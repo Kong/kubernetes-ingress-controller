@@ -8,22 +8,33 @@ import (
 	"path/filepath"
 
 	"github.com/ghodss/yaml"
-	"sigs.k8s.io/kustomize/api/filesys"
 	"sigs.k8s.io/kustomize/api/krusty"
 	"sigs.k8s.io/kustomize/api/types"
+	"sigs.k8s.io/kustomize/kyaml/filesys"
 	"sigs.k8s.io/kustomize/kyaml/resid"
 )
 
 const (
-	// the Kustomization type uses raw strings for all its patch fields, even though it should be possible to use a
-	// proper struct for JSONPatches. Using multiline strings here causes something screwy in marshalling and converts
-	// these to JSON for god knows what reason. This doesn't actually work and makes kustomize mad, so these are
-	// annoying single-line strings, which don't break. Alternative is to carve out more of the krusty innards and
-	// skip writing to disk, and somehow load the bytes directly into the kustomize builder.
+	initRetryPatch = `- op: add
+  path: /spec/template/spec/containers/1/env/-
+  value:
+    name: CONTROLLER_KONG_ADMIN_INIT_RETRY_DELAY
+    value: "%s"
+- op: add
+  path: /spec/template/spec/containers/1/env/-
+  value:
+    name: CONTROLLER_KONG_ADMIN_INIT_RETRIES
+    value: "%d"`
 
-	increaseControllerInitRetriesPatch = "- op: add\n  path: /spec/template/spec/containers/1/env/-\n  value:\n    name: CONTROLLER_KONG_ADMIN_INIT_RETRIES\n    value: \"%d\""
-
-	increaseControllerInitDelayPatch = "- op: add\n  path: /spec/template/spec/containers/1/env/-\n  value:\n    name: CONTROLLER_KONG_ADMIN_INIT_RETRY_DELAY\n    value: \"%s\""
+	livenessProbePatch = `- op: replace
+  path: /spec/template/spec/containers/%[1]d/livenessProbe/initialDelaySeconds
+  value: %[2]d
+- op: replace
+  path: /spec/template/spec/containers/%[1]d/livenessProbe/timeoutSeconds
+  value: %[3]d
+- op: replace
+  path: /spec/template/spec/containers/%[1]d/livenessProbe/failureThreshold
+  value: %[4]d`
 )
 
 // getKustomizedManifest takes a base manifest Reader and a Kustomization, and returns the manifest after applying the
@@ -43,11 +54,11 @@ func getKustomizedManifest(baseManifestReader io.Reader, kustomization types.Kus
 		return nil, err
 	}
 	kustomization.Bases = []string{"base.yaml"}
-	kBytes, err := yaml.Marshal(kustomization)
+	marshalled, err := yaml.Marshal(kustomization)
 	if err != nil {
 		return nil, err
 	}
-	err = os.WriteFile(filepath.Join(workDir, "kustomization.yaml"), kBytes, 0o600)
+	err = os.WriteFile(filepath.Join(workDir, "kustomization.yaml"), marshalled, 0o600)
 	if err != nil {
 		return nil, err
 	}
@@ -75,7 +86,7 @@ func patchControllerImage(baseManifestReader io.Reader, image, tag string) (io.R
 }
 
 // patchKongImage replaces the kong and kong/kong-gateway images in a manifest with the provide image and tag,
-//and returns the modified manifest.
+// and returns the modified manifest.
 func patchKongImage(baseManifestsReader io.Reader, image, tag string) (io.Reader, error) {
 	kustomization := types.Kustomization{
 		Bases: []string{"base.yaml"},
@@ -103,7 +114,7 @@ func patchControllerStartTimeout(baseManifestReader io.Reader, tries int, delay 
 		Bases: []string{"base.yaml"},
 		Patches: []types.Patch{
 			{
-				Patch: fmt.Sprintf(increaseControllerInitRetriesPatch, tries),
+				Patch: fmt.Sprintf(initRetryPatch, delay, tries),
 				Target: &types.Selector{
 					ResId: resid.ResId{
 						Gvk: resid.Gvk{
@@ -116,8 +127,19 @@ func patchControllerStartTimeout(baseManifestReader io.Reader, tries int, delay 
 					},
 				},
 			},
+		},
+	}
+	return getKustomizedManifest(baseManifestReader, kustomization)
+}
+
+// patchLivenessProbes patches the given container's liveness probe, replacing the initial delay, period, and failure
+// threshold.
+func patchLivenessProbes(baseManifestReader io.Reader, container, initial, period, failure int) (io.Reader, error) {
+	kustomization := types.Kustomization{
+		Bases: []string{"base.yaml"},
+		Patches: []types.Patch{
 			{
-				Patch: fmt.Sprintf(increaseControllerInitDelayPatch, delay),
+				Patch: fmt.Sprintf(livenessProbePatch, container, initial, period, failure),
 				Target: &types.Selector{
 					ResId: resid.ResId{
 						Gvk: resid.Gvk{

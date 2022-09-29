@@ -118,6 +118,9 @@ func (p *Parser) isTLSRoutePassthrough(tlsroute *gatewayv1alpha2.TLSRoute) (bool
 		gateway, err := p.storer.GetGateway(gatewayNamespace, string(parentRef.Name))
 		if err != nil {
 			if errors.As(err, &store.ErrNotFound{}) {
+				// log an error if the gateway expected to support the TLSRoute is not found in our cache.
+				p.logger.WithError(err).Errorf("gateway %s/%s not found for TLSRoute %s/%s",
+					gatewayNamespace, parentRef.Name, tlsroute.Namespace, tlsroute.Name)
 				continue
 			}
 			return false, err

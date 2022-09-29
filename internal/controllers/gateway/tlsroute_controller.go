@@ -387,6 +387,11 @@ func (r *TLSRouteReconciler) ensureGatewayReferenceStatusAdded(ctx context.Conte
 			}},
 		}
 
+		if gateway.listenerName != "" {
+			sectionName := gatewayv1alpha2.SectionName(gateway.listenerName)
+			gatewayParentStatus.ParentRef.SectionName = &sectionName
+		}
+
 		// if the reference already exists and doesn't require any changes
 		// then just leave it alone.
 		if existingGatewayParentStatus, exists := parentStatuses[gateway.gateway.Namespace+gateway.gateway.Name]; exists {

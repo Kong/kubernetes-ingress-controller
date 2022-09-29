@@ -8,7 +8,7 @@ import (
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 )
 
-func Test_setGatewayClassCondtion(t *testing.T) {
+func TestSetGatewayClassCondtion(t *testing.T) {
 	testCases := []struct {
 		name            string
 		gwc             *gatewayv1beta1.GatewayClass

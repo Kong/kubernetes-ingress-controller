@@ -35,7 +35,7 @@ var (
 	queryMatchExact = gatewayv1beta1.QueryParamMatchExact
 )
 
-func Test_ingressRulesFromHTTPRoutes(t *testing.T) {
+func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 	fakestore, err := store.NewFakeStore(store.FakeObjects{})
 	require.NoError(t, err)
 	p := NewParser(logrus.New(), fakestore)
@@ -664,7 +664,7 @@ func Test_ingressRulesFromHTTPRoutes(t *testing.T) {
 	}
 }
 
-func Test_getHTTPRouteHostnamesAsSliceOfStringPointers(t *testing.T) {
+func TestGetHTTPRouteHostnamesAsSliceOfStringPointers(t *testing.T) {
 	for _, tt := range []struct {
 		msg      string
 		input    *gatewayv1beta1.HTTPRoute
@@ -712,7 +712,7 @@ func Test_getHTTPRouteHostnamesAsSliceOfStringPointers(t *testing.T) {
 	}
 }
 
-func Test_ingressRulesFromHTTPRoutes_RegexPrefix(t *testing.T) {
+func TestIngressRulesFromHTTPRoutes_RegexPrefix(t *testing.T) {
 	fakestore, err := store.NewFakeStore(store.FakeObjects{})
 	require.NoError(t, err)
 	p := NewParser(logrus.New(), fakestore)

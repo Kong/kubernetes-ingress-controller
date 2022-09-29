@@ -54,7 +54,7 @@ func TestKongState_SanitizedCopy(t *testing.T) {
 	}
 }
 
-func Test_getPluginRelations(t *testing.T) {
+func TestGetPluginRelations(t *testing.T) {
 	type args struct {
 		state KongState
 	}
@@ -307,7 +307,7 @@ func Test_getPluginRelations(t *testing.T) {
 	}
 }
 
-func Test_FillConsumersAndCredentials(t *testing.T) {
+func TestFillConsumersAndCredentials(t *testing.T) {
 	secrets := []*corev1.Secret{
 		{
 			ObjectMeta: metav1.ObjectMeta{

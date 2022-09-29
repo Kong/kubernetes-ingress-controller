@@ -15,7 +15,7 @@ import (
 	configurationv1alpha1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1alpha1"
 )
 
-func Test_GetIngressClassParameters(t *testing.T) {
+func TestGetIngressClassParameters(t *testing.T) {
 	var (
 		scopeNamespace    = "Namespace"
 		testNamespaceName = "test-ns"

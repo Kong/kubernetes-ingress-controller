@@ -20,7 +20,7 @@ import (
 	configurationv1beta1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1beta1"
 )
 
-func Test_keyFunc(t *testing.T) {
+func TestKeyFunc(t *testing.T) {
 	type args struct {
 		obj interface{}
 	}

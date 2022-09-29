@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-func Test_GetCombinations(t *testing.T) {
+func TestGetCombinations(t *testing.T) {
 	type args struct {
 		relations ForeignRelations
 	}

@@ -108,7 +108,7 @@ func TestMergeIngressRules(t *testing.T) {
 	}
 }
 
-func Test_addFromIngressV1beta1TLS(t *testing.T) {
+func TestAddFromIngressV1beta1TLS(t *testing.T) {
 	type args struct {
 		tlsSections []netv1beta1.IngressTLS
 		namespace   string
@@ -178,7 +178,7 @@ func Test_addFromIngressV1beta1TLS(t *testing.T) {
 	}
 }
 
-func Test_getK8sServicesForBackends(t *testing.T) {
+func TestGetK8sServicesForBackends(t *testing.T) {
 	for _, tt := range []struct {
 		name                string
 		namespace           string
@@ -290,7 +290,7 @@ func Test_getK8sServicesForBackends(t *testing.T) {
 	}
 }
 
-func Test_doK8sServicesMatchAnnotations(t *testing.T) {
+func TestDoK8sServicesMatchAnnotations(t *testing.T) {
 	for _, tt := range []struct {
 		name               string
 		services           []*corev1.Service

@@ -25,39 +25,6 @@ import (
 )
 
 // -----------------------------------------------------------------------------
-// All-In-One Manifest Tests - Vars
-// -----------------------------------------------------------------------------
-
-const (
-	// kongComponentWait is the maximum amount of time to wait for components (such as
-	// the ingress controller or the Kong Gateway) to become responsive after
-	// deployment to the cluster has finished.
-	kongComponentWait = time.Minute * 7
-
-	// ingressWait is the maximum amount of time to wait for a basic HTTP service
-	// (e.g. httpbin) to come online and for ingress to have properly configured
-	// proxy traffic to route to it.
-	ingressWait = time.Minute * 5
-
-	// adminAPIWait is the maximum amount of time to wait for the Admin API to become
-	// responsive after updating the KONG_ADMIN_LISTEN and adding a service for it.
-	adminAPIWait = time.Minute * 2
-
-	// gatewayUpdateWaitTime is the amount of time to wait for updates to the Gateway, or to its
-	// parent Service to fully resolve into ready state.
-	gatewayUpdateWaitTime = time.Minute * 3
-)
-
-var (
-	imageOverride         = os.Getenv("TEST_KONG_CONTROLLER_IMAGE_OVERRIDE")
-	imageLoad             = os.Getenv("TEST_KONG_CONTROLLER_IMAGE_LOAD")
-	kongImageOverride     = os.Getenv("TEST_KONG_IMAGE_OVERRIDE")
-	kongImageLoad         = os.Getenv("TEST_KONG_IMAGE_LOAD")
-	kongImagePullUsername = os.Getenv("TEST_KONG_PULL_USERNAME")
-	kongImagePullPassword = os.Getenv("TEST_KONG_PULL_PASSWORD")
-)
-
-// -----------------------------------------------------------------------------
 // All-In-One Manifest Tests - Suite
 //
 // The following tests ensure that the local "all-in-one" style deployment manifests

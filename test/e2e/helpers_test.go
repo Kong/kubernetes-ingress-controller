@@ -1,5 +1,5 @@
-//go:build e2e_tests
-// +build e2e_tests
+//go:build e2e_tests || istio_tests
+// +build e2e_tests istio_tests
 
 package e2e
 
@@ -36,14 +36,39 @@ import (
 )
 
 const (
+	// kongComponentWait is the maximum amount of time to wait for components (such as
+	// the ingress controller or the Kong Gateway) to become responsive after
+	// deployment to the cluster has finished.
+	kongComponentWait = time.Minute * 7
+
+	// ingressWait is the maximum amount of time to wait for a basic HTTP service
+	// (e.g. httpbin) to come online and for ingress to have properly configured
+	// proxy traffic to route to it.
+	ingressWait = time.Minute * 5
+
+	// adminAPIWait is the maximum amount of time to wait for the Admin API to become
+	// responsive after updating the KONG_ADMIN_LISTEN and adding a service for it.
+	adminAPIWait = time.Minute * 2
+
+	// gatewayUpdateWaitTime is the amount of time to wait for updates to the Gateway, or to its
+	// parent Service to fully resolve into ready state.
+	gatewayUpdateWaitTime = time.Minute * 3
+
 	ingressClass     = "kong"
 	namespace        = "kong"
 	adminServiceName = "kong-admin"
-)
 
-const (
 	tcpEchoPort    = 1025
 	tcpListnerPort = 8888
+)
+
+var (
+	imageOverride         = os.Getenv("TEST_KONG_CONTROLLER_IMAGE_OVERRIDE")
+	imageLoad             = os.Getenv("TEST_KONG_CONTROLLER_IMAGE_LOAD")
+	kongImageOverride     = os.Getenv("TEST_KONG_IMAGE_OVERRIDE")
+	kongImageLoad         = os.Getenv("TEST_KONG_IMAGE_LOAD")
+	kongImagePullUsername = os.Getenv("TEST_KONG_PULL_USERNAME")
+	kongImagePullPassword = os.Getenv("TEST_KONG_PULL_PASSWORD")
 )
 
 func deployKong(ctx context.Context, t *testing.T, env environments.Environment, manifest io.Reader, additionalSecrets ...*corev1.Secret) *appsv1.Deployment {

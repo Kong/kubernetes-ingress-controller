@@ -68,9 +68,10 @@ jobs:
         kubernetes-version:
           - 'v1.24.2'
         istio-version:
-          - 'v1.14.1'
-          - 'v1.13.2'
-          - 'v1.12.5'
+          - 'v1.15.1'
+          - 'v1.14.4'
+          - 'v1.13.8'
+          - 'v1.12.9'
           - 'v1.11.8'
     steps:
     - name: setup golang

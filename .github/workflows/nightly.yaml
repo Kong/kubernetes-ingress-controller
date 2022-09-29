@@ -173,7 +173,7 @@ jobs:
         with:
           fetch-depth: 0
       - name: Kubernetes ${{ matrix.kubernetes-version }} ${{ matrix.dbmode }} Integration Tests
-        run: KONG_CLUSTER_VERSION=${{ matrix.kubernetes-version }} make test.integration.${{ matrix.dbmode }}
+        run: TEST_KONG_CONTROLLER_IMAGE_OVERRIDE="kong/nightly-ingress-controller:nightly" KONG_CLUSTER_VERSION=${{ matrix.kubernetes-version }} make test.integration.${{ matrix.dbmode }}
   # run integration tests in previous versions of kubernetes 
   test-previous-kubernetes-gke:
     name: Run integration tests on GKE
@@ -207,7 +207,7 @@ jobs:
         with:
           fetch-depth: 0
       - name: test ${{ matrix.dbmode }} on GKE v1.${{ matrix.minor }}
-        run: ./hack/e2e/run-tests.sh
+        run: make test.integration.gke
         env:
           KUBERNETES_MAJOR_VERSION: 1
           KUBERNETES_MINOR_VERSION: ${{ matrix.minor }}

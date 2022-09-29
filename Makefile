@@ -229,7 +229,7 @@ test.conformance:
 		./test/conformance
 
 .PHONY: test.integration
-test.integration: test.integration.dbless test.integration.postgres
+test.integration: test.integration.dbless test.integration.postgres test.integration.cp
 
 .PHONY: test.integration.enterprise
 test.integration.enterprise: test.integration.enterprise.postgres
@@ -312,6 +312,27 @@ test.integration.enterprise.postgres.pretty:
 		GOTESTFLAGS="-json" \
 		COVERAGE_OUT=coverage.enterprisepostgres.out 2>/dev/null | \
 		$(GOTESTFMT_CMD)
+
+.PHONY: test.integration.cp
+_test.integration.cp:
+	CLUSTER_NAME="e2e-$(uuidgen)" \
+		KUBERNETES_CLUSTER_NAME="${CLUSTER_NAME}" go run hack/e2e/cluster/deploy/main.go \
+		GOFLAGS="-tags=integration_tests" \
+		KONG_TEST_CLUSTER="${CP}:${CLUSTER_NAME}" \
+		go test -parallel "${NCPU}" -timeout $(INTEGRATION_TEST_TIMEOUT) -v \
+		./test/integration/... \
+    	go run hack/e2e/cluster/cleanup/main.go ${CLUSTER_NAME} \
+		trap cleanup EXIT SIGINT SIGQUIT
+
+.PHONY: test.integration.gke
+test.integration.gke:
+	@$(MAKE) _test.integration.cp \
+		CP="gke"
+
+.PHONY: test.integration.kind
+test.integration.kind:
+	@$(MAKE) _test.integration.cp \
+		CP="kind"
 
 .PHONY: test.e2e
 test.e2e:

@@ -235,8 +235,8 @@ func setupControllers(
 		{
 			Enabled: c.KongClusterPluginEnabled,
 			AutoHandler: crdExistsChecker{GVR: schema.GroupVersionResource{
-				Group:    konghqcomv1.SchemeGroupVersion.Group,
-				Version:  konghqcomv1.SchemeGroupVersion.Version,
+				Group:    konghqcomv1.GroupVersion.Group,
+				Version:  konghqcomv1.GroupVersion.Version,
 				Resource: "kongclusterplugins",
 			}}.CRDExists,
 			Controller: &configuration.KongV1KongClusterPluginReconciler{
@@ -363,56 +363,56 @@ func (c crdExistsChecker) CRDExists(r client.Client) bool {
 
 var gatewayCRDExistsChecker = crdExistsChecker{
 	GVR: schema.GroupVersionResource{
-		Group:    gatewayv1alpha2.SchemeGroupVersion.Group,
-		Version:  gatewayv1alpha2.SchemeGroupVersion.Version,
+		Group:    gatewayv1alpha2.GroupVersion.Group,
+		Version:  gatewayv1alpha2.GroupVersion.Version,
 		Resource: "gateways",
 	},
 }
 
 var gatewayClassCRDExistsChecker = crdExistsChecker{
 	GVR: schema.GroupVersionResource{
-		Group:    gatewayv1beta1.SchemeGroupVersion.Group,
-		Version:  gatewayv1beta1.SchemeGroupVersion.Version,
+		Group:    gatewayv1beta1.GroupVersion.Group,
+		Version:  gatewayv1beta1.GroupVersion.Version,
 		Resource: "gatewayclasses",
 	},
 }
 
 var httpRouteCRDExistsChecker = crdExistsChecker{
 	GVR: schema.GroupVersionResource{
-		Group:    gatewayv1alpha2.SchemeGroupVersion.Group,
-		Version:  gatewayv1alpha2.SchemeGroupVersion.Version,
+		Group:    gatewayv1alpha2.GroupVersion.Group,
+		Version:  gatewayv1alpha2.GroupVersion.Version,
 		Resource: "httproutes",
 	},
 }
 
 var tcpRouteCRDExistsChecker = crdExistsChecker{
 	GVR: schema.GroupVersionResource{
-		Group:    gatewayv1alpha2.SchemeGroupVersion.Group,
-		Version:  gatewayv1alpha2.SchemeGroupVersion.Version,
+		Group:    gatewayv1alpha2.GroupVersion.Group,
+		Version:  gatewayv1alpha2.GroupVersion.Version,
 		Resource: "tcproutes",
 	},
 }
 
 var udpRouteCRDExistsChecker = crdExistsChecker{
 	GVR: schema.GroupVersionResource{
-		Group:    gatewayv1alpha2.SchemeGroupVersion.Group,
-		Version:  gatewayv1alpha2.SchemeGroupVersion.Version,
+		Group:    gatewayv1alpha2.GroupVersion.Group,
+		Version:  gatewayv1alpha2.GroupVersion.Version,
 		Resource: "udproutes",
 	},
 }
 
 var tlsRouteCRDExistsChecker = crdExistsChecker{
 	GVR: schema.GroupVersionResource{
-		Group:    gatewayv1alpha2.SchemeGroupVersion.Group,
-		Version:  gatewayv1alpha2.SchemeGroupVersion.Version,
+		Group:    gatewayv1alpha2.GroupVersion.Group,
+		Version:  gatewayv1alpha2.GroupVersion.Version,
 		Resource: "tlsroutes",
 	},
 }
 
 var referenceGrantCRDExistsChecker = crdExistsChecker{
 	GVR: schema.GroupVersionResource{
-		Group:    gatewayv1alpha2.SchemeGroupVersion.Group,
-		Version:  gatewayv1alpha2.SchemeGroupVersion.Version,
+		Group:    gatewayv1alpha2.GroupVersion.Group,
+		Version:  gatewayv1alpha2.GroupVersion.Version,
 		Resource: "referencegrants",
 	},
 }

@@ -59,15 +59,54 @@ func (p *Parser) ingressRulesFromHTTPRoute(result *ingressRules, httproute *gate
 		return fmt.Errorf("no rules provided")
 	}
 
-	// each rule may represent a different set of backend services that will be accepting
-	// traffic, so we make separate routes and Kong services for every present rule.
-	for ruleNumber, rule := range spec.Rules {
+	for _, rule := range spec.Rules {
 		// TODO: add this to a generic HTTPRoute validation, and then we should probably
 		//       simply be calling validation on each httproute object at the begininning
 		//       of the topmost list.
 		if len(rule.BackendRefs) == 0 {
 			return fmt.Errorf("missing backendRef in rule")
 		}
+	}
+
+	if p.featureEnabledCombinedServiceRoutes {
+		return p.ingressRulesFromHTTPRouteWithCombinedServiceRoutes(httproute, result)
+	}
+
+	return p.ingressRulesFromHTTPRouteLegacyFallback(httproute, result)
+}
+
+func (p *Parser) ingressRulesFromHTTPRouteWithCombinedServiceRoutes(httproute *gatewayv1beta1.HTTPRoute, result *ingressRules) error {
+	for i, translationMeta := range translators.TranslateHTTPRoute(httproute) {
+		// HTTPRoute uses a wrapper HTTPBackendRef to add optional filters to its BackendRefs
+		backendRefs := httpBackendRefsToBackendRefs(translationMeta.BackendRefs)
+
+		// create a service and attach the routes to it
+		service, err := generateKongServiceFromBackendRef(p.logger, p.storer, result, httproute, i, "http", backendRefs...)
+		if err != nil {
+			return err
+		}
+
+		// generate the routes for the service and attach them to the service
+		for ruleNumber, rule := range translationMeta.Rules {
+			routes, err := generateKongRoutesFromHTTPRouteRule(httproute, ruleNumber, rule, p.flagEnabledRegexPathPrefix)
+			if err != nil {
+				return err
+			}
+			service.Routes = append(service.Routes, routes...)
+		}
+
+		// cache the service to avoid duplicates in further loop iterations
+		result.ServiceNameToServices[*service.Service.Name] = service
+	}
+
+	return nil
+}
+
+// ingressRulesFromHTTPRouteLegacyFallback is to be depracated in favor of the combined service routes.
+func (p *Parser) ingressRulesFromHTTPRouteLegacyFallback(httproute *gatewayv1beta1.HTTPRoute, result *ingressRules) error {
+	// each rule may represent a different set of backend services that will be accepting
+	// traffic, so we make separate routes and Kong services for every present rule.
+	for ruleNumber, rule := range httproute.Spec.Rules {
 
 		// determine the routes needed to route traffic to services for this rule
 		routes, err := generateKongRoutesFromHTTPRouteRule(httproute, ruleNumber, rule, p.flagEnabledRegexPathPrefix)
@@ -75,12 +114,10 @@ func (p *Parser) ingressRulesFromHTTPRoute(result *ingressRules, httproute *gate
 			return err
 		}
 
-		// create a service and attach the routes to it
-		var backendRefs []gatewayv1beta1.BackendRef
 		// HTTPRoute uses a wrapper HTTPBackendRef to add optional filters to its BackendRefs
-		for _, hRef := range rule.BackendRefs {
-			backendRefs = append(backendRefs, hRef.BackendRef)
-		}
+		backendRefs := httpBackendRefsToBackendRefs(rule.BackendRefs)
+
+		// create a service and attach the routes to it
 		service, err := generateKongServiceFromBackendRef(p.logger, p.storer, result, httproute, ruleNumber, "http", backendRefs...)
 		if err != nil {
 			return err
@@ -90,7 +127,6 @@ func (p *Parser) ingressRulesFromHTTPRoute(result *ingressRules, httproute *gate
 		// cache the service to avoid duplicates in further loop iterations
 		result.ServiceNameToServices[*service.Service.Name] = service
 	}
-
 	return nil
 }
 
@@ -316,4 +352,13 @@ func generateRequestHeaderModifierKongPlugin(modifier *gatewayv1beta1.HTTPReques
 
 func kongHeaderFormatter(header gatewayv1beta1.HTTPHeader) string {
 	return fmt.Sprintf("%s:%s", header.Name, header.Value)
+}
+
+func httpBackendRefsToBackendRefs(httpBackendRef []gatewayv1beta1.HTTPBackendRef) []gatewayv1beta1.BackendRef {
+	var backendRefs []gatewayv1beta1.BackendRef
+
+	for _, hRef := range httpBackendRef {
+		backendRefs = append(backendRefs, hRef.BackendRef)
+	}
+	return backendRefs
 }

@@ -38,7 +38,10 @@ var (
 func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 	fakestore, err := store.NewFakeStore(store.FakeObjects{})
 	require.NoError(t, err)
-	p := NewParser(logrus.New(), fakestore)
+	parser := NewParser(logrus.New(), fakestore)
+	parserWithCombinedServiceRoutes := NewParser(logrus.New(), fakestore)
+	parserWithCombinedServiceRoutes.EnableCombinedServiceRoutes()
+
 	httpPort := gatewayv1beta1.PortNumber(80)
 
 	for _, tt := range []struct {
@@ -640,27 +643,32 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 			},
 		},
 	} {
-		t.Run(tt.msg, func(t *testing.T) {
-			ingressRules := newIngressRules()
+		withParser := func(p *Parser) func(t *testing.T) {
+			return func(t *testing.T) {
+				ingressRules := newIngressRules()
 
-			var errs []error
-			for _, httproute := range tt.routes {
-				// initialize the HTTPRoute object
-				httproute.SetGroupVersionKind(httprouteGVK)
+				var errs []error
+				for _, httproute := range tt.routes {
+					// initialize the HTTPRoute object
+					httproute.SetGroupVersionKind(httprouteGVK)
 
-				// generate the ingress rules
-				err := p.ingressRulesFromHTTPRoute(&ingressRules, httproute)
-				if err != nil {
-					errs = append(errs, err)
+					// generate the ingress rules
+					err := p.ingressRulesFromHTTPRoute(&ingressRules, httproute)
+					if err != nil {
+						errs = append(errs, err)
+					}
 				}
+
+				// verify that we receive the expected values
+				assert.Equal(t, tt.expected, ingressRules)
+
+				// verify that we receive any and all expected errors
+				assert.Equal(t, tt.errs, errs)
 			}
+		}
 
-			// verify that we receive the expected values
-			assert.Equal(t, tt.expected, ingressRules)
-
-			// verify that we receive any and all expected errors
-			assert.Equal(t, tt.errs, errs)
-		})
+		t.Run(tt.msg+" using lagacy parser", withParser(parser))
+		t.Run(tt.msg+" using combined service routes parser", withParser(parserWithCombinedServiceRoutes))
 	}
 }
 
@@ -715,8 +723,11 @@ func TestGetHTTPRouteHostnamesAsSliceOfStringPointers(t *testing.T) {
 func TestIngressRulesFromHTTPRoutes_RegexPrefix(t *testing.T) {
 	fakestore, err := store.NewFakeStore(store.FakeObjects{})
 	require.NoError(t, err)
-	p := NewParser(logrus.New(), fakestore)
-	p.EnableRegexPathPrefix()
+	parser := NewParser(logrus.New(), fakestore)
+	parser.EnableRegexPathPrefix()
+	parserWithCombinedServiceRoutes := NewParser(logrus.New(), fakestore)
+	parserWithCombinedServiceRoutes.EnableRegexPathPrefix()
+	parserWithCombinedServiceRoutes.EnableCombinedServiceRoutes()
 	httpPort := gatewayv1beta1.PortNumber(80)
 
 	for _, tt := range []struct {
@@ -849,26 +860,31 @@ func TestIngressRulesFromHTTPRoutes_RegexPrefix(t *testing.T) {
 			},
 		},
 	} {
-		t.Run(tt.msg, func(t *testing.T) {
-			ingressRules := newIngressRules()
+		withParser := func(p *Parser) func(t *testing.T) {
+			return func(t *testing.T) {
+				ingressRules := newIngressRules()
 
-			var errs []error
-			for _, httproute := range tt.routes {
-				// initialize the HTTPRoute object
-				httproute.SetGroupVersionKind(httprouteGVK)
+				var errs []error
+				for _, httproute := range tt.routes {
+					// initialize the HTTPRoute object
+					httproute.SetGroupVersionKind(httprouteGVK)
 
-				// generate the ingress rules
-				err := p.ingressRulesFromHTTPRoute(&ingressRules, httproute)
-				if err != nil {
-					errs = append(errs, err)
+					// generate the ingress rules
+					err := p.ingressRulesFromHTTPRoute(&ingressRules, httproute)
+					if err != nil {
+						errs = append(errs, err)
+					}
 				}
+
+				// verify that we receive the expected values
+				assert.Equal(t, tt.expected, ingressRules)
+
+				// verify that we receive any and all expected errors
+				assert.Equal(t, tt.errs, errs)
 			}
+		}
 
-			// verify that we receive the expected values
-			assert.Equal(t, tt.expected, ingressRules)
-
-			// verify that we receive any and all expected errors
-			assert.Equal(t, tt.errs, errs)
-		})
+		t.Run(tt.msg+" using lagacy parser", withParser(parser))
+		t.Run(tt.msg+" using combined service routes parser", withParser(parserWithCombinedServiceRoutes))
 	}
 }

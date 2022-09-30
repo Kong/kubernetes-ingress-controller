@@ -60,6 +60,17 @@ Adding a new version? You'll need three changes:
  - [0.0.5](#005)
  - [0.0.4 and prior](#004-and-prior)
 
+ ## Unreleased
+
+ ### Added
+
+  - Added `HTTPRoute` support for `CombinedRoutes` feature. When enabled,
+  this changes how `HTTPRoute` resources are translated so that `HTTPRouteRule`
+  resources are combined when they have same backends references. This change 
+  does not functionally impact routing: requests that went to a given Service
+  using the original method still go to the same Service in the new method.
+  [#3008](https://github.com/Kong/kubernetes-ingress-controller/pull/3008)
+
 ## [2.7.0]
 
 > Release date: 2022-09-26

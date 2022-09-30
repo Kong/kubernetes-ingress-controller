@@ -167,13 +167,13 @@ func getTestManifest(t *testing.T, baseManifestPath string) (io.Reader, error) {
 		}
 	}
 
-	manifestsReader, err = patchControllerStartTimeout(manifestsReader, 120, "3s")
+	manifestsReader, err = patchControllerStartTimeout(manifestsReader, 120, time.Second*3)
 	if err != nil {
 		t.Logf("failed patching controller timeouts (%v), using default manifest %v", err, baseManifestPath)
 		return manifestsReader, nil
 	}
 
-	manifestsReader, err = patchLivenessProbes(manifestsReader, 0, 15, 3, 10)
+	manifestsReader, err = patchLivenessProbes(manifestsReader, 0, 10, time.Second*15, time.Second*3)
 	if err != nil {
 		t.Logf("failed patching kong liveness (%v), using default manifest %v", err, baseManifestPath)
 		return manifestsReader, nil

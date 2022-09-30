@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/ghodss/yaml"
 	"sigs.k8s.io/kustomize/api/krusty"
@@ -109,12 +110,12 @@ func patchKongImage(baseManifestsReader io.Reader, image, tag string) (io.Reader
 // patchControllerStartTimeout adds or updates the controller container CONTROLLER_KONG_ADMIN_INIT_RETRIES and
 // CONTROLLER_KONG_ADMIN_INIT_RETRY_DELAY environment variables with the provided values, and returns the modified
 // manifest.
-func patchControllerStartTimeout(baseManifestReader io.Reader, tries int, delay string) (io.Reader, error) {
+func patchControllerStartTimeout(baseManifestReader io.Reader, tries int, delay time.Duration) (io.Reader, error) {
 	kustomization := types.Kustomization{
 		Bases: []string{"base.yaml"},
 		Patches: []types.Patch{
 			{
-				Patch: fmt.Sprintf(initRetryPatch, delay, tries),
+				Patch: fmt.Sprintf(initRetryPatch, delay.String(), tries),
 				Target: &types.Selector{
 					ResId: resid.ResId{
 						Gvk: resid.Gvk{
@@ -134,12 +135,12 @@ func patchControllerStartTimeout(baseManifestReader io.Reader, tries int, delay 
 
 // patchLivenessProbes patches the given container's liveness probe, replacing the initial delay, period, and failure
 // threshold.
-func patchLivenessProbes(baseManifestReader io.Reader, container, initial, period, failure int) (io.Reader, error) {
+func patchLivenessProbes(baseManifestReader io.Reader, container, failure int, initial, period time.Duration) (io.Reader, error) {
 	kustomization := types.Kustomization{
 		Bases: []string{"base.yaml"},
 		Patches: []types.Patch{
 			{
-				Patch: fmt.Sprintf(livenessProbePatch, container, initial, period, failure),
+				Patch: fmt.Sprintf(livenessProbePatch, container, int(initial.Seconds()), int(period.Seconds()), failure),
 				Target: &types.Selector{
 					ResId: resid.ResId{
 						Gvk: resid.Gvk{

@@ -859,6 +859,147 @@ func TestTranslateIngress(t *testing.T) {
 				},
 			},
 		},
+
+		{
+			name: "when there are multiple ingress rules with overlapping host and service, separate kong services will be provided",
+			ingress: &netv1.Ingress{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-ingress",
+					Namespace: corev1.NamespaceDefault,
+				},
+				Spec: netv1.IngressSpec{
+					Rules: []netv1.IngressRule{
+						{
+							Host: "konghq.com",
+							IngressRuleValue: netv1.IngressRuleValue{
+								HTTP: &netv1.HTTPIngressRuleValue{
+									Paths: []netv1.HTTPIngressPath{
+										{
+											Path: "/v1/api",
+											Backend: netv1.IngressBackend{
+												Service: &netv1.IngressServiceBackend{
+													Name: "ad-service",
+													Port: netv1.ServiceBackendPort{
+														Name:   "http",
+														Number: 80,
+													},
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+						{
+							Host: "konghq.co",
+							IngressRuleValue: netv1.IngressRuleValue{
+								HTTP: &netv1.HTTPIngressRuleValue{
+									Paths: []netv1.HTTPIngressPath{
+										{
+											Path: "/v1/api",
+											Backend: netv1.IngressBackend{
+												Service: &netv1.IngressServiceBackend{
+													Name: "mad-service",
+													Port: netv1.ServiceBackendPort{
+														Name:   "http",
+														Number: 80,
+													},
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			expected: []*kongstate.Service{
+				{
+					Namespace: corev1.NamespaceDefault,
+					Service: kong.Service{
+						Name:           kong.String("default.test-ingress.ad-service.80"),
+						Host:           kong.String("ad-service.default.80.svc"),
+						ConnectTimeout: kong.Int(int(defaultServiceTimeout.Milliseconds())),
+						Path:           kong.String("/"),
+						Port:           kong.Int(80),
+						Protocol:       kong.String("http"),
+						Retries:        kong.Int(defaultRetries),
+						ReadTimeout:    kong.Int(int(defaultServiceTimeout.Milliseconds())),
+						WriteTimeout:   kong.Int(int(defaultServiceTimeout.Milliseconds())),
+					},
+					Routes: []kongstate.Route{
+						{
+							Ingress: util.K8sObjectInfo{
+								Name:      "test-ingress",
+								Namespace: corev1.NamespaceDefault,
+							},
+							Route: kong.Route{
+								Name:              kong.String("default.test-ingress.ad-service.konghq.com.80"),
+								Hosts:             kong.StringSlice("konghq.com"),
+								Paths:             kong.StringSlice("/v1/api"),
+								PreserveHost:      kong.Bool(true),
+								Protocols:         kong.StringSlice("http", "https"),
+								RegexPriority:     kong.Int(0),
+								StripPath:         kong.Bool(false),
+								ResponseBuffering: kong.Bool(true),
+								RequestBuffering:  kong.Bool(true),
+							},
+						},
+					},
+					Backends: []kongstate.ServiceBackend{{
+						Name:      "ad-service",
+						Namespace: corev1.NamespaceDefault,
+						PortDef: kongstate.PortDef{
+							Mode:   kongstate.PortModeByNumber,
+							Number: 80,
+						},
+					}},
+				},
+
+				{
+					Namespace: corev1.NamespaceDefault,
+					Service: kong.Service{
+						Name:           kong.String("default.test-ingress.mad-service.80"),
+						Host:           kong.String("mad-service.default.80.svc"),
+						ConnectTimeout: kong.Int(int(defaultServiceTimeout.Milliseconds())),
+						Path:           kong.String("/"),
+						Port:           kong.Int(80),
+						Protocol:       kong.String("http"),
+						Retries:        kong.Int(defaultRetries),
+						ReadTimeout:    kong.Int(int(defaultServiceTimeout.Milliseconds())),
+						WriteTimeout:   kong.Int(int(defaultServiceTimeout.Milliseconds())),
+					},
+					Routes: []kongstate.Route{
+						{
+							Ingress: util.K8sObjectInfo{
+								Name:      "test-ingress",
+								Namespace: corev1.NamespaceDefault,
+							},
+							Route: kong.Route{
+								Name:              kong.String("default.test-ingress.mad-service.konghq.co.80"),
+								Hosts:             kong.StringSlice("konghq.co"),
+								Paths:             kong.StringSlice("/v1/api"),
+								PreserveHost:      kong.Bool(true),
+								Protocols:         kong.StringSlice("http", "https"),
+								RegexPriority:     kong.Int(0),
+								StripPath:         kong.Bool(false),
+								ResponseBuffering: kong.Bool(true),
+								RequestBuffering:  kong.Bool(true),
+							},
+						},
+					},
+					Backends: []kongstate.ServiceBackend{{
+						Name:      "mad-service",
+						Namespace: corev1.NamespaceDefault,
+						PortDef: kongstate.PortDef{
+							Mode:   kongstate.PortModeByNumber,
+							Number: 80,
+						},
+					}},
+				},
+			},
+		},
 	}
 
 	for _, tt := range tts {

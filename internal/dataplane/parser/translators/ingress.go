@@ -98,7 +98,7 @@ func (i *ingressTranslationIndex) add(ingress *netv1.Ingress) {
 			serviceName := httpIngressPath.Backend.Service.Name
 			servicePort := httpIngressPath.Backend.Service.Port.Number
 
-			cacheKey := fmt.Sprintf("%s%s%s%s%d", ingress.Namespace, ingress.Name, ingressRule.Host, serviceName, servicePort)
+			cacheKey := fmt.Sprintf("%s.%s.%s.%s.%d", ingress.Namespace, ingress.Name, ingressRule.Host, serviceName, servicePort)
 			meta, ok := i.cache[cacheKey]
 			if !ok {
 				meta = &ingressTranslationMeta{

@@ -66,7 +66,7 @@ func setupControllers(
 	restMapper := mgr.GetClient().RESTMapper()
 
 	// Choose the best API version of Ingress to inform which ingress controller to enable.
-	ingressPicker, err := NewIngressControllersConditions(c, mgr.GetClient())
+	ingressConditions, err := NewIngressControllersConditions(c, restMapper)
 	if err != nil {
 		return nil, fmt.Errorf("ingress version picker failed: %w", err)
 	}
@@ -86,7 +86,7 @@ func setupControllers(
 		// Core API Controllers
 		// ---------------------------------------------------------------------------
 		{
-			Enabled: ingressPicker.IngressClassNetV1Enabled(),
+			Enabled: ingressConditions.IngressClassNetV1Enabled(),
 			Controller: &configuration.NetV1IngressClassReconciler{
 				Client:          mgr.GetClient(),
 				Log:             ctrl.Log.WithName("controllers").WithName("IngressClass").WithName("netv1"),
@@ -95,7 +95,7 @@ func setupControllers(
 			},
 		},
 		{
-			Enabled: ingressPicker.IngressNetV1Enabled(),
+			Enabled: ingressConditions.IngressNetV1Enabled(),
 			Controller: &configuration.NetV1IngressReconciler{
 				Client:                     mgr.GetClient(),
 				Log:                        ctrl.Log.WithName("controllers").WithName("Ingress").WithName("netv1"),
@@ -108,7 +108,7 @@ func setupControllers(
 			},
 		},
 		{
-			Enabled: ingressPicker.IngressNetV1beta1Enabled(),
+			Enabled: ingressConditions.IngressNetV1beta1Enabled(),
 			Controller: &configuration.NetV1Beta1IngressReconciler{
 				Client:           mgr.GetClient(),
 				Log:              ctrl.Log.WithName("controllers").WithName("Ingress").WithName("netv1beta1"),
@@ -125,7 +125,7 @@ func setupControllers(
 			},
 		},
 		{
-			Enabled: ingressPicker.IngressExtV1beta1Enabled(),
+			Enabled: ingressConditions.IngressExtV1beta1Enabled(),
 			Controller: &configuration.ExtV1Beta1IngressReconciler{
 				Client:                     mgr.GetClient(),
 				Log:                        ctrl.Log.WithName("controllers").WithName("Ingress").WithName("extv1beta1"),

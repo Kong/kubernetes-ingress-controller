@@ -18,14 +18,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ghodss/yaml"
-
 	"github.com/blang/semver/v4"
 	"github.com/kong/kubernetes-testing-framework/pkg/environments"
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
 	"github.com/sethvargo/go-password/password"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"gopkg.in/yaml.v3"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -435,24 +434,22 @@ func stripCRDs(t *testing.T, manifest io.Reader) io.Reader {
 	in, err := io.ReadAll(manifest)
 	require.NoError(t, err)
 
-	objs := strings.Split(string(in), sep)
-
-	var filteredObjs []string
-	for _, obj := range objs {
-		var originalManifests struct {
+	var filteredObjs [][]byte
+	for _, objYaml := range bytes.Split(in, []byte(sep)) {
+		var obj struct {
 			Kind string `yaml:"kind"`
 		}
-		err = yaml.Unmarshal([]byte(obj), &originalManifests)
+		err = yaml.Unmarshal(objYaml, &obj)
 		require.NoError(t, err)
 
-		if originalManifests.Kind == "CustomResourceDefinition" {
+		if obj.Kind == "CustomResourceDefinition" {
 			continue
 		}
 
-		filteredObjs = append(filteredObjs, obj)
+		filteredObjs = append(filteredObjs, objYaml)
 	}
 
-	outBytes := []byte(strings.Join(filteredObjs, sep))
+	outBytes := bytes.Join(filteredObjs, []byte(sep))
 	return bytes.NewReader(outBytes)
 }
 

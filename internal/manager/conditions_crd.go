@@ -13,24 +13,24 @@ import (
 
 // CRDControllerCondition determines if a resource controller for a given CRD should be enabled.
 type CRDControllerCondition struct {
-	gvr        schema.GroupVersionResource
-	enabled    bool
-	restMapper meta.RESTMapper
-	log        logr.Logger
+	gvr           schema.GroupVersionResource
+	toggleEnabled bool
+	restMapper    meta.RESTMapper
+	log           logr.Logger
 }
 
 func NewCRDCondition(gvr schema.GroupVersionResource, enabled bool, restMapper meta.RESTMapper) CRDControllerCondition {
 	return CRDControllerCondition{
-		enabled:    enabled,
-		gvr:        gvr,
-		restMapper: restMapper,
+		toggleEnabled: enabled,
+		gvr:           gvr,
+		restMapper:    restMapper,
 		log: ctrl.Log.WithName("crd_controller_condition").
 			WithValues("group", gvr.Group, "version", gvr.Version, "resource", gvr.Resource),
 	}
 }
 
 func (c CRDControllerCondition) Enabled() bool {
-	if c.enabled {
+	if c.toggleEnabled {
 		if !utils.CRDExists(c.restMapper, c.gvr) {
 			c.log.Info(fmt.Sprintf("Disabling the '%s' controller due to missing CRD installation", c.gvr.Resource))
 			return false

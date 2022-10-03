@@ -18,6 +18,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ghodss/yaml"
+
 	"github.com/blang/semver/v4"
 	"github.com/kong/kubernetes-testing-framework/pkg/environments"
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
@@ -424,4 +426,49 @@ func getPodLogs(
 		return "", fmt.Errorf("%s", stderr.String())
 	}
 	return string(out), nil
+}
+
+// stripCRDs removes every CustomResourceDefinition from the manifest.
+func stripCRDs(t *testing.T, manifest io.Reader) io.Reader {
+	const sep = "---\n"
+
+	in, err := io.ReadAll(manifest)
+	require.NoError(t, err)
+
+	objs := strings.Split(string(in), sep)
+
+	var filteredObjs []string
+	for _, obj := range objs {
+		var originalManifests struct {
+			Kind string `yaml:"kind"`
+		}
+		err = yaml.Unmarshal([]byte(obj), &originalManifests)
+		require.NoError(t, err)
+
+		if originalManifests.Kind == "CustomResourceDefinition" {
+			continue
+		}
+
+		filteredObjs = append(filteredObjs, obj)
+	}
+
+	outBytes := []byte(strings.Join(filteredObjs, sep))
+	return bytes.NewReader(outBytes)
+}
+
+// requireContainerDidntCrash verifies that a container with a given containerName did not restart.
+// In case name=containerName is not found in pod's containers, it fails.
+func requireContainerDidntCrash(t *testing.T, pod corev1.Pod, containerName string) {
+	for _, containerStatus := range pod.Status.ContainerStatuses {
+		if containerStatus.Name == containerName {
+			if containerStatus.RestartCount != 0 {
+				t.Error("container crashed at least once")
+				return
+			}
+
+			return
+		}
+	}
+
+	t.Error("container not found")
 }

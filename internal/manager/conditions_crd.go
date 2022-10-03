@@ -1,6 +1,8 @@
 package manager
 
 import (
+	"fmt"
+
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -30,7 +32,7 @@ func NewCRDCondition(gvr schema.GroupVersionResource, enabled bool, restMapper m
 func (c CRDControllerCondition) Enabled() bool {
 	if c.enabled {
 		if !utils.CRDExists(c.restMapper, c.gvr) {
-			c.log.Info("Disabling the resource controller due to missing CRD installation")
+			c.log.Info(fmt.Sprintf("Disabling the '%s' controller due to missing CRD installation", c.gvr.Resource))
 			return false
 		}
 

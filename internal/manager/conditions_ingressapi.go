@@ -3,13 +3,13 @@ package manager
 import (
 	"fmt"
 
-	"k8s.io/apimachinery/pkg/api/meta"
-
-	ctrlutils "github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/utils"
 	extensionsv1beta1 "k8s.io/api/extensions/v1beta1"
 	netv1 "k8s.io/api/networking/v1"
 	netv1beta1 "k8s.io/api/networking/v1beta1"
+	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+
+	ctrlutils "github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/utils"
 )
 
 type IngressAPI int

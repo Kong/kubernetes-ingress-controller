@@ -108,15 +108,11 @@ jobs:
         name: coverage
         path: coverage.unit.out
 
-    - name: Upload test results to BuildPulse for flaky test detection
-      if: '!cancelled()' # Run this step even when the tests fail. Skip if the workflow is cancelled.
-      uses: Workshop64/buildpulse-action@main
+    - name: collect test report
+      uses: actions/upload-artifact@v3
       with:
-        account: 962416
-        repository: 127765544
+        name: tests-report
         path: unit-tests.xml
-        key: ${{ secrets.BUILDPULSE_ACCESS_KEY_ID }}
-        secret: ${{ secrets.BUILDPULSE_SECRET_ACCESS_KEY }}
 
   integration-tests-enterprise-postgres:
     environment: "Configure ci"
@@ -167,15 +163,11 @@ jobs:
         path: /tmp/ktf-diag*
         if-no-files-found: ignore
 
-    - name: Upload test results to BuildPulse for flaky test detection
-      if: '!cancelled()' # Run this step even when the tests fail. Skip if the workflow is cancelled.
-      uses: Workshop64/buildpulse-action@main
+    - name: collect test report
+      uses: actions/upload-artifact@v3
       with:
-        account: 962416
-        repository: 127765544
+        name: tests-report
         path: integration-tests-enterprise-postgres.xml
-        key: ${{ secrets.BUILDPULSE_ACCESS_KEY_ID }}
-        secret: ${{ secrets.BUILDPULSE_SECRET_ACCESS_KEY }}
 
   integration-tests-dbless:
     runs-on: ubuntu-latest
@@ -218,15 +210,11 @@ jobs:
         path: /tmp/ktf-diag*
         if-no-files-found: ignore
 
-    - name: Upload test results to BuildPulse for flaky test detection
-      if: '!cancelled()' # Run this step even when the tests fail. Skip if the workflow is cancelled.
-      uses: Workshop64/buildpulse-action@main
+    - name: collect test report
+      uses: actions/upload-artifact@v3
       with:
-        account: 962416
-        repository: 127765544
+        name: tests-report
         path: integration-tests-dbless.xml
-        key: ${{ secrets.BUILDPULSE_ACCESS_KEY_ID }}
-        secret: ${{ secrets.BUILDPULSE_SECRET_ACCESS_KEY }}
 
   integration-tests-postgres:
     runs-on: ubuntu-latest
@@ -269,15 +257,11 @@ jobs:
         path: /tmp/ktf-diag*
         if-no-files-found: ignore
 
-    - name: Upload test results to BuildPulse for flaky test detection
-      if: '!cancelled()' # Run this step even when the tests fail. Skip if the workflow is cancelled.
-      uses: Workshop64/buildpulse-action@main
+    - name: collect test report
+      uses: actions/upload-artifact@v3
       with:
-        account: 962416
-        repository: 127765544
+        name: tests-report
         path: integration-tests-postgres.xml
-        key: ${{ secrets.BUILDPULSE_ACCESS_KEY_ID }}
-        secret: ${{ secrets.BUILDPULSE_SECRET_ACCESS_KEY }}
 
   integration-tests-feature-gates:
     runs-on: ubuntu-latest
@@ -321,15 +305,11 @@ jobs:
         path: /tmp/ktf-diag*
         if-no-files-found: ignore
 
-    - name: Upload test results to BuildPulse for flaky test detection
-      if: '!cancelled()' # Run this step even when the tests fail. Skip if the workflow is cancelled.
-      uses: Workshop64/buildpulse-action@main
+    - name: collect test report
+      uses: actions/upload-artifact@v3
       with:
-        account: 962416
-        repository: 127765544
+        name: tests-report
         path: integration-tests-feature-gates.xml
-        key: ${{ secrets.BUILDPULSE_ACCESS_KEY_ID }}
-        secret: ${{ secrets.BUILDPULSE_SECRET_ACCESS_KEY }}
 
   conformance-tests:
     runs-on: ubuntu-latest
@@ -358,15 +338,11 @@ jobs:
       env:
         GOTESTSUM_JUNITFILE: "conformance-tests.xml"
 
-    - name: Upload test results to BuildPulse for flaky test detection
-      if: '!cancelled()' # Run this step even when the tests fail. Skip if the workflow is cancelled.
-      uses: Workshop64/buildpulse-action@main
+    - name: collect test report
+      uses: actions/upload-artifact@v3
       with:
-        account: 962416
-        repository: 127765544
+        name: tests-report
         path: conformance-tests.xml
-        key: ${{ secrets.BUILDPULSE_ACCESS_KEY_ID }}
-        secret: ${{ secrets.BUILDPULSE_SECRET_ACCESS_KEY }}
 
   coverage:
     environment: "Configure ci"
@@ -394,3 +370,32 @@ jobs:
         directory: ${{steps.download-coverage.outputs.download-path}}
         fail_ci_if_error: true
         verbose: true
+
+  buildpulse-report:
+    environment: "Configure ci"
+    needs:
+      - "unit-tests"
+      - "integration-tests-dbless"
+      - "integration-tests-postgres"
+      - "integration-tests-enterprise-postgres"
+      - "integration-tests-feature-gates"
+      - "conformance-tests"
+    runs-on: ubuntu-latest
+    steps:
+
+      - name: collect tests report
+        id: download-coverage
+        uses: actions/download-artifact@v3
+        with:
+          name: tests-report
+          path: report
+
+      - name: Upload test results to BuildPulse for flaky test detection
+        if: '!cancelled()' # Run this step even when the tests fail. Skip if the workflow is cancelled.
+        uses: Workshop64/buildpulse-action@main
+        with:
+          account: 962416
+          repository: 127765544
+          path: report/*.xml
+          key: ${{ secrets.BUILDPULSE_ACCESS_KEY_ID }}
+          secret: ${{ secrets.BUILDPULSE_SECRET_ACCESS_KEY }}

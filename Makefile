@@ -217,7 +217,7 @@ INTEGRATION_TEST_TIMEOUT ?= "45m"
 E2E_TEST_TIMEOUT ?= "45m"
 KONG_CONTROLLER_FEATURE_GATES ?= GatewayAlpha=true
 GOTESTFMT_CMD ?= $(GOTESTFMT) -hide successful-downloads,empty-packages -showteststatus
-GOTESTSUM_CMD ?= $(GOTESTSUM) --
+GOTESTSUM_CMD ?= $(GOTESTSUM) --format=standard-verbose --
 
 .PHONY: test
 test: test.unit

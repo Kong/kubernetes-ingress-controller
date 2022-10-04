@@ -242,7 +242,7 @@ test.integration: test.integration.dbless test.integration.postgres test.integra
 test.integration.enterprise: test.integration.enterprise.postgres
 
 .PHONY: _test.unit
-_test.unit:
+_test.unit: gotestsum
 	$(GOTESTSUM_CMD) -race $(GOTESTFLAGS) \
 		-covermode=atomic \
 		-coverpkg=$(PKG_LIST) \
@@ -263,7 +263,7 @@ _check.container.environment:
 	@./scripts/check-container-environment.sh
 
 .PHONY: _test.integration
-_test.integration: _check.container.environment
+_test.integration: _check.container.environment gotestsum
 	TEST_DATABASE_MODE="$(DBMODE)" \
 		GOFLAGS="-tags=integration_tests" \
 		KONG_CONTROLLER_FEATURE_GATES=$(KONG_CONTROLLER_FEATURE_GATES) \
@@ -322,7 +322,7 @@ test.integration.enterprise.postgres.pretty:
 		$(GOTESTFMT_CMD)
 
 .PHONY: test.integration.cp
-_test.integration.cp:
+_test.integration.cp: gotestsum
 	CLUSTER_NAME="e2e-$(uuidgen)" \
 		KUBERNETES_CLUSTER_NAME="${CLUSTER_NAME}" go run hack/e2e/cluster/deploy/main.go \
 		GOFLAGS="-tags=integration_tests" \
@@ -343,7 +343,7 @@ test.integration.kind:
 		CP="kind"
 
 .PHONY: test.e2e
-test.e2e:
+test.e2e: gotestsum
 	GOFLAGS="-tags=e2e_tests" $(GOTESTSUM_CMD) $(GOTESTFLAGS) \
 		-race \
 		-parallel $(NCPU) \
@@ -351,7 +351,7 @@ test.e2e:
 		./test/e2e/...
 
 .PHONY: test.istio
-test.istio:
+test.istio: gotestsum
 	ISTIO_TEST_ENABLED="true" \
 	GOFLAGS="-tags=istio_tests" $(GOTESTSUM_CMD) $(GOTESTFLAGS) \
 		-race \

@@ -24,7 +24,7 @@ func NewCRDCondition(gvr schema.GroupVersionResource, enabled bool, restMapper m
 		toggleEnabled: enabled,
 		gvr:           gvr,
 		restMapper:    restMapper,
-		log: ctrl.Log.WithName("crd_controller_condition").
+		log: ctrl.Log.WithName("controllers").WithName("crdCondition").
 			WithValues("group", gvr.Group, "version", gvr.Version, "resource", gvr.Resource),
 	}
 }

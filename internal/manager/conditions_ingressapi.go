@@ -21,8 +21,8 @@ const (
 	ExtensionsV1beta1 IngressAPI = iota
 )
 
-// IngressControllerConditions negotiate the best Ingress API version supported by both KIC and the k8s apiserver and
-// provide functions to determine if particular controllers should be enabled.
+// IngressControllerConditions negotiates the best Ingress API version supported by both KIC and the k8s apiserver and
+// provides functions to determine if particular controllers should be enabled.
 type IngressControllerConditions struct {
 	chosenVersion IngressAPI
 	cfg           *Config

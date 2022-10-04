@@ -720,8 +720,7 @@ func TestMissingCRDsDontCrashTheController(t *testing.T) {
 	}
 	cluster, err := clusterBuilder.Build(ctx)
 	require.NoError(t, err)
-	var addons []clusters.Addon
-	addons = append(addons, metallb.New())
+	addons := []clusters.Addon{metallb.New()}
 
 	if b, err := loadimage.NewBuilder().WithImage(imageLoad); err == nil {
 		addons = append(addons, b.Build())

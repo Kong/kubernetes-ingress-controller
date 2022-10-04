@@ -380,6 +380,7 @@ jobs:
       - "integration-tests-enterprise-postgres"
       - "integration-tests-feature-gates"
       - "conformance-tests"
+    if: ${{ always() }}
     runs-on: ubuntu-latest
     steps:
 
@@ -391,7 +392,7 @@ jobs:
           path: report
 
       - name: Upload test results to BuildPulse for flaky test detection
-        if: '!cancelled()' # Run this step even when the tests fail. Skip if the workflow is cancelled.
+        if: ${{ !cancelled() && github.ref == 'refs/heads/main' }}
         uses: Workshop64/buildpulse-action@main
         with:
           account: 962416

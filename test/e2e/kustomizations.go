@@ -48,7 +48,7 @@ func patchControllerImage(baseManifestReader io.Reader, image, tag string) (io.R
 	return kubectl.GetKustomizedManifest(kustomization, baseManifestReader)
 }
 
-// patchKongImage replaces the kong and kong/kong-gateway images in a manifest with the provide image and tag,
+// patchKongImage replaces the kong and kong/kong-gateway images in a manifest with the provided image and tag,
 // and returns the modified manifest.
 func patchKongImage(baseManifestReader io.Reader, image, tag string) (io.Reader, error) {
 	kustomization := types.Kustomization{

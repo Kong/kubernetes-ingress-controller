@@ -179,7 +179,7 @@ func getTestManifest(t *testing.T, baseManifestPath string) (io.Reader, error) {
 		return manifestsReader, nil
 	}
 
-	manifestsReader, err = patchLivenessProbes(manifestsReader, 1, 15, 3, 10)
+	manifestsReader, err = patchLivenessProbes(manifestsReader, 1, 15, time.Second*3, time.Second*10)
 	if err != nil {
 		t.Logf("failed patching controller liveness (%v), using default manifest %v", err, baseManifestPath)
 		return manifestsReader, nil

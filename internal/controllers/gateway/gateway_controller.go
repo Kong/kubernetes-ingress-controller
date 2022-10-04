@@ -25,6 +25,7 @@ import (
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 )
 
 // -----------------------------------------------------------------------------
@@ -72,6 +73,7 @@ func (r *GatewayReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		LogConstructor: func(_ *reconcile.Request) logr.Logger {
 			return r.Log
 		},
+		CacheSyncTimeout: util.ControllersCacheSyncTimeout(),
 	})
 	if err != nil {
 		return err

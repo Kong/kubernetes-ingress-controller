@@ -54,6 +54,7 @@ func (r *Knativev1alpha1IngressReconciler) SetupWithManager(mgr ctrl.Manager) er
 		LogConstructor: func(_ *reconcile.Request) logr.Logger {
 			return r.Log
 		},
+		CacheSyncTimeout: util.ControllersCacheSyncTimeout(),
 	})
 	if err != nil {
 		return err

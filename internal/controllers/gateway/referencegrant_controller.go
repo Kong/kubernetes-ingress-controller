@@ -19,6 +19,8 @@ package gateway
 import (
 	"context"
 
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
+
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -51,6 +53,7 @@ func (r *ReferenceGrantReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		LogConstructor: func(_ *reconcile.Request) logr.Logger {
 			return r.Log
 		},
+		CacheSyncTimeout: util.ControllersCacheSyncTimeout(),
 	})
 	if err != nil {
 		return err

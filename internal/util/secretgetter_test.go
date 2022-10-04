@@ -1,6 +1,7 @@
 package util
 
 import (
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -37,4 +38,11 @@ func TestSecretGetter(t *testing.T) {
 
 	_, err = secretGetter.GetSecret("default", "valid-secret-old")
 	assert.Error(t, err)
+}
+
+func TestDD(t *testing.T) {
+	os.Setenv("TEST_KONG_CONTROLLERS_CACHE_SYNC_TIMEOUT", "5s")
+	r := ControllersCacheSyncTimeout()
+
+	t.Log(r)
 }

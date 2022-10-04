@@ -51,6 +51,7 @@ func (r *HTTPRouteReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		LogConstructor: func(_ *reconcile.Request) logr.Logger {
 			return r.Log
 		},
+		CacheSyncTimeout: util.ControllersCacheSyncTimeout(),
 	})
 	if err != nil {
 		return err

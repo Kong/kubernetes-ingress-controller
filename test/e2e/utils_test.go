@@ -453,19 +453,26 @@ func stripCRDs(t *testing.T, manifest io.Reader) io.Reader {
 	return bytes.NewReader(outBytes)
 }
 
-// requireContainerDidntCrash verifies that a container with a given containerName did not restart.
-// In case name=containerName is not found in pod's containers, it fails.
-func requireContainerDidntCrash(t *testing.T, pod corev1.Pod, containerName string) {
+// containerDidntCrash evaluates whether a container with a given containerName did not restart.
+// In case name=containerName is not found in pod's containers, returns false.
+func containerDidntCrash(pod corev1.Pod, containerName string) bool {
 	for _, containerStatus := range pod.Status.ContainerStatuses {
 		if containerStatus.Name == containerName {
 			if containerStatus.RestartCount != 0 {
-				t.Error("container crashed at least once")
-				return
+				return false
 			}
-
-			return
+			return true
 		}
 	}
+	return false
+}
 
-	t.Error("container not found")
+// isPodReady evaluates whether a pod is in Ready state.
+func isPodReady(pod corev1.Pod) bool {
+	for _, condition := range pod.Status.Conditions {
+		if condition.Type == corev1.PodReady {
+			return condition.Status == corev1.ConditionTrue
+		}
+	}
+	return false
 }

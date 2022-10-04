@@ -735,10 +735,10 @@ func TestMissingCRDsDontCrashTheController(t *testing.T) {
 	defer func() {
 		if t.Failed() {
 			output, err := cleaner.DumpDiagnostics(ctx, t.Name())
-			t.Logf("%s failed, dumped diagnostics to %s", t.Name(), output)
-			assert.NoError(t, err)
+			if assert.NoError(t, err, "failed to dump diagnostics") {
+				t.Logf("%s failed, dumped diagnostics to %s", t.Name(), output)
+			}
 		}
-		assert.NoError(t, cleaner.Cleanup(ctx))
 		assert.NoError(t, cluster.Cleanup(ctx))
 	}()
 

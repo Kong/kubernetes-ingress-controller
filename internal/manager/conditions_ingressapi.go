@@ -15,10 +15,10 @@ import (
 type IngressAPI int
 
 const (
-	OtherAPI          IngressAPI = iota
-	NetworkingV1      IngressAPI = iota
-	NetworkingV1beta1 IngressAPI = iota
-	ExtensionsV1beta1 IngressAPI = iota
+	OtherAPI IngressAPI = iota
+	NetworkingV1
+	NetworkingV1beta1
+	ExtensionsV1beta1
 )
 
 // IngressControllerConditions negotiates the best Ingress API version supported by both KIC and the k8s apiserver and

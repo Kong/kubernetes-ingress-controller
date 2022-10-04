@@ -364,7 +364,7 @@ func TestDeployAllInOneDBLESSGateway(t *testing.T) {
 				t.Logf("failed to get logs of pods %s/%s, error %v", pod.Namespace, pod.Name, err)
 				return false
 			}
-			if !strings.Contains(logs, "Disabling the 'gateways' controller due to missing CRD installation") {
+			if !strings.Contains(logs, "disabling the 'gateways' controller due to missing CRD installation") {
 				return false
 			}
 		}
@@ -778,7 +778,7 @@ func TestMissingCRDsDontCrashTheController(t *testing.T) {
 			"httproutes",
 		}
 		for _, resource := range resources {
-			if !strings.Contains(logs, fmt.Sprintf("Disabling the '%s' controller due to missing CRD installation", resource)) {
+			if !strings.Contains(logs, fmt.Sprintf("disabling the '%s' controller due to missing CRD installation", resource)) {
 				return false
 			}
 		}

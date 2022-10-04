@@ -14,11 +14,6 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/manager"
 )
 
-type ingressTestOpts struct {
-	enabled      bool
-	crdInstalled bool
-}
-
 func TestIngressControllerConditions(t *testing.T) {
 	const kind = "Ingress"
 	var (
@@ -38,6 +33,11 @@ func TestIngressControllerConditions(t *testing.T) {
 			Resource: "ingresses",
 		}
 	)
+
+	type ingressTestOpts struct {
+		enabled      bool
+		crdInstalled bool
+	}
 
 	testCases := []struct {
 		name string
@@ -97,10 +97,7 @@ func TestIngressControllerConditions(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
-
 			restMapper := meta.NewDefaultRESTMapper(nil)
 			if tc.ingressNetV1.crdInstalled || tc.ingressClassNetV1.crdInstalled {
 				restMapper.Add(schema.GroupVersionKind{

@@ -98,6 +98,8 @@ jobs:
         fetch-depth: 0
 
     - name: run unit tests
+      env:
+        GOTESTSUM_JUNIT: unit-tests.xml
       run: make test.unit
 
     - name: collect test coverage
@@ -105,6 +107,16 @@ jobs:
       with:
         name: coverage
         path: coverage.unit.out
+
+    - name: Upload test results to BuildPulse for flaky test detection
+      if: '!cancelled()' # Run this step even when the tests fail. Skip if the workflow is cancelled.
+      uses: Workshop64/buildpulse-action@main
+      with:
+        account: 962416
+        repository: 127765544
+        path: unit-tests.xml
+        key: ${{ secrets.BUILDPULSE_ACCESS_KEY_ID }}
+        secret: ${{ secrets.BUILDPULSE_SECRET_ACCESS_KEY }}
 
   integration-tests-enterprise-postgres:
     environment: "Configure ci"

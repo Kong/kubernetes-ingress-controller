@@ -32,7 +32,7 @@ func NewCRDCondition(gvr schema.GroupVersionResource, enabled bool, restMapper m
 func (c CRDControllerCondition) Enabled() bool {
 	if c.toggleEnabled {
 		if !utils.CRDExists(c.restMapper, c.gvr) {
-			c.log.Info(fmt.Sprintf("Disabling the '%s' controller due to missing CRD installation", c.gvr.Resource))
+			c.log.Info(fmt.Sprintf("disabling the '%s' controller due to missing CRD installation", c.gvr.Resource))
 			return false
 		}
 

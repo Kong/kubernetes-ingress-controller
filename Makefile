@@ -210,6 +210,7 @@ PKG_LIST = ./pkg/...,./internal/...
 KIND_CLUSTER_NAME ?= "integration-tests"
 INTEGRATION_TEST_TIMEOUT ?= "45m"
 E2E_TEST_TIMEOUT ?= "45m"
+E2E_TEST_RUN ?= ""
 KONG_CONTROLLER_FEATURE_GATES ?= GatewayAlpha=true
 GOTESTFMT_CMD ?= $(GOTESTFMT) -hide successful-downloads,empty-packages -showteststatus
 
@@ -338,6 +339,7 @@ test.integration.kind:
 test.e2e:
 	GOFLAGS="-tags=e2e_tests" go test -v $(GOTESTFLAGS) \
 		-race \
+		-run $(E2E_TEST_RUN) \
 		-parallel $(NCPU) \
 		-timeout $(E2E_TEST_TIMEOUT) \
 		./test/e2e/...

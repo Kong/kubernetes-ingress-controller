@@ -226,7 +226,7 @@ test: test.unit
 test.all: test.unit test.integration test.conformance
 
 .PHONY: test.conformance
-test.conformance:
+test.conformance: gotestsum
 	@./scripts/check-container-environment.sh
 	@TEST_DATABASE_MODE="off" GOFLAGS="-tags=conformance_tests" \
 	$(GOTESTSUM_CMD) -race \

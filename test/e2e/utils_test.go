@@ -494,10 +494,7 @@ func stripCRDs(t *testing.T, manifest io.Reader) io.Reader {
 func containerDidntCrash(pod corev1.Pod, containerName string) bool {
 	for _, containerStatus := range pod.Status.ContainerStatuses {
 		if containerStatus.Name == containerName {
-			if containerStatus.RestartCount != 0 {
-				return false
-			}
-			return true
+			return containerStatus.RestartCount == 0
 		}
 	}
 	return false

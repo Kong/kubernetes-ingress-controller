@@ -67,10 +67,10 @@ Adding a new version? You'll need three changes:
 
 ### Fixed
 
-- When the KongState is built, if there are Kubernetes services that have
-  inconsistent annotations, an error message is logged and the service
-  is skipped, instead of breaking the whole configuration.
-  [#2942](https://github.com/Kong/kubernetes-ingress-controller/pull/2988)
+- The controller now logs an error for and skips multi-Service rules that have
+  inconsistent Service annotations. Previously this issue prevented the
+  controller from applying configuration until corrected.
+  [#2988](https://github.com/Kong/kubernetes-ingress-controller/pull/2988)
 
 ## [2.7.0]
 

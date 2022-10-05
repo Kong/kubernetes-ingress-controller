@@ -40,8 +40,8 @@ func mergeIngressRules(objs ...ingressRules) ingressRules {
 	return result
 }
 
-// populateServices populate the ServiceNameToServices map with additional information
-// and return a map of services to be skipped.
+// populateServices populates the ServiceNameToServices map with additional information
+// and returns a map of services to be skipped.
 func (ir *ingressRules) populateServices(log logrus.FieldLogger, s store.Storer) map[string]interface{} {
 	serviceNamesToSkip := make(map[string]interface{})
 

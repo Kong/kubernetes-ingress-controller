@@ -211,7 +211,7 @@ KIND_CLUSTER_NAME ?= "integration-tests"
 INTEGRATION_TEST_TIMEOUT ?= "45m"
 E2E_TEST_TIMEOUT ?= "45m"
 KONG_CONTROLLER_FEATURE_GATES ?= GatewayAlpha=true
-export GOTESTSUM_FORMAT=standard-verbose
+GOTESTSUM_FORMAT ?= standard-verbose
 
 .PHONY: test
 test: test.unit
@@ -223,6 +223,7 @@ test.all: test.unit test.integration test.conformance
 test.conformance: gotestsum
 	@./scripts/check-container-environment.sh
 	@TEST_DATABASE_MODE="off" GOFLAGS="-tags=conformance_tests" \
+	GOTESTSUM_FORMAT=$(GOTESTSUM_FORMAT) \
 	$(GOTESTSUM) -- -race \
 		-timeout $(INTEGRATION_TEST_TIMEOUT) \
 		-parallel $(NCPU) \
@@ -237,6 +238,7 @@ test.integration.enterprise: test.integration.enterprise.postgres
 
 .PHONY: _test.unit
 _test.unit: gotestsum
+	GOTESTSUM_FORMAT=$(GOTESTSUM_FORMAT) \
 	$(GOTESTSUM) -- -race $(GOTESTFLAGS) \
 		-covermode=atomic \
 		-coverpkg=$(PKG_LIST) \
@@ -261,6 +263,7 @@ _test.integration: _check.container.environment gotestsum
 	TEST_DATABASE_MODE="$(DBMODE)" \
 		GOFLAGS="-tags=integration_tests" \
 		KONG_CONTROLLER_FEATURE_GATES=$(KONG_CONTROLLER_FEATURE_GATES) \
+		GOTESTSUM_FORMAT=$(GOTESTSUM_FORMAT) \
 		$(GOTESTSUM) -- $(GOTESTFLAGS) \
 		-timeout $(INTEGRATION_TEST_TIMEOUT) \
 		-parallel $(NCPU) \
@@ -318,6 +321,7 @@ _test.integration.cp: gotestsum
 		KUBERNETES_CLUSTER_NAME="${CLUSTER_NAME}" go run hack/e2e/cluster/deploy/main.go \
 		GOFLAGS="-tags=integration_tests" \
 		KONG_TEST_CLUSTER="${CP}:${CLUSTER_NAME}" \
+		GOTESTSUM_FORMAT=$(GOTESTSUM_FORMAT) \
 		$(GOTESTSUM) -- -parallel "${NCPU}" -timeout $(INTEGRATION_TEST_TIMEOUT) \
 		./test/integration/... \
     	go run hack/e2e/cluster/cleanup/main.go ${CLUSTER_NAME} \
@@ -335,7 +339,9 @@ test.integration.kind:
 
 .PHONY: test.e2e
 test.e2e: gotestsum
-	GOFLAGS="-tags=e2e_tests" $(GOTESTSUM) -- $(GOTESTFLAGS) \
+	GOFLAGS="-tags=e2e_tests" \
+	GOTESTSUM_FORMAT=$(GOTESTSUM_FORMAT) \
+	$(GOTESTSUM) -- $(GOTESTFLAGS) \
 		-race \
 		-parallel $(NCPU) \
 		-timeout $(E2E_TEST_TIMEOUT) \
@@ -344,6 +350,7 @@ test.e2e: gotestsum
 .PHONY: test.istio
 test.istio: gotestsum
 	ISTIO_TEST_ENABLED="true" \
+	GOTESTSUM_FORMAT=$(GOTESTSUM_FORMAT) \
 	GOFLAGS="-tags=istio_tests" $(GOTESTSUM) -- $(GOTESTFLAGS) \
 		-race \
 		-parallel $(NCPU) \

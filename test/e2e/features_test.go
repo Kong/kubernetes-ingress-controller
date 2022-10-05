@@ -778,7 +778,6 @@ func TestMissingCRDsDontCrashTheController(t *testing.T) {
 	}, cacheSyncTimeout+time.Second*5, time.Second)
 
 	t.Log("waiting for pod to output required logs")
-	var podName string
 	require.Eventually(t, func() bool {
 		pods, err := env.Cluster().Client().CoreV1().Pods(deployment.Namespace).List(ctx, metav1.ListOptions{
 			LabelSelector: fmt.Sprintf("app=%s", deployment.Name),
@@ -787,7 +786,7 @@ func TestMissingCRDsDontCrashTheController(t *testing.T) {
 			return false
 		}
 
-		podName = pods.Items[0].Name
+		podName := pods.Items[0].Name
 		logs, err := getPodLogs(ctx, t, env, deployment.Namespace, podName)
 		if err != nil {
 			return false

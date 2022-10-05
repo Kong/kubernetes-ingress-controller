@@ -64,7 +64,7 @@ jobs:
       uses: actions/upload-artifact@v3
       with:
         name: tests-report
-        path: e2e-tests.xml
+        path: e2e-${{ matrix.kubernetes-version }}-tests.xml
 
   istio-tests:
     environment: "Configure ci"
@@ -128,7 +128,7 @@ jobs:
       uses: actions/upload-artifact@v3
       with:
         name: tests-report
-        path: istio-tests.xml
+        path: istio-${{ matrix.kubernetes-version }}-${{ matrix.istio-version }}-tests.xml
 
   buildpulse-report:
     environment: "Configure ci"

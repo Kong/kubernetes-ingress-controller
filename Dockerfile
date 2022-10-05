@@ -1,6 +1,6 @@
 ### Standard binary
 # Build the manager binary
-FROM golang:1.19.1 as builder
+FROM golang:1.19.2 as builder
 
 ARG TARGETPLATFORM
 ARG TARGETOS
@@ -34,7 +34,7 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH="${TARGETARCH}" GO111MODULE=on go build -a -
 ### FIPS 140-2 binary
 # Build the manager binary
 # https://github.com/golang/go/tree/dev.boringcrypto/misc/boring#building-from-docker
-FROM us-docker.pkg.dev/google.com/api-project-999119582588/go-boringcrypto/golang:1.18.6b7 as builder-fips
+FROM us-docker.pkg.dev/google.com/api-project-999119582588/go-boringcrypto/golang:1.18.7b7 as builder-fips
 
 ARG TARGETPLATFORM
 ARG TARGETOS
@@ -75,7 +75,7 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH="${TARGETARCH}" GO111MODULE=on go build -a -
 
 ### Debug
 # Create an image that runs a debug build with a Delve remote server on port 2345
-FROM golang:1.19.1 AS debug
+FROM golang:1.19.2 AS debug
 RUN go install github.com/go-delve/delve/cmd/dlv@latest
 # We want all source so Delve file location operations work
 COPY --from=builder-delve /workspace/ /workspace/

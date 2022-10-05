@@ -50,6 +50,7 @@ jobs:
         KONG_CLUSTER_VERSION: ${{ matrix.kubernetes-version }}
         NCPU: 1 # it was found that github actions (specifically) did not seem to perform well when spawning
                 # multiple kind clusters within a single job, so only 1 is allowed at a time.
+        GOTESTSUM_JUNITFILE: "e2e-${{ matrix.kubernetes-version }}-tests.xml"
 
     - name: upload diagnostics
       if: ${{ always() }}
@@ -58,6 +59,12 @@ jobs:
         name: diagnostics-e2e-tests
         path: /tmp/ktf-diag*
         if-no-files-found: ignore
+
+    - name: collect test report
+      uses: actions/upload-artifact@v3
+      with:
+        name: tests-report
+        path: e2e-tests.xml
 
   istio-tests:
     environment: "Configure ci"
@@ -107,6 +114,7 @@ jobs:
         ISTIO_VERSION: ${{ matrix.istio-version }}
         NCPU: 1 # it was found that github actions (specifically) did not seem to perform well when spawning
                 # multiple kind clusters within a single job, so only 1 is allowed at a time.
+        GOTESTSUM_JUNITFILE: "istio-${{ matrix.kubernetes-version }}-${{ matrix.istio-version }}-tests.xml"
 
     - name: upload diagnostics
       if: ${{ always() }}
@@ -115,3 +123,40 @@ jobs:
         name: diagnostics-e2e-tests
         path: /tmp/ktf-diag*
         if-no-files-found: ignore
+
+    - name: collect test report
+      uses: actions/upload-artifact@v3
+      with:
+        name: tests-report
+        path: istio-tests.xml
+
+  buildpulse-report:
+    environment: "Configure ci"
+    needs:
+      - "e2e-tests"
+      - "istio-tests"
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    steps:
+
+      - name: checkout repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: download tests report
+        id: download-coverage
+        uses: actions/download-artifact@v3
+        with:
+          name: tests-report
+          path: report
+
+      - name: Upload test results to BuildPulse for flaky test detection
+        if: ${{ !cancelled() }}
+        uses: Workshop64/buildpulse-action@main
+        with:
+          account: 962416
+          repository: 127765544
+          path: report/*.xml
+          key: ${{ secrets.BUILDPULSE_ACCESS_KEY_ID }}
+          secret: ${{ secrets.BUILDPULSE_SECRET_ACCESS_KEY }}

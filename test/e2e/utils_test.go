@@ -12,7 +12,6 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"sort"
 	"strings"
 	"testing"
@@ -28,8 +27,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"sigs.k8s.io/kustomize/api/krusty"
-	"sigs.k8s.io/kustomize/kyaml/filesys"
 )
 
 var (
@@ -171,132 +168,26 @@ func getTestManifest(t *testing.T, baseManifestPath string) (io.Reader, error) {
 		}
 	}
 
-	t.Logf("using modified %v manifest", baseManifestPath)
+	manifestsReader, err = patchControllerStartTimeout(manifestsReader, 120, time.Second*3)
+	if err != nil {
+		t.Logf("failed patching controller timeouts (%v), using default manifest %v", err, baseManifestPath)
+		return manifestsReader, nil
+	}
 
-	// patch kong image.
+	manifestsReader, err = patchLivenessProbes(manifestsReader, 0, 10, time.Second*15, time.Second*3)
+	if err != nil {
+		t.Logf("failed patching kong liveness (%v), using default manifest %v", err, baseManifestPath)
+		return manifestsReader, nil
+	}
+
+	manifestsReader, err = patchLivenessProbes(manifestsReader, 1, 15, time.Second*3, time.Second*10)
+	if err != nil {
+		t.Logf("failed patching controller liveness (%v), using default manifest %v", err, baseManifestPath)
+		return manifestsReader, nil
+	}
+
+	t.Logf("generated modified manifest at %v", baseManifestPath)
 	return manifestsReader, nil
-}
-
-const imageKustomizationContents = `resources:
-- base.yaml
-images:
-- name: kong/kubernetes-ingress-controller
-  newName: %v
-  newTag: '%v'
-`
-
-// patchControllerImage takes a manifest, image, and tag and runs kustomize to replace the
-// kong/kubernetes-ingress-controller image with the provided image. It returns the location of kustomize's output.
-func patchControllerImage(baseManifestReader io.Reader, image string, tag string) (io.Reader, error) {
-	workDir, err := os.MkdirTemp("", "kictest.")
-	if err != nil {
-		return nil, err
-	}
-	defer os.RemoveAll(workDir)
-	orig, err := io.ReadAll(baseManifestReader)
-	if err != nil {
-		return nil, err
-	}
-	err = os.WriteFile(filepath.Join(workDir, "base.yaml"), orig, 0o600)
-	if err != nil {
-		return nil, err
-	}
-	kustomization := []byte(fmt.Sprintf(imageKustomizationContents, image, tag))
-	err = os.WriteFile(filepath.Join(workDir, "kustomization.yaml"), kustomization, 0o600)
-	if err != nil {
-		return nil, err
-	}
-
-	kustomized, err := kustomizeManifest(workDir)
-	if err != nil {
-		return nil, err
-	}
-	return bytes.NewReader(kustomized), nil
-}
-
-const kongImageKustomizationContents = `resources:
-- base.yaml
-images:
-- name: kong
-  newName: %v
-  newTag: '%v'
-- name: kong/kong-gateway
-  newName: %v
-  newTag: '%v'
-`
-
-func patchKongImage(baseManifestsReader io.Reader, image string, tag string) (io.Reader, error) {
-	workDir, err := os.MkdirTemp("", "kictest.")
-	if err != nil {
-		return nil, err
-	}
-	defer os.RemoveAll(workDir)
-	orig, err := io.ReadAll(baseManifestsReader)
-	if err != nil {
-		return nil, err
-	}
-
-	err = os.WriteFile(filepath.Join(workDir, "base.yaml"), orig, 0o600)
-	if err != nil {
-		return nil, err
-	}
-
-	kustomization := []byte(fmt.Sprintf(kongImageKustomizationContents, image, tag, image, tag))
-	err = os.WriteFile(filepath.Join(workDir, "kustomization.yaml"), kustomization, 0o600)
-	if err != nil {
-		return nil, err
-	}
-	kustomized, err := kustomizeManifest(workDir)
-	if err != nil {
-		return nil, err
-	}
-	return bytes.NewReader(kustomized), nil
-}
-
-const addControllerEnvKustomizationContents = `resources:
-- base.yaml
-patches:
-- patch: |-
-    - op: add
-      path: "/spec/template/spec/containers/1/env/-"
-      value:
-        name: %s
-        value: "%s"
-  target:
-    kind: Deployment
-    name: ingress-kong
-`
-
-// addControllerEnv adds an environment variable to ingress-controller container.
-func addControllerEnv(t *testing.T, baseManifestReader io.Reader, envName, value string) io.Reader {
-	workDir, err := os.MkdirTemp("", "kictest.")
-	require.NoError(t, err)
-	defer os.RemoveAll(workDir)
-
-	orig, err := io.ReadAll(baseManifestReader)
-	require.NoError(t, err)
-
-	err = os.WriteFile(filepath.Join(workDir, "base.yaml"), orig, 0o600)
-	require.NoError(t, err)
-
-	kustomization := []byte(fmt.Sprintf(addControllerEnvKustomizationContents, envName, value))
-	err = os.WriteFile(filepath.Join(workDir, "kustomization.yaml"), kustomization, 0o600)
-	require.NoError(t, err)
-
-	kustomized, err := kustomizeManifest(workDir)
-	require.NoError(t, err)
-
-	return bytes.NewReader(kustomized)
-}
-
-// kustomizeManifest runs kustomize on a path and returns the YAML output.
-func kustomizeManifest(path string) ([]byte, error) {
-	k := krusty.MakeKustomizer(krusty.MakeDefaultOptions())
-	m, err := k.Run(filesys.MakeFsOnDisk(), path)
-	if err != nil {
-		return []byte{}, err
-	}
-	return m.AsYaml()
 }
 
 func getCurrentGitTag(path string) (semver.Version, error) {

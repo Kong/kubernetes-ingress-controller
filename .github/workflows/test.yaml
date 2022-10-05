@@ -99,12 +99,20 @@ jobs:
 
     - name: run unit tests
       run: make test.unit
+      env:
+        GOTESTSUM_JUNITFILE: "unit-tests.xml"
 
     - name: collect test coverage
       uses: actions/upload-artifact@v3
       with:
         name: coverage
         path: coverage.unit.out
+
+    - name: collect test report
+      uses: actions/upload-artifact@v3
+      with:
+        name: tests-report
+        path: unit-tests.xml
 
   integration-tests-enterprise-postgres:
     environment: "Configure ci"
@@ -139,6 +147,7 @@ jobs:
       run: make test.integration.enterprise.postgres
       env:
         KONG_LICENSE_DATA: ${{ steps.license.outputs.license }}
+        GOTESTSUM_JUNITFILE: "integration-tests-enterprise-postgres.xml"
 
     - name: collect test coverage
       uses: actions/upload-artifact@v3
@@ -153,6 +162,12 @@ jobs:
         name: diagnostics-integration-tests-enterprise-postgres
         path: /tmp/ktf-diag*
         if-no-files-found: ignore
+
+    - name: collect test report
+      uses: actions/upload-artifact@v3
+      with:
+        name: tests-report
+        path: integration-tests-enterprise-postgres.xml
 
   integration-tests-dbless:
     runs-on: ubuntu-latest
@@ -178,6 +193,8 @@ jobs:
 
     - name: run integration tests
       run: make test.integration.dbless
+      env:
+        GOTESTSUM_JUNITFILE: "integration-tests-dbless.xml"
 
     - name: collect test coverage
       uses: actions/upload-artifact@v3
@@ -192,6 +209,12 @@ jobs:
         name: diagnostics-integration-tests-dbless
         path: /tmp/ktf-diag*
         if-no-files-found: ignore
+
+    - name: collect test report
+      uses: actions/upload-artifact@v3
+      with:
+        name: tests-report
+        path: integration-tests-dbless.xml
 
   integration-tests-postgres:
     runs-on: ubuntu-latest
@@ -217,6 +240,8 @@ jobs:
 
     - name: run integration tests
       run: make test.integration.postgres
+      env:
+        GOTESTSUM_JUNITFILE: "integration-tests-postgres.xml"
 
     - name: collect test coverage
       uses: actions/upload-artifact@v3
@@ -231,6 +256,12 @@ jobs:
         name: diagnostics-integration-tests-postgres
         path: /tmp/ktf-diag*
         if-no-files-found: ignore
+
+    - name: collect test report
+      uses: actions/upload-artifact@v3
+      with:
+        name: tests-report
+        path: integration-tests-postgres.xml
 
   integration-tests-feature-gates:
     runs-on: ubuntu-latest
@@ -258,6 +289,7 @@ jobs:
       run: make test.integration.dbless
       env:
         KONG_CONTROLLER_FEATURE_GATES: "GatewayAlpha=true,CombinedRoutes=true"
+        GOTESTSUM_JUNITFILE: "integration-tests-feature-gates.xml"
 
     - name: collect test coverage
       uses: actions/upload-artifact@v3
@@ -272,6 +304,12 @@ jobs:
         name: diagnostics-integration-tests-feature-gates
         path: /tmp/ktf-diag*
         if-no-files-found: ignore
+
+    - name: collect test report
+      uses: actions/upload-artifact@v3
+      with:
+        name: tests-report
+        path: integration-tests-feature-gates.xml
 
   conformance-tests:
     runs-on: ubuntu-latest
@@ -297,6 +335,14 @@ jobs:
 
     - name: run conformance tests
       run: make test.conformance
+      env:
+        GOTESTSUM_JUNITFILE: "conformance-tests.xml"
+
+    - name: collect test report
+      uses: actions/upload-artifact@v3
+      with:
+        name: tests-report
+        path: conformance-tests.xml
 
   coverage:
     environment: "Configure ci"
@@ -324,3 +370,38 @@ jobs:
         directory: ${{steps.download-coverage.outputs.download-path}}
         fail_ci_if_error: true
         verbose: true
+
+  buildpulse-report:
+    environment: "Configure ci"
+    needs:
+      - "unit-tests"
+      - "integration-tests-dbless"
+      - "integration-tests-postgres"
+      - "integration-tests-enterprise-postgres"
+      - "integration-tests-feature-gates"
+      - "conformance-tests"
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    steps:
+
+      - name: checkout repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: download tests report
+        id: download-coverage
+        uses: actions/download-artifact@v3
+        with:
+          name: tests-report
+          path: report
+
+      - name: Upload test results to BuildPulse for flaky test detection
+        if: ${{ !cancelled() && github.ref == 'refs/heads/main' }}
+        uses: Workshop64/buildpulse-action@main
+        with:
+          account: 962416
+          repository: 127765544
+          path: report/*.xml
+          key: ${{ secrets.BUILDPULSE_ACCESS_KEY_ID }}
+          secret: ${{ secrets.BUILDPULSE_SECRET_ACCESS_KEY }}

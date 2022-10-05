@@ -173,8 +173,15 @@ jobs:
         with:
           fetch-depth: 0
       - name: Kubernetes ${{ matrix.kubernetes-version }} ${{ matrix.dbmode }} Integration Tests
-        run: TEST_KONG_CONTROLLER_IMAGE_OVERRIDE="kong/nightly-ingress-controller:nightly" KONG_CLUSTER_VERSION=${{ matrix.kubernetes-version }} make test.integration.${{ matrix.dbmode }}
-  # run integration tests in previous versions of kubernetes 
+        run: KONG_CLUSTER_VERSION=${{ matrix.kubernetes-version }} make test.integration.${{ matrix.dbmode }}
+        env:
+          GOTESTSUM_JUNITFILE: integration-${{ matrix.kubernetes-version }}-${{ matrix.dbmode }}-tests.xml
+      - name: collect test report
+        uses: actions/upload-artifact@v3
+        with:
+          name: tests-report
+          path: integration-${{ matrix.kubernetes-version }}-${{ matrix.dbmode }}-tests.xml
+  # run integration tests in previous versions of kubernetes
   test-previous-kubernetes-gke:
     name: Run integration tests on GKE
     environment: gcloud
@@ -207,10 +214,47 @@ jobs:
         with:
           fetch-depth: 0
       - name: test ${{ matrix.dbmode }} on GKE v1.${{ matrix.minor }}
-        run: make test.integration.gke
+        run: ./hack/e2e/run-tests.sh
         env:
           KUBERNETES_MAJOR_VERSION: 1
           KUBERNETES_MINOR_VERSION: ${{ matrix.minor }}
           GOOGLE_APPLICATION_CREDENTIALS: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}
           GOOGLE_PROJECT: ${{ secrets.GOOGLE_PROJECT }}
           GOOGLE_LOCATION: ${{ secrets.GOOGLE_LOCATION }}
+          GOTESTSUM_JUNITFILE: integration-${{ matrix.kubernetes-version }}-${{ matrix.dbmode }}-tests.xml
+      - name: collect test report
+        uses: actions/upload-artifact@v3
+        with:
+          name: tests-report
+          path: integration-${{ matrix.kubernetes-version }}-${{ matrix.dbmode }}-tests.xml
+
+  buildpulse-report:
+    environment: "Configure ci"
+    needs:
+      - "test-current-kubernetes"
+      - "test-previous-kubernetes-gke"
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    steps:
+
+      - name: checkout repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: download tests report
+        id: download-coverage
+        uses: actions/download-artifact@v3
+        with:
+          name: tests-report
+          path: report
+
+      - name: Upload test results to BuildPulse for flaky test detection
+        if: ${{ !cancelled() }}
+        uses: Workshop64/buildpulse-action@main
+        with:
+          account: 962416
+          repository: 127765544
+          path: report/*.xml
+          key: ${{ secrets.BUILDPULSE_ACCESS_KEY_ID }}
+          secret: ${{ secrets.BUILDPULSE_SECRET_ACCESS_KEY }}

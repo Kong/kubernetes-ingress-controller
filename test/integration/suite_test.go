@@ -217,6 +217,7 @@ func TestMain(m *testing.M) {
 			"--dump-config",
 			"--log-level=trace",
 			"--debug-log-reduce-redundancy",
+			"--anonymous-reports=false",
 			fmt.Sprintf("--feature-gates=%s", controllerFeatureGates),
 			fmt.Sprintf("--election-namespace=%s", kongAddon.Namespace()),
 		}

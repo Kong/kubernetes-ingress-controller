@@ -50,7 +50,7 @@ jobs:
         KONG_CLUSTER_VERSION: ${{ matrix.kubernetes-version }}
         NCPU: 1 # it was found that github actions (specifically) did not seem to perform well when spawning
                 # multiple kind clusters within a single job, so only 1 is allowed at a time.
-        GOTESTSUM_JUNITFILE: "e2e-tests.xml"
+        GOTESTSUM_JUNITFILE: "e2e-${{ matrix.kubernetes-version }}-tests.xml"
 
     - name: upload diagnostics
       if: ${{ always() }}
@@ -114,7 +114,7 @@ jobs:
         ISTIO_VERSION: ${{ matrix.istio-version }}
         NCPU: 1 # it was found that github actions (specifically) did not seem to perform well when spawning
                 # multiple kind clusters within a single job, so only 1 is allowed at a time.
-        GOTESTSUM_JUNITFILE: "istio-tests.xml"
+        GOTESTSUM_JUNITFILE: "istio-${{ matrix.kubernetes-version }}-${{ matrix.istio-version }}-tests.xml"
 
     - name: upload diagnostics
       if: ${{ always() }}

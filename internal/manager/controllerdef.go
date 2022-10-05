@@ -167,16 +167,15 @@ func setupControllers(
 		// Kong API Controllers
 		// ---------------------------------------------------------------------------
 		{
-			Enabled: true,
-			//NewCRDCondition(
-			//	schema.GroupVersionResource{
-			//		Group:    konghqcomv1beta1.GroupVersion.Group,
-			//		Version:  konghqcomv1beta1.GroupVersion.Version,
-			//		Resource: "udpingresses",
-			//	},
-			//	c.UDPIngressEnabled,
-			//	restMapper,
-			//).Enabled(),
+			Enabled: NewCRDCondition(
+				schema.GroupVersionResource{
+					Group:    konghqcomv1beta1.GroupVersion.Group,
+					Version:  konghqcomv1beta1.GroupVersion.Version,
+					Resource: "udpingresses",
+				},
+				c.UDPIngressEnabled,
+				restMapper,
+			).Enabled(),
 			Controller: &configuration.KongV1Beta1UDPIngressReconciler{
 				Client:                     mgr.GetClient(),
 				Log:                        ctrl.Log.WithName("controllers").WithName("UDPIngress"),

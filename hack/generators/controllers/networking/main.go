@@ -460,6 +460,7 @@ func (r *{{.PackageAlias}}{{.Kind}}Reconciler) SetupWithManager(mgr ctrl.Manager
 		LogConstructor: func(_ *reconcile.Request) logr.Logger {
 			return r.Log
 		},
+		CacheSyncTimeout: util.ControllersCacheSyncTimeout(),
 	})
 	if err != nil {
 		return err

@@ -2,12 +2,13 @@
 
 <!---
 Adding a new version? You'll need three changes:
-* Add the ToC link, like "[1.2.3](#123]".
+* Add the ToC link, like "[1.2.3](#123)".
 * Add the section header, like "## [1.2.3]".
 * Add the diff link, like "[2.7.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v1.2.2...v1.2.3".
   This is all the way at the bottom. It's the thing we always forget.
 --->
 
+ - [2.8.0](#280)
  - [2.7.0](#270)
  - [2.6.0](#260)
  - [2.5.0](#250)
@@ -59,6 +60,17 @@ Adding a new version? You'll need three changes:
  - [0.1.0](#010)
  - [0.0.5](#005)
  - [0.0.4 and prior](#004-and-prior)
+
+## [2.8.0]
+
+> Release date: TBD
+
+### Fixed
+
+- When the KongState is built, if there are Kubernetes service that have
+  inconsistent annotations, the an error message is logged and the service
+  is skipped, instead of breaking the whole configuration.
+  [#2942](https://github.com/Kong/kubernetes-ingress-controller/pull/2988)
 
 ## [2.7.0]
 
@@ -1991,6 +2003,7 @@ Please read the changelog and test in your environment.
  - The initial versions  were rapildy iterated to deliver
    a working ingress controller.
 
+[2.8.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.7.0...v2.8.0
 [2.7.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.6.0...v2.7.0
 [2.6.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.5.0...v2.6.0
 [2.5.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.4.2...v2.5.0

@@ -80,15 +80,18 @@ func (p *Parser) Build() (*kongstate.KongState, error) {
 		p.ingressRulesFromTLSRoutes(),
 	)
 
-	// populate any Kubernetes Service objects relevant objects
-	if err := ingressRules.populateServices(p.logger, p.storer); err != nil {
-		return nil, err
-	}
+	// populate any Kubernetes Service objects relevant objects and get the
+	// services to be skipped because of annotations inconsistency
+	servicesToBeSkipped := ingressRules.populateServices(p.logger, p.storer)
 
 	// add the routes and services to the state
 	var result kongstate.KongState
-	for _, service := range ingressRules.ServiceNameToServices {
-		result.Services = append(result.Services, service)
+	for key, service := range ingressRules.ServiceNameToServices {
+		// if the service doesn't need to be skipped, then add it to the
+		// list of services.
+		if _, ok := servicesToBeSkipped[key]; !ok {
+			result.Services = append(result.Services, service)
+		}
 	}
 
 	// generate Upstreams and Targets from service defs

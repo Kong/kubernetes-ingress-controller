@@ -1,7 +1,6 @@
 package parser
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/kong/go-kong/kong"
@@ -41,7 +40,11 @@ func mergeIngressRules(objs ...ingressRules) ingressRules {
 	return result
 }
 
-func (ir *ingressRules) populateServices(log logrus.FieldLogger, s store.Storer) error {
+// populateServices populate the ServiceNameToServices map with additional information
+// and return a map of services to be skipped.
+func (ir *ingressRules) populateServices(log logrus.FieldLogger, s store.Storer) map[string]interface{} {
+	serviceNamesToSkip := make(map[string]interface{})
+
 	// populate Kubernetes Service
 	for key, service := range ir.ServiceNameToServices {
 		if service.K8sServices == nil {
@@ -52,12 +55,16 @@ func (ir *ingressRules) populateServices(log logrus.FieldLogger, s store.Storer)
 		// and all the annotations in use across all services (when applicable).
 		k8sServices, seenAnnotations := getK8sServicesForBackends(log, s, service.Namespace, service.Backends)
 
-		// if the Kubernetes services have been deemed invalid, no need to continue
-		// they will all be dropped until the problem has been rectified.
+		// if the Kubernetes services have been deemed invalid, log an error message
+		// and skip the current service.
 		if !servicesAllUseTheSameKongAnnotations(log, k8sServices, seenAnnotations) {
-			return fmt.Errorf("the Kubernetes Services %v cannot have different sets of konghq.com annotations. "+
+			log.Errorf("the Kubernetes Services %v cannot have different sets of konghq.com annotations. "+
 				"These Services are used in the same Gateway Route BackendRef together to create the Kong Service %s"+
 				"and must use the same Kong annotations", k8sServices, *service.Name)
+			// The Kong services not having all the k8s services correctly annotated must be marked
+			// as to be skipped.
+			serviceNamesToSkip[key] = nil
+			continue
 		}
 
 		for _, k8sService := range k8sServices {
@@ -91,8 +98,7 @@ func (ir *ingressRules) populateServices(log logrus.FieldLogger, s store.Storer)
 		// now be cached.
 		ir.ServiceNameToServices[key] = service
 	}
-
-	return nil
+	return serviceNamesToSkip
 }
 
 type SecretNameToSNIs map[string][]string

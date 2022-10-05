@@ -267,7 +267,7 @@ patches:
     name: ingress-kong
 `
 
-// patchEnv
+// addControllerEnv adds an environment variable to ingress-controller container.
 func addControllerEnv(t *testing.T, baseManifestReader io.Reader, envName, value string) io.Reader {
 	workDir, err := os.MkdirTemp("", "kictest.")
 	require.NoError(t, err)

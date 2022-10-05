@@ -58,9 +58,6 @@ func (ir *ingressRules) populateServices(log logrus.FieldLogger, s store.Storer)
 		// if the Kubernetes services have been deemed invalid, log an error message
 		// and skip the current service.
 		if !servicesAllUseTheSameKongAnnotations(log, k8sServices, seenAnnotations) {
-			log.Errorf("the Kubernetes Services %v cannot have different sets of konghq.com annotations. "+
-				"These Services are used in the same Gateway Route BackendRef together to create the Kong Service %s"+
-				"and must use the same Kong annotations", k8sServices, *service.Name)
 			// The Kong services not having all the k8s services correctly annotated must be marked
 			// as to be skipped.
 			serviceNamesToSkip[key] = nil

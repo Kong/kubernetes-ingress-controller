@@ -253,6 +253,42 @@ func patchKongImage(baseManifestsReader io.Reader, image string, tag string) (io
 	return bytes.NewReader(kustomized), nil
 }
 
+const addControllerEnvKustomizationContents = `resources:
+- base.yaml
+patches:
+- patch: |-
+    - op: add
+      path: "/spec/template/spec/containers/1/env/-"
+      value:
+        name: %s
+        value: "%s"
+  target:
+    kind: Deployment
+    name: ingress-kong
+`
+
+// patchEnv
+func addControllerEnv(t *testing.T, baseManifestReader io.Reader, envName, value string) io.Reader {
+	workDir, err := os.MkdirTemp("", "kictest.")
+	require.NoError(t, err)
+	defer os.RemoveAll(workDir)
+
+	orig, err := io.ReadAll(baseManifestReader)
+	require.NoError(t, err)
+
+	err = os.WriteFile(filepath.Join(workDir, "base.yaml"), orig, 0o600)
+	require.NoError(t, err)
+
+	kustomization := []byte(fmt.Sprintf(addControllerEnvKustomizationContents, envName, value))
+	err = os.WriteFile(filepath.Join(workDir, "kustomization.yaml"), kustomization, 0o600)
+	require.NoError(t, err)
+
+	kustomized, err := kustomizeManifest(workDir)
+	require.NoError(t, err)
+
+	return bytes.NewReader(kustomized)
+}
+
 // kustomizeManifest runs kustomize on a path and returns the YAML output.
 func kustomizeManifest(path string) ([]byte, error) {
 	k := krusty.MakeKustomizer(krusty.MakeDefaultOptions())

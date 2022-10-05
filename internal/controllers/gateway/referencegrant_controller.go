@@ -19,8 +19,6 @@ package gateway
 import (
 	"context"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
-
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -33,6 +31,7 @@ import (
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 )
 
 // ReferenceGrantReconciler reconciles a ReferenceGrant object.

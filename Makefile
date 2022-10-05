@@ -35,7 +35,7 @@ _download_tool:
 		GOBIN=$(PROJECT_DIR)/bin go generate -tags=third_party ./$(TOOL).go )
 
 .PHONY: tools
-tools: controller-gen kustomize client-gen golangci-lint gotestfmt
+tools: controller-gen kustomize client-gen golangci-lint gotestsum
 
 CONTROLLER_GEN = $(PROJECT_DIR)/bin/controller-gen
 .PHONY: controller-gen
@@ -57,10 +57,10 @@ GOLANGCI_LINT = $(PROJECT_DIR)/bin/golangci-lint
 golangci-lint: ## Download golangci-lint locally if necessary.
 	@$(MAKE) _download_tool TOOL=golangci-lint
 
-GOTESTFMT = $(PROJECT_DIR)/bin/gotestfmt
-.PHONY: gotestfmt
-gotestfmt: ## Download gotestfmt locally if necessary.
-	@$(MAKE) _download_tool TOOL=gotestfmt
+GOTESTSUM = $(PROJECT_DIR)/bin/gotestsum
+.PHONY: gotestsum
+gotestsum: ## Download gotestsum locally if necessary.
+	@$(MAKE) _download_tool TOOL=gotestsum
 
 # ------------------------------------------------------------------------------
 # Build
@@ -211,7 +211,7 @@ KIND_CLUSTER_NAME ?= "integration-tests"
 INTEGRATION_TEST_TIMEOUT ?= "45m"
 E2E_TEST_TIMEOUT ?= "45m"
 KONG_CONTROLLER_FEATURE_GATES ?= GatewayAlpha=true
-GOTESTFMT_CMD ?= $(GOTESTFMT) -hide successful-downloads,empty-packages -showteststatus
+GOTESTSUM_FORMAT ?= standard-verbose
 
 .PHONY: test
 test: test.unit
@@ -220,9 +220,11 @@ test: test.unit
 test.all: test.unit test.integration test.conformance
 
 .PHONY: test.conformance
-test.conformance:
+test.conformance: gotestsum
 	@./scripts/check-container-environment.sh
-	@TEST_DATABASE_MODE="off" GOFLAGS="-tags=conformance_tests" go test -v -race \
+	@TEST_DATABASE_MODE="off" GOFLAGS="-tags=conformance_tests" \
+	GOTESTSUM_FORMAT=$(GOTESTSUM_FORMAT) \
+	$(GOTESTSUM) -- -race \
 		-timeout $(INTEGRATION_TEST_TIMEOUT) \
 		-parallel $(NCPU) \
 		-race \
@@ -235,8 +237,9 @@ test.integration: test.integration.dbless test.integration.postgres test.integra
 test.integration.enterprise: test.integration.enterprise.postgres
 
 .PHONY: _test.unit
-_test.unit:
-	go test -v -race $(GOTESTFLAGS) \
+_test.unit: gotestsum
+	GOTESTSUM_FORMAT=$(GOTESTSUM_FORMAT) \
+	$(GOTESTSUM) -- -race $(GOTESTFLAGS) \
 		-covermode=atomic \
 		-coverpkg=$(PKG_LIST) \
 		-coverprofile=coverage.unit.out \
@@ -248,19 +251,20 @@ test.unit:
 	@$(MAKE) _test.unit GOTESTFLAGS="$(GOTESTFLAGS)"
 
 .PHONY: test.unit.pretty
-test.unit.pretty: gotestfmt
-	@$(MAKE) _test.unit GOTESTFLAGS="-json" 2>/dev/null | $(GOTESTFMT_CMD)
+test.unit.pretty:
+	@$(MAKE) GOTESTSUM_FORMAT=pkgname _test.unit
 
 .PHONY: _check.container.environment
 _check.container.environment:
 	@./scripts/check-container-environment.sh
 
 .PHONY: _test.integration
-_test.integration: _check.container.environment
+_test.integration: _check.container.environment gotestsum
 	TEST_DATABASE_MODE="$(DBMODE)" \
 		GOFLAGS="-tags=integration_tests" \
 		KONG_CONTROLLER_FEATURE_GATES=$(KONG_CONTROLLER_FEATURE_GATES) \
-		go test -v $(GOTESTFLAGS) \
+		GOTESTSUM_FORMAT=$(GOTESTSUM_FORMAT) \
+		$(GOTESTSUM) -- $(GOTESTFLAGS) \
 		-timeout $(INTEGRATION_TEST_TIMEOUT) \
 		-parallel $(NCPU) \
 		-race \
@@ -277,11 +281,10 @@ test.integration.dbless:
 
 .PHONY: test.integration.dbless.pretty
 test.integration.dbless.pretty:
-	@$(MAKE) _test.integration \
+	@$(MAKE) GOTESTSUM_FORMAT=pkgname _test.integration \
 		DBMODE=off \
 		GOTESTFLAGS="-json" \
-		COVERAGE_OUT=coverage.dbless.out 2>/dev/null | \
-		$(GOTESTFMT_CMD)
+		COVERAGE_OUT=coverage.dbless.out
 
 .PHONY: test.integration.postgres
 test.integration.postgres:
@@ -291,11 +294,10 @@ test.integration.postgres:
 
 .PHONY: test.integration.postgres.pretty
 test.integration.postgres.pretty:
-	@$(MAKE) _test.integration \
+	@$(MAKE) GOTESTSUM_FORMAT=pkgname _test.integration \
 		DBMODE=postgres \
 		GOTESTFLAGS="-json" \
-		COVERAGE_OUT=coverage.postgres.out 2>/dev/null | \
-		$(GOTESTFMT_CMD)
+		COVERAGE_OUT=coverage.postgres.out
 
 .PHONY: test.integration.enterprise.postgres
 test.integration.enterprise.postgres:
@@ -307,19 +309,20 @@ test.integration.enterprise.postgres:
 .PHONY: test.integration.enterprise.postgres.pretty
 test.integration.enterprise.postgres.pretty:
 	@TEST_KONG_ENTERPRISE="true" \
+		GOTESTSUM_FORMAT=pkgname \
 		$(MAKE) _test.integration \
 		DBMODE=postgres \
 		GOTESTFLAGS="-json" \
-		COVERAGE_OUT=coverage.enterprisepostgres.out 2>/dev/null | \
-		$(GOTESTFMT_CMD)
+		COVERAGE_OUT=coverage.enterprisepostgres.out
 
 .PHONY: test.integration.cp
-_test.integration.cp:
+_test.integration.cp: gotestsum
 	CLUSTER_NAME="e2e-$(uuidgen)" \
 		KUBERNETES_CLUSTER_NAME="${CLUSTER_NAME}" go run hack/e2e/cluster/deploy/main.go \
 		GOFLAGS="-tags=integration_tests" \
 		KONG_TEST_CLUSTER="${CP}:${CLUSTER_NAME}" \
-		go test -parallel "${NCPU}" -timeout $(INTEGRATION_TEST_TIMEOUT) -v \
+		GOTESTSUM_FORMAT=$(GOTESTSUM_FORMAT) \
+		$(GOTESTSUM) -- -parallel "${NCPU}" -timeout $(INTEGRATION_TEST_TIMEOUT) \
 		./test/integration/... \
     	go run hack/e2e/cluster/cleanup/main.go ${CLUSTER_NAME} \
 		trap cleanup EXIT SIGINT SIGQUIT
@@ -335,17 +338,20 @@ test.integration.kind:
 		CP="kind"
 
 .PHONY: test.e2e
-test.e2e:
-	GOFLAGS="-tags=e2e_tests" go test -v $(GOTESTFLAGS) \
+test.e2e: gotestsum
+	GOFLAGS="-tags=e2e_tests" \
+	GOTESTSUM_FORMAT=$(GOTESTSUM_FORMAT) \
+	$(GOTESTSUM) -- $(GOTESTFLAGS) \
 		-race \
 		-parallel $(NCPU) \
 		-timeout $(E2E_TEST_TIMEOUT) \
 		./test/e2e/...
 
 .PHONY: test.istio
-test.istio:
+test.istio: gotestsum
 	ISTIO_TEST_ENABLED="true" \
-	GOFLAGS="-tags=istio_tests" go test -v $(GOTESTFLAGS) \
+	GOTESTSUM_FORMAT=$(GOTESTSUM_FORMAT) \
+	GOFLAGS="-tags=istio_tests" $(GOTESTSUM) -- $(GOTESTFLAGS) \
 		-race \
 		-parallel $(NCPU) \
 		-timeout $(E2E_TEST_TIMEOUT) \

@@ -423,7 +423,10 @@ func (r *GatewayReconciler) reconcileUnmanagedGateway(ctx context.Context, log l
 	// a single set of shared listens. We lack knowledge of whether this is compatible with user intent, and it may
 	// be incompatible with the spec, so we should consider evaluating cross-Gateway compatibility and raising error
 	// conditions in the event of a problem
-	listenerStatuses := getListenerStatus(gateway, kongListeners, referenceGrantList.Items)
+	listenerStatuses, err := r.getListenerStatus(ctx, gateway, kongListeners, referenceGrantList.Items)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
 
 	// once specification matches the reference Service, all that's left to do is ensure that the
 	// Gateway status reflects the spec. As the status is simply a mirror of the Service, this is

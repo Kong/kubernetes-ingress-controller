@@ -1,12 +1,15 @@
 package gateway
 
 import (
+	"context"
 	"fmt"
 	"reflect"
 	"sort"
 	"strings"
 
 	"github.com/go-logr/logr"
+	corev1 "k8s.io/api/core/v1"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -229,11 +232,12 @@ func canSharePort(requested, existing ProtocolType) bool {
 	}
 }
 
-func getListenerStatus(
+func (r *GatewayReconciler) getListenerStatus(
+	ctx context.Context,
 	gateway *Gateway,
 	kongListens []Listener,
 	referenceGrants []gatewayv1alpha2.ReferenceGrant,
-) []ListenerStatus {
+) ([]ListenerStatus, error) {
 	statuses := make(map[SectionName]ListenerStatus, len(gateway.Spec.Listeners))
 	portToProtocol, portToHostname, listenerToAttached := initializeListenerMaps(gateway)
 	kongProtocolsToPort := buildKongPortMap(kongListens)
@@ -398,21 +402,32 @@ func getListenerStatus(
 		if listener.TLS != nil {
 			resolvedRefReason = string(gatewayv1alpha2.ListenerReasonResolvedRefs)
 			for _, certRef := range listener.TLS.CertificateRefs {
+				// if the certificate is in the same namespace of the gateway, no ReferenceGrant is needed
+				if certRef.Namespace != nil && *certRef.Namespace != (Namespace)(gateway.Namespace) {
+					// get the result of the certificate reference. If the returned reason is not successful, the loop
+					// must be broken because the secret reference isn't granted
+					resolvedRefReason = getReferenceGrantConditionReason(gateway.Namespace, certRef, referenceGrants)
+					if resolvedRefReason != string(gatewayv1alpha2.ListenerReasonResolvedRefs) {
+						break
+					}
+				}
+
 				// only secrets are supported as certificate references
 				if (certRef.Group != nil && (*certRef.Group != "core" && *certRef.Group != "")) ||
 					(certRef.Kind != nil && *certRef.Kind != "Secret") {
 					resolvedRefReason = string(gatewayv1alpha2.ListenerReasonInvalidCertificateRef)
 					break
 				}
-				// if the certificate is in the same namespace of the gateway, no ReferenceGrant is needed
-				if certRef.Namespace == nil || *certRef.Namespace == (Namespace)(gateway.Namespace) {
-					continue
+				secret := &corev1.Secret{}
+				secretNamespace := gateway.Namespace
+				if certRef.Namespace != nil {
+					secretNamespace = string(*certRef.Namespace)
 				}
-				// get the result of the certificate reference. If the returned reason is not successful, the loop
-				// must be broken because a secret reference isn't granted
-				resolvedRefReason = getReferenceGrantConditionReason(gateway.Namespace, certRef, referenceGrants)
-				if resolvedRefReason != string(gatewayv1alpha2.ListenerReasonResolvedRefs) {
-					break
+				if err := r.Client.Get(ctx, types.NamespacedName{Namespace: secretNamespace, Name: string(certRef.Name)}, secret); err != nil {
+					if !k8serrors.IsNotFound(err) {
+						return nil, err
+					}
+					resolvedRefReason = string(gatewayv1alpha2.ListenerReasonInvalidCertificateRef)
 				}
 			}
 		}
@@ -494,7 +509,7 @@ func getListenerStatus(
 		statusArray = append(statusArray, status)
 	}
 
-	return statusArray
+	return statusArray, nil
 }
 
 // getReferenceGrantConditionReason gets a certRef belonging to a specific listener and a slice of referenceGrants.
@@ -534,7 +549,7 @@ func getReferenceGrantConditionReason(
 		}
 	}
 	// if no grants have been found for the reference, return an "InvalidCertificateRef" reason
-	return string(gatewayv1alpha2.ListenerReasonInvalidCertificateRef)
+	return string(gatewayv1alpha2.ListenerReasonRefNotPermitted)
 }
 
 // -----------------------------------------------------------------------------

@@ -384,7 +384,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
 
-      - name: collect tests report
+      - name: download tests report
         id: download-coverage
         uses: actions/download-artifact@v3
         with:

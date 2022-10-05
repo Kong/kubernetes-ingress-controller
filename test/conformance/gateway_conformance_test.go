@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -18,6 +19,7 @@ import (
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/gateway"
+	testutils "github.com/kong/kubernetes-ingress-controller/v2/internal/util/test"
 	"github.com/kong/kubernetes-ingress-controller/v2/test/consts"
 )
 
@@ -29,13 +31,26 @@ var (
 )
 
 func TestGatewayConformance(t *testing.T) {
-	t.Parallel()
-
 	t.Log("configuring environment for gateway conformance tests")
 	client, err := client.New(env.Cluster().Config(), client.Options{})
 	require.NoError(t, err)
 	require.NoError(t, gatewayv1alpha2.AddToScheme(client.Scheme()))
 	require.NoError(t, gatewayv1beta1.AddToScheme(client.Scheme()))
+
+	t.Log("starting the controller manager")
+	args := []string{
+		fmt.Sprintf("--ingress-class=%s", ingressClass),
+		fmt.Sprintf("--admission-webhook-cert=%s", testutils.KongSystemServiceCert),
+		fmt.Sprintf("--admission-webhook-key=%s", testutils.KongSystemServiceKey),
+		fmt.Sprintf("--admission-webhook-listen=%s:%d", testutils.AdmissionWebhookListenHost, testutils.AdmissionWebhookListenPort),
+		"--profiling",
+		"--dump-config",
+		"--log-level=trace",
+		"--debug-log-reduce-redundancy",
+		"--feature-gates=GatewayAlpha=true",
+		"--anonymous-reports=false",
+	}
+	require.NoError(t, testutils.DeployControllerManagerForCluster(ctx, env.Cluster(), args...))
 
 	t.Log("creating GatewayClass for gateway conformance tests")
 	gwc := &gatewayv1beta1.GatewayClass{
@@ -50,9 +65,7 @@ func TestGatewayConformance(t *testing.T) {
 		},
 	}
 	require.NoError(t, client.Create(ctx, gwc))
-	defer func() {
-		require.NoError(t, client.Delete(ctx, gwc))
-	}()
+	t.Cleanup(func() { assert.NoError(t, client.Delete(ctx, gwc)) })
 
 	t.Log("starting the gateway conformance test suite")
 	cSuite := suite.New(suite.Options{

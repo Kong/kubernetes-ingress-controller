@@ -6,7 +6,6 @@ package conformance
 import (
 	"context"
 	"fmt"
-	"net/url"
 	"os"
 	"strings"
 	"testing"
@@ -16,17 +15,14 @@ import (
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/metallb"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/types/kind"
 	"github.com/kong/kubernetes-testing-framework/pkg/environments"
-
-	testutils "github.com/kong/kubernetes-ingress-controller/v2/internal/util/test"
 )
 
 var (
 	existingCluster = os.Getenv("KONG_TEST_CLUSTER")
 	ingressClass    = "kong-conformance-tests"
 
-	env   environments.Environment
-	ctx   context.Context
-	admin *url.URL
+	env environments.Environment
+	ctx context.Context
 )
 
 func TestMain(m *testing.M) {
@@ -49,29 +45,6 @@ func TestMain(m *testing.M) {
 
 	fmt.Println("INFO: waiting for cluster and addons to be ready")
 	exitOnErr(<-env.WaitForReady(ctx))
-
-	fmt.Println("INFO: deploying CRDs")
-	exitOnErr(testutils.DeployCRDsForCluster(ctx, env.Cluster()))
-
-	fmt.Println("INFO: gathering the kong proxy admin URL")
-	admin, err = kongAddon.ProxyAdminURL(ctx, env.Cluster())
-	exitOnErr(err)
-
-	fmt.Println("INFO: starting the controller manager")
-	args := []string{
-		fmt.Sprintf("--ingress-class=%s", ingressClass),
-		fmt.Sprintf("--admission-webhook-cert=%s", testutils.KongSystemServiceCert),
-		fmt.Sprintf("--admission-webhook-key=%s", testutils.KongSystemServiceKey),
-		fmt.Sprintf("--admission-webhook-listen=%s:%d", testutils.AdmissionWebhookListenHost, testutils.AdmissionWebhookListenPort),
-		"--profiling",
-		"--dump-config",
-		"--log-level=trace",
-		"--debug-log-reduce-redundancy",
-		"--feature-gates=GatewayAlpha=true",
-		"--anonymous-reports=false",
-		fmt.Sprintf("--kong-admin-url=%s", admin.String()),
-	}
-	exitOnErr(testutils.DeployControllerManagerForCluster(ctx, env.Cluster(), args...))
 
 	code := m.Run()
 

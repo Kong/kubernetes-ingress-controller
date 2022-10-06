@@ -46,13 +46,8 @@ func TestDeployAllInOneDBLESS(t *testing.T) {
 	defer cancel()
 
 	t.Log("building test cluster and environment")
-	addons := []clusters.Addon{}
-	addons = append(addons, metallb.New())
-
-	addons = append(addons, buildImageLoadAddons(t, imageLoad, kongImageLoad)...)
-
-	builder := setBuilderKubernetesVersion(t,
-		environments.NewBuilder().WithAddons(addons...), clusterVersionStr)
+	builder, err := getEnvironmentBuilder(ctx)
+	require.NoError(t, err)
 	env, err := builder.Build(ctx)
 	require.NoError(t, err)
 	defer func() {

@@ -20,6 +20,9 @@ import (
 	"github.com/blang/semver/v4"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/loadimage"
+	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/metallb"
+	"github.com/kong/kubernetes-testing-framework/pkg/clusters/types/gke"
+	"github.com/kong/kubernetes-testing-framework/pkg/clusters/types/kind"
 	"github.com/kong/kubernetes-testing-framework/pkg/environments"
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
 	"github.com/stretchr/testify/assert"
@@ -62,14 +65,82 @@ const (
 	tcpListnerPort = 8888
 )
 
-var (
-	imageOverride         = os.Getenv("TEST_KONG_CONTROLLER_IMAGE_OVERRIDE")
-	imageLoad             = os.Getenv("TEST_KONG_CONTROLLER_IMAGE_LOAD")
-	kongImageOverride     = os.Getenv("TEST_KONG_IMAGE_OVERRIDE")
-	kongImageLoad         = os.Getenv("TEST_KONG_IMAGE_LOAD")
-	kongImagePullUsername = os.Getenv("TEST_KONG_PULL_USERNAME")
-	kongImagePullPassword = os.Getenv("TEST_KONG_PULL_PASSWORD")
-)
+func getEnvironmentBuilder(ctx context.Context) (*environments.Builder, error) {
+	var builder *environments.Builder
+	var err error
+	if existingCluster != "" {
+		if clusterVersionStr != "" {
+			return nil, fmt.Errorf("cannot provide cluster version with existing cluster")
+		}
+		clusterParts := strings.Split(existingCluster, ":")
+		if len(clusterParts) != 2 {
+			return nil, fmt.Errorf("existing cluster in wrong format (%s): format is <TYPE>:<NAME> (e.g. kind:test-cluster)", existingCluster)
+		}
+		clusterType, clusterName := clusterParts[0], clusterParts[1]
+
+		fmt.Printf("INFO: using existing %s cluster %s\n", clusterType, clusterName)
+		switch clusterType {
+		case string(kind.KindClusterType):
+			builder, err = createExistingKINDBuilder(clusterName)
+			if err != nil {
+				return nil, err
+			}
+		case string(gke.GKEClusterType):
+			builder, err = createExistingGKEBuilder(ctx, clusterName)
+			if err != nil {
+				return nil, err
+			}
+		default:
+			return nil, fmt.Errorf("unrecognized cluster type %s", clusterType)
+		}
+	} else {
+		builder = createDefaultKINDBuilder()
+	}
+	return builder, err
+}
+
+func createDefaultKINDBuilder() *environments.Builder {
+	builder := environments.NewBuilder()
+	clusterBuilder := kind.NewBuilder()
+	if false { // condition on image loads
+		// TODO load image but refactored
+	}
+	if clusterVersionStr != "" {
+		clusterVersion := semver.MustParse(strings.TrimPrefix(clusterVersionStr, "v"))
+		clusterBuilder = clusterBuilder.WithClusterVersion(clusterVersion)
+	}
+	builder = builder.WithClusterBuilder(clusterBuilder)
+	builder = builder.WithAddons(metallb.New())
+	return builder
+}
+
+func createExistingKINDBuilder(name string) (*environments.Builder, error) {
+	builder := environments.NewBuilder()
+	cluster, err := kind.NewFromExisting(name)
+	if err != nil {
+		return nil, err
+	}
+	if false { // condition on image loads
+		// TODO load image but refactored
+	}
+	builder = builder.WithExistingCluster(cluster)
+	builder = builder.WithAddons(metallb.New())
+	return builder, nil
+}
+
+// existing GKE patterns rely on running hack/e2e/cluster/deploy/main.go (integration too) and then just loading
+// an existing cluster. this could probably avoid the hack script, and may be reasonable to integrate into KTF.
+// there is no default GKE builder as such.
+
+func createExistingGKEBuilder(ctx context.Context, name string) (*environments.Builder, error) {
+	cluster, err := gke.NewFromExistingWithEnv(ctx, name)
+	if err != nil {
+		return nil, err
+	}
+	builder := environments.NewBuilder()
+	builder = builder.WithExistingCluster(cluster)
+	return builder, nil
+}
 
 func deployKong(ctx context.Context, t *testing.T, env environments.Environment, manifest io.Reader, additionalSecrets ...*corev1.Secret) *appsv1.Deployment {
 	t.Log("creating a tempfile for kubeconfig")

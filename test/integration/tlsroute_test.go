@@ -615,7 +615,7 @@ func TestTLSRouteReferenceGrant(t *testing.T) {
 		if ok := util.CheckCondition(
 			status.Conditions,
 			util.ConditionType(gatewayv1alpha2.ListenerConditionResolvedRefs),
-			util.ConditionReason(gatewayv1alpha2.ListenerReasonInvalidCertificateRef),
+			util.ConditionReason(gatewayv1alpha2.ListenerReasonRefNotPermitted),
 			metav1.ConditionFalse,
 			gateway.Generation,
 		); ok {

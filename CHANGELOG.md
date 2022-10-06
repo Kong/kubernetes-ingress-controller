@@ -71,6 +71,14 @@ Adding a new version? You'll need three changes:
   inconsistent Service annotations. Previously this issue prevented the
   controller from applying configuration until corrected.
   [#2988](https://github.com/Kong/kubernetes-ingress-controller/pull/2988)
+- Gateway API has been updated to 0.5.1. That version brought in some changes
+  in the conformance tests logic. Now, when the TLS config of a listener
+  references a non-existing secret, the listener ResolvedRefs condition reason
+  is set to InvalidCertificateRef. In addition, if a TLS config references a
+  secret in another namespace, and no ReferenceGrant allows that
+  reference, the listener ResolvedRefs condition reason is set to
+  RefNotPermitted.
+  [#3024](https://github.com/Kong/kubernetes-ingress-controller/pull/3024)
 
 ## [2.7.0]
 

@@ -215,7 +215,7 @@ jobs:
         GOOGLE_PROJECT: ${{ secrets.GOOGLE_PROJECT }}
         GOOGLE_LOCATION: ${{ secrets.GOOGLE_LOCATION }}
         KUBERNETES_MAJOR_VERSION: 1
-        KUBERNETES_MINOR_VERSION: 25
+        KUBERNETES_MINOR_VERSION: 24
         KONG_LICENSE_DATA: ${{ steps.license.outputs.license }}
 
     - name: upload diagnostics

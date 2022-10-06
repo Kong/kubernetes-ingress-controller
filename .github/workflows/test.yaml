@@ -397,8 +397,8 @@ jobs:
           path: report
 
       - name: Upload test results to BuildPulse for flaky test detection
-        if: ${{ !cancelled() && github.ref == 'refs/heads/main' }}
-        uses: Workshop64/buildpulse-action@main
+        if: ${{ !cancelled() }}
+        uses: Workshop64/buildpulse-action@a0e683af4e5070c379e9801ee9b33792ff414936
         with:
           account: 962416
           repository: 127765544

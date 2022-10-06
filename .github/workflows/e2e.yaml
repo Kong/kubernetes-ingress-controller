@@ -181,7 +181,7 @@ jobs:
           secret: ${{ secrets.BUILDPULSE_SECRET_ACCESS_KEY }}
 
   e2e-gke-tests:
-    environment: "Configure ci"
+    environment: "gcloud"
     runs-on: ubuntu-latest
     steps:
     - name: setup golang

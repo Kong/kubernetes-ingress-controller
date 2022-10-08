@@ -6,9 +6,25 @@ on:
   workflow_dispatch: {}
 
 jobs:
+  setup-e2e-tests:
+    runs-on: ubuntu-latest
+    outputs:
+      test_names: ${{ steps.set_test_names.outputs.test_names }}
+    steps:
+      - uses: actions/checkout@v3
+      - id: set_test_names
+        name: Set test names
+        working-directory: test/e2e/
+        # grep magic described in https://unix.stackexchange.com/a/13472
+        # sed to add the extra $ is because some of our test names overlap. we need it so the -run regex only matches one test
+        run: |
+          echo "::set-output name=test_names::$(grep -shoP "(?<=^func )(Test[a-zA-z_0-9]+)(?=\(t \*testing.T\) {)" * | sed -e "s/$/\$/"| jq -R . | jq -cs .)"
+      - name: Print test names
+        run: echo "Test names ${{ steps.set_test_names.outputs.test_names }}"
   e2e-tests:
     environment: "Configure ci"
     runs-on: ubuntu-latest
+    needs: setup-e2e-tests
     strategy:
       fail-fast: false
       matrix:
@@ -17,6 +33,8 @@ jobs:
           - 'v1.22.9'
           - 'v1.23.6'
           - 'v1.24.2'
+          - 'v1.25.2'
+        test: ${{ fromJSON(needs.setup-e2e-tests.outputs.test_names) }}
     steps:
     - name: setup golang
       uses: actions/setup-go@v3
@@ -42,12 +60,13 @@ jobs:
         # PULP_PASSWORD secret is set in "Configure ci" environment
         password: ${{ secrets.PULP_PASSWORD }}
 
-    - name: run e2e tests
+    - name: run ${{ matrix.test }} - ${{ matrix.kubernetes-version }}
       run: make test.e2e
       env:
         TEST_KONG_CONTROLLER_IMAGE_OVERRIDE: "kong/nightly-ingress-controller:nightly"
         KONG_LICENSE_DATA: ${{ steps.license.outputs.license }}
         KONG_CLUSTER_VERSION: ${{ matrix.kubernetes-version }}
+        E2E_TEST_RUN: ${{ matrix.test }}
         NCPU: 1 # it was found that github actions (specifically) did not seem to perform well when spawning
                 # multiple kind clusters within a single job, so only 1 is allowed at a time.
         GOTESTSUM_JUNITFILE: "e2e-${{ matrix.kubernetes-version }}-tests.xml"

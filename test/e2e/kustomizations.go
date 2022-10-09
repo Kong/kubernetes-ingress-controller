@@ -97,7 +97,6 @@ func patchControllerStartTimeout(baseManifestReader io.Reader, tries int, delay 
 // threshold.
 func patchLivenessProbes(baseManifestReader io.Reader, container, failure int, initial, period time.Duration) (io.Reader, error) {
 	kustomization := types.Kustomization{
-		Bases: []string{"base.yaml"},
 		Patches: []types.Patch{
 			{
 				Patch: fmt.Sprintf(livenessProbePatch, container, int(initial.Seconds()), int(period.Seconds()), failure),

@@ -1,3 +1,6 @@
+//go:build e2e_tests
+// +build e2e_tests
+
 package e2e
 
 import (

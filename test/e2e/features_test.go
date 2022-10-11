@@ -135,6 +135,18 @@ func TestWebhookUpdate(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
+	// on KIND, this test requires webhookKINDConfig. the generic getEnvironmentBuilder we use for most tests doesn't
+	// support this: the configuration is specific to KIND but should not be used by default, and the scaffolding isn't
+	// flexible enough to support tests building their own clusters or passing additional builder functions. this still
+	// uses the setup style from before getEnvironmentBuilder/GKE support as such, and just skips if it's attempting
+	// to run on GKE
+	if existingCluster != "" {
+		clusterType := strings.Split(existingCluster, ":")[0]
+		if clusterType != string(kind.KindClusterType) {
+			t.Skip("test not supported on non-KIND clusters")
+		}
+	}
+
 	t.Log("building test cluster and environment")
 	configFile, err := os.CreateTemp(os.TempDir(), "webhook-kind-config-")
 	require.NoError(t, err)
@@ -302,14 +314,8 @@ func TestDeployAllInOneDBLESSGateway(t *testing.T) {
 	defer cancel()
 
 	t.Log("building test cluster and environment")
-	addons := []clusters.Addon{}
-	addons = append(addons, metallb.New())
-	if b, err := loadimage.NewBuilder().WithImage(imageLoad); err == nil {
-		addons = append(addons, b.Build())
-	}
-
-	builder := setBuilderKubernetesVersion(t,
-		environments.NewBuilder().WithAddons(addons...), clusterVersionStr)
+	builder, err := getEnvironmentBuilder(ctx)
+	require.NoError(t, err)
 	env, err := builder.Build(ctx)
 	require.NoError(t, err)
 
@@ -498,13 +504,8 @@ func TestDeployAllInOneDBLESSNoLoadBalancer(t *testing.T) {
 	defer cancel()
 
 	t.Log("building test cluster and environment")
-	addons := []clusters.Addon{}
-	if b, err := loadimage.NewBuilder().WithImage(imageLoad); err == nil {
-		addons = append(addons, b.Build())
-	}
-
-	builder := setBuilderKubernetesVersion(t,
-		environments.NewBuilder().WithAddons(addons...), clusterVersionStr)
+	builder, err := getEnvironmentBuilder(ctx)
+	require.NoError(t, err)
 	env, err := builder.Build(ctx)
 	require.NoError(t, err)
 	cleaner := clusters.NewCleaner(env.Cluster())
@@ -568,29 +569,8 @@ func TestDefaultIngressClass(t *testing.T) {
 	defer cancel()
 
 	t.Log("building test cluster and environment")
-	configFile, err := os.CreateTemp(os.TempDir(), "test-default-ingress-class")
+	builder, err := getEnvironmentBuilder(ctx)
 	require.NoError(t, err)
-	defer os.Remove(configFile.Name())
-	defer configFile.Close()
-	written, err := configFile.Write([]byte(webhookKINDConfig))
-	require.NoError(t, err)
-	require.Equal(t, len(webhookKINDConfig), written)
-
-	clusterBuilder := kind.NewBuilder()
-	clusterBuilder.WithConfig(configFile.Name())
-	if clusterVersionStr != "" {
-		clusterVersion, err := semver.ParseTolerant(clusterVersionStr)
-		require.NoError(t, err)
-		clusterBuilder.WithClusterVersion(clusterVersion)
-	}
-	cluster, err := clusterBuilder.Build(ctx)
-	require.NoError(t, err)
-	addons := []clusters.Addon{}
-	addons = append(addons, metallb.New())
-	if b, err := loadimage.NewBuilder().WithImage(imageLoad); err == nil {
-		addons = append(addons, b.Build())
-	}
-	builder := environments.NewBuilder().WithExistingCluster(cluster).WithAddons(addons...)
 	env, err := builder.Build(ctx)
 	require.NoError(t, err)
 
@@ -712,21 +692,8 @@ func TestMissingCRDsDontCrashTheController(t *testing.T) {
 	defer cancel()
 
 	t.Log("building test cluster and environment")
-	clusterBuilder := kind.NewBuilder()
-	if clusterVersionStr != "" {
-		clusterVersion, err := semver.ParseTolerant(clusterVersionStr)
-		require.NoError(t, err)
-		clusterBuilder.WithClusterVersion(clusterVersion)
-	}
-	cluster, err := clusterBuilder.Build(ctx)
+	builder, err := getEnvironmentBuilder(ctx)
 	require.NoError(t, err)
-	addons := []clusters.Addon{metallb.New()}
-
-	if b, err := loadimage.NewBuilder().WithImage(imageLoad); err == nil {
-		addons = append(addons, b.Build())
-	}
-
-	builder := environments.NewBuilder().WithExistingCluster(cluster).WithAddons(addons...)
 	env, err := builder.Build(ctx)
 	require.NoError(t, err)
 
@@ -739,7 +706,7 @@ func TestMissingCRDsDontCrashTheController(t *testing.T) {
 				t.Logf("%s failed, dumped diagnostics to %s", t.Name(), output)
 			}
 		}
-		assert.NoError(t, cluster.Cleanup(ctx))
+		assert.NoError(t, cleaner.Cleanup(ctx))
 	}()
 
 	t.Log("deploying kong components")

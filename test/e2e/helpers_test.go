@@ -102,15 +102,13 @@ func getEnvironmentBuilder(ctx context.Context) (*environments.Builder, error) {
 func createDefaultKINDBuilder() *environments.Builder {
 	builder := environments.NewBuilder()
 	clusterBuilder := kind.NewBuilder()
-	if false { // condition on image loads
-		// TODO load image but refactored
-	}
 	if clusterVersionStr != "" {
 		clusterVersion := semver.MustParse(strings.TrimPrefix(clusterVersionStr, "v"))
 		clusterBuilder = clusterBuilder.WithClusterVersion(clusterVersion)
 	}
 	builder = builder.WithClusterBuilder(clusterBuilder)
 	builder = builder.WithAddons(metallb.New())
+	builder = builder.WithAddons(buildImageLoadAddons(imageLoad, kongImageLoad)...)
 	return builder
 }
 
@@ -120,11 +118,9 @@ func createExistingKINDBuilder(name string) (*environments.Builder, error) {
 	if err != nil {
 		return nil, err
 	}
-	if false { // condition on image loads
-		// TODO load image but refactored
-	}
 	builder = builder.WithExistingCluster(cluster)
 	builder = builder.WithAddons(metallb.New())
+	builder = builder.WithAddons(buildImageLoadAddons(imageLoad, kongImageLoad)...)
 	return builder, nil
 }
 
@@ -404,13 +400,13 @@ func killKong(ctx context.Context, t *testing.T, env environments.Environment, p
 }
 
 // buildImageLoadAddons creates addons to load KIC and kong images.
-func buildImageLoadAddons(t *testing.T, images ...string) []clusters.Addon {
+func buildImageLoadAddons(images ...string) []clusters.Addon {
 	addons := []clusters.Addon{}
 	for _, image := range images {
 		if image != "" {
-			t.Logf("load image %s", image)
-			b, err := loadimage.NewBuilder().WithImage(image)
-			require.NoError(t, err)
+			// https://github.com/Kong/kubernetes-testing-framework/issues/440 this error only occurs if image == ""
+			// it will eventually be removed from the WithImage return signature
+			b, _ := loadimage.NewBuilder().WithImage(image)
 			addons = append(addons, b.Build())
 		}
 	}

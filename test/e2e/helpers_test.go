@@ -246,9 +246,11 @@ func verifyEnterprise(ctx context.Context, t *testing.T, env environments.Enviro
 	}, adminAPIWait, time.Second)
 	if string(adminOutput.Version[0]) == "3" {
 		// 3.x removed the "-enterprise-edition" string but provided no other indication that something is enterprise
-		require.Len(t, strings.Split(adminOutput.Version, "."), 4)
+		require.Len(t, strings.Split(adminOutput.Version, "."), 4,
+			fmt.Sprintf("actual kong version: %s", adminOutput.Version))
 	} else {
-		require.Contains(t, adminOutput.Version, "enterprise-edition")
+		require.Contains(t, adminOutput.Version, "enterprise-edition",
+			fmt.Sprintf("actual kong version: %s", adminOutput.Version))
 	}
 }
 

@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
+	corev1 "k8s.io/api/core/v1"
 	netv1 "k8s.io/api/networking/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -161,6 +162,34 @@ func (r *Knativev1alpha1IngressReconciler) Reconcile(ctx context.Context, req ct
 	if !ctrlutils.MatchesIngressClass(obj, r.IngressClassName, ctrlutils.IsDefaultIngressClass(class)) {
 		log.V(util.DebugLevel).Info("object missing ingress class, ensuring it's removed from configuration", "namespace", req.Namespace, "name", req.Name)
 		return ctrl.Result{}, r.DataplaneClient.DeleteObject(obj)
+	}
+
+	// update reference records for secrets referred by the ingress
+	for _, tls := range obj.Spec.TLS {
+		secretNamespace := tls.SecretNamespace
+		if tls.SecretNamespace != "" {
+			secretNamespace = tls.SecretNamespace
+		}
+
+		secret := &corev1.Secret{}
+		err := r.Client.Get(ctx, types.NamespacedName{
+			Namespace: secretNamespace,
+			Name:      tls.SecretName,
+		}, secret)
+		if err != nil {
+			if errors.IsNotFound(err) {
+				return ctrl.Result{Requeue: true}, nil
+			}
+			return ctrl.Result{}, err
+		}
+		err = r.DataplaneClient.SetObjectReference(obj.DeepCopy(), secret)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+		err = r.DataplaneClient.UpdateObject(secret)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
 	}
 
 	// update the kong Admin API with the changes

@@ -61,6 +61,10 @@ type KongClient struct {
 	// objects for parsing into Kong objects.
 	cache *store.CacheStores
 
+	// referenceIndexers are the indexers to store references of kubernetes objects.
+	// currently used to store references of secrets.
+	referenceIndexers *store.CacheIndexers
+
 	// kongConfig is the client configuration for the Kong Admin API
 	kongConfig sendconfig.Kong
 
@@ -121,6 +125,7 @@ func NewKongClient(
 ) (*KongClient, error) {
 	// build the client object
 	cache := store.NewCacheStores()
+	indexers := store.NewCacheIndexers()
 	c := &KongClient{
 		logger:             logger,
 		ingressClass:       ingressClass,
@@ -130,6 +135,7 @@ func NewKongClient(
 		diagnostic:         diagnostic,
 		prometheusMetrics:  metrics.NewCtrlFuncMetrics(),
 		cache:              &cache,
+		referenceIndexers:  &indexers,
 		kongConfig:         kongConfig,
 	}
 
@@ -201,6 +207,22 @@ func (c *KongClient) DeleteObject(obj client.Object) error {
 func (c *KongClient) ObjectExists(obj client.Object) (bool, error) {
 	_, exists, err := c.cache.Get(obj)
 	return exists, err
+}
+
+func (c *KongClient) SetObjectReference(referrer client.Object, referent client.Object) error {
+	ref := &store.ObjectReference{
+		Referrer: referrer,
+		Referent: referent,
+	}
+	return c.referenceIndexers.SetReference(ref)
+}
+
+func (c *KongClient) ObjectReferred(obj client.Object) (bool, error) {
+	return c.referenceIndexers.ObjectReferred(obj)
+}
+
+func (c *KongClient) DeleteReferencesByReferrer(referrer client.Object) error {
+	return c.referenceIndexers.DeleteReferencesByReferrer(referrer)
 }
 
 // Listeners retrieves the currently configured listeners from the

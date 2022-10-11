@@ -331,6 +331,33 @@ func (r *GatewayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 			debug(log, gateway, "failed to update object in data-plane, requeueing")
 			return result, err
 		}
+
+		referredSecrets := listSecretsReferredByGateway(gateway)
+		for _, secret := range referredSecrets {
+
+			err := r.Client.Get(ctx, types.NamespacedName{
+				Namespace: secret.Namespace,
+				Name:      secret.Name,
+			}, secret)
+			if err != nil {
+				if k8serrors.IsNotFound(err) {
+					result.Requeue = true
+					return result, nil
+				}
+				return result, err
+			}
+			err = r.DataplaneClient.SetObjectReference(gateway, secret)
+			if err != nil {
+				debug(log, gateway, "failed to update reference between gateways and secrets")
+				return result, err
+			}
+
+			err = r.DataplaneClient.UpdateObject(secret)
+			if err != nil {
+				debug(log, gateway, "failed to update referred secret in cache")
+				return result, err
+			}
+		}
 	}
 	return result, err
 }

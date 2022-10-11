@@ -43,6 +43,7 @@ var inputControllersNeeded = &typesNeeded{
 		NeedsStatusPermissions:            true,
 		AcceptsIngressClassNameAnnotation: false,
 		AcceptsIngressClassNameSpec:       false,
+		NeedsUpdateReferences:             true,
 		RBACVerbs:                         []string{"get", "list", "watch"},
 	},
 	typeNeeded{
@@ -54,20 +55,6 @@ var inputControllersNeeded = &typesNeeded{
 		Package:                           corev1,
 		Plural:                            "endpoints",
 		CacheType:                         "Endpoint",
-		NeedsStatusPermissions:            true,
-		AcceptsIngressClassNameAnnotation: false,
-		AcceptsIngressClassNameSpec:       false,
-		RBACVerbs:                         []string{"list", "watch"},
-	},
-	typeNeeded{
-		Group:                             "\"\"",
-		Version:                           "v1",
-		Kind:                              "Secret",
-		PackageImportAlias:                "corev1",
-		PackageAlias:                      "CoreV1",
-		Package:                           corev1,
-		Plural:                            "secrets",
-		CacheType:                         "Secret",
 		NeedsStatusPermissions:            true,
 		AcceptsIngressClassNameAnnotation: false,
 		AcceptsIngressClassNameSpec:       false,
@@ -86,6 +73,7 @@ var inputControllersNeeded = &typesNeeded{
 		CapableOfStatusUpdates:            true,
 		AcceptsIngressClassNameAnnotation: true,
 		AcceptsIngressClassNameSpec:       true,
+		NeedsUpdateReferences:             true,
 		RBACVerbs:                         []string{"get", "list", "watch"},
 	},
 	typeNeeded{
@@ -115,6 +103,7 @@ var inputControllersNeeded = &typesNeeded{
 		CapableOfStatusUpdates:            true,
 		AcceptsIngressClassNameAnnotation: true,
 		AcceptsIngressClassNameSpec:       true,
+		NeedsUpdateReferences:             true,
 		RBACVerbs:                         []string{"get", "list", "watch"},
 	},
 	typeNeeded{
@@ -130,6 +119,7 @@ var inputControllersNeeded = &typesNeeded{
 		CapableOfStatusUpdates:            true,
 		AcceptsIngressClassNameAnnotation: true,
 		AcceptsIngressClassNameSpec:       true,
+		NeedsUpdateReferences:             true,
 		RBACVerbs:                         []string{"get", "list", "watch"},
 	},
 	typeNeeded{
@@ -158,6 +148,7 @@ var inputControllersNeeded = &typesNeeded{
 		NeedsStatusPermissions:            true,
 		AcceptsIngressClassNameAnnotation: false,
 		AcceptsIngressClassNameSpec:       false,
+		NeedsUpdateReferences:             true,
 		RBACVerbs:                         []string{"get", "list", "watch"},
 	},
 	typeNeeded{
@@ -172,6 +163,7 @@ var inputControllersNeeded = &typesNeeded{
 		NeedsStatusPermissions:            true,
 		AcceptsIngressClassNameAnnotation: true,
 		AcceptsIngressClassNameSpec:       false,
+		NeedsUpdateReferences:             true,
 		RBACVerbs:                         []string{"get", "list", "watch"},
 	},
 	typeNeeded{
@@ -186,6 +178,7 @@ var inputControllersNeeded = &typesNeeded{
 		NeedsStatusPermissions:            true,
 		AcceptsIngressClassNameAnnotation: true,
 		AcceptsIngressClassNameSpec:       false,
+		NeedsUpdateReferences:             true,
 		RBACVerbs:                         []string{"get", "list", "watch"},
 	},
 	typeNeeded{
@@ -201,6 +194,7 @@ var inputControllersNeeded = &typesNeeded{
 		CapableOfStatusUpdates:            true,
 		AcceptsIngressClassNameAnnotation: true,
 		AcceptsIngressClassNameSpec:       false,
+		NeedsUpdateReferences:             true,
 		RBACVerbs:                         []string{"get", "list", "watch"},
 	},
 	typeNeeded{
@@ -355,6 +349,10 @@ type typeNeeded struct {
 	// CapableOfStatusUpdates indicates that the controllers should manage status
 	// updates for the resource.
 	CapableOfStatusUpdates bool
+
+	// NeedUpdateReferences is true if we need to update the referece relationships
+	// between reconciled object and other objects.
+	NeedsUpdateReferences bool
 }
 
 func (t *typeNeeded) generate(contents *bytes.Buffer) error {
@@ -542,6 +540,13 @@ func (r *{{.PackageAlias}}{{.Kind}}Reconciler) Reconcile(ctx context.Context, re
 		if errors.IsNotFound(err) {
 			obj.Namespace = req.Namespace
 			obj.Name = req.Name
+			{{if .NeedsUpdateReferences}}
+			// remove reference record where the {{.Kind}} is the referrer
+			err = r.DataplaneClient.DeleteReferencesByReferrer(obj)
+			if err != nil {
+				return ctrl.Result{}, err
+			}
+			{{end}}
 			return ctrl.Result{}, r.DataplaneClient.DeleteObject(obj)
 		}
 		return ctrl.Result{}, err
@@ -551,6 +556,13 @@ func (r *{{.PackageAlias}}{{.Kind}}Reconciler) Reconcile(ctx context.Context, re
 	// clean the object up if it's being deleted
 	if !obj.DeletionTimestamp.IsZero() && time.Now().After(obj.DeletionTimestamp.Time) {
 		log.V(util.DebugLevel).Info("resource is being deleted, its configuration will be removed", "type", "{{.Kind}}", "namespace", req.Namespace, "name", req.Name)
+		{{if .NeedsUpdateReferences}}
+		// remove reference record where the {{.Kind}} is the referrer
+		delRefErr := r.DataplaneClient.DeleteReferencesByReferrer(obj)
+		if delRefErr != nil {
+			return ctrl.Result{}, delRefErr
+		}
+		{{end}}
 		objectExistsInCache, err := r.DataplaneClient.ObjectExists(obj)
 		if err != nil {
 			return ctrl.Result{}, err
@@ -588,6 +600,19 @@ func (r *{{.PackageAlias}}{{.Kind}}Reconciler) Reconcile(ctx context.Context, re
 	if err := r.DataplaneClient.UpdateObject(obj); err != nil {
 		return ctrl.Result{}, err
 	}
+
+{{- if .NeedsUpdateReferences }}
+	// update reference relationship from the {{.Kind}} to other objects.
+	if err := updateReferredObjects(ctx, r.Client, r.DataplaneClient, obj); err != nil {
+		if errors.IsNotFound(err) {
+			// reconcile again if the secret does not exist yet
+			return ctrl.Result{
+				Requeue: true
+			}, nil
+		}
+		return ctrl.Result{}, err
+	}
+{{- end }}
 
 {{- if .CapableOfStatusUpdates}}
 	// if status updates are enabled report the status for the object

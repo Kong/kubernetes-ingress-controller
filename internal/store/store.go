@@ -121,6 +121,8 @@ type Store struct {
 	logger logrus.FieldLogger
 }
 
+var _ Storer = Store{}
+
 // CacheStores stores cache.Store for all Kinds of k8s objects that
 // the Ingress Controller reads.
 type CacheStores struct {

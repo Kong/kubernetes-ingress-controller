@@ -1,0 +1,121 @@
+package configuration
+
+import (
+	"context"
+	"time"
+
+	"github.com/go-logr/logr"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/runtime"
+	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller"
+	"sigs.k8s.io/controller-runtime/pkg/event"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	"sigs.k8s.io/controller-runtime/pkg/source"
+)
+
+// -----------------------------------------------------------------------------
+// CoreV1 Secret - Reconciler
+// -----------------------------------------------------------------------------
+
+// CoreV1SecretReconciler reconciles Secret resources
+type CoreV1SecretReconciler struct {
+	client.Client
+
+	Log              logr.Logger
+	Scheme           *runtime.Scheme
+	DataplaneClient  *dataplane.KongClient
+	CacheSyncTimeout time.Duration
+}
+
+// SetupWithManager sets up the controller with the Manager.
+func (r *CoreV1SecretReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	c, err := controller.New("CoreV1Secret", mgr, controller.Options{
+		Reconciler: r,
+		LogConstructor: func(_ *reconcile.Request) logr.Logger {
+			return r.Log
+		},
+		CacheSyncTimeout: r.CacheSyncTimeout,
+	})
+	if err != nil {
+		return err
+	}
+
+	predicateFuncs := predicate.NewPredicateFuncs(r.shouldReconcileSecret)
+	//we should always try to delete secrets in caches when they are deleted in cluster.
+	predicateFuncs.DeleteFunc = func(event event.DeleteEvent) bool { return true }
+	return c.Watch(
+		&source.Kind{Type: &corev1.Secret{}},
+		&handler.EnqueueRequestForObject{},
+		predicateFuncs,
+	)
+}
+
+func (r *CoreV1SecretReconciler) shouldReconcileSecret(obj client.Object) bool {
+	secret, ok := obj.(*corev1.Secret)
+	if !ok {
+		return false
+	}
+	labels := secret.Labels
+	if labels != nil && labels["konghq.com/ca-cert"] == "true" {
+		return true
+	}
+
+	referred, err := r.DataplaneClient.ObjectReferred(secret)
+
+	if err != nil {
+		r.Log.Info("failed to check whether secret referred:", err)
+		return false
+	}
+
+	return referred
+}
+
+//+kubebuilder:rbac:groups="",resources=secrets,verbs=list;watch
+//+kubebuilder:rbac:groups="",resources=secrets/status,verbs=get;update;patch
+
+// Reconcile processes the watched objects
+func (r *CoreV1SecretReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+	log := r.Log.WithValues("CoreV1Secret", req.NamespacedName)
+
+	// get the relevant object
+	obj := new(corev1.Secret)
+	if err := r.Get(ctx, req.NamespacedName, obj); err != nil {
+		if errors.IsNotFound(err) {
+			obj.Namespace = req.Namespace
+			obj.Name = req.Name
+			return ctrl.Result{}, r.DataplaneClient.DeleteObject(obj)
+		}
+		return ctrl.Result{}, err
+	}
+	log.V(util.DebugLevel).Info("reconciling resource", "namespace", req.Namespace, "name", req.Name)
+
+	// clean the object up if it's being deleted
+	if !obj.DeletionTimestamp.IsZero() && time.Now().After(obj.DeletionTimestamp.Time) {
+		log.V(util.DebugLevel).Info("resource is being deleted, its configuration will be removed", "type", "Secret", "namespace", req.Namespace, "name", req.Name)
+		objectExistsInCache, err := r.DataplaneClient.ObjectExists(obj)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+		if objectExistsInCache {
+			if err := r.DataplaneClient.DeleteObject(obj); err != nil {
+				return ctrl.Result{}, err
+			}
+			return ctrl.Result{Requeue: true}, nil // wait until the object is no longer present in the cache
+		}
+		return ctrl.Result{}, nil
+	}
+
+	// update the kong Admin API with the changes
+	if err := r.DataplaneClient.UpdateObject(obj); err != nil {
+		return ctrl.Result{}, err
+	}
+
+	return ctrl.Result{}, nil
+}

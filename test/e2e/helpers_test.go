@@ -229,22 +229,17 @@ func verifyEnterprise(ctx context.Context, t *testing.T, env environments.Enviro
 		// before considering this complete.
 		resp, err := httpc.Do(req)
 		if err != nil {
-			t.Log("failed to get response from admin API:", err)
 			return false
 		}
 		defer resp.Body.Close()
 		body, err := io.ReadAll(resp.Body)
 		if err != nil {
-			t.Log("failed to read response body from admin API:", err)
 			return false
 		}
 		if resp.StatusCode != http.StatusOK {
-			t.Log("received non-OK http code:", resp.StatusCode)
 			return false
 		}
 		if err := json.Unmarshal(body, &adminOutput); err != nil {
-			t.Log("failed to parse version from response body from admin API:", err)
-			t.Logf("response body: %s", string(body))
 			return false
 		}
 		return adminOutput.Version != ""

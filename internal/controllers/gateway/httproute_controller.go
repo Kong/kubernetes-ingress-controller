@@ -316,45 +316,59 @@ func (r *HTTPRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		}
 	}
 
-	// perform operations on the kong store only if the route is in accepted status
-	if isRouteAccepted(gateways) {
-		// remove all the hostnames that don't match with at least one Listener's Hostname
-		filteredHTTPRoute := filterHostnames(gateways, httproute.DeepCopy())
+	// TODO HeaderFailure at this point the HTTPRoute passes class checks and is part of a ready Gateway. We've
+	// populated an Accepted condition inside _gateways_ slice items, from getSupportedGatewayForRoute, if the route
+	// passes Gateway Listener-level filters.
 
-		// if the gateways are ready, and the HTTPRoute is destined for them, ensure that
-		// the object is pushed to the dataplane.
-		if err := r.DataplaneClient.UpdateObject(filteredHTTPRoute); err != nil {
-			debug(log, httproute, "failed to update object in data-plane, requeueing")
-			return ctrl.Result{}, err
-		}
-		if r.DataplaneClient.AreKubernetesObjectReportsEnabled() {
-			// if the dataplane client has reporting enabled (this is the default and is
-			// tied in with status updates being enabled in the controller manager) then
-			// we will wait until the object is reported as successfully configured before
-			// moving on to status updates.
-			if !r.DataplaneClient.KubernetesObjectIsConfigured(httproute) {
-				return ctrl.Result{Requeue: true}, nil
+	// After, this reconciler will check that accepted condition and add it to the store. If status updates are
+	// enabled, it will requeue and r.ensureGatewayReferenceStatusAdded will add status information if the config
+	// push succeeds.
+
+	problemConditions := r.determineProblemConditions(httproute)
+	if len(problemConditions) <= 0 {
+
+		// perform operations on the kong store only if the route is in accepted status
+		if isRouteAccepted(gateways) {
+			// remove all the hostnames that don't match with at least one Listener's Hostname
+			filteredHTTPRoute := filterHostnames(gateways, httproute.DeepCopy())
+
+			// if the gateways are ready, and the HTTPRoute is destined for them, ensure that
+			// the object is pushed to the dataplane.
+			if err := r.DataplaneClient.UpdateObject(filteredHTTPRoute); err != nil {
+				debug(log, httproute, "failed to update object in data-plane, requeueing")
+				return ctrl.Result{}, err
+			}
+			if r.DataplaneClient.AreKubernetesObjectReportsEnabled() {
+				// if the dataplane client has reporting enabled (this is the default and is
+				// tied in with status updates being enabled in the controller manager) then
+				// we will wait until the object is reported as successfully configured before
+				// moving on to status updates.
+				if !r.DataplaneClient.KubernetesObjectIsConfigured(httproute) {
+					return ctrl.Result{Requeue: true}, nil
+				}
 			}
 		}
-	}
 
-	// now that the object has been successfully configured for in the dataplane
-	// we can update the object status to indicate that it's now properly linked
-	// to the configured Gateways.
-	debug(log, httproute, "ensuring status contains Gateway associations")
-	statusUpdated, err := r.ensureGatewayReferenceStatusAdded(ctx, httproute, gateways...)
-	if err != nil {
-		// don't proceed until the statuses can be updated appropriately
-		return ctrl.Result{}, err
-	}
-	if statusUpdated {
-		// if the status was updated it will trigger a follow-up reconciliation
-		// so we don't need to do anything further here.
-		return ctrl.Result{}, nil
-	}
+		// now that the object has been successfully configured for in the dataplane
+		// we can update the object status to indicate that it's now properly linked
+		// to the configured Gateways.
+		debug(log, httproute, "ensuring status contains Gateway associations")
+		statusUpdated, err := r.ensureGatewayReferenceStatusAdded(ctx, httproute, gateways...)
+		if err != nil {
+			// don't proceed until the statuses can be updated appropriately
+			return ctrl.Result{}, err
+		}
+		if statusUpdated {
+			// if the status was updated it will trigger a follow-up reconciliation
+			// so we don't need to do anything further here.
+			return ctrl.Result{}, nil
+		}
 
-	// once the data-plane has accepted the HTTPRoute object, we're all set.
-	info(log, httproute, "httproute has been configured on the data-plane")
+		// once the data-plane has accepted the HTTPRoute object, we're all set.
+		info(log, httproute, "httproute has been configured on the data-plane")
+	} else {
+		// update status with conditions
+	}
 	return ctrl.Result{}, nil
 }
 
@@ -369,7 +383,11 @@ var httprouteParentKind = "Gateway"
 // ensureGatewayReferenceStatus takes any number of Gateways that should be
 // considered "attached" to a given HTTPRoute and ensures that the status
 // for the HTTPRoute is updated appropriately.
-func (r *HTTPRouteReconciler) ensureGatewayReferenceStatusAdded(ctx context.Context, httproute *gatewayv1beta1.HTTPRoute, gateways ...supportedGatewayWithCondition) (bool, error) {
+func (r *HTTPRouteReconciler) ensureGatewayReferenceStatusAdded(
+	ctx context.Context,
+	httproute *gatewayv1beta1.HTTPRoute,
+	gateways ...supportedGatewayWithCondition,
+) (bool, error) {
 	// map the existing parentStatues to avoid duplications
 	parentStatuses := make(map[string]*gatewayv1beta1.RouteParentStatus)
 	for _, existingParent := range httproute.Status.Parents {
@@ -578,4 +596,58 @@ func (r *HTTPRouteReconciler) getHTTPRouteRuleReason(ctx context.Context, httpRo
 		}
 	}
 	return gatewayv1beta1.RouteReasonResolvedRefs, nil
+}
+
+// determineProblemConditions checks the HTTPRoute for various misconfigurations that block the controller from
+// accepting the HTTPRoute. It returns a slice of Conditions, which is empty if there are no problems.
+func (r *HTTPRouteReconciler) determineProblemConditions(route *gatewayv1beta1.HTTPRoute) []metav1.Condition {
+	var conditions []metav1.Condition
+	if condition := getHeaderModifierConditions(route); condition != nil {
+		conditions = append(conditions, *condition)
+	}
+	return conditions
+}
+
+// getHeaderModifierConditions checks header modifier filters for any filters with multiple actions for the same
+// header. It returns a Condition pointer if any filters violate this rule, or nil if not.
+func getHeaderModifierConditions(route *gatewayv1beta1.HTTPRoute) *metav1.Condition {
+	condition := metav1.Condition{
+		Type:               string(gatewayv1beta1.RouteConditionAccepted),
+		Status:             metav1.ConditionFalse,
+		ObservedGeneration: route.Generation,
+		LastTransitionTime: metav1.Now(),
+		Reason:             string(gatewayv1beta1.RouteReasonUnsupportedValue),
+	}
+	message := "rule %d specifies multiple request header actions for header %s"
+	for ruleIndex, rule := range route.Spec.Rules {
+		for _, filter := range rule.Filters {
+			// TODO gatewayv1beta1.HTTPRouteFilterResponseHeaderModifier isn't released yet, but we should check them
+			// here also when it is
+			if filter.Type == gatewayv1beta1.HTTPRouteFilterRequestHeaderModifier {
+				seen := make(map[string]bool)
+				for _, header := range filter.RequestHeaderModifier.Set {
+					if _, exists := seen[string(header.Name)]; exists {
+						condition.Message = fmt.Sprintf(message, ruleIndex, header.Name)
+						return &condition
+					}
+					seen[string(header.Name)] = true
+				}
+				for _, header := range filter.RequestHeaderModifier.Add {
+					if _, exists := seen[string(header.Name)]; exists {
+						condition.Message = fmt.Sprintf(message, ruleIndex, header.Name)
+						return &condition
+					}
+					seen[string(header.Name)] = true
+				}
+				for _, header := range filter.RequestHeaderModifier.Remove {
+					if _, exists := seen[header]; exists {
+						condition.Message = fmt.Sprintf(message, ruleIndex, header)
+						return &condition
+					}
+					seen[header] = true
+				}
+			}
+		}
+	}
+	return nil
 }

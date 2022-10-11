@@ -84,29 +84,6 @@ USER 65532:65532
 ENTRYPOINT ["/go/bin/dlv"]
 CMD ["exec", "--continue", "--accept-multiclient",  "--headless", "--api-version=2", "--listen=:2345", "--log", "/workspace/manager-debug"]
 
-### Distroless/default
-# Use distroless as minimal base image to package the manager binary
-# Refer to https://github.com/GoogleContainerTools/distroless for more details
-FROM gcr.io/distroless/static:nonroot AS distroless
-ARG TAG
-ARG TARGETPLATFORM
-ARG TARGETOS
-ARG TARGETARCH
-
-LABEL name="Kong Ingress Controller" \
-      vendor="Kong" \
-      version="$TAG" \
-      release="1" \
-      url="https://github.com/Kong/kubernetes-ingress-controller" \
-      summary="Kong for Kubernetes Ingress" \
-      description="Use Kong for Kubernetes Ingress. Configure plugins, health checking, load balancing and more in Kong for Kubernetes Services, all using Custom Resource Definitions (CRDs) and Kubernetes-native tooling."
-
-WORKDIR /
-COPY --from=builder /workspace/manager .
-USER 65532:65532
-
-ENTRYPOINT ["/manager"]
-
 ### RHEL
 # Build UBI image
 FROM registry.access.redhat.com/ubi8/ubi AS redhat
@@ -170,4 +147,27 @@ COPY LICENSE /licenses/
 USER 1000
 
 # Run the compiled binary.
+ENTRYPOINT ["/manager"]
+
+### Distroless/default
+# Use distroless as minimal base image to package the manager binary
+# Refer to https://github.com/GoogleContainerTools/distroless for more details
+FROM gcr.io/distroless/static:nonroot AS distroless
+ARG TAG
+ARG TARGETPLATFORM
+ARG TARGETOS
+ARG TARGETARCH
+
+LABEL name="Kong Ingress Controller" \
+      vendor="Kong" \
+      version="$TAG" \
+      release="1" \
+      url="https://github.com/Kong/kubernetes-ingress-controller" \
+      summary="Kong for Kubernetes Ingress" \
+      description="Use Kong for Kubernetes Ingress. Configure plugins, health checking, load balancing and more in Kong for Kubernetes Services, all using Custom Resource Definitions (CRDs) and Kubernetes-native tooling."
+
+WORKDIR /
+COPY --from=builder /workspace/manager .
+USER 65532:65532
+
 ENTRYPOINT ["/manager"]

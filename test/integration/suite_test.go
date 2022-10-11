@@ -161,7 +161,6 @@ func TestMain(m *testing.M) {
 	svc.Spec.Type = corev1.ServiceTypeLoadBalancer
 	_, err = env.Cluster().Client().CoreV1().Services(kongAddon.Namespace()).Update(ctx, svc, metav1.UpdateOptions{})
 	exitOnErr(err)
-
 	clusterVersion, err = env.Cluster().Version()
 	exitOnErr(err)
 	if clusterVersion.GE(knativeMinKubernetesVersion) {

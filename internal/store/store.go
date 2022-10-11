@@ -81,6 +81,7 @@ type Storer interface {
 	GetKongConsumer(namespace, name string) (*kongv1.KongConsumer, error)
 	GetIngressClassV1(name string) (*netv1.IngressClass, error)
 	GetIngressClassParametersV1Alpha1() (*kongv1alpha1.IngressClassParameters, error)
+	GetGateway(namespace string, name string) (*gatewayv1beta1.Gateway, error)
 
 	ListIngressesV1beta1() []*netv1beta1.Ingress
 	ListIngressesV1() []*netv1.Ingress
@@ -881,6 +882,19 @@ func (s Store) GetIngressClassParametersV1Alpha1() (*kongv1alpha1.IngressClassPa
 		return nil, ErrNotFound{fmt.Sprintf("IngressClassParameters %v not found", ingressClass.Spec.Parameters.Name)}
 	}
 	return params.(*kongv1alpha1.IngressClassParameters), nil
+}
+
+// GetGateway returns gateway resource having specified namespace and name.
+func (s Store) GetGateway(namespace string, name string) (*gatewayv1beta1.Gateway, error) {
+	key := fmt.Sprintf("%v/%v", namespace, name)
+	obj, exists, err := s.stores.Gateway.GetByKey(key)
+	if err != nil {
+		return nil, err
+	}
+	if !exists {
+		return nil, ErrNotFound{fmt.Sprintf("Gateway %v not found", name)}
+	}
+	return obj.(*gatewayv1beta1.Gateway), nil
 }
 
 // ListKongConsumers returns all KongConsumers filtered by the ingress.class

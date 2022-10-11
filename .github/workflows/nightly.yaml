@@ -186,7 +186,6 @@ jobs:
     environment: "Configure ci"
     needs:
       - "test-current-kubernetes"
-      - "test-previous-kubernetes-gke"
     if: ${{ always() }}
     runs-on: ubuntu-latest
     steps:

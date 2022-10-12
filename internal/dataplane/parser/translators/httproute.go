@@ -12,8 +12,9 @@ import (
 // that can be used to instantiate Kong routes and services.
 // Rules from this object should route traffic to BackendRefs from this object.
 type HTTPRouteTranslationMeta struct {
-	BackendRefs []gatewayv1beta1.HTTPBackendRef
-	Rules       []gatewayv1beta1.HTTPRouteRule
+	BackendRefs  []gatewayv1beta1.HTTPBackendRef
+	Rules        []gatewayv1beta1.HTTPRouteRule
+	RulesNumbers []int
 }
 
 // TranslateHTTPRoutes translates a list of HTTPRoutes into a list of HTTPRouteTranslationMeta
@@ -33,34 +34,49 @@ func TranslateHTTPRoute(route *gatewayv1beta1.HTTPRoute) []*HTTPRouteTranslation
 
 // httpRouteTranslationIndex aggregates all rules routing to the same backends group.
 type httpRouteTranslationIndex struct {
-	backendsRules map[httpBackendRefsKey][]gatewayv1beta1.HTTPRouteRule
+	backendsRules map[httpBackendRefsKey]*rulesEntry
+}
+
+type rulesEntry struct {
+	rules       []gatewayv1beta1.HTTPRouteRule
+	ruleNumbers []int
 }
 
 // newHTTPRouteTranslationIndex creates a new httpRouteTranslationIndex.
 func newHTTPRouteTranslationIndex() *httpRouteTranslationIndex {
 	return &httpRouteTranslationIndex{
-		backendsRules: make(map[httpBackendRefsKey][]gatewayv1beta1.HTTPRouteRule),
+		backendsRules: make(map[httpBackendRefsKey]*rulesEntry),
 	}
 }
 
 // addRoute an HTTPRoute to the index, grouping the rules by their backendRefs.
 func (i *httpRouteTranslationIndex) addRoute(route *gatewayv1beta1.HTTPRoute) {
-	for _, rule := range route.Spec.Rules {
+	for ruleNumber, rule := range route.Spec.Rules {
 		backendRefsKey := getHTTPBackendRefsKey(rule.BackendRefs...)
-		i.backendsRules[backendRefsKey] = append(i.backendsRules[backendRefsKey], rule)
+		entry, ok := i.backendsRules[backendRefsKey]
+		if !ok {
+			entry = &rulesEntry{
+				rules:       []gatewayv1beta1.HTTPRouteRule{},
+				ruleNumbers: []int{},
+			}
+			i.backendsRules[backendRefsKey] = entry
+		}
+		entry.rules = append(entry.rules, rule)
+		entry.ruleNumbers = append(entry.ruleNumbers, ruleNumber)
 	}
 }
 
 // translate the index into a list of HTTPRouteTranslationMeta objects.
 func (i *httpRouteTranslationIndex) translate() []*HTTPRouteTranslationMeta {
 	translations := make([]*HTTPRouteTranslationMeta, 0)
-	for _, rules := range i.backendsRules {
+	for _, rulesEntry := range i.backendsRules {
 		// get the backendRefs from any rule, as they are all the same
-		backendRefs := rules[0].BackendRefs
+		backendRefs := rulesEntry.rules[0].BackendRefs
 
 		translations = append(translations, &HTTPRouteTranslationMeta{
-			BackendRefs: backendRefs,
-			Rules:       rules,
+			BackendRefs:  backendRefs,
+			Rules:        rulesEntry.rules,
+			RulesNumbers: rulesEntry.ruleNumbers,
 		})
 	}
 

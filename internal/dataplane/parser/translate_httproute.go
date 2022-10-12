@@ -74,21 +74,26 @@ func (p *Parser) ingressRulesFromHTTPRoute(result *ingressRules, httproute *gate
 
 	return p.ingressRulesFromHTTPRouteLegacyFallback(httproute, result)
 }
+
 // ingressRulesFromHTTPRouteWithCombinedServiceRoutes generates a set of proto-Kong routes (ingress rules) from an HTTPRoute.
 // If multiple rules in the HTTPRoute use the same Service, it combines them into a single Kong route.
 func (p *Parser) ingressRulesFromHTTPRouteWithCombinedServiceRoutes(httproute *gatewayv1beta1.HTTPRoute, result *ingressRules) error {
-	for i, translationMeta := range translators.TranslateHTTPRoute(httproute) {
+	for _, translationMeta := range translators.TranslateHTTPRoute(httproute) {
 		// HTTPRoute uses a wrapper HTTPBackendRef to add optional filters to its BackendRefs
 		backendRefs := httpBackendRefsToBackendRefs(translationMeta.BackendRefs)
 
+		// use the original index of the first rule that uses this service as the rule number
+		firstCombinedRuleNum := translationMeta.RulesNumbers[0]
+
 		// create a service and attach the routes to it
-		service, err := generateKongServiceFromBackendRef(p.logger, p.storer, result, httproute, i, "http", backendRefs...)
+		service, err := generateKongServiceFromBackendRef(p.logger, p.storer, result, httproute, firstCombinedRuleNum, "http", backendRefs...)
 		if err != nil {
 			return err
 		}
 
 		// generate the routes for the service and attach them to the service
-		for ruleNumber, rule := range translationMeta.Rules {
+		for j, rule := range translationMeta.Rules {
+			ruleNumber := translationMeta.RulesNumbers[j]
 			routes, err := generateKongRoutesFromHTTPRouteRule(httproute, ruleNumber, rule, p.flagEnabledRegexPathPrefix)
 			if err != nil {
 				return err

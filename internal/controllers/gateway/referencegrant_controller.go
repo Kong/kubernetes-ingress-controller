@@ -18,6 +18,7 @@ package gateway
 
 import (
 	"context"
+	"time"
 
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -31,7 +32,6 @@ import (
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 )
 
 // ReferenceGrantReconciler reconciles a ReferenceGrant object.
@@ -41,8 +41,9 @@ type ReferenceGrantReconciler struct {
 	Scheme          *runtime.Scheme
 	DataplaneClient *dataplane.KongClient
 
-	PublishService  string
-	WatchNamespaces []string
+	PublishService   string
+	WatchNamespaces  []string
+	CacheSyncTimeout time.Duration
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -52,7 +53,7 @@ func (r *ReferenceGrantReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		LogConstructor: func(_ *reconcile.Request) logr.Logger {
 			return r.Log
 		},
-		CacheSyncTimeout: util.ControllersCacheSyncTimeout(),
+		CacheSyncTimeout: r.CacheSyncTimeout,
 	})
 	if err != nil {
 		return err

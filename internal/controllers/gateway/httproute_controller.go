@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"reflect"
+	"time"
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
@@ -42,6 +43,7 @@ type HTTPRouteReconciler struct {
 	// namespace is in backendRefs.
 	// If it is false, referencing backend in different namespace will be rejected.
 	EnableReferenceGrant bool
+	CacheSyncTimeout     time.Duration
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -51,7 +53,7 @@ func (r *HTTPRouteReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		LogConstructor: func(_ *reconcile.Request) logr.Logger {
 			return r.Log
 		},
-		CacheSyncTimeout: util.ControllersCacheSyncTimeout(),
+		CacheSyncTimeout: r.CacheSyncTimeout,
 	})
 	if err != nil {
 		return err

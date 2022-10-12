@@ -87,10 +87,11 @@ func setupControllers(
 		{
 			Enabled: ingressConditions.IngressClassNetV1Enabled(),
 			Controller: &configuration.NetV1IngressClassReconciler{
-				Client:          mgr.GetClient(),
-				Log:             ctrl.Log.WithName("controllers").WithName("IngressClass").WithName("netv1"),
-				DataplaneClient: dataplaneClient,
-				Scheme:          mgr.GetScheme(),
+				Client:           mgr.GetClient(),
+				Log:              ctrl.Log.WithName("controllers").WithName("IngressClass").WithName("netv1"),
+				DataplaneClient:  dataplaneClient,
+				Scheme:           mgr.GetScheme(),
+				CacheSyncTimeout: c.CacheSyncTimeout,
 			},
 		},
 		{
@@ -104,6 +105,7 @@ func setupControllers(
 				DisableIngressClassLookups: !c.IngressClassNetV1Enabled,
 				StatusQueue:                kubernetesStatusQueue,
 				DataplaneAddressFinder:     dataplaneAddressFinder,
+				CacheSyncTimeout:           c.CacheSyncTimeout,
 			},
 		},
 		{
@@ -121,6 +123,7 @@ func setupControllers(
 				DisableIngressClassLookups: !c.IngressClassNetV1Enabled,
 				StatusQueue:                kubernetesStatusQueue,
 				DataplaneAddressFinder:     dataplaneAddressFinder,
+				CacheSyncTimeout:           c.CacheSyncTimeout,
 			},
 		},
 		{
@@ -134,33 +137,37 @@ func setupControllers(
 				DisableIngressClassLookups: !c.IngressClassNetV1Enabled,
 				StatusQueue:                kubernetesStatusQueue,
 				DataplaneAddressFinder:     dataplaneAddressFinder,
+				CacheSyncTimeout:           c.CacheSyncTimeout,
 			},
 		},
 		{
 			Enabled: c.ServiceEnabled,
 			Controller: &configuration.CoreV1ServiceReconciler{
-				Client:          mgr.GetClient(),
-				Log:             ctrl.Log.WithName("controllers").WithName("Service"),
-				Scheme:          mgr.GetScheme(),
-				DataplaneClient: dataplaneClient,
+				Client:           mgr.GetClient(),
+				Log:              ctrl.Log.WithName("controllers").WithName("Service"),
+				Scheme:           mgr.GetScheme(),
+				DataplaneClient:  dataplaneClient,
+				CacheSyncTimeout: c.CacheSyncTimeout,
 			},
 		},
 		{
 			Enabled: c.ServiceEnabled,
 			Controller: &configuration.CoreV1EndpointsReconciler{
-				Client:          mgr.GetClient(),
-				Log:             ctrl.Log.WithName("controllers").WithName("Endpoints"),
-				Scheme:          mgr.GetScheme(),
-				DataplaneClient: dataplaneClient,
+				Client:           mgr.GetClient(),
+				Log:              ctrl.Log.WithName("controllers").WithName("Endpoints"),
+				Scheme:           mgr.GetScheme(),
+				DataplaneClient:  dataplaneClient,
+				CacheSyncTimeout: c.CacheSyncTimeout,
 			},
 		},
 		{
 			Enabled: true,
 			Controller: &configuration.CoreV1SecretReconciler{
-				Client:          mgr.GetClient(),
-				Log:             ctrl.Log.WithName("controllers").WithName("Secrets"),
-				Scheme:          mgr.GetScheme(),
-				DataplaneClient: dataplaneClient,
+				Client:           mgr.GetClient(),
+				Log:              ctrl.Log.WithName("controllers").WithName("Secrets"),
+				Scheme:           mgr.GetScheme(),
+				DataplaneClient:  dataplaneClient,
+				CacheSyncTimeout: c.CacheSyncTimeout,
 			},
 		},
 		// ---------------------------------------------------------------------------
@@ -185,6 +192,7 @@ func setupControllers(
 				DisableIngressClassLookups: !c.IngressClassNetV1Enabled,
 				StatusQueue:                kubernetesStatusQueue,
 				DataplaneAddressFinder:     dataplaneAddressFinder,
+				CacheSyncTimeout:           c.CacheSyncTimeout,
 			},
 		},
 		{
@@ -206,6 +214,7 @@ func setupControllers(
 				DisableIngressClassLookups: !c.IngressClassNetV1Enabled,
 				StatusQueue:                kubernetesStatusQueue,
 				DataplaneAddressFinder:     dataplaneAddressFinder,
+				CacheSyncTimeout:           c.CacheSyncTimeout,
 			},
 		},
 		{
@@ -219,10 +228,11 @@ func setupControllers(
 				restMapper,
 			).Enabled(),
 			Controller: &configuration.KongV1KongIngressReconciler{
-				Client:          mgr.GetClient(),
-				Log:             ctrl.Log.WithName("controllers").WithName("KongIngress"),
-				Scheme:          mgr.GetScheme(),
-				DataplaneClient: dataplaneClient,
+				Client:           mgr.GetClient(),
+				Log:              ctrl.Log.WithName("controllers").WithName("KongIngress"),
+				Scheme:           mgr.GetScheme(),
+				DataplaneClient:  dataplaneClient,
+				CacheSyncTimeout: c.CacheSyncTimeout,
 			},
 		},
 		{
@@ -236,10 +246,11 @@ func setupControllers(
 				restMapper,
 			).Enabled(),
 			Controller: &configuration.KongV1Alpha1IngressClassParametersReconciler{
-				Client:          mgr.GetClient(),
-				Log:             ctrl.Log.WithName("controllers").WithName("IngressClassParameters"),
-				Scheme:          mgr.GetScheme(),
-				DataplaneClient: dataplaneClient,
+				Client:           mgr.GetClient(),
+				Log:              ctrl.Log.WithName("controllers").WithName("IngressClassParameters"),
+				Scheme:           mgr.GetScheme(),
+				DataplaneClient:  dataplaneClient,
+				CacheSyncTimeout: c.CacheSyncTimeout,
 			},
 		},
 		{
@@ -253,10 +264,11 @@ func setupControllers(
 				restMapper,
 			).Enabled(),
 			Controller: &configuration.KongV1KongPluginReconciler{
-				Client:          mgr.GetClient(),
-				Log:             ctrl.Log.WithName("controllers").WithName("KongPlugin"),
-				Scheme:          mgr.GetScheme(),
-				DataplaneClient: dataplaneClient,
+				Client:           mgr.GetClient(),
+				Log:              ctrl.Log.WithName("controllers").WithName("KongPlugin"),
+				Scheme:           mgr.GetScheme(),
+				DataplaneClient:  dataplaneClient,
+				CacheSyncTimeout: c.CacheSyncTimeout,
 			},
 		},
 		{
@@ -276,6 +288,7 @@ func setupControllers(
 				DataplaneClient:            dataplaneClient,
 				IngressClassName:           c.IngressClassName,
 				DisableIngressClassLookups: !c.IngressClassNetV1Enabled,
+				CacheSyncTimeout:           c.CacheSyncTimeout,
 			},
 		},
 		{
@@ -295,6 +308,7 @@ func setupControllers(
 				DataplaneClient:            dataplaneClient,
 				IngressClassName:           c.IngressClassName,
 				DisableIngressClassLookups: !c.IngressClassNetV1Enabled,
+				CacheSyncTimeout:           c.CacheSyncTimeout,
 			},
 		},
 		// ---------------------------------------------------------------------------
@@ -322,6 +336,7 @@ func setupControllers(
 				DisableIngressClassLookups: !c.IngressClassNetV1Enabled,
 				StatusQueue:                kubernetesStatusQueue,
 				DataplaneAddressFinder:     dataplaneAddressFinder,
+				CacheSyncTimeout:           c.CacheSyncTimeout,
 			},
 		},
 		// ---------------------------------------------------------------------------
@@ -345,6 +360,7 @@ func setupControllers(
 				PublishService:       c.PublishService,
 				WatchNamespaces:      c.WatchNamespaces,
 				EnableReferenceGrant: referenceGrantsEnabled,
+				CacheSyncTimeout:     c.CacheSyncTimeout,
 			},
 		},
 		{
@@ -363,6 +379,7 @@ func setupControllers(
 				Scheme:               mgr.GetScheme(),
 				DataplaneClient:      dataplaneClient,
 				EnableReferenceGrant: referenceGrantsEnabled,
+				CacheSyncTimeout:     c.CacheSyncTimeout,
 			},
 		},
 		// ---------------------------------------------------------------------------
@@ -371,10 +388,11 @@ func setupControllers(
 		{
 			Enabled: referenceGrantsEnabled,
 			Controller: &gateway.ReferenceGrantReconciler{
-				Client:          mgr.GetClient(),
-				Log:             ctrl.Log.WithName("controllers").WithName("ReferenceGrant"),
-				Scheme:          mgr.GetScheme(),
-				DataplaneClient: dataplaneClient,
+				Client:           mgr.GetClient(),
+				Log:              ctrl.Log.WithName("controllers").WithName("ReferenceGrant"),
+				Scheme:           mgr.GetScheme(),
+				DataplaneClient:  dataplaneClient,
+				CacheSyncTimeout: c.CacheSyncTimeout,
 			},
 		},
 		{
@@ -388,10 +406,11 @@ func setupControllers(
 				restMapper,
 			).Enabled(),
 			Controller: &gateway.UDPRouteReconciler{
-				Client:          mgr.GetClient(),
-				Log:             ctrl.Log.WithName("controllers").WithName("UDPRoute"),
-				Scheme:          mgr.GetScheme(),
-				DataplaneClient: dataplaneClient,
+				Client:           mgr.GetClient(),
+				Log:              ctrl.Log.WithName("controllers").WithName("UDPRoute"),
+				Scheme:           mgr.GetScheme(),
+				DataplaneClient:  dataplaneClient,
+				CacheSyncTimeout: c.CacheSyncTimeout,
 			},
 		},
 		{
@@ -405,10 +424,11 @@ func setupControllers(
 				restMapper,
 			).Enabled(),
 			Controller: &gateway.TCPRouteReconciler{
-				Client:          mgr.GetClient(),
-				Log:             ctrl.Log.WithName("controllers").WithName("TCPRoute"),
-				Scheme:          mgr.GetScheme(),
-				DataplaneClient: dataplaneClient,
+				Client:           mgr.GetClient(),
+				Log:              ctrl.Log.WithName("controllers").WithName("TCPRoute"),
+				Scheme:           mgr.GetScheme(),
+				DataplaneClient:  dataplaneClient,
+				CacheSyncTimeout: c.CacheSyncTimeout,
 			},
 		},
 		{
@@ -422,10 +442,11 @@ func setupControllers(
 				restMapper,
 			).Enabled(),
 			Controller: &gateway.TLSRouteReconciler{
-				Client:          mgr.GetClient(),
-				Log:             ctrl.Log.WithName("controllers").WithName("TLSRoute"),
-				Scheme:          mgr.GetScheme(),
-				DataplaneClient: dataplaneClient,
+				Client:           mgr.GetClient(),
+				Log:              ctrl.Log.WithName("controllers").WithName("TLSRoute"),
+				Scheme:           mgr.GetScheme(),
+				DataplaneClient:  dataplaneClient,
+				CacheSyncTimeout: c.CacheSyncTimeout,
 			},
 		},
 	}

@@ -750,7 +750,7 @@ func TestMissingCRDsDontCrashTheController(t *testing.T) {
 
 	// reducing controllers' cache synchronisation timeout in order to trigger the possible process crash quicker
 	cacheSyncTimeout := time.Second
-	manifest = addControllerEnv(t, manifest, "TEST_KONG_CONTROLLERS_CACHE_SYNC_TIMEOUT", cacheSyncTimeout.String())
+	manifest = addControllerEnv(t, manifest, "CONTROLLER_CACHE_SYNC_TIMEOUT", cacheSyncTimeout.String())
 
 	deployment := deployKong(ctx, t, env, manifest)
 

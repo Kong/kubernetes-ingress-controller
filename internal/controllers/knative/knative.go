@@ -45,6 +45,7 @@ type Knativev1alpha1IngressReconciler struct {
 
 	IngressClassName           string
 	DisableIngressClassLookups bool
+	CacheSyncTimeout           time.Duration
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -54,7 +55,7 @@ func (r *Knativev1alpha1IngressReconciler) SetupWithManager(mgr ctrl.Manager) er
 		LogConstructor: func(_ *reconcile.Request) logr.Logger {
 			return r.Log
 		},
-		CacheSyncTimeout: util.ControllersCacheSyncTimeout(),
+		CacheSyncTimeout: r.CacheSyncTimeout,
 	})
 	if err != nil {
 		return err

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"reflect"
+	"time"
 
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -33,9 +34,10 @@ import (
 type TCPRouteReconciler struct {
 	client.Client
 
-	Log             logr.Logger
-	Scheme          *runtime.Scheme
-	DataplaneClient *dataplane.KongClient
+	Log              logr.Logger
+	Scheme           *runtime.Scheme
+	DataplaneClient  *dataplane.KongClient
+	CacheSyncTimeout time.Duration
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -45,7 +47,7 @@ func (r *TCPRouteReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		LogConstructor: func(_ *reconcile.Request) logr.Logger {
 			return r.Log
 		},
-		CacheSyncTimeout: util.ControllersCacheSyncTimeout(),
+		CacheSyncTimeout: r.CacheSyncTimeout,
 	})
 	if err != nil {
 		return err

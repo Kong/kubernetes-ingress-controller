@@ -25,7 +25,7 @@ import (
 
 // Config collects all configuration that the controller manager takes from the environment.
 type Config struct {
-	// See flag definitions in RegisterFlags(...) for documentation of the fields defined here.
+	// See flag definitions in FlagSet(...) for documentation of the fields defined here.
 
 	// Logging configurations
 	LogLevel            string
@@ -42,6 +42,7 @@ type Config struct {
 	EnableReverseSync                 bool
 	SyncPeriod                        time.Duration
 	SkipCACertificates                bool
+	CacheSyncTimeout                  time.Duration
 
 	// Kong Proxy configurations
 	APIServerHost            string
@@ -132,6 +133,7 @@ func (c *Config) FlagSet() *pflag.FlagSet {
 	flagSet.BoolVar(&c.EnableReverseSync, "enable-reverse-sync", false, `Send configuration to Kong even if the configuration checksum has not changed since previous update.`)
 	flagSet.DurationVar(&c.SyncPeriod, "sync-period", time.Hour*48, `Relist and confirm cloud resources this often`) // 48 hours derived from controller-runtime defaults
 	flagSet.BoolVar(&c.SkipCACertificates, "skip-ca-certificates", false, `disable syncing CA certificate syncing (for use with multi-workspace environments)`)
+	flagSet.DurationVar(&c.CacheSyncTimeout, "cache-sync-timeout", time.Minute*2, `The time limit set to wait for syncing controllers' caches.`) // 2 minutes derived from controller-runtime defaults
 
 	flagSet.StringVar(&c.KongAdminAPIConfig.TLSClientCertPath, "kong-admin-tls-client-cert-file", "", "mTLS client certificate file for authentication.")
 	flagSet.StringVar(&c.KongAdminAPIConfig.TLSClientKeyPath, "kong-admin-tls-client-key-file", "", "mTLS client key file for authentication.")

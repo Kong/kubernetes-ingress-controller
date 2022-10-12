@@ -10,7 +10,7 @@ import (
 
 // HTTPRouteTranslationMeta is a translation of a single HTTPRoute into metadata
 // that can be used to instantiate Kong routes and services.
-// Rules from this object should route traffic to the BAckendRefs from this object.
+// Rules from this object should route traffic to BackendRefs from this object.
 type HTTPRouteTranslationMeta struct {
 	BackendRefs []gatewayv1beta1.HTTPBackendRef
 	Rules       []gatewayv1beta1.HTTPRouteRule

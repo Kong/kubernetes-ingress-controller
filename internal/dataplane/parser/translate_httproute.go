@@ -102,7 +102,8 @@ func (p *Parser) ingressRulesFromHTTPRouteWithCombinedServiceRoutes(httproute *g
 	return nil
 }
 
-// ingressRulesFromHTTPRouteLegacyFallback is to be depracated in favor of the combined service routes.
+// ingressRulesFromHTTPRouteLegacyFallback generates a set of proto-Kong routes (ingress rules) from an HTTPRoute.
+// It generates a separate route for each rule. It is planned for deprecation in favor of ingressRulesFromHTTPRouteWithCombinedServiceRoutes.
 func (p *Parser) ingressRulesFromHTTPRouteLegacyFallback(httproute *gatewayv1beta1.HTTPRoute, result *ingressRules) error {
 	// each rule may represent a different set of backend services that will be accepting
 	// traffic, so we make separate routes and Kong services for every present rule.
@@ -355,7 +356,7 @@ func kongHeaderFormatter(header gatewayv1beta1.HTTPHeader) string {
 }
 
 func httpBackendRefsToBackendRefs(httpBackendRef []gatewayv1beta1.HTTPBackendRef) []gatewayv1beta1.BackendRef {
-	var backendRefs []gatewayv1beta1.BackendRef
+	var backendRefs = make([]gatewayv1beta1.BackendRef, 0, len(httpBackendRef))
 
 	for _, hRef := range httpBackendRef {
 		backendRefs = append(backendRefs, hRef.BackendRef)

@@ -667,7 +667,7 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 			}
 		}
 
-		t.Run(tt.msg+" using lagacy parser", withParser(parser))
+		t.Run(tt.msg+" using legacy parser", withParser(parser))
 		t.Run(tt.msg+" using combined service routes parser", withParser(parserWithCombinedServiceRoutes))
 	}
 }
@@ -884,7 +884,7 @@ func TestIngressRulesFromHTTPRoutes_RegexPrefix(t *testing.T) {
 			}
 		}
 
-		t.Run(tt.msg+" using lagacy parser", withParser(parser))
+		t.Run(tt.msg+" using legacy parser", withParser(parser))
 		t.Run(tt.msg+" using combined service routes parser", withParser(parserWithCombinedServiceRoutes))
 	}
 }

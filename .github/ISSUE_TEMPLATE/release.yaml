@@ -61,6 +61,7 @@ body:
       - label: Copy `app/_data/docs_nav_kic_OLDVERSION.yml` to `app/_data/docs_nav_kic_NEWVERSION.yml` and update the `release` field to `NEWVERSION`. Add entries for any new articles.
       - label: Add a section to `app/_data/kong_versions.yml` for your version.
       - label: Open a PR from your branch.
+      - label: Inform and ping the @team-k8s via slack of impending release with a link to the release PR.
 - type: textarea
   id: release_trouble_shooting_link
   attributes:

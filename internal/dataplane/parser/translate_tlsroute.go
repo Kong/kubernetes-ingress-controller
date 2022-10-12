@@ -1,9 +1,14 @@
 package parser
 
 import (
+	"errors"
 	"fmt"
 
+	"github.com/kong/go-kong/kong"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
+
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/store"
 )
 
 // -----------------------------------------------------------------------------
@@ -53,11 +58,22 @@ func (p *Parser) ingressRulesFromTLSRoute(result *ingressRules, tlsroute *gatewa
 		return fmt.Errorf("no rules provided")
 	}
 
+	tlsPassthrough, err := p.isTLSRoutePassthrough(tlsroute)
+	if err != nil {
+		return err
+	}
+
 	// each rule may represent a different set of backend services that will be accepting
 	// traffic, so we make separate routes and Kong services for every present rule.
 	for ruleNumber, rule := range spec.Rules {
 		// determine the routes needed to route traffic to services for this rule
 		routes, err := generateKongRoutesFromRouteRule(tlsroute, ruleNumber, rule)
+		// change protocols in route to tls_passthrough.
+		if tlsPassthrough {
+			for i := range routes {
+				routes[i].Protocols = kong.StringSlice("tls_passthrough")
+			}
+		}
 		if err != nil {
 			return err
 		}
@@ -74,4 +90,56 @@ func (p *Parser) ingressRulesFromTLSRoute(result *ingressRules, tlsroute *gatewa
 	}
 
 	return nil
+}
+
+// isTLSRoutePassthrough returns true if we need to configure TLS passthrough to kong
+// for the tlsroute object.
+// returns a non-nil error if we failed to get the supported gateway.
+func (p *Parser) isTLSRoutePassthrough(tlsroute *gatewayv1alpha2.TLSRoute) (bool, error) {
+	// reconcile loop will push TLSRoute object with updated status when
+	// gateway is ready and TLSRoute object becomes stable.
+	// so we get the supported gateways from status.parents.
+	for _, parentStatus := range tlsroute.Status.Parents {
+		parentRef := parentStatus.ParentRef
+
+		if parentRef.Group != nil && string(*parentRef.Group) != gatewayv1beta1.GroupName {
+			continue
+		}
+
+		if parentRef.Kind != nil && gatewayv1beta1.Kind(*parentRef.Kind) != KindGateway {
+			continue
+		}
+
+		gatewayNamespace := tlsroute.Namespace
+		if parentRef.Namespace != nil {
+			gatewayNamespace = string(*parentRef.Namespace)
+		}
+
+		gateway, err := p.storer.GetGateway(gatewayNamespace, string(parentRef.Name))
+		if err != nil {
+			if errors.As(err, &store.ErrNotFound{}) {
+				// log an error if the gateway expected to support the TLSRoute is not found in our cache.
+				p.logger.WithError(err).Errorf("gateway %s/%s not found for TLSRoute %s/%s",
+					gatewayNamespace, parentRef.Name, tlsroute.Namespace, tlsroute.Name)
+				continue
+			}
+			return false, err
+		}
+
+		if parentRef.SectionName == nil {
+			continue
+		}
+		// if anyone of the listeners used for the gateway is configured to passthrough
+		// TLS requests, we return true.
+		for _, listener := range gateway.Spec.Listeners {
+			if listener.Name == gatewayv1beta1.SectionName(*parentRef.SectionName) {
+				if listener.TLS != nil && listener.TLS.Mode != nil &&
+					*listener.TLS.Mode == gatewayv1beta1.TLSModePassthrough {
+					return true, nil
+				}
+			}
+		}
+	}
+
+	return false, nil
 }

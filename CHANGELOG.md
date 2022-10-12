@@ -2,12 +2,13 @@
 
 <!---
 Adding a new version? You'll need three changes:
-* Add the ToC link, like "[1.2.3](#123]".
+* Add the ToC link, like "[1.2.3](#123)".
 * Add the section header, like "## [1.2.3]".
 * Add the diff link, like "[2.7.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v1.2.2...v1.2.3".
   This is all the way at the bottom. It's the thing we always forget.
 --->
 
+ - [2.8.0](#280)
  - [2.7.0](#270)
  - [2.6.0](#260)
  - [2.5.0](#250)
@@ -60,7 +61,9 @@ Adding a new version? You'll need three changes:
  - [0.0.5](#005)
  - [0.0.4 and prior](#004-and-prior)
 
- ## Unreleased
+## [2.8.0]
+
+> Release date: TBD
 
  ### Added
 
@@ -70,6 +73,27 @@ Adding a new version? You'll need three changes:
   does not functionally impact routing: requests that went to a given Service
   using the original method still go to the same Service in the new method.
   [#3008](https://github.com/Kong/kubernetes-ingress-controller/pull/3008)
+
+### Fixed
+
+- The controller now logs an error for and skips multi-Service rules that have
+  inconsistent Service annotations. Previously this issue prevented the
+  controller from applying configuration until corrected.
+  [#2988](https://github.com/Kong/kubernetes-ingress-controller/pull/2988)
+- Gateway API has been updated to 0.5.1. That version brought in some changes
+  in the conformance tests logic. Now, when the TLS config of a listener
+  references a non-existing secret, the listener ResolvedRefs condition reason
+  is set to InvalidCertificateRef. In addition, if a TLS config references a
+  secret in another namespace, and no ReferenceGrant allows that
+  reference, the listener ResolvedRefs condition reason is set to
+  RefNotPermitted.
+  [#3024](https://github.com/Kong/kubernetes-ingress-controller/pull/3024)
+- The `distroless` target is now the last target in the Dockerfile. This makes
+  it the default target if `docker buildx build` is invoked without a target.
+  While custom image build pipelines _should_ specify a target, this change
+  makes the default the same target released as the standard
+  `kong/kubernetes-ingress-controller:X.Y.Z` tags in the official repo.
+  [#3043](https://github.com/Kong/kubernetes-ingress-controller/pull/3043)
 
 ## [2.7.0]
 
@@ -2002,6 +2026,7 @@ Please read the changelog and test in your environment.
  - The initial versions  were rapildy iterated to deliver
    a working ingress controller.
 
+[2.8.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.7.0...v2.8.0
 [2.7.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.6.0...v2.7.0
 [2.6.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.5.0...v2.6.0
 [2.5.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.4.2...v2.5.0

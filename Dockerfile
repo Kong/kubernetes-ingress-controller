@@ -1,6 +1,6 @@
 ### Standard binary
 # Build the manager binary
-FROM golang:1.19.1 as builder
+FROM golang:1.19.2 as builder
 
 ARG TARGETPLATFORM
 ARG TARGETOS
@@ -34,7 +34,7 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH="${TARGETARCH}" GO111MODULE=on go build -a -
 ### FIPS 140-2 binary
 # Build the manager binary
 # https://github.com/golang/go/tree/dev.boringcrypto/misc/boring#building-from-docker
-FROM us-docker.pkg.dev/google.com/api-project-999119582588/go-boringcrypto/golang:1.18.6b7 as builder-fips
+FROM us-docker.pkg.dev/google.com/api-project-999119582588/go-boringcrypto/golang:1.18.7b7 as builder-fips
 
 ARG TARGETPLATFORM
 ARG TARGETOS
@@ -75,7 +75,7 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH="${TARGETARCH}" GO111MODULE=on go build -a -
 
 ### Debug
 # Create an image that runs a debug build with a Delve remote server on port 2345
-FROM golang:1.19.1 AS debug
+FROM golang:1.19.2 AS debug
 RUN go install github.com/go-delve/delve/cmd/dlv@latest
 # We want all source so Delve file location operations work
 COPY --from=builder-delve /workspace/ /workspace/
@@ -83,29 +83,6 @@ USER 65532:65532
 
 ENTRYPOINT ["/go/bin/dlv"]
 CMD ["exec", "--continue", "--accept-multiclient",  "--headless", "--api-version=2", "--listen=:2345", "--log", "/workspace/manager-debug"]
-
-### Distroless/default
-# Use distroless as minimal base image to package the manager binary
-# Refer to https://github.com/GoogleContainerTools/distroless for more details
-FROM gcr.io/distroless/static:nonroot AS distroless
-ARG TAG
-ARG TARGETPLATFORM
-ARG TARGETOS
-ARG TARGETARCH
-
-LABEL name="Kong Ingress Controller" \
-      vendor="Kong" \
-      version="$TAG" \
-      release="1" \
-      url="https://github.com/Kong/kubernetes-ingress-controller" \
-      summary="Kong for Kubernetes Ingress" \
-      description="Use Kong for Kubernetes Ingress. Configure plugins, health checking, load balancing and more in Kong for Kubernetes Services, all using Custom Resource Definitions (CRDs) and Kubernetes-native tooling."
-
-WORKDIR /
-COPY --from=builder /workspace/manager .
-USER 65532:65532
-
-ENTRYPOINT ["/manager"]
 
 ### RHEL
 # Build UBI image
@@ -170,4 +147,27 @@ COPY LICENSE /licenses/
 USER 1000
 
 # Run the compiled binary.
+ENTRYPOINT ["/manager"]
+
+### Distroless/default
+# Use distroless as minimal base image to package the manager binary
+# Refer to https://github.com/GoogleContainerTools/distroless for more details
+FROM gcr.io/distroless/static:nonroot AS distroless
+ARG TAG
+ARG TARGETPLATFORM
+ARG TARGETOS
+ARG TARGETARCH
+
+LABEL name="Kong Ingress Controller" \
+      vendor="Kong" \
+      version="$TAG" \
+      release="1" \
+      url="https://github.com/Kong/kubernetes-ingress-controller" \
+      summary="Kong for Kubernetes Ingress" \
+      description="Use Kong for Kubernetes Ingress. Configure plugins, health checking, load balancing and more in Kong for Kubernetes Services, all using Custom Resource Definitions (CRDs) and Kubernetes-native tooling."
+
+WORKDIR /
+COPY --from=builder /workspace/manager .
+USER 65532:65532
+
 ENTRYPOINT ["/manager"]

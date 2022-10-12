@@ -4,12 +4,14 @@ import (
 	"bytes"
 	"testing"
 
+	"github.com/kong/go-kong/kong"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	netv1beta1 "k8s.io/api/networking/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/pointer"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/store"
@@ -464,6 +466,106 @@ func TestDoK8sServicesMatchAnnotations(t *testing.T) {
 			for _, expectedLogEntry := range tt.expectedLogEntries {
 				assert.Contains(t, stdout.String(), expectedLogEntry)
 			}
+		})
+	}
+}
+
+func TestPopulateServices(t *testing.T) {
+	testCases := []struct {
+		name                   string
+		k8sServices            []*corev1.Service
+		serviceNamesToServices map[string]kongstate.Service
+		serviceNamesToSkip     map[string]interface{}
+	}{
+		{
+			name: "one service to skip, one service to keep",
+			k8sServices: []*corev1.Service{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "k8s-service-to-skip1",
+						Namespace: "test-namespace",
+						Annotations: map[string]string{
+							"konghq.com/foo": "bar",
+						},
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "k8s-service-to-skip2",
+						Namespace: "test-namespace",
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "k8s-service-to-keep1",
+						Namespace: "test-namespace",
+						Annotations: map[string]string{
+							"konghq.com/foo": "bar",
+						},
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "k8s-service-to-keep2",
+						Namespace: "test-namespace",
+						Annotations: map[string]string{
+							"konghq.com/foo": "bar",
+						},
+					},
+				},
+			},
+			serviceNamesToServices: map[string]kongstate.Service{
+				"service-to-skip": {
+					Service: kong.Service{
+						Name: pointer.StringPtr("service-to-skip"),
+					},
+					Namespace: "test-namespace",
+					Backends: []kongstate.ServiceBackend{
+						{
+							Name:      "k8s-service-to-skip1",
+							Namespace: "test-namespace",
+						},
+						{
+							Name:      "k8s-service-to-skip2",
+							Namespace: "test-namespace",
+						},
+					},
+				},
+				"service-to-keep": {
+					Service: kong.Service{
+						Name: pointer.StringPtr("service-to-skip"),
+					},
+					Namespace: "test-namespace",
+					Backends: []kongstate.ServiceBackend{
+						{
+							Name:      "k8s-service-to-keep1",
+							Namespace: "test-namespace",
+						},
+						{
+							Name:      "k8s-service-to-keep2",
+							Namespace: "test-namespace",
+						},
+					},
+				},
+			},
+			serviceNamesToSkip: map[string]interface{}{
+				"service-to-skip": nil,
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		tc := tc
+
+		t.Run(tc.name, func(t *testing.T) {
+			ingressRules := newIngressRules()
+			fakeStore, err := store.NewFakeStore(store.FakeObjects{
+				Services: tc.k8sServices,
+			})
+			require.NoError(t, err)
+			ingressRules.ServiceNameToServices = tc.serviceNamesToServices
+			servicesToBeSkipped := ingressRules.populateServices(logrus.New(), fakeStore)
+			require.Equal(t, tc.serviceNamesToSkip, servicesToBeSkipped)
 		})
 	}
 }

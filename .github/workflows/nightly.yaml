@@ -181,58 +181,11 @@ jobs:
         with:
           name: tests-report
           path: integration-${{ matrix.kubernetes-version }}-${{ matrix.dbmode }}-tests.xml
-  # run integration tests in previous versions of kubernetes
-  test-previous-kubernetes-gke:
-    name: Run integration tests on GKE
-    environment: gcloud
-    runs-on: ubuntu-latest
-    needs: build-push-images
-    strategy:
-      matrix:
-        minor:
-          - '21'
-          - '22'
-          - '23'
-          - '24'
-        dbmode:
-          - 'dbless'
-          - 'postgres'
-    steps:
-      - name: setup golang
-        uses: actions/setup-go@v3
-        with:
-          go-version: '^1.19'
-      - name: cache go modules
-        uses: actions/cache@v3
-        with:
-          path: ~/go/pkg/mod
-          key: ${{ runner.os }}-build-codegen-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-build-codegen-
-      - name: checkout repository
-        uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
-      - name: test ${{ matrix.dbmode }} on GKE v1.${{ matrix.minor }}
-        run: ./hack/e2e/run-tests.sh
-        env:
-          KUBERNETES_MAJOR_VERSION: 1
-          KUBERNETES_MINOR_VERSION: ${{ matrix.minor }}
-          GOOGLE_APPLICATION_CREDENTIALS: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}
-          GOOGLE_PROJECT: ${{ secrets.GOOGLE_PROJECT }}
-          GOOGLE_LOCATION: ${{ secrets.GOOGLE_LOCATION }}
-          GOTESTSUM_JUNITFILE: integration-${{ matrix.kubernetes-version }}-${{ matrix.dbmode }}-tests.xml
-      - name: collect test report
-        uses: actions/upload-artifact@v3
-        with:
-          name: tests-report
-          path: integration-${{ matrix.kubernetes-version }}-${{ matrix.dbmode }}-tests.xml
 
   buildpulse-report:
     environment: "Configure ci"
     needs:
       - "test-current-kubernetes"
-      - "test-previous-kubernetes-gke"
     if: ${{ always() }}
     runs-on: ubuntu-latest
     steps:

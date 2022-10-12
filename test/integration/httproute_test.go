@@ -60,30 +60,15 @@ func TestHTTPRouteEssentials(t *testing.T) {
 	cleaner.Add(gateway)
 
 	t.Log("deploying a minimal HTTP container deployment to test Ingress routes")
-	container1 := generators.NewContainer("httpbin", test.HTTPBinImage, 80)
-	deployment1 := generators.NewDeploymentForContainer(container1)
-	deployment1, err = env.Cluster().Client().AppsV1().Deployments(ns.Name).Create(ctx, deployment1, metav1.CreateOptions{})
+	container := generators.NewContainer("httpbin", test.HTTPBinImage, 80)
+	deployment := generators.NewDeploymentForContainer(container)
+	deployment, err = env.Cluster().Client().AppsV1().Deployments(ns.Name).Create(ctx, deployment, metav1.CreateOptions{})
 	require.NoError(t, err)
 
-	t.Log("deploying an extra minimal HTTP container deployment to test multiple backendRefs")
-	container2 := generators.NewContainer("nginx", "nginx", 80)
-	deployment2 := generators.NewDeploymentForContainer(container2)
-	deployment2, err = env.Cluster().Client().AppsV1().Deployments(ns.Name).Create(ctx, deployment2, metav1.CreateOptions{})
+	t.Logf("exposing deployment %s via service", deployment.Name)
+	service := generators.NewServiceForDeployment(deployment, corev1.ServiceTypeLoadBalancer)
+	_, err = env.Cluster().Client().CoreV1().Services(ns.Name).Create(ctx, service, metav1.CreateOptions{})
 	require.NoError(t, err)
-	cleaner.Add(deployment1)
-	cleaner.Add(deployment2)
-
-	t.Logf("exposing deployment %s via service", deployment1.Name)
-	service1 := generators.NewServiceForDeployment(deployment1, corev1.ServiceTypeLoadBalancer)
-	_, err = env.Cluster().Client().CoreV1().Services(ns.Name).Create(ctx, service1, metav1.CreateOptions{})
-	require.NoError(t, err)
-
-	t.Logf("exposing deployment %s via service", deployment2.Name)
-	service2 := generators.NewServiceForDeployment(deployment2, corev1.ServiceTypeLoadBalancer)
-	_, err = env.Cluster().Client().CoreV1().Services(ns.Name).Create(ctx, service2, metav1.CreateOptions{})
-	require.NoError(t, err)
-	cleaner.Add(service1)
-	cleaner.Add(service2)
 
 	kongplugin := &kongv1.KongPlugin{
 		ObjectMeta: metav1.ObjectMeta{
@@ -99,7 +84,7 @@ func TestHTTPRouteEssentials(t *testing.T) {
 	pluginClient, err := clientset.NewForConfig(env.Cluster().Config())
 	_, err = pluginClient.ConfigurationV1().KongPlugins(ns.Name).Create(ctx, kongplugin, metav1.CreateOptions{})
 
-	t.Logf("creating an httproute to access deployment %s via kong", deployment1.Name)
+	t.Logf("creating an httproute to access deployment %s via kong", deployment.Name)
 	httpPort := gatewayv1beta1.PortNumber(80)
 	pathMatchPrefix := gatewayv1beta1.PathMatchPathPrefix
 	pathMatchRegularExpression := gatewayv1beta1.PathMatchRegularExpression
@@ -143,7 +128,7 @@ func TestHTTPRouteEssentials(t *testing.T) {
 				BackendRefs: []gatewayv1beta1.HTTPBackendRef{{
 					BackendRef: gatewayv1beta1.BackendRef{
 						BackendObjectReference: gatewayv1beta1.BackendObjectReference{
-							Name: gatewayv1beta1.ObjectName(service1.Name),
+							Name: gatewayv1beta1.ObjectName(service.Name),
 							Port: &httpPort,
 							Kind: util.StringToGatewayAPIKindPtr("Service"),
 						},
@@ -201,78 +186,6 @@ func TestHTTPRouteEssentials(t *testing.T) {
 		t.Log("verifying HTTPRoute header match")
 		eventuallyGETPath(t, "", http.StatusOK, "<title>httpbin.org</title>", map[string]string{"Content-Type": "audio/mp3"})
 	}
-
-	t.Log("adding an additional backendRef to the HTTPRoute")
-	var httpbinWeight int32 = 75
-	var nginxWeight int32 = 25
-	require.Eventually(t, func() bool {
-		httpRoute, err = gatewayClient.GatewayV1beta1().HTTPRoutes(httpRoute.Namespace).Get(ctx, httpRoute.Name, metav1.GetOptions{})
-		require.NoError(t, err)
-		httpRoute.Spec.Rules[0].BackendRefs = []gatewayv1beta1.HTTPBackendRef{
-			{
-				BackendRef: gatewayv1beta1.BackendRef{
-					BackendObjectReference: gatewayv1beta1.BackendObjectReference{
-						Name: gatewayv1beta1.ObjectName(service1.Name),
-						Port: &httpPort,
-						Kind: util.StringToGatewayAPIKindPtr("Service"),
-					},
-					Weight: &httpbinWeight,
-				},
-			},
-			{
-				BackendRef: gatewayv1beta1.BackendRef{
-					BackendObjectReference: gatewayv1beta1.BackendObjectReference{
-						Name: gatewayv1beta1.ObjectName(service2.Name),
-						Port: &httpPort,
-						Kind: util.StringToGatewayAPIKindPtr("Service"),
-					},
-					Weight: &nginxWeight,
-				},
-			},
-		}
-
-		httpRoute, err = gatewayClient.GatewayV1beta1().HTTPRoutes(httpRoute.Namespace).Update(ctx, httpRoute, metav1.UpdateOptions{})
-		if err != nil {
-			t.Logf("WARNING: could not update httproute with an additional backendRef: %s (retrying)", err)
-			return false
-		}
-
-		return true
-	}, ingressWait, waitTick)
-
-	t.Log("verifying that both backends are ready to receive traffic")
-	httpbinRespContent := "<title>httpbin.org</title>"
-	nginxRespContent := "<title>Welcome to nginx!</title>"
-	eventuallyGETPath(t, "test-http-route-essentials", http.StatusOK, httpbinRespContent, emptyHeaderSet)
-	eventuallyGETPath(t, "test-http-route-essentials", http.StatusOK, nginxRespContent, emptyHeaderSet)
-
-	t.Log("verifying that both backends receive requests according to weighted distribution")
-	httpbinRespName := "httpbin-resp"
-	nginxRespName := "nginx-resp"
-	toleranceDelta := 0.2
-	expectedRespRatio := map[string]int{
-		httpbinRespName: int(httpbinWeight),
-		nginxRespName:   int(nginxWeight),
-	}
-	weightedLoadBalancingTestConfig := countHTTPResponsesConfig{
-		Method:      http.MethodGet,
-		Path:        "test-http-route-essentials",
-		Headers:     emptyHeaderSet,
-		Duration:    5 * time.Second,
-		RequestTick: 50 * time.Millisecond,
-	}
-	respCounter := countHTTPGetResponses(t, weightedLoadBalancingTestConfig,
-		matchRespByStatusAndContent(httpbinRespName, http.StatusOK, httpbinRespContent),
-		matchRespByStatusAndContent(nginxRespName, http.StatusOK, nginxRespContent),
-	)
-	assert.InDeltaMapValues(t,
-		distributionOfMapValues(respCounter),
-		distributionOfMapValues(expectedRespRatio),
-		toleranceDelta,
-		"Response distribution does not match expected distribution within %f%% delta,"+
-			" request-count=%v, expected-ratio=%v",
-		toleranceDelta*100, respCounter, expectedRespRatio,
-	)
 
 	t.Log("removing the parentrefs from the HTTPRoute")
 	oldParentRefs := httpRoute.Spec.ParentRefs
@@ -361,4 +274,195 @@ func TestHTTPRouteEssentials(t *testing.T) {
 
 	t.Log("verifying that the data-plane configuration from the HTTPRoute does not get orphaned with the GatewayClass and Gateway gone")
 	eventuallyGETPath(t, "test-http-route-essentials", http.StatusNotFound, "", emptyHeaderSet)
+}
+
+func TestHTTPRouteMultipleServices(t *testing.T) {
+	ns, cleaner := setup(t)
+	defer func() {
+		if t.Failed() {
+			output, err := cleaner.DumpDiagnostics(ctx, t.Name())
+			t.Logf("%s failed, dumped diagnostics to %s", t.Name(), output)
+			assert.NoError(t, err)
+		}
+		assert.NoError(t, cleaner.Cleanup(ctx))
+	}()
+
+	t.Log("getting a gateway client")
+	gatewayClient, err := gatewayclient.NewForConfig(env.Cluster().Config())
+	require.NoError(t, err)
+
+	t.Log("deploying a new gatewayClass")
+	gatewayClassName := uuid.NewString()
+	gwc, err := DeployGatewayClass(ctx, gatewayClient, gatewayClassName)
+	require.NoError(t, err)
+	cleaner.Add(gwc)
+
+	t.Log("deploying a new gateway")
+	gatewayName := uuid.NewString()
+	gateway, err := DeployGateway(ctx, gatewayClient, ns.Name, gatewayClassName, func(gw *gatewayv1beta1.Gateway) {
+		gw.Name = gatewayName
+	})
+	require.NoError(t, err)
+	cleaner.Add(gateway)
+
+	t.Log("deploying a minimal HTTP container deployment to test Ingress routes")
+	container1 := generators.NewContainer("httpbin", test.HTTPBinImage, 80)
+	deployment1 := generators.NewDeploymentForContainer(container1)
+	deployment1, err = env.Cluster().Client().AppsV1().Deployments(ns.Name).Create(ctx, deployment1, metav1.CreateOptions{})
+	require.NoError(t, err)
+
+	t.Log("deploying an extra minimal HTTP container deployment to test multiple backendRefs")
+	container2 := generators.NewContainer("nginx", "nginx", 80)
+	deployment2 := generators.NewDeploymentForContainer(container2)
+	deployment2, err = env.Cluster().Client().AppsV1().Deployments(ns.Name).Create(ctx, deployment2, metav1.CreateOptions{})
+	require.NoError(t, err)
+	cleaner.Add(deployment1)
+	cleaner.Add(deployment2)
+
+	t.Logf("exposing deployment %s via service", deployment1.Name)
+	service1 := generators.NewServiceForDeployment(deployment1, corev1.ServiceTypeLoadBalancer)
+	_, err = env.Cluster().Client().CoreV1().Services(ns.Name).Create(ctx, service1, metav1.CreateOptions{})
+	require.NoError(t, err)
+
+	t.Logf("exposing deployment %s via service", deployment2.Name)
+	service2 := generators.NewServiceForDeployment(deployment2, corev1.ServiceTypeLoadBalancer)
+	_, err = env.Cluster().Client().CoreV1().Services(ns.Name).Create(ctx, service2, metav1.CreateOptions{})
+	require.NoError(t, err)
+	// service3 has an annotation the others don't. we expect the controller to skip rules that have different annotations
+	service3 := generators.NewServiceForDeployment(deployment2, corev1.ServiceTypeLoadBalancer)
+	service3.Annotations = map[string]string{annotations.AnnotationPrefix + annotations.HostHeaderKey: "example.com"}
+	service3.Name = "nginx-host"
+	_, err = env.Cluster().Client().CoreV1().Services(ns.Name).Create(ctx, service3, metav1.CreateOptions{})
+	require.NoError(t, err)
+	cleaner.Add(service1)
+	cleaner.Add(service2)
+	cleaner.Add(service3)
+
+	t.Log("adding an HTTPRoute with multi-backend rules")
+	var httpbinWeight int32 = 75
+	var nginxWeight int32 = 25
+	httpPort := gatewayv1beta1.PortNumber(80)
+	pathMatchPrefix := gatewayv1beta1.PathMatchPathPrefix
+	httpRoute := &gatewayv1beta1.HTTPRoute{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: uuid.NewString(),
+			Annotations: map[string]string{
+				annotations.AnnotationPrefix + annotations.StripPathKey: "true",
+				annotations.AnnotationPrefix + annotations.PluginsKey:   "correlation",
+			},
+		},
+		Spec: gatewayv1beta1.HTTPRouteSpec{
+			CommonRouteSpec: gatewayv1beta1.CommonRouteSpec{
+				ParentRefs: []gatewayv1beta1.ParentReference{{
+					Name: gatewayv1beta1.ObjectName(gateway.Name),
+				}},
+			},
+			Rules: []gatewayv1beta1.HTTPRouteRule{
+				{
+					Matches: []gatewayv1beta1.HTTPRouteMatch{
+						{
+							Path: &gatewayv1beta1.HTTPPathMatch{
+								Type:  &pathMatchPrefix,
+								Value: kong.String("/test-http-route-multiple-services"),
+							},
+						},
+					},
+					BackendRefs: []gatewayv1beta1.HTTPBackendRef{
+						{
+							BackendRef: gatewayv1beta1.BackendRef{
+								BackendObjectReference: gatewayv1beta1.BackendObjectReference{
+									Name: gatewayv1beta1.ObjectName(service1.Name),
+									Port: &httpPort,
+									Kind: util.StringToGatewayAPIKindPtr("Service"),
+								},
+								Weight: &httpbinWeight,
+							},
+						},
+						{
+							BackendRef: gatewayv1beta1.BackendRef{
+								BackendObjectReference: gatewayv1beta1.BackendObjectReference{
+									Name: gatewayv1beta1.ObjectName(service2.Name),
+									Port: &httpPort,
+									Kind: util.StringToGatewayAPIKindPtr("Service"),
+								},
+								Weight: &nginxWeight,
+							},
+						},
+					},
+				},
+				{
+					Matches: []gatewayv1beta1.HTTPRouteMatch{
+						{
+							Path: &gatewayv1beta1.HTTPPathMatch{
+								Type:  &pathMatchPrefix,
+								Value: kong.String("/test-http-route-multiple-services-broken"),
+							},
+						},
+					},
+					BackendRefs: []gatewayv1beta1.HTTPBackendRef{
+						{
+							BackendRef: gatewayv1beta1.BackendRef{
+								BackendObjectReference: gatewayv1beta1.BackendObjectReference{
+									Name: gatewayv1beta1.ObjectName(service1.Name),
+									Port: &httpPort,
+									Kind: util.StringToGatewayAPIKindPtr("Service"),
+								},
+								Weight: &httpbinWeight,
+							},
+						},
+						{
+							BackendRef: gatewayv1beta1.BackendRef{
+								BackendObjectReference: gatewayv1beta1.BackendObjectReference{
+									Name: gatewayv1beta1.ObjectName(service3.Name),
+									Port: &httpPort,
+									Kind: util.StringToGatewayAPIKindPtr("Service"),
+								},
+								Weight: &nginxWeight,
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+	httpRoute, err = gatewayClient.GatewayV1beta1().HTTPRoutes(ns.Name).Create(ctx, httpRoute, metav1.CreateOptions{})
+	require.NoError(t, err)
+	cleaner.Add(httpRoute)
+
+	t.Log("verifying that both backends are ready to receive traffic")
+	httpbinRespContent := "<title>httpbin.org</title>"
+	nginxRespContent := "<title>Welcome to nginx!</title>"
+	eventuallyGETPath(t, "test-http-route-multiple-services", http.StatusOK, httpbinRespContent, emptyHeaderSet)
+	eventuallyGETPath(t, "test-http-route-multiple-services", http.StatusOK, nginxRespContent, emptyHeaderSet)
+
+	t.Log("verifying that both backends receive requests according to weighted distribution")
+	httpbinRespName := "httpbin-resp"
+	nginxRespName := "nginx-resp"
+	toleranceDelta := 0.2
+	expectedRespRatio := map[string]int{
+		httpbinRespName: int(httpbinWeight),
+		nginxRespName:   int(nginxWeight),
+	}
+	weightedLoadBalancingTestConfig := countHTTPResponsesConfig{
+		Method:      http.MethodGet,
+		Path:        "test-http-route-multiple-services",
+		Headers:     emptyHeaderSet,
+		Duration:    5 * time.Second,
+		RequestTick: 50 * time.Millisecond,
+	}
+	respCounter := countHTTPGetResponses(t, weightedLoadBalancingTestConfig,
+		matchRespByStatusAndContent(httpbinRespName, http.StatusOK, httpbinRespContent),
+		matchRespByStatusAndContent(nginxRespName, http.StatusOK, nginxRespContent),
+	)
+	assert.InDeltaMapValues(t,
+		distributionOfMapValues(respCounter),
+		distributionOfMapValues(expectedRespRatio),
+		toleranceDelta,
+		"Response distribution does not match expected distribution within %f%% delta,"+
+			" request-count=%v, expected-ratio=%v",
+		toleranceDelta*100, respCounter, expectedRespRatio,
+	)
+
+	t.Log("verifying that misconfigured service rules are _not_ routed")
+	eventuallyGETPath(t, "test-http-route-multiple-services-broken", http.StatusNotFound, "", emptyHeaderSet)
 }

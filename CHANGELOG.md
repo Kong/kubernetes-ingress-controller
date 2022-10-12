@@ -65,10 +65,28 @@ Adding a new version? You'll need three changes:
 
 > Release date: TBD
 
-### Fixed 
+### Fixed
 
-- The controller will no longer crash in case of missing CRDs installation. 
-  Instead, an explicit message will be logged, informing that a given resource 
+- The controller now logs an error for and skips multi-Service rules that have
+  inconsistent Service annotations. Previously this issue prevented the
+  controller from applying configuration until corrected.
+  [#2988](https://github.com/Kong/kubernetes-ingress-controller/pull/2988)
+- Gateway API has been updated to 0.5.1. That version brought in some changes
+  in the conformance tests logic. Now, when the TLS config of a listener
+  references a non-existing secret, the listener ResolvedRefs condition reason
+  is set to InvalidCertificateRef. In addition, if a TLS config references a
+  secret in another namespace, and no ReferenceGrant allows that
+  reference, the listener ResolvedRefs condition reason is set to
+  RefNotPermitted.
+  [#3024](https://github.com/Kong/kubernetes-ingress-controller/pull/3024)
+- The `distroless` target is now the last target in the Dockerfile. This makes
+  it the default target if `docker buildx build` is invoked without a target.
+  While custom image build pipelines _should_ specify a target, this change
+  makes the default the same target released as the standard
+  `kong/kubernetes-ingress-controller:X.Y.Z` tags in the official repo.
+  [#3043](https://github.com/Kong/kubernetes-ingress-controller/pull/3043)
+- The controller will no longer crash in case of missing CRDs installation.
+  Instead, an explicit message will be logged, informing that a given resource
   controller has been disabled.
   [#3013](https://github.com/Kong/kubernetes-ingress-controller/pull/3013)
 

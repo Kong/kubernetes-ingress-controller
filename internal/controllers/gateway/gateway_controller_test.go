@@ -597,7 +597,7 @@ func TestGetReferenceGrantConditionReason(t *testing.T) {
 					},
 				},
 			},
-			expectedReason: string(gatewayv1alpha2.ListenerReasonInvalidCertificateRef),
+			expectedReason: string(gatewayv1alpha2.ListenerReasonRefNotPermitted),
 		},
 		{
 			name:             "reference granted, secret name not specified",

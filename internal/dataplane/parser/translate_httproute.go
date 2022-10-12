@@ -74,7 +74,8 @@ func (p *Parser) ingressRulesFromHTTPRoute(result *ingressRules, httproute *gate
 
 	return p.ingressRulesFromHTTPRouteLegacyFallback(httproute, result)
 }
-
+// ingressRulesFromHTTPRouteWithCombinedServiceRoutes generates a set of proto-Kong routes (ingress rules) from an HTTPRoute.
+// If multiple rules in the HTTPRoute use the same Service, it combines them into a single Kong route.
 func (p *Parser) ingressRulesFromHTTPRouteWithCombinedServiceRoutes(httproute *gatewayv1beta1.HTTPRoute, result *ingressRules) error {
 	for i, translationMeta := range translators.TranslateHTTPRoute(httproute) {
 		// HTTPRoute uses a wrapper HTTPBackendRef to add optional filters to its BackendRefs

@@ -113,12 +113,5 @@ func getHTTPBackendRefsKey(backendRefs ...gatewayv1beta1.HTTPBackendRef) httpBac
 	}
 	sort.Strings(backendKeys)
 
-	// create a string representation of the backend keys
-	var keyBuilder strings.Builder
-	for _, backendKey := range backendKeys {
-		keyBuilder.WriteString(backendKey)
-		keyBuilder.WriteString(";")
-	}
-
-	return httpBackendRefsKey(keyBuilder.String())
+	return httpBackendRefsKey(strings.Join(backendKeys, ";"))
 }

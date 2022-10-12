@@ -35,8 +35,10 @@ var (
 	queryMatchExact = gatewayv1beta1.QueryParamMatchExact
 )
 
-var ingressRulesFromHTTPRoutesCommonCasesHTTPPort = gatewayv1beta1.PortNumber(80)
-var ingressRulesFromHTTPRoutesCommonCasesHTTPPort2 = gatewayv1beta1.PortNumber(8080)
+var (
+	ingressRulesFromHTTPRoutesCommonCasesHTTPPort  = gatewayv1beta1.PortNumber(80)
+	ingressRulesFromHTTPRoutesCommonCasesHTTPPort2 = gatewayv1beta1.PortNumber(8080)
+)
 
 type testIngressRulesFromHTTPRoutes struct {
 	msg      string
@@ -45,7 +47,7 @@ type testIngressRulesFromHTTPRoutes struct {
 	errs     []error
 }
 
-// testIngressRulesFromHTTPRoutesCommonCases test should work with lagacy parser and combined routes parser
+// testIngressRulesFromHTTPRoutesCommonCases test should work with lagacy parser and combined routes parser.
 var ingressRulesFromHTTPRoutesCommonCases = []testIngressRulesFromHTTPRoutes{
 	{
 		msg: "an empty list of HTTPRoutes should produce no ingress rules",

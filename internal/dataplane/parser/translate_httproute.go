@@ -362,7 +362,7 @@ func kongHeaderFormatter(header gatewayv1beta1.HTTPHeader) string {
 }
 
 func httpBackendRefsToBackendRefs(httpBackendRef []gatewayv1beta1.HTTPBackendRef) []gatewayv1beta1.BackendRef {
-	var backendRefs = make([]gatewayv1beta1.BackendRef, 0, len(httpBackendRef))
+	backendRefs := make([]gatewayv1beta1.BackendRef, 0, len(httpBackendRef))
 
 	for _, hRef := range httpBackendRef {
 		backendRefs = append(backendRefs, hRef.BackendRef)

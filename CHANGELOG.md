@@ -79,6 +79,12 @@ Adding a new version? You'll need three changes:
   reference, the listener ResolvedRefs condition reason is set to
   RefNotPermitted.
   [#3024](https://github.com/Kong/kubernetes-ingress-controller/pull/3024)
+- The `distroless` target is now the last target in the Dockerfile. This makes
+  it the default target if `docker buildx build` is invoked without a target.
+  While custom image build pipelines _should_ specify a target, this change
+  makes the default the same target released as the standard
+  `kong/kubernetes-ingress-controller:X.Y.Z` tags in the official repo.
+  [#3043](https://github.com/Kong/kubernetes-ingress-controller/pull/3043)
 
 ## [2.7.0]
 

@@ -338,6 +338,8 @@ func (r *HTTPRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 				debug(log, httproute, "failed to update object in data-plane, requeueing")
 				return ctrl.Result{}, err
 			}
+			info(log, httproute, "httproute has been configured on the data-plane")
+
 			if r.DataplaneClient.AreKubernetesObjectReportsEnabled() {
 				// if the dataplane client has reporting enabled (this is the default and is
 				// tied in with status updates being enabled in the controller manager) then
@@ -348,26 +350,25 @@ func (r *HTTPRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 				}
 			}
 		}
-
-		// now that the object has been successfully configured for in the dataplane
-		// we can update the object status to indicate that it's now properly linked
-		// to the configured Gateways.
-		debug(log, httproute, "ensuring status contains Gateway associations")
-		statusUpdated, err := r.ensureGatewayReferenceStatusAdded(ctx, httproute, gateways...)
-		if err != nil {
-			// don't proceed until the statuses can be updated appropriately
+	} else {
+		// if problems exist, the route is not accepted and needs to be removed from the store if present
+		if err := r.DataplaneClient.DeleteObject(httproute); err != nil {
+			debug(log, httproute, "failed to delete object from data-plane, requeuing")
 			return ctrl.Result{}, err
 		}
-		if statusUpdated {
-			// if the status was updated it will trigger a follow-up reconciliation
-			// so we don't need to do anything further here.
-			return ctrl.Result{}, nil
-		}
-
-		// once the data-plane has accepted the HTTPRoute object, we're all set.
-		info(log, httproute, "httproute has been configured on the data-plane")
-	} else {
-		// update status with conditions
+	}
+	// update the route status to show either that it was accepted Gateways or list problems that prevent Gateways
+	// from accepting it
+	debug(log, httproute, "updating route status if needed")
+	statusUpdated, err := r.ensureGatewayReferenceStatusAdded(ctx, httproute, problemConditions, gateways...)
+	if err != nil {
+		// don't proceed until the statuses can be updated appropriately
+		return ctrl.Result{}, err
+	}
+	if statusUpdated {
+		// if the status was updated it will trigger a follow-up reconciliation
+		// so we don't need to do anything further here.
+		return ctrl.Result{}, nil
 	}
 	return ctrl.Result{}, nil
 }
@@ -386,6 +387,7 @@ var httprouteParentKind = "Gateway"
 func (r *HTTPRouteReconciler) ensureGatewayReferenceStatusAdded(
 	ctx context.Context,
 	httproute *gatewayv1beta1.HTTPRoute,
+	problems []metav1.Condition,
 	gateways ...supportedGatewayWithCondition,
 ) (bool, error) {
 	// map the existing parentStatues to avoid duplications
@@ -415,13 +417,22 @@ func (r *HTTPRouteReconciler) ensureGatewayReferenceStatusAdded(
 				Name:      gatewayv1beta1.ObjectName(gateway.gateway.Name),
 			},
 			ControllerName: ControllerName,
-			Conditions: []metav1.Condition{{
+		}
+		// if there are no misconfiguration conditions generated earlier, add the accepted condition generated based on
+		// the Gateway's filters
+		if len(problems) == 0 {
+			gatewayParentStatus.Conditions = []metav1.Condition{{
 				Type:               gateway.condition.Type,
 				Status:             gateway.condition.Status,
 				ObservedGeneration: httproute.Generation,
 				LastTransitionTime: metav1.Now(),
 				Reason:             gateway.condition.Reason,
-			}},
+			}}
+			// if there _were_ misconfigurations, use those instead. note that these will indicate that the false accepted
+			// reason is because of the misconfiguration, regardless of whether the Gateaway filters would accept a
+			// well-configured route
+		} else {
+			gatewayParentStatus.Conditions = problems
 		}
 		if gateway.listenerName != "" {
 			gatewayParentStatus.ParentRef.SectionName = (*SectionName)(pointer.StringPtr(gateway.listenerName))

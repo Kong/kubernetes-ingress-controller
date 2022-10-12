@@ -28,7 +28,12 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/test"
 )
 
-var emptyHeaderSet = make(map[string]string)
+var (
+	emptyHeaderSet             = make(map[string]string)
+	pathMatchPrefix            = gatewayv1beta1.PathMatchPathPrefix
+	pathMatchRegularExpression = gatewayv1beta1.PathMatchRegularExpression
+	pathMatchExact             = gatewayv1beta1.PathMatchExact
+)
 
 func TestHTTPRouteEssentials(t *testing.T) {
 	ns, cleaner := setup(t)
@@ -86,9 +91,6 @@ func TestHTTPRouteEssentials(t *testing.T) {
 
 	t.Logf("creating an httproute to access deployment %s via kong", deployment.Name)
 	httpPort := gatewayv1beta1.PortNumber(80)
-	pathMatchPrefix := gatewayv1beta1.PathMatchPathPrefix
-	pathMatchRegularExpression := gatewayv1beta1.PathMatchRegularExpression
-	pathMatchExact := gatewayv1beta1.PathMatchExact
 	headerMatchRegex := gatewayv1beta1.HeaderMatchRegularExpression
 	httpRoute := &gatewayv1beta1.HTTPRoute{
 		ObjectMeta: metav1.ObjectMeta{
@@ -465,4 +467,127 @@ func TestHTTPRouteMultipleServices(t *testing.T) {
 
 	t.Log("verifying that misconfigured service rules are _not_ routed")
 	eventuallyGETPath(t, "test-http-route-multiple-services-broken", http.StatusNotFound, "", emptyHeaderSet)
+}
+
+func TestHTTPRouteHeaderFilter(t *testing.T) {
+	ns, cleaner := setup(t)
+	defer func() {
+		if t.Failed() {
+			output, err := cleaner.DumpDiagnostics(ctx, t.Name())
+			t.Logf("%s failed, dumped diagnostics to %s", t.Name(), output)
+			assert.NoError(t, err)
+		}
+		assert.NoError(t, cleaner.Cleanup(ctx))
+	}()
+
+	t.Log("getting a gateway client")
+	gatewayClient, err := gatewayclient.NewForConfig(env.Cluster().Config())
+	require.NoError(t, err)
+
+	t.Log("deploying a new gatewayClass")
+	gatewayClassName := uuid.NewString()
+	gwc, err := DeployGatewayClass(ctx, gatewayClient, gatewayClassName)
+	require.NoError(t, err)
+	cleaner.Add(gwc)
+
+	t.Log("deploying a new gateway")
+	gatewayName := uuid.NewString()
+	gateway, err := DeployGateway(ctx, gatewayClient, ns.Name, gatewayClassName, func(gw *gatewayv1beta1.Gateway) {
+		gw.Name = gatewayName
+	})
+	require.NoError(t, err)
+	cleaner.Add(gateway)
+
+	t.Log("deploying a minimal HTTP container deployment to test Ingress routes")
+	container := generators.NewContainer("httpbin", test.HTTPBinImage, 80)
+	deployment := generators.NewDeploymentForContainer(container)
+	deployment, err = env.Cluster().Client().AppsV1().Deployments(ns.Name).Create(ctx, deployment, metav1.CreateOptions{})
+	require.NoError(t, err)
+
+	t.Logf("exposing deployment %s via service", deployment.Name)
+	service := generators.NewServiceForDeployment(deployment, corev1.ServiceTypeLoadBalancer)
+	_, err = env.Cluster().Client().CoreV1().Services(ns.Name).Create(ctx, service, metav1.CreateOptions{})
+	require.NoError(t, err)
+
+	t.Logf("creating an httproute to access deployment %s via kong", deployment.Name)
+	httpPort := gatewayv1beta1.PortNumber(80)
+	httpRoute := &gatewayv1beta1.HTTPRoute{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: uuid.NewString(),
+			Annotations: map[string]string{
+				annotations.AnnotationPrefix + annotations.StripPathKey: "true",
+				annotations.AnnotationPrefix + annotations.PluginsKey:   "correlation",
+			},
+		},
+		Spec: gatewayv1beta1.HTTPRouteSpec{
+			CommonRouteSpec: gatewayv1beta1.CommonRouteSpec{
+				ParentRefs: []gatewayv1beta1.ParentReference{{
+					Name: gatewayv1beta1.ObjectName(gateway.Name),
+				}},
+			},
+			Rules: []gatewayv1beta1.HTTPRouteRule{{
+				Matches: []gatewayv1beta1.HTTPRouteMatch{
+					{
+						Path: &gatewayv1beta1.HTTPPathMatch{
+							Type:  &pathMatchPrefix,
+							Value: kong.String("/test-http-route-header-filter"),
+						},
+					},
+				},
+				Filters: []gatewayv1beta1.HTTPRouteFilter{
+					{
+						Type: gatewayv1beta1.HTTPRouteFilterRequestHeaderModifier,
+						RequestHeaderModifier: &gatewayv1beta1.HTTPRequestHeaderFilter{
+							Set: []gatewayv1beta1.HTTPHeader{
+								{
+									Name:  "x-test",
+									Value: "marzipan",
+								},
+							},
+						},
+					},
+				},
+				BackendRefs: []gatewayv1beta1.HTTPBackendRef{{
+					BackendRef: gatewayv1beta1.BackendRef{
+						BackendObjectReference: gatewayv1beta1.BackendObjectReference{
+							Name: gatewayv1beta1.ObjectName(service.Name),
+							Port: &httpPort,
+							Kind: util.StringToGatewayAPIKindPtr("Service"),
+						},
+					},
+				}},
+			}},
+		},
+	}
+	httpRoute, err = gatewayClient.GatewayV1beta1().HTTPRoutes(ns.Name).Create(ctx, httpRoute, metav1.CreateOptions{})
+	require.NoError(t, err)
+	cleaner.Add(httpRoute)
+
+	t.Logf("checking route has injected header")
+	eventuallyGETPath(t, "test-http-route-header-filter/headers", http.StatusOK, "marzipan", emptyHeaderSet)
+
+	t.Logf("adding broken request header filter configuration")
+	httpRoute, err = gatewayClient.GatewayV1beta1().HTTPRoutes(ns.Name).Get(ctx, httpRoute.Name, metav1.GetOptions{})
+	httpRoute.Spec.Rules[0].Filters[0].RequestHeaderModifier.Add = []gatewayv1beta1.HTTPHeader{
+		{
+			Name:  "x-test",
+			Value: "blarzipan",
+		},
+	}
+	httpRoute, err = gatewayClient.GatewayV1beta1().HTTPRoutes(ns.Name).Update(ctx, httpRoute, metav1.UpdateOptions{})
+	require.NoError(t, err)
+
+	t.Logf("checking that route is marked not accepted")
+	require.Eventually(t, func() bool {
+		httpRoute, err = gatewayClient.GatewayV1beta1().HTTPRoutes(ns.Name).Get(ctx, httpRoute.Name, metav1.GetOptions{})
+		if err != nil {
+			return false
+		}
+		for _, condition := range httpRoute.Status.Parents[0].Conditions {
+			if condition.Type == string(gatewayv1beta1.RouteConditionAccepted) && condition.Reason == string(gatewayv1beta1.RouteReasonUnsupportedValue) {
+				return true
+			}
+		}
+		return false
+	}, ingressWait, waitTick)
 }

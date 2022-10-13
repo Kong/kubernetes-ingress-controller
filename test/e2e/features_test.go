@@ -364,7 +364,7 @@ func TestDeployAllInOneDBLESSGateway(t *testing.T) {
 				t.Logf("failed to get logs of pods %s/%s, error %v", pod.Namespace, pod.Name, err)
 				return false
 			}
-			if !strings.Contains(logs, "CRD does not exist, disable gateway feature") {
+			if !strings.Contains(logs, "disabling the 'gateways' controller due to missing CRD installation") {
 				return false
 			}
 		}
@@ -702,4 +702,114 @@ func TestDefaultIngressClass(t *testing.T) {
 		}
 		return false
 	}, ingressWait, time.Second)
+}
+
+// TestMissingCRDsDontCrashTheController ensures that in case of missing CRDs installation in the cluster, specific
+// controllers are disabled, this fact is properly logged, and the controller doesn't crash.
+func TestMissingCRDsDontCrashTheController(t *testing.T) {
+	t.Parallel()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	t.Log("building test cluster and environment")
+	clusterBuilder := kind.NewBuilder()
+	if clusterVersionStr != "" {
+		clusterVersion, err := semver.ParseTolerant(clusterVersionStr)
+		require.NoError(t, err)
+		clusterBuilder.WithClusterVersion(clusterVersion)
+	}
+	cluster, err := clusterBuilder.Build(ctx)
+	require.NoError(t, err)
+	addons := []clusters.Addon{metallb.New()}
+
+	if b, err := loadimage.NewBuilder().WithImage(imageLoad); err == nil {
+		addons = append(addons, b.Build())
+	}
+
+	builder := environments.NewBuilder().WithExistingCluster(cluster).WithAddons(addons...)
+	env, err := builder.Build(ctx)
+	require.NoError(t, err)
+
+	t.Logf("building cleaner to dump diagnostics...")
+	cleaner := clusters.NewCleaner(env.Cluster())
+	defer func() {
+		if t.Failed() {
+			output, err := cleaner.DumpDiagnostics(ctx, t.Name())
+			if assert.NoError(t, err, "failed to dump diagnostics") {
+				t.Logf("%s failed, dumped diagnostics to %s", t.Name(), output)
+			}
+		}
+		assert.NoError(t, cluster.Cleanup(ctx))
+	}()
+
+	t.Log("deploying kong components")
+	manifest, err := getTestManifest(t, dblessPath)
+	require.NoError(t, err)
+
+	manifest = stripCRDs(t, manifest)
+
+	// reducing controllers' cache synchronisation timeout in order to trigger the possible process crash quicker
+	cacheSyncTimeout := time.Second
+	manifest = addControllerEnv(t, manifest, "CONTROLLER_CACHE_SYNC_TIMEOUT", cacheSyncTimeout.String())
+
+	deployment := deployKong(ctx, t, env, manifest)
+
+	t.Log("ensuring pod's ready and controller didn't crash")
+	require.Never(t, func() bool {
+		pods, err := env.Cluster().Client().CoreV1().Pods(deployment.Namespace).List(ctx, metav1.ListOptions{
+			LabelSelector: fmt.Sprintf("app=%s", deployment.Name),
+		})
+		if err != nil || len(pods.Items) == 0 {
+			return true
+		}
+
+		pod := pods.Items[0]
+		if !containerDidntCrash(pod, "ingress-controller") {
+			t.Log("controller crashed")
+			return true
+		}
+
+		if !isPodReady(pod) {
+			t.Log("pod is not ready")
+			return true
+		}
+
+		return false
+	}, cacheSyncTimeout+time.Second*5, time.Second)
+
+	t.Log("waiting for pod to output required logs")
+	require.Eventually(t, func() bool {
+		pods, err := env.Cluster().Client().CoreV1().Pods(deployment.Namespace).List(ctx, metav1.ListOptions{
+			LabelSelector: fmt.Sprintf("app=%s", deployment.Name),
+		})
+		if err != nil || len(pods.Items) == 0 {
+			return false
+		}
+
+		podName := pods.Items[0].Name
+		logs, err := getPodLogs(ctx, t, env, deployment.Namespace, podName)
+		if err != nil {
+			return false
+		}
+
+		resources := []string{
+			"udpingresses",
+			"tcpingresses",
+			"kongingresses",
+			"ingressclassparameterses",
+			"kongplugins",
+			"kongconsumers",
+			"kongclusterplugins",
+			"ingresses",
+			"gateways",
+			"httproutes",
+		}
+		for _, resource := range resources {
+			if !strings.Contains(logs, fmt.Sprintf("disabling the '%s' controller due to missing CRD installation", resource)) {
+				return false
+			}
+		}
+
+		return true
+	}, time.Minute, time.Second)
 }

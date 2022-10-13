@@ -7,7 +7,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	knativev1alpha1 "knative.dev/networking/pkg/apis/networking/v1alpha1"
 	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
@@ -15,10 +14,11 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/configuration"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/gateway"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/knative"
-	ctrlutils "github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/utils"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util/kubernetes/object/status"
 	konghqcomv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
+	konghqcomv1alpha1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1alpha1"
+	konghqcomv1beta1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1beta1"
 )
 
 // -----------------------------------------------------------------------------
@@ -30,14 +30,10 @@ type Controller interface {
 	SetupWithManager(ctrl.Manager) error
 }
 
-// AutoHandler decides whether the specific controller shall be enabled (true) or disabled (false).
-type AutoHandler func(client.Client) bool
-
 // ControllerDef is a specification of a Controller that can be conditionally registered with Manager.
 type ControllerDef struct {
-	Enabled     bool
-	AutoHandler AutoHandler
-	Controller  Controller
+	Enabled    bool
+	Controller Controller
 }
 
 // Name returns a human-readable name of the controller.
@@ -45,18 +41,12 @@ func (c *ControllerDef) Name() string {
 	return reflect.TypeOf(c.Controller).String()
 }
 
-// MaybeSetupWithManager runs SetupWithManager on the controller if it is enabled
-// and its AutoHandler (if any) indicates that it can load.
+// MaybeSetupWithManager runs SetupWithManager on the controller if it is enabled.
 func (c *ControllerDef) MaybeSetupWithManager(mgr ctrl.Manager) error {
 	if !c.Enabled {
 		return nil
 	}
 
-	if c.AutoHandler != nil {
-		if enable := c.AutoHandler(mgr.GetClient()); !enable {
-			return nil
-		}
-	}
 	return c.Controller.SetupWithManager(mgr)
 }
 
@@ -72,29 +62,39 @@ func setupControllers(
 	c *Config,
 	featureGates map[string]bool,
 ) ([]ControllerDef, error) {
+	restMapper := mgr.GetClient().RESTMapper()
+
 	// Choose the best API version of Ingress to inform which ingress controller to enable.
-	var ingressPicker ingressControllerStrategy
-	if err := ingressPicker.Initialize(c, mgr.GetClient()); err != nil {
+	ingressConditions, err := NewIngressControllersConditions(c, restMapper)
+	if err != nil {
 		return nil, fmt.Errorf("ingress version picker failed: %w", err)
 	}
+
+	referenceGrantsEnabled := featureGates[gatewayAlphaFeature] && ShouldEnableCRDController(
+		schema.GroupVersionResource{
+			Group:    gatewayv1alpha2.GroupVersion.Group,
+			Version:  gatewayv1alpha2.GroupVersion.Version,
+			Resource: "referencegrants",
+		},
+		restMapper,
+	)
 
 	controllers := []ControllerDef{
 		// ---------------------------------------------------------------------------
 		// Core API Controllers
 		// ---------------------------------------------------------------------------
 		{
-			Enabled:     c.IngressClassNetV1Enabled,
-			AutoHandler: ingressPicker.IsNetV1,
+			Enabled: ingressConditions.IngressClassNetV1Enabled(),
 			Controller: &configuration.NetV1IngressClassReconciler{
-				Client:          mgr.GetClient(),
-				Log:             ctrl.Log.WithName("controllers").WithName("IngressClass").WithName("netv1"),
-				DataplaneClient: dataplaneClient,
-				Scheme:          mgr.GetScheme(),
+				Client:           mgr.GetClient(),
+				Log:              ctrl.Log.WithName("controllers").WithName("IngressClass").WithName("netv1"),
+				DataplaneClient:  dataplaneClient,
+				Scheme:           mgr.GetScheme(),
+				CacheSyncTimeout: c.CacheSyncTimeout,
 			},
 		},
 		{
-			Enabled:     c.IngressNetV1Enabled,
-			AutoHandler: ingressPicker.IsNetV1,
+			Enabled: ingressConditions.IngressNetV1Enabled(),
 			Controller: &configuration.NetV1IngressReconciler{
 				Client:                     mgr.GetClient(),
 				Log:                        ctrl.Log.WithName("controllers").WithName("Ingress").WithName("netv1"),
@@ -104,11 +104,11 @@ func setupControllers(
 				DisableIngressClassLookups: !c.IngressClassNetV1Enabled,
 				StatusQueue:                kubernetesStatusQueue,
 				DataplaneAddressFinder:     dataplaneAddressFinder,
+				CacheSyncTimeout:           c.CacheSyncTimeout,
 			},
 		},
 		{
-			Enabled:     c.IngressNetV1beta1Enabled,
-			AutoHandler: ingressPicker.IsNetV1beta1,
+			Enabled: ingressConditions.IngressNetV1beta1Enabled(),
 			Controller: &configuration.NetV1Beta1IngressReconciler{
 				Client:           mgr.GetClient(),
 				Log:              ctrl.Log.WithName("controllers").WithName("Ingress").WithName("netv1beta1"),
@@ -122,11 +122,11 @@ func setupControllers(
 				DisableIngressClassLookups: !c.IngressClassNetV1Enabled,
 				StatusQueue:                kubernetesStatusQueue,
 				DataplaneAddressFinder:     dataplaneAddressFinder,
+				CacheSyncTimeout:           c.CacheSyncTimeout,
 			},
 		},
 		{
-			Enabled:     c.IngressExtV1beta1Enabled,
-			AutoHandler: ingressPicker.IsExtV1beta1,
+			Enabled: ingressConditions.IngressExtV1beta1Enabled(),
 			Controller: &configuration.ExtV1Beta1IngressReconciler{
 				Client:                     mgr.GetClient(),
 				Log:                        ctrl.Log.WithName("controllers").WithName("Ingress").WithName("extv1beta1"),
@@ -136,40 +136,51 @@ func setupControllers(
 				DisableIngressClassLookups: !c.IngressClassNetV1Enabled,
 				StatusQueue:                kubernetesStatusQueue,
 				DataplaneAddressFinder:     dataplaneAddressFinder,
+				CacheSyncTimeout:           c.CacheSyncTimeout,
 			},
 		},
 		{
 			Enabled: c.ServiceEnabled,
 			Controller: &configuration.CoreV1ServiceReconciler{
-				Client:          mgr.GetClient(),
-				Log:             ctrl.Log.WithName("controllers").WithName("Service"),
-				Scheme:          mgr.GetScheme(),
-				DataplaneClient: dataplaneClient,
+				Client:           mgr.GetClient(),
+				Log:              ctrl.Log.WithName("controllers").WithName("Service"),
+				Scheme:           mgr.GetScheme(),
+				DataplaneClient:  dataplaneClient,
+				CacheSyncTimeout: c.CacheSyncTimeout,
 			},
 		},
 		{
 			Enabled: c.ServiceEnabled,
 			Controller: &configuration.CoreV1EndpointsReconciler{
-				Client:          mgr.GetClient(),
-				Log:             ctrl.Log.WithName("controllers").WithName("Endpoints"),
-				Scheme:          mgr.GetScheme(),
-				DataplaneClient: dataplaneClient,
+				Client:           mgr.GetClient(),
+				Log:              ctrl.Log.WithName("controllers").WithName("Endpoints"),
+				Scheme:           mgr.GetScheme(),
+				DataplaneClient:  dataplaneClient,
+				CacheSyncTimeout: c.CacheSyncTimeout,
 			},
 		},
 		{
 			Enabled: true,
 			Controller: &configuration.CoreV1SecretReconciler{
-				Client:          mgr.GetClient(),
-				Log:             ctrl.Log.WithName("controllers").WithName("Secrets"),
-				Scheme:          mgr.GetScheme(),
-				DataplaneClient: dataplaneClient,
+				Client:           mgr.GetClient(),
+				Log:              ctrl.Log.WithName("controllers").WithName("Secrets"),
+				Scheme:           mgr.GetScheme(),
+				DataplaneClient:  dataplaneClient,
+				CacheSyncTimeout: c.CacheSyncTimeout,
 			},
 		},
 		// ---------------------------------------------------------------------------
 		// Kong API Controllers
 		// ---------------------------------------------------------------------------
 		{
-			Enabled: c.UDPIngressEnabled,
+			Enabled: c.UDPIngressEnabled && ShouldEnableCRDController(
+				schema.GroupVersionResource{
+					Group:    konghqcomv1beta1.GroupVersion.Group,
+					Version:  konghqcomv1beta1.GroupVersion.Version,
+					Resource: "udpingresses",
+				},
+				restMapper,
+			),
 			Controller: &configuration.KongV1Beta1UDPIngressReconciler{
 				Client:                     mgr.GetClient(),
 				Log:                        ctrl.Log.WithName("controllers").WithName("UDPIngress"),
@@ -179,10 +190,18 @@ func setupControllers(
 				DisableIngressClassLookups: !c.IngressClassNetV1Enabled,
 				StatusQueue:                kubernetesStatusQueue,
 				DataplaneAddressFinder:     dataplaneAddressFinder,
+				CacheSyncTimeout:           c.CacheSyncTimeout,
 			},
 		},
 		{
-			Enabled: c.TCPIngressEnabled,
+			Enabled: c.TCPIngressEnabled && ShouldEnableCRDController(
+				schema.GroupVersionResource{
+					Group:    konghqcomv1beta1.GroupVersion.Group,
+					Version:  konghqcomv1beta1.GroupVersion.Version,
+					Resource: "tcpingresses",
+				},
+				restMapper,
+			),
 			Controller: &configuration.KongV1Beta1TCPIngressReconciler{
 				Client:                     mgr.GetClient(),
 				Log:                        ctrl.Log.WithName("controllers").WithName("TCPIngress"),
@@ -192,37 +211,69 @@ func setupControllers(
 				DisableIngressClassLookups: !c.IngressClassNetV1Enabled,
 				StatusQueue:                kubernetesStatusQueue,
 				DataplaneAddressFinder:     dataplaneAddressFinder,
+				CacheSyncTimeout:           c.CacheSyncTimeout,
 			},
 		},
 		{
-			Enabled: c.KongIngressEnabled,
+			Enabled: c.KongIngressEnabled && ShouldEnableCRDController(
+				schema.GroupVersionResource{
+					Group:    konghqcomv1.GroupVersion.Group,
+					Version:  konghqcomv1.GroupVersion.Version,
+					Resource: "kongingresses",
+				},
+				restMapper,
+			),
 			Controller: &configuration.KongV1KongIngressReconciler{
-				Client:          mgr.GetClient(),
-				Log:             ctrl.Log.WithName("controllers").WithName("KongIngress"),
-				Scheme:          mgr.GetScheme(),
-				DataplaneClient: dataplaneClient,
+				Client:           mgr.GetClient(),
+				Log:              ctrl.Log.WithName("controllers").WithName("KongIngress"),
+				Scheme:           mgr.GetScheme(),
+				DataplaneClient:  dataplaneClient,
+				CacheSyncTimeout: c.CacheSyncTimeout,
 			},
 		},
 		{
-			Enabled: c.IngressClassParametersEnabled,
+			Enabled: c.IngressClassParametersEnabled && ShouldEnableCRDController(
+				schema.GroupVersionResource{
+					Group:    konghqcomv1alpha1.GroupVersion.Group,
+					Version:  konghqcomv1alpha1.GroupVersion.Version,
+					Resource: "ingressclassparameterses",
+				},
+				restMapper,
+			),
 			Controller: &configuration.KongV1Alpha1IngressClassParametersReconciler{
-				Client:          mgr.GetClient(),
-				Log:             ctrl.Log.WithName("controllers").WithName("IngressClassParameters"),
-				Scheme:          mgr.GetScheme(),
-				DataplaneClient: dataplaneClient,
+				Client:           mgr.GetClient(),
+				Log:              ctrl.Log.WithName("controllers").WithName("IngressClassParameters"),
+				Scheme:           mgr.GetScheme(),
+				DataplaneClient:  dataplaneClient,
+				CacheSyncTimeout: c.CacheSyncTimeout,
 			},
 		},
 		{
-			Enabled: c.KongPluginEnabled,
+			Enabled: c.KongPluginEnabled && ShouldEnableCRDController(
+				schema.GroupVersionResource{
+					Group:    konghqcomv1.GroupVersion.Group,
+					Version:  konghqcomv1.GroupVersion.Version,
+					Resource: "kongplugins",
+				},
+				restMapper,
+			),
 			Controller: &configuration.KongV1KongPluginReconciler{
-				Client:          mgr.GetClient(),
-				Log:             ctrl.Log.WithName("controllers").WithName("KongPlugin"),
-				Scheme:          mgr.GetScheme(),
-				DataplaneClient: dataplaneClient,
+				Client:           mgr.GetClient(),
+				Log:              ctrl.Log.WithName("controllers").WithName("KongPlugin"),
+				Scheme:           mgr.GetScheme(),
+				DataplaneClient:  dataplaneClient,
+				CacheSyncTimeout: c.CacheSyncTimeout,
 			},
 		},
 		{
-			Enabled: c.KongConsumerEnabled,
+			Enabled: c.KongConsumerEnabled && ShouldEnableCRDController(
+				schema.GroupVersionResource{
+					Group:    konghqcomv1.GroupVersion.Group,
+					Version:  konghqcomv1.GroupVersion.Version,
+					Resource: "kongconsumers",
+				},
+				restMapper,
+			),
 			Controller: &configuration.KongV1KongConsumerReconciler{
 				Client:                     mgr.GetClient(),
 				Log:                        ctrl.Log.WithName("controllers").WithName("KongConsumer"),
@@ -230,15 +281,18 @@ func setupControllers(
 				DataplaneClient:            dataplaneClient,
 				IngressClassName:           c.IngressClassName,
 				DisableIngressClassLookups: !c.IngressClassNetV1Enabled,
+				CacheSyncTimeout:           c.CacheSyncTimeout,
 			},
 		},
 		{
-			Enabled: c.KongClusterPluginEnabled,
-			AutoHandler: crdExistsChecker{GVR: schema.GroupVersionResource{
-				Group:    konghqcomv1.SchemeGroupVersion.Group,
-				Version:  konghqcomv1.SchemeGroupVersion.Version,
-				Resource: "kongclusterplugins",
-			}}.CRDExists,
+			Enabled: c.KongClusterPluginEnabled && ShouldEnableCRDController(
+				schema.GroupVersionResource{
+					Group:    konghqcomv1.GroupVersion.Group,
+					Version:  konghqcomv1.GroupVersion.Version,
+					Resource: "kongclusterplugins",
+				},
+				restMapper,
+			),
 			Controller: &configuration.KongV1KongClusterPluginReconciler{
 				Client:                     mgr.GetClient(),
 				Log:                        ctrl.Log.WithName("controllers").WithName("KongClusterPlugin"),
@@ -246,6 +300,7 @@ func setupControllers(
 				DataplaneClient:            dataplaneClient,
 				IngressClassName:           c.IngressClassName,
 				DisableIngressClassLookups: !c.IngressClassNetV1Enabled,
+				CacheSyncTimeout:           c.CacheSyncTimeout,
 			},
 		},
 		// ---------------------------------------------------------------------------
@@ -255,12 +310,14 @@ func setupControllers(
 			// knative is a special case because it existed before we added feature gates functionality
 			// for this controller (only) the existing --enable-controller-knativeingress flag overrides
 			// any feature gate configuration. See FEATURE_GATES.md for more information.
-			Enabled: featureGates[knativeFeature] || c.KnativeIngressEnabled,
-			AutoHandler: crdExistsChecker{GVR: schema.GroupVersionResource{
-				Group:    knativev1alpha1.SchemeGroupVersion.Group,
-				Version:  knativev1alpha1.SchemeGroupVersion.Version,
-				Resource: "ingresses",
-			}}.CRDExists,
+			Enabled: (featureGates[knativeFeature] || c.KnativeIngressEnabled) && ShouldEnableCRDController(
+				schema.GroupVersionResource{
+					Group:    knativev1alpha1.SchemeGroupVersion.Group,
+					Version:  knativev1alpha1.SchemeGroupVersion.Version,
+					Resource: "ingresses",
+				},
+				restMapper,
+			),
 			Controller: &knative.Knativev1alpha1IngressReconciler{
 				Client:                     mgr.GetClient(),
 				Log:                        ctrl.Log.WithName("controllers").WithName("Ingress").WithName("KnativeV1Alpha1"),
@@ -270,189 +327,115 @@ func setupControllers(
 				DisableIngressClassLookups: !c.IngressClassNetV1Enabled,
 				StatusQueue:                kubernetesStatusQueue,
 				DataplaneAddressFinder:     dataplaneAddressFinder,
+				CacheSyncTimeout:           c.CacheSyncTimeout,
 			},
 		},
 		// ---------------------------------------------------------------------------
 		// Gateway API Controllers - Beta APIs
 		// ---------------------------------------------------------------------------
 		{
-			Enabled:     featureGates[gatewayFeature],
-			AutoHandler: gatewayCRDExistsChecker.CRDExists,
+			Enabled: featureGates[gatewayFeature] && ShouldEnableCRDController(
+				schema.GroupVersionResource{
+					Group:    gatewayv1beta1.GroupVersion.Group,
+					Version:  gatewayv1beta1.GroupVersion.Version,
+					Resource: "gateways",
+				},
+				restMapper,
+			),
 			Controller: &gateway.GatewayReconciler{
-				Client:          mgr.GetClient(),
-				Log:             ctrl.Log.WithName("controllers").WithName(gatewayFeature),
-				Scheme:          mgr.GetScheme(),
-				DataplaneClient: dataplaneClient,
-				PublishService:  c.PublishService,
-				WatchNamespaces: c.WatchNamespaces,
-				EnableReferenceGrant: featureGates[gatewayAlphaFeature] &&
-					referenceGrantCRDExistsChecker.CRDExists(mgr.GetClient()),
+				Client:               mgr.GetClient(),
+				Log:                  ctrl.Log.WithName("controllers").WithName(gatewayFeature),
+				Scheme:               mgr.GetScheme(),
+				DataplaneClient:      dataplaneClient,
+				PublishService:       c.PublishService,
+				WatchNamespaces:      c.WatchNamespaces,
+				EnableReferenceGrant: referenceGrantsEnabled,
+				CacheSyncTimeout:     c.CacheSyncTimeout,
 			},
 		},
 		{
-			Enabled:     featureGates[gatewayFeature],
-			AutoHandler: httpRouteCRDExistsChecker.CRDExists,
+			Enabled: featureGates[gatewayFeature] && ShouldEnableCRDController(
+				schema.GroupVersionResource{
+					Group:    gatewayv1beta1.GroupVersion.Group,
+					Version:  gatewayv1beta1.GroupVersion.Version,
+					Resource: "httproutes",
+				},
+				restMapper,
+			),
 			Controller: &gateway.HTTPRouteReconciler{
-				Client:          mgr.GetClient(),
-				Log:             ctrl.Log.WithName("controllers").WithName("HTTPRoute"),
-				Scheme:          mgr.GetScheme(),
-				DataplaneClient: dataplaneClient,
-				EnableReferenceGrant: featureGates[gatewayAlphaFeature] &&
-					referenceGrantCRDExistsChecker.CRDExists(mgr.GetClient()),
+				Client:               mgr.GetClient(),
+				Log:                  ctrl.Log.WithName("controllers").WithName("HTTPRoute"),
+				Scheme:               mgr.GetScheme(),
+				DataplaneClient:      dataplaneClient,
+				EnableReferenceGrant: referenceGrantsEnabled,
+				CacheSyncTimeout:     c.CacheSyncTimeout,
 			},
 		},
 		// ---------------------------------------------------------------------------
 		// Gateway API Controllers - Alpha APIs
 		// ---------------------------------------------------------------------------
 		{
-			Enabled:     featureGates[gatewayAlphaFeature],
-			AutoHandler: referenceGrantCRDExistsChecker.CRDExists,
+			Enabled: referenceGrantsEnabled,
 			Controller: &gateway.ReferenceGrantReconciler{
-				Client:          mgr.GetClient(),
-				Log:             ctrl.Log.WithName("controllers").WithName("ReferenceGrant"),
-				Scheme:          mgr.GetScheme(),
-				DataplaneClient: dataplaneClient,
+				Client:           mgr.GetClient(),
+				Log:              ctrl.Log.WithName("controllers").WithName("ReferenceGrant"),
+				Scheme:           mgr.GetScheme(),
+				DataplaneClient:  dataplaneClient,
+				CacheSyncTimeout: c.CacheSyncTimeout,
 			},
 		},
 		{
-			Enabled:     featureGates[gatewayAlphaFeature],
-			AutoHandler: udpRouteCRDExistsChecker.CRDExists,
+			Enabled: featureGates[gatewayAlphaFeature] && ShouldEnableCRDController(
+				schema.GroupVersionResource{
+					Group:    gatewayv1alpha2.GroupVersion.Group,
+					Version:  gatewayv1alpha2.GroupVersion.Version,
+					Resource: "udproutes",
+				},
+				restMapper,
+			),
 			Controller: &gateway.UDPRouteReconciler{
-				Client:          mgr.GetClient(),
-				Log:             ctrl.Log.WithName("controllers").WithName("UDPRoute"),
-				Scheme:          mgr.GetScheme(),
-				DataplaneClient: dataplaneClient,
+				Client:           mgr.GetClient(),
+				Log:              ctrl.Log.WithName("controllers").WithName("UDPRoute"),
+				Scheme:           mgr.GetScheme(),
+				DataplaneClient:  dataplaneClient,
+				CacheSyncTimeout: c.CacheSyncTimeout,
 			},
 		},
 		{
-			Enabled:     featureGates[gatewayAlphaFeature],
-			AutoHandler: tcpRouteCRDExistsChecker.CRDExists,
+			Enabled: featureGates[gatewayAlphaFeature] && ShouldEnableCRDController(
+				schema.GroupVersionResource{
+					Group:    gatewayv1alpha2.GroupVersion.Group,
+					Version:  gatewayv1alpha2.GroupVersion.Version,
+					Resource: "tcproutes",
+				},
+				restMapper,
+			),
 			Controller: &gateway.TCPRouteReconciler{
-				Client:          mgr.GetClient(),
-				Log:             ctrl.Log.WithName("controllers").WithName("TCPRoute"),
-				Scheme:          mgr.GetScheme(),
-				DataplaneClient: dataplaneClient,
+				Client:           mgr.GetClient(),
+				Log:              ctrl.Log.WithName("controllers").WithName("TCPRoute"),
+				Scheme:           mgr.GetScheme(),
+				DataplaneClient:  dataplaneClient,
+				CacheSyncTimeout: c.CacheSyncTimeout,
 			},
 		},
 		{
-			Enabled:     featureGates[gatewayAlphaFeature],
-			AutoHandler: tlsRouteCRDExistsChecker.CRDExists,
+			Enabled: featureGates[gatewayAlphaFeature] && ShouldEnableCRDController(
+				schema.GroupVersionResource{
+					Group:    gatewayv1alpha2.GroupVersion.Group,
+					Version:  gatewayv1alpha2.GroupVersion.Version,
+					Resource: "tlsroutes",
+				},
+				restMapper,
+			),
 			Controller: &gateway.TLSRouteReconciler{
-				Client:          mgr.GetClient(),
-				Log:             ctrl.Log.WithName("controllers").WithName("TLSRoute"),
-				Scheme:          mgr.GetScheme(),
-				DataplaneClient: dataplaneClient,
+				Client:           mgr.GetClient(),
+				Log:              ctrl.Log.WithName("controllers").WithName("TLSRoute"),
+				Scheme:           mgr.GetScheme(),
+				DataplaneClient:  dataplaneClient,
+				CacheSyncTimeout: c.CacheSyncTimeout,
 			},
 		},
 	}
 
 	return controllers, nil
-}
-
-// crdExistsChecker verifies whether the resource type defined by GVR is supported by the k8s apiserver.
-type crdExistsChecker struct {
-	GVR schema.GroupVersionResource
-}
-
-// CRDExists returns true iff the apiserver supports the specified group/version/resource.
-func (c crdExistsChecker) CRDExists(r client.Client) bool {
-	return ctrlutils.CRDExists(r, c.GVR)
-}
-
-// CRD Exists checker for gateway API resources.
-
-var gatewayCRDExistsChecker = crdExistsChecker{
-	GVR: schema.GroupVersionResource{
-		Group:    gatewayv1alpha2.SchemeGroupVersion.Group,
-		Version:  gatewayv1alpha2.SchemeGroupVersion.Version,
-		Resource: "gateways",
-	},
-}
-
-var gatewayClassCRDExistsChecker = crdExistsChecker{
-	GVR: schema.GroupVersionResource{
-		Group:    gatewayv1beta1.SchemeGroupVersion.Group,
-		Version:  gatewayv1beta1.SchemeGroupVersion.Version,
-		Resource: "gatewayclasses",
-	},
-}
-
-var httpRouteCRDExistsChecker = crdExistsChecker{
-	GVR: schema.GroupVersionResource{
-		Group:    gatewayv1alpha2.SchemeGroupVersion.Group,
-		Version:  gatewayv1alpha2.SchemeGroupVersion.Version,
-		Resource: "httproutes",
-	},
-}
-
-var tcpRouteCRDExistsChecker = crdExistsChecker{
-	GVR: schema.GroupVersionResource{
-		Group:    gatewayv1alpha2.SchemeGroupVersion.Group,
-		Version:  gatewayv1alpha2.SchemeGroupVersion.Version,
-		Resource: "tcproutes",
-	},
-}
-
-var udpRouteCRDExistsChecker = crdExistsChecker{
-	GVR: schema.GroupVersionResource{
-		Group:    gatewayv1alpha2.SchemeGroupVersion.Group,
-		Version:  gatewayv1alpha2.SchemeGroupVersion.Version,
-		Resource: "udproutes",
-	},
-}
-
-var tlsRouteCRDExistsChecker = crdExistsChecker{
-	GVR: schema.GroupVersionResource{
-		Group:    gatewayv1alpha2.SchemeGroupVersion.Group,
-		Version:  gatewayv1alpha2.SchemeGroupVersion.Version,
-		Resource: "tlsroutes",
-	},
-}
-
-var referenceGrantCRDExistsChecker = crdExistsChecker{
-	GVR: schema.GroupVersionResource{
-		Group:    gatewayv1alpha2.SchemeGroupVersion.Group,
-		Version:  gatewayv1alpha2.SchemeGroupVersion.Version,
-		Resource: "referencegrants",
-	},
-}
-
-var gatewayBetaCRDsExistsCheckers = []crdExistsChecker{
-	gatewayCRDExistsChecker,
-	gatewayClassCRDExistsChecker,
-	httpRouteCRDExistsChecker,
-}
-
-var gatewayAlphaCRDsExistsCheckers = []crdExistsChecker{
-	tcpRouteCRDExistsChecker,
-	udpRouteCRDExistsChecker,
-	tlsRouteCRDExistsChecker,
-	referenceGrantCRDExistsChecker,
-}
-
-// ingressControllerStrategy picks the best Ingress API supported by k8s apiserver.
-type ingressControllerStrategy struct {
-	chosenVersion IngressAPI
-}
-
-// Initialize negotiates the best Ingress API version supported by both KIC and the k8s apiserver.
-func (s *ingressControllerStrategy) Initialize(cfg *Config, cl client.Client) error {
-	var err error
-	s.chosenVersion, err = negotiateIngressAPI(cfg, cl)
-	return err
-}
-
-// IsExtV1beta1 returns true iff the best supported API version is extensions/v1beta1.
-func (s *ingressControllerStrategy) IsExtV1beta1(_ client.Client) bool {
-	return s.chosenVersion == ExtensionsV1beta1
-}
-
-// IsExtV1beta1 returns true iff the best supported API version is networking.k8s.io/v1beta1.
-func (s *ingressControllerStrategy) IsNetV1beta1(_ client.Client) bool {
-	return s.chosenVersion == NetworkingV1beta1
-}
-
-// IsExtV1beta1 returns true iff the best supported API version is networking.k8s.io/v1.
-func (s *ingressControllerStrategy) IsNetV1(_ client.Client) bool {
-	return s.chosenVersion == NetworkingV1
 }

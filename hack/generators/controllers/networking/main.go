@@ -441,6 +441,7 @@ type {{.PackageAlias}}{{.Kind}}Reconciler struct {
 	Log             logr.Logger
 	Scheme          *runtime.Scheme
 	DataplaneClient *dataplane.KongClient
+	CacheSyncTimeout time.Duration
 {{- if .CapableOfStatusUpdates }}
 
 	DataplaneAddressFinder *dataplane.AddressFinder
@@ -460,6 +461,7 @@ func (r *{{.PackageAlias}}{{.Kind}}Reconciler) SetupWithManager(mgr ctrl.Manager
 		LogConstructor: func(_ *reconcile.Request) logr.Logger {
 			return r.Log
 		},
+		CacheSyncTimeout: r.CacheSyncTimeout,
 	})
 	if err != nil {
 		return err

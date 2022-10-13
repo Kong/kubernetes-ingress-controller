@@ -32,31 +32,16 @@ func TestCRDControllerCondition(t *testing.T) {
 	testCases := []struct {
 		name           string
 		gvr            schema.GroupVersionResource
-		enabled        bool
 		expectedResult bool
 	}{
 		{
-			name:           "enabled_and_registered_resource",
+			name:           "registered_resource",
 			gvr:            knownGvr,
-			enabled:        true,
 			expectedResult: true,
 		},
 		{
-			name:           "disabled_and_registered_resource",
-			gvr:            knownGvr,
-			enabled:        false,
-			expectedResult: false,
-		},
-		{
-			name:           "enabled_and_not_registered_resource",
+			name:           "not_registered_resource",
 			gvr:            unknownGVR,
-			enabled:        true,
-			expectedResult: false,
-		},
-		{
-			name:           "disabled_and_not_registered_resource",
-			gvr:            unknownGVR,
-			enabled:        false,
 			expectedResult: false,
 		},
 	}
@@ -66,7 +51,7 @@ func TestCRDControllerCondition(t *testing.T) {
 			require.Equal(
 				t,
 				tc.expectedResult,
-				manager.NewCRDCondition(tc.gvr, tc.enabled, restMapper).Enabled(),
+				manager.NewCRDCondition(tc.gvr, restMapper).Enabled(),
 			)
 		})
 	}

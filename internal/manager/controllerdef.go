@@ -70,13 +70,12 @@ func setupControllers(
 		return nil, fmt.Errorf("ingress version picker failed: %w", err)
 	}
 
-	referenceGrantsEnabled := NewCRDCondition(
+	referenceGrantsEnabled := featureGates[gatewayAlphaFeature] && NewCRDCondition(
 		schema.GroupVersionResource{
 			Group:    gatewayv1alpha2.GroupVersion.Group,
 			Version:  gatewayv1alpha2.GroupVersion.Version,
 			Resource: "referencegrants",
 		},
-		featureGates[gatewayAlphaFeature],
 		restMapper,
 	).Enabled()
 
@@ -174,13 +173,12 @@ func setupControllers(
 		// Kong API Controllers
 		// ---------------------------------------------------------------------------
 		{
-			Enabled: NewCRDCondition(
+			Enabled: c.UDPIngressEnabled && NewCRDCondition(
 				schema.GroupVersionResource{
 					Group:    konghqcomv1beta1.GroupVersion.Group,
 					Version:  konghqcomv1beta1.GroupVersion.Version,
 					Resource: "udpingresses",
 				},
-				c.UDPIngressEnabled,
 				restMapper,
 			).Enabled(),
 			Controller: &configuration.KongV1Beta1UDPIngressReconciler{
@@ -196,13 +194,12 @@ func setupControllers(
 			},
 		},
 		{
-			Enabled: NewCRDCondition(
+			Enabled: c.TCPIngressEnabled && NewCRDCondition(
 				schema.GroupVersionResource{
 					Group:    konghqcomv1beta1.GroupVersion.Group,
 					Version:  konghqcomv1beta1.GroupVersion.Version,
 					Resource: "tcpingresses",
 				},
-				c.TCPIngressEnabled,
 				restMapper,
 			).Enabled(),
 			Controller: &configuration.KongV1Beta1TCPIngressReconciler{
@@ -218,13 +215,12 @@ func setupControllers(
 			},
 		},
 		{
-			Enabled: NewCRDCondition(
+			Enabled: c.KongIngressEnabled && NewCRDCondition(
 				schema.GroupVersionResource{
 					Group:    konghqcomv1.GroupVersion.Group,
 					Version:  konghqcomv1.GroupVersion.Version,
 					Resource: "kongingresses",
 				},
-				c.KongIngressEnabled,
 				restMapper,
 			).Enabled(),
 			Controller: &configuration.KongV1KongIngressReconciler{
@@ -236,13 +232,12 @@ func setupControllers(
 			},
 		},
 		{
-			Enabled: NewCRDCondition(
+			Enabled: c.IngressClassParametersEnabled && NewCRDCondition(
 				schema.GroupVersionResource{
 					Group:    konghqcomv1alpha1.GroupVersion.Group,
 					Version:  konghqcomv1alpha1.GroupVersion.Version,
 					Resource: "ingressclassparameterses",
 				},
-				c.IngressClassParametersEnabled,
 				restMapper,
 			).Enabled(),
 			Controller: &configuration.KongV1Alpha1IngressClassParametersReconciler{
@@ -254,13 +249,12 @@ func setupControllers(
 			},
 		},
 		{
-			Enabled: NewCRDCondition(
+			Enabled: c.KongPluginEnabled && NewCRDCondition(
 				schema.GroupVersionResource{
 					Group:    konghqcomv1.GroupVersion.Group,
 					Version:  konghqcomv1.GroupVersion.Version,
 					Resource: "kongplugins",
 				},
-				c.KongPluginEnabled,
 				restMapper,
 			).Enabled(),
 			Controller: &configuration.KongV1KongPluginReconciler{
@@ -272,13 +266,12 @@ func setupControllers(
 			},
 		},
 		{
-			Enabled: NewCRDCondition(
+			Enabled: c.KongConsumerEnabled && NewCRDCondition(
 				schema.GroupVersionResource{
 					Group:    konghqcomv1.GroupVersion.Group,
 					Version:  konghqcomv1.GroupVersion.Version,
 					Resource: "kongconsumers",
 				},
-				c.KongConsumerEnabled,
 				restMapper,
 			).Enabled(),
 			Controller: &configuration.KongV1KongConsumerReconciler{
@@ -292,13 +285,12 @@ func setupControllers(
 			},
 		},
 		{
-			Enabled: NewCRDCondition(
+			Enabled: c.KongClusterPluginEnabled && NewCRDCondition(
 				schema.GroupVersionResource{
 					Group:    konghqcomv1.GroupVersion.Group,
 					Version:  konghqcomv1.GroupVersion.Version,
 					Resource: "kongclusterplugins",
 				},
-				c.KongClusterPluginEnabled,
 				restMapper,
 			).Enabled(),
 			Controller: &configuration.KongV1KongClusterPluginReconciler{
@@ -318,13 +310,12 @@ func setupControllers(
 			// knative is a special case because it existed before we added feature gates functionality
 			// for this controller (only) the existing --enable-controller-knativeingress flag overrides
 			// any feature gate configuration. See FEATURE_GATES.md for more information.
-			Enabled: NewCRDCondition(
+			Enabled: (featureGates[knativeFeature] || c.KnativeIngressEnabled) && NewCRDCondition(
 				schema.GroupVersionResource{
 					Group:    knativev1alpha1.SchemeGroupVersion.Group,
 					Version:  knativev1alpha1.SchemeGroupVersion.Version,
 					Resource: "ingresses",
 				},
-				featureGates[knativeFeature] || c.KnativeIngressEnabled,
 				restMapper,
 			).Enabled(),
 			Controller: &knative.Knativev1alpha1IngressReconciler{
@@ -343,13 +334,12 @@ func setupControllers(
 		// Gateway API Controllers - Beta APIs
 		// ---------------------------------------------------------------------------
 		{
-			Enabled: NewCRDCondition(
+			Enabled: featureGates[gatewayFeature] && NewCRDCondition(
 				schema.GroupVersionResource{
 					Group:    gatewayv1beta1.GroupVersion.Group,
 					Version:  gatewayv1beta1.GroupVersion.Version,
 					Resource: "gateways",
 				},
-				featureGates[gatewayFeature],
 				restMapper,
 			).Enabled(),
 			Controller: &gateway.GatewayReconciler{
@@ -364,13 +354,12 @@ func setupControllers(
 			},
 		},
 		{
-			Enabled: NewCRDCondition(
+			Enabled: featureGates[gatewayFeature] && NewCRDCondition(
 				schema.GroupVersionResource{
 					Group:    gatewayv1beta1.GroupVersion.Group,
 					Version:  gatewayv1beta1.GroupVersion.Version,
 					Resource: "httproutes",
 				},
-				featureGates[gatewayFeature],
 				restMapper,
 			).Enabled(),
 			Controller: &gateway.HTTPRouteReconciler{
@@ -396,13 +385,12 @@ func setupControllers(
 			},
 		},
 		{
-			Enabled: NewCRDCondition(
+			Enabled: featureGates[gatewayAlphaFeature] && NewCRDCondition(
 				schema.GroupVersionResource{
 					Group:    gatewayv1alpha2.GroupVersion.Group,
 					Version:  gatewayv1alpha2.GroupVersion.Version,
 					Resource: "udproutes",
 				},
-				featureGates[gatewayAlphaFeature],
 				restMapper,
 			).Enabled(),
 			Controller: &gateway.UDPRouteReconciler{
@@ -414,13 +402,12 @@ func setupControllers(
 			},
 		},
 		{
-			Enabled: NewCRDCondition(
+			Enabled: featureGates[gatewayAlphaFeature] && NewCRDCondition(
 				schema.GroupVersionResource{
 					Group:    gatewayv1alpha2.GroupVersion.Group,
 					Version:  gatewayv1alpha2.GroupVersion.Version,
 					Resource: "tcproutes",
 				},
-				featureGates[gatewayAlphaFeature],
 				restMapper,
 			).Enabled(),
 			Controller: &gateway.TCPRouteReconciler{
@@ -432,13 +419,12 @@ func setupControllers(
 			},
 		},
 		{
-			Enabled: NewCRDCondition(
+			Enabled: featureGates[gatewayAlphaFeature] && NewCRDCondition(
 				schema.GroupVersionResource{
 					Group:    gatewayv1alpha2.GroupVersion.Group,
 					Version:  gatewayv1alpha2.GroupVersion.Version,
 					Resource: "tlsroutes",
 				},
-				featureGates[gatewayAlphaFeature],
 				restMapper,
 			).Enabled(),
 			Controller: &gateway.TLSRouteReconciler{

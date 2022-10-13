@@ -35,7 +35,7 @@ var ControllerName gatewayv1beta1.GatewayController = "konghq.com/kic-gateway-co
 // -----------------------------------------------------------------------------
 
 // GatewayClassReconciler reconciles a GatewayClass object.
-type GatewayClassReconciler struct { //nolint:revive,golint
+type GatewayClassReconciler struct { //nolint:revive
 	client.Client
 	Log    logr.Logger
 	Scheme *runtime.Scheme

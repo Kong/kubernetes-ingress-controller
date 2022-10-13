@@ -153,7 +153,11 @@ func TestMain(m *testing.M) {
 	k8sClient = env.Cluster().Client()
 
 	cleaner := clusters.NewCleaner(env.Cluster())
-	defer cleaner.Cleanup(ctx) //nolint:errcheck
+	defer func() {
+		if err := cleaner.Cleanup(ctx); err != nil {
+			fmt.Printf("ERROR: failed cleaning up the cluster: %v\n", err)
+		}
+	}()
 
 	fmt.Printf("INFO: reconfiguring the kong admin service as LoadBalancer type\n")
 	svc, err := env.Cluster().Client().CoreV1().Services(kongAddon.Namespace()).Get(ctx, kong.DefaultAdminServiceName, metav1.GetOptions{})

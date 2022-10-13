@@ -65,7 +65,8 @@ Adding a new version? You'll need three changes:
 
 > Release date: TBD
 
-### Added 
+### Added
+
 - Added `--cache-sync-timeout` flag allowing to change the default controllers' 
   cache synchronisation timeout. 
   [#3013](https://github.com/Kong/kubernetes-ingress-controller/pull/3013)

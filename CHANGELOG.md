@@ -65,7 +65,7 @@ Adding a new version? You'll need three changes:
 
 > Release date: TBD
 
- ### Added
+### Added
 
   - Added `HTTPRoute` support for `CombinedRoutes` feature. When enabled,
   this changes how `HTTPRoute` resources are translated so that `HTTPRouteRule`
@@ -73,6 +73,9 @@ Adding a new version? You'll need three changes:
   does not functionally impact routing: requests that went to a given Service
   using the original method still go to the same Service in the new method.
   [#3008](https://github.com/Kong/kubernetes-ingress-controller/pull/3008)
+- Added `--cache-sync-timeout` flag allowing to change the default controllers' 
+  cache synchronisation timeout. 
+  [#3013](https://github.com/Kong/kubernetes-ingress-controller/pull/3013)
 
 ### Fixed
 
@@ -94,6 +97,10 @@ Adding a new version? You'll need three changes:
   makes the default the same target released as the standard
   `kong/kubernetes-ingress-controller:X.Y.Z` tags in the official repo.
   [#3043](https://github.com/Kong/kubernetes-ingress-controller/pull/3043)
+- The controller will no longer crash in case of missing CRDs installation.
+  Instead, an explicit message will be logged, informing that a given resource
+  controller has been disabled.
+  [#3013](https://github.com/Kong/kubernetes-ingress-controller/pull/3013)
 
 ## [2.7.0]
 

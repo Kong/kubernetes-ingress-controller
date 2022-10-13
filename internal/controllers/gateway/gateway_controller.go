@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"time"
 
 	"github.com/go-logr/logr"
 	"github.com/kong/go-kong/kong"
@@ -41,7 +42,7 @@ var (
 // -----------------------------------------------------------------------------
 
 // GatewayReconciler reconciles a Gateway object.
-type GatewayReconciler struct { //nolint:revive,golint
+type GatewayReconciler struct { //nolint:revive
 	client.Client
 
 	Log             logr.Logger
@@ -53,6 +54,7 @@ type GatewayReconciler struct { //nolint:revive,golint
 	// If EnableReferenceGrant is true, controller will watch ReferenceGrants
 	// to invalidate or allow cross-namespace TLSConfigs in gateways.
 	EnableReferenceGrant bool
+	CacheSyncTimeout     time.Duration
 
 	publishServiceRef types.NamespacedName
 }
@@ -72,6 +74,7 @@ func (r *GatewayReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		LogConstructor: func(_ *reconcile.Request) logr.Logger {
 			return r.Log
 		},
+		CacheSyncTimeout: r.CacheSyncTimeout,
 	})
 	if err != nil {
 		return err
@@ -121,9 +124,10 @@ func (r *GatewayReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 	// start the required gatewayclass controller as well
 	gwcCTRL := &GatewayClassReconciler{
-		Client: r.Client,
-		Log:    r.Log.WithName("V1Beta1GatewayClass"),
-		Scheme: r.Scheme,
+		Client:           r.Client,
+		Log:              r.Log.WithName("V1Beta1GatewayClass"),
+		Scheme:           r.Scheme,
+		CacheSyncTimeout: r.CacheSyncTimeout,
 	}
 
 	return gwcCTRL.SetupWithManager(mgr)

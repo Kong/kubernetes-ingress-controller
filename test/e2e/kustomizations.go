@@ -1,14 +1,16 @@
-//go:build e2e_tests
-// +build e2e_tests
+//go:build e2e_tests || istio_tests
+// +build e2e_tests istio_tests
 
 package e2e
 
 import (
 	"fmt"
 	"io"
+	"testing"
 	"time"
 
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/kubectl"
+	"github.com/stretchr/testify/require"
 	"sigs.k8s.io/kustomize/api/types"
 	"sigs.k8s.io/kustomize/kyaml/resid"
 )
@@ -34,6 +36,12 @@ const (
 - op: replace
   path: /spec/template/spec/containers/%[1]d/livenessProbe/failureThreshold
   value: %[4]d`
+
+	addControllerEnvPatch = `- op: add
+	path: "/spec/template/spec/containers/1/env/-"
+	value:
+		name: %s
+		value: "%s"`
 )
 
 // patchControllerImage replaces the kong/kubernetes-ingress-controller image with the provided image and tag,
@@ -118,4 +126,30 @@ func patchLivenessProbes(baseManifestReader io.Reader, container, failure int, i
 		},
 	}
 	return kubectl.GetKustomizedManifest(kustomization, baseManifestReader)
+}
+
+// addControllerEnv adds an environment variable to ingress-controller container.
+func addControllerEnv(t *testing.T, baseManifestReader io.Reader, envName, value string) io.Reader {
+	kustomization := types.Kustomization{
+		Bases: []string{"base.yaml"},
+		Patches: []types.Patch{
+			{
+				Patch: fmt.Sprintf(addControllerEnvPatch, envName, value),
+				Target: &types.Selector{
+					ResId: resid.ResId{
+						Gvk: resid.Gvk{
+							Group:   "apps",
+							Version: "v1",
+							Kind:    "Deployment",
+						},
+						Name:      "ingress-kong",
+						Namespace: "kong",
+					},
+				},
+			},
+		},
+	}
+	k, err := kubectl.GetKustomizedManifest(kustomization, baseManifestReader)
+	require.NoError(t, err)
+	return k
 }

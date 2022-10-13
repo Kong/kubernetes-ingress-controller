@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"reflect"
+	"time"
 
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -35,10 +36,11 @@ var ControllerName gatewayv1beta1.GatewayController = "konghq.com/kic-gateway-co
 // -----------------------------------------------------------------------------
 
 // GatewayClassReconciler reconciles a GatewayClass object.
-type GatewayClassReconciler struct { //nolint:revive,golint
+type GatewayClassReconciler struct { //nolint:revive
 	client.Client
-	Log    logr.Logger
-	Scheme *runtime.Scheme
+	Log              logr.Logger
+	Scheme           *runtime.Scheme
+	CacheSyncTimeout time.Duration
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -48,6 +50,7 @@ func (r *GatewayClassReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		LogConstructor: func(_ *reconcile.Request) logr.Logger {
 			return r.Log
 		},
+		CacheSyncTimeout: r.CacheSyncTimeout,
 	})
 	if err != nil {
 		return err

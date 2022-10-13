@@ -70,14 +70,14 @@ func setupControllers(
 		return nil, fmt.Errorf("ingress version picker failed: %w", err)
 	}
 
-	referenceGrantsEnabled := featureGates[gatewayAlphaFeature] && NewCRDCondition(
+	referenceGrantsEnabled := featureGates[gatewayAlphaFeature] && ShouldEnableCRDController(
 		schema.GroupVersionResource{
 			Group:    gatewayv1alpha2.GroupVersion.Group,
 			Version:  gatewayv1alpha2.GroupVersion.Version,
 			Resource: "referencegrants",
 		},
 		restMapper,
-	).Enabled()
+	)
 
 	controllers := []ControllerDef{
 		// ---------------------------------------------------------------------------
@@ -173,14 +173,14 @@ func setupControllers(
 		// Kong API Controllers
 		// ---------------------------------------------------------------------------
 		{
-			Enabled: c.UDPIngressEnabled && NewCRDCondition(
+			Enabled: c.UDPIngressEnabled && ShouldEnableCRDController(
 				schema.GroupVersionResource{
 					Group:    konghqcomv1beta1.GroupVersion.Group,
 					Version:  konghqcomv1beta1.GroupVersion.Version,
 					Resource: "udpingresses",
 				},
 				restMapper,
-			).Enabled(),
+			),
 			Controller: &configuration.KongV1Beta1UDPIngressReconciler{
 				Client:                     mgr.GetClient(),
 				Log:                        ctrl.Log.WithName("controllers").WithName("UDPIngress"),
@@ -194,14 +194,14 @@ func setupControllers(
 			},
 		},
 		{
-			Enabled: c.TCPIngressEnabled && NewCRDCondition(
+			Enabled: c.TCPIngressEnabled && ShouldEnableCRDController(
 				schema.GroupVersionResource{
 					Group:    konghqcomv1beta1.GroupVersion.Group,
 					Version:  konghqcomv1beta1.GroupVersion.Version,
 					Resource: "tcpingresses",
 				},
 				restMapper,
-			).Enabled(),
+			),
 			Controller: &configuration.KongV1Beta1TCPIngressReconciler{
 				Client:                     mgr.GetClient(),
 				Log:                        ctrl.Log.WithName("controllers").WithName("TCPIngress"),
@@ -215,14 +215,14 @@ func setupControllers(
 			},
 		},
 		{
-			Enabled: c.KongIngressEnabled && NewCRDCondition(
+			Enabled: c.KongIngressEnabled && ShouldEnableCRDController(
 				schema.GroupVersionResource{
 					Group:    konghqcomv1.GroupVersion.Group,
 					Version:  konghqcomv1.GroupVersion.Version,
 					Resource: "kongingresses",
 				},
 				restMapper,
-			).Enabled(),
+			),
 			Controller: &configuration.KongV1KongIngressReconciler{
 				Client:           mgr.GetClient(),
 				Log:              ctrl.Log.WithName("controllers").WithName("KongIngress"),
@@ -232,14 +232,14 @@ func setupControllers(
 			},
 		},
 		{
-			Enabled: c.IngressClassParametersEnabled && NewCRDCondition(
+			Enabled: c.IngressClassParametersEnabled && ShouldEnableCRDController(
 				schema.GroupVersionResource{
 					Group:    konghqcomv1alpha1.GroupVersion.Group,
 					Version:  konghqcomv1alpha1.GroupVersion.Version,
 					Resource: "ingressclassparameterses",
 				},
 				restMapper,
-			).Enabled(),
+			),
 			Controller: &configuration.KongV1Alpha1IngressClassParametersReconciler{
 				Client:           mgr.GetClient(),
 				Log:              ctrl.Log.WithName("controllers").WithName("IngressClassParameters"),
@@ -249,14 +249,14 @@ func setupControllers(
 			},
 		},
 		{
-			Enabled: c.KongPluginEnabled && NewCRDCondition(
+			Enabled: c.KongPluginEnabled && ShouldEnableCRDController(
 				schema.GroupVersionResource{
 					Group:    konghqcomv1.GroupVersion.Group,
 					Version:  konghqcomv1.GroupVersion.Version,
 					Resource: "kongplugins",
 				},
 				restMapper,
-			).Enabled(),
+			),
 			Controller: &configuration.KongV1KongPluginReconciler{
 				Client:           mgr.GetClient(),
 				Log:              ctrl.Log.WithName("controllers").WithName("KongPlugin"),
@@ -266,14 +266,14 @@ func setupControllers(
 			},
 		},
 		{
-			Enabled: c.KongConsumerEnabled && NewCRDCondition(
+			Enabled: c.KongConsumerEnabled && ShouldEnableCRDController(
 				schema.GroupVersionResource{
 					Group:    konghqcomv1.GroupVersion.Group,
 					Version:  konghqcomv1.GroupVersion.Version,
 					Resource: "kongconsumers",
 				},
 				restMapper,
-			).Enabled(),
+			),
 			Controller: &configuration.KongV1KongConsumerReconciler{
 				Client:                     mgr.GetClient(),
 				Log:                        ctrl.Log.WithName("controllers").WithName("KongConsumer"),
@@ -285,14 +285,14 @@ func setupControllers(
 			},
 		},
 		{
-			Enabled: c.KongClusterPluginEnabled && NewCRDCondition(
+			Enabled: c.KongClusterPluginEnabled && ShouldEnableCRDController(
 				schema.GroupVersionResource{
 					Group:    konghqcomv1.GroupVersion.Group,
 					Version:  konghqcomv1.GroupVersion.Version,
 					Resource: "kongclusterplugins",
 				},
 				restMapper,
-			).Enabled(),
+			),
 			Controller: &configuration.KongV1KongClusterPluginReconciler{
 				Client:                     mgr.GetClient(),
 				Log:                        ctrl.Log.WithName("controllers").WithName("KongClusterPlugin"),
@@ -310,14 +310,14 @@ func setupControllers(
 			// knative is a special case because it existed before we added feature gates functionality
 			// for this controller (only) the existing --enable-controller-knativeingress flag overrides
 			// any feature gate configuration. See FEATURE_GATES.md for more information.
-			Enabled: (featureGates[knativeFeature] || c.KnativeIngressEnabled) && NewCRDCondition(
+			Enabled: (featureGates[knativeFeature] || c.KnativeIngressEnabled) && ShouldEnableCRDController(
 				schema.GroupVersionResource{
 					Group:    knativev1alpha1.SchemeGroupVersion.Group,
 					Version:  knativev1alpha1.SchemeGroupVersion.Version,
 					Resource: "ingresses",
 				},
 				restMapper,
-			).Enabled(),
+			),
 			Controller: &knative.Knativev1alpha1IngressReconciler{
 				Client:                     mgr.GetClient(),
 				Log:                        ctrl.Log.WithName("controllers").WithName("Ingress").WithName("KnativeV1Alpha1"),
@@ -334,14 +334,14 @@ func setupControllers(
 		// Gateway API Controllers - Beta APIs
 		// ---------------------------------------------------------------------------
 		{
-			Enabled: featureGates[gatewayFeature] && NewCRDCondition(
+			Enabled: featureGates[gatewayFeature] && ShouldEnableCRDController(
 				schema.GroupVersionResource{
 					Group:    gatewayv1beta1.GroupVersion.Group,
 					Version:  gatewayv1beta1.GroupVersion.Version,
 					Resource: "gateways",
 				},
 				restMapper,
-			).Enabled(),
+			),
 			Controller: &gateway.GatewayReconciler{
 				Client:               mgr.GetClient(),
 				Log:                  ctrl.Log.WithName("controllers").WithName(gatewayFeature),
@@ -354,14 +354,14 @@ func setupControllers(
 			},
 		},
 		{
-			Enabled: featureGates[gatewayFeature] && NewCRDCondition(
+			Enabled: featureGates[gatewayFeature] && ShouldEnableCRDController(
 				schema.GroupVersionResource{
 					Group:    gatewayv1beta1.GroupVersion.Group,
 					Version:  gatewayv1beta1.GroupVersion.Version,
 					Resource: "httproutes",
 				},
 				restMapper,
-			).Enabled(),
+			),
 			Controller: &gateway.HTTPRouteReconciler{
 				Client:               mgr.GetClient(),
 				Log:                  ctrl.Log.WithName("controllers").WithName("HTTPRoute"),
@@ -385,14 +385,14 @@ func setupControllers(
 			},
 		},
 		{
-			Enabled: featureGates[gatewayAlphaFeature] && NewCRDCondition(
+			Enabled: featureGates[gatewayAlphaFeature] && ShouldEnableCRDController(
 				schema.GroupVersionResource{
 					Group:    gatewayv1alpha2.GroupVersion.Group,
 					Version:  gatewayv1alpha2.GroupVersion.Version,
 					Resource: "udproutes",
 				},
 				restMapper,
-			).Enabled(),
+			),
 			Controller: &gateway.UDPRouteReconciler{
 				Client:           mgr.GetClient(),
 				Log:              ctrl.Log.WithName("controllers").WithName("UDPRoute"),
@@ -402,14 +402,14 @@ func setupControllers(
 			},
 		},
 		{
-			Enabled: featureGates[gatewayAlphaFeature] && NewCRDCondition(
+			Enabled: featureGates[gatewayAlphaFeature] && ShouldEnableCRDController(
 				schema.GroupVersionResource{
 					Group:    gatewayv1alpha2.GroupVersion.Group,
 					Version:  gatewayv1alpha2.GroupVersion.Version,
 					Resource: "tcproutes",
 				},
 				restMapper,
-			).Enabled(),
+			),
 			Controller: &gateway.TCPRouteReconciler{
 				Client:           mgr.GetClient(),
 				Log:              ctrl.Log.WithName("controllers").WithName("TCPRoute"),
@@ -419,14 +419,14 @@ func setupControllers(
 			},
 		},
 		{
-			Enabled: featureGates[gatewayAlphaFeature] && NewCRDCondition(
+			Enabled: featureGates[gatewayAlphaFeature] && ShouldEnableCRDController(
 				schema.GroupVersionResource{
 					Group:    gatewayv1alpha2.GroupVersion.Group,
 					Version:  gatewayv1alpha2.GroupVersion.Version,
 					Resource: "tlsroutes",
 				},
 				restMapper,
-			).Enabled(),
+			),
 			Controller: &gateway.TLSRouteReconciler{
 				Client:           mgr.GetClient(),
 				Log:              ctrl.Log.WithName("controllers").WithName("TLSRoute"),

@@ -8,7 +8,9 @@ import (
 	netv1beta1 "k8s.io/api/networking/v1beta1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	ctrl "sigs.k8s.io/controller-runtime"
 
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/utils"
 	ctrlutils "github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/utils"
 )
 
@@ -95,4 +97,13 @@ func negotiateIngressAPI(config *Config, mapper meta.RESTMapper) (IngressAPI, er
 		}
 	}
 	return OtherAPI, fmt.Errorf("no suitable Ingress API found")
+}
+
+func ShouldEnableCRDController(gvr schema.GroupVersionResource, restMapper meta.RESTMapper) bool {
+	if !utils.CRDExists(restMapper, gvr) {
+		ctrl.Log.WithName("controllers").WithName("crdCondition").
+			Info(fmt.Sprintf("disabling the '%s' controller due to missing CRD installation", gvr.Resource))
+		return false
+	}
+	return true
 }

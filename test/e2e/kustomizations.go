@@ -1,5 +1,5 @@
-//go:build e2e_tests
-// +build e2e_tests
+//go:build e2e_tests || istio_tests
+// +build e2e_tests istio_tests
 
 package e2e
 

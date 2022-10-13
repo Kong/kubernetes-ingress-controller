@@ -39,9 +39,6 @@ var (
 	// If not provided, the latest version of Istio will be tested.
 	istioVersionStr = os.Getenv("ISTIO_VERSION")
 
-	// enableIstioTest skips Istio tests if not set.
-	enableIstioTest = os.Getenv("ISTIO_TEST_ENABLED")
-
 	// kialiAPIPort is the port number that the Kiali API will use.
 	kialiAPIPort = 20001
 

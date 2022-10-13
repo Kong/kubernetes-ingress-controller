@@ -25,6 +25,7 @@ const (
 
 // IngressControllerConditions negotiates the best Ingress API version supported by both KIC and the k8s apiserver and
 // provides functions to determine if particular controllers should be enabled.
+// TODO: https://github.com/Kong/kubernetes-ingress-controller/issues/1666
 type IngressControllerConditions struct {
 	chosenVersion IngressAPI
 	cfg           *Config
@@ -79,6 +80,7 @@ func negotiateIngressAPI(config *Config, mapper meta.RESTMapper) (IngressAPI, er
 		},
 	}
 
+	// Please note the order is not arbitrary - the most mature APIs will get picked first.
 	if config.IngressNetV1Enabled {
 		allowedAPIs = append(allowedAPIs, NetworkingV1)
 	}

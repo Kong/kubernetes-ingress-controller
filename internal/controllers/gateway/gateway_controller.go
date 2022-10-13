@@ -42,7 +42,7 @@ var (
 // -----------------------------------------------------------------------------
 
 // GatewayReconciler reconciles a Gateway object.
-type GatewayReconciler struct { //nolint:revive,golint
+type GatewayReconciler struct { //nolint:revive
 	client.Client
 
 	Log             logr.Logger

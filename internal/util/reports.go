@@ -18,8 +18,11 @@ var (
 	reportsHost  = "kong-hf.konghq.com"
 	reportsPort  = 61833
 	pingInterval = 3600
-	tlsConf      = tls.Config{MinVersion: tls.VersionTLS12, MaxVersion: tls.VersionTLS12} //nolint:gosec
-	dialer       = net.Dialer{Timeout: time.Second * 30}
+	tlsConf      = tls.Config{
+		MinVersion: tls.VersionTLS12,
+		MaxVersion: tls.VersionTLS13,
+	}
+	dialer = net.Dialer{Timeout: time.Second * 30}
 )
 
 const (

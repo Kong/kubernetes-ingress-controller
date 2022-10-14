@@ -67,6 +67,12 @@ Adding a new version? You'll need three changes:
 
 ### Added
 
+  - Added `HTTPRoute` support for `CombinedRoutes` feature. When enabled,
+  this changes how `HTTPRoute` resources are translated so that `HTTPRouteRule`
+  resources are combined when they have same backends references. This change 
+  does not functionally impact routing: requests that went to a given Service
+  using the original method still go to the same Service in the new method.
+  [#3008](https://github.com/Kong/kubernetes-ingress-controller/pull/3008)
 - Added `--cache-sync-timeout` flag allowing to change the default controllers' 
   cache synchronisation timeout. 
   [#3013](https://github.com/Kong/kubernetes-ingress-controller/pull/3013)

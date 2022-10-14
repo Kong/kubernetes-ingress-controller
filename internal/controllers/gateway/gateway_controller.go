@@ -25,6 +25,7 @@ import (
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/reference"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane"
 )
 
@@ -272,6 +273,7 @@ func (r *GatewayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	gateway := new(gatewayv1beta1.Gateway)
 	if err := r.Get(ctx, req.NamespacedName, gateway); err != nil {
 		if k8serrors.IsNotFound(err) {
+			// TODO: fill in namespace and name of gateway and delete the non-exist gateway in cache.
 			debug(log, gateway, "reconciliation triggered but gateway does not exist, ignoring")
 			return ctrl.Result{Requeue: false}, nil
 		}
@@ -332,31 +334,14 @@ func (r *GatewayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 			return result, err
 		}
 
-		referredSecrets := listSecretsReferredByGateway(gateway)
-		for _, secret := range referredSecrets {
-
-			err := r.Client.Get(ctx, types.NamespacedName{
-				Namespace: secret.Namespace,
-				Name:      secret.Name,
-			}, secret)
-			if err != nil {
-				if k8serrors.IsNotFound(err) {
-					result.Requeue = true
-					return result, nil
-				}
-				return result, err
+		referredSecretNames := listSecretNamesReferredByGateway(gateway)
+		if err := reference.UpdateReferencesToSecret(
+			ctx, r.Client, r.DataplaneClient, gateway, referredSecretNames); err != nil {
+			if k8serrors.IsNotFound(err) {
+				result.Requeue = true
+				return result, nil
 			}
-			err = r.DataplaneClient.SetObjectReference(gateway, secret)
-			if err != nil {
-				debug(log, gateway, "failed to update reference between gateways and secrets")
-				return result, err
-			}
-
-			err = r.DataplaneClient.UpdateObject(secret)
-			if err != nil {
-				debug(log, gateway, "failed to update referred secret in cache")
-				return result, err
-			}
+			return result, err
 		}
 	}
 	return result, err

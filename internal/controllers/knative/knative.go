@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
-	corev1 "k8s.io/api/core/v1"
 	netv1 "k8s.io/api/networking/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -23,6 +22,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
+	ctrlref "github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/reference"
 	ctrlutils "github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/utils"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
@@ -126,6 +126,11 @@ func (r *Knativev1alpha1IngressReconciler) Reconcile(ctx context.Context, req ct
 		if errors.IsNotFound(err) {
 			obj.Namespace = req.Namespace
 			obj.Name = req.Name
+
+			err := ctrlref.DeleteReferencesByReferrer(r.DataplaneClient, obj)
+			if err != nil {
+				return ctrl.Result{}, err
+			}
 			return ctrl.Result{}, r.DataplaneClient.DeleteObject(obj)
 		}
 		return ctrl.Result{}, err
@@ -135,6 +140,11 @@ func (r *Knativev1alpha1IngressReconciler) Reconcile(ctx context.Context, req ct
 	// clean the object up if it's being deleted
 	if !obj.DeletionTimestamp.IsZero() && time.Now().After(obj.DeletionTimestamp.Time) {
 		log.V(util.DebugLevel).Info("resource is being deleted, its configuration will be removed", "type", "Ingress", "namespace", req.Namespace, "name", req.Name)
+		err := ctrlref.DeleteReferencesByReferrer(r.DataplaneClient, obj)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+
 		objectExistsInCache, err := r.DataplaneClient.ObjectExists(obj)
 		if err != nil {
 			return ctrl.Result{}, err
@@ -165,31 +175,20 @@ func (r *Knativev1alpha1IngressReconciler) Reconcile(ctx context.Context, req ct
 	}
 
 	// update reference records for secrets referred by the ingress
+	referredSecretNames := make([]types.NamespacedName, 0, len(obj.Spec.TLS))
 	for _, tls := range obj.Spec.TLS {
 		secretNamespace := tls.SecretNamespace
 		if tls.SecretNamespace != "" {
 			secretNamespace = tls.SecretNamespace
 		}
-
-		secret := &corev1.Secret{}
-		err := r.Client.Get(ctx, types.NamespacedName{
+		nsName := types.NamespacedName{
 			Namespace: secretNamespace,
 			Name:      tls.SecretName,
-		}, secret)
-		if err != nil {
-			if errors.IsNotFound(err) {
-				return ctrl.Result{Requeue: true}, nil
-			}
-			return ctrl.Result{}, err
 		}
-		err = r.DataplaneClient.SetObjectReference(obj.DeepCopy(), secret)
-		if err != nil {
-			return ctrl.Result{}, err
-		}
-		err = r.DataplaneClient.UpdateObject(secret)
-		if err != nil {
-			return ctrl.Result{}, err
-		}
+		referredSecretNames = append(referredSecretNames, nsName)
+	}
+	if err := ctrlref.UpdateReferencesToSecret(ctx, r.Client, r.DataplaneClient, obj, referredSecretNames); err != nil {
+		return ctrl.Result{}, err
 	}
 
 	// update the kong Admin API with the changes

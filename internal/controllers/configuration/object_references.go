@@ -7,20 +7,25 @@ import (
 	extv1beta1 "k8s.io/api/extensions/v1beta1"
 	netv1 "k8s.io/api/networking/v1"
 	netv1beta1 "k8s.io/api/networking/v1beta1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/reference"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
 	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1beta1"
 )
 
+// updateReferredObjects updates reference records where the referrer is the object in parameter obj.
+// currently it only updates reference records to secrets, since we wanted to limit cache size of secrets:
+// https://github.com/Kong/kubernetes-ingress-controller/issues/2868
 func updateReferredObjects(
-	ctx context.Context, client client.Client, dataplaneClient *dataplane.KongClient, obj runtime.Object) error {
+	ctx context.Context, client client.Client, dataplaneClient *dataplane.KongClient, obj client.Object) error {
 	switch obj := obj.(type) {
+	// functions update***ReferredSecrets first list the secrets referred by object,
+	// then call UpdateReferencesToSecret to store referrence records between the object and referred secrets,
+	// and also to remove the outdated reference records in cache where the secret is not referred by the obj specification anymore.
 	case *corev1.Service:
 		return updateCoreV1ServiceReferredSecrets(ctx, client, dataplaneClient, obj)
 	case *netv1.Ingress:
@@ -45,266 +50,131 @@ func updateReferredObjects(
 func updateCoreV1ServiceReferredSecrets(
 	ctx context.Context, client client.Client, dataplaneClient *dataplane.KongClient, service *corev1.Service,
 ) error {
+	referredSecretNames := make([]types.NamespacedName, 0, 1)
+
+	anns := service.Annotations
 	if service.Annotations == nil {
-		return nil
+		anns = map[string]string{}
 	}
-	secretName := annotations.ExtractClientCertificate(service.Annotations)
+	secretName := annotations.ExtractClientCertificate(anns)
 	if secretName != "" {
-		secret := &corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: service.Namespace,
-				Name:      secretName,
-			},
+		nsName := types.NamespacedName{
+			Namespace: service.Namespace,
+			Name:      secretName,
 		}
 
-		err := client.Get(ctx, types.NamespacedName{
-			Namespace: secret.Namespace,
-			Name:      secret.Name,
-		}, secret)
-		if err != nil {
-			return err
-		}
-
-		err = dataplaneClient.SetObjectReference(service.DeepCopy(), secret.DeepCopy())
-		if err != nil {
-			return err
-		}
-
-		if err := dataplaneClient.UpdateObject(secret); err != nil {
-			return err
-		}
+		referredSecretNames = append(referredSecretNames, nsName)
 	}
-	// TODO: remove outdated reference records.
 
-	return nil
+	return reference.UpdateReferencesToSecret(ctx, client, dataplaneClient, service, referredSecretNames)
 }
 
 func updateNetV1IngressReferredSecrets(
 	ctx context.Context, client client.Client, dataplaneClient *dataplane.KongClient, ingress *netv1.Ingress,
 ) error {
+	referredSecretNames := make([]types.NamespacedName, 0, len(ingress.Spec.TLS))
 	for _, tls := range ingress.Spec.TLS {
-		secret := &corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: ingress.Namespace,
-				Name:      tls.SecretName,
-			},
+		nsName := types.NamespacedName{
+			Namespace: ingress.Namespace,
+			Name:      tls.SecretName,
 		}
-
-		err := client.Get(ctx, types.NamespacedName{
-			Namespace: secret.Namespace,
-			Name:      secret.Name,
-		}, secret)
-		if err != nil {
-			return err
-		}
-
-		err = dataplaneClient.SetObjectReference(ingress.DeepCopy(), secret.DeepCopy())
-		if err != nil {
-			return err
-		}
-
-		if err := dataplaneClient.UpdateObject(secret); err != nil {
-			return err
-		}
-
+		referredSecretNames = append(referredSecretNames, nsName)
 	}
 
-	return nil
+	return reference.UpdateReferencesToSecret(ctx, client, dataplaneClient, ingress, referredSecretNames)
 }
 
 func updateNetV1beta1IngressReferredSecrets(
 	ctx context.Context, client client.Client, dataplaneClient *dataplane.KongClient, ingress *netv1beta1.Ingress,
 ) error {
-
+	referredSecretNames := make([]types.NamespacedName, 0, len(ingress.Spec.TLS))
 	for _, tls := range ingress.Spec.TLS {
-		secret := &corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: ingress.Namespace,
-				Name:      tls.SecretName,
-			},
+		nsName := types.NamespacedName{
+			Namespace: ingress.Namespace,
+			Name:      tls.SecretName,
 		}
-
-		err := client.Get(ctx, types.NamespacedName{
-			Namespace: secret.Namespace,
-			Name:      secret.Name,
-		}, secret)
-		if err != nil {
-			return err
-		}
-
-		err = dataplaneClient.SetObjectReference(ingress.DeepCopy(), secret.DeepCopy())
-		if err != nil {
-			return err
-		}
-
-		if err := dataplaneClient.UpdateObject(secret); err != nil {
-			return err
-		}
+		referredSecretNames = append(referredSecretNames, nsName)
 	}
 
-	return nil
+	return reference.UpdateReferencesToSecret(ctx, client, dataplaneClient, ingress, referredSecretNames)
 }
 
 func updateExtensionV1beta1IngressReferredSecrets(
 	ctx context.Context, client client.Client, dataplaneClient *dataplane.KongClient, ingress *extv1beta1.Ingress,
 ) error {
+	referredSecretNames := make([]types.NamespacedName, 0, len(ingress.Spec.TLS))
 
 	for _, tls := range ingress.Spec.TLS {
-		secret := &corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: ingress.Namespace,
-				Name:      tls.SecretName,
-			},
+		nsName := types.NamespacedName{
+			Namespace: ingress.Namespace,
+			Name:      tls.SecretName,
 		}
-
-		err := client.Get(ctx, types.NamespacedName{
-			Namespace: secret.Namespace,
-			Name:      secret.Name,
-		}, secret)
-		if err != nil {
-			return err
-		}
-
-		err = dataplaneClient.SetObjectReference(ingress.DeepCopy(), secret.DeepCopy())
-		if err != nil {
-			return err
-		}
-
-		if err := dataplaneClient.UpdateObject(secret); err != nil {
-			return err
-		}
+		referredSecretNames = append(referredSecretNames, nsName)
 	}
 
-	return nil
+	return reference.UpdateReferencesToSecret(ctx, client, dataplaneClient, ingress, referredSecretNames)
 }
 
 func updateKongPluginReferredSecrets(
 	ctx context.Context, client client.Client, dataplaneClient *dataplane.KongClient, plugin *kongv1.KongPlugin,
 ) error {
+	referredSecretNames := make([]types.NamespacedName, 0, 1)
+
 	if plugin.ConfigFrom != nil {
-		secretName := plugin.ConfigFrom.SecretValue.Secret
-		secret := &corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: plugin.Namespace,
-				Name:      secretName,
-			},
+		nsName := types.NamespacedName{
+			Namespace: plugin.Namespace,
+			Name:      plugin.ConfigFrom.SecretValue.Secret,
 		}
-
-		err := client.Get(ctx, types.NamespacedName{
-			Namespace: secret.Namespace,
-			Name:      secret.Name,
-		}, secret)
-		if err != nil {
-			return err
-		}
-
-		err = dataplaneClient.SetObjectReference(plugin.DeepCopy(), secret.DeepCopy())
-		if err != nil {
-			return err
-		}
-
-		if err := dataplaneClient.UpdateObject(secret); err != nil {
-			return err
-		}
+		referredSecretNames = append(referredSecretNames, nsName)
 	}
 
-	return nil
+	return reference.UpdateReferencesToSecret(ctx, client, dataplaneClient, plugin, referredSecretNames)
 }
 
 func updateKongClusterPluginReferredSecrets(
 	ctx context.Context, client client.Client, dataplaneClient *dataplane.KongClient, plugin *kongv1.KongClusterPlugin,
 ) error {
+	referredSecretNames := make([]types.NamespacedName, 0, 1)
+
 	if plugin.ConfigFrom != nil {
-		secretNamespace := plugin.ConfigFrom.SecretValue.Namespace
-		secretName := plugin.ConfigFrom.SecretValue.Secret
-		secret := &corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: secretNamespace,
-				Name:      secretName,
-			},
+		nsName := types.NamespacedName{
+			Namespace: plugin.ConfigFrom.SecretValue.Namespace,
+			Name:      plugin.ConfigFrom.SecretValue.Secret,
 		}
+		referredSecretNames = append(referredSecretNames, nsName)
 
-		err := client.Get(ctx, types.NamespacedName{
-			Namespace: secret.Namespace,
-			Name:      secret.Name,
-		}, secret)
-		if err != nil {
-			return err
-		}
-
-		err = dataplaneClient.SetObjectReference(plugin.DeepCopy(), secret.DeepCopy())
-		if err != nil {
-			return err
-		}
-
-		if err := dataplaneClient.UpdateObject(secret); err != nil {
-			return err
-		}
 	}
 
-	return nil
+	return reference.UpdateReferencesToSecret(ctx, client, dataplaneClient, plugin, referredSecretNames)
 }
 
 func updateKongConsumerReferredSecrets(
 	ctx context.Context, client client.Client, dataplaneClient *dataplane.KongClient, consumer *kongv1.KongConsumer,
 ) error {
+	referredSecretNames := make([]types.NamespacedName, 0, len(consumer.Credentials))
+
 	for _, secretName := range consumer.Credentials {
-		secret := &corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: consumer.Namespace,
-				Name:      secretName,
-			},
+		nsName := types.NamespacedName{
+			Namespace: consumer.Namespace,
+			Name:      secretName,
 		}
-
-		err := client.Get(ctx, types.NamespacedName{
-			Namespace: secret.Namespace,
-			Name:      secret.Name,
-		}, secret)
-		if err != nil {
-			return err
-		}
-
-		err = dataplaneClient.SetObjectReference(consumer.DeepCopy(), secret.DeepCopy())
-		if err != nil {
-			return err
-		}
-
-		if err := dataplaneClient.UpdateObject(secret); err != nil {
-			return err
-		}
+		referredSecretNames = append(referredSecretNames, nsName)
 	}
 
-	return nil
+	return reference.UpdateReferencesToSecret(ctx, client, dataplaneClient, consumer, referredSecretNames)
 }
 
 func updateTCPIngressReferredSecrets(
 	ctx context.Context, client client.Client, dataplaneClient *dataplane.KongClient, tcpIngress *kongv1beta1.TCPIngress,
 ) error {
+	referredSecretNames := make([]types.NamespacedName, len(tcpIngress.Spec.TLS))
 	for _, tls := range tcpIngress.Spec.TLS {
-		secret := &corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: tcpIngress.Namespace,
-				Name:      tls.SecretName,
-			},
+		nsName := types.NamespacedName{
+			Namespace: tcpIngress.Namespace,
+			Name:      tls.SecretName,
 		}
-
-		err := client.Get(ctx, types.NamespacedName{
-			Namespace: secret.Namespace,
-			Name:      secret.Name,
-		}, secret)
-		if err != nil {
-			return err
-		}
-
-		err = dataplaneClient.SetObjectReference(tcpIngress.DeepCopy(), secret.DeepCopy())
-		if err != nil {
-			return err
-		}
-
-		if err := dataplaneClient.UpdateObject(secret); err != nil {
-			return err
-		}
+		referredSecretNames = append(referredSecretNames, nsName)
 	}
 
-	return nil
+	return reference.UpdateReferencesToSecret(ctx, client, dataplaneClient, tcpIngress, referredSecretNames)
 }

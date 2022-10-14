@@ -209,6 +209,7 @@ func (c *KongClient) ObjectExists(obj client.Object) (bool, error) {
 	return exists, err
 }
 
+// SetObjectReference add or update a reference record between referrer and referent in reference cache.
 func (c *KongClient) SetObjectReference(referrer client.Object, referent client.Object) error {
 	ref := &store.ObjectReference{
 		Referrer: referrer,
@@ -217,10 +218,53 @@ func (c *KongClient) SetObjectReference(referrer client.Object, referent client.
 	return c.referenceIndexers.SetReference(ref)
 }
 
+// DeleteObjectReference delete the reference record between referrer and referent from reference cache.
+func (c *KongClient) DeleteObjectReference(referrer client.Object, referent client.Object) error {
+	ref := &store.ObjectReference{
+		Referrer: referrer,
+		Referent: referent,
+	}
+	err := c.referenceIndexers.DeleteReference(ref)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// ObjectReferred returns true when the object is referred in reference cahe.
 func (c *KongClient) ObjectReferred(obj client.Object) (bool, error) {
 	return c.referenceIndexers.ObjectReferred(obj)
 }
 
+// DeleteObjectIfNotReferred deletes object in object cache if
+// the object is not referenced in reference cache.
+func (c *KongClient) DeleteObjectIfNotReferred(obj client.Object) error {
+	referred, err := c.referenceIndexers.ObjectReferred(obj)
+	if err != nil {
+		return err
+	}
+	if !referred {
+		return c.DeleteObject(obj)
+	}
+	return nil
+}
+
+// ListReferredObjects lists all objects referred by referrer in reference cache.
+func (c *KongClient) ListReferredObjects(referrer client.Object) ([]client.Object, error) {
+	refs, err := c.referenceIndexers.ListReferencesByReferrer(referrer)
+	if err != nil {
+		return nil, err
+	}
+	objs := []client.Object{}
+	for _, ref := range refs {
+		objs = append(objs, ref.Referent)
+	}
+	return objs, nil
+}
+
+// DeleteReferencesByReferrer deletes all the reference records in reference cache with specified referrer.
+// Called when the referrer is deleted in k8s.
 func (c *KongClient) DeleteReferencesByReferrer(referrer client.Object) error {
 	return c.referenceIndexers.DeleteReferencesByReferrer(referrer)
 }

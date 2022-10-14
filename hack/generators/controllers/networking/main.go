@@ -409,6 +409,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
+	ctrlref "github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/reference"
 	ctrlutils "github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/utils"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
@@ -542,8 +543,7 @@ func (r *{{.PackageAlias}}{{.Kind}}Reconciler) Reconcile(ctx context.Context, re
 			obj.Name = req.Name
 			{{if .NeedsUpdateReferences}}
 			// remove reference record where the {{.Kind}} is the referrer
-			err = r.DataplaneClient.DeleteReferencesByReferrer(obj)
-			if err != nil {
+			if err := ctrlref.DeleteReferencesByReferrer(r.DataplaneClient, obj); err != nil {
 				return ctrl.Result{}, err
 			}
 			{{end}}
@@ -558,9 +558,8 @@ func (r *{{.PackageAlias}}{{.Kind}}Reconciler) Reconcile(ctx context.Context, re
 		log.V(util.DebugLevel).Info("resource is being deleted, its configuration will be removed", "type", "{{.Kind}}", "namespace", req.Namespace, "name", req.Name)
 		{{if .NeedsUpdateReferences}}
 		// remove reference record where the {{.Kind}} is the referrer
-		delRefErr := r.DataplaneClient.DeleteReferencesByReferrer(obj)
-		if delRefErr != nil {
-			return ctrl.Result{}, delRefErr
+		if err := ctrlref.DeleteReferencesByReferrer(r.DataplaneClient, obj); err != nil {
+			return ctrl.Result{}, err
 		}
 		{{end}}
 		objectExistsInCache, err := r.DataplaneClient.ObjectExists(obj)
@@ -607,7 +606,7 @@ func (r *{{.PackageAlias}}{{.Kind}}Reconciler) Reconcile(ctx context.Context, re
 		if errors.IsNotFound(err) {
 			// reconcile again if the secret does not exist yet
 			return ctrl.Result{
-				Requeue: true
+				Requeue: true,
 			}, nil
 		}
 		return ctrl.Result{}, err

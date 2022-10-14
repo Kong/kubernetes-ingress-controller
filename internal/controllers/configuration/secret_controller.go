@@ -57,11 +57,17 @@ func (r *CoreV1SecretReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	)
 }
 
+// shouldReconcileSecret is the filter function to judge whether the secret should be reconciled
+// and stored in cache of the controller. It returns true for the secret should be reconciled when:
+// - the secret has label: konghq.com/ca-cert:true
+// - or the secret is referred by objects we care (service, ingress, gateway, ...)
+
 func (r *CoreV1SecretReconciler) shouldReconcileSecret(obj client.Object) bool {
 	secret, ok := obj.(*corev1.Secret)
 	if !ok {
 		return false
 	}
+
 	labels := secret.Labels
 	if labels != nil && labels["konghq.com/ca-cert"] == "true" {
 		return true

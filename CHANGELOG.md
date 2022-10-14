@@ -79,6 +79,11 @@ Adding a new version? You'll need three changes:
 - Secrets validation introduced: CA certificates won't be synchronized
   to Kong if the certificate is expired.
   [#3063](https://github.com/Kong/kubernetes-ingress-controller/pull/3063)
+- Changed the logic of storing secrets into object cache. Now only the secrets
+  that are possibly used in Kong configuration are stored into cache, and the 
+  irrelevant secrets (e.g: service account tokens) are not stored. This change
+  is made to reduce memory usage of the cache.
+  [#3047](https://github.com/Kong/kubernetes-ingress-controller/pull/3047)
 
 ### Fixed
 

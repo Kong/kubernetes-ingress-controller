@@ -121,8 +121,9 @@ func reconcileGatewaysIfClassMatches(gatewayClass client.Object, gateways []Gate
 	return
 }
 
-func listSecretsReferredByGateway(gateway *gatewayv1beta1.Gateway) []*corev1.Secret {
-	secrets := []*corev1.Secret{}
+// list namespaced names of secrets referred by the gateway.
+func listSecretNamesReferredByGateway(gateway *gatewayv1beta1.Gateway) []types.NamespacedName {
+	nsNames := []types.NamespacedName{}
 
 	for _, listener := range gateway.Spec.Listeners {
 		if listener.TLS == nil {
@@ -130,7 +131,7 @@ func listSecretsReferredByGateway(gateway *gatewayv1beta1.Gateway) []*corev1.Sec
 		}
 
 		for _, certRef := range listener.TLS.CertificateRefs {
-			if certRef.Group != nil && *certRef.Group != "" && *certRef.Group != "core" {
+			if certRef.Group != nil && *certRef.Group != corev1.GroupName {
 				continue
 			}
 
@@ -143,15 +144,13 @@ func listSecretsReferredByGateway(gateway *gatewayv1beta1.Gateway) []*corev1.Sec
 				refNamespace = string(*certRef.Namespace)
 			}
 
-			secrets = append(secrets, &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: refNamespace,
-					Name:      string(certRef.Name),
-				},
+			nsNames = append(nsNames, types.NamespacedName{
+				Namespace: refNamespace,
+				Name:      string(certRef.Name),
 			})
 		}
 	}
-	return secrets
+	return nsNames
 }
 
 // ListenerTracker holds Gateway Listeners and their statuses, and provides methods to update statuses upon

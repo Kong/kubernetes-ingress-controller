@@ -42,6 +42,24 @@ type testCaseIngressRulesFromHTTPRoutes struct {
 	errs     []error
 }
 
+func (t *testCaseIngressRulesFromHTTPRoutes) expectCombinedServiceFromHTTPRoute(
+	route *gatewayv1beta1.HTTPRoute,
+	service *kongstate.Service,
+) *testCaseIngressRulesFromHTTPRoutes {
+	service.Parent = route
+	t.expected.ServiceNameToServices[*service.Name] = *service
+	return t
+}
+
+func newTestCaseIngressRulesFromHTTPRoutes(msg string) *testCaseIngressRulesFromHTTPRoutes {
+	return &testCaseIngressRulesFromHTTPRoutes{
+		msg:      msg,
+		routes:   make([]*gatewayv1beta1.HTTPRoute, 0),
+		expected: ingressRules{},
+		errs:     []error{},
+	}
+}
+
 // common test cases  should work with legacy parser and combined routes parser.
 func getIngressRulesFromHTTPRoutesCommonTestCases() []testCaseIngressRulesFromHTTPRoutes {
 	ingressRulesFromHTTPRoutesCommonCasesHTTPPort := gatewayv1beta1.PortNumber(80)
@@ -1098,6 +1116,252 @@ func getIngressRulesFromHTTPRoutesCombinedRoutesTestCases() []testCaseIngressRul
 				},
 			},
 		},
+
+		{
+			// TODO (jrsmroz): with single path!
+			msg: "a single HTTPRoute with multiple rules with equal filters results in a single service",
+			routes: []*gatewayv1beta1.HTTPRoute{{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "basic-httproute",
+					Namespace: corev1.NamespaceDefault,
+				},
+				Spec: gatewayv1beta1.HTTPRouteSpec{
+					CommonRouteSpec: gatewayv1beta1.CommonRouteSpec{
+						ParentRefs: []gatewayv1beta1.ParentReference{{
+							Name: gatewayv1beta1.ObjectName("fake-gateway"),
+						}},
+					},
+					Rules: []gatewayv1beta1.HTTPRouteRule{{
+						Matches: []gatewayv1beta1.HTTPRouteMatch{
+							{
+								Path: &gatewayv1beta1.HTTPPathMatch{
+									Type:  &pathMatchPrefix,
+									Value: kong.String("/httpbin-1"),
+								},
+							},
+						},
+						BackendRefs: []gatewayv1beta1.HTTPBackendRef{{
+							BackendRef: gatewayv1beta1.BackendRef{
+								BackendObjectReference: gatewayv1beta1.BackendObjectReference{
+									Name: gatewayv1beta1.ObjectName("fake-service"),
+									Port: &ingressRulesFromHTTPRoutesCommonCasesHTTPPort1,
+									Kind: util.StringToGatewayAPIKindPtr("Service"),
+								},
+							},
+						}},
+						Filters: []gatewayv1beta1.HTTPRouteFilter{{
+							Type: gatewayv1beta1.HTTPRouteFilterRequestHeaderModifier,
+							RequestHeaderModifier: &gatewayv1beta1.HTTPRequestHeaderFilter{
+								Add: []gatewayv1beta1.HTTPHeader{
+									{Name: "X-Header-1", Value: "X-Header-1-Value"},
+								},
+							},
+						}},
+					}, {
+						Matches: []gatewayv1beta1.HTTPRouteMatch{{
+							Path: &gatewayv1beta1.HTTPPathMatch{
+								Type:  &pathMatchPrefix,
+								Value: kong.String("/httpbin-2"),
+							},
+						}},
+						BackendRefs: []gatewayv1beta1.HTTPBackendRef{{
+							BackendRef: gatewayv1beta1.BackendRef{
+								BackendObjectReference: gatewayv1beta1.BackendObjectReference{
+									Name: gatewayv1beta1.ObjectName("fake-service"),
+									Port: &ingressRulesFromHTTPRoutesCommonCasesHTTPPort1,
+									Kind: util.StringToGatewayAPIKindPtr("Service"),
+								},
+							},
+						}},
+						Filters: []gatewayv1beta1.HTTPRouteFilter{{
+							Type: gatewayv1beta1.HTTPRouteFilterRequestHeaderModifier,
+							RequestHeaderModifier: &gatewayv1beta1.HTTPRequestHeaderFilter{
+								Add: []gatewayv1beta1.HTTPHeader{
+									{Name: "X-Header-1", Value: "X-Header-1-Value"},
+								},
+							},
+						}},
+					}},
+				},
+			}},
+			expected: ingressRules{
+				SecretNameToSNIs: SecretNameToSNIs{},
+				ServiceNameToServices: map[string]kongstate.Service{
+					"httproute.default.basic-httproute.0": {
+						Service: kong.Service{ // only 1 service should be created
+							ConnectTimeout: kong.Int(60000),
+							Host:           kong.String("httproute.default.basic-httproute.0"),
+							Name:           kong.String("httproute.default.basic-httproute.0"),
+							Protocol:       kong.String("http"),
+							ReadTimeout:    kong.Int(60000),
+							Retries:        kong.Int(5),
+							WriteTimeout:   kong.Int(60000),
+						},
+						Backends: kongstate.ServiceBackends{{
+							Name: "fake-service",
+							PortDef: kongstate.PortDef{
+								Mode:   kongstate.PortMode(1),
+								Number: 80,
+							},
+						}},
+						Namespace: "default",
+						Routes: []kongstate.Route{ // only 2 routes should be created
+							{
+								Route: kong.Route{
+									Name: kong.String("httproute.default.basic-httproute.0.0"),
+									Paths: []*string{
+										kong.String("/httpbin-1"),
+									},
+									PreserveHost: kong.Bool(true),
+									Protocols: []*string{
+										kong.String("http"),
+										kong.String("https"),
+									},
+									StripPath: pointer.BoolPtr(false),
+								},
+								Ingress: util.K8sObjectInfo{
+									Name:        "basic-httproute",
+									Namespace:   corev1.NamespaceDefault,
+									Annotations: make(map[string]string),
+									GroupVersionKind: schema.GroupVersionKind{
+										Group:   "gateway.networking.k8s.io",
+										Version: "v1beta1",
+										Kind:    "HTTPRoute",
+									},
+								},
+								Plugins: []kong.Plugin{
+									{
+										Name: kong.String("request-transformer"),
+										Config: kong.Configuration{
+											"append": map[string][]string{
+												"headers": {"X-Header-1:X-Header-1-Value"},
+											},
+										},
+									},
+								},
+							},
+							{
+								Route: kong.Route{
+									Name: kong.String("httproute.default.basic-httproute.1.0"),
+									Paths: []*string{
+										kong.String("/httpbin-2"),
+									},
+									PreserveHost: kong.Bool(true),
+									Protocols: []*string{
+										kong.String("http"),
+										kong.String("https"),
+									},
+									StripPath: pointer.BoolPtr(false),
+								},
+								Ingress: util.K8sObjectInfo{
+									Name:        "basic-httproute",
+									Namespace:   corev1.NamespaceDefault,
+									Annotations: make(map[string]string),
+									GroupVersionKind: schema.GroupVersionKind{
+										Group:   "gateway.networking.k8s.io",
+										Version: "v1beta1",
+										Kind:    "HTTPRoute",
+									},
+								},
+								Plugins: []kong.Plugin{
+									{
+										Name: kong.String("request-transformer"),
+										Config: kong.Configuration{
+											"append": map[string][]string{
+												"headers": {"X-Header-1:X-Header-1-Value"},
+											},
+										},
+									},
+								},
+							},
+						},
+						Parent: &gatewayv1beta1.HTTPRoute{
+							Spec: gatewayv1beta1.HTTPRouteSpec{
+								CommonRouteSpec: gatewayv1beta1.CommonRouteSpec{
+									ParentRefs: []gatewayv1beta1.ParentReference{
+										{
+											Name: gatewayv1beta1.ObjectName("fake-gateway"),
+										},
+									},
+								},
+								Rules: []gatewayv1beta1.HTTPRouteRule{
+									{
+										Matches: []gatewayv1beta1.HTTPRouteMatch{
+											{
+												Path: &gatewayv1beta1.HTTPPathMatch{
+													Type:  &pathMatchPrefix,
+													Value: kong.String("/httpbin-1"),
+												},
+											},
+										},
+										BackendRefs: []gatewayv1beta1.HTTPBackendRef{
+											{
+												BackendRef: gatewayv1beta1.BackendRef{
+													BackendObjectReference: gatewayv1beta1.BackendObjectReference{
+														Name: gatewayv1beta1.ObjectName("fake-service"),
+														Port: &ingressRulesFromHTTPRoutesCommonCasesHTTPPort1,
+														Kind: util.StringToGatewayAPIKindPtr("Service"),
+													},
+												},
+											},
+										},
+										Filters: []gatewayv1beta1.HTTPRouteFilter{
+											{
+												Type: gatewayv1beta1.HTTPRouteFilterRequestHeaderModifier,
+												RequestHeaderModifier: &gatewayv1beta1.HTTPRequestHeaderFilter{
+													Add: []gatewayv1beta1.HTTPHeader{
+														{Name: "X-Header-1", Value: "X-Header-1-Value"},
+													},
+												},
+											},
+										},
+									},
+									{
+										Matches: []gatewayv1beta1.HTTPRouteMatch{
+											{
+												Path: &gatewayv1beta1.HTTPPathMatch{
+													Type:  &pathMatchPrefix,
+													Value: kong.String("/httpbin-2"),
+												},
+											},
+										},
+										BackendRefs: []gatewayv1beta1.HTTPBackendRef{
+											{
+												BackendRef: gatewayv1beta1.BackendRef{
+													BackendObjectReference: gatewayv1beta1.BackendObjectReference{
+														Name: gatewayv1beta1.ObjectName("fake-service"),
+														Port: &ingressRulesFromHTTPRoutesCommonCasesHTTPPort1,
+														Kind: util.StringToGatewayAPIKindPtr("Service"),
+													},
+												},
+											},
+										},
+										Filters: []gatewayv1beta1.HTTPRouteFilter{
+											{
+												Type: gatewayv1beta1.HTTPRouteFilterRequestHeaderModifier,
+												RequestHeaderModifier: &gatewayv1beta1.HTTPRequestHeaderFilter{
+													Add: []gatewayv1beta1.HTTPHeader{
+														{Name: "X-Header-1", Value: "X-Header-1-Value"},
+													},
+												},
+											},
+										},
+									},
+								},
+							},
+							ObjectMeta: metav1.ObjectMeta{
+								Name:      "basic-httproute",
+								Namespace: "default",
+							},
+							TypeMeta: metav1.TypeMeta{
+								Kind:       "HTTPRoute",
+								APIVersion: "gateway.networking.k8s.io/v1beta1",
+							},
+						},
+					},
+				},
+			},
+		},
 	}
 }
 
@@ -1383,4 +1647,8 @@ func TestIngressRulesFromHTTPRoutes_RegexPrefix(t *testing.T) {
 		t.Run(tt.msg+" using legacy parser", withParser(parser))
 		t.Run(tt.msg+" using combined service routes parser", withParser(parserWithCombinedServiceRoutes))
 	}
+}
+
+func HTTPMethodPointer(method string) *gatewayv1beta1.HTTPMethod {
+	return (*gatewayv1beta1.HTTPMethod)(&method)
 }

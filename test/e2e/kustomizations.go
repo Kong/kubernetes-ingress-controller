@@ -38,10 +38,10 @@ const (
   value: %[4]d`
 
 	addControllerEnvPatch = `- op: add
-	path: "/spec/template/spec/containers/1/env/-"
-	value:
-		name: %s
-		value: "%s"`
+  path: "/spec/template/spec/containers/1/env/-"
+  value:
+    name: %s
+    value: "%s"`
 )
 
 // patchControllerImage replaces the kong/kubernetes-ingress-controller image with the provided image and tag,
@@ -131,7 +131,6 @@ func patchLivenessProbes(baseManifestReader io.Reader, container, failure int, i
 // addControllerEnv adds an environment variable to ingress-controller container.
 func addControllerEnv(t *testing.T, baseManifestReader io.Reader, envName, value string) io.Reader {
 	kustomization := types.Kustomization{
-		Bases: []string{"base.yaml"},
 		Patches: []types.Patch{
 			{
 				Patch: fmt.Sprintf(addControllerEnvPatch, envName, value),

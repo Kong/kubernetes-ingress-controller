@@ -311,13 +311,9 @@ func (c *KongClient) Update(ctx context.Context) error {
 	}
 
 	// parse the Kubernetes objects from the storer into Kong configuration
-	kongstate, err := p.Build()
-	if err != nil {
-		c.prometheusMetrics.TranslationCount.With(prometheus.Labels{
-			metrics.SuccessKey: metrics.SuccessFalse,
-		}).Inc()
-		return err
-	}
+	kongstate := p.Build()
+	// todo: does it still make sense to report TranslationCount when Build no longer returns an error?
+	// https://github.com/Kong/kubernetes-ingress-controller/issues/1892
 	c.prometheusMetrics.TranslationCount.With(prometheus.Labels{
 		metrics.SuccessKey: metrics.SuccessTrue,
 	}).Inc()

@@ -71,8 +71,7 @@ func NewParser(
 
 // Build creates a Kong configuration from Ingress and Custom resources
 // defined in Kubernetes.
-// It throws an error if there is an error returned from client-go.
-func (p *Parser) Build() (*kongstate.KongState, error) {
+func (p *Parser) Build() *kongstate.KongState {
 	// parse and merge all rules together from all Kubernetes API sources
 	ingressRules := mergeIngressRules(
 		p.ingressRulesFromIngressV1beta1(),
@@ -121,7 +120,7 @@ func (p *Parser) Build() (*kongstate.KongState, error) {
 	// populate CA certificates in Kong
 	result.CACertificates = getCACerts(p.logger, p.storer, result.Plugins)
 
-	return &result, nil
+	return &result
 }
 
 // -----------------------------------------------------------------------------

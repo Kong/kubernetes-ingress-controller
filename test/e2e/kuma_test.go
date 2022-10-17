@@ -37,8 +37,15 @@ func TestDeployAllInOneDBLESSKuma(t *testing.T) {
 		environments.NewBuilder().WithAddons(addons...), clusterVersionStr)
 	env, err := builder.Build(ctx)
 	require.NoError(t, err)
+
+	defer func() { assert.NoError(t, env.Cleanup(ctx)) }()
 	defer func() {
-		assert.NoError(t, env.Cleanup(ctx))
+		if t.Failed() {
+			output, err := clusters.NewCleaner(env.Cluster()).DumpDiagnostics(ctx, t.Name())
+			if assert.NoErrorf(t, err, "failed dumping diagnostics to %s", output) {
+				t.Logf("%s failed, dumped diagnostics to %s", t.Name(), output)
+			}
+		}
 	}()
 
 	t.Log("deploying kong components")

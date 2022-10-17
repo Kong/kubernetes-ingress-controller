@@ -5,7 +5,7 @@ go 1.19
 replace github.com/imdario/mergo v0.3.12 => github.com/Kong/mergo v0.3.13
 
 require (
-	cloud.google.com/go/container v1.4.0
+	cloud.google.com/go/container v1.5.0
 	github.com/Masterminds/sprig v2.22.0+incompatible
 	github.com/avast/retry-go/v4 v4.1.0
 	github.com/blang/semver/v4 v4.0.0
@@ -30,7 +30,7 @@ require (
 	github.com/tidwall/gjson v1.14.3
 	golang.org/x/net v0.0.0-20221012135044-0b7e1fb9d458
 	google.golang.org/api v0.99.0
-	google.golang.org/genproto v0.0.0-20221010155953-15ba04fc1c0e
+	google.golang.org/genproto v0.0.0-20221014173430-6e2ab493f96b
 	gopkg.in/yaml.v3 v3.0.1
 	k8s.io/api v0.25.3
 	k8s.io/apiextensions-apiserver v0.25.3

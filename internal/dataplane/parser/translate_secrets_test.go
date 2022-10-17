@@ -10,7 +10,7 @@ import (
 )
 
 func TestGetPluginsAssociatedWithCACertSecret(t *testing.T) {
-	secretID := "8a3753e0-093b-43d9-9d39-27985c987d92"
+	secretID := "8a3753e0-093b-43d9-9d39-27985c987d92" //nolint:gosec
 	plugins := []kongstate.Plugin{
 		{
 			Plugin: kong.Plugin{

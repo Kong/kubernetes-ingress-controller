@@ -8,7 +8,7 @@ import (
 
 	"github.com/kong/go-kong/kong"
 	"github.com/sirupsen/logrus"
-	v1 "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/store"
@@ -45,7 +45,7 @@ func getCACerts(log logrus.FieldLogger, storer store.Storer, plugins []kongstate
 	return caCerts
 }
 
-func toKongCACertificate(certSecret *v1.Secret, secretID string) (kong.CACertificate, error) {
+func toKongCACertificate(certSecret *corev1.Secret, secretID string) (kong.CACertificate, error) {
 	caCertbytes, certExists := certSecret.Data["cert"]
 	if !certExists {
 		return kong.CACertificate{}, errors.New("missing 'cert' field in data")

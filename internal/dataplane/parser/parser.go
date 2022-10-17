@@ -119,7 +119,7 @@ func (p *Parser) Build() (*kongstate.KongState, error) {
 	result.Certificates = mergeCerts(p.logger, ingressCerts, gatewayCerts)
 
 	// populate CA certificates in Kong
-	result.CACertificates = getCACerts(p.logger, p.storer)
+	result.CACertificates = getCACerts(p.logger, p.storer, result.Plugins)
 
 	return &result, nil
 }

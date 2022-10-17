@@ -3,19 +3,39 @@ package parser
 import (
 	"testing"
 
-	corev1 "k8s.io/api/core/v1"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/store"
+	"github.com/kong/go-kong/kong"
+
 	"github.com/stretchr/testify/require"
 )
 
-func TestGetPluginsAssociatedWithSecret(t *testing.T) {
-	s, err := store.NewFakeStore(store.FakeObjects{
-		Secrets: []*corev1.Secret{},
-	})
-	require.NoError(t, err)
+func TestGetPluginsAssociatedWithCACertSecret(t *testing.T) {
 	secretID := "8a3753e0-093b-43d9-9d39-27985c987d92"
+	plugins := []kongstate.Plugin{
+		{
+			Plugin: kong.Plugin{
+				Name: kong.String("associated-plugin"),
+				Config: map[string]interface{}{
+					"ca_certificates": []string{secretID},
+				},
+			},
+		},
+		{
+			Plugin: kong.Plugin{
+				Name: kong.String("another-associated-plugin"),
+				Config: map[string]interface{}{
+					"ca_certificates": []string{secretID},
+				},
+			},
+		},
+		{
+			Plugin: kong.Plugin{
+				Name: kong.String("non-associated-plugin"),
+			},
+		},
+	}
 
-	associatedPlugins := getPluginsAssociatedWithSecret(s, secretID)
-	require.Empty(t, associatedPlugins)
+	associatedPlugins := getPluginsAssociatedWithCACertSecret(plugins, secretID)
+	require.ElementsMatch(t, []string{"associated-plugin", "another-associated-plugin"}, associatedPlugins)
 }

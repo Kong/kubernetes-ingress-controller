@@ -237,6 +237,23 @@ etlxzx2CCoUDXKkYW2gZKEozwBZ+eBgUj8WB5g/8jGDAI0qzYnfAgiahjGwlEUtP
 hJiPG/YFADw0m5b/8OMCZ6AXNhxjdweHniDxY2HE734Nwm9mG/7UbkdvhR05tqFh
 G4KCViLH0cXt/TgW1sYB2o9Z
 -----END CERTIFICATE-----`
+	expiredCACert = `-----BEGIN CERTIFICATE-----
+MIICwTCCAamgAwIBAgIUHGUzUWvHJHrREvIZIcORiFUvze4wDQYJKoZIhvcNAQEL
+BQAwEDEOMAwGA1UEAwwFSGVsbG8wHhcNMjAwNTA4MjExODA1WhcNMjAwNjA3MjEx
+ODA1WjAQMQ4wDAYDVQQDDAVIZWxsbzCCASIwDQYJKoZIhvcNAQEBBQADggEPADCC
+AQoCggEBANCMMBngjuTvqts8ZXtZhqdr181QH/NmytW1KlyqZd6ppXUer+i0OWhP
+1nAyHsBPJljKAFLd8l1EioPFkN78/wJFDJrHOtfniIQPVLdS2cnNQ72dLyQH6smH
+JQDV8ePBQ2GdRP6s61+Da8eoaW6nSLtmEUhxvyteboqwmi2CtUtAfuiU1m5sOdpS
+z+L4D08CE+SFIT4MGD3gxNdg7lccWCHIfk54VRSdGDKEVwed8OQvxD0TdpHY+ym5
+nJ4JSkhiS9XIodnxR3AZ6rIPRqk+MQ4LGTjX2EbM0/Yg4qvnZ7m4fcpK2goDZIVL
+EF8F+ka1RaAYWTsXI1BAkJbb3kdo/yUCAwEAAaMTMBEwDwYDVR0TBAgwBgEB/wIB
+ADANBgkqhkiG9w0BAQsFAAOCAQEAVvB/PeVZpeQ7q2IQQQpADtTd8+22Ma3jNZQD
+EkWGZEQLkRws4EJNCCIvkApzpx1GqRcLLL9lbV+iCSiIdlR5W9HtK07VZ318gpsG
+aTMNrP9/2XWTBzdHWaeZKmRKB04H4z7V2Dl58D+wxjdqNWsMIHeqqPNKGamk/q8k
+YFNqNwisRxMhU6qPOpOj5Swl2jLTuVMAeGWBWmPGU2MUoaJb8sc2Vix9KXcyDZIr
+eidkzkqSrjNzI0yJ2gdCDRS4/Rw9iV3B3SRMs0mJMLBDrsowhNfLAd8I3NHzLwps
+dZFcvZcT/p717K3hlFVdjGnKIgKcG7aYji/XRR87HKnc+cJMCw==
+-----END CERTIFICATE-----`
 )
 
 func TestGlobalPlugin(t *testing.T) {
@@ -944,6 +961,22 @@ func TestCACertificate(t *testing.T) {
 				Data: map[string][]byte{
 					// id is missing
 					"cert": []byte(caCert2),
+				},
+			},
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "baz",
+					Namespace: "non-default",
+					Labels: map[string]string{
+						"konghq.com/ca-cert": "true",
+					},
+					Annotations: map[string]string{
+						annotations.IngressClassKey: annotations.DefaultIngressClass,
+					},
+				},
+				Data: map[string][]byte{
+					"id":   []byte("670c28aa-e784-43c1-8ec7-ae7f4ce40189"),
+					"cert": []byte(expiredCACert),
 				},
 			},
 		}

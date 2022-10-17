@@ -25,18 +25,17 @@ func getCACerts(log logrus.FieldLogger, storer store.Storer, plugins []kongstate
 	for _, certSecret := range caCertSecrets {
 		idBytes, ok := certSecret.Data["id"]
 		if !ok {
-			log.Errorf("invalid CA certificate: missing 'id' field in data")
+			log.Errorf("skipping synchronisation, invalid CA certificate: missing 'id' field in data")
 			continue
 		}
 		secretID := string(idBytes)
 
 		caCert, err := toKongCACertificate(certSecret, secretID)
 		if err != nil {
-			secretName := certSecret.Namespace + "/" + certSecret.Name
 			logWithAffectedPlugins(log, plugins, secretID).WithFields(logrus.Fields{
-				"secret_name":      secretName,
+				"secret_name":      certSecret.Name,
 				"secret_namespace": certSecret.Namespace,
-			}).WithError(err).Error("invalid CA certificate")
+			}).WithError(err).Error("skipping synchronisation, invalid CA certificate")
 			continue
 		}
 

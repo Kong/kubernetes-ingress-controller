@@ -76,6 +76,9 @@ Adding a new version? You'll need three changes:
 - Added `--cache-sync-timeout` flag allowing to change the default controllers' 
   cache synchronisation timeout. 
   [#3013](https://github.com/Kong/kubernetes-ingress-controller/pull/3013)
+- Secrets validation introduced: CA certificates won't be synchronized 
+  to Kong if the certificate is expired.
+  [#3063](https://github.com/Kong/kubernetes-ingress-controller/pull/3063)
 
 ### Fixed
 

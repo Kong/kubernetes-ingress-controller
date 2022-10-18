@@ -237,6 +237,23 @@ etlxzx2CCoUDXKkYW2gZKEozwBZ+eBgUj8WB5g/8jGDAI0qzYnfAgiahjGwlEUtP
 hJiPG/YFADw0m5b/8OMCZ6AXNhxjdweHniDxY2HE734Nwm9mG/7UbkdvhR05tqFh
 G4KCViLH0cXt/TgW1sYB2o9Z
 -----END CERTIFICATE-----`
+	expiredCACert = `-----BEGIN CERTIFICATE-----
+MIICwTCCAamgAwIBAgIUHGUzUWvHJHrREvIZIcORiFUvze4wDQYJKoZIhvcNAQEL
+BQAwEDEOMAwGA1UEAwwFSGVsbG8wHhcNMjAwNTA4MjExODA1WhcNMjAwNjA3MjEx
+ODA1WjAQMQ4wDAYDVQQDDAVIZWxsbzCCASIwDQYJKoZIhvcNAQEBBQADggEPADCC
+AQoCggEBANCMMBngjuTvqts8ZXtZhqdr181QH/NmytW1KlyqZd6ppXUer+i0OWhP
+1nAyHsBPJljKAFLd8l1EioPFkN78/wJFDJrHOtfniIQPVLdS2cnNQ72dLyQH6smH
+JQDV8ePBQ2GdRP6s61+Da8eoaW6nSLtmEUhxvyteboqwmi2CtUtAfuiU1m5sOdpS
+z+L4D08CE+SFIT4MGD3gxNdg7lccWCHIfk54VRSdGDKEVwed8OQvxD0TdpHY+ym5
+nJ4JSkhiS9XIodnxR3AZ6rIPRqk+MQ4LGTjX2EbM0/Yg4qvnZ7m4fcpK2goDZIVL
+EF8F+ka1RaAYWTsXI1BAkJbb3kdo/yUCAwEAAaMTMBEwDwYDVR0TBAgwBgEB/wIB
+ADANBgkqhkiG9w0BAQsFAAOCAQEAVvB/PeVZpeQ7q2IQQQpADtTd8+22Ma3jNZQD
+EkWGZEQLkRws4EJNCCIvkApzpx1GqRcLLL9lbV+iCSiIdlR5W9HtK07VZ318gpsG
+aTMNrP9/2XWTBzdHWaeZKmRKB04H4z7V2Dl58D+wxjdqNWsMIHeqqPNKGamk/q8k
+YFNqNwisRxMhU6qPOpOj5Swl2jLTuVMAeGWBWmPGU2MUoaJb8sc2Vix9KXcyDZIr
+eidkzkqSrjNzI0yJ2gdCDRS4/Rw9iV3B3SRMs0mJMLBDrsowhNfLAd8I3NHzLwps
+dZFcvZcT/p717K3hlFVdjGnKIgKcG7aYji/XRR87HKnc+cJMCw==
+-----END CERTIFICATE-----`
 )
 
 func TestGlobalPlugin(t *testing.T) {
@@ -264,8 +281,7 @@ func TestGlobalPlugin(t *testing.T) {
 		})
 		assert.Nil(err)
 		p := NewParser(logrus.New(), store)
-		state, err := p.Build()
-		assert.Nil(err)
+		state := p.Build()
 		assert.NotNil(state)
 		assert.Equal(1, len(state.Plugins),
 			"expected one plugin to be rendered")
@@ -446,7 +462,7 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 			store, err := store.NewFakeStore(objects)
 			assert.Nil(err)
 			p := NewParser(logrus.New(), store)
-			state, err := p.Build()
+			state := p.Build()
 			assert.Nil(err)
 			assert.NotNil(state)
 			assert.Equal(3, len(state.Plugins),
@@ -551,7 +567,7 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 			store, err := store.NewFakeStore(objects)
 			assert.Nil(err)
 			p := NewParser(logrus.New(), store)
-			state, err := p.Build()
+			state := p.Build()
 			assert.Nil(err)
 			assert.NotNil(state)
 			assert.Equal(0, len(state.Plugins),
@@ -653,8 +669,7 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 			store, err := store.NewFakeStore(objects)
 			assert.Nil(err)
 			p := NewParser(logrus.New(), store)
-			state, err := p.Build()
-			assert.Nil(err)
+			state := p.Build()
 			assert.NotNil(state)
 			assert.Equal(0, len(state.Plugins),
 				"expected no plugins to be rendered")
@@ -705,8 +720,7 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 		store, err := store.NewFakeStore(objects)
 		assert.Nil(err)
 		p := NewParser(logrus.New(), store)
-		state, err := p.Build()
-		assert.Nil(err)
+		state := p.Build()
 		assert.NotNil(state)
 		for _, testcase := range references {
 			config, err := kongstate.SecretToConfiguration(store, *testcase, "default")
@@ -804,8 +818,7 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 			store, err := store.NewFakeStore(objects)
 			assert.Nil(err)
 			p := NewParser(logrus.New(), store)
-			state, err := p.Build()
-			assert.Nil(err)
+			state := p.Build()
 			assert.NotNil(state)
 			assert.Equal(0, len(state.Plugins),
 				"expected no plugins to be rendered")
@@ -839,8 +852,7 @@ func TestCACertificate(t *testing.T) {
 		})
 		assert.Nil(err)
 		p := NewParser(logrus.New(), store)
-		state, err := p.Build()
-		assert.Nil(err)
+		state := p.Build()
 		assert.NotNil(state)
 
 		assert.Equal(1, len(state.CACertificates))
@@ -890,8 +902,7 @@ func TestCACertificate(t *testing.T) {
 		})
 		assert.Nil(err)
 		p := NewParser(logrus.New(), store)
-		state, err := p.Build()
-		assert.Nil(err)
+		state := p.Build()
 		assert.NotNil(state)
 
 		assert.Equal(2, len(state.CACertificates))
@@ -946,6 +957,22 @@ func TestCACertificate(t *testing.T) {
 					"cert": []byte(caCert2),
 				},
 			},
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "baz",
+					Namespace: "non-default",
+					Labels: map[string]string{
+						"konghq.com/ca-cert": "true",
+					},
+					Annotations: map[string]string{
+						annotations.IngressClassKey: annotations.DefaultIngressClass,
+					},
+				},
+				Data: map[string][]byte{
+					"id":   []byte("670c28aa-e784-43c1-8ec7-ae7f4ce40189"),
+					"cert": []byte(expiredCACert),
+				},
+			},
 		}
 
 		store, err := store.NewFakeStore(store.FakeObjects{
@@ -953,8 +980,7 @@ func TestCACertificate(t *testing.T) {
 		})
 		assert.Nil(err)
 		p := NewParser(logrus.New(), store)
-		state, err := p.Build()
-		assert.Nil(err)
+		state := p.Build()
 		assert.NotNil(state)
 
 		assert.Equal(1, len(state.CACertificates))
@@ -1037,8 +1063,7 @@ func TestServiceClientCertificate(t *testing.T) {
 		})
 		assert.Nil(err)
 		p := NewParser(logrus.New(), store)
-		state, err := p.Build()
-		assert.Nil(err)
+		state := p.Build()
 		assert.NotNil(state)
 		assert.Equal(1, len(state.Certificates),
 			"expected one certificates to be rendered")
@@ -1105,8 +1130,7 @@ func TestServiceClientCertificate(t *testing.T) {
 		})
 		assert.Nil(err)
 		p := NewParser(logrus.New(), store)
-		state, err := p.Build()
-		assert.Nil(err)
+		state := p.Build()
 		assert.NotNil(state)
 		assert.Equal(0, len(state.Certificates),
 			"expected no certificates to be rendered")
@@ -1166,8 +1190,7 @@ func TestKongRouteAnnotations(t *testing.T) {
 		})
 		assert.Nil(err)
 		p := NewParser(logrus.New(), store)
-		state, err := p.Build()
-		assert.Nil(err)
+		state := p.Build()
 		assert.NotNil(state)
 
 		assert.Equal(1, len(state.Services),
@@ -1246,8 +1269,7 @@ func TestKongRouteAnnotations(t *testing.T) {
 		})
 		assert.Nil(err)
 		p := NewParser(logrus.New(), store)
-		state, err := p.Build()
-		assert.Nil(err)
+		state := p.Build()
 		assert.NotNil(state)
 
 		assert.Equal(1, len(state.Services),
@@ -1327,8 +1349,7 @@ func TestKongRouteAnnotations(t *testing.T) {
 			})
 			assert.Nil(err)
 			p := NewParser(logrus.New(), store)
-			state, err := p.Build()
-			assert.Nil(err)
+			state := p.Build()
 			assert.NotNil(state)
 
 			assert.Equal(1, len(state.Services),
@@ -1409,8 +1430,7 @@ func TestKongRouteAnnotations(t *testing.T) {
 			})
 			assert.Nil(err)
 			p := NewParser(logrus.New(), store)
-			state, err := p.Build()
-			assert.Nil(err)
+			state := p.Build()
 			assert.NotNil(state)
 
 			assert.Equal(1, len(state.Services),
@@ -1490,8 +1510,7 @@ func TestKongRouteAnnotations(t *testing.T) {
 			})
 			assert.Nil(err)
 			p := NewParser(logrus.New(), store)
-			state, err := p.Build()
-			assert.Nil(err)
+			state := p.Build()
 			assert.NotNil(state)
 
 			assert.Equal(1, len(state.Services),
@@ -1571,8 +1590,7 @@ func TestKongRouteAnnotations(t *testing.T) {
 			})
 			assert.Nil(err)
 			p := NewParser(logrus.New(), store)
-			state, err := p.Build()
-			assert.Nil(err)
+			state := p.Build()
 			assert.NotNil(state)
 
 			assert.Equal(1, len(state.Services),
@@ -1652,8 +1670,7 @@ func TestKongRouteAnnotations(t *testing.T) {
 			})
 			assert.Nil(err)
 			p := NewParser(logrus.New(), store)
-			state, err := p.Build()
-			assert.Nil(err)
+			state := p.Build()
 			assert.NotNil(state)
 
 			assert.Equal(1, len(state.Services),
@@ -1733,8 +1750,7 @@ func TestKongRouteAnnotations(t *testing.T) {
 			})
 			assert.Nil(err)
 			p := NewParser(logrus.New(), store)
-			state, err := p.Build()
-			assert.Nil(err)
+			state := p.Build()
 			assert.NotNil(state)
 
 			assert.Equal(1, len(state.Services),
@@ -1814,8 +1830,7 @@ func TestKongRouteAnnotations(t *testing.T) {
 		})
 		assert.Nil(err)
 		p := NewParser(logrus.New(), store)
-		state, err := p.Build()
-		assert.Nil(err)
+		state := p.Build()
 		assert.NotNil(state)
 
 		assert.Equal(1, len(state.Services), "expected one service to be rendered")
@@ -1893,8 +1908,7 @@ func TestKongRouteAnnotations(t *testing.T) {
 		})
 		assert.Nil(err)
 		p := NewParser(logrus.New(), store)
-		state, err := p.Build()
-		assert.Nil(err)
+		state := p.Build()
 		assert.NotNil(state)
 
 		assert.Equal(1, len(state.Services), "expected one service to be rendered")
@@ -1972,8 +1986,7 @@ func TestKongRouteAnnotations(t *testing.T) {
 		})
 		assert.Nil(err)
 		p := NewParser(logrus.New(), store)
-		state, err := p.Build()
-		assert.Nil(err)
+		state := p.Build()
 		assert.NotNil(state)
 
 		kongTrue := kong.Bool(true)
@@ -2033,8 +2046,7 @@ func TestKongProcessClasslessIngress(t *testing.T) {
 		})
 		assert.Nil(err)
 		p := NewParser(logrus.New(), store)
-		state, err := p.Build()
-		assert.Nil(err)
+		state := p.Build()
 		assert.NotNil(state)
 
 		assert.Equal(1, len(state.Services),
@@ -2084,8 +2096,7 @@ func TestKongProcessClasslessIngress(t *testing.T) {
 		})
 		assert.Nil(err)
 		p := NewParser(logrus.New(), store)
-		state, err := p.Build()
-		assert.Nil(err)
+		state := p.Build()
 		assert.NotNil(state)
 
 		assert.Equal(0, len(state.Services),
@@ -2162,8 +2173,7 @@ func TestKnativeIngressAndPlugins(t *testing.T) {
 		})
 		assert.Nil(err)
 		p := NewParser(logrus.New(), store)
-		state, err := p.Build()
-		assert.Nil(err)
+		state := p.Build()
 		assert.NotNil(state)
 
 		assert.Equal(1, len(state.Services), "expected one knative service")
@@ -2241,8 +2251,7 @@ func TestKnativeIngressAndPlugins(t *testing.T) {
 		})
 		assert.Nil(err)
 		p := NewParser(logrus.New(), store)
-		state, err := p.Build()
-		assert.Nil(err)
+		state := p.Build()
 		assert.NotNil(state)
 
 		assert.Equal(1, len(state.Services), "expected one knative service")
@@ -2311,8 +2320,7 @@ func TestKnativeIngressAndPlugins(t *testing.T) {
 		})
 		assert.Nil(err)
 		p := NewParser(logrus.New(), store)
-		state, err := p.Build()
-		assert.Nil(err)
+		state := p.Build()
 		assert.NotNil(state)
 
 		assert.Equal(1, len(state.Services), "expected one knative service")
@@ -2397,8 +2405,7 @@ func TestKnativeIngressAndPlugins(t *testing.T) {
 		})
 		assert.Nil(err)
 		p := NewParser(logrus.New(), store)
-		state, err := p.Build()
-		assert.Nil(err)
+		state := p.Build()
 		assert.NotNil(state)
 
 		assert.Equal(1, len(state.Services),
@@ -2508,8 +2515,7 @@ func TestKongServiceAnnotations(t *testing.T) {
 		})
 		assert.Nil(err)
 		p := NewParser(logrus.New(), store)
-		state, err := p.Build()
-		assert.Nil(err)
+		state := p.Build()
 		assert.NotNil(state)
 
 		assert.Equal(1, len(state.Services),
@@ -2591,8 +2597,7 @@ func TestKongServiceAnnotations(t *testing.T) {
 		})
 		assert.Nil(err)
 		p := NewParser(logrus.New(), store)
-		state, err := p.Build()
-		assert.Nil(err)
+		state := p.Build()
 		assert.NotNil(state)
 
 		assert.Equal(1, len(state.Services),
@@ -2680,8 +2685,7 @@ func TestKongServiceAnnotations(t *testing.T) {
 			})
 			assert.Nil(err)
 			p := NewParser(logrus.New(), store)
-			state, err := p.Build()
-			assert.Nil(err)
+			state := p.Build()
 			assert.NotNil(state)
 
 			assert.Equal(1, len(state.Services),
@@ -2750,8 +2754,7 @@ func TestDefaultBackend(t *testing.T) {
 		})
 		assert.Nil(err)
 		p := NewParser(logrus.New(), store)
-		state, err := p.Build()
-		assert.Nil(err)
+		state := p.Build()
 		assert.NotNil(state)
 		assert.Equal(1, len(state.Services),
 			"expected one service to be rendered")
@@ -2819,8 +2822,7 @@ func TestDefaultBackend(t *testing.T) {
 		})
 		assert.Nil(err)
 		p := NewParser(logrus.New(), store)
-		state, err := p.Build()
-		assert.Nil(err)
+		state := p.Build()
 		assert.NotNil(state)
 		assert.Equal(0, len(state.Certificates),
 			"expected no certificates to be rendered")
@@ -2885,8 +2887,7 @@ func TestParserSecret(t *testing.T) {
 		})
 		assert.Nil(err)
 		p := NewParser(logrus.New(), store)
-		state, err := p.Build()
-		assert.Nil(err)
+		state := p.Build()
 		assert.NotNil(state)
 		assert.Equal(0, len(state.Certificates),
 			"expected no certificates to be rendered with empty secret")
@@ -2967,8 +2968,7 @@ func TestParserSecret(t *testing.T) {
 		})
 		assert.Nil(err)
 		p := NewParser(logrus.New(), store)
-		state, err := p.Build()
-		assert.Nil(err)
+		state := p.Build()
 		assert.NotNil(state)
 		assert.Equal(1, len(state.Certificates),
 			"certificates are de-duplicated")
@@ -3094,8 +3094,7 @@ func TestParserSecret(t *testing.T) {
 		})
 		assert.Nil(err)
 		p := NewParser(logrus.New(), store)
-		state, err := p.Build()
-		assert.Nil(err)
+		state := p.Build()
 		assert.NotNil(state)
 		assert.Equal(1, len(state.Certificates),
 			"certificates are de-duplicated")
@@ -3176,8 +3175,7 @@ func TestParserSecret(t *testing.T) {
 		})
 		assert.Nil(err)
 		p := NewParser(logrus.New(), store)
-		state, err := p.Build()
-		assert.Nil(err)
+		state := p.Build()
 		assert.NotNil(state)
 		assert.Equal(1, len(state.Certificates),
 			"SNIs are de-duplicated")
@@ -3259,8 +3257,7 @@ func TestParserSNI(t *testing.T) {
 		})
 		assert.Nil(err)
 		p := NewParser(logrus.New(), store)
-		state, err := p.Build()
-		assert.Nil(err)
+		state := p.Build()
 		assert.NotNil(state)
 		assert.Equal(kong.Route{
 			Name:              kong.String("default.foo.00"),
@@ -3324,8 +3321,7 @@ func TestParserSNI(t *testing.T) {
 		})
 		assert.Nil(err)
 		p := NewParser(logrus.New(), store)
-		state, err := p.Build()
-		assert.Nil(err)
+		state := p.Build()
 		assert.NotNil(state)
 		assert.Equal(kong.Route{
 			Name:              kong.String("default.foo.00"),
@@ -3384,8 +3380,7 @@ func TestParserHostAliases(t *testing.T) {
 		})
 		assert.Nil(err)
 		p := NewParser(logrus.New(), store)
-		state, err := p.Build()
-		assert.Nil(err)
+		state := p.Build()
 		assert.NotNil(state)
 		assert.Equal(kong.Route{
 			Name:              kong.String("default.foo.00"),
@@ -3437,8 +3432,7 @@ func TestParserHostAliases(t *testing.T) {
 		})
 		assert.Nil(err)
 		p := NewParser(logrus.New(), store)
-		state, err := p.Build()
-		assert.Nil(err)
+		state := p.Build()
 		assert.NotNil(state)
 		assert.Equal(kong.Route{
 			Name:              kong.String("default.foo.00"),
@@ -3491,8 +3485,7 @@ func TestParserHostAliases(t *testing.T) {
 		})
 		assert.Nil(err)
 		p := NewParser(logrus.New(), store)
-		state, err := p.Build()
-		assert.Nil(err)
+		state := p.Build()
 		assert.NotNil(state)
 		assert.Equal(kong.Route{
 			Name:              kong.String("default.foo.00"),
@@ -3581,8 +3574,7 @@ func TestPluginAnnotations(t *testing.T) {
 		})
 		assert.Nil(err)
 		p := NewParser(logrus.New(), store)
-		state, err := p.Build()
-		assert.Nil(err)
+		state := p.Build()
 		assert.NotNil(state)
 		assert.Equal(1, len(state.Plugins),
 			"expected no plugins to be rendered with missing plugin")
@@ -3679,8 +3671,7 @@ func TestPluginAnnotations(t *testing.T) {
 		})
 		assert.Nil(err)
 		p := NewParser(logrus.New(), store)
-		state, err := p.Build()
-		assert.Nil(err)
+		state := p.Build()
 		assert.NotNil(state)
 		assert.Equal(1, len(state.Plugins),
 			"expected no plugins to be rendered with missing plugin")
@@ -3750,8 +3741,7 @@ func TestPluginAnnotations(t *testing.T) {
 		})
 		assert.Nil(err)
 		p := NewParser(logrus.New(), store)
-		state, err := p.Build()
-		assert.Nil(err)
+		state := p.Build()
 		assert.NotNil(state)
 		assert.Equal(1, len(state.Plugins),
 			"expected no plugins to be rendered with missing plugin")
@@ -3797,8 +3787,7 @@ func TestPluginAnnotations(t *testing.T) {
 		})
 		assert.Nil(err)
 		p := NewParser(logrus.New(), store)
-		state, err := p.Build()
-		assert.Nil(err)
+		state := p.Build()
 		assert.NotNil(state)
 		assert.Equal(0, len(state.Plugins),
 			"expected no plugins to be rendered with missing plugin")
@@ -4594,8 +4583,7 @@ func TestPickPort(t *testing.T) {
 			assert.NoError(err)
 
 			p := NewParser(logrus.New(), store)
-			state, err := p.Build()
-			assert.NoError(err)
+			state := p.Build()
 
 			assert.Equal(tt.wantTarget, *state.Upstreams[0].Targets[0].Target.Target)
 		})
@@ -4708,8 +4696,7 @@ func TestCertificate(t *testing.T) {
 		})
 		assert.Nil(err)
 		p := NewParser(logrus.New(), store)
-		state, err := p.Build()
-		assert.Nil(err)
+		state := p.Build()
 		assert.NotNil(state)
 		assert.Equal(3, len(state.Certificates))
 		// foo.com with cert should be fixed
@@ -4801,8 +4788,7 @@ func TestCertificate(t *testing.T) {
 		})
 		assert.Nil(err)
 		p := NewParser(logrus.New(), store)
-		state, err := p.Build()
-		assert.Nil(err)
+		state := p.Build()
 		assert.NotNil(state)
 		assert.Equal(1, len(state.Certificates))
 		assert.Equal(state.Certificates[0], fooCertificate)

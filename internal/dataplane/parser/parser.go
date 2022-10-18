@@ -3,8 +3,6 @@ package parser
 import (
 	"bytes"
 	"crypto/tls"
-	"crypto/x509"
-	"encoding/pem"
 	"fmt"
 	"reflect"
 	"sort"
@@ -73,8 +71,7 @@ func NewParser(
 
 // Build creates a Kong configuration from Ingress and Custom resources
 // defined in Kubernetes.
-// It throws an error if there is an error returned from client-go.
-func (p *Parser) Build() (*kongstate.KongState, error) {
+func (p *Parser) Build() *kongstate.KongState {
 	// parse and merge all rules together from all Kubernetes API sources
 	ingressRules := mergeIngressRules(
 		p.ingressRulesFromIngressV1beta1(),
@@ -121,14 +118,9 @@ func (p *Parser) Build() (*kongstate.KongState, error) {
 	result.Certificates = mergeCerts(p.logger, ingressCerts, gatewayCerts)
 
 	// populate CA certificates in Kong
-	var err error
-	caCertSecrets, err := p.storer.ListCACerts()
-	if err != nil {
-		return nil, err
-	}
-	result.CACertificates = toCACerts(p.logger, caCertSecrets)
+	result.CACertificates = getCACerts(p.logger, p.storer, result.Plugins)
 
-	return &result, nil
+	return &result
 }
 
 // -----------------------------------------------------------------------------
@@ -185,51 +177,6 @@ func (p *Parser) EnableRegexPathPrefix() {
 // -----------------------------------------------------------------------------
 // Parser - Private Methods
 // -----------------------------------------------------------------------------
-
-func toCACerts(log logrus.FieldLogger, caCertSecrets []*corev1.Secret) []kong.CACertificate {
-	var caCerts []kong.CACertificate
-	for _, certSecret := range caCertSecrets {
-		secretName := certSecret.Namespace + "/" + certSecret.Name
-
-		idbytes, idExists := certSecret.Data["id"]
-		log = log.WithFields(logrus.Fields{
-			"secret_name":      secretName,
-			"secret_namespace": certSecret.Namespace,
-		})
-		if !idExists {
-			log.Errorf("invalid CA certificate: missing 'id' field in data")
-			continue
-		}
-
-		caCertbytes, certExists := certSecret.Data["cert"]
-		if !certExists {
-			log.Errorf("invalid CA certificate: missing 'cert' field in data")
-			continue
-		}
-
-		pemBlock, _ := pem.Decode(caCertbytes)
-		if pemBlock == nil {
-			log.Errorf("invalid CA certificate: invalid PEM block")
-			continue
-		}
-		x509Cert, err := x509.ParseCertificate(pemBlock.Bytes)
-		if err != nil {
-			log.WithError(err).Errorf("invalid CA certificate: failed to parse certificate")
-			continue
-		}
-		if !x509Cert.IsCA {
-			log.WithError(err).Errorf("invalid CA certificate: certificate is missing the 'CA' basic constraint")
-			continue
-		}
-
-		caCerts = append(caCerts, kong.CACertificate{
-			ID:   kong.String(string(idbytes)),
-			Cert: kong.String(string(caCertbytes)),
-		})
-	}
-
-	return caCerts
-}
 
 func knativeIngressToNetworkingTLS(tls []knative.IngressTLS) []netv1beta1.IngressTLS {
 	var result []netv1beta1.IngressTLS

@@ -14,6 +14,9 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/store"
 )
 
+// getCACerts translates CA certificates Secrets to kong.CACertificates. It ensures every certificate's structure and
+// validity. In case of violation of any validation rule, a secret gets skipped in a result and error message is logged
+// with affected plugins for context.
 func getCACerts(log logrus.FieldLogger, storer store.Storer, plugins []kongstate.Plugin) []kong.CACertificate {
 	caCertSecrets, err := storer.ListCACerts()
 	if err != nil {
@@ -23,19 +26,22 @@ func getCACerts(log logrus.FieldLogger, storer store.Storer, plugins []kongstate
 
 	var caCerts []kong.CACertificate
 	for _, certSecret := range caCertSecrets {
+		log := log.WithFields(logrus.Fields{
+			"secret_name":      certSecret.Name,
+			"secret_namespace": certSecret.Namespace,
+		})
+
 		idBytes, ok := certSecret.Data["id"]
 		if !ok {
-			log.Errorf("skipping synchronisation, invalid CA certificate: missing 'id' field in data")
+			log.Error("skipping synchronisation, invalid CA certificate: missing 'id' field in data")
 			continue
 		}
 		secretID := string(idBytes)
 
 		caCert, err := toKongCACertificate(certSecret, secretID)
 		if err != nil {
-			logWithAffectedPlugins(log, plugins, secretID).WithFields(logrus.Fields{
-				"secret_name":      certSecret.Name,
-				"secret_namespace": certSecret.Namespace,
-			}).WithError(err).Error("skipping synchronisation, invalid CA certificate")
+			logWithAffectedPlugins(log, plugins, secretID).WithError(err).
+				Error("skipping synchronisation, invalid CA certificate")
 			continue
 		}
 

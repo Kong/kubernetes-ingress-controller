@@ -391,6 +391,8 @@ func (c *KongClient) Update(ctx context.Context) error {
 	// report on configured Kubernetes objects if enabled
 	if c.AreKubernetesObjectReportsEnabled() {
 		if string(c.lastConfigSHA) != string(newConfigSHA) {
+			// todo: there might be a potential bug here since we do not always call it (in case of an error it gets skipped)
+			// and may have some objects in the report during the next call
 			report := p.GenerateKubernetesObjectReport()
 			c.logger.Debugf("triggering report for %d configured Kubernetes objects", len(report))
 			c.triggerKubernetesObjectReport(report...)
@@ -436,5 +438,6 @@ func (c *KongClient) triggerKubernetesObjectReport(objs ...client.Object) {
 func (c *KongClient) updateKubernetesObjectReportFilter(set k8sobj.Set) {
 	c.kubernetesObjectReportLock.Lock()
 	defer c.kubernetesObjectReportLock.Unlock()
+	// todo: there's a chance for race conditions here? it can get replaced before a controller picks it up
 	c.kubernetesObjectReportsFilter = set
 }

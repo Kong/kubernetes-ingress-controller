@@ -16,7 +16,7 @@ const (
 	KindSecret = "Secret"
 )
 
-// UpdateReferencesToSecret update the reference records between referrer and each secret
+// UpdateReferencesToSecret updates the reference records between referrer and each secret
 // in namespacedNames in record cache.
 func UpdateReferencesToSecret(
 	ctx context.Context,

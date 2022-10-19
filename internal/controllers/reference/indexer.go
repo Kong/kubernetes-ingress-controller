@@ -14,6 +14,13 @@ const (
 	IndexNameReferent = "referent"
 )
 
+var (
+	// ErrTypeNotObjectReference is the error returned to caller to tell that type of the object stored
+	// in indexer is not ObjectReference.
+	// It should not happen in normal use, because only ObjectReference should be added to the indexer.
+	ErrTypeNotObjectReference = fmt.Errorf("type of object in indexer is not ObjectReference")
+)
+
 type ObjectReference struct {
 	Referrer client.Object
 	Referent client.Object
@@ -23,10 +30,10 @@ type ObjectReference struct {
 // group/version,Kind=kind/namespace/name.
 // the combination is unique inside a kubernetes cluster.
 func objectKeyFunc(obj client.Object) string {
-	return fmt.Sprintf("%s/%s/%s",
-		obj.GetObjectKind().GroupVersionKind().String(),
-		obj.GetNamespace(), obj.GetName(),
-	)
+
+	return obj.GetObjectKind().GroupVersionKind().String() + "/" +
+		obj.GetNamespace() + "/" + obj.GetName()
+
 }
 
 // CacheIndexers implements a reference cache to store reference relationship between k8s objects
@@ -53,7 +60,7 @@ func NewCacheIndexers() CacheIndexers {
 func ObjectReferenceKeyFunc(obj interface{}) (string, error) {
 	ref, ok := obj.(*ObjectReference)
 	if !ok {
-		return "", fmt.Errorf("object is type %T, not ObjectReference", obj)
+		return "", ErrTypeNotObjectReference
 	}
 	referrerKey := objectKeyFunc(ref.Referrer)
 	referentKey := objectKeyFunc(ref.Referent)
@@ -67,7 +74,7 @@ func ObjectReferenceKeyFunc(obj interface{}) (string, error) {
 func ObjectReferenceIndexerReferrer(obj interface{}) ([]string, error) {
 	ref, ok := obj.(*ObjectReference)
 	if !ok {
-		return nil, fmt.Errorf("object is type %T, not ObjectReference", obj)
+		return nil, ErrTypeNotObjectReference
 	}
 	return []string{objectKeyFunc(ref.Referrer)}, nil
 }
@@ -78,12 +85,12 @@ func ObjectReferenceIndexerReferrer(obj interface{}) ([]string, error) {
 func ObjectReferenceIndexerReferent(obj interface{}) ([]string, error) {
 	ref, ok := obj.(*ObjectReference)
 	if !ok {
-		return nil, fmt.Errorf("object is type %T, not ObjectReference", obj)
+		return nil, ErrTypeNotObjectReference
 	}
 	return []string{objectKeyFunc(ref.Referent)}, nil
 }
 
-// SetObjectReference add or update a reference record between referrer and referent in reference cache.
+// SetObjectReference adds or updates a reference record between referrer and referent in reference cache.
 func (c CacheIndexers) SetObjectReference(referrer client.Object, referent client.Object) error {
 	ref := &ObjectReference{
 		Referrer: referrer,
@@ -92,7 +99,7 @@ func (c CacheIndexers) SetObjectReference(referrer client.Object, referent clien
 	return c.indexer.Add(ref)
 }
 
-// DeleteObjectReference delete the reference record between referrer and referent from reference cache.
+// DeleteObjectReference deletes the reference record between referrer and referent from reference cache.
 func (c CacheIndexers) DeleteObjectReference(referrer client.Object, referent client.Object) error {
 	ref := &ObjectReference{
 		Referrer: referrer,
@@ -112,7 +119,7 @@ func (c CacheIndexers) ObjectReferred(obj client.Object) (bool, error) {
 	return len(refs) != 0, nil
 }
 
-// ListReferencesByReferrer list all reference records where referrer has the same key
+// ListReferencesByReferrer lists all reference records where referrer has the same key
 // (GroupVersionKind+NamespacedName, that means the same k8s object).
 func (c CacheIndexers) ListReferencesByReferrer(referrer client.Object) ([]*ObjectReference, error) {
 	refList, err := c.indexer.ByIndex(IndexNameReferrer, objectKeyFunc(referrer))
@@ -121,7 +128,11 @@ func (c CacheIndexers) ListReferencesByReferrer(referrer client.Object) ([]*Obje
 	}
 	returnRefList := make([]*ObjectReference, 0, len(refList))
 	for _, ref := range refList {
-		returnRefList = append(returnRefList, ref.(*ObjectReference))
+		retRef, ok := ref.(*ObjectReference)
+		if !ok {
+			return nil, ErrTypeNotObjectReference
+		}
+		returnRefList = append(returnRefList, retRef)
 	}
 	return returnRefList, nil
 }
@@ -130,10 +141,7 @@ func (c CacheIndexers) ListReferencesByReferrer(referrer client.Object) ([]*Obje
 // (GroupVersionKind+NamespacedName, that means the same k8s object).
 // called when a k8s object deleted in cluster, or when we do not care about it anymore.
 func (c CacheIndexers) DeleteReferencesByReferrer(referrer client.Object) error {
-	key := fmt.Sprintf("%s/%s/%s",
-		referrer.GetObjectKind().GroupVersionKind().String(),
-		referrer.GetNamespace(), referrer.GetName(),
-	)
+	key := objectKeyFunc(referrer)
 	refs, err := c.indexer.ByIndex(IndexNameReferrer, key)
 	if err != nil {
 		return err

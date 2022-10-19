@@ -275,7 +275,8 @@ func (r *GatewayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	gateway := new(gatewayv1beta1.Gateway)
 	if err := r.Get(ctx, req.NamespacedName, gateway); err != nil {
 		if k8serrors.IsNotFound(err) {
-			// TODO: fill in namespace and name of gateway and delete the non-exist gateway in cache.
+			// TODO: fill in namespace and name of gateway and delete the non-exist gateway in cache:
+			// https://github.com/Kong/kubernetes-ingress-controller/issues/3069
 			debug(log, gateway, "reconciliation triggered but gateway does not exist, ignoring")
 			return ctrl.Result{Requeue: false}, nil
 		}

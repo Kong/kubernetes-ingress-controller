@@ -152,7 +152,7 @@ func listKongConsumerReferredSecrets(consumer *kongv1.KongConsumer) []types.Name
 }
 
 func listTCPIngressReferredSecrets(tcpIngress *kongv1beta1.TCPIngress) []types.NamespacedName {
-	referredSecretNames := make([]types.NamespacedName, len(tcpIngress.Spec.TLS))
+	referredSecretNames := make([]types.NamespacedName, 0, len(tcpIngress.Spec.TLS))
 	for _, tls := range tcpIngress.Spec.TLS {
 		nsName := types.NamespacedName{
 			Namespace: tcpIngress.Namespace,

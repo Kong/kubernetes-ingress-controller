@@ -62,6 +62,7 @@ type CoreV1ServiceReconciler struct {
 	Scheme           *runtime.Scheme
 	DataplaneClient  *dataplane.KongClient
 	CacheSyncTimeout time.Duration
+	ReferenceIndexers ctrlref.CacheIndexers
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -97,7 +98,7 @@ func (r *CoreV1ServiceReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 			obj.Name = req.Name
 			
 			// remove reference record where the Service is the referrer
-			if err := ctrlref.DeleteReferencesByReferrer(r.DataplaneClient, obj); err != nil {
+			if err := ctrlref.DeleteReferencesByReferrer(r.ReferenceIndexers, r.DataplaneClient, obj); err != nil {
 				return ctrl.Result{}, err
 			}
 			
@@ -112,7 +113,7 @@ func (r *CoreV1ServiceReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		log.V(util.DebugLevel).Info("resource is being deleted, its configuration will be removed", "type", "Service", "namespace", req.Namespace, "name", req.Name)
 		
 		// remove reference record where the Service is the referrer
-		if err := ctrlref.DeleteReferencesByReferrer(r.DataplaneClient, obj); err != nil {
+		if err := ctrlref.DeleteReferencesByReferrer(r.ReferenceIndexers, r.DataplaneClient, obj); err != nil {
 			return ctrl.Result{}, err
 		}
 		
@@ -134,7 +135,7 @@ func (r *CoreV1ServiceReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		return ctrl.Result{}, err
 	}
 	// update reference relationship from the Service to other objects.
-	if err := updateReferredObjects(ctx, r.Client, r.DataplaneClient, obj); err != nil {
+	if err := updateReferredObjects(ctx, r.Client, r.ReferenceIndexers, r.DataplaneClient, obj); err != nil {
 		if errors.IsNotFound(err) {
 			// reconcile again if the secret does not exist yet
 			return ctrl.Result{
@@ -320,6 +321,7 @@ type NetV1IngressReconciler struct {
 
 	IngressClassName           string
 	DisableIngressClassLookups bool
+	ReferenceIndexers ctrlref.CacheIndexers
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -401,7 +403,7 @@ func (r *NetV1IngressReconciler) Reconcile(ctx context.Context, req ctrl.Request
 			obj.Name = req.Name
 			
 			// remove reference record where the Ingress is the referrer
-			if err := ctrlref.DeleteReferencesByReferrer(r.DataplaneClient, obj); err != nil {
+			if err := ctrlref.DeleteReferencesByReferrer(r.ReferenceIndexers, r.DataplaneClient, obj); err != nil {
 				return ctrl.Result{}, err
 			}
 			
@@ -416,7 +418,7 @@ func (r *NetV1IngressReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		log.V(util.DebugLevel).Info("resource is being deleted, its configuration will be removed", "type", "Ingress", "namespace", req.Namespace, "name", req.Name)
 		
 		// remove reference record where the Ingress is the referrer
-		if err := ctrlref.DeleteReferencesByReferrer(r.DataplaneClient, obj); err != nil {
+		if err := ctrlref.DeleteReferencesByReferrer(r.ReferenceIndexers, r.DataplaneClient, obj); err != nil {
 			return ctrl.Result{}, err
 		}
 		
@@ -458,7 +460,7 @@ func (r *NetV1IngressReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		return ctrl.Result{}, err
 	}
 	// update reference relationship from the Ingress to other objects.
-	if err := updateReferredObjects(ctx, r.Client, r.DataplaneClient, obj); err != nil {
+	if err := updateReferredObjects(ctx, r.Client, r.ReferenceIndexers, r.DataplaneClient, obj); err != nil {
 		if errors.IsNotFound(err) {
 			// reconcile again if the secret does not exist yet
 			return ctrl.Result{
@@ -586,6 +588,7 @@ type NetV1Beta1IngressReconciler struct {
 
 	IngressClassName           string
 	DisableIngressClassLookups bool
+	ReferenceIndexers ctrlref.CacheIndexers
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -667,7 +670,7 @@ func (r *NetV1Beta1IngressReconciler) Reconcile(ctx context.Context, req ctrl.Re
 			obj.Name = req.Name
 			
 			// remove reference record where the Ingress is the referrer
-			if err := ctrlref.DeleteReferencesByReferrer(r.DataplaneClient, obj); err != nil {
+			if err := ctrlref.DeleteReferencesByReferrer(r.ReferenceIndexers, r.DataplaneClient, obj); err != nil {
 				return ctrl.Result{}, err
 			}
 			
@@ -682,7 +685,7 @@ func (r *NetV1Beta1IngressReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		log.V(util.DebugLevel).Info("resource is being deleted, its configuration will be removed", "type", "Ingress", "namespace", req.Namespace, "name", req.Name)
 		
 		// remove reference record where the Ingress is the referrer
-		if err := ctrlref.DeleteReferencesByReferrer(r.DataplaneClient, obj); err != nil {
+		if err := ctrlref.DeleteReferencesByReferrer(r.ReferenceIndexers, r.DataplaneClient, obj); err != nil {
 			return ctrl.Result{}, err
 		}
 		
@@ -724,7 +727,7 @@ func (r *NetV1Beta1IngressReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		return ctrl.Result{}, err
 	}
 	// update reference relationship from the Ingress to other objects.
-	if err := updateReferredObjects(ctx, r.Client, r.DataplaneClient, obj); err != nil {
+	if err := updateReferredObjects(ctx, r.Client, r.ReferenceIndexers, r.DataplaneClient, obj); err != nil {
 		if errors.IsNotFound(err) {
 			// reconcile again if the secret does not exist yet
 			return ctrl.Result{
@@ -776,6 +779,7 @@ type ExtV1Beta1IngressReconciler struct {
 
 	IngressClassName           string
 	DisableIngressClassLookups bool
+	ReferenceIndexers ctrlref.CacheIndexers
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -857,7 +861,7 @@ func (r *ExtV1Beta1IngressReconciler) Reconcile(ctx context.Context, req ctrl.Re
 			obj.Name = req.Name
 			
 			// remove reference record where the Ingress is the referrer
-			if err := ctrlref.DeleteReferencesByReferrer(r.DataplaneClient, obj); err != nil {
+			if err := ctrlref.DeleteReferencesByReferrer(r.ReferenceIndexers, r.DataplaneClient, obj); err != nil {
 				return ctrl.Result{}, err
 			}
 			
@@ -872,7 +876,7 @@ func (r *ExtV1Beta1IngressReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		log.V(util.DebugLevel).Info("resource is being deleted, its configuration will be removed", "type", "Ingress", "namespace", req.Namespace, "name", req.Name)
 		
 		// remove reference record where the Ingress is the referrer
-		if err := ctrlref.DeleteReferencesByReferrer(r.DataplaneClient, obj); err != nil {
+		if err := ctrlref.DeleteReferencesByReferrer(r.ReferenceIndexers, r.DataplaneClient, obj); err != nil {
 			return ctrl.Result{}, err
 		}
 		
@@ -914,7 +918,7 @@ func (r *ExtV1Beta1IngressReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		return ctrl.Result{}, err
 	}
 	// update reference relationship from the Ingress to other objects.
-	if err := updateReferredObjects(ctx, r.Client, r.DataplaneClient, obj); err != nil {
+	if err := updateReferredObjects(ctx, r.Client, r.ReferenceIndexers, r.DataplaneClient, obj); err != nil {
 		if errors.IsNotFound(err) {
 			// reconcile again if the secret does not exist yet
 			return ctrl.Result{
@@ -1037,6 +1041,7 @@ type KongV1KongPluginReconciler struct {
 	Scheme           *runtime.Scheme
 	DataplaneClient  *dataplane.KongClient
 	CacheSyncTimeout time.Duration
+	ReferenceIndexers ctrlref.CacheIndexers
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -1072,7 +1077,7 @@ func (r *KongV1KongPluginReconciler) Reconcile(ctx context.Context, req ctrl.Req
 			obj.Name = req.Name
 			
 			// remove reference record where the KongPlugin is the referrer
-			if err := ctrlref.DeleteReferencesByReferrer(r.DataplaneClient, obj); err != nil {
+			if err := ctrlref.DeleteReferencesByReferrer(r.ReferenceIndexers, r.DataplaneClient, obj); err != nil {
 				return ctrl.Result{}, err
 			}
 			
@@ -1087,7 +1092,7 @@ func (r *KongV1KongPluginReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		log.V(util.DebugLevel).Info("resource is being deleted, its configuration will be removed", "type", "KongPlugin", "namespace", req.Namespace, "name", req.Name)
 		
 		// remove reference record where the KongPlugin is the referrer
-		if err := ctrlref.DeleteReferencesByReferrer(r.DataplaneClient, obj); err != nil {
+		if err := ctrlref.DeleteReferencesByReferrer(r.ReferenceIndexers, r.DataplaneClient, obj); err != nil {
 			return ctrl.Result{}, err
 		}
 		
@@ -1109,7 +1114,7 @@ func (r *KongV1KongPluginReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		return ctrl.Result{}, err
 	}
 	// update reference relationship from the KongPlugin to other objects.
-	if err := updateReferredObjects(ctx, r.Client, r.DataplaneClient, obj); err != nil {
+	if err := updateReferredObjects(ctx, r.Client, r.ReferenceIndexers, r.DataplaneClient, obj); err != nil {
 		if errors.IsNotFound(err) {
 			// reconcile again if the secret does not exist yet
 			return ctrl.Result{
@@ -1137,6 +1142,7 @@ type KongV1KongClusterPluginReconciler struct {
 
 	IngressClassName           string
 	DisableIngressClassLookups bool
+	ReferenceIndexers ctrlref.CacheIndexers
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -1205,7 +1211,7 @@ func (r *KongV1KongClusterPluginReconciler) Reconcile(ctx context.Context, req c
 			obj.Name = req.Name
 			
 			// remove reference record where the KongClusterPlugin is the referrer
-			if err := ctrlref.DeleteReferencesByReferrer(r.DataplaneClient, obj); err != nil {
+			if err := ctrlref.DeleteReferencesByReferrer(r.ReferenceIndexers, r.DataplaneClient, obj); err != nil {
 				return ctrl.Result{}, err
 			}
 			
@@ -1220,7 +1226,7 @@ func (r *KongV1KongClusterPluginReconciler) Reconcile(ctx context.Context, req c
 		log.V(util.DebugLevel).Info("resource is being deleted, its configuration will be removed", "type", "KongClusterPlugin", "namespace", req.Namespace, "name", req.Name)
 		
 		// remove reference record where the KongClusterPlugin is the referrer
-		if err := ctrlref.DeleteReferencesByReferrer(r.DataplaneClient, obj); err != nil {
+		if err := ctrlref.DeleteReferencesByReferrer(r.ReferenceIndexers, r.DataplaneClient, obj); err != nil {
 			return ctrl.Result{}, err
 		}
 		
@@ -1262,7 +1268,7 @@ func (r *KongV1KongClusterPluginReconciler) Reconcile(ctx context.Context, req c
 		return ctrl.Result{}, err
 	}
 	// update reference relationship from the KongClusterPlugin to other objects.
-	if err := updateReferredObjects(ctx, r.Client, r.DataplaneClient, obj); err != nil {
+	if err := updateReferredObjects(ctx, r.Client, r.ReferenceIndexers, r.DataplaneClient, obj); err != nil {
 		if errors.IsNotFound(err) {
 			// reconcile again if the secret does not exist yet
 			return ctrl.Result{
@@ -1290,6 +1296,7 @@ type KongV1KongConsumerReconciler struct {
 
 	IngressClassName           string
 	DisableIngressClassLookups bool
+	ReferenceIndexers ctrlref.CacheIndexers
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -1358,7 +1365,7 @@ func (r *KongV1KongConsumerReconciler) Reconcile(ctx context.Context, req ctrl.R
 			obj.Name = req.Name
 			
 			// remove reference record where the KongConsumer is the referrer
-			if err := ctrlref.DeleteReferencesByReferrer(r.DataplaneClient, obj); err != nil {
+			if err := ctrlref.DeleteReferencesByReferrer(r.ReferenceIndexers, r.DataplaneClient, obj); err != nil {
 				return ctrl.Result{}, err
 			}
 			
@@ -1373,7 +1380,7 @@ func (r *KongV1KongConsumerReconciler) Reconcile(ctx context.Context, req ctrl.R
 		log.V(util.DebugLevel).Info("resource is being deleted, its configuration will be removed", "type", "KongConsumer", "namespace", req.Namespace, "name", req.Name)
 		
 		// remove reference record where the KongConsumer is the referrer
-		if err := ctrlref.DeleteReferencesByReferrer(r.DataplaneClient, obj); err != nil {
+		if err := ctrlref.DeleteReferencesByReferrer(r.ReferenceIndexers, r.DataplaneClient, obj); err != nil {
 			return ctrl.Result{}, err
 		}
 		
@@ -1415,7 +1422,7 @@ func (r *KongV1KongConsumerReconciler) Reconcile(ctx context.Context, req ctrl.R
 		return ctrl.Result{}, err
 	}
 	// update reference relationship from the KongConsumer to other objects.
-	if err := updateReferredObjects(ctx, r.Client, r.DataplaneClient, obj); err != nil {
+	if err := updateReferredObjects(ctx, r.Client, r.ReferenceIndexers, r.DataplaneClient, obj); err != nil {
 		if errors.IsNotFound(err) {
 			// reconcile again if the secret does not exist yet
 			return ctrl.Result{
@@ -1446,6 +1453,7 @@ type KongV1Beta1TCPIngressReconciler struct {
 
 	IngressClassName           string
 	DisableIngressClassLookups bool
+	ReferenceIndexers ctrlref.CacheIndexers
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -1527,7 +1535,7 @@ func (r *KongV1Beta1TCPIngressReconciler) Reconcile(ctx context.Context, req ctr
 			obj.Name = req.Name
 			
 			// remove reference record where the TCPIngress is the referrer
-			if err := ctrlref.DeleteReferencesByReferrer(r.DataplaneClient, obj); err != nil {
+			if err := ctrlref.DeleteReferencesByReferrer(r.ReferenceIndexers, r.DataplaneClient, obj); err != nil {
 				return ctrl.Result{}, err
 			}
 			
@@ -1542,7 +1550,7 @@ func (r *KongV1Beta1TCPIngressReconciler) Reconcile(ctx context.Context, req ctr
 		log.V(util.DebugLevel).Info("resource is being deleted, its configuration will be removed", "type", "TCPIngress", "namespace", req.Namespace, "name", req.Name)
 		
 		// remove reference record where the TCPIngress is the referrer
-		if err := ctrlref.DeleteReferencesByReferrer(r.DataplaneClient, obj); err != nil {
+		if err := ctrlref.DeleteReferencesByReferrer(r.ReferenceIndexers, r.DataplaneClient, obj); err != nil {
 			return ctrl.Result{}, err
 		}
 		
@@ -1584,7 +1592,7 @@ func (r *KongV1Beta1TCPIngressReconciler) Reconcile(ctx context.Context, req ctr
 		return ctrl.Result{}, err
 	}
 	// update reference relationship from the TCPIngress to other objects.
-	if err := updateReferredObjects(ctx, r.Client, r.DataplaneClient, obj); err != nil {
+	if err := updateReferredObjects(ctx, r.Client, r.ReferenceIndexers, r.DataplaneClient, obj); err != nil {
 		if errors.IsNotFound(err) {
 			// reconcile again if the secret does not exist yet
 			return ctrl.Result{

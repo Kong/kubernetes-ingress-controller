@@ -14,6 +14,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/configuration"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/gateway"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/knative"
+	ctrlref "github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/reference"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util/kubernetes/object/status"
 	konghqcomv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
@@ -79,6 +80,8 @@ func setupControllers(
 		restMapper,
 	)
 
+	referenceIndexers := ctrlref.NewCacheIndexers()
+
 	controllers := []ControllerDef{
 		// ---------------------------------------------------------------------------
 		// Core API Controllers
@@ -105,6 +108,7 @@ func setupControllers(
 				StatusQueue:                kubernetesStatusQueue,
 				DataplaneAddressFinder:     dataplaneAddressFinder,
 				CacheSyncTimeout:           c.CacheSyncTimeout,
+				ReferenceIndexers:          referenceIndexers,
 			},
 		},
 		{
@@ -123,6 +127,7 @@ func setupControllers(
 				StatusQueue:                kubernetesStatusQueue,
 				DataplaneAddressFinder:     dataplaneAddressFinder,
 				CacheSyncTimeout:           c.CacheSyncTimeout,
+				ReferenceIndexers:          referenceIndexers,
 			},
 		},
 		{
@@ -137,16 +142,18 @@ func setupControllers(
 				StatusQueue:                kubernetesStatusQueue,
 				DataplaneAddressFinder:     dataplaneAddressFinder,
 				CacheSyncTimeout:           c.CacheSyncTimeout,
+				ReferenceIndexers:          referenceIndexers,
 			},
 		},
 		{
 			Enabled: c.ServiceEnabled,
 			Controller: &configuration.CoreV1ServiceReconciler{
-				Client:           mgr.GetClient(),
-				Log:              ctrl.Log.WithName("controllers").WithName("Service"),
-				Scheme:           mgr.GetScheme(),
-				DataplaneClient:  dataplaneClient,
-				CacheSyncTimeout: c.CacheSyncTimeout,
+				Client:            mgr.GetClient(),
+				Log:               ctrl.Log.WithName("controllers").WithName("Service"),
+				Scheme:            mgr.GetScheme(),
+				DataplaneClient:   dataplaneClient,
+				CacheSyncTimeout:  c.CacheSyncTimeout,
+				ReferenceIndexers: referenceIndexers,
 			},
 		},
 		{
@@ -162,11 +169,12 @@ func setupControllers(
 		{
 			Enabled: true,
 			Controller: &configuration.CoreV1SecretReconciler{
-				Client:           mgr.GetClient(),
-				Log:              ctrl.Log.WithName("controllers").WithName("Secrets"),
-				Scheme:           mgr.GetScheme(),
-				DataplaneClient:  dataplaneClient,
-				CacheSyncTimeout: c.CacheSyncTimeout,
+				Client:            mgr.GetClient(),
+				Log:               ctrl.Log.WithName("controllers").WithName("Secrets"),
+				Scheme:            mgr.GetScheme(),
+				DataplaneClient:   dataplaneClient,
+				CacheSyncTimeout:  c.CacheSyncTimeout,
+				ReferenceIndexers: referenceIndexers,
 			},
 		},
 		// ---------------------------------------------------------------------------
@@ -212,6 +220,7 @@ func setupControllers(
 				StatusQueue:                kubernetesStatusQueue,
 				DataplaneAddressFinder:     dataplaneAddressFinder,
 				CacheSyncTimeout:           c.CacheSyncTimeout,
+				ReferenceIndexers:          referenceIndexers,
 			},
 		},
 		{
@@ -258,11 +267,12 @@ func setupControllers(
 				restMapper,
 			),
 			Controller: &configuration.KongV1KongPluginReconciler{
-				Client:           mgr.GetClient(),
-				Log:              ctrl.Log.WithName("controllers").WithName("KongPlugin"),
-				Scheme:           mgr.GetScheme(),
-				DataplaneClient:  dataplaneClient,
-				CacheSyncTimeout: c.CacheSyncTimeout,
+				Client:            mgr.GetClient(),
+				Log:               ctrl.Log.WithName("controllers").WithName("KongPlugin"),
+				Scheme:            mgr.GetScheme(),
+				DataplaneClient:   dataplaneClient,
+				CacheSyncTimeout:  c.CacheSyncTimeout,
+				ReferenceIndexers: referenceIndexers,
 			},
 		},
 		{
@@ -282,6 +292,7 @@ func setupControllers(
 				IngressClassName:           c.IngressClassName,
 				DisableIngressClassLookups: !c.IngressClassNetV1Enabled,
 				CacheSyncTimeout:           c.CacheSyncTimeout,
+				ReferenceIndexers:          referenceIndexers,
 			},
 		},
 		{
@@ -301,6 +312,7 @@ func setupControllers(
 				IngressClassName:           c.IngressClassName,
 				DisableIngressClassLookups: !c.IngressClassNetV1Enabled,
 				CacheSyncTimeout:           c.CacheSyncTimeout,
+				ReferenceIndexers:          referenceIndexers,
 			},
 		},
 		// ---------------------------------------------------------------------------
@@ -328,6 +340,7 @@ func setupControllers(
 				StatusQueue:                kubernetesStatusQueue,
 				DataplaneAddressFinder:     dataplaneAddressFinder,
 				CacheSyncTimeout:           c.CacheSyncTimeout,
+				ReferenceIndexers:          referenceIndexers,
 			},
 		},
 		// ---------------------------------------------------------------------------
@@ -351,6 +364,7 @@ func setupControllers(
 				WatchNamespaces:      c.WatchNamespaces,
 				EnableReferenceGrant: referenceGrantsEnabled,
 				CacheSyncTimeout:     c.CacheSyncTimeout,
+				ReferenceIndexers:    referenceIndexers,
 			},
 		},
 		{

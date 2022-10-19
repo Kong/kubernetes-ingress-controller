@@ -5,8 +5,6 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -18,11 +16,19 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
+
+	ctrlref "github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/reference"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 )
 
 // -----------------------------------------------------------------------------
 // CoreV1 Secret - Reconciler
 // -----------------------------------------------------------------------------
+
+const (
+	CACertLabelKey = "konghq.com/ca-cert"
+)
 
 // CoreV1SecretReconciler reconciles Secret resources
 type CoreV1SecretReconciler struct {
@@ -32,6 +38,8 @@ type CoreV1SecretReconciler struct {
 	Scheme           *runtime.Scheme
 	DataplaneClient  *dataplane.KongClient
 	CacheSyncTimeout time.Duration
+
+	ReferenceIndexers ctrlref.CacheIndexers
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -61,7 +69,6 @@ func (r *CoreV1SecretReconciler) SetupWithManager(mgr ctrl.Manager) error {
 // and stored in cache of the controller. It returns true for the secret should be reconciled when:
 // - the secret has label: konghq.com/ca-cert:true
 // - or the secret is referred by objects we care (service, ingress, gateway, ...)
-
 func (r *CoreV1SecretReconciler) shouldReconcileSecret(obj client.Object) bool {
 	secret, ok := obj.(*corev1.Secret)
 	if !ok {
@@ -69,11 +76,11 @@ func (r *CoreV1SecretReconciler) shouldReconcileSecret(obj client.Object) bool {
 	}
 
 	labels := secret.Labels
-	if labels != nil && labels["konghq.com/ca-cert"] == "true" {
+	if labels != nil && labels[CACertLabelKey] == "true" {
 		return true
 	}
 
-	referred, err := r.DataplaneClient.ObjectReferred(secret)
+	referred, err := r.ReferenceIndexers.ObjectReferred(secret)
 
 	if err != nil {
 		r.Log.Info("failed to check whether secret referred:", err)

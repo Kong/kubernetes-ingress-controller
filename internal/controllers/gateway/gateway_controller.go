@@ -25,7 +25,7 @@ import (
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/reference"
+	ctrlref "github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/reference"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane"
 )
 
@@ -56,6 +56,8 @@ type GatewayReconciler struct { //nolint:revive
 	// to invalidate or allow cross-namespace TLSConfigs in gateways.
 	EnableReferenceGrant bool
 	CacheSyncTimeout     time.Duration
+
+	ReferenceIndexers ctrlref.CacheIndexers
 
 	publishServiceRef types.NamespacedName
 }
@@ -335,8 +337,9 @@ func (r *GatewayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		}
 
 		referredSecretNames := listSecretNamesReferredByGateway(gateway)
-		if err := reference.UpdateReferencesToSecret(
-			ctx, r.Client, r.DataplaneClient, gateway, referredSecretNames); err != nil {
+		if err := ctrlref.UpdateReferencesToSecret(
+			ctx, r.Client, r.ReferenceIndexers, r.DataplaneClient,
+			gateway, referredSecretNames); err != nil {
 			if k8serrors.IsNotFound(err) {
 				result.Requeue = true
 				return result, nil

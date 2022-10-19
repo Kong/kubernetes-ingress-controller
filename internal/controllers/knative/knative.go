@@ -47,6 +47,8 @@ type Knativev1alpha1IngressReconciler struct {
 	IngressClassName           string
 	DisableIngressClassLookups bool
 	CacheSyncTimeout           time.Duration
+
+	ReferenceIndexers ctrlref.CacheIndexers
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -127,7 +129,7 @@ func (r *Knativev1alpha1IngressReconciler) Reconcile(ctx context.Context, req ct
 			obj.Namespace = req.Namespace
 			obj.Name = req.Name
 
-			err := ctrlref.DeleteReferencesByReferrer(r.DataplaneClient, obj)
+			err := ctrlref.DeleteReferencesByReferrer(r.ReferenceIndexers, r.DataplaneClient, obj)
 			if err != nil {
 				return ctrl.Result{}, err
 			}
@@ -140,7 +142,7 @@ func (r *Knativev1alpha1IngressReconciler) Reconcile(ctx context.Context, req ct
 	// clean the object up if it's being deleted
 	if !obj.DeletionTimestamp.IsZero() && time.Now().After(obj.DeletionTimestamp.Time) {
 		log.V(util.DebugLevel).Info("resource is being deleted, its configuration will be removed", "type", "Ingress", "namespace", req.Namespace, "name", req.Name)
-		err := ctrlref.DeleteReferencesByReferrer(r.DataplaneClient, obj)
+		err := ctrlref.DeleteReferencesByReferrer(r.ReferenceIndexers, r.DataplaneClient, obj)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
@@ -187,7 +189,8 @@ func (r *Knativev1alpha1IngressReconciler) Reconcile(ctx context.Context, req ct
 		}
 		referredSecretNames = append(referredSecretNames, nsName)
 	}
-	if err := ctrlref.UpdateReferencesToSecret(ctx, r.Client, r.DataplaneClient, obj, referredSecretNames); err != nil {
+	if err := ctrlref.UpdateReferencesToSecret(ctx, r.Client, r.ReferenceIndexers, r.DataplaneClient,
+		obj, referredSecretNames); err != nil {
 		return ctrl.Result{}, err
 	}
 

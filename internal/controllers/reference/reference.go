@@ -19,7 +19,8 @@ const (
 // UpdateReferencesToSecret update the reference records between referrer and each secret
 // in namespacedNames in record cache.
 func UpdateReferencesToSecret(
-	ctx context.Context, c client.Client, dataplaneClient *dataplane.KongClient,
+	ctx context.Context,
+	c client.Client, indexers CacheIndexers, dataplaneClient *dataplane.KongClient,
 	referrer client.Object, namespacedNames []types.NamespacedName,
 ) error {
 	for _, nsName := range namespacedNames {
@@ -34,7 +35,7 @@ func UpdateReferencesToSecret(
 		// Here we update the reference relationship even when the referred secret does not exist yet
 		// If the referred secret is created, it could be reconciled in secret controller.
 		referrerCopy := referrer.DeepCopyObject().(client.Object)
-		if err := dataplaneClient.SetObjectReference(
+		if err := indexers.SetObjectReference(
 			referrerCopy, secret.DeepCopy()); err != nil {
 			return err
 		}
@@ -48,7 +49,7 @@ func UpdateReferencesToSecret(
 		}
 	}
 
-	return removeOutdatedReferencesToSecret(dataplaneClient, referrer, namespacedNames)
+	return removeOutdatedReferencesToSecret(indexers, dataplaneClient, referrer, namespacedNames)
 }
 
 // removeOutdatedReferenceToSecret removes outdated reference records to secrets in reference indexer.
@@ -56,14 +57,15 @@ func UpdateReferencesToSecret(
 // if the secret is not actually referrenced by any object after deleting outdated reference records,
 // the secret will be removed from object cache in dataplaneClient.
 func removeOutdatedReferencesToSecret(
-	dataplaneClient *dataplane.KongClient, referrer client.Object, referredSecretNames []types.NamespacedName,
+	indexers CacheIndexers, dataplaneClient *dataplane.KongClient,
+	referrer client.Object, referredSecretNames []types.NamespacedName,
 ) error {
 	referredSecretNameMap := make(map[types.NamespacedName]bool, len(referredSecretNames))
 	for _, nsName := range referredSecretNames {
 		referredSecretNameMap[nsName] = true
 	}
 
-	referents, err := dataplaneClient.ListReferredObjects(referrer)
+	referents, err := indexers.ListReferredObjects(referrer)
 	if err != nil {
 		return err
 	}
@@ -76,12 +78,12 @@ func removeOutdatedReferencesToSecret(
 				Name:      obj.GetName(),
 			}
 			if !referredSecretNameMap[namespacedName] {
-				if err := dataplaneClient.DeleteObjectReference(referrer, obj); err != nil {
+				if err := indexers.DeleteObjectReference(referrer, obj); err != nil {
 					return err
 				}
 				// remove the secret in cache if it is not referred.
 				// Do this check and delete when the reference count may be reduced by 1.
-				if err := dataplaneClient.DeleteObjectIfNotReferred(obj); err != nil {
+				if err := indexers.DeleteObjectIfNotReferred(obj, dataplaneClient); err != nil {
 					return err
 				}
 			}
@@ -93,15 +95,15 @@ func removeOutdatedReferencesToSecret(
 // DeleteReferencesByReferrer deletes all reference records with specified referrer
 // in reference cache.
 // If the affected secret is not referred by any other objects, it deletes the secret in object cache.
-func DeleteReferencesByReferrer(dataplaneClient *dataplane.KongClient, referrer client.Object) error {
-	referents, err := dataplaneClient.ListReferredObjects(referrer)
+func DeleteReferencesByReferrer(indexers CacheIndexers, dataplaneClient *dataplane.KongClient, referrer client.Object) error {
+	referents, err := indexers.ListReferredObjects(referrer)
 	if err != nil {
 		return err
 	}
 
 	// delete(gc) the reference record between referrer and referent.
 	for _, referent := range referents {
-		err := dataplaneClient.DeleteObjectReference(referrer, referent)
+		err := indexers.DeleteObjectReference(referrer, referent)
 		if err != nil {
 			return err
 		}
@@ -113,7 +115,7 @@ func DeleteReferencesByReferrer(dataplaneClient *dataplane.KongClient, referrer 
 		if !(gvk.Group == corev1.GroupName && gvk.Version == VersionV1 && gvk.Kind == KindSecret) {
 			continue
 		}
-		err := dataplaneClient.DeleteObjectIfNotReferred(referent)
+		err := indexers.DeleteObjectIfNotReferred(referent, dataplaneClient)
 		if err != nil {
 			return err
 		}

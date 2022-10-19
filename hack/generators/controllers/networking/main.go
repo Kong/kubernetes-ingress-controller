@@ -451,6 +451,9 @@ type {{.PackageAlias}}{{.Kind}}Reconciler struct {
 	IngressClassName string
 	DisableIngressClassLookups bool
 {{- end}}
+{{- if .NeedsUpdateReferences}}
+	ReferenceIndexers ctrlref.CacheIndexers
+{{- end}}
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -543,7 +546,7 @@ func (r *{{.PackageAlias}}{{.Kind}}Reconciler) Reconcile(ctx context.Context, re
 			obj.Name = req.Name
 			{{if .NeedsUpdateReferences}}
 			// remove reference record where the {{.Kind}} is the referrer
-			if err := ctrlref.DeleteReferencesByReferrer(r.DataplaneClient, obj); err != nil {
+			if err := ctrlref.DeleteReferencesByReferrer(r.ReferenceIndexers, r.DataplaneClient, obj); err != nil {
 				return ctrl.Result{}, err
 			}
 			{{end}}
@@ -558,7 +561,7 @@ func (r *{{.PackageAlias}}{{.Kind}}Reconciler) Reconcile(ctx context.Context, re
 		log.V(util.DebugLevel).Info("resource is being deleted, its configuration will be removed", "type", "{{.Kind}}", "namespace", req.Namespace, "name", req.Name)
 		{{if .NeedsUpdateReferences}}
 		// remove reference record where the {{.Kind}} is the referrer
-		if err := ctrlref.DeleteReferencesByReferrer(r.DataplaneClient, obj); err != nil {
+		if err := ctrlref.DeleteReferencesByReferrer(r.ReferenceIndexers, r.DataplaneClient, obj); err != nil {
 			return ctrl.Result{}, err
 		}
 		{{end}}
@@ -602,7 +605,7 @@ func (r *{{.PackageAlias}}{{.Kind}}Reconciler) Reconcile(ctx context.Context, re
 
 {{- if .NeedsUpdateReferences }}
 	// update reference relationship from the {{.Kind}} to other objects.
-	if err := updateReferredObjects(ctx, r.Client, r.DataplaneClient, obj); err != nil {
+	if err := updateReferredObjects(ctx, r.Client, r.ReferenceIndexers, r.DataplaneClient, obj); err != nil {
 		if errors.IsNotFound(err) {
 			// reconcile again if the secret does not exist yet
 			return ctrl.Result{

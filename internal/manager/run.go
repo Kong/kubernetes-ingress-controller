@@ -139,7 +139,18 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic) e
 	if err != nil {
 		return fmt.Errorf("%f is not a valid number of seconds to the timeout config for the kong client: %w", c.ProxyTimeoutSeconds, err)
 	}
-	dataplaneClient, err := dataplane.NewKongClient(deprecatedLogger, timeoutDuration, c.IngressClassName, c.EnableReverseSync, c.SkipCACertificates, diagnostic, kongConfig)
+
+	dataplaneEventRecorder := mgr.GetEventRecorderFor("kubernetes-ingress-controller-data-plane")
+	dataplaneClient, err := dataplane.NewKongClient(
+		deprecatedLogger,
+		timeoutDuration,
+		c.IngressClassName,
+		c.EnableReverseSync,
+		c.SkipCACertificates,
+		diagnostic,
+		kongConfig,
+		dataplaneEventRecorder,
+	)
 	if err != nil {
 		return fmt.Errorf("failed to initialize kong data-plane client: %w", err)
 	}

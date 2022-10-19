@@ -39,6 +39,41 @@ const (
 // Parser - Public Types
 // -----------------------------------------------------------------------------
 
+type ParsingError struct {
+	relatedObjects []client.Object
+	reason         string
+}
+
+func NewParsingError(reason string, relatedObjects ...client.Object) ParsingError {
+	if reason == "" {
+		reason = "unknown"
+	}
+	return ParsingError{
+		relatedObjects: relatedObjects,
+		reason:         reason,
+	}
+}
+
+func (p ParsingError) RelatedObjects() []client.Object {
+	return p.relatedObjects
+}
+
+func (p ParsingError) Reason() string {
+	return p.reason
+}
+
+type parsingErrorsCollector struct {
+	errors []ParsingError
+}
+
+func newParsingErrorsCollector() *parsingErrorsCollector {
+	return &parsingErrorsCollector{}
+}
+
+func (c *parsingErrorsCollector) ParsingError(reason string, relatedObjects ...client.Object) {
+	c.errors = append(c.errors, NewParsingError(reason, relatedObjects...))
+}
+
 // Parser parses Kubernetes objects and configurations into their
 // equivalent Kong objects and configurations, producing a complete
 // state configuration for the Kong Admin API.
@@ -51,6 +86,7 @@ type Parser struct {
 	featureEnabledCombinedServiceRoutes             bool
 
 	flagEnabledRegexPathPrefix bool
+	errorsCollector            *parsingErrorsCollector
 }
 
 // NewParser produces a new Parser object provided a logging mechanism
@@ -60,8 +96,9 @@ func NewParser(
 	storer store.Storer,
 ) *Parser {
 	return &Parser{
-		logger: logger,
-		storer: storer,
+		logger:          logger,
+		storer:          storer,
+		errorsCollector: newParsingErrorsCollector(),
 	}
 }
 
@@ -118,7 +155,7 @@ func (p *Parser) Build() *kongstate.KongState {
 	result.Certificates = mergeCerts(p.logger, ingressCerts, gatewayCerts)
 
 	// populate CA certificates in Kong
-	result.CACertificates = getCACerts(p.logger, p.storer, result.Plugins)
+	result.CACertificates = p.getCACerts(p.logger, p.storer)
 
 	return &result
 }
@@ -152,6 +189,12 @@ func (p *Parser) GenerateKubernetesObjectReport() []client.Object {
 	report := p.configuredKubernetesObjects
 	p.configuredKubernetesObjects = nil
 	return report
+}
+
+func (p *Parser) GetParsingErrors() []ParsingError {
+	errors := p.errorsCollector.errors
+	p.errorsCollector.errors = nil
+	return errors
 }
 
 // -----------------------------------------------------------------------------

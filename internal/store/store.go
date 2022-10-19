@@ -96,6 +96,8 @@ type Storer interface {
 	ListTCPIngresses() ([]*kongv1beta1.TCPIngress, error)
 	ListUDPIngresses() ([]*kongv1beta1.UDPIngress, error)
 	ListKnativeIngresses() ([]*knative.Ingress, error)
+	ListKongPlugins() []*kongv1.KongPlugin
+	ListKongClusterPlugins() []*kongv1.KongClusterPlugin
 	ListGlobalKongPlugins() ([]*kongv1.KongPlugin, error)
 	ListGlobalKongClusterPlugins() ([]*kongv1.KongClusterPlugin, error)
 	ListKongConsumers() []*kongv1.KongConsumer
@@ -959,6 +961,28 @@ func (s Store) ListGlobalKongClusterPlugins() ([]*kongv1.KongClusterPlugin, erro
 		return nil, err
 	}
 	return plugins, nil
+}
+
+func (s Store) ListKongClusterPlugins() []*kongv1.KongClusterPlugin {
+	var plugins []*kongv1.KongClusterPlugin
+	for _, item := range s.stores.ClusterPlugin.List() {
+		p, ok := item.(*kongv1.KongClusterPlugin)
+		if ok && s.isValidIngressClass(&p.ObjectMeta, annotations.IngressClassKey, s.getIngressClassHandling()) {
+			plugins = append(plugins, p)
+		}
+	}
+	return plugins
+}
+
+func (s Store) ListKongPlugins() []*kongv1.KongPlugin {
+	var plugins []*kongv1.KongPlugin
+	for _, item := range s.stores.Plugin.List() {
+		p, ok := item.(*kongv1.KongPlugin)
+		if ok && s.isValidIngressClass(&p.ObjectMeta, annotations.IngressClassKey, s.getIngressClassHandling()) {
+			plugins = append(plugins, p)
+		}
+	}
+	return plugins
 }
 
 // ListCACerts returns all Secrets containing the label

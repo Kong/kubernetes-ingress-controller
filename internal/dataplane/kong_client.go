@@ -11,6 +11,8 @@ import (
 	"github.com/kong/go-kong/kong"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/sirupsen/logrus"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/deckgen"
@@ -106,6 +108,7 @@ type KongClient struct {
 	// whether a Kubernetes object has corresponding data-plane configuration that
 	// is actively configured (e.g. to know how to set the object status).
 	kubernetesObjectReportsFilter k8sobj.Set
+	eventsRecorder                record.EventRecorder
 }
 
 // NewKongClient provides a new KongClient object after connecting to the
@@ -118,6 +121,7 @@ func NewKongClient(
 	skipCACertificates bool,
 	diagnostic util.ConfigDumpDiagnostic,
 	kongConfig sendconfig.Kong,
+	eventsRecorder record.EventRecorder,
 ) (*KongClient, error) {
 	// build the client object
 	cache := store.NewCacheStores()
@@ -131,6 +135,7 @@ func NewKongClient(
 		prometheusMetrics:  metrics.NewCtrlFuncMetrics(),
 		cache:              &cache,
 		kongConfig:         kongConfig,
+		eventsRecorder:     eventsRecorder,
 	}
 
 	// download the kong root configuration (and validate connectivity to the proxy API)
@@ -312,12 +317,18 @@ func (c *KongClient) Update(ctx context.Context) error {
 
 	// parse the Kubernetes objects from the storer into Kong configuration
 	kongstate := p.Build()
-	// todo: does it still make sense to report TranslationCount when Build no longer returns an error?
-	// https://github.com/Kong/kubernetes-ingress-controller/issues/1892
-	c.prometheusMetrics.TranslationCount.With(prometheus.Labels{
-		metrics.SuccessKey: metrics.SuccessTrue,
-	}).Inc()
-	c.logger.Debug("successfully built data-plane configuration")
+	if errors := p.GetParsingErrors(); errors != nil {
+		c.createParsingErrorsEvents(errors)
+		c.prometheusMetrics.TranslationCount.With(prometheus.Labels{
+			metrics.SuccessKey: metrics.SuccessFalse,
+		}).Inc()
+		c.logger.Debugf("%d translation errors occurred when building data-plane configuration", len(errors))
+	} else {
+		c.prometheusMetrics.TranslationCount.With(prometheus.Labels{
+			metrics.SuccessKey: metrics.SuccessTrue,
+		}).Inc()
+		c.logger.Debug("successfully built data-plane configuration")
+	}
 
 	// generate the deck configuration to be applied to the admin API
 	c.logger.Debug("converting configuration to deck config")
@@ -437,4 +448,13 @@ func (c *KongClient) updateKubernetesObjectReportFilter(set k8sobj.Set) {
 	c.kubernetesObjectReportLock.Lock()
 	defer c.kubernetesObjectReportLock.Unlock()
 	c.kubernetesObjectReportsFilter = set
+}
+
+func (c *KongClient) createParsingErrorsEvents(errors []parser.ParsingError) {
+	const reason = "TranslationToKongConfigurationFailed"
+	for _, err := range errors {
+		for _, obj := range err.RelatedObjects() {
+			c.eventsRecorder.Event(obj, corev1.EventTypeWarning, reason, err.Reason())
+		}
+	}
 }

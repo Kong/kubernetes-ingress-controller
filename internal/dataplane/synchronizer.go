@@ -85,10 +85,15 @@ func NewSynchronizerWithStagger(logger logrus.FieldLogger, dataplaneClient Clien
 //
 // To stop the server, the provided context must be Done().
 func (p *Synchronizer) Start(ctx context.Context) error {
+	select {
 	// TODO https://github.com/Kong/kubernetes-ingress-controller/issues/2249
 	// This is a temporary mitigation to allow some time for controllers to
 	// populate their dataplaneClient cache.
-	time.Sleep(time.Second * 5)
+	case <-time.After(time.Second * 5):
+	case <-ctx.Done():
+		return fmt.Errorf("Synchronizer Start() interrupted: %w", ctx.Err())
+	}
+
 	p.lock.Lock()
 	defer p.lock.Unlock()
 

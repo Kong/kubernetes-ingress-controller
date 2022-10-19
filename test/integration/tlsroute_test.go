@@ -142,6 +142,7 @@ func TestTLSRouteEssentials(t *testing.T) {
 	t.Log("deploying a gateway to the test cluster using unmanaged gateway mode and port 8899")
 	gatewayName := uuid.NewString()
 	hostname := gatewayv1beta1.Hostname(tlsRouteHostname)
+	modePassthrough := gatewayv1beta1.TLSModePassthrough
 	gateway, err := DeployGateway(ctx, gatewayClient, ns.Name, gatewayClassName, func(gw *gatewayv1beta1.Gateway) {
 		gw.Name = gatewayName
 		gw.Spec.Listeners = []gatewayv1beta1.Listener{{
@@ -150,6 +151,7 @@ func TestTLSRouteEssentials(t *testing.T) {
 			Port:     gatewayv1beta1.PortNumber(ktfkong.DefaultTLSServicePort),
 			Hostname: &hostname,
 			TLS: &gatewayv1beta1.GatewayTLSConfig{
+				Mode: &modePassthrough,
 				CertificateRefs: []gatewayv1beta1.SecretObjectReference{
 					{
 						Name: gatewayv1beta1.ObjectName(tlsSecretName),
@@ -335,6 +337,7 @@ func TestTLSRouteEssentials(t *testing.T) {
 			Port:     gatewayv1beta1.PortNumber(ktfkong.DefaultTLSServicePort),
 			Hostname: &hostname,
 			TLS: &gatewayv1beta1.GatewayTLSConfig{
+				Mode: &modePassthrough,
 				CertificateRefs: []gatewayv1beta1.SecretObjectReference{
 					{
 						Name: gatewayv1beta1.ObjectName(tlsSecretName),
@@ -463,6 +466,7 @@ func TestTLSRouteReferenceGrant(t *testing.T) {
 	require.NoError(t, err)
 	cleaner.Add(secret2)
 
+	modePassthrough := gatewayv1beta1.TLSModePassthrough
 	t.Log("deploying a gateway to the test cluster using unmanaged gateway mode")
 	gateway, err := DeployGateway(ctx, gatewayClient, ns.Name, unmanagedGatewayClassName, func(gw *gatewayv1beta1.Gateway) {
 		hostname := gatewayv1beta1.Hostname(tlsRouteHostname)
@@ -475,6 +479,7 @@ func TestTLSRouteReferenceGrant(t *testing.T) {
 				Port:     gatewayv1beta1.PortNumber(ktfkong.DefaultTLSServicePort),
 				Hostname: &hostname,
 				TLS: &gatewayv1beta1.GatewayTLSConfig{
+					Mode: &modePassthrough,
 					CertificateRefs: []gatewayv1beta1.SecretObjectReference{
 						{
 							Name: gatewayv1beta1.ObjectName(secrets[0].Name),
@@ -488,6 +493,7 @@ func TestTLSRouteReferenceGrant(t *testing.T) {
 				Port:     gatewayv1beta1.PortNumber(ktfkong.DefaultTLSServicePort),
 				Hostname: &otherHostname,
 				TLS: &gatewayv1beta1.GatewayTLSConfig{
+					Mode: &modePassthrough,
 					CertificateRefs: []gatewayv1beta1.SecretObjectReference{
 						{
 							Name:      gatewayv1beta1.ObjectName(secrets[1].Name),

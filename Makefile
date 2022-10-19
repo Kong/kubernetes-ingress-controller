@@ -145,7 +145,7 @@ manifests.single: kustomize ## Compose single-file deployment manifests from bui
 # ------------------------------------------------------------------------------
 
 .PHONY: generate
-generate: generate.controllers generate.clientsets generate.gateway-api-urls
+generate: generate.controllers generate.clientsets generate.gateway-api-urls fmt
 
 .PHONY: generate.controllers
 generate.controllers: controller-gen

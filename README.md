@@ -143,6 +143,7 @@ preview features can be found in [FEATURE_PREVIEW_DOCUMENTATION.md][fpreview].
 [github-kic-discussions]: https://github.com/Kong/kubernetes-ingress-controller/discussions
 [github-kic-issues]: https://github.com/kong/kubernetes-ingress-controller/issues
 
+
 [docs-konghq]:https://docs.konghq.com
 [docs-konghq-hub]: https://docs.konghq.com/hub/
 [docs-konghq-faqs]: https://docs.konghq.com/kubernetes-ingress-controller/latest/faq/

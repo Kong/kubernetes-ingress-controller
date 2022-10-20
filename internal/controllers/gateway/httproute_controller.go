@@ -240,7 +240,7 @@ func (r *HTTPRouteReconciler) listHTTPRoutesForGateway(obj client.Object) []reco
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
 func (r *HTTPRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	log := r.Log.WithValues("NetV1Alpha2HTTPRoute", req.NamespacedName)
+	log := r.Log.WithValues("NetV1Beta1HTTPRoute", req.NamespacedName)
 
 	httproute := new(gatewayv1beta1.HTTPRoute)
 	if err := r.Get(ctx, req.NamespacedName, httproute); err != nil {

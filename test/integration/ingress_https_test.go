@@ -291,18 +291,23 @@ func TestHTTPSIngress(t *testing.T) {
 		},
 	}
 
-	t.Log("deploying secrets")
+	// Since we updated the logic of secret controller to only process secrets that are referred by
+	// other controlled objects (service, ingress, gateway, ...), we should make sure that ingresses
+	// created before and after referred secret created both works.
+	// so here we interleave the creating process of deploying 2 ingresses and secrets.
+	t.Log("deploying secrets and ingresses")
+	require.NoError(t, clusters.DeployIngress(ctx, env.Cluster(), ns.Name, ingress1))
+	addIngressToCleaner(cleaner, ingress1)
+
 	secret1, err := env.Cluster().Client().CoreV1().Secrets(ns.Name).Create(ctx, secrets[0], metav1.CreateOptions{})
 	assert.NoError(t, err)
+	cleaner.Add(secret1)
+
 	secret2, err := env.Cluster().Client().CoreV1().Secrets(ns.Name).Create(ctx, secrets[1], metav1.CreateOptions{})
 	assert.NoError(t, err)
-	cleaner.Add(secret1)
 	cleaner.Add(secret2)
 
-	t.Log("deploying ingress resources")
-	require.NoError(t, clusters.DeployIngress(ctx, env.Cluster(), ns.Name, ingress1))
 	require.NoError(t, clusters.DeployIngress(ctx, env.Cluster(), ns.Name, ingress2))
-	addIngressToCleaner(cleaner, ingress1)
 	addIngressToCleaner(cleaner, ingress2)
 
 	t.Log("checking first ingress status readiness")

@@ -14,12 +14,10 @@ const (
 	IndexNameReferent = "referent"
 )
 
-var (
-	// ErrTypeNotObjectReference is the error returned to caller to tell that type of the object stored
-	// in indexer is not ObjectReference.
-	// It should not happen in normal use, because only ObjectReference should be added to the indexer.
-	ErrTypeNotObjectReference = fmt.Errorf("type of object in indexer is not ObjectReference")
-)
+// ErrTypeNotObjectReference is the error returned to caller to tell that type of the object stored
+// in indexer is not ObjectReference.
+// It should not happen in normal use, because only ObjectReference should be added to the indexer.
+var ErrTypeNotObjectReference = fmt.Errorf("type of object in indexer is not ObjectReference")
 
 type ObjectReference struct {
 	Referrer client.Object
@@ -30,10 +28,8 @@ type ObjectReference struct {
 // group/version,Kind=kind/namespace/name.
 // the combination is unique inside a kubernetes cluster.
 func objectKeyFunc(obj client.Object) string {
-
 	return obj.GetObjectKind().GroupVersionKind().String() + "/" +
 		obj.GetNamespace() + "/" + obj.GetName()
-
 }
 
 // CacheIndexers implements a reference cache to store reference relationship between k8s objects

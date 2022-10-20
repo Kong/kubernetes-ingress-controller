@@ -126,16 +126,16 @@ func TestDeleteObjectReference(t *testing.T) {
 		},
 	}
 
-	c := NewCacheIndexers()
-	err := c.SetObjectReference(testRefService1, testRefSecret1)
-	require.NoError(t, err, "should not return error on setting reference")
-	err = c.SetObjectReference(testRefService1, testRefSecret2)
-	require.NoError(t, err, "should not return error on setting reference")
-
 	for _, tc := range testCases {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
-			err := c.DeleteObjectReference(tc.deleteReferrer, tc.deleteReferent)
+			c := NewCacheIndexers()
+			err := c.SetObjectReference(testRefService1, testRefSecret1)
+			require.NoError(t, err, "should not return error on setting reference")
+			err = c.SetObjectReference(testRefService1, testRefSecret2)
+			require.NoError(t, err, "should not return error on setting reference")
+
+			err = c.DeleteObjectReference(tc.deleteReferrer, tc.deleteReferent)
 			require.NoError(t, err, "should not return error on setting reference")
 			_, exists, err := c.indexer.Get(&ObjectReference{Referrer: tc.checkReferrer, Referent: tc.checkReferent})
 			require.NoError(t, err)
@@ -169,13 +169,16 @@ func TestObjectReferred(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		c := NewCacheIndexers()
-		err := c.SetObjectReference(tc.addReferrer, tc.addReferent)
-		require.NoError(t, err, "should not return error on setting reference")
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			c := NewCacheIndexers()
+			err := c.SetObjectReference(tc.addReferrer, tc.addReferent)
+			require.NoError(t, err, "should not return error on setting reference")
 
-		referred, err := c.ObjectReferred(tc.checkReferent)
-		require.NoError(t, err)
-		require.Equal(t, tc.referred, referred)
+			referred, err := c.ObjectReferred(tc.checkReferent)
+			require.NoError(t, err)
+			require.Equal(t, tc.referred, referred)
+		})
 	}
 }
 
@@ -204,13 +207,16 @@ func TestListReferredObjects(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		c := NewCacheIndexers()
-		err := c.SetObjectReference(tc.addReferrer, tc.addReferent)
-		require.NoError(t, err, "should not return error on setting reference")
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			c := NewCacheIndexers()
+			err := c.SetObjectReference(tc.addReferrer, tc.addReferent)
+			require.NoError(t, err, "should not return error on setting reference")
 
-		referents, err := c.ListReferredObjects(tc.checkReferrer)
-		require.NoError(t, err)
-		require.Len(t, referents, tc.objectNum)
+			referents, err := c.ListReferredObjects(tc.checkReferrer)
+			require.NoError(t, err)
+			require.Len(t, referents, tc.objectNum)
+		})
 	}
 }
 
@@ -239,16 +245,19 @@ func TestDeleteReferencesByReferrer(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		c := NewCacheIndexers()
-		err := c.SetObjectReference(testRefService1, testRefSecret1)
-		require.NoError(t, err, "should not return error on setting reference")
-		err = c.SetObjectReference(testRefService2, testRefSecret2)
-		require.NoError(t, err, "should not return error on setting reference")
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			c := NewCacheIndexers()
+			err := c.SetObjectReference(testRefService1, testRefSecret1)
+			require.NoError(t, err, "should not return error on setting reference")
+			err = c.SetObjectReference(testRefService2, testRefSecret2)
+			require.NoError(t, err, "should not return error on setting reference")
 
-		err = c.DeleteReferencesByReferrer(tc.deleteReferrer)
-		require.NoError(t, err)
-		_, exists, err := c.indexer.Get(&ObjectReference{Referrer: tc.checkReferrer, Referent: tc.checkReferent})
-		require.NoError(t, err)
-		require.Equal(t, tc.found, exists)
+			err = c.DeleteReferencesByReferrer(tc.deleteReferrer)
+			require.NoError(t, err)
+			_, exists, err := c.indexer.Get(&ObjectReference{Referrer: tc.checkReferrer, Referent: tc.checkReferent})
+			require.NoError(t, err)
+			require.Equal(t, tc.found, exists)
+		})
 	}
 }

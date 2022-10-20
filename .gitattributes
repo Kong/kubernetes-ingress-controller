@@ -1,3 +1,4 @@
+hack/generators/controllers/networking/main.go linguist-generated=true
 internal/controllers/configuration/zz_generated_controllers.go linguist-generated=true
 pkg/apis/configuration/v1/zz_generated.deepcopy.go linguist-generated=true
 pkg/apis/configuration/v1alpha1/zz_generated.deepcopy.go linguist-generated=true
@@ -39,4 +40,3 @@ pkg/clientset/typed/configuration/v1beta1/generated_expansion.go linguist-genera
 pkg/clientset/typed/configuration/v1beta1/tcpingress.go linguist-generated=true
 pkg/clientset/typed/configuration/v1beta1/udpingress.go linguist-generated=true
 scripts/update-gitattributes.sh linguist-generated=true
-zz_generated_test.go linguist-generated=true

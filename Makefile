@@ -94,6 +94,10 @@ vet:
 lint: verify.tidy golangci-lint
 	$(GOLANGCI_LINT) run -v
 
+.PHONY: update.gitattributes
+update.gitattributes:
+	@./scripts/update-gitattributes.sh
+
 .PHONY: verify.tidy
 verify.tidy:
 	./scripts/verify-tidy.sh
@@ -115,6 +119,9 @@ verify.manifests: verify.repo manifests manifests.single verify.diff
 
 .PHONY: verify.generators
 verify.generators: verify.repo generate verify.diff
+
+.PHONY: verify.gitattributes
+verify.gitattributes: verify.repo update.gitattributes verify.diff
 
 # ------------------------------------------------------------------------------
 # Build - Manifests

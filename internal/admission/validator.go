@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/parser"
+
 	"github.com/kong/go-kong/kong"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
@@ -14,7 +16,6 @@ import (
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
 	gatewaycontroller "github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/gateway"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
 	credsvalidation "github.com/kong/kubernetes-ingress-controller/v2/internal/validation/consumers/credentials"
 	gatewayvalidators "github.com/kong/kubernetes-ingress-controller/v2/internal/validation/gateway"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
@@ -36,7 +37,7 @@ type KongHTTPValidator struct {
 	ConsumerSvc   kong.AbstractConsumerService
 	PluginSvc     kong.AbstractPluginService
 	Logger        logrus.FieldLogger
-	SecretGetter  kongstate.SecretGetter
+	SecretGetter  parser.SecretGetter
 	ManagerClient client.Client
 
 	ingressClassMatcher func(*metav1.ObjectMeta, string, annotations.ClassMatching) bool
@@ -231,7 +232,7 @@ func (validator KongHTTPValidator) ValidatePlugin(
 	var plugin kong.Plugin
 	plugin.Name = kong.String(k8sPlugin.PluginName)
 	var err error
-	plugin.Config, err = kongstate.RawConfigToConfiguration(k8sPlugin.Config)
+	plugin.Config, err = parser.RawConfigToConfiguration(k8sPlugin.Config)
 	if err != nil {
 		return false, ErrTextPluginConfigInvalid, err
 	}
@@ -239,7 +240,7 @@ func (validator KongHTTPValidator) ValidatePlugin(
 		if len(plugin.Config) > 0 {
 			return false, ErrTextPluginUsesBothConfigTypes, nil
 		}
-		config, err := kongstate.SecretToConfiguration(validator.SecretGetter, (*k8sPlugin.ConfigFrom).SecretValue, k8sPlugin.Namespace)
+		config, err := parser.SecretToConfiguration(validator.SecretGetter, (*k8sPlugin.ConfigFrom).SecretValue, k8sPlugin.Namespace)
 		if err != nil {
 			return false, ErrTextPluginSecretConfigUnretrievable, err
 		}

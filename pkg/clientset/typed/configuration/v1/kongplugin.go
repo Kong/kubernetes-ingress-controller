@@ -40,6 +40,7 @@ type KongPluginsGetter interface {
 type KongPluginInterface interface {
 	Create(ctx context.Context, kongPlugin *v1.KongPlugin, opts metav1.CreateOptions) (*v1.KongPlugin, error)
 	Update(ctx context.Context, kongPlugin *v1.KongPlugin, opts metav1.UpdateOptions) (*v1.KongPlugin, error)
+	UpdateStatus(ctx context.Context, kongPlugin *v1.KongPlugin, opts metav1.UpdateOptions) (*v1.KongPlugin, error)
 	Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error
 	DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error
 	Get(ctx context.Context, name string, opts metav1.GetOptions) (*v1.KongPlugin, error)
@@ -128,6 +129,22 @@ func (c *kongPlugins) Update(ctx context.Context, kongPlugin *v1.KongPlugin, opt
 		Namespace(c.ns).
 		Resource("kongplugins").
 		Name(kongPlugin.Name).
+		VersionedParams(&opts, scheme.ParameterCodec).
+		Body(kongPlugin).
+		Do(ctx).
+		Into(result)
+	return
+}
+
+// UpdateStatus was generated because the type contains a Status member.
+// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
+func (c *kongPlugins) UpdateStatus(ctx context.Context, kongPlugin *v1.KongPlugin, opts metav1.UpdateOptions) (result *v1.KongPlugin, err error) {
+	result = &v1.KongPlugin{}
+	err = c.client.Put().
+		Namespace(c.ns).
+		Resource("kongplugins").
+		Name(kongPlugin.Name).
+		SubResource("status").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Body(kongPlugin).
 		Do(ctx).

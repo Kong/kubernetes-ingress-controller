@@ -23,6 +23,8 @@ import (
 	"reflect"
 	"time"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	extv1beta1 "k8s.io/api/extensions/v1beta1"
@@ -997,6 +999,31 @@ func (r *KongV1KongPluginReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	// update the kong Admin API with the changes
 	if err := r.DataplaneClient.UpdateObject(obj); err != nil {
 		return ctrl.Result{}, err
+	}
+
+	if r.DataplaneClient.AreKubernetesObjectReportsEnabled() {
+		obj.Status.Conditions = nil
+		if r.DataplaneClient.KubernetesObjectIsConfigured(obj) {
+			obj.Status.Conditions = append(obj.Status.Conditions, metav1.Condition{
+				Type:               kongv1.KongConditionConfiguredInGateway,
+				Status:             metav1.ConditionTrue,
+				ObservedGeneration: obj.Generation,
+				Reason:             "Configured",
+				LastTransitionTime: metav1.Now(),
+			})
+		} else {
+			obj.Status.Conditions = append(obj.Status.Conditions, metav1.Condition{
+				Type:               kongv1.KongConditionConfiguredInGateway,
+				Status:             metav1.ConditionFalse,
+				ObservedGeneration: obj.Generation,
+				Reason:             "Scheduled",
+				LastTransitionTime: metav1.Now(),
+			})
+		}
+
+		if err := r.Status().Update(ctx, obj); err != nil {
+			return ctrl.Result{}, err
+		}
 	}
 
 	return ctrl.Result{}, nil

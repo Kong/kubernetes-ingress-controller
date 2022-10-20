@@ -146,7 +146,7 @@ func (p *Parser) Build() *kongstate.KongState {
 	result.FillConsumersAndCredentials(p.logger, p.storer)
 
 	// process annotation plugins
-	result.FillPlugins(p.logger, p.storer)
+	result.Plugins = p.getPlugins(p.logger, p.storer, result.GetPluginRelations())
 
 	// generate Certificates and SNIs
 	ingressCerts := getCerts(p.logger, p.storer, ingressRules.SecretNameToSNIs)

@@ -405,3 +405,10 @@ func (r *Route) overrideHosts(log logrus.FieldLogger, anns map[string]string) {
 
 	r.Hosts = hosts
 }
+
+func protocolPointersToStringPointers(protocols []*configurationv1.KongProtocol) (res []*string) {
+	for _, protocol := range protocols {
+		res = append(res, kong.String(string(*protocol)))
+	}
+	return
+}

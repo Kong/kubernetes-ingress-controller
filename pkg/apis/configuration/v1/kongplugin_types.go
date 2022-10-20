@@ -67,6 +67,8 @@ type KongPlugin struct {
 
 	// Ordering overrides the normal plugin execution order
 	Ordering *kong.PluginOrdering `json:"ordering,omitempty"`
+
+	Status KongPluginStatus `json:"status,omitempty"`
 }
 
 //+kubebuilder:object:root=true
@@ -76,6 +78,20 @@ type KongPluginList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []KongPlugin `json:"items"`
+}
+
+const (
+	KongConditionConfiguredInGateway = "ConfiguredInGateway"
+)
+
+// KongPluginStatus represents the status of the kong plugin.
+type KongPluginStatus struct {
+	// Conditions describe the status of the kong plugin.
+	// +listType=map
+	// +listMapKey=type
+	// +kubebuilder:validation:MinItems=1
+	// +kubebuilder:validation:MaxItems=8
+	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
 
 func init() {

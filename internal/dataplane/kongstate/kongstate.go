@@ -179,7 +179,7 @@ func (ks *KongState) FillOverrides(log logrus.FieldLogger, s store.Storer) {
 	}
 }
 
-func (ks *KongState) getPluginRelations() map[string]util.ForeignRelations {
+func (ks *KongState) GetPluginRelations() map[string]util.ForeignRelations {
 	// KongPlugin key (KongPlugin's name:namespace) to corresponding associations
 	pluginRels := map[string]util.ForeignRelations{}
 	addConsumerRelation := func(namespace, pluginName, identifier string) {
@@ -235,110 +235,4 @@ func (ks *KongState) getPluginRelations() map[string]util.ForeignRelations {
 		}
 	}
 	return pluginRels
-}
-
-func buildPlugins(log logrus.FieldLogger, s store.Storer, pluginRels map[string]util.ForeignRelations) []Plugin {
-	var plugins []Plugin
-
-	for pluginIdentifier, relations := range pluginRels {
-		identifier := strings.Split(pluginIdentifier, ":")
-		namespace, kongPluginName := identifier[0], identifier[1]
-		plugin, err := getPlugin(s, namespace, kongPluginName)
-		if err != nil {
-			log.WithFields(logrus.Fields{
-				"kongplugin_name":      kongPluginName,
-				"kongplugin_namespace": namespace,
-			}).WithError(err).Errorf("failed to fetch KongPlugin")
-			continue
-		}
-
-		for _, rel := range relations.GetCombinations() {
-			plugin := *plugin.DeepCopy()
-			// ID is populated because that is read by decK and in_memory
-			// translator too
-			if rel.Service != "" {
-				plugin.Service = &kong.Service{ID: kong.String(rel.Service)}
-			}
-			if rel.Route != "" {
-				plugin.Route = &kong.Route{ID: kong.String(rel.Route)}
-			}
-			if rel.Consumer != "" {
-				plugin.Consumer = &kong.Consumer{ID: kong.String(rel.Consumer)}
-			}
-			plugins = append(plugins, Plugin{plugin})
-		}
-	}
-
-	globalPlugins, err := globalPlugins(log, s)
-	if err != nil {
-		log.WithError(err).Error("failed to fetch global plugins")
-	}
-	plugins = append(plugins, globalPlugins...)
-
-	return plugins
-}
-
-func globalPlugins(log logrus.FieldLogger, s store.Storer) ([]Plugin, error) {
-	// removed as of 0.10.0
-	// only retrieved now to warn users
-	globalPlugins, err := s.ListGlobalKongPlugins()
-	if err != nil {
-		return nil, fmt.Errorf("error listing global KongPlugins: %w", err)
-	}
-	if len(globalPlugins) > 0 {
-		log.Warning("global KongPlugins found. These are no longer applied and",
-			" must be replaced with KongClusterPlugins.",
-			" Please run \"kubectl get kongplugin -l global=true --all-namespaces\" to list existing plugins")
-	}
-	res := make(map[string]Plugin)
-	var duplicates []string // keep track of duplicate
-	// TODO respect the oldest CRD
-	// Current behavior is to skip creating the plugin but in case
-	// of duplicate plugin definitions, we should respect the oldest one
-	// This is important since if a user comes in to k8s and creates a new
-	// CRD, the user now deleted an older plugin
-
-	globalClusterPlugins, err := s.ListGlobalKongClusterPlugins()
-	if err != nil {
-		return nil, fmt.Errorf("error listing global KongClusterPlugins: %w", err)
-	}
-	for i := 0; i < len(globalClusterPlugins); i++ {
-		k8sPlugin := *globalClusterPlugins[i]
-		pluginName := k8sPlugin.PluginName
-		// empty pluginName skip it
-		if pluginName == "" {
-			log.WithFields(logrus.Fields{
-				"kongclusterplugin_name": k8sPlugin.Name,
-			}).Errorf("invalid KongClusterPlugin: empty plugin property")
-			continue
-		}
-		if _, ok := res[pluginName]; ok {
-			log.Error("multiple KongPlugin definitions found with"+
-				" 'global' label for '", pluginName,
-				"', the plugin will not be applied")
-			duplicates = append(duplicates, pluginName)
-			continue
-		}
-		if plugin, err := kongPluginFromK8SClusterPlugin(s, k8sPlugin); err == nil {
-			res[pluginName] = Plugin{
-				Plugin: plugin,
-			}
-		} else {
-			log.WithFields(logrus.Fields{
-				"kongclusterplugin_name": k8sPlugin.Name,
-			}).WithError(err).Error("failed to generate configuration from KongClusterPlugin")
-		}
-	}
-	for _, plugin := range duplicates {
-		delete(res, plugin)
-	}
-	var plugins []Plugin
-	for _, p := range res {
-		plugins = append(plugins, p)
-	}
-	return plugins, nil
-}
-
-func (ks *KongState) FillPlugins(log logrus.FieldLogger, s store.Storer) {
-	ks.Plugins = buildPlugins(log, s, ks.getPluginRelations())
 }

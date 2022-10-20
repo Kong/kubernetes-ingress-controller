@@ -46,6 +46,9 @@ jobs:
     - name: Verify generators consistency
       run: make verify.generators
 
+    - name: Verify .gitattributes consistency
+      run: make verify.gitattributes
+
   image-tests:
     runs-on: ubuntu-latest
     steps:

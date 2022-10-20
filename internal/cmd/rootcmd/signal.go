@@ -3,7 +3,6 @@ package rootcmd
 import (
 	"context"
 	"errors"
-	"fmt"
 	"os"
 	"os/signal"
 	"sync"
@@ -42,20 +41,26 @@ func SetupSignalHandler(cfg *manager.Config) (context.Context, error) {
 	c := make(chan os.Signal, 2)
 	signal.Notify(c, shutdownSignals...)
 	go func() {
-		<-c
-		logger.Info("Signal received, shutting down", "timeout", fmt.Sprint(cfg.TermDelay))
+		sig := <-c
+		logger.Info("Signal received, shutting down", "graceful_period", cfg.TermDelay.String(), "signal", sig.String())
+		cancel()
 
-		select {
-		case <-time.After(cfg.TermDelay):
-			cancel()
-		case <-c:
-			logger.Info("Signal received during termination delay, exiting immediately")
-			os.Exit(1) // second signal. Exit directly.
+		// If code in other places has already exited then code below won't
+		// execute, and hence the os.Exit() will not be called.
+		// This allows deferred code in other parts of the application to execute.
+		if cfg.TermDelay != 0 {
+			select {
+			case <-time.After(cfg.TermDelay):
+				logger.Info("Graceful termination period has passed, exiting immediately", "graceful_period", cfg.TermDelay.String())
+			case sig := <-c:
+				logger.Info("Signal received during graceful shutdown, exiting immediately", "signal", sig.String())
+			}
+		} else {
+			sig := <-c
+			logger.Info("Signal received during graceful shutdown, exiting immediately", "signal", sig.String())
 		}
 
-		<-c
-		logger.Info("Signal received during graceful shutdown, exiting immediately")
-		os.Exit(1) // second signal. Exit directly.
+		os.Exit(1)
 	}()
 
 	return ctx, nil

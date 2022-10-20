@@ -67,16 +67,16 @@ Adding a new version? You'll need three changes:
 
 ### Added
 
-  - Added `HTTPRoute` support for `CombinedRoutes` feature. When enabled,
+- Added `HTTPRoute` support for `CombinedRoutes` feature. When enabled,
   this changes how `HTTPRoute` resources are translated so that `HTTPRouteRule`
-  resources are combined when they have same backends references. This change 
+  resources are combined when they have same backends references. This change
   does not functionally impact routing: requests that went to a given Service
   using the original method still go to the same Service in the new method.
   [#3008](https://github.com/Kong/kubernetes-ingress-controller/pull/3008)
-- Added `--cache-sync-timeout` flag allowing to change the default controllers' 
-  cache synchronisation timeout. 
+- Added `--cache-sync-timeout` flag allowing to change the default controllers'
+  cache synchronisation timeout.
   [#3013](https://github.com/Kong/kubernetes-ingress-controller/pull/3013)
-- Secrets validation introduced: CA certificates won't be synchronized 
+- Secrets validation introduced: CA certificates won't be synchronized
   to Kong if the certificate is expired.
   [#3063](https://github.com/Kong/kubernetes-ingress-controller/pull/3063)
 
@@ -104,6 +104,9 @@ Adding a new version? You'll need three changes:
   Instead, an explicit message will be logged, informing that a given resource
   controller has been disabled.
   [#3013](https://github.com/Kong/kubernetes-ingress-controller/pull/3013)
+- Improve signal handling and cancellation. With this change broken connection to
+  Admin API and/or initial data plane sync can be cancelled properly.
+  [#3076](https://github.com/Kong/kubernetes-ingress-controller/pull/3076)
 
 ## [2.7.0]
 

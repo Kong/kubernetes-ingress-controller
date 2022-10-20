@@ -145,7 +145,7 @@ manifests.single: kustomize ## Compose single-file deployment manifests from bui
 # ------------------------------------------------------------------------------
 
 .PHONY: generate
-generate: generate.controllers generate.clientsets generate.gateway-api-urls
+generate: generate.controllers generate.clientsets generate.gateway-api-urls fmt
 
 .PHONY: generate.controllers
 generate.controllers: controller-gen
@@ -363,33 +363,58 @@ test.istio: gotestsum
 # Operations - Local Deployment
 # ------------------------------------------------------------------------------
 
-# NOTE: the environment used for "make debug" or "make run" by default should
-#       have a Kong Gateway deployed into the kong-system namespace, but these
-#       defaults can be changed using the arguments below.
+# NOTE:
+# The environment used for "make debug" or "make run" by default should
+# have a Kong Gateway deployed into the kong-system namespace, but these
+# defaults can be changed using the arguments below.
 #
-#       One easy way to create a testing/debugging environment that works with
-#       these defaults is to use the Kong Kubernetes Testing Framework (KTF):
+# One easy way to create a testing/debugging environment that works with
+# these defaults is to use the Kong Kubernetes Testing Framework (KTF):
 #
-#       $ ktf envs create --addon metallb --addon kong --kong-disable-controller --kong-admin-service-loadbalancer
+# $ ktf envs create --addon metallb --addon kong --kong-disable-controller --kong-admin-service-loadbalancer
 #
-#       KTF can be installed by following the instructions at:
+# KTF can be installed by following the instructions at:
+# https://github.com/kong/kubernetes-testing-framework
 #
-#       https://github.com/kong/kubernetes-testing-framework
+# Alternatively one can use Kong's helm chart to deploy it on the cluster, using
+# for example the following set of flags:
+#   helm upgrade --create-namespace --install --namespace kong-system kong kong/kong \
+#       --set ingressController.enabled=false \
+#       --set admin.enabled=true \
+#       --set admin.type=LoadBalancer \
+#       --set admin.http.enabled=true \
+#       --set admin.tls.enabled=false
+#
+# https://github.com/Kong/charts/tree/main/charts/kong
 
 KUBECONFIG ?= "${HOME}/.kube/config"
 KONG_NAMESPACE ?= kong-system
 KONG_PROXY_SERVICE ?= ingress-controller-kong-proxy
+KONG_ADMIN_SERVICE ?= ingress-controller-kong-admin
 KONG_ADMIN_PORT ?= 8001
-KONG_ADMIN_URL ?= "http://$(shell kubectl -n kong-system get service ingress-controller-kong-admin -o=go-template='{{range .status.loadBalancer.ingress}}{{.ip}}{{end}}'):$(KONG_ADMIN_PORT)"
+KONG_ADMIN_URL ?= "http://$(shell kubectl -n $(KONG_NAMESPACE) get service $(KONG_ADMIN_SERVICE) -o=go-template='{{range .status.loadBalancer.ingress}}{{.ip}}{{end}}'):$(KONG_ADMIN_PORT)"
 
-debug: install
+.PHONY: _ensure-namespace
+_ensure-namespace:
+	@kubectl create ns $(KONG_NAMESPACE) 2>/dev/null || true
+
+.PHONY: debug
+debug: install _ensure-namespace
 	dlv debug ./internal/cmd/main.go -- \
 		--kong-admin-url $(KONG_ADMIN_URL) \
 		--publish-service $(KONG_NAMESPACE)/$(KONG_PROXY_SERVICE) \
 		--kubeconfig $(KUBECONFIG) \
 		--feature-gates=$(KONG_CONTROLLER_FEATURE_GATES)
 
-run: install
+.PHONY: run
+run: install _ensure-namespace
+	@$(MAKE) _run
+
+# This target can be used to skip all the precondition checks, code generation
+# and other logic around running the controller.
+# It should be run only after the cluster has been already prepared to run with KIC.
+.PHONY: _run
+_run:
 	go run ./internal/cmd/main.go \
 		--kong-admin-url $(KONG_ADMIN_URL) \
 		--publish-service $(KONG_NAMESPACE)/$(KONG_PROXY_SERVICE) \

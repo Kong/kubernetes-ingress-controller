@@ -82,11 +82,16 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic) e
 	err = retry.Do(
 		func() error {
 			kongRoot, err = adminClient.Root(ctx)
+			// Abort if the provided context has been cancelled.
+			if errors.Is(err, context.Canceled) {
+				return retry.Unrecoverable(err)
+			}
 			return err
 		},
 		retry.Attempts(c.KongAdminInitializationRetries),
 		retry.Delay(c.KongAdminInitializationRetryDelay),
 		retry.DelayType(retry.FixedDelay),
+		retry.LastErrorOnly(true),
 		retry.OnRetry(func(n uint, err error) {
 			setupLog.Info("Retrying kong admin api client call after error",
 				"retries", fmt.Sprintf("%d/%d", n, c.KongAdminInitializationRetries),

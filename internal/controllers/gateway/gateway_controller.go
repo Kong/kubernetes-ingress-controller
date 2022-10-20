@@ -292,7 +292,7 @@ func (r *GatewayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 			return ctrl.Result{}, err
 		}
 		debug(log, gateway, "ensured object was removed from the data-plane (if ever present)")
-		return ctrl.Result{}, r.DataplaneClient.DeleteObject(gateway)
+		return ctrl.Result{}, nil
 	}
 	if gwc.Spec.ControllerName != ControllerName {
 		debug(log, gateway, "unsupported gatewayclass controllername, ignoring", "gatewayclass", gwc.Name, "controllername", gwc.Spec.ControllerName)
@@ -301,7 +301,7 @@ func (r *GatewayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 			return ctrl.Result{}, err
 		}
 		debug(log, gateway, "ensured object was removed from the data-plane (if ever present)")
-		return ctrl.Result{}, r.DataplaneClient.DeleteObject(gateway)
+		return ctrl.Result{}, nil
 	}
 
 	// if there's any deletion timestamp on the object, we can simply ignore it. At this point
@@ -367,8 +367,8 @@ func (r *GatewayReconciler) reconcileUnmanagedGateway(ctx context.Context, log l
 
 	// set the Gateway as scheduled to indicate that validation is complete and reconciliation work
 	// on the object is ready to begin.
-	info(log, gateway, "marking gateway as scheduled")
 	if !isGatewayScheduled(gateway) {
+		info(log, gateway, "marking gateway as scheduled")
 		scheduledCondition := metav1.Condition{
 			Type:               string(gatewayv1beta1.GatewayConditionScheduled),
 			Status:             metav1.ConditionTrue,

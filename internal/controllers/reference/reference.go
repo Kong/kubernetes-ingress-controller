@@ -23,9 +23,9 @@ const (
 func UpdateReferencesToSecret(
 	ctx context.Context,
 	c client.Client, indexers CacheIndexers, dataplaneClient *dataplane.KongClient,
-	referrer client.Object, namespacedNames []types.NamespacedName,
+	referrer client.Object, referencedSecretNameMap map[types.NamespacedName]struct{},
 ) error {
-	for _, nsName := range namespacedNames {
+	for nsName := range referencedSecretNameMap {
 
 		secret := &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
@@ -51,23 +51,19 @@ func UpdateReferencesToSecret(
 		}
 	}
 
-	return removeOutdatedReferencesToSecret(ctx, indexers, c, dataplaneClient, referrer, namespacedNames)
+	return removeOutdatedReferencesToSecret(ctx, indexers, c, dataplaneClient, referrer, referencedSecretNameMap)
 }
 
 // removeOutdatedReferenceToSecret removes outdated reference records to secrets in reference indexer.
-// secrets that are really referred by referrer is passed in parameter referredSecretNames.
-// if the secret is not actually referrenced by any object after deleting outdated reference records,
-// the secret will be removed from object cache in dataplaneClient.
+// secrets that are referred by referrer are passed in referredSecretNames parameter.
+// If a secret is not referenced by any other object after deleting outdated reference records,
+// and it does not have label "konghq.com/ca-cert:true", it is not possible to be used in Kong gateway config
+// and should be removed from the object cache inside KongClient.
 func removeOutdatedReferencesToSecret(
 	ctx context.Context,
 	indexers CacheIndexers, c client.Client, dataplaneClient *dataplane.KongClient,
-	referrer client.Object, referredSecretNames []types.NamespacedName,
+	referrer client.Object, referredSecretNameMap map[types.NamespacedName]struct{},
 ) error {
-	referredSecretNameMap := make(map[types.NamespacedName]bool, len(referredSecretNames))
-	for _, nsName := range referredSecretNames {
-		referredSecretNameMap[nsName] = true
-	}
-
 	referents, err := indexers.ListReferredObjects(referrer)
 	if err != nil {
 		return err
@@ -82,7 +78,7 @@ func removeOutdatedReferencesToSecret(
 			}
 
 			// if the secret is still referenced, no operations are taken so continue here.
-			if referredSecretNameMap[namespacedName] {
+			if _, ok := referredSecretNameMap[namespacedName]; ok {
 				continue
 			}
 

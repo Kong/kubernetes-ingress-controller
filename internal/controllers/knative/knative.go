@@ -177,7 +177,7 @@ func (r *Knativev1alpha1IngressReconciler) Reconcile(ctx context.Context, req ct
 	}
 
 	// update reference records for secrets referred by the ingress
-	referredSecretNames := make([]types.NamespacedName, 0, len(obj.Spec.TLS))
+	referredSecretNames := make(map[types.NamespacedName]struct{}, len(obj.Spec.TLS))
 	for _, tls := range obj.Spec.TLS {
 		secretNamespace := tls.SecretNamespace
 		if tls.SecretNamespace != "" {
@@ -187,7 +187,7 @@ func (r *Knativev1alpha1IngressReconciler) Reconcile(ctx context.Context, req ct
 			Namespace: secretNamespace,
 			Name:      tls.SecretName,
 		}
-		referredSecretNames = append(referredSecretNames, nsName)
+		referredSecretNames[nsName] = struct{}{}
 	}
 	if err := ctrlref.UpdateReferencesToSecret(ctx, r.Client, r.ReferenceIndexers, r.DataplaneClient,
 		obj, referredSecretNames); err != nil {

@@ -122,8 +122,8 @@ func reconcileGatewaysIfClassMatches(gatewayClass client.Object, gateways []Gate
 }
 
 // list namespaced names of secrets referred by the gateway.
-func listSecretNamesReferredByGateway(gateway *gatewayv1beta1.Gateway) []types.NamespacedName {
-	nsNames := []types.NamespacedName{}
+func listSecretNamesReferredByGateway(gateway *gatewayv1beta1.Gateway) map[types.NamespacedName]struct{} {
+	nsNames := make(map[types.NamespacedName]struct{})
 
 	for _, listener := range gateway.Spec.Listeners {
 		if listener.TLS == nil {
@@ -144,10 +144,10 @@ func listSecretNamesReferredByGateway(gateway *gatewayv1beta1.Gateway) []types.N
 				refNamespace = string(*certRef.Namespace)
 			}
 
-			nsNames = append(nsNames, types.NamespacedName{
+			nsNames[types.NamespacedName{
 				Namespace: refNamespace,
 				Name:      string(certRef.Name),
-			})
+			}] = struct{}{}
 		}
 	}
 	return nsNames

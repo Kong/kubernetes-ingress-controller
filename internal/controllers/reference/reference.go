@@ -4,6 +4,7 @@ import (
 	"context"
 
 	corev1 "k8s.io/api/core/v1"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -12,8 +13,9 @@ import (
 )
 
 const (
-	VersionV1  = "v1"
-	KindSecret = "Secret"
+	VersionV1      = "v1"
+	KindSecret     = "Secret"
+	CACertLabelKey = "konghq.com/ca-cert"
 )
 
 // UpdateReferencesToSecret updates the reference records between referrer and each secret
@@ -49,7 +51,7 @@ func UpdateReferencesToSecret(
 		}
 	}
 
-	return removeOutdatedReferencesToSecret(indexers, dataplaneClient, referrer, namespacedNames)
+	return removeOutdatedReferencesToSecret(ctx, indexers, c, dataplaneClient, referrer, namespacedNames)
 }
 
 // removeOutdatedReferenceToSecret removes outdated reference records to secrets in reference indexer.
@@ -57,7 +59,8 @@ func UpdateReferencesToSecret(
 // if the secret is not actually referrenced by any object after deleting outdated reference records,
 // the secret will be removed from object cache in dataplaneClient.
 func removeOutdatedReferencesToSecret(
-	indexers CacheIndexers, dataplaneClient *dataplane.KongClient,
+	ctx context.Context,
+	indexers CacheIndexers, c client.Client, dataplaneClient *dataplane.KongClient,
 	referrer client.Object, referredSecretNames []types.NamespacedName,
 ) error {
 	referredSecretNameMap := make(map[types.NamespacedName]bool, len(referredSecretNames))
@@ -77,16 +80,38 @@ func removeOutdatedReferencesToSecret(
 				Namespace: obj.GetNamespace(),
 				Name:      obj.GetName(),
 			}
-			if !referredSecretNameMap[namespacedName] {
-				if err := indexers.DeleteObjectReference(referrer, obj); err != nil {
-					return err
+
+			// if the secret is still referenced, no operations are taken so continue here.
+			if referredSecretNameMap[namespacedName] {
+				continue
+			}
+
+			if err := indexers.DeleteObjectReference(referrer, obj); err != nil {
+				return err
+			}
+			// remove the secret in object cache if it is not referred and does not have label "konghq.com/ca-cert:true".
+			// Do this check and delete when the reference count may be reduced by 1.
+
+			// retrieve the secret in k8s and check it has the label.
+			secret := &corev1.Secret{}
+			getErr := c.Get(ctx, namespacedName, secret)
+			// if the secret exists in k8s and has the label, we should not delete it in object cache.
+			if getErr == nil {
+				if secret.Labels != nil && secret.Labels[CACertLabelKey] == "true" {
+					continue
 				}
-				// remove the secret in cache if it is not referred.
-				// Do this check and delete when the reference count may be reduced by 1.
-				if err := indexers.DeleteObjectIfNotReferred(obj, dataplaneClient); err != nil {
+			} else {
+				// if the secret does not exist in k8s, we ignore the error and continue the check and delete operation.
+				// for other errors, we return the error and stop the operation.
+				if !k8serrors.IsNotFound(getErr) {
 					return err
 				}
 			}
+
+			if err := indexers.DeleteObjectIfNotReferred(obj, dataplaneClient); err != nil {
+				return err
+			}
+
 		}
 	}
 	return nil

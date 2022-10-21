@@ -6,7 +6,7 @@ on:
   workflow_dispatch: {}
 
 env:
-  RH_SCAN_REGISTRY: scan.connect.redhat.com
+  RH_SCAN_REGISTRY: quay.io
   RH_SCAN_REGISTRY_IMAGE_NAME: ${{ secrets.RH_PROJECT_ID }}/nightly-ingress-controller
 
 jobs:

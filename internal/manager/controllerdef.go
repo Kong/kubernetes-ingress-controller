@@ -263,6 +263,7 @@ func setupControllers(
 				Scheme:           mgr.GetScheme(),
 				DataplaneClient:  dataplaneClient,
 				CacheSyncTimeout: c.CacheSyncTimeout,
+				StatusQueue:      kubernetesStatusQueue,
 			},
 		},
 		{

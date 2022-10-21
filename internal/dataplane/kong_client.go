@@ -249,10 +249,10 @@ func (c *KongClient) AreKubernetesObjectReportsEnabled() bool {
 
 // KubernetesObjectIsConfigured reports whether the provided object has active
 // configuration for itself successfully applied to the data-plane.
-func (c *KongClient) KubernetesObjectIsConfigured(obj client.Object) bool {
+func (c *KongClient) KubernetesObjectIsConfigured(obj client.Object) k8sobj.ConfiguredStatus {
 	c.kubernetesObjectReportLock.RLock()
 	defer c.kubernetesObjectReportLock.RUnlock()
-	return c.kubernetesObjectReportsFilter.Has(obj)
+	return c.kubernetesObjectReportsFilter.Get(obj)
 }
 
 // -----------------------------------------------------------------------------
@@ -317,12 +317,13 @@ func (c *KongClient) Update(ctx context.Context) error {
 
 	// parse the Kubernetes objects from the storer into Kong configuration
 	kongstate := p.Build()
-	if errors := p.GetParsingErrors(); errors != nil {
-		c.createParsingErrorsEvents(errors)
+	parsingErrors := p.GetParsingErrors()
+	if len(parsingErrors) > 0 {
+		c.createParsingErrorsEvents(parsingErrors)
 		c.prometheusMetrics.TranslationCount.With(prometheus.Labels{
 			metrics.SuccessKey: metrics.SuccessFalse,
 		}).Inc()
-		c.logger.Debugf("%d translation errors occurred when building data-plane configuration", len(errors))
+		c.logger.Debugf("%d translation errors occurred when building data-plane configuration", len(parsingErrors))
 	} else {
 		c.prometheusMetrics.TranslationCount.With(prometheus.Labels{
 			metrics.SuccessKey: metrics.SuccessTrue,
@@ -404,7 +405,7 @@ func (c *KongClient) Update(ctx context.Context) error {
 		if string(c.lastConfigSHA) != string(newConfigSHA) {
 			report := p.GenerateKubernetesObjectReport()
 			c.logger.Debugf("triggering report for %d configured Kubernetes objects", len(report))
-			c.triggerKubernetesObjectReport(report...)
+			c.triggerKubernetesObjectReport(report, parsingErrors)
 		} else {
 			c.logger.Debug("no configuration change, skipping kubernetes object report")
 		}
@@ -423,21 +424,28 @@ func (c *KongClient) Update(ctx context.Context) error {
 // enables filtering for which objects are currently applied to the data-plane,
 // as well as updating the c.kubernetesObjectStatusQueue to queue those objects
 // for reconciliation so their statuses can be properly updated.
-func (c *KongClient) triggerKubernetesObjectReport(objs ...client.Object) {
+func (c *KongClient) triggerKubernetesObjectReport(succeededObjs []client.Object, parsingErrors []parser.ParsingError) {
 	// first a new set of the included objects for the most recent configuration
 	// needs to be generated.
 	set := k8sobj.Set{}
-	for _, obj := range objs {
-		set.Insert(obj)
+	for _, obj := range succeededObjs {
+		set.InsertSucceeded(obj)
 	}
 
 	c.updateKubernetesObjectReportFilter(set)
 
+	failedObjs := make([]client.Object, 0, len(parsingErrors))
+	for _, err := range parsingErrors {
+		failedObjs = append(failedObjs, err.RelatedObjects()...)
+	}
+
+	objs := append(succeededObjs, failedObjs...)
 	// after the filter has been updated we signal the status queue so that the
 	// control-plane can update the Kubernetes object statuses for affected objs.
 	// this has to be done in a separate loop so that the filter is in place
 	// before the objects are enqueued, as the filter is used by the control-plane
 	for _, obj := range objs {
+		c.logger.Infof("publishing event for %s/%s/%s", obj.GetObjectKind(), obj.GetNamespace(), obj.GetName())
 		c.kubernetesObjectStatusQueue.Publish(obj)
 	}
 }

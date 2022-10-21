@@ -6,6 +6,8 @@ import (
 	"reflect"
 	"time"
 
+	k8sobj "github.com/kong/kubernetes-ingress-controller/v2/internal/util/kubernetes/object"
+
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -321,7 +323,7 @@ func (r *TCPRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		// tied in with status updates being enabled in the controller manager) then
 		// we will wait until the object is reported as successfully configured before
 		// moving on to status updates.
-		if !r.DataplaneClient.KubernetesObjectIsConfigured(tcproute) {
+		if !(r.DataplaneClient.KubernetesObjectIsConfigured(tcproute) == k8sobj.ConfiguredStatusSucceeded) {
 			return ctrl.Result{Requeue: true}, nil
 		}
 	}

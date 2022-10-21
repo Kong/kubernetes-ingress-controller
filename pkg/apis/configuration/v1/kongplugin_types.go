@@ -81,7 +81,7 @@ type KongPluginList struct {
 }
 
 const (
-	KongConditionConfiguredInGateway = "ConfiguredInGateway"
+	ProgrammedConditionType = "Programmed"
 )
 
 // KongPluginStatus represents the status of the kong plugin.

@@ -23,6 +23,8 @@ import (
 	"reflect"
 	"time"
 
+	k8sobj "github.com/kong/kubernetes-ingress-controller/v2/internal/util/kubernetes/object"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/go-logr/logr"
@@ -422,7 +424,7 @@ func (r *NetV1IngressReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	// if status updates are enabled report the status for the object
 	if r.DataplaneClient.AreKubernetesObjectReportsEnabled() {
 		log.V(util.DebugLevel).Info("determining whether data-plane configuration has succeeded", "namespace", req.Namespace, "name", req.Name)
-		if !r.DataplaneClient.KubernetesObjectIsConfigured(obj) {
+		if !(r.DataplaneClient.KubernetesObjectIsConfigured(obj) == k8sobj.ConfiguredStatusSucceeded) {
 			log.V(util.DebugLevel).Info("resource not yet configured in the data-plane", "namespace", req.Namespace, "name", req.Name)
 			return ctrl.Result{Requeue: true}, nil // requeue until the object has been properly configured
 		}
@@ -664,7 +666,7 @@ func (r *NetV1Beta1IngressReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	// if status updates are enabled report the status for the object
 	if r.DataplaneClient.AreKubernetesObjectReportsEnabled() {
 		log.V(util.DebugLevel).Info("determining whether data-plane configuration has succeeded", "namespace", req.Namespace, "name", req.Name)
-		if !r.DataplaneClient.KubernetesObjectIsConfigured(obj) {
+		if !(r.DataplaneClient.KubernetesObjectIsConfigured(obj) == k8sobj.ConfiguredStatusSucceeded) {
 			log.V(util.DebugLevel).Info("resource not yet configured in the data-plane", "namespace", req.Namespace, "name", req.Name)
 			return ctrl.Result{Requeue: true}, nil // requeue until the object has been properly configured
 		}
@@ -832,7 +834,7 @@ func (r *ExtV1Beta1IngressReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	// if status updates are enabled report the status for the object
 	if r.DataplaneClient.AreKubernetesObjectReportsEnabled() {
 		log.V(util.DebugLevel).Info("determining whether data-plane configuration has succeeded", "namespace", req.Namespace, "name", req.Name)
-		if !r.DataplaneClient.KubernetesObjectIsConfigured(obj) {
+		if !(r.DataplaneClient.KubernetesObjectIsConfigured(obj) == k8sobj.ConfiguredStatusSucceeded) {
 			log.V(util.DebugLevel).Info("resource not yet configured in the data-plane", "namespace", req.Namespace, "name", req.Name)
 			return ctrl.Result{Requeue: true}, nil // requeue until the object has been properly configured
 		}
@@ -941,6 +943,7 @@ type KongV1KongPluginReconciler struct {
 	Scheme           *runtime.Scheme
 	DataplaneClient  *dataplane.KongClient
 	CacheSyncTimeout time.Duration
+	StatusQueue      *status.Queue
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -955,6 +958,20 @@ func (r *KongV1KongPluginReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	if err != nil {
 		return err
 	}
+
+	if r.StatusQueue != nil {
+		if err := c.Watch(
+			&source.Channel{Source: r.StatusQueue.Subscribe(schema.GroupVersionKind{
+				Group:   "configuration.konghq.com",
+				Version: "v1",
+				Kind:    "KongPlugin",
+			})},
+			&handler.EnqueueRequestForObject{},
+		); err != nil {
+			return err
+		}
+	}
+
 	return c.Watch(
 		&source.Kind{Type: &kongv1.KongPlugin{}},
 		&handler.EnqueueRequestForObject{},
@@ -1003,20 +1020,29 @@ func (r *KongV1KongPluginReconciler) Reconcile(ctx context.Context, req ctrl.Req
 
 	if r.DataplaneClient.AreKubernetesObjectReportsEnabled() {
 		obj.Status.Conditions = nil
-		if r.DataplaneClient.KubernetesObjectIsConfigured(obj) {
+		configuredStatus := r.DataplaneClient.KubernetesObjectIsConfigured(obj)
+		if configuredStatus == k8sobj.ConfiguredStatusSucceeded {
 			obj.Status.Conditions = append(obj.Status.Conditions, metav1.Condition{
-				Type:               kongv1.KongConditionConfiguredInGateway,
+				Type:               kongv1.ProgrammedConditionType,
 				Status:             metav1.ConditionTrue,
 				ObservedGeneration: obj.Generation,
-				Reason:             "Configured",
+				Reason:             "ConfiguredInGateway",
+				LastTransitionTime: metav1.Now(),
+			})
+		} else if configuredStatus == k8sobj.ConfiguredStatusFailed {
+			obj.Status.Conditions = append(obj.Status.Conditions, metav1.Condition{
+				Type:               kongv1.ProgrammedConditionType,
+				Status:             metav1.ConditionFalse,
+				ObservedGeneration: obj.Generation,
+				Reason:             "ConfigurationFailed",
 				LastTransitionTime: metav1.Now(),
 			})
 		} else {
 			obj.Status.Conditions = append(obj.Status.Conditions, metav1.Condition{
-				Type:               kongv1.KongConditionConfiguredInGateway,
-				Status:             metav1.ConditionFalse,
+				Type:               kongv1.ProgrammedConditionType,
+				Status:             metav1.ConditionUnknown,
 				ObservedGeneration: obj.Generation,
-				Reason:             "Scheduled",
+				Reason:             "Unknown",
 				LastTransitionTime: metav1.Now(),
 			})
 		}
@@ -1437,7 +1463,7 @@ func (r *KongV1Beta1TCPIngressReconciler) Reconcile(ctx context.Context, req ctr
 	// if status updates are enabled report the status for the object
 	if r.DataplaneClient.AreKubernetesObjectReportsEnabled() {
 		log.V(util.DebugLevel).Info("determining whether data-plane configuration has succeeded", "namespace", req.Namespace, "name", req.Name)
-		if !r.DataplaneClient.KubernetesObjectIsConfigured(obj) {
+		if !(r.DataplaneClient.KubernetesObjectIsConfigured(obj) == k8sobj.ConfiguredStatusSucceeded) {
 			log.V(util.DebugLevel).Info("resource not yet configured in the data-plane", "namespace", req.Namespace, "name", req.Name)
 			return ctrl.Result{Requeue: true}, nil // requeue until the object has been properly configured
 		}
@@ -1605,7 +1631,7 @@ func (r *KongV1Beta1UDPIngressReconciler) Reconcile(ctx context.Context, req ctr
 	// if status updates are enabled report the status for the object
 	if r.DataplaneClient.AreKubernetesObjectReportsEnabled() {
 		log.V(util.DebugLevel).Info("determining whether data-plane configuration has succeeded", "namespace", req.Namespace, "name", req.Name)
-		if !r.DataplaneClient.KubernetesObjectIsConfigured(obj) {
+		if !(r.DataplaneClient.KubernetesObjectIsConfigured(obj) == k8sobj.ConfiguredStatusSucceeded) {
 			log.V(util.DebugLevel).Info("resource not yet configured in the data-plane", "namespace", req.Namespace, "name", req.Name)
 			return ctrl.Result{Requeue: true}, nil // requeue until the object has been properly configured
 		}

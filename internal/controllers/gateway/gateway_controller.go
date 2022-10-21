@@ -272,10 +272,12 @@ func (r *GatewayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	gateway := new(gatewayv1beta1.Gateway)
 	if err := r.Get(ctx, req.NamespacedName, gateway); err != nil {
 		if k8serrors.IsNotFound(err) {
-			debug(log, gateway, "reconciliation triggered but gateway does not exist, ignoring")
-			return ctrl.Result{Requeue: false}, nil
+			gateway.Namespace = req.Namespace
+			gateway.Name = req.Name
+			debug(log, gateway, "reconciliation triggered but gateway does not exist, deleting it in dataplane")
+			return ctrl.Result{}, r.DataplaneClient.DeleteObject(gateway)
 		}
-		return ctrl.Result{Requeue: true}, r.DataplaneClient.DeleteObject(gateway)
+		return ctrl.Result{Requeue: true}, err
 	}
 	debug(log, gateway, "processing gateway")
 

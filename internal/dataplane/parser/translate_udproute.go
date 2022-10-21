@@ -71,7 +71,7 @@ func (p *Parser) ingressRulesFromUDPRoute(result *ingressRules, udproute *gatewa
 		}
 
 		// create a service and attach the routes to it
-		service, err := generateKongServiceFromBackendRef(p.logger, p.storer, result, udproute, ruleNumber, "udp", rule.BackendRefs...)
+		service, err := generateKongServiceFromBackendRefWithRuleNumber(p.logger, p.storer, result, udproute, ruleNumber, "udp", rule.BackendRefs...)
 		if err != nil {
 			return err
 		}

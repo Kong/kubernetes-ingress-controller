@@ -86,7 +86,7 @@ func (p *Parser) ingressRulesFromHTTPRouteWithCombinedServiceRoutes(httproute *g
 		firstCombinedRuleNum := translationMeta.RulesNumbers[0]
 
 		// create a service and attach the routes to it
-		service, err := generateKongServiceFromBackendRef(p.logger, p.storer, result, httproute, firstCombinedRuleNum, "http", backendRefs...)
+		service, err := generateKongServiceFromBackendRefWithRuleNumber(p.logger, p.storer, result, httproute, firstCombinedRuleNum, "http", backendRefs...)
 		if err != nil {
 			return err
 		}
@@ -125,7 +125,7 @@ func (p *Parser) ingressRulesFromHTTPRouteLegacyFallback(httproute *gatewayv1bet
 		backendRefs := httpBackendRefsToBackendRefs(rule.BackendRefs)
 
 		// create a service and attach the routes to it
-		service, err := generateKongServiceFromBackendRef(p.logger, p.storer, result, httproute, ruleNumber, "http", backendRefs...)
+		service, err := generateKongServiceFromBackendRefWithRuleNumber(p.logger, p.storer, result, httproute, ruleNumber, "http", backendRefs...)
 		if err != nil {
 			return err
 		}
@@ -176,101 +176,68 @@ func generateKongRoutesFromHTTPRouteRule(
 	var routes []kongstate.Route
 
 	// generate kong plugins from rule.filters
-	plugins := generatePluginsFromHTTPRouteRuleFilters(rule)
+	plugins := generatePluginsFromHTTPRouteFilters(rule.Filters)
+
 	if len(rule.Matches) > 0 {
-		for matchNumber, match := range rule.Matches {
+		for matchNumber := range rule.Matches {
 			// determine the name of the route, identify it as a route that belongs
 			// to a Kubernetes HTTPRoute object.
-			routeName := kong.String(fmt.Sprintf(
+			routeName := fmt.Sprintf(
 				"httproute.%s.%s.%d.%d",
 				httproute.Namespace,
 				httproute.Name,
 				ruleNumber,
 				matchNumber,
-			))
+			)
 
-			// TODO: implement query param matches (https://github.com/Kong/kubernetes-ingress-controller/issues/2778)
-			if len(match.QueryParams) > 0 {
-				return nil, fmt.Errorf("query param matches are not yet supported")
-			}
-
-			// build the route object using the method and pathing information
-			r := kongstate.Route{
-				Ingress: objectInfo,
-				Route: kong.Route{
-					Name:         routeName,
-					Protocols:    kong.StringSlice("http", "https"),
-					PreserveHost: kong.Bool(true),
-				},
-			}
-
-			// attach any hostnames associated with the httproute
-			if len(hostnames) > 0 {
-				r.Hosts = hostnames
-			}
-
-			// configure path matching information about the route if paths matching was defined
-			// Kong automatically infers whether or not a path is a regular expression and uses a prefix match by
-			// default it it is not. For those types, we use the path value as-is and let Kong determine the type.
-			// For exact matches, we transform the path into a regular expression that terminates after the value
-			if match.Path != nil {
-				switch *match.Path.Type {
-				case gatewayv1beta1.PathMatchExact:
-					terminated := *match.Path.Value + "$"
-					if addRegexPrefix {
-						terminated = translators.KongPathRegexPrefix + terminated
-					}
-					r.Route.Paths = []*string{&terminated}
-				case gatewayv1beta1.PathMatchPathPrefix:
-					path := *match.Path.Value
-					r.Route.Paths = []*string{&path}
-				case gatewayv1beta1.PathMatchRegularExpression:
-					path := *match.Path.Value
-					if addRegexPrefix {
-						path = translators.KongPathRegexPrefix + path
-					}
-					r.Route.Paths = []*string{&path}
-				}
-			}
-
-			// configure method matching information about the route if method
-			// matching was defined.
-			if match.Method != nil {
-				r.Route.Methods = append(r.Route.Methods, kong.String(string(*match.Method)))
-			}
-
-			// convert header matching from HTTPRoute to Route format
-			headers, err := convertGatewayMatchHeadersToKongRouteMatchHeaders(match.Headers)
+			r, err := generateKongRouteFromHTTPRouteMatches(
+				routeName,
+				rule.Matches[matchNumber:matchNumber+1],
+				objectInfo,
+				hostnames,
+				plugins,
+				addRegexPrefix,
+			)
 			if err != nil {
 				return nil, err
-			}
-			if len(headers) > 0 {
-				r.Route.Headers = headers
-			}
-
-			// stripPath needs to be disabled by default to be conformant with the Gateway API
-			r.StripPath = kong.Bool(false)
-
-			// attach the plugins to be applied to the given route
-			if len(plugins) != 0 {
-				if r.Plugins == nil {
-					r.Plugins = make([]kong.Plugin, 0, len(plugins))
-				}
-				r.Plugins = append(r.Plugins, plugins...)
 			}
 
 			// add the route to the list of routes for the service(s)
 			routes = append(routes, r)
 		}
 	} else {
+		routeName := fmt.Sprintf("httproute.%s.%s.0.0", httproute.Namespace, httproute.Name)
+		r, err := generateKongRouteFromHTTPRouteMatches(routeName, rule.Matches, objectInfo, hostnames, plugins, addRegexPrefix)
+		if err != nil {
+			return nil, err
+		}
+
+		// add the route to the list of routes for the service(s)
+		routes = append(routes, r)
+	}
+
+	return routes, nil
+}
+
+// generateKongRouteFromHTTPRouteMatches converts an HTTPRouteMatches to a Kong Route object.
+// This function assumes that the HTTPRouteMatches share the query params, headers and methods.
+func generateKongRouteFromHTTPRouteMatches(
+	routeName string,
+	matches []gatewayv1beta1.HTTPRouteMatch,
+	ingressObjectInfo util.K8sObjectInfo,
+	hostnames []*string,
+	plugins []kong.Plugin,
+	addRegexPrefix bool,
+) (kongstate.Route, error) {
+	if len(matches) == 0 {
 		// it's acceptable for an HTTPRoute to have no matches in the rulesets,
 		// but only backends as long as there are hostnames. In this case, we
 		// match all traffic based on the hostname and leave all other routing
 		// options default.
 		r := kongstate.Route{
-			Ingress: objectInfo,
+			Ingress: ingressObjectInfo,
 			Route: kong.Route{
-				Name:         kong.String(fmt.Sprintf("httproute.%s.%s.0.0", httproute.Namespace, httproute.Name)),
+				Name:         kong.String(routeName),
 				Protocols:    kong.StringSlice("http", "https"),
 				PreserveHost: kong.Bool(true),
 			},
@@ -279,33 +246,122 @@ func generateKongRoutesFromHTTPRouteRule(
 		// however in this case there must actually be some present hostnames
 		// configured for the HTTPRoute or else it's not valid.
 		if len(hostnames) == 0 {
-			return nil, fmt.Errorf("no match rules or hostnames specified")
+			return kongstate.Route{}, fmt.Errorf("no match rules or hostnames specified")
 		}
 
 		// otherwise apply the hostnames to the route
 		r.Hosts = append(r.Hosts, hostnames...)
+
 		// attach the plugins to be applied to the given route
-		if len(plugins) != 0 {
-			if r.Plugins == nil {
-				r.Plugins = make([]kong.Plugin, 0, len(plugins))
-			}
-			r.Plugins = append(r.Plugins, plugins...)
-		}
-		routes = append(routes, r)
+		r.Plugins = append(r.Plugins, plugins...)
+
+		return r, nil
 	}
 
-	return routes, nil
+	// TODO: implement query param matches (https://github.com/Kong/kubernetes-ingress-controller/issues/2778)
+	if len(matches[0].QueryParams) > 0 {
+		return kongstate.Route{}, fmt.Errorf("query param matches are not yet supported")
+	}
+
+	r := generateKongstateRoute(routeName, ingressObjectInfo, hostnames)
+
+	// convert header matching from HTTPRoute to Route format
+	headers, err := convertGatewayMatchHeadersToKongRouteMatchHeaders(matches[0].Headers)
+	if err != nil {
+		return kongstate.Route{}, err
+	}
+	if len(headers) > 0 {
+		r.Route.Headers = headers
+	}
+
+	// stripPath needs to be disabled by default to be conformant with the Gateway API
+	r.StripPath = kong.Bool(false)
+
+	// attach the plugins to be applied to the given route
+	if len(plugins) != 0 {
+		if r.Plugins == nil {
+			r.Plugins = make([]kong.Plugin, 0, len(plugins))
+		}
+		r.Plugins = append(r.Plugins, plugins...)
+	}
+
+	seenMethods := make(map[string]struct{})
+
+	for _, match := range matches {
+		// configure path matching information about the route if paths matching was defined
+		// Kong automatically infers whether or not a path is a regular expression and uses a prefix match by
+		// default it it is not. For those types, we use the path value as-is and let Kong determine the type.
+		// For exact matches, we transform the path into a regular expression that terminates after the value
+		if match.Path != nil {
+			path := generateKongRoutePathFromHTTPRouteMatch(match, addRegexPrefix)
+			r.Route.Paths = append(r.Route.Paths, kong.String(path))
+		}
+
+		// configure method matching information about the route if method
+		// matching was defined.
+		if match.Method != nil {
+			method := string(*match.Method)
+			if _, ok := seenMethods[method]; !ok {
+				r.Route.Methods = append(r.Route.Methods, kong.String(string(*match.Method)))
+				seenMethods[method] = struct{}{}
+			}
+		}
+	}
+
+	return r, nil
 }
 
-// generatePluginsFromHTTPRouteRuleFilters accepts a rule as argument and converts
-// HttpRouteRule.Filters into Kong filters.
-func generatePluginsFromHTTPRouteRuleFilters(rule gatewayv1beta1.HTTPRouteRule) []kong.Plugin {
+func generateKongRoutePathFromHTTPRouteMatch(match gatewayv1beta1.HTTPRouteMatch, addRegexPrefix bool) string {
+	switch *match.Path.Type {
+	case gatewayv1beta1.PathMatchExact:
+		terminated := *match.Path.Value + "$"
+		if addRegexPrefix {
+			terminated = translators.KongPathRegexPrefix + terminated
+		}
+		return terminated
+
+	case gatewayv1beta1.PathMatchPathPrefix:
+		path := *match.Path.Value
+		return path
+
+	case gatewayv1beta1.PathMatchRegularExpression:
+		path := *match.Path.Value
+		if addRegexPrefix {
+			path = translators.KongPathRegexPrefix + path
+		}
+		return path
+	}
+
+	return "" // unreachable code
+}
+
+func generateKongstateRoute(routeName string, ingressObjectInfo util.K8sObjectInfo, hostnames []*string) kongstate.Route {
+	// build the route object using the method and pathing information
+	r := kongstate.Route{
+		Ingress: ingressObjectInfo,
+		Route: kong.Route{
+			Name:         kong.String(routeName),
+			Protocols:    kong.StringSlice("http", "https"),
+			PreserveHost: kong.Bool(true),
+		},
+	}
+
+	// attach any hostnames associated with the httproute
+	if len(hostnames) > 0 {
+		r.Hosts = hostnames
+	}
+
+	return r
+}
+
+// generatePluginsFromHTTPRouteFilters  converts HTTPRouteFilter into Kong filters.
+func generatePluginsFromHTTPRouteFilters(filters []gatewayv1beta1.HTTPRouteFilter) []kong.Plugin {
 	kongPlugins := make([]kong.Plugin, 0)
-	if rule.Filters == nil {
+	if len(filters) == 0 {
 		return kongPlugins
 	}
 
-	for _, filter := range rule.Filters {
+	for _, filter := range filters {
 		if filter.Type == gatewayv1beta1.HTTPRouteFilterRequestHeaderModifier {
 			kongPlugins = append(kongPlugins, generateRequestHeaderModifierKongPlugin(filter.RequestHeaderModifier))
 		}

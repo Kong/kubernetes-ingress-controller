@@ -12,7 +12,7 @@ on:
         default: 'false'
 env:
   RH_SCAN_REGISTRY: quay.io
-  RH_SCAN_REGISTRY_IMAGE_NAME: ${{ secrets.RH_PROJECT_ID }}/kong-ingress-controller
+  RH_SCAN_REGISTRY_IMAGE_NAME: redhat-isv-containers/5eab1b8ea165648bd1353266
 
 jobs:
   verify-manifest-tag:
@@ -142,7 +142,7 @@ jobs:
             TAG=${{ steps.meta.outputs.version }}
             COMMIT=${{ github.sha }}
             REPO_INFO=https://github.com/${{ github.repository }}.git
-      - name: Build and push
+      - name: Build and push distroless image to DockerHub
         id: docker_build
         uses: docker/build-push-action@v3
         with:
@@ -156,7 +156,7 @@ jobs:
             TAG=${{ steps.meta.outputs.version }}
             COMMIT=${{ github.sha }}
             REPO_INFO=https://github.com/${{ github.repository }}.git
-      - name: Build and push Red Hat image
+      - name: Build and push Red Hat image to DockerHub
         id: docker_build_redhat
         env:
           TAG: ${{ steps.meta_redhat.outputs.version }}
@@ -172,7 +172,7 @@ jobs:
             TAG=${{ steps.meta.outputs.version }}
             COMMIT=${{ github.sha }}
             REPO_INFO=https://github.com/${{ github.repository }}.git
-      - name: Build and push Red Hat Scan Registry image
+      - name: Build and push Red Hat image to Red Hat Scan Registry
         id: docker_build_redhat_scan_registry
         env:
           TAG: ${{ steps.meta_redhat_scan_registry.outputs.version }}

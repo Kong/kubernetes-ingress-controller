@@ -437,13 +437,14 @@ func (c *KongClient) triggerKubernetesObjectReport(succeededObjs []client.Object
 	failedObjs := make([]client.Object, 0, len(parsingErrors))
 	for _, err := range parsingErrors {
 		failedObjs = append(failedObjs, err.RelatedObjects()...)
+		set.InsertFailed(err.RelatedObjects()...)
 	}
 
-	objs := append(succeededObjs, failedObjs...)
 	// after the filter has been updated we signal the status queue so that the
 	// control-plane can update the Kubernetes object statuses for affected objs.
 	// this has to be done in a separate loop so that the filter is in place
 	// before the objects are enqueued, as the filter is used by the control-plane
+	objs := append(succeededObjs, failedObjs...)
 	for _, obj := range objs {
 		c.logger.Infof("publishing event for %s/%s/%s", obj.GetObjectKind(), obj.GetNamespace(), obj.GetName())
 		c.kubernetesObjectStatusQueue.Publish(obj)

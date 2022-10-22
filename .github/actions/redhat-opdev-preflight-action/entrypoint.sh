@@ -24,7 +24,7 @@ require_env INPUT_PASSWORD INPUT_USERNAME INPUT_IMAGE INPUT_SUBMIT
 
 
 # Login.
-echo "$INPUT_PASSWORD"  | docker login scan.connect.redhat.com -u "${INPUT_USERNAME}" --password-stdin
+echo "$INPUT_PASSWORD"  | docker login quay.io -u "${INPUT_USERNAME}" --password-stdin
 
 
 # Run checks, do not submit the results.

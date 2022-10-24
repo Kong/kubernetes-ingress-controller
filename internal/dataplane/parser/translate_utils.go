@@ -72,16 +72,16 @@ func getPermittedForReferenceGrantFrom(
 	return allowed
 }
 
-// generateKongServiceFromBackendRef translates backendRefs for rule ruleNumber into a Kong service for use with the
-// rules generated from a Gateway APIs route.
-func generateKongServiceFromBackendRef[
+// generateKongServiceFromBackendRefWithName translates backendRefs into a Kong service for use with the
+// rules generated from a Gateway APIs route. The service name is provided by the caller.
+func generateKongServiceFromBackendRefWithName[
 	T types.BackendRefT,
 ](
 	logger logrus.FieldLogger,
 	storer store.Storer,
 	rules *ingressRules,
+	serviceName string,
 	route client.Object,
-	ruleNumber int,
 	protocol string,
 	backendRefs ...T,
 ) (kongstate.Service, error) {
@@ -102,10 +102,6 @@ func generateKongServiceFromBackendRef[
 	}, grants)
 
 	backends := backendRefsToKongStateBackends(logger, route, backendRefs, allowed)
-
-	// the service name needs to uniquely identify this service given it's list of
-	// one or more backends.
-	serviceName := fmt.Sprintf("%s.%d", getUniqueKongServiceNameForObject(route), ruleNumber)
 
 	// the service host needs to be a resolvable name due to legacy logic so we'll
 	// use the anchor backendRef as the basis for the name
@@ -148,6 +144,34 @@ func generateKongServiceFromBackendRef[
 	}
 
 	return service, nil
+}
+
+// generateKongServiceFromBackendRefWithRuleNumber translates backendRefs for rule ruleNumber into a Kong service for use with the
+// rules generated from a Gateway APIs route. The service name is computed from route and ruleNumber by the function.
+func generateKongServiceFromBackendRefWithRuleNumber[
+	T types.BackendRefT,
+](
+	logger logrus.FieldLogger,
+	storer store.Storer,
+	rules *ingressRules,
+	route client.Object,
+	ruleNumber int,
+	protocol string,
+	backendRefs ...T,
+) (kongstate.Service, error) {
+	// the service name needs to uniquely identify this service given it's list of
+	// one or more backends.
+	serviceName := fmt.Sprintf("%s.%d", getUniqueKongServiceNameForObject(route), ruleNumber)
+
+	return generateKongServiceFromBackendRefWithName(
+		logger,
+		storer,
+		rules,
+		serviceName,
+		route,
+		protocol,
+		backendRefs...,
+	)
 }
 
 // maybePrependRegexPrefix takes a path, controller regex prefix, and a legacy heuristic toggle. It returns the path

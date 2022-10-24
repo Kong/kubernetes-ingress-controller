@@ -290,7 +290,7 @@ func generateKongRouteFromHTTPRouteMatches(
 	for _, match := range matches {
 		// configure path matching information about the route if paths matching was defined
 		// Kong automatically infers whether or not a path is a regular expression and uses a prefix match by
-		// default it it is not. For those types, we use the path value as-is and let Kong determine the type.
+		// default if it is not. For those types, we use the path value as-is and let Kong determine the type.
 		// For exact matches, we transform the path into a regular expression that terminates after the value
 		if match.Path != nil {
 			path := generateKongRoutePathFromHTTPRouteMatch(match, addRegexPrefix)

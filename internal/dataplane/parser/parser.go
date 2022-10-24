@@ -191,7 +191,8 @@ func (p *Parser) GenerateKubernetesObjectReport() []client.Object {
 	return report
 }
 
-func (p *Parser) GetParsingErrors() []ParsingError {
+// PopParsingErrors pops all the parsing errors collected during the last parsing round.
+func (p *Parser) PopParsingErrors() []ParsingError {
 	errors := p.errorsCollector.errors
 	p.errorsCollector.errors = nil
 	return errors

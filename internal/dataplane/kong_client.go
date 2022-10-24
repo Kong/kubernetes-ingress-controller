@@ -317,7 +317,7 @@ func (c *KongClient) Update(ctx context.Context) error {
 
 	// parse the Kubernetes objects from the storer into Kong configuration
 	kongstate := p.Build()
-	if errors := p.GetParsingErrors(); errors != nil {
+	if errors := p.PopParsingErrors(); errors != nil {
 		c.createParsingErrorsEvents(errors)
 		c.prometheusMetrics.TranslationCount.With(prometheus.Labels{
 			metrics.SuccessKey: metrics.SuccessFalse,

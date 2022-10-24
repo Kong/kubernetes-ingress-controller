@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/kong/go-kong/kong"
-	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -20,11 +19,9 @@ import (
 // getCACerts translates CA certificates Secrets to kong.CACertificates. It ensures every certificate's structure and
 // validity. In case of violation of any validation rule, a secret gets skipped in a result and error message is logged
 // with affected plugins for context.
-func (p *Parser) getCACerts(
-	log logrus.FieldLogger,
-	storer store.Storer,
-) []kong.CACertificate {
-	caCertSecrets, err := storer.ListCACerts()
+func (p *Parser) getCACerts() []kong.CACertificate {
+	log := p.logger
+	caCertSecrets, err := p.storer.ListCACerts()
 	if err != nil {
 		log.WithError(err).Error("failed to list CA certs")
 		return nil
@@ -41,7 +38,7 @@ func (p *Parser) getCACerts(
 
 		caCert, err := toKongCACertificate(certSecret, secretID)
 		if err != nil {
-			affectedObjects := getPluginsAssociatedWithCACertSecret(secretID, storer)
+			affectedObjects := getPluginsAssociatedWithCACertSecret(secretID, p.storer)
 			affectedObjects = append(affectedObjects, certSecret)
 			p.errorsCollector.ParsingError(fmt.Sprintf("invalid CA certificate: %s", err), affectedObjects...)
 			continue

@@ -83,7 +83,8 @@ func (r *CoreV1SecretReconciler) shouldReconcileSecret(obj client.Object) bool {
 	referred, err := r.ReferenceIndexers.ObjectReferred(secret)
 
 	if err != nil {
-		r.Log.Info("failed to check whether secret referred:", err)
+		r.Log.Error(err, "failed to check whether secret referred",
+			"namespace", secret.Namespace, "name", secret.Name)
 		return false
 	}
 
@@ -98,26 +99,26 @@ func (r *CoreV1SecretReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	log := r.Log.WithValues("CoreV1Secret", req.NamespacedName)
 
 	// get the relevant object
-	obj := new(corev1.Secret)
-	if err := r.Get(ctx, req.NamespacedName, obj); err != nil {
+	secret := new(corev1.Secret)
+	if err := r.Get(ctx, req.NamespacedName, secret); err != nil {
 		if errors.IsNotFound(err) {
-			obj.Namespace = req.Namespace
-			obj.Name = req.Name
-			return ctrl.Result{}, r.DataplaneClient.DeleteObject(obj)
+			secret.Namespace = req.Namespace
+			secret.Name = req.Name
+			return ctrl.Result{}, r.DataplaneClient.DeleteObject(secret)
 		}
 		return ctrl.Result{}, err
 	}
 	log.V(util.DebugLevel).Info("reconciling resource", "namespace", req.Namespace, "name", req.Name)
 
 	// clean the object up if it's being deleted
-	if !obj.DeletionTimestamp.IsZero() && time.Now().After(obj.DeletionTimestamp.Time) {
+	if !secret.DeletionTimestamp.IsZero() && time.Now().After(secret.DeletionTimestamp.Time) {
 		log.V(util.DebugLevel).Info("resource is being deleted, its configuration will be removed", "type", "Secret", "namespace", req.Namespace, "name", req.Name)
-		objectExistsInCache, err := r.DataplaneClient.ObjectExists(obj)
+		objectExistsInCache, err := r.DataplaneClient.ObjectExists(secret)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
 		if objectExistsInCache {
-			if err := r.DataplaneClient.DeleteObject(obj); err != nil {
+			if err := r.DataplaneClient.DeleteObject(secret); err != nil {
 				return ctrl.Result{}, err
 			}
 			return ctrl.Result{Requeue: true}, nil // wait until the object is no longer present in the cache
@@ -126,7 +127,7 @@ func (r *CoreV1SecretReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	}
 
 	// update the kong Admin API with the changes
-	if err := r.DataplaneClient.UpdateObject(obj); err != nil {
+	if err := r.DataplaneClient.UpdateObject(secret); err != nil {
 		return ctrl.Result{}, err
 	}
 

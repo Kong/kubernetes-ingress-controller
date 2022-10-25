@@ -350,7 +350,7 @@ type typeNeeded struct {
 	// updates for the resource.
 	CapableOfStatusUpdates bool
 
-	// NeedUpdateReferences is true if we need to update the referece relationships
+	// NeedUpdateReferences is true if we need to update the reference relationships
 	// between reconciled object and other objects.
 	NeedsUpdateReferences bool
 }

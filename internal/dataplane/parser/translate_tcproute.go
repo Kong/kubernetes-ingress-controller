@@ -71,7 +71,7 @@ func (p *Parser) ingressRulesFromTCPRoute(result *ingressRules, tcproute *gatewa
 		}
 
 		// create a service and attach the routes to it
-		service, err := generateKongServiceFromBackendRef(p.logger, p.storer, result, tcproute, ruleNumber, "tcp", rule.BackendRefs...)
+		service, err := generateKongServiceFromBackendRefWithRuleNumber(p.logger, p.storer, result, tcproute, ruleNumber, "tcp", rule.BackendRefs...)
 		if err != nil {
 			return err
 		}

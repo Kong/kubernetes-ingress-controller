@@ -23,38 +23,43 @@ import (
 func updateReferredObjects(
 	ctx context.Context, client client.Client, refIndexers ctrlref.CacheIndexers, dataplaneClient *dataplane.KongClient, obj client.Object) error {
 
-	var referredSecretNames = make(map[types.NamespacedName]struct{})
+	var referredSecretNameMap = make(map[types.NamespacedName]struct{})
+	var referredSecretList []types.NamespacedName
 	switch obj := obj.(type) {
 	// functions update***ReferredSecrets first list the secrets referred by object,
 	// then call UpdateReferencesToSecret to store referrence records between the object and referred secrets,
 	// and also to remove the outdated reference records in cache where the secret is not referred by the obj specification anymore.
 	case *corev1.Service:
-		listCoreV1ServiceReferredSecrets(obj, referredSecretNames)
+		referredSecretList = listCoreV1ServiceReferredSecrets(obj)
 	case *netv1.Ingress:
-		listNetV1IngressReferredSecrets(obj, referredSecretNames)
+		referredSecretList = listNetV1IngressReferredSecrets(obj)
 	case *netv1beta1.Ingress:
-		listNetV1beta1IngressReferredSecrets(obj, referredSecretNames)
+		referredSecretList = listNetV1beta1IngressReferredSecrets(obj)
 	case *extv1beta1.Ingress:
-		listExtensionV1beta1IngressReferredSecrets(obj, referredSecretNames)
+		referredSecretList = listExtensionV1beta1IngressReferredSecrets(obj)
 	case *kongv1.KongPlugin:
-		listKongPluginReferredSecrets(obj, referredSecretNames)
+		referredSecretList = listKongPluginReferredSecrets(obj)
 	case *kongv1.KongClusterPlugin:
-		listKongClusterPluginReferredSecrets(obj, referredSecretNames)
+		referredSecretList = listKongClusterPluginReferredSecrets(obj)
 	case *kongv1.KongConsumer:
-		listKongConsumerReferredSecrets(obj, referredSecretNames)
+		referredSecretList = listKongConsumerReferredSecrets(obj)
 	case *kongv1beta1.TCPIngress:
-		listTCPIngressReferredSecrets(obj, referredSecretNames)
+		referredSecretList = listTCPIngressReferredSecrets(obj)
 	}
 
-	return ctrlref.UpdateReferencesToSecret(ctx, client, refIndexers, dataplaneClient, obj, referredSecretNames)
+	for _, nsName := range referredSecretList {
+		referredSecretNameMap[nsName] = struct{}{}
+	}
+	return ctrlref.UpdateReferencesToSecret(ctx, client, refIndexers, dataplaneClient, obj, referredSecretNameMap)
 }
 
-func listCoreV1ServiceReferredSecrets(service *corev1.Service, referredSecretNames map[types.NamespacedName]struct{}) {
+func listCoreV1ServiceReferredSecrets(service *corev1.Service) []types.NamespacedName {
 
 	if service.Annotations == nil {
-		return
+		return nil
 	}
 
+	referredSecretNames := make([]types.NamespacedName, 0, 1)
 	secretName := annotations.ExtractClientCertificate(service.Annotations)
 	if secretName != "" {
 		nsName := types.NamespacedName{
@@ -62,77 +67,91 @@ func listCoreV1ServiceReferredSecrets(service *corev1.Service, referredSecretNam
 			Name:      secretName,
 		}
 
-		referredSecretNames[nsName] = struct{}{}
+		referredSecretNames = append(referredSecretNames, nsName)
 	}
+	return referredSecretNames
 }
 
-func listNetV1IngressReferredSecrets(ingress *netv1.Ingress, referredSecretNames map[types.NamespacedName]struct{}) {
+func listNetV1IngressReferredSecrets(ingress *netv1.Ingress) []types.NamespacedName {
+	referredSecretNames := make([]types.NamespacedName, 0, len(ingress.Spec.TLS))
 	for _, tls := range ingress.Spec.TLS {
 		nsName := types.NamespacedName{
 			Namespace: ingress.Namespace,
 			Name:      tls.SecretName,
 		}
-		referredSecretNames[nsName] = struct{}{}
+		referredSecretNames = append(referredSecretNames, nsName)
 	}
+	return referredSecretNames
 }
 
-func listNetV1beta1IngressReferredSecrets(ingress *netv1beta1.Ingress, referredSecretNames map[types.NamespacedName]struct{}) {
+func listNetV1beta1IngressReferredSecrets(ingress *netv1beta1.Ingress) []types.NamespacedName {
+	referredSecretNames := make([]types.NamespacedName, 0, len(ingress.Spec.TLS))
 	for _, tls := range ingress.Spec.TLS {
 		nsName := types.NamespacedName{
 			Namespace: ingress.Namespace,
 			Name:      tls.SecretName,
 		}
-		referredSecretNames[nsName] = struct{}{}
+		referredSecretNames = append(referredSecretNames, nsName)
 	}
+	return referredSecretNames
 }
 
-func listExtensionV1beta1IngressReferredSecrets(ingress *extv1beta1.Ingress, referredSecretNames map[types.NamespacedName]struct{}) {
+func listExtensionV1beta1IngressReferredSecrets(ingress *extv1beta1.Ingress) []types.NamespacedName {
+	referredSecretNames := make([]types.NamespacedName, 0, len(ingress.Spec.TLS))
 	for _, tls := range ingress.Spec.TLS {
 		nsName := types.NamespacedName{
 			Namespace: ingress.Namespace,
 			Name:      tls.SecretName,
 		}
-		referredSecretNames[nsName] = struct{}{}
+		referredSecretNames = append(referredSecretNames, nsName)
 	}
+	return referredSecretNames
 }
 
-func listKongPluginReferredSecrets(plugin *kongv1.KongPlugin, referredSecretNames map[types.NamespacedName]struct{}) {
+func listKongPluginReferredSecrets(plugin *kongv1.KongPlugin) []types.NamespacedName {
+	referredSecretNames := make([]types.NamespacedName, 0, 1)
 	if plugin.ConfigFrom != nil {
 		nsName := types.NamespacedName{
 			Namespace: plugin.Namespace,
 			Name:      plugin.ConfigFrom.SecretValue.Secret,
 		}
-		referredSecretNames[nsName] = struct{}{}
+		referredSecretNames = append(referredSecretNames, nsName)
 	}
-
+	return referredSecretNames
 }
 
-func listKongClusterPluginReferredSecrets(plugin *kongv1.KongClusterPlugin, referredSecretNames map[types.NamespacedName]struct{}) {
+func listKongClusterPluginReferredSecrets(plugin *kongv1.KongClusterPlugin) []types.NamespacedName {
+	referredSecretNames := make([]types.NamespacedName, 0, 1)
 	if plugin.ConfigFrom != nil {
 		nsName := types.NamespacedName{
 			Namespace: plugin.ConfigFrom.SecretValue.Namespace,
 			Name:      plugin.ConfigFrom.SecretValue.Secret,
 		}
-		referredSecretNames[nsName] = struct{}{}
+		referredSecretNames = append(referredSecretNames, nsName)
 	}
+	return referredSecretNames
 }
 
-func listKongConsumerReferredSecrets(consumer *kongv1.KongConsumer, referredSecretNames map[types.NamespacedName]struct{}) {
+func listKongConsumerReferredSecrets(consumer *kongv1.KongConsumer) []types.NamespacedName {
+	referredSecretNames := make([]types.NamespacedName, 0, len(consumer.Credentials))
 	for _, secretName := range consumer.Credentials {
 		nsName := types.NamespacedName{
 			Namespace: consumer.Namespace,
 			Name:      secretName,
 		}
-		referredSecretNames[nsName] = struct{}{}
+		referredSecretNames = append(referredSecretNames, nsName)
 	}
+	return referredSecretNames
 }
 
-func listTCPIngressReferredSecrets(tcpIngress *kongv1beta1.TCPIngress, referredSecretNames map[types.NamespacedName]struct{}) {
+func listTCPIngressReferredSecrets(tcpIngress *kongv1beta1.TCPIngress) []types.NamespacedName {
+	referredSecretNames := make([]types.NamespacedName, 0, len(tcpIngress.Spec.TLS))
 	for _, tls := range tcpIngress.Spec.TLS {
 		nsName := types.NamespacedName{
 			Namespace: tcpIngress.Namespace,
 			Name:      tls.SecretName,
 		}
-		referredSecretNames[nsName] = struct{}{}
+		referredSecretNames = append(referredSecretNames, nsName)
 	}
+	return referredSecretNames
 }

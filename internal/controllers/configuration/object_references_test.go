@@ -62,8 +62,7 @@ func TestListCoreV1ServiceReferredSecrets(t *testing.T) {
 	for _, tc := range testCases {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
-			secretNames := make(map[types.NamespacedName]struct{})
-			listCoreV1ServiceReferredSecrets(tc.service, secretNames)
+			secretNames := listCoreV1ServiceReferredSecrets(tc.service)
 			require.Len(t, secretNames, tc.secretNum)
 			if tc.secretNum > 0 {
 				require.Contains(t, secretNames, tc.refSecretName)
@@ -110,8 +109,7 @@ func TestListIngressReferredSecrets(t *testing.T) {
 	for _, tc := range testCases {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
-			secretNames := make(map[types.NamespacedName]struct{})
-			listNetV1IngressReferredSecrets(tc.ingress, secretNames)
+			secretNames := listNetV1IngressReferredSecrets(tc.ingress)
 			require.Len(t, secretNames, tc.secretNum)
 			if tc.secretNum > 0 {
 				require.Contains(t, secretNames, tc.refSecretName)
@@ -161,8 +159,7 @@ func TestListKongPluginReferredSecrets(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			secretNames := make(map[types.NamespacedName]struct{})
-			listKongPluginReferredSecrets(tc.plugin, secretNames)
+			secretNames := listKongPluginReferredSecrets(tc.plugin)
 			require.Len(t, secretNames, tc.secretNum)
 			if tc.secretNum > 0 {
 				require.Contains(t, secretNames, tc.refSecretName)
@@ -211,8 +208,7 @@ func TestListKongClusterPluginReferredSecrets(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			secretNames := make(map[types.NamespacedName]struct{})
-			listKongClusterPluginReferredSecrets(tc.plugin, secretNames)
+			secretNames := listKongClusterPluginReferredSecrets(tc.plugin)
 			require.Len(t, secretNames, tc.secretNum)
 			if tc.secretNum > 0 {
 				require.Contains(t, secretNames, tc.refSecretName)
@@ -257,8 +253,7 @@ func TestListKongConsumerReferredSecrets(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			secretNames := make(map[types.NamespacedName]struct{})
-			listKongConsumerReferredSecrets(tc.consumer, secretNames)
+			secretNames := listKongConsumerReferredSecrets(tc.consumer)
 			require.Len(t, secretNames, tc.secretNum)
 			if tc.secretNum > 0 {
 				require.Contains(t, secretNames, tc.refSecretName)
@@ -308,8 +303,7 @@ func TestListTCPIngressReferredSecrets(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			secretNames := make(map[types.NamespacedName]struct{})
-			listTCPIngressReferredSecrets(tc.tcpIngress, secretNames)
+			secretNames := listTCPIngressReferredSecrets(tc.tcpIngress)
 			require.Len(t, secretNames, tc.secretNum)
 			if tc.secretNum > 0 {
 				require.Contains(t, secretNames, tc.refSecretName)

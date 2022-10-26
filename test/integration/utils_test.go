@@ -504,6 +504,7 @@ func setup(t *testing.T) (*corev1.Namespace, *clusters.Cleaner) {
 	}, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.AddNamespace(namespace)
+	t.Logf("created namespace %s for test case %s", namespace.Name, t.Name())
 
 	return namespace, cleaner
 }

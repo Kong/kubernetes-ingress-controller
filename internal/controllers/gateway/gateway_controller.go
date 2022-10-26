@@ -25,6 +25,7 @@ import (
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
+	ctrlref "github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/reference"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane"
 )
 
@@ -55,6 +56,8 @@ type GatewayReconciler struct { //nolint:revive
 	// to invalidate or allow cross-namespace TLSConfigs in gateways.
 	EnableReferenceGrant bool
 	CacheSyncTimeout     time.Duration
+
+	ReferenceIndexers ctrlref.CacheIndexers
 
 	publishServiceRef types.NamespacedName
 }
@@ -274,6 +277,11 @@ func (r *GatewayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		if k8serrors.IsNotFound(err) {
 			gateway.Namespace = req.Namespace
 			gateway.Name = req.Name
+			// delete reference relationships where the gateway is the referrer.
+			err := ctrlref.DeleteReferencesByReferrer(r.ReferenceIndexers, r.DataplaneClient, gateway)
+			if err != nil {
+				return ctrl.Result{}, err
+			}
 			debug(log, gateway, "reconciliation triggered but gateway does not exist, deleting it in dataplane")
 			return ctrl.Result{}, r.DataplaneClient.DeleteObject(gateway)
 		}
@@ -289,6 +297,11 @@ func (r *GatewayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	gwc := &gatewayv1beta1.GatewayClass{}
 	if err := r.Client.Get(ctx, client.ObjectKey{Name: string(gateway.Spec.GatewayClassName)}, gwc); err != nil {
 		debug(log, gateway, "could not retrieve gatewayclass for gateway", "gatewayclass", string(gateway.Spec.GatewayClassName))
+		// delete reference relationships where the gateway is the referrer, as we will not process the gateway.
+		err := ctrlref.DeleteReferencesByReferrer(r.ReferenceIndexers, r.DataplaneClient, gateway)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
 		if err := r.DataplaneClient.DeleteObject(gateway); err != nil {
 			debug(log, gateway, "failed to delete object from data-plane, requeuing")
 			return ctrl.Result{}, err
@@ -298,6 +311,11 @@ func (r *GatewayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	}
 	if gwc.Spec.ControllerName != ControllerName {
 		debug(log, gateway, "unsupported gatewayclass controllername, ignoring", "gatewayclass", gwc.Name, "controllername", gwc.Spec.ControllerName)
+		// delete reference relationships where the gateway is the referrer, as we will not process the gateway.
+		err := ctrlref.DeleteReferencesByReferrer(r.ReferenceIndexers, r.DataplaneClient, gateway)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
 		if err := r.DataplaneClient.DeleteObject(gateway); err != nil {
 			debug(log, gateway, "failed to delete object from data-plane, requeuing")
 			return ctrl.Result{}, err
@@ -331,6 +349,17 @@ func (r *GatewayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	if err == nil {
 		if err := r.DataplaneClient.UpdateObject(gateway); err != nil {
 			debug(log, gateway, "failed to update object in data-plane, requeueing")
+			return result, err
+		}
+
+		referredSecretNames := listSecretNamesReferredByGateway(gateway)
+		if err := ctrlref.UpdateReferencesToSecret(
+			ctx, r.Client, r.ReferenceIndexers, r.DataplaneClient,
+			gateway, referredSecretNames); err != nil {
+			if k8serrors.IsNotFound(err) {
+				result.Requeue = true
+				return result, nil
+			}
 			return result, err
 		}
 	}

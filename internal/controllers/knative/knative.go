@@ -22,6 +22,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
+	ctrlref "github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/reference"
 	ctrlutils "github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/utils"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
@@ -46,6 +47,8 @@ type Knativev1alpha1IngressReconciler struct {
 	IngressClassName           string
 	DisableIngressClassLookups bool
 	CacheSyncTimeout           time.Duration
+
+	ReferenceIndexers ctrlref.CacheIndexers
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -125,6 +128,11 @@ func (r *Knativev1alpha1IngressReconciler) Reconcile(ctx context.Context, req ct
 		if errors.IsNotFound(err) {
 			obj.Namespace = req.Namespace
 			obj.Name = req.Name
+
+			err := ctrlref.DeleteReferencesByReferrer(r.ReferenceIndexers, r.DataplaneClient, obj)
+			if err != nil {
+				return ctrl.Result{}, err
+			}
 			return ctrl.Result{}, r.DataplaneClient.DeleteObject(obj)
 		}
 		return ctrl.Result{}, err
@@ -134,6 +142,11 @@ func (r *Knativev1alpha1IngressReconciler) Reconcile(ctx context.Context, req ct
 	// clean the object up if it's being deleted
 	if !obj.DeletionTimestamp.IsZero() && time.Now().After(obj.DeletionTimestamp.Time) {
 		log.V(util.DebugLevel).Info("resource is being deleted, its configuration will be removed", "type", "Ingress", "namespace", req.Namespace, "name", req.Name)
+		err := ctrlref.DeleteReferencesByReferrer(r.ReferenceIndexers, r.DataplaneClient, obj)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+
 		objectExistsInCache, err := r.DataplaneClient.ObjectExists(obj)
 		if err != nil {
 			return ctrl.Result{}, err
@@ -161,6 +174,24 @@ func (r *Knativev1alpha1IngressReconciler) Reconcile(ctx context.Context, req ct
 	if !ctrlutils.MatchesIngressClass(obj, r.IngressClassName, ctrlutils.IsDefaultIngressClass(class)) {
 		log.V(util.DebugLevel).Info("object missing ingress class, ensuring it's removed from configuration", "namespace", req.Namespace, "name", req.Name)
 		return ctrl.Result{}, r.DataplaneClient.DeleteObject(obj)
+	}
+
+	// update reference records for secrets referred by the ingress
+	referredSecretNames := make(map[types.NamespacedName]struct{}, len(obj.Spec.TLS))
+	for _, tls := range obj.Spec.TLS {
+		secretNamespace := tls.SecretNamespace
+		if tls.SecretNamespace != "" {
+			secretNamespace = tls.SecretNamespace
+		}
+		nsName := types.NamespacedName{
+			Namespace: secretNamespace,
+			Name:      tls.SecretName,
+		}
+		referredSecretNames[nsName] = struct{}{}
+	}
+	if err := ctrlref.UpdateReferencesToSecret(ctx, r.Client, r.ReferenceIndexers, r.DataplaneClient,
+		obj, referredSecretNames); err != nil {
+		return ctrl.Result{}, err
 	}
 
 	// update the kong Admin API with the changes

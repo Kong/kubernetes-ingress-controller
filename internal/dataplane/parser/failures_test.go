@@ -20,7 +20,7 @@ func someValidTranslationFailureCausingObjects() []client.Object {
 }
 
 func TestTranslationFailure(t *testing.T) {
-	t.Run("is_created_and_returns_reason_and_causing_objects", func(t *testing.T) {
+	t.Run("is created and returns reason and causing objects", func(t *testing.T) {
 		transErr, err := parser.NewTranslationFailure(someValidTranslationFailureReason, someValidTranslationFailureCausingObjects()...)
 		require.NoError(t, err)
 
@@ -28,13 +28,13 @@ func TestTranslationFailure(t *testing.T) {
 		assert.ElementsMatch(t, someValidTranslationFailureCausingObjects, transErr.CausingObjects())
 	})
 
-	t.Run("fallbacks_to_unknown_reason_when_empty", func(t *testing.T) {
+	t.Run("fallbacks to unknown reason when empty", func(t *testing.T) {
 		transErr, err := parser.NewTranslationFailure("", someValidTranslationFailureCausingObjects()...)
 		require.NoError(t, err)
 		require.Equal(t, parser.TranslationFailureReasonUnknown, transErr.Reason())
 	})
 
-	t.Run("requires_at_least_one_causing_object", func(t *testing.T) {
+	t.Run("requires at least one causing object", func(t *testing.T) {
 		_, err := parser.NewTranslationFailure(someValidTranslationFailureReason, someValidTranslationFailureCausingObjects()[0])
 		require.NoError(t, err)
 
@@ -46,18 +46,18 @@ func TestTranslationFailure(t *testing.T) {
 func TestTranslationFailuresCollector(t *testing.T) {
 	testLogger, _ := test.NewNullLogger()
 
-	t.Run("is_created_when_logger_valid", func(t *testing.T) {
+	t.Run("is created when logger valid", func(t *testing.T) {
 		collector, err := parser.NewTranslationFailuresCollector(testLogger)
 		require.NoError(t, err)
 		require.NotNil(t, collector)
 	})
 
-	t.Run("requires_non_nil_logger", func(t *testing.T) {
+	t.Run("requires non nil logger", func(t *testing.T) {
 		_, err := parser.NewTranslationFailuresCollector(nil)
 		require.Error(t, err)
 	})
 
-	t.Run("pushes_and_pops_translation_failures", func(t *testing.T) {
+	t.Run("pushes and pops translation failures", func(t *testing.T) {
 		collector, err := parser.NewTranslationFailuresCollector(testLogger)
 		require.NoError(t, err)
 
@@ -69,7 +69,7 @@ func TestTranslationFailuresCollector(t *testing.T) {
 		require.Empty(t, collector.PopTranslationFailures(), "second call should not return any failure")
 	})
 
-	t.Run("does_not_crash_but_logs_warning_when_no_causing_objects_passed", func(t *testing.T) {
+	t.Run("does not crash but logs warning when no causing objects passed", func(t *testing.T) {
 		logger, loggerHook := test.NewNullLogger()
 		collector, err := parser.NewTranslationFailuresCollector(logger)
 		require.NoError(t, err)

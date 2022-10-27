@@ -9,6 +9,7 @@ import (
 	"github.com/kong/go-kong/kong"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
@@ -507,7 +508,8 @@ func TestGenerateKongServiceFromBackendRef(t *testing.T) {
 	}
 	fakestore, err := store.NewFakeStore(store.FakeObjects{ReferenceGrants: grants})
 	assert.Nil(t, err)
-	p := NewParser(logrus.New(), fakestore)
+	p, err := NewParser(logrus.New(), fakestore)
+	require.NoError(t, err)
 	// empty since we always want to actually generate a service for tests
 	// static values for the basic string format inputs since nothing interesting happens with them
 	rules := ingressRules{ServiceNameToServices: map[string]kongstate.Service{}}

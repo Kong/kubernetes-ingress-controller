@@ -63,7 +63,7 @@ func getIngressRulesFromHTTPRoutesCommonTestCases() []testCaseIngressRulesFromHT
 					Namespace: corev1.NamespaceDefault,
 				},
 				Spec: gatewayv1beta1.HTTPRouteSpec{
-					CommonRouteSpec: commonRouteSpecMock("fake-gateway"),
+					CommonRouteSpec: commonRouteSpecMock("fake-gateway-1"),
 					Hostnames: []gatewayv1beta1.Hostname{
 						"konghq.com",
 						"www.konghq.com",

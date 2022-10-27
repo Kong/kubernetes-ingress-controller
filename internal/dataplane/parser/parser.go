@@ -51,7 +51,7 @@ type Parser struct {
 	featureEnabledCombinedServiceRoutes             bool
 
 	flagEnabledRegexPathPrefix bool
-	errorsCollector            *TranslationFailuresCollector
+	failuresCollector          *TranslationFailuresCollector
 }
 
 // NewParser produces a new Parser object provided a logging mechanism
@@ -60,15 +60,15 @@ func NewParser(
 	logger logrus.FieldLogger,
 	storer store.Storer,
 ) (*Parser, error) {
-	errorsCollector, err := NewTranslationFailuresCollector(logger)
+	failuresCollector, err := NewTranslationFailuresCollector(logger)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create translation errors collector: %w", err)
 	}
 
 	return &Parser{
-		logger:          logger,
-		storer:          storer,
-		errorsCollector: errorsCollector,
+		logger:            logger,
+		storer:            storer,
+		failuresCollector: failuresCollector,
 	}, nil
 }
 
@@ -183,7 +183,7 @@ func (p *Parser) EnableRegexPathPrefix() {
 }
 
 func (p *Parser) popTranslationFailures() []TranslationFailure {
-	return p.errorsCollector.PopTranslationFailures()
+	return p.failuresCollector.PopTranslationFailures()
 }
 
 // -----------------------------------------------------------------------------

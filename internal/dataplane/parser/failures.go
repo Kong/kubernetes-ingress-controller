@@ -41,15 +41,15 @@ func (p TranslationFailure) CausingObjects() []client.Object {
 	return p.causingObjects
 }
 
-// Reason returns a human-readable reason of the error.
+// Reason returns a human-readable reason of the failure.
 func (p TranslationFailure) Reason() string {
 	return p.reason
 }
 
-// TranslationFailuresCollector should be used to collect all translation errors that happen during the translation process.
+// TranslationFailuresCollector should be used to collect all translation failures that happen during the translation process.
 type TranslationFailuresCollector struct {
-	errors []TranslationFailure
-	logger logrus.FieldLogger
+	failures []TranslationFailure
+	logger   logrus.FieldLogger
 }
 
 func NewTranslationFailuresCollector(logger logrus.FieldLogger) (*TranslationFailuresCollector, error) {
@@ -59,7 +59,7 @@ func NewTranslationFailuresCollector(logger logrus.FieldLogger) (*TranslationFai
 	return &TranslationFailuresCollector{logger: logger}, nil
 }
 
-// PushTranslationFailure registers a translation error.
+// PushTranslationFailure registers a translation failure.
 func (c *TranslationFailuresCollector) PushTranslationFailure(reason string, causingObjects ...client.Object) {
 	translationErr, err := NewTranslationFailure(reason, causingObjects...)
 	if err != nil {
@@ -67,14 +67,14 @@ func (c *TranslationFailuresCollector) PushTranslationFailure(reason string, cau
 		return
 	}
 
-	c.errors = append(c.errors, translationErr)
+	c.failures = append(c.failures, translationErr)
 }
 
-// PopTranslationFailures returns all translation errors that occurred during the translation process and erases them
+// PopTranslationFailures returns all translation failures that occurred during the translation process and erases them
 // in the collector. It makes the collector reusable during next translation runs.
 func (c *TranslationFailuresCollector) PopTranslationFailures() []TranslationFailure {
-	errs := c.errors
-	c.errors = nil
+	errs := c.failures
+	c.failures = nil
 
 	return errs
 }

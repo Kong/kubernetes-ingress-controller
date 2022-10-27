@@ -9,7 +9,6 @@ import (
 	"strings"
 
 	"github.com/kong/go-kong/kong"
-	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	netv1beta1 "k8s.io/api/networking/v1beta1"
@@ -63,7 +62,7 @@ func NewParser(
 ) (*Parser, error) {
 	errorsCollector, err := NewTranslationFailuresCollector(logger)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to create translation errors collector")
+		return nil, fmt.Errorf("failed to create translation errors collector: %w", err)
 	}
 
 	return &Parser{

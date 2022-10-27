@@ -77,7 +77,8 @@ func NewParser(
 // -----------------------------------------------------------------------------
 
 // Build creates a Kong configuration from Ingress and Custom resources
-// defined in Kubernetes.
+// defined in Kubernetes. It returns a slice of TranslationFailures which should
+// be used to provide users with feedback on Kubernetes objects validity.
 func (p *Parser) Build() (*kongstate.KongState, []TranslationFailure) {
 	// parse and merge all rules together from all Kubernetes API sources
 	ingressRules := mergeIngressRules(

@@ -82,7 +82,8 @@ func NewCtrlFuncMetrics() *CtrlFuncMetrics {
 			Name: MetricNameTranslationCount,
 			Help: fmt.Sprintf(
 				"Count of translations from Kubernetes state to Kong state. "+
-					"`%s` describes whether there were unrecoverable errors (`%s`) or not (`%s`).",
+					"`%s` describes whether there were unrecoverable errors (`%s`) or not (`%s`). "+
+					"Unrecoverable error in this case means KIC wasn't able to translate a Kubernetes object to Kong model.",
 				SuccessKey, SuccessFalse, SuccessTrue,
 			),
 		},

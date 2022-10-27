@@ -320,7 +320,7 @@ func (c *KongClient) Update(ctx context.Context) error {
 		c.prometheusMetrics.TranslationCount.With(prometheus.Labels{
 			metrics.SuccessKey: metrics.SuccessFalse,
 		}).Inc()
-		c.logger.Debugf("%d translation failures has occurred when building data-plane configuration")
+		c.logger.Debugf("%d translation failures have occurred when building data-plane configuration")
 	} else {
 		c.prometheusMetrics.TranslationCount.With(prometheus.Labels{
 			metrics.SuccessKey: metrics.SuccessTrue,

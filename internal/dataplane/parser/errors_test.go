@@ -29,7 +29,7 @@ func TestTranslationError(t *testing.T) {
 	t.Run("fallbacks_to_unknown_reason_when_empty", func(t *testing.T) {
 		transErr, err := parser.NewTranslationError("", someValidTranslationErrorCausingObjects...)
 		require.NoError(t, err)
-		require.Equal(t, "unknown", transErr.Reason())
+		require.Equal(t, parser.TranslationErrorReasonUnknown, transErr.Reason())
 	})
 
 	t.Run("requires_at_least_one_causing_object", func(t *testing.T) {

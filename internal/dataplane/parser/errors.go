@@ -8,6 +8,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+const (
+	// TranslationErrorReasonUnknown is used when no specific reason is specified when creating a TranslationError.
+	TranslationErrorReasonUnknown = "unknown"
+)
+
 // TranslationError represents an error occurring during translating Kubernetes objects into Kong ones.
 // It can be associated with one or more Kubernetes objects.
 type TranslationError struct {
@@ -16,10 +21,10 @@ type TranslationError struct {
 }
 
 // NewTranslationError creates a TranslationError with a reason that should be a human-readable explanation
-// of the error reason, and an causingObjects slice that specifies what objects have caused the error.
+// of the error reason, and a causingObjects slice that specifies what objects have caused the error.
 func NewTranslationError(reason string, causingObjects ...client.Object) (TranslationError, error) {
 	if reason == "" {
-		reason = "unknown"
+		reason = TranslationErrorReasonUnknown
 	}
 	if len(causingObjects) < 1 {
 		return TranslationError{}, fmt.Errorf("no causing objects specified, reason: %s", reason)

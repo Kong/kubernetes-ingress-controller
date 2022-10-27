@@ -17,6 +17,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/util/builder"
 )
 
 var (
@@ -44,8 +45,6 @@ type testCaseIngressRulesFromHTTPRoutes struct {
 
 // common test cases  should work with legacy parser and combined routes parser.
 func getIngressRulesFromHTTPRoutesCommonTestCases() []testCaseIngressRulesFromHTTPRoutes {
-	ingressRulesFromHTTPRoutesCommonCasesHTTPPort := gatewayv1beta1.PortNumber(80)
-
 	return []testCaseIngressRulesFromHTTPRoutes{
 		{
 			msg: "an empty list of HTTPRoutes should produce no ingress rules",
@@ -74,15 +73,9 @@ func getIngressRulesFromHTTPRoutesCommonTestCases() []testCaseIngressRulesFromHT
 						"www.konghq.com",
 					},
 					Rules: []gatewayv1beta1.HTTPRouteRule{{
-						BackendRefs: []gatewayv1beta1.HTTPBackendRef{{
-							BackendRef: gatewayv1beta1.BackendRef{
-								BackendObjectReference: gatewayv1beta1.BackendObjectReference{
-									Name: gatewayv1beta1.ObjectName("fake-service"),
-									Port: &ingressRulesFromHTTPRoutesCommonCasesHTTPPort,
-									Kind: util.StringToGatewayAPIKindPtr("Service"),
-								},
-							},
-						}},
+						BackendRefs: []gatewayv1beta1.HTTPBackendRef{
+							builder.NewHTTPBackendRef("fake-service").WithPort(80).Build(),
+						},
 					}},
 				},
 			}},
@@ -100,13 +93,9 @@ func getIngressRulesFromHTTPRoutesCommonTestCases() []testCaseIngressRulesFromHT
 								Retries:        kong.Int(5),
 								WriteTimeout:   kong.Int(60000),
 							},
-							Backends: kongstate.ServiceBackends{{
-								Name: "fake-service",
-								PortDef: kongstate.PortDef{
-									Mode:   kongstate.PortMode(1),
-									Number: 80,
-								},
-							}},
+							Backends: kongstate.ServiceBackends{
+								builder.NewKongstateServiceBackend("fake-service").WithPortNumber(80).Build(),
+							},
 							Namespace: "default",
 							Routes: []kongstate.Route{{ // only 1 route should be created
 								Route: kong.Route{
@@ -154,14 +143,9 @@ func getIngressRulesFromHTTPRoutesCommonTestCases() []testCaseIngressRulesFromHT
 					// no hostnames present
 					Rules: []gatewayv1beta1.HTTPRouteRule{{
 						// no match rules present
-						BackendRefs: []gatewayv1beta1.HTTPBackendRef{{
-							BackendRef: gatewayv1beta1.BackendRef{
-								BackendObjectReference: gatewayv1beta1.BackendObjectReference{
-									Name: gatewayv1beta1.ObjectName("fake-service"),
-									Port: &ingressRulesFromHTTPRoutesCommonCasesHTTPPort,
-								},
-							},
-						}},
+						BackendRefs: []gatewayv1beta1.HTTPBackendRef{
+							builder.NewHTTPBackendRef("fake-service").WithPort(80).Build(),
+						},
 					}},
 				},
 			}},
@@ -195,15 +179,9 @@ func getIngressRulesFromHTTPRoutesCommonTestCases() []testCaseIngressRulesFromHT
 								Value: kong.String("/httpbin"),
 							},
 						}},
-						BackendRefs: []gatewayv1beta1.HTTPBackendRef{{
-							BackendRef: gatewayv1beta1.BackendRef{
-								BackendObjectReference: gatewayv1beta1.BackendObjectReference{
-									Name: gatewayv1beta1.ObjectName("fake-service"),
-									Port: &ingressRulesFromHTTPRoutesCommonCasesHTTPPort,
-									Kind: util.StringToGatewayAPIKindPtr("Service"),
-								},
-							},
-						}},
+						BackendRefs: []gatewayv1beta1.HTTPBackendRef{
+							builder.NewHTTPBackendRef("fake-service").WithPort(80).Build(),
+						},
 					}},
 				},
 			}},
@@ -221,13 +199,9 @@ func getIngressRulesFromHTTPRoutesCommonTestCases() []testCaseIngressRulesFromHT
 								Retries:        kong.Int(5),
 								WriteTimeout:   kong.Int(60000),
 							},
-							Backends: kongstate.ServiceBackends{{
-								Name: "fake-service",
-								PortDef: kongstate.PortDef{
-									Mode:   kongstate.PortMode(1),
-									Number: 80,
-								},
-							}},
+							Backends: kongstate.ServiceBackends{
+								builder.NewKongstateServiceBackend("fake-service").WithPortNumber(80).Build(),
+							},
 							Namespace: "default",
 							Routes: []kongstate.Route{{ // only 1 route should be created
 								Route: kong.Route{
@@ -305,15 +279,9 @@ func getIngressRulesFromHTTPRoutesCommonTestCases() []testCaseIngressRulesFromHT
 								Value: "kong",
 							}},
 						}},
-						BackendRefs: []gatewayv1beta1.HTTPBackendRef{{
-							BackendRef: gatewayv1beta1.BackendRef{
-								BackendObjectReference: gatewayv1beta1.BackendObjectReference{
-									Name: gatewayv1beta1.ObjectName("fake-service"),
-									Port: &ingressRulesFromHTTPRoutesCommonCasesHTTPPort,
-									Kind: util.StringToGatewayAPIKindPtr("Service"),
-								},
-							},
-						}},
+						BackendRefs: []gatewayv1beta1.HTTPBackendRef{
+							builder.NewHTTPBackendRef("fake-service").WithPort(80).Build(),
+						},
 					}},
 				},
 			}},
@@ -347,15 +315,9 @@ func getIngressRulesFromHTTPRoutesCommonTestCases() []testCaseIngressRulesFromHT
 								Value: kong.String("/httpbin$"),
 							},
 						}},
-						BackendRefs: []gatewayv1beta1.HTTPBackendRef{{
-							BackendRef: gatewayv1beta1.BackendRef{
-								BackendObjectReference: gatewayv1beta1.BackendObjectReference{
-									Name: gatewayv1beta1.ObjectName("fake-service"),
-									Port: &ingressRulesFromHTTPRoutesCommonCasesHTTPPort,
-									Kind: util.StringToGatewayAPIKindPtr("Service"),
-								},
-							},
-						}},
+						BackendRefs: []gatewayv1beta1.HTTPBackendRef{
+							builder.NewHTTPBackendRef("fake-service").WithPort(80).Build(),
+						},
 					}},
 				},
 			}},
@@ -373,13 +335,9 @@ func getIngressRulesFromHTTPRoutesCommonTestCases() []testCaseIngressRulesFromHT
 								Retries:        kong.Int(5),
 								WriteTimeout:   kong.Int(60000),
 							},
-							Backends: kongstate.ServiceBackends{{
-								Name: "fake-service",
-								PortDef: kongstate.PortDef{
-									Mode:   kongstate.PortMode(1),
-									Number: 80,
-								},
-							}},
+							Backends: kongstate.ServiceBackends{
+								builder.NewKongstateServiceBackend("fake-service").WithPortNumber(80).Build(),
+							},
 							Namespace: "default",
 							Routes: []kongstate.Route{{ // only 1 route should be created
 								Route: kong.Route{
@@ -431,15 +389,9 @@ func getIngressRulesFromHTTPRoutesCommonTestCases() []testCaseIngressRulesFromHT
 								Value: kong.String("/httpbin"),
 							},
 						}},
-						BackendRefs: []gatewayv1beta1.HTTPBackendRef{{
-							BackendRef: gatewayv1beta1.BackendRef{
-								BackendObjectReference: gatewayv1beta1.BackendObjectReference{
-									Name: gatewayv1beta1.ObjectName("fake-service"),
-									Port: &ingressRulesFromHTTPRoutesCommonCasesHTTPPort,
-									Kind: util.StringToGatewayAPIKindPtr("Service"),
-								},
-							},
-						}},
+						BackendRefs: []gatewayv1beta1.HTTPBackendRef{
+							builder.NewHTTPBackendRef("fake-service").WithPort(80).Build(),
+						},
 					}},
 				},
 			}},
@@ -457,13 +409,9 @@ func getIngressRulesFromHTTPRoutesCommonTestCases() []testCaseIngressRulesFromHT
 								Retries:        kong.Int(5),
 								WriteTimeout:   kong.Int(60000),
 							},
-							Backends: kongstate.ServiceBackends{{
-								Name: "fake-service",
-								PortDef: kongstate.PortDef{
-									Mode:   kongstate.PortMode(1),
-									Number: 80,
-								},
-							}},
+							Backends: kongstate.ServiceBackends{
+								builder.NewKongstateServiceBackend("fake-service").WithPortNumber(80).Build(),
+							},
 							Namespace: "default",
 							Routes: []kongstate.Route{{ // only 1 route should be created
 								Route: kong.Route{
@@ -523,15 +471,9 @@ func getIngressRulesFromHTTPRoutesCombinedRoutesTestCases() []testCaseIngressRul
 								Value: kong.String("/httpbin-1"),
 							},
 						}},
-						BackendRefs: []gatewayv1beta1.HTTPBackendRef{{
-							BackendRef: gatewayv1beta1.BackendRef{
-								BackendObjectReference: gatewayv1beta1.BackendObjectReference{
-									Name: gatewayv1beta1.ObjectName("fake-service"),
-									Port: &ingressRulesFromHTTPRoutesCommonCasesHTTPPort1,
-									Kind: util.StringToGatewayAPIKindPtr("Service"),
-								},
-							},
-						}},
+						BackendRefs: []gatewayv1beta1.HTTPBackendRef{
+							builder.NewHTTPBackendRef("fake-service").WithPort(80).Build(),
+						},
 					}, {
 						Matches: []gatewayv1beta1.HTTPRouteMatch{{
 							Path: &gatewayv1beta1.HTTPPathMatch{
@@ -539,15 +481,9 @@ func getIngressRulesFromHTTPRoutesCombinedRoutesTestCases() []testCaseIngressRul
 								Value: kong.String("/httpbin-2"),
 							},
 						}},
-						BackendRefs: []gatewayv1beta1.HTTPBackendRef{{
-							BackendRef: gatewayv1beta1.BackendRef{
-								BackendObjectReference: gatewayv1beta1.BackendObjectReference{
-									Name: gatewayv1beta1.ObjectName("fake-service"),
-									Port: &ingressRulesFromHTTPRoutesCommonCasesHTTPPort1,
-									Kind: util.StringToGatewayAPIKindPtr("Service"),
-								},
-							},
-						}},
+						BackendRefs: []gatewayv1beta1.HTTPBackendRef{
+							builder.NewHTTPBackendRef("fake-service").WithPort(80).Build(),
+						},
 					}},
 				},
 			}},
@@ -565,13 +501,9 @@ func getIngressRulesFromHTTPRoutesCombinedRoutesTestCases() []testCaseIngressRul
 								Retries:        kong.Int(5),
 								WriteTimeout:   kong.Int(60000),
 							},
-							Backends: kongstate.ServiceBackends{{
-								Name: "fake-service",
-								PortDef: kongstate.PortDef{
-									Mode:   kongstate.PortMode(1),
-									Number: 80,
-								},
-							}},
+							Backends: kongstate.ServiceBackends{
+								builder.NewKongstateServiceBackend("fake-service").WithPortNumber(80).Build(),
+							},
 							Namespace: "default",
 							Routes: []kongstate.Route{
 								// only 2 routes should be created
@@ -658,15 +590,7 @@ func getIngressRulesFromHTTPRoutesCombinedRoutesTestCases() []testCaseIngressRul
 									},
 								},
 								BackendRefs: []gatewayv1beta1.HTTPBackendRef{
-									{
-										BackendRef: gatewayv1beta1.BackendRef{
-											BackendObjectReference: gatewayv1beta1.BackendObjectReference{
-												Name: gatewayv1beta1.ObjectName("fake-service"),
-												Port: &ingressRulesFromHTTPRoutesCommonCasesHTTPPort1,
-												Kind: util.StringToGatewayAPIKindPtr("Service"),
-											},
-										},
-									},
+									builder.NewHTTPBackendRef("fake-service").WithPort(80).Build(),
 								},
 							}, {
 								Matches: []gatewayv1beta1.HTTPRouteMatch{
@@ -678,15 +602,7 @@ func getIngressRulesFromHTTPRoutesCombinedRoutesTestCases() []testCaseIngressRul
 									},
 								},
 								BackendRefs: []gatewayv1beta1.HTTPBackendRef{
-									{
-										BackendRef: gatewayv1beta1.BackendRef{
-											BackendObjectReference: gatewayv1beta1.BackendObjectReference{
-												Name: gatewayv1beta1.ObjectName("fake-service"),
-												Port: &ingressRulesFromHTTPRoutesCommonCasesHTTPPort2,
-												Kind: util.StringToGatewayAPIKindPtr("Service"),
-											},
-										},
-									},
+									builder.NewHTTPBackendRef("fake-service").WithPort(8080).Build(),
 								},
 							},
 						},
@@ -708,13 +624,9 @@ func getIngressRulesFromHTTPRoutesCombinedRoutesTestCases() []testCaseIngressRul
 								Retries:        kong.Int(5),
 								WriteTimeout:   kong.Int(60000),
 							},
-							Backends: kongstate.ServiceBackends{{
-								Name: "fake-service",
-								PortDef: kongstate.PortDef{
-									Mode:   kongstate.PortMode(1),
-									Number: int32(ingressRulesFromHTTPRoutesCommonCasesHTTPPort1),
-								},
-							}},
+							Backends: kongstate.ServiceBackends{
+								builder.NewKongstateServiceBackend("fake-service").WithPortNumber(80).Build(),
+							},
 							Namespace: "default",
 							Routes: []kongstate.Route{{ // only 1 route should be created for this service
 								Route: kong.Route{
@@ -815,13 +727,9 @@ func getIngressRulesFromHTTPRoutesCombinedRoutesTestCases() []testCaseIngressRul
 								Retries:        kong.Int(5),
 								WriteTimeout:   kong.Int(60000),
 							},
-							Backends: kongstate.ServiceBackends{{
-								Name: "fake-service",
-								PortDef: kongstate.PortDef{
-									Mode:   kongstate.PortMode(1),
-									Number: int32(ingressRulesFromHTTPRoutesCommonCasesHTTPPort2),
-								},
-							}},
+							Backends: kongstate.ServiceBackends{
+								builder.NewKongstateServiceBackend("fake-service").WithPortNumber(8080).Build(),
+							},
 							Namespace: "default",
 							Routes: []kongstate.Route{{
 								Route: kong.Route{
@@ -881,26 +789,8 @@ func getIngressRulesFromHTTPRoutesCombinedRoutesTestCases() []testCaseIngressRul
 									},
 								},
 								BackendRefs: []gatewayv1beta1.HTTPBackendRef{
-									{
-										BackendRef: gatewayv1beta1.BackendRef{
-											BackendObjectReference: gatewayv1beta1.BackendObjectReference{
-												Name: gatewayv1beta1.ObjectName("foo-v1"),
-												Port: &ingressRulesFromHTTPRoutesCommonCasesHTTPPort1,
-												Kind: util.StringToGatewayAPIKindPtr("Service"),
-											},
-											Weight: pointer.Int32(90),
-										},
-									},
-									{
-										BackendRef: gatewayv1beta1.BackendRef{
-											BackendObjectReference: gatewayv1beta1.BackendObjectReference{
-												Name: gatewayv1beta1.ObjectName("foo-v2"),
-												Port: &ingressRulesFromHTTPRoutesCommonCasesHTTPPort2,
-												Kind: util.StringToGatewayAPIKindPtr("Service"),
-											},
-											Weight: pointer.Int32(10),
-										},
-									},
+									builder.NewHTTPBackendRef("foo-v1").WithPort(80).WithWeight(90).Build(),
+									builder.NewHTTPBackendRef("foo-v2").WithPort(8080).WithWeight(10).Build(),
 								},
 							},
 							{
@@ -913,26 +803,8 @@ func getIngressRulesFromHTTPRoutesCombinedRoutesTestCases() []testCaseIngressRul
 									},
 								},
 								BackendRefs: []gatewayv1beta1.HTTPBackendRef{
-									{
-										BackendRef: gatewayv1beta1.BackendRef{
-											BackendObjectReference: gatewayv1beta1.BackendObjectReference{
-												Name: gatewayv1beta1.ObjectName("foo-v1"),
-												Port: &ingressRulesFromHTTPRoutesCommonCasesHTTPPort1,
-												Kind: util.StringToGatewayAPIKindPtr("Service"),
-											},
-											Weight: pointer.Int32(90),
-										},
-									},
-									{
-										BackendRef: gatewayv1beta1.BackendRef{
-											BackendObjectReference: gatewayv1beta1.BackendObjectReference{
-												Name: gatewayv1beta1.ObjectName("foo-v2"),
-												Port: &ingressRulesFromHTTPRoutesCommonCasesHTTPPort2,
-												Kind: util.StringToGatewayAPIKindPtr("Service"),
-											},
-											Weight: pointer.Int32(10),
-										},
-									},
+									builder.NewHTTPBackendRef("foo-v1").WithPort(80).WithWeight(90).Build(),
+									builder.NewHTTPBackendRef("foo-v2").WithPort(8080).WithWeight(10).Build(),
 								},
 							},
 							{
@@ -943,26 +815,8 @@ func getIngressRulesFromHTTPRoutesCombinedRoutesTestCases() []testCaseIngressRul
 									},
 								}},
 								BackendRefs: []gatewayv1beta1.HTTPBackendRef{
-									{
-										BackendRef: gatewayv1beta1.BackendRef{
-											BackendObjectReference: gatewayv1beta1.BackendObjectReference{
-												Name: gatewayv1beta1.ObjectName("foo-v1"),
-												Port: &ingressRulesFromHTTPRoutesCommonCasesHTTPPort2,
-												Kind: util.StringToGatewayAPIKindPtr("Service"),
-											},
-											Weight: pointer.Int32(90),
-										},
-									},
-									{
-										BackendRef: gatewayv1beta1.BackendRef{
-											BackendObjectReference: gatewayv1beta1.BackendObjectReference{
-												Name: gatewayv1beta1.ObjectName("foo-v3"),
-												Port: &ingressRulesFromHTTPRoutesCommonCasesHTTPPort2,
-												Kind: util.StringToGatewayAPIKindPtr("Service"),
-											},
-											Weight: pointer.Int32(10),
-										},
-									},
+									builder.NewHTTPBackendRef("foo-v1").WithPort(8080).WithWeight(90).Build(),
+									builder.NewHTTPBackendRef("foo-v3").WithPort(8080).WithWeight(10).Build(),
 								},
 							},
 						},
@@ -984,22 +838,8 @@ func getIngressRulesFromHTTPRoutesCombinedRoutesTestCases() []testCaseIngressRul
 								WriteTimeout:   kong.Int(60000),
 							},
 							Backends: kongstate.ServiceBackends{
-								{
-									Name: "foo-v1",
-									PortDef: kongstate.PortDef{
-										Mode:   kongstate.PortMode(1),
-										Number: 80,
-									},
-									Weight: pointer.Int32(90),
-								},
-								{
-									Name: "foo-v2",
-									PortDef: kongstate.PortDef{
-										Mode:   kongstate.PortMode(1),
-										Number: 8080,
-									},
-									Weight: pointer.Int32(10),
-								},
+								builder.NewKongstateServiceBackend("foo-v1").WithPortNumber(80).WithWeight(90).Build(),
+								builder.NewKongstateServiceBackend("foo-v2").WithPortNumber(8080).WithWeight(10).Build(),
 							},
 							Namespace: "default",
 							Routes: []kongstate.Route{
@@ -1180,22 +1020,8 @@ func getIngressRulesFromHTTPRoutesCombinedRoutesTestCases() []testCaseIngressRul
 								WriteTimeout:   kong.Int(60000),
 							},
 							Backends: kongstate.ServiceBackends{
-								{
-									Name: "foo-v1",
-									PortDef: kongstate.PortDef{
-										Mode:   kongstate.PortMode(1),
-										Number: 8080,
-									},
-									Weight: pointer.Int32(90),
-								},
-								{
-									Name: "foo-v3",
-									PortDef: kongstate.PortDef{
-										Mode:   kongstate.PortMode(1),
-										Number: 8080,
-									},
-									Weight: pointer.Int32(10),
-								},
+								builder.NewKongstateServiceBackend("foo-v1").WithPortNumber(8080).WithWeight(90).Build(),
+								builder.NewKongstateServiceBackend("foo-v3").WithPortNumber(8080).WithWeight(10).Build(),
 							},
 							Namespace: "default",
 							Routes: []kongstate.Route{

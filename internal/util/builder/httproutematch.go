@@ -1,7 +1,6 @@
 package builder
 
 import (
-	"k8s.io/utils/pointer"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 )
 
@@ -24,15 +23,19 @@ func (b *HTTPRouteMatchBuilder) Build() gatewayv1beta1.HTTPRouteMatch {
 }
 
 func (b *HTTPRouteMatchBuilder) WithPathPrefix(pathPrefix string) *HTTPRouteMatchBuilder {
-	return b.WithPathType(&pathPrefix, (*gatewayv1beta1.PathMatchType)(pointer.StringPtr(string(gatewayv1beta1.PathMatchPathPrefix))))
+	return b.WithPathType(&pathPrefix, pathMatchTypePtr(gatewayv1beta1.PathMatchPathPrefix))
 }
 
 func (b *HTTPRouteMatchBuilder) WithPathRegex(pathRegexp string) *HTTPRouteMatchBuilder {
-	return b.WithPathType(&pathRegexp, (*gatewayv1beta1.PathMatchType)(pointer.StringPtr(string(gatewayv1beta1.PathMatchRegularExpression))))
+	return b.WithPathType(&pathRegexp, pathMatchTypePtr(gatewayv1beta1.PathMatchRegularExpression))
 }
 
 func (b *HTTPRouteMatchBuilder) WithPathExact(pathRegexp string) *HTTPRouteMatchBuilder {
-	return b.WithPathType(&pathRegexp, (*gatewayv1beta1.PathMatchType)(pointer.StringPtr(string(gatewayv1beta1.PathMatchExact))))
+	return b.WithPathType(&pathRegexp, pathMatchTypePtr(gatewayv1beta1.PathMatchExact))
+}
+
+func pathMatchTypePtr(pathMatchType gatewayv1beta1.PathMatchType) *gatewayv1beta1.PathMatchType {
+	return &pathMatchType
 }
 
 func (b *HTTPRouteMatchBuilder) WithPathType(pathValuePtr *string, pathTypePtr *gatewayv1beta1.PathMatchType) *HTTPRouteMatchBuilder {

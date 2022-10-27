@@ -383,9 +383,6 @@ func getIngressRulesFromHTTPRoutesCommonTestCases() []testCaseIngressRulesFromHT
 }
 
 func getIngressRulesFromHTTPRoutesCombinedRoutesTestCases() []testCaseIngressRulesFromHTTPRoutes {
-	ingressRulesFromHTTPRoutesCommonCasesHTTPPort1 := gatewayv1beta1.PortNumber(80)
-	ingressRulesFromHTTPRoutesCommonCasesHTTPPort2 := gatewayv1beta1.PortNumber(8080)
-
 	return []testCaseIngressRulesFromHTTPRoutes{
 		{
 			msg: "a single HTTPRoute with multiple rules with equal backendRefs results in a single service",
@@ -551,63 +548,7 @@ func getIngressRulesFromHTTPRoutesCombinedRoutesTestCases() []testCaseIngressRul
 								},
 								Ingress: k8sObjectInfoOfHTTPRoute(routes[0]),
 							}},
-							Parent: &gatewayv1beta1.HTTPRoute{
-								Spec: gatewayv1beta1.HTTPRouteSpec{
-									CommonRouteSpec: commonRouteSpecMock("fake-gateway"),
-									Rules: []gatewayv1beta1.HTTPRouteRule{
-										{
-											Matches: []gatewayv1beta1.HTTPRouteMatch{
-												{
-													Path: &gatewayv1beta1.HTTPPathMatch{
-														Type:  &pathMatchPrefix,
-														Value: kong.String("/httpbin-1"),
-													},
-												},
-											},
-											BackendRefs: []gatewayv1beta1.HTTPBackendRef{
-												{
-													BackendRef: gatewayv1beta1.BackendRef{
-														BackendObjectReference: gatewayv1beta1.BackendObjectReference{
-															Name: gatewayv1beta1.ObjectName("fake-service"),
-															Port: &ingressRulesFromHTTPRoutesCommonCasesHTTPPort1,
-															Kind: util.StringToGatewayAPIKindPtr("Service"),
-														},
-													},
-												},
-											},
-										},
-										{
-											Matches: []gatewayv1beta1.HTTPRouteMatch{
-												{
-													Path: &gatewayv1beta1.HTTPPathMatch{
-														Type:  &pathMatchPrefix,
-														Value: kong.String("/httpbin-2"),
-													},
-												},
-											},
-											BackendRefs: []gatewayv1beta1.HTTPBackendRef{
-												{
-													BackendRef: gatewayv1beta1.BackendRef{
-														BackendObjectReference: gatewayv1beta1.BackendObjectReference{
-															Name: gatewayv1beta1.ObjectName("fake-service"),
-															Port: &ingressRulesFromHTTPRoutesCommonCasesHTTPPort2,
-															Kind: util.StringToGatewayAPIKindPtr("Service"),
-														},
-													},
-												},
-											},
-										},
-									},
-								},
-								ObjectMeta: metav1.ObjectMeta{
-									Name:      "basic-httproute",
-									Namespace: "default",
-								},
-								TypeMeta: metav1.TypeMeta{
-									Kind:       "HTTPRoute",
-									APIVersion: "gateway.networking.k8s.io/v1beta1",
-								},
-							},
+							Parent: routes[0],
 						},
 
 						"httproute.default.basic-httproute.1": {
@@ -752,115 +693,7 @@ func getIngressRulesFromHTTPRoutesCombinedRoutesTestCases() []testCaseIngressRul
 									Ingress: k8sObjectInfoOfHTTPRoute(routes[0]),
 								},
 							},
-							Parent: &gatewayv1beta1.HTTPRoute{
-								Spec: gatewayv1beta1.HTTPRouteSpec{
-									CommonRouteSpec: commonRouteSpecMock("fake-gateway"),
-									Rules: []gatewayv1beta1.HTTPRouteRule{
-										{
-											Matches: []gatewayv1beta1.HTTPRouteMatch{
-												{
-													Path: &gatewayv1beta1.HTTPPathMatch{
-														Type:  &pathMatchPrefix,
-														Value: kong.String("/httpbin-1"),
-													},
-												},
-											},
-											BackendRefs: []gatewayv1beta1.HTTPBackendRef{
-												{
-													BackendRef: gatewayv1beta1.BackendRef{
-														BackendObjectReference: gatewayv1beta1.BackendObjectReference{
-															Name: gatewayv1beta1.ObjectName("foo-v1"),
-															Port: &ingressRulesFromHTTPRoutesCommonCasesHTTPPort1,
-															Kind: util.StringToGatewayAPIKindPtr("Service"),
-														},
-														Weight: pointer.Int32(90),
-													},
-												},
-												{
-													BackendRef: gatewayv1beta1.BackendRef{
-														BackendObjectReference: gatewayv1beta1.BackendObjectReference{
-															Name: gatewayv1beta1.ObjectName("foo-v2"),
-															Port: &ingressRulesFromHTTPRoutesCommonCasesHTTPPort2,
-															Kind: util.StringToGatewayAPIKindPtr("Service"),
-														},
-														Weight: pointer.Int32(10),
-													},
-												},
-											},
-										},
-										{
-											Matches: []gatewayv1beta1.HTTPRouteMatch{
-												{
-													Path: &gatewayv1beta1.HTTPPathMatch{
-														Type:  &pathMatchPrefix,
-														Value: kong.String("/httpbin-2"),
-													},
-												},
-											},
-											BackendRefs: []gatewayv1beta1.HTTPBackendRef{
-												{
-													BackendRef: gatewayv1beta1.BackendRef{
-														BackendObjectReference: gatewayv1beta1.BackendObjectReference{
-															Name: gatewayv1beta1.ObjectName("foo-v1"),
-															Port: &ingressRulesFromHTTPRoutesCommonCasesHTTPPort1,
-															Kind: util.StringToGatewayAPIKindPtr("Service"),
-														},
-														Weight: pointer.Int32(90),
-													},
-												},
-												{
-													BackendRef: gatewayv1beta1.BackendRef{
-														BackendObjectReference: gatewayv1beta1.BackendObjectReference{
-															Name: gatewayv1beta1.ObjectName("foo-v2"),
-															Port: &ingressRulesFromHTTPRoutesCommonCasesHTTPPort2,
-															Kind: util.StringToGatewayAPIKindPtr("Service"),
-														},
-														Weight: pointer.Int32(10),
-													},
-												},
-											},
-										},
-										{
-											Matches: []gatewayv1beta1.HTTPRouteMatch{{
-												Path: &gatewayv1beta1.HTTPPathMatch{
-													Type:  &pathMatchPrefix,
-													Value: kong.String("/httpbin-2"),
-												},
-											}},
-											BackendRefs: []gatewayv1beta1.HTTPBackendRef{
-												{
-													BackendRef: gatewayv1beta1.BackendRef{
-														BackendObjectReference: gatewayv1beta1.BackendObjectReference{
-															Name: gatewayv1beta1.ObjectName("foo-v1"),
-															Port: &ingressRulesFromHTTPRoutesCommonCasesHTTPPort2,
-															Kind: util.StringToGatewayAPIKindPtr("Service"),
-														},
-														Weight: pointer.Int32(90),
-													},
-												},
-												{
-													BackendRef: gatewayv1beta1.BackendRef{
-														BackendObjectReference: gatewayv1beta1.BackendObjectReference{
-															Name: gatewayv1beta1.ObjectName("foo-v3"),
-															Port: &ingressRulesFromHTTPRoutesCommonCasesHTTPPort2,
-															Kind: util.StringToGatewayAPIKindPtr("Service"),
-														},
-														Weight: pointer.Int32(10),
-													},
-												},
-											},
-										},
-									},
-								},
-								ObjectMeta: metav1.ObjectMeta{
-									Name:      "basic-httproute",
-									Namespace: "default",
-								},
-								TypeMeta: metav1.TypeMeta{
-									Kind:       "HTTPRoute",
-									APIVersion: "gateway.networking.k8s.io/v1beta1",
-								},
-							},
+							Parent: routes[0],
 						},
 
 						"httproute.default.basic-httproute.2": {

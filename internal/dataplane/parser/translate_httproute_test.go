@@ -63,11 +63,7 @@ func getIngressRulesFromHTTPRoutesCommonTestCases() []testCaseIngressRulesFromHT
 					Namespace: corev1.NamespaceDefault,
 				},
 				Spec: gatewayv1beta1.HTTPRouteSpec{
-					CommonRouteSpec: gatewayv1beta1.CommonRouteSpec{
-						ParentRefs: []gatewayv1beta1.ParentReference{{
-							Name: gatewayv1beta1.ObjectName("fake-gateway"),
-						}},
-					},
+					CommonRouteSpec: commonRouteSpecMock("fake-gateway-1"),
 					Hostnames: []gatewayv1beta1.Hostname{
 						"konghq.com",
 						"www.konghq.com",
@@ -126,11 +122,7 @@ func getIngressRulesFromHTTPRoutesCommonTestCases() []testCaseIngressRulesFromHT
 					Namespace: corev1.NamespaceDefault,
 				},
 				Spec: gatewayv1beta1.HTTPRouteSpec{
-					CommonRouteSpec: gatewayv1beta1.CommonRouteSpec{
-						ParentRefs: []gatewayv1beta1.ParentReference{{
-							Name: gatewayv1beta1.ObjectName("fake-gateway"),
-						}},
-					},
+					CommonRouteSpec: commonRouteSpecMock("fake-gateway"),
 					// no hostnames present
 					Rules: []gatewayv1beta1.HTTPRouteRule{{
 						// no match rules present
@@ -158,11 +150,7 @@ func getIngressRulesFromHTTPRoutesCommonTestCases() []testCaseIngressRulesFromHT
 					Namespace: corev1.NamespaceDefault,
 				},
 				Spec: gatewayv1beta1.HTTPRouteSpec{
-					CommonRouteSpec: gatewayv1beta1.CommonRouteSpec{
-						ParentRefs: []gatewayv1beta1.ParentReference{{
-							Name: gatewayv1beta1.ObjectName("fake-gateway"),
-						}},
-					},
+					CommonRouteSpec: commonRouteSpecMock("fake-gateway"),
 					Rules: []gatewayv1beta1.HTTPRouteRule{{
 						Matches: []gatewayv1beta1.HTTPRouteMatch{{
 							Path: &gatewayv1beta1.HTTPPathMatch{
@@ -223,11 +211,7 @@ func getIngressRulesFromHTTPRoutesCommonTestCases() []testCaseIngressRulesFromHT
 					Namespace: corev1.NamespaceDefault,
 				},
 				Spec: gatewayv1beta1.HTTPRouteSpec{
-					CommonRouteSpec: gatewayv1beta1.CommonRouteSpec{
-						ParentRefs: []gatewayv1beta1.ParentReference{{
-							Name: gatewayv1beta1.ObjectName("fake-gateway"),
-						}},
-					},
+					CommonRouteSpec: commonRouteSpecMock("fake-gateway"),
 				},
 			}},
 			expected: func(routes []*gatewayv1beta1.HTTPRoute) ingressRules {
@@ -248,11 +232,7 @@ func getIngressRulesFromHTTPRoutesCommonTestCases() []testCaseIngressRulesFromHT
 					Namespace: corev1.NamespaceDefault,
 				},
 				Spec: gatewayv1beta1.HTTPRouteSpec{
-					CommonRouteSpec: gatewayv1beta1.CommonRouteSpec{
-						ParentRefs: []gatewayv1beta1.ParentReference{{
-							Name: gatewayv1beta1.ObjectName("fake-gateway"),
-						}},
-					},
+					CommonRouteSpec: commonRouteSpecMock("fake-gateway"),
 					Rules: []gatewayv1beta1.HTTPRouteRule{{
 						Matches: []gatewayv1beta1.HTTPRouteMatch{{
 							QueryParams: []gatewayv1beta1.HTTPQueryParamMatch{{
@@ -285,11 +265,7 @@ func getIngressRulesFromHTTPRoutesCommonTestCases() []testCaseIngressRulesFromHT
 					Namespace: corev1.NamespaceDefault,
 				},
 				Spec: gatewayv1beta1.HTTPRouteSpec{
-					CommonRouteSpec: gatewayv1beta1.CommonRouteSpec{
-						ParentRefs: []gatewayv1beta1.ParentReference{{
-							Name: gatewayv1beta1.ObjectName("fake-gateway"),
-						}},
-					},
+					CommonRouteSpec: commonRouteSpecMock("fake-gateway"),
 					Rules: []gatewayv1beta1.HTTPRouteRule{{
 						Matches: []gatewayv1beta1.HTTPRouteMatch{{
 							Path: &gatewayv1beta1.HTTPPathMatch{
@@ -350,11 +326,7 @@ func getIngressRulesFromHTTPRoutesCommonTestCases() []testCaseIngressRulesFromHT
 					Namespace: corev1.NamespaceDefault,
 				},
 				Spec: gatewayv1beta1.HTTPRouteSpec{
-					CommonRouteSpec: gatewayv1beta1.CommonRouteSpec{
-						ParentRefs: []gatewayv1beta1.ParentReference{{
-							Name: gatewayv1beta1.ObjectName("fake-gateway"),
-						}},
-					},
+					CommonRouteSpec: commonRouteSpecMock("fake-gateway"),
 					Rules: []gatewayv1beta1.HTTPRouteRule{{
 						Matches: []gatewayv1beta1.HTTPRouteMatch{{
 							Path: &gatewayv1beta1.HTTPPathMatch{
@@ -423,11 +395,7 @@ func getIngressRulesFromHTTPRoutesCombinedRoutesTestCases() []testCaseIngressRul
 					Namespace: corev1.NamespaceDefault,
 				},
 				Spec: gatewayv1beta1.HTTPRouteSpec{
-					CommonRouteSpec: gatewayv1beta1.CommonRouteSpec{
-						ParentRefs: []gatewayv1beta1.ParentReference{{
-							Name: gatewayv1beta1.ObjectName("fake-gateway"),
-						}},
-					},
+					CommonRouteSpec: commonRouteSpecMock("fake-gateway"),
 					Rules: []gatewayv1beta1.HTTPRouteRule{{
 						Matches: []gatewayv1beta1.HTTPRouteMatch{{
 							Path: &gatewayv1beta1.HTTPPathMatch{
@@ -518,13 +486,7 @@ func getIngressRulesFromHTTPRoutesCombinedRoutesTestCases() []testCaseIngressRul
 						Namespace: corev1.NamespaceDefault,
 					},
 					Spec: gatewayv1beta1.HTTPRouteSpec{
-						CommonRouteSpec: gatewayv1beta1.CommonRouteSpec{
-							ParentRefs: []gatewayv1beta1.ParentReference{
-								{
-									Name: gatewayv1beta1.ObjectName("fake-gateway"),
-								},
-							},
-						},
+						CommonRouteSpec: commonRouteSpecMock("fake-gateway"),
 						Rules: []gatewayv1beta1.HTTPRouteRule{
 							{
 								Matches: []gatewayv1beta1.HTTPRouteMatch{
@@ -591,13 +553,7 @@ func getIngressRulesFromHTTPRoutesCombinedRoutesTestCases() []testCaseIngressRul
 							}},
 							Parent: &gatewayv1beta1.HTTPRoute{
 								Spec: gatewayv1beta1.HTTPRouteSpec{
-									CommonRouteSpec: gatewayv1beta1.CommonRouteSpec{
-										ParentRefs: []gatewayv1beta1.ParentReference{
-											{
-												Name: gatewayv1beta1.ObjectName("fake-gateway"),
-											},
-										},
-									},
+									CommonRouteSpec: commonRouteSpecMock("fake-gateway"),
 									Rules: []gatewayv1beta1.HTTPRouteRule{
 										{
 											Matches: []gatewayv1beta1.HTTPRouteMatch{
@@ -699,13 +655,7 @@ func getIngressRulesFromHTTPRoutesCombinedRoutesTestCases() []testCaseIngressRul
 						Namespace: corev1.NamespaceDefault,
 					},
 					Spec: gatewayv1beta1.HTTPRouteSpec{
-						CommonRouteSpec: gatewayv1beta1.CommonRouteSpec{
-							ParentRefs: []gatewayv1beta1.ParentReference{
-								{
-									Name: gatewayv1beta1.ObjectName("fake-gateway"),
-								},
-							},
-						},
+						CommonRouteSpec: commonRouteSpecMock("fake-gateway"),
 						Rules: []gatewayv1beta1.HTTPRouteRule{
 							{
 								Matches: []gatewayv1beta1.HTTPRouteMatch{
@@ -804,13 +754,7 @@ func getIngressRulesFromHTTPRoutesCombinedRoutesTestCases() []testCaseIngressRul
 							},
 							Parent: &gatewayv1beta1.HTTPRoute{
 								Spec: gatewayv1beta1.HTTPRouteSpec{
-									CommonRouteSpec: gatewayv1beta1.CommonRouteSpec{
-										ParentRefs: []gatewayv1beta1.ParentReference{
-											{
-												Name: gatewayv1beta1.ObjectName("fake-gateway"),
-											},
-										},
-									},
+									CommonRouteSpec: commonRouteSpecMock("fake-gateway"),
 									Rules: []gatewayv1beta1.HTTPRouteRule{
 										{
 											Matches: []gatewayv1beta1.HTTPRouteMatch{
@@ -1096,11 +1040,7 @@ func TestIngressRulesFromHTTPRoutes_RegexPrefix(t *testing.T) {
 					Namespace: corev1.NamespaceDefault,
 				},
 				Spec: gatewayv1beta1.HTTPRouteSpec{
-					CommonRouteSpec: gatewayv1beta1.CommonRouteSpec{
-						ParentRefs: []gatewayv1beta1.ParentReference{{
-							Name: gatewayv1beta1.ObjectName("fake-gateway"),
-						}},
-					},
+					CommonRouteSpec: commonRouteSpecMock("fake-gateway"),
 					Rules: []gatewayv1beta1.HTTPRouteRule{{
 						Matches: []gatewayv1beta1.HTTPRouteMatch{{
 							Path: &gatewayv1beta1.HTTPPathMatch{
@@ -1214,5 +1154,13 @@ func k8sObjectInfoOfHTTPRoute(route *gatewayv1beta1.HTTPRoute) util.K8sObjectInf
 			Version: "v1beta1",
 			Kind:    "HTTPRoute",
 		},
+	}
+}
+
+func commonRouteSpecMock(parentReferentName string) gatewayv1beta1.CommonRouteSpec {
+	return gatewayv1beta1.CommonRouteSpec{
+		ParentRefs: []gatewayv1beta1.ParentReference{{
+			Name: gatewayv1beta1.ObjectName(parentReferentName),
+		}},
 	}
 }

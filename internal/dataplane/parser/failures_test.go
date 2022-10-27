@@ -25,7 +25,7 @@ func TestTranslationFailure(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Equal(t, someValidTranslationFailureReason, transErr.Reason())
-		assert.ElementsMatch(t, someValidTranslationFailureCausingObjects, transErr.CausingObjects())
+		assert.ElementsMatch(t, someValidTranslationFailureCausingObjects(), transErr.CausingObjects())
 	})
 
 	t.Run("fallbacks to unknown reason when empty", func(t *testing.T) {

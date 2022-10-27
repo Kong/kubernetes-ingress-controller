@@ -18,7 +18,6 @@ const someValidTranslationErrorReason = "some valid reason"
 var someValidTranslationErrorCausingObjects = []client.Object{&kongv1.KongIngress{}, &kongv1.KongPlugin{}}
 
 func TestTranslationError(t *testing.T) {
-
 	t.Run("is_created_and_returns_reason_and_causing_objects", func(t *testing.T) {
 		transErr, err := parser.NewTranslationError(someValidTranslationErrorReason, someValidTranslationErrorCausingObjects...)
 		require.NoError(t, err)

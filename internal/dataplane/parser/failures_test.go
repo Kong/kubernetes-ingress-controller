@@ -15,11 +15,13 @@ import (
 
 const someValidTranslationFailureReason = "some valid reason"
 
-var someValidTranslationFailureCausingObjects = []client.Object{&kongv1.KongIngress{}, &kongv1.KongPlugin{}}
+func someValidTranslationFailureCausingObjects() []client.Object {
+	return []client.Object{&kongv1.KongIngress{}, &kongv1.KongPlugin{}}
+}
 
 func TestTranslationFailure(t *testing.T) {
 	t.Run("is_created_and_returns_reason_and_causing_objects", func(t *testing.T) {
-		transErr, err := parser.NewTranslationFailure(someValidTranslationFailureReason, someValidTranslationFailureCausingObjects...)
+		transErr, err := parser.NewTranslationFailure(someValidTranslationFailureReason, someValidTranslationFailureCausingObjects()...)
 		require.NoError(t, err)
 
 		assert.Equal(t, someValidTranslationFailureReason, transErr.Reason())
@@ -27,13 +29,13 @@ func TestTranslationFailure(t *testing.T) {
 	})
 
 	t.Run("fallbacks_to_unknown_reason_when_empty", func(t *testing.T) {
-		transErr, err := parser.NewTranslationFailure("", someValidTranslationFailureCausingObjects...)
+		transErr, err := parser.NewTranslationFailure("", someValidTranslationFailureCausingObjects()...)
 		require.NoError(t, err)
 		require.Equal(t, parser.TranslationFailureReasonUnknown, transErr.Reason())
 	})
 
 	t.Run("requires_at_least_one_causing_object", func(t *testing.T) {
-		_, err := parser.NewTranslationFailure(someValidTranslationFailureReason, someValidTranslationFailureCausingObjects[0])
+		_, err := parser.NewTranslationFailure(someValidTranslationFailureReason, someValidTranslationFailureCausingObjects()[0])
 		require.NoError(t, err)
 
 		_, err = parser.NewTranslationFailure(someValidTranslationFailureReason)
@@ -59,8 +61,8 @@ func TestTranslationFailuresCollector(t *testing.T) {
 		collector, err := parser.NewTranslationFailuresCollector(testLogger)
 		require.NoError(t, err)
 
-		collector.PushTranslationFailure(someValidTranslationFailureReason, someValidTranslationFailureCausingObjects...)
-		collector.PushTranslationFailure(someValidTranslationFailureReason, someValidTranslationFailureCausingObjects...)
+		collector.PushTranslationFailure(someValidTranslationFailureReason, someValidTranslationFailureCausingObjects()...)
+		collector.PushTranslationFailure(someValidTranslationFailureReason, someValidTranslationFailureCausingObjects()...)
 
 		collectedErrors := collector.PopTranslationFailures()
 		require.Len(t, collectedErrors, 2)

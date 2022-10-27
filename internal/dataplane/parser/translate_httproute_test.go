@@ -63,11 +63,7 @@ func getIngressRulesFromHTTPRoutesCommonTestCases() []testCaseIngressRulesFromHT
 					Namespace: corev1.NamespaceDefault,
 				},
 				Spec: gatewayv1beta1.HTTPRouteSpec{
-					CommonRouteSpec: gatewayv1beta1.CommonRouteSpec{
-						ParentRefs: []gatewayv1beta1.ParentReference{{
-							Name: gatewayv1beta1.ObjectName("fake-gateway"),
-						}},
-					},
+					CommonRouteSpec: commonRouteSpecMock("fake-gateway"),
 					Hostnames: []gatewayv1beta1.Hostname{
 						"konghq.com",
 						"www.konghq.com",
@@ -110,16 +106,7 @@ func getIngressRulesFromHTTPRoutesCommonTestCases() []testCaseIngressRulesFromHT
 										kong.String("www.konghq.com"),
 									},
 								},
-								Ingress: util.K8sObjectInfo{
-									Name:        "basic-httproute",
-									Namespace:   corev1.NamespaceDefault,
-									Annotations: make(map[string]string),
-									GroupVersionKind: schema.GroupVersionKind{
-										Group:   "gateway.networking.k8s.io",
-										Version: "v1beta1",
-										Kind:    "HTTPRoute",
-									},
-								},
+								Ingress: k8sObjectInfoOfHTTPRoute(routes[0]),
 							}},
 							Parent: routes[0],
 						},
@@ -135,11 +122,7 @@ func getIngressRulesFromHTTPRoutesCommonTestCases() []testCaseIngressRulesFromHT
 					Namespace: corev1.NamespaceDefault,
 				},
 				Spec: gatewayv1beta1.HTTPRouteSpec{
-					CommonRouteSpec: gatewayv1beta1.CommonRouteSpec{
-						ParentRefs: []gatewayv1beta1.ParentReference{{
-							Name: gatewayv1beta1.ObjectName("fake-gateway"),
-						}},
-					},
+					CommonRouteSpec: commonRouteSpecMock("fake-gateway"),
 					// no hostnames present
 					Rules: []gatewayv1beta1.HTTPRouteRule{{
 						// no match rules present
@@ -167,11 +150,7 @@ func getIngressRulesFromHTTPRoutesCommonTestCases() []testCaseIngressRulesFromHT
 					Namespace: corev1.NamespaceDefault,
 				},
 				Spec: gatewayv1beta1.HTTPRouteSpec{
-					CommonRouteSpec: gatewayv1beta1.CommonRouteSpec{
-						ParentRefs: []gatewayv1beta1.ParentReference{{
-							Name: gatewayv1beta1.ObjectName("fake-gateway"),
-						}},
-					},
+					CommonRouteSpec: commonRouteSpecMock("fake-gateway"),
 					Rules: []gatewayv1beta1.HTTPRouteRule{{
 						Matches: []gatewayv1beta1.HTTPRouteMatch{{
 							Path: &gatewayv1beta1.HTTPPathMatch{
@@ -216,16 +195,7 @@ func getIngressRulesFromHTTPRoutesCommonTestCases() []testCaseIngressRulesFromHT
 									},
 									StripPath: pointer.BoolPtr(false),
 								},
-								Ingress: util.K8sObjectInfo{
-									Name:        "basic-httproute",
-									Namespace:   corev1.NamespaceDefault,
-									Annotations: make(map[string]string),
-									GroupVersionKind: schema.GroupVersionKind{
-										Group:   "gateway.networking.k8s.io",
-										Version: "v1beta1",
-										Kind:    "HTTPRoute",
-									},
-								},
+								Ingress: k8sObjectInfoOfHTTPRoute(routes[0]),
 							}},
 							Parent: routes[0],
 						},
@@ -241,11 +211,7 @@ func getIngressRulesFromHTTPRoutesCommonTestCases() []testCaseIngressRulesFromHT
 					Namespace: corev1.NamespaceDefault,
 				},
 				Spec: gatewayv1beta1.HTTPRouteSpec{
-					CommonRouteSpec: gatewayv1beta1.CommonRouteSpec{
-						ParentRefs: []gatewayv1beta1.ParentReference{{
-							Name: gatewayv1beta1.ObjectName("fake-gateway"),
-						}},
-					},
+					CommonRouteSpec: commonRouteSpecMock("fake-gateway"),
 				},
 			}},
 			expected: func(routes []*gatewayv1beta1.HTTPRoute) ingressRules {
@@ -266,11 +232,7 @@ func getIngressRulesFromHTTPRoutesCommonTestCases() []testCaseIngressRulesFromHT
 					Namespace: corev1.NamespaceDefault,
 				},
 				Spec: gatewayv1beta1.HTTPRouteSpec{
-					CommonRouteSpec: gatewayv1beta1.CommonRouteSpec{
-						ParentRefs: []gatewayv1beta1.ParentReference{{
-							Name: gatewayv1beta1.ObjectName("fake-gateway"),
-						}},
-					},
+					CommonRouteSpec: commonRouteSpecMock("fake-gateway"),
 					Rules: []gatewayv1beta1.HTTPRouteRule{{
 						Matches: []gatewayv1beta1.HTTPRouteMatch{{
 							QueryParams: []gatewayv1beta1.HTTPQueryParamMatch{{
@@ -303,11 +265,7 @@ func getIngressRulesFromHTTPRoutesCommonTestCases() []testCaseIngressRulesFromHT
 					Namespace: corev1.NamespaceDefault,
 				},
 				Spec: gatewayv1beta1.HTTPRouteSpec{
-					CommonRouteSpec: gatewayv1beta1.CommonRouteSpec{
-						ParentRefs: []gatewayv1beta1.ParentReference{{
-							Name: gatewayv1beta1.ObjectName("fake-gateway"),
-						}},
-					},
+					CommonRouteSpec: commonRouteSpecMock("fake-gateway"),
 					Rules: []gatewayv1beta1.HTTPRouteRule{{
 						Matches: []gatewayv1beta1.HTTPRouteMatch{{
 							Path: &gatewayv1beta1.HTTPPathMatch{
@@ -352,16 +310,7 @@ func getIngressRulesFromHTTPRoutesCommonTestCases() []testCaseIngressRulesFromHT
 									},
 									StripPath: pointer.BoolPtr(false),
 								},
-								Ingress: util.K8sObjectInfo{
-									Name:        "basic-httproute",
-									Namespace:   corev1.NamespaceDefault,
-									Annotations: make(map[string]string),
-									GroupVersionKind: schema.GroupVersionKind{
-										Group:   "gateway.networking.k8s.io",
-										Version: "v1beta1",
-										Kind:    "HTTPRoute",
-									},
-								},
+								Ingress: k8sObjectInfoOfHTTPRoute(routes[0]),
 							}},
 							Parent: routes[0],
 						},
@@ -377,11 +326,7 @@ func getIngressRulesFromHTTPRoutesCommonTestCases() []testCaseIngressRulesFromHT
 					Namespace: corev1.NamespaceDefault,
 				},
 				Spec: gatewayv1beta1.HTTPRouteSpec{
-					CommonRouteSpec: gatewayv1beta1.CommonRouteSpec{
-						ParentRefs: []gatewayv1beta1.ParentReference{{
-							Name: gatewayv1beta1.ObjectName("fake-gateway"),
-						}},
-					},
+					CommonRouteSpec: commonRouteSpecMock("fake-gateway"),
 					Rules: []gatewayv1beta1.HTTPRouteRule{{
 						Matches: []gatewayv1beta1.HTTPRouteMatch{{
 							Path: &gatewayv1beta1.HTTPPathMatch{
@@ -426,16 +371,7 @@ func getIngressRulesFromHTTPRoutesCommonTestCases() []testCaseIngressRulesFromHT
 									},
 									StripPath: pointer.BoolPtr(false),
 								},
-								Ingress: util.K8sObjectInfo{
-									Name:        "basic-httproute",
-									Namespace:   corev1.NamespaceDefault,
-									Annotations: make(map[string]string),
-									GroupVersionKind: schema.GroupVersionKind{
-										Group:   "gateway.networking.k8s.io",
-										Version: "v1beta1",
-										Kind:    "HTTPRoute",
-									},
-								},
+								Ingress: k8sObjectInfoOfHTTPRoute(routes[0]),
 							}},
 							Parent: routes[0],
 						},
@@ -459,11 +395,7 @@ func getIngressRulesFromHTTPRoutesCombinedRoutesTestCases() []testCaseIngressRul
 					Namespace: corev1.NamespaceDefault,
 				},
 				Spec: gatewayv1beta1.HTTPRouteSpec{
-					CommonRouteSpec: gatewayv1beta1.CommonRouteSpec{
-						ParentRefs: []gatewayv1beta1.ParentReference{{
-							Name: gatewayv1beta1.ObjectName("fake-gateway"),
-						}},
-					},
+					CommonRouteSpec: commonRouteSpecMock("fake-gateway"),
 					Rules: []gatewayv1beta1.HTTPRouteRule{{
 						Matches: []gatewayv1beta1.HTTPRouteMatch{{
 							Path: &gatewayv1beta1.HTTPPathMatch{
@@ -520,16 +452,7 @@ func getIngressRulesFromHTTPRoutesCombinedRoutesTestCases() []testCaseIngressRul
 										},
 										StripPath: pointer.BoolPtr(false),
 									},
-									Ingress: util.K8sObjectInfo{
-										Name:        "basic-httproute",
-										Namespace:   corev1.NamespaceDefault,
-										Annotations: make(map[string]string),
-										GroupVersionKind: schema.GroupVersionKind{
-											Group:   "gateway.networking.k8s.io",
-											Version: "v1beta1",
-											Kind:    "HTTPRoute",
-										},
-									},
+									Ingress: k8sObjectInfoOfHTTPRoute(routes[0]),
 								},
 								{
 									Route: kong.Route{
@@ -544,16 +467,7 @@ func getIngressRulesFromHTTPRoutesCombinedRoutesTestCases() []testCaseIngressRul
 										},
 										StripPath: pointer.BoolPtr(false),
 									},
-									Ingress: util.K8sObjectInfo{
-										Name:        "basic-httproute",
-										Namespace:   corev1.NamespaceDefault,
-										Annotations: make(map[string]string),
-										GroupVersionKind: schema.GroupVersionKind{
-											Group:   "gateway.networking.k8s.io",
-											Version: "v1beta1",
-											Kind:    "HTTPRoute",
-										},
-									},
+									Ingress: k8sObjectInfoOfHTTPRoute(routes[0]),
 								},
 							},
 							Parent: routes[0],
@@ -572,13 +486,7 @@ func getIngressRulesFromHTTPRoutesCombinedRoutesTestCases() []testCaseIngressRul
 						Namespace: corev1.NamespaceDefault,
 					},
 					Spec: gatewayv1beta1.HTTPRouteSpec{
-						CommonRouteSpec: gatewayv1beta1.CommonRouteSpec{
-							ParentRefs: []gatewayv1beta1.ParentReference{
-								{
-									Name: gatewayv1beta1.ObjectName("fake-gateway"),
-								},
-							},
-						},
+						CommonRouteSpec: commonRouteSpecMock("fake-gateway"),
 						Rules: []gatewayv1beta1.HTTPRouteRule{
 							{
 								Matches: []gatewayv1beta1.HTTPRouteMatch{
@@ -641,26 +549,11 @@ func getIngressRulesFromHTTPRoutesCombinedRoutesTestCases() []testCaseIngressRul
 									},
 									StripPath: pointer.BoolPtr(false),
 								},
-								Ingress: util.K8sObjectInfo{
-									Name:        "basic-httproute",
-									Namespace:   corev1.NamespaceDefault,
-									Annotations: make(map[string]string),
-									GroupVersionKind: schema.GroupVersionKind{
-										Group:   "gateway.networking.k8s.io",
-										Version: "v1beta1",
-										Kind:    "HTTPRoute",
-									},
-								},
+								Ingress: k8sObjectInfoOfHTTPRoute(routes[0]),
 							}},
 							Parent: &gatewayv1beta1.HTTPRoute{
 								Spec: gatewayv1beta1.HTTPRouteSpec{
-									CommonRouteSpec: gatewayv1beta1.CommonRouteSpec{
-										ParentRefs: []gatewayv1beta1.ParentReference{
-											{
-												Name: gatewayv1beta1.ObjectName("fake-gateway"),
-											},
-										},
-									},
+									CommonRouteSpec: commonRouteSpecMock("fake-gateway"),
 									Rules: []gatewayv1beta1.HTTPRouteRule{
 										{
 											Matches: []gatewayv1beta1.HTTPRouteMatch{
@@ -744,16 +637,7 @@ func getIngressRulesFromHTTPRoutesCombinedRoutesTestCases() []testCaseIngressRul
 									},
 									StripPath: pointer.BoolPtr(false),
 								},
-								Ingress: util.K8sObjectInfo{
-									Name:        "basic-httproute",
-									Namespace:   corev1.NamespaceDefault,
-									Annotations: make(map[string]string),
-									GroupVersionKind: schema.GroupVersionKind{
-										Group:   "gateway.networking.k8s.io",
-										Version: "v1beta1",
-										Kind:    "HTTPRoute",
-									},
-								},
+								Ingress: k8sObjectInfoOfHTTPRoute(routes[0]),
 							}},
 							Parent: routes[0],
 						},
@@ -771,13 +655,7 @@ func getIngressRulesFromHTTPRoutesCombinedRoutesTestCases() []testCaseIngressRul
 						Namespace: corev1.NamespaceDefault,
 					},
 					Spec: gatewayv1beta1.HTTPRouteSpec{
-						CommonRouteSpec: gatewayv1beta1.CommonRouteSpec{
-							ParentRefs: []gatewayv1beta1.ParentReference{
-								{
-									Name: gatewayv1beta1.ObjectName("fake-gateway"),
-								},
-							},
-						},
+						CommonRouteSpec: commonRouteSpecMock("fake-gateway"),
 						Rules: []gatewayv1beta1.HTTPRouteRule{
 							{
 								Matches: []gatewayv1beta1.HTTPRouteMatch{
@@ -856,16 +734,7 @@ func getIngressRulesFromHTTPRoutesCombinedRoutesTestCases() []testCaseIngressRul
 										},
 										StripPath: pointer.BoolPtr(false),
 									},
-									Ingress: util.K8sObjectInfo{
-										Name:        "basic-httproute",
-										Namespace:   corev1.NamespaceDefault,
-										Annotations: make(map[string]string),
-										GroupVersionKind: schema.GroupVersionKind{
-											Group:   "gateway.networking.k8s.io",
-											Version: "v1beta1",
-											Kind:    "HTTPRoute",
-										},
-									},
+									Ingress: k8sObjectInfoOfHTTPRoute(routes[0]),
 								},
 								{
 									Route: kong.Route{
@@ -880,27 +749,12 @@ func getIngressRulesFromHTTPRoutesCombinedRoutesTestCases() []testCaseIngressRul
 										},
 										StripPath: pointer.BoolPtr(false),
 									},
-									Ingress: util.K8sObjectInfo{
-										Name:        "basic-httproute",
-										Namespace:   corev1.NamespaceDefault,
-										Annotations: make(map[string]string),
-										GroupVersionKind: schema.GroupVersionKind{
-											Group:   "gateway.networking.k8s.io",
-											Version: "v1beta1",
-											Kind:    "HTTPRoute",
-										},
-									},
+									Ingress: k8sObjectInfoOfHTTPRoute(routes[0]),
 								},
 							},
 							Parent: &gatewayv1beta1.HTTPRoute{
 								Spec: gatewayv1beta1.HTTPRouteSpec{
-									CommonRouteSpec: gatewayv1beta1.CommonRouteSpec{
-										ParentRefs: []gatewayv1beta1.ParentReference{
-											{
-												Name: gatewayv1beta1.ObjectName("fake-gateway"),
-											},
-										},
-									},
+									CommonRouteSpec: commonRouteSpecMock("fake-gateway"),
 									Rules: []gatewayv1beta1.HTTPRouteRule{
 										{
 											Matches: []gatewayv1beta1.HTTPRouteMatch{
@@ -1038,16 +892,7 @@ func getIngressRulesFromHTTPRoutesCombinedRoutesTestCases() []testCaseIngressRul
 										},
 										StripPath: pointer.BoolPtr(false),
 									},
-									Ingress: util.K8sObjectInfo{
-										Name:        "basic-httproute",
-										Namespace:   corev1.NamespaceDefault,
-										Annotations: make(map[string]string),
-										GroupVersionKind: schema.GroupVersionKind{
-											Group:   "gateway.networking.k8s.io",
-											Version: "v1beta1",
-											Kind:    "HTTPRoute",
-										},
-									},
+									Ingress: k8sObjectInfoOfHTTPRoute(routes[0]),
 								},
 							},
 							Parent: routes[0],
@@ -1195,11 +1040,7 @@ func TestIngressRulesFromHTTPRoutes_RegexPrefix(t *testing.T) {
 					Namespace: corev1.NamespaceDefault,
 				},
 				Spec: gatewayv1beta1.HTTPRouteSpec{
-					CommonRouteSpec: gatewayv1beta1.CommonRouteSpec{
-						ParentRefs: []gatewayv1beta1.ParentReference{{
-							Name: gatewayv1beta1.ObjectName("fake-gateway"),
-						}},
-					},
+					CommonRouteSpec: commonRouteSpecMock("fake-gateway"),
 					Rules: []gatewayv1beta1.HTTPRouteRule{{
 						Matches: []gatewayv1beta1.HTTPRouteMatch{{
 							Path: &gatewayv1beta1.HTTPPathMatch{
@@ -1254,16 +1095,7 @@ func TestIngressRulesFromHTTPRoutes_RegexPrefix(t *testing.T) {
 									},
 									StripPath: pointer.BoolPtr(false),
 								},
-								Ingress: util.K8sObjectInfo{
-									Name:        "basic-httproute",
-									Namespace:   corev1.NamespaceDefault,
-									Annotations: make(map[string]string),
-									GroupVersionKind: schema.GroupVersionKind{
-										Group:   "gateway.networking.k8s.io",
-										Version: "v1beta1",
-										Kind:    "HTTPRoute",
-									},
-								},
+								Ingress: k8sObjectInfoOfHTTPRoute(routes[0]),
 							}},
 							Parent: routes[0],
 						},
@@ -1304,4 +1136,31 @@ func TestIngressRulesFromHTTPRoutes_RegexPrefix(t *testing.T) {
 
 func HTTPMethodPointer(method string) *gatewayv1beta1.HTTPMethod {
 	return (*gatewayv1beta1.HTTPMethod)(&method)
+}
+
+func k8sObjectInfoOfHTTPRoute(route *gatewayv1beta1.HTTPRoute) util.K8sObjectInfo {
+	// parsers always provide the annotations map, even if route didn't have any
+	anotations := route.Annotations
+	if anotations == nil {
+		anotations = make(map[string]string)
+	}
+
+	return util.K8sObjectInfo{
+		Name:        route.Name,
+		Namespace:   route.Namespace,
+		Annotations: anotations,
+		GroupVersionKind: schema.GroupVersionKind{
+			Group:   "gateway.networking.k8s.io",
+			Version: "v1beta1",
+			Kind:    "HTTPRoute",
+		},
+	}
+}
+
+func commonRouteSpecMock(parentReferentName string) gatewayv1beta1.CommonRouteSpec {
+	return gatewayv1beta1.CommonRouteSpec{
+		ParentRefs: []gatewayv1beta1.ParentReference{{
+			Name: gatewayv1beta1.ObjectName(parentReferentName),
+		}},
+	}
 }

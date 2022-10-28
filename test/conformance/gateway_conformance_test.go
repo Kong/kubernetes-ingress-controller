@@ -11,10 +11,12 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
-	"sigs.k8s.io/gateway-api/conformance/tests"
+	//"sigs.k8s.io/gateway-api/conformance/tests"
+	"sigs.k8s.io/gateway-api/conformance/utils/kubernetes"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
@@ -29,6 +31,31 @@ var (
 
 	conformanceTestsBaseManifests = fmt.Sprintf("%s/conformance/base/manifests.yaml", consts.GatewayRawRepoURL)
 )
+
+var HTTPRouteInvalidRequestHeaderModifier = suite.ConformanceTest{
+	ShortName:   "HTTPRouteInvalidRequestHeaderModifier",
+	Description: "An HTTPRoute with invalid request header modifiers is not accepted",
+	Manifests:   []string{"tests/httproute-invalid-request-header-modifier.yaml"},
+	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
+		ns := "gateway-conformance-infra"
+		gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
+
+		t.Run("HTTPRoutes that do intersect with listener hostnames", func(t *testing.T) {
+			routes := []types.NamespacedName{
+				{Namespace: ns, Name: "invalid-request-header-modifier-multiple-actions"},
+			}
+			for _, route := range routes {
+				headerConflictCond := metav1.Condition{
+					Type:   string(gatewayv1beta1.RouteConditionAccepted),
+					Status: metav1.ConditionFalse,
+					Reason: string(gatewayv1beta1.RouteReasonUnsupportedValue),
+				}
+
+				kubernetes.HTTPRouteMustHaveCondition(t, suite.Client, route, gwNN, headerConflictCond, 60)
+			}
+		})
+	},
+}
 
 func TestGatewayConformance(t *testing.T) {
 	t.Log("configuring environment for gateway conformance tests")
@@ -83,15 +110,16 @@ func TestGatewayConformance(t *testing.T) {
 	})
 	cSuite.Setup(t)
 
+	sod := []suite.ConformanceTest{HTTPRouteInvalidRequestHeaderModifier}
 	t.Log("configuring gateway conformance tests")
-	for i := range tests.ConformanceTests {
-		for j, manifest := range tests.ConformanceTests[i].Manifests {
-			tests.ConformanceTests[i].Manifests[j] = fmt.Sprintf("%s/conformance/%s", consts.GatewayRawRepoURL, manifest)
+	for i := range sod {
+		for j, manifest := range sod[i].Manifests {
+			sod[i].Manifests[j] = fmt.Sprintf("%s/conformance/%s", consts.GatewayRawRepoURL, manifest)
 		}
 	}
 
 	t.Log("running gateway conformance tests")
-	for _, tt := range tests.ConformanceTests {
+	for _, tt := range append(sod, HTTPRouteInvalidRequestHeaderModifier) {
 		tt := tt
 		t.Run(tt.Description, func(t *testing.T) { tt.Run(t, cSuite) })
 	}

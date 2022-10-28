@@ -37,8 +37,8 @@ func TestGetPluginsAssociatedWithCACertSecret(t *testing.T) {
 		}
 	}
 
-	secretID := "8a3753e0-093b-43d9-9d39-27985c987d92"        // nolint:gosec
-	anotherSecretID := "99fa09c7-f849-4449-891e-19b9a0015763" // nolint:gosec
+	secretID := "8a3753e0-093b-43d9-9d39-27985c987d92"        //nolint:gosec
+	anotherSecretID := "99fa09c7-f849-4449-891e-19b9a0015763" //nolint:gosec
 	associatedPlugin := kongPluginWithSecret("associated_plugin", secretID)
 	nonAssociatedPlugin := kongPluginWithSecret("non_associated_plugin", anotherSecretID)
 	associatedClusterPlugin := kongClusterPluginWithSecret("associated_cluster_plugin", secretID)

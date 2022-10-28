@@ -126,7 +126,7 @@ func (p *Parser) Build() (*kongstate.KongState, []TranslationFailure) {
 	result.Certificates = mergeCerts(p.logger, ingressCerts, gatewayCerts)
 
 	// populate CA certificates in Kong
-	result.CACertificates = getCACerts(p.logger, p.storer, result.Plugins)
+	result.CACertificates = p.getCACerts(result.Plugins)
 
 	return &result, p.popTranslationFailures()
 }
@@ -184,6 +184,18 @@ func (p *Parser) EnableRegexPathPrefix() {
 
 func (p *Parser) popTranslationFailures() []TranslationFailure {
 	return p.failuresCollector.PopTranslationFailures()
+}
+
+func (p *Parser) registerTranslationFailure(reason string, causingObjects ...client.Object) {
+	p.failuresCollector.PushTranslationFailure(reason, causingObjects...)
+
+	objectsStrings := make([]string, 0, len(causingObjects))
+	for _, causingObject := range causingObjects {
+		objectsStrings = append(objectsStrings, causingObject.GetSelfLink())
+	}
+
+	p.logger.WithField("causing_objects", objectsStrings).
+		Errorf("translation failure occurred: %s", reason)
 }
 
 // -----------------------------------------------------------------------------

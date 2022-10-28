@@ -4,6 +4,7 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/kong/go-kong/kong"
@@ -11,37 +12,32 @@ import (
 	corev1 "k8s.io/api/core/v1"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/store"
 )
 
 // getCACerts translates CA certificates Secrets to kong.CACertificates. It ensures every certificate's structure and
 // validity. In case of violation of any validation rule, a secret gets skipped in a result and error message is logged
 // with affected plugins for context.
-func getCACerts(log logrus.FieldLogger, storer store.Storer, plugins []kongstate.Plugin) []kong.CACertificate {
-	caCertSecrets, err := storer.ListCACerts()
+func (p *Parser) getCACerts(plugins []kongstate.Plugin) []kong.CACertificate {
+	caCertSecrets, err := p.storer.ListCACerts()
 	if err != nil {
-		log.WithError(err).Error("failed to list CA certs")
+		p.logger.WithError(err).Error("failed to list CA certs")
 		return nil
 	}
 
 	var caCerts []kong.CACertificate
 	for _, certSecret := range caCertSecrets {
-		log := log.WithFields(logrus.Fields{
-			"secret_name":      certSecret.Name,
-			"secret_namespace": certSecret.Namespace,
-		})
-
 		idBytes, ok := certSecret.Data["id"]
 		if !ok {
-			log.Error("skipping synchronisation, invalid CA certificate: missing 'id' field in data")
+			p.registerTranslationFailure("invalid CA certificate: missing 'id' field in data", certSecret)
 			continue
 		}
 		secretID := string(idBytes)
 
 		caCert, err := toKongCACertificate(certSecret, secretID)
 		if err != nil {
-			logWithAffectedPlugins(log, plugins, secretID).WithError(err).
-				Error("skipping synchronisation, invalid CA certificate")
+			relatedObjects := getPluginsAssociatedWithCACertSecret(plugins, secretID)
+			_ = relatedObjects
+			p.registerTranslationFailure(fmt.Sprintf("invalid CA certificate: %s", err), certSecret)
 			continue
 		}
 

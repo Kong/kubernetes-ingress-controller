@@ -2,22 +2,24 @@ package parser
 
 import (
 	"crypto/x509"
+	"encoding/json"
 	"encoding/pem"
 	"errors"
 	"fmt"
 	"time"
 
 	"github.com/kong/go-kong/kong"
-	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
+	v1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/store"
 )
 
 // getCACerts translates CA certificates Secrets to kong.CACertificates. It ensures every certificate's structure and
-// validity. In case of violation of any validation rule, a secret gets skipped in a result and error message is logged
-// with affected plugins for context.
-func (p *Parser) getCACerts(plugins []kongstate.Plugin) []kong.CACertificate {
+// validity. In case of violation of any validation rule, a secret gets skipped in a result, and a translation failure
+// is reported.
+func (p *Parser) getCACerts() []kong.CACertificate {
 	caCertSecrets, err := p.storer.ListCACerts()
 	if err != nil {
 		p.logger.WithError(err).Error("failed to list CA certs")
@@ -35,9 +37,9 @@ func (p *Parser) getCACerts(plugins []kongstate.Plugin) []kong.CACertificate {
 
 		caCert, err := toKongCACertificate(certSecret, secretID)
 		if err != nil {
-			relatedObjects := getPluginsAssociatedWithCACertSecret(plugins, secretID)
-			_ = relatedObjects
-			p.registerTranslationFailure(fmt.Sprintf("invalid CA certificate: %s", err), certSecret)
+			relatedObjects := getPluginsAssociatedWithCACertSecret(secretID, p.storer)
+			relatedObjects = append(relatedObjects, certSecret.DeepCopy())
+			p.registerTranslationFailure(fmt.Sprintf("invalid CA certificate: %s", err), relatedObjects...)
 			continue
 		}
 
@@ -73,19 +75,17 @@ func toKongCACertificate(certSecret *corev1.Secret, secretID string) (kong.CACer
 	}, nil
 }
 
-func logWithAffectedPlugins(log logrus.FieldLogger, plugins []kongstate.Plugin, secretID string) logrus.FieldLogger {
-	affectedPlugins := getPluginsAssociatedWithCACertSecret(plugins, secretID)
-	return log.WithField("affected_plugins", affectedPlugins)
-}
-
-func getPluginsAssociatedWithCACertSecret(plugins []kongstate.Plugin, secretID string) []string {
-	refersToSecret := func(pluginConfig map[string]interface{}) bool {
-		caCertReferences, ok := pluginConfig["ca_certificates"].([]string)
-		if !ok {
+func getPluginsAssociatedWithCACertSecret(secretID string, storer store.Storer) []client.Object {
+	refersToSecret := func(pluginConfig v1.JSON) bool {
+		cfg := struct {
+			CACertificates []string `json:"ca_certificates,omitempty"`
+		}{}
+		err := json.Unmarshal(pluginConfig.Raw, &cfg)
+		if err != nil {
 			return false
 		}
 
-		for _, reference := range caCertReferences {
+		for _, reference := range cfg.CACertificates {
 			if reference == secretID {
 				return true
 			}
@@ -93,10 +93,15 @@ func getPluginsAssociatedWithCACertSecret(plugins []kongstate.Plugin, secretID s
 		return false
 	}
 
-	var affectedPlugins []string
-	for _, p := range plugins {
-		if refersToSecret(p.Config) && p.Name != nil {
-			affectedPlugins = append(affectedPlugins, *p.Name)
+	var affectedPlugins []client.Object
+	for _, p := range storer.ListKongPlugins() {
+		if refersToSecret(p.Config) {
+			affectedPlugins = append(affectedPlugins, p.DeepCopy())
+		}
+	}
+	for _, p := range storer.ListKongClusterPlugins() {
+		if refersToSecret(p.Config) {
+			affectedPlugins = append(affectedPlugins, p.DeepCopy())
 		}
 	}
 

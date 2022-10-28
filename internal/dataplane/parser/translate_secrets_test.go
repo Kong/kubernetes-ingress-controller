@@ -1,40 +1,54 @@
 package parser
 
 import (
+	"fmt"
 	"testing"
 
-	"github.com/kong/go-kong/kong"
 	"github.com/stretchr/testify/require"
+	v1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/store"
+	kongv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
 )
 
 func TestGetPluginsAssociatedWithCACertSecret(t *testing.T) {
-	secretID := "8a3753e0-093b-43d9-9d39-27985c987d92" //nolint:gosec
-	plugins := []kongstate.Plugin{
-		{
-			Plugin: kong.Plugin{
-				Name: kong.String("associated-plugin"),
-				Config: map[string]interface{}{
-					"ca_certificates": []string{secretID},
-				},
+	kongPluginWithSecret := func(name, secretID string) *kongv1.KongPlugin {
+		return &kongv1.KongPlugin{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: name,
 			},
-		},
-		{
-			Plugin: kong.Plugin{
-				Name: kong.String("another-associated-plugin"),
-				Config: map[string]interface{}{
-					"ca_certificates": []string{secretID},
-				},
+			Config: v1.JSON{
+				Raw: []byte(fmt.Sprintf(`{"ca_certificates": ["%s"]}`, secretID)),
 			},
-		},
-		{
-			Plugin: kong.Plugin{
-				Name: kong.String("non-associated-plugin"),
+		}
+	}
+	kongClusterPluginWithSecret := func(name, secretID string) *kongv1.KongClusterPlugin {
+		return &kongv1.KongClusterPlugin{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:        name,
+				Annotations: map[string]string{annotations.IngressClassKey: annotations.DefaultIngressClass},
 			},
-		},
+			Config: v1.JSON{
+				Raw: []byte(fmt.Sprintf(`{"ca_certificates": ["%s"]}`, secretID)),
+			},
+		}
 	}
 
-	associatedPlugins := getPluginsAssociatedWithCACertSecret(plugins, secretID)
-	require.ElementsMatch(t, []string{"associated-plugin", "another-associated-plugin"}, associatedPlugins)
+	secretID := "8a3753e0-093b-43d9-9d39-27985c987d92"        // nolint:gosec
+	anotherSecretID := "99fa09c7-f849-4449-891e-19b9a0015763" // nolint:gosec
+	associatedPlugin := kongPluginWithSecret("associated_plugin", secretID)
+	nonAssociatedPlugin := kongPluginWithSecret("non_associated_plugin", anotherSecretID)
+	associatedClusterPlugin := kongClusterPluginWithSecret("associated_cluster_plugin", secretID)
+	nonAssociatedClusterPlugin := kongClusterPluginWithSecret("non_associated_cluster_plugin", anotherSecretID)
+	storer, err := store.NewFakeStore(store.FakeObjects{
+		KongPlugins:        []*kongv1.KongPlugin{associatedPlugin, nonAssociatedPlugin},
+		KongClusterPlugins: []*kongv1.KongClusterPlugin{associatedClusterPlugin, nonAssociatedClusterPlugin},
+	})
+	require.NoError(t, err)
+
+	associatedPlugins := getPluginsAssociatedWithCACertSecret(secretID, storer)
+	require.ElementsMatch(t, []client.Object{associatedPlugin, associatedClusterPlugin}, associatedPlugins)
 }

@@ -126,7 +126,7 @@ func (p *Parser) Build() (*kongstate.KongState, []TranslationFailure) {
 	result.Certificates = mergeCerts(p.logger, ingressCerts, gatewayCerts)
 
 	// populate CA certificates in Kong
-	result.CACertificates = p.getCACerts(result.Plugins)
+	result.CACertificates = p.getCACerts()
 
 	return &result, p.popTranslationFailures()
 }
@@ -182,25 +182,31 @@ func (p *Parser) EnableRegexPathPrefix() {
 	p.flagEnabledRegexPathPrefix = true
 }
 
+// -----------------------------------------------------------------------------
+// Parser - Private Methods
+// -----------------------------------------------------------------------------
+
 func (p *Parser) popTranslationFailures() []TranslationFailure {
 	return p.failuresCollector.PopTranslationFailures()
 }
 
 func (p *Parser) registerTranslationFailure(reason string, causingObjects ...client.Object) {
 	p.failuresCollector.PushTranslationFailure(reason, causingObjects...)
-
-	objectsStrings := make([]string, 0, len(causingObjects))
-	for _, causingObject := range causingObjects {
-		objectsStrings = append(objectsStrings, causingObject.GetSelfLink())
-	}
-
-	p.logger.WithField("causing_objects", objectsStrings).
-		Errorf("translation failure occurred: %s", reason)
+	p.logTranslationFailure(reason, causingObjects...)
 }
 
-// -----------------------------------------------------------------------------
-// Parser - Private Methods
-// -----------------------------------------------------------------------------
+func (p *Parser) logTranslationFailure(reason string, causingObjects ...client.Object) {
+	objString := func(o client.Object) string {
+		return o.GetObjectKind().GroupVersionKind().String() + ", " + o.GetNamespace() + "/" + o.GetName()
+	}
+
+	objectsStrings := make([]string, 0, len(causingObjects))
+	for _, o := range causingObjects {
+		objectsStrings = append(objectsStrings, objString(o))
+	}
+
+	p.logger.WithField("causing_objects", objectsStrings).Errorf("translation failure has occurred: %s", reason)
+}
 
 func knativeIngressToNetworkingTLS(tls []knative.IngressTLS) []netv1beta1.IngressTLS {
 	var result []netv1beta1.IngressTLS

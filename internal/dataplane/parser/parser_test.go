@@ -920,7 +920,7 @@ func TestCACertificate(t *testing.T) {
 		secrets := []*corev1.Secret{
 			{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      "foo",
+					Name:      "valid-cert",
 					Namespace: "default",
 					Labels: map[string]string{
 						"konghq.com/ca-cert": "true",
@@ -936,7 +936,7 @@ func TestCACertificate(t *testing.T) {
 			},
 			{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      "bar",
+					Name:      "missing-cert-key",
 					Namespace: "non-default",
 					Labels: map[string]string{
 						"konghq.com/ca-cert": "true",
@@ -952,7 +952,7 @@ func TestCACertificate(t *testing.T) {
 			},
 			{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      "baz",
+					Name:      "missing-id-key",
 					Namespace: "non-default",
 					Labels: map[string]string{
 						"konghq.com/ca-cert": "true",
@@ -968,7 +968,7 @@ func TestCACertificate(t *testing.T) {
 			},
 			{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      "baz",
+					Name:      "expired-cert",
 					Namespace: "non-default",
 					Labels: map[string]string{
 						"konghq.com/ca-cert": "true",
@@ -990,7 +990,7 @@ func TestCACertificate(t *testing.T) {
 		assert.Nil(err)
 		p := mustNewParser(t, store)
 		state, translationFailures := p.Build()
-		require.Empty(t, translationFailures)
+		assert.Len(translationFailures, 3)
 		assert.NotNil(state)
 
 		assert.Equal(1, len(state.CACertificates))

@@ -98,6 +98,8 @@ type Storer interface {
 	ListKnativeIngresses() ([]*knative.Ingress, error)
 	ListGlobalKongPlugins() ([]*kongv1.KongPlugin, error)
 	ListGlobalKongClusterPlugins() ([]*kongv1.KongClusterPlugin, error)
+	ListKongPlugins() []*kongv1.KongPlugin
+	ListKongClusterPlugins() []*kongv1.KongClusterPlugin
 	ListKongConsumers() []*kongv1.KongConsumer
 	ListCACerts() ([]*corev1.Secret, error)
 }
@@ -920,7 +922,6 @@ func (s Store) ListKongConsumers() []*kongv1.KongConsumer {
 // This function remains only to provide warnings to users with old configuration.
 func (s Store) ListGlobalKongPlugins() ([]*kongv1.KongPlugin, error) {
 	var plugins []*kongv1.KongPlugin
-	// var globalPlugins []*configurationv1.KongPlugin
 	req, err := labels.NewRequirement("global", selection.Equals, []string{"true"})
 	if err != nil {
 		return nil, err
@@ -961,6 +962,30 @@ func (s Store) ListGlobalKongClusterPlugins() ([]*kongv1.KongClusterPlugin, erro
 		return nil, err
 	}
 	return plugins, nil
+}
+
+// ListKongClusterPlugins lists all KongClusterPlugins that match expected ingress.class annotation.
+func (s Store) ListKongClusterPlugins() []*kongv1.KongClusterPlugin {
+	var plugins []*kongv1.KongClusterPlugin
+	for _, item := range s.stores.ClusterPlugin.List() {
+		p, ok := item.(*kongv1.KongClusterPlugin)
+		if ok && s.isValidIngressClass(&p.ObjectMeta, annotations.IngressClassKey, s.getIngressClassHandling()) {
+			plugins = append(plugins, p)
+		}
+	}
+	return plugins
+}
+
+// ListKongPlugins lists all KongPlugins.
+func (s Store) ListKongPlugins() []*kongv1.KongPlugin {
+	var plugins []*kongv1.KongPlugin
+	for _, item := range s.stores.Plugin.List() {
+		p, ok := item.(*kongv1.KongPlugin)
+		if ok {
+			plugins = append(plugins, p)
+		}
+	}
+	return plugins
 }
 
 // ListCACerts returns all Secrets containing the label

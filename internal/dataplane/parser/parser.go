@@ -186,15 +186,14 @@ func (p *Parser) EnableRegexPathPrefix() {
 // Parser - Private Methods
 // -----------------------------------------------------------------------------
 
-func (p *Parser) popTranslationFailures() []TranslationFailure {
-	return p.failuresCollector.PopTranslationFailures()
-}
-
+// registerTranslationFailure should be called when any Kubernetes object translation failure is encountered.
 func (p *Parser) registerTranslationFailure(reason string, causingObjects ...client.Object) {
 	p.failuresCollector.PushTranslationFailure(reason, causingObjects...)
 	p.logTranslationFailure(reason, causingObjects...)
 }
 
+// logTranslationFailure logs an error message signaling that a translation error has occurred along with its reason.
+// `causing_objects` log field is populated with a slice of "GVK, ns/name" strings of translation failure causing objects.
 func (p *Parser) logTranslationFailure(reason string, causingObjects ...client.Object) {
 	objString := func(o client.Object) string {
 		return o.GetObjectKind().GroupVersionKind().String() + ", " + o.GetNamespace() + "/" + o.GetName()
@@ -206,6 +205,10 @@ func (p *Parser) logTranslationFailure(reason string, causingObjects ...client.O
 	}
 
 	p.logger.WithField("causing_objects", objectsStrings).Errorf("translation failure has occurred: %s", reason)
+}
+
+func (p *Parser) popTranslationFailures() []TranslationFailure {
+	return p.failuresCollector.PopTranslationFailures()
 }
 
 func knativeIngressToNetworkingTLS(tls []knative.IngressTLS) []netv1beta1.IngressTLS {

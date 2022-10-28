@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/kong/go-kong/kong"
-	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -167,7 +166,7 @@ func TestFromTCPIngressV1beta1(t *testing.T) {
 			TCPIngresses: []*configurationv1beta1.TCPIngress{},
 		})
 		assert.NoError(err)
-		p := NewParser(logrus.New(), store)
+		p := mustNewParser(t, store)
 
 		parsedInfo := p.ingressRulesFromTCPIngressV1beta1()
 		assert.Equal(ingressRules{
@@ -182,7 +181,7 @@ func TestFromTCPIngressV1beta1(t *testing.T) {
 			},
 		})
 		assert.NoError(err)
-		p := NewParser(logrus.New(), store)
+		p := mustNewParser(t, store)
 
 		parsedInfo := p.ingressRulesFromTCPIngressV1beta1()
 		assert.Equal(ingressRules{
@@ -197,7 +196,7 @@ func TestFromTCPIngressV1beta1(t *testing.T) {
 			},
 		})
 		assert.NoError(err)
-		p := NewParser(logrus.New(), store)
+		p := mustNewParser(t, store)
 
 		parsedInfo := p.ingressRulesFromTCPIngressV1beta1()
 		assert.Equal(1, len(parsedInfo.ServiceNameToServices))
@@ -225,7 +224,7 @@ func TestFromTCPIngressV1beta1(t *testing.T) {
 			},
 		})
 		assert.NoError(err)
-		p := NewParser(logrus.New(), store)
+		p := mustNewParser(t, store)
 
 		parsedInfo := p.ingressRulesFromTCPIngressV1beta1()
 		assert.Equal(1, len(parsedInfo.ServiceNameToServices))
@@ -254,7 +253,7 @@ func TestFromTCPIngressV1beta1(t *testing.T) {
 			},
 		})
 		assert.NoError(err)
-		p := NewParser(logrus.New(), store)
+		p := mustNewParser(t, store)
 
 		parsedInfo := p.ingressRulesFromTCPIngressV1beta1()
 		assert.Equal(2, len(parsedInfo.SecretNameToSNIs))
@@ -268,7 +267,7 @@ func TestFromTCPIngressV1beta1(t *testing.T) {
 			},
 		})
 		assert.NoError(err)
-		p := NewParser(logrus.New(), store)
+		p := mustNewParser(t, store)
 
 		parsedInfo := p.ingressRulesFromTCPIngressV1beta1()
 		assert.Equal(ingressRules{
@@ -283,7 +282,7 @@ func TestFromTCPIngressV1beta1(t *testing.T) {
 			},
 		})
 		assert.NoError(err)
-		p := NewParser(logrus.New(), store)
+		p := mustNewParser(t, store)
 
 		parsedInfo := p.ingressRulesFromTCPIngressV1beta1()
 		assert.Equal(ingressRules{
@@ -298,7 +297,7 @@ func TestFromTCPIngressV1beta1(t *testing.T) {
 			},
 		})
 		assert.NoError(err)
-		p := NewParser(logrus.New(), store)
+		p := mustNewParser(t, store)
 
 		parsedInfo := p.ingressRulesFromTCPIngressV1beta1()
 		assert.Equal(ingressRules{

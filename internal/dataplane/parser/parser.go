@@ -51,6 +51,7 @@ type Parser struct {
 	featureEnabledCombinedServiceRoutes             bool
 
 	flagEnabledRegexPathPrefix bool
+	failuresCollector          *TranslationFailuresCollector
 }
 
 // NewParser produces a new Parser object provided a logging mechanism
@@ -58,11 +59,17 @@ type Parser struct {
 func NewParser(
 	logger logrus.FieldLogger,
 	storer store.Storer,
-) *Parser {
-	return &Parser{
-		logger: logger,
-		storer: storer,
+) (*Parser, error) {
+	failuresCollector, err := NewTranslationFailuresCollector(logger)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create translation errors collector: %w", err)
 	}
+
+	return &Parser{
+		logger:            logger,
+		storer:            storer,
+		failuresCollector: failuresCollector,
+	}, nil
 }
 
 // -----------------------------------------------------------------------------
@@ -70,8 +77,9 @@ func NewParser(
 // -----------------------------------------------------------------------------
 
 // Build creates a Kong configuration from Ingress and Custom resources
-// defined in Kubernetes.
-func (p *Parser) Build() *kongstate.KongState {
+// defined in Kubernetes. It returns a slice of TranslationFailures which should
+// be used to provide users with feedback on Kubernetes objects validity.
+func (p *Parser) Build() (*kongstate.KongState, []TranslationFailure) {
 	// parse and merge all rules together from all Kubernetes API sources
 	ingressRules := mergeIngressRules(
 		p.ingressRulesFromIngressV1beta1(),
@@ -120,7 +128,7 @@ func (p *Parser) Build() *kongstate.KongState {
 	// populate CA certificates in Kong
 	result.CACertificates = getCACerts(p.logger, p.storer, result.Plugins)
 
-	return &result
+	return &result, p.popTranslationFailures()
 }
 
 // -----------------------------------------------------------------------------
@@ -172,6 +180,10 @@ func (p *Parser) EnableCombinedServiceRoutes() {
 // paths, which require an IngressClass setting.
 func (p *Parser) EnableRegexPathPrefix() {
 	p.flagEnabledRegexPathPrefix = true
+}
+
+func (p *Parser) popTranslationFailures() []TranslationFailure {
+	return p.failuresCollector.PopTranslationFailures()
 }
 
 // -----------------------------------------------------------------------------

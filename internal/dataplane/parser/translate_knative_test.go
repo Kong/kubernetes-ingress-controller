@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/kong/go-kong/kong"
-	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -220,7 +219,7 @@ func TestFromKnativeIngress(t *testing.T) {
 			KnativeIngresses: []*knative.Ingress{},
 		})
 		assert.NoError(err)
-		p := NewParser(logrus.New(), store)
+		p := mustNewParser(t, store)
 
 		parsedInfo := p.ingressRulesFromKnativeIngress()
 		assert.Equal(map[string]kongstate.Service{}, parsedInfo.ServiceNameToServices)
@@ -233,7 +232,7 @@ func TestFromKnativeIngress(t *testing.T) {
 			},
 		})
 		assert.NoError(err)
-		p := NewParser(logrus.New(), store)
+		p := mustNewParser(t, store)
 
 		parsedInfo := p.ingressRulesFromKnativeIngress()
 		assert.Equal(map[string]kongstate.Service{}, parsedInfo.ServiceNameToServices)
@@ -246,7 +245,7 @@ func TestFromKnativeIngress(t *testing.T) {
 			},
 		})
 		assert.NoError(err)
-		p := NewParser(logrus.New(), store)
+		p := mustNewParser(t, store)
 
 		parsedInfo := p.ingressRulesFromKnativeIngress()
 		assert.Equal(1, len(parsedInfo.ServiceNameToServices))
@@ -291,7 +290,7 @@ func TestFromKnativeIngress(t *testing.T) {
 			},
 		})
 		assert.NoError(err)
-		p := NewParser(logrus.New(), store)
+		p := mustNewParser(t, store)
 
 		parsedInfo := p.ingressRulesFromKnativeIngress()
 		assert.Equal(SecretNameToSNIs(map[string][]string{
@@ -306,7 +305,7 @@ func TestFromKnativeIngress(t *testing.T) {
 			},
 		})
 		assert.NoError(err)
-		p := NewParser(logrus.New(), store)
+		p := mustNewParser(t, store)
 
 		parsedInfo := p.ingressRulesFromKnativeIngress()
 		assert.Equal(1, len(parsedInfo.ServiceNameToServices))
@@ -351,7 +350,7 @@ func TestFromKnativeIngress(t *testing.T) {
 			},
 		})
 		assert.NoError(err)
-		p := NewParser(logrus.New(), store)
+		p := mustNewParser(t, store)
 
 		parsedInfo := p.ingressRulesFromKnativeIngress()
 		assert.Equal(1, len(parsedInfo.ServiceNameToServices))

@@ -297,7 +297,11 @@ func (c *KongClient) Update(ctx context.Context) error {
 
 	// initialize a parser
 	c.logger.Debug("parsing kubernetes objects into data-plane configuration")
-	p := parser.NewParser(c.logger, storer)
+
+	p, err := parser.NewParser(c.logger, storer)
+	if err != nil {
+		return fmt.Errorf("failed to create parser: %w", err)
+	}
 	formatVersion := "1.1"
 	if c.AreKubernetesObjectReportsEnabled() {
 		p.EnableKubernetesObjectReports()
@@ -311,13 +315,18 @@ func (c *KongClient) Update(ctx context.Context) error {
 	}
 
 	// parse the Kubernetes objects from the storer into Kong configuration
-	kongstate := p.Build()
-	// todo: does it still make sense to report TranslationCount when Build no longer returns an error?
-	// https://github.com/Kong/kubernetes-ingress-controller/issues/1892
-	c.prometheusMetrics.TranslationCount.With(prometheus.Labels{
-		metrics.SuccessKey: metrics.SuccessTrue,
-	}).Inc()
-	c.logger.Debug("successfully built data-plane configuration")
+	kongstate, translationFailures := p.Build()
+	if failuresCount := len(translationFailures); failuresCount > 0 {
+		c.prometheusMetrics.TranslationCount.With(prometheus.Labels{
+			metrics.SuccessKey: metrics.SuccessFalse,
+		}).Inc()
+		c.logger.Debugf("%d translation failures have occurred when building data-plane configuration", failuresCount)
+	} else {
+		c.prometheusMetrics.TranslationCount.With(prometheus.Labels{
+			metrics.SuccessKey: metrics.SuccessTrue,
+		}).Inc()
+		c.logger.Debug("successfully built data-plane configuration")
+	}
 
 	// generate the deck configuration to be applied to the admin API
 	c.logger.Debug("converting configuration to deck config")

@@ -316,11 +316,11 @@ func (c *KongClient) Update(ctx context.Context) error {
 
 	// parse the Kubernetes objects from the storer into Kong configuration
 	kongstate, translationFailures := p.Build()
-	if len(translationFailures) > 0 {
+	if failuresCount := len(translationFailures); failuresCount > 0 {
 		c.prometheusMetrics.TranslationCount.With(prometheus.Labels{
 			metrics.SuccessKey: metrics.SuccessFalse,
 		}).Inc()
-		c.logger.Debugf("%d translation failures have occurred when building data-plane configuration")
+		c.logger.Debugf("%d translation failures have occurred when building data-plane configuration", failuresCount)
 	} else {
 		c.prometheusMetrics.TranslationCount.With(prometheus.Labels{
 			metrics.SuccessKey: metrics.SuccessTrue,

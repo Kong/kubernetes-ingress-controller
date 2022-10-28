@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	"github.com/kong/go-kong/kong"
-	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
@@ -968,8 +967,7 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 
 	for _, tt := range testCases {
 		t.Run(tt.msg, func(t *testing.T) {
-			p, err := NewParser(logrus.New(), fakestore)
-			require.NoError(t, err)
+			p := mustNewParser(t, fakestore)
 
 			ingressRules := newIngressRules()
 
@@ -1004,8 +1002,7 @@ func TestIngressRulesFromHTTPRoutesWithCombinedServiceRoutes(t *testing.T) {
 
 	for _, tt := range testCases {
 		t.Run(tt.msg, func(t *testing.T) {
-			p, err := NewParser(logrus.New(), fakestore)
-			require.NoError(t, err)
+			p := mustNewParser(t, fakestore)
 			p.EnableCombinedServiceRoutes()
 
 			ingressRules := newIngressRules()
@@ -1083,11 +1080,10 @@ func TestGetHTTPRouteHostnamesAsSliceOfStringPointers(t *testing.T) {
 func TestIngressRulesFromHTTPRoutes_RegexPrefix(t *testing.T) {
 	fakestore, err := store.NewFakeStore(store.FakeObjects{})
 	require.NoError(t, err)
-	parser, err := NewParser(logrus.New(), fakestore)
+	parser := mustNewParser(t, fakestore)
 	require.NoError(t, err)
 	parser.EnableRegexPathPrefix()
-	parserWithCombinedServiceRoutes, err := NewParser(logrus.New(), fakestore)
-	require.NoError(t, err)
+	parserWithCombinedServiceRoutes := mustNewParser(t, fakestore)
 	parserWithCombinedServiceRoutes.EnableRegexPathPrefix()
 	parserWithCombinedServiceRoutes.EnableCombinedServiceRoutes()
 	httpPort := gatewayv1beta1.PortNumber(80)

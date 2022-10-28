@@ -3,7 +3,6 @@ package parser
 import (
 	"testing"
 
-	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	netv1 "k8s.io/api/networking/v1"
@@ -300,8 +299,7 @@ func TestFromIngressV1beta1(t *testing.T) {
 			IngressesV1beta1: []*netv1beta1.Ingress{},
 		})
 		require.NoError(t, err)
-		p, err := NewParser(logrus.New(), store)
-		require.NoError(t, err)
+		p := mustNewParser(t, store)
 
 		parsedInfo := p.ingressRulesFromIngressV1beta1()
 		assert.Equal(ingressRules{
@@ -316,8 +314,7 @@ func TestFromIngressV1beta1(t *testing.T) {
 			},
 		})
 		require.NoError(t, err)
-		p, err := NewParser(logrus.New(), store)
-		require.NoError(t, err)
+		p := mustNewParser(t, store)
 
 		parsedInfo := p.ingressRulesFromIngressV1beta1()
 		assert.Equal(1, len(parsedInfo.ServiceNameToServices))
@@ -332,8 +329,7 @@ func TestFromIngressV1beta1(t *testing.T) {
 			IngressesV1beta1: []*netv1beta1.Ingress{ingressList[0], ingressList[2]},
 		})
 		require.NoError(t, err)
-		p, err := NewParser(logrus.New(), store)
-		require.NoError(t, err)
+		p := mustNewParser(t, store)
 
 		parsedInfo := p.ingressRulesFromIngressV1beta1()
 		assert.Equal(2, len(parsedInfo.ServiceNameToServices))
@@ -354,8 +350,7 @@ func TestFromIngressV1beta1(t *testing.T) {
 			},
 		})
 		require.NoError(t, err)
-		p, err := NewParser(logrus.New(), store)
-		require.NoError(t, err)
+		p := mustNewParser(t, store)
 
 		parsedInfo := p.ingressRulesFromIngressV1beta1()
 		assert.Equal(2, len(parsedInfo.SecretNameToSNIs))
@@ -369,8 +364,7 @@ func TestFromIngressV1beta1(t *testing.T) {
 			},
 		})
 		require.NoError(t, err)
-		p, err := NewParser(logrus.New(), store)
-		require.NoError(t, err)
+		p := mustNewParser(t, store)
 
 		parsedInfo := p.ingressRulesFromIngressV1beta1()
 		assert.Equal(1, len(parsedInfo.ServiceNameToServices))
@@ -391,8 +385,7 @@ func TestFromIngressV1beta1(t *testing.T) {
 			},
 		})
 		require.NoError(t, err)
-		p, err := NewParser(logrus.New(), store)
-		require.NoError(t, err)
+		p := mustNewParser(t, store)
 
 		parsedInfo := p.ingressRulesFromIngressV1beta1()
 		assert.Equal("/", *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.80"].Routes[0].Paths[0])
@@ -405,8 +398,7 @@ func TestFromIngressV1beta1(t *testing.T) {
 			},
 		})
 		require.NoError(t, err)
-		p, err := NewParser(logrus.New(), store)
-		require.NoError(t, err)
+		p := mustNewParser(t, store)
 
 		assert.NotPanics(func() {
 			p.ingressRulesFromIngressV1beta1()
@@ -419,8 +411,7 @@ func TestFromIngressV1beta1(t *testing.T) {
 			},
 		})
 		require.NoError(t, err)
-		p, err := NewParser(logrus.New(), store)
-		require.NoError(t, err)
+		p := mustNewParser(t, store)
 
 		parsedInfo := p.ingressRulesFromIngressV1beta1()
 		assert.Equal("foo-svc.foo-namespace.80.svc", *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.80"].Host)
@@ -433,8 +424,7 @@ func TestFromIngressV1beta1(t *testing.T) {
 			},
 		})
 		require.NoError(t, err)
-		p, err := NewParser(logrus.New(), store)
-		require.NoError(t, err)
+		p := mustNewParser(t, store)
 
 		parsedInfo := p.ingressRulesFromIngressV1beta1()
 		assert.Empty(parsedInfo.ServiceNameToServices)
@@ -446,8 +436,7 @@ func TestFromIngressV1beta1(t *testing.T) {
 			},
 		})
 		require.NoError(t, err)
-		p, err := NewParser(logrus.New(), store)
-		require.NoError(t, err)
+		p := mustNewParser(t, store)
 
 		parsedInfo := p.ingressRulesFromIngressV1beta1()
 		assert.Equal(translators.KongPathRegexPrefix+"/foo/\\d{3}", *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.80"].Routes[0].Paths[0])
@@ -796,8 +785,7 @@ func TestFromIngressV1(t *testing.T) {
 			IngressesV1: []*netv1.Ingress{},
 		})
 		require.NoError(t, err)
-		p, err := NewParser(logrus.New(), store)
-		require.NoError(t, err)
+		p := mustNewParser(t, store)
 
 		parsedInfo := p.ingressRulesFromIngressV1()
 		assert.Equal(ingressRules{
@@ -812,8 +800,7 @@ func TestFromIngressV1(t *testing.T) {
 			},
 		})
 		require.NoError(t, err)
-		p, err := NewParser(logrus.New(), store)
-		require.NoError(t, err)
+		p := mustNewParser(t, store)
 
 		parsedInfo := p.ingressRulesFromIngressV1()
 		assert.Equal(1, len(parsedInfo.ServiceNameToServices))
@@ -831,8 +818,7 @@ func TestFromIngressV1(t *testing.T) {
 			},
 		})
 		require.NoError(t, err)
-		p, err := NewParser(logrus.New(), store)
-		require.NoError(t, err)
+		p := mustNewParser(t, store)
 
 		parsedInfo := p.ingressRulesFromIngressV1()
 		assert.Equal(2, len(parsedInfo.ServiceNameToServices))
@@ -853,8 +839,7 @@ func TestFromIngressV1(t *testing.T) {
 			},
 		})
 		require.NoError(t, err)
-		p, err := NewParser(logrus.New(), store)
-		require.NoError(t, err)
+		p := mustNewParser(t, store)
 
 		parsedInfo := p.ingressRulesFromIngressV1()
 		assert.Equal(2, len(parsedInfo.SecretNameToSNIs))
@@ -868,8 +853,7 @@ func TestFromIngressV1(t *testing.T) {
 			},
 		})
 		require.NoError(t, err)
-		p, err := NewParser(logrus.New(), store)
-		require.NoError(t, err)
+		p := mustNewParser(t, store)
 
 		parsedInfo := p.ingressRulesFromIngressV1()
 		assert.Equal(1, len(parsedInfo.ServiceNameToServices))
@@ -890,8 +874,7 @@ func TestFromIngressV1(t *testing.T) {
 			},
 		})
 		require.NoError(t, err)
-		p, err := NewParser(logrus.New(), store)
-		require.NoError(t, err)
+		p := mustNewParser(t, store)
 
 		parsedInfo := p.ingressRulesFromIngressV1()
 		assert.Equal("/", *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.pnum-80"].Routes[0].Paths[0])
@@ -904,8 +887,7 @@ func TestFromIngressV1(t *testing.T) {
 			},
 		})
 		require.NoError(t, err)
-		p, err := NewParser(logrus.New(), store)
-		require.NoError(t, err)
+		p := mustNewParser(t, store)
 
 		assert.NotPanics(func() {
 			p.ingressRulesFromIngressV1()
@@ -918,8 +900,7 @@ func TestFromIngressV1(t *testing.T) {
 			},
 		})
 		require.NoError(t, err)
-		p, err := NewParser(logrus.New(), store)
-		require.NoError(t, err)
+		p := mustNewParser(t, store)
 
 		parsedInfo := p.ingressRulesFromIngressV1()
 		assert.Equal("foo-svc.foo-namespace.80.svc",
@@ -934,8 +915,7 @@ func TestFromIngressV1(t *testing.T) {
 			},
 		})
 		require.NoError(t, err)
-		p, err := NewParser(logrus.New(), store)
-		require.NoError(t, err)
+		p := mustNewParser(t, store)
 
 		parsedInfo := p.ingressRulesFromIngressV1()
 		assert.Empty(parsedInfo.ServiceNameToServices)
@@ -947,8 +927,7 @@ func TestFromIngressV1(t *testing.T) {
 			},
 		})
 		require.NoError(t, err)
-		p, err := NewParser(logrus.New(), store)
-		require.NoError(t, err)
+		p := mustNewParser(t, store)
 
 		parsedInfo := p.ingressRulesFromIngressV1()
 		_, ok := parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.pnum-80"]
@@ -961,8 +940,7 @@ func TestFromIngressV1(t *testing.T) {
 			},
 		})
 		require.NoError(t, err)
-		p, err := NewParser(logrus.New(), store)
-		require.NoError(t, err)
+		p := mustNewParser(t, store)
 
 		parsedInfo := p.ingressRulesFromIngressV1()
 		assert.Equal(translators.KongPathRegexPrefix+"/foo/\\d{3}", *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.pnum-80"].Routes[0].Paths[0])
@@ -1014,8 +992,7 @@ func TestFromIngressV1_RegexPrefix(t *testing.T) {
 			},
 		})
 		require.NoError(t, err)
-		p, err := NewParser(logrus.New(), store)
-		require.NoError(t, err)
+		p := mustNewParser(t, store)
 
 		p.EnableRegexPathPrefix()
 

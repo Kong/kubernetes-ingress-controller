@@ -4,9 +4,7 @@ import (
 	"testing"
 
 	"github.com/kong/go-kong/kong"
-	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	knative "knative.dev/networking/pkg/apis/networking/v1alpha1"
@@ -221,8 +219,7 @@ func TestFromKnativeIngress(t *testing.T) {
 			KnativeIngresses: []*knative.Ingress{},
 		})
 		assert.NoError(err)
-		p, err := NewParser(logrus.New(), store)
-		require.NoError(t, err)
+		p := mustNewParser(t, store)
 
 		parsedInfo := p.ingressRulesFromKnativeIngress()
 		assert.Equal(map[string]kongstate.Service{}, parsedInfo.ServiceNameToServices)
@@ -235,8 +232,7 @@ func TestFromKnativeIngress(t *testing.T) {
 			},
 		})
 		assert.NoError(err)
-		p, err := NewParser(logrus.New(), store)
-		require.NoError(t, err)
+		p := mustNewParser(t, store)
 
 		parsedInfo := p.ingressRulesFromKnativeIngress()
 		assert.Equal(map[string]kongstate.Service{}, parsedInfo.ServiceNameToServices)
@@ -249,8 +245,7 @@ func TestFromKnativeIngress(t *testing.T) {
 			},
 		})
 		assert.NoError(err)
-		p, err := NewParser(logrus.New(), store)
-		require.NoError(t, err)
+		p := mustNewParser(t, store)
 
 		parsedInfo := p.ingressRulesFromKnativeIngress()
 		assert.Equal(1, len(parsedInfo.ServiceNameToServices))
@@ -295,8 +290,7 @@ func TestFromKnativeIngress(t *testing.T) {
 			},
 		})
 		assert.NoError(err)
-		p, err := NewParser(logrus.New(), store)
-		require.NoError(t, err)
+		p := mustNewParser(t, store)
 
 		parsedInfo := p.ingressRulesFromKnativeIngress()
 		assert.Equal(SecretNameToSNIs(map[string][]string{
@@ -311,8 +305,7 @@ func TestFromKnativeIngress(t *testing.T) {
 			},
 		})
 		assert.NoError(err)
-		p, err := NewParser(logrus.New(), store)
-		require.NoError(t, err)
+		p := mustNewParser(t, store)
 
 		parsedInfo := p.ingressRulesFromKnativeIngress()
 		assert.Equal(1, len(parsedInfo.ServiceNameToServices))
@@ -357,8 +350,7 @@ func TestFromKnativeIngress(t *testing.T) {
 			},
 		})
 		assert.NoError(err)
-		p, err := NewParser(logrus.New(), store)
-		require.NoError(t, err)
+		p := mustNewParser(t, store)
 
 		parsedInfo := p.ingressRulesFromKnativeIngress()
 		assert.Equal(1, len(parsedInfo.ServiceNameToServices))

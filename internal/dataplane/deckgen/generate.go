@@ -197,11 +197,10 @@ func fillPlugin(ctx context.Context, plugin *file.FPlugin, schemas *util.PluginS
 	if plugin.Config == nil {
 		plugin.Config = make(kong.Configuration)
 	}
-	newConfig, err := FillPluginConfig(schema, plugin.Config)
+	err = kong.FillPluginsDefaults(&plugin.Plugin, schema)
 	if err != nil {
 		return fmt.Errorf("error filling in default for plugin %s: %w", *plugin.Name, err)
 	}
-	plugin.Config = newConfig
 	if plugin.RunOn == nil {
 		plugin.RunOn = kong.String("first")
 	}

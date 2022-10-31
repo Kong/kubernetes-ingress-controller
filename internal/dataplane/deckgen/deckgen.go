@@ -118,19 +118,6 @@ func PluginString(plugin file.FPlugin) string {
 	return result
 }
 
-// FillPluginConfig returns a copy of `config` that has default values filled in from `schema`.
-func FillPluginConfig(schema map[string]interface{},
-	config kong.Configuration,
-) (kong.Configuration, error) {
-	jsonb, err := json.Marshal(&schema)
-	if err != nil {
-		return nil, err
-	}
-	// Get all in the schema
-	value := gjson.ParseBytes((jsonb)).Get("config")
-	return fillRecord(value, config)
-}
-
 func fillRecord(schema gjson.Result, config kong.Configuration) (kong.Configuration, error) {
 	if config == nil {
 		return nil, nil

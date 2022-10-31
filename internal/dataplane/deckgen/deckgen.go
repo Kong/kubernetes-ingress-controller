@@ -8,7 +8,6 @@ import (
 
 	"github.com/kong/deck/file"
 	"github.com/kong/go-kong/kong"
-	"github.com/tidwall/gjson"
 )
 
 // GenerateSHA generates a SHA256 checksum of the (targetContent, customEntities) tuple, with the purpose of change
@@ -116,48 +115,4 @@ func PluginString(plugin file.FPlugin) string {
 		result += *plugin.Service.ID
 	}
 	return result
-}
-
-func fillRecord(schema gjson.Result, config kong.Configuration) kong.Configuration {
-	if config == nil {
-		return nil
-	}
-	res := config.DeepCopy()
-	value := schema.Get("fields")
-
-	value.ForEach(func(key, value gjson.Result) bool {
-		// get the key name
-		ms := value.Map()
-		fname := ""
-		for k := range ms {
-			fname = k
-			break
-		}
-		ftype := value.Get(fname + ".type")
-		if ftype.String() == "record" {
-			subConfig := config[fname]
-			if subConfig == nil {
-				subConfig = make(map[string]interface{})
-			}
-			newSubConfig := fillRecord(value.Get(fname), subConfig.(map[string]interface{}))
-			res[fname] = map[string]interface{}(newSubConfig)
-			return true
-		}
-		// check if key is already set in the config
-		if _, ok := config[fname]; ok {
-			// yes, don't set it
-			return true
-		}
-		// no, set it
-		value = value.Get(fname + ".default")
-		if value.Exists() {
-			res[fname] = value.Value()
-		} else {
-			// if no default exists, set an explicit nil
-			res[fname] = nil
-		}
-		return true
-	})
-
-	return res
 }

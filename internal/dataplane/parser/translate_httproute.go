@@ -78,27 +78,25 @@ func (p *Parser) ingressRulesFromHTTPRoute(result *ingressRules, httproute *gate
 // ingressRulesFromHTTPRouteWithCombinedServiceRoutes generates a set of proto-Kong routes (ingress rules) from an HTTPRoute.
 // If multiple rules in the HTTPRoute use the same Service, it combines them into a single Kong route.
 func (p *Parser) ingressRulesFromHTTPRouteWithCombinedServiceRoutes(httproute *gatewayv1beta1.HTTPRoute, result *ingressRules) error {
-	for _, translationMeta := range translators.TranslateHTTPRoute(httproute) {
+	for _, kongServiceTranslation := range translators.TranslateHTTPRoute(httproute) {
 		// HTTPRoute uses a wrapper HTTPBackendRef to add optional filters to its BackendRefs
-		backendRefs := httpBackendRefsToBackendRefs(translationMeta.BackendRefs)
+		backendRefs := httpBackendRefsToBackendRefs(kongServiceTranslation.BackendRefs)
 
-		// use the original index of the first rule that uses this service as the rule number
-		firstCombinedRuleNum := translationMeta.RulesNumbers[0]
+		serviceName := kongServiceTranslation.Name
 
 		// create a service and attach the routes to it
-		service, err := generateKongServiceFromBackendRefWithRuleNumber(p.logger, p.storer, result, httproute, firstCombinedRuleNum, "http", backendRefs...)
+		service, err := generateKongServiceFromBackendRefWithName(p.logger, p.storer, result, serviceName, httproute, "http", backendRefs...)
 		if err != nil {
 			return err
 		}
 
 		// generate the routes for the service and attach them to the service
-		for j, rule := range translationMeta.Rules {
-			ruleNumber := translationMeta.RulesNumbers[j]
-			routes, err := generateKongRoutesFromHTTPRouteRule(httproute, ruleNumber, rule, p.flagEnabledRegexPathPrefix)
+		for _, kongRouteTranslation := range kongServiceTranslation.KongRoutes {
+			route, err := generateKongRouteFromTranslation(httproute, kongRouteTranslation, p.flagEnabledRegexPathPrefix)
 			if err != nil {
 				return err
 			}
-			service.Routes = append(service.Routes, routes...)
+			service.Routes = append(service.Routes, route)
 		}
 
 		// cache the service to avoid duplicates in further loop iterations
@@ -217,6 +215,30 @@ func generateKongRoutesFromHTTPRouteRule(
 	}
 
 	return routes, nil
+}
+
+func generateKongRouteFromTranslation(
+	httproute *gatewayv1beta1.HTTPRoute,
+	translation translators.KongRouteTranslation,
+	addRegexPrefix bool,
+) (kongstate.Route, error) {
+	// gather the k8s object information and hostnames from the httproute
+	objectInfo := util.FromK8sObject(httproute)
+
+	// get the hostnames from the HTTPRoute
+	hostnames := getHTTPRouteHostnamesAsSliceOfStringPointers(httproute)
+
+	// generate kong plugins from rule.filters
+	plugins := generatePluginsFromHTTPRouteFilters(translation.Filters)
+
+	return generateKongRouteFromHTTPRouteMatches(
+		translation.Name,
+		translation.Matches,
+		objectInfo,
+		hostnames,
+		plugins,
+		addRegexPrefix,
+	)
 }
 
 // generateKongRouteFromHTTPRouteMatches converts an HTTPRouteMatches to a Kong Route object.

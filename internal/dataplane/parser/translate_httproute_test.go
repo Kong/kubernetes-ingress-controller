@@ -410,26 +410,12 @@ func getIngressRulesFromHTTPRoutesCombinedRoutesTestCases() []testCaseIngressRul
 							},
 							Namespace: "default",
 							Routes: []kongstate.Route{
-								// only 2 routes should be created
+								// only 1 route with two paths should be created
 								{
 									Route: kong.Route{
 										Name: kong.String("httproute.default.basic-httproute.0.0"),
 										Paths: []*string{
 											kong.String("/httpbin-1"),
-										},
-										PreserveHost: kong.Bool(true),
-										Protocols: []*string{
-											kong.String("http"),
-											kong.String("https"),
-										},
-										StripPath: pointer.BoolPtr(false),
-									},
-									Ingress: k8sObjectInfoOfHTTPRoute(routes[0]),
-								},
-								{
-									Route: kong.Route{
-										Name: kong.String("httproute.default.basic-httproute.1.0"),
-										Paths: []*string{
 											kong.String("/httpbin-2"),
 										},
 										PreserveHost: kong.Bool(true),
@@ -467,7 +453,8 @@ func getIngressRulesFromHTTPRoutesCombinedRoutesTestCases() []testCaseIngressRul
 								BackendRefs: []gatewayv1beta1.HTTPBackendRef{
 									builder.NewHTTPBackendRef("fake-service").WithPort(80).Build(),
 								},
-							}, {
+							},
+							{
 								Matches: []gatewayv1beta1.HTTPRouteMatch{
 									builder.NewHTTPRouteMatch().WithPathPrefix("/httpbin-2").Build(),
 								},
@@ -479,7 +466,6 @@ func getIngressRulesFromHTTPRoutesCombinedRoutesTestCases() []testCaseIngressRul
 					},
 				},
 			},
-
 			expected: func(routes []*gatewayv1beta1.HTTPRoute) ingressRules {
 				return ingressRules{
 					SecretNameToSNIs: SecretNameToSNIs{},
@@ -619,20 +605,6 @@ func getIngressRulesFromHTTPRoutesCombinedRoutesTestCases() []testCaseIngressRul
 										Name: kong.String("httproute.default.basic-httproute.0.0"),
 										Paths: []*string{
 											kong.String("/httpbin-1"),
-										},
-										PreserveHost: kong.Bool(true),
-										Protocols: []*string{
-											kong.String("http"),
-											kong.String("https"),
-										},
-										StripPath: pointer.BoolPtr(false),
-									},
-									Ingress: k8sObjectInfoOfHTTPRoute(routes[0]),
-								},
-								{
-									Route: kong.Route{
-										Name: kong.String("httproute.default.basic-httproute.1.0"),
-										Paths: []*string{
 											kong.String("/httpbin-2"),
 										},
 										PreserveHost: kong.Bool(true),
@@ -678,6 +650,420 @@ func getIngressRulesFromHTTPRoutesCombinedRoutesTestCases() []testCaseIngressRul
 										StripPath: pointer.BoolPtr(false),
 									},
 									Ingress: k8sObjectInfoOfHTTPRoute(routes[0]),
+								},
+							},
+							Parent: routes[0],
+						},
+					},
+				}
+			},
+		},
+
+		{
+			msg: "a single HTTPRoute with multiple rules with equal backendRefs and different filters results in a single service",
+			routes: []*gatewayv1beta1.HTTPRoute{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "basic-httproute",
+						Namespace: corev1.NamespaceDefault,
+					},
+					Spec: gatewayv1beta1.HTTPRouteSpec{
+						CommonRouteSpec: commonRouteSpecMock("fake-gateway"),
+						Rules: []gatewayv1beta1.HTTPRouteRule{
+							{
+								Matches: []gatewayv1beta1.HTTPRouteMatch{
+									builder.NewHTTPRouteMatch().WithPathPrefix("/path-0").Build(),
+								},
+								BackendRefs: []gatewayv1beta1.HTTPBackendRef{
+									builder.NewHTTPBackendRef("fake-service").WithPort(80).Build(),
+								},
+								Filters: []gatewayv1beta1.HTTPRouteFilter{
+									{
+										Type: gatewayv1beta1.HTTPRouteFilterRequestHeaderModifier,
+										RequestHeaderModifier: &gatewayv1beta1.HTTPRequestHeaderFilter{
+											Add: []gatewayv1beta1.HTTPHeader{
+												{Name: "X-Test-Header-1", Value: "test-value-1"},
+											},
+										},
+									},
+								},
+							},
+							{
+								Matches: []gatewayv1beta1.HTTPRouteMatch{
+									builder.NewHTTPRouteMatch().WithPathPrefix("/path-1").Build(),
+								},
+								BackendRefs: []gatewayv1beta1.HTTPBackendRef{
+									builder.NewHTTPBackendRef("fake-service").WithPort(80).Build(),
+								},
+								Filters: []gatewayv1beta1.HTTPRouteFilter{
+									{
+										Type: gatewayv1beta1.HTTPRouteFilterRequestHeaderModifier,
+										RequestHeaderModifier: &gatewayv1beta1.HTTPRequestHeaderFilter{
+											Add: []gatewayv1beta1.HTTPHeader{
+												{Name: "X-Test-Header-2", Value: "test-value-2"},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			expected: func(routes []*gatewayv1beta1.HTTPRoute) ingressRules {
+				return ingressRules{
+					SecretNameToSNIs: SecretNameToSNIs{},
+					ServiceNameToServices: map[string]kongstate.Service{
+						"httproute.default.basic-httproute.0": {
+							Service: kong.Service{ // only 1 service should be created
+								ConnectTimeout: kong.Int(60000),
+								Host:           kong.String("httproute.default.basic-httproute.0"),
+								Name:           kong.String("httproute.default.basic-httproute.0"),
+								Protocol:       kong.String("http"),
+								ReadTimeout:    kong.Int(60000),
+								Retries:        kong.Int(5),
+								WriteTimeout:   kong.Int(60000),
+							},
+							Backends: kongstate.ServiceBackends{
+								builder.NewKongstateServiceBackend("fake-service").WithPortNumber(80).Build(),
+							},
+							Namespace: "default",
+							Routes: []kongstate.Route{
+								// two route  should be created, as the filters are different
+								{
+									Route: kong.Route{
+										Name: kong.String("httproute.default.basic-httproute.0.0"),
+										Paths: []*string{
+											kong.String("/path-0"),
+										},
+										PreserveHost: kong.Bool(true),
+										Protocols: []*string{
+											kong.String("http"),
+											kong.String("https"),
+										},
+										StripPath: pointer.BoolPtr(false),
+									},
+									Ingress: k8sObjectInfoOfHTTPRoute(routes[0]),
+									Plugins: []kong.Plugin{
+										{
+											Name: kong.String("request-transformer"),
+											Config: kong.Configuration{
+												"append": map[string][]string{
+													"headers": {"X-Test-Header-1:test-value-1"},
+												},
+											},
+										},
+									},
+								},
+								{
+									Route: kong.Route{
+										Name: kong.String("httproute.default.basic-httproute.1.0"),
+										Paths: []*string{
+											kong.String("/path-1"),
+										},
+										PreserveHost: kong.Bool(true),
+										Protocols: []*string{
+											kong.String("http"),
+											kong.String("https"),
+										},
+										StripPath: pointer.BoolPtr(false),
+									},
+									Ingress: k8sObjectInfoOfHTTPRoute(routes[0]),
+									Plugins: []kong.Plugin{
+										{
+											Name: kong.String("request-transformer"),
+											Config: kong.Configuration{
+												"append": map[string][]string{
+													"headers": {"X-Test-Header-2:test-value-2"},
+												},
+											},
+										},
+									},
+								},
+							},
+							Parent: routes[0],
+						},
+					},
+				}
+			},
+		},
+
+		{
+			msg: "a single HTTPRoute with single rule and multiple matches generates consolidated kong route paths",
+			routes: []*gatewayv1beta1.HTTPRoute{{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "basic-httproute",
+					Namespace: corev1.NamespaceDefault,
+				},
+				Spec: gatewayv1beta1.HTTPRouteSpec{
+					CommonRouteSpec: commonRouteSpecMock("fake-gateway"),
+					Rules: []gatewayv1beta1.HTTPRouteRule{
+						{
+							Matches: []gatewayv1beta1.HTTPRouteMatch{
+								// Two matches eligible for consolidation into a single kong route
+								builder.NewHTTPRouteMatch().WithPathPrefix("/path-0").Build(),
+								builder.NewHTTPRouteMatch().WithPathPrefix("/path-1").Build(),
+								// Other two matches eligible for consolidation, but not with the above two
+								// as they have different methods
+								builder.NewHTTPRouteMatch().WithPathPrefix("/path-2").WithMethod(gatewayv1beta1.HTTPMethodDelete).Build(),
+								builder.NewHTTPRouteMatch().WithPathPrefix("/path-3").WithMethod(gatewayv1beta1.HTTPMethodDelete).Build(),
+								// Other two matches eligible for consolidation, but not with the above two
+								// as they have different headers
+								builder.NewHTTPRouteMatch().WithPathPrefix("/path-4").
+									WithHeader("x-header-1", "x-value-1").
+									WithHeader("x-header-2", "x-value-2").
+									Build(),
+								// Note the different header order
+								builder.NewHTTPRouteMatch().WithPathPrefix("/path-5").
+									WithHeader("x-header-2", "x-value-2").
+									WithHeader("x-header-1", "x-value-1").
+									Build(),
+							},
+							BackendRefs: []gatewayv1beta1.HTTPBackendRef{
+								builder.NewHTTPBackendRef("foo-v1").WithPort(80).WithWeight(90).Build(),
+								builder.NewHTTPBackendRef("foo-v2").WithPort(8080).WithWeight(10).Build(),
+							},
+						},
+					},
+				},
+			}},
+			expected: func(routes []*gatewayv1beta1.HTTPRoute) ingressRules {
+				return ingressRules{
+					SecretNameToSNIs: SecretNameToSNIs{},
+					ServiceNameToServices: map[string]kongstate.Service{
+						"httproute.default.basic-httproute.0": {
+							Service: kong.Service{
+								ConnectTimeout: kong.Int(60000),
+								Host:           kong.String("httproute.default.basic-httproute.0"),
+								Name:           kong.String("httproute.default.basic-httproute.0"),
+								Protocol:       kong.String("http"),
+								ReadTimeout:    kong.Int(60000),
+								Retries:        kong.Int(5),
+								WriteTimeout:   kong.Int(60000),
+							},
+
+							Backends: kongstate.ServiceBackends{
+								builder.NewKongstateServiceBackend("foo-v1").WithPortNumber(80).WithWeight(90).Build(),
+								builder.NewKongstateServiceBackend("foo-v2").WithPortNumber(8080).WithWeight(10).Build(),
+							},
+							Namespace: "default",
+							Routes: []kongstate.Route{
+								// First two matches consolidated into a single route
+								{
+									Route: kong.Route{
+										Name: kong.String("httproute.default.basic-httproute.0.0"),
+										Paths: []*string{
+											kong.String("/path-0"),
+											kong.String("/path-1"),
+										},
+										PreserveHost: kong.Bool(true),
+										Protocols: []*string{
+											kong.String("http"),
+											kong.String("https"),
+										},
+										StripPath: pointer.BoolPtr(false),
+									},
+									Ingress: k8sObjectInfoOfHTTPRoute(routes[0]),
+								},
+								// Second two matches consolidated into a single route
+								{
+									Route: kong.Route{
+										Name: kong.String("httproute.default.basic-httproute.0.2"),
+										Paths: []*string{
+											kong.String("/path-2"),
+											kong.String("/path-3"),
+										},
+										PreserveHost: kong.Bool(true),
+										Protocols: []*string{
+											kong.String("http"),
+											kong.String("https"),
+										},
+										StripPath: pointer.BoolPtr(false),
+										Methods:   []*string{kong.String("DELETE")},
+									},
+									Ingress: k8sObjectInfoOfHTTPRoute(routes[0]),
+								},
+								// Third two matches consolidated into a single route
+								{
+									Route: kong.Route{
+										Name: kong.String("httproute.default.basic-httproute.0.4"),
+										Paths: []*string{
+											kong.String("/path-4"),
+											kong.String("/path-5"),
+										},
+										PreserveHost: kong.Bool(true),
+										Protocols: []*string{
+											kong.String("http"),
+											kong.String("https"),
+										},
+										StripPath: pointer.BoolPtr(false),
+										Headers: map[string][]string{
+											"x-header-1": {"x-value-1"},
+											"x-header-2": {"x-value-2"},
+										},
+									},
+									Ingress: k8sObjectInfoOfHTTPRoute(routes[0]),
+								},
+							},
+							Parent: routes[0],
+						},
+					},
+				}
+			},
+		},
+
+		{
+			msg: "a single HTTPRoute with multiple rules and matches generates consolidated kong route paths",
+			routes: []*gatewayv1beta1.HTTPRoute{{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "basic-httproute",
+					Namespace: corev1.NamespaceDefault,
+				},
+				Spec: gatewayv1beta1.HTTPRouteSpec{
+					CommonRouteSpec: commonRouteSpecMock("fake-gateway"),
+					Rules: []gatewayv1beta1.HTTPRouteRule{
+						// Rule one has four matches, that can be consolidated into two kong routes
+						{
+							Matches: []gatewayv1beta1.HTTPRouteMatch{
+								// Two matches eligible for consolidation into a single kong route
+								builder.NewHTTPRouteMatch().WithPathPrefix("/path-0").Build(),
+								builder.NewHTTPRouteMatch().WithPathPrefix("/path-1").Build(),
+								// Other two matches eligible for consolidation, but not with the above two
+								// as they have different methods
+								builder.NewHTTPRouteMatch().WithPathPrefix("/path-2").WithMethod(gatewayv1beta1.HTTPMethodDelete).Build(),
+								builder.NewHTTPRouteMatch().WithPathPrefix("/path-3").WithMethod(gatewayv1beta1.HTTPMethodDelete).Build(),
+							},
+							BackendRefs: []gatewayv1beta1.HTTPBackendRef{
+								builder.NewHTTPBackendRef("foo-v1").WithPort(80).WithWeight(90).Build(),
+								builder.NewHTTPBackendRef("foo-v2").WithPort(8080).WithWeight(10).Build(),
+							},
+						},
+
+						// Rule two:
+						//	- shares the backend refs with rule one
+						//	- has two matches, that can be consolidated with the first two matches of rule one
+						{
+							Matches: []gatewayv1beta1.HTTPRouteMatch{
+								builder.NewHTTPRouteMatch().WithPathPrefix("/path-4").Build(),
+								builder.NewHTTPRouteMatch().WithPathPrefix("/path-5").Build(),
+							},
+							BackendRefs: []gatewayv1beta1.HTTPBackendRef{
+								builder.NewHTTPBackendRef("foo-v1").WithPort(80).WithWeight(90).Build(),
+								builder.NewHTTPBackendRef("foo-v2").WithPort(8080).WithWeight(10).Build(),
+							},
+						},
+
+						// Rule three:
+						//	- shares the backend refs with rule one
+						//	- has two matches, that potentially could be consolidated with the first match of rule one
+						//	- has a different filter than rule one, thus cannot be consolidated
+						{
+							Matches: []gatewayv1beta1.HTTPRouteMatch{
+								builder.NewHTTPRouteMatch().WithPathPrefix("/path-6").Build(),
+								builder.NewHTTPRouteMatch().WithPathPrefix("/path-7").Build(),
+							},
+							BackendRefs: []gatewayv1beta1.HTTPBackendRef{
+								builder.NewHTTPBackendRef("foo-v1").WithPort(80).WithWeight(90).Build(),
+								builder.NewHTTPBackendRef("foo-v2").WithPort(8080).WithWeight(10).Build(),
+							},
+							Filters: []gatewayv1beta1.HTTPRouteFilter{
+								{
+									Type: gatewayv1beta1.HTTPRouteFilterRequestHeaderModifier,
+									RequestHeaderModifier: &gatewayv1beta1.HTTPRequestHeaderFilter{
+										Add: []gatewayv1beta1.HTTPHeader{
+											{Name: "X-Test-Header-1", Value: "test-value-1"},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			}},
+			expected: func(routes []*gatewayv1beta1.HTTPRoute) ingressRules {
+				return ingressRules{
+					SecretNameToSNIs: SecretNameToSNIs{},
+					ServiceNameToServices: map[string]kongstate.Service{
+						"httproute.default.basic-httproute.0": {
+							Service: kong.Service{
+								ConnectTimeout: kong.Int(60000),
+								Host:           kong.String("httproute.default.basic-httproute.0"),
+								Name:           kong.String("httproute.default.basic-httproute.0"),
+								Protocol:       kong.String("http"),
+								ReadTimeout:    kong.Int(60000),
+								Retries:        kong.Int(5),
+								WriteTimeout:   kong.Int(60000),
+							},
+							Backends: kongstate.ServiceBackends{
+								builder.NewKongstateServiceBackend("foo-v1").WithPortNumber(80).WithWeight(90).Build(),
+								builder.NewKongstateServiceBackend("foo-v2").WithPortNumber(8080).WithWeight(10).Build(),
+							},
+							Namespace: "default",
+							Routes: []kongstate.Route{
+								// First two matches from rule one and rule two consolidated into a single route
+								{
+									Route: kong.Route{
+										Name: kong.String("httproute.default.basic-httproute.0.0"),
+										Paths: []*string{
+											kong.String("/path-0"),
+											kong.String("/path-1"),
+											kong.String("/path-4"),
+											kong.String("/path-5"),
+										},
+										PreserveHost: kong.Bool(true),
+										Protocols: []*string{
+											kong.String("http"),
+											kong.String("https"),
+										},
+										StripPath: pointer.BoolPtr(false),
+									},
+									Ingress: k8sObjectInfoOfHTTPRoute(routes[0]),
+								},
+								// Second two matches consolidated into a single route
+								{
+									Route: kong.Route{
+										Name: kong.String("httproute.default.basic-httproute.0.2"),
+										Paths: []*string{
+											kong.String("/path-2"),
+											kong.String("/path-3"),
+										},
+										PreserveHost: kong.Bool(true),
+										Protocols: []*string{
+											kong.String("http"),
+											kong.String("https"),
+										},
+										StripPath: pointer.BoolPtr(false),
+										Methods:   []*string{kong.String("DELETE")},
+									},
+									Ingress: k8sObjectInfoOfHTTPRoute(routes[0]),
+								},
+
+								// Matches from rule 3, that has different filter, are not consolidated
+								{
+									Route: kong.Route{
+										Name: kong.String("httproute.default.basic-httproute.2.0"),
+										Paths: []*string{
+											kong.String("/path-6"),
+											kong.String("/path-7"),
+										},
+										PreserveHost: kong.Bool(true),
+										Protocols: []*string{
+											kong.String("http"),
+											kong.String("https"),
+										},
+										StripPath: pointer.BoolPtr(false),
+									},
+									Ingress: k8sObjectInfoOfHTTPRoute(routes[0]),
+									Plugins: []kong.Plugin{
+										{
+											Name: kong.String("request-transformer"),
+											Config: kong.Configuration{
+												"append": map[string][]string{
+													"headers": {"X-Test-Header-1:test-value-1"},
+												},
+											},
+										},
+									},
 								},
 							},
 							Parent: routes[0],
@@ -858,13 +1244,9 @@ func TestIngressRulesFromHTTPRoutes_RegexPrefix(t *testing.T) {
 								Retries:        kong.Int(5),
 								WriteTimeout:   kong.Int(60000),
 							},
-							Backends: kongstate.ServiceBackends{{
-								Name: "fake-service",
-								PortDef: kongstate.PortDef{
-									Mode:   kongstate.PortMode(1),
-									Number: 80,
-								},
-							}},
+							Backends: kongstate.ServiceBackends{
+								builder.NewKongstateServiceBackend("fake-service").WithPortNumber(80).Build(),
+							},
 							Namespace: "default",
 							Routes: []kongstate.Route{{ // only 1 route should be created
 								Route: kong.Route{
@@ -918,8 +1300,8 @@ func TestIngressRulesFromHTTPRoutes_RegexPrefix(t *testing.T) {
 	}
 }
 
-func HTTPMethodPointer(method string) *gatewayv1beta1.HTTPMethod {
-	return (*gatewayv1beta1.HTTPMethod)(&method)
+func HTTPMethodPointer(method gatewayv1beta1.HTTPMethod) *gatewayv1beta1.HTTPMethod {
+	return &method
 }
 
 func k8sObjectInfoOfHTTPRoute(route *gatewayv1beta1.HTTPRoute) util.K8sObjectInfo {

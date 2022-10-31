@@ -53,3 +53,16 @@ func (b *HTTPRouteMatchBuilder) WithQueryParam(name, value string) *HTTPRouteMat
 	})
 	return b
 }
+
+func (b *HTTPRouteMatchBuilder) WithMethod(method gatewayv1beta1.HTTPMethod) *HTTPRouteMatchBuilder {
+	b.httpRouteMatch.Method = &method
+	return b
+}
+
+func (b *HTTPRouteMatchBuilder) WithHeader(name, value string) *HTTPRouteMatchBuilder {
+	b.httpRouteMatch.Headers = append(b.httpRouteMatch.Headers, gatewayv1beta1.HTTPHeaderMatch{
+		Name:  gatewayv1beta1.HTTPHeaderName(name),
+		Value: value,
+	})
+	return b
+}

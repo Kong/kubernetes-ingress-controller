@@ -118,9 +118,9 @@ func PluginString(plugin file.FPlugin) string {
 	return result
 }
 
-func fillRecord(schema gjson.Result, config kong.Configuration) (kong.Configuration, error) {
+func fillRecord(schema gjson.Result, config kong.Configuration) kong.Configuration {
 	if config == nil {
-		return nil, nil
+		return nil
 	}
 	res := config.DeepCopy()
 	value := schema.Get("fields")
@@ -139,10 +139,7 @@ func fillRecord(schema gjson.Result, config kong.Configuration) (kong.Configurat
 			if subConfig == nil {
 				subConfig = make(map[string]interface{})
 			}
-			newSubConfig, err := fillRecord(value.Get(fname), subConfig.(map[string]interface{}))
-			if err != nil {
-				panic(err)
-			}
+			newSubConfig := fillRecord(value.Get(fname), subConfig.(map[string]interface{}))
 			res[fname] = map[string]interface{}(newSubConfig)
 			return true
 		}
@@ -162,5 +159,5 @@ func fillRecord(schema gjson.Result, config kong.Configuration) (kong.Configurat
 		return true
 	})
 
-	return res, nil
+	return res
 }

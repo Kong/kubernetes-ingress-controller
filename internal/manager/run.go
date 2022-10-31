@@ -12,6 +12,7 @@ import (
 	"github.com/avast/retry-go/v4"
 	"github.com/blang/semver/v4"
 	"github.com/kong/go-kong/kong"
+	"github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
@@ -39,10 +40,16 @@ import (
 
 // Run starts the controller manager and blocks until it exits.
 func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic) error {
-	deprecatedLogger, _, err := setupLoggers(c)
+	deprecatedLogger, _, err := SetupLoggers(c)
 	if err != nil {
 		return err
 	}
+	return RunWithLogger(ctx, c, diagnostic, deprecatedLogger)
+}
+
+// RunWithLogger starts the controller manager and blocks until it exits.
+// This function is intended for use in tests, where the logger can be injected.
+func RunWithLogger(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, deprecatedLogger logrus.FieldLogger) error {
 	setupLog := ctrl.Log.WithName("setup")
 	setupLog.Info("starting controller manager", "release", metadata.Release, "repo", metadata.Repo, "commit", metadata.Commit)
 	setupLog.V(util.DebugLevel).Info("the ingress class name has been set", "value", c.IngressClassName)

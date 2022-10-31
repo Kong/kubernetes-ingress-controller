@@ -83,6 +83,17 @@ func TestMain(m *testing.M) {
 	ctx, cancel = context.WithCancel(context.Background())
 	defer cancel()
 
+	// Logger needs to be configured before anything else happens.
+	// This is because the controller manager has a timeout for
+	// logger initialization, and if the logger isn't configured
+	// after 30s from the start of controller manager package init function,
+	// the controller manager will set up a no op logger and continue.
+	// The logger cannot be configured after that point.
+	logger, _, err := testutils.SetupLoggers("trace", "text", false)
+	if err != nil {
+		exitOnErrWithCode(fmt.Errorf("failed to setup loggers: %w", err), ExitCodeCantCreateLogger)
+	}
+
 	fmt.Println("INFO: setting up test environment")
 	kongbuilder, extraControllerArgs := generateKongBuilder()
 	kongAddon := kongbuilder.Build()
@@ -129,7 +140,6 @@ func TestMain(m *testing.M) {
 	}
 
 	fmt.Println("INFO: building test environment")
-	var err error
 	env, err = builder.Build(ctx)
 	exitOnErr(err)
 	k8sClient = env.Cluster().Client()
@@ -200,14 +210,14 @@ func TestMain(m *testing.M) {
 			fmt.Sprintf("--admission-webhook-listen=0.0.0.0:%d", testutils.AdmissionWebhookListenPort),
 			"--profiling",
 			"--dump-config",
-			"--log-level=trace",
-			"--debug-log-reduce-redundancy",
+			"--log-level=trace",             // not used, as controller logger is configured separately
+			"--debug-log-reduce-redundancy", // not used, as controller logger is configured separately
 			"--anonymous-reports=false",
 			fmt.Sprintf("--feature-gates=%s", controllerFeatureGates),
 			fmt.Sprintf("--election-namespace=%s", kongAddon.Namespace()),
 		}
 		allControllerArgs := append(standardControllerArgs, extraControllerArgs...)
-		exitOnErr(testutils.DeployControllerManagerForCluster(ctx, env.Cluster(), allControllerArgs...))
+		exitOnErr(testutils.DeployControllerManagerForCluster(ctx, logger, env.Cluster(), allControllerArgs...))
 	}
 
 	gatewayClient, err := gatewayclient.NewForConfig(env.Cluster().Config())

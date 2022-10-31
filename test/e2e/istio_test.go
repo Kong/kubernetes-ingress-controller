@@ -59,6 +59,15 @@ func TestIstioWithKongIngressGateway(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
+	// Logger needs to be configured before anything else happens.
+	// This is because the controller manager has a timeout for
+	// logger initialization, and if the logger isn't configured
+	// after 30s from the start of controller manager package init function,
+	// the controller manager will set up a no op logger and continue.
+	// The logger cannot be configured after that point.
+	logger, _, err := testutils.SetupLoggers("trace", "text", false)
+	require.NoError(t, err, "failed to configure logger")
+
 	t.Log("configuring cluster addons for the testing environment")
 	metallbAddon := metallb.New()
 	kongBuilder := kong.NewBuilder().
@@ -111,7 +120,7 @@ func TestIstioWithKongIngressGateway(t *testing.T) {
 	}, time.Minute, time.Second)
 
 	t.Log("starting the controller manager")
-	require.NoError(t, testutils.DeployControllerManagerForCluster(ctx, env.Cluster(), "--log-level=debug"))
+	require.NoError(t, testutils.DeployControllerManagerForCluster(ctx, logger, env.Cluster(), "--log-level=debug"))
 
 	t.Log("creating a new mesh-enabled namespace for testing http traffic")
 	namespace := &corev1.Namespace{

@@ -68,11 +68,12 @@ Adding a new version? You'll need three changes:
 ### Added
 
 - Added `HTTPRoute` support for `CombinedRoutes` feature. When enabled,
-  this changes how `HTTPRoute` objects are translated to the Kong configuration.
-  Multiple `HTTPRoute.HTTPRouteRule[]` objects can be consolidated into a single
-  Kong Service. Multiple `HTTPRoute.HTTPRouteRule[].HTTPRouteMatch[]` objects 
-  can consolidated into a single Kong Route. 
-  Following limitations apply:
+  `HTTPRoute.HTTPRouteRule` objects with identical `backendRefs` generate a 
+  single Kong service instead of a service per rule, and 
+  `HTTPRouteRule.HTTPRouteMatche` objects using the same `backendRefs` can be 
+  consolidated into a single Kong route instead of always creating a route per 
+  match, reducing configuration size.
+  The following limitations apply:
   - `HTTPRouteRule` objects cannot be consolidated into a single Kong Service 
     if they belong to different `HTTPRoute`.
   - `HTTPRouteRule` objects cannot be consolidated into a single Kong Service 
@@ -87,7 +88,7 @@ Adding a new version? You'll need three changes:
     `HTTPHeaderMatch.Method`). Different `HTTPHeaderMatch.Path` paths between 
     `HTTPRouteMatch[]` objects does not prevent consolidation.
   This change does not functionally impact routing: requests that went to a given Service
-  using the original method still go to the same Service in the new method.
+  using the original method still go to the same Service when `CombinedRoutes` is enabled.
   [#3008](https://github.com/Kong/kubernetes-ingress-controller/pull/3008)
   [#3060]https://github.com/Kong/kubernetes-ingress-controller/pull/3060)
 - Added `--cache-sync-timeout` flag allowing to change the default controllers' 

@@ -105,7 +105,8 @@ func (i *httpRouteTranslationIndex) translateToKongServiceBackends(rulesMeta []h
 	if len(rulesMeta) == 0 {
 		return nil
 	}
-	// get the backendRefs and filters from any rule, as they are all the same
+	// get the backendRefs and filters from any rule, as they are all the same,
+	// because the the rules are processed in groups wit the same backendRefs and filters.
 	return rulesMeta[0].Rule.BackendRefs
 }
 
@@ -252,10 +253,11 @@ type httpRouteMatchMeta struct {
 	MatchNumber int
 }
 
-// getKey computes a key from a HTTPRouteMatch, to be used to group rules by their match.
-// The key is derived from the match method, headers and query parameters.
+// getKey computes a key from an HTTPRouteMatch. Two HTTPRouteMatches will generate the same key if their
+// methods, headers, and query parameters are identical. HTTPRouteMatches with the same key can be
+// combined into a single Kong route.
 func (m httpRouteMatchMeta) getKey() string {
-	// According to the spec of HTTPRouteMatch:
+	// Per the HTTPHeader definition at https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io%2fv1beta1.HTTPHeader
 	//
 	// Name is the name of the HTTP Header to be matched. Name matching MUST be
 	// case insensitive. (See https://tools.ietf.org/html/rfc7230#section-3.2).

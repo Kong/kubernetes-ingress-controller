@@ -175,6 +175,10 @@ const (
 	// problems setting up the testing environment and/or cluster.
 	ExitCodeEnvSetupFailed = 104
 
+	// ExitCodeCentCreateLogger is a POSIX compliant exit code for the test suite to indicate
+	// that a failure occurred when trying to create a logger for the test suite.
+	ExitCodeCantCreateLogger = 105
+
 	// kongTestPassword is used as a password only within the context of transient integration test runs
 	// and is left static to help developers debug failures in those testing environments.
 	kongTestPassword = "password"

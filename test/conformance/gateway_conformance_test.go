@@ -50,7 +50,8 @@ func TestGatewayConformance(t *testing.T) {
 		"--feature-gates=GatewayAlpha=true",
 		"--anonymous-reports=false",
 	}
-	require.NoError(t, testutils.DeployControllerManagerForCluster(ctx, env.Cluster(), args...))
+
+	require.NoError(t, testutils.DeployControllerManagerForCluster(ctx, globalLogger, env.Cluster(), args...))
 
 	t.Log("creating GatewayClass for gateway conformance tests")
 	gwc := &gatewayv1beta1.GatewayClass{

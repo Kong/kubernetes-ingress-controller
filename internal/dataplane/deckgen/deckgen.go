@@ -127,7 +127,7 @@ func FillPluginConfig(schema map[string]interface{},
 		return nil, err
 	}
 	// Get all in the schema
-	value := gjson.ParseBytes((jsonb))
+	value := gjson.ParseBytes((jsonb)).Get("config")
 	return fillRecord(value, config)
 }
 

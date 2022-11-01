@@ -29,11 +29,9 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
-var (
-	// httpc is a standard HTTP client for tests to use that has a low default
-	// timeout instead of the longer default provided by the http stdlib.
-	httpc = http.Client{Timeout: time.Second * 10}
-)
+// httpc is a standard HTTP client for tests to use that has a low default
+// timeout instead of the longer default provided by the http stdlib.
+var httpc = http.Client{Timeout: time.Second * 10}
 
 const (
 	// adminPasswordSecretName is the name of the secret which will house the admin

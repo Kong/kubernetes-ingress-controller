@@ -56,6 +56,9 @@ const (
 	ResponseBuffering    = "/response-buffering"
 	HostAliasesKey       = "/host-aliases"
 	RegexPrefixKey       = "/regex-prefix"
+	ConnectTimeoutKey    = "/connect-timeout"
+	WriteTimeoutKey      = "/write-timeout"
+	ReadTimeoutKey       = "/read-timeout"
 
 	// GatewayClassUnmanagedAnnotationSuffix is an annotation used on a Gateway resource to
 	// indicate that the GatewayClass should be reconciled according to unmanaged
@@ -251,6 +254,33 @@ func ExtractHostAliases(anns map[string]string) ([]string, bool) {
 		return nil, false
 	}
 	return strings.Split(val, ","), true
+}
+
+// ExtractConnectTimeout extracts the connection timeout annotation value.
+func ExtractConnectTimeout(anns map[string]string) (string, bool) {
+	val, exists := anns[AnnotationPrefix+ConnectTimeoutKey]
+	if !exists {
+		return "", false
+	}
+	return val, true
+}
+
+// ExtractWriteTimeout extracts the write timeout annotation value.
+func ExtractWriteTimeout(anns map[string]string) (string, bool) {
+	val, exists := anns[AnnotationPrefix+WriteTimeoutKey]
+	if !exists {
+		return "", false
+	}
+	return val, true
+}
+
+// ExtractReadTimeout extracts the read timeout annotation value.
+func ExtractReadTimeout(anns map[string]string) (string, bool) {
+	val, exists := anns[AnnotationPrefix+ReadTimeoutKey]
+	if !exists {
+		return "", false
+	}
+	return val, true
 }
 
 // ExtractUnmanagedGatewayClassMode extracts the value of the unmanaged gateway

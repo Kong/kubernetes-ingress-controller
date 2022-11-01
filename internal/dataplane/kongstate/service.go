@@ -1,6 +1,7 @@
 package kongstate
 
 import (
+	"strconv"
 	"strings"
 
 	"github.com/kong/go-kong/kong"
@@ -106,6 +107,51 @@ func (s *Service) overrideProtocol(anns map[string]string) {
 	s.Protocol = kong.String(protocol)
 }
 
+func (s *Service) overrideConnectTimeout(anns map[string]string) {
+	if s == nil {
+		return
+	}
+	timeout, exists := annotations.ExtractConnectTimeout(anns)
+	if !exists {
+		return
+	}
+	val, err := strconv.Atoi(timeout)
+	if err != nil {
+		return
+	}
+	s.ConnectTimeout = kong.Int(val)
+}
+
+func (s *Service) overrideWriteTimeout(anns map[string]string) {
+	if s == nil {
+		return
+	}
+	timeout, exists := annotations.ExtractWriteTimeout(anns)
+	if !exists {
+		return
+	}
+	val, err := strconv.Atoi(timeout)
+	if err != nil {
+		return
+	}
+	s.WriteTimeout = kong.Int(val)
+}
+
+func (s *Service) overrideReadTimeout(anns map[string]string) {
+	if s == nil {
+		return
+	}
+	timeout, exists := annotations.ExtractReadTimeout(anns)
+	if !exists {
+		return
+	}
+	val, err := strconv.Atoi(timeout)
+	if err != nil {
+		return
+	}
+	s.ReadTimeout = kong.Int(val)
+}
+
 // overrideByAnnotation modifies the Kong service based on annotations
 // on the Kubernetes service.
 func (s *Service) overrideByAnnotation(anns map[string]string) {
@@ -114,6 +160,9 @@ func (s *Service) overrideByAnnotation(anns map[string]string) {
 	}
 	s.overrideProtocol(anns)
 	s.overridePath(anns)
+	s.overrideConnectTimeout(anns)
+	s.overrideWriteTimeout(anns)
+	s.overrideReadTimeout(anns)
 }
 
 // override sets Service fields by KongIngress first, then by k8s Service's annotations.

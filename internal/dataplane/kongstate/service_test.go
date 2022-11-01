@@ -444,3 +444,186 @@ func TestOverrideServicePath(t *testing.T) {
 		})
 	}
 }
+
+func TestOverrideConnectTimeout(t *testing.T) {
+	type args struct {
+		service Service
+		anns    map[string]string
+	}
+	tests := []struct {
+		name string
+		args args
+		want Service
+	}{
+		{
+			name: "set to valid value",
+			args: args{
+				anns: map[string]string{
+					"konghq.com/connect-timeout": "3000",
+				},
+			},
+			want: Service{
+				Service: kong.Service{
+					ConnectTimeout: kong.Int(3000),
+				},
+			},
+		},
+		{
+			name: "value cannot parse to int",
+			args: args{
+				anns: map[string]string{
+					"konghq.com/connect-timeout": "burranyi yedigei",
+				},
+			},
+			want: Service{},
+		},
+		{
+			name: "overrides any other value",
+			args: args{
+				service: Service{
+					Service: kong.Service{
+						ConnectTimeout: kong.Int(2000),
+					},
+				},
+				anns: map[string]string{
+					"konghq.com/connect-timeout": "3000",
+				},
+			},
+			want: Service{
+				Service: kong.Service{
+					ConnectTimeout: kong.Int(3000),
+				},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.args.service.overrideConnectTimeout(tt.args.anns)
+			if !reflect.DeepEqual(tt.args.service, tt.want) {
+				t.Errorf("overrideConnectTimeout() got = %v, want %v", tt.args.service, tt.want)
+			}
+		})
+	}
+}
+
+func TestOverrideWriteTimeout(t *testing.T) {
+	type args struct {
+		service Service
+		anns    map[string]string
+	}
+	tests := []struct {
+		name string
+		args args
+		want Service
+	}{
+		{
+			name: "set to valid value",
+			args: args{
+				anns: map[string]string{
+					"konghq.com/write-timeout": "3000",
+				},
+			},
+			want: Service{
+				Service: kong.Service{
+					WriteTimeout: kong.Int(3000),
+				},
+			},
+		},
+		{
+			name: "value cannot parse to int",
+			args: args{
+				anns: map[string]string{
+					"konghq.com/write-timeout": "burranyi yedigei",
+				},
+			},
+			want: Service{},
+		},
+		{
+			name: "overrides any other value",
+			args: args{
+				service: Service{
+					Service: kong.Service{
+						WriteTimeout: kong.Int(2000),
+					},
+				},
+				anns: map[string]string{
+					"konghq.com/write-timeout": "3000",
+				},
+			},
+			want: Service{
+				Service: kong.Service{
+					WriteTimeout: kong.Int(3000),
+				},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.args.service.overrideWriteTimeout(tt.args.anns)
+			if !reflect.DeepEqual(tt.args.service, tt.want) {
+				t.Errorf("overrideWriteTimeout() got = %v, want %v", tt.args.service, tt.want)
+			}
+		})
+	}
+}
+
+func TestOverrideReadTimeout(t *testing.T) {
+	type args struct {
+		service Service
+		anns    map[string]string
+	}
+	tests := []struct {
+		name string
+		args args
+		want Service
+	}{
+		{
+			name: "set to valid value",
+			args: args{
+				anns: map[string]string{
+					"konghq.com/read-timeout": "3000",
+				},
+			},
+			want: Service{
+				Service: kong.Service{
+					ReadTimeout: kong.Int(3000),
+				},
+			},
+		},
+		{
+			name: "value cannot parse to int",
+			args: args{
+				anns: map[string]string{
+					"konghq.com/read-timeout": "burranyi yedigei",
+				},
+			},
+			want: Service{},
+		},
+		{
+			name: "overrides any other value",
+			args: args{
+				service: Service{
+					Service: kong.Service{
+						ReadTimeout: kong.Int(2000),
+					},
+				},
+				anns: map[string]string{
+					"konghq.com/read-timeout": "3000",
+				},
+			},
+			want: Service{
+				Service: kong.Service{
+					ReadTimeout: kong.Int(3000),
+				},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.args.service.overrideReadTimeout(tt.args.anns)
+			if !reflect.DeepEqual(tt.args.service, tt.want) {
+				t.Errorf("overrideReadTimeout() got = %v, want %v", tt.args.service, tt.want)
+			}
+		})
+	}
+}

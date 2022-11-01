@@ -684,3 +684,117 @@ func TestExtractHostAliases(t *testing.T) {
 		})
 	}
 }
+
+func TestExtractConnectTimeout(t *testing.T) {
+	type args struct {
+		anns map[string]string
+	}
+	tests := []struct {
+		name string
+		args args
+		want string
+	}{
+		{
+			name: "empty",
+			want: "",
+		},
+		{
+			name: "non-empty",
+			args: args{
+				anns: map[string]string{
+					"konghq.com/connect-timeout": "3000",
+				},
+			},
+			want: "3000",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, ok := ExtractConnectTimeout(tt.args.anns)
+			if tt.want == "" {
+				assert.False(t, ok)
+			} else {
+				assert.True(t, ok)
+			}
+			if got != tt.want {
+				t.Errorf("ExtractConnectTimeout() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestExtractWriteTimeout(t *testing.T) {
+	type args struct {
+		anns map[string]string
+	}
+	tests := []struct {
+		name string
+		args args
+		want string
+	}{
+		{
+			name: "empty",
+			want: "",
+		},
+		{
+			name: "non-empty",
+			args: args{
+				anns: map[string]string{
+					"konghq.com/write-timeout": "3000",
+				},
+			},
+			want: "3000",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, ok := ExtractWriteTimeout(tt.args.anns)
+			if tt.want == "" {
+				assert.False(t, ok)
+			} else {
+				assert.True(t, ok)
+			}
+			if got != tt.want {
+				t.Errorf("ExtractWriteTimeout() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestExtractReadTimeout(t *testing.T) {
+	type args struct {
+		anns map[string]string
+	}
+	tests := []struct {
+		name string
+		args args
+		want string
+	}{
+		{
+			name: "empty",
+			want: "",
+		},
+		{
+			name: "non-empty",
+			args: args{
+				anns: map[string]string{
+					"konghq.com/read-timeout": "3000",
+				},
+			},
+			want: "3000",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, ok := ExtractReadTimeout(tt.args.anns)
+			if tt.want == "" {
+				assert.False(t, ok)
+			} else {
+				assert.True(t, ok)
+			}
+			if got != tt.want {
+				t.Errorf("ExtractReadTimeout() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}

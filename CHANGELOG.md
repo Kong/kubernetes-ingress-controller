@@ -104,6 +104,8 @@ Adding a new version? You'll need three changes:
   [#3047](https://github.com/Kong/kubernetes-ingress-controller/pull/3047)
 - Services support annotations for connect, read, and write timeouts.
   [#3121](https://github.com/Kong/kubernetes-ingress-controller/pull/3121)
+- Services support annotations for retries.
+  [#3121](https://github.com/Kong/kubernetes-ingress-controller/pull/3121)
 
 ### Fixed
 

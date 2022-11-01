@@ -152,6 +152,21 @@ func (s *Service) overrideReadTimeout(anns map[string]string) {
 	s.ReadTimeout = kong.Int(val)
 }
 
+func (s *Service) overrideRetries(anns map[string]string) {
+	if s == nil {
+		return
+	}
+	retries, exists := annotations.ExtractRetries(anns)
+	if !exists {
+		return
+	}
+	val, err := strconv.Atoi(retries)
+	if err != nil {
+		return
+	}
+	s.Retries = kong.Int(val)
+}
+
 // overrideByAnnotation modifies the Kong service based on annotations
 // on the Kubernetes service.
 func (s *Service) overrideByAnnotation(anns map[string]string) {
@@ -163,6 +178,7 @@ func (s *Service) overrideByAnnotation(anns map[string]string) {
 	s.overrideConnectTimeout(anns)
 	s.overrideWriteTimeout(anns)
 	s.overrideReadTimeout(anns)
+	s.overrideRetries(anns)
 }
 
 // override sets Service fields by KongIngress first, then by k8s Service's annotations.

@@ -627,3 +627,64 @@ func TestOverrideReadTimeout(t *testing.T) {
 		})
 	}
 }
+
+func TestOverrideRetries(t *testing.T) {
+	type args struct {
+		service Service
+		anns    map[string]string
+	}
+	tests := []struct {
+		name string
+		args args
+		want Service
+	}{
+		{
+			name: "set to valid value",
+			args: args{
+				anns: map[string]string{
+					"konghq.com/retries": "3000",
+				},
+			},
+			want: Service{
+				Service: kong.Service{
+					Retries: kong.Int(3000),
+				},
+			},
+		},
+		{
+			name: "value cannot parse to int",
+			args: args{
+				anns: map[string]string{
+					"konghq.com/retries": "burranyi yedigei",
+				},
+			},
+			want: Service{},
+		},
+		{
+			name: "overrides any other value",
+			args: args{
+				service: Service{
+					Service: kong.Service{
+						Retries: kong.Int(2000),
+					},
+				},
+				anns: map[string]string{
+					"konghq.com/retries": "3000",
+				},
+			},
+			want: Service{
+				Service: kong.Service{
+					Retries: kong.Int(3000),
+				},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.args.service.overrideRetries(tt.args.anns)
+			if !reflect.DeepEqual(tt.args.service, tt.want) {
+				t.Errorf("overrideRetries() got = %v, want %v", tt.args.service, tt.want)
+			}
+		})
+	}
+}

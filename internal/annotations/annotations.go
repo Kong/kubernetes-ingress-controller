@@ -59,6 +59,7 @@ const (
 	ConnectTimeoutKey    = "/connect-timeout"
 	WriteTimeoutKey      = "/write-timeout"
 	ReadTimeoutKey       = "/read-timeout"
+	RetriesKey           = "/retries"
 
 	// GatewayClassUnmanagedAnnotationSuffix is an annotation used on a Gateway resource to
 	// indicate that the GatewayClass should be reconciled according to unmanaged
@@ -277,6 +278,15 @@ func ExtractWriteTimeout(anns map[string]string) (string, bool) {
 // ExtractReadTimeout extracts the read timeout annotation value.
 func ExtractReadTimeout(anns map[string]string) (string, bool) {
 	val, exists := anns[AnnotationPrefix+ReadTimeoutKey]
+	if !exists {
+		return "", false
+	}
+	return val, true
+}
+
+// ExtractRetries extracts the retries annotation value.
+func ExtractRetries(anns map[string]string) (string, bool) {
+	val, exists := anns[AnnotationPrefix+RetriesKey]
 	if !exists {
 		return "", false
 	}

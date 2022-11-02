@@ -17,8 +17,7 @@ import (
 )
 
 // getCACerts translates CA certificates Secrets to kong.CACertificates. It ensures every certificate's structure and
-// validity. In case of violation of any validation rule, a secret gets skipped in a result, and a translation failure
-// is reported.
+// validity. It skips Secrets that do not contain a valid certificate and reports translation failures for them.
 func (p *Parser) getCACerts() []kong.CACertificate {
 	caCertSecrets, err := p.storer.ListCACerts()
 	if err != nil {

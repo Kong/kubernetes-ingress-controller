@@ -85,7 +85,7 @@ func getEnvironmentBuilder(ctx context.Context) (*environments.Builder, error) {
 		default:
 			return nil, fmt.Errorf("unrecognized cluster type %s", clusterType)
 		}
-	} 
+	}
 	return createDefaultKINDBuilder(), nil
 }
 

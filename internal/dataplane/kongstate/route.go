@@ -228,6 +228,7 @@ func (r *Route) overrideByAnnotation(log logrus.FieldLogger) {
 	r.overrideRequestBuffering(log, r.Ingress.Annotations)
 	r.overrideResponseBuffering(log, r.Ingress.Annotations)
 	r.overrideHosts(log, r.Ingress.Annotations)
+	r.overrideHeaders(r.Ingress.Annotations)
 }
 
 // override sets Route fields by KongIngress first, then by annotation.
@@ -404,4 +405,12 @@ func (r *Route) overrideHosts(log logrus.FieldLogger, anns map[string]string) {
 	}
 
 	r.Hosts = hosts
+}
+
+func (r *Route) overrideHeaders(anns map[string]string) {
+	headers, exists := annotations.ExtractHeaders(anns)
+	if !exists {
+		return
+	}
+	r.Headers = headers
 }

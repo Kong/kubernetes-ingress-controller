@@ -836,3 +836,61 @@ func TestExtractRetries(t *testing.T) {
 		})
 	}
 }
+
+func TestExtractHeaders(t *testing.T) {
+	type args struct {
+		anns map[string]string
+	}
+	tests := []struct {
+		name string
+		args args
+		want map[string][]string
+	}{
+		{
+			name: "empty",
+			want: map[string][]string{},
+		},
+		{
+			name: "non-empty",
+			args: args{
+				anns: map[string]string{
+					"konghq.com/headers/foo": "foo",
+				},
+			},
+			want: map[string][]string{"foo": {"foo"}},
+		},
+		{
+			name: "no separator",
+			args: args{
+				anns: map[string]string{
+					"konghq.com/headersfoo": "foo",
+				},
+			},
+			want: map[string][]string{},
+		},
+		{
+			name: "no header name",
+			args: args{
+				anns: map[string]string{
+					"konghq.com/headers/": "foo",
+				},
+			},
+			want: map[string][]string{},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, ok := ExtractHeaders(tt.args.anns)
+			if len(tt.want) == 0 {
+				assert.False(t, ok)
+			} else {
+				assert.True(t, ok)
+			}
+			for key, val := range tt.want {
+				actual, ok := got[key]
+				assert.True(t, ok)
+				assert.Equal(t, val, actual)
+			}
+		})
+	}
+}

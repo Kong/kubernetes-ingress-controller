@@ -1055,3 +1055,85 @@ func TestOverrideHosts(t *testing.T) {
 		})
 	}
 }
+
+func TestOverrideHeaders(t *testing.T) {
+	type args struct {
+		route Route
+		anns  map[string]string
+	}
+	tests := []struct {
+		name string
+		args args
+		want Route
+	}{
+		{name: "basic empty route"},
+		{
+			name: "single header single value",
+			args: args{
+				anns: map[string]string{
+					"konghq.com/headers/x-example": "example",
+				},
+			},
+			want: Route{
+				Route: kong.Route{
+					Headers: map[string][]string{"x-example": {"example"}},
+				},
+			},
+		},
+		{
+			name: "single header multi value",
+			args: args{
+				anns: map[string]string{
+					"konghq.com/headers/x-example": "foo,bar",
+				},
+			},
+			want: Route{
+				Route: kong.Route{
+					Headers: map[string][]string{"x-example": {"foo", "bar"}},
+				},
+			},
+		},
+		{
+			name: "multi header single value",
+			args: args{
+				anns: map[string]string{
+					"konghq.com/headers/x-foo": "example",
+					"konghq.com/headers/x-bar": "example",
+				},
+			},
+			want: Route{
+				Route: kong.Route{
+					Headers: map[string][]string{
+						"x-foo": {"example"},
+						"x-bar": {"example"},
+					},
+				},
+			},
+		},
+		{
+			name: "multi header multi value",
+			args: args{
+				anns: map[string]string{
+					"konghq.com/headers/x-foo": "foo,bar",
+					"konghq.com/headers/x-bar": "bar,baz",
+				},
+			},
+			want: Route{
+				Route: kong.Route{
+					Headers: map[string][]string{
+						"x-foo": {"foo", "bar"},
+						"x-bar": {"bar", "baz"},
+					},
+				},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.args.route.overrideHeaders(tt.args.anns)
+			if !reflect.DeepEqual(tt.args.route, tt.want) {
+				t.Errorf("overrideHeaders() got = %v, want %v", tt.args.route, tt.want)
+			}
+		})
+	}
+}

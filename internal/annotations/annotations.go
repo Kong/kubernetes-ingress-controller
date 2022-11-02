@@ -60,6 +60,7 @@ const (
 	WriteTimeoutKey      = "/write-timeout"
 	ReadTimeoutKey       = "/read-timeout"
 	RetriesKey           = "/retries"
+	HeadersKey           = "/headers"
 
 	// GatewayClassUnmanagedAnnotationSuffix is an annotation used on a Gateway resource to
 	// indicate that the GatewayClass should be reconciled according to unmanaged
@@ -291,6 +292,25 @@ func ExtractRetries(anns map[string]string) (string, bool) {
 		return "", false
 	}
 	return val, true
+}
+
+// ExtractHeaders extracts the parsed headerr annotations values. It returns a map of header names to slices of values.
+func ExtractHeaders(anns map[string]string) (map[string][]string, bool) {
+	headers := make(map[string][]string)
+	prefix := AnnotationPrefix + HeadersKey + "/"
+	for key, val := range anns {
+		if strings.HasPrefix(key, prefix) {
+			header := strings.TrimPrefix(key, prefix)
+			if len(header) == 0 || len(val) == 0 {
+				continue
+			}
+			headers[header] = strings.Split(val, ",")
+		}
+	}
+	if len(headers) == 0 {
+		return headers, false
+	}
+	return headers, true
 }
 
 // ExtractUnmanagedGatewayClassMode extracts the value of the unmanaged gateway

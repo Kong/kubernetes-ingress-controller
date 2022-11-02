@@ -894,3 +894,41 @@ func TestExtractHeaders(t *testing.T) {
 		})
 	}
 }
+
+func TestExtractPathHandling(t *testing.T) {
+	type args struct {
+		anns map[string]string
+	}
+	tests := []struct {
+		name string
+		args args
+		want string
+	}{
+		{
+			name: "empty",
+			want: "",
+		},
+		{
+			name: "non-empty",
+			args: args{
+				anns: map[string]string{
+					"konghq.com/path-handling": "v1",
+				},
+			},
+			want: "v1",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, ok := ExtractPathHandling(tt.args.anns)
+			if tt.want == "" {
+				assert.False(t, ok)
+			} else {
+				assert.True(t, ok)
+			}
+			if got != tt.want {
+				t.Errorf("ExtractPathHandling() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}

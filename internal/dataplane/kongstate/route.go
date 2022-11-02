@@ -24,7 +24,8 @@ type Route struct {
 }
 
 var (
-	validMethods = regexp.MustCompile(`\A[A-Z]+$`)
+	validMethods      = regexp.MustCompile(`\A[A-Z]+$`)
+	validPathHandling = regexp.MustCompile(`v\d`)
 
 	// hostnames are complicated. shamelessly cribbed from https://stackoverflow.com/a/18494710
 	// TODO if the Kong core adds support for wildcard SNI route match criteria, this should change.
@@ -229,6 +230,7 @@ func (r *Route) overrideByAnnotation(log logrus.FieldLogger) {
 	r.overrideResponseBuffering(log, r.Ingress.Annotations)
 	r.overrideHosts(log, r.Ingress.Annotations)
 	r.overrideHeaders(r.Ingress.Annotations)
+	r.overridePathHandling(log, r.Ingress.Annotations)
 }
 
 // override sets Route fields by KongIngress first, then by annotation.
@@ -413,4 +415,18 @@ func (r *Route) overrideHeaders(anns map[string]string) {
 		return
 	}
 	r.Headers = headers
+}
+
+func (r *Route) overridePathHandling(log logrus.FieldLogger, anns map[string]string) {
+	val, ok := annotations.ExtractPathHandling(anns)
+	if !ok {
+		return
+	}
+
+	if !validPathHandling.MatchString(val) {
+		log.WithField("kongroute", r.Name).Errorf("invalid path_handling value: %s", val)
+		return
+	}
+
+	r.PathHandling = kong.String(val)
 }

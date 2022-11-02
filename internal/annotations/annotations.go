@@ -61,6 +61,7 @@ const (
 	ReadTimeoutKey       = "/read-timeout"
 	RetriesKey           = "/retries"
 	HeadersKey           = "/headers"
+	PathHandlingKey      = "/path-handling"
 
 	// GatewayClassUnmanagedAnnotationSuffix is an annotation used on a Gateway resource to
 	// indicate that the GatewayClass should be reconciled according to unmanaged
@@ -311,6 +312,15 @@ func ExtractHeaders(anns map[string]string) (map[string][]string, bool) {
 		return headers, false
 	}
 	return headers, true
+}
+
+// ExtractPathHandling extracts the path handling annotation value.
+func ExtractPathHandling(anns map[string]string) (string, bool) {
+	val, exists := anns[AnnotationPrefix+PathHandlingKey]
+	if !exists {
+		return "", false
+	}
+	return val, true
 }
 
 // ExtractUnmanagedGatewayClassMode extracts the value of the unmanaged gateway

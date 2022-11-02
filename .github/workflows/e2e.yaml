@@ -149,37 +149,6 @@ jobs:
         name: tests-report
         path: istio-${{ matrix.kubernetes-version }}-${{ matrix.istio-version }}-tests.xml
 
-  buildpulse-report:
-    environment: "Configure ci"
-    needs:
-      - "e2e-tests"
-      - "istio-tests"
-    if: ${{ always() }}
-    runs-on: ubuntu-latest
-    steps:
-
-      - name: checkout repository
-        uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
-
-      - name: download tests report
-        id: download-coverage
-        uses: actions/download-artifact@v3
-        with:
-          name: tests-report
-          path: report
-
-      - name: Upload test results to BuildPulse for flaky test detection
-        if: ${{ !cancelled() }}
-        uses: Workshop64/buildpulse-action@main
-        with:
-          account: 962416
-          repository: 127765544
-          path: report/*.xml
-          key: ${{ secrets.BUILDPULSE_ACCESS_KEY_ID }}
-          secret: ${{ secrets.BUILDPULSE_SECRET_ACCESS_KEY }}
-
   e2e-gke-tests:
     environment: "gcloud"
     runs-on: ubuntu-latest
@@ -225,3 +194,35 @@ jobs:
         name: diagnostics-e2e-tests
         path: /tmp/ktf-diag*
         if-no-files-found: ignore
+
+  buildpulse-report:
+    environment: "Configure ci"
+    needs:
+      - "e2e-tests"
+      - "e2e-gke-tests"
+      - "istio-tests"
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    steps:
+
+      - name: checkout repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: download tests report
+        id: download-coverage
+        uses: actions/download-artifact@v3
+        with:
+          name: tests-report
+          path: report
+
+      - name: Upload test results to BuildPulse for flaky test detection
+        if: ${{ !cancelled() }}
+        uses: Workshop64/buildpulse-action@main
+        with:
+          account: 962416
+          repository: 127765544
+          path: report/*.xml
+          key: ${{ secrets.BUILDPULSE_ACCESS_KEY_ID }}
+          secret: ${{ secrets.BUILDPULSE_SECRET_ACCESS_KEY }}

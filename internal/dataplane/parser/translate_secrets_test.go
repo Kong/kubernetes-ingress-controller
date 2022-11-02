@@ -37,18 +37,24 @@ func TestGetPluginsAssociatedWithCACertSecret(t *testing.T) {
 		}
 	}
 
-	secretID := "8a3753e0-093b-43d9-9d39-27985c987d92"        //nolint:gosec
-	anotherSecretID := "99fa09c7-f849-4449-891e-19b9a0015763" //nolint:gosec
-	associatedPlugin := kongPluginWithSecret("associated_plugin", secretID)
-	nonAssociatedPlugin := kongPluginWithSecret("non_associated_plugin", anotherSecretID)
-	associatedClusterPlugin := kongClusterPluginWithSecret("associated_cluster_plugin", secretID)
-	nonAssociatedClusterPlugin := kongClusterPluginWithSecret("non_associated_cluster_plugin", anotherSecretID)
+	//nolint:gosec
+	const (
+		secretID        = "8a3753e0-093b-43d9-9d39-27985c987d92"
+		anotherSecretID = "99fa09c7-f849-4449-891e-19b9a0015763"
+	)
+	var (
+		associatedPlugin           = kongPluginWithSecret("associated_plugin", secretID)
+		nonAssociatedPlugin        = kongPluginWithSecret("non_associated_plugin", anotherSecretID)
+		associatedClusterPlugin    = kongClusterPluginWithSecret("associated_cluster_plugin", secretID)
+		nonAssociatedClusterPlugin = kongClusterPluginWithSecret("non_associated_cluster_plugin", anotherSecretID)
+	)
 	storer, err := store.NewFakeStore(store.FakeObjects{
 		KongPlugins:        []*kongv1.KongPlugin{associatedPlugin, nonAssociatedPlugin},
 		KongClusterPlugins: []*kongv1.KongClusterPlugin{associatedClusterPlugin, nonAssociatedClusterPlugin},
 	})
 	require.NoError(t, err)
 
-	associatedPlugins := getPluginsAssociatedWithCACertSecret(secretID, storer)
-	require.ElementsMatch(t, []client.Object{associatedPlugin, associatedClusterPlugin}, associatedPlugins)
+	gotPlugins := getPluginsAssociatedWithCACertSecret(secretID, storer)
+	expectedPlugins := []client.Object{associatedPlugin, associatedClusterPlugin}
+	require.ElementsMatch(t, expectedPlugins, gotPlugins, "expected plugins do not match actual ones")
 }

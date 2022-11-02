@@ -66,8 +66,6 @@ const (
 )
 
 func getEnvironmentBuilder(ctx context.Context) (*environments.Builder, error) {
-	var builder *environments.Builder
-	var err error
 	if existingCluster != "" {
 		if clusterVersionStr != "" {
 			return nil, fmt.Errorf("cannot provide cluster version with existing cluster")
@@ -81,22 +79,14 @@ func getEnvironmentBuilder(ctx context.Context) (*environments.Builder, error) {
 		fmt.Printf("INFO: using existing %s cluster %s\n", clusterType, clusterName)
 		switch clusterType {
 		case string(kind.KindClusterType):
-			builder, err = createExistingKINDBuilder(clusterName)
-			if err != nil {
-				return nil, err
-			}
+			return createExistingKINDBuilder(clusterName)
 		case string(gke.GKEClusterType):
-			builder, err = createExistingGKEBuilder(ctx, clusterName)
-			if err != nil {
-				return nil, err
-			}
+			return createExistingGKEBuilder(ctx, clusterName)
 		default:
 			return nil, fmt.Errorf("unrecognized cluster type %s", clusterType)
 		}
-	} else {
-		builder = createDefaultKINDBuilder()
-	}
-	return builder, err
+	} 
+	return createDefaultKINDBuilder(), nil
 }
 
 func createDefaultKINDBuilder() *environments.Builder {

@@ -6,6 +6,9 @@ import (
 	"sync"
 	"time"
 
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/client-go/tools/record"
+
 	"github.com/blang/semver/v4"
 	"github.com/kong/deck/file"
 	"github.com/kong/go-kong/kong"
@@ -22,6 +25,10 @@ import (
 	k8sobj "github.com/kong/kubernetes-ingress-controller/v2/internal/util/kubernetes/object"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util/kubernetes/object/status"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/versions"
+)
+
+const (
+	KongConfigurationTranslationFailedEventReason = "KongConfigurationTranslationFailed"
 )
 
 // -----------------------------------------------------------------------------
@@ -106,6 +113,9 @@ type KongClient struct {
 	// whether a Kubernetes object has corresponding data-plane configuration that
 	// is actively configured (e.g. to know how to set the object status).
 	kubernetesObjectReportsFilter k8sobj.Set
+
+	// eventRecorder is used to record warning events for translation failures.
+	eventRecorder record.EventRecorder
 }
 
 // NewKongClient provides a new KongClient object after connecting to the
@@ -320,6 +330,7 @@ func (c *KongClient) Update(ctx context.Context) error {
 		c.prometheusMetrics.TranslationCount.With(prometheus.Labels{
 			metrics.SuccessKey: metrics.SuccessFalse,
 		}).Inc()
+		c.recordTranslationFailureWarningEvents(translationFailures)
 		c.logger.Debugf("%d translation failures have occurred when building data-plane configuration", failuresCount)
 	} else {
 		c.prometheusMetrics.TranslationCount.With(prometheus.Labels{
@@ -446,4 +457,12 @@ func (c *KongClient) updateKubernetesObjectReportFilter(set k8sobj.Set) {
 	c.kubernetesObjectReportLock.Lock()
 	defer c.kubernetesObjectReportLock.Unlock()
 	c.kubernetesObjectReportsFilter = set
+}
+
+func (c *KongClient) recordTranslationFailureWarningEvents(translationFailures []parser.TranslationFailure) {
+	for _, failure := range translationFailures {
+		for _, obj := range failure.CausingObjects() {
+			c.eventRecorder.Event(obj, corev1.EventTypeWarning, KongConfigurationTranslationFailedEventReason, failure.Reason())
+		}
+	}
 }

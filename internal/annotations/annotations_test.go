@@ -715,9 +715,7 @@ func TestExtractConnectTimeout(t *testing.T) {
 				assert.False(t, ok)
 			} else {
 				assert.True(t, ok)
-			}
-			if got != tt.want {
-				t.Errorf("ExtractConnectTimeout() = %v, want %v", got, tt.want)
+				require.Equal(t, tt.want, got)
 			}
 		})
 	}
@@ -753,9 +751,7 @@ func TestExtractWriteTimeout(t *testing.T) {
 				assert.False(t, ok)
 			} else {
 				assert.True(t, ok)
-			}
-			if got != tt.want {
-				t.Errorf("ExtractWriteTimeout() = %v, want %v", got, tt.want)
+				require.Equal(t, tt.want, got)
 			}
 		})
 	}
@@ -791,9 +787,7 @@ func TestExtractReadTimeout(t *testing.T) {
 				assert.False(t, ok)
 			} else {
 				assert.True(t, ok)
-			}
-			if got != tt.want {
-				t.Errorf("ExtractReadTimeout() = %v, want %v", got, tt.want)
+				require.Equal(t, tt.want, got)
 			}
 		})
 	}

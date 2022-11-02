@@ -1066,7 +1066,9 @@ func TestOverrideHeaders(t *testing.T) {
 		args args
 		want Route
 	}{
-		{name: "basic empty route"},
+		{
+			name: "basic empty route",
+		},
 		{
 			name: "single header single value",
 			args: args{

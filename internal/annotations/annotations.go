@@ -295,7 +295,7 @@ func ExtractRetries(anns map[string]string) (string, bool) {
 	return val, true
 }
 
-// ExtractHeaders extracts the parsed headerr annotations values. It returns a map of header names to slices of values.
+// ExtractHeaders extracts the parsed headers annotations values. It returns a map of header names to slices of values.
 func ExtractHeaders(anns map[string]string) (map[string][]string, bool) {
 	headers := make(map[string][]string)
 	prefix := AnnotationPrefix + HeadersKey + "/"

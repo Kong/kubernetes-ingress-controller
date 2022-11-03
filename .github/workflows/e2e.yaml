@@ -186,6 +186,7 @@ jobs:
         KUBERNETES_MAJOR_VERSION: 1
         KUBERNETES_MINOR_VERSION: 24
         KONG_LICENSE_DATA: ${{ steps.license.outputs.license }}
+        GOTESTSUM_JUNITFILE: "gke-${{ matrix.kubernetes-version }}-tests.xml"
 
     - name: upload diagnostics
       if: ${{ always() }}
@@ -194,6 +195,12 @@ jobs:
         name: diagnostics-e2e-tests
         path: /tmp/ktf-diag*
         if-no-files-found: ignore
+    
+    - name: collect test report
+      uses: actions/upload-artifact@v3
+      with:
+        name: tests-report
+        path: gke-${{ matrix.kubernetes-version }}-tests.xml
 
   buildpulse-report:
     environment: "Configure ci"

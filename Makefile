@@ -343,7 +343,7 @@ test.e2e.gke:
 	CLUSTER_NAME="e2e-$(uuidgen)" \
 		KUBERNETES_CLUSTER_NAME="${CLUSTER_NAME}" go run hack/e2e/cluster/deploy/main.go \
 		KONG_TEST_CLUSTER="gke:${CLUSTER_NAME}" \
-		GOFLAGS="-tags=e2e_tests" go test -v $(GOTESTFLAGS) \
+		GOFLAGS="-tags=e2e_tests" $(GOTESTSUM) -- $(GOTESTFLAGS) \
 			-race \
 			-run $(E2E_TEST_RUN) \
 			-parallel $(NCPU) \

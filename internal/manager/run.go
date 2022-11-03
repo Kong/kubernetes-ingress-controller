@@ -151,7 +151,18 @@ func RunWithLogger(ctx context.Context, c *Config, diagnostic util.ConfigDumpDia
 	if err != nil {
 		return fmt.Errorf("%f is not a valid number of seconds to the timeout config for the kong client: %w", c.ProxyTimeoutSeconds, err)
 	}
-	dataplaneClient, err := dataplane.NewKongClient(deprecatedLogger, timeoutDuration, c.IngressClassName, c.EnableReverseSync, c.SkipCACertificates, diagnostic, kongConfig)
+
+	eventRecorder := mgr.GetEventRecorderFor(KongClientEventRecorderComponentName)
+	dataplaneClient, err := dataplane.NewKongClient(
+		deprecatedLogger,
+		timeoutDuration,
+		c.IngressClassName,
+		c.EnableReverseSync,
+		c.SkipCACertificates,
+		diagnostic,
+		kongConfig,
+		eventRecorder,
+	)
 	if err != nil {
 		return fmt.Errorf("failed to initialize kong data-plane client: %w", err)
 	}
@@ -200,7 +211,7 @@ func RunWithLogger(ctx context.Context, c *Config, diagnostic util.ConfigDumpDia
 
 	// BUG: kubebuilder (at the time of writing - 3.0.0-rc.1) does not allow this tag anywhere else than main.go
 	// See https://github.com/kubernetes-sigs/kubebuilder/issues/932
-	//+kubebuilder:scaffold:builder
+	// +kubebuilder:scaffold:builder
 
 	setupLog.Info("Starting health check servers")
 	if err := mgr.AddHealthzCheck("health", healthz.Ping); err != nil {

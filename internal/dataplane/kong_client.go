@@ -11,6 +11,8 @@ import (
 	"github.com/kong/go-kong/kong"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/sirupsen/logrus"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/deckgen"
@@ -23,6 +25,9 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util/kubernetes/object/status"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/versions"
 )
+
+// KongConfigurationTranslationFailedEventReason defines an event reason used for creating all translation failure events.
+const KongConfigurationTranslationFailedEventReason = "KongConfigurationTranslationFailed"
 
 // -----------------------------------------------------------------------------
 // Dataplane Client - Kong - Public Types
@@ -106,6 +111,9 @@ type KongClient struct {
 	// whether a Kubernetes object has corresponding data-plane configuration that
 	// is actively configured (e.g. to know how to set the object status).
 	kubernetesObjectReportsFilter k8sobj.Set
+
+	// eventRecorder is used to record warning events for translation failures.
+	eventRecorder record.EventRecorder
 }
 
 // NewKongClient provides a new KongClient object after connecting to the
@@ -118,6 +126,7 @@ func NewKongClient(
 	skipCACertificates bool,
 	diagnostic util.ConfigDumpDiagnostic,
 	kongConfig sendconfig.Kong,
+	eventRecorder record.EventRecorder,
 ) (*KongClient, error) {
 	// build the client object
 	cache := store.NewCacheStores()
@@ -131,6 +140,7 @@ func NewKongClient(
 		prometheusMetrics:  metrics.NewCtrlFuncMetrics(),
 		cache:              &cache,
 		kongConfig:         kongConfig,
+		eventRecorder:      eventRecorder,
 	}
 
 	// download the kong root configuration (and validate connectivity to the proxy API)
@@ -320,6 +330,7 @@ func (c *KongClient) Update(ctx context.Context) error {
 		c.prometheusMetrics.TranslationCount.With(prometheus.Labels{
 			metrics.SuccessKey: metrics.SuccessFalse,
 		}).Inc()
+		c.recordTranslationFailureWarningEvents(translationFailures)
 		c.logger.Debugf("%d translation failures have occurred when building data-plane configuration", failuresCount)
 	} else {
 		c.prometheusMetrics.TranslationCount.With(prometheus.Labels{
@@ -446,4 +457,14 @@ func (c *KongClient) updateKubernetesObjectReportFilter(set k8sobj.Set) {
 	c.kubernetesObjectReportLock.Lock()
 	defer c.kubernetesObjectReportLock.Unlock()
 	c.kubernetesObjectReportsFilter = set
+}
+
+// recordTranslationFailureWarningEvents records a warning KongConfigurationTranslationFailedEventReason events,
+// one per a translation failure causing object.
+func (c *KongClient) recordTranslationFailureWarningEvents(translationFailures []parser.TranslationFailure) {
+	for _, failure := range translationFailures {
+		for _, obj := range failure.CausingObjects() {
+			c.eventRecorder.Event(obj, corev1.EventTypeWarning, KongConfigurationTranslationFailedEventReason, failure.Reason())
+		}
+	}
 }

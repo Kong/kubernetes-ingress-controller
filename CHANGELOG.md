@@ -102,6 +102,14 @@ Adding a new version? You'll need three changes:
   irrelevant secrets (e.g: service account tokens) are not stored. This change
   is made to reduce memory usage of the cache.
   [#3047](https://github.com/Kong/kubernetes-ingress-controller/pull/3047)
+- Services support annotations for connect, read, and write timeouts.
+  [#3121](https://github.com/Kong/kubernetes-ingress-controller/pull/3121)
+- Services support annotations for retries.
+  [#3121](https://github.com/Kong/kubernetes-ingress-controller/pull/3121)
+- Routes support annotations for headers.
+  [#3121](https://github.com/Kong/kubernetes-ingress-controller/pull/3121)
+- Routes support annotations for path handling.
+  [#3121](https://github.com/Kong/kubernetes-ingress-controller/pull/3121)
 
 ### Fixed
 

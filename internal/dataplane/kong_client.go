@@ -26,9 +26,8 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/versions"
 )
 
-const (
-	KongConfigurationTranslationFailedEventReason = "KongConfigurationTranslationFailed"
-)
+// KongConfigurationTranslationFailedEventReason defines an event reason used for creating all translation failure events.
+const KongConfigurationTranslationFailedEventReason = "KongConfigurationTranslationFailed"
 
 // -----------------------------------------------------------------------------
 // Dataplane Client - Kong - Public Types
@@ -460,6 +459,8 @@ func (c *KongClient) updateKubernetesObjectReportFilter(set k8sobj.Set) {
 	c.kubernetesObjectReportsFilter = set
 }
 
+// recordTranslationFailureWarningEvents records a warning KongConfigurationTranslationFailedEventReason events,
+// one per a translation failure causing object.
 func (c *KongClient) recordTranslationFailureWarningEvents(translationFailures []parser.TranslationFailure) {
 	for _, failure := range translationFailures {
 		for _, obj := range failure.CausingObjects() {

@@ -34,8 +34,6 @@ import (
 	configurationv1beta1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1beta1"
 )
 
-const KongClientEventRecorderComponentName = "kong-client"
-
 // -----------------------------------------------------------------------------
 // Controller Manager - Setup & Run
 // -----------------------------------------------------------------------------

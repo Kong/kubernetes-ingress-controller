@@ -19,3 +19,6 @@ const MetricsPort = 10255
 
 // DiagnosticsPort is the default port of the manager's diagnostics service listens on.
 const DiagnosticsPort = 10256
+
+// KongClientEventRecorderComponentName is a KongClient component name used to identify an events recording component.
+const KongClientEventRecorderComponentName = "kong-client"

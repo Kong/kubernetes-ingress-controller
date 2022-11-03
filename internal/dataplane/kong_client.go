@@ -6,14 +6,13 @@ import (
 	"sync"
 	"time"
 
-	corev1 "k8s.io/api/core/v1"
-	"k8s.io/client-go/tools/record"
-
 	"github.com/blang/semver/v4"
 	"github.com/kong/deck/file"
 	"github.com/kong/go-kong/kong"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/sirupsen/logrus"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/deckgen"
@@ -128,6 +127,7 @@ func NewKongClient(
 	skipCACertificates bool,
 	diagnostic util.ConfigDumpDiagnostic,
 	kongConfig sendconfig.Kong,
+	eventRecorder record.EventRecorder,
 ) (*KongClient, error) {
 	// build the client object
 	cache := store.NewCacheStores()
@@ -141,6 +141,7 @@ func NewKongClient(
 		prometheusMetrics:  metrics.NewCtrlFuncMetrics(),
 		cache:              &cache,
 		kongConfig:         kongConfig,
+		eventRecorder:      eventRecorder,
 	}
 
 	// download the kong root configuration (and validate connectivity to the proxy API)

@@ -102,6 +102,8 @@ Adding a new version? You'll need three changes:
   irrelevant secrets (e.g: service account tokens) are not stored. This change
   is made to reduce memory usage of the cache.
   [#3047](https://github.com/Kong/kubernetes-ingress-controller/pull/3047)
+- Warning events are recorded when CA secrets cannot be properly translated into Kong configuration.  
+  [#3125](https://github.com/Kong/kubernetes-ingress-controller/pull/3125)
 
 ### Fixed
 

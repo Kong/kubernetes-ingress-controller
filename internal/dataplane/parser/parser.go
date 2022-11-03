@@ -126,7 +126,7 @@ func (p *Parser) Build() (*kongstate.KongState, []TranslationFailure) {
 	result.Certificates = mergeCerts(p.logger, ingressCerts, gatewayCerts)
 
 	// populate CA certificates in Kong
-	result.CACertificates = getCACerts(p.logger, p.storer, result.Plugins)
+	result.CACertificates = p.getCACerts()
 
 	return &result, p.popTranslationFailures()
 }
@@ -182,13 +182,31 @@ func (p *Parser) EnableRegexPathPrefix() {
 	p.flagEnabledRegexPathPrefix = true
 }
 
-func (p *Parser) popTranslationFailures() []TranslationFailure {
-	return p.failuresCollector.PopTranslationFailures()
-}
-
 // -----------------------------------------------------------------------------
 // Parser - Private Methods
 // -----------------------------------------------------------------------------
+
+// registerTranslationFailure should be called when any Kubernetes object translation failure is encountered.
+func (p *Parser) registerTranslationFailure(reason string, causingObjects ...client.Object) {
+	p.failuresCollector.PushTranslationFailure(reason, causingObjects...)
+	p.logTranslationFailure(reason, causingObjects...)
+}
+
+// logTranslationFailure logs an error message signaling that a translation error has occurred along with its reason
+// for every causing object.
+func (p *Parser) logTranslationFailure(reason string, causingObjects ...client.Object) {
+	for _, obj := range causingObjects {
+		p.logger.WithFields(logrus.Fields{
+			"name":      obj.GetName(),
+			"namespace": obj.GetNamespace(),
+			"GVK":       obj.GetObjectKind().GroupVersionKind().String(),
+		}).Errorf("translation failed: %s", reason)
+	}
+}
+
+func (p *Parser) popTranslationFailures() []TranslationFailure {
+	return p.failuresCollector.PopTranslationFailures()
+}
 
 func knativeIngressToNetworkingTLS(tls []knative.IngressTLS) []netv1beta1.IngressTLS {
 	var result []netv1beta1.IngressTLS

@@ -21,7 +21,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/pkg/clientset"
 )
 
-const InvalidCASecretID = "8214a145-a328-4c56-ab72-2973a56d4eae"
+const InvalidCASecretID = "8214a145-a328-4c56-ab72-2973a56d4eae" //nolint:gosec
 
 func invalidCASecret(ns string) *corev1.Secret {
 	return &corev1.Secret{
@@ -83,6 +83,7 @@ func TestTranslationFailures(t *testing.T) {
 				c, err := clientset.NewForConfig(env.Cluster().Config())
 				require.NoError(t, err)
 				createdPlugin, err := c.ConfigurationV1().KongPlugins(ns).Create(ctx, pluginUsingInvalidCACert(ns), metav1.CreateOptions{})
+				require.NoError(t, err)
 
 				// expect events for both: a faulty secret and a plugin referring it
 				return []client.Object{createdSecret, createdPlugin}

@@ -28,11 +28,11 @@ func TestTranslationFailures(t *testing.T) {
 		name string
 		// translationFailureTrigger should create objects that trigger translation failure and return the objects
 		// that we expect translation failure warning events to be created for.
-		translationFailureTrigger func(ns string) []client.Object
+		translationFailureTrigger func(t *testing.T, ns string) []client.Object
 	}{
 		{
 			name: "invalid CA secret",
-			translationFailureTrigger: func(ns string) []client.Object {
+			translationFailureTrigger: func(t *testing.T, ns string) []client.Object {
 				createdSecret, err := env.Cluster().Client().CoreV1().Secrets(ns).Create(ctx, invalidCASecret(ns), metav1.CreateOptions{})
 				require.NoError(t, err)
 
@@ -41,7 +41,7 @@ func TestTranslationFailures(t *testing.T) {
 		},
 		{
 			name: "invalid CA secret referred by a plugin",
-			translationFailureTrigger: func(ns string) []client.Object {
+			translationFailureTrigger: func(t *testing.T, ns string) []client.Object {
 				createdSecret, err := env.Cluster().Client().CoreV1().Secrets(ns).Create(ctx, invalidCASecret(ns), metav1.CreateOptions{})
 				require.NoError(t, err)
 
@@ -60,10 +60,14 @@ func TestTranslationFailures(t *testing.T) {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
+			start := time.Now()
 			ns, cleaner := setup(t)
-			defer func() { assert.NoError(t, cleaner.Cleanup(ctx)) }()
+			defer func() {
+				assert.NoError(t, cleaner.Cleanup(ctx))
+				t.Logf("test case took: %dms", time.Since(start).Milliseconds())
+			}()
 
-			expectedCausingObjects := tt.translationFailureTrigger(ns.GetName())
+			expectedCausingObjects := tt.translationFailureTrigger(t, ns.GetName())
 
 			require.Eventually(t, func() bool {
 				eventsForAllObjectsFound := true

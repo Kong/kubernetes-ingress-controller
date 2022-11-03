@@ -60,12 +60,8 @@ func TestTranslationFailures(t *testing.T) {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			start := time.Now()
 			ns, cleaner := setup(t)
-			defer func() {
-				assert.NoError(t, cleaner.Cleanup(ctx))
-				t.Logf("test case took: %dms", time.Since(start).Milliseconds())
-			}()
+			defer func() { assert.NoError(t, cleaner.Cleanup(ctx)) }()
 
 			expectedCausingObjects := tt.translationFailureTrigger(t, ns.GetName())
 

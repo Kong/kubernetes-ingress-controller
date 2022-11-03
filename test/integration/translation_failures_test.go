@@ -21,41 +21,6 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/pkg/clientset"
 )
 
-const InvalidCASecretID = "8214a145-a328-4c56-ab72-2973a56d4eae" //nolint:gosec
-
-func invalidCASecret(ns string) *corev1.Secret {
-	return &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: "ca-secret-",
-			Namespace:    ns,
-			Labels: map[string]string{
-				"konghq.com/ca-cert": "true",
-			},
-			Annotations: map[string]string{
-				annotations.IngressClassKey: ingressClass,
-			},
-		},
-		Data: map[string][]byte{
-			"id": []byte(InvalidCASecretID),
-			// missing cert key
-		},
-	}
-}
-
-func pluginUsingInvalidCACert(ns string) *kongv1.KongPlugin {
-	return &kongv1.KongPlugin{
-		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: "kong-plugin-",
-			Namespace:    ns,
-			Annotations: map[string]string{
-				annotations.IngressClassKey: ingressClass,
-			},
-		},
-		Config:     v1.JSON{Raw: []byte(fmt.Sprintf(`{"ca_certificates": ["%s"]}`, InvalidCASecretID))},
-		PluginName: "mtls-auth",
-	}
-}
-
 // TestTranslationFailures ensures that proper warning Kubernetes events are recorded in case of translation failures
 // encountered.
 func TestTranslationFailures(t *testing.T) {
@@ -126,5 +91,40 @@ func TestTranslationFailures(t *testing.T) {
 				return eventsForAllObjectsFound
 			}, time.Minute*5, time.Second)
 		})
+	}
+}
+
+const invalidCASecretID = "8214a145-a328-4c56-ab72-2973a56d4eae" //nolint:gosec
+
+func invalidCASecret(ns string) *corev1.Secret {
+	return &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			GenerateName: "ca-secret-",
+			Namespace:    ns,
+			Labels: map[string]string{
+				"konghq.com/ca-cert": "true",
+			},
+			Annotations: map[string]string{
+				annotations.IngressClassKey: ingressClass,
+			},
+		},
+		Data: map[string][]byte{
+			"id": []byte(invalidCASecretID),
+			// missing cert key
+		},
+	}
+}
+
+func pluginUsingInvalidCACert(ns string) *kongv1.KongPlugin {
+	return &kongv1.KongPlugin{
+		ObjectMeta: metav1.ObjectMeta{
+			GenerateName: "kong-plugin-",
+			Namespace:    ns,
+			Annotations: map[string]string{
+				annotations.IngressClassKey: ingressClass,
+			},
+		},
+		Config:     v1.JSON{Raw: []byte(fmt.Sprintf(`{"ca_certificates": ["%s"]}`, invalidCASecretID))},
+		PluginName: "mtls-auth",
 	}
 }

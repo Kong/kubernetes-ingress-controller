@@ -56,6 +56,12 @@ const (
 	ResponseBuffering    = "/response-buffering"
 	HostAliasesKey       = "/host-aliases"
 	RegexPrefixKey       = "/regex-prefix"
+	ConnectTimeoutKey    = "/connect-timeout"
+	WriteTimeoutKey      = "/write-timeout"
+	ReadTimeoutKey       = "/read-timeout"
+	RetriesKey           = "/retries"
+	HeadersKey           = "/headers"
+	PathHandlingKey      = "/path-handling"
 
 	// GatewayClassUnmanagedAnnotationSuffix is an annotation used on a Gateway resource to
 	// indicate that the GatewayClass should be reconciled according to unmanaged
@@ -251,6 +257,70 @@ func ExtractHostAliases(anns map[string]string) ([]string, bool) {
 		return nil, false
 	}
 	return strings.Split(val, ","), true
+}
+
+// ExtractConnectTimeout extracts the connection timeout annotation value.
+func ExtractConnectTimeout(anns map[string]string) (string, bool) {
+	val, exists := anns[AnnotationPrefix+ConnectTimeoutKey]
+	if !exists {
+		return "", false
+	}
+	return val, true
+}
+
+// ExtractWriteTimeout extracts the write timeout annotation value.
+func ExtractWriteTimeout(anns map[string]string) (string, bool) {
+	val, exists := anns[AnnotationPrefix+WriteTimeoutKey]
+	if !exists {
+		return "", false
+	}
+	return val, true
+}
+
+// ExtractReadTimeout extracts the read timeout annotation value.
+func ExtractReadTimeout(anns map[string]string) (string, bool) {
+	val, exists := anns[AnnotationPrefix+ReadTimeoutKey]
+	if !exists {
+		return "", false
+	}
+	return val, true
+}
+
+// ExtractRetries extracts the retries annotation value.
+func ExtractRetries(anns map[string]string) (string, bool) {
+	val, exists := anns[AnnotationPrefix+RetriesKey]
+	if !exists {
+		return "", false
+	}
+	return val, true
+}
+
+// ExtractHeaders extracts the parsed headers annotations values. It returns a map of header names to slices of values.
+func ExtractHeaders(anns map[string]string) (map[string][]string, bool) {
+	headers := make(map[string][]string)
+	prefix := AnnotationPrefix + HeadersKey + "/"
+	for key, val := range anns {
+		if strings.HasPrefix(key, prefix) {
+			header := strings.TrimPrefix(key, prefix)
+			if len(header) == 0 || len(val) == 0 {
+				continue
+			}
+			headers[header] = strings.Split(val, ",")
+		}
+	}
+	if len(headers) == 0 {
+		return headers, false
+	}
+	return headers, true
+}
+
+// ExtractPathHandling extracts the path handling annotation value.
+func ExtractPathHandling(anns map[string]string) (string, bool) {
+	val, exists := anns[AnnotationPrefix+PathHandlingKey]
+	if !exists {
+		return "", false
+	}
+	return val, true
 }
 
 // ExtractUnmanagedGatewayClassMode extracts the value of the unmanaged gateway

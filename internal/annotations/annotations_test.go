@@ -21,6 +21,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	extensions "k8s.io/api/extensions/v1beta1"
 	netv1 "k8s.io/api/networking/v1"
@@ -680,6 +681,248 @@ func TestExtractHostAliases(t *testing.T) {
 			var got []string
 			if got, _ = ExtractHostAliases(tt.args.anns); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("ExtractHostAliases() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestExtractConnectTimeout(t *testing.T) {
+	type args struct {
+		anns map[string]string
+	}
+	tests := []struct {
+		name string
+		args args
+		want string
+	}{
+		{
+			name: "empty",
+			want: "",
+		},
+		{
+			name: "non-empty",
+			args: args{
+				anns: map[string]string{
+					"konghq.com/connect-timeout": "3000",
+				},
+			},
+			want: "3000",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, ok := ExtractConnectTimeout(tt.args.anns)
+			if tt.want == "" {
+				assert.False(t, ok)
+			} else {
+				assert.True(t, ok)
+				require.Equal(t, tt.want, got)
+			}
+		})
+	}
+}
+
+func TestExtractWriteTimeout(t *testing.T) {
+	type args struct {
+		anns map[string]string
+	}
+	tests := []struct {
+		name string
+		args args
+		want string
+	}{
+		{
+			name: "empty",
+			want: "",
+		},
+		{
+			name: "non-empty",
+			args: args{
+				anns: map[string]string{
+					"konghq.com/write-timeout": "3000",
+				},
+			},
+			want: "3000",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, ok := ExtractWriteTimeout(tt.args.anns)
+			if tt.want == "" {
+				assert.False(t, ok)
+			} else {
+				assert.True(t, ok)
+				require.Equal(t, tt.want, got)
+			}
+		})
+	}
+}
+
+func TestExtractReadTimeout(t *testing.T) {
+	type args struct {
+		anns map[string]string
+	}
+	tests := []struct {
+		name string
+		args args
+		want string
+	}{
+		{
+			name: "empty",
+			want: "",
+		},
+		{
+			name: "non-empty",
+			args: args{
+				anns: map[string]string{
+					"konghq.com/read-timeout": "3000",
+				},
+			},
+			want: "3000",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, ok := ExtractReadTimeout(tt.args.anns)
+			if tt.want == "" {
+				assert.False(t, ok)
+			} else {
+				assert.True(t, ok)
+				require.Equal(t, tt.want, got)
+			}
+		})
+	}
+}
+
+func TestExtractRetries(t *testing.T) {
+	type args struct {
+		anns map[string]string
+	}
+	tests := []struct {
+		name string
+		args args
+		want string
+	}{
+		{
+			name: "empty",
+			want: "",
+		},
+		{
+			name: "non-empty",
+			args: args{
+				anns: map[string]string{
+					"konghq.com/retries": "3000",
+				},
+			},
+			want: "3000",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, ok := ExtractRetries(tt.args.anns)
+			if tt.want == "" {
+				assert.False(t, ok)
+			} else {
+				assert.True(t, ok)
+			}
+			if got != tt.want {
+				t.Errorf("ExtractRetries() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestExtractHeaders(t *testing.T) {
+	type args struct {
+		anns map[string]string
+	}
+	tests := []struct {
+		name string
+		args args
+		want map[string][]string
+	}{
+		{
+			name: "empty",
+			want: map[string][]string{},
+		},
+		{
+			name: "non-empty",
+			args: args{
+				anns: map[string]string{
+					"konghq.com/headers/foo": "foo",
+				},
+			},
+			want: map[string][]string{"foo": {"foo"}},
+		},
+		{
+			name: "no separator",
+			args: args{
+				anns: map[string]string{
+					"konghq.com/headersfoo": "foo",
+				},
+			},
+			want: map[string][]string{},
+		},
+		{
+			name: "no header name",
+			args: args{
+				anns: map[string]string{
+					"konghq.com/headers/": "foo",
+				},
+			},
+			want: map[string][]string{},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, ok := ExtractHeaders(tt.args.anns)
+			if len(tt.want) == 0 {
+				assert.False(t, ok)
+			} else {
+				assert.True(t, ok)
+			}
+			for key, val := range tt.want {
+				actual, ok := got[key]
+				assert.True(t, ok)
+				assert.Equal(t, val, actual)
+			}
+		})
+	}
+}
+
+func TestExtractPathHandling(t *testing.T) {
+	type args struct {
+		anns map[string]string
+	}
+	tests := []struct {
+		name string
+		args args
+		want string
+	}{
+		{
+			name: "empty",
+			want: "",
+		},
+		{
+			name: "non-empty",
+			args: args{
+				anns: map[string]string{
+					"konghq.com/path-handling": "v1",
+				},
+			},
+			want: "v1",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, ok := ExtractPathHandling(tt.args.anns)
+			if tt.want == "" {
+				assert.False(t, ok)
+			} else {
+				assert.True(t, ok)
+			}
+			if got != tt.want {
+				t.Errorf("ExtractPathHandling() = %v, want %v", got, tt.want)
 			}
 		})
 	}

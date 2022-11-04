@@ -106,59 +106,7 @@ func TestTranslationFailures(t *testing.T) {
 				require.NoError(t, err)
 				cleaner.Add(service2)
 
-				var service1Weight int32 = 75
-				var service2Weight int32 = 25
-				httpPort := gatewayv1beta1.PortNumber(80)
-				pathMatchPrefix := gatewayv1beta1.PathMatchPathPrefix
-				httpRoute := &gatewayv1beta1.HTTPRoute{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: uuid.NewString(),
-						Annotations: map[string]string{
-							annotations.AnnotationPrefix + annotations.StripPathKey: "true",
-						},
-					},
-					Spec: gatewayv1beta1.HTTPRouteSpec{
-						CommonRouteSpec: gatewayv1beta1.CommonRouteSpec{
-							ParentRefs: []gatewayv1beta1.ParentReference{{
-								Name: gatewayv1beta1.ObjectName(gateway.Name),
-							}},
-						},
-						Rules: []gatewayv1beta1.HTTPRouteRule{
-							{
-								Matches: []gatewayv1beta1.HTTPRouteMatch{
-									{
-										Path: &gatewayv1beta1.HTTPPathMatch{
-											Type:  &pathMatchPrefix,
-											Value: kong.String("/test"),
-										},
-									},
-								},
-								BackendRefs: []gatewayv1beta1.HTTPBackendRef{
-									{
-										BackendRef: gatewayv1beta1.BackendRef{
-											BackendObjectReference: gatewayv1beta1.BackendObjectReference{
-												Name: gatewayv1beta1.ObjectName(service1.Name),
-												Port: &httpPort,
-												Kind: util.StringToGatewayAPIKindPtr("Service"),
-											},
-											Weight: &service1Weight,
-										},
-									},
-									{
-										BackendRef: gatewayv1beta1.BackendRef{
-											BackendObjectReference: gatewayv1beta1.BackendObjectReference{
-												Name: gatewayv1beta1.ObjectName(service2.Name),
-												Port: &httpPort,
-												Kind: util.StringToGatewayAPIKindPtr("Service"),
-											},
-											Weight: &service2Weight,
-										},
-									},
-								},
-							},
-						},
-					},
-				}
+				httpRoute := httpRouteWithBackends(gatewayName, service1, service2)
 				httpRoute, err = gatewayClient.GatewayV1beta1().HTTPRoutes(ns).Create(ctx, httpRoute, metav1.CreateOptions{})
 				require.NoError(t, err)
 				cleaner.Add(httpRoute)
@@ -204,12 +152,19 @@ func TestTranslationFailures(t *testing.T) {
 					receivedEvents = append(receivedEvents, events.Items...)
 				}
 
-				if eventsForAllObjectsFound {
-					t.Logf("received all events:\n%s", eventsToString(receivedEvents))
-				}
+				logReceivedEvents(t, receivedEvents, eventsForAllObjectsFound)
 				return eventsForAllObjectsFound
 			}, time.Minute*5, time.Second)
 		})
+	}
+}
+
+func logReceivedEvents(t *testing.T, events []corev1.Event, eventsForAllObjectsFound bool) {
+	eventsString := eventsToString(events)
+	if eventsForAllObjectsFound {
+		t.Logf("received all events:\n%s", eventsString)
+	} else {
+		t.Logf("waiting for events, received so far:\n%s", eventsString)
 	}
 }
 
@@ -217,6 +172,7 @@ func eventsToString(events []corev1.Event) string {
 	eventRow := func(e corev1.Event) string {
 		return fmt.Sprintf(`* %s/%s: "%s"`, e.InvolvedObject.Kind, e.InvolvedObject.Name, e.Message)
 	}
+
 	rows := make([]string, 0, len(events))
 	for _, e := range events {
 		rows = append(rows, eventRow(e))
@@ -257,5 +213,55 @@ func pluginUsingInvalidCACert(ns string) *kongv1.KongPlugin {
 		},
 		Config:     v1.JSON{Raw: []byte(fmt.Sprintf(`{"ca_certificates": ["%s"]}`, invalidCASecretID))},
 		PluginName: "mtls-auth",
+	}
+}
+
+func httpRouteWithBackends(gatewayName string, services ...*corev1.Service) *gatewayv1beta1.HTTPRoute {
+	httpPort := gatewayv1beta1.PortNumber(80)
+	weight := int32(100 / len(services))
+	pathMatchPrefix := gatewayv1beta1.PathMatchPathPrefix
+
+	backendRefs := make([]gatewayv1beta1.HTTPBackendRef, 0, len(services))
+	for _, service := range services {
+		backendRefs = append(backendRefs,
+			gatewayv1beta1.HTTPBackendRef{
+				BackendRef: gatewayv1beta1.BackendRef{
+					BackendObjectReference: gatewayv1beta1.BackendObjectReference{
+						Name: gatewayv1beta1.ObjectName(service.Name),
+						Port: &httpPort,
+						Kind: util.StringToGatewayAPIKindPtr("Service"),
+					},
+					Weight: &weight,
+				},
+			})
+	}
+
+	return &gatewayv1beta1.HTTPRoute{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: uuid.NewString(),
+			Annotations: map[string]string{
+				annotations.AnnotationPrefix + annotations.StripPathKey: "true",
+			},
+		},
+		Spec: gatewayv1beta1.HTTPRouteSpec{
+			CommonRouteSpec: gatewayv1beta1.CommonRouteSpec{
+				ParentRefs: []gatewayv1beta1.ParentReference{{
+					Name: gatewayv1beta1.ObjectName(gatewayName),
+				}},
+			},
+			Rules: []gatewayv1beta1.HTTPRouteRule{
+				{
+					Matches: []gatewayv1beta1.HTTPRouteMatch{
+						{
+							Path: &gatewayv1beta1.HTTPPathMatch{
+								Type:  &pathMatchPrefix,
+								Value: kong.String("/test"),
+							},
+						},
+					},
+					BackendRefs: backendRefs,
+				},
+			},
+		},
 	}
 }

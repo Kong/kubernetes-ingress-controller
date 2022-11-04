@@ -8,10 +8,13 @@ import (
 	"testing"
 	"time"
 
+	"github.com/kong/go-kong/kong"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
+	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
+	netv1 "k8s.io/api/networking/v1"
 	v1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -20,6 +23,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
 	"github.com/kong/kubernetes-ingress-controller/v2/pkg/clientset"
+	"github.com/kong/kubernetes-ingress-controller/v2/test"
 )
 
 // TestTranslationFailures ensures that proper warning Kubernetes events are recorded in case of translation failures
@@ -56,6 +60,88 @@ func TestTranslationFailures(t *testing.T) {
 
 				// expect events for both: a faulty secret and a plugin referring it
 				return []client.Object{createdSecret, createdPlugin}
+			},
+		},
+		{
+			name: "grouped services annotations do not match",
+			translationFailureTrigger: func(t *testing.T, cleaner *clusters.Cleaner, ns string) []client.Object {
+				container := generators.NewContainer("httpbin", test.HTTPBinImage, 80)
+				d1 := generators.NewDeploymentForContainer(container)
+				d1.Name = ""
+				d1.GenerateName = "deployment-"
+				d1, err := env.Cluster().Client().AppsV1().Deployments(ns).Create(ctx, d1, metav1.CreateOptions{})
+				require.NoError(t, err)
+				cleaner.Add(d1)
+
+				d2 := generators.NewDeploymentForContainer(container)
+				d2.Name = ""
+				d2.GenerateName = "deployment-"
+				d2, err = env.Cluster().Client().AppsV1().Deployments(ns).Create(ctx, d2, metav1.CreateOptions{})
+				require.NoError(t, err)
+				cleaner.Add(d2)
+
+				service1 := generators.NewServiceForDeployment(d1, corev1.ServiceTypeClusterIP)
+				service1.Annotations = map[string]string{"konghq.com/annotation": "true"}
+				_, err = env.Cluster().Client().CoreV1().Services(ns).Create(ctx, service1, metav1.CreateOptions{})
+				require.NoError(t, err)
+				cleaner.Add(service1)
+
+				service2 := generators.NewServiceForDeployment(d2, corev1.ServiceTypeClusterIP)
+				service2.Annotations = map[string]string{"konghq.com/annotation": "false"}
+				_, err = env.Cluster().Client().CoreV1().Services(ns).Create(ctx, service2, metav1.CreateOptions{})
+				require.NoError(t, err)
+				cleaner.Add(service2)
+
+				pathType := netv1.PathTypePrefix
+				ingress := &netv1.Ingress{
+					ObjectMeta: metav1.ObjectMeta{
+						GenerateName: "ingress-",
+						Annotations: map[string]string{
+							"konghq.com/strip-path": "true",
+						},
+					},
+					Spec: netv1.IngressSpec{
+						IngressClassName: kong.String(ingressClass),
+						Rules: []netv1.IngressRule{
+							{
+								IngressRuleValue: netv1.IngressRuleValue{
+									HTTP: &netv1.HTTPIngressRuleValue{
+										Paths: []netv1.HTTPIngressPath{
+											{
+												Path:     "/test_1",
+												PathType: &pathType,
+												Backend: netv1.IngressBackend{
+													Service: &netv1.IngressServiceBackend{
+														Name: service1.Name,
+														Port: netv1.ServiceBackendPort{
+															Number: service1.Spec.Ports[0].Port,
+														},
+													},
+												},
+											},
+											{
+												Path:     "/test_2",
+												PathType: &pathType,
+												Backend: netv1.IngressBackend{
+													Service: &netv1.IngressServiceBackend{
+														Name: service2.Name,
+														Port: netv1.ServiceBackendPort{
+															Number: service2.Spec.Ports[0].Port,
+														},
+													},
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				}
+				require.NoError(t, clusters.DeployIngress(ctx, env.Cluster(), ns, ingress))
+				cleaner.Add(ingress)
+
+				return []client.Object{service1, service2}
 			},
 		},
 	}

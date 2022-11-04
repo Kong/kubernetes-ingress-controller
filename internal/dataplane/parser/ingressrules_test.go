@@ -456,6 +456,7 @@ func TestDoK8sServicesMatchAnnotations(t *testing.T) {
 			expected: false,
 			expectedLogEntries: []string{
 				"the value of annotation konghq.com/foo is different between the 3 services which comprise this backend.",
+				"the value of annotation konghq.com/foo is different between the 3 services which comprise this backend.",
 			},
 		},
 	} {
@@ -466,6 +467,7 @@ func TestDoK8sServicesMatchAnnotations(t *testing.T) {
 			failuresCollector, err := NewTranslationFailuresCollector(logger)
 			require.NoError(t, err)
 			assert.Equal(t, tt.expected, servicesAllUseTheSameKongAnnotations(tt.services, tt.annotations, failuresCollector))
+			assert.Len(t, failuresCollector.PopTranslationFailures(), len(tt.expectedLogEntries))
 			for _, expectedLogEntry := range tt.expectedLogEntries {
 				assert.Contains(t, stdout.String(), expectedLogEntry)
 			}

@@ -940,11 +940,14 @@ func TestIngressRecoverFromInvalidPath(t *testing.T) {
 	defer func() {
 		if t.Failed() {
 			output, err := cleaner.DumpDiagnostics(ctx, t.Name())
-			t.Logf("%s failed, dumped diagnostics to %s", t.Name(), output)
+			t.Logf("%s failed, test ns %s, dumped diagnostics to %s", t.Name(), ns.Name, output)
 			assert.NoError(t, err)
 		}
 		assert.NoError(t, cleaner.Cleanup(ctx))
 	}()
+
+	// TODO: run this separately, make it not to affect other tests for sharing Kong.
+	t.Skipf("the case %s should be run separately", t.Name())
 
 	t.Log("deploying a minimal HTTP container deployment to test Ingress routes")
 	container := generators.NewContainer("httpbin", test.HTTPBinImage, 80)
@@ -1046,7 +1049,7 @@ func TestIngressRecoverFromInvalidPath(t *testing.T) {
 								},
 								{
 									PathType: &pathTypeImplementationSpecific,
-									Path:     `/~/\/*$`, // invalid regex
+									Path:     `/~^^/*$`, // invalid regex
 									Backend: netv1.IngressBackend{
 										Service: &netv1.IngressServiceBackend{
 											Name: service.Name,
@@ -1145,5 +1148,4 @@ func TestIngressRecoverFromInvalidPath(t *testing.T) {
 		}
 		return false
 	}, ingressWait, waitTick)
-
 }

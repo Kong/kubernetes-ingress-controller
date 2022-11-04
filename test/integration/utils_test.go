@@ -131,7 +131,7 @@ var (
 
 	// kongRouterFlavor configures router mode of Kong. currently supports:
 	// - `traditional`
-	// - `traditional_compat`
+	// - `traditional_compatible`.
 	kongRouterFlavor = os.Getenv("TEST_KONG_ROUTER_FLAVOR")
 
 	// kongImage is the Kong image to use in lieu of the default.

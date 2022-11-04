@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
@@ -28,27 +29,30 @@ func TestTranslationFailures(t *testing.T) {
 		name string
 		// translationFailureTrigger should create objects that trigger translation failure and return the objects
 		// that we expect translation failure warning events to be created for.
-		translationFailureTrigger func(t *testing.T, ns string) []client.Object
+		translationFailureTrigger func(t *testing.T, cleaner *clusters.Cleaner, ns string) []client.Object
 	}{
 		{
 			name: "invalid CA secret",
-			translationFailureTrigger: func(t *testing.T, ns string) []client.Object {
+			translationFailureTrigger: func(t *testing.T, cleaner *clusters.Cleaner, ns string) []client.Object {
 				createdSecret, err := env.Cluster().Client().CoreV1().Secrets(ns).Create(ctx, invalidCASecret(ns), metav1.CreateOptions{})
 				require.NoError(t, err)
+				cleaner.Add(createdSecret)
 
 				return []client.Object{createdSecret}
 			},
 		},
 		{
 			name: "invalid CA secret referred by a plugin",
-			translationFailureTrigger: func(t *testing.T, ns string) []client.Object {
+			translationFailureTrigger: func(t *testing.T, cleaner *clusters.Cleaner, ns string) []client.Object {
 				createdSecret, err := env.Cluster().Client().CoreV1().Secrets(ns).Create(ctx, invalidCASecret(ns), metav1.CreateOptions{})
 				require.NoError(t, err)
+				cleaner.Add(createdSecret)
 
 				c, err := clientset.NewForConfig(env.Cluster().Config())
 				require.NoError(t, err)
 				createdPlugin, err := c.ConfigurationV1().KongPlugins(ns).Create(ctx, pluginUsingInvalidCACert(ns), metav1.CreateOptions{})
 				require.NoError(t, err)
+				cleaner.Add(createdPlugin)
 
 				// expect events for both: a faulty secret and a plugin referring it
 				return []client.Object{createdSecret, createdPlugin}
@@ -63,7 +67,7 @@ func TestTranslationFailures(t *testing.T) {
 			ns, cleaner := setup(t)
 			defer func() { assert.NoError(t, cleaner.Cleanup(ctx)) }()
 
-			expectedCausingObjects := tt.translationFailureTrigger(t, ns.GetName())
+			expectedCausingObjects := tt.translationFailureTrigger(t, cleaner, ns.GetName())
 
 			require.Eventually(t, func() bool {
 				eventsForAllObjectsFound := true

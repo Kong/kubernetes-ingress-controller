@@ -55,7 +55,7 @@ func (p *Parser) ingressRulesFromTLSRoute(result *ingressRules, tlsroute *gatewa
 		return fmt.Errorf("no hostnames provided")
 	}
 	if len(spec.Rules) == 0 {
-		return fmt.Errorf("no rules provided")
+		return errRouteValidationNoRules
 	}
 
 	tlsPassthrough, err := p.isTLSRoutePassthrough(tlsroute)

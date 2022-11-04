@@ -123,16 +123,6 @@ func tcpRouteToKongRoute(
 }
 
 func backendRefsToKongCIDRPorts(backendRefs []gatewayv1alpha2.BackendRef) []*kong.CIDRPort {
-	// For now, Gateway Routes provide no means of specifying a destination port
-	// other than the backend target port
-	//
-	// They will once https://gateway-api.sigs.k8s.io/geps/gep-957/ is stable.
-	// In the interim, this always uses the backend target.
-	//
-	// NOTE: The above is now implemented via:
-	// https://github.com/kubernetes-sigs/gateway-api/pull/1002 and here's the
-	// related issue in KIC:
-	// https://github.com/Kong/kubernetes-ingress-controller/issues/2709
 	destinations := make([]*kong.CIDRPort, 0, len(backendRefs))
 	for _, backendRef := range backendRefs {
 		if backendRef.Port == nil {

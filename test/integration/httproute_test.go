@@ -21,6 +21,7 @@ import (
 	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
+	gatewaypkg "github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/gateway"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/versions"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
@@ -80,9 +81,10 @@ func TestHTTPRouteEssentials(t *testing.T) {
 			Raw: []byte(`{"header_name":"reqid", "echo_downstream": true}`),
 		},
 	}
-	require.NoError(t, err)
 	pluginClient, err := clientset.NewForConfig(env.Cluster().Config())
+	require.NoError(t, err)
 	_, err = pluginClient.ConfigurationV1().KongPlugins(ns.Name).Create(ctx, kongplugin, metav1.CreateOptions{})
+	require.NoError(t, err)
 
 	t.Logf("creating an httproute to access deployment %s via kong", deployment.Name)
 	httpPort := gatewayv1beta1.PortNumber(80)
@@ -142,7 +144,7 @@ func TestHTTPRouteEssentials(t *testing.T) {
 			Headers: []gatewayv1beta1.HTTPHeaderMatch{
 				{
 					Type:  &headerMatchRegex,
-					Value: "^audio/*",
+					Value: `^audio/.*`,
 					Name:  "Content-Type",
 				},
 			},
@@ -274,6 +276,32 @@ func TestHTTPRouteEssentials(t *testing.T) {
 
 	t.Log("verifying that the data-plane configuration from the HTTPRoute does not get orphaned with the GatewayClass and Gateway gone")
 	eventuallyGETPath(t, "test-http-route-essentials", http.StatusNotFound, "", emptyHeaderSet)
+
+	t.Log("testing port matching....")
+	t.Log("putting the Gateway back")
+	_, err = DeployGateway(ctx, gatewayClient, ns.Name, gatewayClassName, func(gw *gatewayv1beta1.Gateway) {
+		gw.Name = gatewayName
+	})
+	require.NoError(t, err)
+	t.Log("putting the GatewayClass back")
+	_, err = DeployGatewayClass(ctx, gatewayClient, gatewayClassName)
+	require.NoError(t, err)
+
+	t.Log("verifying that the HTTPRoute has the Condition 'Accepted' set to 'True' before specifying a port not existent in Gateway")
+	require.Eventually(t, HTTPRouteMatchesAcceptedCallback(t, gatewayClient, httpRoute, true, gatewayv1beta1.RouteReasonAccepted), statusWait, waitTick)
+
+	// Set the Port in ParentRef which does not have a matching listener in Gateway.
+	require.Eventually(t, func() bool {
+		httpRoute, err = gatewayClient.GatewayV1beta1().HTTPRoutes(ns.Name).Get(ctx, httpRoute.Name, metav1.GetOptions{})
+		require.NoError(t, err)
+		port81 := gatewayv1beta1.PortNumber(81)
+		httpRoute.Spec.ParentRefs[0].Port = &port81
+		httpRoute, err = gatewayClient.GatewayV1beta1().HTTPRoutes(ns.Name).Update(ctx, httpRoute, metav1.UpdateOptions{})
+		return err == nil
+	}, time.Minute, time.Second)
+
+	t.Log("verifying that the HTTPRoute has the Condition 'Accepted' set to 'False' when it specified a port not existent in Gateway")
+	require.Eventually(t, HTTPRouteMatchesAcceptedCallback(t, gatewayClient, httpRoute, false, gatewaypkg.RouteReasonNoMatchingListenerPort), statusWait, waitTick)
 }
 
 func TestHTTPRouteMultipleServices(t *testing.T) {

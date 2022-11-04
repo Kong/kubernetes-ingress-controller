@@ -131,6 +131,9 @@ Adding a new version? You'll need three changes:
 - CRDs' validations improvements: `UDPIngressRule.Port`, `IngressRule.Port` and `IngressBackend.ServiceName`
   instead of being validated in the Parser, are validated by the Kubernetes API now.
   [#3136](https://github.com/Kong/kubernetes-ingress-controller/pull/3136)
+- Gateway API: Implement port matching for routes as defined in
+  [GEP-957](https://gateway-api.sigs.k8s.io/geps/gep-957/)
+  [#3129](https://github.com/Kong/kubernetes-ingress-controller/pull/3129)
 
 ### Fixed
 

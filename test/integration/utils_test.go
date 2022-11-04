@@ -310,7 +310,7 @@ func identifyTestCasesForFile(filePath string) ([]string, error) {
 // Testing Utility Functions - HTTP Requests
 // -----------------------------------------------------------------------------
 
-// eventuallyGETPAth makes a GET request to the Kong proxy multiple times until
+// eventuallyGETPath makes a GET request to the Kong proxy multiple times until
 // either the request starts to respond with the given status code and contents
 // present in the response body, or until timeout occurrs according to
 // ingressWait time limits. This uses only the path of for the request and does

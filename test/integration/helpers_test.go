@@ -10,6 +10,7 @@ import (
 	"time"
 
 	ktfkong "github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/kong"
+	"github.com/stretchr/testify/require"
 	netv1 "k8s.io/api/networking/v1"
 	netv1beta1 "k8s.io/api/networking/v1beta1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -137,6 +138,41 @@ func gatewayHealthCheck(ctx context.Context, client *gatewayclient.Clientset, ga
 			tick = ticker.C
 		}
 	}
+}
+
+// HTTPRouteMatchesAcceptedCallback is a testing helper functions that returns a callback which
+// checks if the provided HTTPRoute has an Accepted condition with:
+// - Status matching the provided 'accepted' boolean argument.
+// - Reason matching the provided 'reason' string argument.
+func HTTPRouteMatchesAcceptedCallback(t *testing.T, c *gatewayclient.Clientset, httpRoute *gatewayv1beta1.HTTPRoute, accepted bool, reason gatewayv1beta1.RouteConditionReason) func() bool {
+	return func() bool {
+		return httpRouteAcceptedConditionMatches(t, c, httpRoute, accepted, reason)
+	}
+}
+
+func httpRouteAcceptedConditionMatches(t *testing.T, c *gatewayclient.Clientset, httpRoute *gatewayv1beta1.HTTPRoute, accepted bool, reason gatewayv1beta1.RouteConditionReason) bool {
+	var err error
+	httpRoute, err = c.GatewayV1beta1().HTTPRoutes(httpRoute.Namespace).Get(ctx, httpRoute.Name, metav1.GetOptions{})
+	require.NoError(t, err)
+
+	if len(httpRoute.Status.Parents) <= 0 {
+		return false
+	}
+
+	var expectedStatus metav1.ConditionStatus = "False"
+	if accepted {
+		expectedStatus = "True"
+	}
+
+	for _, cond := range httpRoute.Status.Parents[0].Conditions {
+		if cond.Type == string(gatewayv1beta1.RouteConditionAccepted) &&
+			cond.Status == expectedStatus &&
+			cond.Reason == string(reason) {
+			return true
+		}
+	}
+
+	return false
 }
 
 // GetGatewayIsLinkedCallback returns a callback that checks if the specific Route (HTTP, TCP, TLS, or UDP)

@@ -129,6 +129,11 @@ var (
 	// kongEnterpriseEnabled enables Enterprise-specific tests when set to "true".
 	kongEnterpriseEnabled = os.Getenv("TEST_KONG_ENTERPRISE")
 
+	// kongRouterFlavor configures router mode of Kong. currently supports:
+	// - `traditional`
+	// - `traditional_compat`
+	kongRouterFlavor = os.Getenv("TEST_KONG_ROUTER_FLAVOR")
+
 	// kongImage is the Kong image to use in lieu of the default.
 	kongImage = os.Getenv("TEST_KONG_IMAGE")
 

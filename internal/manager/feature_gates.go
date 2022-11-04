@@ -58,6 +58,6 @@ func getFeatureGatesDefaults() map[string]bool {
 		knativeFeature:        false,
 		gatewayFeature:        true,
 		gatewayAlphaFeature:   false,
-		combinedRoutesFeature: false,
+		combinedRoutesFeature: true,
 	}
 }

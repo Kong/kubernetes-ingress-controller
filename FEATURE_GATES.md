@@ -58,7 +58,7 @@ Features that reach GA and over time become stable will be removed from this tab
 |------------------------|---------|-------|-------|-------|
 | Knative                | `true`  | Alpha | 0.8.0 | TBD   |
 | Gateway                | `true`  | Beta  | 2.2.0 | TBD   |
-| CombinedRoutes         | `false` | Alpha | 2.4.0 | TBD   |
+| CombinedRoutes         | `true`  | Beta  | 2.8.0 | TBD   |
 | IngressClassParameters | `false` | Alpha | 2.6.0 | TBD   |
 | GatewayAlpha           | `false` | Alpha | 2.6.0 | TBD   |
 
@@ -67,3 +67,96 @@ Features that reach GA and over time become stable will be removed from this tab
  `v1beta1` or later. `GatewayAlpha` refers to APIs which are still in alpha.
  These are separated to make a clear distinction in the support stage for these
  APIs.
+
+### Differences between traditional and combined routes
+
+Ingress and HTTPRoute resources use a different approach to configuration layout
+than Kong routes. In Ingress and HTTPRoute the upstream service is associated
+with individual rules or rule paths, whereas Kong routes associate the upstream
+service with the entire route, which may allow multiple different paths.
+
+This difference in layout means that a single Kong route often cannot represent
+an entire Ingress or HTTPRoute. For example, the Ingress
+
+```
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: example
+spec:
+  ingressClassName: kong
+  rules:
+  - host: "ingress.example"
+    http:
+      paths:
+      - path: /one
+        pathType: Prefix
+        backend:
+          service:
+            name: red
+            port:
+              number: 80
+      - path: /two
+        pathType: Prefix
+        backend:
+          service:
+            name: red
+            port:
+              number: 80
+      - path: /three
+        pathType: Prefix
+        backend:
+          service:
+            name: blue
+            port:
+              number: 80
+```
+
+requires more than one Kong route. A single route only supports a single
+service, so placing all three paths on the same route would incorrectly direct
+traffic destined for the `blue` service to the `red` service.
+
+To account for this, KIC's traditional route generation strategy created a route
+for every individual Ingress path. The Ingress above would generate three
+routes, for paths `/one`, `/two`, and `/three`. This simple strategy ensures
+that requests always route to the correct service, but results in a large number
+of routes. Larger configurations can affect performance, especially when loading
+configuration updates.
+
+Combined routes reduces configuration size by consolidating routes that share
+the same service and hostname. The above example (where all paths use the same
+hostname) would instead result in two routes, one matching either `/one` or
+`/two` for service `red` and another matching `/three` for service `blue`.
+
+Combined routes thus does not change which requests are routed to which
+services. It has no effect on request routing, only the arrangement of
+configuration. The number of routes and route names _will_ change, however, and
+you should expect to see a disconnect in monitoring information (Prometheus
+metrics, logging plugin output, etc.) and third-party tools that rely on route
+names or IDs.
+
+Combined routes use a revised naming scheme. Traditional Ingress routes used a
+`<namespace>.<name>.<rule index><path index>` name format (e.g.
+`default.httpbin.00` for the first (0-indexed) rule's first path on the
+`httpbin` Ingress in the `default` namespace), whereas combined routes use a
+`<namespace>.<name>.<service>.<hostname>.<port>` scheme (e.g.
+`default.httpbin.httpbin.ing.example.80` for all paths in the `default/httpbin`
+Ingress for the `httpbin` service on port `80` with the hostname `ing.example`).
+HTTPRoutes use the same `httproute.<namespace>.<name>.<rule>.<match>` scheme as
+before, but the indices are the _first_ rule and match with a given backendRef,
+whereas traditional would generate routes for _every_ match. If rule 1 match 2
+has the same backendRef as rule 3 match 1, you'll see a single `.1.2` route with
+paths from both.
+
+HTTPRoutes have more combination rules than Ingresses because their rules are
+more expressive. Rules cannot be combined with others if they use different
+filters, header matches, or query parameter matches, since these are implemented
+using Kong settings that apply to an entire route.
+
+HTTPRoute backendRefs can target multiple Services. In traditional mode, KIC
+generates a Kong service for every backendRef, labeled with the rule and match
+indices. In combined mode, KIC generates a Kong service for every unique set of
+services: if two HTTPRoute rules use both serviceA and serviceB in their
+backendRefs, KIC will generate a single Kong service with endpoints from both
+serviceA and serviceB, named for the first rule and match indices with that
+combination of Services.

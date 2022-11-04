@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"testing"
 
+	"github.com/sirupsen/logrus/hooks/test"
+
 	"github.com/kong/go-kong/kong"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
@@ -462,7 +464,9 @@ func TestDoK8sServicesMatchAnnotations(t *testing.T) {
 			stdout := new(bytes.Buffer)
 			logger := logrus.New()
 			logger.SetOutput(stdout)
-			assert.Equal(t, tt.expected, servicesAllUseTheSameKongAnnotations(logger, tt.services, tt.annotations))
+			failuresCollector, err := NewTranslationFailuresCollector(logger)
+			require.NoError(t, err)
+			assert.Equal(t, tt.expected, servicesAllUseTheSameKongAnnotations(tt.services, tt.annotations, failuresCollector))
 			for _, expectedLogEntry := range tt.expectedLogEntries {
 				assert.Contains(t, stdout.String(), expectedLogEntry)
 			}
@@ -564,8 +568,12 @@ func TestPopulateServices(t *testing.T) {
 			})
 			require.NoError(t, err)
 			ingressRules.ServiceNameToServices = tc.serviceNamesToServices
-			servicesToBeSkipped := ingressRules.populateServices(logrus.New(), fakeStore)
+			logger, _ := test.NewNullLogger()
+			failuresCollector, err := NewTranslationFailuresCollector(logger)
+			require.NoError(t, err)
+			servicesToBeSkipped := ingressRules.populateServices(logrus.New(), fakeStore, failuresCollector)
 			require.Equal(t, tc.serviceNamesToSkip, servicesToBeSkipped)
+			require.Len(t, failuresCollector.PopTranslationFailures(), len(servicesToBeSkipped))
 		})
 	}
 }

@@ -57,12 +57,17 @@ func TestTranslationFailuresCollector(t *testing.T) {
 		require.Error(t, err)
 	})
 
-	t.Run("pushes and pops translation failures", func(t *testing.T) {
-		collector, err := parser.NewTranslationFailuresCollector(testLogger)
+	t.Run("pushes, logs and pops translation failures", func(t *testing.T) {
+		logger, loggerHook := test.NewNullLogger()
+		collector, err := parser.NewTranslationFailuresCollector(logger)
 		require.NoError(t, err)
 
 		collector.PushTranslationFailure(someValidTranslationFailureReason, someValidTranslationFailureCausingObjects()...)
 		collector.PushTranslationFailure(someValidTranslationFailureReason, someValidTranslationFailureCausingObjects()...)
+
+		numberOfCausingObjects := len(someValidTranslationFailureCausingObjects())
+		require.Len(t, loggerHook.AllEntries(), numberOfCausingObjects*2, "expecting one log entry per causing object")
+		assertErrorLogs(t, loggerHook)
 
 		collectedErrors := collector.PopTranslationFailures()
 		require.Len(t, collectedErrors, 2)
@@ -81,4 +86,10 @@ func TestTranslationFailuresCollector(t *testing.T) {
 		require.Equal(t, logrus.WarnLevel, lastLog.Level)
 		require.Len(t, collector.PopTranslationFailures(), 0, "no failures expected - causing objects missing")
 	})
+}
+
+func assertErrorLogs(t *testing.T, logHook *test.Hook) {
+	for i := range logHook.AllEntries() {
+		assert.Equalf(t, logrus.ErrorLevel, logHook.AllEntries()[i].Level, "%d-nth log entry expected to have ErrorLevel", i)
+	}
 }

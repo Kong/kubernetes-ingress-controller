@@ -5,19 +5,23 @@ package integration
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/kong/go-kong/kong"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
-	netv1 "k8s.io/api/networking/v1"
 	v1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
+	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane"
@@ -65,72 +69,89 @@ func TestTranslationFailures(t *testing.T) {
 		{
 			name: "grouped services annotations do not match",
 			translationFailureTrigger: func(t *testing.T, cleaner *clusters.Cleaner, ns string) []client.Object {
+				gatewayClient, err := gatewayclient.NewForConfig(env.Cluster().Config())
+				require.NoError(t, err)
+
+				gatewayClassName := uuid.NewString()
+				gwc, err := DeployGatewayClass(ctx, gatewayClient, gatewayClassName)
+				require.NoError(t, err)
+				cleaner.Add(gwc)
+
+				gatewayName := uuid.NewString()
+				gateway, err := DeployGateway(ctx, gatewayClient, ns, gatewayClassName, func(gw *gatewayv1beta1.Gateway) {
+					gw.Name = gatewayName
+				})
+				require.NoError(t, err)
+				cleaner.Add(gateway)
+
 				container := generators.NewContainer("httpbin", test.HTTPBinImage, 80)
-				d1 := generators.NewDeploymentForContainer(container)
-				d1.Name = ""
-				d1.GenerateName = "deployment-"
-				d1, err := env.Cluster().Client().AppsV1().Deployments(ns).Create(ctx, d1, metav1.CreateOptions{})
+				deployment := generators.NewDeploymentForContainer(container)
+				deployment, err = env.Cluster().Client().AppsV1().Deployments(ns).Create(ctx, deployment, metav1.CreateOptions{})
 				require.NoError(t, err)
-				cleaner.Add(d1)
+				cleaner.Add(deployment)
 
-				d2 := generators.NewDeploymentForContainer(container)
-				d2.Name = ""
-				d2.GenerateName = "deployment-"
-				d2, err = env.Cluster().Client().AppsV1().Deployments(ns).Create(ctx, d2, metav1.CreateOptions{})
-				require.NoError(t, err)
-				cleaner.Add(d2)
-
-				service1 := generators.NewServiceForDeployment(d1, corev1.ServiceTypeClusterIP)
-				service1.Annotations = map[string]string{"konghq.com/annotation": "true"}
-				_, err = env.Cluster().Client().CoreV1().Services(ns).Create(ctx, service1, metav1.CreateOptions{})
+				service1 := generators.NewServiceForDeployment(deployment, corev1.ServiceTypeClusterIP)
+				service1.Name = ""
+				service1.GenerateName = "service-"
+				// adding the annotation to trigger conflict
+				service1.Annotations = map[string]string{annotations.AnnotationPrefix + annotations.HostHeaderKey: "example.com"}
+				service1, err = env.Cluster().Client().CoreV1().Services(ns).Create(ctx, service1, metav1.CreateOptions{})
 				require.NoError(t, err)
 				cleaner.Add(service1)
 
-				service2 := generators.NewServiceForDeployment(d2, corev1.ServiceTypeClusterIP)
-				service2.Annotations = map[string]string{"konghq.com/annotation": "false"}
-				_, err = env.Cluster().Client().CoreV1().Services(ns).Create(ctx, service2, metav1.CreateOptions{})
+				service2 := generators.NewServiceForDeployment(deployment, corev1.ServiceTypeClusterIP)
+				service2.Name = ""
+				service2.GenerateName = "service-"
+				service2, err = env.Cluster().Client().CoreV1().Services(ns).Create(ctx, service2, metav1.CreateOptions{})
 				require.NoError(t, err)
 				cleaner.Add(service2)
 
-				pathType := netv1.PathTypePrefix
-				ingress := &netv1.Ingress{
+				var service1Weight int32 = 75
+				var service2Weight int32 = 25
+				httpPort := gatewayv1beta1.PortNumber(80)
+				pathMatchPrefix := gatewayv1beta1.PathMatchPathPrefix
+				httpRoute := &gatewayv1beta1.HTTPRoute{
 					ObjectMeta: metav1.ObjectMeta{
-						GenerateName: "ingress-",
+						Name: uuid.NewString(),
 						Annotations: map[string]string{
-							"konghq.com/strip-path": "true",
+							annotations.AnnotationPrefix + annotations.StripPathKey: "true",
 						},
 					},
-					Spec: netv1.IngressSpec{
-						IngressClassName: kong.String(ingressClass),
-						Rules: []netv1.IngressRule{
+					Spec: gatewayv1beta1.HTTPRouteSpec{
+						CommonRouteSpec: gatewayv1beta1.CommonRouteSpec{
+							ParentRefs: []gatewayv1beta1.ParentReference{{
+								Name: gatewayv1beta1.ObjectName(gateway.Name),
+							}},
+						},
+						Rules: []gatewayv1beta1.HTTPRouteRule{
 							{
-								IngressRuleValue: netv1.IngressRuleValue{
-									HTTP: &netv1.HTTPIngressRuleValue{
-										Paths: []netv1.HTTPIngressPath{
-											{
-												Path:     "/test_1",
-												PathType: &pathType,
-												Backend: netv1.IngressBackend{
-													Service: &netv1.IngressServiceBackend{
-														Name: service1.Name,
-														Port: netv1.ServiceBackendPort{
-															Number: service1.Spec.Ports[0].Port,
-														},
-													},
-												},
+								Matches: []gatewayv1beta1.HTTPRouteMatch{
+									{
+										Path: &gatewayv1beta1.HTTPPathMatch{
+											Type:  &pathMatchPrefix,
+											Value: kong.String("/test"),
+										},
+									},
+								},
+								BackendRefs: []gatewayv1beta1.HTTPBackendRef{
+									{
+										BackendRef: gatewayv1beta1.BackendRef{
+											BackendObjectReference: gatewayv1beta1.BackendObjectReference{
+												Name: gatewayv1beta1.ObjectName(service1.Name),
+												Port: &httpPort,
+												Kind: util.StringToGatewayAPIKindPtr("Service"),
 											},
-											{
-												Path:     "/test_2",
-												PathType: &pathType,
-												Backend: netv1.IngressBackend{
-													Service: &netv1.IngressServiceBackend{
-														Name: service2.Name,
-														Port: netv1.ServiceBackendPort{
-															Number: service2.Spec.Ports[0].Port,
-														},
-													},
-												},
+											Weight: &service1Weight,
+										},
+									},
+									{
+										BackendRef: gatewayv1beta1.BackendRef{
+											BackendObjectReference: gatewayv1beta1.BackendObjectReference{
+												Name: gatewayv1beta1.ObjectName(service2.Name),
+												Port: &httpPort,
+												Kind: util.StringToGatewayAPIKindPtr("Service"),
 											},
+											Weight: &service2Weight,
 										},
 									},
 								},
@@ -138,10 +159,12 @@ func TestTranslationFailures(t *testing.T) {
 						},
 					},
 				}
-				require.NoError(t, clusters.DeployIngress(ctx, env.Cluster(), ns, ingress))
-				cleaner.Add(ingress)
+				httpRoute, err = gatewayClient.GatewayV1beta1().HTTPRoutes(ns).Create(ctx, httpRoute, metav1.CreateOptions{})
+				require.NoError(t, err)
+				cleaner.Add(httpRoute)
 
-				return []client.Object{service1, service2}
+				// expect event for service2 as it doesn't have annotations that service1 has
+				return []client.Object{service2}
 			},
 		},
 	}
@@ -157,6 +180,7 @@ func TestTranslationFailures(t *testing.T) {
 
 			require.Eventually(t, func() bool {
 				eventsForAllObjectsFound := true
+				var receivedEvents []corev1.Event
 
 				for _, expectedCausingObject := range expectedCausingObjects {
 					events, err := env.Cluster().Client().CoreV1().Events(ns.GetName()).List(ctx, metav1.ListOptions{
@@ -176,12 +200,29 @@ func TestTranslationFailures(t *testing.T) {
 						t.Logf("waiting for events related to '%s' to be created", expectedCausingObject.GetName())
 						eventsForAllObjectsFound = false
 					}
+
+					receivedEvents = append(receivedEvents, events.Items...)
 				}
 
+				if eventsForAllObjectsFound {
+					t.Logf("received all events:\n%s", eventsToString(receivedEvents))
+				}
 				return eventsForAllObjectsFound
 			}, time.Minute*5, time.Second)
 		})
 	}
+}
+
+func eventsToString(events []corev1.Event) string {
+	eventRow := func(e corev1.Event) string {
+		return fmt.Sprintf(`* %s/%s: "%s"`, e.InvolvedObject.Kind, e.InvolvedObject.Name, e.Message)
+	}
+	rows := make([]string, 0, len(events))
+	for _, e := range events {
+		rows = append(rows, eventRow(e))
+	}
+
+	return strings.Join(rows, "\n")
 }
 
 const invalidCASecretID = "8214a145-a328-4c56-ab72-2973a56d4eae" //nolint:gosec

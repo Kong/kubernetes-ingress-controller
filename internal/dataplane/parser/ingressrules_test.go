@@ -461,15 +461,13 @@ func TestDoK8sServicesMatchAnnotations(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			stdout := new(bytes.Buffer)
-			logger := logrus.New()
-			logger.SetOutput(stdout)
+			logger, loggerHook := test.NewNullLogger()
 			failuresCollector, err := NewTranslationFailuresCollector(logger)
 			require.NoError(t, err)
 			assert.Equal(t, tt.expected, servicesAllUseTheSameKongAnnotations(tt.services, tt.annotations, failuresCollector))
-			assert.Len(t, failuresCollector.PopTranslationFailures(), len(tt.expectedLogEntries))
-			for _, expectedLogEntry := range tt.expectedLogEntries {
-				assert.Contains(t, stdout.String(), expectedLogEntry)
+			assert.Len(t, failuresCollector.PopTranslationFailures(), len(tt.expectedLogEntries), "expecting as many translation failures as log entries")
+			for i := range tt.expectedLogEntries {
+				assert.Contains(t, loggerHook.AllEntries()[i].Message, tt.expectedLogEntries[i])
 			}
 		})
 	}
@@ -574,7 +572,7 @@ func TestPopulateServices(t *testing.T) {
 			require.NoError(t, err)
 			servicesToBeSkipped := ingressRules.populateServices(logrus.New(), fakeStore, failuresCollector)
 			require.Equal(t, tc.serviceNamesToSkip, servicesToBeSkipped)
-			require.Len(t, failuresCollector.PopTranslationFailures(), len(servicesToBeSkipped))
+			require.Len(t, failuresCollector.PopTranslationFailures(), len(servicesToBeSkipped), "expecting as many translation failures as services to skip")
 		})
 	}
 }

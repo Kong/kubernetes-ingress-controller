@@ -4,10 +4,9 @@ import (
 	"bytes"
 	"testing"
 
-	"github.com/sirupsen/logrus/hooks/test"
-
 	"github.com/kong/go-kong/kong"
 	"github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus/hooks/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"

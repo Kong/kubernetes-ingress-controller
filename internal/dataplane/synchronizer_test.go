@@ -11,6 +11,10 @@ import (
 )
 
 func TestSynchronizer(t *testing.T) {
+	if testing.Short() {
+		t.SkipNow()
+	}
+
 	t.Log("setting up a fake dataplane client to test the synchronizer")
 	c := &fakeDataplaneClient{dbmode: "postgres"}
 

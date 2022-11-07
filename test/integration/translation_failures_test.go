@@ -9,7 +9,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/kong/go-kong/kong"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
@@ -25,14 +24,18 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
+	testutils "github.com/kong/kubernetes-ingress-controller/v2/internal/util/test"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
 	"github.com/kong/kubernetes-ingress-controller/v2/pkg/clientset"
 	"github.com/kong/kubernetes-ingress-controller/v2/test"
 )
 
+const testTranslationFailuresObjectsPrefix = "translation-failures-"
+
 // TestTranslationFailures ensures that proper warning Kubernetes events are recorded in case of translation failures
 // encountered.
 func TestTranslationFailures(t *testing.T) {
+
 	testCases := []struct {
 		name string
 		// translationFailureTrigger should create objects that trigger translation failure and return the objects
@@ -72,12 +75,12 @@ func TestTranslationFailures(t *testing.T) {
 				gatewayClient, err := gatewayclient.NewForConfig(env.Cluster().Config())
 				require.NoError(t, err)
 
-				gatewayClassName := randomName()
+				gatewayClassName := testutils.RandomName(testTranslationFailuresObjectsPrefix)
 				gwc, err := DeployGatewayClass(ctx, gatewayClient, gatewayClassName)
 				require.NoError(t, err)
 				cleaner.Add(gwc)
 
-				gatewayName := randomName()
+				gatewayName := testutils.RandomName(testTranslationFailuresObjectsPrefix)
 				gateway, err := DeployGateway(ctx, gatewayClient, ns, gatewayClassName, func(gw *gatewayv1beta1.Gateway) {
 					gw.Name = gatewayName
 				})
@@ -91,7 +94,7 @@ func TestTranslationFailures(t *testing.T) {
 				cleaner.Add(deployment)
 
 				service1 := generators.NewServiceForDeployment(deployment, corev1.ServiceTypeClusterIP)
-				service1.Name = randomName()
+				service1.Name = testutils.RandomName(testTranslationFailuresObjectsPrefix)
 				// adding the annotation to trigger conflict
 				service1.Annotations = map[string]string{annotations.AnnotationPrefix + annotations.HostHeaderKey: "example.com"}
 				service1, err = env.Cluster().Client().CoreV1().Services(ns).Create(ctx, service1, metav1.CreateOptions{})
@@ -99,7 +102,7 @@ func TestTranslationFailures(t *testing.T) {
 				cleaner.Add(service1)
 
 				service2 := generators.NewServiceForDeployment(deployment, corev1.ServiceTypeClusterIP)
-				service2.Name = randomName()
+				service2.Name = testutils.RandomName(testTranslationFailuresObjectsPrefix)
 				service2, err = env.Cluster().Client().CoreV1().Services(ns).Create(ctx, service2, metav1.CreateOptions{})
 				require.NoError(t, err)
 				cleaner.Add(service2)
@@ -184,7 +187,7 @@ const invalidCASecretID = "8214a145-a328-4c56-ab72-2973a56d4eae" //nolint:gosec
 func invalidCASecret(ns string) *corev1.Secret {
 	return &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      randomName(),
+			Name:      testutils.RandomName(testTranslationFailuresObjectsPrefix),
 			Namespace: ns,
 			Labels: map[string]string{
 				"konghq.com/ca-cert": "true",
@@ -203,7 +206,7 @@ func invalidCASecret(ns string) *corev1.Secret {
 func pluginUsingInvalidCACert(ns string) *kongv1.KongPlugin {
 	return &kongv1.KongPlugin{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      randomName(),
+			Name:      testutils.RandomName(testTranslationFailuresObjectsPrefix),
 			Namespace: ns,
 			Annotations: map[string]string{
 				annotations.IngressClassKey: ingressClass,
@@ -236,7 +239,7 @@ func httpRouteWithBackends(gatewayName string, services ...*corev1.Service) *gat
 
 	return &gatewayv1beta1.HTTPRoute{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: randomName(),
+			Name: testutils.RandomName(testTranslationFailuresObjectsPrefix),
 			Annotations: map[string]string{
 				annotations.AnnotationPrefix + annotations.StripPathKey: "true",
 			},
@@ -262,8 +265,4 @@ func httpRouteWithBackends(gatewayName string, services ...*corev1.Service) *gat
 			},
 		},
 	}
-}
-
-func randomName() string {
-	return "translation-failures-" + uuid.NewString()
 }

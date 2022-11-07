@@ -50,6 +50,7 @@ type IngressRule struct {
 type IngressBackend struct {
 	// Specifies the name of the referenced service.
 	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:MinLength=1
 	ServiceName string `json:"serviceName"`
 
 	// Specifies the port of the referenced service.

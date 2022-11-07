@@ -9,7 +9,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -21,7 +20,6 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
-	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1beta1"
 	"github.com/kong/kubernetes-ingress-controller/v2/pkg/clientset"
 )
 
@@ -61,54 +59,6 @@ func TestTranslationFailures(t *testing.T) {
 
 				// expect events for both: a faulty secret and a plugin referring it
 				return []expectedTranslationFailure{{object: createdSecret}, {object: createdPlugin}}
-			},
-		},
-		{
-			name: "invalid TCPIngress rule port",
-			translationFailureScenario: func(t *testing.T, cleaner *clusters.Cleaner, ns string) []expectedTranslationFailure {
-				gatewayClient, err := clientset.NewForConfig(env.Cluster().Config())
-				require.NoError(t, err)
-
-				ingress := validTCPIngress()
-				ingress.Spec.Rules[0].Port = 0
-
-				ingress, err = gatewayClient.ConfigurationV1beta1().TCPIngresses(ns).Create(ctx, ingress, metav1.CreateOptions{})
-				require.NoError(t, err)
-				cleaner.Add(ingress)
-
-				return []expectedTranslationFailure{{object: ingress, messageContains: "invalid port"}}
-			},
-		},
-		{
-			name: "empty TCPIngress service name",
-			translationFailureScenario: func(t *testing.T, cleaner *clusters.Cleaner, ns string) []expectedTranslationFailure {
-				gatewayClient, err := clientset.NewForConfig(env.Cluster().Config())
-				require.NoError(t, err)
-
-				ingress := validTCPIngress()
-				ingress.Spec.Rules[0].Backend.ServiceName = ""
-
-				ingress, err = gatewayClient.ConfigurationV1beta1().TCPIngresses(ns).Create(ctx, ingress, metav1.CreateOptions{})
-				require.NoError(t, err)
-				cleaner.Add(ingress)
-
-				return []expectedTranslationFailure{{object: ingress, messageContains: "empty serviceName"}}
-			},
-		},
-		{
-			name: "invalid TCPIngress service port",
-			translationFailureScenario: func(t *testing.T, cleaner *clusters.Cleaner, ns string) []expectedTranslationFailure {
-				gatewayClient, err := clientset.NewForConfig(env.Cluster().Config())
-				require.NoError(t, err)
-
-				ingress := validTCPIngress()
-				ingress.Spec.Rules[0].Backend.ServicePort = 0
-
-				ingress, err = gatewayClient.ConfigurationV1beta1().TCPIngresses(ns).Create(ctx, ingress, metav1.CreateOptions{})
-				require.NoError(t, err)
-				cleaner.Add(ingress)
-
-				return []expectedTranslationFailure{{object: ingress, messageContains: "invalid servicePort"}}
 			},
 		},
 	}
@@ -190,27 +140,5 @@ func pluginUsingInvalidCACert(ns string) *kongv1.KongPlugin {
 		},
 		Config:     v1.JSON{Raw: []byte(fmt.Sprintf(`{"ca_certificates": ["%s"]}`, invalidCASecretID))},
 		PluginName: "mtls-auth",
-	}
-}
-
-func validTCPIngress() *kongv1beta1.TCPIngress {
-	return &kongv1beta1.TCPIngress{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: uuid.NewString(),
-			Annotations: map[string]string{
-				annotations.IngressClassKey: ingressClass,
-			},
-		},
-		Spec: kongv1beta1.TCPIngressSpec{
-			Rules: []kongv1beta1.IngressRule{
-				{
-					Port: 80,
-					Backend: kongv1beta1.IngressBackend{
-						ServiceName: "service-name",
-						ServicePort: 80,
-					},
-				},
-			},
-		},
 	}
 }

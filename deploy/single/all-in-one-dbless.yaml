@@ -787,6 +787,7 @@ spec:
                       properties:
                         serviceName:
                           description: Specifies the name of the referenced service.
+                          minLength: 1
                           type: string
                         servicePort:
                           description: Specifies the port of the referenced service.
@@ -811,7 +812,7 @@ spec:
                         on Port.
                       format: int32
                       maximum: 65535
-                      minimum: 1
+                      minimum: 2
                       type: integer
                   required:
                   - backend
@@ -969,6 +970,7 @@ spec:
                       properties:
                         serviceName:
                           description: Specifies the name of the referenced service.
+                          minLength: 1
                           type: string
                         servicePort:
                           description: Specifies the port of the referenced service.

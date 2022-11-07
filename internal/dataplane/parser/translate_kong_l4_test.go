@@ -97,69 +97,6 @@ func TestFromTCPIngressV1beta1(t *testing.T) {
 				},
 			},
 		},
-		// 4
-		{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "foo",
-				Namespace: "default",
-				Annotations: map[string]string{
-					annotations.IngressClassKey: annotations.DefaultIngressClass,
-				},
-			},
-			Spec: configurationv1beta1.TCPIngressSpec{
-				Rules: []configurationv1beta1.IngressRule{
-					{
-						Port: 9000,
-						Backend: configurationv1beta1.IngressBackend{
-							ServiceName: "",
-							ServicePort: 80,
-						},
-					},
-				},
-			},
-		},
-		// 5
-		{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "foo",
-				Namespace: "default",
-				Annotations: map[string]string{
-					annotations.IngressClassKey: annotations.DefaultIngressClass,
-				},
-			},
-			Spec: configurationv1beta1.TCPIngressSpec{
-				Rules: []configurationv1beta1.IngressRule{
-					{
-						Port: 0,
-						Backend: configurationv1beta1.IngressBackend{
-							ServiceName: "foo-svc",
-							ServicePort: 80,
-						},
-					},
-				},
-			},
-		},
-		// 6
-		{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "foo",
-				Namespace: "default",
-				Annotations: map[string]string{
-					annotations.IngressClassKey: annotations.DefaultIngressClass,
-				},
-			},
-			Spec: configurationv1beta1.TCPIngressSpec{
-				Rules: []configurationv1beta1.IngressRule{
-					{
-						Port: 9000,
-						Backend: configurationv1beta1.IngressBackend{
-							ServiceName: "foo-svc",
-							ServicePort: 0,
-						},
-					},
-				},
-			},
-		},
 	}
 	t.Run("no TCPIngress returns empty info", func(t *testing.T) {
 		store, err := store.NewFakeStore(store.FakeObjects{
@@ -259,53 +196,5 @@ func TestFromTCPIngressV1beta1(t *testing.T) {
 		assert.Equal(2, len(parsedInfo.SecretNameToSNIs))
 		assert.Equal(2, len(parsedInfo.SecretNameToSNIs["default/sooper-secret"]))
 		assert.Equal(2, len(parsedInfo.SecretNameToSNIs["default/sooper-secret2"]))
-	})
-	t.Run("TCPIngress without service name returns empty info", func(t *testing.T) {
-		store, err := store.NewFakeStore(store.FakeObjects{
-			TCPIngresses: []*configurationv1beta1.TCPIngress{
-				tcpIngressList[4],
-			},
-		})
-		assert.NoError(err)
-		p := mustNewParser(t, store)
-
-		parsedInfo := p.ingressRulesFromTCPIngressV1beta1()
-		assert.Equal(ingressRules{
-			ServiceNameToServices: make(map[string]kongstate.Service),
-			SecretNameToSNIs:      make(map[string][]string),
-		}, parsedInfo)
-		assert.Len(p.popTranslationFailures(), 1)
-	})
-	t.Run("TCPIngress with invalid port returns empty info", func(t *testing.T) {
-		store, err := store.NewFakeStore(store.FakeObjects{
-			TCPIngresses: []*configurationv1beta1.TCPIngress{
-				tcpIngressList[5],
-			},
-		})
-		assert.NoError(err)
-		p := mustNewParser(t, store)
-
-		parsedInfo := p.ingressRulesFromTCPIngressV1beta1()
-		assert.Equal(ingressRules{
-			ServiceNameToServices: make(map[string]kongstate.Service),
-			SecretNameToSNIs:      make(map[string][]string),
-		}, parsedInfo)
-		assert.Len(p.popTranslationFailures(), 1)
-	})
-	t.Run("empty TCPIngress with invalid service port returns empty info", func(t *testing.T) {
-		store, err := store.NewFakeStore(store.FakeObjects{
-			TCPIngresses: []*configurationv1beta1.TCPIngress{
-				tcpIngressList[6],
-			},
-		})
-		assert.NoError(err)
-		p := mustNewParser(t, store)
-
-		parsedInfo := p.ingressRulesFromTCPIngressV1beta1()
-		assert.Equal(ingressRules{
-			ServiceNameToServices: make(map[string]kongstate.Service),
-			SecretNameToSNIs:      make(map[string][]string),
-		}, parsedInfo)
-		assert.Len(p.popTranslationFailures(), 1)
 	})
 }

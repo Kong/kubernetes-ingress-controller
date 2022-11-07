@@ -126,6 +126,8 @@ Adding a new version? You'll need three changes:
   [#3125](https://github.com/Kong/kubernetes-ingress-controller/pull/3125)
 - Warning events are recorded when annotations in services backing a single route do not match. 
   [#3130](https://github.com/Kong/kubernetes-ingress-controller/pull/3130)
+- Warning events are recorded when a service's referred client-cert does not exist. 
+  [#3137](https://github.com/Kong/kubernetes-ingress-controller/pull/3137)
 
 ### Fixed
 

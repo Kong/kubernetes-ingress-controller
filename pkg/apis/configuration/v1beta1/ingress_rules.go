@@ -1,6 +1,6 @@
 package v1beta1
 
-//+kubebuilder:validation:Optional
+// +kubebuilder:validation:Optional
 
 // UDPIngressRule represents a rule to apply against incoming requests
 // wherein no Host matching is available for request routing, only the port
@@ -17,7 +17,7 @@ type UDPIngressRule struct {
 	Backend IngressBackend `json:"backend"`
 }
 
-//+kubebuilder:validation:Optional
+// +kubebuilder:validation:Optional
 
 // IngressRule represents a rule to apply against incoming requests.
 // Matching is performed based on an (optional) SNI and port.
@@ -33,7 +33,7 @@ type IngressRule struct {
 	// Port is the port on which to accept TCP or TLS over TCP sessions and
 	// route. It is a required field. If a Host is not specified, the requested
 	// are routed based only on Port.
-	// +kubebuilder:validation:Minimum=1
+	// +kubebuilder:validation:Minimum=2
 	// +kubebuilder:validation:Maximum=65535
 	// +kubebuilder:validation:Format=int32
 	Port int `json:"port,omitempty"`
@@ -44,7 +44,7 @@ type IngressRule struct {
 	Backend IngressBackend `json:"backend"`
 }
 
-//+kubebuilder:validation:Optional
+// +kubebuilder:validation:Optional
 
 // IngressBackend describes all endpoints for a given service and port.
 type IngressBackend struct {

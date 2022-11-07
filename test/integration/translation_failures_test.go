@@ -79,6 +79,38 @@ func TestTranslationFailures(t *testing.T) {
 				return []expectedTranslationFailure{{object: ingress, messageContains: "invalid port"}}
 			},
 		},
+		{
+			name: "empty TCPIngress service name",
+			translationFailureScenario: func(t *testing.T, cleaner *clusters.Cleaner, ns string) []expectedTranslationFailure {
+				gatewayClient, err := clientset.NewForConfig(env.Cluster().Config())
+				require.NoError(t, err)
+
+				ingress := validTCPIngress()
+				ingress.Spec.Rules[0].Backend.ServiceName = ""
+
+				ingress, err = gatewayClient.ConfigurationV1beta1().TCPIngresses(ns).Create(ctx, ingress, metav1.CreateOptions{})
+				require.NoError(t, err)
+				cleaner.Add(ingress)
+
+				return []expectedTranslationFailure{{object: ingress, messageContains: "empty serviceName"}}
+			},
+		},
+		{
+			name: "invalid TCPIngress service port",
+			translationFailureScenario: func(t *testing.T, cleaner *clusters.Cleaner, ns string) []expectedTranslationFailure {
+				gatewayClient, err := clientset.NewForConfig(env.Cluster().Config())
+				require.NoError(t, err)
+
+				ingress := validTCPIngress()
+				ingress.Spec.Rules[0].Backend.ServicePort = 0
+
+				ingress, err = gatewayClient.ConfigurationV1beta1().TCPIngresses(ns).Create(ctx, ingress, metav1.CreateOptions{})
+				require.NoError(t, err)
+				cleaner.Add(ingress)
+
+				return []expectedTranslationFailure{{object: ingress, messageContains: "invalid servicePort"}}
+			},
+		},
 	}
 
 	for _, tt := range testCases {

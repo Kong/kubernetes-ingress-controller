@@ -65,6 +65,18 @@ Adding a new version? You'll need three changes:
 
 > Release date: TBD
 
+### Breaking changes
+
+- The `CombinedRoutes` feature flag is enabled by default, and traditional
+  route generation is deprecated. This reduces configuration size without
+  affecting routing, but does change route names and IDs. Metrics
+  monitors or other systems that track data by route name or ID will see a
+  break in continuity. The [feature gates document](https://github.com/Kong/kubernetes-ingress-controller/blob/main/FEATURE_GATES.md#differences-between-traditional-and-combined-routes)
+  covers changes in greater detail. Please [comment on the deprecation
+  issue](https://github.com/Kong/kubernetes-ingress-controller/issues/3131)
+  if you have questions or concerns about the transition.
+  [#3132](https://github.com/Kong/kubernetes-ingress-controller/pull/3132)
+
 ### Added
 
 - Added `HTTPRoute` support for `CombinedRoutes` feature. When enabled,

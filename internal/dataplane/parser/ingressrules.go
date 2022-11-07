@@ -73,21 +73,21 @@ func (ir *ingressRules) populateServices(log logrus.FieldLogger, s store.Storer,
 			// extract client certificates intended for use by the service
 			secretName := annotations.ExtractClientCertificate(k8sService.Annotations)
 			if secretName != "" {
-				secret, err := s.GetSecret(k8sService.Namespace, secretName)
 				secretKey := k8sService.Namespace + "/" + secretName
+				secret, err := s.GetSecret(k8sService.Namespace, secretName)
+				if err != nil {
+					failuresCollector.PushTranslationFailure(
+						fmt.Sprintf("failed to fetch secret '%s': %v", secretKey, err), k8sService,
+					)
+					continue
+				}
+
 				// ensure that the cert is loaded into Kong
 				if _, ok := ir.SecretNameToSNIs[secretKey]; !ok {
 					ir.SecretNameToSNIs[secretKey] = []string{}
 				}
-				if err == nil {
-					service.ClientCertificate = &kong.Certificate{
-						ID: kong.String(string(secret.UID)),
-					}
-				} else {
-					log.WithFields(logrus.Fields{
-						"secret_name":      secretName,
-						"secret_namespace": k8sService.Namespace,
-					}).Errorf("failed to fetch secret: %v", err)
+				service.ClientCertificate = &kong.Certificate{
+					ID: kong.String(string(secret.UID)),
 				}
 			}
 		}

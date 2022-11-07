@@ -29,8 +29,9 @@ func (p *Parser) ingressRulesFromHTTPRoutes() ingressRules {
 	var errs []error
 	for _, httproute := range httpRouteList {
 		if err := p.ingressRulesFromHTTPRoute(&result, httproute); err != nil {
-			err = fmt.Errorf("HTTPRoute %s/%s can't be routed: %w", httproute.Namespace, httproute.Name, err)
-			errs = append(errs, err)
+			errs = append(errs, fmt.Errorf("HTTPRoute %s/%s can't be routed: %w",
+				httproute.Namespace, httproute.Name, err),
+			)
 		} else {
 			// at this point the object has been configured and can be
 			// reported as successfully parsed.
@@ -48,24 +49,8 @@ func (p *Parser) ingressRulesFromHTTPRoutes() ingressRules {
 }
 
 func (p *Parser) ingressRulesFromHTTPRoute(result *ingressRules, httproute *gatewayv1beta1.HTTPRoute) error {
-	// first we grab the spec and gather some metadata about the object
-	spec := httproute.Spec
-
-	// validation for HTTPRoutes will happen at a higher layer, but in spite of that we run
-	// validation at this level as well as a fallback so that if routes are posted which
-	// are invalid somehow make it past validation (e.g. the webhook is not enabled) we can
-	// at least try to provide a helpful message about the situation in the manager logs.
-	if len(spec.Rules) == 0 {
-		return fmt.Errorf("no rules provided")
-	}
-
-	for _, rule := range spec.Rules {
-		// TODO: add this to a generic HTTPRoute validation, and then we should probably
-		//       simply be calling validation on each httproute object at the begininning
-		//       of the topmost list.
-		if len(rule.BackendRefs) == 0 {
-			return fmt.Errorf("missing backendRef in rule")
-		}
+	if err := validateHTTPRoute(httproute); err != nil {
+		return fmt.Errorf("validation failed : %w", err)
 	}
 
 	if p.featureEnabledCombinedServiceRoutes {
@@ -73,6 +58,25 @@ func (p *Parser) ingressRulesFromHTTPRoute(result *ingressRules, httproute *gate
 	}
 
 	return p.ingressRulesFromHTTPRouteLegacyFallback(httproute, result)
+}
+
+func validateHTTPRoute(httproute *gatewayv1beta1.HTTPRoute) error {
+	spec := httproute.Spec
+
+	// validation for HTTPRoutes will happen at a higher layer, but in spite of that we run
+	// validation at this level as well as a fallback so that if routes are posted which
+	// are invalid somehow make it past validation (e.g. the webhook is not enabled) we can
+	// at least try to provide a helpful message about the situation in the manager logs.
+	if len(spec.Rules) == 0 {
+		return errRouteValidationNoRules
+	}
+
+	for _, rule := range spec.Rules {
+		if len(rule.BackendRefs) == 0 {
+			return errRouteValidationMissingBackendRefs
+		}
+	}
+	return nil
 }
 
 // ingressRulesFromHTTPRouteWithCombinedServiceRoutes generates a set of proto-Kong routes (ingress rules) from an HTTPRoute.
@@ -107,7 +111,8 @@ func (p *Parser) ingressRulesFromHTTPRouteWithCombinedServiceRoutes(httproute *g
 }
 
 // ingressRulesFromHTTPRouteLegacyFallback generates a set of proto-Kong routes (ingress rules) from an HTTPRoute.
-// It generates a separate route for each rule. It is planned for deprecation in favor of ingressRulesFromHTTPRouteWithCombinedServiceRoutes.
+// It generates a separate route for each rule.
+// It is planned for deprecation in favor of ingressRulesFromHTTPRouteWithCombinedServiceRoutes.
 func (p *Parser) ingressRulesFromHTTPRouteLegacyFallback(httproute *gatewayv1beta1.HTTPRoute, result *ingressRules) error {
 	// each rule may represent a different set of backend services that will be accepting
 	// traffic, so we make separate routes and Kong services for every present rule.
@@ -268,7 +273,7 @@ func generateKongRouteFromHTTPRouteMatches(
 		// however in this case there must actually be some present hostnames
 		// configured for the HTTPRoute or else it's not valid.
 		if len(hostnames) == 0 {
-			return kongstate.Route{}, fmt.Errorf("no match rules or hostnames specified")
+			return kongstate.Route{}, errRouteValidationNoMatchRulesOrHostnamesSpecified
 		}
 
 		// otherwise apply the hostnames to the route
@@ -282,7 +287,7 @@ func generateKongRouteFromHTTPRouteMatches(
 
 	// TODO: implement query param matches (https://github.com/Kong/kubernetes-ingress-controller/issues/2778)
 	if len(matches[0].QueryParams) > 0 {
-		return kongstate.Route{}, fmt.Errorf("query param matches are not yet supported")
+		return kongstate.Route{}, errRouteValidationQueryParamMatchesUnsupported
 	}
 
 	r := generateKongstateRoute(routeName, ingressObjectInfo, hostnames)

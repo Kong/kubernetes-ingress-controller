@@ -136,6 +136,7 @@ require (
 	github.com/prometheus/client_model v0.2.0 // indirect
 	github.com/prometheus/procfs v0.8.0 // indirect
 	github.com/russross/blackfriday v1.6.0 // indirect
+	github.com/samber/lo v1.33.0
 	github.com/sergi/go-diff v1.2.0 // indirect
 	github.com/shirou/gopsutil/v3 v3.22.8 // indirect
 	github.com/ssgelm/cookiejarparser v1.0.1 // indirect

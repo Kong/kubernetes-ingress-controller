@@ -6,6 +6,7 @@ import (
 )
 
 type (
+	BackendRef        = gatewayv1beta1.BackendRef
 	Gateway           = gatewayv1beta1.Gateway
 	GatewayAddress    = gatewayv1beta1.GatewayAddress
 	GatewayClass      = gatewayv1beta1.GatewayClass

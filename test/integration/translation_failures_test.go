@@ -5,9 +5,11 @@ package integration
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -26,24 +28,29 @@ import (
 // TestTranslationFailures ensures that proper warning Kubernetes events are recorded in case of translation failures
 // encountered.
 func TestTranslationFailures(t *testing.T) {
+	type expectedTranslationFailure struct {
+		object          client.Object
+		messageContains string
+	}
+
 	testCases := []struct {
 		name string
-		// translationFailureTrigger should create objects that trigger translation failure and return the objects
+		// translationFailureScenario should create objects that trigger translation failure and return the objects
 		// that we expect translation failure warning events to be created for.
-		translationFailureTrigger func(t *testing.T, cleaner *clusters.Cleaner, ns string) []client.Object
+		translationFailureScenario func(t *testing.T, cleaner *clusters.Cleaner, ns string) []expectedTranslationFailure
 	}{
 		{
 			name: "invalid CA secret",
-			translationFailureTrigger: func(t *testing.T, cleaner *clusters.Cleaner, ns string) []client.Object {
+			translationFailureScenario: func(t *testing.T, cleaner *clusters.Cleaner, ns string) []expectedTranslationFailure {
 				createdSecret, err := env.Cluster().Client().CoreV1().Secrets(ns).Create(ctx, invalidCASecret(ns), metav1.CreateOptions{})
 				require.NoError(t, err)
 
-				return []client.Object{createdSecret}
+				return []expectedTranslationFailure{{object: createdSecret}}
 			},
 		},
 		{
 			name: "invalid CA secret referred by a plugin",
-			translationFailureTrigger: func(t *testing.T, cleaner *clusters.Cleaner, ns string) []client.Object {
+			translationFailureScenario: func(t *testing.T, cleaner *clusters.Cleaner, ns string) []expectedTranslationFailure {
 				createdSecret, err := env.Cluster().Client().CoreV1().Secrets(ns).Create(ctx, invalidCASecret(ns), metav1.CreateOptions{})
 				require.NoError(t, err)
 
@@ -53,40 +60,23 @@ func TestTranslationFailures(t *testing.T) {
 				require.NoError(t, err)
 
 				// expect events for both: a faulty secret and a plugin referring it
-				return []client.Object{createdSecret, createdPlugin}
+				return []expectedTranslationFailure{{object: createdSecret}, {object: createdPlugin}}
 			},
 		},
 		{
 			name: "invalid TCPIngress rule port",
-			translationFailureTrigger: func(t *testing.T, cleaner *clusters.Cleaner, ns string) []client.Object {
+			translationFailureScenario: func(t *testing.T, cleaner *clusters.Cleaner, ns string) []expectedTranslationFailure {
 				gatewayClient, err := clientset.NewForConfig(env.Cluster().Config())
 				require.NoError(t, err)
 
-				ingress := &kongv1beta1.TCPIngress{
-					ObjectMeta: metav1.ObjectMeta{
-						GenerateName: "ingress-",
-						Annotations: map[string]string{
-							annotations.IngressClassKey: ingressClass,
-						},
-					},
-					Spec: kongv1beta1.TCPIngressSpec{
-						Rules: []kongv1beta1.IngressRule{
-							{
-								Port: 0,
-								Backend: kongv1beta1.IngressBackend{
-									ServiceName: "service-name",
-									ServicePort: 80,
-								},
-							},
-						},
-					},
-				}
+				ingress := validTCPIngress()
+				ingress.Spec.Rules[0].Port = 0
 
 				ingress, err = gatewayClient.ConfigurationV1beta1().TCPIngresses(ns).Create(ctx, ingress, metav1.CreateOptions{})
 				require.NoError(t, err)
 				cleaner.Add(ingress)
 
-				return []client.Object{ingress}
+				return []expectedTranslationFailure{{object: ingress, messageContains: "invalid port"}}
 			},
 		},
 	}
@@ -98,27 +88,34 @@ func TestTranslationFailures(t *testing.T) {
 			ns, cleaner := setup(t)
 			defer func() { assert.NoError(t, cleaner.Cleanup(ctx)) }()
 
-			expectedCausingObjects := tt.translationFailureTrigger(t, cleaner, ns.GetName())
+			expectedTranslationFailures := tt.translationFailureScenario(t, cleaner, ns.GetName())
 
 			require.Eventually(t, func() bool {
 				eventsForAllObjectsFound := true
 
-				for _, expectedCausingObject := range expectedCausingObjects {
+				for _, expected := range expectedTranslationFailures {
 					events, err := env.Cluster().Client().CoreV1().Events(ns.GetName()).List(ctx, metav1.ListOptions{
 						FieldSelector: fmt.Sprintf(
 							"reason=%s,type=%s,involvedObject.name=%s",
 							dataplane.KongConfigurationTranslationFailedEventReason,
 							corev1.EventTypeWarning,
-							expectedCausingObject.GetName(),
+							expected.object.GetName(),
 						),
 					})
 					if err != nil {
 						t.Logf("failed to list events: %s", err)
 						eventsForAllObjectsFound = false
+						continue
 					}
 
 					if len(events.Items) == 0 {
-						t.Logf("waiting for events related to '%s' to be created", expectedCausingObject.GetName())
+						t.Logf("waiting for events related to '%s' to be created", expected.object.GetName())
+						eventsForAllObjectsFound = false
+						continue
+					}
+
+					if actualMsg := events.Items[0].Message; !strings.Contains(actualMsg, expected.messageContains) {
+						t.Logf("expected '%s' not found in the actual event message: '%s'", expected.messageContains, actualMsg)
 						eventsForAllObjectsFound = false
 					}
 				}
@@ -161,5 +158,27 @@ func pluginUsingInvalidCACert(ns string) *kongv1.KongPlugin {
 		},
 		Config:     v1.JSON{Raw: []byte(fmt.Sprintf(`{"ca_certificates": ["%s"]}`, invalidCASecretID))},
 		PluginName: "mtls-auth",
+	}
+}
+
+func validTCPIngress() *kongv1beta1.TCPIngress {
+	return &kongv1beta1.TCPIngress{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: uuid.NewString(),
+			Annotations: map[string]string{
+				annotations.IngressClassKey: ingressClass,
+			},
+		},
+		Spec: kongv1beta1.TCPIngressSpec{
+			Rules: []kongv1beta1.IngressRule{
+				{
+					Port: 80,
+					Backend: kongv1beta1.IngressBackend{
+						ServiceName: "service-name",
+						ServicePort: 80,
+					},
+				},
+			},
+		},
 	}
 }

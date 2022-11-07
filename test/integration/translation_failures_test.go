@@ -9,6 +9,8 @@ import (
 	"testing"
 	"time"
 
+	netv1 "k8s.io/api/networking/v1"
+
 	"github.com/kong/go-kong/kong"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
@@ -113,6 +115,46 @@ func TestTranslationFailures(t *testing.T) {
 
 				// expect event for service2 as it doesn't have annotations that service1 has
 				return []client.Object{service2}
+			},
+		},
+		{
+			name: "missing ingress backing service",
+			translationFailureTrigger: func(t *testing.T, cleaner *clusters.Cleaner, ns string) []client.Object {
+				pathType := netv1.PathTypeImplementationSpecific
+				ingress := &netv1.Ingress{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:        testutils.RandomName(testTranslationFailuresObjectsPrefix),
+						Annotations: map[string]string{annotations.IngressClassKey: ingressClass},
+					},
+					Spec: netv1.IngressSpec{
+						Rules: []netv1.IngressRule{
+							{
+								IngressRuleValue: netv1.IngressRuleValue{
+									HTTP: &netv1.HTTPIngressRuleValue{
+										Paths: []netv1.HTTPIngressPath{
+											{
+												Path:     "/",
+												PathType: &pathType,
+												Backend: netv1.IngressBackend{
+													Service: &netv1.IngressServiceBackend{
+														Name: "not-existing-service",
+														Port: netv1.ServiceBackendPort{
+															Number: 80,
+														},
+													},
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				}
+				ingress, err := env.Cluster().Client().NetworkingV1().Ingresses(ns).Create(ctx, ingress, metav1.CreateOptions{})
+				require.NoError(t, err)
+
+				return []client.Object{ingress}
 			},
 		},
 	}

@@ -6,6 +6,8 @@ import (
 	"strings"
 	"time"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 	"github.com/kong/go-kong/kong"
 	netv1 "k8s.io/api/networking/v1"
 
@@ -180,6 +182,12 @@ func (m *ingressTranslationMeta) translateIntoKongStateService(kongServiceName s
 			Namespace: m.ingressNamespace,
 			PortDef:   portDef,
 		}},
+		Parent: &netv1.Ingress{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      m.ingressName,
+				Namespace: m.ingressNamespace,
+			},
+		},
 	}
 }
 

@@ -208,10 +208,6 @@ func (p *Parser) ingressRulesFromIngressV1() ingressRules {
 			regexPrefix = prefix
 		}
 		ingressSpec := ingress.Spec
-		log := p.logger.WithFields(logrus.Fields{
-			"ingress_namespace": ingress.Namespace,
-			"ingress_name":      ingress.Name,
-		})
 
 		if ingressSpec.DefaultBackend != nil {
 			allDefaultBackends = append(allDefaultBackends, *ingress)
@@ -239,7 +235,7 @@ func (p *Parser) ingressRulesFromIngressV1() ingressRules {
 				}
 				for j, rulePath := range rule.HTTP.Paths {
 					if strings.Contains(rulePath.Path, "//") {
-						log.Errorf("rule skipped: invalid path: '%v'", rulePath.Path)
+						p.registerTranslationFailure(fmt.Sprintf("rule skipped: invalid path: '%v'", rulePath.Path), ingress)
 						continue
 					}
 
@@ -250,7 +246,10 @@ func (p *Parser) ingressRulesFromIngressV1() ingressRules {
 
 					paths := translators.PathsFromIngressPaths(rulePath, p.flagEnabledRegexPathPrefix)
 					if paths == nil {
-						log.Errorf("could not translate Ingress Path %s to Kong paths", rulePath.Path)
+						// registering a failure, but technically it should never happen thanks to Kubernetes API validations
+						p.registerTranslationFailure(
+							fmt.Sprintf("could not translate Ingress Path %s to Kong paths", rulePath.Path), ingress,
+						)
 						continue
 					}
 

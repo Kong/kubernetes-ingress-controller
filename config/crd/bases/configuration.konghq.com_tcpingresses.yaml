@@ -84,10 +84,11 @@ spec:
                         on Port.
                       format: int32
                       maximum: 65535
-                      minimum: 2
+                      minimum: 1
                       type: integer
                   required:
                   - backend
+                  - port
                   type: object
                 type: array
               tls:

@@ -33,9 +33,10 @@ type IngressRule struct {
 	// Port is the port on which to accept TCP or TLS over TCP sessions and
 	// route. It is a required field. If a Host is not specified, the requested
 	// are routed based only on Port.
-	// +kubebuilder:validation:Minimum=2
+	// +kubebuilder:validation:Minimum=1
 	// +kubebuilder:validation:Maximum=65535
 	// +kubebuilder:validation:Format=int32
+	// +kubebuilder:validation:Required
 	Port int `json:"port,omitempty"`
 
 	// Backend defines the referenced service endpoint to which the traffic

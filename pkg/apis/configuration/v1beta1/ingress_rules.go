@@ -1,6 +1,6 @@
 package v1beta1
 
-//+kubebuilder:validation:Optional
+// +kubebuilder:validation:Optional
 
 // UDPIngressRule represents a rule to apply against incoming requests
 // wherein no Host matching is available for request routing, only the port
@@ -8,6 +8,9 @@ package v1beta1
 type UDPIngressRule struct {
 	// Port indicates the port for the Kong proxy to accept incoming traffic
 	// on, which will then be routed to the service Backend.
+	// +kubebuilder:validation:Minimum=1
+	// +kubebuilder:validation:Maximum=65535
+	// +kubebuilder:validation:Format=int32
 	// +kubebuilder:validation:Required
 	Port int `json:"port"`
 
@@ -17,7 +20,7 @@ type UDPIngressRule struct {
 	Backend IngressBackend `json:"backend"`
 }
 
-//+kubebuilder:validation:Optional
+// +kubebuilder:validation:Optional
 
 // IngressRule represents a rule to apply against incoming requests.
 // Matching is performed based on an (optional) SNI and port.
@@ -36,6 +39,7 @@ type IngressRule struct {
 	// +kubebuilder:validation:Minimum=1
 	// +kubebuilder:validation:Maximum=65535
 	// +kubebuilder:validation:Format=int32
+	// +kubebuilder:validation:Required
 	Port int `json:"port,omitempty"`
 
 	// Backend defines the referenced service endpoint to which the traffic
@@ -44,12 +48,13 @@ type IngressRule struct {
 	Backend IngressBackend `json:"backend"`
 }
 
-//+kubebuilder:validation:Optional
+// +kubebuilder:validation:Optional
 
 // IngressBackend describes all endpoints for a given service and port.
 type IngressBackend struct {
 	// Specifies the name of the referenced service.
 	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:MinLength=1
 	ServiceName string `json:"serviceName"`
 
 	// Specifies the port of the referenced service.

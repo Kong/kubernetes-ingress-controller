@@ -126,6 +126,9 @@ Adding a new version? You'll need three changes:
   [#3125](https://github.com/Kong/kubernetes-ingress-controller/pull/3125)
 - Warning events are recorded when annotations in services backing a single route do not match. 
   [#3130](https://github.com/Kong/kubernetes-ingress-controller/pull/3130)
+- CRDs' validations improvements: `UDPIngressRule.Port`, `IngressRule.Port` and `IngressBackend.ServiceName`
+  instead of being validated in the Parser, are validated by the Kubernetes API now.
+  [#3136](https://github.com/Kong/kubernetes-ingress-controller/pull/3136)
 
 ### Fixed
 

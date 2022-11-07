@@ -1142,7 +1142,7 @@ func TestServiceClientCertificate(t *testing.T) {
 		assert.Nil(err)
 		p := mustNewParser(t, store)
 		state, translationFailures := p.Build()
-		require.Empty(t, translationFailures)
+		require.Len(t, translationFailures, 1)
 		assert.NotNil(state)
 		assert.Equal(0, len(state.Certificates),
 			"expected no certificates to be rendered")
@@ -2856,7 +2856,7 @@ func TestDefaultBackend(t *testing.T) {
 		assert.Nil(err)
 		p := mustNewParser(t, store)
 		state, translationFailures := p.Build()
-		require.Empty(t, translationFailures)
+		require.Len(t, translationFailures, 1)
 		assert.NotNil(state)
 		assert.Equal(0, len(state.Certificates),
 			"expected no certificates to be rendered")

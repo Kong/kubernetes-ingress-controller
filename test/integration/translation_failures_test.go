@@ -9,14 +9,13 @@ import (
 	"testing"
 	"time"
 
-	netv1 "k8s.io/api/networking/v1"
-
 	"github.com/kong/go-kong/kong"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
+	netv1 "k8s.io/api/networking/v1"
 	v1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -115,6 +114,37 @@ func TestTranslationFailures(t *testing.T) {
 
 				// expect event for service2 as it doesn't have annotations that service1 has
 				return []client.Object{service2}
+			},
+		},
+		{
+			name: "missing client-cert for service",
+			translationFailureTrigger: func(t *testing.T, cleaner *clusters.Cleaner, ns string) []client.Object {
+				service := &corev1.Service{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: testutils.RandomName(testTranslationFailuresObjectsPrefix),
+						Annotations: map[string]string{
+							"konghq.com/client-cert": "not-existing-secret",
+						},
+					},
+					Spec: corev1.ServiceSpec{
+						Ports: []corev1.ServicePort{
+							{
+								Port: 80,
+							},
+						},
+					},
+				}
+				service, err := env.Cluster().Client().CoreV1().Services(ns).Create(ctx, service, metav1.CreateOptions{})
+				require.NoError(t, err)
+
+				_, err = env.Cluster().Client().NetworkingV1().Ingresses(ns).Create(
+					ctx,
+					ingressWithPathBackedByService(service),
+					metav1.CreateOptions{},
+				)
+				require.NoError(t, err)
+
+				return []client.Object{service}
 			},
 		},
 		{
@@ -302,6 +332,42 @@ func httpRouteWithBackends(gatewayName string, services ...*corev1.Service) *gat
 						},
 					},
 					BackendRefs: backendRefs,
+				},
+			},
+		},
+	}
+}
+
+func ingressWithPathBackedByService(service *corev1.Service) *netv1.Ingress {
+	pathType := netv1.PathTypePrefix
+	return &netv1.Ingress{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: testutils.RandomName(testTranslationFailuresObjectsPrefix),
+			Annotations: map[string]string{
+				annotations.IngressClassKey: ingressClass,
+			},
+		},
+		Spec: netv1.IngressSpec{
+			Rules: []netv1.IngressRule{
+				{
+					IngressRuleValue: netv1.IngressRuleValue{
+						HTTP: &netv1.HTTPIngressRuleValue{
+							Paths: []netv1.HTTPIngressPath{
+								{
+									Path:     "/",
+									PathType: &pathType,
+									Backend: netv1.IngressBackend{
+										Service: &netv1.IngressServiceBackend{
+											Name: service.Name,
+											Port: netv1.ServiceBackendPort{
+												Number: 80,
+											},
+										},
+									},
+								},
+							},
+						},
+					},
 				},
 			},
 		},

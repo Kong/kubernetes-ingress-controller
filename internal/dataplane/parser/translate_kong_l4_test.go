@@ -274,6 +274,7 @@ func TestFromTCPIngressV1beta1(t *testing.T) {
 			ServiceNameToServices: make(map[string]kongstate.Service),
 			SecretNameToSNIs:      make(map[string][]string),
 		}, parsedInfo)
+		assert.Len(p.popTranslationFailures(), 1)
 	})
 	t.Run("TCPIngress with invalid port returns empty info", func(t *testing.T) {
 		store, err := store.NewFakeStore(store.FakeObjects{
@@ -289,6 +290,7 @@ func TestFromTCPIngressV1beta1(t *testing.T) {
 			ServiceNameToServices: make(map[string]kongstate.Service),
 			SecretNameToSNIs:      make(map[string][]string),
 		}, parsedInfo)
+		assert.Len(p.popTranslationFailures(), 1)
 	})
 	t.Run("empty TCPIngress with invalid service port returns empty info", func(t *testing.T) {
 		store, err := store.NewFakeStore(store.FakeObjects{
@@ -304,5 +306,6 @@ func TestFromTCPIngressV1beta1(t *testing.T) {
 			ServiceNameToServices: make(map[string]kongstate.Service),
 			SecretNameToSNIs:      make(map[string][]string),
 		}, parsedInfo)
+		assert.Len(p.popTranslationFailures(), 1)
 	})
 }

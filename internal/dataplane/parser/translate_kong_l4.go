@@ -29,17 +29,12 @@ func (p *Parser) ingressRulesFromTCPIngressV1beta1() ingressRules {
 	for _, ingress := range ingressList {
 		ingressSpec := ingress.Spec
 
-		log := p.logger.WithFields(logrus.Fields{
-			"tcpingress_namespace": ingress.Namespace,
-			"tcpingress_name":      ingress.Name,
-		})
-
 		result.SecretNameToSNIs.addFromIngressV1beta1TLS(tcpIngressToNetworkingTLS(ingressSpec.TLS), ingress.Namespace)
 
 		var objectSuccessfullyParsed bool
 		for i, rule := range ingressSpec.Rules {
 			if !util.IsValidPort(rule.Port) {
-				log.Errorf("invalid TCPIngress: invalid port: %v", rule.Port)
+				p.registerTranslationFailure(fmt.Sprintf("invalid TCPIngress: invalid port: %v", rule.Port), ingress)
 				continue
 			}
 			r := kongstate.Route{
@@ -59,11 +54,11 @@ func (p *Parser) ingressRulesFromTCPIngressV1beta1() ingressRules {
 				r.SNIs = kong.StringSlice(host)
 			}
 			if rule.Backend.ServiceName == "" {
-				log.Errorf("invalid TCPIngress: empty serviceName")
+				p.registerTranslationFailure("invalid TCPIngress: empty serviceName", ingress)
 				continue
 			}
 			if !util.IsValidPort(rule.Backend.ServicePort) {
-				log.Errorf("invalid TCPIngress: invalid servicePort: %v", rule.Backend.ServicePort)
+				p.registerTranslationFailure(fmt.Sprintf("invalid TCPIngress: invalid servicePort: %v", rule.Backend.ServicePort), ingress)
 				continue
 			}
 

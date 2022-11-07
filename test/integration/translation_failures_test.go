@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
@@ -18,6 +19,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
+	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1beta1"
 	"github.com/kong/kubernetes-ingress-controller/v2/pkg/clientset"
 )
 
@@ -28,11 +30,11 @@ func TestTranslationFailures(t *testing.T) {
 		name string
 		// translationFailureTrigger should create objects that trigger translation failure and return the objects
 		// that we expect translation failure warning events to be created for.
-		translationFailureTrigger func(t *testing.T, ns string) []client.Object
+		translationFailureTrigger func(t *testing.T, cleaner *clusters.Cleaner, ns string) []client.Object
 	}{
 		{
 			name: "invalid CA secret",
-			translationFailureTrigger: func(t *testing.T, ns string) []client.Object {
+			translationFailureTrigger: func(t *testing.T, cleaner *clusters.Cleaner, ns string) []client.Object {
 				createdSecret, err := env.Cluster().Client().CoreV1().Secrets(ns).Create(ctx, invalidCASecret(ns), metav1.CreateOptions{})
 				require.NoError(t, err)
 
@@ -41,7 +43,7 @@ func TestTranslationFailures(t *testing.T) {
 		},
 		{
 			name: "invalid CA secret referred by a plugin",
-			translationFailureTrigger: func(t *testing.T, ns string) []client.Object {
+			translationFailureTrigger: func(t *testing.T, cleaner *clusters.Cleaner, ns string) []client.Object {
 				createdSecret, err := env.Cluster().Client().CoreV1().Secrets(ns).Create(ctx, invalidCASecret(ns), metav1.CreateOptions{})
 				require.NoError(t, err)
 
@@ -54,6 +56,39 @@ func TestTranslationFailures(t *testing.T) {
 				return []client.Object{createdSecret, createdPlugin}
 			},
 		},
+		{
+			name: "invalid TCPIngress rule port",
+			translationFailureTrigger: func(t *testing.T, cleaner *clusters.Cleaner, ns string) []client.Object {
+				gatewayClient, err := clientset.NewForConfig(env.Cluster().Config())
+				require.NoError(t, err)
+
+				ingress := &kongv1beta1.TCPIngress{
+					ObjectMeta: metav1.ObjectMeta{
+						GenerateName: "ingress-",
+						Annotations: map[string]string{
+							annotations.IngressClassKey: ingressClass,
+						},
+					},
+					Spec: kongv1beta1.TCPIngressSpec{
+						Rules: []kongv1beta1.IngressRule{
+							{
+								Port: 0,
+								Backend: kongv1beta1.IngressBackend{
+									ServiceName: "service-name",
+									ServicePort: 80,
+								},
+							},
+						},
+					},
+				}
+
+				ingress, err = gatewayClient.ConfigurationV1beta1().TCPIngresses(ns).Create(ctx, ingress, metav1.CreateOptions{})
+				require.NoError(t, err)
+				cleaner.Add(ingress)
+
+				return []client.Object{ingress}
+			},
+		},
 	}
 
 	for _, tt := range testCases {
@@ -63,7 +98,7 @@ func TestTranslationFailures(t *testing.T) {
 			ns, cleaner := setup(t)
 			defer func() { assert.NoError(t, cleaner.Cleanup(ctx)) }()
 
-			expectedCausingObjects := tt.translationFailureTrigger(t, ns.GetName())
+			expectedCausingObjects := tt.translationFailureTrigger(t, cleaner, ns.GetName())
 
 			require.Eventually(t, func() bool {
 				eventsForAllObjectsFound := true

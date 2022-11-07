@@ -7,14 +7,14 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
-	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1beta1"
-
-	"github.com/kong/kubernetes-ingress-controller/v2/pkg/clientset"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
+	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1beta1"
+	"github.com/kong/kubernetes-ingress-controller/v2/pkg/clientset"
 )
 
 // TestCRDValidations ensures that CRD validations we expect to exist are properly disallowing faulty objects to be created.

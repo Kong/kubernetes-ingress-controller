@@ -72,12 +72,12 @@ func TestTranslationFailures(t *testing.T) {
 				gatewayClient, err := gatewayclient.NewForConfig(env.Cluster().Config())
 				require.NoError(t, err)
 
-				gatewayClassName := uuid.NewString()
+				gatewayClassName := randomName()
 				gwc, err := DeployGatewayClass(ctx, gatewayClient, gatewayClassName)
 				require.NoError(t, err)
 				cleaner.Add(gwc)
 
-				gatewayName := uuid.NewString()
+				gatewayName := randomName()
 				gateway, err := DeployGateway(ctx, gatewayClient, ns, gatewayClassName, func(gw *gatewayv1beta1.Gateway) {
 					gw.Name = gatewayName
 				})
@@ -91,7 +91,7 @@ func TestTranslationFailures(t *testing.T) {
 				cleaner.Add(deployment)
 
 				service1 := generators.NewServiceForDeployment(deployment, corev1.ServiceTypeClusterIP)
-				service1.Name = uuid.NewString()
+				service1.Name = randomName()
 				// adding the annotation to trigger conflict
 				service1.Annotations = map[string]string{annotations.AnnotationPrefix + annotations.HostHeaderKey: "example.com"}
 				service1, err = env.Cluster().Client().CoreV1().Services(ns).Create(ctx, service1, metav1.CreateOptions{})
@@ -184,8 +184,8 @@ const invalidCASecretID = "8214a145-a328-4c56-ab72-2973a56d4eae" //nolint:gosec
 func invalidCASecret(ns string) *corev1.Secret {
 	return &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: "ca-secret-",
-			Namespace:    ns,
+			Name:      randomName(),
+			Namespace: ns,
 			Labels: map[string]string{
 				"konghq.com/ca-cert": "true",
 			},
@@ -203,7 +203,7 @@ func invalidCASecret(ns string) *corev1.Secret {
 func pluginUsingInvalidCACert(ns string) *kongv1.KongPlugin {
 	return &kongv1.KongPlugin{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      uuid.NewString(),
+			Name:      randomName(),
 			Namespace: ns,
 			Annotations: map[string]string{
 				annotations.IngressClassKey: ingressClass,
@@ -236,7 +236,7 @@ func httpRouteWithBackends(gatewayName string, services ...*corev1.Service) *gat
 
 	return &gatewayv1beta1.HTTPRoute{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: uuid.NewString(),
+			Name: randomName(),
 			Annotations: map[string]string{
 				annotations.AnnotationPrefix + annotations.StripPathKey: "true",
 			},
@@ -262,4 +262,8 @@ func httpRouteWithBackends(gatewayName string, services ...*corev1.Service) *gat
 			},
 		},
 	}
+}
+
+func randomName() string {
+	return "translation-failures-" + uuid.NewString()
 }

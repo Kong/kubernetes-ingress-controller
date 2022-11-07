@@ -112,6 +112,9 @@ Adding a new version? You'll need three changes:
   [#3121](https://github.com/Kong/kubernetes-ingress-controller/pull/3121)
 - Warning events are recorded when CA secrets cannot be properly translated into Kong configuration.  
   [#3125](https://github.com/Kong/kubernetes-ingress-controller/pull/3125)
+- CRDs' validations improvements: `UDPIngressRule.Port`, `IngressRule.Port` and `IngressBackend.ServiceName`
+  instead of being validated in the Parser, are validated by the Kubernetes API now.
+  [#3136](https://github.com/Kong/kubernetes-ingress-controller/pull/3136)
 
 ### Fixed
 

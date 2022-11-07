@@ -6,6 +6,7 @@ import (
 
 	"github.com/kong/go-kong/kong"
 	"github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus/hooks/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
@@ -455,16 +456,18 @@ func TestDoK8sServicesMatchAnnotations(t *testing.T) {
 			expected: false,
 			expectedLogEntries: []string{
 				"the value of annotation konghq.com/foo is different between the 3 services which comprise this backend.",
+				"the value of annotation konghq.com/foo is different between the 3 services which comprise this backend.",
 			},
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			stdout := new(bytes.Buffer)
-			logger := logrus.New()
-			logger.SetOutput(stdout)
-			assert.Equal(t, tt.expected, servicesAllUseTheSameKongAnnotations(logger, tt.services, tt.annotations))
-			for _, expectedLogEntry := range tt.expectedLogEntries {
-				assert.Contains(t, stdout.String(), expectedLogEntry)
+			logger, loggerHook := test.NewNullLogger()
+			failuresCollector, err := NewTranslationFailuresCollector(logger)
+			require.NoError(t, err)
+			assert.Equal(t, tt.expected, servicesAllUseTheSameKongAnnotations(tt.services, tt.annotations, failuresCollector))
+			assert.Len(t, failuresCollector.PopTranslationFailures(), len(tt.expectedLogEntries), "expecting as many translation failures as log entries")
+			for i := range tt.expectedLogEntries {
+				assert.Contains(t, loggerHook.AllEntries()[i].Message, tt.expectedLogEntries[i])
 			}
 		})
 	}
@@ -564,8 +567,12 @@ func TestPopulateServices(t *testing.T) {
 			})
 			require.NoError(t, err)
 			ingressRules.ServiceNameToServices = tc.serviceNamesToServices
-			servicesToBeSkipped := ingressRules.populateServices(logrus.New(), fakeStore)
+			logger, _ := test.NewNullLogger()
+			failuresCollector, err := NewTranslationFailuresCollector(logger)
+			require.NoError(t, err)
+			servicesToBeSkipped := ingressRules.populateServices(logrus.New(), fakeStore, failuresCollector)
 			require.Equal(t, tc.serviceNamesToSkip, servicesToBeSkipped)
+			require.Len(t, failuresCollector.PopTranslationFailures(), len(servicesToBeSkipped), "expecting as many translation failures as services to skip")
 		})
 	}
 }

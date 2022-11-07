@@ -109,6 +109,8 @@ func TestMakeHTTPClientWithTLSOptsAndFilePaths(t *testing.T) {
 }
 
 func buildTLS(t *testing.T) (caPEM *bytes.Buffer, certPEM *bytes.Buffer, certPrivateKeyPEM *bytes.Buffer, err error) {
+	const rsaKeySize = 2048
+
 	var ca *x509.Certificate
 	var caPrivateKeyPEM *bytes.Buffer
 
@@ -130,7 +132,7 @@ func buildTLS(t *testing.T) (caPEM *bytes.Buffer, certPEM *bytes.Buffer, certPri
 		BasicConstraintsValid: true,
 	}
 
-	caPrivateKey, err := rsa.GenerateKey(rand.Reader, 4096)
+	caPrivateKey, err := rsa.GenerateKey(rand.Reader, rsaKeySize)
 	if err != nil {
 		t.Errorf("Fail to generate CA key %s", err.Error())
 		return nil, nil, nil, err
@@ -180,7 +182,7 @@ func buildTLS(t *testing.T) (caPEM *bytes.Buffer, certPEM *bytes.Buffer, certPri
 		KeyUsage:     x509.KeyUsageDigitalSignature,
 	}
 
-	certPrivateKey, err := rsa.GenerateKey(rand.Reader, 4096)
+	certPrivateKey, err := rsa.GenerateKey(rand.Reader, rsaKeySize)
 	if err != nil {
 		t.Errorf("Fail to generate ingress key %s", err.Error())
 		return nil, nil, nil, err

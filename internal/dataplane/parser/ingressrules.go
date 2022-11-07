@@ -1,6 +1,7 @@
 package parser
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/kong/go-kong/kong"
@@ -42,7 +43,7 @@ func mergeIngressRules(objs ...ingressRules) ingressRules {
 
 // populateServices populates the ServiceNameToServices map with additional information
 // and returns a map of services to be skipped.
-func (ir *ingressRules) populateServices(log logrus.FieldLogger, s store.Storer) map[string]interface{} {
+func (ir *ingressRules) populateServices(log logrus.FieldLogger, s store.Storer, failuresCollector *TranslationFailuresCollector) map[string]interface{} {
 	serviceNamesToSkip := make(map[string]interface{})
 
 	// populate Kubernetes Service
@@ -57,7 +58,7 @@ func (ir *ingressRules) populateServices(log logrus.FieldLogger, s store.Storer)
 
 		// if the Kubernetes services have been deemed invalid, log an error message
 		// and skip the current service.
-		if !servicesAllUseTheSameKongAnnotations(log, k8sServices, seenAnnotations) {
+		if !servicesAllUseTheSameKongAnnotations(k8sServices, seenAnnotations, failuresCollector) {
 			// The Kong services not having all the k8s services correctly annotated must be marked
 			// as to be skipped.
 			serviceNamesToSkip[key] = nil
@@ -190,9 +191,9 @@ func getK8sServicesForBackends(
 }
 
 func servicesAllUseTheSameKongAnnotations(
-	log logrus.FieldLogger,
 	services []*corev1.Service,
 	annotations map[string]string,
+	failuresCollector *TranslationFailuresCollector,
 ) bool {
 	match := true
 	for _, service := range services {
@@ -207,22 +208,24 @@ func servicesAllUseTheSameKongAnnotations(
 		for k, v := range annotations {
 			valueForThisObject, ok := service.Annotations[k]
 			if !ok {
-				log.WithFields(logrus.Fields{
-					"service_name":      service.Name,
-					"service_namespace": service.Namespace,
-				}).Errorf("in the backend group of %d kubernetes services some have the %s annotation while others don't. "+
-					"this is not supported: when multiple services comprise a backend all kong annotations "+
-					"between them must be set to the same value", len(services), k)
+				failuresCollector.PushTranslationFailure(
+					fmt.Sprintf("in the backend group of %d kubernetes services some have the %s annotation while others don't. "+
+						"this is not supported: when multiple services comprise a backend all kong annotations "+
+						"between them must be set to the same value", len(services), k),
+					service.DeepCopy(),
+				)
 				match = false
+				// continue as it doesn't make sense to verify value of not existing annotation
+				continue
 			}
 
 			if valueForThisObject != v {
-				log.WithFields(logrus.Fields{
-					"service_name":      service.Name,
-					"service_namespace": service.Namespace,
-				}).Errorf("the value of annotation %s is different between the %d services which comprise this backend. "+
-					"this is not supported: when multiple services comprise a backend all kong annotations "+
-					"between them must be set to the same value", k, len(services))
+				failuresCollector.PushTranslationFailure(
+					fmt.Sprintf("the value of annotation %s is different between the %d services which comprise this backend. "+
+						"this is not supported: when multiple services comprise a backend all kong annotations "+
+						"between them must be set to the same value", k, len(services)),
+					service.DeepCopy(),
+				)
 				match = false
 			}
 		}

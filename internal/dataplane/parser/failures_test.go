@@ -41,6 +41,11 @@ func TestTranslationFailure(t *testing.T) {
 		_, err = parser.NewTranslationFailure(someValidTranslationFailureReason)
 		require.Error(t, err)
 	})
+
+	t.Run("requires non nil objects", func(t *testing.T) {
+		_, err := parser.NewTranslationFailure(someValidTranslationFailureReason, nil)
+		require.Error(t, err)
+	})
 }
 
 func TestTranslationFailuresCollector(t *testing.T) {

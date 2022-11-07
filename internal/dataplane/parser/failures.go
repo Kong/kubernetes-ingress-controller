@@ -30,6 +30,12 @@ func NewTranslationFailure(reason string, causingObjects ...client.Object) (Tran
 		return TranslationFailure{}, fmt.Errorf("no causing objects specified, reason: %s", reason)
 	}
 
+	for _, obj := range causingObjects {
+		if obj == nil {
+			return TranslationFailure{}, errors.New("one of causing objects is nil")
+		}
+	}
+
 	return TranslationFailure{
 		causingObjects: causingObjects,
 		reason:         reason,

@@ -99,7 +99,7 @@ func TestTranslationFailures(t *testing.T) {
 				cleaner.Add(service1)
 
 				service2 := generators.NewServiceForDeployment(deployment, corev1.ServiceTypeClusterIP)
-				service2.Name = uuid.NewString()
+				service2.Name = randomName()
 				service2, err = env.Cluster().Client().CoreV1().Services(ns).Create(ctx, service2, metav1.CreateOptions{})
 				require.NoError(t, err)
 				cleaner.Add(service2)

@@ -8,6 +8,9 @@ package v1beta1
 type UDPIngressRule struct {
 	// Port indicates the port for the Kong proxy to accept incoming traffic
 	// on, which will then be routed to the service Backend.
+	// +kubebuilder:validation:Minimum=1
+	// +kubebuilder:validation:Maximum=65535
+	// +kubebuilder:validation:Format=int32
 	// +kubebuilder:validation:Required
 	Port int `json:"port"`
 

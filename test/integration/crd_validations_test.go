@@ -54,6 +54,36 @@ func TestCRDValidations(t *testing.T) {
 				require.ErrorContains(t, err, "spec.rules[0].port")
 			},
 		},
+		{
+			name: "invalid UDPIngress service name",
+			scenario: func(t *testing.T, cleaner *clusters.Cleaner, ns string) {
+				err := createFaultyUDPIngress(t, cleaner, ns, func(ingress *kongv1beta1.UDPIngress) {
+					ingress.Spec.Rules[0].Backend.ServiceName = ""
+				})
+
+				require.ErrorContains(t, err, "serviceName")
+			},
+		},
+		{
+			name: "invalid UDPIngress service port",
+			scenario: func(t *testing.T, cleaner *clusters.Cleaner, ns string) {
+				err := createFaultyUDPIngress(t, cleaner, ns, func(ingress *kongv1beta1.UDPIngress) {
+					ingress.Spec.Rules[0].Backend.ServicePort = 0
+				})
+
+				require.ErrorContains(t, err, "servicePort")
+			},
+		},
+		{
+			name: "invalid UDPIngress rule port",
+			scenario: func(t *testing.T, cleaner *clusters.Cleaner, ns string) {
+				err := createFaultyUDPIngress(t, cleaner, ns, func(ingress *kongv1beta1.UDPIngress) {
+					ingress.Spec.Rules[0].Port = 0
+				})
+
+				require.ErrorContains(t, err, "spec.rules[0].port")
+			},
+		},
 	}
 
 	for _, tt := range testCases {
@@ -92,6 +122,42 @@ func validTCPIngress() *kongv1beta1.TCPIngress {
 		},
 		Spec: kongv1beta1.TCPIngressSpec{
 			Rules: []kongv1beta1.IngressRule{
+				{
+					Port: 80,
+					Backend: kongv1beta1.IngressBackend{
+						ServiceName: "service-name",
+						ServicePort: 80,
+					},
+				},
+			},
+		},
+	}
+}
+
+func createFaultyUDPIngress(t *testing.T, cleaner *clusters.Cleaner, ns string, modifier func(ingress *kongv1beta1.UDPIngress)) error {
+	ingress := validUDPIngress()
+	modifier(ingress)
+
+	gatewayClient, err := clientset.NewForConfig(env.Cluster().Config())
+	require.NoError(t, err)
+
+	ingress, err = gatewayClient.ConfigurationV1beta1().UDPIngresses(ns).Create(ctx, ingress, metav1.CreateOptions{})
+	if !assert.Error(t, err) {
+		cleaner.Add(ingress)
+	}
+	return err
+}
+
+func validUDPIngress() *kongv1beta1.UDPIngress {
+	return &kongv1beta1.UDPIngress{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: uuid.NewString(),
+			Annotations: map[string]string{
+				annotations.IngressClassKey: ingressClass,
+			},
+		},
+		Spec: kongv1beta1.UDPIngressSpec{
+			Rules: []kongv1beta1.UDPIngressRule{
 				{
 					Port: 80,
 					Backend: kongv1beta1.IngressBackend{

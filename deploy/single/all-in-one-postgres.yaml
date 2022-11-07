@@ -987,6 +987,9 @@ spec:
                       description: Port indicates the port for the Kong proxy to accept
                         incoming traffic on, which will then be routed to the service
                         Backend.
+                      format: int32
+                      maximum: 65535
+                      minimum: 1
                       type: integer
                   required:
                   - backend

@@ -91,8 +91,7 @@ func TestTranslationFailures(t *testing.T) {
 				cleaner.Add(deployment)
 
 				service1 := generators.NewServiceForDeployment(deployment, corev1.ServiceTypeClusterIP)
-				service1.Name = ""
-				service1.GenerateName = "service-"
+				service1.Name = uuid.NewString()
 				// adding the annotation to trigger conflict
 				service1.Annotations = map[string]string{annotations.AnnotationPrefix + annotations.HostHeaderKey: "example.com"}
 				service1, err = env.Cluster().Client().CoreV1().Services(ns).Create(ctx, service1, metav1.CreateOptions{})
@@ -100,8 +99,7 @@ func TestTranslationFailures(t *testing.T) {
 				cleaner.Add(service1)
 
 				service2 := generators.NewServiceForDeployment(deployment, corev1.ServiceTypeClusterIP)
-				service2.Name = ""
-				service2.GenerateName = "service-"
+				service2.Name = uuid.NewString()
 				service2, err = env.Cluster().Client().CoreV1().Services(ns).Create(ctx, service2, metav1.CreateOptions{})
 				require.NoError(t, err)
 				cleaner.Add(service2)
@@ -205,8 +203,8 @@ func invalidCASecret(ns string) *corev1.Secret {
 func pluginUsingInvalidCACert(ns string) *kongv1.KongPlugin {
 	return &kongv1.KongPlugin{
 		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: "kong-plugin-",
-			Namespace:    ns,
+			Name:      uuid.NewString(),
+			Namespace: ns,
 			Annotations: map[string]string{
 				annotations.IngressClassKey: ingressClass,
 			},

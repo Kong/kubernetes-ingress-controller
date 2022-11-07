@@ -59,7 +59,7 @@ func NewTranslationFailuresCollector(logger logrus.FieldLogger) (*TranslationFai
 	return &TranslationFailuresCollector{logger: logger}, nil
 }
 
-// PushTranslationFailure registers a translation failure.
+// PushTranslationFailure registers a translation failure and logs it.
 func (c *TranslationFailuresCollector) PushTranslationFailure(reason string, causingObjects ...client.Object) {
 	translationErr, err := NewTranslationFailure(reason, causingObjects...)
 	if err != nil {
@@ -68,6 +68,19 @@ func (c *TranslationFailuresCollector) PushTranslationFailure(reason string, cau
 	}
 
 	c.failures = append(c.failures, translationErr)
+	c.logTranslationFailure(reason, causingObjects...)
+}
+
+// logTranslationFailure logs an error message signaling that a translation error has occurred along with its reason
+// for every causing object.
+func (c *TranslationFailuresCollector) logTranslationFailure(reason string, causingObjects ...client.Object) {
+	for _, obj := range causingObjects {
+		c.logger.WithFields(logrus.Fields{
+			"name":      obj.GetName(),
+			"namespace": obj.GetNamespace(),
+			"GVK":       obj.GetObjectKind().GroupVersionKind().String(),
+		}).Errorf("translation failed: %s", reason)
+	}
 }
 
 // PopTranslationFailures returns all translation failures that occurred during the translation process and erases them

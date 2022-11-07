@@ -124,6 +124,8 @@ Adding a new version? You'll need three changes:
   [#3121](https://github.com/Kong/kubernetes-ingress-controller/pull/3121)
 - Warning events are recorded when CA secrets cannot be properly translated into Kong configuration.  
   [#3125](https://github.com/Kong/kubernetes-ingress-controller/pull/3125)
+- Warning events are recorded when annotations in services backing a single route do not match. 
+  [#3130](https://github.com/Kong/kubernetes-ingress-controller/pull/3130)
 
 ### Fixed
 

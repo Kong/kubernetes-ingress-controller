@@ -95,7 +95,7 @@ func (p *Parser) Build() (*kongstate.KongState, []TranslationFailure) {
 
 	// populate any Kubernetes Service objects relevant objects and get the
 	// services to be skipped because of annotations inconsistency
-	servicesToBeSkipped := ingressRules.populateServices(p.logger, p.storer)
+	servicesToBeSkipped := ingressRules.populateServices(p.logger, p.storer, p.failuresCollector)
 
 	// add the routes and services to the state
 	var result kongstate.KongState
@@ -189,19 +189,6 @@ func (p *Parser) EnableRegexPathPrefix() {
 // registerTranslationFailure should be called when any Kubernetes object translation failure is encountered.
 func (p *Parser) registerTranslationFailure(reason string, causingObjects ...client.Object) {
 	p.failuresCollector.PushTranslationFailure(reason, causingObjects...)
-	p.logTranslationFailure(reason, causingObjects...)
-}
-
-// logTranslationFailure logs an error message signaling that a translation error has occurred along with its reason
-// for every causing object.
-func (p *Parser) logTranslationFailure(reason string, causingObjects ...client.Object) {
-	for _, obj := range causingObjects {
-		p.logger.WithFields(logrus.Fields{
-			"name":      obj.GetName(),
-			"namespace": obj.GetNamespace(),
-			"GVK":       obj.GetObjectKind().GroupVersionKind().String(),
-		}).Errorf("translation failed: %s", reason)
-	}
 }
 
 func (p *Parser) popTranslationFailures() []TranslationFailure {

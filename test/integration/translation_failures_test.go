@@ -5,11 +5,9 @@ package integration
 
 import (
 	"fmt"
-	"strings"
 	"testing"
 	"time"
 
-	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
@@ -26,29 +24,24 @@ import (
 // TestTranslationFailures ensures that proper warning Kubernetes events are recorded in case of translation failures
 // encountered.
 func TestTranslationFailures(t *testing.T) {
-	type expectedTranslationFailure struct {
-		object          client.Object
-		messageContains string
-	}
-
 	testCases := []struct {
 		name string
-		// translationFailureScenario should create objects that trigger translation failure and return the objects
+		// translationFailureTrigger should create objects that trigger translation failure and return the objects
 		// that we expect translation failure warning events to be created for.
-		translationFailureScenario func(t *testing.T, cleaner *clusters.Cleaner, ns string) []expectedTranslationFailure
+		translationFailureTrigger func(t *testing.T, ns string) []client.Object
 	}{
 		{
 			name: "invalid CA secret",
-			translationFailureScenario: func(t *testing.T, cleaner *clusters.Cleaner, ns string) []expectedTranslationFailure {
+			translationFailureTrigger: func(t *testing.T, ns string) []client.Object {
 				createdSecret, err := env.Cluster().Client().CoreV1().Secrets(ns).Create(ctx, invalidCASecret(ns), metav1.CreateOptions{})
 				require.NoError(t, err)
 
-				return []expectedTranslationFailure{{object: createdSecret}}
+				return []client.Object{createdSecret}
 			},
 		},
 		{
 			name: "invalid CA secret referred by a plugin",
-			translationFailureScenario: func(t *testing.T, cleaner *clusters.Cleaner, ns string) []expectedTranslationFailure {
+			translationFailureTrigger: func(t *testing.T, ns string) []client.Object {
 				createdSecret, err := env.Cluster().Client().CoreV1().Secrets(ns).Create(ctx, invalidCASecret(ns), metav1.CreateOptions{})
 				require.NoError(t, err)
 
@@ -58,7 +51,7 @@ func TestTranslationFailures(t *testing.T) {
 				require.NoError(t, err)
 
 				// expect events for both: a faulty secret and a plugin referring it
-				return []expectedTranslationFailure{{object: createdSecret}, {object: createdPlugin}}
+				return []client.Object{createdSecret, createdPlugin}
 			},
 		},
 	}
@@ -70,34 +63,27 @@ func TestTranslationFailures(t *testing.T) {
 			ns, cleaner := setup(t)
 			defer func() { assert.NoError(t, cleaner.Cleanup(ctx)) }()
 
-			expectedTranslationFailures := tt.translationFailureScenario(t, cleaner, ns.GetName())
+			expectedCausingObjects := tt.translationFailureTrigger(t, ns.GetName())
 
 			require.Eventually(t, func() bool {
 				eventsForAllObjectsFound := true
 
-				for _, expected := range expectedTranslationFailures {
+				for _, expectedCausingObject := range expectedCausingObjects {
 					events, err := env.Cluster().Client().CoreV1().Events(ns.GetName()).List(ctx, metav1.ListOptions{
 						FieldSelector: fmt.Sprintf(
 							"reason=%s,type=%s,involvedObject.name=%s",
 							dataplane.KongConfigurationTranslationFailedEventReason,
 							corev1.EventTypeWarning,
-							expected.object.GetName(),
+							expectedCausingObject.GetName(),
 						),
 					})
 					if err != nil {
 						t.Logf("failed to list events: %s", err)
 						eventsForAllObjectsFound = false
-						continue
 					}
 
 					if len(events.Items) == 0 {
-						t.Logf("waiting for events related to '%s' to be created", expected.object.GetName())
-						eventsForAllObjectsFound = false
-						continue
-					}
-
-					if actualMsg := events.Items[0].Message; !strings.Contains(actualMsg, expected.messageContains) {
-						t.Logf("expected '%s' not found in the actual event message: '%s'", expected.messageContains, actualMsg)
+						t.Logf("waiting for events related to '%s' to be created", expectedCausingObject.GetName())
 						eventsForAllObjectsFound = false
 					}
 				}

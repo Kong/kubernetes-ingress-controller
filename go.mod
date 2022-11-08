@@ -5,7 +5,7 @@ go 1.19
 replace github.com/imdario/mergo v0.3.12 => github.com/Kong/mergo v0.3.13
 
 require (
-	cloud.google.com/go/container v1.6.0
+	cloud.google.com/go/container v1.7.0
 	github.com/Masterminds/sprig v2.22.0+incompatible
 	github.com/avast/retry-go/v4 v4.3.0
 	github.com/blang/semver/v4 v4.0.0
@@ -29,7 +29,7 @@ require (
 	github.com/stretchr/testify v1.8.1
 	golang.org/x/net v0.0.0-20221014081412-f15817d10f9b
 	google.golang.org/api v0.102.0
-	google.golang.org/genproto v0.0.0-20221024183307-1bc688fe9f3e
+	google.golang.org/genproto v0.0.0-20221027153422-115e99e71e1c
 	gopkg.in/yaml.v3 v3.0.1
 	k8s.io/api v0.25.3
 	k8s.io/apiextensions-apiserver v0.25.3

@@ -1,7 +1,6 @@
 package parser
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/kong/go-kong/kong"
@@ -131,7 +130,7 @@ func getIngressRulesFromHTTPRoutesCommonTestCases() []testCaseIngressRulesFromHT
 				}
 			},
 			errs: []error{
-				fmt.Errorf("no match rules or hostnames specified"),
+				errRouteValidationNoMatchRulesOrHostnamesSpecified,
 			},
 		},
 		{
@@ -210,7 +209,7 @@ func getIngressRulesFromHTTPRoutesCommonTestCases() []testCaseIngressRulesFromHT
 				}
 			},
 			errs: []error{
-				fmt.Errorf("no rules provided"),
+				errRouteValidationNoRules,
 			},
 		},
 		{
@@ -239,7 +238,7 @@ func getIngressRulesFromHTTPRoutesCommonTestCases() []testCaseIngressRulesFromHT
 				}
 			},
 			errs: []error{
-				fmt.Errorf("query param matches are not yet supported"),
+				errRouteValidationQueryParamMatchesUnsupported,
 			},
 		},
 		{
@@ -1104,7 +1103,9 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 			assert.Equal(t, expectedIngressRules, ingressRules)
 
 			// verify that we receive any and all expected errors
-			assert.Equal(t, tt.errs, errs)
+			for i := range tt.errs {
+				assert.ErrorIs(t, errs[i], tt.errs[i])
+			}
 		})
 	}
 }
@@ -1140,7 +1141,9 @@ func TestIngressRulesFromHTTPRoutesWithCombinedServiceRoutes(t *testing.T) {
 			assert.Equal(t, expectedIngressRules, ingressRules)
 
 			// verify that we receive any and all expected errors
-			assert.Equal(t, tt.errs, errs)
+			for i := range tt.errs {
+				assert.ErrorIs(t, errs[i], tt.errs[i])
+			}
 		})
 	}
 }

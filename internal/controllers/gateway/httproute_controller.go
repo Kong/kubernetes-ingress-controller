@@ -336,6 +336,12 @@ func (r *HTTPRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 				return ctrl.Result{Requeue: true}, nil
 			}
 		}
+	} else {
+		// route is not accepted, remove it from kong store
+		if err := r.DataplaneClient.DeleteObject(httproute); err != nil {
+			debug(log, httproute, "failed to delete object in data-plane, requeueing")
+			return ctrl.Result{}, err
+		}
 	}
 
 	// now that the object has been successfully configured for in the dataplane

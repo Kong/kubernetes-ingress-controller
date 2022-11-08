@@ -51,7 +51,7 @@ func (p *Parser) ingressRulesFromUDPRoute(result *ingressRules, udproute *gatewa
 	// are invalid somehow make it past validation (e.g. the webhook is not enabled) we can
 	// at least try to provide a helpful message about the situation in the manager logs.
 	if len(spec.Rules) == 0 {
-		return fmt.Errorf("no rules provided")
+		return errRouteValidationNoRules
 	}
 
 	// each rule may represent a different set of backend services that will be accepting

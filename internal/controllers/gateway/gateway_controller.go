@@ -417,7 +417,7 @@ func (r *GatewayReconciler) reconcileUnmanagedGateway(ctx context.Context, log l
 	// 0.0.0.0 as the address for its listeners internally). In order to get addresses we have to derive them
 	// from the Kubernetes Service which will also give us all the L4 information about the proxy. From there
 	// we can use that L4 information to derive the higher level TLS and HTTP,GRPC, e.t.c. information from
-	// the data-plane's // metadata.
+	// the data-plane's metadata.
 	debug(log, gateway, "determining listener configurations from publish service")
 	kongAddresses, kongListeners, err := r.determineL4ListenersFromService(log, svc)
 	if err != nil {

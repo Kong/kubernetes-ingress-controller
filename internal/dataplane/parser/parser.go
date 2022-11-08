@@ -405,6 +405,9 @@ func getGatewayCerts(log logrus.FieldLogger, s store.Storer) []certWrapper {
 		}
 		for _, listener := range gateway.Spec.Listeners {
 			ready := false
+			// TODO: invert the logic to prevent logs about missing listener status
+			// where it's actually in place?
+			// Relevant issue: https://github.com/Kong/kubernetes-ingress-controller/issues/3133
 			if status, ok := statuses[listener.Name]; ok {
 				log.WithFields(logrus.Fields{
 					"gateway":  gateway.Name,

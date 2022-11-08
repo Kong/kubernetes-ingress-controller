@@ -69,6 +69,7 @@ func (p *Parser) ingressRulesFromTCPIngressV1beta1() ingressRules {
 						Name:    rule.Backend.ServiceName,
 						PortDef: kongstate.PortDef{Mode: kongstate.PortModeByNumber, Number: int32(rule.Backend.ServicePort)},
 					}},
+					Parent: ingress,
 				}
 			}
 			service.Routes = append(service.Routes, r)
@@ -129,6 +130,7 @@ func (p *Parser) ingressRulesFromUDPIngressV1beta1() ingressRules {
 						Name:    rule.Backend.ServiceName,
 						PortDef: kongstate.PortDef{Mode: kongstate.PortModeByNumber, Number: int32(rule.Backend.ServicePort)},
 					}},
+					Parent: ingress,
 				}
 			}
 			service.Routes = append(service.Routes, route)

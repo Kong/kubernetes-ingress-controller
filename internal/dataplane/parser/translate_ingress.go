@@ -104,6 +104,7 @@ func (p *Parser) ingressRulesFromIngressV1beta1() ingressRules {
 							Name:    rule.Backend.ServiceName,
 							PortDef: PortDefFromIntStr(rule.Backend.ServicePort),
 						}},
+						Parent: ingress,
 					}
 				}
 				service.Routes = append(service.Routes, r)
@@ -148,6 +149,7 @@ func (p *Parser) ingressRulesFromIngressV1beta1() ingressRules {
 					Name:    defaultBackend.ServiceName,
 					PortDef: PortDefFromIntStr(defaultBackend.ServicePort),
 				}},
+				Parent: &ingress,
 			}
 		}
 		r := kongstate.Route{
@@ -282,6 +284,7 @@ func (p *Parser) ingressRulesFromIngressV1() ingressRules {
 								Name:    rulePath.Backend.Service.Name,
 								PortDef: port,
 							}},
+							Parent: ingress,
 						}
 					}
 					service.Routes = append(service.Routes, r)
@@ -326,6 +329,7 @@ func (p *Parser) ingressRulesFromIngressV1() ingressRules {
 					Name:    defaultBackend.Service.Name,
 					PortDef: PortDefFromServiceBackendPort(&defaultBackend.Service.Port),
 				}},
+				Parent: &ingress,
 			}
 		}
 		r := kongstate.Route{

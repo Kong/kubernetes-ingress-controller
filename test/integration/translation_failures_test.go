@@ -163,7 +163,7 @@ func TestTranslationFailures(t *testing.T) {
 
 				return expectedTranslationFailure{
 					causingObjects: []client.Object{ingress},
-					reasonContains: "can't add target for backend not-existing-service: no kubernetes service found",
+					reasonContains: "can't add target for backend non-existing-service: no kubernetes service found",
 				}
 			},
 		},

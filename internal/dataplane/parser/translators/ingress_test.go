@@ -19,14 +19,14 @@ var (
 	pathTypePrefix                 = netv1.PathTypePrefix
 )
 
-func TestTranslateIngress(t *testing.T) {
-	expectedParentIngress := func() *netv1.Ingress {
-		return &netv1.Ingress{
-			TypeMeta:   metav1.TypeMeta{Kind: "Ingress", APIVersion: netv1.SchemeGroupVersion.String()},
-			ObjectMeta: metav1.ObjectMeta{Name: "test-ingress", Namespace: corev1.NamespaceDefault},
-		}
+func expectedParentIngress() *netv1.Ingress {
+	return &netv1.Ingress{
+		TypeMeta:   metav1.TypeMeta{Kind: "Ingress", APIVersion: netv1.SchemeGroupVersion.String()},
+		ObjectMeta: metav1.ObjectMeta{Name: "test-ingress", Namespace: corev1.NamespaceDefault},
 	}
+}
 
+func TestTranslateIngress(t *testing.T) {
 	tts := []struct {
 		name     string
 		ingress  *netv1.Ingress
@@ -1225,10 +1225,7 @@ func TestTranslateIngressRegexPrefix(t *testing.T) {
 						Number: 80,
 					},
 				}},
-				Parent: &netv1.Ingress{
-					TypeMeta:   metav1.TypeMeta{Kind: "Ingress", APIVersion: netv1.SchemeGroupVersion.String()},
-					ObjectMeta: metav1.ObjectMeta{Name: "test-ingress", Namespace: corev1.NamespaceDefault},
-				},
+				Parent: expectedParentIngress(),
 			}},
 		},
 	}

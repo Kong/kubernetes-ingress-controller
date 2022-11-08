@@ -34,6 +34,16 @@ func NewTranslationFailure(reason string, causingObjects ...client.Object) (Tran
 		if obj == nil {
 			return TranslationFailure{}, errors.New("one of causing objects is nil")
 		}
+		gvk := obj.GetObjectKind().GroupVersionKind()
+		if gvk.Empty() {
+			return TranslationFailure{}, errors.New("one of causing objects has an empty GVK")
+		}
+		if obj.GetName() == "" {
+			return TranslationFailure{}, fmt.Errorf("one of causing objects (%s) has no name", gvk.String())
+		}
+		if obj.GetNamespace() == "" {
+			return TranslationFailure{}, fmt.Errorf("one of causing objects (%s) has no namespace", gvk.String())
+		}
 	}
 
 	return TranslationFailure{
@@ -69,7 +79,7 @@ func NewTranslationFailuresCollector(logger logrus.FieldLogger) (*TranslationFai
 func (c *TranslationFailuresCollector) PushTranslationFailure(reason string, causingObjects ...client.Object) {
 	translationErr, err := NewTranslationFailure(reason, causingObjects...)
 	if err != nil {
-		c.logger.Warningf("failed to create translation failure: %w", err)
+		c.logger.WithField("translation_failure_reason", reason).Warningf("failed to create translation failure: %s", err)
 		return
 	}
 

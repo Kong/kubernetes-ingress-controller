@@ -183,6 +183,10 @@ func (m *ingressTranslationMeta) translateIntoKongStateService(kongServiceName s
 			PortDef:   portDef,
 		}},
 		Parent: &netv1.Ingress{
+			TypeMeta: metav1.TypeMeta{
+				Kind:       "Ingress",
+				APIVersion: netv1.SchemeGroupVersion.String(),
+			},
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      m.ingressName,
 				Namespace: m.ingressNamespace,

@@ -28,8 +28,8 @@ require (
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.8.1
 	golang.org/x/net v0.0.0-20221014081412-f15817d10f9b
-	google.golang.org/api v0.101.0
-	google.golang.org/genproto v0.0.0-20221018160656-63c7b68cfc55
+	google.golang.org/api v0.102.0
+	google.golang.org/genproto v0.0.0-20221024183307-1bc688fe9f3e
 	gopkg.in/yaml.v3 v3.0.1
 	k8s.io/api v0.25.3
 	k8s.io/apiextensions-apiserver v0.25.3
@@ -46,8 +46,10 @@ require (
 	sigs.k8s.io/yaml v1.3.0
 )
 
+require cloud.google.com/go/compute/metadata v0.2.1 // indirect
+
 require (
-	cloud.google.com/go/compute v1.10.0 // indirect
+	cloud.google.com/go/compute v1.12.1 // indirect
 	github.com/Azure/go-ansiterm v0.0.0-20210617225240-d185dfc1b5a1 // indirect
 	github.com/Azure/go-autorest v14.2.0+incompatible // indirect
 	github.com/Azure/go-autorest/autorest v0.11.27 // indirect

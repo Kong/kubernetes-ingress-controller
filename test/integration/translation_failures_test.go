@@ -167,37 +167,8 @@ func TestTranslationFailures(t *testing.T) {
 		{
 			name: "missing ingress backing service",
 			translationFailureTrigger: func(t *testing.T, cleaner *clusters.Cleaner, ns string) expectedTranslationFailure {
-				pathType := netv1.PathTypeImplementationSpecific
-				ingress := &netv1.Ingress{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:        testutils.RandomName(testTranslationFailuresObjectsPrefix),
-						Annotations: map[string]string{annotations.IngressClassKey: ingressClass},
-					},
-					Spec: netv1.IngressSpec{
-						Rules: []netv1.IngressRule{
-							{
-								IngressRuleValue: netv1.IngressRuleValue{
-									HTTP: &netv1.HTTPIngressRuleValue{
-										Paths: []netv1.HTTPIngressPath{
-											{
-												Path:     "/",
-												PathType: &pathType,
-												Backend: netv1.IngressBackend{
-													Service: &netv1.IngressServiceBackend{
-														Name: "not-existing-service",
-														Port: netv1.ServiceBackendPort{
-															Number: 80,
-														},
-													},
-												},
-											},
-										},
-									},
-								},
-							},
-						},
-					},
-				}
+				nonExistingService := &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "non-existing-service"}}
+				ingress := ingressWithPathBackedByService(nonExistingService)
 				ingress, err := env.Cluster().Client().NetworkingV1().Ingresses(ns).Create(ctx, ingress, metav1.CreateOptions{})
 				require.NoError(t, err)
 
@@ -217,6 +188,7 @@ func TestTranslationFailures(t *testing.T) {
 					Spec: corev1.ServiceSpec{
 						Ports: []corev1.ServicePort{
 							{
+								// ingress can only expect this port to be used
 								Port: 80,
 							},
 						},
@@ -225,36 +197,10 @@ func TestTranslationFailures(t *testing.T) {
 				service, err := env.Cluster().Client().CoreV1().Services(ns).Create(ctx, service, metav1.CreateOptions{})
 				require.NoError(t, err)
 
-				pathType := netv1.PathTypeImplementationSpecific
-				ingress := &netv1.Ingress{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:        testutils.RandomName(testTranslationFailuresObjectsPrefix),
-						Annotations: map[string]string{annotations.IngressClassKey: ingressClass},
-					},
-					Spec: netv1.IngressSpec{
-						Rules: []netv1.IngressRule{
-							{
-								IngressRuleValue: netv1.IngressRuleValue{
-									HTTP: &netv1.HTTPIngressRuleValue{
-										Paths: []netv1.HTTPIngressPath{
-											{
-												Path:     "/",
-												PathType: &pathType,
-												Backend: netv1.IngressBackend{
-													Service: &netv1.IngressServiceBackend{
-														Name: service.Name,
-														Port: netv1.ServiceBackendPort{
-															Number: 90,
-														},
-													},
-												},
-											},
-										},
-									},
-								},
-							},
-						},
-					},
+				ingress := ingressWithPathBackedByService(service)
+				const notMatchingPort = 90
+				ingress.Spec.Rules[0].IngressRuleValue.HTTP.Paths[0].Backend.Service.Port = netv1.ServiceBackendPort{
+					Number: notMatchingPort,
 				}
 				ingress, err = env.Cluster().Client().NetworkingV1().Ingresses(ns).Create(ctx, ingress, metav1.CreateOptions{})
 				require.NoError(t, err)

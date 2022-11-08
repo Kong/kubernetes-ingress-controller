@@ -947,7 +947,9 @@ func TestIngressRecoverFromInvalidPath(t *testing.T) {
 	}()
 
 	// TODO: run this separately, make it not to affect other tests for sharing Kong.
-	t.Skipf("the case %s should be run separately", t.Name())
+	if !runInvalidConfigTests {
+		t.Skipf("the case %s should be run separately; please set TEST_RUN_INVALID_CONFIG_CASES to true to run this case", t.Name())
+	}
 
 	t.Log("deploying a minimal HTTP container deployment to test Ingress routes")
 	container := generators.NewContainer("httpbin", test.HTTPBinImage, 80)

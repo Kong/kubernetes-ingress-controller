@@ -96,6 +96,9 @@ var (
 
 	// clusterVersion is a convenience var where the found version of the env.Cluster is stored.
 	clusterVersion semver.Version
+
+	// runInvalidConfigTests is set to true to run the test cases including invalid test cases.
+	runInvalidConfigTests bool
 )
 
 const (

@@ -152,6 +152,11 @@ jobs:
   e2e-gke-tests:
     environment: "gcloud"
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        kubernetes-version: # the GKE setup script ignores the patch version here and uses the latest, but we still include it for consistency with the other E2E jobs
+          - 'v1.24.2'
     steps:
     - name: setup golang
       uses: actions/setup-go@v3
@@ -183,8 +188,7 @@ jobs:
         GOOGLE_APPLICATION_CREDENTIALS: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}
         GOOGLE_PROJECT: ${{ secrets.GOOGLE_PROJECT }}
         GOOGLE_LOCATION: ${{ secrets.GOOGLE_LOCATION }}
-        KUBERNETES_MAJOR_VERSION: 1
-        KUBERNETES_MINOR_VERSION: 24
+        KONG_CLUSTER_VERSION: ${{ matrix.kubernetes-version }}
         KONG_LICENSE_DATA: ${{ steps.license.outputs.license }}
         GOTESTSUM_JUNITFILE: "gke-${{ matrix.kubernetes-version }}-tests.xml"
 

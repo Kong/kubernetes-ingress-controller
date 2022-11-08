@@ -133,20 +133,9 @@ func TestTranslationFailures(t *testing.T) {
 		{
 			name: "missing client-cert for service",
 			translationFailureTrigger: func(t *testing.T, cleaner *clusters.Cleaner, ns string) expectedTranslationFailure {
-				service := &corev1.Service{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: testutils.RandomName(testTranslationFailuresObjectsPrefix),
-						Annotations: map[string]string{
-							"konghq.com/client-cert": "not-existing-secret",
-						},
-					},
-					Spec: corev1.ServiceSpec{
-						Ports: []corev1.ServicePort{
-							{
-								Port: 80,
-							},
-						},
-					},
+				service := validService()
+				service.ObjectMeta.Annotations = map[string]string{
+					"konghq.com/client-cert": "not-existing-secret",
 				}
 				service, err := env.Cluster().Client().CoreV1().Services(ns).Create(ctx, service, metav1.CreateOptions{})
 				require.NoError(t, err)
@@ -181,20 +170,7 @@ func TestTranslationFailures(t *testing.T) {
 		{
 			name: "missing port for service",
 			translationFailureTrigger: func(t *testing.T, cleaner *clusters.Cleaner, ns string) expectedTranslationFailure {
-				service := &corev1.Service{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: testutils.RandomName(testTranslationFailuresObjectsPrefix),
-					},
-					Spec: corev1.ServiceSpec{
-						Ports: []corev1.ServicePort{
-							{
-								// ingress can only expect this port to be used
-								Port: 80,
-							},
-						},
-					},
-				}
-				service, err := env.Cluster().Client().CoreV1().Services(ns).Create(ctx, service, metav1.CreateOptions{})
+				service, err := env.Cluster().Client().CoreV1().Services(ns).Create(ctx, validService(), metav1.CreateOptions{})
 				require.NoError(t, err)
 
 				ingress := ingressWithPathBackedByService(service)
@@ -399,6 +375,21 @@ func ingressWithPathBackedByService(service *corev1.Service) *netv1.Ingress {
 							},
 						},
 					},
+				},
+			},
+		},
+	}
+}
+
+func validService() *corev1.Service {
+	return &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: testutils.RandomName(testTranslationFailuresObjectsPrefix),
+		},
+		Spec: corev1.ServiceSpec{
+			Ports: []corev1.ServicePort{
+				{
+					Port: 80,
 				},
 			},
 		},

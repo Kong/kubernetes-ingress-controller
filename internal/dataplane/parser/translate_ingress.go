@@ -4,10 +4,8 @@ import (
 	"errors"
 	"fmt"
 	"sort"
-	"strings"
 
 	"github.com/kong/go-kong/kong"
-	"github.com/sirupsen/logrus"
 	netv1 "k8s.io/api/networking/v1"
 	netv1beta1 "k8s.io/api/networking/v1beta1"
 
@@ -45,10 +43,6 @@ func (p *Parser) ingressRulesFromIngressV1beta1() ingressRules {
 			regexPrefix = prefix
 		}
 		ingressSpec := ingress.Spec
-		log := p.logger.WithFields(logrus.Fields{
-			"ingress_namespace": ingress.Namespace,
-			"ingress_name":      ingress.Name,
-		})
 
 		if ingressSpec.Backend != nil {
 			allDefaultBackends = append(allDefaultBackends, *ingress)
@@ -64,11 +58,6 @@ func (p *Parser) ingressRulesFromIngressV1beta1() ingressRules {
 			}
 			for j, rule := range rule.HTTP.Paths {
 				path := rule.Path
-
-				if strings.Contains(path, "//") {
-					log.Errorf("rule skipped: invalid path: '%v'", path)
-					continue
-				}
 				path = maybePrependRegexPrefix(path, regexPrefix, icp.EnableLegacyRegexDetection && p.flagEnabledRegexPathPrefix)
 				if path == "" {
 					path = "/"
@@ -234,11 +223,6 @@ func (p *Parser) ingressRulesFromIngressV1() ingressRules {
 					continue
 				}
 				for j, rulePath := range rule.HTTP.Paths {
-					if strings.Contains(rulePath.Path, "//") {
-						p.registerTranslationFailure(fmt.Sprintf("rule skipped: invalid path: '%v'", rulePath.Path), ingress)
-						continue
-					}
-
 					pathTypeImplementationSpecific := netv1.PathTypeImplementationSpecific
 					if rulePath.PathType == nil {
 						rulePath.PathType = &pathTypeImplementationSpecific

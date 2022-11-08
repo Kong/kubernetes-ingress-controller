@@ -6,6 +6,8 @@ package integration
 import (
 	"testing"
 
+	corev1 "k8s.io/api/core/v1"
+
 	"github.com/google/uuid"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	"github.com/stretchr/testify/assert"
@@ -82,6 +84,15 @@ func TestCRDValidations(t *testing.T) {
 				})
 
 				require.ErrorContains(t, err, "spec.rules[0].port")
+			},
+		},
+		{
+			name: "invalid http path in ingress rule",
+			scenario: func(t *testing.T, cleaner *clusters.Cleaner, ns string) {
+				ingress := ingressWithPathBackedByService(&corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "some-service"}})
+				ingress.Spec.Rules[0].IngressRuleValue.HTTP.Paths[0].Path = "///invalid-path"
+				_, err := env.Cluster().Client().NetworkingV1().Ingresses(ns).Create(ctx, ingress, metav1.CreateOptions{})
+				require.ErrorContains(t, err, `spec.rules[0].http.paths[0].path: Invalid value: "///invalid-path": must not contain '//'`)
 			},
 		},
 	}

@@ -837,6 +837,7 @@ func TestCACertificate(t *testing.T) {
 	t.Run("valid CACertificte is processed", func(t *testing.T) {
 		secrets := []*corev1.Secret{
 			{
+				TypeMeta: metav1.TypeMeta{Kind: "Secret", APIVersion: corev1.SchemeGroupVersion.String()},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "foo",
 					Namespace: "default",
@@ -872,6 +873,7 @@ func TestCACertificate(t *testing.T) {
 	t.Run("multiple CACertifictes are processed", func(t *testing.T) {
 		secrets := []*corev1.Secret{
 			{
+				TypeMeta: metav1.TypeMeta{Kind: "Secret", APIVersion: corev1.SchemeGroupVersion.String()},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "foo",
 					Namespace: "default",
@@ -888,6 +890,7 @@ func TestCACertificate(t *testing.T) {
 				},
 			},
 			{
+				TypeMeta: metav1.TypeMeta{Kind: "Secret", APIVersion: corev1.SchemeGroupVersion.String()},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "bar",
 					Namespace: "non-default",
@@ -919,6 +922,7 @@ func TestCACertificate(t *testing.T) {
 	t.Run("invalid CACertifictes are ignored", func(t *testing.T) {
 		secrets := []*corev1.Secret{
 			{
+				TypeMeta: metav1.TypeMeta{Kind: "Secret", APIVersion: corev1.SchemeGroupVersion.String()},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "valid-cert",
 					Namespace: "default",
@@ -935,6 +939,7 @@ func TestCACertificate(t *testing.T) {
 				},
 			},
 			{
+				TypeMeta: metav1.TypeMeta{Kind: "Secret", APIVersion: corev1.SchemeGroupVersion.String()},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "missing-cert-key",
 					Namespace: "non-default",
@@ -951,6 +956,7 @@ func TestCACertificate(t *testing.T) {
 				},
 			},
 			{
+				TypeMeta: metav1.TypeMeta{Kind: "Secret", APIVersion: corev1.SchemeGroupVersion.String()},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "missing-id-key",
 					Namespace: "non-default",
@@ -967,6 +973,7 @@ func TestCACertificate(t *testing.T) {
 				},
 			},
 			{
+				TypeMeta: metav1.TypeMeta{Kind: "Secret", APIVersion: corev1.SchemeGroupVersion.String()},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "expired-cert",
 					Namespace: "non-default",
@@ -1126,6 +1133,7 @@ func TestServiceClientCertificate(t *testing.T) {
 
 		services := []*corev1.Service{
 			{
+				TypeMeta: metav1.TypeMeta{Kind: "Service", APIVersion: corev1.SchemeGroupVersion.String()},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "foo-svc",
 					Namespace: "default",
@@ -2840,6 +2848,7 @@ func TestDefaultBackend(t *testing.T) {
 
 		services := []*corev1.Service{
 			{
+				TypeMeta: metav1.TypeMeta{Kind: "Service", APIVersion: corev1.SchemeGroupVersion.String()},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "foo-svc",
 					Namespace: "default",

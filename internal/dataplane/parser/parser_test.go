@@ -3876,20 +3876,6 @@ func TestGetEndpoints(t *testing.T) {
 			result: []util.Endpoint{},
 		},
 		{
-			name: "a service type ServiceTypeExternalName service with an invalid port should return 0 endpoints",
-			svc: &corev1.Service{
-				Spec: corev1.ServiceSpec{
-					Type: corev1.ServiceTypeExternalName,
-				},
-			},
-			port:  &corev1.ServicePort{Name: "default"},
-			proto: corev1.ProtocolTCP,
-			fn: func(string, string) (*corev1.Endpoints, error) {
-				return &corev1.Endpoints{}, nil
-			},
-			result: []util.Endpoint{},
-		},
-		{
 			name: "a service type ServiceTypeExternalName with a valid port should return one endpoint",
 			svc: &corev1.Service{
 				Spec: corev1.ServiceSpec{

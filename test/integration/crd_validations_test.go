@@ -6,6 +6,10 @@ package integration
 import (
 	"testing"
 
+	"k8s.io/apimachinery/pkg/util/intstr"
+
+	corev1 "k8s.io/api/core/v1"
+
 	"github.com/google/uuid"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	"github.com/stretchr/testify/assert"
@@ -82,6 +86,27 @@ func TestCRDValidations(t *testing.T) {
 				})
 
 				require.ErrorContains(t, err, "spec.rules[0].port")
+			},
+		},
+		{
+			name: "service type=ExternalName with empty target port",
+			scenario: func(t *testing.T, cleaner *clusters.Cleaner, ns string) {
+				service := &corev1.Service{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "service-name",
+					},
+					Spec: corev1.ServiceSpec{
+						Type: corev1.ServiceTypeExternalName,
+						Ports: []corev1.ServicePort{
+							{
+								TargetPort: intstr.FromInt(0),
+							},
+						},
+						ExternalName: "example.com",
+					},
+				}
+				_, err := env.Cluster().Client().CoreV1().Services(ns).Create(ctx, service, metav1.CreateOptions{})
+				require.ErrorContains(t, err, "spec.ports[0].targetPort: Invalid value: 0")
 			},
 		},
 	}

@@ -705,7 +705,7 @@ func getEndpoints(
 
 		return append(upsServers, util.Endpoint{
 			Address: s.Spec.ExternalName,
-			Port:    fmt.Sprintf("%v", port.TargetPort.IntValue()),
+			Port:    port.TargetPort.String(),
 		})
 	}
 	if annotations.HasServiceUpstreamAnnotation(s.Annotations) {

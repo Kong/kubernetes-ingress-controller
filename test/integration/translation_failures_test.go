@@ -11,6 +11,7 @@ import (
 
 	"github.com/kong/go-kong/kong"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
+	ktfkong "github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/kong"
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -145,6 +146,40 @@ func TestTranslationFailures(t *testing.T) {
 				require.NoError(t, err)
 
 				return []client.Object{service}
+			},
+		},
+		{
+			name: "more than one certificate ref specified for a gateway listener",
+			translationFailureTrigger: func(t *testing.T, cleaner *clusters.Cleaner, ns string) []client.Object {
+				gatewayClient, err := gatewayclient.NewForConfig(env.Cluster().Config())
+				require.NoError(t, err)
+
+				gatewayClassName := testutils.RandomName(testTranslationFailuresObjectsPrefix)
+				gwc, err := DeployGatewayClass(ctx, gatewayClient, gatewayClassName)
+				require.NoError(t, err)
+				cleaner.Add(gwc)
+
+				gatewayName := testutils.RandomName(testTranslationFailuresObjectsPrefix)
+				hostname := gatewayv1beta1.Hostname(tlsRouteHostname)
+				gateway, err := DeployGateway(ctx, gatewayClient, ns, gatewayClassName, func(gw *gatewayv1beta1.Gateway) {
+					gw.Name = gatewayName
+					gw.Spec.Listeners = []gatewayv1beta1.Listener{{
+						Name:     gatewayv1beta1.SectionName(testutils.RandomName(testTranslationFailuresObjectsPrefix)),
+						Protocol: gatewayv1beta1.TLSProtocolType,
+						Port:     gatewayv1beta1.PortNumber(ktfkong.DefaultTLSServicePort),
+						Hostname: &hostname,
+						TLS: &gatewayv1beta1.GatewayTLSConfig{
+							CertificateRefs: []gatewayv1beta1.SecretObjectReference{
+								{Name: "tls-secret-name"},
+								{Name: "another-tls-secret-name"},
+							},
+						},
+					}}
+				})
+				require.NoError(t, err)
+				cleaner.Add(gateway)
+
+				return []client.Object{gateway}
 			},
 		},
 	}

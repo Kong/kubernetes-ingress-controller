@@ -121,7 +121,7 @@ func (p *Parser) Build() (*kongstate.KongState, []TranslationFailure) {
 
 	// generate Certificates and SNIs
 	ingressCerts := getCerts(p.logger, p.storer, ingressRules.SecretNameToSNIs)
-	gatewayCerts := getGatewayCerts(p.logger, p.storer)
+	gatewayCerts := p.getGatewayCerts()
 	// note that ingress-derived certificates will take precedence over gateway-derived certificates for SNI assignment
 	result.Certificates = mergeCerts(p.logger, ingressCerts, gatewayCerts)
 
@@ -384,7 +384,9 @@ type certWrapper struct {
 	CreationTimestamp metav1.Time
 }
 
-func getGatewayCerts(log logrus.FieldLogger, s store.Storer) []certWrapper {
+func (p *Parser) getGatewayCerts() []certWrapper {
+	log := p.logger
+	s := p.storer
 	certs := []certWrapper{}
 	gateways, err := s.ListGateways()
 	if err != nil {
@@ -429,10 +431,7 @@ func getGatewayCerts(log logrus.FieldLogger, s store.Storer) []certWrapper {
 					if len(listener.TLS.CertificateRefs) > 1 {
 						// TODO support cert_alt and key_alt if there are 2 SecretObjectReferences
 						// https://github.com/Kong/kubernetes-ingress-controller/issues/2604
-						log.WithFields(logrus.Fields{
-							"gateway":  gateway.Name,
-							"listener": listener.Name,
-						}).Error("Gateway Listeners with more than one certificateRef are not supported")
+						p.registerTranslationFailure("listener '%s' has more than one certificateRef, it's not supported", gateway)
 						continue
 					}
 

@@ -208,7 +208,7 @@ func TestTranslationFailures(t *testing.T) {
 
 				return expectedTranslationFailure{
 					causingObjects: []client.Object{gateway},
-					reasonContains: fmt.Sprintf("more than one certificateRef"),
+					reasonContains: "more than one certificateRef",
 				}
 			},
 		},

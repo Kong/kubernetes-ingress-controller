@@ -184,23 +184,6 @@ func TestTranslationFailures(t *testing.T) {
 				return []client.Object{gateway, emptySecret}
 			},
 		},
-		{
-			name: "secret reference not allowed by ReferenceGrant",
-			translationFailureTrigger: func(t *testing.T, cleaner *clusters.Cleaner, ns string) []client.Object {
-				otherNs := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: testutils.RandomName(testTranslationFailuresObjectsPrefix)}}
-				otherNs, err := env.Cluster().Client().CoreV1().Namespaces().Create(ctx, otherNs, metav1.CreateOptions{})
-				secretInDifferentNamespace := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{
-					Name: testutils.RandomName(testTranslationFailuresObjectsPrefix),
-				}}
-				secretInDifferentNamespace, err = env.Cluster().Client().CoreV1().Secrets(otherNs.Name).Create(ctx, secretInDifferentNamespace, metav1.CreateOptions{})
-				require.NoError(t, err)
-				cleaner.Add(secretInDifferentNamespace)
-
-				gateway := deployGatewayReferringSecrets(t, cleaner, ns, secretInDifferentNamespace)
-
-				return []client.Object{gateway}
-			},
-		},
 	}
 
 	for _, tt := range testCases {

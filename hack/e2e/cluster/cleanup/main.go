@@ -27,9 +27,9 @@ import (
 	"time"
 
 	container "cloud.google.com/go/container/apiv1"
+	"cloud.google.com/go/container/apiv1/containerpb"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/types/gke"
 	"google.golang.org/api/option"
-	containerpb "google.golang.org/genproto/googleapis/container/v1"
 )
 
 const timeUntilClusterOrphaned = time.Minute * 30

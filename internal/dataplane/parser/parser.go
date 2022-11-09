@@ -439,11 +439,9 @@ func (p *Parser) getGatewayCerts() []certWrapper {
 
 					// SecretObjectReference is a misnomer; it can reference any Group+Kind, but defaults to Secret
 					if ref.Kind != nil {
-						if string(*ref.Kind) != "Secret" {
-							log.WithFields(logrus.Fields{
-								"gateway":  gateway.Name,
-								"listener": listener.Name,
-							}).Error("CertificateRefs to kinds other than Secret are not supported")
+						if kind := *ref.Kind; kind != "Secret" {
+							p.registerTranslationFailure(fmt.Sprintf("CertificateRefs to kinds other than Secret (%s) are not supported", kind), gateway)
+							continue
 						}
 					}
 
@@ -460,13 +458,8 @@ func (p *Parser) getGatewayCerts() []certWrapper {
 						}, grants)
 
 						if !newRefChecker(ref).IsRefAllowedByGrant(allowed) {
-							log.WithFields(logrus.Fields{
-								"gateway":           gateway.Name,
-								"gateway_namespace": gateway.Namespace,
-								"listener":          listener.Name,
-								"secret_name":       string(ref.Name),
-								"secret_namespace":  namespace,
-							}).WithError(err).Error("secret reference not allowed by ReferenceGrant")
+							secretName := namespace + "/" + string(ref.Name)
+							p.registerTranslationFailure(fmt.Sprintf("secret reference (%s) not allowed by ReferenceGrant", secretName), gateway)
 							continue
 						}
 					}
@@ -484,12 +477,7 @@ func (p *Parser) getGatewayCerts() []certWrapper {
 					}
 					cert, key, err := getCertFromSecret(secret)
 					if err != nil {
-						log.WithFields(logrus.Fields{
-							"gateway":          gateway.Name,
-							"listener":         listener.Name,
-							"secret_name":      string(ref.Name),
-							"secret_namespace": namespace,
-						}).WithError(err).Error("failed to construct certificate from secret")
+						p.registerTranslationFailure("failed to construct certificate from secret", secret, gateway)
 						continue
 					}
 

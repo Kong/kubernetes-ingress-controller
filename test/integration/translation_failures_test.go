@@ -164,33 +164,39 @@ func TestTranslationFailures(t *testing.T) {
 				require.NoError(t, err)
 				cleaner.Add(secret2)
 
-				gatewayClient, err := gatewayclient.NewForConfig(env.Cluster().Config())
-				require.NoError(t, err)
+				gateway := deployGatewayReferringSecrets(t, cleaner, ns, secret1, secret2)
 
-				gatewayClassName := testutils.RandomName(testTranslationFailuresObjectsPrefix)
-				gwc, err := DeployGatewayClass(ctx, gatewayClient, gatewayClassName)
+				return []client.Object{gateway}
+			},
+		},
+		{
+			name: "invalid secret referred by a gateway listener",
+			translationFailureTrigger: func(t *testing.T, cleaner *clusters.Cleaner, ns string) []client.Object {
+				emptySecret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{
+					Name: testutils.RandomName(testTranslationFailuresObjectsPrefix),
+				}}
+				emptySecret, err := env.Cluster().Client().CoreV1().Secrets(ns).Create(ctx, emptySecret, metav1.CreateOptions{})
 				require.NoError(t, err)
-				cleaner.Add(gwc)
+				cleaner.Add(emptySecret)
 
-				gatewayName := testutils.RandomName(testTranslationFailuresObjectsPrefix)
-				hostname := gatewayv1beta1.Hostname(tlsRouteHostname)
-				gateway, err := DeployGateway(ctx, gatewayClient, ns, gatewayClassName, func(gw *gatewayv1beta1.Gateway) {
-					gw.Name = gatewayName
-					gw.Spec.Listeners = []gatewayv1beta1.Listener{{
-						Name:     gatewayv1beta1.SectionName(testutils.RandomName(testTranslationFailuresObjectsPrefix)),
-						Protocol: gatewayv1beta1.TLSProtocolType,
-						Port:     gatewayv1beta1.PortNumber(ktfkong.DefaultTLSServicePort),
-						Hostname: &hostname,
-						TLS: &gatewayv1beta1.GatewayTLSConfig{
-							CertificateRefs: []gatewayv1beta1.SecretObjectReference{
-								{Name: gatewayv1beta1.ObjectName(secret1.Name)},
-								{Name: gatewayv1beta1.ObjectName(secret2.Name)},
-							},
-						},
-					}}
-				})
+				gateway := deployGatewayReferringSecrets(t, cleaner, ns, emptySecret)
+
+				return []client.Object{gateway, emptySecret}
+			},
+		},
+		{
+			name: "secret reference not allowed by ReferenceGrant",
+			translationFailureTrigger: func(t *testing.T, cleaner *clusters.Cleaner, ns string) []client.Object {
+				otherNs := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: testutils.RandomName(testTranslationFailuresObjectsPrefix)}}
+				otherNs, err := env.Cluster().Client().CoreV1().Namespaces().Create(ctx, otherNs, metav1.CreateOptions{})
+				secretInDifferentNamespace := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{
+					Name: testutils.RandomName(testTranslationFailuresObjectsPrefix),
+				}}
+				secretInDifferentNamespace, err = env.Cluster().Client().CoreV1().Secrets(otherNs.Name).Create(ctx, secretInDifferentNamespace, metav1.CreateOptions{})
 				require.NoError(t, err)
-				cleaner.Add(gateway)
+				cleaner.Add(secretInDifferentNamespace)
+
+				gateway := deployGatewayReferringSecrets(t, cleaner, ns, secretInDifferentNamespace)
 
 				return []client.Object{gateway}
 			},
@@ -380,4 +386,39 @@ func ingressWithPathBackedByService(service *corev1.Service) *netv1.Ingress {
 			},
 		},
 	}
+}
+
+func deployGatewayReferringSecrets(t *testing.T, cleaner *clusters.Cleaner, ns string, secrets ...*corev1.Secret) *gatewayv1beta1.Gateway {
+	gatewayClient, err := gatewayclient.NewForConfig(env.Cluster().Config())
+	require.NoError(t, err)
+
+	gatewayClassName := testutils.RandomName(testTranslationFailuresObjectsPrefix)
+	gwc, err := DeployGatewayClass(ctx, gatewayClient, gatewayClassName)
+	require.NoError(t, err)
+	cleaner.Add(gwc)
+
+	certificateRefs := make([]gatewayv1beta1.SecretObjectReference, 0, len(secrets))
+	for _, s := range secrets {
+		sn := gatewayv1beta1.Namespace(s.GetNamespace())
+		certificateRefs = append(certificateRefs, gatewayv1beta1.SecretObjectReference{
+			Name:      gatewayv1beta1.ObjectName(s.GetName()),
+			Namespace: &sn,
+		})
+	}
+
+	gatewayName := testutils.RandomName(testTranslationFailuresObjectsPrefix)
+	hostname := gatewayv1beta1.Hostname(tlsRouteHostname)
+	gateway, err := DeployGateway(ctx, gatewayClient, ns, gatewayClassName, func(gw *gatewayv1beta1.Gateway) {
+		gw.Name = gatewayName
+		gw.Spec.Listeners = []gatewayv1beta1.Listener{{
+			Name:     gatewayv1beta1.SectionName(testutils.RandomName(testTranslationFailuresObjectsPrefix)),
+			Protocol: gatewayv1beta1.TLSProtocolType,
+			Port:     gatewayv1beta1.PortNumber(ktfkong.DefaultTLSServicePort),
+			Hostname: &hostname,
+			TLS:      &gatewayv1beta1.GatewayTLSConfig{CertificateRefs: certificateRefs},
+		}}
+	})
+	require.NoError(t, err)
+	cleaner.Add(gateway)
+	return gateway
 }

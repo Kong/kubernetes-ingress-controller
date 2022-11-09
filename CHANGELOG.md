@@ -134,6 +134,8 @@ Adding a new version? You'll need three changes:
 - Gateway API: Implement port matching for routes as defined in
   [GEP-957](https://gateway-api.sigs.k8s.io/geps/gep-957/)
   [#3129](https://github.com/Kong/kubernetes-ingress-controller/pull/3129)
+- Warning events are recorded when a Gateway Listener has more than one CertificateRef specified.
+  [#3147](https://github.com/Kong/kubernetes-ingress-controller/pull/3147)
 
 ### Fixed
 

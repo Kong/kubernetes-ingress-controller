@@ -8,10 +8,11 @@ import (
 	"sort"
 	"strings"
 
+	netv1 "k8s.io/api/networking/v1"
+
 	"github.com/kong/go-kong/kong"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
-	netv1beta1 "k8s.io/api/networking/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	knative "knative.dev/networking/pkg/apis/networking/v1alpha1"
@@ -195,11 +196,11 @@ func (p *Parser) popTranslationFailures() []TranslationFailure {
 	return p.failuresCollector.PopTranslationFailures()
 }
 
-func knativeIngressToNetworkingTLS(tls []knative.IngressTLS) []netv1beta1.IngressTLS {
-	var result []netv1beta1.IngressTLS
+func knativeIngressToNetworkingTLS(tls []knative.IngressTLS) []netv1.IngressTLS {
+	var result []netv1.IngressTLS
 
 	for _, t := range tls {
-		result = append(result, netv1beta1.IngressTLS{
+		result = append(result, netv1.IngressTLS{
 			Hosts:      t.Hosts,
 			SecretName: t.SecretName,
 		})
@@ -207,11 +208,11 @@ func knativeIngressToNetworkingTLS(tls []knative.IngressTLS) []netv1beta1.Ingres
 	return result
 }
 
-func tcpIngressToNetworkingTLS(tls []configurationv1beta1.IngressTLS) []netv1beta1.IngressTLS {
-	var result []netv1beta1.IngressTLS
+func tcpIngressToNetworkingTLS(tls []configurationv1beta1.IngressTLS) []netv1.IngressTLS {
+	var result []netv1.IngressTLS
 
 	for _, t := range tls {
-		result = append(result, netv1beta1.IngressTLS{
+		result = append(result, netv1.IngressTLS{
 			Hosts:      t.Hosts,
 			SecretName: t.SecretName,
 		})
@@ -520,7 +521,7 @@ func getGatewayCerts(log logrus.FieldLogger, s store.Storer) []certWrapper {
 	return certs
 }
 
-func (p *Parser) getCerts(secretsToSNIs map[string][]string) []certWrapper {
+func (p *Parser) getCerts(secretsToSNIs SecretNameToSNIs) []certWrapper {
 	log := p.logger
 	s := p.storer
 	certs := []certWrapper{}
@@ -530,7 +531,7 @@ func (p *Parser) getCerts(secretsToSNIs map[string][]string) []certWrapper {
 		secret, err := s.GetSecret(namespaceName[0], namespaceName[1])
 		if err != nil {
 			// todo: associate secret with an ingress?
-			p.registerTranslationFailure(fmt.Sprintf("failed to fetch the secret (%s)", secretKey))
+			p.registerTranslationFailure(fmt.Sprintf("failed to fetch the secret (%s)", secretKey), SNIs.parents...)
 			continue
 		}
 		cert, key, err := getCertFromSecret(secret)
@@ -549,7 +550,7 @@ func (p *Parser) getCerts(secretsToSNIs map[string][]string) []certWrapper {
 				Key:  kong.String(key),
 			},
 			CreationTimestamp: secret.CreationTimestamp,
-			snis:              SNIs,
+			snis:              SNIs.hosts,
 		})
 	}
 

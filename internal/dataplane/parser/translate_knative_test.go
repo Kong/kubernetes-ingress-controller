@@ -3,6 +3,8 @@ package parser
 import (
 	"testing"
 
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
 	"github.com/kong/go-kong/kong"
 	"github.com/stretchr/testify/assert"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -293,9 +295,9 @@ func TestFromKnativeIngress(t *testing.T) {
 		p := mustNewParser(t, store)
 
 		parsedInfo := p.ingressRulesFromKnativeIngress()
-		assert.Equal(SecretNameToSNIs(map[string][]string{
-			"foo-namespace/bar-secret": {"bar.example.com", "bar1.example.com"},
-			"foo-namespace/foo-secret": {"foo.example.com", "foo1.example.com"},
+		assert.Equal(SecretNameToSNIs(map[string]*SNIs{
+			"foo-namespace/bar-secret": {hosts: []string{"bar.example.com", "bar1.example.com"}, parents: []client.Object{ingressList[3]}},
+			"foo-namespace/foo-secret": {hosts: []string{"foo.example.com", "foo1.example.com"}, parents: []client.Object{ingressList[3]}},
 		}), parsedInfo.SecretNameToSNIs)
 	})
 	t.Run("split knative Ingress resource chooses the highest split", func(t *testing.T) {

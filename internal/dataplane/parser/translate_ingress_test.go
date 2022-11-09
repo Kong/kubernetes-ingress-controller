@@ -274,7 +274,7 @@ func TestFromIngressV1beta1(t *testing.T) {
 		parsedInfo := p.ingressRulesFromIngressV1beta1()
 		assert.Equal(ingressRules{
 			ServiceNameToServices: make(map[string]kongstate.Service),
-			SecretNameToSNIs:      make(map[string][]string),
+			SecretNameToSNIs:      make(map[string]*SNIs),
 		}, parsedInfo)
 	})
 	t.Run("simple ingress rule is parsed", func(t *testing.T) {
@@ -324,8 +324,8 @@ func TestFromIngressV1beta1(t *testing.T) {
 
 		parsedInfo := p.ingressRulesFromIngressV1beta1()
 		assert.Equal(2, len(parsedInfo.SecretNameToSNIs))
-		assert.Equal(2, len(parsedInfo.SecretNameToSNIs["bar-namespace/sooper-secret"]))
-		assert.Equal(2, len(parsedInfo.SecretNameToSNIs["bar-namespace/sooper-secret2"]))
+		assert.Equal(2, len(parsedInfo.SecretNameToSNIs["bar-namespace/sooper-secret"].hosts))
+		assert.Equal(2, len(parsedInfo.SecretNameToSNIs["bar-namespace/sooper-secret2"].hosts))
 	})
 	t.Run("ingress rule with ACME like path has strip_path set to false", func(t *testing.T) {
 		store, err := store.NewFakeStore(store.FakeObjects{
@@ -748,7 +748,7 @@ func TestFromIngressV1(t *testing.T) {
 		parsedInfo := p.ingressRulesFromIngressV1()
 		assert.Equal(ingressRules{
 			ServiceNameToServices: make(map[string]kongstate.Service),
-			SecretNameToSNIs:      make(map[string][]string),
+			SecretNameToSNIs:      make(map[string]*SNIs),
 		}, parsedInfo)
 	})
 	t.Run("simple ingress rule is parsed", func(t *testing.T) {
@@ -801,8 +801,8 @@ func TestFromIngressV1(t *testing.T) {
 
 		parsedInfo := p.ingressRulesFromIngressV1()
 		assert.Equal(2, len(parsedInfo.SecretNameToSNIs))
-		assert.Equal(2, len(parsedInfo.SecretNameToSNIs["bar-namespace/sooper-secret"]))
-		assert.Equal(2, len(parsedInfo.SecretNameToSNIs["bar-namespace/sooper-secret2"]))
+		assert.Equal(2, len(parsedInfo.SecretNameToSNIs["bar-namespace/sooper-secret"].hosts))
+		assert.Equal(2, len(parsedInfo.SecretNameToSNIs["bar-namespace/sooper-secret2"].hosts))
 	})
 	t.Run("ingress rule with ACME like path has strip_path set to false", func(t *testing.T) {
 		store, err := store.NewFakeStore(store.FakeObjects{

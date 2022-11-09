@@ -140,12 +140,13 @@ func TestTranslationFailures(t *testing.T) {
 				service, err := env.Cluster().Client().CoreV1().Services(ns).Create(ctx, service, metav1.CreateOptions{})
 				require.NoError(t, err)
 
-				_, err = env.Cluster().Client().NetworkingV1().Ingresses(ns).Create(
+				ingress, err := env.Cluster().Client().NetworkingV1().Ingresses(ns).Create(
 					ctx,
 					ingressWithPathBackedByService(service),
 					metav1.CreateOptions{},
 				)
 				require.NoError(t, err)
+				cleaner.Add(ingress)
 
 				return expectedTranslationFailure{
 					causingObjects: []client.Object{service},
@@ -160,6 +161,7 @@ func TestTranslationFailures(t *testing.T) {
 				ingress := ingressWithPathBackedByService(nonExistingService)
 				ingress, err := env.Cluster().Client().NetworkingV1().Ingresses(ns).Create(ctx, ingress, metav1.CreateOptions{})
 				require.NoError(t, err)
+				cleaner.Add(ingress)
 
 				return expectedTranslationFailure{
 					causingObjects: []client.Object{ingress},
@@ -172,6 +174,7 @@ func TestTranslationFailures(t *testing.T) {
 			translationFailureTrigger: func(t *testing.T, cleaner *clusters.Cleaner, ns string) expectedTranslationFailure {
 				service, err := env.Cluster().Client().CoreV1().Services(ns).Create(ctx, validService(), metav1.CreateOptions{})
 				require.NoError(t, err)
+				cleaner.Add(service)
 
 				ingress := ingressWithPathBackedByService(service)
 				const notMatchingPort = 90
@@ -180,6 +183,7 @@ func TestTranslationFailures(t *testing.T) {
 				}
 				ingress, err = env.Cluster().Client().NetworkingV1().Ingresses(ns).Create(ctx, ingress, metav1.CreateOptions{})
 				require.NoError(t, err)
+				cleaner.Add(ingress)
 
 				return expectedTranslationFailure{
 					causingObjects: []client.Object{ingress, service},
@@ -190,7 +194,52 @@ func TestTranslationFailures(t *testing.T) {
 		{
 			name: "ingress referring a non-existing TLS secret",
 			translationFailureTrigger: func(t *testing.T, cleaner *clusters.Cleaner, ns string) expectedTranslationFailure {
-				return expectedTranslationFailure{}
+				service, err := env.Cluster().Client().CoreV1().Services(ns).Create(ctx, validService(), metav1.CreateOptions{})
+				require.NoError(t, err)
+				cleaner.Add(service)
+
+				ingress := ingressWithPathBackedByService(service)
+				ingress.Spec.TLS = []netv1.IngressTLS{
+					{
+						SecretName: "non-existing-secret",
+					},
+				}
+				ingress, err = env.Cluster().Client().NetworkingV1().Ingresses(ns).Create(ctx, ingress, metav1.CreateOptions{})
+				require.NoError(t, err)
+				cleaner.Add(ingress)
+
+				return expectedTranslationFailure{
+					causingObjects: []client.Object{ingress},
+					reasonContains: "failed to fetch secret",
+				}
+			},
+		},
+		{
+			name: "ingress referring a secret with no valid TLS key-pair",
+			translationFailureTrigger: func(t *testing.T, cleaner *clusters.Cleaner, ns string) expectedTranslationFailure {
+				secret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: testutils.RandomName(testTranslationFailuresObjectsPrefix)}}
+				secret, err := env.Cluster().Client().CoreV1().Secrets(ns).Create(ctx, secret, metav1.CreateOptions{})
+				require.NoError(t, err)
+				cleaner.Add(secret)
+
+				service, err := env.Cluster().Client().CoreV1().Services(ns).Create(ctx, validService(), metav1.CreateOptions{})
+				require.NoError(t, err)
+				cleaner.Add(service)
+
+				ingress := ingressWithPathBackedByService(service)
+				ingress.Spec.TLS = []netv1.IngressTLS{
+					{
+						SecretName: secret.Name,
+					},
+				}
+				ingress, err = env.Cluster().Client().NetworkingV1().Ingresses(ns).Create(ctx, ingress, metav1.CreateOptions{})
+				require.NoError(t, err)
+				cleaner.Add(ingress)
+
+				return expectedTranslationFailure{
+					causingObjects: []client.Object{ingress},
+					reasonContains: "failed to construct certificate from secret",
+				}
 			},
 		},
 	}

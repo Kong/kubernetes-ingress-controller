@@ -244,6 +244,7 @@ func TestTranslationFailures(t *testing.T) {
 				ingress := ingressWithPathBackedByService(service)
 				ingress.Spec.TLS = []netv1.IngressTLS{
 					{
+						Hosts:      []string{"example.com"},
 						SecretName: "non-existing-secret",
 					},
 				}
@@ -253,7 +254,7 @@ func TestTranslationFailures(t *testing.T) {
 
 				return expectedTranslationFailure{
 					causingObjects: []client.Object{ingress},
-					reasonContains: "failed to fetch secret",
+					reasonContains: "failed to fetch the secret",
 				}
 			},
 		},
@@ -272,6 +273,7 @@ func TestTranslationFailures(t *testing.T) {
 				ingress := ingressWithPathBackedByService(service)
 				ingress.Spec.TLS = []netv1.IngressTLS{
 					{
+						Hosts:      []string{"example.com"},
 						SecretName: secret.Name,
 					},
 				}
@@ -280,7 +282,7 @@ func TestTranslationFailures(t *testing.T) {
 				cleaner.Add(ingress)
 
 				return expectedTranslationFailure{
-					causingObjects: []client.Object{ingress},
+					causingObjects: []client.Object{ingress, secret},
 					reasonContains: "failed to construct certificate from secret",
 				}
 			},

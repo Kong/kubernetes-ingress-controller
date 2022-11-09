@@ -481,23 +481,19 @@ func (p *Parser) getGatewayCerts() []certWrapper {
 }
 
 func (p *Parser) getCerts(secretsToSNIs SecretNameToSNIs) []certWrapper {
-	log := p.logger
-	s := p.storer
 	certs := []certWrapper{}
 
 	for secretKey, SNIs := range secretsToSNIs {
 		namespaceName := strings.Split(secretKey, "/")
-		secret, err := s.GetSecret(namespaceName[0], namespaceName[1])
+		secret, err := p.storer.GetSecret(namespaceName[0], namespaceName[1])
 		if err != nil {
 			p.registerTranslationFailure(fmt.Sprintf("failed to fetch the secret (%s)", secretKey), SNIs.parents...)
 			continue
 		}
 		cert, key, err := getCertFromSecret(secret)
 		if err != nil {
-			log.WithFields(logrus.Fields{
-				"secret_name":      namespaceName[1],
-				"secret_namespace": namespaceName[0],
-			}).WithError(err).Error("failed to construct certificate from secret")
+			causingObjects := append(SNIs.parents, secret)
+			p.registerTranslationFailure("failed to construct certificate from secret", causingObjects...)
 			continue
 		}
 		certs = append(certs, certWrapper{

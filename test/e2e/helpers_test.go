@@ -20,6 +20,9 @@ import (
 	"github.com/blang/semver/v4"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/loadimage"
+	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/metallb"
+	"github.com/kong/kubernetes-testing-framework/pkg/clusters/types/gke"
+	"github.com/kong/kubernetes-testing-framework/pkg/clusters/types/kind"
 	"github.com/kong/kubernetes-testing-framework/pkg/environments"
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
 	"github.com/stretchr/testify/assert"
@@ -62,14 +65,68 @@ const (
 	tcpListnerPort = 8888
 )
 
-var (
-	imageOverride         = os.Getenv("TEST_KONG_CONTROLLER_IMAGE_OVERRIDE")
-	imageLoad             = os.Getenv("TEST_KONG_CONTROLLER_IMAGE_LOAD")
-	kongImageOverride     = os.Getenv("TEST_KONG_IMAGE_OVERRIDE")
-	kongImageLoad         = os.Getenv("TEST_KONG_IMAGE_LOAD")
-	kongImagePullUsername = os.Getenv("TEST_KONG_PULL_USERNAME")
-	kongImagePullPassword = os.Getenv("TEST_KONG_PULL_PASSWORD")
-)
+func getEnvironmentBuilder(ctx context.Context) (*environments.Builder, error) {
+	if existingCluster != "" {
+		if clusterVersionStr != "" {
+			return nil, fmt.Errorf("cannot provide cluster version with existing cluster")
+		}
+		clusterParts := strings.Split(existingCluster, ":")
+		if len(clusterParts) != 2 {
+			return nil, fmt.Errorf("existing cluster in wrong format (%s): format is <TYPE>:<NAME> (e.g. kind:test-cluster)", existingCluster)
+		}
+		clusterType, clusterName := clusterParts[0], clusterParts[1]
+
+		fmt.Printf("INFO: using existing %s cluster %s\n", clusterType, clusterName)
+		switch clusterType {
+		case string(kind.KindClusterType):
+			return createExistingKINDBuilder(clusterName)
+		case string(gke.GKEClusterType):
+			return createExistingGKEBuilder(ctx, clusterName)
+		default:
+			return nil, fmt.Errorf("unrecognized cluster type %s", clusterType)
+		}
+	}
+	return createDefaultKINDBuilder(), nil
+}
+
+func createDefaultKINDBuilder() *environments.Builder {
+	builder := environments.NewBuilder()
+	clusterBuilder := kind.NewBuilder()
+	if clusterVersionStr != "" {
+		clusterVersion := semver.MustParse(strings.TrimPrefix(clusterVersionStr, "v"))
+		clusterBuilder = clusterBuilder.WithClusterVersion(clusterVersion)
+	}
+	builder = builder.WithClusterBuilder(clusterBuilder)
+	builder = builder.WithAddons(metallb.New())
+	builder = builder.WithAddons(buildImageLoadAddons(imageLoad, kongImageLoad)...)
+	return builder
+}
+
+func createExistingKINDBuilder(name string) (*environments.Builder, error) {
+	builder := environments.NewBuilder()
+	cluster, err := kind.NewFromExisting(name)
+	if err != nil {
+		return nil, err
+	}
+	builder = builder.WithExistingCluster(cluster)
+	builder = builder.WithAddons(metallb.New())
+	builder = builder.WithAddons(buildImageLoadAddons(imageLoad, kongImageLoad)...)
+	return builder, nil
+}
+
+// existing GKE patterns rely on running hack/e2e/cluster/deploy/main.go (integration too) and then just loading
+// an existing cluster. this could probably avoid the hack script, and may be reasonable to integrate into KTF.
+// there is no default GKE builder as such: https://github.com/Kong/kubernetes-ingress-controller/issues/1613
+
+func createExistingGKEBuilder(ctx context.Context, name string) (*environments.Builder, error) {
+	cluster, err := gke.NewFromExistingWithEnv(ctx, name)
+	if err != nil {
+		return nil, err
+	}
+	builder := environments.NewBuilder()
+	builder = builder.WithExistingCluster(cluster)
+	return builder, nil
+}
 
 func deployKong(ctx context.Context, t *testing.T, env environments.Environment, manifest io.Reader, additionalSecrets ...*corev1.Secret) *appsv1.Deployment {
 	t.Log("creating a tempfile for kubeconfig")
@@ -333,13 +390,13 @@ func killKong(ctx context.Context, t *testing.T, env environments.Environment, p
 }
 
 // buildImageLoadAddons creates addons to load KIC and kong images.
-func buildImageLoadAddons(t *testing.T, images ...string) []clusters.Addon {
+func buildImageLoadAddons(images ...string) []clusters.Addon {
 	addons := []clusters.Addon{}
 	for _, image := range images {
 		if image != "" {
-			t.Logf("load image %s", image)
-			b, err := loadimage.NewBuilder().WithImage(image)
-			require.NoError(t, err)
+			// https://github.com/Kong/kubernetes-testing-framework/issues/440 this error only occurs if image == ""
+			// it will eventually be removed from the WithImage return signature
+			b, _ := loadimage.NewBuilder().WithImage(image)
 			addons = append(addons, b.Build())
 		}
 	}

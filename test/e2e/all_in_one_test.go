@@ -13,8 +13,6 @@ import (
 
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/kong"
-	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/metallb"
-	"github.com/kong/kubernetes-testing-framework/pkg/environments"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
@@ -46,13 +44,8 @@ func TestDeployAllInOneDBLESS(t *testing.T) {
 	defer cancel()
 
 	t.Log("building test cluster and environment")
-	addons := []clusters.Addon{}
-	addons = append(addons, metallb.New())
-
-	addons = append(addons, buildImageLoadAddons(t, imageLoad, kongImageLoad)...)
-
-	builder := setBuilderKubernetesVersion(t,
-		environments.NewBuilder().WithAddons(addons...), clusterVersionStr)
+	builder, err := getEnvironmentBuilder(ctx)
+	require.NoError(t, err)
 	env, err := builder.Build(ctx)
 	require.NoError(t, err)
 	defer func() {
@@ -112,13 +105,8 @@ func TestDeployAndUpgradeAllInOneDBLESS(t *testing.T) {
 	defer cancel()
 
 	t.Log("building test cluster and environment")
-	addons := []clusters.Addon{}
-	addons = append(addons, metallb.New())
-
-	addons = append(addons, buildImageLoadAddons(t, imageLoad, kongImageLoad)...)
-
-	builder := setBuilderKubernetesVersion(t,
-		environments.NewBuilder().WithAddons(addons...), clusterVersionStr)
+	builder, err := getEnvironmentBuilder(ctx)
+	require.NoError(t, err)
 
 	env, err := builder.Build(ctx)
 	require.NoError(t, err)
@@ -164,13 +152,8 @@ func TestDeployAllInOneEnterpriseDBLESS(t *testing.T) {
 	defer cancel()
 
 	t.Log("building test cluster and environment")
-	addons := []clusters.Addon{}
-	addons = append(addons, metallb.New())
-
-	addons = append(addons, buildImageLoadAddons(t, imageLoad, kongImageLoad)...)
-
-	builder := setBuilderKubernetesVersion(t,
-		environments.NewBuilder().WithAddons(addons...), clusterVersionStr)
+	builder, err := getEnvironmentBuilder(ctx)
+	require.NoError(t, err)
 	env, err := builder.Build(ctx)
 	require.NoError(t, err)
 
@@ -220,13 +203,8 @@ func TestDeployAllInOnePostgres(t *testing.T) {
 	defer cancel()
 
 	t.Log("building test cluster and environment")
-	addons := []clusters.Addon{}
-	addons = append(addons, metallb.New())
-
-	addons = append(addons, buildImageLoadAddons(t, imageLoad, kongImageLoad)...)
-
-	builder := setBuilderKubernetesVersion(t,
-		environments.NewBuilder().WithAddons(addons...), clusterVersionStr)
+	builder, err := getEnvironmentBuilder(ctx)
+	require.NoError(t, err)
 	env, err := builder.Build(ctx)
 	require.NoError(t, err)
 
@@ -261,13 +239,8 @@ func TestDeployAllInOnePostgresWithMultipleReplicas(t *testing.T) {
 	defer cancel()
 
 	t.Log("building test cluster and environment")
-	addons := []clusters.Addon{}
-	addons = append(addons, metallb.New())
-
-	addons = append(addons, buildImageLoadAddons(t, imageLoad, kongImageLoad)...)
-
-	builder := setBuilderKubernetesVersion(t,
-		environments.NewBuilder().WithAddons(addons...), clusterVersionStr)
+	builder, err := getEnvironmentBuilder(ctx)
+	require.NoError(t, err)
 	env, err := builder.Build(ctx)
 	require.NoError(t, err)
 
@@ -417,13 +390,8 @@ func TestDeployAllInOneEnterprisePostgres(t *testing.T) {
 	defer cancel()
 
 	t.Log("building test cluster and environment")
-	addons := []clusters.Addon{}
-	addons = append(addons, metallb.New())
-
-	addons = append(addons, buildImageLoadAddons(t, imageLoad, kongImageLoad)...)
-
-	builder := setBuilderKubernetesVersion(t,
-		environments.NewBuilder().WithAddons(addons...), clusterVersionStr)
+	builder, err := getEnvironmentBuilder(ctx)
+	require.NoError(t, err)
 	env, err := builder.Build(ctx)
 	require.NoError(t, err)
 	createKongImagePullSecret(ctx, t, env)

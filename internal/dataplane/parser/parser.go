@@ -395,11 +395,6 @@ func (p *Parser) getGatewayCerts() []certWrapper {
 		log.WithError(err).Error("failed to list Gateways")
 		return certs
 	}
-	grants, err := s.ListReferenceGrants()
-	if err != nil {
-		log.WithError(err).Error("failed to list ReferenceGrants")
-		return certs
-	}
 	for _, gateway := range gateways {
 		statuses := make(map[gatewayv1beta1.SectionName]gatewayv1beta1.ListenerStatus, len(gateway.Status.Listeners))
 		for _, status := range gateway.Status.Listeners {
@@ -437,33 +432,11 @@ func (p *Parser) getGatewayCerts() []certWrapper {
 						continue
 					}
 
+					// determine the Secret Namespace
 					ref := listener.TLS.CertificateRefs[0]
-
-					// SecretObjectReference is a misnomer; it can reference any Group+Kind, but defaults to Secret
-					if ref.Kind != nil {
-						if kind := *ref.Kind; kind != "Secret" {
-							p.registerTranslationFailure(fmt.Sprintf("CertificateRefs to kinds other than Secret (%s) are not supported", kind), gateway)
-							continue
-						}
-					}
-
-					// determine the Secret Namespace and validate against ReferenceGrant if needed
 					namespace := gateway.Namespace
 					if ref.Namespace != nil {
 						namespace = string(*ref.Namespace)
-					}
-					if namespace != gateway.Namespace {
-						allowed := getPermittedForReferenceGrantFrom(gatewayv1alpha2.ReferenceGrantFrom{
-							Group:     gatewayv1alpha2.Group(gateway.GetObjectKind().GroupVersionKind().Group),
-							Kind:      gatewayv1alpha2.Kind(gateway.GetObjectKind().GroupVersionKind().Kind),
-							Namespace: gatewayv1alpha2.Namespace(gateway.GetNamespace()),
-						}, grants)
-
-						if !newRefChecker(ref).IsRefAllowedByGrant(allowed) {
-							secretName := namespace + "/" + string(ref.Name)
-							p.registerTranslationFailure(fmt.Sprintf("secret reference (%s) not allowed by ReferenceGrant", secretName), gateway)
-							continue
-						}
 					}
 
 					// retrieve the Secret and extract the PEM strings

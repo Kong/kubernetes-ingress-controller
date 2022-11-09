@@ -235,36 +235,6 @@ func TestFromIngressV1beta1(t *testing.T) {
 		// 7
 		{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "invalid-path",
-				Namespace: "foo-namespace",
-				Annotations: map[string]string{
-					annotations.IngressClassKey: annotations.DefaultIngressClass,
-				},
-			},
-			Spec: netv1beta1.IngressSpec{
-				Rules: []netv1beta1.IngressRule{
-					{
-						Host: "example.com",
-						IngressRuleValue: netv1beta1.IngressRuleValue{
-							HTTP: &netv1beta1.HTTPIngressRuleValue{
-								Paths: []netv1beta1.HTTPIngressPath{
-									{
-										Path: "/foo//bar",
-										Backend: netv1beta1.IngressBackend{
-											ServiceName: "foo-svc",
-											ServicePort: intstr.FromInt(80),
-										},
-									},
-								},
-							},
-						},
-					},
-				},
-			},
-		},
-		// 8
-		{
-			ObjectMeta: metav1.ObjectMeta{
 				Name:      "regex-prefix",
 				Namespace: "foo-namespace",
 				Annotations: map[string]string{
@@ -417,22 +387,10 @@ func TestFromIngressV1beta1(t *testing.T) {
 		assert.Equal("foo-svc.foo-namespace.80.svc", *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.80"].Host)
 		assert.Equal("foo-svc.foo-namespace.8000.svc", *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.8000"].Host)
 	})
-	t.Run("Ingress rule with path containing multiple slashes ('//') is skipped", func(t *testing.T) {
-		store, err := store.NewFakeStore(store.FakeObjects{
-			IngressesV1beta1: []*netv1beta1.Ingress{
-				ingressList[7],
-			},
-		})
-		require.NoError(t, err)
-		p := mustNewParser(t, store)
-
-		parsedInfo := p.ingressRulesFromIngressV1beta1()
-		assert.Empty(parsedInfo.ServiceNameToServices)
-	})
 	t.Run("Ingress rule with regex prefixed path creates route with Kong regex prefix", func(t *testing.T) {
 		store, err := store.NewFakeStore(store.FakeObjects{
 			IngressesV1beta1: []*netv1beta1.Ingress{
-				ingressList[8],
+				ingressList[7],
 			},
 		})
 		require.NoError(t, err)
@@ -907,18 +865,6 @@ func TestFromIngressV1(t *testing.T) {
 			*parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.pnum-80"].Host)
 		assert.Equal("foo-svc.foo-namespace.8000.svc",
 			*parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.pnum-8000"].Host)
-	})
-	t.Run("Ingress rule with path containing multiple slashes ('//') is skipped", func(t *testing.T) {
-		store, err := store.NewFakeStore(store.FakeObjects{
-			IngressesV1: []*netv1.Ingress{
-				ingressList[7],
-			},
-		})
-		require.NoError(t, err)
-		p := mustNewParser(t, store)
-
-		parsedInfo := p.ingressRulesFromIngressV1()
-		assert.Empty(parsedInfo.ServiceNameToServices)
 	})
 	t.Run("Ingress rule with ports defined by name", func(t *testing.T) {
 		store, err := store.NewFakeStore(store.FakeObjects{

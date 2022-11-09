@@ -116,6 +116,7 @@ func (p *Parser) ingressRulesFromKnativeIngress() ingressRules {
 							Name:    knativeBackend.ServiceName,
 							PortDef: PortDefFromIntStr(knativeBackend.ServicePort),
 						}},
+						Parent: ingress,
 					}
 					if len(headers) > 0 {
 						service.Plugins = append(service.Plugins, kong.Plugin{

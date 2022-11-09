@@ -37,25 +37,33 @@ const testTranslationFailuresObjectsPrefix = "translation-failures-"
 // TestTranslationFailures ensures that proper warning Kubernetes events are recorded in case of translation failures
 // encountered.
 func TestTranslationFailures(t *testing.T) {
+	type expectedTranslationFailure struct {
+		causingObjects []client.Object
+		reasonContains string
+	}
+
 	testCases := []struct {
 		name string
 		// translationFailureTrigger should create objects that trigger translation failure and return the objects
 		// that we expect translation failure warning events to be created for.
-		translationFailureTrigger func(t *testing.T, cleaner *clusters.Cleaner, ns string) []client.Object
+		translationFailureTrigger func(t *testing.T, cleaner *clusters.Cleaner, ns string) expectedTranslationFailure
 	}{
 		{
 			name: "invalid CA secret",
-			translationFailureTrigger: func(t *testing.T, cleaner *clusters.Cleaner, ns string) []client.Object {
+			translationFailureTrigger: func(t *testing.T, cleaner *clusters.Cleaner, ns string) expectedTranslationFailure {
 				createdSecret, err := env.Cluster().Client().CoreV1().Secrets(ns).Create(ctx, invalidCASecret(ns), metav1.CreateOptions{})
 				require.NoError(t, err)
 				cleaner.Add(createdSecret)
 
-				return []client.Object{createdSecret}
+				return expectedTranslationFailure{
+					causingObjects: []client.Object{createdSecret},
+					reasonContains: "invalid CA certificate: missing 'cert' field in data",
+				}
 			},
 		},
 		{
 			name: "invalid CA secret referred by a plugin",
-			translationFailureTrigger: func(t *testing.T, cleaner *clusters.Cleaner, ns string) []client.Object {
+			translationFailureTrigger: func(t *testing.T, cleaner *clusters.Cleaner, ns string) expectedTranslationFailure {
 				createdSecret, err := env.Cluster().Client().CoreV1().Secrets(ns).Create(ctx, invalidCASecret(ns), metav1.CreateOptions{})
 				require.NoError(t, err)
 				cleaner.Add(createdSecret)
@@ -66,13 +74,16 @@ func TestTranslationFailures(t *testing.T) {
 				require.NoError(t, err)
 				cleaner.Add(createdPlugin)
 
-				// expect events for both: a faulty secret and a plugin referring it
-				return []client.Object{createdSecret, createdPlugin}
+				return expectedTranslationFailure{
+					// expect events for both: a faulty secret and a plugin referring it
+					causingObjects: []client.Object{createdSecret, createdPlugin},
+					reasonContains: "invalid CA certificate: missing 'cert' field in data",
+				}
 			},
 		},
 		{
 			name: "grouped services annotations do not match",
-			translationFailureTrigger: func(t *testing.T, cleaner *clusters.Cleaner, ns string) []client.Object {
+			translationFailureTrigger: func(t *testing.T, cleaner *clusters.Cleaner, ns string) expectedTranslationFailure {
 				gatewayClient, err := gatewayclient.NewForConfig(env.Cluster().Config())
 				require.NoError(t, err)
 
@@ -113,27 +124,19 @@ func TestTranslationFailures(t *testing.T) {
 				require.NoError(t, err)
 				cleaner.Add(httpRoute)
 
-				// expect event for service2 as it doesn't have annotations that service1 has
-				return []client.Object{service2}
+				return expectedTranslationFailure{
+					// expect event for service2 as it doesn't have annotations that service1 has
+					causingObjects: []client.Object{service2},
+					reasonContains: "when multiple services comprise a backend all kong annotations between them must be set to the same value",
+				}
 			},
 		},
 		{
 			name: "missing client-cert for service",
-			translationFailureTrigger: func(t *testing.T, cleaner *clusters.Cleaner, ns string) []client.Object {
-				service := &corev1.Service{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: testutils.RandomName(testTranslationFailuresObjectsPrefix),
-						Annotations: map[string]string{
-							"konghq.com/client-cert": "not-existing-secret",
-						},
-					},
-					Spec: corev1.ServiceSpec{
-						Ports: []corev1.ServicePort{
-							{
-								Port: 80,
-							},
-						},
-					},
+			translationFailureTrigger: func(t *testing.T, cleaner *clusters.Cleaner, ns string) expectedTranslationFailure {
+				service := validService()
+				service.ObjectMeta.Annotations = map[string]string{
+					"konghq.com/client-cert": "not-existing-secret",
 				}
 				service, err := env.Cluster().Client().CoreV1().Services(ns).Create(ctx, service, metav1.CreateOptions{})
 				require.NoError(t, err)
@@ -145,12 +148,49 @@ func TestTranslationFailures(t *testing.T) {
 				)
 				require.NoError(t, err)
 
-				return []client.Object{service}
+				return expectedTranslationFailure{
+					causingObjects: []client.Object{service},
+					reasonContains: "failed to fetch secret",
+				}
+			},
+		},
+		{
+			name: "missing ingress backing service",
+			translationFailureTrigger: func(t *testing.T, cleaner *clusters.Cleaner, ns string) expectedTranslationFailure {
+				nonExistingService := &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "non-existing-service"}}
+				ingress := ingressWithPathBackedByService(nonExistingService)
+				ingress, err := env.Cluster().Client().NetworkingV1().Ingresses(ns).Create(ctx, ingress, metav1.CreateOptions{})
+				require.NoError(t, err)
+
+				return expectedTranslationFailure{
+					causingObjects: []client.Object{ingress},
+					reasonContains: "can't add target for backend non-existing-service: no kubernetes service found",
+				}
+			},
+		},
+		{
+			name: "missing port for service",
+			translationFailureTrigger: func(t *testing.T, cleaner *clusters.Cleaner, ns string) expectedTranslationFailure {
+				service, err := env.Cluster().Client().CoreV1().Services(ns).Create(ctx, validService(), metav1.CreateOptions{})
+				require.NoError(t, err)
+
+				ingress := ingressWithPathBackedByService(service)
+				const notMatchingPort = 90
+				ingress.Spec.Rules[0].IngressRuleValue.HTTP.Paths[0].Backend.Service.Port = netv1.ServiceBackendPort{
+					Number: notMatchingPort,
+				}
+				ingress, err = env.Cluster().Client().NetworkingV1().Ingresses(ns).Create(ctx, ingress, metav1.CreateOptions{})
+				require.NoError(t, err)
+
+				return expectedTranslationFailure{
+					causingObjects: []client.Object{ingress, service},
+					reasonContains: "can't find port for backend kubernetes service: no suitable port found",
+				}
 			},
 		},
 		{
 			name: "more than one certificate ref specified for a gateway listener",
-			translationFailureTrigger: func(t *testing.T, cleaner *clusters.Cleaner, ns string) []client.Object {
+			translationFailureTrigger: func(t *testing.T, cleaner *clusters.Cleaner, ns string) expectedTranslationFailure {
 				secret1 := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{
 					Name: testutils.RandomName(testTranslationFailuresObjectsPrefix),
 				}}
@@ -166,12 +206,15 @@ func TestTranslationFailures(t *testing.T) {
 
 				gateway := deployGatewayReferringSecrets(t, cleaner, ns, secret1, secret2)
 
-				return []client.Object{gateway}
+				return expectedTranslationFailure{
+					causingObjects: []client.Object{gateway},
+					reasonContains: fmt.Sprintf("more than one certificateRef"),
+				}
 			},
 		},
 		{
 			name: "invalid secret referred by a gateway listener",
-			translationFailureTrigger: func(t *testing.T, cleaner *clusters.Cleaner, ns string) []client.Object {
+			translationFailureTrigger: func(t *testing.T, cleaner *clusters.Cleaner, ns string) expectedTranslationFailure {
 				emptySecret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{
 					Name: testutils.RandomName(testTranslationFailuresObjectsPrefix),
 				}}
@@ -181,7 +224,10 @@ func TestTranslationFailures(t *testing.T) {
 
 				gateway := deployGatewayReferringSecrets(t, cleaner, ns, emptySecret)
 
-				return []client.Object{gateway, emptySecret}
+				return expectedTranslationFailure{
+					causingObjects: []client.Object{gateway, emptySecret},
+					reasonContains: "failed to construct certificate from secret",
+				}
 			},
 		},
 	}
@@ -193,13 +239,13 @@ func TestTranslationFailures(t *testing.T) {
 			ns, cleaner := setup(t)
 			defer func() { assert.NoError(t, cleaner.Cleanup(ctx)) }()
 
-			expectedCausingObjects := tt.translationFailureTrigger(t, cleaner, ns.GetName())
+			expected := tt.translationFailureTrigger(t, cleaner, ns.GetName())
 
 			require.Eventually(t, func() bool {
 				eventsForAllObjectsFound := true
 				var receivedEvents []corev1.Event
 
-				for _, expectedCausingObject := range expectedCausingObjects {
+				for _, expectedCausingObject := range expected.causingObjects {
 					events, err := env.Cluster().Client().CoreV1().Events(ns.GetName()).List(ctx, metav1.ListOptions{
 						FieldSelector: fmt.Sprintf(
 							"reason=%s,type=%s,involvedObject.name=%s",
@@ -211,10 +257,17 @@ func TestTranslationFailures(t *testing.T) {
 					if err != nil {
 						t.Logf("failed to list events: %s", err)
 						eventsForAllObjectsFound = false
+						continue
 					}
 
 					if len(events.Items) == 0 {
 						t.Logf("waiting for events related to '%s' to be created", expectedCausingObject.GetName())
+						eventsForAllObjectsFound = false
+						continue
+					}
+
+					if actualMsg := events.Items[0].Message; !strings.Contains(actualMsg, expected.reasonContains) {
+						t.Logf("received event's message (%s) does not contain the expected reason: '%s'", actualMsg, expected.reasonContains)
 						eventsForAllObjectsFound = false
 					}
 
@@ -365,6 +418,21 @@ func ingressWithPathBackedByService(service *corev1.Service) *netv1.Ingress {
 							},
 						},
 					},
+				},
+			},
+		},
+	}
+}
+
+func validService() *corev1.Service {
+	return &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: testutils.RandomName(testTranslationFailuresObjectsPrefix),
+		},
+		Spec: corev1.ServiceSpec{
+			Ports: []corev1.ServicePort{
+				{
+					Port: 80,
 				},
 			},
 		},

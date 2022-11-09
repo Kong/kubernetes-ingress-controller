@@ -122,11 +122,11 @@ Adding a new version? You'll need three changes:
   [#3121](https://github.com/Kong/kubernetes-ingress-controller/pull/3121)
 - Routes support annotations for path handling.
   [#3121](https://github.com/Kong/kubernetes-ingress-controller/pull/3121)
-- Warning events are recorded when CA secrets cannot be properly translated into Kong configuration.  
+- Warning events are recorded when CA secrets cannot be properly translated into Kong configuration.
   [#3125](https://github.com/Kong/kubernetes-ingress-controller/pull/3125)
-- Warning events are recorded when annotations in services backing a single route do not match. 
+- Warning events are recorded when annotations in services backing a single route do not match.
   [#3130](https://github.com/Kong/kubernetes-ingress-controller/pull/3130)
-- Warning events are recorded when a service's referred client-cert does not exist. 
+- Warning events are recorded when a service's referred client-cert does not exist.
   [#3137](https://github.com/Kong/kubernetes-ingress-controller/pull/3137)
 - CRDs' validations improvements: `UDPIngressRule.Port`, `IngressRule.Port` and `IngressBackend.ServiceName`
   instead of being validated in the Parser, are validated by the Kubernetes API now.
@@ -134,6 +134,9 @@ Adding a new version? You'll need three changes:
 - Gateway API: Implement port matching for routes as defined in
   [GEP-957](https://gateway-api.sigs.k8s.io/geps/gep-957/)
   [#3129](https://github.com/Kong/kubernetes-ingress-controller/pull/3129)
+- Warning events are recorded when one of `netv1.Ingress` related issues occurs
+  (e.g. backing Kubernetes service couldn't be found, matching Kubernetes service port couldn't be found).
+  [#3138](https://github.com/Kong/kubernetes-ingress-controller/pull/3138)
 - Warning events are recorded when a Gateway Listener has more than one CertificateRef specified
   or refers to a Secret that has no valid TLS key-pair.
   [#3147](https://github.com/Kong/kubernetes-ingress-controller/pull/3147)

@@ -108,7 +108,7 @@ func (p *Parser) Build() (*kongstate.KongState, []TranslationFailure) {
 	}
 
 	// generate Upstreams and Targets from service defs
-	result.Upstreams = getUpstreams(p.logger, p.storer, ingressRules.ServiceNameToServices)
+	result.Upstreams = p.getUpstreams(ingressRules.ServiceNameToServices)
 
 	// merge KongIngress with Routes, Services and Upstream
 	result.FillOverrides(p.logger, p.storer)
@@ -266,11 +266,7 @@ func findPort(svc *corev1.Service, wantPort kongstate.PortDef) (*corev1.ServiceP
 	return nil, fmt.Errorf("no suitable port found")
 }
 
-func getUpstreams(
-	log logrus.FieldLogger,
-	s store.Storer,
-	serviceMap map[string]kongstate.Service,
-) []kongstate.Upstream {
+func (p *Parser) getUpstreams(serviceMap map[string]kongstate.Service) []kongstate.Upstream {
 	upstreamDedup := make(map[string]struct{}, len(serviceMap))
 	var empty struct{}
 	upstreams := make([]kongstate.Upstream, 0, len(serviceMap))
@@ -287,22 +283,28 @@ func getUpstreams(
 				// gather the Kubernetes service for the backend
 				k8sService, ok := service.K8sServices[backend.Name]
 				if !ok {
-					log.WithField("service_name", *service.Name).Errorf("can't add target for backend %s: no kubernetes service found", backend.Name)
+					p.registerTranslationFailure(
+						fmt.Sprintf("can't add target for backend %s: no kubernetes service found", backend.Name),
+						service.Parent,
+					)
 					continue
 				}
 
 				// determine the port for the backend
 				port, err := findPort(k8sService, backend.PortDef)
 				if err != nil {
-					log.WithField("service_name", *service.Name).Errorf("can't find port for backend kubernetes service %s/%s: %v", k8sService.Namespace, k8sService.Name, err)
+					p.registerTranslationFailure(
+						fmt.Sprintf("can't find port for backend kubernetes service: %v", err),
+						k8sService, service.Parent,
+					)
 					continue
 				}
 
 				// get the new targets for this backend service
-				newTargets := getServiceEndpoints(log, s, k8sService, port)
+				newTargets := getServiceEndpoints(p.logger, p.storer, k8sService, port)
 
 				if len(newTargets) == 0 {
-					log.WithField("service_name", *service.Name).Infof("no targets could be found for kubernetes service %s/%s", k8sService.Namespace, k8sService.Name)
+					p.logger.WithField("service_name", *service.Name).Infof("no targets could be found for kubernetes service %s/%s", k8sService.Namespace, k8sService.Name)
 				}
 
 				// if weights were set for the backend then that weight needs to be
@@ -337,7 +339,7 @@ func getUpstreams(
 
 			// warn if an upstream was created with 0 targets
 			if len(targets) == 0 {
-				log.WithField("service_name", *service.Name).Infof("no targets found to create upstream")
+				p.logger.WithField("service_name", *service.Name).Infof("no targets found to create upstream")
 			}
 
 			// define the upstream including all the newly populated targets
@@ -690,17 +692,9 @@ func getEndpoints(
 	if s.Spec.Type == corev1.ServiceTypeExternalName {
 		log.Debug("found service of type=ExternalName")
 
-		targetPort := port.TargetPort.IntValue()
-		// check for invalid port value
-		if targetPort <= 0 {
-			err := fmt.Errorf("invalid port: %v", targetPort)
-			log.WithError(err).Error("invalid service")
-			return upsServers
-		}
-
 		return append(upsServers, util.Endpoint{
 			Address: s.Spec.ExternalName,
-			Port:    fmt.Sprintf("%v", targetPort),
+			Port:    port.TargetPort.String(),
 		})
 	}
 	if annotations.HasServiceUpstreamAnnotation(s.Annotations) {

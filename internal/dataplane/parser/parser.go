@@ -121,7 +121,7 @@ func (p *Parser) Build() (*kongstate.KongState, []TranslationFailure) {
 
 	// generate Certificates and SNIs
 	ingressCerts := getCerts(p.logger, p.storer, ingressRules.SecretNameToSNIs)
-	gatewayCerts := getGatewayCerts(p.logger, p.storer)
+	gatewayCerts := p.getGatewayCerts()
 	// note that ingress-derived certificates will take precedence over gateway-derived certificates for SNI assignment
 	result.Certificates = mergeCerts(p.logger, ingressCerts, gatewayCerts)
 
@@ -386,16 +386,13 @@ type certWrapper struct {
 	CreationTimestamp metav1.Time
 }
 
-func getGatewayCerts(log logrus.FieldLogger, s store.Storer) []certWrapper {
+func (p *Parser) getGatewayCerts() []certWrapper {
+	log := p.logger
+	s := p.storer
 	certs := []certWrapper{}
 	gateways, err := s.ListGateways()
 	if err != nil {
 		log.WithError(err).Error("failed to list Gateways")
-		return certs
-	}
-	grants, err := s.ListReferenceGrants()
-	if err != nil {
-		log.WithError(err).Error("failed to list ReferenceGrants")
 		return certs
 	}
 	for _, gateway := range gateways {
@@ -431,47 +428,15 @@ func getGatewayCerts(log logrus.FieldLogger, s store.Storer) []certWrapper {
 					if len(listener.TLS.CertificateRefs) > 1 {
 						// TODO support cert_alt and key_alt if there are 2 SecretObjectReferences
 						// https://github.com/Kong/kubernetes-ingress-controller/issues/2604
-						log.WithFields(logrus.Fields{
-							"gateway":  gateway.Name,
-							"listener": listener.Name,
-						}).Error("Gateway Listeners with more than one certificateRef are not supported")
+						p.registerTranslationFailure("listener '%s' has more than one certificateRef, it's not supported", gateway)
 						continue
 					}
 
+					// determine the Secret Namespace
 					ref := listener.TLS.CertificateRefs[0]
-
-					// SecretObjectReference is a misnomer; it can reference any Group+Kind, but defaults to Secret
-					if ref.Kind != nil {
-						if string(*ref.Kind) != "Secret" {
-							log.WithFields(logrus.Fields{
-								"gateway":  gateway.Name,
-								"listener": listener.Name,
-							}).Error("CertificateRefs to kinds other than Secret are not supported")
-						}
-					}
-
-					// determine the Secret Namespace and validate against ReferenceGrant if needed
 					namespace := gateway.Namespace
 					if ref.Namespace != nil {
 						namespace = string(*ref.Namespace)
-					}
-					if namespace != gateway.Namespace {
-						allowed := getPermittedForReferenceGrantFrom(gatewayv1alpha2.ReferenceGrantFrom{
-							Group:     gatewayv1alpha2.Group(gateway.GetObjectKind().GroupVersionKind().Group),
-							Kind:      gatewayv1alpha2.Kind(gateway.GetObjectKind().GroupVersionKind().Kind),
-							Namespace: gatewayv1alpha2.Namespace(gateway.GetNamespace()),
-						}, grants)
-
-						if !newRefChecker(ref).IsRefAllowedByGrant(allowed) {
-							log.WithFields(logrus.Fields{
-								"gateway":           gateway.Name,
-								"gateway_namespace": gateway.Namespace,
-								"listener":          listener.Name,
-								"secret_name":       string(ref.Name),
-								"secret_namespace":  namespace,
-							}).WithError(err).Error("secret reference not allowed by ReferenceGrant")
-							continue
-						}
 					}
 
 					// retrieve the Secret and extract the PEM strings
@@ -487,12 +452,7 @@ func getGatewayCerts(log logrus.FieldLogger, s store.Storer) []certWrapper {
 					}
 					cert, key, err := getCertFromSecret(secret)
 					if err != nil {
-						log.WithFields(logrus.Fields{
-							"gateway":          gateway.Name,
-							"listener":         listener.Name,
-							"secret_name":      string(ref.Name),
-							"secret_namespace": namespace,
-						}).WithError(err).Error("failed to construct certificate from secret")
+						p.registerTranslationFailure("failed to construct certificate from secret", secret, gateway)
 						continue
 					}
 

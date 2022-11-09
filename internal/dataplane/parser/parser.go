@@ -705,17 +705,9 @@ func getEndpoints(
 	if s.Spec.Type == corev1.ServiceTypeExternalName {
 		log.Debug("found service of type=ExternalName")
 
-		targetPort := port.TargetPort.IntValue()
-		// check for invalid port value
-		if targetPort <= 0 {
-			err := fmt.Errorf("invalid port: %v", targetPort)
-			log.WithError(err).Error("invalid service")
-			return upsServers
-		}
-
 		return append(upsServers, util.Endpoint{
 			Address: s.Spec.ExternalName,
-			Port:    fmt.Sprintf("%v", targetPort),
+			Port:    port.TargetPort.String(),
 		})
 	}
 	if annotations.HasServiceUpstreamAnnotation(s.Annotations) {

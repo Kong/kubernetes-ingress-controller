@@ -102,19 +102,19 @@ func (ir *ingressRules) populateServices(log logrus.FieldLogger, s store.Storer,
 type SecretNameToSNIs map[string][]string
 
 func newSecretNameToSNIs() SecretNameToSNIs {
-	return SecretNameToSNIs(map[string][]string{})
+	return map[string][]string{}
 }
 
-func (m SecretNameToSNIs) addFromIngressV1beta1TLS(tlsSections []netv1beta1.IngressTLS, namespace string) {
+func (m SecretNameToSNIs) addFromIngressV1beta1TLS(ingress *netv1beta1.Ingress, namespace string) {
 	// Assume that v1beta1 and v1 tlsSections have identical semantics and field-wise content.
 	var v1 []netv1.IngressTLS
-	for _, item := range tlsSections {
+	for _, item := range ingress.Spec.TLS {
 		v1 = append(v1, netv1.IngressTLS{Hosts: item.Hosts, SecretName: item.SecretName})
 	}
 	m.addFromIngressV1TLS(v1, namespace)
 }
 
-func (m SecretNameToSNIs) addFromIngressV1TLS(tlsSections []netv1.IngressTLS, namespace string) {
+func (m SecretNameToSNIs) addFromIngressV1TLS(tlsSections []netv1.Ingress, namespace string) {
 	for _, tls := range tlsSections {
 		if len(tls.Hosts) == 0 {
 			continue

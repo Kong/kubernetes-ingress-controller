@@ -99,7 +99,7 @@ func TestMergeIngressRules(t *testing.T) {
 				},
 			},
 			wantOutput: &ingressRules{
-				SecretNameToSNIs:      map[string][]string{},
+				SecretNameToSNIs:      newSecretNameToSNIs(),
 				ServiceNameToServices: map[string]kongstate.Service{"svc-name": {Namespace: "new"}},
 			},
 		},

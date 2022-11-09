@@ -120,7 +120,7 @@ func (p *Parser) Build() (*kongstate.KongState, []TranslationFailure) {
 	result.FillPlugins(p.logger, p.storer)
 
 	// generate Certificates and SNIs
-	ingressCerts := getCerts(p.logger, p.storer, ingressRules.SecretNameToSNIs)
+	ingressCerts := p.getCerts(ingressRules.SecretNameToSNIs)
 	gatewayCerts := getGatewayCerts(p.logger, p.storer)
 	// note that ingress-derived certificates will take precedence over gateway-derived certificates for SNI assignment
 	result.Certificates = mergeCerts(p.logger, ingressCerts, gatewayCerts)
@@ -518,17 +518,17 @@ func getGatewayCerts(log logrus.FieldLogger, s store.Storer) []certWrapper {
 	return certs
 }
 
-func getCerts(log logrus.FieldLogger, s store.Storer, secretsToSNIs map[string][]string) []certWrapper {
+func (p *Parser) getCerts(secretsToSNIs map[string][]string) []certWrapper {
+	log := p.logger
+	s := p.storer
 	certs := []certWrapper{}
 
 	for secretKey, SNIs := range secretsToSNIs {
 		namespaceName := strings.Split(secretKey, "/")
 		secret, err := s.GetSecret(namespaceName[0], namespaceName[1])
 		if err != nil {
-			log.WithFields(logrus.Fields{
-				"secret_name":      namespaceName[1],
-				"secret_namespace": namespaceName[0],
-			}).WithError(err).Error("failed to fetch secret")
+			// todo: associate secret with an ingress?
+			p.registerTranslationFailure(fmt.Sprintf("failed to fetch the secret (%s)", secretKey))
 			continue
 		}
 		cert, key, err := getCertFromSecret(secret)

@@ -147,6 +147,13 @@ func TestTranslationFailures(t *testing.T) {
 				return []client.Object{service}
 			},
 		},
+		{
+			name: "Ingress referring a non-existing TLS secret",
+			translationFailureTrigger: func(t *testing.T, cleaner *clusters.Cleaner, ns string) []client.Object {
+
+				return []client.Object{}
+			},
+		},
 	}
 
 	for _, tt := range testCases {

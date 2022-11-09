@@ -383,8 +383,10 @@ func TestDoK8sServicesMatchAnnotations(t *testing.T) {
 			name: "validation fails if one service does not have all expected annotations",
 			services: []*corev1.Service{
 				{
+					TypeMeta: metav1.TypeMeta{Kind: "Service", APIVersion: corev1.SchemeGroupVersion.String()},
 					ObjectMeta: metav1.ObjectMeta{
-						Name: "test-service1",
+						Name:      "test-service1",
+						Namespace: corev1.NamespaceDefault,
 						Annotations: map[string]string{
 							"konghq.com/bar": "foo",
 							"konghq.com/baz": "foo",
@@ -392,8 +394,10 @@ func TestDoK8sServicesMatchAnnotations(t *testing.T) {
 					},
 				},
 				{
+					TypeMeta: metav1.TypeMeta{Kind: "Service", APIVersion: corev1.SchemeGroupVersion.String()},
 					ObjectMeta: metav1.ObjectMeta{
-						Name: "test-service2",
+						Name:      "test-service2",
+						Namespace: corev1.NamespaceDefault,
 						Annotations: map[string]string{
 							"konghq.com/baz": "foo",
 							"konghq.com/foo": "bar",
@@ -402,8 +406,10 @@ func TestDoK8sServicesMatchAnnotations(t *testing.T) {
 					},
 				},
 				{
+					TypeMeta: metav1.TypeMeta{Kind: "Service", APIVersion: corev1.SchemeGroupVersion.String()},
 					ObjectMeta: metav1.ObjectMeta{
-						Name: "test-service3",
+						Name:      "test-service3",
+						Namespace: corev1.NamespaceDefault,
 						Annotations: map[string]string{
 							"konghq.com/bar": "foo",
 							"konghq.com/foo": "bar",
@@ -426,24 +432,30 @@ func TestDoK8sServicesMatchAnnotations(t *testing.T) {
 			name: "validation fails if all services have the same annotations, but not the same value",
 			services: []*corev1.Service{
 				{
+					TypeMeta: metav1.TypeMeta{Kind: "Service", APIVersion: corev1.SchemeGroupVersion.String()},
 					ObjectMeta: metav1.ObjectMeta{
-						Name: "test-service1",
+						Name:      "test-service1",
+						Namespace: corev1.NamespaceDefault,
 						Annotations: map[string]string{
 							"konghq.com/foo": "bar",
 						},
 					},
 				},
 				{
+					TypeMeta: metav1.TypeMeta{Kind: "Service", APIVersion: corev1.SchemeGroupVersion.String()},
 					ObjectMeta: metav1.ObjectMeta{
-						Name: "test-service2",
+						Name:      "test-service2",
+						Namespace: corev1.NamespaceDefault,
 						Annotations: map[string]string{
 							"konghq.com/foo": "baz",
 						},
 					},
 				},
 				{
+					TypeMeta: metav1.TypeMeta{Kind: "Service", APIVersion: corev1.SchemeGroupVersion.String()},
 					ObjectMeta: metav1.ObjectMeta{
-						Name: "test-service3",
+						Name:      "test-service3",
+						Namespace: corev1.NamespaceDefault,
 						Annotations: map[string]string{
 							"konghq.com/foo": "buzz",
 						},
@@ -484,6 +496,7 @@ func TestPopulateServices(t *testing.T) {
 			name: "one service to skip, one service to keep",
 			k8sServices: []*corev1.Service{
 				{
+					TypeMeta: metav1.TypeMeta{Kind: "Service", APIVersion: corev1.SchemeGroupVersion.String()},
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "k8s-service-to-skip1",
 						Namespace: "test-namespace",
@@ -493,12 +506,14 @@ func TestPopulateServices(t *testing.T) {
 					},
 				},
 				{
+					TypeMeta: metav1.TypeMeta{Kind: "Service", APIVersion: corev1.SchemeGroupVersion.String()},
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "k8s-service-to-skip2",
 						Namespace: "test-namespace",
 					},
 				},
 				{
+					TypeMeta: metav1.TypeMeta{Kind: "Service", APIVersion: corev1.SchemeGroupVersion.String()},
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "k8s-service-to-keep1",
 						Namespace: "test-namespace",
@@ -508,6 +523,7 @@ func TestPopulateServices(t *testing.T) {
 					},
 				},
 				{
+					TypeMeta: metav1.TypeMeta{Kind: "Service", APIVersion: corev1.SchemeGroupVersion.String()},
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "k8s-service-to-keep2",
 						Namespace: "test-namespace",

@@ -10,6 +10,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/go-logr/logr"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/kong"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/metallb"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/types/kind"
@@ -23,9 +24,10 @@ var (
 	existingCluster = os.Getenv("KONG_TEST_CLUSTER")
 	ingressClass    = "kong-conformance-tests"
 
-	env          environments.Environment
-	ctx          context.Context
-	globalLogger logrus.FieldLogger
+	env                    environments.Environment
+	ctx                    context.Context
+	globalDeprecatedLogger logrus.FieldLogger
+	globalLogger           logr.Logger
 )
 
 func TestMain(m *testing.M) {
@@ -39,10 +41,14 @@ func TestMain(m *testing.M) {
 	// after 30s from the start of controller manager package init function,
 	// the controller manager will set up a no op logger and continue.
 	// The logger cannot be configured after that point.
-	logger, _, err := testutils.SetupLoggers("trace", "text", false)
+	deprecatedLogger, logger, logOutput, err := testutils.SetupLoggers("trace", "text", false)
 	if err != nil {
 		exitOnErr(fmt.Errorf("failed to setup loggers: %w", err))
 	}
+	if logOutput != "" {
+		fmt.Printf("INFO: writing manager logs to %s\n", logOutput)
+	}
+	globalDeprecatedLogger = deprecatedLogger
 	globalLogger = logger
 
 	kongAddon := kong.NewBuilder().WithControllerDisabled().WithProxyAdminServiceTypeLoadBalancer().Build()

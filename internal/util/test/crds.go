@@ -9,6 +9,10 @@ import (
 	"strings"
 
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
+	apiextclient "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset/typed/apiextensions/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/util/retry"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/test/consts"
 )
@@ -25,6 +29,10 @@ func DeployCRDsForCluster(ctx context.Context, cluster clusters.Cluster) error {
 	// create a tempfile to hold the cluster kubeconfig that will be used for the controller
 	// generate a temporary kubeconfig since we're going to be using the helm CLI
 	kubeconfig, err := clusters.TempKubeconfig(cluster)
+	if err != nil {
+		return err
+	}
+	apiextClient, err := apiextclient.NewForConfig(cluster.Config())
 	if err != nil {
 		return err
 	}
@@ -57,6 +65,27 @@ func DeployCRDsForCluster(ctx context.Context, cluster clusters.Cluster) error {
 	// deploy all CRDs required for testing
 	for _, yaml := range []string{kongCRDYAML, gatewayCRDYAML} {
 		if err := clusters.ApplyManifestByYAML(ctx, cluster, yaml); err != nil {
+			return err
+		}
+	}
+	for _, crd := range []string{
+		"gatewayclasses.gateway.networking.k8s.io",
+		"gateways.gateway.networking.k8s.io",
+		"httproutes.gateway.networking.k8s.io",
+		"referencegrants.gateway.networking.k8s.io",
+		"referencepolicies.gateway.networking.k8s.io",
+		"tcproutes.gateway.networking.k8s.io",
+		"tlsroutes.gateway.networking.k8s.io",
+		"udproutes.gateway.networking.k8s.io",
+	} {
+		if err := retry.OnError(
+			retry.DefaultRetry,
+			errors.IsNotFound,
+			func() error {
+				_, err := apiextClient.CustomResourceDefinitions().Get(ctx, crd, metav1.GetOptions{})
+				return err
+			},
+		); err != nil {
 			return err
 		}
 	}

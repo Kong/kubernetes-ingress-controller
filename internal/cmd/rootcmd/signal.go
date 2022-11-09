@@ -9,10 +9,9 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/bombsimon/logrusr/v2"
+	"github.com/go-logr/logr"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/manager"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 )
 
 var (
@@ -24,17 +23,11 @@ var (
 // which is canceled on one of these signals. If a second signal is not caught, the program
 // will delay for the configured period of time before terminating. If a second signal is caught,
 // the program is terminated with exit code 1.
-func SetupSignalHandler(cfg *manager.Config) (context.Context, error) {
+func SetupSignalHandler(cfg *manager.Config, logger logr.Logger) (context.Context, error) {
 	// This will prevent multiple signal handlers from being created
 	if ok := mutex.TryLock(); !ok {
 		return nil, errors.New("signal handler can only be setup once")
 	}
-
-	deprecatedLogger, err := util.MakeLogger(cfg.LogLevel, cfg.LogFormat)
-	if err != nil {
-		return nil, err
-	}
-	logger := logrusr.New(deprecatedLogger)
 
 	ctx, cancel := context.WithCancel(context.Background())
 

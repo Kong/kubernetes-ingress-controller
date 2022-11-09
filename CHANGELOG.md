@@ -137,6 +137,9 @@ Adding a new version? You'll need three changes:
 - Warning events are recorded when one of `netv1.Ingress` related issues occurs
   (e.g. backing Kubernetes service couldn't be found, matching Kubernetes service port couldn't be found).
   [#3138](https://github.com/Kong/kubernetes-ingress-controller/pull/3138)
+- Warning events are recorded when a Gateway Listener has more than one CertificateRef specified
+  or refers to a Secret that has no valid TLS key-pair.
+  [#3147](https://github.com/Kong/kubernetes-ingress-controller/pull/3147)
 
 ### Fixed
 

@@ -206,9 +206,6 @@ jobs:
       matrix:
         kubernetes-version:
           - 'v1.24.3'
-        dbmode:
-          - 'dbless'
-          - 'postgres'
     steps:
       - name: setup golang
         uses: actions/setup-go@v3
@@ -225,7 +222,7 @@ jobs:
         uses: actions/checkout@v3
         with:
           fetch-depth: 0
-      - name: Kubernetes ${{ matrix.kubernetes-version }} ${{ matrix.dbmode }} Integration Tests
+      - name: Kubernetes ${{ matrix.kubernetes-version }} E2E Tests
         run: KONG_CLUSTER_VERSION=${{ matrix.kubernetes-version }} make test.integration.${{ matrix.dbmode }}
 
   test-previous-kubernetes:
@@ -238,9 +235,6 @@ jobs:
           - '21'
           - '22'
           - '23'
-        dbmode:
-          - 'dbless'
-          - 'postgres'
     steps:
       - name: setup golang
         uses: actions/setup-go@v3
@@ -257,8 +251,8 @@ jobs:
         uses: actions/checkout@v3
         with:
           fetch-depth: 0
-      - name: test ${{ matrix.dbmode }} on GKE v1.${{ matrix.minor }}
-        run: make test.integration.gke
+      - name: E2E on GKE v1.${{ matrix.minor }}
+        run: make test.e2e.gke
         env:
           KUBERNETES_MAJOR_VERSION: 1
           KUBERNETES_MINOR_VERSION: ${{ matrix.minor }}

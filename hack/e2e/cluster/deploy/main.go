@@ -8,16 +8,17 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"strconv"
+	"strings"
 
+	"github.com/blang/semver/v4"
+	"github.com/google/uuid"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/types/gke"
 )
 
 const (
-	k8sNameVar  = "KUBERNETES_CLUSTER_NAME"
-	k8sMajorVar = "KUBERNETES_MAJOR_VERSION"
-	k8sMinorVar = "KUBERNETES_MINOR_VERSION"
+	k8sNameVar    = "KUBERNETES_CLUSTER_NAME"
+	k8sVersionVar = "KONG_CLUSTER_VERSION"
 )
 
 var (
@@ -28,23 +29,22 @@ var (
 	gkeProject  = os.Getenv(gke.GKEProjectVar)
 	gkeLocation = os.Getenv(gke.GKELocationVar)
 	k8sName     = os.Getenv(k8sNameVar)
-	k8sMajor    = os.Getenv(k8sMajorVar)
-	k8sMinor    = os.Getenv(k8sMinorVar)
+	k8sVersion  = semver.MustParse(strings.TrimPrefix(os.Getenv(k8sVersionVar), "v"))
 )
 
 func main() {
 	mustNotBeEmpty(gke.GKECredsVar, gkeCreds)
 	mustNotBeEmpty(gke.GKEProjectVar, gkeProject)
 	mustNotBeEmpty(gke.GKELocationVar, gkeLocation)
-	mustNotBeEmpty(k8sNameVar, k8sName)
-	mustNotBeEmpty(k8sMajorVar, k8sMajor)
-	mustNotBeEmpty(k8sMinorVar, k8sMinor)
+	mustNotBeEmpty(k8sVersionVar, k8sVersion.String())
+	if k8sName == "" {
+		k8sName = "kic-" + uuid.NewString()
+		fmt.Println("INFO: no cluster name provided, using generated name " + k8sName)
+	}
 
 	fmt.Println("INFO: validating cluster version requirements")
-	major, err := strconv.Atoi(k8sMajor)
-	mustNotError(err)
-	minor, err := strconv.Atoi(k8sMinor)
-	mustNotError(err)
+	major := k8sVersion.Major
+	minor := k8sVersion.Minor
 
 	if len(os.Args) > 1 && os.Args[1] == "cleanup" {
 		fmt.Printf("INFO: cleanup called, deleting GKE cluster %s\n", k8sName)
@@ -57,10 +57,10 @@ func main() {
 
 	fmt.Printf("INFO: configuring the GKE cluster NAME=(%s) VERSION=(v%d.%d) PROJECT=(%s) LOCATION=(%s)\n", k8sName, major, minor, gkeProject, gkeLocation)
 	builder := gke.NewBuilder([]byte(gkeCreds), gkeProject, gkeLocation).WithName(k8sName)
-	builder.WithClusterMinorVersion(uint64(major), uint64(minor))
+	builder.WithClusterMinorVersion(major, minor)
 
 	fmt.Printf("INFO: building cluster %s (this can take some time)\n", builder.Name)
-	cluster, err = builder.Build(ctx)
+	cluster, err := builder.Build(ctx)
 	mustNotError(err)
 
 	fmt.Println("INFO: verifying that the cluster can be communicated with")

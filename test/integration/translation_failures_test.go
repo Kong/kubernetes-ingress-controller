@@ -151,6 +151,19 @@ func TestTranslationFailures(t *testing.T) {
 		{
 			name: "more than one certificate ref specified for a gateway listener",
 			translationFailureTrigger: func(t *testing.T, cleaner *clusters.Cleaner, ns string) []client.Object {
+				secret1 := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{
+					Name: testutils.RandomName(testTranslationFailuresObjectsPrefix),
+				}}
+				secret2 := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{
+					Name: testutils.RandomName(testTranslationFailuresObjectsPrefix),
+				}}
+				secret1, err := env.Cluster().Client().CoreV1().Secrets(ns).Create(ctx, secret1, metav1.CreateOptions{})
+				require.NoError(t, err)
+				cleaner.Add(secret1)
+				secret2, err = env.Cluster().Client().CoreV1().Secrets(ns).Create(ctx, secret2, metav1.CreateOptions{})
+				require.NoError(t, err)
+				cleaner.Add(secret2)
+
 				gatewayClient, err := gatewayclient.NewForConfig(env.Cluster().Config())
 				require.NoError(t, err)
 
@@ -170,8 +183,8 @@ func TestTranslationFailures(t *testing.T) {
 						Hostname: &hostname,
 						TLS: &gatewayv1beta1.GatewayTLSConfig{
 							CertificateRefs: []gatewayv1beta1.SecretObjectReference{
-								{Name: "tls-secret-name"},
-								{Name: "another-tls-secret-name"},
+								{Name: gatewayv1beta1.ObjectName(secret1.Name)},
+								{Name: gatewayv1beta1.ObjectName(secret2.Name)},
 							},
 						},
 					}}

@@ -19,6 +19,13 @@ var (
 	pathTypePrefix                 = netv1.PathTypePrefix
 )
 
+func expectedParentIngress() *netv1.Ingress {
+	return &netv1.Ingress{
+		TypeMeta:   metav1.TypeMeta{Kind: "Ingress", APIVersion: netv1.SchemeGroupVersion.String()},
+		ObjectMeta: metav1.ObjectMeta{Name: "test-ingress", Namespace: corev1.NamespaceDefault},
+	}
+}
+
 func TestTranslateIngress(t *testing.T) {
 	tts := []struct {
 		name     string
@@ -92,9 +99,9 @@ func TestTranslateIngress(t *testing.T) {
 						Number: 80,
 					},
 				}},
+				Parent: expectedParentIngress(),
 			}},
 		},
-
 		{
 			name: "a basic ingress resource with a single rule and prefix path type",
 			ingress: &netv1.Ingress{
@@ -163,9 +170,9 @@ func TestTranslateIngress(t *testing.T) {
 						Number: 80,
 					},
 				}},
+				Parent: expectedParentIngress(),
 			}},
 		},
-
 		{
 			name: "an ingress with path type exact gets a kong route with an exact path match",
 			ingress: &netv1.Ingress{
@@ -234,9 +241,9 @@ func TestTranslateIngress(t *testing.T) {
 						Number: 80,
 					},
 				}},
+				Parent: expectedParentIngress(),
 			}},
 		},
-
 		{
 			name: "an Ingress resource with implementation specific path type doesn't modify the path",
 			ingress: &netv1.Ingress{
@@ -305,9 +312,9 @@ func TestTranslateIngress(t *testing.T) {
 						Number: 80,
 					},
 				}},
+				Parent: expectedParentIngress(),
 			}},
 		},
-
 		{
 			name: "an Ingress resource with paths with double /'s gets flattened",
 			ingress: &netv1.Ingress{
@@ -375,9 +382,9 @@ func TestTranslateIngress(t *testing.T) {
 						Number: 80,
 					},
 				}},
+				Parent: expectedParentIngress(),
 			}},
 		},
-
 		{
 			name: "empty paths get treated as '/'",
 			ingress: &netv1.Ingress{
@@ -445,9 +452,9 @@ func TestTranslateIngress(t *testing.T) {
 						Number: 80,
 					},
 				}},
+				Parent: expectedParentIngress(),
 			}},
 		},
-
 		{
 			name: "multiple and various paths get compiled together properly",
 			ingress: &netv1.Ingress{
@@ -587,9 +594,9 @@ func TestTranslateIngress(t *testing.T) {
 						Number: 80,
 					},
 				}},
+				Parent: expectedParentIngress(),
 			}},
 		},
-
 		{
 			name: "when no host is provided, all hosts are matched",
 			ingress: &netv1.Ingress{
@@ -727,9 +734,9 @@ func TestTranslateIngress(t *testing.T) {
 						Number: 80,
 					},
 				}},
+				Parent: expectedParentIngress(),
 			}},
 		},
-
 		{
 			name: "when there are multiple backends services, paths wont be combined and separate kong services will be provided",
 			ingress: &netv1.Ingress{
@@ -814,8 +821,8 @@ func TestTranslateIngress(t *testing.T) {
 							Number: 80,
 						},
 					}},
+					Parent: expectedParentIngress(),
 				},
-
 				{
 					Namespace: corev1.NamespaceDefault,
 					Service: kong.Service{
@@ -856,10 +863,10 @@ func TestTranslateIngress(t *testing.T) {
 							Number: 80,
 						},
 					}},
+					Parent: expectedParentIngress(),
 				},
 			},
 		},
-
 		{
 			name: "when there are multiple ingress rules with overlapping host and service, separate kong services will be provided",
 			ingress: &netv1.Ingress{
@@ -955,8 +962,8 @@ func TestTranslateIngress(t *testing.T) {
 							Number: 80,
 						},
 					}},
+					Parent: expectedParentIngress(),
 				},
-
 				{
 					Namespace: corev1.NamespaceDefault,
 					Service: kong.Service{
@@ -997,6 +1004,7 @@ func TestTranslateIngress(t *testing.T) {
 							Number: 80,
 						},
 					}},
+					Parent: expectedParentIngress(),
 				},
 			},
 		},
@@ -1217,6 +1225,7 @@ func TestTranslateIngressRegexPrefix(t *testing.T) {
 						Number: 80,
 					},
 				}},
+				Parent: expectedParentIngress(),
 			}},
 		},
 	}

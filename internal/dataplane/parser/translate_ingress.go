@@ -4,10 +4,8 @@ import (
 	"errors"
 	"fmt"
 	"sort"
-	"strings"
 
 	"github.com/kong/go-kong/kong"
-	"github.com/sirupsen/logrus"
 	netv1 "k8s.io/api/networking/v1"
 	netv1beta1 "k8s.io/api/networking/v1beta1"
 
@@ -45,10 +43,6 @@ func (p *Parser) ingressRulesFromIngressV1beta1() ingressRules {
 			regexPrefix = prefix
 		}
 		ingressSpec := ingress.Spec
-		log := p.logger.WithFields(logrus.Fields{
-			"ingress_namespace": ingress.Namespace,
-			"ingress_name":      ingress.Name,
-		})
 
 		if ingressSpec.Backend != nil {
 			allDefaultBackends = append(allDefaultBackends, *ingress)
@@ -64,11 +58,6 @@ func (p *Parser) ingressRulesFromIngressV1beta1() ingressRules {
 			}
 			for j, rule := range rule.HTTP.Paths {
 				path := rule.Path
-
-				if strings.Contains(path, "//") {
-					log.Errorf("rule skipped: invalid path: '%v'", path)
-					continue
-				}
 				path = maybePrependRegexPrefix(path, regexPrefix, icp.EnableLegacyRegexDetection && p.flagEnabledRegexPathPrefix)
 				if path == "" {
 					path = "/"
@@ -115,6 +104,7 @@ func (p *Parser) ingressRulesFromIngressV1beta1() ingressRules {
 							Name:    rule.Backend.ServiceName,
 							PortDef: PortDefFromIntStr(rule.Backend.ServicePort),
 						}},
+						Parent: ingress,
 					}
 				}
 				service.Routes = append(service.Routes, r)
@@ -159,6 +149,7 @@ func (p *Parser) ingressRulesFromIngressV1beta1() ingressRules {
 					Name:    defaultBackend.ServiceName,
 					PortDef: PortDefFromIntStr(defaultBackend.ServicePort),
 				}},
+				Parent: &ingress,
 			}
 		}
 		r := kongstate.Route{
@@ -208,10 +199,6 @@ func (p *Parser) ingressRulesFromIngressV1() ingressRules {
 			regexPrefix = prefix
 		}
 		ingressSpec := ingress.Spec
-		log := p.logger.WithFields(logrus.Fields{
-			"ingress_namespace": ingress.Namespace,
-			"ingress_name":      ingress.Name,
-		})
 
 		if ingressSpec.DefaultBackend != nil {
 			allDefaultBackends = append(allDefaultBackends, *ingress)
@@ -238,11 +225,6 @@ func (p *Parser) ingressRulesFromIngressV1() ingressRules {
 					continue
 				}
 				for j, rulePath := range rule.HTTP.Paths {
-					if strings.Contains(rulePath.Path, "//") {
-						log.Errorf("rule skipped: invalid path: '%v'", rulePath.Path)
-						continue
-					}
-
 					pathTypeImplementationSpecific := netv1.PathTypeImplementationSpecific
 					if rulePath.PathType == nil {
 						rulePath.PathType = &pathTypeImplementationSpecific
@@ -250,7 +232,10 @@ func (p *Parser) ingressRulesFromIngressV1() ingressRules {
 
 					paths := translators.PathsFromIngressPaths(rulePath, p.flagEnabledRegexPathPrefix)
 					if paths == nil {
-						log.Errorf("could not translate Ingress Path %s to Kong paths", rulePath.Path)
+						// registering a failure, but technically it should never happen thanks to Kubernetes API validations
+						p.registerTranslationFailure(
+							fmt.Sprintf("could not translate Ingress Path %s to Kong paths", rulePath.Path), ingress,
+						)
 						continue
 					}
 
@@ -299,6 +284,7 @@ func (p *Parser) ingressRulesFromIngressV1() ingressRules {
 								Name:    rulePath.Backend.Service.Name,
 								PortDef: port,
 							}},
+							Parent: ingress,
 						}
 					}
 					service.Routes = append(service.Routes, r)
@@ -343,6 +329,7 @@ func (p *Parser) ingressRulesFromIngressV1() ingressRules {
 					Name:    defaultBackend.Service.Name,
 					PortDef: PortDefFromServiceBackendPort(&defaultBackend.Service.Port),
 				}},
+				Parent: &ingress,
 			}
 		}
 		r := kongstate.Route{

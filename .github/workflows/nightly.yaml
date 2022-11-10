@@ -207,7 +207,7 @@ jobs:
       - name: Kubernetes ${{ matrix.kubernetes-version }} ${{ matrix.dbmode }} Integration Tests With ${{ matrix.kong-router-flavor }} Kong Router
         run: KONG_CLUSTER_VERSION=${{ matrix.kubernetes-version }} make test.integration.${{ matrix.dbmode }}
         env:
-          GOTESTSUM_JUNITFILE: integration-${{ matrix.kubernetes-version }}-${{ matrix.dbmode }}-tests.xml
+          GOTESTSUM_JUNITFILE: integration-${{ matrix.kong-router-flavor }}-${{ matrix.kubernetes-version }}-${{ matrix.dbmode }}-tests.xml
           TEST_KONG_ROUTER_FLAVOR: ${{ matrix.kong-router-flavor }}
       - name: Kubernetes ${{ matrix.kubernetes-version }} ${{ matrix.dbmode }} Integration Tests for Invalid Configurations With ${{ matrix.kong-router-flavor }} Kong Router
         run: KONG_CLUSTER_VERSION=${{ matrix.kubernetes-version }} make test.integration.${{ matrix.dbmode }}

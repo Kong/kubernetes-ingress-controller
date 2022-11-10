@@ -4,7 +4,7 @@ import (
 	"context"
 	"sync"
 
-	"github.com/bombsimon/logrusr/v2"
+	"github.com/go-logr/logr"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/diagnostics"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/manager"
@@ -20,17 +20,18 @@ const (
 	DiagnosticConfigBufferDepth = 3
 )
 
-func StartDiagnosticsServer(ctx context.Context, port int, c *manager.Config) (diagnostics.Server, error) {
-	deprecatedLogger, err := util.MakeLogger(c.LogLevel, c.LogFormat)
-	if err != nil {
-		return diagnostics.Server{}, err
-	}
-	logger := logrusr.New(deprecatedLogger)
-
+// StartDiagnosticsServer starts a goroutine that handles requests for the diagnostics server.
+func StartDiagnosticsServer(
+	ctx context.Context,
+	port int,
+	c *manager.Config,
+	logger logr.Logger,
+) (diagnostics.Server, error) {
 	if !c.EnableProfiling && !c.EnableConfigDumps {
 		logger.Info("diagnostics server disabled")
 		return diagnostics.Server{}, nil
 	}
+	logger.Info("starting diagnostics server")
 
 	s := diagnostics.Server{
 		Logger:           logger,

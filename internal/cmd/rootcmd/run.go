@@ -2,37 +2,42 @@ package rootcmd
 
 import (
 	"fmt"
+	"os"
 
+	"github.com/go-logr/logr"
 	"github.com/sirupsen/logrus"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/manager"
 )
 
-// Run starts the controller manager.
+// Run sets up a default stderr logger and starts the controller manager.
 func Run(c *manager.Config) error {
-	ctx, err := SetupSignalHandler(c)
+	deprecatedLogger, logger, err := manager.SetupLoggers(c, os.Stderr)
+	if err != nil {
+		return fmt.Errorf("failed to initialize logger: %w", err)
+	}
+	ctx, err := SetupSignalHandler(c, logger)
 	if err != nil {
 		return fmt.Errorf("failed to setup signal handler: %w", err)
 	}
 
-	diag, err := StartDiagnosticsServer(ctx, manager.DiagnosticsPort, c)
+	diag, err := StartDiagnosticsServer(ctx, manager.DiagnosticsPort, c, logger)
 	if err != nil {
 		return fmt.Errorf("failed to start diagnostics server: %w", err)
 	}
-	return manager.Run(ctx, c, diag.ConfigDumps)
+	return manager.Run(ctx, c, diag.ConfigDumps, deprecatedLogger)
 }
 
-// RunWithLogger starts the controller manager.
-// This function is intended for use in tests, where the logger can be injected.
-func RunWithLogger(c *manager.Config, l logrus.FieldLogger) error {
-	ctx, err := SetupSignalHandler(c)
+// RunWithLogger starts the controller manager with a provided logger.
+func RunWithLogger(c *manager.Config, deprecatedLogger logrus.FieldLogger, logger logr.Logger) error {
+	ctx, err := SetupSignalHandler(c, logger)
 	if err != nil {
 		return fmt.Errorf("failed to setup signal handler: %w", err)
 	}
 
-	diag, err := StartDiagnosticsServer(ctx, manager.DiagnosticsPort, c)
+	diag, err := StartDiagnosticsServer(ctx, manager.DiagnosticsPort, c, logger)
 	if err != nil {
 		return fmt.Errorf("failed to start diagnostics server: %w", err)
 	}
-	return manager.RunWithLogger(ctx, c, diag.ConfigDumps, l)
+	return manager.Run(ctx, c, diag.ConfigDumps, deprecatedLogger)
 }

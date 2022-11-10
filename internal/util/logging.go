@@ -2,6 +2,7 @@ package util
 
 import (
 	"fmt"
+	"io"
 
 	"github.com/sirupsen/logrus"
 )
@@ -41,7 +42,7 @@ var logrusLevels = map[string]logrus.Level{
 	"trace": logrus.TraceLevel,
 }
 
-func MakeLogger(level string, formatter string) (logrus.FieldLogger, error) {
+func MakeLogger(level string, formatter string, output io.Writer) (logrus.FieldLogger, error) {
 	log := logrus.New()
 	var err error
 
@@ -54,6 +55,7 @@ func MakeLogger(level string, formatter string) (logrus.FieldLogger, error) {
 	}
 
 	log.SetLevel(logLevel)
+	log.Out = output
 	return log, nil
 }
 

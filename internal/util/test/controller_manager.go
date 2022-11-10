@@ -7,12 +7,15 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
-	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/kong"
+	ktfkong "github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/kong"
 	"github.com/sirupsen/logrus"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/cmd/rootcmd"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/manager"
 )
+
+// logOutput is a file to use for manager log output other than stderr.
+var logOutput = os.Getenv("TEST_KONG_KIC_MANAGER_LOG_OUTPUT")
 
 // -----------------------------------------------------------------------------
 // Testing Utility Functions - Controller Manager
@@ -25,13 +28,19 @@ import (
 // Controller managers started this way will run in the background in a goroutine:
 // The caller must use the provided context.Context to stop the controller manager
 // from running when they're done with it.
-func DeployControllerManagerForCluster(ctx context.Context, l logrus.FieldLogger, cluster clusters.Cluster, additionalFlags ...string) error {
+func DeployControllerManagerForCluster(
+	ctx context.Context,
+	deprecatedLogger logrus.FieldLogger,
+	logger logr.Logger,
+	cluster clusters.Cluster,
+	additionalFlags ...string,
+) error {
 	// ensure that the provided test cluster has a kongAddon deployed to it
-	var kongAddon *kong.Addon
+	var kongAddon *ktfkong.Addon
 	for _, addon := range cluster.ListAddons() {
-		if addon.Name() == kong.AddonName {
+		if addon.Name() == ktfkong.AddonName {
 			var ok bool
-			kongAddon, ok = addon.(*kong.Addon)
+			kongAddon, ok = addon.(*ktfkong.Addon)
 			if !ok {
 				return fmt.Errorf("an invalid kong addon was present in test environment")
 			}
@@ -81,7 +90,7 @@ func DeployControllerManagerForCluster(ctx context.Context, l logrus.FieldLogger
 	go func() {
 		defer os.Remove(kubeconfig.Name())
 		fmt.Fprintf(os.Stderr, "INFO: Starting Controller Manager for Cluster %s with Configuration: %+v\n", cluster.Name(), config)
-		if err := rootcmd.RunWithLogger(&config, l); err != nil {
+		if err := rootcmd.RunWithLogger(&config, deprecatedLogger, logger); err != nil {
 			panic(err)
 		}
 	}()
@@ -95,13 +104,22 @@ func DeployControllerManagerForCluster(ctx context.Context, l logrus.FieldLogger
 // will pass before the controller manager logs are setup.
 // This function can be used to sets up the loggers for the controller manager
 // before the cluster deployment.
-func SetupLoggers(logLevel string, logFormat string, logReduceRedundancy bool) (logrus.FieldLogger, logr.Logger, error) {
+func SetupLoggers(logLevel string, logFormat string, logReduceRedundancy bool) (logrus.FieldLogger, logr.Logger, string, error) {
 	// construct the config for the logger
+	var err error
+	output := os.Stderr
+	if logOutput != "" {
+		output, err = os.OpenFile(logOutput, os.O_CREATE|os.O_RDWR|os.O_APPEND, 0o644)
+		if err != nil {
+			return nil, logr.Logger{}, logOutput, err
+		}
+	}
 	config := manager.Config{
 		LogLevel:            logLevel,
 		LogFormat:           logFormat,
 		LogReduceRedundancy: logReduceRedundancy,
 	}
 
-	return manager.SetupLoggers(&config)
+	deprecated, logger, err := manager.SetupLoggers(&config, output)
+	return deprecated, logger, "", err
 }

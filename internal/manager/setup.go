@@ -3,7 +3,7 @@ package manager
 import (
 	"context"
 	"fmt"
-	"os"
+	"io"
 	"strings"
 	"time"
 
@@ -31,15 +31,15 @@ import (
 // -----------------------------------------------------------------------------
 
 // SetupLoggers sets up the loggers for the controller manager.
-func SetupLoggers(c *Config) (logrus.FieldLogger, logr.Logger, error) {
-	deprecatedLogger, err := util.MakeLogger(c.LogLevel, c.LogFormat)
+func SetupLoggers(c *Config, output io.Writer) (logrus.FieldLogger, logr.Logger, error) {
+	deprecatedLogger, err := util.MakeLogger(c.LogLevel, c.LogFormat, output)
 	if err != nil {
 		return nil, logr.Logger{}, fmt.Errorf("failed to make logger: %w", err)
 	}
 
 	if c.LogReduceRedundancy {
 		deprecatedLogger.Info("WARNING: log stifling has been enabled (experimental)")
-		deprecatedLogger = util.MakeDebugLoggerWithReducedRedudancy(os.Stdout, &logrus.TextFormatter{}, 3, time.Second*30)
+		deprecatedLogger = util.MakeDebugLoggerWithReducedRedudancy(output, &logrus.TextFormatter{}, 3, time.Second*30)
 	}
 
 	logger := logrusr.New(deprecatedLogger)
@@ -169,18 +169,18 @@ func setupDataplaneSynchronizer(
 	return dataplaneSynchronizer, nil
 }
 
-func setupAdmissionServer(ctx context.Context, managerConfig *Config, managerClient client.Client) error {
-	log, err := util.MakeLogger(managerConfig.LogLevel, managerConfig.LogFormat)
-	if err != nil {
-		return err
-	}
+func setupAdmissionServer(
+	ctx context.Context,
+	managerConfig *Config,
+	managerClient client.Client,
+	deprecatedLogger logrus.FieldLogger,
+) error {
+	logger := deprecatedLogger.WithField("component", "admission-server")
 
 	if managerConfig.AdmissionServer.ListenAddr == "off" {
-		log.Info("admission webhook server disabled")
+		logger.Info("admission webhook server disabled")
 		return nil
 	}
-
-	logger := log.WithField("component", "admission-server")
 
 	kongclient, err := managerConfig.GetKongClient(ctx)
 	if err != nil {
@@ -190,18 +190,18 @@ func setupAdmissionServer(ctx context.Context, managerConfig *Config, managerCli
 		Validator: admission.NewKongHTTPValidator(
 			kongclient.Consumers,
 			kongclient.Plugins,
-			log,
+			logger,
 			managerClient,
 			managerConfig.IngressClassName,
 		),
 		Logger: logger,
-	}, log)
+	}, logger)
 	if err != nil {
 		return err
 	}
 	go func() {
 		err := srv.ListenAndServeTLS("", "")
-		log.WithError(err).Error("admission webhook server stopped")
+		logger.WithError(err).Error("admission webhook server stopped")
 	}()
 	return nil
 }

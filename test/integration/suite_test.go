@@ -89,9 +89,12 @@ func TestMain(m *testing.M) {
 	// after 30s from the start of controller manager package init function,
 	// the controller manager will set up a no op logger and continue.
 	// The logger cannot be configured after that point.
-	logger, _, err := testutils.SetupLoggers("trace", "text", false)
+	deprecatedLogger, logger, logOutput, err := testutils.SetupLoggers("trace", "text", false)
 	if err != nil {
 		exitOnErrWithCode(fmt.Errorf("failed to setup loggers: %w", err), ExitCodeCantCreateLogger)
+	}
+	if logOutput != "" {
+		fmt.Printf("INFO: writing manager logs to %s\n", logOutput)
 	}
 
 	fmt.Println("INFO: setting up test environment")
@@ -217,7 +220,7 @@ func TestMain(m *testing.M) {
 			fmt.Sprintf("--election-namespace=%s", kongAddon.Namespace()),
 		}
 		allControllerArgs := append(standardControllerArgs, extraControllerArgs...)
-		exitOnErr(testutils.DeployControllerManagerForCluster(ctx, logger, env.Cluster(), allControllerArgs...))
+		exitOnErr(testutils.DeployControllerManagerForCluster(ctx, deprecatedLogger, logger, env.Cluster(), allControllerArgs...))
 	}
 
 	gatewayClient, err := gatewayclient.NewForConfig(env.Cluster().Config())

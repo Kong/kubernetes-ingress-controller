@@ -118,8 +118,12 @@ Adding a new version? You'll need three changes:
   [#3121](https://github.com/Kong/kubernetes-ingress-controller/pull/3121)
 - Services support annotations for retries.
   [#3121](https://github.com/Kong/kubernetes-ingress-controller/pull/3121)
-- Routes support annotations for headers.
+- Routes support annotations for headers. These use a special
+  `konghq.com/headers.HEADERNAME` format. For example, adding
+  `konghq.com/headers.x-example: green` to an Ingress will create routes that
+  only match requests with an `x-example: green` request header.
   [#3121](https://github.com/Kong/kubernetes-ingress-controller/pull/3121)
+  [#3155](https://github.com/Kong/kubernetes-ingress-controller/pull/3155)
 - Routes support annotations for path handling.
   [#3121](https://github.com/Kong/kubernetes-ingress-controller/pull/3121)
 - Warning events are recorded when CA secrets cannot be properly translated into Kong configuration.

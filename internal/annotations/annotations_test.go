@@ -849,7 +849,7 @@ func TestExtractHeaders(t *testing.T) {
 			name: "non-empty",
 			args: args{
 				anns: map[string]string{
-					"konghq.com/headers/foo": "foo",
+					"konghq.com/headers.foo": "foo",
 				},
 			},
 			want: map[string][]string{"foo": {"foo"}},
@@ -867,7 +867,7 @@ func TestExtractHeaders(t *testing.T) {
 			name: "no header name",
 			args: args{
 				anns: map[string]string{
-					"konghq.com/headers/": "foo",
+					"konghq.com/headers.": "foo",
 				},
 			},
 			want: map[string][]string{},

@@ -298,7 +298,7 @@ func ExtractRetries(anns map[string]string) (string, bool) {
 // ExtractHeaders extracts the parsed headers annotations values. It returns a map of header names to slices of values.
 func ExtractHeaders(anns map[string]string) (map[string][]string, bool) {
 	headers := make(map[string][]string)
-	prefix := AnnotationPrefix + HeadersKey + "/"
+	prefix := AnnotationPrefix + HeadersKey + "."
 	for key, val := range anns {
 		if strings.HasPrefix(key, prefix) {
 			header := strings.TrimPrefix(key, prefix)

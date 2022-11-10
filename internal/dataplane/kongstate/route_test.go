@@ -1073,7 +1073,7 @@ func TestOverrideHeaders(t *testing.T) {
 			name: "single header single value",
 			args: args{
 				anns: map[string]string{
-					"konghq.com/headers/x-example": "example",
+					"konghq.com/headers.x-example": "example",
 				},
 			},
 			want: Route{
@@ -1086,7 +1086,7 @@ func TestOverrideHeaders(t *testing.T) {
 			name: "single header multi value",
 			args: args{
 				anns: map[string]string{
-					"konghq.com/headers/x-example": "foo,bar",
+					"konghq.com/headers.x-example": "foo,bar",
 				},
 			},
 			want: Route{
@@ -1099,8 +1099,8 @@ func TestOverrideHeaders(t *testing.T) {
 			name: "multi header single value",
 			args: args{
 				anns: map[string]string{
-					"konghq.com/headers/x-foo": "example",
-					"konghq.com/headers/x-bar": "example",
+					"konghq.com/headers.x-foo": "example",
+					"konghq.com/headers.x-bar": "example",
 				},
 			},
 			want: Route{
@@ -1116,8 +1116,8 @@ func TestOverrideHeaders(t *testing.T) {
 			name: "multi header multi value",
 			args: args{
 				anns: map[string]string{
-					"konghq.com/headers/x-foo": "foo,bar",
-					"konghq.com/headers/x-bar": "bar,baz",
+					"konghq.com/headers.x-foo": "foo,bar",
+					"konghq.com/headers.x-bar": "bar,baz",
 				},
 			},
 			want: Route{

@@ -162,6 +162,9 @@ Adding a new version? You'll need three changes:
 - Improve signal handling and cancellation. With this change broken connection to
   Admin API and/or initial data plane sync can be cancelled properly.
   [#3076](https://github.com/Kong/kubernetes-ingress-controller/pull/3076)
+- Admin and proxy listens in the deploy manifests now use the same parameters
+  as the default upstream kong.conf.
+  [#3165](https://github.com/Kong/kubernetes-ingress-controller/pull/3165)
 
 ## [2.7.0]
 

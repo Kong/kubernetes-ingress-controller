@@ -158,14 +158,14 @@ func (m SecretNameToSNIs) addParents(secretKey string, parents []client.Object) 
 		m[secretKey] = &SNIs{}
 	}
 
-	seenHosts := map[types.UID]bool{}
+	seenParents := map[types.UID]struct{}{}
 	for _, parent := range m[secretKey].parents {
-		seenHosts[parent.GetUID()] = true
+		seenParents[parent.GetUID()] = struct{}{}
 	}
 
 	var parentsToAdd []client.Object
 	for _, parent := range parents {
-		if !seenHosts[parent.GetUID()] {
+		if _, ok := seenParents[parent.GetUID()]; !ok {
 			parentsToAdd = append(parentsToAdd, parent)
 		}
 	}

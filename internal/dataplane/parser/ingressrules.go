@@ -153,6 +153,7 @@ func (m SecretNameToSNIs) addHosts(secretKey string, hosts []string) {
 	m[secretKey].hosts = append(m[secretKey].hosts, hostsToAdd...)
 }
 
+// TODO: https://github.com/Kong/kubernetes-ingress-controller/issues/3166
 func (m SecretNameToSNIs) addParents(secretKey string, parents []client.Object) {
 	if _, ok := m[secretKey]; !ok {
 		m[secretKey] = &SNIs{}

@@ -144,6 +144,8 @@ Adding a new version? You'll need three changes:
 - Warning events are recorded when a Gateway Listener has more than one CertificateRef specified
   or refers to a Secret that has no valid TLS key-pair.
   [#3147](https://github.com/Kong/kubernetes-ingress-controller/pull/3147)
+- Warning events are recorded when HTTPRoute has no backendRefs specified. 
+  [#3167](https://github.com/Kong/kubernetes-ingress-controller/pull/3167)
 
 ### Fixed
 

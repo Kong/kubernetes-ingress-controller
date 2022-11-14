@@ -209,6 +209,11 @@ func TestIngressRegexMatchHeader(t *testing.T) {
 			matchHeaders:    []string{"a", "aaa", "abc"},
 			notMatchHeaders: []string{"", "abcd"},
 		},
+		{
+			headerRegex:     "^kong\\.",
+			matchHeaders:    []string{"kong.", "kong.abc", "kong.foo.bar"},
+			notMatchHeaders: []string{"kong", "akong."},
+		},
 	}
 
 	t.Log("deploying a minimal HTTP container deployment to test Ingress routes")
@@ -281,7 +286,7 @@ func TestIngressRegexMatchHeader(t *testing.T) {
 						return false
 					}
 					defer resp.Body.Close()
-					// returns false if one path is not matched.
+					// returns false if one of test requests is not matched.
 					if resp.StatusCode == http.StatusOK {
 						b := new(bytes.Buffer)
 						n, err := b.ReadFrom(resp.Body)
@@ -294,7 +299,7 @@ func TestIngressRegexMatchHeader(t *testing.T) {
 						return false
 					}
 				}
-				// returns true if all testing paths matched.
+				// returns true if all testing requests matched.
 				return true
 			}, ingressWait, waitTick)
 

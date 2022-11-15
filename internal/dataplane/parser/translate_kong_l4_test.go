@@ -108,7 +108,7 @@ func TestFromTCPIngressV1beta1(t *testing.T) {
 		parsedInfo := p.ingressRulesFromTCPIngressV1beta1()
 		assert.Equal(ingressRules{
 			ServiceNameToServices: make(map[string]kongstate.Service),
-			SecretNameToSNIs:      make(map[string]*SNIs),
+			SecretNameToSNIs:      newSecretNameToSNIs(),
 		}, parsedInfo)
 	})
 	t.Run("empty TCPIngress return empty info", func(t *testing.T) {
@@ -123,7 +123,7 @@ func TestFromTCPIngressV1beta1(t *testing.T) {
 		parsedInfo := p.ingressRulesFromTCPIngressV1beta1()
 		assert.Equal(ingressRules{
 			ServiceNameToServices: make(map[string]kongstate.Service),
-			SecretNameToSNIs:      make(map[string]*SNIs),
+			SecretNameToSNIs:      newSecretNameToSNIs(),
 		}, parsedInfo)
 	})
 	t.Run("simple TCPIngress rule is parsed", func(t *testing.T) {
@@ -193,8 +193,7 @@ func TestFromTCPIngressV1beta1(t *testing.T) {
 		p := mustNewParser(t, store)
 
 		parsedInfo := p.ingressRulesFromTCPIngressV1beta1()
-		assert.Equal(2, len(parsedInfo.SecretNameToSNIs))
-		assert.Equal(2, len(parsedInfo.SecretNameToSNIs["default/sooper-secret"].hosts))
-		assert.Equal(2, len(parsedInfo.SecretNameToSNIs["default/sooper-secret2"].hosts))
+		assert.Equal(2, len(parsedInfo.SecretNameToSNIs.Hosts("default/sooper-secret")))
+		assert.Equal(2, len(parsedInfo.SecretNameToSNIs.Hosts("default/sooper-secret2")))
 	})
 }

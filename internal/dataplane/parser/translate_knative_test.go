@@ -294,7 +294,7 @@ func TestFromKnativeIngress(t *testing.T) {
 		p := mustNewParser(t, store)
 
 		parsedInfo := p.ingressRulesFromKnativeIngress()
-		assert.Equal(SecretNameToSNIs(map[string]*SNIs{
+		assert.Equal(makeSecretToSNIs(map[string]testSNIs{
 			"foo-namespace/bar-secret": {hosts: []string{"bar.example.com", "bar1.example.com"}, parents: []client.Object{ingressList[3]}},
 			"foo-namespace/foo-secret": {hosts: []string{"foo.example.com", "foo1.example.com"}, parents: []client.Object{ingressList[3]}},
 		}), parsedInfo.SecretNameToSNIs)

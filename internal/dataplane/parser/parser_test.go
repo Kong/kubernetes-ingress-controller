@@ -4635,7 +4635,7 @@ func TestPickPort(t *testing.T) {
 
 func TestCertificate(t *testing.T) {
 	assert := assert.New(t)
-	t.Run("same host with multiple namespace return the first namespace/secret by asc ", func(t *testing.T) {
+	t.Run("same host with multiple namespace return the first namespace/secret by asc", func(t *testing.T) {
 		ingresses := []*netv1beta1.Ingress{
 			{
 				ObjectMeta: metav1.ObjectMeta{

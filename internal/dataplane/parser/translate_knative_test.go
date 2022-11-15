@@ -8,6 +8,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	knative "knative.dev/networking/pkg/apis/networking/v1alpha1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
@@ -293,9 +294,9 @@ func TestFromKnativeIngress(t *testing.T) {
 		p := mustNewParser(t, store)
 
 		parsedInfo := p.ingressRulesFromKnativeIngress()
-		assert.Equal(SecretNameToSNIs(map[string][]string{
-			"foo-namespace/bar-secret": {"bar.example.com", "bar1.example.com"},
-			"foo-namespace/foo-secret": {"foo.example.com", "foo1.example.com"},
+		assert.Equal(SecretNameToSNIs(map[string]*SNIs{
+			"foo-namespace/bar-secret": {hosts: []string{"bar.example.com", "bar1.example.com"}, parents: []client.Object{ingressList[3]}},
+			"foo-namespace/foo-secret": {hosts: []string{"foo.example.com", "foo1.example.com"}, parents: []client.Object{ingressList[3]}},
 		}), parsedInfo.SecretNameToSNIs)
 	})
 	t.Run("split knative Ingress resource chooses the highest split", func(t *testing.T) {

@@ -48,7 +48,7 @@ func (p *Parser) ingressRulesFromIngressV1beta1() ingressRules {
 			allDefaultBackends = append(allDefaultBackends, *ingress)
 		}
 
-		result.SecretNameToSNIs.addFromIngressV1beta1TLS(ingressSpec.TLS, ingress.Namespace)
+		result.SecretNameToSNIs.addFromIngressV1TLS(v1beta1toV1TLS(ingressSpec.TLS), ingress)
 
 		var objectSuccessfullyParsed bool
 		for i, rule := range ingressSpec.Rules {
@@ -204,7 +204,7 @@ func (p *Parser) ingressRulesFromIngressV1() ingressRules {
 			allDefaultBackends = append(allDefaultBackends, *ingress)
 		}
 
-		result.SecretNameToSNIs.addFromIngressV1TLS(ingressSpec.TLS, ingress.Namespace)
+		result.SecretNameToSNIs.addFromIngressV1TLS(ingressSpec.TLS, ingress)
 
 		var objectSuccessfullyParsed bool
 

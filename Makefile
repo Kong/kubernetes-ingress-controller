@@ -489,7 +489,8 @@ run: install _ensure-namespace
 # It should be run only after the cluster has been already prepared to run with KIC.
 .PHONY: _run
 _run:
-	go run ./internal/cmd/main.go \
+	go build -gcflags="all=-N -l" -o ./controller ./internal/cmd/main.go && \
+		./controller \
 		--kong-admin-url $(KONG_ADMIN_URL) \
 		--publish-service $(KONG_NAMESPACE)/$(KONG_PROXY_SERVICE) \
 		--kubeconfig $(KUBECONFIG) \

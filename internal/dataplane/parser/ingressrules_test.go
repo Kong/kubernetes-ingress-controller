@@ -122,7 +122,7 @@ func TestMergeIngressRules(t *testing.T) {
 				},
 			},
 			wantOutput: &ingressRules{
-				SecretNameToSNIs:      map[string]*SNIs{"a": {parents: []client.Object{parent1, parent2}, hosts: []string{"b", "c", "d", "e"}}},
+				SecretNameToSNIs:      map[string]*SNIs{"a": {parents: []client.Object{parent1, parent2, parent1, parent2}, hosts: []string{"b", "c", "d", "e"}}},
 				ServiceNameToServices: map[string]kongstate.Service{},
 			},
 		},

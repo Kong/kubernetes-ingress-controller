@@ -34,8 +34,11 @@ func mergeIngressRules(objs ...ingressRules) ingressRules {
 
 	for _, obj := range objs {
 		for k, v := range obj.SecretNameToSNIs {
-			result.SecretNameToSNIs.addHosts(k, v.hosts)
-			result.SecretNameToSNIs.addParents(k, v.parents)
+			if _, ok := result.SecretNameToSNIs[k]; !ok {
+				result.SecretNameToSNIs[k] = &SNIs{}
+			}
+			result.SecretNameToSNIs[k].hosts = append(result.SecretNameToSNIs[k].hosts, v.hosts...)
+			result.SecretNameToSNIs[k].parents = append(result.SecretNameToSNIs[k].parents, v.parents...)
 		}
 		for k, v := range obj.ServiceNameToServices {
 			result.ServiceNameToServices[k] = v
@@ -126,12 +129,12 @@ func (m SecretNameToSNIs) addFromIngressV1TLS(tlsSections []netv1.IngressTLS, pa
 		}
 
 		secretKey := parent.GetNamespace() + "/" + tls.SecretName
-		m.addHosts(secretKey, tls.Hosts)
-		m.addParents(secretKey, []client.Object{parent})
+		m.addUniqueHosts(secretKey, tls.Hosts)
+		m.addUniqueParents(secretKey, []client.Object{parent})
 	}
 }
 
-func (m SecretNameToSNIs) addHosts(secretKey string, hosts []string) {
+func (m SecretNameToSNIs) addUniqueHosts(secretKey string, hosts []string) {
 	if _, ok := m[secretKey]; !ok {
 		m[secretKey] = &SNIs{}
 	}
@@ -154,7 +157,7 @@ func (m SecretNameToSNIs) addHosts(secretKey string, hosts []string) {
 }
 
 // TODO: https://github.com/Kong/kubernetes-ingress-controller/issues/3166
-func (m SecretNameToSNIs) addParents(secretKey string, parents []client.Object) {
+func (m SecretNameToSNIs) addUniqueParents(secretKey string, parents []client.Object) {
 	if _, ok := m[secretKey]; !ok {
 		m[secretKey] = &SNIs{}
 	}

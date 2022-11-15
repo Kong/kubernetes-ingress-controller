@@ -11,7 +11,7 @@ import (
 	"github.com/kong/go-kong/kong"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
-	netv1beta1 "k8s.io/api/networking/v1beta1"
+	netv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	knative "knative.dev/networking/pkg/apis/networking/v1alpha1"
@@ -120,7 +120,7 @@ func (p *Parser) Build() (*kongstate.KongState, []TranslationFailure) {
 	result.FillPlugins(p.logger, p.storer)
 
 	// generate Certificates and SNIs
-	ingressCerts := getCerts(p.logger, p.storer, ingressRules.SecretNameToSNIs)
+	ingressCerts := p.getCerts(ingressRules.SecretNameToSNIs)
 	gatewayCerts := p.getGatewayCerts()
 	// note that ingress-derived certificates will take precedence over gateway-derived certificates for SNI assignment
 	result.Certificates = mergeCerts(p.logger, ingressCerts, gatewayCerts)
@@ -195,11 +195,11 @@ func (p *Parser) popTranslationFailures() []TranslationFailure {
 	return p.failuresCollector.PopTranslationFailures()
 }
 
-func knativeIngressToNetworkingTLS(tls []knative.IngressTLS) []netv1beta1.IngressTLS {
-	var result []netv1beta1.IngressTLS
+func knativeIngressToNetworkingTLS(tls []knative.IngressTLS) []netv1.IngressTLS {
+	var result []netv1.IngressTLS
 
 	for _, t := range tls {
-		result = append(result, netv1beta1.IngressTLS{
+		result = append(result, netv1.IngressTLS{
 			Hosts:      t.Hosts,
 			SecretName: t.SecretName,
 		})
@@ -207,11 +207,11 @@ func knativeIngressToNetworkingTLS(tls []knative.IngressTLS) []netv1beta1.Ingres
 	return result
 }
 
-func tcpIngressToNetworkingTLS(tls []configurationv1beta1.IngressTLS) []netv1beta1.IngressTLS {
-	var result []netv1beta1.IngressTLS
+func tcpIngressToNetworkingTLS(tls []configurationv1beta1.IngressTLS) []netv1.IngressTLS {
+	var result []netv1.IngressTLS
 
 	for _, t := range tls {
-		result = append(result, netv1beta1.IngressTLS{
+		result = append(result, netv1.IngressTLS{
 			Hosts:      t.Hosts,
 			SecretName: t.SecretName,
 		})
@@ -480,25 +480,20 @@ func (p *Parser) getGatewayCerts() []certWrapper {
 	return certs
 }
 
-func getCerts(log logrus.FieldLogger, s store.Storer, secretsToSNIs map[string][]string) []certWrapper {
+func (p *Parser) getCerts(secretsToSNIs SecretNameToSNIs) []certWrapper {
 	certs := []certWrapper{}
 
 	for secretKey, SNIs := range secretsToSNIs {
 		namespaceName := strings.Split(secretKey, "/")
-		secret, err := s.GetSecret(namespaceName[0], namespaceName[1])
+		secret, err := p.storer.GetSecret(namespaceName[0], namespaceName[1])
 		if err != nil {
-			log.WithFields(logrus.Fields{
-				"secret_name":      namespaceName[1],
-				"secret_namespace": namespaceName[0],
-			}).WithError(err).Error("failed to fetch secret")
+			p.registerTranslationFailure(fmt.Sprintf("failed to fetch the secret (%s)", secretKey), SNIs.parents...)
 			continue
 		}
 		cert, key, err := getCertFromSecret(secret)
 		if err != nil {
-			log.WithFields(logrus.Fields{
-				"secret_name":      namespaceName[1],
-				"secret_namespace": namespaceName[0],
-			}).WithError(err).Error("failed to construct certificate from secret")
+			causingObjects := append(SNIs.parents, secret)
+			p.registerTranslationFailure("failed to construct certificate from secret", causingObjects...)
 			continue
 		}
 		certs = append(certs, certWrapper{
@@ -509,7 +504,7 @@ func getCerts(log logrus.FieldLogger, s store.Storer, secretsToSNIs map[string][
 				Key:  kong.String(key),
 			},
 			CreationTimestamp: secret.CreationTimestamp,
-			snis:              SNIs,
+			snis:              SNIs.hosts,
 		})
 	}
 

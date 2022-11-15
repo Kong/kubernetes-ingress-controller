@@ -53,7 +53,7 @@ func (p *Parser) ingressRulesFromKnativeIngress() ingressRules {
 		}
 		ingressSpec := ingress.Spec
 
-		secretToSNIs.addFromIngressV1beta1TLS(knativeIngressToNetworkingTLS(ingress.Spec.TLS), ingress.Namespace)
+		secretToSNIs.addFromIngressV1TLS(knativeIngressToNetworkingTLS(ingress.Spec.TLS), ingress)
 
 		var objectSuccessfullyParsed bool
 		for i, rule := range ingressSpec.Rules {

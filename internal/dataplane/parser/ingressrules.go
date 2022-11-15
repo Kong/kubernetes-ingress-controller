@@ -9,6 +9,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	netv1 "k8s.io/api/networking/v1"
 	netv1beta1 "k8s.io/api/networking/v1beta1"
+	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
@@ -32,7 +34,11 @@ func mergeIngressRules(objs ...ingressRules) ingressRules {
 
 	for _, obj := range objs {
 		for k, v := range obj.SecretNameToSNIs {
-			result.SecretNameToSNIs[k] = append(result.SecretNameToSNIs[k], v...)
+			if _, ok := result.SecretNameToSNIs[k]; !ok {
+				result.SecretNameToSNIs[k] = &SNIs{}
+			}
+			result.SecretNameToSNIs[k].hosts = append(result.SecretNameToSNIs[k].hosts, v.hosts...)
+			result.SecretNameToSNIs[k].parents = append(result.SecretNameToSNIs[k].parents, v.parents...)
 		}
 		for k, v := range obj.ServiceNameToServices {
 			result.ServiceNameToServices[k] = v
@@ -84,7 +90,10 @@ func (ir *ingressRules) populateServices(log logrus.FieldLogger, s store.Storer,
 
 				// ensure that the cert is loaded into Kong
 				if _, ok := ir.SecretNameToSNIs[secretKey]; !ok {
-					ir.SecretNameToSNIs[secretKey] = []string{}
+					ir.SecretNameToSNIs[secretKey] = &SNIs{
+						parents: []client.Object{k8sService},
+						hosts:   []string{},
+					}
 				}
 				service.ClientCertificate = &kong.Certificate{
 					ID: kong.String(string(secret.UID)),
@@ -99,22 +108,18 @@ func (ir *ingressRules) populateServices(log logrus.FieldLogger, s store.Storer,
 	return serviceNamesToSkip
 }
 
-type SecretNameToSNIs map[string][]string
+type SecretNameToSNIs map[string]*SNIs
+
+type SNIs struct {
+	parents []client.Object
+	hosts   []string
+}
 
 func newSecretNameToSNIs() SecretNameToSNIs {
-	return SecretNameToSNIs(map[string][]string{})
+	return map[string]*SNIs{}
 }
 
-func (m SecretNameToSNIs) addFromIngressV1beta1TLS(tlsSections []netv1beta1.IngressTLS, namespace string) {
-	// Assume that v1beta1 and v1 tlsSections have identical semantics and field-wise content.
-	var v1 []netv1.IngressTLS
-	for _, item := range tlsSections {
-		v1 = append(v1, netv1.IngressTLS{Hosts: item.Hosts, SecretName: item.SecretName})
-	}
-	m.addFromIngressV1TLS(v1, namespace)
-}
-
-func (m SecretNameToSNIs) addFromIngressV1TLS(tlsSections []netv1.IngressTLS, namespace string) {
+func (m SecretNameToSNIs) addFromIngressV1TLS(tlsSections []netv1.IngressTLS, parent client.Object) {
 	for _, tls := range tlsSections {
 		if len(tls.Hosts) == 0 {
 			continue
@@ -122,30 +127,54 @@ func (m SecretNameToSNIs) addFromIngressV1TLS(tlsSections []netv1.IngressTLS, na
 		if tls.SecretName == "" {
 			continue
 		}
-		hosts := tls.Hosts
-		secretName := namespace + "/" + tls.SecretName
-		hosts = m.filterHosts(hosts)
-		if m[secretName] != nil {
-			hosts = append(hosts, m[secretName]...)
-		}
-		m[secretName] = hosts
+
+		secretKey := parent.GetNamespace() + "/" + tls.SecretName
+		m.addUniqueHosts(secretKey, tls.Hosts)
+		m.addUniqueParents(secretKey, []client.Object{parent})
 	}
 }
 
-func (m SecretNameToSNIs) filterHosts(hosts []string) []string {
-	hostsToAdd := []string{}
+func (m SecretNameToSNIs) addUniqueHosts(secretKey string, hosts []string) {
+	if _, ok := m[secretKey]; !ok {
+		m[secretKey] = &SNIs{}
+	}
+
 	seenHosts := map[string]bool{}
-	for _, hosts := range m {
-		for _, host := range hosts {
+	for _, snis := range m {
+		for _, host := range snis.hosts {
 			seenHosts[host] = true
 		}
 	}
+
+	var hostsToAdd []string
 	for _, host := range hosts {
 		if !seenHosts[host] {
 			hostsToAdd = append(hostsToAdd, host)
 		}
 	}
-	return hostsToAdd
+
+	m[secretKey].hosts = append(m[secretKey].hosts, hostsToAdd...)
+}
+
+// TODO: https://github.com/Kong/kubernetes-ingress-controller/issues/3166
+func (m SecretNameToSNIs) addUniqueParents(secretKey string, parents []client.Object) {
+	if _, ok := m[secretKey]; !ok {
+		m[secretKey] = &SNIs{}
+	}
+
+	seenParents := map[types.UID]struct{}{}
+	for _, parent := range m[secretKey].parents {
+		seenParents[parent.GetUID()] = struct{}{}
+	}
+
+	var parentsToAdd []client.Object
+	for _, parent := range parents {
+		if _, ok := seenParents[parent.GetUID()]; !ok {
+			parentsToAdd = append(parentsToAdd, parent)
+		}
+	}
+
+	m[secretKey].parents = append(m[secretKey].parents, parentsToAdd...)
 }
 
 func getK8sServicesForBackends(
@@ -232,4 +261,12 @@ func servicesAllUseTheSameKongAnnotations(
 	}
 
 	return match
+}
+
+func v1beta1toV1TLS(tlsSections []netv1beta1.IngressTLS) []netv1.IngressTLS {
+	var v1 []netv1.IngressTLS
+	for _, item := range tlsSections {
+		v1 = append(v1, netv1.IngressTLS{Hosts: item.Hosts, SecretName: item.SecretName})
+	}
+	return v1
 }

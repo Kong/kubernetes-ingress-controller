@@ -223,7 +223,7 @@ func TestFromKnativeIngress(t *testing.T) {
 
 		parsedInfo := p.ingressRulesFromKnativeIngress()
 		assert.Equal(map[string]kongstate.Service{}, parsedInfo.ServiceNameToServices)
-		assert.Equal(newSecretNameToSNIs(), parsedInfo.SecretNameToSNIs)
+		assert.Equal(newSecretNameToSNIMap(), parsedInfo.SecretNameToSNIs)
 	})
 	t.Run("empty ingress returns empty info", func(t *testing.T) {
 		store, err := store.NewFakeStore(store.FakeObjects{
@@ -236,7 +236,7 @@ func TestFromKnativeIngress(t *testing.T) {
 
 		parsedInfo := p.ingressRulesFromKnativeIngress()
 		assert.Equal(map[string]kongstate.Service{}, parsedInfo.ServiceNameToServices)
-		assert.Equal(newSecretNameToSNIs(), parsedInfo.SecretNameToSNIs)
+		assert.Equal(newSecretNameToSNIMap(), parsedInfo.SecretNameToSNIs)
 	})
 	t.Run("basic knative Ingress resource is parsed", func(t *testing.T) {
 		store, err := store.NewFakeStore(store.FakeObjects{
@@ -281,7 +281,7 @@ func TestFromKnativeIngress(t *testing.T) {
 			},
 		}, svc.Plugins[0])
 
-		assert.Equal(newSecretNameToSNIs(), parsedInfo.SecretNameToSNIs)
+		assert.Equal(newSecretNameToSNIMap(), parsedInfo.SecretNameToSNIs)
 	})
 	t.Run("knative TLS section is correctly parsed", func(t *testing.T) {
 		store, err := store.NewFakeStore(store.FakeObjects{
@@ -293,7 +293,7 @@ func TestFromKnativeIngress(t *testing.T) {
 		p := mustNewParser(t, store)
 
 		parsedInfo := p.ingressRulesFromKnativeIngress()
-		assert.Equal(SecretNameToSNIs(map[string][]string{
+		assert.Equal(makeSecretNameToSNIMap(map[string][]string{
 			"foo-namespace/bar-secret": {"bar.example.com", "bar1.example.com"},
 			"foo-namespace/foo-secret": {"foo.example.com", "foo1.example.com"},
 		}), parsedInfo.SecretNameToSNIs)
@@ -341,7 +341,7 @@ func TestFromKnativeIngress(t *testing.T) {
 			},
 		}, svc.Plugins[0])
 
-		assert.Equal(newSecretNameToSNIs(), parsedInfo.SecretNameToSNIs)
+		assert.Equal(newSecretNameToSNIMap(), parsedInfo.SecretNameToSNIs)
 	})
 	t.Run("regex prefix translated to Kong form", func(t *testing.T) {
 		store, err := store.NewFakeStore(store.FakeObjects{
@@ -357,6 +357,6 @@ func TestFromKnativeIngress(t *testing.T) {
 		svc := parsedInfo.ServiceNameToServices["foo-ns.foo-svc.42"]
 		assert.Equal(translators.KongPathRegexPrefix+"/foo/\\d{3}", *svc.Routes[0].Route.Paths[0])
 
-		assert.Equal(newSecretNameToSNIs(), parsedInfo.SecretNameToSNIs)
+		assert.Equal(newSecretNameToSNIMap(), parsedInfo.SecretNameToSNIs)
 	})
 }

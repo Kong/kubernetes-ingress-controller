@@ -44,7 +44,7 @@ func (p *Parser) ingressRulesFromKnativeIngress() ingressRules {
 	})
 
 	services := map[string]kongstate.Service{}
-	secretToSNIs := newSecretNameToSNIs()
+	secretToSNIs := newSecretNameToSNIMap()
 
 	for _, ingress := range ingressList {
 		regexPrefix := translators.ControllerPathRegexPrefix
@@ -53,7 +53,7 @@ func (p *Parser) ingressRulesFromKnativeIngress() ingressRules {
 		}
 		ingressSpec := ingress.Spec
 
-		secretToSNIs.addFromIngressV1beta1TLS(knativeIngressToNetworkingTLS(ingress.Spec.TLS), ingress.Namespace)
+		secretToSNIs.addFromIngressV1TLS(knativeIngressToNetworkingV1TLS(ingress.Spec.TLS), ingress.Namespace)
 
 		var objectSuccessfullyParsed bool
 		for i, rule := range ingressSpec.Rules {

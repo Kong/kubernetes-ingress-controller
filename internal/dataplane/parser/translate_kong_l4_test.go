@@ -108,7 +108,7 @@ func TestFromTCPIngressV1beta1(t *testing.T) {
 		parsedInfo := p.ingressRulesFromTCPIngressV1beta1()
 		assert.Equal(ingressRules{
 			ServiceNameToServices: make(map[string]kongstate.Service),
-			SecretNameToSNIs:      make(map[string][]string),
+			SecretNameToSNIs:      newSecretNameToSNIMap(),
 		}, parsedInfo)
 	})
 	t.Run("empty TCPIngress return empty info", func(t *testing.T) {
@@ -123,7 +123,7 @@ func TestFromTCPIngressV1beta1(t *testing.T) {
 		parsedInfo := p.ingressRulesFromTCPIngressV1beta1()
 		assert.Equal(ingressRules{
 			ServiceNameToServices: make(map[string]kongstate.Service),
-			SecretNameToSNIs:      make(map[string][]string),
+			SecretNameToSNIs:      newSecretNameToSNIMap(),
 		}, parsedInfo)
 	})
 	t.Run("simple TCPIngress rule is parsed", func(t *testing.T) {

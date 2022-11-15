@@ -4635,6 +4635,7 @@ func TestPickPort(t *testing.T) {
 
 func TestCertificate(t *testing.T) {
 	assert := assert.New(t)
+	// TODO: do we actually need to keep the order? if so, the method `addHost` of `SNIHostMap` should consider the adding time.
 	t.Run("same host with multiple namespace return the first namespace/secret by asc ", func(t *testing.T) {
 		ingresses := []*netv1beta1.Ingress{
 			{

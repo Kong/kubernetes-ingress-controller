@@ -28,7 +28,7 @@ func (p *Parser) ingressRulesFromTCPIngressV1beta1() ingressRules {
 	for _, ingress := range ingressList {
 		ingressSpec := ingress.Spec
 
-		result.SecretNameToSNIs.addFromIngressV1beta1TLS(tcpIngressToNetworkingTLS(ingressSpec.TLS), ingress.Namespace)
+		result.SecretNameToSNIs.addFromIngressV1TLS(tcpIngressToNetworkingV1TLS(ingressSpec.TLS), ingress.Namespace)
 
 		var objectSuccessfullyParsed bool
 		for i, rule := range ingressSpec.Rules {

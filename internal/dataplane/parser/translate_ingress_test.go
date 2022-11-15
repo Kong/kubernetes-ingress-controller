@@ -274,7 +274,7 @@ func TestFromIngressV1beta1(t *testing.T) {
 		parsedInfo := p.ingressRulesFromIngressV1beta1()
 		assert.Equal(ingressRules{
 			ServiceNameToServices: make(map[string]kongstate.Service),
-			SecretNameToSNIs:      make(map[string][]string),
+			SecretNameToSNIs:      newSecretNameToSNIMap(),
 		}, parsedInfo)
 	})
 	t.Run("simple ingress rule is parsed", func(t *testing.T) {
@@ -748,7 +748,7 @@ func TestFromIngressV1(t *testing.T) {
 		parsedInfo := p.ingressRulesFromIngressV1()
 		assert.Equal(ingressRules{
 			ServiceNameToServices: make(map[string]kongstate.Service),
-			SecretNameToSNIs:      make(map[string][]string),
+			SecretNameToSNIs:      newSecretNameToSNIMap(),
 		}, parsedInfo)
 	})
 	t.Run("simple ingress rule is parsed", func(t *testing.T) {

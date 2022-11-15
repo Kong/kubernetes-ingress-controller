@@ -41,7 +41,7 @@ func getIngressRulesFromHTTPRoutesCommonTestCases() []testCaseIngressRulesFromHT
 			msg: "an empty list of HTTPRoutes should produce no ingress rules",
 			expected: func(routes []*gatewayv1beta1.HTTPRoute) ingressRules {
 				return ingressRules{
-					SecretNameToSNIs:      SecretNameToSNIs{},
+					SecretNameToSNIs:      newSecretNameToSNIMap(),
 					ServiceNameToServices: make(map[string]kongstate.Service),
 				}
 			},
@@ -68,7 +68,7 @@ func getIngressRulesFromHTTPRoutesCommonTestCases() []testCaseIngressRulesFromHT
 			}},
 			expected: func(routes []*gatewayv1beta1.HTTPRoute) ingressRules {
 				return ingressRules{
-					SecretNameToSNIs: SecretNameToSNIs{},
+					SecretNameToSNIs: newSecretNameToSNIMap(),
 					ServiceNameToServices: map[string]kongstate.Service{
 						"httproute.default.basic-httproute.0": {
 							Service: kong.Service{ // only 1 service should be created
@@ -125,7 +125,7 @@ func getIngressRulesFromHTTPRoutesCommonTestCases() []testCaseIngressRulesFromHT
 			}},
 			expected: func(routes []*gatewayv1beta1.HTTPRoute) ingressRules {
 				return ingressRules{
-					SecretNameToSNIs:      SecretNameToSNIs{},
+					SecretNameToSNIs:      newSecretNameToSNIMap(),
 					ServiceNameToServices: make(map[string]kongstate.Service),
 				}
 			},
@@ -154,7 +154,7 @@ func getIngressRulesFromHTTPRoutesCommonTestCases() []testCaseIngressRulesFromHT
 			}},
 			expected: func(routes []*gatewayv1beta1.HTTPRoute) ingressRules {
 				return ingressRules{
-					SecretNameToSNIs: SecretNameToSNIs{},
+					SecretNameToSNIs: newSecretNameToSNIMap(),
 					ServiceNameToServices: map[string]kongstate.Service{
 						"httproute.default.basic-httproute.0": {
 							Service: kong.Service{ // only 1 service should be created
@@ -204,7 +204,7 @@ func getIngressRulesFromHTTPRoutesCommonTestCases() []testCaseIngressRulesFromHT
 			}},
 			expected: func(routes []*gatewayv1beta1.HTTPRoute) ingressRules {
 				return ingressRules{
-					SecretNameToSNIs:      SecretNameToSNIs{},
+					SecretNameToSNIs:      newSecretNameToSNIMap(),
 					ServiceNameToServices: make(map[string]kongstate.Service),
 				}
 			},
@@ -233,7 +233,7 @@ func getIngressRulesFromHTTPRoutesCommonTestCases() []testCaseIngressRulesFromHT
 			}},
 			expected: func(routes []*gatewayv1beta1.HTTPRoute) ingressRules {
 				return ingressRules{
-					SecretNameToSNIs:      SecretNameToSNIs{},
+					SecretNameToSNIs:      newSecretNameToSNIMap(),
 					ServiceNameToServices: make(map[string]kongstate.Service),
 				}
 			},
@@ -262,7 +262,7 @@ func getIngressRulesFromHTTPRoutesCommonTestCases() []testCaseIngressRulesFromHT
 			}},
 			expected: func(routes []*gatewayv1beta1.HTTPRoute) ingressRules {
 				return ingressRules{
-					SecretNameToSNIs: SecretNameToSNIs{},
+					SecretNameToSNIs: newSecretNameToSNIMap(),
 					ServiceNameToServices: map[string]kongstate.Service{
 						"httproute.default.basic-httproute.0": {
 							Service: kong.Service{ // only 1 service should be created
@@ -322,7 +322,7 @@ func getIngressRulesFromHTTPRoutesCommonTestCases() []testCaseIngressRulesFromHT
 			}},
 			expected: func(routes []*gatewayv1beta1.HTTPRoute) ingressRules {
 				return ingressRules{
-					SecretNameToSNIs: SecretNameToSNIs{},
+					SecretNameToSNIs: newSecretNameToSNIMap(),
 					ServiceNameToServices: map[string]kongstate.Service{
 						"httproute.default.basic-httproute.0": {
 							Service: kong.Service{ // only 1 service should be created
@@ -392,7 +392,7 @@ func getIngressRulesFromHTTPRoutesCombinedRoutesTestCases() []testCaseIngressRul
 			}},
 			expected: func(routes []*gatewayv1beta1.HTTPRoute) ingressRules {
 				return ingressRules{
-					SecretNameToSNIs: SecretNameToSNIs{},
+					SecretNameToSNIs: newSecretNameToSNIMap(),
 					ServiceNameToServices: map[string]kongstate.Service{
 						"httproute.default.basic-httproute.0": {
 							Service: kong.Service{ // only 1 service should be created
@@ -467,7 +467,7 @@ func getIngressRulesFromHTTPRoutesCombinedRoutesTestCases() []testCaseIngressRul
 			},
 			expected: func(routes []*gatewayv1beta1.HTTPRoute) ingressRules {
 				return ingressRules{
-					SecretNameToSNIs: SecretNameToSNIs{},
+					SecretNameToSNIs: newSecretNameToSNIMap(),
 					ServiceNameToServices: map[string]kongstate.Service{
 						"httproute.default.basic-httproute.0": {
 							Service: kong.Service{ // 1 service per route should be created
@@ -581,7 +581,7 @@ func getIngressRulesFromHTTPRoutesCombinedRoutesTestCases() []testCaseIngressRul
 			},
 			expected: func(routes []*gatewayv1beta1.HTTPRoute) ingressRules {
 				return ingressRules{
-					SecretNameToSNIs: SecretNameToSNIs{},
+					SecretNameToSNIs: newSecretNameToSNIMap(),
 					ServiceNameToServices: map[string]kongstate.Service{
 						"httproute.default.basic-httproute.0": {
 							Service: kong.Service{
@@ -711,7 +711,7 @@ func getIngressRulesFromHTTPRoutesCombinedRoutesTestCases() []testCaseIngressRul
 			},
 			expected: func(routes []*gatewayv1beta1.HTTPRoute) ingressRules {
 				return ingressRules{
-					SecretNameToSNIs: SecretNameToSNIs{},
+					SecretNameToSNIs: newSecretNameToSNIMap(),
 					ServiceNameToServices: map[string]kongstate.Service{
 						"httproute.default.basic-httproute.0": {
 							Service: kong.Service{ // only 1 service should be created
@@ -828,7 +828,7 @@ func getIngressRulesFromHTTPRoutesCombinedRoutesTestCases() []testCaseIngressRul
 			}},
 			expected: func(routes []*gatewayv1beta1.HTTPRoute) ingressRules {
 				return ingressRules{
-					SecretNameToSNIs: SecretNameToSNIs{},
+					SecretNameToSNIs: newSecretNameToSNIMap(),
 					ServiceNameToServices: map[string]kongstate.Service{
 						"httproute.default.basic-httproute.0": {
 							Service: kong.Service{
@@ -981,7 +981,7 @@ func getIngressRulesFromHTTPRoutesCombinedRoutesTestCases() []testCaseIngressRul
 			}},
 			expected: func(routes []*gatewayv1beta1.HTTPRoute) ingressRules {
 				return ingressRules{
-					SecretNameToSNIs: SecretNameToSNIs{},
+					SecretNameToSNIs: newSecretNameToSNIMap(),
 					ServiceNameToServices: map[string]kongstate.Service{
 						"httproute.default.basic-httproute.0": {
 							Service: kong.Service{
@@ -1235,7 +1235,7 @@ func TestIngressRulesFromHTTPRoutes_RegexPrefix(t *testing.T) {
 			}},
 			expected: func(routes []*gatewayv1beta1.HTTPRoute) ingressRules {
 				return ingressRules{
-					SecretNameToSNIs: SecretNameToSNIs{},
+					SecretNameToSNIs: newSecretNameToSNIMap(),
 					ServiceNameToServices: map[string]kongstate.Service{
 						"httproute.default.basic-httproute.0": {
 							Service: kong.Service{ // only 1 service should be created

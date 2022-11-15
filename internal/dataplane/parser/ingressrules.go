@@ -16,13 +16,13 @@ import (
 )
 
 type ingressRules struct {
-	SecretNameToSNIs      SecretNameToSNIs
+	SecretNameToSNIs      SecretNameToSNIMap
 	ServiceNameToServices map[string]kongstate.Service
 }
 
 func newIngressRules() ingressRules {
 	return ingressRules{
-		SecretNameToSNIs:      newSecretNameToSNIs(),
+		SecretNameToSNIs:      newSecretNameToSNIMap(),
 		ServiceNameToServices: make(map[string]kongstate.Service),
 	}
 }
@@ -32,7 +32,7 @@ func mergeIngressRules(objs ...ingressRules) ingressRules {
 
 	for _, obj := range objs {
 		for k, v := range obj.SecretNameToSNIs {
-			result.SecretNameToSNIs[k] = append(result.SecretNameToSNIs[k], v...)
+			result.SecretNameToSNIs[k] = mergeSNIHostMap(result.SecretNameToSNIs[k], v)
 		}
 		for k, v := range obj.ServiceNameToServices {
 			result.ServiceNameToServices[k] = v
@@ -84,7 +84,7 @@ func (ir *ingressRules) populateServices(log logrus.FieldLogger, s store.Storer,
 
 				// ensure that the cert is loaded into Kong
 				if _, ok := ir.SecretNameToSNIs[secretKey]; !ok {
-					ir.SecretNameToSNIs[secretKey] = []string{}
+					ir.SecretNameToSNIs[secretKey] = newSNIHostMap()
 				}
 				service.ClientCertificate = &kong.Certificate{
 					ID: kong.String(string(secret.UID)),
@@ -99,22 +99,46 @@ func (ir *ingressRules) populateServices(log logrus.FieldLogger, s store.Storer,
 	return serviceNamesToSkip
 }
 
-type SecretNameToSNIs map[string][]string
+// SNIHostMap is a map to store non-duplicate SNI hosts.
+type SNIHostMap map[string]struct{}
 
-func newSecretNameToSNIs() SecretNameToSNIs {
-	return SecretNameToSNIs(map[string][]string{})
+func newSNIHostMap() SNIHostMap {
+	return SNIHostMap(map[string]struct{}{})
 }
 
-func (m SecretNameToSNIs) addFromIngressV1beta1TLS(tlsSections []netv1beta1.IngressTLS, namespace string) {
-	// Assume that v1beta1 and v1 tlsSections have identical semantics and field-wise content.
-	var v1 []netv1.IngressTLS
-	for _, item := range tlsSections {
-		v1 = append(v1, netv1.IngressTLS{Hosts: item.Hosts, SecretName: item.SecretName})
+func (m SNIHostMap) addHost(host string) {
+	m[host] = struct{}{}
+}
+
+// deleteHost is not
+
+func (m SNIHostMap) listHosts() []string {
+	hosts := make([]string, 0, len(m))
+	for host := range m {
+		hosts = append(hosts, host)
 	}
-	m.addFromIngressV1TLS(v1, namespace)
+	return hosts
 }
 
-func (m SecretNameToSNIs) addFromIngressV1TLS(tlsSections []netv1.IngressTLS, namespace string) {
+func mergeSNIHostMap(m1, m2 SNIHostMap) SNIHostMap {
+	if m1 == nil {
+		return m2
+	}
+
+	for host := range m2 {
+		m1[host] = struct{}{}
+	}
+
+	return m1
+}
+
+type SecretNameToSNIMap map[string]SNIHostMap
+
+func newSecretNameToSNIMap() SecretNameToSNIMap {
+	return SecretNameToSNIMap(map[string]SNIHostMap{})
+}
+
+func (m SecretNameToSNIMap) addFromIngressV1TLS(tlsSections []netv1.IngressTLS, namespace string) {
 	for _, tls := range tlsSections {
 		if len(tls.Hosts) == 0 {
 			continue
@@ -124,28 +148,22 @@ func (m SecretNameToSNIs) addFromIngressV1TLS(tlsSections []netv1.IngressTLS, na
 		}
 		hosts := tls.Hosts
 		secretName := namespace + "/" + tls.SecretName
-		hosts = m.filterHosts(hosts)
-		if m[secretName] != nil {
-			hosts = append(hosts, m[secretName]...)
+		if m[secretName] == nil {
+			m[secretName] = newSNIHostMap()
 		}
-		m[secretName] = hosts
+		for _, host := range hosts {
+			m[secretName].addHost(host)
+		}
 	}
 }
 
-func (m SecretNameToSNIs) filterHosts(hosts []string) []string {
-	hostsToAdd := []string{}
-	seenHosts := map[string]bool{}
-	for _, hosts := range m {
-		for _, host := range hosts {
-			seenHosts[host] = true
-		}
+func (m SecretNameToSNIMap) addFromIngressV1beta1TLS(tlsSections []netv1beta1.IngressTLS, namespace string) {
+	// Assume that v1beta1 and v1 tlsSections have identical semantics and field-wise content.
+	var v1 []netv1.IngressTLS
+	for _, item := range tlsSections {
+		v1 = append(v1, netv1.IngressTLS{Hosts: item.Hosts, SecretName: item.SecretName})
 	}
-	for _, host := range hosts {
-		if !seenHosts[host] {
-			hostsToAdd = append(hostsToAdd, host)
-		}
-	}
-	return hostsToAdd
+	m.addFromIngressV1TLS(v1, namespace)
 }
 
 func getK8sServicesForBackends(

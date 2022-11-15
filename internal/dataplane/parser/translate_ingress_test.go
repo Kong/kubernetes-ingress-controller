@@ -323,7 +323,6 @@ func TestFromIngressV1beta1(t *testing.T) {
 		p := mustNewParser(t, store)
 
 		parsedInfo := p.ingressRulesFromIngressV1beta1()
-		assert.Equal(2, len(parsedInfo.SecretNameToSNIs.m))
 		assert.Equal(2, len(parsedInfo.SecretNameToSNIs.Hosts("bar-namespace/sooper-secret")))
 		assert.Equal(2, len(parsedInfo.SecretNameToSNIs.Hosts("bar-namespace/sooper-secret2")))
 	})
@@ -800,7 +799,6 @@ func TestFromIngressV1(t *testing.T) {
 		p := mustNewParser(t, store)
 
 		parsedInfo := p.ingressRulesFromIngressV1()
-		assert.Equal(2, len(parsedInfo.SecretNameToSNIs.m))
 		assert.Equal(2, len(parsedInfo.SecretNameToSNIs.Hosts("bar-namespace/sooper-secret")))
 		assert.Equal(2, len(parsedInfo.SecretNameToSNIs.Hosts("bar-namespace/sooper-secret2")))
 	})

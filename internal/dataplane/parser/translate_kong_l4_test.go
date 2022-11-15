@@ -193,7 +193,6 @@ func TestFromTCPIngressV1beta1(t *testing.T) {
 		p := mustNewParser(t, store)
 
 		parsedInfo := p.ingressRulesFromTCPIngressV1beta1()
-		assert.Equal(2, len(parsedInfo.SecretNameToSNIs.m))
 		assert.Equal(2, len(parsedInfo.SecretNameToSNIs.Hosts("default/sooper-secret")))
 		assert.Equal(2, len(parsedInfo.SecretNameToSNIs.Hosts("default/sooper-secret2")))
 	})

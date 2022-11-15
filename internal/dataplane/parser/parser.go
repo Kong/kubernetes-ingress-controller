@@ -483,7 +483,7 @@ func (p *Parser) getGatewayCerts() []certWrapper {
 func (p *Parser) getCerts(secretsToSNIs SecretNameToSNIs) []certWrapper {
 	certs := []certWrapper{}
 
-	for secretKey, SNIs := range secretsToSNIs.m {
+	for secretKey, SNIs := range secretsToSNIs.secretToSNIs {
 		namespaceName := strings.Split(secretKey, "/")
 		secret, err := p.storer.GetSecret(namespaceName[0], namespaceName[1])
 		if err != nil {

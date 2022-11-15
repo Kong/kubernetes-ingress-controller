@@ -98,31 +98,32 @@ func (ir *ingressRules) populateServices(log logrus.FieldLogger, s store.Storer,
 }
 
 type SecretNameToSNIs struct {
-	m map[string]*SNIs
+	// secretToSNIs maps secrets (by 'namespace/name' key) to SNIs they are related to.
+	secretToSNIs map[string]*SNIs
 
-	// hosts keep global hosts registry to make sure only one secret can refer a single host
-	hosts map[string]struct{}
+	// seenHosts keeps global hosts registry to make sure only one secret can refer a host.
+	seenHosts map[string]struct{}
 }
 
 func newSecretNameToSNIs() SecretNameToSNIs {
 	return SecretNameToSNIs{
-		m:     map[string]*SNIs{},
-		hosts: map[string]struct{}{},
+		secretToSNIs: map[string]*SNIs{},
+		seenHosts:    map[string]struct{}{},
 	}
 }
 
 func (m SecretNameToSNIs) Parents(secretKey string) []client.Object {
-	if _, ok := m.m[secretKey]; !ok {
+	if _, ok := m.secretToSNIs[secretKey]; !ok {
 		return nil
 	}
-	return m.m[secretKey].Parents()
+	return m.secretToSNIs[secretKey].Parents()
 }
 
 func (m SecretNameToSNIs) Hosts(secretKey string) []string {
-	if _, ok := m.m[secretKey]; !ok {
+	if _, ok := m.secretToSNIs[secretKey]; !ok {
 		return nil
 	}
-	return m.m[secretKey].Hosts()
+	return m.secretToSNIs[secretKey].Hosts()
 }
 
 func (m SecretNameToSNIs) addFromIngressV1TLS(tlsSections []netv1.IngressTLS, parent client.Object) {
@@ -140,36 +141,40 @@ func (m SecretNameToSNIs) addFromIngressV1TLS(tlsSections []netv1.IngressTLS, pa
 	}
 }
 
+// addUniqueHosts adds hosts to SNIs stored under a secretKey.
+// It ensures that a host is not assigned to any secret yet. If it's assigned already, it will get skipped.
 func (m SecretNameToSNIs) addUniqueHosts(secretKey string, hosts ...string) {
 	m.ensureSNIsEntry(secretKey)
 
 	for _, host := range hosts {
-		if _, ok := m.hosts[host]; ok {
-			// skip this host, it's already added, possibly for other secret
+		if _, ok := m.seenHosts[host]; ok {
+			// Skip this host, it's already assigned, possibly to another secret.
 			continue
 		}
 
-		m.m[secretKey].hosts = append(m.m[secretKey].hosts, host)
-		m.hosts[host] = struct{}{}
+		m.secretToSNIs[secretKey].hosts = append(m.secretToSNIs[secretKey].hosts, host)
+		m.seenHosts[host] = struct{}{}
 	}
 }
 
+// addUniqueParents adds parents to SNIs stored under a secretKey, ensuring their uniqueness by the object UID.
 func (m SecretNameToSNIs) addUniqueParents(secretKey string, parents ...client.Object) {
 	m.ensureSNIsEntry(secretKey)
 
 	for _, parent := range parents {
-		m.m[secretKey].parents[parent.GetUID()] = parent
+		m.secretToSNIs[secretKey].parents[parent.GetUID()] = parent
 	}
 }
 
 func (m SecretNameToSNIs) ensureSNIsEntry(secretKey string) {
-	if _, ok := m.m[secretKey]; !ok {
-		m.m[secretKey] = newSNIs()
+	if _, ok := m.secretToSNIs[secretKey]; !ok {
+		m.secretToSNIs[secretKey] = newSNIs()
 	}
 }
 
+// merge merges other SecretNameToSNIs into m in place.
 func (m SecretNameToSNIs) merge(o SecretNameToSNIs) {
-	for secretKey, snis := range o.m {
+	for secretKey, snis := range o.secretToSNIs {
 		for _, obj := range snis.parents {
 			m.addUniqueParents(secretKey, obj)
 		}
@@ -180,6 +185,7 @@ func (m SecretNameToSNIs) merge(o SecretNameToSNIs) {
 }
 
 type SNIs struct {
+	// parents are objects that the SNIs are inherited from
 	parents map[types.UID]client.Object
 	hosts   []string
 }

@@ -96,6 +96,9 @@ var (
 
 	// clusterVersion is a convenience var where the found version of the env.Cluster is stored.
 	clusterVersion semver.Version
+
+	// runInvalidConfigTests is set to true to run the test cases including invalid test cases.
+	runInvalidConfigTests bool
 )
 
 const (
@@ -128,6 +131,11 @@ var (
 
 	// kongEnterpriseEnabled enables Enterprise-specific tests when set to "true".
 	kongEnterpriseEnabled = os.Getenv("TEST_KONG_ENTERPRISE")
+
+	// kongRouterFlavor configures router mode of Kong. currently supports:
+	// - `traditional`
+	// - `traditional_compatible`.
+	kongRouterFlavor = os.Getenv("TEST_KONG_ROUTER_FLAVOR")
 
 	// kongImage is the Kong image to use in lieu of the default.
 	kongImage = os.Getenv("TEST_KONG_IMAGE")

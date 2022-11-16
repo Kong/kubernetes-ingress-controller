@@ -934,3 +934,220 @@ func TestIngressRegexPrefix(t *testing.T) {
 		return false
 	}, ingressWait, waitTick)
 }
+
+func TestIngressRecoverFromInvalidPath(t *testing.T) {
+	ns, cleaner := setup(t)
+	defer func() {
+		if t.Failed() {
+			output, err := cleaner.DumpDiagnostics(ctx, t.Name())
+			t.Logf("%s failed, test ns %s, dumped diagnostics to %s", t.Name(), ns.Name, output)
+			assert.NoError(t, err)
+		}
+		assert.NoError(t, cleaner.Cleanup(ctx))
+	}()
+
+	// TODO: run this separately, make it not to affect other tests for sharing Kong.
+	if !runInvalidConfigTests {
+		t.Skipf("the case %s should be run separately; please set TEST_RUN_INVALID_CONFIG_CASES to true to run this case", t.Name())
+	}
+
+	t.Log("deploying a minimal HTTP container deployment to test Ingress routes")
+	container := generators.NewContainer("httpbin", test.HTTPBinImage, 80)
+	deployment := generators.NewDeploymentForContainer(container)
+	deployment, err := env.Cluster().Client().AppsV1().Deployments(ns.Name).Create(ctx, deployment, metav1.CreateOptions{})
+	require.NoError(t, err)
+	cleaner.Add(deployment)
+
+	t.Logf("exposing deployment %s via service", deployment.Name)
+	service := generators.NewServiceForDeployment(deployment, corev1.ServiceTypeLoadBalancer)
+	_, err = env.Cluster().Client().CoreV1().Services(ns.Name).Create(ctx, service, metav1.CreateOptions{})
+	require.NoError(t, err)
+	cleaner.Add(service)
+
+	t.Log("create an ingress")
+	pathTypePrefix := netv1.PathTypePrefix
+	pathTypeImplementationSpecific := netv1.PathTypeImplementationSpecific
+	ingress := &netv1.Ingress{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "regex-prefix-ns",
+			Annotations: map[string]string{
+				"konghq.com/strip-path": "true",
+			},
+		},
+		Spec: netv1.IngressSpec{
+			IngressClassName: kong.String(ingressClass),
+			Rules: []netv1.IngressRule{
+				{
+					IngressRuleValue: netv1.IngressRuleValue{
+						HTTP: &netv1.HTTPIngressRuleValue{
+							Paths: []netv1.HTTPIngressPath{
+								{
+									PathType: &pathTypePrefix,
+									Path:     "/foo",
+									Backend: netv1.IngressBackend{
+										Service: &netv1.IngressServiceBackend{
+											Name: service.Name,
+											Port: netv1.ServiceBackendPort{
+												Number: service.Spec.Ports[0].Port,
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+	ingress, err = env.Cluster().Client().NetworkingV1().Ingresses(ns.Name).Create(ctx, ingress, metav1.CreateOptions{})
+	require.NoError(t, err)
+	cleaner.Add(ingress)
+
+	t.Log("waiting for ingress path to become available")
+	require.Eventually(t, func() bool {
+		resp, err := httpc.Get(fmt.Sprintf("%s/foo/", proxyURL))
+		if err != nil {
+			t.Logf("WARNING: error while waiting for %s: %v", proxyURL, err)
+			return false
+		}
+		defer resp.Body.Close()
+		if resp.StatusCode == http.StatusOK {
+			b := new(bytes.Buffer)
+			n, err := b.ReadFrom(resp.Body)
+			require.NoError(t, err)
+			require.True(t, n > 0)
+			return strings.Contains(b.String(), "<title>httpbin.org</title>")
+		}
+		return false
+	}, ingressWait, waitTick)
+
+	t.Log("add an invalid path to ingress")
+	ingressInvalid := &netv1.Ingress{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "regex-prefix-ns",
+			Annotations: map[string]string{
+				"konghq.com/strip-path": "true",
+			},
+		},
+		Spec: netv1.IngressSpec{
+			IngressClassName: kong.String(ingressClass),
+			Rules: []netv1.IngressRule{
+				{
+					IngressRuleValue: netv1.IngressRuleValue{
+						HTTP: &netv1.HTTPIngressRuleValue{
+							Paths: []netv1.HTTPIngressPath{
+								{
+									PathType: &pathTypePrefix,
+									Path:     "/bar",
+									Backend: netv1.IngressBackend{
+										Service: &netv1.IngressServiceBackend{
+											Name: service.Name,
+											Port: netv1.ServiceBackendPort{
+												Number: service.Spec.Ports[0].Port,
+											},
+										},
+									},
+								},
+								{
+									PathType: &pathTypeImplementationSpecific,
+									Path:     `/~^^/*$`, // invalid regex
+									Backend: netv1.IngressBackend{
+										Service: &netv1.IngressServiceBackend{
+											Name: service.Name,
+											Port: netv1.ServiceBackendPort{
+												Number: service.Spec.Ports[0].Port,
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+	_, err = env.Cluster().Client().NetworkingV1().Ingresses(ns.Name).Update(ctx, ingressInvalid, metav1.UpdateOptions{})
+	require.NoError(t, err)
+	t.Log("verifying new configuration is not applied to kong proxy")
+	require.Never(t, func() bool {
+		resp, err := httpc.Get(fmt.Sprintf("%s/bar/", proxyURL))
+		require.NoError(t, err)
+		defer resp.Body.Close()
+		return resp.StatusCode == http.StatusOK
+	}, time.Minute, waitTick)
+
+	t.Log("verifying routes configured before invalid config is still available")
+	require.Eventually(t, func() bool {
+		resp, err := httpc.Get(fmt.Sprintf("%s/foo/", proxyURL))
+		if err != nil {
+			t.Logf("WARNING: error while waiting for %s: %v", proxyURL, err)
+			return false
+		}
+		defer resp.Body.Close()
+		if resp.StatusCode == http.StatusOK {
+			b := new(bytes.Buffer)
+			n, err := b.ReadFrom(resp.Body)
+			require.NoError(t, err)
+			require.True(t, n > 0)
+			return strings.Contains(b.String(), "<title>httpbin.org</title>")
+		}
+		return false
+	}, ingressWait, waitTick)
+
+	t.Log("reconfigure ingress with valid paths")
+	ingressRecover := &netv1.Ingress{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "regex-prefix-ns",
+			Annotations: map[string]string{
+				"konghq.com/strip-path": "true",
+			},
+		},
+		Spec: netv1.IngressSpec{
+			IngressClassName: kong.String(ingressClass),
+			Rules: []netv1.IngressRule{
+				{
+					IngressRuleValue: netv1.IngressRuleValue{
+						HTTP: &netv1.HTTPIngressRuleValue{
+							Paths: []netv1.HTTPIngressPath{
+								{
+									PathType: &pathTypePrefix,
+									Path:     "/bar",
+									Backend: netv1.IngressBackend{
+										Service: &netv1.IngressServiceBackend{
+											Name: service.Name,
+											Port: netv1.ServiceBackendPort{
+												Number: service.Spec.Ports[0].Port,
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+	_, err = env.Cluster().Client().NetworkingV1().Ingresses(ns.Name).Update(ctx, ingressRecover, metav1.UpdateOptions{})
+	require.NoError(t, err)
+
+	t.Log("waiting for ingress path to recover and new path available")
+	require.Eventually(t, func() bool {
+		resp, err := httpc.Get(fmt.Sprintf("%s/bar/", proxyURL))
+		if err != nil {
+			t.Logf("WARNING: error while waiting for %s: %v", proxyURL, err)
+			return false
+		}
+		defer resp.Body.Close()
+		if resp.StatusCode == http.StatusOK {
+			b := new(bytes.Buffer)
+			n, err := b.ReadFrom(resp.Body)
+			require.NoError(t, err)
+			require.True(t, n > 0)
+			return strings.Contains(b.String(), "<title>httpbin.org</title>")
+		}
+		return false
+	}, ingressWait, waitTick)
+}

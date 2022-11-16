@@ -68,7 +68,10 @@ func generateKongBuilder() (*kong.Builder, []string) {
 		kongbuilder = kongbuilder.WithPostgreSQL()
 	}
 
-	kongbuilder = kongbuilder.WithProxyEnvVar("router_flavor", "traditional")
+	if kongRouterFlavor == "" {
+		kongRouterFlavor = "traditional"
+	}
+	kongbuilder = kongbuilder.WithProxyEnvVar("router_flavor", kongRouterFlavor)
 
 	kongbuilder.WithControllerDisabled()
 
@@ -185,6 +188,7 @@ func TestMain(m *testing.M) {
 	exitOnErr(err)
 	for _, testCase := range testCases {
 		namespaceForTestCase, err := clusters.GenerateNamespace(ctx, env.Cluster(), testCase)
+
 		exitOnErr(err)
 		namespaces[testCase] = namespaceForTestCase
 		watchNamespaces = fmt.Sprintf("%s,%s", watchNamespaces, namespaceForTestCase.Name)
@@ -247,6 +251,12 @@ func TestMain(m *testing.M) {
 		// unknown reasons
 		_ = env.Cluster().Client().NetworkingV1().IngressClasses().Delete(ctx, iclass.Name, metav1.DeleteOptions{})
 	}()
+
+	if os.Getenv("TEST_RUN_INVALID_CONFIG_CASES") == "true" {
+		fmt.Println("INFO: run tests with invalid configurations")
+		fmt.Println("WARN: should run these cases separately to prevent config being affected by invalid cases")
+		runInvalidConfigTests = true
+	}
 
 	fmt.Printf("INFO: testing environment is ready KUBERNETES_VERSION=(%v): running tests\n", clusterVersion)
 	code = m.Run()

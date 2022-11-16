@@ -442,3 +442,30 @@ func setBuilderKubernetesVersion(t *testing.T, b *environments.Builder, clusterV
 	t.Logf("k8s cluster version is set to %v", clusterVersion)
 	return b.WithKubernetesVersion(clusterVersion)
 }
+
+// getContainerInPodSpec returns the spec of container having the given name.
+// returns nil if there is no such container.
+func getContainerInPodSpec(podSpec *corev1.PodSpec, name string) *corev1.Container {
+	for i, container := range podSpec.Containers {
+		if container.Name == name {
+			return &podSpec.Containers[i]
+		}
+	}
+	return nil
+}
+
+// getEnvValueInContainer returns the value of specified environment variable in the container.
+// if there are multiple envs with same value, return the last one which is actually effective.
+// returns empty string if the env os not found.
+func getEnvValueInContainer(container *corev1.Container, name string) string {
+	if container == nil {
+		return ""
+	}
+	value := ""
+	for _, env := range container.Env {
+		if env.Name == name {
+			value = env.Value
+		}
+	}
+	return value
+}

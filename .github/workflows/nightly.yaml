@@ -185,6 +185,9 @@ jobs:
         dbmode:
           - 'dbless'
           - 'postgres'
+        kong-router-flavor:
+          - 'traditional'
+          - 'traditional_compatible'
     steps:
       - name: setup golang
         uses: actions/setup-go@v3
@@ -201,15 +204,23 @@ jobs:
         uses: actions/checkout@v3
         with:
           fetch-depth: 0
-      - name: Kubernetes ${{ matrix.kubernetes-version }} ${{ matrix.dbmode }} Integration Tests
+      - name: Kubernetes ${{ matrix.kubernetes-version }} ${{ matrix.dbmode }} Integration Tests With ${{ matrix.kong-router-flavor }} Kong Router
         run: KONG_CLUSTER_VERSION=${{ matrix.kubernetes-version }} make test.integration.${{ matrix.dbmode }}
         env:
-          GOTESTSUM_JUNITFILE: integration-${{ matrix.kubernetes-version }}-${{ matrix.dbmode }}-tests.xml
+          GOTESTSUM_JUNITFILE: integration-${{ matrix.kong-router-flavor }}-${{ matrix.kubernetes-version }}-${{ matrix.dbmode }}-tests.xml
+          TEST_KONG_ROUTER_FLAVOR: ${{ matrix.kong-router-flavor }}
+      - name: Kubernetes ${{ matrix.kubernetes-version }} ${{ matrix.dbmode }} Integration Tests for Invalid Configurations With ${{ matrix.kong-router-flavor }} Kong Router
+        run: KONG_CLUSTER_VERSION=${{ matrix.kubernetes-version }} make test.integration.${{ matrix.dbmode }}
+        env:
+          GOTESTSUM_JUNITFILE: integration-invalid-config-${{ matrix.kong-router-flavor }}-${{ matrix.kubernetes-version }}-${{ matrix.dbmode }}-tests.xml
+          TEST_KONG_ROUTER_FLAVOR: ${{ matrix.kong-router-flavor }}
+          GOTESTFLAGS: "-run=TestIngressRecoverFromInvalidPath"
+          TEST_RUN_INVALID_CONFIG_CASES: "true"
       - name: collect test report
         uses: actions/upload-artifact@v3
         with:
           name: tests-report
-          path: integration-${{ matrix.kubernetes-version }}-${{ matrix.dbmode }}-tests.xml
+          path: integration-${{ matrix.kubernetes-version }}-${{ matrix.dbmode }}-${{ matrix.kong-router-flavor }}-tests.xml
 
   buildpulse-report:
     environment: "Configure ci"

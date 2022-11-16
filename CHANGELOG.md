@@ -147,6 +147,8 @@ Adding a new version? You'll need three changes:
 - Warning events are recorded when an Ingress refers to a TLS secret that does not exist or 
   has no valid TLS key-pair. 
   [#3150](https://github.com/Kong/kubernetes-ingress-controller/pull/3150)
+- Warning events are recorded when HTTPRoute has no backendRefs specified.
+  [#3167](https://github.com/Kong/kubernetes-ingress-controller/pull/3167)
 
 ### Fixed
 

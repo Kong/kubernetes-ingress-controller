@@ -287,6 +287,35 @@ func TestTranslationFailures(t *testing.T) {
 				}
 			},
 		},
+		{
+			name: "httproute rule has no backendRefs defined",
+			translationFailureTrigger: func(t *testing.T, cleaner *clusters.Cleaner, ns string) expectedTranslationFailure {
+				gatewayClient, err := gatewayclient.NewForConfig(env.Cluster().Config())
+				require.NoError(t, err)
+
+				gatewayClassName := testutils.RandomName(testTranslationFailuresObjectsPrefix)
+				gwc, err := DeployGatewayClass(ctx, gatewayClient, gatewayClassName)
+				require.NoError(t, err)
+				cleaner.Add(gwc)
+
+				gatewayName := testutils.RandomName(testTranslationFailuresObjectsPrefix)
+				gateway, err := DeployGateway(ctx, gatewayClient, ns, gatewayClassName, func(gw *gatewayv1beta1.Gateway) {
+					gw.Name = gatewayName
+				})
+				require.NoError(t, err)
+				cleaner.Add(gateway)
+
+				httpRoute := httpRouteWithBackends(gatewayName)
+				httpRoute, err = gatewayClient.GatewayV1beta1().HTTPRoutes(ns).Create(ctx, httpRoute, metav1.CreateOptions{})
+				require.NoError(t, err)
+				cleaner.Add(httpRoute)
+
+				return expectedTranslationFailure{
+					causingObjects: []client.Object{httpRoute},
+					reasonContains: "missing backendRef in rule",
+				}
+			},
+		},
 	}
 
 	for _, tt := range testCases {
@@ -396,25 +425,28 @@ func pluginUsingInvalidCACert(ns string) *kongv1.KongPlugin {
 }
 
 func httpRouteWithBackends(gatewayName string, services ...*corev1.Service) *gatewayv1beta1.HTTPRoute {
-	httpPort := gatewayv1beta1.PortNumber(80)
-	weight := int32(100 / len(services))
-	pathMatchPrefix := gatewayv1beta1.PathMatchPathPrefix
-
 	backendRefs := make([]gatewayv1beta1.HTTPBackendRef, 0, len(services))
-	for _, service := range services {
-		backendRefs = append(backendRefs,
-			gatewayv1beta1.HTTPBackendRef{
-				BackendRef: gatewayv1beta1.BackendRef{
-					BackendObjectReference: gatewayv1beta1.BackendObjectReference{
-						Name: gatewayv1beta1.ObjectName(service.Name),
-						Port: &httpPort,
-						Kind: util.StringToGatewayAPIKindPtr("Service"),
+
+	if len(services) > 0 {
+		httpPort := gatewayv1beta1.PortNumber(80)
+		weight := int32(100 / len(services))
+
+		for _, service := range services {
+			backendRefs = append(backendRefs,
+				gatewayv1beta1.HTTPBackendRef{
+					BackendRef: gatewayv1beta1.BackendRef{
+						BackendObjectReference: gatewayv1beta1.BackendObjectReference{
+							Name: gatewayv1beta1.ObjectName(service.Name),
+							Port: &httpPort,
+							Kind: util.StringToGatewayAPIKindPtr("Service"),
+						},
+						Weight: &weight,
 					},
-					Weight: &weight,
-				},
-			})
+				})
+		}
 	}
 
+	pathMatchPrefix := gatewayv1beta1.PathMatchPathPrefix
 	return &gatewayv1beta1.HTTPRoute{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: testutils.RandomName(testTranslationFailuresObjectsPrefix),

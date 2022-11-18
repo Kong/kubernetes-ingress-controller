@@ -370,7 +370,7 @@ func (c *KongClient) Update(ctx context.Context) error {
 	c.logger.Debug("sending configuration to Kong Admin API")
 	timedCtx, cancel := context.WithTimeout(ctx, c.requestTimeout)
 	defer cancel()
-	newConfigSHA, err := sendconfig.PerformUpdate(timedCtx,
+	newConfigSHA, err, entityErrors := sendconfig.PerformUpdate(timedCtx,
 		c.logger,
 		&c.kongConfig,
 		c.kongConfig.InMemory,
@@ -382,6 +382,7 @@ func (c *KongClient) Update(ctx context.Context) error {
 		c.lastConfigSHA,
 		c.prometheusMetrics,
 	)
+	c.recordTranslationFailureWarningEvents(entityErrors)
 	if err != nil {
 		if expired, ok := timedCtx.Deadline(); ok && time.Now().After(expired) {
 			c.logger.Warn("exceeded Kong API timeout, consider increasing --proxy-timeout-seconds")

@@ -5,9 +5,7 @@ import (
 	"context"
 	"encoding/hex"
 	"encoding/json"
-	"errors"
 	"fmt"
-	"net"
 	"net/http"
 	"reflect"
 	"sync"
@@ -21,8 +19,11 @@ import (
 	"github.com/kong/go-kong/kong"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/sirupsen/logrus"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/deckgen"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/parser"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/metrics"
 )
 
@@ -44,10 +45,10 @@ func PerformUpdate(ctx context.Context,
 	customEntities []byte,
 	oldSHA []byte,
 	promMetrics *metrics.CtrlFuncMetrics,
-) ([]byte, error) {
+) ([]byte, error, []parser.TranslationFailure) {
 	newSHA, err := deckgen.GenerateSHA(targetContent, customEntities)
 	if err != nil {
-		return oldSHA, err
+		return oldSHA, err, []parser.TranslationFailure{}
 	}
 	// disable optimization if reverse sync is enabled
 	if !reverseSync {
@@ -63,23 +64,25 @@ func PerformUpdate(ctx context.Context,
 			if err != nil {
 				log.WithError(err).Error("checking config status failed")
 				log.Debug("configuration state unknown, skipping sync to kong")
-				return oldSHA, nil
+				return oldSHA, nil, []parser.TranslationFailure{}
 			}
 			if status.ConfigurationHash == initialHash {
 				ready = false
 			}
 			if ready {
 				log.Debug("no configuration change, skipping sync to kong")
-				return oldSHA, nil
+				return oldSHA, nil, []parser.TranslationFailure{}
 			}
 		}
 	}
 
 	var metricsProtocol string
 	timeStart := time.Now()
+	var errParseErr error
+	var resourceErrors []ResourceError
 	if inMemory {
 		metricsProtocol = metrics.ProtocolDBLess
-		err = onUpdateInMemoryMode(ctx, log, targetContent, customEntities, kongConfig)
+		err, resourceErrors, errParseErr = onUpdateInMemoryMode(ctx, log, targetContent, customEntities, kongConfig)
 	} else {
 		metricsProtocol = metrics.ProtocolDeck
 		err = onUpdateDBMode(ctx, targetContent, kongConfig, selectorTags, skipCACertificates)
@@ -87,6 +90,39 @@ func PerformUpdate(ctx context.Context,
 	timeEnd := time.Now()
 
 	if err != nil {
+		// TODO the collector model doesn't make much sense here since we generate all errors in one go and then toss
+		// the instance--no immediate need to retain it, but you could. having it in parser is also a bit awkward, it
+		// needs its own package. the translation name is no longer correct either
+		failuresCollector, tfcErr := parser.NewTranslationFailuresCollector(log)
+		if errParseErr != nil {
+			log.WithError(errParseErr).Error("could not parse error response from Kong")
+		} else {
+			if tfcErr != nil {
+				log.WithError(errParseErr).Error("could not parse error response from Kong")
+			}
+			for _, ee := range resourceErrors {
+				obj := metav1.PartialObjectMetadata{
+					TypeMeta: metav1.TypeMeta{
+						Kind:       ee.Kind,
+						APIVersion: ee.APIVersion,
+					},
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: ee.Namespace,
+						Name:      ee.Name,
+						UID:       types.UID(ee.UID),
+					},
+				}
+				for field, problem := range ee.Problems {
+					// TODO this object is incomplete and therefore breaks events a bit. they'll show up in the event
+					// list with short fields populated, but won't appear in "describe resource" output. this requires
+					// the UID in the reference, so we either need to get the object using the info given or store
+					// the UID in tags.
+					failuresCollector.PushTranslationFailure(fmt.Sprintf("invalid %s: %s", field, problem), &obj)
+					log.Info(fmt.Sprintf("adding failure for %s: %s = %s", ee.Name, field, problem)) // TODO remove
+				}
+			}
+		}
+
 		promMetrics.ConfigPushCount.With(prometheus.Labels{
 			metrics.SuccessKey:       metrics.SuccessFalse,
 			metrics.ProtocolKey:      metricsProtocol,
@@ -96,7 +132,7 @@ func PerformUpdate(ctx context.Context,
 			metrics.SuccessKey:  metrics.SuccessFalse,
 			metrics.ProtocolKey: metricsProtocol,
 		}).Observe(float64(timeEnd.Sub(timeStart).Milliseconds()))
-		return nil, err
+		return nil, err, failuresCollector.PopTranslationFailures()
 	}
 
 	promMetrics.ConfigPushCount.With(prometheus.Labels{
@@ -109,7 +145,7 @@ func PerformUpdate(ctx context.Context,
 		metrics.ProtocolKey: metricsProtocol,
 	}).Observe(float64(timeEnd.Sub(timeStart).Milliseconds()))
 	log.Info("successfully synced configuration to kong.")
-	return newSHA, nil
+	return newSHA, nil, []parser.TranslationFailure{}
 }
 
 // -----------------------------------------------------------------------------
@@ -171,21 +207,23 @@ func onUpdateInMemoryMode(ctx context.Context,
 	state *file.Content,
 	customEntities []byte,
 	kongConfig *Kong,
-) error {
+) (error, []ResourceError, error) {
 	// Kong will error out if this is set
 	state.Info = nil
 	// Kong errors out if `null`s are present in `config` of plugins
 	deckgen.CleanUpNullsInPluginConfigs(state)
+	var parseErr error
+	var resourceErrors []ResourceError
 
 	config, err := renderConfigWithCustomEntities(log, state, customEntities)
 	if err != nil {
-		return fmt.Errorf("constructing kong configuration: %w", err)
+		return fmt.Errorf("constructing kong configuration: %w", err), resourceErrors, parseErr
 	}
 
 	req, err := http.NewRequest("POST", kongConfig.URL+"/config",
 		bytes.NewReader(config))
 	if err != nil {
-		return fmt.Errorf("creating new HTTP request for /config: %w", err)
+		return fmt.Errorf("creating new HTTP request for /config: %w", err), resourceErrors, parseErr
 	}
 	req.Header.Add("content-type", "application/json")
 
@@ -196,10 +234,12 @@ func onUpdateInMemoryMode(ctx context.Context,
 
 	_, err = kongConfig.Client.Do(ctx, req, nil)
 	if err != nil {
-		return fmt.Errorf("posting new config to /config: %w", err)
+		if apiError, ok := err.(*kong.APIError); ok {
+			resourceErrors, parseErr = parseFlatEntityErrors(apiError.Raw(), log)
+		}
 	}
 
-	return err
+	return err, resourceErrors, parseErr
 }
 
 func onUpdateDBMode(ctx context.Context,
@@ -286,57 +326,5 @@ func hasSHAUpdateAlreadyBeenReported(latestUpdateSHA []byte) bool {
 		return true
 	}
 	latestReportedSHA = latestUpdateSHA
-	return false
-}
-
-// deckConfigConflictError is an error used to wrap deck config conflict errors returned from deck functions
-// transforming KongRawState to KongState (e.g. state.Get, dump.Get).
-type deckConfigConflictError struct {
-	err error
-}
-
-func (e deckConfigConflictError) Error() string {
-	return e.err.Error()
-}
-
-func (e deckConfigConflictError) Is(target error) bool {
-	_, ok := target.(deckConfigConflictError)
-	return ok
-}
-
-func (e deckConfigConflictError) Unwrap() error {
-	return e.err
-}
-
-// pushFailureReason extracts config push failure reason from an error returned from onUpdateInMemoryMode or onUpdateDBMode.
-func pushFailureReason(err error) string {
-	var netErr net.Error
-	if errors.As(err, &netErr) {
-		return metrics.FailureReasonNetwork
-	}
-
-	if isConflictErr(err) {
-		return metrics.FailureReasonConflict
-	}
-
-	return metrics.FailureReasonOther
-}
-
-func isConflictErr(err error) bool {
-	var apiErr *kong.APIError
-	if errors.As(err, &apiErr) && apiErr.Code() == http.StatusConflict ||
-		errors.Is(err, deckConfigConflictError{}) {
-		return true
-	}
-
-	var deckErrArray deckutils.ErrArray
-	if errors.As(err, &deckErrArray) {
-		for _, err := range deckErrArray.Errors {
-			if isConflictErr(err) {
-				return true
-			}
-		}
-	}
-
 	return false
 }

@@ -35,6 +35,15 @@ const (
 	KindGateway = gatewayv1beta1.Kind("Gateway")
 )
 
+const (
+	K8sNamespaceTagPrefix = "k8s-namespace:"
+	K8sNameTagPrefix      = "k8s-name:"
+	K8sUIDTagPrefix       = "k8s-uid:"
+	K8sKindTagPrefix      = "k8s-kind:"
+	K8sGroupTagPrefix     = "k8s-group:"
+	K8sVersionTagPrefix   = "k8s-version:"
+)
+
 // -----------------------------------------------------------------------------
 // Parser - Public Types
 // -----------------------------------------------------------------------------

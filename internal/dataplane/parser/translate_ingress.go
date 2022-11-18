@@ -255,6 +255,14 @@ func (p *Parser) ingressRulesFromIngressV1() ingressRules {
 							RegexPriority:     kong.Int(priorityForPath[*rulePath.PathType]),
 							RequestBuffering:  kong.Bool(true),
 							ResponseBuffering: kong.Bool(true),
+							Tags: kong.StringSlice(
+								K8sNameTagPrefix+ingress.ObjectMeta.Name,
+								K8sNamespaceTagPrefix+ingress.ObjectMeta.Namespace,
+								K8sKindTagPrefix+ingress.TypeMeta.Kind,
+								K8sUIDTagPrefix+string(ingress.ObjectMeta.UID),
+								K8sGroupTagPrefix+ingress.TypeMeta.GroupVersionKind().Group,
+								K8sVersionTagPrefix+ingress.TypeMeta.GroupVersionKind().Version,
+							),
 						},
 					}
 					if rule.Host != "" {

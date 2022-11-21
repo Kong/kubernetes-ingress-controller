@@ -27,6 +27,10 @@ const (
 	unsupportedGW = "no supported Gateway found for route"
 )
 
+var (
+	ErrNoMatchingListenerHostname = fmt.Errorf("no matching hostnames in listener")
+)
+
 // supportedGatewayWithCondition is a struct that wraps a gateway and some further info
 // such as the condition Status condition Accepted of the gateway and the listenerName.
 type supportedGatewayWithCondition struct {
@@ -82,6 +86,13 @@ const (
 	// https://github.com/kubernetes-sigs/gateway-api/pull/1516
 	// TODO: swap this out with upstream const when released.
 	RouteReasonNoMatchingParent gatewayv1beta1.RouteConditionReason = "NoMatchingParent"
+	// This reason is used with the "Accepted" condition when the Gateway has no
+	// compatible Listeners whose Port matches the route
+	// NOTE: This should probably be proposed upstream.
+	RouteReasonNoMatchingListenerPort gatewayv1beta1.RouteConditionReason = "NoMatchingListenerPort"
+	// This reason is used with the "Accepted" condition when no hostnames in listeners
+	// could match hostname in the spec of route.
+	RouteReasonNoMatchingListenerHostname gatewayv1beta1.RouteConditionReason = "NoMatchingListenerHostname"
 )
 
 // getSupportedGatewayForRoute will retrieve the Gateway and GatewayClass object for any
@@ -458,9 +469,18 @@ func listenerHostnameIntersectWithRouteHostnames[H types.HostnameT, L types.List
 	return false
 }
 
+// isListenterHostnameEffective if the listener could specify an effective hostname to match hostnames in requests.
+// it will return true when the protocol of listener is HTTP, HTTPS, or TLS.
+func isListenterHostnameEffective(listener gatewayv1beta1.Listener) bool {
+	return listener.Protocol == gatewayv1beta1.HTTPProtocolType ||
+		listener.Protocol == gatewayv1beta1.HTTPSProtocolType ||
+		listener.Protocol == gatewayv1beta1.TLSProtocolType
+}
+
 // filterHostnames accepts a HTTPRoute and returns a version of the same object with only a subset of the
 // hostnames, the ones matching with the listeners' hostname.
-func filterHostnames(gateways []supportedGatewayWithCondition, httpRoute *gatewayv1beta1.HTTPRoute) *gatewayv1beta1.HTTPRoute {
+// it returns an error if the intersection of hostname match in httproute and listeners is empty.
+func filterHostnames(gateways []supportedGatewayWithCondition, httpRoute *gatewayv1beta1.HTTPRoute) (*gatewayv1beta1.HTTPRoute, error) {
 	filteredHostnames := make([]gatewayv1beta1.Hostname, 0)
 
 	// if no hostnames are specified in the route spec, get all the hostnames from
@@ -468,10 +488,14 @@ func filterHostnames(gateways []supportedGatewayWithCondition, httpRoute *gatewa
 	if len(httpRoute.Spec.Hostnames) == 0 {
 		for _, gateway := range gateways {
 			for _, listener := range gateway.gateway.Spec.Listeners {
-				if listenerName := gateway.listenerName; listenerName == "" || listenerName == string(listener.Name) {
-					if listener.Hostname != nil {
-						filteredHostnames = append(filteredHostnames, (*listener.Hostname))
+				if listenerName := gateway.listenerName; listenerName == "" || listenerName == string(listener.Name) &&
+					isListenterHostnameEffective(listener) {
+					// httpRoute remains an empty hostname if any of the listeners
+					// has not specified hostname to match any host.
+					if listener.Hostname == nil {
+						return httpRoute, nil
 					}
+					filteredHostnames = append(filteredHostnames, (*listener.Hostname))
 				}
 			}
 		}
@@ -481,10 +505,13 @@ func filterHostnames(gateways []supportedGatewayWithCondition, httpRoute *gatewa
 				filteredHostnames = append(filteredHostnames, hostnameMatching)
 			}
 		}
+		if len(filteredHostnames) == 0 {
+			return httpRoute, ErrNoMatchingListenerHostname
+		}
 	}
 
 	httpRoute.Spec.Hostnames = filteredHostnames
-	return httpRoute
+	return httpRoute, nil
 }
 
 // getMinimumHostnameIntersection returns the minimum intersecting hostname, in the sense that:

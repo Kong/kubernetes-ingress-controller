@@ -57,6 +57,8 @@ func TestFilterHostnames(t *testing.T) {
 		gateways          []supportedGatewayWithCondition
 		httpRoute         *gatewayv1beta1.HTTPRoute
 		expectedHTTPRoute *gatewayv1beta1.HTTPRoute
+		hasError          bool
+		errString         string
 	}{
 		{
 			name: "listener 1 - specific",
@@ -179,12 +181,20 @@ func TestFilterHostnames(t *testing.T) {
 					Hostnames: []gatewayv1beta1.Hostname{},
 				},
 			},
+			hasError:  true,
+			errString: "no matching hostnames in listener",
 		},
 	}
 
 	for _, tc := range testCases {
-		filteredHTTPRoute := filterHostnames(tc.gateways, tc.httpRoute)
-		assert.Equal(t, tc.expectedHTTPRoute.Spec, filteredHTTPRoute.Spec, tc.name)
+		filteredHTTPRoute, err := filterHostnames(tc.gateways, tc.httpRoute)
+		if tc.hasError {
+			assert.Error(t, err)
+			assert.Contains(t, err.Error(), tc.errString)
+		} else {
+			assert.NoError(t, err)
+			assert.Equal(t, tc.expectedHTTPRoute.Spec, filteredHTTPRoute.Spec, tc.name)
+		}
 	}
 }
 

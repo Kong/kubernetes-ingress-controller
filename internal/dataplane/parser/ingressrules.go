@@ -71,6 +71,10 @@ func (ir *ingressRules) populateServices(log logrus.FieldLogger, s store.Storer,
 			// used for traffic, so cache it amongst the kong Services k8s services.
 			service.K8sServices[k8sService.Name] = k8sService
 
+			if konnectServiceName := annotations.ExtractKonnectService(k8sService.Annotations); konnectServiceName != "" {
+				service.Tags = append(service.Tags, kong.String(fmt.Sprintf("_KonnectService:%s", konnectServiceName)))
+			}
+
 			// extract client certificates intended for use by the service
 			secretName := annotations.ExtractClientCertificate(k8sService.Annotations)
 			if secretName != "" {

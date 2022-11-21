@@ -62,6 +62,7 @@ const (
 	RetriesKey           = "/retries"
 	HeadersKey           = "/headers"
 	PathHandlingKey      = "/path-handling"
+	KonnectServiceKey    = "/konnect-service"
 
 	// GatewayClassUnmanagedAnnotationSuffix is an annotation used on a Gateway resource to
 	// indicate that the GatewayClass should be reconciled according to unmanaged
@@ -335,4 +336,8 @@ func ExtractUnmanagedGatewayClassMode(anns map[string]string) string {
 // UpdateUnmanagedAnnotation updates the value of the annotation konghq.com/gatewayclass-unmanaged.
 func UpdateUnmanagedAnnotation(anns map[string]string, annotationValue string) {
 	anns[GatewayClassUnmanagedAnnotation] = annotationValue
+}
+
+func ExtractKonnectService(anns map[string]string) string {
+	return anns[AnnotationPrefix+KonnectServiceKey]
 }

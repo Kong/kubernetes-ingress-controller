@@ -60,6 +60,7 @@ func ToDeckContent(
 					return strings.Compare(*route.Plugins[i].Name, *route.Plugins[j].Name) > 0
 				})
 			}
+
 			service.Routes = append(service.Routes, &route)
 		}
 		sort.SliceStable(service.Routes, func(i, j int) bool {

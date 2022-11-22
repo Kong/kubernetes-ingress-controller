@@ -6,7 +6,6 @@
 {{ $gv.Doc }}
 
 {{- if $gv.Kinds  }}
-### Resource Types
 {{- range $gv.SortedKinds }}
 - {{ $gv.TypeForKind . | markdownRenderTypeLink }}
 {{- end }}

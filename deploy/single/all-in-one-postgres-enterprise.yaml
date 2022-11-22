@@ -23,7 +23,7 @@ spec:
     schema:
       openAPIV3Schema:
         description: IngressClassParameters is the Schema for the IngressClassParameters
-          API
+          API.
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation
@@ -48,7 +48,7 @@ spec:
                 type: boolean
               serviceUpstream:
                 default: false
-                description: Offload load-balancing to kube-proxy or sidecar
+                description: Offload load-balancing to kube-proxy or sidecar.
                 type: boolean
             type: object
         type: object
@@ -97,7 +97,7 @@ spec:
     name: v1
     schema:
       openAPIV3Schema:
-        description: KongClusterPlugin is the Schema for the kongclusterplugins API
+        description: KongClusterPlugin is the Schema for the  API.
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation
@@ -113,16 +113,16 @@ spec:
             properties:
               secretKeyRef:
                 description: NamespacedSecretValueFromSource represents the source
-                  of a secret value specifying the secret namespace
+                  of a secret value specifying the secret namespace.
                 properties:
                   key:
-                    description: the key containing the value
+                    description: The key containing the value.
                     type: string
                   name:
-                    description: the secret containing the key
+                    description: The secret containing the key.
                     type: string
                   namespace:
-                    description: The namespace containing the secret
+                    description: The namespace containing the secret.
                     type: string
                 required:
                 - key
@@ -131,10 +131,10 @@ spec:
                 type: object
             type: object
           consumerRef:
-            description: ConsumerRef is a reference to a particular consumer
+            description: ConsumerRef is a reference to a particular consumer.
             type: string
           disabled:
-            description: Disabled set if the plugin is disabled or not
+            description: Disabled set if the plugin is disabled or not.
             type: boolean
           kind:
             description: 'Kind is a string value representing the REST resource this
@@ -144,7 +144,7 @@ spec:
           metadata:
             type: object
           ordering:
-            description: Ordering overrides the normal plugin execution order
+            description: Ordering overrides the normal plugin execution order.
             properties:
               after:
                 additionalProperties:
@@ -165,7 +165,7 @@ spec:
             type: object
           plugin:
             description: PluginName is the name of the plugin to which to apply the
-              config
+              config.
             type: string
           protocols:
             description: Protocols configures plugin to run on requests received on
@@ -229,7 +229,7 @@ spec:
     name: v1
     schema:
       openAPIV3Schema:
-        description: KongConsumer is the Schema for the kongconsumers API
+        description: KongConsumer is the Schema for the kongconsumers API.
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation
@@ -244,7 +244,7 @@ spec:
             type: array
           custom_id:
             description: CustomID existing unique ID for the consumer - useful for
-              mapping Kong with users in your existing database
+              mapping Kong with users in your existing database.
             type: string
           kind:
             description: 'Kind is a string value representing the REST resource this
@@ -285,7 +285,7 @@ spec:
   - name: v1
     schema:
       openAPIV3Schema:
-        description: KongIngress is the Schema for the kongingresses API
+        description: KongIngress is the Schema for the kongingresses API.
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation
@@ -302,7 +302,7 @@ spec:
           proxy:
             description: Proxy defines additional connection options for the routes
               to be configured in the Kong Gateway, e.g. `connection_timeout`, `retries`,
-              e.t.c.
+              etc.
             properties:
               connect_timeout:
                 description: The timeout in milliseconds for establishing a connection
@@ -310,7 +310,8 @@ spec:
                 minimum: 0
                 type: integer
               path:
-                description: The path to be used in requests to the upstream server.(optional)
+                description: (optional) The path to be used in requests to the upstream
+                  server.
                 pattern: ^/.*$
                 type: string
               protocol:
@@ -631,7 +632,7 @@ spec:
     name: v1
     schema:
       openAPIV3Schema:
-        description: KongPlugin is the Schema for the kongplugins API
+        description: KongPlugin is the Schema for the kongplugins API.
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation
@@ -647,13 +648,13 @@ spec:
             properties:
               secretKeyRef:
                 description: SecretValueFromSource represents the source of a secret
-                  value
+                  value.
                 properties:
                   key:
-                    description: the key containing the value
+                    description: The key containing the value.
                     type: string
                   name:
-                    description: the secret containing the key
+                    description: The secret containing the key.
                     type: string
                 required:
                 - key
@@ -661,10 +662,10 @@ spec:
                 type: object
             type: object
           consumerRef:
-            description: ConsumerRef is a reference to a particular consumer
+            description: ConsumerRef is a reference to a particular consumer.
             type: string
           disabled:
-            description: Disabled set if the plugin is disabled or not
+            description: Disabled set if the plugin is disabled or not.
             type: boolean
           kind:
             description: 'Kind is a string value representing the REST resource this
@@ -674,7 +675,7 @@ spec:
           metadata:
             type: object
           ordering:
-            description: Ordering overrides the normal plugin execution order
+            description: Ordering overrides the normal plugin execution order.
             properties:
               after:
                 additionalProperties:
@@ -695,7 +696,7 @@ spec:
             type: object
           plugin:
             description: PluginName is the name of the plugin to which to apply the
-              config
+              config.
             type: string
           protocols:
             description: Protocols configures plugin to run on requests received on
@@ -757,7 +758,7 @@ spec:
     name: v1beta1
     schema:
       openAPIV3Schema:
-        description: TCPIngress is the Schema for the tcpingresses API
+        description: TCPIngress is the Schema for the tcpingresses API.
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation
@@ -772,7 +773,7 @@ spec:
           metadata:
             type: object
           spec:
-            description: TCPIngressSpec defines the desired state of TCPIngress
+            description: TCPIngressSpec defines the desired state of TCPIngress.
             properties:
               rules:
                 description: A list of rules used to configure the Ingress.
@@ -844,7 +845,7 @@ spec:
                 type: array
             type: object
           status:
-            description: TCPIngressStatus defines the observed state of TCPIngress
+            description: TCPIngressStatus defines the observed state of TCPIngress.
             properties:
               loadBalancer:
                 description: LoadBalancer contains the current status of the load-balancer.
@@ -941,7 +942,7 @@ spec:
     name: v1beta1
     schema:
       openAPIV3Schema:
-        description: UDPIngress is the Schema for the udpingresses API
+        description: UDPIngress is the Schema for the udpingresses API.
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation
@@ -956,7 +957,7 @@ spec:
           metadata:
             type: object
           spec:
-            description: UDPIngressSpec defines the desired state of UDPIngress
+            description: UDPIngressSpec defines the desired state of UDPIngress.
             properties:
               rules:
                 description: A list of rules used to configure the Ingress.
@@ -998,7 +999,7 @@ spec:
                 type: array
             type: object
           status:
-            description: UDPIngressStatus defines the observed state of UDPIngress
+            description: UDPIngressStatus defines the observed state of UDPIngress.
             properties:
               loadBalancer:
                 description: LoadBalancer contains the current status of the load-balancer.

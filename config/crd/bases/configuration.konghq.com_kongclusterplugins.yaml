@@ -41,7 +41,7 @@ spec:
     name: v1
     schema:
       openAPIV3Schema:
-        description: KongClusterPlugin is the Schema for the kongclusterplugins API
+        description: KongClusterPlugin is the Schema for the  API.
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation
@@ -57,16 +57,16 @@ spec:
             properties:
               secretKeyRef:
                 description: NamespacedSecretValueFromSource represents the source
-                  of a secret value specifying the secret namespace
+                  of a secret value specifying the secret namespace.
                 properties:
                   key:
-                    description: the key containing the value
+                    description: The key containing the value.
                     type: string
                   name:
-                    description: the secret containing the key
+                    description: The secret containing the key.
                     type: string
                   namespace:
-                    description: The namespace containing the secret
+                    description: The namespace containing the secret.
                     type: string
                 required:
                 - key
@@ -75,10 +75,10 @@ spec:
                 type: object
             type: object
           consumerRef:
-            description: ConsumerRef is a reference to a particular consumer
+            description: ConsumerRef is a reference to a particular consumer.
             type: string
           disabled:
-            description: Disabled set if the plugin is disabled or not
+            description: Disabled set if the plugin is disabled or not.
             type: boolean
           kind:
             description: 'Kind is a string value representing the REST resource this
@@ -88,7 +88,7 @@ spec:
           metadata:
             type: object
           ordering:
-            description: Ordering overrides the normal plugin execution order
+            description: Ordering overrides the normal plugin execution order.
             properties:
               after:
                 additionalProperties:
@@ -109,7 +109,7 @@ spec:
             type: object
           plugin:
             description: PluginName is the name of the plugin to which to apply the
-              config
+              config.
             type: string
           protocols:
             description: Protocols configures plugin to run on requests received on

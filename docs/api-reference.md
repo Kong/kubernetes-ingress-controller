@@ -4,7 +4,7 @@
 
 ## configuration.konghq.com/v1
 
-Package v1 contains API Schema definitions for the konghq.com v1 API group
+Package v1 contains API Schema definitions for the konghq.com v1 API group.
 
 ### Resource Types
 - [KongClusterPlugin](#kongclusterplugin)
@@ -22,7 +22,7 @@ Package v1 contains API Schema definitions for the konghq.com v1 API group
 
 
 
-ConfigSource is a wrapper around SecretValueFromSource
+ConfigSource is a wrapper around SecretValueFromSource.
 
 _Appears in:_
 - [KongPlugin](#kongplugin)
@@ -36,7 +36,7 @@ _Appears in:_
 
 
 
-KongClusterPlugin is the Schema for the kongclusterplugins API
+KongClusterPlugin is the Schema for the  API.
 
 _Appears in:_
 - [KongClusterPluginList](#kongclusterpluginlist)
@@ -46,21 +46,21 @@ _Appears in:_
 | `apiVersion` _string_ | `configuration.konghq.com/v1`
 | `kind` _string_ | `KongClusterPlugin`
 | `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
-| `consumerRef` _string_ | ConsumerRef is a reference to a particular consumer |
-| `disabled` _boolean_ | Disabled set if the plugin is disabled or not |
+| `consumerRef` _string_ | ConsumerRef is a reference to a particular consumer. |
+| `disabled` _boolean_ | Disabled set if the plugin is disabled or not. |
 | `config` _[JSON](#json)_ | Config contains the plugin configuration. |
 | `configFrom` _[NamespacedConfigSource](#namespacedconfigsource)_ | ConfigFrom references a secret containing the plugin configuration. |
-| `plugin` _string_ | PluginName is the name of the plugin to which to apply the config |
+| `plugin` _string_ | PluginName is the name of the plugin to which to apply the config. |
 | `run_on` _string_ | RunOn configures the plugin to run on the first or the second or both nodes in case of a service mesh deployment. |
 | `protocols` _[KongProtocol](#kongprotocol) array_ | Protocols configures plugin to run on requests received on specific protocols. |
-| `ordering` _PluginOrdering_ | Ordering overrides the normal plugin execution order |
+| `ordering` _PluginOrdering_ | Ordering overrides the normal plugin execution order. |
 
 
 #### KongClusterPluginList
 
 
 
-KongClusterPluginList contains a list of KongClusterPlugin
+KongClusterPluginList contains a list of KongClusterPlugin.
 
 
 
@@ -76,7 +76,7 @@ KongClusterPluginList contains a list of KongClusterPlugin
 
 
 
-KongConsumer is the Schema for the kongconsumers API
+KongConsumer is the Schema for the kongconsumers API.
 
 _Appears in:_
 - [KongConsumerList](#kongconsumerlist)
@@ -87,7 +87,7 @@ _Appears in:_
 | `kind` _string_ | `KongConsumer`
 | `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `username` _string_ | Username unique username of the consumer. |
-| `custom_id` _string_ | CustomID existing unique ID for the consumer - useful for mapping Kong with users in your existing database |
+| `custom_id` _string_ | CustomID existing unique ID for the consumer - useful for mapping Kong with users in your existing database. |
 | `credentials` _string array_ | Credentials are references to secrets containing a credential to be provisioned in Kong. |
 
 
@@ -95,7 +95,7 @@ _Appears in:_
 
 
 
-KongConsumerList contains a list of KongConsumer
+KongConsumerList contains a list of KongConsumer.
 
 
 
@@ -111,7 +111,7 @@ KongConsumerList contains a list of KongConsumer
 
 
 
-KongIngress is the Schema for the kongingresses API
+KongIngress is the Schema for the kongingresses API.
 
 _Appears in:_
 - [KongIngressList](#kongingresslist)
@@ -122,7 +122,7 @@ _Appears in:_
 | `kind` _string_ | `KongIngress`
 | `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `upstream` _[KongIngressUpstream](#kongingressupstream)_ | Upstream represents a virtual hostname and can be used to loadbalance incoming requests over multiple targets (e.g. Kubernetes `Services` can be a target, OR `Endpoints` can be targets). |
-| `proxy` _[KongIngressService](#kongingressservice)_ | Proxy defines additional connection options for the routes to be configured in the Kong Gateway, e.g. `connection_timeout`, `retries`, e.t.c. |
+| `proxy` _[KongIngressService](#kongingressservice)_ | Proxy defines additional connection options for the routes to be configured in the Kong Gateway, e.g. `connection_timeout`, `retries`, etc. |
 | `route` _[KongIngressRoute](#kongingressroute)_ | Route define rules to match client requests. Each Route is associated with a Service, and a Service may have multiple Routes associated to it. |
 
 
@@ -130,7 +130,7 @@ _Appears in:_
 
 
 
-KongIngressList contains a list of KongIngress
+KongIngressList contains a list of KongIngress.
 
 
 
@@ -146,7 +146,7 @@ KongIngressList contains a list of KongIngress
 
 
 
-KongIngressRoute contains KongIngress route configuration
+KongIngressRoute contains KongIngress route configuration. It contains the subset of `go-kong.kong.Route` fields supported by `kongstate.Route.overrideByKongIngress`.
 
 _Appears in:_
 - [KongIngress](#kongingress)
@@ -178,7 +178,7 @@ _Appears in:_
 | Field | Description |
 | --- | --- |
 | `protocol` _string_ | The protocol used to communicate with the upstream. |
-| `path` _string_ | The path to be used in requests to the upstream server.(optional) |
+| `path` _string_ | (optional) The path to be used in requests to the upstream server. |
 | `retries` _integer_ | The number of retries to execute upon failure to proxy. |
 | `connect_timeout` _integer_ | The timeout in milliseconds for establishing a connection to the upstream server. |
 | `read_timeout` _integer_ | The timeout in milliseconds between two successive read operations for transmitting a request to the upstream server. |
@@ -189,7 +189,7 @@ _Appears in:_
 
 
 
-KongIngressUpstream contains KongIngress upstream configuration
+KongIngressUpstream contains KongIngress upstream configuration. It contains the subset of `go-kong.kong.Upstream` fields supported by `kongstate.Upstream.overrideByKongIngress`.
 
 _Appears in:_
 - [KongIngress](#kongingress)
@@ -216,7 +216,7 @@ _Appears in:_
 
 
 
-KongPlugin is the Schema for the kongplugins API
+KongPlugin is the Schema for the kongplugins API.
 
 _Appears in:_
 - [KongPluginList](#kongpluginlist)
@@ -226,21 +226,21 @@ _Appears in:_
 | `apiVersion` _string_ | `configuration.konghq.com/v1`
 | `kind` _string_ | `KongPlugin`
 | `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
-| `consumerRef` _string_ | ConsumerRef is a reference to a particular consumer |
-| `disabled` _boolean_ | Disabled set if the plugin is disabled or not |
+| `consumerRef` _string_ | ConsumerRef is a reference to a particular consumer. |
+| `disabled` _boolean_ | Disabled set if the plugin is disabled or not. |
 | `config` _[JSON](#json)_ | Config contains the plugin configuration. |
 | `configFrom` _[ConfigSource](#configsource)_ | ConfigFrom references a secret containing the plugin configuration. |
-| `plugin` _string_ | PluginName is the name of the plugin to which to apply the config |
+| `plugin` _string_ | PluginName is the name of the plugin to which to apply the config. |
 | `run_on` _string_ | RunOn configures the plugin to run on the first or the second or both nodes in case of a service mesh deployment. |
 | `protocols` _[KongProtocol](#kongprotocol) array_ | Protocols configures plugin to run on requests received on specific protocols. |
-| `ordering` _[PluginOrdering](#pluginordering)_ | Ordering overrides the normal plugin execution order |
+| `ordering` _[PluginOrdering](#pluginordering)_ | Ordering overrides the normal plugin execution order. |
 
 
 #### KongPluginList
 
 
 
-KongPluginList contains a list of KongPlugin
+KongPluginList contains a list of KongPlugin.
 
 
 
@@ -269,7 +269,7 @@ _Appears in:_
 
 
 
-NamespacedConfigSource is a wrapper around NamespacedSecretValueFromSource
+NamespacedConfigSource is a wrapper around NamespacedSecretValueFromSource.
 
 _Appears in:_
 - [KongClusterPlugin](#kongclusterplugin)
@@ -283,30 +283,30 @@ _Appears in:_
 
 
 
-NamespacedSecretValueFromSource represents the source of a secret value specifying the secret namespace
+NamespacedSecretValueFromSource represents the source of a secret value specifying the secret namespace.
 
 _Appears in:_
 - [NamespacedConfigSource](#namespacedconfigsource)
 
 | Field | Description |
 | --- | --- |
-| `namespace` _string_ | The namespace containing the secret |
-| `name` _string_ | the secret containing the key |
-| `key` _string_ | the key containing the value |
+| `namespace` _string_ | The namespace containing the secret. |
+| `name` _string_ | The secret containing the key. |
+| `key` _string_ | The key containing the value. |
 
 
 #### SecretValueFromSource
 
 
 
-SecretValueFromSource represents the source of a secret value
+SecretValueFromSource represents the source of a secret value.
 
 _Appears in:_
 - [ConfigSource](#configsource)
 
 | Field | Description |
 | --- | --- |
-| `name` _string_ | the secret containing the key |
-| `key` _string_ | the key containing the value |
+| `name` _string_ | The secret containing the key. |
+| `key` _string_ | The key containing the value. |
 
 

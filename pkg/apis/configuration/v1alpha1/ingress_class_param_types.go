@@ -24,23 +24,23 @@ const (
 	IngressClassParametersKind = "IngressClassParameters"
 )
 
-//+kubebuilder:object:root=true
+// +kubebuilder:object:root=true
 
-// IngressClassParametersList contains a list of IngressClassParameters
+// IngressClassParametersList contains a list of IngressClassParameters.
 type IngressClassParametersList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []IngressClassParameters `json:"items"`
 }
 
-//+genclient
-//+k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-//+kubebuilder:object:root=true
-//+kubebuilder:storageversion
-//+kubebuilder:resource:categories=kong-ingress-controller
-//+kubebuilder:resource:path=ingressclassparameterses
+// +genclient
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+// +kubebuilder:object:root=true
+// +kubebuilder:storageversion
+// +kubebuilder:resource:categories=kong-ingress-controller
+// +kubebuilder:resource:path=ingressclassparameterses
 
-// IngressClassParameters is the Schema for the IngressClassParameters API
+// IngressClassParameters is the Schema for the IngressClassParameters API.
 type IngressClassParameters struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -48,17 +48,17 @@ type IngressClassParameters struct {
 	Spec IngressClassParametersSpec `json:"spec,omitempty"`
 }
 
-// IngressClassParametersSpec defines the desired state of IngressClassParameters
+// IngressClassParametersSpec defines the desired state of IngressClassParameters.
 
 type IngressClassParametersSpec struct {
-	// Offload load-balancing to kube-proxy or sidecar
-	//+kubebuilder:default:=false
+	// Offload load-balancing to kube-proxy or sidecar.
+	// +kubebuilder:default:=false
 	ServiceUpstream bool `json:"serviceUpstream,omitempty"`
 
 	// EnableLegacyRegexDetection automatically detects if ImplementationSpecific Ingress paths are regular expression
 	// paths using the legacy 2.x heuristic. The controller adds the "~" prefix to those paths if the Kong version is
 	// 3.0 or higher.
-	//+kubebuilder:default:=false
+	// +kubebuilder:default:=false
 	EnableLegacyRegexDetection bool `json:"enableLegacyRegexDetection,omitempty"`
 }
 

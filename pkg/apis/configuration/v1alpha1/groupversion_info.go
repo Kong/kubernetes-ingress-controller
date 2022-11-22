@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// Package v1alpha1 contains API Schema definitions for the configuration.konghq.com v1alpha1 API group
+// Package v1alpha1 contains API Schema definitions for the configuration.konghq.com v1alpha1 API group.
 package v1alpha1
 
 import (
@@ -22,24 +22,24 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/scheme"
 )
 
-//+kubebuilder:object:generate=true
-//+groupName=configuration.konghq.com
+// +kubebuilder:object:generate=true
+// +groupName=configuration.konghq.com
 
 var (
-	// GroupVersion is group version used to register these objects
+	// GroupVersion is group version used to register these objects.
 	GroupVersion = schema.GroupVersion{Group: "configuration.konghq.com", Version: "v1alpha1"}
 
-	// SchemeGroupVersion is a convenience var for generated clientsets
+	// SchemeGroupVersion is a convenience var for generated clientsets.
 	SchemeGroupVersion = GroupVersion
 
-	// SchemeBuilder is used to add go types to the GroupVersionKind scheme
+	// SchemeBuilder is used to add go types to the GroupVersionKind scheme.
 	SchemeBuilder = &scheme.Builder{GroupVersion: GroupVersion}
 
 	// AddToScheme adds the types in this group-version to the given scheme.
 	AddToScheme = SchemeBuilder.AddToScheme
 )
 
-// Resource takes an unqualified resource and returns a Group qualified GroupResource
+// Resource takes an unqualified resource and returns a Group qualified GroupResource.
 func Resource(resource string) schema.GroupResource {
 	return SchemeGroupVersion.WithResource(resource).GroupResource()
 }

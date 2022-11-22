@@ -21,15 +21,15 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-//+genclient
-//+k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-//+kubebuilder:object:root=true
-//+kubebuilder:subresource:status
-//+kubebuilder:storageversion
-//+kubebuilder:resource:shortName=ki,categories=kong-ingress-controller
-//+kubebuilder:validation:Optional
+// +genclient
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+// +kubebuilder:object:root=true
+// +kubebuilder:subresource:status
+// +kubebuilder:storageversion
+// +kubebuilder:resource:shortName=ki,categories=kong-ingress-controller
+// +kubebuilder:validation:Optional
 
-// KongIngress is the Schema for the kongingresses API
+// KongIngress is the Schema for the kongingresses API.
 type KongIngress struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -40,7 +40,7 @@ type KongIngress struct {
 	Upstream *KongIngressUpstream `json:"upstream,omitempty"`
 
 	// Proxy defines additional connection options for the routes to be configured in the
-	// Kong Gateway, e.g. `connection_timeout`, `retries`, e.t.c.
+	// Kong Gateway, e.g. `connection_timeout`, `retries`, etc.
 	Proxy *KongIngressService `json:"proxy,omitempty"`
 
 	// Route define rules to match client requests.
@@ -49,9 +49,9 @@ type KongIngress struct {
 	Route *KongIngressRoute `json:"route,omitempty"`
 }
 
-//+kubebuilder:object:root=true
+// +kubebuilder:object:root=true
 
-// KongIngressList contains a list of KongIngress
+// KongIngressList contains a list of KongIngress.
 type KongIngressList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
@@ -59,37 +59,37 @@ type KongIngressList struct {
 }
 
 // KongIngressService contains KongIngress service configuration.
-// + It contains the subset of go-kong.kong.Service fields supported by kongstate.Service.overrideByKongIngress
+// + It contains the subset of go-kong.kong.Service fields supported by kongstate.Service.overrideByKongIngress.
 type KongIngressService struct {
 	// The protocol used to communicate with the upstream.
-	//+kubebuilder:validation:Enum=http;https;grpc;grpcs;tcp;tls;udp
+	// +kubebuilder:validation:Enum=http;https;grpc;grpcs;tcp;tls;udp
 	Protocol *string `json:"protocol,omitempty" yaml:"protocol,omitempty"`
 
-	// The path to be used in requests to the upstream server.(optional)
-	//+kubebuilder:validation:Pattern=^/.*$
+	// (optional) The path to be used in requests to the upstream server.
+	// +kubebuilder:validation:Pattern=^/.*$
 	Path *string `json:"path,omitempty" yaml:"path,omitempty"`
 
 	// The number of retries to execute upon failure to proxy.
-	//+kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Minimum=0
 	Retries *int `json:"retries,omitempty" yaml:"retries,omitempty"`
 
 	// The timeout in milliseconds for establishing a connection to the upstream server.
-	//+kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Minimum=0
 	ConnectTimeout *int `json:"connect_timeout,omitempty" yaml:"connect_timeout,omitempty"`
 
 	// The timeout in milliseconds between two successive read operations
 	// for transmitting a request to the upstream server.
-	//+kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Minimum=0
 	ReadTimeout *int `json:"read_timeout,omitempty" yaml:"read_timeout,omitempty"`
 
 	// The timeout in milliseconds between two successive write operations
 	// for transmitting a request to the upstream server.
-	//+kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Minimum=0
 	WriteTimeout *int `json:"write_timeout,omitempty" yaml:"write_timeout,omitempty"`
 }
 
-// KongIngressRoute contains KongIngress route configuration
-// + It contains the subset of go-kong.kong.Route fields supported by kongstate.Route.overrideByKongIngress
+// KongIngressRoute contains KongIngress route configuration.
+// It contains the subset of `go-kong.kong.Route` fields supported by `kongstate.Route.overrideByKongIngress`.
 type KongIngressRoute struct {
 	// Methods is a list of HTTP methods that match this Route.
 	Methods []*string `json:"methods,omitempty" yaml:"methods,omitempty"`
@@ -112,7 +112,7 @@ type KongIngressRoute struct {
 
 	// PreserveHost sets When matching a Route via one of the hosts domain names,
 	// use the request Host header in the upstream request headers.
-	//If set to false, the upstream Host header will be that of the Service’s host.
+	// If set to false, the upstream Host header will be that of the Service’s host.
 	PreserveHost *bool `json:"preserve_host,omitempty" yaml:"preserve_host,omitempty"`
 
 	// HTTPSRedirectStatusCode is the status code Kong responds with
@@ -121,7 +121,7 @@ type KongIngressRoute struct {
 
 	// PathHandling controls how the Service path, Route path and requested path
 	// are combined when sending a request to the upstream.
-	//+kubebuilder:validation:Enum=v0;v1
+	// +kubebuilder:validation:Enum=v0;v1
 	PathHandling *string `json:"path_handling,omitempty" yaml:"path_handling,omitempty"`
 
 	// SNIs is a list of SNIs that match this Route when using stream routing.
@@ -134,19 +134,19 @@ type KongIngressRoute struct {
 	ResponseBuffering *bool `json:"response_buffering,omitempty" yaml:"response_buffering,omitempty"`
 }
 
-// KongIngressUpstream contains KongIngress upstream configuration
-// + It contains the subset of go-kong.kong.Upstream fields supported by kongstate.Upstream.overrideByKongIngress
+// KongIngressUpstream contains KongIngress upstream configuration.
+// It contains the subset of `go-kong.kong.Upstream` fields supported by `kongstate.Upstream.overrideByKongIngress`.
 type KongIngressUpstream struct {
 	// HostHeader is The hostname to be used as Host header
 	// when proxying requests through Kong.
 	HostHeader *string `json:"host_header,omitempty" yaml:"host_header,omitempty"`
 
 	// Algorithm is the load balancing algorithm to use.
-	//+kubebuilder:validation:Enum=round-robin;consistent-hashing;least-connections
+	// +kubebuilder:validation:Enum=round-robin;consistent-hashing;least-connections
 	Algorithm *string `json:"algorithm,omitempty" yaml:"algorithm,omitempty"`
 
 	// Slots is the number of slots in the load balancer algorithm.
-	//+kubebuilder:validation:Minimum=10
+	// +kubebuilder:validation:Minimum=10
 	Slots *int `json:"slots,omitempty" yaml:"slots,omitempty"`
 
 	// Healthchecks defines the health check configurations in Kong.
@@ -191,7 +191,7 @@ type KongIngressUpstream struct {
 	HashFallbackURICapture *string `json:"hash_fallback_uri_capture,omitempty" yaml:"hash_fallback_uri_capture,omitempty"`
 
 	// TODO https://github.com/Kong/kubernetes-ingress-controller/issues/2075
-	//ClientCertificate  *CertificateSecretRef `json:"client_certificate,omitempty" yaml:"client_certificate,omitempty"`
+	// ClientCertificate  *CertificateSecretRef `json:"client_certificate,omitempty" yaml:"client_certificate,omitempty"`
 }
 
 func init() {

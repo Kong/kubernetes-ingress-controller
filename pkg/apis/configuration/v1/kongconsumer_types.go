@@ -20,17 +20,17 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-//+genclient
-//+k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-//+kubebuilder:object:root=true
-//+kubebuilder:subresource:status
-//+kubebuilder:storageversion
-//+kubebuilder:resource:shortName=kc,categories=kong-ingress-controller
-//+kubebuilder:validation:Optional
-//+kubebuilder:printcolumn:name="Username",type=string,JSONPath=`.username`,description="Username of a Kong Consumer"
-//+kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`,description="Age"
+// +genclient
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+// +kubebuilder:object:root=true
+// +kubebuilder:subresource:status
+// +kubebuilder:storageversion
+// +kubebuilder:resource:shortName=kc,categories=kong-ingress-controller
+// +kubebuilder:validation:Optional
+// +kubebuilder:printcolumn:name="Username",type=string,JSONPath=`.username`,description="Username of a Kong Consumer"
+// +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`,description="Age"
 
-// KongConsumer is the Schema for the kongconsumers API
+// KongConsumer is the Schema for the kongconsumers API.
 type KongConsumer struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -39,7 +39,7 @@ type KongConsumer struct {
 	Username string `json:"username,omitempty"`
 
 	// CustomID existing unique ID for the consumer - useful for mapping
-	// Kong with users in your existing database
+	// Kong with users in your existing database.
 	CustomID string `json:"custom_id,omitempty"`
 
 	// Credentials are references to secrets containing a credential to be
@@ -47,9 +47,9 @@ type KongConsumer struct {
 	Credentials []string `json:"credentials,omitempty"`
 }
 
-//+kubebuilder:object:root=true
+// +kubebuilder:object:root=true
 
-// KongConsumerList contains a list of KongConsumer
+// KongConsumerList contains a list of KongConsumer.
 type KongConsumerList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`

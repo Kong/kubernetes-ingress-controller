@@ -1039,6 +1039,101 @@ func Test_getSupportedGatewayForRoute(t *testing.T) {
 			wantErr  bool
 		}{
 			{
+				name: "basic TCPRoute does get accepted because it is in supported kinds",
+				route: &TCPRoute{
+					TypeMeta: metav1.TypeMeta{
+						Kind:       "TCPRoute",
+						APIVersion: gatewayv1alpha2.GroupVersion.Group + "/" + gatewayv1alpha2.GroupVersion.Version,
+					},
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "basic-tcproute",
+						Namespace: "test-namespace",
+					},
+					Spec: gatewayv1alpha2.TCPRouteSpec{
+						CommonRouteSpec: gatewayv1alpha2.CommonRouteSpec{
+							ParentRefs: []gatewayv1alpha2.ParentReference{
+								{
+									Name: gatewayv1alpha2.ObjectName("test-gateway"),
+								},
+							},
+						},
+					},
+				},
+				objects: []client.Object{
+					&Gateway{
+						TypeMeta: metav1.TypeMeta{
+							APIVersion: "gateway.networking.k8s.io/v1beta1",
+							Kind:       "Gateway",
+						},
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "test-gateway",
+							Namespace: "test-namespace",
+							UID:       types.UID("ce7f0678-f59a-483c-80d1-243d3738d22c"),
+						},
+						Spec: gatewayv1beta1.GatewaySpec{
+							GatewayClassName: "test-gatewayclass",
+							Listeners: []gatewayv1beta1.Listener{
+								{
+									Name:     gatewayv1beta1.SectionName("tcp"),
+									Protocol: gatewayv1beta1.TCPProtocolType,
+									Port:     gatewayv1beta1.PortNumber(80),
+								},
+							},
+						},
+						Status: gatewayv1beta1.GatewayStatus{
+							Listeners: []gatewayv1beta1.ListenerStatus{
+								{
+									Name: gatewayv1beta1.SectionName("tcp"),
+									Conditions: []metav1.Condition{
+										{
+											Type:   "Ready",
+											Status: metav1.ConditionTrue,
+										},
+									},
+									SupportedKinds: []gatewayv1beta1.RouteGroupKind{
+										{
+											Group: addressOf(gatewayv1beta1.Group(gatewayv1beta1.GroupVersion.Group)),
+											Kind:  gatewayv1beta1.Kind("HTTPRoute"),
+										},
+										{
+											Group: addressOf(gatewayv1beta1.Group(gatewayv1beta1.GroupVersion.Group)),
+											Kind:  gatewayv1beta1.Kind("TCPRoute"),
+										},
+									},
+								},
+							},
+						},
+					},
+					&GatewayClass{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "test-gatewayclass",
+						},
+						Spec: gatewayv1beta1.GatewayClassSpec{
+							ControllerName: gatewayv1beta1.GatewayController("konghq.com/kic-gateway-controller"),
+						},
+					},
+					&corev1.Namespace{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "test-namespace",
+						},
+					},
+				},
+				expected: []expected{
+					{
+						gateway: types.NamespacedName{
+							Name:      "test-gateway",
+							Namespace: "test-namespace",
+						},
+						listenerName: "",
+						condition: metav1.Condition{
+							Type:   string(gatewayv1beta1.RouteConditionAccepted),
+							Status: metav1.ConditionTrue,
+							Reason: string(gatewayv1beta1.RouteReasonAccepted),
+						},
+					},
+				},
+			},
+			{
 				name: "basic TCPRoute does not get accepted because it is not in supported kinds",
 				route: &TCPRoute{
 					TypeMeta: metav1.TypeMeta{
@@ -1046,7 +1141,7 @@ func Test_getSupportedGatewayForRoute(t *testing.T) {
 						APIVersion: gatewayv1alpha2.GroupVersion.Group + "/" + gatewayv1alpha2.GroupVersion.Version,
 					},
 					ObjectMeta: metav1.ObjectMeta{
-						Name:      "basic-httproute",
+						Name:      "basic-tcproute",
 						Namespace: "test-namespace",
 					},
 					Spec: gatewayv1alpha2.TCPRouteSpec{

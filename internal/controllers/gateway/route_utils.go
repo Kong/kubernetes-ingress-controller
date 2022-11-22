@@ -10,6 +10,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
@@ -159,7 +160,7 @@ func getSupportedGatewayForRoute[T types.RouteT](ctx context.Context, mgrc clien
 
 		for _, listener := range gateway.Spec.Listeners {
 			// Check if the route matches listener's AllowedRoutes.
-			if ok, err := routeMatchesListenersAllowedRoutes(ctx, mgrc, route, listener, gateway.Namespace, parentRef.Namespace); err != nil {
+			if ok, err := routeMatchesListenerAllowedRoutes(ctx, mgrc, route, listener, gateway.Namespace, parentRef.Namespace); err != nil {
 				return nil, fmt.Errorf("failed matching listener %s to a route %s for gateway %s: %w",
 					listener.Name, route.GetName(), gateway.Name, err,
 				)
@@ -180,10 +181,12 @@ func getSupportedGatewayForRoute[T types.RouteT](ctx context.Context, mgrc clien
 			}
 
 			// Perform the port matching as described in GEP-957.
-			if parentRef.Port != nil && *parentRef.Port != listener.Port {
-				// This ParentRef has a port specified and it's different than current listener's port.
-				continue
-			} else if parentRef.Port != nil && *parentRef.Port == listener.Port {
+			if parentRef.Port != nil {
+				if *parentRef.Port != listener.Port {
+					// This ParentRef has a port specified and it's different
+					// than current listener's port.
+					continue
+				}
 				portMatched = true
 			}
 
@@ -267,9 +270,9 @@ func routeHostnamesIntersectsWithListenerHostname[T types.RouteT](route T, liste
 	case *gatewayv1beta1.HTTPRoute:
 		return listenerHostnameIntersectWithRouteHostnames(listener, r.Spec.Hostnames)
 	case *gatewayv1alpha2.TCPRoute:
-		return false
+		return true
 	case *gatewayv1alpha2.UDPRoute:
-		return false
+		return true
 	case *gatewayv1alpha2.TLSRoute:
 		return listenerHostnameIntersectWithRouteHostnames(listener, r.Spec.Hostnames)
 	default:
@@ -284,15 +287,15 @@ func routeTypeMatchesListenerType[T types.RouteT](route T, listenerProtocol Prot
 			return false
 		}
 	case *gatewayv1alpha2.TCPRoute:
-		if listenerProtocol != (TCPProtocolType) {
+		if listenerProtocol != TCPProtocolType {
 			return false
 		}
 	case *gatewayv1alpha2.UDPRoute:
-		if listenerProtocol != (UDPProtocolType) {
+		if listenerProtocol != UDPProtocolType {
 			return false
 		}
 	case *gatewayv1alpha2.TLSRoute:
-		if listenerProtocol != (TLSProtocolType) {
+		if listenerProtocol != TLSProtocolType {
 			return false
 		}
 	default:
@@ -301,9 +304,9 @@ func routeTypeMatchesListenerType[T types.RouteT](route T, listenerProtocol Prot
 	return true
 }
 
-// routeMatchesListenersAllowedRoutes checks if the provided route matches the
+// routeMatchesListenerAllowedRoutes checks if the provided route matches the
 // criteria defined in listener's AllowedRoutes field.
-func routeMatchesListenersAllowedRoutes[T types.RouteT](
+func routeMatchesListenerAllowedRoutes[T types.RouteT](
 	ctx context.Context,
 	mgrc client.Client,
 	route T,
@@ -345,24 +348,20 @@ func routeMatchesListenersAllowedRoutes[T types.RouteT](
 		return route.GetNamespace() == string(*parentRefNamespace), nil
 
 	case gatewayv1beta1.NamespacesFromSelector:
-		namespaces := corev1.NamespaceList{}
-		selector, err := metav1.LabelSelectorAsSelector(listener.AllowedRoutes.Namespaces.Selector)
+		namespace := corev1.Namespace{}
+		if err := mgrc.Get(ctx, client.ObjectKey{Name: route.GetNamespace()}, &namespace); err != nil {
+			return false, fmt.Errorf("failed to get namespace %s: %w", route.GetNamespace(), err)
+		}
+
+		s, err := metav1.LabelSelectorAsSelector(listener.AllowedRoutes.Namespaces.Selector)
 		if err != nil {
 			return false, fmt.Errorf(
 				"failed to convert AllowedRoutes LabelSelector %s to Selector for listener %s: %w",
 				listener.AllowedRoutes.Namespaces.Selector, listener.Name, err,
 			)
 		}
-		if err = mgrc.List(ctx, &namespaces, &client.ListOptions{LabelSelector: selector}); err != nil {
-			return false, fmt.Errorf(
-				"could not fetch allowed namespaces for listener %s using selector %s: %w",
-				selector, listener.Name, err,
-			)
-		}
 
-		_, ok := lo.Find(namespaces.Items, func(ns corev1.Namespace) bool {
-			return ns.Name == route.GetNamespace()
-		})
+		ok := s.Matches(labels.Set(namespace.Labels))
 		return ok, nil
 
 	default:

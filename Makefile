@@ -62,8 +62,8 @@ GOTESTSUM = $(PROJECT_DIR)/bin/gotestsum
 gotestsum: ## Download gotestsum locally if necessary.
 	@$(MAKE) _download_tool TOOL=gotestsum
 
-GOTESTSUM = $(PROJECT_DIR)/bin/gotestsum
-.PHONY: gotestsum
+CRD_REF_DOCS = $(PROJECT_DIR)/bin/crd-ref-docs
+.PHONY: crd-ref-docs
 crd-ref-docs: ## Download crd-ref-docs locally if necessary.
 	@$(MAKE) _download_tool TOOL=crd-ref-docs
 
@@ -180,7 +180,7 @@ generate.clientsets: client-gen
 
 .PHONY: generate.docs
 generate.docs: crd-ref-docs
-	./scripts/apidocs-gen/generate.sh
+	./scripts/apidocs-gen/generate.sh $(CRD_REF_DOCS)
 
 # ------------------------------------------------------------------------------
 # Build - Container Images

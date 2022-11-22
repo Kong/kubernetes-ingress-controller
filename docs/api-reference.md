@@ -1,5 +1,7 @@
 ## Packages
 - [configuration.konghq.com/v1](#configurationkonghqcomv1)
+- [configuration.konghq.com/v1alpha1](#configurationkonghqcomv1alpha1)
+- [configuration.konghq.com/v1beta1](#configurationkonghqcomv1beta1)
 
 
 ## configuration.konghq.com/v1
@@ -308,5 +310,238 @@ _Appears in:_
 | --- | --- |
 | `name` _string_ | The secret containing the key. |
 | `key` _string_ | The key containing the value. |
+
+
+
+## configuration.konghq.com/v1alpha1
+
+Package v1alpha1 contains API Schema definitions for the configuration.konghq.com v1alpha1 API group.
+
+### Resource Types
+- [IngressClassParameters](#ingressclassparameters)
+- [IngressClassParametersList](#ingressclassparameterslist)
+
+
+
+#### IngressClassParameters
+
+
+
+IngressClassParameters is the Schema for the IngressClassParameters API.
+
+_Appears in:_
+- [IngressClassParametersList](#ingressclassparameterslist)
+
+| Field | Description |
+| --- | --- |
+| `apiVersion` _string_ | `configuration.konghq.com/v1alpha1`
+| `kind` _string_ | `IngressClassParameters`
+| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` _[IngressClassParametersSpec](#ingressclassparametersspec)_ |  |
+
+
+#### IngressClassParametersList
+
+
+
+IngressClassParametersList contains a list of IngressClassParameters.
+
+
+
+| Field | Description |
+| --- | --- |
+| `apiVersion` _string_ | `configuration.konghq.com/v1alpha1`
+| `kind` _string_ | `IngressClassParametersList`
+| `metadata` _[ListMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#listmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `items` _[IngressClassParameters](#ingressclassparameters) array_ |  |
+
+
+#### IngressClassParametersSpec
+
+
+
+
+
+_Appears in:_
+- [IngressClassParameters](#ingressclassparameters)
+
+| Field | Description |
+| --- | --- |
+| `serviceUpstream` _boolean_ | Offload load-balancing to kube-proxy or sidecar. |
+| `enableLegacyRegexDetection` _boolean_ | EnableLegacyRegexDetection automatically detects if ImplementationSpecific Ingress paths are regular expression paths using the legacy 2.x heuristic. The controller adds the "~" prefix to those paths if the Kong version is 3.0 or higher. |
+
+
+
+## configuration.konghq.com/v1beta1
+
+Package v1beta1 contains API Schema definitions for the configuration.konghq.com v1beta1 API group.
+
+### Resource Types
+- [TCPIngress](#tcpingress)
+- [TCPIngressList](#tcpingresslist)
+- [UDPIngress](#udpingress)
+- [UDPIngressList](#udpingresslist)
+
+
+
+#### IngressBackend
+
+
+
+IngressBackend describes all endpoints for a given service and port.
+
+_Appears in:_
+- [IngressRule](#ingressrule)
+- [UDPIngressRule](#udpingressrule)
+
+| Field | Description |
+| --- | --- |
+| `serviceName` _string_ | Specifies the name of the referenced service. |
+| `servicePort` _integer_ | Specifies the port of the referenced service. |
+
+
+#### IngressRule
+
+
+
+IngressRule represents a rule to apply against incoming requests. Matching is performed based on an (optional) SNI and port.
+
+_Appears in:_
+- [TCPIngressSpec](#tcpingressspec)
+
+| Field | Description |
+| --- | --- |
+| `host` _string_ | Host is the fully qualified domain name of a network host, as defined by RFC 3986. If a Host is specified, the protocol must be TLS over TCP. A plain-text TCP request cannot be routed based on Host. It can only be routed based on Port. |
+| `port` _integer_ | Port is the port on which to accept TCP or TLS over TCP sessions and route. It is a required field. If a Host is not specified, the requested are routed based only on Port. |
+| `backend` _[IngressBackend](#ingressbackend)_ | Backend defines the referenced service endpoint to which the traffic will be forwarded to. |
+
+
+#### IngressTLS
+
+
+
+IngressTLS describes the transport layer security.
+
+_Appears in:_
+- [TCPIngressSpec](#tcpingressspec)
+
+| Field | Description |
+| --- | --- |
+| `hosts` _string array_ | Hosts are a list of hosts included in the TLS certificate. The values in this list must match the name/s used in the tlsSecret. Defaults to the wildcard host setting for the loadbalancer controller fulfilling this Ingress, if left unspecified. |
+| `secretName` _string_ | SecretName is the name of the secret used to terminate SSL traffic. |
+
+
+#### TCPIngress
+
+
+
+TCPIngress is the Schema for the tcpingresses API.
+
+_Appears in:_
+- [TCPIngressList](#tcpingresslist)
+
+| Field | Description |
+| --- | --- |
+| `apiVersion` _string_ | `configuration.konghq.com/v1beta1`
+| `kind` _string_ | `TCPIngress`
+| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` _[TCPIngressSpec](#tcpingressspec)_ |  |
+
+
+#### TCPIngressList
+
+
+
+TCPIngressList contains a list of TCPIngress.
+
+
+
+| Field | Description |
+| --- | --- |
+| `apiVersion` _string_ | `configuration.konghq.com/v1beta1`
+| `kind` _string_ | `TCPIngressList`
+| `metadata` _[ListMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#listmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `items` _[TCPIngress](#tcpingress) array_ |  |
+
+
+#### TCPIngressSpec
+
+
+
+TCPIngressSpec defines the desired state of TCPIngress.
+
+_Appears in:_
+- [TCPIngress](#tcpingress)
+
+| Field | Description |
+| --- | --- |
+| `rules` _[IngressRule](#ingressrule) array_ | A list of rules used to configure the Ingress. |
+| `tls` _[IngressTLS](#ingresstls) array_ | TLS configuration. This is similar to the `tls` section in the Ingress resource in networking.v1beta1 group. The mapping of SNIs to TLS cert-key pair defined here will be used for HTTP Ingress rules as well. Once can define the mapping in this resource or the original Ingress resource, both have the same effect. |
+
+
+
+
+#### UDPIngress
+
+
+
+UDPIngress is the Schema for the udpingresses API.
+
+_Appears in:_
+- [UDPIngressList](#udpingresslist)
+
+| Field | Description |
+| --- | --- |
+| `apiVersion` _string_ | `configuration.konghq.com/v1beta1`
+| `kind` _string_ | `UDPIngress`
+| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` _[UDPIngressSpec](#udpingressspec)_ |  |
+
+
+#### UDPIngressList
+
+
+
+UDPIngressList contains a list of UDPIngress.
+
+
+
+| Field | Description |
+| --- | --- |
+| `apiVersion` _string_ | `configuration.konghq.com/v1beta1`
+| `kind` _string_ | `UDPIngressList`
+| `metadata` _[ListMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#listmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `items` _[UDPIngress](#udpingress) array_ |  |
+
+
+#### UDPIngressRule
+
+
+
+UDPIngressRule represents a rule to apply against incoming requests wherein no Host matching is available for request routing, only the port is used to match requests.
+
+_Appears in:_
+- [UDPIngressSpec](#udpingressspec)
+
+| Field | Description |
+| --- | --- |
+| `port` _integer_ | Port indicates the port for the Kong proxy to accept incoming traffic on, which will then be routed to the service Backend. |
+| `backend` _[IngressBackend](#ingressbackend)_ | Backend defines the Kubernetes service which accepts traffic from the listening Port defined above. |
+
+
+#### UDPIngressSpec
+
+
+
+UDPIngressSpec defines the desired state of UDPIngress.
+
+_Appears in:_
+- [UDPIngress](#udpingress)
+
+| Field | Description |
+| --- | --- |
+| `rules` _[UDPIngressRule](#udpingressrule) array_ | A list of rules used to configure the Ingress. |
+
+
 
 

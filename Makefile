@@ -35,7 +35,7 @@ _download_tool:
 		GOBIN=$(PROJECT_DIR)/bin go generate -tags=third_party ./$(TOOL).go )
 
 .PHONY: tools
-tools: controller-gen kustomize client-gen golangci-lint gotestsum
+tools: controller-gen kustomize client-gen golangci-lint gotestsum crd-ref-docs
 
 CONTROLLER_GEN = $(PROJECT_DIR)/bin/controller-gen
 .PHONY: controller-gen
@@ -61,6 +61,11 @@ GOTESTSUM = $(PROJECT_DIR)/bin/gotestsum
 .PHONY: gotestsum
 gotestsum: ## Download gotestsum locally if necessary.
 	@$(MAKE) _download_tool TOOL=gotestsum
+
+GOTESTSUM = $(PROJECT_DIR)/bin/gotestsum
+.PHONY: gotestsum
+crd-ref-docs: ## Download crd-ref-docs locally if necessary.
+	@$(MAKE) _download_tool TOOL=crd-ref-docs
 
 # ------------------------------------------------------------------------------
 # Build
@@ -145,7 +150,7 @@ manifests.single: kustomize ## Compose single-file deployment manifests from bui
 # ------------------------------------------------------------------------------
 
 .PHONY: generate
-generate: generate.controllers generate.clientsets generate.gateway-api-urls fmt
+generate: generate.controllers generate.clientsets generate.gateway-api-urls generate.docs fmt
 
 .PHONY: generate.controllers
 generate.controllers: controller-gen
@@ -172,6 +177,10 @@ generate.clientsets: client-gen
 		--output-base pkg/ \
 		--output-package $(REPO_URL)/v2/pkg/ \
 		--trim-path-prefix pkg/$(REPO_URL)/v2/
+
+.PHONY: generate.docs
+generate.docs: crd-ref-docs
+	./scripts/apidocs-gen/generate.sh
 
 # ------------------------------------------------------------------------------
 # Build - Container Images

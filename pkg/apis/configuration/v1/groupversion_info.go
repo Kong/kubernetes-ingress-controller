@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// Package v1 contains API Schema definitions for the konghq.com v1 API group
 package v1
 
 import (
@@ -22,8 +21,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/scheme"
 )
 
-//+kubebuilder:object:generate=true
-//+groupName=configuration.konghq.com
+// +kubebuilder:object:generate=true
 
 var (
 	// GroupVersion is group version used to register these objects

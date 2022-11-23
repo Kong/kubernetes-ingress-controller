@@ -8,13 +8,6 @@
 
 {{ $type.Doc }}
 
-{{ if $type.References -}}
-_Appears in:_
-{{- range $type.SortedReferences }}
-- {{ markdownRenderTypeLink . }}
-{{- end }}
-{{- end }}
-
 {{ if $type.Members -}}
 | Field | Description |
 | --- | --- |
@@ -27,7 +20,14 @@ _Appears in:_
 | `{{ .Name  }}` _{{ markdownRenderType .Type }}_ | {{ template "type_members" . }} |
 {{ end -}}
 
-{{ end -}}
+{{ end }}
+
+{{ if $type.References -}}
+_Appears in:_
+{{- range $type.SortedReferences }}
+- {{ markdownRenderTypeLink . }}
+{{- end }}
+{{- end }}
 
 {{- end -}}
 {{- end -}}

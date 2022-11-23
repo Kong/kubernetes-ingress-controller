@@ -318,7 +318,7 @@ func (r *HTTPRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 
 	// perform operations on the kong store only if the route is in accepted status
 	if isRouteAccepted(gateways) {
-		// if there is no matched hosts in listners for the httproute, the httproute should not be accepted:
+		// if there is no matched hosts in listeners for the httproute, the httproute should not be accepted
 		// and have an "Accepted" condition with status false.
 		// https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1beta1.HTTPRoute
 		filteredHTTPRoute, err := filterHostnames(gateways, httproute.DeepCopy())
@@ -601,6 +601,7 @@ func (r *HTTPRouteReconciler) getHTTPRouteRuleReason(ctx context.Context, httpRo
 	return gatewayv1beta1.RouteReasonResolvedRefs, nil
 }
 
+// ensureParentsAcceptedCondition sets the "Accepted" condition of HTTPRoute status.
 func (r *HTTPRouteReconciler) ensureParentsAcceptedCondition(
 	ctx context.Context,
 	httproute *gatewayv1beta1.HTTPRoute,
@@ -609,7 +610,6 @@ func (r *HTTPRouteReconciler) ensureParentsAcceptedCondition(
 	conditionReason string,
 	conditionMessage string,
 ) (bool, error) {
-
 	// map the existing parentStatues to avoid duplications
 	parentStatuses := make(map[string]*gatewayv1beta1.RouteParentStatus)
 	for _, existingParent := range httproute.Status.Parents {
@@ -631,9 +631,11 @@ func (r *HTTPRouteReconciler) ensureParentsAcceptedCondition(
 		parentRefKey := fmt.Sprintf("%s/%s/%s", gateway.Namespace, gateway.Name, g.listenerName)
 		parentStatus, ok := parentStatuses[parentRefKey]
 		if ok {
+			// update existing parent in status.
 			changed := updateAcceptedConditionInRouteParentStatus(parentStatus, conditionStatus, conditionReason, conditionMessage, httproute.Generation)
 			statusChanged = statusChanged || changed
 		} else {
+			// add a new parent if the parent is not found in status.
 			newParentStatus := &gatewayv1beta1.RouteParentStatus{
 				ParentRef: gatewayv1beta1.ParentReference{
 					Namespace:   (*gatewayv1beta1.Namespace)(pointer.String(gateway.Namespace)),
@@ -669,6 +671,8 @@ func (r *HTTPRouteReconciler) ensureParentsAcceptedCondition(
 	return false, nil
 }
 
+// updateAcceptedConditionInRouteParentStatus updates conditions with type "Accepted" in parentStatus.
+// returns true if the parentStatus modified.
 func updateAcceptedConditionInRouteParentStatus(
 	parentStatus *gatewayv1beta1.RouteParentStatus,
 	conditionStatus metav1.ConditionStatus,

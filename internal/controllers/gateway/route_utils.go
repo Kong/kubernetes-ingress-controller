@@ -27,9 +27,7 @@ const (
 	unsupportedGW = "no supported Gateway found for route"
 )
 
-var (
-	ErrNoMatchingListenerHostname = fmt.Errorf("no matching hostnames in listener")
-)
+var ErrNoMatchingListenerHostname = fmt.Errorf("no matching hostnames in listener")
 
 // supportedGatewayWithCondition is a struct that wraps a gateway and some further info
 // such as the condition Status condition Accepted of the gateway and the listenerName.

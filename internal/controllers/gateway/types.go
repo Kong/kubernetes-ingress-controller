@@ -2,6 +2,7 @@
 package gateway
 
 import (
+	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 )
 
@@ -19,10 +20,12 @@ type (
 	Namespace         = gatewayv1beta1.Namespace
 	ObjectName        = gatewayv1beta1.ObjectName
 	ParentReference   = gatewayv1beta1.ParentReference
-	RouteParentStatus = gatewayv1beta1.RouteParentStatus
 	PortNumber        = gatewayv1beta1.PortNumber
 	ProtocolType      = gatewayv1beta1.ProtocolType
+	RouteParentStatus = gatewayv1beta1.RouteParentStatus
 	SectionName       = gatewayv1beta1.SectionName
+
+	TCPRoute = gatewayv1alpha2.TCPRoute
 )
 
 const (

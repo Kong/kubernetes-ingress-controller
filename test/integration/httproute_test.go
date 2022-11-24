@@ -301,7 +301,7 @@ func TestHTTPRouteEssentials(t *testing.T) {
 	}, time.Minute, time.Second)
 
 	t.Log("verifying that the HTTPRoute has the Condition 'Accepted' set to 'False' when it specified a port not existent in Gateway")
-	require.Eventually(t, HTTPRouteMatchesAcceptedCallback(t, gatewayClient, httpRoute, false, gatewaypkg.RouteReasonNoMatchingListenerPort), statusWait, waitTick)
+	require.Eventually(t, HTTPRouteMatchesAcceptedCallback(t, gatewayClient, httpRoute, false, gatewaypkg.RouteReasonNoMatchingParent), statusWait, waitTick)
 }
 
 func TestHTTPRouteMultipleServices(t *testing.T) {

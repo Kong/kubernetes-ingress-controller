@@ -5,10 +5,12 @@ import (
 	"fmt"
 	"reflect"
 
+	"github.com/pkg/errors"
 	"github.com/samber/lo"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
@@ -45,10 +47,10 @@ func parentRefsForRoute[T types.RouteT](route T) ([]ParentReference, error) {
 		ret := make([]ParentReference, len(refsAlpha))
 		for i, v := range refsAlpha {
 			ret[i] = ParentReference{
-				Group:       (*gatewayv1beta1.Group)(v.Group),
+				Group:       (*Group)(v.Group),
 				Kind:        (*Kind)(v.Kind),
-				Namespace:   (*gatewayv1beta1.Namespace)(v.Namespace),
-				Name:        (gatewayv1beta1.ObjectName)(v.Name),
+				Namespace:   (*Namespace)(v.Namespace),
+				Name:        (ObjectName)(v.Name),
 				SectionName: (*SectionName)(v.SectionName),
 				Port:        (*PortNumber)(v.Port),
 			}
@@ -66,15 +68,20 @@ func parentRefsForRoute[T types.RouteT](route T) ([]ParentReference, error) {
 	case *gatewayv1alpha2.TLSRoute:
 		return convertV1Alpha2ToV1Beta1ParentReference(r.Spec.ParentRefs), nil
 	default:
-		return nil, fmt.Errorf("cant determine parent gateway for unsupported type %s", reflect.TypeOf(route))
+		return nil, fmt.Errorf("cant determine parent gateway for unsupported route type %s", reflect.TypeOf(route))
 	}
 }
 
 const (
-	// This reason is used with the "Accepted" condition when the Gateway has no
-	// compatible Listeners whose Port matches the route
-	// NOTE: This should probably be proposed upstream.
-	RouteReasonNoMatchingListenerPort gatewayv1beta1.RouteConditionReason = "NoMatchingListenerPort"
+	// This reason is used with the "Accepted" condition when there are
+	// no matching Parents. In the case of Gateways, this can occur when
+	// a Route ParentRef specifies a Port and/or SectionName that does not
+	// match any Listeners in the Gateway.
+	//
+	// NOTE: This is already in uptsream, albeit unreleased:
+	// https://github.com/kubernetes-sigs/gateway-api/pull/1516
+	// TODO: swap this out with upstream const when released.
+	RouteReasonNoMatchingParent gatewayv1beta1.RouteConditionReason = "NoMatchingParent"
 )
 
 // getSupportedGatewayForRoute will retrieve the Gateway and GatewayClass object for any
@@ -107,7 +114,7 @@ func getSupportedGatewayForRoute[T types.RouteT](ctx context.Context, mgrc clien
 			Namespace: namespace,
 			Name:      name,
 		}, &gateway); err != nil {
-			if errors.IsNotFound(err) {
+			if k8serrors.IsNotFound(err) {
 				// if a configured gateway is not found it's still possible
 				// that there's another gateway, so keep searching through the list.
 				continue
@@ -120,7 +127,7 @@ func getSupportedGatewayForRoute[T types.RouteT](ctx context.Context, mgrc clien
 		if err := mgrc.Get(ctx, client.ObjectKey{
 			Name: string(gateway.Spec.GatewayClassName),
 		}, &gatewayClass); err != nil {
-			if errors.IsNotFound(err) {
+			if k8serrors.IsNotFound(err) {
 				// if a configured gatewayClass is not found it's still possible
 				// that there's another properly configured gateway in the parentRefs,
 				// so keep searching through the list.
@@ -129,123 +136,123 @@ func getSupportedGatewayForRoute[T types.RouteT](ctx context.Context, mgrc clien
 			return nil, fmt.Errorf("failed to retrieve gatewayclass for gateway: %w", err)
 		}
 
-		// if the GatewayClass matches this controller we're all set and this controller
-		// should reconcile this object.
-		if gatewayClass.Spec.ControllerName == ControllerName {
-			allowedNamespaces := make(map[string]interface{})
-			var (
-				// set true if we find any AllowedRoutes. there may be none, in which case any namespace is permitted
-				filtered         = false
-				matchingHostname = metav1.ConditionFalse
-				// set to true if ParentRef specifies a Port and a listener matches that Port.
-				portMatched = false
-			)
-			for _, listener := range gateway.Spec.Listeners {
-				// TODO check listenerStatus.SupportedKinds
+		// If the GatewayClass does not match this controller then skip it
+		if gatewayClass.Spec.ControllerName != ControllerName {
+			continue
+		}
 
-				// Check if we already have a matching listener in status.
-				if !existsMatchingReadyListenerInStatus(listener, gateway.Status.Listeners) {
-					continue
-				}
+		// Otherwise we're all set and this controller should reconcile this route.
 
-				// Perform the port matching as described in GEP-957.
-				if parentRef.Port != nil && *parentRef.Port != listener.Port {
-					// This ParentRef has a port specified and it's different than current listener's port.
-					continue
-				} else if parentRef.Port != nil && *parentRef.Port == listener.Port {
-					portMatched = true
-				}
+		var (
+			// Set to true if there exists a listener which wasn't filtered by:
+			// - AlowedRoutes
+			// - listener status checks
+			// - listener and route type checks
+			matched = false
+			// Set to true if ParentRef specified a hostname and it matches route's hostnames.
+			matchingHostname *metav1.ConditionStatus
+			// Set to true if ParentRef specifies a Port and a listener matches that Port.
+			portMatched = false
 
-				// TODO https://github.com/Kong/kubernetes-ingress-controller/issues/2408
-				// This currently only performs a baseline filter to ensure that routes cannot match based on namespace
-				// criteria on a listener that cannot possibly handle them (e.g. an HTTPRoute should not be included
-				// based on matching a filter for a UDP listener). This needs to be expanded to an allowedRoutes.kind
-				// implementation with default allowed kinds when there's no user-specified filter.
-				var oneHostnameMatch bool
-				switch r := (interface{})(route).(type) {
-				case *gatewayv1beta1.HTTPRoute:
-					hostnames := r.Spec.Hostnames
-					oneHostnameMatch = listenerHostnameIntersectWithRouteHostnames(listener, hostnames)
-					if !(listener.Protocol == HTTPProtocolType || listener.Protocol == HTTPSProtocolType) {
-						continue
-					}
+			allowedByAllowedRoutes  = false
+			allowedBySupportedKinds = false
+		)
 
-				case *gatewayv1alpha2.TCPRoute:
-					if listener.Protocol != (TCPProtocolType) {
-						continue
-					}
-				case *gatewayv1alpha2.UDPRoute:
-					if listener.Protocol != (UDPProtocolType) {
-						continue
-					}
-				case *gatewayv1alpha2.TLSRoute:
-					hostnames := r.Spec.Hostnames
-					oneHostnameMatch = listenerHostnameIntersectWithRouteHostnames(listener, hostnames)
-					if listener.Protocol != (TLSProtocolType) {
-						continue
-					}
-				default:
-					continue
-				}
-				if oneHostnameMatch {
-					matchingHostname = metav1.ConditionTrue
-				}
-				if listener.AllowedRoutes != nil {
-					filtered = true
-					if *listener.AllowedRoutes.Namespaces.From == gatewayv1beta1.NamespacesFromAll {
-						// we allow "all" by just stuffing the namespace we want to find into the map
-						allowedNamespaces[route.GetNamespace()] = nil
-					} else if *listener.AllowedRoutes.Namespaces.From == gatewayv1beta1.NamespacesFromSame {
-						allowedNamespaces[gateway.ObjectMeta.Namespace] = nil
-					} else if *listener.AllowedRoutes.Namespaces.From == gatewayv1beta1.NamespacesFromSelector {
-						namespaces := &corev1.NamespaceList{}
-						selector, err := metav1.LabelSelectorAsSelector(listener.AllowedRoutes.Namespaces.Selector)
-						if err != nil {
-							return nil, fmt.Errorf("failed to convert LabelSelector to Selector for gateway %s",
-								gateway.ObjectMeta.Name)
-						}
-						err = mgrc.List(ctx, namespaces, &client.ListOptions{LabelSelector: selector})
-						if err != nil {
-							return nil, fmt.Errorf("could not fetch allowed namespaces for gateway %s",
-								gateway.ObjectMeta.Name)
-						}
-						for _, allowed := range namespaces.Items {
-							allowedNamespaces[allowed.ObjectMeta.Name] = nil
-						}
-					}
-				}
+		for _, listener := range gateway.Spec.Listeners {
+			// Check if the route matches listener's AllowedRoutes.
+			if ok, err := routeMatchesListenerAllowedRoutes(ctx, mgrc, route, listener, gateway.Namespace, parentRef.Namespace); err != nil {
+				return nil, fmt.Errorf("failed matching listener %s to a route %s for gateway %s: %w",
+					listener.Name, route.GetName(), gateway.Name, err,
+				)
+			} else if !ok {
+				continue
+			} else {
+				allowedByAllowedRoutes = true
 			}
 
-			_, allowedNamespace := allowedNamespaces[route.GetNamespace()]
-			if ((parentRef.Port != nil) && !portMatched) ||
-				(!filtered || allowedNamespace) {
-
-				reason := gatewayv1beta1.RouteReasonAccepted
-				if (parentRef.Port != nil) && !portMatched {
-					// If ParentRef specified a Port but none of the listeners matched, the gateway Status
-					// Condition Accepted must be set to False with reason NoMatchingListenerPort
-					reason = RouteReasonNoMatchingListenerPort
-				} else if matchingHostname == metav1.ConditionFalse {
-					// If there is no matchingHostname, the gateway Status Condition Accepted must be set to False
-					// with reason NoMatchingListenerHostname
-					reason = gatewayv1beta1.RouteReasonNoMatchingListenerHostname
-				}
-
-				var listenerName string
-				if parentRef.SectionName != nil && *parentRef.SectionName != "" {
-					listenerName = string(*parentRef.SectionName)
-				}
-
-				gateways = append(gateways, supportedGatewayWithCondition{
-					gateway:      &gateway,
-					listenerName: listenerName,
-					condition: metav1.Condition{
-						Type:   string(gatewayv1beta1.RouteConditionAccepted),
-						Status: matchingHostname,
-						Reason: string(reason),
-					},
-				})
+			// Check the listeners statuses:
+			// - Check if a listener status exists with a matching type (via SupportedKinds).
+			// - Check if it matches the requested listener by name (if specified).
+			// - And finally check if that listeners is marked as Ready.
+			if err := existsMatchingReadyListenerInStatus(route, listener, gateway.Status.Listeners); err != nil {
+				continue
+			} else {
+				allowedBySupportedKinds = true
 			}
+
+			// Perform the port matching as described in GEP-957.
+			if parentRef.Port != nil {
+				if *parentRef.Port != listener.Port {
+					// This ParentRef has a port specified and it's different
+					// than current listener's port.
+					continue
+				}
+				portMatched = true
+			}
+
+			if !routeTypeMatchesListenerType(route, listener.Protocol) {
+				continue
+			}
+
+			if routeHostnamesIntersectsWithListenerHostname(route, listener) {
+				condTrue := metav1.ConditionTrue
+				matchingHostname = &condTrue
+			} else {
+				condFalse := metav1.ConditionFalse
+				matchingHostname = &condFalse
+				continue
+			}
+
+			matched = true
+		}
+
+		if matched {
+			var listenerName string
+			if parentRef.SectionName != nil && *parentRef.SectionName != "" {
+				listenerName = string(*parentRef.SectionName)
+			}
+
+			gateways = append(gateways, supportedGatewayWithCondition{
+				gateway:      &gateway,
+				listenerName: listenerName,
+				condition: metav1.Condition{
+					Type:   string(gatewayv1beta1.RouteConditionAccepted),
+					Status: metav1.ConditionTrue,
+					Reason: string(gatewayv1beta1.RouteReasonAccepted),
+				},
+			})
+		} else {
+			// We failed to match a listener with this route
+
+			// This will also catch a case of not matching listener/section name.
+			reason := RouteReasonNoMatchingParent
+
+			if matchingHostname != nil && *matchingHostname == metav1.ConditionFalse {
+				// If there is no matchingHostname, the gateway Status Condition Accepted
+				// must be set to False with reason NoMatchingListenerHostname
+				reason = gatewayv1beta1.RouteReasonNoMatchingListenerHostname
+			} else if (parentRef.Port != nil) && !portMatched {
+				// If ParentRef specified a Port but none of the listeners matched, the gateway Status
+				// Condition Accepted must be set to False with reason NoMatchingListenerPort
+				reason = RouteReasonNoMatchingParent
+			} else if !allowedByAllowedRoutes || !allowedBySupportedKinds {
+				reason = gatewayv1beta1.RouteReasonNotAllowedByListeners
+			}
+
+			var listenerName string
+			if parentRef.SectionName != nil && *parentRef.SectionName != "" {
+				listenerName = string(*parentRef.SectionName)
+			}
+
+			gateways = append(gateways, supportedGatewayWithCondition{
+				gateway:      &gateway,
+				listenerName: listenerName,
+				condition: metav1.Condition{
+					Type:   string(gatewayv1beta1.RouteConditionAccepted),
+					Status: metav1.ConditionFalse,
+					Reason: string(reason),
+				},
+			})
 		}
 	}
 
@@ -258,25 +265,163 @@ func getSupportedGatewayForRoute[T types.RouteT](ctx context.Context, mgrc clien
 	return gateways, nil
 }
 
-func existsMatchingReadyListenerInStatus(listener Listener, lss []ListenerStatus) bool {
+func routeHostnamesIntersectsWithListenerHostname[T types.RouteT](route T, listener Listener) bool {
+	switch r := (any)(route).(type) {
+	case *gatewayv1beta1.HTTPRoute:
+		return listenerHostnameIntersectWithRouteHostnames(listener, r.Spec.Hostnames)
+	case *gatewayv1alpha2.TCPRoute:
+		return true
+	case *gatewayv1alpha2.UDPRoute:
+		return true
+	case *gatewayv1alpha2.TLSRoute:
+		return listenerHostnameIntersectWithRouteHostnames(listener, r.Spec.Hostnames)
+	default:
+		return false
+	}
+}
+
+func routeTypeMatchesListenerType[T types.RouteT](route T, listenerProtocol ProtocolType) bool {
+	switch (any)(route).(type) {
+	case *gatewayv1beta1.HTTPRoute:
+		if !(listenerProtocol == HTTPProtocolType || listenerProtocol == HTTPSProtocolType) {
+			return false
+		}
+	case *gatewayv1alpha2.TCPRoute:
+		if listenerProtocol != TCPProtocolType {
+			return false
+		}
+	case *gatewayv1alpha2.UDPRoute:
+		if listenerProtocol != UDPProtocolType {
+			return false
+		}
+	case *gatewayv1alpha2.TLSRoute:
+		if listenerProtocol != TLSProtocolType {
+			return false
+		}
+	default:
+		return false
+	}
+	return true
+}
+
+// routeMatchesListenerAllowedRoutes checks if the provided route matches the
+// criteria defined in listener's AllowedRoutes field.
+func routeMatchesListenerAllowedRoutes[T types.RouteT](
+	ctx context.Context,
+	mgrc client.Client,
+	route T,
+	listener Listener,
+	gatewayNamespace string,
+	parentRefNamespace *Namespace,
+) (bool, error) {
+	if listener.AllowedRoutes == nil {
+		return true, nil
+	}
+
+	if len(listener.AllowedRoutes.Kinds) > 0 {
+		// Find if the route has a type that's within the listener's supported types.
+		_, ok := lo.Find(listener.AllowedRoutes.Kinds, func(rgk gatewayv1beta1.RouteGroupKind) bool {
+			gvk := route.GetObjectKind().GroupVersionKind()
+			return (rgk.Group != nil && string(*rgk.Group) == gvk.Group) && string(rgk.Kind) == gvk.Kind
+		})
+		if !ok {
+			return false, nil
+		}
+	}
+
+	if listener.AllowedRoutes.Namespaces == nil || listener.AllowedRoutes.Namespaces.From == nil {
+		return true, nil
+	}
+
+	switch *listener.AllowedRoutes.Namespaces.From {
+
+	case gatewayv1beta1.NamespacesFromAll:
+		return true, nil
+
+	case gatewayv1beta1.NamespacesFromSame:
+		// If parentRef didn't specify the namespace then we check if
+		// the gateway is from the same namespace as the route
+		if parentRefNamespace == nil {
+			return gatewayNamespace == route.GetNamespace(), nil
+		}
+		// Otherwise compare routes namespace with parentRef's one.
+		return route.GetNamespace() == string(*parentRefNamespace), nil
+
+	case gatewayv1beta1.NamespacesFromSelector:
+		namespace := corev1.Namespace{}
+		if err := mgrc.Get(ctx, client.ObjectKey{Name: route.GetNamespace()}, &namespace); err != nil {
+			return false, fmt.Errorf("failed to get namespace %s: %w", route.GetNamespace(), err)
+		}
+
+		s, err := metav1.LabelSelectorAsSelector(listener.AllowedRoutes.Namespaces.Selector)
+		if err != nil {
+			return false, fmt.Errorf(
+				"failed to convert AllowedRoutes LabelSelector %s to Selector for listener %s: %w",
+				listener.AllowedRoutes.Namespaces.Selector, listener.Name, err,
+			)
+		}
+
+		ok := s.Matches(labels.Set(namespace.Labels))
+		return ok, nil
+
+	default:
+		return false, fmt.Errorf(
+			"unknown listener.AllowedRoutes.Namespaces.From value: %s for listener %s",
+			*listener.AllowedRoutes.Namespaces.From, listener.Name,
+		)
+	}
+}
+
+var (
+	errUnsupportedRouteKind             = errors.New("unsupported route kind")
+	errUnmatchedListenerName            = errors.New("unmatched listener name")
+	errNoReadyConditionFoundForListener = errors.New("no Ready condition found for listener")
+	errListenerNotReadyYet              = errors.New("listener not ready yet")
+)
+
+// existsMatchingReadyListenerInStatus checks if:
+// - If a listener status exists with a matching type (via SupportedKinds).
+// - If it matches the requested listener by name (if specified).
+// - And finally check if the provided listener is marked as Ready.
+func existsMatchingReadyListenerInStatus[T types.RouteT](route T, listener Listener, lss []ListenerStatus) error {
+	listenerFound := false
+
 	// Find listener's status...
 	listenerStatus, ok := lo.Find(lss, func(ls gatewayv1beta1.ListenerStatus) bool {
-		return ls.Name == listener.Name
+		if ls.Name != listener.Name {
+			return false
+		}
+		listenerFound = true
+
+		// Find if the route has a type that's within the supported types, listed
+		// in listener's status.
+		_, ok := lo.Find(ls.SupportedKinds, func(rgk gatewayv1beta1.RouteGroupKind) bool {
+			gvk := route.GetObjectKind().GroupVersionKind()
+			return (rgk.Group != nil && string(*rgk.Group) == gvk.Group) && string(rgk.Kind) == gvk.Kind
+		})
+		return ok
 	})
-	if !ok {
-		return false // Listener's status not found
+
+	if !ok && !listenerFound {
+		return errUnmatchedListenerName // Matching Listener's not found.
 	}
+
+	if !ok && listenerFound {
+		return errUnsupportedRouteKind // Listener(s) found but none with matching supported kinds.
+	}
+
 	// ... and verify if it's ready.
 	lReadyCond, ok := lo.Find(listenerStatus.Conditions, func(c metav1.Condition) bool {
 		return c.Type == string(gatewayv1beta1.ListenerConditionReady)
 	})
 	if !ok {
-		return false
+		return errNoReadyConditionFoundForListener
 	}
 	if lReadyCond.Status != "True" {
-		return false // Listener is not ready yet.
+		return errListenerNotReadyYet // Listener is not ready yet.
 	}
-	return true
+
+	return nil
 }
 
 func listenerHostnameIntersectWithRouteHostnames[H types.HostnameT, L types.ListenerT](listener L, hostnames []H) bool {
@@ -285,7 +430,7 @@ func listenerHostnameIntersectWithRouteHostnames[H types.HostnameT, L types.List
 	}
 
 	// if the listener has no hostname, all hostnames automatically intersect
-	switch l := (interface{})(listener).(type) {
+	switch l := (any)(listener).(type) {
 	case gatewayv1alpha2.Listener:
 		if l.Hostname == nil || *l.Hostname == "" {
 			return true

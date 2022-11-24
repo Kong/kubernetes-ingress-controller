@@ -182,8 +182,12 @@ Adding a new version? You'll need three changes:
 - Admin and proxy listens in the deploy manifests now use the same parameters
   as the default upstream kong.conf.
   [#3165](https://github.com/Kong/kubernetes-ingress-controller/pull/3165)
-- Fix the behavior of filtering hostnames in `HTTPRoutes` when listeners 
-  of parent gateways specified hostname.
+- Fix the behavior of filtering hostnames in `HTTPRoute` when listeners 
+  of parent gateways specified hostname. Now if an `HTTPRoute` does not 
+  specify hostnames, and one of its parent listeners has not specified
+  hostname, the hostnames will not be filtered in `HTTPRoute`. 
+  If an `HTTPRoute` specifies hostnames, and no intersecting hostnames 
+  could be found in its parent listners, it is not accepted.
   [#3180](https://github.com/Kong/kubernetes-ingress-controller/pull/3180)
 
 ## [2.7.0]

@@ -150,7 +150,6 @@ func listSecretNamesReferredByGateway(gateway *gatewayv1beta1.Gateway) map[types
 			}] = struct{}{}
 		}
 	}
-
 	return nsNames
 }
 

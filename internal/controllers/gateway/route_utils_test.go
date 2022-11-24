@@ -48,6 +48,9 @@ func TestFilterHostnames(t *testing.T) {
 					Name:     "listener-3",
 					Hostname: util.StringToGatewayAPIHostnamePtr("*.anotherwildcard.io"),
 				},
+				{
+					Name: "listener-4",
+				},
 			},
 		},
 	}
@@ -162,10 +165,29 @@ func TestFilterHostnames(t *testing.T) {
 			},
 		},
 		{
-			name: "no match",
+			name: "no listner specified - no hostname",
 			gateways: []supportedGatewayWithCondition{
 				{
 					gateway: commonGateway,
+				},
+			},
+			httpRoute: &gatewayv1beta1.HTTPRoute{
+				Spec: gatewayv1beta1.HTTPRouteSpec{
+					Hostnames: []gatewayv1beta1.Hostname{},
+				},
+			},
+			expectedHTTPRoute: &gatewayv1beta1.HTTPRoute{
+				Spec: gatewayv1beta1.HTTPRouteSpec{
+					Hostnames: []gatewayv1beta1.Hostname{},
+				},
+			},
+		},
+		{
+			name: "listener 1 - no match",
+			gateways: []supportedGatewayWithCondition{
+				{
+					gateway:      commonGateway,
+					listenerName: "listner-1",
 				},
 			},
 			httpRoute: &gatewayv1beta1.HTTPRoute{

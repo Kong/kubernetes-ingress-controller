@@ -469,7 +469,7 @@ func listenerHostnameIntersectWithRouteHostnames[H types.HostnameT, L types.List
 
 // isListenterHostnameEffective if the listener could specify an effective hostname to match hostnames in requests.
 // it will return true when the protocol of listener is HTTP, HTTPS, or TLS.
-func isListenterHostnameEffective(listener gatewayv1beta1.Listener) bool {
+func isListenerHostnameEffective(listener gatewayv1beta1.Listener) bool {
 	return listener.Protocol == gatewayv1beta1.HTTPProtocolType ||
 		listener.Protocol == gatewayv1beta1.HTTPSProtocolType ||
 		listener.Protocol == gatewayv1beta1.TLSProtocolType
@@ -486,8 +486,9 @@ func filterHostnames(gateways []supportedGatewayWithCondition, httpRoute *gatewa
 	if len(httpRoute.Spec.Hostnames) == 0 {
 		for _, gateway := range gateways {
 			for _, listener := range gateway.gateway.Spec.Listeners {
-				if listenerName := gateway.listenerName; listenerName == "" || listenerName == string(listener.Name) &&
-					isListenterHostnameEffective(listener) {
+				listenerName := gateway.listenerName
+				if (listenerName == "" || listenerName == string(listener.Name)) &&
+					isListenerHostnameEffective(listener) {
 					// httpRoute remains an empty hostname if any of the listeners
 					// has not specified hostname to match any host.
 					if listener.Hostname == nil {

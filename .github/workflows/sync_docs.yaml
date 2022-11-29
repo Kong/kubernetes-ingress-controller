@@ -43,6 +43,7 @@ jobs:
           base: main
           branch: kic-docs-sync
           delete-branch: true
-          body: |
-            It synchronizes [KIC's auto-generated API reference](https://github.com/Kong/kubernetes-ingress-controller/blob/main/docs/api-reference.md)
-            with this repository.
+          labels: |
+            Kubernetes Team
+            review:autodoc
+          body: It synchronizes [KIC's auto-generated API reference](https://github.com/Kong/kubernetes-ingress-controller/blob/main/docs/api-reference.md) with this repository.

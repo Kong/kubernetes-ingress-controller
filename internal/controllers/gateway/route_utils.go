@@ -84,10 +84,6 @@ const (
 	// https://github.com/kubernetes-sigs/gateway-api/pull/1516
 	// TODO: swap this out with upstream const when released.
 	RouteReasonNoMatchingParent gatewayv1beta1.RouteConditionReason = "NoMatchingParent"
-	// This reason is used with the "Accepted" condition when the Gateway has no
-	// compatible Listeners whose Port matches the route
-	// NOTE: This should probably be proposed upstream.
-	RouteReasonNoMatchingListenerPort gatewayv1beta1.RouteConditionReason = "NoMatchingListenerPort"
 	// This reason is used with the "Accepted" condition when no hostnames in listeners
 	// could match hostname in the spec of route.
 	RouteReasonNoMatchingListenerHostname gatewayv1beta1.RouteConditionReason = "NoMatchingListenerHostname"
@@ -520,7 +516,7 @@ func getUnionOfGatewayHostnames(gateways []supportedGatewayWithCondition) ([]gat
 				if listener.Hostname == nil {
 					return nil, true
 				}
-				hostnames = append(hostnames, (*listener.Hostname))
+				hostnames = append(hostnames, *listener.Hostname)
 			}
 		} else {
 			for _, listener := range gateway.gateway.Spec.Listeners {
@@ -529,7 +525,7 @@ func getUnionOfGatewayHostnames(gateways []supportedGatewayWithCondition) ([]gat
 					if listener.Hostname == nil {
 						return nil, true
 					}
-					hostnames = append(hostnames, (*listener.Hostname))
+					hostnames = append(hostnames, *listener.Hostname)
 				}
 			}
 		}

@@ -23,6 +23,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
 	gatewaypkg "github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/gateway"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/util/builder"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/versions"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
 	"github.com/kong/kubernetes-ingress-controller/v2/pkg/clientset"
@@ -541,8 +542,6 @@ func TestHTTPRouteFilterHosts(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Logf("creating an httproute with a same hostname and another unmatched hostname")
-	httpPort := gatewayv1beta1.PortNumber(80)
-	pathMatchPrefix := gatewayv1beta1.PathMatchPathPrefix
 	httpRoute := &gatewayv1beta1.HTTPRoute{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: uuid.NewString(),
@@ -563,22 +562,11 @@ func TestHTTPRouteFilterHosts(t *testing.T) {
 			},
 			Rules: []gatewayv1beta1.HTTPRouteRule{{
 				Matches: []gatewayv1beta1.HTTPRouteMatch{
-					{
-						Path: &gatewayv1beta1.HTTPPathMatch{
-							Type:  &pathMatchPrefix,
-							Value: kong.String("/test-http-route-filter-hosts"),
-						},
-					},
+					builder.NewHTTPRouteMatch().WithPathPrefix("/test-http-route-filter-hosts").Build(),
 				},
-				BackendRefs: []gatewayv1beta1.HTTPBackendRef{{
-					BackendRef: gatewayv1beta1.BackendRef{
-						BackendObjectReference: gatewayv1beta1.BackendObjectReference{
-							Name: gatewayv1beta1.ObjectName(service.Name),
-							Port: &httpPort,
-							Kind: util.StringToGatewayAPIKindPtr("Service"),
-						},
-					},
-				}},
+				BackendRefs: []gatewayv1beta1.HTTPBackendRef{
+					builder.NewHTTPBackendRef(service.Name).WithPort(80).Build(),
+				},
 			}},
 		},
 	}

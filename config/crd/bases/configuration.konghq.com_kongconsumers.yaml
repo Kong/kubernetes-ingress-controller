@@ -31,7 +31,7 @@ spec:
     name: v1
     schema:
       openAPIV3Schema:
-        description: KongConsumer is the Schema for the kongconsumers API
+        description: KongConsumer is the Schema for the kongconsumers API.
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation
@@ -46,7 +46,7 @@ spec:
             type: array
           custom_id:
             description: CustomID existing unique ID for the consumer - useful for
-              mapping Kong with users in your existing database
+              mapping Kong with users in your existing database.
             type: string
           kind:
             description: 'Kind is a string value representing the REST resource this

@@ -19,7 +19,7 @@ spec:
     schema:
       openAPIV3Schema:
         description: IngressClassParameters is the Schema for the IngressClassParameters
-          API
+          API.
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation
@@ -44,7 +44,7 @@ spec:
                 type: boolean
               serviceUpstream:
                 default: false
-                description: Offload load-balancing to kube-proxy or sidecar
+                description: Offload load-balancing to kube-proxy or sidecar.
                 type: boolean
             type: object
         type: object

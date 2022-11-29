@@ -21,17 +21,17 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-//+genclient
-//+k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-//+kubebuilder:object:root=true
-//+kubebuilder:resource:categories=kong-ingress-controller
-//+kubebuilder:subresource:status
-//+kubebuilder:storageversion
-//+kubebuilder:validation:Optional
-//+kubebuilder:printcolumn:name="Address",type=string,JSONPath=`.status.loadBalancer.ingress[*].ip`,description="Address of the load balancer"
-//+kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`,description="Age"
+// +genclient
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+// +kubebuilder:object:root=true
+// +kubebuilder:resource:categories=kong-ingress-controller
+// +kubebuilder:subresource:status
+// +kubebuilder:storageversion
+// +kubebuilder:validation:Optional
+// +kubebuilder:printcolumn:name="Address",type=string,JSONPath=`.status.loadBalancer.ingress[*].ip`,description="Address of the load balancer"
+// +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`,description="Age"
 
-// TCPIngress is the Schema for the tcpingresses API
+// TCPIngress is the Schema for the tcpingresses API.
 type TCPIngress struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -40,16 +40,16 @@ type TCPIngress struct {
 	Status TCPIngressStatus `json:"status,omitempty"`
 }
 
-//+kubebuilder:object:root=true
+// +kubebuilder:object:root=true
 
-// TCPIngressList contains a list of TCPIngress
+// TCPIngressList contains a list of TCPIngress.
 type TCPIngressList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []TCPIngress `json:"items"`
 }
 
-// TCPIngressSpec defines the desired state of TCPIngress
+// TCPIngressSpec defines the desired state of TCPIngress.
 type TCPIngressSpec struct {
 	// A list of rules used to configure the Ingress.
 	Rules []IngressRule `json:"rules,omitempty"`
@@ -76,7 +76,7 @@ type IngressTLS struct {
 	SecretName string `json:"secretName,omitempty"`
 }
 
-// TCPIngressStatus defines the observed state of TCPIngress
+// TCPIngressStatus defines the observed state of TCPIngress.
 type TCPIngressStatus struct {
 	// LoadBalancer contains the current status of the load-balancer.
 	// +optional

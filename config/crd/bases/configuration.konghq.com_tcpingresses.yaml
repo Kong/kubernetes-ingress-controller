@@ -29,7 +29,7 @@ spec:
     name: v1beta1
     schema:
       openAPIV3Schema:
-        description: TCPIngress is the Schema for the tcpingresses API
+        description: TCPIngress is the Schema for the tcpingresses API.
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation
@@ -44,7 +44,7 @@ spec:
           metadata:
             type: object
           spec:
-            description: TCPIngressSpec defines the desired state of TCPIngress
+            description: TCPIngressSpec defines the desired state of TCPIngress.
             properties:
               rules:
                 description: A list of rules used to configure the Ingress.
@@ -116,7 +116,7 @@ spec:
                 type: array
             type: object
           status:
-            description: TCPIngressStatus defines the observed state of TCPIngress
+            description: TCPIngressStatus defines the observed state of TCPIngress.
             properties:
               loadBalancer:
                 description: LoadBalancer contains the current status of the load-balancer.

@@ -25,26 +25,26 @@ func init() {
 	SchemeBuilder.Register(&UDPIngress{}, &UDPIngressList{})
 }
 
-//+kubebuilder:object:root=true
+// +kubebuilder:object:root=true
 
-// UDPIngressList contains a list of UDPIngress
+// UDPIngressList contains a list of UDPIngress.
 type UDPIngressList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []UDPIngress `json:"items"`
 }
 
-//+genclient
-//+k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-//+kubebuilder:object:root=true
-//+kubebuilder:resource:categories=kong-ingress-controller
-//+kubebuilder:subresource:status
-//+kubebuilder:storageversion
-//+kubebuilder:validation:Optional
-//+kubebuilder:printcolumn:name="Address",type=string,JSONPath=`.status.loadBalancer.ingress[*].ip`,description="Address of the load balancer"
-//+kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`,description="Age"
+// +genclient
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+// +kubebuilder:object:root=true
+// +kubebuilder:resource:categories=kong-ingress-controller
+// +kubebuilder:subresource:status
+// +kubebuilder:storageversion
+// +kubebuilder:validation:Optional
+// +kubebuilder:printcolumn:name="Address",type=string,JSONPath=`.status.loadBalancer.ingress[*].ip`,description="Address of the load balancer"
+// +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`,description="Age"
 
-// UDPIngress is the Schema for the udpingresses API
+// UDPIngress is the Schema for the udpingresses API.
 type UDPIngress struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -53,13 +53,13 @@ type UDPIngress struct {
 	Status UDPIngressStatus `json:"status,omitempty"`
 }
 
-// UDPIngressSpec defines the desired state of UDPIngress
+// UDPIngressSpec defines the desired state of UDPIngress.
 type UDPIngressSpec struct {
 	// A list of rules used to configure the Ingress.
 	Rules []UDPIngressRule `json:"rules,omitempty"`
 }
 
-// UDPIngressStatus defines the observed state of UDPIngress
+// UDPIngressStatus defines the observed state of UDPIngress.
 type UDPIngressStatus struct {
 	// LoadBalancer contains the current status of the load-balancer.
 	// +optional

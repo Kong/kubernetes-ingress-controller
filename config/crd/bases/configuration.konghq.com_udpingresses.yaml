@@ -29,7 +29,7 @@ spec:
     name: v1beta1
     schema:
       openAPIV3Schema:
-        description: UDPIngress is the Schema for the udpingresses API
+        description: UDPIngress is the Schema for the udpingresses API.
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation
@@ -44,7 +44,7 @@ spec:
           metadata:
             type: object
           spec:
-            description: UDPIngressSpec defines the desired state of UDPIngress
+            description: UDPIngressSpec defines the desired state of UDPIngress.
             properties:
               rules:
                 description: A list of rules used to configure the Ingress.
@@ -86,7 +86,7 @@ spec:
                 type: array
             type: object
           status:
-            description: UDPIngressStatus defines the observed state of UDPIngress
+            description: UDPIngressStatus defines the observed state of UDPIngress.
             properties:
               loadBalancer:
                 description: LoadBalancer contains the current status of the load-balancer.

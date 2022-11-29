@@ -41,7 +41,7 @@ spec:
     name: v1
     schema:
       openAPIV3Schema:
-        description: KongPlugin is the Schema for the kongplugins API
+        description: KongPlugin is the Schema for the kongplugins API.
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation
@@ -57,13 +57,13 @@ spec:
             properties:
               secretKeyRef:
                 description: SecretValueFromSource represents the source of a secret
-                  value
+                  value.
                 properties:
                   key:
-                    description: the key containing the value
+                    description: The key containing the value.
                     type: string
                   name:
-                    description: the secret containing the key
+                    description: The secret containing the key.
                     type: string
                 required:
                 - key
@@ -71,10 +71,10 @@ spec:
                 type: object
             type: object
           consumerRef:
-            description: ConsumerRef is a reference to a particular consumer
+            description: ConsumerRef is a reference to a particular consumer.
             type: string
           disabled:
-            description: Disabled set if the plugin is disabled or not
+            description: Disabled set if the plugin is disabled or not.
             type: boolean
           kind:
             description: 'Kind is a string value representing the REST resource this
@@ -84,7 +84,7 @@ spec:
           metadata:
             type: object
           ordering:
-            description: Ordering overrides the normal plugin execution order
+            description: Ordering overrides the normal plugin execution order.
             properties:
               after:
                 additionalProperties:
@@ -105,7 +105,7 @@ spec:
             type: object
           plugin:
             description: PluginName is the name of the plugin to which to apply the
-              config
+              config.
             type: string
           protocols:
             description: Protocols configures plugin to run on requests received on

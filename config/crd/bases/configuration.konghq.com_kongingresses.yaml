@@ -22,7 +22,7 @@ spec:
   - name: v1
     schema:
       openAPIV3Schema:
-        description: KongIngress is the Schema for the kongingresses API
+        description: KongIngress is the Schema for the kongingresses API.
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation
@@ -39,7 +39,7 @@ spec:
           proxy:
             description: Proxy defines additional connection options for the routes
               to be configured in the Kong Gateway, e.g. `connection_timeout`, `retries`,
-              e.t.c.
+              etc.
             properties:
               connect_timeout:
                 description: The timeout in milliseconds for establishing a connection
@@ -47,7 +47,8 @@ spec:
                 minimum: 0
                 type: integer
               path:
-                description: The path to be used in requests to the upstream server.(optional)
+                description: (optional) The path to be used in requests to the upstream
+                  server.
                 pattern: ^/.*$
                 type: string
               protocol:

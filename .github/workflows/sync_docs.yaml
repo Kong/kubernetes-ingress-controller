@@ -29,13 +29,13 @@ jobs:
         id: detect-changes
         run: echo "HAS_CHANGES=$(cd docs.konghq.com && git status --porcelain)" >> $GITHUB_OUTPUT
 
-      - name: Create a PR
+      - name: Create a PR in docs repo
         uses: peter-evans/create-pull-request@b4d51739f96fca8047ad065eccef63442d8e99f7
         if: steps.detect-changes.outputs.HAS_CHANGES
         with:
           token: ${{ secrets.K8S_TEAM_BOT_GH_PAT }}
-          title: Synchronize auto-generated KIC documentation
-          commit-message: Synchronize auto-generated KIC documentation
+          title: Synchronize auto-generated KIC API reference
+          commit-message: Synchronize auto-generated KIC API reference
           committer: Kong <team-k8s+github-bot@konghq.com>
           author: Kong <team-k8s+github-bot@konghq.com>
           signoff: true
@@ -43,4 +43,6 @@ jobs:
           base: main
           branch: kic-docs-sync
           delete-branch: true
-          body: test
+          body: |
+            It synchronizes [KIC's auto-generated API reference](https://github.com/Kong/kubernetes-ingress-controller/blob/main/docs/api-reference.md)
+            with this repository.

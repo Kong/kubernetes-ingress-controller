@@ -266,11 +266,21 @@ jobs:
         uses: actions/checkout@v3
         with:
           repository: kong/docs.konghq.com
-          path: docs
+          path: docs.konghq.com
           fetch-depth: 0
 
-      - name: Create a PR # https://github.com/marketplace/actions/create-pull-request
+      - name: Generate docs
+        run: | 
+          ./scripts/apidocs-gen/post-process-for-konghq.sh \
+          docs.konghq.com/src/kubernetes-ingress-controller/references/custom-resources.md
+
+      - name: Detect changes
+        id: detect-changes
+        run: echo "HAS_CHANGES=$(cd docs.konghq.com && git status --porcelain)" >> $GITHUB_OUTPUT
+
+      - name: Create a PR
         uses: peter-evans/create-pull-request@b4d51739f96fca8047ad065eccef63442d8e99f7
+        if: steps.detect-changes.outputs.HAS_CHANGES
         with:
           token: ${{ secrets.PAT_GITHUB }}
           title: Synchronize auto-generated KIC documentation
@@ -278,7 +288,8 @@ jobs:
           committer: Kong <team-k8s+github-bot@konghq.com>
           author: Kong <team-k8s+github-bot@konghq.com>
           signoff: true
+          path: docs.konghq.com
           base: main
           branch: kic-docs-sync
           delete-branch: true
-          body: ${{ env.PR_TEMPLATE }}
+          body: test

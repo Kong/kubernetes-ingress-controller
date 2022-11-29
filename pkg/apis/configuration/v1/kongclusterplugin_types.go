@@ -54,7 +54,6 @@ type KongClusterPlugin struct {
 	// Please read the documentation of the plugin being configured to set values
 	// in here. For any plugin in Kong, anything that goes in the `config` JSON
 	// key in the Admin API request, goes into this property.
-	//
 	// Only one of `config` or `configFrom` may be used in a KongClusterPlugin, not both at once.
 	// +kubebuilder:validation:Type=object
 	Config apiextensionsv1.JSON `json:"config,omitempty"`
@@ -62,7 +61,6 @@ type KongClusterPlugin struct {
 	// ConfigFrom references a secret containing the plugin configuration.
 	// This should be used when the plugin configuration contains sensitive information,
 	// such as AWS credentials in the Lambda plugin or the client secret in the OIDC plugin.
-	//
 	// Only one of `config` or `configFrom` may be used in a KongClusterPlugin, not both at once.
 	ConfigFrom *NamespacedConfigSource `json:"configFrom,omitempty"`
 

@@ -29,7 +29,10 @@ spec:
     name: v1beta1
     schema:
       openAPIV3Schema:
-        description: UDPIngress is the Schema for the udpingresses API.
+        description: UDPIngress is the Schema for the udpingresses API. It makes it
+          possible to route traffic to your UDP services using Kong (e.g. DNS, Game
+          Servers, etc.). For each rule provided in the spec the Kong proxy environment
+          must be updated to listen to UDP on that port as well.
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation

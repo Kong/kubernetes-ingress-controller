@@ -610,12 +610,7 @@ func Test_getSupportedGatewayForRoute(t *testing.T) {
 											Status: metav1.ConditionTrue,
 										},
 									},
-									SupportedKinds: []gatewayv1beta1.RouteGroupKind{
-										{
-											Group: addressOf(gatewayv1beta1.Group(gatewayv1beta1.GroupVersion.Group)),
-											Kind:  gatewayv1beta1.Kind("TCPRoute"),
-										},
-									},
+									SupportedKinds: builder.NewRouteGroupKind().TCPRoute().IntoSlice(),
 								},
 							},
 						},
@@ -694,12 +689,7 @@ func Test_getSupportedGatewayForRoute(t *testing.T) {
 								NewListener("http").WithPort(80).HTTP().
 								WithAllowedRoutes(
 									&gatewayv1beta1.AllowedRoutes{
-										Kinds: []gatewayv1beta1.RouteGroupKind{
-											{
-												Group: addressOf(gatewayv1beta1.Group(gatewayv1beta1.GroupVersion.Group)),
-												Kind:  gatewayv1beta1.Kind("TCPRoute"),
-											},
-										},
+										Kinds: builder.NewRouteGroupKind().TCPRoute().IntoSlice(),
 									},
 								).
 								IntoSlice(),
@@ -714,12 +704,7 @@ func Test_getSupportedGatewayForRoute(t *testing.T) {
 											Status: metav1.ConditionTrue,
 										},
 									},
-									SupportedKinds: []gatewayv1beta1.RouteGroupKind{
-										{
-											Group: addressOf(gatewayv1beta1.Group(gatewayv1beta1.GroupVersion.Group)),
-											Kind:  gatewayv1beta1.Kind("TCPRoute"),
-										},
-									},
+									SupportedKinds: builder.NewRouteGroupKind().TCPRoute().IntoSlice(),
 								},
 							},
 						},
@@ -795,16 +780,7 @@ func Test_getSupportedGatewayForRoute(t *testing.T) {
 						},
 						Spec: gatewayv1beta1.GatewaySpec{
 							GatewayClassName: "test-gatewayclass",
-							Listeners: builder.
-								NewListener("http").WithPort(80).HTTP().
-								WithAllowedRoutes(
-									&gatewayv1beta1.AllowedRoutes{
-										Namespaces: &gatewayv1beta1.RouteNamespaces{
-											From: addressOf(gatewayv1beta1.NamespacesFromSame),
-										},
-									},
-								).
-								IntoSlice(),
+							Listeners:        builder.NewListener("http").WithPort(80).HTTP().WithAllowedRoutes(builder.NewAllowedRoutesFromSameNamespaces()).IntoSlice(),
 						},
 						Status: gatewayv1beta1.GatewayStatus{
 							Listeners: []gatewayv1beta1.ListenerStatus{
@@ -816,12 +792,7 @@ func Test_getSupportedGatewayForRoute(t *testing.T) {
 											Status: metav1.ConditionTrue,
 										},
 									},
-									SupportedKinds: []gatewayv1beta1.RouteGroupKind{
-										{
-											Group: addressOf(gatewayv1beta1.Group(gatewayv1beta1.GroupVersion.Group)),
-											Kind:  gatewayv1beta1.Kind("HTTPRoute"),
-										},
-									},
+									SupportedKinds: builder.NewRouteGroupKind().HTTPRoute().IntoSlice(),
 								},
 							},
 						},
@@ -899,17 +870,7 @@ func Test_getSupportedGatewayForRoute(t *testing.T) {
 						},
 						Spec: gatewayv1beta1.GatewaySpec{
 							GatewayClassName: "test-gatewayclass",
-							Listeners: builder.
-								NewListener("http").WithPort(80).HTTP().
-								WithAllowedRoutes(
-									&gatewayv1beta1.AllowedRoutes{
-										Namespaces: &gatewayv1beta1.RouteNamespaces{
-											From: addressOf(gatewayv1beta1.NamespacesFromSame),
-										},
-									},
-								).
-								WithHostname("hostname.com").
-								IntoSlice(),
+							Listeners:        builder.NewListener("http").WithPort(80).HTTP().WithAllowedRoutes(builder.NewAllowedRoutesFromSameNamespaces()).WithHostname("hostname.com").IntoSlice(),
 						},
 						Status: gatewayv1beta1.GatewayStatus{
 							Listeners: []gatewayv1beta1.ListenerStatus{
@@ -921,12 +882,7 @@ func Test_getSupportedGatewayForRoute(t *testing.T) {
 											Status: metav1.ConditionTrue,
 										},
 									},
-									SupportedKinds: []gatewayv1beta1.RouteGroupKind{
-										{
-											Group: addressOf(gatewayv1beta1.Group(gatewayv1beta1.GroupVersion.Group)),
-											Kind:  gatewayv1beta1.Kind("HTTPRoute"),
-										},
-									},
+									SupportedKinds: builder.NewRouteGroupKind().HTTPRoute().IntoSlice(),
 								},
 							},
 						},
@@ -1049,14 +1005,8 @@ func Test_getSupportedGatewayForRoute(t *testing.T) {
 										},
 									},
 									SupportedKinds: []gatewayv1beta1.RouteGroupKind{
-										{
-											Group: addressOf(gatewayv1beta1.Group(gatewayv1beta1.GroupVersion.Group)),
-											Kind:  gatewayv1beta1.Kind("HTTPRoute"),
-										},
-										{
-											Group: addressOf(gatewayv1beta1.Group(gatewayv1beta1.GroupVersion.Group)),
-											Kind:  gatewayv1beta1.Kind("TCPRoute"),
-										},
+										builder.NewRouteGroupKind().HTTPRoute().Build(),
+										builder.NewRouteGroupKind().TCPRoute().Build(),
 									},
 								},
 							},

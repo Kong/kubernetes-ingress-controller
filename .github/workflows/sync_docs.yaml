@@ -33,7 +33,7 @@ jobs:
         uses: peter-evans/create-pull-request@b4d51739f96fca8047ad065eccef63442d8e99f7
         if: steps.detect-changes.outputs.HAS_CHANGES
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.K8S_TEAM_BOT_GH_PAT }}
           title: Synchronize auto-generated KIC documentation
           commit-message: Synchronize auto-generated KIC documentation
           committer: Kong <team-k8s+github-bot@konghq.com>

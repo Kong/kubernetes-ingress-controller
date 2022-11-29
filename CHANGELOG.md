@@ -183,9 +183,9 @@ Adding a new version? You'll need three changes:
   as the default upstream kong.conf.
   [#3165](https://github.com/Kong/kubernetes-ingress-controller/pull/3165)
 - Fix the behavior of filtering hostnames in `HTTPRoute` when listeners 
-  of parent gateways specified hostname. Now if an `HTTPRoute` does not 
-  specify hostnames, and one of its parent listeners has not specified
-  hostname, the hostnames will not be filtered in `HTTPRoute`. 
+  of parent gateways specified hostname.
+  If an `HTTPRoute` does not specify hostnames, and one of its parent listeners
+  has not specified hostname, the `HTTPRoute` matches any hostname. 
   If an `HTTPRoute` specifies hostnames, and no intersecting hostnames 
   could be found in its parent listners, it is not accepted.
   [#3180](https://github.com/Kong/kubernetes-ingress-controller/pull/3180)

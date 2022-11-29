@@ -467,8 +467,9 @@ func listenerHostnameIntersectWithRouteHostnames[H types.HostnameT, L types.List
 	return false
 }
 
-// isListenterHostnameEffective if the listener could specify an effective hostname to match hostnames in requests.
-// it will return true when the protocol of listener is HTTP, HTTPS, or TLS.
+// isListenterHostnameEffective returns true if the listener can specify an effective
+// hostname to match hostnames in requests.
+// It basically checks if the listener is using any these protocols: HTTP, HTTPS, or TLS.
 func isListenerHostnameEffective(listener gatewayv1beta1.Listener) bool {
 	return listener.Protocol == gatewayv1beta1.HTTPProtocolType ||
 		listener.Protocol == gatewayv1beta1.HTTPSProtocolType ||
@@ -480,23 +481,14 @@ func isListenerHostnameEffective(listener gatewayv1beta1.Listener) bool {
 // it returns an error if the intersection of hostname match in httproute and listeners is empty.
 func filterHostnames(gateways []supportedGatewayWithCondition, httpRoute *gatewayv1beta1.HTTPRoute) (*gatewayv1beta1.HTTPRoute, error) {
 	filteredHostnames := make([]gatewayv1beta1.Hostname, 0)
-
-	// if no hostnames are specified in the route spec, get all the hostnames from
-	// the gateway
+	// if no hostnames are specified in the route spec, we use the UNION of all hostnames in supported gateways.
+	// if any of supported listener has not specified hostname, the hostnames of HTTPRoute remains empty
+	// to match **ANY** hostname.
 	if len(httpRoute.Spec.Hostnames) == 0 {
-		for _, gateway := range gateways {
-			for _, listener := range gateway.gateway.Spec.Listeners {
-				listenerName := gateway.listenerName
-				if (listenerName == "" || listenerName == string(listener.Name)) &&
-					isListenerHostnameEffective(listener) {
-					// httpRoute remains an empty hostname if any of the listeners
-					// has not specified hostname to match any host.
-					if listener.Hostname == nil {
-						return httpRoute, nil
-					}
-					filteredHostnames = append(filteredHostnames, (*listener.Hostname))
-				}
-			}
+		var matchAnyHost bool
+		filteredHostnames, matchAnyHost = getUnionOfGatewayHostnames(gateways)
+		if matchAnyHost {
+			return httpRoute, nil
 		}
 	} else {
 		for _, hostname := range httpRoute.Spec.Hostnames {
@@ -511,6 +503,38 @@ func filterHostnames(gateways []supportedGatewayWithCondition, httpRoute *gatewa
 
 	httpRoute.Spec.Hostnames = filteredHostnames
 	return httpRoute, nil
+}
+
+// getUnionOfGatewayHostnames returns UNION of hostnames specified in supported gateways.
+// the second return value is true if any hostname could be matched in at least one listener
+// in supported gateways and listeners, so the `HTTPRoute` could match any hostname.
+func getUnionOfGatewayHostnames(gateways []supportedGatewayWithCondition) ([]gatewayv1beta1.Hostname, bool) {
+	hostnames := make([]gatewayv1beta1.Hostname, 0)
+	for _, gateway := range gateways {
+		if gateway.listenerName != "" {
+			if listener := extractListenerSpecFromGateway(
+				gateway.gateway,
+				gatewayv1beta1.SectionName(gateway.listenerName),
+			); listener != nil {
+				// return true if the listener has not specified hostname to match any hostname.
+				if listener.Hostname == nil {
+					return nil, true
+				}
+				hostnames = append(hostnames, (*listener.Hostname))
+			}
+		} else {
+			for _, listener := range gateway.gateway.Spec.Listeners {
+				// REVIEW: which listeners should we take into consideration here if no listener in supported gateways?
+				if isListenerHostnameEffective(listener) {
+					if listener.Hostname == nil {
+						return nil, true
+					}
+					hostnames = append(hostnames, (*listener.Hostname))
+				}
+			}
+		}
+	}
+	return hostnames, false
 }
 
 // getMinimumHostnameIntersection returns the minimum intersecting hostname, in the sense that:

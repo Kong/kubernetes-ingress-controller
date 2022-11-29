@@ -1,9 +1,6 @@
 name: sync docs
 
-on:
-  schedule:
-    - cron: '30 3 * * *'
-  workflow_dispatch: {}
+on: [pull_request]
 
 jobs:
   synchronize_docs:

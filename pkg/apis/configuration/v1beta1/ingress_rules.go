@@ -27,6 +27,8 @@ type UDPIngressRule struct {
 type IngressRule struct {
 	// Host is the fully qualified domain name of a network host, as defined
 	// by RFC 3986.
+	// If a Host is not specified, then port-based TCP routing is performed. Kong
+	// doesn't care about the content of the TCP stream in this case.
 	// If a Host is specified, the protocol must be TLS over TCP.
 	// A plain-text TCP request cannot be routed based on Host. It can only
 	// be routed based on Port.

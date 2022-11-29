@@ -247,13 +247,7 @@ func Test_getSupportedGatewayForRoute(t *testing.T) {
 						},
 						Spec: gatewayv1beta1.GatewaySpec{
 							GatewayClassName: "test-gatewayclass",
-							Listeners: []gatewayv1beta1.Listener{
-								{
-									Name:     gatewayv1beta1.SectionName("http"),
-									Protocol: gatewayv1beta1.HTTPProtocolType,
-									Port:     gatewayv1beta1.PortNumber(80),
-								},
-							},
+							Listeners:        builder.NewListener("http").WithPort(80).HTTP().IntoSlice(),
 						},
 						Status: gatewayv1beta1.GatewayStatus{
 							Listeners: []gatewayv1beta1.ListenerStatus{
@@ -341,13 +335,7 @@ func Test_getSupportedGatewayForRoute(t *testing.T) {
 						},
 						Spec: gatewayv1beta1.GatewaySpec{
 							GatewayClassName: "test-gatewayclass",
-							Listeners: []gatewayv1beta1.Listener{
-								{
-									Name:     gatewayv1beta1.SectionName("http"),
-									Protocol: gatewayv1beta1.HTTPProtocolType,
-									Port:     gatewayv1beta1.PortNumber(80),
-								},
-							},
+							Listeners:        builder.NewListener("http").WithPort(80).HTTP().IntoSlice(),
 						},
 						Status: gatewayv1beta1.GatewayStatus{
 							Listeners: []gatewayv1beta1.ListenerStatus{
@@ -435,13 +423,7 @@ func Test_getSupportedGatewayForRoute(t *testing.T) {
 						},
 						Spec: gatewayv1beta1.GatewaySpec{
 							GatewayClassName: "test-gatewayclass",
-							Listeners: []gatewayv1beta1.Listener{
-								{
-									Name:     gatewayv1beta1.SectionName("http"),
-									Protocol: gatewayv1beta1.HTTPProtocolType,
-									Port:     gatewayv1beta1.PortNumber(80),
-								},
-							},
+							Listeners:        builder.NewListener("http").WithPort(80).HTTP().IntoSlice(),
 						},
 						Status: gatewayv1beta1.GatewayStatus{
 							Listeners: []gatewayv1beta1.ListenerStatus{
@@ -529,13 +511,7 @@ func Test_getSupportedGatewayForRoute(t *testing.T) {
 						},
 						Spec: gatewayv1beta1.GatewaySpec{
 							GatewayClassName: "test-gatewayclass",
-							Listeners: []gatewayv1beta1.Listener{
-								{
-									Name:     gatewayv1beta1.SectionName("http"),
-									Protocol: gatewayv1beta1.HTTPProtocolType,
-									Port:     gatewayv1beta1.PortNumber(81),
-								},
-							},
+							Listeners:        builder.NewListener("http").WithPort(81).HTTP().IntoSlice(),
 						},
 						Status: gatewayv1beta1.GatewayStatus{
 							Listeners: []gatewayv1beta1.ListenerStatus{
@@ -622,13 +598,7 @@ func Test_getSupportedGatewayForRoute(t *testing.T) {
 						},
 						Spec: gatewayv1beta1.GatewaySpec{
 							GatewayClassName: "test-gatewayclass",
-							Listeners: []gatewayv1beta1.Listener{
-								{
-									Name:     gatewayv1beta1.SectionName("http"),
-									Protocol: gatewayv1beta1.HTTPProtocolType,
-									Port:     gatewayv1beta1.PortNumber(80),
-								},
-							},
+							Listeners:        builder.NewListener("http").WithPort(80).HTTP().IntoSlice(),
 						},
 						Status: gatewayv1beta1.GatewayStatus{
 							Listeners: []gatewayv1beta1.ListenerStatus{
@@ -720,12 +690,10 @@ func Test_getSupportedGatewayForRoute(t *testing.T) {
 						},
 						Spec: gatewayv1beta1.GatewaySpec{
 							GatewayClassName: "test-gatewayclass",
-							Listeners: []gatewayv1beta1.Listener{
-								{
-									Name:     gatewayv1beta1.SectionName("http"),
-									Protocol: gatewayv1beta1.HTTPProtocolType,
-									Port:     gatewayv1beta1.PortNumber(80),
-									AllowedRoutes: &gatewayv1beta1.AllowedRoutes{
+							Listeners: builder.
+								NewListener("http").WithPort(80).HTTP().
+								WithAllowedRoutes(
+									&gatewayv1beta1.AllowedRoutes{
 										Kinds: []gatewayv1beta1.RouteGroupKind{
 											{
 												Group: addressOf(gatewayv1beta1.Group(gatewayv1beta1.GroupVersion.Group)),
@@ -733,8 +701,8 @@ func Test_getSupportedGatewayForRoute(t *testing.T) {
 											},
 										},
 									},
-								},
-							},
+								).
+								IntoSlice(),
 						},
 						Status: gatewayv1beta1.GatewayStatus{
 							Listeners: []gatewayv1beta1.ListenerStatus{
@@ -827,18 +795,16 @@ func Test_getSupportedGatewayForRoute(t *testing.T) {
 						},
 						Spec: gatewayv1beta1.GatewaySpec{
 							GatewayClassName: "test-gatewayclass",
-							Listeners: []gatewayv1beta1.Listener{
-								{
-									Name:     gatewayv1beta1.SectionName("http"),
-									Protocol: gatewayv1beta1.HTTPProtocolType,
-									Port:     gatewayv1beta1.PortNumber(80),
-									AllowedRoutes: &gatewayv1beta1.AllowedRoutes{
+							Listeners: builder.
+								NewListener("http").WithPort(80).HTTP().
+								WithAllowedRoutes(
+									&gatewayv1beta1.AllowedRoutes{
 										Namespaces: &gatewayv1beta1.RouteNamespaces{
 											From: addressOf(gatewayv1beta1.NamespacesFromSame),
 										},
 									},
-								},
-							},
+								).
+								IntoSlice(),
 						},
 						Status: gatewayv1beta1.GatewayStatus{
 							Listeners: []gatewayv1beta1.ListenerStatus{
@@ -933,19 +899,17 @@ func Test_getSupportedGatewayForRoute(t *testing.T) {
 						},
 						Spec: gatewayv1beta1.GatewaySpec{
 							GatewayClassName: "test-gatewayclass",
-							Listeners: []gatewayv1beta1.Listener{
-								{
-									Name:     gatewayv1beta1.SectionName("http"),
-									Protocol: gatewayv1beta1.HTTPProtocolType,
-									Port:     gatewayv1beta1.PortNumber(80),
-									AllowedRoutes: &gatewayv1beta1.AllowedRoutes{
+							Listeners: builder.
+								NewListener("http").WithPort(80).HTTP().
+								WithAllowedRoutes(
+									&gatewayv1beta1.AllowedRoutes{
 										Namespaces: &gatewayv1beta1.RouteNamespaces{
 											From: addressOf(gatewayv1beta1.NamespacesFromSame),
 										},
 									},
-									Hostname: addressOf(gatewayv1beta1.Hostname("hostname.com")),
-								},
-							},
+								).
+								WithHostname("hostname.com").
+								IntoSlice(),
 						},
 						Status: gatewayv1beta1.GatewayStatus{
 							Listeners: []gatewayv1beta1.ListenerStatus{
@@ -1072,13 +1036,7 @@ func Test_getSupportedGatewayForRoute(t *testing.T) {
 						},
 						Spec: gatewayv1beta1.GatewaySpec{
 							GatewayClassName: "test-gatewayclass",
-							Listeners: []gatewayv1beta1.Listener{
-								{
-									Name:     gatewayv1beta1.SectionName("tcp"),
-									Protocol: gatewayv1beta1.TCPProtocolType,
-									Port:     gatewayv1beta1.PortNumber(80),
-								},
-							},
+							Listeners:        builder.NewListener("tcp").WithPort(80).TCP().IntoSlice(),
 						},
 						Status: gatewayv1beta1.GatewayStatus{
 							Listeners: []gatewayv1beta1.ListenerStatus{
@@ -1167,13 +1125,7 @@ func Test_getSupportedGatewayForRoute(t *testing.T) {
 						},
 						Spec: gatewayv1beta1.GatewaySpec{
 							GatewayClassName: "test-gatewayclass",
-							Listeners: []gatewayv1beta1.Listener{
-								{
-									Name:     gatewayv1beta1.SectionName("http"),
-									Protocol: gatewayv1beta1.HTTPProtocolType,
-									Port:     gatewayv1beta1.PortNumber(80),
-								},
-							},
+							Listeners:        builder.NewListener("http").WithPort(80).HTTP().IntoSlice(),
 						},
 						Status: gatewayv1beta1.GatewayStatus{
 							Listeners: []gatewayv1beta1.ListenerStatus{

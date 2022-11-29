@@ -251,3 +251,34 @@ jobs:
           path: report/*.xml
           key: ${{ secrets.BUILDPULSE_ACCESS_KEY_ID }}
           secret: ${{ secrets.BUILDPULSE_SECRET_ACCESS_KEY }}
+
+  synchronize_docs:
+    environment: "Configure ci"
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout KIC repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Checkout docs repository
+        uses: actions/checkout@v3
+        with:
+          repository: kong/docs.konghq.com
+          path: docs
+          fetch-depth: 0
+
+      - name: Create a PR # https://github.com/marketplace/actions/create-pull-request
+        uses: peter-evans/create-pull-request@b4d51739f96fca8047ad065eccef63442d8e99f7
+        with:
+          token: ${{ secrets.PAT_GITHUB }}
+          title: Synchronize auto-generated KIC documentation
+          commit-message: Synchronize auto-generated KIC documentation
+          committer: Kong <team-k8s+github-bot@konghq.com>
+          author: Kong <team-k8s+github-bot@konghq.com>
+          signoff: true
+          base: main
+          branch: kic-docs-sync
+          delete-branch: true
+          body: ${{ env.PR_TEMPLATE }}

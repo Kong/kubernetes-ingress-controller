@@ -30,6 +30,17 @@ import (
 // +kubebuilder:validation:Optional
 
 // KongIngress is the Schema for the kongingresses API.
+// It serves as an "extension" to Ingress resource. It is not meant as a replacement to
+// the Ingress resource in Kubernetes.
+// Ingress resource spec in Kubernetes can define routing policies based on HTTP Host header and paths.
+// While this is sufficient in most cases, sometimes, users may want more control over routing at the Ingress level.
+//
+// Once a `KongIngress` resource is created, it needs to be associated with
+// an Ingress or Service resource using the `konghq.com/override` annotation.
+//
+// Many fields available on KongIngress are also available as annotations.
+// When an annotation is available, it is the preferred means of configuring that setting, and the annotation value
+// will take precedence over a KongIngress value if both set the same setting.
 type KongIngress struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`

@@ -32,6 +32,8 @@ import (
 // +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`,description="Age"
 
 // TCPIngress is the Schema for the tcpingresses API.
+// The Ingress resource in Kubernetes is HTTP-only. This custom resource is modeled similar to the Ingress resource
+// but for TCP and TLS SNI based routing purposes.
 type TCPIngress struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`

@@ -30,6 +30,7 @@ jobs:
       - name: GPG sign the commits
         uses: crazy-max/ghaction-import-gpg@111c56156bcc6918c056dbef52164cfa583dc549
         with:
+          workdir: docs.konghq.com
           gpg_private_key: ${{ secrets.K8S_TEAM_BOT_GPG_PRIVATE_KEY }}
           passphrase: ${{ secrets.K8S_TEAM_BOT_GPG_PASSPHRASE }}
           git_user_signingkey: true

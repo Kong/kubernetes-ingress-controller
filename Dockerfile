@@ -109,6 +109,10 @@ COPY --from=builder /workspace/manager .
 COPY LICENSE /licenses/
 COPY LICENSES /licenses/
 
+# Run yum update to prevent vulnerable packages getting into the final image
+# and preventing publishing on Redhat connect registry.
+RUN yum update -y
+
 # Perform any further action as an unprivileged user.
 USER 1000
 

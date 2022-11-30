@@ -328,7 +328,7 @@ func (r *HTTPRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 				ctx,
 				httproute, gateways,
 				metav1.ConditionFalse,
-				RouteReasonNoMatchingListenerHostname,
+				gatewayv1beta1.RouteReasonNoMatchingListenerHostname,
 				err.Error(),
 			)
 			if err != nil {

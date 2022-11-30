@@ -84,9 +84,6 @@ const (
 	// https://github.com/kubernetes-sigs/gateway-api/pull/1516
 	// TODO: swap this out with upstream const when released.
 	RouteReasonNoMatchingParent gatewayv1beta1.RouteConditionReason = "NoMatchingParent"
-	// This reason is used with the "Accepted" condition when no hostnames in listeners
-	// could match hostname in the spec of route.
-	RouteReasonNoMatchingListenerHostname gatewayv1beta1.RouteConditionReason = "NoMatchingListenerHostname"
 )
 
 // getSupportedGatewayForRoute will retrieve the Gateway and GatewayClass object for any
@@ -463,7 +460,7 @@ func listenerHostnameIntersectWithRouteHostnames[H types.HostnameT, L types.List
 	return false
 }
 
-// isListenterHostnameEffective returns true if the listener can specify an effective
+// isListenerHostnameEffective returns true if the listener can specify an effective
 // hostname to match hostnames in requests.
 // It basically checks if the listener is using any these protocols: HTTP, HTTPS, or TLS.
 func isListenerHostnameEffective(listener gatewayv1beta1.Listener) bool {
@@ -520,7 +517,9 @@ func getUnionOfGatewayHostnames(gateways []supportedGatewayWithCondition) ([]gat
 			}
 		} else {
 			for _, listener := range gateway.gateway.Spec.Listeners {
-				// REVIEW: which listeners should we take into consideration here if no listener in supported gateways?
+				// here we consider ALL listeners that are able to configure a hostname if no listener attached.
+				// may be changed if there is a conclusion on the upstream discussion about it:
+				// https://github.com/kubernetes-sigs/gateway-api/discussions/1563
 				if isListenerHostnameEffective(listener) {
 					if listener.Hostname == nil {
 						return nil, true
@@ -594,6 +593,5 @@ func isHTTPReferenceGranted(grantSpec gatewayv1alpha2.ReferenceGrantSpec, backen
 			}
 		}
 	}
-
 	return false
 }

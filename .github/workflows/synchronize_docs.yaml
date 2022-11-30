@@ -1,6 +1,7 @@
-name: Synchronize documentation
+name: Synchronize documentation with docs.konghq.com
 
-on: [pull_request]
+on:
+  workflow_dispatch: {}
 
 jobs:
   synchronize_docs:
@@ -43,7 +44,6 @@ jobs:
           token: ${{ secrets.K8S_TEAM_BOT_GH_PAT }}
           title: Synchronize auto-generated KIC API reference
           commit-message: Synchronize auto-generated KIC API reference
-          draft: true
           committer: Kong's Team k8s bot <team-k8s+github-bot@konghq.com>
           author: Kong's Team k8s bot <team-k8s+github-bot@konghq.com>
           signoff: true

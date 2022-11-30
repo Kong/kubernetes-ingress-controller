@@ -11,7 +11,7 @@ set -o pipefail
 
 SCRIPT_ROOT="$(dirname "${BASH_SOURCE[0]}")/../.."
 CRD_REF_DOC="${SCRIPT_ROOT}/docs/api-reference.md"
-POST_PROCESSED_DOC="$1"
+POST_PROCESSED_DOC="${1}"
 
 echo "---
 title: Custom Resource Definitions API Reference

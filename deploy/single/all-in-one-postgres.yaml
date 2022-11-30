@@ -97,7 +97,10 @@ spec:
     name: v1
     schema:
       openAPIV3Schema:
-        description: KongClusterPlugin is the Schema for the  API.
+        description: KongClusterPlugin is the Schema for the  API. The only differences
+          between KongPlugin and KongClusterPlugin are that KongClusterPlugin is a
+          Kubernetes cluster-level resource instead of a namespaced resource, and
+          can be applied as a global plugin using `global` label.
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation
@@ -105,11 +108,20 @@ spec:
               internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
             type: string
           config:
-            description: Config contains the plugin configuration.
+            description: Config contains the plugin configuration. It's a list of
+              keys and values required to configure the plugin. Please read the documentation
+              of the plugin being configured to set values in here. For any plugin
+              in Kong, anything that goes in the `config` JSON key in the Admin API
+              request, goes into this property. Only one of `config` or `configFrom`
+              may be used in a KongClusterPlugin, not both at once.
             type: object
             x-kubernetes-preserve-unknown-fields: true
           configFrom:
             description: ConfigFrom references a secret containing the plugin configuration.
+              This should be used when the plugin configuration contains sensitive
+              information, such as AWS credentials in the Lambda plugin or the client
+              secret in the OIDC plugin. Only one of `config` or `configFrom` may
+              be used in a KongClusterPlugin, not both at once.
             properties:
               secretKeyRef:
                 description: NamespacedSecretValueFromSource represents the source
@@ -144,7 +156,13 @@ spec:
           metadata:
             type: object
           ordering:
-            description: Ordering overrides the normal plugin execution order.
+            description: 'Ordering overrides the normal plugin execution order. It''s
+              only available on Kong Enterprise. `<phase>` is a request processing
+              phase (for example, `access` or `body_filter`) and `<plugin>` is the
+              name of the plugin that will run before or after the KongPlugin. For
+              example, a KongPlugin with `plugin: rate-limiting` and `before.access:
+              ["key-auth"]` will create a rate limiting plugin that limits requests
+              _before_ they are authenticated.'
             properties:
               after:
                 additionalProperties:
@@ -229,7 +247,12 @@ spec:
     name: v1
     schema:
       openAPIV3Schema:
-        description: KongConsumer is the Schema for the kongconsumers API.
+        description: "KongConsumer is the Schema for the kongconsumers API. When this
+          resource is created, a corresponding consumer entity will be created in
+          Kong. \n While KongConsumer exists in a specific Kubernetes namespace, KongConsumers
+          from all namespaces are combined into a single Kong configuration, and no
+          KongConsumers with the same `kubernetes.io/ingress.class` may share the
+          same Username or CustomID value."
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation
@@ -243,8 +266,8 @@ spec:
               type: string
             type: array
           custom_id:
-            description: CustomID existing unique ID for the consumer - useful for
-              mapping Kong with users in your existing database.
+            description: CustomID is a Kong cluster-unique existing ID for the consumer
+              - useful for mapping Kong with users in your existing database.
             type: string
           kind:
             description: 'Kind is a string value representing the REST resource this
@@ -254,7 +277,7 @@ spec:
           metadata:
             type: object
           username:
-            description: Username unique username of the consumer.
+            description: Username is a Kong cluster-unique username of the consumer.
             type: string
         type: object
     served: true
@@ -285,7 +308,17 @@ spec:
   - name: v1
     schema:
       openAPIV3Schema:
-        description: KongIngress is the Schema for the kongingresses API.
+        description: "KongIngress is the Schema for the kongingresses API. It serves
+          as an \"extension\" to Ingress resource. It is not meant as a replacement
+          to the Ingress resource in Kubernetes. Ingress resource spec in Kubernetes
+          can define routing policies based on HTTP Host header and paths. While this
+          is sufficient in most cases, sometimes, users may want more control over
+          routing at the Ingress level. \n Once a `KongIngress` resource is created,
+          it needs to be associated with an Ingress or Service resource using the
+          `konghq.com/override` annotation. \n Many fields available on KongIngress
+          are also available as annotations. When an annotation is available, it is
+          the preferred means of configuring that setting, and the annotation value
+          will take precedence over a KongIngress value if both set the same setting."
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation
@@ -632,7 +665,9 @@ spec:
     name: v1
     schema:
       openAPIV3Schema:
-        description: KongPlugin is the Schema for the kongplugins API.
+        description: KongPlugin is the Schema for the kongplugins API. Plugins can
+          be associated with Ingress or Service object in Kubernetes using `konghq.com/plugins`
+          annotation.
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation
@@ -640,11 +675,20 @@ spec:
               internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
             type: string
           config:
-            description: Config contains the plugin configuration.
+            description: Config contains the plugin configuration. It's a list of
+              keys and values required to configure the plugin. Please read the documentation
+              of the plugin being configured to set values in here. For any plugin
+              in Kong, anything that goes in the `config` JSON key in the Admin API
+              request, goes into this property. Only one of `config` or `configFrom`
+              may be used in a KongPlugin, not both at once.
             type: object
             x-kubernetes-preserve-unknown-fields: true
           configFrom:
             description: ConfigFrom references a secret containing the plugin configuration.
+              This should be used when the plugin configuration contains sensitive
+              information, such as AWS credentials in the Lambda plugin or the client
+              secret in the OIDC plugin. Only one of `config` or `configFrom` may
+              be used in a KongPlugin, not both at once.
             properties:
               secretKeyRef:
                 description: SecretValueFromSource represents the source of a secret
@@ -675,7 +719,13 @@ spec:
           metadata:
             type: object
           ordering:
-            description: Ordering overrides the normal plugin execution order.
+            description: 'Ordering overrides the normal plugin execution order. It''s
+              only available on Kong Enterprise. `<phase>` is a request processing
+              phase (for example, `access` or `body_filter`) and `<plugin>` is the
+              name of the plugin that will run before or after the KongPlugin. For
+              example, a KongPlugin with `plugin: rate-limiting` and `before.access:
+              ["key-auth"]` will create a rate limiting plugin that limits requests
+              _before_ they are authenticated.'
             properties:
               after:
                 additionalProperties:
@@ -758,7 +808,9 @@ spec:
     name: v1beta1
     schema:
       openAPIV3Schema:
-        description: TCPIngress is the Schema for the tcpingresses API.
+        description: TCPIngress is the Schema for the tcpingresses API. The Ingress
+          resource in Kubernetes is HTTP-only. This custom resource is modeled similar
+          to the Ingress resource but for TCP and TLS SNI based routing purposes.
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation
@@ -802,9 +854,12 @@ spec:
                       type: object
                     host:
                       description: Host is the fully qualified domain name of a network
-                        host, as defined by RFC 3986. If a Host is specified, the
-                        protocol must be TLS over TCP. A plain-text TCP request cannot
-                        be routed based on Host. It can only be routed based on Port.
+                        host, as defined by RFC 3986. If a Host is not specified,
+                        then port-based TCP routing is performed. Kong doesn't care
+                        about the content of the TCP stream in this case. If a Host
+                        is specified, the protocol must be TLS over TCP. A plain-text
+                        TCP request cannot be routed based on Host. It can only be
+                        routed based on Port.
                       type: string
                     port:
                       description: Port is the port on which to accept TCP or TLS
@@ -942,7 +997,10 @@ spec:
     name: v1beta1
     schema:
       openAPIV3Schema:
-        description: UDPIngress is the Schema for the udpingresses API.
+        description: UDPIngress is the Schema for the udpingresses API. It makes it
+          possible to route traffic to your UDP services using Kong (e.g. DNS, Game
+          Servers, etc.). For each rule provided in the spec the Kong proxy environment
+          must be updated to listen to UDP on that port as well.
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation

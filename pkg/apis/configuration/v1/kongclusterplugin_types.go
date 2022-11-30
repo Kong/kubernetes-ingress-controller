@@ -36,6 +36,9 @@ import (
 // +kubebuilder:printcolumn:name="Config",type=string,JSONPath=`.config`,description="Configuration of the plugin",priority=1
 
 // KongClusterPlugin is the Schema for the  API.
+// The only differences between KongPlugin and KongClusterPlugin are that KongClusterPlugin
+// is a Kubernetes cluster-level resource instead of a namespaced resource, and can be applied
+// as a global plugin using `global` label.
 type KongClusterPlugin struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -46,11 +49,19 @@ type KongClusterPlugin struct {
 	// Disabled set if the plugin is disabled or not.
 	Disabled bool `json:"disabled,omitempty"`
 
-	// Config contains the plugin configuration.
+	// Config contains the plugin configuration. It's a list of keys and values
+	// required to configure the plugin.
+	// Please read the documentation of the plugin being configured to set values
+	// in here. For any plugin in Kong, anything that goes in the `config` JSON
+	// key in the Admin API request, goes into this property.
+	// Only one of `config` or `configFrom` may be used in a KongClusterPlugin, not both at once.
 	// +kubebuilder:validation:Type=object
 	Config apiextensionsv1.JSON `json:"config,omitempty"`
 
 	// ConfigFrom references a secret containing the plugin configuration.
+	// This should be used when the plugin configuration contains sensitive information,
+	// such as AWS credentials in the Lambda plugin or the client secret in the OIDC plugin.
+	// Only one of `config` or `configFrom` may be used in a KongClusterPlugin, not both at once.
 	ConfigFrom *NamespacedConfigSource `json:"configFrom,omitempty"`
 
 	// PluginName is the name of the plugin to which to apply the config.
@@ -66,7 +77,11 @@ type KongClusterPlugin struct {
 	// protocols.
 	Protocols []KongProtocol `json:"protocols,omitempty"`
 
-	// Ordering overrides the normal plugin execution order.
+	// Ordering overrides the normal plugin execution order. It's only available on Kong Enterprise.
+	// `<phase>` is a request processing phase (for example, `access` or `body_filter`) and
+	// `<plugin>` is the name of the plugin that will run before or after the KongPlugin.
+	// For example, a KongPlugin with `plugin: rate-limiting` and `before.access: ["key-auth"]`
+	// will create a rate limiting plugin that limits requests _before_ they are authenticated.
 	Ordering *kong.PluginOrdering `json:"ordering,omitempty"`
 }
 

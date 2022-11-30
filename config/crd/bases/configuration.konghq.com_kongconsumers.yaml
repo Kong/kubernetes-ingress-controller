@@ -31,7 +31,12 @@ spec:
     name: v1
     schema:
       openAPIV3Schema:
-        description: KongConsumer is the Schema for the kongconsumers API.
+        description: "KongConsumer is the Schema for the kongconsumers API. When this
+          resource is created, a corresponding consumer entity will be created in
+          Kong. \n While KongConsumer exists in a specific Kubernetes namespace, KongConsumers
+          from all namespaces are combined into a single Kong configuration, and no
+          KongConsumers with the same `kubernetes.io/ingress.class` may share the
+          same Username or CustomID value."
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation
@@ -45,8 +50,8 @@ spec:
               type: string
             type: array
           custom_id:
-            description: CustomID existing unique ID for the consumer - useful for
-              mapping Kong with users in your existing database.
+            description: CustomID is a Kong cluster-unique existing ID for the consumer
+              - useful for mapping Kong with users in your existing database.
             type: string
           kind:
             description: 'Kind is a string value representing the REST resource this
@@ -56,7 +61,7 @@ spec:
           metadata:
             type: object
           username:
-            description: Username unique username of the consumer.
+            description: Username is a Kong cluster-unique username of the consumer.
             type: string
         type: object
     served: true

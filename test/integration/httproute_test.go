@@ -23,6 +23,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
 	gatewaypkg "github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/gateway"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/util/builder"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/versions"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
 	"github.com/kong/kubernetes-ingress-controller/v2/pkg/clientset"
@@ -493,4 +494,150 @@ func TestHTTPRouteMultipleServices(t *testing.T) {
 
 	t.Log("verifying that misconfigured service rules are _not_ routed")
 	eventuallyGETPath(t, "test-http-route-multiple-services-broken", http.StatusNotFound, "", emptyHeaderSet)
+}
+
+func TestHTTPRouteFilterHosts(t *testing.T) {
+	ns, cleaner := setup(t)
+	defer func() {
+		if t.Failed() {
+			output, err := cleaner.DumpDiagnostics(ctx, t.Name())
+			t.Logf("%s failed, dumped diagnostics to %s", t.Name(), output)
+			assert.NoError(t, err)
+		}
+		assert.NoError(t, cleaner.Cleanup(ctx))
+	}()
+
+	listenerHostname := gatewayv1beta1.Hostname("test.specific.io")
+
+	t.Log("getting a gateway client")
+	gatewayClient, err := gatewayclient.NewForConfig(env.Cluster().Config())
+	require.NoError(t, err)
+
+	t.Log("deploying a new gatewayClass")
+	gatewayClassName := uuid.NewString()
+	gwc, err := DeployGatewayClass(ctx, gatewayClient, gatewayClassName)
+	require.NoError(t, err)
+	cleaner.Add(gwc)
+
+	t.Log("deploying a new gateway with specified hostname")
+	gatewayName := uuid.NewString()
+	gateway, err := DeployGateway(ctx, gatewayClient, ns.Name, gatewayClassName, func(gw *gatewayv1beta1.Gateway) {
+		gw.Name = gatewayName
+		for i := range gw.Spec.Listeners {
+			gw.Spec.Listeners[i].Hostname = &listenerHostname
+		}
+	})
+	require.NoError(t, err)
+	cleaner.Add(gateway)
+
+	t.Log("deploying a minimal HTTP container deployment to test Ingress routes")
+	container := generators.NewContainer("httpbin", test.HTTPBinImage, 80)
+	deployment := generators.NewDeploymentForContainer(container)
+	deployment, err = env.Cluster().Client().AppsV1().Deployments(ns.Name).Create(ctx, deployment, metav1.CreateOptions{})
+	require.NoError(t, err)
+
+	t.Logf("exposing deployment %s via service", deployment.Name)
+	service := generators.NewServiceForDeployment(deployment, corev1.ServiceTypeLoadBalancer)
+	_, err = env.Cluster().Client().CoreV1().Services(ns.Name).Create(ctx, service, metav1.CreateOptions{})
+	require.NoError(t, err)
+
+	t.Logf("creating an httproute with a same hostname and another unmatched hostname")
+	httpRoute := &gatewayv1beta1.HTTPRoute{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: uuid.NewString(),
+			Annotations: map[string]string{
+				annotations.AnnotationPrefix + annotations.StripPathKey: "true",
+				annotations.AnnotationPrefix + annotations.PluginsKey:   "correlation",
+			},
+		},
+		Spec: gatewayv1beta1.HTTPRouteSpec{
+			CommonRouteSpec: gatewayv1beta1.CommonRouteSpec{
+				ParentRefs: []gatewayv1beta1.ParentReference{{
+					Name: gatewayv1beta1.ObjectName(gateway.Name),
+				}},
+			},
+			Hostnames: []gatewayv1beta1.Hostname{
+				gatewayv1beta1.Hostname("test.specific.io"),
+				gatewayv1beta1.Hostname("another.specific.io"),
+			},
+			Rules: []gatewayv1beta1.HTTPRouteRule{{
+				Matches: []gatewayv1beta1.HTTPRouteMatch{
+					builder.NewHTTPRouteMatch().WithPathPrefix("/test-http-route-filter-hosts").Build(),
+				},
+				BackendRefs: []gatewayv1beta1.HTTPBackendRef{
+					builder.NewHTTPBackendRef(service.Name).WithPort(80).Build(),
+				},
+			}},
+		},
+	}
+	_, err = gatewayClient.GatewayV1beta1().HTTPRoutes(ns.Name).Create(ctx, httpRoute, metav1.CreateOptions{})
+	require.NoError(t, err)
+	cleaner.Add(httpRoute)
+
+	// testGetByHost tries to get the test path with specified host in request,
+	// and returns true if 200 returned.
+	testGetByHost := func(t *testing.T, host string) bool {
+		req, err := http.NewRequest("GET", proxyURL.String()+"/test-http-route-filter-hosts", nil)
+		require.NoError(t, err)
+		req.Host = host
+		resp, err := httpc.Do(req)
+		if err != nil {
+			return false
+		}
+		defer resp.Body.Close()
+		return resp.StatusCode == http.StatusOK
+	}
+
+	t.Logf("test host matched hostname in listeners")
+	require.Eventually(t, func() bool {
+		return testGetByHost(t, "test.specific.io")
+	}, ingressWait, waitTick)
+	t.Logf("test host matched in httproute, but not in listeners")
+	require.False(t, testGetByHost(t, "another.specific.io"))
+
+	t.Logf("update hostnames in httproute to wildcard")
+	httpRoute, err = gatewayClient.GatewayV1beta1().HTTPRoutes(ns.Name).Get(ctx, httpRoute.Name, metav1.GetOptions{})
+	require.NoError(t, err)
+	httpRoute.Spec.Hostnames = []gatewayv1beta1.Hostname{
+		gatewayv1beta1.Hostname("*.specific.io"),
+	}
+	_, err = gatewayClient.GatewayV1beta1().HTTPRoutes(ns.Name).Update(ctx, httpRoute, metav1.UpdateOptions{})
+	require.NoError(t, err)
+	t.Logf("test host matched hostname in listeners")
+	require.Eventually(t, func() bool {
+		return testGetByHost(t, "test.specific.io")
+	}, ingressWait, waitTick)
+	t.Logf("test host matched in httproute, but not in listeners")
+	require.False(t, testGetByHost(t, "another2.specific.io"))
+
+	t.Logf("update hostname in httproute to an unmatched host")
+	httpRoute, err = gatewayClient.GatewayV1beta1().HTTPRoutes(ns.Name).Get(ctx, httpRoute.Name, metav1.GetOptions{})
+	require.NoError(t, err)
+	httpRoute.Spec.Hostnames = []gatewayv1beta1.Hostname{
+		gatewayv1beta1.Hostname("another.specific.io"),
+	}
+	_, err = gatewayClient.GatewayV1beta1().HTTPRoutes(ns.Name).Update(ctx, httpRoute, metav1.UpdateOptions{})
+	require.NoError(t, err)
+	t.Logf("status of httproute should contain an 'Accepted' condition with 'False' status")
+	require.Eventuallyf(t, func() bool {
+		currentHTTPRoute, err := gatewayClient.GatewayV1beta1().HTTPRoutes(ns.Name).Get(ctx, httpRoute.Name, metav1.GetOptions{})
+		require.NoError(t, err)
+		for _, parent := range currentHTTPRoute.Status.Parents {
+			for _, condition := range parent.Conditions {
+				if condition.Type == string(gatewayv1beta1.RouteReasonAccepted) && condition.Status == metav1.ConditionFalse {
+					return true
+				}
+			}
+		}
+		return false
+	}, ingressWait, waitTick,
+		func() string {
+			currentHTTPRoute, err := gatewayClient.GatewayV1beta1().HTTPRoutes(ns.Name).Get(ctx, httpRoute.Name, metav1.GetOptions{})
+			if err != nil {
+				return err.Error()
+			}
+			return fmt.Sprintf("current status of HTTPRoute %s/%s:%v", httpRoute.Namespace, httpRoute.Name, currentHTTPRoute.Status)
+		}())
+	t.Logf("test host matched in httproute, but not in listeners")
+	require.False(t, testGetByHost(t, "another.specific.io"))
 }

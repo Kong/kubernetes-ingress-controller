@@ -153,6 +153,17 @@ func listSecretNamesReferredByGateway(gateway *gatewayv1beta1.Gateway) map[types
 	return nsNames
 }
 
+// extractListenerSpecFromGateway returns the spec of the listener with the given name.
+// returns nil if the listener with given name is not found.
+func extractListenerSpecFromGateway(gateway *gatewayv1beta1.Gateway, listenerName gatewayv1beta1.SectionName) *gatewayv1beta1.Listener {
+	for i, l := range gateway.Spec.Listeners {
+		if l.Name == listenerName {
+			return &gateway.Spec.Listeners[i]
+		}
+	}
+	return nil
+}
+
 // ListenerTracker holds Gateway Listeners and their statuses, and provides methods to update statuses upon
 // reconciliation.
 type ListenerTracker struct {

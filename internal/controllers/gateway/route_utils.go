@@ -192,7 +192,7 @@ func getSupportedGatewayForRoute[T types.RouteT](ctx context.Context, mgrc clien
 				portMatched = true
 			}
 
-			if !routeTypeMatchesListenerType(route, listener.Protocol) {
+			if !routeTypeMatchesListenerType(route, listener) {
 				continue
 			}
 
@@ -282,22 +282,44 @@ func routeHostnamesIntersectsWithListenerHostname[T types.RouteT](route T, liste
 	}
 }
 
-func routeTypeMatchesListenerType[T types.RouteT](route T, listenerProtocol ProtocolType) bool {
+func routeTypeMatchesListenerType[T types.RouteT](route T, listener Listener) bool {
 	switch (any)(route).(type) {
 	case *gatewayv1beta1.HTTPRoute:
-		if !(listenerProtocol == HTTPProtocolType || listenerProtocol == HTTPSProtocolType) {
+		// HTTPRoutes support Terminate only
+		// Note: this is a guess we are doing as the upstream documentation is unclear at the moment.
+		// see https://github.com/kubernetes-sigs/gateway-api/issues/1474
+		if !(listener.Protocol == HTTPProtocolType || listener.Protocol == HTTPSProtocolType) {
+			return false
+		}
+		if listener.TLS != nil && *listener.TLS.Mode != gatewayv1beta1.TLSModeTerminate {
 			return false
 		}
 	case *gatewayv1alpha2.TCPRoute:
-		if listenerProtocol != TCPProtocolType {
+		if listener.Protocol != TCPProtocolType {
+			return false
+		}
+		// TCPRoutes support Terminate only
+		// Note: this is a guess we are doing as the upstream documentation is unclear at the moment.
+		// see https://github.com/kubernetes-sigs/gateway-api/issues/1474
+		if listener.TLS != nil && *listener.TLS.Mode != gatewayv1beta1.TLSModeTerminate {
 			return false
 		}
 	case *gatewayv1alpha2.UDPRoute:
-		if listenerProtocol != UDPProtocolType {
+		if listener.Protocol != UDPProtocolType {
+			return false
+		}
+		// TLS should not be set in UDP listeners
+		if listener.TLS != nil {
 			return false
 		}
 	case *gatewayv1alpha2.TLSRoute:
-		if listenerProtocol != TLSProtocolType {
+		if listener.Protocol != TLSProtocolType {
+			return false
+		}
+		// TLSRoutes currently support Passthrough only
+		// Note: this is a guess we are doing as the upstream documentation is unclear at the moment.
+		// see https://github.com/kubernetes-sigs/gateway-api/issues/1474
+		if listener.TLS != nil && *listener.TLS.Mode != gatewayv1beta1.TLSModePassthrough {
 			return false
 		}
 	default:

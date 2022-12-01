@@ -27,6 +27,7 @@ import (
 	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/util/builder"
 	"github.com/kong/kubernetes-ingress-controller/v2/test"
 )
 
@@ -141,24 +142,23 @@ func TestTLSRouteEssentials(t *testing.T) {
 
 	t.Log("deploying a gateway to the test cluster using unmanaged gateway mode and port 8899")
 	gatewayName := uuid.NewString()
-	hostname := gatewayv1beta1.Hostname(tlsRouteHostname)
 	modePassthrough := gatewayv1beta1.TLSModePassthrough
 	gateway, err := DeployGateway(ctx, gatewayClient, ns.Name, gatewayClassName, func(gw *gatewayv1beta1.Gateway) {
 		gw.Name = gatewayName
-		gw.Spec.Listeners = []gatewayv1beta1.Listener{{
-			Name:     "tls",
-			Protocol: gatewayv1beta1.TLSProtocolType,
-			Port:     gatewayv1beta1.PortNumber(ktfkong.DefaultTLSServicePort),
-			Hostname: &hostname,
-			TLS: &gatewayv1beta1.GatewayTLSConfig{
+
+		gw.Spec.Listeners = builder.NewListener("tls").
+			TLS().
+			WithPort(ktfkong.DefaultTLSServicePort).
+			WithHostname(tlsRouteHostname).
+			WithTLSConfig(&gatewayv1beta1.GatewayTLSConfig{
 				Mode: &modePassthrough,
 				CertificateRefs: []gatewayv1beta1.SecretObjectReference{
 					{
 						Name: gatewayv1beta1.ObjectName(tlsSecretName),
 					},
 				},
-			},
-		}}
+			}).
+			IntoSlice()
 	})
 	require.NoError(t, err)
 	cleaner.Add(gateway)
@@ -331,20 +331,19 @@ func TestTLSRouteEssentials(t *testing.T) {
 	t.Log("putting the Gateway back")
 	gateway, err = DeployGateway(ctx, gatewayClient, ns.Name, gatewayClassName, func(gw *gatewayv1beta1.Gateway) {
 		gw.Name = gatewayName
-		gw.Spec.Listeners = []gatewayv1beta1.Listener{{
-			Name:     "tls",
-			Protocol: gatewayv1beta1.TLSProtocolType,
-			Port:     gatewayv1beta1.PortNumber(ktfkong.DefaultTLSServicePort),
-			Hostname: &hostname,
-			TLS: &gatewayv1beta1.GatewayTLSConfig{
+		gw.Spec.Listeners = builder.NewListener("tls").
+			TLS().
+			WithPort(ktfkong.DefaultTLSServicePort).
+			WithHostname(tlsRouteHostname).
+			WithTLSConfig(&gatewayv1beta1.GatewayTLSConfig{
 				Mode: &modePassthrough,
 				CertificateRefs: []gatewayv1beta1.SecretObjectReference{
 					{
 						Name: gatewayv1beta1.ObjectName(tlsSecretName),
 					},
 				},
-			},
-		}}
+			}).
+			IntoSlice()
 	})
 	require.NoError(t, err)
 
@@ -469,30 +468,25 @@ func TestTLSRouteReferenceGrant(t *testing.T) {
 	modePassthrough := gatewayv1beta1.TLSModePassthrough
 	t.Log("deploying a gateway to the test cluster using unmanaged gateway mode")
 	gateway, err := DeployGateway(ctx, gatewayClient, ns.Name, unmanagedGatewayClassName, func(gw *gatewayv1beta1.Gateway) {
-		hostname := gatewayv1beta1.Hostname(tlsRouteHostname)
-		otherHostname := gatewayv1beta1.Hostname(tlsRouteExtraHostname)
 		otherNamespace := gatewayv1beta1.Namespace(otherNs.Name)
 		gw.Spec.Listeners = []gatewayv1beta1.Listener{
-			{
-				Name:     "tls",
-				Protocol: gatewayv1beta1.TLSProtocolType,
-				Port:     gatewayv1beta1.PortNumber(ktfkong.DefaultTLSServicePort),
-				Hostname: &hostname,
-				TLS: &gatewayv1beta1.GatewayTLSConfig{
+			builder.NewListener("tls").
+				TLS().
+				WithPort(ktfkong.DefaultTLSServicePort).
+				WithHostname(tlsRouteHostname).
+				WithTLSConfig(&gatewayv1beta1.GatewayTLSConfig{
 					Mode: &modePassthrough,
 					CertificateRefs: []gatewayv1beta1.SecretObjectReference{
 						{
 							Name: gatewayv1beta1.ObjectName(secrets[0].Name),
 						},
 					},
-				},
-			},
-			{
-				Name:     "tlsother",
-				Protocol: gatewayv1beta1.TLSProtocolType,
-				Port:     gatewayv1beta1.PortNumber(ktfkong.DefaultTLSServicePort),
-				Hostname: &otherHostname,
-				TLS: &gatewayv1beta1.GatewayTLSConfig{
+				}).Build(),
+			builder.NewListener("tlsother").
+				TLS().
+				WithPort(ktfkong.DefaultTLSServicePort).
+				WithHostname(tlsRouteExtraHostname).
+				WithTLSConfig(&gatewayv1beta1.GatewayTLSConfig{
 					Mode: &modePassthrough,
 					CertificateRefs: []gatewayv1beta1.SecretObjectReference{
 						{
@@ -500,8 +494,7 @@ func TestTLSRouteReferenceGrant(t *testing.T) {
 							Namespace: &otherNamespace,
 						},
 					},
-				},
-			},
+				}).Build(),
 		}
 	})
 

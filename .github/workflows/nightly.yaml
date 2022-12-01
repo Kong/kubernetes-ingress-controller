@@ -117,7 +117,7 @@ jobs:
     needs: 
       - build-push-images
     env:
-      REDHAT_STANDARD_TAG: ${{ needs.build-push-images.outputs.REDHAT_STANDARD_TAG }}
+      REDHAT_STANDARD_TAG: ${{ needs.build-push-images.outputs.TAGS_REDHAT_STANDARD }}
 
     steps:
       - name: checkout repository

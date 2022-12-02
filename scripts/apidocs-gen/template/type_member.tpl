@@ -7,7 +7,7 @@
 {{- if eq $field.Name "metadata" -}}
 Refer to Kubernetes API documentation for fields of `metadata`.
 {{- else if and $isNotBasic $isNotImported $isNotJSON -}}
-{{ $field.Doc }} {{ template "type_members_html" $field.Type }}
+{{ $field.Doc }}<br/>{{ template "type_members_html" $field.Type }}
 {{- else -}}
 {{ $field.Doc }}
 {{- end -}}

@@ -75,6 +75,7 @@ spec:
     port: 8899
     hostname: tlsroute.kong.example
     tls:
+      mode: Passthrough
       certificateRefs:
       - name: tlsroute-example
 ---

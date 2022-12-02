@@ -26,6 +26,7 @@ type (
 	SectionName       = gatewayv1beta1.SectionName
 
 	TCPRoute = gatewayv1alpha2.TCPRoute
+	TLSRoute = gatewayv1alpha2.TLSRoute
 )
 
 const (

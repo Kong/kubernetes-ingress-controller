@@ -51,6 +51,14 @@ body:
       - label: Click publish button for all tags related to the release that were pushed to the portal. That will publish the image to Red Hat Catalog.
       - label: Make sure the latest tag was added when asked. If forgot, the tag can be added from the dropdown menu.
 - type: checkboxes
+  id: synchronize_documentation
+  attributes:
+    label: "**For all releases** Synchronize documentation with docs.konghq.com"
+    options:
+      - label: Trigger [synchronize_docs](https://github.com/Kong/kubernetes-ingress-controller/blob/main/.github/workflows/synchronize_docs.yaml) workflow.
+      - label: Ensure the PR is created in [docs.konghq.com](https://github.com/Kong/docs.konghq.com/pulls) repository.
+      - label: Review and approve the PR if everything looks correct.
+- type: checkboxes
   id: release_documents
   attributes:
     label: "**For major/minor releases only** Update Release documents"

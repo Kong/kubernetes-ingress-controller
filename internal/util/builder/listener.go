@@ -61,3 +61,8 @@ func (b *ListenerBuilder) WithAllowedRoutes(routes *gatewayv1beta1.AllowedRoutes
 	b.listener.AllowedRoutes = routes
 	return b
 }
+
+func (b *ListenerBuilder) WithTLSConfig(tlsConfig *gatewayv1beta1.GatewayTLSConfig) *ListenerBuilder {
+	b.listener.TLS = tlsConfig
+	return b
+}

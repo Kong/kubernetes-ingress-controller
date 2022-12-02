@@ -117,7 +117,7 @@ jobs:
     needs: 
       - build-push-images
     env:
-      REDHAT_STANDARD_TAG: ${{ needs.build-push-images.outputs.REDHAT_STANDARD_TAG }}
+      REDHAT_STANDARD_TAG: ${{ needs.build-push-images.outputs.TAGS_REDHAT_STANDARD }}
 
     steps:
       - name: checkout repository
@@ -207,7 +207,7 @@ jobs:
       - name: Kubernetes ${{ matrix.kubernetes-version }} ${{ matrix.dbmode }} Integration Tests With ${{ matrix.kong-router-flavor }} Kong Router
         run: KONG_CLUSTER_VERSION=${{ matrix.kubernetes-version }} make test.integration.${{ matrix.dbmode }}
         env:
-          GOTESTSUM_JUNITFILE: integration-${{ matrix.kong-router-flavor }}-${{ matrix.kubernetes-version }}-${{ matrix.dbmode }}-tests.xml
+          GOTESTSUM_JUNITFILE: integration-${{ matrix.kubernetes-version }}-${{ matrix.dbmode }}-${{ matrix.kong-router-flavor }}-tests.xml
           TEST_KONG_ROUTER_FLAVOR: ${{ matrix.kong-router-flavor }}
       - name: Kubernetes ${{ matrix.kubernetes-version }} ${{ matrix.dbmode }} Integration Tests for Invalid Configurations With ${{ matrix.kong-router-flavor }} Kong Router
         run: KONG_CLUSTER_VERSION=${{ matrix.kubernetes-version }} make test.integration.${{ matrix.dbmode }}

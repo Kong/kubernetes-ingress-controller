@@ -18,7 +18,7 @@ jobs:
   verify-manifest-tag:
     runs-on: ubuntu-latest
     steps:
-      - uses: mukunku/tag-exists-action@v1.1.0
+      - uses: mukunku/tag-exists-action@v1.2.0
         id: check-tag
         name: check if tag already exists
         with:

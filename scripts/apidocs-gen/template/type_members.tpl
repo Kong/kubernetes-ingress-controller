@@ -1,8 +1,9 @@
-{{- define "type_members" -}}
-{{- $field := . -}}
-{{- if eq $field.Name "metadata" -}}
-Refer to Kubernetes API documentation for fields of `metadata`.
-{{- else -}}
-{{ $field.Doc }}
+{{- define "type_members_html" -}}
+{{- $type := . -}}
+{{- "<table><tbody>" -}}
+{{- range $type.Members -}}
+<tr><td>`{{ .Name  }}` _{{ markdownRenderType .Type }}_</td><td>{{- template "type_member" . -}}</td></tr>
 {{- end -}}
+</tbody></table>
+
 {{- end -}}

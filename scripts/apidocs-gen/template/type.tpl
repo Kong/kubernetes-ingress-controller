@@ -12,12 +12,12 @@
 | Field | Description |
 | --- | --- |
 {{ if $type.GVK -}}
-| `apiVersion` _string_ | `{{ $type.GVK.Group }}/{{ $type.GVK.Version }}`
-| `kind` _string_ | `{{ $type.GVK.Kind }}`
+| `apiVersion` _string_ | `{{ $type.GVK.Group }}/{{ $type.GVK.Version }}` |
+| `kind` _string_ | `{{ $type.GVK.Kind }}` |
 {{ end -}}
 
 {{ range $type.Members -}}
-| `{{ .Name  }}` _{{ markdownRenderType .Type }}_ | {{ template "type_members" . }} |
+| `{{ .Name  }}` _{{ markdownRenderType .Type }}_ | {{ template "type_member" . }} |
 {{ end -}}
 
 {{ end }}

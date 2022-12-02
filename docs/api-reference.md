@@ -15,22 +15,6 @@ Package v1 contains API Schema definitions for the konghq.com v1 API group.
 - [KongIngress](#kongingress)
 - [KongPlugin](#kongplugin)
 
-
-
-### ConfigSource
-
-
-
-ConfigSource is a wrapper around SecretValueFromSource.
-
-| Field | Description |
-| --- | --- |
-| `secretKeyRef` _[SecretValueFromSource](#secretvaluefromsource)_ |  |
-
-
-_Appears in:_
-- [KongPlugin](#kongplugin)
-
 ### KongClusterPlugin
 
 
@@ -92,6 +76,43 @@ KongIngress is the Schema for the kongingresses API. It serves as an "extension"
 
 
 
+
+### KongPlugin
+
+
+
+KongPlugin is the Schema for the kongplugins API. Plugins can be associated with Ingress or Service object in Kubernetes using `konghq.com/plugins` annotation.
+
+| Field | Description |
+| --- | --- |
+| `apiVersion` _string_ | `configuration.konghq.com/v1`
+| `kind` _string_ | `KongPlugin`
+| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `consumerRef` _string_ | ConsumerRef is a reference to a particular consumer. |
+| `disabled` _boolean_ | Disabled set if the plugin is disabled or not. |
+| `config` _[JSON](#json)_ | Config contains the plugin configuration. It's a list of keys and values required to configure the plugin. Please read the documentation of the plugin being configured to set values in here. For any plugin in Kong, anything that goes in the `config` JSON key in the Admin API request, goes into this property. Only one of `config` or `configFrom` may be used in a KongPlugin, not both at once. |
+| `configFrom` _[ConfigSource](#configsource)_ | ConfigFrom references a secret containing the plugin configuration. This should be used when the plugin configuration contains sensitive information, such as AWS credentials in the Lambda plugin or the client secret in the OIDC plugin. Only one of `config` or `configFrom` may be used in a KongPlugin, not both at once. |
+| `plugin` _string_ | PluginName is the name of the plugin to which to apply the config. |
+| `run_on` _string_ | RunOn configures the plugin to run on the first or the second or both nodes in case of a service mesh deployment. |
+| `protocols` _[KongProtocol](#kongprotocol) array_ | Protocols configures plugin to run on requests received on specific protocols. |
+| `ordering` _[PluginOrdering](#pluginordering)_ | Ordering overrides the normal plugin execution order. It's only available on Kong Enterprise. `<phase>` is a request processing phase (for example, `access` or `body_filter`) and `<plugin>` is the name of the plugin that will run before or after the KongPlugin. For example, a KongPlugin with `plugin: rate-limiting` and `before.access: ["key-auth"]` will create a rate limiting plugin that limits requests _before_ they are authenticated. |
+
+
+
+
+### ConfigSource
+
+
+
+ConfigSource is a wrapper around SecretValueFromSource.
+
+| Field | Description |
+| --- | --- |
+| `secretKeyRef` _[SecretValueFromSource](#secretvaluefromsource)_ | Specifies a name and a key of a secret to refer to. The namespace is implicitly set to the one of referring object. |
+
+
+_Appears in:_
+- [KongPlugin](#kongplugin)
 
 ### KongIngressRoute
 
@@ -163,29 +184,6 @@ KongIngressUpstream contains KongIngress upstream configuration. It contains the
 _Appears in:_
 - [KongIngress](#kongingress)
 
-### KongPlugin
-
-
-
-KongPlugin is the Schema for the kongplugins API. Plugins can be associated with Ingress or Service object in Kubernetes using `konghq.com/plugins` annotation.
-
-| Field | Description |
-| --- | --- |
-| `apiVersion` _string_ | `configuration.konghq.com/v1`
-| `kind` _string_ | `KongPlugin`
-| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
-| `consumerRef` _string_ | ConsumerRef is a reference to a particular consumer. |
-| `disabled` _boolean_ | Disabled set if the plugin is disabled or not. |
-| `config` _[JSON](#json)_ | Config contains the plugin configuration. It's a list of keys and values required to configure the plugin. Please read the documentation of the plugin being configured to set values in here. For any plugin in Kong, anything that goes in the `config` JSON key in the Admin API request, goes into this property. Only one of `config` or `configFrom` may be used in a KongPlugin, not both at once. |
-| `configFrom` _[ConfigSource](#configsource)_ | ConfigFrom references a secret containing the plugin configuration. This should be used when the plugin configuration contains sensitive information, such as AWS credentials in the Lambda plugin or the client secret in the OIDC plugin. Only one of `config` or `configFrom` may be used in a KongPlugin, not both at once. |
-| `plugin` _string_ | PluginName is the name of the plugin to which to apply the config. |
-| `run_on` _string_ | RunOn configures the plugin to run on the first or the second or both nodes in case of a service mesh deployment. |
-| `protocols` _[KongProtocol](#kongprotocol) array_ | Protocols configures plugin to run on requests received on specific protocols. |
-| `ordering` _[PluginOrdering](#pluginordering)_ | Ordering overrides the normal plugin execution order. It's only available on Kong Enterprise. `<phase>` is a request processing phase (for example, `access` or `body_filter`) and `<plugin>` is the name of the plugin that will run before or after the KongPlugin. For example, a KongPlugin with `plugin: rate-limiting` and `before.access: ["key-auth"]` will create a rate limiting plugin that limits requests _before_ they are authenticated. |
-
-
-
-
 ### KongProtocol
 
 _Underlying type:_ `string`
@@ -207,7 +205,7 @@ NamespacedConfigSource is a wrapper around NamespacedSecretValueFromSource.
 
 | Field | Description |
 | --- | --- |
-| `secretKeyRef` _[NamespacedSecretValueFromSource](#namespacedsecretvaluefromsource)_ |  |
+| `secretKeyRef` _[NamespacedSecretValueFromSource](#namespacedsecretvaluefromsource)_ | Specifies a name, a namespace, and a key of a secret to refer to. |
 
 
 _Appears in:_
@@ -251,8 +249,6 @@ Package v1alpha1 contains API Schema definitions for the configuration.konghq.co
 
 - [IngressClassParameters](#ingressclassparameters)
 
-
-
 ### IngressClassParameters
 
 
@@ -291,6 +287,36 @@ Package v1beta1 contains API Schema definitions for the configuration.konghq.com
 
 - [TCPIngress](#tcpingress)
 - [UDPIngress](#udpingress)
+
+### TCPIngress
+
+
+
+TCPIngress is the Schema for the tcpingresses API. The Ingress resource in Kubernetes is HTTP-only. This custom resource is modeled similar to the Ingress resource but for TCP and TLS SNI based routing purposes.
+
+| Field | Description |
+| --- | --- |
+| `apiVersion` _string_ | `configuration.konghq.com/v1beta1`
+| `kind` _string_ | `TCPIngress`
+| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` _[TCPIngressSpec](#tcpingressspec)_ |  |
+
+
+
+
+### UDPIngress
+
+
+
+UDPIngress is the Schema for the udpingresses API. It makes it possible to route traffic to your UDP services using Kong (e.g. DNS, Game Servers, etc.). For each rule provided in the spec the Kong proxy environment must be updated to listen to UDP on that port as well.
+
+| Field | Description |
+| --- | --- |
+| `apiVersion` _string_ | `configuration.konghq.com/v1beta1`
+| `kind` _string_ | `UDPIngress`
+| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` _[UDPIngressSpec](#udpingressspec)_ |  |
+
 
 
 
@@ -341,22 +367,6 @@ IngressTLS describes the transport layer security.
 _Appears in:_
 - [TCPIngressSpec](#tcpingressspec)
 
-### TCPIngress
-
-
-
-TCPIngress is the Schema for the tcpingresses API. The Ingress resource in Kubernetes is HTTP-only. This custom resource is modeled similar to the Ingress resource but for TCP and TLS SNI based routing purposes.
-
-| Field | Description |
-| --- | --- |
-| `apiVersion` _string_ | `configuration.konghq.com/v1beta1`
-| `kind` _string_ | `TCPIngress`
-| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
-| `spec` _[TCPIngressSpec](#tcpingressspec)_ |  |
-
-
-
-
 ### TCPIngressSpec
 
 
@@ -371,22 +381,6 @@ TCPIngressSpec defines the desired state of TCPIngress.
 
 _Appears in:_
 - [TCPIngress](#tcpingress)
-
-
-
-### UDPIngress
-
-
-
-UDPIngress is the Schema for the udpingresses API. It makes it possible to route traffic to your UDP services using Kong (e.g. DNS, Game Servers, etc.). For each rule provided in the spec the Kong proxy environment must be updated to listen to UDP on that port as well.
-
-| Field | Description |
-| --- | --- |
-| `apiVersion` _string_ | `configuration.konghq.com/v1beta1`
-| `kind` _string_ | `UDPIngress`
-| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
-| `spec` _[UDPIngressSpec](#udpingressspec)_ |  |
-
 
 
 

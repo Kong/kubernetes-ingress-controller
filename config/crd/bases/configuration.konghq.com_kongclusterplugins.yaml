@@ -68,8 +68,8 @@ spec:
               be used in a KongClusterPlugin, not both at once.
             properties:
               secretKeyRef:
-                description: NamespacedSecretValueFromSource represents the source
-                  of a secret value specifying the secret namespace.
+                description: Specifies a name, a namespace, and a key of a secret
+                  to refer to.
                 properties:
                   key:
                     description: The key containing the value.

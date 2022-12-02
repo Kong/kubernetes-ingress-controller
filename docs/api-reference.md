@@ -108,7 +108,7 @@ ConfigSource is a wrapper around SecretValueFromSource.
 
 | Field | Description |
 | --- | --- |
-| `secretKeyRef` _[SecretValueFromSource](#secretvaluefromsource)_ |  |
+| `secretKeyRef` _[SecretValueFromSource](#secretvaluefromsource)_ | Specifies a name and a key of a secret to refer to. The namespace is implicitly set to the one of referring object. |
 
 
 _Appears in:_
@@ -205,7 +205,7 @@ NamespacedConfigSource is a wrapper around NamespacedSecretValueFromSource.
 
 | Field | Description |
 | --- | --- |
-| `secretKeyRef` _[NamespacedSecretValueFromSource](#namespacedsecretvaluefromsource)_ |  |
+| `secretKeyRef` _[NamespacedSecretValueFromSource](#namespacedsecretvaluefromsource)_ | Specifies a name, a namespace, and a key of a secret to refer to. |
 
 
 _Appears in:_

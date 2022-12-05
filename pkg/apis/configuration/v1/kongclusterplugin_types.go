@@ -35,10 +35,7 @@ import (
 // +kubebuilder:printcolumn:name="Disabled",type=boolean,JSONPath=`.disabled`,description="Indicates if the plugin is disabled",priority=1
 // +kubebuilder:printcolumn:name="Config",type=string,JSONPath=`.config`,description="Configuration of the plugin",priority=1
 
-// KongClusterPlugin is the Schema for the  API.
-// The only differences between KongPlugin and KongClusterPlugin are that KongClusterPlugin
-// is a Kubernetes cluster-level resource instead of a namespaced resource, and can be applied
-// as a global plugin using `global` label.
+// KongClusterPlugin is the Schema for the kongclusterplugins API.
 type KongClusterPlugin struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`

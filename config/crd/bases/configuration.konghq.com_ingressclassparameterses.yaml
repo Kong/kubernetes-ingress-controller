@@ -34,6 +34,7 @@ spec:
           metadata:
             type: object
           spec:
+            description: Spec is the IngressClassParameters specification.
             properties:
               enableLegacyRegexDetection:
                 default: false

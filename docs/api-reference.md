@@ -19,7 +19,7 @@ Package v1 contains API Schema definitions for the konghq.com v1 API group.
 
 
 
-KongClusterPlugin is the Schema for the  API. The only differences between KongPlugin and KongClusterPlugin are that KongClusterPlugin is a Kubernetes cluster-level resource instead of a namespaced resource, and can be applied as a global plugin using `global` label.
+KongClusterPlugin is the Schema for the kongclusterplugins API.
 
 <!-- kong_cluster_plugin description placeholder -->
 
@@ -44,8 +44,7 @@ KongClusterPlugin is the Schema for the  API. The only differences between KongP
 
 
 
-KongConsumer is the Schema for the kongconsumers API. When this resource is created, a corresponding consumer entity will be created in Kong. 
- While KongConsumer exists in a specific Kubernetes namespace, KongConsumers from all namespaces are combined into a single Kong configuration, and no KongConsumers with the same `kubernetes.io/ingress.class` may share the same Username or CustomID value.
+KongConsumer is the Schema for the kongconsumers API.
 
 <!-- kong_consumer description placeholder -->
 
@@ -65,9 +64,7 @@ KongConsumer is the Schema for the kongconsumers API. When this resource is crea
 
 
 
-KongIngress is the Schema for the kongingresses API. It serves as an "extension" to Ingress resource. It is not meant as a replacement to the Ingress resource in Kubernetes. Ingress resource spec in Kubernetes can define routing policies based on HTTP Host header and paths. While this is sufficient in most cases, sometimes, users may want more control over routing at the Ingress level. 
- Once a `KongIngress` resource is created, it needs to be associated with an Ingress or Service resource using the `konghq.com/override` annotation. 
- Many fields available on KongIngress are also available as annotations. When an annotation is available, it is the preferred means of configuring that setting, and the annotation value will take precedence over a KongIngress value if both set the same setting.
+KongIngress is the Schema for the kongingresses API.
 
 <!-- kong_ingress description placeholder -->
 
@@ -87,7 +84,7 @@ KongIngress is the Schema for the kongingresses API. It serves as an "extension"
 
 
 
-KongPlugin is the Schema for the kongplugins API. Plugins can be associated with Ingress or Service object in Kubernetes using `konghq.com/plugins` annotation.
+KongPlugin is the Schema for the kongplugins API.
 
 <!-- kong_plugin description placeholder -->
 
@@ -286,7 +283,7 @@ IngressClassParameters is the Schema for the IngressClassParameters API.
 | `apiVersion` _string_ | `configuration.konghq.com/v1alpha1`
 | `kind` _string_ | `IngressClassParameters`
 | `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
-| `spec` _[IngressClassParametersSpec](#ingressclassparametersspec)_ |  |
+| `spec` _[IngressClassParametersSpec](#ingressclassparametersspec)_ | Spec is the IngressClassParameters specification. |
 
 
 
@@ -320,7 +317,7 @@ Package v1beta1 contains API Schema definitions for the configuration.konghq.com
 
 
 
-TCPIngress is the Schema for the tcpingresses API. The Ingress resource in Kubernetes is HTTP-only. This custom resource is modeled similar to the Ingress resource but for TCP and TLS SNI based routing purposes.
+TCPIngress is the Schema for the tcpingresses API.
 
 <!-- tcp_ingress description placeholder -->
 
@@ -329,7 +326,7 @@ TCPIngress is the Schema for the tcpingresses API. The Ingress resource in Kuber
 | `apiVersion` _string_ | `configuration.konghq.com/v1beta1`
 | `kind` _string_ | `TCPIngress`
 | `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
-| `spec` _[TCPIngressSpec](#tcpingressspec)_ |  |
+| `spec` _[TCPIngressSpec](#tcpingressspec)_ | Spec is the TCPIngress specification. |
 
 
 
@@ -338,7 +335,7 @@ TCPIngress is the Schema for the tcpingresses API. The Ingress resource in Kuber
 
 
 
-UDPIngress is the Schema for the udpingresses API. It makes it possible to route traffic to your UDP services using Kong (e.g. DNS, Game Servers, etc.). For each rule provided in the spec the Kong proxy environment must be updated to listen to UDP on that port as well.
+UDPIngress is the Schema for the udpingresses API.
 
 <!-- udp_ingress description placeholder -->
 
@@ -347,7 +344,7 @@ UDPIngress is the Schema for the udpingresses API. It makes it possible to route
 | `apiVersion` _string_ | `configuration.konghq.com/v1beta1`
 | `kind` _string_ | `UDPIngress`
 | `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
-| `spec` _[UDPIngressSpec](#udpingressspec)_ |  |
+| `spec` _[UDPIngressSpec](#udpingressspec)_ | Spec is the UDPIngress specification. |
 
 
 

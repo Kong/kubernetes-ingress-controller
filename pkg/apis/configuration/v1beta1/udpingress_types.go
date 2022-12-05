@@ -45,12 +45,11 @@ type UDPIngressList struct {
 // +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`,description="Age"
 
 // UDPIngress is the Schema for the udpingresses API.
-// It makes it possible to route traffic to your UDP services using Kong (e.g. DNS, Game Servers, etc.).
-// For each rule provided in the spec the Kong proxy environment must be updated to listen to UDP on that port as well.
 type UDPIngress struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
+	// Spec is the UDPIngress specification.
 	Spec   UDPIngressSpec   `json:"spec,omitempty"`
 	Status UDPIngressStatus `json:"status,omitempty"`
 }

@@ -8,6 +8,10 @@
 
 {{ $type.Doc }}
 
+{{ if $type.GVK -}}
+<!-- {{ snakecase $type.Name }} description placeholder -->
+{{- end }}
+
 {{ if $type.Members -}}
 | Field | Description |
 | --- | --- |

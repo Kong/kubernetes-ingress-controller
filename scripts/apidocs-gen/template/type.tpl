@@ -9,17 +9,29 @@
 {{ $type.Doc }}
 
 {{ if $type.Members -}}
-| Field | Description |
-| --- | --- |
+<table>
+<thead><tr>
+    <td>Field</td><td>Description</td>
+</tr></thead>
+<tbody>
 {{ if $type.GVK -}}
-| `apiVersion` _string_ | `{{ $type.GVK.Group }}/{{ $type.GVK.Version }}` |
-| `kind` _string_ | `{{ $type.GVK.Kind }}` |
+<tr>
+    <td>`apiVersion` _string_</td>
+    <td>`{{ $type.GVK.Group }}/{{ $type.GVK.Version }}`</td>
+</tr>
+<tr>
+    <td>`kind` _string_</td>
+    <td>`{{ $type.GVK.Kind }}`</td>
+</tr>
 {{ end -}}
-
 {{ range $type.Members -}}
-| `{{ .Name  }}` _{{ markdownRenderType .Type }}_ | {{ template "type_member" . }} |
+<tr>
+    <td>`{{ .Name  }}` _{{ markdownRenderType .Type }}_</td>
+    <td>{{ template "type_member" . }} </td>
+</tr>
 {{ end -}}
 
+</tbody></table>
 {{ end }}
 
 {{ if $type.References -}}

@@ -19,8 +19,12 @@ title: Custom Resource Definitions API Reference
 ---
 <!-- vale off -->
 " > "${POST_PROCESSED_DOC}"
+
+# Add the generated doc content
 cat "${CRD_REF_DOC}" >> "${POST_PROCESSED_DOC}"
+
 # Turn the linter back on
 echo "<!-- vale on -->" >> "${POST_PROCESSED_DOC}"
+
 # Replace all description placeholders with proper include directives
 sed -i '' -E 's/<!-- (.*) description placeholder -->/{% include_cached md\/kubernetes-ingress-controller\/\1_description.md %}/' "${POST_PROCESSED_DOC}"

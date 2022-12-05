@@ -29,9 +29,7 @@ spec:
     name: v1beta1
     schema:
       openAPIV3Schema:
-        description: TCPIngress is the Schema for the tcpingresses API. The Ingress
-          resource in Kubernetes is HTTP-only. This custom resource is modeled similar
-          to the Ingress resource but for TCP and TLS SNI based routing purposes.
+        description: TCPIngress is the Schema for the tcpingresses API.
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation
@@ -46,7 +44,7 @@ spec:
           metadata:
             type: object
           spec:
-            description: TCPIngressSpec defines the desired state of TCPIngress.
+            description: Spec is the TCPIngress specification.
             properties:
               rules:
                 description: A list of rules used to configure the Ingress.

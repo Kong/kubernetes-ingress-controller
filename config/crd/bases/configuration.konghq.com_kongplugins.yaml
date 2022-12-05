@@ -41,9 +41,7 @@ spec:
     name: v1
     schema:
       openAPIV3Schema:
-        description: KongPlugin is the Schema for the kongplugins API. Plugins can
-          be associated with Ingress or Service object in Kubernetes using `konghq.com/plugins`
-          annotation.
+        description: KongPlugin is the Schema for the kongplugins API.
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation

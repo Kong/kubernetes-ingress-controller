@@ -41,10 +41,7 @@ spec:
     name: v1
     schema:
       openAPIV3Schema:
-        description: KongClusterPlugin is the Schema for the  API. The only differences
-          between KongPlugin and KongClusterPlugin are that KongClusterPlugin is a
-          Kubernetes cluster-level resource instead of a namespaced resource, and
-          can be applied as a global plugin using `global` label.
+        description: KongClusterPlugin is the Schema for the kongclusterplugins API.
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation

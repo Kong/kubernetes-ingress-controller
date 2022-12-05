@@ -27,4 +27,6 @@ cat "${CRD_REF_DOC}" >> "${POST_PROCESSED_DOC}"
 echo "<!-- vale on -->" >> "${POST_PROCESSED_DOC}"
 
 # Replace all description placeholders with proper include directives
-sed -i '' -E 's/<!-- (.*) description placeholder -->/{% include_cached md\/kubernetes-ingress-controller\/\1_description.md %}/' "${POST_PROCESSED_DOC}"
+sed -i '' -E \
+  's/<!-- (.*) description placeholder -->/{% include_cached md\/kubernetes-ingress-controller\/\1_description.md kong_version=page.kong_version %}/' \
+  "${POST_PROCESSED_DOC}"

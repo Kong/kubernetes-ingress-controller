@@ -3,12 +3,14 @@ package v1
 // ConfigSource is a wrapper around SecretValueFromSource.
 // +kubebuilder:object:generate=true
 type ConfigSource struct {
+	// Specifies a name and a key of a secret to refer to. The namespace is implicitly set to the one of referring object.
 	SecretValue SecretValueFromSource `json:"secretKeyRef,omitempty"`
 }
 
 // NamespacedConfigSource is a wrapper around NamespacedSecretValueFromSource.
 // +kubebuilder:object:generate=true
 type NamespacedConfigSource struct {
+	// Specifies a name, a namespace, and a key of a secret to refer to.
 	SecretValue NamespacedSecretValueFromSource `json:"secretKeyRef,omitempty"`
 }
 

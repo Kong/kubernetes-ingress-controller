@@ -21,6 +21,8 @@ Package v1 contains API Schema definitions for the konghq.com v1 API group.
 
 KongClusterPlugin is the Schema for the  API. The only differences between KongPlugin and KongClusterPlugin are that KongClusterPlugin is a Kubernetes cluster-level resource instead of a namespaced resource, and can be applied as a global plugin using `global` label.
 
+<!-- kong_cluster_plugin description placeholder -->
+
 | Field | Description |
 | --- | --- |
 | `apiVersion` _string_ | `configuration.konghq.com/v1`
@@ -45,6 +47,8 @@ KongClusterPlugin is the Schema for the  API. The only differences between KongP
 KongConsumer is the Schema for the kongconsumers API. When this resource is created, a corresponding consumer entity will be created in Kong. 
  While KongConsumer exists in a specific Kubernetes namespace, KongConsumers from all namespaces are combined into a single Kong configuration, and no KongConsumers with the same `kubernetes.io/ingress.class` may share the same Username or CustomID value.
 
+<!-- kong_consumer description placeholder -->
+
 | Field | Description |
 | --- | --- |
 | `apiVersion` _string_ | `configuration.konghq.com/v1`
@@ -65,6 +69,8 @@ KongIngress is the Schema for the kongingresses API. It serves as an "extension"
  Once a `KongIngress` resource is created, it needs to be associated with an Ingress or Service resource using the `konghq.com/override` annotation. 
  Many fields available on KongIngress are also available as annotations. When an annotation is available, it is the preferred means of configuring that setting, and the annotation value will take precedence over a KongIngress value if both set the same setting.
 
+<!-- kong_ingress description placeholder -->
+
 | Field | Description |
 | --- | --- |
 | `apiVersion` _string_ | `configuration.konghq.com/v1`
@@ -82,6 +88,8 @@ KongIngress is the Schema for the kongingresses API. It serves as an "extension"
 
 
 KongPlugin is the Schema for the kongplugins API. Plugins can be associated with Ingress or Service object in Kubernetes using `konghq.com/plugins` annotation.
+
+<!-- kong_plugin description placeholder -->
 
 | Field | Description |
 | --- | --- |
@@ -106,6 +114,8 @@ KongPlugin is the Schema for the kongplugins API. Plugins can be associated with
 
 ConfigSource is a wrapper around SecretValueFromSource.
 
+
+
 | Field | Description |
 | --- | --- |
 | `secretKeyRef` _[SecretValueFromSource](#secretvaluefromsource)_ | Specifies a name and a key of a secret to refer to. The namespace is implicitly set to the one of referring object. |
@@ -119,6 +129,8 @@ _Appears in:_
 
 
 KongIngressRoute contains KongIngress route configuration. It contains the subset of `go-kong.kong.Route` fields supported by `kongstate.Route.overrideByKongIngress`.
+
+
 
 | Field | Description |
 | --- | --- |
@@ -144,6 +156,8 @@ _Appears in:_
 
 KongIngressService contains KongIngress service configuration.
 
+
+
 | Field | Description |
 | --- | --- |
 | `protocol` _string_ | The protocol used to communicate with the upstream. |
@@ -162,6 +176,8 @@ _Appears in:_
 
 
 KongIngressUpstream contains KongIngress upstream configuration. It contains the subset of `go-kong.kong.Upstream` fields supported by `kongstate.Upstream.overrideByKongIngress`.
+
+
 
 | Field | Description |
 | --- | --- |
@@ -192,6 +208,8 @@ _Underlying type:_ `string`
 
 
 
+
+
 _Appears in:_
 - [KongClusterPlugin](#kongclusterplugin)
 - [KongIngressRoute](#kongingressroute)
@@ -202,6 +220,8 @@ _Appears in:_
 
 
 NamespacedConfigSource is a wrapper around NamespacedSecretValueFromSource.
+
+
 
 | Field | Description |
 | --- | --- |
@@ -216,6 +236,8 @@ _Appears in:_
 
 
 NamespacedSecretValueFromSource represents the source of a secret value specifying the secret namespace.
+
+
 
 | Field | Description |
 | --- | --- |
@@ -232,6 +254,8 @@ _Appears in:_
 
 
 SecretValueFromSource represents the source of a secret value.
+
+
 
 | Field | Description |
 | --- | --- |
@@ -255,6 +279,8 @@ Package v1alpha1 contains API Schema definitions for the configuration.konghq.co
 
 IngressClassParameters is the Schema for the IngressClassParameters API.
 
+<!-- ingress_class_parameters description placeholder -->
+
 | Field | Description |
 | --- | --- |
 | `apiVersion` _string_ | `configuration.konghq.com/v1alpha1`
@@ -266,6 +292,8 @@ IngressClassParameters is the Schema for the IngressClassParameters API.
 
 
 ### IngressClassParametersSpec
+
+
 
 
 
@@ -294,6 +322,8 @@ Package v1beta1 contains API Schema definitions for the configuration.konghq.com
 
 TCPIngress is the Schema for the tcpingresses API. The Ingress resource in Kubernetes is HTTP-only. This custom resource is modeled similar to the Ingress resource but for TCP and TLS SNI based routing purposes.
 
+<!-- tcp_ingress description placeholder -->
+
 | Field | Description |
 | --- | --- |
 | `apiVersion` _string_ | `configuration.konghq.com/v1beta1`
@@ -309,6 +339,8 @@ TCPIngress is the Schema for the tcpingresses API. The Ingress resource in Kuber
 
 
 UDPIngress is the Schema for the udpingresses API. It makes it possible to route traffic to your UDP services using Kong (e.g. DNS, Game Servers, etc.). For each rule provided in the spec the Kong proxy environment must be updated to listen to UDP on that port as well.
+
+<!-- udp_ingress description placeholder -->
 
 | Field | Description |
 | --- | --- |
@@ -326,6 +358,8 @@ UDPIngress is the Schema for the udpingresses API. It makes it possible to route
 
 IngressBackend describes all endpoints for a given service and port.
 
+
+
 | Field | Description |
 | --- | --- |
 | `serviceName` _string_ | Specifies the name of the referenced service. |
@@ -341,6 +375,8 @@ _Appears in:_
 
 
 IngressRule represents a rule to apply against incoming requests. Matching is performed based on an (optional) SNI and port.
+
+
 
 | Field | Description |
 | --- | --- |
@@ -358,6 +394,8 @@ _Appears in:_
 
 IngressTLS describes the transport layer security.
 
+
+
 | Field | Description |
 | --- | --- |
 | `hosts` _string array_ | Hosts are a list of hosts included in the TLS certificate. The values in this list must match the name/s used in the tlsSecret. Defaults to the wildcard host setting for the loadbalancer controller fulfilling this Ingress, if left unspecified. |
@@ -372,6 +410,8 @@ _Appears in:_
 
 
 TCPIngressSpec defines the desired state of TCPIngress.
+
+
 
 | Field | Description |
 | --- | --- |
@@ -390,6 +430,8 @@ _Appears in:_
 
 UDPIngressRule represents a rule to apply against incoming requests wherein no Host matching is available for request routing, only the port is used to match requests.
 
+
+
 | Field | Description |
 | --- | --- |
 | `port` _integer_ | Port indicates the port for the Kong proxy to accept incoming traffic on, which will then be routed to the service Backend. |
@@ -404,6 +446,8 @@ _Appears in:_
 
 
 UDPIngressSpec defines the desired state of UDPIngress.
+
+
 
 | Field | Description |
 | --- | --- |

@@ -36,6 +36,7 @@ type TCPIngress struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
+	// Spec is the TCPIngress specification.
 	Spec   TCPIngressSpec   `json:"spec,omitempty"`
 	Status TCPIngressStatus `json:"status,omitempty"`
 }

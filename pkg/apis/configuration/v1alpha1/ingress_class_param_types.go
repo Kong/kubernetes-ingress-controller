@@ -45,6 +45,7 @@ type IngressClassParameters struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
+	// Spec is the IngressClassParameters specification.
 	Spec IngressClassParametersSpec `json:"spec,omitempty"`
 }
 

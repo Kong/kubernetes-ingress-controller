@@ -283,7 +283,7 @@ IngressClassParameters is the Schema for the IngressClassParameters API.
 | `apiVersion` _string_ | `configuration.konghq.com/v1alpha1`
 | `kind` _string_ | `IngressClassParameters`
 | `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
-| `spec` _[IngressClassParametersSpec](#ingressclassparametersspec)_ |  |
+| `spec` _[IngressClassParametersSpec](#ingressclassparametersspec)_ | Spec is the IngressClassParameters specification. |
 
 
 
@@ -326,7 +326,7 @@ TCPIngress is the Schema for the tcpingresses API.
 | `apiVersion` _string_ | `configuration.konghq.com/v1beta1`
 | `kind` _string_ | `TCPIngress`
 | `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
-| `spec` _[TCPIngressSpec](#tcpingressspec)_ |  |
+| `spec` _[TCPIngressSpec](#tcpingressspec)_ | Spec is the TCPIngress specification. |
 
 
 
@@ -344,7 +344,7 @@ UDPIngress is the Schema for the udpingresses API.
 | `apiVersion` _string_ | `configuration.konghq.com/v1beta1`
 | `kind` _string_ | `UDPIngress`
 | `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
-| `spec` _[UDPIngressSpec](#udpingressspec)_ |  |
+| `spec` _[UDPIngressSpec](#udpingressspec)_ | Spec is the UDPIngress specification. |
 
 
 

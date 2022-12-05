@@ -49,6 +49,7 @@ type UDPIngress struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
+	// Spec is the UDPIngress specification.
 	Spec   UDPIngressSpec   `json:"spec,omitempty"`
 	Status UDPIngressStatus `json:"status,omitempty"`
 }

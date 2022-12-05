@@ -31,11 +31,6 @@ import (
 // +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`,description="Age"
 
 // KongConsumer is the Schema for the kongconsumers API.
-// When this resource is created, a corresponding consumer entity will be created in Kong.
-//
-// While KongConsumer exists in a specific Kubernetes namespace, KongConsumers from all namespaces are combined
-// into a single Kong configuration, and no KongConsumers with the same `kubernetes.io/ingress.class`
-// may share the same Username or CustomID value.
 type KongConsumer struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`

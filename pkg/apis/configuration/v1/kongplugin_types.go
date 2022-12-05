@@ -35,7 +35,6 @@ import (
 // +kubebuilder:printcolumn:name="Config",type=string,JSONPath=`.config`,description="Configuration of the plugin",priority=1
 
 // KongPlugin is the Schema for the kongplugins API.
-// Plugins can be associated with Ingress or Service object in Kubernetes using `konghq.com/plugins` annotation.
 type KongPlugin struct {
 	metav1.TypeMeta `json:",inline"`
 	// Setting a `global` label to `true` will apply the plugin to every request proxied by the Kong.

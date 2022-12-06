@@ -10,7 +10,6 @@ require (
 	github.com/avast/retry-go/v4 v4.3.1
 	github.com/blang/semver/v4 v4.0.0
 	github.com/bombsimon/logrusr/v2 v2.0.1
-	github.com/ghodss/yaml v1.0.0
 	github.com/go-logr/logr v1.2.3
 	github.com/google/go-cmp v0.5.9
 	github.com/google/uuid v1.3.0
@@ -47,6 +46,7 @@ require (
 
 require (
 	cloud.google.com/go/compute/metadata v0.2.1 // indirect
+	github.com/ghodss/yaml v1.0.0 // indirect
 	github.com/google/go-github/v48 v48.1.0 // indirect
 	go.uber.org/multierr v1.8.0 // indirect
 	google.golang.org/genproto v0.0.0-20221201164419-0e50fba7f41c // indirect

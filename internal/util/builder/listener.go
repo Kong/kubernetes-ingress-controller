@@ -52,6 +52,11 @@ func (b *ListenerBuilder) TCP() *ListenerBuilder {
 	return b
 }
 
+func (b *ListenerBuilder) UDP() *ListenerBuilder {
+	b.listener.Protocol = gatewayv1beta1.UDPProtocolType
+	return b
+}
+
 func (b *ListenerBuilder) WithHostname(hostname string) *ListenerBuilder {
 	b.listener.Hostname = addressOf(gatewayv1beta1.Hostname(hostname))
 	return b

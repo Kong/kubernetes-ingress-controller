@@ -1226,10 +1226,7 @@ func Test_getSupportedGatewayForRoute(t *testing.T) {
 											Status: metav1.ConditionTrue,
 										},
 									},
-									SupportedKinds: []gatewayv1beta1.RouteGroupKind{
-										builder.NewRouteGroupKind().HTTPRoute().Build(),
-										builder.NewRouteGroupKind().TCPRoute().Build(),
-									},
+									SupportedKinds: supportedRouteGroupKinds,
 								},
 							},
 						},
@@ -1297,12 +1294,191 @@ func Test_getSupportedGatewayForRoute(t *testing.T) {
 						},
 						Spec: gatewayv1beta1.GatewaySpec{
 							GatewayClassName: "test-gatewayclass",
-							Listeners:        builder.NewListener("http").WithPort(80).HTTP().IntoSlice(),
+							Listeners:        builder.NewListener("tcp").WithPort(80).TCP().IntoSlice(),
 						},
 						Status: gatewayv1beta1.GatewayStatus{
 							Listeners: []gatewayv1beta1.ListenerStatus{
 								{
-									Name: gatewayv1beta1.SectionName("http"),
+									Name: gatewayv1beta1.SectionName("tcp"),
+									Conditions: []metav1.Condition{
+										{
+											Type:   "Ready",
+											Status: metav1.ConditionTrue,
+										},
+									},
+									SupportedKinds: []gatewayv1beta1.RouteGroupKind{
+										builder.NewRouteGroupKind().HTTPRoute().Build(),
+									},
+								},
+							},
+						},
+					},
+					&GatewayClass{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "test-gatewayclass",
+						},
+						Spec: gatewayv1beta1.GatewayClassSpec{
+							ControllerName: gatewayv1beta1.GatewayController("konghq.com/kic-gateway-controller"),
+						},
+					},
+					&corev1.Namespace{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "test-namespace",
+						},
+					},
+				},
+				expected: []expected{
+					{
+						gateway: types.NamespacedName{
+							Name:      "test-gateway",
+							Namespace: "test-namespace",
+						},
+						listenerName: "",
+						condition: metav1.Condition{
+							Type:   string(gatewayv1beta1.RouteConditionAccepted),
+							Status: metav1.ConditionFalse,
+							// NOTE: Is this correct? Does ListenerStatus.SupportedKinds have impact on this?
+							Reason: string(gatewayv1beta1.RouteReasonNotAllowedByListeners),
+						},
+					},
+				},
+			},
+			{
+				name: "TCPRoute specifying existing port gets Accepted",
+				route: &TCPRoute{
+					TypeMeta: metav1.TypeMeta{
+						Kind:       "TCPRoute",
+						APIVersion: gatewayv1alpha2.GroupVersion.String(),
+					},
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "basic-tcproute",
+						Namespace: "test-namespace",
+					},
+					Spec: gatewayv1alpha2.TCPRouteSpec{
+						CommonRouteSpec: gatewayv1alpha2.CommonRouteSpec{
+							ParentRefs: []gatewayv1alpha2.ParentReference{
+								{
+									Name: gatewayv1alpha2.ObjectName("test-gateway"),
+									Port: addressOf(gatewayv1alpha2.PortNumber(80)),
+								},
+							},
+						},
+						Rules: []gatewayv1alpha2.TCPRouteRule{
+							{
+								BackendRefs: []gatewayv1alpha2.BackendRef{
+									builder.NewBackendRef("fake-service").WithPort(80).Build(),
+								},
+							},
+						},
+					},
+				},
+				objects: []client.Object{
+					&Gateway{
+						TypeMeta: metav1.TypeMeta{
+							APIVersion: "gateway.networking.k8s.io/v1beta1",
+							Kind:       "Gateway",
+						},
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "test-gateway",
+							Namespace: "test-namespace",
+							UID:       types.UID("ce7f0678-f59a-483c-80d1-243d3738d22c"),
+						},
+						Spec: gatewayv1beta1.GatewaySpec{
+							GatewayClassName: "test-gatewayclass",
+							Listeners:        builder.NewListener("tcp").WithPort(80).TCP().IntoSlice(),
+						},
+						Status: gatewayv1beta1.GatewayStatus{
+							Listeners: []gatewayv1beta1.ListenerStatus{
+								{
+									Name: gatewayv1beta1.SectionName("tcp"),
+									Conditions: []metav1.Condition{
+										{
+											Type:   "Ready",
+											Status: metav1.ConditionTrue,
+										},
+									},
+									SupportedKinds: supportedRouteGroupKinds,
+								},
+							},
+						},
+					},
+					&GatewayClass{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "test-gatewayclass",
+						},
+						Spec: gatewayv1beta1.GatewayClassSpec{
+							ControllerName: gatewayv1beta1.GatewayController("konghq.com/kic-gateway-controller"),
+						},
+					},
+					&corev1.Namespace{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "test-namespace",
+						},
+					},
+				},
+				expected: []expected{
+					{
+						gateway: types.NamespacedName{
+							Name:      "test-gateway",
+							Namespace: "test-namespace",
+						},
+						listenerName: "",
+						condition: metav1.Condition{
+							Type:   string(gatewayv1beta1.RouteConditionAccepted),
+							Status: metav1.ConditionTrue,
+							Reason: string(gatewayv1beta1.RouteReasonAccepted),
+						},
+					},
+				},
+			},
+			{
+				name: "TCPRoute specifying non existing port does not get Accepted",
+				route: &TCPRoute{
+					TypeMeta: metav1.TypeMeta{
+						Kind:       "TCPRoute",
+						APIVersion: gatewayv1alpha2.GroupVersion.String(),
+					},
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "basic-tcproute",
+						Namespace: "test-namespace",
+					},
+					Spec: gatewayv1alpha2.TCPRouteSpec{
+						CommonRouteSpec: gatewayv1alpha2.CommonRouteSpec{
+							ParentRefs: []gatewayv1alpha2.ParentReference{
+								{
+									Name: gatewayv1alpha2.ObjectName("test-gateway"),
+									Port: addressOf(gatewayv1alpha2.PortNumber(80)),
+								},
+							},
+						},
+						Rules: []gatewayv1alpha2.TCPRouteRule{
+							{
+								BackendRefs: []gatewayv1alpha2.BackendRef{
+									builder.NewBackendRef("fake-service").WithPort(80).Build(),
+								},
+							},
+						},
+					},
+				},
+				objects: []client.Object{
+					&Gateway{
+						TypeMeta: metav1.TypeMeta{
+							APIVersion: "gateway.networking.k8s.io/v1beta1",
+							Kind:       "Gateway",
+						},
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "test-gateway",
+							Namespace: "test-namespace",
+							UID:       types.UID("ce7f0678-f59a-483c-80d1-243d3738d22c"),
+						},
+						Spec: gatewayv1beta1.GatewaySpec{
+							GatewayClassName: "test-gatewayclass",
+							Listeners:        builder.NewListener("tcp").WithPort(81).TCP().IntoSlice(),
+						},
+						Status: gatewayv1beta1.GatewayStatus{
+							Listeners: []gatewayv1beta1.ListenerStatus{
+								{
+									Name: gatewayv1beta1.SectionName("tcp"),
 									Conditions: []metav1.Condition{
 										{
 											Type:   "Ready",
@@ -1338,12 +1514,750 @@ func Test_getSupportedGatewayForRoute(t *testing.T) {
 						condition: metav1.Condition{
 							Type:   string(gatewayv1beta1.RouteConditionAccepted),
 							Status: metav1.ConditionFalse,
+							Reason: string(RouteReasonNoMatchingParent),
+						},
+					},
+				},
+			},
+			{
+				name: "TCPRoute specifying in sectionName existing listener gets Accepted",
+				route: &TCPRoute{
+					TypeMeta: metav1.TypeMeta{
+						Kind:       "TCPRoute",
+						APIVersion: gatewayv1alpha2.GroupVersion.String(),
+					},
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "basic-tcproute",
+						Namespace: "test-namespace",
+					},
+					Spec: gatewayv1alpha2.TCPRouteSpec{
+						CommonRouteSpec: gatewayv1alpha2.CommonRouteSpec{
+							ParentRefs: []gatewayv1alpha2.ParentReference{
+								{
+									Name:        gatewayv1alpha2.ObjectName("test-gateway"),
+									Port:        addressOf(gatewayv1alpha2.PortNumber(80)),
+									SectionName: addressOf(gatewayv1alpha2.SectionName("tcp")),
+								},
+							},
+						},
+						Rules: []gatewayv1alpha2.TCPRouteRule{
+							{
+								BackendRefs: []gatewayv1alpha2.BackendRef{
+									builder.NewBackendRef("fake-service").WithPort(80).Build(),
+								},
+							},
+						},
+					},
+				},
+				objects: []client.Object{
+					&Gateway{
+						TypeMeta: metav1.TypeMeta{
+							APIVersion: "gateway.networking.k8s.io/v1beta1",
+							Kind:       "Gateway",
+						},
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "test-gateway",
+							Namespace: "test-namespace",
+							UID:       types.UID("ce7f0678-f59a-483c-80d1-243d3738d22c"),
+						},
+						Spec: gatewayv1beta1.GatewaySpec{
+							GatewayClassName: "test-gatewayclass",
+							Listeners:        builder.NewListener("tcp").WithPort(80).TCP().IntoSlice(),
+						},
+						Status: gatewayv1beta1.GatewayStatus{
+							Listeners: []gatewayv1beta1.ListenerStatus{
+								{
+									Name: gatewayv1beta1.SectionName("tcp"),
+									Conditions: []metav1.Condition{
+										{
+											Type:   "Ready",
+											Status: metav1.ConditionTrue,
+										},
+									},
+									SupportedKinds: supportedRouteGroupKinds,
+								},
+							},
+						},
+					},
+					&GatewayClass{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "test-gatewayclass",
+						},
+						Spec: gatewayv1beta1.GatewayClassSpec{
+							ControllerName: gatewayv1beta1.GatewayController("konghq.com/kic-gateway-controller"),
+						},
+					},
+					&corev1.Namespace{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "test-namespace",
+						},
+					},
+				},
+				expected: []expected{
+					{
+						gateway: types.NamespacedName{
+							Name:      "test-gateway",
+							Namespace: "test-namespace",
+						},
+						listenerName: "tcp",
+						condition: metav1.Condition{
+							Type:   string(gatewayv1beta1.RouteConditionAccepted),
+							Status: metav1.ConditionTrue,
+							Reason: string(gatewayv1beta1.RouteReasonAccepted),
+						},
+					},
+				},
+			},
+			// TODO: uncomment when https://github.com/Kong/kubernetes-ingress-controller/issues/3221 is done
+			// {
+			// 	name: "TCPRoute specifying in sectionName non existing listener does not get Accepted",
+			// 	route: &TCPRoute{
+			// 		TypeMeta: metav1.TypeMeta{
+			// 			Kind:       "TCPRoute",
+			// 			APIVersion: gatewayv1alpha2.GroupVersion.String(),
+			// 		},
+			// 		ObjectMeta: metav1.ObjectMeta{
+			// 			Name:      "basic-tcproute",
+			// 			Namespace: "test-namespace",
+			// 		},
+			// 		Spec: gatewayv1alpha2.TCPRouteSpec{
+			// 			CommonRouteSpec: gatewayv1alpha2.CommonRouteSpec{
+			// 				ParentRefs: []gatewayv1alpha2.ParentReference{
+			// 					{
+			// 						Name:        gatewayv1alpha2.ObjectName("test-gateway"),
+			// 						Port:        addressOf(gatewayv1alpha2.PortNumber(80)),
+			// 						SectionName: addressOf(gatewayv1alpha2.SectionName("non-existing")),
+			// 					},
+			// 				},
+			// 			},
+			// 			Rules: []gatewayv1alpha2.TCPRouteRule{
+			// 				{
+			// 					BackendRefs: []gatewayv1alpha2.BackendRef{
+			// 						builder.NewBackendRef("fake-service").WithPort(80).Build(),
+			// 					},
+			// 				},
+			// 			},
+			// 		},
+			// 	},
+			// 	objects: []client.Object{
+			// 		&Gateway{
+			// 			TypeMeta: metav1.TypeMeta{
+			// 				APIVersion: "gateway.networking.k8s.io/v1beta1",
+			// 				Kind:       "Gateway",
+			// 			},
+			// 			ObjectMeta: metav1.ObjectMeta{
+			// 				Name:      "test-gateway",
+			// 				Namespace: "test-namespace",
+			// 				UID:       types.UID("ce7f0678-f59a-483c-80d1-243d3738d22c"),
+			// 			},
+			// 			Spec: gatewayv1beta1.GatewaySpec{
+			// 				GatewayClassName: "test-gatewayclass",
+			// 				Listeners:        builder.NewListener("tcp").WithPort(80).TCP().IntoSlice(),
+			// 			},
+			// 			Status: gatewayv1beta1.GatewayStatus{
+			// 				Listeners: []gatewayv1beta1.ListenerStatus{
+			// 					{
+			// 						Name: gatewayv1beta1.SectionName("tcp"),
+			// 						Conditions: []metav1.Condition{
+			// 							{
+			// 								Type:   "Ready",
+			// 								Status: metav1.ConditionTrue,
+			// 							},
+			// 						},
+			// 						SupportedKinds: supportedRouteGroupKinds,
+			// 					},
+			// 				},
+			// 			},
+			// 		},
+			// 		&GatewayClass{
+			// 			ObjectMeta: metav1.ObjectMeta{
+			// 				Name: "test-gatewayclass",
+			// 			},
+			// 			Spec: gatewayv1beta1.GatewayClassSpec{
+			// 				ControllerName: gatewayv1beta1.GatewayController("konghq.com/kic-gateway-controller"),
+			// 			},
+			// 		},
+			// 		&corev1.Namespace{
+			// 			ObjectMeta: metav1.ObjectMeta{
+			// 				Name: "test-namespace",
+			// 			},
+			// 		},
+			// 	},
+			// 	expected: []expected{
+			// 		{
+			// 			gateway: types.NamespacedName{
+			// 				Name:      "test-gateway",
+			// 				Namespace: "test-namespace",
+			// 			},
+			// 			listenerName: "tcp",
+			// 			condition: metav1.Condition{
+			// 				Type:   string(gatewayv1beta1.RouteConditionAccepted),
+			// 				Status: metav1.ConditionFalse,
+			// 				Reason: string(RouteReasonNoMatchingParent),
+			// 			},
+			// 		},
+			// 	},
+			// },
+		}
+
+		for _, tt := range tests {
+			tt := tt
+			t.Run(tt.name, func(t *testing.T) {
+				fakeClient := fakeclient.
+					NewClientBuilder().
+					WithScheme(scheme.Scheme).
+					WithObjects(tt.objects...).
+					Build()
+
+				got, err := getSupportedGatewayForRoute(context.Background(), fakeClient, tt.route)
+				if tt.wantErr {
+					require.Error(t, err)
+				} else {
+					require.NoError(t, err)
+					require.Len(t, got, len(tt.expected))
+
+					for i := range got {
+						assert.Equalf(t, tt.expected[i].gateway.Namespace, got[i].gateway.Namespace, "gateway namespace #%d", i)
+						assert.Equalf(t, tt.expected[i].gateway.Name, got[i].gateway.Name, "gateway name #%d", i)
+						assert.Equalf(t, tt.expected[i].listenerName, got[i].listenerName, "listenerName #%d", i)
+						assert.Equalf(t, tt.expected[i].condition, got[i].condition, "condition #%d", i)
+					}
+				}
+			})
+		}
+	})
+
+	t.Run("UDPRoute", func(t *testing.T) {
+		type expected struct {
+			gateway      types.NamespacedName
+			condition    metav1.Condition
+			listenerName string
+		}
+		tests := []struct {
+			name     string
+			route    *UDPRoute
+			expected []expected
+			objects  []client.Object
+			wantErr  bool
+		}{
+			{
+				name: "basic UDPRoute does get accepted because it is in supported kinds",
+				route: &UDPRoute{
+					TypeMeta: metav1.TypeMeta{
+						Kind:       "UDPRoute",
+						APIVersion: gatewayv1alpha2.GroupVersion.Group + "/" + gatewayv1alpha2.GroupVersion.Version,
+					},
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "basic-udproute",
+						Namespace: "test-namespace",
+					},
+					Spec: gatewayv1alpha2.UDPRouteSpec{
+						CommonRouteSpec: gatewayv1alpha2.CommonRouteSpec{
+							ParentRefs: []gatewayv1alpha2.ParentReference{
+								{
+									Name: gatewayv1alpha2.ObjectName("test-gateway"),
+								},
+							},
+						},
+					},
+				},
+				objects: []client.Object{
+					&Gateway{
+						TypeMeta: metav1.TypeMeta{
+							APIVersion: "gateway.networking.k8s.io/v1beta1",
+							Kind:       "Gateway",
+						},
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "test-gateway",
+							Namespace: "test-namespace",
+							UID:       types.UID("ce7f0678-f59a-483c-80d1-243d3738d22c"),
+						},
+						Spec: gatewayv1beta1.GatewaySpec{
+							GatewayClassName: "test-gatewayclass",
+							Listeners:        builder.NewListener("udp").WithPort(80).UDP().IntoSlice(),
+						},
+						Status: gatewayv1beta1.GatewayStatus{
+							Listeners: []gatewayv1beta1.ListenerStatus{
+								{
+									Name: gatewayv1beta1.SectionName("udp"),
+									Conditions: []metav1.Condition{
+										{
+											Type:   "Ready",
+											Status: metav1.ConditionTrue,
+										},
+									},
+									SupportedKinds: supportedRouteGroupKinds,
+								},
+							},
+						},
+					},
+					&GatewayClass{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "test-gatewayclass",
+						},
+						Spec: gatewayv1beta1.GatewayClassSpec{
+							ControllerName: gatewayv1beta1.GatewayController("konghq.com/kic-gateway-controller"),
+						},
+					},
+					&corev1.Namespace{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "test-namespace",
+						},
+					},
+				},
+				expected: []expected{
+					{
+						gateway: types.NamespacedName{
+							Name:      "test-gateway",
+							Namespace: "test-namespace",
+						},
+						listenerName: "",
+						condition: metav1.Condition{
+							Type:   string(gatewayv1beta1.RouteConditionAccepted),
+							Status: metav1.ConditionTrue,
+							Reason: string(gatewayv1beta1.RouteReasonAccepted),
+						},
+					},
+				},
+			},
+			{
+				name: "basic UDPRoute does not get accepted because it is not in supported kinds",
+				route: &UDPRoute{
+					TypeMeta: metav1.TypeMeta{
+						Kind:       "UDPRoute",
+						APIVersion: gatewayv1alpha2.GroupVersion.Group + "/" + gatewayv1alpha2.GroupVersion.Version,
+					},
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "basic-udproute",
+						Namespace: "test-namespace",
+					},
+					Spec: gatewayv1alpha2.UDPRouteSpec{
+						CommonRouteSpec: gatewayv1alpha2.CommonRouteSpec{
+							ParentRefs: []gatewayv1alpha2.ParentReference{
+								{
+									Name: gatewayv1alpha2.ObjectName("test-gateway"),
+								},
+							},
+						},
+					},
+				},
+				objects: []client.Object{
+					&Gateway{
+						TypeMeta: metav1.TypeMeta{
+							APIVersion: "gateway.networking.k8s.io/v1beta1",
+							Kind:       "Gateway",
+						},
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "test-gateway",
+							Namespace: "test-namespace",
+							UID:       types.UID("ce7f0678-f59a-483c-80d1-243d3738d22c"),
+						},
+						Spec: gatewayv1beta1.GatewaySpec{
+							GatewayClassName: "test-gatewayclass",
+							Listeners:        builder.NewListener("udp").WithPort(80).UDP().IntoSlice(),
+						},
+						Status: gatewayv1beta1.GatewayStatus{
+							Listeners: []gatewayv1beta1.ListenerStatus{
+								{
+									Name: gatewayv1beta1.SectionName("http"),
+									Conditions: []metav1.Condition{
+										{
+											Type:   "Ready",
+											Status: metav1.ConditionTrue,
+										},
+									},
+									SupportedKinds: []gatewayv1beta1.RouteGroupKind{
+										builder.NewRouteGroupKind().HTTPRoute().Build(),
+									},
+								},
+							},
+						},
+					},
+					&GatewayClass{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "test-gatewayclass",
+						},
+						Spec: gatewayv1beta1.GatewayClassSpec{
+							ControllerName: gatewayv1beta1.GatewayController("konghq.com/kic-gateway-controller"),
+						},
+					},
+					&corev1.Namespace{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "test-namespace",
+						},
+					},
+				},
+				expected: []expected{
+					{
+						gateway: types.NamespacedName{
+							Name:      "test-gateway",
+							Namespace: "test-namespace",
+						},
+						listenerName: "",
+						condition: metav1.Condition{
+							Type:   string(gatewayv1beta1.RouteConditionAccepted),
+							Status: metav1.ConditionFalse,
 							// NOTE: Is this correct? Does ListenerStatus.SupportedKinds have impact on this?
 							Reason: string(gatewayv1beta1.RouteReasonNotAllowedByListeners),
 						},
 					},
 				},
 			},
+			{
+				name: "UDPRoute specifying existing port gets Accepted",
+				route: &UDPRoute{
+					TypeMeta: metav1.TypeMeta{
+						Kind:       "UDPRoute",
+						APIVersion: gatewayv1alpha2.GroupVersion.String(),
+					},
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "basic-udproute",
+						Namespace: "test-namespace",
+					},
+					Spec: gatewayv1alpha2.UDPRouteSpec{
+						CommonRouteSpec: gatewayv1alpha2.CommonRouteSpec{
+							ParentRefs: []gatewayv1alpha2.ParentReference{
+								{
+									Name: gatewayv1alpha2.ObjectName("test-gateway"),
+									Port: addressOf(gatewayv1alpha2.PortNumber(80)),
+								},
+							},
+						},
+						Rules: []gatewayv1alpha2.UDPRouteRule{
+							{
+								BackendRefs: []gatewayv1alpha2.BackendRef{
+									builder.NewBackendRef("fake-service").WithPort(80).Build(),
+								},
+							},
+						},
+					},
+				},
+				objects: []client.Object{
+					&Gateway{
+						TypeMeta: metav1.TypeMeta{
+							APIVersion: "gateway.networking.k8s.io/v1beta1",
+							Kind:       "Gateway",
+						},
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "test-gateway",
+							Namespace: "test-namespace",
+							UID:       types.UID("ce7f0678-f59a-483c-80d1-243d3738d22c"),
+						},
+						Spec: gatewayv1beta1.GatewaySpec{
+							GatewayClassName: "test-gatewayclass",
+							Listeners:        builder.NewListener("udp").WithPort(80).UDP().IntoSlice(),
+						},
+						Status: gatewayv1beta1.GatewayStatus{
+							Listeners: []gatewayv1beta1.ListenerStatus{
+								{
+									Name: gatewayv1beta1.SectionName("udp"),
+									Conditions: []metav1.Condition{
+										{
+											Type:   "Ready",
+											Status: metav1.ConditionTrue,
+										},
+									},
+									SupportedKinds: supportedRouteGroupKinds,
+								},
+							},
+						},
+					},
+					&GatewayClass{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "test-gatewayclass",
+						},
+						Spec: gatewayv1beta1.GatewayClassSpec{
+							ControllerName: gatewayv1beta1.GatewayController("konghq.com/kic-gateway-controller"),
+						},
+					},
+					&corev1.Namespace{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "test-namespace",
+						},
+					},
+				},
+				expected: []expected{
+					{
+						gateway: types.NamespacedName{
+							Name:      "test-gateway",
+							Namespace: "test-namespace",
+						},
+						listenerName: "",
+						condition: metav1.Condition{
+							Type:   string(gatewayv1beta1.RouteConditionAccepted),
+							Status: metav1.ConditionTrue,
+							Reason: string(gatewayv1beta1.RouteReasonAccepted),
+						},
+					},
+				},
+			},
+			{
+				name: "UDPRoute specifying non existing port does not get Accepted",
+				route: &UDPRoute{
+					TypeMeta: metav1.TypeMeta{
+						Kind:       "UDPRoute",
+						APIVersion: gatewayv1alpha2.GroupVersion.String(),
+					},
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "basic-udproute",
+						Namespace: "test-namespace",
+					},
+					Spec: gatewayv1alpha2.UDPRouteSpec{
+						CommonRouteSpec: gatewayv1alpha2.CommonRouteSpec{
+							ParentRefs: []gatewayv1alpha2.ParentReference{
+								{
+									Name: gatewayv1alpha2.ObjectName("test-gateway"),
+									Port: addressOf(gatewayv1alpha2.PortNumber(80)),
+								},
+							},
+						},
+						Rules: []gatewayv1alpha2.UDPRouteRule{
+							{
+								BackendRefs: []gatewayv1alpha2.BackendRef{
+									builder.NewBackendRef("fake-service").WithPort(80).Build(),
+								},
+							},
+						},
+					},
+				},
+				objects: []client.Object{
+					&Gateway{
+						TypeMeta: metav1.TypeMeta{
+							APIVersion: "gateway.networking.k8s.io/v1beta1",
+							Kind:       "Gateway",
+						},
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "test-gateway",
+							Namespace: "test-namespace",
+							UID:       types.UID("ce7f0678-f59a-483c-80d1-243d3738d22c"),
+						},
+						Spec: gatewayv1beta1.GatewaySpec{
+							GatewayClassName: "test-gatewayclass",
+							Listeners:        builder.NewListener("udp").WithPort(81).UDP().IntoSlice(),
+						},
+						Status: gatewayv1beta1.GatewayStatus{
+							Listeners: []gatewayv1beta1.ListenerStatus{
+								{
+									Name: gatewayv1beta1.SectionName("udp"),
+									Conditions: []metav1.Condition{
+										{
+											Type:   "Ready",
+											Status: metav1.ConditionTrue,
+										},
+									},
+									SupportedKinds: supportedRouteGroupKinds,
+								},
+							},
+						},
+					},
+					&GatewayClass{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "test-gatewayclass",
+						},
+						Spec: gatewayv1beta1.GatewayClassSpec{
+							ControllerName: gatewayv1beta1.GatewayController("konghq.com/kic-gateway-controller"),
+						},
+					},
+					&corev1.Namespace{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "test-namespace",
+						},
+					},
+				},
+				expected: []expected{
+					{
+						gateway: types.NamespacedName{
+							Name:      "test-gateway",
+							Namespace: "test-namespace",
+						},
+						listenerName: "",
+						condition: metav1.Condition{
+							Type:   string(gatewayv1beta1.RouteConditionAccepted),
+							Status: metav1.ConditionFalse,
+							Reason: string(RouteReasonNoMatchingParent),
+						},
+					},
+				},
+			},
+			{
+				name: "UDPRoute specifying in sectionName existing listener gets Accepted",
+				route: &UDPRoute{
+					TypeMeta: metav1.TypeMeta{
+						Kind:       "UDPRoute",
+						APIVersion: gatewayv1alpha2.GroupVersion.String(),
+					},
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "basic-udproute",
+						Namespace: "test-namespace",
+					},
+					Spec: gatewayv1alpha2.UDPRouteSpec{
+						CommonRouteSpec: gatewayv1alpha2.CommonRouteSpec{
+							ParentRefs: []gatewayv1alpha2.ParentReference{
+								{
+									Name:        gatewayv1alpha2.ObjectName("test-gateway"),
+									Port:        addressOf(gatewayv1alpha2.PortNumber(80)),
+									SectionName: addressOf(gatewayv1alpha2.SectionName("udp")),
+								},
+							},
+						},
+						Rules: []gatewayv1alpha2.UDPRouteRule{
+							{
+								BackendRefs: []gatewayv1alpha2.BackendRef{
+									builder.NewBackendRef("fake-service").WithPort(80).Build(),
+								},
+							},
+						},
+					},
+				},
+				objects: []client.Object{
+					&Gateway{
+						TypeMeta: metav1.TypeMeta{
+							APIVersion: "gateway.networking.k8s.io/v1beta1",
+							Kind:       "Gateway",
+						},
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "test-gateway",
+							Namespace: "test-namespace",
+							UID:       types.UID("ce7f0678-f59a-483c-80d1-243d3738d22c"),
+						},
+						Spec: gatewayv1beta1.GatewaySpec{
+							GatewayClassName: "test-gatewayclass",
+							Listeners:        builder.NewListener("udp").WithPort(80).UDP().IntoSlice(),
+						},
+						Status: gatewayv1beta1.GatewayStatus{
+							Listeners: []gatewayv1beta1.ListenerStatus{
+								{
+									Name: gatewayv1beta1.SectionName("udp"),
+									Conditions: []metav1.Condition{
+										{
+											Type:   "Ready",
+											Status: metav1.ConditionTrue,
+										},
+									},
+									SupportedKinds: supportedRouteGroupKinds,
+								},
+							},
+						},
+					},
+					&GatewayClass{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "test-gatewayclass",
+						},
+						Spec: gatewayv1beta1.GatewayClassSpec{
+							ControllerName: gatewayv1beta1.GatewayController("konghq.com/kic-gateway-controller"),
+						},
+					},
+					&corev1.Namespace{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "test-namespace",
+						},
+					},
+				},
+				expected: []expected{
+					{
+						gateway: types.NamespacedName{
+							Name:      "test-gateway",
+							Namespace: "test-namespace",
+						},
+						listenerName: "udp",
+						condition: metav1.Condition{
+							Type:   string(gatewayv1beta1.RouteConditionAccepted),
+							Status: metav1.ConditionTrue,
+							Reason: string(gatewayv1beta1.RouteReasonAccepted),
+						},
+					},
+				},
+			},
+			// TODO: uncomment when https://github.com/Kong/kubernetes-ingress-controller/issues/3221 is done
+			// {
+			// 	name: "UDPRoute specifying in sectionName non existing listener does not get Accepted",
+			// 	route: &UDPRoute{
+			// 		TypeMeta: metav1.TypeMeta{
+			// 			Kind:       "TCPRoute",
+			// 			APIVersion: gatewayv1alpha2.GroupVersion.String(),
+			// 		},
+			// 		ObjectMeta: metav1.ObjectMeta{
+			// 			Name:      "basic-udproute",
+			// 			Namespace: "test-namespace",
+			// 		},
+			// 		Spec: gatewayv1alpha2.TCPRouteSpec{
+			// 			CommonRouteSpec: gatewayv1alpha2.CommonRouteSpec{
+			// 				ParentRefs: []gatewayv1alpha2.ParentReference{
+			// 					{
+			// 						Name:        gatewayv1alpha2.ObjectName("test-gateway"),
+			// 						Port:        addressOf(gatewayv1alpha2.PortNumber(80)),
+			// 						SectionName: addressOf(gatewayv1alpha2.SectionName("non-existing")),
+			// 					},
+			// 				},
+			// 			},
+			// 			Rules: []gatewayv1alpha2.TCPRouteRule{
+			// 				{
+			// 					BackendRefs: []gatewayv1alpha2.BackendRef{
+			// 						builder.NewBackendRef("fake-service").WithPort(80).Build(),
+			// 					},
+			// 				},
+			// 			},
+			// 		},
+			// 	},
+			// 	objects: []client.Object{
+			// 		&Gateway{
+			// 			TypeMeta: metav1.TypeMeta{
+			// 				APIVersion: "gateway.networking.k8s.io/v1beta1",
+			// 				Kind:       "Gateway",
+			// 			},
+			// 			ObjectMeta: metav1.ObjectMeta{
+			// 				Name:      "test-gateway",
+			// 				Namespace: "test-namespace",
+			// 				UID:       types.UID("ce7f0678-f59a-483c-80d1-243d3738d22c"),
+			// 			},
+			// 			Spec: gatewayv1beta1.GatewaySpec{
+			// 				GatewayClassName: "test-gatewayclass",
+			// 				Listeners:        builder.NewListener("udp").WithPort(80).UDP().IntoSlice(),
+			// 			},
+			// 			Status: gatewayv1beta1.GatewayStatus{
+			// 				Listeners: []gatewayv1beta1.ListenerStatus{
+			// 					{
+			// 						Name: gatewayv1beta1.SectionName("udp"),
+			// 						Conditions: []metav1.Condition{
+			// 							{
+			// 								Type:   "Ready",
+			// 								Status: metav1.ConditionTrue,
+			// 							},
+			// 						},
+			// 						SupportedKinds: supportedRouteGroupKinds,
+			// 					},
+			// 				},
+			// 			},
+			// 		},
+			// 		&GatewayClass{
+			// 			ObjectMeta: metav1.ObjectMeta{
+			// 				Name: "test-gatewayclass",
+			// 			},
+			// 			Spec: gatewayv1beta1.GatewayClassSpec{
+			// 				ControllerName: gatewayv1beta1.GatewayController("konghq.com/kic-gateway-controller"),
+			// 			},
+			// 		},
+			// 		&corev1.Namespace{
+			// 			ObjectMeta: metav1.ObjectMeta{
+			// 				Name: "test-namespace",
+			// 			},
+			// 		},
+			// 	},
+			// 	expected: []expected{
+			// 		{
+			// 			gateway: types.NamespacedName{
+			// 				Name:      "test-gateway",
+			// 				Namespace: "test-namespace",
+			// 			},
+			// 			listenerName: "udp",
+			// 			condition: metav1.Condition{
+			// 				Type:   string(gatewayv1beta1.RouteConditionAccepted),
+			// 				Status: metav1.ConditionFalse,
+			// 				Reason: string(RouteReasonNoMatchingParent),
+			// 			},
+			// 		},
+			// 	},
+			// },
 		}
 
 		for _, tt := range tests {
@@ -1424,7 +2338,7 @@ func Test_getSupportedGatewayForRoute(t *testing.T) {
 								WithPort(443).
 								TLS().
 								WithTLSConfig(&gatewayv1beta1.GatewayTLSConfig{
-									Mode: (*gatewayv1beta1.TLSModeType)(pointer.StringPtr(string(gatewayv1beta1.TLSModePassthrough))),
+									Mode: addressOf(gatewayv1beta1.TLSModePassthrough),
 								}).IntoSlice(),
 						},
 						Status: gatewayv1beta1.GatewayStatus{
@@ -1518,7 +2432,7 @@ func Test_getSupportedGatewayForRoute(t *testing.T) {
 								WithPort(443).
 								TLS().
 								WithTLSConfig(&gatewayv1beta1.GatewayTLSConfig{
-									Mode: (*gatewayv1beta1.TLSModeType)(pointer.StringPtr(string(gatewayv1beta1.TLSModeTerminate))),
+									Mode: addressOf(gatewayv1beta1.TLSModeTerminate),
 								}).IntoSlice(),
 						},
 						Status: gatewayv1beta1.GatewayStatus{
@@ -1574,6 +2488,474 @@ func Test_getSupportedGatewayForRoute(t *testing.T) {
 					},
 				},
 			},
+			{
+				name: "TLSRoute does not get accepted because it is not in supported kinds",
+				route: &TLSRoute{
+					TypeMeta: metav1.TypeMeta{
+						Kind:       "TLSRoute",
+						APIVersion: gatewayv1alpha2.GroupVersion.Group + "/" + gatewayv1alpha2.GroupVersion.Version,
+					},
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "basic-tlsroute",
+						Namespace: "test-namespace",
+					},
+					Spec: gatewayv1alpha2.TLSRouteSpec{
+						CommonRouteSpec: gatewayv1alpha2.CommonRouteSpec{
+							ParentRefs: []gatewayv1alpha2.ParentReference{
+								{
+									Name: gatewayv1alpha2.ObjectName("test-gateway"),
+								},
+							},
+						},
+					},
+				},
+				objects: []client.Object{
+					&Gateway{
+						TypeMeta: metav1.TypeMeta{
+							APIVersion: "gateway.networking.k8s.io/v1beta1",
+							Kind:       "Gateway",
+						},
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "test-gateway",
+							Namespace: "test-namespace",
+							UID:       types.UID("ce7f0678-f59a-483c-80d1-243d3738d22c"),
+						},
+						Spec: gatewayv1beta1.GatewaySpec{
+							GatewayClassName: "test-gatewayclass",
+							Listeners: builder.NewListener("tls").
+								WithPort(443).
+								TLS().
+								WithTLSConfig(&gatewayv1beta1.GatewayTLSConfig{
+									Mode: addressOf(gatewayv1beta1.TLSModePassthrough),
+								}).
+								IntoSlice(),
+						},
+						Status: gatewayv1beta1.GatewayStatus{
+							Listeners: []gatewayv1beta1.ListenerStatus{
+								{
+									Name: gatewayv1beta1.SectionName("tls"),
+									Conditions: []metav1.Condition{
+										{
+											Type:   "Ready",
+											Status: metav1.ConditionTrue,
+										},
+									},
+									SupportedKinds: []gatewayv1beta1.RouteGroupKind{
+										builder.NewRouteGroupKind().HTTPRoute().Build(),
+									},
+								},
+							},
+						},
+					},
+					&GatewayClass{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "test-gatewayclass",
+						},
+						Spec: gatewayv1beta1.GatewayClassSpec{
+							ControllerName: gatewayv1beta1.GatewayController("konghq.com/kic-gateway-controller"),
+						},
+					},
+					&corev1.Namespace{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "test-namespace",
+						},
+					},
+				},
+				expected: []expected{
+					{
+						gateway: types.NamespacedName{
+							Name:      "test-gateway",
+							Namespace: "test-namespace",
+						},
+						listenerName: "",
+						condition: metav1.Condition{
+							Type:   string(gatewayv1beta1.RouteConditionAccepted),
+							Status: metav1.ConditionFalse,
+							// NOTE: Is this correct? Does ListenerStatus.SupportedKinds have impact on this?
+							Reason: string(gatewayv1beta1.RouteReasonNotAllowedByListeners),
+						},
+					},
+				},
+			},
+			{
+				name: "TLSRoute specifying existing port gets Accepted",
+				route: &TLSRoute{
+					TypeMeta: metav1.TypeMeta{
+						Kind:       "TLSRoute",
+						APIVersion: gatewayv1alpha2.GroupVersion.String(),
+					},
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "basic-tlsroute",
+						Namespace: "test-namespace",
+					},
+					Spec: gatewayv1alpha2.TLSRouteSpec{
+						CommonRouteSpec: gatewayv1alpha2.CommonRouteSpec{
+							ParentRefs: []gatewayv1alpha2.ParentReference{
+								{
+									Name: gatewayv1alpha2.ObjectName("test-gateway"),
+									Port: addressOf(gatewayv1alpha2.PortNumber(443)),
+								},
+							},
+						},
+						Rules: []gatewayv1alpha2.TLSRouteRule{
+							{
+								BackendRefs: []gatewayv1alpha2.BackendRef{
+									builder.NewBackendRef("fake-service").WithPort(443).Build(),
+								},
+							},
+						},
+					},
+				},
+				objects: []client.Object{
+					&Gateway{
+						TypeMeta: metav1.TypeMeta{
+							APIVersion: "gateway.networking.k8s.io/v1beta1",
+							Kind:       "Gateway",
+						},
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "test-gateway",
+							Namespace: "test-namespace",
+							UID:       types.UID("ce7f0678-f59a-483c-80d1-243d3738d22c"),
+						},
+						Spec: gatewayv1beta1.GatewaySpec{
+							GatewayClassName: "test-gatewayclass",
+							Listeners: builder.NewListener("tls").
+								WithPort(443).
+								TLS().
+								WithTLSConfig(&gatewayv1beta1.GatewayTLSConfig{
+									Mode: addressOf(gatewayv1beta1.TLSModePassthrough),
+								}).
+								IntoSlice(),
+						},
+						Status: gatewayv1beta1.GatewayStatus{
+							Listeners: []gatewayv1beta1.ListenerStatus{
+								{
+									Name: gatewayv1beta1.SectionName("tls"),
+									Conditions: []metav1.Condition{
+										{
+											Type:   "Ready",
+											Status: metav1.ConditionTrue,
+										},
+									},
+									SupportedKinds: supportedRouteGroupKinds,
+								},
+							},
+						},
+					},
+					&GatewayClass{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "test-gatewayclass",
+						},
+						Spec: gatewayv1beta1.GatewayClassSpec{
+							ControllerName: gatewayv1beta1.GatewayController("konghq.com/kic-gateway-controller"),
+						},
+					},
+					&corev1.Namespace{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "test-namespace",
+						},
+					},
+				},
+				expected: []expected{
+					{
+						gateway: types.NamespacedName{
+							Name:      "test-gateway",
+							Namespace: "test-namespace",
+						},
+						listenerName: "",
+						condition: metav1.Condition{
+							Type:   string(gatewayv1beta1.RouteConditionAccepted),
+							Status: metav1.ConditionTrue,
+							Reason: string(gatewayv1beta1.RouteReasonAccepted),
+						},
+					},
+				},
+			},
+			{
+				name: "TLSRoute specifying non existing port does not get Accepted",
+				route: &TLSRoute{
+					TypeMeta: metav1.TypeMeta{
+						Kind:       "TLSRoute",
+						APIVersion: gatewayv1alpha2.GroupVersion.String(),
+					},
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "basic-tlsroute",
+						Namespace: "test-namespace",
+					},
+					Spec: gatewayv1alpha2.TLSRouteSpec{
+						CommonRouteSpec: gatewayv1alpha2.CommonRouteSpec{
+							ParentRefs: []gatewayv1alpha2.ParentReference{
+								{
+									Name: gatewayv1alpha2.ObjectName("test-gateway"),
+									Port: addressOf(gatewayv1alpha2.PortNumber(80)),
+								},
+							},
+						},
+						Rules: []gatewayv1alpha2.TLSRouteRule{
+							{
+								BackendRefs: []gatewayv1alpha2.BackendRef{
+									builder.NewBackendRef("fake-service").WithPort(80).Build(),
+								},
+							},
+						},
+					},
+				},
+				objects: []client.Object{
+					&Gateway{
+						TypeMeta: metav1.TypeMeta{
+							APIVersion: "gateway.networking.k8s.io/v1beta1",
+							Kind:       "Gateway",
+						},
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "test-gateway",
+							Namespace: "test-namespace",
+							UID:       types.UID("ce7f0678-f59a-483c-80d1-243d3738d22c"),
+						},
+						Spec: gatewayv1beta1.GatewaySpec{
+							GatewayClassName: "test-gatewayclass",
+							Listeners: builder.NewListener("tls").
+								WithPort(443).
+								TLS().
+								WithTLSConfig(&gatewayv1beta1.GatewayTLSConfig{
+									Mode: addressOf(gatewayv1beta1.TLSModePassthrough),
+								}).
+								IntoSlice(),
+						},
+						Status: gatewayv1beta1.GatewayStatus{
+							Listeners: []gatewayv1beta1.ListenerStatus{
+								{
+									Name: gatewayv1beta1.SectionName("tls"),
+									Conditions: []metav1.Condition{
+										{
+											Type:   "Ready",
+											Status: metav1.ConditionTrue,
+										},
+									},
+									SupportedKinds: supportedRouteGroupKinds,
+								},
+							},
+						},
+					},
+					&GatewayClass{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "test-gatewayclass",
+						},
+						Spec: gatewayv1beta1.GatewayClassSpec{
+							ControllerName: gatewayv1beta1.GatewayController("konghq.com/kic-gateway-controller"),
+						},
+					},
+					&corev1.Namespace{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "test-namespace",
+						},
+					},
+				},
+				expected: []expected{
+					{
+						gateway: types.NamespacedName{
+							Name:      "test-gateway",
+							Namespace: "test-namespace",
+						},
+						listenerName: "",
+						condition: metav1.Condition{
+							Type:   string(gatewayv1beta1.RouteConditionAccepted),
+							Status: metav1.ConditionFalse,
+							Reason: string(RouteReasonNoMatchingParent),
+						},
+					},
+				},
+			},
+			{
+				name: "UDPRoute specifying in sectionName existing listener gets Accepted",
+				route: &TLSRoute{
+					TypeMeta: metav1.TypeMeta{
+						Kind:       "UDPRoute",
+						APIVersion: gatewayv1alpha2.GroupVersion.String(),
+					},
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "basic-tlsroute",
+						Namespace: "test-namespace",
+					},
+					Spec: gatewayv1alpha2.TLSRouteSpec{
+						CommonRouteSpec: gatewayv1alpha2.CommonRouteSpec{
+							ParentRefs: []gatewayv1alpha2.ParentReference{
+								{
+									Name:        gatewayv1alpha2.ObjectName("test-gateway"),
+									Port:        addressOf(gatewayv1alpha2.PortNumber(80)),
+									SectionName: addressOf(gatewayv1alpha2.SectionName("tls")),
+								},
+							},
+						},
+						Rules: []gatewayv1alpha2.TLSRouteRule{
+							{
+								BackendRefs: []gatewayv1alpha2.BackendRef{
+									builder.NewBackendRef("fake-service").WithPort(80).Build(),
+								},
+							},
+						},
+					},
+				},
+				objects: []client.Object{
+					&Gateway{
+						TypeMeta: metav1.TypeMeta{
+							APIVersion: "gateway.networking.k8s.io/v1beta1",
+							Kind:       "Gateway",
+						},
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "test-gateway",
+							Namespace: "test-namespace",
+							UID:       types.UID("ce7f0678-f59a-483c-80d1-243d3738d22c"),
+						},
+						Spec: gatewayv1beta1.GatewaySpec{
+							GatewayClassName: "test-gatewayclass",
+							Listeners: builder.NewListener("tls").
+								WithPort(80).
+								TLS().
+								WithTLSConfig(&gatewayv1beta1.GatewayTLSConfig{
+									Mode: addressOf(gatewayv1beta1.TLSModePassthrough),
+								}).
+								IntoSlice(),
+						},
+						Status: gatewayv1beta1.GatewayStatus{
+							Listeners: []gatewayv1beta1.ListenerStatus{
+								{
+									Name: gatewayv1beta1.SectionName("tls"),
+									Conditions: []metav1.Condition{
+										{
+											Type:   "Ready",
+											Status: metav1.ConditionTrue,
+										},
+									},
+									SupportedKinds: supportedRouteGroupKinds,
+								},
+							},
+						},
+					},
+					&GatewayClass{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "test-gatewayclass",
+						},
+						Spec: gatewayv1beta1.GatewayClassSpec{
+							ControllerName: gatewayv1beta1.GatewayController("konghq.com/kic-gateway-controller"),
+						},
+					},
+					&corev1.Namespace{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "test-namespace",
+						},
+					},
+				},
+				expected: []expected{
+					{
+						gateway: types.NamespacedName{
+							Name:      "test-gateway",
+							Namespace: "test-namespace",
+						},
+						listenerName: "tls",
+						condition: metav1.Condition{
+							Type:   string(gatewayv1beta1.RouteConditionAccepted),
+							Status: metav1.ConditionTrue,
+							Reason: string(gatewayv1beta1.RouteReasonAccepted),
+						},
+					},
+				},
+			},
+			// TODO: uncomment when https://github.com/Kong/kubernetes-ingress-controller/issues/3221 is done
+			// {
+			// 	name: "TLSRoute specifying in sectionName non existing listener does not get Accepted",
+			// 	route: &TLSRoute{
+			// 		TypeMeta: metav1.TypeMeta{
+			// 			Kind:       "TLSRoute",
+			// 			APIVersion: gatewayv1alpha2.GroupVersion.String(),
+			// 		},
+			// 		ObjectMeta: metav1.ObjectMeta{
+			// 			Name:      "basic-tlsroute",
+			// 			Namespace: "test-namespace",
+			// 		},
+			// 		Spec: gatewayv1alpha2.TLSRouteSpec{
+			// 			CommonRouteSpec: gatewayv1alpha2.CommonRouteSpec{
+			// 				ParentRefs: []gatewayv1alpha2.ParentReference{
+			// 					{
+			// 						Name:        gatewayv1alpha2.ObjectName("test-gateway"),
+			// 						Port:        addressOf(gatewayv1alpha2.PortNumber(80)),
+			// 						SectionName: addressOf(gatewayv1alpha2.SectionName("non-existing")),
+			// 					},
+			// 				},
+			// 			},
+			// 			Rules: []gatewayv1alpha2.TLSRouteRule{
+			// 				{
+			// 					BackendRefs: []gatewayv1alpha2.BackendRef{
+			// 						builder.NewBackendRef("fake-service").WithPort(80).Build(),
+			// 					},
+			// 				},
+			// 			},
+			// 		},
+			// 	},
+			// 	objects: []client.Object{
+			// 		&Gateway{
+			// 			TypeMeta: metav1.TypeMeta{
+			// 				APIVersion: "gateway.networking.k8s.io/v1beta1",
+			// 				Kind:       "Gateway",
+			// 			},
+			// 			ObjectMeta: metav1.ObjectMeta{
+			// 				Name:      "test-gateway",
+			// 				Namespace: "test-namespace",
+			// 				UID:       types.UID("ce7f0678-f59a-483c-80d1-243d3738d22c"),
+			// 			},
+			// 			Spec: gatewayv1beta1.GatewaySpec{
+			// 				GatewayClassName: "test-gatewayclass",
+			// 				Listeners:        builder.NewListener("tls").
+			// 					WithPort(80).
+			// 					UDP().
+			// 					WithTLSConfig(&gatewayv1beta1.GatewayTLSConfig{
+			// 						Mode: addressOf(gatewayv1beta1.TLSModePassthrough),
+			// 					}).
+			// 					IntoSlice(),
+			// 			},
+			// 			Status: gatewayv1beta1.GatewayStatus{
+			// 				Listeners: []gatewayv1beta1.ListenerStatus{
+			// 					{
+			// 						Name: gatewayv1beta1.SectionName("tls"),
+			// 						Conditions: []metav1.Condition{
+			// 							{
+			// 								Type:   "Ready",
+			// 								Status: metav1.ConditionTrue,
+			// 							},
+			// 						},
+			// 						SupportedKinds: supportedRouteGroupKinds,
+			// 					},
+			// 				},
+			// 			},
+			// 		},
+			// 		&GatewayClass{
+			// 			ObjectMeta: metav1.ObjectMeta{
+			// 				Name: "test-gatewayclass",
+			// 			},
+			// 			Spec: gatewayv1beta1.GatewayClassSpec{
+			// 				ControllerName: gatewayv1beta1.GatewayController("konghq.com/kic-gateway-controller"),
+			// 			},
+			// 		},
+			// 		&corev1.Namespace{
+			// 			ObjectMeta: metav1.ObjectMeta{
+			// 				Name: "test-namespace",
+			// 			},
+			// 		},
+			// 	},
+			// 	expected: []expected{
+			// 		{
+			// 			gateway: types.NamespacedName{
+			// 				Name:      "test-gateway",
+			// 				Namespace: "test-namespace",
+			// 			},
+			// 			listenerName: "tls",
+			// 			condition: metav1.Condition{
+			// 				Type:   string(gatewayv1beta1.RouteConditionAccepted),
+			// 				Status: metav1.ConditionFalse,
+			// 				Reason: string(RouteReasonNoMatchingParent),
+			// 			},
+			// 		},
+			// 	},
+			// },
 		}
 
 		for _, tt := range tests {

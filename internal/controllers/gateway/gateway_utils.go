@@ -648,6 +648,8 @@ func getListenerSupportedRouteKinds(listener gatewayv1beta1.Listener) []gatewayv
 		b.UDPRoute()
 	case TLSProtocolType:
 		b.TLSRoute()
+	default:
+		return supportedRouteGroupKinds
 	}
 
 	return b.IntoSlice()

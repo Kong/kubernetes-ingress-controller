@@ -107,6 +107,7 @@ func (i *ingressTranslationIndex) add(ingress *netv1.Ingress) {
 					ingressName:      ingress.Name,
 					ingressUID:       string(ingress.UID),
 					ingressHost:      ingressRule.Host,
+					ingressTags:      util.GenerateTagsForObject(ingress),
 					serviceName:      serviceName,
 					servicePort:      servicePort,
 					addRegexPrefix:   i.addRegexPrefix,
@@ -158,6 +159,7 @@ type ingressTranslationMeta struct {
 	ingressName        string
 	ingressUID         string
 	ingressHost        string
+	ingressTags        []*string
 	serviceName        string
 	servicePort        int32
 	paths              []netv1.HTTPIngressPath
@@ -212,14 +214,7 @@ func (m *ingressTranslationMeta) translateIntoKongRoutes() *kongstate.Route {
 			RegexPriority:     kong.Int(0),
 			RequestBuffering:  kong.Bool(true),
 			ResponseBuffering: kong.Bool(true),
-			Tags: kong.StringSlice(
-				fmt.Sprintf("k8s-name:%s", m.ingressName),
-				fmt.Sprintf("k8s-uid:%s", m.ingressUID),
-				fmt.Sprintf("k8s-namespace:%s", m.ingressNamespace),
-				// TODO values from a source would be better
-				fmt.Sprintf("k8s-kind:%s", "Ingress"),
-				//fmt.Sprintf("k8s-apiversion:%s", netv1.SchemeGroupVersion.String()),
-			),
+			Tags:              m.ingressTags,
 		},
 	}
 

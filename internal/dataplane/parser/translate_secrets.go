@@ -6,6 +6,7 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 	"time"
 
 	"github.com/kong/go-kong/kong"
@@ -71,6 +72,7 @@ func toKongCACertificate(certSecret *corev1.Secret, secretID string) (kong.CACer
 	return kong.CACertificate{
 		ID:   kong.String(secretID),
 		Cert: kong.String(string(caCertbytes)),
+		Tags: util.GenerateTagsForObject(certSecret),
 	}, nil
 }
 

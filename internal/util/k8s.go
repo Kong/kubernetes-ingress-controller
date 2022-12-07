@@ -19,7 +19,9 @@ package util
 import (
 	"context"
 	"fmt"
+	"github.com/kong/go-kong/kong"
 	"os"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"strings"
 
 	corev1 "k8s.io/api/core/v1"
@@ -127,4 +129,26 @@ func IsBackendRefGroupKindSupported(gatewayAPIGroup *gatewayv1beta1.Group, gatew
 
 	_, ok := backendRefSupportedGroupKinds[fmt.Sprintf("%s/%s", group, *gatewayAPIKind)]
 	return ok
+}
+
+const (
+	K8sNamespaceTagPrefix = "k8s-namespace:"
+	K8sNameTagPrefix      = "k8s-name:"
+	K8sUIDTagPrefix       = "k8s-uid:"
+	K8sKindTagPrefix      = "k8s-kind:"
+	K8sGroupTagPrefix     = "k8s-group:"
+	K8sVersionTagPrefix   = "k8s-version:"
+)
+
+// GenerateTagsForObject returns a subset of an object's metadata as a slice of prefixed string pointers.
+func GenerateTagsForObject(obj client.Object) []*string {
+	gvk := obj.GetObjectKind().GroupVersionKind()
+	return kong.StringSlice(
+		K8sNameTagPrefix+obj.GetName(),
+		K8sNamespaceTagPrefix+obj.GetNamespace(),
+		K8sKindTagPrefix+gvk.Kind,
+		K8sUIDTagPrefix+string(obj.GetUID()),
+		K8sGroupTagPrefix+gvk.Group,
+		K8sVersionTagPrefix+gvk.Version,
+	)
 }

@@ -162,6 +162,7 @@ func generateKongRoutesFromHTTPRouteRule(
 	// gather the k8s object information and hostnames from the httproute
 	objectInfo := util.FromK8sObject(httproute)
 	hostnames := getHTTPRouteHostnamesAsSliceOfStringPointers(httproute)
+	tags := util.GenerateTagsForObject(httproute)
 
 	// the HTTPRoute specification upstream specifically defines matches as
 	// independent (e.g. each match is an OR with other matches, not an AND).
@@ -170,7 +171,7 @@ func generateKongRoutesFromHTTPRouteRule(
 	var routes []kongstate.Route
 
 	// generate kong plugins from rule.filters
-	plugins := generatePluginsFromHTTPRouteFilters(rule.Filters)
+	plugins := generatePluginsFromHTTPRouteFilters(rule.Filters, tags)
 
 	if len(rule.Matches) > 0 {
 		for matchNumber := range rule.Matches {
@@ -191,6 +192,7 @@ func generateKongRoutesFromHTTPRouteRule(
 				hostnames,
 				plugins,
 				addRegexPrefix,
+				tags,
 			)
 			if err != nil {
 				return nil, err
@@ -201,7 +203,8 @@ func generateKongRoutesFromHTTPRouteRule(
 		}
 	} else {
 		routeName := fmt.Sprintf("httproute.%s.%s.0.0", httproute.Namespace, httproute.Name)
-		r, err := generateKongRouteFromHTTPRouteMatches(routeName, rule.Matches, objectInfo, hostnames, plugins, addRegexPrefix)
+		r, err := generateKongRouteFromHTTPRouteMatches(routeName, rule.Matches, objectInfo, hostnames, plugins,
+			addRegexPrefix, tags)
 		if err != nil {
 			return nil, err
 		}
@@ -220,12 +223,13 @@ func generateKongRouteFromTranslation(
 ) (kongstate.Route, error) {
 	// gather the k8s object information and hostnames from the httproute
 	objectInfo := util.FromK8sObject(httproute)
+	tags := util.GenerateTagsForObject(httproute)
 
 	// get the hostnames from the HTTPRoute
 	hostnames := getHTTPRouteHostnamesAsSliceOfStringPointers(httproute)
 
 	// generate kong plugins from rule.filters
-	plugins := generatePluginsFromHTTPRouteFilters(translation.Filters)
+	plugins := generatePluginsFromHTTPRouteFilters(translation.Filters, tags)
 
 	return generateKongRouteFromHTTPRouteMatches(
 		translation.Name,
@@ -234,6 +238,7 @@ func generateKongRouteFromTranslation(
 		hostnames,
 		plugins,
 		addRegexPrefix,
+		tags,
 	)
 }
 
@@ -246,6 +251,7 @@ func generateKongRouteFromHTTPRouteMatches(
 	hostnames []*string,
 	plugins []kong.Plugin,
 	addRegexPrefix bool,
+	tags []*string,
 ) (kongstate.Route, error) {
 	if len(matches) == 0 {
 		// it's acceptable for an HTTPRoute to have no matches in the rulesets,
@@ -258,6 +264,7 @@ func generateKongRouteFromHTTPRouteMatches(
 				Name:         kong.String(routeName),
 				Protocols:    kong.StringSlice("http", "https"),
 				PreserveHost: kong.Bool(true),
+				Tags:         tags,
 			},
 		}
 
@@ -282,6 +289,7 @@ func generateKongRouteFromHTTPRouteMatches(
 	}
 
 	r := generateKongstateRoute(routeName, ingressObjectInfo, hostnames)
+	r.Tags = tags
 
 	// convert header matching from HTTPRoute to Route format
 	headers, err := convertGatewayMatchHeadersToKongRouteMatchHeaders(matches[0].Headers)
@@ -361,6 +369,7 @@ func generateKongstateRoute(routeName string, ingressObjectInfo util.K8sObjectIn
 			Name:         kong.String(routeName),
 			Protocols:    kong.StringSlice("http", "https"),
 			PreserveHost: kong.Bool(true),
+			// metadata tags aren't added here, they're added by the caller
 		},
 	}
 
@@ -373,7 +382,7 @@ func generateKongstateRoute(routeName string, ingressObjectInfo util.K8sObjectIn
 }
 
 // generatePluginsFromHTTPRouteFilters  converts HTTPRouteFilter into Kong filters.
-func generatePluginsFromHTTPRouteFilters(filters []gatewayv1beta1.HTTPRouteFilter) []kong.Plugin {
+func generatePluginsFromHTTPRouteFilters(filters []gatewayv1beta1.HTTPRouteFilter, tags []*string) []kong.Plugin {
 	kongPlugins := make([]kong.Plugin, 0)
 	if len(filters) == 0 {
 		return kongPlugins
@@ -384,6 +393,9 @@ func generatePluginsFromHTTPRouteFilters(filters []gatewayv1beta1.HTTPRouteFilte
 			kongPlugins = append(kongPlugins, generateRequestHeaderModifierKongPlugin(filter.RequestHeaderModifier))
 		}
 		// TODO: https://github.com/Kong/kubernetes-ingress-controller/issues/2793
+	}
+	for _, p := range kongPlugins {
+		p.Tags = tags
 	}
 
 	return kongPlugins

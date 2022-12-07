@@ -79,6 +79,7 @@ func (p *Parser) ingressRulesFromKnativeIngress() ingressRules {
 						RegexPriority:     kong.Int(0),
 						RequestBuffering:  kong.Bool(true),
 						ResponseBuffering: kong.Bool(true),
+						Tags:              util.GenerateTagsForObject(ingress),
 					},
 				}
 				r.Hosts = kong.StringSlice(hosts...)

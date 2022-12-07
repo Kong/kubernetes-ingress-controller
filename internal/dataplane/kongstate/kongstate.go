@@ -64,6 +64,7 @@ func (ks *KongState) FillConsumersAndCredentials(log logrus.FieldLogger, s store
 			c.CustomID = kong.String(consumer.CustomID)
 		}
 		c.K8sKongConsumer = *consumer
+		c.Tags = util.GenerateTagsForObject(consumer)
 
 		log = log.WithFields(logrus.Fields{
 			"kongconsumer_name":      consumer.Name,
@@ -116,7 +117,8 @@ func (ks *KongState) FillConsumersAndCredentials(log logrus.FieldLogger, s store
 				log.Error("failed to provision credential: empty secret")
 				continue
 			}
-			err = c.SetCredential(credType, credConfig)
+			credTags := util.GenerateTagsForObject(secret)
+			err = c.SetCredential(credType, credConfig, credTags)
 			if err != nil {
 				log.WithError(err).Errorf("failed to provision credential")
 				continue

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 	"net"
 	"net/http"
 	"strings"
@@ -13,7 +14,6 @@ import (
 	"github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/parser"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/metrics"
 )
 
@@ -118,24 +118,24 @@ func parseRawResourceError(raw rawResourceError) (ResourceError, error) {
 	re.Problems = raw.Problems
 	var gvk schema.GroupVersionKind
 	for _, tag := range raw.Tags {
-		if strings.HasPrefix(tag, parser.K8sNameTagPrefix) {
-			re.Name = strings.TrimPrefix(tag, parser.K8sNameTagPrefix)
+		if strings.HasPrefix(tag, util.K8sNameTagPrefix) {
+			re.Name = strings.TrimPrefix(tag, util.K8sNameTagPrefix)
 		}
-		if strings.HasPrefix(tag, parser.K8sNamespaceTagPrefix) {
-			re.Namespace = strings.TrimPrefix(tag, parser.K8sNamespaceTagPrefix)
+		if strings.HasPrefix(tag, util.K8sNamespaceTagPrefix) {
+			re.Namespace = strings.TrimPrefix(tag, util.K8sNamespaceTagPrefix)
 		}
-		if strings.HasPrefix(tag, parser.K8sKindTagPrefix) {
-			gvk.Kind = strings.TrimPrefix(tag, parser.K8sKindTagPrefix)
+		if strings.HasPrefix(tag, util.K8sKindTagPrefix) {
+			gvk.Kind = strings.TrimPrefix(tag, util.K8sKindTagPrefix)
 		}
-		if strings.HasPrefix(tag, parser.K8sVersionTagPrefix) {
-			gvk.Version = strings.TrimPrefix(tag, parser.K8sVersionTagPrefix)
+		if strings.HasPrefix(tag, util.K8sVersionTagPrefix) {
+			gvk.Version = strings.TrimPrefix(tag, util.K8sVersionTagPrefix)
 		}
 		// this will not set anything for core resources
-		if strings.HasPrefix(tag, parser.K8sGroupTagPrefix) {
-			gvk.Group = strings.TrimPrefix(tag, parser.K8sGroupTagPrefix)
+		if strings.HasPrefix(tag, util.K8sGroupTagPrefix) {
+			gvk.Group = strings.TrimPrefix(tag, util.K8sGroupTagPrefix)
 		}
-		if strings.HasPrefix(tag, parser.K8sUIDTagPrefix) {
-			re.UID = strings.TrimPrefix(tag, parser.K8sUIDTagPrefix)
+		if strings.HasPrefix(tag, util.K8sUIDTagPrefix) {
+			re.UID = strings.TrimPrefix(tag, util.K8sUIDTagPrefix)
 		}
 	}
 	re.APIVersion, re.Kind = gvk.ToAPIVersionAndKind()

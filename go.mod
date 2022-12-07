@@ -28,7 +28,6 @@ require (
 	github.com/stretchr/testify v1.8.1
 	golang.org/x/net v0.0.0-20221014081412-f15817d10f9b
 	google.golang.org/api v0.103.0
-	gopkg.in/yaml.v3 v3.0.1
 	k8s.io/api v0.25.4
 	k8s.io/apiextensions-apiserver v0.25.4
 	k8s.io/apimachinery v0.25.4
@@ -50,6 +49,7 @@ require (
 	github.com/google/go-github/v48 v48.1.0 // indirect
 	go.uber.org/multierr v1.8.0 // indirect
 	google.golang.org/genproto v0.0.0-20221201164419-0e50fba7f41c // indirect
+	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
 
 require (

@@ -22,20 +22,20 @@ func StringToGatewayAPIHostnameV1Beta1(hostname string) gatewayv1beta1.Hostname 
 
 // StringToGatewayAPIHostnamePtr converts a string to a *gatewayv1beta1.Hostname.
 func StringToGatewayAPIHostnamePtr(hostname string) *gatewayv1beta1.Hostname {
-	return (*gatewayv1beta1.Hostname)(pointer.StringPtr(hostname))
+	return (*gatewayv1beta1.Hostname)(pointer.String(hostname))
 }
 
 // StringToGatewayAPIHostnameV1Beta1Ptr converts a string to a *gatewayv1beta1.Hostname.
 func StringToGatewayAPIHostnameV1Beta1Ptr(hostname string) *gatewayv1beta1.Hostname {
-	return (*gatewayv1beta1.Hostname)(pointer.StringPtr(hostname))
+	return (*gatewayv1beta1.Hostname)(pointer.String(hostname))
 }
 
-// StringToGatewayAPIKind converts a string to a gatewayv1alpha2.Kind.
-func StringToGatewayAPIKind(kind string) gatewayv1alpha2.Kind {
-	return (gatewayv1alpha2.Kind)(kind)
+// StringToGatewayAPIKindV1Alpha2Ptr converts a string to a *gatewayv1alpha2.Kind.
+func StringToGatewayAPIKindV1Alpha2Ptr(kind string) *gatewayv1alpha2.Kind {
+	return (*gatewayv1alpha2.Kind)(pointer.String(kind))
 }
 
 // StringToGatewayAPIKindPtr converts a string to a *gatewayv1beta1.Kind.
 func StringToGatewayAPIKindPtr(kind string) *gatewayv1beta1.Kind {
-	return (*gatewayv1beta1.Kind)(pointer.StringPtr(kind))
+	return (*gatewayv1beta1.Kind)(pointer.String(kind))
 }

@@ -20,6 +20,7 @@ import (
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/util/builder"
 )
 
 // -----------------------------------------------------------------------------
@@ -297,7 +298,7 @@ func (r *GatewayReconciler) getListenerStatus(
 		status := ListenerStatus{
 			Name:           listener.Name,
 			Conditions:     []metav1.Condition{},
-			SupportedKinds: supportedRouteGroupKinds,
+			SupportedKinds: getListenerSupportedRouteKinds(listener),
 			// this has been populated by initializeListenerMaps()
 			AttachedRoutes: listenerToAttached[listener.Name],
 		}
@@ -631,4 +632,24 @@ func isGatewayClassEventInClass(log logr.Logger, watchEvent interface{}) bool {
 	}
 
 	return false
+}
+
+func getListenerSupportedRouteKinds(listener gatewayv1beta1.Listener) []gatewayv1beta1.RouteGroupKind {
+	b := builder.NewRouteGroupKind()
+
+	switch listener.Protocol {
+	case HTTPProtocolType:
+	case HTTPSProtocolType:
+		b = b.HTTPRoute()
+	case TCPProtocolType:
+		b = b.TCPRoute()
+	case UDPProtocolType:
+		b = b.UDPRoute()
+	case TLSProtocolType:
+		b = b.TLSRoute()
+	default:
+		return nil
+	}
+
+	return b.IntoSlice()
 }

@@ -228,8 +228,8 @@ func (r *UDPRouteReconciler) listUDPRoutesForGateway(obj client.Object) []reconc
 // UDPRoute Controller - Reconciliation
 // -----------------------------------------------------------------------------
 
-//+kubebuilder:rbac:groups=gateway.networking.k8s.io,resources=udproutes,verbs=get;list;watch
-//+kubebuilder:rbac:groups=gateway.networking.k8s.io,resources=udproutes/status,verbs=get;update
+// +kubebuilder:rbac:groups=gateway.networking.k8s.io,resources=udproutes,verbs=get;list;watch
+// +kubebuilder:rbac:groups=gateway.networking.k8s.io,resources=udproutes/status,verbs=get;update
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
@@ -309,6 +309,9 @@ func (r *UDPRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 			return ctrl.Result{Requeue: true}, nil
 		}
 	}
+
+	// TODO: UDPRoute should be 'Accepted' before proceeding further. Get here back once
+	// https://github.com/Kong/kubernetes-ingress-controller/issues/2544 is implemented.
 
 	// if the gateways are ready, and the UDPRoute is destined for them, ensure that
 	// the object is pushed to the dataplane.

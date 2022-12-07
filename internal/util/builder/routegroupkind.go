@@ -28,11 +28,21 @@ func (b *RouteGroupKindBuilder) IntoSlice() []gatewayv1beta1.RouteGroupKind {
 }
 
 func (b *RouteGroupKindBuilder) TCPRoute() *RouteGroupKindBuilder {
-	b.routeGroupKind.Kind = gatewayv1beta1.Kind("TCPRoute")
+	b.routeGroupKind.Kind = "TCPRoute"
 	return b
 }
 
 func (b *RouteGroupKindBuilder) HTTPRoute() *RouteGroupKindBuilder {
-	b.routeGroupKind.Kind = gatewayv1beta1.Kind("HTTPRoute")
+	b.routeGroupKind.Kind = "HTTPRoute"
+	return b
+}
+
+func (b *RouteGroupKindBuilder) UDPRoute() *RouteGroupKindBuilder {
+	b.routeGroupKind.Kind = "UDPRoute"
+	return b
+}
+
+func (b *RouteGroupKindBuilder) TLSRoute() *RouteGroupKindBuilder {
+	b.routeGroupKind.Kind = "TLSRoute"
 	return b
 }

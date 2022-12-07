@@ -641,16 +641,14 @@ func getListenerSupportedRouteKinds(listener gatewayv1beta1.Listener) []gatewayv
 	switch listener.Protocol {
 	case HTTPProtocolType:
 	case HTTPSProtocolType:
-		b.HTTPRoute()
+		return b.HTTPRoute().IntoSlice()
 	case TCPProtocolType:
-		b.TCPRoute()
+		return b.TCPRoute().IntoSlice()
 	case UDPProtocolType:
-		b.UDPRoute()
+		return b.UDPRoute().IntoSlice()
 	case TLSProtocolType:
-		b.TLSRoute()
-	default:
-		return supportedRouteGroupKinds
+		return b.TLSRoute().IntoSlice()
 	}
 
-	return b.IntoSlice()
+	return supportedRouteGroupKinds
 }

@@ -350,6 +350,10 @@ func TestUDPRouteEssentials(t *testing.T) {
 	}, ingressWait, waitTick)
 
 	t.Log("testing port matching....")
+	t.Log("putting the GatewayClass back")
+	_, err = DeployGatewayClass(ctx, gatewayClient, gatewayClassName)
+	require.NoError(t, err)
+
 	t.Log("putting the Gateway back")
 	_, err = DeployGateway(ctx, gatewayClient, ns.Name, gatewayClassName, func(gw *gatewayv1beta1.Gateway) {
 		gw.Name = gatewayName
@@ -359,9 +363,6 @@ func TestUDPRouteEssentials(t *testing.T) {
 			Port:     gatewayv1beta1.PortNumber(ktfkong.DefaultUDPServicePort),
 		}}
 	})
-	require.NoError(t, err)
-	t.Log("putting the GatewayClass back")
-	_, err = DeployGatewayClass(ctx, gatewayClient, gatewayClassName)
 	require.NoError(t, err)
 
 	t.Log("verifying that the UDPRoute responds before specifying a port not existent in Gateway")
@@ -382,11 +383,19 @@ func TestUDPRouteEssentials(t *testing.T) {
 		return err == nil
 	}, time.Minute, time.Second)
 
-	t.Log("verifying that the TCPRoute does not respond after specifying a port not existent in Gateway")
+	t.Log("verifying that the UDPRoute does not respond after specifying a port not existent in Gateway")
 	require.Eventually(t, func() bool {
 		_, err := resolver.LookupHost(ctx, "kernel.org")
 		return err != nil
 	}, ingressWait, waitTick)
+
+	t.Log("deleting both GatewayClass and Gateway")
+	require.NoError(t, gatewayClient.GatewayV1beta1().GatewayClasses().Delete(ctx, gatewayClassName, metav1.DeleteOptions{}))
+	require.NoError(t, gatewayClient.GatewayV1beta1().Gateways(ns.Name).Delete(ctx, gatewayName, metav1.DeleteOptions{}))
+
+	t.Log("verifying that the Gateway gets unlinked from the route via status")
+	callback = GetGatewayIsUnlinkedCallback(t, gatewayClient, gatewayv1beta1.UDPProtocolType, ns.Name, udpRoute.Name)
+	require.Eventually(t, callback, ingressWait, waitTick)
 }
 
 func isDNSResolverReturningExpectedResult(resolver *net.Resolver, host, addr string) bool { //nolint:unparam

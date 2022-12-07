@@ -492,9 +492,6 @@ var (
 	// supportedKinds indicates which gateway kinds are supported by this implementation.
 	supportedKinds = []Kind{
 		Kind("HTTPRoute"),
-		Kind("TCPRoute"),
-		Kind("UDPRoute"),
-		Kind("TLSRoute"),
 	}
 
 	// supportedRouteGroupKinds indicates the full kinds with GVK that are supported by this implementation.

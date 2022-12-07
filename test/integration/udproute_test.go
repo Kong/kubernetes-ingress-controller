@@ -22,6 +22,8 @@ import (
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
+
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
 )
 
 const testdomain = "konghq.com"
@@ -52,6 +54,11 @@ func TestUDPRouteEssentials(t *testing.T) {
 	gatewayName := uuid.NewString()
 	gateway, err := DeployGateway(ctx, gatewayClient, ns.Name, gatewayClassName, func(gw *gatewayv1beta1.Gateway) {
 		gw.Name = gatewayName
+		// use the dedicated UDP LoadBalancer - the default one doesn't expose a UDP port
+		udpProxyRef := "kong-system/ingress-controller-kong-udp"
+		gw.Annotations = map[string]string{
+			annotations.GatewayClassUnmanagedAnnotation: udpProxyRef,
+		}
 		gw.Spec.Listeners = []gatewayv1beta1.Listener{{
 			Name:     "udp",
 			Protocol: gatewayv1beta1.UDPProtocolType,
@@ -194,7 +201,7 @@ func TestUDPRouteEssentials(t *testing.T) {
 	callback := GetGatewayIsLinkedCallback(t, gatewayClient, gatewayv1beta1.UDPProtocolType, ns.Name, udpRoute.Name)
 	require.Eventually(t, callback, ingressWait, waitTick)
 
-	t.Logf("checking DNS to resolve via UDPIngress %s", udpRoute.Name)
+	t.Logf("checking DNS to resolve via UDPRoute %s", udpRoute.Name)
 	require.Eventually(t, func() bool {
 		_, err := resolver.LookupHost(ctx, "kernel.org")
 		return err == nil
@@ -388,14 +395,6 @@ func TestUDPRouteEssentials(t *testing.T) {
 		_, err := resolver.LookupHost(ctx, "kernel.org")
 		return err != nil
 	}, ingressWait, waitTick)
-
-	t.Log("deleting both GatewayClass and Gateway")
-	require.NoError(t, gatewayClient.GatewayV1beta1().GatewayClasses().Delete(ctx, gatewayClassName, metav1.DeleteOptions{}))
-	require.NoError(t, gatewayClient.GatewayV1beta1().Gateways(ns.Name).Delete(ctx, gatewayName, metav1.DeleteOptions{}))
-
-	t.Log("verifying that the Gateway gets unlinked from the route via status")
-	callback = GetGatewayIsUnlinkedCallback(t, gatewayClient, gatewayv1beta1.UDPProtocolType, ns.Name, udpRoute.Name)
-	require.Eventually(t, callback, ingressWait, waitTick)
 }
 
 func isDNSResolverReturningExpectedResult(resolver *net.Resolver, host, addr string) bool { //nolint:unparam

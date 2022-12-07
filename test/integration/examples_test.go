@@ -128,6 +128,12 @@ func TestUDPRouteExample(t *testing.T) {
 	// destination service port. Once parentRef port functionality is stable, we should remove this
 	s := string(b)
 	s = strings.ReplaceAll(s, "port: 53", "port: 9999")
+
+	// use the dedicated UDP LoadBalancer - the default one doesn't expose a UDP port
+	s = strings.ReplaceAll(s,
+		`konghq.com/gatewayclass-unmanaged: "true"`,
+		`konghq.com/gatewayclass-unmanaged: "kong-system/ingress-controller-kong-udp"`,
+	)
 	b = []byte(s)
 	require.NoError(t, err)
 	require.NoError(t, clusters.ApplyManifestByYAML(ctx, env.Cluster(), string(b)))

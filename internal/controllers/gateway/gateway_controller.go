@@ -386,11 +386,10 @@ func (r *GatewayReconciler) reconcileUnmanagedGateway(ctx context.Context, log l
 		return ctrl.Result{}, r.Update(ctx, gateway)
 	}
 
-	serviceRef := annotations.ExtractUnmanagedGatewayClassMode(gateway.Annotations)
 	// validation check of the Gateway to ensure that the publish service is actually available
 	// in the cluster. If it is not the object will be requeued until it exists (or is otherwise retrievable).
 	debug(log, gateway, "gathering the gateway publish service") // this will also be done by the validating webhook, this is a fallback
-	svc, err := r.determineServiceForGateway(ctx, serviceRef)
+	svc, err := r.determineServiceForGateway(ctx, gateway)
 	if err != nil {
 		log.Error(err, "could not determine service for gateway", "namespace", gateway.Namespace, "name", gateway.Name)
 		return ctrl.Result{Requeue: true}, err
@@ -514,17 +513,19 @@ func init() {
 
 // determineServiceForGateway provides the "publish service" (aka the proxy Service) object which
 // will be used to populate unmanaged gateways.
-func (r *GatewayReconciler) determineServiceForGateway(ctx context.Context, ref string) (*corev1.Service, error) {
-	// currently the gateway controller ONLY supports service references that correspond with the --publish-service
-	// provided to the controller manager via flags when operating on unmanaged gateways. This constraint may
-	// be loosened in later iterations if there is need.
-	if ref != r.PublishService {
-		return nil, fmt.Errorf("service ref %s did not match controller manager ref %s", ref, r.PublishService)
+func (r *GatewayReconciler) determineServiceForGateway(ctx context.Context, gateway *Gateway) (*corev1.Service, error) {
+	publishService, err := getRefFromPublishService(
+		// UnmanagedGatewayClassMode annotation should already be populated with the "publish service" reference: either
+		// manually by the user or by the controller if the initial value provided by the user was the placeholder ("true").
+		annotations.ExtractUnmanagedGatewayClassMode(gateway.Annotations),
+	)
+	if err != nil {
+		return nil, err
 	}
 
 	// retrieve the service for the kong gateway
 	svc := &corev1.Service{}
-	return svc, r.Client.Get(ctx, r.publishServiceRef, svc)
+	return svc, r.Client.Get(ctx, publishService, svc)
 }
 
 // determineL4ListenersFromService generates L4 addresses and listeners for a

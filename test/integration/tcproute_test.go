@@ -376,6 +376,45 @@ func TestTCPRouteEssentials(t *testing.T) {
 		responded, err := test.TCPEchoResponds(fmt.Sprintf("%s:%d", proxyURL.Hostname(), ktfkong.DefaultTCPServicePort), testUUID1)
 		return responded == false && (errors.Is(err, io.EOF) || errors.Is(err, syscall.ECONNRESET))
 	}, ingressWait, waitTick)
+
+	t.Log("testing port matching....")
+	t.Log("putting the Gateway back")
+	_, err = DeployGateway(ctx, gatewayClient, ns.Name, gatewayClassName, func(gw *gatewayv1beta1.Gateway) {
+		gw.Name = gatewayName
+		gw.Spec.Listeners = []gatewayv1beta1.Listener{{
+			Name:     "tcp",
+			Protocol: gatewayv1beta1.TCPProtocolType,
+			Port:     gatewayv1beta1.PortNumber(ktfkong.DefaultTCPServicePort),
+		}}
+	})
+	require.NoError(t, err)
+	t.Log("putting the GatewayClass back")
+	_, err = DeployGatewayClass(ctx, gatewayClient, gatewayClassName)
+	require.NoError(t, err)
+
+	t.Log("verifying that the TCPRoute responds before specifying a port not existent in Gateway")
+	require.Eventually(t, func() bool {
+		responded, err := test.TCPEchoResponds(fmt.Sprintf("%s:%d", proxyURL.Hostname(), ktfkong.DefaultTCPServicePort), testUUID1)
+		return err == nil && responded == true
+	}, ingressWait, waitTick)
+
+	t.Log("setting the port in ParentRef which does not have a matching listener in Gateway")
+	require.Eventually(t, func() bool {
+		tcpRoute, err = gatewayClient.GatewayV1alpha2().TCPRoutes(ns.Name).Get(ctx, tcpRoute.Name, metav1.GetOptions{})
+		if err != nil {
+			return false
+		}
+		notExistingPort := gatewayv1alpha2.PortNumber(81)
+		tcpRoute.Spec.ParentRefs[0].Port = &notExistingPort
+		tcpRoute, err = gatewayClient.GatewayV1alpha2().TCPRoutes(ns.Name).Update(ctx, tcpRoute, metav1.UpdateOptions{})
+		return err == nil
+	}, time.Minute, time.Second)
+
+	t.Log("verifying that the TCPRoute does not respond after specifying a port not existent in Gateway")
+	require.Eventually(t, func() bool {
+		responded, err := test.TCPEchoResponds(fmt.Sprintf("%s:%d", proxyURL.Hostname(), ktfkong.DefaultTCPServicePort), testUUID1)
+		return responded == false && (errors.Is(err, io.EOF) || errors.Is(err, syscall.ECONNRESET))
+	}, ingressWait, waitTick)
 }
 
 func TestTCPRouteReferenceGrant(t *testing.T) {

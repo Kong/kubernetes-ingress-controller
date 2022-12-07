@@ -228,8 +228,8 @@ func (r *TLSRouteReconciler) listTLSRoutesForGateway(obj client.Object) []reconc
 // TLSRoute Controller - Reconciliation
 // -----------------------------------------------------------------------------
 
-//+kubebuilder:rbac:groups=gateway.networking.k8s.io,resources=tlsroutes,verbs=get;list;watch
-//+kubebuilder:rbac:groups=gateway.networking.k8s.io,resources=tlsroutes/status,verbs=get;update
+// +kubebuilder:rbac:groups=gateway.networking.k8s.io,resources=tlsroutes,verbs=get;list;watch
+// +kubebuilder:rbac:groups=gateway.networking.k8s.io,resources=tlsroutes/status,verbs=get;update
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
@@ -310,19 +310,27 @@ func (r *TLSRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		}
 	}
 
-	// if the gateways are ready, and the TLSRoute is destined for them, ensure that
-	// the object is pushed to the dataplane.
-	if err := r.DataplaneClient.UpdateObject(tlsroute); err != nil {
-		debug(log, tlsroute, "failed to update object in data-plane, requeueing")
-		return ctrl.Result{}, err
-	}
-	if r.DataplaneClient.AreKubernetesObjectReportsEnabled() {
-		// if the dataplane client has reporting enabled (this is the default and is
-		// tied in with status updates being enabled in the controller manager) then
-		// we will wait until the object is reported as successfully configured before
-		// moving on to status updates.
-		if !r.DataplaneClient.KubernetesObjectIsConfigured(tlsroute) {
-			return ctrl.Result{Requeue: true}, nil
+	if isRouteAccepted(gateways) {
+		// if the gateways are ready, and the TLSRoute is destined for them, ensure that
+		// the object is pushed to the dataplane.
+		if err := r.DataplaneClient.UpdateObject(tlsroute); err != nil {
+			debug(log, tlsroute, "failed to update object in data-plane, requeueing")
+			return ctrl.Result{}, err
+		}
+		if r.DataplaneClient.AreKubernetesObjectReportsEnabled() {
+			// if the dataplane client has reporting enabled (this is the default and is
+			// tied in with status updates being enabled in the controller manager) then
+			// we will wait until the object is reported as successfully configured before
+			// moving on to status updates.
+			if !r.DataplaneClient.KubernetesObjectIsConfigured(tlsroute) {
+				return ctrl.Result{Requeue: true}, nil
+			}
+		}
+	} else {
+		// route is not accepted, remove it from kong store
+		if err := r.DataplaneClient.DeleteObject(tlsroute); err != nil {
+			debug(log, tlsroute, "failed to delete object in data-plane, requeueing")
+			return ctrl.Result{}, err
 		}
 	}
 

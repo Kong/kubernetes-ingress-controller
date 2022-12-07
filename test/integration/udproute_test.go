@@ -348,6 +348,45 @@ func TestUDPRouteEssentials(t *testing.T) {
 		_, err := resolver.LookupHost(ctx, "kernel.org")
 		return err != nil
 	}, ingressWait, waitTick)
+
+	t.Log("testing port matching....")
+	t.Log("putting the Gateway back")
+	_, err = DeployGateway(ctx, gatewayClient, ns.Name, gatewayClassName, func(gw *gatewayv1beta1.Gateway) {
+		gw.Name = gatewayName
+		gw.Spec.Listeners = []gatewayv1beta1.Listener{{
+			Name:     "udp",
+			Protocol: gatewayv1beta1.UDPProtocolType,
+			Port:     gatewayv1beta1.PortNumber(ktfkong.DefaultUDPServicePort),
+		}}
+	})
+	require.NoError(t, err)
+	t.Log("putting the GatewayClass back")
+	_, err = DeployGatewayClass(ctx, gatewayClient, gatewayClassName)
+	require.NoError(t, err)
+
+	t.Log("verifying that the UDPRoute responds before specifying a port not existent in Gateway")
+	require.Eventually(t, func() bool {
+		_, err := resolver.LookupHost(ctx, "kernel.org")
+		return err == nil
+	}, ingressWait, waitTick)
+
+	t.Log("setting the port in ParentRef which does not have a matching listener in Gateway")
+	require.Eventually(t, func() bool {
+		udpRoute, err = gatewayClient.GatewayV1alpha2().UDPRoutes(ns.Name).Get(ctx, udpRoute.Name, metav1.GetOptions{})
+		if err != nil {
+			return false
+		}
+		notExistingPort := gatewayv1alpha2.PortNumber(81)
+		udpRoute.Spec.ParentRefs[0].Port = &notExistingPort
+		udpRoute, err = gatewayClient.GatewayV1alpha2().UDPRoutes(ns.Name).Update(ctx, udpRoute, metav1.UpdateOptions{})
+		return err == nil
+	}, time.Minute, time.Second)
+
+	t.Log("verifying that the TCPRoute does not respond after specifying a port not existent in Gateway")
+	require.Eventually(t, func() bool {
+		_, err := resolver.LookupHost(ctx, "kernel.org")
+		return err != nil
+	}, ingressWait, waitTick)
 }
 
 func isDNSResolverReturningExpectedResult(resolver *net.Resolver, host, addr string) bool { //nolint:unparam

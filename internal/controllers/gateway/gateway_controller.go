@@ -64,13 +64,6 @@ type GatewayReconciler struct { //nolint:revive
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *GatewayReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	// verify that the PublishService was configured properly
-	var err error
-	r.publishServiceRef, err = getRefFromPublishService(r.PublishService)
-	if err != nil {
-		return err
-	}
-
 	// generate the controller object and attach it to the manager and link the reconciler object
 	c, err := controller.New("gateway-controller", mgr, controller.Options{
 		Reconciler: r,

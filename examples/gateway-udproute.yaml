@@ -95,6 +95,8 @@ apiVersion: gateway.networking.k8s.io/v1beta1
 kind: Gateway
 metadata:
   name: kong
+  annotations:
+    konghq.com/gatewayclass-unmanaged: "true"
 spec:
   gatewayClassName: kong
   listeners:

@@ -58,8 +58,6 @@ type GatewayReconciler struct { //nolint:revive
 	CacheSyncTimeout     time.Duration
 
 	ReferenceIndexers ctrlref.CacheIndexers
-
-	publishServiceRef types.NamespacedName
 }
 
 // SetupWithManager sets up the controller with the Manager.

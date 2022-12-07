@@ -29,6 +29,10 @@ func (b *BackendRefBuilder) Build() gatewayv1alpha2.BackendRef {
 	return b.backendRef
 }
 
+func (b *BackendRefBuilder) ToSlice() []gatewayv1alpha2.BackendRef {
+	return []gatewayv1alpha2.BackendRef{b.backendRef}
+}
+
 func (b *BackendRefBuilder) WithPort(port int) *BackendRefBuilder {
 	val := gatewayv1alpha2.PortNumber(port)
 	b.backendRef.Port = &val

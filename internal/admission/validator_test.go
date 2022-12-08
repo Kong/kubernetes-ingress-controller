@@ -380,6 +380,47 @@ func TestKongHTTPValidator_ValidateConsumer(t *testing.T) {
 			expectError:     true,
 			expectedMessage: "consumer credential violated unique key constraint",
 		},
+		{
+			name: "consumer refers a secret that has the same key as another secret",
+			modifyBasicConsumer: func(c *configurationv1.KongConsumer) {
+				c.Credentials = []string{"secret"}
+			},
+			secrets: []*corev1.Secret{
+				validSecret(),
+				func() *corev1.Secret {
+					s := validSecret()
+					s.Name = "secret-2"
+					return s
+				}(),
+			},
+			consumers: []*configurationv1.KongConsumer{
+				func() *configurationv1.KongConsumer {
+					c := basicConsumer()
+					c.Name = "consumer-2"
+					c.Credentials = []string{"secret-2"}
+					return &c
+				}(),
+			},
+			expectError:     true,
+			expectedMessage: "consumer credential violated unique key constraint",
+		},
+		{
+			name: "consumer already exists and is updated in place - no unique constraint violation should occur",
+			modifyBasicConsumer: func(c *configurationv1.KongConsumer) {
+				c.Credentials = []string{"secret"}
+			},
+			secrets: []*corev1.Secret{
+				validSecret(),
+			},
+			consumers: []*configurationv1.KongConsumer{
+				func() *configurationv1.KongConsumer {
+					c := basicConsumer()
+					c.Credentials = []string{"secret"}
+					return &c
+				}(),
+			},
+			expectOK: true,
+		},
 	}
 	for _, tt := range tests {
 		tt := tt

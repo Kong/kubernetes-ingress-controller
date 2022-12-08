@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/samber/lo"
+
 	"github.com/kong/go-kong/kong"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
@@ -114,8 +116,13 @@ func (validator KongHTTPValidator) ValidateConsumer(
 	// credentials so that the consumers credentials references can be validated.
 	managedConsumers := validator.Store.ListKongConsumers()
 
+	_, isConsumerAlreadyManaged := lo.Find(managedConsumers, func(c *kongv1.KongConsumer) bool {
+		return c.Name == consumer.Name
+	})
+
 	// retrieve the consumer's credentials secrets to validate them with the index
 	credentials := make([]*corev1.Secret, 0, len(consumer.Credentials))
+	ignoredSecrets := map[string]map[string]struct{}{}
 	for _, secretName := range consumer.Credentials {
 		// retrieve the credentials secret
 		secret, err := validator.SecretGetter.GetSecret(ctx, consumer.Namespace, secretName)
@@ -131,6 +138,15 @@ func (validator KongHTTPValidator) ValidateConsumer(
 			return false, ErrTextConsumerCredentialValidationFailed, err
 		}
 
+		// If a consumer is already managed it means it's being updated. We should ignore its secrets
+		// as they would always be duplicated in this case.
+		if isConsumerAlreadyManaged {
+			if _, namespaceHasSecrets := ignoredSecrets[consumer.Namespace]; !namespaceHasSecrets {
+				ignoredSecrets[consumer.Namespace] = map[string]struct{}{}
+			}
+			ignoredSecrets[consumer.Namespace][secret.Name] = struct{}{}
+		}
+
 		// if valid, store it so we can index it for upcoming constraints validation
 		credentials = append(credentials, secret)
 	}
@@ -139,7 +155,6 @@ func (validator KongHTTPValidator) ValidateConsumer(
 	// and credentials, so we must build an index based on all existing credentials.
 	// we ignore the secrets referenced by this consumer so that the index is not
 	// testing them against themselves.
-	ignoredSecrets := map[string]map[string]struct{}{}
 	credentialsIndex, err := globalValidationIndexForCredentials(ctx, validator.SecretGetter, managedConsumers, ignoredSecrets)
 	if err != nil {
 		return false, ErrTextConsumerCredentialValidationFailed, err

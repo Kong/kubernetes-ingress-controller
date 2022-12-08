@@ -118,20 +118,33 @@ jobs:
   integration-tests-enterprise-postgres:
     environment: "Configure ci"
     runs-on: ubuntu-latest
+    env:
+      # PULP_PASSWORD secret is set in "Configure ci" environment
+      PULP_PASSWORD: ${{ secrets.PULP_PASSWORD }}
+    # We don't want to run enterprise tests for contributors whose workflow runs
+    # do not have access to enterprise license (here, through the means of
+    # kong-license action) so don't run this job when the required secret is not
+    # available.
+    # Instead of making it conditional on job level we need to job.env because
+    # secrets context is only available at this level.
+    #
+    # ref: https://docs.github.com/en/actions/learn-github-actions/contexts#context-availability
     steps:
 
     - uses: Kong/kong-license@master
+      if: env.PULP_PASSWORD != ''
       id: license
       with:
-        # PULP_PASSWORD secret is set in "Configure ci" environment
-        password: ${{ secrets.PULP_PASSWORD }}
+        password: ${{ env.PULP_PASSWORD }}
 
     - name: setup golang
+      if: env.PULP_PASSWORD != ''
       uses: actions/setup-go@v3
       with:
         go-version: '^1.19'
 
     - name: cache go modules
+      if: env.PULP_PASSWORD != ''
       uses: actions/cache@v3
       with:
         path: ~/go/pkg/mod
@@ -140,24 +153,27 @@ jobs:
           ${{ runner.os }}-build-codegen-
 
     - name: checkout repository
+      if: env.PULP_PASSWORD != ''
       uses: actions/checkout@v3
       with:
         fetch-depth: 0
 
     - name: run integration tests
+      if: env.PULP_PASSWORD != ''
       run: make test.integration.enterprise.postgres
       env:
         KONG_LICENSE_DATA: ${{ steps.license.outputs.license }}
         GOTESTSUM_JUNITFILE: "integration-tests-enterprise-postgres.xml"
 
     - name: collect test coverage
+      if: env.PULP_PASSWORD != ''
       uses: actions/upload-artifact@v3
       with:
         name: coverage
         path: coverage.enterprisepostgres.out
 
     - name: upload diagnostics
-      if: ${{ always() }}
+      if: env.PULP_PASSWORD != ''
       uses: actions/upload-artifact@v3
       with:
         name: diagnostics-integration-tests-enterprise-postgres
@@ -165,7 +181,7 @@ jobs:
         if-no-files-found: ignore
 
     - name: collect test report
-      if: ${{ always() }}
+      if: env.PULP_PASSWORD != ''
       uses: actions/upload-artifact@v3
       with:
         name: tests-report

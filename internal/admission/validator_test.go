@@ -8,6 +8,7 @@ import (
 
 	"github.com/kong/go-kong/kong"
 	"github.com/stretchr/testify/assert"
+	admissionv1 "k8s.io/api/admission/v1"
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -326,6 +327,7 @@ func TestKongHTTPValidator_ValidateConsumer(t *testing.T) {
 		secrets                        []*corev1.Secret
 		consumers                      []*configurationv1.KongConsumer
 		modifyBasicConsumer            func(c *configurationv1.KongConsumer)
+		operation                      admissionv1.Operation
 		consumerAlreadyExistsInGateway bool
 		expectError                    bool
 		expectOK                       bool
@@ -336,6 +338,7 @@ func TestKongHTTPValidator_ValidateConsumer(t *testing.T) {
 			modifyBasicConsumer: func(c *configurationv1.KongConsumer) {
 				c.Credentials = []string{"non-existing-secret"}
 			},
+			operation:       admissionv1.Create,
 			expectOK:        false,
 			expectError:     true,
 			expectedMessage: "could not retrieve secrets from the kubernetes API",
@@ -345,8 +348,9 @@ func TestKongHTTPValidator_ValidateConsumer(t *testing.T) {
 			modifyBasicConsumer: func(c *configurationv1.KongConsumer) {
 				c.Credentials = []string{"secret"}
 			},
-			secrets:  []*corev1.Secret{validSecret()},
-			expectOK: true,
+			secrets:   []*corev1.Secret{validSecret()},
+			operation: admissionv1.Create,
+			expectOK:  true,
 		},
 		{
 			name: "consumer refers a secret with no kongCredType",
@@ -360,6 +364,7 @@ func TestKongHTTPValidator_ValidateConsumer(t *testing.T) {
 					return s
 				}(),
 			},
+			operation:       admissionv1.Create,
 			expectError:     true,
 			expectedMessage: "consumer credential failed validation",
 		},
@@ -377,6 +382,7 @@ func TestKongHTTPValidator_ValidateConsumer(t *testing.T) {
 					return &c
 				}(),
 			},
+			operation:       admissionv1.Create,
 			expectError:     true,
 			expectedMessage: "consumer credential violated unique key constraint",
 		},
@@ -401,11 +407,12 @@ func TestKongHTTPValidator_ValidateConsumer(t *testing.T) {
 					return &c
 				}(),
 			},
+			operation:       admissionv1.Create,
 			expectError:     true,
 			expectedMessage: "consumer credential violated unique key constraint",
 		},
 		{
-			name: "consumer already exists and is updated in place - no unique constraint violation should occur",
+			name: "consumer is updated in place - no unique constraint violation should occur",
 			modifyBasicConsumer: func(c *configurationv1.KongConsumer) {
 				c.Credentials = []string{"secret"}
 			},
@@ -419,7 +426,8 @@ func TestKongHTTPValidator_ValidateConsumer(t *testing.T) {
 					return &c
 				}(),
 			},
-			expectOK: true,
+			operation: admissionv1.Update,
+			expectOK:  true,
 		},
 	}
 	for _, tt := range tests {
@@ -441,7 +449,7 @@ func TestKongHTTPValidator_ValidateConsumer(t *testing.T) {
 
 			toValidate := basicConsumer()
 			tt.modifyBasicConsumer(&toValidate)
-			ok, message, err := validator.ValidateConsumer(context.Background(), toValidate)
+			ok, message, err := validator.ValidateConsumer(context.Background(), toValidate, tt.operation)
 			assert.Equal(t, tt.expectOK, ok)
 			if tt.expectError {
 				assert.Error(t, err)

@@ -28,9 +28,7 @@ type KongFakeValidator struct {
 	Error   error
 }
 
-func (v KongFakeValidator) ValidateConsumer(_ context.Context,
-	consumer configuration.KongConsumer,
-) (bool, string, error) {
+func (v KongFakeValidator) ValidateConsumer(ctx context.Context, consumer configuration.KongConsumer, operation admissionv1.Operation) (bool, string, error) {
 	return v.Result, v.Message, v.Error
 }
 

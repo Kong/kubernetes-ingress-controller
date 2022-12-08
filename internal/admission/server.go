@@ -215,7 +215,7 @@ func (a RequestHandler) handleValidation(ctx context.Context, request admissionv
 		}
 		switch request.Operation {
 		case admissionv1.Create:
-			ok, message, err = a.Validator.ValidateConsumer(ctx, consumer)
+			ok, message, err = a.Validator.ValidateConsumer(ctx, consumer, request.Operation)
 			if err != nil {
 				return nil, err
 			}
@@ -228,7 +228,7 @@ func (a RequestHandler) handleValidation(ctx context.Context, request admissionv
 			}
 			// validate only if the username is being changed
 			if consumer.Username != oldConsumer.Username {
-				ok, message, err = a.Validator.ValidateConsumer(ctx, consumer)
+				ok, message, err = a.Validator.ValidateConsumer(ctx, consumer, request.Operation)
 				if err != nil {
 					return nil, err
 				}

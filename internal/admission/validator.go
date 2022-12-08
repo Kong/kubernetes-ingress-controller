@@ -5,10 +5,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/samber/lo"
-
 	"github.com/kong/go-kong/kong"
 	"github.com/sirupsen/logrus"
+	admissionv1 "k8s.io/api/admission/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -25,7 +24,7 @@ import (
 
 // KongValidator validates Kong entities.
 type KongValidator interface {
-	ValidateConsumer(ctx context.Context, consumer kongv1.KongConsumer) (bool, string, error)
+	ValidateConsumer(ctx context.Context, consumer kongv1.KongConsumer, operation admissionv1.Operation) (bool, string, error)
 	ValidatePlugin(ctx context.Context, plugin kongv1.KongPlugin) (bool, string, error)
 	ValidateClusterPlugin(ctx context.Context, plugin kongv1.KongClusterPlugin) (bool, string, error)
 	ValidateCredential(ctx context.Context, secret corev1.Secret) (bool, string, error)
@@ -80,10 +79,7 @@ func NewKongHTTPValidator(
 // If an error occurs during validation, it is returned as the last argument.
 // The first boolean communicates if the consumer is valid or not and string
 // holds a message if the entity is not valid.
-func (validator KongHTTPValidator) ValidateConsumer(
-	ctx context.Context,
-	consumer kongv1.KongConsumer,
-) (bool, string, error) {
+func (validator KongHTTPValidator) ValidateConsumer(ctx context.Context, consumer kongv1.KongConsumer, operation admissionv1.Operation) (bool, string, error) {
 	// ignore consumers that are being managed by another controller
 	if !validator.ingressClassMatcher(&consumer.ObjectMeta, annotations.IngressClassKey, annotations.ExactClassMatch) {
 		return true, "", nil
@@ -116,10 +112,6 @@ func (validator KongHTTPValidator) ValidateConsumer(
 	// credentials so that the consumers credentials references can be validated.
 	managedConsumers := validator.Store.ListKongConsumers()
 
-	_, isConsumerAlreadyManaged := lo.Find(managedConsumers, func(c *kongv1.KongConsumer) bool {
-		return c.Name == consumer.Name
-	})
-
 	// retrieve the consumer's credentials secrets to validate them with the index
 	credentials := make([]*corev1.Secret, 0, len(consumer.Credentials))
 	ignoredSecrets := map[string]map[string]struct{}{}
@@ -138,9 +130,8 @@ func (validator KongHTTPValidator) ValidateConsumer(
 			return false, ErrTextConsumerCredentialValidationFailed, err
 		}
 
-		// If a consumer is already managed it means it's being updated. We should ignore its secrets
-		// as they would always be duplicated in this case.
-		if isConsumerAlreadyManaged {
+		// If a consumer is being updated, we should ignore its secrets as they would always be duplicated in this case.
+		if operation == admissionv1.Update {
 			if _, namespaceHasSecrets := ignoredSecrets[consumer.Namespace]; !namespaceHasSecrets {
 				ignoredSecrets[consumer.Namespace] = map[string]struct{}{}
 			}

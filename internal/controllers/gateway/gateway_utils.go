@@ -639,6 +639,9 @@ func isGatewayClassEventInClass(log logr.Logger, watchEvent interface{}) bool {
 // If no AllowedRoutes.Kinds are specified for the Listener, the supported RouteGroupKind is derived directly
 // from the Listener's Protocol.
 // Otherwise, user specified AllowedRoutes.Kinds are used, filtered by the global Gateway supported kinds.
+//
+// TODO: Make ListenerStatus.SupportedKinds compliant with GW API specification
+// https://github.com/Kong/kubernetes-ingress-controller/issues/3228
 func getListenerSupportedRouteKinds(l gatewayv1beta1.Listener) []gatewayv1beta1.RouteGroupKind {
 	if l.AllowedRoutes == nil || len(l.AllowedRoutes.Kinds) == 0 {
 		switch string(l.Protocol) {

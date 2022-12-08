@@ -11,11 +11,8 @@ import (
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/util/address"
 )
-
-func addressOf[T any](t T) *T {
-	return &t
-}
 
 func TestGenerateKongRoutesFromRouteRule_TCP(t *testing.T) {
 	testcases := []struct {
@@ -36,7 +33,7 @@ func TestGenerateKongRoutesFromRouteRule_TCP(t *testing.T) {
 				BackendRefs: []gatewayv1alpha2.BackendRef{
 					{
 						BackendObjectReference: gatewayv1alpha2.BackendObjectReference{
-							Port: addressOf(gatewayv1alpha2.PortNumber(1234)),
+							Port: address.Of(gatewayv1alpha2.PortNumber(1234)),
 						},
 					},
 				},
@@ -49,14 +46,14 @@ func TestGenerateKongRoutesFromRouteRule_TCP(t *testing.T) {
 						Annotations: map[string]string{},
 					},
 					Route: kong.Route{
-						Name: addressOf("tcproute.mynamespace.mytcproute-name.0.0"),
+						Name: address.Of("tcproute.mynamespace.mytcproute-name.0.0"),
 						Destinations: []*kong.CIDRPort{
 							{
-								Port: addressOf(1234),
+								Port: address.Of(1234),
 							},
 						},
 						Protocols: []*string{
-							addressOf("tcp"),
+							address.Of("tcp"),
 						},
 					},
 				},
@@ -97,7 +94,7 @@ func TestGenerateKongRoutesFromRouteRule_UDP(t *testing.T) {
 				BackendRefs: []gatewayv1alpha2.BackendRef{
 					{
 						BackendObjectReference: gatewayv1alpha2.BackendObjectReference{
-							Port: addressOf(gatewayv1alpha2.PortNumber(1234)),
+							Port: address.Of(gatewayv1alpha2.PortNumber(1234)),
 						},
 					},
 				},
@@ -110,14 +107,14 @@ func TestGenerateKongRoutesFromRouteRule_UDP(t *testing.T) {
 						Annotations: map[string]string{},
 					},
 					Route: kong.Route{
-						Name: addressOf("udproute.mynamespace.myudproute-name.0.0"),
+						Name: address.Of("udproute.mynamespace.myudproute-name.0.0"),
 						Destinations: []*kong.CIDRPort{
 							{
-								Port: addressOf(1234),
+								Port: address.Of(1234),
 							},
 						},
 						Protocols: []*string{
-							addressOf("udp"),
+							address.Of("udp"),
 						},
 					},
 				},
@@ -169,13 +166,13 @@ func TestGenerateKongRoutesFromRouteRule_TLS(t *testing.T) {
 						Annotations: map[string]string{},
 					},
 					Route: kong.Route{
-						Name: addressOf("tlsroute.mynamespace.mytlsroute-name.0.0"),
+						Name: address.Of("tlsroute.mynamespace.mytlsroute-name.0.0"),
 						SNIs: []*string{
-							addressOf("hostname.com"),
-							addressOf("hostname2.com"),
+							address.Of("hostname.com"),
+							address.Of("hostname2.com"),
 						},
 						Protocols: []*string{
-							addressOf("tls"),
+							address.Of("tls"),
 						},
 					},
 				},
@@ -199,10 +196,10 @@ func TestGenerateKongRoutesFromRouteRule_TLS(t *testing.T) {
 						Annotations: map[string]string{},
 					},
 					Route: kong.Route{
-						Name: addressOf("tlsroute.mynamespace.mytlsroute-name.0.0"),
+						Name: address.Of("tlsroute.mynamespace.mytlsroute-name.0.0"),
 						SNIs: []*string{},
 						Protocols: []*string{
-							addressOf("tls"),
+							address.Of("tls"),
 						},
 					},
 				},

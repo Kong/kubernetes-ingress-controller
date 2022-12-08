@@ -14,11 +14,11 @@ import (
 	netv1beta1 "k8s.io/api/networking/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/uuid"
-	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/store"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/util/address"
 )
 
 type testSNIs struct {
@@ -587,7 +587,7 @@ func TestPopulateServices(t *testing.T) {
 			serviceNamesToServices: map[string]kongstate.Service{
 				"service-to-skip": {
 					Service: kong.Service{
-						Name: pointer.StringPtr("service-to-skip"),
+						Name: address.Of("service-to-skip"),
 					},
 					Namespace: "test-namespace",
 					Backends: []kongstate.ServiceBackend{
@@ -603,7 +603,7 @@ func TestPopulateServices(t *testing.T) {
 				},
 				"service-to-keep": {
 					Service: kong.Service{
-						Name: pointer.StringPtr("service-to-skip"),
+						Name: address.Of("service-to-skip"),
 					},
 					Namespace: "test-namespace",
 					Backends: []kongstate.ServiceBackend{

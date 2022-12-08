@@ -6,6 +6,7 @@ import (
 	"github.com/stretchr/testify/require"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/util/address"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util/builder"
 )
 
@@ -56,7 +57,7 @@ func TestGetListenerSupportedRouteKinds(t *testing.T) {
 				Protocol: HTTPProtocolType,
 				AllowedRoutes: &gatewayv1beta1.AllowedRoutes{
 					Kinds: []gatewayv1beta1.RouteGroupKind{{
-						Group: addressOf(gatewayv1beta1.Group("unknown.group.com")),
+						Group: address.Of(gatewayv1beta1.Group("unknown.group.com")),
 						Kind:  Kind("UnknownKind"),
 					}},
 				},

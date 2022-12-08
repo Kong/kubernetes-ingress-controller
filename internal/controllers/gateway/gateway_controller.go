@@ -493,7 +493,7 @@ var (
 	supportedKinds = []Kind{
 		Kind("HTTPRoute"),
 		Kind("TCPRoute"),
-		Kind("UDPPRoute"),
+		Kind("UDPRoute"),
 		Kind("TLSRoute"),
 	}
 

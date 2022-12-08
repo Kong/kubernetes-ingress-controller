@@ -16,6 +16,7 @@ import (
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/util/address"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util/builder"
 	"github.com/kong/kubernetes-ingress-controller/v2/pkg/clientset/scheme"
 )
@@ -219,10 +220,6 @@ func TestFilterHostnames(t *testing.T) {
 	}
 }
 
-func addressOf[T any](v T) *T {
-	return &v
-}
-
 func Test_getSupportedGatewayForRoute(t *testing.T) {
 	gatewayClass := &GatewayClass{
 		ObjectMeta: metav1.ObjectMeta{
@@ -342,7 +339,7 @@ func Test_getSupportedGatewayForRoute(t *testing.T) {
 						gw.Spec.Listeners = builder.
 							NewListener("http").WithPort(443).HTTPS().
 							WithTLSConfig(&gatewayv1beta1.GatewayTLSConfig{
-								Mode: addressOf(gatewayv1beta1.TLSModeTerminate),
+								Mode: address.Of(gatewayv1beta1.TLSModeTerminate),
 							}).
 							IntoSlice()
 						return gw
@@ -360,7 +357,7 @@ func Test_getSupportedGatewayForRoute(t *testing.T) {
 				name: "basic HTTPRoute specifying existing section name gets Accepted",
 				route: func() *HTTPRoute {
 					r := basicHTTPRoute()
-					r.Spec.ParentRefs[0].SectionName = addressOf(gatewayv1beta1.SectionName("http"))
+					r.Spec.ParentRefs[0].SectionName = address.Of(gatewayv1beta1.SectionName("http"))
 					return r
 				}(),
 				objects: []client.Object{
@@ -379,7 +376,7 @@ func Test_getSupportedGatewayForRoute(t *testing.T) {
 				name: "basic HTTPRoute specifying existing port gets Accepted",
 				route: func() *HTTPRoute {
 					r := basicHTTPRoute()
-					r.Spec.CommonRouteSpec.ParentRefs[0].Port = addressOf(gatewayv1beta1.PortNumber(80))
+					r.Spec.CommonRouteSpec.ParentRefs[0].Port = address.Of(gatewayv1beta1.PortNumber(80))
 					return r
 				}(),
 				objects: []client.Object{
@@ -397,7 +394,7 @@ func Test_getSupportedGatewayForRoute(t *testing.T) {
 				name: "basic HTTPRoute specifying non-existing port does not get Accepted",
 				route: func() *HTTPRoute {
 					r := basicHTTPRoute()
-					r.Spec.CommonRouteSpec.ParentRefs[0].Port = addressOf(PortNumber(80))
+					r.Spec.CommonRouteSpec.ParentRefs[0].Port = address.Of(PortNumber(80))
 					return r
 				}(),
 				objects: []client.Object{
@@ -517,7 +514,7 @@ func Test_getSupportedGatewayForRoute(t *testing.T) {
 						gw.Spec.Listeners = builder.
 							NewListener("https").WithPort(443).HTTPS().
 							WithTLSConfig(&gatewayv1beta1.GatewayTLSConfig{
-								Mode: addressOf(gatewayv1beta1.TLSModePassthrough),
+								Mode: address.Of(gatewayv1beta1.TLSModePassthrough),
 							}).
 							IntoSlice()
 						gw.Status.Listeners[0].Name = "https"
@@ -654,7 +651,7 @@ func Test_getSupportedGatewayForRoute(t *testing.T) {
 				name: "TCPRoute specifying existing port gets Accepted",
 				route: func() *TCPRoute {
 					r := basicTCPRoute()
-					r.Spec.CommonRouteSpec.ParentRefs[0].Port = addressOf(gatewayv1alpha2.PortNumber(80))
+					r.Spec.CommonRouteSpec.ParentRefs[0].Port = address.Of(gatewayv1alpha2.PortNumber(80))
 					r.Spec.Rules = []gatewayv1alpha2.TCPRouteRule{
 						{
 							BackendRefs: builder.NewBackendRef("fake-service").WithPort(80).ToSlice(),
@@ -675,7 +672,7 @@ func Test_getSupportedGatewayForRoute(t *testing.T) {
 				name: "TCPRoute specifying non existing port does not get Accepted",
 				route: func() *TCPRoute {
 					r := basicTCPRoute()
-					r.Spec.CommonRouteSpec.ParentRefs[0].Port = addressOf(gatewayv1alpha2.PortNumber(8000))
+					r.Spec.CommonRouteSpec.ParentRefs[0].Port = address.Of(gatewayv1alpha2.PortNumber(8000))
 					r.Spec.Rules = []gatewayv1alpha2.TCPRouteRule{
 						{
 							BackendRefs: builder.NewBackendRef("fake-service").WithPort(80).ToSlice(),
@@ -696,8 +693,8 @@ func Test_getSupportedGatewayForRoute(t *testing.T) {
 				name: "TCPRoute specifying in sectionName existing listener gets Accepted",
 				route: func() *TCPRoute {
 					r := basicTCPRoute()
-					r.Spec.CommonRouteSpec.ParentRefs[0].Port = addressOf(gatewayv1alpha2.PortNumber(80))
-					r.Spec.CommonRouteSpec.ParentRefs[0].SectionName = addressOf(gatewayv1alpha2.SectionName("tcp"))
+					r.Spec.CommonRouteSpec.ParentRefs[0].Port = address.Of(gatewayv1alpha2.PortNumber(80))
+					r.Spec.CommonRouteSpec.ParentRefs[0].SectionName = address.Of(gatewayv1alpha2.SectionName("tcp"))
 					r.Spec.Rules = []gatewayv1alpha2.TCPRouteRule{
 						{
 							BackendRefs: builder.NewBackendRef("fake-service").WithPort(80).ToSlice(),
@@ -720,8 +717,8 @@ func Test_getSupportedGatewayForRoute(t *testing.T) {
 			// 	name: "TCPRoute specifying in sectionName non existing listener does not get Accepted",
 			// 	route: func() *TCPRoute {
 			// 		r := basicTCPRoute()
-			// 		r.Spec.CommonRouteSpec.ParentRefs[0].Port = addressOf(gatewayv1alpha2.PortNumber(80))
-			// 		r.Spec.CommonRouteSpec.ParentRefs[0].SectionName = addressOf(gatewayv1alpha2.SectionName("unknown-listener"))
+			// 		r.Spec.CommonRouteSpec.ParentRefs[0].Port = address.Of(gatewayv1alpha2.PortNumber(80))
+			// 		r.Spec.CommonRouteSpec.ParentRefs[0].SectionName = address.Of(gatewayv1alpha2.SectionName("unknown-listener"))
 			// 		r.Spec.Rules = []gatewayv1alpha2.TCPRouteRule{
 			// 			{
 			// 				BackendRefs: builder.NewBackendRef("fake-service").WithPort(80).ToSlice(),
@@ -860,7 +857,7 @@ func Test_getSupportedGatewayForRoute(t *testing.T) {
 				name: "UDPRoute specifying existing port gets Accepted",
 				route: func() *UDPRoute {
 					r := basicUDPRoute()
-					r.Spec.CommonRouteSpec.ParentRefs[0].Port = addressOf(gatewayv1alpha2.PortNumber(53))
+					r.Spec.CommonRouteSpec.ParentRefs[0].Port = address.Of(gatewayv1alpha2.PortNumber(53))
 					return r
 				}(),
 				objects: []client.Object{
@@ -876,7 +873,7 @@ func Test_getSupportedGatewayForRoute(t *testing.T) {
 				name: "UDPRoute specifying non existing port does not get Accepted",
 				route: func() *UDPRoute {
 					r := basicUDPRoute()
-					r.Spec.CommonRouteSpec.ParentRefs[0].Port = addressOf(gatewayv1alpha2.PortNumber(8000))
+					r.Spec.CommonRouteSpec.ParentRefs[0].Port = address.Of(gatewayv1alpha2.PortNumber(8000))
 					return r
 				}(),
 				objects: []client.Object{
@@ -892,8 +889,8 @@ func Test_getSupportedGatewayForRoute(t *testing.T) {
 				name: "UDPRoute specifying in sectionName existing listener gets Accepted",
 				route: func() *UDPRoute {
 					r := basicUDPRoute()
-					r.Spec.CommonRouteSpec.ParentRefs[0].Port = addressOf(gatewayv1alpha2.PortNumber(53))
-					r.Spec.CommonRouteSpec.ParentRefs[0].SectionName = addressOf(gatewayv1alpha2.SectionName("udp"))
+					r.Spec.CommonRouteSpec.ParentRefs[0].Port = address.Of(gatewayv1alpha2.PortNumber(53))
+					r.Spec.CommonRouteSpec.ParentRefs[0].SectionName = address.Of(gatewayv1alpha2.SectionName("udp"))
 					return r
 				}(),
 				objects: []client.Object{
@@ -911,8 +908,8 @@ func Test_getSupportedGatewayForRoute(t *testing.T) {
 			// 	name: "UDPRoute specifying in sectionName non existing listener does not get Accepted",
 			// 	route: func() *UDPRoute {
 			// 		r := basicUDPRoute()
-			// 		r.Spec.CommonRouteSpec.ParentRefs[0].Port = addressOf(gatewayv1alpha2.PortNumber(53))
-			// 		r.Spec.CommonRouteSpec.ParentRefs[0].SectionName = addressOf(gatewayv1alpha2.SectionName("unknown-listener"))
+			// 		r.Spec.CommonRouteSpec.ParentRefs[0].Port = address.Of(gatewayv1alpha2.PortNumber(53))
+			// 		r.Spec.CommonRouteSpec.ParentRefs[0].SectionName = address.Of(gatewayv1alpha2.SectionName("unknown-listener"))
 			// 		return r
 			// 	}(),
 			// 	objects: []client.Object{
@@ -988,7 +985,7 @@ func Test_getSupportedGatewayForRoute(t *testing.T) {
 						WithPort(443).
 						TLS().
 						WithTLSConfig(&gatewayv1beta1.GatewayTLSConfig{
-							Mode: addressOf(gatewayv1beta1.TLSModePassthrough),
+							Mode: address.Of(gatewayv1beta1.TLSModePassthrough),
 						}).IntoSlice(),
 				},
 				Status: gatewayv1beta1.GatewayStatus{
@@ -1043,7 +1040,7 @@ func Test_getSupportedGatewayForRoute(t *testing.T) {
 							WithPort(443).
 							TLS().
 							WithTLSConfig(&gatewayv1beta1.GatewayTLSConfig{
-								Mode: addressOf(gatewayv1beta1.TLSModeTerminate),
+								Mode: address.Of(gatewayv1beta1.TLSModeTerminate),
 							}).IntoSlice()
 						return gw
 					}(),
@@ -1078,7 +1075,7 @@ func Test_getSupportedGatewayForRoute(t *testing.T) {
 				name: "TLSRoute specifying existing port gets Accepted",
 				route: func() *TLSRoute {
 					r := basicTLSRoute()
-					r.Spec.CommonRouteSpec.ParentRefs[0].Port = addressOf(gatewayv1alpha2.PortNumber(443))
+					r.Spec.CommonRouteSpec.ParentRefs[0].Port = address.Of(gatewayv1alpha2.PortNumber(443))
 					return r
 				}(),
 				objects: []client.Object{
@@ -1096,7 +1093,7 @@ func Test_getSupportedGatewayForRoute(t *testing.T) {
 				name: "TLSRoute specifying non existing port does not get Accepted",
 				route: func() *TLSRoute {
 					r := basicTLSRoute()
-					r.Spec.CommonRouteSpec.ParentRefs[0].Port = addressOf(gatewayv1alpha2.PortNumber(444))
+					r.Spec.CommonRouteSpec.ParentRefs[0].Port = address.Of(gatewayv1alpha2.PortNumber(444))
 					return r
 				}(),
 				objects: []client.Object{
@@ -1114,8 +1111,8 @@ func Test_getSupportedGatewayForRoute(t *testing.T) {
 				name: "TLSRoute specifying in sectionName existing listener gets Accepted",
 				route: func() *TLSRoute {
 					r := basicTLSRoute()
-					r.Spec.CommonRouteSpec.ParentRefs[0].Port = addressOf(gatewayv1alpha2.PortNumber(443))
-					r.Spec.CommonRouteSpec.ParentRefs[0].SectionName = addressOf(gatewayv1alpha2.SectionName("tls"))
+					r.Spec.CommonRouteSpec.ParentRefs[0].Port = address.Of(gatewayv1alpha2.PortNumber(443))
+					r.Spec.CommonRouteSpec.ParentRefs[0].SectionName = address.Of(gatewayv1alpha2.SectionName("tls"))
 					return r
 				}(),
 				objects: []client.Object{
@@ -1135,8 +1132,8 @@ func Test_getSupportedGatewayForRoute(t *testing.T) {
 			// 	name: "TLSRoute specifying in sectionName non existing listener does not get Accepted",
 			// 	route: func() *TLSRoute {
 			// 		r := basicTLSRoute()
-			// 		r.Spec.CommonRouteSpec.ParentRefs[0].Port = addressOf(gatewayv1alpha2.PortNumber(443))
-			// 		r.Spec.CommonRouteSpec.ParentRefs[0].SectionName = addressOf(gatewayv1alpha2.SectionName("unknown-listener"))
+			// 		r.Spec.CommonRouteSpec.ParentRefs[0].Port = address.Of(gatewayv1alpha2.PortNumber(443))
+			// 		r.Spec.CommonRouteSpec.ParentRefs[0].SectionName = address.Of(gatewayv1alpha2.SectionName("unknown-listener"))
 			// 		return r
 			// 	}(),
 			// 	objects: []client.Object{

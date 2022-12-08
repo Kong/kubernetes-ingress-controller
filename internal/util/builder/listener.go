@@ -1,6 +1,10 @@
 package builder
 
-import gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
+import (
+	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
+
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/util/address"
+)
 
 // ListenerBuilder is a builder for gateway api Listener.
 // Will set default values, as specified in the gateway API, for fields that are not set.
@@ -58,7 +62,7 @@ func (b *ListenerBuilder) UDP() *ListenerBuilder {
 }
 
 func (b *ListenerBuilder) WithHostname(hostname string) *ListenerBuilder {
-	b.listener.Hostname = addressOf(gatewayv1beta1.Hostname(hostname))
+	b.listener.Hostname = address.Of(gatewayv1beta1.Hostname(hostname))
 	return b
 }
 

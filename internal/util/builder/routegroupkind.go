@@ -1,6 +1,10 @@
 package builder
 
-import gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
+import (
+	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
+
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/util/address"
+)
 
 // RouteGroupKindBuilder is a builder for gateway api RouteGroupKind.
 // Will set default values, as specified in the gateway API, for fields that are not set.
@@ -12,7 +16,7 @@ type RouteGroupKindBuilder struct {
 func NewRouteGroupKind() *RouteGroupKindBuilder {
 	return &RouteGroupKindBuilder{
 		routeGroupKind: gatewayv1beta1.RouteGroupKind{
-			Group: addressOf(gatewayv1beta1.Group(gatewayv1beta1.GroupVersion.Group)),
+			Group: address.Of(gatewayv1beta1.Group(gatewayv1beta1.GroupVersion.Group)),
 		},
 	}
 }

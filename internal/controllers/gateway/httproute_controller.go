@@ -12,7 +12,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/utils/pointer"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -26,6 +25,7 @@ import (
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/util/address"
 )
 
 // -----------------------------------------------------------------------------
@@ -427,7 +427,7 @@ func (r *HTTPRouteReconciler) ensureGatewayReferenceStatusAdded(ctx context.Cont
 			}},
 		}
 		if gateway.listenerName != "" {
-			gatewayParentStatus.ParentRef.SectionName = (*SectionName)(pointer.StringPtr(gateway.listenerName))
+			gatewayParentStatus.ParentRef.SectionName = address.Of(SectionName(gateway.listenerName))
 		}
 
 		key := fmt.Sprintf("%s/%s/%s", gateway.gateway.Namespace, gateway.gateway.Name, gateway.listenerName)
@@ -640,9 +640,9 @@ func (r *HTTPRouteReconciler) ensureParentsAcceptedCondition(
 			// add a new parent if the parent is not found in status.
 			newParentStatus := &gatewayv1beta1.RouteParentStatus{
 				ParentRef: gatewayv1beta1.ParentReference{
-					Namespace:   (*gatewayv1beta1.Namespace)(pointer.String(gateway.Namespace)),
+					Namespace:   address.Of(gatewayv1beta1.Namespace(gateway.Namespace)),
 					Name:        gatewayv1beta1.ObjectName(gateway.Name),
-					SectionName: (*gatewayv1beta1.SectionName)(pointer.String(g.listenerName)),
+					SectionName: address.Of(gatewayv1beta1.SectionName(g.listenerName)),
 					// TODO: set port after gateway port matching implemented: https://github.com/Kong/kubernetes-ingress-controller/issues/3016
 				},
 				Conditions: []metav1.Condition{

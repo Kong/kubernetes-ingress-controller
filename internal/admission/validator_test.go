@@ -140,7 +140,7 @@ func TestKongHTTPValidator_ValidatePlugin(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			validator := KongHTTPValidator{
-				Store:               store,
+				SecretGetter:        store,
 				PluginSvc:           tt.PluginSvc,
 				ingressClassMatcher: fakeClassMatcher,
 			}
@@ -272,7 +272,7 @@ func TestKongHTTPValidator_ValidateClusterPlugin(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			validator := KongHTTPValidator{
-				Store:               store,
+				SecretGetter:        store,
 				PluginSvc:           tt.PluginSvc,
 				ingressClassMatcher: fakeClassMatcher,
 			}
@@ -390,7 +390,8 @@ func TestKongHTTPValidator_ValidateConsumer(t *testing.T) {
 				KongConsumers: tt.consumers,
 			})
 			validator := KongHTTPValidator{
-				// For the sake of tests we use the same store for both SecretGetter and Store as it does not matter here.
+				// For the sake of tests we use the same store for both SecretGetter and Store as it does not matter here
+				// if secrets are managed by us or not yet.
 				Store:               s,
 				SecretGetter:        s,
 				ConsumerSvc:         &fakeConsumerService{consumerAlreadyExists: tt.consumerAlreadyExistsInGateway},

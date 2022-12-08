@@ -233,7 +233,7 @@ func (validator KongHTTPValidator) ValidatePlugin(
 		if len(plugin.Config) > 0 {
 			return false, ErrTextPluginUsesBothConfigTypes, nil
 		}
-		config, err := kongstate.SecretToConfiguration(validator.Store, (*k8sPlugin.ConfigFrom).SecretValue, k8sPlugin.Namespace)
+		config, err := kongstate.SecretToConfiguration(validator.SecretGetter, (*k8sPlugin.ConfigFrom).SecretValue, k8sPlugin.Namespace)
 		if err != nil {
 			return false, ErrTextPluginSecretConfigUnretrievable, err
 		}

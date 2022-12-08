@@ -1309,7 +1309,7 @@ func Test_getSupportedGatewayForRoute(t *testing.T) {
 											Status: metav1.ConditionTrue,
 										},
 									},
-									SupportedKinds: supportedRouteGroupKinds,
+									SupportedKinds: nil,
 								},
 							},
 						},

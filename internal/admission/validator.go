@@ -140,7 +140,7 @@ func (validator KongHTTPValidator) ValidateConsumer(
 	// we ignore the secrets referenced by this consumer so that the index is not
 	// testing them against themselves.
 	ignoredSecrets := map[string]map[string]struct{}{}
-	credentialsIndex, err := globalValidationIndexForCredentials(ctx, validator.Store, managedConsumers, ignoredSecrets)
+	credentialsIndex, err := globalValidationIndexForCredentials(ctx, validator.SecretGetter, managedConsumers, ignoredSecrets)
 	if err != nil {
 		return false, ErrTextConsumerCredentialValidationFailed, err
 	}
@@ -196,7 +196,7 @@ func (validator KongHTTPValidator) ValidateCredential(
 	// all managed credentials so that we can verify that the updates to
 	// this secret are not in violation of any unique key constraints.
 	ignoreSecrets := map[string]map[string]struct{}{secret.Namespace: {secret.Name: {}}}
-	credentialsIndex, err := globalValidationIndexForCredentials(ctx, validator.Store, managedConsumers, ignoreSecrets)
+	credentialsIndex, err := globalValidationIndexForCredentials(ctx, validator.SecretGetter, managedConsumers, ignoreSecrets)
 	if err != nil {
 		return false, ErrTextConsumerCredentialValidationFailed, err
 	}

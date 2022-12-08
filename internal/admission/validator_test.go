@@ -341,7 +341,7 @@ func TestKongHTTPValidator_ValidateConsumer(t *testing.T) {
 			operation:       admissionv1.Create,
 			expectOK:        false,
 			expectError:     true,
-			expectedMessage: "could not retrieve secrets from the kubernetes API",
+			expectedMessage: ErrTextFailedToRetrieveSecret,
 		},
 		{
 			name: "consumer refers a valid secret",
@@ -384,7 +384,7 @@ func TestKongHTTPValidator_ValidateConsumer(t *testing.T) {
 			},
 			operation:       admissionv1.Create,
 			expectError:     true,
-			expectedMessage: "consumer credential violated unique key constraint",
+			expectedMessage: ErrTextConsumerCredentialUniqueKeyConstraintFailed,
 		},
 		{
 			name: "consumer refers a secret that has the same key as another secret",
@@ -409,7 +409,7 @@ func TestKongHTTPValidator_ValidateConsumer(t *testing.T) {
 			},
 			operation:       admissionv1.Create,
 			expectError:     true,
-			expectedMessage: "consumer credential violated unique key constraint",
+			expectedMessage: ErrTextConsumerCredentialUniqueKeyConstraintFailed,
 		},
 		{
 			name: "consumer is updated in place - no unique constraint violation should occur",
@@ -428,6 +428,30 @@ func TestKongHTTPValidator_ValidateConsumer(t *testing.T) {
 			},
 			operation: admissionv1.Update,
 			expectOK:  true,
+		},
+		{
+			name: "consumer refers to a secret that violates the unique key constraint",
+			modifyBasicConsumer: func(c *configurationv1.KongConsumer) {
+				c.Credentials = []string{"secret"}
+			},
+			secrets: []*corev1.Secret{
+				validSecret(),
+				func() *corev1.Secret {
+					s := validSecret()
+					s.Name = "secret-2"
+					return s
+				}(),
+			},
+			consumers: []*configurationv1.KongConsumer{
+				func() *configurationv1.KongConsumer {
+					c := basicConsumer()
+					c.Credentials = []string{"secret-2"}
+					return &c
+				}(),
+			},
+			operation:       admissionv1.Create,
+			expectError:     true,
+			expectedMessage: ErrTextConsumerCredentialUniqueKeyConstraintFailed,
 		},
 	}
 	for _, tt := range tests {

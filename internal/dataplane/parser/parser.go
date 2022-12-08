@@ -2,6 +2,7 @@ package parser
 
 import (
 	"bytes"
+	"context"
 	"crypto/tls"
 	"fmt"
 	"reflect"
@@ -440,7 +441,7 @@ func (p *Parser) getGatewayCerts() []certWrapper {
 					}
 
 					// retrieve the Secret and extract the PEM strings
-					secret, err := s.GetSecret(namespace, string(ref.Name))
+					secret, err := s.GetSecret(context.TODO(), namespace, string(ref.Name))
 					if err != nil {
 						log.WithFields(logrus.Fields{
 							"gateway":          gateway.Name,
@@ -485,7 +486,7 @@ func (p *Parser) getCerts(secretsToSNIs SecretNameToSNIs) []certWrapper {
 
 	for secretKey, SNIs := range secretsToSNIs.secretToSNIs {
 		namespaceName := strings.Split(secretKey, "/")
-		secret, err := p.storer.GetSecret(namespaceName[0], namespaceName[1])
+		secret, err := p.storer.GetSecret(context.TODO(), namespaceName[0], namespaceName[1])
 		if err != nil {
 			p.registerTranslationFailure(fmt.Sprintf("failed to fetch the secret (%s)", secretKey), SNIs.Parents()...)
 			continue

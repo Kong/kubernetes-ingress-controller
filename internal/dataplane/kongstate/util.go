@@ -1,6 +1,7 @@
 package kongstate
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -107,7 +108,7 @@ func getPlugin(s store.Storer, namespace, name string) (kong.Plugin, error) {
 		return plugin, fmt.Errorf("invalid empty 'plugin' property")
 	}
 
-	plugin, err = kongPluginFromK8SPlugin(s, *k8sPlugin)
+	plugin, err = kongPluginFromK8SPlugin(*k8sPlugin, s)
 	return plugin, err
 }
 
@@ -164,8 +165,8 @@ func protocolsToStrings(protocols []configurationv1.KongProtocol) (res []string)
 }
 
 func kongPluginFromK8SPlugin(
-	s store.Storer,
 	k8sPlugin configurationv1.KongPlugin,
+	s store.Storer,
 ) (kong.Plugin, error) {
 	var config kong.Configuration
 	config, err := RawConfigToConfiguration(k8sPlugin.Config)
@@ -181,8 +182,7 @@ func kongPluginFromK8SPlugin(
 	}
 	if k8sPlugin.ConfigFrom != nil {
 		var err error
-		config, err = SecretToConfiguration(s,
-			(*k8sPlugin.ConfigFrom).SecretValue, k8sPlugin.Namespace)
+		config, err = SecretToConfiguration(s, (*k8sPlugin.ConfigFrom).SecretValue, k8sPlugin.Namespace)
 		if err != nil {
 			return kong.Plugin{},
 				fmt.Errorf("error parsing config for KongPlugin '%v/%v': %w",
@@ -226,15 +226,11 @@ func namespacedSecretToConfiguration(
 }
 
 type SecretGetter interface {
-	GetSecret(namespace, name string) (*corev1.Secret, error)
+	GetSecret(ctx context.Context, namespace, name string) (*corev1.Secret, error)
 }
 
-func SecretToConfiguration(
-	s SecretGetter,
-	reference configurationv1.SecretValueFromSource, namespace string) (
-	kong.Configuration, error,
-) {
-	secret, err := s.GetSecret(namespace, reference.Secret)
+func SecretToConfiguration(s SecretGetter, reference configurationv1.SecretValueFromSource, namespace string) (kong.Configuration, error) {
+	secret, err := s.GetSecret(context.TODO(), namespace, reference.Secret)
 	if err != nil {
 		return kong.Configuration{}, fmt.Errorf(
 			"error fetching plugin configuration secret '%v/%v': %w",

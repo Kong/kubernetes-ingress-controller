@@ -1,6 +1,7 @@
 package store
 
 import (
+	"context"
 	"errors"
 	"testing"
 
@@ -641,11 +642,11 @@ func TestFakeStoreSecret(t *testing.T) {
 	store, err := NewFakeStore(FakeObjects{Secrets: secrets})
 	require.Nil(err)
 	require.NotNil(store)
-	secret, err := store.GetSecret("default", "foo")
+	secret, err := store.GetSecret(context.TODO(), "default", "foo")
 	assert.Nil(err)
 	assert.NotNil(secret)
 
-	secret, err = store.GetSecret("default", "does-not-exist")
+	secret, err = store.GetSecret(context.TODO(), "default", "does-not-exist")
 	assert.Nil(secret)
 	assert.NotNil(err)
 	assert.True(errors.As(err, &ErrNotFound{}))

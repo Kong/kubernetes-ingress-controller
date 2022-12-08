@@ -142,7 +142,7 @@ func TestGetIngressClassParameters(t *testing.T) {
 			assert.NoError(t, err)
 			err = cacheStores.Add(icp)
 			assert.NoError(t, err)
-			s := store.New(cacheStores, ingressClass.Name, true, true, true, logrus.New())
+			s := store.New(cacheStores, ingressClass.Name, logrus.New())
 			icpSpec, err := getIngressClassParametersOrDefault(s)
 			assert.Truef(t, reflect.DeepEqual(*tc.parameterSpec, icpSpec),
 				fmt.Sprintf("should get same ingress parameter spec: expected %+v, actual %+v", tc.parameterSpec, icpSpec),

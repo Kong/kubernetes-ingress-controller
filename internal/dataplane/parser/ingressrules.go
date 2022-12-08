@@ -1,6 +1,7 @@
 package parser
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
@@ -74,7 +75,7 @@ func (ir *ingressRules) populateServices(log logrus.FieldLogger, s store.Storer,
 			secretName := annotations.ExtractClientCertificate(k8sService.Annotations)
 			if secretName != "" {
 				secretKey := k8sService.Namespace + "/" + secretName
-				secret, err := s.GetSecret(k8sService.Namespace, secretName)
+				secret, err := s.GetSecret(context.TODO(), k8sService.Namespace, secretName)
 				if err != nil {
 					failuresCollector.PushTranslationFailure(
 						fmt.Sprintf("failed to fetch secret '%s': %v", secretKey, err), k8sService,

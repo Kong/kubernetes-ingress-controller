@@ -65,6 +65,7 @@ type KongClient struct {
 	// cache is the Kubernetes object cache which is used to list Kubernetes
 	// objects for parsing into Kong objects.
 	cache *store.CacheStores
+	store store.Storer
 
 	// kongConfig is the client configuration for the Kong Admin API
 	kongConfig sendconfig.Kong
@@ -127,9 +128,9 @@ func NewKongClient(
 	diagnostic util.ConfigDumpDiagnostic,
 	kongConfig sendconfig.Kong,
 	eventRecorder record.EventRecorder,
+	cache store.CacheStores,
+	storer store.Storer,
 ) (*KongClient, error) {
-	// build the client object
-	cache := store.NewCacheStores()
 	c := &KongClient{
 		logger:             logger,
 		ingressClass:       ingressClass,
@@ -139,6 +140,7 @@ func NewKongClient(
 		diagnostic:         diagnostic,
 		prometheusMetrics:  metrics.NewCtrlFuncMetrics(),
 		cache:              &cache,
+		store:              storer,
 		kongConfig:         kongConfig,
 		eventRecorder:      eventRecorder,
 	}
@@ -302,13 +304,10 @@ func (c *KongClient) Update(ctx context.Context) error {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
-	// build the kongstate object from the Kubernetes objects in the storer
-	storer := store.New(*c.cache, c.ingressClass, false, false, false, c.logger)
-
 	// initialize a parser
 	c.logger.Debug("parsing kubernetes objects into data-plane configuration")
 
-	p, err := parser.NewParser(c.logger, storer)
+	p, err := parser.NewParser(c.logger, c.store)
 	if err != nil {
 		return fmt.Errorf("failed to create parser: %w", err)
 	}

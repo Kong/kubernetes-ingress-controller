@@ -26,6 +26,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/manager/metadata"
 	mgrutils "github.com/kong/kubernetes-ingress-controller/v2/internal/manager/utils"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util/kubernetes/object/status"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/versions"
@@ -131,8 +132,10 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 		return fmt.Errorf("unable to start controller manager: %w", err)
 	}
 
+	cache := store.NewCacheStores()
+	storer := store.New(cache, c.IngressClassName, deprecatedLogger)
 	setupLog.Info("Starting Admission Server")
-	if err := setupAdmissionServer(ctx, c, mgr.GetClient(), deprecatedLogger); err != nil {
+	if err := setupAdmissionServer(ctx, c, mgr.GetClient(), deprecatedLogger, storer); err != nil {
 		return err
 	}
 
@@ -152,6 +155,8 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 		diagnostic,
 		kongConfig,
 		eventRecorder,
+		cache,
+		storer,
 	)
 	if err != nil {
 		return fmt.Errorf("failed to initialize kong data-plane client: %w", err)

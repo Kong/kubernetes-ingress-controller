@@ -15,6 +15,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
 	gatewaycontroller "github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/gateway"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/store"
 	credsvalidation "github.com/kong/kubernetes-ingress-controller/v2/internal/validation/consumers/credentials"
 	gatewayvalidators "github.com/kong/kubernetes-ingress-controller/v2/internal/validation/gateway"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
@@ -33,11 +34,16 @@ type KongValidator interface {
 // KongHTTPValidator implements KongValidator interface to validate Kong
 // entities using the Admin API of Kong.
 type KongHTTPValidator struct {
-	ConsumerSvc   kong.AbstractConsumerService
-	PluginSvc     kong.AbstractPluginService
-	Logger        logrus.FieldLogger
+	ConsumerSvc kong.AbstractConsumerService
+	PluginSvc   kong.AbstractPluginService
+	Logger      logrus.FieldLogger
+
+	// SecretGetter is used for fetching secrets that may be not managed yet, hence are not present in the store.
 	SecretGetter  kongstate.SecretGetter
 	ManagerClient client.Client
+
+	// Store is used for fetching objects that are managed by this KIC instance.
+	Store store.Storer
 
 	ingressClassMatcher func(*metav1.ObjectMeta, string, annotations.ClassMatching) bool
 }
@@ -52,12 +58,14 @@ func NewKongHTTPValidator(
 	logger logrus.FieldLogger,
 	managerClient client.Client,
 	ingressClass string,
+	store store.Storer,
 ) KongHTTPValidator {
 	matcher := annotations.IngressClassValidatorFuncFromObjectMeta(ingressClass)
 	return KongHTTPValidator{
 		ConsumerSvc:   consumerSvc,
 		PluginSvc:     pluginSvc,
 		Logger:        logger,
+		Store:         store,
 		SecretGetter:  &managerClientSecretGetter{managerClient: managerClient},
 		ManagerClient: managerClient,
 
@@ -104,17 +112,13 @@ func (validator KongHTTPValidator) ValidateConsumer(
 
 	// pull all the managed consumers in order to build a validation index of
 	// credentials so that the consumers credentials references can be validated.
-	managedConsumers, err := validator.listManagedConsumers(ctx)
-	if err != nil {
-		return false, ErrTextConsumerUnretrievable, err
-	}
+	managedConsumers := validator.Store.ListKongConsumers()
 
 	// retrieve the consumer's credentials secrets to validate them with the index
 	credentials := make([]*corev1.Secret, 0, len(consumer.Credentials))
-	ignoredSecrets := make(map[string]map[string]struct{})
 	for _, secretName := range consumer.Credentials {
 		// retrieve the credentials secret
-		secret, err := validator.SecretGetter.GetSecret(consumer.Namespace, secretName)
+		secret, err := validator.SecretGetter.GetSecret(ctx, consumer.Namespace, secretName)
 		if err != nil {
 			if errors.IsNotFound(err) {
 				return false, ErrTextConsumerCredentialSecretNotFound, err
@@ -129,21 +133,14 @@ func (validator KongHTTPValidator) ValidateConsumer(
 
 		// if valid, store it so we can index it for upcoming constraints validation
 		credentials = append(credentials, secret)
-
-		// later we'll build a global index of all credentials which is needed to
-		// validate unique key constraints. That index should omit the secrets that
-		// are referenced by this consumer to avoid duplication.
-		if _, ok := ignoredSecrets[consumer.Namespace]; !ok {
-			ignoredSecrets[consumer.Namespace] = make(map[string]struct{}, len(consumer.Credentials))
-		}
-		ignoredSecrets[consumer.Namespace][secretName] = struct{}{}
 	}
 
 	// unique constraints on consumer credentials are global to all consumers
 	// and credentials, so we must build an index based on all existing credentials.
 	// we ignore the secrets referenced by this consumer so that the index is not
 	// testing them against themselves.
-	credentialsIndex, err := globalValidationIndexForCredentials(ctx, validator.ManagerClient, managedConsumers, ignoredSecrets)
+	ignoredSecrets := map[string]map[string]struct{}{}
+	credentialsIndex, err := globalValidationIndexForCredentials(ctx, validator.Store, managedConsumers, ignoredSecrets)
 	if err != nil {
 		return false, ErrTextConsumerCredentialValidationFailed, err
 	}
@@ -153,7 +150,7 @@ func (validator KongHTTPValidator) ValidateConsumer(
 	for _, secret := range credentials {
 		// do the unique constraints validation of the credentials using the credentials index
 		if err := credentialsIndex.ValidateCredentialsForUniqueKeyConstraints(secret); err != nil {
-			return false, ErrTextConsumerCredentialValidationFailed, err
+			return false, ErrTextConsumerCredentialUniqueKeyConstraintFailed, err
 		}
 	}
 
@@ -178,10 +175,7 @@ func (validator KongHTTPValidator) ValidateCredential(
 	// credentials are only validated if they are referenced by a managed consumer
 	// in the namespace, as such we pull a list of all consumers from the cached
 	// client to determine if the credentials are referenced.
-	managedConsumers, err := validator.listManagedConsumers(ctx)
-	if err != nil {
-		return false, ErrTextConsumerUnretrievable, err
-	}
+	managedConsumers := validator.Store.ListKongConsumers()
 
 	// verify whether this secret is referenced by any managed consumer
 	managedConsumersWithReferences := listManagedConsumersReferencingCredentialsSecret(secret, managedConsumers)
@@ -202,7 +196,7 @@ func (validator KongHTTPValidator) ValidateCredential(
 	// all managed credentials so that we can verify that the updates to
 	// this secret are not in violation of any unique key constraints.
 	ignoreSecrets := map[string]map[string]struct{}{secret.Namespace: {secret.Name: {}}}
-	credentialsIndex, err := globalValidationIndexForCredentials(ctx, validator.ManagerClient, managedConsumers, ignoreSecrets)
+	credentialsIndex, err := globalValidationIndexForCredentials(ctx, validator.Store, managedConsumers, ignoreSecrets)
 	if err != nil {
 		return false, ErrTextConsumerCredentialValidationFailed, err
 	}
@@ -239,7 +233,7 @@ func (validator KongHTTPValidator) ValidatePlugin(
 		if len(plugin.Config) > 0 {
 			return false, ErrTextPluginUsesBothConfigTypes, nil
 		}
-		config, err := kongstate.SecretToConfiguration(validator.SecretGetter, (*k8sPlugin.ConfigFrom).SecretValue, k8sPlugin.Namespace)
+		config, err := kongstate.SecretToConfiguration(validator.Store, (*k8sPlugin.ConfigFrom).SecretValue, k8sPlugin.Namespace)
 		if err != nil {
 			return false, ErrTextPluginSecretConfigUnretrievable, err
 		}
@@ -368,34 +362,6 @@ func (validator KongHTTPValidator) ValidateHTTPRoute(
 }
 
 // -----------------------------------------------------------------------------
-// KongHTTPValidator - Private Methods
-// -----------------------------------------------------------------------------
-
-func (validator KongHTTPValidator) listManagedConsumers(ctx context.Context) ([]*kongv1.KongConsumer, error) {
-	// gather a list of all consumers from the cached client
-	consumers := &kongv1.KongConsumerList{}
-	if err := validator.ManagerClient.List(ctx, consumers, &client.ListOptions{
-		Namespace: corev1.NamespaceAll,
-	}); err != nil {
-		return nil, err
-	}
-
-	// reduce the consumer set to consumers managed by this controller
-	managedConsumers := make([]*kongv1.KongConsumer, 0)
-	for _, consumer := range consumers.Items {
-		if !validator.ingressClassMatcher(&consumer.ObjectMeta, annotations.IngressClassKey,
-			annotations.ExactClassMatch) {
-			// ignore consumers (and subsequently secrets) that are managed by other controllers
-			continue
-		}
-		consumerCopy := consumer
-		managedConsumers = append(managedConsumers, &consumerCopy)
-	}
-
-	return managedConsumers, nil
-}
-
-// -----------------------------------------------------------------------------
 // Private - Manager Client Secret Getter
 // -----------------------------------------------------------------------------
 
@@ -403,9 +369,9 @@ type managerClientSecretGetter struct {
 	managerClient client.Client
 }
 
-func (m *managerClientSecretGetter) GetSecret(namespace, name string) (*corev1.Secret, error) {
+func (m *managerClientSecretGetter) GetSecret(ctx context.Context, namespace, name string) (*corev1.Secret, error) {
 	secret := &corev1.Secret{}
-	return secret, m.managerClient.Get(context.Background(), client.ObjectKey{
+	return secret, m.managerClient.Get(ctx, client.ObjectKey{
 		Namespace: namespace,
 		Name:      name,
 	}, secret)

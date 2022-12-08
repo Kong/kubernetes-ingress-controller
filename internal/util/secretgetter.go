@@ -13,7 +13,7 @@ type SecretGetterFromK8s struct {
 }
 
 // GetSecret reads a core v1 Secret from Kubernetes API.
-func (s *SecretGetterFromK8s) GetSecret(namespace string, name string) (*corev1.Secret, error) {
+func (s *SecretGetterFromK8s) GetSecret(ctx context.Context, namespace, name string) (*corev1.Secret, error) {
 	var res corev1.Secret
 	err := s.Reader.Get(context.TODO(), client.ObjectKey{Namespace: namespace, Name: name}, &res)
 	return &res, err

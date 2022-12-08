@@ -1,6 +1,7 @@
 package kongstate
 
 import (
+	"context"
 	"fmt"
 	"strconv"
 	"strings"
@@ -74,7 +75,7 @@ func (ks *KongState) FillConsumersAndCredentials(log logrus.FieldLogger, s store
 				"secret_name":      cred,
 				"secret_namespace": consumer.Namespace,
 			})
-			secret, err := s.GetSecret(consumer.Namespace, cred)
+			secret, err := s.GetSecret(context.TODO(), consumer.Namespace, cred)
 			if err != nil {
 				log.WithError(err).Error("failed to fetch secret")
 				continue

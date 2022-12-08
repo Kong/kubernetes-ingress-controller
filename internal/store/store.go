@@ -17,6 +17,7 @@ limitations under the License.
 package store
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"reflect"
@@ -72,7 +73,7 @@ func (e ErrNotFound) Error() string {
 // Storer is the interface that wraps the required methods to gather information
 // about ingresses, services, secrets and ingress annotations.
 type Storer interface {
-	GetSecret(namespace, name string) (*corev1.Secret, error)
+	GetSecret(ctx context.Context, namespace, name string) (*corev1.Secret, error)
 	GetService(namespace, name string) (*corev1.Service, error)
 	GetEndpointsForService(namespace, name string) (*corev1.Endpoints, error)
 	GetKongIngress(namespace, name string) (*kongv1.KongIngress, error)
@@ -430,33 +431,14 @@ func (c CacheStores) Delete(obj runtime.Object) error {
 }
 
 // New creates a new object store to be used in the ingress controller.
-func New(cs CacheStores, ingressClass string, processClasslessIngressV1Beta1 bool, processClasslessIngressV1 bool,
-	processClasslessKongConsumer bool, logger logrus.FieldLogger,
-) Storer {
-	var ingressV1Beta1ClassMatching annotations.ClassMatching
-	var ingressV1ClassMatching annotations.ClassMatching
-	var kongConsumerClassMatching annotations.ClassMatching
-	if processClasslessIngressV1Beta1 {
-		ingressV1Beta1ClassMatching = annotations.ExactOrEmptyClassMatch
-	} else {
-		ingressV1Beta1ClassMatching = annotations.ExactClassMatch
-	}
-	if processClasslessIngressV1 {
-		ingressV1ClassMatching = annotations.ExactOrEmptyClassMatch
-	} else {
-		ingressV1ClassMatching = annotations.ExactClassMatch
-	}
-	if processClasslessKongConsumer {
-		kongConsumerClassMatching = annotations.ExactOrEmptyClassMatch
-	} else {
-		kongConsumerClassMatching = annotations.ExactClassMatch
-	}
+func New(cs CacheStores, ingressClass string, logger logrus.FieldLogger) Storer {
+	classMatching := annotations.ExactClassMatch
 	return Store{
 		stores:                      cs,
 		ingressClass:                ingressClass,
-		ingressV1Beta1ClassMatching: ingressV1Beta1ClassMatching,
-		ingressV1ClassMatching:      ingressV1ClassMatching,
-		kongConsumerClassMatching:   kongConsumerClassMatching,
+		ingressV1Beta1ClassMatching: classMatching,
+		ingressV1ClassMatching:      classMatching,
+		kongConsumerClassMatching:   classMatching,
 		isValidIngressClass:         annotations.IngressClassValidatorFuncFromObjectMeta(ingressClass),
 		isValidIngressV1Class:       annotations.IngressClassValidatorFuncFromV1Ingress(ingressClass),
 		logger:                      logger,
@@ -464,7 +446,7 @@ func New(cs CacheStores, ingressClass string, processClasslessIngressV1Beta1 boo
 }
 
 // GetSecret returns a Secret using the namespace and name as key.
-func (s Store) GetSecret(namespace, name string) (*corev1.Secret, error) {
+func (s Store) GetSecret(ctx context.Context, namespace, name string) (*corev1.Secret, error) {
 	key := fmt.Sprintf("%v/%v", namespace, name)
 	secret, exists, err := s.stores.Secret.GetByKey(key)
 	if err != nil {

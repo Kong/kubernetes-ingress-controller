@@ -23,6 +23,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/admission"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/sendconfig"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 )
 
@@ -169,12 +170,7 @@ func setupDataplaneSynchronizer(
 	return dataplaneSynchronizer, nil
 }
 
-func setupAdmissionServer(
-	ctx context.Context,
-	managerConfig *Config,
-	managerClient client.Client,
-	deprecatedLogger logrus.FieldLogger,
-) error {
+func setupAdmissionServer(ctx context.Context, managerConfig *Config, managerClient client.Client, deprecatedLogger logrus.FieldLogger, store store.Storer) error {
 	logger := deprecatedLogger.WithField("component", "admission-server")
 
 	if managerConfig.AdmissionServer.ListenAddr == "off" {
@@ -193,6 +189,7 @@ func setupAdmissionServer(
 			logger,
 			managerClient,
 			managerConfig.IngressClassName,
+			store,
 		),
 		Logger: logger,
 	}, logger)

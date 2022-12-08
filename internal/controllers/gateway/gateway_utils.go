@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/go-logr/logr"
+	"github.com/samber/lo"
 	corev1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -634,22 +635,35 @@ func isGatewayClassEventInClass(log logr.Logger, watchEvent interface{}) bool {
 	return false
 }
 
-func getListenerSupportedRouteKinds(listener gatewayv1beta1.Listener) []gatewayv1beta1.RouteGroupKind {
-	b := builder.NewRouteGroupKind()
-
-	switch listener.Protocol {
-	case HTTPProtocolType:
-	case HTTPSProtocolType:
-		b = b.HTTPRoute()
-	case TCPProtocolType:
-		b = b.TCPRoute()
-	case UDPProtocolType:
-		b = b.UDPRoute()
-	case TLSProtocolType:
-		b = b.TLSRoute()
-	default:
-		return nil
+// getListenerSupportedRouteKinds determines what RouteGroupKinds are supported by the Listener.
+// If no AllowedRoutes.Kinds are specified for the Listener, the supported RouteGroupKind is derived directly
+// from the Listener's Protocol.
+// Otherwise, user specified AllowedRoutes.Kinds are used, filtered by the global Gateway supported kinds.
+func getListenerSupportedRouteKinds(l gatewayv1beta1.Listener) []gatewayv1beta1.RouteGroupKind {
+	if l.AllowedRoutes == nil || len(l.AllowedRoutes.Kinds) == 0 {
+		switch string(l.Protocol) {
+		case string(gatewayv1beta1.HTTPProtocolType), string(gatewayv1beta1.HTTPSProtocolType):
+			return builder.NewRouteGroupKind().HTTPRoute().IntoSlice()
+		case string(gatewayv1beta1.TCPProtocolType):
+			return builder.NewRouteGroupKind().TCPRoute().IntoSlice()
+		case string(gatewayv1beta1.UDPProtocolType):
+			return builder.NewRouteGroupKind().UDPRoute().IntoSlice()
+		case string(gatewayv1beta1.TLSProtocolType):
+			return builder.NewRouteGroupKind().TLSRoute().IntoSlice()
+		}
 	}
 
-	return b.IntoSlice()
+	var supportedRGK []gatewayv1beta1.RouteGroupKind
+	for _, gk := range l.AllowedRoutes.Kinds {
+		if gk.Group != nil && *gk.Group == gatewayv1beta1.GroupName {
+			_, ok := lo.Find(supportedKinds, func(k Kind) bool {
+				return gk.Kind == k
+			})
+			if ok {
+				supportedRGK = append(supportedRGK, gk)
+			}
+		}
+	}
+
+	return supportedRGK
 }

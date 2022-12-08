@@ -262,8 +262,8 @@ func referenceGrantHasGatewayFrom(obj client.Object) bool {
 // Gateway Controller - Reconciliation
 // -----------------------------------------------------------------------------
 
-//+kubebuilder:rbac:groups=gateway.networking.k8s.io,resources=gateways,verbs=get;list;watch;update
-//+kubebuilder:rbac:groups=gateway.networking.k8s.io,resources=gateways/status,verbs=get;update
+// +kubebuilder:rbac:groups=gateway.networking.k8s.io,resources=gateways,verbs=get;list;watch;update
+// +kubebuilder:rbac:groups=gateway.networking.k8s.io,resources=gateways/status,verbs=get;update
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
@@ -492,6 +492,9 @@ var (
 	// supportedKinds indicates which gateway kinds are supported by this implementation.
 	supportedKinds = []Kind{
 		Kind("HTTPRoute"),
+		Kind("TCPRoute"),
+		Kind("UDPRoute"),
+		Kind("TLSRoute"),
 	}
 
 	// supportedRouteGroupKinds indicates the full kinds with GVK that are supported by this implementation.

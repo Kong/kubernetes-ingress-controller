@@ -712,30 +712,29 @@ func Test_getSupportedGatewayForRoute(t *testing.T) {
 					condition:    routeConditionAccepted(metav1.ConditionTrue, gatewayv1beta1.RouteReasonAccepted),
 				},
 			},
-			// TODO: uncomment when https://github.com/Kong/kubernetes-ingress-controller/issues/3221 is done
-			// {
-			// 	name: "TCPRoute specifying in sectionName non existing listener does not get Accepted",
-			// 	route: func() *TCPRoute {
-			// 		r := basicTCPRoute()
-			// 		r.Spec.CommonRouteSpec.ParentRefs[0].Port = address.Of(gatewayv1alpha2.PortNumber(80))
-			// 		r.Spec.CommonRouteSpec.ParentRefs[0].SectionName = address.Of(gatewayv1alpha2.SectionName("unknown-listener"))
-			// 		r.Spec.Rules = []gatewayv1alpha2.TCPRouteRule{
-			// 			{
-			// 				BackendRefs: builder.NewBackendRef("fake-service").WithPort(80).ToSlice(),
-			// 			},
-			// 		}
-			// 		return r
-			// 	}(),
-			// 	objects: []client.Object{
-			// 		gatewayWithTCP80Ready(),
-			// 		gatewayClass,
-			// 		namespace,
-			// 	},
-			// 	expected: expected{
-			// 		listenerName: "tcp",
-			// 		condition:    routeConditionAccepted(metav1.ConditionFalse, RouteReasonNoMatchingParent),
-			// 	},
-			// },
+			{
+				name: "TCPRoute specifying in sectionName non existing listener does not get Accepted",
+				route: func() *TCPRoute {
+					r := basicTCPRoute()
+					r.Spec.CommonRouteSpec.ParentRefs[0].Port = address.Of(gatewayv1alpha2.PortNumber(80))
+					r.Spec.CommonRouteSpec.ParentRefs[0].SectionName = address.Of(gatewayv1alpha2.SectionName("unknown-listener"))
+					r.Spec.Rules = []gatewayv1alpha2.TCPRouteRule{
+						{
+							BackendRefs: builder.NewBackendRef("fake-service").WithPort(80).ToSlice(),
+						},
+					}
+					return r
+				}(),
+				objects: []client.Object{
+					gatewayWithTCP80Ready(),
+					gatewayClass,
+					namespace,
+				},
+				expected: expected{
+					listenerName: "unknown-listener",
+					condition:    routeConditionAccepted(metav1.ConditionFalse, RouteReasonNoMatchingParent),
+				},
+			},
 		}
 
 		for _, tt := range tests {
@@ -903,25 +902,24 @@ func Test_getSupportedGatewayForRoute(t *testing.T) {
 					condition:    routeConditionAccepted(metav1.ConditionTrue, gatewayv1beta1.RouteReasonAccepted),
 				},
 			},
-			// TODO: uncomment when https://github.com/Kong/kubernetes-ingress-controller/issues/3221 is done
-			// {
-			// 	name: "UDPRoute specifying in sectionName non existing listener does not get Accepted",
-			// 	route: func() *UDPRoute {
-			// 		r := basicUDPRoute()
-			// 		r.Spec.CommonRouteSpec.ParentRefs[0].Port = address.Of(gatewayv1alpha2.PortNumber(53))
-			// 		r.Spec.CommonRouteSpec.ParentRefs[0].SectionName = address.Of(gatewayv1alpha2.SectionName("unknown-listener"))
-			// 		return r
-			// 	}(),
-			// 	objects: []client.Object{
-			// 		gatewayWithUDP53Ready(),
-			// 		gatewayClass,
-			// 		namespace,
-			// 	},
-			// 	expected: expected{
-			// 		listenerName: "udp",
-			// 		condition:    routeConditionAccepted(metav1.ConditionFalse, RouteReasonNoMatchingParent),
-			// 	},
-			// },
+			{
+				name: "UDPRoute specifying in sectionName non existing listener does not get Accepted",
+				route: func() *UDPRoute {
+					r := basicUDPRoute()
+					r.Spec.CommonRouteSpec.ParentRefs[0].Port = address.Of(gatewayv1alpha2.PortNumber(53))
+					r.Spec.CommonRouteSpec.ParentRefs[0].SectionName = address.Of(gatewayv1alpha2.SectionName("unknown-listener"))
+					return r
+				}(),
+				objects: []client.Object{
+					gatewayWithUDP53Ready(),
+					gatewayClass,
+					namespace,
+				},
+				expected: expected{
+					listenerName: "unknown-listener",
+					condition:    routeConditionAccepted(metav1.ConditionFalse, RouteReasonNoMatchingParent),
+				},
+			},
 		}
 
 		for _, tt := range tests {
@@ -1127,27 +1125,27 @@ func Test_getSupportedGatewayForRoute(t *testing.T) {
 					},
 				},
 			},
-			// TODO: uncomment when https://github.com/Kong/kubernetes-ingress-controller/issues/3221 is done
-			// {
-			// 	name: "TLSRoute specifying in sectionName non existing listener does not get Accepted",
-			// 	route: func() *TLSRoute {
-			// 		r := basicTLSRoute()
-			// 		r.Spec.CommonRouteSpec.ParentRefs[0].Port = address.Of(gatewayv1alpha2.PortNumber(443))
-			// 		r.Spec.CommonRouteSpec.ParentRefs[0].SectionName = address.Of(gatewayv1alpha2.SectionName("unknown-listener"))
-			// 		return r
-			// 	}(),
-			// 	objects: []client.Object{
-			// 		gatewayWithTLS443PassthroughReady(),
-			// 		gatewayClass,
-			// 		namespace,
-			// 	},
-			// 	expected: []expected{
-			// 		{
-			// 			listenerName: "tls",
-			//			condition: routeConditionAccepted(metav1.ConditionFalse, RouteReasonNoMatchingParent),
-			// 		},
-			// 	},
-			// },
+			// unmatched sectionName.
+			{
+				name: "TLSRoute specifying in sectionName non existing listener does not get Accepted",
+				route: func() *TLSRoute {
+					r := basicTLSRoute()
+					r.Spec.CommonRouteSpec.ParentRefs[0].Port = address.Of(gatewayv1alpha2.PortNumber(443))
+					r.Spec.CommonRouteSpec.ParentRefs[0].SectionName = address.Of(gatewayv1alpha2.SectionName("unknown-listener"))
+					return r
+				}(),
+				objects: []client.Object{
+					gatewayWithTLS443PassthroughReady(),
+					gatewayClass,
+					namespace,
+				},
+				expected: []expected{
+					{
+						listenerName: "unknown-listener",
+						condition:    routeConditionAccepted(metav1.ConditionFalse, RouteReasonNoMatchingParent),
+					},
+				},
+			},
 		}
 
 		for _, tt := range tests {

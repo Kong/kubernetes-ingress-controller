@@ -116,7 +116,7 @@ func (cs Index) ValidateCredentialsForUniqueKeyConstraints(secret *corev1.Secret
 	// the indication of credential type is required to be present on all credentials.
 	credentialTypeB, ok := secret.Data[TypeKey]
 	if !ok {
-		return fmt.Errorf("missing required key %s", TypeKey)
+		return fmt.Errorf("missing required key '%s'", TypeKey)
 	}
 	credentialType := string(credentialTypeB)
 
@@ -153,7 +153,7 @@ func (cs Index) add(newCred Credential) error {
 	for _, constrainedKey := range constraints {
 		if newCred.Key == constrainedKey { // this key has constraints on it, we need to check for violations
 			if _, ok := cs[newCred.Type][newCred.Key][newCred.Value]; ok {
-				return fmt.Errorf("unique key constraint violated for %s", newCred.Key)
+				return fmt.Errorf("unique key constraint violated for '%s'", newCred.Key)
 			}
 		}
 	}

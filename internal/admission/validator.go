@@ -171,7 +171,7 @@ func (validator KongHTTPValidator) ValidateConsumer(
 	for _, secret := range credentials {
 		// do the unique constraints validation of the credentials using the credentials index
 		if err := credentialsIndex.ValidateCredentialsForUniqueKeyConstraints(secret); err != nil {
-			msg := fmt.Sprintf("%s: %s", ErrTextConsumerCredentialUniqueKeyConstraintFailed, err.Error())
+			msg := fmt.Sprintf("%s: %s", ErrTextConsumerCredentialValidationFailed, err.Error())
 			return false, msg, nil
 		}
 	}

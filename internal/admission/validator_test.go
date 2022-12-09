@@ -387,7 +387,7 @@ func TestKongHTTPValidator_ValidateConsumer(t *testing.T) {
 			},
 			operation:       admissionv1.Create,
 			expectError:     false,
-			expectedMessage: "consumer credential violated unique key constraint: unique key constraint violated for key",
+			expectedMessage: "consumer credential failed validation: unique key constraint violated for 'key'",
 		},
 		{
 			name: "consumer refers a secret that has the same key as another secret",
@@ -412,7 +412,7 @@ func TestKongHTTPValidator_ValidateConsumer(t *testing.T) {
 			},
 			operation:       admissionv1.Create,
 			expectError:     false,
-			expectedMessage: "consumer credential violated unique key constraint: unique key constraint violated for key",
+			expectedMessage: "consumer credential failed validation: unique key constraint violated for 'key'",
 		},
 		{
 			name: "consumer is updated in place - no unique constraint violation should occur",

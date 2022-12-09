@@ -97,60 +97,60 @@ type KongIngressService struct {
 
 // KongIngressRoute contains KongIngress route configuration.
 // It contains the subset of `go-kong.kong.Route` fields supported by `kongstate.Route.overrideByKongIngress`.
-// Deprecated: use Route's annotations instead.
+// Deprecated: use Ingress' annotations instead.
 type KongIngressRoute struct {
 	// Methods is a list of HTTP methods that match this Route.
-	// Deprecated: use Route's "konghq.com/override-protocols" annotation instead.
+	// Deprecated: use Ingress' "konghq.com/override-protocols" annotation instead.
 	Methods []*string `json:"methods,omitempty" yaml:"methods,omitempty"`
 
 	// Headers contains one or more lists of values indexed by header name
 	// that will cause this Route to match if present in the request.
 	// The Host header cannot be used with this attribute.
-	// Deprecated: use Route's "konghq.com/headers" annotation instead.
+	// Deprecated: use Ingress' "konghq.com/headers" annotation instead.
 	Headers map[string][]string `json:"headers,omitempty" yaml:"headers,omitempty"`
 
 	// Protocols is an array of the protocols this Route should allow.
-	// Deprecated: use Route's "konghq.com/protocols" annotation instead.
+	// Deprecated: use Ingress' "konghq.com/protocols" annotation instead.
 	Protocols []*KongProtocol `json:"protocols,omitempty" yaml:"protocols,omitempty"`
 
 	// RegexPriority is a number used to choose which route resolves a given request
 	// when several routes match it using regexes simultaneously.
-	// Deprecated: use Route's "konghq.com/regex-priority" annotation instead.
+	// Deprecated: use Ingress' "konghq.com/regex-priority" annotation instead.
 	RegexPriority *int `json:"regex_priority,omitempty" yaml:"regex_priority,omitempty"`
 
 	// StripPath sets When matching a Route via one of the paths
 	// strip the matching prefix from the upstream request URL.
-	// Deprecated: use Route's "konghq.com/strip-path" annotation instead.
+	// Deprecated: use Ingress' "konghq.com/strip-path" annotation instead.
 	StripPath *bool `json:"strip_path,omitempty" yaml:"strip_path,omitempty"`
 
 	// PreserveHost sets When matching a Route via one of the hosts domain names,
 	// use the request Host header in the upstream request headers.
 	// If set to false, the upstream Host header will be that of the Service’s host.
-	// Deprecated: use Route's "konghq.com/preserve-host" annotation instead.
+	// Deprecated: use Ingress' "konghq.com/preserve-host" annotation instead.
 	PreserveHost *bool `json:"preserve_host,omitempty" yaml:"preserve_host,omitempty"`
 
 	// HTTPSRedirectStatusCode is the status code Kong responds with
 	// when all properties of a Route match except the protocol.
-	// Deprecated: use Route's "ingress.kubernetes.io/force-ssl-redirect" or
+	// Deprecated: use Ingress' "ingress.kubernetes.io/force-ssl-redirect" or
 	// "konghq.com/https-redirect-status-code" annotations instead.
 	HTTPSRedirectStatusCode *int `json:"https_redirect_status_code,omitempty" yaml:"https_redirect_status_code,omitempty"`
 
 	// PathHandling controls how the Service path, Route path and requested path
 	// are combined when sending a request to the upstream.
 	// +kubebuilder:validation:Enum=v0;v1
-	// Deprecated: use Route's "konghq.com/path-handling" annotation instead.
+	// Deprecated: use Ingress' "konghq.com/path-handling" annotation instead.
 	PathHandling *string `json:"path_handling,omitempty" yaml:"path_handling,omitempty"`
 
 	// SNIs is a list of SNIs that match this Route when using stream routing.
-	// Deprecated: use Route's "konghq.com/snis" annotation instead.
+	// Deprecated: use Ingress' "konghq.com/snis" annotation instead.
 	SNIs []*string `json:"snis,omitempty" yaml:"snis,omitempty"`
 
 	// RequestBuffering sets whether to enable request body buffering or not.
-	// Deprecated: use Route's "konghq.com/request-buffering" annotation instead.
+	// Deprecated: use Ingress' "konghq.com/request-buffering" annotation instead.
 	RequestBuffering *bool `json:"request_buffering,omitempty" yaml:"request_buffering,omitempty"`
 
 	// ResponseBuffering sets whether to enable response body buffering or not.
-	// Deprecated: use Route's "konghq.com/response-buffering" annotation instead.
+	// Deprecated: use Ingress' "konghq.com/response-buffering" annotation instead.
 	ResponseBuffering *bool `json:"response_buffering,omitempty" yaml:"response_buffering,omitempty"`
 }
 

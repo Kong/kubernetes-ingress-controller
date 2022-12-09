@@ -96,17 +96,17 @@ spec:
                 description: 'Headers contains one or more lists of values indexed
                   by header name that will cause this Route to match if present in
                   the request. The Host header cannot be used with this attribute.
-                  Deprecated: use Route''s "konghq.com/headers" annotation instead.'
+                  Deprecated: use Ingress'' "konghq.com/headers" annotation instead.'
                 type: object
               https_redirect_status_code:
                 description: 'HTTPSRedirectStatusCode is the status code Kong responds
                   with when all properties of a Route match except the protocol. Deprecated:
-                  use Route''s "ingress.kubernetes.io/force-ssl-redirect" or "konghq.com/https-redirect-status-code"
+                  use Ingress'' "ingress.kubernetes.io/force-ssl-redirect" or "konghq.com/https-redirect-status-code"
                   annotations instead.'
                 type: integer
               methods:
                 description: 'Methods is a list of HTTP methods that match this Route.
-                  Deprecated: use Route''s "konghq.com/override-protocols" annotation
+                  Deprecated: use Ingress'' "konghq.com/override-protocols" annotation
                   instead.'
                 items:
                   type: string
@@ -114,7 +114,8 @@ spec:
               path_handling:
                 description: 'PathHandling controls how the Service path, Route path
                   and requested path are combined when sending a request to the upstream.
-                  Deprecated: use Route''s "konghq.com/path-handling" annotation instead.'
+                  Deprecated: use Ingress'' "konghq.com/path-handling" annotation
+                  instead.'
                 enum:
                 - v0
                 - v1
@@ -123,12 +124,12 @@ spec:
                 description: 'PreserveHost sets When matching a Route via one of the
                   hosts domain names, use the request Host header in the upstream
                   request headers. If set to false, the upstream Host header will
-                  be that of the Service’s host. Deprecated: use Route''s "konghq.com/preserve-host"
+                  be that of the Service’s host. Deprecated: use Ingress'' "konghq.com/preserve-host"
                   annotation instead.'
                 type: boolean
               protocols:
                 description: 'Protocols is an array of the protocols this Route should
-                  allow. Deprecated: use Route''s "konghq.com/protocols" annotation
+                  allow. Deprecated: use Ingress'' "konghq.com/protocols" annotation
                   instead.'
                 items:
                   enum:
@@ -144,22 +145,22 @@ spec:
               regex_priority:
                 description: 'RegexPriority is a number used to choose which route
                   resolves a given request when several routes match it using regexes
-                  simultaneously. Deprecated: use Route''s "konghq.com/regex-priority"
+                  simultaneously. Deprecated: use Ingress'' "konghq.com/regex-priority"
                   annotation instead.'
                 type: integer
               request_buffering:
                 description: 'RequestBuffering sets whether to enable request body
-                  buffering or not. Deprecated: use Route''s "konghq.com/request-buffering"
+                  buffering or not. Deprecated: use Ingress'' "konghq.com/request-buffering"
                   annotation instead.'
                 type: boolean
               response_buffering:
                 description: 'ResponseBuffering sets whether to enable response body
-                  buffering or not. Deprecated: use Route''s "konghq.com/response-buffering"
+                  buffering or not. Deprecated: use Ingress'' "konghq.com/response-buffering"
                   annotation instead.'
                 type: boolean
               snis:
                 description: 'SNIs is a list of SNIs that match this Route when using
-                  stream routing. Deprecated: use Route''s "konghq.com/snis" annotation
+                  stream routing. Deprecated: use Ingress'' "konghq.com/snis" annotation
                   instead.'
                 items:
                   type: string
@@ -167,7 +168,7 @@ spec:
               strip_path:
                 description: 'StripPath sets When matching a Route via one of the
                   paths strip the matching prefix from the upstream request URL. Deprecated:
-                  use Route''s "konghq.com/strip-path" annotation instead.'
+                  use Ingress'' "konghq.com/strip-path" annotation instead.'
                 type: boolean
             type: object
           upstream:

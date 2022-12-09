@@ -80,7 +80,7 @@ Adding a new version? You'll need three changes:
 ### Deprecated
 - KongIngress' `proxy` and `route` fields are now deprecated in favor of
   Service and Ingress annotations. The annotations will become the only
-  means of configuring those settings in a future release.
+  means of configuring those settings in 3.0 release.
   [#3246](https://github.com/Kong/kubernetes-ingress-controller/pull/3246)
 
 ### Added

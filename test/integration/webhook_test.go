@@ -345,7 +345,7 @@ func TestValidationWebhook(t *testing.T) {
 				},
 			},
 			wantErr:        true,
-			wantPartialErr: "not found",
+			wantPartialErr: "consumer referenced non-existent credentials secret",
 		},
 		{
 			name: "a consumer with duplicate credentials which ARE constrained should fail validation",

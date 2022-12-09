@@ -148,6 +148,7 @@ func getSupportedGatewayForRoute[T types.RouteT](ctx context.Context, mgrc clien
 		var (
 			// Set to true if there exists a listener which wasn't filtered by:
 			// - AlowedRoutes
+			// - listener name matching
 			// - listener status checks
 			// - listener and route type checks
 			matched = false
@@ -158,6 +159,7 @@ func getSupportedGatewayForRoute[T types.RouteT](ctx context.Context, mgrc clien
 
 			allowedByAllowedRoutes  = false
 			allowedBySupportedKinds = false
+			allowedByListenerName   = false
 		)
 
 		for _, listener := range gateway.Spec.Listeners {
@@ -180,6 +182,14 @@ func getSupportedGatewayForRoute[T types.RouteT](ctx context.Context, mgrc clien
 				continue
 			} else {
 				allowedBySupportedKinds = true
+			}
+
+			// Check if listener name matches.
+			if parentRef.SectionName != nil {
+				if *parentRef.SectionName != "" && *parentRef.SectionName != listener.Name {
+					continue
+				}
+				allowedByListenerName = true
 			}
 
 			// Perform the port matching as described in GEP-957.
@@ -233,6 +243,10 @@ func getSupportedGatewayForRoute[T types.RouteT](ctx context.Context, mgrc clien
 				// If there is no matchingHostname, the gateway Status Condition Accepted
 				// must be set to False with reason NoMatchingListenerHostname
 				reason = gatewayv1beta1.RouteReasonNoMatchingListenerHostname
+			} else if (parentRef.SectionName) != nil && !allowedByListenerName {
+				// If ParentRef specified listener names but none of the listeners matches the name,
+				// the gateway Status Condition Accepted must be set to False with reason RouteReasonNoMatchingParent.
+				reason = RouteReasonNoMatchingParent
 			} else if (parentRef.Port != nil) && !portMatched {
 				// If ParentRef specified a Port but none of the listeners matched, the gateway Status
 				// Condition Accepted must be set to False with reason NoMatchingListenerPort

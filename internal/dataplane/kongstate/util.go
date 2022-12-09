@@ -1,7 +1,6 @@
 package kongstate
 
 import (
-	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -226,11 +225,11 @@ func namespacedSecretToConfiguration(
 }
 
 type SecretGetter interface {
-	GetSecret(ctx context.Context, namespace, name string) (*corev1.Secret, error)
+	GetSecret(namespace, name string) (*corev1.Secret, error)
 }
 
 func SecretToConfiguration(s SecretGetter, reference configurationv1.SecretValueFromSource, namespace string) (kong.Configuration, error) {
-	secret, err := s.GetSecret(context.TODO(), namespace, reference.Secret)
+	secret, err := s.GetSecret(namespace, reference.Secret)
 	if err != nil {
 		return kong.Configuration{}, fmt.Errorf(
 			"error fetching plugin configuration secret '%v/%v': %w",

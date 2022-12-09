@@ -6,7 +6,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
 	credsvalidation "github.com/kong/kubernetes-ingress-controller/v2/internal/validation/consumers/credentials"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
 )
@@ -44,7 +43,7 @@ func listManagedConsumersReferencingCredentialsSecret(secret corev1.Secret, mana
 // if the caller is building the index to validate updates for specific secrets
 // and those secrets should be excluded from the index because they will be added
 // later, a map of the namespace and name of those secrets can be provided to exclude them.
-func globalValidationIndexForCredentials(ctx context.Context, secretGetter kongstate.SecretGetter, consumers []*kongv1.KongConsumer, ignoredSecrets map[string]map[string]struct{}) (credsvalidation.Index, error) {
+func globalValidationIndexForCredentials(ctx context.Context, secretGetter SecretGetter, consumers []*kongv1.KongConsumer, ignoredSecrets map[string]map[string]struct{}) (credsvalidation.Index, error) {
 	// pull the reference secrets for credentials from each consumer in the list
 	index := make(credsvalidation.Index)
 	for _, consumer := range consumers {

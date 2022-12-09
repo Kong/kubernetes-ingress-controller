@@ -144,7 +144,7 @@ func TestKongHTTPValidator_ValidatePlugin(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			validator := KongHTTPValidator{
-				SecretGetter:        store,
+				Store:               store,
 				PluginSvc:           tt.PluginSvc,
 				ingressClassMatcher: fakeClassMatcher,
 			}
@@ -276,7 +276,7 @@ func TestKongHTTPValidator_ValidateClusterPlugin(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			validator := KongHTTPValidator{
-				SecretGetter:        store,
+				Store:               store,
 				PluginSvc:           tt.PluginSvc,
 				ingressClassMatcher: fakeClassMatcher,
 			}

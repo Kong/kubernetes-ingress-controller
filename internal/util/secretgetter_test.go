@@ -1,7 +1,6 @@
 package util
 
 import (
-	"context"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -28,7 +27,7 @@ func TestSecretGetter(t *testing.T) {
 
 	t.Log("should return the secret object if it is found")
 
-	res, err := secretGetter.GetSecret(context.TODO(), "default", "valid-secret")
+	res, err := secretGetter.GetSecret("default", "valid-secret")
 
 	assert.NoError(t, err)
 	assert.Equal(t, secret.Data, res.Data)
@@ -36,6 +35,6 @@ func TestSecretGetter(t *testing.T) {
 
 	t.Log("should return error if it is not found")
 
-	_, err = secretGetter.GetSecret(context.TODO(), "default", "valid-secret-old")
+	_, err = secretGetter.GetSecret("default", "valid-secret-old")
 	assert.Error(t, err)
 }

@@ -32,6 +32,11 @@ type KongValidator interface {
 	ValidateHTTPRoute(ctx context.Context, httproute gatewaycontroller.HTTPRoute) (bool, string, error)
 }
 
+// SecretGetter allows fetching Secrets from Kubernetes API.
+type SecretGetter interface {
+	GetSecret(ctx context.Context, namespace, name string) (*corev1.Secret, error)
+}
+
 // KongHTTPValidator implements KongValidator interface to validate Kong
 // entities using the Admin API of Kong.
 type KongHTTPValidator struct {
@@ -40,7 +45,7 @@ type KongHTTPValidator struct {
 	Logger      logrus.FieldLogger
 
 	// SecretGetter is used for fetching secrets that may be not managed yet, hence are not present in the store.
-	SecretGetter  kongstate.SecretGetter
+	SecretGetter  SecretGetter
 	ManagerClient client.Client
 
 	// Store is used for fetching objects that are managed by this KIC instance.
@@ -250,7 +255,7 @@ func (validator KongHTTPValidator) ValidatePlugin(
 		if len(plugin.Config) > 0 {
 			return false, ErrTextPluginUsesBothConfigTypes, nil
 		}
-		config, err := kongstate.SecretToConfiguration(validator.SecretGetter, (*k8sPlugin.ConfigFrom).SecretValue, k8sPlugin.Namespace)
+		config, err := kongstate.SecretToConfiguration(validator.Store, (*k8sPlugin.ConfigFrom).SecretValue, k8sPlugin.Namespace)
 		if err != nil {
 			return false, ErrTextPluginSecretConfigUnretrievable, err
 		}

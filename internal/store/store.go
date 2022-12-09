@@ -17,7 +17,6 @@ limitations under the License.
 package store
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"reflect"
@@ -73,7 +72,7 @@ func (e ErrNotFound) Error() string {
 // Storer is the interface that wraps the required methods to gather information
 // about ingresses, services, secrets and ingress annotations.
 type Storer interface {
-	GetSecret(ctx context.Context, namespace, name string) (*corev1.Secret, error)
+	GetSecret(namespace, name string) (*corev1.Secret, error)
 	GetService(namespace, name string) (*corev1.Service, error)
 	GetEndpointsForService(namespace, name string) (*corev1.Endpoints, error)
 	GetKongIngress(namespace, name string) (*kongv1.KongIngress, error)
@@ -446,7 +445,7 @@ func New(cs CacheStores, ingressClass string, logger logrus.FieldLogger) Storer 
 }
 
 // GetSecret returns a Secret using the namespace and name as key.
-func (s Store) GetSecret(ctx context.Context, namespace, name string) (*corev1.Secret, error) {
+func (s Store) GetSecret(namespace, name string) (*corev1.Secret, error) {
 	key := fmt.Sprintf("%v/%v", namespace, name)
 	secret, exists, err := s.stores.Secret.GetByKey(key)
 	if err != nil {

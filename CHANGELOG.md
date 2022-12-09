@@ -190,8 +190,9 @@ Adding a new version? You'll need three changes:
   If an `HTTPRoute` specifies hostnames, and no intersecting hostnames 
   could be found in its parent listners, it is not accepted.
   [#3180](https://github.com/Kong/kubernetes-ingress-controller/pull/3180)
-- Admission webhook will reject a KongConsumer that refers to a Secret violating 
-  the unique key constraint validation.
+- Admission webhook will reject a KongConsumer that during being created, refers 
+  to a Secret already referred by another KongConsumer as it violates the unique 
+  key constraint.
   [#3239](https://github.com/Kong/kubernetes-ingress-controller/pull/3239)
 
 ## [2.7.0]

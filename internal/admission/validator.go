@@ -74,12 +74,19 @@ func NewKongHTTPValidator(
 	}
 }
 
-// ValidateConsumer checks if consumer has a Username and a consumer with
-// the same username doesn't exist in Kong.
+// ValidateConsumer checks if:
+// - the consumer has a Username and a consumer with the same username doesn't exist in Kong,
+// - credentials referred by the consumer do not violate unique key constraints.
+// Operation is used to determine whether the consumer is being created or updated to make
+// sure that during the update we ignore already validated secrets.
 // If an error occurs during validation, it is returned as the last argument.
 // The first boolean communicates if the consumer is valid or not and string
 // holds a message if the entity is not valid.
-func (validator KongHTTPValidator) ValidateConsumer(ctx context.Context, consumer kongv1.KongConsumer, operation admissionv1.Operation) (bool, string, error) {
+func (validator KongHTTPValidator) ValidateConsumer(
+	ctx context.Context,
+	consumer kongv1.KongConsumer,
+	operation admissionv1.Operation,
+) (bool, string, error) {
 	// ignore consumers that are being managed by another controller
 	if !validator.ingressClassMatcher(&consumer.ObjectMeta, annotations.IngressClassKey, annotations.ExactClassMatch) {
 		return true, "", nil

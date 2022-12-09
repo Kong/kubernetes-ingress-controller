@@ -429,30 +429,6 @@ func TestKongHTTPValidator_ValidateConsumer(t *testing.T) {
 			operation: admissionv1.Update,
 			expectOK:  true,
 		},
-		{
-			name: "consumer refers to a secret that violates the unique key constraint",
-			modifyBasicConsumer: func(c *configurationv1.KongConsumer) {
-				c.Credentials = []string{"secret"}
-			},
-			secrets: []*corev1.Secret{
-				validSecret(),
-				func() *corev1.Secret {
-					s := validSecret()
-					s.Name = "secret-2"
-					return s
-				}(),
-			},
-			consumers: []*configurationv1.KongConsumer{
-				func() *configurationv1.KongConsumer {
-					c := basicConsumer()
-					c.Credentials = []string{"secret-2"}
-					return &c
-				}(),
-			},
-			operation:       admissionv1.Create,
-			expectError:     true,
-			expectedMessage: ErrTextConsumerCredentialUniqueKeyConstraintFailed,
-		},
 	}
 	for _, tt := range tests {
 		tt := tt

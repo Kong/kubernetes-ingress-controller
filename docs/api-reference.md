@@ -125,23 +125,23 @@ _Appears in:_
 
 
 
-KongIngressRoute contains KongIngress route configuration. It contains the subset of `go-kong.kong.Route` fields supported by `kongstate.Route.overrideByKongIngress`.
+KongIngressRoute contains KongIngress route configuration. It contains the subset of `go-kong.kong.Route` fields supported by `kongstate.Route.overrideByKongIngress`. Deprecated: use Route's annotations instead.
 
 
 
 | Field | Description |
 | --- | --- |
-| `methods` _string array_ | Methods is a list of HTTP methods that match this Route. |
-| `headers` _object (keys:string, values:string array)_ | Headers contains one or more lists of values indexed by header name that will cause this Route to match if present in the request. The Host header cannot be used with this attribute. |
-| `protocols` _[KongProtocol](#kongprotocol) array_ | Protocols is an array of the protocols this Route should allow. |
-| `regex_priority` _integer_ | RegexPriority is a number used to choose which route resolves a given request when several routes match it using regexes simultaneously. |
-| `strip_path` _boolean_ | StripPath sets When matching a Route via one of the paths strip the matching prefix from the upstream request URL. |
-| `preserve_host` _boolean_ | PreserveHost sets When matching a Route via one of the hosts domain names, use the request Host header in the upstream request headers. If set to false, the upstream Host header will be that of the Service’s host. |
-| `https_redirect_status_code` _integer_ | HTTPSRedirectStatusCode is the status code Kong responds with when all properties of a Route match except the protocol. |
-| `path_handling` _string_ | PathHandling controls how the Service path, Route path and requested path are combined when sending a request to the upstream. |
-| `snis` _string array_ | SNIs is a list of SNIs that match this Route when using stream routing. |
-| `request_buffering` _boolean_ | RequestBuffering sets whether to enable request body buffering or not. |
-| `response_buffering` _boolean_ | ResponseBuffering sets whether to enable response body buffering or not. |
+| `methods` _string array_ | Methods is a list of HTTP methods that match this Route. Deprecated: use Route's "konghq.com/override-protocols" annotation instead. |
+| `headers` _object (keys:string, values:string array)_ | Headers contains one or more lists of values indexed by header name that will cause this Route to match if present in the request. The Host header cannot be used with this attribute. Deprecated: use Route's "konghq.com/headers" annotation instead. |
+| `protocols` _[KongProtocol](#kongprotocol) array_ | Protocols is an array of the protocols this Route should allow. Deprecated: use Route's "konghq.com/protocols" annotation instead. |
+| `regex_priority` _integer_ | RegexPriority is a number used to choose which route resolves a given request when several routes match it using regexes simultaneously. Deprecated: use Route's "konghq.com/regex-priority" annotation instead. |
+| `strip_path` _boolean_ | StripPath sets When matching a Route via one of the paths strip the matching prefix from the upstream request URL. Deprecated: use Route's "konghq.com/strip-path" annotation instead. |
+| `preserve_host` _boolean_ | PreserveHost sets When matching a Route via one of the hosts domain names, use the request Host header in the upstream request headers. If set to false, the upstream Host header will be that of the Service’s host. Deprecated: use Route's "konghq.com/preserve-host" annotation instead. |
+| `https_redirect_status_code` _integer_ | HTTPSRedirectStatusCode is the status code Kong responds with when all properties of a Route match except the protocol. Deprecated: use Route's "ingress.kubernetes.io/force-ssl-redirect" or "konghq.com/https-redirect-status-code" annotations instead. |
+| `path_handling` _string_ | PathHandling controls how the Service path, Route path and requested path are combined when sending a request to the upstream. Deprecated: use Route's "konghq.com/path-handling" annotation instead. |
+| `snis` _string array_ | SNIs is a list of SNIs that match this Route when using stream routing. Deprecated: use Route's "konghq.com/snis" annotation instead. |
+| `request_buffering` _boolean_ | RequestBuffering sets whether to enable request body buffering or not. Deprecated: use Route's "konghq.com/request-buffering" annotation instead. |
+| `response_buffering` _boolean_ | ResponseBuffering sets whether to enable response body buffering or not. Deprecated: use Route's "konghq.com/response-buffering" annotation instead. |
 
 
 _Appears in:_
@@ -151,18 +151,18 @@ _Appears in:_
 
 
 
-KongIngressService contains KongIngress service configuration.
+KongIngressService contains KongIngress service configuration. Deprecated: use Service's annotations instead.
 
 
 
 | Field | Description |
 | --- | --- |
-| `protocol` _string_ | The protocol used to communicate with the upstream. |
-| `path` _string_ | (optional) The path to be used in requests to the upstream server. |
-| `retries` _integer_ | The number of retries to execute upon failure to proxy. |
-| `connect_timeout` _integer_ | The timeout in milliseconds for establishing a connection to the upstream server. |
-| `read_timeout` _integer_ | The timeout in milliseconds between two successive read operations for transmitting a request to the upstream server. |
-| `write_timeout` _integer_ | The timeout in milliseconds between two successive write operations for transmitting a request to the upstream server. |
+| `protocol` _string_ | The protocol used to communicate with the upstream. Deprecated: use Service's "konghq.com/protocol" annotation instead. |
+| `path` _string_ | (optional) The path to be used in requests to the upstream server. Deprecated: use Service's "konghq.com/path" annotation instead. |
+| `retries` _integer_ | The number of retries to execute upon failure to proxy. Deprecated: use Service's "konghq.com/retries" annotation instead. |
+| `connect_timeout` _integer_ | The timeout in milliseconds for	establishing a connection to the upstream server. Deprecated: use Service's "konghq.com/connect-timeout" annotation instead. |
+| `read_timeout` _integer_ | The timeout in milliseconds between two successive read operations for transmitting a request to the upstream server. Deprecated: use Service's "konghq.com/read-timeout" annotation instead. |
+| `write_timeout` _integer_ | The timeout in milliseconds between two successive write operations for transmitting a request to the upstream server. Deprecated: use Service's "konghq.com/write-timeout" annotation instead. |
 
 
 _Appears in:_

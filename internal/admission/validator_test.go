@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"reflect"
 	"testing"
 
 	"github.com/kong/go-kong/kong"
@@ -11,7 +12,9 @@ import (
 	admissionv1 "k8s.io/api/admission/v1"
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/tools/cache"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/store"
@@ -340,8 +343,8 @@ func TestKongHTTPValidator_ValidateConsumer(t *testing.T) {
 			},
 			operation:       admissionv1.Create,
 			expectOK:        false,
-			expectError:     true,
-			expectedMessage: ErrTextFailedToRetrieveSecret,
+			expectError:     false,
+			expectedMessage: "consumer referenced non-existent credentials secret: default/non-existing-secret",
 		},
 		{
 			name: "consumer refers a valid secret",
@@ -365,8 +368,8 @@ func TestKongHTTPValidator_ValidateConsumer(t *testing.T) {
 				}(),
 			},
 			operation:       admissionv1.Create,
-			expectError:     true,
-			expectedMessage: "consumer credential failed validation",
+			expectError:     false,
+			expectedMessage: "consumer credential failed validation: missing required key kongCredType",
 		},
 		{
 			name: "consumer refers a secret that is already referred by another consumer",
@@ -383,8 +386,8 @@ func TestKongHTTPValidator_ValidateConsumer(t *testing.T) {
 				}(),
 			},
 			operation:       admissionv1.Create,
-			expectError:     true,
-			expectedMessage: ErrTextConsumerCredentialUniqueKeyConstraintFailed,
+			expectError:     false,
+			expectedMessage: "consumer credential violated unique key constraint: unique key constraint violated for key",
 		},
 		{
 			name: "consumer refers a secret that has the same key as another secret",
@@ -408,8 +411,8 @@ func TestKongHTTPValidator_ValidateConsumer(t *testing.T) {
 				}(),
 			},
 			operation:       admissionv1.Create,
-			expectError:     true,
-			expectedMessage: ErrTextConsumerCredentialUniqueKeyConstraintFailed,
+			expectError:     false,
+			expectedMessage: "consumer credential violated unique key constraint: unique key constraint violated for key",
 		},
 		{
 			name: "consumer is updated in place - no unique constraint violation should occur",
@@ -435,14 +438,11 @@ func TestKongHTTPValidator_ValidateConsumer(t *testing.T) {
 
 		t.Run(tt.name, func(t *testing.T) {
 			s, _ := store.NewFakeStore(store.FakeObjects{
-				Secrets:       tt.secrets,
 				KongConsumers: tt.consumers,
 			})
 			validator := KongHTTPValidator{
-				// For the sake of tests we use the same store for both SecretGetter and Store as it does not matter here
-				// if secrets are managed by us or not yet.
 				Store:               s,
-				SecretGetter:        s,
+				SecretGetter:        newFakeSecretGetter(tt.secrets...),
 				ConsumerSvc:         &fakeConsumerService{consumerAlreadyExists: tt.consumerAlreadyExistsInGateway},
 				ingressClassMatcher: fakeClassMatcher,
 			}
@@ -473,4 +473,40 @@ func (f *fakeConsumerService) Get(context.Context, *string) (*kong.Consumer, err
 		return &kong.Consumer{}, nil
 	}
 	return nil, kong.NewAPIError(http.StatusNotFound, "consumer not found")
+}
+
+type fakeSecretGetter struct {
+	s cache.Store
+}
+
+func newFakeSecretGetter(secrets ...*corev1.Secret) fakeSecretGetter {
+	keyFunc := func(obj interface{}) (string, error) {
+		v := reflect.Indirect(reflect.ValueOf(obj))
+		name := v.FieldByName("Name")
+		namespace := v.FieldByName("Namespace")
+		return namespace.String() + "/" + name.String(), nil
+	}
+	cs := cache.NewStore(keyFunc)
+	for _, s := range secrets {
+		_ = cs.Add(s)
+	}
+
+	return fakeSecretGetter{cs}
+}
+
+func (f fakeSecretGetter) GetSecret(_ context.Context, namespace, name string) (*corev1.Secret, error) {
+	secret, exists, err := f.s.GetByKey(fmt.Sprintf("%s/%s", namespace, name))
+	if err != nil {
+		return nil, err
+	}
+	if !exists {
+		// We're returning a Kubernetes StatusError as it's the error that Validator expects.
+		return nil, &errors.StatusError{
+			ErrStatus: metav1.Status{
+				Reason: metav1.StatusReasonNotFound,
+			},
+		}
+	}
+
+	return secret.(*corev1.Secret), nil
 }

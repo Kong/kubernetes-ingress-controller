@@ -102,7 +102,7 @@ func (validator KongHTTPValidator) ValidateConsumer(
 	if err != nil {
 		if !kong.IsNotFoundErr(err) {
 			validator.Logger.WithError(err).Error("failed to fetch consumer from kong")
-			return false, ErrTextConsumerUnretrievable, err
+			return false, "", err
 		}
 	}
 	if c != nil {
@@ -127,14 +127,17 @@ func (validator KongHTTPValidator) ValidateConsumer(
 		secret, err := validator.SecretGetter.GetSecret(ctx, consumer.Namespace, secretName)
 		if err != nil {
 			if errors.IsNotFound(err) {
-				return false, ErrTextConsumerCredentialSecretNotFound, err
+				secretRef := fmt.Sprintf("%s/%s", consumer.Namespace, secretName)
+				msg := fmt.Sprintf("%s: %s", ErrTextConsumerCredentialSecretNotFound, secretRef)
+				return false, msg, nil
 			}
-			return false, ErrTextFailedToRetrieveSecret, err
+			return false, "", err
 		}
 
 		// do the basic credentials validation
 		if err := credsvalidation.ValidateCredentials(secret); err != nil {
-			return false, ErrTextConsumerCredentialValidationFailed, err
+			msg := fmt.Sprintf("%s: %s", ErrTextConsumerCredentialValidationFailed, err.Error())
+			return false, msg, nil
 		}
 
 		// If a consumer is being updated, we should ignore its secrets as they would always be duplicated in this case.
@@ -155,7 +158,7 @@ func (validator KongHTTPValidator) ValidateConsumer(
 	// testing them against themselves.
 	credentialsIndex, err := globalValidationIndexForCredentials(ctx, validator.SecretGetter, managedConsumers, ignoredSecrets)
 	if err != nil {
-		return false, ErrTextConsumerCredentialValidationFailed, err
+		return false, "", err
 	}
 
 	// validate the consumer's credentials against the index of all managed
@@ -163,7 +166,8 @@ func (validator KongHTTPValidator) ValidateConsumer(
 	for _, secret := range credentials {
 		// do the unique constraints validation of the credentials using the credentials index
 		if err := credentialsIndex.ValidateCredentialsForUniqueKeyConstraints(secret); err != nil {
-			return false, ErrTextConsumerCredentialUniqueKeyConstraintFailed, err
+			msg := fmt.Sprintf("%s: %s", ErrTextConsumerCredentialUniqueKeyConstraintFailed, err.Error())
+			return false, msg, nil
 		}
 	}
 

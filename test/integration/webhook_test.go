@@ -386,7 +386,7 @@ func TestValidationWebhook(t *testing.T) {
 				},
 			},
 			wantErr:        true,
-			wantPartialErr: "unique key constraint violated for username",
+			wantPartialErr: "unique key constraint violated for 'username'",
 		},
 		{
 			name: "a consumer that provides duplicate credentials which are NOT in violation of unique key constraints should pass validation",
@@ -445,7 +445,7 @@ func TestValidationWebhook(t *testing.T) {
 				},
 			},
 			wantErr:        true,
-			wantPartialErr: "unique key constraint violated for username",
+			wantPartialErr: "unique key constraint violated for 'username'",
 		},
 		{
 			name: "secret with missing fields",

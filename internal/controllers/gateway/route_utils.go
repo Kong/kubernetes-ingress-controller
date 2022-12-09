@@ -177,7 +177,6 @@ func getSupportedGatewayForRoute[T types.RouteT](ctx context.Context, mgrc clien
 			// Check the listeners statuses:
 			// - Check if a listener status exists with a matching type (via SupportedKinds).
 			// - Check if it matches the requested listener by name (if specified).
-			// - Check if it matches the requested listener by port (if specified).
 			// - And finally check if that listeners is marked as Ready.
 			if err := existsMatchingReadyListenerInStatus(route, listener, gateway.Status.Listeners); err != nil {
 				continue
@@ -247,7 +246,6 @@ func getSupportedGatewayForRoute[T types.RouteT](ctx context.Context, mgrc clien
 			} else if (parentRef.SectionName) != nil && !allowedByListenerName {
 				// If ParentRef specified listener names but none of the listeners matches the name,
 				// the gateway Status Condition Accepted must be set to False with reason RouteReasonNoMatchingParent.
-				// TODO: which listenerName to fill in for such case?
 				reason = RouteReasonNoMatchingParent
 			} else if (parentRef.Port != nil) && !portMatched {
 				// If ParentRef specified a Port but none of the listeners matched, the gateway Status

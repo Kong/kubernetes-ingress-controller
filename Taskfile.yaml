@@ -1,0 +1,61 @@
+version: '3'
+
+vars:
+  GOTESTSUM: "{{.ROOT_DIR}}/bin/gotestsum"
+  E2E_TEST_TIMEOUT: 45m
+  DEFAULT_NCPU:
+    sh: getconf _NPROCESSORS_ONLN
+  NCPU: "{{.NCPU | default .DEFAULT_NCPU }}"
+
+tasks:
+
+  test.e2e.gke:
+    desc: |
+      Run e2e tests on GKE spawning and cleaning up the cluster.
+      This job requires the following env variables to be set in order to interact
+      with Google API:
+      - GOOGLE_APPLICATION_CREDENTIALS
+      - GOOGLE_LOCATION
+      - GOOGLE_PROJECT
+
+      KUBERNETES_CLUSTER_NAME env will be set using the tasks within this job.
+
+    cmds:
+    # These 2 steps below will create and cleanup a GKE cluster named as specified
+    # in KUBERNETES_CLUSTER_NAME env variable.
+    - task: cluster.create
+      vars:
+        KUBERNETES_CLUSTER_NAME: "{{.KUBERNETES_CLUSTER_NAME}}"
+    - defer:
+        task: cluster.cleanup
+        vars:
+          KUBERNETES_CLUSTER_NAME: "{{.KUBERNETES_CLUSTER_NAME}}"
+
+    - |
+      {{.GOTESTSUM}} -- {{.GOTESTFLAGS}} \
+        -tags=e2e_tests \
+        -race \
+        -run "{{.E2E_TEST_RUN}}" \
+        -parallel {{.NCPU}} \
+        -timeout {{.E2E_TEST_TIMEOUT}} \
+        ./test/e2e/...
+
+    vars:
+      E2E_TEST_RUN: ""
+      KUBERNETES_CLUSTER_NAME:
+        sh: printf "kic-%s" $(openssl rand -hex 12)
+    env:
+      KUBERNETES_CLUSTER_NAME: "{{.KUBERNETES_CLUSTER_NAME}}"
+      GOTESTSUM_FORMAT: standard-verbose
+
+  cluster.create:
+    cmds:
+      - go run hack/e2e/cluster/deploy/main.go
+    env:
+      KUBERNETES_CLUSTER_NAME: "{{.KUBERNETES_CLUSTER_NAME}}"
+
+  cluster.cleanup:
+    cmds:
+      - go run hack/e2e/cluster/deploy/main.go cleanup
+    env:
+      KUBERNETES_CLUSTER_NAME: "{{.KUBERNETES_CLUSTER_NAME}}"

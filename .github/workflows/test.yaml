@@ -116,10 +116,8 @@ jobs:
         path: unit-tests.xml
 
   integration-tests-enterprise-postgres:
-    environment: "Configure ci"
     runs-on: ubuntu-latest
     env:
-      # PULP_PASSWORD secret is set in "Configure ci" environment
       PULP_PASSWORD: ${{ secrets.PULP_PASSWORD }}
     # We don't want to run enterprise tests for contributors whose workflow runs
     # do not have access to enterprise license (here, through the means of
@@ -367,7 +365,6 @@ jobs:
         path: conformance-tests.xml
 
   coverage:
-    environment: "Configure ci"
     needs:
       - "unit-tests"
       - "integration-tests-dbless"
@@ -394,7 +391,6 @@ jobs:
         verbose: true
 
   buildpulse-report:
-    environment: "Configure ci"
     needs:
       - "unit-tests"
       - "integration-tests-dbless"

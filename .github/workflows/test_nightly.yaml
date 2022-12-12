@@ -9,14 +9,12 @@ on:
 jobs:
   integration-tests-enterprise-postgres-nightly:
     if: ${{ github.event.label.name == 'ci/run-nightly' || github.event_name == 'workflow_dispatch' }}
-    environment: "Configure ci"
     runs-on: ubuntu-latest
     steps:
 
     - uses: Kong/kong-license@master
       id: license
       with:
-        # PULP_PASSWORD secret is set in "Configure ci" environment
         password: ${{ secrets.PULP_PASSWORD }}
 
     - name: setup golang
@@ -62,7 +60,6 @@ jobs:
 
   integration-tests-postgres-nightly:
     if: ${{ github.event.label.name == 'ci/run-nightly' || github.event_name == 'workflow_dispatch' }}
-    environment: "Configure ci"
     runs-on: ubuntu-latest
     steps:
 
@@ -106,7 +103,6 @@ jobs:
 
   integration-tests-dbless-nightly:
     if: ${{ github.event.label.name == 'ci/run-nightly' || github.event_name == 'workflow_dispatch' }}
-    environment: "Configure ci"
     runs-on: ubuntu-latest
     steps:
 

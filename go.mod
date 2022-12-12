@@ -2,7 +2,13 @@ module github.com/kong/kubernetes-ingress-controller/v2
 
 go 1.19
 
-replace github.com/imdario/mergo v0.3.12 => github.com/Kong/mergo v0.3.13
+replace (
+	github.com/imdario/mergo v0.3.12 => github.com/Kong/mergo v0.3.13
+
+	// replacing controller-runtime with a version compatible with v0.26.0 k8s libs
+	// TODO: remove when controller-runtime gets released
+	sigs.k8s.io/controller-runtime v0.13.1 => sigs.k8s.io/controller-runtime v0.13.1-0.20221212022533-c773bef2bc5b
+)
 
 require (
 	cloud.google.com/go/container v1.9.0
@@ -15,7 +21,7 @@ require (
 	github.com/google/uuid v1.3.0
 	github.com/kong/deck v1.16.1
 	github.com/kong/go-kong v0.33.0
-	github.com/kong/kubernetes-testing-framework v0.24.2-0.20221212113429-72c3f8ba851a
+	github.com/kong/kubernetes-testing-framework v0.24.1
 	github.com/lithammer/dedent v1.1.0
 	github.com/miekg/dns v1.1.50
 	github.com/mitchellh/mapstructure v1.5.0
@@ -38,7 +44,7 @@ require (
 	k8s.io/utils v0.0.0-20221128185143-99ec85e7a448
 	knative.dev/networking v0.0.0-20220302134042-e8b2eb995165
 	knative.dev/pkg v0.0.0-20220301181942-2fdd5f232e77
-	sigs.k8s.io/controller-runtime v0.13.1-0.20221212022533-c773bef2bc5b
+	sigs.k8s.io/controller-runtime v0.13.1
 	sigs.k8s.io/gateway-api v0.5.1
 	sigs.k8s.io/kustomize/api v0.12.1
 	sigs.k8s.io/kustomize/kyaml v0.13.9

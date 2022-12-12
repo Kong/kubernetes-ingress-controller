@@ -224,7 +224,6 @@ jobs:
           path: integration-${{ matrix.kubernetes-version }}-${{ matrix.dbmode }}-${{ matrix.kong-router-flavor }}-tests.xml
 
   buildpulse-report:
-    environment: "Configure ci"
     needs:
       - "test-current-kubernetes"
     if: ${{ always() }}

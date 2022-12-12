@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"reflect"
 
-	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	extv1beta1 "k8s.io/api/extensions/v1beta1"
 	netv1 "k8s.io/api/networking/v1"
@@ -43,7 +42,7 @@ func UpdateLoadBalancerIngress(
 	case *extv1beta1.Ingress:
 		obj.Status.LoadBalancer.Ingress = netV1ToExtV1beta1LoadBalancerIngress(newAddresses)
 	default:
-		return false, errors.Errorf("unsupported ingress type: %T", obj)
+		return false, fmt.Errorf("unsupported ingress type: %T", obj)
 	}
 
 	return true, nil
@@ -98,7 +97,7 @@ func ingressToNetV1LoadBalancerIngressStatus(in any) ([]netv1.IngressLoadBalance
 	case *extv1beta1.Ingress:
 		return extV1beta1ToNetV1ToLoadBalancerIngress(obj.Status.LoadBalancer.Ingress), nil
 	default:
-		return nil, errors.Errorf("unsupported ingress type: %T", obj)
+		return nil, fmt.Errorf("unsupported ingress type: %T", obj)
 	}
 }
 

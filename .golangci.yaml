@@ -80,6 +80,10 @@ linters-settings:
       - gopkg.in/yaml.v3:
           recommendations:
           - sigs.k8s.io/yaml
+      - github.com/pkg/errors:
+          recommendations:
+            - fmt
+            - errors
 issues:
   fix: true
   max-same-issues: 0

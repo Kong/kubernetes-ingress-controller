@@ -181,7 +181,8 @@ jobs:
     strategy:
       matrix:
         kubernetes-version:
-          - 'v1.25.0'
+          - 'v1.26.0'
+          - 'v1.25.3'
         dbmode:
           - 'dbless'
           - 'postgres'

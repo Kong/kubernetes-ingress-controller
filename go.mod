@@ -7,6 +7,7 @@ replace (
 
 	// replacing controller-runtime with a version compatible with v0.26.0 k8s libs
 	// TODO: remove when controller-runtime gets released
+	// https://github.com/Kong/kubernetes-ingress-controller/issues/3253
 	sigs.k8s.io/controller-runtime v0.13.1 => sigs.k8s.io/controller-runtime v0.13.1-0.20221212022533-c773bef2bc5b
 )
 

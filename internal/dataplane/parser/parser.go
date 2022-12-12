@@ -8,6 +8,10 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/failures"
+
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/failures"
+
 	"github.com/kong/go-kong/kong"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
@@ -20,6 +24,7 @@ import (
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/failures"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
@@ -51,7 +56,7 @@ type Parser struct {
 	featureEnabledCombinedServiceRoutes             bool
 
 	flagEnabledRegexPathPrefix bool
-	failuresCollector          *TranslationFailuresCollector
+	failuresCollector          *failures.ResourceFailuresCollector
 }
 
 // NewParser produces a new Parser object provided a logging mechanism
@@ -60,7 +65,7 @@ func NewParser(
 	logger logrus.FieldLogger,
 	storer store.Storer,
 ) (*Parser, error) {
-	failuresCollector, err := NewTranslationFailuresCollector(logger)
+	failuresCollector, err := failures.NewResourceFailuresCollector(logger)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create translation errors collector: %w", err)
 	}
@@ -77,9 +82,9 @@ func NewParser(
 // -----------------------------------------------------------------------------
 
 // Build creates a Kong configuration from Ingress and Custom resources
-// defined in Kubernetes. It returns a slice of TranslationFailures which should
+// defined in Kubernetes. It returns a slice of ResourceFailures which should
 // be used to provide users with feedback on Kubernetes objects validity.
-func (p *Parser) Build() (*kongstate.KongState, []TranslationFailure) {
+func (p *Parser) Build() (*kongstate.KongState, []failures.ResourceFailure) {
 	// parse and merge all rules together from all Kubernetes API sources
 	ingressRules := mergeIngressRules(
 		p.ingressRulesFromIngressV1beta1(),
@@ -188,11 +193,11 @@ func (p *Parser) EnableRegexPathPrefix() {
 
 // registerTranslationFailure should be called when any Kubernetes object translation failure is encountered.
 func (p *Parser) registerTranslationFailure(reason string, causingObjects ...client.Object) {
-	p.failuresCollector.PushTranslationFailure(reason, causingObjects...)
+	p.failuresCollector.PushResourceFailure(reason, causingObjects...)
 }
 
-func (p *Parser) popTranslationFailures() []TranslationFailure {
-	return p.failuresCollector.PopTranslationFailures()
+func (p *Parser) popTranslationFailures() []failures.ResourceFailure {
+	return p.failuresCollector.PopResourceFailures()
 }
 
 func knativeIngressToNetworkingTLS(tls []knative.IngressTLS) []netv1.IngressTLS {

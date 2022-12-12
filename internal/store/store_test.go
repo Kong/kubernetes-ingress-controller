@@ -82,8 +82,8 @@ func TestNetworkingIngressV1Beta1(t *testing.T) {
 						},
 					},
 					Status: extensions.IngressStatus{
-						LoadBalancer: corev1.LoadBalancerStatus{
-							Ingress: []corev1.LoadBalancerIngress{{IP: "1.2.3.4"}},
+						LoadBalancer: extensions.IngressLoadBalancerStatus{
+							Ingress: []extensions.IngressLoadBalancerIngress{{IP: "1.2.3.4"}},
 						},
 					},
 				},

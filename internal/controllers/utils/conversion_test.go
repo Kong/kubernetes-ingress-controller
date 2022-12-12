@@ -97,9 +97,11 @@ func TestUpdateLoadBalancerIngress(t *testing.T) {
 
 		for _, old := range oldIngress {
 			t.Run(fmt.Sprintf("%T", old), func(t *testing.T) {
+				copiedOld := old.DeepCopyObject()
 				updatedNeeded, err := UpdateLoadBalancerIngress(old, newAddresses)
 				require.NoError(t, err)
 				assert.False(t, updatedNeeded)
+				assert.Equal(t, copiedOld, old, "when update not needed, the old object shouldn't be updated")
 			})
 		}
 	})
@@ -122,7 +124,7 @@ func TestUpdateLoadBalancerIngress(t *testing.T) {
 				updatedNeeded, err := UpdateLoadBalancerIngress(old, newAddresses)
 				require.NoError(t, err)
 				assert.True(t, updatedNeeded)
-				assert.NotEqual(t, copiedOld, old, "when updated needed the old object should be updated")
+				assert.NotEqual(t, copiedOld, old, "when updated needed, the old object should be updated")
 			})
 		}
 	})

@@ -16,6 +16,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/uuid"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/failures"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util/address"
@@ -525,10 +526,10 @@ func TestDoK8sServicesMatchAnnotations(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			logger, loggerHook := test.NewNullLogger()
-			failuresCollector, err := NewTranslationFailuresCollector(logger)
+			failuresCollector, err := failures.NewResourceFailuresCollector(logger)
 			require.NoError(t, err)
 			assert.Equal(t, tt.expected, servicesAllUseTheSameKongAnnotations(tt.services, tt.annotations, failuresCollector))
-			assert.Len(t, failuresCollector.PopTranslationFailures(), len(tt.expectedLogEntries), "expecting as many translation failures as log entries")
+			assert.Len(t, failuresCollector.PopResourceFailures(), len(tt.expectedLogEntries), "expecting as many translation failures as log entries")
 			for i := range tt.expectedLogEntries {
 				assert.Contains(t, loggerHook.AllEntries()[i].Message, tt.expectedLogEntries[i])
 			}
@@ -635,11 +636,11 @@ func TestPopulateServices(t *testing.T) {
 			require.NoError(t, err)
 			ingressRules.ServiceNameToServices = tc.serviceNamesToServices
 			logger, _ := test.NewNullLogger()
-			failuresCollector, err := NewTranslationFailuresCollector(logger)
+			failuresCollector, err := failures.NewResourceFailuresCollector(logger)
 			require.NoError(t, err)
 			servicesToBeSkipped := ingressRules.populateServices(logrus.New(), fakeStore, failuresCollector)
 			require.Equal(t, tc.serviceNamesToSkip, servicesToBeSkipped)
-			require.Len(t, failuresCollector.PopTranslationFailures(), len(servicesToBeSkipped), "expecting as many translation failures as services to skip")
+			require.Len(t, failuresCollector.PopResourceFailures(), len(servicesToBeSkipped), "expecting as many translation failures as services to skip")
 		})
 	}
 }

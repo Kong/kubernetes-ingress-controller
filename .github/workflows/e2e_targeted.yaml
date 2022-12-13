@@ -22,7 +22,6 @@ on:
 
 jobs:
   e2e-tests:
-    environment: "Configure ci"
     runs-on: ubuntu-latest
     steps:
     - name: setup golang
@@ -67,7 +66,6 @@ jobs:
     - uses: Kong/kong-license@master
       id: license
       with:
-        # PULP_PASSWORD secret is set in "Configure ci" environment
         password: ${{ secrets.PULP_PASSWORD }}
 
     - name: run e2e tests
@@ -102,7 +100,6 @@ jobs:
 
   integration-tests:
     if: ${{ github.event.inputs.include-integration == 'true' }}
-    environment: "Configure ci"
     runs-on: ubuntu-latest
     steps:
     - name: setup golang
@@ -126,7 +123,6 @@ jobs:
     - uses: Kong/kong-license@master
       id: license
       with:
-        # PULP_PASSWORD secret is set in "Configure ci" environment
         password: ${{ secrets.PULP_PASSWORD }}
 
     - name: run integration tests

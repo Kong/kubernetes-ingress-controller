@@ -22,18 +22,18 @@ jobs:
       - name: Print test names
         run: echo "Test names ${{ steps.set_test_names.outputs.test_names }}"
   e2e-tests:
-    environment: "Configure ci"
     runs-on: ubuntu-latest
     needs: setup-e2e-tests
     strategy:
       fail-fast: false
       matrix:
         kubernetes-version:
-          - 'v1.21.12'
-          - 'v1.22.9'
-          - 'v1.23.6'
-          - 'v1.24.2'
-          - 'v1.25.2'
+          - 'v1.21.14'
+          - 'v1.22.15'
+          - 'v1.23.13'
+          - 'v1.24.7'
+          - 'v1.25.3'
+          - 'v1.26.0'
         test: ${{ fromJSON(needs.setup-e2e-tests.outputs.test_names) }}
     steps:
     - name: setup golang
@@ -57,7 +57,6 @@ jobs:
     - uses: Kong/kong-license@master
       id: license
       with:
-        # PULP_PASSWORD secret is set in "Configure ci" environment
         password: ${{ secrets.PULP_PASSWORD }}
 
     - name: run ${{ matrix.test }} - ${{ matrix.kubernetes-version }}
@@ -86,7 +85,6 @@ jobs:
         path: e2e-${{ matrix.kubernetes-version }}-tests.xml
 
   istio-tests:
-    environment: "Configure ci"
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -121,7 +119,6 @@ jobs:
     - uses: Kong/kong-license@master
       id: license
       with:
-        # PULP_PASSWORD secret is set in "Configure ci" environment
         password: ${{ secrets.PULP_PASSWORD }}
 
     - name: run Istio tests
@@ -179,7 +176,6 @@ jobs:
     - uses: Kong/kong-license@master
       id: license
       with:
-        # PULP_PASSWORD secret is set in "Configure ci" environment
         password: ${{ secrets.PULP_PASSWORD }}
 
     - name: run ${{ matrix.kubernetes-version }}
@@ -207,7 +203,6 @@ jobs:
         path: gke-${{ matrix.kubernetes-version }}-tests.xml
 
   buildpulse-report:
-    environment: "Configure ci"
     needs:
       - "e2e-tests"
       - "e2e-gke-tests"

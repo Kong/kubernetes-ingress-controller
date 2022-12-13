@@ -143,7 +143,7 @@ func gatewayHealthCheck(ctx context.Context, client *gatewayclient.Clientset, ga
 // HTTPRouteMatchesAcceptedCallback is a testing helper functions that returns a callback which
 // checks if the provided HTTPRoute has an Accepted condition with:
 // - Status matching the provided 'accepted' boolean argument.
-// - Message matching the provided 'reason' string argument.
+// - Reason matching the provided 'reason' string argument.
 func HTTPRouteMatchesAcceptedCallback(t *testing.T, c *gatewayclient.Clientset, httpRoute *gatewayv1beta1.HTTPRoute, accepted bool, reason gatewayv1beta1.RouteConditionReason) func() bool {
 	return func() bool {
 		return httpRouteAcceptedConditionMatches(t, c, httpRoute, accepted, reason)

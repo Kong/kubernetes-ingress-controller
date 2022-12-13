@@ -78,6 +78,7 @@ Adding a new version? You'll need three changes:
   [#3132](https://github.com/Kong/kubernetes-ingress-controller/pull/3132)
 
 ### Deprecated
+
 - KongIngress' `proxy` and `route` fields are now deprecated in favor of
   Service and Ingress annotations. The annotations will become the only
   means of configuring those settings in 3.0 release.
@@ -200,6 +201,9 @@ Adding a new version? You'll need three changes:
   if a route specifies `sectionName` in parentRefs, and no listener can 
   match the specified name, the route is not accepted.
   [#3230](https://github.com/Kong/kubernetes-ingress-controller/pull/3230)
+- If there's no matching Kong listener for a protocol specified in a Gateway's
+  Listener, only one `Detached` condition is created in the Listener's status.
+  [#3257](https://github.com/Kong/kubernetes-ingress-controller/pull/3257)
 
 ## [2.7.0]
 

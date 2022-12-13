@@ -6,10 +6,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/failures"
-
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/failures"
-
 	"github.com/blang/semver/v4"
 	"github.com/kong/deck/file"
 	"github.com/kong/go-kong/kong"

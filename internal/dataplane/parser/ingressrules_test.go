@@ -4,9 +4,6 @@ import (
 	"bytes"
 	"testing"
 
-
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/failures"
-
 	"github.com/kong/go-kong/kong"
 	"github.com/sirupsen/logrus"
 	"github.com/sirupsen/logrus/hooks/test"

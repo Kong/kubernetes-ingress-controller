@@ -277,11 +277,12 @@ func canSharePort(requested, existing ProtocolType) bool {
 	}
 }
 
-func (r *GatewayReconciler) getListenerStatus(
+func getListenerStatus(
 	ctx context.Context,
 	gateway *Gateway,
 	kongListens []Listener,
 	referenceGrants []gatewayv1alpha2.ReferenceGrant,
+	client client.Client,
 ) ([]ListenerStatus, error) {
 	statuses := make(map[SectionName]ListenerStatus, len(gateway.Spec.Listeners))
 	portToProtocol, portToHostname, listenerToAttached := initializeListenerMaps(gateway)
@@ -361,16 +362,17 @@ func (r *GatewayReconciler) getListenerStatus(
 				Reason:             string(gatewayv1alpha2.ListenerReasonUnsupportedProtocol),
 				Message:            "no Kong listen with the requested protocol is configured",
 			})
-		}
-		if _, ok := kongProtocolsToPort[listener.Protocol][listener.Port]; !ok {
-			status.Conditions = append(status.Conditions, metav1.Condition{
-				Type:               string(gatewayv1alpha2.ListenerConditionDetached),
-				Status:             metav1.ConditionTrue,
-				ObservedGeneration: gateway.Generation,
-				LastTransitionTime: metav1.Now(),
-				Reason:             string(gatewayv1alpha2.ListenerReasonPortUnavailable),
-				Message:            "no Kong listen with the requested protocol is configured for the requested port",
-			})
+		} else {
+			if _, ok := kongProtocolsToPort[listener.Protocol][listener.Port]; !ok {
+				status.Conditions = append(status.Conditions, metav1.Condition{
+					Type:               string(gatewayv1alpha2.ListenerConditionDetached),
+					Status:             metav1.ConditionTrue,
+					ObservedGeneration: gateway.Generation,
+					LastTransitionTime: metav1.Now(),
+					Reason:             string(gatewayv1alpha2.ListenerReasonPortUnavailable),
+					Message:            "no Kong listen with the requested protocol is configured for the requested port",
+				})
+			}
 		}
 
 		// finalize adding any general conditions
@@ -468,7 +470,7 @@ func (r *GatewayReconciler) getListenerStatus(
 				if certRef.Namespace != nil {
 					secretNamespace = string(*certRef.Namespace)
 				}
-				if err := r.Client.Get(ctx, types.NamespacedName{Namespace: secretNamespace, Name: string(certRef.Name)}, secret); err != nil {
+				if err := client.Get(ctx, types.NamespacedName{Namespace: secretNamespace, Name: string(certRef.Name)}, secret); err != nil {
 					if !k8serrors.IsNotFound(err) {
 						return nil, err
 					}

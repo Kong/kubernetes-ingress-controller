@@ -1,9 +1,13 @@
 package gateway
 
 import (
+	"context"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util/address"
@@ -83,4 +87,35 @@ func TestGetListenerSupportedRouteKinds(t *testing.T) {
 			require.Equal(t, tc.expectedSupportedKinds, got)
 		})
 	}
+}
+
+func TestGetListenerStatus_no_duplicated_Detached_condition(t *testing.T) {
+	ctx := context.Background()
+	client := fake.NewClientBuilder().Build()
+
+	statuses, err := getListenerStatus(ctx, &Gateway{
+		Spec: gatewayv1beta1.GatewaySpec{
+			GatewayClassName: "kong",
+			Listeners: []gatewayv1beta1.Listener{
+				{
+					Port:     80,
+					Protocol: "TCP",
+				},
+			},
+		},
+	}, nil, nil, client)
+	require.NoError(t, err)
+	require.Len(t, statuses, 1, "only one listener status expected as only one listener was defined")
+	listenerStatus := statuses[0]
+	assertOnlyOneConditionOfType(t, listenerStatus.Conditions, gatewayv1beta1.ListenerConditionDetached)
+}
+
+func assertOnlyOneConditionOfType(t *testing.T, conditions []metav1.Condition, typ gatewayv1beta1.ListenerConditionType) {
+	conditionNum := 0
+	for _, condition := range conditions {
+		if condition.Type == string(typ) {
+			conditionNum++
+		}
+	}
+	assert.Equal(t, 1, conditionNum)
 }

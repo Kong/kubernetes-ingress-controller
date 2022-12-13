@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	corev1 "k8s.io/api/core/v1"
+	netv1 "k8s.io/api/networking/v1"
 )
 
 func TestAddressFinder(t *testing.T) {
@@ -46,14 +46,14 @@ func TestAddressFinder(t *testing.T) {
 	t.Log("verifying k8s load balancer formatted version of the addresses")
 	lbs, err := finder.GetLoadBalancerAddresses()
 	require.NoError(t, err)
-	require.Equal(t, []corev1.LoadBalancerIngress{{IP: defaultAddrs[0]}, {IP: defaultAddrs[1]}}, lbs)
+	require.Equal(t, []netv1.IngressLoadBalancerIngress{{IP: defaultAddrs[0]}, {IP: defaultAddrs[1]}}, lbs)
 
 	t.Log("verifying valid DNS names are formatting properly")
 	dnsAddrs := []string{"127.0.0.1", "example1.konghq.com", "example2.konghq.com"}
 	finder.SetOverrides(dnsAddrs)
 	lbs, err = finder.GetLoadBalancerAddresses()
 	require.NoError(t, err)
-	require.Equal(t, []corev1.LoadBalancerIngress{
+	require.Equal(t, []netv1.IngressLoadBalancerIngress{
 		{IP: dnsAddrs[0]},
 		{Hostname: dnsAddrs[1]},
 		{Hostname: dnsAddrs[2]},

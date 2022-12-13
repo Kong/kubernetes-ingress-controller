@@ -20,7 +20,7 @@ package configuration
 
 import (
 	"context"
-	"reflect"
+	"fmt"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -406,8 +406,11 @@ func (r *NetV1IngressReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		}
 
 		log.V(util.DebugLevel).Info("found addresses for data-plane updating object status", "namespace", req.Namespace, "name", req.Name)
-		if len(obj.Status.LoadBalancer.Ingress) != len(addrs) || !reflect.DeepEqual(obj.Status.LoadBalancer.Ingress, addrs) {
-			obj.Status.LoadBalancer.Ingress = addrs
+		updateNeeded, err := ctrlutils.UpdateLoadBalancerIngress(obj, addrs)
+		if err != nil {
+			return ctrl.Result{}, fmt.Errorf("failed to update load balancer address: %w", err)
+		}
+		if updateNeeded {
 			return ctrl.Result{}, r.Status().Update(ctx, obj)
 		}
 		log.V(util.DebugLevel).Info("status update not needed", "namespace", req.Namespace, "name", req.Name)
@@ -673,8 +676,11 @@ func (r *NetV1Beta1IngressReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		}
 
 		log.V(util.DebugLevel).Info("found addresses for data-plane updating object status", "namespace", req.Namespace, "name", req.Name)
-		if len(obj.Status.LoadBalancer.Ingress) != len(addrs) || !reflect.DeepEqual(obj.Status.LoadBalancer.Ingress, addrs) {
-			obj.Status.LoadBalancer.Ingress = addrs
+		updateNeeded, err := ctrlutils.UpdateLoadBalancerIngress(obj, addrs)
+		if err != nil {
+			return ctrl.Result{}, fmt.Errorf("failed to update load balancer address: %w", err)
+		}
+		if updateNeeded {
 			return ctrl.Result{}, r.Status().Update(ctx, obj)
 		}
 		log.V(util.DebugLevel).Info("status update not needed", "namespace", req.Namespace, "name", req.Name)
@@ -864,8 +870,11 @@ func (r *ExtV1Beta1IngressReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		}
 
 		log.V(util.DebugLevel).Info("found addresses for data-plane updating object status", "namespace", req.Namespace, "name", req.Name)
-		if len(obj.Status.LoadBalancer.Ingress) != len(addrs) || !reflect.DeepEqual(obj.Status.LoadBalancer.Ingress, addrs) {
-			obj.Status.LoadBalancer.Ingress = addrs
+		updateNeeded, err := ctrlutils.UpdateLoadBalancerIngress(obj, addrs)
+		if err != nil {
+			return ctrl.Result{}, fmt.Errorf("failed to update load balancer address: %w", err)
+		}
+		if updateNeeded {
 			return ctrl.Result{}, r.Status().Update(ctx, obj)
 		}
 		log.V(util.DebugLevel).Info("status update not needed", "namespace", req.Namespace, "name", req.Name)
@@ -1538,8 +1547,11 @@ func (r *KongV1Beta1TCPIngressReconciler) Reconcile(ctx context.Context, req ctr
 		}
 
 		log.V(util.DebugLevel).Info("found addresses for data-plane updating object status", "namespace", req.Namespace, "name", req.Name)
-		if len(obj.Status.LoadBalancer.Ingress) != len(addrs) || !reflect.DeepEqual(obj.Status.LoadBalancer.Ingress, addrs) {
-			obj.Status.LoadBalancer.Ingress = addrs
+		updateNeeded, err := ctrlutils.UpdateLoadBalancerIngress(obj, addrs)
+		if err != nil {
+			return ctrl.Result{}, fmt.Errorf("failed to update load balancer address: %w", err)
+		}
+		if updateNeeded {
 			return ctrl.Result{}, r.Status().Update(ctx, obj)
 		}
 		log.V(util.DebugLevel).Info("status update not needed", "namespace", req.Namespace, "name", req.Name)
@@ -1708,8 +1720,11 @@ func (r *KongV1Beta1UDPIngressReconciler) Reconcile(ctx context.Context, req ctr
 		}
 
 		log.V(util.DebugLevel).Info("found addresses for data-plane updating object status", "namespace", req.Namespace, "name", req.Name)
-		if len(obj.Status.LoadBalancer.Ingress) != len(addrs) || !reflect.DeepEqual(obj.Status.LoadBalancer.Ingress, addrs) {
-			obj.Status.LoadBalancer.Ingress = addrs
+		updateNeeded, err := ctrlutils.UpdateLoadBalancerIngress(obj, addrs)
+		if err != nil {
+			return ctrl.Result{}, fmt.Errorf("failed to update load balancer address: %w", err)
+		}
+		if updateNeeded {
 			return ctrl.Result{}, r.Status().Update(ctx, obj)
 		}
 		log.V(util.DebugLevel).Info("status update not needed", "namespace", req.Namespace, "name", req.Name)

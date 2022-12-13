@@ -6,7 +6,7 @@ import (
 	"strings"
 	"sync"
 
-	corev1 "k8s.io/api/core/v1"
+	netv1 "k8s.io/api/networking/v1"
 	utilvalidation "k8s.io/apimachinery/pkg/util/validation"
 )
 
@@ -76,15 +76,15 @@ func (a *AddressFinder) GetAddresses() ([]string, error) {
 // data-plane is listening on for ingress network traffic, but provides the
 // addresses in Kubernetes corev1.LoadBalancerIngress format. Addresses can be
 // IP addresses or hostnames.
-func (a *AddressFinder) GetLoadBalancerAddresses() ([]corev1.LoadBalancerIngress, error) {
+func (a *AddressFinder) GetLoadBalancerAddresses() ([]netv1.IngressLoadBalancerIngress, error) {
 	addrs, err := a.GetAddresses()
 	if err != nil {
 		return nil, err
 	}
 
-	var loadBalancerAddresses []corev1.LoadBalancerIngress
+	var loadBalancerAddresses []netv1.IngressLoadBalancerIngress
 	for _, addr := range addrs {
-		ing := corev1.LoadBalancerIngress{}
+		ing := netv1.IngressLoadBalancerIngress{}
 		if net.ParseIP(addr) != nil {
 			ing.IP = addr
 		} else {

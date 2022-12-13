@@ -361,16 +361,17 @@ func (r *GatewayReconciler) getListenerStatus(
 				Reason:             string(gatewayv1alpha2.ListenerReasonUnsupportedProtocol),
 				Message:            "no Kong listen with the requested protocol is configured",
 			})
-		}
-		if _, ok := kongProtocolsToPort[listener.Protocol][listener.Port]; !ok {
-			status.Conditions = append(status.Conditions, metav1.Condition{
-				Type:               string(gatewayv1alpha2.ListenerConditionDetached),
-				Status:             metav1.ConditionTrue,
-				ObservedGeneration: gateway.Generation,
-				LastTransitionTime: metav1.Now(),
-				Reason:             string(gatewayv1alpha2.ListenerReasonPortUnavailable),
-				Message:            "no Kong listen with the requested protocol is configured for the requested port",
-			})
+		} else {
+			if _, ok := kongProtocolsToPort[listener.Protocol][listener.Port]; !ok {
+				status.Conditions = append(status.Conditions, metav1.Condition{
+					Type:               string(gatewayv1alpha2.ListenerConditionDetached),
+					Status:             metav1.ConditionTrue,
+					ObservedGeneration: gateway.Generation,
+					LastTransitionTime: metav1.Now(),
+					Reason:             string(gatewayv1alpha2.ListenerReasonPortUnavailable),
+					Message:            "no Kong listen with the requested protocol is configured for the requested port",
+				})
+			}
 		}
 
 		// finalize adding any general conditions

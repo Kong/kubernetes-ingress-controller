@@ -137,9 +137,10 @@ func TestUpdateLoadBalancerIngress(t *testing.T) {
 				Hostname: oldHostname,
 			},
 		}
+		var err error
 		assert.NotPanics(t, func() {
-			_, err := UpdateLoadBalancerIngress(unknownObject, newAddresses)
-			require.ErrorContains(t, err, "unsupported ingress type")
+			_, err = UpdateLoadBalancerIngress(unknownObject, newAddresses)
 		})
+		require.ErrorContains(t, err, "unsupported ingress type")
 	})
 }

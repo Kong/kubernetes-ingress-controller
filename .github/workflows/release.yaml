@@ -205,7 +205,8 @@ jobs:
     strategy:
       matrix:
         kubernetes-version:
-          - 'v1.24.3'
+          - 'v1.25.3'
+          - 'v1.26.0'
     steps:
       - name: setup golang
         uses: actions/setup-go@v3
@@ -235,6 +236,7 @@ jobs:
           - '21'
           - '22'
           - '23'
+          - '24'
     steps:
       - name: setup golang
         uses: actions/setup-go@v3

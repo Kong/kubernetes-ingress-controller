@@ -159,6 +159,8 @@ Adding a new version? You'll need three changes:
   [#3167](https://github.com/Kong/kubernetes-ingress-controller/pull/3167)
 - Gateway API: Matching routes by `Listener.AllowedRoutes`
   [#3181](https://github.com/Kong/kubernetes-ingress-controller/pull/3181)
+- Admission webhook will warn if any of `KongIngress` deprecated fields gets populated.
+  [#XXXX]()
 
 ### Fixed
 

@@ -297,15 +297,13 @@ func (h RequestHandler) handleKongIngress(_ context.Context, request admissionv1
 	responseBuilder = responseBuilder.Allowed(true)
 
 	if kongIngress.Proxy != nil {
-		const warning = "Proxy field is deprecated in favor of Service's annotations. " +
-			"The annotations will become the only means of configuring those settings in KIC's 3.0.0 release."
-		return responseBuilder.WithWarning(warning).Build(), nil
+		const warning = "'proxy' is DEPRECATED. Use Service's annotations instead."
+		responseBuilder = responseBuilder.WithWarning(warning)
 	}
 
 	if kongIngress.Route != nil {
-		const warning = "Route field is deprecated in favor of Ingress' annotations. " +
-			"The annotations will become the only means of configuring those settings in KIC's 3.0.0 release."
-		return responseBuilder.WithWarning(warning).Build(), nil
+		const warning = "'route' is DEPRECATED. Use Ingress' annotations instead."
+		responseBuilder = responseBuilder.WithWarning(warning)
 	}
 
 	return responseBuilder.Build(), nil

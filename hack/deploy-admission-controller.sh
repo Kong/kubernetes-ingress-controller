@@ -45,6 +45,7 @@ webhooks:
     - kongconsumers
     - kongplugins
     - kongclusterplugins
+    - kongingresses
   - apiGroups:
     - ''
     apiVersions:
@@ -68,4 +69,3 @@ webhooks:
       namespace: kong
       name: kong-validation-webhook
     caBundle: $(cat ${TMPDIR}/tls.crt  | base64 ${BASE64_OPTIONS}) " | kubectl apply -f -
-

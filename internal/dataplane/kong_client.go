@@ -384,7 +384,6 @@ func (c *KongClient) Update(ctx context.Context) error {
 		c.skipCACertificates,
 		targetConfig,
 		c.kongConfig.FilterTags,
-		nil,
 		c.lastConfigSHA,
 		c.prometheusMetrics,
 	)

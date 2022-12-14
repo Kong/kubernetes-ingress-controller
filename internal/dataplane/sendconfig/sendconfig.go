@@ -32,7 +32,7 @@ const initialHash = "00000000000000000000000000000000"
 // Sendconfig - Public Functions
 // -----------------------------------------------------------------------------
 
-// PerformUpdate writes `targetContent` and `customEntities` to Kong Admin API specified by `kongConfig`.
+// PerformUpdate writes `targetContent` to Kong Admin API specified by `kongConfig`.
 func PerformUpdate(ctx context.Context,
 	log logrus.FieldLogger,
 	kongConfig *Kong,
@@ -41,11 +41,10 @@ func PerformUpdate(ctx context.Context,
 	skipCACertificates bool,
 	targetContent *file.Content,
 	selectorTags []string,
-	customEntities []byte,
 	oldSHA []byte,
 	promMetrics *metrics.CtrlFuncMetrics,
 ) ([]byte, error) {
-	newSHA, err := deckgen.GenerateSHA(targetContent, customEntities)
+	newSHA, err := deckgen.GenerateSHA(targetContent)
 	if err != nil {
 		return oldSHA, err
 	}
@@ -79,7 +78,7 @@ func PerformUpdate(ctx context.Context,
 	timeStart := time.Now()
 	if inMemory {
 		metricsProtocol = metrics.ProtocolDBLess
-		err = onUpdateInMemoryMode(ctx, log, targetContent, customEntities, kongConfig)
+		err = onUpdateInMemoryMode(ctx, log, targetContent, kongConfig)
 	} else {
 		metricsProtocol = metrics.ProtocolDeck
 		err = onUpdateDBMode(ctx, targetContent, kongConfig, selectorTags, skipCACertificates)
@@ -116,60 +115,9 @@ func PerformUpdate(ctx context.Context,
 // Sendconfig - Private Functions
 // -----------------------------------------------------------------------------
 
-func renderConfigWithCustomEntities(log logrus.FieldLogger, state *file.Content,
-	customEntitiesJSONBytes []byte,
-) ([]byte, error) {
-	var kongCoreConfig []byte
-	var err error
-
-	kongCoreConfig, err = json.Marshal(state)
-	if err != nil {
-		return nil, fmt.Errorf("marshaling kong config into json: %w", err)
-	}
-
-	// fast path
-	if len(customEntitiesJSONBytes) == 0 {
-		return kongCoreConfig, nil
-	}
-
-	// slow path
-	mergeMap := map[string]interface{}{}
-	var result []byte
-	var customEntities map[string]interface{}
-
-	// unmarshal core config into the merge map
-	err = json.Unmarshal(kongCoreConfig, &mergeMap)
-	if err != nil {
-		return nil, fmt.Errorf("unmarshalling kong config into map[string]interface{}: %w", err)
-	}
-
-	// unmarshal custom entities config into the merge map
-	err = json.Unmarshal(customEntitiesJSONBytes, &customEntities)
-	if err != nil {
-		// do not error out when custom entities are messed up
-		log.WithError(err).Error("failed to unmarshal custom entities from secret data")
-	} else {
-		for k, v := range customEntities {
-			if _, exists := mergeMap[k]; !exists {
-				mergeMap[k] = v
-			}
-		}
-	}
-
-	// construct the final configuration
-	result, err = json.Marshal(mergeMap)
-	if err != nil {
-		err = fmt.Errorf("marshaling final config into JSON: %w", err)
-		return nil, err
-	}
-
-	return result, nil
-}
-
 func onUpdateInMemoryMode(ctx context.Context,
 	log logrus.FieldLogger,
 	state *file.Content,
-	customEntities []byte,
 	kongConfig *Kong,
 ) error {
 	// Kong will error out if this is set
@@ -177,7 +125,7 @@ func onUpdateInMemoryMode(ctx context.Context,
 	// Kong errors out if `null`s are present in `config` of plugins
 	deckgen.CleanUpNullsInPluginConfigs(state)
 
-	config, err := renderConfigWithCustomEntities(log, state, customEntities)
+	config, err := json.Marshal(state)
 	if err != nil {
 		return fmt.Errorf("constructing kong configuration: %w", err)
 	}

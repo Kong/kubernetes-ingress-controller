@@ -45,15 +45,14 @@ type Config struct {
 	CacheSyncTimeout                  time.Duration
 
 	// Kong Proxy configurations
-	APIServerHost            string
-	APIServerQPS             int
-	APIServerBurst           int
-	MetricsAddr              string
-	ProbeAddr                string
-	KongAdminURL             string
-	ProxySyncSeconds         float32
-	ProxyTimeoutSeconds      float32
-	KongCustomEntitiesSecret string
+	APIServerHost       string
+	APIServerQPS        int
+	APIServerBurst      int
+	MetricsAddr         string
+	ProbeAddr           string
+	KongAdminURL        string
+	ProxySyncSeconds    float32
+	ProxyTimeoutSeconds float32
 
 	// Kubernetes configurations
 	KubeconfigPath           string
@@ -152,7 +151,9 @@ func (c *Config) FlagSet() *pflag.FlagSet {
 	flagSet.Float32Var(&c.ProxyTimeoutSeconds, "proxy-timeout-seconds", dataplane.DefaultTimeoutSeconds,
 		"Sets the timeout (in seconds) for all requests to Kong's Admin API.",
 	)
-	flagSet.StringVar(&c.KongCustomEntitiesSecret, "kong-custom-entities-secret", "", `WARNING: Does not work. It's a known issue tracked in a GitHub issue #3278.`)
+
+	_ = flagSet.String("kong-custom-entities-secret", "", "Will be removed in next major release.")
+	flagSet.MarkDeprecated("kong-custom-entities-secret", "Will be removed in next major release.") //nolint:errcheck
 
 	// Kubernetes configurations
 	flagSet.StringVar(&c.GatewayAPIControllerName, "gateway-api-controller-name", string(gateway.ControllerName), "The controller name to match on Gateway API resources.")

@@ -72,6 +72,12 @@ Adding a new version? You'll need three changes:
 - Disabled non-functioning mesh reporting when `--watch-namespaces` flag set.
   [#3336](https://github.com/Kong/kubernetes-ingress-controller/pull/3336)
 
+### Deprecated
+
+- `kong-custom-entities-secret` flag has been marked as deprecated and will be
+  removed in 3.0.
+  [#3262](https://github.com/Kong/kubernetes-ingress-controller/pull/3262)
+
 ## [2.8.1]
 
 > Release date: 2022-01-04
@@ -79,7 +85,7 @@ Adding a new version? You'll need three changes:
 ### Fixed
 
 - When `CombinedRoutes` is turned on, translator will replace each occurrence of
- `*` in `Ingress`'s host to `_` in kong route names because `*` is not
+  `*` in `Ingress`'s host to `_` in kong route names because `*` is not
   allowed in kong route names.
   [#3312](https://github.com/Kong/kubernetes-ingress-controller/pull/3312)
 - Fix an issue with `CombinedRoutes`, which caused the controller to fail when
@@ -2161,7 +2167,7 @@ Please read the changelog and test in your environment.
    [#92](https://github.com/Kong/kubernetes-ingress-controller/pull/92)
 
 
-## [v0.0.5]
+## [0.0.5]
 
 > Release date: 2018/06/02
 
@@ -2169,7 +2175,7 @@ Please read the changelog and test in your environment.
 
  - Add support for Kong Enterprise Edition 0.32 and above
 
-## [v0.0.4] and prior
+## [0.0.4] and prior
 
  - The initial versions  were rapildy iterated to deliver
    a working ingress controller.

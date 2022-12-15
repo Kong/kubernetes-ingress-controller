@@ -84,6 +84,11 @@ linters-settings:
           recommendations:
             - fmt
             - errors
+  depguard:
+    list-type: blacklist
+    include-go-root: false
+    packages-with-error-message:
+      - k8s.io/utils/pointer: "Use github.com/samber/lo ToPtr instead"
 issues:
   fix: true
   max-same-issues: 0

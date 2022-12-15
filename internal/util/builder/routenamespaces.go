@@ -1,10 +1,9 @@
 package builder
 
 import (
+	"github.com/samber/lo"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
-
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/util/address"
 )
 
 // RouteNamespacesBuilder is a builder for gateway api RouteNamespaces.
@@ -24,17 +23,17 @@ func (b *RouteNamespacesBuilder) Build() *gatewayv1beta1.RouteNamespaces {
 }
 
 func (b *RouteNamespacesBuilder) FromSame() *RouteNamespacesBuilder {
-	b.routeNamespaces.From = address.Of(gatewayv1beta1.NamespacesFromSame)
+	b.routeNamespaces.From = lo.ToPtr(gatewayv1beta1.NamespacesFromSame)
 	return b
 }
 
 func (b *RouteNamespacesBuilder) FromAll() *RouteNamespacesBuilder {
-	b.routeNamespaces.From = address.Of(gatewayv1beta1.NamespacesFromAll)
+	b.routeNamespaces.From = lo.ToPtr(gatewayv1beta1.NamespacesFromAll)
 	return b
 }
 
 func (b *RouteNamespacesBuilder) FromSelector(s *metav1.LabelSelector) *RouteNamespacesBuilder {
-	b.routeNamespaces.From = address.Of(gatewayv1beta1.NamespacesFromSelector)
+	b.routeNamespaces.From = lo.ToPtr(gatewayv1beta1.NamespacesFromSelector)
 	b.routeNamespaces.Selector = s
 	return b
 }

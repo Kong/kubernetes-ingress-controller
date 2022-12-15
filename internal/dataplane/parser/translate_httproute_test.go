@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/kong/go-kong/kong"
+	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
@@ -14,7 +15,6 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/util/address"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util/builder"
 )
 
@@ -181,7 +181,7 @@ func getIngressRulesFromHTTPRoutesCommonTestCases() []testCaseIngressRulesFromHT
 										kong.String("http"),
 										kong.String("https"),
 									},
-									StripPath: address.Of(false),
+									StripPath: lo.ToPtr(false),
 								},
 								Ingress: k8sObjectInfoOfHTTPRoute(routes[0]),
 							}},
@@ -289,7 +289,7 @@ func getIngressRulesFromHTTPRoutesCommonTestCases() []testCaseIngressRulesFromHT
 										kong.String("http"),
 										kong.String("https"),
 									},
-									StripPath: address.Of(false),
+									StripPath: lo.ToPtr(false),
 								},
 								Ingress: k8sObjectInfoOfHTTPRoute(routes[0]),
 							}},
@@ -349,7 +349,7 @@ func getIngressRulesFromHTTPRoutesCommonTestCases() []testCaseIngressRulesFromHT
 										kong.String("http"),
 										kong.String("https"),
 									},
-									StripPath: address.Of(false),
+									StripPath: lo.ToPtr(false),
 								},
 								Ingress: k8sObjectInfoOfHTTPRoute(routes[0]),
 							}},
@@ -422,7 +422,7 @@ func getIngressRulesFromHTTPRoutesCombinedRoutesTestCases() []testCaseIngressRul
 											kong.String("http"),
 											kong.String("https"),
 										},
-										StripPath: address.Of(false),
+										StripPath: lo.ToPtr(false),
 									},
 									Ingress: k8sObjectInfoOfHTTPRoute(routes[0]),
 								},
@@ -494,7 +494,7 @@ func getIngressRulesFromHTTPRoutesCombinedRoutesTestCases() []testCaseIngressRul
 										kong.String("http"),
 										kong.String("https"),
 									},
-									StripPath: address.Of(false),
+									StripPath: lo.ToPtr(false),
 								},
 								Ingress: k8sObjectInfoOfHTTPRoute(routes[0]),
 							}},
@@ -526,7 +526,7 @@ func getIngressRulesFromHTTPRoutesCombinedRoutesTestCases() []testCaseIngressRul
 										kong.String("http"),
 										kong.String("https"),
 									},
-									StripPath: address.Of(false),
+									StripPath: lo.ToPtr(false),
 								},
 								Ingress: k8sObjectInfoOfHTTPRoute(routes[0]),
 							}},
@@ -611,7 +611,7 @@ func getIngressRulesFromHTTPRoutesCombinedRoutesTestCases() []testCaseIngressRul
 											kong.String("http"),
 											kong.String("https"),
 										},
-										StripPath: address.Of(false),
+										StripPath: lo.ToPtr(false),
 									},
 									Ingress: k8sObjectInfoOfHTTPRoute(routes[0]),
 								},
@@ -646,7 +646,7 @@ func getIngressRulesFromHTTPRoutesCombinedRoutesTestCases() []testCaseIngressRul
 											kong.String("http"),
 											kong.String("https"),
 										},
-										StripPath: address.Of(false),
+										StripPath: lo.ToPtr(false),
 									},
 									Ingress: k8sObjectInfoOfHTTPRoute(routes[0]),
 								},
@@ -740,7 +740,7 @@ func getIngressRulesFromHTTPRoutesCombinedRoutesTestCases() []testCaseIngressRul
 											kong.String("http"),
 											kong.String("https"),
 										},
-										StripPath: address.Of(false),
+										StripPath: lo.ToPtr(false),
 									},
 									Ingress: k8sObjectInfoOfHTTPRoute(routes[0]),
 									Plugins: []kong.Plugin{
@@ -765,7 +765,7 @@ func getIngressRulesFromHTTPRoutesCombinedRoutesTestCases() []testCaseIngressRul
 											kong.String("http"),
 											kong.String("https"),
 										},
-										StripPath: address.Of(false),
+										StripPath: lo.ToPtr(false),
 									},
 									Ingress: k8sObjectInfoOfHTTPRoute(routes[0]),
 									Plugins: []kong.Plugin{
@@ -860,7 +860,7 @@ func getIngressRulesFromHTTPRoutesCombinedRoutesTestCases() []testCaseIngressRul
 											kong.String("http"),
 											kong.String("https"),
 										},
-										StripPath: address.Of(false),
+										StripPath: lo.ToPtr(false),
 									},
 									Ingress: k8sObjectInfoOfHTTPRoute(routes[0]),
 								},
@@ -877,7 +877,7 @@ func getIngressRulesFromHTTPRoutesCombinedRoutesTestCases() []testCaseIngressRul
 											kong.String("http"),
 											kong.String("https"),
 										},
-										StripPath: address.Of(false),
+										StripPath: lo.ToPtr(false),
 										Methods:   []*string{kong.String("DELETE")},
 									},
 									Ingress: k8sObjectInfoOfHTTPRoute(routes[0]),
@@ -895,7 +895,7 @@ func getIngressRulesFromHTTPRoutesCombinedRoutesTestCases() []testCaseIngressRul
 											kong.String("http"),
 											kong.String("https"),
 										},
-										StripPath: address.Of(false),
+										StripPath: lo.ToPtr(false),
 										Headers: map[string][]string{
 											"x-header-1": {"x-value-1"},
 											"x-header-2": {"x-value-2"},
@@ -1014,7 +1014,7 @@ func getIngressRulesFromHTTPRoutesCombinedRoutesTestCases() []testCaseIngressRul
 											kong.String("http"),
 											kong.String("https"),
 										},
-										StripPath: address.Of(false),
+										StripPath: lo.ToPtr(false),
 									},
 									Ingress: k8sObjectInfoOfHTTPRoute(routes[0]),
 								},
@@ -1031,7 +1031,7 @@ func getIngressRulesFromHTTPRoutesCombinedRoutesTestCases() []testCaseIngressRul
 											kong.String("http"),
 											kong.String("https"),
 										},
-										StripPath: address.Of(false),
+										StripPath: lo.ToPtr(false),
 										Methods:   []*string{kong.String("DELETE")},
 									},
 									Ingress: k8sObjectInfoOfHTTPRoute(routes[0]),
@@ -1050,7 +1050,7 @@ func getIngressRulesFromHTTPRoutesCombinedRoutesTestCases() []testCaseIngressRul
 											kong.String("http"),
 											kong.String("https"),
 										},
-										StripPath: address.Of(false),
+										StripPath: lo.ToPtr(false),
 									},
 									Ingress: k8sObjectInfoOfHTTPRoute(routes[0]),
 									Plugins: []kong.Plugin{
@@ -1262,7 +1262,7 @@ func TestIngressRulesFromHTTPRoutes_RegexPrefix(t *testing.T) {
 										kong.String("http"),
 										kong.String("https"),
 									},
-									StripPath: address.Of(false),
+									StripPath: lo.ToPtr(false),
 								},
 								Ingress: k8sObjectInfoOfHTTPRoute(routes[0]),
 							}},

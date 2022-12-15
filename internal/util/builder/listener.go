@@ -1,9 +1,8 @@
 package builder
 
 import (
+	"github.com/samber/lo"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
-
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/util/address"
 )
 
 // ListenerBuilder is a builder for gateway api Listener.
@@ -62,7 +61,7 @@ func (b *ListenerBuilder) UDP() *ListenerBuilder {
 }
 
 func (b *ListenerBuilder) WithHostname(hostname string) *ListenerBuilder {
-	b.listener.Hostname = address.Of(gatewayv1beta1.Hostname(hostname))
+	b.listener.Hostname = lo.ToPtr(gatewayv1beta1.Hostname(hostname))
 	return b
 }
 

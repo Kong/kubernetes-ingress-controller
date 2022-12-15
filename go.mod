@@ -2,14 +2,7 @@ module github.com/kong/kubernetes-ingress-controller/v2
 
 go 1.19
 
-replace (
-	github.com/imdario/mergo v0.3.12 => github.com/Kong/mergo v0.3.13
-
-	// replacing controller-runtime with a version compatible with v0.26.0 k8s libs
-	// TODO: remove when controller-runtime gets released
-	// https://github.com/Kong/kubernetes-ingress-controller/issues/3253
-	sigs.k8s.io/controller-runtime v0.13.1 => sigs.k8s.io/controller-runtime v0.13.1-0.20221212022533-c773bef2bc5b
-)
+replace github.com/imdario/mergo v0.3.12 => github.com/Kong/mergo v0.3.13
 
 require (
 	cloud.google.com/go/container v1.9.0
@@ -44,7 +37,7 @@ require (
 	k8s.io/utils v0.0.0-20221128185143-99ec85e7a448
 	knative.dev/networking v0.0.0-20220302134042-e8b2eb995165
 	knative.dev/pkg v0.0.0-20220301181942-2fdd5f232e77
-	sigs.k8s.io/controller-runtime v0.13.1
+	sigs.k8s.io/controller-runtime v0.14.0
 	sigs.k8s.io/gateway-api v0.5.1
 	sigs.k8s.io/kustomize/api v0.12.1
 	sigs.k8s.io/kustomize/kyaml v0.13.9

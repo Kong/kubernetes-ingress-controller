@@ -1,0 +1,2 @@
+fixes:
+  - "github.com/kong/kubernetes-ingress-controller/v2/::"

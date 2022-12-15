@@ -255,6 +255,7 @@ _test.unit: gotestsum
 		-coverprofile=coverage.unit.out \
 		./internal/... \
 		./pkg/...
+	sed -i.bak "s#github.com/kong/kubernetes-ingress-controller/v2/#github.com/kong/kubernetes-ingress-controller/#g" coverage.unit.out
 
 .PHONY: test.unit
 test.unit:
@@ -282,6 +283,7 @@ _test.integration: _check.container.environment gotestsum
 		-coverpkg=$(PKG_LIST) \
 		-coverprofile=$(COVERAGE_OUT) \
 		./test/integration
+	sed -i.bak "s#github.com/kong/kubernetes-ingress-controller/v2/#github.com/kong/kubernetes-ingress-controller/#g" $(COVERAGE_OUT)
 
 .PHONY: test.integration.dbless
 test.integration.dbless:

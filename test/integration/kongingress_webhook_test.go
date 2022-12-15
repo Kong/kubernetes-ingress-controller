@@ -14,6 +14,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/net"
 
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/util/address"
 	configurationv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
 	"github.com/kong/kubernetes-ingress-controller/v2/pkg/clientset"
 	"github.com/kong/kubernetes-ingress-controller/v2/pkg/clientset/scheme"
@@ -59,11 +60,11 @@ func TestKongIngressValidationWebhook(t *testing.T) {
 			},
 			// Proxy field is deprecated, expecting warning for it.
 			Proxy: &configurationv1.KongIngressService{
-				Protocol: lo.ToPtr("tcp"),
+				Protocol: address.Of("tcp"),
 			},
 			// Route field is deprecated, expecting warning for it.
 			Route: &configurationv1.KongIngressRoute{
-				Methods: []*string{lo.ToPtr("POST")},
+				Methods: []*string{address.Of("POST")},
 			},
 		}
 

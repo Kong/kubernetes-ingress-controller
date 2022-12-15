@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
 
 	"github.com/sirupsen/logrus"
@@ -35,15 +34,10 @@ func (h RequestHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			http.StatusBadRequest)
 		return
 	}
-	data, err := io.ReadAll(r.Body)
-	if err != nil {
-		h.Logger.WithError(err).Error("failed to read request from client")
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
+
 	review := admissionv1.AdmissionReview{}
-	if err := json.Unmarshal(data, &review); err != nil {
-		h.Logger.WithError(err).Error("failed to parse AdmissionReview object")
+	if err := json.NewDecoder(r.Body).Decode(&review); err != nil {
+		h.Logger.WithError(err).Error("failed to decode admission review")
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -54,15 +48,9 @@ func (h RequestHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	review.Response = response
-	data, err = json.Marshal(review)
-	if err != nil {
-		h.Logger.WithError(err).Error("failed to marshal response")
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	_, err = w.Write(data)
-	if err != nil {
-		h.Logger.WithError(err).Error("failed to write response")
+
+	if err := json.NewEncoder(w).Encode(&review); err != nil {
+		h.Logger.WithError(err).Error("failed to encode response")
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -140,8 +128,7 @@ func (h RequestHandler) handleKongConsumer(
 ) (*admissionv1.AdmissionResponse, error) {
 	consumer := configuration.KongConsumer{}
 	deserializer := codecs.UniversalDeserializer()
-	_, _, err := deserializer.Decode(request.Object.Raw,
-		nil, &consumer)
+	_, _, err := deserializer.Decode(request.Object.Raw, nil, &consumer)
 	if err != nil {
 		return nil, err
 	}
@@ -155,8 +142,7 @@ func (h RequestHandler) handleKongConsumer(
 		return responseBuilder.Allowed(ok).WithMessage(msg).Build(), nil
 	case admissionv1.Update:
 		var oldConsumer configuration.KongConsumer
-		_, _, err = deserializer.Decode(request.OldObject.Raw,
-			nil, &oldConsumer)
+		_, _, err = deserializer.Decode(request.OldObject.Raw, nil, &oldConsumer)
 		if err != nil {
 			return nil, err
 		}
@@ -170,7 +156,7 @@ func (h RequestHandler) handleKongConsumer(
 		}
 		return responseBuilder.Allowed(ok).WithMessage(message).Build(), nil
 	default:
-		return nil, fmt.Errorf("unknown operation '%v'", string(request.Operation))
+		return nil, fmt.Errorf("unknown operation %q", string(request.Operation))
 	}
 }
 
@@ -180,8 +166,7 @@ func (h RequestHandler) handleKongPlugin(
 	responseBuilder *ResponseBuilder,
 ) (*admissionv1.AdmissionResponse, error) {
 	plugin := configuration.KongPlugin{}
-	deserializer := codecs.UniversalDeserializer()
-	_, _, err := deserializer.Decode(request.Object.Raw, nil, &plugin)
+	_, _, err := codecs.UniversalDeserializer().Decode(request.Object.Raw, nil, &plugin)
 	if err != nil {
 		return nil, err
 	}
@@ -200,8 +185,7 @@ func (h RequestHandler) handleKongClusterPlugin(
 	responseBuilder *ResponseBuilder,
 ) (*admissionv1.AdmissionResponse, error) {
 	plugin := configuration.KongClusterPlugin{}
-	deserializer := codecs.UniversalDeserializer()
-	_, _, err := deserializer.Decode(request.Object.Raw, nil, &plugin)
+	_, _, err := codecs.UniversalDeserializer().Decode(request.Object.Raw, nil, &plugin)
 	if err != nil {
 		return nil, err
 	}
@@ -220,8 +204,7 @@ func (h RequestHandler) handleSecret(
 	responseBuilder *ResponseBuilder,
 ) (*admissionv1.AdmissionResponse, error) {
 	secret := corev1.Secret{}
-	deserializer := codecs.UniversalDeserializer()
-	_, _, err := deserializer.Decode(request.Object.Raw, nil, &secret)
+	_, _, err := codecs.UniversalDeserializer().Decode(request.Object.Raw, nil, &secret)
 	if err != nil {
 		return nil, err
 	}
@@ -243,7 +226,7 @@ func (h RequestHandler) handleSecret(
 		}
 		return responseBuilder.Allowed(ok).WithMessage(message).Build(), nil
 	default:
-		return nil, fmt.Errorf("unknown operation '%v'", string(request.Operation))
+		return nil, fmt.Errorf("unknown operation %q", string(request.Operation))
 	}
 }
 
@@ -253,8 +236,7 @@ func (h RequestHandler) handleGateway(
 	responseBuilder *ResponseBuilder,
 ) (*admissionv1.AdmissionResponse, error) {
 	gateway := gatewayv1beta1.Gateway{}
-	deserializer := codecs.UniversalDeserializer()
-	_, _, err := deserializer.Decode(request.Object.Raw, nil, &gateway)
+	_, _, err := codecs.UniversalDeserializer().Decode(request.Object.Raw, nil, &gateway)
 	if err != nil {
 		return nil, err
 	}
@@ -272,8 +254,7 @@ func (h RequestHandler) handleHTTPRoute(
 	responseBuilder *ResponseBuilder,
 ) (*admissionv1.AdmissionResponse, error) {
 	httproute := gatewayv1beta1.HTTPRoute{}
-	deserializer := codecs.UniversalDeserializer()
-	_, _, err := deserializer.Decode(request.Object.Raw, nil, &httproute)
+	_, _, err := codecs.UniversalDeserializer().Decode(request.Object.Raw, nil, &httproute)
 	if err != nil {
 		return nil, err
 	}
@@ -287,8 +268,7 @@ func (h RequestHandler) handleHTTPRoute(
 
 func (h RequestHandler) handleKongIngress(_ context.Context, request admissionv1.AdmissionRequest, responseBuilder *ResponseBuilder) (*admissionv1.AdmissionResponse, error) {
 	kongIngress := configuration.KongIngress{}
-	deserializer := codecs.UniversalDeserializer()
-	_, _, err := deserializer.Decode(request.Object.Raw, nil, &kongIngress)
+	_, _, err := codecs.UniversalDeserializer().Decode(request.Object.Raw, nil, &kongIngress)
 	if err != nil {
 		return nil, err
 	}

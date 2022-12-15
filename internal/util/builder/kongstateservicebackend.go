@@ -1,8 +1,9 @@
 package builder
 
 import (
+	"github.com/samber/lo"
+
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/util/address"
 )
 
 // KongstateServiceBackendBuilder is a builder for KongstateServiceBackend.
@@ -25,7 +26,7 @@ func (b *KongstateServiceBackendBuilder) WithNamespace(namespace string) *Kongst
 }
 
 func (b *KongstateServiceBackendBuilder) WithWeight(weight int) *KongstateServiceBackendBuilder {
-	b.kongstateServiceBackend.Weight = address.Of(int32(weight))
+	b.kongstateServiceBackend.Weight = lo.ToPtr(int32(weight))
 	return b
 }
 

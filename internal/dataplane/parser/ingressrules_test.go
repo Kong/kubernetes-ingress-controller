@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/kong/go-kong/kong"
+	"github.com/samber/lo"
 	"github.com/sirupsen/logrus"
 	"github.com/sirupsen/logrus/hooks/test"
 	"github.com/stretchr/testify/assert"
@@ -19,7 +20,6 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/failures"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/store"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/util/address"
 )
 
 type testSNIs struct {
@@ -588,7 +588,7 @@ func TestPopulateServices(t *testing.T) {
 			serviceNamesToServices: map[string]kongstate.Service{
 				"service-to-skip": {
 					Service: kong.Service{
-						Name: address.Of("service-to-skip"),
+						Name: lo.ToPtr("service-to-skip"),
 					},
 					Namespace: "test-namespace",
 					Backends: []kongstate.ServiceBackend{
@@ -604,7 +604,7 @@ func TestPopulateServices(t *testing.T) {
 				},
 				"service-to-keep": {
 					Service: kong.Service{
-						Name: address.Of("service-to-skip"),
+						Name: lo.ToPtr("service-to-skip"),
 					},
 					Namespace: "test-namespace",
 					Backends: []kongstate.ServiceBackend{

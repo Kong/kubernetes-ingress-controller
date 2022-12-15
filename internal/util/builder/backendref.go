@@ -1,7 +1,7 @@
 package builder
 
 import (
-	"k8s.io/utils/pointer"
+	"github.com/samber/lo"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
@@ -40,7 +40,7 @@ func (b *BackendRefBuilder) WithPort(port int) *BackendRefBuilder {
 }
 
 func (b *BackendRefBuilder) WithWeight(weight int) *BackendRefBuilder {
-	b.backendRef.Weight = pointer.Int32(int32(weight))
+	b.backendRef.Weight = lo.ToPtr(int32(weight))
 	return b
 }
 

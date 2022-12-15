@@ -4,13 +4,13 @@ import (
 	"context"
 	"testing"
 
+	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/util/address"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util/builder"
 )
 
@@ -61,7 +61,7 @@ func TestGetListenerSupportedRouteKinds(t *testing.T) {
 				Protocol: HTTPProtocolType,
 				AllowedRoutes: &gatewayv1beta1.AllowedRoutes{
 					Kinds: []gatewayv1beta1.RouteGroupKind{{
-						Group: address.Of(gatewayv1beta1.Group("unknown.group.com")),
+						Group: lo.ToPtr(gatewayv1beta1.Group("unknown.group.com")),
 						Kind:  Kind("UnknownKind"),
 					}},
 				},

@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
+	"github.com/samber/lo"
 	corev1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -25,7 +26,6 @@ import (
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/util/address"
 )
 
 // -----------------------------------------------------------------------------
@@ -234,8 +234,8 @@ func (r *HTTPRouteReconciler) listHTTPRoutesForGateway(obj client.Object) []reco
 // HTTPRoute Controller - Reconciliation
 // -----------------------------------------------------------------------------
 
-//+kubebuilder:rbac:groups=gateway.networking.k8s.io,resources=httproutes,verbs=get;list;watch
-//+kubebuilder:rbac:groups=gateway.networking.k8s.io,resources=httproutes/status,verbs=get;update
+// +kubebuilder:rbac:groups=gateway.networking.k8s.io,resources=httproutes,verbs=get;list;watch
+// +kubebuilder:rbac:groups=gateway.networking.k8s.io,resources=httproutes/status,verbs=get;update
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
@@ -427,7 +427,7 @@ func (r *HTTPRouteReconciler) ensureGatewayReferenceStatusAdded(ctx context.Cont
 			}},
 		}
 		if gateway.listenerName != "" {
-			gatewayParentStatus.ParentRef.SectionName = address.Of(SectionName(gateway.listenerName))
+			gatewayParentStatus.ParentRef.SectionName = lo.ToPtr(SectionName(gateway.listenerName))
 		}
 
 		key := fmt.Sprintf("%s/%s/%s", gateway.gateway.Namespace, gateway.gateway.Name, gateway.listenerName)
@@ -640,9 +640,9 @@ func (r *HTTPRouteReconciler) ensureParentsAcceptedCondition(
 			// add a new parent if the parent is not found in status.
 			newParentStatus := &gatewayv1beta1.RouteParentStatus{
 				ParentRef: gatewayv1beta1.ParentReference{
-					Namespace:   address.Of(gatewayv1beta1.Namespace(gateway.Namespace)),
+					Namespace:   lo.ToPtr(gatewayv1beta1.Namespace(gateway.Namespace)),
 					Name:        gatewayv1beta1.ObjectName(gateway.Name),
-					SectionName: address.Of(gatewayv1beta1.SectionName(g.listenerName)),
+					SectionName: lo.ToPtr(gatewayv1beta1.SectionName(g.listenerName)),
 					// TODO: set port after gateway port matching implemented: https://github.com/Kong/kubernetes-ingress-controller/issues/3016
 				},
 				Conditions: []metav1.Condition{

@@ -146,16 +146,10 @@ func setupDataplaneSynchronizer(
 		))
 	}
 
-	syncTickDuration, err := time.ParseDuration(fmt.Sprintf("%gs", c.ProxySyncSeconds))
-	if err != nil {
-		logger.Error(err, "%s is not a valid number of seconds to stagger the proxy server synchronization")
-		return nil, err
-	}
-
-	dataplaneSynchronizer, err := dataplane.NewSynchronizerWithStagger(
+	dataplaneSynchronizer, err := dataplane.NewSynchronizer(
 		fieldLogger.WithField("subsystem", "dataplane-synchronizer"),
 		dataplaneClient,
-		syncTickDuration,
+		dataplane.WithStagger(time.Second*time.Duration(c.ProxySyncSeconds)),
 	)
 	if err != nil {
 		return nil, err

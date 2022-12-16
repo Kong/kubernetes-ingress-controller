@@ -38,6 +38,7 @@ jobs:
     - name: run integration tests
       run: make test.integration.enterprise.postgres
       env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         KONG_LICENSE_DATA: ${{ steps.license.outputs.license }}
         TEST_KONG_IMAGE: "kong/kong-gateway-internal"
         TEST_KONG_TAG: "master-alpine"
@@ -84,6 +85,7 @@ jobs:
     - name: run integration tests
       run: make test.integration.postgres
       env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         TEST_KONG_IMAGE: "kong/kong"
         TEST_KONG_TAG: "master-alpine"
 
@@ -127,6 +129,7 @@ jobs:
     - name: run integration tests
       run: make test.integration.dbless
       env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         TEST_KONG_IMAGE: "kong/kong"
         TEST_KONG_TAG: "master-alpine"
 

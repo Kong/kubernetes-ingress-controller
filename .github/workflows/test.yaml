@@ -160,6 +160,7 @@ jobs:
       if: env.PULP_PASSWORD != ''
       run: make test.integration.enterprise.postgres
       env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         KONG_LICENSE_DATA: ${{ steps.license.outputs.license }}
         GOTESTSUM_JUNITFILE: "integration-tests-enterprise-postgres.xml"
 
@@ -210,6 +211,7 @@ jobs:
     - name: run integration tests
       run: make test.integration.dbless
       env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         GOTESTSUM_JUNITFILE: "integration-tests-dbless.xml"
 
     - name: collect test coverage
@@ -258,6 +260,7 @@ jobs:
     - name: run integration tests
       run: make test.integration.postgres
       env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         GOTESTSUM_JUNITFILE: "integration-tests-postgres.xml"
 
     - name: collect test coverage
@@ -306,6 +309,7 @@ jobs:
     - name: run integration tests
       run: make test.integration.dbless
       env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         KONG_CONTROLLER_FEATURE_GATES: "GatewayAlpha=true,CombinedRoutes=false"
         GOTESTSUM_JUNITFILE: "integration-tests-feature-gates.xml"
 

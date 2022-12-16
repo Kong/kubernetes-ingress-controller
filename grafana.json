@@ -1,31 +1,12 @@
 {
-  "__inputs": [],
-  "__elements": [],
-  "__requires": [
-    {
-      "type": "grafana",
-      "id": "grafana",
-      "name": "Grafana",
-      "version": "8.3.4"
-    },
-    {
-      "type": "panel",
-      "id": "histogram",
-      "name": "Histogram",
-      "version": ""
-    },
-    {
-      "type": "panel",
-      "id": "stat",
-      "name": "Stat",
-      "version": ""
-    }
-  ],
   "annotations": {
     "list": [
       {
         "builtIn": 1,
-        "datasource": "-- Grafana --",
+        "datasource": {
+          "type": "datasource",
+          "uid": "grafana"
+        },
         "enable": true,
         "hide": true,
         "iconColor": "rgba(0, 211, 255, 1)",
@@ -40,14 +21,20 @@
       }
     ]
   },
+  "description": "Dashboard that graphs Prometheus metrics exported by Kong's kubernetes-ingress-controller (https://github.com/Kong/kubernetes-ingress-controller). \r\n",
   "editable": true,
   "fiscalYearStartMonth": 0,
+  "gnetId": 15662,
   "graphTooltip": 0,
-  "id": null,
+  "id": 82,
   "links": [],
   "liveNow": false,
   "panels": [
     {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -109,15 +96,22 @@
         "legend": {
           "calcs": [],
           "displayMode": "list",
-          "placement": "bottom"
+          "placement": "bottom",
+          "showLegend": false
         }
       },
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
           "exemplar": true,
-          "expr": "ingress_controller_configuration_push_duration_milliseconds_bucket",
+          "expr": "sum(increase(ingress_controller_configuration_push_duration_milliseconds_bucket[$__range]))",
           "interval": "",
           "legendFormat": "",
+          "range": true,
           "refId": "A"
         }
       ],
@@ -125,6 +119,10 @@
       "type": "histogram"
     },
     {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -153,7 +151,7 @@
       "id": 4,
       "options": {
         "colorMode": "value",
-        "graphMode": "area",
+        "graphMode": "none",
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
@@ -166,14 +164,20 @@
         "text": {},
         "textMode": "auto"
       },
-      "pluginVersion": "8.3.4",
+      "pluginVersion": "9.2.4",
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
           "exemplar": true,
-          "expr": "ingress_controller_configuration_push_count{success=\"true\"}",
+          "expr": "round(sum(increase(ingress_controller_configuration_push_count{success=\"true\"}[$__range])))",
           "format": "time_series",
           "interval": "",
           "legendFormat": "",
+          "range": true,
           "refId": "A"
         }
       ],
@@ -181,6 +185,10 @@
       "type": "stat"
     },
     {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -197,12 +205,8 @@
                 "value": null
               },
               {
-                "color": "#EAB839",
-                "value": 1
-              },
-              {
                 "color": "red",
-                "value": 10
+                "value": 1
               }
             ]
           }
@@ -218,7 +222,7 @@
       "id": 11,
       "options": {
         "colorMode": "value",
-        "graphMode": "area",
+        "graphMode": "none",
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
@@ -231,11 +235,16 @@
         "text": {},
         "textMode": "auto"
       },
-      "pluginVersion": "8.3.4",
+      "pluginVersion": "9.2.4",
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
           "exemplar": true,
-          "expr": "sum by (failure_reason) (ingress_controller_configuration_push_count{success=\"false\"})",
+          "expr": "round(sum(increase(ingress_controller_configuration_push_count{success=\"false\"}[$__range])))",
           "instant": false,
           "interval": "",
           "legendFormat": "",
@@ -246,6 +255,10 @@
       "type": "stat"
     },
     {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -274,7 +287,7 @@
       "id": 10,
       "options": {
         "colorMode": "value",
-        "graphMode": "area",
+        "graphMode": "none",
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
@@ -287,13 +300,19 @@
         "text": {},
         "textMode": "auto"
       },
-      "pluginVersion": "8.3.4",
+      "pluginVersion": "9.2.4",
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
           "exemplar": true,
-          "expr": "ingress_controller_translation_count{success=\"true\"}",
+          "expr": "round(sum(increase(ingress_controller_translation_count{success=\"true\"}[$__range])))",
           "interval": "",
           "legendFormat": "",
+          "range": true,
           "refId": "A"
         }
       ],
@@ -301,6 +320,10 @@
       "type": "stat"
     },
     {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -317,7 +340,7 @@
               },
               {
                 "color": "red",
-                "value": 20
+                "value": 1
               }
             ]
           }
@@ -333,7 +356,7 @@
       "id": 12,
       "options": {
         "colorMode": "value",
-        "graphMode": "area",
+        "graphMode": "none",
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
@@ -346,13 +369,19 @@
         "text": {},
         "textMode": "auto"
       },
-      "pluginVersion": "8.3.4",
+      "pluginVersion": "9.2.4",
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
           "exemplar": true,
-          "expr": "ingress_controller_translation_count{success=\"false\"}",
+          "expr": "round(sum(increase(ingress_controller_translation_count{success=\"false\"}[$__range])))",
           "interval": "",
           "legendFormat": "",
+          "range": true,
           "refId": "A"
         }
       ],
@@ -361,7 +390,7 @@
     }
   ],
   "refresh": "5s",
-  "schemaVersion": 34,
+  "schemaVersion": 37,
   "style": "dark",
   "tags": [],
   "templating": {
@@ -375,5 +404,6 @@
   "timezone": "",
   "title": "Kong ingress controller",
   "uid": "SaGwMOtnz",
-  "version": 2
+  "version": 1,
+  "weekStart": ""
 }

@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
+	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
@@ -109,7 +110,7 @@ func TestIngressRegexMatchPath(t *testing.T) {
 					},
 				},
 				Spec: netv1.IngressSpec{
-					IngressClassName: &ingressClass,
+					IngressClassName: lo.ToPtr(ingressClass),
 					Rules: []netv1.IngressRule{
 						{
 							IngressRuleValue: netv1.IngressRuleValue{
@@ -244,7 +245,7 @@ func TestIngressRegexMatchHeader(t *testing.T) {
 					},
 				},
 				Spec: netv1.IngressSpec{
-					IngressClassName: &ingressClass,
+					IngressClassName: lo.ToPtr(ingressClass),
 					Rules: []netv1.IngressRule{
 						{
 							IngressRuleValue: netv1.IngressRuleValue{

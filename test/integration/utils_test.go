@@ -54,6 +54,11 @@ const (
 // Testing Variables
 // -----------------------------------------------------------------------------
 
+const (
+	// ingressClass indicates the ingress class name which the tests will use for supported object reconciliation.
+	ingressClass = "kongtests"
+)
+
 var (
 	// ctx the topical context of the test suite, can be used by test cases if they don't need
 	// any special context as a function of the test.
@@ -65,9 +70,6 @@ var (
 	// redisImage is Redis. Pinned because of
 	// https://github.com/Kong/kubernetes-ingress-controller/issues/2735#issuecomment-1194376496 breakage.
 	redisImage = "bitnami/redis:7.0.4-debian-11-r3"
-
-	// ingressClass indicates the ingress class name which the tests will use for supported object reconciliation.
-	ingressClass = "kongtests"
 
 	// controllerNamespace is the Kubernetes namespace where the controller is deployed.
 	controllerNamespace = "kong-system"

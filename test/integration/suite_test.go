@@ -236,20 +236,31 @@ func TestMain(m *testing.M) {
 	cleaner.Add(gwc)
 
 	fmt.Println("INFO: Deploying the controller's IngressClass")
-	iclass := &netv1.IngressClass{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: ingressClass,
-		},
-		Spec: netv1.IngressClassSpec{
-			Controller: store.IngressClassKongController,
-		},
+	createIngressClass := func() *netv1.IngressClass {
+		return &netv1.IngressClass{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: ingressClass,
+			},
+			Spec: netv1.IngressClassSpec{
+				Controller: store.IngressClassKongController,
+			},
+		}
 	}
-	iclass, err = env.Cluster().Client().NetworkingV1().IngressClasses().Create(ctx, iclass, metav1.CreateOptions{})
+	ingClasses := env.Cluster().Client().NetworkingV1().IngressClasses()
+	_, err = ingClasses.Create(ctx, createIngressClass(), metav1.CreateOptions{})
+	if errors.IsAlreadyExists(err) {
+		// If for some reason the ingress class is already in the cluster don't
+		// fail the whole test suite but recreate it and continue.
+		err = ingClasses.Delete(ctx, ingressClass, metav1.DeleteOptions{})
+		exitOnErr(err)
+		_, err = ingClasses.Create(ctx, createIngressClass(), metav1.CreateOptions{})
+		exitOnErr(err)
+	}
 	exitOnErr(err)
 	defer func() {
-		// deleting this directly instead of adding it to the cleaner because the cleaner always gets a 404 on it for
-		// unknown reasons
-		_ = env.Cluster().Client().NetworkingV1().IngressClasses().Delete(ctx, iclass.Name, metav1.DeleteOptions{})
+		// deleting this directly instead of adding it to the cleaner because
+		// the cleaner always gets a 404 on it for unknown reasons
+		_ = ingClasses.Delete(ctx, ingressClass, metav1.DeleteOptions{})
 	}()
 
 	if os.Getenv("TEST_RUN_INVALID_CONFIG_CASES") == "true" {

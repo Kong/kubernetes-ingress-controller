@@ -706,25 +706,3 @@ func (r *GatewayReconciler) updateAddressesAndListenersStatus(
 	}
 	return false, nil
 }
-
-// areAllowedRoutesConsistentByProtocol returns an error if a set of listeners includes multiple listeners for the same
-// protocol that do not use the same AllowedRoutes filters. Kong does not support limiting routes to a specific listen:
-// all routes are always served on all listens compatible with their protocol. As such, while we can filter the routes
-// we ingest, if we ingest routes from two incompatible filters, we will combine them into a single proxy configuration
-// It may be possible to write a new Kong plugin that checks the inbound port/address to de facto apply listen-based
-// filters in the future.
-func areAllowedRoutesConsistentByProtocol(listeners []gatewayv1alpha2.Listener) bool {
-	allowedByProtocol := make(map[gatewayv1alpha2.ProtocolType]gatewayv1alpha2.AllowedRoutes)
-	for _, listener := range listeners {
-		var allowed gatewayv1alpha2.AllowedRoutes
-		var exists bool
-		if allowed, exists = allowedByProtocol[listener.Protocol]; !exists {
-			allowedByProtocol[listener.Protocol] = *listener.AllowedRoutes
-		} else {
-			if !reflect.DeepEqual(allowed, *listener.AllowedRoutes) {
-				return false
-			}
-		}
-	}
-	return true
-}

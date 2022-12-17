@@ -40,8 +40,7 @@ const highEndConsumerUsageCount = 50
 
 func TestValidationWebhook(t *testing.T) {
 	t.Parallel()
-	ns, cleanup := namespace(t)
-	defer cleanup()
+	ns := namespace(t)
 
 	if env.Cluster().Type() != kind.KindClusterType {
 		t.Skip("webhook tests are only available on KIND clusters currently")

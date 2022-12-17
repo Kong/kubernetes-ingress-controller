@@ -21,8 +21,7 @@ import (
 )
 
 func TestGatewayValidationWebhook(t *testing.T) {
-	ns, cleanup := namespace(t)
-	defer cleanup()
+	ns := namespace(t)
 
 	if env.Cluster().Type() != kind.KindClusterType {
 		t.Skip("webhook tests are only available on KIND clusters currently")

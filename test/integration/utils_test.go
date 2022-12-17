@@ -12,7 +12,6 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"regexp"
 	"strings"
 	"testing"
 	"time"
@@ -76,12 +75,6 @@ var (
 
 	// httpc is the default HTTP client to use for tests.
 	httpc = http.Client{Timeout: httpcTimeout}
-
-	// watchNamespaces is a list of namespaces the controller watches
-	// NOTE: more namespaces will be loaded dynamically by the test.Main
-	//       during runtime. In general, avoid adding hardcoded namespaces
-	//       to this list as that's reserved for special cases.
-	watchNamespaces = fmt.Sprintf("%s,%s,%s", extraIngressNamespace, extraWebhookNamespace, corev1.NamespaceDefault)
 
 	// env is the primary testing environment object which includes access to the Kubernetes cluster
 	// and all the addons deployed in support of the tests.
@@ -237,83 +230,15 @@ func getKongVersion() (semver.Version, error) {
 // Testing Utility Functions - Namespaces
 // -----------------------------------------------------------------------------
 
-// namespaces is a map of test case names to a namespace that was generated specifically for them to use.
-// each test case in the test run gets its own unique namespace.
-var namespaces = make(map[string]*corev1.Namespace)
-
 // namespace provides the namespace provisioned for each test case given their t.Name as the "testCase".
-func namespace(t *testing.T) (*corev1.Namespace, func()) {
-	namespace, ok := namespaces[t.Name()]
-	if !ok {
-		fmt.Fprintf(os.Stderr, "Error: test case %s did not have a namespace set up\n", t.Name())
-		os.Exit(ExitCodeCantCreateCluster)
-	}
-
-	cleanup := func() {
+func namespace(t *testing.T) *corev1.Namespace {
+	namespace, err := clusters.GenerateNamespace(ctx, env.Cluster(), t.Name())
+	require.NoError(t, err)
+	t.Cleanup(func() {
 		assert.NoError(t, clusters.CleanupGeneratedResources(ctx, env.Cluster(), t.Name()))
-	}
+	})
 
-	return namespace, cleanup
-}
-
-// -----------------------------------------------------------------------------
-// Testing Utility Functions - Identifying Test Cases
-// -----------------------------------------------------------------------------
-
-// identifyTestCasesForDir finds the Go function names for any Go test files in the given directory.
-func identifyTestCasesForDir(dir string) ([]string, error) {
-	files, err := os.ReadDir(dir)
-	if err != nil {
-		return nil, err
-	}
-
-	var testCasesForDir []string
-	for _, fileInfo := range files {
-		if !fileInfo.IsDir() {
-			if strings.HasSuffix(fileInfo.Name(), "test.go") {
-				testCasesForFile, err := identifyTestCasesForFile(dir + fileInfo.Name())
-				if err != nil {
-					return nil, err
-				}
-
-				testCasesForDir = append(testCasesForDir, testCasesForFile...)
-			}
-		}
-	}
-
-	return testCasesForDir, nil
-}
-
-// testCaseRegexp is a regex to identify Go test cases in test files.
-var testCaseRegexp = regexp.MustCompile(`func (Test.*)\(`)
-
-// identifyTestCasesForFile searches the given file for any Golang test cases.
-func identifyTestCasesForFile(filePath string) ([]string, error) {
-	if !strings.HasSuffix(filePath, "test.go") {
-		return nil, fmt.Errorf("%s does not look like a Golang test file", filePath)
-	}
-
-	b, err := os.ReadFile(filePath)
-	if err != nil {
-		return nil, err
-	}
-
-	matches := testCaseRegexp.FindAllSubmatch(b, -1)
-	if len(matches) < 1 {
-		return nil, nil
-	}
-
-	var testCasesForFile []string
-	for _, submatches := range matches {
-		if len(submatches) > 1 {
-			testCaseName := string(submatches[1])
-			if testCaseName != "TestMain" { // don't count TestMains
-				testCasesForFile = append(testCasesForFile, testCaseName)
-			}
-		}
-	}
-
-	return testCasesForFile, nil
+	return namespace
 }
 
 // -----------------------------------------------------------------------------

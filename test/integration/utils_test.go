@@ -472,14 +472,14 @@ func expect404WithNoRoute(t *testing.T, proxyURL string, resp *http.Response) bo
 // exitOnErrWithCode is a helper function meant for us in the test.Main to simplify failing and exiting
 // the tests under unrecoverable error conditions. It will also attempt to perform any cluster
 // cleaning necessary before exiting.
-func exitOnErrWithCode(err error, exitCode int) {
+func exitOnErrWithCode(ctx context.Context, err error, exitCode int) {
 	if err == nil {
 		return
 	}
 
 	fmt.Println("WARNING: failure occurred, performing test cleanup")
 	if env != nil && existingCluster == "" && keepTestCluster == "" {
-		ctx, cancel := context.WithTimeout(context.Background(), environmentCleanupTimeout)
+		ctx, cancel := context.WithTimeout(ctx, environmentCleanupTimeout)
 		defer cancel()
 
 		fmt.Printf("INFO: cluster %s is being deleted\n", env.Cluster().Name())
@@ -494,11 +494,11 @@ func exitOnErrWithCode(err error, exitCode int) {
 
 // exitOnErr is a wrapper around exitOnErrorWithCode that defaults to using the ExitCodeEnvSetupFailed
 // exit code. This function is meant for convenience to wrap errors in setup that are hard to predict.
-func exitOnErr(err error) {
+func exitOnErr(ctx context.Context, err error) {
 	if err == nil {
 		return
 	}
-	exitOnErrWithCode(err, ExitCodeEnvSetupFailed)
+	exitOnErrWithCode(ctx, err, ExitCodeEnvSetupFailed)
 }
 
 // TODO move this into a shared library https://github.com/Kong/kubernetes-testing-framework/issues/302

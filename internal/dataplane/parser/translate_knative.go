@@ -90,7 +90,6 @@ func (p *Parser) ingressRulesFromKnativeIngress() ingressRules {
 					knativeBackend.ServicePort.String())
 				service, ok := services[serviceName]
 				if !ok {
-
 					var headers []string
 					for key, value := range knativeBackend.AppendHeaders {
 						headers = append(headers, key+":"+value)

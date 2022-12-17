@@ -26,7 +26,6 @@ func UpdateReferencesToSecret(
 	referrer client.Object, referencedSecretNameMap map[types.NamespacedName]struct{},
 ) error {
 	for nsName := range referencedSecretNameMap {
-
 		secret := &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: nsName.Namespace,
@@ -107,7 +106,6 @@ func removeOutdatedReferencesToSecret(
 			if err := indexers.DeleteObjectIfNotReferred(obj, dataplaneClient); err != nil {
 				return err
 			}
-
 		}
 	}
 	return nil

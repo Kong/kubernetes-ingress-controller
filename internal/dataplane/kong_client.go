@@ -124,6 +124,7 @@ type KongClient struct {
 // NewKongClient provides a new KongClient object after connecting to the
 // data-plane API and verifying integrity.
 func NewKongClient(
+	ctx context.Context,
 	logger logrus.FieldLogger,
 	timeout time.Duration,
 	ingressClass string,
@@ -149,7 +150,7 @@ func NewKongClient(
 	}
 
 	// download the kong root configuration (and validate connectivity to the proxy API)
-	root, err := c.RootWithTimeout()
+	root, err := c.RootWithTimeout(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -227,8 +228,8 @@ func (c *KongClient) Listeners(ctx context.Context) ([]kong.ProxyListener, []kon
 
 // RootWithTimeout provides the root configuration from Kong, but uses a configurable timeout to avoid long waits if the Admin API
 // is not yet ready to respond. If a timeout error occurs, the caller is responsible for providing a retry mechanism.
-func (c *KongClient) RootWithTimeout() (map[string]interface{}, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), c.requestTimeout)
+func (c *KongClient) RootWithTimeout(ctx context.Context) (map[string]interface{}, error) {
+	ctx, cancel := context.WithTimeout(ctx, c.requestTimeout)
 	defer cancel()
 	return c.kongConfig.Client.Root(ctx)
 }

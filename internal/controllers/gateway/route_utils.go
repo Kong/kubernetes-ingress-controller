@@ -372,7 +372,6 @@ func routeMatchesListenerAllowedRoutes[T types.RouteT](
 	}
 
 	switch *listener.AllowedRoutes.Namespaces.From {
-
 	case gatewayv1beta1.NamespacesFromAll:
 		return true, nil
 

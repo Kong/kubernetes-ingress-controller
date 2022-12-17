@@ -104,7 +104,6 @@ func backendRefsToKongStateBackends[T types.BackendRefT](
 			brw.Group(),
 			brw.Kind(),
 		) && newRefChecker(backendRef).IsRefAllowedByGrant(allowed) {
-
 			backend := kongstate.ServiceBackend{
 				Name: brw.Name(),
 				PortDef: kongstate.PortDef{

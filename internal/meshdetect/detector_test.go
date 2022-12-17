@@ -317,7 +317,6 @@ func TestDetectRunUnder(t *testing.T) {
 					"test case %s: detection result should be same for mesh %s", tc.caseName, meshKind)
 			}
 		})
-
 	}
 }
 

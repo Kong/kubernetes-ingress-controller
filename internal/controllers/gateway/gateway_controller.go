@@ -145,7 +145,11 @@ func (r *GatewayReconciler) SetupWithManager(mgr ctrl.Manager) error {
 func (r *GatewayReconciler) gatewayHasMatchingGatewayClass(obj client.Object) bool {
 	gateway, ok := obj.(*gatewayv1beta1.Gateway)
 	if !ok {
-		r.Log.Error(fmt.Errorf("unexpected object type in gateway watch predicates"), "expected", "*gatewayv1beta1.Gateway", "found", reflect.TypeOf(obj))
+		r.Log.Error(
+			fmt.Errorf("unexpected object type"),
+			"gateway watch predicate received unexpected object type",
+			"expected", "*gatewayv1beta1.Gateway", "found", reflect.TypeOf(obj),
+		)
 		return false
 	}
 	gatewayClass := &gatewayv1beta1.GatewayClass{}
@@ -161,7 +165,11 @@ func (r *GatewayReconciler) gatewayHasMatchingGatewayClass(obj client.Object) bo
 func (r *GatewayReconciler) gatewayClassMatchesController(obj client.Object) bool {
 	gatewayClass, ok := obj.(*gatewayv1beta1.GatewayClass)
 	if !ok {
-		r.Log.Error(fmt.Errorf("unexpected object type in gatewayclass watch predicates"), "expected", "*gatewayv1beta1.GatewayClass", "found", reflect.TypeOf(obj))
+		r.Log.Error(
+			fmt.Errorf("unexpected object type"),
+			"gatewayclass watch predicate received unexpected object type",
+			"expected", "*gatewayv1beta1.GatewayClass", "found", reflect.TypeOf(obj),
+		)
 		return false
 	}
 	return isGatewayClassControlledAndUnmanaged(gatewayClass)
@@ -184,8 +192,11 @@ func (r *GatewayReconciler) listGatewaysForGatewayClass(gatewayClass client.Obje
 func (r *GatewayReconciler) listReferenceGrantsForGateway(obj client.Object) []reconcile.Request {
 	grant, ok := obj.(*gatewayv1alpha2.ReferenceGrant)
 	if !ok {
-		r.Log.Error(fmt.Errorf("unexpected object type in referencegrant watch predicates"), "expected",
-			"*gatewayv1alpha2.ReferenceGrant", "found", reflect.TypeOf(obj))
+		r.Log.Error(
+			fmt.Errorf("unexpected object type"),
+			"referencegrant watch predicate received unexpected object type",
+			"expected", "*gatewayv1alpha2.ReferenceGrant", "found", reflect.TypeOf(obj),
+		)
 		return nil
 	}
 	gateways := &gatewayv1beta1.GatewayList{}
@@ -218,7 +229,7 @@ func (r *GatewayReconciler) listReferenceGrantsForGateway(obj client.Object) []r
 func (r *GatewayReconciler) listGatewaysForService(svc client.Object) (recs []reconcile.Request) {
 	gateways := &gatewayv1beta1.GatewayList{}
 	if err := r.Client.List(context.Background(), gateways); err != nil {
-		r.Log.Error(err, "failed to list gateways for service in watch predicates", "service")
+		r.Log.Error(err, "failed to list gateways for service in watch predicates", "service", svc)
 		return
 	}
 	for _, gateway := range gateways.Items {

@@ -18,7 +18,6 @@ package util
 
 import (
 	"context"
-	"os"
 	"testing"
 
 	corev1 "k8s.io/api/core/v1"
@@ -176,32 +175,32 @@ func TestGetNodeIP(t *testing.T) {
 func TestGetPodDetails(t *testing.T) {
 	ctx := context.Background()
 	// POD_NAME & POD_NAMESPACE not exist
-	os.Setenv("POD_NAME", "")
-	os.Setenv("POD_NAMESPACE", "")
+	t.Setenv("POD_NAME", "")
+	t.Setenv("POD_NAMESPACE", "")
 	_, err1 := GetPodDetails(ctx, testclient.NewSimpleClientset())
 	if err1 == nil {
 		t.Errorf("expected an error but returned nil")
 	}
 
 	// POD_NAME not exist
-	os.Setenv("POD_NAME", "")
-	os.Setenv("POD_NAMESPACE", corev1.NamespaceDefault)
+	t.Setenv("POD_NAME", "")
+	t.Setenv("POD_NAMESPACE", corev1.NamespaceDefault)
 	_, err2 := GetPodDetails(ctx, testclient.NewSimpleClientset())
 	if err2 == nil {
 		t.Errorf("expected an error but returned nil")
 	}
 
 	// POD_NAMESPACE not exist
-	os.Setenv("POD_NAME", "testpod")
-	os.Setenv("POD_NAMESPACE", "")
+	t.Setenv("POD_NAME", "testpod")
+	t.Setenv("POD_NAMESPACE", "")
 	_, err3 := GetPodDetails(ctx, testclient.NewSimpleClientset())
 	if err3 == nil {
 		t.Errorf("expected an error but returned nil")
 	}
 
 	// POD not exist
-	os.Setenv("POD_NAME", "testpod")
-	os.Setenv("POD_NAMESPACE", corev1.NamespaceDefault)
+	t.Setenv("POD_NAME", "testpod")
+	t.Setenv("POD_NAMESPACE", corev1.NamespaceDefault)
 	_, err4 := GetPodDetails(ctx, testclient.NewSimpleClientset())
 	if err4 == nil {
 		t.Errorf("expected an error but returned nil")

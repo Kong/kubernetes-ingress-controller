@@ -224,7 +224,7 @@ jobs:
         with:
           fetch-depth: 0
       - name: Kubernetes ${{ matrix.kubernetes-version }} E2E Tests
-        run: KONG_CLUSTER_VERSION=${{ matrix.kubernetes-version }} make test.integration.${{ matrix.dbmode }}
+        run: KONG_CLUSTER_VERSION=${{ matrix.kubernetes-version }} make test.e2e
 
   test-previous-kubernetes:
     environment: gcloud
@@ -242,6 +242,7 @@ jobs:
         uses: actions/setup-go@v3
         with:
           go-version: '^1.19'
+
       - name: cache go modules
         uses: actions/cache@v3
         with:
@@ -249,18 +250,25 @@ jobs:
           key: ${{ runner.os }}-build-codegen-${{ hashFiles('**/go.sum') }}
           restore-keys: |
             ${{ runner.os }}-build-codegen-
+
       - name: checkout repository
         uses: actions/checkout@v3
         with:
           fetch-depth: 0
+
+      - uses: Kong/kong-license@master
+        id: license
+        with:
+          password: ${{ secrets.PULP_PASSWORD }}
+
       - name: E2E on GKE v1.${{ matrix.minor }}
         run: make test.e2e.gke
         env:
-          KUBERNETES_MAJOR_VERSION: 1
-          KUBERNETES_MINOR_VERSION: ${{ matrix.minor }}
           GOOGLE_APPLICATION_CREDENTIALS: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}
           GOOGLE_PROJECT: ${{ secrets.GOOGLE_PROJECT }}
           GOOGLE_LOCATION: ${{ secrets.GOOGLE_LOCATION }}
+          KONG_CLUSTER_VERSION: v1.${{ matrix.minor }}
+          KONG_LICENSE_DATA: ${{ steps.license.outputs.license }}
 
   publish-release:
     runs-on: ubuntu-latest

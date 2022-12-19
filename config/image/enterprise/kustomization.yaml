@@ -7,6 +7,6 @@ images:
 - name: kong
   newName: kong/kong-gateway
   newTag: '3.0'
-- name: kic-placeholder
-  newName: kong/kubernetes-ingress-controller
-  newTag: '2.8.0'
+- name: kong-placeholder
+  newName: kong/kong-gateway
+  newTag: '3.0'

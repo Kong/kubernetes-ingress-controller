@@ -224,7 +224,7 @@ jobs:
         with:
           fetch-depth: 0
       - name: Kubernetes ${{ matrix.kubernetes-version }} E2E Tests
-        run: KONG_CLUSTER_VERSION=${{ matrix.kubernetes-version }} make test.integration.${{ matrix.dbmode }}
+        run: KONG_CLUSTER_VERSION=${{ matrix.kubernetes-version }} make test.e2e
 
   test-previous-kubernetes:
     environment: gcloud

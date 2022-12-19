@@ -43,8 +43,7 @@ func TestKnativeIngress(t *testing.T) {
 	}
 
 	t.Parallel()
-	ns, cleanup := namespace(t)
-	defer cleanup()
+	ns := namespace(t)
 
 	t.Log("generating a knative clientset")
 	dynamicClient, err := dynamic.NewForConfig(env.Cluster().Config())

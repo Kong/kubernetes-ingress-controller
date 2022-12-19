@@ -43,8 +43,7 @@ func TestUDPIngressEssentials(t *testing.T) {
 		udpMutex.Unlock()
 	}()
 
-	ns, cleanup := namespace(t)
-	defer cleanup()
+	ns := namespace(t)
 
 	t.Log("configuring coredns corefile")
 	cfgmap := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "coredns"}, Data: map[string]string{"Corefile": corefile}}
@@ -180,8 +179,7 @@ func TestUDPIngressTCPIngressCollision(t *testing.T) {
 	defer udpMutex.Unlock()
 	defer tcpMutex.Unlock()
 
-	ns, cleanup := namespace(t)
-	defer cleanup()
+	ns := namespace(t)
 
 	t.Log("configuring coredns corefile")
 	cfgmap := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "coredns"}, Data: map[string]string{"Corefile": corefile}}

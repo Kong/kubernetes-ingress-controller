@@ -90,7 +90,7 @@ jobs:
       fail-fast: false
       matrix:
         kubernetes-version:
-          - 'v1.26.0'
+          - 'v1.25.3'
         istio-version:
           - 'v1.16.1'
           - 'v1.15.4'

@@ -69,7 +69,7 @@ func (s *Server) Listen(ctx context.Context, port int) error {
 	select {
 	case <-ctx.Done():
 		s.Logger.Info("shutting down diagnostics server")
-		return httpServer.Shutdown(context.Background())
+		return httpServer.Shutdown(context.Background()) //nolint:contextcheck
 	case err := <-errChan:
 		return err
 	}

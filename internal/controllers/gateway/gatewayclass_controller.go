@@ -71,7 +71,11 @@ func (r *GatewayClassReconciler) SetupWithManager(mgr ctrl.Manager) error {
 func (r *GatewayClassReconciler) GatewayClassIsUnmanaged(obj client.Object) bool {
 	gatewayClass, ok := obj.(*gatewayv1beta1.GatewayClass)
 	if !ok {
-		r.Log.Error(fmt.Errorf("unexpected object type in gateway watch predicates"), "expected", "*gatewayv1beta1.GatewayClass", "found", reflect.TypeOf(obj))
+		r.Log.Error(
+			fmt.Errorf("unexpected object type"),
+			"gatewayclass watch predicate received unexpected object type",
+			"expected", "*gatewayv1beta1.GatewayClass", "found", reflect.TypeOf(obj),
+		)
 		return false
 	}
 

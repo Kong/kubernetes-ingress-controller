@@ -61,7 +61,6 @@ func (r *Route) useSSLProtocol() {
 	var prots []*string
 
 	for _, val := range r.Protocols {
-
 		if strings.Contains(*val, "grpc") {
 			grpc = true
 		}

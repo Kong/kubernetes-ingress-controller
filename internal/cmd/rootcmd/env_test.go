@@ -3,7 +3,6 @@ package rootcmd
 import (
 	"fmt"
 	"io"
-	"os"
 	"strings"
 	"testing"
 
@@ -34,12 +33,8 @@ func TestBindEnvVars(t *testing.T) {
 	cmd.Flags().String("flag-3", "default3", "Set by args only")
 	cmd.Flags().String("flag-4", "default4", "Set by both env and args")
 
-	_ = os.Setenv("CONTROLLER_FLAG_2", "env2")
-	_ = os.Setenv("CONTROLLER_FLAG_4", "env4")
-	defer func() {
-		_ = os.Unsetenv("CONTROLLER_FLAG_2")
-		_ = os.Unsetenv("CONTROLLER_FLAG_4")
-	}()
+	t.Setenv("CONTROLLER_FLAG_2", "env2")
+	t.Setenv("CONTROLLER_FLAG_4", "env4")
 
 	cmd.SetArgs([]string{
 		"--flag-3=args3",
@@ -63,8 +58,7 @@ func TestBindEnvVarsValidation(t *testing.T) {
 	cmd.SetOut(io.Discard)
 	cmd.SetErr(io.Discard)
 
-	_ = os.Setenv("CONTROLLER_VALIDATION_TEST", "intentionally_fail")
-	defer os.Unsetenv("CONTROLLER_VALIDATION_TEST")
+	t.Setenv("CONTROLLER_VALIDATION_TEST", "intentionally_fail")
 
 	err := cmd.Execute()
 	assert.Error(t, err)

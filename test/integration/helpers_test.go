@@ -121,7 +121,7 @@ func gatewayHealthCheck(ctx context.Context, client *gatewayclient.Clientset, ga
 			tick = nil
 			ch <- func() bool {
 				gw, err := client.GatewayV1beta1().Gateways(namespace).Get(ctx, gatewayName, metav1.GetOptions{})
-				exitOnErr(err)
+				exitOnErr(ctx, err)
 				ok := util.CheckCondition(
 					gw.Status.Conditions,
 					util.ConditionType(gatewayv1beta1.GatewayConditionReady),
@@ -307,7 +307,6 @@ func setIngressClassNameWithRetry(ctx context.Context, namespace string, obj run
 			_, err = ingressClient.Update(ctx, ingress, metav1.UpdateOptions{})
 			return err
 		})
-
 	}
 	return fmt.Errorf("unsupported GroupVersionKind %v", obj.GetObjectKind())
 }

@@ -59,7 +59,6 @@ func TestSerializeMeshDeploymentResults(t *testing.T) {
 			require.Equalf(t, tc.serializedStr, serialized,
 				"case %s: serialized message should be the same as expected", tc.caseName)
 		})
-
 	}
 }
 
@@ -161,6 +160,5 @@ func TestSerializeMeshServiceDistribution(t *testing.T) {
 			require.Equalf(t, tc.serializedStr, serialized,
 				"case %s: serialized message should be the same as expected", tc.caseName)
 		})
-
 	}
 }

@@ -144,6 +144,7 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 
 	eventRecorder := mgr.GetEventRecorderFor(KongClientEventRecorderComponentName)
 	dataplaneClient, err := dataplane.NewKongClient(
+		ctx,
 		deprecatedLogger,
 		timeoutDuration,
 		c.IngressClassName,

@@ -11,8 +11,10 @@ run:
   - istio_tests
 linters:
   enable:
+  - asasalint
   - asciicheck
   - bodyclose
+  - contextcheck
   - depguard
   - dogsled
   - durationcheck
@@ -31,6 +33,7 @@ linters:
   - govet
   - importas
   - ineffassign
+  - loggercheck
   - megacheck
   - misspell
   - nakedret
@@ -39,6 +42,7 @@ linters:
   - predeclared
   - revive
   - staticcheck
+  - tenv
   - typecheck
   - unconvert
   - unparam
@@ -89,6 +93,13 @@ linters-settings:
     include-go-root: false
     packages-with-error-message:
       - k8s.io/utils/pointer: "Use github.com/samber/lo ToPtr instead"
+  tenv:
+    all: true
+  loggercheck:
+    kitlog: false
+    klog: true
+    logr: true
+    zap: false
 issues:
   fix: true
   max-same-issues: 0

@@ -152,7 +152,6 @@ func (d *Detector) DetectRunUnder(ctx context.Context) map[MeshKind]*RunUnderRes
 
 		// detect if pod has a init container.
 		runUnderResults[meshKind].InitContainerInjected = isPodInitContainerInjected(meshKind, pod)
-
 	}
 
 	return runUnderResults
@@ -350,7 +349,6 @@ func (d *Detector) DetectServiceDistribution(ctx context.Context) (*ServiceDistr
 	}
 
 	for _, svc := range serviceList {
-
 		key := client.ObjectKeyFromObject(svc)
 		endpointsResource := endpoints[key]
 		if endpointsResource == nil {

@@ -682,7 +682,6 @@ func getEndpoints(
 
 	for _, ss := range ep.Subsets {
 		for _, epPort := range ss.Ports {
-
 			if !reflect.DeepEqual(epPort.Protocol, proto) {
 				continue
 			}

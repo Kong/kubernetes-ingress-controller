@@ -92,7 +92,7 @@ func RunReport(ctx context.Context, kubeCfg *rest.Config, kongCfg sendconfig.Kon
 		reporter.MeshDetector = detector
 	}
 
-	go reporter.Run(ctx.Done())
+	go reporter.Run(ctx)
 
 	return nil
 }

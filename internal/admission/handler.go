@@ -132,8 +132,8 @@ func (h RequestHandler) handleKongConsumer(
 	if err != nil {
 		return nil, err
 	}
-	//nolint:exhaustive
-	switch request.Operation {
+
+	switch request.Operation { //nolint:exhaustive
 	case admissionv1.Create:
 		ok, msg, err := h.Validator.ValidateConsumer(ctx, consumer)
 		if err != nil {
@@ -217,8 +217,8 @@ func (h RequestHandler) handleSecret(
 	// managed consumer in order for us to validate them, and because credentials
 	// validation also happens at the consumer side of the reference so a
 	// credentials secret can not be referenced without being validated.
-	//nolint:exhaustive
-	switch request.Operation {
+
+	switch request.Operation { //nolint:exhaustive
 	case admissionv1.Update:
 		ok, message, err := h.Validator.ValidateCredential(ctx, secret)
 		if err != nil {

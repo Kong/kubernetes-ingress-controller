@@ -115,8 +115,33 @@ jobs:
         name: tests-report
         path: unit-tests.xml
 
-  integration-tests-enterprise-postgres:
+  setup-integration-tests:
     runs-on: ubuntu-latest
+    outputs:
+      test_names: ${{ steps.set_test_names.outputs.test_names }}
+    steps:
+
+    - uses: actions/checkout@v3
+
+    - id: set_test_names
+      name: Set test names
+      working-directory: test/integration/
+      # grep magic described in https://unix.stackexchange.com/a/13472
+      # sed to add the extra $ is because some of our test names overlap. we need it so the -run regex only matches one test
+      run: |
+        echo "test_names=$(grep -shoP "(?<=^func )(Test[a-zA-z_0-9]+)(?=\(t \*testing.T\) {)" * | sed -e "s/$/\$/"| jq -R . | jq -cs .)" >> $GITHUB_OUTPUT
+
+    - name: Print test names
+      run: echo "Test names ${{ steps.set_test_names.outputs.test_names }}"
+
+  integration-tests-enterprise-postgres:
+    needs:
+    - setup-integration-tests
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        test: ${{ fromJSON(needs.setup-integration-tests.outputs.test_names) }}
     env:
       PULP_PASSWORD: ${{ secrets.PULP_PASSWORD }}
     # We don't want to run enterprise tests for contributors whose workflow runs
@@ -155,21 +180,29 @@ jobs:
       uses: actions/checkout@v3
       with:
         fetch-depth: 0
+        
+    - name: Setting test name with stripped $
+      uses: actions/github-script@v6
+      id: set_test_name
+      with:
+        script: |
+          core.setOutput('name', '${{ matrix.test }}'.trim('$'));
 
-    - name: run integration tests
+    - name: run integration test ${{ matrix.test }}
       if: env.PULP_PASSWORD != ''
       run: make test.integration.enterprise.postgres
       env:
+        GOTESTFLAGS: -json -run ${{ matrix.test }}
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         KONG_LICENSE_DATA: ${{ steps.license.outputs.license }}
-        GOTESTSUM_JUNITFILE: "integration-tests-enterprise-postgres.xml"
+        GOTESTSUM_JUNITFILE: integration-tests-enterprise-postgres-${{ steps.set_test_name.outputs.name }}.xml
 
     - name: collect test coverage
       if: env.PULP_PASSWORD != ''
       uses: actions/upload-artifact@v3
       with:
         name: coverage
-        path: coverage.enterprisepostgres.out
+        path: coverage.enterprisepostgres.${{ steps.set_test_name.outputs.name }}.out
 
     - name: upload diagnostics
       if: env.PULP_PASSWORD != ''
@@ -184,10 +217,16 @@ jobs:
       uses: actions/upload-artifact@v3
       with:
         name: tests-report
-        path: integration-tests-enterprise-postgres.xml
+        path: integration-tests-enterprise-postgres-${{ steps.set_test_name.outputs.name }}.xml
 
   integration-tests-dbless:
+    needs:
+    - setup-integration-tests
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        test: ${{ fromJSON(needs.setup-integration-tests.outputs.test_names) }}
     steps:
 
     - name: setup golang
@@ -208,17 +247,18 @@ jobs:
       with:
         fetch-depth: 0
 
-    - name: run integration tests
+    - name: run integration test ${{ matrix.test }}
       run: make test.integration.dbless
       env:
+        GOTESTFLAGS: -json -run ${{ matrix.test }}
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        GOTESTSUM_JUNITFILE: "integration-tests-dbless.xml"
+        GOTESTSUM_JUNITFILE: integration-tests-dbless-${{ steps.set_test_name.outputs.name }}.xml
 
     - name: collect test coverage
       uses: actions/upload-artifact@v3
       with:
         name: coverage
-        path: coverage.dbless.out
+        path: coverage.dbless.${{ steps.set_test_name.outputs.name }}.out
 
     - name: upload diagnostics
       if: ${{ always() }}
@@ -233,10 +273,16 @@ jobs:
       uses: actions/upload-artifact@v3
       with:
         name: tests-report
-        path: integration-tests-dbless.xml
+        path: integration-tests-dbless-${{ steps.set_test_name.outputs.name }}.xml
 
   integration-tests-postgres:
+    needs:
+    - setup-integration-tests
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        test: ${{ fromJSON(needs.setup-integration-tests.outputs.test_names) }}
     steps:
 
     - name: setup golang
@@ -257,17 +303,18 @@ jobs:
       with:
         fetch-depth: 0
 
-    - name: run integration tests
+    - name: run integration test ${{ matrix.test }}
       run: make test.integration.postgres
       env:
+        GOTESTFLAGS: -json -run ${{ matrix.test }}
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        GOTESTSUM_JUNITFILE: "integration-tests-postgres.xml"
+        GOTESTSUM_JUNITFILE: integration-tests-postgres-${{ steps.set_test_name.outputs.name }}.xml
 
     - name: collect test coverage
       uses: actions/upload-artifact@v3
       with:
         name: coverage
-        path: coverage.postgres.out
+        path: coverage.postgres.${{ steps.set_test_name.outputs.name }}.out
 
     - name: upload diagnostics
       if: ${{ always() }}
@@ -282,10 +329,16 @@ jobs:
       uses: actions/upload-artifact@v3
       with:
         name: tests-report
-        path: integration-tests-postgres.xml
+        path: integration-tests-postgres-${{ steps.set_test_name.outputs.name }}.xml
 
   integration-tests-feature-gates:
+    needs:
+    - setup-integration-tests
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        test: ${{ fromJSON(needs.setup-integration-tests.outputs.test_names) }}
     steps:
 
     - name: setup golang
@@ -306,18 +359,19 @@ jobs:
       with:
         fetch-depth: 0
 
-    - name: run integration tests
+    - name: run integration test ${{ matrix.test }}
       run: make test.integration.dbless
       env:
+        GOTESTFLAGS: -json -run ${{ matrix.test }}
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         KONG_CONTROLLER_FEATURE_GATES: "GatewayAlpha=true,CombinedRoutes=false"
-        GOTESTSUM_JUNITFILE: "integration-tests-feature-gates.xml"
+        GOTESTSUM_JUNITFILE: integration-tests-feature-gates-${{ steps.set_test_name.outputs.name }}.xml
 
     - name: collect test coverage
       uses: actions/upload-artifact@v3
       with:
         name: coverage
-        path: coverage.featuregates.out
+        path: coverage.featuregates.${{ steps.set_test_name.outputs.name }}.out
 
     - name: upload diagnostics
       if: ${{ always() }}
@@ -332,7 +386,7 @@ jobs:
       uses: actions/upload-artifact@v3
       with:
         name: tests-report
-        path: integration-tests-feature-gates.xml
+        path: integration-tests-feature-gates-${{ steps.set_test_name.outputs.name }}.xml
 
   conformance-tests:
     runs-on: ubuntu-latest

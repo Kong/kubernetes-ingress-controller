@@ -77,6 +77,12 @@ Adding a new version? You'll need three changes:
   if you have questions or concerns about the transition.
   [#3132](https://github.com/Kong/kubernetes-ingress-controller/pull/3132)
 
+### Known issues
+
+- Processing of custom entites through `--kong-custom-entities-secret` flag or
+  `CONTROLLER_KONG_CUSTOM_ENTITIES_SECRET` environment variable does not work.
+  [#3278](https://github.com/Kong/kubernetes-ingress-controller/issues/3278)
+
 ### Deprecated
 
 - KongIngress' `proxy` and `route` fields are now deprecated in favor of

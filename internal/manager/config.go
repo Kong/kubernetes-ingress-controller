@@ -152,7 +152,7 @@ func (c *Config) FlagSet() *pflag.FlagSet {
 	flagSet.Float32Var(&c.ProxyTimeoutSeconds, "proxy-timeout-seconds", dataplane.DefaultTimeoutSeconds,
 		"Sets the timeout (in seconds) for all requests to Kong's Admin API.",
 	)
-	flagSet.StringVar(&c.KongCustomEntitiesSecret, "kong-custom-entities-secret", "", `A Secret containing custom entities for DB-less mode, in "namespace/name" format`)
+	flagSet.StringVar(&c.KongCustomEntitiesSecret, "kong-custom-entities-secret", "", `WARNING: Does not work. It's a known issue tracked in a GitHub issue #3278.`)
 
 	// Kubernetes configurations
 	flagSet.StringVar(&c.GatewayAPIControllerName, "gateway-api-controller-name", string(gateway.ControllerName), "The controller name to match on Gateway API resources.")

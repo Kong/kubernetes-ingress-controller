@@ -267,7 +267,7 @@ jobs:
           GOOGLE_APPLICATION_CREDENTIALS: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}
           GOOGLE_PROJECT: ${{ secrets.GOOGLE_PROJECT }}
           GOOGLE_LOCATION: ${{ secrets.GOOGLE_LOCATION }}
-          KONG_CLUSTER_VERSION: v1.${{ matrix.minor }}
+          KONG_CLUSTER_VERSION: v1.${{ matrix.minor }}.0
           KONG_LICENSE_DATA: ${{ steps.license.outputs.license }}
 
   publish-release:

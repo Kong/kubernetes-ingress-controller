@@ -208,8 +208,7 @@ func TestIngressEssentials(t *testing.T) {
 
 func TestGRPCIngressEssentials(t *testing.T) {
 	t.Parallel()
-	ns, cleanup := namespace(t)
-	defer cleanup()
+	ns := namespace(t)
 
 	t.Log("deploying a minimal HTTP container deployment to test Ingress routes")
 	container := generators.NewContainer("grpcbin", "moul/grpcbin", 9001)
@@ -479,8 +478,7 @@ func TestIngressNamespaces(t *testing.T) {
 
 func TestIngressStatusUpdatesExtended(t *testing.T) {
 	t.Parallel()
-	ns, cleanup := namespace(t)
-	defer cleanup()
+	ns := namespace(t)
 
 	if clusterVersion.Major == uint64(1) && clusterVersion.Minor < uint64(19) {
 		t.Skip("status test disabled for old cluster versions")

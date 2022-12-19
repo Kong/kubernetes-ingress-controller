@@ -90,11 +90,12 @@ jobs:
       fail-fast: false
       matrix:
         kubernetes-version:
-          - 'v1.24.2'
+          - 'v1.26.0'
         istio-version:
-          - 'v1.15.1'
-          - 'v1.14.4'
-          - 'v1.13.8'
+          - 'v1.16.1'
+          - 'v1.15.4'
+          - 'v1.14.6'
+          - 'v1.13.9'
           - 'v1.12.9'
           - 'v1.11.8'
     steps:
@@ -153,7 +154,7 @@ jobs:
       fail-fast: false
       matrix:
         kubernetes-version: # the GKE setup script ignores the patch version here and uses the latest, but we still include it for consistency with the other E2E jobs
-          - 'v1.24.2'
+          - 'v1.24.7'
     steps:
     - name: setup golang
       uses: actions/setup-go@v3

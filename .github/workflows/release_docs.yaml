@@ -8,7 +8,7 @@ on:
         required: true
 
 jobs:
-  synchronize_docs:
+  create_docs_pr:
     runs-on: ubuntu-latest
     steps:
       - name: Parse semver string
@@ -63,7 +63,6 @@ jobs:
           branch: kic-docs-sync
           delete-branch: true
           draft: true
-          team-reviewers: "Team K8s"
           labels: |
             Kubernetes Team
             review:autodoc

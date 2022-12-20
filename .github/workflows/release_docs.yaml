@@ -1,12 +1,23 @@
-name: Synchronize documentation with docs.konghq.com
+name: Create release docs PR
 
 on:
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'The version to release (e.g. v1.2.3)'
+        required: true
 
 jobs:
   synchronize_docs:
     runs-on: ubuntu-latest
     steps:
+      - name: Parse semver string
+        id: semver_parser
+        uses: booxmedialtd/ws-action-parse-semver@e81ad80123156d7ddd4f6c8383e63f497f857deb
+        with:
+          input_string: ${{ github.event.inputs.tag }}
+          version_extractor_regex: 'v(.*)$'
+
       - name: Checkout KIC repository
         uses: actions/checkout@v3
         with:
@@ -22,7 +33,7 @@ jobs:
       - name: Generate docs
         run: |
           ./scripts/apidocs-gen/post-process-for-konghq.sh \
-          docs.konghq.com/src/kubernetes-ingress-controller/references/custom-resources.md
+          docs.konghq.com/app/_src/kubernetes-ingress-controller/references/custom-resources-${{ steps.semver_parser.outputs.major }}.${{ steps.semver_parser.outputs.minor }}.x.md
 
       - name: Detect changes
         id: detect-changes
@@ -42,7 +53,7 @@ jobs:
         if: steps.detect-changes.outputs.HAS_CHANGES
         with:
           token: ${{ secrets.K8S_TEAM_BOT_GH_PAT }}
-          title: Synchronize auto-generated KIC API reference
+          title: Update docs for KIC ${{ steps.semver_parser.outputs.fullversion }}
           commit-message: Synchronize auto-generated KIC API reference
           committer: Kong's Team k8s bot <team-k8s+github-bot@konghq.com>
           author: Kong's Team k8s bot <team-k8s+github-bot@konghq.com>
@@ -51,7 +62,9 @@ jobs:
           base: main
           branch: kic-docs-sync
           delete-branch: true
+          draft: true
+          team-reviewers: "Team K8s"
           labels: |
             Kubernetes Team
             review:autodoc
-          body: It synchronizes [KIC's auto-generated API reference](https://github.com/Kong/kubernetes-ingress-controller/blob/main/docs/api-reference.md).
+          body: Prepares documentation for KIC ${{ steps.semver_parser.outputs.fullversion }} release.

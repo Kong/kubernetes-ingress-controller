@@ -14,7 +14,7 @@ require (
 	github.com/google/go-cmp v0.5.9
 	github.com/google/uuid v1.3.0
 	github.com/kong/deck v1.16.1
-	github.com/kong/go-kong v0.33.0
+	github.com/kong/go-kong v0.34.0
 	github.com/kong/kubernetes-testing-framework v0.24.1
 	github.com/lithammer/dedent v1.1.0
 	github.com/miekg/dns v1.1.50
@@ -131,7 +131,7 @@ require (
 	github.com/shopspring/decimal v1.2.0 // indirect
 	github.com/spf13/cast v1.5.0 // indirect
 	github.com/ssgelm/cookiejarparser v1.0.1 // indirect
-	github.com/tidwall/gjson v1.14.3 // indirect
+	github.com/tidwall/gjson v1.14.4 // indirect
 	github.com/tidwall/match v1.1.1 // indirect
 	github.com/tidwall/pretty v1.2.0 // indirect
 	github.com/tklauser/go-sysconf v0.3.10 // indirect

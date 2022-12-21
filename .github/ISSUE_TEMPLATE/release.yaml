@@ -64,7 +64,7 @@ body:
   attributes:
     label: "**For major/minor releases only** Update Release documents"
     options:
-      - label: Trigger [release_docs](https://github.com/Kong/kubernetes-ingress-controller/blob/main/.github/workflows/release_docs.yaml) workflow.
+      - label: Trigger [release_docs](https://github.com/Kong/kubernetes-ingress-controller/blob/main/.github/workflows/release_docs.yaml) workflow. Note that you will need to update the new version's navigation manifest (e.g. [for 2.7](https://github.com/Kong/docs.konghq.com/blob/main/app/_data/docs_nav_kic_2.7.x.yml) to use the new file after.
       - label: Ensure a draft PR is created in [docs.konghq.com](https://github.com/Kong/docs.konghq.com/pulls) repository.
       - label: Update articles in the new version as needed.
       - label: Update `references/version-compatibility.md` to include the new versions (make sure you capture any new Kubernetes/Istio versions that have been tested)

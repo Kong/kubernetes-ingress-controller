@@ -73,6 +73,7 @@ body:
       - label: Copy `app/_data/docs_nav_kic_OLDVERSION.yml` to `app/_data/docs_nav_kic_NEWVERSION.yml` and update the `release` field to `NEWVERSION`. Add entries for any new articles.
       - label: Make sure that `app/_data/docs_nav_kic_NEWVERSION.yml` links to the latest generated `custom-resources-X.X.X.md`.
       - label: Add a section to `app/_data/kong_versions.yml` for your version.
+      - label: "Add entries in support policy documents: `app/_includes/md/support-policy.md` and `app/_src/kubernetes-ingress-controller/support-policy.md`."
       - label: Mark the PR ready for review.
       - label: Inform and ping the @team-k8s via slack of impending release with a link to the release PR.
 - type: textarea

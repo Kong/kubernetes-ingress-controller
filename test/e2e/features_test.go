@@ -368,9 +368,9 @@ func TestDeployAllInOneDBLESSGateway(t *testing.T) {
 			if lstatus.Name == "badhttp" {
 				if util.CheckCondition(
 					lstatus.Conditions,
-					util.ConditionType(gatewayv1beta1.ListenerConditionDetached),
+					util.ConditionType(gatewayv1beta1.GatewayConditionAccepted),
 					util.ConditionReason(gatewayv1beta1.ListenerReasonPortUnavailable),
-					metav1.ConditionTrue,
+					metav1.ConditionFalse,
 					gw.Generation,
 				) {
 					http = true
@@ -378,9 +378,9 @@ func TestDeployAllInOneDBLESSGateway(t *testing.T) {
 
 				if util.CheckCondition(
 					lstatus.Conditions,
-					util.ConditionType(gatewayv1beta1.ListenerConditionDetached),
+					util.ConditionType(gatewayv1beta1.GatewayConditionAccepted),
 					util.ConditionReason(gatewayv1beta1.ListenerReasonUnsupportedProtocol),
-					metav1.ConditionTrue,
+					metav1.ConditionFalse,
 					gw.Generation,
 				) {
 					return false
@@ -389,9 +389,9 @@ func TestDeployAllInOneDBLESSGateway(t *testing.T) {
 			if lstatus.Name == "badudp" {
 				if util.CheckCondition(
 					lstatus.Conditions,
-					util.ConditionType(gatewayv1beta1.ListenerConditionDetached),
+					util.ConditionType(gatewayv1beta1.GatewayConditionAccepted),
 					util.ConditionReason(gatewayv1beta1.ListenerReasonUnsupportedProtocol),
-					metav1.ConditionTrue,
+					metav1.ConditionFalse,
 					gw.Generation,
 				) {
 					udp = true

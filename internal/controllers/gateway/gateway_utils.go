@@ -48,13 +48,13 @@ func setGatewayCondition(gateway *Gateway, newCondition metav1.Condition) {
 	gateway.Status.Conditions = newConditions
 }
 
-// isGatewayScheduled returns boolean whether or not the gateway object was scheduled
+// isGatewayAccepted returns boolean whether or not the gateway object was accepted
 // previously by the gateway controller.
-func isGatewayScheduled(gateway *Gateway) bool {
+func isGatewayAccepted(gateway *Gateway) bool {
 	return util.CheckCondition(
 		gateway.Status.Conditions,
-		util.ConditionType(gatewayv1beta1.GatewayConditionScheduled),
-		util.ConditionReason(gatewayv1beta1.GatewayReasonScheduled),
+		util.ConditionType(gatewayv1beta1.GatewayConditionAccepted),
+		util.ConditionReason(gatewayv1beta1.GatewayReasonAccepted),
 		metav1.ConditionTrue,
 		gateway.Generation,
 	)
@@ -323,8 +323,8 @@ func getListenerStatus(
 		// does not provide should be both Conflicted and Detached
 		if len(kongProtocolsToPort[listener.Protocol]) == 0 {
 			status.Conditions = append(status.Conditions, metav1.Condition{
-				Type:               string(gatewayv1beta1.ListenerConditionDetached),
-				Status:             metav1.ConditionTrue,
+				Type:               string(gatewayv1beta1.GatewayConditionAccepted),
+				Status:             metav1.ConditionFalse,
 				ObservedGeneration: gateway.Generation,
 				LastTransitionTime: metav1.Now(),
 				Reason:             string(gatewayv1beta1.ListenerReasonUnsupportedProtocol),
@@ -333,8 +333,8 @@ func getListenerStatus(
 		} else {
 			if _, ok := kongProtocolsToPort[listener.Protocol][listener.Port]; !ok {
 				status.Conditions = append(status.Conditions, metav1.Condition{
-					Type:               string(gatewayv1beta1.ListenerConditionDetached),
-					Status:             metav1.ConditionTrue,
+					Type:               string(gatewayv1beta1.GatewayConditionAccepted),
+					Status:             metav1.ConditionFalse,
 					ObservedGeneration: gateway.Generation,
 					LastTransitionTime: metav1.Now(),
 					Reason:             string(gatewayv1beta1.ListenerReasonPortUnavailable),

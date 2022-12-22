@@ -164,25 +164,25 @@ func TestSetGatewayCondtion(t *testing.T) {
 	}
 }
 
-func TestIsGatewayMarkedAsScheduled(t *testing.T) {
-	t.Log("verifying scheduled check for gateway object which has been scheduled")
-	scheduledGateway := &gatewayv1beta1.Gateway{
+func TestIsGatewayMarkedAsAccepted(t *testing.T) {
+	t.Log("verifying accepted check for gateway object which has been scheduled")
+	acceptedGateway := &gatewayv1beta1.Gateway{
 		ObjectMeta: metav1.ObjectMeta{Generation: 1},
 		Status: gatewayv1beta1.GatewayStatus{
 			Conditions: []metav1.Condition{{
-				Type:               string(gatewayv1beta1.GatewayConditionScheduled),
+				Type:               string(gatewayv1beta1.GatewayConditionAccepted),
 				Status:             metav1.ConditionTrue,
 				ObservedGeneration: 1,
 				LastTransitionTime: metav1.Now(),
-				Reason:             string(gatewayv1beta1.GatewayReasonScheduled),
+				Reason:             string(gatewayv1beta1.GatewayReasonAccepted),
 			}},
 		},
 	}
-	assert.True(t, isGatewayScheduled(scheduledGateway))
+	assert.True(t, isGatewayAccepted(acceptedGateway))
 
-	t.Log("verifying scheduled check for gateway object which has not been scheduled")
-	unscheduledGateway := &gatewayv1beta1.Gateway{}
-	assert.False(t, isGatewayScheduled(unscheduledGateway))
+	t.Log("verifying accepted check for gateway object which has not been accepted")
+	unacceptedGateway := &gatewayv1beta1.Gateway{}
+	assert.False(t, isGatewayAccepted(unacceptedGateway))
 }
 
 func TestGetRefFromPublishService(t *testing.T) {

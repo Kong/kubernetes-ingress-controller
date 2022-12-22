@@ -75,10 +75,10 @@ func TestGatewayConformance(t *testing.T) {
 		Debug:                showDebug,
 		CleanupBaseResources: shouldCleanup,
 		BaseManifests:        conformanceTestsBaseManifests,
-		SupportedFeatures: []suite.SupportedFeature{
-			suite.SupportReferenceGrant,
+		SupportedFeatures: map[suite.SupportedFeature]bool{
+			suite.SupportReferenceGrant: true,
 			// TODO: https://github.com/Kong/kubernetes-ingress-controller/issues/2778
-			// suite.SupportHTTPRouteQueryParamMatching,
+			// suite.SupportHTTPRouteQueryParamMatching: true,
 		},
 	})
 	cSuite.Setup(t)

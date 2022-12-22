@@ -25,8 +25,6 @@ func newBackendRefWrapper[T types.BackendRefT](b T) backendRefWrapper[T] {
 
 func (brw backendRefWrapper[T]) Group() *gatewayv1beta1.Group {
 	switch br := (interface{})(brw.backendRef).(type) {
-	case gatewayv1alpha2.BackendRef:
-		return (*gatewayv1beta1.Group)(br.Group)
 	case gatewayv1beta1.BackendRef:
 		return br.Group
 	}
@@ -35,8 +33,6 @@ func (brw backendRefWrapper[T]) Group() *gatewayv1beta1.Group {
 
 func (brw backendRefWrapper[T]) Kind() *gatewayv1beta1.Kind {
 	switch br := (interface{})(brw.backendRef).(type) {
-	case gatewayv1alpha2.BackendRef:
-		return (*gatewayv1beta1.Kind)(br.Kind)
 	case gatewayv1beta1.BackendRef:
 		return br.Kind
 	}
@@ -45,8 +41,6 @@ func (brw backendRefWrapper[T]) Kind() *gatewayv1beta1.Kind {
 
 func (brw backendRefWrapper[T]) Name() string {
 	switch br := (interface{})(brw.backendRef).(type) {
-	case gatewayv1alpha2.BackendRef:
-		return string(br.Name)
 	case gatewayv1beta1.BackendRef:
 		return string(br.Name)
 	}
@@ -55,8 +49,6 @@ func (brw backendRefWrapper[T]) Name() string {
 
 func (brw backendRefWrapper[T]) Namespace() *string {
 	switch br := (interface{})(brw.backendRef).(type) {
-	case gatewayv1alpha2.BackendRef:
-		return (*string)(br.Namespace)
 	case gatewayv1beta1.BackendRef:
 		return (*string)(br.Namespace)
 	}
@@ -65,11 +57,6 @@ func (brw backendRefWrapper[T]) Namespace() *string {
 
 func (brw backendRefWrapper[T]) Port() int32 {
 	switch br := (interface{})(brw.backendRef).(type) {
-	case gatewayv1alpha2.BackendRef:
-		if br.Port == nil {
-			return -1
-		}
-		return int32(*br.Port)
 	case gatewayv1beta1.BackendRef:
 		if br.Port == nil {
 			return -1
@@ -81,8 +68,6 @@ func (brw backendRefWrapper[T]) Port() int32 {
 
 func (brw backendRefWrapper[T]) Weight() *int32 {
 	switch br := (interface{})(brw.backendRef).(type) {
-	case gatewayv1alpha2.BackendRef:
-		return br.Weight
 	case gatewayv1beta1.BackendRef:
 		return br.Weight
 	}

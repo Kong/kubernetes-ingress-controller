@@ -16,7 +16,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	knative "knative.dev/networking/pkg/apis/networking/v1alpha1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
@@ -413,8 +412,8 @@ func (p *Parser) getGatewayCerts() []certWrapper {
 				}).Debug("listener missing status information")
 				if ok := util.CheckCondition(
 					status.Conditions,
-					util.ConditionType(gatewayv1alpha2.ListenerConditionReady),
-					util.ConditionReason(gatewayv1alpha2.ListenerReasonReady),
+					util.ConditionType(gatewayv1beta1.ListenerConditionReady),
+					util.ConditionReason(gatewayv1beta1.ListenerReasonReady),
 					metav1.ConditionTrue,
 					gateway.Generation,
 				); ok {

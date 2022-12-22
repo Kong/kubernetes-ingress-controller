@@ -398,20 +398,20 @@ func (r *UDPRouteReconciler) ensureGatewayReferenceStatusAdded(ctx context.Conte
 	statusChangesWereMade := false
 	for _, gateway := range gateways {
 		// build a new status for the parent Gateway
-		gatewayParentStatus := &gatewayv1alpha2.RouteParentStatus{
-			ParentRef: gatewayv1alpha2.ParentReference{
-				Group:     (*gatewayv1alpha2.Group)(&gatewayv1alpha2.GroupVersion.Group),
-				Kind:      (*gatewayv1alpha2.Kind)(util.StringToGatewayAPIKindPtr(udprouteParentKind)),
-				Namespace: (*gatewayv1alpha2.Namespace)(&gateway.gateway.Namespace),
-				Name:      gatewayv1alpha2.ObjectName(gateway.gateway.Name),
+		gatewayParentStatus := &gatewayv1beta1.RouteParentStatus{
+			ParentRef: gatewayv1beta1.ParentReference{
+				Group:     (*gatewayv1beta1.Group)(&gatewayv1alpha2.GroupVersion.Group),
+				Kind:      util.StringToGatewayAPIKindPtr(udprouteParentKind),
+				Namespace: (*gatewayv1beta1.Namespace)(&gateway.gateway.Namespace),
+				Name:      gatewayv1beta1.ObjectName(gateway.gateway.Name),
 			},
-			ControllerName: (gatewayv1alpha2.GatewayController)(ControllerName),
+			ControllerName: ControllerName,
 			Conditions: []metav1.Condition{{
-				Type:               string(gatewayv1alpha2.RouteConditionAccepted),
+				Type:               string(gatewayv1beta1.RouteConditionAccepted),
 				Status:             metav1.ConditionTrue,
 				ObservedGeneration: udproute.Generation,
 				LastTransitionTime: metav1.Now(),
-				Reason:             string(gatewayv1alpha2.RouteReasonAccepted),
+				Reason:             string(gatewayv1beta1.RouteReasonAccepted),
 			}},
 		}
 
@@ -457,7 +457,7 @@ func (r *UDPRouteReconciler) ensureGatewayReferenceStatusAdded(ctx context.Conte
 	}
 
 	// update the udproute status with the new status references
-	udproute.Status.Parents = make([]gatewayv1alpha2.RouteParentStatus, 0, len(parentStatuses))
+	udproute.Status.Parents = make([]gatewayv1beta1.RouteParentStatus, 0, len(parentStatuses))
 	for _, parent := range parentStatuses {
 		udproute.Status.Parents = append(udproute.Status.Parents, *parent)
 	}
@@ -478,7 +478,7 @@ func (r *UDPRouteReconciler) ensureGatewayReferenceStatusRemoved(ctx context.Con
 	// drop all status references to supported Gateway objects
 	newStatuses := make([]gatewayv1alpha2.RouteParentStatus, 0)
 	for _, status := range udproute.Status.Parents {
-		if status.ControllerName != (gatewayv1alpha2.GatewayController)(ControllerName) {
+		if status.ControllerName != ControllerName {
 			newStatuses = append(newStatuses, status)
 		}
 	}

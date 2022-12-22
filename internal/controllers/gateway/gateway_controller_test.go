@@ -398,6 +398,157 @@ func TestIsGatewayControlledAndUnmanagedMode(t *testing.T) {
 	}
 }
 
+func TestAreAllowedRoutesConsistentByProtocol(t *testing.T) {
+	same := gatewayv1beta1.NamespacesFromSame
+	all := gatewayv1beta1.NamespacesFromAll
+	selector := gatewayv1beta1.NamespacesFromSelector
+
+	inputs := []struct {
+		expected bool
+		message  string
+		l        []gatewayv1alpha2.Listener
+	}{
+		{
+			expected: true,
+			message:  "empty",
+			l:        []gatewayv1alpha2.Listener{},
+		},
+		{
+			expected: true,
+			message:  "no intersect",
+			l: []gatewayv1alpha2.Listener{
+				{
+					Protocol: gatewayv1beta1.UDPProtocolType,
+					AllowedRoutes: &gatewayv1alpha2.AllowedRoutes{
+						Namespaces: &gatewayv1alpha2.RouteNamespaces{
+							From: &same,
+						},
+					},
+				},
+				{
+					Protocol: gatewayv1beta1.TCPProtocolType,
+					AllowedRoutes: &gatewayv1alpha2.AllowedRoutes{
+						Namespaces: &gatewayv1alpha2.RouteNamespaces{
+							From: &all,
+						},
+					},
+				},
+			},
+		},
+		{
+			expected: true,
+			message:  "same allowed for each listener with same protocol",
+			l: []gatewayv1alpha2.Listener{
+				{
+					Protocol: gatewayv1beta1.UDPProtocolType,
+					AllowedRoutes: &gatewayv1alpha2.AllowedRoutes{
+						Namespaces: &gatewayv1alpha2.RouteNamespaces{
+							From: &same,
+						},
+					},
+				},
+				{
+					Protocol: gatewayv1beta1.UDPProtocolType,
+					AllowedRoutes: &gatewayv1alpha2.AllowedRoutes{
+						Namespaces: &gatewayv1alpha2.RouteNamespaces{
+							From: &same,
+						},
+					},
+				},
+				{
+					Protocol: gatewayv1beta1.TCPProtocolType,
+					AllowedRoutes: &gatewayv1alpha2.AllowedRoutes{
+						Namespaces: &gatewayv1alpha2.RouteNamespaces{
+							From: &all,
+						},
+					},
+				},
+			},
+		},
+		{
+			expected: false,
+			message:  "different allowed for listeners with same protocol",
+			l: []gatewayv1alpha2.Listener{
+				{
+					Protocol: gatewayv1beta1.UDPProtocolType,
+					AllowedRoutes: &gatewayv1alpha2.AllowedRoutes{
+						Namespaces: &gatewayv1alpha2.RouteNamespaces{
+							From: &same,
+						},
+					},
+				},
+				{
+					Protocol: gatewayv1beta1.UDPProtocolType,
+					AllowedRoutes: &gatewayv1alpha2.AllowedRoutes{
+						Namespaces: &gatewayv1alpha2.RouteNamespaces{
+							From: &all,
+						},
+					},
+				},
+			},
+		},
+		{
+			expected: true,
+			message:  "same selector",
+			l: []gatewayv1alpha2.Listener{
+				{
+					Protocol: gatewayv1beta1.UDPProtocolType,
+					AllowedRoutes: &gatewayv1alpha2.AllowedRoutes{
+						Namespaces: &gatewayv1alpha2.RouteNamespaces{
+							From: &selector,
+							Selector: &metav1.LabelSelector{
+								MatchLabels: map[string]string{"key": "value"},
+							},
+						},
+					},
+				},
+				{
+					Protocol: gatewayv1beta1.UDPProtocolType,
+					AllowedRoutes: &gatewayv1alpha2.AllowedRoutes{
+						Namespaces: &gatewayv1alpha2.RouteNamespaces{
+							From: &selector,
+							Selector: &metav1.LabelSelector{
+								MatchLabels: map[string]string{"key": "value"},
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			expected: false,
+			message:  "different selector",
+			l: []gatewayv1alpha2.Listener{
+				{
+					Protocol: gatewayv1beta1.UDPProtocolType,
+					AllowedRoutes: &gatewayv1alpha2.AllowedRoutes{
+						Namespaces: &gatewayv1alpha2.RouteNamespaces{
+							From: &selector,
+							Selector: &metav1.LabelSelector{
+								MatchLabels: map[string]string{"key": "value"},
+							},
+						},
+					},
+				},
+				{
+					Protocol: gatewayv1beta1.UDPProtocolType,
+					AllowedRoutes: &gatewayv1alpha2.AllowedRoutes{
+						Namespaces: &gatewayv1alpha2.RouteNamespaces{
+							From: &selector,
+							Selector: &metav1.LabelSelector{
+								MatchLabels: map[string]string{"key": "notvalue"},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+	for _, input := range inputs {
+		assert.Equal(t, input.expected, areAllowedRoutesConsistentByProtocol(input.l), input.message)
+	}
+}
+
 func TestGetReferenceGrantConditionReason(t *testing.T) {
 	testCases := []struct {
 		name             string
@@ -409,7 +560,7 @@ func TestGetReferenceGrantConditionReason(t *testing.T) {
 		{
 			name:           "empty reference",
 			certRef:        gatewayv1beta1.SecretObjectReference{},
-			expectedReason: string(gatewayv1alpha2.ListenerReasonResolvedRefs),
+			expectedReason: string(gatewayv1beta1.ListenerReasonResolvedRefs),
 		},
 		{
 			name:             "no need for reference",
@@ -418,7 +569,7 @@ func TestGetReferenceGrantConditionReason(t *testing.T) {
 				Kind: util.StringToGatewayAPIKindPtr("Secret"),
 				Name: "testSecret",
 			},
-			expectedReason: string(gatewayv1alpha2.ListenerReasonResolvedRefs),
+			expectedReason: string(gatewayv1beta1.ListenerReasonResolvedRefs),
 		},
 		{
 			name:             "reference not granted - secret name not matching",
@@ -436,7 +587,7 @@ func TestGetReferenceGrantConditionReason(t *testing.T) {
 					Spec: gatewayv1alpha2.ReferenceGrantSpec{
 						From: []gatewayv1alpha2.ReferenceGrantFrom{
 							{
-								Group:     (gatewayv1alpha2.Group)(gatewayV1beta1Group),
+								Group:     gatewayV1beta1Group,
 								Kind:      "Gateway",
 								Namespace: "test",
 							},
@@ -451,7 +602,7 @@ func TestGetReferenceGrantConditionReason(t *testing.T) {
 					},
 				},
 			},
-			expectedReason: string(gatewayv1alpha2.ListenerReasonRefNotPermitted),
+			expectedReason: string(gatewayv1beta1.ListenerReasonRefNotPermitted),
 		},
 		{
 			name:             "reference not granted - no grants specified",
@@ -461,7 +612,7 @@ func TestGetReferenceGrantConditionReason(t *testing.T) {
 				Name:      "testSecret",
 				Namespace: lo.ToPtr(Namespace("otherNamespace")),
 			},
-			expectedReason: string(gatewayv1alpha2.ListenerReasonRefNotPermitted),
+			expectedReason: string(gatewayv1beta1.ListenerReasonRefNotPermitted),
 		},
 		{
 			name:             "reference granted, secret name not specified",
@@ -486,7 +637,7 @@ func TestGetReferenceGrantConditionReason(t *testing.T) {
 							},
 							// good entry
 							{
-								Group:     (gatewayv1alpha2.Group)(gatewayV1beta1Group),
+								Group:     gatewayV1beta1Group,
 								Kind:      "Gateway",
 								Namespace: "test",
 							},
@@ -500,7 +651,7 @@ func TestGetReferenceGrantConditionReason(t *testing.T) {
 					},
 				},
 			},
-			expectedReason: string(gatewayv1alpha2.ListenerReasonResolvedRefs),
+			expectedReason: string(gatewayv1beta1.ListenerReasonResolvedRefs),
 		},
 		{
 			name:             "reference granted, secret name specified",
@@ -518,7 +669,7 @@ func TestGetReferenceGrantConditionReason(t *testing.T) {
 					Spec: gatewayv1alpha2.ReferenceGrantSpec{
 						From: []gatewayv1alpha2.ReferenceGrantFrom{
 							{
-								Group:     (gatewayv1alpha2.Group)(gatewayV1beta1Group),
+								Group:     gatewayV1beta1Group,
 								Kind:      "Gateway",
 								Namespace: "test",
 							},
@@ -533,7 +684,7 @@ func TestGetReferenceGrantConditionReason(t *testing.T) {
 					},
 				},
 			},
-			expectedReason: string(gatewayv1alpha2.ListenerReasonResolvedRefs),
+			expectedReason: string(gatewayv1beta1.ListenerReasonResolvedRefs),
 		},
 	}
 

@@ -47,35 +47,15 @@ type supportedGatewayWithCondition struct {
 // parentRefsForRoute provides a list of the parentRefs given a Gateway APIs route object
 // (e.g. HTTPRoute, TCPRoute, e.t.c.) which refer to the Gateway resource(s) which manage it.
 func parentRefsForRoute[T types.RouteT](route T) ([]ParentReference, error) {
-	// Note: Ideally we wouldn't have to do this but it's hard to juggle around types
-	// and support ParentReference and gatewayv1alpha2.ParentReference
-	// at the same time so we just copy v1alpha2 refs to a new v1beta1 slice.
-	convertV1Alpha2ToV1Beta1ParentReference := func(
-		refsAlpha []gatewayv1alpha2.ParentReference,
-	) []ParentReference {
-		ret := make([]ParentReference, len(refsAlpha))
-		for i, v := range refsAlpha {
-			ret[i] = ParentReference{
-				Group:       (*Group)(v.Group),
-				Kind:        (*Kind)(v.Kind),
-				Namespace:   (*Namespace)(v.Namespace),
-				Name:        (ObjectName)(v.Name),
-				SectionName: (*SectionName)(v.SectionName),
-				Port:        (*PortNumber)(v.Port),
-			}
-		}
-		return ret
-	}
-
 	switch r := (interface{})(route).(type) {
 	case *gatewayv1beta1.HTTPRoute:
 		return r.Spec.ParentRefs, nil
 	case *gatewayv1alpha2.UDPRoute:
-		return convertV1Alpha2ToV1Beta1ParentReference(r.Spec.ParentRefs), nil
+		return r.Spec.ParentRefs, nil
 	case *gatewayv1alpha2.TCPRoute:
-		return convertV1Alpha2ToV1Beta1ParentReference(r.Spec.ParentRefs), nil
+		return r.Spec.ParentRefs, nil
 	case *gatewayv1alpha2.TLSRoute:
-		return convertV1Alpha2ToV1Beta1ParentReference(r.Spec.ParentRefs), nil
+		return r.Spec.ParentRefs, nil
 	default:
 		return nil, fmt.Errorf("cant determine parent gateway for unsupported route type %s", reflect.TypeOf(route))
 	}
@@ -475,17 +455,6 @@ func listenerHostnameIntersectWithRouteHostnames[H types.HostnameT, L types.List
 
 	// if the listener has no hostname, all hostnames automatically intersect
 	switch l := (any)(listener).(type) {
-	case gatewayv1alpha2.Listener:
-		if l.Hostname == nil || *l.Hostname == "" {
-			return true
-		}
-
-		// iterate over all the hostnames and check that at least one intersect with the listener hostname
-		for _, hostname := range hostnames {
-			if util.HostnamesIntersect(*l.Hostname, hostname) {
-				return true
-			}
-		}
 	case Listener:
 		if l.Hostname == nil || *l.Hostname == "" {
 			return true
@@ -628,9 +597,9 @@ func isHTTPReferenceGranted(grantSpec gatewayv1alpha2.ReferenceGrantSpec, backen
 		}
 
 		for _, to := range grantSpec.To {
-			if backendRefGroup == (gatewayv1beta1.Group)(to.Group) &&
-				backendRefKind == (Kind)(to.Kind) &&
-				(to.Name == nil || (gatewayv1beta1.ObjectName)(*to.Name) == backendRef.Name) {
+			if backendRefGroup == to.Group &&
+				backendRefKind == to.Kind &&
+				(to.Name == nil || *to.Name == backendRef.Name) {
 				return true
 			}
 		}

@@ -106,7 +106,7 @@ func (p *Parser) isTLSRoutePassthrough(tlsroute *gatewayv1alpha2.TLSRoute) (bool
 			continue
 		}
 
-		if parentRef.Kind != nil && gatewayv1beta1.Kind(*parentRef.Kind) != KindGateway {
+		if parentRef.Kind != nil && *parentRef.Kind != KindGateway {
 			continue
 		}
 
@@ -132,7 +132,7 @@ func (p *Parser) isTLSRoutePassthrough(tlsroute *gatewayv1alpha2.TLSRoute) (bool
 		// if anyone of the listeners used for the gateway is configured to passthrough
 		// TLS requests, we return true.
 		for _, listener := range gateway.Spec.Listeners {
-			if listener.Name == gatewayv1beta1.SectionName(*parentRef.SectionName) {
+			if listener.Name == *parentRef.SectionName {
 				if listener.TLS != nil && listener.TLS.Mode != nil &&
 					*listener.TLS.Mode == gatewayv1beta1.TLSModePassthrough {
 					return true, nil

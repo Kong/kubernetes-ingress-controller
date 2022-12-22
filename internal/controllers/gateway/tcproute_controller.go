@@ -421,14 +421,14 @@ func (r *TCPRouteReconciler) ensureGatewayReferenceStatusAdded(
 	statusChangesWereMade := false
 	for _, gateway := range gateways {
 		// build a new status for the parent Gateway
-		gatewayParentStatus := &gatewayv1alpha2.RouteParentStatus{
-			ParentRef: gatewayv1alpha2.ParentReference{
-				Group:     (*gatewayv1alpha2.Group)(&gatewayv1beta1.GroupVersion.Group),
-				Kind:      (*gatewayv1alpha2.Kind)(util.StringToGatewayAPIKindPtr(tcprouteParentKind)),
-				Namespace: (*gatewayv1alpha2.Namespace)(&gateway.gateway.Namespace),
-				Name:      (gatewayv1alpha2.ObjectName)(gateway.gateway.Name),
+		gatewayParentStatus := &gatewayv1beta1.RouteParentStatus{
+			ParentRef: gatewayv1beta1.ParentReference{
+				Group:     (*gatewayv1beta1.Group)(&gatewayv1beta1.GroupVersion.Group),
+				Kind:      util.StringToGatewayAPIKindPtr(tcprouteParentKind),
+				Namespace: (*gatewayv1beta1.Namespace)(&gateway.gateway.Namespace),
+				Name:      (gatewayv1beta1.ObjectName)(gateway.gateway.Name),
 			},
-			ControllerName: (gatewayv1alpha2.GatewayController)(ControllerName),
+			ControllerName: ControllerName,
 			Conditions: []metav1.Condition{{
 				Type:               string(gatewayv1beta1.RouteConditionAccepted),
 				Status:             metav1.ConditionTrue,
@@ -499,9 +499,9 @@ func (r *TCPRouteReconciler) ensureGatewayReferenceStatusAdded(
 // in the provided TCPRoute object.
 func (r *TCPRouteReconciler) ensureGatewayReferenceStatusRemoved(ctx context.Context, tcproute *gatewayv1alpha2.TCPRoute) (bool, error) {
 	// drop all status references to supported Gateway objects
-	newStatuses := make([]gatewayv1alpha2.RouteParentStatus, 0)
+	newStatuses := make([]gatewayv1beta1.RouteParentStatus, 0)
 	for _, status := range tcproute.Status.Parents {
-		if status.ControllerName != (gatewayv1alpha2.GatewayController)(ControllerName) {
+		if status.ControllerName != ControllerName {
 			newStatuses = append(newStatuses, status)
 		}
 	}

@@ -7,11 +7,11 @@ import (
 )
 
 type HostnameT interface {
-	gatewayv1beta1.Hostname | gatewayv1alpha2.Hostname | string
+	gatewayv1beta1.Hostname | string
 }
 
 type ListenerT interface {
-	gatewayv1beta1.Listener | gatewayv1alpha2.Listener
+	gatewayv1beta1.Listener
 }
 
 type RouteT interface {
@@ -24,13 +24,11 @@ type RouteT interface {
 }
 
 type ParentReferenceT interface {
-	gatewayv1alpha2.ParentReference | gatewayv1beta1.ParentReference
+	gatewayv1beta1.ParentReference
 }
 
 type BackendRefT interface {
-	gatewayv1alpha2.BackendRef |
-		gatewayv1beta1.BackendRef |
-		gatewayv1alpha2.SecretObjectReference |
+	gatewayv1beta1.BackendRef |
 		gatewayv1beta1.SecretObjectReference
 }
 

@@ -39,8 +39,8 @@ body:
       - label: "ensure that you have up to date copy of `main`: git checkout main; git pull"
       - label: "create the release branch for the version (e.g. `release/1.3.1`): `git branch -m release/x.y.z`"
       - label: Make any final adjustments to CHANGELOG.md. Double-check that dates are correct, that link anchors point to the correct header, and that you've included a link to the Github compare link at the end.
-      - label: Resolve all licensing issues that FOSSA has detected. Go to Issues tab in FOSSA's KIC project and resolve every issue, inspecting if it's a false positive or not. [resolved.json](https://github.com/Kong/team-k8s/blob/main/fossa/kubernetes-ingress-controller/resolved.json) should be useful to look for issues that have been already resolved and reappeared due to version changes (do ctrl+f and look for a library name).
-      - label: Update [resolved.json](https://github.com/Kong/team-k8s/blob/main/fossa/kubernetes-ingress-controller/resolved.json) following instructions in [README](https://github.com/Kong/team-k8s/blob/main/fossa/README.md).
+      - label: Resolve all licensing issues that FOSSA has detected. Go to Issues tab in FOSSA's KIC project and resolve every issue, inspecting if it's a false positive or not. [ignored.go](https://github.com/Kong/team-k8s/blob/main/fossa/ignored.go) script should be useful to look for issues that have been already resolved and reappeared due to version changes.
+      - label: Update [ignored.json](https://github.com/Kong/team-k8s/blob/main/fossa/kubernetes-ingress-controller/ignored.json) following instructions in [README](https://github.com/Kong/team-k8s/blob/main/fossa/README.md).
       - label: Retrieve the latest license report from FOSSA and save it to LICENSES (go to Reports tab in FOSSA's KIC project, select 'plain text' format, tick 'direct dependencies' and download it).
       - label: "ensure base manifest versions use the new version (`config/image/enterprise/kustomization.yaml` and `config/image/oss/kustomization.yaml`) and update manifest files: `make manifests`"
       - label: "push the branch up to the remote: `git push --set-upstream origin release/x.y.z`"
@@ -73,6 +73,7 @@ body:
       - label: Copy `app/_data/docs_nav_kic_OLDVERSION.yml` to `app/_data/docs_nav_kic_NEWVERSION.yml` and update the `release` field to `NEWVERSION`. Add entries for any new articles.
       - label: Make sure that `app/_data/docs_nav_kic_NEWVERSION.yml` links to the latest generated `custom-resources-X.X.X.md`.
       - label: Add a section to `app/_data/kong_versions.yml` for your version.
+      - label: "Add entries in support policy documents: `app/_includes/md/support-policy.md` and `app/_src/kubernetes-ingress-controller/support-policy.md`."
       - label: Mark the PR ready for review.
       - label: Inform and ping the @team-k8s via slack of impending release with a link to the release PR.
 - type: textarea

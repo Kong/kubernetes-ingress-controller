@@ -483,10 +483,10 @@ github.com/kisielk/errcheck v1.2.0/go.mod h1:/BMXB+zMLi60iA8Vv6Ksmxu/1UDYcXs4uQL
 github.com/kisielk/errcheck v1.5.0/go.mod h1:pFxgyoBC7bSaBwPgfKdkLd5X25qrDl4LWUI2bnpBCr8=
 github.com/kisielk/gotool v1.0.0/go.mod h1:XhKaO+MFFWcvkIS/tQcRk01m1F5IRFswLeQ+oQHNcck=
 github.com/klauspost/compress v1.13.6/go.mod h1:/3/Vjq9QcHkK5uEr5lBEmyoZ1iFhe47etQ6QUkpK6sk=
-github.com/kong/deck v1.17.0 h1:ky390eEODpHgjm3AOtHa/2mlPoTzZMxB92BtDwsBlDg=
-github.com/kong/deck v1.17.0/go.mod h1:qI12ZTzz3fTl1y7URd38qggrbBIlN0YVKLvvBqA1Vzc=
-github.com/kong/go-kong v0.34.0 h1:HS6Ak+rtxcXTBKg8kJpVErtnlF0m2V7kpbQSBoRlCs8=
-github.com/kong/go-kong v0.34.0/go.mod h1:G30uJtuJOjJXFL1vulIrz/27KhPdE2g0GtJZlNINU6U=
+github.com/kong/deck v1.17.1 h1:mBtd5CBv+Ouwz6SbOWfpvQvSMsiD3jwIeiKVU0oNvFI=
+github.com/kong/deck v1.17.1/go.mod h1:IH/Ic9dgBwvb1WHOx3+0BUzo+SYiVjd9inEe+JIIeK4=
+github.com/kong/go-kong v0.34.1-0.20221222170410-6c81ce561662 h1:IIIAzs6eNp+lA+E0k9oooAyqmAJyAA/9Ebyb0y19mrU=
+github.com/kong/go-kong v0.34.1-0.20221222170410-6c81ce561662/go.mod h1:G30uJtuJOjJXFL1vulIrz/27KhPdE2g0GtJZlNINU6U=
 github.com/kong/kubernetes-testing-framework v0.24.1 h1:gAxsdoiQpiy3Fuobnkk6cqRklar7sHgYj1YkuyzN72o=
 github.com/kong/kubernetes-testing-framework v0.24.1/go.mod h1:06+dJPW+b51PNNbTEb3J1hOgVD70l9eLvgmx5n0DDT4=
 github.com/kong/semver/v4 v4.0.1 h1:DIcNR8W3gfx0KabFBADPalxxsp+q/5COwIFkkhrFQ2Y=

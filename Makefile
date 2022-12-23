@@ -67,6 +67,24 @@ CRD_REF_DOCS = $(PROJECT_DIR)/bin/crd-ref-docs
 crd-ref-docs: ## Download crd-ref-docs locally if necessary.
 	@$(MAKE) _download_tool TOOL=crd-ref-docs
 
+DLV = $(PROJECT_DIR)/bin/dlv
+.PHONY: dlv
+dlv: ## Download dlv locally if necessary.
+	@$(MAKE) _download_tool TOOL=dlv
+
+SKAFFOLD = $(PROJECT_DIR)/bin/skaffold
+.PHONY: skaffold
+skaffold: ## Download skaffold locally if necessary.
+# NOTE: this step is not idempotent like other tool download steps because for
+# some reason skaffold doesn't want to be included in imports or installed via
+# go install:
+# go: github.com/GoogleContainerTools/skaffold@v2.0.4: invalid version: module contains a go.mod file, so module path must match major version ("github.com/GoogleContainerTools/skaffold/v2")
+ifeq ($(wildcard $(SKAFFOLD)),)
+	curl -Lo skaffold https://storage.googleapis.com/skaffold/releases/v2.0.4/skaffold-$(shell go env GOOS)-$(shell go env GOARCH)
+	@chmod +x skaffold
+	@mv skaffold ./bin/
+endif
+
 # ------------------------------------------------------------------------------
 # Build
 # ------------------------------------------------------------------------------
@@ -423,11 +441,41 @@ _ensure-namespace:
 
 .PHONY: debug
 debug: install _ensure-namespace
-	dlv debug ./internal/cmd/main.go -- \
+	$(DLV) debug ./internal/cmd/main.go -- \
 		--kong-admin-url $(KONG_ADMIN_URL) \
 		--publish-service $(KONG_NAMESPACE)/$(KONG_PROXY_SERVICE) \
 		--kubeconfig $(KUBECONFIG) \
 		--feature-gates=$(KONG_CONTROLLER_FEATURE_GATES)
+
+# By default dlv will look for a config in:
+# > If $XDG_CONFIG_HOME is set, then configuration and command history files are
+# > located in $XDG_CONFIG_HOME/dlv.
+# > Otherwise, they are located in $HOME/.config/dlv on Linux and $HOME/.dlv on other systems.
+#
+# ref: https://github.com/go-delve/delve/blob/master/Documentation/cli/README.md#configuration-and-command-history
+# 
+# This sets the XDG_CONFIG_HOME to this project's subdirectory so that project
+# specific substitution paths can be isolated to this project only and not shared
+# across projects under $HOME or common XDG_CONFIG_HOME.
+.PHONY: debug.connect
+debug.connect:
+	XDG_CONFIG_HOME="$(PROJECT_DIR)/.config" $(DLV) connect localhost:40000
+
+# This will port-forward 40000 from KIC's debugger to localhost. Connect to that
+# port with debugger/IDE of your choice
+.PHONY: debug.skaffold
+debug.skaffold: skaffold
+	$(SKAFFOLD) debug --port-forward=pods --profile=debug $(SKAFFOLD_FLAGS)
+
+# This will port-forward 40000 from KIC's debugger to localhost. Connect to that
+# port with debugger/IDE of your choice
+.PHONY: debug.skaffold.sync
+debug.skaffold.sync: skaffold
+	@$(MAKE) debug.skaffold SKAFFOLD_FLAGS="--auto-build --auto-deploy --auto-sync"
+
+.PHONY: run.skaffold
+run.skaffold: skaffold
+	$(SKAFFOLD) dev --port-forward=pods --profile=dev
 
 .PHONY: run
 run: install _ensure-namespace

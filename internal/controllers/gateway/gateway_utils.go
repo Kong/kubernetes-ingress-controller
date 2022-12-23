@@ -265,13 +265,40 @@ func getListenerStatus(
 		if listener.Hostname != nil {
 			hostname = *listener.Hostname
 		}
+		supportedRouteKinds := getListenerSupportedRouteKinds(listener)
 		status := ListenerStatus{
 			Name:           listener.Name,
 			Conditions:     []metav1.Condition{},
-			SupportedKinds: getListenerSupportedRouteKinds(listener),
+			SupportedKinds: supportedRouteKinds,
 			// this has been populated by initializeListenerMaps()
 			AttachedRoutes: listenerToAttached[listener.Name],
 		}
+		// if the listener contains unsupported kind of routes in its allowed routes,
+		// set resolvedRef condition to false.
+		if listener.AllowedRoutes != nil && len(listener.AllowedRoutes.Kinds) > 0 {
+			supportedRouteKindMap := map[string]struct{}{}
+			hasUnsupportedRoute := false
+			for _, kind := range supportedRouteKinds {
+				supportedRouteKindMap[string(kind.Kind)] = struct{}{}
+			}
+			for _, kind := range listener.AllowedRoutes.Kinds {
+				if _, ok := supportedRouteKindMap[string(kind.Kind)]; !ok {
+					hasUnsupportedRoute = true
+					break
+				}
+			}
+			if hasUnsupportedRoute {
+				status.Conditions = append(status.Conditions, metav1.Condition{
+					Type:               string(gatewayv1beta1.ListenerConditionResolvedRefs),
+					Status:             metav1.ConditionFalse,
+					ObservedGeneration: gateway.Generation,
+					LastTransitionTime: metav1.Now(),
+					Reason:             string(gatewayv1beta1.ListenerReasonInvalidRouteKinds),
+				})
+				continue
+			}
+		}
+
 		// TODO this only handles some Listener conditions and reasons as needed to check cross-listener compatibility
 		// and unattachability due to missing Kong configuration. There are others available and it may be appropriate
 		// for us to add them https://github.com/Kong/kubernetes-ingress-controller/issues/2558

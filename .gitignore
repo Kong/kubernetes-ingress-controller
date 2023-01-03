@@ -80,3 +80,6 @@ TODO
 
 # ignore .vscode user configuration directory
 .vscode/
+
+# user specific dlv config
+.config/dlv

@@ -16,6 +16,7 @@ import (
 	"github.com/kong/go-kong/kong"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
+	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
@@ -1250,4 +1251,94 @@ func TestIngressMatchByHost(t *testing.T) {
 	require.NoError(t, err)
 	defer resp.Body.Close()
 	require.Equal(t, resp.StatusCode, http.StatusNotFound)
+}
+
+func TestIngressWorksWithServiceBackendsSpecifyingOnlyPortNames(t *testing.T) {
+	t.Parallel()
+	ns, cleaner := setup(t)
+	defer func() {
+		if t.Failed() {
+			output, err := cleaner.DumpDiagnostics(ctx, t.Name())
+			t.Logf("%s failed, dumped diagnostics to %s", t.Name(), output)
+			assert.NoError(t, err)
+		}
+		assert.NoError(t, cleaner.Cleanup(ctx))
+	}()
+
+	client := env.Cluster().Client()
+
+	t.Log("deploying a minimal HTTP container deployment to test Ingress routes")
+	container := generators.NewContainer("httpbin", test.HTTPBinImage, 80)
+	deployment := generators.NewDeploymentForContainer(container)
+	deployment.Spec.Template.Spec.Containers[0].Ports[0].Name = "http"
+	deployment, err := client.AppsV1().Deployments(ns.Name).Create(ctx, deployment, metav1.CreateOptions{})
+	require.NoError(t, err)
+	cleaner.Add(deployment)
+
+	t.Logf("exposing deployment %s via service", deployment.Name)
+	service := generators.NewServiceForDeployment(deployment, corev1.ServiceTypeLoadBalancer)
+	service, err = client.CoreV1().Services(ns.Name).Create(ctx, service, metav1.CreateOptions{})
+	require.NoError(t, err)
+	cleaner.Add(service)
+
+	t.Logf("creating an ingress for service %s with ingress.class %s", service.Name, ingressClass)
+
+	// TODO: create a similar helper to generators.NewIngressForServiceWithClusterVersion()
+	// which will accept a param to parametrize the port name or number.
+	ingress := &netv1.Ingress{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: service.Name,
+			Annotations: map[string]string{
+				annotations.IngressClassKey: ingressClass,
+				"konghq.com/strip-path":     "true",
+			},
+		},
+		Spec: netv1.IngressSpec{
+			Rules: []netv1.IngressRule{
+				{
+					IngressRuleValue: netv1.IngressRuleValue{
+						HTTP: &netv1.HTTPIngressRuleValue{
+							Paths: []netv1.HTTPIngressPath{
+								{
+									Path:     "/",
+									PathType: lo.ToPtr(netv1.PathTypePrefix),
+									Backend: netv1.IngressBackend{
+										Service: &netv1.IngressServiceBackend{
+											Name: service.Name,
+											Port: netv1.ServiceBackendPort{
+												Name: service.Spec.Ports[0].Name,
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+	_, err = client.NetworkingV1().Ingresses(ns.Name).Create(ctx, ingress, metav1.CreateOptions{})
+	require.NoError(t, err)
+	cleaner.Add(ingress)
+
+	t.Log("waiting for routes from Ingress to be operational")
+	require.Eventually(t, func() bool {
+		resp, err := httpc.Get(proxyURL.String())
+		if err != nil {
+			t.Logf("WARNING: error while waiting for %s: %v", proxyURL, err)
+			return false
+		}
+		defer resp.Body.Close()
+		if resp.StatusCode == http.StatusOK {
+			// now that the ingress backend is routable, make sure the contents we're getting back are what we expect
+			// Expected: "<title>httpbin.org</title>"
+			b := new(bytes.Buffer)
+			n, err := b.ReadFrom(resp.Body)
+			require.NoError(t, err)
+			require.True(t, n > 0)
+			return strings.Contains(b.String(), "<title>httpbin.org</title>")
+		}
+		return false
+	}, ingressWait, waitTick)
 }

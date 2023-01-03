@@ -113,7 +113,7 @@ func (p *Parser) ingressRulesFromKnativeIngress() ingressRules {
 						Namespace: ingress.Namespace,
 						Backends: []kongstate.ServiceBackend{{
 							Name:    knativeBackend.ServiceName,
-							PortDef: PortDefFromIntStr(knativeBackend.ServicePort),
+							PortDef: translators.PortDefFromIntStr(knativeBackend.ServicePort),
 						}},
 						Parent: ingress,
 					}

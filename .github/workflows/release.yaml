@@ -305,7 +305,7 @@ jobs:
         with:
           input_string: ${{ github.event.inputs.tag }}
           version_extractor_regex: 'v(.*)$'
-      - name: run ${{ matrix.test }} - ${{ matrix.kubernetes-version }}
+      - name: ${{ matrix.test }} - ${{ matrix.kubernetes-version }}
         run: make test.e2e.gke
         env:
           TEST_KONG_CONTROLLER_IMAGE_OVERRIDE: "kong/kubernetes-ingress-controller:${{ steps.semver_parser.outputs.fullversion }}"

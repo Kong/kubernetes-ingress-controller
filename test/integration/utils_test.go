@@ -17,7 +17,6 @@ import (
 	"time"
 
 	"github.com/blang/semver/v4"
-	"github.com/google/uuid"
 	"github.com/kong/go-kong/kong"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	"github.com/kong/kubernetes-testing-framework/pkg/environments"
@@ -26,7 +25,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	netv1 "k8s.io/api/networking/v1"
 	netv1beta1 "k8s.io/api/networking/v1beta1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
@@ -436,11 +434,7 @@ func setup(t *testing.T) (*corev1.Namespace, *clusters.Cleaner) {
 	cleaner := clusters.NewCleaner(env.Cluster())
 
 	t.Log("creating a testing namespace")
-	namespace, err := k8sClient.CoreV1().Namespaces().Create(ctx, &corev1.Namespace{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: uuid.NewString(),
-		},
-	}, metav1.CreateOptions{})
+	namespace, err := clusters.GenerateNamespace(ctx, env.Cluster(), t.Name())
 	require.NoError(t, err)
 	cleaner.AddNamespace(namespace)
 	t.Logf("created namespace %s for test case %s", namespace.Name, t.Name())

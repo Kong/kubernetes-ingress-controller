@@ -30,7 +30,7 @@ import (
 const (
 	// knativeWaitTime indicates how long to wait for knative components to be up and running
 	// on the cluster. The current value is based on deployment times seen in a GKE environment.
-	knativeWaitTime = time.Minute * 2
+	knativeWaitTime = time.Minute * 5
 )
 
 // knativeMinKubernetesVersion indicates the minimum Kubernetes version
@@ -43,7 +43,22 @@ func TestKnativeIngress(t *testing.T) {
 	}
 
 	t.Parallel()
-	ns := namespace(t)
+
+	t.Log("deploying knative addon")
+	knativeAddon := knative.NewBuilder().Build()
+	require.NoError(t, env.Cluster().DeployAddon(ctx, knativeAddon))
+	t.Log("waiting for addon to become ready")
+	require.NoError(t, <-env.WaitForReady(ctx))
+
+	ns, cleaner := setup(t)
+	defer func() {
+		if t.Failed() {
+			output, err := cleaner.DumpDiagnostics(ctx, t.Name())
+			t.Logf("%s failed, dumped diagnostics to %s", t.Name(), output)
+			assert.NoError(t, err)
+		}
+		assert.NoError(t, cleaner.Cleanup(ctx))
+	}()
 
 	t.Log("generating a knative clientset")
 	dynamicClient, err := dynamic.NewForConfig(env.Cluster().Config())
@@ -91,7 +106,7 @@ func TestKnativeIngress(t *testing.T) {
 	require.Eventually(t, func() bool {
 		_, err = knativeClient.Create(ctx, service, metav1.CreateOptions{})
 		return err == nil
-	}, knativeWaitTime, waitTick, true)
+	}, knativeWaitTime, waitTick)
 
 	defer func() {
 		t.Log("cleaning up knative services used for testing")
@@ -99,7 +114,7 @@ func TestKnativeIngress(t *testing.T) {
 	}()
 
 	t.Log("Test knative service using kong.")
-	require.True(t, accessKnativeSrv(ctx, proxyURL.Hostname(), ns.Name, t), true)
+	require.True(t, accessKnativeSrv(ctx, proxyURL.Hostname(), ns.Name, t))
 }
 
 // -----------------------------------------------------------------------------

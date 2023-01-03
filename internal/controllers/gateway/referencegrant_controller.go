@@ -41,8 +41,6 @@ type ReferenceGrantReconciler struct {
 	Scheme          *runtime.Scheme
 	DataplaneClient *dataplane.KongClient
 
-	PublishService   string
-	WatchNamespaces  []string
 	CacheSyncTimeout time.Duration
 }
 

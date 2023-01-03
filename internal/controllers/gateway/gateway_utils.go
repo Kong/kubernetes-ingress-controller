@@ -166,38 +166,6 @@ func extractListenerSpecFromGateway(gateway *gatewayv1beta1.Gateway, listenerNam
 	return nil
 }
 
-// ListenerTracker holds Gateway Listeners and their statuses, and provides methods to update statuses upon
-// reconciliation.
-type ListenerTracker struct {
-	// actual listeners
-	Listeners map[SectionName]Listener
-
-	// statuses
-	Statuses map[SectionName]ListenerStatus
-
-	// protocol to port to number map (var protocols)
-	protocolToPort map[ProtocolType]map[PortNumber]bool
-	// port to protocol map (portsToProtocol)
-	portToProtocol map[PortNumber]ProtocolType
-	// port to hostname to listener name map (portsToHostnames)
-	portsToHostnames map[PortNumber]map[Hostname]SectionName
-}
-
-// update from existing becomes moot if we're stateful, correct?
-// we just keep the existing maps around
-// need to detect changes, will still receive the full set
-
-// NewListenerTracker returns a ListenerTracker with empty maps.
-func NewListenerTracker() ListenerTracker {
-	return ListenerTracker{
-		Statuses:         map[SectionName]ListenerStatus{},
-		Listeners:        map[SectionName]Listener{},
-		protocolToPort:   map[ProtocolType]map[PortNumber]bool{},
-		portToProtocol:   map[PortNumber]ProtocolType{},
-		portsToHostnames: map[PortNumber]map[Hostname]SectionName{},
-	}
-}
-
 type (
 	protocolPortMap     map[ProtocolType]map[PortNumber]bool
 	portProtocolMap     map[PortNumber]ProtocolType

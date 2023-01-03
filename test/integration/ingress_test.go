@@ -1149,3 +1149,105 @@ func TestIngressRecoverFromInvalidPath(t *testing.T) {
 		return false
 	}, ingressWait, waitTick)
 }
+
+func TestIngressMatchByHost(t *testing.T) {
+	ns, cleaner := setup(t)
+	defer func() {
+		if t.Failed() {
+			output, err := cleaner.DumpDiagnostics(ctx, t.Name())
+			t.Logf("%s failed, dumped diagnostics to %s", t.Name(), output)
+			assert.NoError(t, err)
+		}
+		assert.NoError(t, cleaner.Cleanup(ctx))
+	}()
+
+	t.Log("deploying a minimal HTTP container deployment to test Ingress routes")
+	container := generators.NewContainer("httpbin", test.HTTPBinImage, 80)
+	deployment := generators.NewDeploymentForContainer(container)
+	deployment, err := env.Cluster().Client().AppsV1().Deployments(ns.Name).Create(ctx, deployment, metav1.CreateOptions{})
+	require.NoError(t, err)
+	cleaner.Add(deployment)
+
+	t.Logf("exposing deployment %s via service", deployment.Name)
+	service := generators.NewServiceForDeployment(deployment, corev1.ServiceTypeLoadBalancer)
+	_, err = env.Cluster().Client().CoreV1().Services(ns.Name).Create(ctx, service, metav1.CreateOptions{})
+	require.NoError(t, err)
+	cleaner.Add(service)
+
+	t.Logf("creating an ingress for service %s with fixed host", service.Name)
+	require.NoError(t, err)
+
+	ingress := generators.NewIngressForService("/", map[string]string{
+		"konghq.com/strip-path": "true",
+	}, service)
+	ingress.Spec.IngressClassName = kong.String(ingressClass)
+	for i := range ingress.Spec.Rules {
+		ingress.Spec.Rules[i].Host = "test.example"
+	}
+	_, err = env.Cluster().Client().NetworkingV1().Ingresses(ns.Name).Create(ctx, ingress, metav1.CreateOptions{})
+	require.NoError(t, err)
+	cleaner.Add(ingress)
+
+	t.Log("try to access the ingress by matching host")
+	req, err := http.NewRequest("GET", proxyURL.String(), nil)
+	require.NoError(t, err)
+	req.Host = "test.example"
+	require.Eventually(t, func() bool {
+		resp, err := httpc.Do(req)
+		if err != nil {
+			t.Logf("WARNING: error while waiting for %s: %v", proxyURL, err)
+			return false
+		}
+		defer resp.Body.Close()
+		if resp.StatusCode == http.StatusOK {
+			b := new(bytes.Buffer)
+			n, err := b.ReadFrom(resp.Body)
+			require.NoError(t, err)
+			require.True(t, n > 0)
+			return strings.Contains(b.String(), "<title>httpbin.org</title>")
+		}
+		return false
+	}, ingressWait, waitTick)
+
+	t.Log("try to access the ingress by unmatching host, should return 404")
+	req.Host = "foo.example"
+	resp, err := httpc.Do(req)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+	require.Equal(t, resp.StatusCode, http.StatusNotFound)
+
+	t.Log("change the ingress to wildcard host")
+	for i := range ingress.Spec.Rules {
+		ingress.Spec.Rules[i].Host = "*.example"
+	}
+	_, err = env.Cluster().Client().NetworkingV1().Ingresses(ns.Name).Update(ctx, ingress, metav1.UpdateOptions{})
+	require.NoError(t, err)
+	cleaner.Add(ingress)
+
+	t.Log("try to access the ingress by matching host")
+
+	req.Host = "test0.example"
+	require.Eventually(t, func() bool {
+		resp, err := httpc.Do(req)
+		if err != nil {
+			t.Logf("WARNING: error while waiting for %s: %v", proxyURL, err)
+			return false
+		}
+		defer resp.Body.Close()
+		if resp.StatusCode == http.StatusOK {
+			b := new(bytes.Buffer)
+			n, err := b.ReadFrom(resp.Body)
+			require.NoError(t, err)
+			require.True(t, n > 0)
+			return strings.Contains(b.String(), "<title>httpbin.org</title>")
+		}
+		return false
+	}, ingressWait, waitTick)
+
+	t.Log("try to access the ingress by unmatching host, should return 404")
+	req.Host = "test.another"
+	resp, err = httpc.Do(req)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+	require.Equal(t, resp.StatusCode, http.StatusNotFound)
+}

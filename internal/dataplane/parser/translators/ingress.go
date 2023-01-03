@@ -195,7 +195,12 @@ func (m *ingressTranslationMeta) translateIntoKongStateService(kongServiceName s
 }
 
 func (m *ingressTranslationMeta) translateIntoKongRoutes() *kongstate.Route {
-	routeName := fmt.Sprintf("%s.%s.%s.%s.%d", m.ingressNamespace, m.ingressName, m.serviceName, m.ingressHost, m.servicePort)
+	ingressHost := m.ingressHost
+	if strings.Contains(ingressHost, "*") {
+		// '_' is not allowed in host, so we use '_' to replace '*' since '*' is not allowed in Kong.
+		ingressHost = strings.ReplaceAll(ingressHost, "*", "_")
+	}
+	routeName := fmt.Sprintf("%s.%s.%s.%s.%d", m.ingressNamespace, m.ingressName, m.serviceName, ingressHost, m.servicePort)
 	route := &kongstate.Route{
 		Ingress: util.K8sObjectInfo{
 			Namespace:   m.ingressNamespace,

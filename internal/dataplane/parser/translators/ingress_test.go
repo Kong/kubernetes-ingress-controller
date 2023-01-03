@@ -1078,11 +1078,80 @@ func TestTranslateIngress(t *testing.T) {
 				Parent: expectedParentIngress(),
 			}},
 		},
+		{
+			name: "use port name when service port number is not provided",
+			ingress: &netv1.Ingress{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-ingress",
+					Namespace: corev1.NamespaceDefault,
+				},
+				Spec: netv1.IngressSpec{
+					Rules: []netv1.IngressRule{{
+						Host: "konghq.com",
+						IngressRuleValue: netv1.IngressRuleValue{
+							HTTP: &netv1.HTTPIngressRuleValue{
+								Paths: []netv1.HTTPIngressPath{{
+									Path: "/api/",
+									Backend: netv1.IngressBackend{
+										Service: &netv1.IngressServiceBackend{
+											Name: "test-service",
+											Port: netv1.ServiceBackendPort{
+												Name: "http",
+											},
+										},
+									},
+								}},
+							},
+						},
+					}},
+				},
+			},
+			expected: []*kongstate.Service{{
+				Namespace: corev1.NamespaceDefault,
+				Service: kong.Service{
+					Name:           kong.String("default.test-ingress.test-service.http"),
+					Host:           kong.String("test-service.default.http.svc"),
+					ConnectTimeout: kong.Int(int(defaultServiceTimeout.Milliseconds())),
+					Path:           kong.String("/"),
+					Port:           kong.Int(80),
+					Protocol:       kong.String("http"),
+					Retries:        kong.Int(defaultRetries),
+					ReadTimeout:    kong.Int(int(defaultServiceTimeout.Milliseconds())),
+					WriteTimeout:   kong.Int(int(defaultServiceTimeout.Milliseconds())),
+				},
+				Routes: []kongstate.Route{{
+					Ingress: util.K8sObjectInfo{
+						Name:      "test-ingress",
+						Namespace: corev1.NamespaceDefault,
+					},
+					Route: kong.Route{
+						Name:              kong.String("default.test-ingress.test-service.konghq.com.http"),
+						Hosts:             kong.StringSlice("konghq.com"),
+						Paths:             kong.StringSlice("/api/"), // default ImplementationSpecific
+						PreserveHost:      kong.Bool(true),
+						Protocols:         kong.StringSlice("http", "https"),
+						RegexPriority:     kong.Int(0),
+						StripPath:         kong.Bool(false),
+						ResponseBuffering: kong.Bool(true),
+						RequestBuffering:  kong.Bool(true),
+					},
+				}},
+				Backends: []kongstate.ServiceBackend{{
+					Name:      "test-service",
+					Namespace: corev1.NamespaceDefault,
+					PortDef: kongstate.PortDef{
+						Mode: kongstate.PortModeByName,
+						Name: "http",
+					},
+				}},
+				Parent: expectedParentIngress(),
+			}},
+		},
 	}
 
 	for _, tt := range tts {
 		t.Run(tt.name, func(t *testing.T) {
-			assert.Equal(t, TranslateIngress(tt.ingress, false), tt.expected)
+			assert.Equal(t, tt.expected, TranslateIngress(tt.ingress, false))
 		})
 	}
 }

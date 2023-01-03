@@ -1250,5 +1250,4 @@ func TestIngressMatchByHost(t *testing.T) {
 	require.NoError(t, err)
 	defer resp.Body.Close()
 	require.Equal(t, resp.StatusCode, http.StatusNotFound)
-
 }

@@ -67,8 +67,8 @@ Adding a new version? You'll need three changes:
 
 ### Fixed
 
-- When `CombinedRoutes` is turned on, translator will replace appearance of
- `*` in host of `Ingress` to `_` in kong route names because `*` is not 
+- When `CombinedRoutes` is turned on, translator will replace each occurrence of
+ `*` in `Ingress`'s host to `_` in kong route names because `*` is not 
   allowed in kong route names.
   [#3312](https://github.com/Kong/kubernetes-ingress-controller/pull/3312)
 

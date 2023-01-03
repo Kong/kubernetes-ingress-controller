@@ -4,7 +4,13 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: 'The version to release (e.g. v1.2.3)'
+        description: |
+          The version to release.
+          Depending on the value, a production release will be published to GitHub or not.
+            - In case of prerelease tags (e.g. v1.2.3-alpha.1) it will build-push the images (only standard tags,
+              i.e., v1.2.3-alpha.1 and v1.2.3-alpha.1-redhat), test them and publish a GitHub prerelease (labeled as non-production ready).
+            - In other cases (e.g. v1.2.3) it will build-push the images (standard and supplemental tags, 
+              i.e., v1.2.3, v1.2.3-redhat, v1.2 and v1.2-redhat), test them and publish a production Github release.
         required: true
       latest:
         description: 'Whether to tag this release latest'
@@ -199,6 +205,22 @@ jobs:
           apitoken: ${{ secrets.RH_PYXIS_TOKEN }}
           certificationid: ${{ secrets.RH_CERTIFICATION_ID }}
 
+  setup-e2e-tests:
+    runs-on: ubuntu-latest
+    outputs:
+      test_names: ${{ steps.set_test_names.outputs.test_names }}
+    steps:
+      - uses: actions/checkout@v3
+      - id: set_test_names
+        name: Set test names
+        working-directory: test/e2e/
+        # grep magic described in https://unix.stackexchange.com/a/13472
+        # sed to add the extra $ is because some of our test names overlap. we need it so the -run regex only matches one test
+        run: |
+          echo "::set-output name=test_names::$(grep -shoP "(?<=^func )(Test[a-zA-z_0-9]+)(?=\(t \*testing.T\) {)" * | sed -e "s/$/\$/"| jq -R . | jq -cs .)"
+      - name: Print test names
+        run: echo "Test names ${{ steps.set_test_names.outputs.test_names }}"
+
   test-current-kubernetes:
     runs-on: ubuntu-latest
     needs: build-push-images
@@ -206,6 +228,7 @@ jobs:
       matrix:
         kubernetes-version:
           - 'v1.26.0'
+        test: ${{ fromJSON(needs.setup-e2e-tests.outputs.test_names) }}
     steps:
       - name: setup golang
         uses: actions/setup-go@v3
@@ -222,8 +245,25 @@ jobs:
         uses: actions/checkout@v3
         with:
           fetch-depth: 0
-      - name: Kubernetes ${{ matrix.kubernetes-version }} E2E Tests
-        run: KONG_CLUSTER_VERSION=${{ matrix.kubernetes-version }} make test.e2e
+      - uses: Kong/kong-license@master
+        id: license
+        with:
+          password: ${{ secrets.PULP_PASSWORD }}
+      - name: Parse semver string
+        id: semver_parser
+        uses: booxmedialtd/ws-action-parse-semver@v1
+        with:
+          input_string: ${{ github.event.inputs.tag }}
+          version_extractor_regex: 'v(.*)$'
+      - name: ${{ matrix.test }} - ${{ matrix.kubernetes-version }}
+        run: make test.e2e
+        env:
+          TEST_KONG_CONTROLLER_IMAGE_OVERRIDE: "kong/kubernetes-ingress-controller:${{ steps.semver_parser.outputs.fullversion }}"
+          KONG_LICENSE_DATA: ${{ steps.license.outputs.license }}
+          KONG_CLUSTER_VERSION: ${{ matrix.kubernetes-version }}
+          E2E_TEST_RUN: ${{ matrix.test }}
+          NCPU: 1 # it was found that github actions (specifically) did not seem to perform well when spawning
+          # multiple kind clusters within a single job, so only 1 is allowed at a time.
 
   test-previous-kubernetes:
     environment: gcloud
@@ -238,12 +278,12 @@ jobs:
           - 'v1.23.6'
           - 'v1.24.2'
           - 'v1.25.3'
+        test: ${{ fromJSON(needs.setup-e2e-tests.outputs.test_names) }}
     steps:
       - name: setup golang
         uses: actions/setup-go@v3
         with:
           go-version: '^1.19'
-
       - name: cache go modules
         uses: actions/cache@v3
         with:
@@ -251,25 +291,30 @@ jobs:
           key: ${{ runner.os }}-build-codegen-${{ hashFiles('**/go.sum') }}
           restore-keys: |
             ${{ runner.os }}-build-codegen-
-
       - name: checkout repository
         uses: actions/checkout@v3
         with:
           fetch-depth: 0
-
       - uses: Kong/kong-license@master
         id: license
         with:
           password: ${{ secrets.PULP_PASSWORD }}
-
-      - name: E2E on GKE v1.${{ matrix.minor }}
+      - name: Parse semver string
+        id: semver_parser
+        uses: booxmedialtd/ws-action-parse-semver@v1
+        with:
+          input_string: ${{ github.event.inputs.tag }}
+          version_extractor_regex: 'v(.*)$'
+      - name: ${{ matrix.test }} - ${{ matrix.kubernetes-version }}
         run: make test.e2e.gke
         env:
+          TEST_KONG_CONTROLLER_IMAGE_OVERRIDE: "kong/kubernetes-ingress-controller:${{ steps.semver_parser.outputs.fullversion }}"
+          KONG_LICENSE_DATA: ${{ steps.license.outputs.license }}
+          KONG_CLUSTER_VERSION: ${{ matrix.kubernetes-version }}
+          E2E_TEST_RUN: ${{ matrix.test }}
           GOOGLE_APPLICATION_CREDENTIALS: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}
           GOOGLE_PROJECT: ${{ secrets.GOOGLE_PROJECT }}
           GOOGLE_LOCATION: ${{ secrets.GOOGLE_LOCATION }}
-          KONG_CLUSTER_VERSION: ${{ matrix.kubernetes-version }}
-          KONG_LICENSE_DATA: ${{ steps.license.outputs.license }}
 
   publish-release:
     runs-on: ubuntu-latest
@@ -296,3 +341,6 @@ jobs:
         token: ${{ secrets.GITHUB_TOKEN }}
         tag: ${{ github.event.inputs.tag }}
         commit: ${{ github.sha }}
+        # When prerelease part of the input tag is not empty, make it a prerelease.
+        # The release will be labeled as non-production ready in GitHub.
+        prerelease: ${{ steps.semver_parser.outputs.prerelease != '' }}

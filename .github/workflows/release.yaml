@@ -7,10 +7,10 @@ on:
         description: |
           The version to release.
           Depending on the value, a production release will be published to GitHub or not.
-            - In case of prerelease tags (e.g. v1.2.3-alpha.1) it will build-push the images (only fullversion variants), 
-              test them and publish a GitHub prerelease (labeled as non-production ready).
-            - In other cases (e.g. v1.2.3) it will build-push the images (all variants), test them and publish 
-              a production Github release.
+            - In case of prerelease tags (e.g. v1.2.3-alpha.1) it will build-push the images (only standard tags,
+              i.e., v1.2.3-alpha.1 and v1.2.3-alpha.1-redhat), test them and publish a GitHub prerelease (labeled as non-production ready).
+            - In other cases (e.g. v1.2.3) it will build-push the images (standard and supplemental tags, 
+              i.e., v1.2.3, v1.2.3-redhat, v1.2 and v1.2-redhat), test them and publish a production Github release.
         required: true
       latest:
         description: 'Whether to tag this release latest'

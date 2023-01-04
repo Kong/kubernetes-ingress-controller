@@ -25,7 +25,7 @@ body:
 - type: checkboxes
   id: gateway_version
   attributes:
-    label: "**For major/minor releases only** Bump Kong Gateway version in manifests"
+    label: "Bump Kong Gateway version in manifests"
     options:
       - label: "Note: it might be possible that the latest Gateway version is not compatible with KIC and code changes are required. In such case, a decision whether to release with no compliance with the latest Gateway version should be made on a team level."
       - label: Check the latest minor Kong Gateway release in [Kong releases](https://github.com/Kong/kong/releases).

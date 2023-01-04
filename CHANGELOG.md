@@ -64,7 +64,7 @@ Adding a new version? You'll need three changes:
 
 ## [2.8.1]
 
-> Release date: TBD
+> Release date: 2022-01-04
 
 ### Fixed
 

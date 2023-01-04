@@ -66,9 +66,11 @@ type Config struct {
 	GatewayAPIControllerName string
 
 	// Ingress status
-	PublishService       string
-	PublishStatusAddress []string
-	UpdateStatus         bool
+	PublishService          string
+	PublishServiceUDP       string
+	PublishStatusAddress    []string
+	PublishStatusAddressUDP []string
+	UpdateStatus            bool
 
 	// Kubernetes API toggling
 	IngressExtV1beta1Enabled      bool
@@ -165,11 +167,16 @@ func (c *Config) FlagSet() *pflag.FlagSet {
 			`To watch multiple namespaces, use a comma-separated list of namespaces.`)
 
 	// Ingress status
-	flagSet.StringVar(&c.PublishService, "publish-service", "",
-		`Service fronting Ingress resources in "namespace/name" format. The controller will update Ingress status information with this Service's endpoints.`)
-	flagSet.StringSliceVar(&c.PublishStatusAddress, "publish-status-address", []string{},
-		`User-provided addresses in comma-separated string format, for use in lieu of "publish-service" `+
-			`when that Service lacks useful address information (for example, in bare-metal environments).`)
+	flagSet.StringVar(&c.PublishService, "publish-service", "", `Service fronting routing resources in "namespace/name"
+			format. The controller will update route resource status information with this Service's endpoints.`)
+	flagSet.StringSliceVar(&c.PublishStatusAddress, "publish-status-address", []string{}, `User-provided address CSV.
+			For use in lieu of "publish-service" when that Service lacks useful address information (for example,
+			in bare-metal environments).`)
+	flagSet.StringVar(&c.PublishServiceUDP, "publish-service-udp", "", `Service fronting UDP routing resources in
+			"namespace/name" format. The controller will update UDP route status information with this Service's
+			endpoints. If omitted, the same Service will be used for both TCP and UDP routes.`)
+	flagSet.StringSliceVar(&c.PublishStatusAddressUDP, "publish-status-address-udp", []string{}, `User-provided
+			address CSV, for use in lieu of "publish-service-udp" when that Service lacks useful address information.`)
 	flagSet.BoolVar(&c.UpdateStatus, "update-status", true,
 		`Indicates if the ingress controller should update the status of resources (e.g. IP/Hostname for v1.Ingress, e.t.c.)`)
 

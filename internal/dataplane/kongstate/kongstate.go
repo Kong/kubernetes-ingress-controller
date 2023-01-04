@@ -100,7 +100,7 @@ func (ks *KongState) FillConsumersAndCredentials(log logrus.FieldLogger, s store
 					}
 					continue
 				}
-				// TODO: ttl is a field that only appears in keyAuth credentials and has int type.
+				// ttl is a field that only appears in keyAuth credentials and has int type.
 				// Same as above, we cannot fix individual keys after translated to credConfig.
 				if k == "ttl" {
 					intVal, err := strconv.Atoi(string(v))

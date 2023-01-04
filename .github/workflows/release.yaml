@@ -45,6 +45,8 @@ jobs:
           input_string: ${{ github.event.inputs.tag }}
           version_extractor_regex: 'v(.*)$'
       - name: Verify manifests have requested KIC tag
+        # For prereleases we don't expect the manifests on main to point to the prerelease image tag,
+        # so we're skipping this check.
         if: ${{ steps.semver_parser.outputs.prerelease == '' }}
         env:
           TAG: ${{ steps.semver_parser.outputs.fullversion }}

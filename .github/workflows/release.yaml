@@ -45,6 +45,7 @@ jobs:
           input_string: ${{ github.event.inputs.tag }}
           version_extractor_regex: 'v(.*)$'
       - name: Verify manifests have requested KIC tag
+        if: ${{ steps.semver_parser.outputs.prerelease == '' }}
         env:
           TAG: ${{ steps.semver_parser.outputs.fullversion }}
         run: make verify.versions

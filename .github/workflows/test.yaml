@@ -34,9 +34,6 @@ jobs:
       with:
         fetch-depth: 0
 
-    - name: Setup yq
-      run: go install github.com/mikefarah/yq/v4@latest
-
     - name: Run lint
       run: make lint
 

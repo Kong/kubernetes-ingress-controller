@@ -40,7 +40,7 @@ jobs:
           fetch-depth: 0
       - name: Parse semver string
         id: semver_parser
-        uses: booxmedialtd/ws-action-parse-semver@v1
+        uses: booxmedialtd/ws-action-parse-semver@v1.4.6
         with:
           input_string: ${{ github.event.inputs.tag }}
           version_extractor_regex: 'v(.*)$'

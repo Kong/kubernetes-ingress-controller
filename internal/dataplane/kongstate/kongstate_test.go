@@ -317,6 +317,7 @@ func TestFillConsumersAndCredentials(t *testing.T) {
 			Data: map[string][]byte{
 				"kongCredType": []byte("key-auth"),
 				"key":          []byte("whatever"),
+				"ttl":          []byte("1024"),
 			},
 		},
 		{
@@ -362,7 +363,10 @@ func TestFillConsumersAndCredentials(t *testing.T) {
 				Username: kong.String("foo"),
 				CustomID: kong.String("foo"),
 			},
-			KeyAuths: []*KeyAuth{{kong.KeyAuth{Key: kong.String("whatever")}}},
+			KeyAuths: []*KeyAuth{{kong.KeyAuth{
+				Key: kong.String("whatever"),
+				TTL: kong.Int(1024),
+			}}},
 			Oauth2Creds: []*Oauth2Credential{
 				{
 					kong.Oauth2Credential{

@@ -8,6 +8,7 @@ Adding a new version? You'll need three changes:
   This is all the way at the bottom. It's the thing we always forget.
 --->
 
+ - [2.8.1](#281)
  - [2.8.0](#280)
  - [2.7.0](#270)
  - [2.6.0](#260)
@@ -61,7 +62,7 @@ Adding a new version? You'll need three changes:
  - [0.0.5](#005)
  - [0.0.4 and prior](#004-and-prior)
 
-## [2.9.0]
+## [2.8.1]
 
 > Release date: TBD
 
@@ -74,6 +75,9 @@ Adding a new version? You'll need three changes:
 - Fix an issue with `CombinedRoutes`, which caused the controller to fail when
   creating config for Ingress when backend services specified only port names
   [#3313](https://github.com/Kong/kubernetes-ingress-controller/pull/3313)
+- Parse `ttl` field of key-auth credentials in secrets to `int` type before filling
+  to kong credentials to fix the invalid type error.
+  [#3319](https://github.com/Kong/kubernetes-ingress-controller/pull/3319)
 
 ## [2.8.0]
 

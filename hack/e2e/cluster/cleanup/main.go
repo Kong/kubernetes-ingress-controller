@@ -37,7 +37,6 @@ const timeUntilClusterOrphaned = time.Minute * 30
 var (
 	gcloudClientID string
 
-	ctx         = context.Background()
 	gkeCreds    = os.Getenv(gke.GKECredsVar)
 	gkeProject  = os.Getenv(gke.GKEProjectVar)
 	gkeLocation = os.Getenv(gke.GKELocationVar)
@@ -66,10 +65,18 @@ func main() {
 		os.Exit(1)
 	}
 
+	credsOpt := option.WithCredentialsJSON([]byte(gkeCreds))
+	mgrc, err := container.NewClusterManagerClient(context.Background(), credsOpt)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "failed to create cluster manager client: %s", err)
+		os.Exit(2)
+	}
+	defer mgrc.Close()
+
 	var clusterNames []string
 	if len(os.Args) == 2 && os.Args[1] == "all" {
 		var err error
-		clusterNames, err = findOrphanedClusters()
+		clusterNames, err = findOrphanedClusters(context.Background(), mgrc)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "could not find orphaned clusters: %s", err)
 			os.Exit(2)
@@ -85,14 +92,10 @@ func main() {
 
 	var errs []error
 	for _, clusterName := range clusterNames {
-		cluster, err := gke.NewFromExistingWithEnv(ctx, clusterName)
+		fmt.Printf("INFO: cleaning up cluster %s\n", clusterName)
+		err := deleteCluster(context.Background(), mgrc, gkeProject, gkeLocation, clusterName)
 		if err != nil {
-			errs = append(errs, fmt.Errorf("could not retrieve cluster %s: %w", clusterName, err))
-			continue
-		}
-		fmt.Printf("INFO: cleaning up cluster %s\n", cluster.Name())
-		if err := cluster.Cleanup(ctx); err != nil {
-			errs = append(errs, fmt.Errorf("could not delete cluster %s: %w", clusterName, err))
+			errs = append(errs, err)
 			continue
 		}
 	}
@@ -109,14 +112,20 @@ func mustNotBeEmpty(name, value string) {
 	}
 }
 
-func findOrphanedClusters() ([]string, error) {
-	credsOpt := option.WithCredentialsJSON([]byte(gkeCreds))
-	mgrc, err := container.NewClusterManagerClient(ctx, credsOpt)
+func deleteCluster(ctx context.Context, mgrc *container.ClusterManagerClient, project, location, name string) error {
+	fullname := fmt.Sprintf("projects/%s/locations/%s/clusters/%s", project, location, name)
+	op, err := mgrc.DeleteCluster(ctx, &containerpb.DeleteClusterRequest{Name: fullname})
 	if err != nil {
-		return nil, err
+		return fmt.Errorf("failed to call delete cluster for %q: %w", name, err)
 	}
-	defer mgrc.Close()
+	if op.Error != nil {
+		return fmt.Errorf("failed to remove cluster %q: %s", name, op.Error)
+	}
 
+	return nil
+}
+
+func findOrphanedClusters(ctx context.Context, mgrc *container.ClusterManagerClient) ([]string, error) {
 	clusterListReq := containerpb.ListClustersRequest{
 		Parent: fmt.Sprintf("projects/%s/locations/%s", gkeProject, gkeLocation),
 	}

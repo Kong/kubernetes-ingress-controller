@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"github.com/blang/semver/v4"
+	"github.com/google/uuid"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/loadimage"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/metallb"
@@ -66,15 +67,34 @@ const (
 )
 
 func getEnvironmentBuilder(ctx context.Context) (*environments.Builder, error) {
-	if existingCluster != "" {
+	if existingCluster == "" {
+		return createDefaultKINDBuilder(), nil
+	}
+
+	createCluster := func(ctx context.Context, cType string) (*environments.Builder, error) {
+		switch cType {
+		case string(gke.GKEClusterType):
+			return createDefaultGKEBuilder(ctx, clusterVersionStr)
+		case string(kind.KindClusterType):
+			return createDefaultKINDBuilder(), nil
+		default:
+			return nil, fmt.Errorf("unrecognized cluster type %s", cType)
+		}
+	}
+
+	clusterParts := strings.Split(existingCluster, ":")
+	switch len(clusterParts) {
+	case 1:
+		return createCluster(ctx, clusterParts[0])
+	case 2:
+		clusterType, clusterName := clusterParts[0], clusterParts[1]
+		if clusterName == "" {
+			return createCluster(ctx, clusterParts[0])
+		}
+
 		if clusterVersionStr != "" {
 			return nil, fmt.Errorf("cannot provide cluster version with existing cluster")
 		}
-		clusterParts := strings.Split(existingCluster, ":")
-		if len(clusterParts) != 2 {
-			return nil, fmt.Errorf("existing cluster in wrong format (%s): format is <TYPE>:<NAME> (e.g. kind:test-cluster)", existingCluster)
-		}
-		clusterType, clusterName := clusterParts[0], clusterParts[1]
 
 		fmt.Printf("INFO: using existing %s cluster %s\n", clusterType, clusterName)
 		switch clusterType {
@@ -85,8 +105,10 @@ func getEnvironmentBuilder(ctx context.Context) (*environments.Builder, error) {
 		default:
 			return nil, fmt.Errorf("unrecognized cluster type %s", clusterType)
 		}
+
+	default:
+		return nil, fmt.Errorf("existing cluster in wrong format (%s): format is <TYPE>:<NAME> (e.g. kind:test-cluster)", existingCluster)
 	}
-	return createDefaultKINDBuilder(), nil
 }
 
 func createDefaultKINDBuilder() *environments.Builder {
@@ -126,6 +148,30 @@ func createExistingGKEBuilder(ctx context.Context, name string) (*environments.B
 	builder := environments.NewBuilder()
 	builder = builder.WithExistingCluster(cluster)
 	return builder, nil
+}
+
+func createDefaultGKEBuilder(ctx context.Context, version string) (*environments.Builder, error) {
+	var (
+		name        = "e2e" + uuid.NewString()
+		gkeCreds    = os.Getenv(gke.GKECredsVar)
+		gkeProject  = os.Getenv(gke.GKEProjectVar)
+		gkeLocation = os.Getenv(gke.GKELocationVar)
+	)
+	k8sVersion, err := semver.Parse(strings.TrimPrefix(version, "v"))
+	if err != nil {
+		return nil, err
+	}
+
+	cluster, err := gke.
+		NewBuilder([]byte(gkeCreds), gkeProject, gkeLocation).
+		WithName(name).
+		WithClusterMinorVersion(k8sVersion.Major, k8sVersion.Minor).
+		Build(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	return environments.NewBuilder().WithExistingCluster(cluster), nil
 }
 
 func deployKong(ctx context.Context, t *testing.T, env environments.Environment, manifest io.Reader, additionalSecrets ...*corev1.Secret) *appsv1.Deployment {

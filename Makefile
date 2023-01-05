@@ -345,15 +345,12 @@ test.integration.enterprise.postgres.pretty:
 
 .PHONY: test.integration.cp
 _test.integration.cp: gotestsum
-	CLUSTER_NAME="e2e-$(uuidgen)" \
-		KUBERNETES_CLUSTER_NAME="${CLUSTER_NAME}" go run hack/e2e/cluster/deploy/main.go \
-		GOFLAGS="-tags=integration_tests" \
+	KUBERNETES_CLUSTER_NAME="${CLUSTER_NAME}" go run hack/e2e/cluster/deploy/main.go && \
+	GOFLAGS="-tags=integration_tests" \
 		KONG_TEST_CLUSTER="${CP}:${CLUSTER_NAME}" \
 		GOTESTSUM_FORMAT=$(GOTESTSUM_FORMAT) \
 		$(GOTESTSUM) -- -parallel "${NCPU}" -timeout $(INTEGRATION_TEST_TIMEOUT) \
-		./test/integration/... \
-    	go run hack/e2e/cluster/cleanup/main.go ${CLUSTER_NAME} \
-		trap cleanup EXIT SIGINT SIGQUIT
+		./test/integration/...
 
 .PHONY: test.integration.gke
 test.integration.gke:
@@ -366,18 +363,8 @@ test.integration.kind:
 		CP="kind"
 
 .PHONY: test.e2e.gke
-test.e2e.gke:
-	CLUSTER_NAME="e2e-$(uuidgen)" \
-		KUBERNETES_CLUSTER_NAME="${CLUSTER_NAME}" go run hack/e2e/cluster/deploy/main.go \
-		KONG_TEST_CLUSTER="gke:${CLUSTER_NAME}" \
-		GOFLAGS="-tags=e2e_tests" $(GOTESTSUM) -- $(GOTESTFLAGS) \
-			-race \
-			-run $(E2E_TEST_RUN) \
-			-parallel $(NCPU) \
-			-timeout $(E2E_TEST_TIMEOUT) \
-			./test/e2e/... \
-		go run hack/e2e/cluster/cleanup/main.go ${CLUSTER_NAME} \
-		trap cleanup EXIT SIGINT SIGQUIT
+test.e2e.gke: gotestsum
+	KONG_TEST_CLUSTER="gke:${CLUSTER_NAME}" $(MAKE) test.e2e
 
 .PHONY: test.e2e
 test.e2e: gotestsum

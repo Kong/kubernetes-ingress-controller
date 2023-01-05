@@ -271,6 +271,7 @@ jobs:
     needs: [build-push-images, setup-e2e-tests]
     strategy:
       fail-fast: true
+      max-parallel: 16
       matrix:
         kubernetes-version:
           - 'v1.21.12'

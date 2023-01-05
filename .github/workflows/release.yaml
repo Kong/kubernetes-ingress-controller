@@ -205,30 +205,9 @@ jobs:
           apitoken: ${{ secrets.RH_PYXIS_TOKEN }}
           certificationid: ${{ secrets.RH_CERTIFICATION_ID }}
 
-  setup-e2e-tests:
-    runs-on: ubuntu-latest
-    outputs:
-      test_names: ${{ steps.set_test_names.outputs.test_names }}
-    steps:
-      - uses: actions/checkout@v3
-      - id: set_test_names
-        name: Set test names
-        working-directory: test/e2e/
-        # grep magic described in https://unix.stackexchange.com/a/13472
-        # sed to add the extra $ is because some of our test names overlap. we need it so the -run regex only matches one test
-        run: |
-          echo "test_names=$(grep -shoP "(?<=^func )(Test[a-zA-z_0-9]+)(?=\(t \*testing.T\) {)" * | sed -e "s/$/\$/"| jq -R . | jq -cs .)" >> $GITHUB_OUTPUT
-      - name: Print test names
-        run: echo "Test names ${{ steps.set_test_names.outputs.test_names }}"
-
   test-current-kubernetes:
     runs-on: ubuntu-latest
-    needs: [build-push-images, setup-e2e-tests]
-    strategy:
-      matrix:
-        kubernetes-version:
-          - 'v1.26.0'
-        test: ${{ fromJSON(needs.setup-e2e-tests.outputs.test_names) }}
+    needs: build-push-images
     steps:
       - name: setup golang
         uses: actions/setup-go@v3
@@ -255,23 +234,21 @@ jobs:
         with:
           input_string: ${{ github.event.inputs.tag }}
           version_extractor_regex: 'v(.*)$'
-      - name: ${{ matrix.test }} - ${{ matrix.kubernetes-version }}
+      - name: e2e current kubernetes
         run: make test.e2e
         env:
           TEST_KONG_CONTROLLER_IMAGE_OVERRIDE: "kong/kubernetes-ingress-controller:${{ steps.semver_parser.outputs.fullversion }}"
           KONG_LICENSE_DATA: ${{ steps.license.outputs.license }}
-          KONG_CLUSTER_VERSION: ${{ matrix.kubernetes-version }}
-          E2E_TEST_RUN: ${{ matrix.test }}
+          KONG_CLUSTER_VERSION: 'v1.26.0'
           NCPU: 1 # it was found that github actions (specifically) did not seem to perform well when spawning
           # multiple kind clusters within a single job, so only 1 is allowed at a time.
 
   test-previous-kubernetes:
     environment: gcloud
     runs-on: ubuntu-latest
-    needs: [build-push-images, setup-e2e-tests]
+    needs: build-push-images
     strategy:
       fail-fast: true
-      max-parallel: 15
       matrix:
         kubernetes-version:
           - 'v1.21.12'
@@ -279,7 +256,6 @@ jobs:
           - 'v1.23.6'
           - 'v1.24.2'
           - 'v1.25.3'
-        test: ${{ fromJSON(needs.setup-e2e-tests.outputs.test_names) }}
     steps:
       - name: setup golang
         uses: actions/setup-go@v3
@@ -306,13 +282,12 @@ jobs:
         with:
           input_string: ${{ github.event.inputs.tag }}
           version_extractor_regex: 'v(.*)$'
-      - name: ${{ matrix.test }} - ${{ matrix.kubernetes-version }}
+      - name: e2e ${{ matrix.kubernetes-version }}
         run: make test.e2e.gke
         env:
           TEST_KONG_CONTROLLER_IMAGE_OVERRIDE: "kong/kubernetes-ingress-controller:${{ steps.semver_parser.outputs.fullversion }}"
           KONG_LICENSE_DATA: ${{ steps.license.outputs.license }}
           KONG_CLUSTER_VERSION: ${{ matrix.kubernetes-version }}
-          E2E_TEST_RUN: ${{ matrix.test }}
           GOOGLE_APPLICATION_CREDENTIALS: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}
           GOOGLE_PROJECT: ${{ secrets.GOOGLE_PROJECT }}
           GOOGLE_LOCATION: ${{ secrets.GOOGLE_LOCATION }}

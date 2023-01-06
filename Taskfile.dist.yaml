@@ -1,8 +1,0 @@
-version: '3'
-
-tasks:
-  print-var:
-    cmds:
-      - echo "{{.VAR}}"
-    vars:
-      VAR: Hello!

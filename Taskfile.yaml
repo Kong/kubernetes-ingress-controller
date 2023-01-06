@@ -23,13 +23,13 @@ tasks:
     cmds:
     # These 2 steps below will create and cleanup a GKE cluster named as specified
     # in KUBERNETES_CLUSTER_NAME env variable.
-    - task: cluster.create
-      vars:
-        KUBERNETES_CLUSTER_NAME: "{{.KUBERNETES_CLUSTER_NAME}}"
-    - defer:
-        task: cluster.cleanup
-        vars:
-          KUBERNETES_CLUSTER_NAME: "{{.KUBERNETES_CLUSTER_NAME}}"
+    # - task: cluster.create
+    #   vars:
+    #     KUBERNETES_CLUSTER_NAME: "{{.KUBERNETES_CLUSTER_NAME}}"
+    # - defer:
+    #     task: cluster.cleanup
+    #     vars:
+    #       KUBERNETES_CLUSTER_NAME: "{{.KUBERNETES_CLUSTER_NAME}}"
 
     - |
       {{.GOTESTSUM}} -- {{.GOTESTFLAGS}} \
@@ -41,11 +41,9 @@ tasks:
         ./test/e2e/...
 
     vars:
-      E2E_TEST_RUN: ""
-      KUBERNETES_CLUSTER_NAME:
-        sh: printf "kic-%s" $(openssl rand -hex 12)
+      E2E_TEST_RUN: "{{.E2E_TEST_RUN}}" 
     env:
-      KUBERNETES_CLUSTER_NAME: "{{.KUBERNETES_CLUSTER_NAME}}"
+      KONG_TEST_CLUSTER: "{{.KUBERNETES_CLUSTER_NAME}}"
       GOTESTSUM_FORMAT: standard-verbose
 
   cluster.create:

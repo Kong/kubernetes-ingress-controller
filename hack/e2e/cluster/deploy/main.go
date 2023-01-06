@@ -36,15 +36,10 @@ func main() {
 	mustNotBeEmpty(gke.GKECredsVar, gkeCreds)
 	mustNotBeEmpty(gke.GKEProjectVar, gkeProject)
 	mustNotBeEmpty(gke.GKELocationVar, gkeLocation)
-	mustNotBeEmpty(k8sVersionVar, k8sVersion.String())
 	if k8sName == "" {
 		k8sName = "kic-" + uuid.NewString()
 		fmt.Println("INFO: no cluster name provided, using generated name " + k8sName)
 	}
-
-	fmt.Println("INFO: validating cluster version requirements")
-	major := k8sVersion.Major
-	minor := k8sVersion.Minor
 
 	if len(os.Args) > 1 && os.Args[1] == "cleanup" {
 		fmt.Printf("INFO: cleanup called, deleting GKE cluster %s\n", k8sName)
@@ -54,6 +49,11 @@ func main() {
 		fmt.Printf("INFO: GKE cluster %s successfully cleaned up\n", k8sName)
 		os.Exit(0)
 	}
+
+	mustNotBeEmpty(k8sVersionVar, k8sVersion.String())
+	fmt.Println("INFO: validating cluster version requirements")
+	major := k8sVersion.Major
+	minor := k8sVersion.Minor
 
 	fmt.Printf("INFO: configuring the GKE cluster NAME=(%s) VERSION=(v%d.%d) PROJECT=(%s) LOCATION=(%s)\n", k8sName, major, minor, gkeProject, gkeLocation)
 	builder := gke.NewBuilder([]byte(gkeCreds), gkeProject, gkeLocation).WithName(k8sName)

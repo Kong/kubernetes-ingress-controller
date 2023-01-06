@@ -151,14 +151,59 @@ jobs:
         name: tests-report
         path: istio-${{ matrix.kubernetes-version }}-${{ matrix.istio-version }}-tests.xml
 
-  e2e-gke-tests:
+  setup-gke-cluster:
     environment: "gcloud"
     runs-on: ubuntu-latest
+    outputs:
+      cluster_name: ${{ steps.set_cluster_name.outputs.name }}
+      cluster_name_raw: ${{ steps.set_cluster_name.outputs.name_raw }}
     strategy:
       fail-fast: false
       matrix:
-        kubernetes-version: # the GKE setup script ignores the patch version here and uses the latest, but we still include it for consistency with the other E2E jobs
+       # the GKE setup script ignores the patch version here and uses the latest
+       # but we still include it for consistency with the other E2E jobs
+        kubernetes-version:
           - 'v1.24.7'
+    steps:
+      - uses: actions/checkout@v3
+      - name: setup golang
+        uses: actions/setup-go@v3
+        with:
+          go-version: '^1.19'
+      - name: cache go modules
+        uses: actions/cache@v3
+        with:
+          path: ~/go/pkg/mod
+          key: ${{ runner.os }}-build-codegen-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-build-codegen-
+      - name: Set cluster name in env
+        run: |
+          echo "KUBERNETES_CLUSTER_NAME=$(printf "kic-%s" $(openssl rand -hex 12))" >> $GITHUB_ENV
+      - name: Deploy ${{ env.KUBERNETES_CLUSTER_NAME }} GKE cluster ${{ matrix.kubernetes-version }}
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}
+          GOOGLE_PROJECT: ${{ secrets.GOOGLE_PROJECT }}
+          GOOGLE_LOCATION: ${{ secrets.GOOGLE_LOCATION }}
+          KONG_CLUSTER_VERSION: ${{ matrix.kubernetes-version }}
+          KUBERNETES_CLUSTER_NAME : ${{ env.KUBERNETES_CLUSTER_NAME }}
+        run: go run hack/e2e/cluster/deploy/main.go
+      - name: Set cluster name in job outputs
+        id: set_cluster_name
+        run: |
+          echo "name=gke:${{ env.KUBERNETES_CLUSTER_NAME }}" >> $GITHUB_OUTPUT
+          echo "name_raw=${{ env.KUBERNETES_CLUSTER_NAME }}" >> $GITHUB_OUTPUT
+
+  e2e-gke-tests:
+    environment: "gcloud"
+    runs-on: ubuntu-latest
+    needs:
+    - setup-e2e-tests
+    - setup-gke-cluster
+    strategy:
+      fail-fast: false
+      matrix:
+        test: ${{ fromJSON(needs.setup-e2e-tests.outputs.test_names) }}
     steps:
     - name: setup golang
       uses: actions/setup-go@v3
@@ -183,15 +228,16 @@ jobs:
       with:
         password: ${{ secrets.PULP_PASSWORD }}
 
-    - name: run ${{ matrix.kubernetes-version }}
+    - name: run ${{ matrix.test }}
       run: make test.e2e.gke
       env:
         GOOGLE_APPLICATION_CREDENTIALS: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}
         GOOGLE_PROJECT: ${{ secrets.GOOGLE_PROJECT }}
         GOOGLE_LOCATION: ${{ secrets.GOOGLE_LOCATION }}
-        KONG_CLUSTER_VERSION: ${{ matrix.kubernetes-version }}
+        E2E_TEST_RUN: ${{ matrix.test }}
         KONG_LICENSE_DATA: ${{ steps.license.outputs.license }}
-        GOTESTSUM_JUNITFILE: "gke-${{ matrix.kubernetes-version }}-tests.xml"
+        KUBERNETES_CLUSTER_NAME : ${{ needs.setup-gke-cluster.outputs.cluster_name }}
+        GOTESTSUM_JUNITFILE: "gke-${{ matrix.test }}-tests.xml"
 
     - name: upload diagnostics
       if: ${{ always() }}
@@ -205,7 +251,41 @@ jobs:
       uses: actions/upload-artifact@v3
       with:
         name: tests-report
-        path: gke-${{ matrix.kubernetes-version }}-tests.xml
+        path: gke-${{ matrix.name }}-tests.xml
+
+  cleanup-gke-cluster:
+    environment: "gcloud"
+    runs-on: ubuntu-latest
+    if: ${{ always() }}
+    needs:
+    - setup-gke-cluster
+    - e2e-gke-tests
+    steps:
+    - name: setup golang
+      uses: actions/setup-go@v3
+      with:
+        go-version: '^1.19'
+
+    - name: cache go modules
+      uses: actions/cache@v3
+      with:
+        path: ~/go/pkg/mod
+        key: ${{ runner.os }}-build-codegen-${{ hashFiles('**/go.sum') }}
+        restore-keys: |
+          ${{ runner.os }}-build-codegen-
+
+    - name: checkout repository
+      uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+
+    - name: Cleanup ${{ needs.setup-gke-cluster.outputs.cluster_name }} GKE cluster
+      env:
+        GOOGLE_APPLICATION_CREDENTIALS: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}
+        GOOGLE_PROJECT: ${{ secrets.GOOGLE_PROJECT }}
+        GOOGLE_LOCATION: ${{ secrets.GOOGLE_LOCATION }}
+        KUBERNETES_CLUSTER_NAME : ${{ needs.setup-gke-cluster.outputs.cluster_name_raw }}
+      run: go run hack/e2e/cluster/deploy/main.go cleanup
 
   buildpulse-report:
     needs:

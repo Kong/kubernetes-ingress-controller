@@ -233,7 +233,7 @@ func setupDataplaneAddressFinder(
 
 		// UDP. falls back to default if not configured
 		if udpOverrideAddrs := c.PublishStatusAddressUDP; len(udpOverrideAddrs) > 0 {
-			dataplaneAddressFinder.SetUDPOverrides(udpOverrideAddrs)
+			udpDataplaneAddressFinder.SetUDPOverrides(udpOverrideAddrs)
 		} else if c.PublishServiceUDP != "" {
 			parts := strings.Split(c.PublishServiceUDP, "/")
 			if len(parts) != 2 {

@@ -47,14 +47,6 @@ func (a *AddressFinder) SetGetter(getter AddressGetter) {
 	a.addressGetter = getter
 }
 
-// SetUDPGetter provides a callback function that the AddressFinder will use to
-// dynamically retrieve the UDP addresses of the data-plane.
-func (a *AddressFinder) SetUDPGetter(getter AddressGetter) {
-	a.lock.Lock()
-	defer a.lock.Unlock()
-	a.addressGetterUDP = getter
-}
-
 // SetOverrides hard codes a specific list of addresses to be the addresses
 // that this finder produces for the data-plane. To disable overrides, call
 // this method again with an empty list.

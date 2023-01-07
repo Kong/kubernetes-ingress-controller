@@ -102,7 +102,7 @@ func TestUDPAddressFinder(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, overrideAddrs, addrs)
 
-	finder.SetUDPGetter(fakeUDPGetter)
+	finder.SetGetter(fakeUDPGetter)
 	addrs, err = finder.GetUDPAddresses()
 	require.NoError(t, err)
 	require.Equal(t, defaultUDPAddrs, addrs)

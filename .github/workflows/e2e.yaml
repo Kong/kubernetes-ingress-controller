@@ -151,66 +151,9 @@ jobs:
         name: tests-report
         path: istio-${{ matrix.kubernetes-version }}-${{ matrix.istio-version }}-tests.xml
 
-  e2e-gke-tests:
-    environment: "gcloud"
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        kubernetes-version: # the GKE setup script ignores the patch version here and uses the latest, but we still include it for consistency with the other E2E jobs
-          - 'v1.24.7'
-    steps:
-    - name: setup golang
-      uses: actions/setup-go@v3
-      with:
-        go-version: '^1.19'
-
-    - name: cache go modules
-      uses: actions/cache@v3
-      with:
-        path: ~/go/pkg/mod
-        key: ${{ runner.os }}-build-codegen-${{ hashFiles('**/go.sum') }}
-        restore-keys: |
-          ${{ runner.os }}-build-codegen-
-
-    - name: checkout repository
-      uses: actions/checkout@v3
-      with:
-        fetch-depth: 0
-
-    - uses: Kong/kong-license@master
-      id: license
-      with:
-        password: ${{ secrets.PULP_PASSWORD }}
-
-    - name: run ${{ matrix.kubernetes-version }}
-      run: make test.e2e.gke
-      env:
-        GOOGLE_APPLICATION_CREDENTIALS: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}
-        GOOGLE_PROJECT: ${{ secrets.GOOGLE_PROJECT }}
-        GOOGLE_LOCATION: ${{ secrets.GOOGLE_LOCATION }}
-        KONG_CLUSTER_VERSION: ${{ matrix.kubernetes-version }}
-        KONG_LICENSE_DATA: ${{ steps.license.outputs.license }}
-        GOTESTSUM_JUNITFILE: "gke-${{ matrix.kubernetes-version }}-tests.xml"
-
-    - name: upload diagnostics
-      if: ${{ always() }}
-      uses: actions/upload-artifact@v3
-      with:
-        name: diagnostics-e2e-tests
-        path: /tmp/ktf-diag*
-        if-no-files-found: ignore
-    
-    - name: collect test report
-      uses: actions/upload-artifact@v3
-      with:
-        name: tests-report
-        path: gke-${{ matrix.kubernetes-version }}-tests.xml
-
   buildpulse-report:
     needs:
       - "e2e-tests"
-      - "e2e-gke-tests"
       - "istio-tests"
     if: ${{ always() }}
     runs-on: ubuntu-latest

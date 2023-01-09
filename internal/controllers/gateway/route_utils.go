@@ -27,6 +27,13 @@ const (
 	unsupportedGW = "no supported Gateway found for route"
 )
 
+const (
+	ConditionTypeProgrammed                                                = "Programmed"
+	ConditionReasonProgrammedUnknown   gatewayv1beta1.RouteConditionReason = "Unknown"
+	ConditionReasonConfiguredInGateway gatewayv1beta1.RouteConditionReason = "ConfiguredInGateway"
+	ConditionReasonTranslationError    gatewayv1beta1.RouteConditionReason = "TranslationError"
+)
+
 var ErrNoMatchingListenerHostname = fmt.Errorf("no matching hostnames in listener")
 
 // supportedGatewayWithCondition is a struct that wraps a gateway and some further info
@@ -637,4 +644,34 @@ func sameCondition(a, b metav1.Condition) bool {
 		a.Status == b.Status &&
 		a.Reason == b.Reason &&
 		a.Message == b.Message
+}
+
+func setRouteParentStatusCondition(parentStatus *gatewayv1beta1.RouteParentStatus, newCondition metav1.Condition) bool {
+	var conditionFound, changed bool
+	for i, condition := range parentStatus.Conditions {
+		if condition.Type == newCondition.Type {
+			conditionFound = true
+			if condition.Status != newCondition.Status ||
+				condition.Reason != newCondition.Reason ||
+				condition.Message != newCondition.Message {
+				parentStatus.Conditions[i] = newCondition
+				changed = true
+			}
+		}
+	}
+
+	if !conditionFound {
+		parentStatus.Conditions = append(parentStatus.Conditions, newCondition)
+		changed = true
+	}
+	return changed
+}
+
+func parentStatusHasProgrammedCondition(parentStatus *gatewayv1beta1.RouteParentStatus) bool {
+	for _, condition := range parentStatus.Conditions {
+		if condition.Type == ConditionTypeProgrammed {
+			return true
+		}
+	}
+	return false
 }

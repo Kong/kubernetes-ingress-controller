@@ -631,16 +631,11 @@ func isHTTPReferenceGranted(grantSpec gatewayv1alpha2.ReferenceGrantSpec, backen
 	return false
 }
 
-// containsCondition returns true if a condition with same type, status, reason and message
-// of expectedCondition in conditions
-func containsCondition(conditions []metav1.Condition, expectedCondition metav1.Condition) bool {
-	for _, condition := range conditions {
-		if condition.Type == expectedCondition.Type &&
-			condition.Status == expectedCondition.Status &&
-			condition.Reason == expectedCondition.Reason &&
-			condition.Message == expectedCondition.Message {
-			return true
-		}
-	}
-	return false
+// sameCondition returns true if the condition has the same type, status, reason and message
+// with expectedCondition.
+func sameCondition(expectedCondition metav1.Condition, condition metav1.Condition) bool {
+	return condition.Type == expectedCondition.Type &&
+		condition.Status == expectedCondition.Status &&
+		condition.Reason == expectedCondition.Reason &&
+		condition.Message == expectedCondition.Message
 }

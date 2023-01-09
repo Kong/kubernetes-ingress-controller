@@ -7,21 +7,18 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/manager"
 )
 
-var cfg manager.Config
-
-func init() {
-	rootCmd.Flags().AddFlagSet(cfg.FlagSet())
-}
-
-var rootCmd = &cobra.Command{
-	PersistentPreRunE: bindEnvVars,
-	RunE: func(cmd *cobra.Command, args []string) error {
-		return Run(&cfg)
-	},
-	SilenceUsage: true,
-}
-
 // Execute is the entry point to the controller manager.
 func Execute() {
+	var (
+		cfg     manager.Config
+		rootCmd = &cobra.Command{
+			PersistentPreRunE: bindEnvVars,
+			RunE: func(cmd *cobra.Command, args []string) error {
+				return Run(cmd.Context(), &cfg)
+			},
+			SilenceUsage: true,
+		}
+	)
+	rootCmd.Flags().AddFlagSet(cfg.FlagSet())
 	cobra.CheckErr(rootCmd.Execute())
 }

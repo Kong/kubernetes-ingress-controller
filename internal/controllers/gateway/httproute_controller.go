@@ -435,13 +435,10 @@ func (r *HTTPRouteReconciler) ensureGatewayReferenceStatusAdded(ctx context.Cont
 		// if the reference already exists and doesn't require any changes
 		// then just leave it alone.
 		if existingGatewayParentStatus, exists := parentStatuses[key]; exists {
-			// fake the time of the existing status as this wont be equal
-			for i := range existingGatewayParentStatus.Conditions {
-				existingGatewayParentStatus.Conditions[i].LastTransitionTime = gatewayParentStatus.Conditions[0].LastTransitionTime
-			}
-
-			// other than the condition timestamps, check if the statuses are equal
-			if reflect.DeepEqual(existingGatewayParentStatus, gatewayParentStatus) {
+			//  check if the parentRef and controllerName are equal, and expected condition presents in conditions
+			if reflect.DeepEqual(existingGatewayParentStatus.ParentRef, gatewayParentStatus.ParentRef) &&
+				existingGatewayParentStatus.ControllerName == gatewayParentStatus.ControllerName &&
+				containsCondition(existingGatewayParentStatus.Conditions, gatewayParentStatus.Conditions[0]) {
 				continue
 			}
 		}

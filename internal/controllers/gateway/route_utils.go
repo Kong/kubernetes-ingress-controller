@@ -631,11 +631,10 @@ func isHTTPReferenceGranted(grantSpec gatewayv1alpha2.ReferenceGrantSpec, backen
 	return false
 }
 
-// sameCondition returns true if the condition has the same type, status, reason and message
-// with expectedCondition.
-func sameCondition(expectedCondition metav1.Condition, condition metav1.Condition) bool {
-	return condition.Type == expectedCondition.Type &&
-		condition.Status == expectedCondition.Status &&
-		condition.Reason == expectedCondition.Reason &&
-		condition.Message == expectedCondition.Message
+// sameCondition returns true if the conditions in parameter has the same type, status, reason and message.
+func sameCondition(a, b metav1.Condition) bool {
+	return a.Type == b.Type &&
+		a.Status == b.Status &&
+		a.Reason == b.Reason &&
+		a.Message == b.Message
 }

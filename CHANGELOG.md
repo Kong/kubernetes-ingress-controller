@@ -71,6 +71,9 @@ Adding a new version? You'll need three changes:
 
 - Disabled non-functioning mesh reporting when `--watch-namespaces` flag set.
   [#3336](https://github.com/Kong/kubernetes-ingress-controller/pull/3336)
+- Fixed the duplicate update of status of `HTTPRoute` caused by incorrect check
+  of whether status is changed.
+  [#3346](https://github.com/Kong/kubernetes-ingress-controller/pull/3346)
 
 ### Deprecated
 

@@ -152,14 +152,10 @@ func (c *Config) FlagSet() *pflag.FlagSet {
 		"Sets the timeout (in seconds) for all requests to Kong's Admin API.",
 	)
 
-	_ = flagSet.String("kong-custom-entities-secret", "", "Will be removed in next major release.")
-	flagSet.MarkDeprecated("kong-custom-entities-secret", "Will be removed in next major release.") //nolint:errcheck
-
 	// Kubernetes configurations
 	flagSet.StringVar(&c.GatewayAPIControllerName, "gateway-api-controller-name", string(gateway.ControllerName), "The controller name to match on Gateway API resources.")
 	flagSet.StringVar(&c.KubeconfigPath, "kubeconfig", "", "Path to the kubeconfig file.")
 	flagSet.StringVar(&c.IngressClassName, "ingress-class", annotations.DefaultIngressClass, `Name of the ingress class to route through this controller.`)
-	flagSet.BoolVar(&c.EnableLeaderElection, "leader-elect", false, "DEPRECATED as of 2.1.0 leader election behavior is determined automatically and this flag has no effect")
 	flagSet.StringVar(&c.LeaderElectionID, "election-id", "5b374a9e.konghq.com", `Election id to use for status update.`)
 	flagSet.StringVar(&c.LeaderElectionNamespace, "election-namespace", "", `Leader election namespace to use when running outside a cluster`)
 	flagSet.StringSliceVar(&c.FilterTags, "kong-admin-filter-tag", []string{"managed-by-ingress-controller"}, "The tag used to manage and filter entities in Kong. This flag can be specified multiple times to specify multiple tags. This setting will be silently ignored if the Kong instance has no tags support.")
@@ -218,12 +214,22 @@ func (c *Config) FlagSet() *pflag.FlagSet {
 	// SIGTERM or SIGINT signal delay
 	flagSet.DurationVar(&c.TermDelay, "term-delay", time.Second*0, "The time delay to sleep before SIGTERM or SIGINT will shut down the Ingress Controller")
 
-	// Deprecated (to be removed in future releases)
-	flagSet.Float32Var(&c.ProxySyncSeconds, "sync-rate-limit", dataplane.DefaultSyncSeconds,
-		"Define the rate (in seconds) in which configuration updates will be applied to the Kong Admin API (DEPRECATED, use --proxy-sync-seconds instead)",
-	)
-	flagSet.Int("stderrthreshold", 0, "DEPRECATED: has no effect and will be removed in future releases (see github issue #1297)")
-	flagSet.Bool("update-status-on-shutdown", false, `DEPRECATED: no longer has any effect and will be removed in a later release (see github issue #1304)`)
+	// Deprecated flags
+
+	flagSet.Float32Var(&c.ProxySyncSeconds, "sync-rate-limit", dataplane.DefaultSyncSeconds, "Use --proxy-sync-seconds instead")
+	_ = flagSet.MarkDeprecated("sync-rate-limit", "Use --proxy-sync-seconds instead")
+
+	_ = flagSet.Int("stderrthreshold", 0, "Has no effect and will be removed in future releases (see github issue #1297)")
+	_ = flagSet.MarkDeprecated("stderrthreshold", "Has no effect and will be removed in future releases (see github issue #1297)")
+
+	_ = flagSet.Bool("update-status-on-shutdown", false, "No longer has any effect and will be removed in a later release (see github issue #1304)")
+	_ = flagSet.MarkDeprecated("update-status-on-shutdown", "No longer has any effect and will be removed in a later release (see github issue #1304)")
+
+	_ = flagSet.String("kong-custom-entities-secret", "", "Will be removed in next major release.")
+	_ = flagSet.MarkDeprecated("kong-custom-entities-secret", "Will be removed in next major release.")
+
+	flagSet.BoolVar(&c.EnableLeaderElection, "leader-elect", false, "DEPRECATED as of 2.1.0 leader election behavior is determined automatically and this flag has no effect")
+	_ = flagSet.MarkDeprecated("leader-elect", "DEPRECATED as of 2.1.0 leader election behavior is determined automatically and this flag has no effect")
 
 	return flagSet
 }

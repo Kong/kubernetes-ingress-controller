@@ -15,24 +15,17 @@ jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
-
-    - name: Setup go
-      uses: actions/setup-go@v3
-      with:
-        go-version: '^1.19'
-
-    - name: Cache Go modules
-      uses: actions/cache@v3
-      with:
-        path: ~/go/pkg/mod
-        key: ${{ runner.os }}-build-codegen-${{ hashFiles('**/go.sum') }}
-        restore-keys: |
-          ${{ runner.os }}-build-codegen-
-
     - name: Checkout repository
       uses: actions/checkout@v3
       with:
         fetch-depth: 0
+
+    - name: Setup go
+      uses: actions/setup-go@v3
+      with:
+        cache: true
+        cache-dependency-path: go.sum
+        go-version-file: go.mod
 
     - name: Run lint
       run: make lint
@@ -75,24 +68,17 @@ jobs:
   unit-tests:
     runs-on: ubuntu-latest
     steps:
-
-    - name: setup golang
-      uses: actions/setup-go@v3
-      with:
-        go-version: '^1.19'
-
-    - name: cache go modules
-      uses: actions/cache@v3
-      with:
-        path: ~/go/pkg/mod
-        key: ${{ runner.os }}-build-codegen-${{ hashFiles('**/go.sum') }}
-        restore-keys: |
-          ${{ runner.os }}-build-codegen-
-
     - name: checkout repository
       uses: actions/checkout@v3
       with:
         fetch-depth: 0
+
+    - name: Setup go
+      uses: actions/setup-go@v3
+      with:
+        cache: true
+        cache-dependency-path: go.sum
+        go-version-file: go.mod
 
     - name: run unit tests
       run: make test.unit
@@ -132,20 +118,18 @@ jobs:
       with:
         password: ${{ env.PULP_PASSWORD }}
 
-    - name: setup golang
+    - name: checkout repository
+      uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+
+    - name: Setup go
       if: env.PULP_PASSWORD != ''
       uses: actions/setup-go@v3
       with:
-        go-version: '^1.19'
-
-    - name: cache go modules
-      if: env.PULP_PASSWORD != ''
-      uses: actions/cache@v3
-      with:
-        path: ~/go/pkg/mod
-        key: ${{ runner.os }}-build-codegen-${{ hashFiles('**/go.sum') }}
-        restore-keys: |
-          ${{ runner.os }}-build-codegen-
+        cache: true
+        cache-dependency-path: go.sum
+        go-version-file: go.mod
 
     - name: checkout repository
       if: env.PULP_PASSWORD != ''
@@ -186,19 +170,17 @@ jobs:
   integration-tests-dbless:
     runs-on: ubuntu-latest
     steps:
+    - name: checkout repository
+      uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
 
-    - name: setup golang
+    - name: Setup go
       uses: actions/setup-go@v3
       with:
-        go-version: '^1.19'
-
-    - name: cache go modules
-      uses: actions/cache@v3
-      with:
-        path: ~/go/pkg/mod
-        key: ${{ runner.os }}-build-codegen-${{ hashFiles('**/go.sum') }}
-        restore-keys: |
-          ${{ runner.os }}-build-codegen-
+        cache: true
+        cache-dependency-path: go.sum
+        go-version-file: go.mod
 
     - name: checkout repository
       uses: actions/checkout@v3
@@ -235,24 +217,17 @@ jobs:
   integration-tests-postgres:
     runs-on: ubuntu-latest
     steps:
-
-    - name: setup golang
-      uses: actions/setup-go@v3
-      with:
-        go-version: '^1.19'
-
-    - name: cache go modules
-      uses: actions/cache@v3
-      with:
-        path: ~/go/pkg/mod
-        key: ${{ runner.os }}-build-codegen-${{ hashFiles('**/go.sum') }}
-        restore-keys: |
-          ${{ runner.os }}-build-codegen-
-
     - name: checkout repository
       uses: actions/checkout@v3
       with:
         fetch-depth: 0
+
+    - name: Setup go
+      uses: actions/setup-go@v3
+      with:
+        cache: true
+        cache-dependency-path: go.sum
+        go-version-file: go.mod
 
     - name: run integration tests
       run: make test.integration.postgres
@@ -284,24 +259,17 @@ jobs:
   integration-tests-feature-gates:
     runs-on: ubuntu-latest
     steps:
-
-    - name: setup golang
-      uses: actions/setup-go@v3
-      with:
-        go-version: '^1.19'
-
-    - name: cache go modules
-      uses: actions/cache@v3
-      with:
-        path: ~/go/pkg/mod
-        key: ${{ runner.os }}-build-codegen-${{ hashFiles('**/go.sum') }}
-        restore-keys: |
-          ${{ runner.os }}-build-codegen-
-
     - name: checkout repository
       uses: actions/checkout@v3
       with:
         fetch-depth: 0
+
+    - name: Setup go
+      uses: actions/setup-go@v3
+      with:
+        cache: true
+        cache-dependency-path: go.sum
+        go-version-file: go.mod
 
     - name: run integration tests
       run: make test.integration.dbless
@@ -334,24 +302,17 @@ jobs:
   conformance-tests:
     runs-on: ubuntu-latest
     steps:
-
-    - name: setup golang
-      uses: actions/setup-go@v3
-      with:
-        go-version: '^1.19'
-
-    - name: cache go modules
-      uses: actions/cache@v3
-      with:
-        path: ~/go/pkg/mod
-        key: ${{ runner.os }}-build-codegen-${{ hashFiles('**/go.sum') }}
-        restore-keys: |
-          ${{ runner.os }}-build-codegen-
-
     - name: checkout repository
       uses: actions/checkout@v3
       with:
         fetch-depth: 0
+
+    - name: Setup go
+      uses: actions/setup-go@v3
+      with:
+        cache: true
+        cache-dependency-path: go.sum
+        go-version-file: go.mod
 
     - name: run conformance tests
       run: make test.conformance

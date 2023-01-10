@@ -1338,6 +1338,14 @@ rules:
   - patch
   - update
 - apiGroups:
+  - discovery.k8s.io
+  resources:
+  - endpointslices
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
   - extensions
   resources:
   - ingresses
@@ -1650,12 +1658,8 @@ spec:
       automountServiceAccountToken: false
       containers:
       - env:
-        - name: CONTROLLER_LOG_LEVEL
-          value: debug
         - name: CONTROLLER_KONG_ADMIN_SVC
           value: kong/kong-admin
-        - name: CONTROLLER_KONG_ADMIN_URL
-          value: https://127.0.0.1:8444
         - name: CONTROLLER_KONG_ADMIN_TLS_SKIP_VERIFY
           value: "true"
         - name: CONTROLLER_PUBLISH_SERVICE
@@ -1670,7 +1674,7 @@ spec:
             fieldRef:
               apiVersion: v1
               fieldPath: metadata.namespace
-        image: kic-placeholder:placeholder
+        image: kong/kubernetes-ingress-controller:2.8.1
         imagePullPolicy: IfNotPresent
         livenessProbe:
           failureThreshold: 3

@@ -6,12 +6,14 @@ package e2e
 import (
 	"context"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
 	"testing"
 	"time"
 
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/kong"
+	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -376,4 +378,52 @@ func TestDeployAllInOneEnterprisePostgres(t *testing.T) {
 	t.Log("this deployment used enterprise kong, verifying that enterprise functionality was set up properly")
 	verifyEnterprise(ctx, t, env, adminPassword)
 	verifyEnterpriseWithPostgres(ctx, t, env, adminPassword)
+}
+
+func TestDeployAllInOneDBLESSMultiGW(t *testing.T) {
+	t.Parallel()
+
+	const (
+		manifestFileName = "all-in-one-dbless-multi-gw.yaml"
+		manifestFilePath = "../../deploy/single/" + manifestFileName
+	)
+
+	t.Logf("configuring %s manifest test", manifestFileName)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	t.Log("building test cluster and environment")
+	builder, err := getEnvironmentBuilder(ctx)
+	require.NoError(t, err)
+	env, err := builder.Build(ctx)
+	require.NoError(t, err)
+
+	defer func() {
+		helpers.TeardownCluster(ctx, t, env.Cluster())
+	}()
+
+	t.Log("deploying kong components")
+	f, err := os.Open(manifestFilePath)
+	require.NoError(t, err)
+	defer f.Close()
+	var manifest io.Reader = f
+
+	manifest, err = patchControllerImageHelper(manifest, manifestFilePath)
+	require.NoError(t, err)
+	deployment := deployKong(ctx, t, env, manifest)
+
+	t.Log("running ingress tests to verify all-in-one deployed ingress controller and proxy are functional")
+	deployIngress(ctx, t, env)
+	verifyIngress(ctx, t, env)
+
+	gatewayDeployment, err := env.Cluster().Client().AppsV1().Deployments(deployment.Namespace).Get(ctx, "proxy-kong", metav1.GetOptions{})
+	require.NoError(t, err)
+	gatewayDeployment.Spec.Replicas = lo.ToPtr(int32(3))
+	_, err = env.Cluster().Client().AppsV1().Deployments(deployment.Namespace).Update(ctx, gatewayDeployment, metav1.UpdateOptions{})
+	require.NoError(t, err)
+
+	t.Log("confirming that routes are stil served after scaling out")
+	verifyIngress(ctx, t, env)
+	verifyIngress(ctx, t, env)
+	verifyIngress(ctx, t, env)
 }

@@ -108,32 +108,19 @@ func exposeAdminAPI(ctx context.Context, t *testing.T, env environments.Environm
 // returns the modified manifest path. If there is any issue patching the manifest, it will log the issue and return
 // the original provided path.
 func getTestManifest(t *testing.T, baseManifestPath string) (io.Reader, error) {
-	var manifestsReader io.Reader
-	manifestsReader, err := os.Open(baseManifestPath)
+	var (
+		manifestsReader io.Reader
+		err             error
+	)
+	manifestsReader, err = os.Open(baseManifestPath)
 	if err != nil {
 		return nil, err
 	}
 
-	var imageFullname string
-	if imageLoad != "" {
-		imageFullname = imageLoad
-	} else {
-		imageFullname = imageOverride
-	}
-
-	if imageFullname != "" {
-		split := strings.Split(imageFullname, ":")
-		if len(split) < 2 {
-			t.Logf("could not parse override image '%v', using default manifest %v", imageFullname, baseManifestPath)
-			return manifestsReader, nil
-		}
-		repo := strings.Join(split[0:len(split)-1], ":")
-		tag := split[len(split)-1]
-		manifestsReader, err = patchControllerImage(manifestsReader, repo, tag)
-		if err != nil {
-			t.Logf("failed patching override image '%v' (%v), using default manifest %v", imageFullname, err, baseManifestPath)
-			return manifestsReader, nil
-		}
+	manifestsReader, err = patchControllerImageHelper(manifestsReader, baseManifestPath)
+	if err != nil {
+		t.Logf("failed patching controller image (%v), using default manifest %v", err, baseManifestPath)
+		return manifestsReader, nil
 	}
 
 	var kongImageFullname string
@@ -178,6 +165,30 @@ func getTestManifest(t *testing.T, baseManifestPath string) (io.Reader, error) {
 
 	t.Logf("generated modified manifest at %v", baseManifestPath)
 	return manifestsReader, nil
+}
+
+func patchControllerImageHelper(manifestReader io.Reader, baseManifestPath string) (io.Reader, error) {
+	var imageFullname string
+	if imageLoad != "" {
+		imageFullname = imageLoad
+	} else {
+		imageFullname = imageOverride
+	}
+
+	if imageFullname != "" {
+		split := strings.Split(imageFullname, ":")
+		if len(split) < 2 {
+			return manifestReader, fmt.Errorf("could not parse override image '%v', using default manifest %v", imageFullname, baseManifestPath)
+		}
+		repo := strings.Join(split[0:len(split)-1], ":")
+		tag := split[len(split)-1]
+		var err error
+		manifestReader, err = patchControllerImage(manifestReader, repo, tag)
+		if err != nil {
+			return manifestReader, fmt.Errorf("failed patching override image '%v' (%w), using default manifest %v", imageFullname, err, baseManifestPath)
+		}
+	}
+	return manifestReader, nil
 }
 
 func getCurrentGitTag(path string) (semver.Version, error) {
@@ -260,6 +271,8 @@ func getKongProxyLoadBalancerIP(t *testing.T, refreshSvc func() *corev1.Service)
 }
 
 func getKongProxyNodePortIP(ctx context.Context, t *testing.T, env environments.Environment, svc *corev1.Service) string {
+	t.Helper()
+
 	var port corev1.ServicePort
 	for _, sport := range svc.Spec.Ports {
 		if sport.Name == "kong-proxy" || sport.Name == "proxy" {

@@ -190,6 +190,10 @@ jobs:
           - 'traditional'
           - 'traditional_compatible'
     steps:
+      - name: checkout repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
       - name: setup golang
         uses: actions/setup-go@v3
         with:
@@ -201,10 +205,6 @@ jobs:
           key: ${{ runner.os }}-build-codegen-${{ hashFiles('**/go.sum') }}
           restore-keys: |
             ${{ runner.os }}-build-codegen-
-      - name: checkout repository
-        uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
       - name: Kubernetes ${{ matrix.kubernetes-version }} ${{ matrix.dbmode }} Integration Tests With ${{ matrix.kong-router-flavor }} Kong Router
         run: KONG_CLUSTER_VERSION=${{ matrix.kubernetes-version }} make test.integration.${{ matrix.dbmode }}
         env:

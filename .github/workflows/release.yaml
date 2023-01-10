@@ -209,6 +209,10 @@ jobs:
     runs-on: ubuntu-latest
     needs: build-push-images
     steps:
+      - name: checkout repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
       - name: setup golang
         uses: actions/setup-go@v3
         with:
@@ -220,10 +224,6 @@ jobs:
           key: ${{ runner.os }}-build-codegen-${{ hashFiles('**/go.sum') }}
           restore-keys: |
             ${{ runner.os }}-build-codegen-
-      - name: checkout repository
-        uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
       - uses: Kong/kong-license@master
         id: license
         with:
@@ -257,6 +257,10 @@ jobs:
           - 'v1.24.2'
           - 'v1.25.3'
     steps:
+      - name: checkout repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
       - name: setup golang
         uses: actions/setup-go@v3
         with:
@@ -268,10 +272,6 @@ jobs:
           key: ${{ runner.os }}-build-codegen-${{ hashFiles('**/go.sum') }}
           restore-keys: |
             ${{ runner.os }}-build-codegen-
-      - name: checkout repository
-        uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
       - uses: Kong/kong-license@master
         id: license
         with:

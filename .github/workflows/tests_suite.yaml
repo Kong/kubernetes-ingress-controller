@@ -1,0 +1,193 @@
+name: e2e tests (targeted)
+
+on:
+  workflow_call:
+    inputs:
+      run-unit:
+        type: boolean
+        default: true
+      run-integration:
+        type: boolean
+        default: true
+      run-conformance:
+        type: boolean
+        default: true
+      run-e2e:
+        type: boolean
+        default: false
+      e2e-only-latest-k8s:
+        type: boolean
+        default: true
+
+jobs:
+  unit-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: setup golang
+        uses: actions/setup-go@v3
+        with:
+          go-version: '^1.19'
+      - name: cache go modules
+        uses: actions/cache@v3
+        with:
+          path: ~/go/pkg/mod
+          key: ${{ runner.os }}-build-codegen-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-build-codegen-
+      - name: checkout repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - name: run unit tests
+        run: make test.unit
+        env:
+          GOTESTSUM_JUNITFILE: "unit-tests.xml"
+      - name: collect test coverage
+        uses: actions/upload-artifact@v3
+        with:
+          name: coverage
+          path: coverage.unit.out
+      - name: collect test report
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v3
+        with:
+          name: tests-report
+          path: unit-tests.xml
+
+  integration-tests:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - dbmode: on
+          - dbmode: on
+            enterprise: true
+          - dbmode: off
+          - dbmode: off
+            feature-gates: "GatewayAlpha=true,CombinedRoutes=false"
+    steps:
+      - name: generate unique job id
+        id: gen-job-uuid
+        run: echo "JOB_UUID=integration-tests-$(uuidgen)" >> $GITHUB_OUTPUT
+      - name: setup golang
+        uses: actions/setup-go@v3
+        with:
+          go-version: '^1.19'
+      - name: cache go modules
+        uses: actions/cache@v3
+        with:
+          path: ~/go/pkg/mod
+          key: ${{ runner.os }}-build-codegen-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-build-codegen-
+      - name: checkout repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - name: run integration tests
+        run: make test.integration
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GOTESTSUM_JUNITFILE: "${{ steps.gen-job-uuid.outputs.JOB_UUID }}.xml"
+          COVERAGE_OUT: "coverage.${{ steps.gen-job-uuid.outputs.JOB_UUID }}.out"
+      - name: collect test coverage
+        uses: actions/upload-artifact@v3
+        with:
+          name: coverage
+          path: "coverage.${{ steps.gen-job-uuid.outputs.JOB_UUID }}.out"
+      - name: upload diagnostics
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v3
+        with:
+          name: "diagnostics-${{ steps.gen-job-uuid.outputs.JOB_UUID }}"
+          path: /tmp/ktf-diag*
+          if-no-files-found: ignore
+      - name: collect test report
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v3
+        with:
+          name: tests-report
+          path: "${{ steps.gen-job-uuid.outputs.JOB_UUID }}.xml".xml
+
+  conformance-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: setup golang
+        uses: actions/setup-go@v3
+        with:
+          go-version: '^1.19'
+      - name: cache go modules
+        uses: actions/cache@v3
+        with:
+          path: ~/go/pkg/mod
+          key: ${{ runner.os }}-build-codegen-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-build-codegen-
+      - name: checkout repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - name: run conformance tests
+        run: make test.conformance
+        env:
+          GOTESTSUM_JUNITFILE: "conformance-tests.xml"
+      - name: collect test report
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v3
+        with:
+          name: tests-report
+          path: conformance-tests.xml
+
+  coverage:
+    needs:
+      - "unit-tests"
+      - "integration-tests"
+      - "conformance-tests"
+    runs-on: ubuntu-latest
+    steps:
+    - name: checkout repository
+      uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+    - name: collect test coverage artifacts
+      id: download-coverage
+      uses: actions/download-artifact@v3
+      with:
+        name: coverage
+        path: coverage
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v3
+      with:
+        name: combined-coverage
+        token: ${{ secrets.CODECOV_TOKEN }}
+        directory: ${{ steps.download-coverage.outputs.download-path }}
+        fail_ci_if_error: true
+        verbose: true
+
+  buildpulse-report:
+    needs:
+      - "unit-tests"
+      - "integration-tests"
+      - "conformance-tests"
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - name: download tests report
+        id: download-coverage
+        uses: actions/download-artifact@v3
+        with:
+          name: tests-report
+          path: report
+      - name: Upload test results to BuildPulse for flaky test detection
+        if: ${{ !cancelled() }}
+        uses: Workshop64/buildpulse-action@a0e683af4e5070c379e9801ee9b33792ff414936
+        with:
+          account: 962416
+          repository: 127765544
+          path: report/*.xml
+          key: ${{ secrets.BUILDPULSE_ACCESS_KEY_ID }}
+          secret: ${{ secrets.BUILDPULSE_SECRET_ACCESS_KEY }}

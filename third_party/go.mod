@@ -7,6 +7,7 @@ require (
 	github.com/go-delve/delve v1.20.1
 	github.com/golangci/golangci-lint v1.50.1
 	gotest.tools/gotestsum v1.8.2
+	honnef.co/go/tools v0.3.3
 	k8s.io/code-generator v0.26.0
 	sigs.k8s.io/controller-tools v0.11.1
 	sigs.k8s.io/kustomize/kustomize/v4 v4.5.7
@@ -220,7 +221,6 @@ require (
 	gopkg.in/ini.v1 v1.67.0 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
-	honnef.co/go/tools v0.3.3 // indirect
 	k8s.io/api v0.26.0 // indirect
 	k8s.io/apiextensions-apiserver v0.26.0 // indirect
 	k8s.io/apimachinery v0.26.0 // indirect

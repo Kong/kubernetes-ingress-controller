@@ -85,6 +85,11 @@ ifeq ($(wildcard $(SKAFFOLD)),)
 	@mv skaffold ./bin/
 endif
 
+STATICCHECK = $(PROJECT_DIR)/bin/staticcheck
+.PHONY: staticcheck
+staticcheck.download: ## Download staticcheck locally if necessary.
+	@$(MAKE) _download_tool TOOL=staticcheck
+
 # ------------------------------------------------------------------------------
 # Build
 # ------------------------------------------------------------------------------
@@ -114,8 +119,14 @@ vet:
 	go vet ./...
 
 .PHONY: lint
-lint: verify.tidy golangci-lint
+lint: verify.tidy golangci-lint staticcheck
 	$(GOLANGCI_LINT) run -v
+
+.PHONY: staticcheck
+staticcheck: staticcheck.download
+	$(STATICCHECK) -tags e2e_tests,integration_tests,istio_tests,conformance_tests \
+		-f stylish \
+		./...
 
 .PHONY: verify.tidy
 verify.tidy:

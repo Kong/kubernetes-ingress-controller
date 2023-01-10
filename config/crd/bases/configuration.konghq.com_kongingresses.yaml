@@ -132,6 +132,8 @@ spec:
                   allow. Deprecated: use Ingress'' "konghq.com/protocols" annotation
                   instead.'
                 items:
+                  description: KongProtocol is a valid Kong protocol This alias is
+                    necessary to deal with https://github.com/kubernetes-sigs/controller-tools/issues/342
                   enum:
                   - http
                   - https

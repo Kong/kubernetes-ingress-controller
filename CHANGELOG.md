@@ -69,13 +69,18 @@ Adding a new version? You'll need three changes:
 
 ### Added
 
-- Store status of whether configuration succedded or failed for Kubernetes 
+- Store status of whether configuration succedded or failed for Kubernetes
   objects in dataplane client and publish the events to let controllers know
-  if the controlled objects succeeded or failed to be translated to Kong 
+  if the controlled objects succeeded or failed to be translated to Kong
   configuration.
-  [#3359](https://github.com/Kong/kubernetes-ingress-controller/pull/3359)  
+  [#3359](https://github.com/Kong/kubernetes-ingress-controller/pull/3359)
 - Added `version` command
-  [#3379](https://github.com/Kong/kubernetes-ingress-controller/pull/3379)  
+  [#3379](https://github.com/Kong/kubernetes-ingress-controller/pull/3379)
+- Added possibility to configure multiple Kong Gateways through the
+  `--kong-admin-url` CLI flag (which can be specified multiple times) or through
+  a corresponding environment variable `CONTROLLER_KONG_ADMIN_URL` (which can
+  specify multiple values separated by a comma).
+  [#3268](https://github.com/Kong/kubernetes-ingress-controller/pull/3268)
 
 ### Fixed
 

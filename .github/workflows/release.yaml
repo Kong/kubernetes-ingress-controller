@@ -217,7 +217,6 @@ jobs:
           - 'v1.23.6'
           - 'v1.24.2'
           - 'v1.25.3'
-          - 'v1.26.0'
     steps:
       - name: setup golang
         uses: actions/setup-go@v3

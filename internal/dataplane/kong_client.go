@@ -125,6 +125,14 @@ type KongClient struct {
 
 	// SHAs is a slice is configuration hashes send in last batch send.
 	SHAs []string
+
+	// TODO xxx: change this
+	kongClientCreator func(ctx context.Context, addr string) (*kong.Client, error)
+
+	notifyChan chan []string
+	// TODO xxx
+	close     chan struct{}
+	onceClose sync.Once
 }
 
 // NewKongClient provides a new KongClient object after connecting to the
@@ -140,6 +148,7 @@ func NewKongClient(
 	kongConfig sendconfig.Kong,
 	eventRecorder record.EventRecorder,
 	dbMode string,
+	kongClientCreator func(ctx context.Context, addr string) (*kong.Client, error),
 ) (*KongClient, error) {
 	// build the client object
 	cache := store.NewCacheStores()
@@ -155,7 +164,12 @@ func NewKongClient(
 		kongConfig:         kongConfig,
 		eventRecorder:      eventRecorder,
 		dbmode:             dbMode,
+		kongClientCreator:  kongClientCreator,
+		notifyChan:         make(chan []string),
+		close:              make(chan struct{}),
 	}
+
+	go c.notifyLoop(ctx)
 
 	return c, nil
 }
@@ -368,6 +382,14 @@ func (c *KongClient) DBMode() string {
 	return c.dbmode
 }
 
+// Shutdown shuts down the internal loops and synchronization workers.
+func (c *KongClient) Shutdown(ctx context.Context) error {
+	c.onceClose.Do(func() {
+		close(c.close)
+	})
+	return nil
+}
+
 // Update parses the Cache present in the client and converts current
 // Kubernetes state into Kong objects and state, and then ships the
 // resulting configuration to the data-plane (Kong Admin API).
@@ -543,6 +565,91 @@ func (c *KongClient) sendToClient(
 	client.SetLastConfigSHA(newConfigSHA)
 
 	return string(newConfigSHA), nil
+}
+
+// notifyLoop is an inner loop listening on notifyChan which are received via
+// Notify() calls. Each time it receives on notifyChan tt will take the provided
+// list of addresses and update the internally held list of clients such that:
+//   - the internal list of kong clients contains only the provided addresses
+//   - if a client for a provided address already exists it's not recreated again
+//     (hence no external calls are made to check the provided endpoint if there
+//     exists a client already using it)
+//   - client that do not exist in the provided address list are removed if they
+//     are present in the current state
+//
+// This function whill acquire the internal lock to prevent the modification of
+// internal clients list.
+func (c *KongClient) notifyLoop(ctx context.Context) {
+	for {
+		select {
+		case <-c.close:
+			c.notifyChan = nil
+			return
+
+		case addresses := <-c.notifyChan:
+			c.lock.Lock()
+
+			toAdd := lo.Filter(addresses, func(addr string, _ int) bool {
+				// If we already have a client with a provided address then great, no need
+				// to do anything.
+
+				// If we don't have a client with new address then filter it and add
+				// a client for this address.
+				return !lo.ContainsBy(c.kongConfig.Clients, func(cl sendconfig.ClientWithPluginStore) bool {
+					return addr == cl.BaseRootURL()
+				})
+			})
+
+			var idxToRemove []int
+			for i, cl := range c.kongConfig.Clients {
+				// If the new address set contains a client that we already have then
+				// good, no need to do anything for it.
+				if lo.Contains(addresses, cl.BaseRootURL()) {
+					continue
+				}
+				// If the new address set does not contain an address that we already
+				// have then remove it.
+				idxToRemove = append(idxToRemove, i)
+			}
+
+			for i := len(idxToRemove) - 1; i >= 0; i-- {
+				idx := idxToRemove[i]
+				c.kongConfig.Clients = append(c.kongConfig.Clients[:idx], c.kongConfig.Clients[idx+1:]...)
+			}
+
+			for _, addr := range toAdd {
+				client, err := c.kongClientCreator(ctx, addr)
+				if err != nil {
+					c.logger.WithError(err).Errorf("failed to create a client for %s", addr)
+					continue
+				}
+				c.kongConfig.Clients = append(c.kongConfig.Clients, sendconfig.ClientWithPluginStore{
+					Client:            client,
+					PluginSchemaStore: util.NewPluginSchemaStore(client),
+				})
+			}
+
+			c.lock.Unlock()
+		}
+	}
+}
+
+// Notify receives a list of addresses that KongClient should use from now on as
+// a list of Kong Admin API endpoints.
+func (c *KongClient) Notify(addresses []string) {
+	// Ensure here that we're not closed.
+	select {
+	case <-c.close:
+		return
+	default:
+	}
+
+	// And here also listen on c.close to allow the notification to be interrupted
+	// by Shutdown().
+	select {
+	case <-c.close:
+	case c.notifyChan <- addresses:
+	}
 }
 
 // -----------------------------------------------------------------------------

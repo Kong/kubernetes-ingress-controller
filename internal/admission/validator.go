@@ -314,7 +314,7 @@ func (validator KongHTTPValidator) ValidateGateway(
 
 	// validate whether the gatewayclass is a supported class, if not
 	// then this gateway belongs to another controller.
-	if gwc.Spec.ControllerName != gatewaycontroller.ControllerName {
+	if gwc.Spec.ControllerName != gatewaycontroller.GetControllerName() {
 		return true, "", nil
 	}
 
@@ -352,7 +352,7 @@ func (validator KongHTTPValidator) ValidateHTTPRoute(
 		}
 
 		// determine ultimately whether the Gateway is managed by this controller implementation
-		if string(gatewayClass.Spec.ControllerName) == string(gatewaycontroller.ControllerName) {
+		if string(gatewayClass.Spec.ControllerName) == string(gatewaycontroller.GetControllerName()) {
 			managedGateways = append(managedGateways, &gateway)
 		}
 	}

@@ -6,8 +6,13 @@ import (
 	"regexp"
 	"time"
 
+	"github.com/avast/retry-go/v4"
 	"github.com/kong/go-kong/kong"
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/pflag"
+	discoveryv1 "k8s.io/api/discovery/v1"
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
@@ -17,6 +22,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/adminapi"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/admission"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/configuration"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/gateway"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane"
 )
@@ -52,7 +58,8 @@ type Config struct {
 	APIServerBurst      int
 	MetricsAddr         string
 	ProbeAddr           string
-	KongAdminURL        []string
+	KongAdminURLs       []string
+	KongAdminSvc        types.NamespacedName
 	ProxySyncSeconds    float32
 	ProxyTimeoutSeconds float32
 
@@ -115,6 +122,11 @@ type Config struct {
 // Validate validates the config. It should be used to validate the config variables' interdependencies.
 // When a single variable is to be validated, NewValidatedValue should be used.
 func (c *Config) Validate() error {
+	// TODO xxx: leave this out to allow debugging before this is complete
+	// if c.flagSet.Changed("kong-admin-svc") && c.flagSet.Changed("kong-admin-url") {
+	// 	return fmt.Errorf("can't set both kong-admin-svc and kong-admin-url")
+	// }
+
 	return nil
 }
 
@@ -155,9 +167,13 @@ func (c *Config) FlagSet() *pflag.FlagSet {
 	flagSet.IntVar(&c.APIServerBurst, "apiserver-burst", 300, "The Kubernetes API RateLimiter maximum burst queries per second")
 	flagSet.StringVar(&c.MetricsAddr, "metrics-bind-address", fmt.Sprintf(":%v", MetricsPort), "The address the metric endpoint binds to.")
 	flagSet.StringVar(&c.ProbeAddr, "health-probe-bind-address", fmt.Sprintf(":%v", HealthzPort), "The address the probe endpoint binds to.")
-	flagSet.StringSliceVar(&c.KongAdminURL, "kong-admin-url", []string{"http://localhost:8001"},
+	flagSet.StringSliceVar(&c.KongAdminURLs, "kong-admin-url", []string{"http://localhost:8001"},
 		`Kong Admin URL(s) to connect to in the format "protocol://address:port". `+
 			`More than 1 URL can be provided, in such case the flag should be used multiple times or a corresponding env variable should use comma delimited addresses.`)
+	flagSet.Var(NewValidatedValue(&c.KongAdminSvc, namespacedNameFromFlagValue), "kong-admin-svc",
+		// TODO xxx
+		`Kong Admin Service name to use for Kong Gateway service discovery. Namespaced name can be specified as namespace_name/service_name. Otherwise just use the Service name.`)
+
 	flagSet.Float32Var(&c.ProxySyncSeconds, "proxy-sync-seconds", dataplane.DefaultSyncSeconds,
 		"Define the rate (in seconds) in which configuration updates will be applied to the Kong Admin API.",
 	)
@@ -166,7 +182,7 @@ func (c *Config) FlagSet() *pflag.FlagSet {
 	)
 
 	// Kubernetes configurations
-	flagSet.Var(NewValidatedValueWithDefault(&c.GatewayAPIControllerName, gatewayAPIControllerNameFromFlagValue, string(gateway.ControllerName)), "gateway-api-controller-name", "The controller name to match on Gateway API resources.")
+	flagSet.Var(NewValidatedValueWithDefault(&c.GatewayAPIControllerName, gatewayAPIControllerNameFromFlagValue, string(gateway.GetControllerName())), "gateway-api-controller-name", "The controller name to match on Gateway API resources.")
 	flagSet.StringVar(&c.KubeconfigPath, "kubeconfig", "", "Path to the kubeconfig file.")
 	flagSet.StringVar(&c.IngressClassName, "ingress-class", annotations.DefaultIngressClass, `Name of the ingress class to route through this controller.`)
 	flagSet.StringVar(&c.LeaderElectionID, "election-id", "5b374a9e.konghq.com", `Election id to use for status update.`)
@@ -174,7 +190,8 @@ func (c *Config) FlagSet() *pflag.FlagSet {
 	flagSet.StringSliceVar(&c.FilterTags, "kong-admin-filter-tag", []string{"managed-by-ingress-controller"}, "The tag used to manage and filter entities in Kong. This flag can be specified multiple times to specify multiple tags. This setting will be silently ignored if the Kong instance has no tags support.")
 	flagSet.IntVar(&c.Concurrency, "kong-admin-concurrency", 10, "Max number of concurrent requests sent to Kong's Admin API.")
 	flagSet.StringSliceVar(&c.WatchNamespaces, "watch-namespace", nil,
-		`Namespace(s) to watch for Kubernetes resources. Defaults to all namespaces. To watch multiple namespaces, use a comma-separated list of namespaces.`)
+		`Namespace(s) to watch for Kubernetes resources. Defaults to all namespaces.`+
+			`To watch multiple namespaces, use a comma-separated list of namespaces.`)
 
 	// Ingress status
 	flagSet.Var(NewValidatedValue(&c.PublishService, namespacedNameFromFlagValue), "publish-service",
@@ -252,25 +269,103 @@ func (c *Config) FlagSet() *pflag.FlagSet {
 	return flagSet
 }
 
-// getKongClients returns the kong clients given the provided urls, workspace name
-// and adminAPIConfig.
-func getKongClients(
-	ctx context.Context, urls []string, workspace string, adminAPIConfig adminapi.HTTPClientOpts,
+// getKongClients returns the kong clients given the config.
+func (c *Config) getKongClients(
+	ctx context.Context,
 ) ([]*kong.Client, error) {
-	httpclient, err := adminapi.MakeHTTPClient(&adminAPIConfig)
+	if c.KongAdminToken != "" {
+		c.KongAdminAPIConfig.Headers = append(c.KongAdminAPIConfig.Headers, "kong-admin-token:"+c.KongAdminToken)
+	}
+	httpclient, err := adminapi.MakeHTTPClient(&c.KongAdminAPIConfig)
 	if err != nil {
 		return nil, err
 	}
 
-	clients := make([]*kong.Client, 0, len(urls))
-	for _, url := range urls {
-		client, err := adminapi.GetKongClientForWorkspace(ctx, url, workspace, httpclient)
+	var addresses []string
+
+	// If kong-admin-svc flag has been specified then use it to get the list
+	// of Kong Admin API endpoints.
+	if c.KongAdminSvc.Name != "" {
+		kubeClient, err := c.GetKubeClient()
+		if err != nil {
+			return nil, err
+		}
+
+		// Retry this as we may either encounter an error of get 0 addresses,
+		// which can mean that Kong instances meant to be configured by this controller
+		// are not yet ready.
+		// If we end up in a situation where none of them are ready then bail
+		// because we have more code that relies on the configuration of Kong
+		// instance and without an address there's no way to initialize the
+		// configuration validation and sending code.
+		err = retry.Do(func() error {
+			var err error
+			addresses, err = GetEndpointslicesForService(ctx, kubeClient, c.KongAdminSvc)
+			if err != nil {
+				return err
+			}
+			if len(addresses) == 0 {
+				return fmt.Errorf("no endpoints for kong admin service: %q", c.KongAdminSvc)
+			}
+			return nil
+		},
+			retry.Attempts(60),
+			retry.DelayType(retry.FixedDelay),
+			retry.Delay(time.Second),
+			retry.OnRetry(func(_ uint, err error) {
+				logrus.New().WithError(err).Error("failed to create kong client(s)")
+			}),
+		)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		addresses = c.KongAdminURLs
+	}
+
+	clients := make([]*kong.Client, 0, len(c.KongAdminURLs))
+	for _, address := range addresses {
+		client, err := adminapi.GetKongClientForWorkspace(ctx, address, c.KongWorkspace, httpclient)
 		if err != nil {
 			return nil, err
 		}
 		clients = append(clients, client)
 	}
 	return clients, nil
+}
+
+// GetEndpointslicesForService performs an endpoint lookup, using provided kubeClient
+// to list provided service's endpointslices.
+func GetEndpointslicesForService(ctx context.Context, kubeClient client.Client, service types.NamespacedName) ([]string, error) {
+	// Get all the endpointslices assigned to the provided service.
+	labelReq, err := labels.NewRequirement("kubernetes.io/service-name", selection.Equals, []string{service.Name})
+	if err != nil {
+		return nil, err
+	}
+
+	var (
+		addresses     []string
+		continueToken string
+	)
+	for {
+		var endpointsList discoveryv1.EndpointSliceList
+		if err := kubeClient.List(ctx, &endpointsList, &client.ListOptions{
+			LabelSelector: labels.NewSelector().Add(*labelReq),
+			Namespace:     service.Namespace,
+			Continue:      continueToken,
+		}); err != nil {
+			return nil, err
+		}
+
+		for _, es := range endpointsList.Items {
+			addresses = append(addresses, configuration.AddressesFromEndpointSlice(es)...)
+		}
+
+		if endpointsList.Continue == "" {
+			break
+		}
+	}
+	return addresses, nil
 }
 
 func (c *Config) GetKubeconfig() (*rest.Config, error) {

@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/blang/semver/v4"
+	"github.com/kong/go-kong/kong"
 	"github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
@@ -18,6 +19,7 @@ import (
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/adminapi"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/gateway"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/sendconfig"
@@ -42,32 +44,30 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 	setupLog.Info("starting controller manager", "release", metadata.Release, "repo", metadata.Repo, "commit", metadata.Commit)
 	setupLog.Info("the ingress class name has been set", "value", c.IngressClassName)
 
+	gateway.SetControllerName(gatewayv1beta1.GatewayController(c.GatewayAPIControllerName))
+
 	setupLog.Info("getting enabled options and features")
 	featureGates, err := setupFeatureGates(setupLog, c.FeatureGates)
 	if err != nil {
 		return fmt.Errorf("failed to configure feature gates: %w", err)
 	}
 
-	setupLog.Info("getting the kubernetes client configuration")
-	kubeconfig, err := c.GetKubeconfig()
-	if err != nil {
-		return fmt.Errorf("get kubeconfig from file %q: %w", c.KubeconfigPath, err)
-	}
-	setupLog.Info("getting the kong admin api client configuration")
-	if c.KongAdminToken != "" {
-		c.KongAdminAPIConfig.Headers = append(c.KongAdminAPIConfig.Headers, "kong-admin-token:"+c.KongAdminToken)
-	}
+	// TODO Just do it once?
 
-	kongClients, err := getKongClients(ctx, c.KongAdminURL, c.KongWorkspace, c.KongAdminAPIConfig)
+	setupLog.Info("getting the kong admin api client configuration")
+	kongClients, err := c.getKongClients(ctx)
 	if err != nil {
 		return fmt.Errorf("unable to build kong api client(s): %w", err)
 	}
+
+	// -------------------------------------------------------------------------
 
 	// Get Kong configuration root(s) to validate them and extract Kong's version.
 	kongRoots, err := kongconfig.GetRoots(ctx, setupLog, c.KongAdminInitializationRetries, c.KongAdminInitializationRetryDelay, kongClients)
 	if err != nil {
 		return fmt.Errorf("could not retrieve Kong admin root(s): %w", err)
 	}
+
 	dbMode, v, err := kongconfig.ValidateRoots(kongRoots, c.SkipCACertificates)
 	if err != nil {
 		return fmt.Errorf("could not validate Kong admin root(s) configuration: %w", err)
@@ -81,6 +81,13 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 	if err != nil {
 		return fmt.Errorf("unable to setup controller options: %w", err)
 	}
+
+	setupLog.Info("getting the kubernetes client configuration")
+	kubeconfig, err := c.GetKubeconfig()
+	if err != nil {
+		return fmt.Errorf("get kubeconfig from file %q: %w", c.KubeconfigPath, err)
+	}
+
 	mgr, err := ctrl.NewManager(kubeconfig, controllerOpts)
 	if err != nil {
 		return fmt.Errorf("unable to start controller manager: %w", err)
@@ -104,6 +111,16 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 		kongConfig,
 		eventRecorder,
 		dbMode,
+		func(ctx context.Context, addr string) (*kong.Client, error) {
+			if c.KongAdminToken != "" {
+				c.KongAdminAPIConfig.Headers = append(c.KongAdminAPIConfig.Headers, "kong-admin-token:"+c.KongAdminToken)
+			}
+			httpclient, err := adminapi.MakeHTTPClient(&c.KongAdminAPIConfig)
+			if err != nil {
+				return nil, err
+			}
+			return adminapi.GetKongClientForWorkspace(ctx, addr, c.KongWorkspace, httpclient)
+		},
 	)
 	if err != nil {
 		return fmt.Errorf("failed to initialize kong data-plane client: %w", err)
@@ -135,11 +152,9 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 		return err
 	}
 
-	gateway.ControllerName = gatewayv1beta1.GatewayController(c.GatewayAPIControllerName)
-
 	setupLog.Info("Starting Enabled Controllers")
 	controllers, err := setupControllers(mgr, dataplaneClient,
-		dataplaneAddressFinder, udpDataplaneAddressFinder, kubernetesStatusQueue, c, featureGates)
+		dataplaneAddressFinder, udpDataplaneAddressFinder, kubernetesStatusQueue, c, featureGates, dataplaneClient)
 	if err != nil {
 		return fmt.Errorf("unable to setup controller as expected %w", err)
 	}

@@ -443,9 +443,12 @@ _ensure-namespace:
 
 .PHONY: debug
 debug: install _ensure-namespace
-	$(DLV) debug ./internal/cmd/main.go -- \
+	$(DLV) debug \
+		--headless --listen 127.0.0.1:40000 --continue --accept-multiclient \
+		./internal/cmd/main.go -- \
 		--anonymous-reports=false \
 		--kong-admin-url $(KONG_ADMIN_URL) \
+		--kong-admin-svc $(KONG_NAMESPACE)/$(KONG_ADMIN_SERVICE) \
 		--publish-service $(KONG_NAMESPACE)/$(KONG_PROXY_SERVICE) \
 		--publish-service-udp $(KONG_NAMESPACE)/$(KONG_PROXY_UDP_SERVICE) \
 		--kubeconfig $(KUBECONFIG) \
@@ -465,23 +468,33 @@ debug: install _ensure-namespace
 debug.connect:
 	XDG_CONFIG_HOME="$(PROJECT_DIR)/.config" $(DLV) connect localhost:40000
 
+SKAFFOLD_DEBUG_PROFILE ?= debug
+
 # This will port-forward 40000 from KIC's debugger to localhost. Connect to that
 # port with debugger/IDE of your choice
 .PHONY: debug.skaffold
-debug.skaffold: skaffold
+debug.skaffold:
 	TAG=$(TAG)-debug REPO_INFO=$(REPO_INFO) COMMIT=$(COMMIT) \
-		$(SKAFFOLD) debug --port-forward=pods --profile=debug $(SKAFFOLD_FLAGS)
+		CMD=debug SKAFFOLD_PROFILE=$(SKAFFOLD_DEBUG_PROFILE) \
+		$(MAKE) _skaffold
 
 # This will port-forward 40000 from KIC's debugger to localhost. Connect to that
 # port with debugger/IDE of your choice
 .PHONY: debug.skaffold.sync
-debug.skaffold.sync: skaffold
-	@$(MAKE) debug.skaffold SKAFFOLD_FLAGS="--auto-build --auto-deploy --auto-sync"
+debug.skaffold.sync:
+	$(MAKE) debug.skaffold SKAFFOLD_FLAGS="--auto-build --auto-deploy --auto-sync"
+
+SKAFFOLD_RUN_PROFILE ?= dev
 
 .PHONY: run.skaffold
-run.skaffold: skaffold
-	TAG=$(TAG)-debug REPO_INFO=$(REPO_INFO) COMMIT=$(COMMIT) \
-		$(SKAFFOLD) dev --port-forward=pods --profile=dev
+run.skaffold:
+	TAG=$(TAG) REPO_INFO=$(REPO_INFO) COMMIT=$(COMMIT) \
+		CMD=dev SKAFFOLD_PROFILE=$(SKAFFOLD_RUN_PROFILE) \
+		$(MAKE) _skaffold
+
+.PHONY: _skaffold
+_skaffold: skaffold
+	$(SKAFFOLD) $(CMD) --port-forward=pods --profile=$(SKAFFOLD_PROFILE) $(SKAFFOLD_FLAGS)
 
 .PHONY: run
 run: install _ensure-namespace
@@ -494,7 +507,8 @@ run: install _ensure-namespace
 _run:
 	go run ./internal/cmd/main.go \
 		--anonymous-reports=false \
-		--kong-admin-url $(KONG_ADMIN_URL) \
+		--kong-admin-url $(KONG_NAMESPACE)/$(KONG_ADMIN_URL) \
+		--kong-admin-svc $(KONG_NAMESPACE)/$(KONG_ADMIN_SERVICE) \
 		--publish-service $(KONG_NAMESPACE)/$(KONG_PROXY_SERVICE) \
 		--publish-service-udp $(KONG_NAMESPACE)/$(KONG_PROXY_UDP_SERVICE) \
 		--kubeconfig $(KUBECONFIG) \

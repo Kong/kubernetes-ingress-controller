@@ -32,6 +32,8 @@ metadata:
   labels:
     app: httpbin
   name: httpbin
+  annotations:
+    konghq.com/retries: "3"
 spec:
   ports:
   - port: 80
@@ -68,6 +70,8 @@ metadata:
   labels:
     app: nginx
   name: nginx
+  annotations:
+    konghq.com/retries: "3"
 spec:
   ports:
   - port: 8080

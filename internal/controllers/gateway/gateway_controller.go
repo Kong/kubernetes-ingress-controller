@@ -320,7 +320,7 @@ func (r *GatewayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		debug(log, gateway, "ensured gateway was removed from the data-plane (if ever present)")
 		return ctrl.Result{}, nil
 	}
-	if gwc.Spec.ControllerName != ControllerName {
+	if gwc.Spec.ControllerName != GetControllerName() {
 		debug(log, gateway, "unsupported gatewayclass controllername, ignoring", "gatewayclass", gwc.Name, "controllername", gwc.Spec.ControllerName)
 		// delete reference relationships where the gateway is the referrer, as we will not process the gateway.
 		err := ctrlref.DeleteReferencesByReferrer(r.ReferenceIndexers, r.DataplaneClient, gateway)

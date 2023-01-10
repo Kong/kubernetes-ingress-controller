@@ -46,7 +46,22 @@ profiles:
   manifests:
     kustomize:
       paths:
-      - config/debug
+      - config/debug/base
+  build:
+    artifacts:
+    - image: kic-placeholder
+      docker:
+        dockerfile: Dockerfile.debug
+        target: debug
+        buildArgs:
+          TAG: ${{ .TAG }}
+          COMMIT: ${{ .COMMIT }}
+          REPO_INFO: ${{ .REPO_INFO }}
+- name: debug_multi_gw
+  manifests:
+    kustomize:
+      paths:
+      - config/debug/multi_gw
   build:
     artifacts:
     - image: kic-placeholder

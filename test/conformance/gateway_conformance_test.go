@@ -62,7 +62,7 @@ func TestGatewayConformance(t *testing.T) {
 			},
 		},
 		Spec: gatewayv1beta1.GatewayClassSpec{
-			ControllerName: gateway.ControllerName,
+			ControllerName: gateway.GetControllerName(),
 		},
 	}
 	require.NoError(t, client.Create(ctx, gwc))

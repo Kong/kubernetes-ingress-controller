@@ -839,7 +839,8 @@ func (s Store) GetIngressClassV1(name string) (*netv1.IngressClass, error) {
 	return p.(*netv1.IngressClass), nil
 }
 
-// GetIngressClassV1 returns the 'name' IngressClass resource.
+// GetIngressClassParametersV1Alpha1 returns IngressClassParameters of configured
+// IngressClass.
 func (s Store) GetIngressClassParametersV1Alpha1() (*kongv1alpha1.IngressClassParameters, error) {
 	class, exists, err := s.stores.IngressClassV1.GetByKey(s.ingressClass)
 	if err != nil {

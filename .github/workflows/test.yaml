@@ -15,6 +15,10 @@ jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
 
     - name: Setup go
       uses: actions/setup-go@v3
@@ -28,11 +32,6 @@ jobs:
         key: ${{ runner.os }}-build-codegen-${{ hashFiles('**/go.sum') }}
         restore-keys: |
           ${{ runner.os }}-build-codegen-
-
-    - name: Checkout repository
-      uses: actions/checkout@v3
-      with:
-        fetch-depth: 0
 
     - name: Run lint
       run: make lint
@@ -75,6 +74,10 @@ jobs:
   unit-tests:
     runs-on: ubuntu-latest
     steps:
+    - name: checkout repository
+      uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
 
     - name: setup golang
       uses: actions/setup-go@v3
@@ -88,11 +91,6 @@ jobs:
         key: ${{ runner.os }}-build-codegen-${{ hashFiles('**/go.sum') }}
         restore-keys: |
           ${{ runner.os }}-build-codegen-
-
-    - name: checkout repository
-      uses: actions/checkout@v3
-      with:
-        fetch-depth: 0
 
     - name: run unit tests
       run: make test.unit
@@ -132,6 +130,12 @@ jobs:
       with:
         password: ${{ env.PULP_PASSWORD }}
 
+    - name: checkout repository
+      if: env.PULP_PASSWORD != ''
+      uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+
     - name: setup golang
       if: env.PULP_PASSWORD != ''
       uses: actions/setup-go@v3
@@ -146,12 +150,6 @@ jobs:
         key: ${{ runner.os }}-build-codegen-${{ hashFiles('**/go.sum') }}
         restore-keys: |
           ${{ runner.os }}-build-codegen-
-
-    - name: checkout repository
-      if: env.PULP_PASSWORD != ''
-      uses: actions/checkout@v3
-      with:
-        fetch-depth: 0
 
     - name: run integration tests
       if: env.PULP_PASSWORD != ''
@@ -187,6 +185,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
 
+    - name: checkout repository
+      uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+
     - name: setup golang
       uses: actions/setup-go@v3
       with:
@@ -199,11 +202,6 @@ jobs:
         key: ${{ runner.os }}-build-codegen-${{ hashFiles('**/go.sum') }}
         restore-keys: |
           ${{ runner.os }}-build-codegen-
-
-    - name: checkout repository
-      uses: actions/checkout@v3
-      with:
-        fetch-depth: 0
 
     - name: run integration tests
       run: make test.integration.dbless
@@ -236,6 +234,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
 
+    - name: checkout repository
+      uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+
     - name: setup golang
       uses: actions/setup-go@v3
       with:
@@ -248,11 +251,6 @@ jobs:
         key: ${{ runner.os }}-build-codegen-${{ hashFiles('**/go.sum') }}
         restore-keys: |
           ${{ runner.os }}-build-codegen-
-
-    - name: checkout repository
-      uses: actions/checkout@v3
-      with:
-        fetch-depth: 0
 
     - name: run integration tests
       run: make test.integration.postgres
@@ -285,6 +283,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
 
+    - name: checkout repository
+      uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+
     - name: setup golang
       uses: actions/setup-go@v3
       with:
@@ -297,11 +300,6 @@ jobs:
         key: ${{ runner.os }}-build-codegen-${{ hashFiles('**/go.sum') }}
         restore-keys: |
           ${{ runner.os }}-build-codegen-
-
-    - name: checkout repository
-      uses: actions/checkout@v3
-      with:
-        fetch-depth: 0
 
     - name: run integration tests
       run: make test.integration.dbless
@@ -335,6 +333,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
 
+    - name: checkout repository
+      uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+
     - name: setup golang
       uses: actions/setup-go@v3
       with:
@@ -347,11 +350,6 @@ jobs:
         key: ${{ runner.os }}-build-codegen-${{ hashFiles('**/go.sum') }}
         restore-keys: |
           ${{ runner.os }}-build-codegen-
-
-    - name: checkout repository
-      uses: actions/checkout@v3
-      with:
-        fetch-depth: 0
 
     - name: run conformance tests
       run: make test.conformance

@@ -201,7 +201,7 @@ _Appears in:_
 
 _Underlying type:_ `string`
 
-
+KongProtocol is a valid Kong protocol This alias is necessary to deal with https://github.com/kubernetes-sigs/controller-tools/issues/342
 
 
 

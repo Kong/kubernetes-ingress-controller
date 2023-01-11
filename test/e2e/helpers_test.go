@@ -154,7 +154,9 @@ func createDefaultGKEBuilder() (*environments.Builder, error) {
 	clusterBuilder := gke.
 		NewBuilder([]byte(gkeCreds), gkeProject, gkeLocation).
 		WithName(name).
-		WithClusterMinorVersion(k8sVersion.Major, k8sVersion.Minor)
+		WithClusterMinorVersion(k8sVersion.Major, k8sVersion.Minor).
+		WithWaitForTeardown(true).
+		WithCreateSubnet(true)
 
 	return environments.NewBuilder().WithClusterBuilder(clusterBuilder), nil
 }

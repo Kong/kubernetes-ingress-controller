@@ -84,6 +84,60 @@ jobs:
         name: tests-report
         path: e2e-${{ matrix.kubernetes-version }}-tests.xml
 
+  e2e-gke-tests:
+    environment: "gcloud"
+    needs: setup-e2e-tests
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        test: ${{ fromJSON(needs.setup-e2e-tests.outputs.test_names) }}
+    steps:
+      - name: checkout repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - name: setup golang
+        uses: actions/setup-go@v3
+        with:
+          go-version: '^1.19'
+      - name: cache go modules
+        uses: actions/cache@v3
+        with:
+          path: ~/go/pkg/mod
+          key: ${{ runner.os }}-build-codegen-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-build-codegen-
+      - uses: Kong/kong-license@master
+        id: license
+        with:
+          password: ${{ secrets.PULP_PASSWORD }}
+      - name: gke e2e tests
+        run: make test.e2e
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}
+          GOOGLE_PROJECT: ${{ secrets.GOOGLE_PROJECT }}
+          GOOGLE_LOCATION: ${{ secrets.GOOGLE_LOCATION }}
+          KONG_CLUSTER_VERSION: 'v1.26.0'
+          KONG_TEST_CLUSTER_PROVIDER: "gke"
+          KONG_LICENSE_DATA: ${{ steps.license.outputs.license }}
+          GOTESTSUM_JUNITFILE: "gke-${{ matrix.test }}-tests.xml"
+          E2E_TEST_RUN: ${{ matrix.test }}
+
+      - name: upload diagnostics
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v3
+        with:
+          name: diagnostics-e2e-tests
+          path: /tmp/ktf-diag*
+          if-no-files-found: ignore
+
+      - name: collect test report
+        uses: actions/upload-artifact@v3
+        with:
+          name: tests-report
+          path: gke-${{ matrix.test }}-tests.xml
+
   istio-tests:
     runs-on: ubuntu-latest
     strategy:

@@ -3,7 +3,13 @@ name: e2e tests
 on:
   schedule:
     - cron: '30 4 * * *'
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      only-gke:
+        description: 'Run only GKE E2Es'
+        required: true
+        default: 'false'
+
 
 jobs:
   setup-e2e-tests:
@@ -22,6 +28,7 @@ jobs:
       - name: Print test names
         run: echo "Test names ${{ steps.set_test_names.outputs.test_names }}"
   e2e-tests:
+    if: ${{ github.event.inputs.only-gke == 'false' }}
     runs-on: ubuntu-latest
     needs: setup-e2e-tests
     strategy:
@@ -139,6 +146,7 @@ jobs:
           path: gke-${{ matrix.test }}-tests.xml
 
   istio-tests:
+    if: ${{ github.event.inputs.only-gke == 'false' }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false

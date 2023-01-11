@@ -340,6 +340,8 @@ func TestDeployAllInOneDBLESSGateway(t *testing.T) {
 
 	t.Log("running the admission webhook setup script")
 	cmd := exec.Command("bash", admissionScriptPath)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
 	require.NoError(t, cmd.Run())
 
 	// vov it's easier than tracking the deployment state

@@ -24,6 +24,7 @@ import (
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
+	k8sobj "github.com/kong/kubernetes-ingress-controller/v2/internal/util/kubernetes/object"
 )
 
 // -----------------------------------------------------------------------------
@@ -322,7 +323,8 @@ func (r *TCPRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 			// tied in with status updates being enabled in the controller manager) then
 			// we will wait until the object is reported as successfully configured before
 			// moving on to status updates.
-			if !r.DataplaneClient.KubernetesObjectIsConfigured(tcproute) {
+			configurationStatus := r.DataplaneClient.KubernetesObjectConfigurationStatus(tcproute)
+			if configurationStatus != k8sobj.ConfigurationStatusSucceeded {
 				return ctrl.Result{Requeue: true}, nil
 			}
 		}

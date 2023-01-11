@@ -12,65 +12,75 @@ import (
 	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1beta1"
 )
 
-func TestSet(t *testing.T) {
+func TestObjectConfigurationStatusSet(t *testing.T) {
 	t.Log("generating some objects to test the object set")
 	ing1 := &netv1.Ingress{
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace: corev1.NamespaceDefault,
-			Name:      "test-ingress-1",
+			Namespace:  corev1.NamespaceDefault,
+			Name:       "test-ingress-1",
+			Generation: 1,
 		},
 	}
 	ing1.SetGroupVersionKind(ingGVK)
 	ing2 := &netv1.Ingress{
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace: corev1.NamespaceDefault,
-			Name:      "test-ingress-2",
+			Namespace:  corev1.NamespaceDefault,
+			Name:       "test-ingress-2",
+			Generation: 1,
 		},
 	}
 	ing2.SetGroupVersionKind(ingGVK)
 	ing3 := &netv1.Ingress{
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace: "other-namespace",
-			Name:      "test-ingress-3",
+			Namespace:  "other-namespace",
+			Name:       "test-ingress-1",
+			Generation: 1,
 		},
 	}
 	ing3.SetGroupVersionKind(ingGVK)
 	tcp := &kongv1beta1.TCPIngress{
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace: corev1.NamespaceDefault,
-			Name:      "test-tcpingress",
+			Namespace:  corev1.NamespaceDefault,
+			Name:       "test-tcpingress",
+			Generation: 1,
 		},
 	}
 	tcp.SetGroupVersionKind(tcpGVK)
 
-	t.Log("verifying creation of an object set")
-	set := &Set{}
-	require.False(t, set.Has(ing1))
-	require.False(t, set.Has(ing2))
-	require.False(t, set.Has(ing3))
-	require.False(t, set.Has(tcp))
+	t.Log("verifying creation of an object configure status set")
+	set := &ConfigurationStatusSet{}
+	require.Equal(t, ConfigurationStatusUnknown, set.Get(ing1))
+	require.Equal(t, ConfigurationStatusUnknown, set.Get(ing2))
+	require.Equal(t, ConfigurationStatusUnknown, set.Get(ing3))
+	require.Equal(t, ConfigurationStatusUnknown, set.Get(tcp))
 
-	t.Log("verifying object set insertion")
-	set.Insert(ing1)
-	require.True(t, set.Has(ing1))
-	require.False(t, set.Has(ing2))
-	require.False(t, set.Has(ing3))
-	require.False(t, set.Has(tcp))
-	set.Insert(ing2)
-	require.True(t, set.Has(ing1))
-	require.True(t, set.Has(ing2))
-	require.False(t, set.Has(ing3))
-	require.False(t, set.Has(tcp))
-	set.Insert(ing3)
-	require.True(t, set.Has(ing1))
-	require.True(t, set.Has(ing2))
-	require.True(t, set.Has(ing3))
-	require.False(t, set.Has(tcp))
-	set.Insert(tcp)
-	require.True(t, set.Has(ing1))
-	require.True(t, set.Has(ing2))
-	require.True(t, set.Has(ing3))
-	require.True(t, set.Has(tcp))
+	t.Log("verifying object configure status set insertion")
+	set.Insert(ing1, true)
+	require.Equal(t, ConfigurationStatusSucceeded, set.Get(ing1))
+	require.Equal(t, ConfigurationStatusUnknown, set.Get(ing2))
+	require.Equal(t, ConfigurationStatusUnknown, set.Get(ing3))
+	require.Equal(t, ConfigurationStatusUnknown, set.Get(tcp))
+	set.Insert(ing2, false)
+	require.Equal(t, ConfigurationStatusSucceeded, set.Get(ing1))
+	require.Equal(t, ConfigurationStatusFailed, set.Get(ing2))
+	require.Equal(t, ConfigurationStatusUnknown, set.Get(ing3))
+	require.Equal(t, ConfigurationStatusUnknown, set.Get(tcp))
+	set.Insert(ing3, true)
+	require.Equal(t, ConfigurationStatusSucceeded, set.Get(ing1))
+	require.Equal(t, ConfigurationStatusFailed, set.Get(ing2))
+	require.Equal(t, ConfigurationStatusSucceeded, set.Get(ing3))
+	require.Equal(t, ConfigurationStatusUnknown, set.Get(tcp))
+	set.Insert(tcp, true)
+	require.Equal(t, ConfigurationStatusSucceeded, set.Get(ing1))
+	require.Equal(t, ConfigurationStatusFailed, set.Get(ing2))
+	require.Equal(t, ConfigurationStatusSucceeded, set.Get(ing3))
+	require.Equal(t, ConfigurationStatusSucceeded, set.Get(tcp))
+	t.Log("updating generation of some objects")
+	ing1.Generation = 2
+	require.Equal(t, ConfigurationStatusUnknown, set.Get(ing1))
+	require.Equal(t, ConfigurationStatusFailed, set.Get(ing2))
+	require.Equal(t, ConfigurationStatusSucceeded, set.Get(ing3))
+	require.Equal(t, ConfigurationStatusSucceeded, set.Get(tcp))
 }
 
 // -----------------------------------------------------------------------------

@@ -172,7 +172,21 @@ func (m *ingressTranslationMeta) translateIntoKongStateService(kongServiceName s
 			Namespace: m.parentIngress.GetNamespace(),
 			PortDef:   portDef,
 		}},
+<<<<<<< HEAD
 		Parent: m.parentIngress,
+=======
+		Parent: &netv1.Ingress{
+			TypeMeta: metav1.TypeMeta{
+				Kind:       "Ingress",
+				APIVersion: netv1.SchemeGroupVersion.String(),
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:       m.ingressName,
+				Namespace:  m.ingressNamespace,
+				Generation: m.ingressGeneration,
+			},
+		},
+>>>>>>> feat: dataplane propogate translation failures to controllers
 	}
 }
 

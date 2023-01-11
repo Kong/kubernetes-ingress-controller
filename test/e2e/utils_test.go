@@ -219,7 +219,7 @@ func getPreviousGitTag(path string, cur semver.Version) (semver.Version, error) 
 // getKongProxyIP takes a Service with Kong proxy ports and returns and its IP, or fails the test if it cannot.
 func getKongProxyIP(ctx context.Context, t *testing.T, env environments.Environment, svc *corev1.Service) string {
 	proxyIP := ""
-	require.NotEqual(t, svc.Spec.Type, svc.Spec.ClusterIP)
+	require.NotEqual(t, svc.Spec.Type, corev1.ServiceTypeClusterIP)
 	if svc.Spec.Type == corev1.ServiceTypeLoadBalancer {
 		if len(svc.Status.LoadBalancer.Ingress) > 0 {
 			proxyIP = svc.Status.LoadBalancer.Ingress[0].IP
@@ -252,8 +252,10 @@ func getKongProxyIP(ctx context.Context, t *testing.T, env environments.Environm
 		// routeable from their host. We prefer external addresses if they're available, but fall back to internal
 		// in their absence
 		if len(extAddrs) > 0 {
+			t.Logf("picking an external NodePort address: %s", extAddrs[0])
 			proxyIP = fmt.Sprintf("%v:%v", extAddrs[0], port)
 		} else if len(intAddrs) > 0 {
+			t.Logf("picking an internal NodePort address: %s", intAddrs[0])
 			proxyIP = fmt.Sprintf("%v:%v", intAddrs[0], port)
 		} else {
 			assert.Fail(t, "both extAddrs and intAddrs are empty")

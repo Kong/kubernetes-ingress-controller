@@ -125,7 +125,7 @@ jobs:
           GOOGLE_APPLICATION_CREDENTIALS: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}
           GOOGLE_PROJECT: ${{ secrets.GOOGLE_PROJECT }}
           GOOGLE_LOCATION: ${{ secrets.GOOGLE_LOCATION }}
-          KONG_CLUSTER_VERSION: 'v1.26.0'
+          KONG_CLUSTER_VERSION: 'v1.25.0'
           KONG_TEST_CLUSTER_PROVIDER: "gke"
           KONG_LICENSE_DATA: ${{ steps.license.outputs.license }}
           GOTESTSUM_JUNITFILE: "gke-${{ matrix.test }}-tests.xml"

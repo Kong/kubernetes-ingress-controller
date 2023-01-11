@@ -26,7 +26,7 @@ type KongRouteTranslation struct {
 	Filters []gatewayv1beta1.HTTPRouteFilter
 }
 
-// TranslateHTTPRoutes translates a list of HTTPRoutes into a list of HTTPRouteTranslationMeta
+// TranslateHTTPRoute translates a list of HTTPRoutes into a list of HTTPRouteTranslationMeta
 // objects that can be used to instantiate Kong routes and services.
 // The translation is done by grouping the HTTPRoutes by their backendRefs.
 // This means that all the rules of a single HTTPRoute will be grouped together

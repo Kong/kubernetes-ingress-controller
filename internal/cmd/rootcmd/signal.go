@@ -23,13 +23,14 @@ var (
 // which is canceled on one of these signals. If a second signal is not caught, the program
 // will delay for the configured period of time before terminating. If a second signal is caught,
 // the program is terminated with exit code 1.
-func SetupSignalHandler(cfg *manager.Config, logger logr.Logger) (context.Context, error) {
+func SetupSignalHandler(ctx context.Context, cfg *manager.Config, logger logr.Logger) (context.Context, error) {
 	// This will prevent multiple signal handlers from being created
 	if ok := mutex.TryLock(); !ok {
 		return nil, errors.New("signal handler can only be setup once")
 	}
 
-	ctx, cancel := context.WithCancel(context.Background())
+	var cancel func()
+	ctx, cancel = context.WithCancel(ctx)
 
 	c := make(chan os.Signal, 2)
 	signal.Notify(c, shutdownSignals...)

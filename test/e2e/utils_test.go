@@ -218,50 +218,50 @@ func getPreviousGitTag(path string, cur semver.Version) (semver.Version, error) 
 
 // getKongProxyIP takes a Service with Kong proxy ports and returns and its IP, or fails the test if it cannot.
 func getKongProxyIP(ctx context.Context, t *testing.T, env environments.Environment, svc *corev1.Service) string {
-	proxyIP := ""
 	require.NotEqual(t, svc.Spec.Type, corev1.ServiceTypeClusterIP)
+
 	if svc.Spec.Type == corev1.ServiceTypeLoadBalancer {
 		if len(svc.Status.LoadBalancer.Ingress) > 0 {
-			proxyIP = svc.Status.LoadBalancer.Ingress[0].IP
-			t.Logf("found loadbalancer IP for the Kong Proxy: %s", proxyIP)
+			ip := svc.Status.LoadBalancer.Ingress[0].IP
+			t.Logf("found loadbalancer IP for the Kong Proxy: %s", ip)
+			return ip
 		}
 	}
+
 	// the above failed to find an address. either the LB didn't provision or we're using a NodePort
-	if proxyIP == "" {
-		var port int32
-		for _, sport := range svc.Spec.Ports {
-			if sport.Name == "kong-proxy" || sport.Name == "proxy" {
-				port = sport.NodePort
-			}
-		}
-		var extAddrs []string
-		var intAddrs []string
-		nodes, err := env.Cluster().Client().CoreV1().Nodes().List(ctx, metav1.ListOptions{})
-		require.NoError(t, err)
-		for _, node := range nodes.Items {
-			for _, naddr := range node.Status.Addresses {
-				if naddr.Type == corev1.NodeExternalIP {
-					extAddrs = append(extAddrs, naddr.Address)
-				}
-				if naddr.Type == corev1.NodeInternalIP {
-					extAddrs = append(intAddrs, naddr.Address)
-				}
-			}
-		}
-		// local clusters (KIND, minikube) typically provide no external addresses, but their internal addresses are
-		// routeable from their host. We prefer external addresses if they're available, but fall back to internal
-		// in their absence
-		if len(extAddrs) > 0 {
-			t.Logf("picking an external NodePort address: %s", extAddrs[0])
-			proxyIP = fmt.Sprintf("%v:%v", extAddrs[0], port)
-		} else if len(intAddrs) > 0 {
-			t.Logf("picking an internal NodePort address: %s", intAddrs[0])
-			proxyIP = fmt.Sprintf("%v:%v", intAddrs[0], port)
-		} else {
-			assert.Fail(t, "both extAddrs and intAddrs are empty")
+	var port int32
+	for _, sport := range svc.Spec.Ports {
+		if sport.Name == "kong-proxy" || sport.Name == "proxy" {
+			port = sport.NodePort
 		}
 	}
-	return proxyIP
+	var extAddrs []string
+	var intAddrs []string
+	nodes, err := env.Cluster().Client().CoreV1().Nodes().List(ctx, metav1.ListOptions{})
+	require.NoError(t, err)
+	for _, node := range nodes.Items {
+		for _, naddr := range node.Status.Addresses {
+			if naddr.Type == corev1.NodeExternalIP {
+				extAddrs = append(extAddrs, naddr.Address)
+			}
+			if naddr.Type == corev1.NodeInternalIP {
+				extAddrs = append(intAddrs, naddr.Address)
+			}
+		}
+	}
+	// local clusters (KIND, minikube) typically provide no external addresses, but their internal addresses are
+	// routeable from their host. We prefer external addresses if they're available, but fall back to internal
+	// in their absence
+	if len(extAddrs) > 0 {
+		t.Logf("picking an external NodePort address: %s", extAddrs[0])
+		return fmt.Sprintf("%v:%v", extAddrs[0], port)
+	} else if len(intAddrs) > 0 {
+		t.Logf("picking an internal NodePort address: %s", intAddrs[0])
+		return fmt.Sprintf("%v:%v", intAddrs[0], port)
+	}
+
+	assert.Fail(t, "both extAddrs and intAddrs are empty")
+	return ""
 }
 
 // startPortForwarder runs "kubectl port-forward" in the background. It stops the forward when the provided context

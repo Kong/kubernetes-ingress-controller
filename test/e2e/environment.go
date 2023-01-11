@@ -16,4 +16,5 @@ var (
 	kongImagePullUsername = os.Getenv("TEST_KONG_PULL_USERNAME")
 	kongImagePullPassword = os.Getenv("TEST_KONG_PULL_PASSWORD")
 	existingCluster       = os.Getenv("KONG_TEST_CLUSTER")
+	clusterProvider       = os.Getenv("KONG_TEST_CLUSTER_PROVIDER")
 )

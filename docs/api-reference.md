@@ -151,7 +151,7 @@ _Appears in:_
 
 
 
-KongIngressService contains KongIngress service configuration. Deprecated: use Service's annotations instead.
+KongIngressService contains KongIngress service configuration. It contains the subset of go-kong.kong.Service fields supported by kongstate.Service.overrideByKongIngress. Deprecated: use Service's annotations instead.
 
 
 

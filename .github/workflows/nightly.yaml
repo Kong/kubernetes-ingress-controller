@@ -53,13 +53,13 @@ jobs:
           password: ${{ secrets.DOCKER_TOKEN }}
       - name: Docker meta
         id: meta
-        uses: docker/metadata-action@v4.1.1
+        uses: docker/metadata-action@v4.2.0
         with:
           images: kong/nightly-ingress-controller
           tags: ${{ steps.tags-standard.outputs.TAGS_STANDARD }}
       - name: Docker meta (redhat)
         id: meta_redhat
-        uses: docker/metadata-action@v4.1.1
+        uses: docker/metadata-action@v4.2.0
         with:
           images: kong/nightly-ingress-controller
           flavor: |
@@ -142,7 +142,7 @@ jobs:
           password: ${{ secrets.RH_TOKEN }}
       - name: Docker meta (redhat scan registry)
         id: meta_redhat_scan_registry
-        uses: docker/metadata-action@v4.1.1
+        uses: docker/metadata-action@v4.2.0
         with:
           images: ${{ env.RH_SCAN_REGISTRY }}/${{ env.RH_SCAN_REGISTRY_IMAGE_NAME }}
           flavor: |

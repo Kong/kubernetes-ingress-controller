@@ -59,7 +59,7 @@ type KongIngressList struct {
 }
 
 // KongIngressService contains KongIngress service configuration.
-// + It contains the subset of go-kong.kong.Service fields supported by kongstate.Service.overrideByKongIngress.
+// It contains the subset of go-kong.kong.Service fields supported by kongstate.Service.overrideByKongIngress.
 // Deprecated: use Service's annotations instead.
 type KongIngressService struct {
 	// The protocol used to communicate with the upstream.

@@ -67,6 +67,14 @@ Adding a new version? You'll need three changes:
 
 > Release date: TBD
 
+### Added
+
+- Store status of whether configuration succedded or failed for Kubernetes 
+  objects in dataplane client and publish the events to let controllers know
+  if the controlled objects succeeded or failed to be translated to Kong 
+  configuration.
+  [#3359](https://github.com/Kong/kubernetes-ingress-controller/pull/3359)  
+
 ### Fixed
 
 - Disabled non-functioning mesh reporting when `--watch-namespaces` flag set.

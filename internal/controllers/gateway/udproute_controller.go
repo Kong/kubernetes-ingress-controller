@@ -234,7 +234,7 @@ func (r *UDPRouteReconciler) listUDPRoutesForGateway(obj client.Object) []reconc
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
 func (r *UDPRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	log := r.Log.WithValues("NetV1Alpha2UDPRoute", req.NamespacedName)
+	log := r.Log.WithValues("GatewayV1Alpha2UDPRoute", req.NamespacedName)
 
 	udproute := new(gatewayv1alpha2.UDPRoute)
 	if err := r.Get(ctx, req.NamespacedName, udproute); err != nil {

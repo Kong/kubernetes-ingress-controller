@@ -279,7 +279,7 @@ func referenceGrantHasGatewayFrom(obj client.Object) bool {
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
 func (r *GatewayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	log := r.Log.WithValues("V1Beta1Gateway", req.NamespacedName)
+	log := r.Log.WithValues("GatewayV1Beta1Gateway", req.NamespacedName)
 
 	// gather the gateway object based on the reconciliation trigger. It's possible for the object
 	// to be gone at this point in which case it will be ignored.

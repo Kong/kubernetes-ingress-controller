@@ -24,7 +24,6 @@ type AddressFinder struct {
 	overrideAddresses    []string
 	overrideAddressesUDP []string
 	addressGetter        AddressGetter
-	addressGetterUDP     AddressGetter
 
 	lock sync.RWMutex
 }
@@ -94,12 +93,12 @@ func (a *AddressFinder) GetUDPAddresses() ([]string, error) {
 		return a.overrideAddressesUDP, nil
 	}
 
-	if len(a.overrideAddresses) > 0 && a.addressGetterUDP == nil {
+	if len(a.overrideAddresses) > 0 && a.addressGetter == nil {
 		return a.overrideAddresses, nil
 	}
 
-	if a.addressGetterUDP != nil {
-		return a.addressGetterUDP()
+	if a.addressGetter != nil {
+		return a.addressGetter()
 	}
 
 	return a.GetAddresses()

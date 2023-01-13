@@ -19,7 +19,6 @@ import (
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/istio"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/kong"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/metallb"
-	"github.com/kong/kubernetes-testing-framework/pkg/environments"
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -91,9 +90,9 @@ func TestIstioWithKongIngressGateway(t *testing.T) {
 	istioAddon := istioBuilder.Build()
 
 	t.Log("deploying a testing environment and Kubernetes cluster with Istio enabled")
-	envBuilder := setBuilderKubernetesVersion(t,
-		environments.NewBuilder().WithAddons(metallbAddon, kongAddon, istioAddon), clusterVersionStr)
-	env, err := envBuilder.Build(ctx)
+	envBuilder, err := getEnvironmentBuilder(ctx)
+	require.NoError(t, err)
+	env, err := envBuilder.WithAddons(istioAddon, kongAddon).Build(ctx)
 	require.NoError(t, err)
 
 	t.Log("configuring cluster cleanup")

@@ -176,14 +176,14 @@ func TestWebhookUpdate(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Logf("build a cleaner to dump diagnostics...")
-	cleaner := clusters.NewCleaner(env.Cluster())
+	cleaner := clusters.NewCleaner(cluster)
 	defer func() {
 		if t.Failed() {
 			output, err := cleaner.DumpDiagnostics(ctx, t.Name())
 			t.Logf("%s failed, dumped diagnostics to %s", t.Name(), output)
 			assert.NoError(t, err)
 		}
-		assert.NoError(t, cleaner.Cleanup(ctx))
+		assert.NoError(t, cluster.Cleanup(ctx))
 	}()
 
 	t.Log("deploying kong components")
@@ -508,14 +508,15 @@ func TestDeployAllInOneDBLESSNoLoadBalancer(t *testing.T) {
 	require.NoError(t, err)
 	env, err := builder.Build(ctx)
 	require.NoError(t, err)
-	cleaner := clusters.NewCleaner(env.Cluster())
+	cluster := env.Cluster()
+	cleaner := clusters.NewCleaner(cluster)
 	defer func() {
 		if t.Failed() {
 			output, err := cleaner.DumpDiagnostics(ctx, t.Name())
 			t.Logf("%s failed, dumped diagnostics to %s", t.Name(), output)
 			assert.NoError(t, err)
 		}
-		assert.NoError(t, cleaner.Cleanup(ctx))
+		assert.NoError(t, cluster.Cleanup(ctx))
 	}()
 
 	t.Log("deploying kong components")
@@ -575,14 +576,15 @@ func TestDefaultIngressClass(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Logf("build a cleaner to dump diagnostics...")
-	cleaner := clusters.NewCleaner(env.Cluster())
+	cluster := env.Cluster()
+	cleaner := clusters.NewCleaner(cluster)
 	defer func() {
 		if t.Failed() {
 			output, err := cleaner.DumpDiagnostics(ctx, t.Name())
 			t.Logf("%s failed, dumped diagnostics to %s", t.Name(), output)
 			assert.NoError(t, err)
 		}
-		assert.NoError(t, cleaner.Cleanup(ctx))
+		assert.NoError(t, cluster.Cleanup(ctx))
 	}()
 
 	t.Log("deploying kong components")
@@ -640,8 +642,16 @@ func TestDefaultIngressClass(t *testing.T) {
 		if err != nil {
 			return false
 		}
-		return len(lbstatus.Ingress) > 0
-	}, time.Minute, time.Second)
+		if len(lbstatus.Ingress) == 0 || lbstatus.Ingress[0].IP == "" {
+			return false
+		}
+		return true
+	}, ingressWait, time.Second)
+
+	t.Log("getting kong proxy IP after LB provisioning")
+	svc, err = env.Cluster().Client().CoreV1().Services(namespace).Get(ctx, "kong-proxy", metav1.GetOptions{})
+	require.NoError(t, err)
+	proxyURL = "http://" + getKongProxyIP(ctx, t, env, svc)
 
 	t.Log("creating classless global KongClusterPlugin")
 	kongclusterplugin := &kongv1.KongClusterPlugin{

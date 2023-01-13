@@ -9,12 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/blang/semver/v4"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
-	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/loadimage"
-	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/metallb"
-	"github.com/kong/kubernetes-testing-framework/pkg/clusters/types/kind"
-	"github.com/kong/kubernetes-testing-framework/pkg/environments"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -27,27 +22,14 @@ func TestKongRouterFlavorCompatibility(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	t.Log("building test cluster and environment")
-	clusterBuilder := kind.NewBuilder()
-	if clusterVersionStr != "" {
-		clusterVersion, err := semver.ParseTolerant(clusterVersionStr)
-		require.NoError(t, err)
-		clusterBuilder.WithClusterVersion(clusterVersion)
-	}
-	cluster, err := clusterBuilder.Build(ctx)
+	builder, err := getEnvironmentBuilder(ctx)
 	require.NoError(t, err)
-	addons := []clusters.Addon{metallb.New()}
-
-	if b, err := loadimage.NewBuilder().WithImage(imageLoad); err == nil {
-		addons = append(addons, b.Build())
-	}
-
-	builder := environments.NewBuilder().WithExistingCluster(cluster).WithAddons(addons...)
 	env, err := builder.Build(ctx)
 	require.NoError(t, err)
 
 	t.Logf("building cleaner to dump diagnostics...")
-	cleaner := clusters.NewCleaner(env.Cluster())
+	cluster := env.Cluster()
+	cleaner := clusters.NewCleaner(cluster)
 	defer func() {
 		if t.Failed() {
 			output, err := cleaner.DumpDiagnostics(ctx, t.Name())

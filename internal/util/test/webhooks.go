@@ -1,6 +1,7 @@
 package test
 
 import (
+	"fmt"
 	"os/exec"
 	"strings"
 )
@@ -144,8 +145,11 @@ func admissionWebhookListenHost() string {
 }
 
 func isColimaHost() bool {
-	out, err := exec.Command("docker", "info", "--format", "{{.Name}}").Output()
+	cmd := exec.Command("docker", "info", "--format", "{{.Name}}")
+	out, err := cmd.CombinedOutput()
 	if err != nil {
+		fmt.Printf("failed to run %q command %s\n", cmd.String(), err)
+		fmt.Println(string(out))
 		return false
 	}
 

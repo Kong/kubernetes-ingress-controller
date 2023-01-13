@@ -185,7 +185,10 @@ func getTestManifest(t *testing.T, baseManifestPath string) (io.Reader, error) {
 func getCurrentGitTag(path string) (semver.Version, error) {
 	cmd := exec.Command("git", "describe", "--tags")
 	cmd.Dir = path
-	tagBytes, _ := cmd.Output()
+	tagBytes, err := cmd.Output()
+	if err != nil {
+		return semver.Version{}, fmt.Errorf("%q command failed: %w", cmd.String(), err)
+	}
 	tag, err := semver.ParseTolerant(string(tagBytes))
 	if err != nil {
 		return semver.Version{}, err
@@ -277,11 +280,12 @@ func startPortForwarder(ctx context.Context, t *testing.T, env environments.Envi
 	require.NoError(t, err)
 	require.Equal(t, len(kubeconfig), written)
 	cmd := exec.CommandContext(ctx, "kubectl", "--kubeconfig", kubeconfigFile.Name(), "port-forward", "-n", namespace, name, fmt.Sprintf("%s:%s", localPort, targetPort)) //nolint:gosec
+	out := new(bytes.Buffer)
+	cmd.Stdout = out
+	cmd.Stderr = out
 	t.Logf("forwarding port %s to %s/%s:%s", localPort, namespace, name, targetPort)
 	if startErr := cmd.Start(); startErr != nil {
-		startOutput, outputErr := cmd.Output()
-		assert.NoError(t, outputErr)
-		require.NoError(t, startErr, string(startOutput))
+		require.NoError(t, startErr, out.String())
 	}
 	require.Eventually(t, func() bool {
 		conn, err := net.Dial("tcp", fmt.Sprintf("localhost:%s", localPort))
@@ -289,6 +293,8 @@ func startPortForwarder(ctx context.Context, t *testing.T, env environments.Envi
 			conn.Close()
 			return true
 		}
+
+		t.Logf("port forwarding command %q output so far: %s", cmd.String(), out.String())
 		return false
 	}, kongComponentWait, time.Second)
 }

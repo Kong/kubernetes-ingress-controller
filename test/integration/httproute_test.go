@@ -570,7 +570,8 @@ func TestHTTPRouteFilterHosts(t *testing.T) {
 			}},
 		},
 	}
-	_, err = gatewayClient.GatewayV1beta1().HTTPRoutes(ns.Name).Create(ctx, httpRoute, metav1.CreateOptions{})
+	hClient := gatewayClient.GatewayV1beta1().HTTPRoutes(ns.Name)
+	httpRoute, err = hClient.Create(ctx, httpRoute, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(httpRoute)
 
@@ -596,13 +597,22 @@ func TestHTTPRouteFilterHosts(t *testing.T) {
 	require.False(t, testGetByHost(t, "another.specific.io"))
 
 	t.Logf("update hostnames in httproute to wildcard")
-	httpRoute, err = gatewayClient.GatewayV1beta1().HTTPRoutes(ns.Name).Get(ctx, httpRoute.Name, metav1.GetOptions{})
-	require.NoError(t, err)
-	httpRoute.Spec.Hostnames = []gatewayv1beta1.Hostname{
-		gatewayv1beta1.Hostname("*.specific.io"),
-	}
-	_, err = gatewayClient.GatewayV1beta1().HTTPRoutes(ns.Name).Update(ctx, httpRoute, metav1.UpdateOptions{})
-	require.NoError(t, err)
+	require.Eventually(t, func() bool {
+		httpRoute, err = hClient.Get(ctx, httpRoute.Name, metav1.GetOptions{})
+		if err != nil {
+			t.Logf("failed getting the HTTPRoute %s: %v", httpRoute.Name, err)
+			return false
+		}
+		httpRoute.Spec.Hostnames = []gatewayv1beta1.Hostname{
+			gatewayv1beta1.Hostname("*.specific.io"),
+		}
+		httpRoute, err = hClient.Update(ctx, httpRoute, metav1.UpdateOptions{})
+		if err != nil {
+			t.Logf("failed updating the HTTPRoute %s: %v", httpRoute.Name, err)
+			return false
+		}
+		return true
+	}, 10*time.Second, 100*time.Millisecond)
 	t.Logf("test host matched hostname in listeners")
 	require.Eventually(t, func() bool {
 		return testGetByHost(t, "test.specific.io")
@@ -611,16 +621,16 @@ func TestHTTPRouteFilterHosts(t *testing.T) {
 	require.False(t, testGetByHost(t, "another2.specific.io"))
 
 	t.Logf("update hostname in httproute to an unmatched host")
-	httpRoute, err = gatewayClient.GatewayV1beta1().HTTPRoutes(ns.Name).Get(ctx, httpRoute.Name, metav1.GetOptions{})
+	httpRoute, err = hClient.Get(ctx, httpRoute.Name, metav1.GetOptions{})
 	require.NoError(t, err)
 	httpRoute.Spec.Hostnames = []gatewayv1beta1.Hostname{
 		gatewayv1beta1.Hostname("another.specific.io"),
 	}
-	_, err = gatewayClient.GatewayV1beta1().HTTPRoutes(ns.Name).Update(ctx, httpRoute, metav1.UpdateOptions{})
+	httpRoute, err = hClient.Update(ctx, httpRoute, metav1.UpdateOptions{})
 	require.NoError(t, err)
 	t.Logf("status of httproute should contain an 'Accepted' condition with 'False' status")
 	require.Eventuallyf(t, func() bool {
-		currentHTTPRoute, err := gatewayClient.GatewayV1beta1().HTTPRoutes(ns.Name).Get(ctx, httpRoute.Name, metav1.GetOptions{})
+		currentHTTPRoute, err := hClient.Get(ctx, httpRoute.Name, metav1.GetOptions{})
 		require.NoError(t, err)
 		for _, parent := range currentHTTPRoute.Status.Parents {
 			for _, condition := range parent.Conditions {
@@ -632,7 +642,7 @@ func TestHTTPRouteFilterHosts(t *testing.T) {
 		return false
 	}, ingressWait, waitTick,
 		func() string {
-			currentHTTPRoute, err := gatewayClient.GatewayV1beta1().HTTPRoutes(ns.Name).Get(ctx, httpRoute.Name, metav1.GetOptions{})
+			currentHTTPRoute, err := hClient.Get(ctx, httpRoute.Name, metav1.GetOptions{})
 			if err != nil {
 				return err.Error()
 			}

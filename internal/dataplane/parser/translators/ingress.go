@@ -8,7 +8,7 @@ import (
 
 	"github.com/kong/go-kong/kong"
 	netv1 "k8s.io/api/networking/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
@@ -103,17 +103,15 @@ func (i *ingressTranslationIndex) add(ingress *netv1.Ingress) {
 			meta, ok := i.cache[cacheKey]
 			if !ok {
 				meta = &ingressTranslationMeta{
-					ingressNamespace: ingress.Namespace,
-					ingressName:      ingress.Name,
-					ingressHost:      ingressRule.Host,
-					serviceName:      serviceName,
-					servicePort:      port,
-					addRegexPrefix:   i.addRegexPrefix,
+					ingressHost:    ingressRule.Host,
+					serviceName:    serviceName,
+					servicePort:    port,
+					addRegexPrefix: i.addRegexPrefix,
 				}
 			}
 
+			meta.parentIngress = ingress
 			meta.paths = append(meta.paths, httpIngressPath)
-			meta.ingressAnnotations = ingress.Annotations
 			i.cache[cacheKey] = meta
 		}
 	}
@@ -122,7 +120,7 @@ func (i *ingressTranslationIndex) add(ingress *netv1.Ingress) {
 func (i *ingressTranslationIndex) translate() []*kongstate.Service {
 	kongStateServiceCache := make(map[string]*kongstate.Service)
 	for _, meta := range i.cache {
-		kongServiceName := fmt.Sprintf("%s.%s.%s.%s", meta.ingressNamespace, meta.ingressName, meta.serviceName, meta.servicePort.CanonicalString())
+		kongServiceName := fmt.Sprintf("%s.%s.%s.%s", meta.parentIngress.GetNamespace(), meta.parentIngress.GetName(), meta.serviceName, meta.servicePort.CanonicalString())
 		kongStateService, ok := kongStateServiceCache[kongServiceName]
 		if !ok {
 			kongStateService = meta.translateIntoKongStateService(kongServiceName, meta.servicePort)
@@ -147,22 +145,20 @@ func (i *ingressTranslationIndex) translate() []*kongstate.Service {
 // -----------------------------------------------------------------------------
 
 type ingressTranslationMeta struct {
-	ingressAnnotations map[string]string
-	ingressNamespace   string
-	ingressName        string
-	ingressHost        string
-	serviceName        string
-	servicePort        kongstate.PortDef
-	paths              []netv1.HTTPIngressPath
-	addRegexPrefix     bool
+	parentIngress  client.Object
+	ingressHost    string
+	serviceName    string
+	servicePort    kongstate.PortDef
+	paths          []netv1.HTTPIngressPath
+	addRegexPrefix bool
 }
 
 func (m *ingressTranslationMeta) translateIntoKongStateService(kongServiceName string, portDef kongstate.PortDef) *kongstate.Service {
 	return &kongstate.Service{
-		Namespace: m.ingressNamespace,
+		Namespace: m.parentIngress.GetNamespace(),
 		Service: kong.Service{
 			Name:           kong.String(kongServiceName),
-			Host:           kong.String(fmt.Sprintf("%s.%s.%s.svc", m.serviceName, m.ingressNamespace, portDef.CanonicalString())),
+			Host:           kong.String(fmt.Sprintf("%s.%s.%s.svc", m.serviceName, m.parentIngress.GetNamespace(), portDef.CanonicalString())),
 			Port:           kong.Int(defaultHTTPPort),
 			Protocol:       kong.String("http"),
 			Path:           kong.String("/"),
@@ -173,19 +169,10 @@ func (m *ingressTranslationMeta) translateIntoKongStateService(kongServiceName s
 		},
 		Backends: []kongstate.ServiceBackend{{
 			Name:      m.serviceName,
-			Namespace: m.ingressNamespace,
+			Namespace: m.parentIngress.GetNamespace(),
 			PortDef:   portDef,
 		}},
-		Parent: &netv1.Ingress{
-			TypeMeta: metav1.TypeMeta{
-				Kind:       "Ingress",
-				APIVersion: netv1.SchemeGroupVersion.String(),
-			},
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      m.ingressName,
-				Namespace: m.ingressNamespace,
-			},
-		},
+		Parent: m.parentIngress,
 	}
 }
 
@@ -195,12 +182,12 @@ func (m *ingressTranslationMeta) translateIntoKongRoutes() *kongstate.Route {
 		// '_' is not allowed in host, so we use '_' to replace '*' since '*' is not allowed in Kong.
 		ingressHost = strings.ReplaceAll(ingressHost, "*", "_")
 	}
-	routeName := fmt.Sprintf("%s.%s.%s.%s.%s", m.ingressNamespace, m.ingressName, m.serviceName, ingressHost, m.servicePort.CanonicalString())
+	routeName := fmt.Sprintf("%s.%s.%s.%s.%s", m.parentIngress.GetNamespace(), m.parentIngress.GetName(), m.serviceName, ingressHost, m.servicePort.CanonicalString())
 	route := &kongstate.Route{
 		Ingress: util.K8sObjectInfo{
-			Namespace:   m.ingressNamespace,
-			Name:        m.ingressName,
-			Annotations: m.ingressAnnotations,
+			Namespace:   m.parentIngress.GetNamespace(),
+			Name:        m.parentIngress.GetName(),
+			Annotations: m.parentIngress.GetAnnotations(),
 		},
 		Route: kong.Route{
 			Name:              kong.String(routeName),

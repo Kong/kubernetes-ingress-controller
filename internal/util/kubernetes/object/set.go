@@ -12,7 +12,6 @@ type (
 type objectConfigurationStatus struct {
 	generation int64
 	succeeded  bool
-	// TODO: add reason/message here when configuration failed.
 }
 
 type ConfigurationStatus string

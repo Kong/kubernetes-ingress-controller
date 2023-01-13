@@ -10,6 +10,7 @@ import (
 	"github.com/kong/deck/file"
 	"github.com/kong/go-kong/kong"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/samber/lo"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/tools/record"
@@ -451,7 +452,7 @@ func (c *KongClient) triggerKubernetesObjectReport(reportedObjects []client.Obje
 		set.Insert(obj, true)
 	}
 
-	// in some situations, objects with translation failures are be reported:
+	// in some situations, objects with translation failures are reported:
 	// https://github.com/Kong/kubernetes-ingress-controller/issues/3364
 	// so we override the failed configuration status from translation failures.
 	for _, translationFailure := range translationFailures {
@@ -466,26 +467,20 @@ func (c *KongClient) triggerKubernetesObjectReport(reportedObjects []client.Obje
 	// control-plane can update the Kubernetes object statuses for affected objs.
 	// this has to be done in a separate loop so that the filter is in place
 	// before the objects are enqueued, as the filter is used by the control-plane
-
-	// create a new set to de-duplicate the objects to avoid duplicate events sent to controllers.
-	set = k8sobj.ConfigurationStatusSet{}
-	for _, obj := range reportedObjects {
-		if set.Get(obj) == k8sobj.ConfigurationStatusUnknown {
-			set.Insert(obj, true)
-			c.kubernetesObjectStatusQueue.Publish(obj)
-		}
+	for _, obj := range uniqueObjects(reportedObjects, translationFailures) {
+		c.kubernetesObjectStatusQueue.Publish(obj)
 	}
+}
 
-	for _, translationFailure := range translationFailures {
-		for _, obj := range translationFailure.CausingObjects() {
-			// We only check if the object has been added to the set to avoid multiple events on the same object.
-			// Controllers will get configuration status from c.kubernetesObjectReportsFilter.
-			if set.Get(obj) == k8sobj.ConfigurationStatusUnknown {
-				set.Insert(obj, false)
-				c.kubernetesObjectStatusQueue.Publish(obj)
-			}
-		}
-	}
+func uniqueObjects(reportedObjects []client.Object, resourceFailures []failures.ResourceFailure) []client.Object {
+	allCausingObjects := lo.FlatMap(resourceFailures, func(f failures.ResourceFailure, _ int) []client.Object {
+		return f.CausingObjects()
+	})
+	allObjects := append(reportedObjects, allCausingObjects...)
+	return lo.UniqBy(allObjects, func(obj client.Object) string {
+		return obj.GetObjectKind().GroupVersionKind().String() + "/" +
+			obj.GetNamespace() + "/" + obj.GetName()
+	})
 }
 
 // updateKubernetesObjectReportFilter overrides the internal object set with

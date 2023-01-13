@@ -26,7 +26,6 @@ import (
 	ctrlutils "github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/utils"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
-	k8sobj "github.com/kong/kubernetes-ingress-controller/v2/internal/util/kubernetes/object"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util/kubernetes/object/status"
 )
 
@@ -202,15 +201,9 @@ func (r *Knativev1alpha1IngressReconciler) Reconcile(ctx context.Context, req ct
 	// if status updates are enabled report the status for the object
 	if r.DataplaneClient.AreKubernetesObjectReportsEnabled() {
 		log.V(util.DebugLevel).Info("determining whether data-plane configuration has succeeded", "namespace", req.Namespace, "name", req.Name)
-		configurationStatus := r.DataplaneClient.KubernetesObjectConfigurationStatus(obj)
 
-		if configurationStatus == k8sobj.ConfigurationStatusUnknown {
+		if !r.DataplaneClient.KubernetesObjectIsConfigured(obj) {
 			log.V(util.DebugLevel).Error(fmt.Errorf("resource not yet configured"), "resource not yet configured in the data-plane", "namespace", req.Namespace, "name", req.Name)
-			return ctrl.Result{Requeue: true}, nil // requeue until the object has been properly configured
-		}
-
-		if configurationStatus == k8sobj.ConfigurationStatusFailed {
-			log.V(util.DebugLevel).Error(fmt.Errorf("resource configuration failed"), "resource failed to be configured in the data-plane", "namespace", req.Namespace, "name", req.Name)
 			return ctrl.Result{Requeue: true}, nil // requeue until the object has been properly configured
 		}
 

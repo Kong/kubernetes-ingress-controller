@@ -69,10 +69,10 @@ Adding a new version? You'll need three changes:
 
 ### Added
 
-- Store status of whether configuration succedded or failed forkubernetes 
-  objects in dataplane client and publish the events to let controllers 
-  know if the controlled objects succeeded or failed to be translated to
-  Kong configuration.
+- Store status of whether configuration succedded or failed for Kubernetes 
+  objects in dataplane client and publish the events to let controllers know
+  if the controlled objects succeeded or failed to be translated to Kong 
+  configuration.
   [#3359](https://github.com/Kong/kubernetes-ingress-controller/pull/3359)  
 
 ### Fixed

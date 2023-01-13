@@ -621,13 +621,9 @@ func (r *{{.PackageAlias}}{{.Kind}}Reconciler) Reconcile(ctx context.Context, re
 	// if status updates are enabled report the status for the object
 	if r.DataplaneClient.AreKubernetesObjectReportsEnabled() {
 		log.V(util.DebugLevel).Info("determining whether data-plane configuration has succeeded", "namespace", req.Namespace, "name", req.Name)
-		configurationStatus := r.DataplaneClient.KubernetesObjectConfigurationStatus(obj)
-		if configurationStatus == k8sobj.ConfigurationStatusUnknown {
+		
+		if  !r.DataplaneClient.KubernetesObjectIsConfigured(obj) {
 			log.V(util.DebugLevel).Info("resource not yet configured in the data-plane", "namespace", req.Namespace, "name", req.Name)
-			return ctrl.Result{Requeue: true}, nil // requeue until the object has been properly configured
-		}
-		if configurationStatus == k8sobj.ConfigurationStatusFailed {
-			log.V(util.DebugLevel).Info("resource failed to be configured in the data-plane", "namespace", req.Namespace, "name", req.Name)
 			return ctrl.Result{Requeue: true}, nil // requeue until the object has been properly configured
 		}
 

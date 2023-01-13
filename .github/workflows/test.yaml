@@ -167,7 +167,7 @@ jobs:
         path: coverage.enterprisepostgres.out
 
     - name: upload diagnostics
-      if: env.PULP_PASSWORD != ''
+      if: ${{ failure() && env.PULP_PASSWORD != '' }}
       uses: actions/upload-artifact@v3
       with:
         name: diagnostics-integration-tests-enterprise-postgres

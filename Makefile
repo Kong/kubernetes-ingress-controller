@@ -2,6 +2,7 @@
 # Configuration - Repository
 # ------------------------------------------------------------------------------
 
+MAKEFLAGS += --no-print-directory
 REPO_URL ?= github.com/kong/kubernetes-ingress-controller
 REPO_INFO ?= $(shell git config --get remote.origin.url)
 TAG ?= $(shell git describe --tags)

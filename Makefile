@@ -468,6 +468,7 @@ test.istio: gotestsum
 KUBECONFIG ?= "${HOME}/.kube/config"
 KONG_NAMESPACE ?= kong-system
 KONG_PROXY_SERVICE ?= ingress-controller-kong-proxy
+KONG_PROXY_UDP_SERVICE ?= ingress-controller-kong-udp-proxy
 KONG_ADMIN_SERVICE ?= ingress-controller-kong-admin
 KONG_ADMIN_PORT ?= 8001
 KONG_ADMIN_URL ?= "http://$(shell kubectl -n $(KONG_NAMESPACE) get service $(KONG_ADMIN_SERVICE) -o=go-template='{{range .status.loadBalancer.ingress}}{{.ip}}{{end}}'):$(KONG_ADMIN_PORT)"
@@ -481,6 +482,7 @@ debug: install _ensure-namespace
 	$(DLV) debug ./internal/cmd/main.go -- \
 		--kong-admin-url $(KONG_ADMIN_URL) \
 		--publish-service $(KONG_NAMESPACE)/$(KONG_PROXY_SERVICE) \
+		--publish-service-udp $(KONG_NAMESPACE)/$(KONG_PROXY_UDP_SERVICE) \
 		--kubeconfig $(KUBECONFIG) \
 		--feature-gates=$(KONG_CONTROLLER_FEATURE_GATES)
 
@@ -526,6 +528,7 @@ _run:
 	go run ./internal/cmd/main.go \
 		--kong-admin-url $(KONG_ADMIN_URL) \
 		--publish-service $(KONG_NAMESPACE)/$(KONG_PROXY_SERVICE) \
+		--publish-service-udp $(KONG_NAMESPACE)/$(KONG_PROXY_UDP_SERVICE) \
 		--kubeconfig $(KUBECONFIG) \
 		--feature-gates=$(KONG_CONTROLLER_FEATURE_GATES)
 

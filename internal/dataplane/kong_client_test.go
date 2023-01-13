@@ -3,13 +3,14 @@ package dataplane
 import (
 	"testing"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/failures"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	netv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/failures"
 )
 
 func TestUniqueObjects(t *testing.T) {
@@ -91,9 +92,7 @@ func TestUniqueObjects(t *testing.T) {
 			}
 			uniqueObjs := uniqueObjects(tc.reportedObjs, translationFailures)
 			require.Len(t, uniqueObjs, len(tc.uniqueObjs))
-			for _, obj := range tc.uniqueObjs {
-				require.Contains(t, uniqueObjs, obj)
-			}
+			require.ElementsMatch(t, tc.uniqueObjs, uniqueObjs)
 		})
 	}
 }

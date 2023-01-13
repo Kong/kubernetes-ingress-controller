@@ -33,8 +33,25 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-build-codegen-
 
-    - name: Run lint
-      run: make lint
+    - name: Cache Go modules
+      uses: actions/cache@v3
+      with:
+        path: |
+            ~/.cache/golangci-lint
+        key: ${{ runner.os }}-golangcilint-${{ hashFiles('**/go.sum') }}
+        restore-keys: |
+          ${{ runner.os }}-golangcilint-
+
+    - uses: reviewdog/action-staticcheck@v1
+      with:
+        reporter: github-pr-review
+        filter_mode: nofilter
+        fail_on_error: false
+        staticcheck_flags: -tags e2e_tests,integration_tests,istio_tests,conformance_tests
+
+    - uses: reviewdog/action-golangci-lint@v2
+      with:
+        cache: false
 
     - name: Verify manifest consistency
       run: make verify.manifests

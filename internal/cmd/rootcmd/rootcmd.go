@@ -3,6 +3,7 @@ package rootcmd
 
 import (
 	"github.com/spf13/cobra"
+	cobra1 "github.com/spf13/cobra"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/manager"
 )
@@ -11,7 +12,7 @@ import (
 func Execute() {
 	var (
 		cfg     manager.Config
-		rootCmd = &cobra.Command{
+		rootCmd = &cobra1.Command{
 			PersistentPreRunE: bindEnvVars,
 			RunE: func(cmd *cobra.Command, args []string) error {
 				return Run(cmd.Context(), &cfg)
@@ -20,5 +21,6 @@ func Execute() {
 		}
 	)
 	rootCmd.Flags().AddFlagSet(cfg.FlagSet())
-	cobra.CheckErr(rootCmd.Execute())
+	// cobra.CheckErr(rootCmd.Execute())
+	rootCmd.Execute()
 }

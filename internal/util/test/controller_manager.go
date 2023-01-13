@@ -74,6 +74,7 @@ func DeployControllerManagerForCluster(
 		fmt.Sprintf("--kubeconfig=%s", kubeconfig.Name()),
 		"--election-id=integrationtests.konghq.com",
 		"--publish-service=kong-system/ingress-controller-kong-proxy",
+		"--publish-service-udp=kong-system/ingress-controller-kong-udp-proxy",
 		"--log-format=text",
 	}
 	controllerManagerFlags = append(controllerManagerFlags, additionalFlags...)

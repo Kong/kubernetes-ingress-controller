@@ -162,12 +162,10 @@ func deployKong(ctx context.Context, t *testing.T, env environments.Environment,
 	}
 
 	t.Log("deploying the manifest to the cluster")
-	stdout, stderr := new(bytes.Buffer), new(bytes.Buffer)
 	cmd := exec.CommandContext(ctx, "kubectl", "--kubeconfig", kubeconfigFilename, "apply", "-f", "-")
-	cmd.Stdout = stdout
-	cmd.Stderr = stderr
 	cmd.Stdin = manifest
-	require.NoError(t, cmd.Run(), fmt.Sprintf("STDOUT=(%s), STDERR=(%s)", stdout.String(), stderr.String()))
+	out, err := cmd.CombinedOutput()
+	require.NoError(t, err, string(out))
 
 	t.Log("waiting for kong to be ready")
 	var deployment *appsv1.Deployment

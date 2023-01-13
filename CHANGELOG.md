@@ -74,6 +74,8 @@ Adding a new version? You'll need three changes:
   if the controlled objects succeeded or failed to be translated to Kong 
   configuration.
   [#3359](https://github.com/Kong/kubernetes-ingress-controller/pull/3359)  
+- Added `version` command
+  [#3379](https://github.com/Kong/kubernetes-ingress-controller/pull/3379)  
 
 ### Fixed
 

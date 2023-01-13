@@ -2,6 +2,7 @@
 # Configuration - Repository
 # ------------------------------------------------------------------------------
 
+MAKEFLAGS += --no-print-directory
 REPO_URL ?= github.com/kong/kubernetes-ingress-controller
 REPO_INFO ?= $(shell git config --get remote.origin.url)
 TAG ?= $(shell git describe --tags)
@@ -104,11 +105,36 @@ clean:
 	@rm -f coverage*.out
 
 .PHONY: build
-build: generate fmt vet lint
-	go build -a -o bin/manager -ldflags "-s -w \
-		-X $(REPO_URL)/v2/internal/metadata.Release=$(TAG) \
-		-X $(REPO_URL)/v2/internal/metadata.Commit=$(COMMIT) \
-		-X $(REPO_URL)/v2/internal/metadata.Repo=$(REPO_INFO)" internal/cmd/main.go
+build: generate fmt vet lint _build
+
+.PHONY: build.fips
+build.fips: generate fmt vet lint _build.fips
+
+.PHONY: _build
+_build:
+	$(MAKE) _build.template MAIN=./internal/cmd/main.go
+
+.PHONY: _build.fips
+_build.fips:
+	$(MAKE) _build.template MAIN=./internal/cmd/fips/main.go
+
+.PHONY: _build.template
+_build.template:
+	go build -o bin/manager -ldflags "-s -w \
+		-X $(REPO_URL)/v2/internal/manager/metadata.Release=$(TAG) \
+		-X $(REPO_URL)/v2/internal/manager/metadata.Commit=$(COMMIT) \
+		-X $(REPO_URL)/v2/internal/manager/metadata.Repo=$(REPO_INFO)" ${MAIN}
+
+.PHONY: _build.debug
+_build.debug:
+	$(MAKE) _build.template.debug MAIN=./internal/cmd/main.go
+
+.PHONY: _build.template.debug
+_build.template.debug:
+	go build -o bin/manager-debug -gcflags=all="-N -l" -ldflags " \
+		-X $(REPO_URL)/v2/internal/manager/metadata.Release=$(TAG) \
+		-X $(REPO_URL)/v2/internal/manager/metadata.Commit=$(COMMIT) \
+		-X $(REPO_URL)/v2/internal/manager/metadata.Repo=$(REPO_INFO)" ${MAIN}
 
 .PHONY: fmt
 fmt:
@@ -229,8 +255,8 @@ container:
 		--build-arg REPO_INFO=${REPO_INFO} \
 		-t ${IMAGE}:${TAG} .
 
-.PHONY: container
-debug-container:
+.PHONY: container.debug
+container.debug:
 	docker buildx build \
 		-f Dockerfile \
 		--target debug \

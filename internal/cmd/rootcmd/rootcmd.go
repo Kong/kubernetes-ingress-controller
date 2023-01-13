@@ -17,6 +17,9 @@ func Execute() {
 				return Run(cmd.Context(), &cfg)
 			},
 			SilenceUsage: true,
+			// We can silence the errors because cobra.CheckErr below will print
+			// the returned error and set the exit code to 1.
+			SilenceErrors: true,
 		}
 	)
 	rootCmd.Flags().AddFlagSet(cfg.FlagSet())

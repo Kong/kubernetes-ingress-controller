@@ -234,7 +234,7 @@ func (r *TCPRouteReconciler) listTCPRoutesForGateway(obj client.Object) []reconc
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
 func (r *TCPRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	log := r.Log.WithValues("NetV1Alpha2TCPRoute", req.NamespacedName)
+	log := r.Log.WithValues("GatewayV1Alpha2TCPRoute", req.NamespacedName)
 
 	tcproute := new(gatewayv1alpha2.TCPRoute)
 	if err := r.Get(ctx, req.NamespacedName, tcproute); err != nil {

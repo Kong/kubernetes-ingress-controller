@@ -390,11 +390,12 @@ func (r *GatewayReconciler) reconcileUnmanagedGateway(ctx context.Context, log l
 	debug(log, gateway, "initializing admin service annotation if unset")
 	if !isObjectUnmanaged(gateway.GetAnnotations()) {
 		debug(log, gateway, fmt.Sprintf("a placeholder value was provided for %s, adding the default service ref %s", annotations.GatewayClassUnmanagedAnnotation, r.PublishService))
+		oldGateway := gateway.DeepCopy()
 		if gateway.Annotations == nil {
 			gateway.Annotations = map[string]string{}
 		}
 		annotations.UpdateUnmanagedAnnotation(gateway.Annotations, r.PublishService)
-		return ctrl.Result{}, r.Update(ctx, gateway)
+		return ctrl.Result{}, r.Patch(ctx, gateway, client.MergeFrom(oldGateway))
 	}
 
 	serviceRef := annotations.ExtractUnmanagedGatewayClassMode(gateway.Annotations)
@@ -419,8 +420,9 @@ func (r *GatewayReconciler) reconcileUnmanagedGateway(ctx context.Context, log l
 			Reason:             string(gatewayv1beta1.GatewayReasonScheduled),
 			Message:            "this unmanaged gateway has been picked up by the controller and will be processed",
 		}
+		oldGateway := gateway.DeepCopy()
 		setGatewayCondition(gateway, scheduledCondition)
-		return ctrl.Result{}, r.Status().Update(ctx, pruneGatewayStatusConds(gateway))
+		return ctrl.Result{}, r.Status().Patch(ctx, pruneGatewayStatusConds(gateway), client.MergeFrom(oldGateway))
 	}
 
 	// When deployed on Kubernetes Kong can not be relied on for the address data needed for Gateway because
@@ -442,8 +444,9 @@ func (r *GatewayReconciler) reconcileUnmanagedGateway(ctx context.Context, log l
 
 	if !reflect.DeepEqual(gateway.Spec.Addresses, kongAddresses) {
 		debug(log, gateway, "updating addresses to match Kong proxy Service")
+		oldGateway := gateway.DeepCopy()
 		gateway.Spec.Addresses = kongAddresses
-		if err := r.Update(ctx, gateway); err != nil {
+		if err := r.Patch(ctx, gateway, client.MergeFrom(oldGateway)); err != nil {
 			if k8serrors.IsConflict(err) {
 				// if there's a conflict that's normal just requeue to retry, no need to make noise.
 				return ctrl.Result{Requeue: true}, nil
@@ -698,6 +701,7 @@ func (r *GatewayReconciler) updateAddressesAndListenersStatus(
 	listenerStatuses []gatewayv1beta1.ListenerStatus,
 ) (bool, error) {
 	if !isGatewayReady(gateway) {
+		oldGateway := gateway.DeepCopy()
 		gateway.Status.Listeners = listenerStatuses
 		gateway.Status.Addresses = gateway.Spec.Addresses
 		readyCondition := metav1.Condition{
@@ -709,11 +713,12 @@ func (r *GatewayReconciler) updateAddressesAndListenersStatus(
 			Message:            "addresses and listeners for the Gateway resource were successfully updated",
 		}
 		setGatewayCondition(gateway, readyCondition)
-		return true, r.Status().Update(ctx, pruneGatewayStatusConds(gateway))
+		return true, r.Status().Patch(ctx, pruneGatewayStatusConds(gateway), client.MergeFrom(oldGateway))
 	}
 	if !reflect.DeepEqual(gateway.Status.Listeners, listenerStatuses) {
+		oldGateway := gateway.DeepCopy()
 		gateway.Status.Listeners = listenerStatuses
-		return true, r.Status().Update(ctx, gateway)
+		return true, r.Status().Patch(ctx, pruneGatewayStatusConds(gateway), client.MergeFrom(oldGateway))
 	}
 	return false, nil
 }

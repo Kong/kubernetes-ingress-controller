@@ -427,6 +427,7 @@ func (r *TLSRouteReconciler) ensureGatewayReferenceStatusAdded(ctx context.Conte
 		return false, nil
 	}
 
+	oldTLSRoute := tlsroute.DeepCopy()
 	// update the tlsroute status with the new status references
 	tlsroute.Status.Parents = make([]gatewayv1alpha2.RouteParentStatus, 0, len(parentStatuses))
 	for _, parent := range parentStatuses {
@@ -434,7 +435,7 @@ func (r *TLSRouteReconciler) ensureGatewayReferenceStatusAdded(ctx context.Conte
 	}
 
 	// update the object status in the API
-	if err := r.Status().Update(ctx, tlsroute); err != nil {
+	if err := r.Status().Patch(ctx, tlsroute, client.MergeFrom(oldTLSRoute)); err != nil {
 		return false, err
 	}
 
@@ -460,9 +461,10 @@ func (r *TLSRouteReconciler) ensureGatewayReferenceStatusRemoved(ctx context.Con
 		return false, nil
 	}
 
+	oldTLSRoute := tlsroute.DeepCopy()
 	// update the object status in the API
 	tlsroute.Status.Parents = newStatuses
-	if err := r.Status().Update(ctx, tlsroute); err != nil {
+	if err := r.Status().Patch(ctx, tlsroute, client.MergeFrom(oldTLSRoute)); err != nil {
 		return false, err
 	}
 

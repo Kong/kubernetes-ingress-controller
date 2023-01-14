@@ -122,8 +122,9 @@ func (r *GatewayClassReconciler) Reconcile(ctx context.Context, req ctrl.Request
 				Reason:             string(gatewayv1beta1.GatewayClassReasonAccepted),
 				Message:            "the gatewayclass has been accepted by the controller",
 			}
+			oldGatewayClass := gwc.DeepCopy()
 			setGatewayClassCondition(gwc, acceptedCondtion)
-			return ctrl.Result{}, r.Status().Update(ctx, pruneGatewayClassStatusConds(gwc))
+			return ctrl.Result{}, r.Status().Patch(ctx, pruneGatewayClassStatusConds(gwc), client.MergeFrom(oldGatewayClass))
 		}
 	}
 

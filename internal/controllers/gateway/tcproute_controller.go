@@ -426,6 +426,7 @@ func (r *TCPRouteReconciler) ensureGatewayReferenceStatusAdded(
 		return false, nil
 	}
 
+	oldTCPRoute := tcproute.DeepCopy()
 	// update the tcproute status with the new status references
 	tcproute.Status.Parents = make([]gatewayv1alpha2.RouteParentStatus, 0, len(parentStatuses))
 	for _, parent := range parentStatuses {
@@ -433,7 +434,7 @@ func (r *TCPRouteReconciler) ensureGatewayReferenceStatusAdded(
 	}
 
 	// update the object status in the API
-	if err := r.Status().Update(ctx, tcproute); err != nil {
+	if err := r.Status().Patch(ctx, tcproute, client.MergeFrom(oldTCPRoute)); err != nil {
 		return false, err
 	}
 
@@ -459,9 +460,10 @@ func (r *TCPRouteReconciler) ensureGatewayReferenceStatusRemoved(ctx context.Con
 		return false, nil
 	}
 
+	oldTCPRoute := tcproute.DeepCopy()
 	// update the object status in the API
 	tcproute.Status.Parents = newStatuses
-	if err := r.Status().Update(ctx, tcproute); err != nil {
+	if err := r.Status().Patch(ctx, tcproute, client.MergeFrom(oldTCPRoute)); err != nil {
 		return false, err
 	}
 

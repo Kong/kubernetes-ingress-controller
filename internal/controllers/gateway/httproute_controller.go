@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"reflect"
+	"sync"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -460,6 +461,7 @@ func (r *HTTPRouteReconciler) ensureGatewayReferenceStatusAdded(ctx context.Cont
 		return false, nil
 	}
 
+	oldHTTPRoute := httproute.DeepCopy()
 	// update the httproute status with the new status references
 	httproute.Status.Parents = make([]gatewayv1beta1.RouteParentStatus, 0, len(parentStatuses))
 	for _, parent := range parentStatuses {
@@ -467,7 +469,7 @@ func (r *HTTPRouteReconciler) ensureGatewayReferenceStatusAdded(ctx context.Cont
 	}
 
 	// update the object status in the API
-	if err := r.Status().Update(ctx, httproute); err != nil {
+	if err := r.Status().Patch(ctx, httproute, client.MergeFrom(oldHTTPRoute)); err != nil {
 		return false, err
 	}
 
@@ -493,9 +495,10 @@ func (r *HTTPRouteReconciler) ensureGatewayReferenceStatusRemoved(ctx context.Co
 		return false, nil
 	}
 
+	old := httproute.DeepCopy()
 	// update the object status in the API
 	httproute.Status.Parents = newStatuses
-	if err := r.Status().Update(ctx, httproute); err != nil {
+	if err := r.Status().Patch(ctx, httproute, client.MergeFrom(old)); err != nil {
 		return false, err
 	}
 
@@ -626,7 +629,11 @@ func (r *HTTPRouteReconciler) ensureParentsAcceptedCondition(
 		parentStatuses[fmt.Sprintf("%s/%s/%s", namespace, existingParent.ParentRef.Name, sectionName)] = &existingParentCopy
 	}
 
-	statusChanged := false
+	var (
+		oldHTTPRoute  *HTTPRoute
+		statusChanged = false
+		once          sync.Once
+	)
 	for _, g := range gateways {
 		gateway := g.gateway
 		parentRefKey := fmt.Sprintf("%s/%s/%s", gateway.Namespace, gateway.Name, g.listenerName)
@@ -655,6 +662,9 @@ func (r *HTTPRouteReconciler) ensureParentsAcceptedCondition(
 					},
 				},
 			}
+			once.Do(func() {
+				oldHTTPRoute = httproute.DeepCopy()
+			})
 			httproute.Status.Parents = append(httproute.Status.Parents, *newParentStatus)
 			parentStatuses[parentRefKey] = newParentStatus
 			statusChanged = true
@@ -663,7 +673,7 @@ func (r *HTTPRouteReconciler) ensureParentsAcceptedCondition(
 
 	// update status if needed.
 	if statusChanged {
-		if err := r.Status().Update(ctx, httproute); err != nil {
+		if err := r.Status().Patch(ctx, httproute, client.MergeFrom(oldHTTPRoute)); err != nil {
 			return false, err
 		}
 		return true, nil

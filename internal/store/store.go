@@ -79,8 +79,9 @@ type Storer interface {
 	GetKongPlugin(namespace, name string) (*kongv1.KongPlugin, error)
 	GetKongClusterPlugin(name string) (*kongv1.KongClusterPlugin, error)
 	GetKongConsumer(namespace, name string) (*kongv1.KongConsumer, error)
+	GetIngressClassName() string
 	GetIngressClassV1(name string) (*netv1.IngressClass, error)
-	GetIngressClassParametersV1Alpha1() (*kongv1alpha1.IngressClassParameters, error)
+	GetIngressClassParametersV1Alpha1(ingressClass *netv1.IngressClass) (*kongv1alpha1.IngressClassParameters, error)
 	GetGateway(namespace string, name string) (*gatewayv1beta1.Gateway, error)
 
 	ListIngressesV1beta1() []*netv1beta1.Ingress
@@ -827,6 +828,10 @@ func (s Store) GetKongConsumer(namespace, name string) (*kongv1.KongConsumer, er
 	return p.(*kongv1.KongConsumer), nil
 }
 
+func (s Store) GetIngressClassName() string {
+	return s.ingressClass
+}
+
 // GetIngressClassV1 returns the 'name' IngressClass resource.
 func (s Store) GetIngressClassV1(name string) (*netv1.IngressClass, error) {
 	p, exists, err := s.stores.IngressClassV1.GetByKey(name)
@@ -841,41 +846,34 @@ func (s Store) GetIngressClassV1(name string) (*netv1.IngressClass, error) {
 
 // GetIngressClassParametersV1Alpha1 returns IngressClassParameters of configured
 // IngressClass.
-func (s Store) GetIngressClassParametersV1Alpha1() (*kongv1alpha1.IngressClassParameters, error) {
-	class, exists, err := s.stores.IngressClassV1.GetByKey(s.ingressClass)
-	if err != nil {
-		return nil, err
-	}
-	if !exists {
-		return nil, ErrNotFound{fmt.Sprintf("IngressClass %s not found", s.ingressClass)}
+func (s Store) GetIngressClassParametersV1Alpha1(ingressClass *netv1.IngressClass) (*kongv1alpha1.IngressClassParameters, error) {
+	if ingressClass == nil {
+		return nil, fmt.Errorf("provided IngressClass is nil")
 	}
 
-	ingressClass := class.(*netv1.IngressClass)
 	if ingressClass.Spec.Parameters == nil {
-		return nil, ErrNotFound{fmt.Sprintf("IngressClass %s doesn't reference any parameters", s.ingressClass)}
+		return nil, fmt.Errorf("IngressClass %s doesn't reference any parameters", ingressClass.Name)
 	}
 
 	if ingressClass.Spec.Parameters.APIGroup == nil ||
 		*ingressClass.Spec.Parameters.APIGroup != kongv1alpha1.GroupVersion.Group {
-		return nil, ErrNotFound{fmt.Sprintf(
+		return nil, fmt.Errorf(
 			"IngressClass %s should reference parameters in apiGroup:%s",
-			s.ingressClass,
+			ingressClass.Name,
 			kongv1alpha1.GroupVersion.Group,
-		)}
+		)
 	}
 
 	if ingressClass.Spec.Parameters.Kind != kongv1alpha1.IngressClassParametersKind {
-		return nil, ErrNotFound{fmt.Sprintf(
+		return nil, fmt.Errorf(
 			"IngressClass %s should reference parameters with kind:%s",
-			s.ingressClass,
+			ingressClass.Name,
 			kongv1alpha1.IngressClassParametersKind,
-		)}
+		)
 	}
 
 	if ingressClass.Spec.Parameters.Scope == nil || ingressClass.Spec.Parameters.Namespace == nil {
-		return nil, ErrNotFound{
-			message: fmt.Sprintf("IngressClass %s should reference namespaced parameters", ingressClass),
-		}
+		return nil, fmt.Errorf("IngressClass %s should reference namespaced parameters", ingressClass)
 	}
 
 	key := fmt.Sprintf("%v/%v", *ingressClass.Spec.Parameters.Namespace, ingressClass.Spec.Parameters.Name)

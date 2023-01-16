@@ -12,11 +12,13 @@ type RouteParentStatusT interface {
 	gatewayv1beta1.RouteParentStatus | gatewayv1alpha2.RouteParentStatus
 }
 
+type namespacedObjectT interface {
+    GetNamespace() string
+}
+
 // getParentStatuses creates a parent status map for the provided route given the
 // route parent status slice.
-func getParentStatuses[routeT interface {
-	GetNamespace() string
-}, parentStatusT RouteParentStatusT](
+func getParentStatuses[routeT namespacedObjectT, parentStatusT RouteParentStatusT](
 	route routeT, parentStatuses []parentStatusT,
 ) map[string]*parentStatusT {
 	var (

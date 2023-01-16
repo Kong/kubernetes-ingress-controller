@@ -85,6 +85,7 @@ jobs:
           path: "*-tests.xml"
 
   e2e-gke-tests:
+    environment: "gcloud"
     runs-on: ubuntu-latest
     needs: setup-e2e-tests
     strategy:

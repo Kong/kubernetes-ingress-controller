@@ -13,11 +13,13 @@ import (
 	"os"
 	"os/exec"
 	"sort"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/blang/semver/v4"
+	"github.com/kong/kubernetes-testing-framework/pkg/clusters/types/gke"
 	"github.com/kong/kubernetes-testing-framework/pkg/environments"
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
 	"github.com/sethvargo/go-password/password"
@@ -259,12 +261,21 @@ func getKongProxyLoadBalancerIP(t *testing.T, refreshSvc func() *corev1.Service)
 }
 
 func getKongProxyNodePortIP(ctx context.Context, t *testing.T, env environments.Environment, svc *corev1.Service) string {
-	var port int32
+	var port corev1.ServicePort
 	for _, sport := range svc.Spec.Ports {
 		if sport.Name == "kong-proxy" || sport.Name == "proxy" {
-			port = sport.NodePort
+			port = sport
 		}
 	}
+
+	if env.Cluster().Type() == gke.GKEClusterType {
+		const kongProxyLocalPort = "9779"
+		startPortForwarder(ctx, t, env, svc.Namespace, fmt.Sprintf("service/%s", svc.Name),
+			kongProxyLocalPort, strconv.Itoa(int(port.Port)),
+		)
+		return fmt.Sprintf("localhost:%d", port.Port)
+	}
+
 	var extAddrs []string
 	var intAddrs []string
 	nodes, err := env.Cluster().Client().CoreV1().Nodes().List(ctx, metav1.ListOptions{})
@@ -284,10 +295,10 @@ func getKongProxyNodePortIP(ctx context.Context, t *testing.T, env environments.
 	// in their absence
 	if len(extAddrs) > 0 {
 		t.Logf("picking an external NodePort address: %s", extAddrs[0])
-		return fmt.Sprintf("%v:%v", extAddrs[0], port)
+		return fmt.Sprintf("%v:%v", extAddrs[0], port.NodePort)
 	} else if len(intAddrs) > 0 {
 		t.Logf("picking an internal NodePort address: %s", intAddrs[0])
-		return fmt.Sprintf("%v:%v", intAddrs[0], port)
+		return fmt.Sprintf("%v:%v", intAddrs[0], port.NodePort)
 	}
 
 	assert.Fail(t, "both extAddrs and intAddrs are empty")
@@ -296,8 +307,12 @@ func getKongProxyNodePortIP(ctx context.Context, t *testing.T, env environments.
 
 // startPortForwarder runs "kubectl port-forward" in the background. It stops the forward when the provided context
 // ends.
-func startPortForwarder(ctx context.Context, t *testing.T, env environments.Environment, namespace, name, localPort,
-	targetPort string,
+func startPortForwarder(
+	ctx context.Context,
+	t *testing.T,
+	env environments.Environment,
+	namespace, name string,
+	localPort, targetPort string,
 ) {
 	kubeconfig, err := generators.NewKubeConfigForRestConfig(env.Name(), env.Cluster().Config())
 	require.NoError(t, err)

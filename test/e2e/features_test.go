@@ -547,7 +547,7 @@ func TestDeployAllInOneDBLESSNoLoadBalancer(t *testing.T) {
 	t.Log("updating service type to NodePort")
 	svc, err := env.Cluster().Client().CoreV1().Services(deployment.Namespace).Get(ctx, "kong-proxy", metav1.GetOptions{})
 	require.NoError(t, err)
-	svc.Spec.Type = "NodePort"
+	svc.Spec.Type = corev1.ServiceTypeNodePort
 	_, err = env.Cluster().Client().CoreV1().Services(deployment.Namespace).Update(ctx, svc, metav1.UpdateOptions{})
 	require.NoError(t, err)
 

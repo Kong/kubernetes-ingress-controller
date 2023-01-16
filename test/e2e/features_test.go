@@ -22,7 +22,6 @@ import (
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/types/kind"
 	"github.com/kong/kubernetes-testing-framework/pkg/environments"
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
@@ -130,22 +129,17 @@ PMxZ3NvEwhsJgDJ82D7OUR2G7wZtgUj/WFj14XOofpZJmhzTQrtbbuc=
 // the mounted Secret updates. This requires E2E because we can't mount Secrets with the locally-run integration
 // test controller instance.
 func TestWebhookUpdate(t *testing.T) {
-	t.Log("configuring all-in-one-dbless.yaml manifest test")
-	t.Parallel()
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
 	// on KIND, this test requires webhookKINDConfig. the generic getEnvironmentBuilder we use for most tests doesn't
 	// support this: the configuration is specific to KIND but should not be used by default, and the scaffolding isn't
 	// flexible enough to support tests building their own clusters or passing additional builder functions. this still
 	// uses the setup style from before getEnvironmentBuilder/GKE support as such, and just skips if it's attempting
 	// to run on GKE
-	if existingCluster != "" {
-		clusterType := strings.Split(existingCluster, ":")[0]
-		if clusterType != string(kind.KindClusterType) {
-			t.Skip("test not supported on non-KIND clusters")
-		}
-	}
+	runOnlyOnKindClusters(t)
+
+	t.Log("configuring all-in-one-dbless.yaml manifest test")
+	t.Parallel()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
 	t.Log("building test cluster and environment")
 	configFile, err := os.CreateTemp(os.TempDir(), "webhook-kind-config-")
@@ -175,15 +169,8 @@ func TestWebhookUpdate(t *testing.T) {
 	env, err := builder.Build(ctx)
 	require.NoError(t, err)
 
-	t.Logf("build a cleaner to dump diagnostics...")
-	cleaner := clusters.NewCleaner(cluster)
 	defer func() {
-		if t.Failed() {
-			output, err := cleaner.DumpDiagnostics(ctx, t.Name())
-			t.Logf("%s failed, dumped diagnostics to %s", t.Name(), output)
-			assert.NoError(t, err)
-		}
-		assert.NoError(t, cluster.Cleanup(ctx))
+		finalizeTest(ctx, t, env.Cluster())
 	}()
 
 	t.Log("deploying kong components")
@@ -212,15 +199,6 @@ func TestWebhookUpdate(t *testing.T) {
 			"tls.key": []byte(tlsPairs[1].Key),
 		},
 	}
-
-	// dump diagnostics and print out logs of KIC pod to a temporary directory, if the test failed.
-	defer func() {
-		if t.Failed() {
-			outputDir, err := cleaner.DumpDiagnostics(ctx, t.Name())
-			assert.NoError(t, err, "failed to dump diagnostics")
-			t.Logf("%s failed, dumped diagnostics to directory %s", t.Name(), outputDir)
-		}
-	}()
 
 	_, err = env.Cluster().Client().CoreV1().Secrets(kongNamespace).Create(ctx, firstCertificate, metav1.CreateOptions{})
 	require.NoError(t, err)
@@ -319,15 +297,8 @@ func TestDeployAllInOneDBLESSGateway(t *testing.T) {
 	env, err := builder.Build(ctx)
 	require.NoError(t, err)
 
-	t.Logf("build a cleaner to dump diagnostics...")
-	cleaner := clusters.NewCleaner(env.Cluster())
 	defer func() {
-		if t.Failed() {
-			output, err := cleaner.DumpDiagnostics(ctx, t.Name())
-			t.Logf("%s failed, dumped diagnostics to %s", t.Name(), output)
-			assert.NoError(t, err)
-		}
-		assert.NoError(t, cleaner.Cleanup(ctx))
+		finalizeTest(ctx, t, env.Cluster())
 	}()
 
 	t.Log("deploying kong components")
@@ -340,7 +311,6 @@ func TestDeployAllInOneDBLESSGateway(t *testing.T) {
 
 	t.Log("running the admission webhook setup script")
 	deployAdmissionWebhook(t, env)
-
 
 	// vov it's easier than tracking the deployment state
 	t.Log("creating a consumer to ensure the admission webhook is online")
@@ -517,14 +487,8 @@ func TestDeployAllInOneDBLESSNoLoadBalancer(t *testing.T) {
 	require.NoError(t, err)
 	env, err := builder.Build(ctx)
 	require.NoError(t, err)
-	cluster := env.Cluster()
 	defer func() {
-		if t.Failed() {
-			output, err := cluster.DumpDiagnostics(ctx, t.Name())
-			t.Logf("%s failed, dumped diagnostics to %s", t.Name(), output)
-			assert.NoError(t, err)
-		}
-		assert.NoError(t, cluster.Cleanup(ctx))
+		finalizeTest(ctx, t, env.Cluster())
 	}()
 
 	t.Log("deploying kong components")
@@ -583,16 +547,8 @@ func TestDefaultIngressClass(t *testing.T) {
 	env, err := builder.Build(ctx)
 	require.NoError(t, err)
 
-	t.Logf("build a cleaner to dump diagnostics...")
-	cluster := env.Cluster()
-	cleaner := clusters.NewCleaner(cluster)
 	defer func() {
-		if t.Failed() {
-			output, err := cleaner.DumpDiagnostics(ctx, t.Name())
-			t.Logf("%s failed, dumped diagnostics to %s", t.Name(), output)
-			assert.NoError(t, err)
-		}
-		assert.NoError(t, cluster.Cleanup(ctx))
+		finalizeTest(ctx, t, env.Cluster())
 	}()
 
 	t.Log("deploying kong components")
@@ -711,16 +667,8 @@ func TestMissingCRDsDontCrashTheController(t *testing.T) {
 	env, err := builder.Build(ctx)
 	require.NoError(t, err)
 
-	t.Logf("building cleaner to dump diagnostics...")
-	cleaner := clusters.NewCleaner(env.Cluster())
 	defer func() {
-		if t.Failed() {
-			output, err := cleaner.DumpDiagnostics(ctx, t.Name())
-			if assert.NoError(t, err, "failed to dump diagnostics") {
-				t.Logf("%s failed, dumped diagnostics to %s", t.Name(), output)
-			}
-		}
-		assert.NoError(t, cleaner.Cleanup(ctx))
+		finalizeTest(ctx, t, env.Cluster())
 	}()
 
 	t.Log("deploying kong components")

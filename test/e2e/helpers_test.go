@@ -492,3 +492,22 @@ func getTemporaryKubeconfig(t *testing.T, env environments.Environment) (path st
 
 	return kubeconfigFile.Name(), cleanup
 }
+
+func runOnlyOnKindClusters(t *testing.T) {
+	existingClusterIsKind := strings.Split(existingCluster, ":")[0] == string(kind.KindClusterType)
+	clusterProviderIsKind := clusterProvider == "" || clusterProvider == string(kind.KindClusterType)
+
+	if !existingClusterIsKind || !clusterProviderIsKind {
+		t.Skip("test is supported only on Kind clusters")
+	}
+}
+
+func finalizeTest(ctx context.Context, t *testing.T, cluster clusters.Cluster) {
+	if t.Failed() {
+		output, err := cluster.DumpDiagnostics(ctx, t.Name())
+		t.Logf("%s failed, dumped diagnostics to %s", t.Name(), output)
+		assert.NoError(t, err)
+	}
+
+	assert.NoError(t, cluster.Cleanup(ctx))
+}

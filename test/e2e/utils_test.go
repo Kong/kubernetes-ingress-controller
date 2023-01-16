@@ -318,13 +318,15 @@ func startPortForwarder(
 	namespace, name string,
 	localPort, targetPort string,
 ) {
-
 	kubeconfig, cleanup := getTemporaryKubeconfig(t, env)
 	defer cleanup()
 
 	cmd := exec.CommandContext(ctx, "kubectl", "--kubeconfig", kubeconfig, "port-forward", "-n", namespace,
 		name, fmt.Sprintf("%s:%s", localPort, targetPort),
 	)
+	out := new(bytes.Buffer)
+	cmd.Stderr = out
+	cmd.Stdout = out
 
 	t.Logf("forwarding port %s to %s/%s:%s", localPort, namespace, name, targetPort)
 	if startErr := cmd.Start(); startErr != nil {

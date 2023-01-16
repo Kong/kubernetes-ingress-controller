@@ -9,8 +9,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -27,17 +25,9 @@ func TestKongRouterFlavorCompatibility(t *testing.T) {
 	env, err := builder.Build(ctx)
 	require.NoError(t, err)
 
-	t.Logf("building cleaner to dump diagnostics...")
 	cluster := env.Cluster()
-	cleaner := clusters.NewCleaner(cluster)
 	defer func() {
-		if t.Failed() {
-			output, err := cleaner.DumpDiagnostics(ctx, t.Name())
-			if assert.NoError(t, err, "failed to dump diagnostics") {
-				t.Logf("%s failed, dumped diagnostics to %s", t.Name(), output)
-			}
-		}
-		assert.NoError(t, cluster.Cleanup(ctx))
+		finalizeTest(ctx, t, cluster)
 	}()
 
 	t.Log("deploying kong components with traditional Kong router")

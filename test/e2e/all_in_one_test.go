@@ -11,9 +11,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/kong"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -49,15 +47,8 @@ func TestDeployAllInOneDBLESS(t *testing.T) {
 	env, err := builder.Build(ctx)
 	require.NoError(t, err)
 
-	t.Logf("build a cleaner to dump diagnostics...")
-	cluster := env.Cluster()
 	defer func() {
-		if t.Failed() {
-			output, err := cluster.DumpDiagnostics(ctx, t.Name())
-			t.Logf("%s failed, dumped diagnostics to %s", t.Name(), output)
-			assert.NoError(t, err)
-		}
-		assert.NoError(t, cluster.Cleanup(ctx))
+		finalizeTest(ctx, t, env.Cluster())
 	}()
 
 	t.Log("deploying kong components")
@@ -107,19 +98,9 @@ func TestDeployAndUpgradeAllInOneDBLESS(t *testing.T) {
 
 	env, err := builder.Build(ctx)
 	require.NoError(t, err)
-	defer func() {
-		assert.NoError(t, env.Cleanup(ctx))
-	}()
 
-	t.Logf("build a cleaner to dump diagnostics...")
-	cleaner := clusters.NewCleaner(env.Cluster())
 	defer func() {
-		if t.Failed() {
-			output, err := cleaner.DumpDiagnostics(ctx, t.Name())
-			t.Logf("%s failed, dumped diagnostics to %s", t.Name(), output)
-			assert.NoError(t, err)
-		}
-		assert.NoError(t, cleaner.Cleanup(ctx))
+		finalizeTest(ctx, t, env.Cluster())
 	}()
 
 	t.Logf("deploying previous version %s kong manifest", preTag)
@@ -156,15 +137,8 @@ func TestDeployAllInOneEnterpriseDBLESS(t *testing.T) {
 
 	createKongImagePullSecret(ctx, t, env)
 
-	t.Logf("build a cleaner to dump diagnostics...")
-	cleaner := clusters.NewCleaner(env.Cluster())
 	defer func() {
-		if t.Failed() {
-			output, err := cleaner.DumpDiagnostics(ctx, t.Name())
-			t.Logf("%s failed, dumped diagnostics to %s", t.Name(), output)
-			assert.NoError(t, err)
-		}
-		assert.NoError(t, cleaner.Cleanup(ctx))
+		finalizeTest(ctx, t, env.Cluster())
 	}()
 
 	t.Log("generating a superuser password")
@@ -205,15 +179,8 @@ func TestDeployAllInOnePostgres(t *testing.T) {
 	env, err := builder.Build(ctx)
 	require.NoError(t, err)
 
-	t.Logf("build a cleaner to dump diagnostics...")
-	cleaner := clusters.NewCleaner(env.Cluster())
 	defer func() {
-		if t.Failed() {
-			output, err := cleaner.DumpDiagnostics(ctx, t.Name())
-			t.Logf("%s failed, dumped diagnostics to %s", t.Name(), output)
-			assert.NoError(t, err)
-		}
-		assert.NoError(t, cleaner.Cleanup(ctx))
+		finalizeTest(ctx, t, env.Cluster())
 	}()
 
 	t.Log("deploying kong components")
@@ -241,29 +208,14 @@ func TestDeployAllInOnePostgresWithMultipleReplicas(t *testing.T) {
 	env, err := builder.Build(ctx)
 	require.NoError(t, err)
 
-	t.Logf("build a cleaner to dump diagnostics...")
-	cleaner := clusters.NewCleaner(env.Cluster())
 	defer func() {
-		if t.Failed() {
-			output, err := cleaner.DumpDiagnostics(ctx, t.Name())
-			t.Logf("%s failed, dumped diagnostics to %s", t.Name(), output)
-			assert.NoError(t, err)
-		}
-		assert.NoError(t, cleaner.Cleanup(ctx))
+		finalizeTest(ctx, t, env.Cluster())
 	}()
 
 	t.Log("deploying kong components")
 	manifest, err := getTestManifest(t, postgresPath)
 	require.NoError(t, err)
 	deployment := deployKong(ctx, t, env, manifest)
-	// dump diagnostics and print out logs of KIC pod to a temporary directory, if the test failed.
-	defer func() {
-		if t.Failed() {
-			outputDir, err := cleaner.DumpDiagnostics(ctx, t.Name())
-			assert.NoError(t, err, "failed to dump diagnostics")
-			t.Logf("%s failed, dumped diagnostics to directory %s", t.Name(), outputDir)
-		}
-	}()
 
 	t.Log("this deployment used a postgres backend, verifying that postgres migrations ran properly")
 	verifyPostgres(ctx, t, env)
@@ -393,15 +345,8 @@ func TestDeployAllInOneEnterprisePostgres(t *testing.T) {
 	require.NoError(t, err)
 	createKongImagePullSecret(ctx, t, env)
 
-	t.Logf("build a cleaner to dump diagnostics...")
-	cleaner := clusters.NewCleaner(env.Cluster())
 	defer func() {
-		if t.Failed() {
-			output, err := cleaner.DumpDiagnostics(ctx, t.Name())
-			t.Logf("%s failed, dumped diagnostics to %s", t.Name(), output)
-			assert.NoError(t, err)
-		}
-		assert.NoError(t, cleaner.Cleanup(ctx))
+		finalizeTest(ctx, t, env.Cluster())
 	}()
 
 	t.Log("generating a superuser password")

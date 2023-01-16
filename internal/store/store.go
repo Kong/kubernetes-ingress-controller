@@ -59,14 +59,14 @@ const (
 // ErrNotFound error is returned when a lookup results in no resource.
 // This type is meant to be used for error handling using `errors.As()`.
 type ErrNotFound struct {
-	message string
+	Message string
 }
 
 func (e ErrNotFound) Error() string {
-	if e.message == "" {
+	if e.Message == "" {
 		return "not found"
 	}
-	return e.message
+	return e.Message
 }
 
 // Storer is the interface that wraps the required methods to gather information
@@ -873,7 +873,7 @@ func (s Store) GetIngressClassParametersV1Alpha1(ingressClass *netv1.IngressClas
 	}
 
 	if ingressClass.Spec.Parameters.Scope == nil || ingressClass.Spec.Parameters.Namespace == nil {
-		return nil, fmt.Errorf("IngressClass %s should reference namespaced parameters", ingressClass)
+		return nil, fmt.Errorf("IngressClass %s should reference namespaced parameters", ingressClass.Name)
 	}
 
 	key := fmt.Sprintf("%v/%v", *ingressClass.Spec.Parameters.Namespace, ingressClass.Spec.Parameters.Name)

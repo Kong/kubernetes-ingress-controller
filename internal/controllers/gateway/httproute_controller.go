@@ -521,24 +521,28 @@ func (r *HTTPRouteReconciler) setRouteConditionResolvedRefsCondition(
 
 	// iterate over all the parentStatuses conditions, and if no RouteConditionResolvedRefs is found,
 	// or if the condition is found but has to be changed, update the status and mark it to be updated
+	resolvedRefsCondition := metav1.Condition{
+		Type:               string(gatewayv1beta1.RouteConditionResolvedRefs),
+		Status:             resolvedRefsStatus,
+		ObservedGeneration: httpRoute.Generation,
+		LastTransitionTime: metav1.Now(),
+		Reason:             string(reason),
+	}
 	for _, parentStatus := range parentStatuses {
 		var conditionFound bool
-		for _, cond := range parentStatus.Conditions {
-			if cond.Type == string(gatewayv1beta1.RouteConditionResolvedRefs) &&
-				cond.Status == resolvedRefsStatus &&
-				cond.Reason == string(reason) {
+		for i, cond := range parentStatus.Conditions {
+			if cond.Type == string(gatewayv1beta1.RouteConditionResolvedRefs) {
+				if !(cond.Status == resolvedRefsStatus &&
+					cond.Reason == string(reason)) {
+					parentStatus.Conditions[i] = resolvedRefsCondition
+					changed = true
+				}
 				conditionFound = true
 				break
 			}
 		}
 		if !conditionFound {
-			parentStatus.Conditions = append(parentStatus.Conditions, metav1.Condition{
-				Type:               string(gatewayv1beta1.RouteConditionResolvedRefs),
-				Status:             resolvedRefsStatus,
-				ObservedGeneration: httpRoute.Generation,
-				LastTransitionTime: metav1.Now(),
-				Reason:             string(reason),
-			})
+			parentStatus.Conditions = append(parentStatus.Conditions, resolvedRefsCondition)
 			changed = true
 		}
 	}

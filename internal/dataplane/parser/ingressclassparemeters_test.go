@@ -8,6 +8,7 @@ import (
 
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	netv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -38,11 +39,12 @@ func TestGetIngressClassParameters(t *testing.T) {
 		paramRef      *netv1.IngressClassParametersReference
 		parameterSpec *configurationv1alpha1.IngressClassParametersSpec
 		hasError      bool
+		err           error
 	}{
 		{
 			name:          "nil-paramref",
 			parameterSpec: defaultIcpSpec,
-			hasError:      true,
+			err:           fmt.Errorf("IngressClass nil-paramref doesn't reference any parameters"),
 		},
 		{
 			name: "nil-apigroup",
@@ -51,7 +53,7 @@ func TestGetIngressClassParameters(t *testing.T) {
 				Name: "some-cm",
 			},
 			parameterSpec: defaultIcpSpec,
-			hasError:      true,
+			err:           fmt.Errorf("IngressClass nil-apigroup should reference parameters in apiGroup:configuration.konghq.com"),
 		},
 		{
 			name: "nil-scope",
@@ -62,7 +64,7 @@ func TestGetIngressClassParameters(t *testing.T) {
 				Name:      testIcpName,
 			},
 			parameterSpec: defaultIcpSpec,
-			hasError:      true,
+			err:           fmt.Errorf("IngressClass nil-scope should reference namespaced parameters"),
 		},
 		{
 			name: "nil-namespace",
@@ -73,7 +75,7 @@ func TestGetIngressClassParameters(t *testing.T) {
 				Name:     testIcpName,
 			},
 			parameterSpec: defaultIcpSpec,
-			hasError:      true,
+			err:           fmt.Errorf("IngressClass nil-namespace should reference namespaced parameters"),
 		},
 		{
 			name: "matched-parameters",
@@ -96,7 +98,7 @@ func TestGetIngressClassParameters(t *testing.T) {
 				Name:      testIcpName,
 			},
 			parameterSpec: defaultIcpSpec,
-			hasError:      true,
+			err:           fmt.Errorf("IngressClass unmatched-kind should reference parameters with kind:IngressClassParameters"),
 		},
 		{
 			name: "unmatched-namespace",
@@ -109,6 +111,7 @@ func TestGetIngressClassParameters(t *testing.T) {
 			},
 			parameterSpec: defaultIcpSpec,
 			hasError:      true,
+			err:           store.ErrNotFound{Message: "IngressClassParameters test-icp not found"},
 		},
 		{
 			name: "unmatched-name",
@@ -120,7 +123,7 @@ func TestGetIngressClassParameters(t *testing.T) {
 				Name:      "another-icp",
 			},
 			parameterSpec: defaultIcpSpec,
-			hasError:      true,
+			err:           store.ErrNotFound{Message: "IngressClassParameters another-icp not found"},
 		},
 	}
 
@@ -137,21 +140,25 @@ func TestGetIngressClassParameters(t *testing.T) {
 				},
 			}
 			cacheStores, err := store.NewCacheStoresFromObjs()
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			err = cacheStores.Add(ingressClass)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			err = cacheStores.Add(icp)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			s := store.New(cacheStores, ingressClass.Name, true, true, true, logrus.New())
 			icpSpec, err := getIngressClassParametersOrDefault(s)
 			assert.Truef(t, reflect.DeepEqual(*tc.parameterSpec, icpSpec),
 				fmt.Sprintf("should get same ingress parameter spec: expected %+v, actual %+v", tc.parameterSpec, icpSpec),
 			)
-			if tc.hasError {
-				assert.NotNil(t, err)
-				assert.Truef(t, errors.As(err, &store.ErrNotFound{}), "error should be a store.ErrNotFound, actual %T", err)
+
+			if tc.err != nil {
+				assert.EqualError(t, err, tc.err.Error())
+
+				if errors.As(tc.err, &store.ErrNotFound{}) {
+					assert.ErrorAs(t, err, &store.ErrNotFound{})
+				}
 			} else {
-				assert.Nil(t, err)
+				assert.NoError(t, err)
 			}
 		})
 	}

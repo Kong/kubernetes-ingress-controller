@@ -2,6 +2,7 @@ package dataplane
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sync"
 	"time"
@@ -166,7 +167,7 @@ func (p *Synchronizer) startUpdateServer(ctx context.Context) {
 		select {
 		case <-ctx.Done():
 			p.logger.Info("context done: shutting down the proxy update server")
-			if err := ctx.Err(); err != nil {
+			if err := ctx.Err(); err != nil && !errors.Is(err, context.Canceled) {
 				p.logger.Error(err, "context completed with error")
 			}
 			p.syncTicker.Stop()

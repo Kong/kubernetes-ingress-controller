@@ -10,6 +10,7 @@ import (
 	"github.com/kong/deck/file"
 	"github.com/kong/go-kong/kong"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/samber/lo"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/tools/record"
@@ -115,7 +116,7 @@ type KongClient struct {
 	// in the most recent Update(). This can be helpful for callers to determine
 	// whether a Kubernetes object has corresponding data-plane configuration that
 	// is actively configured (e.g. to know how to set the object status).
-	kubernetesObjectReportsFilter k8sobj.Set
+	kubernetesObjectReportsFilter k8sobj.ConfigurationStatusSet
 
 	// eventRecorder is used to record warning events for resource failures.
 	eventRecorder record.EventRecorder
@@ -263,7 +264,13 @@ func (c *KongClient) AreKubernetesObjectReportsEnabled() bool {
 func (c *KongClient) KubernetesObjectIsConfigured(obj client.Object) bool {
 	c.kubernetesObjectReportLock.RLock()
 	defer c.kubernetesObjectReportLock.RUnlock()
-	return c.kubernetesObjectReportsFilter.Has(obj)
+	return c.kubernetesObjectReportsFilter.Get(obj) == k8sobj.ConfigurationStatusSucceeded
+}
+
+func (c *KongClient) KubernetesObjectConfigurationStatus(obj client.Object) k8sobj.ConfigurationStatus {
+	c.kubernetesObjectReportLock.RLock()
+	defer c.kubernetesObjectReportLock.RUnlock()
+	return c.kubernetesObjectReportsFilter.Get(obj)
 }
 
 // -----------------------------------------------------------------------------
@@ -418,7 +425,7 @@ func (c *KongClient) Update(ctx context.Context) error {
 		if string(c.lastConfigSHA) != string(newConfigSHA) {
 			report := p.GenerateKubernetesObjectReport()
 			c.logger.Debugf("triggering report for %d configured Kubernetes objects", len(report))
-			c.triggerKubernetesObjectReport(report...)
+			c.triggerKubernetesObjectReport(report, translationFailures)
 		} else {
 			c.logger.Debug("no configuration change, skipping kubernetes object report")
 		}
@@ -437,12 +444,21 @@ func (c *KongClient) Update(ctx context.Context) error {
 // enables filtering for which objects are currently applied to the data-plane,
 // as well as updating the c.kubernetesObjectStatusQueue to queue those objects
 // for reconciliation so their statuses can be properly updated.
-func (c *KongClient) triggerKubernetesObjectReport(objs ...client.Object) {
+func (c *KongClient) triggerKubernetesObjectReport(reportedObjects []client.Object, translationFailures []failures.ResourceFailure) {
 	// first a new set of the included objects for the most recent configuration
 	// needs to be generated.
-	set := k8sobj.Set{}
-	for _, obj := range objs {
-		set.Insert(obj)
+	set := k8sobj.ConfigurationStatusSet{}
+	for _, obj := range reportedObjects {
+		set.Insert(obj, true)
+	}
+
+	// in some situations, objects with translation failures are reported:
+	// https://github.com/Kong/kubernetes-ingress-controller/issues/3364
+	// so we override the failed configuration status from translation failures.
+	for _, translationFailure := range translationFailures {
+		for _, obj := range translationFailure.CausingObjects() {
+			set.Insert(obj, false)
+		}
 	}
 
 	c.updateKubernetesObjectReportFilter(set)
@@ -451,14 +467,25 @@ func (c *KongClient) triggerKubernetesObjectReport(objs ...client.Object) {
 	// control-plane can update the Kubernetes object statuses for affected objs.
 	// this has to be done in a separate loop so that the filter is in place
 	// before the objects are enqueued, as the filter is used by the control-plane
-	for _, obj := range objs {
+	for _, obj := range uniqueObjects(reportedObjects, translationFailures) {
 		c.kubernetesObjectStatusQueue.Publish(obj)
 	}
 }
 
+func uniqueObjects(reportedObjects []client.Object, resourceFailures []failures.ResourceFailure) []client.Object {
+	allCausingObjects := lo.FlatMap(resourceFailures, func(f failures.ResourceFailure, _ int) []client.Object {
+		return f.CausingObjects()
+	})
+	allObjects := append(reportedObjects, allCausingObjects...)
+	return lo.UniqBy(allObjects, func(obj client.Object) string {
+		return obj.GetObjectKind().GroupVersionKind().String() + "/" +
+			obj.GetNamespace() + "/" + obj.GetName()
+	})
+}
+
 // updateKubernetesObjectReportFilter overrides the internal object set with
 // a new provided set.
-func (c *KongClient) updateKubernetesObjectReportFilter(set k8sobj.Set) {
+func (c *KongClient) updateKubernetesObjectReportFilter(set k8sobj.ConfigurationStatusSet) {
 	c.kubernetesObjectReportLock.Lock()
 	defer c.kubernetesObjectReportLock.Unlock()
 	c.kubernetesObjectReportsFilter = set

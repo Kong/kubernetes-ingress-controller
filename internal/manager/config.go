@@ -161,15 +161,15 @@ func (c *Config) FlagSet() *pflag.FlagSet {
 	flagSet.StringSliceVar(&c.FilterTags, "kong-admin-filter-tag", []string{"managed-by-ingress-controller"}, "The tag used to manage and filter entities in Kong. This flag can be specified multiple times to specify multiple tags. This setting will be silently ignored if the Kong instance has no tags support.")
 	flagSet.IntVar(&c.Concurrency, "kong-admin-concurrency", 10, "Max number of concurrent requests sent to Kong's Admin API.")
 	flagSet.StringSliceVar(&c.WatchNamespaces, "watch-namespace", nil,
-		`Namespace(s) to watch for Kubernetes resources. Defaults to all namespaces. To watch multiple namespaces, use
-		a comma-separated list of namespaces.`)
+		`Namespace(s) to watch for Kubernetes resources. Defaults to all namespaces.`+
+			`To watch multiple namespaces, use a comma-separated list of namespaces.`)
 
 	// Ingress status
-	flagSet.StringVar(&c.PublishService, "publish-service", "", `Service fronting Ingress resources in "namespace/name"
-			format. The controller will update Ingress status information with this Service's endpoints.`)
-	flagSet.StringSliceVar(&c.PublishStatusAddress, "publish-status-address", []string{}, `User-provided addresses in
-			comma-separated string format, for use in lieu of "publish-service" when that Service lacks useful address
-			information (for example, in bare-metal environments).`)
+	flagSet.StringVar(&c.PublishService, "publish-service", "",
+		`Service fronting Ingress resources in "namespace/name" format. The controller will update Ingress status information with this Service's endpoints.`)
+	flagSet.StringSliceVar(&c.PublishStatusAddress, "publish-status-address", []string{},
+		`User-provided addresses in comma-separated string format, for use in lieu of "publish-service" `+
+			`when that Service lacks useful address information (for example, in bare-metal environments).`)
 	flagSet.BoolVar(&c.UpdateStatus, "update-status", true,
 		`Indicates if the ingress controller should update the status of resources (e.g. IP/Hostname for v1.Ingress, e.t.c.)`)
 

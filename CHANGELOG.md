@@ -67,6 +67,16 @@ Adding a new version? You'll need three changes:
 
 > Release date: TBD
 
+### Added
+
+- Store status of whether configuration succedded or failed for Kubernetes 
+  objects in dataplane client and publish the events to let controllers know
+  if the controlled objects succeeded or failed to be translated to Kong 
+  configuration.
+  [#3359](https://github.com/Kong/kubernetes-ingress-controller/pull/3359)  
+- Added `version` command
+  [#3379](https://github.com/Kong/kubernetes-ingress-controller/pull/3379)  
+
 ### Fixed
 
 - Disabled non-functioning mesh reporting when `--watch-namespaces` flag set.
@@ -74,6 +84,9 @@ Adding a new version? You'll need three changes:
 - Fixed the duplicate update of status of `HTTPRoute` caused by incorrect check
   of whether status is changed.
   [#3346](https://github.com/Kong/kubernetes-ingress-controller/pull/3346)
+- Change existing `resolvedRefs` condition in status `HTTPRoute` if there is
+  already one to avoid multiple appearance of conditions with same type
+  [#3386](https://github.com/Kong/kubernetes-ingress-controller/pull/3386)
 
 ### Deprecated
 

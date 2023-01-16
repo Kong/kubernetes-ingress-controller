@@ -268,6 +268,8 @@ func getKongProxyNodePortIP(ctx context.Context, t *testing.T, env environments.
 		}
 	}
 
+	// GKE clusters by default do not allow ingress traffic to its nodes
+	// TODO: consider adding an option to create firewall rules in KTF GKE provider
 	if env.Cluster().Type() == gke.GKEClusterType {
 		const kongProxyLocalPort = "9779"
 		startPortForwarder(ctx, t, env, svc.Namespace, fmt.Sprintf("service/%s", svc.Name),

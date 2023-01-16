@@ -59,7 +59,7 @@ jobs:
         with:
           password: ${{ secrets.PULP_PASSWORD }}
 
-      - name: run ${{ matrix.test }} - ${{ matrix.kubernetes-version }}
+      - name: run ${{ matrix.test }}
         run: make test.e2e
         env:
           TEST_KONG_CONTROLLER_IMAGE_OVERRIDE: "kong/nightly-ingress-controller:nightly"
@@ -126,6 +126,9 @@ jobs:
           KONG_TEST_CLUSTER_PROVIDER: gke
           E2E_TEST_RUN: ${{ matrix.test }}
           GOTESTSUM_JUNITFILE: "e2e-gke-${{ matrix.test }}-${{ matrix.kubernetes-version }}-tests.xml"
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}
+          GOOGLE_PROJECT: ${{ secrets.GOOGLE_PROJECT }}
+          GOOGLE_LOCATION: ${{ secrets.GOOGLE_LOCATION }}
 
       - name: upload diagnostics
         if: ${{ always() }}

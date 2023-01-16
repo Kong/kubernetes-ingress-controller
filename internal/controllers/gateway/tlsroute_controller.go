@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
+	"github.com/samber/lo"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -24,6 +25,7 @@ import (
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
+	k8sobj "github.com/kong/kubernetes-ingress-controller/v2/internal/util/kubernetes/object"
 )
 
 // -----------------------------------------------------------------------------
@@ -317,15 +319,6 @@ func (r *TLSRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 			debug(log, tlsroute, "failed to update object in data-plane, requeueing")
 			return ctrl.Result{}, err
 		}
-		if r.DataplaneClient.AreKubernetesObjectReportsEnabled() {
-			// if the dataplane client has reporting enabled (this is the default and is
-			// tied in with status updates being enabled in the controller manager) then
-			// we will wait until the object is reported as successfully configured before
-			// moving on to status updates.
-			if !r.DataplaneClient.KubernetesObjectIsConfigured(tlsroute) {
-				return ctrl.Result{Requeue: true}, nil
-			}
-		}
 	} else {
 		// route is not accepted, remove it from kong store
 		if err := r.DataplaneClient.DeleteObject(tlsroute); err != nil {
@@ -347,6 +340,34 @@ func (r *TLSRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		// if the status was updated it will trigger a follow-up reconciliation
 		// so we don't need to do anything further here.
 		return ctrl.Result{}, nil
+	}
+
+	// update "Programmed" condition if the TLSRoute is translated to Kong configuration.
+	// if the TLSRoute is not configured ad Kong side, leave it unchanged and requeue.
+	// if it is successfully configured, update its "Programmed" condition to True.
+	// if translation failures happens, update its "Programmed" condition to False.
+	if r.DataplaneClient.AreKubernetesObjectReportsEnabled() {
+		// if the dataplane client has reporting enabled (this is the default and is
+		// tied in with status updates being enabled in the controller manager) then
+		// we will wait until the object is reported as successfully configured before
+		// moving on to status updates.
+		configurationStatus := r.DataplaneClient.KubernetesObjectConfigurationStatus(tlsroute)
+		if configurationStatus == k8sobj.ConfigurationStatusUnknown {
+			// requeue until tlsroute is configured.
+			debug(log, tlsroute, "tlsroute not configured,requeueing")
+			return ctrl.Result{Requeue: true}, nil
+		}
+
+		if configurationStatus == k8sobj.ConfigurationStatusFailed {
+			debug(log, tlsroute, "tlsroute configuration failed")
+			statusUpdated, err := r.ensureParentsProgrammedCondition(ctx, tlsroute, gateways, metav1.ConditionFalse, ConditionReasonTranslationError, "")
+			if err != nil {
+				// don't proceed until the statuses can be updated appropriately
+				debug(log, tlsroute, "failed to update programmed condition")
+				return ctrl.Result{}, err
+			}
+			return ctrl.Result{Requeue: !statusUpdated}, nil
+		}
 	}
 
 	// once the data-plane has accepted the TLSRoute object, we're all set.
@@ -398,13 +419,12 @@ func (r *TLSRouteReconciler) ensureGatewayReferenceStatusAdded(ctx context.Conte
 		// if the reference already exists and doesn't require any changes
 		// then just leave it alone.
 		if existingGatewayParentStatus, exists := parentStatuses[gateway.gateway.Namespace+gateway.gateway.Name]; exists {
-			// fake the time of the existing status as this wont be equal
-			for i := range existingGatewayParentStatus.Conditions {
-				existingGatewayParentStatus.Conditions[i].LastTransitionTime = gatewayParentStatus.Conditions[0].LastTransitionTime
-			}
-
-			// other than the condition timestamps, check if the statuses are equal
-			if reflect.DeepEqual(existingGatewayParentStatus, gatewayParentStatus) {
+			//  check if the parentRef and controllerName are equal, and whether the new condition is present in existing conditions
+			if reflect.DeepEqual(existingGatewayParentStatus.ParentRef, gatewayParentStatus.ParentRef) &&
+				existingGatewayParentStatus.ControllerName == gatewayParentStatus.ControllerName &&
+				lo.ContainsBy(existingGatewayParentStatus.Conditions, func(condition metav1.Condition) bool {
+					return sameCondition(gatewayParentStatus.Conditions[0], condition)
+				}) {
 				continue
 			}
 		}
@@ -414,8 +434,25 @@ func (r *TLSRouteReconciler) ensureGatewayReferenceStatusAdded(ctx context.Conte
 		statusChangesWereMade = true
 	}
 
+	// initialize "programmed" condition to Unknown.
+	// do not update the condition If a "Programmed" condition is already present.
+	programmedConditionChanged := false
+	programmedConditionUnknown := metav1.Condition{
+		Type:               ConditionTypeProgrammed,
+		Status:             metav1.ConditionUnknown,
+		Reason:             string(ConditionReasonProgrammedUnknown),
+		ObservedGeneration: tlsroute.Generation,
+		LastTransitionTime: metav1.Now(),
+	}
+	for _, parentStatus := range parentStatuses {
+		if !parentStatusHasProgrammedCondition(parentStatus) {
+			programmedConditionChanged = true
+			parentStatus.Conditions = append(parentStatus.Conditions, programmedConditionUnknown)
+		}
+	}
+
 	// if we didn't have to actually make any changes, no status update is needed
-	if !statusChangesWereMade {
+	if !statusChangesWereMade && !programmedConditionChanged {
 		return false, nil
 	}
 
@@ -460,4 +497,74 @@ func (r *TLSRouteReconciler) ensureGatewayReferenceStatusRemoved(ctx context.Con
 
 	// the status needed an update and it was updated successfully
 	return true, nil
+}
+
+func (r *TLSRouteReconciler) ensureParentsProgrammedCondition(
+	ctx context.Context,
+	tlsroute *gatewayv1alpha2.TLSRoute,
+	gateways []supportedGatewayWithCondition,
+	conditionStatus metav1.ConditionStatus,
+	conditionReason gatewayv1beta1.RouteConditionReason,
+	conditionMessage string,
+) (bool, error) {
+	// map the existing parentStatues to avoid duplications
+	parentStatuses := make(map[string]*gatewayv1alpha2.RouteParentStatus)
+	for _, existingParent := range tlsroute.Status.Parents {
+		namespace := tlsroute.Namespace
+		if existingParent.ParentRef.Namespace != nil {
+			namespace = string(*existingParent.ParentRef.Namespace)
+		}
+		existingParentCopy := existingParent
+		var sectionName string
+		if existingParent.ParentRef.SectionName != nil {
+			sectionName = string(*existingParent.ParentRef.SectionName)
+		}
+		parentStatuses[fmt.Sprintf("%s/%s/%s", namespace, existingParent.ParentRef.Name, sectionName)] = &existingParentCopy
+	}
+
+	programmedCondition := metav1.Condition{
+		Type:               ConditionTypeProgrammed,
+		Status:             conditionStatus,
+		Reason:             string(conditionReason),
+		ObservedGeneration: tlsroute.Generation,
+		Message:            conditionMessage,
+		LastTransitionTime: metav1.Now(),
+	}
+	statusChanged := false
+	for _, g := range gateways {
+		gateway := g.gateway
+		parentRefKey := fmt.Sprintf("%s/%s/%s", gateway.Namespace, gateway.Name, g.listenerName)
+		parentStatus, ok := parentStatuses[parentRefKey]
+		if ok {
+			// update existing parent in status.
+			changed := setRouteParentStatusCondition(parentStatus, programmedCondition)
+			statusChanged = statusChanged || changed
+		} else {
+			// add a new parent if the parent is not found in status.
+			newParentStatus := &gatewayv1alpha2.RouteParentStatus{
+				ParentRef: gatewayv1alpha2.ParentReference{
+					Namespace:   lo.ToPtr(gatewayv1alpha2.Namespace(gateway.Namespace)),
+					Name:        gatewayv1alpha2.ObjectName(gateway.Name),
+					SectionName: lo.ToPtr(gatewayv1alpha2.SectionName(g.listenerName)),
+					// TODO: set port after gateway port matching implemented: https://github.com/Kong/kubernetes-ingress-controller/issues/3016
+				},
+				Conditions: []metav1.Condition{
+					programmedCondition,
+				},
+			}
+			tlsroute.Status.Parents = append(tlsroute.Status.Parents, *newParentStatus)
+			parentStatuses[parentRefKey] = newParentStatus
+			statusChanged = true
+		}
+	}
+
+	// update status if needed.
+	if statusChanged {
+		if err := r.Status().Update(ctx, tlsroute); err != nil {
+			return false, err
+		}
+		return true, nil
+	}
+	// no need to update if no status is changed.
+	return false, nil
 }

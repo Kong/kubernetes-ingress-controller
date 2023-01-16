@@ -367,14 +367,15 @@ func (r *HTTPRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	}
 
 	// update "Programmed" condition if HTTPRoute is translated to Kong configuration.
-
+	// if the HTTPRoute is not configured ad Kong side, leave it unchanged and requeue.
+	// if it is successfully configured, update its "Programmed" condition to True.
+	// if translation failures happens, update its "Programmed" condition to False.
 	debug(log, httproute, "ensuring status contains Programmed condition")
 	if r.DataplaneClient.AreKubernetesObjectReportsEnabled() {
 		// if the dataplane client has reporting enabled (this is the default and is
 		// tied in with status updates being enabled in the controller manager) then
 		// we will wait until the object is reported as successfully configured before
 		// moving on to status updates.
-
 		configurationStatus := r.DataplaneClient.KubernetesObjectConfigurationStatus(httproute)
 		if configurationStatus == k8sobj.ConfigurationStatusUnknown {
 			// requeue until httproute is configured.
@@ -492,7 +493,6 @@ func (r *HTTPRouteReconciler) ensureGatewayReferenceStatusAdded(ctx context.Cont
 			programmedConditionChanged = true
 			parentStatus.Conditions = append(parentStatus.Conditions, programmedConditionUnknown)
 		}
-
 	}
 
 	// if we didn't have to actually make any changes, no status update is needed
@@ -744,6 +744,7 @@ func updateAcceptedConditionInRouteParentStatus(
 	return changed
 }
 
+// TODO: extract method for different types of *Routes to update conditions.
 func (r *HTTPRouteReconciler) ensureParentsProgrammedCondition(
 	ctx context.Context,
 	httproute *gatewayv1beta1.HTTPRoute,

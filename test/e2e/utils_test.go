@@ -21,7 +21,6 @@ import (
 	"github.com/blang/semver/v4"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/types/gke"
 	"github.com/kong/kubernetes-testing-framework/pkg/environments"
-	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
 	"github.com/sethvargo/go-password/password"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -229,7 +228,7 @@ func getKongProxyIP(ctx context.Context, t *testing.T, env environments.Environm
 	svc := refreshService()
 	require.NotEqual(t, svc.Spec.Type, corev1.ServiceTypeClusterIP, "ClusterIP service is not supported")
 
-	// nolint: exhaustive
+	//nolint: exhaustive
 	switch svc.Spec.Type {
 	case corev1.ServiceTypeLoadBalancer:
 		return getKongProxyLoadBalancerIP(t, refreshService)
@@ -316,16 +315,12 @@ func startPortForwarder(
 	namespace, name string,
 	localPort, targetPort string,
 ) {
-	kubeconfig, err := generators.NewKubeConfigForRestConfig(env.Name(), env.Cluster().Config())
-	require.NoError(t, err)
-	kubeconfigFile, err := os.CreateTemp(os.TempDir(), "portforward-tests-kubeconfig-")
-	require.NoError(t, err)
-	defer os.Remove(kubeconfigFile.Name())
-	defer kubeconfigFile.Close()
-	written, err := kubeconfigFile.Write(kubeconfig)
-	require.NoError(t, err)
-	require.Equal(t, len(kubeconfig), written)
-	cmd := exec.CommandContext(ctx, "kubectl", "--kubeconfig", kubeconfigFile.Name(), "port-forward", "-n", namespace, name, fmt.Sprintf("%s:%s", localPort, targetPort)) //nolint:gosec
+	kubeconfig, cleanup := getTemporaryKubeconfig(t, env)
+	defer cleanup()
+
+	cmd := exec.CommandContext(ctx, "kubectl", "--kubeconfig", kubeconfig, "port-forward", "-n", namespace,
+		name, fmt.Sprintf("%s:%s", localPort, targetPort),
+	)
 	t.Logf("forwarding port %s to %s/%s:%s", localPort, namespace, name, targetPort)
 	if startErr := cmd.Start(); startErr != nil {
 		startOutput, outputErr := cmd.Output()
@@ -374,19 +369,11 @@ func getPodLogs(
 	ctx context.Context, t *testing.T, env environments.Environment,
 	namespace string, podName string,
 ) (string, error) {
-	kubeconfig, err := generators.NewKubeConfigForRestConfig(env.Name(), env.Cluster().Config())
-	require.NoError(t, err)
-	kubeconfigFile, err := os.CreateTemp(os.TempDir(), "podlogs-tests-kubeconfig-")
-	require.NoError(t, err)
-	defer os.Remove(kubeconfigFile.Name())
-	defer kubeconfigFile.Close()
-
-	written, err := kubeconfigFile.Write(kubeconfig)
-	require.NoError(t, err)
-	require.Equal(t, len(kubeconfig), written)
+	kubeconfig, cleanup := getTemporaryKubeconfig(t, env)
+	defer cleanup()
 
 	stderr := new(bytes.Buffer)
-	cmd := exec.CommandContext(ctx, "kubectl", "--kubeconfig", kubeconfigFile.Name(), "logs", podName, "-n", namespace, "--all-containers") //nolint:gosec
+	cmd := exec.CommandContext(ctx, "kubectl", "--kubeconfig", kubeconfig, "logs", podName, "-n", namespace, "--all-containers")
 	cmd.Stderr = stderr
 	out, err := cmd.Output()
 	if err != nil {

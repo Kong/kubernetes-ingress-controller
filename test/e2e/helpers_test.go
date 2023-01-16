@@ -166,26 +166,15 @@ func createGKEBuilder() (*environments.Builder, error) {
 }
 
 func deployKong(ctx context.Context, t *testing.T, env environments.Environment, manifest io.Reader, additionalSecrets ...*corev1.Secret) *appsv1.Deployment {
-	t.Log("creating a tempfile for kubeconfig")
-	kubeconfig, err := generators.NewKubeConfigForRestConfig(env.Name(), env.Cluster().Config())
-	require.NoError(t, err)
-	kubeconfigFile, err := os.CreateTemp(os.TempDir(), "manifest-tests-kubeconfig-")
-	require.NoError(t, err)
-	defer os.Remove(kubeconfigFile.Name())
-	defer kubeconfigFile.Close()
-
-	t.Log("dumping kubeconfig to tempfile")
-	written, err := kubeconfigFile.Write(kubeconfig)
-	require.NoError(t, err)
-	require.Equal(t, len(kubeconfig), written)
-	kubeconfigFilename := kubeconfigFile.Name()
+	kubeconfigFilename, cleanup := getTemporaryKubeconfig(t, env)
+	defer cleanup()
 
 	t.Log("waiting for testing environment to be ready")
 	require.NoError(t, <-env.WaitForReady(ctx))
 
 	t.Log("creating the kong namespace")
 	ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "kong"}}
-	_, err = env.Cluster().Client().CoreV1().Namespaces().Create(ctx, ns, metav1.CreateOptions{})
+	_, err := env.Cluster().Client().CoreV1().Namespaces().Create(ctx, ns, metav1.CreateOptions{})
 	if !kerrors.IsAlreadyExists(err) {
 		require.NoError(t, err)
 	}
@@ -392,21 +381,15 @@ func killKong(ctx context.Context, t *testing.T, env environments.Environment, p
 			orig = status.RestartCount
 		}
 	}
-	t.Logf("kong container has %v restart currently", orig)
-	kubeconfig, err := generators.NewKubeConfigForRestConfig(env.Name(), env.Cluster().Config())
-	require.NoError(t, err)
-	kubeconfigFile, err := os.CreateTemp(os.TempDir(), "kill-tests-kubeconfig-")
-	require.NoError(t, err)
-	defer os.Remove(kubeconfigFile.Name())
-	defer kubeconfigFile.Close()
-	written, err := kubeconfigFile.Write(kubeconfig)
-	require.NoError(t, err)
-	require.Equal(t, len(kubeconfig), written)
-	cmd := exec.Command("kubectl", "--kubeconfig", kubeconfigFile.Name(), "exec", "-n", pod.Namespace, pod.Name, "--", "bash", "-c", "kill 1") //nolint:gosec
+
+	kubeconfig, cleanup := getTemporaryKubeconfig(t, env)
+	defer cleanup()
+
+	cmd := exec.Command("kubectl", "--kubeconfig", kubeconfig, "exec", "-n", pod.Namespace, pod.Name, "--", "bash", "-c", "kill 1")
 	stdout, stderr := new(bytes.Buffer), new(bytes.Buffer)
 	cmd.Stdout = stdout
 	cmd.Stderr = stderr
-	err = cmd.Run()
+	err := cmd.Run()
 	require.NoErrorf(t, err, "kill failed: STDOUT(%s) STDERR(%s)", stdout.String(), stderr.String())
 	require.Eventually(t, func() bool {
 		pod, err = env.Cluster().Client().CoreV1().Pods(pod.Namespace).Get(ctx, pod.Name, metav1.GetOptions{})
@@ -445,16 +428,10 @@ func createKongImagePullSecret(ctx context.Context, t *testing.T, env environmen
 	if kongImagePullUsername == "" || kongImagePullPassword == "" {
 		return
 	}
-	secretName := "kong-enterprise-edition-docker"
-	kubeconfig, err := generators.NewKubeConfigForRestConfig(env.Name(), env.Cluster().Config())
-	require.NoError(t, err)
-	kubeconfigFile, err := os.CreateTemp(os.TempDir(), "create-pull-secret-kubeconfig-")
-	require.NoError(t, err)
-	t.Log("dumping kubeconfig to tempfile")
-	written, err := kubeconfigFile.Write(kubeconfig)
-	require.NoError(t, err)
-	require.Len(t, kubeconfig, written)
-	kubeconfigFilename := kubeconfigFile.Name()
+	kubeconfigFilename, cleanup := getTemporaryKubeconfig(t, env)
+	defer cleanup()
+
+	const secretName = "kong-enterprise-edition-docker"
 	cmd := exec.CommandContext(
 		ctx,
 		"kubectl", "--kubeconfig", kubeconfigFilename,
@@ -491,4 +468,29 @@ func getEnvValueInContainer(container *corev1.Container, name string) string {
 		}
 	}
 	return value
+}
+
+// getTemporaryKubeconfig dumps an environment's kubeconfig to a temporary file.
+func getTemporaryKubeconfig(t *testing.T, env environments.Environment) (path string, cleanup func()) {
+	t.Log("creating a tempfile for kubeconfig")
+
+	kubeconfig, err := generators.NewKubeConfigForRestConfig(env.Name(), env.Cluster().Config())
+	require.NoError(t, err)
+	kubeconfigFile, err := os.CreateTemp(os.TempDir(), "manifest-tests-kubeconfig-")
+	require.NoError(t, err)
+	defer kubeconfigFile.Close()
+
+	cleanup = func() {
+		_ = os.Remove(kubeconfigFile.Name())
+	}
+
+	t.Log("dumping kubeconfig to tempfile")
+	written, err := kubeconfigFile.Write(kubeconfig)
+	if err != nil || len(kubeconfig) != written {
+		cleanup()
+	}
+	require.NoError(t, err)
+	require.Equal(t, len(kubeconfig), written)
+
+	return kubeconfigFile.Name(), cleanup
 }

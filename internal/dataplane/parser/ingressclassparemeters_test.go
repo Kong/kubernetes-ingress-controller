@@ -154,7 +154,7 @@ func TestGetIngressClassParameters(t *testing.T) {
 			if tc.err != nil {
 				assert.EqualError(t, err, tc.err.Error())
 
-				if errors.As(err, &store.ErrNotFound{}) {
+				if errors.As(tc.err, &store.ErrNotFound{}) {
 					assert.ErrorAs(t, err, &store.ErrNotFound{})
 				}
 			} else {

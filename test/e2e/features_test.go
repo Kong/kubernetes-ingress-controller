@@ -509,10 +509,9 @@ func TestDeployAllInOneDBLESSNoLoadBalancer(t *testing.T) {
 	env, err := builder.Build(ctx)
 	require.NoError(t, err)
 	cluster := env.Cluster()
-	cleaner := clusters.NewCleaner(cluster)
 	defer func() {
 		if t.Failed() {
-			output, err := cleaner.DumpDiagnostics(ctx, t.Name())
+			output, err := cluster.DumpDiagnostics(ctx, t.Name())
 			t.Logf("%s failed, dumped diagnostics to %s", t.Name(), output)
 			assert.NoError(t, err)
 		}

@@ -356,8 +356,8 @@ func TestDeployAllInOneDBLESSGateway(t *testing.T) {
 	kongClient, err := clientset.NewForConfig(env.Cluster().Config())
 	require.Eventually(t, func() bool {
 		_, err = kongClient.ConfigurationV1().KongConsumers(namespace).Create(ctx, consumer, metav1.CreateOptions{})
-		return err == nil
-	}, time.Minute*2, time.Second*1)
+		return err != nil
+	}, time.Minute*2, time.Second*1, "expected consumer eventually fail to be created due to a duplicated username")
 
 	t.Log("verifying that KIC disabled controllers for Gateway API and printed proper log")
 	require.Eventually(t, func() bool {

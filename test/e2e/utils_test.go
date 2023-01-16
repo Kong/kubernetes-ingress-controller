@@ -229,7 +229,7 @@ func getKongProxyIP(ctx context.Context, t *testing.T, env environments.Environm
 	svc := refreshService()
 	require.NotEqual(t, svc.Spec.Type, corev1.ServiceTypeClusterIP, "ClusterIP service is not supported")
 
-	//nolint: exhaustive
+	// nolint: exhaustive
 	switch svc.Spec.Type {
 	case corev1.ServiceTypeLoadBalancer:
 		return getKongProxyLoadBalancerIP(t, refreshService)
@@ -273,7 +273,7 @@ func getKongProxyNodePortIP(ctx context.Context, t *testing.T, env environments.
 		startPortForwarder(ctx, t, env, svc.Namespace, fmt.Sprintf("service/%s", svc.Name),
 			kongProxyLocalPort, strconv.Itoa(int(port.Port)),
 		)
-		return fmt.Sprintf("localhost:%d", port.Port)
+		return fmt.Sprintf("localhost:%s", kongProxyLocalPort)
 	}
 
 	var extAddrs []string

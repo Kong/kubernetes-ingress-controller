@@ -13,7 +13,7 @@ type RouteParentStatusT interface {
 }
 
 type namespacedObjectT interface {
-    GetNamespace() string
+	GetNamespace() string
 }
 
 // getParentStatuses creates a parent status map for the provided route given the

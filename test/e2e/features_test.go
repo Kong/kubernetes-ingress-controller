@@ -611,9 +611,7 @@ func TestDefaultIngressClass(t *testing.T) {
 	}, service)
 	require.NoError(t, clusters.DeployIngress(ctx, env.Cluster(), kongDeployment.Namespace, ingress))
 
-	svc, err := env.Cluster().Client().CoreV1().Services(namespace).Get(ctx, "kong-proxy", metav1.GetOptions{})
-	require.NoError(t, err)
-	proxyURL := "http://" + getKongProxyIP(ctx, t, env, svc)
+	proxyURL := "http://" + getKongProxyIP(ctx, t, env)
 	t.Log("ensuring Ingress does not become live")
 	require.Never(t, func() bool {
 		resp, err := httpc.Get(fmt.Sprintf("%s/abbosiysaltanati", proxyURL))
@@ -649,9 +647,7 @@ func TestDefaultIngressClass(t *testing.T) {
 	}, ingressWait, time.Second)
 
 	t.Log("getting kong proxy IP after LB provisioning")
-	svc, err = env.Cluster().Client().CoreV1().Services(namespace).Get(ctx, "kong-proxy", metav1.GetOptions{})
-	require.NoError(t, err)
-	proxyURL = "http://" + getKongProxyIP(ctx, t, env, svc)
+	proxyURL = "http://" + getKongProxyIP(ctx, t, env)
 
 	t.Log("creating classless global KongClusterPlugin")
 	kongclusterplugin := &kongv1.KongClusterPlugin{

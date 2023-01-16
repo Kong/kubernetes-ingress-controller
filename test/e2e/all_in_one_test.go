@@ -53,14 +53,15 @@ func TestDeployAllInOneDBLESS(t *testing.T) {
 	}()
 
 	t.Logf("build a cleaner to dump diagnostics...")
-	cleaner := clusters.NewCleaner(env.Cluster())
+	cluster := env.Cluster()
+	cleaner := clusters.NewCleaner(cluster)
 	defer func() {
 		if t.Failed() {
 			output, err := cleaner.DumpDiagnostics(ctx, t.Name())
 			t.Logf("%s failed, dumped diagnostics to %s", t.Name(), output)
 			assert.NoError(t, err)
 		}
-		assert.NoError(t, cleaner.Cleanup(ctx))
+		assert.NoError(t, cluster.Cleanup(ctx))
 	}()
 
 	t.Log("deploying kong components")

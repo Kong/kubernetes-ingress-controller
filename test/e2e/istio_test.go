@@ -18,7 +18,6 @@ import (
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/istio"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/kong"
-	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/metallb"
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -71,7 +70,6 @@ func TestIstioWithKongIngressGateway(t *testing.T) {
 	}
 
 	t.Log("configuring cluster addons for the testing environment")
-	metallbAddon := metallb.New()
 	kongBuilder := kong.NewBuilder().
 		WithControllerDisabled().
 		WithProxyAdminServiceTypeLoadBalancer()

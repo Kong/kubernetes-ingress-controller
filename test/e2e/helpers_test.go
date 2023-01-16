@@ -260,9 +260,7 @@ func deployIngress(ctx context.Context, t *testing.T, env environments.Environme
 
 func verifyIngress(ctx context.Context, t *testing.T, env environments.Environment) {
 	t.Log("finding the kong proxy service ip")
-	svc, err := env.Cluster().Client().CoreV1().Services(namespace).Get(ctx, "kong-proxy", metav1.GetOptions{})
-	require.NoError(t, err)
-	proxyIP := getKongProxyIP(ctx, t, env, svc)
+	proxyIP := getKongProxyIP(ctx, t, env)
 
 	t.Logf("waiting for route from Ingress to be operational at http://%s/httpbin", proxyIP)
 	httpc := http.Client{Timeout: time.Second * 10}
@@ -466,18 +464,6 @@ func createKongImagePullSecret(ctx context.Context, t *testing.T, env environmen
 	)
 	out, err := cmd.CombinedOutput()
 	require.NoError(t, err, "command output: "+string(out))
-}
-
-// setBuilderKubernetesVersion configures the kubernetes version of test environment builder
-// and returns the updated builder.
-func setBuilderKubernetesVersion(t *testing.T, b *environments.Builder, clusterVersionStr string) *environments.Builder {
-	if clusterVersionStr == "" {
-		return b
-	}
-	clusterVersion, err := semver.ParseTolerant(clusterVersionStr)
-	require.NoError(t, err)
-	t.Logf("k8s cluster version is set to %v", clusterVersion)
-	return b.WithKubernetesVersion(clusterVersion)
 }
 
 // getContainerInPodSpec returns the spec of container having the given name.

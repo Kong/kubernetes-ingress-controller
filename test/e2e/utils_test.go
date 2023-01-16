@@ -217,18 +217,48 @@ func getPreviousGitTag(path string, cur semver.Version) (semver.Version, error) 
 }
 
 // getKongProxyIP takes a Service with Kong proxy ports and returns and its IP, or fails the test if it cannot.
-func getKongProxyIP(ctx context.Context, t *testing.T, env environments.Environment, svc *corev1.Service) string {
-	require.NotEqual(t, svc.Spec.Type, corev1.ServiceTypeClusterIP)
+func getKongProxyIP(ctx context.Context, t *testing.T, env environments.Environment) string {
+	refreshService := func() *corev1.Service {
+		svc, err := env.Cluster().Client().CoreV1().Services(namespace).Get(ctx, "kong-proxy", metav1.GetOptions{})
+		require.NoError(t, err)
+		return svc
+	}
 
-	if svc.Spec.Type == corev1.ServiceTypeLoadBalancer {
+	svc := refreshService()
+	require.NotEqual(t, svc.Spec.Type, corev1.ServiceTypeClusterIP, "ClusterIP service is not supported")
+
+	//nolint: exhaustive
+	switch svc.Spec.Type {
+	case corev1.ServiceTypeLoadBalancer:
+		return getKongProxyLoadBalancerIP(t, refreshService)
+	case corev1.ServiceTypeNodePort:
+		return getKongProxyNodePortIP(ctx, t, env, svc)
+	default:
+		t.Fatalf("unknown service type: %q", svc.Spec.Type)
+		return ""
+	}
+}
+
+func getKongProxyLoadBalancerIP(t *testing.T, refreshSvc func() *corev1.Service) string {
+	var resIP string
+	require.Eventually(t, func() bool {
+		svc := refreshSvc()
+
 		if len(svc.Status.LoadBalancer.Ingress) > 0 {
 			ip := svc.Status.LoadBalancer.Ingress[0].IP
 			t.Logf("found loadbalancer IP for the Kong Proxy: %s", ip)
-			return ip
+			resIP = ip
+			return true
 		}
-	}
 
-	// the above failed to find an address. either the LB didn't provision or we're using a NodePort
+		t.Log("no IP for LoadBalancer found yet")
+		return false
+	}, ingressWait, time.Second)
+
+	return resIP
+}
+
+func getKongProxyNodePortIP(ctx context.Context, t *testing.T, env environments.Environment, svc *corev1.Service) string {
 	var port int32
 	for _, sport := range svc.Spec.Ports {
 		if sport.Name == "kong-proxy" || sport.Name == "proxy" {

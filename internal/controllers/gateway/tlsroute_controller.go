@@ -367,15 +367,7 @@ var tlsrouteParentKind = "Gateway"
 // for the TLSRoute is updated appropriately.
 func (r *TLSRouteReconciler) ensureGatewayReferenceStatusAdded(ctx context.Context, tlsroute *gatewayv1alpha2.TLSRoute, gateways ...supportedGatewayWithCondition) (bool, error) {
 	// map the existing parentStatues to avoid duplications
-	parentStatuses := make(map[string]*gatewayv1alpha2.RouteParentStatus)
-	for _, existingParent := range tlsroute.Status.Parents {
-		namespace := tlsroute.Namespace
-		if existingParent.ParentRef.Namespace != nil {
-			namespace = string(*existingParent.ParentRef.Namespace)
-		}
-		existingParentCopy := existingParent
-		parentStatuses[namespace+string(existingParent.ParentRef.Name)] = &existingParentCopy
-	}
+	parentStatuses := getParentStatuses(tlsroute, tlsroute.Status.Parents)
 
 	// overlay the parent ref statuses for all new gateway references
 	statusChangesWereMade := false

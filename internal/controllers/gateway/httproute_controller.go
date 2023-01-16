@@ -392,19 +392,7 @@ var httprouteParentKind = "Gateway"
 // for the HTTPRoute is updated appropriately.
 func (r *HTTPRouteReconciler) ensureGatewayReferenceStatusAdded(ctx context.Context, httproute *gatewayv1beta1.HTTPRoute, gateways ...supportedGatewayWithCondition) (bool, error) {
 	// map the existing parentStatues to avoid duplications
-	parentStatuses := make(map[string]*gatewayv1beta1.RouteParentStatus)
-	for _, existingParent := range httproute.Status.Parents {
-		namespace := httproute.Namespace
-		if existingParent.ParentRef.Namespace != nil {
-			namespace = string(*existingParent.ParentRef.Namespace)
-		}
-		existingParentCopy := existingParent
-		var sectionName string
-		if existingParent.ParentRef.SectionName != nil {
-			sectionName = string(*existingParent.ParentRef.SectionName)
-		}
-		parentStatuses[fmt.Sprintf("%s/%s/%s", namespace, existingParent.ParentRef.Name, sectionName)] = &existingParentCopy
-	}
+	parentStatuses := getParentStatuses(httproute, httproute.Status.Parents)
 
 	// overlay the parent ref statuses for all new gateway references
 	statusChangesWereMade := false

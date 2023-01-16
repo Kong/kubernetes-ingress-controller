@@ -362,15 +362,7 @@ var udprouteParentKind = "Gateway"
 // for the UDPRoute is updated appropriately.
 func (r *UDPRouteReconciler) ensureGatewayReferenceStatusAdded(ctx context.Context, udproute *gatewayv1alpha2.UDPRoute, gateways ...supportedGatewayWithCondition) (bool, error) {
 	// map the existing parentStatues to avoid duplications
-	parentStatuses := make(map[string]*gatewayv1alpha2.RouteParentStatus)
-	for _, existingParent := range udproute.Status.Parents {
-		namespace := udproute.Namespace
-		if existingParent.ParentRef.Namespace != nil {
-			namespace = string(*existingParent.ParentRef.Namespace)
-		}
-		existingParentCopy := existingParent
-		parentStatuses[namespace+string(existingParent.ParentRef.Name)] = &existingParentCopy
-	}
+	parentStatuses := getParentStatuses(udproute, udproute.Status.Parents)
 
 	// overlay the parent ref statuses for all new gateway references
 	statusChangesWereMade := false

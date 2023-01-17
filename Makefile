@@ -258,7 +258,7 @@ container:
 .PHONY: container.debug
 container.debug:
 	docker buildx build \
-		-f Dockerfile \
+		-f Dockerfile.debug \
 		--target debug \
 		--build-arg TAG=${TAG}-debug \
 		--build-arg COMMIT=${COMMIT} \
@@ -502,7 +502,8 @@ debug.connect:
 # port with debugger/IDE of your choice
 .PHONY: debug.skaffold
 debug.skaffold: skaffold
-	$(SKAFFOLD) debug --port-forward=pods --profile=debug $(SKAFFOLD_FLAGS)
+	TAG=$(TAG)-debug REPO_INFO=$(REPO_INFO) COMMIT=$(COMMIT) \
+		$(SKAFFOLD) debug --port-forward=pods --profile=debug $(SKAFFOLD_FLAGS)
 
 # This will port-forward 40000 from KIC's debugger to localhost. Connect to that
 # port with debugger/IDE of your choice
@@ -512,7 +513,8 @@ debug.skaffold.sync: skaffold
 
 .PHONY: run.skaffold
 run.skaffold: skaffold
-	$(SKAFFOLD) dev --port-forward=pods --profile=dev
+	TAG=$(TAG)-debug REPO_INFO=$(REPO_INFO) COMMIT=$(COMMIT) \
+		$(SKAFFOLD) dev --port-forward=pods --profile=dev
 
 .PHONY: run
 run: install _ensure-namespace

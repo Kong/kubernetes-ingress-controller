@@ -27,6 +27,13 @@ const (
 	unsupportedGW = "no supported Gateway found for route"
 )
 
+const (
+	ConditionTypeProgrammed                                                = "Programmed"
+	ConditionReasonProgrammedUnknown   gatewayv1beta1.RouteConditionReason = "Unknown"
+	ConditionReasonConfiguredInGateway gatewayv1beta1.RouteConditionReason = "ConfiguredInGateway"
+	ConditionReasonTranslationError    gatewayv1beta1.RouteConditionReason = "TranslationError"
+)
+
 var ErrNoMatchingListenerHostname = fmt.Errorf("no matching hostnames in listener")
 
 // supportedGatewayWithCondition is a struct that wraps a gateway and some further info
@@ -637,4 +644,61 @@ func sameCondition(a, b metav1.Condition) bool {
 		a.Status == b.Status &&
 		a.Reason == b.Reason &&
 		a.Message == b.Message
+}
+
+func setRouteParentStatusCondition[T types.ParentStatusT](parentStatus T, newCondition metav1.Condition) bool {
+	var conditionFound, changed bool
+	switch p := (any)(parentStatus).(type) {
+	case *gatewayv1beta1.RouteParentStatus:
+		for i, condition := range p.Conditions {
+			if condition.Type == newCondition.Type {
+				conditionFound = true
+				if !sameCondition(condition, newCondition) {
+					p.Conditions[i] = newCondition
+					changed = true
+				}
+			}
+		}
+
+		if !conditionFound {
+			p.Conditions = append(p.Conditions, newCondition)
+			changed = true
+		}
+	case *gatewayv1alpha2.RouteParentStatus:
+		for i, condition := range p.Conditions {
+			if condition.Type == newCondition.Type {
+				conditionFound = true
+				if !sameCondition(condition, newCondition) {
+					p.Conditions[i] = newCondition
+					changed = true
+				}
+			}
+		}
+
+		if !conditionFound {
+			p.Conditions = append(p.Conditions, newCondition)
+			changed = true
+		}
+	}
+	return changed
+}
+
+func parentStatusHasProgrammedCondition[T types.ParentStatusT](parentStatus T) bool {
+	switch p := (any)(parentStatus).(type) {
+	case *gatewayv1beta1.RouteParentStatus:
+		for _, condition := range p.Conditions {
+			if condition.Type == ConditionTypeProgrammed {
+				return true
+			}
+		}
+		return false
+	case *gatewayv1alpha2.RouteParentStatus:
+		for _, condition := range p.Conditions {
+			if condition.Type == ConditionTypeProgrammed {
+				return true
+			}
+		}
+		return false
+	}
+	return false
 }

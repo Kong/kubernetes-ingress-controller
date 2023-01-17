@@ -26,6 +26,7 @@ import (
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
+	k8sobj "github.com/kong/kubernetes-ingress-controller/v2/internal/util/kubernetes/object"
 )
 
 // -----------------------------------------------------------------------------
@@ -342,15 +343,6 @@ func (r *HTTPRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 			debug(log, httproute, "failed to update object in data-plane, requeueing")
 			return ctrl.Result{}, err
 		}
-		if r.DataplaneClient.AreKubernetesObjectReportsEnabled() {
-			// if the dataplane client has reporting enabled (this is the default and is
-			// tied in with status updates being enabled in the controller manager) then
-			// we will wait until the object is reported as successfully configured before
-			// moving on to status updates.
-			if !r.DataplaneClient.KubernetesObjectIsConfigured(httproute) {
-				return ctrl.Result{Requeue: true}, nil
-			}
-		}
 	} else {
 		// route is not accepted, remove it from kong store
 		if err := r.DataplaneClient.DeleteObject(httproute); err != nil {
@@ -374,8 +366,51 @@ func (r *HTTPRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		return ctrl.Result{}, nil
 	}
 
+	// update "Programmed" condition if HTTPRoute is translated to Kong configuration.
+	// if the HTTPRoute is not configured in the dataplane, leave it unchanged and requeue.
+	// if it is successfully configured, update its "Programmed" condition to True.
+	// if translation failure happens, update its "Programmed" condition to False.
+	debug(log, httproute, "ensuring status contains Programmed condition")
+	if r.DataplaneClient.AreKubernetesObjectReportsEnabled() {
+		// if the dataplane client has reporting enabled (this is the default and is
+		// tied in with status updates being enabled in the controller manager) then
+		// we will wait until the object is reported as successfully configured before
+		// moving on to status updates.
+		configurationStatus := r.DataplaneClient.KubernetesObjectConfigurationStatus(httproute)
+		if configurationStatus == k8sobj.ConfigurationStatusUnknown {
+			// requeue until httproute is configured.
+			debug(log, httproute, "httproute not configured,requeueing")
+			return ctrl.Result{Requeue: true}, nil
+		}
+
+		if configurationStatus == k8sobj.ConfigurationStatusFailed {
+			debug(log, httproute, "httproute configuration failed")
+			statusUpdated, err := r.ensureParentsProgrammedCondition(ctx, httproute, gateways, metav1.ConditionFalse, ConditionReasonTranslationError, "")
+			if err != nil {
+				// don't proceed until the statuses can be updated appropriately
+				debug(log, httproute, "failed to update programmed condition")
+				return ctrl.Result{}, err
+			}
+			return ctrl.Result{Requeue: !statusUpdated}, nil
+		}
+
+		statusUpdated, err := r.ensureParentsProgrammedCondition(ctx, httproute, gateways, metav1.ConditionTrue, ConditionReasonConfiguredInGateway, "")
+		if err != nil {
+			// don't proceed until the statuses can be updated appropriately
+			debug(log, httproute, "failed to update programmed condition")
+			return ctrl.Result{}, err
+		}
+		if statusUpdated {
+			// if the status was updated it will trigger a follow-up reconciliation
+			// so we don't need to do anything further here.
+			debug(log, httproute, "programmed condition updated")
+			return ctrl.Result{}, nil
+		}
+	}
+
 	// once the data-plane has accepted the HTTPRoute object, we're all set.
 	info(log, httproute, "httproute has been configured on the data-plane")
+
 	return ctrl.Result{}, nil
 }
 
@@ -443,8 +478,25 @@ func (r *HTTPRouteReconciler) ensureGatewayReferenceStatusAdded(ctx context.Cont
 		return false, err
 	}
 
+	// initialize "programmed" condition to Unknown.
+	// do not update the condition If a "Programmed" condition is already present.
+	programmedConditionChanged := false
+	programmedConditionUnknown := metav1.Condition{
+		Type:               ConditionTypeProgrammed,
+		Status:             metav1.ConditionUnknown,
+		Reason:             string(ConditionReasonProgrammedUnknown),
+		ObservedGeneration: httproute.Generation,
+		LastTransitionTime: metav1.Now(),
+	}
+	for _, parentStatus := range parentStatuses {
+		if !parentStatusHasProgrammedCondition(parentStatus) {
+			programmedConditionChanged = true
+			parentStatus.Conditions = append(parentStatus.Conditions, programmedConditionUnknown)
+		}
+	}
+
 	// if we didn't have to actually make any changes, no status update is needed
-	if !statusChangesWereMade && !resolvedRefsChanged {
+	if !statusChangesWereMade && !resolvedRefsChanged && !programmedConditionChanged {
 		return false, nil
 	}
 
@@ -690,4 +742,65 @@ func updateAcceptedConditionInRouteParentStatus(
 		}
 	}
 	return changed
+}
+
+// TODO: extract method for different types of *Routes to update conditions:
+// https://github.com/Kong/kubernetes-ingress-controller/issues/3390
+func (r *HTTPRouteReconciler) ensureParentsProgrammedCondition(
+	ctx context.Context,
+	httproute *gatewayv1beta1.HTTPRoute,
+	gateways []supportedGatewayWithCondition,
+	conditionStatus metav1.ConditionStatus,
+	conditionReason gatewayv1beta1.RouteConditionReason,
+	conditionMessage string,
+) (bool, error) {
+	// map the existing parentStatues to avoid duplications
+	parentStatuses := getParentStatuses(httproute, httproute.Status.Parents)
+
+	programmedCondition := metav1.Condition{
+		Type:               ConditionTypeProgrammed,
+		Status:             conditionStatus,
+		Reason:             string(conditionReason),
+		ObservedGeneration: httproute.Generation,
+		Message:            conditionMessage,
+		LastTransitionTime: metav1.Now(),
+	}
+	statusChanged := false
+	for _, g := range gateways {
+		gateway := g.gateway
+		parentRefKey := fmt.Sprintf("%s/%s/%s", gateway.Namespace, gateway.Name, g.listenerName)
+		parentStatus, ok := parentStatuses[parentRefKey]
+		if ok {
+			// update existing parent in status.
+			changed := setRouteParentStatusCondition(parentStatus, programmedCondition)
+			statusChanged = statusChanged || changed
+		} else {
+			// add a new parent if the parent is not found in status.
+			newParentStatus := &gatewayv1beta1.RouteParentStatus{
+				ParentRef: gatewayv1beta1.ParentReference{
+					Namespace:   lo.ToPtr(gatewayv1beta1.Namespace(gateway.Namespace)),
+					Name:        gatewayv1beta1.ObjectName(gateway.Name),
+					SectionName: lo.ToPtr(gatewayv1beta1.SectionName(g.listenerName)),
+					// TODO: set port after gateway port matching implemented: https://github.com/Kong/kubernetes-ingress-controller/issues/3016
+				},
+				ControllerName: ControllerName,
+				Conditions: []metav1.Condition{
+					programmedCondition,
+				},
+			}
+			httproute.Status.Parents = append(httproute.Status.Parents, *newParentStatus)
+			parentStatuses[parentRefKey] = newParentStatus
+			statusChanged = true
+		}
+	}
+
+	// update status if needed.
+	if statusChanged {
+		if err := r.Status().Update(ctx, httproute); err != nil {
+			return false, err
+		}
+		return true, nil
+	}
+	// no need to update if no status is changed.
+	return false, nil
 }

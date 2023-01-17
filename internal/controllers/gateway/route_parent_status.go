@@ -41,7 +41,6 @@ func getParentStatuses[routeT namespacedObjectT, parentStatusT RouteParentStatus
 		switch any(route).(type) {
 		case *gatewayv1beta1.HTTPRoute:
 			key = fmt.Sprintf("%s/%s/%s", namespace, parentRef.Name, sectionName)
-
 		default:
 			key = fmt.Sprintf("%s/%s", namespace, parentRef.Name)
 		}

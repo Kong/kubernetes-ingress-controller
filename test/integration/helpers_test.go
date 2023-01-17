@@ -10,6 +10,7 @@ import (
 	"time"
 
 	ktfkong "github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/kong"
+	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
 	netv1 "k8s.io/api/networking/v1"
 	netv1beta1 "k8s.io/api/networking/v1beta1"
@@ -279,6 +280,92 @@ func gatewayLinkStatusMatches(
 
 	t.Fatal("this should not happen")
 	return false
+}
+
+func parentStatusContainsProgrammedCondition[T routeParentStatusT](
+	parentStatuses []T, controllerName gatewayv1beta1.GatewayController, expectedStatus metav1.ConditionStatus,
+) bool {
+	var conditions []metav1.Condition
+	parentFound := false
+	for _, parentStatus := range parentStatuses {
+		switch p := (any)(parentStatus).(type) {
+		case gatewayv1beta1.RouteParentStatus:
+			if p.ControllerName == controllerName {
+				conditions = p.Conditions
+				parentFound = true
+			}
+		case gatewayv1alpha2.RouteParentStatus:
+			if gatewayv1beta1.GatewayController(p.ControllerName) == controllerName {
+				conditions = p.Conditions
+				parentFound = true
+			}
+		}
+
+		if parentFound {
+			break
+		}
+	}
+
+	if !parentFound {
+		return false
+	}
+	return lo.ContainsBy(conditions, func(cond metav1.Condition) bool {
+		return cond.Type == "Programmed" && cond.Status == expectedStatus
+	})
+}
+
+func verifyProgrammedConditionStatus(t *testing.T,
+	c *gatewayclient.Clientset,
+	protocolType gatewayv1beta1.ProtocolType,
+	namespace, name string,
+	expectedStatus metav1.ConditionStatus,
+) bool {
+	// gather a fresh copy of the route, given the specific protocol type
+	switch protocolType { //nolint:exhaustive
+	case gatewayv1beta1.HTTPProtocolType:
+		route, err := c.GatewayV1beta1().HTTPRoutes(namespace).Get(ctx, name, metav1.GetOptions{})
+		if err != nil {
+			t.Logf("error getting http route: %v", err)
+		} else {
+			return parentStatusContainsProgrammedCondition(route.Status.Parents, gateway.ControllerName, expectedStatus)
+		}
+	case gateway.TCPProtocolType:
+		route, err := c.GatewayV1alpha2().TCPRoutes(namespace).Get(ctx, name, metav1.GetOptions{})
+		if err != nil {
+			t.Logf("error getting tcp route: %v", err)
+		} else {
+			return parentStatusContainsProgrammedCondition(route.Status.Parents, gateway.ControllerName, expectedStatus)
+		}
+	case gateway.TLSProtocolType:
+		route, err := c.GatewayV1alpha2().TLSRoutes(namespace).Get(ctx, name, metav1.GetOptions{})
+		if err != nil {
+			t.Logf("error getting tls route: %v", err)
+		} else {
+			return parentStatusContainsProgrammedCondition(route.Status.Parents, gateway.ControllerName, expectedStatus)
+		}
+	case gateway.UDPProtocolType:
+		route, err := c.GatewayV1alpha2().UDPRoutes(namespace).Get(ctx, name, metav1.GetOptions{})
+		if err != nil {
+			t.Logf("error getting udp route: %v", err)
+		} else {
+			return parentStatusContainsProgrammedCondition(route.Status.Parents, gateway.ControllerName, expectedStatus)
+		}
+	default:
+		t.Fatalf("protocol %s not supported", string(protocolType))
+	}
+
+	return false
+}
+
+func GetVerifyProgrammedConditionCallback(t *testing.T,
+	c *gatewayclient.Clientset,
+	protocolType gatewayv1beta1.ProtocolType,
+	namespace, name string,
+	expectedStatus metav1.ConditionStatus,
+) func() bool {
+	return func() bool {
+		return verifyProgrammedConditionStatus(t, c, protocolType, namespace, name, expectedStatus)
+	}
 }
 
 // setIngressClassNameWithRetry changes Ingress.Spec.IngressClassName to specified value

@@ -744,7 +744,8 @@ func updateAcceptedConditionInRouteParentStatus(
 	return changed
 }
 
-// TODO: extract method for different types of *Routes to update conditions.
+// TODO: extract method for different types of *Routes to update conditions:
+// https://github.com/Kong/kubernetes-ingress-controller/issues/3390
 func (r *HTTPRouteReconciler) ensureParentsProgrammedCondition(
 	ctx context.Context,
 	httproute *gatewayv1beta1.HTTPRoute,

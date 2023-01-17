@@ -283,7 +283,8 @@ func gatewayLinkStatusMatches(
 }
 
 func parentStatusContainsProgrammedCondition[T routeParentStatusT](
-	parentStatuses []T, controllerName gatewayv1beta1.GatewayController, expectedStatus metav1.ConditionStatus) bool {
+	parentStatuses []T, controllerName gatewayv1beta1.GatewayController, expectedStatus metav1.ConditionStatus,
+) bool {
 	var conditions []metav1.Condition
 	parentFound := false
 	for _, parentStatus := range parentStatuses {
@@ -317,7 +318,8 @@ func verifyProgrammedConditionStatus(t *testing.T,
 	c *gatewayclient.Clientset,
 	protocolType gatewayv1beta1.ProtocolType,
 	namespace, name string,
-	expectedStatus metav1.ConditionStatus) bool {
+	expectedStatus metav1.ConditionStatus,
+) bool {
 	// gather a fresh copy of the route, given the specific protocol type
 	switch protocolType { //nolint:exhaustive
 	case gatewayv1beta1.HTTPProtocolType:
@@ -359,7 +361,8 @@ func GetVerifyProgrammedConditionCallback(t *testing.T,
 	c *gatewayclient.Clientset,
 	protocolType gatewayv1beta1.ProtocolType,
 	namespace, name string,
-	expectedStatus metav1.ConditionStatus) func() bool {
+	expectedStatus metav1.ConditionStatus,
+) func() bool {
 	return func() bool {
 		return verifyProgrammedConditionStatus(t, c, protocolType, namespace, name, expectedStatus)
 	}

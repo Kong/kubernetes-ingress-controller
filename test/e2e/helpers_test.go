@@ -147,6 +147,8 @@ func createGKEBuilder() (*environments.Builder, error) {
 		gkeLocation = os.Getenv(gke.GKELocationVar)
 	)
 
+	fmt.Printf("INFO: cluster name: %q\n", name)
+
 	clusterBuilder := gke.
 		NewBuilder([]byte(gkeCreds), gkeProject, gkeLocation).
 		WithName(name).

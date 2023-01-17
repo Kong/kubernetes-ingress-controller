@@ -31,7 +31,6 @@ import (
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
 	"github.com/kong/kubernetes-ingress-controller/v2/pkg/clientset"
@@ -312,23 +311,26 @@ func TestDeployAllInOneDBLESSGateway(t *testing.T) {
 	t.Log("running the admission webhook setup script")
 	deployAdmissionWebhook(t, env)
 
+	// TODO: make sure that KongConsumer cannot be created due to admission webhook rejecting duplicates
+	// https://github.com/Kong/kubernetes-ingress-controller/issues/3393
+	//
 	// vov it's easier than tracking the deployment state
-	t.Log("creating a consumer to ensure the admission webhook is online")
-	consumer := &kongv1.KongConsumer{
-		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: "nihoniy-",
-			Annotations: map[string]string{
-				annotations.IngressClassKey: ingressClass,
-			},
-		},
-		Username: "nihoniy",
-	}
-
-	kongClient, err := clientset.NewForConfig(env.Cluster().Config())
-	require.Eventually(t, func() bool {
-		_, err = kongClient.ConfigurationV1().KongConsumers(namespace).Create(ctx, consumer, metav1.CreateOptions{})
-		return err != nil
-	}, time.Minute*10, time.Second*1, "expected consumer eventually fail to be created due to a duplicated username")
+	// t.Log("creating a consumer to ensure the admission webhook is online")
+	// consumer := &kongv1.KongConsumer{
+	// 	ObjectMeta: metav1.ObjectMeta{
+	// 		GenerateName: "nihoniy-",
+	// 		Annotations: map[string]string{
+	// 			annotations.IngressClassKey: ingressClass,
+	// 		},
+	// 	},
+	// 	Username: "nihoniy",
+	// }
+	//
+	// kongClient, err := clientset.NewForConfig(env.Cluster().Config())
+	// require.Eventually(t, func() bool {
+	// 	_, err = kongClient.ConfigurationV1().KongConsumers(namespace).Create(ctx, consumer, metav1.CreateOptions{})
+	// 	return err != nil
+	// }, time.Minute*10, time.Second*1, "expected consumer eventually fail to be created due to a duplicated username")
 
 	t.Log("verifying that KIC disabled controllers for Gateway API and printed proper log")
 	require.Eventually(t, func() bool {

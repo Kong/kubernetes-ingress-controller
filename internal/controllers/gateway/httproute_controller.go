@@ -367,9 +367,9 @@ func (r *HTTPRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	}
 
 	// update "Programmed" condition if HTTPRoute is translated to Kong configuration.
-	// if the HTTPRoute is not configured ad Kong side, leave it unchanged and requeue.
+	// if the HTTPRoute is not configured in the dataplane, leave it unchanged and requeue.
 	// if it is successfully configured, update its "Programmed" condition to True.
-	// if translation failures happens, update its "Programmed" condition to False.
+	// if translation failure happens, update its "Programmed" condition to False.
 	debug(log, httproute, "ensuring status contains Programmed condition")
 	if r.DataplaneClient.AreKubernetesObjectReportsEnabled() {
 		// if the dataplane client has reporting enabled (this is the default and is
@@ -754,19 +754,7 @@ func (r *HTTPRouteReconciler) ensureParentsProgrammedCondition(
 	conditionMessage string,
 ) (bool, error) {
 	// map the existing parentStatues to avoid duplications
-	parentStatuses := make(map[string]*gatewayv1beta1.RouteParentStatus)
-	for _, existingParent := range httproute.Status.Parents {
-		namespace := httproute.Namespace
-		if existingParent.ParentRef.Namespace != nil {
-			namespace = string(*existingParent.ParentRef.Namespace)
-		}
-		existingParentCopy := existingParent
-		var sectionName string
-		if existingParent.ParentRef.SectionName != nil {
-			sectionName = string(*existingParent.ParentRef.SectionName)
-		}
-		parentStatuses[fmt.Sprintf("%s/%s/%s", namespace, existingParent.ParentRef.Name, sectionName)] = &existingParentCopy
-	}
+	parentStatuses := getParentStatuses(httproute, httproute.Status.Parents)
 
 	programmedCondition := metav1.Condition{
 		Type:               ConditionTypeProgrammed,
@@ -794,6 +782,7 @@ func (r *HTTPRouteReconciler) ensureParentsProgrammedCondition(
 					SectionName: lo.ToPtr(gatewayv1beta1.SectionName(g.listenerName)),
 					// TODO: set port after gateway port matching implemented: https://github.com/Kong/kubernetes-ingress-controller/issues/3016
 				},
+				ControllerName: ControllerName,
 				Conditions: []metav1.Condition{
 					programmedCondition,
 				},

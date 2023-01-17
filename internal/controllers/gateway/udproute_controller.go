@@ -359,6 +359,19 @@ func (r *UDPRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 			}
 			return ctrl.Result{Requeue: !statusUpdated}, nil
 		}
+
+		statusUpdated, err := r.ensureParentsProgrammedCondition(ctx, udproute, gateways, metav1.ConditionTrue, ConditionReasonConfiguredInGateway, "")
+		if err != nil {
+			// don't proceed until the statuses can be updated appropriately
+			debug(log, udproute, "failed to update programmed condition")
+			return ctrl.Result{}, err
+		}
+		if statusUpdated {
+			// if the status was updated it will trigger a follow-up reconciliation
+			// so we don't need to do anything further here.
+			debug(log, udproute, "programmed condition updated")
+			return ctrl.Result{}, nil
+		}
 	}
 
 	// once the data-plane has accepted the UDPRoute object, we're all set.
@@ -404,7 +417,8 @@ func (r *UDPRouteReconciler) ensureGatewayReferenceStatusAdded(ctx context.Conte
 
 		// if the reference already exists and doesn't require any changes
 		// then just leave it alone.
-		if existingGatewayParentStatus, exists := parentStatuses[gateway.gateway.Namespace+gateway.gateway.Name]; exists {
+		parentRefKey := gateway.gateway.Namespace + "/" + gateway.gateway.Name
+		if existingGatewayParentStatus, exists := parentStatuses[parentRefKey]; exists {
 			//  check if the parentRef and controllerName are equal, and whether the new condition is present in existing conditions
 			if reflect.DeepEqual(existingGatewayParentStatus.ParentRef, gatewayParentStatus.ParentRef) &&
 				existingGatewayParentStatus.ControllerName == gatewayParentStatus.ControllerName &&
@@ -416,7 +430,7 @@ func (r *UDPRouteReconciler) ensureGatewayReferenceStatusAdded(ctx context.Conte
 		}
 
 		// otherwise overlay the new status on top the list of parentStatuses
-		parentStatuses[gateway.gateway.Namespace+gateway.gateway.Name] = gatewayParentStatus
+		parentStatuses[parentRefKey] = gatewayParentStatus
 		statusChangesWereMade = true
 	}
 
@@ -494,19 +508,7 @@ func (r *UDPRouteReconciler) ensureParentsProgrammedCondition(
 	conditionMessage string,
 ) (bool, error) {
 	// map the existing parentStatues to avoid duplications
-	parentStatuses := make(map[string]*gatewayv1alpha2.RouteParentStatus)
-	for _, existingParent := range udproute.Status.Parents {
-		namespace := udproute.Namespace
-		if existingParent.ParentRef.Namespace != nil {
-			namespace = string(*existingParent.ParentRef.Namespace)
-		}
-		existingParentCopy := existingParent
-		var sectionName string
-		if existingParent.ParentRef.SectionName != nil {
-			sectionName = string(*existingParent.ParentRef.SectionName)
-		}
-		parentStatuses[fmt.Sprintf("%s/%s/%s", namespace, existingParent.ParentRef.Name, sectionName)] = &existingParentCopy
-	}
+	parentStatuses := getParentStatuses(udproute, udproute.Status.Parents)
 
 	programmedCondition := metav1.Condition{
 		Type:               ConditionTypeProgrammed,
@@ -519,7 +521,7 @@ func (r *UDPRouteReconciler) ensureParentsProgrammedCondition(
 	statusChanged := false
 	for _, g := range gateways {
 		gateway := g.gateway
-		parentRefKey := fmt.Sprintf("%s/%s/%s", gateway.Namespace, gateway.Name, g.listenerName)
+		parentRefKey := fmt.Sprintf("%s/%s", gateway.Namespace, gateway.Name)
 		parentStatus, ok := parentStatuses[parentRefKey]
 		if ok {
 			// update existing parent in status.

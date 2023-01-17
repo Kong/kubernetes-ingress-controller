@@ -236,6 +236,11 @@ func TestTLSRouteEssentials(t *testing.T) {
 	t.Log("verifying that the Gateway gets linked to the route via status")
 	callback := GetGatewayIsLinkedCallback(t, gatewayClient, gatewayv1beta1.TLSProtocolType, ns.Name, tlsRoute.Name)
 	require.Eventually(t, callback, ingressWait, waitTick)
+	t.Log("verifying that the tlsroute contains 'Programmed' condition")
+	require.Eventually(t,
+		GetVerifyProgrammedConditionCallback(t, gatewayClient, gatewayv1beta1.TLSProtocolType, ns.Name, tlsRoute.Name, metav1.ConditionTrue),
+		ingressWait, waitTick,
+	)
 
 	t.Log("verifying that the tcpecho is responding properly over TLS")
 	require.Eventually(t, func() bool {

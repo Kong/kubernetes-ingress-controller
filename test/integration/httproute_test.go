@@ -158,6 +158,11 @@ func TestHTTPRouteEssentials(t *testing.T) {
 	t.Log("verifying that the Gateway gets linked to the route via status")
 	callback := GetGatewayIsLinkedCallback(t, gatewayClient, gatewayv1beta1.HTTPProtocolType, ns.Name, httpRoute.Name)
 	require.Eventually(t, callback, ingressWait, waitTick)
+	t.Log("verifying that the httproute contains 'Programmed' condition")
+	require.Eventually(t,
+		GetVerifyProgrammedConditionCallback(t, gatewayClient, gatewayv1beta1.HTTPProtocolType, ns.Name, httpRoute.Name, metav1.ConditionTrue),
+		ingressWait, waitTick,
+	)
 
 	t.Log("waiting for routes from HTTPRoute to become operational")
 	eventuallyGETPath(t, "test-http-route-essentials", http.StatusOK, "<title>httpbin.org</title>", emptyHeaderSet)

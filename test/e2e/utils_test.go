@@ -318,9 +318,7 @@ func startPortForwarder(
 	namespace, name string,
 	localPort, targetPort string,
 ) {
-	kubeconfig, cleanup := getTemporaryKubeconfig(t, env)
-	defer cleanup()
-
+	kubeconfig := getTemporaryKubeconfig(t, env)
 	cmd := exec.CommandContext(ctx, "kubectl", "--kubeconfig", kubeconfig, "port-forward", "-n", namespace,
 		name, fmt.Sprintf("%s:%s", localPort, targetPort),
 	)
@@ -376,9 +374,7 @@ func getPodLogs(
 	ctx context.Context, t *testing.T, env environments.Environment,
 	namespace string, podName string,
 ) (string, error) {
-	kubeconfig, cleanup := getTemporaryKubeconfig(t, env)
-	defer cleanup()
-
+	kubeconfig := getTemporaryKubeconfig(t, env)
 	stderr := new(bytes.Buffer)
 	cmd := exec.CommandContext(ctx, "kubectl", "--kubeconfig", kubeconfig, "logs", podName, "-n", namespace, "--all-containers")
 	cmd.Stderr = stderr

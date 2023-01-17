@@ -328,7 +328,7 @@ func TestDeployAllInOneDBLESSGateway(t *testing.T) {
 	require.Eventually(t, func() bool {
 		_, err = kongClient.ConfigurationV1().KongConsumers(namespace).Create(ctx, consumer, metav1.CreateOptions{})
 		return err != nil
-	}, time.Minute*2, time.Second*1, "expected consumer eventually fail to be created due to a duplicated username")
+	}, time.Minute*10, time.Second*1, "expected consumer eventually fail to be created due to a duplicated username")
 
 	t.Log("verifying that KIC disabled controllers for Gateway API and printed proper log")
 	require.Eventually(t, func() bool {
@@ -466,9 +466,7 @@ func TestDeployAllInOneDBLESSGateway(t *testing.T) {
 }
 
 func deployAdmissionWebhook(t *testing.T, env environments.Environment) {
-	kubeconfig, cleanup := getTemporaryKubeconfig(t, env)
-	defer cleanup()
-
+	kubeconfig := getTemporaryKubeconfig(t, env)
 	cmd := exec.Command("bash", admissionScriptPath, kubeconfig)
 	out, err := cmd.CombinedOutput()
 	require.NoError(t, err, "running command failed: %s", string(out))

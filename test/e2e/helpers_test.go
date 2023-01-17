@@ -166,9 +166,6 @@ func createGKEBuilder() (*environments.Builder, error) {
 }
 
 func deployKong(ctx context.Context, t *testing.T, env environments.Environment, manifest io.Reader, additionalSecrets ...*corev1.Secret) *appsv1.Deployment {
-	kubeconfigFilename, cleanup := getTemporaryKubeconfig(t, env)
-	defer cleanup()
-
 	t.Log("waiting for testing environment to be ready")
 	require.NoError(t, <-env.WaitForReady(ctx))
 
@@ -188,6 +185,7 @@ func deployKong(ctx context.Context, t *testing.T, env environments.Environment,
 	}
 
 	t.Log("deploying the manifest to the cluster")
+	kubeconfigFilename := getTemporaryKubeconfig(t, env)
 	cmd := exec.CommandContext(ctx, "kubectl", "--kubeconfig", kubeconfigFilename, "apply", "-f", "-")
 	cmd.Stdin = manifest
 	out, err := cmd.CombinedOutput()
@@ -380,9 +378,7 @@ func killKong(ctx context.Context, t *testing.T, env environments.Environment, p
 		}
 	}
 
-	kubeconfig, cleanup := getTemporaryKubeconfig(t, env)
-	defer cleanup()
-
+	kubeconfig := getTemporaryKubeconfig(t, env)
 	cmd := exec.Command("kubectl", "--kubeconfig", kubeconfig, "exec", "-n", pod.Namespace, pod.Name, "--", "bash", "-c", "kill 1")
 	stdout, stderr := new(bytes.Buffer), new(bytes.Buffer)
 	cmd.Stdout = stdout
@@ -426,8 +422,7 @@ func createKongImagePullSecret(ctx context.Context, t *testing.T, env environmen
 	if kongImagePullUsername == "" || kongImagePullPassword == "" {
 		return
 	}
-	kubeconfigFilename, cleanup := getTemporaryKubeconfig(t, env)
-	defer cleanup()
+	kubeconfigFilename := getTemporaryKubeconfig(t, env)
 
 	const secretName = "kong-enterprise-edition-docker"
 	cmd := exec.CommandContext(
@@ -469,7 +464,7 @@ func getEnvValueInContainer(container *corev1.Container, name string) string {
 }
 
 // getTemporaryKubeconfig dumps an environment's kubeconfig to a temporary file.
-func getTemporaryKubeconfig(t *testing.T, env environments.Environment) (path string, cleanup func()) {
+func getTemporaryKubeconfig(t *testing.T, env environments.Environment) string {
 	t.Log("creating a tempfile for kubeconfig")
 
 	kubeconfig, err := generators.NewKubeConfigForRestConfig(env.Name(), env.Cluster().Config())
@@ -477,20 +472,16 @@ func getTemporaryKubeconfig(t *testing.T, env environments.Environment) (path st
 	kubeconfigFile, err := os.CreateTemp(os.TempDir(), "manifest-tests-kubeconfig-")
 	require.NoError(t, err)
 	defer kubeconfigFile.Close()
-
-	cleanup = func() {
-		_ = os.Remove(kubeconfigFile.Name())
-	}
+	t.Cleanup(func() {
+		assert.NoError(t, os.Remove(kubeconfigFile.Name()))
+	})
 
 	t.Log("dumping kubeconfig to tempfile")
 	written, err := kubeconfigFile.Write(kubeconfig)
-	if err != nil || len(kubeconfig) != written {
-		cleanup()
-	}
 	require.NoError(t, err)
 	require.Equal(t, len(kubeconfig), written)
 
-	return kubeconfigFile.Name(), cleanup
+	return kubeconfigFile.Name()
 }
 
 func runOnlyOnKindClusters(t *testing.T) {

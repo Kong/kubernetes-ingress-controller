@@ -316,7 +316,7 @@ func TestDeployAllInOneDBLESSGateway(t *testing.T) {
 	t.Log("creating a consumer to ensure the admission webhook is online")
 	consumer := &kongv1.KongConsumer{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: "nihoniy",
+			GenerateName: "nihoniy-",
 			Annotations: map[string]string{
 				annotations.IngressClassKey: ingressClass,
 			},

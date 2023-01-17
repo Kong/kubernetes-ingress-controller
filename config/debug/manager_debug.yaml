@@ -27,7 +27,7 @@ spec:
           - --log=true
           - --log-output=debugger,debuglineerr,gdbwire
           - exec
-          - /workspace/manager-debug
+          - /manager-debug
           - --
         args:
           - --feature-gates=GatewayAlpha=true

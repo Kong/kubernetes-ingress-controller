@@ -64,26 +64,6 @@ ARG REPO_INFO
 
 RUN CGO_ENABLED=0 GOOS=linux GOARCH="${TARGETARCH}" GO111MODULE=on make _build.fips
 
-# Build a manager binary with debug symbols and download Delve
-FROM builder as builder-delve
-
-ARG TARGETPLATFORM
-ARG TARGETOS
-ARG TARGETARCH
-
-RUN CGO_ENABLED=0 GOOS=linux GOARCH="${TARGETARCH}" GO111MODULE=on make _build.debug
-
-### Debug
-# Create an image that runs a debug build with a Delve remote server on port 2345
-FROM golang:1.19.5 AS debug
-RUN go install github.com/go-delve/delve/cmd/dlv@latest
-# We want all source so Delve file location operations work
-COPY --from=builder-delve /workspace/ /workspace/
-USER 65532:65532
-
-ENTRYPOINT ["/go/bin/dlv"]
-CMD ["exec", "--continue", "--accept-multiclient",  "--headless", "--api-version=2", "--listen=:2345", "--log", "/workspace/manager-debug"]
-
 ### RHEL
 # Build UBI image
 FROM registry.access.redhat.com/ubi8/ubi AS redhat

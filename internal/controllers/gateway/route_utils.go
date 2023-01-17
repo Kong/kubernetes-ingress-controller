@@ -653,9 +653,7 @@ func setRouteParentStatusCondition[T types.ParentStatusT](parentStatus T, newCon
 		for i, condition := range p.Conditions {
 			if condition.Type == newCondition.Type {
 				conditionFound = true
-				if condition.Status != newCondition.Status ||
-					condition.Reason != newCondition.Reason ||
-					condition.Message != newCondition.Message {
+				if !sameCondition(condition, newCondition) {
 					p.Conditions[i] = newCondition
 					changed = true
 				}
@@ -670,9 +668,7 @@ func setRouteParentStatusCondition[T types.ParentStatusT](parentStatus T, newCon
 		for i, condition := range p.Conditions {
 			if condition.Type == newCondition.Type {
 				conditionFound = true
-				if condition.Status != newCondition.Status ||
-					condition.Reason != newCondition.Reason ||
-					condition.Message != newCondition.Message {
+				if !sameCondition(condition, newCondition) {
 					p.Conditions[i] = newCondition
 					changed = true
 				}

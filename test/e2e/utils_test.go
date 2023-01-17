@@ -232,7 +232,7 @@ func getKongProxyIP(ctx context.Context, t *testing.T, env environments.Environm
 	svc := refreshService()
 	require.NotEqual(t, svc.Spec.Type, corev1.ServiceTypeClusterIP, "ClusterIP service is not supported")
 
-	// nolint: exhaustive
+	//nolint: exhaustive
 	switch svc.Spec.Type {
 	case corev1.ServiceTypeLoadBalancer:
 		return getKongProxyLoadBalancerIP(t, refreshService)
@@ -288,7 +288,7 @@ func getKongProxyNodePortIP(ctx context.Context, t *testing.T, env environments.
 				extAddrs = append(extAddrs, naddr.Address)
 			}
 			if naddr.Type == corev1.NodeInternalIP {
-				extAddrs = append(intAddrs, naddr.Address)
+				intAddrs = append(intAddrs, naddr.Address)
 			}
 		}
 	}

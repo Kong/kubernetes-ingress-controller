@@ -38,13 +38,12 @@ func TestGetIngressClassParameters(t *testing.T) {
 		name          string
 		paramRef      *netv1.IngressClassParametersReference
 		parameterSpec *configurationv1alpha1.IngressClassParametersSpec
-		hasError      bool
 		err           error
 	}{
 		{
 			name:          "nil-paramref",
 			parameterSpec: defaultIcpSpec,
-			err:           fmt.Errorf("IngressClass nil-paramref doesn't reference any parameters"),
+			// No error: it's OK to not reference ingress class parameters.
 		},
 		{
 			name: "nil-apigroup",
@@ -110,7 +109,6 @@ func TestGetIngressClassParameters(t *testing.T) {
 				Name:      testIcpName,
 			},
 			parameterSpec: defaultIcpSpec,
-			hasError:      true,
 			err:           store.ErrNotFound{Message: "IngressClassParameters test-icp not found"},
 		},
 		{

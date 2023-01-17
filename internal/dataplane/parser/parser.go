@@ -614,7 +614,7 @@ func getServiceEndpoints(
 func getIngressClassParametersOrDefault(s store.Storer) (configurationv1alpha1.IngressClassParametersSpec, error) {
 	ingressClassName := s.GetIngressClassName()
 	ingressClass, err := s.GetIngressClassV1(ingressClassName)
-	if err != nil || ingressClass == nil {
+	if err != nil {
 		return configurationv1alpha1.IngressClassParametersSpec{}, err
 	}
 

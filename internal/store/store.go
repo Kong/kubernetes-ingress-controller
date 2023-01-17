@@ -844,7 +844,7 @@ func (s Store) GetIngressClassV1(name string) (*netv1.IngressClass, error) {
 	return p.(*netv1.IngressClass), nil
 }
 
-// GetIngressClassParametersV1Alpha1 returns IngressClassParameters of configured
+// GetIngressClassParametersV1Alpha1 returns IngressClassParameters for provided
 // IngressClass.
 func (s Store) GetIngressClassParametersV1Alpha1(ingressClass *netv1.IngressClass) (*kongv1alpha1.IngressClassParameters, error) {
 	if ingressClass == nil {
@@ -852,7 +852,7 @@ func (s Store) GetIngressClassParametersV1Alpha1(ingressClass *netv1.IngressClas
 	}
 
 	if ingressClass.Spec.Parameters == nil {
-		return nil, fmt.Errorf("IngressClass %s doesn't reference any parameters", ingressClass.Name)
+		return &kongv1alpha1.IngressClassParameters{}, nil
 	}
 
 	if ingressClass.Spec.Parameters.APIGroup == nil ||

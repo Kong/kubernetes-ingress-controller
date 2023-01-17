@@ -21,6 +21,7 @@ import (
 	"github.com/blang/semver/v4"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/types/gke"
 	"github.com/kong/kubernetes-testing-framework/pkg/environments"
+	"github.com/phayes/freeport"
 	"github.com/sethvargo/go-password/password"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -231,7 +232,7 @@ func getKongProxyIP(ctx context.Context, t *testing.T, env environments.Environm
 	svc := refreshService()
 	require.NotEqual(t, svc.Spec.Type, corev1.ServiceTypeClusterIP, "ClusterIP service is not supported")
 
-	//nolint: exhaustive
+	// nolint: exhaustive
 	switch svc.Spec.Type {
 	case corev1.ServiceTypeLoadBalancer:
 		return getKongProxyLoadBalancerIP(t, refreshService)
@@ -273,11 +274,8 @@ func getKongProxyNodePortIP(ctx context.Context, t *testing.T, env environments.
 	// GKE clusters by default do not allow ingress traffic to its nodes
 	// TODO: consider adding an option to create firewall rules in KTF GKE provider
 	if env.Cluster().Type() == gke.GKEClusterType {
-		const kongProxyLocalPort = "9779"
-		startPortForwarder(ctx, t, env, svc.Namespace, fmt.Sprintf("service/%s", svc.Name),
-			kongProxyLocalPort, strconv.Itoa(int(port.Port)),
-		)
-		return fmt.Sprintf("localhost:%s", kongProxyLocalPort)
+		kongProxyLocalPort := startPortForwarder(ctx, t, env, svc.Namespace, fmt.Sprintf("service/%s", svc.Name), strconv.Itoa(int(port.Port)))
+		return fmt.Sprintf("localhost:%d", kongProxyLocalPort)
 	}
 
 	var extAddrs []string
@@ -309,29 +307,24 @@ func getKongProxyNodePortIP(ctx context.Context, t *testing.T, env environments.
 	return ""
 }
 
-// startPortForwarder runs "kubectl port-forward" in the background. It stops the forward when the provided context
-// ends.
-func startPortForwarder(
-	ctx context.Context,
-	t *testing.T,
-	env environments.Environment,
-	namespace, name string,
-	localPort, targetPort string,
-) {
+// startPortForwarder runs "kubectl port-forward" in the background. It returns a local port that the traffic gets forward to.
+// It stops the forward when the provided context ends.
+func startPortForwarder(ctx context.Context, t *testing.T, env environments.Environment, namespace, name, targetPort string) int {
+	localPort, err := freeport.GetFreePort()
+	require.NoError(t, err)
+
 	kubeconfig := getTemporaryKubeconfig(t, env)
-	cmd := exec.CommandContext(ctx, "kubectl", "--kubeconfig", kubeconfig, "port-forward", "-n", namespace,
-		name, fmt.Sprintf("%s:%s", localPort, targetPort),
-	)
+	cmd := exec.CommandContext(ctx, "kubectl", "--kubeconfig", kubeconfig, "port-forward", "-n", namespace, name, fmt.Sprintf("%d:%s", localPort, targetPort))
 	out := new(bytes.Buffer)
 	cmd.Stderr = out
 	cmd.Stdout = out
 
-	t.Logf("forwarding port %s to %s/%s:%s", localPort, namespace, name, targetPort)
+	t.Logf("forwarding port %d to %s/%s:%s", localPort, namespace, name, targetPort)
 	if startErr := cmd.Start(); startErr != nil {
 		require.NoError(t, startErr, out.String())
 	}
 	require.Eventually(t, func() bool {
-		conn, err := net.Dial("tcp", fmt.Sprintf("localhost:%s", localPort))
+		conn, err := net.Dial("tcp", fmt.Sprintf("localhost:%d", localPort))
 		if err == nil {
 			conn.Close()
 			return true
@@ -340,6 +333,8 @@ func startPortForwarder(
 		t.Logf("port forwarding command %q output so far: %s", cmd.String(), out.String())
 		return false
 	}, kongComponentWait, time.Second)
+
+	return localPort
 }
 
 // httpGetResponseContains returns true if the response body of GETting the URL contains specified substring.

@@ -270,11 +270,11 @@ func TestDeployAllInOnePostgresWithMultipleReplicas(t *testing.T) {
 	forwardCtx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	startPortForwarder(forwardCtx, t, env, secondary.Namespace, secondary.Name, "9777", "cmetrics")
+	localPort := startPortForwarder(forwardCtx, t, env, secondary.Namespace, secondary.Name, "cmetrics")
 
 	require.Never(t, func() bool {
 		// if we are not the leader, we run no config pushes, and this metric string will not appear.
-		return httpGetResponseContains(t, "http://localhost:9777/metrics", client, metrics.MetricNameConfigPushCount)
+		return httpGetResponseContains(t, fmt.Sprintf("http://localhost:%d/metrics", localPort), client, metrics.MetricNameConfigPushCount)
 	}, time.Minute, time.Second*10)
 
 	// since leader election is time sensitive, we log the time here.
@@ -300,11 +300,14 @@ func TestDeployAllInOnePostgresWithMultipleReplicas(t *testing.T) {
 		return podNum == 2
 	}, time.Minute, time.Second)
 
-	var rebuiltPod corev1.Pod
+	var (
+		rebuiltPod       corev1.Pod
+		rebuiltLocalPort int
+	)
 	for _, pod := range podList.Items {
 		if pod.Name != initialPod.Name && pod.Name != secondary.Name {
 			rebuiltPod = pod
-			startPortForwarder(forwardCtx, t, env, rebuiltPod.Namespace, rebuiltPod.Name, "9778", "cmetrics")
+			rebuiltLocalPort = startPortForwarder(forwardCtx, t, env, rebuiltPod.Namespace, rebuiltPod.Name, "cmetrics")
 			break
 		}
 	}
@@ -314,11 +317,11 @@ func TestDeployAllInOnePostgresWithMultipleReplicas(t *testing.T) {
 	t.Logf("confirming there is exactly one pod that becomes leader and starts pushing configuration at %v", time.Now())
 	require.Eventually(t, func() bool {
 		leaderCount := 0
-		if httpGetResponseContains(t, "http://localhost:9777/metrics", client, metrics.MetricNameConfigPushCount) {
+		if httpGetResponseContains(t, fmt.Sprintf("http://localhost:%d/metrics", localPort), client, metrics.MetricNameConfigPushCount) {
 			t.Logf("secondary pod %s is the leader at %v", secondary.Name, time.Now())
 			leaderCount++
 		}
-		if httpGetResponseContains(t, "http://localhost:9778/metrics", client, metrics.MetricNameConfigPushCount) {
+		if httpGetResponseContains(t, fmt.Sprintf("http://localhost:%d/metrics", rebuiltLocalPort), client, metrics.MetricNameConfigPushCount) {
 			t.Logf("rebuilt pod %s is the leader at %v", rebuiltPod.Name, time.Now())
 			leaderCount++
 		}

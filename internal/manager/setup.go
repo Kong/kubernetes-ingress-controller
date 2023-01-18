@@ -10,7 +10,6 @@ import (
 	"github.com/bombsimon/logrusr/v2"
 	"github.com/go-logr/logr"
 	"github.com/kong/deck/cprint"
-	"github.com/kong/go-kong/kong"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -22,7 +21,6 @@ import (
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/admission"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/sendconfig"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 )
 
@@ -114,24 +112,6 @@ func setupControllerOptions(logger logr.Logger, c *Config, scheme *runtime.Schem
 	return controllerOpts, nil
 }
 
-func setupKongConfig(ctx context.Context, kongClient *kong.Client, logger logr.Logger, c *Config) sendconfig.Kong {
-	var filterTags []string
-	if ok, err := kongClient.Tags.Exists(ctx); err != nil {
-		logger.Error(err, "tag filtering disabled because Kong Admin API does not support tags")
-	} else if ok {
-		logger.Info("tag filtering enabled", "tags", c.FilterTags)
-		filterTags = c.FilterTags
-	}
-
-	return sendconfig.Kong{
-		URL:               c.KongAdminURL,
-		FilterTags:        filterTags,
-		Concurrency:       c.Concurrency,
-		Client:            kongClient,
-		PluginSchemaStore: util.NewPluginSchemaStore(kongClient),
-	}
-}
-
 func setupDataplaneSynchronizer(
 	logger logr.Logger,
 	fieldLogger logrus.FieldLogger,
@@ -176,14 +156,26 @@ func setupAdmissionServer(
 		return nil
 	}
 
-	kongclient, err := managerConfig.GetKongClient(ctx)
+	kongclients, err := getKongClients(ctx,
+		managerConfig.KongAdminURL,
+		managerConfig.KongWorkspace,
+		managerConfig.KongAdminAPIConfig,
+	)
 	if err != nil {
 		return err
 	}
 	srv, err := admission.MakeTLSServer(ctx, &managerConfig.AdmissionServer, &admission.RequestHandler{
 		Validator: admission.NewKongHTTPValidator(
-			kongclient.Consumers,
-			kongclient.Plugins,
+			// For now using first client is kind of OK. Using Consumer and Plugin
+			// services from first kong client should theoretically return the same
+			// results as for all other clients. There might be instances where
+			// configurations in different Kong Gateways are ever so slightly
+			// different but that shouldn't cause a fatal failure.
+			//
+			// TODO: We should take a look at this sooner rather than later.
+			// https://github.com/Kong/kubernetes-ingress-controller/issues/3363
+			kongclients[0].Consumers,
+			kongclients[0].Plugins,
 			logger,
 			managerClient,
 			managerConfig.IngressClassName,

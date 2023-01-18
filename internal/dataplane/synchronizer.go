@@ -88,6 +88,8 @@ func NewSynchronizer(logger logrus.FieldLogger, client Client, opts ...Synchroni
 		opt(synchronizer)
 	}
 
+	synchronizer.dbMode = client.DBMode()
+
 	return synchronizer, nil
 }
 
@@ -182,7 +184,7 @@ func (p *Synchronizer) startUpdateServer(ctx context.Context) {
 		case <-p.syncTicker.C:
 			if err := p.dataplaneClient.Update(ctx); err != nil {
 				p.logger.Error(err, "could not update kong admin")
-				break
+				continue
 			}
 			initialConfig.Do(p.markConfigApplied)
 		}

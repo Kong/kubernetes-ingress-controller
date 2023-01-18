@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"net/http"
 	"os"
-	"os/exec"
 	"strings"
 	"testing"
 	"time"
@@ -308,12 +307,6 @@ func TestDeployAllInOneDBLESSGateway(t *testing.T) {
 		LabelSelector: "app=" + deployment.Name,
 	}
 
-	t.Log("running the admission webhook setup script")
-	deployAdmissionWebhook(t, env)
-
-	// TODO: make sure that KongConsumer cannot be created due to admission webhook rejecting duplicates
-	// https://github.com/Kong/kubernetes-ingress-controller/issues/3393
-
 	t.Log("verifying that KIC disabled controllers for Gateway API and printed proper log")
 	require.Eventually(t, func() bool {
 		pods, err := env.Cluster().Client().CoreV1().Pods(deployment.Namespace).List(ctx, deploymentListOptions)
@@ -447,13 +440,6 @@ func TestDeployAllInOneDBLESSGateway(t *testing.T) {
 
 	deployTCPRoute(ctx, t, env, gw)
 	verifyTCPRoute(ctx, t, env)
-}
-
-func deployAdmissionWebhook(t *testing.T, env environments.Environment) {
-	kubeconfig := getTemporaryKubeconfig(t, env)
-	cmd := exec.Command("bash", admissionScriptPath, kubeconfig)
-	out, err := cmd.CombinedOutput()
-	require.NoError(t, err, "running command failed: %s", string(out))
 }
 
 // Unsatisfied LoadBalancers have special handling, see

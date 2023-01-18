@@ -559,13 +559,11 @@ func TestGatewayFilters(t *testing.T) {
 	require.NoError(t, err)
 	cleaner.Add(httpRoute)
 
-	otherRoute, err := gatewayClient.HTTPRoutes(other.Name).Create(ctx, HTTPRoute(), metav1.CreateOptions{})
+	otherRoute := HTTPRoute()
+	otherRoute.Spec.Rules[0].Matches[0].Path.Value = kong.String("/other_test_gateway_filters")
+	otherRoute, err = gatewayClient.HTTPRoutes(other.Name).Create(ctx, otherRoute, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(otherRoute)
-
-	otherRoute.Spec.Rules[0].Matches[0].Path.Value = kong.String("/other_test_gateway_filters")
-	_, err = gatewayClient.HTTPRoutes(other.Name).Update(ctx, otherRoute, metav1.UpdateOptions{})
-	require.NoError(t, err)
 
 	t.Log("verifying that the Gateway gets linked to the route via status")
 	callback := GetGatewayIsLinkedCallback(t, gwClientSet, gatewayv1beta1.HTTPProtocolType, ns.Name, httpRoute.Name)

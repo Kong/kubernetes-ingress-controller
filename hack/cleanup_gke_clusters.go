@@ -1,23 +1,14 @@
+// This script cleans up all GKE clusters that could be potentially
+// orphaned by our tests (e.g. unexpected crash that didn't allow
+// a test's teardown to be completed correctly). It's meant to be
+// installed as a cronjob and run repeatedly throughout the day to
+// catch any orphaned clusters: however tests should be trying to
+// delete the clusters they create themselves.
+//
+// A cluster is considered orphaned when all conditions are satisfied:
+// 1. Its name begins with a predefined prefix (`gke-e2e-`).
+// 2. It was created more than 1h ago.
 package main
-
-// this script can either:
-//
-//  1) clean up specific named clusters
-//  2) clean up "all" clusters
-//
-// when "all" is chosen (e.g. "go run main.go all") the behavior is to
-// identify all clusters in the current GKE project and location which
-// are tagged as having been created by KTF and delete them if they are
-// older than 30m (because all tests generally pass in ~20m) or if they
-// are currently being created.
-//
-// this script is meant to be installed as a cronjob and run repeatedly
-// throughout the day to catch any orphaned clusters: however tests should
-// be trying to delete the clusters they create themselves.
-//
-// TODO: this is temporary: it was created for speed but will be replaced
-//       by upstream functionality in KTF.
-//       See: https://github.com/Kong/kubernetes-testing-framework/issues/61
 
 import (
 	"context"
@@ -30,13 +21,13 @@ import (
 	"cloud.google.com/go/container/apiv1/containerpb"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/types/gke"
 	"google.golang.org/api/option"
+
+	"github.com/kong/kubernetes-ingress-controller/v2/test/e2e"
 )
 
-const timeUntilClusterOrphaned = time.Minute * 30
+const timeUntilClusterOrphaned = time.Hour
 
 var (
-	gcloudClientID string
-
 	gkeCreds    = os.Getenv(gke.GKECredsVar)
 	gkeProject  = os.Getenv(gke.GKEProjectVar)
 	gkeLocation = os.Getenv(gke.GKELocationVar)
@@ -53,13 +44,6 @@ func main() {
 		os.Exit(10)
 	}
 
-	var ok bool
-	gcloudClientID, ok = creds["client_id"]
-	if !ok || gcloudClientID == "" {
-		fmt.Fprintln(os.Stderr, "invalid credentials: missing 'client_id'")
-		os.Exit(10)
-	}
-
 	if len(os.Args) < 1 {
 		fmt.Fprintln(os.Stdout, "Usage: cleanup all | <list of cluster names...>")
 		os.Exit(1)
@@ -73,16 +57,10 @@ func main() {
 	}
 	defer mgrc.Close()
 
-	var clusterNames []string
-	if len(os.Args) == 2 && os.Args[1] == "all" {
-		var err error
-		clusterNames, err = findOrphanedClusters(context.Background(), mgrc)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "could not find orphaned clusters: %s", err)
-			os.Exit(2)
-		}
-	} else {
-		clusterNames = os.Args[1:]
+	clusterNames, err := findOrphanedClusters(context.Background(), mgrc)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "could not find orphaned clusters: %s", err)
+		os.Exit(2)
 	}
 
 	if len(clusterNames) < 1 {
@@ -136,22 +114,28 @@ func findOrphanedClusters(ctx context.Context, mgrc *container.ClusterManagerCli
 
 	var orphanedClusterNames []string
 	for _, cluster := range clusterListResp.Clusters {
-		if createdBy, ok := cluster.ResourceLabels[gke.GKECreateLabel]; ok {
-			if gcloudClientID == createdBy {
-				createdAt, err := time.Parse(time.RFC3339, cluster.CreateTime)
-				if err != nil {
-					return nil, err
-				}
+		if isCreatedByTests(cluster) {
+			createdAt, err := time.Parse(time.RFC3339, cluster.CreateTime)
+			if err != nil {
+				return nil, err
+			}
 
-				orphanTime := createdAt.Add(timeUntilClusterOrphaned)
-				if time.Now().UTC().After(orphanTime) {
-					orphanedClusterNames = append(orphanedClusterNames, cluster.Name)
-				} else {
-					fmt.Printf("INFO: cluster %s skipped (built in the last %s)\n", cluster.Name, timeUntilClusterOrphaned)
-				}
+			orphanTime := createdAt.Add(timeUntilClusterOrphaned)
+			if time.Now().UTC().After(orphanTime) {
+				orphanedClusterNames = append(orphanedClusterNames, cluster.Name)
+			} else {
+				fmt.Printf("INFO: cluster %s skipped (built in the last %s)\n", cluster.Name, timeUntilClusterOrphaned)
 			}
 		}
 	}
 
 	return orphanedClusterNames, nil
+}
+
+func isCreatedByTests(cluster *containerpb.Cluster) bool {
+	if cluster == nil {
+		return false
+	}
+
+	return e2e.IsCreatedByE2ETests(cluster.Name)
 }

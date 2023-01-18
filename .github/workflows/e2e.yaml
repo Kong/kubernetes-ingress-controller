@@ -1,9 +1,5 @@
 name: e2e tests
 
-# Putting concurrency on the workflow level as we run every GKE E2E test as a separate job.
-# Leaving it on the job level would make all the GKE E2E jobs block each other.
-concurrency: gke
-
 on:
   schedule:
     - cron: '30 4 * * *'

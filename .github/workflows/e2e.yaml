@@ -86,6 +86,7 @@ jobs:
 
   e2e-gke-tests:
     environment: "gcloud"
+    concurrency: gke
     runs-on: ubuntu-latest
     needs: setup-e2e-tests
     strategy:

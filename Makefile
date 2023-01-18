@@ -258,7 +258,7 @@ container:
 .PHONY: container.debug
 container.debug:
 	docker buildx build \
-		-f Dockerfile \
+		-f Dockerfile.debug \
 		--target debug \
 		--build-arg TAG=${TAG}-debug \
 		--build-arg COMMIT=${COMMIT} \
@@ -380,42 +380,6 @@ test.integration.enterprise.postgres.pretty:
 		GOTESTFLAGS="-json" \
 		COVERAGE_OUT=coverage.enterprisepostgres.out
 
-.PHONY: test.integration.cp
-_test.integration.cp: gotestsum
-	CLUSTER_NAME="e2e-$(uuidgen)" \
-		KUBERNETES_CLUSTER_NAME="${CLUSTER_NAME}" go run hack/e2e/cluster/deploy/main.go \
-		GOFLAGS="-tags=integration_tests" \
-		KONG_TEST_CLUSTER="${CP}:${CLUSTER_NAME}" \
-		GOTESTSUM_FORMAT=$(GOTESTSUM_FORMAT) \
-		$(GOTESTSUM) -- -parallel "${NCPU}" -timeout $(INTEGRATION_TEST_TIMEOUT) \
-		./test/integration/... \
-    	go run hack/e2e/cluster/cleanup/main.go ${CLUSTER_NAME} \
-		trap cleanup EXIT SIGINT SIGQUIT
-
-.PHONY: test.integration.gke
-test.integration.gke:
-	@$(MAKE) _test.integration.cp \
-		CP="gke"
-
-.PHONY: test.integration.kind
-test.integration.kind:
-	@$(MAKE) _test.integration.cp \
-		CP="kind"
-
-.PHONY: test.e2e.gke
-test.e2e.gke:
-	CLUSTER_NAME="e2e-$(uuidgen)" \
-		KUBERNETES_CLUSTER_NAME="${CLUSTER_NAME}" go run hack/e2e/cluster/deploy/main.go \
-		KONG_TEST_CLUSTER="gke:${CLUSTER_NAME}" \
-		GOFLAGS="-tags=e2e_tests" $(GOTESTSUM) -- $(GOTESTFLAGS) \
-			-race \
-			-run $(E2E_TEST_RUN) \
-			-parallel $(NCPU) \
-			-timeout $(E2E_TEST_TIMEOUT) \
-			./test/e2e/... \
-		go run hack/e2e/cluster/cleanup/main.go ${CLUSTER_NAME} \
-		trap cleanup EXIT SIGINT SIGQUIT
-
 .PHONY: test.e2e
 test.e2e: gotestsum
 	GOFLAGS="-tags=e2e_tests" \
@@ -504,7 +468,8 @@ debug.connect:
 # port with debugger/IDE of your choice
 .PHONY: debug.skaffold
 debug.skaffold: skaffold
-	$(SKAFFOLD) debug --port-forward=pods --profile=debug $(SKAFFOLD_FLAGS)
+	TAG=$(TAG)-debug REPO_INFO=$(REPO_INFO) COMMIT=$(COMMIT) \
+		$(SKAFFOLD) debug --port-forward=pods --profile=debug $(SKAFFOLD_FLAGS)
 
 # This will port-forward 40000 from KIC's debugger to localhost. Connect to that
 # port with debugger/IDE of your choice
@@ -514,7 +479,8 @@ debug.skaffold.sync: skaffold
 
 .PHONY: run.skaffold
 run.skaffold: skaffold
-	$(SKAFFOLD) dev --port-forward=pods --profile=dev
+	TAG=$(TAG)-debug REPO_INFO=$(REPO_INFO) COMMIT=$(COMMIT) \
+		$(SKAFFOLD) dev --port-forward=pods --profile=dev
 
 .PHONY: run
 run: install _ensure-namespace

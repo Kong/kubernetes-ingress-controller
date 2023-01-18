@@ -69,16 +69,21 @@ Adding a new version? You'll need three changes:
 
 ### Added
 
-- Store status of whether configuration succedded or failed for Kubernetes 
+- Store status of whether configuration succedded or failed for Kubernetes
   objects in dataplane client and publish the events to let controllers know
-  if the controlled objects succeeded or failed to be translated to Kong 
+  if the controlled objects succeeded or failed to be translated to Kong
   configuration.
-  [#3359](https://github.com/Kong/kubernetes-ingress-controller/pull/3359)  
+  [#3359](https://github.com/Kong/kubernetes-ingress-controller/pull/3359)
 - Added `version` command
   [#3379](https://github.com/Kong/kubernetes-ingress-controller/pull/3379)  
 - Added `--publish-service-udp` to indicate the Service that handles inbound
   UDP traffic.
   [#3325](https://github.com/Kong/kubernetes-ingress-controller/pull/3325)
+- Added possibility to configure multiple Kong Gateways through the
+  `--kong-admin-url` CLI flag (which can be specified multiple times) or through
+  a corresponding environment variable `CONTROLLER_KONG_ADMIN_URL` (which can
+  specify multiple values separated by a comma).
+  [#3268](https://github.com/Kong/kubernetes-ingress-controller/pull/3268)
 
 ### Fixed
 
@@ -87,6 +92,9 @@ Adding a new version? You'll need three changes:
 - Fixed the duplicate update of status of `HTTPRoute` caused by incorrect check
   of whether status is changed.
   [#3346](https://github.com/Kong/kubernetes-ingress-controller/pull/3346)
+- Change existing `resolvedRefs` condition in status `HTTPRoute` if there is
+  already one to avoid multiple appearance of conditions with same type
+  [#3386](https://github.com/Kong/kubernetes-ingress-controller/pull/3386)
 
 ### Deprecated
 

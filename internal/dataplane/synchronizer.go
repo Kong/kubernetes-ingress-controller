@@ -2,6 +2,7 @@ package dataplane
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sync"
 	"time"
@@ -87,6 +88,8 @@ func NewSynchronizer(logger logrus.FieldLogger, client Client, opts ...Synchroni
 		opt(synchronizer)
 	}
 
+	synchronizer.dbMode = client.DBMode()
+
 	return synchronizer, nil
 }
 
@@ -166,7 +169,7 @@ func (p *Synchronizer) startUpdateServer(ctx context.Context) {
 		select {
 		case <-ctx.Done():
 			p.logger.Info("context done: shutting down the proxy update server")
-			if err := ctx.Err(); err != nil {
+			if err := ctx.Err(); err != nil && !errors.Is(err, context.Canceled) {
 				p.logger.Error(err, "context completed with error")
 			}
 			p.syncTicker.Stop()
@@ -181,7 +184,7 @@ func (p *Synchronizer) startUpdateServer(ctx context.Context) {
 		case <-p.syncTicker.C:
 			if err := p.dataplaneClient.Update(ctx); err != nil {
 				p.logger.Error(err, "could not update kong admin")
-				break
+				continue
 			}
 			initialConfig.Do(p.markConfigApplied)
 		}

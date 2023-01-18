@@ -9,9 +9,7 @@ import (
 	"regexp"
 	"time"
 
-	"github.com/avast/retry-go/v4"
 	"github.com/blang/semver/v4"
-	"github.com/kong/go-kong/kong"
 	"github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -24,8 +22,10 @@ import (
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/gateway"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/sendconfig"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/manager/metadata"
 	mgrutils "github.com/kong/kubernetes-ingress-controller/v2/internal/manager/utils"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/manager/utils/kongconfig"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util/kubernetes/object/status"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/versions"
@@ -70,59 +70,30 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 	}
 
 	setupLog.Info("getting the kong admin api client configuration")
-	adminClient, err := c.GetKongClient(ctx)
+	if c.KongAdminToken != "" {
+		c.KongAdminAPIConfig.Headers = append(c.KongAdminAPIConfig.Headers, "kong-admin-token:"+c.KongAdminToken)
+	}
+	kongClients, err := getKongClients(ctx, c.KongAdminURL, c.KongWorkspace, c.KongAdminAPIConfig)
 	if err != nil {
-		return fmt.Errorf("unable to build kong api client: %w", err)
+		return fmt.Errorf("unable to build kong api client(s): %w", err)
 	}
 
-	var kongRoot map[string]interface{}
-	err = retry.Do(
-		func() error {
-			kongRoot, err = adminClient.Root(ctx)
-			// Abort if the provided context has been cancelled.
-			if errors.Is(err, context.Canceled) {
-				return retry.Unrecoverable(err)
-			}
-			return err
-		},
-		retry.Attempts(c.KongAdminInitializationRetries),
-		retry.Delay(c.KongAdminInitializationRetryDelay),
-		retry.DelayType(retry.FixedDelay),
-		retry.LastErrorOnly(true),
-		retry.OnRetry(func(n uint, err error) {
-			setupLog.Info("Retrying kong admin api client call after error",
-				"retries", fmt.Sprintf("%d/%d", n, c.KongAdminInitializationRetries),
-				"error", err.Error(),
-			)
-		}),
-	)
-
+	// Get Kong configuration root(s) to validate them and extract Kong's version.
+	kongRoots, err := kongconfig.GetRoots(ctx, setupLog, c.KongAdminInitializationRetries, c.KongAdminInitializationRetryDelay, kongClients)
 	if err != nil {
-		return fmt.Errorf("could not retrieve Kong admin root: %w", err)
+		return fmt.Errorf("could not retrieve Kong admin root(s): %w", err)
+	}
+	dbMode, v, err := kongconfig.ValidateRoots(kongRoots, c.SkipCACertificates)
+	if err != nil {
+		return fmt.Errorf("could not validate Kong admin root(s) configuration: %w", err)
 	}
 
-	kongConfig := setupKongConfig(ctx, adminClient, setupLog, c)
-	kongVersion, err := kong.ParseSemanticVersion(kong.VersionFromInfo(kongRoot))
-	if err != nil {
-		setupLog.V(util.WarnLevel).Info("could not parse Kong version, version-specific behavior disabled", "error", err)
-	} else {
-		versions.SetKongVersion(semver.Version{Major: kongVersion.Major(), Minor: kongVersion.Minor(), Patch: kongVersion.Patch()})
-	}
-	kongRootConfig, ok := kongRoot["configuration"].(map[string]interface{})
-	if !ok {
-		return fmt.Errorf("invalid root configuration, expected a map[string]interface{} got %T",
-			kongRoot["configuration"])
-	}
-	dbmode, ok := kongRootConfig["database"].(string)
-	if !ok {
-		return fmt.Errorf("invalid database configuration, expected a string got %T", kongRootConfig["database"])
-	}
-	if dbmode == "off" && c.SkipCACertificates {
-		return fmt.Errorf("--skip-ca-certificates is not available for use with DB-less Kong instances")
-	}
+	semV := semver.Version{Major: v.Major(), Minor: v.Minor(), Patch: v.Patch()}
+	versions.SetKongVersion(semV)
+	kongConfig := sendconfig.New(ctx, setupLog, kongClients, semV, dbMode, c.Concurrency, c.FilterTags)
 
 	setupLog.Info("configuring and building the controller manager")
-	controllerOpts, err := setupControllerOptions(setupLog, c, scheme, dbmode)
+	controllerOpts, err := setupControllerOptions(setupLog, c, scheme, dbMode)
 	if err != nil {
 		return fmt.Errorf("unable to setup controller options: %w", err)
 	}
@@ -137,22 +108,18 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 	}
 
 	setupLog.Info("Initializing Dataplane Client")
-	timeoutDuration, err := time.ParseDuration(fmt.Sprintf("%gs", c.ProxyTimeoutSeconds))
-	if err != nil {
-		return fmt.Errorf("%f is not a valid number of seconds to the timeout config for the kong client: %w", c.ProxyTimeoutSeconds, err)
-	}
-
 	eventRecorder := mgr.GetEventRecorderFor(KongClientEventRecorderComponentName)
 	dataplaneClient, err := dataplane.NewKongClient(
 		ctx,
 		deprecatedLogger,
-		timeoutDuration,
+		time.Duration(c.ProxyTimeoutSeconds*float32(time.Second)),
 		c.IngressClassName,
 		c.EnableReverseSync,
 		c.SkipCACertificates,
 		diagnostic,
 		kongConfig,
 		eventRecorder,
+		dbMode,
 	)
 	if err != nil {
 		return fmt.Errorf("failed to initialize kong data-plane client: %w", err)

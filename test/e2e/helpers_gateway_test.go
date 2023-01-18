@@ -213,9 +213,7 @@ func deployHTTPRoute(ctx context.Context, t *testing.T, env environments.Environ
 // Once we support HTTPMethod HTTPRouteMatch handling, we can combine the two into a single generic function.
 func verifyHTTPRoute(ctx context.Context, t *testing.T, env environments.Environment) {
 	t.Log("finding the kong proxy service ip")
-	svc, err := env.Cluster().Client().CoreV1().Services(namespace).Get(ctx, "kong-proxy", metav1.GetOptions{})
-	require.NoError(t, err)
-	proxyIP := getKongProxyIP(ctx, t, env, svc)
+	proxyIP := getKongProxyIP(ctx, t, env)
 
 	t.Logf("waiting for route from Ingress to be operational at http://%s/httpbin", proxyIP)
 	httpc := http.Client{Timeout: time.Second * 10}
@@ -299,9 +297,7 @@ func deployTCPRoute(ctx context.Context, t *testing.T, env environments.Environm
 // using eventually testing helper.
 func verifyTCPRoute(ctx context.Context, t *testing.T, env environments.Environment) {
 	t.Log("finding the kong proxy service ip")
-	svc, err := env.Cluster().Client().CoreV1().Services(namespace).Get(ctx, "kong-proxy", metav1.GetOptions{})
-	require.NoError(t, err)
-	proxyIP := getKongProxyIP(ctx, t, env, svc)
+	proxyIP := getKongProxyIP(ctx, t, env)
 
 	t.Logf("waiting for route from TCPRoute to be operational at %s:%d", proxyIP, tcpListnerPort)
 	require.Eventually(t, func() bool {

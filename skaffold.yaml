@@ -23,6 +23,10 @@ profiles:
       docker:
         dockerfile: Dockerfile
         target: distroless
+        buildArgs:
+          TAG: ${{ .TAG }}
+          COMMIT: ${{ .COMMIT }}
+          REPO_INFO: ${{ .REPO_INFO }}
 - name: dev
   manifests:
     kustomize:
@@ -34,6 +38,10 @@ profiles:
       docker:
         dockerfile: Dockerfile
         target: distroless
+        buildArgs:
+          TAG: ${{ .TAG }}
+          COMMIT: ${{ .COMMIT }}
+          REPO_INFO: ${{ .REPO_INFO }}
 - name: debug
   manifests:
     kustomize:
@@ -43,5 +51,9 @@ profiles:
     artifacts:
     - image: kic-placeholder
       docker:
-        dockerfile: Dockerfile
+        dockerfile: Dockerfile.debug
         target: debug
+        buildArgs:
+          TAG: ${{ .TAG }}
+          COMMIT: ${{ .COMMIT }}
+          REPO_INFO: ${{ .REPO_INFO }}

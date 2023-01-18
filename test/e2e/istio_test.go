@@ -18,10 +18,7 @@ import (
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/istio"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/kong"
-	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/metallb"
-	"github.com/kong/kubernetes-testing-framework/pkg/environments"
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
@@ -72,7 +69,6 @@ func TestIstioWithKongIngressGateway(t *testing.T) {
 	}
 
 	t.Log("configuring cluster addons for the testing environment")
-	metallbAddon := metallb.New()
 	kongBuilder := kong.NewBuilder().
 		WithControllerDisabled().
 		WithProxyAdminServiceTypeLoadBalancer()
@@ -91,15 +87,13 @@ func TestIstioWithKongIngressGateway(t *testing.T) {
 	istioAddon := istioBuilder.Build()
 
 	t.Log("deploying a testing environment and Kubernetes cluster with Istio enabled")
-	envBuilder := setBuilderKubernetesVersion(t,
-		environments.NewBuilder().WithAddons(metallbAddon, kongAddon, istioAddon), clusterVersionStr)
-	env, err := envBuilder.Build(ctx)
+	envBuilder, err := getEnvironmentBuilder(ctx)
+	require.NoError(t, err)
+	env, err := envBuilder.WithAddons(istioAddon, kongAddon).Build(ctx)
 	require.NoError(t, err)
 
-	t.Log("configuring cluster cleanup")
 	defer func() {
-		t.Logf("cleaning up istio test cluster %s", env.Cluster().Name())
-		assert.NoError(t, env.Cleanup(ctx))
+		finalizeTest(ctx, t, env.Cluster())
 	}()
 
 	t.Log("waiting for test cluster to be ready")

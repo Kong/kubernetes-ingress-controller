@@ -55,8 +55,17 @@ func RunReport(
 		return fmt.Errorf("failed to get pod details: %w", err)
 	}
 
+	// This now only uses the first instance for telemetry reporting.
+	// That's fine because we allow for now only 1 set of version and db setting
+	// throughout all Kong instances that 1 KIC instance configures.
+	//
+	// When we change that and decide to allow heterogenous Kong instances to be
+	// configured by 1 KIC instance then this will have to change.
+	//
+	// https://github.com/Kong/kubernetes-ingress-controller/issues/3362
+
 	// gather versioning information from the kong client
-	root, err := kongCfg.Client.Root(ctx)
+	root, err := kongCfg.Clients[0].Root(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to get Kong root config data: %w", err)
 	}

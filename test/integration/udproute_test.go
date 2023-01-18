@@ -193,6 +193,11 @@ func TestUDPRouteEssentials(t *testing.T) {
 	t.Log("verifying that the Gateway gets linked to the route via status")
 	callback := GetGatewayIsLinkedCallback(t, gatewayClient, gatewayv1beta1.UDPProtocolType, ns.Name, udpRoute.Name)
 	require.Eventually(t, callback, ingressWait, waitTick)
+	t.Log("verifying that the udproute contains 'Programmed' condition")
+	require.Eventually(t,
+		GetVerifyProgrammedConditionCallback(t, gatewayClient, gatewayv1beta1.UDPProtocolType, ns.Name, udpRoute.Name, metav1.ConditionTrue),
+		ingressWait, waitTick,
+	)
 
 	t.Logf("checking DNS to resolve via UDPIngress %s", udpRoute.Name)
 	require.Eventually(t, func() bool {

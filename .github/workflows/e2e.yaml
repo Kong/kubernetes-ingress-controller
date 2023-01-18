@@ -21,7 +21,7 @@ jobs:
           echo "test_names=$(grep -shoP "(?<=^func )(Test[a-zA-z_0-9]+)(?=\(t \*testing.T\) {)" * | sed -e "s/$/\$/"| jq -R . | jq -cs .)" >> $GITHUB_OUTPUT
       - name: Print test names
         run: echo "Test names ${{ steps.set_test_names.outputs.test_names }}"
-  e2e-tests:
+  e2e-kind-tests:
     runs-on: ubuntu-latest
     needs: setup-e2e-tests
     strategy:
@@ -36,53 +36,114 @@ jobs:
           - 'v1.26.0'
         test: ${{ fromJSON(needs.setup-e2e-tests.outputs.test_names) }}
     steps:
-    - name: checkout repository
-      uses: actions/checkout@v3
-      with:
-        fetch-depth: 0
+      - name: checkout repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
 
-    - name: setup golang
-      uses: actions/setup-go@v3
-      with:
-        go-version: '^1.19'
+      - name: setup golang
+        uses: actions/setup-go@v3
+        with:
+          go-version: '^1.19'
 
-    - name: cache go modules
-      uses: actions/cache@v3
-      with:
-        path: ~/go/pkg/mod
-        key: ${{ runner.os }}-build-codegen-${{ hashFiles('**/go.sum') }}
-        restore-keys: |
-          ${{ runner.os }}-build-codegen-
+      - name: cache go modules
+        uses: actions/cache@v3
+        with:
+          path: ~/go/pkg/mod
+          key: ${{ runner.os }}-build-codegen-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-build-codegen-
 
-    - uses: Kong/kong-license@master
-      id: license
-      with:
-        password: ${{ secrets.PULP_PASSWORD }}
+      - uses: Kong/kong-license@master
+        id: license
+        with:
+          password: ${{ secrets.PULP_PASSWORD }}
 
-    - name: run ${{ matrix.test }} - ${{ matrix.kubernetes-version }}
-      run: make test.e2e
-      env:
-        TEST_KONG_CONTROLLER_IMAGE_OVERRIDE: "kong/nightly-ingress-controller:nightly"
-        KONG_LICENSE_DATA: ${{ steps.license.outputs.license }}
-        KONG_CLUSTER_VERSION: ${{ matrix.kubernetes-version }}
-        E2E_TEST_RUN: ${{ matrix.test }}
-        NCPU: 1 # it was found that github actions (specifically) did not seem to perform well when spawning
-                # multiple kind clusters within a single job, so only 1 is allowed at a time.
-        GOTESTSUM_JUNITFILE: "e2e-${{ matrix.kubernetes-version }}-tests.xml"
+      - name: run ${{ matrix.test }}
+        run: make test.e2e
+        env:
+          TEST_KONG_CONTROLLER_IMAGE_OVERRIDE: "kong/nightly-ingress-controller:nightly"
+          KONG_LICENSE_DATA: ${{ steps.license.outputs.license }}
+          KONG_CLUSTER_VERSION: ${{ matrix.kubernetes-version }}
+          E2E_TEST_RUN: ${{ matrix.test }}
+          NCPU: 1 # it was found that github actions (specifically) did not seem to perform well when spawning
+          # multiple kind clusters within a single job, so only 1 is allowed at a time.
+          GOTESTSUM_JUNITFILE: "e2e-${{ matrix.test }}${{ matrix.kubernetes-version }}-tests.xml"
 
-    - name: upload diagnostics
-      if: ${{ always() }}
-      uses: actions/upload-artifact@v3
-      with:
-        name: diagnostics-e2e-tests
-        path: /tmp/ktf-diag*
-        if-no-files-found: ignore
+      - name: upload diagnostics
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v3
+        with:
+          name: "diagnostics-e2e-tests-${{ matrix.test }}-${{ matrix.kubernetes-version }}"
+          path: /tmp/ktf-diag*
+          if-no-files-found: ignore
 
-    - name: collect test report
-      uses: actions/upload-artifact@v3
-      with:
-        name: tests-report
-        path: e2e-${{ matrix.kubernetes-version }}-tests.xml
+      - name: collect test report
+        uses: actions/upload-artifact@v3
+        with:
+          name: tests-report
+          path: "*-tests.xml"
+
+  e2e-gke-tests:
+    environment: "gcloud"
+    runs-on: ubuntu-latest
+    needs: setup-e2e-tests
+    strategy:
+      fail-fast: false
+      matrix:
+        kubernetes-version:
+          - 'v1.25.5'
+        test: ${{ fromJSON(needs.setup-e2e-tests.outputs.test_names) }}
+    steps:
+      - name: checkout repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: setup golang
+        uses: actions/setup-go@v3
+        with:
+          go-version: '^1.19'
+
+      - name: cache go modules
+        uses: actions/cache@v3
+        with:
+          path: ~/go/pkg/mod
+          key: ${{ runner.os }}-build-codegen-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-build-codegen-
+
+      - uses: Kong/kong-license@master
+        id: license
+        with:
+          password: ${{ secrets.PULP_PASSWORD }}
+
+      - name: run ${{ matrix.test }}
+        run: make test.e2e
+        env:
+          TEST_KONG_CONTROLLER_IMAGE_OVERRIDE: "kong/nightly-ingress-controller:nightly"
+          KONG_LICENSE_DATA: ${{ steps.license.outputs.license }}
+          KONG_CLUSTER_VERSION: ${{ matrix.kubernetes-version }}
+          KONG_TEST_CLUSTER_PROVIDER: gke
+          E2E_TEST_RUN: ${{ matrix.test }}
+          GOTESTSUM_JUNITFILE: "e2e-gke-${{ matrix.test }}-${{ matrix.kubernetes-version }}-tests.xml"
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}
+          GOOGLE_PROJECT: ${{ secrets.GOOGLE_PROJECT }}
+          GOOGLE_LOCATION: ${{ secrets.GOOGLE_LOCATION }}
+
+      - name: upload diagnostics
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v3
+        with:
+          name: "diagnostics-e2e-tests-${{ matrix.test }}-${{ matrix.kubernetes-version }}"
+          path: /tmp/ktf-diag*
+          if-no-files-found: ignore
+
+      - name: collect test report
+        uses: actions/upload-artifact@v3
+        with:
+          name: tests-report
+          path: "*-tests.xml"
 
   istio-tests:
     runs-on: ubuntu-latest
@@ -103,57 +164,58 @@ jobs:
             istio-version: 'v1.14.6'
 
     steps:
-    - name: checkout repository
-      uses: actions/checkout@v3
-      with:
-        fetch-depth: 0
+      - name: checkout repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
 
-    - name: setup golang
-      uses: actions/setup-go@v3
-      with:
-        go-version: '^1.19'
+      - name: setup golang
+        uses: actions/setup-go@v3
+        with:
+          go-version: '^1.19'
 
-    - name: cache go modules
-      uses: actions/cache@v3
-      with:
-        path: ~/go/pkg/mod
-        key: ${{ runner.os }}-build-codegen-${{ hashFiles('**/go.sum') }}
-        restore-keys: |
-          ${{ runner.os }}-build-codegen-
+      - name: cache go modules
+        uses: actions/cache@v3
+        with:
+          path: ~/go/pkg/mod
+          key: ${{ runner.os }}-build-codegen-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-build-codegen-
 
-    - uses: Kong/kong-license@master
-      id: license
-      with:
-        password: ${{ secrets.PULP_PASSWORD }}
+      - uses: Kong/kong-license@master
+        id: license
+        with:
+          password: ${{ secrets.PULP_PASSWORD }}
 
-    - name: run Istio tests
-      run: make test.istio
-      env:
-        TEST_KONG_CONTROLLER_IMAGE_OVERRIDE: "kong/nightly-ingress-controller:nightly"
-        KONG_LICENSE_DATA: ${{ steps.license.outputs.license }}
-        KONG_CLUSTER_VERSION: ${{ matrix.kubernetes-version }}
-        ISTIO_VERSION: ${{ matrix.istio-version }}
-        NCPU: 1 # it was found that github actions (specifically) did not seem to perform well when spawning
-                # multiple kind clusters within a single job, so only 1 is allowed at a time.
-        GOTESTSUM_JUNITFILE: "istio-${{ matrix.kubernetes-version }}-${{ matrix.istio-version }}-tests.xml"
+      - name: run Istio tests
+        run: make test.istio
+        env:
+          TEST_KONG_CONTROLLER_IMAGE_OVERRIDE: "kong/nightly-ingress-controller:nightly"
+          KONG_LICENSE_DATA: ${{ steps.license.outputs.license }}
+          KONG_CLUSTER_VERSION: ${{ matrix.kubernetes-version }}
+          ISTIO_VERSION: ${{ matrix.istio-version }}
+          NCPU: 1 # it was found that github actions (specifically) did not seem to perform well when spawning
+          # multiple kind clusters within a single job, so only 1 is allowed at a time.
+          GOTESTSUM_JUNITFILE: "istio-${{ matrix.kubernetes-version }}-${{ matrix.istio-version }}-tests.xml"
 
-    - name: upload diagnostics
-      if: ${{ always() }}
-      uses: actions/upload-artifact@v3
-      with:
-        name: diagnostics-e2e-tests
-        path: /tmp/ktf-diag*
-        if-no-files-found: ignore
+      - name: upload diagnostics
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v3
+        with:
+          name: diagnostics-e2e-tests
+          path: /tmp/ktf-diag*
+          if-no-files-found: ignore
 
-    - name: collect test report
-      uses: actions/upload-artifact@v3
-      with:
-        name: tests-report
-        path: istio-${{ matrix.kubernetes-version }}-${{ matrix.istio-version }}-tests.xml
+      - name: collect test report
+        uses: actions/upload-artifact@v3
+        with:
+          name: tests-report
+          path: "*-tests.xml"
 
   buildpulse-report:
     needs:
-      - "e2e-tests"
+      - "e2e-kind-tests"
+      - "e2e-gke-tests"
       - "istio-tests"
     if: ${{ always() }}
     runs-on: ubuntu-latest

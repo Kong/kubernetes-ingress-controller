@@ -168,6 +168,11 @@ func TestTCPRouteEssentials(t *testing.T) {
 	t.Log("verifying that the Gateway gets linked to the route via status")
 	callback := GetGatewayIsLinkedCallback(t, gatewayClient, gatewayv1beta1.TCPProtocolType, ns.Name, tcpRoute.Name)
 	require.Eventually(t, callback, ingressWait, waitTick)
+	t.Log("verifying that the tcproute contains 'Programmed' condition")
+	require.Eventually(t,
+		GetVerifyProgrammedConditionCallback(t, gatewayClient, gatewayv1beta1.TCPProtocolType, ns.Name, tcpRoute.Name, metav1.ConditionTrue),
+		ingressWait, waitTick,
+	)
 
 	t.Log("verifying that the tcpecho is responding properly")
 	require.Eventually(t, func() bool {

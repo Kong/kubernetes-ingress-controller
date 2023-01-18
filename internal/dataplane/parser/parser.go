@@ -612,7 +612,13 @@ func getServiceEndpoints(
 // If the cluster operators have specified a set of parameters explicitly, it returns those.
 // Otherwise, it returns a default set of parameters.
 func getIngressClassParametersOrDefault(s store.Storer) (configurationv1alpha1.IngressClassParametersSpec, error) {
-	params, err := s.GetIngressClassParametersV1Alpha1()
+	ingressClassName := s.GetIngressClassName()
+	ingressClass, err := s.GetIngressClassV1(ingressClassName)
+	if err != nil {
+		return configurationv1alpha1.IngressClassParametersSpec{}, err
+	}
+
+	params, err := s.GetIngressClassParametersV1Alpha1(ingressClass)
 	if err != nil {
 		return configurationv1alpha1.IngressClassParametersSpec{}, err
 	}

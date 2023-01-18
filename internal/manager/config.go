@@ -50,7 +50,7 @@ type Config struct {
 	APIServerBurst      int
 	MetricsAddr         string
 	ProbeAddr           string
-	KongAdminURL        string
+	KongAdminURL        []string
 	ProxySyncSeconds    float32
 	ProxyTimeoutSeconds float32
 
@@ -146,7 +146,9 @@ func (c *Config) FlagSet() *pflag.FlagSet {
 	flagSet.IntVar(&c.APIServerBurst, "apiserver-burst", 300, "The Kubernetes API RateLimiter maximum burst queries per second")
 	flagSet.StringVar(&c.MetricsAddr, "metrics-bind-address", fmt.Sprintf(":%v", MetricsPort), "The address the metric endpoint binds to.")
 	flagSet.StringVar(&c.ProbeAddr, "health-probe-bind-address", fmt.Sprintf(":%v", HealthzPort), "The address the probe endpoint binds to.")
-	flagSet.StringVar(&c.KongAdminURL, "kong-admin-url", "http://localhost:8001", `The Kong Admin URL to connect to in the format "protocol://address:port".`)
+	flagSet.StringSliceVar(&c.KongAdminURL, "kong-admin-url", []string{"http://localhost:8001"},
+		`Kong Admin URL(s) to connect to in the format "protocol://address:port". `+
+			`More than 1 URL can be provided, in such case the flag should be used multiple times or a corresponding env variable should use comma delimited addresses.`)
 	flagSet.Float32Var(&c.ProxySyncSeconds, "proxy-sync-seconds", dataplane.DefaultSyncSeconds,
 		"Define the rate (in seconds) in which configuration updates will be applied to the Kong Admin API.",
 	)
@@ -241,16 +243,25 @@ func (c *Config) FlagSet() *pflag.FlagSet {
 	return flagSet
 }
 
-func (c *Config) GetKongClient(ctx context.Context) (*kong.Client, error) {
-	if c.KongAdminToken != "" {
-		c.KongAdminAPIConfig.Headers = append(c.KongAdminAPIConfig.Headers, "kong-admin-token:"+c.KongAdminToken)
-	}
-	httpclient, err := adminapi.MakeHTTPClient(&c.KongAdminAPIConfig)
+// getKongClients returns the kong clients given the provided urls, workspace name
+// and adminAPIConfig.
+func getKongClients(
+	ctx context.Context, urls []string, workspace string, adminAPIConfig adminapi.HTTPClientOpts,
+) ([]*kong.Client, error) {
+	httpclient, err := adminapi.MakeHTTPClient(&adminAPIConfig)
 	if err != nil {
 		return nil, err
 	}
 
-	return adminapi.GetKongClientForWorkspace(ctx, c.KongAdminURL, c.KongWorkspace, httpclient)
+	clients := make([]*kong.Client, 0, len(urls))
+	for _, url := range urls {
+		client, err := adminapi.GetKongClientForWorkspace(ctx, url, workspace, httpclient)
+		if err != nil {
+			return nil, err
+		}
+		clients = append(clients, client)
+	}
+	return clients, nil
 }
 
 func (c *Config) GetKubeconfig() (*rest.Config, error) {

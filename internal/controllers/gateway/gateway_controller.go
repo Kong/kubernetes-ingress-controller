@@ -317,7 +317,7 @@ func (r *GatewayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 			debug(log, gateway, "failed to delete object from data-plane, requeuing")
 			return ctrl.Result{}, err
 		}
-		debug(log, gateway, "ensured object was removed from the data-plane (if ever present)")
+		debug(log, gateway, "ensured gateway was removed from the data-plane (if ever present)")
 		return ctrl.Result{}, nil
 	}
 	if gwc.Spec.ControllerName != ControllerName {
@@ -331,7 +331,7 @@ func (r *GatewayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 			debug(log, gateway, "failed to delete object from data-plane, requeuing")
 			return ctrl.Result{}, err
 		}
-		debug(log, gateway, "ensured object was removed from the data-plane (if ever present)")
+		debug(log, gateway, "ensured gateway was removed from the data-plane (if ever present)")
 		return ctrl.Result{}, nil
 	}
 

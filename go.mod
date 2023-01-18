@@ -141,7 +141,7 @@ require (
 	github.com/sergi/go-diff v1.2.0 // indirect
 	github.com/shirou/gopsutil/v3 v3.22.11 // indirect
 	github.com/shopspring/decimal v1.2.0 // indirect
-	github.com/sourcegraph/conc v0.1.0
+	github.com/sourcegraph/conc v0.2.0
 	github.com/spf13/cast v1.5.0 // indirect
 	github.com/ssgelm/cookiejarparser v1.0.1 // indirect
 	github.com/tidwall/gjson v1.14.4 // indirect

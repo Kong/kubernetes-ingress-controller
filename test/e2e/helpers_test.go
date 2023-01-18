@@ -468,7 +468,6 @@ func getEnvValueInContainer(container *corev1.Container, name string) string {
 // getTemporaryKubeconfig dumps an environment's kubeconfig to a temporary file.
 func getTemporaryKubeconfig(t *testing.T, env environments.Environment) string {
 	t.Log("creating a tempfile for kubeconfig")
-
 	kubeconfig, err := generators.NewKubeConfigForRestConfig(env.Name(), env.Cluster().Config())
 	require.NoError(t, err)
 	kubeconfigFile, err := os.CreateTemp(os.TempDir(), "manifest-tests-kubeconfig-")
@@ -478,7 +477,7 @@ func getTemporaryKubeconfig(t *testing.T, env environments.Environment) string {
 		assert.NoError(t, os.Remove(kubeconfigFile.Name()))
 	})
 
-	t.Log("dumping kubeconfig to tempfile")
+	t.Logf("dumping kubeconfig to tempfile: %s", kubeconfigFile.Name())
 	written, err := kubeconfigFile.Write(kubeconfig)
 	require.NoError(t, err)
 	require.Equal(t, len(kubeconfig), written)

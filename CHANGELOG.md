@@ -76,6 +76,9 @@ Adding a new version? You'll need three changes:
   [#3359](https://github.com/Kong/kubernetes-ingress-controller/pull/3359)  
 - Added `version` command
   [#3379](https://github.com/Kong/kubernetes-ingress-controller/pull/3379)  
+- Added `--publish-service-udp` to indicate the Service that handles inbound
+  UDP traffic.
+  [#3325](https://github.com/Kong/kubernetes-ingress-controller/pull/3325)
 
 ### Fixed
 

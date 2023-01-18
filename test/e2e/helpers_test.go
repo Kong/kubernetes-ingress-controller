@@ -125,10 +125,6 @@ func createExistingKINDBuilder(name string) (*environments.Builder, error) {
 	return builder, nil
 }
 
-// existing GKE patterns rely on running hack/e2e/cluster/deploy/main.go (integration too) and then just loading
-// an existing cluster. this could probably avoid the hack script, and may be reasonable to integrate into KTF.
-// there is no default GKE builder as such: https://github.com/Kong/kubernetes-ingress-controller/issues/1613
-
 func createExistingGKEBuilder(ctx context.Context, name string) (*environments.Builder, error) {
 	cluster, err := gke.NewFromExistingWithEnv(ctx, name)
 	if err != nil {
@@ -141,7 +137,7 @@ func createExistingGKEBuilder(ctx context.Context, name string) (*environments.B
 
 func createGKEBuilder() (*environments.Builder, error) {
 	var (
-		name        = "e2e-" + uuid.NewString()
+		name        = gkeTestClusterNamePrefix + uuid.NewString()
 		gkeCreds    = os.Getenv(gke.GKECredsVar)
 		gkeProject  = os.Getenv(gke.GKEProjectVar)
 		gkeLocation = os.Getenv(gke.GKELocationVar)

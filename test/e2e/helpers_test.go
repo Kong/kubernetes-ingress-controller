@@ -141,47 +141,39 @@ func createExistingGKEBuilder(ctx context.Context, name string) (*environments.B
 
 func createGKEBuilder() (*environments.Builder, error) {
 	var (
-		name        = "e2e" + uuid.NewString()
+		name        = "e2e-" + uuid.NewString()
 		gkeCreds    = os.Getenv(gke.GKECredsVar)
 		gkeProject  = os.Getenv(gke.GKEProjectVar)
 		gkeLocation = os.Getenv(gke.GKELocationVar)
 	)
-	k8sVersion, err := semver.Parse(strings.TrimPrefix(clusterVersionStr, "v"))
-	if err != nil {
-		return nil, err
-	}
+
+	fmt.Printf("INFO: cluster name: %q\n", name)
 
 	clusterBuilder := gke.
 		NewBuilder([]byte(gkeCreds), gkeProject, gkeLocation).
 		WithName(name).
-		WithClusterMinorVersion(k8sVersion.Major, k8sVersion.Minor).
 		WithWaitForTeardown(true).
 		WithCreateSubnet(true)
+
+	if clusterVersionStr != "" {
+		k8sVersion, err := semver.Parse(strings.TrimPrefix(clusterVersionStr, "v"))
+		if err != nil {
+			return nil, err
+		}
+
+		clusterBuilder = clusterBuilder.WithClusterMinorVersion(k8sVersion.Major, k8sVersion.Minor)
+	}
 
 	return environments.NewBuilder().WithClusterBuilder(clusterBuilder), nil
 }
 
 func deployKong(ctx context.Context, t *testing.T, env environments.Environment, manifest io.Reader, additionalSecrets ...*corev1.Secret) *appsv1.Deployment {
-	t.Log("creating a tempfile for kubeconfig")
-	kubeconfig, err := generators.NewKubeConfigForRestConfig(env.Name(), env.Cluster().Config())
-	require.NoError(t, err)
-	kubeconfigFile, err := os.CreateTemp(os.TempDir(), "manifest-tests-kubeconfig-")
-	require.NoError(t, err)
-	defer os.Remove(kubeconfigFile.Name())
-	defer kubeconfigFile.Close()
-
-	t.Log("dumping kubeconfig to tempfile")
-	written, err := kubeconfigFile.Write(kubeconfig)
-	require.NoError(t, err)
-	require.Equal(t, len(kubeconfig), written)
-	kubeconfigFilename := kubeconfigFile.Name()
-
 	t.Log("waiting for testing environment to be ready")
 	require.NoError(t, <-env.WaitForReady(ctx))
 
 	t.Log("creating the kong namespace")
 	ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "kong"}}
-	_, err = env.Cluster().Client().CoreV1().Namespaces().Create(ctx, ns, metav1.CreateOptions{})
+	_, err := env.Cluster().Client().CoreV1().Namespaces().Create(ctx, ns, metav1.CreateOptions{})
 	if !kerrors.IsAlreadyExists(err) {
 		require.NoError(t, err)
 	}
@@ -195,6 +187,7 @@ func deployKong(ctx context.Context, t *testing.T, env environments.Environment,
 	}
 
 	t.Log("deploying the manifest to the cluster")
+	kubeconfigFilename := getTemporaryKubeconfig(t, env)
 	cmd := exec.CommandContext(ctx, "kubectl", "--kubeconfig", kubeconfigFilename, "apply", "-f", "-")
 	cmd.Stdin = manifest
 	out, err := cmd.CombinedOutput()
@@ -254,9 +247,7 @@ func deployIngress(ctx context.Context, t *testing.T, env environments.Environme
 
 func verifyIngress(ctx context.Context, t *testing.T, env environments.Environment) {
 	t.Log("finding the kong proxy service ip")
-	svc, err := env.Cluster().Client().CoreV1().Services(namespace).Get(ctx, "kong-proxy", metav1.GetOptions{})
-	require.NoError(t, err)
-	proxyIP := getKongProxyIP(ctx, t, env, svc)
+	proxyIP := getKongProxyIP(ctx, t, env)
 
 	t.Logf("waiting for route from Ingress to be operational at http://%s/httpbin", proxyIP)
 	httpc := http.Client{Timeout: time.Second * 10}
@@ -388,21 +379,13 @@ func killKong(ctx context.Context, t *testing.T, env environments.Environment, p
 			orig = status.RestartCount
 		}
 	}
-	t.Logf("kong container has %v restart currently", orig)
-	kubeconfig, err := generators.NewKubeConfigForRestConfig(env.Name(), env.Cluster().Config())
-	require.NoError(t, err)
-	kubeconfigFile, err := os.CreateTemp(os.TempDir(), "kill-tests-kubeconfig-")
-	require.NoError(t, err)
-	defer os.Remove(kubeconfigFile.Name())
-	defer kubeconfigFile.Close()
-	written, err := kubeconfigFile.Write(kubeconfig)
-	require.NoError(t, err)
-	require.Equal(t, len(kubeconfig), written)
-	cmd := exec.Command("kubectl", "--kubeconfig", kubeconfigFile.Name(), "exec", "-n", pod.Namespace, pod.Name, "--", "bash", "-c", "kill 1") //nolint:gosec
+
+	kubeconfig := getTemporaryKubeconfig(t, env)
+	cmd := exec.Command("kubectl", "--kubeconfig", kubeconfig, "exec", "-n", pod.Namespace, pod.Name, "--", "bash", "-c", "kill 1")
 	stdout, stderr := new(bytes.Buffer), new(bytes.Buffer)
 	cmd.Stdout = stdout
 	cmd.Stderr = stderr
-	err = cmd.Run()
+	err := cmd.Run()
 	require.NoErrorf(t, err, "kill failed: STDOUT(%s) STDERR(%s)", stdout.String(), stderr.String())
 	require.Eventually(t, func() bool {
 		pod, err = env.Cluster().Client().CoreV1().Pods(pod.Namespace).Get(ctx, pod.Name, metav1.GetOptions{})
@@ -441,16 +424,9 @@ func createKongImagePullSecret(ctx context.Context, t *testing.T, env environmen
 	if kongImagePullUsername == "" || kongImagePullPassword == "" {
 		return
 	}
-	secretName := "kong-enterprise-edition-docker"
-	kubeconfig, err := generators.NewKubeConfigForRestConfig(env.Name(), env.Cluster().Config())
-	require.NoError(t, err)
-	kubeconfigFile, err := os.CreateTemp(os.TempDir(), "create-pull-secret-kubeconfig-")
-	require.NoError(t, err)
-	t.Log("dumping kubeconfig to tempfile")
-	written, err := kubeconfigFile.Write(kubeconfig)
-	require.NoError(t, err)
-	require.Len(t, kubeconfig, written)
-	kubeconfigFilename := kubeconfigFile.Name()
+	kubeconfigFilename := getTemporaryKubeconfig(t, env)
+
+	const secretName = "kong-enterprise-edition-docker"
 	cmd := exec.CommandContext(
 		ctx,
 		"kubectl", "--kubeconfig", kubeconfigFilename,
@@ -460,18 +436,6 @@ func createKongImagePullSecret(ctx context.Context, t *testing.T, env environmen
 	)
 	out, err := cmd.CombinedOutput()
 	require.NoError(t, err, "command output: "+string(out))
-}
-
-// setBuilderKubernetesVersion configures the kubernetes version of test environment builder
-// and returns the updated builder.
-func setBuilderKubernetesVersion(t *testing.T, b *environments.Builder, clusterVersionStr string) *environments.Builder {
-	if clusterVersionStr == "" {
-		return b
-	}
-	clusterVersion, err := semver.ParseTolerant(clusterVersionStr)
-	require.NoError(t, err)
-	t.Logf("k8s cluster version is set to %v", clusterVersion)
-	return b.WithKubernetesVersion(clusterVersion)
 }
 
 // getContainerInPodSpec returns the spec of container having the given name.
@@ -499,4 +463,43 @@ func getEnvValueInContainer(container *corev1.Container, name string) string {
 		}
 	}
 	return value
+}
+
+// getTemporaryKubeconfig dumps an environment's kubeconfig to a temporary file.
+func getTemporaryKubeconfig(t *testing.T, env environments.Environment) string {
+	t.Log("creating a tempfile for kubeconfig")
+	kubeconfig, err := generators.NewKubeConfigForRestConfig(env.Name(), env.Cluster().Config())
+	require.NoError(t, err)
+	kubeconfigFile, err := os.CreateTemp(os.TempDir(), "manifest-tests-kubeconfig-")
+	require.NoError(t, err)
+	defer kubeconfigFile.Close()
+	t.Cleanup(func() {
+		assert.NoError(t, os.Remove(kubeconfigFile.Name()))
+	})
+
+	t.Logf("dumping kubeconfig to tempfile: %s", kubeconfigFile.Name())
+	written, err := kubeconfigFile.Write(kubeconfig)
+	require.NoError(t, err)
+	require.Equal(t, len(kubeconfig), written)
+
+	return kubeconfigFile.Name()
+}
+
+func runOnlyOnKindClusters(t *testing.T) {
+	existingClusterIsKind := strings.Split(existingCluster, ":")[0] == string(kind.KindClusterType)
+	clusterProviderIsKind := clusterProvider == "" || clusterProvider == string(kind.KindClusterType)
+
+	if !existingClusterIsKind || !clusterProviderIsKind {
+		t.Skip("test is supported only on Kind clusters")
+	}
+}
+
+func finalizeTest(ctx context.Context, t *testing.T, cluster clusters.Cluster) {
+	if t.Failed() {
+		output, err := cluster.DumpDiagnostics(ctx, t.Name())
+		t.Logf("%s failed, dumped diagnostics to %s", t.Name(), output)
+		assert.NoError(t, err)
+	}
+
+	assert.NoError(t, cluster.Cleanup(ctx))
 }

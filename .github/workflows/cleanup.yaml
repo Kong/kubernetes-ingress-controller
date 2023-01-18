@@ -8,6 +8,7 @@ on:
 jobs:
   gcloud:
     environment: gcloud
+    concurrency: gke # do not clean up while tests using GKE are still running
     runs-on: ubuntu-latest
     steps:
       - name: checkout repository

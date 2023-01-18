@@ -13,13 +13,15 @@ import (
 	"os"
 	"os/exec"
 	"sort"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/blang/semver/v4"
+	"github.com/kong/kubernetes-testing-framework/pkg/clusters/types/gke"
 	"github.com/kong/kubernetes-testing-framework/pkg/environments"
-	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
+	"github.com/phayes/freeport"
 	"github.com/sethvargo/go-password/password"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -220,75 +222,109 @@ func getPreviousGitTag(path string, cur semver.Version) (semver.Version, error) 
 }
 
 // getKongProxyIP takes a Service with Kong proxy ports and returns and its IP, or fails the test if it cannot.
-func getKongProxyIP(ctx context.Context, t *testing.T, env environments.Environment, svc *corev1.Service) string {
-	proxyIP := ""
-	require.NotEqual(t, svc.Spec.Type, svc.Spec.ClusterIP)
-	if svc.Spec.Type == corev1.ServiceTypeLoadBalancer {
-		if len(svc.Status.LoadBalancer.Ingress) > 0 {
-			proxyIP = svc.Status.LoadBalancer.Ingress[0].IP
-			t.Logf("found loadbalancer IP for the Kong Proxy: %s", proxyIP)
-		}
-	}
-	// the above failed to find an address. either the LB didn't provision or we're using a NodePort
-	if proxyIP == "" {
-		var port int32
-		for _, sport := range svc.Spec.Ports {
-			if sport.Name == "kong-proxy" || sport.Name == "proxy" {
-				port = sport.NodePort
-			}
-		}
-		var extAddrs []string
-		var intAddrs []string
-		nodes, err := env.Cluster().Client().CoreV1().Nodes().List(ctx, metav1.ListOptions{})
+func getKongProxyIP(ctx context.Context, t *testing.T, env environments.Environment) string {
+	refreshService := func() *corev1.Service {
+		svc, err := env.Cluster().Client().CoreV1().Services(namespace).Get(ctx, "kong-proxy", metav1.GetOptions{})
 		require.NoError(t, err)
-		for _, node := range nodes.Items {
-			for _, naddr := range node.Status.Addresses {
-				if naddr.Type == corev1.NodeExternalIP {
-					extAddrs = append(extAddrs, naddr.Address)
-				}
-				if naddr.Type == corev1.NodeInternalIP {
-					extAddrs = append(intAddrs, naddr.Address)
-				}
-			}
-		}
-		// local clusters (KIND, minikube) typically provide no external addresses, but their internal addresses are
-		// routeable from their host. We prefer external addresses if they're available, but fall back to internal
-		// in their absence
-		if len(extAddrs) > 0 {
-			proxyIP = fmt.Sprintf("%v:%v", extAddrs[0], port)
-		} else if len(intAddrs) > 0 {
-			proxyIP = fmt.Sprintf("%v:%v", intAddrs[0], port)
-		} else {
-			assert.Fail(t, "both extAddrs and intAddrs are empty")
-		}
+		return svc
 	}
-	return proxyIP
+
+	svc := refreshService()
+	require.NotEqual(t, svc.Spec.Type, corev1.ServiceTypeClusterIP, "ClusterIP service is not supported")
+
+	//nolint: exhaustive
+	switch svc.Spec.Type {
+	case corev1.ServiceTypeLoadBalancer:
+		return getKongProxyLoadBalancerIP(t, refreshService)
+	case corev1.ServiceTypeNodePort:
+		return getKongProxyNodePortIP(ctx, t, env, svc)
+	default:
+		t.Fatalf("unknown service type: %q", svc.Spec.Type)
+		return ""
+	}
 }
 
-// startPortForwarder runs "kubectl port-forward" in the background. It stops the forward when the provided context
-// ends.
-func startPortForwarder(ctx context.Context, t *testing.T, env environments.Environment, namespace, name, localPort,
-	targetPort string,
-) {
-	kubeconfig, err := generators.NewKubeConfigForRestConfig(env.Name(), env.Cluster().Config())
+func getKongProxyLoadBalancerIP(t *testing.T, refreshSvc func() *corev1.Service) string {
+	var resIP string
+	require.Eventually(t, func() bool {
+		svc := refreshSvc()
+
+		if len(svc.Status.LoadBalancer.Ingress) > 0 {
+			ip := svc.Status.LoadBalancer.Ingress[0].IP
+			t.Logf("found loadbalancer IP for the Kong Proxy: %s", ip)
+			resIP = ip
+			return true
+		}
+
+		t.Log("no IP for LoadBalancer found yet")
+		return false
+	}, ingressWait, time.Second)
+
+	return resIP
+}
+
+func getKongProxyNodePortIP(ctx context.Context, t *testing.T, env environments.Environment, svc *corev1.Service) string {
+	var port corev1.ServicePort
+	for _, sport := range svc.Spec.Ports {
+		if sport.Name == "kong-proxy" || sport.Name == "proxy" {
+			port = sport
+		}
+	}
+
+	// GKE clusters by default do not allow ingress traffic to its nodes
+	// TODO: consider adding an option to create firewall rules in KTF GKE provider
+	if env.Cluster().Type() == gke.GKEClusterType {
+		kongProxyLocalPort := startPortForwarder(ctx, t, env, svc.Namespace, fmt.Sprintf("service/%s", svc.Name), strconv.Itoa(int(port.Port)))
+		return fmt.Sprintf("localhost:%d", kongProxyLocalPort)
+	}
+
+	var extAddrs []string
+	var intAddrs []string
+	nodes, err := env.Cluster().Client().CoreV1().Nodes().List(ctx, metav1.ListOptions{})
 	require.NoError(t, err)
-	kubeconfigFile, err := os.CreateTemp(os.TempDir(), "portforward-tests-kubeconfig-")
+	for _, node := range nodes.Items {
+		for _, naddr := range node.Status.Addresses {
+			if naddr.Type == corev1.NodeExternalIP {
+				extAddrs = append(extAddrs, naddr.Address)
+			}
+			if naddr.Type == corev1.NodeInternalIP {
+				intAddrs = append(intAddrs, naddr.Address)
+			}
+		}
+	}
+	// local clusters (KIND, minikube) typically provide no external addresses, but their internal addresses are
+	// routeable from their host. We prefer external addresses if they're available, but fall back to internal
+	// in their absence
+	if len(extAddrs) > 0 {
+		t.Logf("picking an external NodePort address: %s", extAddrs[0])
+		return fmt.Sprintf("%v:%v", extAddrs[0], port.NodePort)
+	} else if len(intAddrs) > 0 {
+		t.Logf("picking an internal NodePort address: %s", intAddrs[0])
+		return fmt.Sprintf("%v:%v", intAddrs[0], port.NodePort)
+	}
+
+	assert.Fail(t, "both extAddrs and intAddrs are empty")
+	return ""
+}
+
+// startPortForwarder runs "kubectl port-forward" in the background. It returns a local port that the traffic gets forward to.
+// It stops the forward when the provided context ends.
+func startPortForwarder(ctx context.Context, t *testing.T, env environments.Environment, namespace, name, targetPort string) int {
+	localPort, err := freeport.GetFreePort()
 	require.NoError(t, err)
-	defer os.Remove(kubeconfigFile.Name())
-	defer kubeconfigFile.Close()
-	written, err := kubeconfigFile.Write(kubeconfig)
-	require.NoError(t, err)
-	require.Equal(t, len(kubeconfig), written)
-	cmd := exec.CommandContext(ctx, "kubectl", "--kubeconfig", kubeconfigFile.Name(), "port-forward", "-n", namespace, name, fmt.Sprintf("%s:%s", localPort, targetPort)) //nolint:gosec
+
+	kubeconfig := getTemporaryKubeconfig(t, env)
+	cmd := exec.CommandContext(ctx, "kubectl", "--kubeconfig", kubeconfig, "port-forward", "-n", namespace, name, fmt.Sprintf("%d:%s", localPort, targetPort))
 	out := new(bytes.Buffer)
-	cmd.Stdout = out
 	cmd.Stderr = out
-	t.Logf("forwarding port %s to %s/%s:%s", localPort, namespace, name, targetPort)
+	cmd.Stdout = out
+
+	t.Logf("forwarding port %d to %s/%s:%s", localPort, namespace, name, targetPort)
 	if startErr := cmd.Start(); startErr != nil {
 		require.NoError(t, startErr, out.String())
 	}
 	require.Eventually(t, func() bool {
-		conn, err := net.Dial("tcp", fmt.Sprintf("localhost:%s", localPort))
+		conn, err := net.Dial("tcp", fmt.Sprintf("localhost:%d", localPort))
 		if err == nil {
 			conn.Close()
 			return true
@@ -297,6 +333,8 @@ func startPortForwarder(ctx context.Context, t *testing.T, env environments.Envi
 		t.Logf("port forwarding command %q output so far: %s", cmd.String(), out.String())
 		return false
 	}, kongComponentWait, time.Second)
+
+	return localPort
 }
 
 // httpGetResponseContains returns true if the response body of GETting the URL contains specified substring.
@@ -331,19 +369,9 @@ func getPodLogs(
 	ctx context.Context, t *testing.T, env environments.Environment,
 	namespace string, podName string,
 ) (string, error) {
-	kubeconfig, err := generators.NewKubeConfigForRestConfig(env.Name(), env.Cluster().Config())
-	require.NoError(t, err)
-	kubeconfigFile, err := os.CreateTemp(os.TempDir(), "podlogs-tests-kubeconfig-")
-	require.NoError(t, err)
-	defer os.Remove(kubeconfigFile.Name())
-	defer kubeconfigFile.Close()
-
-	written, err := kubeconfigFile.Write(kubeconfig)
-	require.NoError(t, err)
-	require.Equal(t, len(kubeconfig), written)
-
+	kubeconfig := getTemporaryKubeconfig(t, env)
 	stderr := new(bytes.Buffer)
-	cmd := exec.CommandContext(ctx, "kubectl", "--kubeconfig", kubeconfigFile.Name(), "logs", podName, "-n", namespace, "--all-containers") //nolint:gosec
+	cmd := exec.CommandContext(ctx, "kubectl", "--kubeconfig", kubeconfig, "logs", podName, "-n", namespace, "--all-containers")
 	cmd.Stderr = stderr
 	out, err := cmd.Output()
 	if err != nil {

@@ -11,9 +11,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/kong"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -48,19 +46,9 @@ func TestDeployAllInOneDBLESS(t *testing.T) {
 	require.NoError(t, err)
 	env, err := builder.Build(ctx)
 	require.NoError(t, err)
-	defer func() {
-		assert.NoError(t, env.Cleanup(ctx))
-	}()
 
-	t.Logf("build a cleaner to dump diagnostics...")
-	cleaner := clusters.NewCleaner(env.Cluster())
 	defer func() {
-		if t.Failed() {
-			output, err := cleaner.DumpDiagnostics(ctx, t.Name())
-			t.Logf("%s failed, dumped diagnostics to %s", t.Name(), output)
-			assert.NoError(t, err)
-		}
-		assert.NoError(t, cleaner.Cleanup(ctx))
+		finalizeTest(ctx, t, env.Cluster())
 	}()
 
 	t.Log("deploying kong components")
@@ -110,19 +98,9 @@ func TestDeployAndUpgradeAllInOneDBLESS(t *testing.T) {
 
 	env, err := builder.Build(ctx)
 	require.NoError(t, err)
-	defer func() {
-		assert.NoError(t, env.Cleanup(ctx))
-	}()
 
-	t.Logf("build a cleaner to dump diagnostics...")
-	cleaner := clusters.NewCleaner(env.Cluster())
 	defer func() {
-		if t.Failed() {
-			output, err := cleaner.DumpDiagnostics(ctx, t.Name())
-			t.Logf("%s failed, dumped diagnostics to %s", t.Name(), output)
-			assert.NoError(t, err)
-		}
-		assert.NoError(t, cleaner.Cleanup(ctx))
+		finalizeTest(ctx, t, env.Cluster())
 	}()
 
 	t.Logf("deploying previous version %s kong manifest", preTag)
@@ -159,15 +137,8 @@ func TestDeployAllInOneEnterpriseDBLESS(t *testing.T) {
 
 	createKongImagePullSecret(ctx, t, env)
 
-	t.Logf("build a cleaner to dump diagnostics...")
-	cleaner := clusters.NewCleaner(env.Cluster())
 	defer func() {
-		if t.Failed() {
-			output, err := cleaner.DumpDiagnostics(ctx, t.Name())
-			t.Logf("%s failed, dumped diagnostics to %s", t.Name(), output)
-			assert.NoError(t, err)
-		}
-		assert.NoError(t, cleaner.Cleanup(ctx))
+		finalizeTest(ctx, t, env.Cluster())
 	}()
 
 	t.Log("generating a superuser password")
@@ -208,15 +179,8 @@ func TestDeployAllInOnePostgres(t *testing.T) {
 	env, err := builder.Build(ctx)
 	require.NoError(t, err)
 
-	t.Logf("build a cleaner to dump diagnostics...")
-	cleaner := clusters.NewCleaner(env.Cluster())
 	defer func() {
-		if t.Failed() {
-			output, err := cleaner.DumpDiagnostics(ctx, t.Name())
-			t.Logf("%s failed, dumped diagnostics to %s", t.Name(), output)
-			assert.NoError(t, err)
-		}
-		assert.NoError(t, cleaner.Cleanup(ctx))
+		finalizeTest(ctx, t, env.Cluster())
 	}()
 
 	t.Log("deploying kong components")
@@ -244,29 +208,14 @@ func TestDeployAllInOnePostgresWithMultipleReplicas(t *testing.T) {
 	env, err := builder.Build(ctx)
 	require.NoError(t, err)
 
-	t.Logf("build a cleaner to dump diagnostics...")
-	cleaner := clusters.NewCleaner(env.Cluster())
 	defer func() {
-		if t.Failed() {
-			output, err := cleaner.DumpDiagnostics(ctx, t.Name())
-			t.Logf("%s failed, dumped diagnostics to %s", t.Name(), output)
-			assert.NoError(t, err)
-		}
-		assert.NoError(t, cleaner.Cleanup(ctx))
+		finalizeTest(ctx, t, env.Cluster())
 	}()
 
 	t.Log("deploying kong components")
 	manifest, err := getTestManifest(t, postgresPath)
 	require.NoError(t, err)
 	deployment := deployKong(ctx, t, env, manifest)
-	// dump diagnostics and print out logs of KIC pod to a temporary directory, if the test failed.
-	defer func() {
-		if t.Failed() {
-			outputDir, err := cleaner.DumpDiagnostics(ctx, t.Name())
-			assert.NoError(t, err, "failed to dump diagnostics")
-			t.Logf("%s failed, dumped diagnostics to directory %s", t.Name(), outputDir)
-		}
-	}()
 
 	t.Log("this deployment used a postgres backend, verifying that postgres migrations ran properly")
 	verifyPostgres(ctx, t, env)
@@ -321,11 +270,11 @@ func TestDeployAllInOnePostgresWithMultipleReplicas(t *testing.T) {
 	forwardCtx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	startPortForwarder(forwardCtx, t, env, secondary.Namespace, secondary.Name, "9777", "cmetrics")
+	localPort := startPortForwarder(forwardCtx, t, env, secondary.Namespace, secondary.Name, "cmetrics")
 
 	require.Never(t, func() bool {
 		// if we are not the leader, we run no config pushes, and this metric string will not appear.
-		return httpGetResponseContains(t, "http://localhost:9777/metrics", client, metrics.MetricNameConfigPushCount)
+		return httpGetResponseContains(t, fmt.Sprintf("http://localhost:%d/metrics", localPort), client, metrics.MetricNameConfigPushCount)
 	}, time.Minute, time.Second*10)
 
 	// since leader election is time sensitive, we log the time here.
@@ -351,11 +300,14 @@ func TestDeployAllInOnePostgresWithMultipleReplicas(t *testing.T) {
 		return podNum == 2
 	}, time.Minute, time.Second)
 
-	var rebuiltPod corev1.Pod
+	var (
+		rebuiltPod       corev1.Pod
+		rebuiltLocalPort int
+	)
 	for _, pod := range podList.Items {
 		if pod.Name != initialPod.Name && pod.Name != secondary.Name {
 			rebuiltPod = pod
-			startPortForwarder(forwardCtx, t, env, rebuiltPod.Namespace, rebuiltPod.Name, "9778", "cmetrics")
+			rebuiltLocalPort = startPortForwarder(forwardCtx, t, env, rebuiltPod.Namespace, rebuiltPod.Name, "cmetrics")
 			break
 		}
 	}
@@ -365,11 +317,11 @@ func TestDeployAllInOnePostgresWithMultipleReplicas(t *testing.T) {
 	t.Logf("confirming there is exactly one pod that becomes leader and starts pushing configuration at %v", time.Now())
 	require.Eventually(t, func() bool {
 		leaderCount := 0
-		if httpGetResponseContains(t, "http://localhost:9777/metrics", client, metrics.MetricNameConfigPushCount) {
+		if httpGetResponseContains(t, fmt.Sprintf("http://localhost:%d/metrics", localPort), client, metrics.MetricNameConfigPushCount) {
 			t.Logf("secondary pod %s is the leader at %v", secondary.Name, time.Now())
 			leaderCount++
 		}
-		if httpGetResponseContains(t, "http://localhost:9778/metrics", client, metrics.MetricNameConfigPushCount) {
+		if httpGetResponseContains(t, fmt.Sprintf("http://localhost:%d/metrics", rebuiltLocalPort), client, metrics.MetricNameConfigPushCount) {
 			t.Logf("rebuilt pod %s is the leader at %v", rebuiltPod.Name, time.Now())
 			leaderCount++
 		}
@@ -396,15 +348,8 @@ func TestDeployAllInOneEnterprisePostgres(t *testing.T) {
 	require.NoError(t, err)
 	createKongImagePullSecret(ctx, t, env)
 
-	t.Logf("build a cleaner to dump diagnostics...")
-	cleaner := clusters.NewCleaner(env.Cluster())
 	defer func() {
-		if t.Failed() {
-			output, err := cleaner.DumpDiagnostics(ctx, t.Name())
-			t.Logf("%s failed, dumped diagnostics to %s", t.Name(), output)
-			assert.NoError(t, err)
-		}
-		assert.NoError(t, cleaner.Cleanup(ctx))
+		finalizeTest(ctx, t, env.Cluster())
 	}()
 
 	t.Log("generating a superuser password")

@@ -360,7 +360,7 @@ func setupControllers(
 				Log:                  ctrl.Log.WithName("controllers").WithName(gatewayFeature),
 				Scheme:               mgr.GetScheme(),
 				DataplaneClient:      dataplaneClient,
-				PublishService:       c.PublishService,
+				PublishService:       c.PublishService.String(),
 				WatchNamespaces:      c.WatchNamespaces,
 				EnableReferenceGrant: referenceGrantsEnabled,
 				CacheSyncTimeout:     c.CacheSyncTimeout,

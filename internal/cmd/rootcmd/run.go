@@ -32,5 +32,6 @@ func RunWithLogger(ctx context.Context, c *manager.Config, deprecatedLogger logr
 	if err != nil {
 		return fmt.Errorf("failed to start diagnostics server: %w", err)
 	}
+
 	return manager.Run(ctx, c, diag.ConfigDumps, deprecatedLogger)
 }

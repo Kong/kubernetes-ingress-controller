@@ -4,12 +4,10 @@ import (
 	"context"
 	"fmt"
 	"regexp"
-	"strings"
 	"time"
 
 	"github.com/kong/go-kong/kong"
 	"github.com/spf13/pflag"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	cliflag "k8s.io/component-base/cli/flag"
@@ -68,10 +66,9 @@ type Config struct {
 	GatewayAPIControllerName string
 
 	// Ingress status
-	PublishService              string
-	publishServiceNamespaceName types.NamespacedName
-	PublishStatusAddress        []string
-	UpdateStatus                bool
+	PublishService       FlagNamespacedName
+	PublishStatusAddress []string
+	UpdateStatus         bool
 
 	// Kubernetes API toggling
 	IngressExtV1beta1Enabled      bool
@@ -119,25 +116,12 @@ func (c *Config) Validate() error {
 		return fmt.Errorf("--gateway-api-controller-name (%s) is invalid. The expected format is example.com/controller-name", c.GatewayAPIControllerName)
 	}
 
-	// if publish service has been provided, validate it and save the publish
-	// service namespaced name.
-	if c.PublishService != "" {
-		publishServiceSplit := strings.SplitN(c.PublishService, "/", 3)
-		if len(publishServiceSplit) != 2 {
-			return fmt.Errorf("--publish-service was expected to be in format <namespace>/<name> but got %s", c.PublishService)
-		}
-		c.publishServiceNamespaceName = types.NamespacedName{
-			Namespace: publishServiceSplit[0],
-			Name:      publishServiceSplit[1],
-		}
-	}
-
 	return nil
 }
 
 // FlagSet binds the provided Config to commandline flags.
 func (c *Config) FlagSet() *pflag.FlagSet {
-	flagSet := pflag.NewFlagSet("", pflag.ExitOnError)
+	flagSet := pflag.NewFlagSet("", pflag.ContinueOnError)
 
 	// Logging configurations
 	flagSet.StringVar(&c.LogLevel, "log-level", "info", `Level of logging for the controller. Allowed values are trace, debug, info, warn, error, fatal and panic.`)
@@ -191,11 +175,10 @@ func (c *Config) FlagSet() *pflag.FlagSet {
 	flagSet.StringSliceVar(&c.FilterTags, "kong-admin-filter-tag", []string{"managed-by-ingress-controller"}, "The tag used to manage and filter entities in Kong. This flag can be specified multiple times to specify multiple tags. This setting will be silently ignored if the Kong instance has no tags support.")
 	flagSet.IntVar(&c.Concurrency, "kong-admin-concurrency", 10, "Max number of concurrent requests sent to Kong's Admin API.")
 	flagSet.StringSliceVar(&c.WatchNamespaces, "watch-namespace", nil,
-		`Namespace(s) to watch for Kubernetes resources. Defaults to all namespaces.`+
-			`To watch multiple namespaces, use a comma-separated list of namespaces.`)
+		`Namespace(s) to watch for Kubernetes resources. Defaults to all namespaces. To watch multiple namespaces, use a comma-separated list of namespaces.`)
 
 	// Ingress status
-	flagSet.StringVar(&c.PublishService, "publish-service", "",
+	flagSet.Var(&c.PublishService, "publish-service",
 		`Service fronting Ingress resources in "namespace/name" format. The controller will update Ingress status information with this Service's endpoints.`)
 	flagSet.StringSliceVar(&c.PublishStatusAddress, "publish-status-address", []string{},
 		`User-provided addresses in comma-separated string format, for use in lieu of "publish-service" `+

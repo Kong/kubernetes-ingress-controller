@@ -173,7 +173,7 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 		// the argument checking the watch namespaces length enables or disables mesh detection. the mesh detect client
 		// attempts to use all namespaces and can't utilize a manager multi-namespaced cache, so if we need to limit
 		// namespace access we just disable mesh detection altogether.
-		if err := mgrutils.RunReport(ctx, kubeconfig, kongConfig, c.PublishService, metadata.Release,
+		if err := mgrutils.RunReport(ctx, kubeconfig, kongConfig, c.PublishService.String(), metadata.Release,
 			len(c.WatchNamespaces) == 0, featureGates); err != nil {
 			setupLog.Error(err, "anonymous reporting failed")
 		}

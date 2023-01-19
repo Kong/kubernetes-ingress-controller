@@ -137,7 +137,7 @@ func createExistingGKEBuilder(ctx context.Context, name string) (*environments.B
 
 func createGKEBuilder() (*environments.Builder, error) {
 	var (
-		name        = gkeTestClusterNamePrefix + uuid.NewString()
+		name        = "e2e-" + uuid.NewString()
 		gkeCreds    = os.Getenv(gke.GKECredsVar)
 		gkeProject  = os.Getenv(gke.GKEProjectVar)
 		gkeLocation = os.Getenv(gke.GKELocationVar)
@@ -149,7 +149,8 @@ func createGKEBuilder() (*environments.Builder, error) {
 		NewBuilder([]byte(gkeCreds), gkeProject, gkeLocation).
 		WithName(name).
 		WithWaitForTeardown(true).
-		WithCreateSubnet(true)
+		WithCreateSubnet(true).
+		WithLabels(gkeTestClusterLabels())
 
 	if clusterVersionStr != "" {
 		k8sVersion, err := semver.Parse(strings.TrimPrefix(clusterVersionStr, "v"))

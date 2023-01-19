@@ -15,7 +15,7 @@ require (
 	github.com/google/uuid v1.3.0
 	github.com/kong/deck v1.17.1
 	github.com/kong/go-kong v0.34.1-0.20221222170410-6c81ce561662
-	github.com/kong/kubernetes-testing-framework v0.25.0
+	github.com/kong/kubernetes-testing-framework v0.26.0
 	github.com/lithammer/dedent v1.1.0
 	github.com/miekg/dns v1.1.50
 	github.com/mitchellh/mapstructure v1.5.0

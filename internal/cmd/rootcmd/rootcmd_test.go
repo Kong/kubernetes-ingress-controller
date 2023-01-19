@@ -38,7 +38,7 @@ func TestRootCmd(t *testing.T) {
 		var cfg manager.Config
 		rootCmd := GetRootCmd(&cfg)
 		require.Error(t, rootCmd.PersistentPreRunE(rootCmd, os.Args[:0]),
-			"binding env vars should fail becuase a non namespaced name of publish service was provided",
+			"binding env vars should fail because a non namespaced name of publish service was provided",
 		)
 	})
 }

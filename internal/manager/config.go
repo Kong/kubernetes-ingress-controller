@@ -2,7 +2,9 @@ package manager
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/kong/go-kong/kong"
@@ -101,15 +103,61 @@ type Config struct {
 	// helpful for advanced cases with load-balancers so that the ingress
 	// controller can be gracefully removed/drained from their rotation.
 	TermDelay time.Duration
+
+	MyValidatedVar *ValidatedVar[string]
 }
 
 // -----------------------------------------------------------------------------
 // Controller Manager - Config - Methods
 // -----------------------------------------------------------------------------
 
+func NewValidatedVar[T any](constructor func(string) (T, error)) *ValidatedVar[T] {
+	return &ValidatedVar[T]{
+		constructor: constructor,
+	}
+}
+
+type ValidatedVar[T any] struct {
+	origin      string
+	value       T
+	constructor func(string) (T, error)
+}
+
+func (v *ValidatedVar[T]) String() string {
+	return v.origin
+}
+
+func (v *ValidatedVar[T]) Get() T {
+	return v.value
+}
+
+func (v *ValidatedVar[T]) Set(s string) error {
+	value, err := v.constructor(s)
+	if err != nil {
+		return fmt.Errorf("validation failed: %s", err)
+	}
+
+	v.value = value
+	return nil
+}
+
+func (v *ValidatedVar[T]) Type() string {
+	var t T
+	return fmt.Sprintf("Validated%T", t)
+}
+
 // FlagSet binds the provided Config to commandline flags.
 func (c *Config) FlagSet() *pflag.FlagSet {
-	flagSet := pflag.NewFlagSet("", pflag.ExitOnError)
+	flagSet := pflag.NewFlagSet("", pflag.ContinueOnError)
+
+	c.MyValidatedVar = NewValidatedVar(func(s string) (string, error) {
+		if !strings.Contains(s, "magic-token") {
+			return "", errors.New("variable is missing magic token")
+		}
+		return s, nil
+	})
+
+	flagSet.Var(c.MyValidatedVar, "validated-var", "this is flag that is validated with custom logic")
 
 	// Logging configurations
 	flagSet.StringVar(&c.LogLevel, "log-level", "info", `Level of logging for the controller. Allowed values are trace, debug, info, warn, error, fatal and panic.`)

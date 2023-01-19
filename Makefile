@@ -443,6 +443,7 @@ _ensure-namespace:
 .PHONY: debug
 debug: install _ensure-namespace
 	$(DLV) debug ./internal/cmd/main.go -- \
+		--anonymous-reports=false \
 		--kong-admin-url $(KONG_ADMIN_URL) \
 		--publish-service $(KONG_NAMESPACE)/$(KONG_PROXY_SERVICE) \
 		--kubeconfig $(KUBECONFIG) \
@@ -490,6 +491,7 @@ run: install _ensure-namespace
 .PHONY: _run
 _run:
 	go run ./internal/cmd/main.go \
+		--anonymous-reports=false \
 		--kong-admin-url $(KONG_ADMIN_URL) \
 		--publish-service $(KONG_NAMESPACE)/$(KONG_PROXY_SERVICE) \
 		--kubeconfig $(KUBECONFIG) \

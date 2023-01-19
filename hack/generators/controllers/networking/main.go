@@ -630,9 +630,9 @@ func (r *{{.PackageAlias}}{{.Kind}}Reconciler) Reconcile(ctx context.Context, re
 
 		log.V(util.DebugLevel).Info("determining gateway addresses for object status updates", "namespace", req.Namespace, "name", req.Name)
 		{{- if .IsUDP }}
-		addrs, err := r.DataplaneAddressFinder.GetUDPLoadBalancerAddresses()
+		addrs, err := r.DataplaneAddressFinder.GetUDPLoadBalancerAddresses(ctx)
 		{{- else }}
-		addrs, err := r.DataplaneAddressFinder.GetLoadBalancerAddresses()
+		addrs, err := r.DataplaneAddressFinder.GetLoadBalancerAddresses(ctx)
 		{{- end }}
 		if err != nil {
 			return ctrl.Result{}, err

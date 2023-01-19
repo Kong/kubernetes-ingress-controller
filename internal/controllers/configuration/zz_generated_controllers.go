@@ -401,7 +401,7 @@ func (r *NetV1IngressReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		}
 
 		log.V(util.DebugLevel).Info("determining gateway addresses for object status updates", "namespace", req.Namespace, "name", req.Name)
-		addrs, err := r.DataplaneAddressFinder.GetLoadBalancerAddresses()
+		addrs, err := r.DataplaneAddressFinder.GetLoadBalancerAddresses(ctx)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
@@ -672,7 +672,7 @@ func (r *NetV1Beta1IngressReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		}
 
 		log.V(util.DebugLevel).Info("determining gateway addresses for object status updates", "namespace", req.Namespace, "name", req.Name)
-		addrs, err := r.DataplaneAddressFinder.GetLoadBalancerAddresses()
+		addrs, err := r.DataplaneAddressFinder.GetLoadBalancerAddresses(ctx)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
@@ -867,7 +867,7 @@ func (r *ExtV1Beta1IngressReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		}
 
 		log.V(util.DebugLevel).Info("determining gateway addresses for object status updates", "namespace", req.Namespace, "name", req.Name)
-		addrs, err := r.DataplaneAddressFinder.GetLoadBalancerAddresses()
+		addrs, err := r.DataplaneAddressFinder.GetLoadBalancerAddresses(ctx)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
@@ -1545,7 +1545,7 @@ func (r *KongV1Beta1TCPIngressReconciler) Reconcile(ctx context.Context, req ctr
 		}
 
 		log.V(util.DebugLevel).Info("determining gateway addresses for object status updates", "namespace", req.Namespace, "name", req.Name)
-		addrs, err := r.DataplaneAddressFinder.GetLoadBalancerAddresses()
+		addrs, err := r.DataplaneAddressFinder.GetLoadBalancerAddresses(ctx)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
@@ -1719,7 +1719,7 @@ func (r *KongV1Beta1UDPIngressReconciler) Reconcile(ctx context.Context, req ctr
 		}
 
 		log.V(util.DebugLevel).Info("determining gateway addresses for object status updates", "namespace", req.Namespace, "name", req.Name)
-		addrs, err := r.DataplaneAddressFinder.GetUDPLoadBalancerAddresses()
+		addrs, err := r.DataplaneAddressFinder.GetUDPLoadBalancerAddresses(ctx)
 		if err != nil {
 			return ctrl.Result{}, err
 		}

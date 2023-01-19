@@ -208,7 +208,7 @@ func (r *Knativev1alpha1IngressReconciler) Reconcile(ctx context.Context, req ct
 		}
 
 		log.V(util.DebugLevel).Info("determining gateway addresses for object status updates", "namespace", req.Namespace, "name", req.Name)
-		addrs, err := r.DataplaneAddressFinder.GetLoadBalancerAddresses()
+		addrs, err := r.DataplaneAddressFinder.GetLoadBalancerAddresses(ctx)
 		if err != nil {
 			return ctrl.Result{}, err
 		}

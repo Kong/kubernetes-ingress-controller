@@ -146,7 +146,7 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 	}
 
 	setupLog.Info("Initializing Dataplane Address Discovery")
-	dataplaneAddressFinder, udpDataplaneAddressFinder, err := setupDataplaneAddressFinder(ctx, mgr.GetClient(), c)
+	dataplaneAddressFinder, udpDataplaneAddressFinder, err := setupDataplaneAddressFinder(mgr.GetClient(), c)
 	if err != nil {
 		return err
 	}

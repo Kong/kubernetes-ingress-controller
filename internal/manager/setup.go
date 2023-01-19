@@ -197,13 +197,12 @@ func setupAdmissionServer(
 // the UDP finder will also return the default addresses. If no override or publish service is set, this function
 // returns nil finders and an error.
 func setupDataplaneAddressFinder(
-	ctx context.Context,
 	mgrc client.Client,
 	c *Config,
 ) (*dataplane.AddressFinder, *dataplane.AddressFinder, error) {
 	dataplaneAddressFinder := dataplane.NewAddressFinder()
 	udpDataplaneAddressFinder := dataplane.NewAddressFinder()
-	var getter func() ([]string, error)
+	var getter func(ctx context.Context) ([]string, error)
 	if c.UpdateStatus {
 		// Default
 		if overrideAddrs := c.PublishStatusAddress; len(overrideAddrs) > 0 {
@@ -217,7 +216,7 @@ func setupDataplaneAddressFinder(
 				Namespace: parts[0],
 				Name:      parts[1],
 			}
-			getter = generateAddressFinderGetter(ctx, mgrc, nsn)
+			getter = generateAddressFinderGetter(mgrc, nsn)
 			dataplaneAddressFinder.SetGetter(getter)
 		} else {
 			return nil, nil, fmt.Errorf("status updates enabled but no method to determine data-plane addresses, need either --publish-service or --publish-status-address")
@@ -235,7 +234,7 @@ func setupDataplaneAddressFinder(
 				Namespace: parts[0],
 				Name:      parts[1],
 			}
-			udpDataplaneAddressFinder.SetGetter(generateAddressFinderGetter(ctx, mgrc, nsn))
+			udpDataplaneAddressFinder.SetGetter(generateAddressFinderGetter(mgrc, nsn))
 		} else {
 			udpDataplaneAddressFinder.SetGetter(getter)
 		}
@@ -245,11 +244,10 @@ func setupDataplaneAddressFinder(
 }
 
 func generateAddressFinderGetter(
-	ctx context.Context,
 	mgrc client.Client,
 	nsn types.NamespacedName,
-) func() ([]string, error) {
-	return func() ([]string, error) {
+) func(ctx context.Context) ([]string, error) {
+	return func(ctx context.Context) ([]string, error) {
 		svc := new(corev1.Service)
 		if err := mgrc.Get(ctx, nsn, svc); err != nil {
 			return nil, err

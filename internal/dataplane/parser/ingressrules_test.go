@@ -477,7 +477,7 @@ func TestDoK8sServicesMatchAnnotations(t *testing.T) {
 			},
 			expected: false,
 			expectedLogEntries: []string{
-				"in the backend group of 3 kubernetes services some have the konghq.com/foo annotation while others don't",
+				"Service has inconsistent konghq.com/foo annotation and is used in multi-Service backend",
 			},
 		},
 		{
@@ -519,8 +519,8 @@ func TestDoK8sServicesMatchAnnotations(t *testing.T) {
 			},
 			expected: false,
 			expectedLogEntries: []string{
-				"the value of annotation konghq.com/foo is different between the 3 services which comprise this backend.",
-				"the value of annotation konghq.com/foo is different between the 3 services which comprise this backend.",
+				"Service has inconsistent konghq.com/foo annotation and is used in multi-Service backend",
+				"Service has inconsistent konghq.com/foo annotation and is used in multi-Service backend",
 			},
 		},
 	} {
@@ -528,7 +528,7 @@ func TestDoK8sServicesMatchAnnotations(t *testing.T) {
 			logger, loggerHook := test.NewNullLogger()
 			failuresCollector, err := failures.NewResourceFailuresCollector(logger)
 			require.NoError(t, err)
-			assert.Equal(t, tt.expected, servicesAllUseTheSameKongAnnotations(tt.services, tt.annotations, failuresCollector))
+			assert.Equal(t, tt.expected, servicesAllUseTheSameKongAnnotations(tt.services, tt.annotations, failuresCollector, ""))
 			assert.Len(t, failuresCollector.PopResourceFailures(), len(tt.expectedLogEntries), "expecting as many translation failures as log entries")
 			for i := range tt.expectedLogEntries {
 				assert.Contains(t, loggerHook.AllEntries()[i].Message, tt.expectedLogEntries[i])

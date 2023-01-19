@@ -114,7 +114,7 @@ func findOrphanedClusters(ctx context.Context, mgrc *container.ClusterManagerCli
 
 	var orphanedClusterNames []string
 	for _, cluster := range clusterListResp.Clusters {
-		if isCreatedByTests(cluster) {
+		if e2e.IsGKETestCluster(cluster) {
 			createdAt, err := time.Parse(time.RFC3339, cluster.CreateTime)
 			if err != nil {
 				return nil, err
@@ -130,12 +130,4 @@ func findOrphanedClusters(ctx context.Context, mgrc *container.ClusterManagerCli
 	}
 
 	return orphanedClusterNames, nil
-}
-
-func isCreatedByTests(cluster *containerpb.Cluster) bool {
-	if cluster == nil {
-		return false
-	}
-
-	return e2e.IsCreatedByE2ETests(cluster.Name)
 }

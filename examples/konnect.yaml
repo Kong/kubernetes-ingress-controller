@@ -81,9 +81,34 @@ metadata:
     kubernetes.io/ingress.class: "kong"
 spec:
   rules:
-    - http:
+    - host: "foo.bar"
+      http:
         paths:
           - path: /httpbin2
+            pathType: Prefix
+            backend:
+              service:
+                name: httpbin-service
+                port:
+                  number: 80
+          - path: /httpbin2-other
+            pathType: Prefix
+            backend:
+              service:
+                name: httpbin-service
+                port:
+                  number: 80
+    - host: "poo.foo.bar"
+      http:
+        paths:
+          - path: /httpbin2
+            pathType: Prefix
+            backend:
+              service:
+                name: httpbin-service
+                port:
+                  number: 80
+          - path: /httpbin2-other
             pathType: Prefix
             backend:
               service:

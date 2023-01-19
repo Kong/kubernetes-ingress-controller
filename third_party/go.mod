@@ -8,7 +8,7 @@ require (
 	github.com/golangci/golangci-lint v1.50.1
 	gotest.tools/gotestsum v1.9.0
 	honnef.co/go/tools v0.3.3
-	k8s.io/code-generator v0.26.0
+	k8s.io/code-generator v0.26.1
 	sigs.k8s.io/controller-tools v0.11.1
 	sigs.k8s.io/kustomize/kustomize/v4 v4.5.7
 )

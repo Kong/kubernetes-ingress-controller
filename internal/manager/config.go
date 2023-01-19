@@ -3,6 +3,7 @@ package manager
 import (
 	"context"
 	"fmt"
+	"regexp"
 	"time"
 
 	"github.com/spf13/pflag"
@@ -65,7 +66,7 @@ type Config struct {
 	GatewayAPIControllerName string
 
 	// Ingress status
-	PublishService       string
+	PublishService       FlagNamespacedName
 	PublishStatusAddress []string
 	UpdateStatus         bool
 
@@ -102,6 +103,8 @@ type Config struct {
 	TermDelay time.Duration
 
 	Konnect KonnectConfig
+
+	flagSet *pflag.FlagSet
 }
 
 type KonnectConfig struct {
@@ -115,9 +118,19 @@ type KonnectConfig struct {
 // Controller Manager - Config - Methods
 // -----------------------------------------------------------------------------
 
+// Validate validates the config. With time this logic may grow to invalidate
+// incorrect configurations.
+func (c *Config) Validate() error {
+	if !isControllerNameValid(c.GatewayAPIControllerName) {
+		return fmt.Errorf("--gateway-api-controller-name (%s) is invalid. The expected format is example.com/controller-name", c.GatewayAPIControllerName)
+	}
+
+	return nil
+}
+
 // FlagSet binds the provided Config to commandline flags.
 func (c *Config) FlagSet() *pflag.FlagSet {
-	flagSet := pflag.NewFlagSet("", pflag.ExitOnError)
+	flagSet := pflag.NewFlagSet("", pflag.ContinueOnError)
 
 	// Logging configurations
 	flagSet.StringVar(&c.LogLevel, "log-level", "info", `Level of logging for the controller. Allowed values are trace, debug, info, warn, error, fatal and panic.`)
@@ -171,11 +184,10 @@ func (c *Config) FlagSet() *pflag.FlagSet {
 	flagSet.StringSliceVar(&c.FilterTags, "kong-admin-filter-tag", []string{"managed-by-ingress-controller"}, "The tag used to manage and filter entities in Kong. This flag can be specified multiple times to specify multiple tags. This setting will be silently ignored if the Kong instance has no tags support.")
 	flagSet.IntVar(&c.Concurrency, "kong-admin-concurrency", 10, "Max number of concurrent requests sent to Kong's Admin API.")
 	flagSet.StringSliceVar(&c.WatchNamespaces, "watch-namespace", nil,
-		`Namespace(s) to watch for Kubernetes resources. Defaults to all namespaces.`+
-			`To watch multiple namespaces, use a comma-separated list of namespaces.`)
+		`Namespace(s) to watch for Kubernetes resources. Defaults to all namespaces. To watch multiple namespaces, use a comma-separated list of namespaces.`)
 
 	// Ingress status
-	flagSet.StringVar(&c.PublishService, "publish-service", "",
+	flagSet.Var(&c.PublishService, "publish-service",
 		`Service fronting Ingress resources in "namespace/name" format. The controller will update Ingress status information with this Service's endpoints.`)
 	flagSet.StringSliceVar(&c.PublishStatusAddress, "publish-status-address", []string{},
 		`User-provided addresses in comma-separated string format, for use in lieu of "publish-service" `+
@@ -232,7 +244,7 @@ func (c *Config) FlagSet() *pflag.FlagSet {
 
 	// Deprecated flags
 
-	flagSet.Float32Var(&c.ProxySyncSeconds, "sync-rate-limit", dataplane.DefaultSyncSeconds, "Use --proxy-sync-seconds instead")
+	_ = flagSet.Float32("sync-rate-limit", dataplane.DefaultSyncSeconds, "Use --proxy-sync-seconds instead")
 	_ = flagSet.MarkDeprecated("sync-rate-limit", "Use --proxy-sync-seconds instead")
 
 	_ = flagSet.Int("stderrthreshold", 0, "Has no effect and will be removed in future releases (see github issue #1297)")
@@ -244,9 +256,10 @@ func (c *Config) FlagSet() *pflag.FlagSet {
 	_ = flagSet.String("kong-custom-entities-secret", "", "Will be removed in next major release.")
 	_ = flagSet.MarkDeprecated("kong-custom-entities-secret", "Will be removed in next major release.")
 
-	flagSet.BoolVar(&c.EnableLeaderElection, "leader-elect", false, "DEPRECATED as of 2.1.0 leader election behavior is determined automatically and this flag has no effect")
-	_ = flagSet.MarkDeprecated("leader-elect", "DEPRECATED as of 2.1.0 leader election behavior is determined automatically and this flag has no effect")
+	_ = flagSet.Bool("leader-elect", false, "DEPRECATED as of 2.1.0: leader election behavior is determined automatically based on the Kong database setting and this flag has no effect")
+	_ = flagSet.MarkDeprecated("leader-elect", "DEPRECATED as of 2.1.0: leader election behavior is determined automatically based on the Kong database setting and this flag has no effect")
 
+	c.flagSet = flagSet
 	return flagSet
 }
 
@@ -298,4 +311,10 @@ func (c *Config) GetKubeClient() (client.Client, error) {
 		return nil, err
 	}
 	return client.New(conf, client.Options{})
+}
+
+func isControllerNameValid(controllerName string) bool {
+	// https://github.com/kubernetes-sigs/gateway-api/blob/547122f7f55ac0464685552898c560658fb40073/apis/v1beta1/shared_types.go#L448-L463
+	re := regexp.MustCompile(`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*\/[A-Za-z0-9\/\-._~%!$&'()*+,;=:]+$`)
+	return re.Match([]byte(controllerName))
 }

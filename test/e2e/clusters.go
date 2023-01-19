@@ -1,14 +1,29 @@
 package e2e
 
-import "strings"
-
-const (
-	// GKETestClusterNamePrefix defines a prefix that is used for naming GKE clusters created in tests.
-	// It allows hack/cleanup_gke_clusters.go script to deterministically tell whether a cluster should
-	// be taken into account in the cleanup procedure.
-	gkeTestClusterNamePrefix = "e2e-"
+import (
+	"cloud.google.com/go/container/apiv1/containerpb"
 )
 
-func IsCreatedByE2ETests(clusterName string) bool {
-	return strings.HasPrefix(clusterName, gkeTestClusterNamePrefix)
+const (
+	gkeTestClusterLabel = "test-cluster"
+	gkeLabelValueTrue   = "true"
+)
+
+// IsGKETestCluster tells if the GKE cluster has been created for test purposes.
+func IsGKETestCluster(cluster *containerpb.Cluster) bool {
+	if cluster == nil {
+		return false
+	}
+
+	if labels := cluster.GetResourceLabels(); labels != nil {
+		return labels[gkeTestClusterLabel] == gkeLabelValueTrue
+	}
+
+	return false
+}
+
+func gkeTestClusterLabels() map[string]string {
+	return map[string]string{
+		gkeTestClusterLabel: gkeLabelValueTrue,
+	}
 }

@@ -18,7 +18,7 @@ func TestConfigValidatedVars(t *testing.T) {
 		ExpectedErrorContains string
 	}
 
-	testCases := map[string][]testCase{
+	testCasesGroupedByFlag := map[string][]testCase{
 		"--gateway-api-controller-name": {
 			{
 				Input: "example.com/controller-name",
@@ -54,7 +54,7 @@ func TestConfigValidatedVars(t *testing.T) {
 		},
 	}
 
-	for flag, flagTestCases := range testCases {
+	for flag, flagTestCases := range testCasesGroupedByFlag {
 		for _, tc := range flagTestCases {
 			t.Run(fmt.Sprintf("%s=%s", flag, tc.Input), func(t *testing.T) {
 				var c Config

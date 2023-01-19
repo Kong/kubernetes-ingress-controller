@@ -10,8 +10,8 @@ import (
 // This file contains a set of constructors that are used to validate and set validated values in Config.
 // They're meant to be used together with ValidatedValue[T] type.
 
-func createNamespacedName(s string) (types.NamespacedName, error) {
-	parts := strings.SplitN(s, "/", 3)
+func namespacedNameFromFlagValue(flagValue string) (types.NamespacedName, error) {
+	parts := strings.SplitN(flagValue, "/", 3)
 	if len(parts) != 2 {
 		return types.NamespacedName{}, errors.New("the expected format is namespace/name")
 	}
@@ -21,9 +21,9 @@ func createNamespacedName(s string) (types.NamespacedName, error) {
 	}, nil
 }
 
-func createGatewayAPIControllerName(s string) (string, error) {
-	if !isControllerNameValid(s) {
+func gatewayAPIControllerNameFromFlagValue(flagValue string) (string, error) {
+	if !isControllerNameValid(flagValue) {
 		return "", errors.New("the expected format is example.com/controller-name")
 	}
-	return s, nil
+	return flagValue, nil
 }

@@ -158,7 +158,7 @@ func (c *Config) FlagSet() *pflag.FlagSet {
 	)
 
 	// Kubernetes configurations
-	flagSet.Var(NewValidatedValueWithDefault(&c.GatewayAPIControllerName, createGatewayAPIControllerName, string(gateway.ControllerName)), "gateway-api-controller-name", "The controller name to match on Gateway API resources.")
+	flagSet.Var(NewValidatedValueWithDefault(&c.GatewayAPIControllerName, gatewayAPIControllerNameFromFlagValue, string(gateway.ControllerName)), "gateway-api-controller-name", "The controller name to match on Gateway API resources.")
 	flagSet.StringVar(&c.KubeconfigPath, "kubeconfig", "", "Path to the kubeconfig file.")
 	flagSet.StringVar(&c.IngressClassName, "ingress-class", annotations.DefaultIngressClass, `Name of the ingress class to route through this controller.`)
 	flagSet.StringVar(&c.LeaderElectionID, "election-id", "5b374a9e.konghq.com", `Election id to use for status update.`)
@@ -169,7 +169,7 @@ func (c *Config) FlagSet() *pflag.FlagSet {
 		`Namespace(s) to watch for Kubernetes resources. Defaults to all namespaces. To watch multiple namespaces, use a comma-separated list of namespaces.`)
 
 	// Ingress status
-	flagSet.Var(NewValidatedValue(&c.PublishService, createNamespacedName), "publish-service",
+	flagSet.Var(NewValidatedValue(&c.PublishService, namespacedNameFromFlagValue), "publish-service",
 		`Service fronting Ingress resources in "namespace/name" format. The controller will update Ingress status information with this Service's endpoints.`)
 	flagSet.StringSliceVar(&c.PublishStatusAddress, "publish-status-address", []string{},
 		`User-provided addresses in comma-separated string format, for use in lieu of "publish-service" `+

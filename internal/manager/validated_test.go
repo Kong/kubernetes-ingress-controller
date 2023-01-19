@@ -13,9 +13,10 @@ import (
 )
 
 func TestValidatedValue(t *testing.T) {
-	flags := pflag.NewFlagSet("", pflag.ContinueOnError)
+	flags := func() *pflag.FlagSet { return pflag.NewFlagSet("", pflag.ContinueOnError) }
 
 	t.Run("string", func(t *testing.T) {
+		flags := flags()
 		var validatedString string
 		flags.Var(manager.NewValidatedValue(&validatedString, func(s string) (string, error) {
 			if !strings.Contains(s, "magic-token") {
@@ -36,12 +37,12 @@ func TestValidatedValue(t *testing.T) {
 				"--validated-string", "magic-token",
 			})
 			require.NoError(t, err)
-			v := validatedString
-			require.Equal(t, "magic-token", v)
+			require.Equal(t, "magic-token", validatedString)
 		})
 	})
 
 	t.Run("struct", func(t *testing.T) {
+		flags := flags()
 		type customType struct {
 			p1, p2 string
 		}
@@ -68,6 +69,7 @@ func TestValidatedValue(t *testing.T) {
 	})
 
 	t.Run("with default", func(t *testing.T) {
+		flags := flags()
 		var validatedString string
 		flags.Var(manager.NewValidatedValueWithDefault(&validatedString, func(s string) (string, error) {
 			if !strings.Contains(s, "magic-token") {
@@ -95,8 +97,7 @@ func TestValidatedValue(t *testing.T) {
 				"--flag-with-default", "magic-token",
 			})
 			require.NoError(t, err)
-			v := validatedString
-			require.Equal(t, "magic-token", v)
+			require.Equal(t, "magic-token", validatedString)
 		})
 	})
 }

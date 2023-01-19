@@ -208,7 +208,7 @@ func GetKongClientForWorkspace(ctx context.Context, adminURL string, wsName stri
 	return NewClient(client), nil
 }
 
-func NewKongClientForKonnect(httpClient *http.Client, token, address, runtimeGroup string) (*Client, error) {
+func NewKongClientForKonnect(token, address, runtimeGroup string) (*Client, error) {
 	if token == "" {
 		return nil, errors.New("empty token")
 	}
@@ -224,7 +224,7 @@ func NewKongClientForKonnect(httpClient *http.Client, token, address, runtimeGro
 	headers := []string{"Authorization:Bearer " + token}
 	client, err := deckutils.GetKongClient(deckutils.KongClientConfig{
 		Address:    address + "/konnect-api/api/runtime_groups/" + runtimeGroup,
-		HTTPClient: httpClient,
+		HTTPClient: &http.Client{},
 		Debug:      false,
 		Headers:    headers,
 		Retryable:  true,

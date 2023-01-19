@@ -268,7 +268,7 @@ func getKongClients(ctx context.Context, cfg *Config) ([]*adminapi.Client, error
 	}
 
 	if cfg.Konnect.ConfigSynchronizationEnabled {
-		konnectClient, err := adminapi.NewKongClientForKonnect(httpclient, cfg.Konnect.Token, cfg.Konnect.Address, cfg.Konnect.RuntimeGroup)
+		konnectClient, err := adminapi.NewKongClientForKonnect(cfg.Konnect.Token, cfg.Konnect.Address, cfg.Konnect.RuntimeGroup)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create kong client for konnect: %w", err)
 		}

@@ -64,6 +64,12 @@ func PerformUpdate(ctx context.Context,
 			// and their readiness state is always unknown
 			ready := true
 
+			// In case of Konnect KIC has authority, so when oldSHA=newSHA we're sure there's
+			// no need to push.
+			if client.IsKonnect() {
+				return oldSHA, nil
+			}
+
 			status, err := client.Status(ctx)
 			if err != nil {
 				return nil, err

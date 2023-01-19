@@ -22,6 +22,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/sirupsen/logrus"
 
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/adminapi"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/deckgen"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/metrics"
 )
@@ -35,7 +36,7 @@ const initialHash = "00000000000000000000000000000000"
 // PerformUpdate writes `targetContent` to Kong Admin API specified by `kongConfig`.
 func PerformUpdate(ctx context.Context,
 	log logrus.FieldLogger,
-	client *kong.Client,
+	client *adminapi.Client,
 	version semver.Version,
 	concurrency int,
 	inMemory bool,
@@ -82,13 +83,16 @@ func PerformUpdate(ctx context.Context,
 
 	var metricsProtocol string
 	timeStart := time.Now()
-	if inMemory {
-		metricsProtocol = metrics.ProtocolDBLess
-		err = onUpdateInMemoryMode(ctx, log, targetContent, client)
-	} else {
+	if !inMemory || client.IsKonnect() {
 		metricsProtocol = metrics.ProtocolDeck
 		dumpConfig := dump.Config{SelectorTags: selectorTags, SkipCACerts: skipCACertificates}
-		err = onUpdateDBMode(ctx, targetContent, client, dumpConfig, version, concurrency)
+		if client.IsKonnect() {
+			dumpConfig.KonnectRuntimeGroup = client.KonnectRuntimeGroup()
+		}
+		err = onUpdateDBMode(ctx, targetContent, client.Client, dumpConfig, version, concurrency)
+	} else {
+		metricsProtocol = metrics.ProtocolDBLess
+		err = onUpdateInMemoryMode(ctx, log, targetContent, client.Client)
 	}
 	timeEnd := time.Now()
 

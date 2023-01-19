@@ -6,10 +6,10 @@ import (
 
 	"github.com/blang/semver/v4"
 	"github.com/go-logr/logr"
-	"github.com/kong/go-kong/kong"
 	"github.com/samber/lo"
 	"golang.org/x/sync/errgroup"
 
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/adminapi"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 )
 
@@ -23,8 +23,7 @@ type Kong struct {
 
 	// Currently, this assumes that all underlying clients are using the same version
 	// hence this shared field in here.
-	Version  semver.Version
-	InMemory bool
+	Version semver.Version
 
 	Concurrency int
 	FilterTags  []string
@@ -35,7 +34,7 @@ type Kong struct {
 func New(
 	ctx context.Context,
 	logger logr.Logger,
-	kongClients []*kong.Client,
+	kongClients []*adminapi.Client,
 	v semver.Version,
 	dbMode string,
 	concurrency int,
@@ -67,24 +66,28 @@ func New(
 	}
 
 	return Kong{
-		InMemory:    (dbMode == "off") || (dbMode == ""),
 		Version:     v,
 		FilterTags:  tags,
 		Concurrency: concurrency,
-		Clients: lo.Map(kongClients, func(client *kong.Client, index int) ClientWithPluginStore {
+		Clients: lo.Map(kongClients, func(client *adminapi.Client, index int) ClientWithPluginStore {
 			return ClientWithPluginStore{
 				Client:            client,
-				PluginSchemaStore: util.NewPluginSchemaStore(client),
+				PluginSchemaStore: util.NewPluginSchemaStore(client.Client),
+				inMemory:          (dbMode == "off") || (dbMode == ""),
+				isKonnect:         client.IsKonnect(),
 			}
 		}),
 	}
 }
 
 type ClientWithPluginStore struct {
-	*kong.Client
+	*adminapi.Client
 	*util.PluginSchemaStore
 	// lastConfigSHA is a checksum of the last successful update to the data-plane
 	lastConfigSHA []byte
+	inMemory      bool
+
+	isKonnect bool
 }
 
 func (c *ClientWithPluginStore) SetLastConfigSHA(s []byte) {
@@ -93,4 +96,12 @@ func (c *ClientWithPluginStore) SetLastConfigSHA(s []byte) {
 
 func (c *ClientWithPluginStore) LastConfigSHA() []byte {
 	return c.lastConfigSHA
+}
+
+func (c *ClientWithPluginStore) InMemory() bool {
+	return c.inMemory
+}
+
+func (c *ClientWithPluginStore) IsKonnect() bool {
+	return c.isKonnect
 }

@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/kong/go-kong/kong"
 	"github.com/spf13/pflag"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
@@ -101,6 +100,15 @@ type Config struct {
 	// helpful for advanced cases with load-balancers so that the ingress
 	// controller can be gracefully removed/drained from their rotation.
 	TermDelay time.Duration
+
+	Konnect KonnectConfig
+}
+
+type KonnectConfig struct {
+	ConfigSynchronizationEnabled bool
+	Token                        string
+	RuntimeGroup                 string
+	Address                      string
 }
 
 // -----------------------------------------------------------------------------
@@ -216,6 +224,12 @@ func (c *Config) FlagSet() *pflag.FlagSet {
 	// SIGTERM or SIGINT signal delay
 	flagSet.DurationVar(&c.TermDelay, "term-delay", time.Second*0, "The time delay to sleep before SIGTERM or SIGINT will shut down the Ingress Controller")
 
+	// Konnect
+	flagSet.BoolVar(&c.Konnect.ConfigSynchronizationEnabled, "konnect-sync-enabled", false, "Enable synchronization of dataplane configuration with a Konnect runtime group.")
+	flagSet.StringVar(&c.Konnect.Token, "konnect-access-token", "", "Personal access token to be used to synchronize dataplane configuration with Konnect.")
+	flagSet.StringVar(&c.Konnect.RuntimeGroup, "konnect-runtime-group", "", "An ID of a runtime group (not name!) that is to be synchronized with dataplane configuration.")
+	flagSet.StringVar(&c.Konnect.Address, "konnect-address", "https://api.konghq.com", "Base address of the Konnect API.")
+
 	// Deprecated flags
 
 	flagSet.Float32Var(&c.ProxySyncSeconds, "sync-rate-limit", dataplane.DefaultSyncSeconds, "Use --proxy-sync-seconds instead")
@@ -238,22 +252,30 @@ func (c *Config) FlagSet() *pflag.FlagSet {
 
 // getKongClients returns the kong clients given the provided urls, workspace name
 // and adminAPIConfig.
-func getKongClients(
-	ctx context.Context, urls []string, workspace string, adminAPIConfig adminapi.HTTPClientOpts,
-) ([]*kong.Client, error) {
-	httpclient, err := adminapi.MakeHTTPClient(&adminAPIConfig)
+func getKongClients(ctx context.Context, cfg *Config) ([]*adminapi.Client, error) {
+	httpclient, err := adminapi.MakeHTTPClient(&cfg.KongAdminAPIConfig)
 	if err != nil {
 		return nil, err
 	}
 
-	clients := make([]*kong.Client, 0, len(urls))
-	for _, url := range urls {
-		client, err := adminapi.GetKongClientForWorkspace(ctx, url, workspace, httpclient)
+	clients := make([]*adminapi.Client, 0, len(cfg.KongAdminURL))
+	for _, url := range cfg.KongAdminURL {
+		client, err := adminapi.GetKongClientForWorkspace(ctx, url, cfg.KongWorkspace, httpclient)
 		if err != nil {
 			return nil, err
 		}
 		clients = append(clients, client)
 	}
+
+	if cfg.Konnect.ConfigSynchronizationEnabled {
+		konnectClient, err := adminapi.NewKongClientForKonnect(httpclient, cfg.Konnect.Token, cfg.Konnect.Address, cfg.Konnect.RuntimeGroup)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create kong client for konnect: %w", err)
+		}
+
+		clients = append(clients, konnectClient)
+	}
+
 	return clients, nil
 }
 

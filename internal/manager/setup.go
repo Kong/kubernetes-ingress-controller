@@ -156,11 +156,7 @@ func setupAdmissionServer(
 		return nil
 	}
 
-	kongclients, err := getKongClients(ctx,
-		managerConfig.KongAdminURL,
-		managerConfig.KongWorkspace,
-		managerConfig.KongAdminAPIConfig,
-	)
+	kongclients, err := getKongClients(ctx, managerConfig)
 	if err != nil {
 		return err
 	}

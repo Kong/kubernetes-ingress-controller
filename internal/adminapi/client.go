@@ -4,11 +4,13 @@ import (
 	"context"
 	"crypto/tls"
 	"crypto/x509"
+	"errors"
 	"fmt"
 	"net/http"
 	"os"
 	"sync"
 
+	deckutils "github.com/kong/deck/utils"
 	"github.com/kong/go-kong/kong"
 )
 
@@ -140,18 +142,45 @@ func MakeHTTPClient(opts *HTTPClientOpts) (*http.Client, error) {
 	}, nil
 }
 
+type Client struct {
+	*kong.Client
+
+	isKonnect           bool
+	konnectRuntimeGroup string
+}
+
+func NewClient(c *kong.Client) *Client {
+	return &Client{Client: c}
+}
+
+func NewKonnectClient(c *kong.Client, runtimeGroup string) *Client {
+	return &Client{
+		Client:              c,
+		isKonnect:           true,
+		konnectRuntimeGroup: runtimeGroup,
+	}
+}
+
+func (c *Client) IsKonnect() bool {
+	return c.isKonnect
+}
+
+func (c *Client) KonnectRuntimeGroup() string {
+	return c.konnectRuntimeGroup
+}
+
 // GetKongClientForWorkspace returns a Kong API client for a given root API URL and workspace.
 // If the workspace does not already exist, GetKongClientForWorkspace will create it.
 func GetKongClientForWorkspace(ctx context.Context, adminURL string, wsName string,
 	httpclient *http.Client,
-) (*kong.Client, error) {
+) (*Client, error) {
 	// create the base client, and if no workspace was provided then return that.
 	client, err := kong.NewClient(kong.String(adminURL), httpclient)
 	if err != nil {
 		return nil, fmt.Errorf("creating Kong client: %w", err)
 	}
 	if wsName == "" {
-		return client, nil
+		return NewClient(client), nil
 	}
 
 	// if a workspace was provided, verify whether or not it exists.
@@ -176,5 +205,33 @@ func GetKongClientForWorkspace(ctx context.Context, adminURL string, wsName stri
 	// ensure that we set the workspace appropriately
 	client.SetWorkspace(wsName)
 
-	return client, nil
+	return NewClient(client), nil
+}
+
+func NewKongClientForKonnect(httpClient *http.Client, token, address, runtimeGroup string) (*Client, error) {
+	if token == "" {
+		return nil, errors.New("empty token")
+	}
+	if address == "" {
+		return nil, errors.New("empty address")
+	}
+	if runtimeGroup == "" {
+		return nil, errors.New("empty runtime group")
+	}
+
+	// TODO: when https://github.com/Kong/koko-private/pull/1384 is done we should switch to using KIC-specific
+	// endpoints and pass client cert in headers.
+	headers := []string{"Authorization:Bearer " + token}
+	client, err := deckutils.GetKongClient(deckutils.KongClientConfig{
+		Address:    address + "/konnect-api/api/runtime_groups/" + runtimeGroup,
+		HTTPClient: httpClient,
+		Debug:      false,
+		Headers:    headers,
+		Retryable:  true,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return NewKonnectClient(client, runtimeGroup), nil
 }

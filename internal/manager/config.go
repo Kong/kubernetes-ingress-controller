@@ -3,10 +3,13 @@ package manager
 import (
 	"context"
 	"fmt"
+	"regexp"
+	"strings"
 	"time"
 
 	"github.com/kong/go-kong/kong"
 	"github.com/spf13/pflag"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	cliflag "k8s.io/component-base/cli/flag"
@@ -57,7 +60,6 @@ type Config struct {
 	// Kubernetes configurations
 	KubeconfigPath           string
 	IngressClassName         string
-	EnableLeaderElection     bool
 	LeaderElectionNamespace  string
 	LeaderElectionID         string
 	Concurrency              int
@@ -66,9 +68,10 @@ type Config struct {
 	GatewayAPIControllerName string
 
 	// Ingress status
-	PublishService       string
-	PublishStatusAddress []string
-	UpdateStatus         bool
+	PublishService              string
+	publishServiceNamespaceName types.NamespacedName
+	PublishStatusAddress        []string
+	UpdateStatus                bool
 
 	// Kubernetes API toggling
 	IngressExtV1beta1Enabled      bool
@@ -101,11 +104,36 @@ type Config struct {
 	// helpful for advanced cases with load-balancers so that the ingress
 	// controller can be gracefully removed/drained from their rotation.
 	TermDelay time.Duration
+
+	flagSet *pflag.FlagSet
 }
 
 // -----------------------------------------------------------------------------
 // Controller Manager - Config - Methods
 // -----------------------------------------------------------------------------
+
+// Validate validates the config. With time this logic may grow to invalidate
+// incorrect configurations.
+func (c *Config) Validate() error {
+	if !isControllerNameValid(c.GatewayAPIControllerName) {
+		return fmt.Errorf("--gateway-api-controller-name (%s) is invalid. The expected format is example.com/controller-name", c.GatewayAPIControllerName)
+	}
+
+	// if publish service has been provided, validate it and save the publish
+	// service namespaced name.
+	if c.PublishService != "" {
+		publishServiceSplit := strings.SplitN(c.PublishService, "/", 3)
+		if len(publishServiceSplit) != 2 {
+			return fmt.Errorf("--publish-service was expected to be in format <namespace>/<name> but got %s", c.PublishService)
+		}
+		c.publishServiceNamespaceName = types.NamespacedName{
+			Namespace: publishServiceSplit[0],
+			Name:      publishServiceSplit[1],
+		}
+	}
+
+	return nil
+}
 
 // FlagSet binds the provided Config to commandline flags.
 func (c *Config) FlagSet() *pflag.FlagSet {
@@ -218,7 +246,7 @@ func (c *Config) FlagSet() *pflag.FlagSet {
 
 	// Deprecated flags
 
-	flagSet.Float32Var(&c.ProxySyncSeconds, "sync-rate-limit", dataplane.DefaultSyncSeconds, "Use --proxy-sync-seconds instead")
+	_ = flagSet.Float32("sync-rate-limit", dataplane.DefaultSyncSeconds, "Use --proxy-sync-seconds instead")
 	_ = flagSet.MarkDeprecated("sync-rate-limit", "Use --proxy-sync-seconds instead")
 
 	_ = flagSet.Int("stderrthreshold", 0, "Has no effect and will be removed in future releases (see github issue #1297)")
@@ -230,9 +258,10 @@ func (c *Config) FlagSet() *pflag.FlagSet {
 	_ = flagSet.String("kong-custom-entities-secret", "", "Will be removed in next major release.")
 	_ = flagSet.MarkDeprecated("kong-custom-entities-secret", "Will be removed in next major release.")
 
-	flagSet.BoolVar(&c.EnableLeaderElection, "leader-elect", false, "DEPRECATED as of 2.1.0 leader election behavior is determined automatically and this flag has no effect")
-	_ = flagSet.MarkDeprecated("leader-elect", "DEPRECATED as of 2.1.0 leader election behavior is determined automatically and this flag has no effect")
+	_ = flagSet.Bool("leader-elect", false, "DEPRECATED as of 2.1.0: leader election behavior is determined automatically based on the Kong database setting and this flag has no effect")
+	_ = flagSet.MarkDeprecated("leader-elect", "DEPRECATED as of 2.1.0: leader election behavior is determined automatically based on the Kong database setting and this flag has no effect")
 
+	c.flagSet = flagSet
 	return flagSet
 }
 
@@ -276,4 +305,10 @@ func (c *Config) GetKubeClient() (client.Client, error) {
 		return nil, err
 	}
 	return client.New(conf, client.Options{})
+}
+
+func isControllerNameValid(controllerName string) bool {
+	// https://github.com/kubernetes-sigs/gateway-api/blob/547122f7f55ac0464685552898c560658fb40073/apis/v1beta1/shared_types.go#L448-L463
+	re := regexp.MustCompile(`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*\/[A-Za-z0-9\/\-._~%!$&'()*+,;=:]+$`)
+	return re.Match([]byte(controllerName))
 }

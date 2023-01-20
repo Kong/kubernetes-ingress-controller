@@ -6,13 +6,11 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"regexp"
 	"time"
 
 	"github.com/blang/semver/v4"
 	"github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/runtime"
-	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	knativev1alpha1 "knative.dev/networking/pkg/apis/networking/v1alpha1"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -42,23 +40,10 @@ import (
 func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, deprecatedLogger logrus.FieldLogger) error {
 	setupLog := ctrl.Log.WithName("setup")
 	setupLog.Info("starting controller manager", "release", metadata.Release, "repo", metadata.Repo, "commit", metadata.Commit)
-	setupLog.V(util.DebugLevel).Info("the ingress class name has been set", "value", c.IngressClassName)
-	setupLog.V(util.DebugLevel).Info("building the manager runtime scheme and loading apis into the scheme")
-	scheme := runtime.NewScheme()
-	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
-	utilruntime.Must(konghqcomv1.AddToScheme(scheme))
-	utilruntime.Must(konghqcomv1alpha1.AddToScheme(scheme))
-	utilruntime.Must(configurationv1beta1.AddToScheme(scheme))
-	utilruntime.Must(knativev1alpha1.AddToScheme(scheme))
-	utilruntime.Must(gatewayv1alpha2.AddToScheme(scheme))
-	utilruntime.Must(gatewayv1beta1.AddToScheme(scheme))
-
-	if c.EnableLeaderElection {
-		setupLog.V(0).Info("the --leader-elect flag is deprecated and no longer has any effect: leader election is set based on the Kong database setting")
-	}
+	setupLog.Info("the ingress class name has been set", "value", c.IngressClassName)
 
 	setupLog.Info("getting enabled options and features")
-	featureGates, err := setupFeatureGates(setupLog, c)
+	featureGates, err := setupFeatureGates(setupLog, c.FeatureGates)
 	if err != nil {
 		return fmt.Errorf("failed to configure feature gates: %w", err)
 	}
@@ -68,11 +53,11 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 	if err != nil {
 		return fmt.Errorf("get kubeconfig from file %q: %w", c.KubeconfigPath, err)
 	}
-
 	setupLog.Info("getting the kong admin api client configuration")
 	if c.KongAdminToken != "" {
 		c.KongAdminAPIConfig.Headers = append(c.KongAdminAPIConfig.Headers, "kong-admin-token:"+c.KongAdminToken)
 	}
+
 	kongClients, err := getKongClients(ctx, c.KongAdminURL, c.KongWorkspace, c.KongAdminAPIConfig)
 	if err != nil {
 		return fmt.Errorf("unable to build kong api client(s): %w", err)
@@ -87,13 +72,12 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 	if err != nil {
 		return fmt.Errorf("could not validate Kong admin root(s) configuration: %w", err)
 	}
-
 	semV := semver.Version{Major: v.Major(), Minor: v.Minor(), Patch: v.Patch()}
 	versions.SetKongVersion(semV)
 	kongConfig := sendconfig.New(ctx, setupLog, kongClients, semV, dbMode, c.Concurrency, c.FilterTags)
 
 	setupLog.Info("configuring and building the controller manager")
-	controllerOpts, err := setupControllerOptions(setupLog, c, scheme, dbMode)
+	controllerOpts, err := setupControllerOptions(setupLog, c, dbMode)
 	if err != nil {
 		return fmt.Errorf("unable to setup controller options: %w", err)
 	}
@@ -126,7 +110,7 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 	}
 
 	setupLog.Info("Initializing Dataplane Synchronizer")
-	synchronizer, err := setupDataplaneSynchronizer(setupLog, deprecatedLogger, mgr, dataplaneClient, c)
+	synchronizer, err := setupDataplaneSynchronizer(setupLog, deprecatedLogger, mgr, dataplaneClient, c.ProxySyncSeconds)
 	if err != nil {
 		return fmt.Errorf("unable to initialize dataplane synchronizer: %w", err)
 	}
@@ -190,7 +174,7 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 		// the argument checking the watch namespaces length enables or disables mesh detection. the mesh detect client
 		// attempts to use all namespaces and can't utilize a manager multi-namespaced cache, so if we need to limit
 		// namespace access we just disable mesh detection altogether.
-		if err := mgrutils.RunReport(ctx, kubeconfig, kongConfig, c.PublishService, metadata.Release,
+		if err := mgrutils.RunReport(ctx, kubeconfig, kongConfig, c.PublishService.String(), metadata.Release,
 			len(c.WatchNamespaces) == 0, featureGates); err != nil {
 			setupLog.Error(err, "anonymous reporting failed")
 		}
@@ -202,8 +186,30 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 	return mgr.Start(ctx)
 }
 
-func isControllerNameValid(controllerName string) bool {
-	// https://github.com/kubernetes-sigs/gateway-api/blob/547122f7f55ac0464685552898c560658fb40073/apis/v1beta1/shared_types.go#L448-L463
-	re := regexp.MustCompile(`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*\/[A-Za-z0-9\/\-._~%!$&'()*+,;=:]+$`)
-	return re.Match([]byte(controllerName))
+func getScheme() (*runtime.Scheme, error) {
+	scheme := runtime.NewScheme()
+
+	if err := clientgoscheme.AddToScheme(scheme); err != nil {
+		return nil, err
+	}
+	if err := konghqcomv1.AddToScheme(scheme); err != nil {
+		return nil, err
+	}
+	if err := konghqcomv1alpha1.AddToScheme(scheme); err != nil {
+		return nil, err
+	}
+	if err := configurationv1beta1.AddToScheme(scheme); err != nil {
+		return nil, err
+	}
+	if err := knativev1alpha1.AddToScheme(scheme); err != nil {
+		return nil, err
+	}
+	if err := gatewayv1alpha2.Install(scheme); err != nil {
+		return nil, err
+	}
+	if err := gatewayv1beta1.Install(scheme); err != nil {
+		return nil, err
+	}
+
+	return scheme, nil
 }

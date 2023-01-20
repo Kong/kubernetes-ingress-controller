@@ -95,6 +95,9 @@ Adding a new version? You'll need three changes:
 - Change existing `resolvedRefs` condition in status `HTTPRoute` if there is
   already one to avoid multiple appearance of conditions with same type
   [#3386](https://github.com/Kong/kubernetes-ingress-controller/pull/3386)
+- Event messages for invalid multi-Service backends now indicate their derived
+  Kong resource name.
+  [#3318](https://github.com/Kong/kubernetes-ingress-controller/pull/3318)
 
 ### Deprecated
 

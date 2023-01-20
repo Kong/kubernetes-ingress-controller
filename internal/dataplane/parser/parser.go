@@ -584,7 +584,7 @@ func getServiceEndpoints(
 	// for TCP as this is the default protocol for service ports.
 	protocols := listProtocols(svc)
 
-	// Check if the service is an upstream service either by annotation or controller configuration.
+	// Check if the service is an upstream service through Ingress Class parameters.
 	var isSvcUpstream bool
 	ingressClassParameters, err := getIngressClassParametersOrDefault(s)
 	if err != nil {
@@ -637,19 +637,19 @@ func getEndpoints(
 	getEndpoints func(string, string) (*corev1.Endpoints, error),
 	isSvcUpstream bool,
 ) []util.Endpoint {
-	upsServers := []util.Endpoint{}
-
 	if s == nil || port == nil {
-		return upsServers
+		return []util.Endpoint{}
 	}
 
 	// If service is an upstream service...
 	if isSvcUpstream || annotations.HasServiceUpstreamAnnotation(s.Annotations) {
 		// ... return its address as the only endpoint.
-		return append(upsServers, util.Endpoint{
-			Address: s.Name + "." + s.Namespace + ".svc",
-			Port:    fmt.Sprintf("%v", port.Port),
-		})
+		return []util.Endpoint{
+			{
+				Address: s.Name + "." + s.Namespace + ".svc",
+				Port:    fmt.Sprintf("%v", port.Port),
+			},
+		}
 	}
 
 	log = log.WithFields(logrus.Fields{
@@ -666,26 +666,22 @@ func getEndpoints(
 	// ExternalName services
 	if s.Spec.Type == corev1.ServiceTypeExternalName {
 		log.Debug("found service of type=ExternalName")
-
-		return append(upsServers, util.Endpoint{
-			Address: s.Spec.ExternalName,
-			Port:    port.TargetPort.String(),
-		})
-	}
-	if annotations.HasServiceUpstreamAnnotation(s.Annotations) {
-		return append(upsServers, util.Endpoint{
-			Address: s.Name + "." + s.Namespace + ".svc",
-			Port:    fmt.Sprintf("%v", port.Port),
-		})
+		return []util.Endpoint{
+			{
+				Address: s.Spec.ExternalName,
+				Port:    port.TargetPort.String(),
+			},
+		}
 	}
 
 	log.Debugf("fetching endpoints")
 	ep, err := getEndpoints(s.Namespace, s.Name)
 	if err != nil {
 		log.WithError(err).Error("failed to fetch endpoints")
-		return upsServers
+		return []util.Endpoint{}
 	}
 
+	upsServers := []util.Endpoint{}
 	for _, ss := range ep.Subsets {
 		for _, epPort := range ss.Ports {
 			if !reflect.DeepEqual(epPort.Protocol, proto) {

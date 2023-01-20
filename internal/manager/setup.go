@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"strings"
 	"time"
 
 	"github.com/bombsimon/logrusr/v2"
@@ -12,7 +11,6 @@ import (
 	"github.com/kong/deck/cprint"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
@@ -51,25 +49,7 @@ func SetupLoggers(c *Config, output io.Writer) (logrus.FieldLogger, logr.Logger,
 	return deprecatedLogger, logger, nil
 }
 
-func setupControllerOptions(logger logr.Logger, c *Config, scheme *runtime.Scheme,
-	dbmode string,
-) (ctrl.Options, error) {
-	// some controllers may require additional namespaces to be cached and this
-	// is currently done using the global manager client cache.
-	//
-	// See: https://github.com/Kong/kubernetes-ingress-controller/issues/2004
-	requiredCacheNamespaces := make([]string, 0)
-
-	// if publish service has been provided the namespace for it should be
-	// watched so that controllers can see updates to the service.
-	if c.PublishService != "" {
-		publishServiceSplit := strings.SplitN(c.PublishService, "/", 3)
-		if len(publishServiceSplit) != 2 {
-			return ctrl.Options{}, fmt.Errorf("--publish-service was expected to be in format <namespace>/<name> but got %s", c.PublishService)
-		}
-		requiredCacheNamespaces = append(requiredCacheNamespaces, publishServiceSplit[0])
-	}
-
+func setupControllerOptions(logger logr.Logger, c *Config, dbmode string) (ctrl.Options, error) {
 	var leaderElection bool
 	if dbmode == "off" {
 		logger.Info("DB-less mode detected, disabling leader election")
@@ -77,6 +57,12 @@ func setupControllerOptions(logger logr.Logger, c *Config, scheme *runtime.Schem
 	} else {
 		logger.Info("Database mode detected, enabling leader election")
 		leaderElection = true
+	}
+
+	logger.Info("building the manager runtime scheme and loading apis into the scheme")
+	scheme, err := getScheme()
+	if err != nil {
+		return ctrl.Options{}, err
 	}
 
 	// configure the general controller options
@@ -96,13 +82,21 @@ func setupControllerOptions(logger logr.Logger, c *Config, scheme *runtime.Schem
 		// and we don't have to bother individually caching any particular namespaces
 		controllerOpts.Namespace = corev1.NamespaceAll
 	} else {
+		watchNamespaces := c.WatchNamespaces
+
 		// in all other cases we are a multi-namespace setup and must watch all the
-		// c.WatchNamespaces and additionalNamespacesToCache defined namespaces.
+		// c.WatchNamespaces.
 		// this mode does not set the Namespace option, so the manager will default to watching all namespaces
 		// MultiNamespacedCacheBuilder imposes a filter on top of that watch to retrieve scoped resources
 		// from the watched namespaces only.
-		logger.Info("manager set up with multiple namespaces", "namespaces", c.WatchNamespaces)
-		controllerOpts.NewCache = cache.MultiNamespacedCacheBuilder(append(c.WatchNamespaces, requiredCacheNamespaces...))
+		logger.Info("manager set up with multiple namespaces", "namespaces", watchNamespaces)
+
+		// if publish service has been provided the namespace for it should be
+		// watched so that controllers can see updates to the service.
+		if c.PublishService.NN.String() != "" {
+			watchNamespaces = append(c.WatchNamespaces, c.PublishService.NN.Namespace)
+		}
+		controllerOpts.NewCache = cache.MultiNamespacedCacheBuilder(watchNamespaces)
 	}
 
 	if len(c.LeaderElectionNamespace) > 0 {
@@ -117,19 +111,20 @@ func setupDataplaneSynchronizer(
 	fieldLogger logrus.FieldLogger,
 	mgr manager.Manager,
 	dataplaneClient dataplane.Client,
-	c *Config,
+	proxySyncSeconds float32,
 ) (*dataplane.Synchronizer, error) {
-	if c.ProxySyncSeconds < dataplane.DefaultSyncSeconds {
-		logger.Info(fmt.Sprintf("WARNING: --proxy-sync-seconds is configured for %fs, in DBLESS mode this may result in"+
-			" problems of inconsistency in the proxy state. For DBLESS mode %fs+ is recommended (3s is the default).",
-			c.ProxySyncSeconds, dataplane.DefaultSyncSeconds,
+	if proxySyncSeconds < dataplane.DefaultSyncSeconds {
+		logger.Info(fmt.Sprintf(
+			"WARNING: --proxy-sync-seconds is configured for %fs, in DBLESS mode this may result in"+
+				" problems of inconsistency in the proxy state. For DBLESS mode %fs+ is recommended (3s is the default).",
+			proxySyncSeconds, dataplane.DefaultSyncSeconds,
 		))
 	}
 
 	dataplaneSynchronizer, err := dataplane.NewSynchronizer(
 		fieldLogger.WithField("subsystem", "dataplane-synchronizer"),
 		dataplaneClient,
-		dataplane.WithStagger(time.Second*time.Duration(c.ProxySyncSeconds)),
+		dataplane.WithStagger(time.Duration(proxySyncSeconds*float32(time.Second))),
 	)
 	if err != nil {
 		return nil, err
@@ -207,17 +202,35 @@ func setupDataplaneAddressFinder(
 		// Default
 		if overrideAddrs := c.PublishStatusAddress; len(overrideAddrs) > 0 {
 			dataplaneAddressFinder.SetOverrides(overrideAddrs)
-		} else if c.PublishService != "" {
-			parts := strings.Split(c.PublishService, "/")
-			if len(parts) != 2 {
-				return nil, nil, fmt.Errorf("publish service %s is invalid, expecting <namespace>/<name>", c.PublishService)
-			}
-			nsn := types.NamespacedName{
-				Namespace: parts[0],
-				Name:      parts[1],
-			}
-			getter = generateAddressFinderGetter(mgrc, nsn)
-			dataplaneAddressFinder.SetGetter(getter)
+		} else if c.PublishService.String() != "" {
+			publishServiceNn := c.PublishService.NN
+			dataplaneAddressFinder.SetGetter(func(ctx context.Context) ([]string, error) {
+				svc := new(corev1.Service)
+				if err := mgrc.Get(ctx, publishServiceNn, svc); err != nil {
+					return nil, err
+				}
+
+				var addrs []string
+				switch svc.Spec.Type { //nolint:exhaustive
+				case corev1.ServiceTypeLoadBalancer:
+					for _, lbaddr := range svc.Status.LoadBalancer.Ingress {
+						if lbaddr.IP != "" {
+							addrs = append(addrs, lbaddr.IP)
+						}
+						if lbaddr.Hostname != "" {
+							addrs = append(addrs, lbaddr.Hostname)
+						}
+					}
+				default:
+					addrs = append(addrs, svc.Spec.ClusterIPs...)
+				}
+
+				if len(addrs) == 0 {
+					return nil, fmt.Errorf("waiting for addresses to be provisioned for publish service %s", publishServiceNn)
+				}
+
+				return addrs, nil
+			})
 		} else {
 			return nil, nil, fmt.Errorf("status updates enabled but no method to determine data-plane addresses, need either --publish-service or --publish-status-address")
 		}
@@ -225,16 +238,35 @@ func setupDataplaneAddressFinder(
 		// UDP. falls back to default if not configured
 		if udpOverrideAddrs := c.PublishStatusAddressUDP; len(udpOverrideAddrs) > 0 {
 			udpDataplaneAddressFinder.SetUDPOverrides(udpOverrideAddrs)
-		} else if c.PublishServiceUDP != "" {
-			parts := strings.Split(c.PublishServiceUDP, "/")
-			if len(parts) != 2 {
-				return nil, nil, fmt.Errorf("UDP publish service %s is invalid, expecting <namespace>/<name>", c.PublishService)
-			}
-			nsn := types.NamespacedName{
-				Namespace: parts[0],
-				Name:      parts[1],
-			}
-			udpDataplaneAddressFinder.SetGetter(generateAddressFinderGetter(mgrc, nsn))
+		} else if c.PublishServiceUDP.String() != "" {
+			publishServiceNn := c.PublishServiceUDP.NN
+			udpDataplaneAddressFinder.SetGetter(func(ctx context.Context) ([]string, error) {
+				svc := new(corev1.Service)
+				if err := mgrc.Get(ctx, publishServiceNn, svc); err != nil {
+					return nil, err
+				}
+
+				var addrs []string
+				switch svc.Spec.Type { //nolint:exhaustive
+				case corev1.ServiceTypeLoadBalancer:
+					for _, lbaddr := range svc.Status.LoadBalancer.Ingress {
+						if lbaddr.IP != "" {
+							addrs = append(addrs, lbaddr.IP)
+						}
+						if lbaddr.Hostname != "" {
+							addrs = append(addrs, lbaddr.Hostname)
+						}
+					}
+				default:
+					addrs = append(addrs, svc.Spec.ClusterIPs...)
+				}
+
+				if len(addrs) == 0 {
+					return nil, fmt.Errorf("waiting for addresses to be provisioned for publish service %s", publishServiceNn)
+				}
+
+				return addrs, nil
+			})
 		} else {
 			udpDataplaneAddressFinder.SetGetter(getter)
 		}

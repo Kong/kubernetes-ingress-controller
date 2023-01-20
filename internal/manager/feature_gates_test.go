@@ -16,24 +16,23 @@ func TestFeatureGates(t *testing.T) {
 	baseLogger.SetOutput(out)
 	baseLogger.SetLevel(logrus.DebugLevel)
 	setupLog := logrusr.New(baseLogger)
-	config := new(Config)
 
 	t.Log("verifying feature gates setup defaults when no feature gates are configured")
-	fgs, err := setupFeatureGates(setupLog, config)
+	fgs, err := setupFeatureGates(setupLog, nil)
 	assert.NoError(t, err)
 	assert.Len(t, fgs, len(getFeatureGatesDefaults()))
 
 	t.Log("verifying feature gates setup results when valid feature gates options are present")
-	config.FeatureGates = map[string]bool{gatewayFeature: true}
-	fgs, err = setupFeatureGates(setupLog, config)
+	featureGates := map[string]bool{gatewayFeature: true}
+	fgs, err = setupFeatureGates(setupLog, featureGates)
 	assert.NoError(t, err)
 	assert.True(t, fgs[gatewayFeature])
 
 	t.Log("configuring several invalid feature gates options")
-	config.FeatureGates = map[string]bool{"invalidGateway": true}
+	featureGates = map[string]bool{"invalidGateway": true}
 
 	t.Log("verifying feature gates setup results when invalid feature gates options are present")
-	_, err = setupFeatureGates(setupLog, config)
+	_, err = setupFeatureGates(setupLog, featureGates)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "invalidGateway is not a valid feature")
 }

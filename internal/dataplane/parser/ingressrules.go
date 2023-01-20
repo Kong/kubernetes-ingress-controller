@@ -59,7 +59,7 @@ func (ir *ingressRules) populateServices(log logrus.FieldLogger, s store.Storer,
 
 		// if the Kubernetes services have been deemed invalid, log an error message
 		// and skip the current service.
-		if !servicesAllUseTheSameKongAnnotations(k8sServices, seenAnnotations, failuresCollector) {
+		if !servicesAllUseTheSameKongAnnotations(k8sServices, seenAnnotations, failuresCollector, key) {
 			// The Kong services not having all the k8s services correctly annotated must be marked
 			// as to be skipped.
 			serviceNamesToSkip[key] = nil
@@ -255,6 +255,7 @@ func servicesAllUseTheSameKongAnnotations(
 	services []*corev1.Service,
 	annotations map[string]string,
 	failuresCollector *failures.ResourceFailuresCollector,
+	kongServiceName string,
 ) bool {
 	match := true
 	for _, service := range services {
@@ -270,9 +271,10 @@ func servicesAllUseTheSameKongAnnotations(
 			valueForThisObject, ok := service.Annotations[k]
 			if !ok {
 				failuresCollector.PushResourceFailure(
-					fmt.Sprintf("in the backend group of %d kubernetes services some have the %s annotation while others don't. "+
-						"this is not supported: when multiple services comprise a backend all kong annotations "+
-						"between them must be set to the same value", len(services), k),
+					fmt.Sprintf("Service has inconsistent %s annotation and is used in multi-Service backend %s. "+
+						"All Services in a multi-Service backend must have matching Kong annotations. Review the "+
+						"associated route resource and align annotations in its multi-Service backends.",
+						k, kongServiceName),
 					service.DeepCopy(),
 				)
 				match = false
@@ -282,9 +284,10 @@ func servicesAllUseTheSameKongAnnotations(
 
 			if valueForThisObject != v {
 				failuresCollector.PushResourceFailure(
-					fmt.Sprintf("the value of annotation %s is different between the %d services which comprise this backend. "+
-						"this is not supported: when multiple services comprise a backend all kong annotations "+
-						"between them must be set to the same value", k, len(services)),
+					fmt.Sprintf("Service has inconsistent %s annotation and is used in multi-Service backend %s. "+
+						"All Services in a multi-Service backend must have matching Kong annotations. Review the "+
+						"associated route resource and align annotations in its multi-Service backends.",
+						k, kongServiceName),
 					service.DeepCopy(),
 				)
 				match = false

@@ -11,7 +11,6 @@ import (
 	"github.com/kong/deck/cprint"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -273,37 +272,4 @@ func setupDataplaneAddressFinder(
 	}
 
 	return dataplaneAddressFinder, udpDataplaneAddressFinder, nil
-}
-
-func generateAddressFinderGetter(
-	mgrc client.Client,
-	nsn types.NamespacedName,
-) func(ctx context.Context) ([]string, error) {
-	return func(ctx context.Context) ([]string, error) {
-		svc := new(corev1.Service)
-		if err := mgrc.Get(ctx, nsn, svc); err != nil {
-			return nil, err
-		}
-
-		var addrs []string
-		switch svc.Spec.Type { //nolint:exhaustive
-		case corev1.ServiceTypeLoadBalancer:
-			for _, lbaddr := range svc.Status.LoadBalancer.Ingress {
-				if lbaddr.IP != "" {
-					addrs = append(addrs, lbaddr.IP)
-				}
-				if lbaddr.Hostname != "" {
-					addrs = append(addrs, lbaddr.Hostname)
-				}
-			}
-		default:
-			addrs = append(addrs, svc.Spec.ClusterIPs...)
-		}
-
-		if len(addrs) == 0 {
-			return nil, fmt.Errorf("waiting for addresses to be provisioned for publish service %s/%s", nsn.Namespace, nsn.Name)
-		}
-
-		return addrs, nil
-	}
 }

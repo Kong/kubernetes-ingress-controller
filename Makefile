@@ -132,7 +132,7 @@ _build.debug:
 
 .PHONY: _build.template.debug
 _build.template.debug:
-	go build -o bin/manager-debug -gcflags=all="-N -l" -ldflags " \
+	go build -o bin/manager-debug -trimpath -gcflags=all="-N -l" -ldflags " \
 		-X $(REPO_URL)/v2/internal/manager/metadata.Release=$(TAG) \
 		-X $(REPO_URL)/v2/internal/manager/metadata.Commit=$(COMMIT) \
 		-X $(REPO_URL)/v2/internal/manager/metadata.Repo=$(REPO_INFO)" ${MAIN}

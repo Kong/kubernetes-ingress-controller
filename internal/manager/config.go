@@ -110,6 +110,12 @@ type Config struct {
 // Controller Manager - Config - Methods
 // -----------------------------------------------------------------------------
 
+// Validate validates the config. It should be used to validate the config variables' interdependencies.
+// When a single variable is to be validated, NewValidatedValue should be used.
+func (c *Config) Validate() error {
+	return nil
+}
+
 // FlagSet binds the provided Config to commandline flags.
 func (c *Config) FlagSet() *pflag.FlagSet {
 	flagSet := pflag.NewFlagSet("", pflag.ContinueOnError)

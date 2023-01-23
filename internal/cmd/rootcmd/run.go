@@ -28,6 +28,10 @@ func RunWithLogger(ctx context.Context, c *manager.Config, deprecatedLogger logr
 		return fmt.Errorf("failed to setup signal handler: %w", err)
 	}
 
+	if err := c.Validate(); err != nil {
+		return fmt.Errorf("failed to validate config: %w", err)
+	}
+
 	diag, err := StartDiagnosticsServer(ctx, manager.DiagnosticsPort, c, logger)
 	if err != nil {
 		return fmt.Errorf("failed to start diagnostics server: %w", err)

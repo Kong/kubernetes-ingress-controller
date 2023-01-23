@@ -8,6 +8,7 @@ import (
 
 	"github.com/kong/go-kong/kong"
 	"github.com/spf13/pflag"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	cliflag "k8s.io/component-base/cli/flag"
@@ -66,8 +67,8 @@ type Config struct {
 	GatewayAPIControllerName string
 
 	// Ingress status
-	PublishServiceUDP       FlagNamespacedName
-	PublishService          FlagNamespacedName
+	PublishServiceUDP       types.NamespacedName
+	PublishService          types.NamespacedName
 	PublishStatusAddress    []string
 	PublishStatusAddressUDP []string
 	UpdateStatus            bool
@@ -111,13 +112,9 @@ type Config struct {
 // Controller Manager - Config - Methods
 // -----------------------------------------------------------------------------
 
-// Validate validates the config. With time this logic may grow to invalidate
-// incorrect configurations.
+// Validate validates the config. It should be used to validate the config variables' interdependencies.
+// When a single variable is to be validated, NewValidatedValue should be used.
 func (c *Config) Validate() error {
-	if !isControllerNameValid(c.GatewayAPIControllerName) {
-		return fmt.Errorf("--gateway-api-controller-name (%s) is invalid. The expected format is example.com/controller-name", c.GatewayAPIControllerName)
-	}
-
 	return nil
 }
 
@@ -169,7 +166,7 @@ func (c *Config) FlagSet() *pflag.FlagSet {
 	)
 
 	// Kubernetes configurations
-	flagSet.StringVar(&c.GatewayAPIControllerName, "gateway-api-controller-name", string(gateway.ControllerName), "The controller name to match on Gateway API resources.")
+	flagSet.Var(NewValidatedValueWithDefault(&c.GatewayAPIControllerName, gatewayAPIControllerNameFromFlagValue, string(gateway.ControllerName)), "gateway-api-controller-name", "The controller name to match on Gateway API resources.")
 	flagSet.StringVar(&c.KubeconfigPath, "kubeconfig", "", "Path to the kubeconfig file.")
 	flagSet.StringVar(&c.IngressClassName, "ingress-class", annotations.DefaultIngressClass, `Name of the ingress class to route through this controller.`)
 	flagSet.StringVar(&c.LeaderElectionID, "election-id", "5b374a9e.konghq.com", `Election id to use for status update.`)
@@ -180,12 +177,12 @@ func (c *Config) FlagSet() *pflag.FlagSet {
 		`Namespace(s) to watch for Kubernetes resources. Defaults to all namespaces. To watch multiple namespaces, use a comma-separated list of namespaces.`)
 
 	// Ingress status
-	flagSet.Var(&c.PublishService, "publish-service",
+	flagSet.Var(NewValidatedValue(&c.PublishService, namespacedNameFromFlagValue), "publish-service",
 		`Service fronting Ingress resources in "namespace/name" format. The controller will update Ingress status information with this Service's endpoints.`)
 	flagSet.StringSliceVar(&c.PublishStatusAddress, "publish-status-address", []string{},
 		`User-provided addresses in comma-separated string format, for use in lieu of "publish-service" `+
 			`when that Service lacks useful address information (for example, in bare-metal environments).`)
-	flagSet.Var(&c.PublishServiceUDP, "publish-service-udp", `Service fronting UDP routing resources in
+	flagSet.Var(NewValidatedValue(&c.PublishServiceUDP, namespacedNameFromFlagValue), "publish-service-udp", `Service fronting UDP routing resources in
 			"namespace/name" format. The controller will update UDP route status information with this Service's
 			endpoints. If omitted, the same Service will be used for both TCP and UDP routes.`)
 	flagSet.StringSliceVar(&c.PublishStatusAddressUDP, "publish-status-address-udp", []string{}, `User-provided

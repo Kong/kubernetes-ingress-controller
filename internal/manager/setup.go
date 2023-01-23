@@ -92,8 +92,8 @@ func setupControllerOptions(logger logr.Logger, c *Config, dbmode string) (ctrl.
 
 		// if publish service has been provided the namespace for it should be
 		// watched so that controllers can see updates to the service.
-		if c.PublishService.NN.String() != "" {
-			watchNamespaces = append(c.WatchNamespaces, c.PublishService.NN.Namespace)
+		if c.PublishService.String() != "" {
+			watchNamespaces = append(c.WatchNamespaces, c.PublishService.Namespace)
 		}
 		controllerOpts.NewCache = cache.MultiNamespacedCacheBuilder(watchNamespaces)
 	}
@@ -202,7 +202,7 @@ func setupDataplaneAddressFinder(
 		if overrideAddrs := c.PublishStatusAddress; len(overrideAddrs) > 0 {
 			dataplaneAddressFinder.SetOverrides(overrideAddrs)
 		} else if c.PublishService.String() != "" {
-			publishServiceNn := c.PublishService.NN
+			publishServiceNn := c.PublishService
 			dataplaneAddressFinder.SetGetter(func(ctx context.Context) ([]string, error) {
 				svc := new(corev1.Service)
 				if err := mgrc.Get(ctx, publishServiceNn, svc); err != nil {
@@ -238,7 +238,7 @@ func setupDataplaneAddressFinder(
 		if udpOverrideAddrs := c.PublishStatusAddressUDP; len(udpOverrideAddrs) > 0 {
 			udpDataplaneAddressFinder.SetUDPOverrides(udpOverrideAddrs)
 		} else if c.PublishServiceUDP.String() != "" {
-			publishServiceNn := c.PublishServiceUDP.NN
+			publishServiceNn := c.PublishServiceUDP
 			udpDataplaneAddressFinder.SetGetter(func(ctx context.Context) ([]string, error) {
 				svc := new(corev1.Service)
 				if err := mgrc.Get(ctx, publishServiceNn, svc); err != nil {

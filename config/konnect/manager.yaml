@@ -1,0 +1,49 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: ingress-kong
+  name: ingress-kong
+  namespace: kong
+spec:
+  selector:
+    matchLabels:
+      app: ingress-kong
+  template:
+    metadata:
+      labels:
+        app: ingress-kong
+    spec:
+      containers:
+      - name: ingress-controller
+        command:
+          - /go/bin/dlv
+          - debug
+          - --continue
+          - --accept-multiclient
+          - --listen=:40000
+          - --headless=true
+          - --api-version=2
+          - --log=true
+          - --log-output=debugger,debuglineerr,gdbwire
+          - exec
+          - /manager-debug
+          - --
+        args:
+          - --feature-gates=GatewayAlpha=true
+          - --anonymous-reports=false
+        env:
+        - name: CONTROLLER_KONNECT_ACCESS_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: konnect
+              key: token
+        - name: CONTROLLER_KONNECT_RUNTIME_GROUP
+          value: "adf78c28-5763-4394-a9a4-a9436a1bea7d"
+        - name: CONTROLLER_KONNECT_ADDRESS
+          value: "https://us.api.konghq.tech"
+        - name: CONTROLLER_KONNECT_SYNC_ENABLED
+          value: "true"
+        - name: CONTROLLER_LOG_LEVEL
+          value: debug
+        image: kic-placeholder:placeholder

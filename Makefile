@@ -123,7 +123,8 @@ _build.template:
 	go build -o bin/manager -ldflags "-s -w \
 		-X $(REPO_URL)/v2/internal/manager/metadata.Release=$(TAG) \
 		-X $(REPO_URL)/v2/internal/manager/metadata.Commit=$(COMMIT) \
-		-X $(REPO_URL)/v2/internal/manager/metadata.Repo=$(REPO_INFO)" ${MAIN}
+		-X $(REPO_URL)/v2/internal/manager/metadata.Repo=$(REPO_INFO)" \
+		-gcflags "-trimpath" ${MAIN}
 
 .PHONY: _build.debug
 _build.debug:
@@ -469,6 +470,13 @@ debug.connect:
 debug.skaffold: skaffold
 	TAG=$(TAG)-debug REPO_INFO=$(REPO_INFO) COMMIT=$(COMMIT) \
 		$(SKAFFOLD) debug --port-forward=pods --profile=debug $(SKAFFOLD_FLAGS)
+
+# This will port-forward 40000 from KIC's debugger to localhost. Connect to that
+# port with debugger/IDE of your choice
+.PHONY: debug.konnect.skaffold
+debug.konnect.skaffold: skaffold
+	TAG=$(TAG)-debug REPO_INFO=$(REPO_INFO) COMMIT=$(COMMIT) \
+		$(SKAFFOLD) debug --port-forward=pods --profile=debug-konnect $(SKAFFOLD_FLAGS)
 
 # This will port-forward 40000 from KIC's debugger to localhost. Connect to that
 # port with debugger/IDE of your choice

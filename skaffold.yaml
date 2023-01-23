@@ -57,3 +57,18 @@ profiles:
           TAG: ${{ .TAG }}
           COMMIT: ${{ .COMMIT }}
           REPO_INFO: ${{ .REPO_INFO }}
+- name: debug-konnect
+  manifests:
+    kustomize:
+      paths:
+        - config/konnect
+  build:
+    artifacts:
+      - image: kic-placeholder
+        docker:
+          dockerfile: Dockerfile.debug
+          target: debug
+          buildArgs:
+            TAG: ${{ .TAG }}
+            COMMIT: ${{ .COMMIT }}
+            REPO_INFO: ${{ .REPO_INFO }}

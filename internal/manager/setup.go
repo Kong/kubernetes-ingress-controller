@@ -213,8 +213,8 @@ func setupDataplaneAddressFinder(mgrc client.Client, c *Config, log logr.Logger)
 func buildDataplaneAddressFinder(mgrc client.Client, publishStatusAddress []string, publishServiceNn types.NamespacedName) (*dataplane.AddressFinder, error) {
 	addressFinder := dataplane.NewAddressFinder()
 
-	if overrideAddrs := publishStatusAddress; len(overrideAddrs) > 0 {
-		addressFinder.SetOverrides(overrideAddrs)
+	if len(publishStatusAddress) > 0 {
+		addressFinder.SetOverrides(publishStatusAddress)
 		return addressFinder, nil
 	}
 	if publishServiceNn.String() != "" {

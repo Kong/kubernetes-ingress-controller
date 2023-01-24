@@ -330,7 +330,7 @@ func startPortForwarder(ctx context.Context, t *testing.T, env environments.Envi
 			return true
 		}
 
-		t.Logf("port forwarding command %q output so far: %s", cmd.String(), out.String())
+		t.Logf("port forwarding (via %q) not ready....", cmd.String())
 		return false
 	}, kongComponentWait, time.Second)
 

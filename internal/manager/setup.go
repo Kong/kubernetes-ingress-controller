@@ -2,6 +2,7 @@ package manager
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"time"
@@ -11,6 +12,7 @@ import (
 	"github.com/kong/deck/cprint"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -190,86 +192,65 @@ func setupAdmissionServer(
 // set or the publish service addresses if no overrides are set. If no UDP overrides or UDP publish service are set,
 // the UDP finder will also return the default addresses. If no override or publish service is set, this function
 // returns nil finders and an error.
-func setupDataplaneAddressFinder(
-	mgrc client.Client,
-	c *Config,
-) (*dataplane.AddressFinder, *dataplane.AddressFinder, error) {
-	dataplaneAddressFinder := dataplane.NewAddressFinder()
-	udpDataplaneAddressFinder := dataplane.NewAddressFinder()
-	var getter func(ctx context.Context) ([]string, error)
-	if c.UpdateStatus {
-		// Default
-		if overrideAddrs := c.PublishStatusAddress; len(overrideAddrs) > 0 {
-			dataplaneAddressFinder.SetOverrides(overrideAddrs)
-		} else if c.PublishService.String() != "" {
-			publishServiceNn := c.PublishService
-			dataplaneAddressFinder.SetGetter(func(ctx context.Context) ([]string, error) {
-				svc := new(corev1.Service)
-				if err := mgrc.Get(ctx, publishServiceNn, svc); err != nil {
-					return nil, err
-				}
-
-				var addrs []string
-				switch svc.Spec.Type { //nolint:exhaustive
-				case corev1.ServiceTypeLoadBalancer:
-					for _, lbaddr := range svc.Status.LoadBalancer.Ingress {
-						if lbaddr.IP != "" {
-							addrs = append(addrs, lbaddr.IP)
-						}
-						if lbaddr.Hostname != "" {
-							addrs = append(addrs, lbaddr.Hostname)
-						}
-					}
-				default:
-					addrs = append(addrs, svc.Spec.ClusterIPs...)
-				}
-
-				if len(addrs) == 0 {
-					return nil, fmt.Errorf("waiting for addresses to be provisioned for publish service %s", publishServiceNn)
-				}
-
-				return addrs, nil
-			})
-		} else {
-			return nil, nil, fmt.Errorf("status updates enabled but no method to determine data-plane addresses, need either --publish-service or --publish-status-address")
-		}
-
-		// UDP. falls back to default if not configured
-		if udpOverrideAddrs := c.PublishStatusAddressUDP; len(udpOverrideAddrs) > 0 {
-			udpDataplaneAddressFinder.SetUDPOverrides(udpOverrideAddrs)
-		} else if c.PublishServiceUDP.String() != "" {
-			publishServiceNn := c.PublishServiceUDP
-			udpDataplaneAddressFinder.SetGetter(func(ctx context.Context) ([]string, error) {
-				svc := new(corev1.Service)
-				if err := mgrc.Get(ctx, publishServiceNn, svc); err != nil {
-					return nil, err
-				}
-
-				var addrs []string
-				switch svc.Spec.Type { //nolint:exhaustive
-				case corev1.ServiceTypeLoadBalancer:
-					for _, lbaddr := range svc.Status.LoadBalancer.Ingress {
-						if lbaddr.IP != "" {
-							addrs = append(addrs, lbaddr.IP)
-						}
-						if lbaddr.Hostname != "" {
-							addrs = append(addrs, lbaddr.Hostname)
-						}
-					}
-				default:
-					addrs = append(addrs, svc.Spec.ClusterIPs...)
-				}
-
-				if len(addrs) == 0 {
-					return nil, fmt.Errorf("waiting for addresses to be provisioned for publish service %s", publishServiceNn)
-				}
-
-				return addrs, nil
-			})
-		} else {
-			udpDataplaneAddressFinder.SetGetter(getter)
-		}
+func setupDataplaneAddressFinder(mgrc client.Client, c *Config, log logr.Logger) (*dataplane.AddressFinder, *dataplane.AddressFinder, error) {
+	if !c.UpdateStatus {
+		return nil, nil, nil
 	}
 
-	return dataplaneAddressFinder, udpDataplaneAddressFinder, nil
+	defaultAddressFinder, err := buildDataplaneAddressFinder(mgrc, c.PublishStatusAddress, c.PublishService)
+	if err != nil {
+		return nil, nil, fmt.Errorf("status updates enabled but no method to determine data-plane addresses: %w", err)
+	}
+	udpAddressFinder, err := buildDataplaneAddressFinder(mgrc, c.PublishStatusAddressUDP, c.PublishServiceUDP)
+	if err != nil {
+		log.Info("falling back to a default address finder for UDP", "reason", err.Error())
+		udpAddressFinder = defaultAddressFinder
+	}
+
+	return defaultAddressFinder, udpAddressFinder, nil
+}
+
+func buildDataplaneAddressFinder(mgrc client.Client, publishStatusAddress []string, publishServiceNn types.NamespacedName) (*dataplane.AddressFinder, error) {
+	addressFinder := dataplane.NewAddressFinder()
+
+	if overrideAddrs := publishStatusAddress; len(overrideAddrs) > 0 {
+		addressFinder.SetOverrides(overrideAddrs)
+		return addressFinder, nil
+	}
+	if publishServiceNn.String() != "" {
+		addressFinder.SetGetter(generateAddressFinderGetter(mgrc, publishServiceNn))
+		return addressFinder, nil
+	}
+
+	return nil, errors.New("no publish status address or publish service were provided")
+}
+
+func generateAddressFinderGetter(mgrc client.Client, publishServiceNn types.NamespacedName) func(context.Context) ([]string, error) {
+	return func(ctx context.Context) ([]string, error) {
+		svc := new(corev1.Service)
+		if err := mgrc.Get(ctx, publishServiceNn, svc); err != nil {
+			return nil, err
+		}
+
+		var addrs []string
+		switch svc.Spec.Type { //nolint:exhaustive
+		case corev1.ServiceTypeLoadBalancer:
+			for _, lbaddr := range svc.Status.LoadBalancer.Ingress {
+				if lbaddr.IP != "" {
+					addrs = append(addrs, lbaddr.IP)
+				}
+				if lbaddr.Hostname != "" {
+					addrs = append(addrs, lbaddr.Hostname)
+				}
+			}
+		default:
+			addrs = append(addrs, svc.Spec.ClusterIPs...)
+		}
+
+		if len(addrs) == 0 {
+			return nil, fmt.Errorf("waiting for addresses to be provisioned for publish service %s", publishServiceNn)
+		}
+
+		return addrs, nil
+	}
 }

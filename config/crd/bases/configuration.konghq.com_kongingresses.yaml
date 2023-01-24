@@ -106,8 +106,7 @@ spec:
                 type: integer
               methods:
                 description: 'Methods is a list of HTTP methods that match this Route.
-                  Deprecated: use Ingress'' "konghq.com/override-protocols" annotation
-                  instead.'
+                  Deprecated: use Ingress'' "konghq.com/methods" annotation instead.'
                 items:
                   type: string
                 type: array

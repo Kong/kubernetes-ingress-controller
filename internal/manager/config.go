@@ -67,9 +67,11 @@ type Config struct {
 	GatewayAPIControllerName string
 
 	// Ingress status
-	PublishService       types.NamespacedName
-	PublishStatusAddress []string
-	UpdateStatus         bool
+	PublishServiceUDP       types.NamespacedName
+	PublishService          types.NamespacedName
+	PublishStatusAddress    []string
+	PublishStatusAddressUDP []string
+	UpdateStatus            bool
 
 	// Kubernetes API toggling
 	IngressExtV1beta1Enabled      bool
@@ -180,6 +182,11 @@ func (c *Config) FlagSet() *pflag.FlagSet {
 	flagSet.StringSliceVar(&c.PublishStatusAddress, "publish-status-address", []string{},
 		`User-provided addresses in comma-separated string format, for use in lieu of "publish-service" `+
 			`when that Service lacks useful address information (for example, in bare-metal environments).`)
+	flagSet.Var(NewValidatedValue(&c.PublishServiceUDP, namespacedNameFromFlagValue), "publish-service-udp", `Service fronting UDP routing resources in
+			"namespace/name" format. The controller will update UDP route status information with this Service's
+			endpoints. If omitted, the same Service will be used for both TCP and UDP routes.`)
+	flagSet.StringSliceVar(&c.PublishStatusAddressUDP, "publish-status-address-udp", []string{}, `User-provided
+			address CSV, for use in lieu of "publish-service-udp" when that Service lacks useful address information.`)
 	flagSet.BoolVar(&c.UpdateStatus, "update-status", true,
 		`Indicates if the ingress controller should update the status of resources (e.g. IP/Hostname for v1.Ingress, e.t.c.)`)
 

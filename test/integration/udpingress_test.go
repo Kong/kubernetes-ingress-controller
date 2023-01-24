@@ -144,8 +144,11 @@ func TestUDPIngressEssentials(t *testing.T) {
 		ingresses := curIng.Status.LoadBalancer.Ingress
 		for _, ingress := range ingresses {
 			if len(ingress.Hostname) > 0 || len(ingress.IP) > 0 {
-				t.Logf("udpingress hostname %s or ip %s is ready to redirect traffic.", ingress.Hostname, ingress.IP)
-				return true
+				proxyUDPIP := strings.Split(proxyUDPURL.Hostname(), ":")[0]
+				if ingress.IP == proxyUDPIP {
+					t.Logf("udpingress hostname %s or ip %s is ready to redirect traffic.", ingress.Hostname, ingress.IP)
+					return true
+				}
 			}
 		}
 		return false

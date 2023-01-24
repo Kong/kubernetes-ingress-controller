@@ -1,6 +1,7 @@
 package dataplane
 
 import (
+	"context"
 	"fmt"
 	"net"
 	"strings"
@@ -16,13 +17,14 @@ import (
 
 // AddressGetter is a function which can dynamically retrieve the list of IPs
 // that the data-plane is listening on for ingress network traffic.
-type AddressGetter func() ([]string, error)
+type AddressGetter func(ctx context.Context) ([]string, error)
 
 // AddressFinder is a threadsafe metadata object which can provide the current
 // live addresses in use by the dataplane at any point in time.
 type AddressFinder struct {
-	overrideAddresses []string
-	addressGetter     AddressGetter
+	overrideAddresses    []string
+	overrideAddressesUDP []string
+	addressGetter        AddressGetter
 
 	lock sync.RWMutex
 }
@@ -54,10 +56,19 @@ func (a *AddressFinder) SetOverrides(addrs []string) {
 	a.overrideAddresses = addrs
 }
 
+// SetUDPOverrides hard codes a specific list of addresses to be the UDP addresses
+// that this finder produces for the data-plane. To disable overrides, call
+// this method again with an empty list.
+func (a *AddressFinder) SetUDPOverrides(addrs []string) {
+	a.lock.Lock()
+	defer a.lock.Unlock()
+	a.overrideAddressesUDP = addrs
+}
+
 // GetAddresses provides a list of the addresses which the data-plane is
 // listening on for ingress network traffic. Addresses can either be IP
 // addresses or hostnames.
-func (a *AddressFinder) GetAddresses() ([]string, error) {
+func (a *AddressFinder) GetAddresses(ctx context.Context) ([]string, error) {
 	a.lock.RLock()
 	defer a.lock.RUnlock()
 
@@ -66,22 +77,50 @@ func (a *AddressFinder) GetAddresses() ([]string, error) {
 	}
 
 	if a.addressGetter != nil {
-		return a.addressGetter()
+		return a.addressGetter(ctx)
 	}
 
 	return nil, fmt.Errorf("data-plane addresses can't be retrieved: no valid method available")
+}
+
+// GetUDPAddresses provides a list of the UDP addresses which the data-plane is
+// listening on for ingress network traffic. Addresses can either be IP
+// addresses or hostnames. If UDP settings are not configured, falls back to GetAddresses().
+func (a *AddressFinder) GetUDPAddresses(ctx context.Context) ([]string, error) {
+	a.lock.RLock()
+	defer a.lock.RUnlock()
+
+	if len(a.overrideAddressesUDP) > 0 {
+		return a.overrideAddressesUDP, nil
+	}
+
+	if len(a.overrideAddresses) > 0 && a.addressGetter == nil {
+		return a.overrideAddresses, nil
+	}
+
+	if a.addressGetter != nil {
+		return a.addressGetter(ctx)
+	}
+
+	return a.GetAddresses(ctx)
 }
 
 // GetLoadBalancerAddresses provides a list of the addresses which the
 // data-plane is listening on for ingress network traffic, but provides the
 // addresses in Kubernetes corev1.LoadBalancerIngress format. Addresses can be
 // IP addresses or hostnames.
-func (a *AddressFinder) GetLoadBalancerAddresses() ([]netv1.IngressLoadBalancerIngress, error) {
-	addrs, err := a.GetAddresses()
+func (a *AddressFinder) GetLoadBalancerAddresses(ctx context.Context) ([]netv1.IngressLoadBalancerIngress, error) {
+	addrs, err := a.GetAddresses(ctx)
 	if err != nil {
 		return nil, err
 	}
+	return getAddressHelper(addrs)
+}
 
+// getAddressHelper converts a string slice of addresses (IPs or hostnames) into an IngressLoadBalancerIngress
+// (https://pkg.go.dev/k8s.io/api/networking/v1#IngressLoadBalancerIngress), or an error if one of the given strings
+// is neither a valid IP nor a valid hostname.
+func getAddressHelper(addrs []string) ([]netv1.IngressLoadBalancerIngress, error) {
 	var loadBalancerAddresses []netv1.IngressLoadBalancerIngress
 	for _, addr := range addrs {
 		ing := netv1.IngressLoadBalancerIngress{}
@@ -97,6 +136,18 @@ func (a *AddressFinder) GetLoadBalancerAddresses() ([]netv1.IngressLoadBalancerI
 	}
 
 	return loadBalancerAddresses, nil
+}
+
+// GetUDPLoadBalancerAddresses provides a list of the addresses which the
+// data-plane is listening on for UDP network traffic, but provides the
+// addresses in Kubernetes corev1.LoadBalancerIngress format. Addresses can be
+// IP addresses or hostnames.
+func (a *AddressFinder) GetUDPLoadBalancerAddresses(ctx context.Context) ([]netv1.IngressLoadBalancerIngress, error) {
+	addrs, err := a.GetUDPAddresses(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return getAddressHelper(addrs)
 }
 
 // -----------------------------------------------------------------------------

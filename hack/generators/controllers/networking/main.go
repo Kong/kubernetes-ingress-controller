@@ -206,6 +206,7 @@ var inputControllersNeeded = &typesNeeded{
 		Package:                           kongv1beta1,
 		Plural:                            "udpingresses",
 		CacheType:                         "UDPIngress",
+		IsUDP:                             true,
 		NeedsStatusPermissions:            true,
 		CapableOfStatusUpdates:            true,
 		AcceptsIngressClassNameAnnotation: true,
@@ -333,6 +334,7 @@ type typeNeeded struct {
 	Plural             string
 	CacheType          string
 	RBACVerbs          []string
+	IsUDP              bool
 
 	// AcceptsIngressClassNameAnnotation indicates that the object accepts (and the controller will listen to)
 	// the "kubernetes.io/ingress.class" annotation to decide whether or not the object is supported.
@@ -627,7 +629,11 @@ func (r *{{.PackageAlias}}{{.Kind}}Reconciler) Reconcile(ctx context.Context, re
 		}
 
 		log.V(util.DebugLevel).Info("determining gateway addresses for object status updates", "namespace", req.Namespace, "name", req.Name)
-		addrs, err := r.DataplaneAddressFinder.GetLoadBalancerAddresses()
+		{{- if .IsUDP }}
+		addrs, err := r.DataplaneAddressFinder.GetUDPLoadBalancerAddresses(ctx)
+		{{- else }}
+		addrs, err := r.DataplaneAddressFinder.GetLoadBalancerAddresses(ctx)
+		{{- end }}
 		if err != nil {
 			return ctrl.Result{}, err
 		}

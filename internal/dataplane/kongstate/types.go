@@ -30,7 +30,7 @@ type PortDef struct {
 
 const ImplicitPort = "implicitPort"
 
-func (p *PortDef) CanonicalString() string {
+func (p PortDef) CanonicalString() string {
 	switch p.Mode {
 	case PortModeByNumber:
 		return fmt.Sprintf("%d", p.Number)

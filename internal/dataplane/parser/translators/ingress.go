@@ -21,13 +21,14 @@ import (
 // TranslateIngress receives a Kubernetes ingress object and from it will
 // produce a translated set of kong.Services and kong.Routes which will come
 // wrapped in a kongstate.Service object.
-func TranslateIngress(ingress *netv1.Ingress, addRegexPrefix bool) []*kongstate.Service {
-	index := &ingressTranslationIndex{
-		cache:          make(map[string]*ingressTranslationMeta),
-		addRegexPrefix: addRegexPrefix,
-	}
-	index.add(ingress)
-	kongStateServices := kongstate.Services(index.translate())
+func TranslateIngress(
+	ingress *netv1.Ingress,
+	index *IngressTranslationIndex,
+	addRegexPrefixFn func(string) *string,
+	flagEnabledRegexPathPrefix bool,
+) []*kongstate.Service {
+	index.add(ingress, addRegexPrefixFn)
+	kongStateServices := kongstate.Services(index.translate(flagEnabledRegexPathPrefix))
 	sort.Sort(kongStateServices)
 	return kongStateServices
 }
@@ -53,7 +54,7 @@ const (
 // Ingress Translation - Private - Index
 // -----------------------------------------------------------------------------
 
-// ingressTranslationIndex is a de-duplicating index of the contents of a
+// IngressTranslationIndex is a de-duplicating index of the contents of a
 // Kubernetes Ingress resource, where the key is a combination of data from
 // that resource which makes it unique for the purpose of translating it into
 // kong.Services and kong.Routes and the value is a combination of various
@@ -74,12 +75,17 @@ const (
 //
 // The addRegexPrefix flag indicates if generated regex paths for path type handling include the Kong 3.0+ "~" regular
 // expression prefix.
-type ingressTranslationIndex struct {
-	cache          map[string]*ingressTranslationMeta
-	addRegexPrefix bool
+type IngressTranslationIndex struct {
+	cache map[string]*ingressTranslationMeta
 }
 
-func (i *ingressTranslationIndex) add(ingress *netv1.Ingress) {
+func NewIngressTranslationIndex() *IngressTranslationIndex {
+	return &IngressTranslationIndex{
+		cache: make(map[string]*ingressTranslationMeta),
+	}
+}
+
+func (i *IngressTranslationIndex) add(ingress *netv1.Ingress, addRegexPrefixFn func(string) *string) {
 	for _, ingressRule := range ingress.Spec.Rules {
 		if ingressRule.HTTP == nil || len(ingressRule.HTTP.Paths) < 1 {
 			continue
@@ -99,7 +105,14 @@ func (i *ingressTranslationIndex) add(ingress *netv1.Ingress) {
 			serviceName := httpIngressPath.Backend.Service.Name
 			port := PortDefFromServiceBackendPort(&httpIngressPath.Backend.Service.Port)
 
-			cacheKey := fmt.Sprintf("%s.%s.%s.%s.%s", ingress.Namespace, ingress.Name, ingressRule.Host, serviceName, port.CanonicalString())
+			cacheKey := fmt.Sprintf(
+				"%s.%s.%s.%s.%s",
+				ingress.Namespace,
+				ingress.Name,
+				ingressRule.Host,
+				serviceName,
+				port.CanonicalString(),
+			)
 			meta, ok := i.cache[cacheKey]
 			if !ok {
 				meta = &ingressTranslationMeta{
@@ -110,7 +123,7 @@ func (i *ingressTranslationIndex) add(ingress *netv1.Ingress) {
 					ingressTags:      util.GenerateTagsForObject(ingress),
 					serviceName:      serviceName,
 					servicePort:      port,
-					addRegexPrefix:   i.addRegexPrefix,
+					addRegexPrefixFn: addRegexPrefixFn,
 				}
 			}
 
@@ -121,16 +134,21 @@ func (i *ingressTranslationIndex) add(ingress *netv1.Ingress) {
 	}
 }
 
-func (i *ingressTranslationIndex) translate() []*kongstate.Service {
+func (i *IngressTranslationIndex) translate(flagEnabledRegexPathPrefix bool) []*kongstate.Service {
 	kongStateServiceCache := make(map[string]*kongstate.Service)
 	for _, meta := range i.cache {
-		kongServiceName := fmt.Sprintf("%s.%s.%s.%s", meta.parentIngress.GetNamespace(), meta.parentIngress.GetName(), meta.serviceName, meta.servicePort.CanonicalString())
+		kongServiceName := fmt.Sprintf(
+			"%s.%s.%s",
+			meta.parentIngress.GetNamespace(),
+			meta.serviceName,
+			meta.servicePort.CanonicalString(),
+		)
 		kongStateService, ok := kongStateServiceCache[kongServiceName]
 		if !ok {
 			kongStateService = meta.translateIntoKongStateService(kongServiceName, meta.servicePort)
 		}
 
-		route := meta.translateIntoKongRoutes()
+		route := meta.translateIntoKongRoutes(flagEnabledRegexPathPrefix)
 		kongStateService.Routes = append(kongStateService.Routes, *route)
 
 		kongStateServiceCache[kongServiceName] = kongStateService
@@ -158,15 +176,20 @@ type ingressTranslationMeta struct {
 	serviceName      string
 	servicePort      kongstate.PortDef
 	paths            []netv1.HTTPIngressPath
-	addRegexPrefix   bool
+	addRegexPrefixFn func(string) *string
 }
 
 func (m *ingressTranslationMeta) translateIntoKongStateService(kongServiceName string, portDef kongstate.PortDef) *kongstate.Service {
 	return &kongstate.Service{
 		Namespace: m.parentIngress.GetNamespace(),
 		Service: kong.Service{
-			Name:           kong.String(kongServiceName),
-			Host:           kong.String(fmt.Sprintf("%s.%s.%s.svc", m.serviceName, m.parentIngress.GetNamespace(), portDef.CanonicalString())),
+			Name: kong.String(kongServiceName),
+			Host: kong.String(fmt.Sprintf(
+				"%s.%s.%s.svc",
+				m.serviceName,
+				m.parentIngress.GetNamespace(),
+				portDef.CanonicalString(),
+			)),
 			Port:           kong.Int(defaultHTTPPort),
 			Protocol:       kong.String("http"),
 			Path:           kong.String("/"),
@@ -184,13 +207,20 @@ func (m *ingressTranslationMeta) translateIntoKongStateService(kongServiceName s
 	}
 }
 
-func (m *ingressTranslationMeta) translateIntoKongRoutes() *kongstate.Route {
+func (m *ingressTranslationMeta) translateIntoKongRoutes(flagEnabledRegexPathPrefix bool) *kongstate.Route {
 	ingressHost := m.ingressHost
 	if strings.Contains(ingressHost, "*") {
 		// '_' is not allowed in host, so we use '_' to replace '*' since '*' is not allowed in Kong.
 		ingressHost = strings.ReplaceAll(ingressHost, "*", "_")
 	}
-	routeName := fmt.Sprintf("%s.%s.%s.%s.%s", m.parentIngress.GetNamespace(), m.parentIngress.GetName(), m.serviceName, ingressHost, m.servicePort.CanonicalString())
+	routeName := fmt.Sprintf(
+		"%s.%s.%s.%s.%s",
+		m.parentIngress.GetNamespace(),
+		m.parentIngress.GetName(),
+		m.serviceName,
+		ingressHost,
+		m.servicePort.CanonicalString(),
+	)
 	route := &kongstate.Route{
 		Ingress: util.K8sObjectInfo{
 			Namespace:   m.parentIngress.GetNamespace(),
@@ -214,7 +244,10 @@ func (m *ingressTranslationMeta) translateIntoKongRoutes() *kongstate.Route {
 	}
 
 	for _, httpIngressPath := range m.paths {
-		paths := PathsFromIngressPaths(httpIngressPath, m.addRegexPrefix)
+		paths := PathsFromIngressPaths(httpIngressPath, flagEnabledRegexPathPrefix)
+		for i, path := range paths {
+			paths[i] = m.addRegexPrefixFn(*path)
+		}
 		route.Paths = append(route.Paths, paths...)
 	}
 

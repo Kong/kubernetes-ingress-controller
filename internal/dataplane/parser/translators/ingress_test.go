@@ -5,6 +5,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/kong/go-kong/kong"
+	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
@@ -69,7 +70,7 @@ func TestTranslateIngress(t *testing.T) {
 			expected: []*kongstate.Service{{
 				Namespace: corev1.NamespaceDefault,
 				Service: kong.Service{
-					Name:           kong.String("default.test-ingress.test-service.80"),
+					Name:           kong.String("default.test-service.80"),
 					Host:           kong.String("test-service.default.80.svc"),
 					ConnectTimeout: kong.Int(int(defaultServiceTimeout.Milliseconds())),
 					Path:           kong.String("/"),
@@ -140,7 +141,7 @@ func TestTranslateIngress(t *testing.T) {
 			expected: []*kongstate.Service{{
 				Namespace: corev1.NamespaceDefault,
 				Service: kong.Service{
-					Name:           kong.String("default.test-ingress.test-service.80"),
+					Name:           kong.String("default.test-service.80"),
 					Host:           kong.String("test-service.default.80.svc"),
 					ConnectTimeout: kong.Int(int(defaultServiceTimeout.Milliseconds())),
 					Path:           kong.String("/"),
@@ -212,7 +213,7 @@ func TestTranslateIngress(t *testing.T) {
 			expected: []*kongstate.Service{{
 				Namespace: corev1.NamespaceDefault,
 				Service: kong.Service{
-					Name:           kong.String("default.test-ingress.test-service.80"),
+					Name:           kong.String("default.test-service.80"),
 					Host:           kong.String("test-service.default.80.svc"),
 					ConnectTimeout: kong.Int(int(defaultServiceTimeout.Milliseconds())),
 					Path:           kong.String("/"),
@@ -284,7 +285,7 @@ func TestTranslateIngress(t *testing.T) {
 			expected: []*kongstate.Service{{
 				Namespace: corev1.NamespaceDefault,
 				Service: kong.Service{
-					Name:           kong.String("default.test-ingress.test-service.80"),
+					Name:           kong.String("default.test-service.80"),
 					Host:           kong.String("test-service.default.80.svc"),
 					ConnectTimeout: kong.Int(int(defaultServiceTimeout.Milliseconds())),
 					Path:           kong.String("/"),
@@ -356,7 +357,7 @@ func TestTranslateIngress(t *testing.T) {
 			expected: []*kongstate.Service{{
 				Namespace: corev1.NamespaceDefault,
 				Service: kong.Service{
-					Name:           kong.String("default.test-ingress.test-service.80"),
+					Name:           kong.String("default.test-service.80"),
 					Host:           kong.String("test-service.default.80.svc"),
 					ConnectTimeout: kong.Int(int(defaultServiceTimeout.Milliseconds())),
 					Path:           kong.String("/"),
@@ -427,7 +428,7 @@ func TestTranslateIngress(t *testing.T) {
 			expected: []*kongstate.Service{{
 				Namespace: corev1.NamespaceDefault,
 				Service: kong.Service{
-					Name:           kong.String("default.test-ingress.test-service.80"),
+					Name:           kong.String("default.test-service.80"),
 					Host:           kong.String("test-service.default.80.svc"),
 					ConnectTimeout: kong.Int(int(defaultServiceTimeout.Milliseconds())),
 					Path:           kong.String("/"),
@@ -498,7 +499,7 @@ func TestTranslateIngress(t *testing.T) {
 			expected: []*kongstate.Service{{
 				Namespace: corev1.NamespaceDefault,
 				Service: kong.Service{
-					Name:           kong.String("default.test-ingress.test-service.80"),
+					Name:           kong.String("default.test-service.80"),
 					Host:           kong.String("test-service.default.80.svc"),
 					ConnectTimeout: kong.Int(int(defaultServiceTimeout.Milliseconds())),
 					Path:           kong.String("/"),
@@ -634,7 +635,7 @@ func TestTranslateIngress(t *testing.T) {
 			expected: []*kongstate.Service{{
 				Namespace: corev1.NamespaceDefault,
 				Service: kong.Service{
-					Name:           kong.String("default.test-ingress.test-service.80"),
+					Name:           kong.String("default.test-service.80"),
 					Host:           kong.String("test-service.default.80.svc"),
 					ConnectTimeout: kong.Int(int(defaultServiceTimeout.Milliseconds())),
 					Path:           kong.String("/"),
@@ -776,7 +777,7 @@ func TestTranslateIngress(t *testing.T) {
 			expected: []*kongstate.Service{{
 				Namespace: corev1.NamespaceDefault,
 				Service: kong.Service{
-					Name:           kong.String("default.test-ingress.test-service.80"),
+					Name:           kong.String("default.test-service.80"),
 					Host:           kong.String("test-service.default.80.svc"),
 					ConnectTimeout: kong.Int(int(defaultServiceTimeout.Milliseconds())),
 					Path:           kong.String("/"),
@@ -868,7 +869,7 @@ func TestTranslateIngress(t *testing.T) {
 				{
 					Namespace: corev1.NamespaceDefault,
 					Service: kong.Service{
-						Name:           kong.String("default.test-ingress.test-service1.80"),
+						Name:           kong.String("default.test-service1.80"),
 						Host:           kong.String("test-service1.default.80.svc"),
 						ConnectTimeout: kong.Int(int(defaultServiceTimeout.Milliseconds())),
 						Path:           kong.String("/"),
@@ -911,7 +912,7 @@ func TestTranslateIngress(t *testing.T) {
 				{
 					Namespace: corev1.NamespaceDefault,
 					Service: kong.Service{
-						Name:           kong.String("default.test-ingress.test-service2.80"),
+						Name:           kong.String("default.test-service2.80"),
 						Host:           kong.String("test-service2.default.80.svc"),
 						ConnectTimeout: kong.Int(int(defaultServiceTimeout.Milliseconds())),
 						Path:           kong.String("/"),
@@ -1011,7 +1012,7 @@ func TestTranslateIngress(t *testing.T) {
 				{
 					Namespace: corev1.NamespaceDefault,
 					Service: kong.Service{
-						Name:           kong.String("default.test-ingress.ad-service.80"),
+						Name:           kong.String("default.ad-service.80"),
 						Host:           kong.String("ad-service.default.80.svc"),
 						ConnectTimeout: kong.Int(int(defaultServiceTimeout.Milliseconds())),
 						Path:           kong.String("/"),
@@ -1054,7 +1055,7 @@ func TestTranslateIngress(t *testing.T) {
 				{
 					Namespace: corev1.NamespaceDefault,
 					Service: kong.Service{
-						Name:           kong.String("default.test-ingress.mad-service.80"),
+						Name:           kong.String("default.mad-service.80"),
 						Host:           kong.String("mad-service.default.80.svc"),
 						ConnectTimeout: kong.Int(int(defaultServiceTimeout.Milliseconds())),
 						Path:           kong.String("/"),
@@ -1128,7 +1129,7 @@ func TestTranslateIngress(t *testing.T) {
 			expected: []*kongstate.Service{{
 				Namespace: corev1.NamespaceDefault,
 				Service: kong.Service{
-					Name:           kong.String("default.test-ingress.test-service.80"),
+					Name:           kong.String("default.test-service.80"),
 					Host:           kong.String("test-service.default.80.svc"),
 					ConnectTimeout: kong.Int(int(defaultServiceTimeout.Milliseconds())),
 					Path:           kong.String("/"),
@@ -1202,7 +1203,7 @@ func TestTranslateIngress(t *testing.T) {
 			expected: []*kongstate.Service{{
 				Namespace: corev1.NamespaceDefault,
 				Service: kong.Service{
-					Name:           kong.String("default.test-ingress.test-service.http"),
+					Name:           kong.String("default.test-service.http"),
 					Host:           kong.String("test-service.default.http.svc"),
 					ConnectTimeout: kong.Int(int(defaultServiceTimeout.Milliseconds())),
 					Path:           kong.String("/"),
@@ -1252,6 +1253,8 @@ func TestTranslateIngress(t *testing.T) {
 	for _, tt := range tts {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
+			index := NewIngressTranslationIndex()
+
 			checkOnlyObjectMeta := cmp.Transformer("checkOnlyObjectMeta", func(i *netv1.Ingress) *netv1.Ingress {
 				// In the result we only care about ingresses' metadata being equal.
 				// We ignore specification to simplify tests.
@@ -1259,7 +1262,8 @@ func TestTranslateIngress(t *testing.T) {
 					ObjectMeta: i.ObjectMeta,
 				}
 			})
-			diff := cmp.Diff(tt.expected, TranslateIngress(tt.ingress, tt.addRegexPrefix), checkOnlyObjectMeta)
+			noopAddRegexPrefix := func(s string) *string { return lo.ToPtr(s) }
+			diff := cmp.Diff(tt.expected, TranslateIngress(tt.ingress, index, noopAddRegexPrefix, tt.addRegexPrefix), checkOnlyObjectMeta)
 			require.Empty(t, diff, "expected no difference between expected and translated ingress")
 		})
 	}

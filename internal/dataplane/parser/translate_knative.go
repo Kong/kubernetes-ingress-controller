@@ -82,8 +82,13 @@ func (p *Parser) ingressRulesFromKnativeIngress() ingressRules {
 				r.Hosts = kong.StringSlice(hosts...)
 
 				knativeBackend := knativeSelectSplit(rule.Splits)
-				serviceName := fmt.Sprintf("%s.%s.%s", knativeBackend.ServiceNamespace, knativeBackend.ServiceName,
-					knativeBackend.ServicePort.String())
+				port := translators.PortDefFromIntStr(knativeBackend.ServicePort)
+				serviceName := fmt.Sprintf(
+					"%s.%s.%s",
+					knativeBackend.ServiceNamespace,
+					knativeBackend.ServiceName,
+					port.CanonicalString(),
+				)
 				serviceHost := fmt.Sprintf("%s.%s.%s.svc", knativeBackend.ServiceName, knativeBackend.ServiceNamespace,
 					knativeBackend.ServicePort.String())
 				service, ok := services[serviceName]

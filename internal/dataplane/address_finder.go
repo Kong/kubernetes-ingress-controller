@@ -22,9 +22,8 @@ type AddressGetter func(ctx context.Context) ([]string, error)
 // AddressFinder is a threadsafe metadata object which can provide the current
 // live addresses in use by the dataplane at any point in time.
 type AddressFinder struct {
-	overrideAddresses    []string
-	overrideAddressesUDP []string
-	addressGetter        AddressGetter
+	overrideAddresses []string
+	addressGetter     AddressGetter
 
 	lock sync.RWMutex
 }
@@ -56,15 +55,6 @@ func (a *AddressFinder) SetOverrides(addrs []string) {
 	a.overrideAddresses = addrs
 }
 
-// SetUDPOverrides hard codes a specific list of addresses to be the UDP addresses
-// that this finder produces for the data-plane. To disable overrides, call
-// this method again with an empty list.
-func (a *AddressFinder) SetUDPOverrides(addrs []string) {
-	a.lock.Lock()
-	defer a.lock.Unlock()
-	a.overrideAddressesUDP = addrs
-}
-
 // GetAddresses provides a list of the addresses which the data-plane is
 // listening on for ingress network traffic. Addresses can either be IP
 // addresses or hostnames.
@@ -81,28 +71,6 @@ func (a *AddressFinder) GetAddresses(ctx context.Context) ([]string, error) {
 	}
 
 	return nil, fmt.Errorf("data-plane addresses can't be retrieved: no valid method available")
-}
-
-// GetUDPAddresses provides a list of the UDP addresses which the data-plane is
-// listening on for ingress network traffic. Addresses can either be IP
-// addresses or hostnames. If UDP settings are not configured, falls back to GetAddresses().
-func (a *AddressFinder) GetUDPAddresses(ctx context.Context) ([]string, error) {
-	a.lock.RLock()
-	defer a.lock.RUnlock()
-
-	if len(a.overrideAddressesUDP) > 0 {
-		return a.overrideAddressesUDP, nil
-	}
-
-	if len(a.overrideAddresses) > 0 && a.addressGetter == nil {
-		return a.overrideAddresses, nil
-	}
-
-	if a.addressGetter != nil {
-		return a.addressGetter(ctx)
-	}
-
-	return a.GetAddresses(ctx)
 }
 
 // GetLoadBalancerAddresses provides a list of the addresses which the
@@ -137,22 +105,6 @@ func getAddressHelper(addrs []string) ([]netv1.IngressLoadBalancerIngress, error
 
 	return loadBalancerAddresses, nil
 }
-
-// GetUDPLoadBalancerAddresses provides a list of the addresses which the
-// data-plane is listening on for UDP network traffic, but provides the
-// addresses in Kubernetes corev1.LoadBalancerIngress format. Addresses can be
-// IP addresses or hostnames.
-func (a *AddressFinder) GetUDPLoadBalancerAddresses(ctx context.Context) ([]netv1.IngressLoadBalancerIngress, error) {
-	addrs, err := a.GetUDPAddresses(ctx)
-	if err != nil {
-		return nil, err
-	}
-	return getAddressHelper(addrs)
-}
-
-// -----------------------------------------------------------------------------
-//
-// -----------------------------------------------------------------------------
 
 func isValidHostname(hostname string) error {
 	if hostname == "" {

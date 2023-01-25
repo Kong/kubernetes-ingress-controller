@@ -2,6 +2,7 @@ package dataplane
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sync"
 	"time"
@@ -19,13 +20,15 @@ const (
 	// DefaultSyncSeconds indicates the time.Duration (minimum) that will occur between
 	// updates to the DataplaneClient.
 	//
-	// This 1s default was based on local testing wherein it appeared sub-second updates
+	// This default was based on local testing wherein it appeared sub-second updates
 	// to the Admin API could be problematic (or at least operate differently) based on
 	// which storage backend was in use (i.e. "dbless", "postgres"). This is a workaround
 	// for improvements we still need to investigate upstream.
 	//
 	// See Also: https://github.com/Kong/kubernetes-ingress-controller/issues/1398
 	DefaultSyncSeconds float32 = 3.0
+
+	DefaultInitWaitPeriod = 5 * time.Second
 )
 
 // -----------------------------------------------------------------------------
@@ -39,38 +42,53 @@ type Synchronizer struct {
 
 	// dataplane client to send updates to the Kong Admin API
 	dataplaneClient Client
+	dbMode          string
 
 	// server configuration, flow control, channels and utility attributes
 	stagger         time.Duration
 	syncTicker      *time.Ticker
 	configApplied   bool
 	isServerRunning bool
+	initWaitPeriod  time.Duration
 
 	lock sync.RWMutex
 }
 
-// NewSynchronizer will provide a new Synchronizer object. Note that this
-// starts some background goroutines and the caller is resonsible for marking
-// the provided context.Context as "Done()" to shut down the background routines.
-func NewSynchronizer(logger logrus.FieldLogger, dataplaneClient Client) (*Synchronizer, error) {
-	stagger, err := time.ParseDuration(fmt.Sprintf("%gs", DefaultSyncSeconds))
-	if err != nil {
-		return nil, err
+type SynchronizerOption func(*Synchronizer)
+
+// WithStagger returns a SynchronizerOption which sets the stagger period.
+func WithStagger(period time.Duration) SynchronizerOption {
+	return func(s *Synchronizer) {
+		s.stagger = period
 	}
-	return NewSynchronizerWithStagger(logger, dataplaneClient, stagger)
+}
+
+// WithInitWaitPeriod returns a SynchronizerOption which sets the initial wait period.
+func WithInitWaitPeriod(period time.Duration) SynchronizerOption {
+	return func(s *Synchronizer) {
+		s.initWaitPeriod = period
+	}
 }
 
 // NewSynchronizer will provide a new Synchronizer object with a specified
 // stagger time for data-plane updates to occur. Note that this starts some
 // background goroutines and the caller is resonsible for marking the provided
 // context.Context as "Done()" to shut down the background routines.
-func NewSynchronizerWithStagger(logger logrus.FieldLogger, dataplaneClient Client, stagger time.Duration) (*Synchronizer, error) {
+func NewSynchronizer(logger logrus.FieldLogger, client Client, opts ...SynchronizerOption) (*Synchronizer, error) {
 	synchronizer := &Synchronizer{
 		logger:          logrusr.New(logger),
-		dataplaneClient: dataplaneClient,
-		stagger:         stagger,
+		stagger:         time.Duration(DefaultSyncSeconds),
+		initWaitPeriod:  DefaultInitWaitPeriod,
+		dataplaneClient: client,
 		configApplied:   false,
+		dbMode:          client.DBMode(),
 	}
+
+	for _, opt := range opts {
+		opt(synchronizer)
+	}
+
+	synchronizer.dbMode = client.DBMode()
 
 	return synchronizer, nil
 }
@@ -89,14 +107,13 @@ func (p *Synchronizer) Start(ctx context.Context) error {
 	// TODO https://github.com/Kong/kubernetes-ingress-controller/issues/2249
 	// This is a temporary mitigation to allow some time for controllers to
 	// populate their dataplaneClient cache.
-	case <-time.After(time.Second * 5):
+	case <-time.After(p.initWaitPeriod):
 	case <-ctx.Done():
 		return fmt.Errorf("Synchronizer Start() interrupted: %w", ctx.Err())
 	}
 
 	p.lock.Lock()
 	defer p.lock.Unlock()
-
 	if p.isServerRunning {
 		return fmt.Errorf("server is already running")
 	}
@@ -121,11 +138,11 @@ func (p *Synchronizer) IsRunning() bool {
 // of a controller-runtime Runnable interface to wait for readiness before
 // starting controllers.
 func (p *Synchronizer) IsReady() bool {
+	p.lock.RLock()
+	defer p.lock.RUnlock()
 	// If the proxy is has no database, it is only ready after a successful sync
 	// Otherwise, it has no configuration loaded
-	if p.dataplaneClient.DBMode() == "off" {
-		p.lock.RLock()
-		defer p.lock.RUnlock()
+	if p.dbMode == "off" {
 		return p.configApplied
 	}
 	// If the proxy has a database, it is ready immediately
@@ -152,7 +169,7 @@ func (p *Synchronizer) startUpdateServer(ctx context.Context) {
 		select {
 		case <-ctx.Done():
 			p.logger.Info("context done: shutting down the proxy update server")
-			if err := ctx.Err(); err != nil {
+			if err := ctx.Err(); err != nil && !errors.Is(err, context.Canceled) {
 				p.logger.Error(err, "context completed with error")
 			}
 			p.syncTicker.Stop()
@@ -163,10 +180,11 @@ func (p *Synchronizer) startUpdateServer(ctx context.Context) {
 			p.configApplied = false
 
 			return
+
 		case <-p.syncTicker.C:
 			if err := p.dataplaneClient.Update(ctx); err != nil {
 				p.logger.Error(err, "could not update kong admin")
-				break
+				continue
 			}
 			initialConfig.Do(p.markConfigApplied)
 		}

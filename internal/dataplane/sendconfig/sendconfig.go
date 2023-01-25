@@ -6,11 +6,10 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"net/http"
-	"reflect"
 	"sync"
 	"time"
 
+	"github.com/blang/semver/v4"
 	"github.com/kong/deck/diff"
 	"github.com/kong/deck/dump"
 	"github.com/kong/deck/file"
@@ -23,7 +22,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/deckgen"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/parser"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/failures"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/metrics"
 )
 
@@ -33,46 +32,51 @@ const initialHash = "00000000000000000000000000000000"
 // Sendconfig - Public Functions
 // -----------------------------------------------------------------------------
 
-// PerformUpdate writes `targetContent` and `customEntities` to Kong Admin API specified by `kongConfig`.
+// PerformUpdate writes `targetContent` to Kong Admin API specified by `kongConfig`.
 func PerformUpdate(ctx context.Context,
 	log logrus.FieldLogger,
-	kongConfig *Kong,
+	client *kong.Client,
+	version semver.Version,
+	concurrency int,
 	inMemory bool,
 	reverseSync bool,
 	skipCACertificates bool,
 	targetContent *file.Content,
 	selectorTags []string,
-	customEntities []byte,
 	oldSHA []byte,
 	promMetrics *metrics.CtrlFuncMetrics,
-) ([]byte, error, []parser.TranslationFailure) {
-	newSHA, err := deckgen.GenerateSHA(targetContent, customEntities)
+) ([]byte, error, []failures.ResourceFailure) {
+	newSHA, err := deckgen.GenerateSHA(targetContent)
 	if err != nil {
-		return oldSHA, err, []parser.TranslationFailure{}
+		return oldSHA, err, []failures.ResourceFailure{}
 	}
+
 	// disable optimization if reverse sync is enabled
 	if !reverseSync {
 		// use the previous SHA to determine whether or not to perform an update
-		if equalSHA(oldSHA, newSHA) {
+		if bytes.Equal(oldSHA, newSHA) {
 			if !hasSHAUpdateAlreadyBeenReported(newSHA) {
 				log.Debugf("sha %s has been reported", hex.EncodeToString(newSHA))
 			}
-			// we assume ready as not all Kong versions provide their configuration hash, and their readiness state
-			// is always unknown
+
+			// we assume ready as not all Kong versions provide their configuration hash,
+			// and their readiness state is always unknown
 			ready := true
-			status, err := kongConfig.Client.Status(ctx)
+
+			status, err := client.Status(ctx)
 			if err != nil {
-				log.WithError(err).Error("checking config status failed")
-				log.Debug("configuration state unknown, skipping sync to kong")
-				return oldSHA, nil, []parser.TranslationFailure{}
+				return nil, err, []failures.ResourceFailure{}
 			}
+
 			if status.ConfigurationHash == initialHash {
 				ready = false
 			}
+
 			if ready {
 				log.Debug("no configuration change, skipping sync to kong")
-				return oldSHA, nil, []parser.TranslationFailure{}
+				return oldSHA, nil, []failures.ResourceFailure{}
 			}
+			log.Debugf("starting to send configuration (hash: %s)", status.ConfigurationHash)
 		}
 	}
 
@@ -82,18 +86,19 @@ func PerformUpdate(ctx context.Context,
 	var resourceErrors []ResourceError
 	if inMemory {
 		metricsProtocol = metrics.ProtocolDBLess
-		err, resourceErrors, errParseErr = onUpdateInMemoryMode(ctx, log, targetContent, customEntities, kongConfig)
+		err, resourceErrors, errParseErr = onUpdateInMemoryMode(ctx, log, targetContent, client)
 	} else {
 		metricsProtocol = metrics.ProtocolDeck
-		err = onUpdateDBMode(ctx, targetContent, kongConfig, selectorTags, skipCACertificates)
+		dumpConfig := dump.Config{SelectorTags: selectorTags, SkipCACerts: skipCACertificates}
+		err = onUpdateDBMode(ctx, targetContent, client, dumpConfig, version, concurrency)
 	}
 	timeEnd := time.Now()
 
 	if err != nil {
-		// TODO the collector model doesn't make much sense here since we generate all errors in one go and then toss
+		// TODO TRM the collector model doesn't make much sense here since we generate all errors in one go and then toss
 		// the instance--no immediate need to retain it, but you could. having it in parser is also a bit awkward, it
 		// needs its own package. the translation name is no longer correct either
-		failuresCollector, tfcErr := parser.NewTranslationFailuresCollector(log)
+		failuresCollector, tfcErr := failures.NewResourceFailuresCollector(log)
 		if errParseErr != nil {
 			log.WithError(errParseErr).Error("could not parse error response from Kong")
 		} else {
@@ -117,7 +122,7 @@ func PerformUpdate(ctx context.Context,
 					// list with short fields populated, but won't appear in "describe resource" output. this requires
 					// the UID in the reference, so we either need to get the object using the info given or store
 					// the UID in tags.
-					failuresCollector.PushTranslationFailure(fmt.Sprintf("invalid %s: %s", field, problem), &obj)
+					failuresCollector.PushResourceFailure(fmt.Sprintf("invalid %s: %s", field, problem), &obj)
 					log.Info(fmt.Sprintf("adding failure for %s: %s = %s", ee.Name, field, problem)) // TODO remove
 				}
 			}
@@ -132,7 +137,7 @@ func PerformUpdate(ctx context.Context,
 			metrics.SuccessKey:  metrics.SuccessFalse,
 			metrics.ProtocolKey: metricsProtocol,
 		}).Observe(float64(timeEnd.Sub(timeStart).Milliseconds()))
-		return nil, err, failuresCollector.PopTranslationFailures()
+		return nil, err, failuresCollector.PopResourceFailures()
 	}
 
 	promMetrics.ConfigPushCount.With(prometheus.Labels{
@@ -145,68 +150,18 @@ func PerformUpdate(ctx context.Context,
 		metrics.ProtocolKey: metricsProtocol,
 	}).Observe(float64(timeEnd.Sub(timeStart).Milliseconds()))
 	log.Info("successfully synced configuration to kong.")
-	return newSHA, nil, []parser.TranslationFailure{}
+	return newSHA, nil, []failures.ResourceFailure{}
 }
 
 // -----------------------------------------------------------------------------
 // Sendconfig - Private Functions
 // -----------------------------------------------------------------------------
 
-func renderConfigWithCustomEntities(log logrus.FieldLogger, state *file.Content,
-	customEntitiesJSONBytes []byte,
-) ([]byte, error) {
-	var kongCoreConfig []byte
-	var err error
-
-	kongCoreConfig, err = json.Marshal(state)
-	if err != nil {
-		return nil, fmt.Errorf("marshaling kong config into json: %w", err)
-	}
-
-	// fast path
-	if len(customEntitiesJSONBytes) == 0 {
-		return kongCoreConfig, nil
-	}
-
-	// slow path
-	mergeMap := map[string]interface{}{}
-	var result []byte
-	var customEntities map[string]interface{}
-
-	// unmarshal core config into the merge map
-	err = json.Unmarshal(kongCoreConfig, &mergeMap)
-	if err != nil {
-		return nil, fmt.Errorf("unmarshalling kong config into map[string]interface{}: %w", err)
-	}
-
-	// unmarshal custom entities config into the merge map
-	err = json.Unmarshal(customEntitiesJSONBytes, &customEntities)
-	if err != nil {
-		// do not error out when custom entities are messed up
-		log.WithError(err).Error("failed to unmarshal custom entities from secret data")
-	} else {
-		for k, v := range customEntities {
-			if _, exists := mergeMap[k]; !exists {
-				mergeMap[k] = v
-			}
-		}
-	}
-
-	// construct the final configuration
-	result, err = json.Marshal(mergeMap)
-	if err != nil {
-		err = fmt.Errorf("marshaling final config into JSON: %w", err)
-		return nil, err
-	}
-
-	return result, nil
-}
-
-func onUpdateInMemoryMode(ctx context.Context,
+func onUpdateInMemoryMode(
+	ctx context.Context,
 	log logrus.FieldLogger,
 	state *file.Content,
-	customEntities []byte,
-	kongConfig *Kong,
+	client *kong.Client,
 ) (error, []ResourceError, error) {
 	// Kong will error out if this is set
 	state.Info = nil
@@ -215,47 +170,36 @@ func onUpdateInMemoryMode(ctx context.Context,
 	var parseErr error
 	var resourceErrors []ResourceError
 
-	config, err := renderConfigWithCustomEntities(log, state, customEntities)
+	config, err := json.Marshal(state)
 	if err != nil {
 		return fmt.Errorf("constructing kong configuration: %w", err), resourceErrors, parseErr
 	}
 
-	req, err := http.NewRequest("POST", kongConfig.URL+"/config",
-		bytes.NewReader(config))
-	if err != nil {
-		return fmt.Errorf("creating new HTTP request for /config: %w", err), resourceErrors, parseErr
-	}
-	req.Header.Add("content-type", "application/json")
-
-	queryString := req.URL.Query()
-	queryString.Add("check_hash", "1")
-
-	req.URL.RawQuery = queryString.Encode()
-
-	_, err = kongConfig.Client.Do(ctx, req, nil)
-	if err != nil {
-		if apiError, ok := err.(*kong.APIError); ok {
-			resourceErrors, parseErr = parseFlatEntityErrors(apiError.Raw(), log)
-		}
+	log.WithField("kong_url", client.BaseRootURL()).
+		Debug("sending configuration to Kong Admin API")
+	if err = client.Configs.ReloadDeclarativeRawConfig(ctx, bytes.NewReader(config), true); err != nil {
+		// TODO TRM the other errors aren't getting populated
+		return err, resourceErrors, parseErr
 	}
 
-	return err, resourceErrors, parseErr
+	// TODO TRM ditto
+	return nil, resourceErrors, parseErr
 }
 
-func onUpdateDBMode(ctx context.Context,
+func onUpdateDBMode(
+	ctx context.Context,
 	targetContent *file.Content,
-	kongConfig *Kong,
-	selectorTags []string,
-	skipCACertificates bool,
+	client *kong.Client,
+	dumpConfig dump.Config,
+	version semver.Version,
+	concurrency int,
 ) error {
-	dumpConfig := dump.Config{SelectorTags: selectorTags, SkipCACerts: skipCACertificates}
-
-	cs, err := currentState(ctx, kongConfig, dumpConfig)
+	cs, err := currentState(ctx, client, dumpConfig)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed getting current state for %s: %w", client.BaseRootURL(), err)
 	}
 
-	ts, err := targetState(ctx, targetContent, cs, kongConfig, dumpConfig)
+	ts, err := targetState(ctx, targetContent, cs, version, client, dumpConfig)
 	if err != nil {
 		return deckConfigConflictError{err}
 	}
@@ -263,22 +207,23 @@ func onUpdateDBMode(ctx context.Context,
 	syncer, err := diff.NewSyncer(diff.SyncerOpts{
 		CurrentState:    cs,
 		TargetState:     ts,
-		KongClient:      kongConfig.Client,
+		KongClient:      client,
 		SilenceWarnings: true,
 	})
 	if err != nil {
-		return fmt.Errorf("creating a new syncer: %w", err)
+		return fmt.Errorf("creating a new syncer for %s: %w", client.BaseRootURL(), err)
 	}
 
-	_, errs := syncer.Solve(ctx, kongConfig.Concurrency, false)
+	_, errs := syncer.Solve(ctx, concurrency, false)
 	if errs != nil {
 		return deckutils.ErrArray{Errors: errs}
 	}
+
 	return nil
 }
 
-func currentState(ctx context.Context, kongConfig *Kong, dumpConfig dump.Config) (*state.KongState, error) {
-	rawState, err := dump.Get(ctx, kongConfig.Client, dumpConfig)
+func currentState(ctx context.Context, kongClient *kong.Client, dumpConfig dump.Config) (*state.KongState, error) {
+	rawState, err := dump.Get(ctx, kongClient, dumpConfig)
 	if err != nil {
 		return nil, fmt.Errorf("loading configuration from kong: %w", err)
 	}
@@ -286,20 +231,23 @@ func currentState(ctx context.Context, kongConfig *Kong, dumpConfig dump.Config)
 	return state.Get(rawState)
 }
 
-func targetState(ctx context.Context, targetContent *file.Content, currentState *state.KongState, kongConfig *Kong, dumpConfig dump.Config) (*state.KongState, error) {
+func targetState(
+	ctx context.Context,
+	targetContent *file.Content,
+	currentState *state.KongState,
+	version semver.Version,
+	kongClient *kong.Client,
+	dumpConfig dump.Config,
+) (*state.KongState, error) {
 	rawState, err := file.Get(ctx, targetContent, file.RenderConfig{
 		CurrentState: currentState,
-		KongVersion:  kongConfig.Version,
-	}, dumpConfig, kongConfig.Client)
+		KongVersion:  version,
+	}, dumpConfig, kongClient)
 	if err != nil {
 		return nil, err
 	}
 
 	return state.Get(rawState)
-}
-
-func equalSHA(a, b []byte) bool {
-	return reflect.DeepEqual(a, b)
 }
 
 var (
@@ -315,14 +263,13 @@ var (
 // decisions (such as staggering or stifling duplicate log lines).
 //
 // TODO: This is a bit of a hack for now to keep backwards compat,
-//
-//	but in the future we might configure rolling this into
-//	some object/interface which has this functionality as an
-//	inherent behavior.
+// but in the future we might configure rolling this into
+// some object/interface which has this functionality as an
+// inherent behavior.
 func hasSHAUpdateAlreadyBeenReported(latestUpdateSHA []byte) bool {
 	shaLock.Lock()
 	defer shaLock.Unlock()
-	if equalSHA(latestReportedSHA, latestUpdateSHA) {
+	if bytes.Equal(latestReportedSHA, latestUpdateSHA) {
 		return true
 	}
 	latestReportedSHA = latestUpdateSHA

@@ -24,10 +24,7 @@ func (p *Parser) ingressRulesFromKnativeIngress() ingressRules {
 	// well use the stock Kubernetes resource.
 	icp, err := getIngressClassParametersOrDefault(p.storer)
 	if err != nil {
-		if errors.As(err, &store.ErrNotFound{}) {
-			// not found is expected if no IngressClass exists or IngressClassParameters isn't configured
-			p.logger.Debugf("could not find IngressClassParameters, using defaults: %s", err)
-		} else {
+		if !errors.As(err, &store.ErrNotFound{}) {
 			// anything else is unexpected
 			p.logger.Errorf("could not find IngressClassParameters, using defaults: %s", err)
 		}
@@ -91,7 +88,6 @@ func (p *Parser) ingressRulesFromKnativeIngress() ingressRules {
 					knativeBackend.ServicePort.String())
 				service, ok := services[serviceName]
 				if !ok {
-
 					var headers []string
 					for key, value := range knativeBackend.AppendHeaders {
 						headers = append(headers, key+":"+value)
@@ -115,7 +111,7 @@ func (p *Parser) ingressRulesFromKnativeIngress() ingressRules {
 						Namespace: ingress.Namespace,
 						Backends: []kongstate.ServiceBackend{{
 							Name:    knativeBackend.ServiceName,
-							PortDef: PortDefFromIntStr(knativeBackend.ServicePort),
+							PortDef: translators.PortDefFromIntStr(knativeBackend.ServicePort),
 						}},
 						Parent: ingress,
 					}

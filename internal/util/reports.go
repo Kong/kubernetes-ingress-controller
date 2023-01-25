@@ -70,39 +70,40 @@ func (r *Reporter) once() {
 }
 
 // Run starts the reporter. It will send reports until done is closed.
-func (r Reporter) Run(done <-chan struct{}) {
+func (r Reporter) Run(ctx context.Context) {
 	r.once()
 
-	r.sendStart()
+	r.sendStart(ctx)
 	ticker := time.NewTicker(time.Duration(pingInterval) * time.Second)
 	i := 1
+	done := ctx.Done()
 	for {
 		select {
 		case <-done:
 			return
 		case <-ticker.C:
-			r.sendPing(i * pingInterval)
+			r.sendPing(ctx, i*pingInterval)
 			i++
 		}
 	}
 }
 
-func (r *Reporter) sendStart() {
+func (r *Reporter) sendStart(ctx context.Context) {
 	signal := prd + "-start"
-	r.send(signal, 0)
+	r.send(ctx, signal, 0)
 }
 
-func (r *Reporter) sendPing(uptime int) {
+func (r *Reporter) sendPing(ctx context.Context, uptime int) {
 	signal := prd + "-ping"
-	r.send(signal, uptime)
+	r.send(ctx, signal, uptime)
 }
 
-func (r *Reporter) send(signal string, uptime int) {
+func (r *Reporter) send(ctx context.Context, signal string, uptime int) {
 	message := "<14>signal=" + signal + ";uptime=" +
 		strconv.Itoa(uptime) + ";" + r.serializedInfo
 	// run mesh detection if enabled.
 	if r.MeshDetectionEnabled {
-		meshMessage, err := r.getMeshMessages(context.Background())
+		meshMessage, err := r.getMeshMessages(ctx)
 		if err != nil {
 			// log the error if mesh detection fails,
 			// but still send the messages without mesh detection results.

@@ -7,7 +7,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.10.0
+    controller-gen.kubebuilder.io/version: v0.11.1
   creationTimestamp: null
   name: ingressclassparameterses.configuration.konghq.com
 spec:
@@ -60,7 +60,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.10.0
+    controller-gen.kubebuilder.io/version: v0.11.1
   creationTimestamp: null
   name: kongclusterplugins.configuration.konghq.com
 spec:
@@ -187,6 +187,8 @@ spec:
             description: Protocols configures plugin to run on requests received on
               specific protocols.
             items:
+              description: KongProtocol is a valid Kong protocol. This alias is necessary
+                to deal with https://github.com/kubernetes-sigs/controller-tools/issues/342
               enum:
               - http
               - https
@@ -217,7 +219,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.10.0
+    controller-gen.kubebuilder.io/version: v0.11.1
   creationTimestamp: null
   name: kongconsumers.configuration.konghq.com
 spec:
@@ -282,7 +284,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.10.0
+    controller-gen.kubebuilder.io/version: v0.11.1
   creationTimestamp: null
   name: kongingresses.configuration.konghq.com
 spec:
@@ -321,17 +323,20 @@ spec:
               etc.
             properties:
               connect_timeout:
-                description: The timeout in milliseconds for establishing a connection
-                  to the upstream server.
+                description: "The timeout in milliseconds for\testablishing a connection
+                  to the upstream server. Deprecated: use Service's \"konghq.com/connect-timeout\"
+                  annotation instead."
                 minimum: 0
                 type: integer
               path:
-                description: (optional) The path to be used in requests to the upstream
-                  server.
+                description: '(optional) The path to be used in requests to the upstream
+                  server. Deprecated: use Service''s "konghq.com/path" annotation
+                  instead.'
                 pattern: ^/.*$
                 type: string
               protocol:
-                description: The protocol used to communicate with the upstream.
+                description: 'The protocol used to communicate with the upstream.
+                  Deprecated: use Service''s "konghq.com/protocol" annotation instead.'
                 enum:
                 - http
                 - https
@@ -342,17 +347,20 @@ spec:
                 - udp
                 type: string
               read_timeout:
-                description: The timeout in milliseconds between two successive read
-                  operations for transmitting a request to the upstream server.
+                description: 'The timeout in milliseconds between two successive read
+                  operations for transmitting a request to the upstream server. Deprecated:
+                  use Service''s "konghq.com/read-timeout" annotation instead.'
                 minimum: 0
                 type: integer
               retries:
-                description: The number of retries to execute upon failure to proxy.
+                description: 'The number of retries to execute upon failure to proxy.
+                  Deprecated: use Service''s "konghq.com/retries" annotation instead.'
                 minimum: 0
                 type: integer
               write_timeout:
-                description: The timeout in milliseconds between two successive write
-                  operations for transmitting a request to the upstream server.
+                description: 'The timeout in milliseconds between two successive write
+                  operations for transmitting a request to the upstream server. Deprecated:
+                  use Service''s "konghq.com/write-timeout" annotation instead.'
                 minimum: 0
                 type: integer
             type: object
@@ -366,36 +374,46 @@ spec:
                   items:
                     type: string
                   type: array
-                description: Headers contains one or more lists of values indexed
+                description: 'Headers contains one or more lists of values indexed
                   by header name that will cause this Route to match if present in
                   the request. The Host header cannot be used with this attribute.
+                  Deprecated: use Ingress'' "konghq.com/headers" annotation instead.'
                 type: object
               https_redirect_status_code:
-                description: HTTPSRedirectStatusCode is the status code Kong responds
-                  with when all properties of a Route match except the protocol.
+                description: 'HTTPSRedirectStatusCode is the status code Kong responds
+                  with when all properties of a Route match except the protocol. Deprecated:
+                  use Ingress'' "ingress.kubernetes.io/force-ssl-redirect" or "konghq.com/https-redirect-status-code"
+                  annotations instead.'
                 type: integer
               methods:
-                description: Methods is a list of HTTP methods that match this Route.
+                description: 'Methods is a list of HTTP methods that match this Route.
+                  Deprecated: use Ingress'' "konghq.com/methods" annotation instead.'
                 items:
                   type: string
                 type: array
               path_handling:
-                description: PathHandling controls how the Service path, Route path
+                description: 'PathHandling controls how the Service path, Route path
                   and requested path are combined when sending a request to the upstream.
+                  Deprecated: use Ingress'' "konghq.com/path-handling" annotation
+                  instead.'
                 enum:
                 - v0
                 - v1
                 type: string
               preserve_host:
-                description: PreserveHost sets When matching a Route via one of the
+                description: 'PreserveHost sets When matching a Route via one of the
                   hosts domain names, use the request Host header in the upstream
                   request headers. If set to false, the upstream Host header will
-                  be that of the Service’s host.
+                  be that of the Service’s host. Deprecated: use Ingress'' "konghq.com/preserve-host"
+                  annotation instead.'
                 type: boolean
               protocols:
-                description: Protocols is an array of the protocols this Route should
-                  allow.
+                description: 'Protocols is an array of the protocols this Route should
+                  allow. Deprecated: use Ingress'' "konghq.com/protocols" annotation
+                  instead.'
                 items:
+                  description: KongProtocol is a valid Kong protocol. This alias is
+                    necessary to deal with https://github.com/kubernetes-sigs/controller-tools/issues/342
                   enum:
                   - http
                   - https
@@ -407,27 +425,32 @@ spec:
                   type: string
                 type: array
               regex_priority:
-                description: RegexPriority is a number used to choose which route
+                description: 'RegexPriority is a number used to choose which route
                   resolves a given request when several routes match it using regexes
-                  simultaneously.
+                  simultaneously. Deprecated: use Ingress'' "konghq.com/regex-priority"
+                  annotation instead.'
                 type: integer
               request_buffering:
-                description: RequestBuffering sets whether to enable request body
-                  buffering or not.
+                description: 'RequestBuffering sets whether to enable request body
+                  buffering or not. Deprecated: use Ingress'' "konghq.com/request-buffering"
+                  annotation instead.'
                 type: boolean
               response_buffering:
-                description: ResponseBuffering sets whether to enable response body
-                  buffering or not.
+                description: 'ResponseBuffering sets whether to enable response body
+                  buffering or not. Deprecated: use Ingress'' "konghq.com/response-buffering"
+                  annotation instead.'
                 type: boolean
               snis:
-                description: SNIs is a list of SNIs that match this Route when using
-                  stream routing.
+                description: 'SNIs is a list of SNIs that match this Route when using
+                  stream routing. Deprecated: use Ingress'' "konghq.com/snis" annotation
+                  instead.'
                 items:
                   type: string
                 type: array
               strip_path:
-                description: StripPath sets When matching a Route via one of the paths
-                  strip the matching prefix from the upstream request URL.
+                description: 'StripPath sets When matching a Route via one of the
+                  paths strip the matching prefix from the upstream request URL. Deprecated:
+                  use Ingress'' "konghq.com/strip-path" annotation instead.'
                 type: boolean
             type: object
           upstream:
@@ -610,7 +633,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.10.0
+    controller-gen.kubebuilder.io/version: v0.11.1
   creationTimestamp: null
   name: kongplugins.configuration.konghq.com
 spec:
@@ -733,6 +756,8 @@ spec:
             description: Protocols configures plugin to run on requests received on
               specific protocols.
             items:
+              description: KongProtocol is a valid Kong protocol. This alias is necessary
+                to deal with https://github.com/kubernetes-sigs/controller-tools/issues/342
               enum:
               - http
               - https
@@ -763,7 +788,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.10.0
+    controller-gen.kubebuilder.io/version: v0.11.1
   creationTimestamp: null
   name: tcpingresses.configuration.konghq.com
 spec:
@@ -950,7 +975,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.10.0
+    controller-gen.kubebuilder.io/version: v0.11.1
   creationTimestamp: null
   name: udpingresses.configuration.konghq.com
 spec:
@@ -1638,7 +1663,7 @@ spec:
           value: /dev/stderr
         - name: KONG_ROUTER_FLAVOR
           value: traditional
-        image: kong/kong-gateway:3.0
+        image: kong/kong-gateway:3.1
         lifecycle:
           preStop:
             exec:
@@ -1694,7 +1719,7 @@ spec:
             fieldRef:
               apiVersion: v1
               fieldPath: metadata.namespace
-        image: kong/kubernetes-ingress-controller:2.7.0
+        image: kong/kubernetes-ingress-controller:2.8.1
         imagePullPolicy: IfNotPresent
         livenessProbe:
           failureThreshold: 3

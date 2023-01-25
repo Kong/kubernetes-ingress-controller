@@ -20,6 +20,7 @@ import (
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/failures"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
@@ -51,7 +52,7 @@ type Parser struct {
 	featureEnabledCombinedServiceRoutes             bool
 
 	flagEnabledRegexPathPrefix bool
-	failuresCollector          *TranslationFailuresCollector
+	failuresCollector          *failures.ResourceFailuresCollector
 }
 
 // NewParser produces a new Parser object provided a logging mechanism
@@ -60,7 +61,7 @@ func NewParser(
 	logger logrus.FieldLogger,
 	storer store.Storer,
 ) (*Parser, error) {
-	failuresCollector, err := NewTranslationFailuresCollector(logger)
+	failuresCollector, err := failures.NewResourceFailuresCollector(logger)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create translation errors collector: %w", err)
 	}
@@ -77,9 +78,9 @@ func NewParser(
 // -----------------------------------------------------------------------------
 
 // Build creates a Kong configuration from Ingress and Custom resources
-// defined in Kubernetes. It returns a slice of TranslationFailures which should
+// defined in Kubernetes. It returns a slice of ResourceFailures which should
 // be used to provide users with feedback on Kubernetes objects validity.
-func (p *Parser) Build() (*kongstate.KongState, []TranslationFailure) {
+func (p *Parser) Build() (*kongstate.KongState, []failures.ResourceFailure) {
 	// parse and merge all rules together from all Kubernetes API sources
 	ingressRules := mergeIngressRules(
 		p.ingressRulesFromIngressV1beta1(),
@@ -188,11 +189,11 @@ func (p *Parser) EnableRegexPathPrefix() {
 
 // registerTranslationFailure should be called when any Kubernetes object translation failure is encountered.
 func (p *Parser) registerTranslationFailure(reason string, causingObjects ...client.Object) {
-	p.failuresCollector.PushTranslationFailure(reason, causingObjects...)
+	p.failuresCollector.PushResourceFailure(reason, causingObjects...)
 }
 
-func (p *Parser) popTranslationFailures() []TranslationFailure {
-	return p.failuresCollector.PopTranslationFailures()
+func (p *Parser) popTranslationFailures() []failures.ResourceFailure {
+	return p.failuresCollector.PopResourceFailures()
 }
 
 func knativeIngressToNetworkingTLS(tls []knative.IngressTLS) []netv1.IngressTLS {
@@ -586,7 +587,7 @@ func getServiceEndpoints(
 	// for TCP as this is the default protocol for service ports.
 	protocols := listProtocols(svc)
 
-	// Check if the service is an upstream service either by annotation or controller configuration.
+	// Check if the service is an upstream service through Ingress Class parameters.
 	var isSvcUpstream bool
 	ingressClassParameters, err := getIngressClassParametersOrDefault(s)
 	if err != nil {
@@ -614,7 +615,13 @@ func getServiceEndpoints(
 // If the cluster operators have specified a set of parameters explicitly, it returns those.
 // Otherwise, it returns a default set of parameters.
 func getIngressClassParametersOrDefault(s store.Storer) (configurationv1alpha1.IngressClassParametersSpec, error) {
-	params, err := s.GetIngressClassParametersV1Alpha1()
+	ingressClassName := s.GetIngressClassName()
+	ingressClass, err := s.GetIngressClassV1(ingressClassName)
+	if err != nil {
+		return configurationv1alpha1.IngressClassParametersSpec{}, err
+	}
+
+	params, err := s.GetIngressClassParametersV1Alpha1(ingressClass)
 	if err != nil {
 		return configurationv1alpha1.IngressClassParametersSpec{}, err
 	}
@@ -633,19 +640,19 @@ func getEndpoints(
 	getEndpoints func(string, string) (*corev1.Endpoints, error),
 	isSvcUpstream bool,
 ) []util.Endpoint {
-	upsServers := []util.Endpoint{}
-
 	if s == nil || port == nil {
-		return upsServers
+		return []util.Endpoint{}
 	}
 
 	// If service is an upstream service...
 	if isSvcUpstream || annotations.HasServiceUpstreamAnnotation(s.Annotations) {
 		// ... return its address as the only endpoint.
-		return append(upsServers, util.Endpoint{
-			Address: s.Name + "." + s.Namespace + ".svc",
-			Port:    fmt.Sprintf("%v", port.Port),
-		})
+		return []util.Endpoint{
+			{
+				Address: s.Name + "." + s.Namespace + ".svc",
+				Port:    fmt.Sprintf("%v", port.Port),
+			},
+		}
 	}
 
 	log = log.WithFields(logrus.Fields{
@@ -662,29 +669,24 @@ func getEndpoints(
 	// ExternalName services
 	if s.Spec.Type == corev1.ServiceTypeExternalName {
 		log.Debug("found service of type=ExternalName")
-
-		return append(upsServers, util.Endpoint{
-			Address: s.Spec.ExternalName,
-			Port:    port.TargetPort.String(),
-		})
-	}
-	if annotations.HasServiceUpstreamAnnotation(s.Annotations) {
-		return append(upsServers, util.Endpoint{
-			Address: s.Name + "." + s.Namespace + ".svc",
-			Port:    fmt.Sprintf("%v", port.Port),
-		})
+		return []util.Endpoint{
+			{
+				Address: s.Spec.ExternalName,
+				Port:    port.TargetPort.String(),
+			},
+		}
 	}
 
 	log.Debugf("fetching endpoints")
 	ep, err := getEndpoints(s.Namespace, s.Name)
 	if err != nil {
 		log.WithError(err).Error("failed to fetch endpoints")
-		return upsServers
+		return []util.Endpoint{}
 	}
 
+	upsServers := []util.Endpoint{}
 	for _, ss := range ep.Subsets {
 		for _, epPort := range ss.Ports {
-
 			if !reflect.DeepEqual(epPort.Protocol, proto) {
 				continue
 			}

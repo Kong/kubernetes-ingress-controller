@@ -1,6 +1,9 @@
 package builder
 
-import gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
+import (
+	"github.com/samber/lo"
+	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
+)
 
 // ListenerBuilder is a builder for gateway api Listener.
 // Will set default values, as specified in the gateway API, for fields that are not set.
@@ -52,8 +55,13 @@ func (b *ListenerBuilder) TCP() *ListenerBuilder {
 	return b
 }
 
+func (b *ListenerBuilder) UDP() *ListenerBuilder {
+	b.listener.Protocol = gatewayv1beta1.UDPProtocolType
+	return b
+}
+
 func (b *ListenerBuilder) WithHostname(hostname string) *ListenerBuilder {
-	b.listener.Hostname = addressOf(gatewayv1beta1.Hostname(hostname))
+	b.listener.Hostname = lo.ToPtr(gatewayv1beta1.Hostname(hostname))
 	return b
 }
 

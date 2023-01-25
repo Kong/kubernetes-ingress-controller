@@ -27,8 +27,7 @@ import (
 
 func TestKongIngressEssentials(t *testing.T) {
 	t.Parallel()
-	ns, cleanup := namespace(t)
-	defer cleanup()
+	ns := namespace(t)
 
 	t.Log("deploying a minimal HTTP container deployment to test Ingress routes")
 	testName := "minking"

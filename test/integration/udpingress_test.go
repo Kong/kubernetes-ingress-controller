@@ -43,8 +43,7 @@ func TestUDPIngressEssentials(t *testing.T) {
 		udpMutex.Unlock()
 	}()
 
-	ns, cleanup := namespace(t)
-	defer cleanup()
+	ns := namespace(t)
 
 	t.Log("configuring coredns corefile")
 	cfgmap := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "coredns"}, Data: map[string]string{"Corefile": corefile}}
@@ -145,8 +144,11 @@ func TestUDPIngressEssentials(t *testing.T) {
 		ingresses := curIng.Status.LoadBalancer.Ingress
 		for _, ingress := range ingresses {
 			if len(ingress.Hostname) > 0 || len(ingress.IP) > 0 {
-				t.Logf("udpingress hostname %s or ip %s is ready to redirect traffic.", ingress.Hostname, ingress.IP)
-				return true
+				proxyUDPIP := strings.Split(proxyUDPURL.Hostname(), ":")[0]
+				if ingress.IP == proxyUDPIP {
+					t.Logf("udpingress hostname %s or ip %s is ready to redirect traffic.", ingress.Hostname, ingress.IP)
+					return true
+				}
 			}
 		}
 		return false
@@ -180,8 +182,7 @@ func TestUDPIngressTCPIngressCollision(t *testing.T) {
 	defer udpMutex.Unlock()
 	defer tcpMutex.Unlock()
 
-	ns, cleanup := namespace(t)
-	defer cleanup()
+	ns := namespace(t)
 
 	t.Log("configuring coredns corefile")
 	cfgmap := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "coredns"}, Data: map[string]string{"Corefile": corefile}}

@@ -1,6 +1,7 @@
 package test
 
 import (
+	"fmt"
 	"os/exec"
 	"strings"
 )
@@ -125,6 +126,7 @@ ctFsgXhf5+tDgbBZpcuTMpd3KnaDUYg=
 // from which 192.168.5.2 routes to the host (https://github.com/abiosoft/colima/issues/220)
 //
 // This works if the test runs against a KIND cluster, and does not work against cloud providers (like GKE).
+
 var AdmissionWebhookListenHost = admissionWebhookListenHost()
 
 const (
@@ -143,8 +145,11 @@ func admissionWebhookListenHost() string {
 }
 
 func isColimaHost() bool {
-	out, err := exec.Command("docker", "info", "--format", "{{.Name}}").Output()
+	cmd := exec.Command("docker", "info", "--format", "{{.Name}}")
+	out, err := cmd.CombinedOutput()
 	if err != nil {
+		fmt.Printf("failed to run %q command %s\n", cmd.String(), err)
+		fmt.Println(string(out))
 		return false
 	}
 

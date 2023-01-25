@@ -16,16 +16,26 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 )
 
+func serviceBackendPortToStr(port netv1.ServiceBackendPort) string {
+	if port.Name != "" {
+		return fmt.Sprintf("pname-%s", port.Name)
+	}
+	return fmt.Sprintf("pnum-%d", port.Number)
+}
+
+var priorityForPath = map[netv1.PathType]int{
+	netv1.PathTypeExact:                  300,
+	netv1.PathTypePrefix:                 200,
+	netv1.PathTypeImplementationSpecific: 100,
+}
+
 func (p *Parser) ingressRulesFromIngressV1beta1() ingressRules {
 	result := newIngressRules()
 
 	ingressList := p.storer.ListIngressesV1beta1()
 	icp, err := getIngressClassParametersOrDefault(p.storer)
 	if err != nil {
-		if errors.As(err, &store.ErrNotFound{}) {
-			// not found is expected if no IngressClass exists or IngressClassParameters isn't configured
-			p.logger.Debugf("could not find IngressClassParameters, using defaults: %s", err)
-		} else {
+		if !errors.As(err, &store.ErrNotFound{}) {
 			// anything else is unexpected
 			p.logger.Errorf("could not find IngressClassParameters, using defaults: %s", err)
 		}
@@ -103,7 +113,7 @@ func (p *Parser) ingressRulesFromIngressV1beta1() ingressRules {
 						Namespace: ingress.Namespace,
 						Backends: []kongstate.ServiceBackend{{
 							Name:    rule.Backend.ServiceName,
-							PortDef: PortDefFromIntStr(rule.Backend.ServicePort),
+							PortDef: translators.PortDefFromIntStr(rule.Backend.ServicePort),
 						}},
 						Parent: ingress,
 					}
@@ -150,7 +160,7 @@ func (p *Parser) ingressRulesFromIngressV1beta1() ingressRules {
 				Namespace: ingress.Namespace,
 				Backends: []kongstate.ServiceBackend{{
 					Name:    defaultBackend.ServiceName,
-					PortDef: PortDefFromIntStr(defaultBackend.ServicePort),
+					PortDef: translators.PortDefFromIntStr(defaultBackend.ServicePort),
 				}},
 				Parent: &ingress,
 			}
@@ -183,10 +193,7 @@ func (p *Parser) ingressRulesFromIngressV1() ingressRules {
 	ingressList := p.storer.ListIngressesV1()
 	icp, err := getIngressClassParametersOrDefault(p.storer)
 	if err != nil {
-		if errors.As(err, &store.ErrNotFound{}) {
-			// not found is expected if no IngressClass exists or IngressClassParameters isn't configured
-			p.logger.Debugf("could not find IngressClassParameters, using defaults: %s", err)
-		} else {
+		if !errors.As(err, &store.ErrNotFound{}) {
 			// anything else is unexpected
 			p.logger.Errorf("could not find IngressClassParameters, using defaults: %s", err)
 		}
@@ -267,7 +274,7 @@ func (p *Parser) ingressRulesFromIngressV1() ingressRules {
 						r.Hosts = kong.StringSlice(rule.Host)
 					}
 
-					port := PortDefFromServiceBackendPort(&rulePath.Backend.Service.Port)
+					port := translators.PortDefFromServiceBackendPort(&rulePath.Backend.Service.Port)
 					serviceName := fmt.Sprintf("%s.%s.%s", ingress.Namespace, rulePath.Backend.Service.Name,
 						serviceBackendPortToStr(rulePath.Backend.Service.Port))
 					service, ok := result.ServiceNameToServices[serviceName]
@@ -313,7 +320,7 @@ func (p *Parser) ingressRulesFromIngressV1() ingressRules {
 	if len(allDefaultBackends) > 0 {
 		ingress := allDefaultBackends[0]
 		defaultBackend := allDefaultBackends[0].Spec.DefaultBackend
-		port := PortDefFromServiceBackendPort(&defaultBackend.Service.Port)
+		port := translators.PortDefFromServiceBackendPort(&defaultBackend.Service.Port)
 		serviceName := fmt.Sprintf("%s.%s.%s", allDefaultBackends[0].Namespace, defaultBackend.Service.Name,
 			port.CanonicalString())
 		service, ok := result.ServiceNameToServices[serviceName]
@@ -335,7 +342,7 @@ func (p *Parser) ingressRulesFromIngressV1() ingressRules {
 				Namespace: ingress.Namespace,
 				Backends: []kongstate.ServiceBackend{{
 					Name:    defaultBackend.Service.Name,
-					PortDef: PortDefFromServiceBackendPort(&defaultBackend.Service.Port),
+					PortDef: translators.PortDefFromServiceBackendPort(&defaultBackend.Service.Port),
 				}},
 				Parent: &ingress,
 			}

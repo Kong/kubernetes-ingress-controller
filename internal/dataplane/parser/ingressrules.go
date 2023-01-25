@@ -14,6 +14,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/failures"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/store"
 )
@@ -44,7 +45,7 @@ func mergeIngressRules(objs ...ingressRules) ingressRules {
 
 // populateServices populates the ServiceNameToServices map with additional information
 // and returns a map of services to be skipped.
-func (ir *ingressRules) populateServices(log logrus.FieldLogger, s store.Storer, failuresCollector *TranslationFailuresCollector) map[string]interface{} {
+func (ir *ingressRules) populateServices(log logrus.FieldLogger, s store.Storer, failuresCollector *failures.ResourceFailuresCollector) map[string]interface{} {
 	serviceNamesToSkip := make(map[string]interface{})
 
 	// populate Kubernetes Service
@@ -59,7 +60,7 @@ func (ir *ingressRules) populateServices(log logrus.FieldLogger, s store.Storer,
 
 		// if the Kubernetes services have been deemed invalid, log an error message
 		// and skip the current service.
-		if !servicesAllUseTheSameKongAnnotations(k8sServices, seenAnnotations, failuresCollector) {
+		if !servicesAllUseTheSameKongAnnotations(k8sServices, seenAnnotations, failuresCollector, key) {
 			// The Kong services not having all the k8s services correctly annotated must be marked
 			// as to be skipped.
 			serviceNamesToSkip[key] = nil
@@ -77,7 +78,7 @@ func (ir *ingressRules) populateServices(log logrus.FieldLogger, s store.Storer,
 				secretKey := k8sService.Namespace + "/" + secretName
 				secret, err := s.GetSecret(k8sService.Namespace, secretName)
 				if err != nil {
-					failuresCollector.PushTranslationFailure(
+					failuresCollector.PushResourceFailure(
 						fmt.Sprintf("failed to fetch secret '%s': %v", secretKey, err), k8sService,
 					)
 					continue
@@ -257,7 +258,8 @@ func getK8sServicesForBackends(
 func servicesAllUseTheSameKongAnnotations(
 	services []*corev1.Service,
 	annotations map[string]string,
-	failuresCollector *TranslationFailuresCollector,
+	failuresCollector *failures.ResourceFailuresCollector,
+	kongServiceName string,
 ) bool {
 	match := true
 	for _, service := range services {
@@ -272,10 +274,11 @@ func servicesAllUseTheSameKongAnnotations(
 		for k, v := range annotations {
 			valueForThisObject, ok := service.Annotations[k]
 			if !ok {
-				failuresCollector.PushTranslationFailure(
-					fmt.Sprintf("in the backend group of %d kubernetes services some have the %s annotation while others don't. "+
-						"this is not supported: when multiple services comprise a backend all kong annotations "+
-						"between them must be set to the same value", len(services), k),
+				failuresCollector.PushResourceFailure(
+					fmt.Sprintf("Service has inconsistent %s annotation and is used in multi-Service backend %s. "+
+						"All Services in a multi-Service backend must have matching Kong annotations. Review the "+
+						"associated route resource and align annotations in its multi-Service backends.",
+						k, kongServiceName),
 					service.DeepCopy(),
 				)
 				match = false
@@ -284,10 +287,11 @@ func servicesAllUseTheSameKongAnnotations(
 			}
 
 			if valueForThisObject != v {
-				failuresCollector.PushTranslationFailure(
-					fmt.Sprintf("the value of annotation %s is different between the %d services which comprise this backend. "+
-						"this is not supported: when multiple services comprise a backend all kong annotations "+
-						"between them must be set to the same value", k, len(services)),
+				failuresCollector.PushResourceFailure(
+					fmt.Sprintf("Service has inconsistent %s annotation and is used in multi-Service backend %s. "+
+						"All Services in a multi-Service backend must have matching Kong annotations. Review the "+
+						"associated route resource and align annotations in its multi-Service backends.",
+						k, kongServiceName),
 					service.DeepCopy(),
 				)
 				match = false

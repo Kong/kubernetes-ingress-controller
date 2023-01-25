@@ -1,55 +1,88 @@
 package object
 
-import "sigs.k8s.io/controller-runtime/pkg/client"
-
-type (
-	gvk       string
-	namespace string
-	name      string
+import (
+	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-// Set is a de-duplicating list of Kubernetes objects used to test whether an
-// object is a member of the set.
-type Set struct {
-	store map[gvk]map[namespace]map[name]struct{}
+type (
+	gvk string
+)
+
+type objectConfigurationStatus struct {
+	generation int64
+	succeeded  bool
 }
 
-func (s *Set) Insert(objs ...client.Object) {
-	for _, obj := range objs {
-		if s.store == nil {
-			s.store = make(map[gvk]map[namespace]map[name]struct{})
-		}
+type ConfigurationStatus string
 
-		objGVK := obj.GetObjectKind().GroupVersionKind().String()
-		objNS := obj.GetNamespace()
-		objName := obj.GetName()
+const (
+	ConfigurationStatusSucceeded ConfigurationStatus = "Succeeded"
+	ConfigurationStatusFailed    ConfigurationStatus = "Failed"
+	ConfigurationStatusUnknown   ConfigurationStatus = "Unknown"
+)
 
-		if s.store[gvk(objGVK)] == nil {
-			s.store[gvk(objGVK)] = make(map[namespace]map[name]struct{})
-		}
+// ConfigurationStatusSet is a de-duplicate set to store the configure status
+// (succeeded, failed, unknown) of kubernetes objects.
+type ConfigurationStatusSet struct {
+	store map[gvk]map[types.NamespacedName]objectConfigurationStatus
+}
 
-		if s.store[gvk(objGVK)][namespace(objNS)] == nil {
-			s.store[gvk(objGVK)][namespace(objNS)] = make(map[name]struct{})
-		}
-
-		s.store[gvk(objGVK)][namespace(objNS)][name(objName)] = struct{}{}
+func NewConfigurationStatusSet() *ConfigurationStatusSet {
+	return &ConfigurationStatusSet{
+		store: map[gvk]map[types.NamespacedName]objectConfigurationStatus{},
 	}
 }
 
-func (s *Set) Has(obj client.Object) bool {
-	gvkStr := obj.GetObjectKind().GroupVersionKind().String()
-	gvkMap, ok := s.store[gvk(gvkStr)]
-	if !ok {
-		return false
+func (s *ConfigurationStatusSet) Insert(obj client.Object, succeeded bool) {
+	if s.store == nil {
+		s.store = make(map[gvk]map[types.NamespacedName]objectConfigurationStatus)
 	}
 
-	namespaceStr := obj.GetNamespace()
-	namespaceMap, ok := gvkMap[namespace(namespaceStr)]
-	if !ok {
-		return false
+	objGVK := gvk(obj.GetObjectKind().GroupVersionKind().String())
+	nsName := types.NamespacedName{
+		Namespace: obj.GetNamespace(),
+		Name:      obj.GetName(),
+	}
+	if s.store[objGVK] == nil {
+		s.store[objGVK] = make(map[types.NamespacedName]objectConfigurationStatus)
+	}
+	s.store[objGVK][nsName] = objectConfigurationStatus{
+		generation: obj.GetGeneration(),
+		succeeded:  succeeded,
+	}
+}
+
+func (s *ConfigurationStatusSet) Get(obj client.Object) ConfigurationStatus {
+	if s.store == nil {
+		return ConfigurationStatusUnknown
 	}
 
-	objName := obj.GetName()
-	_, ok = namespaceMap[name(objName)]
-	return ok
+	objGVK := gvk(obj.GetObjectKind().GroupVersionKind().String())
+	nsName := types.NamespacedName{
+		Namespace: obj.GetNamespace(),
+		Name:      obj.GetName(),
+	}
+
+	gvkMap, ok := s.store[objGVK]
+	if !ok {
+		return ConfigurationStatusUnknown
+	}
+
+	status, ok := gvkMap[nsName]
+	if !ok {
+		return ConfigurationStatusUnknown
+	}
+
+	// if the object generation is newer than the generation of current configuration,
+	// the latest specification of the object may still not configured on Kong gateway, so "Unknown" is returned.
+	if status.generation < obj.GetGeneration() {
+		return ConfigurationStatusUnknown
+	}
+
+	if !status.succeeded {
+		return ConfigurationStatusFailed
+	}
+
+	return ConfigurationStatusSucceeded
 }

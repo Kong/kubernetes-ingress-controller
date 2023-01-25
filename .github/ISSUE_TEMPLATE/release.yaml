@@ -23,6 +23,15 @@ body:
       - label: Kubernetes (via [KIND](https://hub.docker.com/r/kindest/node/tags) and the latest image available when creating a new rapid channel cluster from the GKE new cluster wizard)
       - label: Istio (via [Istio's releases page](https://github.com/istio/istio/releases))
 - type: checkboxes
+  id: gateway_version
+  attributes:
+    label: "Bump Kong Gateway version in manifests"
+    options:
+      - label: "Note: it might be possible that the latest Gateway version is not compatible with KIC and code changes are required. In such case, a decision whether to release with no compliance with the latest Gateway version should be made on a team level."
+      - label: Check the latest minor Kong Gateway release in [Kong releases](https://github.com/Kong/kong/releases).
+      - label: Make sure the image tag in `config/image/enterprise/kustomization.yaml`, `config/image/oss/kustomization.yaml`, and `config/variants/enterprise/kustomization.yaml` is updated accordingly.
+      - label: Run `make manifests` to regenerate manifests using the modified kustomizations and open a PR with the changes (similarly to [this PR](https://github.com/Kong/kubernetes-ingress-controller/pull/3288)).
+- type: checkboxes
   id: release_branch
   attributes:
     label: "**For all releases** Create Release Branch"
@@ -30,7 +39,9 @@ body:
       - label: "ensure that you have up to date copy of `main`: git checkout main; git pull"
       - label: "create the release branch for the version (e.g. `release/1.3.1`): `git branch -m release/x.y.z`"
       - label: Make any final adjustments to CHANGELOG.md. Double-check that dates are correct, that link anchors point to the correct header, and that you've included a link to the Github compare link at the end.
-      - label: retrieve the latest license report from FOSSA and save it to LICENSES
+      - label: Resolve all licensing issues that FOSSA has detected. Go to Issues tab in FOSSA's KIC project and resolve every issue, inspecting if it's a false positive or not. [ignored.go](https://github.com/Kong/team-k8s/blob/main/fossa/ignored.go) script should be useful to look for issues that have been already resolved and reappeared due to version changes.
+      - label: Update [ignored.json](https://github.com/Kong/team-k8s/blob/main/fossa/kubernetes-ingress-controller/ignored.json) following instructions in [README](https://github.com/Kong/team-k8s/blob/main/fossa/README.md).
+      - label: Retrieve the latest license report from FOSSA and save it to LICENSES (go to Reports tab in FOSSA's KIC project, select 'plain text' format, tick 'direct dependencies' and download it).
       - label: "ensure base manifest versions use the new version (`config/image/enterprise/kustomization.yaml` and `config/image/oss/kustomization.yaml`) and update manifest files: `make manifests`"
       - label: "push the branch up to the remote: `git push --set-upstream origin release/x.y.z`"
 - type: checkboxes
@@ -51,24 +62,19 @@ body:
       - label: Click publish button for all tags related to the release that were pushed to the portal. That will publish the image to Red Hat Catalog.
       - label: Make sure the latest tag was added when asked. If forgot, the tag can be added from the dropdown menu.
 - type: checkboxes
-  id: synchronize_documentation
-  attributes:
-    label: "**For all releases** Synchronize documentation with docs.konghq.com"
-    options:
-      - label: Trigger [synchronize_docs](https://github.com/Kong/kubernetes-ingress-controller/blob/main/.github/workflows/synchronize_docs.yaml) workflow.
-      - label: Ensure the PR is created in [docs.konghq.com](https://github.com/Kong/docs.konghq.com/pulls) repository.
-      - label: Review and approve the PR if everything looks correct.
-- type: checkboxes
   id: release_documents
   attributes:
     label: "**For major/minor releases only** Update Release documents"
     options:
-      - label: Create a new branch in the [documentation site repo](https://github.com/Kong/docs.konghq.com).
+      - label: Trigger [release_docs](https://github.com/Kong/kubernetes-ingress-controller/blob/main/.github/workflows/release_docs.yaml) workflow. Note that you will need to update the new version's navigation manifest (e.g. [for 2.7](https://github.com/Kong/docs.konghq.com/blob/main/app/_data/docs_nav_kic_2.7.x.yml) to use the new file after.
+      - label: Ensure a draft PR is created in [docs.konghq.com](https://github.com/Kong/docs.konghq.com/pulls) repository.
       - label: Update articles in the new version as needed.
       - label: Update `references/version-compatibility.md` to include the new versions (make sure you capture any new Kubernetes/Istio versions that have been tested)
       - label: Copy `app/_data/docs_nav_kic_OLDVERSION.yml` to `app/_data/docs_nav_kic_NEWVERSION.yml` and update the `release` field to `NEWVERSION`. Add entries for any new articles.
+      - label: Make sure that `app/_data/docs_nav_kic_NEWVERSION.yml` links to the latest generated `custom-resources-X.X.X.md`.
       - label: Add a section to `app/_data/kong_versions.yml` for your version.
-      - label: Open a PR from your branch.
+      - label: "Add entries in support policy documents: `app/_includes/md/support-policy.md` and `app/_src/kubernetes-ingress-controller/support-policy.md`."
+      - label: Mark the PR ready for review.
       - label: Inform and ping the @team-k8s via slack of impending release with a link to the release PR.
 - type: textarea
   id: release_trouble_shooting_link

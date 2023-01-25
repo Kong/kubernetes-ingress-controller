@@ -31,12 +31,12 @@ const (
 )
 
 // setupFeatureGates converts feature gates to controller enablement.
-func setupFeatureGates(setupLog logr.Logger, c *Config) (map[string]bool, error) {
+func setupFeatureGates(setupLog logr.Logger, featureGates map[string]bool) (map[string]bool, error) {
 	// generate a map of feature gates by string names to their controller enablement
 	ctrlMap := getFeatureGatesDefaults()
 
 	// override the default settings
-	for feature, enabled := range c.FeatureGates {
+	for feature, enabled := range featureGates {
 		setupLog.Info("found configuration option for gated feature", "feature", feature, "enabled", enabled)
 		_, ok := ctrlMap[feature]
 		if !ok {

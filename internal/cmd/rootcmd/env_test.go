@@ -3,7 +3,6 @@ package rootcmd
 import (
 	"fmt"
 	"io"
-	"os"
 	"strings"
 	"testing"
 
@@ -34,12 +33,8 @@ func TestBindEnvVars(t *testing.T) {
 	cmd.Flags().String("flag-3", "default3", "Set by args only")
 	cmd.Flags().String("flag-4", "default4", "Set by both env and args")
 
-	_ = os.Setenv("CONTROLLER_FLAG_2", "env2")
-	_ = os.Setenv("CONTROLLER_FLAG_4", "env4")
-	defer func() {
-		_ = os.Unsetenv("CONTROLLER_FLAG_2")
-		_ = os.Unsetenv("CONTROLLER_FLAG_4")
-	}()
+	t.Setenv("CONTROLLER_FLAG_2", "env2")
+	t.Setenv("CONTROLLER_FLAG_4", "env4")
 
 	cmd.SetArgs([]string{
 		"--flag-3=args3",
@@ -49,6 +44,42 @@ func TestBindEnvVars(t *testing.T) {
 
 	assert.True(t, commandHasRun)
 	assert.NoError(t, err)
+}
+
+func TestBindEnvVarsSlice(t *testing.T) {
+	t.Run("set by flags", func(t *testing.T) {
+		cmd := &cobra.Command{
+			PreRunE: bindEnvVars,
+			Run:     func(cmd *cobra.Command, args []string) {},
+		}
+
+		ss := cmd.Flags().StringSlice("flag-string-slice", []string{"default"}, "No description")
+
+		t.Setenv("CONTROLLER_FLAG_STRING_SLICE", "q,w,e,r,t,y")
+
+		cmd.SetArgs([]string{
+			"--flag-string-slice=1",
+			"--flag-string-slice=2",
+			"--flag-string-slice=3",
+		})
+		assert.NoError(t, cmd.Execute())
+		assert.Equal(t, []string{"1", "2", "3"}, *ss)
+	})
+
+	t.Run("set by env", func(t *testing.T) {
+		cmd := &cobra.Command{
+			PreRunE: bindEnvVars,
+			Run:     func(cmd *cobra.Command, args []string) {},
+		}
+
+		ss := cmd.Flags().StringSlice("flag-string-slice", []string{"default"}, "No description")
+
+		t.Setenv("CONTROLLER_FLAG_STRING_SLICE", "q,w,e,r,t,y")
+
+		cmd.SetArgs([]string{})
+		assert.NoError(t, cmd.Execute())
+		assert.Equal(t, []string{"q", "w", "e", "r", "t", "y"}, *ss)
+	})
 }
 
 func TestBindEnvVarsValidation(t *testing.T) {
@@ -63,8 +94,7 @@ func TestBindEnvVarsValidation(t *testing.T) {
 	cmd.SetOut(io.Discard)
 	cmd.SetErr(io.Discard)
 
-	_ = os.Setenv("CONTROLLER_VALIDATION_TEST", "intentionally_fail")
-	defer os.Unsetenv("CONTROLLER_VALIDATION_TEST")
+	t.Setenv("CONTROLLER_VALIDATION_TEST", "intentionally_fail")
 
 	err := cmd.Execute()
 	assert.Error(t, err)

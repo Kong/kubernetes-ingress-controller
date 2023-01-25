@@ -1,7 +1,7 @@
 package builder
 
 import (
-	"k8s.io/utils/pointer"
+	"github.com/samber/lo"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
 )
@@ -26,7 +26,7 @@ func (b *KongstateServiceBackendBuilder) WithNamespace(namespace string) *Kongst
 }
 
 func (b *KongstateServiceBackendBuilder) WithWeight(weight int) *KongstateServiceBackendBuilder {
-	b.kongstateServiceBackend.Weight = pointer.Int32(int32(weight))
+	b.kongstateServiceBackend.Weight = lo.ToPtr(int32(weight))
 	return b
 }
 

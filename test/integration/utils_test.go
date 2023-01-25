@@ -12,7 +12,6 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"regexp"
 	"strings"
 	"testing"
 	"time"
@@ -54,6 +53,11 @@ const (
 // Testing Variables
 // -----------------------------------------------------------------------------
 
+const (
+	// ingressClass indicates the ingress class name which the tests will use for supported object reconciliation.
+	ingressClass = "kongtests"
+)
+
 var (
 	// ctx the topical context of the test suite, can be used by test cases if they don't need
 	// any special context as a function of the test.
@@ -66,20 +70,11 @@ var (
 	// https://github.com/Kong/kubernetes-ingress-controller/issues/2735#issuecomment-1194376496 breakage.
 	redisImage = "bitnami/redis:7.0.4-debian-11-r3"
 
-	// ingressClass indicates the ingress class name which the tests will use for supported object reconciliation.
-	ingressClass = "kongtests"
-
 	// controllerNamespace is the Kubernetes namespace where the controller is deployed.
 	controllerNamespace = "kong-system"
 
 	// httpc is the default HTTP client to use for tests.
 	httpc = http.Client{Timeout: httpcTimeout}
-
-	// watchNamespaces is a list of namespaces the controller watches
-	// NOTE: more namespaces will be loaded dynamically by the test.Main
-	//       during runtime. In general, avoid adding hardcoded namespaces
-	//       to this list as that's reserved for special cases.
-	watchNamespaces = fmt.Sprintf("%s,%s,%s", extraIngressNamespace, extraWebhookNamespace, corev1.NamespaceDefault)
 
 	// env is the primary testing environment object which includes access to the Kubernetes cluster
 	// and all the addons deployed in support of the tests.
@@ -235,83 +230,15 @@ func getKongVersion() (semver.Version, error) {
 // Testing Utility Functions - Namespaces
 // -----------------------------------------------------------------------------
 
-// namespaces is a map of test case names to a namespace that was generated specifically for them to use.
-// each test case in the test run gets its own unique namespace.
-var namespaces = make(map[string]*corev1.Namespace)
-
 // namespace provides the namespace provisioned for each test case given their t.Name as the "testCase".
-func namespace(t *testing.T) (*corev1.Namespace, func()) {
-	namespace, ok := namespaces[t.Name()]
-	if !ok {
-		fmt.Fprintf(os.Stderr, "Error: test case %s did not have a namespace set up\n", t.Name())
-		os.Exit(ExitCodeCantCreateCluster)
-	}
-
-	cleanup := func() {
+func namespace(t *testing.T) *corev1.Namespace {
+	namespace, err := clusters.GenerateNamespace(ctx, env.Cluster(), t.Name())
+	require.NoError(t, err)
+	t.Cleanup(func() {
 		assert.NoError(t, clusters.CleanupGeneratedResources(ctx, env.Cluster(), t.Name()))
-	}
+	})
 
-	return namespace, cleanup
-}
-
-// -----------------------------------------------------------------------------
-// Testing Utility Functions - Identifying Test Cases
-// -----------------------------------------------------------------------------
-
-// identifyTestCasesForDir finds the Go function names for any Go test files in the given directory.
-func identifyTestCasesForDir(dir string) ([]string, error) {
-	files, err := os.ReadDir(dir)
-	if err != nil {
-		return nil, err
-	}
-
-	var testCasesForDir []string
-	for _, fileInfo := range files {
-		if !fileInfo.IsDir() {
-			if strings.HasSuffix(fileInfo.Name(), "test.go") {
-				testCasesForFile, err := identifyTestCasesForFile(dir + fileInfo.Name())
-				if err != nil {
-					return nil, err
-				}
-
-				testCasesForDir = append(testCasesForDir, testCasesForFile...)
-			}
-		}
-	}
-
-	return testCasesForDir, nil
-}
-
-// testCaseRegexp is a regex to identify Go test cases in test files.
-var testCaseRegexp = regexp.MustCompile(`func (Test.*)\(`)
-
-// identifyTestCasesForFile searches the given file for any Golang test cases.
-func identifyTestCasesForFile(filePath string) ([]string, error) {
-	if !strings.HasSuffix(filePath, "test.go") {
-		return nil, fmt.Errorf("%s does not look like a Golang test file", filePath)
-	}
-
-	b, err := os.ReadFile(filePath)
-	if err != nil {
-		return nil, err
-	}
-
-	matches := testCaseRegexp.FindAllSubmatch(b, -1)
-	if len(matches) < 1 {
-		return nil, nil
-	}
-
-	var testCasesForFile []string
-	for _, submatches := range matches {
-		if len(submatches) > 1 {
-			testCaseName := string(submatches[1])
-			if testCaseName != "TestMain" { // don't count TestMains
-				testCasesForFile = append(testCasesForFile, testCaseName)
-			}
-		}
-	}
-
-	return testCasesForFile, nil
+	return namespace
 }
 
 // -----------------------------------------------------------------------------
@@ -470,14 +397,14 @@ func expect404WithNoRoute(t *testing.T, proxyURL string, resp *http.Response) bo
 // exitOnErrWithCode is a helper function meant for us in the test.Main to simplify failing and exiting
 // the tests under unrecoverable error conditions. It will also attempt to perform any cluster
 // cleaning necessary before exiting.
-func exitOnErrWithCode(err error, exitCode int) {
+func exitOnErrWithCode(ctx context.Context, err error, exitCode int) {
 	if err == nil {
 		return
 	}
 
 	fmt.Println("WARNING: failure occurred, performing test cleanup")
 	if env != nil && existingCluster == "" && keepTestCluster == "" {
-		ctx, cancel := context.WithTimeout(context.Background(), environmentCleanupTimeout)
+		ctx, cancel := context.WithTimeout(ctx, environmentCleanupTimeout)
 		defer cancel()
 
 		fmt.Printf("INFO: cluster %s is being deleted\n", env.Cluster().Name())
@@ -492,11 +419,11 @@ func exitOnErrWithCode(err error, exitCode int) {
 
 // exitOnErr is a wrapper around exitOnErrorWithCode that defaults to using the ExitCodeEnvSetupFailed
 // exit code. This function is meant for convenience to wrap errors in setup that are hard to predict.
-func exitOnErr(err error) {
+func exitOnErr(ctx context.Context, err error) {
 	if err == nil {
 		return
 	}
-	exitOnErrWithCode(err, ExitCodeEnvSetupFailed)
+	exitOnErrWithCode(ctx, err, ExitCodeEnvSetupFailed)
 }
 
 // TODO move this into a shared library https://github.com/Kong/kubernetes-testing-framework/issues/302

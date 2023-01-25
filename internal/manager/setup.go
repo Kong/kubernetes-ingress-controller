@@ -2,18 +2,16 @@ package manager
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
-	"strings"
 	"time"
 
 	"github.com/bombsimon/logrusr/v2"
 	"github.com/go-logr/logr"
 	"github.com/kong/deck/cprint"
-	"github.com/kong/go-kong/kong"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
@@ -22,7 +20,6 @@ import (
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/admission"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/sendconfig"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 )
 
@@ -53,25 +50,7 @@ func SetupLoggers(c *Config, output io.Writer) (logrus.FieldLogger, logr.Logger,
 	return deprecatedLogger, logger, nil
 }
 
-func setupControllerOptions(logger logr.Logger, c *Config, scheme *runtime.Scheme,
-	dbmode string,
-) (ctrl.Options, error) {
-	// some controllers may require additional namespaces to be cached and this
-	// is currently done using the global manager client cache.
-	//
-	// See: https://github.com/Kong/kubernetes-ingress-controller/issues/2004
-	requiredCacheNamespaces := make([]string, 0)
-
-	// if publish service has been provided the namespace for it should be
-	// watched so that controllers can see updates to the service.
-	if c.PublishService != "" {
-		publishServiceSplit := strings.SplitN(c.PublishService, "/", 3)
-		if len(publishServiceSplit) != 2 {
-			return ctrl.Options{}, fmt.Errorf("--publish-service was expected to be in format <namespace>/<name> but got %s", c.PublishService)
-		}
-		requiredCacheNamespaces = append(requiredCacheNamespaces, publishServiceSplit[0])
-	}
-
+func setupControllerOptions(logger logr.Logger, c *Config, dbmode string) (ctrl.Options, error) {
 	var leaderElection bool
 	if dbmode == "off" {
 		logger.Info("DB-less mode detected, disabling leader election")
@@ -79,6 +58,12 @@ func setupControllerOptions(logger logr.Logger, c *Config, scheme *runtime.Schem
 	} else {
 		logger.Info("Database mode detected, enabling leader election")
 		leaderElection = true
+	}
+
+	logger.Info("building the manager runtime scheme and loading apis into the scheme")
+	scheme, err := getScheme()
+	if err != nil {
+		return ctrl.Options{}, err
 	}
 
 	// configure the general controller options
@@ -98,13 +83,21 @@ func setupControllerOptions(logger logr.Logger, c *Config, scheme *runtime.Schem
 		// and we don't have to bother individually caching any particular namespaces
 		controllerOpts.Namespace = corev1.NamespaceAll
 	} else {
+		watchNamespaces := c.WatchNamespaces
+
 		// in all other cases we are a multi-namespace setup and must watch all the
-		// c.WatchNamespaces and additionalNamespacesToCache defined namespaces.
+		// c.WatchNamespaces.
 		// this mode does not set the Namespace option, so the manager will default to watching all namespaces
 		// MultiNamespacedCacheBuilder imposes a filter on top of that watch to retrieve scoped resources
 		// from the watched namespaces only.
-		logger.Info("manager set up with multiple namespaces", "namespaces", c.WatchNamespaces)
-		controllerOpts.NewCache = cache.MultiNamespacedCacheBuilder(append(c.WatchNamespaces, requiredCacheNamespaces...))
+		logger.Info("manager set up with multiple namespaces", "namespaces", watchNamespaces)
+
+		// if publish service has been provided the namespace for it should be
+		// watched so that controllers can see updates to the service.
+		if c.PublishService.String() != "" {
+			watchNamespaces = append(c.WatchNamespaces, c.PublishService.Namespace)
+		}
+		controllerOpts.NewCache = cache.MultiNamespacedCacheBuilder(watchNamespaces)
 	}
 
 	if len(c.LeaderElectionNamespace) > 0 {
@@ -114,48 +107,25 @@ func setupControllerOptions(logger logr.Logger, c *Config, scheme *runtime.Schem
 	return controllerOpts, nil
 }
 
-func setupKongConfig(ctx context.Context, kongClient *kong.Client, logger logr.Logger, c *Config) sendconfig.Kong {
-	var filterTags []string
-	if ok, err := kongClient.Tags.Exists(ctx); err != nil {
-		logger.Error(err, "tag filtering disabled because Kong Admin API does not support tags")
-	} else if ok {
-		logger.Info("tag filtering enabled", "tags", c.FilterTags)
-		filterTags = c.FilterTags
-	}
-
-	return sendconfig.Kong{
-		URL:               c.KongAdminURL,
-		FilterTags:        filterTags,
-		Concurrency:       c.Concurrency,
-		Client:            kongClient,
-		PluginSchemaStore: util.NewPluginSchemaStore(kongClient),
-	}
-}
-
 func setupDataplaneSynchronizer(
 	logger logr.Logger,
 	fieldLogger logrus.FieldLogger,
 	mgr manager.Manager,
 	dataplaneClient dataplane.Client,
-	c *Config,
+	proxySyncSeconds float32,
 ) (*dataplane.Synchronizer, error) {
-	if c.ProxySyncSeconds < dataplane.DefaultSyncSeconds {
-		logger.Info(fmt.Sprintf("WARNING: --proxy-sync-seconds is configured for %fs, in DBLESS mode this may result in"+
-			" problems of inconsistency in the proxy state. For DBLESS mode %fs+ is recommended (3s is the default).",
-			c.ProxySyncSeconds, dataplane.DefaultSyncSeconds,
+	if proxySyncSeconds < dataplane.DefaultSyncSeconds {
+		logger.Info(fmt.Sprintf(
+			"WARNING: --proxy-sync-seconds is configured for %fs, in DBLESS mode this may result in"+
+				" problems of inconsistency in the proxy state. For DBLESS mode %fs+ is recommended (3s is the default).",
+			proxySyncSeconds, dataplane.DefaultSyncSeconds,
 		))
 	}
 
-	syncTickDuration, err := time.ParseDuration(fmt.Sprintf("%gs", c.ProxySyncSeconds))
-	if err != nil {
-		logger.Error(err, "%s is not a valid number of seconds to stagger the proxy server synchronization")
-		return nil, err
-	}
-
-	dataplaneSynchronizer, err := dataplane.NewSynchronizerWithStagger(
+	dataplaneSynchronizer, err := dataplane.NewSynchronizer(
 		fieldLogger.WithField("subsystem", "dataplane-synchronizer"),
 		dataplaneClient,
-		syncTickDuration,
+		dataplane.WithStagger(time.Duration(proxySyncSeconds*float32(time.Second))),
 	)
 	if err != nil {
 		return nil, err
@@ -182,14 +152,26 @@ func setupAdmissionServer(
 		return nil
 	}
 
-	kongclient, err := managerConfig.GetKongClient(ctx)
+	kongclients, err := getKongClients(ctx,
+		managerConfig.KongAdminURL,
+		managerConfig.KongWorkspace,
+		managerConfig.KongAdminAPIConfig,
+	)
 	if err != nil {
 		return err
 	}
 	srv, err := admission.MakeTLSServer(ctx, &managerConfig.AdmissionServer, &admission.RequestHandler{
 		Validator: admission.NewKongHTTPValidator(
-			kongclient.Consumers,
-			kongclient.Plugins,
+			// For now using first client is kind of OK. Using Consumer and Plugin
+			// services from first kong client should theoretically return the same
+			// results as for all other clients. There might be instances where
+			// configurations in different Kong Gateways are ever so slightly
+			// different but that shouldn't cause a fatal failure.
+			//
+			// TODO: We should take a look at this sooner rather than later.
+			// https://github.com/Kong/kubernetes-ingress-controller/issues/3363
+			kongclients[0].Consumers,
+			kongclients[0].Plugins,
 			logger,
 			managerClient,
 			managerConfig.IngressClassName,
@@ -206,51 +188,69 @@ func setupAdmissionServer(
 	return nil
 }
 
-func setupDataplaneAddressFinder(ctx context.Context, mgrc client.Client, c *Config) (*dataplane.AddressFinder, error) {
-	dataplaneAddressFinder := dataplane.NewAddressFinder()
-	if c.UpdateStatus {
-		if overrideAddrs := c.PublishStatusAddress; len(overrideAddrs) > 0 {
-			dataplaneAddressFinder.SetOverrides(overrideAddrs)
-		} else if c.PublishService != "" {
-			parts := strings.Split(c.PublishService, "/")
-			if len(parts) != 2 {
-				return nil, fmt.Errorf("publish service %s is invalid, expecting <namespace>/<name>", c.PublishService)
-			}
-			nsn := types.NamespacedName{
-				Namespace: parts[0],
-				Name:      parts[1],
-			}
-			dataplaneAddressFinder.SetGetter(func() ([]string, error) {
-				svc := new(corev1.Service)
-				if err := mgrc.Get(ctx, nsn, svc); err != nil {
-					return nil, err
-				}
-
-				var addrs []string
-				switch svc.Spec.Type { //nolint:exhaustive
-				case corev1.ServiceTypeLoadBalancer:
-					for _, lbaddr := range svc.Status.LoadBalancer.Ingress {
-						if lbaddr.IP != "" {
-							addrs = append(addrs, lbaddr.IP)
-						}
-						if lbaddr.Hostname != "" {
-							addrs = append(addrs, lbaddr.Hostname)
-						}
-					}
-				default:
-					addrs = append(addrs, svc.Spec.ClusterIPs...)
-				}
-
-				if len(addrs) == 0 {
-					return nil, fmt.Errorf("waiting for addresses to be provisioned for publish service %s/%s", nsn.Namespace, nsn.Name)
-				}
-
-				return addrs, nil
-			})
-		} else {
-			return nil, fmt.Errorf("status updates enabled but no method to determine data-plane addresses, need either --publish-service or --publish-status-address")
-		}
+// setupDataplaneAddressFinder returns a default and UDP address finder. These finders return the override addresses if
+// set or the publish service addresses if no overrides are set. If no UDP overrides or UDP publish service are set,
+// the UDP finder will also return the default addresses. If no override or publish service is set, this function
+// returns nil finders and an error.
+func setupDataplaneAddressFinder(mgrc client.Client, c *Config, log logr.Logger) (*dataplane.AddressFinder, *dataplane.AddressFinder, error) {
+	if !c.UpdateStatus {
+		return nil, nil, nil
 	}
 
-	return dataplaneAddressFinder, nil
+	defaultAddressFinder, err := buildDataplaneAddressFinder(mgrc, c.PublishStatusAddress, c.PublishService)
+	if err != nil {
+		return nil, nil, fmt.Errorf("status updates enabled but no method to determine data-plane addresses: %w", err)
+	}
+	udpAddressFinder, err := buildDataplaneAddressFinder(mgrc, c.PublishStatusAddressUDP, c.PublishServiceUDP)
+	if err != nil {
+		log.Info("falling back to a default address finder for UDP", "reason", err.Error())
+		udpAddressFinder = defaultAddressFinder
+	}
+
+	return defaultAddressFinder, udpAddressFinder, nil
+}
+
+func buildDataplaneAddressFinder(mgrc client.Client, publishStatusAddress []string, publishServiceNn types.NamespacedName) (*dataplane.AddressFinder, error) {
+	addressFinder := dataplane.NewAddressFinder()
+
+	if len(publishStatusAddress) > 0 {
+		addressFinder.SetOverrides(publishStatusAddress)
+		return addressFinder, nil
+	}
+	if publishServiceNn.String() != "" {
+		addressFinder.SetGetter(generateAddressFinderGetter(mgrc, publishServiceNn))
+		return addressFinder, nil
+	}
+
+	return nil, errors.New("no publish status address or publish service were provided")
+}
+
+func generateAddressFinderGetter(mgrc client.Client, publishServiceNn types.NamespacedName) func(context.Context) ([]string, error) {
+	return func(ctx context.Context) ([]string, error) {
+		svc := new(corev1.Service)
+		if err := mgrc.Get(ctx, publishServiceNn, svc); err != nil {
+			return nil, err
+		}
+
+		var addrs []string
+		switch svc.Spec.Type { //nolint:exhaustive
+		case corev1.ServiceTypeLoadBalancer:
+			for _, lbaddr := range svc.Status.LoadBalancer.Ingress {
+				if lbaddr.IP != "" {
+					addrs = append(addrs, lbaddr.IP)
+				}
+				if lbaddr.Hostname != "" {
+					addrs = append(addrs, lbaddr.Hostname)
+				}
+			}
+		default:
+			addrs = append(addrs, svc.Spec.ClusterIPs...)
+		}
+
+		if len(addrs) == 0 {
+			return nil, fmt.Errorf("waiting for addresses to be provisioned for publish service %s", publishServiceNn)
+		}
+
+		return addrs, nil
+	}
 }

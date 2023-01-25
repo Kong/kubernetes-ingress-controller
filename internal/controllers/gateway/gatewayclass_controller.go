@@ -71,7 +71,11 @@ func (r *GatewayClassReconciler) SetupWithManager(mgr ctrl.Manager) error {
 func (r *GatewayClassReconciler) GatewayClassIsUnmanaged(obj client.Object) bool {
 	gatewayClass, ok := obj.(*gatewayv1beta1.GatewayClass)
 	if !ok {
-		r.Log.Error(fmt.Errorf("unexpected object type in gateway watch predicates"), "expected", "*gatewayv1beta1.GatewayClass", "found", reflect.TypeOf(obj))
+		r.Log.Error(
+			fmt.Errorf("unexpected object type"),
+			"gatewayclass watch predicate received unexpected object type",
+			"expected", "*gatewayv1beta1.GatewayClass", "found", reflect.TypeOf(obj),
+		)
 		return false
 	}
 
@@ -88,7 +92,7 @@ func (r *GatewayClassReconciler) GatewayClassIsUnmanaged(obj client.Object) bool
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
 func (r *GatewayClassReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	log := r.Log.WithValues("V1Beta1GatewayClass", req.NamespacedName)
+	log := r.Log.WithValues("GatewayV1Beta1GatewayClass", req.NamespacedName)
 
 	gwc := new(gatewayv1beta1.GatewayClass)
 	if err := r.Client.Get(ctx, req.NamespacedName, gwc); err != nil {

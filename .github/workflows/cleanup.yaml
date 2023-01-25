@@ -10,6 +10,11 @@ jobs:
     environment: gcloud
     runs-on: ubuntu-latest
     steps:
+      - name: checkout repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
       - name: setup golang
         uses: actions/setup-go@v3
         with:
@@ -23,13 +28,8 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-build-codegen-
 
-      - name: checkout repository
-        uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
-
       - name: cleanup orphaned test clusters
-        run: go run hack/e2e/cluster/cleanup/main.go all
+        run: go run hack/cleanup_gke_clusters.go
         env:
           GOOGLE_APPLICATION_CREDENTIALS: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}
           GOOGLE_PROJECT: ${{ secrets.GOOGLE_PROJECT }}

@@ -59,78 +59,98 @@ type KongIngressList struct {
 }
 
 // KongIngressService contains KongIngress service configuration.
-// + It contains the subset of go-kong.kong.Service fields supported by kongstate.Service.overrideByKongIngress.
+// It contains the subset of go-kong.kong.Service fields supported by kongstate.Service.overrideByKongIngress.
+// Deprecated: use Service's annotations instead.
 type KongIngressService struct {
 	// The protocol used to communicate with the upstream.
+	// Deprecated: use Service's "konghq.com/protocol" annotation instead.
 	// +kubebuilder:validation:Enum=http;https;grpc;grpcs;tcp;tls;udp
 	Protocol *string `json:"protocol,omitempty" yaml:"protocol,omitempty"`
 
 	// (optional) The path to be used in requests to the upstream server.
+	// Deprecated: use Service's "konghq.com/path" annotation instead.
 	// +kubebuilder:validation:Pattern=^/.*$
 	Path *string `json:"path,omitempty" yaml:"path,omitempty"`
 
 	// The number of retries to execute upon failure to proxy.
+	// Deprecated: use Service's "konghq.com/retries" annotation instead.
 	// +kubebuilder:validation:Minimum=0
 	Retries *int `json:"retries,omitempty" yaml:"retries,omitempty"`
 
-	// The timeout in milliseconds for establishing a connection to the upstream server.
+	// The timeout in milliseconds for	establishing a connection to the upstream server.
+	// Deprecated: use Service's "konghq.com/connect-timeout" annotation instead.
 	// +kubebuilder:validation:Minimum=0
 	ConnectTimeout *int `json:"connect_timeout,omitempty" yaml:"connect_timeout,omitempty"`
 
 	// The timeout in milliseconds between two successive read operations
 	// for transmitting a request to the upstream server.
+	// Deprecated: use Service's "konghq.com/read-timeout" annotation instead.
 	// +kubebuilder:validation:Minimum=0
 	ReadTimeout *int `json:"read_timeout,omitempty" yaml:"read_timeout,omitempty"`
 
 	// The timeout in milliseconds between two successive write operations
 	// for transmitting a request to the upstream server.
+	// Deprecated: use Service's "konghq.com/write-timeout" annotation instead.
 	// +kubebuilder:validation:Minimum=0
 	WriteTimeout *int `json:"write_timeout,omitempty" yaml:"write_timeout,omitempty"`
 }
 
 // KongIngressRoute contains KongIngress route configuration.
 // It contains the subset of `go-kong.kong.Route` fields supported by `kongstate.Route.overrideByKongIngress`.
+// Deprecated: use Ingress' annotations instead.
 type KongIngressRoute struct {
 	// Methods is a list of HTTP methods that match this Route.
+	// Deprecated: use Ingress' "konghq.com/methods" annotation instead.
 	Methods []*string `json:"methods,omitempty" yaml:"methods,omitempty"`
 
 	// Headers contains one or more lists of values indexed by header name
 	// that will cause this Route to match if present in the request.
 	// The Host header cannot be used with this attribute.
+	// Deprecated: use Ingress' "konghq.com/headers" annotation instead.
 	Headers map[string][]string `json:"headers,omitempty" yaml:"headers,omitempty"`
 
 	// Protocols is an array of the protocols this Route should allow.
+	// Deprecated: use Ingress' "konghq.com/protocols" annotation instead.
 	Protocols []*KongProtocol `json:"protocols,omitempty" yaml:"protocols,omitempty"`
 
 	// RegexPriority is a number used to choose which route resolves a given request
 	// when several routes match it using regexes simultaneously.
+	// Deprecated: use Ingress' "konghq.com/regex-priority" annotation instead.
 	RegexPriority *int `json:"regex_priority,omitempty" yaml:"regex_priority,omitempty"`
 
 	// StripPath sets When matching a Route via one of the paths
 	// strip the matching prefix from the upstream request URL.
+	// Deprecated: use Ingress' "konghq.com/strip-path" annotation instead.
 	StripPath *bool `json:"strip_path,omitempty" yaml:"strip_path,omitempty"`
 
 	// PreserveHost sets When matching a Route via one of the hosts domain names,
 	// use the request Host header in the upstream request headers.
 	// If set to false, the upstream Host header will be that of the Service’s host.
+	// Deprecated: use Ingress' "konghq.com/preserve-host" annotation instead.
 	PreserveHost *bool `json:"preserve_host,omitempty" yaml:"preserve_host,omitempty"`
 
 	// HTTPSRedirectStatusCode is the status code Kong responds with
 	// when all properties of a Route match except the protocol.
+	// Deprecated: use Ingress' "ingress.kubernetes.io/force-ssl-redirect" or
+	// "konghq.com/https-redirect-status-code" annotations instead.
 	HTTPSRedirectStatusCode *int `json:"https_redirect_status_code,omitempty" yaml:"https_redirect_status_code,omitempty"`
 
 	// PathHandling controls how the Service path, Route path and requested path
 	// are combined when sending a request to the upstream.
 	// +kubebuilder:validation:Enum=v0;v1
+	// Deprecated: use Ingress' "konghq.com/path-handling" annotation instead.
 	PathHandling *string `json:"path_handling,omitempty" yaml:"path_handling,omitempty"`
 
 	// SNIs is a list of SNIs that match this Route when using stream routing.
+	// Deprecated: use Ingress' "konghq.com/snis" annotation instead.
 	SNIs []*string `json:"snis,omitempty" yaml:"snis,omitempty"`
 
 	// RequestBuffering sets whether to enable request body buffering or not.
+	// Deprecated: use Ingress' "konghq.com/request-buffering" annotation instead.
 	RequestBuffering *bool `json:"request_buffering,omitempty" yaml:"request_buffering,omitempty"`
 
 	// ResponseBuffering sets whether to enable response body buffering or not.
+	// Deprecated: use Ingress' "konghq.com/response-buffering" annotation instead.
 	ResponseBuffering *bool `json:"response_buffering,omitempty" yaml:"response_buffering,omitempty"`
 }
 

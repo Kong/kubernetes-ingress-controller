@@ -33,3 +33,7 @@ type BackendRefT interface {
 		gatewayv1alpha2.SecretObjectReference |
 		gatewayv1beta1.SecretObjectReference
 }
+
+type ParentStatusT interface {
+	*gatewayv1alpha2.RouteParentStatus | *gatewayv1beta1.RouteParentStatus
+}

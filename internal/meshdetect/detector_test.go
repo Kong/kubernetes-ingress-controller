@@ -9,6 +9,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
@@ -17,7 +18,11 @@ func TestDetectMeshDeployment(t *testing.T) {
 	err := corev1.AddToScheme(testScheme)
 	require.NoErrorf(t, err, "should add corev1 to scheme successfully")
 
-	b := fake.NewClientBuilder().WithScheme(testScheme)
+	b := fake.NewClientBuilder().
+		WithScheme(testScheme).
+		WithIndex(&corev1.Service{}, "metadata.name", func(object client.Object) []string {
+			return []string{object.GetNamespace(), object.GetName()}
+		})
 	b.WithObjects(
 		// add services.
 		&corev1.Service{
@@ -80,7 +85,9 @@ func TestDetectMeshDeployment(t *testing.T) {
 	}
 
 	for _, meshKind := range MeshesToDetect {
-		require.Equalf(t, expected[meshKind], res[meshKind], "detection result should be the same for mesh %s", meshKind)
+		t.Run(string(meshKind), func(t *testing.T) {
+			require.Equalf(t, expected[meshKind], res[meshKind], "detection result should be the same for mesh %s", meshKind)
+		})
 	}
 }
 
@@ -310,7 +317,6 @@ func TestDetectRunUnder(t *testing.T) {
 					"test case %s: detection result should be same for mesh %s", tc.caseName, meshKind)
 			}
 		})
-
 	}
 }
 

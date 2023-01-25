@@ -8,9 +8,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/kuma"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -30,14 +28,8 @@ func TestDeployAllInOneDBLESSKuma(t *testing.T) {
 	env, err := builder.Build(ctx)
 	require.NoError(t, err)
 
-	defer func() { assert.NoError(t, env.Cleanup(ctx)) }()
 	defer func() {
-		if t.Failed() {
-			output, err := clusters.NewCleaner(env.Cluster()).DumpDiagnostics(ctx, t.Name())
-			if assert.NoErrorf(t, err, "failed dumping diagnostics to %s", output) {
-				t.Logf("%s failed, dumped diagnostics to %s", t.Name(), output)
-			}
-		}
+		finalizeTest(ctx, t, env.Cluster())
 	}()
 
 	t.Log("deploying kong components")
@@ -111,7 +103,7 @@ func TestDeployAllInOnePostgresKuma(t *testing.T) {
 	env, err := builder.Build(ctx)
 	require.NoError(t, err)
 	defer func() {
-		assert.NoError(t, env.Cleanup(ctx))
+		finalizeTest(ctx, t, env.Cluster())
 	}()
 
 	t.Log("deploying kong components")

@@ -2,10 +2,10 @@ package gateway
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"reflect"
 
-	"github.com/pkg/errors"
 	"github.com/samber/lo"
 	corev1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
@@ -25,6 +25,13 @@ import (
 
 const (
 	unsupportedGW = "no supported Gateway found for route"
+)
+
+const (
+	ConditionTypeProgrammed                                                = "Programmed"
+	ConditionReasonProgrammedUnknown   gatewayv1beta1.RouteConditionReason = "Unknown"
+	ConditionReasonConfiguredInGateway gatewayv1beta1.RouteConditionReason = "ConfiguredInGateway"
+	ConditionReasonTranslationError    gatewayv1beta1.RouteConditionReason = "TranslationError"
 )
 
 var ErrNoMatchingListenerHostname = fmt.Errorf("no matching hostnames in listener")
@@ -148,6 +155,7 @@ func getSupportedGatewayForRoute[T types.RouteT](ctx context.Context, mgrc clien
 		var (
 			// Set to true if there exists a listener which wasn't filtered by:
 			// - AlowedRoutes
+			// - listener name matching
 			// - listener status checks
 			// - listener and route type checks
 			matched = false
@@ -158,6 +166,7 @@ func getSupportedGatewayForRoute[T types.RouteT](ctx context.Context, mgrc clien
 
 			allowedByAllowedRoutes  = false
 			allowedBySupportedKinds = false
+			allowedByListenerName   = false
 		)
 
 		for _, listener := range gateway.Spec.Listeners {
@@ -180,6 +189,14 @@ func getSupportedGatewayForRoute[T types.RouteT](ctx context.Context, mgrc clien
 				continue
 			} else {
 				allowedBySupportedKinds = true
+			}
+
+			// Check if listener name matches.
+			if parentRef.SectionName != nil {
+				if *parentRef.SectionName != "" && *parentRef.SectionName != listener.Name {
+					continue
+				}
+				allowedByListenerName = true
 			}
 
 			// Perform the port matching as described in GEP-957.
@@ -233,6 +250,10 @@ func getSupportedGatewayForRoute[T types.RouteT](ctx context.Context, mgrc clien
 				// If there is no matchingHostname, the gateway Status Condition Accepted
 				// must be set to False with reason NoMatchingListenerHostname
 				reason = gatewayv1beta1.RouteReasonNoMatchingListenerHostname
+			} else if (parentRef.SectionName) != nil && !allowedByListenerName {
+				// If ParentRef specified listener names but none of the listeners matches the name,
+				// the gateway Status Condition Accepted must be set to False with reason RouteReasonNoMatchingParent.
+				reason = RouteReasonNoMatchingParent
 			} else if (parentRef.Port != nil) && !portMatched {
 				// If ParentRef specified a Port but none of the listeners matched, the gateway Status
 				// Condition Accepted must be set to False with reason NoMatchingListenerPort
@@ -358,7 +379,6 @@ func routeMatchesListenerAllowedRoutes[T types.RouteT](
 	}
 
 	switch *listener.AllowedRoutes.Namespaces.From {
-
 	case gatewayv1beta1.NamespacesFromAll:
 		return true, nil
 
@@ -614,6 +634,71 @@ func isHTTPReferenceGranted(grantSpec gatewayv1alpha2.ReferenceGrantSpec, backen
 				return true
 			}
 		}
+	}
+	return false
+}
+
+// sameCondition returns true if the conditions in parameter has the same type, status, reason and message.
+func sameCondition(a, b metav1.Condition) bool {
+	return a.Type == b.Type &&
+		a.Status == b.Status &&
+		a.Reason == b.Reason &&
+		a.Message == b.Message
+}
+
+func setRouteParentStatusCondition[T types.ParentStatusT](parentStatus T, newCondition metav1.Condition) bool {
+	var conditionFound, changed bool
+	switch p := (any)(parentStatus).(type) {
+	case *gatewayv1beta1.RouteParentStatus:
+		for i, condition := range p.Conditions {
+			if condition.Type == newCondition.Type {
+				conditionFound = true
+				if !sameCondition(condition, newCondition) {
+					p.Conditions[i] = newCondition
+					changed = true
+				}
+			}
+		}
+
+		if !conditionFound {
+			p.Conditions = append(p.Conditions, newCondition)
+			changed = true
+		}
+	case *gatewayv1alpha2.RouteParentStatus:
+		for i, condition := range p.Conditions {
+			if condition.Type == newCondition.Type {
+				conditionFound = true
+				if !sameCondition(condition, newCondition) {
+					p.Conditions[i] = newCondition
+					changed = true
+				}
+			}
+		}
+
+		if !conditionFound {
+			p.Conditions = append(p.Conditions, newCondition)
+			changed = true
+		}
+	}
+	return changed
+}
+
+func parentStatusHasProgrammedCondition[T types.ParentStatusT](parentStatus T) bool {
+	switch p := (any)(parentStatus).(type) {
+	case *gatewayv1beta1.RouteParentStatus:
+		for _, condition := range p.Conditions {
+			if condition.Type == ConditionTypeProgrammed {
+				return true
+			}
+		}
+		return false
+	case *gatewayv1alpha2.RouteParentStatus:
+		for _, condition := range p.Conditions {
+			if condition.Type == ConditionTypeProgrammed {
+				return true
+			}
+		}
+		return false
 	}
 	return false
 }

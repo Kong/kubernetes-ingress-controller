@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/kong/go-kong/kong"
+	"github.com/samber/lo"
 	"github.com/sirupsen/logrus"
 	"github.com/sirupsen/logrus/hooks/test"
 	"github.com/stretchr/testify/assert"
@@ -14,9 +15,9 @@ import (
 	netv1beta1 "k8s.io/api/networking/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/uuid"
-	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/failures"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/store"
 )
@@ -476,7 +477,7 @@ func TestDoK8sServicesMatchAnnotations(t *testing.T) {
 			},
 			expected: false,
 			expectedLogEntries: []string{
-				"in the backend group of 3 kubernetes services some have the konghq.com/foo annotation while others don't",
+				"Service has inconsistent konghq.com/foo annotation and is used in multi-Service backend",
 			},
 		},
 		{
@@ -518,17 +519,17 @@ func TestDoK8sServicesMatchAnnotations(t *testing.T) {
 			},
 			expected: false,
 			expectedLogEntries: []string{
-				"the value of annotation konghq.com/foo is different between the 3 services which comprise this backend.",
-				"the value of annotation konghq.com/foo is different between the 3 services which comprise this backend.",
+				"Service has inconsistent konghq.com/foo annotation and is used in multi-Service backend",
+				"Service has inconsistent konghq.com/foo annotation and is used in multi-Service backend",
 			},
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			logger, loggerHook := test.NewNullLogger()
-			failuresCollector, err := NewTranslationFailuresCollector(logger)
+			failuresCollector, err := failures.NewResourceFailuresCollector(logger)
 			require.NoError(t, err)
-			assert.Equal(t, tt.expected, servicesAllUseTheSameKongAnnotations(tt.services, tt.annotations, failuresCollector))
-			assert.Len(t, failuresCollector.PopTranslationFailures(), len(tt.expectedLogEntries), "expecting as many translation failures as log entries")
+			assert.Equal(t, tt.expected, servicesAllUseTheSameKongAnnotations(tt.services, tt.annotations, failuresCollector, ""))
+			assert.Len(t, failuresCollector.PopResourceFailures(), len(tt.expectedLogEntries), "expecting as many translation failures as log entries")
 			for i := range tt.expectedLogEntries {
 				assert.Contains(t, loggerHook.AllEntries()[i].Message, tt.expectedLogEntries[i])
 			}
@@ -587,7 +588,7 @@ func TestPopulateServices(t *testing.T) {
 			serviceNamesToServices: map[string]kongstate.Service{
 				"service-to-skip": {
 					Service: kong.Service{
-						Name: pointer.StringPtr("service-to-skip"),
+						Name: lo.ToPtr("service-to-skip"),
 					},
 					Namespace: "test-namespace",
 					Backends: []kongstate.ServiceBackend{
@@ -603,7 +604,7 @@ func TestPopulateServices(t *testing.T) {
 				},
 				"service-to-keep": {
 					Service: kong.Service{
-						Name: pointer.StringPtr("service-to-skip"),
+						Name: lo.ToPtr("service-to-skip"),
 					},
 					Namespace: "test-namespace",
 					Backends: []kongstate.ServiceBackend{
@@ -635,11 +636,11 @@ func TestPopulateServices(t *testing.T) {
 			require.NoError(t, err)
 			ingressRules.ServiceNameToServices = tc.serviceNamesToServices
 			logger, _ := test.NewNullLogger()
-			failuresCollector, err := NewTranslationFailuresCollector(logger)
+			failuresCollector, err := failures.NewResourceFailuresCollector(logger)
 			require.NoError(t, err)
 			servicesToBeSkipped := ingressRules.populateServices(logrus.New(), fakeStore, failuresCollector)
 			require.Equal(t, tc.serviceNamesToSkip, servicesToBeSkipped)
-			require.Len(t, failuresCollector.PopTranslationFailures(), len(servicesToBeSkipped), "expecting as many translation failures as services to skip")
+			require.Len(t, failuresCollector.PopResourceFailures(), len(servicesToBeSkipped), "expecting as many translation failures as services to skip")
 		})
 	}
 }

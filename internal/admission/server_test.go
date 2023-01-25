@@ -92,7 +92,7 @@ func TestValidationWebhook(t *testing.T) {
 			{
 				name:               "request with present empty body",
 				wantRespCode:       http.StatusBadRequest,
-				wantFailureMessage: "unexpected end of JSON input\n",
+				wantFailureMessage: "EOF\n",
 			},
 			{
 				name: "validate kong consumer",

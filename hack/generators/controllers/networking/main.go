@@ -6,7 +6,7 @@ import (
 	"os"
 	"text/template"
 
-	"github.com/Masterminds/sprig"
+	"github.com/Masterminds/sprig/v3"
 )
 
 // -----------------------------------------------------------------------------
@@ -389,7 +389,7 @@ package configuration
 
 import (
 	"context"
-	"reflect"
+	"fmt"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -620,20 +620,24 @@ func (r *{{.PackageAlias}}{{.Kind}}Reconciler) Reconcile(ctx context.Context, re
 	// if status updates are enabled report the status for the object
 	if r.DataplaneClient.AreKubernetesObjectReportsEnabled() {
 		log.V(util.DebugLevel).Info("determining whether data-plane configuration has succeeded", "namespace", req.Namespace, "name", req.Name)
-		if !r.DataplaneClient.KubernetesObjectIsConfigured(obj) {
+		
+		if  !r.DataplaneClient.KubernetesObjectIsConfigured(obj) {
 			log.V(util.DebugLevel).Info("resource not yet configured in the data-plane", "namespace", req.Namespace, "name", req.Name)
 			return ctrl.Result{Requeue: true}, nil // requeue until the object has been properly configured
 		}
 
 		log.V(util.DebugLevel).Info("determining gateway addresses for object status updates", "namespace", req.Namespace, "name", req.Name)
-		addrs, err := r.DataplaneAddressFinder.GetLoadBalancerAddresses()
+		addrs, err := r.DataplaneAddressFinder.GetLoadBalancerAddresses(ctx)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
 
 		log.V(util.DebugLevel).Info("found addresses for data-plane updating object status", "namespace", req.Namespace, "name", req.Name)
-		if len(obj.Status.LoadBalancer.Ingress) != len(addrs) || !reflect.DeepEqual(obj.Status.LoadBalancer.Ingress, addrs) {
-			obj.Status.LoadBalancer.Ingress = addrs
+		updateNeeded, err := ctrlutils.UpdateLoadBalancerIngress(obj, addrs)
+		if err != nil {
+			return ctrl.Result{}, fmt.Errorf("failed to update load balancer address: %w", err)
+		}
+		if updateNeeded {
 			return ctrl.Result{}, r.Status().Update(ctx, obj)
 		}
 		log.V(util.DebugLevel).Info("status update not needed", "namespace", req.Namespace, "name", req.Name)

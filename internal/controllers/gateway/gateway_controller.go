@@ -145,7 +145,11 @@ func (r *GatewayReconciler) SetupWithManager(mgr ctrl.Manager) error {
 func (r *GatewayReconciler) gatewayHasMatchingGatewayClass(obj client.Object) bool {
 	gateway, ok := obj.(*gatewayv1beta1.Gateway)
 	if !ok {
-		r.Log.Error(fmt.Errorf("unexpected object type in gateway watch predicates"), "expected", "*gatewayv1beta1.Gateway", "found", reflect.TypeOf(obj))
+		r.Log.Error(
+			fmt.Errorf("unexpected object type"),
+			"gateway watch predicate received unexpected object type",
+			"expected", "*gatewayv1beta1.Gateway", "found", reflect.TypeOf(obj),
+		)
 		return false
 	}
 	gatewayClass := &gatewayv1beta1.GatewayClass{}
@@ -161,7 +165,11 @@ func (r *GatewayReconciler) gatewayHasMatchingGatewayClass(obj client.Object) bo
 func (r *GatewayReconciler) gatewayClassMatchesController(obj client.Object) bool {
 	gatewayClass, ok := obj.(*gatewayv1beta1.GatewayClass)
 	if !ok {
-		r.Log.Error(fmt.Errorf("unexpected object type in gatewayclass watch predicates"), "expected", "*gatewayv1beta1.GatewayClass", "found", reflect.TypeOf(obj))
+		r.Log.Error(
+			fmt.Errorf("unexpected object type"),
+			"gatewayclass watch predicate received unexpected object type",
+			"expected", "*gatewayv1beta1.GatewayClass", "found", reflect.TypeOf(obj),
+		)
 		return false
 	}
 	return isGatewayClassControlledAndUnmanaged(gatewayClass)
@@ -184,8 +192,11 @@ func (r *GatewayReconciler) listGatewaysForGatewayClass(gatewayClass client.Obje
 func (r *GatewayReconciler) listReferenceGrantsForGateway(obj client.Object) []reconcile.Request {
 	grant, ok := obj.(*gatewayv1alpha2.ReferenceGrant)
 	if !ok {
-		r.Log.Error(fmt.Errorf("unexpected object type in referencegrant watch predicates"), "expected",
-			"*gatewayv1alpha2.ReferenceGrant", "found", reflect.TypeOf(obj))
+		r.Log.Error(
+			fmt.Errorf("unexpected object type"),
+			"referencegrant watch predicate received unexpected object type",
+			"expected", "*gatewayv1alpha2.ReferenceGrant", "found", reflect.TypeOf(obj),
+		)
 		return nil
 	}
 	gateways := &gatewayv1beta1.GatewayList{}
@@ -218,7 +229,7 @@ func (r *GatewayReconciler) listReferenceGrantsForGateway(obj client.Object) []r
 func (r *GatewayReconciler) listGatewaysForService(svc client.Object) (recs []reconcile.Request) {
 	gateways := &gatewayv1beta1.GatewayList{}
 	if err := r.Client.List(context.Background(), gateways); err != nil {
-		r.Log.Error(err, "failed to list gateways for service in watch predicates", "service")
+		r.Log.Error(err, "failed to list gateways for service in watch predicates", "service", svc)
 		return
 	}
 	for _, gateway := range gateways.Items {
@@ -262,13 +273,13 @@ func referenceGrantHasGatewayFrom(obj client.Object) bool {
 // Gateway Controller - Reconciliation
 // -----------------------------------------------------------------------------
 
-//+kubebuilder:rbac:groups=gateway.networking.k8s.io,resources=gateways,verbs=get;list;watch;update
-//+kubebuilder:rbac:groups=gateway.networking.k8s.io,resources=gateways/status,verbs=get;update
+// +kubebuilder:rbac:groups=gateway.networking.k8s.io,resources=gateways,verbs=get;list;watch;update
+// +kubebuilder:rbac:groups=gateway.networking.k8s.io,resources=gateways/status,verbs=get;update
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
 func (r *GatewayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	log := r.Log.WithValues("V1Beta1Gateway", req.NamespacedName)
+	log := r.Log.WithValues("GatewayV1Beta1Gateway", req.NamespacedName)
 
 	// gather the gateway object based on the reconciliation trigger. It's possible for the object
 	// to be gone at this point in which case it will be ignored.
@@ -306,7 +317,7 @@ func (r *GatewayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 			debug(log, gateway, "failed to delete object from data-plane, requeuing")
 			return ctrl.Result{}, err
 		}
-		debug(log, gateway, "ensured object was removed from the data-plane (if ever present)")
+		debug(log, gateway, "ensured gateway was removed from the data-plane (if ever present)")
 		return ctrl.Result{}, nil
 	}
 	if gwc.Spec.ControllerName != ControllerName {
@@ -320,7 +331,7 @@ func (r *GatewayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 			debug(log, gateway, "failed to delete object from data-plane, requeuing")
 			return ctrl.Result{}, err
 		}
-		debug(log, gateway, "ensured object was removed from the data-plane (if ever present)")
+		debug(log, gateway, "ensured gateway was removed from the data-plane (if ever present)")
 		return ctrl.Result{}, nil
 	}
 
@@ -458,7 +469,7 @@ func (r *GatewayReconciler) reconcileUnmanagedGateway(ctx context.Context, log l
 	// a single set of shared listens. We lack knowledge of whether this is compatible with user intent, and it may
 	// be incompatible with the spec, so we should consider evaluating cross-Gateway compatibility and raising error
 	// conditions in the event of a problem
-	listenerStatuses, err := r.getListenerStatus(ctx, gateway, kongListeners, referenceGrantList.Items)
+	listenerStatuses, err := getListenerStatus(ctx, gateway, kongListeners, referenceGrantList.Items, r.Client)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
@@ -492,6 +503,9 @@ var (
 	// supportedKinds indicates which gateway kinds are supported by this implementation.
 	supportedKinds = []Kind{
 		Kind("HTTPRoute"),
+		Kind("TCPRoute"),
+		Kind("UDPRoute"),
+		Kind("TLSRoute"),
 	}
 
 	// supportedRouteGroupKinds indicates the full kinds with GVK that are supported by this implementation.
@@ -702,26 +716,4 @@ func (r *GatewayReconciler) updateAddressesAndListenersStatus(
 		return true, r.Status().Update(ctx, gateway)
 	}
 	return false, nil
-}
-
-// areAllowedRoutesConsistentByProtocol returns an error if a set of listeners includes multiple listeners for the same
-// protocol that do not use the same AllowedRoutes filters. Kong does not support limiting routes to a specific listen:
-// all routes are always served on all listens compatible with their protocol. As such, while we can filter the routes
-// we ingest, if we ingest routes from two incompatible filters, we will combine them into a single proxy configuration
-// It may be possible to write a new Kong plugin that checks the inbound port/address to de facto apply listen-based
-// filters in the future.
-func areAllowedRoutesConsistentByProtocol(listeners []gatewayv1alpha2.Listener) bool {
-	allowedByProtocol := make(map[gatewayv1alpha2.ProtocolType]gatewayv1alpha2.AllowedRoutes)
-	for _, listener := range listeners {
-		var allowed gatewayv1alpha2.AllowedRoutes
-		var exists bool
-		if allowed, exists = allowedByProtocol[listener.Protocol]; !exists {
-			allowedByProtocol[listener.Protocol] = *listener.AllowedRoutes
-		} else {
-			if !reflect.DeepEqual(allowed, *listener.AllowedRoutes) {
-				return false
-			}
-		}
-	}
-	return true
 }

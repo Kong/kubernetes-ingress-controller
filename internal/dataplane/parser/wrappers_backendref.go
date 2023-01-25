@@ -104,7 +104,6 @@ func backendRefsToKongStateBackends[T types.BackendRefT](
 			brw.Group(),
 			brw.Kind(),
 		) && newRefChecker(backendRef).IsRefAllowedByGrant(allowed) {
-
 			backend := kongstate.ServiceBackend{
 				Name: brw.Name(),
 				PortDef: kongstate.PortDef{
@@ -122,7 +121,10 @@ func backendRefsToKongStateBackends[T types.BackendRefT](
 			// these, we do not want a single impermissible ref to take the entire rule offline. in the case of edits,
 			// failing the entire rule could potentially delete routes that were previously online and in use, and
 			// that remain viable (because they still have some permissible backendRefs)
-			var namespace, kind string = route.GetNamespace(), ""
+			var (
+				namespace = route.GetNamespace()
+				kind      string
+			)
 			if brw.Namespace() != nil {
 				namespace = *brw.Namespace()
 			}

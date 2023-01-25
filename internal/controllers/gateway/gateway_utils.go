@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/go-logr/logr"
+	"github.com/samber/lo"
 	corev1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -20,6 +21,7 @@ import (
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/util/builder"
 )
 
 // -----------------------------------------------------------------------------
@@ -164,38 +166,6 @@ func extractListenerSpecFromGateway(gateway *gatewayv1beta1.Gateway, listenerNam
 	return nil
 }
 
-// ListenerTracker holds Gateway Listeners and their statuses, and provides methods to update statuses upon
-// reconciliation.
-type ListenerTracker struct {
-	// actual listeners
-	Listeners map[SectionName]Listener
-
-	// statuses
-	Statuses map[SectionName]ListenerStatus
-
-	// protocol to port to number map (var protocols)
-	protocolToPort map[ProtocolType]map[PortNumber]bool
-	// port to protocol map (portsToProtocol)
-	portToProtocol map[PortNumber]ProtocolType
-	// port to hostname to listener name map (portsToHostnames)
-	portsToHostnames map[PortNumber]map[Hostname]SectionName
-}
-
-// update from existing becomes moot if we're stateful, correct?
-// we just keep the existing maps around
-// need to detect changes, will still receive the full set
-
-// NewListenerTracker returns a ListenerTracker with empty maps.
-func NewListenerTracker() ListenerTracker {
-	return ListenerTracker{
-		Statuses:         map[SectionName]ListenerStatus{},
-		Listeners:        map[SectionName]Listener{},
-		protocolToPort:   map[ProtocolType]map[PortNumber]bool{},
-		portToProtocol:   map[PortNumber]ProtocolType{},
-		portsToHostnames: map[PortNumber]map[Hostname]SectionName{},
-	}
-}
-
 type (
 	protocolPortMap     map[ProtocolType]map[PortNumber]bool
 	portProtocolMap     map[PortNumber]ProtocolType
@@ -275,11 +245,12 @@ func canSharePort(requested, existing ProtocolType) bool {
 	}
 }
 
-func (r *GatewayReconciler) getListenerStatus(
+func getListenerStatus(
 	ctx context.Context,
 	gateway *Gateway,
 	kongListens []Listener,
 	referenceGrants []gatewayv1alpha2.ReferenceGrant,
+	client client.Client,
 ) ([]ListenerStatus, error) {
 	statuses := make(map[SectionName]ListenerStatus, len(gateway.Spec.Listeners))
 	portToProtocol, portToHostname, listenerToAttached := initializeListenerMaps(gateway)
@@ -297,7 +268,7 @@ func (r *GatewayReconciler) getListenerStatus(
 		status := ListenerStatus{
 			Name:           listener.Name,
 			Conditions:     []metav1.Condition{},
-			SupportedKinds: supportedRouteGroupKinds,
+			SupportedKinds: getListenerSupportedRouteKinds(listener),
 			// this has been populated by initializeListenerMaps()
 			AttachedRoutes: listenerToAttached[listener.Name],
 		}
@@ -359,16 +330,17 @@ func (r *GatewayReconciler) getListenerStatus(
 				Reason:             string(gatewayv1alpha2.ListenerReasonUnsupportedProtocol),
 				Message:            "no Kong listen with the requested protocol is configured",
 			})
-		}
-		if _, ok := kongProtocolsToPort[listener.Protocol][listener.Port]; !ok {
-			status.Conditions = append(status.Conditions, metav1.Condition{
-				Type:               string(gatewayv1alpha2.ListenerConditionDetached),
-				Status:             metav1.ConditionTrue,
-				ObservedGeneration: gateway.Generation,
-				LastTransitionTime: metav1.Now(),
-				Reason:             string(gatewayv1alpha2.ListenerReasonPortUnavailable),
-				Message:            "no Kong listen with the requested protocol is configured for the requested port",
-			})
+		} else {
+			if _, ok := kongProtocolsToPort[listener.Protocol][listener.Port]; !ok {
+				status.Conditions = append(status.Conditions, metav1.Condition{
+					Type:               string(gatewayv1alpha2.ListenerConditionDetached),
+					Status:             metav1.ConditionTrue,
+					ObservedGeneration: gateway.Generation,
+					LastTransitionTime: metav1.Now(),
+					Reason:             string(gatewayv1alpha2.ListenerReasonPortUnavailable),
+					Message:            "no Kong listen with the requested protocol is configured for the requested port",
+				})
+			}
 		}
 
 		// finalize adding any general conditions
@@ -466,7 +438,7 @@ func (r *GatewayReconciler) getListenerStatus(
 				if certRef.Namespace != nil {
 					secretNamespace = string(*certRef.Namespace)
 				}
-				if err := r.Client.Get(ctx, types.NamespacedName{Namespace: secretNamespace, Name: string(certRef.Name)}, secret); err != nil {
+				if err := client.Get(ctx, types.NamespacedName{Namespace: secretNamespace, Name: string(certRef.Name)}, secret); err != nil {
 					if !k8serrors.IsNotFound(err) {
 						return nil, err
 					}
@@ -631,4 +603,40 @@ func isGatewayClassEventInClass(log logr.Logger, watchEvent interface{}) bool {
 	}
 
 	return false
+}
+
+// getListenerSupportedRouteKinds determines what RouteGroupKinds are supported by the Listener.
+// If no AllowedRoutes.Kinds are specified for the Listener, the supported RouteGroupKind is derived directly
+// from the Listener's Protocol.
+// Otherwise, user specified AllowedRoutes.Kinds are used, filtered by the global Gateway supported kinds.
+//
+// TODO: Make ListenerStatus.SupportedKinds compliant with GW API specification
+// https://github.com/Kong/kubernetes-ingress-controller/issues/3228
+func getListenerSupportedRouteKinds(l gatewayv1beta1.Listener) []gatewayv1beta1.RouteGroupKind {
+	if l.AllowedRoutes == nil || len(l.AllowedRoutes.Kinds) == 0 {
+		switch string(l.Protocol) {
+		case string(gatewayv1beta1.HTTPProtocolType), string(gatewayv1beta1.HTTPSProtocolType):
+			return builder.NewRouteGroupKind().HTTPRoute().IntoSlice()
+		case string(gatewayv1beta1.TCPProtocolType):
+			return builder.NewRouteGroupKind().TCPRoute().IntoSlice()
+		case string(gatewayv1beta1.UDPProtocolType):
+			return builder.NewRouteGroupKind().UDPRoute().IntoSlice()
+		case string(gatewayv1beta1.TLSProtocolType):
+			return builder.NewRouteGroupKind().TLSRoute().IntoSlice()
+		}
+	}
+
+	var supportedRGK []gatewayv1beta1.RouteGroupKind
+	for _, gk := range l.AllowedRoutes.Kinds {
+		if gk.Group != nil && *gk.Group == gatewayv1beta1.GroupName {
+			_, ok := lo.Find(supportedKinds, func(k Kind) bool {
+				return gk.Kind == k
+			})
+			if ok {
+				supportedRGK = append(supportedRGK, gk)
+			}
+		}
+	}
+
+	return supportedRGK
 }

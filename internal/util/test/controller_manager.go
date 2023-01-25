@@ -74,6 +74,7 @@ func DeployControllerManagerForCluster(
 		fmt.Sprintf("--kubeconfig=%s", kubeconfig.Name()),
 		"--election-id=integrationtests.konghq.com",
 		"--publish-service=kong-system/ingress-controller-kong-proxy",
+		"--publish-service-udp=kong-system/ingress-controller-kong-udp-proxy",
 		"--log-format=text",
 	}
 	controllerManagerFlags = append(controllerManagerFlags, additionalFlags...)
@@ -90,7 +91,7 @@ func DeployControllerManagerForCluster(
 	go func() {
 		defer os.Remove(kubeconfig.Name())
 		fmt.Fprintf(os.Stderr, "INFO: Starting Controller Manager for Cluster %s with Configuration: %+v\n", cluster.Name(), config)
-		if err := rootcmd.RunWithLogger(&config, deprecatedLogger, logger); err != nil {
+		if err := rootcmd.RunWithLogger(ctx, &config, deprecatedLogger, logger); err != nil {
 			panic(err)
 		}
 	}()

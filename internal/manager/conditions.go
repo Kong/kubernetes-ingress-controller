@@ -10,7 +10,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	ctrl "sigs.k8s.io/controller-runtime"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/utils"
 	ctrlutils "github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/utils"
 )
 
@@ -102,7 +101,7 @@ func negotiateIngressAPI(config *Config, mapper meta.RESTMapper) (IngressAPI, er
 }
 
 func ShouldEnableCRDController(gvr schema.GroupVersionResource, restMapper meta.RESTMapper) bool {
-	if !utils.CRDExists(restMapper, gvr) {
+	if !ctrlutils.CRDExists(restMapper, gvr) {
 		ctrl.Log.WithName("controllers").WithName("crdCondition").
 			Info(fmt.Sprintf("disabling the '%s' controller due to missing CRD installation", gvr.Resource))
 		return false

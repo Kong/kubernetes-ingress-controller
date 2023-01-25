@@ -22,9 +22,13 @@ on:
 
 jobs:
   e2e-tests:
-    environment: "Configure ci"
     runs-on: ubuntu-latest
     steps:
+    - name: checkout repository
+      uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+
     - name: setup golang
       uses: actions/setup-go@v3
       with:
@@ -37,11 +41,6 @@ jobs:
         key: ${{ runner.os }}-build-codegen-${{ hashFiles('**/go.sum') }}
         restore-keys: |
           ${{ runner.os }}-build-codegen-
-
-    - name: checkout repository
-      uses: actions/checkout@v3
-      with:
-        fetch-depth: 0
 
     - name: Set up QEMU
       if: ${{ github.event.inputs.controller-image == 'kong/kubernetes-ingress-controller:ci' }}
@@ -67,7 +66,6 @@ jobs:
     - uses: Kong/kong-license@master
       id: license
       with:
-        # PULP_PASSWORD secret is set in "Configure ci" environment
         password: ${{ secrets.PULP_PASSWORD }}
 
     - name: run e2e tests
@@ -102,9 +100,13 @@ jobs:
 
   integration-tests:
     if: ${{ github.event.inputs.include-integration == 'true' }}
-    environment: "Configure ci"
     runs-on: ubuntu-latest
     steps:
+    - name: checkout repository
+      uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+
     - name: setup golang
       uses: actions/setup-go@v3
       with:
@@ -118,15 +120,9 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-build-codegen-
 
-    - name: checkout repository
-      uses: actions/checkout@v3
-      with:
-        fetch-depth: 0
-
     - uses: Kong/kong-license@master
       id: license
       with:
-        # PULP_PASSWORD secret is set in "Configure ci" environment
         password: ${{ secrets.PULP_PASSWORD }}
 
     - name: run integration tests

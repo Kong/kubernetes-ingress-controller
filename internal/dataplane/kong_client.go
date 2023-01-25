@@ -3,19 +3,26 @@ package dataplane
 import (
 	"context"
 	"fmt"
+	"reflect"
+	"sort"
 	"sync"
 	"time"
 
-	"github.com/blang/semver/v4"
 	"github.com/kong/deck/file"
 	"github.com/kong/go-kong/kong"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/samber/lo"
 	"github.com/sirupsen/logrus"
+	"github.com/sourcegraph/conc/iter"
+	"golang.org/x/exp/slices"
+	"golang.org/x/sync/errgroup"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/deckgen"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/failures"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/parser"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/sendconfig"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/metrics"
@@ -26,8 +33,12 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/versions"
 )
 
-// KongConfigurationTranslationFailedEventReason defines an event reason used for creating all translation failure events.
-const KongConfigurationTranslationFailedEventReason = "KongConfigurationTranslationFailed"
+const (
+	// KongConfigurationTranslationFailedEventReason defines an event reason used for creating all translation resource failure events.
+	KongConfigurationTranslationFailedEventReason = "KongConfigurationTranslationFailed"
+	// KongConfigurationApplyFailedEventReason defines an event reason used for creating all config apply resource failure events.
+	KongConfigurationApplyFailedEventReason = "KongConfigurationApplyFailed"
+)
 
 // -----------------------------------------------------------------------------
 // Dataplane Client - Kong - Public Types
@@ -72,9 +83,6 @@ type KongClient struct {
 	// dbmode indicates the current database mode of the backend Kong Admin API
 	dbmode string
 
-	// lastConfigSHA is a checksum of the last successful update to the data-plane
-	lastConfigSHA []byte
-
 	// lock is used to ensure threadsafety of the KongClient object
 	lock sync.RWMutex
 
@@ -110,15 +118,19 @@ type KongClient struct {
 	// in the most recent Update(). This can be helpful for callers to determine
 	// whether a Kubernetes object has corresponding data-plane configuration that
 	// is actively configured (e.g. to know how to set the object status).
-	kubernetesObjectReportsFilter k8sobj.Set
+	kubernetesObjectReportsFilter k8sobj.ConfigurationStatusSet
 
-	// eventRecorder is used to record warning events for translation failures.
+	// eventRecorder is used to record warning events for resource failures.
 	eventRecorder record.EventRecorder
+
+	// SHAs is a slice is configuration hashes send in last batch send.
+	SHAs []string
 }
 
 // NewKongClient provides a new KongClient object after connecting to the
 // data-plane API and verifying integrity.
 func NewKongClient(
+	ctx context.Context,
 	logger logrus.FieldLogger,
 	timeout time.Duration,
 	ingressClass string,
@@ -127,6 +139,7 @@ func NewKongClient(
 	diagnostic util.ConfigDumpDiagnostic,
 	kongConfig sendconfig.Kong,
 	eventRecorder record.EventRecorder,
+	dbMode string,
 ) (*KongClient, error) {
 	// build the client object
 	cache := store.NewCacheStores()
@@ -141,45 +154,8 @@ func NewKongClient(
 		cache:              &cache,
 		kongConfig:         kongConfig,
 		eventRecorder:      eventRecorder,
+		dbmode:             dbMode,
 	}
-
-	// download the kong root configuration (and validate connectivity to the proxy API)
-	root, err := c.RootWithTimeout()
-	if err != nil {
-		return nil, err
-	}
-
-	// pull the proxy configuration out of the root config and validate it
-	proxyConfig, ok := root["configuration"].(map[string]interface{})
-	if !ok {
-		return nil, fmt.Errorf("invalid root configuration, expected a map[string]interface{} got %T", proxyConfig["configuration"])
-	}
-
-	// validate the database configuration for the proxy and check for supported database configurations
-	dbmode, ok := proxyConfig["database"].(string)
-	if !ok {
-		return nil, fmt.Errorf("invalid database configuration, expected a string got %t", proxyConfig["database"])
-	}
-	switch dbmode {
-	case "off", "":
-		c.kongConfig.InMemory = true
-	case "postgres":
-		c.kongConfig.InMemory = false
-	case "cassandra":
-		return nil, fmt.Errorf("Cassandra-backed deployments of Kong managed by the ingress controller are no longer supported; you must migrate to a Postgres-backed or DB-less deployment")
-	default:
-		return nil, fmt.Errorf("%s is not a supported database backend", dbmode)
-	}
-
-	// validate the proxy version
-	proxyVersion, err := kong.ParseSemanticVersion(kong.VersionFromInfo(root))
-	if err != nil {
-		return nil, err
-	}
-
-	// store the gathered configuration options
-	c.kongConfig.Version = semver.Version{Major: proxyVersion.Major(), Minor: proxyVersion.Minor(), Patch: proxyVersion.Patch()}
-	c.dbmode = dbmode
 
 	return c, nil
 }
@@ -213,19 +189,110 @@ func (c *KongClient) ObjectExists(obj client.Object) (bool, error) {
 	return exists, err
 }
 
-// Listeners retrieves the currently configured listeners from the
-// underlying proxy so that callers can gather this metadata to
-// know which ports and protocols are in use by the proxy.
-func (c *KongClient) Listeners(ctx context.Context) ([]kong.ProxyListener, []kong.StreamListener, error) {
-	return c.kongConfig.Client.Listeners(ctx)
+// allEqual returns true if all provided objects are equal.
+func allEqual[T any](objs ...T) bool {
+	l := len(objs)
+	if l == 0 || l == 1 {
+		return true
+	}
+
+	obj := objs[0]
+	for i := 1; i < l; i++ {
+		if !reflect.DeepEqual(obj, objs[i]) {
+			return false
+		}
+	}
+	return true
 }
 
-// RootWithTimeout provides the root configuration from Kong, but uses a configurable timeout to avoid long waits if the Admin API
-// is not yet ready to respond. If a timeout error occurs, the caller is responsible for providing a retry mechanism.
-func (c *KongClient) RootWithTimeout() (map[string]interface{}, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), c.requestTimeout)
-	defer cancel()
-	return c.kongConfig.Client.Root(ctx)
+// Listeners retrieves the currently configured listeners from the underlying
+// proxy so that callers can gather this metadata to know which ports
+// and protocols are in use by the proxy.
+func (c *KongClient) Listeners(ctx context.Context) ([]kong.ProxyListener, []kong.StreamListener, error) {
+	var (
+		errg              errgroup.Group
+		errgCollect       errgroup.Group
+		listenersCh       = make(chan []kong.ProxyListener)
+		listeners         = make([][]kong.ProxyListener, 0)
+		streamListenersCh = make(chan []kong.StreamListener)
+		streamListeners   = make([][]kong.StreamListener, 0)
+	)
+
+	errgCollect.Go(func() error {
+		for {
+			select {
+			case <-ctx.Done():
+				return ctx.Err()
+			case l, ok := <-listenersCh:
+				if !ok {
+					return nil
+				}
+				listeners = append(listeners, l)
+			}
+		}
+	})
+	errgCollect.Go(func() error {
+		for {
+			select {
+			case <-ctx.Done():
+				return ctx.Err()
+			case sl, ok := <-streamListenersCh:
+				if !ok {
+					return nil
+				}
+				streamListeners = append(streamListeners, sl)
+			}
+		}
+	})
+
+	// This lock here (which is shared with .Update()) prevents a data race
+	// between reading the client(s) and setting the last applied SHA via client's
+	// SetLastConfigSHA() method. It's not ideal but it should do for now.
+	c.lock.RLock()
+	for _, cl := range c.kongConfig.Clients {
+		cl := cl
+		errg.Go(func() error {
+			listeners, streamListeners, err := cl.Listeners(ctx)
+			if err != nil {
+				return fmt.Errorf("failed to get listeners from %s: %w", cl.BaseRootURL(), err)
+			}
+			listenersCh <- listeners
+			streamListenersCh <- streamListeners
+
+			return nil
+		})
+	}
+	if err := errg.Wait(); err != nil {
+		c.lock.RUnlock()
+		return nil, nil, err
+	}
+	c.lock.RUnlock()
+	close(listenersCh)
+	close(streamListenersCh)
+	if err := errgCollect.Wait(); err != nil {
+		return nil, nil, err
+	}
+
+	if !allEqual(listeners...) {
+		return nil, nil, fmt.Errorf("not all listeners out of %d are the same", len(listeners))
+	}
+
+	if !allEqual(streamListeners...) {
+		return nil, nil, fmt.Errorf("not all stream listeners out of %d are the same", len(streamListeners))
+	}
+
+	var (
+		retListeners       []kong.ProxyListener
+		retStreamListeners []kong.StreamListener
+	)
+	if len(listeners) > 0 {
+		retListeners = listeners[0]
+	}
+	if len(streamListeners) > 0 {
+		retStreamListeners = streamListeners[0]
+	}
+
+	return retListeners, retStreamListeners, nil
 }
 
 // -----------------------------------------------------------------------------
@@ -257,7 +324,13 @@ func (c *KongClient) AreKubernetesObjectReportsEnabled() bool {
 func (c *KongClient) KubernetesObjectIsConfigured(obj client.Object) bool {
 	c.kubernetesObjectReportLock.RLock()
 	defer c.kubernetesObjectReportLock.RUnlock()
-	return c.kubernetesObjectReportsFilter.Has(obj)
+	return c.kubernetesObjectReportsFilter.Get(obj) == k8sobj.ConfigurationStatusSucceeded
+}
+
+func (c *KongClient) KubernetesObjectConfigurationStatus(obj client.Object) k8sobj.ConfigurationStatus {
+	c.kubernetesObjectReportLock.RLock()
+	defer c.kubernetesObjectReportLock.RUnlock()
+	return c.kubernetesObjectReportsFilter.Get(obj)
 }
 
 // -----------------------------------------------------------------------------
@@ -312,13 +385,14 @@ func (c *KongClient) Update(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("failed to create parser: %w", err)
 	}
-	formatVersion := "1.1"
+
 	if c.AreKubernetesObjectReportsEnabled() {
 		p.EnableKubernetesObjectReports()
 	}
 	if c.AreCombinedServiceRoutesEnabled() {
 		p.EnableCombinedServiceRoutes()
 	}
+	formatVersion := "1.1"
 	if versions.GetKongVersion().MajorMinorOnly().GTE(versions.ExplicitRegexPathVersionCutoff) {
 		p.EnableRegexPathPrefix()
 		formatVersion = "3.0"
@@ -330,7 +404,7 @@ func (c *KongClient) Update(ctx context.Context) error {
 		c.prometheusMetrics.TranslationCount.With(prometheus.Labels{
 			metrics.SuccessKey: metrics.SuccessFalse,
 		}).Inc()
-		c.recordTranslationFailureWarningEvents(translationFailures)
+		c.recordResourceFailureEvents(translationFailures, KongConfigurationTranslationFailedEventReason)
 		c.logger.Debugf("%d translation failures have occurred when building data-plane configuration", failuresCount)
 	} else {
 		c.prometheusMetrics.TranslationCount.With(prometheus.Labels{
@@ -339,12 +413,80 @@ func (c *KongClient) Update(ctx context.Context) error {
 		c.logger.Debug("successfully built data-plane configuration")
 	}
 
+	shas, err := c.sendOutToClients(ctx, kongstate, formatVersion, c.kongConfig.FilterTags)
+	if err != nil {
+		return err
+	}
+
+	// report on configured Kubernetes objects if enabled
+	if c.AreKubernetesObjectReportsEnabled() {
+		// if the configuration SHAs that have just been pushed are different than
+		// what's been previously pushed.
+		if !slices.Equal(shas, c.SHAs) {
+			report := p.GenerateKubernetesObjectReport()
+			c.logger.Debugf("triggering report for %d configured Kubernetes objects", len(report))
+			c.triggerKubernetesObjectReport(report, translationFailures)
+		} else {
+			c.logger.Debug("no configuration change, skipping kubernetes object report")
+		}
+	}
+	return nil
+}
+
+// sendOutToClients will generate deck content (config) from the provided kong state
+// and send it out to each of the configured clients.
+func (c *KongClient) sendOutToClients(
+	ctx context.Context, s *kongstate.KongState, formatVersion string, filterTags []string,
+) ([]string, error) {
+	shas, err := iter.MapErr(c.kongConfig.Clients, func(client *sendconfig.ClientWithPluginStore) (string, error) {
+		return c.sendToClient(ctx, client, s, formatVersion, filterTags)
+	},
+	)
+	if err != nil {
+		return nil, err
+	}
+	previousSHAs := c.SHAs
+
+	sort.Strings(shas)
+	c.SHAs = shas
+
+	return previousSHAs, nil
+}
+
+func (c *KongClient) sendToClient(
+	ctx context.Context,
+	client *sendconfig.ClientWithPluginStore,
+	s *kongstate.KongState,
+	formatVersion string,
+	filterTags []string,
+) (string, error) {
+	var (
+		logger         = c.logger.WithField("kong_url", client.BaseRootURL())
+		sendDiagnostic = func(
+			log logrus.FieldLogger, failed bool, ch chan<- util.ConfigDump, diagnosticConfig *file.Content,
+		) {
+			// Given that we can send multiple configs to this channel and
+			// the fact that the API that exposes that can only expose 1 config
+			// at a time it means that users utilizing the diagnostics API
+			// might not see exactly what they indend to see i.e. come failures
+			// or successfully send configs might be covered by those send
+			// later on but we're OK with this limitation of said API.
+			select {
+			case ch <- util.ConfigDump{Failed: failed, Config: *diagnosticConfig}:
+				log.Debug("shipping config to diagnostic server")
+			default:
+				log.Error("config diagnostic buffer full, dropping diagnostic config")
+			}
+		}
+	)
+
 	// generate the deck configuration to be applied to the admin API
-	c.logger.Debug("converting configuration to deck config")
+	logger.Debug("converting configuration to deck config")
 	targetConfig := deckgen.ToDeckContent(ctx,
-		c.logger, kongstate,
-		c.kongConfig.PluginSchemaStore,
-		c.kongConfig.FilterTags,
+		logger,
+		s,
+		client.PluginSchemaStore,
+		filterTags,
 		formatVersion,
 	)
 
@@ -354,10 +496,10 @@ func (c *KongClient) Update(ctx context.Context) error {
 	if c.diagnostic != (util.ConfigDumpDiagnostic{}) {
 		if !c.diagnostic.DumpsIncludeSensitive {
 			redactedConfig := deckgen.ToDeckContent(ctx,
-				c.logger,
-				kongstate.SanitizedCopy(),
-				c.kongConfig.PluginSchemaStore,
-				c.kongConfig.FilterTags,
+				logger,
+				s.SanitizedCopy(),
+				client.PluginSchemaStore,
+				filterTags,
 				formatVersion,
 			)
 			diagnosticConfig = redactedConfig
@@ -367,62 +509,42 @@ func (c *KongClient) Update(ctx context.Context) error {
 	}
 
 	// apply the configuration update in Kong
-	c.logger.Debug("sending configuration to Kong Admin API")
 	timedCtx, cancel := context.WithTimeout(ctx, c.requestTimeout)
 	defer cancel()
-	newConfigSHA, err, entityErrors := sendconfig.PerformUpdate(timedCtx,
-		c.logger,
-		&c.kongConfig,
+	// TODO TRM get errors newConfigSHA, err, entityErrors := sendconfig.PerformUpdate(timedCtx,
+	newConfigSHA, err, _ := sendconfig.PerformUpdate(
+		timedCtx,
+		logger,
+		client.Client,
+		c.kongConfig.Version,
+		c.kongConfig.Concurrency,
 		c.kongConfig.InMemory,
 		c.enableReverseSync,
 		c.skipCACertificates,
 		targetConfig,
-		c.kongConfig.FilterTags,
-		nil,
-		c.lastConfigSHA,
+		filterTags,
+		client.LastConfigSHA(),
 		c.prometheusMetrics,
 	)
-	c.recordTranslationFailureWarningEvents(entityErrors)
+	// TODO TRM record errors c.recordTranslationFailureWarningEvents(entityErrors)
 	if err != nil {
 		if expired, ok := timedCtx.Deadline(); ok && time.Now().After(expired) {
-			c.logger.Warn("exceeded Kong API timeout, consider increasing --proxy-timeout-seconds")
+			logger.Warn("exceeded Kong API timeout, consider increasing --proxy-timeout-seconds")
 		}
-		// ship diagnostics if enabled
 		if c.diagnostic != (util.ConfigDumpDiagnostic{}) {
-			select {
-			case c.diagnostic.Configs <- util.ConfigDump{Failed: true, Config: *diagnosticConfig}:
-				c.logger.Debug("shipping config to diagnostic server")
-			default:
-				c.logger.Error("config diagnostic buffer full, dropping diagnostic config")
-			}
+			sendDiagnostic(logger, true, c.diagnostic.Configs, diagnosticConfig)
 		}
-		return err
+		return "", fmt.Errorf("performing update for %s failed: %w", client.BaseRootURL(), err)
 	}
 
-	// ship diagnostics if enabled
 	if c.diagnostic != (util.ConfigDumpDiagnostic{}) {
-		select {
-		case c.diagnostic.Configs <- util.ConfigDump{Failed: false, Config: *diagnosticConfig}:
-			c.logger.Debug("shipping config to diagnostic server")
-		default:
-			c.logger.Error("config diagnostic buffer full, dropping diagnostic config")
-		}
-	}
-
-	// report on configured Kubernetes objects if enabled
-	if c.AreKubernetesObjectReportsEnabled() {
-		if string(c.lastConfigSHA) != string(newConfigSHA) {
-			report := p.GenerateKubernetesObjectReport()
-			c.logger.Debugf("triggering report for %d configured Kubernetes objects", len(report))
-			c.triggerKubernetesObjectReport(report...)
-		} else {
-			c.logger.Debug("no configuration change, skipping kubernetes object report")
-		}
+		sendDiagnostic(logger, false, c.diagnostic.Configs, diagnosticConfig)
 	}
 
 	// update the lastConfigSHA with the new updated checksum
-	c.lastConfigSHA = newConfigSHA
-	return nil
+	client.SetLastConfigSHA(newConfigSHA)
+
+	return string(newConfigSHA), nil
 }
 
 // -----------------------------------------------------------------------------
@@ -433,12 +555,21 @@ func (c *KongClient) Update(ctx context.Context) error {
 // enables filtering for which objects are currently applied to the data-plane,
 // as well as updating the c.kubernetesObjectStatusQueue to queue those objects
 // for reconciliation so their statuses can be properly updated.
-func (c *KongClient) triggerKubernetesObjectReport(objs ...client.Object) {
+func (c *KongClient) triggerKubernetesObjectReport(reportedObjects []client.Object, translationFailures []failures.ResourceFailure) {
 	// first a new set of the included objects for the most recent configuration
 	// needs to be generated.
-	set := k8sobj.Set{}
-	for _, obj := range objs {
-		set.Insert(obj)
+	set := k8sobj.ConfigurationStatusSet{}
+	for _, obj := range reportedObjects {
+		set.Insert(obj, true)
+	}
+
+	// in some situations, objects with translation failures are reported:
+	// https://github.com/Kong/kubernetes-ingress-controller/issues/3364
+	// so we override the failed configuration status from translation failures.
+	for _, translationFailure := range translationFailures {
+		for _, obj := range translationFailure.CausingObjects() {
+			set.Insert(obj, false)
+		}
 	}
 
 	c.updateKubernetesObjectReportFilter(set)
@@ -447,25 +578,36 @@ func (c *KongClient) triggerKubernetesObjectReport(objs ...client.Object) {
 	// control-plane can update the Kubernetes object statuses for affected objs.
 	// this has to be done in a separate loop so that the filter is in place
 	// before the objects are enqueued, as the filter is used by the control-plane
-	for _, obj := range objs {
+	for _, obj := range uniqueObjects(reportedObjects, translationFailures) {
 		c.kubernetesObjectStatusQueue.Publish(obj)
 	}
 }
 
+func uniqueObjects(reportedObjects []client.Object, resourceFailures []failures.ResourceFailure) []client.Object {
+	allCausingObjects := lo.FlatMap(resourceFailures, func(f failures.ResourceFailure, _ int) []client.Object {
+		return f.CausingObjects()
+	})
+	allObjects := append(reportedObjects, allCausingObjects...)
+	return lo.UniqBy(allObjects, func(obj client.Object) string {
+		return obj.GetObjectKind().GroupVersionKind().String() + "/" +
+			obj.GetNamespace() + "/" + obj.GetName()
+	})
+}
+
 // updateKubernetesObjectReportFilter overrides the internal object set with
 // a new provided set.
-func (c *KongClient) updateKubernetesObjectReportFilter(set k8sobj.Set) {
+func (c *KongClient) updateKubernetesObjectReportFilter(set k8sobj.ConfigurationStatusSet) {
 	c.kubernetesObjectReportLock.Lock()
 	defer c.kubernetesObjectReportLock.Unlock()
 	c.kubernetesObjectReportsFilter = set
 }
 
-// recordTranslationFailureWarningEvents records a warning KongConfigurationTranslationFailedEventReason events,
-// one per a translation failure causing object.
-func (c *KongClient) recordTranslationFailureWarningEvents(translationFailures []parser.TranslationFailure) {
-	for _, failure := range translationFailures {
+// recordResourceFailureEvents records warning Events for each causing object in each input resource failure, with the
+// provided reason.
+func (c *KongClient) recordResourceFailureEvents(resourceFailures []failures.ResourceFailure, reason string) {
+	for _, failure := range resourceFailures {
 		for _, obj := range failure.CausingObjects() {
-			c.eventRecorder.Event(obj, corev1.EventTypeWarning, KongConfigurationTranslationFailedEventReason, failure.Reason())
+			c.eventRecorder.Event(obj, corev1.EventTypeWarning, reason, failure.Message())
 		}
 	}
 }

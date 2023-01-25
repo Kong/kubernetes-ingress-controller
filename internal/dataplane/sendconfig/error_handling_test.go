@@ -158,7 +158,7 @@ func TestParseFlatEntityErrors(t *testing.T) {
 }
 
 func TestPushFailureReason(t *testing.T) {
-	apiConflictErr := kong.NewAPIError(http.StatusConflict, "conflict api error", []byte{})
+	apiConflictErr := kong.NewAPIErrorWithRaw(http.StatusConflict, "conflict api error", []byte{})
 	networkErr := net.UnknownNetworkError("network error")
 	genericError := errors.New("generic error")
 

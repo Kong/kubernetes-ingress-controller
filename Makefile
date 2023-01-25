@@ -2,6 +2,7 @@
 # Configuration - Repository
 # ------------------------------------------------------------------------------
 
+MAKEFLAGS += --no-print-directory
 REPO_URL ?= github.com/kong/kubernetes-ingress-controller
 REPO_INFO ?= $(shell git config --get remote.origin.url)
 TAG ?= $(shell git describe --tags)
@@ -67,6 +68,29 @@ CRD_REF_DOCS = $(PROJECT_DIR)/bin/crd-ref-docs
 crd-ref-docs: ## Download crd-ref-docs locally if necessary.
 	@$(MAKE) _download_tool TOOL=crd-ref-docs
 
+DLV = $(PROJECT_DIR)/bin/dlv
+.PHONY: dlv
+dlv: ## Download dlv locally if necessary.
+	@$(MAKE) _download_tool TOOL=dlv
+
+SKAFFOLD = $(PROJECT_DIR)/bin/skaffold
+.PHONY: skaffold
+skaffold: ## Download skaffold locally if necessary.
+# NOTE: this step is not idempotent like other tool download steps because for
+# some reason skaffold doesn't want to be included in imports or installed via
+# go install:
+# go: github.com/GoogleContainerTools/skaffold@v2.0.4: invalid version: module contains a go.mod file, so module path must match major version ("github.com/GoogleContainerTools/skaffold/v2")
+ifeq ($(wildcard $(SKAFFOLD)),)
+	curl -Lo skaffold https://storage.googleapis.com/skaffold/releases/v2.0.4/skaffold-$(shell go env GOOS)-$(shell go env GOARCH)
+	@chmod +x skaffold
+	@mv skaffold ./bin/
+endif
+
+STATICCHECK = $(PROJECT_DIR)/bin/staticcheck
+.PHONY: staticcheck
+staticcheck.download: ## Download staticcheck locally if necessary.
+	@$(MAKE) _download_tool TOOL=staticcheck
+
 # ------------------------------------------------------------------------------
 # Build
 # ------------------------------------------------------------------------------
@@ -81,11 +105,36 @@ clean:
 	@rm -f coverage*.out
 
 .PHONY: build
-build: generate fmt vet lint
-	go build -a -o bin/manager -ldflags "-s -w \
-		-X $(REPO_URL)/v2/internal/metadata.Release=$(TAG) \
-		-X $(REPO_URL)/v2/internal/metadata.Commit=$(COMMIT) \
-		-X $(REPO_URL)/v2/internal/metadata.Repo=$(REPO_INFO)" internal/cmd/main.go
+build: generate fmt vet lint _build
+
+.PHONY: build.fips
+build.fips: generate fmt vet lint _build.fips
+
+.PHONY: _build
+_build:
+	$(MAKE) _build.template MAIN=./internal/cmd/main.go
+
+.PHONY: _build.fips
+_build.fips:
+	$(MAKE) _build.template MAIN=./internal/cmd/fips/main.go
+
+.PHONY: _build.template
+_build.template:
+	go build -o bin/manager -ldflags "-s -w \
+		-X $(REPO_URL)/v2/internal/manager/metadata.Release=$(TAG) \
+		-X $(REPO_URL)/v2/internal/manager/metadata.Commit=$(COMMIT) \
+		-X $(REPO_URL)/v2/internal/manager/metadata.Repo=$(REPO_INFO)" ${MAIN}
+
+.PHONY: _build.debug
+_build.debug:
+	$(MAKE) _build.template.debug MAIN=./internal/cmd/main.go
+
+.PHONY: _build.template.debug
+_build.template.debug:
+	go build -o bin/manager-debug -trimpath -gcflags=all="-N -l" -ldflags " \
+		-X $(REPO_URL)/v2/internal/manager/metadata.Release=$(TAG) \
+		-X $(REPO_URL)/v2/internal/manager/metadata.Commit=$(COMMIT) \
+		-X $(REPO_URL)/v2/internal/manager/metadata.Repo=$(REPO_INFO)" ${MAIN}
 
 .PHONY: fmt
 fmt:
@@ -96,8 +145,14 @@ vet:
 	go vet ./...
 
 .PHONY: lint
-lint: verify.tidy golangci-lint
+lint: verify.tidy golangci-lint staticcheck
 	$(GOLANGCI_LINT) run -v
+
+.PHONY: staticcheck
+staticcheck: staticcheck.download
+	$(STATICCHECK) -tags e2e_tests,integration_tests,istio_tests,conformance_tests \
+		-f stylish \
+		./...
 
 .PHONY: verify.tidy
 verify.tidy:
@@ -116,7 +171,7 @@ verify.versions:
 	./scripts/verify-versions.sh $(TAG)
 
 .PHONY: verify.manifests
-verify.manifests: verify.repo manifests manifests.single verify.diff
+verify.manifests: verify.repo manifests verify.diff
 
 .PHONY: verify.generators
 verify.generators: verify.repo generate verify.diff
@@ -200,10 +255,10 @@ container:
 		--build-arg REPO_INFO=${REPO_INFO} \
 		-t ${IMAGE}:${TAG} .
 
-.PHONY: container
-debug-container:
+.PHONY: container.debug
+container.debug:
 	docker buildx build \
-		-f Dockerfile \
+		-f Dockerfile.debug \
 		--target debug \
 		--build-arg TAG=${TAG}-debug \
 		--build-arg COMMIT=${COMMIT} \
@@ -325,42 +380,6 @@ test.integration.enterprise.postgres.pretty:
 		GOTESTFLAGS="-json" \
 		COVERAGE_OUT=coverage.enterprisepostgres.out
 
-.PHONY: test.integration.cp
-_test.integration.cp: gotestsum
-	CLUSTER_NAME="e2e-$(uuidgen)" \
-		KUBERNETES_CLUSTER_NAME="${CLUSTER_NAME}" go run hack/e2e/cluster/deploy/main.go \
-		GOFLAGS="-tags=integration_tests" \
-		KONG_TEST_CLUSTER="${CP}:${CLUSTER_NAME}" \
-		GOTESTSUM_FORMAT=$(GOTESTSUM_FORMAT) \
-		$(GOTESTSUM) -- -parallel "${NCPU}" -timeout $(INTEGRATION_TEST_TIMEOUT) \
-		./test/integration/... \
-    	go run hack/e2e/cluster/cleanup/main.go ${CLUSTER_NAME} \
-		trap cleanup EXIT SIGINT SIGQUIT
-
-.PHONY: test.integration.gke
-test.integration.gke:
-	@$(MAKE) _test.integration.cp \
-		CP="gke"
-
-.PHONY: test.integration.kind
-test.integration.kind:
-	@$(MAKE) _test.integration.cp \
-		CP="kind"
-
-.PHONY: test.e2e.gke
-test.e2e.gke:
-	CLUSTER_NAME="e2e-$(uuidgen)" \
-		KUBERNETES_CLUSTER_NAME="${CLUSTER_NAME}" go run hack/e2e/cluster/deploy/main.go \
-		KONG_TEST_CLUSTER="gke:${CLUSTER_NAME}" \
-		GOFLAGS="-tags=e2e_tests" $(GOTESTSUM) -- $(GOTESTFLAGS) \
-			-race \
-			-run $(E2E_TEST_RUN) \
-			-parallel $(NCPU) \
-			-timeout $(E2E_TEST_TIMEOUT) \
-			./test/e2e/... \
-		go run hack/e2e/cluster/cleanup/main.go ${CLUSTER_NAME} \
-		trap cleanup EXIT SIGINT SIGQUIT
-
 .PHONY: test.e2e
 test.e2e: gotestsum
 	GOFLAGS="-tags=e2e_tests" \
@@ -413,6 +432,7 @@ test.istio: gotestsum
 KUBECONFIG ?= "${HOME}/.kube/config"
 KONG_NAMESPACE ?= kong-system
 KONG_PROXY_SERVICE ?= ingress-controller-kong-proxy
+KONG_PROXY_UDP_SERVICE ?= ingress-controller-kong-udp-proxy
 KONG_ADMIN_SERVICE ?= ingress-controller-kong-admin
 KONG_ADMIN_PORT ?= 8001
 KONG_ADMIN_URL ?= "http://$(shell kubectl -n $(KONG_NAMESPACE) get service $(KONG_ADMIN_SERVICE) -o=go-template='{{range .status.loadBalancer.ingress}}{{.ip}}{{end}}'):$(KONG_ADMIN_PORT)"
@@ -423,11 +443,45 @@ _ensure-namespace:
 
 .PHONY: debug
 debug: install _ensure-namespace
-	dlv debug ./internal/cmd/main.go -- \
+	$(DLV) debug ./internal/cmd/main.go -- \
+		--anonymous-reports=false \
 		--kong-admin-url $(KONG_ADMIN_URL) \
 		--publish-service $(KONG_NAMESPACE)/$(KONG_PROXY_SERVICE) \
+		--publish-service-udp $(KONG_NAMESPACE)/$(KONG_PROXY_UDP_SERVICE) \
 		--kubeconfig $(KUBECONFIG) \
 		--feature-gates=$(KONG_CONTROLLER_FEATURE_GATES)
+
+# By default dlv will look for a config in:
+# > If $XDG_CONFIG_HOME is set, then configuration and command history files are
+# > located in $XDG_CONFIG_HOME/dlv.
+# > Otherwise, they are located in $HOME/.config/dlv on Linux and $HOME/.dlv on other systems.
+#
+# ref: https://github.com/go-delve/delve/blob/master/Documentation/cli/README.md#configuration-and-command-history
+# 
+# This sets the XDG_CONFIG_HOME to this project's subdirectory so that project
+# specific substitution paths can be isolated to this project only and not shared
+# across projects under $HOME or common XDG_CONFIG_HOME.
+.PHONY: debug.connect
+debug.connect:
+	XDG_CONFIG_HOME="$(PROJECT_DIR)/.config" $(DLV) connect localhost:40000
+
+# This will port-forward 40000 from KIC's debugger to localhost. Connect to that
+# port with debugger/IDE of your choice
+.PHONY: debug.skaffold
+debug.skaffold: skaffold
+	TAG=$(TAG)-debug REPO_INFO=$(REPO_INFO) COMMIT=$(COMMIT) \
+		$(SKAFFOLD) debug --port-forward=pods --profile=debug $(SKAFFOLD_FLAGS)
+
+# This will port-forward 40000 from KIC's debugger to localhost. Connect to that
+# port with debugger/IDE of your choice
+.PHONY: debug.skaffold.sync
+debug.skaffold.sync: skaffold
+	@$(MAKE) debug.skaffold SKAFFOLD_FLAGS="--auto-build --auto-deploy --auto-sync"
+
+.PHONY: run.skaffold
+run.skaffold: skaffold
+	TAG=$(TAG)-debug REPO_INFO=$(REPO_INFO) COMMIT=$(COMMIT) \
+		$(SKAFFOLD) dev --port-forward=pods --profile=dev
 
 .PHONY: run
 run: install _ensure-namespace
@@ -439,8 +493,10 @@ run: install _ensure-namespace
 .PHONY: _run
 _run:
 	go run ./internal/cmd/main.go \
+		--anonymous-reports=false \
 		--kong-admin-url $(KONG_ADMIN_URL) \
 		--publish-service $(KONG_NAMESPACE)/$(KONG_PROXY_SERVICE) \
+		--publish-service-udp $(KONG_NAMESPACE)/$(KONG_PROXY_UDP_SERVICE) \
 		--kubeconfig $(KUBECONFIG) \
 		--feature-gates=$(KONG_CONTROLLER_FEATURE_GATES)
 

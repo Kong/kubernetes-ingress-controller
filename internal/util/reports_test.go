@@ -14,6 +14,7 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 type TLSPair struct {
@@ -151,7 +152,7 @@ func TestReporterSendStart(t *testing.T) {
 
 	reporter.once()
 
-	reporter.sendStart()
+	reporter.sendStart(ctx)
 
 	serialized := "<14>signal=kic-start;uptime=0;v=kic.version;" +
 		"k8sv=k8s.version;kv=kong.version;db=off;" +
@@ -188,7 +189,7 @@ func TestReporterSendPing(t *testing.T) {
 
 	reporter.once()
 
-	reporter.sendPing(42)
+	reporter.sendPing(ctx, 42)
 
 	serialized := "<14>signal=kic-ping;uptime=42;v=kic.version;" +
 		"k8sv=k8s.version;kv=kong.version;db=off;" +
@@ -216,21 +217,19 @@ func TestReporterRun(t *testing.T) {
 	}
 
 	reqs := make(chan []byte)
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
 	listener, err := getTLSListener()
-	assert.Nil(err)
+	require.NoError(t, err)
 	defer listener.Close()
-	go runTestTLSServer(ctx, t, listener, reqs)
+	go runTestTLSServer(context.Background(), t, listener, reqs)
 
 	reporter.once()
-	done := make(chan struct{})
 
 	var wg sync.WaitGroup
-
 	wg.Add(1)
+	ctxReporter, cancelReporter := context.WithCancel(context.Background())
+	defer cancelReporter()
 	go func() {
-		reporter.Run(done)
+		reporter.Run(ctxReporter)
 		wg.Done()
 	}()
 
@@ -255,7 +254,7 @@ func TestReporterRun(t *testing.T) {
 			assert.Equal(len(expect), len(short))
 			assert.Equal(expect, short)
 		}
-		close(done)
+		cancelReporter()
 	}()
 	wg.Wait()
 }

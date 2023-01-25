@@ -53,13 +53,13 @@ jobs:
           password: ${{ secrets.DOCKER_TOKEN }}
       - name: Docker meta
         id: meta
-        uses: docker/metadata-action@v4.1.1
+        uses: docker/metadata-action@v4.3.0
         with:
           images: kong/nightly-ingress-controller
           tags: ${{ steps.tags-standard.outputs.TAGS_STANDARD }}
       - name: Docker meta (redhat)
         id: meta_redhat
-        uses: docker/metadata-action@v4.1.1
+        uses: docker/metadata-action@v4.3.0
         with:
           images: kong/nightly-ingress-controller
           flavor: |
@@ -142,7 +142,7 @@ jobs:
           password: ${{ secrets.RH_TOKEN }}
       - name: Docker meta (redhat scan registry)
         id: meta_redhat_scan_registry
-        uses: docker/metadata-action@v4.1.1
+        uses: docker/metadata-action@v4.3.0
         with:
           images: ${{ env.RH_SCAN_REGISTRY }}/${{ env.RH_SCAN_REGISTRY_IMAGE_NAME }}
           flavor: |
@@ -181,7 +181,8 @@ jobs:
     strategy:
       matrix:
         kubernetes-version:
-          - 'v1.25.0'
+          - 'v1.26.0'
+          - 'v1.25.3'
         dbmode:
           - 'dbless'
           - 'postgres'
@@ -189,6 +190,10 @@ jobs:
           - 'traditional'
           - 'traditional_compatible'
     steps:
+      - name: checkout repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
       - name: setup golang
         uses: actions/setup-go@v3
         with:
@@ -200,18 +205,16 @@ jobs:
           key: ${{ runner.os }}-build-codegen-${{ hashFiles('**/go.sum') }}
           restore-keys: |
             ${{ runner.os }}-build-codegen-
-      - name: checkout repository
-        uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
       - name: Kubernetes ${{ matrix.kubernetes-version }} ${{ matrix.dbmode }} Integration Tests With ${{ matrix.kong-router-flavor }} Kong Router
         run: KONG_CLUSTER_VERSION=${{ matrix.kubernetes-version }} make test.integration.${{ matrix.dbmode }}
         env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GOTESTSUM_JUNITFILE: integration-${{ matrix.kubernetes-version }}-${{ matrix.dbmode }}-${{ matrix.kong-router-flavor }}-tests.xml
           TEST_KONG_ROUTER_FLAVOR: ${{ matrix.kong-router-flavor }}
       - name: Kubernetes ${{ matrix.kubernetes-version }} ${{ matrix.dbmode }} Integration Tests for Invalid Configurations With ${{ matrix.kong-router-flavor }} Kong Router
         run: KONG_CLUSTER_VERSION=${{ matrix.kubernetes-version }} make test.integration.${{ matrix.dbmode }}
         env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GOTESTSUM_JUNITFILE: integration-invalid-config-${{ matrix.kong-router-flavor }}-${{ matrix.kubernetes-version }}-${{ matrix.dbmode }}-tests.xml
           TEST_KONG_ROUTER_FLAVOR: ${{ matrix.kong-router-flavor }}
           GOTESTFLAGS: "-run=TestIngressRecoverFromInvalidPath"
@@ -223,7 +226,6 @@ jobs:
           path: integration-${{ matrix.kubernetes-version }}-${{ matrix.dbmode }}-${{ matrix.kong-router-flavor }}-tests.xml
 
   buildpulse-report:
-    environment: "Configure ci"
     needs:
       - "test-current-kubernetes"
     if: ${{ always() }}

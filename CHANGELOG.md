@@ -8,6 +8,8 @@ Adding a new version? You'll need three changes:
   This is all the way at the bottom. It's the thing we always forget.
 --->
 
+ - [2.9.0](#290)
+ - [2.8.1](#281)
  - [2.8.0](#280)
  - [2.7.0](#270)
  - [2.6.0](#260)
@@ -61,9 +63,68 @@ Adding a new version? You'll need three changes:
  - [0.0.5](#005)
  - [0.0.4 and prior](#004-and-prior)
 
-## [2.8.0]
+## [2.9.0]
 
 > Release date: TBD
+
+### Added
+
+- Store status of whether configuration succedded or failed for Kubernetes
+  objects in dataplane client and publish the events to let controllers know
+  if the controlled objects succeeded or failed to be translated to Kong
+  configuration.
+  [#3359](https://github.com/Kong/kubernetes-ingress-controller/pull/3359)
+- Added `version` command
+  [#3379](https://github.com/Kong/kubernetes-ingress-controller/pull/3379)  
+- Added `--publish-service-udp` to indicate the Service that handles inbound
+  UDP traffic.
+  [#3325](https://github.com/Kong/kubernetes-ingress-controller/pull/3325)
+- Added possibility to configure multiple Kong Gateways through the
+  `--kong-admin-url` CLI flag (which can be specified multiple times) or through
+  a corresponding environment variable `CONTROLLER_KONG_ADMIN_URL` (which can
+  specify multiple values separated by a comma).
+  [#3268](https://github.com/Kong/kubernetes-ingress-controller/pull/3268)
+
+### Fixed
+
+- Disabled non-functioning mesh reporting when `--watch-namespaces` flag set.
+  [#3336](https://github.com/Kong/kubernetes-ingress-controller/pull/3336)
+- Fixed the duplicate update of status of `HTTPRoute` caused by incorrect check
+  of whether status is changed.
+  [#3346](https://github.com/Kong/kubernetes-ingress-controller/pull/3346)
+- Change existing `resolvedRefs` condition in status `HTTPRoute` if there is
+  already one to avoid multiple appearance of conditions with same type
+  [#3386](https://github.com/Kong/kubernetes-ingress-controller/pull/3386)
+- Event messages for invalid multi-Service backends now indicate their derived
+  Kong resource name.
+  [#3318](https://github.com/Kong/kubernetes-ingress-controller/pull/3318)
+
+### Deprecated
+
+- `kong-custom-entities-secret` flag has been marked as deprecated and will be
+  removed in 3.0.
+  [#3262](https://github.com/Kong/kubernetes-ingress-controller/pull/3262)
+
+## [2.8.1]
+
+> Release date: 2022-01-04
+
+### Fixed
+
+- When `CombinedRoutes` is turned on, translator will replace each occurrence of
+  `*` in `Ingress`'s host to `_` in kong route names because `*` is not
+  allowed in kong route names.
+  [#3312](https://github.com/Kong/kubernetes-ingress-controller/pull/3312)
+- Fix an issue with `CombinedRoutes`, which caused the controller to fail when
+  creating config for Ingress when backend services specified only port names
+  [#3313](https://github.com/Kong/kubernetes-ingress-controller/pull/3313)
+- Parse `ttl` field of key-auth credentials in secrets to `int` type before filling
+  to kong credentials to fix the invalid type error.
+  [#3319](https://github.com/Kong/kubernetes-ingress-controller/pull/3319)
+
+## [2.8.0]
+
+> Release date: 2022-12-19
 
 ### Breaking changes
 
@@ -76,6 +137,19 @@ Adding a new version? You'll need three changes:
   issue](https://github.com/Kong/kubernetes-ingress-controller/issues/3131)
   if you have questions or concerns about the transition.
   [#3132](https://github.com/Kong/kubernetes-ingress-controller/pull/3132)
+
+### Known issues
+
+- Processing of custom entites through `--kong-custom-entities-secret` flag or
+  `CONTROLLER_KONG_CUSTOM_ENTITIES_SECRET` environment variable does not work.
+  [#3278](https://github.com/Kong/kubernetes-ingress-controller/issues/3278)
+
+### Deprecated
+
+- KongIngress' `proxy` and `route` fields are now deprecated in favor of
+  Service and Ingress annotations. The annotations will become the only
+  means of configuring those settings in 3.0 release.
+  [#3246](https://github.com/Kong/kubernetes-ingress-controller/pull/3246)
 
 ### Added
 
@@ -126,31 +200,36 @@ Adding a new version? You'll need three changes:
   [#3155](https://github.com/Kong/kubernetes-ingress-controller/pull/3155)
 - Routes support annotations for path handling.
   [#3121](https://github.com/Kong/kubernetes-ingress-controller/pull/3121)
-- Warning events are recorded when CA secrets cannot be properly translated into Kong configuration.
-  [#3125](https://github.com/Kong/kubernetes-ingress-controller/pull/3125)
-- Warning events are recorded when annotations in services backing a single route do not match.
-  [#3130](https://github.com/Kong/kubernetes-ingress-controller/pull/3130)
-- Warning events are recorded when a service's referred client-cert does not exist.
-  [#3137](https://github.com/Kong/kubernetes-ingress-controller/pull/3137)
+- Warning Kubernetes API events with a `KongConfigurationTranslationFailed` 
+  reason are recorded when:
+  - CA secrets cannot be properly translated into Kong configuration
+    [#3125](https://github.com/Kong/kubernetes-ingress-controller/pull/3125)
+  - Annotations in services backing a single route do not match
+    [#3130](https://github.com/Kong/kubernetes-ingress-controller/pull/3130)
+  - A service's referred client-cert does not exist.
+    [#3137](https://github.com/Kong/kubernetes-ingress-controller/pull/3137)
+  - One of `netv1.Ingress` related issues occurs (e.g. backing Kubernetes service couldn't 
+    be found, matching Kubernetes service port couldn't be found).
+    [#3138](https://github.com/Kong/kubernetes-ingress-controller/pull/3138)
+  - A Gateway Listener has more than one CertificateRef specified or refers to a Secret 
+    that has no valid TLS key-pair.
+    [#3147](https://github.com/Kong/kubernetes-ingress-controller/pull/3147)
+  - An Ingress refers to a TLS secret that does not exist or
+    has no valid TLS key-pair.
+    [#3150](https://github.com/Kong/kubernetes-ingress-controller/pull/3150)
+  - An HTTPRoute has no backendRefs specified.
+    [#3167](https://github.com/Kong/kubernetes-ingress-controller/pull/3167)
 - CRDs' validations improvements: `UDPIngressRule.Port`, `IngressRule.Port` and `IngressBackend.ServiceName`
   instead of being validated in the Parser, are validated by the Kubernetes API now.
   [#3136](https://github.com/Kong/kubernetes-ingress-controller/pull/3136)
-- Gateway API: Implement port matching for routes as defined in
+- Gateway API: Implement port matching for HTTPRoute, TCPRoute and TLSRoute as defined in
   [GEP-957](https://gateway-api.sigs.k8s.io/geps/gep-957/)
   [#3129](https://github.com/Kong/kubernetes-ingress-controller/pull/3129)
-- Warning events are recorded when one of `netv1.Ingress` related issues occurs
-  (e.g. backing Kubernetes service couldn't be found, matching Kubernetes service port couldn't be found).
-  [#3138](https://github.com/Kong/kubernetes-ingress-controller/pull/3138)
-- Warning events are recorded when a Gateway Listener has more than one CertificateRef specified
-  or refers to a Secret that has no valid TLS key-pair.
-  [#3147](https://github.com/Kong/kubernetes-ingress-controller/pull/3147)
-- Warning events are recorded when an Ingress refers to a TLS secret that does not exist or 
-  has no valid TLS key-pair. 
-  [#3150](https://github.com/Kong/kubernetes-ingress-controller/pull/3150)
-- Warning events are recorded when HTTPRoute has no backendRefs specified.
-  [#3167](https://github.com/Kong/kubernetes-ingress-controller/pull/3167)
+  [#3226](https://github.com/Kong/kubernetes-ingress-controller/pull/3226)
 - Gateway API: Matching routes by `Listener.AllowedRoutes`
   [#3181](https://github.com/Kong/kubernetes-ingress-controller/pull/3181)
+- Admission webhook will warn if any of `KongIngress` deprecated fields gets populated.
+  [#3261](https://github.com/Kong/kubernetes-ingress-controller/pull/3261)
 
 ### Fixed
 
@@ -189,6 +268,13 @@ Adding a new version? You'll need three changes:
   If an `HTTPRoute` specifies hostnames, and no intersecting hostnames 
   could be found in its parent listners, it is not accepted.
   [#3180](https://github.com/Kong/kubernetes-ingress-controller/pull/3180)
+- Matches `sectionName` in parentRefs of route objects in gateway API. Now 
+  if a route specifies `sectionName` in parentRefs, and no listener can 
+  match the specified name, the route is not accepted.
+  [#3230](https://github.com/Kong/kubernetes-ingress-controller/pull/3230)
+- If there's no matching Kong listener for a protocol specified in a Gateway's
+  Listener, only one `Detached` condition is created in the Listener's status.
+  [#3257](https://github.com/Kong/kubernetes-ingress-controller/pull/3257)
 
 ## [2.7.0]
 
@@ -2108,7 +2194,7 @@ Please read the changelog and test in your environment.
    [#92](https://github.com/Kong/kubernetes-ingress-controller/pull/92)
 
 
-## [v0.0.5]
+## [0.0.5]
 
 > Release date: 2018/06/02
 
@@ -2116,11 +2202,13 @@ Please read the changelog and test in your environment.
 
  - Add support for Kong Enterprise Edition 0.32 and above
 
-## [v0.0.4] and prior
+## [0.0.4] and prior
 
  - The initial versions  were rapildy iterated to deliver
    a working ingress controller.
 
+[2.9.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.8.1...v2.9.0
+[2.8.1]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.8.0...v2.8.1
 [2.8.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.7.0...v2.8.0
 [2.7.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.6.0...v2.7.0
 [2.6.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.5.0...v2.6.0

@@ -1,5 +1,11 @@
 name: tests
 
+concurrency:
+  # Run only for most recent commit in PRs but for all tags and commits on main
+  # Ref: https://docs.github.com/en/actions/using-jobs/using-concurrency
+  group: ${{ github.workflow }}-${{ github.head_ref || github.sha }}
+  cancel-in-progress: true
+
 on:
   pull_request:
     branches:
@@ -15,6 +21,10 @@ jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
 
     - name: Setup go
       uses: actions/setup-go@v3
@@ -28,14 +38,6 @@ jobs:
         key: ${{ runner.os }}-build-codegen-${{ hashFiles('**/go.sum') }}
         restore-keys: |
           ${{ runner.os }}-build-codegen-
-
-    - name: Checkout repository
-      uses: actions/checkout@v3
-      with:
-        fetch-depth: 0
-
-    - name: Setup yq
-      run: go install github.com/mikefarah/yq/v4@latest
 
     - name: Run lint
       run: make lint
@@ -78,6 +80,10 @@ jobs:
   unit-tests:
     runs-on: ubuntu-latest
     steps:
+    - name: checkout repository
+      uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
 
     - name: setup golang
       uses: actions/setup-go@v3
@@ -91,11 +97,6 @@ jobs:
         key: ${{ runner.os }}-build-codegen-${{ hashFiles('**/go.sum') }}
         restore-keys: |
           ${{ runner.os }}-build-codegen-
-
-    - name: checkout repository
-      uses: actions/checkout@v3
-      with:
-        fetch-depth: 0
 
     - name: run unit tests
       run: make test.unit
@@ -116,22 +117,39 @@ jobs:
         path: unit-tests.xml
 
   integration-tests-enterprise-postgres:
-    environment: "Configure ci"
     runs-on: ubuntu-latest
+    env:
+      PULP_PASSWORD: ${{ secrets.PULP_PASSWORD }}
+    # We don't want to run enterprise tests for contributors whose workflow runs
+    # do not have access to enterprise license (here, through the means of
+    # kong-license action) so don't run this job when the required secret is not
+    # available.
+    # Instead of making it conditional on job level we need to job.env because
+    # secrets context is only available at this level.
+    #
+    # ref: https://docs.github.com/en/actions/learn-github-actions/contexts#context-availability
     steps:
 
     - uses: Kong/kong-license@master
+      if: env.PULP_PASSWORD != ''
       id: license
       with:
-        # PULP_PASSWORD secret is set in "Configure ci" environment
-        password: ${{ secrets.PULP_PASSWORD }}
+        password: ${{ env.PULP_PASSWORD }}
+
+    - name: checkout repository
+      if: env.PULP_PASSWORD != ''
+      uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
 
     - name: setup golang
+      if: env.PULP_PASSWORD != ''
       uses: actions/setup-go@v3
       with:
         go-version: '^1.19'
 
     - name: cache go modules
+      if: env.PULP_PASSWORD != ''
       uses: actions/cache@v3
       with:
         path: ~/go/pkg/mod
@@ -139,25 +157,23 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-build-codegen-
 
-    - name: checkout repository
-      uses: actions/checkout@v3
-      with:
-        fetch-depth: 0
-
     - name: run integration tests
+      if: env.PULP_PASSWORD != ''
       run: make test.integration.enterprise.postgres
       env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         KONG_LICENSE_DATA: ${{ steps.license.outputs.license }}
         GOTESTSUM_JUNITFILE: "integration-tests-enterprise-postgres.xml"
 
     - name: collect test coverage
+      if: env.PULP_PASSWORD != ''
       uses: actions/upload-artifact@v3
       with:
         name: coverage
         path: coverage.enterprisepostgres.out
 
     - name: upload diagnostics
-      if: ${{ always() }}
+      if: ${{ failure() && env.PULP_PASSWORD != '' }}
       uses: actions/upload-artifact@v3
       with:
         name: diagnostics-integration-tests-enterprise-postgres
@@ -165,7 +181,7 @@ jobs:
         if-no-files-found: ignore
 
     - name: collect test report
-      if: ${{ always() }}
+      if: env.PULP_PASSWORD != ''
       uses: actions/upload-artifact@v3
       with:
         name: tests-report
@@ -175,6 +191,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
 
+    - name: checkout repository
+      uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+
     - name: setup golang
       uses: actions/setup-go@v3
       with:
@@ -188,14 +209,10 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-build-codegen-
 
-    - name: checkout repository
-      uses: actions/checkout@v3
-      with:
-        fetch-depth: 0
-
     - name: run integration tests
       run: make test.integration.dbless
       env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         GOTESTSUM_JUNITFILE: "integration-tests-dbless.xml"
 
     - name: collect test coverage
@@ -223,6 +240,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
 
+    - name: checkout repository
+      uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+
     - name: setup golang
       uses: actions/setup-go@v3
       with:
@@ -236,14 +258,10 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-build-codegen-
 
-    - name: checkout repository
-      uses: actions/checkout@v3
-      with:
-        fetch-depth: 0
-
     - name: run integration tests
       run: make test.integration.postgres
       env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         GOTESTSUM_JUNITFILE: "integration-tests-postgres.xml"
 
     - name: collect test coverage
@@ -271,6 +289,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
 
+    - name: checkout repository
+      uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+
     - name: setup golang
       uses: actions/setup-go@v3
       with:
@@ -284,14 +307,10 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-build-codegen-
 
-    - name: checkout repository
-      uses: actions/checkout@v3
-      with:
-        fetch-depth: 0
-
     - name: run integration tests
       run: make test.integration.dbless
       env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         KONG_CONTROLLER_FEATURE_GATES: "GatewayAlpha=true,CombinedRoutes=false"
         GOTESTSUM_JUNITFILE: "integration-tests-feature-gates.xml"
 
@@ -320,6 +339,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
 
+    - name: checkout repository
+      uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+
     - name: setup golang
       uses: actions/setup-go@v3
       with:
@@ -332,11 +356,6 @@ jobs:
         key: ${{ runner.os }}-build-codegen-${{ hashFiles('**/go.sum') }}
         restore-keys: |
           ${{ runner.os }}-build-codegen-
-
-    - name: checkout repository
-      uses: actions/checkout@v3
-      with:
-        fetch-depth: 0
 
     - name: run conformance tests
       run: make test.conformance
@@ -351,7 +370,6 @@ jobs:
         path: conformance-tests.xml
 
   coverage:
-    environment: "Configure ci"
     needs:
       - "unit-tests"
       - "integration-tests-dbless"
@@ -360,6 +378,11 @@ jobs:
       - "integration-tests-feature-gates"
     runs-on: ubuntu-latest
     steps:
+
+    - name: checkout repository
+      uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
 
     - name: collect test coverage artifacts
       id: download-coverage
@@ -378,7 +401,6 @@ jobs:
         verbose: true
 
   buildpulse-report:
-    environment: "Configure ci"
     needs:
       - "unit-tests"
       - "integration-tests-dbless"

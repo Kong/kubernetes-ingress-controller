@@ -18,198 +18,203 @@ jobs:
         # grep magic described in https://unix.stackexchange.com/a/13472
         # sed to add the extra $ is because some of our test names overlap. we need it so the -run regex only matches one test
         run: |
-          echo "::set-output name=test_names::$(grep -shoP "(?<=^func )(Test[a-zA-z_0-9]+)(?=\(t \*testing.T\) {)" * | sed -e "s/$/\$/"| jq -R . | jq -cs .)"
+          echo "test_names=$(grep -shoP "(?<=^func )(Test[a-zA-z_0-9]+)(?=\(t \*testing.T\) {)" * | sed -e "s/$/\$/"| jq -R . | jq -cs .)" >> $GITHUB_OUTPUT
       - name: Print test names
         run: echo "Test names ${{ steps.set_test_names.outputs.test_names }}"
-  e2e-tests:
-    environment: "Configure ci"
+  e2e-kind-tests:
     runs-on: ubuntu-latest
     needs: setup-e2e-tests
     strategy:
       fail-fast: false
       matrix:
         kubernetes-version:
-          - 'v1.21.12'
-          - 'v1.22.9'
-          - 'v1.23.6'
-          - 'v1.24.2'
-          - 'v1.25.2'
+          - 'v1.21.14'
+          - 'v1.22.15'
+          - 'v1.23.13'
+          - 'v1.24.7'
+          - 'v1.25.3'
+          - 'v1.26.0'
         test: ${{ fromJSON(needs.setup-e2e-tests.outputs.test_names) }}
     steps:
-    - name: setup golang
-      uses: actions/setup-go@v3
-      with:
-        go-version: '^1.19'
+      - name: checkout repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
 
-    - name: cache go modules
-      uses: actions/cache@v3
-      with:
-        path: ~/go/pkg/mod
-        key: ${{ runner.os }}-build-codegen-${{ hashFiles('**/go.sum') }}
-        restore-keys: |
-          ${{ runner.os }}-build-codegen-
+      - name: setup golang
+        uses: actions/setup-go@v3
+        with:
+          go-version: '^1.19'
 
-    - name: checkout repository
-      uses: actions/checkout@v3
-      with:
-        fetch-depth: 0
+      - name: cache go modules
+        uses: actions/cache@v3
+        with:
+          path: ~/go/pkg/mod
+          key: ${{ runner.os }}-build-codegen-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-build-codegen-
 
-    - uses: Kong/kong-license@master
-      id: license
-      with:
-        # PULP_PASSWORD secret is set in "Configure ci" environment
-        password: ${{ secrets.PULP_PASSWORD }}
+      - uses: Kong/kong-license@master
+        id: license
+        with:
+          password: ${{ secrets.PULP_PASSWORD }}
 
-    - name: run ${{ matrix.test }} - ${{ matrix.kubernetes-version }}
-      run: make test.e2e
-      env:
-        TEST_KONG_CONTROLLER_IMAGE_OVERRIDE: "kong/nightly-ingress-controller:nightly"
-        KONG_LICENSE_DATA: ${{ steps.license.outputs.license }}
-        KONG_CLUSTER_VERSION: ${{ matrix.kubernetes-version }}
-        E2E_TEST_RUN: ${{ matrix.test }}
-        NCPU: 1 # it was found that github actions (specifically) did not seem to perform well when spawning
-                # multiple kind clusters within a single job, so only 1 is allowed at a time.
-        GOTESTSUM_JUNITFILE: "e2e-${{ matrix.kubernetes-version }}-tests.xml"
+      - name: run ${{ matrix.test }}
+        run: make test.e2e
+        env:
+          TEST_KONG_CONTROLLER_IMAGE_OVERRIDE: "kong/nightly-ingress-controller:nightly"
+          KONG_LICENSE_DATA: ${{ steps.license.outputs.license }}
+          KONG_CLUSTER_VERSION: ${{ matrix.kubernetes-version }}
+          E2E_TEST_RUN: ${{ matrix.test }}
+          NCPU: 1 # it was found that github actions (specifically) did not seem to perform well when spawning
+          # multiple kind clusters within a single job, so only 1 is allowed at a time.
+          GOTESTSUM_JUNITFILE: "e2e-${{ matrix.test }}${{ matrix.kubernetes-version }}-tests.xml"
 
-    - name: upload diagnostics
-      if: ${{ always() }}
-      uses: actions/upload-artifact@v3
-      with:
-        name: diagnostics-e2e-tests
-        path: /tmp/ktf-diag*
-        if-no-files-found: ignore
+      - name: upload diagnostics
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v3
+        with:
+          name: "diagnostics-e2e-tests-${{ matrix.test }}-${{ matrix.kubernetes-version }}"
+          path: /tmp/ktf-diag*
+          if-no-files-found: ignore
 
-    - name: collect test report
-      uses: actions/upload-artifact@v3
-      with:
-        name: tests-report
-        path: e2e-${{ matrix.kubernetes-version }}-tests.xml
+      - name: collect test report
+        uses: actions/upload-artifact@v3
+        with:
+          name: tests-report
+          path: "*-tests.xml"
+
+  e2e-gke-tests:
+    environment: "gcloud"
+    runs-on: ubuntu-latest
+    needs: setup-e2e-tests
+    strategy:
+      fail-fast: false
+      matrix:
+        kubernetes-version:
+          - 'v1.25.5'
+        test: ${{ fromJSON(needs.setup-e2e-tests.outputs.test_names) }}
+    steps:
+      - name: checkout repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: setup golang
+        uses: actions/setup-go@v3
+        with:
+          go-version: '^1.19'
+
+      - name: cache go modules
+        uses: actions/cache@v3
+        with:
+          path: ~/go/pkg/mod
+          key: ${{ runner.os }}-build-codegen-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-build-codegen-
+
+      - uses: Kong/kong-license@master
+        id: license
+        with:
+          password: ${{ secrets.PULP_PASSWORD }}
+
+      - name: run ${{ matrix.test }}
+        run: make test.e2e
+        env:
+          TEST_KONG_CONTROLLER_IMAGE_OVERRIDE: "kong/nightly-ingress-controller:nightly"
+          KONG_LICENSE_DATA: ${{ steps.license.outputs.license }}
+          KONG_CLUSTER_VERSION: ${{ matrix.kubernetes-version }}
+          KONG_TEST_CLUSTER_PROVIDER: gke
+          E2E_TEST_RUN: ${{ matrix.test }}
+          GOTESTSUM_JUNITFILE: "e2e-gke-${{ matrix.test }}-${{ matrix.kubernetes-version }}-tests.xml"
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}
+          GOOGLE_PROJECT: ${{ secrets.GOOGLE_PROJECT }}
+          GOOGLE_LOCATION: ${{ secrets.GOOGLE_LOCATION }}
+
+      - name: upload diagnostics
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v3
+        with:
+          name: "diagnostics-e2e-tests-${{ matrix.test }}-${{ matrix.kubernetes-version }}"
+          path: /tmp/ktf-diag*
+          if-no-files-found: ignore
+
+      - name: collect test report
+        uses: actions/upload-artifact@v3
+        with:
+          name: tests-report
+          path: "*-tests.xml"
 
   istio-tests:
-    environment: "Configure ci"
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
         kubernetes-version:
-          - 'v1.24.2'
+          # v1.25 is the latest Kubernetes version supported by Istio: https://istio.io/latest/docs/releases/supported-releases/
+          - 'v1.25.3'
+          - 'v1.24.7'
         istio-version:
-          - 'v1.15.1'
-          - 'v1.14.4'
-          - 'v1.13.8'
-          - 'v1.12.9'
-          - 'v1.11.8'
+          - 'v1.16.1'
+          - 'v1.15.4'
+          - 'v1.14.6'
+        exclude:
+          # Istio v1.14 does not support Kubernetes v1.25: https://istio.io/latest/docs/releases/supported-releases/
+          - kubernetes-version: 'v1.25.3'
+            istio-version: 'v1.14.6'
+
     steps:
-    - name: setup golang
-      uses: actions/setup-go@v3
-      with:
-        go-version: '^1.19'
+      - name: checkout repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
 
-    - name: cache go modules
-      uses: actions/cache@v3
-      with:
-        path: ~/go/pkg/mod
-        key: ${{ runner.os }}-build-codegen-${{ hashFiles('**/go.sum') }}
-        restore-keys: |
-          ${{ runner.os }}-build-codegen-
+      - name: setup golang
+        uses: actions/setup-go@v3
+        with:
+          go-version: '^1.19'
 
-    - name: checkout repository
-      uses: actions/checkout@v3
-      with:
-        fetch-depth: 0
+      - name: cache go modules
+        uses: actions/cache@v3
+        with:
+          path: ~/go/pkg/mod
+          key: ${{ runner.os }}-build-codegen-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-build-codegen-
 
-    - uses: Kong/kong-license@master
-      id: license
-      with:
-        # PULP_PASSWORD secret is set in "Configure ci" environment
-        password: ${{ secrets.PULP_PASSWORD }}
+      - uses: Kong/kong-license@master
+        id: license
+        with:
+          password: ${{ secrets.PULP_PASSWORD }}
 
-    - name: run Istio tests
-      run: make test.istio
-      env:
-        TEST_KONG_CONTROLLER_IMAGE_OVERRIDE: "kong/nightly-ingress-controller:nightly"
-        KONG_LICENSE_DATA: ${{ steps.license.outputs.license }}
-        KONG_CLUSTER_VERSION: ${{ matrix.kubernetes-version }}
-        ISTIO_VERSION: ${{ matrix.istio-version }}
-        NCPU: 1 # it was found that github actions (specifically) did not seem to perform well when spawning
-                # multiple kind clusters within a single job, so only 1 is allowed at a time.
-        GOTESTSUM_JUNITFILE: "istio-${{ matrix.kubernetes-version }}-${{ matrix.istio-version }}-tests.xml"
+      - name: run Istio tests
+        run: make test.istio
+        env:
+          TEST_KONG_CONTROLLER_IMAGE_OVERRIDE: "kong/nightly-ingress-controller:nightly"
+          KONG_LICENSE_DATA: ${{ steps.license.outputs.license }}
+          KONG_CLUSTER_VERSION: ${{ matrix.kubernetes-version }}
+          ISTIO_VERSION: ${{ matrix.istio-version }}
+          NCPU: 1 # it was found that github actions (specifically) did not seem to perform well when spawning
+          # multiple kind clusters within a single job, so only 1 is allowed at a time.
+          GOTESTSUM_JUNITFILE: "istio-${{ matrix.kubernetes-version }}-${{ matrix.istio-version }}-tests.xml"
 
-    - name: upload diagnostics
-      if: ${{ always() }}
-      uses: actions/upload-artifact@v3
-      with:
-        name: diagnostics-e2e-tests
-        path: /tmp/ktf-diag*
-        if-no-files-found: ignore
+      - name: upload diagnostics
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v3
+        with:
+          name: diagnostics-e2e-tests
+          path: /tmp/ktf-diag*
+          if-no-files-found: ignore
 
-    - name: collect test report
-      uses: actions/upload-artifact@v3
-      with:
-        name: tests-report
-        path: istio-${{ matrix.kubernetes-version }}-${{ matrix.istio-version }}-tests.xml
-
-  e2e-gke-tests:
-    environment: "gcloud"
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        kubernetes-version: # the GKE setup script ignores the patch version here and uses the latest, but we still include it for consistency with the other E2E jobs
-          - 'v1.24.2'
-    steps:
-    - name: setup golang
-      uses: actions/setup-go@v3
-      with:
-        go-version: '^1.19'
-
-    - name: cache go modules
-      uses: actions/cache@v3
-      with:
-        path: ~/go/pkg/mod
-        key: ${{ runner.os }}-build-codegen-${{ hashFiles('**/go.sum') }}
-        restore-keys: |
-          ${{ runner.os }}-build-codegen-
-
-    - name: checkout repository
-      uses: actions/checkout@v3
-      with:
-        fetch-depth: 0
-
-    - uses: Kong/kong-license@master
-      id: license
-      with:
-        # PULP_PASSWORD secret is set in "Configure ci" environment
-        password: ${{ secrets.PULP_PASSWORD }}
-
-    - name: run ${{ matrix.kubernetes-version }}
-      run: make test.e2e.gke
-      env:
-        GOOGLE_APPLICATION_CREDENTIALS: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}
-        GOOGLE_PROJECT: ${{ secrets.GOOGLE_PROJECT }}
-        GOOGLE_LOCATION: ${{ secrets.GOOGLE_LOCATION }}
-        KONG_CLUSTER_VERSION: ${{ matrix.kubernetes-version }}
-        KONG_LICENSE_DATA: ${{ steps.license.outputs.license }}
-        GOTESTSUM_JUNITFILE: "gke-${{ matrix.kubernetes-version }}-tests.xml"
-
-    - name: upload diagnostics
-      if: ${{ always() }}
-      uses: actions/upload-artifact@v3
-      with:
-        name: diagnostics-e2e-tests
-        path: /tmp/ktf-diag*
-        if-no-files-found: ignore
-    
-    - name: collect test report
-      uses: actions/upload-artifact@v3
-      with:
-        name: tests-report
-        path: gke-${{ matrix.kubernetes-version }}-tests.xml
+      - name: collect test report
+        uses: actions/upload-artifact@v3
+        with:
+          name: tests-report
+          path: "*-tests.xml"
 
   buildpulse-report:
-    environment: "Configure ci"
     needs:
-      - "e2e-tests"
+      - "e2e-kind-tests"
       - "e2e-gke-tests"
       - "istio-tests"
     if: ${{ always() }}

@@ -7,9 +7,6 @@ import (
 	"github.com/kong/go-kong/kong"
 )
 
-// FIXME
-// decK will release this official API soon, use that and remove this code.
-
 // PluginSchemaStore retrives a schema of a Plugin from Kong.
 type PluginSchemaStore struct {
 	client  *kong.Client

@@ -3,10 +3,10 @@ package gateway
 import (
 	"testing"
 
+	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
@@ -398,157 +398,6 @@ func TestIsGatewayControlledAndUnmanagedMode(t *testing.T) {
 	}
 }
 
-func TestAreAllowedRoutesConsistentByProtocol(t *testing.T) {
-	same := gatewayv1alpha2.NamespacesFromSame
-	all := gatewayv1alpha2.NamespacesFromAll
-	selector := gatewayv1alpha2.NamespacesFromSelector
-
-	inputs := []struct {
-		expected bool
-		message  string
-		l        []gatewayv1alpha2.Listener
-	}{
-		{
-			expected: true,
-			message:  "empty",
-			l:        []gatewayv1alpha2.Listener{},
-		},
-		{
-			expected: true,
-			message:  "no intersect",
-			l: []gatewayv1alpha2.Listener{
-				{
-					Protocol: gatewayv1alpha2.UDPProtocolType,
-					AllowedRoutes: &gatewayv1alpha2.AllowedRoutes{
-						Namespaces: &gatewayv1alpha2.RouteNamespaces{
-							From: &same,
-						},
-					},
-				},
-				{
-					Protocol: gatewayv1alpha2.TCPProtocolType,
-					AllowedRoutes: &gatewayv1alpha2.AllowedRoutes{
-						Namespaces: &gatewayv1alpha2.RouteNamespaces{
-							From: &all,
-						},
-					},
-				},
-			},
-		},
-		{
-			expected: true,
-			message:  "same allowed for each listener with same protocol",
-			l: []gatewayv1alpha2.Listener{
-				{
-					Protocol: gatewayv1alpha2.UDPProtocolType,
-					AllowedRoutes: &gatewayv1alpha2.AllowedRoutes{
-						Namespaces: &gatewayv1alpha2.RouteNamespaces{
-							From: &same,
-						},
-					},
-				},
-				{
-					Protocol: gatewayv1alpha2.UDPProtocolType,
-					AllowedRoutes: &gatewayv1alpha2.AllowedRoutes{
-						Namespaces: &gatewayv1alpha2.RouteNamespaces{
-							From: &same,
-						},
-					},
-				},
-				{
-					Protocol: gatewayv1alpha2.TCPProtocolType,
-					AllowedRoutes: &gatewayv1alpha2.AllowedRoutes{
-						Namespaces: &gatewayv1alpha2.RouteNamespaces{
-							From: &all,
-						},
-					},
-				},
-			},
-		},
-		{
-			expected: false,
-			message:  "different allowed for listeners with same protocol",
-			l: []gatewayv1alpha2.Listener{
-				{
-					Protocol: gatewayv1alpha2.UDPProtocolType,
-					AllowedRoutes: &gatewayv1alpha2.AllowedRoutes{
-						Namespaces: &gatewayv1alpha2.RouteNamespaces{
-							From: &same,
-						},
-					},
-				},
-				{
-					Protocol: gatewayv1alpha2.UDPProtocolType,
-					AllowedRoutes: &gatewayv1alpha2.AllowedRoutes{
-						Namespaces: &gatewayv1alpha2.RouteNamespaces{
-							From: &all,
-						},
-					},
-				},
-			},
-		},
-		{
-			expected: true,
-			message:  "same selector",
-			l: []gatewayv1alpha2.Listener{
-				{
-					Protocol: gatewayv1alpha2.UDPProtocolType,
-					AllowedRoutes: &gatewayv1alpha2.AllowedRoutes{
-						Namespaces: &gatewayv1alpha2.RouteNamespaces{
-							From: &selector,
-							Selector: &metav1.LabelSelector{
-								MatchLabels: map[string]string{"key": "value"},
-							},
-						},
-					},
-				},
-				{
-					Protocol: gatewayv1alpha2.UDPProtocolType,
-					AllowedRoutes: &gatewayv1alpha2.AllowedRoutes{
-						Namespaces: &gatewayv1alpha2.RouteNamespaces{
-							From: &selector,
-							Selector: &metav1.LabelSelector{
-								MatchLabels: map[string]string{"key": "value"},
-							},
-						},
-					},
-				},
-			},
-		},
-		{
-			expected: false,
-			message:  "different selector",
-			l: []gatewayv1alpha2.Listener{
-				{
-					Protocol: gatewayv1alpha2.UDPProtocolType,
-					AllowedRoutes: &gatewayv1alpha2.AllowedRoutes{
-						Namespaces: &gatewayv1alpha2.RouteNamespaces{
-							From: &selector,
-							Selector: &metav1.LabelSelector{
-								MatchLabels: map[string]string{"key": "value"},
-							},
-						},
-					},
-				},
-				{
-					Protocol: gatewayv1alpha2.UDPProtocolType,
-					AllowedRoutes: &gatewayv1alpha2.AllowedRoutes{
-						Namespaces: &gatewayv1alpha2.RouteNamespaces{
-							From: &selector,
-							Selector: &metav1.LabelSelector{
-								MatchLabels: map[string]string{"key": "notvalue"},
-							},
-						},
-					},
-				},
-			},
-		},
-	}
-	for _, input := range inputs {
-		assert.Equal(t, input.expected, areAllowedRoutesConsistentByProtocol(input.l), input.message)
-	}
-}
-
 func TestGetReferenceGrantConditionReason(t *testing.T) {
 	testCases := []struct {
 		name             string
@@ -577,7 +426,7 @@ func TestGetReferenceGrantConditionReason(t *testing.T) {
 			certRef: gatewayv1beta1.SecretObjectReference{
 				Kind:      util.StringToGatewayAPIKindPtr("Secret"),
 				Name:      "testSecret",
-				Namespace: (*Namespace)(pointer.StringPtr("otherNamespace")),
+				Namespace: lo.ToPtr(Namespace("otherNamespace")),
 			},
 			referenceGrants: []gatewayv1alpha2.ReferenceGrant{
 				{
@@ -596,7 +445,7 @@ func TestGetReferenceGrantConditionReason(t *testing.T) {
 							{
 								Group: "",
 								Kind:  "Secret",
-								Name:  (*gatewayv1alpha2.ObjectName)(pointer.StringPtr("anotherSecret")),
+								Name:  lo.ToPtr(gatewayv1alpha2.ObjectName("anotherSecret")),
 							},
 						},
 					},
@@ -610,7 +459,7 @@ func TestGetReferenceGrantConditionReason(t *testing.T) {
 			certRef: gatewayv1beta1.SecretObjectReference{
 				Kind:      util.StringToGatewayAPIKindPtr("Secret"),
 				Name:      "testSecret",
-				Namespace: (*Namespace)(pointer.StringPtr("otherNamespace")),
+				Namespace: lo.ToPtr(Namespace("otherNamespace")),
 			},
 			expectedReason: string(gatewayv1alpha2.ListenerReasonRefNotPermitted),
 		},
@@ -620,7 +469,7 @@ func TestGetReferenceGrantConditionReason(t *testing.T) {
 			certRef: gatewayv1beta1.SecretObjectReference{
 				Kind:      util.StringToGatewayAPIKindPtr("Secret"),
 				Name:      "testSecret",
-				Namespace: (*Namespace)(pointer.StringPtr("otherNamespace")),
+				Namespace: lo.ToPtr(Namespace("otherNamespace")),
 			},
 			referenceGrants: []gatewayv1alpha2.ReferenceGrant{
 				{
@@ -659,7 +508,7 @@ func TestGetReferenceGrantConditionReason(t *testing.T) {
 			certRef: gatewayv1beta1.SecretObjectReference{
 				Kind:      util.StringToGatewayAPIKindPtr("Secret"),
 				Name:      "testSecret",
-				Namespace: (*Namespace)(pointer.StringPtr("otherNamespace")),
+				Namespace: lo.ToPtr(Namespace("otherNamespace")),
 			},
 			referenceGrants: []gatewayv1alpha2.ReferenceGrant{
 				{
@@ -678,7 +527,7 @@ func TestGetReferenceGrantConditionReason(t *testing.T) {
 							{
 								Group: "",
 								Kind:  "Secret",
-								Name:  (*gatewayv1alpha2.ObjectName)(pointer.StringPtr("testSecret")),
+								Name:  lo.ToPtr(gatewayv1alpha2.ObjectName("testSecret")),
 							},
 						},
 					},

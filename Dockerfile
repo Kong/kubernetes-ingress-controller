@@ -1,6 +1,6 @@
 ### Standard binary
 # Build the manager binary
-FROM golang:1.19.3 as builder
+FROM golang:1.19.5 as builder
 
 ARG TARGETPLATFORM
 ARG TARGETOS
@@ -22,19 +22,19 @@ RUN go mod download
 
 COPY pkg/ pkg/
 COPY internal/ internal/
+COPY Makefile .
 
 # Build
 ARG TAG
 ARG COMMIT
 ARG REPO_INFO
 
-RUN CGO_ENABLED=0 GOOS=linux GOARCH="${TARGETARCH}" GO111MODULE=on go build -a -o manager -ldflags "-s -w -X github.com/kong/kubernetes-ingress-controller/v2/internal/manager/metadata.Release=$TAG -X github.com/kong/kubernetes-ingress-controller/v2/internal/manager/metadata.Commit=$COMMIT -X github.com/kong/kubernetes-ingress-controller/v2/internal/manager/metadata.Repo=$REPO_INFO" ./internal/cmd/main.go
-
+RUN CGO_ENABLED=0 GOOS=linux GOARCH="${TARGETARCH}" GO111MODULE=on make _build
 
 ### FIPS 140-2 binary
 # Build the manager binary
 # https://github.com/golang/go/tree/dev.boringcrypto/misc/boring#building-from-docker
-FROM us-docker.pkg.dev/google.com/api-project-999119582588/go-boringcrypto/golang:1.18.8b7 as builder-fips
+FROM us-docker.pkg.dev/google.com/api-project-999119582588/go-boringcrypto/golang:1.18.10b7 as builder-fips
 
 ARG TARGETPLATFORM
 ARG TARGETOS
@@ -62,27 +62,7 @@ ARG TAG
 ARG COMMIT
 ARG REPO_INFO
 
-RUN CGO_ENABLED=0 GOOS=linux GOARCH="${TARGETARCH}" GO111MODULE=on go build -a -o manager -ldflags "-s -w -X github.com/kong/kubernetes-ingress-controller/v2/internal/manager/metadata.Release=$TAG -X github.com/kong/kubernetes-ingress-controller/v2/internal/manager/metadata.Commit=$COMMIT -X github.com/kong/kubernetes-ingress-controller/v2/internal/manager/metadata.Repo=$REPO_INFO" ./internal/cmd/fips/main.go
-
-# Build a manager binary with debug symbols and download Delve
-FROM builder as builder-delve
-
-ARG TARGETPLATFORM
-ARG TARGETOS
-ARG TARGETARCH
-
-RUN CGO_ENABLED=0 GOOS=linux GOARCH="${TARGETARCH}" GO111MODULE=on go build -a -o manager-debug -gcflags=all="-N -l" -ldflags "-X github.com/kong/kubernetes-ingress-controller/v2/internal/manager/metadata.Release=$TAG -X github.com/kong/kubernetes-ingress-controller/v2/internal/manager/metadata.Commit=$COMMIT -X github.com/kong/kubernetes-ingress-controller/v2/internal/manager/metadata.Repo=$REPO_INFO" ./internal/cmd/main.go
-
-### Debug
-# Create an image that runs a debug build with a Delve remote server on port 2345
-FROM golang:1.19.3 AS debug
-RUN go install github.com/go-delve/delve/cmd/dlv@latest
-# We want all source so Delve file location operations work
-COPY --from=builder-delve /workspace/ /workspace/
-USER 65532:65532
-
-ENTRYPOINT ["/go/bin/dlv"]
-CMD ["exec", "--continue", "--accept-multiclient",  "--headless", "--api-version=2", "--listen=:2345", "--log", "/workspace/manager-debug"]
+RUN CGO_ENABLED=0 GOOS=linux GOARCH="${TARGETARCH}" GO111MODULE=on make _build.fips
 
 ### RHEL
 # Build UBI image
@@ -105,7 +85,7 @@ LABEL name="Kong Ingress Controller" \
 RUN groupadd --system kic && \
     adduser --system kic -g kic -u 1000
 
-COPY --from=builder /workspace/manager .
+COPY --from=builder /workspace/bin/manager .
 COPY LICENSE /licenses/
 COPY LICENSES /licenses/
 
@@ -171,7 +151,7 @@ LABEL name="Kong Ingress Controller" \
       description="Use Kong for Kubernetes Ingress. Configure plugins, health checking, load balancing and more in Kong for Kubernetes Services, all using Custom Resource Definitions (CRDs) and Kubernetes-native tooling."
 
 WORKDIR /
-COPY --from=builder /workspace/manager .
+COPY --from=builder /workspace/bin/manager .
 USER 65532:65532
 
 ENTRYPOINT ["/manager"]

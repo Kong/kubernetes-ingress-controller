@@ -35,6 +35,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/pkg/clientset"
 	"github.com/kong/kubernetes-ingress-controller/v2/test"
 	"github.com/kong/kubernetes-ingress-controller/v2/test/consts"
+	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/helpers"
 )
 
 // -----------------------------------------------------------------------------
@@ -168,7 +169,7 @@ func TestWebhookUpdate(t *testing.T) {
 	require.NoError(t, err)
 
 	defer func() {
-		finalizeTest(ctx, t, env.Cluster())
+		helpers.TeardownCluster(ctx, t, env.Cluster())
 	}()
 
 	t.Log("deploying kong components")
@@ -296,7 +297,7 @@ func TestDeployAllInOneDBLESSGateway(t *testing.T) {
 	require.NoError(t, err)
 
 	defer func() {
-		finalizeTest(ctx, t, env.Cluster())
+		helpers.TeardownCluster(ctx, t, env.Cluster())
 	}()
 
 	t.Log("deploying kong components")
@@ -456,7 +457,7 @@ func TestDeployAllInOneDBLESSNoLoadBalancer(t *testing.T) {
 	env, err := builder.Build(ctx)
 	require.NoError(t, err)
 	defer func() {
-		finalizeTest(ctx, t, env.Cluster())
+		helpers.TeardownCluster(ctx, t, env.Cluster())
 	}()
 
 	t.Log("deploying kong components")
@@ -516,7 +517,7 @@ func TestDefaultIngressClass(t *testing.T) {
 	require.NoError(t, err)
 
 	defer func() {
-		finalizeTest(ctx, t, env.Cluster())
+		helpers.TeardownCluster(ctx, t, env.Cluster())
 	}()
 
 	t.Log("deploying kong components")
@@ -636,7 +637,7 @@ func TestMissingCRDsDontCrashTheController(t *testing.T) {
 	require.NoError(t, err)
 
 	defer func() {
-		finalizeTest(ctx, t, env.Cluster())
+		helpers.TeardownCluster(ctx, t, env.Cluster())
 	}()
 
 	t.Log("deploying kong components")

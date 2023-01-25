@@ -29,6 +29,7 @@ import (
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
 	"github.com/kong/kubernetes-ingress-controller/v2/pkg/clientset"
 	"github.com/kong/kubernetes-ingress-controller/v2/test"
+	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/helpers"
 )
 
 var (
@@ -93,7 +94,7 @@ func TestIstioWithKongIngressGateway(t *testing.T) {
 	require.NoError(t, err)
 
 	defer func() {
-		finalizeTest(ctx, t, env.Cluster())
+		helpers.TeardownCluster(ctx, t, env.Cluster())
 	}()
 
 	t.Log("waiting for test cluster to be ready")

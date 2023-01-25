@@ -490,13 +490,3 @@ func runOnlyOnKindClusters(t *testing.T) {
 		t.Skip("test is supported only on Kind clusters")
 	}
 }
-
-func finalizeTest(ctx context.Context, t *testing.T, cluster clusters.Cluster) {
-	if t.Failed() {
-		output, err := cluster.DumpDiagnostics(ctx, t.Name())
-		t.Logf("%s failed, dumped diagnostics to %s", t.Name(), output)
-		assert.NoError(t, err)
-	}
-
-	assert.NoError(t, cluster.Cleanup(ctx))
-}

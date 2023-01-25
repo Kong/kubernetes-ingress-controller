@@ -36,10 +36,7 @@ import (
 // extraIngressNamespace is the name of an alternative namespace used for ingress tests.
 const extraIngressNamespace = "elsewhere"
 
-var (
-	statusWait        = time.Minute * 3
-	ingressClassMutex = sync.Mutex{}
-)
+var ingressClassMutex = sync.Mutex{}
 
 func TestIngressEssentials(t *testing.T) {
 	t.Parallel()
@@ -50,14 +47,6 @@ func TestIngressEssentials(t *testing.T) {
 		ingressClassMutex.Unlock()
 	}()
 	ns, cleaner := setup(t)
-	defer func() {
-		if t.Failed() {
-			output, err := cleaner.DumpDiagnostics(ctx, t.Name())
-			t.Logf("%s failed, dumped diagnostics to %s", t.Name(), output)
-			assert.NoError(t, err)
-		}
-		assert.NoError(t, cleaner.Cleanup(ctx))
-	}()
 
 	t.Log("deploying a minimal HTTP container deployment to test Ingress routes")
 	container := generators.NewContainer("httpbin", test.HTTPBinImage, 80)
@@ -281,14 +270,6 @@ func TestIngressClassNameSpec(t *testing.T) {
 		ingressClassMutex.Unlock()
 	}()
 	ns, cleaner := setup(t)
-	defer func() {
-		if t.Failed() {
-			output, err := cleaner.DumpDiagnostics(ctx, t.Name())
-			t.Logf("%s failed, dumped diagnostics to %s", t.Name(), output)
-			assert.NoError(t, err)
-		}
-		assert.NoError(t, cleaner.Cleanup(ctx))
-	}()
 
 	if clusterVersion.Major < uint64(2) && clusterVersion.Minor < uint64(19) {
 		t.Skip("ingress spec tests can not be properly validated against old clusters")
@@ -646,14 +627,6 @@ func TestIngressClassRegexToggle(t *testing.T) {
 		ingressClassMutex.Unlock()
 	}()
 	ns, cleaner := setup(t)
-	defer func() {
-		if t.Failed() {
-			output, err := cleaner.DumpDiagnostics(ctx, t.Name())
-			t.Logf("%s failed, dumped diagnostics to %s", t.Name(), output)
-			assert.NoError(t, err)
-		}
-		assert.NoError(t, cleaner.Cleanup(ctx))
-	}()
 
 	t.Log("deploying a minimal HTTP container deployment to test Ingress routes")
 	container := generators.NewContainer("httpbin", test.HTTPBinImage, 80)
@@ -771,14 +744,6 @@ func TestIngressRegexPrefix(t *testing.T) {
 		t.Skip("regex prefixes are only relevant for Kong 3.0+")
 	}
 	ns, cleaner := setup(t)
-	defer func() {
-		if t.Failed() {
-			output, err := cleaner.DumpDiagnostics(ctx, t.Name())
-			t.Logf("%s failed, dumped diagnostics to %s", t.Name(), output)
-			assert.NoError(t, err)
-		}
-		assert.NoError(t, cleaner.Cleanup(ctx))
-	}()
 
 	t.Log("deploying a minimal HTTP container deployment to test Ingress routes")
 	container := generators.NewContainer("httpbin", test.HTTPBinImage, 80)
@@ -936,14 +901,6 @@ func TestIngressRegexPrefix(t *testing.T) {
 
 func TestIngressRecoverFromInvalidPath(t *testing.T) {
 	ns, cleaner := setup(t)
-	defer func() {
-		if t.Failed() {
-			output, err := cleaner.DumpDiagnostics(ctx, t.Name())
-			t.Logf("%s failed, test ns %s, dumped diagnostics to %s", t.Name(), ns.Name, output)
-			assert.NoError(t, err)
-		}
-		assert.NoError(t, cleaner.Cleanup(ctx))
-	}()
 
 	// TODO: run this separately, make it not to affect other tests for sharing Kong.
 	if !runInvalidConfigTests {
@@ -1153,14 +1110,6 @@ func TestIngressRecoverFromInvalidPath(t *testing.T) {
 
 func TestIngressMatchByHost(t *testing.T) {
 	ns, cleaner := setup(t)
-	defer func() {
-		if t.Failed() {
-			output, err := cleaner.DumpDiagnostics(ctx, t.Name())
-			t.Logf("%s failed, dumped diagnostics to %s", t.Name(), output)
-			assert.NoError(t, err)
-		}
-		assert.NoError(t, cleaner.Cleanup(ctx))
-	}()
 
 	t.Log("deploying a minimal HTTP container deployment to test Ingress routes")
 	container := generators.NewContainer("httpbin", test.HTTPBinImage, 80)
@@ -1256,14 +1205,6 @@ func TestIngressMatchByHost(t *testing.T) {
 func TestIngressWorksWithServiceBackendsSpecifyingOnlyPortNames(t *testing.T) {
 	t.Parallel()
 	ns, cleaner := setup(t)
-	defer func() {
-		if t.Failed() {
-			output, err := cleaner.DumpDiagnostics(ctx, t.Name())
-			t.Logf("%s failed, dumped diagnostics to %s", t.Name(), output)
-			assert.NoError(t, err)
-		}
-		assert.NoError(t, cleaner.Cleanup(ctx))
-	}()
 
 	client := env.Cluster().Client()
 

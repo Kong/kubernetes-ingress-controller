@@ -44,14 +44,6 @@ func TestTCPIngressEssentials(t *testing.T) {
 	}()
 
 	ns, cleaner := setup(t)
-	defer func() {
-		if t.Failed() {
-			output, err := cleaner.DumpDiagnostics(ctx, t.Name())
-			t.Logf("%s failed, dumped diagnostics to %s", t.Name(), output)
-			assert.NoError(t, err)
-		}
-		assert.NoError(t, cleaner.Cleanup(ctx))
-	}()
 
 	t.Log("setting up the TCPIngress tests")
 	testName := "tcpingress"
@@ -155,14 +147,6 @@ func TestTCPIngressTLS(t *testing.T) {
 	}()
 
 	ns, cleaner := setup(t)
-	defer func() {
-		if t.Failed() {
-			output, err := cleaner.DumpDiagnostics(ctx, t.Name())
-			t.Logf("%s failed, dumped diagnostics to %s", t.Name(), output)
-			assert.NoError(t, err)
-		}
-		assert.NoError(t, cleaner.Cleanup(ctx))
-	}()
 
 	t.Log("setting up the TCPIngress tests")
 	testName := "tcpingress-%s"
@@ -327,14 +311,6 @@ func TestTCPIngressTLSPassthrough(t *testing.T) {
 	}()
 
 	ns, cleaner := setup(t)
-	defer func() {
-		if t.Failed() {
-			output, err := cleaner.DumpDiagnostics(ctx, t.Name())
-			t.Logf("%s failed, dumped diagnostics to %s", t.Name(), output)
-			assert.NoError(t, err)
-		}
-		assert.NoError(t, cleaner.Cleanup(ctx))
-	}()
 
 	t.Log("setting up the TCPIngress TLS passthrough tests")
 	testName := "tlspass"

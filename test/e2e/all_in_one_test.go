@@ -18,6 +18,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/metrics"
+	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/helpers"
 )
 
 // -----------------------------------------------------------------------------
@@ -48,7 +49,7 @@ func TestDeployAllInOneDBLESS(t *testing.T) {
 	require.NoError(t, err)
 
 	defer func() {
-		finalizeTest(ctx, t, env.Cluster())
+		helpers.TeardownCluster(ctx, t, env.Cluster())
 	}()
 
 	t.Log("deploying kong components")
@@ -100,7 +101,7 @@ func TestDeployAndUpgradeAllInOneDBLESS(t *testing.T) {
 	require.NoError(t, err)
 
 	defer func() {
-		finalizeTest(ctx, t, env.Cluster())
+		helpers.TeardownCluster(ctx, t, env.Cluster())
 	}()
 
 	t.Logf("deploying previous version %s kong manifest", preTag)
@@ -138,7 +139,7 @@ func TestDeployAllInOneEnterpriseDBLESS(t *testing.T) {
 	createKongImagePullSecret(ctx, t, env)
 
 	defer func() {
-		finalizeTest(ctx, t, env.Cluster())
+		helpers.TeardownCluster(ctx, t, env.Cluster())
 	}()
 
 	t.Log("generating a superuser password")
@@ -180,7 +181,7 @@ func TestDeployAllInOnePostgres(t *testing.T) {
 	require.NoError(t, err)
 
 	defer func() {
-		finalizeTest(ctx, t, env.Cluster())
+		helpers.TeardownCluster(ctx, t, env.Cluster())
 	}()
 
 	t.Log("deploying kong components")
@@ -209,7 +210,7 @@ func TestDeployAllInOnePostgresWithMultipleReplicas(t *testing.T) {
 	require.NoError(t, err)
 
 	defer func() {
-		finalizeTest(ctx, t, env.Cluster())
+		helpers.TeardownCluster(ctx, t, env.Cluster())
 	}()
 
 	t.Log("deploying kong components")
@@ -349,7 +350,7 @@ func TestDeployAllInOneEnterprisePostgres(t *testing.T) {
 	createKongImagePullSecret(ctx, t, env)
 
 	defer func() {
-		finalizeTest(ctx, t, env.Cluster())
+		helpers.TeardownCluster(ctx, t, env.Cluster())
 	}()
 
 	t.Log("generating a superuser password")

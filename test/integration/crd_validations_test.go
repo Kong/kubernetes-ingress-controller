@@ -91,7 +91,6 @@ func TestCRDValidations(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			ns, cleaner := setup(t)
-			defer func() { assert.NoError(t, cleaner.Cleanup(ctx)) }()
 
 			tt.scenario(t, cleaner, ns.GetName())
 		})

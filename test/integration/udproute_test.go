@@ -28,7 +28,6 @@ const testdomain = "konghq.com"
 
 func TestUDPRouteEssentials(t *testing.T) {
 	ns, cleaner := setup(t)
-	defer func() { assert.NoError(t, cleaner.Cleanup(ctx)) }()
 
 	t.Log("locking UDP port")
 	udpMutex.Lock()

@@ -13,6 +13,8 @@ import (
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/util/retry"
+
+	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/helpers"
 )
 
 func TestDeployAllInOneDBLESSKuma(t *testing.T) {
@@ -29,7 +31,7 @@ func TestDeployAllInOneDBLESSKuma(t *testing.T) {
 	require.NoError(t, err)
 
 	defer func() {
-		finalizeTest(ctx, t, env.Cluster())
+		helpers.TeardownCluster(ctx, t, env.Cluster())
 	}()
 
 	t.Log("deploying kong components")
@@ -103,7 +105,7 @@ func TestDeployAllInOnePostgresKuma(t *testing.T) {
 	env, err := builder.Build(ctx)
 	require.NoError(t, err)
 	defer func() {
-		finalizeTest(ctx, t, env.Cluster())
+		helpers.TeardownCluster(ctx, t, env.Cluster())
 	}()
 
 	t.Log("deploying kong components")

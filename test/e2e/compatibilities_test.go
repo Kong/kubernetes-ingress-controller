@@ -11,6 +11,8 @@ import (
 
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/helpers"
 )
 
 // TestKongRouterCompatibility verifies that KIC behaves consistently with Kong routers
@@ -27,7 +29,7 @@ func TestKongRouterFlavorCompatibility(t *testing.T) {
 
 	cluster := env.Cluster()
 	defer func() {
-		finalizeTest(ctx, t, cluster)
+		helpers.TeardownCluster(ctx, t, cluster)
 	}()
 
 	t.Log("deploying kong components with traditional Kong router")

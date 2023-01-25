@@ -17,7 +17,6 @@ import (
 	"time"
 
 	"github.com/blang/semver/v4"
-	"github.com/google/uuid"
 	"github.com/kong/go-kong/kong"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	"github.com/kong/kubernetes-testing-framework/pkg/environments"
@@ -26,8 +25,9 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	netv1 "k8s.io/api/networking/v1"
 	netv1beta1 "k8s.io/api/networking/v1beta1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+
+	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/helpers"
 )
 
 // -----------------------------------------------------------------------------
@@ -47,6 +47,10 @@ const (
 	// environmentCleanupTimeout is the amount of time that will be given by the test suite to the
 	// testing environment to perform its cleanup when the test suite is shutting down.
 	environmentCleanupTimeout = time.Minute * 3
+
+	// statusWait is a const duration used in test assertions like .Eventually to
+	// wait for object statuses to fulfill a provided predicate.
+	statusWait = time.Minute * 3
 )
 
 // -----------------------------------------------------------------------------
@@ -426,26 +430,46 @@ func exitOnErr(ctx context.Context, err error) {
 	exitOnErrWithCode(ctx, err, ExitCodeEnvSetupFailed)
 }
 
+// setup is a test helper function which:
+//   - creates a cluster cleaner which will be used to to clean up test resources
+//     automatically after the test finishes and creates a new namespace for the test
+//     to use.
+//   - creates a namespace for the provided test and adds it to the cleaner for
+//     automatic cleanup using the previously created cleaner.
+//
 // TODO move this into a shared library https://github.com/Kong/kubernetes-testing-framework/issues/302
-// setup is a helper function for tests which conveniently creates a cluster
-// cleaner (to clean up test resources automatically after the test finishes)
-// and creates a new namespace for the test to use. It also enables parallel
-// testing.
 func setup(t *testing.T) (*corev1.Namespace, *clusters.Cleaner) {
+	t.Helper()
+
 	t.Log("performing test setup")
-	cleaner := clusters.NewCleaner(env.Cluster())
+	cluster := env.Cluster()
+	cleaner := clusters.NewCleaner(cluster)
+	t.Cleanup(func() {
+		// We still want to dump the diagnostics and perform the cleanup so use
+		// a separate context.
+		ctx := context.Background()
+
+		helpers.DumpDiagnosticsIfFailed(ctx, t, cluster)
+		assert.NoError(t, cleaner.Cleanup(ctx))
+	})
 
 	t.Log("creating a testing namespace")
-	namespace, err := k8sClient.CoreV1().Namespaces().Create(ctx, &corev1.Namespace{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: uuid.NewString(),
-		},
-	}, metav1.CreateOptions{})
+	namespace, err := clusters.GenerateNamespace(ctx, cluster, labelValueForTest(t))
 	require.NoError(t, err)
 	cleaner.AddNamespace(namespace)
 	t.Logf("created namespace %s for test case %s", namespace.Name, t.Name())
 
 	return namespace, cleaner
+}
+
+func labelValueForTest(t *testing.T) string {
+	s := strings.ReplaceAll(t.Name(), "/", ".")
+	// Trim to adhere to k8s label requirements:
+	// https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/#syntax-and-character-set
+	if len(s) > 63 {
+		return s[:63]
+	}
+	return s
 }
 
 // -----------------------------------------------------------------------------

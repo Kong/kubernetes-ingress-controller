@@ -18,7 +18,6 @@ import (
 
 func TestHTTPRouteValidationWebhook(t *testing.T) {
 	ns, cleaner := setup(t)
-	defer func() { assert.NoError(t, cleaner.Cleanup(ctx)) }()
 
 	if env.Cluster().Type() != kind.KindClusterType {
 		t.Skip("webhook tests are only available on KIND clusters currently")

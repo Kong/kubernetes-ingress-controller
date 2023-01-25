@@ -40,7 +40,6 @@ func TestUnmanagedGatewayBasics(t *testing.T) {
 	var gw *gatewayv1beta1.Gateway
 
 	ns, cleaner := setup(t)
-	defer func() { assert.NoError(t, cleaner.Cleanup(ctx)) }()
 
 	t.Log("gathering test data and generating a gateway kubernetes client")
 	pubsvc, err := env.Cluster().Client().CoreV1().Services(controllerNamespace).Get(ctx, "ingress-controller-kong-proxy", metav1.GetOptions{})
@@ -129,7 +128,6 @@ func TestGatewayListenerConflicts(t *testing.T) {
 	var gw *gatewayv1beta1.Gateway
 
 	ns, cleaner := setup(t)
-	defer func() { assert.NoError(t, cleaner.Cleanup(ctx)) }()
 
 	t.Log("generating a gateway kubernetes client and gathering test data")
 	gatewayClient, err := gatewayclient.NewForConfig(env.Cluster().Config())
@@ -352,7 +350,6 @@ func TestGatewayListenerConflicts(t *testing.T) {
 
 func TestUnmanagedGatewayControllerSupport(t *testing.T) {
 	ns, cleaner := setup(t)
-	defer func() { assert.NoError(t, cleaner.Cleanup(ctx)) }()
 
 	t.Log("generating a gateway kubernetes client")
 	gatewayClient, err := gatewayclient.NewForConfig(env.Cluster().Config())
@@ -382,7 +379,6 @@ func TestUnmanagedGatewayControllerSupport(t *testing.T) {
 
 func TestUnmanagedGatewayClass(t *testing.T) {
 	ns, cleaner := setup(t)
-	defer func() { assert.NoError(t, cleaner.Cleanup(ctx)) }()
 
 	t.Log("generating a gateway kubernetes client")
 	gatewayClient, err := gatewayclient.NewForConfig(env.Cluster().Config())
@@ -426,7 +422,6 @@ func TestUnmanagedGatewayClass(t *testing.T) {
 
 func TestManagedGatewayClass(t *testing.T) {
 	ns, cleaner := setup(t)
-	defer func() { assert.NoError(t, cleaner.Cleanup(ctx)) }()
 
 	t.Log("generating a gateway kubernetes client")
 	gatewayClient, err := gatewayclient.NewForConfig(env.Cluster().Config())
@@ -476,7 +471,6 @@ func TestManagedGatewayClass(t *testing.T) {
 
 func TestGatewayFilters(t *testing.T) {
 	ns, cleaner := setup(t)
-	defer func() { assert.NoError(t, cleaner.Cleanup(ctx)) }()
 
 	other, err := clusters.GenerateNamespace(ctx, env.Cluster(), t.Name()+"other")
 	require.NoError(t, err)

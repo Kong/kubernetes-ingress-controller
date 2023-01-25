@@ -20,12 +20,11 @@ import (
 )
 
 func TestKongIngressValidationWebhook(t *testing.T) {
-	ns, cleaner := setup(t)
-	defer func() { assert.NoError(t, cleaner.Cleanup(ctx)) }()
-
 	if env.Cluster().Type() != kind.KindClusterType {
 		t.Skip("webhook tests are only available on KIND clusters currently")
 	}
+
+	ns, _ := setup(t)
 
 	closer, err := ensureAdmissionRegistration(
 		"kong-validations-kongingress",

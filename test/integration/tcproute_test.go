@@ -4,6 +4,7 @@
 package integration
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -33,6 +34,8 @@ const (
 )
 
 func TestTCPRouteEssentials(t *testing.T) {
+	ctx := context.Background()
+
 	t.Log("locking TCP port")
 	tcpMutex.Lock()
 	defer func() {
@@ -41,7 +44,7 @@ func TestTCPRouteEssentials(t *testing.T) {
 		tcpMutex.Unlock()
 	}()
 
-	ns, cleaner := setup(t)
+	ns, cleaner := setup(ctx, t)
 
 	t.Log("getting gateway client")
 	gatewayClient, err := gatewayclient.NewForConfig(env.Cluster().Config())
@@ -415,6 +418,8 @@ func TestTCPRouteEssentials(t *testing.T) {
 }
 
 func TestTCPRouteReferenceGrant(t *testing.T) {
+	ctx := context.Background()
+
 	t.Log("locking TCP port")
 	tcpMutex.Lock()
 	defer func() {
@@ -422,7 +427,7 @@ func TestTCPRouteReferenceGrant(t *testing.T) {
 		tcpMutex.Unlock()
 	}()
 
-	ns, cleaner := setup(t)
+	ns, cleaner := setup(ctx, t)
 
 	otherNs, err := clusters.GenerateNamespace(ctx, env.Cluster(), t.Name())
 	require.NoError(t, err)

@@ -153,7 +153,7 @@ func HTTPRouteMatchesAcceptedCallback(t *testing.T, c *gatewayclient.Clientset, 
 
 func httpRouteAcceptedConditionMatches(t *testing.T, c *gatewayclient.Clientset, httpRoute *gatewayv1beta1.HTTPRoute, accepted bool, reason gatewayv1beta1.RouteConditionReason) bool {
 	var err error
-	httpRoute, err = c.GatewayV1beta1().HTTPRoutes(httpRoute.Namespace).Get(ctx, httpRoute.Name, metav1.GetOptions{})
+	httpRoute, err = c.GatewayV1beta1().HTTPRoutes(httpRoute.Namespace).Get(context.Background(), httpRoute.Name, metav1.GetOptions{})
 	require.NoError(t, err)
 
 	if len(httpRoute.Status.Parents) <= 0 {
@@ -240,6 +240,8 @@ func gatewayLinkStatusMatches(
 	protocolType gatewayv1beta1.ProtocolType,
 	namespace, name string,
 ) bool {
+	ctx := context.Background()
+
 	// gather a fresh copy of the route, given the specific protocol type
 	switch protocolType { //nolint:exhaustive
 	case gatewayv1beta1.HTTPProtocolType:
@@ -320,6 +322,8 @@ func verifyProgrammedConditionStatus(t *testing.T,
 	namespace, name string,
 	expectedStatus metav1.ConditionStatus,
 ) bool {
+	ctx := context.Background()
+
 	// gather a fresh copy of the route, given the specific protocol type
 	switch protocolType { //nolint:exhaustive
 	case gatewayv1beta1.HTTPProtocolType:

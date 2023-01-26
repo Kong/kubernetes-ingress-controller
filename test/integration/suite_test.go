@@ -37,7 +37,7 @@ var k8sClient *kubernetes.Clientset
 
 // generateKongBuilder returns a Kong KTF addon builder and a string slice of controller arguments needed to interact
 // with the addon.
-func generateKongBuilder() (*kong.Builder, []string) {
+func generateKongBuilder(ctx context.Context) (*kong.Builder, []string) {
 	kongbuilder := kong.NewBuilder()
 	extraControllerArgs := []string{}
 	if kongEnterpriseEnabled == "true" {
@@ -83,7 +83,7 @@ func TestMain(m *testing.M) {
 	defer func() {
 		os.Exit(code)
 	}()
-	ctx, cancel = context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
 	// Logger needs to be configured before anything else happens.
@@ -101,7 +101,7 @@ func TestMain(m *testing.M) {
 	}
 
 	fmt.Println("INFO: setting up test environment")
-	kongbuilder, extraControllerArgs := generateKongBuilder()
+	kongbuilder, extraControllerArgs := generateKongBuilder(ctx)
 	kongAddon := kongbuilder.Build()
 	builder := environments.NewBuilder().WithAddons(kongAddon)
 

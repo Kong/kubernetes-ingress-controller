@@ -4,6 +4,7 @@
 package integration
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"testing"
@@ -33,7 +34,9 @@ import (
 var emptyHeaderSet = make(map[string]string)
 
 func TestHTTPRouteEssentials(t *testing.T) {
-	ns, cleaner := setup(t)
+	ctx := context.Background()
+
+	ns, cleaner := setup(ctx, t)
 
 	t.Log("getting a gateway client")
 	gatewayClient, err := gatewayclient.NewForConfig(env.Cluster().Config())
@@ -303,7 +306,9 @@ func TestHTTPRouteEssentials(t *testing.T) {
 }
 
 func TestHTTPRouteMultipleServices(t *testing.T) {
-	ns, cleaner := setup(t)
+	ctx := context.Background()
+
+	ns, cleaner := setup(ctx, t)
 
 	t.Log("getting a gateway client")
 	gatewayClient, err := gatewayclient.NewForConfig(env.Cluster().Config())
@@ -486,7 +491,9 @@ func TestHTTPRouteMultipleServices(t *testing.T) {
 }
 
 func TestHTTPRouteFilterHosts(t *testing.T) {
-	ns, cleaner := setup(t)
+	ctx := context.Background()
+
+	ns, cleaner := setup(ctx, t)
 
 	listenerHostname := gatewayv1beta1.Hostname("test.specific.io")
 

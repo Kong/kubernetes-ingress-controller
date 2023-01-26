@@ -4,6 +4,7 @@
 package integration
 
 import (
+	"context"
 	"testing"
 
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/types/kind"
@@ -20,13 +21,15 @@ import (
 )
 
 func TestKongIngressValidationWebhook(t *testing.T) {
+	ctx := context.Background()
+
 	if env.Cluster().Type() != kind.KindClusterType {
 		t.Skip("webhook tests are only available on KIND clusters currently")
 	}
 
-	ns, _ := setup(t)
+	ns, _ := setup(ctx, t)
 
-	closer, err := ensureAdmissionRegistration(
+	closer, err := ensureAdmissionRegistration(ctx,
 		"kong-validations-kongingress",
 		[]admregv1.RuleWithOperations{
 			{

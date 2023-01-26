@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
-	"k8s.io/apimachinery/pkg/api/errors"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -96,7 +96,7 @@ func (r *GatewayClassReconciler) Reconcile(ctx context.Context, req ctrl.Request
 
 	gwc := new(gatewayv1beta1.GatewayClass)
 	if err := r.Client.Get(ctx, req.NamespacedName, gwc); err != nil {
-		if errors.IsNotFound(err) {
+		if apierrors.IsNotFound(err) {
 			log.V(util.DebugLevel).Info("object enqueued no longer exists, skipping", "name", req.Name)
 			return ctrl.Result{}, nil
 		}

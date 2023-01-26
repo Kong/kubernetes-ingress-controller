@@ -9,7 +9,7 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/samber/lo"
 	corev1 "k8s.io/api/core/v1"
-	k8serrors "k8s.io/apimachinery/pkg/api/errors"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -247,7 +247,7 @@ func (r *HTTPRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	if err := r.Get(ctx, req.NamespacedName, httproute); err != nil {
 		// if the queued object is no longer present in the proxy cache we need
 		// to ensure that if it was ever added to the cache, it gets removed.
-		if k8serrors.IsNotFound(err) {
+		if apierrors.IsNotFound(err) {
 			debug(log, httproute, "object does not exist, ensuring it is not present in the proxy cache")
 			httproute.Namespace = req.Namespace
 			httproute.Name = req.Name
@@ -608,7 +608,7 @@ func (r *HTTPRouteReconciler) getHTTPRouteRuleReason(ctx context.Context, httpRo
 			service := &corev1.Service{}
 			err := r.Client.Get(ctx, types.NamespacedName{Namespace: backendNamespace, Name: string(backendRef.Name)}, service)
 			if err != nil {
-				if !k8serrors.IsNotFound(err) {
+				if !apierrors.IsNotFound(err) {
 					return "", err
 				}
 				return gatewayv1beta1.RouteReasonBackendNotFound, nil

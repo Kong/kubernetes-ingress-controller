@@ -8,7 +8,7 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/samber/lo"
-	"k8s.io/apimachinery/pkg/api/errors"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -242,7 +242,7 @@ func (r *TCPRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	if err := r.Get(ctx, req.NamespacedName, tcproute); err != nil {
 		// if the queued object is no longer present in the proxy cache we need
 		// to ensure that if it was ever added to the cache, it gets removed.
-		if errors.IsNotFound(err) {
+		if apierrors.IsNotFound(err) {
 			debug(log, tcproute, "object does not exist, ensuring it is not present in the proxy cache")
 			tcproute.Namespace = req.Namespace
 			tcproute.Name = req.Name

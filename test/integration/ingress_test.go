@@ -22,7 +22,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	netv1 "k8s.io/api/networking/v1"
 	netv1beta1 "k8s.io/api/networking/v1beta1"
-	"k8s.io/apimachinery/pkg/api/errors"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/util/retry"
 
@@ -236,7 +236,7 @@ func TestGRPCIngressEssentials(t *testing.T) {
 	defer func() {
 		t.Log("cleaning up Ingress resource")
 		if err := clusters.DeleteIngress(ctx, env.Cluster(), ns.Name, ingress); err != nil {
-			if !errors.IsNotFound(err) {
+			if !apierrors.IsNotFound(err) {
 				assert.NoError(t, err)
 			}
 		}
@@ -431,7 +431,7 @@ func TestIngressNamespaces(t *testing.T) {
 	defer func() {
 		t.Log("ensuring that Ingress resources are cleaned up")
 		if err := clusters.DeleteIngress(ctx, env.Cluster(), extraIngressNamespace, elsewhereIngress); err != nil {
-			if !errors.IsNotFound(err) {
+			if !apierrors.IsNotFound(err) {
 				require.NoError(t, err)
 			}
 		}
@@ -566,7 +566,7 @@ func TestIngressStatusUpdatesExtended(t *testing.T) {
 		defer func() {
 			t.Logf("cleaning up ingress %s", createdIngress.Name)
 			if err := env.Cluster().Client().NetworkingV1().Ingresses(ns.Name).Delete(ctx, createdIngress.Name, metav1.DeleteOptions{}); err != nil {
-				if !errors.IsNotFound(err) {
+				if !apierrors.IsNotFound(err) {
 					assert.NoError(t, err)
 				}
 			}

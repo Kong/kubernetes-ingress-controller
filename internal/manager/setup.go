@@ -51,15 +51,6 @@ func SetupLoggers(c *Config, output io.Writer) (logrus.FieldLogger, logr.Logger,
 }
 
 func setupControllerOptions(logger logr.Logger, c *Config, dbmode string) (ctrl.Options, error) {
-	var leaderElection bool
-	if dbmode == "off" {
-		logger.Info("DB-less mode detected, disabling leader election")
-		leaderElection = false
-	} else {
-		logger.Info("Database mode detected, enabling leader election")
-		leaderElection = true
-	}
-
 	logger.Info("building the manager runtime scheme and loading apis into the scheme")
 	scheme, err := getScheme()
 	if err != nil {
@@ -72,7 +63,7 @@ func setupControllerOptions(logger logr.Logger, c *Config, dbmode string) (ctrl.
 		MetricsBindAddress:     c.MetricsAddr,
 		Port:                   9443,
 		HealthProbeBindAddress: c.ProbeAddr,
-		LeaderElection:         leaderElection,
+		LeaderElection:         leaderElectionEnabled(logger, c, dbmode),
 		LeaderElectionID:       c.LeaderElectionID,
 		SyncPeriod:             &c.SyncPeriod,
 	}
@@ -105,6 +96,22 @@ func setupControllerOptions(logger logr.Logger, c *Config, dbmode string) (ctrl.
 	}
 
 	return controllerOpts, nil
+}
+
+// TODO: test it
+func leaderElectionEnabled(logger logr.Logger, c *Config, dbmode string) bool {
+	if c.Konnect.ConfigSynchronizationEnabled {
+		logger.Info("Konnect config synchronisation enabled, enabling leader election")
+		return true
+	}
+
+	if dbmode == "off" {
+		logger.Info("DB-less mode detected, disabling leader election")
+		return false
+	} else {
+		logger.Info("Database mode detected, enabling leader election")
+		return true
+	}
 }
 
 func setupDataplaneSynchronizer(

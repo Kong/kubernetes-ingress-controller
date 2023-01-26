@@ -160,7 +160,9 @@ func GetRoots(
 	eg, ctx := errgroup.WithContext(ctx)
 
 	for _, client := range kongClients {
-		// Konnect doesn't support root endpoint.
+		// We don't fetch Konnect's root as it's not supported, and we already know that Konnect should be
+		// updated using a DB-mode (aka deck-mode).
+		// TODO: test this behavior
 		if client.IsKonnect() {
 			continue
 		}

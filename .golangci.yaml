@@ -68,6 +68,8 @@ linters-settings:
     - pkg: k8s.io/api/networking/v1beta1
       alias: netv1beta1
 
+    - pkg: k8s.io/apimachinery/pkg/api/errors
+      alias: apierrors
     - pkg: k8s.io/apimachinery/pkg/apis/meta/v1
       alias: metav1
     - pkg: sigs.k8s.io/gateway-api/apis/(v[\w\d]+)

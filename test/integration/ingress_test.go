@@ -5,6 +5,7 @@ package integration
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"net/http"
 	"strings"
@@ -22,7 +23,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	netv1 "k8s.io/api/networking/v1"
 	netv1beta1 "k8s.io/api/networking/v1beta1"
-	"k8s.io/apimachinery/pkg/api/errors"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/util/retry"
 
@@ -36,12 +37,11 @@ import (
 // extraIngressNamespace is the name of an alternative namespace used for ingress tests.
 const extraIngressNamespace = "elsewhere"
 
-var (
-	statusWait        = time.Minute * 3
-	ingressClassMutex = sync.Mutex{}
-)
+var ingressClassMutex = sync.Mutex{}
 
 func TestIngressEssentials(t *testing.T) {
+	ctx := context.Background()
+
 	t.Parallel()
 	t.Log("locking IngressClass management")
 	ingressClassMutex.Lock()
@@ -49,15 +49,7 @@ func TestIngressEssentials(t *testing.T) {
 		t.Log("unlocking IngressClass management")
 		ingressClassMutex.Unlock()
 	}()
-	ns, cleaner := setup(t)
-	defer func() {
-		if t.Failed() {
-			output, err := cleaner.DumpDiagnostics(ctx, t.Name())
-			t.Logf("%s failed, dumped diagnostics to %s", t.Name(), output)
-			assert.NoError(t, err)
-		}
-		assert.NoError(t, cleaner.Cleanup(ctx))
-	}()
+	ns, cleaner := setup(ctx, t)
 
 	t.Log("deploying a minimal HTTP container deployment to test Ingress routes")
 	container := generators.NewContainer("httpbin", test.HTTPBinImage, 80)
@@ -208,8 +200,10 @@ func TestIngressEssentials(t *testing.T) {
 }
 
 func TestGRPCIngressEssentials(t *testing.T) {
+	ctx := context.Background()
+
 	t.Parallel()
-	ns := namespace(t)
+	ns := namespace(ctx, t)
 
 	t.Log("deploying a minimal HTTP container deployment to test Ingress routes")
 	container := generators.NewContainer("grpcbin", "moul/grpcbin", 9001)
@@ -247,7 +241,7 @@ func TestGRPCIngressEssentials(t *testing.T) {
 	defer func() {
 		t.Log("cleaning up Ingress resource")
 		if err := clusters.DeleteIngress(ctx, env.Cluster(), ns.Name, ingress); err != nil {
-			if !errors.IsNotFound(err) {
+			if !apierrors.IsNotFound(err) {
 				assert.NoError(t, err)
 			}
 		}
@@ -273,6 +267,8 @@ func TestGRPCIngressEssentials(t *testing.T) {
 }
 
 func TestIngressClassNameSpec(t *testing.T) {
+	ctx := context.Background()
+
 	t.Parallel()
 	t.Log("locking IngressClass management")
 	ingressClassMutex.Lock()
@@ -280,15 +276,7 @@ func TestIngressClassNameSpec(t *testing.T) {
 		t.Log("unlocking IngressClass management")
 		ingressClassMutex.Unlock()
 	}()
-	ns, cleaner := setup(t)
-	defer func() {
-		if t.Failed() {
-			output, err := cleaner.DumpDiagnostics(ctx, t.Name())
-			t.Logf("%s failed, dumped diagnostics to %s", t.Name(), output)
-			assert.NoError(t, err)
-		}
-		assert.NoError(t, cleaner.Cleanup(ctx))
-	}()
+	ns, cleaner := setup(ctx, t)
 
 	if clusterVersion.Major < uint64(2) && clusterVersion.Minor < uint64(19) {
 		t.Skip("ingress spec tests can not be properly validated against old clusters")
@@ -406,6 +394,8 @@ func TestIngressClassNameSpec(t *testing.T) {
 }
 
 func TestIngressNamespaces(t *testing.T) {
+	ctx := context.Background()
+
 	t.Parallel()
 
 	t.Log("creating extra testing namespaces")
@@ -450,7 +440,7 @@ func TestIngressNamespaces(t *testing.T) {
 	defer func() {
 		t.Log("ensuring that Ingress resources are cleaned up")
 		if err := clusters.DeleteIngress(ctx, env.Cluster(), extraIngressNamespace, elsewhereIngress); err != nil {
-			if !errors.IsNotFound(err) {
+			if !apierrors.IsNotFound(err) {
 				require.NoError(t, err)
 			}
 		}
@@ -478,8 +468,10 @@ func TestIngressNamespaces(t *testing.T) {
 }
 
 func TestIngressStatusUpdatesExtended(t *testing.T) {
+	ctx := context.Background()
+
 	t.Parallel()
-	ns := namespace(t)
+	ns := namespace(ctx, t)
 
 	if clusterVersion.Major == uint64(1) && clusterVersion.Minor < uint64(19) {
 		t.Skip("status test disabled for old cluster versions")
@@ -585,7 +577,7 @@ func TestIngressStatusUpdatesExtended(t *testing.T) {
 		defer func() {
 			t.Logf("cleaning up ingress %s", createdIngress.Name)
 			if err := env.Cluster().Client().NetworkingV1().Ingresses(ns.Name).Delete(ctx, createdIngress.Name, metav1.DeleteOptions{}); err != nil {
-				if !errors.IsNotFound(err) {
+				if !apierrors.IsNotFound(err) {
 					assert.NoError(t, err)
 				}
 			}
@@ -624,6 +616,8 @@ func TestIngressStatusUpdatesExtended(t *testing.T) {
 // parallel: parts of the test may add this route _without_ the prefix, and the 3.x router really hates this and will
 // stop working altogether.
 func TestIngressClassRegexToggle(t *testing.T) {
+	ctx := context.Background()
+
 	// the manager runs in a goroutine and may not have pulled the version before this test starts
 	require.Eventually(t, func() bool {
 		return !versions.GetKongVersion().Full().EQ(semver.MustParse("0.0.0"))
@@ -645,15 +639,7 @@ func TestIngressClassRegexToggle(t *testing.T) {
 		t.Log("unlocking IngressClass management")
 		ingressClassMutex.Unlock()
 	}()
-	ns, cleaner := setup(t)
-	defer func() {
-		if t.Failed() {
-			output, err := cleaner.DumpDiagnostics(ctx, t.Name())
-			t.Logf("%s failed, dumped diagnostics to %s", t.Name(), output)
-			assert.NoError(t, err)
-		}
-		assert.NoError(t, cleaner.Cleanup(ctx))
-	}()
+	ns, cleaner := setup(ctx, t)
 
 	t.Log("deploying a minimal HTTP container deployment to test Ingress routes")
 	container := generators.NewContainer("httpbin", test.HTTPBinImage, 80)
@@ -767,18 +753,12 @@ func TestIngressClassRegexToggle(t *testing.T) {
 }
 
 func TestIngressRegexPrefix(t *testing.T) {
+	ctx := context.Background()
+
 	if !versions.GetKongVersion().MajorOnly().GTE(versions.ExplicitRegexPathVersionCutoff) {
 		t.Skip("regex prefixes are only relevant for Kong 3.0+")
 	}
-	ns, cleaner := setup(t)
-	defer func() {
-		if t.Failed() {
-			output, err := cleaner.DumpDiagnostics(ctx, t.Name())
-			t.Logf("%s failed, dumped diagnostics to %s", t.Name(), output)
-			assert.NoError(t, err)
-		}
-		assert.NoError(t, cleaner.Cleanup(ctx))
-	}()
+	ns, cleaner := setup(ctx, t)
 
 	t.Log("deploying a minimal HTTP container deployment to test Ingress routes")
 	container := generators.NewContainer("httpbin", test.HTTPBinImage, 80)
@@ -935,15 +915,9 @@ func TestIngressRegexPrefix(t *testing.T) {
 }
 
 func TestIngressRecoverFromInvalidPath(t *testing.T) {
-	ns, cleaner := setup(t)
-	defer func() {
-		if t.Failed() {
-			output, err := cleaner.DumpDiagnostics(ctx, t.Name())
-			t.Logf("%s failed, test ns %s, dumped diagnostics to %s", t.Name(), ns.Name, output)
-			assert.NoError(t, err)
-		}
-		assert.NoError(t, cleaner.Cleanup(ctx))
-	}()
+	ctx := context.Background()
+
+	ns, cleaner := setup(ctx, t)
 
 	// TODO: run this separately, make it not to affect other tests for sharing Kong.
 	if !runInvalidConfigTests {
@@ -1152,15 +1126,9 @@ func TestIngressRecoverFromInvalidPath(t *testing.T) {
 }
 
 func TestIngressMatchByHost(t *testing.T) {
-	ns, cleaner := setup(t)
-	defer func() {
-		if t.Failed() {
-			output, err := cleaner.DumpDiagnostics(ctx, t.Name())
-			t.Logf("%s failed, dumped diagnostics to %s", t.Name(), output)
-			assert.NoError(t, err)
-		}
-		assert.NoError(t, cleaner.Cleanup(ctx))
-	}()
+	ctx := context.Background()
+
+	ns, cleaner := setup(ctx, t)
 
 	t.Log("deploying a minimal HTTP container deployment to test Ingress routes")
 	container := generators.NewContainer("httpbin", test.HTTPBinImage, 80)
@@ -1254,16 +1222,10 @@ func TestIngressMatchByHost(t *testing.T) {
 }
 
 func TestIngressWorksWithServiceBackendsSpecifyingOnlyPortNames(t *testing.T) {
+	ctx := context.Background()
+
 	t.Parallel()
-	ns, cleaner := setup(t)
-	defer func() {
-		if t.Failed() {
-			output, err := cleaner.DumpDiagnostics(ctx, t.Name())
-			t.Logf("%s failed, dumped diagnostics to %s", t.Name(), output)
-			assert.NoError(t, err)
-		}
-		assert.NoError(t, cleaner.Cleanup(ctx))
-	}()
+	ns, cleaner := setup(ctx, t)
 
 	client := env.Cluster().Client()
 

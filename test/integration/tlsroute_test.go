@@ -5,6 +5,7 @@ package integration
 
 import (
 	"bytes"
+	"context"
 	"crypto/tls"
 	"errors"
 	"fmt"
@@ -17,7 +18,6 @@ import (
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	ktfkong "github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/kong"
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -99,6 +99,8 @@ const (
 )
 
 func TestTLSRouteEssentials(t *testing.T) {
+	ctx := context.Background()
+
 	backendPort := gatewayv1alpha2.PortNumber(tcpEchoPort)
 	t.Log("locking TLS port")
 	tlsMutex.Lock()
@@ -107,8 +109,7 @@ func TestTLSRouteEssentials(t *testing.T) {
 		tlsMutex.Unlock()
 	}()
 
-	ns, cleaner := setup(t)
-	defer func() { assert.NoError(t, cleaner.Cleanup(ctx)) }()
+	ns, cleaner := setup(ctx, t)
 
 	t.Log("getting gateway client")
 	gatewayClient, err := gatewayclient.NewForConfig(env.Cluster().Config())
@@ -467,6 +468,8 @@ func TestTLSRouteEssentials(t *testing.T) {
 // TestTLSRouteReferenceGrant tests cross-namespace certificate references. These are technically implemented within
 // Gateway Listeners, but require an attached Route to see the associated certificate behavior on the proxy.
 func TestTLSRouteReferenceGrant(t *testing.T) {
+	ctx := context.Background()
+
 	backendPort := gatewayv1alpha2.PortNumber(tcpEchoPort)
 	t.Log("locking TLS port")
 	tlsMutex.Lock()
@@ -475,8 +478,7 @@ func TestTLSRouteReferenceGrant(t *testing.T) {
 		tlsMutex.Unlock()
 	}()
 
-	ns, cleaner := setup(t)
-	defer func() { assert.NoError(t, cleaner.Cleanup(ctx)) }()
+	ns, cleaner := setup(ctx, t)
 
 	otherNs, err := clusters.GenerateNamespace(ctx, env.Cluster(), t.Name())
 	require.NoError(t, err)
@@ -697,6 +699,8 @@ func TestTLSRouteReferenceGrant(t *testing.T) {
 }
 
 func TestTLSRoutePassthrough(t *testing.T) {
+	ctx := context.Background()
+
 	backendTLSPort := gatewayv1alpha2.PortNumber(tlsEchoPort)
 	t.Log("locking TLS port")
 	tlsMutex.Lock()
@@ -705,8 +709,7 @@ func TestTLSRoutePassthrough(t *testing.T) {
 		tlsMutex.Unlock()
 	}()
 
-	ns, cleaner := setup(t)
-	defer func() { assert.NoError(t, cleaner.Cleanup(ctx)) }()
+	ns, cleaner := setup(ctx, t)
 
 	t.Log("getting gateway client")
 	gatewayClient, err := gatewayclient.NewForConfig(env.Cluster().Config())

@@ -32,15 +32,9 @@ const examplesDIR = "../../examples"
 var httprouteExampleManifests = fmt.Sprintf("%s/gateway-httproute.yaml", examplesDIR)
 
 func TestHTTPRouteExample(t *testing.T) {
-	_, cleaner := setup(t)
-	defer func() {
-		if t.Failed() {
-			output, err := cleaner.DumpDiagnostics(ctx, t.Name())
-			t.Logf("%s failed, dumped diagnostics to %s", t.Name(), output)
-			assert.NoError(t, err)
-		}
-		assert.NoError(t, cleaner.Cleanup(ctx))
-	}()
+	ctx := context.Background()
+
+	_, cleaner := setup(ctx, t)
 
 	t.Logf("configuring test and setting up API clients")
 	gwc, err := gatewayclient.NewForConfig(env.Cluster().Config())
@@ -108,19 +102,13 @@ func TestHTTPRouteExample(t *testing.T) {
 var udpRouteExampleManifests = fmt.Sprintf("%s/gateway-udproute.yaml", examplesDIR)
 
 func TestUDPRouteExample(t *testing.T) {
+	ctx := context.Background()
+
+	_, cleaner := setup(ctx, t)
+
 	t.Log("locking Gateway UDP ports")
 	udpMutex.Lock()
 	defer udpMutex.Unlock()
-
-	_, cleaner := setup(t)
-	defer func() {
-		if t.Failed() {
-			output, err := cleaner.DumpDiagnostics(ctx, t.Name())
-			t.Logf("%s failed, dumped diagnostics to %s", t.Name(), output)
-			assert.NoError(t, err)
-		}
-		assert.NoError(t, cleaner.Cleanup(ctx))
-	}()
 
 	t.Logf("applying yaml manifest %s", strings.TrimPrefix(udpRouteExampleManifests, examplesDIR))
 	b, err := os.ReadFile(udpRouteExampleManifests)
@@ -154,19 +142,13 @@ func TestUDPRouteExample(t *testing.T) {
 var tcprouteExampleManifests = fmt.Sprintf("%s/gateway-tcproute.yaml", examplesDIR)
 
 func TestTCPRouteExample(t *testing.T) {
+	ctx := context.Background()
+
+	_, cleaner := setup(ctx, t)
+
 	t.Log("locking Gateway TCP ports")
 	tcpMutex.Lock()
 	defer tcpMutex.Unlock()
-
-	_, cleaner := setup(t)
-	defer func() {
-		if t.Failed() {
-			output, err := cleaner.DumpDiagnostics(ctx, t.Name())
-			t.Logf("%s failed, dumped diagnostics to %s", t.Name(), output)
-			assert.NoError(t, err)
-		}
-		assert.NoError(t, cleaner.Cleanup(ctx))
-	}()
 
 	t.Logf("applying yaml manifest %s", tcprouteExampleManifests)
 	b, err := os.ReadFile(tcprouteExampleManifests)
@@ -184,21 +166,15 @@ func TestTCPRouteExample(t *testing.T) {
 var tlsrouteExampleManifests = fmt.Sprintf("%s/gateway-tlsroute.yaml", examplesDIR)
 
 func TestTLSRouteExample(t *testing.T) {
+	ctx := context.Background()
+
+	_, cleaner := setup(ctx, t)
+
 	t.Log("locking Gateway TLS ports")
 	tlsMutex.Lock()
 	defer func() {
 		t.Log("unlocking TLS port")
 		tlsMutex.Unlock()
-	}()
-
-	_, cleaner := setup(t)
-	defer func() {
-		if t.Failed() {
-			output, err := cleaner.DumpDiagnostics(ctx, t.Name())
-			t.Logf("%s failed, dumped diagnostics to %s", t.Name(), output)
-			assert.NoError(t, err)
-		}
-		assert.NoError(t, cleaner.Cleanup(ctx))
 	}()
 
 	t.Logf("applying yaml manifest %s", tlsrouteExampleManifests)
@@ -218,15 +194,9 @@ func TestTLSRouteExample(t *testing.T) {
 var ingressExampleManifests = fmt.Sprintf("%s/ingress.yaml", examplesDIR)
 
 func TestIngressExample(t *testing.T) {
-	_, cleaner := setup(t)
-	defer func() {
-		if t.Failed() {
-			output, err := cleaner.DumpDiagnostics(ctx, t.Name())
-			t.Logf("%s failed, dumped diagnostics to %s", t.Name(), output)
-			assert.NoError(t, err)
-		}
-		assert.NoError(t, cleaner.Cleanup(ctx))
-	}()
+	ctx := context.Background()
+
+	_, cleaner := setup(ctx, t)
 
 	t.Logf("applying yaml manifest %s", strings.TrimPrefix(ingressExampleManifests, examplesDIR))
 	b, err := os.ReadFile(ingressExampleManifests)
@@ -274,19 +244,13 @@ func TestIngressExample(t *testing.T) {
 var udpingressExampleManifests = fmt.Sprintf("%s/udpingress.yaml", examplesDIR)
 
 func TestUDPIngressExample(t *testing.T) {
+	ctx := context.Background()
+
+	_, cleaner := setup(ctx, t)
+
 	t.Log("locking Gateway UDP ports")
 	udpMutex.Lock()
 	defer udpMutex.Unlock()
-
-	_, cleaner := setup(t)
-	defer func() {
-		if t.Failed() {
-			output, err := cleaner.DumpDiagnostics(ctx, t.Name())
-			t.Logf("%s failed, dumped diagnostics to %s", t.Name(), output)
-			assert.NoError(t, err)
-		}
-		assert.NoError(t, cleaner.Cleanup(ctx))
-	}()
 
 	t.Logf("applying yaml manifest %s", strings.TrimPrefix(udpingressExampleManifests, examplesDIR))
 	b, err := os.ReadFile(udpingressExampleManifests)

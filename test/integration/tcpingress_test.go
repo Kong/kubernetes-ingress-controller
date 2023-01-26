@@ -5,6 +5,7 @@ package integration
 
 import (
 	"bytes"
+	"context"
 	"crypto/tls"
 	"fmt"
 	"net/http"
@@ -33,6 +34,8 @@ var (
 )
 
 func TestTCPIngressEssentials(t *testing.T) {
+	ctx := context.Background()
+
 	t.Parallel()
 	// Ensure no other TCP tests run concurrently to avoid fights over the port
 	// Free it when done
@@ -43,15 +46,7 @@ func TestTCPIngressEssentials(t *testing.T) {
 		tcpMutex.Unlock()
 	}()
 
-	ns, cleaner := setup(t)
-	defer func() {
-		if t.Failed() {
-			output, err := cleaner.DumpDiagnostics(ctx, t.Name())
-			t.Logf("%s failed, dumped diagnostics to %s", t.Name(), output)
-			assert.NoError(t, err)
-		}
-		assert.NoError(t, cleaner.Cleanup(ctx))
-	}()
+	ns, cleaner := setup(ctx, t)
 
 	t.Log("setting up the TCPIngress tests")
 	testName := "tcpingress"
@@ -146,6 +141,8 @@ func TestTCPIngressEssentials(t *testing.T) {
 }
 
 func TestTCPIngressTLS(t *testing.T) {
+	ctx := context.Background()
+
 	t.Parallel()
 	t.Log("locking TLS port")
 	tlsMutex.Lock()
@@ -154,15 +151,7 @@ func TestTCPIngressTLS(t *testing.T) {
 		tlsMutex.Unlock()
 	}()
 
-	ns, cleaner := setup(t)
-	defer func() {
-		if t.Failed() {
-			output, err := cleaner.DumpDiagnostics(ctx, t.Name())
-			t.Logf("%s failed, dumped diagnostics to %s", t.Name(), output)
-			assert.NoError(t, err)
-		}
-		assert.NoError(t, cleaner.Cleanup(ctx))
-	}()
+	ns, cleaner := setup(ctx, t)
 
 	t.Log("setting up the TCPIngress tests")
 	testName := "tcpingress-%s"
@@ -311,6 +300,8 @@ func TestTCPIngressTLS(t *testing.T) {
 }
 
 func TestTCPIngressTLSPassthrough(t *testing.T) {
+	ctx := context.Background()
+
 	version, err := getKongVersion()
 	if err != nil {
 		t.Logf("attempting TLS passthrough test despite unknown kong version: %v", err)
@@ -326,15 +317,7 @@ func TestTCPIngressTLSPassthrough(t *testing.T) {
 		tlsMutex.Unlock()
 	}()
 
-	ns, cleaner := setup(t)
-	defer func() {
-		if t.Failed() {
-			output, err := cleaner.DumpDiagnostics(ctx, t.Name())
-			t.Logf("%s failed, dumped diagnostics to %s", t.Name(), output)
-			assert.NoError(t, err)
-		}
-		assert.NoError(t, cleaner.Cleanup(ctx))
-	}()
+	ns, cleaner := setup(ctx, t)
 
 	t.Log("setting up the TCPIngress TLS passthrough tests")
 	testName := "tlspass"

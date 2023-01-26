@@ -4,6 +4,7 @@
 package integration
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"net/http"
@@ -16,7 +17,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
@@ -26,8 +27,10 @@ import (
 )
 
 func TestKongIngressEssentials(t *testing.T) {
+	ctx := context.Background()
+
 	t.Parallel()
-	ns := namespace(t)
+	ns := namespace(ctx, t)
 
 	t.Log("deploying a minimal HTTP container deployment to test Ingress routes")
 	testName := "minking"
@@ -86,7 +89,7 @@ func TestKongIngressEssentials(t *testing.T) {
 	defer func() {
 		t.Logf("ensuring that KongIngress %s is cleaned up", king.Name)
 		if err := c.ConfigurationV1().KongIngresses(ns.Name).Delete(ctx, king.Name, metav1.DeleteOptions{}); err != nil {
-			if !errors.IsNotFound(err) {
+			if !apierrors.IsNotFound(err) {
 				require.NoError(t, err)
 			}
 		}

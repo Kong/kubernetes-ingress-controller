@@ -4,7 +4,7 @@ import (
 	"context"
 
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	credsvalidation "github.com/kong/kubernetes-ingress-controller/v2/internal/validation/consumers/credentials"
@@ -64,7 +64,7 @@ func globalValidationIndexForCredentials(ctx context.Context, managerClient clie
 				Namespace: consumer.Namespace,
 				Name:      secretName,
 			}, secret); err != nil {
-				if errors.IsNotFound(err) { // ignore missing secrets
+				if apierrors.IsNotFound(err) { // ignore missing secrets
 					continue
 				}
 				return nil, err

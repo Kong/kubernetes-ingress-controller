@@ -18,7 +18,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
@@ -33,7 +32,11 @@ var udpMutex sync.Mutex
 const coreDNSImage = "k8s.gcr.io/coredns/coredns:v1.8.6"
 
 func TestUDPIngressEssentials(t *testing.T) {
+	ctx := context.Background()
+
 	t.Parallel()
+	ns, cleaner := setup(ctx, t)
+
 	// Ensure no other UDP tests run concurrently to avoid fights over the port
 	t.Log("locking UDP port")
 	udpMutex.Lock()
@@ -43,17 +46,11 @@ func TestUDPIngressEssentials(t *testing.T) {
 		udpMutex.Unlock()
 	}()
 
-	ns := namespace(t)
-
 	t.Log("configuring coredns corefile")
 	cfgmap := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "coredns"}, Data: map[string]string{"Corefile": corefile}}
 	cfgmap, err := env.Cluster().Client().CoreV1().ConfigMaps(ns.Name).Create(ctx, cfgmap, metav1.CreateOptions{})
-	assert.NoError(t, err)
-
-	defer func() {
-		t.Logf("cleaning up the coredns corefile %s", cfgmap.Name)
-		assert.NoError(t, env.Cluster().Client().CoreV1().ConfigMaps(ns.Name).Delete(ctx, cfgmap.Name, metav1.DeleteOptions{}))
-	}()
+	require.NoError(t, err)
+	cleaner.Add(cfgmap)
 
 	t.Log("configuring a coredns deployent to deploy for UDP testing")
 	container := generators.NewContainer("coredns", coreDNSImage, 53)
@@ -74,22 +71,14 @@ func TestUDPIngressEssentials(t *testing.T) {
 
 	t.Log("deploying coredns")
 	deployment, err = env.Cluster().Client().AppsV1().Deployments(ns.Name).Create(ctx, deployment, metav1.CreateOptions{})
-	assert.NoError(t, err)
-
-	defer func() {
-		t.Logf("cleaning up deployment %s", deployment.Name)
-		assert.NoError(t, env.Cluster().Client().AppsV1().Deployments(ns.Name).Delete(ctx, deployment.Name, metav1.DeleteOptions{}))
-	}()
+	require.NoError(t, err)
+	cleaner.Add(deployment)
 
 	t.Logf("exposing deployment %s via service", deployment.Name)
 	service := generators.NewServiceForDeployment(deployment, corev1.ServiceTypeLoadBalancer)
 	service, err = env.Cluster().Client().CoreV1().Services(ns.Name).Create(ctx, service, metav1.CreateOptions{})
-	assert.NoError(t, err)
-
-	defer func() {
-		t.Logf("cleaning up the service %s", service.Name)
-		assert.NoError(t, env.Cluster().Client().CoreV1().Services(ns.Name).Delete(ctx, service.Name, metav1.DeleteOptions{}))
-	}()
+	require.NoError(t, err)
+	cleaner.Add(service)
 
 	t.Log("exposing DNS service via UDPIngress")
 	udp := &kongv1beta1.UDPIngress{
@@ -112,16 +101,8 @@ func TestUDPIngressEssentials(t *testing.T) {
 	gatewayClient, err := clientset.NewForConfig(env.Cluster().Config())
 	assert.NoError(t, err)
 	udp, err = gatewayClient.ConfigurationV1beta1().UDPIngresses(ns.Name).Create(ctx, udp, metav1.CreateOptions{})
-	assert.NoError(t, err)
-
-	defer func() {
-		t.Logf("ensuring UDPIngress %s is cleaned up", udp.Name)
-		if err := gatewayClient.ConfigurationV1beta1().UDPIngresses(ns.Name).Delete(ctx, udp.Name, metav1.DeleteOptions{}); err != nil {
-			if !errors.IsNotFound(err) {
-				require.NoError(t, err)
-			}
-		}
-	}()
+	require.NoError(t, err)
+	cleaner.Add(udp)
 
 	t.Log("configurating a net.Resolver to resolve DNS via the proxy")
 	resolver := &net.Resolver{
@@ -144,8 +125,11 @@ func TestUDPIngressEssentials(t *testing.T) {
 		ingresses := curIng.Status.LoadBalancer.Ingress
 		for _, ingress := range ingresses {
 			if len(ingress.Hostname) > 0 || len(ingress.IP) > 0 {
-				t.Logf("udpingress hostname %s or ip %s is ready to redirect traffic.", ingress.Hostname, ingress.IP)
-				return true
+				proxyUDPIP := strings.Split(proxyUDPURL.Hostname(), ":")[0]
+				if ingress.IP == proxyUDPIP {
+					t.Logf("udpingress hostname %s or ip %s is ready to redirect traffic.", ingress.Hostname, ingress.IP)
+					return true
+				}
 			}
 		}
 		return false
@@ -171,6 +155,8 @@ func TestUDPIngressEssentials(t *testing.T) {
 }
 
 func TestUDPIngressTCPIngressCollision(t *testing.T) {
+	ctx := context.Background()
+
 	t.Parallel()
 	t.Log("locking TCP and UDP ports")
 	udpMutex.Lock()
@@ -179,17 +165,13 @@ func TestUDPIngressTCPIngressCollision(t *testing.T) {
 	defer udpMutex.Unlock()
 	defer tcpMutex.Unlock()
 
-	ns := namespace(t)
+	ns, cleaner := setup(ctx, t)
 
 	t.Log("configuring coredns corefile")
 	cfgmap := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "coredns"}, Data: map[string]string{"Corefile": corefile}}
 	cfgmap, err := env.Cluster().Client().CoreV1().ConfigMaps(ns.Name).Create(ctx, cfgmap, metav1.CreateOptions{})
 	assert.NoError(t, err)
-
-	defer func() {
-		t.Logf("cleaning up the coredns corefile %s", cfgmap.Name)
-		assert.NoError(t, env.Cluster().Client().CoreV1().ConfigMaps(ns.Name).Delete(ctx, cfgmap.Name, metav1.DeleteOptions{}))
-	}()
+	cleaner.Add(cfgmap)
 
 	t.Log("configuring a coredns deployent to deploy for UDP testing")
 	container := generators.NewContainer("coredns", coreDNSImage, 53)
@@ -212,22 +194,14 @@ func TestUDPIngressTCPIngressCollision(t *testing.T) {
 
 	t.Log("deploying coredns")
 	deployment, err = env.Cluster().Client().AppsV1().Deployments(ns.Name).Create(ctx, deployment, metav1.CreateOptions{})
-	assert.NoError(t, err)
-
-	defer func() {
-		t.Logf("cleaning up deployment %s", deployment.Name)
-		assert.NoError(t, env.Cluster().Client().AppsV1().Deployments(ns.Name).Delete(ctx, deployment.Name, metav1.DeleteOptions{}))
-	}()
+	require.NoError(t, err)
+	cleaner.Add(deployment)
 
 	t.Logf("exposing deployment %s via service", deployment.Name)
 	service := generators.NewServiceForDeployment(deployment, corev1.ServiceTypeNodePort)
 	service, err = env.Cluster().Client().CoreV1().Services(ns.Name).Create(ctx, service, metav1.CreateOptions{})
-	assert.NoError(t, err)
-
-	defer func() {
-		t.Logf("cleaning up the service %s", service.Name)
-		assert.NoError(t, env.Cluster().Client().CoreV1().Services(ns.Name).Delete(ctx, service.Name, metav1.DeleteOptions{}))
-	}()
+	require.NoError(t, err)
+	cleaner.Add(service)
 
 	// Test initial configuration with UDP only
 	t.Log("exposing DNS service via UDPIngress")
@@ -252,15 +226,7 @@ func TestUDPIngressTCPIngressCollision(t *testing.T) {
 	assert.NoError(t, err)
 	udp, err = gatewayClient.ConfigurationV1beta1().UDPIngresses(ns.Name).Create(ctx, udp, metav1.CreateOptions{})
 	assert.NoError(t, err)
-
-	defer func() {
-		t.Logf("ensuring UDPIngress %s is cleaned up", udp.Name)
-		if err := gatewayClient.ConfigurationV1beta1().UDPIngresses(ns.Name).Delete(ctx, udp.Name, metav1.DeleteOptions{}); err != nil {
-			if !errors.IsNotFound(err) {
-				require.NoError(t, err)
-			}
-		}
-	}()
+	cleaner.Add(udp)
 
 	t.Log("configurating a dns query and clients")
 	query := new(dns.Msg)
@@ -315,15 +281,7 @@ func TestUDPIngressTCPIngressCollision(t *testing.T) {
 	assert.NoError(t, err)
 	tcp, err = gatewayClient.ConfigurationV1beta1().TCPIngresses(ns.Name).Create(ctx, tcp, metav1.CreateOptions{})
 	assert.NoError(t, err)
-
-	defer func() {
-		t.Logf("ensuring TCPIngress %s is cleaned up", tcp.Name)
-		if err := gatewayClient.ConfigurationV1beta1().TCPIngresses(ns.Name).Delete(ctx, tcp.Name, metav1.DeleteOptions{}); err != nil {
-			if !errors.IsNotFound(err) {
-				require.NoError(t, err)
-			}
-		}
-	}()
+	cleaner.Add(tcp)
 
 	t.Logf("checking tcpingress %s status readiness.", tcp.Name)
 	tcpIngCli := gatewayClient.ConfigurationV1beta1().TCPIngresses(ns.Name)

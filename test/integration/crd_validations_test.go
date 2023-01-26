@@ -4,6 +4,7 @@
 package integration
 
 import (
+	"context"
 	"testing"
 
 	"github.com/google/uuid"
@@ -19,6 +20,8 @@ import (
 
 // TestCRDValidations ensures that CRD validations we expect to exist are properly disallowing faulty objects to be created.
 func TestCRDValidations(t *testing.T) {
+	ctx := context.Background()
+
 	testCases := []struct {
 		name          string
 		scenario      func(t *testing.T, cleaner *clusters.Cleaner, ns string)
@@ -90,8 +93,7 @@ func TestCRDValidations(t *testing.T) {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			ns, cleaner := setup(t)
-			defer func() { assert.NoError(t, cleaner.Cleanup(ctx)) }()
+			ns, cleaner := setup(ctx, t)
 
 			tt.scenario(t, cleaner, ns.GetName())
 		})
@@ -105,7 +107,7 @@ func createFaultyTCPIngress(t *testing.T, cleaner *clusters.Cleaner, ns string, 
 	gatewayClient, err := clientset.NewForConfig(env.Cluster().Config())
 	require.NoError(t, err)
 
-	ingress, err = gatewayClient.ConfigurationV1beta1().TCPIngresses(ns).Create(ctx, ingress, metav1.CreateOptions{})
+	ingress, err = gatewayClient.ConfigurationV1beta1().TCPIngresses(ns).Create(context.Background(), ingress, metav1.CreateOptions{})
 	if !assert.Error(t, err) {
 		cleaner.Add(ingress)
 	}
@@ -141,7 +143,7 @@ func createFaultyUDPIngress(t *testing.T, cleaner *clusters.Cleaner, ns string, 
 	gatewayClient, err := clientset.NewForConfig(env.Cluster().Config())
 	require.NoError(t, err)
 
-	ingress, err = gatewayClient.ConfigurationV1beta1().UDPIngresses(ns).Create(ctx, ingress, metav1.CreateOptions{})
+	ingress, err = gatewayClient.ConfigurationV1beta1().UDPIngresses(ns).Create(context.Background(), ingress, metav1.CreateOptions{})
 	if !assert.Error(t, err) {
 		cleaner.Add(ingress)
 	}

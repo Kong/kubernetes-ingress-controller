@@ -133,16 +133,10 @@ QLAtVaZd9SSi4Z/RX6B4L3Rj0Mwfn+tbrtYO5Pyhi40hiXf4aMgbVDFYMR0MMmH0
 }
 
 func TestHTTPSRedirect(t *testing.T) {
+	ctx := context.Background()
+
 	t.Parallel()
-	ns, cleaner := setup(t)
-	defer func() {
-		if t.Failed() {
-			output, err := cleaner.DumpDiagnostics(ctx, t.Name())
-			t.Logf("%s failed, dumped diagnostics to %s", t.Name(), output)
-			assert.NoError(t, err)
-		}
-		assert.NoError(t, cleaner.Cleanup(ctx))
-	}()
+	ns, cleaner := setup(ctx, t)
 
 	t.Log("creating an HTTP container via deployment to test redirect functionality")
 	container := generators.NewContainer("alsohttpbin", test.HTTPBinImage, 80)
@@ -187,16 +181,10 @@ func TestHTTPSRedirect(t *testing.T) {
 }
 
 func TestHTTPSIngress(t *testing.T) {
+	ctx := context.Background()
+
 	t.Parallel()
-	ns, cleaner := setup(t)
-	defer func() {
-		if t.Failed() {
-			output, err := cleaner.DumpDiagnostics(ctx, t.Name())
-			t.Logf("%s failed, dumped diagnostics to %s", t.Name(), output)
-			assert.NoError(t, err)
-		}
-		assert.NoError(t, cleaner.Cleanup(ctx))
-	}()
+	ns, cleaner := setup(ctx, t)
 
 	dialer := &net.Dialer{
 		Timeout:   30 * time.Second,

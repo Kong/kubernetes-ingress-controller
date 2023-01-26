@@ -18,7 +18,7 @@ import (
 	"github.com/stretchr/testify/require"
 	admregv1 "k8s.io/api/admissionregistration/v1"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 
@@ -39,8 +39,10 @@ const extraWebhookNamespace = "webhookextra"
 const highEndConsumerUsageCount = 50
 
 func TestValidationWebhook(t *testing.T) {
+	ctx := context.Background()
+
 	t.Parallel()
-	ns := namespace(t)
+	ns := namespace(ctx, t)
 
 	if env.Cluster().Type() != kind.KindClusterType {
 		t.Skip("webhook tests are only available on KIND clusters currently")
@@ -50,13 +52,13 @@ func TestValidationWebhook(t *testing.T) {
 	require.NoError(t, clusters.CreateNamespace(ctx, env.Cluster(), extraWebhookNamespace))
 	defer func() {
 		if err := env.Cluster().Client().CoreV1().Namespaces().Delete(ctx, extraWebhookNamespace, metav1.DeleteOptions{}); err != nil {
-			if !errors.IsNotFound(err) {
+			if !apierrors.IsNotFound(err) {
 				assert.NoError(t, err)
 			}
 		}
 	}()
 
-	closer, err := ensureAdmissionRegistration(
+	closer, err := ensureAdmissionRegistration(ctx,
 		"kong-validations-consumer",
 		[]admregv1.RuleWithOperations{
 			{
@@ -106,7 +108,7 @@ func TestValidationWebhook(t *testing.T) {
 			require.NoError(t, err)
 			defer func() {
 				if err := env.Cluster().Client().CoreV1().Secrets(extraWebhookNamespace).Delete(ctx, credentialName, metav1.DeleteOptions{}); err != nil {
-					if !errors.IsNotFound(err) {
+					if !apierrors.IsNotFound(err) {
 						assert.NoError(t, err)
 					}
 				}
@@ -142,7 +144,7 @@ func TestValidationWebhook(t *testing.T) {
 		require.NoError(t, err)
 		defer func() {
 			if err := kongClient.ConfigurationV1().KongConsumers(extraWebhookNamespace).Delete(ctx, consumerName, metav1.DeleteOptions{}); err != nil {
-				if !errors.IsNotFound(err) {
+				if !apierrors.IsNotFound(err) {
 					assert.NoError(t, err)
 				}
 			}
@@ -177,7 +179,7 @@ func TestValidationWebhook(t *testing.T) {
 		secretName := secret.Name
 		defer func() {
 			if err := env.Cluster().Client().CoreV1().Secrets(extraWebhookNamespace).Delete(ctx, secretName, metav1.DeleteOptions{}); err != nil {
-				if !errors.IsNotFound(err) {
+				if !apierrors.IsNotFound(err) {
 					assert.NoError(t, err)
 				}
 			}
@@ -204,7 +206,7 @@ func TestValidationWebhook(t *testing.T) {
 	require.NoError(t, err)
 	defer func() {
 		if err := kongClient.ConfigurationV1().KongConsumers(extraWebhookNamespace).Delete(ctx, consumer.Name, metav1.DeleteOptions{}); err != nil {
-			if !errors.IsNotFound(err) {
+			if !apierrors.IsNotFound(err) {
 				assert.NoError(t, err)
 			}
 		}
@@ -479,7 +481,7 @@ func TestValidationWebhook(t *testing.T) {
 				credentialName := credential.Name
 				defer func() {
 					if err := env.Cluster().Client().CoreV1().Secrets(ns.Name).Delete(ctx, credentialName, metav1.DeleteOptions{}); err != nil {
-						if !errors.IsNotFound(err) {
+						if !apierrors.IsNotFound(err) {
 							assert.NoError(t, err)
 						}
 					}
@@ -488,7 +490,7 @@ func TestValidationWebhook(t *testing.T) {
 
 			defer func() {
 				if err := kongClient.ConfigurationV1().KongConsumers(ns.Name).Delete(ctx, tt.consumer.Name, metav1.DeleteOptions{}); err != nil {
-					if !errors.IsNotFound(err) {
+					if !apierrors.IsNotFound(err) {
 						assert.NoError(t, err)
 					}
 				}
@@ -520,7 +522,7 @@ func TestValidationWebhook(t *testing.T) {
 	require.NoError(t, err)
 	defer func() {
 		if err := env.Cluster().Client().CoreV1().Secrets(ns.Name).Delete(ctx, invalidCredential.Name, metav1.DeleteOptions{}); err != nil {
-			if !errors.IsNotFound(err) {
+			if !apierrors.IsNotFound(err) {
 				assert.NoError(t, err)
 			}
 		}
@@ -545,7 +547,7 @@ func TestValidationWebhook(t *testing.T) {
 	require.Contains(t, err.Error(), "invalid credential type")
 	defer func() {
 		if err := kongClient.ConfigurationV1().KongConsumers(ns.Name).Delete(ctx, validConsumerLinkedToInvalidCredentials.Name, metav1.DeleteOptions{}); err != nil {
-			if !errors.IsNotFound(err) {
+			if !apierrors.IsNotFound(err) {
 				assert.NoError(t, err)
 			}
 		}
@@ -610,7 +612,7 @@ func TestValidationWebhook(t *testing.T) {
 	require.Contains(t, err.Error(), "some fields were invalid due to missing data: rsa_public_key, key, secret")
 }
 
-func ensureWebhookService(name string) (func() error, error) {
+func ensureWebhookService(ctx context.Context, name string) (func() error, error) {
 	validationsService, err := env.Cluster().Client().CoreV1().Services(controllerNamespace).Create(ctx, &corev1.Service{
 		TypeMeta:   metav1.TypeMeta{APIVersion: "v1", Kind: "Service"},
 		ObjectMeta: metav1.ObjectMeta{Name: name},
@@ -656,11 +658,11 @@ func ensureWebhookService(name string) (func() error, error) {
 	}
 
 	closer := func() error {
-		if err := env.Cluster().Client().CoreV1().Services(controllerNamespace).Delete(ctx, validationsService.Name, metav1.DeleteOptions{}); err != nil && !errors.IsNotFound(err) {
+		if err := env.Cluster().Client().CoreV1().Services(controllerNamespace).Delete(ctx, validationsService.Name, metav1.DeleteOptions{}); err != nil && !apierrors.IsNotFound(err) {
 			return err
 		}
 
-		if err := env.Cluster().Client().CoreV1().Endpoints(controllerNamespace).Delete(ctx, endpoints.Name, metav1.DeleteOptions{}); err != nil && !errors.IsNotFound(err) {
+		if err := env.Cluster().Client().CoreV1().Endpoints(controllerNamespace).Delete(ctx, endpoints.Name, metav1.DeleteOptions{}); err != nil && !apierrors.IsNotFound(err) {
 			return err
 		}
 		return nil
@@ -678,9 +680,9 @@ func waitForWebhookServiceConnective(ctx context.Context, configResourceName str
 	return networking.WaitForConnectionOnServicePort(waitCtx, env.Cluster().Client(), controllerNamespace, svcName, svcPort, 10*time.Second)
 }
 
-func ensureAdmissionRegistration(configResourceName string, rules []admregv1.RuleWithOperations) (func() error, error) {
+func ensureAdmissionRegistration(ctx context.Context, configResourceName string, rules []admregv1.RuleWithOperations) (func() error, error) {
 	svcName := fmt.Sprintf("webhook-%s", configResourceName)
-	svcCloser, err := ensureWebhookService(svcName)
+	svcCloser, err := ensureWebhookService(ctx, svcName)
 	if err != nil {
 		return nil, err
 	}
@@ -710,7 +712,7 @@ func ensureAdmissionRegistration(configResourceName string, rules []admregv1.Rul
 	}
 
 	closer := func() error {
-		if err := env.Cluster().Client().AdmissionregistrationV1().ValidatingWebhookConfigurations().Delete(ctx, webhook.Name, metav1.DeleteOptions{}); err != nil && !errors.IsNotFound(err) {
+		if err := env.Cluster().Client().AdmissionregistrationV1().ValidatingWebhookConfigurations().Delete(ctx, webhook.Name, metav1.DeleteOptions{}); err != nil && !apierrors.IsNotFound(err) {
 			return err
 		}
 		return svcCloser()

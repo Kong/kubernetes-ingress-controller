@@ -5,6 +5,7 @@ package integration
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -13,7 +14,6 @@ import (
 
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
 	"github.com/samber/lo"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	netv1 "k8s.io/api/networking/v1"
@@ -24,18 +24,12 @@ import (
 )
 
 func TestIngressRegexMatchPath(t *testing.T) {
+	ctx := context.Background()
+
 	if !versions.GetKongVersion().MajorOnly().GTE(versions.ExplicitRegexPathVersionCutoff) {
 		t.Skip("regex prefixes are only relevant for Kong 3.0+")
 	}
-	ns, cleaner := setup(t)
-	defer func() {
-		if t.Failed() {
-			output, err := cleaner.DumpDiagnostics(ctx, t.Name())
-			t.Logf("%s failed, dumped diagnostics to %s", t.Name(), output)
-			assert.NoError(t, err)
-		}
-		assert.NoError(t, cleaner.Cleanup(ctx))
-	}()
+	ns, cleaner := setup(ctx, t)
 
 	pathRegexPrefix := "/~"
 	pathTypeImplementationSpecific := netv1.PathTypeImplementationSpecific
@@ -184,18 +178,12 @@ func TestIngressRegexMatchPath(t *testing.T) {
 }
 
 func TestIngressRegexMatchHeader(t *testing.T) {
+	ctx := context.Background()
+
 	if !versions.GetKongVersion().MajorOnly().GTE(versions.ExplicitRegexPathVersionCutoff) {
 		t.Skip("regex prefixes are only relevant for Kong 3.0+")
 	}
-	ns, cleaner := setup(t)
-	defer func() {
-		if t.Failed() {
-			output, err := cleaner.DumpDiagnostics(ctx, t.Name())
-			t.Logf("%s failed, dumped diagnostics to %s", t.Name(), output)
-			assert.NoError(t, err)
-		}
-		assert.NoError(t, cleaner.Cleanup(ctx))
-	}()
+	ns, cleaner := setup(ctx, t)
 
 	headerRegexPrefix := "~*"
 	matchHeaderKey := "X-Kic-Test-Match"

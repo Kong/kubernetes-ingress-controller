@@ -118,18 +118,16 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 	}
 
 	setupLog.Info("Initializing Dataplane Address Discovery")
-	dataplaneAddressFinder, err := setupDataplaneAddressFinder(ctx, mgr.GetClient(), c)
+	dataplaneAddressFinder, udpDataplaneAddressFinder, err := setupDataplaneAddressFinder(mgr.GetClient(), c, setupLog)
 	if err != nil {
 		return err
 	}
 
-	if !isControllerNameValid(c.GatewayAPIControllerName) {
-		return errors.New("--gateway-api-controller-name is invalid. The expected format is example.com/controller-name")
-	}
 	gateway.ControllerName = gatewayv1beta1.GatewayController(c.GatewayAPIControllerName)
 
 	setupLog.Info("Starting Enabled Controllers")
-	controllers, err := setupControllers(mgr, dataplaneClient, dataplaneAddressFinder, kubernetesStatusQueue, c, featureGates)
+	controllers, err := setupControllers(mgr, dataplaneClient,
+		dataplaneAddressFinder, udpDataplaneAddressFinder, kubernetesStatusQueue, c, featureGates)
 	if err != nil {
 		return fmt.Errorf("unable to setup controller as expected %w", err)
 	}

@@ -5,6 +5,7 @@ package integration
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"net/http"
 	"strings"
@@ -27,16 +28,10 @@ import (
 )
 
 func TestConsumerCredential(t *testing.T) {
+	ctx := context.Background()
+
 	t.Parallel()
-	ns, cleaner := setup(t)
-	defer func() {
-		if t.Failed() {
-			output, err := cleaner.DumpDiagnostics(ctx, t.Name())
-			t.Logf("%s failed, dumped diagnostics to %s", t.Name(), output)
-			assert.NoError(t, err)
-		}
-		assert.NoError(t, cleaner.Cleanup(ctx))
-	}()
+	ns, cleaner := setup(ctx, t)
 
 	t.Log("deploying a minimal HTTP container deployment to test Ingress routes")
 	container := generators.NewContainer("httpbin", test.HTTPBinImage, 80)

@@ -566,8 +566,8 @@ github.com/klauspost/compress v1.13.6/go.mod h1:/3/Vjq9QcHkK5uEr5lBEmyoZ1iFhe47e
 github.com/klauspost/cpuid v1.2.1/go.mod h1:Pj4uuM528wm8OyEC2QMXAi2YiTZ96dNQPGgoMS4s3ek=
 github.com/kong/deck v1.17.2 h1:uWmXj1k3T4DGYr3N542Hsz4iIWYQWqcBGZ903KakLD8=
 github.com/kong/deck v1.17.2/go.mod h1:gIj+4WuAzVhmUsBTYiG1pFD0F2QRqlANHIH/fs9+71o=
-github.com/kong/go-kong v0.35.0 h1:N+J1hZrRNL+92YDe/42M5fI5bjZSOHePq1p7OHWiUSU=
-github.com/kong/go-kong v0.35.0/go.mod h1:4xT4uMMGcysH3qOqm458JyIbDBUw8MVAQIi+DP8ggtc=
+github.com/kong/go-kong v0.36.0 h1:jCONQFQqYHkTz+VnHOkWMMUEawYYLgvrlL5g+fGLUQQ=
+github.com/kong/go-kong v0.36.0/go.mod h1:4xT4uMMGcysH3qOqm458JyIbDBUw8MVAQIi+DP8ggtc=
 github.com/kong/kubernetes-testing-framework v0.27.0 h1:JZVcbVWXmyjmxbjqDx8m3ZSUDpzEkFYyLI21KQ3SIP0=
 github.com/kong/kubernetes-testing-framework v0.27.0/go.mod h1:hAqBG1CHcghB/8Aucc7KIj3FgpVZ4jIuxOq9LZeXnI4=
 github.com/kong/semver/v4 v4.0.1 h1:DIcNR8W3gfx0KabFBADPalxxsp+q/5COwIFkkhrFQ2Y=

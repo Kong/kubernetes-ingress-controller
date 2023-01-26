@@ -1,6 +1,3 @@
-//go:build integration_tests || e2e_tests
-// +build integration_tests e2e_tests
-
 package helpers
 
 import (

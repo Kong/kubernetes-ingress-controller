@@ -60,15 +60,6 @@ const (
 const (
 	// ingressClass indicates the ingress class name which the tests will use for supported object reconciliation.
 	ingressClass = "kongtests"
-)
-
-var (
-	// ctx the topical context of the test suite, can be used by test cases if they don't need
-	// any special context as a function of the test.
-	ctx context.Context
-
-	// cancel is the cancel function for the above global test context.
-	cancel context.CancelFunc
 
 	// redisImage is Redis. Pinned because of
 	// https://github.com/Kong/kubernetes-ingress-controller/issues/2735#issuecomment-1194376496 breakage.
@@ -76,7 +67,9 @@ var (
 
 	// controllerNamespace is the Kubernetes namespace where the controller is deployed.
 	controllerNamespace = "kong-system"
+)
 
+var (
 	// httpc is the default HTTP client to use for tests.
 	httpc = http.Client{Timeout: httpcTimeout}
 
@@ -235,11 +228,13 @@ func getKongVersion() (semver.Version, error) {
 // -----------------------------------------------------------------------------
 
 // namespace provides the namespace provisioned for each test case given their t.Name as the "testCase".
-func namespace(t *testing.T) *corev1.Namespace {
+func namespace(ctx context.Context, t *testing.T) *corev1.Namespace {
 	namespace, err := clusters.GenerateNamespace(ctx, env.Cluster(), t.Name())
 	require.NoError(t, err)
 	t.Cleanup(func() {
-		assert.NoError(t, clusters.CleanupGeneratedResources(ctx, env.Cluster(), t.Name()))
+		// Use context.Background() to ensure the namespace got removed when ctx
+		// gets cancelled.
+		assert.NoError(t, clusters.CleanupGeneratedResources(context.Background(), env.Cluster(), t.Name()))
 	})
 
 	return namespace
@@ -438,7 +433,7 @@ func exitOnErr(ctx context.Context, err error) {
 //     automatic cleanup using the previously created cleaner.
 //
 // TODO move this into a shared library https://github.com/Kong/kubernetes-testing-framework/issues/302
-func setup(t *testing.T) (*corev1.Namespace, *clusters.Cleaner) {
+func setup(ctx context.Context, t *testing.T) (*corev1.Namespace, *clusters.Cleaner) {
 	t.Helper()
 
 	t.Log("performing test setup")

@@ -38,12 +38,14 @@ const (
 var knativeMinKubernetesVersion = semver.MustParse("1.22.0")
 
 func TestKnativeIngress(t *testing.T) {
+	ctx := context.Background()
+
 	if clusterVersion.LT(knativeMinKubernetesVersion) {
 		t.Skip("knative tests can't be run on cluster versions prior to", knativeMinKubernetesVersion)
 	}
 
 	t.Parallel()
-	ns := namespace(t)
+	ns := namespace(ctx, t)
 
 	t.Log("generating a knative clientset")
 	dynamicClient, err := dynamic.NewForConfig(env.Cluster().Config())

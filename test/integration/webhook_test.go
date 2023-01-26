@@ -39,8 +39,10 @@ const extraWebhookNamespace = "webhookextra"
 const highEndConsumerUsageCount = 50
 
 func TestValidationWebhook(t *testing.T) {
+	ctx := context.Background()
+
 	t.Parallel()
-	ns := namespace(t)
+	ns := namespace(ctx, t)
 
 	if env.Cluster().Type() != kind.KindClusterType {
 		t.Skip("webhook tests are only available on KIND clusters currently")
@@ -56,7 +58,7 @@ func TestValidationWebhook(t *testing.T) {
 		}
 	}()
 
-	closer, err := ensureAdmissionRegistration(
+	closer, err := ensureAdmissionRegistration(ctx,
 		"kong-validations-consumer",
 		[]admregv1.RuleWithOperations{
 			{
@@ -610,7 +612,7 @@ func TestValidationWebhook(t *testing.T) {
 	require.Contains(t, err.Error(), "some fields were invalid due to missing data: rsa_public_key, key, secret")
 }
 
-func ensureWebhookService(name string) (func() error, error) {
+func ensureWebhookService(ctx context.Context, name string) (func() error, error) {
 	validationsService, err := env.Cluster().Client().CoreV1().Services(controllerNamespace).Create(ctx, &corev1.Service{
 		TypeMeta:   metav1.TypeMeta{APIVersion: "v1", Kind: "Service"},
 		ObjectMeta: metav1.ObjectMeta{Name: name},
@@ -678,9 +680,9 @@ func waitForWebhookServiceConnective(ctx context.Context, configResourceName str
 	return networking.WaitForConnectionOnServicePort(waitCtx, env.Cluster().Client(), controllerNamespace, svcName, svcPort, 10*time.Second)
 }
 
-func ensureAdmissionRegistration(configResourceName string, rules []admregv1.RuleWithOperations) (func() error, error) {
+func ensureAdmissionRegistration(ctx context.Context, configResourceName string, rules []admregv1.RuleWithOperations) (func() error, error) {
 	svcName := fmt.Sprintf("webhook-%s", configResourceName)
-	svcCloser, err := ensureWebhookService(svcName)
+	svcCloser, err := ensureWebhookService(ctx, svcName)
 	if err != nil {
 		return nil, err
 	}

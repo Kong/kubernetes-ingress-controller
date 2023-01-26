@@ -4,6 +4,7 @@
 package integration
 
 import (
+	"context"
 	"testing"
 
 	"github.com/google/uuid"
@@ -17,7 +18,9 @@ import (
 )
 
 func TestHTTPRouteValidationWebhook(t *testing.T) {
-	ns, cleaner := setup(t)
+	ctx := context.Background()
+
+	ns, cleaner := setup(ctx, t)
 
 	if env.Cluster().Type() != kind.KindClusterType {
 		t.Skip("webhook tests are only available on KIND clusters currently")
@@ -25,7 +28,7 @@ func TestHTTPRouteValidationWebhook(t *testing.T) {
 
 	pathMatchRegex := gatewayv1beta1.PathMatchRegularExpression
 
-	closer, err := ensureAdmissionRegistration(
+	closer, err := ensureAdmissionRegistration(ctx,
 		"kong-validations-gateway",
 		[]admregv1.RuleWithOperations{
 			{

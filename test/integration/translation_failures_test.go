@@ -4,6 +4,7 @@
 package integration
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"testing"
@@ -36,6 +37,8 @@ const testTranslationFailuresObjectsPrefix = "translation-failures-"
 // TestTranslationFailures ensures that proper warning Kubernetes events are recorded in case of translation failures
 // encountered.
 func TestTranslationFailures(t *testing.T) {
+	ctx := context.Background()
+
 	type expectedTranslationFailure struct {
 		causingObjects []client.Object
 		reasonContains string
@@ -208,7 +211,7 @@ func TestTranslationFailures(t *testing.T) {
 				require.NoError(t, err)
 				cleaner.Add(secret2)
 
-				gateway := deployGatewayReferringSecrets(t, cleaner, ns, secret1, secret2)
+				gateway := deployGatewayReferringSecrets(ctx, t, cleaner, ns, secret1, secret2)
 
 				return expectedTranslationFailure{
 					causingObjects: []client.Object{gateway},
@@ -226,7 +229,7 @@ func TestTranslationFailures(t *testing.T) {
 				require.NoError(t, err)
 				cleaner.Add(emptySecret)
 
-				gateway := deployGatewayReferringSecrets(t, cleaner, ns, emptySecret)
+				gateway := deployGatewayReferringSecrets(ctx, t, cleaner, ns, emptySecret)
 
 				return expectedTranslationFailure{
 					causingObjects: []client.Object{gateway, emptySecret},
@@ -322,7 +325,7 @@ func TestTranslationFailures(t *testing.T) {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			ns, cleaner := setup(t)
+			ns, cleaner := setup(ctx, t)
 
 			expected := tt.translationFailureTrigger(t, cleaner, ns.GetName())
 
@@ -527,7 +530,7 @@ func validService() *corev1.Service {
 	}
 }
 
-func deployGatewayReferringSecrets(t *testing.T, cleaner *clusters.Cleaner, ns string, secrets ...*corev1.Secret) *gatewayv1beta1.Gateway {
+func deployGatewayReferringSecrets(ctx context.Context, t *testing.T, cleaner *clusters.Cleaner, ns string, secrets ...*corev1.Secret) *gatewayv1beta1.Gateway {
 	gatewayClient, err := gatewayclient.NewForConfig(env.Cluster().Config())
 	require.NoError(t, err)
 

@@ -5,6 +5,7 @@ package integration
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"net/http"
 	"strings"
@@ -31,8 +32,10 @@ import (
 )
 
 func TestPluginEssentials(t *testing.T) {
+	ctx := context.Background()
+
 	t.Parallel()
-	ns, cleaner := setup(t)
+	ns, cleaner := setup(ctx, t)
 
 	t.Log("deploying a minimal HTTP container deployment to test Ingress routes")
 	container := generators.NewContainer("httpbin", test.HTTPBinImage, 80)
@@ -190,6 +193,8 @@ func TestPluginEssentials(t *testing.T) {
 }
 
 func TestPluginOrdering(t *testing.T) {
+	ctx := context.Background()
+
 	t.Parallel()
 	// the manager runs in a goroutine and may not have pulled the version before this test starts
 	require.Eventually(t, func() bool {
@@ -198,7 +203,7 @@ func TestPluginOrdering(t *testing.T) {
 	if !versions.GetKongVersion().MajorOnly().GTE(versions.PluginOrderingVersionCutoff) || kongEnterpriseEnabled == "" {
 		t.Skip("plugin ordering requires Kong Enterprise 3.0+")
 	}
-	ns, cleaner := setup(t)
+	ns, cleaner := setup(ctx, t)
 
 	t.Log("deploying a minimal HTTP container deployment to test Ingress routes")
 	container := generators.NewContainer("httpbin", test.HTTPBinImage, 80)

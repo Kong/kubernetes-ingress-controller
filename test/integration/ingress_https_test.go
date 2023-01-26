@@ -133,8 +133,10 @@ QLAtVaZd9SSi4Z/RX6B4L3Rj0Mwfn+tbrtYO5Pyhi40hiXf4aMgbVDFYMR0MMmH0
 }
 
 func TestHTTPSRedirect(t *testing.T) {
+	ctx := context.Background()
+
 	t.Parallel()
-	ns, cleaner := setup(t)
+	ns, cleaner := setup(ctx, t)
 
 	t.Log("creating an HTTP container via deployment to test redirect functionality")
 	container := generators.NewContainer("alsohttpbin", test.HTTPBinImage, 80)
@@ -179,8 +181,10 @@ func TestHTTPSRedirect(t *testing.T) {
 }
 
 func TestHTTPSIngress(t *testing.T) {
+	ctx := context.Background()
+
 	t.Parallel()
-	ns, cleaner := setup(t)
+	ns, cleaner := setup(ctx, t)
 
 	dialer := &net.Dialer{
 		Timeout:   30 * time.Second,

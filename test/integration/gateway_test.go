@@ -4,6 +4,7 @@
 package integration
 
 import (
+	"context"
 	"net/http"
 	"testing"
 	"time"
@@ -37,9 +38,11 @@ const (
 )
 
 func TestUnmanagedGatewayBasics(t *testing.T) {
+	ctx := context.Background()
+
 	var gw *gatewayv1beta1.Gateway
 
-	ns, cleaner := setup(t)
+	ns, cleaner := setup(ctx, t)
 
 	t.Log("gathering test data and generating a gateway kubernetes client")
 	pubsvc, err := env.Cluster().Client().CoreV1().Services(controllerNamespace).Get(ctx, "ingress-controller-kong-proxy", metav1.GetOptions{})
@@ -125,9 +128,11 @@ func TestUnmanagedGatewayBasics(t *testing.T) {
 }
 
 func TestGatewayListenerConflicts(t *testing.T) {
+	ctx := context.Background()
+
 	var gw *gatewayv1beta1.Gateway
 
-	ns, cleaner := setup(t)
+	ns, cleaner := setup(ctx, t)
 
 	t.Log("generating a gateway kubernetes client and gathering test data")
 	gatewayClient, err := gatewayclient.NewForConfig(env.Cluster().Config())
@@ -349,7 +354,9 @@ func TestGatewayListenerConflicts(t *testing.T) {
 }
 
 func TestUnmanagedGatewayControllerSupport(t *testing.T) {
-	ns, cleaner := setup(t)
+	ctx := context.Background()
+
+	ns, cleaner := setup(ctx, t)
 
 	t.Log("generating a gateway kubernetes client")
 	gatewayClient, err := gatewayclient.NewForConfig(env.Cluster().Config())
@@ -378,7 +385,9 @@ func TestUnmanagedGatewayControllerSupport(t *testing.T) {
 }
 
 func TestUnmanagedGatewayClass(t *testing.T) {
-	ns, cleaner := setup(t)
+	ctx := context.Background()
+
+	ns, cleaner := setup(ctx, t)
 
 	t.Log("generating a gateway kubernetes client")
 	gatewayClient, err := gatewayclient.NewForConfig(env.Cluster().Config())
@@ -421,7 +430,9 @@ func TestUnmanagedGatewayClass(t *testing.T) {
 }
 
 func TestManagedGatewayClass(t *testing.T) {
-	ns, cleaner := setup(t)
+	ctx := context.Background()
+
+	ns, cleaner := setup(ctx, t)
 
 	t.Log("generating a gateway kubernetes client")
 	gatewayClient, err := gatewayclient.NewForConfig(env.Cluster().Config())
@@ -470,7 +481,9 @@ func TestManagedGatewayClass(t *testing.T) {
 }
 
 func TestGatewayFilters(t *testing.T) {
-	ns, cleaner := setup(t)
+	ctx := context.Background()
+
+	ns, cleaner := setup(ctx, t)
 
 	other, err := clusters.GenerateNamespace(ctx, env.Cluster(), t.Name()+"other")
 	require.NoError(t, err)

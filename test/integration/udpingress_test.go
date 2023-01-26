@@ -32,8 +32,10 @@ var udpMutex sync.Mutex
 const coreDNSImage = "k8s.gcr.io/coredns/coredns:v1.8.6"
 
 func TestUDPIngressEssentials(t *testing.T) {
+	ctx := context.Background()
+
 	t.Parallel()
-	ns, cleaner := setup(t)
+	ns, cleaner := setup(ctx, t)
 
 	// Ensure no other UDP tests run concurrently to avoid fights over the port
 	t.Log("locking UDP port")
@@ -153,6 +155,8 @@ func TestUDPIngressEssentials(t *testing.T) {
 }
 
 func TestUDPIngressTCPIngressCollision(t *testing.T) {
+	ctx := context.Background()
+
 	t.Parallel()
 	t.Log("locking TCP and UDP ports")
 	udpMutex.Lock()
@@ -161,7 +165,7 @@ func TestUDPIngressTCPIngressCollision(t *testing.T) {
 	defer udpMutex.Unlock()
 	defer tcpMutex.Unlock()
 
-	ns, cleaner := setup(t)
+	ns, cleaner := setup(ctx, t)
 
 	t.Log("configuring coredns corefile")
 	cfgmap := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "coredns"}, Data: map[string]string{"Corefile": corefile}}

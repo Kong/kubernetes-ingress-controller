@@ -5,6 +5,7 @@ package integration
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -23,10 +24,12 @@ import (
 )
 
 func TestIngressRegexMatchPath(t *testing.T) {
+	ctx := context.Background()
+
 	if !versions.GetKongVersion().MajorOnly().GTE(versions.ExplicitRegexPathVersionCutoff) {
 		t.Skip("regex prefixes are only relevant for Kong 3.0+")
 	}
-	ns, cleaner := setup(t)
+	ns, cleaner := setup(ctx, t)
 
 	pathRegexPrefix := "/~"
 	pathTypeImplementationSpecific := netv1.PathTypeImplementationSpecific
@@ -175,10 +178,12 @@ func TestIngressRegexMatchPath(t *testing.T) {
 }
 
 func TestIngressRegexMatchHeader(t *testing.T) {
+	ctx := context.Background()
+
 	if !versions.GetKongVersion().MajorOnly().GTE(versions.ExplicitRegexPathVersionCutoff) {
 		t.Skip("regex prefixes are only relevant for Kong 3.0+")
 	}
-	ns, cleaner := setup(t)
+	ns, cleaner := setup(ctx, t)
 
 	headerRegexPrefix := "~*"
 	matchHeaderKey := "X-Kic-Test-Match"

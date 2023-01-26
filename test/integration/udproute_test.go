@@ -27,7 +27,9 @@ import (
 const testdomain = "konghq.com"
 
 func TestUDPRouteEssentials(t *testing.T) {
-	ns, cleaner := setup(t)
+	ctx := context.Background()
+
+	ns, cleaner := setup(ctx, t)
 
 	t.Log("locking UDP port")
 	udpMutex.Lock()
@@ -334,10 +336,10 @@ func TestUDPRouteEssentials(t *testing.T) {
 	}, ingressWait, waitTick)
 
 	t.Log("verifying that DNS queries are being load-balanced between multiple CoreDNS pods")
-	require.Eventually(t, func() bool { return isDNSResolverReturningExpectedResult(resolver, testdomain, "10.0.0.1") }, ingressWait, waitTick)
-	require.Eventually(t, func() bool { return isDNSResolverReturningExpectedResult(resolver, testdomain, "10.0.0.2") }, ingressWait, waitTick)
-	require.Eventually(t, func() bool { return isDNSResolverReturningExpectedResult(resolver, testdomain, "10.0.0.1") }, ingressWait, waitTick)
-	require.Eventually(t, func() bool { return isDNSResolverReturningExpectedResult(resolver, testdomain, "10.0.0.2") }, ingressWait, waitTick)
+	require.Eventually(t, func() bool { return isDNSResolverReturningExpectedResult(ctx, resolver, testdomain, "10.0.0.1") }, ingressWait, waitTick)
+	require.Eventually(t, func() bool { return isDNSResolverReturningExpectedResult(ctx, resolver, testdomain, "10.0.0.2") }, ingressWait, waitTick)
+	require.Eventually(t, func() bool { return isDNSResolverReturningExpectedResult(ctx, resolver, testdomain, "10.0.0.1") }, ingressWait, waitTick)
+	require.Eventually(t, func() bool { return isDNSResolverReturningExpectedResult(ctx, resolver, testdomain, "10.0.0.2") }, ingressWait, waitTick)
 
 	t.Log("deleting both GatewayClass and Gateway rapidly")
 	require.NoError(t, gatewayClient.GatewayV1beta1().GatewayClasses().Delete(ctx, gatewayClassName, metav1.DeleteOptions{}))
@@ -354,7 +356,7 @@ func TestUDPRouteEssentials(t *testing.T) {
 	}, ingressWait, waitTick)
 }
 
-func isDNSResolverReturningExpectedResult(resolver *net.Resolver, host, addr string) bool { //nolint:unparam
+func isDNSResolverReturningExpectedResult(ctx context.Context, resolver *net.Resolver, host, addr string) bool { //nolint:unparam
 	addrs, err := resolver.LookupHost(ctx, host)
 	if err != nil {
 		return false

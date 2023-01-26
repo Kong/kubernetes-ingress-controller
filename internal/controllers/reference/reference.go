@@ -4,7 +4,7 @@ import (
 	"context"
 
 	corev1 "k8s.io/api/core/v1"
-	k8serrors "k8s.io/apimachinery/pkg/api/errors"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -98,7 +98,7 @@ func removeOutdatedReferencesToSecret(
 			} else {
 				// if the secret does not exist in k8s, we ignore the error and continue the check and delete operation.
 				// for other errors, we return the error and stop the operation.
-				if !k8serrors.IsNotFound(getErr) {
+				if !apierrors.IsNotFound(getErr) {
 					return err
 				}
 			}

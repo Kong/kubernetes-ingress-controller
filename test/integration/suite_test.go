@@ -20,7 +20,7 @@ import (
 	"github.com/kong/kubernetes-testing-framework/pkg/environments"
 	corev1 "k8s.io/api/core/v1"
 	netv1 "k8s.io/api/networking/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
@@ -189,7 +189,7 @@ func TestMain(m *testing.M) {
 		fmt.Println("INFO: creating additional controller namespaces")
 		ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: controllerNamespace}}
 		if _, err := env.Cluster().Client().CoreV1().Namespaces().Create(context.Background(), ns, metav1.CreateOptions{}); err != nil {
-			if !errors.IsAlreadyExists(err) {
+			if !apierrors.IsAlreadyExists(err) {
 				exitOnErr(ctx, err)
 			}
 		}
@@ -237,7 +237,7 @@ func TestMain(m *testing.M) {
 	}
 	ingClasses := env.Cluster().Client().NetworkingV1().IngressClasses()
 	_, err = ingClasses.Create(ctx, createIngressClass(), metav1.CreateOptions{})
-	if errors.IsAlreadyExists(err) {
+	if apierrors.IsAlreadyExists(err) {
 		// If for some reason the ingress class is already in the cluster don't
 		// fail the whole test suite but recreate it and continue.
 		err = ingClasses.Delete(ctx, ingressClass, metav1.DeleteOptions{})

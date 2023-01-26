@@ -17,7 +17,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
@@ -185,7 +185,7 @@ func TestUDPRouteEssentials(t *testing.T) {
 	defer func() {
 		t.Logf("cleaning up the udproute %s", udpRoute.Name)
 		if err := gatewayClient.GatewayV1alpha2().UDPRoutes(ns.Name).Delete(ctx, udpRoute.Name, metav1.DeleteOptions{}); err != nil {
-			if !errors.IsNotFound(err) {
+			if !apierrors.IsNotFound(err) {
 				assert.NoError(t, err)
 			}
 		}

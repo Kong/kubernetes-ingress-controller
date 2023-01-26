@@ -30,7 +30,7 @@ import (
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	kerrors "k8s.io/apimachinery/pkg/api/errors"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
@@ -171,14 +171,14 @@ func deployKong(ctx context.Context, t *testing.T, env environments.Environment,
 	t.Log("creating the kong namespace")
 	ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "kong"}}
 	_, err := env.Cluster().Client().CoreV1().Namespaces().Create(ctx, ns, metav1.CreateOptions{})
-	if !kerrors.IsAlreadyExists(err) {
+	if !apierrors.IsAlreadyExists(err) {
 		require.NoError(t, err)
 	}
 
 	t.Logf("deploying any supplemental secrets (found: %d)", len(additionalSecrets))
 	for _, secret := range additionalSecrets {
 		_, err := env.Cluster().Client().CoreV1().Secrets("kong").Create(ctx, secret, metav1.CreateOptions{})
-		if !kerrors.IsAlreadyExists(err) {
+		if !apierrors.IsAlreadyExists(err) {
 			require.NoError(t, err)
 		}
 	}

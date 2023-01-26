@@ -18,7 +18,7 @@ import (
 	"github.com/stretchr/testify/require"
 	admregv1 "k8s.io/api/admissionregistration/v1"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 
@@ -52,7 +52,7 @@ func TestValidationWebhook(t *testing.T) {
 	require.NoError(t, clusters.CreateNamespace(ctx, env.Cluster(), extraWebhookNamespace))
 	defer func() {
 		if err := env.Cluster().Client().CoreV1().Namespaces().Delete(ctx, extraWebhookNamespace, metav1.DeleteOptions{}); err != nil {
-			if !errors.IsNotFound(err) {
+			if !apierrors.IsNotFound(err) {
 				assert.NoError(t, err)
 			}
 		}
@@ -108,7 +108,7 @@ func TestValidationWebhook(t *testing.T) {
 			require.NoError(t, err)
 			defer func() {
 				if err := env.Cluster().Client().CoreV1().Secrets(extraWebhookNamespace).Delete(ctx, credentialName, metav1.DeleteOptions{}); err != nil {
-					if !errors.IsNotFound(err) {
+					if !apierrors.IsNotFound(err) {
 						assert.NoError(t, err)
 					}
 				}
@@ -144,7 +144,7 @@ func TestValidationWebhook(t *testing.T) {
 		require.NoError(t, err)
 		defer func() {
 			if err := kongClient.ConfigurationV1().KongConsumers(extraWebhookNamespace).Delete(ctx, consumerName, metav1.DeleteOptions{}); err != nil {
-				if !errors.IsNotFound(err) {
+				if !apierrors.IsNotFound(err) {
 					assert.NoError(t, err)
 				}
 			}
@@ -179,7 +179,7 @@ func TestValidationWebhook(t *testing.T) {
 		secretName := secret.Name
 		defer func() {
 			if err := env.Cluster().Client().CoreV1().Secrets(extraWebhookNamespace).Delete(ctx, secretName, metav1.DeleteOptions{}); err != nil {
-				if !errors.IsNotFound(err) {
+				if !apierrors.IsNotFound(err) {
 					assert.NoError(t, err)
 				}
 			}
@@ -206,7 +206,7 @@ func TestValidationWebhook(t *testing.T) {
 	require.NoError(t, err)
 	defer func() {
 		if err := kongClient.ConfigurationV1().KongConsumers(extraWebhookNamespace).Delete(ctx, consumer.Name, metav1.DeleteOptions{}); err != nil {
-			if !errors.IsNotFound(err) {
+			if !apierrors.IsNotFound(err) {
 				assert.NoError(t, err)
 			}
 		}
@@ -481,7 +481,7 @@ func TestValidationWebhook(t *testing.T) {
 				credentialName := credential.Name
 				defer func() {
 					if err := env.Cluster().Client().CoreV1().Secrets(ns.Name).Delete(ctx, credentialName, metav1.DeleteOptions{}); err != nil {
-						if !errors.IsNotFound(err) {
+						if !apierrors.IsNotFound(err) {
 							assert.NoError(t, err)
 						}
 					}
@@ -490,7 +490,7 @@ func TestValidationWebhook(t *testing.T) {
 
 			defer func() {
 				if err := kongClient.ConfigurationV1().KongConsumers(ns.Name).Delete(ctx, tt.consumer.Name, metav1.DeleteOptions{}); err != nil {
-					if !errors.IsNotFound(err) {
+					if !apierrors.IsNotFound(err) {
 						assert.NoError(t, err)
 					}
 				}
@@ -522,7 +522,7 @@ func TestValidationWebhook(t *testing.T) {
 	require.NoError(t, err)
 	defer func() {
 		if err := env.Cluster().Client().CoreV1().Secrets(ns.Name).Delete(ctx, invalidCredential.Name, metav1.DeleteOptions{}); err != nil {
-			if !errors.IsNotFound(err) {
+			if !apierrors.IsNotFound(err) {
 				assert.NoError(t, err)
 			}
 		}
@@ -547,7 +547,7 @@ func TestValidationWebhook(t *testing.T) {
 	require.Contains(t, err.Error(), "invalid credential type")
 	defer func() {
 		if err := kongClient.ConfigurationV1().KongConsumers(ns.Name).Delete(ctx, validConsumerLinkedToInvalidCredentials.Name, metav1.DeleteOptions{}); err != nil {
-			if !errors.IsNotFound(err) {
+			if !apierrors.IsNotFound(err) {
 				assert.NoError(t, err)
 			}
 		}
@@ -658,11 +658,11 @@ func ensureWebhookService(ctx context.Context, name string) (func() error, error
 	}
 
 	closer := func() error {
-		if err := env.Cluster().Client().CoreV1().Services(controllerNamespace).Delete(ctx, validationsService.Name, metav1.DeleteOptions{}); err != nil && !errors.IsNotFound(err) {
+		if err := env.Cluster().Client().CoreV1().Services(controllerNamespace).Delete(ctx, validationsService.Name, metav1.DeleteOptions{}); err != nil && !apierrors.IsNotFound(err) {
 			return err
 		}
 
-		if err := env.Cluster().Client().CoreV1().Endpoints(controllerNamespace).Delete(ctx, endpoints.Name, metav1.DeleteOptions{}); err != nil && !errors.IsNotFound(err) {
+		if err := env.Cluster().Client().CoreV1().Endpoints(controllerNamespace).Delete(ctx, endpoints.Name, metav1.DeleteOptions{}); err != nil && !apierrors.IsNotFound(err) {
 			return err
 		}
 		return nil
@@ -712,7 +712,7 @@ func ensureAdmissionRegistration(ctx context.Context, configResourceName string,
 	}
 
 	closer := func() error {
-		if err := env.Cluster().Client().AdmissionregistrationV1().ValidatingWebhookConfigurations().Delete(ctx, webhook.Name, metav1.DeleteOptions{}); err != nil && !errors.IsNotFound(err) {
+		if err := env.Cluster().Client().AdmissionregistrationV1().ValidatingWebhookConfigurations().Delete(ctx, webhook.Name, metav1.DeleteOptions{}); err != nil && !apierrors.IsNotFound(err) {
 			return err
 		}
 		return svcCloser()

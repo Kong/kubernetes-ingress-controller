@@ -8,7 +8,7 @@ import (
 	"github.com/kong/go-kong/kong"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -116,7 +116,7 @@ func (validator KongHTTPValidator) ValidateConsumer(
 		// retrieve the credentials secret
 		secret, err := validator.SecretGetter.GetSecret(consumer.Namespace, secretName)
 		if err != nil {
-			if errors.IsNotFound(err) {
+			if apierrors.IsNotFound(err) {
 				return false, ErrTextConsumerCredentialSecretNotFound, err
 			}
 			return false, ErrTextFailedToRetrieveSecret, err

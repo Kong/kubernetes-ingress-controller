@@ -254,8 +254,14 @@ jobs:
       - "conformance-tests"
     if: always()
     steps:
-    - name: Set workflow outcome
-      if: needs.test.result == 'failure' || needs.test.result == 'cancelled'
+    - name: Set workflow outcome based on unit-tests
+      if: needs.unit-tests.result == 'failure' || needs.unit-tests.result == 'cancelled'
+      run: ${{ false }}
+    - name: Set workflow outcome based on integration-tests
+      if: needs.integration-tests.result == 'failure' || needs.integration-tests.result == 'cancelled'
+      run: ${{ false }}
+    - name: Set workflow outcome based on conformance-tests
+      if: needs.conformance-tests.result == 'failure' || needs.conformance-tests.result == 'cancelled'
       run: ${{ false }}
 
   coverage:

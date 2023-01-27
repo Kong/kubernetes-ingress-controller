@@ -326,7 +326,7 @@ _check.container.environment:
 .PHONY: _test.integration
 _test.integration: _check.container.environment gotestsum
 	TEST_DATABASE_MODE="$(DBMODE)" \
-		GOFLAGS="-tags=integration_tests" \
+		GOFLAGS="-tags=$(GOTAGS)" \
 		KONG_CONTROLLER_FEATURE_GATES=$(KONG_CONTROLLER_FEATURE_GATES) \
 		GOTESTSUM_FORMAT=$(GOTESTSUM_FORMAT) \
 		$(GOTESTSUM) -- $(GOTESTFLAGS) \
@@ -338,28 +338,48 @@ _test.integration: _check.container.environment gotestsum
 		-coverprofile=$(COVERAGE_OUT) \
 		./test/integration
 
+.PHONY: test.integration.dbless.knative
+test.integration.dbless.knative:
+	@$(MAKE) _test.integration \
+		GOTAGS="integration_tests,knative" \
+		GOTESTFLAGS="-run TestKnative" \
+		DBMODE=off \
+		COVERAGE_OUT=coverage.dbless.knative.out
+
 .PHONY: test.integration.dbless
 test.integration.dbless:
 	@$(MAKE) _test.integration \
+		GOTAGS="integration_tests" \
 		DBMODE=off \
 		COVERAGE_OUT=coverage.dbless.out
 
 .PHONY: test.integration.dbless.pretty
 test.integration.dbless.pretty:
 	@$(MAKE) GOTESTSUM_FORMAT=pkgname _test.integration \
+		GOTAGS="integration_tests" \
 		DBMODE=off \
 		GOTESTFLAGS="-json" \
 		COVERAGE_OUT=coverage.dbless.out
 
+.PHONY: test.integration.postgres.knative
+test.integration.postgres.knative:
+	@$(MAKE) _test.integration \
+		GOTAGS="integration_tests,knative" \
+		GOTESTFLAGS="-run TestKnative" \
+		DBMODE=postgres \
+		COVERAGE_OUT=coverage.postgres.knative.out
+
 .PHONY: test.integration.postgres
 test.integration.postgres:
 	@$(MAKE) _test.integration \
+		GOTAGS="integration_tests" \
 		DBMODE=postgres \
 		COVERAGE_OUT=coverage.postgres.out
 
 .PHONY: test.integration.postgres.pretty
 test.integration.postgres.pretty:
 	@$(MAKE) GOTESTSUM_FORMAT=pkgname _test.integration \
+		GOTAGS="integration_tests" \
 		DBMODE=postgres \
 		GOTESTFLAGS="-json" \
 		COVERAGE_OUT=coverage.postgres.out
@@ -367,6 +387,7 @@ test.integration.postgres.pretty:
 .PHONY: test.integration.enterprise.postgres
 test.integration.enterprise.postgres:
 	@TEST_KONG_ENTERPRISE="true" \
+		GOTAGS="integration_tests" \
 		$(MAKE) _test.integration \
 		DBMODE=postgres \
 		COVERAGE_OUT=coverage.enterprisepostgres.out
@@ -374,6 +395,7 @@ test.integration.enterprise.postgres:
 .PHONY: test.integration.enterprise.postgres.pretty
 test.integration.enterprise.postgres.pretty:
 	@TEST_KONG_ENTERPRISE="true" \
+		GOTAGS="integration_tests" \
 		GOTESTSUM_FORMAT=pkgname \
 		$(MAKE) _test.integration \
 		DBMODE=postgres \

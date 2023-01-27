@@ -10,6 +10,7 @@ require (
 	gotest.tools/gotestsum v1.9.0
 	honnef.co/go/tools v0.4.2
 	k8s.io/code-generator v0.26.2
+	sigs.k8s.io/controller-runtime/tools/setup-envtest v0.0.0-20230221102149-f6f37e6cc1ec
 	sigs.k8s.io/controller-tools v0.11.3
 	sigs.k8s.io/kustomize/kustomize/v4 v4.5.7
 )
@@ -71,6 +72,7 @@ require (
 	github.com/go-delve/liner v1.2.3-0.20220127212407-d32d89dd2a5d // indirect
 	github.com/go-errors/errors v1.4.2 // indirect
 	github.com/go-logr/logr v1.2.3 // indirect
+	github.com/go-logr/zapr v1.2.0 // indirect
 	github.com/go-openapi/jsonpointer v0.19.6 // indirect
 	github.com/go-openapi/jsonreference v0.20.2 // indirect
 	github.com/go-openapi/swag v0.22.3 // indirect

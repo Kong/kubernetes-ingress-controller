@@ -1,4 +1,11 @@
 # ------------------------------------------------------------------------------
+# Configuration - Make
+# ------------------------------------------------------------------------------
+
+# Some sensible Make defaults: https://tech.davis-hansson.com/p/make/
+SHELL := bash
+
+# ------------------------------------------------------------------------------
 # Configuration - Repository
 # ------------------------------------------------------------------------------
 
@@ -72,6 +79,11 @@ DLV = $(PROJECT_DIR)/bin/dlv
 .PHONY: dlv
 dlv: ## Download dlv locally if necessary.
 	@$(MAKE) _download_tool TOOL=dlv
+
+SETUP_ENVTEST = $(PROJECT_DIR)/bin/setup-envtest
+.PHONY: setup-envtest
+setup-envtest: ## Download setup-envtest locally if necessary.
+	@$(MAKE) _download_tool TOOL=setup-envtest
 
 SKAFFOLD = $(PROJECT_DIR)/bin/skaffold
 .PHONY: skaffold
@@ -306,9 +318,14 @@ test.integration: test.integration.dbless test.integration.postgres test.integra
 test.integration.enterprise: test.integration.enterprise.postgres
 
 .PHONY: _test.unit
-_test.unit: gotestsum
-	GOTESTSUM_FORMAT=$(GOTESTSUM_FORMAT) \
-	$(GOTESTSUM) -- -race $(GOTESTFLAGS) \
+.ONESHELL: _test.unit
+_test.unit: gotestsum setup-envtest
+	$(SETUP_ENVTEST) use
+	KUBEBUILDER_ASSETS="$(shell $(SETUP_ENVTEST) use -p path)" \
+		GOTESTSUM_FORMAT=$(GOTESTSUM_FORMAT) \
+		$(GOTESTSUM) -- \
+		-race $(GOTESTFLAGS) \
+		-tags envtest \
 		-covermode=atomic \
 		-coverpkg=$(PKG_LIST) \
 		-coverprofile=coverage.unit.out \

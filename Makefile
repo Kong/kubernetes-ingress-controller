@@ -81,7 +81,7 @@ skaffold: ## Download skaffold locally if necessary.
 # go install:
 # go: github.com/GoogleContainerTools/skaffold@v2.0.4: invalid version: module contains a go.mod file, so module path must match major version ("github.com/GoogleContainerTools/skaffold/v2")
 ifeq ($(wildcard $(SKAFFOLD)),)
-	curl -Lo skaffold https://storage.googleapis.com/skaffold/releases/v2.0.4/skaffold-$(shell go env GOOS)-$(shell go env GOARCH)
+	curl -Lo skaffold https://storage.googleapis.com/skaffold/releases/v2.1.0/skaffold-$(shell go env GOOS)-$(shell go env GOARCH)
 	@chmod +x skaffold
 	@mv skaffold ./bin/
 endif

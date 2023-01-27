@@ -448,6 +448,8 @@ func TestConsumer_SetCredential(t *testing.T) {
 				t.Errorf("processCredential() error = %v, wantErr %v",
 					err, tt.wantErr)
 			}
+			// the controller will populate tags, but we don't care about them in these test objects
+			tt.result.Consumer.Tags = nil
 			assert.Equal(t, tt.result, tt.args.consumer)
 		})
 	}

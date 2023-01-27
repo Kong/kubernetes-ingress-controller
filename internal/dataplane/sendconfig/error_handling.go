@@ -4,10 +4,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 	"net"
 	"net/http"
 	"strings"
+
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 
 	deckutils "github.com/kong/deck/utils"
 	"github.com/kong/go-kong/kong"
@@ -72,6 +73,8 @@ type FlatFieldError struct {
 func parseFlatEntityErrors(body []byte, log logrus.FieldLogger) ([]ResourceError, error) {
 	var resourceErrors []ResourceError
 	var configError ConfigError
+	strb := string(body)
+	log.Error(strb)
 	err := json.Unmarshal(body, &configError)
 	if err != nil {
 		return resourceErrors, fmt.Errorf("could not unmarshal config error: %w", err)

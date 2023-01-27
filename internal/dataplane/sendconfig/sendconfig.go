@@ -169,6 +169,7 @@ func onUpdateInMemoryMode(
 	deckgen.CleanUpNullsInPluginConfigs(state)
 	var parseErr error
 	var resourceErrors []ResourceError
+	var errBody []byte
 
 	config, err := json.Marshal(state)
 	if err != nil {
@@ -177,8 +178,9 @@ func onUpdateInMemoryMode(
 
 	log.WithField("kong_url", client.BaseRootURL()).
 		Debug("sending configuration to Kong Admin API")
-	if err = client.Configs.ReloadDeclarativeRawConfig(ctx, bytes.NewReader(config), true); err != nil {
+	if err, errBody = client.Configs.ReloadDeclarativeRawConfig(ctx, bytes.NewReader(config), true); err != nil {
 		// TODO TRM the other errors aren't getting populated
+		resourceErrors, parseErr = parseFlatEntityErrors(errBody, log)
 		return err, resourceErrors, parseErr
 	}
 

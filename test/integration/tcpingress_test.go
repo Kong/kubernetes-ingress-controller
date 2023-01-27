@@ -38,13 +38,12 @@ func TestTCPIngressEssentials(t *testing.T) {
 
 	t.Parallel()
 	// Ensure no other TCP tests run concurrently to avoid fights over the port
-	// Free it when done
 	t.Log("locking TCP port")
 	tcpMutex.Lock()
-	defer func() {
+	t.Cleanup(func() {
 		t.Log("unlocking TCP port")
 		tcpMutex.Unlock()
-	}()
+	})
 
 	ns, cleaner := setup(ctx, t)
 
@@ -141,16 +140,16 @@ func TestTCPIngressEssentials(t *testing.T) {
 }
 
 func TestTCPIngressTLS(t *testing.T) {
-	ctx := context.Background()
-
 	t.Parallel()
-	t.Log("locking TLS port")
+
+	t.Log("locking Gateway TLS ports")
 	tlsMutex.Lock()
-	defer func() {
+	t.Cleanup(func() {
 		t.Log("unlocking TLS port")
 		tlsMutex.Unlock()
-	}()
+	})
 
+	ctx := context.Background()
 	ns, cleaner := setup(ctx, t)
 
 	t.Log("setting up the TCPIngress tests")
@@ -300,8 +299,6 @@ func TestTCPIngressTLS(t *testing.T) {
 }
 
 func TestTCPIngressTLSPassthrough(t *testing.T) {
-	ctx := context.Background()
-
 	version, err := getKongVersion()
 	if err != nil {
 		t.Logf("attempting TLS passthrough test despite unknown kong version: %v", err)
@@ -310,13 +307,15 @@ func TestTCPIngressTLSPassthrough(t *testing.T) {
 	}
 
 	t.Parallel()
-	t.Log("locking TLS port")
+
+	t.Log("locking Gateway TLS ports")
 	tlsMutex.Lock()
-	defer func() {
+	t.Cleanup(func() {
 		t.Log("unlocking TLS port")
 		tlsMutex.Unlock()
-	}()
+	})
 
+	ctx := context.Background()
 	ns, cleaner := setup(ctx, t)
 
 	t.Log("setting up the TCPIngress TLS passthrough tests")

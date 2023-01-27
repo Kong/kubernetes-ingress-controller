@@ -36,7 +36,7 @@ func gatewayAPIControllerNameFromFlagValue(flagValue string) (string, error) {
 // When a single variable is to be validated, *FromFlagValue function should be implemented.
 func (c *Config) Validate() error {
 	if err := c.validateKonnect(); err != nil {
-		return fmt.Errorf("konnect configuration is invalid: %w", err)
+		return fmt.Errorf("invalid konnect configuration: %w", err)
 	}
 
 	return nil
@@ -55,7 +55,7 @@ func (c *Config) validateKonnect() error {
 		return errors.New("runtime group not specified")
 	}
 	if err := c.validateKonnectClientTLS(); err != nil {
-		return fmt.Errorf("konnect TLS client config invalid: %w", err)
+		return fmt.Errorf("TLS client config invalid: %w", err)
 	}
 
 	return nil

@@ -229,13 +229,21 @@ func NewKongClientForKonnect(c KonnectConfig) (*Client, error) {
 		Address:       fmt.Sprintf("%s/%s/%s", c.Address, "kic/api/runtime_groups", c.RuntimeGroup),
 		TLSClientCert: tlsClientCert,
 		TLSClientKey:  tlsClientKey,
-		Retryable:     true,
 	})
 	if err != nil {
 		return nil, err
 	}
 
+	// Konnect supports tags, we don't need to verify that.
+	client.Tags = tagsStub{}
+
 	return NewKonnectClient(client, c.RuntimeGroup), nil
+}
+
+type tagsStub struct{}
+
+func (t tagsStub) Exists(context.Context) (bool, error) {
+	return true, nil
 }
 
 // valueFromVariableOrFile uses v value if it's not empty, and falls back to reading a file content when value is missing.

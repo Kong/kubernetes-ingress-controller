@@ -228,7 +228,7 @@ func (c *Config) FlagSet() *pflag.FlagSet {
 	// Konnect
 	flagSet.BoolVar(&c.Konnect.ConfigSynchronizationEnabled, "konnect-sync-enabled", false, "Enable synchronization of data plane configuration with a Konnect runtime group.")
 	flagSet.StringVar(&c.Konnect.RuntimeGroup, "konnect-runtime-group", "", "An ID of a runtime group (not name!) that is to be synchronized with data plane configuration.")
-	flagSet.StringVar(&c.Konnect.Address, "konnect-address", "https://api.konghq.com", "Base address of Konnect API.")
+	flagSet.StringVar(&c.Konnect.Address, "konnect-address", "https://us.kic.api.konghq.com", "Base address of Konnect API.")
 	flagSet.StringVar(&c.Konnect.ClientTLS.Cert, "konnect-tls-client-cert", "", "Konnect TLS client certificate.")
 	flagSet.StringVar(&c.Konnect.ClientTLS.CertFile, "konnect-tls-client-cert-file", "", "Konnect TLS client certificate file path.")
 	flagSet.StringVar(&c.Konnect.ClientTLS.Key, "konnect-tls-client-key", "", "Konnect TLS client key.")

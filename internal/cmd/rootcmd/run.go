@@ -29,7 +29,7 @@ func RunWithLogger(ctx context.Context, c *manager.Config, deprecatedLogger logr
 	}
 
 	if err := c.Validate(); err != nil {
-		return fmt.Errorf("failed to validate config: %w", err)
+		return fmt.Errorf("config invalid: %w", err)
 	}
 
 	diag, err := StartDiagnosticsServer(ctx, manager.DiagnosticsPort, c, logger)

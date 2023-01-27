@@ -438,7 +438,17 @@ func (c *KongClient) sendOutToClients(
 	ctx context.Context, s *kongstate.KongState, formatVersion string, filterTags []string,
 ) ([]string, error) {
 	shas, err := iter.MapErr(c.kongConfig.Clients, func(client *sendconfig.ClientWithPluginStore) (string, error) {
-		return c.sendToClient(ctx, client, s, formatVersion, filterTags)
+		sha, err := c.sendToClient(ctx, client, s, formatVersion, filterTags)
+		if err != nil {
+			if client.IsKonnect() {
+				// We do not collect errors from Konnect as they should not affect readiness.
+				c.logger.WithError(err).Error("Failed to send config to Konnect")
+				return "", nil
+			}
+			return "", err
+		}
+
+		return sha, nil
 	},
 	)
 	if err != nil {

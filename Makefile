@@ -123,8 +123,7 @@ _build.template:
 	go build -o bin/manager -ldflags "-s -w \
 		-X $(REPO_URL)/v2/internal/manager/metadata.Release=$(TAG) \
 		-X $(REPO_URL)/v2/internal/manager/metadata.Commit=$(COMMIT) \
-		-X $(REPO_URL)/v2/internal/manager/metadata.Repo=$(REPO_INFO)" \
-		-gcflags "-trimpath" ${MAIN}
+		-X $(REPO_URL)/v2/internal/manager/metadata.Repo=$(REPO_INFO)" ${MAIN}
 
 .PHONY: _build.debug
 _build.debug:
@@ -475,13 +474,6 @@ debug.skaffold: skaffold
 
 # This will port-forward 40000 from KIC's debugger to localhost. Connect to that
 # port with debugger/IDE of your choice
-.PHONY: debug.konnect.skaffold
-debug.konnect.skaffold: skaffold
-	TAG=$(TAG)-debug REPO_INFO=$(REPO_INFO) COMMIT=$(COMMIT) \
-		$(SKAFFOLD) debug --port-forward=pods --profile=debug-konnect $(SKAFFOLD_FLAGS)
-
-# This will port-forward 40000 from KIC's debugger to localhost. Connect to that
-# port with debugger/IDE of your choice
 .PHONY: debug.skaffold.sync
 debug.skaffold.sync: skaffold
 	@$(MAKE) debug.skaffold SKAFFOLD_FLAGS="--auto-build --auto-deploy --auto-sync"
@@ -500,8 +492,7 @@ run: install _ensure-namespace
 # It should be run only after the cluster has been already prepared to run with KIC.
 .PHONY: _run
 _run:
-	go build -gcflags="all=-N -l" -o ./controller ./internal/cmd/main.go && \
-		./controller \
+	go run ./internal/cmd/main.go \
 		--anonymous-reports=false \
 		--kong-admin-url $(KONG_ADMIN_URL) \
 		--publish-service $(KONG_NAMESPACE)/$(KONG_PROXY_SERVICE) \

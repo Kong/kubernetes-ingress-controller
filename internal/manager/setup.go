@@ -18,6 +18,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/adminapi"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/admission"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
@@ -159,7 +160,7 @@ func setupAdmissionServer(
 		return nil
 	}
 
-	kongclients, err := getKongClients(ctx, managerConfig)
+	kongclients, err := NewKongClients(ctx, managerConfig)
 	if err != nil {
 		return err
 	}
@@ -256,4 +257,32 @@ func generateAddressFinderGetter(mgrc client.Client, publishServiceNn types.Name
 
 		return addrs, nil
 	}
+}
+
+// NewKongClients returns the kong clients
+func NewKongClients(ctx context.Context, cfg *Config) ([]*adminapi.Client, error) {
+	httpclient, err := adminapi.MakeHTTPClient(&cfg.KongAdminAPIConfig)
+	if err != nil {
+		return nil, err
+	}
+
+	clients := make([]*adminapi.Client, 0, len(cfg.KongAdminURL))
+	for _, url := range cfg.KongAdminURL {
+		client, err := adminapi.GetKongClientForWorkspace(ctx, url, cfg.KongWorkspace, httpclient)
+		if err != nil {
+			return nil, err
+		}
+		clients = append(clients, client)
+	}
+
+	if cfg.Konnect.ConfigSynchronizationEnabled {
+		konnectClient, err := adminapi.NewKongClientForKonnect(cfg.Konnect)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create kong client for konnect: %w", err)
+		}
+
+		clients = append(clients, konnectClient)
+	}
+
+	return clients, nil
 }

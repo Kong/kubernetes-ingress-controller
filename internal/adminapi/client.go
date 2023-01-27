@@ -4,17 +4,13 @@ import (
 	"context"
 	"crypto/tls"
 	"crypto/x509"
-	"errors"
 	"fmt"
 	"net/http"
 	"os"
-	"sync"
 
 	deckutils "github.com/kong/deck/utils"
 	"github.com/kong/go-kong/kong"
 )
-
-var clientSetup sync.Mutex
 
 // HTTPClientOpts defines parameters that configure an HTTP client.
 type HTTPClientOpts struct {
@@ -28,14 +24,20 @@ type HTTPClientOpts struct {
 	CACert string
 	// Array of headers added to every Admin API call.
 	Headers []string
-	// mTLS client certificate file for authentication.
-	TLSClientCertPath string
-	// mTLS client key file for authentication.
-	TLSClientCert string
-	// mTLS client certificate for authentication.
-	TLSClientKeyPath string
-	// mTLS client key for authentication.
-	TLSClientKey string
+	// TLSClient is TLS client config.
+	TLSClient TLSClientConfig
+}
+
+type TLSClientConfig struct {
+	// Cert is a client certificate.
+	Cert string
+	// CertFile is a client certificate file path.
+	CertFile string
+
+	// Key is a client key.
+	Key string
+	// KeyFile is a client key file path.
+	KeyFile string
 }
 
 // MakeHTTPClient returns an HTTP client with the specified mTLS/headers configuration.
@@ -80,21 +82,21 @@ func MakeHTTPClient(opts *HTTPClientOpts) (*http.Client, error) {
 
 	// don't allow the caller to specify both the literal and path versions to supply the
 	// certificate and key, they must choose one or the other for each.
-	if opts.TLSClientCertPath != "" && opts.TLSClientCert != "" {
+	if opts.TLSClient.CertFile != "" && opts.TLSClient.Cert != "" {
 		return nil, fmt.Errorf("both --kong-admin-tls-client-cert-file and --kong-admin-tls-client-cert are set; " +
 			"please remove one or the other")
 	}
-	if opts.TLSClientKeyPath != "" && opts.TLSClientKey != "" {
+	if opts.TLSClient.KeyFile != "" && opts.TLSClient.Key != "" {
 		return nil, fmt.Errorf("both --kong-admin-tls-client-key-file and --kong-admin-tls-client-key are set; " +
 			"please remove one or the other")
 	}
 
 	// if the caller has supplied either the cert or the key but not both, this is
 	// erroneous input.
-	if opts.TLSClientCert != "" && opts.TLSClientKey == "" {
+	if opts.TLSClient.Cert != "" && opts.TLSClient.Key == "" {
 		return nil, fmt.Errorf("client certificate was provided, but the client key was not")
 	}
-	if opts.TLSClientKey != "" && opts.TLSClientCert == "" {
+	if opts.TLSClient.Key != "" && opts.TLSClient.Cert == "" {
 		return nil, fmt.Errorf("client key was provided, but the client certificate was not")
 	}
 
@@ -102,25 +104,25 @@ func MakeHTTPClient(opts *HTTPClientOpts) (*http.Client, error) {
 	var err error
 
 	// if a path to the certificate or key has been provided, retrieve the file contents
-	if opts.TLSClientCertPath != "" {
-		tlsClientCertPath := opts.TLSClientCertPath
+	if opts.TLSClient.CertFile != "" {
+		tlsClientCertPath := opts.TLSClient.CertFile
 		clientCert, err = os.ReadFile(tlsClientCertPath)
 		if err != nil {
 			return nil, fmt.Errorf("failed to read certificate file %s: %w", tlsClientCertPath, err)
 		}
 	}
-	if opts.TLSClientKeyPath != "" {
-		tlsClientKeyPath := opts.TLSClientKeyPath
+	if opts.TLSClient.KeyFile != "" {
+		tlsClientKeyPath := opts.TLSClient.KeyFile
 		clientKey, err = os.ReadFile(tlsClientKeyPath)
 		if err != nil {
 			return nil, fmt.Errorf("failed to read key file %s: %w", tlsClientKeyPath, err)
 		}
 	}
-	if opts.TLSClientCert != "" {
-		clientCert = []byte(opts.TLSClientCert)
+	if opts.TLSClient.Cert != "" {
+		clientCert = []byte(opts.TLSClient.Cert)
 	}
-	if opts.TLSClientKey != "" {
-		clientKey = []byte(opts.TLSClientKey)
+	if opts.TLSClient.Key != "" {
+		clientKey = []byte(opts.TLSClient.Key)
 	}
 
 	if len(clientCert) != 0 && len(clientKey) != 0 {
@@ -184,7 +186,6 @@ func GetKongClientForWorkspace(ctx context.Context, adminURL string, wsName stri
 	}
 
 	// if a workspace was provided, verify whether or not it exists.
-	clientSetup.Lock()
 	exists, err := client.Workspaces.ExistsByName(ctx, kong.String(wsName))
 	if err != nil {
 		return nil, fmt.Errorf("looking up workspace: %w", err)
@@ -200,7 +201,6 @@ func GetKongClientForWorkspace(ctx context.Context, adminURL string, wsName stri
 			return nil, fmt.Errorf("creating workspace: %w", err)
 		}
 	}
-	clientSetup.Unlock()
 
 	// ensure that we set the workspace appropriately
 	client.SetWorkspace(wsName)
@@ -208,30 +208,46 @@ func GetKongClientForWorkspace(ctx context.Context, adminURL string, wsName stri
 	return NewClient(client), nil
 }
 
-func NewKongClientForKonnect(token, address, runtimeGroup string) (*Client, error) {
-	if token == "" {
-		return nil, errors.New("empty token")
+type KonnectConfig struct {
+	ConfigSynchronizationEnabled bool
+	RuntimeGroup                 string
+	Address                      string
+	ClientTLS                    TLSClientConfig
+}
+
+func NewKongClientForKonnect(c KonnectConfig) (*Client, error) {
+	tlsClientCert, err := valueFromVariableOrFile(c.ClientTLS.Cert, c.ClientTLS.CertFile)
+	if err != nil {
+		return nil, fmt.Errorf("could not extract TLS client cert")
 	}
-	if address == "" {
-		return nil, errors.New("empty address")
-	}
-	if runtimeGroup == "" {
-		return nil, errors.New("empty runtime group")
+	tlsClientKey, err := valueFromVariableOrFile(c.ClientTLS.Key, c.ClientTLS.KeyFile)
+	if err != nil {
+		return nil, fmt.Errorf("could not extract TLS client key")
 	}
 
-	// TODO: when https://github.com/Kong/koko-private/pull/1384 is done we should switch to using KIC-specific
-	// endpoints and pass client cert in headers.
-	headers := []string{"Authorization:Bearer " + token}
 	client, err := deckutils.GetKongClient(deckutils.KongClientConfig{
-		Address:    address + "/konnect-api/api/runtime_groups/" + runtimeGroup,
-		HTTPClient: &http.Client{},
-		Debug:      false,
-		Headers:    headers,
-		Retryable:  true,
+		Address:       fmt.Sprintf("%s/%s/%s", c.Address, "kic/api/runtime_groups", c.RuntimeGroup),
+		TLSClientCert: tlsClientCert,
+		TLSClientKey:  tlsClientKey,
+		Retryable:     true,
 	})
 	if err != nil {
 		return nil, err
 	}
 
-	return NewKonnectClient(client, runtimeGroup), nil
+	return NewKonnectClient(client, c.RuntimeGroup), nil
+}
+
+// valueFromVariableOrFile uses v value if it's not empty, and falls back to reading a file content when value is missing.
+func valueFromVariableOrFile(v string, file string) (string, error) {
+	if v != "" {
+		return v, nil
+	}
+
+	b, err := os.ReadFile(file)
+	if err != nil {
+		return "", err
+	}
+
+	return string(b), nil
 }

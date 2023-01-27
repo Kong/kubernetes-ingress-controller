@@ -57,7 +57,7 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 	if c.KongAdminToken != "" {
 		c.KongAdminAPIConfig.Headers = append(c.KongAdminAPIConfig.Headers, "kong-admin-token:"+c.KongAdminToken)
 	}
-	kongClients, err := getKongClients(ctx, c)
+	kongClients, err := NewKongClients(ctx, c)
 	if err != nil {
 		return fmt.Errorf("unable to build kong api client(s): %w", err)
 	}

@@ -21,6 +21,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/manager/config"
 )
 
 func TestMakeHTTPClientWithTLSOpts(t *testing.T) {
@@ -34,7 +36,7 @@ func TestMakeHTTPClientWithTLSOpts(t *testing.T) {
 		t.Errorf("Fail to build TLS certificates - %s", err.Error())
 	}
 
-	opts := HTTPClientOpts{
+	opts := config.HTTPClientOpts{
 		TLSSkipVerify:     true,
 		TLSServerName:     "",
 		CACertPath:        "",
@@ -87,7 +89,7 @@ func TestMakeHTTPClientWithTLSOptsAndFilePaths(t *testing.T) {
 	require.Equal(t, certPrivateKeyPEM.Len(), writtenBytes)
 	defer os.Remove(caFile.Name())
 
-	opts := HTTPClientOpts{
+	opts := config.HTTPClientOpts{
 		TLSSkipVerify:     true,
 		TLSServerName:     "",
 		CACertPath:        caFile.Name(),

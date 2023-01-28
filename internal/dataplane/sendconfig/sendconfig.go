@@ -122,7 +122,9 @@ func PerformUpdate(ctx context.Context,
 					// list with short fields populated, but won't appear in "describe resource" output. this requires
 					// the UID in the reference, so we either need to get the object using the info given or store
 					// the UID in tags.
-					failuresCollector.PushResourceFailure(fmt.Sprintf("invalid %s: %s", field, problem), &obj)
+					failuresCollector.PushResourceFailure(
+						fmt.Sprintf("invalid %s: %s", field, problem),
+						&obj)
 					log.Info(fmt.Sprintf("adding failure for %s: %s = %s", ee.Name, field, problem)) // TODO remove
 				}
 			}

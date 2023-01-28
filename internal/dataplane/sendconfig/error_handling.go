@@ -39,15 +39,14 @@ type rawResourceError struct {
 
 // ConfigError is an error response from Kong's DB-less /config endpoint.
 type ConfigError struct {
-	Code   int               `json:"code,omitempty" yaml:"code,omitempty"`
-	Fields ConfigErrorFields `json:"fields,omitempty" yaml:"fields,omitempty"`
+	Code      int               `json:"code,omitempty" yaml:"code,omitempty"`
+	Flattened []FlatEntityError `json:"flattened,omitempty" yaml:"flattened,omitempty"`
+	Message   string            `json:"message,omitempty" yaml:"message,omitempty"`
+	Name      string            `json:"name,omitempty" yaml:"name,omitempty"`
 }
 
 // ConfigErrorFields is the structure under the "fields" key in a /config error response.
 type ConfigErrorFields struct {
-	Flattened []FlatEntityError `json:"flattened,omitempty" yaml:"flattened,omitempty"`
-	Message   string            `json:"message,omitempty" yaml:"message,omitempty"`
-	Name      string            `json:"name,omitempty" yaml:"name,omitempty"`
 }
 
 // FlatEntityError represents a single Kong entity with one or more invalid fields.
@@ -79,7 +78,7 @@ func parseFlatEntityErrors(body []byte, log logrus.FieldLogger) ([]ResourceError
 	if err != nil {
 		return resourceErrors, fmt.Errorf("could not unmarshal config error: %w", err)
 	}
-	for _, ee := range configError.Fields.Flattened {
+	for _, ee := range configError.Flattened {
 		raw := rawResourceError{
 			Name:     ee.Name,
 			ID:       ee.ID,

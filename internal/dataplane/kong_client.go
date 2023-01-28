@@ -512,7 +512,7 @@ func (c *KongClient) sendToClient(
 	timedCtx, cancel := context.WithTimeout(ctx, c.requestTimeout)
 	defer cancel()
 	// TODO TRM get errors newConfigSHA, err, entityErrors := sendconfig.PerformUpdate(timedCtx,
-	newConfigSHA, err, _ := sendconfig.PerformUpdate(
+	newConfigSHA, err, entityErrors := sendconfig.PerformUpdate(
 		timedCtx,
 		logger,
 		client.Client,
@@ -526,7 +526,7 @@ func (c *KongClient) sendToClient(
 		client.LastConfigSHA(),
 		c.prometheusMetrics,
 	)
-	// TODO TRM record errors c.recordTranslationFailureWarningEvents(entityErrors)
+	c.recordResourceFailureEvents(entityErrors, KongConfigurationTranslationFailedEventReason)
 	if err != nil {
 		if expired, ok := timedCtx.Deadline(); ok && time.Now().After(expired) {
 			logger.Warn("exceeded Kong API timeout, consider increasing --proxy-timeout-seconds")

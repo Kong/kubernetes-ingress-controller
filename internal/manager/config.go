@@ -1,12 +1,9 @@
 package manager
 
 import (
-	"context"
 	"fmt"
-	"regexp"
 	"time"
 
-	"github.com/kong/go-kong/kong"
 	"github.com/spf13/pflag"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/rest"
@@ -105,18 +102,14 @@ type Config struct {
 	// controller can be gracefully removed/drained from their rotation.
 	TermDelay time.Duration
 
+	Konnect adminapi.KonnectConfig
+
 	flagSet *pflag.FlagSet
 }
 
 // -----------------------------------------------------------------------------
 // Controller Manager - Config - Methods
 // -----------------------------------------------------------------------------
-
-// Validate validates the config. It should be used to validate the config variables' interdependencies.
-// When a single variable is to be validated, NewValidatedValue should be used.
-func (c *Config) Validate() error {
-	return nil
-}
 
 // FlagSet binds the provided Config to commandline flags.
 func (c *Config) FlagSet() *pflag.FlagSet {
@@ -144,10 +137,10 @@ func (c *Config) FlagSet() *pflag.FlagSet {
 	flagSet.DurationVar(&c.SyncPeriod, "sync-period", time.Hour*48, `Relist and confirm cloud resources this often`) // 48 hours derived from controller-runtime defaults
 	flagSet.BoolVar(&c.SkipCACertificates, "skip-ca-certificates", false, `disable syncing CA certificate syncing (for use with multi-workspace environments)`)
 	flagSet.DurationVar(&c.CacheSyncTimeout, "cache-sync-timeout", 0, `The time limit set to wait for syncing controllers' caches. Leave this empty to use default from controller-runtime.`)
-	flagSet.StringVar(&c.KongAdminAPIConfig.TLSClientCertPath, "kong-admin-tls-client-cert-file", "", "mTLS client certificate file for authentication.")
-	flagSet.StringVar(&c.KongAdminAPIConfig.TLSClientKeyPath, "kong-admin-tls-client-key-file", "", "mTLS client key file for authentication.")
-	flagSet.StringVar(&c.KongAdminAPIConfig.TLSClientCert, "kong-admin-tls-client-cert", "", "mTLS client certificate for authentication.")
-	flagSet.StringVar(&c.KongAdminAPIConfig.TLSClientKey, "kong-admin-tls-client-key", "", "mTLS client key for authentication.")
+	flagSet.StringVar(&c.KongAdminAPIConfig.TLSClient.CertFile, "kong-admin-tls-client-cert-file", "", "mTLS client certificate file for authentication.")
+	flagSet.StringVar(&c.KongAdminAPIConfig.TLSClient.KeyFile, "kong-admin-tls-client-key-file", "", "mTLS client key file for authentication.")
+	flagSet.StringVar(&c.KongAdminAPIConfig.TLSClient.Cert, "kong-admin-tls-client-cert", "", "mTLS client certificate for authentication.")
+	flagSet.StringVar(&c.KongAdminAPIConfig.TLSClient.Key, "kong-admin-tls-client-key", "", "mTLS client key for authentication.")
 
 	// Kong Proxy and Proxy Cache configurations
 	flagSet.StringVar(&c.APIServerHost, "apiserver-host", "", `The Kubernetes API server URL. If not set, the controller will use cluster config discovery.`)
@@ -231,8 +224,16 @@ func (c *Config) FlagSet() *pflag.FlagSet {
 	// SIGTERM or SIGINT signal delay
 	flagSet.DurationVar(&c.TermDelay, "term-delay", time.Second*0, "The time delay to sleep before SIGTERM or SIGINT will shut down the Ingress Controller")
 
-	// Deprecated flags
+	// Konnect
+	flagSet.BoolVar(&c.Konnect.ConfigSynchronizationEnabled, "konnect-sync-enabled", false, "Enable synchronization of data plane configuration with a Konnect runtime group.")
+	flagSet.StringVar(&c.Konnect.RuntimeGroup, "konnect-runtime-group", "", "An ID of a runtime group (not name!) that is to be synchronized with data plane configuration.")
+	flagSet.StringVar(&c.Konnect.Address, "konnect-address", "https://us.kic.api.konghq.com", "Base address of Konnect API.")
+	flagSet.StringVar(&c.Konnect.TLSClient.Cert, "konnect-tls-client-cert", "", "Konnect TLS client certificate.")
+	flagSet.StringVar(&c.Konnect.TLSClient.CertFile, "konnect-tls-client-cert-file", "", "Konnect TLS client certificate file path.")
+	flagSet.StringVar(&c.Konnect.TLSClient.Key, "konnect-tls-client-key", "", "Konnect TLS client key.")
+	flagSet.StringVar(&c.Konnect.TLSClient.KeyFile, "konnect-tls-client-key-file", "", "Konnect TLS client key file path.")
 
+	// Deprecated flags
 	_ = flagSet.Float32("sync-rate-limit", dataplane.DefaultSyncSeconds, "Use --proxy-sync-seconds instead")
 	_ = flagSet.MarkDeprecated("sync-rate-limit", "Use --proxy-sync-seconds instead")
 
@@ -250,27 +251,6 @@ func (c *Config) FlagSet() *pflag.FlagSet {
 
 	c.flagSet = flagSet
 	return flagSet
-}
-
-// getKongClients returns the kong clients given the provided urls, workspace name
-// and adminAPIConfig.
-func getKongClients(
-	ctx context.Context, urls []string, workspace string, adminAPIConfig adminapi.HTTPClientOpts,
-) ([]*kong.Client, error) {
-	httpclient, err := adminapi.MakeHTTPClient(&adminAPIConfig)
-	if err != nil {
-		return nil, err
-	}
-
-	clients := make([]*kong.Client, 0, len(urls))
-	for _, url := range urls {
-		client, err := adminapi.GetKongClientForWorkspace(ctx, url, workspace, httpclient)
-		if err != nil {
-			return nil, err
-		}
-		clients = append(clients, client)
-	}
-	return clients, nil
 }
 
 func (c *Config) GetKubeconfig() (*rest.Config, error) {
@@ -292,10 +272,4 @@ func (c *Config) GetKubeClient() (client.Client, error) {
 		return nil, err
 	}
 	return client.New(conf, client.Options{})
-}
-
-func isControllerNameValid(controllerName string) bool {
-	// https://github.com/kubernetes-sigs/gateway-api/blob/547122f7f55ac0464685552898c560658fb40073/apis/v1beta1/shared_types.go#L448-L463
-	re := regexp.MustCompile(`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*\/[A-Za-z0-9\/\-._~%!$&'()*+,;=:]+$`)
-	return re.Match([]byte(controllerName))
 }

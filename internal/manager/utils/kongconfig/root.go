@@ -13,6 +13,8 @@ import (
 	"github.com/samber/lo"
 	"go.uber.org/multierr"
 	"golang.org/x/sync/errgroup"
+
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/adminapi"
 )
 
 // ValidateRoots checks if all provided kong roots are the same given that we
@@ -148,7 +150,7 @@ func GetRoots(
 	setupLog logr.Logger,
 	retries uint,
 	retryDelay time.Duration,
-	kongClients []*kong.Client,
+	kongClients []*adminapi.Client,
 ) ([]Root, error) {
 	var (
 		roots []Root

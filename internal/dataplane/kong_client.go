@@ -130,7 +130,6 @@ type KongClient struct {
 // NewKongClient provides a new KongClient object after connecting to the
 // data-plane API and verifying integrity.
 func NewKongClient(
-	ctx context.Context,
 	logger logrus.FieldLogger,
 	timeout time.Duration,
 	ingressClass string,

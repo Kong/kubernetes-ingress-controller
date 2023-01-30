@@ -98,6 +98,13 @@ Adding a new version? You'll need three changes:
 - Event messages for invalid multi-Service backends now indicate their derived
   Kong resource name.
   [#3318](https://github.com/Kong/kubernetes-ingress-controller/pull/3318)
+- `--konnect-sync-enabled` feature flag has been introduced. It enables the
+  integration with Kong's Konnect cloud. It's turned off by default.
+  When enabled, it allows to synchronise data-plane configuration with
+  a Konnect Runtime Group specified by `--konnect-runtime-group`.
+  It requires `--konnect-tls-client-*` set of flags to be set to provide
+  Runtime Group's TLS client certificates for authentication.
+  [#3455](https://github.com/Kong/kubernetes-ingress-controller/pull/3455)
 
 ### Deprecated
 

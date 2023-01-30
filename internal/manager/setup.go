@@ -18,6 +18,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/adminapi"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/admission"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
@@ -51,15 +52,6 @@ func SetupLoggers(c *Config, output io.Writer) (logrus.FieldLogger, logr.Logger,
 }
 
 func setupControllerOptions(logger logr.Logger, c *Config, dbmode string) (ctrl.Options, error) {
-	var leaderElection bool
-	if dbmode == "off" {
-		logger.Info("DB-less mode detected, disabling leader election")
-		leaderElection = false
-	} else {
-		logger.Info("Database mode detected, enabling leader election")
-		leaderElection = true
-	}
-
 	logger.Info("building the manager runtime scheme and loading apis into the scheme")
 	scheme, err := getScheme()
 	if err != nil {
@@ -72,7 +64,7 @@ func setupControllerOptions(logger logr.Logger, c *Config, dbmode string) (ctrl.
 		MetricsBindAddress:     c.MetricsAddr,
 		Port:                   9443,
 		HealthProbeBindAddress: c.ProbeAddr,
-		LeaderElection:         leaderElection,
+		LeaderElection:         leaderElectionEnabled(logger, c, dbmode),
 		LeaderElectionID:       c.LeaderElectionID,
 		SyncPeriod:             &c.SyncPeriod,
 	}
@@ -105,6 +97,21 @@ func setupControllerOptions(logger logr.Logger, c *Config, dbmode string) (ctrl.
 	}
 
 	return controllerOpts, nil
+}
+
+func leaderElectionEnabled(logger logr.Logger, c *Config, dbmode string) bool {
+	if c.Konnect.ConfigSynchronizationEnabled {
+		logger.Info("Konnect config synchronisation enabled, enabling leader election")
+		return true
+	}
+
+	if dbmode == "off" {
+		logger.Info("DB-less mode detected, disabling leader election")
+		return false
+	}
+
+	logger.Info("Database mode detected, enabling leader election")
+	return true
 }
 
 func setupDataplaneSynchronizer(
@@ -152,11 +159,7 @@ func setupAdmissionServer(
 		return nil
 	}
 
-	kongclients, err := getKongClients(ctx,
-		managerConfig.KongAdminURL,
-		managerConfig.KongWorkspace,
-		managerConfig.KongAdminAPIConfig,
-	)
+	kongclients, err := getKongClients(ctx, managerConfig)
 	if err != nil {
 		return err
 	}
@@ -253,4 +256,23 @@ func generateAddressFinderGetter(mgrc client.Client, publishServiceNn types.Name
 
 		return addrs, nil
 	}
+}
+
+// getKongClients returns the kong clients.
+func getKongClients(ctx context.Context, cfg *Config) ([]*adminapi.Client, error) {
+	httpclient, err := adminapi.MakeHTTPClient(&cfg.KongAdminAPIConfig)
+	if err != nil {
+		return nil, err
+	}
+
+	clients := make([]*adminapi.Client, 0, len(cfg.KongAdminURL))
+	for _, url := range cfg.KongAdminURL {
+		client, err := adminapi.NewKongClientForWorkspace(ctx, url, cfg.KongWorkspace, httpclient)
+		if err != nil {
+			return nil, err
+		}
+		clients = append(clients, client)
+	}
+
+	return clients, nil
 }

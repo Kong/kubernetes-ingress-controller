@@ -35,15 +35,15 @@ func TestMakeHTTPClientWithTLSOpts(t *testing.T) {
 	}
 
 	opts := HTTPClientOpts{
-		TLSSkipVerify:     true,
-		TLSServerName:     "",
-		CACertPath:        "",
-		CACert:            caPEM.String(),
-		Headers:           nil,
-		TLSClientCertPath: "",
-		TLSClientCert:     certPEM.String(),
-		TLSClientKeyPath:  "",
-		TLSClientKey:      certPrivateKeyPEM.String(),
+		TLSSkipVerify: true,
+		TLSServerName: "",
+		CACertPath:    "",
+		CACert:        caPEM.String(),
+		Headers:       nil,
+		TLSClient: TLSClientConfig{
+			Cert: certPEM.String(),
+			Key:  certPrivateKeyPEM.String(),
+		},
 	}
 
 	httpclient, err := MakeHTTPClient(&opts)
@@ -88,15 +88,15 @@ func TestMakeHTTPClientWithTLSOptsAndFilePaths(t *testing.T) {
 	defer os.Remove(caFile.Name())
 
 	opts := HTTPClientOpts{
-		TLSSkipVerify:     true,
-		TLSServerName:     "",
-		CACertPath:        caFile.Name(),
-		CACert:            "",
-		Headers:           nil,
-		TLSClientCertPath: certFile.Name(),
-		TLSClientCert:     "",
-		TLSClientKeyPath:  certPrivateKeyFile.Name(),
-		TLSClientKey:      "",
+		TLSSkipVerify: true,
+		TLSServerName: "",
+		CACertPath:    caFile.Name(),
+		CACert:        "",
+		Headers:       nil,
+		TLSClient: TLSClientConfig{
+			CertFile: certFile.Name(),
+			KeyFile:  certPrivateKeyFile.Name(),
+		},
 	}
 
 	httpclient, err := MakeHTTPClient(&opts)

@@ -160,7 +160,7 @@ func setupAdmissionServer(
 		return nil
 	}
 
-	kongclients, err := NewKongClients(ctx, managerConfig)
+	kongclients, err := NewKongClients(ctx, managerConfig, logger)
 	if err != nil {
 		return err
 	}
@@ -260,7 +260,7 @@ func generateAddressFinderGetter(mgrc client.Client, publishServiceNn types.Name
 }
 
 // NewKongClients returns the kong clients
-func NewKongClients(ctx context.Context, cfg *Config) ([]*adminapi.Client, error) {
+func NewKongClients(ctx context.Context, cfg *Config, logger logrus.FieldLogger) ([]*adminapi.Client, error) {
 	httpclient, err := adminapi.MakeHTTPClient(&cfg.KongAdminAPIConfig)
 	if err != nil {
 		return nil, err
@@ -276,9 +276,10 @@ func NewKongClients(ctx context.Context, cfg *Config) ([]*adminapi.Client, error
 	}
 
 	if cfg.Konnect.ConfigSynchronizationEnabled {
-		konnectClient, err := adminapi.NewKongClientForKonnect(cfg.Konnect)
+		konnectClient, err := adminapi.NewKongClientForKonnectRuntimeGroup(ctx, cfg.Konnect)
 		if err != nil {
-			return nil, fmt.Errorf("failed to create kong client for konnect: %w", err)
+			logger.WithError(err).Error("could not create client for konnect admin api, skipping it")
+			return clients, nil
 		}
 
 		clients = append(clients, konnectClient)

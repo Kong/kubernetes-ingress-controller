@@ -4,10 +4,13 @@ import (
 	"context"
 	"crypto/tls"
 	"crypto/x509"
+	"errors"
 	"fmt"
 	"net/http"
 	"os"
+	"time"
 
+	"github.com/avast/retry-go/v4"
 	deckutils "github.com/kong/deck/utils"
 	"github.com/kong/go-kong/kong"
 )
@@ -144,6 +147,11 @@ func MakeHTTPClient(opts *HTTPClientOpts) (*http.Client, error) {
 	}, nil
 }
 
+// Client is a wrapper around *kong.Client. It's needed to be able to distinguish between clients
+// that are to be used with a regular Kong Gateway Admin API, and the ones that are to be used with
+// Konnect Runtime Group Admin API.
+// The distinction is needed to be able to tell what protocol (deck or dbless) should be used when
+// updating configuration using the client.
 type Client struct {
 	*kong.Client
 
@@ -163,10 +171,13 @@ func NewKonnectClient(c *kong.Client, runtimeGroup string) *Client {
 	}
 }
 
+// IsKonnect tells if a client is used for communication with Konnect Runtime Group Admin API.
 func (c *Client) IsKonnect() bool {
 	return c.isKonnect
 }
 
+// KonnectRuntimeGroup gets a unique identifier of a Konnect's Runtime Group that config should
+// be synchronised with. Empty in case of non-Konnect clients.
 func (c *Client) KonnectRuntimeGroup() string {
 	return c.konnectRuntimeGroup
 }
@@ -215,7 +226,7 @@ type KonnectConfig struct {
 	ClientTLS                    TLSClientConfig
 }
 
-func NewKongClientForKonnect(c KonnectConfig) (*Client, error) {
+func NewKongClientForKonnectRuntimeGroup(ctx context.Context, c KonnectConfig) (*Client, error) {
 	tlsClientCert, err := valueFromVariableOrFile(c.ClientTLS.Cert, c.ClientTLS.CertFile)
 	if err != nil {
 		return nil, fmt.Errorf("could not extract TLS client cert")
@@ -233,13 +244,45 @@ func NewKongClientForKonnect(c KonnectConfig) (*Client, error) {
 	if err != nil {
 		return nil, err
 	}
-
 	// Konnect supports tags, we don't need to verify that.
 	client.Tags = tagsStub{}
 
+	if err := ensureKonnectConnection(ctx, client); err != nil {
+		return nil, err
+	}
 	return NewKonnectClient(client, c.RuntimeGroup), nil
 }
 
+func ensureKonnectConnection(ctx context.Context, client *kong.Client) error {
+	const (
+		retries = 60
+		delay   = time.Second
+	)
+
+	if err := retry.Do(
+		func() error {
+			// Call an arbitrary endpoint that should return no error.
+			if _, _, err := client.Services.List(ctx, &kong.ListOpt{Size: 1}); err != nil {
+				if errors.Is(err, context.Canceled) {
+					return retry.Unrecoverable(err)
+				}
+				return err
+			}
+			return nil
+		},
+		retry.Attempts(retries),
+		retry.Delay(delay),
+		retry.DelayType(retry.FixedDelay),
+		retry.LastErrorOnly(true),
+	); err != nil {
+		return fmt.Errorf("konnect client unhealthy, no success after %d retries: %w", retries, err)
+	}
+
+	return nil
+}
+
+// tagsStub replaces a default Tags service in the go-kong's Client for Konnect clients.
+// It will always tell tags are supported, which is true for Konnect Runtime Group Admin API.
 type tagsStub struct{}
 
 func (t tagsStub) Exists(context.Context) (bool, error) {

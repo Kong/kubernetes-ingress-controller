@@ -51,39 +51,15 @@ func PerformUpdate(ctx context.Context,
 	if err != nil {
 		return oldSHA, err
 	}
-
-	// disable optimization if reverse sync is enabled
+	// Disable optimization if reverse sync is enabled.
 	if !reverseSync {
-		// use the previous SHA to determine whether or not to perform an update
-		if bytes.Equal(oldSHA, newSHA) {
-			if !hasSHAUpdateAlreadyBeenReported(newSHA) {
-				log.Debugf("sha %s has been reported", hex.EncodeToString(newSHA))
-			}
-
-			// we assume ready as not all Kong versions provide their configuration hash,
-			// and their readiness state is always unknown
-			ready := true
-
-			// In case of Konnect KIC has authority, so when oldSHA=newSHA we're sure there's
-			// no need to push.
-			if client.IsKonnect() {
-				return oldSHA, nil
-			}
-
-			status, err := client.Status(ctx)
-			if err != nil {
-				return nil, err
-			}
-
-			if status.ConfigurationHash == initialHash {
-				ready = false
-			}
-
-			if ready {
-				log.Debug("no configuration change, skipping sync to kong")
-				return oldSHA, nil
-			}
-			log.Debugf("starting to send configuration (hash: %s)", status.ConfigurationHash)
+		configurationChanged, err := hasConfigurationChanged(ctx, oldSHA, newSHA, client, log)
+		if err != nil {
+			return nil, err
+		}
+		if !configurationChanged {
+			log.Debug("no configuration change, skipping sync to kong")
+			return oldSHA, nil
 		}
 	}
 
@@ -92,10 +68,7 @@ func PerformUpdate(ctx context.Context,
 	if !inMemory || client.IsKonnect() {
 		metricsProtocol = metrics.ProtocolDeck
 		dumpConfig := dump.Config{SelectorTags: selectorTags, SkipCACerts: skipCACertificates}
-		if client.IsKonnect() {
-			dumpConfig.KonnectRuntimeGroup = client.KonnectRuntimeGroup()
-		}
-		err = onUpdateDBMode(ctx, targetContent, client.Client, dumpConfig, version, concurrency)
+		err = onUpdateDBMode(ctx, targetContent, client, dumpConfig, version, concurrency)
 	} else {
 		metricsProtocol = metrics.ProtocolDBLess
 		err = onUpdateInMemoryMode(ctx, log, targetContent, client.Client)
@@ -160,17 +133,21 @@ func onUpdateInMemoryMode(
 func onUpdateDBMode(
 	ctx context.Context,
 	targetContent *file.Content,
-	client *kong.Client,
+	client *adminapi.Client,
 	dumpConfig dump.Config,
 	version semver.Version,
 	concurrency int,
 ) error {
-	cs, err := currentState(ctx, client, dumpConfig)
+	if client.IsKonnect() {
+		dumpConfig.KonnectRuntimeGroup = client.KonnectRuntimeGroup()
+	}
+
+	cs, err := currentState(ctx, client.Client, dumpConfig)
 	if err != nil {
 		return fmt.Errorf("failed getting current state for %s: %w", client.BaseRootURL(), err)
 	}
 
-	ts, err := targetState(ctx, targetContent, cs, version, client, dumpConfig)
+	ts, err := targetState(ctx, targetContent, cs, version, client.Client, dumpConfig)
 	if err != nil {
 		return deckConfigConflictError{err}
 	}
@@ -178,7 +155,7 @@ func onUpdateDBMode(
 	syncer, err := diff.NewSyncer(diff.SyncerOpts{
 		CurrentState:    cs,
 		TargetState:     ts,
-		KongClient:      client,
+		KongClient:      client.Client,
 		SilenceWarnings: true,
 	})
 	if err != nil {
@@ -225,6 +202,50 @@ var (
 	latestReportedSHA []byte
 	shaLock           sync.RWMutex
 )
+
+func hasConfigurationChanged(
+	ctx context.Context,
+	oldSHA, newSHA []byte,
+	client *adminapi.Client,
+	log logrus.FieldLogger,
+) (bool, error) {
+	if !bytes.Equal(oldSHA, newSHA) {
+		return true, nil
+	}
+	if !hasSHAUpdateAlreadyBeenReported(newSHA) {
+		log.Debugf("sha %s has been reported", hex.EncodeToString(newSHA))
+	}
+	if !client.IsKonnect() {
+		crashed, err := hasCrashed(ctx, client, log)
+		if err != nil {
+			return false, fmt.Errorf("failed to verify kong readiness: %w", err)
+		}
+		// Kong instance has crashed, we should push config despite the oldSHA and newSHA being equal.
+		if crashed {
+			return true, nil
+		}
+	}
+
+	return false, nil
+}
+
+// hasCrashed checks Kong's status endpoint and read its config hash.
+// If the config hash reported by Kong is the known empty hash, it's considered not ready.
+// This allows providing configuration to Kong instances that have unexpectedly crashed and
+// lost their configuration.
+func hasCrashed(ctx context.Context, client *adminapi.Client, log logrus.FieldLogger) (bool, error) {
+	status, err := client.Status(ctx)
+	if err != nil {
+		return false, err
+	}
+
+	if crashed := status.ConfigurationHash == initialHash; crashed {
+		log.Debugf("starting to send configuration (hash: %s)", status.ConfigurationHash)
+		return true, nil
+	}
+
+	return false, nil
+}
 
 // hasSHAUpdateAlreadyBeenReported is a helper function to allow
 // sendconfig internals to be aware of the last logged/reported

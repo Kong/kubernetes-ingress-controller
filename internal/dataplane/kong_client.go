@@ -526,7 +526,7 @@ func (c *KongClient) sendToClient(
 		client.Client,
 		c.kongConfig.Version,
 		c.kongConfig.Concurrency,
-		client.InMemory(),
+		c.kongConfig.InMemory,
 		c.enableReverseSync,
 		c.skipCACertificates,
 		targetConfig,

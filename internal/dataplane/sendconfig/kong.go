@@ -23,7 +23,8 @@ type Kong struct {
 
 	// Currently, this assumes that all underlying clients are using the same version
 	// hence this shared field in here.
-	Version semver.Version
+	Version  semver.Version
+	InMemory bool
 
 	Concurrency int
 	FilterTags  []string
@@ -66,6 +67,7 @@ func New(
 	}
 
 	return Kong{
+		InMemory:    (dbMode == "off") || (dbMode == ""),
 		Version:     v,
 		FilterTags:  tags,
 		Concurrency: concurrency,
@@ -73,8 +75,6 @@ func New(
 			return ClientWithPluginStore{
 				Client:            client,
 				PluginSchemaStore: util.NewPluginSchemaStore(client.Client),
-				inMemory:          (dbMode == "off") || (dbMode == ""),
-				isKonnect:         client.IsKonnect(),
 			}
 		}),
 	}
@@ -85,9 +85,6 @@ type ClientWithPluginStore struct {
 	*util.PluginSchemaStore
 	// lastConfigSHA is a checksum of the last successful update to the data-plane
 	lastConfigSHA []byte
-	inMemory      bool
-
-	isKonnect bool
 }
 
 func (c *ClientWithPluginStore) SetLastConfigSHA(s []byte) {
@@ -96,12 +93,4 @@ func (c *ClientWithPluginStore) SetLastConfigSHA(s []byte) {
 
 func (c *ClientWithPluginStore) LastConfigSHA() []byte {
 	return c.lastConfigSHA
-}
-
-func (c *ClientWithPluginStore) InMemory() bool {
-	return c.inMemory
-}
-
-func (c *ClientWithPluginStore) IsKonnect() bool {
-	return c.isKonnect
 }

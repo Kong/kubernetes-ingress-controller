@@ -13,14 +13,14 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/certwatcher"
 )
 
-const (
-	DefaultAdmissionWebhookCertPath = "/admission-webhook/tls.crt"
-	DefaultAdmissionWebhookKeyPath  = "/admission-webhook/tls.key"
-)
-
 var (
 	scheme = runtime.NewScheme()
 	codecs = serializer.NewCodecFactory(scheme)
+)
+
+const (
+	DefaultAdmissionWebhookCertPath = "/admission-webhook/tls.crt"
+	DefaultAdmissionWebhookKeyPath  = "/admission-webhook/tls.key"
 )
 
 type ServerConfig struct {

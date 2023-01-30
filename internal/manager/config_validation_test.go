@@ -109,7 +109,7 @@ func TestConfigValidate(t *testing.T) {
 		t.Run("enabled with no tls config is rejected", func(t *testing.T) {
 			c := validEnabled()
 			c.Konnect.ClientTLS = adminapi.TLSClientConfig{}
-			require.ErrorContains(t, c.Validate(), "konnect TLS client config invalid")
+			require.ErrorContains(t, c.Validate(), "TLS client config invalid")
 		})
 
 		t.Run("enabled with no tls cert is rejected", func(t *testing.T) {

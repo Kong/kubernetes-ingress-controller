@@ -21,8 +21,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/manager/config"
 )
 
 func TestMakeHTTPClientWithTLSOpts(t *testing.T) {
@@ -36,16 +34,16 @@ func TestMakeHTTPClientWithTLSOpts(t *testing.T) {
 		t.Errorf("Fail to build TLS certificates - %s", err.Error())
 	}
 
-	opts := config.HTTPClientOpts{
-		TLSSkipVerify:     true,
-		TLSServerName:     "",
-		CACertPath:        "",
-		CACert:            caPEM.String(),
-		Headers:           nil,
-		TLSClientCertPath: "",
-		TLSClientCert:     certPEM.String(),
-		TLSClientKeyPath:  "",
-		TLSClientKey:      certPrivateKeyPEM.String(),
+	opts := HTTPClientOpts{
+		TLSSkipVerify: true,
+		TLSServerName: "",
+		CACertPath:    "",
+		CACert:        caPEM.String(),
+		Headers:       nil,
+		TLSClient: TLSClientConfig{
+			Cert: certPEM.String(),
+			Key:  certPrivateKeyPEM.String(),
+		},
 	}
 
 	httpclient, err := MakeHTTPClient(&opts)
@@ -89,16 +87,16 @@ func TestMakeHTTPClientWithTLSOptsAndFilePaths(t *testing.T) {
 	require.Equal(t, certPrivateKeyPEM.Len(), writtenBytes)
 	defer os.Remove(caFile.Name())
 
-	opts := config.HTTPClientOpts{
-		TLSSkipVerify:     true,
-		TLSServerName:     "",
-		CACertPath:        caFile.Name(),
-		CACert:            "",
-		Headers:           nil,
-		TLSClientCertPath: certFile.Name(),
-		TLSClientCert:     "",
-		TLSClientKeyPath:  certPrivateKeyFile.Name(),
-		TLSClientKey:      "",
+	opts := HTTPClientOpts{
+		TLSSkipVerify: true,
+		TLSServerName: "",
+		CACertPath:    caFile.Name(),
+		CACert:        "",
+		Headers:       nil,
+		TLSClient: TLSClientConfig{
+			CertFile: certFile.Name(),
+			KeyFile:  certPrivateKeyFile.Name(),
+		},
 	}
 
 	httpclient, err := MakeHTTPClient(&opts)

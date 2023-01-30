@@ -3,8 +3,10 @@ package parser
 import (
 	"fmt"
 	"strings"
+	"unicode"
 
 	"github.com/kong/go-kong/kong"
+	"github.com/samber/lo"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	netv1 "k8s.io/api/networking/v1"
@@ -70,6 +72,10 @@ func (ir *ingressRules) populateServices(log logrus.FieldLogger, s store.Storer,
 			// at this point we know the Kubernetes service itself is valid and can be
 			// used for traffic, so cache it amongst the kong Services k8s services.
 			service.K8sServices[k8sService.Name] = k8sService
+
+			if konnectServiceName := annotations.ExtractKonnectService(k8sService.Annotations); konnectServiceName != "" {
+				service.Tags = append(service.Tags, konnectServiceTag(konnectServiceName))
+			}
 
 			// extract client certificates intended for use by the service
 			secretName := annotations.ExtractClientCertificate(k8sService.Annotations)
@@ -304,4 +310,26 @@ func v1beta1toV1TLS(tlsSections []netv1beta1.IngressTLS) []netv1.IngressTLS {
 		v1 = append(v1, netv1.IngressTLS{Hosts: item.Hosts, SecretName: item.SecretName})
 	}
 	return v1
+}
+
+func konnectServiceTag(serviceName string) *string {
+	const konnectServiceTagKey = "_KonnectService"
+	return lo.ToPtr(fmt.Sprintf("%s:%s", konnectServiceTagKey, sanitizeKonnectServiceName(serviceName)))
+}
+
+func sanitizeKonnectServiceName(name string) string {
+	b := strings.Builder{}
+
+	allowed := []int32{'.', '-', '_', '~', ':'}
+	for _, r := range name {
+		if ok := unicode.IsLetter(r) || unicode.IsNumber(r) || unicode.IsSpace(r) || lo.Count(allowed, r) > 0; ok {
+			b.WriteRune(r)
+			continue
+		}
+
+		// If a character is not allowed, replace it with a dash.
+		b.WriteRune('-')
+	}
+
+	return b.String()
 }

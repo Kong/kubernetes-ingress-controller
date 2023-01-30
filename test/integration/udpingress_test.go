@@ -23,6 +23,8 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
 	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1beta1"
 	"github.com/kong/kubernetes-ingress-controller/v2/pkg/clientset"
+	"github.com/kong/kubernetes-ingress-controller/v2/test/consts"
+	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/helpers"
 )
 
 var udpMutex sync.Mutex
@@ -43,7 +45,7 @@ func TestUDPIngressEssentials(t *testing.T) {
 	})
 
 	ctx := context.Background()
-	ns, cleaner := setup(ctx, t)
+	ns, cleaner := helpers.Setup(ctx, t, env)
 
 	t.Log("configuring coredns corefile")
 	cfgmap := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "coredns"}, Data: map[string]string{"Corefile": corefile}}
@@ -84,7 +86,7 @@ func TestUDPIngressEssentials(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "minudp",
 			Annotations: map[string]string{
-				annotations.IngressClassKey: ingressClass,
+				annotations.IngressClassKey: consts.IngressClass,
 			},
 		},
 		Spec: kongv1beta1.UDPIngressSpec{Rules: []kongv1beta1.UDPIngressRule{
@@ -165,7 +167,7 @@ func TestUDPIngressTCPIngressCollision(t *testing.T) {
 	})
 
 	ctx := context.Background()
-	ns, cleaner := setup(ctx, t)
+	ns, cleaner := helpers.Setup(ctx, t, env)
 
 	t.Log("configuring coredns corefile")
 	cfgmap := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "coredns"}, Data: map[string]string{"Corefile": corefile}}
@@ -209,7 +211,7 @@ func TestUDPIngressTCPIngressCollision(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "minudp",
 			Annotations: map[string]string{
-				annotations.IngressClassKey: ingressClass,
+				annotations.IngressClassKey: consts.IngressClass,
 			},
 		},
 		Spec: kongv1beta1.UDPIngressSpec{Rules: []kongv1beta1.UDPIngressRule{
@@ -265,7 +267,7 @@ func TestUDPIngressTCPIngressCollision(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "mintcp",
 			Annotations: map[string]string{
-				annotations.IngressClassKey: ingressClass,
+				annotations.IngressClassKey: consts.IngressClass,
 			},
 		},
 		Spec: kongv1beta1.TCPIngressSpec{Rules: []kongv1beta1.IngressRule{

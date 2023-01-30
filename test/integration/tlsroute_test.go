@@ -29,6 +29,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util/builder"
 	"github.com/kong/kubernetes-ingress-controller/v2/test"
+	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/helpers"
 )
 
 const (
@@ -107,7 +108,7 @@ func TestTLSRouteEssentials(t *testing.T) {
 	})
 
 	ctx := context.Background()
-	ns, cleaner := setup(ctx, t)
+	ns, cleaner := helpers.Setup(ctx, t, env)
 
 	t.Log("getting gateway client")
 	gatewayClient, err := gatewayclient.NewForConfig(env.Cluster().Config())
@@ -475,7 +476,7 @@ func TestTLSRouteReferenceGrant(t *testing.T) {
 	})
 
 	ctx := context.Background()
-	ns, cleaner := setup(ctx, t)
+	ns, cleaner := helpers.Setup(ctx, t, env)
 
 	otherNs, err := clusters.GenerateNamespace(ctx, env.Cluster(), t.Name())
 	require.NoError(t, err)
@@ -705,7 +706,7 @@ func TestTLSRoutePassthrough(t *testing.T) {
 	})
 
 	ctx := context.Background()
-	ns, cleaner := setup(ctx, t)
+	ns, cleaner := helpers.Setup(ctx, t, env)
 
 	t.Log("getting gateway client")
 	gatewayClient, err := gatewayclient.NewForConfig(env.Cluster().Config())

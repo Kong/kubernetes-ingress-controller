@@ -26,6 +26,7 @@ import (
 	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1beta1"
 	"github.com/kong/kubernetes-ingress-controller/v2/pkg/clientset"
 	"github.com/kong/kubernetes-ingress-controller/v2/test"
+	"github.com/kong/kubernetes-ingress-controller/v2/test/consts"
 	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/helpers"
 )
 
@@ -46,7 +47,7 @@ func TestTCPIngressEssentials(t *testing.T) {
 		tcpMutex.Unlock()
 	})
 
-	ns, cleaner := setup(ctx, t)
+	ns, cleaner := helpers.Setup(ctx, t, env)
 
 	t.Log("setting up the TCPIngress tests")
 	testName := "tcpingress"
@@ -71,7 +72,7 @@ func TestTCPIngressEssentials(t *testing.T) {
 			Name:      testName,
 			Namespace: ns.Name,
 			Annotations: map[string]string{
-				annotations.IngressClassKey: ingressClass,
+				annotations.IngressClassKey: consts.IngressClass,
 			},
 		},
 		Spec: kongv1beta1.TCPIngressSpec{
@@ -151,7 +152,7 @@ func TestTCPIngressTLS(t *testing.T) {
 	})
 
 	ctx := context.Background()
-	ns, cleaner := setup(ctx, t)
+	ns, cleaner := helpers.Setup(ctx, t, env)
 
 	t.Log("setting up the TCPIngress tests")
 	testName := "tcpingress-%s"
@@ -191,7 +192,7 @@ func TestTCPIngressTLS(t *testing.T) {
 			Name:      fmt.Sprintf(testName, "x"),
 			Namespace: ns.Name,
 			Annotations: map[string]string{
-				annotations.IngressClassKey: ingressClass,
+				annotations.IngressClassKey: consts.IngressClass,
 			},
 		},
 		Spec: kongv1beta1.TCPIngressSpec{
@@ -224,7 +225,7 @@ func TestTCPIngressTLS(t *testing.T) {
 			Name:      fmt.Sprintf(testName, "y"),
 			Namespace: ns.Name,
 			Annotations: map[string]string{
-				annotations.IngressClassKey: ingressClass,
+				annotations.IngressClassKey: consts.IngressClass,
 			},
 		},
 		Spec: kongv1beta1.TCPIngressSpec{
@@ -300,7 +301,7 @@ func TestTCPIngressTLS(t *testing.T) {
 }
 
 func TestTCPIngressTLSPassthrough(t *testing.T) {
-	version, err := getKongVersion()
+	version, err := helpers.GetKongVersion(proxyAdminURL, consts.KongTestPassword)
 	if err != nil {
 		t.Logf("attempting TLS passthrough test despite unknown kong version: %v", err)
 	} else if version.LT(semver.MustParse("2.7.0")) {
@@ -317,7 +318,13 @@ func TestTCPIngressTLSPassthrough(t *testing.T) {
 	})
 
 	ctx := context.Background()
-	ns, cleaner := setup(ctx, t)
+	ns, cleaner := helpers.Setup(ctx, t, env)
+
+	const (
+		// Pinned because of
+		// https://github.com/Kong/kubernetes-ingress-controller/issues/2735#issuecomment-1194376496 breakage.
+		redisImage = "bitnami/redis:7.0.4-debian-11-r3"
+	)
 
 	t.Log("setting up the TCPIngress TLS passthrough tests")
 	testName := "tlspass"
@@ -431,7 +438,7 @@ func TestTCPIngressTLSPassthrough(t *testing.T) {
 			Name:      "redis",
 			Namespace: ns.Name,
 			Annotations: map[string]string{
-				annotations.IngressClassKey:                             ingressClass,
+				annotations.IngressClassKey:                             consts.IngressClass,
 				annotations.AnnotationPrefix + annotations.ProtocolsKey: "tls_passthrough",
 			},
 		},

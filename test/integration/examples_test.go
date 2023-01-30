@@ -25,6 +25,7 @@ import (
 	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/test"
+	"github.com/kong/kubernetes-ingress-controller/v2/test/consts"
 	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/helpers"
 )
 
@@ -36,7 +37,7 @@ func TestHTTPRouteExample(t *testing.T) {
 		ctx                       = context.Background()
 	)
 
-	_, cleaner := setup(ctx, t)
+	_, cleaner := helpers.Setup(ctx, t, env)
 
 	t.Logf("configuring test and setting up API clients")
 	gwc, err := gatewayclient.NewForConfig(env.Cluster().Config())
@@ -114,7 +115,7 @@ func TestUDPRouteExample(t *testing.T) {
 		udpRouteExampleManifests = fmt.Sprintf("%s/gateway-udproute.yaml", examplesDIR)
 	)
 
-	_, cleaner := setup(ctx, t)
+	_, cleaner := helpers.Setup(ctx, t, env)
 
 	t.Logf("applying yaml manifest %s", udpRouteExampleManifests)
 	b, err := os.ReadFile(udpRouteExampleManifests)
@@ -160,7 +161,7 @@ func TestTCPRouteExample(t *testing.T) {
 		ctx                      = context.Background()
 		tcprouteExampleManifests = fmt.Sprintf("%s/gateway-tcproute.yaml", examplesDIR)
 	)
-	_, cleaner := setup(ctx, t)
+	_, cleaner := helpers.Setup(ctx, t, env)
 
 	t.Logf("applying yaml manifest %s", tcprouteExampleManifests)
 	b, err := os.ReadFile(tcprouteExampleManifests)
@@ -187,7 +188,7 @@ func TestTLSRouteExample(t *testing.T) {
 		tlsrouteExampleManifests = fmt.Sprintf("%s/gateway-tlsroute.yaml", examplesDIR)
 		ctx                      = context.Background()
 	)
-	_, cleaner := setup(ctx, t)
+	_, cleaner := helpers.Setup(ctx, t, env)
 
 	t.Logf("applying yaml manifest %s", tlsrouteExampleManifests)
 	b, err := os.ReadFile(tlsrouteExampleManifests)
@@ -209,7 +210,7 @@ func TestIngressExample(t *testing.T) {
 		ctx                     = context.Background()
 	)
 
-	_, cleaner := setup(ctx, t)
+	_, cleaner := helpers.Setup(ctx, t, env)
 
 	t.Logf("applying yaml manifest %s", ingressExampleManifests)
 	b, err := os.ReadFile(ingressExampleManifests)
@@ -266,7 +267,7 @@ func TestUDPIngressExample(t *testing.T) {
 		udpingressExampleManifests = fmt.Sprintf("%s/udpingress.yaml", examplesDIR)
 		ctx                        = context.Background()
 	)
-	_, cleaner := setup(ctx, t)
+	_, cleaner := helpers.Setup(ctx, t, env)
 
 	t.Logf("applying yaml manifest %s", udpingressExampleManifests)
 	b, err := os.ReadFile(udpingressExampleManifests)
@@ -290,5 +291,5 @@ func TestUDPIngressExample(t *testing.T) {
 }
 
 func replaceIngressClassInManifests(manifests string) string {
-	return strings.ReplaceAll(manifests, `kubernetes.io/ingress.class: "kong"`, fmt.Sprintf(`kubernetes.io/ingress.class: "%s"`, ingressClass))
+	return strings.ReplaceAll(manifests, `kubernetes.io/ingress.class: "kong"`, fmt.Sprintf(`kubernetes.io/ingress.class: "%s"`, consts.IngressClass))
 }

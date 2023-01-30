@@ -25,6 +25,7 @@ import (
 	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/test"
+	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/helpers"
 )
 
 const examplesDIR = "../../examples"
@@ -67,7 +68,7 @@ func TestHTTPRouteExample(t *testing.T) {
 
 	t.Logf("verifying that the HTTPRoute becomes routable")
 	require.Eventually(t, func() bool {
-		resp, err := httpc.Get(fmt.Sprintf("http://%s/httproute-testing", gatewayAddr))
+		resp, err := helpers.DefaultHTTPClient().Get(fmt.Sprintf("http://%s/httproute-testing", gatewayAddr))
 		if err != nil {
 			return false
 		}
@@ -84,7 +85,7 @@ func TestHTTPRouteExample(t *testing.T) {
 
 	t.Logf("verifying that the backendRefs are being loadbalanced")
 	require.Eventually(t, func() bool {
-		resp, err := httpc.Get(fmt.Sprintf("http://%s/httproute-testing", gatewayAddr))
+		resp, err := helpers.DefaultHTTPClient().Get(fmt.Sprintf("http://%s/httproute-testing", gatewayAddr))
 		if err != nil {
 			return false
 		}
@@ -237,7 +238,7 @@ func TestIngressExample(t *testing.T) {
 
 	t.Logf("verifying that the Ingress resource becomes routable")
 	require.Eventually(t, func() bool {
-		resp, err := httpc.Get(fmt.Sprintf("http://%s/", ingAddr))
+		resp, err := helpers.DefaultHTTPClient().Get(fmt.Sprintf("http://%s/", ingAddr))
 		if err != nil {
 			return false
 		}

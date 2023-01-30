@@ -37,6 +37,7 @@ import (
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
 	"github.com/kong/kubernetes-ingress-controller/v2/pkg/clientset"
 	"github.com/kong/kubernetes-ingress-controller/v2/test"
+	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/helpers"
 )
 
 const (
@@ -247,9 +248,8 @@ func verifyIngress(ctx context.Context, t *testing.T, env environments.Environme
 	proxyIP := getKongProxyIP(ctx, t, env)
 
 	t.Logf("waiting for route from Ingress to be operational at http://%s/httpbin", proxyIP)
-	httpc := http.Client{Timeout: time.Second * 10}
 	require.Eventually(t, func() bool {
-		resp, err := httpc.Get(fmt.Sprintf("http://%s/httpbin", proxyIP))
+		resp, err := helpers.DefaultHTTPClient().Get(fmt.Sprintf("http://%s/httpbin", proxyIP))
 		if err != nil {
 			return false
 		}
@@ -269,7 +269,7 @@ func verifyIngress(ctx context.Context, t *testing.T, env environments.Environme
 		// verify the KongIngress method restriction
 		fakeData := url.Values{}
 		fakeData.Set("foo", "bar")
-		resp, err = httpc.PostForm(fmt.Sprintf("http://%s/httpbin", proxyIP), fakeData)
+		resp, err = helpers.DefaultHTTPClient().PostForm(fmt.Sprintf("http://%s/httpbin", proxyIP), fakeData)
 		if err != nil {
 			return false
 		}
@@ -297,7 +297,7 @@ func verifyEnterprise(ctx context.Context, t *testing.T, env environments.Enviro
 	adminOutput := struct {
 		Version string `json:"version"`
 	}{}
-	httpc := http.Client{Timeout: time.Second * 10}
+
 	require.Eventually(t, func() bool {
 		// at the time of writing it was seen that the admin API had
 		// brief timing windows where it could respond 200 OK but
@@ -305,7 +305,7 @@ func verifyEnterprise(ctx context.Context, t *testing.T, env environments.Enviro
 		// decode would fail. Thus this check actually waits until
 		// the response body is fully decoded with a non-empty value
 		// before considering this complete.
-		resp, err := httpc.Do(req)
+		resp, err := helpers.DefaultHTTPClient().Do(req)
 		if err != nil {
 			return false
 		}
@@ -347,8 +347,8 @@ func verifyEnterpriseWithPostgres(ctx context.Context, t *testing.T, env environ
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
 	t.Log("creating a workspace to validate enterprise functionality")
-	httpc := http.Client{Timeout: time.Second * 10}
-	resp, err := httpc.Do(req)
+
+	resp, err := helpers.DefaultHTTPClient().Do(req)
 	require.NoError(t, err)
 	defer resp.Body.Close()
 	body, err := io.ReadAll(resp.Body)

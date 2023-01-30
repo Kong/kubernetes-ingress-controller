@@ -9,7 +9,6 @@ import (
 	"io"
 	"net/http"
 	"testing"
-	"time"
 
 	"github.com/kong/go-kong/kong"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
@@ -24,6 +23,7 @@ import (
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
 	"github.com/kong/kubernetes-ingress-controller/v2/pkg/clientset"
 	"github.com/kong/kubernetes-ingress-controller/v2/test"
+	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/helpers"
 )
 
 func TestKongIngressEssentials(t *testing.T) {
@@ -96,9 +96,11 @@ func TestKongIngressEssentials(t *testing.T) {
 	}()
 
 	t.Log("waiting for routes from Ingress to be operational and that overrides are in place")
-	httpc := http.Client{Timeout: time.Second * 10} // this timeout should never be hit, we expect a 504 from the proxy within 1000ms
+
 	assert.Eventually(t, func() bool {
-		resp, err := httpc.Get(fmt.Sprintf("%s/test_kongingress_essentials/delay/5", proxyURL))
+		// Even though the HTTP client has a timeout of 10s, it should never be hit,
+		// we expect a 504 from the proxy within 1000ms
+		resp, err := helpers.DefaultHTTPClient().Get(fmt.Sprintf("%s/test_kongingress_essentials/delay/5", proxyURL))
 		if err != nil {
 			return false
 		}
@@ -118,7 +120,7 @@ func TestKongIngressEssentials(t *testing.T) {
 	t.Logf("ensuring that Service %s overrides are eventually removed", service.Name)
 	assert.Eventually(t, func() bool {
 		url := fmt.Sprintf("%s/test_kongingress_essentials/delay/5", proxyURL)
-		resp, err := httpc.Get(url)
+		resp, err := helpers.DefaultHTTPClient().Get(url)
 		if err != nil {
 			t.Logf("failed issuing http GET for %q: %v", url, err)
 			return false

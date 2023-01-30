@@ -29,6 +29,7 @@ import (
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
 	"github.com/kong/kubernetes-ingress-controller/v2/pkg/clientset"
 	"github.com/kong/kubernetes-ingress-controller/v2/test"
+	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/helpers"
 )
 
 var emptyHeaderSet = make(map[string]string)
@@ -173,7 +174,7 @@ func TestHTTPRouteEssentials(t *testing.T) {
 			t.Logf("WARNING: failed to create HTTP request: %v", err)
 			return false
 		}
-		resp, err := httpc.Do(req)
+		resp, err := helpers.DefaultHTTPClient().Do(req)
 		if err != nil {
 			t.Logf("WARNING: http request failed for GET %s/%s: %v", proxyURL, "test-http-route-essentials", err)
 			return false
@@ -569,7 +570,7 @@ func TestHTTPRouteFilterHosts(t *testing.T) {
 		req, err := http.NewRequest("GET", proxyURL.String()+"/test-http-route-filter-hosts", nil)
 		require.NoError(t, err)
 		req.Host = host
-		resp, err := httpc.Do(req)
+		resp, err := helpers.DefaultHTTPClient().Do(req)
 		if err != nil {
 			return false
 		}

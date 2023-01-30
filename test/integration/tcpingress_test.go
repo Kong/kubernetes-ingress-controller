@@ -26,6 +26,7 @@ import (
 	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1beta1"
 	"github.com/kong/kubernetes-ingress-controller/v2/pkg/clientset"
 	"github.com/kong/kubernetes-ingress-controller/v2/test"
+	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/helpers"
 )
 
 var (
@@ -110,7 +111,7 @@ func TestTCPIngressEssentials(t *testing.T) {
 	tcpProxyURL, err := url.Parse(fmt.Sprintf("http://%s:8888/", proxyURL.Hostname()))
 	require.NoError(t, err)
 	require.Eventually(t, func() bool {
-		resp, err := httpc.Get(tcpProxyURL.String())
+		resp, err := helpers.DefaultHTTPClient().Get(tcpProxyURL.String())
 		if err != nil {
 			return false
 		}
@@ -130,7 +131,7 @@ func TestTCPIngressEssentials(t *testing.T) {
 	t.Logf("tearing down TCPIngress %s and ensuring that the relevant backend routes are removed", tcp.Name)
 	require.NoError(t, gatewayClient.ConfigurationV1beta1().TCPIngresses(ns.Name).Delete(ctx, tcp.Name, metav1.DeleteOptions{}))
 	require.Eventually(t, func() bool {
-		resp, err := httpc.Get(tcpProxyURL.String())
+		resp, err := helpers.DefaultHTTPClient().Get(tcpProxyURL.String())
 		if err != nil {
 			return true
 		}

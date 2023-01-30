@@ -25,6 +25,7 @@ import (
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
 	"github.com/kong/kubernetes-ingress-controller/v2/pkg/clientset"
 	"github.com/kong/kubernetes-ingress-controller/v2/test"
+	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/helpers"
 )
 
 func TestConsumerCredential(t *testing.T) {
@@ -58,7 +59,7 @@ func TestConsumerCredential(t *testing.T) {
 
 	t.Log("waiting for routes from Ingress to be operational")
 	assert.Eventually(t, func() bool {
-		resp, err := httpc.Get(fmt.Sprintf("%s/test_consumer_credential", proxyURL))
+		resp, err := helpers.DefaultHTTPClient().Get(fmt.Sprintf("%s/test_consumer_credential", proxyURL))
 		if err != nil {
 			t.Logf("WARNING: error while waiting for %s: %v", proxyURL, err)
 			return false
@@ -112,7 +113,7 @@ func TestConsumerCredential(t *testing.T) {
 
 	t.Logf("validating that plugin %s was successfully configured", kongplugin.Name)
 	assert.Eventually(t, func() bool {
-		resp, err := httpc.Get(fmt.Sprintf("%s/test_consumer_credential", proxyURL))
+		resp, err := helpers.DefaultHTTPClient().Get(fmt.Sprintf("%s/test_consumer_credential", proxyURL))
 		if err != nil {
 			t.Logf("WARNING: error while waiting for %s: %v", proxyURL, err)
 			return false
@@ -157,7 +158,7 @@ func TestConsumerCredential(t *testing.T) {
 		req, err := http.NewRequest("GET", fmt.Sprintf("%s/%s", proxyURL, "test_consumer_credential"), nil)
 		require.NoError(t, err)
 		req.SetBasicAuth("test_consumer_credential", "test_consumer_credential")
-		resp, err := httpc.Do(req)
+		resp, err := helpers.DefaultHTTPClient().Do(req)
 		if err != nil {
 			return false
 		}
@@ -168,7 +169,7 @@ func TestConsumerCredential(t *testing.T) {
 	t.Log("deleting Ingress and waiting for routes to be torn down")
 	require.NoError(t, clusters.DeleteIngress(ctx, env.Cluster(), ns.Name, ingress))
 	assert.Eventually(t, func() bool {
-		resp, err := httpc.Get(fmt.Sprintf("%s/test_plugin_essentials", proxyURL))
+		resp, err := helpers.DefaultHTTPClient().Get(fmt.Sprintf("%s/test_plugin_essentials", proxyURL))
 		if err != nil {
 			t.Logf("WARNING: error while waiting for %s: %v", proxyURL, err)
 			return false

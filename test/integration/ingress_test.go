@@ -1104,14 +1104,19 @@ func TestIngressMatchByHost(t *testing.T) {
 			return false
 		}
 		defer resp.Body.Close()
-		if resp.StatusCode == http.StatusOK {
-			b := new(bytes.Buffer)
-			n, err := b.ReadFrom(resp.Body)
-			require.NoError(t, err)
-			require.True(t, n > 0)
-			return strings.Contains(b.String(), "<title>httpbin.org</title>")
+		b := new(bytes.Buffer)
+		n, err := b.ReadFrom(resp.Body)
+		require.NoError(t, err)
+		if resp.StatusCode != http.StatusOK {
+			t.Logf("WARNING: got status code %s while getting %s (for host 'test.example'): %s", resp.Status, proxyURL, b)
+			return false
 		}
-		return false
+
+		require.True(t, n > 0)
+		if !strings.Contains(b.String(), "<title>httpbin.org</title>") {
+			t.Logf("WARNING: while getting %s (for host 'test.example') for unexpected response body: %s", proxyURL, b)
+		}
+		return true
 	}, ingressWait, waitTick)
 
 	t.Log("try to access the ingress by unmatching host, should return 404")

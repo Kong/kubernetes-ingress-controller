@@ -12,7 +12,6 @@ import (
 
 	"github.com/blang/semver/v4"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
-	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/knative"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/kong"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/metallb"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/types/gke"
@@ -165,13 +164,8 @@ func TestMain(m *testing.M) {
 	exitOnErr(ctx, err)
 	clusterVersion, err = env.Cluster().Version()
 	exitOnErr(ctx, err)
-	if clusterVersion.GE(knativeMinKubernetesVersion) {
-		fmt.Println("INFO: deploying knative addon")
-		knativeBuilder := knative.NewBuilder()
-		knativeAddon := knativeBuilder.Build()
-		exitOnErr(ctx, env.Cluster().DeployAddon(ctx, knativeAddon))
-	}
 
+	exitOnErr(ctx, DeployAddonsForCluster(ctx, env.Cluster()))
 	fmt.Printf("INFO: waiting for cluster %s and all addons to become ready\n", env.Cluster().Name())
 	exitOnErr(ctx, <-env.WaitForReady(ctx))
 

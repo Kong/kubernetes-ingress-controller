@@ -547,7 +547,7 @@ func TestDefaultIngressClass(t *testing.T) {
 	proxyURL := "http://" + getKongProxyIP(ctx, t, env)
 	t.Log("ensuring Ingress does not become live")
 	require.Never(t, func() bool {
-		resp, err := httpc.Get(fmt.Sprintf("%s/abbosiysaltanati", proxyURL))
+		resp, err := helpers.DefaultHTTPClient().Get(fmt.Sprintf("%s/abbosiysaltanati", proxyURL))
 		if err != nil {
 			t.Logf("WARNING: error while waiting for %s: %v", proxyURL, err)
 			return false
@@ -602,7 +602,7 @@ func TestDefaultIngressClass(t *testing.T) {
 
 	t.Log("waiting for routes from Ingress to be operational")
 	require.Eventually(t, func() bool {
-		resp, err := httpc.Get(fmt.Sprintf("%s/abbosiysaltanati", proxyURL))
+		resp, err := helpers.DefaultHTTPClient().Get(fmt.Sprintf("%s/abbosiysaltanati", proxyURL))
 		if err != nil {
 			t.Logf("WARNING: error while waiting for %s: %v", proxyURL, err)
 			return false

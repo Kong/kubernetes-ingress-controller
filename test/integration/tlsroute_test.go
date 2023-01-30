@@ -99,16 +99,14 @@ const (
 )
 
 func TestTLSRouteEssentials(t *testing.T) {
-	ctx := context.Background()
-
-	backendPort := gatewayv1alpha2.PortNumber(tcpEchoPort)
-	t.Log("locking TLS port")
+	t.Log("locking Gateway TLS ports")
 	tlsMutex.Lock()
-	defer func() {
+	t.Cleanup(func() {
 		t.Log("unlocking TLS port")
 		tlsMutex.Unlock()
-	}()
+	})
 
+	ctx := context.Background()
 	ns, cleaner := setup(ctx, t)
 
 	t.Log("getting gateway client")
@@ -207,6 +205,7 @@ func TestTLSRouteEssentials(t *testing.T) {
 	require.NoError(t, err)
 	cleaner.Add(service2)
 
+	backendPort := gatewayv1alpha2.PortNumber(tcpEchoPort)
 	t.Logf("creating a tlsroute to access deployment %s via kong", deployment.Name)
 	tlsRoute := &gatewayv1alpha2.TLSRoute{
 		ObjectMeta: metav1.ObjectMeta{
@@ -468,16 +467,14 @@ func TestTLSRouteEssentials(t *testing.T) {
 // TestTLSRouteReferenceGrant tests cross-namespace certificate references. These are technically implemented within
 // Gateway Listeners, but require an attached Route to see the associated certificate behavior on the proxy.
 func TestTLSRouteReferenceGrant(t *testing.T) {
-	ctx := context.Background()
-
-	backendPort := gatewayv1alpha2.PortNumber(tcpEchoPort)
-	t.Log("locking TLS port")
+	t.Log("locking Gateway TLS ports")
 	tlsMutex.Lock()
-	defer func() {
+	t.Cleanup(func() {
 		t.Log("unlocking TLS port")
 		tlsMutex.Unlock()
-	}()
+	})
 
+	ctx := context.Background()
 	ns, cleaner := setup(ctx, t)
 
 	otherNs, err := clusters.GenerateNamespace(ctx, env.Cluster(), t.Name())
@@ -607,6 +604,7 @@ func TestTLSRouteReferenceGrant(t *testing.T) {
 	require.NoError(t, err)
 	cleaner.Add(service)
 
+	backendPort := gatewayv1alpha2.PortNumber(tcpEchoPort)
 	t.Logf("creating a tlsroute to access deployment %s via kong", deployment.Name)
 	tlsroute := &gatewayv1alpha2.TLSRoute{
 		ObjectMeta: metav1.ObjectMeta{
@@ -699,16 +697,14 @@ func TestTLSRouteReferenceGrant(t *testing.T) {
 }
 
 func TestTLSRoutePassthrough(t *testing.T) {
-	ctx := context.Background()
-
-	backendTLSPort := gatewayv1alpha2.PortNumber(tlsEchoPort)
-	t.Log("locking TLS port")
+	t.Log("locking Gateway TLS ports")
 	tlsMutex.Lock()
-	defer func() {
+	t.Cleanup(func() {
 		t.Log("unlocking TLS port")
 		tlsMutex.Unlock()
-	}()
+	})
 
+	ctx := context.Background()
 	ns, cleaner := setup(ctx, t)
 
 	t.Log("getting gateway client")
@@ -792,6 +788,7 @@ func TestTLSRoutePassthrough(t *testing.T) {
 	require.NoError(t, err)
 	cleaner.Add(service)
 
+	backendTLSPort := gatewayv1alpha2.PortNumber(tlsEchoPort)
 	t.Logf("create a TLSRoute using passthrough listner")
 	sectionName := gatewayv1alpha2.SectionName("tls-passthrough")
 	tlsroute := &gatewayv1alpha2.TLSRoute{

@@ -21,6 +21,7 @@ import (
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/versions"
 	"github.com/kong/kubernetes-ingress-controller/v2/test"
+	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/helpers"
 )
 
 func TestIngressRegexMatchPath(t *testing.T) {
@@ -139,7 +140,7 @@ func TestIngressRegexMatchPath(t *testing.T) {
 			require.Eventually(t, func() bool {
 				notMatchedPaths = []string{}
 				for _, path := range tc.matchPaths {
-					resp, err := httpc.Get(fmt.Sprintf("%s%s", proxyURL, path))
+					resp, err := helpers.DefaultHTTPClient().Get(fmt.Sprintf("%s%s", proxyURL, path))
 					if err != nil {
 						t.Logf("WARNING: error while waiting for %s: %v", proxyURL, err)
 						notMatchedPaths = append(notMatchedPaths, path)
@@ -168,7 +169,7 @@ func TestIngressRegexMatchPath(t *testing.T) {
 
 			t.Log("testing paths expected not to match")
 			for _, path := range tc.notMatchPaths {
-				resp, err := httpc.Get(fmt.Sprintf("%s%s", proxyURL, path))
+				resp, err := helpers.DefaultHTTPClient().Get(fmt.Sprintf("%s%s", proxyURL, path))
 				require.NoError(t, err)
 				defer resp.Body.Close()
 				require.Equalf(t, http.StatusNotFound, resp.StatusCode, "should not match path %s: %s", path, tc.description)
@@ -269,7 +270,7 @@ func TestIngressRegexMatchHeader(t *testing.T) {
 					req, err := http.NewRequest("GET", proxyURL.String(), nil)
 					req.Header.Add(matchHeaderKey, header)
 					require.NoError(t, err)
-					resp, err := httpc.Do(req)
+					resp, err := helpers.DefaultHTTPClient().Do(req)
 					if err != nil {
 						t.Logf("WARNING: error while waiting for %s: %v", proxyURL, err)
 						return false
@@ -297,7 +298,7 @@ func TestIngressRegexMatchHeader(t *testing.T) {
 				req, err := http.NewRequest("GET", proxyURL.String(), nil)
 				req.Header.Add(matchHeaderKey, header)
 				require.NoError(t, err)
-				resp, err := httpc.Do(req)
+				resp, err := helpers.DefaultHTTPClient().Do(req)
 				require.NoError(t, err)
 				defer resp.Body.Close()
 				require.Equalf(t, http.StatusNotFound, resp.StatusCode, "should not match host %s", header)

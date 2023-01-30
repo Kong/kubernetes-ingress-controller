@@ -38,11 +38,10 @@ func TestTCPRouteEssentials(t *testing.T) {
 
 	t.Log("locking TCP port")
 	tcpMutex.Lock()
-	defer func() {
-		// Free up the TCP port
+	t.Cleanup(func() {
 		t.Log("unlocking TCP port")
 		tcpMutex.Unlock()
-	}()
+	})
 
 	ns, cleaner := setup(ctx, t)
 
@@ -422,10 +421,10 @@ func TestTCPRouteReferenceGrant(t *testing.T) {
 
 	t.Log("locking TCP port")
 	tcpMutex.Lock()
-	defer func() {
+	t.Cleanup(func() {
 		t.Log("unlocking TCP port")
 		tcpMutex.Unlock()
-	}()
+	})
 
 	ns, cleaner := setup(ctx, t)
 

@@ -1,5 +1,5 @@
-//go:build integration_tests
-// +build integration_tests
+//go:build integration_tests && knative
+// +build integration_tests,knative
 
 package integration
 
@@ -12,7 +12,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/blang/semver/v4"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/knative"
 	"github.com/stretchr/testify/assert"
@@ -32,10 +31,6 @@ const (
 	// on the cluster. The current value is based on deployment times seen in a GKE environment.
 	knativeWaitTime = time.Minute * 2
 )
-
-// knativeMinKubernetesVersion indicates the minimum Kubernetes version
-// required in order to successfully run Knative tests.
-var knativeMinKubernetesVersion = semver.MustParse("1.22.0")
 
 func TestKnativeIngress(t *testing.T) {
 	ctx := context.Background()

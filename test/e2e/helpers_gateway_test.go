@@ -30,6 +30,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/gateway"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 	"github.com/kong/kubernetes-ingress-controller/v2/test"
+	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/helpers"
 )
 
 // deployGateway deploys a gateway with a new created gateway class and a fixed name `kong`.
@@ -216,9 +217,9 @@ func verifyHTTPRoute(ctx context.Context, t *testing.T, env environments.Environ
 	proxyIP := getKongProxyIP(ctx, t, env)
 
 	t.Logf("waiting for route from Ingress to be operational at http://%s/httpbin", proxyIP)
-	httpc := http.Client{Timeout: time.Second * 10}
+
 	require.Eventually(t, func() bool {
-		resp, err := httpc.Get(fmt.Sprintf("http://%s/httpbin", proxyIP))
+		resp, err := helpers.DefaultHTTPClient().Get(fmt.Sprintf("http://%s/httpbin", proxyIP))
 		if err != nil {
 			return false
 		}

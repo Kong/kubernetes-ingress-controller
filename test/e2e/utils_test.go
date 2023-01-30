@@ -31,10 +31,6 @@ import (
 	"sigs.k8s.io/yaml"
 )
 
-// httpc is a standard HTTP client for tests to use that has a low default
-// timeout instead of the longer default provided by the http stdlib.
-var httpc = http.Client{Timeout: time.Second * 10}
-
 const (
 	// adminPasswordSecretName is the name of the secret which will house the admin
 	// API admin password.

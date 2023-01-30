@@ -70,9 +70,6 @@ const (
 )
 
 var (
-	// httpc is the default HTTP client to use for tests.
-	httpc = http.Client{Timeout: httpcTimeout}
-
 	// env is the primary testing environment object which includes access to the Kubernetes cluster
 	// and all the addons deployed in support of the tests.
 	env environments.Environment
@@ -196,13 +193,13 @@ func getKongVersion() (semver.Version, error) {
 		}
 		return semver.Version{Major: version.Major(), Minor: version.Minor(), Patch: version.Patch()}, nil
 	}
-	client := &http.Client{}
+
 	req, err := http.NewRequest("GET", proxyAdminURL.String(), nil)
 	if err != nil {
 		return semver.Version{}, err
 	}
 	req.Header.Set("kong-admin-token", kongTestPassword)
-	resp, err := client.Do(req)
+	resp, err := helpers.DefaultHTTPClient().Do(req)
 	if err != nil {
 		return semver.Version{}, err
 	}
@@ -255,7 +252,7 @@ func eventuallyGETPath(t *testing.T, path string, statusCode int, bodyContents s
 	req := newRequest(t, http.MethodGet, path, headers)
 
 	require.Eventually(t, func() bool {
-		resp, err := httpc.Do(req)
+		resp, err := helpers.DefaultHTTPClient().Do(req)
 		if err != nil {
 			t.Logf("WARNING: http request failed for GET %s/%s: %v", proxyURL, path, err)
 			return false
@@ -322,7 +319,7 @@ func countHTTPGetResponses(t *testing.T,
 }
 
 func countHTTPGetResponse(t *testing.T, req *http.Request, matchCounter map[string]int, matchers ...responseMatcher) {
-	resp, err := httpc.Do(req)
+	resp, err := helpers.DefaultHTTPClient().Do(req)
 	if err != nil {
 		return
 	}

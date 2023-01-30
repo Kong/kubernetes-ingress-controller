@@ -13,6 +13,7 @@ import (
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/manager"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/metrics"
+	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/helpers"
 )
 
 func TestMetricsEndpoint(t *testing.T) {
@@ -26,7 +27,7 @@ func TestMetricsEndpoint(t *testing.T) {
 
 	assert.Eventually(t, func() bool {
 		metricsURL := fmt.Sprintf("http://localhost:%v/metrics", manager.MetricsPort)
-		resp, err := httpc.Get(metricsURL)
+		resp, err := helpers.DefaultHTTPClient().Get(metricsURL)
 		if err != nil {
 			t.Logf("WARNING: error while waiting for %s: %v", metricsURL, err)
 			return false

@@ -160,7 +160,7 @@ func TestIstioWithKongIngressGateway(t *testing.T) {
 	appURL := fmt.Sprintf("%s/httpbin", proxyURL)
 	appStatusOKUrl := fmt.Sprintf("%s/status/200", appURL)
 	require.Eventually(t, func() bool {
-		resp, err := httpc.Get(appStatusOKUrl)
+		resp, err := helpers.DefaultHTTPClient().Get(appStatusOKUrl)
 		if err != nil {
 			return false
 		}
@@ -185,7 +185,7 @@ func TestIstioWithKongIngressGateway(t *testing.T) {
 	t.Logf("retrieving the Kiali workload metrics for deployment %s", deployment.Name)
 	respData := kialiWorkloads{}
 	require.Eventually(t, func() bool {
-		resp, err := httpc.Get(fmt.Sprintf("%s/namespaces/%s/apps/%s", kialiAPIUrl, namespace.Name, deployment.Name))
+		resp, err := helpers.DefaultHTTPClient().Get(fmt.Sprintf("%s/namespaces/%s/apps/%s", kialiAPIUrl, namespace.Name, deployment.Name))
 		if err != nil {
 			return false
 		}
@@ -210,7 +210,7 @@ func TestIstioWithKongIngressGateway(t *testing.T) {
 	var health *workloadHealth
 	var inboundHTTPRequests map[string]float64
 	require.Eventually(t, func() bool {
-		resp, err := httpc.Get(appStatusOKUrl)
+		resp, err := helpers.DefaultHTTPClient().Get(appStatusOKUrl)
 		if err != nil {
 			return false
 		}
@@ -293,7 +293,7 @@ func TestIstioWithKongIngressGateway(t *testing.T) {
 	t.Log("waiting for the rate-limiter plugin to be active")
 	var headers http.Header
 	require.Eventually(t, func() bool {
-		resp, err := httpc.Get(appStatusOKUrl)
+		resp, err := helpers.DefaultHTTPClient().Get(appStatusOKUrl)
 		if err != nil {
 			return false
 		}
@@ -316,7 +316,7 @@ func TestIstioWithKongIngressGateway(t *testing.T) {
 // verifyStatusForURL is a helper function which given a URL and a status code performs
 // a GET and verifies the status code returning an error if the result isn't as expected.
 func verifyStatusForURL(getURL string, statusCode int) error {
-	resp, err := httpc.Get(getURL)
+	resp, err := helpers.DefaultHTTPClient().Get(getURL)
 	if err != nil {
 		return err
 	}
@@ -340,7 +340,7 @@ func getKialiWorkloadHealth(t *testing.T, kialiAPIUrl string, namespace, workloa
 	req.URL.RawQuery = query.Encode()
 
 	// make the health metrics request
-	resp, err := httpc.Do(req)
+	resp, err := helpers.DefaultHTTPClient().Do(req)
 	if err != nil {
 		return nil, err
 	}

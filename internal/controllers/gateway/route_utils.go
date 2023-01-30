@@ -615,59 +615,32 @@ func sameCondition(a, b metav1.Condition) bool {
 		a.Message == b.Message
 }
 
-func setRouteParentStatusCondition[T types.ParentStatusT](parentStatus T, newCondition metav1.Condition) bool {
+func setRouteParentStatusCondition(parentStatus *gatewayv1beta1.RouteParentStatus, newCondition metav1.Condition) bool {
 	var conditionFound, changed bool
-	switch p := (any)(parentStatus).(type) {
-	case *gatewayv1beta1.RouteParentStatus:
-		for i, condition := range p.Conditions {
-			if condition.Type == newCondition.Type {
-				conditionFound = true
-				if !sameCondition(condition, newCondition) {
-					p.Conditions[i] = newCondition
-					changed = true
-				}
-			}
-		}
 
-		if !conditionFound {
-			p.Conditions = append(p.Conditions, newCondition)
-			changed = true
-		}
-	case *gatewayv1alpha2.RouteParentStatus:
-		for i, condition := range p.Conditions {
-			if condition.Type == newCondition.Type {
-				conditionFound = true
-				if !sameCondition(condition, newCondition) {
-					p.Conditions[i] = newCondition
-					changed = true
-				}
+	for i, condition := range parentStatus.Conditions {
+		if condition.Type == newCondition.Type {
+			conditionFound = true
+			if !sameCondition(condition, newCondition) {
+				parentStatus.Conditions[i] = newCondition
+				changed = true
 			}
-		}
-
-		if !conditionFound {
-			p.Conditions = append(p.Conditions, newCondition)
-			changed = true
 		}
 	}
+
+	if !conditionFound {
+		parentStatus.Conditions = append(parentStatus.Conditions, newCondition)
+		changed = true
+	}
+
 	return changed
 }
 
-func parentStatusHasProgrammedCondition[T types.ParentStatusT](parentStatus T) bool {
-	switch p := (any)(parentStatus).(type) {
-	case *gatewayv1beta1.RouteParentStatus:
-		for _, condition := range p.Conditions {
-			if condition.Type == ConditionTypeProgrammed {
-				return true
-			}
+func parentStatusHasProgrammedCondition(parentStatus *gatewayv1beta1.RouteParentStatus) bool {
+	for _, condition := range parentStatus.Conditions {
+		if condition.Type == ConditionTypeProgrammed {
+			return true
 		}
-		return false
-	case *gatewayv1alpha2.RouteParentStatus:
-		for _, condition := range p.Conditions {
-			if condition.Type == ConditionTypeProgrammed {
-				return true
-			}
-		}
-		return false
 	}
 	return false
 }

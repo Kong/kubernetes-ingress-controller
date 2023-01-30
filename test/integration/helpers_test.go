@@ -277,26 +277,15 @@ func gatewayLinkStatusMatches(
 	return false
 }
 
-func parentStatusContainsProgrammedCondition[T routeParentStatusT](
-	parentStatuses []T, controllerName gatewayv1beta1.GatewayController, expectedStatus metav1.ConditionStatus,
+func parentStatusContainsProgrammedCondition(
+	parentStatuses []gatewayv1beta1.RouteParentStatus, controllerName gatewayv1beta1.GatewayController, expectedStatus metav1.ConditionStatus,
 ) bool {
 	var conditions []metav1.Condition
 	parentFound := false
 	for _, parentStatus := range parentStatuses {
-		switch p := (any)(parentStatus).(type) {
-		case gatewayv1beta1.RouteParentStatus:
-			if p.ControllerName == controllerName {
-				conditions = p.Conditions
-				parentFound = true
-			}
-		case gatewayv1alpha2.RouteParentStatus:
-			if gatewayv1beta1.GatewayController(p.ControllerName) == controllerName {
-				conditions = p.Conditions
-				parentFound = true
-			}
-		}
-
-		if parentFound {
+		if parentStatus.ControllerName == controllerName {
+			conditions = parentStatus.Conditions
+			parentFound = true
 			break
 		}
 	}

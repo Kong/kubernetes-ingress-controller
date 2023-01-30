@@ -92,7 +92,17 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 
 	setupLog.Info("Initializing Dataplane Client")
 	eventRecorder := mgr.GetEventRecorderFor(KongClientEventRecorderComponentName)
-	dataplaneClient, err := dataplane.NewKongClient(deprecatedLogger, time.Duration(c.ProxyTimeoutSeconds*float32(time.Second)), c.IngressClassName, c.EnableReverseSync, c.SkipCACertificates, diagnostic, kongConfig, eventRecorder, dbMode)
+	dataplaneClient, err := dataplane.NewKongClient(
+		deprecatedLogger,
+		time.Duration(c.ProxyTimeoutSeconds*float32(time.Second)),
+		c.IngressClassName,
+		c.EnableReverseSync,
+		c.SkipCACertificates,
+		diagnostic,
+		kongConfig,
+		eventRecorder,
+		dbMode,
+	)
 	if err != nil {
 		return fmt.Errorf("failed to initialize kong data-plane client: %w", err)
 	}

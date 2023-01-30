@@ -1,3 +1,5 @@
+//go:build e2e_tests
+
 package e2e
 
 import (
@@ -32,7 +34,7 @@ func TestKonnectRuntimeGroupConfigPush(t *testing.T) {
 	// TODO: deploy config/konnect with
 
 	t.Log("deploying kong components")
-	const konnectDeploymentPath = "../../deploy/single/all-in-one-dbless.yaml"
+	const konnectDeploymentPath = "../../deploy/single/all-in-one-dbless-konnect.yaml"
 	manifest, err := getTestManifest(t, konnectDeploymentPath)
 	require.NoError(t, err)
 	deployment := deployKong(ctx, t, env, manifest)

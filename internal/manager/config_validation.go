@@ -7,6 +7,8 @@ import (
 	"strings"
 
 	"k8s.io/apimachinery/pkg/types"
+
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/adminapi"
 )
 
 // *FromFlagValue functions are used to validate single flag values and set those in Config.
@@ -38,6 +40,9 @@ func (c *Config) Validate() error {
 	if err := c.validateKonnect(); err != nil {
 		return fmt.Errorf("invalid konnect configuration: %w", err)
 	}
+	if err := c.validateKongAdminAPI(); err != nil {
+		return fmt.Errorf("invalid kong admin api configuration: %w", err)
+	}
 
 	return nil
 }
@@ -54,15 +59,23 @@ func (c *Config) validateKonnect() error {
 	if konnect.RuntimeGroup == "" {
 		return errors.New("runtime group not specified")
 	}
-	if err := c.validateKonnectClientTLS(); err != nil {
+	if konnect.TLSClient.IsZero() {
+		return fmt.Errorf("missing TLS client configuration")
+	}
+	if err := validateClientTLS(konnect.TLSClient); err != nil {
 		return fmt.Errorf("TLS client config invalid: %w", err)
 	}
-
 	return nil
 }
 
-func (c *Config) validateKonnectClientTLS() error {
-	clientTLS := c.Konnect.ClientTLS
+func (c *Config) validateKongAdminAPI() error {
+	if err := validateClientTLS(c.KongAdminAPIConfig.TLSClient); err != nil {
+		return fmt.Errorf("TLS client config invalid: %w", err)
+	}
+	return nil
+}
+
+func validateClientTLS(clientTLS adminapi.TLSClientConfig) error {
 	if clientTLS.Cert != "" && clientTLS.CertFile != "" {
 		return errors.New("both client certificate and client certificate file specified, only one allowed")
 	}
@@ -71,13 +84,14 @@ func (c *Config) validateKonnectClientTLS() error {
 	}
 
 	clientCertPassed := clientTLS.Cert != "" || clientTLS.CertFile != ""
-	if !clientCertPassed {
-		return errors.New("missing client cert, cert or path to cert file must be specified")
+	clientKeyPassed := clientTLS.Key != "" || clientTLS.KeyFile != ""
+
+	if !clientCertPassed && clientKeyPassed {
+		return errors.New("client certificate was provided, but the client key was not")
 	}
 
-	clientKeyPassed := clientTLS.Key != "" || clientTLS.KeyFile != ""
-	if !clientKeyPassed {
-		return errors.New("missing client key passed, key or path to key file must be specified")
+	if !clientKeyPassed && clientCertPassed {
+		return errors.New("client key was provided, but the client certificate was not")
 	}
 
 	return nil

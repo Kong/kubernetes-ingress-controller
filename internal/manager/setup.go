@@ -99,7 +99,6 @@ func setupControllerOptions(logger logr.Logger, c *Config, dbmode string) (ctrl.
 	return controllerOpts, nil
 }
 
-// TODO: test it
 func leaderElectionEnabled(logger logr.Logger, c *Config, dbmode string) bool {
 	if c.Konnect.ConfigSynchronizationEnabled {
 		logger.Info("Konnect config synchronisation enabled, enabling leader election")
@@ -109,10 +108,10 @@ func leaderElectionEnabled(logger logr.Logger, c *Config, dbmode string) bool {
 	if dbmode == "off" {
 		logger.Info("DB-less mode detected, disabling leader election")
 		return false
-	} else {
-		logger.Info("Database mode detected, enabling leader election")
-		return true
 	}
+
+	logger.Info("Database mode detected, enabling leader election")
+	return true
 }
 
 func setupDataplaneSynchronizer(
@@ -237,7 +236,8 @@ func generateAddressFinderGetter(mgrc client.Client, publishServiceNn types.Name
 		}
 
 		var addrs []string
-		switch svc.Spec.Type { //nolint:exhaustive
+		//nolint:exhaustive
+		switch svc.Spec.Type {
 		case corev1.ServiceTypeLoadBalancer:
 			for _, lbaddr := range svc.Status.LoadBalancer.Ingress {
 				if lbaddr.IP != "" {
@@ -259,7 +259,7 @@ func generateAddressFinderGetter(mgrc client.Client, publishServiceNn types.Name
 	}
 }
 
-// NewKongClients returns the kong clients
+// NewKongClients returns the kong clients.
 func NewKongClients(ctx context.Context, cfg *Config, logger logrus.FieldLogger) ([]*adminapi.Client, error) {
 	httpclient, err := adminapi.MakeHTTPClient(&cfg.KongAdminAPIConfig)
 	if err != nil {
@@ -268,7 +268,7 @@ func NewKongClients(ctx context.Context, cfg *Config, logger logrus.FieldLogger)
 
 	clients := make([]*adminapi.Client, 0, len(cfg.KongAdminURL))
 	for _, url := range cfg.KongAdminURL {
-		client, err := adminapi.GetKongClientForWorkspace(ctx, url, cfg.KongWorkspace, httpclient)
+		client, err := adminapi.NewKongClientForWorkspace(ctx, url, cfg.KongWorkspace, httpclient)
 		if err != nil {
 			return nil, err
 		}

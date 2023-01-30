@@ -86,7 +86,7 @@ func TestConfigValidate(t *testing.T) {
 					ConfigSynchronizationEnabled: true,
 					RuntimeGroup:                 "fbd3036f-0f1c-4e98-b71c-d4cd61213f90",
 					Address:                      "https://us.kic.api.konghq.tech",
-					ClientTLS: adminapi.TLSClientConfig{
+					TLSClient: adminapi.TLSClientConfig{
 						// We do not set valid cert or key, and it's still considered valid as at this level we only care
 						// about them being not empty. Their validity is to be verified later on by the Admin API client
 						// constructor.
@@ -108,33 +108,33 @@ func TestConfigValidate(t *testing.T) {
 
 		t.Run("enabled with no tls config is rejected", func(t *testing.T) {
 			c := validEnabled()
-			c.Konnect.ClientTLS = adminapi.TLSClientConfig{}
-			require.ErrorContains(t, c.Validate(), "TLS client config invalid")
+			c.Konnect.TLSClient = adminapi.TLSClientConfig{}
+			require.ErrorContains(t, c.Validate(), "missing TLS client configuration")
 		})
 
 		t.Run("enabled with no tls cert is rejected", func(t *testing.T) {
 			c := validEnabled()
-			c.Konnect.ClientTLS.Cert = ""
-			require.ErrorContains(t, c.Validate(), "missing client cert")
+			c.Konnect.TLSClient.Cert = ""
+			require.ErrorContains(t, c.Validate(), "client certificate was provided, but the client key was not")
 		})
 
 		t.Run("enabled with no tls key is rejected", func(t *testing.T) {
 			c := validEnabled()
-			c.Konnect.ClientTLS.Key = ""
-			require.ErrorContains(t, c.Validate(), "missing client key")
+			c.Konnect.TLSClient.Key = ""
+			require.ErrorContains(t, c.Validate(), "client key was provided, but the client certificate was not")
 		})
 
 		t.Run("enabled with tls cert file instead of cert is accepted", func(t *testing.T) {
 			c := validEnabled()
-			c.Konnect.ClientTLS.Cert = ""
-			c.Konnect.ClientTLS.CertFile = "non-empty-path"
+			c.Konnect.TLSClient.Cert = ""
+			c.Konnect.TLSClient.CertFile = "non-empty-path"
 			require.NoError(t, c.Validate())
 		})
 
 		t.Run("enabled with tls key file instead of key is accepted", func(t *testing.T) {
 			c := validEnabled()
-			c.Konnect.ClientTLS.Key = ""
-			c.Konnect.ClientTLS.KeyFile = "non-empty-path"
+			c.Konnect.TLSClient.Key = ""
+			c.Konnect.TLSClient.KeyFile = "non-empty-path"
 			require.NoError(t, c.Validate())
 		})
 
@@ -148,6 +148,62 @@ func TestConfigValidate(t *testing.T) {
 			c := validEnabled()
 			c.Konnect.Address = ""
 			require.ErrorContains(t, c.Validate(), "address not specified")
+		})
+	})
+
+	t.Run("Admin API", func(t *testing.T) {
+		validWithClientTLS := func() manager.Config {
+			return manager.Config{
+				KongAdminAPIConfig: adminapi.HTTPClientOpts{
+					TLSClient: adminapi.TLSClientConfig{
+						// We do not set valid cert or key, and it's still considered valid as at this level we only care
+						// about them being not empty. Their validity is to be verified later on by the Admin API client
+						// constructor.
+						Cert: "not-empty-cert",
+						Key:  "not-empty-key",
+					},
+				},
+			}
+		}
+
+		t.Run("no TLS client is allowed", func(t *testing.T) {
+			c := manager.Config{
+				KongAdminAPIConfig: adminapi.HTTPClientOpts{
+					TLSClient: adminapi.TLSClientConfig{},
+				},
+			}
+			require.NoError(t, c.Validate())
+		})
+
+		t.Run("valid TLS client is allowed", func(t *testing.T) {
+			c := validWithClientTLS()
+			require.NoError(t, c.Validate())
+		})
+
+		t.Run("missing tls cert is rejected", func(t *testing.T) {
+			c := validWithClientTLS()
+			c.KongAdminAPIConfig.TLSClient.Cert = ""
+			require.ErrorContains(t, c.Validate(), "client certificate was provided, but the client key was not")
+		})
+
+		t.Run("missing tls key is rejected", func(t *testing.T) {
+			c := validWithClientTLS()
+			c.KongAdminAPIConfig.TLSClient.Key = ""
+			require.ErrorContains(t, c.Validate(), "client key was provided, but the client certificate was not")
+		})
+
+		t.Run("tls cert file instead of cert is accepted", func(t *testing.T) {
+			c := validWithClientTLS()
+			c.KongAdminAPIConfig.TLSClient.Cert = ""
+			c.KongAdminAPIConfig.TLSClient.CertFile = "non-empty-path"
+			require.NoError(t, c.Validate())
+		})
+
+		t.Run("tls key file instead of key is accepted", func(t *testing.T) {
+			c := validWithClientTLS()
+			c.KongAdminAPIConfig.TLSClient.Key = ""
+			c.KongAdminAPIConfig.TLSClient.KeyFile = "non-empty-path"
+			require.NoError(t, c.Validate())
 		})
 	})
 }

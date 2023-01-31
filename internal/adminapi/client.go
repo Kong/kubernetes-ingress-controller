@@ -36,5 +36,9 @@ func (c *Client) IsKonnect() bool {
 // KonnectRuntimeGroup gets a unique identifier of a Konnect's Runtime Group that config should
 // be synchronised with. Empty in case of non-Konnect clients.
 func (c *Client) KonnectRuntimeGroup() string {
+	if !c.isKonnect {
+		return ""
+	}
+
 	return c.konnectRuntimeGroup
 }

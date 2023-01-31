@@ -55,8 +55,8 @@ func KongPullPassword() string {
 }
 
 // KongEnterpriseEnabled enables Enterprise-specific tests when set to "true".
-func KongEnterpriseEnabled() string {
-	return os.Getenv("TEST_KONG_ENTERPRISE")
+func KongEnterpriseEnabled() bool {
+	return os.Getenv("TEST_KONG_ENTERPRISE") == "true"
 }
 
 // ClusterVersion indicates the version of Kubernetes to use for the tests

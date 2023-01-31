@@ -19,12 +19,13 @@ import (
 	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
+	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/helpers"
 )
 
 func TestGatewayValidationWebhook(t *testing.T) {
 	ctx := context.Background()
 
-	ns := namespace(ctx, t)
+	ns := helpers.Namespace(ctx, t, env)
 
 	if env.Cluster().Type() != kind.KindClusterType {
 		t.Skip("webhook tests are only available on KIND clusters currently")

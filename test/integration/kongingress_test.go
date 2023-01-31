@@ -23,6 +23,7 @@ import (
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
 	"github.com/kong/kubernetes-ingress-controller/v2/pkg/clientset"
 	"github.com/kong/kubernetes-ingress-controller/v2/test"
+	"github.com/kong/kubernetes-ingress-controller/v2/test/consts"
 	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/helpers"
 )
 
@@ -30,7 +31,7 @@ func TestKongIngressEssentials(t *testing.T) {
 	ctx := context.Background()
 
 	t.Parallel()
-	ns := namespace(ctx, t)
+	ns := helpers.Namespace(ctx, t, env)
 
 	t.Log("deploying a minimal HTTP container deployment to test Ingress routes")
 	testName := "minking"
@@ -60,7 +61,7 @@ func TestKongIngressEssentials(t *testing.T) {
 	kubernetesVersion, err := env.Cluster().Version()
 	require.NoError(t, err)
 	ingress := generators.NewIngressForServiceWithClusterVersion(kubernetesVersion, "/test_kongingress_essentials", map[string]string{
-		annotations.IngressClassKey: ingressClass,
+		annotations.IngressClassKey: consts.IngressClass,
 		"konghq.com/strip-path":     "true",
 	}, service)
 	require.NoError(t, clusters.DeployIngress(ctx, env.Cluster(), ns.Name, ingress))
@@ -76,7 +77,7 @@ func TestKongIngressEssentials(t *testing.T) {
 			Name:      testName,
 			Namespace: ns.Name,
 			Annotations: map[string]string{
-				annotations.IngressClassKey: ingressClass,
+				annotations.IngressClassKey: consts.IngressClass,
 			},
 		},
 		Proxy: &kongv1.KongIngressService{

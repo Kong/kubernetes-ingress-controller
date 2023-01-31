@@ -21,6 +21,7 @@ import (
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/versions"
 	"github.com/kong/kubernetes-ingress-controller/v2/test"
+	"github.com/kong/kubernetes-ingress-controller/v2/test/consts"
 	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/helpers"
 )
 
@@ -30,7 +31,7 @@ func TestIngressRegexMatchPath(t *testing.T) {
 	if !versions.GetKongVersion().MajorOnly().GTE(versions.ExplicitRegexPathVersionCutoff) {
 		t.Skip("regex prefixes are only relevant for Kong 3.0+")
 	}
-	ns, cleaner := setup(ctx, t)
+	ns, cleaner := helpers.Setup(ctx, t, env)
 
 	pathRegexPrefix := "/~"
 	pathTypeImplementationSpecific := netv1.PathTypeImplementationSpecific
@@ -105,7 +106,7 @@ func TestIngressRegexMatchPath(t *testing.T) {
 					},
 				},
 				Spec: netv1.IngressSpec{
-					IngressClassName: lo.ToPtr(ingressClass),
+					IngressClassName: lo.ToPtr(consts.IngressClass),
 					Rules: []netv1.IngressRule{
 						{
 							IngressRuleValue: netv1.IngressRuleValue{
@@ -184,7 +185,7 @@ func TestIngressRegexMatchHeader(t *testing.T) {
 	if !versions.GetKongVersion().MajorOnly().GTE(versions.ExplicitRegexPathVersionCutoff) {
 		t.Skip("regex prefixes are only relevant for Kong 3.0+")
 	}
-	ns, cleaner := setup(ctx, t)
+	ns, cleaner := helpers.Setup(ctx, t, env)
 
 	headerRegexPrefix := "~*"
 	matchHeaderKey := "X-Kic-Test-Match"
@@ -234,7 +235,7 @@ func TestIngressRegexMatchHeader(t *testing.T) {
 					},
 				},
 				Spec: netv1.IngressSpec{
-					IngressClassName: lo.ToPtr(ingressClass),
+					IngressClassName: lo.ToPtr(consts.IngressClass),
 					Rules: []netv1.IngressRule{
 						{
 							IngressRuleValue: netv1.IngressRuleValue{
@@ -267,9 +268,8 @@ func TestIngressRegexMatchHeader(t *testing.T) {
 			t.Log("testing headers expected to match")
 			require.Eventually(t, func() bool {
 				for _, header := range tc.matchHeaders {
-					req, err := http.NewRequest("GET", proxyURL.String(), nil)
+					req := helpers.MustHTTPRequest(t, "GET", proxyURL, "/", nil)
 					req.Header.Add(matchHeaderKey, header)
-					require.NoError(t, err)
 					resp, err := helpers.DefaultHTTPClient().Do(req)
 					if err != nil {
 						t.Logf("WARNING: error while waiting for %s: %v", proxyURL, err)
@@ -295,9 +295,8 @@ func TestIngressRegexMatchHeader(t *testing.T) {
 
 			t.Log("testing headers expected not to match")
 			for _, header := range tc.notMatchHeaders {
-				req, err := http.NewRequest("GET", proxyURL.String(), nil)
+				req := helpers.MustHTTPRequest(t, "GET", proxyURL, "/", nil)
 				req.Header.Add(matchHeaderKey, header)
-				require.NoError(t, err)
 				resp, err := helpers.DefaultHTTPClient().Do(req)
 				require.NoError(t, err)
 				defer resp.Body.Close()

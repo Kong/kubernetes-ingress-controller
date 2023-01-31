@@ -12,6 +12,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/kong/kubernetes-ingress-controller/v2/test/consts"
+	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/helpers"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/knative"
 	"github.com/stretchr/testify/assert"
@@ -40,7 +42,7 @@ func TestKnativeIngress(t *testing.T) {
 	}
 
 	t.Parallel()
-	ns := namespace(ctx, t)
+	ns := helpers.Namespace(ctx, t, env)
 
 	t.Log("generating a knative clientset")
 	dynamicClient, err := dynamic.NewForConfig(env.Cluster().Config())
@@ -52,8 +54,8 @@ func TestKnativeIngress(t *testing.T) {
 	}
 	knativeClient := dynamicClient.Resource(knativeGVR).Namespace(ns.Name)
 
-	t.Logf("configure knative network for ingress class %s", ingressClass)
-	payloadBytes := []byte(fmt.Sprintf("{\"data\": {\"ingress-class\": \"%s\"}}", ingressClass))
+	t.Logf("configure knative network for ingress class %s", consts.IngressClass)
+	payloadBytes := []byte(fmt.Sprintf("{\"data\": {\"ingress-class\": \"%s\"}}", consts.IngressClass))
 	_, err = env.Cluster().Client().CoreV1().ConfigMaps(knative.DefaultNamespace).Patch(ctx, "config-network", types.MergePatchType, payloadBytes, metav1.PatchOptions{})
 	require.NoError(t, err)
 	require.NoError(t, configKnativeDomain(ctx, proxyURL.Hostname(), knative.DefaultNamespace, env.Cluster()))
@@ -170,10 +172,7 @@ func accessKnativeSrv(ctx context.Context, proxy, nsn string, t *testing.T) bool
 		Timeout:   time.Second * 60,
 	}
 
-	req, err := http.NewRequest("GET", url, nil)
-	if err != nil {
-		t.Logf("failed generating httpquerst err %v", err)
-	}
+	req := helpers.MustHTTPRequest(t, "GET", proxyURL, url, nil)
 	req.Header.Set("Host", fmt.Sprintf("helloworld-go.%s.%s", nsn, proxy))
 	req.Host = fmt.Sprintf("helloworld-go.%s.%s", nsn, proxy)
 

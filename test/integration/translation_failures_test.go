@@ -30,6 +30,8 @@ import (
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
 	"github.com/kong/kubernetes-ingress-controller/v2/pkg/clientset"
 	"github.com/kong/kubernetes-ingress-controller/v2/test"
+	"github.com/kong/kubernetes-ingress-controller/v2/test/consts"
+	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/helpers"
 )
 
 const testTranslationFailuresObjectsPrefix = "translation-failures-"
@@ -325,7 +327,7 @@ func TestTranslationFailures(t *testing.T) {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			ns, cleaner := setup(ctx, t)
+			ns, cleaner := helpers.Setup(ctx, t, env)
 
 			expected := tt.translationFailureTrigger(t, cleaner, ns.GetName())
 
@@ -402,7 +404,7 @@ func invalidCASecret(ns string) *corev1.Secret {
 				"konghq.com/ca-cert": "true",
 			},
 			Annotations: map[string]string{
-				annotations.IngressClassKey: ingressClass,
+				annotations.IngressClassKey: consts.IngressClass,
 			},
 		},
 		Data: map[string][]byte{
@@ -418,7 +420,7 @@ func pluginUsingInvalidCACert(ns string) *kongv1.KongPlugin {
 			Name:      testutils.RandomName(testTranslationFailuresObjectsPrefix),
 			Namespace: ns,
 			Annotations: map[string]string{
-				annotations.IngressClassKey: ingressClass,
+				annotations.IngressClassKey: consts.IngressClass,
 			},
 		},
 		Config:     v1.JSON{Raw: []byte(fmt.Sprintf(`{"ca_certificates": ["%s"]}`, invalidCASecretID))},
@@ -485,7 +487,7 @@ func ingressWithPathBackedByService(service *corev1.Service) *netv1.Ingress {
 		ObjectMeta: metav1.ObjectMeta{
 			Name: testutils.RandomName(testTranslationFailuresObjectsPrefix),
 			Annotations: map[string]string{
-				annotations.IngressClassKey: ingressClass,
+				annotations.IngressClassKey: consts.IngressClass,
 			},
 		},
 		Spec: netv1.IngressSpec{

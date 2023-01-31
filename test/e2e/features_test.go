@@ -414,7 +414,7 @@ func TestDeployAllInOneDBLESSGateway(t *testing.T) {
 	for i, container := range deployment.Spec.Template.Spec.Containers {
 		if container.Name == "ingress-controller" {
 			deployment.Spec.Template.Spec.Containers[i].Env = append(deployment.Spec.Template.Spec.Containers[i].Env,
-				corev1.EnvVar{Name: "CONTROLLER_FEATURE_GATES", Value: "GatewayAlpha=true"})
+				corev1.EnvVar{Name: "CONTROLLER_FEATURE_GATES", Value: consts.DefaultFeatureGates})
 		}
 		if container.Name == "proxy" {
 			deployment.Spec.Template.Spec.Containers[i].Env = append(deployment.Spec.Template.Spec.Containers[i].Env,
@@ -479,7 +479,7 @@ func TestDeployAllInOneDBLESSNoLoadBalancer(t *testing.T) {
 	for i, container := range deployment.Spec.Template.Spec.Containers {
 		if container.Name == "ingress-controller" {
 			deployment.Spec.Template.Spec.Containers[i].Env = append(deployment.Spec.Template.Spec.Containers[i].Env,
-				corev1.EnvVar{Name: "CONTROLLER_FEATURE_GATES", Value: "GatewayAlpha=true"})
+				corev1.EnvVar{Name: "CONTROLLER_FEATURE_GATES", Value: consts.DefaultFeatureGates})
 		}
 	}
 	_, err = env.Cluster().Client().AppsV1().Deployments(deployment.Namespace).Update(ctx,

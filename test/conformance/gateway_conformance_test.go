@@ -47,7 +47,7 @@ func TestGatewayConformance(t *testing.T) {
 		"--dump-config",
 		"--log-level=trace",
 		"--debug-log-reduce-redundancy",
-		"--feature-gates=GatewayAlpha=true",
+		fmt.Sprintf("--feature-gates=%s", consts.DefaultFeatureGates),
 		"--anonymous-reports=false",
 	}
 

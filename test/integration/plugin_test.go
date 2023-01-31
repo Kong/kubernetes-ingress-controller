@@ -29,14 +29,16 @@ import (
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
 	"github.com/kong/kubernetes-ingress-controller/v2/pkg/clientset"
 	"github.com/kong/kubernetes-ingress-controller/v2/test"
+	"github.com/kong/kubernetes-ingress-controller/v2/test/consts"
 	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/helpers"
+	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/testenv"
 )
 
 func TestPluginEssentials(t *testing.T) {
 	ctx := context.Background()
 
 	t.Parallel()
-	ns, cleaner := setup(ctx, t)
+	ns, cleaner := helpers.Setup(ctx, t, env)
 
 	t.Log("deploying a minimal HTTP container deployment to test Ingress routes")
 	container := generators.NewContainer("httpbin", test.HTTPBinImage, 80)
@@ -51,15 +53,15 @@ func TestPluginEssentials(t *testing.T) {
 	require.NoError(t, err)
 	cleaner.Add(service)
 
-	t.Logf("creating an ingress for service %s with ingress.class %s", service.Name, ingressClass)
+	t.Logf("creating an ingress for service %s with ingress.class %s", service.Name, consts.IngressClass)
 	kubernetesVersion, err := env.Cluster().Version()
 	require.NoError(t, err)
 	ingress := generators.NewIngressForServiceWithClusterVersion(kubernetesVersion, "/test_plugin_essentials", map[string]string{
-		annotations.IngressClassKey: ingressClass,
+		annotations.IngressClassKey: consts.IngressClass,
 		"konghq.com/strip-path":     "true",
 	}, service)
 	require.NoError(t, clusters.DeployIngress(ctx, env.Cluster(), ns.Name, ingress))
-	addIngressToCleaner(cleaner, ingress)
+	helpers.AddIngressToCleaner(cleaner, ingress)
 
 	t.Log("waiting for routes from Ingress to be operational")
 	assert.Eventually(t, func() bool {
@@ -95,7 +97,7 @@ func TestPluginEssentials(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "legal",
 			Annotations: map[string]string{
-				annotations.IngressClassKey: ingressClass,
+				annotations.IngressClassKey: consts.IngressClass,
 			},
 		},
 		PluginName: "request-termination",
@@ -189,7 +191,7 @@ func TestPluginEssentials(t *testing.T) {
 			return false
 		}
 		defer resp.Body.Close()
-		return expect404WithNoRoute(t, proxyURL.String(), resp)
+		return helpers.ExpectHTTP404WithNoRoute(t, proxyURL, resp)
 	}, ingressWait, waitTick)
 }
 
@@ -201,10 +203,10 @@ func TestPluginOrdering(t *testing.T) {
 	require.Eventually(t, func() bool {
 		return !versions.GetKongVersion().Full().EQ(semver.MustParse("0.0.0"))
 	}, time.Minute, time.Second)
-	if !versions.GetKongVersion().MajorOnly().GTE(versions.PluginOrderingVersionCutoff) || kongEnterpriseEnabled == "" {
+	if !versions.GetKongVersion().MajorOnly().GTE(versions.PluginOrderingVersionCutoff) || !testenv.KongEnterpriseEnabled() {
 		t.Skip("plugin ordering requires Kong Enterprise 3.0+")
 	}
-	ns, cleaner := setup(ctx, t)
+	ns, cleaner := helpers.Setup(ctx, t, env)
 
 	t.Log("deploying a minimal HTTP container deployment to test Ingress routes")
 	container := generators.NewContainer("httpbin", test.HTTPBinImage, 80)
@@ -219,9 +221,9 @@ func TestPluginOrdering(t *testing.T) {
 	require.NoError(t, err)
 	cleaner.Add(service)
 
-	t.Logf("creating an ingress for service %s with ingress.class %s", service.Name, ingressClass)
+	t.Logf("creating an ingress for service %s with ingress.class %s", service.Name, consts.IngressClass)
 	ingress := generators.NewIngressForService("/test_plugin_ordering", map[string]string{
-		annotations.IngressClassKey: ingressClass,
+		annotations.IngressClassKey: consts.IngressClass,
 		"konghq.com/strip-path":     "true",
 	}, service)
 	require.NoError(t, clusters.DeployIngress(ctx, env.Cluster(), ns.Name, ingress))
@@ -349,6 +351,6 @@ func TestPluginOrdering(t *testing.T) {
 			return false
 		}
 		defer resp.Body.Close()
-		return expect404WithNoRoute(t, proxyURL.String(), resp)
+		return helpers.ExpectHTTP404WithNoRoute(t, proxyURL, resp)
 	}, ingressWait, waitTick)
 }

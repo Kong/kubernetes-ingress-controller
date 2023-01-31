@@ -30,6 +30,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1alpha1"
 	"github.com/kong/kubernetes-ingress-controller/v2/pkg/clientset"
 	"github.com/kong/kubernetes-ingress-controller/v2/test"
+	"github.com/kong/kubernetes-ingress-controller/v2/test/consts"
 	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/helpers"
 )
 
@@ -46,7 +47,7 @@ func TestIngressEssentials(t *testing.T) {
 	})
 
 	ctx := context.Background()
-	ns, cleaner := setup(ctx, t)
+	ns, cleaner := helpers.Setup(ctx, t, env)
 
 	t.Log("deploying a minimal HTTP container deployment to test Ingress routes")
 	container := generators.NewContainer("httpbin", test.HTTPBinImage, 80)
@@ -61,15 +62,15 @@ func TestIngressEssentials(t *testing.T) {
 	require.NoError(t, err)
 	cleaner.Add(service)
 
-	t.Logf("creating an ingress for service %s with ingress.class %s", service.Name, ingressClass)
+	t.Logf("creating an ingress for service %s with ingress.class %s", service.Name, consts.IngressClass)
 	kubernetesVersion, err := env.Cluster().Version()
 	require.NoError(t, err)
 	ingress := generators.NewIngressForServiceWithClusterVersion(kubernetesVersion, "/test_ingress_essentials", map[string]string{
-		annotations.IngressClassKey: ingressClass,
+		annotations.IngressClassKey: consts.IngressClass,
 		"konghq.com/strip-path":     "true",
 	}, service)
 	require.NoError(t, clusters.DeployIngress(ctx, env.Cluster(), ns.Name, ingress))
-	addIngressToCleaner(cleaner, ingress)
+	helpers.AddIngressToCleaner(cleaner, ingress)
 
 	t.Log("waiting for updated ingress status to include IP")
 	require.Eventually(t, func() bool {
@@ -100,7 +101,7 @@ func TestIngressEssentials(t *testing.T) {
 		return false
 	}, ingressWait, waitTick)
 
-	t.Logf("removing the ingress.class annotation %q from ingress", ingressClass)
+	t.Logf("removing the ingress.class annotation %q from ingress", consts.IngressClass)
 	switch obj := ingress.(type) {
 	case *netv1.Ingress:
 		err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
@@ -126,7 +127,7 @@ func TestIngressEssentials(t *testing.T) {
 		require.NoError(t, err)
 	}
 
-	t.Logf("verifying that removing the ingress.class annotation %q from ingress causes routes to disconnect", ingressClass)
+	t.Logf("verifying that removing the ingress.class annotation %q from ingress causes routes to disconnect", consts.IngressClass)
 	require.Eventually(t, func() bool {
 		resp, err := helpers.DefaultHTTPClient().Get(fmt.Sprintf("%s/test_ingress_essentials", proxyURL))
 		if err != nil {
@@ -134,10 +135,10 @@ func TestIngressEssentials(t *testing.T) {
 			return false
 		}
 		defer resp.Body.Close()
-		return expect404WithNoRoute(t, proxyURL.String(), resp)
+		return helpers.ExpectHTTP404WithNoRoute(t, proxyURL, resp)
 	}, ingressWait, waitTick)
 
-	t.Logf("putting the ingress.class annotation %q back on ingress", ingressClass)
+	t.Logf("putting the ingress.class annotation %q back on ingress", consts.IngressClass)
 	switch obj := ingress.(type) {
 	case *netv1.Ingress:
 		err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
@@ -145,7 +146,7 @@ func TestIngressEssentials(t *testing.T) {
 			if err != nil {
 				return err
 			}
-			ingress.ObjectMeta.Annotations[annotations.IngressClassKey] = ingressClass
+			ingress.ObjectMeta.Annotations[annotations.IngressClassKey] = consts.IngressClass
 			_, err = env.Cluster().Client().NetworkingV1().Ingresses(ns.Name).Update(ctx, ingress, metav1.UpdateOptions{})
 			return err
 		})
@@ -156,7 +157,7 @@ func TestIngressEssentials(t *testing.T) {
 			if err != nil {
 				return err
 			}
-			ingress.ObjectMeta.Annotations[annotations.IngressClassKey] = ingressClass
+			ingress.ObjectMeta.Annotations[annotations.IngressClassKey] = consts.IngressClass
 			_, err = env.Cluster().Client().NetworkingV1beta1().Ingresses(ns.Name).Update(ctx, ingress, metav1.UpdateOptions{})
 			return err
 		})
@@ -192,7 +193,7 @@ func TestIngressEssentials(t *testing.T) {
 			return false
 		}
 		defer resp.Body.Close()
-		return expect404WithNoRoute(t, proxyURL.String(), resp)
+		return helpers.ExpectHTTP404WithNoRoute(t, proxyURL, resp)
 	}, ingressWait, waitTick)
 }
 
@@ -200,7 +201,7 @@ func TestGRPCIngressEssentials(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
-	ns, cleaner := setup(ctx, t)
+	ns, cleaner := helpers.Setup(ctx, t, env)
 
 	t.Log("deploying a minimal HTTP container deployment to test Ingress routes")
 	container := generators.NewContainer("grpcbin", "moul/grpcbin", 9001)
@@ -217,16 +218,16 @@ func TestGRPCIngressEssentials(t *testing.T) {
 	require.NoError(t, err)
 	cleaner.Add(service)
 
-	t.Logf("creating an ingress for service %s with ingress.class %s", service.Name, ingressClass)
+	t.Logf("creating an ingress for service %s with ingress.class %s", service.Name, consts.IngressClass)
 	kubernetesVersion, err := env.Cluster().Version()
 	require.NoError(t, err)
 	ingress := generators.NewIngressForServiceWithClusterVersion(kubernetesVersion, "/", map[string]string{
-		annotations.IngressClassKey:                             ingressClass,
+		annotations.IngressClassKey:                             consts.IngressClass,
 		annotations.AnnotationPrefix + annotations.ProtocolsKey: "grpc,grpcs",
 		annotations.AnnotationPrefix + annotations.StripPathKey: "false",
 	}, service)
 	require.NoError(t, clusters.DeployIngress(ctx, env.Cluster(), ns.Name, ingress))
-	addIngressToCleaner(cleaner, ingress)
+	helpers.AddIngressToCleaner(cleaner, ingress)
 
 	t.Log("waiting for updated ingress status to include IP")
 	require.Eventually(t, func() bool {
@@ -258,7 +259,7 @@ func TestIngressClassNameSpec(t *testing.T) {
 	})
 
 	ctx := context.Background()
-	ns, cleaner := setup(ctx, t)
+	ns, cleaner := helpers.Setup(ctx, t, env)
 
 	t.Log("deploying a minimal HTTP container deployment to test Ingress routes using the IngressClassName spec")
 	container := generators.NewContainer("httpbin", test.HTTPBinImage, 80)
@@ -273,18 +274,18 @@ func TestIngressClassNameSpec(t *testing.T) {
 	require.NoError(t, err)
 	cleaner.Add(service)
 
-	t.Logf("creating an ingress for service %s with ingress.class %s", service.Name, ingressClass)
+	t.Logf("creating an ingress for service %s with ingress.class %s", service.Name, consts.IngressClass)
 	kubernetesVersion, err := env.Cluster().Version()
 	require.NoError(t, err)
 	ingress := generators.NewIngressForServiceWithClusterVersion(kubernetesVersion, "/test_ingressclassname_spec/", map[string]string{"konghq.com/strip-path": "true"}, service)
 	switch obj := ingress.(type) {
 	case *netv1.Ingress:
-		obj.Spec.IngressClassName = kong.String(ingressClass)
+		obj.Spec.IngressClassName = kong.String(consts.IngressClass)
 	case *netv1beta1.Ingress:
-		obj.Spec.IngressClassName = kong.String(ingressClass)
+		obj.Spec.IngressClassName = kong.String(consts.IngressClass)
 	}
 	require.NoError(t, clusters.DeployIngress(ctx, env.Cluster(), ns.Name, ingress))
-	addIngressToCleaner(cleaner, ingress)
+	helpers.AddIngressToCleaner(cleaner, ingress)
 
 	t.Log("waiting for routes from Ingress to be operational")
 	defer func() {
@@ -318,11 +319,11 @@ func TestIngressClassNameSpec(t *testing.T) {
 		return false
 	}, ingressWait, waitTick)
 
-	t.Logf("removing the IngressClassName %q from ingress", ingressClass)
+	t.Logf("removing the IngressClassName %q from ingress", consts.IngressClass)
 	err = setIngressClassNameWithRetry(ctx, ns.Name, ingress, nil)
 	require.NoError(t, err)
 
-	t.Logf("verifying that removing the IngressClassName %q from ingress causes routes to disconnect", ingressClass)
+	t.Logf("verifying that removing the IngressClassName %q from ingress causes routes to disconnect", consts.IngressClass)
 	require.Eventually(t, func() bool {
 		resp, err := helpers.DefaultHTTPClient().Get(fmt.Sprintf("%s/test_ingressclassname_spec", proxyURL))
 		if err != nil {
@@ -330,11 +331,11 @@ func TestIngressClassNameSpec(t *testing.T) {
 			return false
 		}
 		defer resp.Body.Close()
-		return expect404WithNoRoute(t, proxyURL.String(), resp)
+		return helpers.ExpectHTTP404WithNoRoute(t, proxyURL, resp)
 	}, ingressWait, waitTick)
 
-	t.Logf("putting the IngressClassName %q back on ingress", ingressClass)
-	err = setIngressClassNameWithRetry(ctx, ns.Name, ingress, kong.String(ingressClass))
+	t.Logf("putting the IngressClassName %q back on ingress", consts.IngressClass)
+	err = setIngressClassNameWithRetry(ctx, ns.Name, ingress, kong.String(consts.IngressClass))
 	require.NoError(t, err)
 
 	t.Log("waiting for routes from Ingress to be operational after reintroducing ingress class annotation")
@@ -367,7 +368,7 @@ func TestIngressClassNameSpec(t *testing.T) {
 			return false
 		}
 		defer resp.Body.Close()
-		return expect404WithNoRoute(t, proxyURL.String(), resp)
+		return helpers.ExpectHTTP404WithNoRoute(t, proxyURL, resp)
 	}, ingressWait, waitTick)
 }
 
@@ -375,7 +376,7 @@ func TestIngressNamespaces(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
-	ns, cleaner := setup(ctx, t)
+	ns, cleaner := helpers.Setup(ctx, t, env)
 
 	t.Logf("using testing namespace %s", ns.Name)
 
@@ -392,15 +393,15 @@ func TestIngressNamespaces(t *testing.T) {
 	require.NoError(t, err)
 	cleaner.Add(service)
 
-	t.Logf("creating an ingress for service %s with ingress.class %s", service.Name, ingressClass)
+	t.Logf("creating an ingress for service %s with ingress.class %s", service.Name, consts.IngressClass)
 	kubernetesVersion, err := env.Cluster().Version()
 	require.NoError(t, err)
 	ingress := generators.NewIngressForServiceWithClusterVersion(kubernetesVersion, "/elsewhere", map[string]string{
-		annotations.IngressClassKey: ingressClass,
+		annotations.IngressClassKey: consts.IngressClass,
 		"konghq.com/strip-path":     "true",
 	}, service)
 	require.NoError(t, clusters.DeployIngress(ctx, env.Cluster(), ns.Name, ingress))
-	addIngressToCleaner(cleaner, ingress)
+	helpers.AddIngressToCleaner(cleaner, ingress)
 
 	t.Log("waiting for routes from Ingress to be operational")
 	require.Eventually(t, func() bool {
@@ -431,7 +432,7 @@ func TestIngressStatusUpdatesExtended(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
-	ns, cleaner := setup(ctx, t)
+	ns, cleaner := helpers.Setup(ctx, t, env)
 
 	t.Log("deploying a minimal HTTP container deployment to test Ingress routes")
 	container := generators.NewContainer("httpbin", test.HTTPBinImage, 80)
@@ -455,7 +456,7 @@ func TestIngressStatusUpdatesExtended(t *testing.T) {
 			ObjectMeta: metav1.ObjectMeta{
 				Name: ingNameWithPeriods,
 				Annotations: map[string]string{
-					annotations.IngressClassKey: ingressClass,
+					annotations.IngressClassKey: consts.IngressClass,
 					"konghq.com/strip-path":     "true",
 				},
 			},
@@ -488,7 +489,7 @@ func TestIngressStatusUpdatesExtended(t *testing.T) {
 			ObjectMeta: metav1.ObjectMeta{
 				Name: ingNameExtraForService,
 				Annotations: map[string]string{
-					annotations.IngressClassKey: ingressClass,
+					annotations.IngressClassKey: consts.IngressClass,
 					"konghq.com/strip-path":     "true",
 				},
 			},
@@ -521,7 +522,7 @@ func TestIngressStatusUpdatesExtended(t *testing.T) {
 		t.Logf("creating ingress %s and verifying status updates", ing.Name)
 		createdIngress, err := env.Cluster().Client().NetworkingV1().Ingresses(ns.Name).Create(ctx, ing, metav1.CreateOptions{})
 		require.NoError(t, err)
-		addIngressToCleaner(cleaner, createdIngress)
+		helpers.AddIngressToCleaner(cleaner, createdIngress)
 	}
 
 	t.Log("verifying that an ingress with periods in the name has its status populated")
@@ -552,7 +553,7 @@ func TestIngressStatusUpdatesExtended(t *testing.T) {
 }
 
 // TestIngressClassRegexToggle tests if the controller adds the 3.x "~" regular expression path prefix to Ingress
-// paths that match the 2.x heuristic when their IngressClass has the EnableLegacyRegexDetection flag set. It IS NOT
+// paths that match the 2.x heuristic when their consts.IngressClass has the EnableLegacyRegexDetection flag set. It IS NOT
 // parallel: parts of the test may add this route _without_ the prefix, and the 3.x router really hates this and will
 // stop working altogether.
 func TestIngressClassRegexToggle(t *testing.T) {
@@ -579,7 +580,7 @@ func TestIngressClassRegexToggle(t *testing.T) {
 	})
 
 	ctx := context.Background()
-	ns, cleaner := setup(ctx, t)
+	ns, cleaner := helpers.Setup(ctx, t, env)
 
 	t.Log("deploying a minimal HTTP container deployment to test Ingress routes")
 	container := generators.NewContainer("httpbin", test.HTTPBinImage, 80)
@@ -597,7 +598,7 @@ func TestIngressClassRegexToggle(t *testing.T) {
 	t.Logf("creating an IngressClassParameters with legacy regex detection enabled")
 	params := &v1alpha1.IngressClassParameters{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: ingressClass,
+			Name: consts.IngressClass,
 		},
 		Spec: v1alpha1.IngressClassParametersSpec{
 			EnableLegacyRegexDetection: true,
@@ -609,9 +610,9 @@ func TestIngressClassRegexToggle(t *testing.T) {
 	require.NoError(t, err)
 	cleaner.Add(params)
 
-	class, err := env.Cluster().Client().NetworkingV1().IngressClasses().Get(ctx, ingressClass, metav1.GetOptions{})
+	class, err := env.Cluster().Client().NetworkingV1().IngressClasses().Get(ctx, consts.IngressClass, metav1.GetOptions{})
 	require.NoError(t, err)
-	t.Logf("adding legacy regex IngressClassParameters to the %s IngressClass", class.Name)
+	t.Logf("adding legacy regex IngressClassParameters to the %s consts.IngressClass", class.Name)
 	class.Spec.Parameters = &netv1.IngressClassParametersReference{
 		APIGroup:  &v1alpha1.GroupVersion.Group,
 		Kind:      v1alpha1.IngressClassParametersKind,
@@ -623,8 +624,8 @@ func TestIngressClassRegexToggle(t *testing.T) {
 	require.NoError(t, err)
 
 	defer func() {
-		t.Logf("removing parameters from IngressClass %s", class.ObjectMeta.Name)
-		class, err := env.Cluster().Client().NetworkingV1().IngressClasses().Get(ctx, ingressClass, metav1.GetOptions{})
+		t.Logf("removing parameters from consts.IngressClass %s", class.ObjectMeta.Name)
+		class, err := env.Cluster().Client().NetworkingV1().IngressClasses().Get(ctx, consts.IngressClass, metav1.GetOptions{})
 		require.NoError(t, err)
 		class.Spec.Parameters = nil
 		_, err = env.Cluster().Client().NetworkingV1().IngressClasses().Update(ctx, class, metav1.UpdateOptions{})
@@ -642,7 +643,7 @@ func TestIngressClassRegexToggle(t *testing.T) {
 			},
 		},
 		Spec: netv1.IngressSpec{
-			IngressClassName: kong.String(ingressClass),
+			IngressClassName: kong.String(consts.IngressClass),
 			Rules: []netv1.IngressRule{
 				{
 					IngressRuleValue: netv1.IngressRuleValue{
@@ -698,7 +699,7 @@ func TestIngressRegexPrefix(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	ns, cleaner := setup(ctx, t)
+	ns, cleaner := helpers.Setup(ctx, t, env)
 
 	t.Log("deploying a minimal HTTP container deployment to test Ingress routes")
 	container := generators.NewContainer("httpbin", test.HTTPBinImage, 80)
@@ -724,7 +725,7 @@ func TestIngressRegexPrefix(t *testing.T) {
 			},
 		},
 		Spec: netv1.IngressSpec{
-			IngressClassName: kong.String(ingressClass),
+			IngressClassName: kong.String(consts.IngressClass),
 			Rules: []netv1.IngressRule{
 				{
 					IngressRuleValue: netv1.IngressRuleValue{
@@ -763,7 +764,7 @@ func TestIngressRegexPrefix(t *testing.T) {
 			},
 		},
 		Spec: netv1.IngressSpec{
-			IngressClassName: kong.String(ingressClass),
+			IngressClassName: kong.String(consts.IngressClass),
 			Rules: []netv1.IngressRule{
 				{
 					IngressRuleValue: netv1.IngressRuleValue{
@@ -861,7 +862,7 @@ func TestIngressRecoverFromInvalidPath(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	ns, cleaner := setup(ctx, t)
+	ns, cleaner := helpers.Setup(ctx, t, env)
 
 	t.Log("deploying a minimal HTTP container deployment to test Ingress routes")
 	container := generators.NewContainer("httpbin", test.HTTPBinImage, 80)
@@ -887,7 +888,7 @@ func TestIngressRecoverFromInvalidPath(t *testing.T) {
 			},
 		},
 		Spec: netv1.IngressSpec{
-			IngressClassName: kong.String(ingressClass),
+			IngressClassName: kong.String(consts.IngressClass),
 			Rules: []netv1.IngressRule{
 				{
 					IngressRuleValue: netv1.IngressRuleValue{
@@ -943,7 +944,7 @@ func TestIngressRecoverFromInvalidPath(t *testing.T) {
 			},
 		},
 		Spec: netv1.IngressSpec{
-			IngressClassName: kong.String(ingressClass),
+			IngressClassName: kong.String(consts.IngressClass),
 			Rules: []netv1.IngressRule{
 				{
 					IngressRuleValue: netv1.IngressRuleValue{
@@ -1017,7 +1018,7 @@ func TestIngressRecoverFromInvalidPath(t *testing.T) {
 			},
 		},
 		Spec: netv1.IngressSpec{
-			IngressClassName: kong.String(ingressClass),
+			IngressClassName: kong.String(consts.IngressClass),
 			Rules: []netv1.IngressRule{
 				{
 					IngressRuleValue: netv1.IngressRuleValue{
@@ -1067,7 +1068,7 @@ func TestIngressRecoverFromInvalidPath(t *testing.T) {
 func TestIngressMatchByHost(t *testing.T) {
 	ctx := context.Background()
 
-	ns, cleaner := setup(ctx, t)
+	ns, cleaner := helpers.Setup(ctx, t, env)
 
 	t.Log("deploying a minimal HTTP container deployment to test Ingress routes")
 	container := generators.NewContainer("httpbin", test.HTTPBinImage, 80)
@@ -1086,7 +1087,7 @@ func TestIngressMatchByHost(t *testing.T) {
 	ingress := generators.NewIngressForService("/", map[string]string{
 		"konghq.com/strip-path": "true",
 	}, service)
-	ingress.Spec.IngressClassName = kong.String(ingressClass)
+	ingress.Spec.IngressClassName = kong.String(consts.IngressClass)
 	for i := range ingress.Spec.Rules {
 		ingress.Spec.Rules[i].Host = "test.example"
 	}
@@ -1095,8 +1096,7 @@ func TestIngressMatchByHost(t *testing.T) {
 	cleaner.Add(ingress)
 
 	t.Log("try to access the ingress by matching host")
-	req, err := http.NewRequest("GET", proxyURL.String(), nil)
-	require.NoError(t, err)
+	req := helpers.MustHTTPRequest(t, "GET", proxyURL, "/", nil)
 	req.Host = "test.example"
 	require.Eventually(t, func() bool {
 		resp, err := helpers.DefaultHTTPClient().Do(req)
@@ -1164,7 +1164,7 @@ func TestIngressWorksWithServiceBackendsSpecifyingOnlyPortNames(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
-	ns, cleaner := setup(ctx, t)
+	ns, cleaner := helpers.Setup(ctx, t, env)
 
 	client := env.Cluster().Client()
 
@@ -1182,7 +1182,7 @@ func TestIngressWorksWithServiceBackendsSpecifyingOnlyPortNames(t *testing.T) {
 	require.NoError(t, err)
 	cleaner.Add(service)
 
-	t.Logf("creating an ingress for service %s with ingress.class %s", service.Name, ingressClass)
+	t.Logf("creating an ingress for service %s with ingress.class %s", service.Name, consts.IngressClass)
 
 	// TODO: create a similar helper to generators.NewIngressForServiceWithClusterVersion()
 	// which will accept a param to parametrize the port name or number.
@@ -1190,7 +1190,7 @@ func TestIngressWorksWithServiceBackendsSpecifyingOnlyPortNames(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{
 			Name: service.Name,
 			Annotations: map[string]string{
-				annotations.IngressClassKey: ingressClass,
+				annotations.IngressClassKey: consts.IngressClass,
 				"konghq.com/strip-path":     "true",
 			},
 		},

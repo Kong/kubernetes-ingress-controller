@@ -22,6 +22,8 @@ import (
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
+
+	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/helpers"
 )
 
 const testdomain = "konghq.com"
@@ -29,7 +31,7 @@ const testdomain = "konghq.com"
 func TestUDPRouteEssentials(t *testing.T) {
 	ctx := context.Background()
 
-	ns, cleaner := setup(ctx, t)
+	ns, cleaner := helpers.Setup(ctx, t, env)
 
 	t.Log("locking UDP port")
 	udpMutex.Lock()

@@ -12,6 +12,7 @@ import (
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/cmd/rootcmd"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/manager"
+	"github.com/kong/kubernetes-ingress-controller/v2/test/consts"
 )
 
 // logOutput is a file to use for manager log output other than stderr.
@@ -73,8 +74,8 @@ func DeployControllerManagerForCluster(
 		fmt.Sprintf("--kong-admin-url=http://%s:8001", proxyAdminURL.Hostname()),
 		fmt.Sprintf("--kubeconfig=%s", kubeconfig.Name()),
 		"--election-id=integrationtests.konghq.com",
-		"--publish-service=kong-system/ingress-controller-kong-proxy",
-		"--publish-service-udp=kong-system/ingress-controller-kong-udp-proxy",
+		fmt.Sprintf("--publish-service=%s/ingress-controller-kong-proxy", consts.ControllerNamespace),
+		fmt.Sprintf("--publish-service-udp=%s/ingress-controller-kong-udp-proxy", consts.ControllerNamespace),
 		"--log-format=text",
 	}
 	controllerManagerFlags = append(controllerManagerFlags, additionalFlags...)

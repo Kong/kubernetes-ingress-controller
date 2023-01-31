@@ -18,6 +18,7 @@ import (
 	configurationv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
 	"github.com/kong/kubernetes-ingress-controller/v2/pkg/clientset"
 	"github.com/kong/kubernetes-ingress-controller/v2/pkg/clientset/scheme"
+	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/helpers"
 )
 
 func TestKongIngressValidationWebhook(t *testing.T) {
@@ -27,7 +28,7 @@ func TestKongIngressValidationWebhook(t *testing.T) {
 		t.Skip("webhook tests are only available on KIND clusters currently")
 	}
 
-	ns, _ := setup(ctx, t)
+	ns, _ := helpers.Setup(ctx, t, env)
 
 	closer, err := ensureAdmissionRegistration(ctx,
 		"kong-validations-kongingress",

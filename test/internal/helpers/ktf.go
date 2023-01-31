@@ -15,7 +15,7 @@ import (
 func GenerateKongBuilder(ctx context.Context) (*kong.Builder, []string, error) {
 	kongbuilder := kong.NewBuilder()
 	extraControllerArgs := []string{}
-	if testenv.KongEnterpriseEnabled() == "true" {
+	if testenv.KongEnterpriseEnabled() {
 		licenseJSON, err := kong.GetLicenseJSONFromEnv()
 		if err != nil {
 			return nil, nil, err

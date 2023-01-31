@@ -9,10 +9,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
-// -----------------------------------------------------------------------------
-// Ingress Helpers
-// -----------------------------------------------------------------------------
-
 // AddIngressToCleaner adds a runtime.Object to the cleanup list if it is a supported version of Ingress. It panics if the
 // runtime.Object is something else.
 func AddIngressToCleaner(cleaner *clusters.Cleaner, obj runtime.Object) {

@@ -203,7 +203,7 @@ func TestPluginOrdering(t *testing.T) {
 	require.Eventually(t, func() bool {
 		return !versions.GetKongVersion().Full().EQ(semver.MustParse("0.0.0"))
 	}, time.Minute, time.Second)
-	if !versions.GetKongVersion().MajorOnly().GTE(versions.PluginOrderingVersionCutoff) || testenv.KongEnterpriseEnabled() == "" {
+	if !versions.GetKongVersion().MajorOnly().GTE(versions.PluginOrderingVersionCutoff) || !testenv.KongEnterpriseEnabled() {
 		t.Skip("plugin ordering requires Kong Enterprise 3.0+")
 	}
 	ns, cleaner := helpers.Setup(ctx, t, env)

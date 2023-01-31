@@ -39,10 +39,10 @@ var ingressClassMutex = sync.Mutex{}
 func TestIngressEssentials(t *testing.T) {
 	t.Parallel()
 
-	t.Log("locking consts.IngressClass management")
+	t.Log("locking IngressClass management")
 	ingressClassMutex.Lock()
 	t.Cleanup(func() {
-		t.Log("unlocking consts.IngressClass management")
+		t.Log("unlocking IngressClass management")
 		ingressClassMutex.Unlock()
 	})
 
@@ -251,10 +251,10 @@ func TestIngressClassNameSpec(t *testing.T) {
 	}
 
 	t.Parallel()
-	t.Log("locking consts.IngressClass management")
+	t.Log("locking IngressClass management")
 	ingressClassMutex.Lock()
 	t.Cleanup(func() {
-		t.Log("unlocking consts.IngressClass management")
+		t.Log("unlocking IngressClass management")
 		ingressClassMutex.Unlock()
 	})
 
@@ -572,10 +572,10 @@ func TestIngressClassRegexToggle(t *testing.T) {
 		t.Skipf("kubernetes cluster version %s does not support namespaced ingress class parameters", clusterVersion.String())
 	}
 
-	t.Log("locking consts.IngressClass management")
+	t.Log("locking IngressClass management")
 	ingressClassMutex.Lock()
 	t.Cleanup(func() {
-		t.Log("unlocking consts.IngressClass management")
+		t.Log("unlocking IngressClass management")
 		ingressClassMutex.Unlock()
 	})
 

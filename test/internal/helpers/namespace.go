@@ -11,10 +11,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
-// -----------------------------------------------------------------------------
-// Testing Utility Functions - Namespaces
-// -----------------------------------------------------------------------------
-
 // Namespace provides the Namespace provisioned for each test case given their t.Name as the "testCase".
 func Namespace(ctx context.Context, t *testing.T, env environments.Environment) *corev1.Namespace {
 	namespace, err := clusters.GenerateNamespace(ctx, env.Cluster(), t.Name())

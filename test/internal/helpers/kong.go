@@ -11,10 +11,6 @@ import (
 	"github.com/kong/go-kong/kong"
 )
 
-// -----------------------------------------------------------------------------
-// Testing Utility Functions - Kong
-// -----------------------------------------------------------------------------
-
 // GetKongVersion returns kong version using the provided Admin API URL.
 func GetKongVersion(proxyAdminURL *url.URL, kongTestPassword string) (semver.Version, error) {
 	if override := os.Getenv("TEST_KONG_VERSION_OVERRIDE"); len(override) > 0 {

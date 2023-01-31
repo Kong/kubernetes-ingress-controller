@@ -6,10 +6,10 @@ import (
 
 	"github.com/blang/semver/v4"
 	"github.com/go-logr/logr"
-	"github.com/kong/go-kong/kong"
 	"github.com/samber/lo"
 	"golang.org/x/sync/errgroup"
 
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/adminapi"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 )
 
@@ -35,7 +35,7 @@ type Kong struct {
 func New(
 	ctx context.Context,
 	logger logr.Logger,
-	kongClients []*kong.Client,
+	kongClients []*adminapi.Client,
 	v semver.Version,
 	dbMode string,
 	concurrency int,
@@ -71,17 +71,17 @@ func New(
 		Version:     v,
 		FilterTags:  tags,
 		Concurrency: concurrency,
-		Clients: lo.Map(kongClients, func(client *kong.Client, index int) ClientWithPluginStore {
+		Clients: lo.Map(kongClients, func(client *adminapi.Client, index int) ClientWithPluginStore {
 			return ClientWithPluginStore{
 				Client:            client,
-				PluginSchemaStore: util.NewPluginSchemaStore(client),
+				PluginSchemaStore: util.NewPluginSchemaStore(client.Client),
 			}
 		}),
 	}
 }
 
 type ClientWithPluginStore struct {
-	*kong.Client
+	*adminapi.Client
 	*util.PluginSchemaStore
 	// lastConfigSHA is a checksum of the last successful update to the data-plane
 	lastConfigSHA []byte

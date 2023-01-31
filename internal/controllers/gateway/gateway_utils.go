@@ -284,7 +284,6 @@ func getListenerStatus(
 			for _, kind := range listener.AllowedRoutes.Kinds {
 				if _, ok := supportedRouteKindMap[string(kind.Kind)]; !ok {
 					hasUnsupportedRoute = true
-					break
 				}
 			}
 			if hasUnsupportedRoute {
@@ -295,6 +294,7 @@ func getListenerStatus(
 					LastTransitionTime: metav1.Now(),
 					Reason:             string(gatewayv1beta1.ListenerReasonInvalidRouteKinds),
 				})
+				statuses[listener.Name] = status
 				continue
 			}
 		}

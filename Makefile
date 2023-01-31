@@ -271,7 +271,6 @@ container.debug:
 
 NCPU ?= $(shell getconf _NPROCESSORS_ONLN)
 PKG_LIST = ./pkg/...,./internal/...
-KIND_CLUSTER_NAME ?= "integration-tests"
 INTEGRATION_TEST_TIMEOUT ?= "45m"
 E2E_TEST_TIMEOUT ?= "45m"
 E2E_TEST_RUN ?= ""
@@ -292,7 +291,6 @@ test.conformance: gotestsum
 	$(GOTESTSUM) -- -race \
 		-timeout $(INTEGRATION_TEST_TIMEOUT) \
 		-parallel $(NCPU) \
-		-race \
 		./test/conformance
 
 .PHONY: test.integration

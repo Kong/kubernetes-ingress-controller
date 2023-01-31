@@ -1,0 +1,24 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+- ../base
+
+patchesStrategicMerge:
+  - manager_debug.yaml
+
+generatorOptions:
+  disableNameSuffixHash: true
+
+secretGenerator:
+  - name: konnect-client-tls
+    namespace: kong
+    type: tls
+    files:
+      - tls.crt
+      - tls.key
+
+configMapGenerator:
+  - name: konnect-config
+    namespace: kong
+    envs: [konnect.env]

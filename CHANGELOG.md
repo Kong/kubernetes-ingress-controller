@@ -84,6 +84,10 @@ Adding a new version? You'll need three changes:
   a corresponding environment variable `CONTROLLER_KONG_ADMIN_URL` (which can
   specify multiple values separated by a comma).
   [#3268](https://github.com/Kong/kubernetes-ingress-controller/pull/3268)
+- Added a new `dbless-konnect` configuration variant to the manifests. It can
+  be used to deploy a DB-less variant of KIC that will also synchronise its
+  data-plane configuration with Konnect cloud.
+  [#3448](https://github.com/Kong/kubernetes-ingress-controller/pull/3448)
 
 ### Fixed
 

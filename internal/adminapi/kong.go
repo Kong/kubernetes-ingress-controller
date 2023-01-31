@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/tls"
 	"crypto/x509"
+	"errors"
 	"fmt"
 	"net/http"
 	"os"
@@ -84,8 +85,7 @@ func MakeHTTPClient(opts *HTTPClientOpts) (*http.Client, error) {
 		certPool := x509.NewCertPool()
 		ok := certPool.AppendCertsFromPEM([]byte(opts.CACert))
 		if !ok {
-			// TODO give user an error to make this actionable
-			return nil, fmt.Errorf("failed to load kong-admin-ca-cert")
+			return nil, errors.New("failed to load --kong-admin-ca-cert")
 		}
 		tlsConfig.RootCAs = certPool
 	}
@@ -94,12 +94,11 @@ func MakeHTTPClient(opts *HTTPClientOpts) (*http.Client, error) {
 		certPool := x509.NewCertPool()
 		cert, err := os.ReadFile(certPath)
 		if err != nil {
-			return nil, fmt.Errorf("failed to read kong-admin-ca-cert from path '%s': %w", certPath, err)
+			return nil, fmt.Errorf("failed to read --kong-admin-ca-cert from path '%s': %w", certPath, err)
 		}
 		ok := certPool.AppendCertsFromPEM(cert)
 		if !ok {
-			// TODO give user an error to make this actionable
-			return nil, fmt.Errorf("failed to load kong-admin-ca-cert from path '%s'", certPath)
+			return nil, fmt.Errorf("failed to load --kong-admin-ca-cert from path '%s'", certPath)
 		}
 		tlsConfig.RootCAs = certPool
 	}

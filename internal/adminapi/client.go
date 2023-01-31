@@ -16,10 +16,12 @@ type Client struct {
 	konnectRuntimeGroup string
 }
 
+// NewClient creates an Admin API client that is to be used with a regular Admin API exposed by Kong Gateways.
 func NewClient(c *kong.Client) *Client {
 	return &Client{Client: c}
 }
 
+// NewKonnectClient creates an Admin API client that is to be used with a Konnect Runtime Group Admin API.
 func NewKonnectClient(c *kong.Client, runtimeGroup string) *Client {
 	return &Client{
 		Client:              c,

@@ -19,11 +19,11 @@ type KonnectConfig struct {
 }
 
 func NewKongClientForKonnectRuntimeGroup(ctx context.Context, c KonnectConfig) (*Client, error) {
-	tlsClientCert, err := valueFromVariableOrFile(c.TLSClient.Cert, c.TLSClient.CertFile)
+	tlsClientCert, err := valueFromVariableOrFile([]byte(c.TLSClient.Cert), c.TLSClient.CertFile)
 	if err != nil {
 		return nil, fmt.Errorf("could not extract TLS client cert: %w", err)
 	}
-	tlsClientKey, err := valueFromVariableOrFile(c.TLSClient.Key, c.TLSClient.KeyFile)
+	tlsClientKey, err := valueFromVariableOrFile([]byte(c.TLSClient.Key), c.TLSClient.KeyFile)
 	if err != nil {
 		return nil, fmt.Errorf("could not extract TLS client key: %w", err)
 	}

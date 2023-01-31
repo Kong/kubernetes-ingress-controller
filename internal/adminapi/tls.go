@@ -9,10 +9,10 @@ import (
 // TLSClientConfig contains TLS client certificate and client key to be used when connecting with Admin APIs.
 // It's validated with manager.validateClientTLS before passing it further down. It guarantees that only the
 // allowed combinations of variables will be passed:
-// - only one of Cert / CertFile
-// - only one of Key / KeyFile
-// - if any of Cert / CertFile is set, one of Key / KeyFile has to be set
-// - if any of Key / KeyFile is set, one of Cert / CertFile has to be set
+// - only one of Cert / CertFile,
+// - only one of Key / KeyFile,
+// - if any of Cert / CertFile is set, one of Key / KeyFile has to be set,
+// - if any of Key / KeyFile is set, one of Cert / CertFile has to be set.
 type TLSClientConfig struct {
 	// Cert is a client certificate.
 	Cert string
@@ -32,11 +32,11 @@ func (c TLSClientConfig) IsZero() bool {
 // extractClientCertificates extracts tls.Certificates from TLSClientConfig.
 // It returns an empty slice in case there was no client cert and/or client key provided.
 func extractClientCertificates(tlsClient TLSClientConfig) ([]tls.Certificate, error) {
-	clientCert, err := valueFromVariableOrFile(tlsClient.Cert, tlsClient.CertFile)
+	clientCert, err := valueFromVariableOrFile([]byte(tlsClient.Cert), tlsClient.CertFile)
 	if err != nil {
 		return nil, fmt.Errorf("could not extract TLS client cert")
 	}
-	clientKey, err := valueFromVariableOrFile(tlsClient.Key, tlsClient.KeyFile)
+	clientKey, err := valueFromVariableOrFile([]byte(tlsClient.Key), tlsClient.KeyFile)
 	if err != nil {
 		return nil, fmt.Errorf("could not extract TLS client key")
 	}
@@ -54,9 +54,9 @@ func extractClientCertificates(tlsClient TLSClientConfig) ([]tls.Certificate, er
 
 // valueFromVariableOrFile uses v value if it's not empty, and falls back to reading a file content when value is missing.
 // When both are empty, nil is returned.
-func valueFromVariableOrFile(v string, file string) ([]byte, error) {
-	if v != "" {
-		return []byte(v), nil
+func valueFromVariableOrFile(v []byte, file string) ([]byte, error) {
+	if len(v) > 0 {
+		return v, nil
 	}
 	if file != "" {
 		b, err := os.ReadFile(file)

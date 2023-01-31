@@ -55,7 +55,7 @@ jobs:
     - name: Build and push to local registry
       if: ${{ github.event.inputs.controller-image == 'kong/kubernetes-ingress-controller:ci' }}
       id: docker_build
-      uses: docker/build-push-action@v3
+      uses: docker/build-push-action@v4
       with:
         context: .
         load: true

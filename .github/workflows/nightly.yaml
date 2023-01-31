@@ -67,7 +67,7 @@ jobs:
           tags: ${{ steps.tags-redhat-standard.outputs.TAGS_REDHAT_STANDARD }}
       - name: Build binary
         id: docker_build_binary
-        uses: docker/build-push-action@v3
+        uses: docker/build-push-action@v4
         with:
           push: false
           file: Dockerfile
@@ -81,7 +81,7 @@ jobs:
             REPO_INFO=https://github.com/${{ github.repository }}.git
       - name: Build and push distroless image to DockerHub
         id: docker_build
-        uses: docker/build-push-action@v3
+        uses: docker/build-push-action@v4
         with:
           push: true
           file: Dockerfile
@@ -97,7 +97,7 @@ jobs:
         id: docker_build_redhat
         env:
           TAG: ${{ steps.meta.outputs.version }}
-        uses: docker/build-push-action@v3
+        uses: docker/build-push-action@v4
         with:
           push: true
           file: Dockerfile
@@ -152,7 +152,7 @@ jobs:
         id: docker_build_redhat_scan_registry
         env:
           TAG: ${{ steps.meta_redhat_scan_registry.outputs.version }}
-        uses: docker/build-push-action@v3.1.1
+        uses: docker/build-push-action@v4
         with:
           push: false
           file: Dockerfile

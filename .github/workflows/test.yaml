@@ -69,7 +69,7 @@ jobs:
             ${{ runner.os }}-buildx-
 
       - name: Verify Docker Build
-        uses: docker/build-push-action@v3
+        uses: docker/build-push-action@v4
         with:
           push: false
           file: Dockerfile

@@ -20,6 +20,7 @@ import (
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/adminapi"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/deckgen"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/failures"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
@@ -44,9 +45,9 @@ const (
 // Dataplane Client - Kong - Public Types
 // -----------------------------------------------------------------------------
 
-// KongClient is a threadsafe high level API client for the Kong data-plane
+// KongClient is a threadsafe high level API client for the Kong data-plane(s)
 // which parses Kubernetes object caches into Kong Admin configurations and
-// sends them as updates to the data-plane (Kong Admin API).
+// sends them as updates to the data-plane(s) (Kong Admin API).
 type KongClient struct {
 	logger logrus.FieldLogger
 
@@ -250,6 +251,12 @@ func (c *KongClient) Listeners(ctx context.Context) ([]kong.ProxyListener, []kon
 	c.lock.RLock()
 	for _, cl := range c.kongConfig.Clients {
 		cl := cl
+
+		// We don't take Konnect into consideration as it doesn't expose any listeners.
+		if cl.IsKonnect() {
+			continue
+		}
+
 		errg.Go(func() error {
 			listeners, streamListeners, err := cl.Listeners(ctx)
 			if err != nil {
@@ -438,9 +445,9 @@ func (c *KongClient) sendOutToClients(
 	ctx context.Context, s *kongstate.KongState, formatVersion string, filterTags []string,
 ) ([]string, error) {
 	shas, err := iter.MapErr(c.kongConfig.Clients, func(client *sendconfig.ClientWithPluginStore) (string, error) {
-		return c.sendToClient(ctx, client, s, formatVersion, filterTags)
-	},
-	)
+		newSHA, err := c.sendToClient(ctx, client, s, formatVersion, filterTags)
+		return handleSendToClientResult(client.Client, newSHA, err)
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -450,6 +457,20 @@ func (c *KongClient) sendOutToClients(
 	c.SHAs = shas
 
 	return previousSHAs, nil
+}
+
+// handleSendToClientResult handles a result returned from sendToClient.
+// It will ignore errors that are returned from Konnect client.
+func handleSendToClientResult(client *adminapi.Client, newSHA string, err error) (string, error) {
+	if err != nil {
+		// We do not collect errors from Konnect as they should not break the data-plane loop.
+		if client.IsKonnect() {
+			return "", nil
+		}
+		return "", err
+	}
+
+	return newSHA, nil
 }
 
 func (c *KongClient) sendToClient(

@@ -54,30 +54,13 @@ func PerformUpdate(ctx context.Context,
 
 	// disable optimization if reverse sync is enabled
 	if !reverseSync {
-		// use the previous SHA to determine whether or not to perform an update
-		if bytes.Equal(oldSHA, newSHA) {
-			if !hasSHAUpdateAlreadyBeenReported(newSHA) {
-				log.Debugf("sha %s has been reported", hex.EncodeToString(newSHA))
-			}
-
-			// we assume ready as not all Kong versions provide their configuration hash,
-			// and their readiness state is always unknown
-			ready := true
-
-			status, err := client.Status(ctx)
-			if err != nil {
-				return nil, err
-			}
-
-			if status.ConfigurationHash == initialHash {
-				ready = false
-			}
-
-			if ready {
-				log.Debug("no configuration change, skipping sync to kong")
-				return oldSHA, nil
-			}
-			log.Debugf("starting to send configuration (hash: %s)", status.ConfigurationHash)
+		configurationChanged, err := hasConfigurationChanged(ctx, oldSHA, newSHA, client, log)
+		if err != nil {
+			return nil, err
+		}
+		if !configurationChanged {
+			log.Debug("no configuration change, skipping sync to kong")
+			return oldSHA, nil
 		}
 	}
 
@@ -288,4 +271,50 @@ func isConflictErr(err error) bool {
 	}
 
 	return false
+}
+
+// hasConfigurationChanged verifies whether configuration has changed by comparing old and new config's SHAs.
+// In case the SHAs are equal, it still can return true if a client is considered crashed based on its status.
+func hasConfigurationChanged(
+	ctx context.Context,
+	oldSHA, newSHA []byte,
+	client *adminapi.Client,
+	log logrus.FieldLogger,
+) (bool, error) {
+	if !bytes.Equal(oldSHA, newSHA) {
+		return true, nil
+	}
+	if !hasSHAUpdateAlreadyBeenReported(newSHA) {
+		log.Debugf("sha %s has been reported", hex.EncodeToString(newSHA))
+	}
+	if !client.IsKonnect() {
+		crashed, err := hasCrashed(ctx, client, log)
+		if err != nil {
+			return false, fmt.Errorf("failed to verify kong readiness: %w", err)
+		}
+		// Kong instance has crashed, we should push config despite the oldSHA and newSHA being equal.
+		if crashed {
+			return true, nil
+		}
+	}
+
+	return false, nil
+}
+
+// hasCrashed checks Kong's status endpoint and read its config hash.
+// If the config hash reported by Kong is the known empty hash, it's considered crashed.
+// This allows providing configuration to Kong instances that have unexpectedly crashed and
+// lost their configuration.
+func hasCrashed(ctx context.Context, client *adminapi.Client, log logrus.FieldLogger) (bool, error) {
+	status, err := client.Status(ctx)
+	if err != nil {
+		return false, err
+	}
+
+	if crashed := status.ConfigurationHash == initialHash; crashed {
+		log.Debugf("starting to send configuration (hash: %s)", status.ConfigurationHash)
+		return true, nil
+	}
+
+	return false, nil
 }

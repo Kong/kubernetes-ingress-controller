@@ -258,8 +258,12 @@ func generateAddressFinderGetter(mgrc client.Client, publishServiceNn types.Name
 	}
 }
 
-// getKongClients returns the kong clients.
-func getKongClients(ctx context.Context, cfg *Config) ([]*adminapi.Client, error) {
+// getKongClients returns the kong clients that are to be used to configure data-plane nodes with Admin API.
+// It will create an adminapi.Client per cfg.KongAdminURL entry.
+// It will also optionally create a single client for Konnect Runtime Group in case the feature flag is turned on.
+// If Konnect client creation fails, it will be logged, but no error will be propagated to not interfere the basic
+// functionality.
+func getKongClients(ctx context.Context, cfg *Config, logger logr.Logger) ([]*adminapi.Client, error) {
 	httpclient, err := adminapi.MakeHTTPClient(&cfg.KongAdminAPIConfig)
 	if err != nil {
 		return nil, err
@@ -272,6 +276,15 @@ func getKongClients(ctx context.Context, cfg *Config) ([]*adminapi.Client, error
 			return nil, err
 		}
 		clients = append(clients, client)
+	}
+
+	if cfg.Konnect.ConfigSynchronizationEnabled {
+		konnectClient, err := adminapi.NewKongClientForKonnectRuntimeGroup(ctx, cfg.Konnect)
+		if err != nil {
+			logger.Error(err, "failed creating Konnect Runtime Group Admin API client, skipping synchronisation")
+		} else {
+			clients = append(clients, konnectClient)
+		}
 	}
 
 	return clients, nil

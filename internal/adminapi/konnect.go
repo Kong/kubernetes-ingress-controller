@@ -13,7 +13,7 @@ import (
 
 type KonnectConfig struct {
 	ConfigSynchronizationEnabled bool
-	RuntimeGroup                 string
+	RuntimeGroupID               string
 	Address                      string
 	TLSClient                    TLSClientConfig
 }
@@ -29,7 +29,7 @@ func NewKongClientForKonnectRuntimeGroup(ctx context.Context, c KonnectConfig) (
 	}
 
 	client, err := deckutils.GetKongClient(deckutils.KongClientConfig{
-		Address:       fmt.Sprintf("%s/%s/%s", c.Address, "kic/api/runtime_groups", c.RuntimeGroup),
+		Address:       fmt.Sprintf("%s/%s/%s", c.Address, "kic/api/runtime_groups", c.RuntimeGroupID),
 		TLSClientCert: string(tlsClientCert),
 		TLSClientKey:  string(tlsClientKey),
 	})
@@ -42,7 +42,7 @@ func NewKongClientForKonnectRuntimeGroup(ctx context.Context, c KonnectConfig) (
 	if err := ensureKonnectConnection(ctx, client); err != nil {
 		return nil, err
 	}
-	return NewKonnectClient(client, c.RuntimeGroup), nil
+	return NewKonnectClient(client, c.RuntimeGroupID), nil
 }
 
 func ensureKonnectConnection(ctx context.Context, client *kong.Client) error {

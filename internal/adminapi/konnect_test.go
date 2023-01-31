@@ -20,7 +20,7 @@ func TestNewKongClientForKonnectRuntimeGroup(t *testing.T) {
 
 	c, err := adminapi.NewKongClientForKonnectRuntimeGroup(ctx, adminapi.KonnectConfig{
 		ConfigSynchronizationEnabled: true,
-		RuntimeGroup:                 runtimeGroupID,
+		RuntimeGroupID:               runtimeGroupID,
 		Address:                      "https://us.kic.api.konghq.tech",
 		TLSClient: adminapi.TLSClientConfig{
 			Cert: os.Getenv("KONG_TEST_KONNECT_TLS_CLIENT_CERT"),

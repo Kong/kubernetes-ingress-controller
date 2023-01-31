@@ -84,7 +84,7 @@ func TestConfigValidate(t *testing.T) {
 			return &manager.Config{
 				Konnect: adminapi.KonnectConfig{
 					ConfigSynchronizationEnabled: true,
-					RuntimeGroup:                 "fbd3036f-0f1c-4e98-b71c-d4cd61213f90",
+					RuntimeGroupID:               "fbd3036f-0f1c-4e98-b71c-d4cd61213f90",
 					Address:                      "https://us.kic.api.konghq.tech",
 					TLSClient: adminapi.TLSClientConfig{
 						// We do not set valid cert or key, and it's still considered valid as at this level we only care
@@ -140,7 +140,7 @@ func TestConfigValidate(t *testing.T) {
 
 		t.Run("enabled with no runtime group is rejected", func(t *testing.T) {
 			c := validEnabled()
-			c.Konnect.RuntimeGroup = ""
+			c.Konnect.RuntimeGroupID = ""
 			require.ErrorContains(t, c.Validate(), "runtime group not specified")
 		})
 

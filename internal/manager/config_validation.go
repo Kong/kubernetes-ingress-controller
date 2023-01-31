@@ -56,7 +56,7 @@ func (c *Config) validateKonnect() error {
 	if konnect.Address == "" {
 		return errors.New("address not specified")
 	}
-	if konnect.RuntimeGroup == "" {
+	if konnect.RuntimeGroupID == "" {
 		return errors.New("runtime group not specified")
 	}
 	if konnect.TLSClient.IsZero() {

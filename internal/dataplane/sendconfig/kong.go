@@ -6,11 +6,9 @@ import (
 
 	"github.com/blang/semver/v4"
 	"github.com/go-logr/logr"
-	"github.com/samber/lo"
 	"golang.org/x/sync/errgroup"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/adminapi"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 )
 
 // -----------------------------------------------------------------------------
@@ -19,8 +17,11 @@ import (
 
 // Kong Represents a Kong client and connection information.
 type Kong struct {
-	Clients []ClientWithPluginStore
+	Clients []*adminapi.Client
+	Config  Config
+}
 
+type Config struct {
 	// Currently, this assumes that all underlying clients are using the same version
 	// hence this shared field in here.
 	Version  semver.Version
@@ -28,6 +29,17 @@ type Kong struct {
 
 	Concurrency int
 	FilterTags  []string
+
+	// SkipCACertificates disables CA certificates, to avoid fighting over configuration in multi-workspace
+	// environments. See https://github.com/Kong/deck/pull/617
+	SkipCACertificates bool
+
+	// DBMode indicates the current database mode of the backend Kong Admin API
+	DBMode string
+
+	// EnableReverseSync indicates that reverse sync should be enabled for
+	// updates to the data-plane.
+	EnableReverseSync bool
 }
 
 // New creates new Kong client that is responsible for sending configurations
@@ -40,6 +52,8 @@ func New(
 	dbMode string,
 	concurrency int,
 	filterTags []string,
+	skipCACertificates bool,
+	enableReverseSync bool,
 ) Kong {
 	var (
 		errg errgroup.Group
@@ -49,12 +63,12 @@ func New(
 	for _, cl := range kongClients {
 		cl := cl
 		errg.Go(func() error {
-			ok, err := cl.Tags.Exists(ctx)
+			ok, err := cl.AdminAPIClient().Tags.Exists(ctx)
 			if err != nil {
-				return fmt.Errorf("Kong Admin API (%s) does not support tags: %w", cl.BaseRootURL(), err)
+				return fmt.Errorf("Kong Admin API (%s) does not support tags: %w", cl.AdminAPIClient().BaseRootURL(), err)
 			}
 			if !ok {
-				return fmt.Errorf("Kong Admin API (%s) does not support tags", cl.BaseRootURL())
+				return fmt.Errorf("Kong Admin API (%s) does not support tags", cl.AdminAPIClient().BaseRootURL())
 			}
 			return nil
 		})
@@ -67,30 +81,15 @@ func New(
 	}
 
 	return Kong{
-		InMemory:    (dbMode == "off") || (dbMode == ""),
-		Version:     v,
-		FilterTags:  tags,
-		Concurrency: concurrency,
-		Clients: lo.Map(kongClients, func(client *adminapi.Client, index int) ClientWithPluginStore {
-			return ClientWithPluginStore{
-				Client:            client,
-				PluginSchemaStore: util.NewPluginSchemaStore(client.Client),
-			}
-		}),
+		Config: Config{
+			Version:            v,
+			InMemory:           (dbMode == "off") || (dbMode == ""),
+			Concurrency:        concurrency,
+			FilterTags:         tags,
+			SkipCACertificates: skipCACertificates,
+			DBMode:             dbMode,
+			EnableReverseSync:  enableReverseSync,
+		},
+		Clients: kongClients,
 	}
-}
-
-type ClientWithPluginStore struct {
-	*adminapi.Client
-	*util.PluginSchemaStore
-	// lastConfigSHA is a checksum of the last successful update to the data-plane
-	lastConfigSHA []byte
-}
-
-func (c *ClientWithPluginStore) SetLastConfigSHA(s []byte) {
-	c.lastConfigSHA = s
-}
-
-func (c *ClientWithPluginStore) LastConfigSHA() []byte {
-	return c.lastConfigSHA
 }

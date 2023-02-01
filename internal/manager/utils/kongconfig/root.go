@@ -171,7 +171,7 @@ func GetRoots(
 		eg.Go(func() error {
 			return retry.Do(
 				func() error {
-					root, err := client.Root(ctx)
+					root, err := client.AdminAPIClient().Root(ctx)
 					// Abort if the provided context has been cancelled.
 					if errors.Is(err, context.Canceled) {
 						return retry.Unrecoverable(err)

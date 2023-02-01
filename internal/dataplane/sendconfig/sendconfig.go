@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/hex"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"net"
@@ -13,7 +12,6 @@ import (
 	"time"
 
 	"github.com/blang/semver/v4"
-	"github.com/kong/deck/diff"
 	"github.com/kong/deck/dump"
 	"github.com/kong/deck/file"
 	"github.com/kong/deck/state"
@@ -27,8 +25,6 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/metrics"
 )
 
-const initialHash = "00000000000000000000000000000000"
-
 // -----------------------------------------------------------------------------
 // Sendconfig - Public Functions
 // -----------------------------------------------------------------------------
@@ -37,13 +33,8 @@ const initialHash = "00000000000000000000000000000000"
 func PerformUpdate(ctx context.Context,
 	log logrus.FieldLogger,
 	client *adminapi.Client,
-	version semver.Version,
-	concurrency int,
-	inMemory bool,
-	reverseSync bool,
-	skipCACertificates bool,
+	config Config,
 	targetContent *file.Content,
-	selectorTags []string,
 	oldSHA []byte,
 	promMetrics *metrics.CtrlFuncMetrics,
 ) ([]byte, error) {
@@ -53,7 +44,7 @@ func PerformUpdate(ctx context.Context,
 	}
 
 	// disable optimization if reverse sync is enabled
-	if !reverseSync {
+	if !config.EnableReverseSync {
 		configurationChanged, err := hasConfigurationChanged(ctx, oldSHA, newSHA, client, log)
 		if err != nil {
 			return nil, err
@@ -64,17 +55,17 @@ func PerformUpdate(ctx context.Context,
 		}
 	}
 
-	var metricsProtocol string
+	updateStrategy := ProvideUpdateStrategy(
+		client,
+		config,
+	)
+
 	timeStart := time.Now()
-	if inMemory {
-		metricsProtocol = metrics.ProtocolDBLess
-		err = onUpdateInMemoryMode(ctx, log, targetContent, client.Client)
-	} else {
-		metricsProtocol = metrics.ProtocolDeck
-		dumpConfig := dump.Config{SelectorTags: selectorTags, SkipCACerts: skipCACertificates}
-		err = onUpdateDBMode(ctx, targetContent, client, dumpConfig, version, concurrency)
-	}
+	err = updateStrategy.Update(ctx, targetContent)
 	timeEnd := time.Now()
+
+	updateDuration := float64(timeEnd.Sub(timeStart).Milliseconds())
+	metricsProtocol := updateStrategy.MetricsProtocol()
 
 	if err != nil {
 		promMetrics.ConfigPushCount.With(prometheus.Labels{
@@ -85,7 +76,7 @@ func PerformUpdate(ctx context.Context,
 		promMetrics.ConfigPushDuration.With(prometheus.Labels{
 			metrics.SuccessKey:  metrics.SuccessFalse,
 			metrics.ProtocolKey: metricsProtocol,
-		}).Observe(float64(timeEnd.Sub(timeStart).Milliseconds()))
+		}).Observe(updateDuration)
 		return nil, err
 	}
 
@@ -97,7 +88,7 @@ func PerformUpdate(ctx context.Context,
 	promMetrics.ConfigPushDuration.With(prometheus.Labels{
 		metrics.SuccessKey:  metrics.SuccessTrue,
 		metrics.ProtocolKey: metricsProtocol,
-	}).Observe(float64(timeEnd.Sub(timeStart).Milliseconds()))
+	}).Observe(updateDuration)
 	log.Info("successfully synced configuration to kong.")
 	return newSHA, nil
 }
@@ -105,67 +96,6 @@ func PerformUpdate(ctx context.Context,
 // -----------------------------------------------------------------------------
 // Sendconfig - Private Functions
 // -----------------------------------------------------------------------------
-
-func onUpdateInMemoryMode(
-	ctx context.Context,
-	log logrus.FieldLogger,
-	state *file.Content,
-	client *kong.Client,
-) error {
-	// Kong will error out if this is set
-	state.Info = nil
-	// Kong errors out if `null`s are present in `config` of plugins
-	deckgen.CleanUpNullsInPluginConfigs(state)
-
-	config, err := json.Marshal(state)
-	if err != nil {
-		return fmt.Errorf("constructing kong configuration: %w", err)
-	}
-
-	log.WithField("kong_url", client.BaseRootURL()).
-		Debug("sending configuration to Kong Admin API")
-	if err = client.Configs.ReloadDeclarativeRawConfig(ctx, bytes.NewReader(config), true); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func onUpdateDBMode(
-	ctx context.Context,
-	targetContent *file.Content,
-	client *adminapi.Client,
-	dumpConfig dump.Config,
-	version semver.Version,
-	concurrency int,
-) error {
-	cs, err := currentState(ctx, client.Client, dumpConfig)
-	if err != nil {
-		return fmt.Errorf("failed getting current state for %s: %w", client.BaseRootURL(), err)
-	}
-
-	ts, err := targetState(ctx, targetContent, cs, version, client.Client, dumpConfig)
-	if err != nil {
-		return deckConfigConflictError{err}
-	}
-
-	syncer, err := diff.NewSyncer(diff.SyncerOpts{
-		CurrentState:    cs,
-		TargetState:     ts,
-		KongClient:      client.Client,
-		SilenceWarnings: true,
-	})
-	if err != nil {
-		return fmt.Errorf("creating a new syncer for %s: %w", client.BaseRootURL(), err)
-	}
-
-	_, errs := syncer.Solve(ctx, concurrency, false)
-	if errs != nil {
-		return deckutils.ErrArray{Errors: errs}
-	}
-
-	return nil
-}
 
 func currentState(ctx context.Context, kongClient *kong.Client, dumpConfig dump.Config) (*state.KongState, error) {
 	rawState, err := dump.Get(ctx, kongClient, dumpConfig)
@@ -306,11 +236,12 @@ func hasConfigurationChanged(
 // This allows providing configuration to Kong instances that have unexpectedly crashed and
 // lost their configuration.
 func hasCrashed(ctx context.Context, client *adminapi.Client, log logrus.FieldLogger) (bool, error) {
-	status, err := client.Status(ctx)
+	status, err := client.AdminAPIClient().Status(ctx)
 	if err != nil {
 		return false, err
 	}
 
+	const initialHash = "00000000000000000000000000000000"
 	if crashed := status.ConfigurationHash == initialHash; crashed {
 		log.Debugf("starting to send configuration (hash: %s)", status.ConfigurationHash)
 		return true, nil

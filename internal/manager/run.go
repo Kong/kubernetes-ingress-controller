@@ -57,7 +57,7 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 	if c.KongAdminToken != "" {
 		c.KongAdminAPIConfig.Headers = append(c.KongAdminAPIConfig.Headers, "kong-admin-token:"+c.KongAdminToken)
 	}
-	kongClients, err := getKongClients(ctx, c)
+	kongClients, err := getKongClients(ctx, c, setupLog)
 	if err != nil {
 		return fmt.Errorf("unable to build kong api client(s): %w", err)
 	}
@@ -73,7 +73,7 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 	}
 	semV := semver.Version{Major: v.Major(), Minor: v.Minor(), Patch: v.Patch()}
 	versions.SetKongVersion(semV)
-	kongConfig := sendconfig.New(ctx, setupLog, kongClients, semV, dbMode, c.Concurrency, c.FilterTags)
+	kongConfig := sendconfig.New(ctx, setupLog, kongClients, semV, dbMode, c.Concurrency, c.FilterTags, c.SkipCACertificates, c.EnableReverseSync)
 
 	setupLog.Info("configuring and building the controller manager")
 	controllerOpts, err := setupControllerOptions(setupLog, c, dbMode)
@@ -86,7 +86,7 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 	}
 
 	setupLog.Info("Starting Admission Server")
-	if err := setupAdmissionServer(ctx, c, mgr.GetClient(), deprecatedLogger); err != nil {
+	if err := setupAdmissionServer(ctx, c, mgr.GetClient(), setupLog, deprecatedLogger); err != nil {
 		return err
 	}
 
@@ -96,19 +96,16 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 		deprecatedLogger,
 		time.Duration(c.ProxyTimeoutSeconds*float32(time.Second)),
 		c.IngressClassName,
-		c.EnableReverseSync,
-		c.SkipCACertificates,
 		diagnostic,
 		kongConfig,
 		eventRecorder,
-		dbMode,
 	)
 	if err != nil {
 		return fmt.Errorf("failed to initialize kong data-plane client: %w", err)
 	}
 
 	setupLog.Info("Initializing Dataplane Synchronizer")
-	synchronizer, err := setupDataplaneSynchronizer(setupLog, deprecatedLogger, mgr, dataplaneClient, c.ProxySyncSeconds)
+	synchronizer, err := setupDataplaneSynchronizer(setupLog, deprecatedLogger, mgr, dataplaneClient, c.ProxySyncSeconds, dbMode)
 	if err != nil {
 		return fmt.Errorf("unable to initialize dataplane synchronizer: %w", err)
 	}

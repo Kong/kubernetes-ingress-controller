@@ -22,10 +22,6 @@ const (
 // -----------------------------------------------------------------------------
 
 type Client interface {
-	// DBMode informs the caller which DB mode the data-plane has employed
-	// (e.g. "off" (dbless) or "postgres").
-	DBMode() string
-
 	// Update the data-plane by parsing the current configuring and applying
 	// it to the backend API.
 	Update(ctx context.Context) error

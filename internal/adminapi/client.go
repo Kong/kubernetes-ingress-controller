@@ -2,6 +2,8 @@ package adminapi
 
 import (
 	"github.com/kong/go-kong/kong"
+
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 )
 
 // Client is a wrapper around *kong.Client. It's needed to be able to distinguish between clients
@@ -10,21 +12,26 @@ import (
 // The distinction is needed to be able to tell what protocol (deck or dbless) should be used when
 // updating configuration using the client.
 type Client struct {
-	*kong.Client
-
+	adminAPIClient      *kong.Client
+	pluginSchemaStore   *util.PluginSchemaStore
 	isKonnect           bool
 	konnectRuntimeGroup string
+
+	// lastConfigSHA is a checksum of the last successful update to the data-plane
+	lastConfigSHA []byte
 }
 
 // NewClient creates an Admin API client that is to be used with a regular Admin API exposed by Kong Gateways.
 func NewClient(c *kong.Client) *Client {
-	return &Client{Client: c}
+	return &Client{
+		adminAPIClient: c,
+	}
 }
 
 // NewKonnectClient creates an Admin API client that is to be used with a Konnect Runtime Group Admin API.
 func NewKonnectClient(c *kong.Client, runtimeGroup string) *Client {
 	return &Client{
-		Client:              c,
+		adminAPIClient:      c,
 		isKonnect:           true,
 		konnectRuntimeGroup: runtimeGroup,
 	}
@@ -43,4 +50,20 @@ func (c *Client) KonnectRuntimeGroup() string {
 	}
 
 	return c.konnectRuntimeGroup
+}
+
+func (c *Client) AdminAPIClient() *kong.Client {
+	return c.adminAPIClient
+}
+
+func (c *Client) PluginSchemaStore() *util.PluginSchemaStore {
+	return c.pluginSchemaStore
+}
+
+func (c *Client) SetLastConfigSHA(s []byte) {
+	c.lastConfigSHA = s
+}
+
+func (c *Client) LastConfigSHA() []byte {
+	return c.lastConfigSHA
 }

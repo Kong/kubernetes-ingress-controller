@@ -19,14 +19,15 @@ func TestSynchronizer(t *testing.T) {
 	tick := time.Millisecond * 10
 
 	t.Log("setting up a fake dataplane client to test the synchronizer")
-	c := &fakeDataplaneClient{dbmode: "postgres"}
+	c := &fakeDataplaneClient{}
 
 	t.Log("configuring the dataplane synchronizer")
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
 	t.Log("initializing the dataplane synchronizer")
-	sync, err := NewSynchronizer(logrus.New(), c, WithStagger(tick), WithInitWaitPeriod(tick))
+	const dbmode = "postgres"
+	sync, err := NewSynchronizer(logrus.New(), c, dbmode, WithStagger(tick), WithInitWaitPeriod(tick))
 	require.NoError(t, err)
 	assert.NotNil(t, sync)
 
@@ -84,15 +85,8 @@ func TestSynchronizer(t *testing.T) {
 // fakeDataplaneClient fakes the dataplane.Client interface so that we can
 // unit test the dataplane.Synchronizer.
 type fakeDataplaneClient struct {
-	dbmode      string
 	updateCount int
 	lock        sync.RWMutex
-}
-
-func (c *fakeDataplaneClient) DBMode() string {
-	c.lock.RLock()
-	defer c.lock.RUnlock()
-	return c.dbmode
 }
 
 func (c *fakeDataplaneClient) Update(ctx context.Context) error {

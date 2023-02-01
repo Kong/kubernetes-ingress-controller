@@ -120,6 +120,7 @@ func setupDataplaneSynchronizer(
 	mgr manager.Manager,
 	dataplaneClient dataplane.Client,
 	proxySyncSeconds float32,
+	dbmode string,
 ) (*dataplane.Synchronizer, error) {
 	if proxySyncSeconds < dataplane.DefaultSyncSeconds {
 		logger.Info(fmt.Sprintf(
@@ -132,6 +133,7 @@ func setupDataplaneSynchronizer(
 	dataplaneSynchronizer, err := dataplane.NewSynchronizer(
 		fieldLogger.WithField("subsystem", "dataplane-synchronizer"),
 		dataplaneClient,
+		dbmode,
 		dataplane.WithStagger(time.Duration(proxySyncSeconds*float32(time.Second))),
 	)
 	if err != nil {
@@ -150,16 +152,17 @@ func setupAdmissionServer(
 	ctx context.Context,
 	managerConfig *Config,
 	managerClient client.Client,
+	logger logr.Logger,
 	deprecatedLogger logrus.FieldLogger,
 ) error {
-	logger := deprecatedLogger.WithField("component", "admission-server")
+	deprecatedLogger = deprecatedLogger.WithField("component", "admission-server")
 
 	if managerConfig.AdmissionServer.ListenAddr == "off" {
 		logger.Info("admission webhook server disabled")
 		return nil
 	}
 
-	kongclients, err := getKongClients(ctx, managerConfig)
+	kongclients, err := getKongClients(ctx, managerConfig, logger)
 	if err != nil {
 		return err
 	}
@@ -173,20 +176,20 @@ func setupAdmissionServer(
 			//
 			// TODO: We should take a look at this sooner rather than later.
 			// https://github.com/Kong/kubernetes-ingress-controller/issues/3363
-			kongclients[0].Consumers,
-			kongclients[0].Plugins,
-			logger,
+			kongclients[0].AdminAPIClient().Consumers,
+			kongclients[0].AdminAPIClient().Plugins,
+			deprecatedLogger,
 			managerClient,
 			managerConfig.IngressClassName,
 		),
-		Logger: logger,
-	}, logger)
+		Logger: deprecatedLogger,
+	}, deprecatedLogger)
 	if err != nil {
 		return err
 	}
 	go func() {
 		err := srv.ListenAndServeTLS("", "")
-		logger.WithError(err).Error("admission webhook server stopped")
+		deprecatedLogger.WithError(err).Error("admission webhook server stopped")
 	}()
 	return nil
 }

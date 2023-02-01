@@ -56,19 +56,11 @@ type KongClient struct {
 	// into data-plane configuration.
 	ingressClass string
 
-	// enableReverseSync indicates that reverse sync should be enabled for
-	// updates to the data-plane.
-	enableReverseSync bool
-
 	// enableCombinedServiceRoutes indicates that when translating Kubernetes
 	// ingress objects into Kong Admin API configuration we should disable the
 	// legacy logic which would create a single route per path and instead use
 	// the newer logic which combines them.
 	enableCombinedServiceRoutes bool
-
-	// skipCACertificates disables CA certificates, to avoid fighting over configuration in multi-workspace
-	// environments. See https://github.com/Kong/deck/pull/617
-	skipCACertificates bool
 
 	// requestTimeout is the maximum amount of time that should be waited for
 	// requests to the data-plane to receive a response.
@@ -80,9 +72,6 @@ type KongClient struct {
 
 	// kongConfig is the client configuration for the Kong Admin API
 	kongConfig sendconfig.Kong
-
-	// dbmode indicates the current database mode of the backend Kong Admin API
-	dbmode string
 
 	// lock is used to ensure threadsafety of the KongClient object
 	lock sync.RWMutex
@@ -134,27 +123,21 @@ func NewKongClient(
 	logger logrus.FieldLogger,
 	timeout time.Duration,
 	ingressClass string,
-	enableReverseSync bool,
-	skipCACertificates bool,
 	diagnostic util.ConfigDumpDiagnostic,
 	kongConfig sendconfig.Kong,
 	eventRecorder record.EventRecorder,
-	dbMode string,
 ) (*KongClient, error) {
 	// build the client object
 	cache := store.NewCacheStores()
 	c := &KongClient{
-		logger:             logger,
-		ingressClass:       ingressClass,
-		enableReverseSync:  enableReverseSync,
-		skipCACertificates: skipCACertificates,
-		requestTimeout:     timeout,
-		diagnostic:         diagnostic,
-		prometheusMetrics:  metrics.NewCtrlFuncMetrics(),
-		cache:              &cache,
-		kongConfig:         kongConfig,
-		eventRecorder:      eventRecorder,
-		dbmode:             dbMode,
+		logger:            logger,
+		ingressClass:      ingressClass,
+		requestTimeout:    timeout,
+		diagnostic:        diagnostic,
+		prometheusMetrics: metrics.NewCtrlFuncMetrics(),
+		cache:             &cache,
+		kongConfig:        kongConfig,
+		eventRecorder:     eventRecorder,
 	}
 
 	return c, nil
@@ -258,9 +241,9 @@ func (c *KongClient) Listeners(ctx context.Context) ([]kong.ProxyListener, []kon
 		}
 
 		errg.Go(func() error {
-			listeners, streamListeners, err := cl.Listeners(ctx)
+			listeners, streamListeners, err := cl.AdminAPIClient().Listeners(ctx)
 			if err != nil {
-				return fmt.Errorf("failed to get listeners from %s: %w", cl.BaseRootURL(), err)
+				return fmt.Errorf("failed to get listeners from %s: %w", cl.AdminAPIClient().BaseRootURL(), err)
 			}
 			listenersCh <- listeners
 			streamListenersCh <- streamListeners
@@ -367,13 +350,6 @@ func (c *KongClient) AreCombinedServiceRoutesEnabled() bool {
 // Dataplane Client - Kong - Interface Implementation
 // -----------------------------------------------------------------------------
 
-// DBMode indicates which database the Kong Gateway is using.
-func (c *KongClient) DBMode() string {
-	c.lock.RLock()
-	defer c.lock.RUnlock()
-	return c.dbmode
-}
-
 // Update parses the Cache present in the client and converts current
 // Kubernetes state into Kong objects and state, and then ships the
 // resulting configuration to the data-plane (Kong Admin API).
@@ -419,7 +395,7 @@ func (c *KongClient) Update(ctx context.Context) error {
 		c.logger.Debug("successfully built data-plane configuration")
 	}
 
-	shas, err := c.sendOutToClients(ctx, kongstate, formatVersion, c.kongConfig.FilterTags)
+	shas, err := c.sendOutToClients(ctx, kongstate, formatVersion)
 	if err != nil {
 		return err
 	}
@@ -441,12 +417,11 @@ func (c *KongClient) Update(ctx context.Context) error {
 
 // sendOutToClients will generate deck content (config) from the provided kong state
 // and send it out to each of the configured clients.
-func (c *KongClient) sendOutToClients(
-	ctx context.Context, s *kongstate.KongState, formatVersion string, filterTags []string,
-) ([]string, error) {
-	shas, err := iter.MapErr(c.kongConfig.Clients, func(client *sendconfig.ClientWithPluginStore) (string, error) {
-		newSHA, err := c.sendToClient(ctx, client, s, formatVersion, filterTags)
-		return handleSendToClientResult(client.Client, newSHA, err)
+func (c *KongClient) sendOutToClients(ctx context.Context, s *kongstate.KongState, formatVersion string) ([]string, error) {
+	cfg := c.kongConfig.Config
+	shas, err := iter.MapErr(c.kongConfig.Clients, func(client **adminapi.Client) (string, error) {
+		newSHA, err := c.sendToClient(ctx, *client, s, cfg, formatVersion)
+		return handleSendToClientResult(*client, newSHA, err)
 	})
 	if err != nil {
 		return nil, err
@@ -475,58 +450,24 @@ func handleSendToClientResult(client *adminapi.Client, newSHA string, err error)
 
 func (c *KongClient) sendToClient(
 	ctx context.Context,
-	client *sendconfig.ClientWithPluginStore,
+	client *adminapi.Client,
 	s *kongstate.KongState,
+	config sendconfig.Config,
 	formatVersion string,
-	filterTags []string,
 ) (string, error) {
-	var (
-		logger         = c.logger.WithField("kong_url", client.BaseRootURL())
-		sendDiagnostic = func(
-			log logrus.FieldLogger, failed bool, ch chan<- util.ConfigDump, diagnosticConfig *file.Content,
-		) {
-			// Given that we can send multiple configs to this channel and
-			// the fact that the API that exposes that can only expose 1 config
-			// at a time it means that users utilizing the diagnostics API
-			// might not see exactly what they indend to see i.e. come failures
-			// or successfully send configs might be covered by those send
-			// later on but we're OK with this limitation of said API.
-			select {
-			case ch <- util.ConfigDump{Failed: failed, Config: *diagnosticConfig}:
-				log.Debug("shipping config to diagnostic server")
-			default:
-				log.Error("config diagnostic buffer full, dropping diagnostic config")
-			}
-		}
-	)
+	logger := c.logger.WithField("kong_url", client.AdminAPIClient().BaseRootURL())
 
 	// generate the deck configuration to be applied to the admin API
 	logger.Debug("converting configuration to deck config")
 	targetConfig := deckgen.ToDeckContent(ctx,
 		logger,
 		s,
-		client.PluginSchemaStore,
-		filterTags,
+		client.PluginSchemaStore(),
+		config.FilterTags,
 		formatVersion,
 	)
 
-	// generate diagnostic configuration if enabled
-	// "diagnostic" will be empty if --dump-config is not set
-	var diagnosticConfig *file.Content
-	if c.diagnostic != (util.ConfigDumpDiagnostic{}) {
-		if !c.diagnostic.DumpsIncludeSensitive {
-			redactedConfig := deckgen.ToDeckContent(ctx,
-				logger,
-				s.SanitizedCopy(),
-				client.PluginSchemaStore,
-				filterTags,
-				formatVersion,
-			)
-			diagnosticConfig = redactedConfig
-		} else {
-			diagnosticConfig = targetConfig
-		}
-	}
+	sendDiagnostic := c.prepareSendDiagnosticFn(ctx, logger, s, targetConfig, client, config.FilterTags, formatVersion)
 
 	// apply the configuration update in Kong
 	timedCtx, cancel := context.WithTimeout(ctx, c.requestTimeout)
@@ -534,14 +475,9 @@ func (c *KongClient) sendToClient(
 	newConfigSHA, err := sendconfig.PerformUpdate(
 		timedCtx,
 		logger,
-		client.Client,
-		c.kongConfig.Version,
-		c.kongConfig.Concurrency,
-		c.kongConfig.InMemory,
-		c.enableReverseSync,
-		c.skipCACertificates,
+		client,
+		c.kongConfig.Config,
 		targetConfig,
-		filterTags,
 		client.LastConfigSHA(),
 		c.prometheusMetrics,
 	)
@@ -549,15 +485,11 @@ func (c *KongClient) sendToClient(
 		if expired, ok := timedCtx.Deadline(); ok && time.Now().After(expired) {
 			logger.Warn("exceeded Kong API timeout, consider increasing --proxy-timeout-seconds")
 		}
-		if c.diagnostic != (util.ConfigDumpDiagnostic{}) {
-			sendDiagnostic(logger, true, c.diagnostic.Configs, diagnosticConfig)
-		}
-		return "", fmt.Errorf("performing update for %s failed: %w", client.BaseRootURL(), err)
+		sendDiagnostic(true)
+		return "", fmt.Errorf("performing update for %s failed: %w", client.AdminAPIClient().BaseRootURL(), err)
 	}
 
-	if c.diagnostic != (util.ConfigDumpDiagnostic{}) {
-		sendDiagnostic(logger, false, c.diagnostic.Configs, diagnosticConfig)
-	}
+	sendDiagnostic(false)
 
 	// update the lastConfigSHA with the new updated checksum
 	client.SetLastConfigSHA(newConfigSHA)
@@ -568,6 +500,54 @@ func (c *KongClient) sendToClient(
 // -----------------------------------------------------------------------------
 // Dataplane Client - Kong - Private
 // -----------------------------------------------------------------------------
+
+type sendDiagnosticFn func(failed bool)
+
+// prepareSendDiagnosticFn generates sendDiagnosticFn.
+// Diagnostics are sent only when KongClient.diagnostic (--dump-config) is set.
+func (c *KongClient) prepareSendDiagnosticFn(
+	ctx context.Context,
+	log logrus.FieldLogger,
+	targetState *kongstate.KongState,
+	targetContent *file.Content,
+	client *adminapi.Client,
+	filterTags []string,
+	formatVersion string,
+) sendDiagnosticFn {
+	if c.diagnostic == (util.ConfigDumpDiagnostic{}) {
+		// noop, diagnostics won't be sent
+		return func(bool) {}
+	}
+
+	var config *file.Content
+	if !c.diagnostic.DumpsIncludeSensitive {
+		redactedConfig := deckgen.ToDeckContent(ctx,
+			log,
+			targetState.SanitizedCopy(),
+			client.PluginSchemaStore(),
+			filterTags,
+			formatVersion,
+		)
+		config = redactedConfig
+	} else {
+		config = targetContent
+	}
+
+	return func(failed bool) {
+		// Given that we can send multiple configs to this channel and
+		// the fact that the API that exposes that can only expose 1 config
+		// at a time it means that users utilizing the diagnostics API
+		// might not see exactly what they intend to see i.e. come failures
+		// or successfully send configs might be covered by those send
+		// later on but we're OK with this limitation of said API.
+		select {
+		case c.diagnostic.Configs <- util.ConfigDump{Failed: failed, Config: *config}:
+			log.Debug("shipping config to diagnostic server")
+		default:
+			log.Error("config diagnostic buffer full, dropping diagnostic config")
+		}
+	}
+}
 
 // triggerKubernetesObjectReport will update the KongClient with a set which
 // enables filtering for which objects are currently applied to the data-plane,

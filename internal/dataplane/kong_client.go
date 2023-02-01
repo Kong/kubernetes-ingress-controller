@@ -412,7 +412,7 @@ func (c *KongClient) Update(ctx context.Context) error {
 		c.logger.Debug("successfully built data-plane configuration")
 	}
 
-	shas, err := c.sendOutToClients(ctx, kongstate, formatVersion, c.kongConfig.FilterTags)
+	shas, err := c.sendOutToClients(ctx, kongstate, formatVersion, c.kongConfig.Config)
 	if err != nil {
 		return err
 	}
@@ -435,10 +435,10 @@ func (c *KongClient) Update(ctx context.Context) error {
 // sendOutToClients will generate deck content (config) from the provided kong state
 // and send it out to each of the configured clients.
 func (c *KongClient) sendOutToClients(
-	ctx context.Context, s *kongstate.KongState, formatVersion string, filterTags []string,
+	ctx context.Context, s *kongstate.KongState, formatVersion string, config sendconfig.Config,
 ) ([]string, error) {
 	shas, err := iter.MapErr(c.kongConfig.Clients, func(client *sendconfig.ClientWithPluginStore) (string, error) {
-		return c.sendToClient(ctx, client, s, formatVersion, filterTags)
+		return c.sendToClient(ctx, client, s, formatVersion, config)
 	},
 	)
 	if err != nil {
@@ -457,7 +457,7 @@ func (c *KongClient) sendToClient(
 	client *sendconfig.ClientWithPluginStore,
 	s *kongstate.KongState,
 	formatVersion string,
-	filterTags []string,
+	config sendconfig.Config,
 ) (string, error) {
 	var (
 		logger         = c.logger.WithField("kong_url", client.BaseRootURL())
@@ -485,7 +485,7 @@ func (c *KongClient) sendToClient(
 		logger,
 		s,
 		client.PluginSchemaStore,
-		filterTags,
+		config.FilterTags,
 		formatVersion,
 	)
 
@@ -498,7 +498,7 @@ func (c *KongClient) sendToClient(
 				logger,
 				s.SanitizedCopy(),
 				client.PluginSchemaStore,
-				filterTags,
+				config.FilterTags,
 				formatVersion,
 			)
 			diagnosticConfig = redactedConfig
@@ -514,13 +514,8 @@ func (c *KongClient) sendToClient(
 		timedCtx,
 		logger,
 		client.Client,
-		c.kongConfig.Version,
-		c.kongConfig.Concurrency,
-		c.kongConfig.InMemory,
-		c.enableReverseSync,
-		c.skipCACertificates,
+		config,
 		targetConfig,
-		filterTags,
 		client.LastConfigSHA(),
 		c.prometheusMetrics,
 	)

@@ -73,7 +73,14 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 	}
 	semV := semver.Version{Major: v.Major(), Minor: v.Minor(), Patch: v.Patch()}
 	versions.SetKongVersion(semV)
-	kongConfig := sendconfig.New(ctx, setupLog, kongClients, semV, dbMode, c.Concurrency, c.FilterTags)
+
+	kongConfig := sendconfig.New(ctx, setupLog, kongClients, sendconfig.Config{
+		Version:            semV,
+		InMemory:           (dbMode == "off") || (dbMode == ""),
+		Concurrency:        c.Concurrency,
+		FilterTags:         c.FilterTags,
+		SkipCACertificates: c.SkipCACertificates,
+	})
 
 	setupLog.Info("configuring and building the controller manager")
 	controllerOpts, err := setupControllerOptions(setupLog, c, dbMode)

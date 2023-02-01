@@ -32,6 +32,6 @@ func TestNewKongClientForKonnectRuntimeGroup(t *testing.T) {
 	require.True(t, c.IsKonnect())
 	require.Equal(t, runtimeGroupID, c.KonnectRuntimeGroup())
 
-	_, err = c.Services.ListAll(ctx)
+	_, err = c.AdminAPIClient().Services.ListAll(ctx)
 	require.NoError(t, err)
 }

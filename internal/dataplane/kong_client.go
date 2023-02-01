@@ -20,6 +20,7 @@ import (
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/adminapi"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/deckgen"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/failures"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
@@ -44,9 +45,9 @@ const (
 // Dataplane Client - Kong - Public Types
 // -----------------------------------------------------------------------------
 
-// KongClient is a threadsafe high level API client for the Kong data-plane
+// KongClient is a threadsafe high level API client for the Kong data-plane(s)
 // which parses Kubernetes object caches into Kong Admin configurations and
-// sends them as updates to the data-plane (Kong Admin API).
+// sends them as updates to the data-plane(s) (Kong Admin API).
 type KongClient struct {
 	logger logrus.FieldLogger
 
@@ -251,9 +252,9 @@ func (c *KongClient) Listeners(ctx context.Context) ([]kong.ProxyListener, []kon
 	for _, cl := range c.kongConfig.Clients {
 		cl := cl
 		errg.Go(func() error {
-			listeners, streamListeners, err := cl.Listeners(ctx)
+			listeners, streamListeners, err := cl.AdminAPIClient().Listeners(ctx)
 			if err != nil {
-				return fmt.Errorf("failed to get listeners from %s: %w", cl.BaseRootURL(), err)
+				return fmt.Errorf("failed to get listeners from %s: %w", cl.AdminAPIClient().BaseRootURL(), err)
 			}
 			listenersCh <- listeners
 			streamListenersCh <- streamListeners
@@ -437,7 +438,7 @@ func (c *KongClient) Update(ctx context.Context) error {
 func (c *KongClient) sendOutToClients(
 	ctx context.Context, s *kongstate.KongState, formatVersion string, filterTags []string,
 ) ([]string, error) {
-	shas, err := iter.MapErr(c.kongConfig.Clients, func(client *sendconfig.ClientWithPluginStore) (string, error) {
+	shas, err := iter.MapErr(c.kongConfig.Clients, func(client *adminapi.Client) (string, error) {
 		return c.sendToClient(ctx, client, s, formatVersion, filterTags)
 	},
 	)
@@ -454,13 +455,13 @@ func (c *KongClient) sendOutToClients(
 
 func (c *KongClient) sendToClient(
 	ctx context.Context,
-	client *sendconfig.ClientWithPluginStore,
+	client *adminapi.Client,
 	s *kongstate.KongState,
 	formatVersion string,
 	filterTags []string,
 ) (string, error) {
 	var (
-		logger         = c.logger.WithField("kong_url", client.BaseRootURL())
+		logger         = c.logger.WithField("kong_url", client.AdminAPIClient().BaseRootURL())
 		sendDiagnostic = func(
 			log logrus.FieldLogger, failed bool, ch chan<- util.ConfigDump, diagnosticConfig *file.Content,
 		) {
@@ -484,7 +485,7 @@ func (c *KongClient) sendToClient(
 	targetConfig := deckgen.ToDeckContent(ctx,
 		logger,
 		s,
-		client.PluginSchemaStore,
+		client.PluginSchemaStore(),
 		filterTags,
 		formatVersion,
 	)
@@ -497,7 +498,7 @@ func (c *KongClient) sendToClient(
 			redactedConfig := deckgen.ToDeckContent(ctx,
 				logger,
 				s.SanitizedCopy(),
-				client.PluginSchemaStore,
+				client.PluginSchemaStore(),
 				filterTags,
 				formatVersion,
 			)
@@ -513,7 +514,7 @@ func (c *KongClient) sendToClient(
 	newConfigSHA, err := sendconfig.PerformUpdate(
 		timedCtx,
 		logger,
-		client.Client,
+		client,
 		c.kongConfig.Version,
 		c.kongConfig.Concurrency,
 		c.kongConfig.InMemory,
@@ -531,7 +532,7 @@ func (c *KongClient) sendToClient(
 		if c.diagnostic != (util.ConfigDumpDiagnostic{}) {
 			sendDiagnostic(logger, true, c.diagnostic.Configs, diagnosticConfig)
 		}
-		return "", fmt.Errorf("performing update for %s failed: %w", client.BaseRootURL(), err)
+		return "", fmt.Errorf("performing update for %s failed: %w", client.AdminAPIClient().BaseRootURL(), err)
 	}
 
 	if c.diagnostic != (util.ConfigDumpDiagnostic{}) {

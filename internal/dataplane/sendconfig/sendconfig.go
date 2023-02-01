@@ -64,7 +64,7 @@ func PerformUpdate(ctx context.Context,
 			// and their readiness state is always unknown
 			ready := true
 
-			status, err := client.Status(ctx)
+			status, err := client.AdminAPIClient().Status(ctx)
 			if err != nil {
 				return nil, err
 			}
@@ -85,11 +85,11 @@ func PerformUpdate(ctx context.Context,
 	timeStart := time.Now()
 	if inMemory {
 		metricsProtocol = metrics.ProtocolDBLess
-		err = onUpdateInMemoryMode(ctx, log, targetContent, client.Client)
+		err = onUpdateInMemoryMode(ctx, log, targetContent, client.AdminAPIClient())
 	} else {
 		metricsProtocol = metrics.ProtocolDeck
 		dumpConfig := dump.Config{SelectorTags: selectorTags, SkipCACerts: skipCACertificates}
-		err = onUpdateDBMode(ctx, targetContent, client, dumpConfig, version, concurrency)
+		err = onUpdateDBMode(ctx, targetContent, client.AdminAPIClient(), dumpConfig, version, concurrency)
 	}
 	timeEnd := time.Now()
 
@@ -151,17 +151,17 @@ func onUpdateInMemoryMode(
 func onUpdateDBMode(
 	ctx context.Context,
 	targetContent *file.Content,
-	client *adminapi.Client,
+	client *kong.Client,
 	dumpConfig dump.Config,
 	version semver.Version,
 	concurrency int,
 ) error {
-	cs, err := currentState(ctx, client.Client, dumpConfig)
+	cs, err := currentState(ctx, client, dumpConfig)
 	if err != nil {
 		return fmt.Errorf("failed getting current state for %s: %w", client.BaseRootURL(), err)
 	}
 
-	ts, err := targetState(ctx, targetContent, cs, version, client.Client, dumpConfig)
+	ts, err := targetState(ctx, targetContent, cs, version, client, dumpConfig)
 	if err != nil {
 		return deckConfigConflictError{err}
 	}
@@ -169,7 +169,7 @@ func onUpdateDBMode(
 	syncer, err := diff.NewSyncer(diff.SyncerOpts{
 		CurrentState:    cs,
 		TargetState:     ts,
-		KongClient:      client.Client,
+		KongClient:      client,
 		SilenceWarnings: true,
 	})
 	if err != nil {

@@ -16,11 +16,11 @@ import (
 // If the workspace does not already exist, NewKongClientForWorkspace will create it.
 func NewKongClientForWorkspace(ctx context.Context, adminURL string, wsName string,
 	httpclient *http.Client,
-) (*Client, error) {
+) (Client, error) {
 	// create the base client, and if no workspace was provided then return that.
 	client, err := kong.NewClient(kong.String(adminURL), httpclient)
 	if err != nil {
-		return nil, fmt.Errorf("creating Kong client: %w", err)
+		return Client{}, fmt.Errorf("creating Kong client: %w", err)
 	}
 	if wsName == "" {
 		return NewClient(client), nil
@@ -29,7 +29,7 @@ func NewKongClientForWorkspace(ctx context.Context, adminURL string, wsName stri
 	// if a workspace was provided, verify whether or not it exists.
 	exists, err := client.Workspaces.ExistsByName(ctx, kong.String(wsName))
 	if err != nil {
-		return nil, fmt.Errorf("looking up workspace: %w", err)
+		return Client{}, fmt.Errorf("looking up workspace: %w", err)
 	}
 
 	// if the provided workspace does not exist, for convenience we create it.
@@ -39,7 +39,7 @@ func NewKongClientForWorkspace(ctx context.Context, adminURL string, wsName stri
 		}
 		_, err := client.Workspaces.Create(ctx, &workspace)
 		if err != nil {
-			return nil, fmt.Errorf("creating workspace: %w", err)
+			return Client{}, fmt.Errorf("creating workspace: %w", err)
 		}
 	}
 

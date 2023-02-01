@@ -6,11 +6,9 @@ import (
 
 	"github.com/blang/semver/v4"
 	"github.com/go-logr/logr"
-	"github.com/samber/lo"
 	"golang.org/x/sync/errgroup"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/adminapi"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 )
 
 // -----------------------------------------------------------------------------
@@ -19,7 +17,7 @@ import (
 
 // Kong Represents a Kong client and connection information.
 type Kong struct {
-	Clients []ClientWithPluginStore
+	Clients []adminapi.Client
 
 	// Currently, this assumes that all underlying clients are using the same version
 	// hence this shared field in here.
@@ -35,7 +33,7 @@ type Kong struct {
 func New(
 	ctx context.Context,
 	logger logr.Logger,
-	kongClients []*adminapi.Client,
+	kongClients []adminapi.Client,
 	v semver.Version,
 	dbMode string,
 	concurrency int,
@@ -49,12 +47,12 @@ func New(
 	for _, cl := range kongClients {
 		cl := cl
 		errg.Go(func() error {
-			ok, err := cl.Tags.Exists(ctx)
+			ok, err := cl.AdminAPIClient().Tags.Exists(ctx)
 			if err != nil {
-				return fmt.Errorf("Kong Admin API (%s) does not support tags: %w", cl.BaseRootURL(), err)
+				return fmt.Errorf("Kong Admin API (%s) does not support tags: %w", cl.AdminAPIClient().BaseRootURL(), err)
 			}
 			if !ok {
-				return fmt.Errorf("Kong Admin API (%s) does not support tags", cl.BaseRootURL())
+				return fmt.Errorf("Kong Admin API (%s) does not support tags", cl.AdminAPIClient().BaseRootURL())
 			}
 			return nil
 		})
@@ -71,26 +69,6 @@ func New(
 		Version:     v,
 		FilterTags:  tags,
 		Concurrency: concurrency,
-		Clients: lo.Map(kongClients, func(client *adminapi.Client, index int) ClientWithPluginStore {
-			return ClientWithPluginStore{
-				Client:            client,
-				PluginSchemaStore: util.NewPluginSchemaStore(client.Client),
-			}
-		}),
+		Clients:     kongClients,
 	}
-}
-
-type ClientWithPluginStore struct {
-	*adminapi.Client
-	*util.PluginSchemaStore
-	// lastConfigSHA is a checksum of the last successful update to the data-plane
-	lastConfigSHA []byte
-}
-
-func (c *ClientWithPluginStore) SetLastConfigSHA(s []byte) {
-	c.lastConfigSHA = s
-}
-
-func (c *ClientWithPluginStore) LastConfigSHA() []byte {
-	return c.lastConfigSHA
 }

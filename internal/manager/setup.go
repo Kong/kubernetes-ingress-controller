@@ -173,8 +173,8 @@ func setupAdmissionServer(
 			//
 			// TODO: We should take a look at this sooner rather than later.
 			// https://github.com/Kong/kubernetes-ingress-controller/issues/3363
-			kongclients[0].Consumers,
-			kongclients[0].Plugins,
+			kongclients[0].AdminAPIClient().Consumers,
+			kongclients[0].AdminAPIClient().Plugins,
 			logger,
 			managerClient,
 			managerConfig.IngressClassName,
@@ -259,13 +259,13 @@ func generateAddressFinderGetter(mgrc client.Client, publishServiceNn types.Name
 }
 
 // getKongClients returns the kong clients.
-func getKongClients(ctx context.Context, cfg *Config) ([]*adminapi.Client, error) {
+func getKongClients(ctx context.Context, cfg *Config) ([]adminapi.Client, error) {
 	httpclient, err := adminapi.MakeHTTPClient(&cfg.KongAdminAPIConfig)
 	if err != nil {
 		return nil, err
 	}
 
-	clients := make([]*adminapi.Client, 0, len(cfg.KongAdminURL))
+	clients := make([]adminapi.Client, 0, len(cfg.KongAdminURL))
 	for _, url := range cfg.KongAdminURL {
 		client, err := adminapi.NewKongClientForWorkspace(ctx, url, cfg.KongWorkspace, httpclient)
 		if err != nil {

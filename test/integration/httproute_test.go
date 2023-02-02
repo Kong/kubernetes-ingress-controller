@@ -80,8 +80,9 @@ func TestHTTPRouteEssentials(t *testing.T) {
 	}
 	pluginClient, err := clientset.NewForConfig(env.Cluster().Config())
 	require.NoError(t, err)
-	_, err = pluginClient.ConfigurationV1().KongPlugins(ns.Name).Create(ctx, kongplugin, metav1.CreateOptions{})
+	kongplugin, err = pluginClient.ConfigurationV1().KongPlugins(ns.Name).Create(ctx, kongplugin, metav1.CreateOptions{})
 	require.NoError(t, err)
+	cleaner.Add(kongplugin)
 
 	t.Logf("creating an httproute to access deployment %s via kong", deployment.Name)
 	httpPort := gatewayv1beta1.PortNumber(80)
@@ -538,7 +539,6 @@ func TestHTTPRouteFilterHosts(t *testing.T) {
 			Name: uuid.NewString(),
 			Annotations: map[string]string{
 				annotations.AnnotationPrefix + annotations.StripPathKey: "true",
-				annotations.AnnotationPrefix + annotations.PluginsKey:   "correlation",
 			},
 		},
 		Spec: gatewayv1beta1.HTTPRouteSpec{

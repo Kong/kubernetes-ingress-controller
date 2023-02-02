@@ -215,7 +215,7 @@ func initializeListenerMaps(gateway *Gateway) (
 }
 
 func canSharePort(requested, existing ProtocolType) bool {
-	switch requested { //nolint:exhaustive
+	switch requested {
 	// TCP and UDP listeners must always use unique ports
 	case (ProtocolType)(gatewayv1alpha2.TCPProtocolType), (ProtocolType)(gatewayv1alpha2.UDPProtocolType):
 		return false

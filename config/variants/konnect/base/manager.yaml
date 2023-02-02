@@ -1,0 +1,29 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ingress-kong
+  namespace: kong
+spec:
+  template:
+    spec:
+      containers:
+      - name: ingress-controller
+        envFrom:
+          - configMapRef:
+              # konnect-config ConfigMap is expected to specify:
+              #   * CONTROLLER_KONNECT_RUNTIME_GROUP_ID (required)
+              #   * CONTROLLER_KONNECT_ADDRESS (optional)
+              name: konnect-config
+        env:
+          - name: CONTROLLER_KONNECT_SYNC_ENABLED
+            value: "true"
+          - name: CONTROLLER_KONNECT_TLS_CLIENT_CERT
+            valueFrom:
+              secretKeyRef:
+                name: konnect-client-tls
+                key: tls.crt
+          - name: CONTROLLER_KONNECT_TLS_CLIENT_KEY
+            valueFrom:
+              secretKeyRef:
+                name: konnect-client-tls
+                key: tls.key

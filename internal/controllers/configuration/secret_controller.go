@@ -6,7 +6,7 @@ import (
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -56,7 +56,7 @@ func (r *CoreV1SecretReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	}
 
 	predicateFuncs := predicate.NewPredicateFuncs(r.shouldReconcileSecret)
-	//we should always try to delete secrets in caches when they are deleted in cluster.
+	// we should always try to delete secrets in caches when they are deleted in cluster.
 	predicateFuncs.DeleteFunc = func(event event.DeleteEvent) bool { return true }
 	return c.Watch(
 		&source.Kind{Type: &corev1.Secret{}},
@@ -81,7 +81,6 @@ func (r *CoreV1SecretReconciler) shouldReconcileSecret(obj client.Object) bool {
 	}
 
 	referred, err := r.ReferenceIndexers.ObjectReferred(secret)
-
 	if err != nil {
 		r.Log.Error(err, "failed to check whether secret referred",
 			"namespace", secret.Namespace, "name", secret.Name)
@@ -101,7 +100,7 @@ func (r *CoreV1SecretReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	// get the relevant object
 	secret := new(corev1.Secret)
 	if err := r.Get(ctx, req.NamespacedName, secret); err != nil {
-		if errors.IsNotFound(err) {
+		if apierrors.IsNotFound(err) {
 			secret.Namespace = req.Namespace
 			secret.Name = req.Name
 			return ctrl.Result{}, r.DataplaneClient.DeleteObject(secret)

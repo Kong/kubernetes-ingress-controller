@@ -8,7 +8,7 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/samber/lo"
-	"k8s.io/apimachinery/pkg/api/errors"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -242,7 +242,7 @@ func (r *UDPRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	if err := r.Get(ctx, req.NamespacedName, udproute); err != nil {
 		// if the queued object is no longer present in the proxy cache we need
 		// to ensure that if it was ever added to the cache, it gets removed.
-		if errors.IsNotFound(err) {
+		if apierrors.IsNotFound(err) {
 			debug(log, udproute, "object does not exist, ensuring it is not present in the proxy cache")
 			udproute.Namespace = req.Namespace
 			udproute.Name = req.Name
@@ -405,7 +405,7 @@ func (r *UDPRouteReconciler) ensureGatewayReferenceStatusAdded(ctx context.Conte
 				Namespace: (*gatewayv1alpha2.Namespace)(&gateway.gateway.Namespace),
 				Name:      gatewayv1alpha2.ObjectName(gateway.gateway.Name),
 			},
-			ControllerName: (gatewayv1alpha2.GatewayController)(ControllerName),
+			ControllerName: (gatewayv1alpha2.GatewayController)(GetControllerName()),
 			Conditions: []metav1.Condition{{
 				Type:               string(gatewayv1alpha2.RouteConditionAccepted),
 				Status:             metav1.ConditionTrue,
@@ -478,7 +478,7 @@ func (r *UDPRouteReconciler) ensureGatewayReferenceStatusRemoved(ctx context.Con
 	// drop all status references to supported Gateway objects
 	newStatuses := make([]gatewayv1alpha2.RouteParentStatus, 0)
 	for _, status := range udproute.Status.Parents {
-		if status.ControllerName != (gatewayv1alpha2.GatewayController)(ControllerName) {
+		if status.ControllerName != (gatewayv1alpha2.GatewayController)(GetControllerName()) {
 			newStatuses = append(newStatuses, status)
 		}
 	}

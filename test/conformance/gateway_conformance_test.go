@@ -47,7 +47,7 @@ func TestGatewayConformance(t *testing.T) {
 		"--dump-config",
 		"--log-level=trace",
 		"--debug-log-reduce-redundancy",
-		"--feature-gates=GatewayAlpha=true",
+		fmt.Sprintf("--feature-gates=%s", consts.DefaultFeatureGates),
 		"--anonymous-reports=false",
 	}
 
@@ -62,7 +62,7 @@ func TestGatewayConformance(t *testing.T) {
 			},
 		},
 		Spec: gatewayv1beta1.GatewayClassSpec{
-			ControllerName: gateway.ControllerName,
+			ControllerName: gateway.GetControllerName(),
 		},
 	}
 	require.NoError(t, client.Create(ctx, gwc))

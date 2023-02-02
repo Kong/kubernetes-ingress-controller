@@ -30,13 +30,14 @@ import (
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	kerrors "k8s.io/apimachinery/pkg/api/errors"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
 	"github.com/kong/kubernetes-ingress-controller/v2/pkg/clientset"
 	"github.com/kong/kubernetes-ingress-controller/v2/test"
+	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/helpers"
 )
 
 const (
@@ -171,14 +172,14 @@ func deployKong(ctx context.Context, t *testing.T, env environments.Environment,
 	t.Log("creating the kong namespace")
 	ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "kong"}}
 	_, err := env.Cluster().Client().CoreV1().Namespaces().Create(ctx, ns, metav1.CreateOptions{})
-	if !kerrors.IsAlreadyExists(err) {
+	if !apierrors.IsAlreadyExists(err) {
 		require.NoError(t, err)
 	}
 
 	t.Logf("deploying any supplemental secrets (found: %d)", len(additionalSecrets))
 	for _, secret := range additionalSecrets {
 		_, err := env.Cluster().Client().CoreV1().Secrets("kong").Create(ctx, secret, metav1.CreateOptions{})
-		if !kerrors.IsAlreadyExists(err) {
+		if !apierrors.IsAlreadyExists(err) {
 			require.NoError(t, err)
 		}
 	}
@@ -247,9 +248,8 @@ func verifyIngress(ctx context.Context, t *testing.T, env environments.Environme
 	proxyIP := getKongProxyIP(ctx, t, env)
 
 	t.Logf("waiting for route from Ingress to be operational at http://%s/httpbin", proxyIP)
-	httpc := http.Client{Timeout: time.Second * 10}
 	require.Eventually(t, func() bool {
-		resp, err := httpc.Get(fmt.Sprintf("http://%s/httpbin", proxyIP))
+		resp, err := helpers.DefaultHTTPClient().Get(fmt.Sprintf("http://%s/httpbin", proxyIP))
 		if err != nil {
 			return false
 		}
@@ -269,7 +269,7 @@ func verifyIngress(ctx context.Context, t *testing.T, env environments.Environme
 		// verify the KongIngress method restriction
 		fakeData := url.Values{}
 		fakeData.Set("foo", "bar")
-		resp, err = httpc.PostForm(fmt.Sprintf("http://%s/httpbin", proxyIP), fakeData)
+		resp, err = helpers.DefaultHTTPClient().PostForm(fmt.Sprintf("http://%s/httpbin", proxyIP), fakeData)
 		if err != nil {
 			return false
 		}
@@ -297,7 +297,7 @@ func verifyEnterprise(ctx context.Context, t *testing.T, env environments.Enviro
 	adminOutput := struct {
 		Version string `json:"version"`
 	}{}
-	httpc := http.Client{Timeout: time.Second * 10}
+
 	require.Eventually(t, func() bool {
 		// at the time of writing it was seen that the admin API had
 		// brief timing windows where it could respond 200 OK but
@@ -305,7 +305,7 @@ func verifyEnterprise(ctx context.Context, t *testing.T, env environments.Enviro
 		// decode would fail. Thus this check actually waits until
 		// the response body is fully decoded with a non-empty value
 		// before considering this complete.
-		resp, err := httpc.Do(req)
+		resp, err := helpers.DefaultHTTPClient().Do(req)
 		if err != nil {
 			return false
 		}
@@ -347,8 +347,8 @@ func verifyEnterpriseWithPostgres(ctx context.Context, t *testing.T, env environ
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
 	t.Log("creating a workspace to validate enterprise functionality")
-	httpc := http.Client{Timeout: time.Second * 10}
-	resp, err := httpc.Do(req)
+
+	resp, err := helpers.DefaultHTTPClient().Do(req)
 	require.NoError(t, err)
 	defer resp.Body.Close()
 	body, err := io.ReadAll(resp.Body)
@@ -489,14 +489,4 @@ func runOnlyOnKindClusters(t *testing.T) {
 	if !existingClusterIsKind || !clusterProviderIsKind {
 		t.Skip("test is supported only on Kind clusters")
 	}
-}
-
-func finalizeTest(ctx context.Context, t *testing.T, cluster clusters.Cluster) {
-	if t.Failed() {
-		output, err := cluster.DumpDiagnostics(ctx, t.Name())
-		t.Logf("%s failed, dumped diagnostics to %s", t.Name(), output)
-		assert.NoError(t, err)
-	}
-
-	assert.NoError(t, cluster.Cleanup(ctx))
 }

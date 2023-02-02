@@ -4,6 +4,7 @@
 package integration
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -26,6 +27,7 @@ import (
 	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/test"
+	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/helpers"
 )
 
 const (
@@ -33,23 +35,16 @@ const (
 )
 
 func TestTCPRouteEssentials(t *testing.T) {
+	ctx := context.Background()
+
 	t.Log("locking TCP port")
 	tcpMutex.Lock()
-	defer func() {
-		// Free up the TCP port
+	t.Cleanup(func() {
 		t.Log("unlocking TCP port")
 		tcpMutex.Unlock()
-	}()
+	})
 
-	ns, cleaner := setup(t)
-	defer func() {
-		if t.Failed() {
-			output, err := cleaner.DumpDiagnostics(ctx, t.Name())
-			t.Logf("%s failed, dumped diagnostics to %s", t.Name(), output)
-			assert.NoError(t, err)
-		}
-		assert.NoError(t, cleaner.Cleanup(ctx))
-	}()
+	ns, cleaner := helpers.Setup(ctx, t, env)
 
 	t.Log("getting gateway client")
 	gatewayClient, err := gatewayclient.NewForConfig(env.Cluster().Config())
@@ -423,22 +418,16 @@ func TestTCPRouteEssentials(t *testing.T) {
 }
 
 func TestTCPRouteReferenceGrant(t *testing.T) {
+	ctx := context.Background()
+
 	t.Log("locking TCP port")
 	tcpMutex.Lock()
-	defer func() {
+	t.Cleanup(func() {
 		t.Log("unlocking TCP port")
 		tcpMutex.Unlock()
-	}()
+	})
 
-	ns, cleaner := setup(t)
-	defer func() {
-		if t.Failed() {
-			output, err := cleaner.DumpDiagnostics(ctx, t.Name())
-			t.Logf("%s failed, dumped diagnostics to %s", t.Name(), output)
-			assert.NoError(t, err)
-		}
-		assert.NoError(t, cleaner.Cleanup(ctx))
-	}()
+	ns, cleaner := helpers.Setup(ctx, t, env)
 
 	otherNs, err := clusters.GenerateNamespace(ctx, env.Cluster(), t.Name())
 	require.NoError(t, err)

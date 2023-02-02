@@ -25,28 +25,25 @@ import (
 	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/test"
+	"github.com/kong/kubernetes-ingress-controller/v2/test/consts"
+	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/helpers"
 )
 
 const examplesDIR = "../../examples"
 
-var httprouteExampleManifests = fmt.Sprintf("%s/gateway-httproute.yaml", examplesDIR)
-
 func TestHTTPRouteExample(t *testing.T) {
-	_, cleaner := setup(t)
-	defer func() {
-		if t.Failed() {
-			output, err := cleaner.DumpDiagnostics(ctx, t.Name())
-			t.Logf("%s failed, dumped diagnostics to %s", t.Name(), output)
-			assert.NoError(t, err)
-		}
-		assert.NoError(t, cleaner.Cleanup(ctx))
-	}()
+	var (
+		httprouteExampleManifests = fmt.Sprintf("%s/gateway-httproute.yaml", examplesDIR)
+		ctx                       = context.Background()
+	)
+
+	_, cleaner := helpers.Setup(ctx, t, env)
 
 	t.Logf("configuring test and setting up API clients")
 	gwc, err := gatewayclient.NewForConfig(env.Cluster().Config())
 	require.NoError(t, err)
 
-	t.Logf("applying yaml manifest %s", strings.TrimPrefix(httprouteExampleManifests, examplesDIR))
+	t.Logf("applying yaml manifest %s", httprouteExampleManifests)
 	b, err := os.ReadFile(httprouteExampleManifests)
 	require.NoError(t, err)
 	require.NoError(t, clusters.ApplyManifestByYAML(ctx, env.Cluster(), string(b)))
@@ -72,7 +69,7 @@ func TestHTTPRouteExample(t *testing.T) {
 
 	t.Logf("verifying that the HTTPRoute becomes routable")
 	require.Eventually(t, func() bool {
-		resp, err := httpc.Get(fmt.Sprintf("http://%s/httproute-testing", gatewayAddr))
+		resp, err := helpers.DefaultHTTPClient().Get(fmt.Sprintf("http://%s/httproute-testing", gatewayAddr))
 		if err != nil {
 			return false
 		}
@@ -89,7 +86,7 @@ func TestHTTPRouteExample(t *testing.T) {
 
 	t.Logf("verifying that the backendRefs are being loadbalanced")
 	require.Eventually(t, func() bool {
-		resp, err := httpc.Get(fmt.Sprintf("http://%s/httproute-testing", gatewayAddr))
+		resp, err := helpers.DefaultHTTPClient().Get(fmt.Sprintf("http://%s/httproute-testing", gatewayAddr))
 		if err != nil {
 			return false
 		}
@@ -105,33 +102,30 @@ func TestHTTPRouteExample(t *testing.T) {
 	}, ingressWait, waitTick)
 }
 
-var udpRouteExampleManifests = fmt.Sprintf("%s/gateway-udproute.yaml", examplesDIR)
-
 func TestUDPRouteExample(t *testing.T) {
-	t.Log("locking Gateway UDP ports")
+	t.Log("locking UDP port")
 	udpMutex.Lock()
-	defer udpMutex.Unlock()
+	t.Cleanup(func() {
+		t.Log("unlocking UDP port")
+		udpMutex.Unlock()
+	})
 
-	_, cleaner := setup(t)
-	defer func() {
-		if t.Failed() {
-			output, err := cleaner.DumpDiagnostics(ctx, t.Name())
-			t.Logf("%s failed, dumped diagnostics to %s", t.Name(), output)
-			assert.NoError(t, err)
-		}
-		assert.NoError(t, cleaner.Cleanup(ctx))
-	}()
+	var (
+		ctx                      = context.Background()
+		udpRouteExampleManifests = fmt.Sprintf("%s/gateway-udproute.yaml", examplesDIR)
+	)
 
-	t.Logf("applying yaml manifest %s", strings.TrimPrefix(udpRouteExampleManifests, examplesDIR))
+	_, cleaner := helpers.Setup(ctx, t, env)
+
+	t.Logf("applying yaml manifest %s", udpRouteExampleManifests)
 	b, err := os.ReadFile(udpRouteExampleManifests)
 	// TODO as of 2022-04-01, UDPRoute does not support using a different inbound port than the outbound
 	// destination service port. Once parentRef port functionality is stable, we should remove this
 	s := string(b)
 	s = strings.ReplaceAll(s, "port: 53", "port: 9999")
-	b = []byte(s)
 	require.NoError(t, err)
-	require.NoError(t, clusters.ApplyManifestByYAML(ctx, env.Cluster(), string(b)))
-	cleaner.AddManifest(string(b))
+	require.NoError(t, clusters.ApplyManifestByYAML(ctx, env.Cluster(), s))
+	cleaner.AddManifest(s)
 
 	t.Logf("configuring test and setting up API clients")
 	resolver := &net.Resolver{
@@ -147,26 +141,27 @@ func TestUDPRouteExample(t *testing.T) {
 	t.Logf("verifying that the UDPRoute becomes routable")
 	require.Eventually(t, func() bool {
 		_, err := resolver.LookupHost(ctx, "kernel.org")
-		return err == nil
+		if err != nil {
+			t.Logf("failed resolving kernel.org: %v", err)
+			return false
+		}
+		return true
 	}, ingressWait, waitTick)
 }
 
-var tcprouteExampleManifests = fmt.Sprintf("%s/gateway-tcproute.yaml", examplesDIR)
-
 func TestTCPRouteExample(t *testing.T) {
-	t.Log("locking Gateway TCP ports")
+	t.Log("locking TCP port")
 	tcpMutex.Lock()
-	defer tcpMutex.Unlock()
+	t.Cleanup(func() {
+		t.Log("unlocking TCP port")
+		tcpMutex.Unlock()
+	})
 
-	_, cleaner := setup(t)
-	defer func() {
-		if t.Failed() {
-			output, err := cleaner.DumpDiagnostics(ctx, t.Name())
-			t.Logf("%s failed, dumped diagnostics to %s", t.Name(), output)
-			assert.NoError(t, err)
-		}
-		assert.NoError(t, cleaner.Cleanup(ctx))
-	}()
+	var (
+		ctx                      = context.Background()
+		tcprouteExampleManifests = fmt.Sprintf("%s/gateway-tcproute.yaml", examplesDIR)
+	)
+	_, cleaner := helpers.Setup(ctx, t, env)
 
 	t.Logf("applying yaml manifest %s", tcprouteExampleManifests)
 	b, err := os.ReadFile(tcprouteExampleManifests)
@@ -181,25 +176,19 @@ func TestTCPRouteExample(t *testing.T) {
 	}, ingressWait, waitTick)
 }
 
-var tlsrouteExampleManifests = fmt.Sprintf("%s/gateway-tlsroute.yaml", examplesDIR)
-
 func TestTLSRouteExample(t *testing.T) {
 	t.Log("locking Gateway TLS ports")
 	tlsMutex.Lock()
-	defer func() {
+	t.Cleanup(func() {
 		t.Log("unlocking TLS port")
 		tlsMutex.Unlock()
-	}()
+	})
 
-	_, cleaner := setup(t)
-	defer func() {
-		if t.Failed() {
-			output, err := cleaner.DumpDiagnostics(ctx, t.Name())
-			t.Logf("%s failed, dumped diagnostics to %s", t.Name(), output)
-			assert.NoError(t, err)
-		}
-		assert.NoError(t, cleaner.Cleanup(ctx))
-	}()
+	var (
+		tlsrouteExampleManifests = fmt.Sprintf("%s/gateway-tlsroute.yaml", examplesDIR)
+		ctx                      = context.Background()
+	)
+	_, cleaner := helpers.Setup(ctx, t, env)
 
 	t.Logf("applying yaml manifest %s", tlsrouteExampleManifests)
 	b, err := os.ReadFile(tlsrouteExampleManifests)
@@ -215,20 +204,15 @@ func TestTLSRouteExample(t *testing.T) {
 	}, ingressWait, waitTick)
 }
 
-var ingressExampleManifests = fmt.Sprintf("%s/ingress.yaml", examplesDIR)
-
 func TestIngressExample(t *testing.T) {
-	_, cleaner := setup(t)
-	defer func() {
-		if t.Failed() {
-			output, err := cleaner.DumpDiagnostics(ctx, t.Name())
-			t.Logf("%s failed, dumped diagnostics to %s", t.Name(), output)
-			assert.NoError(t, err)
-		}
-		assert.NoError(t, cleaner.Cleanup(ctx))
-	}()
+	var (
+		ingressExampleManifests = fmt.Sprintf("%s/ingress.yaml", examplesDIR)
+		ctx                     = context.Background()
+	)
 
-	t.Logf("applying yaml manifest %s", strings.TrimPrefix(ingressExampleManifests, examplesDIR))
+	_, cleaner := helpers.Setup(ctx, t, env)
+
+	t.Logf("applying yaml manifest %s", ingressExampleManifests)
 	b, err := os.ReadFile(ingressExampleManifests)
 	require.NoError(t, err)
 	manifests := replaceIngressClassInManifests(string(b))
@@ -255,7 +239,7 @@ func TestIngressExample(t *testing.T) {
 
 	t.Logf("verifying that the Ingress resource becomes routable")
 	require.Eventually(t, func() bool {
-		resp, err := httpc.Get(fmt.Sprintf("http://%s/", ingAddr))
+		resp, err := helpers.DefaultHTTPClient().Get(fmt.Sprintf("http://%s/", ingAddr))
 		if err != nil {
 			return false
 		}
@@ -271,24 +255,21 @@ func TestIngressExample(t *testing.T) {
 	}, ingressWait, waitTick)
 }
 
-var udpingressExampleManifests = fmt.Sprintf("%s/udpingress.yaml", examplesDIR)
-
 func TestUDPIngressExample(t *testing.T) {
-	t.Log("locking Gateway UDP ports")
+	t.Log("locking UDP port")
 	udpMutex.Lock()
-	defer udpMutex.Unlock()
+	t.Cleanup(func() {
+		t.Log("unlocking UDP port")
+		udpMutex.Unlock()
+	})
 
-	_, cleaner := setup(t)
-	defer func() {
-		if t.Failed() {
-			output, err := cleaner.DumpDiagnostics(ctx, t.Name())
-			t.Logf("%s failed, dumped diagnostics to %s", t.Name(), output)
-			assert.NoError(t, err)
-		}
-		assert.NoError(t, cleaner.Cleanup(ctx))
-	}()
+	var (
+		udpingressExampleManifests = fmt.Sprintf("%s/udpingress.yaml", examplesDIR)
+		ctx                        = context.Background()
+	)
+	_, cleaner := helpers.Setup(ctx, t, env)
 
-	t.Logf("applying yaml manifest %s", strings.TrimPrefix(udpingressExampleManifests, examplesDIR))
+	t.Logf("applying yaml manifest %s", udpingressExampleManifests)
 	b, err := os.ReadFile(udpingressExampleManifests)
 	require.NoError(t, err)
 	manifests := replaceIngressClassInManifests(string(b))
@@ -310,5 +291,5 @@ func TestUDPIngressExample(t *testing.T) {
 }
 
 func replaceIngressClassInManifests(manifests string) string {
-	return strings.ReplaceAll(manifests, `kubernetes.io/ingress.class: "kong"`, fmt.Sprintf(`kubernetes.io/ingress.class: "%s"`, ingressClass))
+	return strings.ReplaceAll(manifests, `kubernetes.io/ingress.class: "kong"`, fmt.Sprintf(`kubernetes.io/ingress.class: "%s"`, consts.IngressClass))
 }

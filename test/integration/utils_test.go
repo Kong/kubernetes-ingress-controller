@@ -4,78 +4,23 @@
 package integration
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
-	"io"
-	"net/http"
 	"net/url"
 	"os"
-	"strings"
-	"testing"
-	"time"
 
 	"github.com/blang/semver/v4"
-	"github.com/google/uuid"
-	"github.com/kong/go-kong/kong"
-	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	"github.com/kong/kubernetes-testing-framework/pkg/environments"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-	corev1 "k8s.io/api/core/v1"
-	netv1 "k8s.io/api/networking/v1"
-	netv1beta1 "k8s.io/api/networking/v1beta1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
-)
 
-// -----------------------------------------------------------------------------
-// Testing Timeouts
-// -----------------------------------------------------------------------------
-
-const (
-	// waitTick is the default timeout tick interval for checking on ingress resources.
-	waitTick = time.Second * 1
-
-	// ingressWait is the default amount of time to wait for any particular ingress resource to be provisioned.
-	ingressWait = time.Minute * 3
-
-	// httpcTimeout is the default client timeout for HTTP clients used in tests.
-	httpcTimeout = time.Second * 3
-
-	// environmentCleanupTimeout is the amount of time that will be given by the test suite to the
-	// testing environment to perform its cleanup when the test suite is shutting down.
-	environmentCleanupTimeout = time.Minute * 3
+	"github.com/kong/kubernetes-ingress-controller/v2/test/consts"
+	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/testenv"
 )
 
 // -----------------------------------------------------------------------------
 // Testing Variables
 // -----------------------------------------------------------------------------
 
-const (
-	// ingressClass indicates the ingress class name which the tests will use for supported object reconciliation.
-	ingressClass = "kongtests"
-)
-
 var (
-	// ctx the topical context of the test suite, can be used by test cases if they don't need
-	// any special context as a function of the test.
-	ctx context.Context
-
-	// cancel is the cancel function for the above global test context.
-	cancel context.CancelFunc
-
-	// redisImage is Redis. Pinned because of
-	// https://github.com/Kong/kubernetes-ingress-controller/issues/2735#issuecomment-1194376496 breakage.
-	redisImage = "bitnami/redis:7.0.4-debian-11-r3"
-
-	// controllerNamespace is the Kubernetes namespace where the controller is deployed.
-	controllerNamespace = "kong-system"
-
-	// httpc is the default HTTP client to use for tests.
-	httpc = http.Client{Timeout: httpcTimeout}
-
 	// env is the primary testing environment object which includes access to the Kubernetes cluster
 	// and all the addons deployed in support of the tests.
 	env environments.Environment
@@ -96,300 +41,6 @@ var (
 	runInvalidConfigTests bool
 )
 
-const (
-	// defaultFeatureGates is the default feature gates setting that should be
-	// provided if none are provided by the user. This generally includes features
-	// that are innocuous, or otherwise don't actually get triggered unless the
-	// user takes further action.
-	defaultFeatureGates = "GatewayAlpha=true"
-)
-
-// -----------------------------------------------------------------------------
-// Testing Variables - Environment Overrides
-// -----------------------------------------------------------------------------
-
-var (
-	// dbmode indicates the database backend of the test cluster ("off" and "postgres" are supported).
-	dbmode = os.Getenv("TEST_DATABASE_MODE")
-
-	// clusterVersion indicates the version of Kubernetes to use for the tests (if the cluster was not provided by the caller).
-	clusterVersionStr = os.Getenv("KONG_CLUSTER_VERSION")
-
-	// existingCluster indicates whether or not the caller is providing their own cluster for running the tests.
-	// These need to come in the format <TYPE>:<NAME> (e.g. "kind:<NAME>", "gke:<NAME>", e.t.c.).
-	existingCluster = os.Getenv("KONG_TEST_CLUSTER")
-
-	// keepTestCluster indicates whether the caller wants the cluster created by the test suite
-	// to persist after the test for inspection. This has a nil effect when an existing cluster
-	// is provided, as cleanup is not performed for existing clusters.
-	keepTestCluster = os.Getenv("KONG_TEST_CLUSTER_PERSIST")
-
-	// kongEnterpriseEnabled enables Enterprise-specific tests when set to "true".
-	kongEnterpriseEnabled = os.Getenv("TEST_KONG_ENTERPRISE")
-
-	// kongRouterFlavor configures router mode of Kong. currently supports:
-	// - `traditional`
-	// - `traditional_compatible`.
-	kongRouterFlavor = os.Getenv("TEST_KONG_ROUTER_FLAVOR")
-
-	// kongImage is the Kong image to use in lieu of the default.
-	kongImage = os.Getenv("TEST_KONG_IMAGE")
-
-	// kongImage is the Kong image to use in lieu of the default.
-	kongTag = os.Getenv("TEST_KONG_TAG")
-
-	// kongPullUsername is the Docker username to use for the Kong image pull secret.
-	kongPullUsername = os.Getenv("TEST_KONG_PULL_USERNAME")
-
-	// kongPullPassword is the Docker password to use for the Kong image pull secret.
-	kongPullPassword = os.Getenv("TEST_KONG_PULL_PASSWORD")
-
-	// controllerFeatureGates contains the feature gates that should be enabled
-	// for test runs.
-	controllerFeatureGates = os.Getenv("KONG_CONTROLLER_FEATURE_GATES")
-)
-
-// -----------------------------------------------------------------------------
-// Test Suite Exit Codes
-// -----------------------------------------------------------------------------
-
-const (
-	// ExitCodeIncompatibleOptions is a POSIX compliant exit code for the test suite to
-	// indicate that some combination of provided configurations were not compatible.
-	ExitCodeIncompatibleOptions = 100
-
-	// ExitCodeInvalidOptions is a POSIX compliant exit code for the test suite to indicate
-	// that some of the provided runtime options were not valid and the tests could not run.
-	ExitCodeInvalidOptions = 101
-
-	// ExitCodeCantUseExistingCluster is a POSIX compliant exit code for the test suite to
-	// indicate that an existing cluster provided for the tests was not usable.
-	ExitCodeCantUseExistingCluster = 101
-
-	// ExitCodeCantCreateCluster is a POSIX compliant exit code for the test suite to indicate
-	// that a failure occurred when trying to create a Kubernetes cluster to run the tests.
-	ExitCodeCantCreateCluster = 102
-
-	// ExitCodeCleanupFailed is a POSIX compliant exit code for the test suite to indicate
-	// that a failure occurred during cluster cleanup.
-	ExitCodeCleanupFailed = 103
-
-	// ExitCodeEnvSetupFailed is a generic exit code that can be used as a fallback for general
-	// problems setting up the testing environment and/or cluster.
-	ExitCodeEnvSetupFailed = 104
-
-	// ExitCodeCentCreateLogger is a POSIX compliant exit code for the test suite to indicate
-	// that a failure occurred when trying to create a logger for the test suite.
-	ExitCodeCantCreateLogger = 105
-
-	// kongTestPassword is used as a password only within the context of transient integration test runs
-	// and is left static to help developers debug failures in those testing environments.
-	kongTestPassword = "password"
-)
-
-// -----------------------------------------------------------------------------
-// Testing Utility Functions - Kong
-// -----------------------------------------------------------------------------
-
-func getKongVersion() (semver.Version, error) {
-	if override := os.Getenv("TEST_KONG_VERSION_OVERRIDE"); len(override) > 0 {
-		version, err := kong.ParseSemanticVersion(override)
-		if err != nil {
-			return semver.Version{}, err
-		}
-		return semver.Version{Major: version.Major(), Minor: version.Minor(), Patch: version.Patch()}, nil
-	}
-	client := &http.Client{}
-	req, err := http.NewRequest("GET", proxyAdminURL.String(), nil)
-	if err != nil {
-		return semver.Version{}, err
-	}
-	req.Header.Set("kong-admin-token", kongTestPassword)
-	resp, err := client.Do(req)
-	if err != nil {
-		return semver.Version{}, err
-	}
-	defer resp.Body.Close()
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return semver.Version{}, err
-	}
-	var jsonResp map[string]interface{}
-	err = json.Unmarshal(body, &jsonResp)
-	if err != nil {
-		return semver.Version{}, err
-	}
-	version, err := kong.ParseSemanticVersion(kong.VersionFromInfo(jsonResp))
-	if err != nil {
-		return semver.Version{}, err
-	}
-	return semver.Version{Major: version.Major(), Minor: version.Minor(), Patch: version.Patch()}, nil
-}
-
-// -----------------------------------------------------------------------------
-// Testing Utility Functions - Namespaces
-// -----------------------------------------------------------------------------
-
-// namespace provides the namespace provisioned for each test case given their t.Name as the "testCase".
-func namespace(t *testing.T) *corev1.Namespace {
-	namespace, err := clusters.GenerateNamespace(ctx, env.Cluster(), t.Name())
-	require.NoError(t, err)
-	t.Cleanup(func() {
-		assert.NoError(t, clusters.CleanupGeneratedResources(ctx, env.Cluster(), t.Name()))
-	})
-
-	return namespace
-}
-
-// -----------------------------------------------------------------------------
-// Testing Utility Functions - HTTP Requests
-// -----------------------------------------------------------------------------
-
-// eventuallyGETPath makes a GET request to the Kong proxy multiple times until
-// either the request starts to respond with the given status code and contents
-// present in the response body, or until timeout occurrs according to
-// ingressWait time limits. This uses only the path of for the request and does
-// not pay attention to hostname or other routing rules. This uses a "require"
-// for the desired conditions so if this request doesn't eventually succeed the
-// calling test will fail and stop.
-func eventuallyGETPath(t *testing.T, path string, statusCode int, bodyContents string, headers map[string]string) {
-	req := newRequest(t, http.MethodGet, path, headers)
-
-	require.Eventually(t, func() bool {
-		resp, err := httpc.Do(req)
-		if err != nil {
-			t.Logf("WARNING: http request failed for GET %s/%s: %v", proxyURL, path, err)
-			return false
-		}
-		defer resp.Body.Close()
-		if resp.StatusCode == statusCode {
-			if bodyContents == "" {
-				return true
-			}
-			b := new(bytes.Buffer)
-			n, err := b.ReadFrom(resp.Body)
-			require.NoError(t, err)
-			require.True(t, n > 0)
-			return strings.Contains(b.String(), bodyContents)
-		}
-		return false
-	}, ingressWait, waitTick)
-}
-
-// responseMatcher is a function that returns match-name and whether the response
-// matches the provided criteria.
-type responseMatcher func(resp *http.Response, respBody string) (key string, ok bool)
-
-// matchRespByStatusAndContent returns a responseMatcher that matches the given status code
-// and body contents.
-func matchRespByStatusAndContent(
-	responseName string,
-	expectedStatusCode int,
-	expectedBodyContents string,
-) responseMatcher {
-	return func(resp *http.Response, respBody string) (string, bool) {
-		if resp.StatusCode != expectedStatusCode {
-			return responseName, false
-		}
-		ok := strings.Contains(respBody, expectedBodyContents)
-		return responseName, ok
-	}
-}
-
-type countHTTPResponsesConfig struct {
-	Method      string
-	Path        string
-	Headers     map[string]string
-	Duration    time.Duration
-	RequestTick time.Duration
-}
-
-func countHTTPGetResponses(t *testing.T,
-	cfg countHTTPResponsesConfig,
-	matchers ...responseMatcher,
-) (matchedResponseCounter map[string]int) {
-	req := newRequest(t, cfg.Method, cfg.Path, cfg.Headers)
-	finished := time.After(cfg.Duration)
-	matchedResponseCounter = make(map[string]int)
-
-	for {
-		select {
-		case <-time.Tick(cfg.RequestTick):
-			countHTTPGetResponse(t, req, matchedResponseCounter, matchers...)
-		case <-finished:
-			return matchedResponseCounter
-		}
-	}
-}
-
-func countHTTPGetResponse(t *testing.T, req *http.Request, matchCounter map[string]int, matchers ...responseMatcher) {
-	resp, err := httpc.Do(req)
-	if err != nil {
-		return
-	}
-	defer resp.Body.Close()
-
-	bytes, err := io.ReadAll(resp.Body)
-	if err != nil {
-		t.Logf("failed to read response body: %v", err)
-	}
-
-	body := string(bytes)
-
-	for _, matcher := range matchers {
-		if key, ok := matcher(resp, body); ok {
-			matchCounter[key]++
-			t.Logf("response %s matched", key)
-			return
-		}
-	}
-}
-
-// distributionOfMapValues returns a map of the values in the given counter map
-// and the relative frequency of each value.
-func distributionOfMapValues(counter map[string]int) map[string]float64 {
-	total := 0
-	normalized := make(map[string]float64)
-
-	for _, count := range counter {
-		total += count
-	}
-	for key, count := range counter {
-		normalized[key] = float64(count) / float64(total)
-	}
-
-	return normalized
-}
-
-func newRequest(t *testing.T, method, path string, headers map[string]string) *http.Request {
-	req, err := http.NewRequest(method, fmt.Sprintf("%s/%s", proxyURL, path), nil)
-	require.NoError(t, err)
-	for header, value := range headers {
-		req.Header.Set(header, value)
-	}
-	return req
-}
-
-// expect404WithNoRoute is used to check whether a given http response is (specifically) a Kong 404.
-func expect404WithNoRoute(t *testing.T, proxyURL string, resp *http.Response) bool {
-	if resp.StatusCode == http.StatusNotFound {
-		// once the route is torn down and returning 404's, ensure that we got the expected response body back from Kong
-		// Expected: {"message":"no Route matched with those values"}
-		b := new(bytes.Buffer)
-		_, err := b.ReadFrom(resp.Body)
-		require.NoError(t, err)
-		body := struct {
-			Message string `json:"message"`
-		}{}
-		if err := json.Unmarshal(b.Bytes(), &body); err != nil {
-			t.Logf("WARNING: error decoding JSON from proxy while waiting for %s: %v", proxyURL, err)
-			return false
-		}
-		return body.Message == "no Route matched with those values"
-	}
-	return false
-}
-
 // -----------------------------------------------------------------------------
 // Test.MAIN Utility Functions
 // -----------------------------------------------------------------------------
@@ -403,7 +54,7 @@ func exitOnErrWithCode(ctx context.Context, err error, exitCode int) {
 	}
 
 	fmt.Println("WARNING: failure occurred, performing test cleanup")
-	if env != nil && existingCluster == "" && keepTestCluster == "" {
+	if env != nil && testenv.ExistingClusterName() == "" && testenv.KeepTestCluster() == "" {
 		ctx, cancel := context.WithTimeout(ctx, environmentCleanupTimeout)
 		defer cancel()
 
@@ -423,44 +74,5 @@ func exitOnErr(ctx context.Context, err error) {
 	if err == nil {
 		return
 	}
-	exitOnErrWithCode(ctx, err, ExitCodeEnvSetupFailed)
-}
-
-// TODO move this into a shared library https://github.com/Kong/kubernetes-testing-framework/issues/302
-// setup is a helper function for tests which conveniently creates a cluster
-// cleaner (to clean up test resources automatically after the test finishes)
-// and creates a new namespace for the test to use. It also enables parallel
-// testing.
-func setup(t *testing.T) (*corev1.Namespace, *clusters.Cleaner) {
-	t.Log("performing test setup")
-	cleaner := clusters.NewCleaner(env.Cluster())
-
-	t.Log("creating a testing namespace")
-	namespace, err := k8sClient.CoreV1().Namespaces().Create(ctx, &corev1.Namespace{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: uuid.NewString(),
-		},
-	}, metav1.CreateOptions{})
-	require.NoError(t, err)
-	cleaner.AddNamespace(namespace)
-	t.Logf("created namespace %s for test case %s", namespace.Name, t.Name())
-
-	return namespace, cleaner
-}
-
-// -----------------------------------------------------------------------------
-// Ingress Helpers
-// -----------------------------------------------------------------------------
-
-// addIngressToCleaner adds a runtime.Object to the cleanup list if it is a supported version of Ingress. It panics if the
-// runtime.Object is something else.
-func addIngressToCleaner(cleaner *clusters.Cleaner, obj runtime.Object) {
-	switch i := obj.(type) {
-	case *netv1.Ingress:
-		cleaner.Add(i)
-	case *netv1beta1.Ingress:
-		cleaner.Add(i)
-	default:
-		panic(fmt.Sprintf("%s passed to addIngressToCleaner but is not an Ingress", obj.GetObjectKind()))
-	}
+	exitOnErrWithCode(ctx, err, consts.ExitCodeEnvSetupFailed)
 }

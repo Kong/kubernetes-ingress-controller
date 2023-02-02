@@ -10,7 +10,7 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/kong/go-kong/kong"
 	corev1 "k8s.io/api/core/v1"
-	k8serrors "k8s.io/apimachinery/pkg/api/errors"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -285,7 +285,7 @@ func (r *GatewayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	// to be gone at this point in which case it will be ignored.
 	gateway := new(gatewayv1beta1.Gateway)
 	if err := r.Get(ctx, req.NamespacedName, gateway); err != nil {
-		if k8serrors.IsNotFound(err) {
+		if apierrors.IsNotFound(err) {
 			gateway.Namespace = req.Namespace
 			gateway.Name = req.Name
 			// delete reference relationships where the gateway is the referrer.
@@ -320,7 +320,7 @@ func (r *GatewayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		debug(log, gateway, "ensured gateway was removed from the data-plane (if ever present)")
 		return ctrl.Result{}, nil
 	}
-	if gwc.Spec.ControllerName != ControllerName {
+	if gwc.Spec.ControllerName != GetControllerName() {
 		debug(log, gateway, "unsupported gatewayclass controllername, ignoring", "gatewayclass", gwc.Name, "controllername", gwc.Spec.ControllerName)
 		// delete reference relationships where the gateway is the referrer, as we will not process the gateway.
 		err := ctrlref.DeleteReferencesByReferrer(r.ReferenceIndexers, r.DataplaneClient, gateway)
@@ -367,7 +367,7 @@ func (r *GatewayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		if err := ctrlref.UpdateReferencesToSecret(
 			ctx, r.Client, r.ReferenceIndexers, r.DataplaneClient,
 			gateway, referredSecretNames); err != nil {
-			if k8serrors.IsNotFound(err) {
+			if apierrors.IsNotFound(err) {
 				result.Requeue = true
 				return result, nil
 			}
@@ -444,7 +444,7 @@ func (r *GatewayReconciler) reconcileUnmanagedGateway(ctx context.Context, log l
 		debug(log, gateway, "updating addresses to match Kong proxy Service")
 		gateway.Spec.Addresses = kongAddresses
 		if err := r.Update(ctx, gateway); err != nil {
-			if k8serrors.IsConflict(err) {
+			if apierrors.IsConflict(err) {
 				// if there's a conflict that's normal just requeue to retry, no need to make noise.
 				return ctrl.Result{Requeue: true}, nil
 			}
@@ -480,7 +480,7 @@ func (r *GatewayReconciler) reconcileUnmanagedGateway(ctx context.Context, log l
 	debug(log, gateway, "updating the gateway status if necessary")
 	isChanged, err := r.updateAddressesAndListenersStatus(ctx, gateway, listenerStatuses)
 	if err != nil {
-		if k8serrors.IsConflict(err) {
+		if apierrors.IsConflict(err) {
 			// if there's a conflict that's normal just requeue to retry, no need to make noise.
 			return ctrl.Result{Requeue: true}, nil
 		}

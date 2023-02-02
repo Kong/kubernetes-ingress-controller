@@ -4,6 +4,7 @@
 package integration
 
 import (
+	"context"
 	"net/http"
 	"testing"
 	"time"
@@ -24,6 +25,8 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util/builder"
 	"github.com/kong/kubernetes-ingress-controller/v2/test"
+	"github.com/kong/kubernetes-ingress-controller/v2/test/consts"
+	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/helpers"
 )
 
 const (
@@ -37,13 +40,14 @@ const (
 )
 
 func TestUnmanagedGatewayBasics(t *testing.T) {
+	ctx := context.Background()
+
 	var gw *gatewayv1beta1.Gateway
 
-	ns, cleaner := setup(t)
-	defer func() { assert.NoError(t, cleaner.Cleanup(ctx)) }()
+	ns, cleaner := helpers.Setup(ctx, t, env)
 
 	t.Log("gathering test data and generating a gateway kubernetes client")
-	pubsvc, err := env.Cluster().Client().CoreV1().Services(controllerNamespace).Get(ctx, "ingress-controller-kong-proxy", metav1.GetOptions{})
+	pubsvc, err := env.Cluster().Client().CoreV1().Services(consts.ControllerNamespace).Get(ctx, "ingress-controller-kong-proxy", metav1.GetOptions{})
 	require.NoError(t, err)
 	gatewayClient, err := gatewayclient.NewForConfig(env.Cluster().Config())
 	require.NoError(t, err)
@@ -126,10 +130,11 @@ func TestUnmanagedGatewayBasics(t *testing.T) {
 }
 
 func TestGatewayListenerConflicts(t *testing.T) {
+	ctx := context.Background()
+
 	var gw *gatewayv1beta1.Gateway
 
-	ns, cleaner := setup(t)
-	defer func() { assert.NoError(t, cleaner.Cleanup(ctx)) }()
+	ns, cleaner := helpers.Setup(ctx, t, env)
 
 	t.Log("generating a gateway kubernetes client and gathering test data")
 	gatewayClient, err := gatewayclient.NewForConfig(env.Cluster().Config())
@@ -351,8 +356,9 @@ func TestGatewayListenerConflicts(t *testing.T) {
 }
 
 func TestUnmanagedGatewayControllerSupport(t *testing.T) {
-	ns, cleaner := setup(t)
-	defer func() { assert.NoError(t, cleaner.Cleanup(ctx)) }()
+	ctx := context.Background()
+
+	ns, cleaner := helpers.Setup(ctx, t, env)
 
 	t.Log("generating a gateway kubernetes client")
 	gatewayClient, err := gatewayclient.NewForConfig(env.Cluster().Config())
@@ -381,8 +387,9 @@ func TestUnmanagedGatewayControllerSupport(t *testing.T) {
 }
 
 func TestUnmanagedGatewayClass(t *testing.T) {
-	ns, cleaner := setup(t)
-	defer func() { assert.NoError(t, cleaner.Cleanup(ctx)) }()
+	ctx := context.Background()
+
+	ns, cleaner := helpers.Setup(ctx, t, env)
 
 	t.Log("generating a gateway kubernetes client")
 	gatewayClient, err := gatewayclient.NewForConfig(env.Cluster().Config())
@@ -425,8 +432,9 @@ func TestUnmanagedGatewayClass(t *testing.T) {
 }
 
 func TestManagedGatewayClass(t *testing.T) {
-	ns, cleaner := setup(t)
-	defer func() { assert.NoError(t, cleaner.Cleanup(ctx)) }()
+	ctx := context.Background()
+
+	ns, cleaner := helpers.Setup(ctx, t, env)
 
 	t.Log("generating a gateway kubernetes client")
 	gatewayClient, err := gatewayclient.NewForConfig(env.Cluster().Config())
@@ -475,8 +483,9 @@ func TestManagedGatewayClass(t *testing.T) {
 }
 
 func TestGatewayFilters(t *testing.T) {
-	ns, cleaner := setup(t)
-	defer func() { assert.NoError(t, cleaner.Cleanup(ctx)) }()
+	ctx := context.Background()
+
+	ns, cleaner := helpers.Setup(ctx, t, env)
 
 	other, err := clusters.GenerateNamespace(ctx, env.Cluster(), t.Name()+"other")
 	require.NoError(t, err)
@@ -570,9 +579,9 @@ func TestGatewayFilters(t *testing.T) {
 	require.Eventually(t, callback, ingressWait, waitTick)
 
 	t.Log("waiting for routes from HTTPRoute to become operational")
-	eventuallyGETPath(t, "test_gateway_filters", http.StatusOK, "<title>httpbin.org</title>", emptyHeaderSet)
+	helpers.EventuallyGETPath(t, proxyURL, "test_gateway_filters", http.StatusOK, "<title>httpbin.org</title>", emptyHeaderSet, ingressWait, waitTick)
 	t.Log("waiting for routes from HTTPRoute in other namespace to become operational")
-	eventuallyGETPath(t, "other_test_gateway_filters", http.StatusOK, "<title>httpbin.org</title>", emptyHeaderSet)
+	helpers.EventuallyGETPath(t, proxyURL, "other_test_gateway_filters", http.StatusOK, "<title>httpbin.org</title>", emptyHeaderSet, ingressWait, waitTick)
 
 	t.Log("changing to the same namespace filter")
 	gateway, err = gatewayClient.Gateways(ns.Name).Get(ctx, gateway.Name, metav1.GetOptions{})
@@ -604,9 +613,9 @@ func TestGatewayFilters(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Log("confirming other namespace route becomes inaccessible")
-	eventuallyGETPath(t, "other_test_gateway_filters", http.StatusNotFound, "no Route matched", emptyHeaderSet)
+	helpers.EventuallyGETPath(t, proxyURL, "other_test_gateway_filters", http.StatusNotFound, "no Route matched", emptyHeaderSet, ingressWait, waitTick)
 	t.Log("confirming same namespace route still operational")
-	eventuallyGETPath(t, "test_gateway_filters", http.StatusOK, "<title>httpbin.org</title>", emptyHeaderSet)
+	helpers.EventuallyGETPath(t, proxyURL, "test_gateway_filters", http.StatusOK, "<title>httpbin.org</title>", emptyHeaderSet, ingressWait, waitTick)
 
 	t.Log("changing to a selector filter")
 	gateway, err = gatewayClient.Gateways(ns.Name).Get(ctx, gateway.Name, metav1.GetOptions{})
@@ -649,7 +658,7 @@ func TestGatewayFilters(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Log("confirming wrong selector namespace route becomes inaccessible")
-	eventuallyGETPath(t, "test_gateway_filters", http.StatusNotFound, "no Route matched", emptyHeaderSet)
+	helpers.EventuallyGETPath(t, proxyURL, "test_gateway_filters", http.StatusNotFound, "no Route matched", emptyHeaderSet, ingressWait, waitTick)
 	t.Log("confirming right selector namespace route becomes operational")
-	eventuallyGETPath(t, "other_test_gateway_filters", http.StatusOK, "<title>httpbin.org</title>", emptyHeaderSet)
+	helpers.EventuallyGETPath(t, proxyURL, "other_test_gateway_filters", http.StatusOK, "<title>httpbin.org</title>", emptyHeaderSet, ingressWait, waitTick)
 }

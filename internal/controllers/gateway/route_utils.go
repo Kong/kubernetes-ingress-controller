@@ -8,7 +8,7 @@ import (
 
 	"github.com/samber/lo"
 	corev1 "k8s.io/api/core/v1"
-	k8serrors "k8s.io/apimachinery/pkg/api/errors"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -123,7 +123,7 @@ func getSupportedGatewayForRoute[T types.RouteT](ctx context.Context, mgrc clien
 			Namespace: namespace,
 			Name:      name,
 		}, &gateway); err != nil {
-			if k8serrors.IsNotFound(err) {
+			if apierrors.IsNotFound(err) {
 				// if a configured gateway is not found it's still possible
 				// that there's another gateway, so keep searching through the list.
 				continue
@@ -136,7 +136,7 @@ func getSupportedGatewayForRoute[T types.RouteT](ctx context.Context, mgrc clien
 		if err := mgrc.Get(ctx, client.ObjectKey{
 			Name: string(gateway.Spec.GatewayClassName),
 		}, &gatewayClass); err != nil {
-			if k8serrors.IsNotFound(err) {
+			if apierrors.IsNotFound(err) {
 				// if a configured gatewayClass is not found it's still possible
 				// that there's another properly configured gateway in the parentRefs,
 				// so keep searching through the list.
@@ -146,7 +146,7 @@ func getSupportedGatewayForRoute[T types.RouteT](ctx context.Context, mgrc clien
 		}
 
 		// If the GatewayClass does not match this controller then skip it
-		if gatewayClass.Spec.ControllerName != ControllerName {
+		if gatewayClass.Spec.ControllerName != GetControllerName() {
 			continue
 		}
 

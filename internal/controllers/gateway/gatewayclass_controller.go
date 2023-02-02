@@ -4,10 +4,11 @@ import (
 	"context"
 	"fmt"
 	"reflect"
+	"sync"
 	"time"
 
 	"github.com/go-logr/logr"
-	"k8s.io/apimachinery/pkg/api/errors"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -26,10 +27,27 @@ import (
 // GatewayClass Controller - Vars & Consts
 // -----------------------------------------------------------------------------
 
-// ControllerName is the unique identifier for this controller and is used
-// within GatewayClass resources to indicate that this controller should
-// support connected Gateway resources.
-var ControllerName gatewayv1beta1.GatewayController = "konghq.com/kic-gateway-controller"
+var (
+	// _controllerName is the unique identifier for this controller and is used
+	// within GatewayClass resources to indicate that this controller should
+	// support connected Gateway resources.
+	_controllerName gatewayv1beta1.GatewayController = "konghq.com/kic-gateway-controller"
+
+	// _controllerNameLock guards access to _controllerName.
+	_controllerNameLock sync.RWMutex
+)
+
+func SetControllerName(name gatewayv1beta1.GatewayController) {
+	_controllerNameLock.Lock()
+	defer _controllerNameLock.Unlock()
+	_controllerName = name
+}
+
+func GetControllerName() gatewayv1beta1.GatewayController {
+	_controllerNameLock.RLock()
+	defer _controllerNameLock.RUnlock()
+	return _controllerName
+}
 
 // -----------------------------------------------------------------------------
 // GatewayClass Controller - Reconciler
@@ -96,7 +114,7 @@ func (r *GatewayClassReconciler) Reconcile(ctx context.Context, req ctrl.Request
 
 	gwc := new(gatewayv1beta1.GatewayClass)
 	if err := r.Client.Get(ctx, req.NamespacedName, gwc); err != nil {
-		if errors.IsNotFound(err) {
+		if apierrors.IsNotFound(err) {
 			log.V(util.DebugLevel).Info("object enqueued no longer exists, skipping", "name", req.Name)
 			return ctrl.Result{}, nil
 		}

@@ -8,7 +8,7 @@ import (
 	"github.com/kong/go-kong/kong"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -116,7 +116,7 @@ func (validator KongHTTPValidator) ValidateConsumer(
 		// retrieve the credentials secret
 		secret, err := validator.SecretGetter.GetSecret(consumer.Namespace, secretName)
 		if err != nil {
-			if errors.IsNotFound(err) {
+			if apierrors.IsNotFound(err) {
 				return false, ErrTextConsumerCredentialSecretNotFound, err
 			}
 			return false, ErrTextFailedToRetrieveSecret, err
@@ -314,7 +314,7 @@ func (validator KongHTTPValidator) ValidateGateway(
 
 	// validate whether the gatewayclass is a supported class, if not
 	// then this gateway belongs to another controller.
-	if gwc.Spec.ControllerName != gatewaycontroller.ControllerName {
+	if gwc.Spec.ControllerName != gatewaycontroller.GetControllerName() {
 		return true, "", nil
 	}
 
@@ -352,7 +352,7 @@ func (validator KongHTTPValidator) ValidateHTTPRoute(
 		}
 
 		// determine ultimately whether the Gateway is managed by this controller implementation
-		if string(gatewayClass.Spec.ControllerName) == string(gatewaycontroller.ControllerName) {
+		if gatewayClass.Spec.ControllerName == gatewaycontroller.GetControllerName() {
 			managedGateways = append(managedGateways, &gateway)
 		}
 	}

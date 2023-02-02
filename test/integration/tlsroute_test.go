@@ -5,6 +5,7 @@ package integration
 
 import (
 	"bytes"
+	"context"
 	"crypto/tls"
 	"errors"
 	"fmt"
@@ -17,7 +18,6 @@ import (
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	ktfkong "github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/kong"
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -29,6 +29,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util/builder"
 	"github.com/kong/kubernetes-ingress-controller/v2/test"
+	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/helpers"
 )
 
 const (
@@ -99,16 +100,15 @@ const (
 )
 
 func TestTLSRouteEssentials(t *testing.T) {
-	backendPort := gatewayv1alpha2.PortNumber(tcpEchoPort)
-	t.Log("locking TLS port")
+	t.Log("locking Gateway TLS ports")
 	tlsMutex.Lock()
-	defer func() {
+	t.Cleanup(func() {
 		t.Log("unlocking TLS port")
 		tlsMutex.Unlock()
-	}()
+	})
 
-	ns, cleaner := setup(t)
-	defer func() { assert.NoError(t, cleaner.Cleanup(ctx)) }()
+	ctx := context.Background()
+	ns, cleaner := helpers.Setup(ctx, t, env)
 
 	t.Log("getting gateway client")
 	gatewayClient, err := gatewayclient.NewForConfig(env.Cluster().Config())
@@ -206,6 +206,7 @@ func TestTLSRouteEssentials(t *testing.T) {
 	require.NoError(t, err)
 	cleaner.Add(service2)
 
+	backendPort := gatewayv1alpha2.PortNumber(tcpEchoPort)
 	t.Logf("creating a tlsroute to access deployment %s via kong", deployment.Name)
 	tlsRoute := &gatewayv1alpha2.TLSRoute{
 		ObjectMeta: metav1.ObjectMeta{
@@ -467,16 +468,15 @@ func TestTLSRouteEssentials(t *testing.T) {
 // TestTLSRouteReferenceGrant tests cross-namespace certificate references. These are technically implemented within
 // Gateway Listeners, but require an attached Route to see the associated certificate behavior on the proxy.
 func TestTLSRouteReferenceGrant(t *testing.T) {
-	backendPort := gatewayv1alpha2.PortNumber(tcpEchoPort)
-	t.Log("locking TLS port")
+	t.Log("locking Gateway TLS ports")
 	tlsMutex.Lock()
-	defer func() {
+	t.Cleanup(func() {
 		t.Log("unlocking TLS port")
 		tlsMutex.Unlock()
-	}()
+	})
 
-	ns, cleaner := setup(t)
-	defer func() { assert.NoError(t, cleaner.Cleanup(ctx)) }()
+	ctx := context.Background()
+	ns, cleaner := helpers.Setup(ctx, t, env)
 
 	otherNs, err := clusters.GenerateNamespace(ctx, env.Cluster(), t.Name())
 	require.NoError(t, err)
@@ -605,6 +605,7 @@ func TestTLSRouteReferenceGrant(t *testing.T) {
 	require.NoError(t, err)
 	cleaner.Add(service)
 
+	backendPort := gatewayv1alpha2.PortNumber(tcpEchoPort)
 	t.Logf("creating a tlsroute to access deployment %s via kong", deployment.Name)
 	tlsroute := &gatewayv1alpha2.TLSRoute{
 		ObjectMeta: metav1.ObjectMeta{
@@ -697,16 +698,15 @@ func TestTLSRouteReferenceGrant(t *testing.T) {
 }
 
 func TestTLSRoutePassthrough(t *testing.T) {
-	backendTLSPort := gatewayv1alpha2.PortNumber(tlsEchoPort)
-	t.Log("locking TLS port")
+	t.Log("locking Gateway TLS ports")
 	tlsMutex.Lock()
-	defer func() {
+	t.Cleanup(func() {
 		t.Log("unlocking TLS port")
 		tlsMutex.Unlock()
-	}()
+	})
 
-	ns, cleaner := setup(t)
-	defer func() { assert.NoError(t, cleaner.Cleanup(ctx)) }()
+	ctx := context.Background()
+	ns, cleaner := helpers.Setup(ctx, t, env)
 
 	t.Log("getting gateway client")
 	gatewayClient, err := gatewayclient.NewForConfig(env.Cluster().Config())
@@ -789,6 +789,7 @@ func TestTLSRoutePassthrough(t *testing.T) {
 	require.NoError(t, err)
 	cleaner.Add(service)
 
+	backendTLSPort := gatewayv1alpha2.PortNumber(tlsEchoPort)
 	t.Logf("create a TLSRoute using passthrough listner")
 	sectionName := gatewayv1alpha2.SectionName("tls-passthrough")
 	tlsroute := &gatewayv1alpha2.TLSRoute{

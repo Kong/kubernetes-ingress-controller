@@ -26,6 +26,8 @@ import (
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v2/test"
+	"github.com/kong/kubernetes-ingress-controller/v2/test/consts"
+	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/helpers"
 )
 
 type TLSPair struct {
@@ -133,16 +135,10 @@ QLAtVaZd9SSi4Z/RX6B4L3Rj0Mwfn+tbrtYO5Pyhi40hiXf4aMgbVDFYMR0MMmH0
 }
 
 func TestHTTPSRedirect(t *testing.T) {
+	ctx := context.Background()
+
 	t.Parallel()
-	ns, cleaner := setup(t)
-	defer func() {
-		if t.Failed() {
-			output, err := cleaner.DumpDiagnostics(ctx, t.Name())
-			t.Logf("%s failed, dumped diagnostics to %s", t.Name(), output)
-			assert.NoError(t, err)
-		}
-		assert.NoError(t, cleaner.Cleanup(ctx))
-	}()
+	ns, cleaner := helpers.Setup(ctx, t, env)
 
 	t.Log("creating an HTTP container via deployment to test redirect functionality")
 	container := generators.NewContainer("alsohttpbin", test.HTTPBinImage, 80)
@@ -162,12 +158,12 @@ func TestHTTPSRedirect(t *testing.T) {
 	kubernetesVersion, err := env.Cluster().Version()
 	require.NoError(t, err)
 	ingress := generators.NewIngressForServiceWithClusterVersion(kubernetesVersion, "/test_https_redirect", map[string]string{
-		annotations.IngressClassKey:             ingressClass,
+		annotations.IngressClassKey:             consts.IngressClass,
 		"konghq.com/protocols":                  "https",
 		"konghq.com/https-redirect-status-code": "301",
 	}, service)
 	assert.NoError(t, clusters.DeployIngress(ctx, env.Cluster(), ns.Name, ingress))
-	addIngressToCleaner(cleaner, ingress)
+	helpers.AddIngressToCleaner(cleaner, ingress)
 
 	t.Log("waiting for Ingress to be operational and properly redirect")
 	client := &http.Client{
@@ -187,16 +183,10 @@ func TestHTTPSRedirect(t *testing.T) {
 }
 
 func TestHTTPSIngress(t *testing.T) {
+	ctx := context.Background()
+
 	t.Parallel()
-	ns, cleaner := setup(t)
-	defer func() {
-		if t.Failed() {
-			output, err := cleaner.DumpDiagnostics(ctx, t.Name())
-			t.Logf("%s failed, dumped diagnostics to %s", t.Name(), output)
-			assert.NoError(t, err)
-		}
-		assert.NoError(t, cleaner.Cleanup(ctx))
-	}()
+	ns, cleaner := helpers.Setup(ctx, t, env)
 
 	dialer := &net.Dialer{
 		Timeout:   30 * time.Second,
@@ -235,15 +225,15 @@ func TestHTTPSIngress(t *testing.T) {
 	assert.NoError(t, err)
 	cleaner.Add(service)
 
-	t.Logf("creating an ingress for service %s with ingress.class %s", service.Name, ingressClass)
+	t.Logf("creating an ingress for service %s with ingress.class %s", service.Name, consts.IngressClass)
 	kubernetesVersion, err := env.Cluster().Version()
 	require.NoError(t, err)
 	ingress1 := generators.NewIngressForServiceWithClusterVersion(kubernetesVersion, "/foo", map[string]string{
-		annotations.IngressClassKey: ingressClass,
+		annotations.IngressClassKey: consts.IngressClass,
 		"konghq.com/strip-path":     "true",
 	}, service)
 	ingress2 := generators.NewIngressForServiceWithClusterVersion(kubernetesVersion, "/bar", map[string]string{
-		annotations.IngressClassKey: ingressClass,
+		annotations.IngressClassKey: consts.IngressClass,
 		"konghq.com/strip-path":     "true",
 	}, service)
 
@@ -297,7 +287,7 @@ func TestHTTPSIngress(t *testing.T) {
 	// so here we interleave the creating process of deploying 2 ingresses and secrets.
 	t.Log("deploying secrets and ingresses")
 	require.NoError(t, clusters.DeployIngress(ctx, env.Cluster(), ns.Name, ingress1))
-	addIngressToCleaner(cleaner, ingress1)
+	helpers.AddIngressToCleaner(cleaner, ingress1)
 
 	secret1, err := env.Cluster().Client().CoreV1().Secrets(ns.Name).Create(ctx, secrets[0], metav1.CreateOptions{})
 	assert.NoError(t, err)
@@ -308,7 +298,7 @@ func TestHTTPSIngress(t *testing.T) {
 	cleaner.Add(secret2)
 
 	require.NoError(t, clusters.DeployIngress(ctx, env.Cluster(), ns.Name, ingress2))
-	addIngressToCleaner(cleaner, ingress2)
+	helpers.AddIngressToCleaner(cleaner, ingress2)
 
 	t.Log("checking first ingress status readiness")
 	require.Eventually(t, func() bool {

@@ -4,6 +4,7 @@
 package integration
 
 import (
+	"context"
 	"testing"
 
 	"github.com/google/uuid"
@@ -15,10 +16,14 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
 	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1beta1"
 	"github.com/kong/kubernetes-ingress-controller/v2/pkg/clientset"
+	"github.com/kong/kubernetes-ingress-controller/v2/test/consts"
+	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/helpers"
 )
 
 // TestCRDValidations ensures that CRD validations we expect to exist are properly disallowing faulty objects to be created.
 func TestCRDValidations(t *testing.T) {
+	ctx := context.Background()
+
 	testCases := []struct {
 		name          string
 		scenario      func(t *testing.T, cleaner *clusters.Cleaner, ns string)
@@ -90,8 +95,7 @@ func TestCRDValidations(t *testing.T) {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			ns, cleaner := setup(t)
-			defer func() { assert.NoError(t, cleaner.Cleanup(ctx)) }()
+			ns, cleaner := helpers.Setup(ctx, t, env)
 
 			tt.scenario(t, cleaner, ns.GetName())
 		})
@@ -105,7 +109,7 @@ func createFaultyTCPIngress(t *testing.T, cleaner *clusters.Cleaner, ns string, 
 	gatewayClient, err := clientset.NewForConfig(env.Cluster().Config())
 	require.NoError(t, err)
 
-	ingress, err = gatewayClient.ConfigurationV1beta1().TCPIngresses(ns).Create(ctx, ingress, metav1.CreateOptions{})
+	ingress, err = gatewayClient.ConfigurationV1beta1().TCPIngresses(ns).Create(context.Background(), ingress, metav1.CreateOptions{})
 	if !assert.Error(t, err) {
 		cleaner.Add(ingress)
 	}
@@ -117,7 +121,7 @@ func validTCPIngress() *kongv1beta1.TCPIngress {
 		ObjectMeta: metav1.ObjectMeta{
 			Name: uuid.NewString(),
 			Annotations: map[string]string{
-				annotations.IngressClassKey: ingressClass,
+				annotations.IngressClassKey: consts.IngressClass,
 			},
 		},
 		Spec: kongv1beta1.TCPIngressSpec{
@@ -141,7 +145,7 @@ func createFaultyUDPIngress(t *testing.T, cleaner *clusters.Cleaner, ns string, 
 	gatewayClient, err := clientset.NewForConfig(env.Cluster().Config())
 	require.NoError(t, err)
 
-	ingress, err = gatewayClient.ConfigurationV1beta1().UDPIngresses(ns).Create(ctx, ingress, metav1.CreateOptions{})
+	ingress, err = gatewayClient.ConfigurationV1beta1().UDPIngresses(ns).Create(context.Background(), ingress, metav1.CreateOptions{})
 	if !assert.Error(t, err) {
 		cleaner.Add(ingress)
 	}
@@ -153,7 +157,7 @@ func validUDPIngress() *kongv1beta1.UDPIngress {
 		ObjectMeta: metav1.ObjectMeta{
 			Name: uuid.NewString(),
 			Annotations: map[string]string{
-				annotations.IngressClassKey: ingressClass,
+				annotations.IngressClassKey: consts.IngressClass,
 			},
 		},
 		Spec: kongv1beta1.UDPIngressSpec{

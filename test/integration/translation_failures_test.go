@@ -4,6 +4,7 @@
 package integration
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"testing"
@@ -13,7 +14,6 @@ import (
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	ktfkong "github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/kong"
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	netv1 "k8s.io/api/networking/v1"
@@ -30,6 +30,8 @@ import (
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
 	"github.com/kong/kubernetes-ingress-controller/v2/pkg/clientset"
 	"github.com/kong/kubernetes-ingress-controller/v2/test"
+	"github.com/kong/kubernetes-ingress-controller/v2/test/consts"
+	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/helpers"
 )
 
 const testTranslationFailuresObjectsPrefix = "translation-failures-"
@@ -37,6 +39,8 @@ const testTranslationFailuresObjectsPrefix = "translation-failures-"
 // TestTranslationFailures ensures that proper warning Kubernetes events are recorded in case of translation failures
 // encountered.
 func TestTranslationFailures(t *testing.T) {
+	ctx := context.Background()
+
 	type expectedTranslationFailure struct {
 		causingObjects []client.Object
 		reasonContains string
@@ -209,7 +213,7 @@ func TestTranslationFailures(t *testing.T) {
 				require.NoError(t, err)
 				cleaner.Add(secret2)
 
-				gateway := deployGatewayReferringSecrets(t, cleaner, ns, secret1, secret2)
+				gateway := deployGatewayReferringSecrets(ctx, t, cleaner, ns, secret1, secret2)
 
 				return expectedTranslationFailure{
 					causingObjects: []client.Object{gateway},
@@ -227,7 +231,7 @@ func TestTranslationFailures(t *testing.T) {
 				require.NoError(t, err)
 				cleaner.Add(emptySecret)
 
-				gateway := deployGatewayReferringSecrets(t, cleaner, ns, emptySecret)
+				gateway := deployGatewayReferringSecrets(ctx, t, cleaner, ns, emptySecret)
 
 				return expectedTranslationFailure{
 					causingObjects: []client.Object{gateway, emptySecret},
@@ -323,8 +327,7 @@ func TestTranslationFailures(t *testing.T) {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			ns, cleaner := setup(t)
-			defer func() { assert.NoError(t, cleaner.Cleanup(ctx)) }()
+			ns, cleaner := helpers.Setup(ctx, t, env)
 
 			expected := tt.translationFailureTrigger(t, cleaner, ns.GetName())
 
@@ -401,7 +404,7 @@ func invalidCASecret(ns string) *corev1.Secret {
 				"konghq.com/ca-cert": "true",
 			},
 			Annotations: map[string]string{
-				annotations.IngressClassKey: ingressClass,
+				annotations.IngressClassKey: consts.IngressClass,
 			},
 		},
 		Data: map[string][]byte{
@@ -417,7 +420,7 @@ func pluginUsingInvalidCACert(ns string) *kongv1.KongPlugin {
 			Name:      testutils.RandomName(testTranslationFailuresObjectsPrefix),
 			Namespace: ns,
 			Annotations: map[string]string{
-				annotations.IngressClassKey: ingressClass,
+				annotations.IngressClassKey: consts.IngressClass,
 			},
 		},
 		Config:     v1.JSON{Raw: []byte(fmt.Sprintf(`{"ca_certificates": ["%s"]}`, invalidCASecretID))},
@@ -484,7 +487,7 @@ func ingressWithPathBackedByService(service *corev1.Service) *netv1.Ingress {
 		ObjectMeta: metav1.ObjectMeta{
 			Name: testutils.RandomName(testTranslationFailuresObjectsPrefix),
 			Annotations: map[string]string{
-				annotations.IngressClassKey: ingressClass,
+				annotations.IngressClassKey: consts.IngressClass,
 			},
 		},
 		Spec: netv1.IngressSpec{
@@ -529,7 +532,7 @@ func validService() *corev1.Service {
 	}
 }
 
-func deployGatewayReferringSecrets(t *testing.T, cleaner *clusters.Cleaner, ns string, secrets ...*corev1.Secret) *gatewayv1beta1.Gateway {
+func deployGatewayReferringSecrets(ctx context.Context, t *testing.T, cleaner *clusters.Cleaner, ns string, secrets ...*corev1.Secret) *gatewayv1beta1.Gateway {
 	gatewayClient, err := gatewayclient.NewForConfig(env.Cluster().Config())
 	require.NoError(t, err)
 

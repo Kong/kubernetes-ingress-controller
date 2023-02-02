@@ -42,6 +42,8 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 	setupLog.Info("starting controller manager", "release", metadata.Release, "repo", metadata.Repo, "commit", metadata.Commit)
 	setupLog.Info("the ingress class name has been set", "value", c.IngressClassName)
 
+	gateway.SetControllerName(gatewayv1beta1.GatewayController(c.GatewayAPIControllerName))
+
 	setupLog.Info("getting enabled options and features")
 	featureGates, err := setupFeatureGates(setupLog, c.FeatureGates)
 	if err != nil {
@@ -57,8 +59,7 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 	if c.KongAdminToken != "" {
 		c.KongAdminAPIConfig.Headers = append(c.KongAdminAPIConfig.Headers, "kong-admin-token:"+c.KongAdminToken)
 	}
-
-	kongClients, err := getKongClients(ctx, c.KongAdminURL, c.KongWorkspace, c.KongAdminAPIConfig)
+	kongClients, err := getKongClients(ctx, c)
 	if err != nil {
 		return fmt.Errorf("unable to build kong api client(s): %w", err)
 	}
@@ -94,7 +95,6 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 	setupLog.Info("Initializing Dataplane Client")
 	eventRecorder := mgr.GetEventRecorderFor(KongClientEventRecorderComponentName)
 	dataplaneClient, err := dataplane.NewKongClient(
-		ctx,
 		deprecatedLogger,
 		time.Duration(c.ProxyTimeoutSeconds*float32(time.Second)),
 		c.IngressClassName,
@@ -134,8 +134,6 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 	if err != nil {
 		return err
 	}
-
-	gateway.ControllerName = gatewayv1beta1.GatewayController(c.GatewayAPIControllerName)
 
 	setupLog.Info("Starting Enabled Controllers")
 	controllers, err := setupControllers(mgr, dataplaneClient,

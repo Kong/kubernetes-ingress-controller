@@ -4,6 +4,7 @@
 package integration
 
 import (
+	"context"
 	"testing"
 
 	"github.com/google/uuid"
@@ -11,23 +12,26 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	admregv1 "k8s.io/api/admissionregistration/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
+	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/helpers"
 )
 
 func TestGatewayValidationWebhook(t *testing.T) {
-	ns := namespace(t)
+	ctx := context.Background()
+
+	ns := helpers.Namespace(ctx, t, env)
 
 	if env.Cluster().Type() != kind.KindClusterType {
 		t.Skip("webhook tests are only available on KIND clusters currently")
 	}
 
-	closer, err := ensureAdmissionRegistration(
+	closer, err := ensureAdmissionRegistration(ctx,
 		"kong-validations-gateway",
 		[]admregv1.RuleWithOperations{
 			{
@@ -103,7 +107,7 @@ func TestGatewayValidationWebhook(t *testing.T) {
 				}
 			}
 
-			if err := gatewayClient.GatewayV1beta1().Gateways(ns.Name).Delete(ctx, tt.createdGW.Name, metav1.DeleteOptions{}); err != nil && !errors.IsNotFound(err) {
+			if err := gatewayClient.GatewayV1beta1().Gateways(ns.Name).Delete(ctx, tt.createdGW.Name, metav1.DeleteOptions{}); err != nil && !apierrors.IsNotFound(err) {
 				require.NoError(t, err)
 			}
 		})

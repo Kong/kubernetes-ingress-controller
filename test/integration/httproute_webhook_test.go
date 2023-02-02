@@ -4,6 +4,7 @@
 package integration
 
 import (
+	"context"
 	"testing"
 
 	"github.com/google/uuid"
@@ -14,11 +15,14 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
+
+	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/helpers"
 )
 
 func TestHTTPRouteValidationWebhook(t *testing.T) {
-	ns, cleaner := setup(t)
-	defer func() { assert.NoError(t, cleaner.Cleanup(ctx)) }()
+	ctx := context.Background()
+
+	ns, cleaner := helpers.Setup(ctx, t, env)
 
 	if env.Cluster().Type() != kind.KindClusterType {
 		t.Skip("webhook tests are only available on KIND clusters currently")
@@ -26,7 +30,7 @@ func TestHTTPRouteValidationWebhook(t *testing.T) {
 
 	pathMatchRegex := gatewayv1beta1.PathMatchRegularExpression
 
-	closer, err := ensureAdmissionRegistration(
+	closer, err := ensureAdmissionRegistration(ctx,
 		"kong-validations-gateway",
 		[]admregv1.RuleWithOperations{
 			{

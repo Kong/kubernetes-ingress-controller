@@ -1,0 +1,32 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ingress-kong
+  namespace: kong
+spec:
+  template:
+    spec:
+      containers:
+        - name: ingress-controller
+          command:
+            - /go/bin/dlv
+            - --continue
+            - --accept-multiclient
+            - --listen=:40000
+            - --check-go-version=false
+            - --headless=true
+            - --api-version=2
+            - --log=true
+            - --log-output=debugger,debuglineerr,gdbwire
+            - exec
+            - /manager-debug
+            - --
+          args:
+            - --feature-gates=GatewayAlpha=true
+            - --anonymous-reports=false
+          env:
+            - name: CONTROLLER_LOG_LEVEL
+              value: debug
+            - name: CONTROLLER_KONNECT_ADDRESS
+              value: https://us.kic.api.konghq.tech
+          image: kic-placeholder:placeholder

@@ -35,6 +35,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/pkg/clientset"
 	"github.com/kong/kubernetes-ingress-controller/v2/test"
 	"github.com/kong/kubernetes-ingress-controller/v2/test/consts"
+	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/helpers"
 )
 
 // -----------------------------------------------------------------------------
@@ -168,7 +169,7 @@ func TestWebhookUpdate(t *testing.T) {
 	require.NoError(t, err)
 
 	defer func() {
-		finalizeTest(ctx, t, env.Cluster())
+		helpers.TeardownCluster(ctx, t, env.Cluster())
 	}()
 
 	t.Log("deploying kong components")
@@ -296,7 +297,7 @@ func TestDeployAllInOneDBLESSGateway(t *testing.T) {
 	require.NoError(t, err)
 
 	defer func() {
-		finalizeTest(ctx, t, env.Cluster())
+		helpers.TeardownCluster(ctx, t, env.Cluster())
 	}()
 
 	t.Log("deploying kong components")
@@ -413,7 +414,7 @@ func TestDeployAllInOneDBLESSGateway(t *testing.T) {
 	for i, container := range deployment.Spec.Template.Spec.Containers {
 		if container.Name == "ingress-controller" {
 			deployment.Spec.Template.Spec.Containers[i].Env = append(deployment.Spec.Template.Spec.Containers[i].Env,
-				corev1.EnvVar{Name: "CONTROLLER_FEATURE_GATES", Value: "GatewayAlpha=true"})
+				corev1.EnvVar{Name: "CONTROLLER_FEATURE_GATES", Value: consts.DefaultFeatureGates})
 		}
 		if container.Name == "proxy" {
 			deployment.Spec.Template.Spec.Containers[i].Env = append(deployment.Spec.Template.Spec.Containers[i].Env,
@@ -456,7 +457,7 @@ func TestDeployAllInOneDBLESSNoLoadBalancer(t *testing.T) {
 	env, err := builder.Build(ctx)
 	require.NoError(t, err)
 	defer func() {
-		finalizeTest(ctx, t, env.Cluster())
+		helpers.TeardownCluster(ctx, t, env.Cluster())
 	}()
 
 	t.Log("deploying kong components")
@@ -478,7 +479,7 @@ func TestDeployAllInOneDBLESSNoLoadBalancer(t *testing.T) {
 	for i, container := range deployment.Spec.Template.Spec.Containers {
 		if container.Name == "ingress-controller" {
 			deployment.Spec.Template.Spec.Containers[i].Env = append(deployment.Spec.Template.Spec.Containers[i].Env,
-				corev1.EnvVar{Name: "CONTROLLER_FEATURE_GATES", Value: "GatewayAlpha=true"})
+				corev1.EnvVar{Name: "CONTROLLER_FEATURE_GATES", Value: consts.DefaultFeatureGates})
 		}
 	}
 	_, err = env.Cluster().Client().AppsV1().Deployments(deployment.Namespace).Update(ctx,
@@ -516,7 +517,7 @@ func TestDefaultIngressClass(t *testing.T) {
 	require.NoError(t, err)
 
 	defer func() {
-		finalizeTest(ctx, t, env.Cluster())
+		helpers.TeardownCluster(ctx, t, env.Cluster())
 	}()
 
 	t.Log("deploying kong components")
@@ -546,7 +547,7 @@ func TestDefaultIngressClass(t *testing.T) {
 	proxyURL := "http://" + getKongProxyIP(ctx, t, env)
 	t.Log("ensuring Ingress does not become live")
 	require.Never(t, func() bool {
-		resp, err := httpc.Get(fmt.Sprintf("%s/abbosiysaltanati", proxyURL))
+		resp, err := helpers.DefaultHTTPClient().Get(fmt.Sprintf("%s/abbosiysaltanati", proxyURL))
 		if err != nil {
 			t.Logf("WARNING: error while waiting for %s: %v", proxyURL, err)
 			return false
@@ -601,7 +602,7 @@ func TestDefaultIngressClass(t *testing.T) {
 
 	t.Log("waiting for routes from Ingress to be operational")
 	require.Eventually(t, func() bool {
-		resp, err := httpc.Get(fmt.Sprintf("%s/abbosiysaltanati", proxyURL))
+		resp, err := helpers.DefaultHTTPClient().Get(fmt.Sprintf("%s/abbosiysaltanati", proxyURL))
 		if err != nil {
 			t.Logf("WARNING: error while waiting for %s: %v", proxyURL, err)
 			return false
@@ -636,7 +637,7 @@ func TestMissingCRDsDontCrashTheController(t *testing.T) {
 	require.NoError(t, err)
 
 	defer func() {
-		finalizeTest(ctx, t, env.Cluster())
+		helpers.TeardownCluster(ctx, t, env.Cluster())
 	}()
 
 	t.Log("deploying kong components")

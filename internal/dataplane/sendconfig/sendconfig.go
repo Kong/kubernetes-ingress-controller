@@ -21,6 +21,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/adminapi"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/deckgen"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/failures"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/metrics"
@@ -35,7 +36,7 @@ const initialHash = "00000000000000000000000000000000"
 // PerformUpdate writes `targetContent` to Kong Admin API specified by `kongConfig`.
 func PerformUpdate(ctx context.Context,
 	log logrus.FieldLogger,
-	client *kong.Client,
+	client *adminapi.Client,
 	version semver.Version,
 	concurrency int,
 	inMemory bool,
@@ -86,7 +87,7 @@ func PerformUpdate(ctx context.Context,
 	var resourceErrors []ResourceError
 	if inMemory {
 		metricsProtocol = metrics.ProtocolDBLess
-		err, resourceErrors, errParseErr = onUpdateInMemoryMode(ctx, log, targetContent, client)
+		err, resourceErrors, errParseErr = onUpdateInMemoryMode(ctx, log, targetContent, client.Client)
 	} else {
 		metricsProtocol = metrics.ProtocolDeck
 		dumpConfig := dump.Config{SelectorTags: selectorTags, SkipCACerts: skipCACertificates}
@@ -193,17 +194,17 @@ func onUpdateInMemoryMode(
 func onUpdateDBMode(
 	ctx context.Context,
 	targetContent *file.Content,
-	client *kong.Client,
+	client *adminapi.Client,
 	dumpConfig dump.Config,
 	version semver.Version,
 	concurrency int,
 ) error {
-	cs, err := currentState(ctx, client, dumpConfig)
+	cs, err := currentState(ctx, client.Client, dumpConfig)
 	if err != nil {
 		return fmt.Errorf("failed getting current state for %s: %w", client.BaseRootURL(), err)
 	}
 
-	ts, err := targetState(ctx, targetContent, cs, version, client, dumpConfig)
+	ts, err := targetState(ctx, targetContent, cs, version, client.Client, dumpConfig)
 	if err != nil {
 		return deckConfigConflictError{err}
 	}
@@ -211,7 +212,7 @@ func onUpdateDBMode(
 	syncer, err := diff.NewSyncer(diff.SyncerOpts{
 		CurrentState:    cs,
 		TargetState:     ts,
-		KongClient:      client,
+		KongClient:      client.Client,
 		SilenceWarnings: true,
 	})
 	if err != nil {

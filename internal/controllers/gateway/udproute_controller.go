@@ -405,7 +405,7 @@ func (r *UDPRouteReconciler) ensureGatewayReferenceStatusAdded(ctx context.Conte
 				Namespace: (*gatewayv1alpha2.Namespace)(&gateway.gateway.Namespace),
 				Name:      gatewayv1alpha2.ObjectName(gateway.gateway.Name),
 			},
-			ControllerName: (gatewayv1alpha2.GatewayController)(ControllerName),
+			ControllerName: (gatewayv1alpha2.GatewayController)(GetControllerName()),
 			Conditions: []metav1.Condition{{
 				Type:               string(gatewayv1alpha2.RouteConditionAccepted),
 				Status:             metav1.ConditionTrue,
@@ -478,7 +478,7 @@ func (r *UDPRouteReconciler) ensureGatewayReferenceStatusRemoved(ctx context.Con
 	// drop all status references to supported Gateway objects
 	newStatuses := make([]gatewayv1alpha2.RouteParentStatus, 0)
 	for _, status := range udproute.Status.Parents {
-		if status.ControllerName != (gatewayv1alpha2.GatewayController)(ControllerName) {
+		if status.ControllerName != (gatewayv1alpha2.GatewayController)(GetControllerName()) {
 			newStatuses = append(newStatuses, status)
 		}
 	}

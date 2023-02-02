@@ -2,6 +2,7 @@ package metrics
 
 import (
 	"fmt"
+	"sync"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"sigs.k8s.io/controller-runtime/pkg/metrics"
@@ -58,6 +59,8 @@ const (
 	MetricNameConfigPushDuration = "ingress_controller_configuration_push_duration_milliseconds"
 )
 
+var _once sync.Once
+
 func NewCtrlFuncMetrics() *CtrlFuncMetrics {
 	controllerMetrics := &CtrlFuncMetrics{}
 
@@ -104,7 +107,9 @@ func NewCtrlFuncMetrics() *CtrlFuncMetrics {
 		[]string{SuccessKey, ProtocolKey},
 	)
 
-	metrics.Registry.MustRegister(controllerMetrics.ConfigPushCount, controllerMetrics.TranslationCount, controllerMetrics.ConfigPushDuration)
+	_once.Do(func() {
+		metrics.Registry.MustRegister(controllerMetrics.ConfigPushCount, controllerMetrics.TranslationCount, controllerMetrics.ConfigPushDuration)
+	})
 
 	return controllerMetrics
 }

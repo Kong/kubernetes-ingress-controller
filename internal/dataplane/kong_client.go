@@ -471,7 +471,7 @@ func (c *KongClient) sendToClient(
 		formatVersion,
 	)
 
-	sendDiagnostic := c.prepareSendDiagnosticFn(ctx, logger, s, targetConfig, client, filterTags, formatVersion)
+	sendDiagnostic := prepareSendDiagnosticFn(ctx, logger, c.diagnostic, s, targetConfig, client, filterTags, formatVersion)
 
 	// apply the configuration update in Kong
 	timedCtx, cancel := context.WithTimeout(ctx, c.requestTimeout)
@@ -511,23 +511,24 @@ func (c *KongClient) sendToClient(
 type sendDiagnosticFn func(failed bool)
 
 // prepareSendDiagnosticFn generates sendDiagnosticFn.
-// Diagnostics are sent only when KongClient.diagnostic (--dump-config) is set.
-func (c *KongClient) prepareSendDiagnosticFn(
+// Diagnostics are sent only when provided diagnostic config (--dump-config) is set.
+func prepareSendDiagnosticFn(
 	ctx context.Context,
 	log logrus.FieldLogger,
+	diagnosticConfig util.ConfigDumpDiagnostic,
 	targetState *kongstate.KongState,
 	targetContent *file.Content,
 	client *sendconfig.ClientWithPluginStore,
 	filterTags []string,
 	formatVersion string,
 ) sendDiagnosticFn {
-	if c.diagnostic == (util.ConfigDumpDiagnostic{}) {
+	if diagnosticConfig == (util.ConfigDumpDiagnostic{}) {
 		// noop, diagnostics won't be sent
 		return func(bool) {}
 	}
 
 	var config *file.Content
-	if !c.diagnostic.DumpsIncludeSensitive {
+	if diagnosticConfig.DumpsIncludeSensitive {
 		redactedConfig := deckgen.ToDeckContent(ctx,
 			log,
 			targetState.SanitizedCopy(),
@@ -548,7 +549,7 @@ func (c *KongClient) prepareSendDiagnosticFn(
 		// or successfully send configs might be covered by those send
 		// later on but we're OK with this limitation of said API.
 		select {
-		case c.diagnostic.Configs <- util.ConfigDump{Failed: failed, Config: *config}:
+		case diagnosticConfig.Configs <- util.ConfigDump{Failed: failed, Config: *config}:
 			log.Debug("shipping config to diagnostic server")
 		default:
 			log.Error("config diagnostic buffer full, dropping diagnostic config")

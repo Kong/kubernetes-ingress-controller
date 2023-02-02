@@ -10,6 +10,8 @@ import (
 	"os"
 
 	"github.com/kong/go-kong/kong"
+
+	tlsutil "github.com/kong/kubernetes-ingress-controller/v2/internal/util/tls"
 )
 
 // NewKongClientForWorkspace returns a Kong API client for a given root API URL and workspace.
@@ -103,7 +105,8 @@ func MakeHTTPClient(opts *HTTPClientOpts) (*http.Client, error) {
 		tlsConfig.RootCAs = certPool
 	}
 
-	clientCertificates, err := extractClientCertificates(opts.TLSClient)
+	clientCertificates, err := tlsutil.ExtractClientCertificates(
+		opts.TLSClient.Cert, opts.TLSClient.CertFile, opts.TLSClient.Key, opts.TLSClient.KeyFile)
 	if err != nil {
 		return nil, fmt.Errorf("failed to extract client certificates: %w", err)
 	}

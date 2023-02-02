@@ -34,7 +34,7 @@ func TestConfigValidatedVars(t *testing.T) {
 				ExtractValueFn: func(c manager.Config) any {
 					return c.GatewayAPIControllerName
 				},
-				ExpectedValue: string(gateway.ControllerName),
+				ExpectedValue: string(gateway.GetControllerName()),
 			},
 			{
 				Input:                 "%invalid_controller_name$",

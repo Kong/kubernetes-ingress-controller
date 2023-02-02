@@ -159,7 +159,7 @@ func (c *Config) FlagSet() *pflag.FlagSet {
 	)
 
 	// Kubernetes configurations
-	flagSet.Var(NewValidatedValueWithDefault(&c.GatewayAPIControllerName, gatewayAPIControllerNameFromFlagValue, string(gateway.ControllerName)), "gateway-api-controller-name", "The controller name to match on Gateway API resources.")
+	flagSet.Var(NewValidatedValueWithDefault(&c.GatewayAPIControllerName, gatewayAPIControllerNameFromFlagValue, string(gateway.GetControllerName())), "gateway-api-controller-name", "The controller name to match on Gateway API resources.")
 	flagSet.StringVar(&c.KubeconfigPath, "kubeconfig", "", "Path to the kubeconfig file.")
 	flagSet.StringVar(&c.IngressClassName, "ingress-class", annotations.DefaultIngressClass, `Name of the ingress class to route through this controller.`)
 	flagSet.StringVar(&c.LeaderElectionID, "election-id", "5b374a9e.konghq.com", `Election id to use for status update.`)

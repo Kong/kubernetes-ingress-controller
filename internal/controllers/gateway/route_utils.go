@@ -146,7 +146,7 @@ func getSupportedGatewayForRoute[T types.RouteT](ctx context.Context, mgrc clien
 		}
 
 		// If the GatewayClass does not match this controller then skip it
-		if gatewayClass.Spec.ControllerName != ControllerName {
+		if gatewayClass.Spec.ControllerName != GetControllerName() {
 			continue
 		}
 

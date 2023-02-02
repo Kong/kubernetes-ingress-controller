@@ -440,7 +440,7 @@ func (r *HTTPRouteReconciler) ensureGatewayReferenceStatusAdded(ctx context.Cont
 				Namespace: (*gatewayv1beta1.Namespace)(&gateway.gateway.Namespace),
 				Name:      gatewayv1beta1.ObjectName(gateway.gateway.Name),
 			},
-			ControllerName: ControllerName,
+			ControllerName: GetControllerName(),
 			Conditions: []metav1.Condition{{
 				Type:               gateway.condition.Type,
 				Status:             gateway.condition.Status,
@@ -522,7 +522,7 @@ func (r *HTTPRouteReconciler) ensureGatewayReferenceStatusRemoved(ctx context.Co
 	// drop all status references to supported Gateway objects
 	newStatuses := make([]gatewayv1beta1.RouteParentStatus, 0)
 	for _, status := range httproute.Status.Parents {
-		if status.ControllerName != ControllerName {
+		if status.ControllerName != GetControllerName() {
 			newStatuses = append(newStatuses, status)
 		}
 	}
@@ -783,7 +783,7 @@ func (r *HTTPRouteReconciler) ensureParentsProgrammedCondition(
 					SectionName: lo.ToPtr(gatewayv1beta1.SectionName(g.listenerName)),
 					// TODO: set port after gateway port matching implemented: https://github.com/Kong/kubernetes-ingress-controller/issues/3016
 				},
-				ControllerName: ControllerName,
+				ControllerName: GetControllerName(),
 				Conditions: []metav1.Condition{
 					programmedCondition,
 				},

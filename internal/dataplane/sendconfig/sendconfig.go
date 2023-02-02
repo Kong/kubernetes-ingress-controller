@@ -181,8 +181,7 @@ func onUpdateInMemoryMode(
 
 	log.WithField("kong_url", client.BaseRootURL()).
 		Debug("sending configuration to Kong Admin API")
-	if err, errBody = client.Configs.ReloadDeclarativeRawConfig(ctx, bytes.NewReader(config), true); err != nil {
-		// TODO TRM the other errors aren't getting populated
+	if errBody, err = client.ReloadDeclarativeRawConfig(ctx, bytes.NewReader(config), true); err != nil {
 		resourceErrors, parseErr = parseFlatEntityErrors(errBody, log)
 		return err, resourceErrors, parseErr
 	}

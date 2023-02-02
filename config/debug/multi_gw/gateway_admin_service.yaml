@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: kong-admin
+  namespace: kong
+spec:
+  clusterIP: "None"
+  selector:
+    app: proxy-kong
+  ports:
+  - name: admin
+    port: 8444
+    targetPort: 8444
+    protocol: TCP

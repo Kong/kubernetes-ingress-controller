@@ -186,7 +186,6 @@ func onUpdateInMemoryMode(
 		return err, resourceErrors, parseErr
 	}
 
-	// TODO TRM ditto
 	return nil, resourceErrors, parseErr
 }
 

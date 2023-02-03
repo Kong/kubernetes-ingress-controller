@@ -37,13 +37,8 @@ const initialHash = "00000000000000000000000000000000"
 func PerformUpdate(ctx context.Context,
 	log logrus.FieldLogger,
 	client *adminapi.Client,
-	version semver.Version,
-	concurrency int,
-	inMemory bool,
-	reverseSync bool,
-	skipCACertificates bool,
+	config Config,
 	targetContent *file.Content,
-	selectorTags []string,
 	oldSHA []byte,
 	promMetrics *metrics.CtrlFuncMetrics,
 ) ([]byte, error) {
@@ -53,7 +48,7 @@ func PerformUpdate(ctx context.Context,
 	}
 
 	// disable optimization if reverse sync is enabled
-	if !reverseSync {
+	if !config.EnableReverseSync {
 		// use the previous SHA to determine whether or not to perform an update
 		if bytes.Equal(oldSHA, newSHA) {
 			if !hasSHAUpdateAlreadyBeenReported(newSHA) {
@@ -83,13 +78,13 @@ func PerformUpdate(ctx context.Context,
 
 	var metricsProtocol string
 	timeStart := time.Now()
-	if inMemory {
+	if config.InMemory {
 		metricsProtocol = metrics.ProtocolDBLess
 		err = onUpdateInMemoryMode(ctx, log, targetContent, client.Client)
 	} else {
 		metricsProtocol = metrics.ProtocolDeck
-		dumpConfig := dump.Config{SelectorTags: selectorTags, SkipCACerts: skipCACertificates}
-		err = onUpdateDBMode(ctx, targetContent, client, dumpConfig, version, concurrency)
+		dumpConfig := dump.Config{SelectorTags: config.FilterTags, SkipCACerts: config.SkipCACertificates}
+		err = onUpdateDBMode(ctx, targetContent, client, dumpConfig, config.Version, config.Concurrency)
 	}
 	timeEnd := time.Now()
 

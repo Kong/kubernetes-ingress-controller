@@ -40,7 +40,7 @@ type rawResourceError struct {
 // ConfigError is an error response from Kong's DB-less /config endpoint.
 type ConfigError struct {
 	Code      int               `json:"code,omitempty" yaml:"code,omitempty"`
-	Flattened []FlatEntityError `json:"flattened,omitempty" yaml:"flattened,omitempty"`
+	Flattened []FlatEntityError `json:"flattened_errors,omitempty" yaml:"flattened_errors,omitempty"`
 	Message   string            `json:"message,omitempty" yaml:"message,omitempty"`
 	Name      string            `json:"name,omitempty" yaml:"name,omitempty"`
 }

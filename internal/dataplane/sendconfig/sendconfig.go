@@ -96,16 +96,10 @@ func PerformUpdate(ctx context.Context,
 	timeEnd := time.Now()
 
 	if err != nil {
-		// TODO TRM the collector model doesn't make much sense here since we generate all errors in one go and then toss
-		// the instance--no immediate need to retain it, but you could. having it in parser is also a bit awkward, it
-		// needs its own package. the translation name is no longer correct either
-		failuresCollector, tfcErr := failures.NewResourceFailuresCollector(log)
+		dblessFailures := []failures.ResourceFailure{}
 		if errParseErr != nil {
 			log.WithError(errParseErr).Error("could not parse error response from Kong")
 		} else {
-			if tfcErr != nil {
-				log.WithError(errParseErr).Error("could not parse error response from Kong")
-			}
 			for _, ee := range resourceErrors {
 				obj := metav1.PartialObjectMetadata{
 					TypeMeta: metav1.TypeMeta{
@@ -119,10 +113,13 @@ func PerformUpdate(ctx context.Context,
 					},
 				}
 				for field, problem := range ee.Problems {
-					failuresCollector.PushResourceFailure(
-						fmt.Sprintf("invalid %s: %s", field, problem),
-						&obj)
 					log.Debug(fmt.Sprintf("adding failure for %s: %s = %s", ee.Name, field, problem))
+					resourceFailure, failureCreateErr := failures.NewResourceFailure(fmt.Sprintf("invalid %s: %s", field, problem), &obj)
+					if failureCreateErr != nil {
+						log.WithError(failureCreateErr).Error("could create resource failure event")
+					} else {
+						dblessFailures = append(dblessFailures, resourceFailure)
+					}
 				}
 			}
 		}
@@ -136,7 +133,7 @@ func PerformUpdate(ctx context.Context,
 			metrics.SuccessKey:  metrics.SuccessFalse,
 			metrics.ProtocolKey: metricsProtocol,
 		}).Observe(float64(timeEnd.Sub(timeStart).Milliseconds()))
-		return nil, err, failuresCollector.PopResourceFailures()
+		return nil, err, dblessFailures
 	}
 
 	promMetrics.ConfigPushCount.With(prometheus.Labels{

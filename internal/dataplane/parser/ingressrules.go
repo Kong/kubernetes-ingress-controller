@@ -2,8 +2,9 @@ package parser
 
 import (
 	"fmt"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 	"strings"
+
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 
 	"github.com/kong/go-kong/kong"
 	"github.com/sirupsen/logrus"
@@ -93,6 +94,8 @@ func (ir *ingressRules) populateServices(log logrus.FieldLogger, s store.Storer,
 		}
 		// TODO FTI-4350 this doesn't quite work for multi-backend services. this needs to be switched on the array
 		// length, use this if it's 1, and use the parent route-like resource if it's >1
+		// TODO FTI-4350 somehow https://gist.github.com/rainest/8d5a067e9c8b93c98100559fcbe75631 results in _ZERO_
+		// k8sServices, causing a panic here. That shouldn't happen and requires further investigation
 		service.Tags = util.GenerateTagsForObject(k8sServices[0])
 
 		// Kubernetes Services have been populated for this Kong Service, so it can

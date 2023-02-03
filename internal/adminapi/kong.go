@@ -106,7 +106,7 @@ func MakeHTTPClient(opts *HTTPClientOpts) (*http.Client, error) {
 	}
 
 	clientCertificates, err := tlsutil.ExtractClientCertificates(
-		opts.TLSClient.Cert, opts.TLSClient.CertFile, opts.TLSClient.Key, opts.TLSClient.KeyFile)
+		[]byte(opts.TLSClient.Cert), opts.TLSClient.CertFile, []byte(opts.TLSClient.Key), opts.TLSClient.KeyFile)
 	if err != nil {
 		return nil, fmt.Errorf("failed to extract client certificates: %w", err)
 	}

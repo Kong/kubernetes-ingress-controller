@@ -8,12 +8,12 @@ import (
 
 // ExtractClientCertificates extracts tls.Certificates from TLSClientConfig.
 // It returns an empty slice in case there was no client cert and/or client key provided.
-func ExtractClientCertificates(cert, certFile, key, keyFile string) ([]tls.Certificate, error) {
-	clientCert, err := ValueFromVariableOrFile([]byte(cert), certFile)
+func ExtractClientCertificates(cert []byte, certFile string, key []byte, keyFile string) ([]tls.Certificate, error) {
+	clientCert, err := ValueFromVariableOrFile(cert, certFile)
 	if err != nil {
 		return nil, fmt.Errorf("could not extract TLS client cert")
 	}
-	clientKey, err := ValueFromVariableOrFile([]byte(key), keyFile)
+	clientKey, err := ValueFromVariableOrFile(key, keyFile)
 	if err != nil {
 		return nil, fmt.Errorf("could not extract TLS client key")
 	}

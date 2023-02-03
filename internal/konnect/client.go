@@ -12,13 +12,17 @@ import (
 	tlsutil "github.com/kong/kubernetes-ingress-controller/v2/internal/util/tls"
 )
 
-type KonnectAdminClient struct {
+// AdminClient is used for sending requests to Konnect APIs which are not included
+// in Kong Admin APIs, like node registration APIs or runtime group operation APIs.
+// TODO(naming): give a better type name to this client?
+type AdminClient struct {
 	Address        string
 	RuntimeGroupID string
 	Client         *http.Client
 }
 
-func NewKonnectAdminClient(cfg adminapi.KonnectConfig) (*KonnectAdminClient, error) {
+// NewAdminClient creates a Konnect client.
+func NewAdminClient(cfg adminapi.KonnectConfig) (*AdminClient, error) {
 	tlsClientCert, err := tlsutil.ValueFromVariableOrFile([]byte(cfg.TLSClient.Cert), cfg.TLSClient.CertFile)
 	if err != nil {
 		return nil, fmt.Errorf("could not extract TLS client cert: %w", err)
@@ -28,7 +32,7 @@ func NewKonnectAdminClient(cfg adminapi.KonnectConfig) (*KonnectAdminClient, err
 		return nil, fmt.Errorf("could not extract TLS client key: %w", err)
 	}
 
-	tlsConfig := tls.Config{
+	tlsConfig := tls.Config{ //nolint:gosec
 		Certificates: []tls.Certificate{},
 	}
 	if len(tlsClientCert) > 0 && len(tlsClientKey) > 0 {
@@ -44,36 +48,36 @@ func NewKonnectAdminClient(cfg adminapi.KonnectConfig) (*KonnectAdminClient, err
 	defaultTransport.TLSClientConfig = &tlsConfig
 	c.Transport = defaultTransport
 
-	return &KonnectAdminClient{
+	return &AdminClient{
 		Address:        cfg.Address,
 		RuntimeGroupID: cfg.RuntimeGroupID,
 		Client:         c,
 	}, nil
 }
 
-func (c *KonnectAdminClient) CreateNode(req *CreateNodeRequest) (*CreateNodeResponse, error) {
+func (c *AdminClient) CreateNode(req *CreateNodeRequest) (*CreateNodeResponse, error) {
 	buf, err := json.Marshal(req)
 	if err != nil {
-		return nil, fmt.Errorf("failed to marshal create node request: %v", err)
+		return nil, fmt.Errorf("failed to marshal create node request: %w", err)
 	}
 	reqReader := bytes.NewReader(buf)
 	url := fmt.Sprintf("https://%s/kic/api/runtime_groups/%s/kic-nodes", c.Address, c.RuntimeGroupID)
 	httpReq, err := http.NewRequest("POST", url, reqReader)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create request: %v", err)
+		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
 	httpResp, err := c.Client.Do(httpReq)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get response: %v", err)
+		return nil, fmt.Errorf("failed to get response: %w", err)
 	}
 	defer httpResp.Body.Close()
 
 	respBuf, err := io.ReadAll(httpResp.Body)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read response body: %v", err)
+		return nil, fmt.Errorf("failed to read response body: %w", err)
 	}
 
-	if httpResp.StatusCode/100 != 2 {
+	if !isOKStatusCode(httpResp.StatusCode) {
 		return nil, fmt.Errorf("non-success response code from Koko: %d, resp body: %s", httpResp.StatusCode, string(respBuf))
 		// TODO: parse returned body to return a more detailed error
 	}
@@ -81,89 +85,93 @@ func (c *KonnectAdminClient) CreateNode(req *CreateNodeRequest) (*CreateNodeResp
 	resp := &CreateNodeResponse{}
 	err = json.Unmarshal(respBuf, resp)
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse JSON body: %v", err)
+		return nil, fmt.Errorf("failed to parse JSON body: %w", err)
 	}
 
 	return resp, nil
 }
 
-func (c *KonnectAdminClient) UpdateNode(nodeID string, req *UpdateNodeRequest) (*UpdateNodeResponse, error) {
+func (c *AdminClient) UpdateNode(nodeID string, req *UpdateNodeRequest) (*UpdateNodeResponse, error) {
 	buf, err := json.Marshal(req)
 	if err != nil {
-		return nil, fmt.Errorf("failed to marshal update node request: %v", err)
+		return nil, fmt.Errorf("failed to marshal update node request: %w", err)
 	}
 	reqReader := bytes.NewReader(buf)
 	url := fmt.Sprintf("https://%s/kic/api/runtime_groups/%s/kic-nodes/%s", c.Address, c.RuntimeGroupID, nodeID)
 	httpReq, err := http.NewRequest("PUT", url, reqReader)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create request:%v", err)
+		return nil, fmt.Errorf("failed to create request:%w", err)
 	}
 	httpResp, err := c.Client.Do(httpReq)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get response: %v", err)
+		return nil, fmt.Errorf("failed to get response: %w", err)
 	}
 	defer httpResp.Body.Close()
 
 	respBuf, err := io.ReadAll(httpResp.Body)
 	if err != nil {
-		err := fmt.Errorf("failed to read response body: %v", err)
+		err := fmt.Errorf("failed to read response body: %w", err)
 		return nil, err
 	}
 
-	if httpResp.StatusCode/100 != 2 {
+	if !isOKStatusCode(httpResp.StatusCode) {
 		return nil, fmt.Errorf("non-success response code from Koko: %d, resp body %s", httpResp.StatusCode, string(respBuf))
 	}
 
 	resp := &UpdateNodeResponse{}
 	err = json.Unmarshal(respBuf, resp)
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse JSON body: %v", err)
+		return nil, fmt.Errorf("failed to parse JSON body: %w", err)
 	}
 	return resp, nil
 }
 
-func (c *KonnectAdminClient) ListNodes() (*ListNodeResponse, error) {
+func (c *AdminClient) ListNodes() (*ListNodeResponse, error) {
 	url := fmt.Sprintf("https://%s/kic/api/runtime_groups/%s/kic-nodes", c.Address, c.RuntimeGroupID)
 	httpResp, err := c.Client.Get(url)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get response: %v", err)
+		return nil, fmt.Errorf("failed to get response: %w", err)
 	}
 
 	defer httpResp.Body.Close()
 
 	respBuf, err := io.ReadAll(httpResp.Body)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read response body: %v", err)
+		return nil, fmt.Errorf("failed to read response body: %w", err)
 	}
 
-	if httpResp.StatusCode/100 != 2 {
+	if !isOKStatusCode(httpResp.StatusCode) {
 		return nil, fmt.Errorf("non-success response from Koko: %d, resp body %s", httpResp.StatusCode, string(respBuf))
 	}
 
 	resp := &ListNodeResponse{}
 	err = json.Unmarshal(respBuf, resp)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read response body: %v", err)
+		return nil, fmt.Errorf("failed to read response body: %w", err)
 	}
 	return resp, nil
 }
 
-func (c *KonnectAdminClient) DeleteNode(nodeID string) error {
+func (c *AdminClient) DeleteNode(nodeID string) error {
 	url := fmt.Sprintf("https://%s/kic/api/runtime_groups/%s/kic-nodes/%s", c.Address, c.RuntimeGroupID, nodeID)
 	httpReq, err := http.NewRequest("DELETE", url, nil)
 	if err != nil {
-		return fmt.Errorf("failed to create request:%v", err)
+		return fmt.Errorf("failed to create request:%w", err)
 	}
 	httpResp, err := c.Client.Do(httpReq)
 	if err != nil {
-		return fmt.Errorf("failed to get response: %v", err)
-
+		return fmt.Errorf("failed to get response: %w", err)
 	}
 	defer httpResp.Body.Close()
 
-	if httpResp.StatusCode/100 != 2 {
+	if !isOKStatusCode(httpResp.StatusCode) {
 		return fmt.Errorf("non-success response from Koko: %d", httpResp.StatusCode)
 	}
 
 	return nil
+}
+
+// returns true if the input HTTP status code is 2xx, in [200,300).
+func isOKStatusCode(code int) bool {
+	return code >= 200 && code < 300
 }

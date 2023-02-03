@@ -574,6 +574,8 @@ github.com/kong/go-kong v0.36.1-0.20230203020021-ab5b18a9aa92 h1:2rezB9aXAYB57qZ
 github.com/kong/go-kong v0.36.1-0.20230203020021-ab5b18a9aa92/go.mod h1:4xT4uMMGcysH3qOqm458JyIbDBUw8MVAQIi+DP8ggtc=
 github.com/kong/go-kong v0.36.1-0.20230203023736-1cbdb016f563 h1:sqOIZujVnxZgxPY/xb94SNfNgMXjp/B0v5pYC2VQ/tI=
 github.com/kong/go-kong v0.36.1-0.20230203023736-1cbdb016f563/go.mod h1:4xT4uMMGcysH3qOqm458JyIbDBUw8MVAQIi+DP8ggtc=
+github.com/kong/go-kong v0.37.0 h1:81I49dJF6gKTCcWR+bxwp3VHlN4/2kaQ4oxVw252mGY=
+github.com/kong/go-kong v0.37.0/go.mod h1:4xT4uMMGcysH3qOqm458JyIbDBUw8MVAQIi+DP8ggtc=
 github.com/kong/kubernetes-testing-framework v0.28.0 h1:6/NeKcsfeOc+uhAQcNuEgXn9w0QsUziD8Udp11IIMAI=
 github.com/kong/kubernetes-testing-framework v0.28.0/go.mod h1:GTh/IvYaLr6IEldoUilDu4qL1vTjIYAdu90L/08vgrE=
 github.com/kong/semver/v4 v4.0.1 h1:DIcNR8W3gfx0KabFBADPalxxsp+q/5COwIFkkhrFQ2Y=

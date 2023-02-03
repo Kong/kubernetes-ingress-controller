@@ -159,7 +159,7 @@ func (c *Config) FlagSet() *pflag.FlagSet {
 	)
 
 	// Kubernetes configurations
-	flagSet.Var(NewValidatedValueWithDefault(&c.GatewayAPIControllerName, gatewayAPIControllerNameFromFlagValue, string(gateway.ControllerName)), "gateway-api-controller-name", "The controller name to match on Gateway API resources.")
+	flagSet.Var(NewValidatedValueWithDefault(&c.GatewayAPIControllerName, gatewayAPIControllerNameFromFlagValue, string(gateway.GetControllerName())), "gateway-api-controller-name", "The controller name to match on Gateway API resources.")
 	flagSet.StringVar(&c.KubeconfigPath, "kubeconfig", "", "Path to the kubeconfig file.")
 	flagSet.StringVar(&c.IngressClassName, "ingress-class", annotations.DefaultIngressClass, `Name of the ingress class to route through this controller.`)
 	flagSet.StringVar(&c.LeaderElectionID, "election-id", "5b374a9e.konghq.com", `Election id to use for status update.`)
@@ -175,11 +175,11 @@ func (c *Config) FlagSet() *pflag.FlagSet {
 	flagSet.StringSliceVar(&c.PublishStatusAddress, "publish-status-address", []string{},
 		`User-provided addresses in comma-separated string format, for use in lieu of "publish-service" `+
 			`when that Service lacks useful address information (for example, in bare-metal environments).`)
-	flagSet.Var(NewValidatedValue(&c.PublishServiceUDP, namespacedNameFromFlagValue), "publish-service-udp", `Service fronting UDP routing resources in
-			"namespace/name" format. The controller will update UDP route status information with this Service's
-			endpoints. If omitted, the same Service will be used for both TCP and UDP routes.`)
-	flagSet.StringSliceVar(&c.PublishStatusAddressUDP, "publish-status-address-udp", []string{}, `User-provided
-			address CSV, for use in lieu of "publish-service-udp" when that Service lacks useful address information.`)
+	flagSet.Var(NewValidatedValue(&c.PublishServiceUDP, namespacedNameFromFlagValue), "publish-service-udp", `Service fronting UDP routing resources in `+
+		`"namespace/name" format. The controller will update UDP route status information with this Service's `+
+		`endpoints. If omitted, the same Service will be used for both TCP and UDP routes.`)
+	flagSet.StringSliceVar(&c.PublishStatusAddressUDP, "publish-status-address-udp", []string{},
+		`User-provided address CSV, for use in lieu of "publish-service-udp" when that Service lacks useful address information.`)
 	flagSet.BoolVar(&c.UpdateStatus, "update-status", true,
 		`Indicates if the ingress controller should update the status of resources (e.g. IP/Hostname for v1.Ingress, e.t.c.)`)
 

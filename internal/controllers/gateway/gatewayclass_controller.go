@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"reflect"
+	"sync"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -26,10 +27,27 @@ import (
 // GatewayClass Controller - Vars & Consts
 // -----------------------------------------------------------------------------
 
-// ControllerName is the unique identifier for this controller and is used
-// within GatewayClass resources to indicate that this controller should
-// support connected Gateway resources.
-var ControllerName gatewayv1beta1.GatewayController = "konghq.com/kic-gateway-controller"
+var (
+	// _controllerName is the unique identifier for this controller and is used
+	// within GatewayClass resources to indicate that this controller should
+	// support connected Gateway resources.
+	_controllerName gatewayv1beta1.GatewayController = "konghq.com/kic-gateway-controller"
+
+	// _controllerNameLock guards access to _controllerName.
+	_controllerNameLock sync.RWMutex
+)
+
+func SetControllerName(name gatewayv1beta1.GatewayController) {
+	_controllerNameLock.Lock()
+	defer _controllerNameLock.Unlock()
+	_controllerName = name
+}
+
+func GetControllerName() gatewayv1beta1.GatewayController {
+	_controllerNameLock.RLock()
+	defer _controllerNameLock.RUnlock()
+	return _controllerName
+}
 
 // -----------------------------------------------------------------------------
 // GatewayClass Controller - Reconciler

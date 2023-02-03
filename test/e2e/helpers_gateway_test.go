@@ -48,7 +48,7 @@ func deployGateway(ctx context.Context, t *testing.T, env environments.Environme
 			},
 		},
 		Spec: gatewayv1beta1.GatewayClassSpec{
-			ControllerName: gateway.ControllerName,
+			ControllerName: gateway.GetControllerName(),
 		},
 	}
 	supportedGatewayClass, err = gc.GatewayV1beta1().GatewayClasses().Create(ctx, supportedGatewayClass, metav1.CreateOptions{})
@@ -112,7 +112,7 @@ func deployGatewayWithTCPListener(ctx context.Context, t *testing.T, env environ
 			},
 		},
 		Spec: gatewayv1beta1.GatewayClassSpec{
-			ControllerName: gateway.ControllerName,
+			ControllerName: gateway.GetControllerName(),
 		},
 	}
 	supportedGatewayClass, err = gc.GatewayV1beta1().GatewayClasses().Create(ctx, supportedGatewayClass, metav1.CreateOptions{})

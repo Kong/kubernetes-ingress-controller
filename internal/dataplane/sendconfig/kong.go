@@ -88,11 +88,7 @@ func tagsFilteringEnabled(ctx context.Context, kongClients []*adminapi.Client) e
 			return nil
 		})
 	}
-	if err := errg.Wait(); err != nil {
-		return err
-	}
-
-	return nil
+	return errg.Wait()
 }
 
 type ClientWithPluginStore struct {

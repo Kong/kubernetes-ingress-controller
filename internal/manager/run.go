@@ -42,6 +42,8 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 	setupLog.Info("starting controller manager", "release", metadata.Release, "repo", metadata.Repo, "commit", metadata.Commit)
 	setupLog.Info("the ingress class name has been set", "value", c.IngressClassName)
 
+	gateway.SetControllerName(gatewayv1beta1.GatewayController(c.GatewayAPIControllerName))
+
 	setupLog.Info("getting enabled options and features")
 	featureGates, err := setupFeatureGates(setupLog, c.FeatureGates)
 	if err != nil {
@@ -139,8 +141,6 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 	if err != nil {
 		return err
 	}
-
-	gateway.ControllerName = gatewayv1beta1.GatewayController(c.GatewayAPIControllerName)
 
 	setupLog.Info("Starting Enabled Controllers")
 	controllers, err := setupControllers(mgr, dataplaneClient,

@@ -82,7 +82,7 @@ func isObjectUnmanaged(anns map[string]string) bool {
 // isGatewayClassControlledAndUnmanaged returns boolean if the GatewayClass
 // is controlled by this controller and is configured for unmanaged mode.
 func isGatewayClassControlledAndUnmanaged(gatewayClass *GatewayClass) bool {
-	return gatewayClass.Spec.ControllerName == ControllerName && isObjectUnmanaged(gatewayClass.Annotations)
+	return gatewayClass.Spec.ControllerName == GetControllerName() && isObjectUnmanaged(gatewayClass.Annotations)
 }
 
 // getRefFromPublishService splits a publish service string in the format namespace/name into a types.NamespacedName
@@ -215,7 +215,7 @@ func initializeListenerMaps(gateway *Gateway) (
 }
 
 func canSharePort(requested, existing ProtocolType) bool {
-	switch requested { //nolint:exhaustive
+	switch requested {
 	// TCP and UDP listeners must always use unique ports
 	case (ProtocolType)(gatewayv1alpha2.TCPProtocolType), (ProtocolType)(gatewayv1alpha2.UDPProtocolType):
 		return false
@@ -597,7 +597,7 @@ func isGatewayClassEventInClass(log logr.Logger, watchEvent interface{}) bool {
 			log.Error(fmt.Errorf("invalid type"), "received invalid object type in event handlers", "expected", "GatewayClass", "found", reflect.TypeOf(obj))
 			continue
 		}
-		if gwc.Spec.ControllerName == ControllerName {
+		if gwc.Spec.ControllerName == GetControllerName() {
 			return true
 		}
 	}

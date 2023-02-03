@@ -126,7 +126,7 @@ func PerformUpdate(ctx context.Context,
 					failuresCollector.PushResourceFailure(
 						fmt.Sprintf("invalid %s: %s", field, problem),
 						&obj)
-					log.Info(fmt.Sprintf("adding failure for %s: %s = %s", ee.Name, field, problem)) // TODO remove
+					log.Debug(fmt.Sprintf("adding failure for %s: %s = %s", ee.Name, field, problem))
 				}
 			}
 		}

@@ -119,10 +119,6 @@ func PerformUpdate(ctx context.Context,
 					},
 				}
 				for field, problem := range ee.Problems {
-					// TODO this object is incomplete and therefore breaks events a bit. they'll show up in the event
-					// list with short fields populated, but won't appear in "describe resource" output. this requires
-					// the UID in the reference, so we either need to get the object using the info given or store
-					// the UID in tags.
 					failuresCollector.PushResourceFailure(
 						fmt.Sprintf("invalid %s: %s", field, problem),
 						&obj)

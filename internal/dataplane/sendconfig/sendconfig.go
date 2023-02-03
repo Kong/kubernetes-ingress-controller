@@ -25,6 +25,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/deckgen"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/failures"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/metrics"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/versions"
 )
 
 const initialHash = "00000000000000000000000000000000"
@@ -174,7 +175,16 @@ func onUpdateInMemoryMode(
 
 	log.WithField("kong_url", client.BaseRootURL()).
 		Debug("sending configuration to Kong Admin API")
-	if errBody, err = client.ReloadDeclarativeRawConfig(ctx, bytes.NewReader(config), true, true); err != nil {
+	var flattened bool
+	if !versions.GetKongVersion().MajorMinorOnly().LTE(versions.MTLSCredentialVersionCutoff) {
+		// Kong's API library combines KVs in the request body (the config) and query string (check hash, flattened)
+		// into a single set of parameters: https://github.com/Kong/go-kong/pull/271#issuecomment-1416212852
+		// KIC therefore must _not_ request flattened errors on versions that do not support it, as otherwise Kong
+		// will interpret the query string toggle as part of the config, and will reject it, as "flattened_errors" is
+		// not a valid config key. KIC only sends this query parameter if Kong is 3.2 or higher.
+		flattened = true
+	}
+	if errBody, err = client.ReloadDeclarativeRawConfig(ctx, bytes.NewReader(config), true, flattened); err != nil {
 		resourceErrors, parseErr = parseFlatEntityErrors(errBody, log)
 		return err, resourceErrors, parseErr
 	}

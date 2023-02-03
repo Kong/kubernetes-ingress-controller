@@ -4,6 +4,7 @@
 package integration
 
 import (
+	"context"
 	"testing"
 
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
@@ -18,13 +19,15 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane"
 	"github.com/kong/kubernetes-ingress-controller/v2/test"
+	"github.com/kong/kubernetes-ingress-controller/v2/test/consts"
+	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/helpers"
 )
 
 func TestConfigErrorEventGeneration(t *testing.T) {
 	// this test is NOT parallel. the broken configuration prevents all updates and will break unrelated tests
-	// TODO maybe use the same separate test group as TestIngressRecoverFromInvalidPath
 	// TODO skip on DB-backed
-	ns, cleaner := setup(t)
+	ctx := context.Background()
+	ns, cleaner := helpers.Setup(ctx, t, env)
 	defer func() {
 		if t.Failed() {
 			output, err := cleaner.DumpDiagnostics(ctx, t.Name())
@@ -51,7 +54,7 @@ func TestConfigErrorEventGeneration(t *testing.T) {
 	kubernetesVersion, err := env.Cluster().Version()
 	require.NoError(t, err)
 	ingress := generators.NewIngressForServiceWithClusterVersion(kubernetesVersion, "/bar", map[string]string{
-		annotations.IngressClassKey: ingressClass,
+		annotations.IngressClassKey: consts.IngressClass,
 		"konghq.com/strip-path":     "true",
 		"konghq.com/protocols":      "grpcs",
 		"konghq.com/methods":        "GET",
@@ -59,7 +62,7 @@ func TestConfigErrorEventGeneration(t *testing.T) {
 
 	t.Log("deploying ingress")
 	require.NoError(t, clusters.DeployIngress(ctx, env.Cluster(), ns.Name, ingress))
-	addIngressToCleaner(cleaner, ingress)
+	helpers.AddIngressToCleaner(cleaner, ingress)
 
 	t.Log("checking event creation")
 	//selector, err := events.GetFieldSelector(

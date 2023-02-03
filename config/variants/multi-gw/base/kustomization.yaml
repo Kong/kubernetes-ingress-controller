@@ -4,12 +4,12 @@ kind: Kustomization
 namespace: kong
 
 resources:
-- ../base
+- ../../../base
 - gateway_deployment.yaml
 - gateway_admin_service.yaml
 
 components:
-  - ../../image/oss
+  - ../../../image/oss
 
 patchesStrategicMerge:
 - manager_multi_gateway_patch.yaml

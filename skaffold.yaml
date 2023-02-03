@@ -61,7 +61,7 @@ profiles:
   manifests:
     kustomize:
       paths:
-      - config/debug/multi_gw
+      - config/variants/multi-gw/debug
   build:
     artifacts:
     - image: kic-placeholder

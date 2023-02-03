@@ -173,7 +173,7 @@ func TestMain(m *testing.M) {
 	exitOnErr(ctx, err)
 	cleaner.Add(gwc)
 
-	fmt.Println("INFO: Deploying the controller's consts.IngressClass")
+	fmt.Printf("INFO: Deploying the controller's IngressClass %q\n", consts.IngressClass)
 	createIngressClass := func() *netv1.IngressClass {
 		return &netv1.IngressClass{
 			ObjectMeta: metav1.ObjectMeta{

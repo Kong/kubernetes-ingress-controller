@@ -45,6 +45,11 @@ func (c *Client) AdminAPIClient() *kong.Client {
 	return c.adminAPIClient
 }
 
+// BaseRootURL returns a base address used for communicating with the Admin API.
+func (c *Client) BaseRootURL() string {
+	return c.adminAPIClient.BaseRootURL()
+}
+
 // PluginSchemaStore returns client's PluginSchemaStore.
 func (c *Client) PluginSchemaStore() *util.PluginSchemaStore {
 	return c.pluginSchemaStore

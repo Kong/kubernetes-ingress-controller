@@ -254,7 +254,7 @@ func (c *KongClient) Listeners(ctx context.Context) ([]kong.ProxyListener, []kon
 		errg.Go(func() error {
 			listeners, streamListeners, err := cl.AdminAPIClient().Listeners(ctx)
 			if err != nil {
-				return fmt.Errorf("failed to get listeners from %s: %w", cl.AdminAPIClient().BaseRootURL(), err)
+				return fmt.Errorf("failed to get listeners from %s: %w", cl.BaseRootURL(), err)
 			}
 			listenersCh <- listeners
 			streamListenersCh <- streamListeners
@@ -460,25 +460,7 @@ func (c *KongClient) sendToClient(
 	formatVersion string,
 	filterTags []string,
 ) (string, error) {
-	var (
-		logger         = c.logger.WithField("kong_url", client.AdminAPIClient().BaseRootURL())
-		sendDiagnostic = func(
-			log logrus.FieldLogger, failed bool, ch chan<- util.ConfigDump, diagnosticConfig *file.Content,
-		) {
-			// Given that we can send multiple configs to this channel and
-			// the fact that the API that exposes that can only expose 1 config
-			// at a time it means that users utilizing the diagnostics API
-			// might not see exactly what they indend to see i.e. come failures
-			// or successfully send configs might be covered by those send
-			// later on but we're OK with this limitation of said API.
-			select {
-			case ch <- util.ConfigDump{Failed: failed, Config: *diagnosticConfig}:
-				log.Debug("shipping config to diagnostic server")
-			default:
-				log.Error("config diagnostic buffer full, dropping diagnostic config")
-			}
-		}
-	)
+	logger := c.logger.WithField("kong_url", client.AdminAPIClient().BaseRootURL())
 
 	// generate the deck configuration to be applied to the admin API
 	logger.Debug("converting configuration to deck config")
@@ -490,23 +472,7 @@ func (c *KongClient) sendToClient(
 		formatVersion,
 	)
 
-	// generate diagnostic configuration if enabled
-	// "diagnostic" will be empty if --dump-config is not set
-	var diagnosticConfig *file.Content
-	if c.diagnostic != (util.ConfigDumpDiagnostic{}) {
-		if !c.diagnostic.DumpsIncludeSensitive {
-			redactedConfig := deckgen.ToDeckContent(ctx,
-				logger,
-				s.SanitizedCopy(),
-				client.PluginSchemaStore(),
-				filterTags,
-				formatVersion,
-			)
-			diagnosticConfig = redactedConfig
-		} else {
-			diagnosticConfig = targetConfig
-		}
-	}
+	sendDiagnostic := prepareSendDiagnosticFn(ctx, logger, c.diagnostic, s, targetConfig, client.PluginSchemaStore(), filterTags, formatVersion)
 
 	// apply the configuration update in Kong
 	timedCtx, cancel := context.WithTimeout(ctx, c.requestTimeout)
@@ -522,21 +488,14 @@ func (c *KongClient) sendToClient(
 		c.skipCACertificates,
 		targetConfig,
 		filterTags,
-		client.LastConfigSHA(),
 		c.prometheusMetrics,
 	)
+	sendDiagnostic(err != nil)
 	if err != nil {
 		if expired, ok := timedCtx.Deadline(); ok && time.Now().After(expired) {
 			logger.Warn("exceeded Kong API timeout, consider increasing --proxy-timeout-seconds")
 		}
-		if c.diagnostic != (util.ConfigDumpDiagnostic{}) {
-			sendDiagnostic(logger, true, c.diagnostic.Configs, diagnosticConfig)
-		}
 		return "", fmt.Errorf("performing update for %s failed: %w", client.AdminAPIClient().BaseRootURL(), err)
-	}
-
-	if c.diagnostic != (util.ConfigDumpDiagnostic{}) {
-		sendDiagnostic(logger, false, c.diagnostic.Configs, diagnosticConfig)
 	}
 
 	// update the lastConfigSHA with the new updated checksum
@@ -548,6 +507,55 @@ func (c *KongClient) sendToClient(
 // -----------------------------------------------------------------------------
 // Dataplane Client - Kong - Private
 // -----------------------------------------------------------------------------
+
+type sendDiagnosticFn func(failed bool)
+
+// prepareSendDiagnosticFn generates sendDiagnosticFn.
+// Diagnostics are sent only when provided diagnostic config (--dump-config) is set.
+func prepareSendDiagnosticFn(
+	ctx context.Context,
+	log logrus.FieldLogger,
+	diagnosticConfig util.ConfigDumpDiagnostic,
+	targetState *kongstate.KongState,
+	targetContent *file.Content,
+	pluginSchemaStore deckgen.PluginSchemaStore,
+	filterTags []string,
+	formatVersion string,
+) sendDiagnosticFn {
+	if diagnosticConfig == (util.ConfigDumpDiagnostic{}) {
+		// noop, diagnostics won't be sent
+		return func(bool) {}
+	}
+
+	var config *file.Content
+	if diagnosticConfig.DumpsIncludeSensitive {
+		redactedConfig := deckgen.ToDeckContent(ctx,
+			log,
+			targetState.SanitizedCopy(),
+			pluginSchemaStore,
+			filterTags,
+			formatVersion,
+		)
+		config = redactedConfig
+	} else {
+		config = targetContent
+	}
+
+	return func(failed bool) {
+		// Given that we can send multiple configs to this channel and
+		// the fact that the API that exposes that can only expose 1 config
+		// at a time it means that users utilizing the diagnostics API
+		// might not see exactly what they intend to see i.e. come failures
+		// or successfully send configs might be covered by those send
+		// later on but we're OK with this limitation of said API.
+		select {
+		case diagnosticConfig.Configs <- util.ConfigDump{Failed: failed, Config: *config}:
+			log.Debug("shipping config to diagnostic server")
+		default:
+			log.Error("config diagnostic buffer full, dropping diagnostic config")
+		}
+	}
+}
 
 // triggerKubernetesObjectReport will update the KongClient with a set which
 // enables filtering for which objects are currently applied to the data-plane,

@@ -49,10 +49,10 @@ func New(
 		errg.Go(func() error {
 			ok, err := cl.AdminAPIClient().Tags.Exists(ctx)
 			if err != nil {
-				return fmt.Errorf("Kong Admin API (%s) does not support tags: %w", cl.AdminAPIClient().BaseRootURL(), err)
+				return fmt.Errorf("Kong Admin API (%s) does not support tags: %w", cl.BaseRootURL(), err)
 			}
 			if !ok {
-				return fmt.Errorf("Kong Admin API (%s) does not support tags", cl.AdminAPIClient().BaseRootURL())
+				return fmt.Errorf("Kong Admin API (%s) does not support tags", cl.BaseRootURL())
 			}
 			return nil
 		})

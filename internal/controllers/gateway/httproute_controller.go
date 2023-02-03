@@ -317,26 +317,12 @@ func (r *HTTPRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		}
 	}
 
-	// perform operations on the kong store only if the route is in accepted status
-	if isRouteAccepted(gateways) {
-		// if there is no matched hosts in listeners for the httproute, the httproute should not be accepted
-		// and have an "Accepted" condition with status false.
-		// https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1beta1.HTTPRoute
-		filteredHTTPRoute, err := filterHostnames(gateways, httproute.DeepCopy())
-		if err != nil {
-			debug(log, httproute, "not accepting a route: no matching hostnames found after filtering")
-			_, err := r.ensureParentsAcceptedCondition(
-				ctx,
-				httproute, gateways,
-				metav1.ConditionFalse,
-				gatewayv1beta1.RouteReasonNoMatchingListenerHostname,
-				err.Error(),
-			)
-			if err != nil {
-				return ctrl.Result{}, err
-			}
-		}
-
+	// if there is no matched hosts in listeners for the httproute, the httproute should not be accepted
+	// and have an "Accepted" condition with status false.
+	// https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1beta1.HTTPRoute
+	filteredHTTPRoute, err := filterHostnames(gateways, httproute.DeepCopy())
+	// perform operations on the kong store only if the route is in accepted status and there is hostname matching
+	if isRouteAccepted(gateways) && err == nil {
 		// if the gateways are ready, and the HTTPRoute is destined for them, ensure that
 		// the object is pushed to the dataplane.
 		if err := r.DataplaneClient.UpdateObject(filteredHTTPRoute); err != nil {
@@ -440,7 +426,7 @@ func (r *HTTPRouteReconciler) ensureGatewayReferenceStatusAdded(ctx context.Cont
 				Namespace: (*gatewayv1beta1.Namespace)(&gateway.gateway.Namespace),
 				Name:      gatewayv1beta1.ObjectName(gateway.gateway.Name),
 			},
-			ControllerName: ControllerName,
+			ControllerName: GetControllerName(),
 			Conditions: []metav1.Condition{{
 				Type:               gateway.condition.Type,
 				Status:             gateway.condition.Status,
@@ -522,7 +508,7 @@ func (r *HTTPRouteReconciler) ensureGatewayReferenceStatusRemoved(ctx context.Co
 	// drop all status references to supported Gateway objects
 	newStatuses := make([]gatewayv1beta1.RouteParentStatus, 0)
 	for _, status := range httproute.Status.Parents {
-		if status.ControllerName != ControllerName {
+		if status.ControllerName != GetControllerName() {
 			newStatuses = append(newStatuses, status)
 		}
 	}
@@ -644,106 +630,6 @@ func (r *HTTPRouteReconciler) getHTTPRouteRuleReason(ctx context.Context, httpRo
 	return gatewayv1beta1.RouteReasonResolvedRefs, nil
 }
 
-// ensureParentsAcceptedCondition sets the "Accepted" condition of HTTPRoute status.
-// returns a non-nil error if updating status failed,
-// and returns true in the first return value if status changed.
-func (r *HTTPRouteReconciler) ensureParentsAcceptedCondition(
-	ctx context.Context,
-	httproute *gatewayv1beta1.HTTPRoute,
-	gateways []supportedGatewayWithCondition,
-	conditionStatus metav1.ConditionStatus,
-	conditionReason gatewayv1beta1.RouteConditionReason,
-	conditionMessage string,
-) (bool, error) {
-	// map the existing parentStatues to avoid duplications
-	parentStatuses := make(map[string]*gatewayv1beta1.RouteParentStatus)
-	for _, existingParent := range httproute.Status.Parents {
-		namespace := httproute.Namespace
-		if existingParent.ParentRef.Namespace != nil {
-			namespace = string(*existingParent.ParentRef.Namespace)
-		}
-		existingParentCopy := existingParent
-		var sectionName string
-		if existingParent.ParentRef.SectionName != nil {
-			sectionName = string(*existingParent.ParentRef.SectionName)
-		}
-		parentStatuses[fmt.Sprintf("%s/%s/%s", namespace, existingParent.ParentRef.Name, sectionName)] = &existingParentCopy
-	}
-
-	statusChanged := false
-	for _, g := range gateways {
-		gateway := g.gateway
-		parentRefKey := fmt.Sprintf("%s/%s/%s", gateway.Namespace, gateway.Name, g.listenerName)
-		parentStatus, ok := parentStatuses[parentRefKey]
-		if ok {
-			// update existing parent in status.
-			changed := updateAcceptedConditionInRouteParentStatus(parentStatus, conditionStatus, conditionReason, conditionMessage, httproute.Generation)
-			statusChanged = statusChanged || changed
-		} else {
-			// add a new parent if the parent is not found in status.
-			newParentStatus := &gatewayv1beta1.RouteParentStatus{
-				ParentRef: gatewayv1beta1.ParentReference{
-					Namespace:   lo.ToPtr(gatewayv1beta1.Namespace(gateway.Namespace)),
-					Name:        gatewayv1beta1.ObjectName(gateway.Name),
-					SectionName: lo.ToPtr(gatewayv1beta1.SectionName(g.listenerName)),
-					// TODO: set port after gateway port matching implemented: https://github.com/Kong/kubernetes-ingress-controller/issues/3016
-				},
-				Conditions: []metav1.Condition{
-					{
-						Type:               string(gatewayv1beta1.RouteConditionAccepted),
-						Status:             conditionStatus,
-						ObservedGeneration: httproute.Generation,
-						LastTransitionTime: metav1.Now(),
-						Reason:             string(conditionReason),
-						Message:            conditionMessage,
-					},
-				},
-			}
-			httproute.Status.Parents = append(httproute.Status.Parents, *newParentStatus)
-			parentStatuses[parentRefKey] = newParentStatus
-			statusChanged = true
-		}
-	}
-
-	// update status if needed.
-	if statusChanged {
-		if err := r.Status().Update(ctx, httproute); err != nil {
-			return false, err
-		}
-		return true, nil
-	}
-	// no need to update if no status is changed.
-	return false, nil
-}
-
-// updateAcceptedConditionInRouteParentStatus updates conditions with type "Accepted" in parentStatus.
-// returns true if the parentStatus was modified.
-func updateAcceptedConditionInRouteParentStatus(
-	parentStatus *gatewayv1beta1.RouteParentStatus,
-	conditionStatus metav1.ConditionStatus,
-	conditionReason gatewayv1beta1.RouteConditionReason,
-	conditionMessage string,
-	generation int64,
-) bool {
-	changed := false
-	for i, condition := range parentStatus.Conditions {
-		if condition.Type == string(gatewayv1beta1.RouteConditionAccepted) {
-			if condition.Status != conditionStatus || condition.Reason != string(conditionReason) || condition.Message != conditionMessage {
-				parentStatus.Conditions[i] = metav1.Condition{
-					Type:               string(gatewayv1beta1.RouteConditionAccepted),
-					Status:             conditionStatus,
-					ObservedGeneration: generation,
-					LastTransitionTime: metav1.Now(),
-					Reason:             string(conditionReason),
-					Message:            conditionMessage,
-				}
-				changed = true
-			}
-		}
-	}
-	return changed
-}
-
 // TODO: extract method for different types of *Routes to update conditions:
 // https://github.com/Kong/kubernetes-ingress-controller/issues/3390
 func (r *HTTPRouteReconciler) ensureParentsProgrammedCondition(
@@ -783,7 +669,7 @@ func (r *HTTPRouteReconciler) ensureParentsProgrammedCondition(
 					SectionName: lo.ToPtr(gatewayv1beta1.SectionName(g.listenerName)),
 					// TODO: set port after gateway port matching implemented: https://github.com/Kong/kubernetes-ingress-controller/issues/3016
 				},
-				ControllerName: ControllerName,
+				ControllerName: GetControllerName(),
 				Conditions: []metav1.Condition{
 					programmedCondition,
 				},

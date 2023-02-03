@@ -44,9 +44,9 @@ func PerformUpdate(ctx context.Context,
 	skipCACertificates bool,
 	targetContent *file.Content,
 	selectorTags []string,
-	oldSHA []byte,
 	promMetrics *metrics.CtrlFuncMetrics,
 ) ([]byte, error) {
+	oldSHA := client.LastConfigSHA()
 	newSHA, err := deckgen.GenerateSHA(targetContent)
 	if err != nil {
 		return oldSHA, err
@@ -85,7 +85,7 @@ func PerformUpdate(ctx context.Context,
 	timeStart := time.Now()
 	if inMemory {
 		metricsProtocol = metrics.ProtocolDBLess
-		err = onUpdateInMemoryMode(ctx, log, targetContent, client.AdminAPIClient())
+		err = onUpdateInMemoryMode(ctx, log, targetContent, client.AdminAPIClient().Configs)
 	} else {
 		metricsProtocol = metrics.ProtocolDeck
 		dumpConfig := dump.Config{SelectorTags: selectorTags, SkipCACerts: skipCACertificates}
@@ -127,7 +127,7 @@ func onUpdateInMemoryMode(
 	ctx context.Context,
 	log logrus.FieldLogger,
 	state *file.Content,
-	client *kong.Client,
+	client kong.AbstractConfigService,
 ) error {
 	// Kong will error out if this is set
 	state.Info = nil
@@ -139,9 +139,8 @@ func onUpdateInMemoryMode(
 		return fmt.Errorf("constructing kong configuration: %w", err)
 	}
 
-	log.WithField("kong_url", client.BaseRootURL()).
-		Debug("sending configuration to Kong Admin API")
-	if err = client.Configs.ReloadDeclarativeRawConfig(ctx, bytes.NewReader(config), true); err != nil {
+	log.Debug("sending configuration to Kong Admin API")
+	if err = client.ReloadDeclarativeRawConfig(ctx, bytes.NewReader(config), true); err != nil {
 		return err
 	}
 

@@ -10,10 +10,12 @@ import (
 	deckutils "github.com/kong/deck/utils"
 	"github.com/kong/go-kong/kong"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/metrics"
+	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 )
 
 func TestParseFlatEntityErrors(t *testing.T) {
+	log := logrus.New()
 	tests := []struct {
 		name    string
 		body    []byte
@@ -60,94 +62,227 @@ func TestParseFlatEntityErrors(t *testing.T) {
 			body: []byte(`{
     "code": 14,
     "fields": {
-        "flattened": [
+        "routes": [
+            null,
             {
-                "entity_id": "d7300db1-14eb-5a09-b594-2db904ed8eca",
-                "entity_name": "default.demo.00",
-                "entity_tags": [
-                    "k8s-name:scallion",
-                    "k8s-namespace:default",
-                    "k8s-kind:Ingress",
-                    "k8s-uid:d7300db1-14eb-5a09-b594-2db904ed8eca",
-                    "k8s-version:v1",
-                    "k8s-group:networking.k8s.io"
-                ],
-                "errors": [
-                    {
-                        "field": "methods",
-                        "message": "cannot set 'methods' when 'protocols' is 'grpc' or 'grpcs'"
-                    }
-                ]
-            },
-            {
-                "entity_id": "d7300db1-14eb-5a09-b594-2db904ed8eca",
-                "entity_name": "default.demo.01",
-                "entity_tags": [
-                    "k8s-name:turnip",
-                    "k8s-namespace:default",
-                    "k8s-kind:Ingress",
-                    "k8s-uid:d7300db1-14eb-5a09-b594-2db904ed8eca",
-                    "k8s-version:v1",
-                    "k8s-group:networking.k8s.io"
-                ],
-                "errors": [
-                    {
-                        "field": "methods",
-                        "messages": [
-                            "expected a string",
-                            "expected a string"
-                        ]
-                    }
-                ]
-            },
-            {
-                "entity_id": "b8aa692c-6d8d-580e-a767-a7dbc1f58344",
-                "entity_name": "default.echo.pnum-80",
-                "entity_tags": [
-                    "k8s-name:radish",
-                    "k8s-namespace:default",
-                    "k8s-kind:Service",
-                    "k8s-uid:b8aa692c-6d8d-580e-a767-a7dbc1f58344",
-                    "k8s-version:v1"
-                ],
-                "errors": [
-                    {
-                        "field": "write_timeout",
-                        "message": "expected an integer"
-                    },
-                    {
-                        "field": "read_timeout",
-                        "message": "expected an integer"
-                    }
-                ]
+                "methods": "cannot set 'methods' when 'protocols' is 'grpc' or 'grpcs'"
             }
         ],
         "services": [
             {
-                "read_timeout": "expected an integer",
-                "routes": [
-                    {
-                        "methods": "cannot set 'methods' when 'protocols' is 'grpc' or 'grpcs'"
-                    },
-                    {
-                        "methods": [
-                            "expected a string",
-                            "expected a string"
-                        ]
-                    }
-                ],
-                "write_timeout": "expected an integer"
+                "read_timeout": "expected an integer"
             }
         ]
     },
-    "message": "declarative config is invalid: {services={{read_timeout=\"expected an integer\",routes={{methods=\"cannot set 'methods' when 'protocols' is 'grpc' or 'grpcs'\"},{methods={\"expected a string\",\"expected a string\"}}},write_timeout=\"expected an integer\"}}}",
+    "flattened_errors": [
+        {
+            "entity": {
+                "created_at": 1663285589,
+                "destinations": null,
+                "headers": null,
+                "hosts": null,
+                "https_redirect_status_code": 426,
+                "methods": [
+                    "GET"
+                ],
+                "name": "default.demo.00",
+                "path_handling": "v0",
+                "paths": [
+                    "/foo"
+                ],
+                "preserve_host": true,
+                "protocols": [
+                    "grpc"
+                ],
+                "regex_priority": 100,
+                "request_buffering": true,
+                "response_buffering": true,
+                "snis": null,
+                "sources": null,
+                "strip_path": false,
+                "tags": null,
+                "updated_at": 1663285589
+            },
+            "entity_name": "default.demo.00",
+            "entity_type": "route",
+			"entity_tags": [
+                "k8s-name:scallion",
+                "k8s-namespace:ab5a272c-6ab7-4002-80eb-65624379f6ca",
+                "k8s-kind:Ingress",
+                "k8s-uid:d7300db1-14eb-5a09-b594-2db904ed8eca",
+                "k8s-group:networking.k8s.io",
+                "k8s-version:v1"
+            ],
+            "errors": [
+                {
+                    "field": "methods",
+                    "message": "cannot set 'methods' when 'protocols' is 'grpc' or 'grpcs'",
+                    "type": "field"
+                }
+            ]
+        },
+        {
+            "entity": {
+                "created_at": 1663285589,
+                "destinations": null,
+                "headers": null,
+                "hosts": null,
+                "https_redirect_status_code": 426,
+                "methods": null,
+                "name": "default.demo.01",
+                "path_handling": "v0",
+                "paths": [
+                    "/foo"
+                ],
+                "preserve_host": true,
+                "protocols": [
+                    "grpc"
+                ],
+                "regex_priority": 100,
+                "request_buffering": true,
+                "response_buffering": true,
+                "snis": null,
+                "sources": null,
+                "strip_path": true,
+                "tags": null,
+                "updated_at": 1663285589
+            },
+            "entity_name": "default.demo.01",
+            "entity_type": "route",
+            "errors": [
+                {
+                    "field": "strip_path",
+                    "message": "cannot set 'strip_path' when 'protocols' is 'grpc' or 'grpcs'",
+                    "type": "field"
+                }
+            ]
+        },
+        {
+            "entity": {
+                "ca_certificates": null,
+                "connect_timeout": 60000,
+                "created_at": 1663285589,
+                "enabled": true,
+                "host": "echo.default.80.svc",
+                "name": "default.echo.pnum-80",
+                "path": "/",
+                "port": 80,
+                "protocol": "http",
+                "read_timeout": true,
+                "retries": 5,
+                "tags": null,
+                "tls_verify": null,
+                "tls_verify_depth": null,
+                "updated_at": 1663285589,
+                "write_timeout": 60000
+            },
+            "entity_name": "default.echo.pnum-80",
+            "entity_type": "service",
+            "errors": [
+                {
+                    "field": "read_timeout",
+                    "message": "expected an integer",
+                    "type": "field"
+                }
+            ]
+        }
+    ],
+    "message": "declarative config is invalid: {routes={[2]={methods=\"cannot set 'methods' when 'protocols' is 'grpc' or 'grpcs'\"},[3]={strip_path=\"cannot set 'strip_path' when 'protocols' is 'grpc' or 'grpcs'\"}},services={{read_timeout=\"expected an integer\"}}}",
     "name": "invalid declarative configuration"
 }`),
+			/*
+			   			body: []byte(`{
+			       "code": 14,
+			       "fields": {
+			           "flattened": [
+			               {
+			                   "entity_id": "d7300db1-14eb-5a09-b594-2db904ed8eca",
+			                   "entity_name": "default.demo.00",
+			                   "entity_tags": [
+			                       "k8s-name:scallion",
+			                       "k8s-namespace:default",
+			                       "k8s-kind:Ingress",
+			                       "k8s-uid:d7300db1-14eb-5a09-b594-2db904ed8eca",
+			                       "k8s-version:v1",
+			                       "k8s-group:networking.k8s.io"
+			                   ],
+			                   "errors": [
+			                       {
+			                           "field": "methods",
+			                           "message": "cannot set 'methods' when 'protocols' is 'grpc' or 'grpcs'"
+			                       }
+			                   ]
+			               },
+			               {
+			                   "entity_id": "d7300db1-14eb-5a09-b594-2db904ed8eca",
+			                   "entity_name": "default.demo.01",
+			                   "entity_tags": [
+			                       "k8s-name:turnip",
+			                       "k8s-namespace:default",
+			                       "k8s-kind:Ingress",
+			                       "k8s-uid:d7300db1-14eb-5a09-b594-2db904ed8eca",
+			                       "k8s-version:v1",
+			                       "k8s-group:networking.k8s.io"
+			                   ],
+			                   "errors": [
+			                       {
+			                           "field": "methods",
+			                           "messages": [
+			                               "expected a string",
+			                               "expected a string"
+			                           ]
+			                       }
+			                   ]
+			               },
+			               {
+			                   "entity_id": "b8aa692c-6d8d-580e-a767-a7dbc1f58344",
+			                   "entity_name": "default.echo.pnum-80",
+			                   "entity_tags": [
+			                       "k8s-name:radish",
+			                       "k8s-namespace:default",
+			                       "k8s-kind:Service",
+			                       "k8s-uid:b8aa692c-6d8d-580e-a767-a7dbc1f58344",
+			                       "k8s-version:v1"
+			                   ],
+			                   "errors": [
+			                       {
+			                           "field": "write_timeout",
+			                           "message": "expected an integer"
+			                       },
+			                       {
+			                           "field": "read_timeout",
+			                           "message": "expected an integer"
+			                       }
+			                   ]
+			               }
+			           ],
+			           "services": [
+			               {
+			                   "read_timeout": "expected an integer",
+			                   "routes": [
+			                       {
+			                           "methods": "cannot set 'methods' when 'protocols' is 'grpc' or 'grpcs'"
+			                       },
+			                       {
+			                           "methods": [
+			                               "expected a string",
+			                               "expected a string"
+			                           ]
+			                       }
+			                   ],
+			                   "write_timeout": "expected an integer"
+			               }
+			           ]
+			       },
+			       "message": "declarative config is invalid: {services={{read_timeout=\"expected an integer\",routes={{methods=\"cannot set 'methods' when 'protocols' is 'grpc' or 'grpcs'\"},{methods={\"expected a string\",\"expected a string\"}}},write_timeout=\"expected an integer\"}}}",
+			       "name": "invalid declarative configuration"
+			   }`),
+			*/
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := parseFlatEntityErrors(tt.body, nil)
+			got, err := parseFlatEntityErrors(tt.body, log)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("parseFlatEntityErrors() error = %v, wantErr %v", err, tt.wantErr)
 				return

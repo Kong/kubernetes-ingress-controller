@@ -13,19 +13,24 @@ import (
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	//"k8s.io/apimachinery/pkg/runtime/schema"
-	//"k8s.io/client-go/tools/events"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/versions"
 	"github.com/kong/kubernetes-ingress-controller/v2/test"
 	"github.com/kong/kubernetes-ingress-controller/v2/test/consts"
 	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/helpers"
+	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/testenv"
 )
 
 func TestConfigErrorEventGeneration(t *testing.T) {
 	// this test is NOT parallel. the broken configuration prevents all updates and will break unrelated tests
-	// TODO skip on DB-backed
+	if testenv.DBMode() != "off" {
+		t.Skip("config errors are only supported on DB-less mode")
+	}
+	if !versions.GetKongVersion().MajorMinorOnly().GTE(versions.FlattenedErrorCutoff) {
+		t.Skip("flattened errors require Kong 3.2 or higher")
+	}
 	ctx := context.Background()
 	ns, cleaner := helpers.Setup(ctx, t, env)
 	defer func() {
@@ -65,16 +70,7 @@ func TestConfigErrorEventGeneration(t *testing.T) {
 	helpers.AddIngressToCleaner(cleaner, ingress)
 
 	t.Log("checking event creation")
-	//selector, err := events.GetFieldSelector(
-	//	schema.GroupVersion{Version: "v1"},
-	//	schema.GroupVersionKind{
-	//		Group:   "networking.k8s.io", // TODO not backwards compatible, but don't really care
-	//		Version: "v1",                // TODO ditto
-	//		Kind:    "Ingress",
-	//	}, service.Name, "") // this relies on NewIngressForServiceWithClusterVersion's naming scheme, since runtime.Object has no name
-	require.NoError(t, err)
 	require.Eventually(t, func() bool {
-		//events, err := env.Cluster().Client().CoreV1().Events(ns.Name).List(ctx, metav1.ListOptions{FieldSelector: selector.String()})
 		events, err := env.Cluster().Client().CoreV1().Events(ns.Name).List(ctx, metav1.ListOptions{})
 		if err != nil {
 			return false

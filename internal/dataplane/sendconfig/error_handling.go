@@ -72,8 +72,6 @@ type FlatFieldError struct {
 func parseFlatEntityErrors(body []byte, log logrus.FieldLogger) ([]ResourceError, error) {
 	var resourceErrors []ResourceError
 	var configError ConfigError
-	strb := string(body)
-	log.Error(strb)
 	err := json.Unmarshal(body, &configError)
 	if err != nil {
 		return resourceErrors, fmt.Errorf("could not unmarshal config error: %w", err)

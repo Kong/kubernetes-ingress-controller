@@ -174,7 +174,7 @@ func onUpdateInMemoryMode(
 
 	log.WithField("kong_url", client.BaseRootURL()).
 		Debug("sending configuration to Kong Admin API")
-	if errBody, err = client.ReloadDeclarativeRawConfig(ctx, bytes.NewReader(config), true); err != nil {
+	if errBody, err = client.ReloadDeclarativeRawConfig(ctx, bytes.NewReader(config), true, true); err != nil {
 		resourceErrors, parseErr = parseFlatEntityErrors(errBody, log)
 		return err, resourceErrors, parseErr
 	}

@@ -18,6 +18,11 @@ func DBMode() string {
 		os.Exit(1)
 	}
 
+	if dbmode == "" {
+		// if none explicitly set, the default is off
+		return "off"
+	}
+
 	return dbmode
 }
 

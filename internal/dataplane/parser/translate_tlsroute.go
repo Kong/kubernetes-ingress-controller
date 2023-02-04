@@ -87,6 +87,7 @@ func (p *Parser) ingressRulesFromTLSRoute(result *ingressRules, tlsroute *gatewa
 
 		// cache the service to avoid duplicates in further loop iterations
 		result.ServiceNameToServices[*service.Service.Name] = service
+		result.ServiceNameToParent[*service.Service.Name] = tlsroute
 	}
 
 	return nil

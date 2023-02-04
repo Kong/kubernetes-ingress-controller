@@ -96,6 +96,7 @@ func (p *Parser) ingressRulesFromHTTPRouteWithCombinedServiceRoutes(httproute *g
 
 		// cache the service to avoid duplicates in further loop iterations
 		result.ServiceNameToServices[*service.Service.Name] = service
+		result.ServiceNameToParent[serviceName] = httproute
 	}
 
 	return nil
@@ -126,6 +127,7 @@ func (p *Parser) ingressRulesFromHTTPRouteLegacyFallback(httproute *gatewayv1bet
 
 		// cache the service to avoid duplicates in further loop iterations
 		result.ServiceNameToServices[*service.Service.Name] = service
+		result.ServiceNameToParent[*service.Service.Name] = httproute
 	}
 	return nil
 }

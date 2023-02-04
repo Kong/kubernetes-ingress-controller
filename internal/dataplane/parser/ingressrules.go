@@ -23,12 +23,14 @@ import (
 type ingressRules struct {
 	SecretNameToSNIs      SecretNameToSNIs
 	ServiceNameToServices map[string]kongstate.Service
+	ServiceNameToParent   map[string]client.Object
 }
 
 func newIngressRules() ingressRules {
 	return ingressRules{
 		SecretNameToSNIs:      newSecretNameToSNIs(),
 		ServiceNameToServices: make(map[string]kongstate.Service),
+		ServiceNameToParent:   make(map[string]client.Object),
 	}
 }
 
@@ -92,11 +94,34 @@ func (ir *ingressRules) populateServices(log logrus.FieldLogger, s store.Storer,
 				}
 			}
 		}
-		// TODO FTI-4350 this doesn't quite work for multi-backend services. this needs to be switched on the array
-		// length, use this if it's 1, and use the parent route-like resource if it's >1
-		// TODO FTI-4350 somehow https://gist.github.com/rainest/8d5a067e9c8b93c98100559fcbe75631 results in _ZERO_
-		// k8sServices, causing a panic here. That shouldn't happen and requires further investigation
-		service.Tags = util.GenerateTagsForObject(k8sServices[0])
+		if len(k8sServices) > 1 {
+			if parent, ok := ir.ServiceNameToParent[*service.Name]; ok {
+				service.Tags = util.GenerateTagsForObject(parent)
+			} else {
+				log.WithFields(logrus.Fields{
+					"service": *service.Name,
+				}).Error("multi-service backend lacks parent info, cannot generate tags")
+			}
+		}
+		// TODO https://github.com/Kong/kubernetes-ingress-controller/issues/3484
+		// somehow https://gist.github.com/rainest/8d5a067e9c8b93c98100559fcbe75631 results in _ZERO_
+		// k8sServices, causing a panic here without this if clause.
+		// That shouldn't happen and requires further investigation.
+		if len(k8sServices) > 0 {
+			service.Tags = util.GenerateTagsForObject(k8sServices[0])
+		} else {
+			log.WithFields(logrus.Fields{
+				"service": *service.Name,
+			}).Error("service has zero k8sServices backends, cannot generate tags for it properly")
+			service.Tags = kong.StringSlice(
+				util.K8sNameTagPrefix+"UNKNOWN",
+				util.K8sNamespaceTagPrefix+"UNKNOWN",
+				util.K8sKindTagPrefix+"Service",
+				util.K8sUIDTagPrefix+"efcde2e6-9aef-4ea1-af0e-dda4cfe13807",
+				util.K8sGroupTagPrefix+"core",
+				util.K8sVersionTagPrefix+"v1",
+			)
+		}
 
 		// Kubernetes Services have been populated for this Kong Service, so it can
 		// now be cached.

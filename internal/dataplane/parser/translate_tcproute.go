@@ -79,6 +79,7 @@ func (p *Parser) ingressRulesFromTCPRoute(result *ingressRules, tcproute *gatewa
 
 		// cache the service to avoid duplicates in further loop iterations
 		result.ServiceNameToServices[*service.Service.Name] = service
+		result.ServiceNameToParent[*service.Service.Name] = tcproute
 	}
 
 	return nil

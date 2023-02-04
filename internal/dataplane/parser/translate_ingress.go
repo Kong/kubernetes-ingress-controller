@@ -120,6 +120,7 @@ func (p *Parser) ingressRulesFromIngressV1beta1() ingressRules {
 				}
 				service.Routes = append(service.Routes, r)
 				result.ServiceNameToServices[serviceName] = service
+				result.ServiceNameToParent[serviceName] = ingress
 				objectSuccessfullyParsed = true
 			}
 		}
@@ -154,8 +155,7 @@ func (p *Parser) ingressRulesFromIngressV1beta1() ingressRules {
 					ReadTimeout:    kong.Int(DefaultServiceTimeout),
 					WriteTimeout:   kong.Int(DefaultServiceTimeout),
 					Retries:        kong.Int(DefaultRetries),
-					// TODO FTI-4350 no tags here. are there any appropriate for the default backend? it shouldn't ever
-					// break since we hardcode basically everything
+					Tags:           util.GenerateTagsForObject(result.ServiceNameToParent[serviceName]),
 				},
 				Namespace: ingress.Namespace,
 				Backends: []kongstate.ServiceBackend{{
@@ -176,12 +176,12 @@ func (p *Parser) ingressRulesFromIngressV1beta1() ingressRules {
 				RegexPriority:     kong.Int(0),
 				RequestBuffering:  kong.Bool(true),
 				ResponseBuffering: kong.Bool(true),
-				// TODO FTI-4350 no tags here. are there any appropriate for the default backend? it shouldn't ever
-				// break since we hardcode basically everything
+				Tags:              util.GenerateTagsForObject(result.ServiceNameToParent[serviceName]),
 			},
 		}
 		service.Routes = append(service.Routes, r)
 		result.ServiceNameToServices[serviceName] = service
+		result.ServiceNameToParent[serviceName] = &ingress
 	}
 
 	return result
@@ -229,6 +229,7 @@ func (p *Parser) ingressRulesFromIngressV1() ingressRules {
 					}
 				}
 				result.ServiceNameToServices[*kongStateService.Service.Name] = *kongStateService
+				result.ServiceNameToParent[*kongStateService.Service.Name] = ingress
 				objectSuccessfullyParsed = true
 			}
 		} else {
@@ -302,6 +303,7 @@ func (p *Parser) ingressRulesFromIngressV1() ingressRules {
 					}
 					service.Routes = append(service.Routes, r)
 					result.ServiceNameToServices[serviceName] = service
+					result.ServiceNameToParent[serviceName] = ingress
 					objectSuccessfullyParsed = true
 				}
 			}
@@ -336,8 +338,7 @@ func (p *Parser) ingressRulesFromIngressV1() ingressRules {
 					ReadTimeout:    kong.Int(DefaultServiceTimeout),
 					WriteTimeout:   kong.Int(DefaultServiceTimeout),
 					Retries:        kong.Int(DefaultRetries),
-					// TODO FTI-4350 no tags here. are there any appropriate for the default backend? it shouldn't ever
-					// break since we hardcode basically everything
+					Tags:           util.GenerateTagsForObject(result.ServiceNameToParent[serviceName]),
 				},
 				Namespace: ingress.Namespace,
 				Backends: []kongstate.ServiceBackend{{
@@ -358,12 +359,12 @@ func (p *Parser) ingressRulesFromIngressV1() ingressRules {
 				RegexPriority:     kong.Int(0),
 				RequestBuffering:  kong.Bool(true),
 				ResponseBuffering: kong.Bool(true),
-				// TODO FTI-4350 no tags here. are there any appropriate for the default backend? it shouldn't ever
-				// break since we hardcode basically everything
+				Tags:              util.GenerateTagsForObject(result.ServiceNameToParent[serviceName]),
 			},
 		}
 		service.Routes = append(service.Routes, r)
 		result.ServiceNameToServices[serviceName] = service
+		result.ServiceNameToParent[serviceName] = &ingress
 	}
 
 	return result

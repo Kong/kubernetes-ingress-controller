@@ -43,7 +43,7 @@ _download_tool:
 		GOBIN=$(PROJECT_DIR)/bin go generate -tags=third_party ./$(TOOL).go )
 
 .PHONY: tools
-tools: controller-gen kustomize client-gen golangci-lint gotestsum crd-ref-docs
+tools: controller-gen kustomize client-gen golangci-lint gotestsum crd-ref-docs skaffold
 
 CONTROLLER_GEN = $(PROJECT_DIR)/bin/controller-gen
 .PHONY: controller-gen
@@ -88,15 +88,7 @@ setup-envtest: ## Download setup-envtest locally if necessary.
 SKAFFOLD = $(PROJECT_DIR)/bin/skaffold
 .PHONY: skaffold
 skaffold: ## Download skaffold locally if necessary.
-# NOTE: this step is not idempotent like other tool download steps because for
-# some reason skaffold doesn't want to be included in imports or installed via
-# go install:
-# go: github.com/GoogleContainerTools/skaffold@v2.0.4: invalid version: module contains a go.mod file, so module path must match major version ("github.com/GoogleContainerTools/skaffold/v2")
-ifeq ($(wildcard $(SKAFFOLD)),)
-	curl -Lo skaffold https://storage.googleapis.com/skaffold/releases/v2.1.0/skaffold-$(shell go env GOOS)-$(shell go env GOARCH)
-	@chmod +x skaffold
-	@mv skaffold ./bin/
-endif
+	@$(MAKE) _download_tool TOOL=skaffold
 
 STATICCHECK = $(PROJECT_DIR)/bin/staticcheck
 .PHONY: staticcheck

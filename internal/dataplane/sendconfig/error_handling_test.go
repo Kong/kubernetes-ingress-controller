@@ -32,7 +32,7 @@ func TestParseFlatEntityErrors(t *testing.T) {
 					APIVersion: "networking.k8s.io/v1",
 					UID:        "d7300db1-14eb-5a09-b594-2db904ed8eca",
 					Problems: map[string]string{
-						"methods": "cannot set 'methods' when 'protocols' is 'grpc' or 'grpcs'",
+						"methods": "cannot set methods when protocols is grpc or grpcs",
 					},
 				},
 				{
@@ -66,6 +66,9 @@ func TestParseFlatEntityErrors(t *testing.T) {
             null,
             {
                 "methods": "cannot set 'methods' when 'protocols' is 'grpc' or 'grpcs'"
+            },
+            {
+                "strip_path": "cannot set 'strip_path' when 'protocols' is 'grpc' or 'grpcs'"
             }
         ],
         "services": [
@@ -75,6 +78,35 @@ func TestParseFlatEntityErrors(t *testing.T) {
         ]
     },
     "flattened_errors": [
+        {
+            "entity": {
+                "ca_certificates": null,
+                "connect_timeout": 60000,
+                "created_at": 1663285589,
+                "enabled": true,
+                "host": "echo.default.80.svc",
+                "name": "default.echo.pnum-80",
+                "path": "/",
+                "port": 80,
+                "protocol": "http",
+                "read_timeout": true,
+                "retries": 5,
+                "tags": null,
+                "tls_verify": null,
+                "tls_verify_depth": null,
+                "updated_at": 1663285589,
+                "write_timeout": 60000
+            },
+            "entity_name": "default.echo.pnum-80",
+            "entity_type": "service",
+            "errors": [
+                {
+                    "field": "read_timeout",
+                    "message": "expected an integer",
+                    "type": "field"
+                }
+            ]
+        },
         {
             "entity": {
                 "created_at": 1663285589,
@@ -105,14 +137,6 @@ func TestParseFlatEntityErrors(t *testing.T) {
             },
             "entity_name": "default.demo.00",
             "entity_type": "route",
-			"entity_tags": [
-                "k8s-name:scallion",
-                "k8s-namespace:ab5a272c-6ab7-4002-80eb-65624379f6ca",
-                "k8s-kind:Ingress",
-                "k8s-uid:d7300db1-14eb-5a09-b594-2db904ed8eca",
-                "k8s-group:networking.k8s.io",
-                "k8s-version:v1"
-            ],
             "errors": [
                 {
                     "field": "methods",
@@ -153,35 +177,6 @@ func TestParseFlatEntityErrors(t *testing.T) {
                 {
                     "field": "strip_path",
                     "message": "cannot set 'strip_path' when 'protocols' is 'grpc' or 'grpcs'",
-                    "type": "field"
-                }
-            ]
-        },
-        {
-            "entity": {
-                "ca_certificates": null,
-                "connect_timeout": 60000,
-                "created_at": 1663285589,
-                "enabled": true,
-                "host": "echo.default.80.svc",
-                "name": "default.echo.pnum-80",
-                "path": "/",
-                "port": 80,
-                "protocol": "http",
-                "read_timeout": true,
-                "retries": 5,
-                "tags": null,
-                "tls_verify": null,
-                "tls_verify_depth": null,
-                "updated_at": 1663285589,
-                "write_timeout": 60000
-            },
-            "entity_name": "default.echo.pnum-80",
-            "entity_type": "service",
-            "errors": [
-                {
-                    "field": "read_timeout",
-                    "message": "expected an integer",
                     "type": "field"
                 }
             ]

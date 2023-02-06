@@ -163,18 +163,19 @@ func setupAdmissionServer(
 	if err != nil {
 		return err
 	}
+	// For now using first client is kind of OK. Using Consumer and Plugin
+	// services from first kong client should theoretically return the same
+	// results as for all other clients. There might be instances where
+	// configurations in different Kong Gateways are ever so slightly
+	// different but that shouldn't cause a fatal failure.
+	//
+	// TODO: We should take a look at this sooner rather than later.
+	// https://github.com/Kong/kubernetes-ingress-controller/issues/3363
+	designatedKongClient := kongclients[0].AdminAPIClient()
 	srv, err := admission.MakeTLSServer(ctx, &managerConfig.AdmissionServer, &admission.RequestHandler{
 		Validator: admission.NewKongHTTPValidator(
-			// For now using first client is kind of OK. Using Consumer and Plugin
-			// services from first kong client should theoretically return the same
-			// results as for all other clients. There might be instances where
-			// configurations in different Kong Gateways are ever so slightly
-			// different but that shouldn't cause a fatal failure.
-			//
-			// TODO: We should take a look at this sooner rather than later.
-			// https://github.com/Kong/kubernetes-ingress-controller/issues/3363
-			kongclients[0].AdminAPIClient().Consumers,
-			kongclients[0].AdminAPIClient().Plugins,
+			designatedKongClient.Consumers,
+			designatedKongClient.Plugins,
 			logger,
 			managerClient,
 			managerConfig.IngressClassName,

@@ -83,14 +83,14 @@ func validateClientTLS(clientTLS adminapi.TLSClientConfig) error {
 		return errors.New("both client key and client key file specified, only one allowed")
 	}
 
-	clientCertPassed := clientTLS.Cert != "" || clientTLS.CertFile != ""
-	clientKeyPassed := clientTLS.Key != "" || clientTLS.KeyFile != ""
+	clientCertProvided := clientTLS.Cert != "" || clientTLS.CertFile != ""
+	clientKeyProvided := clientTLS.Key != "" || clientTLS.KeyFile != ""
 
-	if !clientCertPassed && clientKeyPassed {
+	if clientCertProvided && !clientKeyProvided {
 		return errors.New("client certificate was provided, but the client key was not")
 	}
 
-	if !clientKeyPassed && clientCertPassed {
+	if clientKeyProvided && !clientCertProvided {
 		return errors.New("client key was provided, but the client certificate was not")
 	}
 

@@ -6,20 +6,17 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 )
 
-// Client is a wrapper around *kong.Client. It's needed to be able to distinguish between clients
-// that are to be used with a regular Kong Gateway Admin API, and the ones that are to be used with
-// Konnect Runtime Group Admin API.
-// The distinction is needed to be able to tell what protocol (deck or dbless) should be used when
-// updating configuration using the client.
-// Each client holds its own PluginSchemaStore to cache plugins' schemas as they may theoretically differ between
+// Client is a wrapper around raw *kong.Client. It's advised to pass this wrapper across the codebase, and
+// fallback to the underlying *kong.Client only when it's passed to external functions that require
+// it. Also, where it's possible, use a specific Abstract*Service interfaces that *kong.Client includes.
+// Each Client holds its own PluginSchemaStore to cache plugins' schemas as they may theoretically differ between
 // instances.
 type Client struct {
 	adminAPIClient      *kong.Client
 	pluginSchemaStore   *util.PluginSchemaStore
 	isKonnect           bool
 	konnectRuntimeGroup string
-
-	lastConfigSHA []byte
+	lastConfigSHA       []byte
 }
 
 // NewClient creates an Admin API client that is to be used with a regular Admin API exposed by Kong Gateways.

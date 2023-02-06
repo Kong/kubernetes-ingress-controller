@@ -1,0 +1,102 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: proxy-kong
+  name: proxy-kong
+  namespace: kong
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: proxy-kong
+  template:
+    metadata:
+      annotations:
+        traffic.sidecar.istio.io/includeInboundPorts: ""
+        kuma.io/gateway: enabled
+        kuma.io/service-account-token-volume: kong-serviceaccount-token
+      labels:
+        app: proxy-kong
+    spec:
+      serviceAccountName: kong-serviceaccount
+      automountServiceAccountToken: false
+      volumes:
+      - name: kong-serviceaccount-token
+        secret:
+          secretName: kong-serviceaccount-token
+          items:
+          - key: token
+            path: token
+          - key: ca.crt
+            path: ca.crt
+          - key: namespace
+            path: namespace
+      containers:
+      - name: proxy
+        image: kong-placeholder:placeholder # This is replaced by the config/image.yaml component
+        env:
+          # servers
+        - name: KONG_PROXY_LISTEN
+          value: 0.0.0.0:8000 reuseport backlog=16384, 0.0.0.0:8443 http2 ssl reuseport backlog=16384
+        - name: KONG_PORT_MAPS
+          value: "80:8000, 443:8443"
+        - name: KONG_ADMIN_LISTEN
+          value: 0.0.0.0:8444 http2 ssl reuseport backlog=16384
+        - name: KONG_STATUS_LISTEN
+          value: 0.0.0.0:8100
+          # DB
+        - name: KONG_DATABASE
+          value: "off"
+          # runtime tweaks
+        - name: KONG_NGINX_WORKER_PROCESSES
+          value: "2"
+        - name: KONG_KIC
+          value: "on"
+          # logging
+        - name: KONG_ADMIN_ACCESS_LOG
+          value: /dev/stdout
+        - name: KONG_ADMIN_ERROR_LOG
+          value: /dev/stderr
+        # - name: KONG_PROXY_ACCESS_LOG
+        # - value: /dev/stdout
+        - name: KONG_PROXY_ERROR_LOG
+          value: /dev/stderr
+        # router mode in 3.0.0. use `traditional` here for full compatibility.
+        - name: KONG_ROUTER_FLAVOR
+          value: traditional
+        lifecycle:
+          preStop:
+            exec:
+              command: [ "/bin/bash", "-c", "kong quit" ]
+        ports:
+        - name: proxy
+          containerPort: 8000
+          protocol: TCP
+        - name: proxy-ssl
+          containerPort: 8443
+          protocol: TCP
+        - name: metrics
+          containerPort: 8100
+          protocol: TCP
+        livenessProbe:
+          httpGet:
+            path: /status
+            port: 8100
+            scheme: HTTP
+          initialDelaySeconds: 5
+          timeoutSeconds: 1
+          periodSeconds: 10
+          successThreshold: 1
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /status
+            port: 8100
+            scheme: HTTP
+          initialDelaySeconds: 5
+          timeoutSeconds: 1
+          periodSeconds: 10
+          successThreshold: 1
+          failureThreshold: 3

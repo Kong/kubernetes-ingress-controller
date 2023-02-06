@@ -112,15 +112,15 @@ func TestConfigValidate(t *testing.T) {
 			require.ErrorContains(t, c.Validate(), "missing TLS client configuration")
 		})
 
-		t.Run("enabled with no tls cert is rejected", func(t *testing.T) {
-			c := validEnabled()
-			c.Konnect.TLSClient.Cert = ""
-			require.ErrorContains(t, c.Validate(), "client certificate was provided, but the client key was not")
-		})
-
 		t.Run("enabled with no tls key is rejected", func(t *testing.T) {
 			c := validEnabled()
 			c.Konnect.TLSClient.Key = ""
+			require.ErrorContains(t, c.Validate(), "client certificate was provided, but the client key was not")
+		})
+
+		t.Run("enabled with no tls cert is rejected", func(t *testing.T) {
+			c := validEnabled()
+			c.Konnect.TLSClient.Cert = ""
 			require.ErrorContains(t, c.Validate(), "client key was provided, but the client certificate was not")
 		})
 
@@ -180,15 +180,15 @@ func TestConfigValidate(t *testing.T) {
 			require.NoError(t, c.Validate())
 		})
 
-		t.Run("missing tls cert is rejected", func(t *testing.T) {
-			c := validWithClientTLS()
-			c.KongAdminAPIConfig.TLSClient.Cert = ""
-			require.ErrorContains(t, c.Validate(), "client certificate was provided, but the client key was not")
-		})
-
 		t.Run("missing tls key is rejected", func(t *testing.T) {
 			c := validWithClientTLS()
 			c.KongAdminAPIConfig.TLSClient.Key = ""
+			require.ErrorContains(t, c.Validate(), "client certificate was provided, but the client key was not")
+		})
+
+		t.Run("missing tls cert is rejected", func(t *testing.T) {
+			c := validWithClientTLS()
+			c.KongAdminAPIConfig.TLSClient.Cert = ""
 			require.ErrorContains(t, c.Validate(), "client key was provided, but the client certificate was not")
 		})
 

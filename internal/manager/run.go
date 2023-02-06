@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/blang/semver/v4"
@@ -21,6 +22,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/gateway"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/sendconfig"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/konnect"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/manager/metadata"
 	mgrutils "github.com/kong/kubernetes-ingress-controller/v2/internal/manager/utils"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/manager/utils/kongconfig"
@@ -169,6 +171,19 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 		return nil
 	}); err != nil {
 		return fmt.Errorf("unable to setup readyz: %w", err)
+	}
+
+	if c.Konnect.ConfigSynchronizationEnabled {
+		setupLog.Info("Start Konnect client to register runtime instances to Konnect")
+		konnectClient, err := konnect.NewAdminClient(c.Konnect)
+		if err != nil {
+			setupLog.Error(err, "failed to create konnect client")
+			return fmt.Errorf("failed to create konnect client: %w", err)
+		}
+		hostname, _ := os.Hostname()
+		version := metadata.Release
+		agent := konnect.NewNodeAgent(hostname, version, setupLog, konnectClient)
+		agent.Run()
 	}
 
 	if c.AnonymousReports {

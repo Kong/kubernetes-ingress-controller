@@ -21,6 +21,14 @@ type AdminClient struct {
 	Client         *http.Client
 }
 
+var (
+	// KicAPIPathPattern is the pattern of paths to API for
+	// operating runtime group with ID in AdminClient.
+	KicAPIPathPattern = "%s/kic/api/runtime_groups/%s"
+	// KicNodeAPIPathPattern is the path pattern for KIC node operations.
+	KicNodeAPIPathPattern = "%s/kic/api/runtime_groups/%s/kic-nodes"
+)
+
 // NewAdminClient creates a Konnect client.
 func NewAdminClient(cfg adminapi.KonnectConfig) (*AdminClient, error) {
 	tlsClientCert, err := tlsutil.ValueFromVariableOrFile([]byte(cfg.TLSClient.Cert), cfg.TLSClient.CertFile)
@@ -33,7 +41,8 @@ func NewAdminClient(cfg adminapi.KonnectConfig) (*AdminClient, error) {
 	}
 
 	tlsConfig := tls.Config{ //nolint:gosec
-		Certificates: []tls.Certificate{},
+		InsecureSkipVerify: true,
+		Certificates:       []tls.Certificate{},
 	}
 	if len(tlsClientCert) > 0 && len(tlsClientKey) > 0 {
 		// Read the key pair to create certificate
@@ -55,13 +64,21 @@ func NewAdminClient(cfg adminapi.KonnectConfig) (*AdminClient, error) {
 	}, nil
 }
 
+func (c *AdminClient) kicNodeAPIEndpoint() string {
+	return fmt.Sprintf(KicNodeAPIPathPattern, c.Address, c.RuntimeGroupID)
+}
+
+func (c *AdminClient) kicNodeAPIEndpointWithNodeID(nodeID string) string {
+	return fmt.Sprintf(KicNodeAPIPathPattern, c.Address, c.RuntimeGroupID) + "/" + nodeID
+}
+
 func (c *AdminClient) CreateNode(req *CreateNodeRequest) (*CreateNodeResponse, error) {
 	buf, err := json.Marshal(req)
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal create node request: %w", err)
 	}
 	reqReader := bytes.NewReader(buf)
-	url := fmt.Sprintf("https://%s/kic/api/runtime_groups/%s/kic-nodes", c.Address, c.RuntimeGroupID)
+	url := c.kicNodeAPIEndpoint()
 	httpReq, err := http.NewRequest("POST", url, reqReader)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)
@@ -97,7 +114,7 @@ func (c *AdminClient) UpdateNode(nodeID string, req *UpdateNodeRequest) (*Update
 		return nil, fmt.Errorf("failed to marshal update node request: %w", err)
 	}
 	reqReader := bytes.NewReader(buf)
-	url := fmt.Sprintf("https://%s/kic/api/runtime_groups/%s/kic-nodes/%s", c.Address, c.RuntimeGroupID, nodeID)
+	url := c.kicNodeAPIEndpointWithNodeID(nodeID)
 	httpReq, err := http.NewRequest("PUT", url, reqReader)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request:%w", err)
@@ -127,7 +144,7 @@ func (c *AdminClient) UpdateNode(nodeID string, req *UpdateNodeRequest) (*Update
 }
 
 func (c *AdminClient) ListNodes() (*ListNodeResponse, error) {
-	url := fmt.Sprintf("https://%s/kic/api/runtime_groups/%s/kic-nodes", c.Address, c.RuntimeGroupID)
+	url := c.kicNodeAPIEndpoint()
 	httpResp, err := c.Client.Get(url)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get response: %w", err)
@@ -153,7 +170,7 @@ func (c *AdminClient) ListNodes() (*ListNodeResponse, error) {
 }
 
 func (c *AdminClient) DeleteNode(nodeID string) error {
-	url := fmt.Sprintf("https://%s/kic/api/runtime_groups/%s/kic-nodes/%s", c.Address, c.RuntimeGroupID, nodeID)
+	url := c.kicNodeAPIEndpointWithNodeID(nodeID)
 	httpReq, err := http.NewRequest("DELETE", url, nil)
 	if err != nil {
 		return fmt.Errorf("failed to create request:%w", err)

@@ -28,8 +28,6 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/metrics"
 )
 
-const initialHash = "00000000000000000000000000000000"
-
 // -----------------------------------------------------------------------------
 // Sendconfig - Public Functions
 // -----------------------------------------------------------------------------
@@ -50,30 +48,13 @@ func PerformUpdate(ctx context.Context,
 
 	// disable optimization if reverse sync is enabled
 	if !config.EnableReverseSync {
-		// use the previous SHA to determine whether or not to perform an update
-		if bytes.Equal(oldSHA, newSHA) {
-			if !hasSHAUpdateAlreadyBeenReported(newSHA) {
-				log.Debugf("sha %s has been reported", hex.EncodeToString(newSHA))
-			}
-
-			// we assume ready as not all Kong versions provide their configuration hash,
-			// and their readiness state is always unknown
-			ready := true
-
-			status, err := client.AdminAPIClient().Status(ctx)
-			if err != nil {
-				return nil, err
-			}
-
-			if status.ConfigurationHash == initialHash {
-				ready = false
-			}
-
-			if ready {
-				log.Debug("no configuration change, skipping sync to kong")
-				return oldSHA, nil
-			}
-			log.Debugf("starting to send configuration (hash: %s)", status.ConfigurationHash)
+		configurationChanged, err := hasConfigurationChanged(ctx, oldSHA, newSHA, client, client.AdminAPIClient(), log)
+		if err != nil {
+			return nil, err
+		}
+		if !configurationChanged {
+			log.Debug("no configuration change, skipping sync to Kong")
+			return oldSHA, nil
 		}
 	}
 
@@ -287,4 +268,61 @@ func isConflictErr(err error) bool {
 	}
 
 	return false
+}
+
+type KonnectAwareClient interface {
+	IsKonnect() bool
+}
+
+type StatusClient interface {
+	Status(context.Context) (*kong.Status, error)
+}
+
+// hasConfigurationChanged verifies whether configuration has changed by comparing old and new config's SHAs.
+// In case the SHAs are equal, it still can return true if a client is considered crashed based on its status.
+func hasConfigurationChanged(
+	ctx context.Context,
+	oldSHA, newSHA []byte,
+	client KonnectAwareClient,
+	statusClient StatusClient,
+	log logrus.FieldLogger,
+) (bool, error) {
+	if !bytes.Equal(oldSHA, newSHA) {
+		return true, nil
+	}
+	if !hasSHAUpdateAlreadyBeenReported(newSHA) {
+		log.Debugf("sha %s has been reported", hex.EncodeToString(newSHA))
+	}
+	if !client.IsKonnect() {
+		crashed, err := hasKongCrashed(ctx, statusClient, log)
+		if err != nil {
+			return false, fmt.Errorf("failed to verify kong readiness: %w", err)
+		}
+		// Kong instance has crashed, we should push config despite the oldSHA and newSHA being equal.
+		if crashed {
+			return true, nil
+		}
+	}
+
+	return false, nil
+}
+
+const wellKnownInitialHash = "00000000000000000000000000000000"
+
+// hasKongCrashed checks Kong's status endpoint and read its config hash.
+// If the config hash reported by Kong is the known empty hash, it's considered crashed.
+// This allows providing configuration to Kong instances that have unexpectedly crashed and
+// lost their configuration.
+func hasKongCrashed(ctx context.Context, client StatusClient, log logrus.FieldLogger) (bool, error) {
+	status, err := client.Status(ctx)
+	if err != nil {
+		return false, err
+	}
+
+	if crashed := status.ConfigurationHash == wellKnownInitialHash; crashed {
+		log.Debugf("starting to send configuration (hash: %s)", status.ConfigurationHash)
+		return true, nil
+	}
+
+	return false, nil
 }

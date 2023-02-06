@@ -136,8 +136,8 @@ func onUpdateInMemoryMode(
 
 	log.WithField("kong_url", client.BaseRootURL()).
 		Debug("sending configuration to Kong Admin API")
-	if err = client.Configs.ReloadDeclarativeRawConfig(ctx, bytes.NewReader(config), true); err != nil {
-		return err
+	if _, err := client.ReloadDeclarativeRawConfig(ctx, bytes.NewReader(config), true, false); err != nil {
+		return fmt.Errorf("failed sending declarative config to %s: %w", client.BaseRootURL(), err)
 	}
 
 	return nil

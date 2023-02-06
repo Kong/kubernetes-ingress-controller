@@ -164,17 +164,17 @@ func TestSetGatewayCondtion(t *testing.T) {
 	}
 }
 
-func TestIsGatewayMarkedAsScheduled(t *testing.T) {
-	t.Log("verifying scheduled check for gateway object which has been scheduled")
+func TestIsGatewayMarkedAsAccepted(t *testing.T) {
+	t.Log("verifying scheduled check for gateway object which has been accepted")
 	scheduledGateway := &gatewayv1beta1.Gateway{
 		ObjectMeta: metav1.ObjectMeta{Generation: 1},
 		Status: gatewayv1beta1.GatewayStatus{
 			Conditions: []metav1.Condition{{
-				Type:               string(gatewayv1beta1.GatewayConditionScheduled),
+				Type:               string(gatewayv1beta1.GatewayConditionAccepted),
 				Status:             metav1.ConditionTrue,
 				ObservedGeneration: 1,
 				LastTransitionTime: metav1.Now(),
-				Reason:             string(gatewayv1beta1.GatewayReasonScheduled),
+				Reason:             string(gatewayv1beta1.GatewayReasonAccepted),
 			}},
 		},
 	}

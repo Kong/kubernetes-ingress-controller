@@ -53,8 +53,8 @@ func setGatewayCondition(gateway *Gateway, newCondition metav1.Condition) {
 func isGatewayScheduled(gateway *Gateway) bool {
 	return util.CheckCondition(
 		gateway.Status.Conditions,
-		util.ConditionType(gatewayv1beta1.GatewayConditionScheduled),
-		util.ConditionReason(gatewayv1beta1.GatewayReasonScheduled),
+		util.ConditionType(gatewayv1beta1.GatewayConditionAccepted),
+		util.ConditionReason(gatewayv1beta1.GatewayReasonAccepted),
 		metav1.ConditionTrue,
 		gateway.Generation,
 	)
@@ -323,7 +323,7 @@ func getListenerStatus(
 		// does not provide should be both Conflicted and Detached
 		if len(kongProtocolsToPort[listener.Protocol]) == 0 {
 			status.Conditions = append(status.Conditions, metav1.Condition{
-				Type:               string(gatewayv1beta1.ListenerConditionDetached),
+				Type:               string(gatewayv1beta1.ListenerConditionAccepted),
 				Status:             metav1.ConditionTrue,
 				ObservedGeneration: gateway.Generation,
 				LastTransitionTime: metav1.Now(),
@@ -333,7 +333,7 @@ func getListenerStatus(
 		} else {
 			if _, ok := kongProtocolsToPort[listener.Protocol][listener.Port]; !ok {
 				status.Conditions = append(status.Conditions, metav1.Condition{
-					Type:               string(gatewayv1beta1.ListenerConditionDetached),
+					Type:               string(gatewayv1beta1.ListenerConditionAccepted),
 					Status:             metav1.ConditionTrue,
 					ObservedGeneration: gateway.Generation,
 					LastTransitionTime: metav1.Now(),

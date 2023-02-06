@@ -410,13 +410,13 @@ func (r *GatewayReconciler) reconcileUnmanagedGateway(ctx context.Context, log l
 	// set the Gateway as scheduled to indicate that validation is complete and reconciliation work
 	// on the object is ready to begin.
 	if !isGatewayScheduled(gateway) {
-		info(log, gateway, "marking gateway as scheduled")
+		info(log, gateway, "marking gateway as accepted")
 		scheduledCondition := metav1.Condition{
-			Type:               string(gatewayv1beta1.GatewayConditionScheduled),
+			Type:               string(gatewayv1beta1.GatewayConditionAccepted),
 			Status:             metav1.ConditionTrue,
 			ObservedGeneration: gateway.Generation,
 			LastTransitionTime: metav1.Now(),
-			Reason:             string(gatewayv1beta1.GatewayReasonScheduled),
+			Reason:             string(gatewayv1beta1.GatewayReasonAccepted),
 			Message:            "this unmanaged gateway has been picked up by the controller and will be processed",
 		}
 		setGatewayCondition(gateway, scheduledCondition)

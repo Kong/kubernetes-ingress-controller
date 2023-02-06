@@ -9,7 +9,7 @@ require (
 	gotest.tools/gotestsum v1.9.0
 	honnef.co/go/tools v0.4.0
 	k8s.io/code-generator v0.26.1
-	sigs.k8s.io/controller-tools v0.11.2
+	sigs.k8s.io/controller-tools v0.11.3
 	sigs.k8s.io/kustomize/kustomize/v4 v4.5.7
 )
 

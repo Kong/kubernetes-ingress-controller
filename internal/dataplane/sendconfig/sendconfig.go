@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net"
 	"net/http"
 	"sync"
@@ -80,7 +81,7 @@ func PerformUpdate(ctx context.Context,
 	timeStart := time.Now()
 	if config.InMemory {
 		metricsProtocol = metrics.ProtocolDBLess
-		err = onUpdateInMemoryMode(ctx, log, targetContent, client.AdminAPIClient().Configs)
+		err = onUpdateInMemoryMode(ctx, log, targetContent, client.AdminAPIClient())
 	} else {
 		metricsProtocol = metrics.ProtocolDeck
 		dumpConfig := dump.Config{SelectorTags: config.FilterTags, SkipCACerts: config.SkipCACertificates}
@@ -118,11 +119,16 @@ func PerformUpdate(ctx context.Context,
 // Sendconfig - Private Functions
 // -----------------------------------------------------------------------------
 
+type InMemoryClient interface {
+	BaseRootURL() string
+	ReloadDeclarativeRawConfig(ctx context.Context, config io.Reader, checkHash bool, flattenErrors bool) ([]byte, error)
+}
+
 func onUpdateInMemoryMode(
 	ctx context.Context,
 	log logrus.FieldLogger,
 	state *file.Content,
-	client kong.AbstractConfigService,
+	client InMemoryClient,
 ) error {
 	// Kong will error out if this is set
 	state.Info = nil
@@ -135,8 +141,8 @@ func onUpdateInMemoryMode(
 	}
 
 	log.Debug("sending configuration to Kong Admin API")
-	if err = client.ReloadDeclarativeRawConfig(ctx, bytes.NewReader(config), true); err != nil {
-		return err
+	if _, err := client.ReloadDeclarativeRawConfig(ctx, bytes.NewReader(config), true, false); err != nil {
+		return fmt.Errorf("failed sending declarative config to %s: %w", client.BaseRootURL(), err)
 	}
 
 	return nil

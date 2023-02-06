@@ -67,8 +67,8 @@ type FlatFieldError struct {
 	Messages []string `json:"messages,omitempty" yaml:"messages,omitempty"`
 }
 
-// parseFlatEntityErrors takes a Kong /config error response body and parses its "fields.flattened" value into errors
-// associated with Kubernetes resources.
+// parseFlatEntityErrors takes a Kong /config error response body and parses its "fields.flattened_errors" value
+// into errors associated with Kubernetes resources.
 func parseFlatEntityErrors(body []byte, log logrus.FieldLogger) ([]ResourceError, error) {
 	var resourceErrors []ResourceError
 	var configError ConfigError

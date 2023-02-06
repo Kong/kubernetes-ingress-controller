@@ -18,14 +18,14 @@ type KonnectConfig struct {
 	TLSClient                    TLSClientConfig
 }
 
-func NewKongClientForKonnectRuntimeGroup(ctx context.Context, c KonnectConfig) (*Client, error) {
+func NewKongClientForKonnectRuntimeGroup(ctx context.Context, c KonnectConfig) (Client, error) {
 	tlsClientCert, err := valueFromVariableOrFile([]byte(c.TLSClient.Cert), c.TLSClient.CertFile)
 	if err != nil {
-		return nil, fmt.Errorf("could not extract TLS client cert: %w", err)
+		return Client{}, fmt.Errorf("could not extract TLS client cert: %w", err)
 	}
 	tlsClientKey, err := valueFromVariableOrFile([]byte(c.TLSClient.Key), c.TLSClient.KeyFile)
 	if err != nil {
-		return nil, fmt.Errorf("could not extract TLS client key: %w", err)
+		return Client{}, fmt.Errorf("could not extract TLS client key: %w", err)
 	}
 
 	client, err := deckutils.GetKongClient(deckutils.KongClientConfig{
@@ -34,13 +34,13 @@ func NewKongClientForKonnectRuntimeGroup(ctx context.Context, c KonnectConfig) (
 		TLSClientKey:  string(tlsClientKey),
 	})
 	if err != nil {
-		return nil, err
+		return Client{}, err
 	}
 	// Konnect supports tags, we don't need to verify that.
 	client.Tags = tagsStub{}
 
 	if err := ensureKonnectConnection(ctx, client); err != nil {
-		return nil, err
+		return Client{}, err
 	}
 	return NewKonnectClient(client, c.RuntimeGroupID), nil
 }

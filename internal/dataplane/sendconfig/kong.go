@@ -6,11 +6,9 @@ import (
 
 	"github.com/blang/semver/v4"
 	"github.com/go-logr/logr"
-	"github.com/samber/lo"
 	"golang.org/x/sync/errgroup"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/adminapi"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 )
 
 // -----------------------------------------------------------------------------
@@ -19,7 +17,7 @@ import (
 
 // Kong Represents a Kong client and connection information.
 type Kong struct {
-	Clients []ClientWithPluginStore
+	Clients []adminapi.Client
 	Config  Config
 }
 
@@ -52,7 +50,7 @@ type Config struct {
 func New(
 	ctx context.Context,
 	logger logr.Logger,
-	kongClients []*adminapi.Client,
+	kongClients []adminapi.Client,
 	cfg Config,
 ) Kong {
 	if err := tagsFilteringEnabled(ctx, kongClients); err != nil {
@@ -63,22 +61,17 @@ func New(
 	}
 
 	return Kong{
-		Config: cfg,
-		Clients: lo.Map(kongClients, func(client *adminapi.Client, index int) ClientWithPluginStore {
-			return ClientWithPluginStore{
-				Client:            client,
-				PluginSchemaStore: util.NewPluginSchemaStore(client.Client),
-			}
-		}),
+		Config:  cfg,
+		Clients: kongClients,
 	}
 }
 
-func tagsFilteringEnabled(ctx context.Context, kongClients []*adminapi.Client) error {
+func tagsFilteringEnabled(ctx context.Context, kongClients []adminapi.Client) error {
 	var errg errgroup.Group
 	for _, cl := range kongClients {
 		cl := cl
 		errg.Go(func() error {
-			ok, err := cl.Tags.Exists(ctx)
+			ok, err := cl.AdminAPIClient().Tags.Exists(ctx)
 			if err != nil {
 				return fmt.Errorf("Kong Admin API (%s) does not support tags: %w", cl.BaseRootURL(), err)
 			}
@@ -89,19 +82,4 @@ func tagsFilteringEnabled(ctx context.Context, kongClients []*adminapi.Client) e
 		})
 	}
 	return errg.Wait()
-}
-
-type ClientWithPluginStore struct {
-	*adminapi.Client
-	*util.PluginSchemaStore
-	// lastConfigSHA is a checksum of the last successful update to the data-plane
-	lastConfigSHA []byte
-}
-
-func (c *ClientWithPluginStore) SetLastConfigSHA(s []byte) {
-	c.lastConfigSHA = s
-}
-
-func (c *ClientWithPluginStore) LastConfigSHA() []byte {
-	return c.lastConfigSHA
 }

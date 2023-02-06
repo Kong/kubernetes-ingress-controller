@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net"
 	"net/http"
 	"sync"
@@ -39,9 +40,9 @@ func PerformUpdate(ctx context.Context,
 	client *adminapi.Client,
 	config Config,
 	targetContent *file.Content,
-	oldSHA []byte,
 	promMetrics *metrics.CtrlFuncMetrics,
 ) ([]byte, error) {
+	oldSHA := client.LastConfigSHA()
 	newSHA, err := deckgen.GenerateSHA(targetContent)
 	if err != nil {
 		return oldSHA, err
@@ -59,7 +60,7 @@ func PerformUpdate(ctx context.Context,
 			// and their readiness state is always unknown
 			ready := true
 
-			status, err := client.Status(ctx)
+			status, err := client.AdminAPIClient().Status(ctx)
 			if err != nil {
 				return nil, err
 			}
@@ -80,11 +81,11 @@ func PerformUpdate(ctx context.Context,
 	timeStart := time.Now()
 	if config.InMemory {
 		metricsProtocol = metrics.ProtocolDBLess
-		err = onUpdateInMemoryMode(ctx, log, targetContent, client.Client)
+		err = onUpdateInMemoryMode(ctx, log, targetContent, client.AdminAPIClient())
 	} else {
 		metricsProtocol = metrics.ProtocolDeck
 		dumpConfig := dump.Config{SelectorTags: config.FilterTags, SkipCACerts: config.SkipCACertificates}
-		err = onUpdateDBMode(ctx, targetContent, client, dumpConfig, config.Version, config.Concurrency)
+		err = onUpdateDBMode(ctx, targetContent, client, dumpConfig, config)
 	}
 	timeEnd := time.Now()
 
@@ -118,11 +119,16 @@ func PerformUpdate(ctx context.Context,
 // Sendconfig - Private Functions
 // -----------------------------------------------------------------------------
 
+type InMemoryClient interface {
+	BaseRootURL() string
+	ReloadDeclarativeRawConfig(ctx context.Context, config io.Reader, checkHash bool, flattenErrors bool) ([]byte, error)
+}
+
 func onUpdateInMemoryMode(
 	ctx context.Context,
 	log logrus.FieldLogger,
 	state *file.Content,
-	client *kong.Client,
+	client InMemoryClient,
 ) error {
 	// Kong will error out if this is set
 	state.Info = nil
@@ -134,8 +140,7 @@ func onUpdateInMemoryMode(
 		return fmt.Errorf("constructing kong configuration: %w", err)
 	}
 
-	log.WithField("kong_url", client.BaseRootURL()).
-		Debug("sending configuration to Kong Admin API")
+	log.Debug("sending configuration to Kong Admin API")
 	if _, err := client.ReloadDeclarativeRawConfig(ctx, bytes.NewReader(config), true, false); err != nil {
 		return fmt.Errorf("failed sending declarative config to %s: %w", client.BaseRootURL(), err)
 	}
@@ -148,15 +153,14 @@ func onUpdateDBMode(
 	targetContent *file.Content,
 	client *adminapi.Client,
 	dumpConfig dump.Config,
-	version semver.Version,
-	concurrency int,
+	config Config,
 ) error {
-	cs, err := currentState(ctx, client.Client, dumpConfig)
+	cs, err := currentState(ctx, client, dumpConfig)
 	if err != nil {
 		return fmt.Errorf("failed getting current state for %s: %w", client.BaseRootURL(), err)
 	}
 
-	ts, err := targetState(ctx, targetContent, cs, version, client.Client, dumpConfig)
+	ts, err := targetState(ctx, targetContent, cs, config.Version, client, dumpConfig)
 	if err != nil {
 		return deckConfigConflictError{err}
 	}
@@ -164,14 +168,14 @@ func onUpdateDBMode(
 	syncer, err := diff.NewSyncer(diff.SyncerOpts{
 		CurrentState:    cs,
 		TargetState:     ts,
-		KongClient:      client.Client,
+		KongClient:      client.AdminAPIClient(),
 		SilenceWarnings: true,
 	})
 	if err != nil {
 		return fmt.Errorf("creating a new syncer for %s: %w", client.BaseRootURL(), err)
 	}
 
-	_, errs := syncer.Solve(ctx, concurrency, false)
+	_, errs := syncer.Solve(ctx, config.Concurrency, false)
 	if errs != nil {
 		return deckutils.ErrArray{Errors: errs}
 	}
@@ -179,8 +183,8 @@ func onUpdateDBMode(
 	return nil
 }
 
-func currentState(ctx context.Context, kongClient *kong.Client, dumpConfig dump.Config) (*state.KongState, error) {
-	rawState, err := dump.Get(ctx, kongClient, dumpConfig)
+func currentState(ctx context.Context, kongClient *adminapi.Client, dumpConfig dump.Config) (*state.KongState, error) {
+	rawState, err := dump.Get(ctx, kongClient.AdminAPIClient(), dumpConfig)
 	if err != nil {
 		return nil, fmt.Errorf("loading configuration from kong: %w", err)
 	}
@@ -193,13 +197,13 @@ func targetState(
 	targetContent *file.Content,
 	currentState *state.KongState,
 	version semver.Version,
-	kongClient *kong.Client,
+	kongClient *adminapi.Client,
 	dumpConfig dump.Config,
 ) (*state.KongState, error) {
 	rawState, err := file.Get(ctx, targetContent, file.RenderConfig{
 		CurrentState: currentState,
 		KongVersion:  version,
-	}, dumpConfig, kongClient)
+	}, dumpConfig, kongClient.AdminAPIClient())
 	if err != nil {
 		return nil, err
 	}

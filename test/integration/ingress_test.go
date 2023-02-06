@@ -561,8 +561,8 @@ func TestIngressClassRegexToggle(t *testing.T) {
 	require.Eventually(t, func() bool {
 		return !versions.GetKongVersion().Full().EQ(semver.MustParse("0.0.0"))
 	}, time.Minute, time.Second)
-	if !versions.GetKongVersion().MajorOnly().GTE(versions.ExplicitRegexPathVersionCutoff) {
-		t.Skip("legacy regex detection is only relevant for Kong 3.0+")
+	if v := versions.GetKongVersion(); !v.MajorOnly().GTE(versions.ExplicitRegexPathVersionCutoff) {
+		t.Skipf("regex prefixes are only relevant for Kong 3.0+, detected: %s", v.Full())
 	}
 
 	// skip the test if the cluster does not support namespaced ingress class parameter (<=1.21).
@@ -650,7 +650,7 @@ func TestIngressClassRegexToggle(t *testing.T) {
 						HTTP: &netv1.HTTPIngressRuleValue{
 							Paths: []netv1.HTTPIngressPath{
 								{
-									Path:     `/test_ingress_class_regex_toggle/\d+`,
+									Path:     `/~/test_ingress_class_regex_toggle/\d+`,
 									PathType: &pathTypeImplementationSpecific,
 									Backend: netv1.IngressBackend{
 										Service: &netv1.IngressServiceBackend{
@@ -694,8 +694,8 @@ func TestIngressClassRegexToggle(t *testing.T) {
 }
 
 func TestIngressRegexPrefix(t *testing.T) {
-	if !versions.GetKongVersion().MajorOnly().GTE(versions.ExplicitRegexPathVersionCutoff) {
-		t.Skip("regex prefixes are only relevant for Kong 3.0+")
+	if v := versions.GetKongVersion(); !v.MajorOnly().GTE(versions.ExplicitRegexPathVersionCutoff) {
+		t.Skipf("regex prefixes are only relevant for Kong 3.0+, detected: %s", v.Full())
 	}
 
 	ctx := context.Background()

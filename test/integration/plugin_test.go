@@ -196,16 +196,22 @@ func TestPluginEssentials(t *testing.T) {
 }
 
 func TestPluginOrdering(t *testing.T) {
-	ctx := context.Background()
-
 	t.Parallel()
+
 	// the manager runs in a goroutine and may not have pulled the version before this test starts
 	require.Eventually(t, func() bool {
 		return !versions.GetKongVersion().Full().EQ(semver.MustParse("0.0.0"))
 	}, time.Minute, time.Second)
-	if !versions.GetKongVersion().MajorOnly().GTE(versions.PluginOrderingVersionCutoff) || !testenv.KongEnterpriseEnabled() {
-		t.Skip("plugin ordering requires Kong Enterprise 3.0+")
+
+	{
+		v := versions.GetKongVersion()
+		enterprise := testenv.KongEnterpriseEnabled()
+		if !v.MajorOnly().GTE(versions.PluginOrderingVersionCutoff) || !enterprise {
+			t.Skipf("plugin ordering requires Kong Enterprise 3.0+, detected: %s (enterprise: %v)", v.Full(), enterprise)
+		}
 	}
+
+	ctx := context.Background()
 	ns, cleaner := helpers.Setup(ctx, t, env)
 
 	t.Log("deploying a minimal HTTP container deployment to test Ingress routes")

@@ -26,11 +26,11 @@ import (
 )
 
 func TestIngressRegexMatchPath(t *testing.T) {
-	ctx := context.Background()
-
-	if !versions.GetKongVersion().MajorOnly().GTE(versions.ExplicitRegexPathVersionCutoff) {
-		t.Skip("regex prefixes are only relevant for Kong 3.0+")
+	if v := versions.GetKongVersion(); !v.MajorOnly().GTE(versions.ExplicitRegexPathVersionCutoff) {
+		t.Skipf("regex prefixes are only relevant for Kong 3.0+, detected: %s", v.Full())
 	}
+
+	ctx := context.Background()
 	ns, cleaner := helpers.Setup(ctx, t, env)
 
 	pathRegexPrefix := "/~"
@@ -180,11 +180,11 @@ func TestIngressRegexMatchPath(t *testing.T) {
 }
 
 func TestIngressRegexMatchHeader(t *testing.T) {
-	ctx := context.Background()
-
-	if !versions.GetKongVersion().MajorOnly().GTE(versions.ExplicitRegexPathVersionCutoff) {
-		t.Skip("regex prefixes are only relevant for Kong 3.0+")
+	if v := versions.GetKongVersion(); !v.MajorOnly().GTE(versions.ExplicitRegexPathVersionCutoff) {
+		t.Skipf("regex prefixes are only relevant for Kong 3.0+, detected: %s", v.Full())
 	}
+
+	ctx := context.Background()
 	ns, cleaner := helpers.Setup(ctx, t, env)
 
 	headerRegexPrefix := "~*"

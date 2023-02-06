@@ -650,7 +650,7 @@ func TestIngressClassRegexToggle(t *testing.T) {
 						HTTP: &netv1.HTTPIngressRuleValue{
 							Paths: []netv1.HTTPIngressPath{
 								{
-									Path:     `/test_ingress_class_regex_toggle/\d+`,
+									Path:     `/~/test_ingress_class_regex_toggle/\d+`,
 									PathType: &pathTypeImplementationSpecific,
 									Backend: netv1.IngressBackend{
 										Service: &netv1.IngressServiceBackend{

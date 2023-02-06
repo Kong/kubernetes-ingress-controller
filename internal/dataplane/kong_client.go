@@ -20,6 +20,7 @@ import (
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/adminapi"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/deckgen"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/failures"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
@@ -44,9 +45,9 @@ const (
 // Dataplane Client - Kong - Public Types
 // -----------------------------------------------------------------------------
 
-// KongClient is a threadsafe high level API client for the Kong data-plane
+// KongClient is a threadsafe high level API client for the Kong data-plane(s)
 // which parses Kubernetes object caches into Kong Admin configurations and
-// sends them as updates to the data-plane (Kong Admin API).
+// sends them as updates to the data-plane(s) (Kong Admin API).
 type KongClient struct {
 	logger logrus.FieldLogger
 
@@ -251,7 +252,7 @@ func (c *KongClient) Listeners(ctx context.Context) ([]kong.ProxyListener, []kon
 	for _, cl := range c.kongConfig.Clients {
 		cl := cl
 		errg.Go(func() error {
-			listeners, streamListeners, err := cl.Listeners(ctx)
+			listeners, streamListeners, err := cl.AdminAPIClient().Listeners(ctx)
 			if err != nil {
 				return fmt.Errorf("failed to get listeners from %s: %w", cl.BaseRootURL(), err)
 			}
@@ -412,7 +413,7 @@ func (c *KongClient) Update(ctx context.Context) error {
 		c.logger.Debug("successfully built data-plane configuration")
 	}
 
-	shas, err := c.sendOutToClients(ctx, kongstate, formatVersion, c.kongConfig.FilterTags)
+	shas, err := c.sendOutToClients(ctx, kongstate, formatVersion, c.kongConfig.Config)
 	if err != nil {
 		return err
 	}
@@ -435,10 +436,10 @@ func (c *KongClient) Update(ctx context.Context) error {
 // sendOutToClients will generate deck content (config) from the provided kong state
 // and send it out to each of the configured clients.
 func (c *KongClient) sendOutToClients(
-	ctx context.Context, s *kongstate.KongState, formatVersion string, filterTags []string,
+	ctx context.Context, s *kongstate.KongState, formatVersion string, config sendconfig.Config,
 ) ([]string, error) {
-	shas, err := iter.MapErr(c.kongConfig.Clients, func(client *sendconfig.ClientWithPluginStore) (string, error) {
-		return c.sendToClient(ctx, client, s, formatVersion, filterTags)
+	shas, err := iter.MapErr(c.kongConfig.Clients, func(client *adminapi.Client) (string, error) {
+		return c.sendToClient(ctx, client, s, formatVersion, config)
 	},
 	)
 	if err != nil {
@@ -454,24 +455,24 @@ func (c *KongClient) sendOutToClients(
 
 func (c *KongClient) sendToClient(
 	ctx context.Context,
-	client *sendconfig.ClientWithPluginStore,
+	client *adminapi.Client,
 	s *kongstate.KongState,
 	formatVersion string,
-	filterTags []string,
+	config sendconfig.Config,
 ) (string, error) {
-	logger := c.logger.WithField("kong_url", client.BaseRootURL())
+	logger := c.logger.WithField("kong_url", client.AdminAPIClient().BaseRootURL())
 
 	// generate the deck configuration to be applied to the admin API
 	logger.Debug("converting configuration to deck config")
 	targetConfig := deckgen.ToDeckContent(ctx,
 		logger,
 		s,
-		client.PluginSchemaStore,
-		filterTags,
+		client.PluginSchemaStore(),
+		config.FilterTags,
 		formatVersion,
 	)
 
-	sendDiagnostic := prepareSendDiagnosticFn(ctx, logger, c.diagnostic, s, targetConfig, client, filterTags, formatVersion)
+	sendDiagnostic := prepareSendDiagnosticFn(ctx, logger, c.diagnostic, s, targetConfig, client.PluginSchemaStore(), config.FilterTags, formatVersion)
 
 	// apply the configuration update in Kong
 	timedCtx, cancel := context.WithTimeout(ctx, c.requestTimeout)
@@ -479,15 +480,9 @@ func (c *KongClient) sendToClient(
 	newConfigSHA, err, entityErrors := sendconfig.PerformUpdate(
 		timedCtx,
 		logger,
-		client.Client,
-		c.kongConfig.Version,
-		c.kongConfig.Concurrency,
-		c.kongConfig.InMemory,
-		c.enableReverseSync,
-		c.skipCACertificates,
+		client,
+		config,
 		targetConfig,
-		filterTags,
-		client.LastConfigSHA(),
 		c.prometheusMetrics,
 	)
 
@@ -498,7 +493,7 @@ func (c *KongClient) sendToClient(
 		if expired, ok := timedCtx.Deadline(); ok && time.Now().After(expired) {
 			logger.Warn("exceeded Kong API timeout, consider increasing --proxy-timeout-seconds")
 		}
-		return "", fmt.Errorf("performing update for %s failed: %w", client.BaseRootURL(), err)
+		return "", fmt.Errorf("performing update for %s failed: %w", client.AdminAPIClient().BaseRootURL(), err)
 	}
 
 	// update the lastConfigSHA with the new updated checksum
@@ -521,7 +516,7 @@ func prepareSendDiagnosticFn(
 	diagnosticConfig util.ConfigDumpDiagnostic,
 	targetState *kongstate.KongState,
 	targetContent *file.Content,
-	client *sendconfig.ClientWithPluginStore,
+	pluginSchemaStore deckgen.PluginSchemaStore,
 	filterTags []string,
 	formatVersion string,
 ) sendDiagnosticFn {
@@ -535,7 +530,7 @@ func prepareSendDiagnosticFn(
 		redactedConfig := deckgen.ToDeckContent(ctx,
 			log,
 			targetState.SanitizedCopy(),
-			client.PluginSchemaStore,
+			pluginSchemaStore,
 			filterTags,
 			formatVersion,
 		)

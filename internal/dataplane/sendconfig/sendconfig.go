@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"io"
 	"sync"
 	"time"
 
@@ -15,7 +16,6 @@ import (
 	"github.com/kong/deck/file"
 	"github.com/kong/deck/state"
 	deckutils "github.com/kong/deck/utils"
-	"github.com/kong/go-kong/kong"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -38,23 +38,18 @@ const initialHash = "00000000000000000000000000000000"
 func PerformUpdate(ctx context.Context,
 	log logrus.FieldLogger,
 	client *adminapi.Client,
-	version semver.Version,
-	concurrency int,
-	inMemory bool,
-	reverseSync bool,
-	skipCACertificates bool,
+	config Config,
 	targetContent *file.Content,
-	selectorTags []string,
-	oldSHA []byte,
 	promMetrics *metrics.CtrlFuncMetrics,
 ) ([]byte, error, []failures.ResourceFailure) {
+	oldSHA := client.LastConfigSHA()
 	newSHA, err := deckgen.GenerateSHA(targetContent)
 	if err != nil {
 		return oldSHA, err, []failures.ResourceFailure{}
 	}
 
 	// disable optimization if reverse sync is enabled
-	if !reverseSync {
+	if !config.EnableReverseSync {
 		// use the previous SHA to determine whether or not to perform an update
 		if bytes.Equal(oldSHA, newSHA) {
 			if !hasSHAUpdateAlreadyBeenReported(newSHA) {
@@ -65,7 +60,7 @@ func PerformUpdate(ctx context.Context,
 			// and their readiness state is always unknown
 			ready := true
 
-			status, err := client.Status(ctx)
+			status, err := client.AdminAPIClient().Status(ctx)
 			if err != nil {
 				return nil, err, []failures.ResourceFailure{}
 			}
@@ -82,24 +77,26 @@ func PerformUpdate(ctx context.Context,
 		}
 	}
 
-	var metricsProtocol string
+	var (
+		metricsProtocol string
+		parseErr        error
+		resourceErrors  []ResourceError
+	)
 	timeStart := time.Now()
-	var errParseErr error
-	var resourceErrors []ResourceError
-	if inMemory {
+	if config.InMemory {
 		metricsProtocol = metrics.ProtocolDBLess
-		err, resourceErrors, errParseErr = onUpdateInMemoryMode(ctx, log, targetContent, client.Client)
+		err, resourceErrors, parseErr = onUpdateInMemoryMode(ctx, log, targetContent, client.AdminAPIClient())
 	} else {
 		metricsProtocol = metrics.ProtocolDeck
-		dumpConfig := dump.Config{SelectorTags: selectorTags, SkipCACerts: skipCACertificates}
-		err = onUpdateDBMode(ctx, targetContent, client, dumpConfig, version, concurrency)
+		dumpConfig := dump.Config{SelectorTags: config.FilterTags, SkipCACerts: config.SkipCACertificates}
+		err = onUpdateDBMode(ctx, targetContent, client, dumpConfig, config)
 	}
 	timeEnd := time.Now()
 
 	if err != nil {
 		dblessFailures := []failures.ResourceFailure{}
-		if errParseErr != nil {
-			log.WithError(errParseErr).Error("could not parse error response from Kong")
+		if parseErr != nil {
+			log.WithError(parseErr).Error("could not parse error response from Kong")
 		} else {
 			for _, ee := range resourceErrors {
 				obj := metav1.PartialObjectMetadata{
@@ -154,11 +151,16 @@ func PerformUpdate(ctx context.Context,
 // Sendconfig - Private Functions
 // -----------------------------------------------------------------------------
 
+type InMemoryClient interface {
+	BaseRootURL() string
+	ReloadDeclarativeRawConfig(ctx context.Context, config io.Reader, checkHash bool, flattenErrors bool) ([]byte, error)
+}
+
 func onUpdateInMemoryMode(
 	ctx context.Context,
 	log logrus.FieldLogger,
 	state *file.Content,
-	client *kong.Client,
+	client InMemoryClient,
 ) (error, []ResourceError, error) {
 	// Kong will error out if this is set
 	state.Info = nil
@@ -173,8 +175,6 @@ func onUpdateInMemoryMode(
 		return fmt.Errorf("constructing kong configuration: %w", err), resourceErrors, parseErr
 	}
 
-	log.WithField("kong_url", client.BaseRootURL()).
-		Debug("sending configuration to Kong Admin API")
 	var flattened bool
 	if !versions.GetKongVersion().MajorMinorOnly().LTE(versions.MTLSCredentialVersionCutoff) {
 		// Kong's API library combines KVs in the request body (the config) and query string (check hash, flattened)
@@ -184,6 +184,8 @@ func onUpdateInMemoryMode(
 		// not a valid config key. KIC only sends this query parameter if Kong is 3.2 or higher.
 		flattened = true
 	}
+
+	log.Debug("sending configuration to Kong Admin API")
 	if errBody, err = client.ReloadDeclarativeRawConfig(ctx, bytes.NewReader(config), true, flattened); err != nil {
 		resourceErrors, parseErr = parseFlatEntityErrors(errBody, log)
 		return err, resourceErrors, parseErr
@@ -197,15 +199,14 @@ func onUpdateDBMode(
 	targetContent *file.Content,
 	client *adminapi.Client,
 	dumpConfig dump.Config,
-	version semver.Version,
-	concurrency int,
+	config Config,
 ) error {
-	cs, err := currentState(ctx, client.Client, dumpConfig)
+	cs, err := currentState(ctx, client, dumpConfig)
 	if err != nil {
 		return fmt.Errorf("failed getting current state for %s: %w", client.BaseRootURL(), err)
 	}
 
-	ts, err := targetState(ctx, targetContent, cs, version, client.Client, dumpConfig)
+	ts, err := targetState(ctx, targetContent, cs, config.Version, client, dumpConfig)
 	if err != nil {
 		return deckConfigConflictError{err}
 	}
@@ -213,14 +214,14 @@ func onUpdateDBMode(
 	syncer, err := diff.NewSyncer(diff.SyncerOpts{
 		CurrentState:    cs,
 		TargetState:     ts,
-		KongClient:      client.Client,
+		KongClient:      client.AdminAPIClient(),
 		SilenceWarnings: true,
 	})
 	if err != nil {
 		return fmt.Errorf("creating a new syncer for %s: %w", client.BaseRootURL(), err)
 	}
 
-	_, errs := syncer.Solve(ctx, concurrency, false)
+	_, errs := syncer.Solve(ctx, config.Concurrency, false)
 	if errs != nil {
 		return deckutils.ErrArray{Errors: errs}
 	}
@@ -228,8 +229,8 @@ func onUpdateDBMode(
 	return nil
 }
 
-func currentState(ctx context.Context, kongClient *kong.Client, dumpConfig dump.Config) (*state.KongState, error) {
-	rawState, err := dump.Get(ctx, kongClient, dumpConfig)
+func currentState(ctx context.Context, kongClient *adminapi.Client, dumpConfig dump.Config) (*state.KongState, error) {
+	rawState, err := dump.Get(ctx, kongClient.AdminAPIClient(), dumpConfig)
 	if err != nil {
 		return nil, fmt.Errorf("loading configuration from kong: %w", err)
 	}
@@ -242,13 +243,13 @@ func targetState(
 	targetContent *file.Content,
 	currentState *state.KongState,
 	version semver.Version,
-	kongClient *kong.Client,
+	kongClient *adminapi.Client,
 	dumpConfig dump.Config,
 ) (*state.KongState, error) {
 	rawState, err := file.Get(ctx, targetContent, file.RenderConfig{
 		CurrentState: currentState,
 		KongVersion:  version,
-	}, dumpConfig, kongClient)
+	}, dumpConfig, kongClient.AdminAPIClient())
 	if err != nil {
 		return nil, err
 	}

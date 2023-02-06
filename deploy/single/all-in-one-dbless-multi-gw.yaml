@@ -1581,31 +1581,14 @@ metadata:
   name: kong-admin
   namespace: kong
 spec:
-  externalTrafficPolicy: Local
+  clusterIP: None
   ports:
   - name: admin
-    port: 80
+    port: 8444
     protocol: TCP
-    targetPort: 8001
+    targetPort: 8444
   selector:
-    app: ingress-kong
-  type: LoadBalancer
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: kong-manager
-  namespace: kong
-spec:
-  externalTrafficPolicy: Local
-  ports:
-  - name: manager
-    port: 80
-    protocol: TCP
-    targetPort: 8002
-  selector:
-    app: ingress-kong
-  type: LoadBalancer
+    app: proxy-kong
 ---
 apiVersion: v1
 kind: Service
@@ -1626,7 +1609,7 @@ spec:
     protocol: TCP
     targetPort: 8443
   selector:
-    app: ingress-kong
+    app: proxy-kong
   type: LoadBalancer
 ---
 apiVersion: v1
@@ -1642,20 +1625,6 @@ spec:
     targetPort: 8080
   selector:
     app: ingress-kong
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: postgres
-  namespace: kong
-spec:
-  ports:
-  - name: pgql
-    port: 5432
-    protocol: TCP
-    targetPort: 5432
-  selector:
-    app: postgres
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -1681,97 +1650,10 @@ spec:
       automountServiceAccountToken: false
       containers:
       - env:
-        - name: KONG_LICENSE_DATA
-          valueFrom:
-            secretKeyRef:
-              key: license
-              name: kong-enterprise-license
-        - name: KONG_ADMIN_API_URI
-          value: set-me
-        - name: KONG_ADMIN_GUI_AUTH
-          value: basic-auth
-        - name: KONG_ENFORCE_RBAC
-          value: "on"
-        - name: KONG_ADMIN_GUI_SESSION_CONF
-          value: '{"cookie_secure":false,"storage":"kong","cookie_name":"admin_session","cookie_lifetime":31557600,"cookie_samesite":"off","secret":"please-change-me"}'
-        - name: KONG_ADMIN_LISTEN
-          value: 0.0.0.0:8001, 0.0.0.0:8444 ssl
-        - name: KONG_DATABASE
-          value: postgres
-        - name: KONG_PG_HOST
-          value: postgres
-        - name: KONG_PG_PASSWORD
-          value: kong
-        - name: KONG_PROXY_LISTEN
-          value: 0.0.0.0:8000 reuseport backlog=16384, 0.0.0.0:8443 http2 ssl reuseport
-            backlog=16384
-        - name: KONG_PORT_MAPS
-          value: 80:8000, 443:8443
-        - name: KONG_STATUS_LISTEN
-          value: 0.0.0.0:8100
-        - name: KONG_NGINX_WORKER_PROCESSES
-          value: "2"
-        - name: KONG_KIC
-          value: "on"
-        - name: KONG_ADMIN_ACCESS_LOG
-          value: /dev/stdout
-        - name: KONG_ADMIN_ERROR_LOG
-          value: /dev/stderr
-        - name: KONG_PROXY_ERROR_LOG
-          value: /dev/stderr
-        - name: KONG_ROUTER_FLAVOR
-          value: traditional
-        image: kong/kong-gateway:3.1
-        lifecycle:
-          preStop:
-            exec:
-              command:
-              - /bin/bash
-              - -c
-              - kong quit
-        livenessProbe:
-          failureThreshold: 3
-          httpGet:
-            path: /status
-            port: 8100
-            scheme: HTTP
-          initialDelaySeconds: 5
-          periodSeconds: 10
-          successThreshold: 1
-          timeoutSeconds: 1
-        name: proxy
-        ports:
-        - containerPort: 8001
-          name: admin
-          protocol: TCP
-        - containerPort: 8002
-          name: manager
-          protocol: TCP
-        - containerPort: 8000
-          name: proxy
-          protocol: TCP
-        - containerPort: 8443
-          name: proxy-ssl
-          protocol: TCP
-        - containerPort: 8100
-          name: metrics
-          protocol: TCP
-        readinessProbe:
-          failureThreshold: 3
-          httpGet:
-            path: /status
-            port: 8100
-            scheme: HTTP
-          initialDelaySeconds: 5
-          periodSeconds: 10
-          successThreshold: 1
-          timeoutSeconds: 1
-      - env:
-        - name: CONTROLLER_KONG_ADMIN_TOKEN
-          valueFrom:
-            secretKeyRef:
-              key: password
-              name: kong-enterprise-superuser-password
+        - name: CONTROLLER_LOG_LEVEL
+          value: debug
+        - name: CONTROLLER_KONG_ADMIN_SVC
+          value: kong/kong-admin
         - name: CONTROLLER_KONG_ADMIN_URL
           value: https://127.0.0.1:8444
         - name: CONTROLLER_KONG_ADMIN_TLS_SKIP_VERIFY
@@ -1788,7 +1670,7 @@ spec:
             fieldRef:
               apiVersion: v1
               fieldPath: metadata.namespace
-        image: kong/kubernetes-ingress-controller:2.8.1
+        image: kic-placeholder:placeholder
         imagePullPolicy: IfNotPresent
         livenessProbe:
           failureThreshold: 3
@@ -1822,26 +1704,6 @@ spec:
         - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
           name: kong-serviceaccount-token
           readOnly: true
-      imagePullSecrets:
-      - name: kong-enterprise-edition-docker
-      initContainers:
-      - command:
-        - /bin/bash
-        - -c
-        - while true; do kong migrations list; if [[ 0 -eq $? ]]; then exit 0; fi;
-          sleep 2;  done;
-        env:
-        - name: KONG_LICENSE_DATA
-          valueFrom:
-            secretKeyRef:
-              key: license
-              name: kong-enterprise-license
-        - name: KONG_PG_HOST
-          value: postgres
-        - name: KONG_PG_PASSWORD
-          value: kong
-        image: kong/kong-gateway:3.1
-        name: wait-for-migrations
       serviceAccountName: kong-serviceaccount
       volumes:
       - name: kong-serviceaccount-token
@@ -1856,100 +1718,103 @@ spec:
           secretName: kong-serviceaccount-token
 ---
 apiVersion: apps/v1
-kind: StatefulSet
+kind: Deployment
 metadata:
-  name: postgres
+  labels:
+    app: proxy-kong
+  name: proxy-kong
   namespace: kong
 spec:
-  replicas: 1
+  replicas: 2
   selector:
     matchLabels:
-      app: postgres
-  serviceName: postgres
+      app: proxy-kong
   template:
     metadata:
+      annotations:
+        kuma.io/gateway: enabled
+        kuma.io/service-account-token-volume: kong-serviceaccount-token
+        traffic.sidecar.istio.io/includeInboundPorts: ""
       labels:
-        app: postgres
+        app: proxy-kong
     spec:
+      automountServiceAccountToken: false
       containers:
       - env:
-        - name: POSTGRES_USER
-          value: kong
-        - name: POSTGRES_PASSWORD
-          value: kong
-        - name: POSTGRES_DB
-          value: kong
-        - name: PGDATA
-          value: /var/lib/postgresql/data/pgdata
-        image: postgres:9.5
-        name: postgres
+        - name: KONG_PROXY_LISTEN
+          value: 0.0.0.0:8000 reuseport backlog=16384, 0.0.0.0:8443 http2 ssl reuseport
+            backlog=16384
+        - name: KONG_PORT_MAPS
+          value: 80:8000, 443:8443
+        - name: KONG_ADMIN_LISTEN
+          value: 0.0.0.0:8444 http2 ssl reuseport backlog=16384
+        - name: KONG_STATUS_LISTEN
+          value: 0.0.0.0:8100
+        - name: KONG_DATABASE
+          value: "off"
+        - name: KONG_NGINX_WORKER_PROCESSES
+          value: "2"
+        - name: KONG_KIC
+          value: "on"
+        - name: KONG_ADMIN_ACCESS_LOG
+          value: /dev/stdout
+        - name: KONG_ADMIN_ERROR_LOG
+          value: /dev/stderr
+        - name: KONG_PROXY_ERROR_LOG
+          value: /dev/stderr
+        - name: KONG_ROUTER_FLAVOR
+          value: traditional
+        image: kong:3.1
+        lifecycle:
+          preStop:
+            exec:
+              command:
+              - /bin/bash
+              - -c
+              - kong quit
+        livenessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /status
+            port: 8100
+            scheme: HTTP
+          initialDelaySeconds: 5
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 1
+        name: proxy
         ports:
-        - containerPort: 5432
-        volumeMounts:
-        - mountPath: /var/lib/postgresql/data
-          name: datadir
-          subPath: pgdata
-      terminationGracePeriodSeconds: 60
-  volumeClaimTemplates:
-  - metadata:
-      name: datadir
-    spec:
-      accessModes:
-      - ReadWriteOnce
-      resources:
-        requests:
-          storage: 1Gi
----
-apiVersion: batch/v1
-kind: Job
-metadata:
-  name: kong-migrations
-  namespace: kong
-spec:
-  template:
-    metadata:
-      name: kong-migrations
-    spec:
-      containers:
-      - command:
-        - /bin/bash
-        - -c
-        - kong migrations bootstrap
-        env:
-        - name: KONG_LICENSE_DATA
-          valueFrom:
-            secretKeyRef:
-              key: license
-              name: kong-enterprise-license
-        - name: KONG_PASSWORD
-          valueFrom:
-            secretKeyRef:
-              key: password
-              name: kong-enterprise-superuser-password
-        - name: KONG_PG_PASSWORD
-          value: kong
-        - name: KONG_PG_HOST
-          value: postgres
-        - name: KONG_PG_PORT
-          value: "5432"
-        image: kong/kong-gateway:3.1
-        name: kong-migrations
-      imagePullSecrets:
-      - name: kong-enterprise-edition-docker
-      initContainers:
-      - command:
-        - /bin/bash
-        - -c
-        - until timeout 1 bash 9<>/dev/tcp/${KONG_PG_HOST}/${KONG_PG_PORT}; do echo
-          'waiting for db'; sleep 1; done
-        env:
-        - name: KONG_PG_HOST
-          value: postgres
-        - name: KONG_PG_PORT
-          value: "5432"
-        image: kong/kong-gateway:3.1
-        name: wait-for-postgres
-      restartPolicy: OnFailure
+        - containerPort: 8000
+          name: proxy
+          protocol: TCP
+        - containerPort: 8443
+          name: proxy-ssl
+          protocol: TCP
+        - containerPort: 8100
+          name: metrics
+          protocol: TCP
+        readinessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /status
+            port: 8100
+            scheme: HTTP
+          initialDelaySeconds: 5
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 1
+      serviceAccountName: kong-serviceaccount
+      volumes:
+      - name: kong-serviceaccount-token
+        secret:
+          items:
+          - key: token
+            path: token
+          - key: ca.crt
+            path: ca.crt
+          - key: namespace
+            path: namespace
+          secretName: kong-serviceaccount-token
 ---
 apiVersion: networking.k8s.io/v1
 kind: IngressClass

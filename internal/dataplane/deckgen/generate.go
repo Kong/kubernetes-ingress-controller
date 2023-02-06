@@ -11,15 +11,18 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 )
+
+type PluginSchemaStore interface {
+	Schema(ctx context.Context, pluginName string) (map[string]interface{}, error)
+}
 
 // ToDeckContent generates a decK configuration from `k8sState` and auxiliary parameters.
 func ToDeckContent(
 	ctx context.Context,
 	log logrus.FieldLogger,
 	k8sState *kongstate.KongState,
-	schemas *util.PluginSchemaStore,
+	schemas PluginSchemaStore,
 	selectorTags []string,
 	formatVersion string,
 ) *file.Content {
@@ -183,7 +186,7 @@ func fillUpstream(upstream *kong.Upstream) {
 	}
 }
 
-func fillPlugin(ctx context.Context, plugin *file.FPlugin, schemas *util.PluginSchemaStore) error {
+func fillPlugin(ctx context.Context, plugin *file.FPlugin, schemas PluginSchemaStore) error {
 	if plugin == nil {
 		return fmt.Errorf("plugin is nil")
 	}

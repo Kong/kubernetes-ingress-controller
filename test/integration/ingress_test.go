@@ -553,7 +553,7 @@ func TestIngressStatusUpdatesExtended(t *testing.T) {
 }
 
 // TestIngressClassRegexToggle tests if the controller adds the 3.x "~" regular expression path prefix to Ingress
-// paths that match the 2.x heuristic when their consts.IngressClass has the EnableLegacyRegexDetection flag set. It IS NOT
+// paths that match the 2.x heuristic when their IngressClass has the EnableLegacyRegexDetection flag set. It IS NOT
 // parallel: parts of the test may add this route _without_ the prefix, and the 3.x router really hates this and will
 // stop working altogether.
 func TestIngressClassRegexToggle(t *testing.T) {
@@ -561,8 +561,8 @@ func TestIngressClassRegexToggle(t *testing.T) {
 	require.Eventually(t, func() bool {
 		return !versions.GetKongVersion().Full().EQ(semver.MustParse("0.0.0"))
 	}, time.Minute, time.Second)
-	if !versions.GetKongVersion().MajorOnly().GTE(versions.ExplicitRegexPathVersionCutoff) {
-		t.Skip("legacy regex detection is only relevant for Kong 3.0+")
+	if v := versions.GetKongVersion(); !v.MajorOnly().GTE(versions.ExplicitRegexPathVersionCutoff) {
+		t.Skipf("regex prefixes are only relevant for Kong 3.0+, detected: %s", v.Full())
 	}
 
 	// skip the test if the cluster does not support namespaced ingress class parameter (<=1.21).
@@ -612,7 +612,7 @@ func TestIngressClassRegexToggle(t *testing.T) {
 
 	class, err := env.Cluster().Client().NetworkingV1().IngressClasses().Get(ctx, consts.IngressClass, metav1.GetOptions{})
 	require.NoError(t, err)
-	t.Logf("adding legacy regex IngressClassParameters to the %s consts.IngressClass", class.Name)
+	t.Logf("adding legacy regex IngressClassParameters to the %q IngressClass", class.Name)
 	class.Spec.Parameters = &netv1.IngressClassParametersReference{
 		APIGroup:  &v1alpha1.GroupVersion.Group,
 		Kind:      v1alpha1.IngressClassParametersKind,
@@ -624,7 +624,7 @@ func TestIngressClassRegexToggle(t *testing.T) {
 	require.NoError(t, err)
 
 	defer func() {
-		t.Logf("removing parameters from consts.IngressClass %s", class.ObjectMeta.Name)
+		t.Logf("removing parameters from IngressClass %q", class.Name)
 		class, err := env.Cluster().Client().NetworkingV1().IngressClasses().Get(ctx, consts.IngressClass, metav1.GetOptions{})
 		require.NoError(t, err)
 		class.Spec.Parameters = nil
@@ -650,7 +650,7 @@ func TestIngressClassRegexToggle(t *testing.T) {
 						HTTP: &netv1.HTTPIngressRuleValue{
 							Paths: []netv1.HTTPIngressPath{
 								{
-									Path:     `/test_ingress_class_regex_toggle/\d+`,
+									Path:     `/~/test_ingress_class_regex_toggle/\d+`,
 									PathType: &pathTypeImplementationSpecific,
 									Backend: netv1.IngressBackend{
 										Service: &netv1.IngressServiceBackend{
@@ -694,8 +694,8 @@ func TestIngressClassRegexToggle(t *testing.T) {
 }
 
 func TestIngressRegexPrefix(t *testing.T) {
-	if !versions.GetKongVersion().MajorOnly().GTE(versions.ExplicitRegexPathVersionCutoff) {
-		t.Skip("regex prefixes are only relevant for Kong 3.0+")
+	if v := versions.GetKongVersion(); !v.MajorOnly().GTE(versions.ExplicitRegexPathVersionCutoff) {
+		t.Skipf("regex prefixes are only relevant for Kong 3.0+, detected: %s", v.Full())
 	}
 
 	ctx := context.Background()

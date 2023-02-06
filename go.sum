@@ -566,14 +566,6 @@ github.com/klauspost/compress v1.13.6/go.mod h1:/3/Vjq9QcHkK5uEr5lBEmyoZ1iFhe47e
 github.com/klauspost/cpuid v1.2.1/go.mod h1:Pj4uuM528wm8OyEC2QMXAi2YiTZ96dNQPGgoMS4s3ek=
 github.com/kong/deck v1.17.2 h1:uWmXj1k3T4DGYr3N542Hsz4iIWYQWqcBGZ903KakLD8=
 github.com/kong/deck v1.17.2/go.mod h1:gIj+4WuAzVhmUsBTYiG1pFD0F2QRqlANHIH/fs9+71o=
-github.com/kong/go-kong v0.36.1-0.20230125233750-c9d617fc9b72 h1:yaIPIJDJbBs8PvFqOMNnLjiRcUWKfUhNtTL44qPK4N8=
-github.com/kong/go-kong v0.36.1-0.20230125233750-c9d617fc9b72/go.mod h1:4xT4uMMGcysH3qOqm458JyIbDBUw8MVAQIi+DP8ggtc=
-github.com/kong/go-kong v0.36.1-0.20230202223406-6a88d7409523 h1:42swsXd2eU6MFsHKOQrQ8WRkPk5xVLuU2j0VjchGtmc=
-github.com/kong/go-kong v0.36.1-0.20230202223406-6a88d7409523/go.mod h1:4xT4uMMGcysH3qOqm458JyIbDBUw8MVAQIi+DP8ggtc=
-github.com/kong/go-kong v0.36.1-0.20230203020021-ab5b18a9aa92 h1:2rezB9aXAYB57qZIBsadr//bdKmv3068m0fydnWEnLk=
-github.com/kong/go-kong v0.36.1-0.20230203020021-ab5b18a9aa92/go.mod h1:4xT4uMMGcysH3qOqm458JyIbDBUw8MVAQIi+DP8ggtc=
-github.com/kong/go-kong v0.36.1-0.20230203023736-1cbdb016f563 h1:sqOIZujVnxZgxPY/xb94SNfNgMXjp/B0v5pYC2VQ/tI=
-github.com/kong/go-kong v0.36.1-0.20230203023736-1cbdb016f563/go.mod h1:4xT4uMMGcysH3qOqm458JyIbDBUw8MVAQIi+DP8ggtc=
 github.com/kong/go-kong v0.37.0 h1:81I49dJF6gKTCcWR+bxwp3VHlN4/2kaQ4oxVw252mGY=
 github.com/kong/go-kong v0.37.0/go.mod h1:4xT4uMMGcysH3qOqm458JyIbDBUw8MVAQIi+DP8ggtc=
 github.com/kong/kubernetes-testing-framework v0.28.0 h1:6/NeKcsfeOc+uhAQcNuEgXn9w0QsUziD8Udp11IIMAI=
@@ -1563,8 +1555,8 @@ rsc.io/binaryregexp v0.2.0/go.mod h1:qTv7/COck+e2FymRvadv62gMdZztPaShugOCi3I+8D8
 rsc.io/quote/v3 v3.1.0/go.mod h1:yEA65RcK8LyAZtP9Kv3t0HmxON59tX3rD+tICJqUlj0=
 rsc.io/sampler v1.3.0/go.mod h1:T1hPZKmBbMNahiBKFy5HrXp6adAjACjK9JXDnKaTXpA=
 sigs.k8s.io/apiserver-network-proxy/konnectivity-client v0.0.22/go.mod h1:LEScyzhFmoF5pso/YSeBstl57mOzx9xlU9n85RGrDQg=
-sigs.k8s.io/controller-runtime v0.14.2 h1:P6IwDhbsRWsBClt/8/h8Zy36bCuGuW5Op7MHpFrN/60=
-sigs.k8s.io/controller-runtime v0.14.2/go.mod h1:WqIdsAY6JBsjfc/CqO0CORmNtoCtE4S6qbPc9s68h+0=
+sigs.k8s.io/controller-runtime v0.14.4 h1:Kd/Qgx5pd2XUL08eOV2vwIq3L9GhIbJ5Nxengbd4/0M=
+sigs.k8s.io/controller-runtime v0.14.4/go.mod h1:WqIdsAY6JBsjfc/CqO0CORmNtoCtE4S6qbPc9s68h+0=
 sigs.k8s.io/gateway-api v0.5.1 h1:EqzgOKhChzyve9rmeXXbceBYB6xiM50vDfq0kK5qpdw=
 sigs.k8s.io/gateway-api v0.5.1/go.mod h1:x0AP6gugkFV8fC/oTlnOMU0pnmuzIR8LfIPRVUjxSqA=
 sigs.k8s.io/json v0.0.0-20220713155537-f223a00ba0e2 h1:iXTIw73aPyC+oRdyqqvVJuloN1p0AC/kzH07hu3NE+k=

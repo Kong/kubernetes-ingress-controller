@@ -109,6 +109,9 @@ Adding a new version? You'll need three changes:
   It requires `--konnect-tls-client-*` set of flags to be set to provide
   Runtime Group's TLS client certificates for authentication.
   [#3455](https://github.com/Kong/kubernetes-ingress-controller/pull/3455)
+- Removed a duplicated status update of the HTTPRoute, which led to a potential
+  status flickering.
+  [#3451](https://github.com/Kong/kubernetes-ingress-controller/pull/3451)
 
 ### Deprecated
 

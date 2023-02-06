@@ -34,9 +34,8 @@ func convertGatewayMatchHeadersToKongRouteMatchHeaders(headers []gatewayv1beta1.
 				string(header.Name))
 		}
 		if header.Type != nil && *header.Type == gatewayv1beta1.HeaderMatchRegularExpression {
-			if !versions.GetKongVersion().MajorMinorOnly().GTE(versions.RegexHeaderVersionCutoff) {
-				return nil, fmt.Errorf("Kong version %s does not support HeaderMatchRegularExpression",
-					versions.GetKongVersion().Full().String())
+			if v := versions.GetKongVersion(); !v.MajorMinorOnly().GTE(versions.RegexHeaderVersionCutoff) {
+				return nil, fmt.Errorf("Kong version %s does not support HeaderMatchRegularExpression", v.Full())
 			}
 			convertedHeaders[string(header.Name)] = []string{kongHeaderRegexPrefix + header.Value}
 		} else if header.Type == nil || *header.Type == gatewayv1beta1.HeaderMatchExact {

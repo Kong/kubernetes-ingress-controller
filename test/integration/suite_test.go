@@ -59,6 +59,13 @@ func TestMain(m *testing.M) {
 	fmt.Println("INFO: setting up test environment")
 	kongbuilder, extraControllerArgs, err := helpers.GenerateKongBuilder(ctx)
 	exitOnErrWithCode(ctx, err, consts.ExitCodeEnvSetupFailed)
+	// TODO: We need a systematic approach to this. Either:
+	// - leave this call here and bump every GW release
+	// - remove this call and rely on bumping GW image in ktf
+	// - rely on a mechanism in ktf that will always, by default return the newest
+	//   GW image
+	// Related issue: https://github.com/Kong/kubernetes-testing-framework/issues/542
+	kongbuilder.WithProxyImage("kong/kong-gateway", "3.1.1.3-alpine")
 	kongAddon := kongbuilder.Build()
 	builder := environments.NewBuilder().WithAddons(kongAddon)
 

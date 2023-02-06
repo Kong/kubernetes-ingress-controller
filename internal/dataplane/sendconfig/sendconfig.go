@@ -293,15 +293,18 @@ func hasConfigurationChanged(
 	if !hasSHAUpdateAlreadyBeenReported(newSHA) {
 		log.Debugf("sha %s has been reported", hex.EncodeToString(newSHA))
 	}
-	if !client.IsKonnect() {
-		crashed, err := hasKongCrashed(ctx, statusClient, log)
-		if err != nil {
-			return false, fmt.Errorf("failed to verify kong readiness: %w", err)
-		}
-		// Kong instance has crashed, we should push config despite the oldSHA and newSHA being equal.
-		if crashed {
-			return true, nil
-		}
+	// In case of Konnect, we skip further steps as it doesn't report its configuration hash.
+	if client.IsKonnect() {
+		return false, nil
+	}
+
+	hasNoConfiguration, err := kongHasNoConfiguration(ctx, statusClient, log)
+	if err != nil {
+		return false, fmt.Errorf("failed to verify kong readiness: %w", err)
+	}
+	// Kong instance has no configuration, we should push despite the oldSHA and newSHA being equal.
+	if hasNoConfiguration {
+		return true, nil
 	}
 
 	return false, nil
@@ -309,17 +312,17 @@ func hasConfigurationChanged(
 
 const wellKnownInitialHash = "00000000000000000000000000000000"
 
-// hasKongCrashed checks Kong's status endpoint and read its config hash.
+// kongHasNoConfiguration checks Kong's status endpoint and read its config hash.
 // If the config hash reported by Kong is the known empty hash, it's considered crashed.
 // This allows providing configuration to Kong instances that have unexpectedly crashed and
 // lost their configuration.
-func hasKongCrashed(ctx context.Context, client StatusClient, log logrus.FieldLogger) (bool, error) {
+func kongHasNoConfiguration(ctx context.Context, client StatusClient, log logrus.FieldLogger) (bool, error) {
 	status, err := client.Status(ctx)
 	if err != nil {
 		return false, err
 	}
 
-	if crashed := status.ConfigurationHash == wellKnownInitialHash; crashed {
+	if hasNoConfig := status.ConfigurationHash == wellKnownInitialHash; hasNoConfig {
 		log.Debugf("starting to send configuration (hash: %s)", status.ConfigurationHash)
 		return true, nil
 	}

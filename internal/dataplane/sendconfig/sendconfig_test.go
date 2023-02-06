@@ -116,10 +116,11 @@ func (c konnectAwareClientMock) IsKonnect() bool {
 
 type statusClientMock struct {
 	expectedValue *kong.Status
+	expectedError error
 }
 
 func (c statusClientMock) Status(context.Context) (*kong.Status, error) {
-	return c.expectedValue, nil
+	return c.expectedValue, c.expectedError
 }
 
 func TestHasConfigurationChanged(t *testing.T) {
@@ -134,7 +135,10 @@ func TestHasConfigurationChanged(t *testing.T) {
 		oldSHA, newSHA []byte
 		statusSHA      string
 		isKonnect      bool
+		statusError    error
+
 		expectedResult bool
+		expectError    bool
 	}{
 		{
 			name:           "oldSHA != newSHA",
@@ -171,6 +175,13 @@ func TestHasConfigurationChanged(t *testing.T) {
 			isKonnect:      true,
 			expectedResult: false,
 		},
+		{
+			name:        "oldSHA == newSHA, status returns error",
+			oldSHA:      testSHAs[0],
+			newSHA:      testSHAs[0],
+			statusError: errors.New("getting kong status failure"),
+			expectError: true,
+		},
 	}
 
 	for _, tc := range testCases {
@@ -180,9 +191,15 @@ func TestHasConfigurationChanged(t *testing.T) {
 				expectedValue: &kong.Status{
 					ConfigurationHash: tc.statusSHA,
 				},
+				expectedError: tc.statusError,
 			}
 
 			result, err := hasConfigurationChanged(ctx, tc.oldSHA, tc.newSHA, konnectAwareClient, statusClient, logrus.New())
+			if tc.expectError {
+				require.Error(t, err)
+				return
+			}
+
 			require.NoError(t, err)
 			require.Equal(t, tc.expectedResult, result)
 		})

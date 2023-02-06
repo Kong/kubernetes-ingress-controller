@@ -30,6 +30,8 @@ func TestConfigErrorEventGeneration(t *testing.T) {
 	}
 	if !versions.GetKongVersion().MajorMinorOnly().GTE(versions.FlattenedErrorCutoff) {
 		t.Skip("flattened errors require Kong 3.2 or higher")
+	} else {
+		t.Logf("kong version is %s >= 3.2, testing config error parsing", versions.GetKongVersion().MajorMinorOnly().String())
 	}
 	ctx := context.Background()
 	ns, cleaner := helpers.Setup(ctx, t, env)

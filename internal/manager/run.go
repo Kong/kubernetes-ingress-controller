@@ -182,6 +182,8 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 		}
 		hostname, _ := os.Hostname()
 		version := metadata.Release
+		// REVIEW: here we used version of KIC itself as version of KIC node.'
+		// Which version is the proper one to use?
 		agent := konnect.NewNodeAgent(hostname, version, setupLog, konnectClient)
 		agent.Run()
 	}

@@ -26,7 +26,6 @@ import (
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
 
@@ -369,8 +368,8 @@ func TestDeployAllInOneDBLESSGateway(t *testing.T) {
 			if lstatus.Name == "badhttp" {
 				if util.CheckCondition(
 					lstatus.Conditions,
-					util.ConditionType(gatewayv1alpha2.ListenerConditionDetached),
-					util.ConditionReason(gatewayv1alpha2.ListenerReasonPortUnavailable),
+					util.ConditionType(gatewayv1beta1.ListenerConditionAccepted),
+					util.ConditionReason(gatewayv1beta1.ListenerReasonPortUnavailable),
 					metav1.ConditionTrue,
 					gw.Generation,
 				) {
@@ -379,8 +378,8 @@ func TestDeployAllInOneDBLESSGateway(t *testing.T) {
 
 				if util.CheckCondition(
 					lstatus.Conditions,
-					util.ConditionType(gatewayv1alpha2.ListenerConditionDetached),
-					util.ConditionReason(gatewayv1alpha2.ListenerReasonUnsupportedProtocol),
+					util.ConditionType(gatewayv1beta1.ListenerConditionAccepted),
+					util.ConditionReason(gatewayv1beta1.ListenerReasonUnsupportedProtocol),
 					metav1.ConditionTrue,
 					gw.Generation,
 				) {
@@ -390,8 +389,8 @@ func TestDeployAllInOneDBLESSGateway(t *testing.T) {
 			if lstatus.Name == "badudp" {
 				if util.CheckCondition(
 					lstatus.Conditions,
-					util.ConditionType(gatewayv1alpha2.ListenerConditionDetached),
-					util.ConditionReason(gatewayv1alpha2.ListenerReasonUnsupportedProtocol),
+					util.ConditionType(gatewayv1beta1.ListenerConditionAccepted),
+					util.ConditionReason(gatewayv1beta1.ListenerReasonUnsupportedProtocol),
 					metav1.ConditionTrue,
 					gw.Generation,
 				) {

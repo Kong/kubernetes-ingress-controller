@@ -56,12 +56,12 @@ func parentRefsForRoute[T types.RouteT](route T) ([]ParentReference, error) {
 		ret := make([]ParentReference, len(refsAlpha))
 		for i, v := range refsAlpha {
 			ret[i] = ParentReference{
-				Group:       (*Group)(v.Group),
-				Kind:        (*Kind)(v.Kind),
-				Namespace:   (*Namespace)(v.Namespace),
-				Name:        (ObjectName)(v.Name),
-				SectionName: (*SectionName)(v.SectionName),
-				Port:        (*PortNumber)(v.Port),
+				Group:       v.Group,
+				Kind:        v.Kind,
+				Namespace:   v.Namespace,
+				Name:        v.Name,
+				SectionName: v.SectionName,
+				Port:        v.Port,
 			}
 		}
 		return ret
@@ -468,34 +468,20 @@ func existsMatchingReadyListenerInStatus[T types.RouteT](route T, listener Liste
 	return nil
 }
 
-func listenerHostnameIntersectWithRouteHostnames[H types.HostnameT, L types.ListenerT](listener L, hostnames []H) bool {
+func listenerHostnameIntersectWithRouteHostnames[H types.HostnameT](listener gatewayv1beta1.Listener, hostnames []H) bool {
 	if len(hostnames) == 0 {
 		return true
 	}
 
 	// if the listener has no hostname, all hostnames automatically intersect
-	switch l := (any)(listener).(type) {
-	case gatewayv1alpha2.Listener:
-		if l.Hostname == nil || *l.Hostname == "" {
-			return true
-		}
+	if listener.Hostname == nil || *listener.Hostname == "" {
+		return true
+	}
 
-		// iterate over all the hostnames and check that at least one intersect with the listener hostname
-		for _, hostname := range hostnames {
-			if util.HostnamesIntersect(*l.Hostname, hostname) {
-				return true
-			}
-		}
-	case Listener:
-		if l.Hostname == nil || *l.Hostname == "" {
+	// iterate over all the hostnames and check that at least one intersect with the listener hostname
+	for _, hostname := range hostnames {
+		if util.HostnamesIntersect(*listener.Hostname, hostname) {
 			return true
-		}
-
-		// iterate over all the hostnames and check that at least one intersect with the listener hostname
-		for _, hostname := range hostnames {
-			if util.HostnamesIntersect(*l.Hostname, hostname) {
-				return true
-			}
 		}
 	}
 
@@ -628,9 +614,9 @@ func isHTTPReferenceGranted(grantSpec gatewayv1alpha2.ReferenceGrantSpec, backen
 		}
 
 		for _, to := range grantSpec.To {
-			if backendRefGroup == (gatewayv1beta1.Group)(to.Group) &&
-				backendRefKind == (Kind)(to.Kind) &&
-				(to.Name == nil || (gatewayv1beta1.ObjectName)(*to.Name) == backendRef.Name) {
+			if backendRefGroup == to.Group &&
+				backendRefKind == to.Kind &&
+				(to.Name == nil || *to.Name == backendRef.Name) {
 				return true
 			}
 		}
@@ -646,59 +632,30 @@ func sameCondition(a, b metav1.Condition) bool {
 		a.Message == b.Message
 }
 
-func setRouteParentStatusCondition[T types.ParentStatusT](parentStatus T, newCondition metav1.Condition) bool {
+func setRouteParentStatusCondition(parentStatus *gatewayv1beta1.RouteParentStatus, newCondition metav1.Condition) bool {
 	var conditionFound, changed bool
-	switch p := (any)(parentStatus).(type) {
-	case *gatewayv1beta1.RouteParentStatus:
-		for i, condition := range p.Conditions {
-			if condition.Type == newCondition.Type {
-				conditionFound = true
-				if !sameCondition(condition, newCondition) {
-					p.Conditions[i] = newCondition
-					changed = true
-				}
+	for i, condition := range parentStatus.Conditions {
+		if condition.Type == newCondition.Type {
+			conditionFound = true
+			if !sameCondition(condition, newCondition) {
+				parentStatus.Conditions[i] = newCondition
+				changed = true
 			}
 		}
+	}
 
-		if !conditionFound {
-			p.Conditions = append(p.Conditions, newCondition)
-			changed = true
-		}
-	case *gatewayv1alpha2.RouteParentStatus:
-		for i, condition := range p.Conditions {
-			if condition.Type == newCondition.Type {
-				conditionFound = true
-				if !sameCondition(condition, newCondition) {
-					p.Conditions[i] = newCondition
-					changed = true
-				}
-			}
-		}
-
-		if !conditionFound {
-			p.Conditions = append(p.Conditions, newCondition)
-			changed = true
-		}
+	if !conditionFound {
+		parentStatus.Conditions = append(parentStatus.Conditions, newCondition)
+		changed = true
 	}
 	return changed
 }
 
-func parentStatusHasProgrammedCondition[T types.ParentStatusT](parentStatus T) bool {
-	switch p := (any)(parentStatus).(type) {
-	case *gatewayv1beta1.RouteParentStatus:
-		for _, condition := range p.Conditions {
-			if condition.Type == ConditionTypeProgrammed {
-				return true
-			}
+func parentStatusHasProgrammedCondition(parentStatus *gatewayv1beta1.RouteParentStatus) bool {
+	for _, condition := range parentStatus.Conditions {
+		if condition.Type == ConditionTypeProgrammed {
+			return true
 		}
-		return false
-	case *gatewayv1alpha2.RouteParentStatus:
-		for _, condition := range p.Conditions {
-			if condition.Type == ConditionTypeProgrammed {
-				return true
-			}
-		}
-		return false
 	}
 	return false
 }

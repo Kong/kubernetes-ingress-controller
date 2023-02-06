@@ -5,14 +5,14 @@ import (
 
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 )
 
 func TestCheckCondition(t *testing.T) {
-	expectedType := util.ConditionType(gatewayv1alpha2.ListenerConditionReady)
-	expectedReason := util.ConditionReason(gatewayv1alpha2.GatewayReasonScheduled)
+	expectedType := util.ConditionType(gatewayv1beta1.ListenerConditionReady)
+	expectedReason := util.ConditionReason(gatewayv1beta1.GatewayReasonScheduled)
 	expectedStatus := metav1.ConditionTrue
 	generation := int64(1)
 	givenConditions := []metav1.Condition{
@@ -24,8 +24,8 @@ func TestCheckCondition(t *testing.T) {
 		},
 	}
 
-	otherType := util.ConditionType(gatewayv1alpha2.ListenerConditionConflicted)
-	otherReason := util.ConditionReason(gatewayv1alpha2.GatewayReasonReady)
+	otherType := util.ConditionType(gatewayv1beta1.ListenerConditionConflicted)
+	otherReason := util.ConditionReason(gatewayv1beta1.GatewayReasonReady)
 	otherStatus := metav1.ConditionFalse
 
 	testCases := []struct {
@@ -102,8 +102,8 @@ func TestCheckCondition(t *testing.T) {
 }
 
 func TestCheckCondition_observed_generations_lower_than_actual_are_ignored(t *testing.T) {
-	expectedType := util.ConditionType(gatewayv1alpha2.ListenerConditionReady)
-	expectedReason := util.ConditionReason(gatewayv1alpha2.GatewayReasonScheduled)
+	expectedType := util.ConditionType(gatewayv1beta1.ListenerConditionReady)
+	expectedReason := util.ConditionReason(gatewayv1beta1.GatewayReasonScheduled)
 	expectedStatus := metav1.ConditionTrue
 	givenConditions := []metav1.Condition{
 		{

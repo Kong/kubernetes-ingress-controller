@@ -409,7 +409,7 @@ func TestGetReferenceGrantConditionReason(t *testing.T) {
 		{
 			name:           "empty reference",
 			certRef:        gatewayv1beta1.SecretObjectReference{},
-			expectedReason: string(gatewayv1alpha2.ListenerReasonResolvedRefs),
+			expectedReason: string(gatewayv1beta1.ListenerReasonResolvedRefs),
 		},
 		{
 			name:             "no need for reference",
@@ -418,7 +418,7 @@ func TestGetReferenceGrantConditionReason(t *testing.T) {
 				Kind: util.StringToGatewayAPIKindPtr("Secret"),
 				Name: "testSecret",
 			},
-			expectedReason: string(gatewayv1alpha2.ListenerReasonResolvedRefs),
+			expectedReason: string(gatewayv1beta1.ListenerReasonResolvedRefs),
 		},
 		{
 			name:             "reference not granted - secret name not matching",
@@ -436,7 +436,7 @@ func TestGetReferenceGrantConditionReason(t *testing.T) {
 					Spec: gatewayv1alpha2.ReferenceGrantSpec{
 						From: []gatewayv1alpha2.ReferenceGrantFrom{
 							{
-								Group:     (gatewayv1alpha2.Group)(gatewayV1beta1Group),
+								Group:     gatewayV1beta1Group,
 								Kind:      "Gateway",
 								Namespace: "test",
 							},
@@ -451,7 +451,7 @@ func TestGetReferenceGrantConditionReason(t *testing.T) {
 					},
 				},
 			},
-			expectedReason: string(gatewayv1alpha2.ListenerReasonRefNotPermitted),
+			expectedReason: string(gatewayv1beta1.ListenerReasonRefNotPermitted),
 		},
 		{
 			name:             "reference not granted - no grants specified",
@@ -461,7 +461,7 @@ func TestGetReferenceGrantConditionReason(t *testing.T) {
 				Name:      "testSecret",
 				Namespace: lo.ToPtr(Namespace("otherNamespace")),
 			},
-			expectedReason: string(gatewayv1alpha2.ListenerReasonRefNotPermitted),
+			expectedReason: string(gatewayv1beta1.ListenerReasonRefNotPermitted),
 		},
 		{
 			name:             "reference granted, secret name not specified",
@@ -486,7 +486,7 @@ func TestGetReferenceGrantConditionReason(t *testing.T) {
 							},
 							// good entry
 							{
-								Group:     (gatewayv1alpha2.Group)(gatewayV1beta1Group),
+								Group:     gatewayV1beta1Group,
 								Kind:      "Gateway",
 								Namespace: "test",
 							},
@@ -500,7 +500,7 @@ func TestGetReferenceGrantConditionReason(t *testing.T) {
 					},
 				},
 			},
-			expectedReason: string(gatewayv1alpha2.ListenerReasonResolvedRefs),
+			expectedReason: string(gatewayv1beta1.ListenerReasonResolvedRefs),
 		},
 		{
 			name:             "reference granted, secret name specified",
@@ -518,7 +518,7 @@ func TestGetReferenceGrantConditionReason(t *testing.T) {
 					Spec: gatewayv1alpha2.ReferenceGrantSpec{
 						From: []gatewayv1alpha2.ReferenceGrantFrom{
 							{
-								Group:     (gatewayv1alpha2.Group)(gatewayV1beta1Group),
+								Group:     gatewayV1beta1Group,
 								Kind:      "Gateway",
 								Namespace: "test",
 							},
@@ -533,7 +533,7 @@ func TestGetReferenceGrantConditionReason(t *testing.T) {
 					},
 				},
 			},
-			expectedReason: string(gatewayv1alpha2.ListenerReasonResolvedRefs),
+			expectedReason: string(gatewayv1beta1.ListenerReasonResolvedRefs),
 		},
 	}
 

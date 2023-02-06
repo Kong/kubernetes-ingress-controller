@@ -39,31 +39,6 @@ func (rc refChecker[T]) IsRefAllowedByGrant(
 			(string)(*br.Kind),
 			allowedRefs,
 		)
-	case gatewayv1alpha2.BackendRef:
-		if br.Namespace == nil {
-			return true
-		}
-
-		return isRefAllowedByGrant(
-			(*string)(br.Namespace),
-			(string)(br.Name),
-			(string)(*br.Group),
-			(string)(*br.Kind),
-			allowedRefs,
-		)
-
-	case gatewayv1alpha2.SecretObjectReference:
-		if br.Namespace == nil {
-			return true
-		}
-
-		return isRefAllowedByGrant(
-			(*string)(br.Namespace),
-			(string)(br.Name),
-			(string)(*br.Group),
-			(string)(*br.Kind),
-			allowedRefs,
-		)
 
 	case gatewayv1beta1.SecretObjectReference:
 		if br.Namespace == nil {

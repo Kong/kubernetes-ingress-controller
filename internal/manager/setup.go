@@ -150,16 +150,17 @@ func setupAdmissionServer(
 	ctx context.Context,
 	managerConfig *Config,
 	managerClient client.Client,
+	logger logr.Logger,
 	deprecatedLogger logrus.FieldLogger,
 ) error {
-	logger := deprecatedLogger.WithField("component", "admission-server")
+	deprecatedLogger = deprecatedLogger.WithField("component", "admission-server")
 
 	if managerConfig.AdmissionServer.ListenAddr == "off" {
-		logger.Info("admission webhook server disabled")
+		deprecatedLogger.Info("admission webhook server disabled")
 		return nil
 	}
 
-	kongclients, err := getKongClients(ctx, managerConfig)
+	kongclients, err := getKongClients(ctx, managerConfig, logger)
 	if err != nil {
 		return err
 	}
@@ -176,18 +177,18 @@ func setupAdmissionServer(
 		Validator: admission.NewKongHTTPValidator(
 			designatedKongClient.Consumers,
 			designatedKongClient.Plugins,
-			logger,
+			deprecatedLogger,
 			managerClient,
 			managerConfig.IngressClassName,
 		),
-		Logger: logger,
-	}, logger)
+		Logger: deprecatedLogger,
+	}, deprecatedLogger)
 	if err != nil {
 		return err
 	}
 	go func() {
 		err := srv.ListenAndServeTLS("", "")
-		logger.WithError(err).Error("admission webhook server stopped")
+		deprecatedLogger.WithError(err).Error("admission webhook server stopped")
 	}()
 	return nil
 }
@@ -260,7 +261,7 @@ func generateAddressFinderGetter(mgrc client.Client, publishServiceNn types.Name
 }
 
 // getKongClients returns the kong clients.
-func getKongClients(ctx context.Context, cfg *Config) ([]adminapi.Client, error) {
+func getKongClients(ctx context.Context, cfg *Config, logger logr.Logger) ([]adminapi.Client, error) {
 	httpclient, err := adminapi.MakeHTTPClient(&cfg.KongAdminAPIConfig)
 	if err != nil {
 		return nil, err
@@ -273,6 +274,15 @@ func getKongClients(ctx context.Context, cfg *Config) ([]adminapi.Client, error)
 			return nil, err
 		}
 		clients = append(clients, client)
+	}
+
+	if cfg.Konnect.ConfigSynchronizationEnabled {
+		konnectClient, err := adminapi.NewKongClientForKonnectRuntimeGroup(ctx, cfg.Konnect)
+		if err != nil {
+			logger.Error(err, "failed creating Konnect Runtime Group Admin API client, skipping synchronisation")
+		} else {
+			clients = append(clients, konnectClient)
+		}
 	}
 
 	return clients, nil

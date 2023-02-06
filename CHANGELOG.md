@@ -88,6 +88,9 @@ Adding a new version? You'll need three changes:
   be used to deploy a DB-less variant of KIC that will also synchronise its
   data-plane configuration with Konnect cloud.
   [#3448](https://github.com/Kong/kubernetes-ingress-controller/pull/3448)
+- Added experimental `--konnect-sync-enabled` flag that allows synchronising 
+  data-plane configuration with Konnect's Runtime Group.
+  [#3500](https://github.com/Kong/kubernetes-ingress-controller/pull/3500)
 
 ### Fixed
 

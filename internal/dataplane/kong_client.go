@@ -251,6 +251,12 @@ func (c *KongClient) Listeners(ctx context.Context) ([]kong.ProxyListener, []kon
 	c.lock.RLock()
 	for _, cl := range c.kongConfig.Clients {
 		cl := cl
+
+		// We don't take Konnect into consideration as it doesn't expose any listeners.
+		if cl.IsKonnect() {
+			continue
+		}
+
 		errg.Go(func() error {
 			listeners, streamListeners, err := cl.AdminAPIClient().Listeners(ctx)
 			if err != nil {
@@ -439,7 +445,8 @@ func (c *KongClient) sendOutToClients(
 	ctx context.Context, s *kongstate.KongState, formatVersion string, config sendconfig.Config,
 ) ([]string, error) {
 	shas, err := iter.MapErr(c.kongConfig.Clients, func(client *adminapi.Client) (string, error) {
-		return c.sendToClient(ctx, client, s, formatVersion, config)
+		newSHA, err := c.sendToClient(ctx, client, s, formatVersion, config)
+		return handleSendToClientResult(client, newSHA, err)
 	},
 	)
 	if err != nil {
@@ -497,6 +504,20 @@ func (c *KongClient) sendToClient(
 	client.SetLastConfigSHA(newConfigSHA)
 
 	return string(newConfigSHA), nil
+}
+
+// handleSendToClientResult handles a result returned from sendToClient.
+// It will ignore errors that are returned from Konnect client.
+func handleSendToClientResult(client sendconfig.KonnectAwareClient, newSHA string, err error) (string, error) {
+	if err != nil {
+		// We do not collect errors from Konnect as they should not break the data-plane loop.
+		if client.IsKonnect() {
+			return "", nil
+		}
+		return "", err
+	}
+
+	return newSHA, nil
 }
 
 // -----------------------------------------------------------------------------

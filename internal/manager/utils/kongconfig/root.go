@@ -161,6 +161,13 @@ func GetRoots(
 
 	for _, client := range kongClients {
 		client := client
+
+		// We don't fetch Konnect's root as it doesn't support this interface, and we already know that Konnect should be
+		// updated using a DB-mode (aka deck-mode).
+		if client.IsKonnect() {
+			continue
+		}
+
 		eg.Go(func() error {
 			return retry.Do(
 				func() error {

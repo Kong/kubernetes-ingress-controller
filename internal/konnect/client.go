@@ -26,7 +26,7 @@ var (
 	// operating runtime group with ID in AdminClient.
 	KicAPIPathPattern = "%s/kic/api/runtime_groups/%s"
 	// KicNodeAPIPathPattern is the path pattern for KIC node operations.
-	KicNodeAPIPathPattern = "%s/kic/api/runtime_groups/%s/kic-nodes"
+	KicNodeAPIPathPattern = "%s/kic/api/runtime_groups/%s/v1/kic-nodes"
 )
 
 // NewAdminClient creates a Konnect client.
@@ -41,8 +41,7 @@ func NewAdminClient(cfg adminapi.KonnectConfig) (*AdminClient, error) {
 	}
 
 	tlsConfig := tls.Config{ //nolint:gosec
-		InsecureSkipVerify: true,
-		Certificates:       []tls.Certificate{},
+		Certificates: []tls.Certificate{},
 	}
 	if len(tlsClientCert) > 0 && len(tlsClientKey) > 0 {
 		// Read the key pair to create certificate

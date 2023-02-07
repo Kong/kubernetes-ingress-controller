@@ -1,6 +1,7 @@
 package konnect
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -8,9 +9,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 )
 
-var (
-	defaultRefreshNodeInterval = 15 * time.Second
-)
+var defaultRefreshNodeInterval = 15 * time.Second
 
 type NodeAgent struct {
 	NodeID   string
@@ -24,7 +23,6 @@ type NodeAgent struct {
 }
 
 func NewNodeAgent(hostname string, version string, logger logr.Logger, adminClient *AdminClient) *NodeAgent {
-
 	return &NodeAgent{
 		Hostname: hostname,
 		Version:  version,
@@ -37,7 +35,6 @@ func NewNodeAgent(hostname string, version string, logger logr.Logger, adminClie
 }
 
 func (a *NodeAgent) createNode() error {
-
 	createNodeReq := &CreateNodeRequest{
 		ID:       a.NodeID,
 		Hostname: a.Hostname,
@@ -56,11 +53,33 @@ func (a *NodeAgent) createNode() error {
 	return nil
 }
 
-func (a *NodeAgent) updateNode() error {
-
-	ingressControllerStatus := &IngressControllerStatus{
-		State: IngressControllerStateOperational,
+func (a *NodeAgent) clearOutdatedNodes() error {
+	nodes, err := a.adminClient.ListNodes()
+	if err != nil {
+		return fmt.Errorf("failed to list nodes: %w", err)
 	}
+
+	for _, node := range nodes.Items {
+		if node.Type == NodeTypeIngressController && node.Hostname != a.Hostname {
+			a.Logger.V(util.DebugLevel).Info("remove KIC node", "node_id", node.ID, "hostname", node.Hostname)
+			err := a.adminClient.DeleteNode(node.ID)
+			if err != nil {
+				return fmt.Errorf("failed to delete node %s: %w", node.ID, err)
+			}
+		}
+	}
+	return nil
+}
+
+func (a *NodeAgent) updateNode() error {
+	err := a.clearOutdatedNodes()
+	if err != nil {
+		a.Logger.Error(err, "failed to clear outdated nodes")
+		return err
+	}
+
+	// TODO: retrieve the real state of KIC
+	ingressControllerStatus := IngressControllerStateOperational
 
 	updateNodeReq := &UpdateNodeRequest{
 		Hostname: a.Hostname,
@@ -68,9 +87,9 @@ func (a *NodeAgent) updateNode() error {
 		Version:  a.Version,
 		LastPing: time.Now().Unix(),
 
-		IngressControllerStatus: ingressControllerStatus,
+		Status: string(ingressControllerStatus),
 	}
-	_, err := a.adminClient.UpdateNode(a.NodeID, updateNodeReq)
+	_, err = a.adminClient.UpdateNode(a.NodeID, updateNodeReq)
 	if err != nil {
 		a.Logger.Error(err, "failed to update node for KIC")
 		return err

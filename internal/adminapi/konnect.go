@@ -20,7 +20,7 @@ type KonnectConfig struct {
 	TLSClient                    TLSClientConfig
 }
 
-func NewKongClientForKonnectRuntimeGroup(ctx context.Context, c KonnectConfig) (*Client, error) {
+func NewKongClientForKonnectRuntimeGroup(ctx context.Context, c KonnectConfig) (Client, error) {
 	tlsClientCert, err := tlsutil.ValueFromVariableOrFile([]byte(c.TLSClient.Cert), c.TLSClient.CertFile)
 	if err != nil {
 		return Client{}, fmt.Errorf("could not extract TLS client cert: %w", err)

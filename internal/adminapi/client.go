@@ -66,3 +66,13 @@ func (c *Client) KonnectRuntimeGroup() string {
 
 	return c.konnectRuntimeGroup
 }
+
+// SetLastConfigSHA overrides last config SHA.
+func (c *Client) SetLastConfigSHA(s []byte) {
+	c.lastConfigSHA = s
+}
+
+// LastConfigSHA returns a checksum of the last successful configuration push.
+func (c *Client) LastConfigSHA() []byte {
+	return c.lastConfigSHA
+}

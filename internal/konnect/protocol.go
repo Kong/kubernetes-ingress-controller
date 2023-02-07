@@ -2,20 +2,21 @@ package konnect
 
 const (
 	NodeTypeIngressController = "ingress-controller"
+	NodeTypeKongProxy         = "kong-proxy"
 	NodeTypeIngressProxy      = "ingress-proxy"
 )
 
 type NodeItem struct {
-	ID                      string                   `json:"id"`
-	Version                 string                   `json:"version"`
-	Hostname                string                   `json:"hostname"`
-	LastPing                int64                    `json:"last_ping"`
-	Type                    string                   `json:"type"`
-	CreatedAt               int64                    `json:"created_at"`
-	UpdatedAt               int64                    `json:"updated_at"`
-	ConfigHash              string                   `json:"config_hash"`
-	CompatibilityStatus     *CompatibilityStatus     `json:"compatibility_status,omitempty"`
-	IngressControllerStatus *IngressControllerStatus `json:"ingress_controller_status,omitempty"`
+	ID                  string               `json:"id"`
+	Version             string               `json:"version"`
+	Hostname            string               `json:"hostname"`
+	LastPing            int64                `json:"last_ping"`
+	Type                string               `json:"type"`
+	CreatedAt           int64                `json:"created_at"`
+	UpdatedAt           int64                `json:"updated_at"`
+	ConfigHash          string               `json:"config_hash"`
+	CompatibilityStatus *CompatibilityStatus `json:"compatibility_status,omitempty"`
+	Status              string               `json:"status,omitempty"`
 }
 
 type CompatibilityState string
@@ -55,19 +56,15 @@ const (
 	IngressControllerStateUnknown           IngressControllerState = "INGRESS_CONTROLLER_STATE_UNKNOWN"
 )
 
-type IngressControllerStatus struct {
-	State IngressControllerState `json:"state"`
-}
-
 type CreateNodeRequest struct {
-	ID                      string                   `json:"id,omitempty"`
-	Hostname                string                   `json:"hostname"`
-	Type                    string                   `json:"type"`
-	LastPing                int64                    `json:"last_ping"`
-	Version                 string                   `json:"version"`
-	CompatabilityStatus     *CompatibilityStatus     `json:"compatibility_status,omitempty"`
-	IngressControllerStatus *IngressControllerStatus `json:"ingress_controller_status,omitempty"`
-	ConfigHash              string                   `json:"config_hash,omitempty"`
+	ID                  string               `json:"id,omitempty"`
+	Hostname            string               `json:"hostname"`
+	Type                string               `json:"type"`
+	LastPing            int64                `json:"last_ping"`
+	Version             string               `json:"version"`
+	CompatabilityStatus *CompatibilityStatus `json:"compatibility_status,omitempty"`
+	Status              string               `json:"status,omitempty"`
+	ConfigHash          string               `json:"config_hash,omitempty"`
 }
 
 type CreateNodeResponse struct {
@@ -75,13 +72,13 @@ type CreateNodeResponse struct {
 }
 
 type UpdateNodeRequest struct {
-	Hostname                string                   `json:"hostname"`
-	Type                    string                   `json:"type"`
-	LastPing                int64                    `json:"last_ping"`
-	Version                 string                   `json:"version"`
-	ConfigHash              string                   `json:"config_hash,omitempty"`
-	CompatabilityStatus     *CompatibilityStatus     `json:"compatibility_status,omitempty"`
-	IngressControllerStatus *IngressControllerStatus `json:"ingress_controller_status,omitempty"`
+	Hostname            string               `json:"hostname"`
+	Type                string               `json:"type"`
+	LastPing            int64                `json:"last_ping"`
+	Version             string               `json:"version"`
+	ConfigHash          string               `json:"config_hash,omitempty"`
+	CompatabilityStatus *CompatibilityStatus `json:"compatibility_status,omitempty"`
+	Status              string               `json:"status,omitempty"`
 }
 
 type UpdateNodeResponse struct {

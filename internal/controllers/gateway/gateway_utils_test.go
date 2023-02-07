@@ -107,7 +107,7 @@ func TestGetListenerStatus_no_duplicated_Detached_condition(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, statuses, 1, "only one listener status expected as only one listener was defined")
 	listenerStatus := statuses[0]
-	assertOnlyOneConditionOfType(t, listenerStatus.Conditions, gatewayv1beta1.ListenerConditionDetached)
+	assertOnlyOneConditionOfType(t, listenerStatus.Conditions, gatewayv1beta1.ListenerConditionAccepted)
 }
 
 func assertOnlyOneConditionOfType(t *testing.T, conditions []metav1.Condition, typ gatewayv1beta1.ListenerConditionType) {

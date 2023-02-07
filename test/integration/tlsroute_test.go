@@ -672,8 +672,8 @@ func TestTLSRouteReferenceGrant(t *testing.T) {
 	for _, status := range gateway.Status.Listeners {
 		if ok := util.CheckCondition(
 			status.Conditions,
-			util.ConditionType(gatewayv1alpha2.ListenerConditionResolvedRefs),
-			util.ConditionReason(gatewayv1alpha2.ListenerReasonRefNotPermitted),
+			util.ConditionType(gatewayv1beta1.ListenerConditionResolvedRefs),
+			util.ConditionReason(gatewayv1beta1.ListenerReasonRefNotPermitted),
 			metav1.ConditionFalse,
 			gateway.Generation,
 		); ok {

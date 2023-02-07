@@ -18,7 +18,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/util/retry"
-	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
 
@@ -192,35 +191,22 @@ func GetGatewayIsUnlinkedCallback(t *testing.T, c *gatewayclient.Clientset, prot
 	}
 }
 
-type routeParentStatusT interface {
-	gatewayv1alpha2.RouteParentStatus | gatewayv1beta1.RouteParentStatus
+type routeParents struct {
+	parents []gatewayv1beta1.RouteParentStatus
 }
 
-type routeParents[T routeParentStatusT] struct {
-	parents []T
-}
-
-func newRouteParentsStatus[T routeParentStatusT](parents []T) routeParents[T] {
-	return routeParents[T]{
+func newRouteParentsStatus(parents []gatewayv1beta1.RouteParentStatus) routeParents {
+	return routeParents{
 		parents: parents,
 	}
 }
 
-func (rp routeParents[T]) check(verifyLinked bool, controllerName string) bool {
+func (rp routeParents) check(verifyLinked bool, controllerName string) bool {
 	for _, ps := range rp.parents {
-		switch parentStatus := (interface{})(ps).(type) {
-		case gatewayv1alpha2.RouteParentStatus:
-			if string(parentStatus.ControllerName) == controllerName {
-				// supported Gateway link was found, hence if we want to ensure
-				// the link existence return true
-				return verifyLinked
-			}
-		case gatewayv1beta1.RouteParentStatus:
-			if string(parentStatus.ControllerName) == controllerName {
-				// supported Gateway link was found, hence if we want to ensure
-				// the link existence return true
-				return verifyLinked
-			}
+		if string(ps.ControllerName) == controllerName {
+			// supported Gateway link was found, hence if we want to ensure
+			// the link existence return true
+			return verifyLinked
 		}
 	}
 
@@ -252,7 +238,7 @@ func gatewayLinkStatusMatches(
 			return newRouteParentsStatus(route.Status.Parents).
 				check(verifyLinked, string(gateway.GetControllerName()))
 		}
-	case (gatewayv1beta1.ProtocolType)(gatewayv1alpha2.TCPProtocolType):
+	case gatewayv1beta1.TCPProtocolType:
 		route, err := c.GatewayV1alpha2().TCPRoutes(namespace).Get(ctx, name, metav1.GetOptions{})
 		if err != nil {
 			t.Logf("error getting tcp route: %v", err)
@@ -260,7 +246,7 @@ func gatewayLinkStatusMatches(
 			return newRouteParentsStatus(route.Status.Parents).
 				check(verifyLinked, string(gateway.GetControllerName()))
 		}
-	case (gatewayv1beta1.ProtocolType)(gatewayv1alpha2.UDPProtocolType):
+	case gatewayv1beta1.UDPProtocolType:
 		route, err := c.GatewayV1alpha2().UDPRoutes(namespace).Get(ctx, name, metav1.GetOptions{})
 		if err != nil {
 			t.Logf("error getting udp route: %v", err)
@@ -268,7 +254,7 @@ func gatewayLinkStatusMatches(
 			return newRouteParentsStatus(route.Status.Parents).
 				check(verifyLinked, string(gateway.GetControllerName()))
 		}
-	case (gatewayv1beta1.ProtocolType)(gatewayv1alpha2.TLSProtocolType):
+	case gatewayv1beta1.TLSProtocolType:
 		route, err := c.GatewayV1alpha2().TLSRoutes(namespace).Get(ctx, name, metav1.GetOptions{})
 		if err != nil {
 			t.Logf("error getting tls route: %v", err)
@@ -284,23 +270,17 @@ func gatewayLinkStatusMatches(
 	return false
 }
 
-func parentStatusContainsProgrammedCondition[T routeParentStatusT](
-	parentStatuses []T, controllerName gatewayv1beta1.GatewayController, expectedStatus metav1.ConditionStatus,
+func parentStatusContainsProgrammedCondition(
+	parentStatuses []gatewayv1beta1.RouteParentStatus,
+	controllerName gatewayv1beta1.GatewayController,
+	expectedStatus metav1.ConditionStatus,
 ) bool {
 	var conditions []metav1.Condition
 	parentFound := false
 	for _, parentStatus := range parentStatuses {
-		switch p := (any)(parentStatus).(type) {
-		case gatewayv1beta1.RouteParentStatus:
-			if p.ControllerName == controllerName {
-				conditions = p.Conditions
-				parentFound = true
-			}
-		case gatewayv1alpha2.RouteParentStatus:
-			if gatewayv1beta1.GatewayController(p.ControllerName) == controllerName {
-				conditions = p.Conditions
-				parentFound = true
-			}
+		if parentStatus.ControllerName == controllerName {
+			conditions = parentStatus.Conditions
+			parentFound = true
 		}
 
 		if parentFound {

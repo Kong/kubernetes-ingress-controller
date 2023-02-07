@@ -53,6 +53,7 @@ func TestConfigErrorEventGeneration(t *testing.T) {
 
 	t.Logf("exposing deployment %s via service", deployment.Name)
 	service := generators.NewServiceForDeployment(deployment, corev1.ServiceTypeLoadBalancer)
+	service.ObjectMeta.Annotations["connect_timeout"] = "mankurt"
 	_, err = env.Cluster().Client().CoreV1().Services(ns.Name).Create(ctx, service, metav1.CreateOptions{})
 	assert.NoError(t, err)
 	cleaner.Add(service)
@@ -72,6 +73,22 @@ func TestConfigErrorEventGeneration(t *testing.T) {
 	helpers.AddIngressToCleaner(cleaner, ingress)
 
 	t.Log("checking event creation")
+
+	// check broken route generates event
+	require.Eventually(t, func() bool {
+		events, err := env.Cluster().Client().CoreV1().Events(ns.Name).List(ctx, metav1.ListOptions{})
+		if err != nil {
+			return false
+		}
+		for _, event := range events.Items {
+			if event.Reason == dataplane.KongConfigurationTranslationFailedEventReason {
+				return true
+			}
+		}
+		return false
+	}, statusWait, waitTick, true)
+
+	// check broken service also generates event
 	require.Eventually(t, func() bool {
 		events, err := env.Cluster().Client().CoreV1().Events(ns.Name).List(ctx, metav1.ListOptions{})
 		if err != nil {

@@ -32,28 +32,22 @@ import (
 // -----------------------------------------------------------------------------
 
 // PerformUpdate writes `targetContent` to Kong Admin API specified by `kongConfig`.
-func PerformUpdate(ctx context.Context,
-	log logrus.FieldLogger,
-	client *adminapi.Client,
-	config Config,
-	targetContent *file.Content,
-	promMetrics *metrics.CtrlFuncMetrics,
-) ([]byte, error, []failures.ResourceFailure) {
+func PerformUpdate(ctx context.Context, log logrus.FieldLogger, client *adminapi.Client, config Config, targetContent *file.Content, promMetrics *metrics.CtrlFuncMetrics) ([]byte, []failures.ResourceFailure, error) {
 	oldSHA := client.LastConfigSHA()
 	newSHA, err := deckgen.GenerateSHA(targetContent)
 	if err != nil {
-		return oldSHA, err, []failures.ResourceFailure{}
+		return oldSHA, []failures.ResourceFailure{}, err
 	}
 
 	// disable optimization if reverse sync is enabled
 	if !config.EnableReverseSync {
 		configurationChanged, err := hasConfigurationChanged(ctx, oldSHA, newSHA, client, client.AdminAPIClient(), log)
 		if err != nil {
-			return nil, err, []failures.ResourceFailure{}
+			return nil, []failures.ResourceFailure{}, err
 		}
 		if !configurationChanged {
 			log.Debug("no configuration change, skipping sync to Kong")
-			return oldSHA, nil, []failures.ResourceFailure{}
+			return oldSHA, []failures.ResourceFailure{}, nil
 		}
 	}
 
@@ -111,7 +105,7 @@ func PerformUpdate(ctx context.Context,
 			metrics.SuccessKey:  metrics.SuccessFalse,
 			metrics.ProtocolKey: metricsProtocol,
 		}).Observe(float64(timeEnd.Sub(timeStart).Milliseconds()))
-		return nil, err, dblessFailures
+		return nil, dblessFailures, err
 	}
 
 	promMetrics.ConfigPushCount.With(prometheus.Labels{
@@ -124,7 +118,7 @@ func PerformUpdate(ctx context.Context,
 		metrics.ProtocolKey: metricsProtocol,
 	}).Observe(float64(timeEnd.Sub(timeStart).Milliseconds()))
 	log.Info("successfully synced configuration to kong.")
-	return newSHA, nil, []failures.ResourceFailure{}
+	return newSHA, []failures.ResourceFailure{}, nil
 }
 
 // -----------------------------------------------------------------------------

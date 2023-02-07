@@ -477,7 +477,7 @@ func (c *KongClient) sendToClient(
 	// apply the configuration update in Kong
 	timedCtx, cancel := context.WithTimeout(ctx, c.requestTimeout)
 	defer cancel()
-	newConfigSHA, err, entityErrors := sendconfig.PerformUpdate(
+	newConfigSHA, entityErrors, err := sendconfig.PerformUpdate(
 		timedCtx,
 		logger,
 		client,

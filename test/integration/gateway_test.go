@@ -382,7 +382,9 @@ func TestUnmanagedGatewayControllerSupport(t *testing.T) {
 		unsupportedGateway, err = gatewayClient.GatewayV1beta1().Gateways(ns.Name).Get(ctx, unsupportedGateway.Name, metav1.GetOptions{})
 		require.NoError(t, err)
 		require.Len(t, unsupportedGateway.Status.Conditions, 1)
-		require.Equal(t, string(gatewayv1beta1.GatewayReasonPending), unsupportedGateway.Status.Conditions[0].Reason)
+		//lint:ignore SA1019 the default upstream reason is still NotReconciled https://github.com/kubernetes-sigs/gateway-api/pull/1701
+		//nolint:staticcheck
+		require.Equal(t, string(gatewayv1beta1.GatewayReasonNotReconciled), unsupportedGateway.Status.Conditions[0].Reason)
 	}
 }
 
@@ -410,7 +412,9 @@ func TestUnmanagedGatewayClass(t *testing.T) {
 		gateway, err = gatewayClient.GatewayV1beta1().Gateways(ns.Name).Get(ctx, gateway.Name, metav1.GetOptions{})
 		require.NoError(t, err)
 		require.Len(t, gateway.Status.Conditions, 1)
-		require.Equal(t, string(gatewayv1beta1.GatewayReasonPending), gateway.Status.Conditions[0].Reason)
+		//lint:ignore SA1019 the default upstream reason is still NotReconciled https://github.com/kubernetes-sigs/gateway-api/pull/1701
+		//nolint:staticcheck
+		require.Equal(t, string(gatewayv1beta1.GatewayReasonNotReconciled), gateway.Status.Conditions[0].Reason)
 	}
 
 	t.Log("deploying the missing gatewayclass to the test cluster")
@@ -455,7 +459,9 @@ func TestManagedGatewayClass(t *testing.T) {
 		gateway, err = gatewayClient.GatewayV1beta1().Gateways(ns.Name).Get(ctx, gateway.Name, metav1.GetOptions{})
 		require.NoError(t, err)
 		require.Len(t, gateway.Status.Conditions, 1)
-		require.Equal(t, string(gatewayv1beta1.GatewayReasonPending), gateway.Status.Conditions[0].Reason)
+		//lint:ignore SA1019 the default upstream reason is still NotReconciled https://github.com/kubernetes-sigs/gateway-api/pull/1701
+		//nolint:staticcheck
+		require.Equal(t, string(gatewayv1beta1.GatewayReasonNotReconciled), gateway.Status.Conditions[0].Reason)
 	}
 
 	t.Log("deploying a missing managed gatewayclass to the test cluster")

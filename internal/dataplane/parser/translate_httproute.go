@@ -390,7 +390,7 @@ func generatePluginsFromHTTPRouteFilters(filters []gatewayv1beta1.HTTPRouteFilte
 
 // generateRequestHeaderModifierKongPlugin converts a gatewayv1beta1.HTTPRequestHeaderFilter into a
 // kong.Plugin of type request-transformer.
-func generateRequestHeaderModifierKongPlugin(modifier *gatewayv1beta1.HTTPRequestHeaderFilter) kong.Plugin {
+func generateRequestHeaderModifierKongPlugin(modifier *gatewayv1beta1.HTTPHeaderFilter) kong.Plugin {
 	plugin := kong.Plugin{
 		Name:   kong.String("request-transformer"),
 		Config: make(kong.Configuration),

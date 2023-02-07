@@ -14,7 +14,6 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/parser/translators"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/store"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/types"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/versions"
 )
 
@@ -73,16 +72,14 @@ func getPermittedForReferenceGrantFrom(
 
 // generateKongServiceFromBackendRefWithName translates backendRefs into a Kong service for use with the
 // rules generated from a Gateway APIs route. The service name is provided by the caller.
-func generateKongServiceFromBackendRefWithName[
-	T types.BackendRefT,
-](
+func generateKongServiceFromBackendRefWithName(
 	logger logrus.FieldLogger,
 	storer store.Storer,
 	rules *ingressRules,
 	serviceName string,
 	route client.Object,
 	protocol string,
-	backendRefs ...T,
+	backendRefs ...gatewayv1beta1.BackendRef,
 ) (kongstate.Service, error) {
 	objName := fmt.Sprintf("%s %s/%s",
 		route.GetObjectKind().GroupVersionKind().String(), route.GetNamespace(), route.GetName())
@@ -147,16 +144,14 @@ func generateKongServiceFromBackendRefWithName[
 
 // generateKongServiceFromBackendRefWithRuleNumber translates backendRefs for rule ruleNumber into a Kong service for use with the
 // rules generated from a Gateway APIs route. The service name is computed from route and ruleNumber by the function.
-func generateKongServiceFromBackendRefWithRuleNumber[
-	T types.BackendRefT,
-](
+func generateKongServiceFromBackendRefWithRuleNumber(
 	logger logrus.FieldLogger,
 	storer store.Storer,
 	rules *ingressRules,
 	route client.Object,
 	ruleNumber int,
 	protocol string,
-	backendRefs ...T,
+	backendRefs ...gatewayv1beta1.BackendRef,
 ) (kongstate.Service, error) {
 	// the service name needs to uniquely identify this service given it's list of
 	// one or more backends.

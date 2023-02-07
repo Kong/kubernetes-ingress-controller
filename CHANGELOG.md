@@ -88,6 +88,10 @@ Adding a new version? You'll need three changes:
   be used to deploy a DB-less variant of KIC that will also synchronise its
   data-plane configuration with Konnect cloud.
   [#3448](https://github.com/Kong/kubernetes-ingress-controller/pull/3448)
+- The Gateway API has been bumped to 0.6.0. The `GatewayConditionScheduled` has
+  been replaced by the `GatewayConditionAccepted`, and the `ListenerConditionDetached`
+  condition has been replaced by the `ListenerConditionAccepted`.
+  [#3496](https://github.com/Kong/kubernetes-ingress-controller/pull/3496)
 
 ### Fixed
 

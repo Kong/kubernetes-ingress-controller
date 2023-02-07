@@ -382,6 +382,8 @@ func TestUnmanagedGatewayControllerSupport(t *testing.T) {
 		unsupportedGateway, err = gatewayClient.GatewayV1beta1().Gateways(ns.Name).Get(ctx, unsupportedGateway.Name, metav1.GetOptions{})
 		require.NoError(t, err)
 		require.Len(t, unsupportedGateway.Status.Conditions, 1)
+		//lint:ignore SA1019 the default upstream reason is still NotReconciled https://github.com/kubernetes-sigs/gateway-api/pull/1701
+		//nolint:staticcheck
 		require.Equal(t, string(gatewayv1beta1.GatewayReasonNotReconciled), unsupportedGateway.Status.Conditions[0].Reason)
 	}
 }
@@ -410,6 +412,8 @@ func TestUnmanagedGatewayClass(t *testing.T) {
 		gateway, err = gatewayClient.GatewayV1beta1().Gateways(ns.Name).Get(ctx, gateway.Name, metav1.GetOptions{})
 		require.NoError(t, err)
 		require.Len(t, gateway.Status.Conditions, 1)
+		//lint:ignore SA1019 the default upstream reason is still NotReconciled https://github.com/kubernetes-sigs/gateway-api/pull/1701
+		//nolint:staticcheck
 		require.Equal(t, string(gatewayv1beta1.GatewayReasonNotReconciled), gateway.Status.Conditions[0].Reason)
 	}
 
@@ -455,6 +459,8 @@ func TestManagedGatewayClass(t *testing.T) {
 		gateway, err = gatewayClient.GatewayV1beta1().Gateways(ns.Name).Get(ctx, gateway.Name, metav1.GetOptions{})
 		require.NoError(t, err)
 		require.Len(t, gateway.Status.Conditions, 1)
+		//lint:ignore SA1019 the default upstream reason is still NotReconciled https://github.com/kubernetes-sigs/gateway-api/pull/1701
+		//nolint:staticcheck
 		require.Equal(t, string(gatewayv1beta1.GatewayReasonNotReconciled), gateway.Status.Conditions[0].Reason)
 	}
 

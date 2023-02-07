@@ -22,6 +22,8 @@ type ConfigService interface {
 	) ([]byte, error)
 }
 
+// UpdateStrategyInMemory implements the UpdateStrategy interface. It updates Kong's data-plane
+// configuration using its `POST /config` endpoint that is used by ConfigService.ReloadDeclarativeRawConfig.
 type UpdateStrategyInMemory struct {
 	configService ConfigService
 }

@@ -108,11 +108,14 @@ func hasConfigurationChanged(
 	if !hasSHAUpdateAlreadyBeenReported(newSHA) {
 		log.Debugf("sha %s has been reported", hex.EncodeToString(newSHA))
 	}
-	// In case of Konnect, we skip further steps as it doesn't report its configuration hash.
+	// In case of Konnect, we skip further steps that are meant to detect Kong instances crash/reset
+	// that are not relevant for Konnect.
+	// We're sure that if oldSHA and newSHA are equal, we are safe to skip the update.
 	if client.IsKonnect() {
 		return false, nil
 	}
 
+	// Check if a Kong instance has no configuration yet (could mean it crashed, was rebooted, etc.).
 	hasNoConfiguration, err := kongHasNoConfiguration(ctx, statusClient, log)
 	if err != nil {
 		return false, fmt.Errorf("failed to verify kong readiness: %w", err)

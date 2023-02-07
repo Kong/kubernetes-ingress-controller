@@ -18,6 +18,8 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/metrics"
 )
 
+// UpdateStrategyDBMode implements the UpdateStrategy interface. It updates Kong's data-plane
+// configuration using decK's syncer.
 type UpdateStrategyDBMode struct {
 	client      *kong.Client
 	dumpConfig  dump.Config

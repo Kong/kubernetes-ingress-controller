@@ -23,6 +23,9 @@ type UpdateClient interface {
 	AdminAPIClient() *kong.Client
 }
 
+// ResolveUpdateStrategy returns an UpdateStrategy based on the client and configuration.
+// The UpdateStrategy can be either UpdateStrategyDBMode or UpdateStrategyInMemory. Both
+// of them implement different ways to populate Kong instances with data-plane configuration.
 func ResolveUpdateStrategy(
 	client UpdateClient,
 	config Config,

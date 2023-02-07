@@ -3,7 +3,6 @@ package sendconfig
 import (
 	"bytes"
 	"context"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -28,8 +27,6 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/versions"
 )
 
-const initialHash = "00000000000000000000000000000000"
-
 // -----------------------------------------------------------------------------
 // Sendconfig - Public Functions
 // -----------------------------------------------------------------------------
@@ -50,30 +47,13 @@ func PerformUpdate(ctx context.Context,
 
 	// disable optimization if reverse sync is enabled
 	if !config.EnableReverseSync {
-		// use the previous SHA to determine whether or not to perform an update
-		if bytes.Equal(oldSHA, newSHA) {
-			if !hasSHAUpdateAlreadyBeenReported(newSHA) {
-				log.Debugf("sha %s has been reported", hex.EncodeToString(newSHA))
-			}
-
-			// we assume ready as not all Kong versions provide their configuration hash,
-			// and their readiness state is always unknown
-			ready := true
-
-			status, err := client.AdminAPIClient().Status(ctx)
-			if err != nil {
-				return nil, err, []failures.ResourceFailure{}
-			}
-
-			if status.ConfigurationHash == initialHash {
-				ready = false
-			}
-
-			if ready {
-				log.Debug("no configuration change, skipping sync to kong")
-				return oldSHA, nil, []failures.ResourceFailure{}
-			}
-			log.Debugf("starting to send configuration (hash: %s)", status.ConfigurationHash)
+		configurationChanged, err := hasConfigurationChanged(ctx, oldSHA, newSHA, client, client.AdminAPIClient(), log)
+		if err != nil {
+			return nil, err, []failures.ResourceFailure{}
+		}
+		if !configurationChanged {
+			log.Debug("no configuration change, skipping sync to Kong")
+			return oldSHA, nil, []failures.ResourceFailure{}
 		}
 	}
 

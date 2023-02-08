@@ -19,6 +19,7 @@ func TestGetListenerSupportedRouteKinds(t *testing.T) {
 		name                   string
 		listener               Listener
 		expectedSupportedKinds []gatewayv1beta1.RouteGroupKind
+		resolvedRefsReason     gatewayv1beta1.ListenerConditionReason
 	}{
 		{
 			name: "only HTTP protocol specified",
@@ -26,6 +27,7 @@ func TestGetListenerSupportedRouteKinds(t *testing.T) {
 				Protocol: HTTPProtocolType,
 			},
 			expectedSupportedKinds: builder.NewRouteGroupKind().HTTPRoute().IntoSlice(),
+			resolvedRefsReason:     gatewayv1beta1.ListenerReasonResolvedRefs,
 		},
 		{
 			name: "only HTTPS protocol specified",
@@ -33,6 +35,7 @@ func TestGetListenerSupportedRouteKinds(t *testing.T) {
 				Protocol: HTTPSProtocolType,
 			},
 			expectedSupportedKinds: builder.NewRouteGroupKind().HTTPRoute().IntoSlice(),
+			resolvedRefsReason:     gatewayv1beta1.ListenerReasonResolvedRefs,
 		},
 		{
 			name: "only TCP protocol specified",
@@ -40,6 +43,7 @@ func TestGetListenerSupportedRouteKinds(t *testing.T) {
 				Protocol: TCPProtocolType,
 			},
 			expectedSupportedKinds: builder.NewRouteGroupKind().TCPRoute().IntoSlice(),
+			resolvedRefsReason:     gatewayv1beta1.ListenerReasonResolvedRefs,
 		},
 		{
 			name: "only UDP protocol specified",
@@ -47,6 +51,7 @@ func TestGetListenerSupportedRouteKinds(t *testing.T) {
 				Protocol: UDPProtocolType,
 			},
 			expectedSupportedKinds: builder.NewRouteGroupKind().UDPRoute().IntoSlice(),
+			resolvedRefsReason:     gatewayv1beta1.ListenerReasonResolvedRefs,
 		},
 		{
 			name: "only TLS protocol specified",
@@ -54,19 +59,32 @@ func TestGetListenerSupportedRouteKinds(t *testing.T) {
 				Protocol: TLSProtocolType,
 			},
 			expectedSupportedKinds: builder.NewRouteGroupKind().TLSRoute().IntoSlice(),
+			resolvedRefsReason:     gatewayv1beta1.ListenerReasonResolvedRefs,
 		},
 		{
 			name: "Kind not included in global gets discarded",
 			listener: Listener{
 				Protocol: HTTPProtocolType,
 				AllowedRoutes: &gatewayv1beta1.AllowedRoutes{
-					Kinds: []gatewayv1beta1.RouteGroupKind{{
-						Group: lo.ToPtr(gatewayv1beta1.Group("unknown.group.com")),
-						Kind:  Kind("UnknownKind"),
-					}},
+					Kinds: []gatewayv1beta1.RouteGroupKind{
+						{
+							Group: lo.ToPtr(gatewayv1beta1.Group("unknown.group.com")),
+							Kind:  Kind("UnknownKind"),
+						},
+						{
+							Group: &gatewayV1beta1Group,
+							Kind:  Kind("HTTPRoute"),
+						},
+					},
 				},
 			},
-			expectedSupportedKinds: nil,
+			expectedSupportedKinds: []gatewayv1beta1.RouteGroupKind{
+				{
+					Group: &gatewayV1beta1Group,
+					Kind:  Kind("HTTPRoute"),
+				},
+			},
+			resolvedRefsReason: gatewayv1beta1.ListenerReasonInvalidRouteKinds,
 		},
 		{
 			name: "Kind included in global gets passed",
@@ -77,14 +95,16 @@ func TestGetListenerSupportedRouteKinds(t *testing.T) {
 				},
 			},
 			expectedSupportedKinds: builder.NewRouteGroupKind().HTTPRoute().IntoSlice(),
+			resolvedRefsReason:     gatewayv1beta1.ListenerReasonResolvedRefs,
 		},
 	}
 
 	for _, tc := range testCases {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
-			got := getListenerSupportedRouteKinds(tc.listener)
+			got, reason := getListenerSupportedRouteKinds(tc.listener)
 			require.Equal(t, tc.expectedSupportedKinds, got)
+			require.Equal(t, tc.resolvedRefsReason, reason)
 		})
 	}
 }

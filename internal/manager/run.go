@@ -175,15 +175,12 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 
 	if c.Konnect.ConfigSynchronizationEnabled {
 		setupLog.Info("Start Konnect client to register runtime instances to Konnect")
-		konnectClient, err := konnect.NewAdminClient(c.Konnect)
+		konnectClient, err := konnect.NewClient(c.Konnect)
 		if err != nil {
-			setupLog.Error(err, "failed to create konnect client")
 			return fmt.Errorf("failed to create konnect client: %w", err)
 		}
 		hostname, _ := os.Hostname()
 		version := metadata.Release
-		// REVIEW: here we used version of KIC itself as version of KIC node.'
-		// Which version is the proper one to use?
 		agent := konnect.NewNodeAgent(hostname, version, setupLog, konnectClient)
 		agent.Run()
 	}

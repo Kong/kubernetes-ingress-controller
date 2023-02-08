@@ -9,7 +9,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 )
 
-var defaultRefreshNodeInterval = 15 * time.Second
+const defaultRefreshNodeInterval = 30 * time.Second
 
 type NodeAgent struct {
 	NodeID   string
@@ -18,17 +18,17 @@ type NodeAgent struct {
 
 	Logger logr.Logger
 
-	adminClient     *AdminClient
+	konnectClient   *Client
 	refreshInterval time.Duration
 }
 
-func NewNodeAgent(hostname string, version string, logger logr.Logger, adminClient *AdminClient) *NodeAgent {
+func NewNodeAgent(hostname string, version string, logger logr.Logger, client *Client) *NodeAgent {
 	return &NodeAgent{
 		Hostname: hostname,
 		Version:  version,
 		Logger: logger.
-			WithName("konnect-node").WithValues("runtime_group_id", adminClient.RuntimeGroupID),
-		adminClient: adminClient,
+			WithName("konnect-node").WithValues("runtime_group_id", client.RuntimeGroupID),
+		konnectClient: client,
 		// TODO: set refresh interval by flags/envvar
 		refreshInterval: defaultRefreshNodeInterval,
 	}
@@ -42,27 +42,26 @@ func (a *NodeAgent) createNode() error {
 		Type:     NodeTypeIngressController,
 		LastPing: time.Now().Unix(),
 	}
-	resp, err := a.adminClient.CreateNode(createNodeReq)
+	resp, err := a.konnectClient.CreateNode(createNodeReq)
 	if err != nil {
-		a.Logger.Error(err, "failed to create node")
-		return err
+		return fmt.Errorf("failed to update node, hostname %s: %w", a.Hostname, err)
 	}
 
 	a.NodeID = resp.Item.ID
-	a.Logger.Info("updated last ping time of node for KIC", "node_id", a.NodeID)
+	a.Logger.V(util.DebugLevel).Info("created node for KIC", "node_id", a.NodeID, "hostname", a.Hostname)
 	return nil
 }
 
 func (a *NodeAgent) clearOutdatedNodes() error {
-	nodes, err := a.adminClient.ListNodes()
+	nodes, err := a.konnectClient.ListNodes()
 	if err != nil {
 		return fmt.Errorf("failed to list nodes: %w", err)
 	}
 
 	for _, node := range nodes.Items {
 		if node.Type == NodeTypeIngressController && node.Hostname != a.Hostname {
-			a.Logger.V(util.DebugLevel).Info("remove KIC node", "node_id", node.ID, "hostname", node.Hostname)
-			err := a.adminClient.DeleteNode(node.ID)
+			a.Logger.V(util.DebugLevel).Info("remove outdated KIC node", "node_id", node.ID, "hostname", node.Hostname)
+			err := a.konnectClient.DeleteNode(node.ID)
 			if err != nil {
 				return fmt.Errorf("failed to delete node %s: %w", node.ID, err)
 			}
@@ -89,17 +88,19 @@ func (a *NodeAgent) updateNode() error {
 
 		Status: string(ingressControllerStatus),
 	}
-	_, err = a.adminClient.UpdateNode(a.NodeID, updateNodeReq)
+	_, err = a.konnectClient.UpdateNode(a.NodeID, updateNodeReq)
 	if err != nil {
 		a.Logger.Error(err, "failed to update node for KIC")
 		return err
 	}
-	a.Logger.V(util.DebugLevel).Info("updated last ping time of node for KIC", "node_id", a.NodeID)
+	a.Logger.V(util.DebugLevel).Info("updated last ping time of node for KIC", "node_id", a.NodeID, "hostname", a.Hostname)
 	return nil
 }
 
 func (a *NodeAgent) updateNodeLoop() {
 	ticker := time.NewTicker(a.refreshInterval)
+	defer ticker.Stop()
+	// TODO: add some mechanism to break the loop
 	for range ticker.C {
 		err := a.updateNode()
 		if err != nil {

@@ -7,8 +7,9 @@ import (
 )
 
 // ExtractClientCertificates extracts tls.Certificates from TLSClientConfig.
-// It returns an empty slice in case there was no client cert and/or client key provided.
-func ExtractClientCertificates(cert []byte, certFile string, key []byte, keyFile string) ([]tls.Certificate, error) {
+// It returns nil in case there was no client cert and/or client key provided.
+// REVIEW: in case of no certs specified, return nil, nil, OR return non-nil error, OR add a boolean return value?
+func ExtractClientCertificates(cert []byte, certFile string, key []byte, keyFile string) (*tls.Certificate, error) {
 	clientCert, err := ValueFromVariableOrFile(cert, certFile)
 	if err != nil {
 		return nil, fmt.Errorf("could not extract TLS client cert")
@@ -23,7 +24,7 @@ func ExtractClientCertificates(cert []byte, certFile string, key []byte, keyFile
 		if err != nil {
 			return nil, fmt.Errorf("failed to load client certificate: %w", err)
 		}
-		return []tls.Certificate{cert}, nil
+		return &cert, nil
 	}
 
 	return nil, nil

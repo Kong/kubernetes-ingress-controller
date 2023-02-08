@@ -81,7 +81,7 @@ func TestConfigErrorEventGeneration(t *testing.T) {
 			return false
 		}
 		for _, event := range events.Items {
-			if event.Reason == dataplane.KongConfigurationTranslationFailedEventReason {
+			if event.Reason == dataplane.KongConfigurationApplyFailedEventReason {
 				if event.InvolvedObject.Kind == "Ingress" {
 					// this is a runtime.Object because of v1/v1beta1 handling, so no ObjectMeta or other obvious way
 					// to get the name. we can reasonably assume it's the only Ingress in the namespace

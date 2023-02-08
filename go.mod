@@ -7,7 +7,7 @@ replace github.com/imdario/mergo v0.3.12 => github.com/Kong/mergo v0.3.13
 require (
 	cloud.google.com/go/container v1.13.0
 	github.com/Masterminds/sprig/v3 v3.2.3
-	github.com/avast/retry-go/v4 v4.3.2
+	github.com/avast/retry-go/v4 v4.3.3
 	github.com/blang/semver/v4 v4.0.0
 	github.com/bombsimon/logrusr/v2 v2.0.1
 	github.com/go-logr/logr v1.2.3

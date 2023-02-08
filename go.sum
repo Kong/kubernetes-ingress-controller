@@ -118,8 +118,8 @@ github.com/armon/go-metrics v0.0.0-20180917152333-f0300d1749da/go.mod h1:Q73ZrmV
 github.com/armon/go-radix v0.0.0-20180808171621-7fddfc383310/go.mod h1:ufUuZ+zHj4x4TnLV4JWEpy2hxWSpsRywHrMgIH9cCH8=
 github.com/armon/go-socks5 v0.0.0-20160902184237-e75332964ef5 h1:0CwZNZbxp69SHPdPJAN/hZIm0C4OItdklCFmMRWYpio=
 github.com/asaskevich/govalidator v0.0.0-20190424111038-f61b66f89f4a/go.mod h1:lB+ZfQJz7igIIfQNfa7Ml4HSf2uFQQRzpGGRXenZAgY=
-github.com/avast/retry-go/v4 v4.3.2 h1:x4sTEu3jSwr7zNjya8NTdIN+U88u/jtO/q3OupBoDtM=
-github.com/avast/retry-go/v4 v4.3.2/go.mod h1:rg6XFaiuFYII0Xu3RDbZQkxCofFwruZKW8oEF1jpWiU=
+github.com/avast/retry-go/v4 v4.3.3 h1:G56Bp6mU0b5HE1SkaoVjscZjlQb0oy4mezwY/cGH19w=
+github.com/avast/retry-go/v4 v4.3.3/go.mod h1:rg6XFaiuFYII0Xu3RDbZQkxCofFwruZKW8oEF1jpWiU=
 github.com/aymerick/raymond v2.0.3-0.20180322193309-b565731e1464+incompatible/go.mod h1:osfaiScAUVup+UC9Nfq76eWqDhXlp+4UYaA8uhTBO6g=
 github.com/benbjohnson/clock v1.0.3/go.mod h1:bGMdMPoPVvcYyt1gHDf4J2KE153Yf9BuiUKYMaxlTDM=
 github.com/benbjohnson/clock v1.1.0/go.mod h1:J11/hYXuz8f4ySSvYwY0FKfm+ezbsZBKZxNJlLklBHA=

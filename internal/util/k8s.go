@@ -142,6 +142,11 @@ const (
 
 // GenerateTagsForObject returns a subset of an object's metadata as a slice of prefixed string pointers.
 func GenerateTagsForObject(obj client.Object) []*string {
+	if obj == nil {
+		// this should never happen in practice, but it happen in some unit tests
+		// in those cases, the nil object has no tags
+		return kong.StringSlice("")
+	}
 	gvk := obj.GetObjectKind().GroupVersionKind()
 	tags := []string{}
 	if obj.GetName() != "" {
@@ -162,12 +167,5 @@ func GenerateTagsForObject(obj client.Object) []*string {
 	if gvk.Version != "" {
 		tags = append(tags, K8sVersionTagPrefix+gvk.Version)
 	}
-	return kong.StringSlice(
-		K8sNameTagPrefix+obj.GetName(),
-		K8sNamespaceTagPrefix+obj.GetNamespace(),
-		K8sKindTagPrefix+gvk.Kind,
-		K8sUIDTagPrefix+string(obj.GetUID()),
-		K8sGroupTagPrefix+gvk.Group,
-		K8sVersionTagPrefix+gvk.Version,
-	)
+	return kong.StringSlice(tags...)
 }

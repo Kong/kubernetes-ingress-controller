@@ -5,7 +5,6 @@ import (
 
 	"github.com/sirupsen/logrus"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
@@ -16,7 +15,7 @@ func backendRefsToKongStateBackends(
 	logger logrus.FieldLogger,
 	route client.Object,
 	backendRefs []gatewayv1beta1.BackendRef,
-	allowed map[gatewayv1beta1.Namespace][]gatewayv1alpha2.ReferenceGrantTo,
+	allowed map[gatewayv1beta1.Namespace][]gatewayv1beta1.ReferenceGrantTo,
 ) kongstate.ServiceBackends {
 	backends := kongstate.ServiceBackends{}
 

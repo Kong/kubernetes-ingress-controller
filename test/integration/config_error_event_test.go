@@ -53,7 +53,9 @@ func TestConfigErrorEventGeneration(t *testing.T) {
 
 	t.Logf("exposing deployment %s via service", deployment.Name)
 	service := generators.NewServiceForDeployment(deployment, corev1.ServiceTypeLoadBalancer)
-	service.ObjectMeta.Annotations["connect_timeout"] = "mankurt"
+	service.ObjectMeta.Annotations = map[string]string{}
+	service.ObjectMeta.Annotations["konghq.com/protocol"] = "tcp"
+	service.ObjectMeta.Annotations["konghq.com/path"] = "/aitmatov"
 	_, err = env.Cluster().Client().CoreV1().Services(ns.Name).Create(ctx, service, metav1.CreateOptions{})
 	assert.NoError(t, err)
 	cleaner.Add(service)
@@ -72,9 +74,7 @@ func TestConfigErrorEventGeneration(t *testing.T) {
 	require.NoError(t, clusters.DeployIngress(ctx, env.Cluster(), ns.Name, ingress))
 	helpers.AddIngressToCleaner(cleaner, ingress)
 
-	t.Log("checking event creation")
-
-	// check broken route generates event
+	t.Log("checking ingress event creation")
 	require.Eventually(t, func() bool {
 		events, err := env.Cluster().Client().CoreV1().Events(ns.Name).List(ctx, metav1.ListOptions{})
 		if err != nil {
@@ -82,13 +82,17 @@ func TestConfigErrorEventGeneration(t *testing.T) {
 		}
 		for _, event := range events.Items {
 			if event.Reason == dataplane.KongConfigurationTranslationFailedEventReason {
-				return true
+				if event.InvolvedObject.Kind == "Ingress" {
+					// this is a runtime.Object because of v1/v1beta1 handling, so no ObjectMeta or other obvious way
+					// to get the name. we can reasonably assume it's the only Ingress in the namespace
+					return true
+				}
 			}
 		}
 		return false
 	}, statusWait, waitTick, true)
 
-	// check broken service also generates event
+	t.Log("checking service event creation")
 	require.Eventually(t, func() bool {
 		events, err := env.Cluster().Client().CoreV1().Events(ns.Name).List(ctx, metav1.ListOptions{})
 		if err != nil {
@@ -96,7 +100,11 @@ func TestConfigErrorEventGeneration(t *testing.T) {
 		}
 		for _, event := range events.Items {
 			if event.Reason == dataplane.KongConfigurationTranslationFailedEventReason {
-				return true
+				if event.InvolvedObject.Kind == "Service" {
+					if event.InvolvedObject.Name == service.ObjectMeta.Name {
+						return true
+					}
+				}
 			}
 		}
 		return false

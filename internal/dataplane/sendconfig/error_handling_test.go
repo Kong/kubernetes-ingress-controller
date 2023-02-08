@@ -19,164 +19,132 @@ func TestParseFlatEntityErrors(t *testing.T) {
 			name: "a route nested under a service, with two and one errors, respectively",
 			want: []ResourceError{
 				{
-					Name:       "scallion",
-					Namespace:  "default",
+					Name:       "httpbin",
+					Namespace:  "67338dc2-31fd-47b6-85a9-9c11d347d090",
 					Kind:       "Ingress",
 					APIVersion: "networking.k8s.io/v1",
-					UID:        "d7300db1-14eb-5a09-b594-2db904ed8eca",
+					UID:        "ea569579-f7e9-4d4e-973b-b207bfb848d8",
 					Problems: map[string]string{
 						"methods": "cannot set methods when protocols is grpc or grpcs",
 					},
 				},
 				{
-					Name:       "turnip",
-					Namespace:  "default",
-					Kind:       "Ingress",
-					APIVersion: "networking.k8s.io/v1",
-					UID:        "d7300db1-14eb-5a09-b594-2db904ed8eca",
-					Problems: map[string]string{
-						"methods[0]": "expected a string",
-						"methods[1]": "expected a string",
-					},
-				},
-				{
-					Name:       "radish",
-					Namespace:  "default",
+					Name:       "httpbin",
+					Namespace:  "67338dc2-31fd-47b6-85a9-9c11d347d090",
 					Kind:       "Service",
-					UID:        "b8aa692c-6d8d-580e-a767-a7dbc1f58344",
 					APIVersion: "v1",
+					UID:        "e7e5c93e-4d56-4cc3-8f4f-ff1fcbe95eb2",
 					Problems: map[string]string{
-						"read_timeout":  "expected an integer",
-						"write_timeout": "expected an integer",
+						"":     "failed conditional validation given value of field protocol",
+						"path": "value must be null",
 					},
 				},
 			},
 			wantErr: false,
 			body: []byte(`{
-    "code": 14,
-    "fields": {
-        "routes": [
-            null,
-            {
-                "methods": "cannot set 'methods' when 'protocols' is 'grpc' or 'grpcs'"
-            },
-            {
-                "strip_path": "cannot set 'strip_path' when 'protocols' is 'grpc' or 'grpcs'"
-            }
+  "name": "invalid declarative configuration",
+  "fields": {
+    "services": [
+      {
+        "@entity": [
+          "failed conditional validation given value of field protocol"
         ],
-        "services": [
-            {
-                "read_timeout": "expected an integer"
-            }
-        ]
-    },
-    "flattened_errors": [
+        "path": "value must be null"
+      }
+    ]
+  },
+  "flattened_errors": [
+    {
+      "entity_type": "route",
+      "entity_name": "67338dc2-31fd-47b6-85a9-9c11d347d090.httpbin.httpbin..80",
+      "entity": {
+        "paths": [
+          "/bar/",
+          "~/bar$"
+        ],
+        "methods": [
+          "GET"
+        ],
+        "response_buffering": true,
+        "tags": [
+          "k8s-name:httpbin",
+          "k8s-namespace:67338dc2-31fd-47b6-85a9-9c11d347d090",
+          "k8s-kind:Ingress",
+          "k8s-uid:ea569579-f7e9-4d4e-973b-b207bfb848d8",
+          "k8s-group:networking.k8s.io",
+          "k8s-version:v1"
+        ],
+        "name": "67338dc2-31fd-47b6-85a9-9c11d347d090.httpbin.httpbin..80",
+        "request_buffering": true,
+        "preserve_host": true,
+        "https_redirect_status_code": 426,
+        "path_handling": "v0",
+        "protocols": [
+          "grpcs"
+        ],
+        "regex_priority": 0
+      },
+      "errors": [
         {
-            "entity": {
-                "ca_certificates": null,
-                "connect_timeout": 60000,
-                "created_at": 1663285589,
-                "enabled": true,
-                "host": "echo.default.80.svc",
-                "name": "default.echo.pnum-80",
-                "path": "/",
-                "port": 80,
-                "protocol": "http",
-                "read_timeout": true,
-                "retries": 5,
-                "tags": null,
-                "tls_verify": null,
-                "tls_verify_depth": null,
-                "updated_at": 1663285589,
-                "write_timeout": 60000
-            },
-            "entity_name": "default.echo.pnum-80",
-            "entity_type": "service",
-            "errors": [
-                {
-                    "field": "read_timeout",
-                    "message": "expected an integer",
-                    "type": "field"
-                }
-            ]
-        },
-        {
-            "entity": {
-                "created_at": 1663285589,
-                "destinations": null,
-                "headers": null,
-                "hosts": null,
-                "https_redirect_status_code": 426,
-                "methods": [
-                    "GET"
-                ],
-                "name": "default.demo.00",
-                "path_handling": "v0",
-                "paths": [
-                    "/foo"
-                ],
-                "preserve_host": true,
-                "protocols": [
-                    "grpc"
-                ],
-                "regex_priority": 100,
-                "request_buffering": true,
-                "response_buffering": true,
-                "snis": null,
-                "sources": null,
-                "strip_path": false,
-                "tags": null,
-                "updated_at": 1663285589
-            },
-            "entity_name": "default.demo.00",
-            "entity_type": "route",
-            "errors": [
-                {
-                    "field": "methods",
-                    "message": "cannot set 'methods' when 'protocols' is 'grpc' or 'grpcs'",
-                    "type": "field"
-                }
-            ]
-        },
-        {
-            "entity": {
-                "created_at": 1663285589,
-                "destinations": null,
-                "headers": null,
-                "hosts": null,
-                "https_redirect_status_code": 426,
-                "methods": null,
-                "name": "default.demo.01",
-                "path_handling": "v0",
-                "paths": [
-                    "/foo"
-                ],
-                "preserve_host": true,
-                "protocols": [
-                    "grpc"
-                ],
-                "regex_priority": 100,
-                "request_buffering": true,
-                "response_buffering": true,
-                "snis": null,
-                "sources": null,
-                "strip_path": true,
-                "tags": null,
-                "updated_at": 1663285589
-            },
-            "entity_name": "default.demo.01",
-            "entity_type": "route",
-            "errors": [
-                {
-                    "field": "strip_path",
-                    "message": "cannot set 'strip_path' when 'protocols' is 'grpc' or 'grpcs'",
-                    "type": "field"
-                }
-            ]
+          "message": "cannot set methods when protocols is grpc or grpcs",
+          "type": "field",
+          "field": "methods"
         }
-    ],
-    "message": "declarative config is invalid: {routes={[2]={methods=\"cannot set 'methods' when 'protocols' is 'grpc' or 'grpcs'\"},[3]={strip_path=\"cannot set 'strip_path' when 'protocols' is 'grpc' or 'grpcs'\"}},services={{read_timeout=\"expected an integer\"}}}",
-    "name": "invalid declarative configuration"
+      ],
+      "entity_tags": [
+        "k8s-name:httpbin",
+        "k8s-namespace:67338dc2-31fd-47b6-85a9-9c11d347d090",
+        "k8s-kind:Ingress",
+        "k8s-uid:ea569579-f7e9-4d4e-973b-b207bfb848d8",
+        "k8s-group:networking.k8s.io",
+        "k8s-version:v1"
+      ]
+    },
+    {
+      "entity_type": "service",
+      "entity_name": "67338dc2-31fd-47b6-85a9-9c11d347d090.httpbin.httpbin.80",
+      "entity": {
+        "protocol": "tcp",
+        "tags": [
+          "k8s-name:httpbin",
+          "k8s-namespace:67338dc2-31fd-47b6-85a9-9c11d347d090",
+          "k8s-kind:Service",
+          "k8s-uid:e7e5c93e-4d56-4cc3-8f4f-ff1fcbe95eb2",
+          "k8s-group:",
+          "k8s-version:v1"
+        ],
+        "retries": 5,
+        "connect_timeout": 60000,
+        "path": "/aitmatov",
+        "name": "67338dc2-31fd-47b6-85a9-9c11d347d090.httpbin.httpbin.80",
+        "read_timeout": 60000,
+        "port": 80,
+        "host": "httpbin.67338dc2-31fd-47b6-85a9-9c11d347d090.80.svc",
+        "write_timeout": 60000
+      },
+      "errors": [
+        {
+          "message": "failed conditional validation given value of field protocol",
+          "type": "entity"
+        },
+        {
+          "message": "value must be null",
+          "type": "field",
+          "field": "path"
+        }
+      ],
+      "entity_tags": [
+        "k8s-name:httpbin",
+        "k8s-namespace:67338dc2-31fd-47b6-85a9-9c11d347d090",
+        "k8s-kind:Service",
+        "k8s-uid:e7e5c93e-4d56-4cc3-8f4f-ff1fcbe95eb2",
+        "k8s-group:",
+        "k8s-version:v1"
+      ]
+    }
+  ],
+  "message": "declarative config is invalid: {services={{[\"@entity\"]={\"failed conditional validation given value of field protocol\"},path=\"value must be null\"}}}",
+  "code": 14
 }`),
 		},
 	}
@@ -187,7 +155,7 @@ func TestParseFlatEntityErrors(t *testing.T) {
 				t.Errorf("parseFlatEntityErrors() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			require.Equal(t, got, tt.want)
+			require.Equal(t, tt.want, got)
 		})
 	}
 }

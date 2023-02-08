@@ -26,8 +26,8 @@ var KicNodeAPIPathPattern = "%s/kic/api/runtime_groups/%s/v1/kic-nodes"
 
 // NewClient creates a Konnect client.
 func NewClient(cfg adminapi.KonnectConfig) (*Client, error) {
-	tlsConfig := tls.Config{ //nolint:gosec
-		Certificates: []tls.Certificate{},
+	tlsConfig := tls.Config{
+		MinVersion: tls.VersionTLS12,
 	}
 	cert, err := tlsutil.ExtractClientCertificates([]byte(cfg.TLSClient.Cert), cfg.TLSClient.CertFile, []byte(cfg.TLSClient.Key), cfg.TLSClient.KeyFile)
 	if err != nil {
@@ -81,7 +81,6 @@ func (c *Client) CreateNode(req *CreateNodeRequest) (*CreateNodeResponse, error)
 
 	if !isOKStatusCode(httpResp.StatusCode) {
 		return nil, fmt.Errorf("non-success response code from Koko: %d, resp body: %s", httpResp.StatusCode, string(respBuf))
-		// TODO: parse returned body to return a more detailed error
 	}
 
 	resp := &CreateNodeResponse{}

@@ -29,7 +29,8 @@ func NewNodeAgent(hostname string, version string, logger logr.Logger, client *C
 		Logger: logger.
 			WithName("konnect-node").WithValues("runtime_group_id", client.RuntimeGroupID),
 		konnectClient: client,
-		// TODO: set refresh interval by flags/envvar
+		// TODO: set refresh interval by some flag
+		// https://github.com/Kong/kubernetes-ingress-controller/issues/3515
 		refreshInterval: defaultRefreshNodeInterval,
 	}
 }
@@ -78,6 +79,7 @@ func (a *NodeAgent) updateNode() error {
 	}
 
 	// TODO: retrieve the real state of KIC
+	// https://github.com/Kong/kubernetes-ingress-controller/issues/3515
 	ingressControllerStatus := IngressControllerStateOperational
 
 	updateNodeReq := &UpdateNodeRequest{
@@ -101,6 +103,7 @@ func (a *NodeAgent) updateNodeLoop() {
 	ticker := time.NewTicker(a.refreshInterval)
 	defer ticker.Stop()
 	// TODO: add some mechanism to break the loop
+	// https://github.com/Kong/kubernetes-ingress-controller/issues/3515
 	for range ticker.C {
 		err := a.updateNode()
 		if err != nil {

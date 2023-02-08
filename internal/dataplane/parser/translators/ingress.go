@@ -150,17 +150,16 @@ func (i *ingressTranslationIndex) translate() []*kongstate.Service {
 // -----------------------------------------------------------------------------
 
 type ingressTranslationMeta struct {
-	parentIngress      client.Object
-	ingressAnnotations map[string]string
-	ingressNamespace   string
-	ingressName        string
-	ingressUID         string
-	ingressHost        string
-	ingressTags        []*string
-	serviceName        string
-	servicePort        kongstate.PortDef
-	paths              []netv1.HTTPIngressPath
-	addRegexPrefix     bool
+	parentIngress    client.Object
+	ingressNamespace string
+	ingressName      string
+	ingressUID       string
+	ingressHost      string
+	ingressTags      []*string
+	serviceName      string
+	servicePort      kongstate.PortDef
+	paths            []netv1.HTTPIngressPath
+	addRegexPrefix   bool
 }
 
 func (m *ingressTranslationMeta) translateIntoKongStateService(kongServiceName string, portDef kongstate.PortDef) *kongstate.Service {

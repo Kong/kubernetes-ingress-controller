@@ -6,7 +6,6 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 	"time"
 
 	"github.com/kong/go-kong/kong"
@@ -15,6 +14,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/store"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 )
 
 // getCACerts translates CA certificates Secrets to kong.CACertificates. It ensures every certificate's structure and

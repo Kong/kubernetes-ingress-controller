@@ -51,10 +51,10 @@ func convertGatewayMatchHeadersToKongRouteMatchHeaders(headers []gatewayv1beta1.
 // from a namespace to a slice of ReferenceGrant Tos. When a To is included in the slice, the key namespace has a
 // ReferenceGrant with those Tos and the input From.
 func getPermittedForReferenceGrantFrom(
-	from gatewayv1alpha2.ReferenceGrantFrom,
-	grants []*gatewayv1alpha2.ReferenceGrant,
-) map[gatewayv1beta1.Namespace][]gatewayv1alpha2.ReferenceGrantTo {
-	allowed := make(map[gatewayv1beta1.Namespace][]gatewayv1alpha2.ReferenceGrantTo)
+	from gatewayv1beta1.ReferenceGrantFrom,
+	grants []*gatewayv1beta1.ReferenceGrant,
+) map[gatewayv1beta1.Namespace][]gatewayv1beta1.ReferenceGrantTo {
+	allowed := make(map[gatewayv1beta1.Namespace][]gatewayv1beta1.ReferenceGrantTo)
 	// loop over all From values in all grants. if we find a match, add all Tos to the list of Tos allowed for the
 	// grant namespace. this technically could add duplicate copies of the Tos if there are duplicate Froms (it makes
 	// no sense to add them, but it's allowed), but duplicate Tos are harmless (we only care about having at least one
@@ -91,7 +91,7 @@ func generateKongServiceFromBackendRefWithName(
 	if err != nil {
 		return kongstate.Service{}, fmt.Errorf("could not retrieve ReferenceGrants for %s: %w", objName, err)
 	}
-	allowed := getPermittedForReferenceGrantFrom(gatewayv1alpha2.ReferenceGrantFrom{
+	allowed := getPermittedForReferenceGrantFrom(gatewayv1beta1.ReferenceGrantFrom{
 		Group:     gatewayv1alpha2.Group(route.GetObjectKind().GroupVersionKind().Group),
 		Kind:      gatewayv1alpha2.Kind(route.GetObjectKind().GroupVersionKind().Kind),
 		Namespace: gatewayv1alpha2.Namespace(route.GetNamespace()),

@@ -837,18 +837,18 @@ func TestFakeStoreReferenceGrant(t *testing.T) {
 	assert := assert.New(t)
 	require := require.New(t)
 
-	grants := []*gatewayv1alpha2.ReferenceGrant{
+	grants := []*gatewayv1beta1.ReferenceGrant{
 		{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "foo",
 			},
-			Spec: gatewayv1alpha2.ReferenceGrantSpec{},
+			Spec: gatewayv1beta1.ReferenceGrantSpec{},
 		},
 		{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "bar",
 			},
-			Spec: gatewayv1alpha2.ReferenceGrantSpec{},
+			Spec: gatewayv1beta1.ReferenceGrantSpec{},
 		},
 	}
 	store, err := NewFakeStore(FakeObjects{ReferenceGrants: grants})

@@ -557,20 +557,20 @@ func TestTLSRouteReferenceGrant(t *testing.T) {
 
 	secret2Name := gatewayv1alpha2.ObjectName(secrets[1].Name)
 	t.Logf("creating a ReferenceGrant that permits tcproute access from %s to services in %s", ns.Name, otherNs.Name)
-	grant := &gatewayv1alpha2.ReferenceGrant{
+	grant := &gatewayv1beta1.ReferenceGrant{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        uuid.NewString(),
 			Annotations: map[string]string{},
 		},
-		Spec: gatewayv1alpha2.ReferenceGrantSpec{
-			From: []gatewayv1alpha2.ReferenceGrantFrom{
+		Spec: gatewayv1beta1.ReferenceGrantSpec{
+			From: []gatewayv1beta1.ReferenceGrantFrom{
 				{
 					Group:     gatewayv1alpha2.Group("gateway.networking.k8s.io"),
 					Kind:      gatewayv1alpha2.Kind("Gateway"),
 					Namespace: gatewayv1alpha2.Namespace(gateway.Namespace),
 				},
 			},
-			To: []gatewayv1alpha2.ReferenceGrantTo{
+			To: []gatewayv1beta1.ReferenceGrantTo{
 				{
 					Group: gatewayv1alpha2.Group(""),
 					Kind:  gatewayv1alpha2.Kind("Secret"),
@@ -580,7 +580,7 @@ func TestTLSRouteReferenceGrant(t *testing.T) {
 		},
 	}
 
-	grant, err = gatewayClient.GatewayV1alpha2().ReferenceGrants(otherNs.Name).Create(ctx, grant, metav1.CreateOptions{})
+	grant, err = gatewayClient.GatewayV1beta1().ReferenceGrants(otherNs.Name).Create(ctx, grant, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(grant)
 
@@ -657,7 +657,7 @@ func TestTLSRouteReferenceGrant(t *testing.T) {
 	t.Log("verifying that using the wrong name in the ReferenceGrant removes the related certificate")
 	badName := gatewayv1alpha2.ObjectName("garbage")
 	grant.Spec.To[0].Name = &badName
-	grant, err = gatewayClient.GatewayV1alpha2().ReferenceGrants(otherNs.Name).Update(ctx, grant, metav1.UpdateOptions{})
+	grant, err = gatewayClient.GatewayV1beta1().ReferenceGrants(otherNs.Name).Update(ctx, grant, metav1.UpdateOptions{})
 	require.NoError(t, err)
 
 	require.Eventually(t, func() bool {
@@ -684,7 +684,7 @@ func TestTLSRouteReferenceGrant(t *testing.T) {
 
 	t.Log("verifying the certificate returns when using a ReferenceGrant with no name restrictions")
 	grant.Spec.To[0].Name = nil
-	_, err = gatewayClient.GatewayV1alpha2().ReferenceGrants(otherNs.Name).Update(ctx, grant, metav1.UpdateOptions{})
+	_, err = gatewayClient.GatewayV1beta1().ReferenceGrants(otherNs.Name).Update(ctx, grant, metav1.UpdateOptions{})
 	require.NoError(t, err)
 
 	require.Eventually(t, func() bool {

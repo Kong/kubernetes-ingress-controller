@@ -249,7 +249,7 @@ func getListenerStatus(
 	ctx context.Context,
 	gateway *Gateway,
 	kongListens []Listener,
-	referenceGrants []gatewayv1alpha2.ReferenceGrant,
+	referenceGrants []gatewayv1beta1.ReferenceGrant,
 	client client.Client,
 ) ([]ListenerStatus, error) {
 	statuses := make(map[SectionName]ListenerStatus, len(gateway.Spec.Listeners))
@@ -531,7 +531,7 @@ func getListenerStatus(
 func getReferenceGrantConditionReason(
 	gatewayNamespace string,
 	certRef gatewayv1beta1.SecretObjectReference,
-	referenceGrants []gatewayv1alpha2.ReferenceGrant,
+	referenceGrants []gatewayv1beta1.ReferenceGrant,
 ) string {
 	// no need to have this reference granted
 	if certRef.Namespace == nil || *certRef.Namespace == (Namespace)(gatewayNamespace) {

@@ -22,7 +22,7 @@ var (
 	// because the original version of the mTLS credential was not compatible with KIC.
 	MTLSCredentialVersionCutoff = semver.Version{Major: 2, Minor: 3, Patch: 2}
 
-	//FlattenedErrorCutoff is the Kong version prior to the addition of flattened errors.
+	// FlattenedErrorCutoff is the Kong version prior to the addition of flattened errors.
 	FlattenedErrorCutoff = semver.Version{Major: 3, Minor: 1}
 )
 

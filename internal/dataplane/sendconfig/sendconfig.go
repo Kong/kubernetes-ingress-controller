@@ -150,7 +150,7 @@ func onUpdateInMemoryMode(
 	}
 
 	var flattened bool
-	if !versions.GetKongVersion().MajorMinorOnly().LTE(versions.MTLSCredentialVersionCutoff) {
+	if !versions.GetKongVersion().MajorMinorOnly().LTE(versions.FlattenedErrorCutoff) {
 		// Kong's API library combines KVs in the request body (the config) and query string (check hash, flattened)
 		// into a single set of parameters: https://github.com/Kong/go-kong/pull/271#issuecomment-1416212852
 		// KIC therefore must _not_ request flattened errors on versions that do not support it, as otherwise Kong

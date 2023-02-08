@@ -92,6 +92,8 @@ Adding a new version? You'll need three changes:
   been replaced by the `GatewayConditionAccepted`, and the `ListenerConditionDetached`
   condition has been replaced by the `ListenerConditionAccepted`.
   [#3496](https://github.com/Kong/kubernetes-ingress-controller/pull/3496)
+- The `ReferenceGrant` has been promoted to beta.
+  [#3507](https://github.com/Kong/kubernetes-ingress-controller/pull/3507)
 
 ### Fixed
 

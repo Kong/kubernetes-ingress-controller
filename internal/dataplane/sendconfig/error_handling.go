@@ -157,61 +157,6 @@ func parseRawResourceError(raw rawResourceError) (ResourceError, error) {
 	return re, nil
 }
 
-/* TODO OLDCODESTARTSHERE
-// deckConfigConflictError is an error used to wrap deck config conflict errors returned from deck functions
-// transforming KongRawState to KongState (e.g. state.Get, dump.Get).
-type deckConfigConflictError struct {
-	err error
-}
-
-func (e deckConfigConflictError) Error() string {
-	return e.err.Error()
-}
-
-func (e deckConfigConflictError) Is(target error) bool {
-	_, ok := target.(deckConfigConflictError)
-	return ok
-}
-
-func (e deckConfigConflictError) Unwrap() error {
-	return e.err
-}
-
-// pushFailureReason extracts config push failure reason from an error returned from onUpdateInMemoryMode or onUpdateDBMode.
-func pushFailureReason(err error) string {
-	var netErr net.Error
-	if errors.As(err, &netErr) {
-		return metrics.FailureReasonNetwork
-	}
-
-	if isConflictErr(err) {
-		return metrics.FailureReasonConflict
-	}
-
-	return metrics.FailureReasonOther
-}
-
-func isConflictErr(err error) bool {
-	var apiErr *kong.APIError
-	if errors.As(err, &apiErr) && apiErr.Code() == http.StatusConflict ||
-		errors.Is(err, deckConfigConflictError{}) {
-		return true
-	}
-
-	var deckErrArray deckutils.ErrArray
-	if errors.As(err, &deckErrArray) {
-		for _, err := range deckErrArray.Errors {
-			if isConflictErr(err) {
-				return true
-			}
-		}
-	}
-
-	return false
-}
-*/
-
-// TODO NEWCODESTARTSHERE
 // deckConfigConflictError is an error used to wrap deck config conflict errors returned from deck functions
 // transforming KongRawState to KongState (e.g. state.Get, dump.Get).
 type deckConfigConflictError struct {

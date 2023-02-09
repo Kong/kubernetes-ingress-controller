@@ -11,16 +11,6 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/adminapi"
 )
 
-// -----------------------------------------------------------------------------
-// Sendconfig - Public Types
-// -----------------------------------------------------------------------------
-
-// Kong Represents a Kong client and connection information.
-type Kong struct {
-	Clients []adminapi.Client
-	Config  Config
-}
-
 // Config gathers parameters that are needed for sending configuration to Kong Admin API.
 type Config struct {
 	// Currently, this assumes that all underlying clients are using the same version
@@ -45,24 +35,17 @@ type Config struct {
 	EnableReverseSync bool
 }
 
-// New creates new Kong client that is responsible for sending configurations
-// to Kong instance(s) through Admin API.
-func New(
+// Init sets up variables that need external calls.
+func (c *Config) Init(
 	ctx context.Context,
 	logger logr.Logger,
 	kongClients []adminapi.Client,
-	cfg Config,
-) Kong {
+) {
 	if err := tagsFilteringEnabled(ctx, kongClients); err != nil {
 		logger.Error(err, "tag filtering disabled")
-		cfg.FilterTags = nil
+		c.FilterTags = nil
 	} else {
-		logger.Info("tag filtering enabled", "tags", cfg.FilterTags)
-	}
-
-	return Kong{
-		Config:  cfg,
-		Clients: kongClients,
+		logger.Info("tag filtering enabled", "tags", c.FilterTags)
 	}
 }
 

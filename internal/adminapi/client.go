@@ -2,8 +2,10 @@ package adminapi
 
 import (
 	"context"
+	"net/http"
 
 	"github.com/kong/go-kong/kong"
+	"github.com/samber/lo"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 )
@@ -37,6 +39,16 @@ func NewKonnectClient(c *kong.Client, runtimeGroup string) Client {
 		konnectRuntimeGroup: runtimeGroup,
 		pluginSchemaStore:   util.NewPluginSchemaStore(c),
 	}
+}
+
+// NewTestClient creates a client for test purposes.
+func NewTestClient(address string) (Client, error) {
+	kongClient, err := kong.NewTestClient(lo.ToPtr(address), &http.Client{})
+	if err != nil {
+		return Client{}, err
+	}
+
+	return NewClient(kongClient), nil
 }
 
 // AdminAPIClient returns an underlying go-kong's Admin API client.

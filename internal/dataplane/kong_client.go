@@ -10,7 +10,6 @@ import (
 
 	"github.com/kong/deck/file"
 	"github.com/kong/go-kong/kong"
-	"github.com/prometheus/client_golang/prometheus"
 	"github.com/samber/lo"
 	"github.com/sirupsen/logrus"
 	"github.com/sourcegraph/conc/iter"
@@ -430,15 +429,11 @@ func (c *KongClient) Update(ctx context.Context) error {
 	// parse the Kubernetes objects from the storer into Kong configuration
 	kongstate, translationFailures := p.Build()
 	if failuresCount := len(translationFailures); failuresCount > 0 {
-		c.prometheusMetrics.TranslationCount.With(prometheus.Labels{
-			metrics.SuccessKey: metrics.SuccessFalse,
-		}).Inc()
+		c.prometheusMetrics.RecordTranslationFailure()
 		c.recordResourceFailureEvents(translationFailures, KongConfigurationTranslationFailedEventReason)
 		c.logger.Debugf("%d translation failures have occurred when building data-plane configuration", failuresCount)
 	} else {
-		c.prometheusMetrics.TranslationCount.With(prometheus.Labels{
-			metrics.SuccessKey: metrics.SuccessTrue,
-		}).Inc()
+		c.prometheusMetrics.RecordTranslationSuccess()
 		c.logger.Debug("successfully built data-plane configuration")
 	}
 

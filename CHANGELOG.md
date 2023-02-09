@@ -96,9 +96,13 @@ Adding a new version? You'll need three changes:
   [#3507](https://github.com/Kong/kubernetes-ingress-controller/pull/3507)
 - Enable `ReferenceGrant` if `Gateway` feature gate is turned on (default).
   [#3519](https://github.com/Kong/kubernetes-ingress-controller/pull/3519)
-- Added Konnect client to upload status of KIC instance to Konnect cloud if 
+- Added Konnect client to upload status of KIC instance to Konnect cloud if
   flag `--konnect-sync-enabled` is set to `true`.
   [#3469](https://github.com/Kong/kubernetes-ingress-controller/pull/3469)
+- Added service discovery for kong admin service configured via `--kong-admin-svc`
+  which accepts a namespaced name of headless kong admin service which should have
+  Admin API endpoints exposed under a named port called `admin`
+  [#3421](https://github.com/Kong/kubernetes-ingress-controller/pull/3421)
 
 ### Fixed
 

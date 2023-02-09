@@ -29,4 +29,8 @@ type Client interface {
 	// Update the data-plane by parsing the current configuring and applying
 	// it to the backend API.
 	Update(ctx context.Context) error
+
+	// Shutdown shuts down the client, all the synchronization loops and all its
+	// internal data structures.
+	Shutdown(ctx context.Context) error
 }

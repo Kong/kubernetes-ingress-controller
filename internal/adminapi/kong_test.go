@@ -19,7 +19,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -30,9 +29,7 @@ func TestMakeHTTPClientWithTLSOpts(t *testing.T) {
 	var err error
 
 	caPEM, certPEM, certPrivateKeyPEM, err = buildTLS(t)
-	if err != nil {
-		t.Errorf("Fail to build TLS certificates - %s", err.Error())
-	}
+	require.NoError(t, err, "Fail to build TLS certificates")
 
 	opts := HTTPClientOpts{
 		TLSSkipVerify: true,
@@ -46,13 +43,19 @@ func TestMakeHTTPClientWithTLSOpts(t *testing.T) {
 		},
 	}
 
-	httpclient, err := MakeHTTPClient(&opts)
-	require.NoError(t, err)
+	t.Run("without kong admin token", func(t *testing.T) {
+		httpclient, err := MakeHTTPClient(&opts, "")
+		require.NoError(t, err)
+		require.NotNil(t, httpclient)
+		require.NoError(t, validate(t, httpclient, caPEM, certPEM, certPrivateKeyPEM, ""))
+	})
 
-	assert.NotNil(t, httpclient)
-
-	err = validate(t, httpclient, caPEM, certPEM, certPrivateKeyPEM)
-	require.NoError(t, err)
+	t.Run("with kong admin token", func(t *testing.T) {
+		httpclient, err := MakeHTTPClient(&opts, "my-token")
+		require.NoError(t, err)
+		require.NotNil(t, httpclient)
+		require.NoError(t, validate(t, httpclient, caPEM, certPEM, certPrivateKeyPEM, "my-token"))
+	})
 }
 
 func TestMakeHTTPClientWithTLSOptsAndFilePaths(t *testing.T) {
@@ -62,9 +65,7 @@ func TestMakeHTTPClientWithTLSOptsAndFilePaths(t *testing.T) {
 	var err error
 
 	caPEM, certPEM, certPrivateKeyPEM, err = buildTLS(t)
-	if err != nil {
-		t.Errorf("Fail to build TLS certificates - %s", err.Error())
-	}
+	require.NoError(t, err, "Fail to build TLS certificates")
 
 	caFile, err := os.CreateTemp(os.TempDir(), "ca.crt")
 	require.NoError(t, err)
@@ -99,13 +100,19 @@ func TestMakeHTTPClientWithTLSOptsAndFilePaths(t *testing.T) {
 		},
 	}
 
-	httpclient, err := MakeHTTPClient(&opts)
-	require.NoError(t, err)
+	t.Run("without kong admin token", func(t *testing.T) {
+		httpclient, err := MakeHTTPClient(&opts, "")
+		require.NoError(t, err)
+		require.NotNil(t, httpclient)
+		require.NoError(t, validate(t, httpclient, caPEM, certPEM, certPrivateKeyPEM, ""))
+	})
 
-	assert.NotNil(t, httpclient)
-
-	err = validate(t, httpclient, caPEM, certPEM, certPrivateKeyPEM)
-	require.NoError(t, err)
+	t.Run("with kong admin token", func(t *testing.T) {
+		httpclient, err := MakeHTTPClient(&opts, "my-token")
+		require.NoError(t, err)
+		require.NotNil(t, httpclient)
+		require.NoError(t, validate(t, httpclient, caPEM, certPEM, certPrivateKeyPEM, "my-token"))
+	})
 }
 
 func buildTLS(t *testing.T) (caPEM *bytes.Buffer, certPEM *bytes.Buffer, certPrivateKeyPEM *bytes.Buffer, err error) {
@@ -222,6 +229,7 @@ func validate(t *testing.T,
 	caPEM *bytes.Buffer,
 	certPEM *bytes.Buffer,
 	certPrivateKeyPEM *bytes.Buffer,
+	kongAdminToken string,
 ) (err error) {
 	serverCert, err := tls.X509KeyPair(certPEM.Bytes(), certPrivateKeyPEM.Bytes())
 	if err != nil {
@@ -242,6 +250,23 @@ func validate(t *testing.T,
 
 	successMessage := "connection successful"
 	server := httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if kongAdminToken != "" {
+			v, ok := r.Header[http.CanonicalHeaderKey(headerNameAdminToken)]
+			if !ok {
+				fmt.Fprintf(w, "%s header not found", headerNameAdminToken)
+				return
+			}
+			if len(v) != 1 {
+				fmt.Fprintf(w, "%s header expected to contain %s but found %v",
+					headerNameAdminToken, kongAdminToken, v)
+				return
+			}
+			if v[0] != kongAdminToken {
+				fmt.Fprintf(w, "%s header expected to contain %s but found %s",
+					headerNameAdminToken, kongAdminToken, v[0])
+				return
+			}
+		}
 		fmt.Fprintln(w, successMessage)
 	}))
 	server.TLS = serverTLSConf
@@ -264,8 +289,7 @@ func validate(t *testing.T,
 
 	body := strings.TrimSpace(string(data[:]))
 	if body != successMessage {
-		t.Errorf("Invalid server response")
-		return err
+		return fmt.Errorf("invalid server response: %s", body)
 	}
 
 	return nil

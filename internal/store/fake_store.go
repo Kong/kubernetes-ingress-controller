@@ -220,13 +220,11 @@ func NewFakeStore(
 
 			KnativeIngress: knativeIngressStore,
 		},
-		ingressClass:                annotations.DefaultIngressClass,
-		isValidIngressClass:         annotations.IngressClassValidatorFuncFromObjectMeta(annotations.DefaultIngressClass),
-		isValidIngressV1Class:       annotations.IngressClassValidatorFuncFromV1Ingress(annotations.DefaultIngressClass),
-		ingressV1Beta1ClassMatching: annotations.ExactClassMatch,
-		ingressV1ClassMatching:      annotations.ExactClassMatch,
-		kongConsumerClassMatching:   annotations.ExactClassMatch,
-		logger:                      logrus.New(),
+		ingressClass:          annotations.DefaultIngressClass,
+		isValidIngressClass:   annotations.IngressClassValidatorFuncFromObjectMeta(annotations.DefaultIngressClass),
+		isValidIngressV1Class: annotations.IngressClassValidatorFuncFromV1Ingress(annotations.DefaultIngressClass),
+		ingressClassMatching:  annotations.ExactClassMatch,
+		logger:                logrus.New(),
 	}
 	return s, nil
 }

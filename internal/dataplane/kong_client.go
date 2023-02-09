@@ -404,7 +404,7 @@ func (c *KongClient) Update(ctx context.Context) error {
 	defer c.lock.Unlock()
 
 	// build the kongstate object from the Kubernetes objects in the storer
-	storer := store.New(*c.cache, c.ingressClass, false, false, false, c.logger)
+	storer := store.New(*c.cache, c.ingressClass, c.logger)
 
 	// initialize a parser
 	c.logger.Debug("parsing kubernetes objects into data-plane configuration")

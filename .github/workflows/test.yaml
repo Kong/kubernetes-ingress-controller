@@ -309,7 +309,7 @@ jobs:
       - "unit-tests"
       - "integration-tests"
       - "conformance-tests"
-    if: ${{ always() }}
+    if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
     steps:
 
@@ -326,7 +326,6 @@ jobs:
           path: report
 
       - name: Upload test results to BuildPulse for flaky test detection
-        if: ${{ !cancelled() }}
         uses: Workshop64/buildpulse-action@a0e683af4e5070c379e9801ee9b33792ff414936
         with:
           account: 962416

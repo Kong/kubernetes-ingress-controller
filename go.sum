@@ -564,8 +564,8 @@ github.com/klauspost/compress v1.9.0/go.mod h1:RyIbtBH6LamlWaDj8nUwkbUhJ87Yi3uG0
 github.com/klauspost/compress v1.9.7/go.mod h1:RyIbtBH6LamlWaDj8nUwkbUhJ87Yi3uG0guNDohfE1A=
 github.com/klauspost/compress v1.13.6/go.mod h1:/3/Vjq9QcHkK5uEr5lBEmyoZ1iFhe47etQ6QUkpK6sk=
 github.com/klauspost/cpuid v1.2.1/go.mod h1:Pj4uuM528wm8OyEC2QMXAi2YiTZ96dNQPGgoMS4s3ek=
-github.com/kong/deck v1.17.2 h1:uWmXj1k3T4DGYr3N542Hsz4iIWYQWqcBGZ903KakLD8=
-github.com/kong/deck v1.17.2/go.mod h1:gIj+4WuAzVhmUsBTYiG1pFD0F2QRqlANHIH/fs9+71o=
+github.com/kong/deck v1.17.3 h1:rtoycfr3TAp09RWcSmW9qg/4kUPl5UBCA4bQyFLVvBI=
+github.com/kong/deck v1.17.3/go.mod h1:cHU6K+Z4DmTqVr0dYFZHZKiizVe0cXI3c5HT2itAzL8=
 github.com/kong/go-kong v0.37.0 h1:81I49dJF6gKTCcWR+bxwp3VHlN4/2kaQ4oxVw252mGY=
 github.com/kong/go-kong v0.37.0/go.mod h1:4xT4uMMGcysH3qOqm458JyIbDBUw8MVAQIi+DP8ggtc=
 github.com/kong/kubernetes-testing-framework v0.28.1 h1:mrKetN0rzoGQ3UIxZKfFcaXZXi8sO4PGHNs2N89h/Jo=

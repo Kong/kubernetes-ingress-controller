@@ -403,7 +403,7 @@ func TestGetReferenceGrantConditionReason(t *testing.T) {
 		name             string
 		gatewayNamespace string
 		certRef          gatewayv1beta1.SecretObjectReference
-		referenceGrants  []gatewayv1alpha2.ReferenceGrant
+		referenceGrants  []gatewayv1beta1.ReferenceGrant
 		expectedReason   string
 	}{
 		{
@@ -428,20 +428,20 @@ func TestGetReferenceGrantConditionReason(t *testing.T) {
 				Name:      "testSecret",
 				Namespace: lo.ToPtr(Namespace("otherNamespace")),
 			},
-			referenceGrants: []gatewayv1alpha2.ReferenceGrant{
+			referenceGrants: []gatewayv1beta1.ReferenceGrant{
 				{
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: "otherNamespace",
 					},
-					Spec: gatewayv1alpha2.ReferenceGrantSpec{
-						From: []gatewayv1alpha2.ReferenceGrantFrom{
+					Spec: gatewayv1beta1.ReferenceGrantSpec{
+						From: []gatewayv1beta1.ReferenceGrantFrom{
 							{
 								Group:     gatewayV1beta1Group,
 								Kind:      "Gateway",
 								Namespace: "test",
 							},
 						},
-						To: []gatewayv1alpha2.ReferenceGrantTo{
+						To: []gatewayv1beta1.ReferenceGrantTo{
 							{
 								Group: "",
 								Kind:  "Secret",
@@ -471,13 +471,13 @@ func TestGetReferenceGrantConditionReason(t *testing.T) {
 				Name:      "testSecret",
 				Namespace: lo.ToPtr(Namespace("otherNamespace")),
 			},
-			referenceGrants: []gatewayv1alpha2.ReferenceGrant{
+			referenceGrants: []gatewayv1beta1.ReferenceGrant{
 				{
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: "otherNamespace",
 					},
-					Spec: gatewayv1alpha2.ReferenceGrantSpec{
-						From: []gatewayv1alpha2.ReferenceGrantFrom{
+					Spec: gatewayv1beta1.ReferenceGrantSpec{
+						From: []gatewayv1beta1.ReferenceGrantFrom{
 							// useless entry, just to furtherly test the function
 							{
 								Group:     "otherGroup",
@@ -491,7 +491,7 @@ func TestGetReferenceGrantConditionReason(t *testing.T) {
 								Namespace: "test",
 							},
 						},
-						To: []gatewayv1alpha2.ReferenceGrantTo{
+						To: []gatewayv1beta1.ReferenceGrantTo{
 							{
 								Group: "",
 								Kind:  "Secret",
@@ -510,20 +510,20 @@ func TestGetReferenceGrantConditionReason(t *testing.T) {
 				Name:      "testSecret",
 				Namespace: lo.ToPtr(Namespace("otherNamespace")),
 			},
-			referenceGrants: []gatewayv1alpha2.ReferenceGrant{
+			referenceGrants: []gatewayv1beta1.ReferenceGrant{
 				{
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: "otherNamespace",
 					},
-					Spec: gatewayv1alpha2.ReferenceGrantSpec{
-						From: []gatewayv1alpha2.ReferenceGrantFrom{
+					Spec: gatewayv1beta1.ReferenceGrantSpec{
+						From: []gatewayv1beta1.ReferenceGrantFrom{
 							{
 								Group:     gatewayV1beta1Group,
 								Kind:      "Gateway",
 								Namespace: "test",
 							},
 						},
-						To: []gatewayv1alpha2.ReferenceGrantTo{
+						To: []gatewayv1beta1.ReferenceGrantTo{
 							{
 								Group: "",
 								Kind:  "Secret",

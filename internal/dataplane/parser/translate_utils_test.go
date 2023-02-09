@@ -179,15 +179,15 @@ func TestConvertGatewayMatchHeadersToKongRouteMatchHeaders(t *testing.T) {
 }
 
 func TestGetPermittedForReferenceGrantFrom(t *testing.T) {
-	grants := []*gatewayv1alpha2.ReferenceGrant{
+	grants := []*gatewayv1beta1.ReferenceGrant{
 		{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:        uuid.NewString(),
 				Annotations: map[string]string{},
 				Namespace:   "fitrat",
 			},
-			Spec: gatewayv1alpha2.ReferenceGrantSpec{
-				From: []gatewayv1alpha2.ReferenceGrantFrom{
+			Spec: gatewayv1beta1.ReferenceGrantSpec{
+				From: []gatewayv1beta1.ReferenceGrantFrom{
 					{
 						Group:     gatewayv1alpha2.Group("gateway.networking.k8s.io"),
 						Kind:      gatewayv1alpha2.Kind("TCPRoute"),
@@ -204,7 +204,7 @@ func TestGetPermittedForReferenceGrantFrom(t *testing.T) {
 						Namespace: gatewayv1alpha2.Namespace("qodiriy"),
 					},
 				},
-				To: []gatewayv1alpha2.ReferenceGrantTo{
+				To: []gatewayv1beta1.ReferenceGrantTo{
 					{
 						Group: gatewayv1alpha2.Group(""),
 						Kind:  gatewayv1alpha2.Kind("GrantOne"),
@@ -218,8 +218,8 @@ func TestGetPermittedForReferenceGrantFrom(t *testing.T) {
 				Annotations: map[string]string{},
 				Namespace:   "cholpon",
 			},
-			Spec: gatewayv1alpha2.ReferenceGrantSpec{
-				From: []gatewayv1alpha2.ReferenceGrantFrom{
+			Spec: gatewayv1beta1.ReferenceGrantSpec{
+				From: []gatewayv1beta1.ReferenceGrantFrom{
 					{
 						Group:     gatewayv1alpha2.Group("gateway.networking.k8s.io"),
 						Kind:      gatewayv1alpha2.Kind("UDPRoute"),
@@ -231,7 +231,7 @@ func TestGetPermittedForReferenceGrantFrom(t *testing.T) {
 						Namespace: gatewayv1alpha2.Namespace("qodiriy"),
 					},
 				},
-				To: []gatewayv1alpha2.ReferenceGrantTo{
+				To: []gatewayv1beta1.ReferenceGrantTo{
 					{
 						Group: gatewayv1alpha2.Group(""),
 						Kind:  gatewayv1alpha2.Kind("GrantTwo"),
@@ -242,53 +242,53 @@ func TestGetPermittedForReferenceGrantFrom(t *testing.T) {
 	}
 	tests := []struct {
 		msg    string
-		from   gatewayv1alpha2.ReferenceGrantFrom
-		result map[gatewayv1beta1.Namespace][]gatewayv1alpha2.ReferenceGrantTo
+		from   gatewayv1beta1.ReferenceGrantFrom
+		result map[gatewayv1beta1.Namespace][]gatewayv1beta1.ReferenceGrantTo
 	}{
 		{
 			msg: "no matches whatsoever",
-			from: gatewayv1alpha2.ReferenceGrantFrom{
+			from: gatewayv1beta1.ReferenceGrantFrom{
 				Group:     gatewayv1alpha2.Group("invalid.example"),
 				Kind:      gatewayv1alpha2.Kind("invalid"),
 				Namespace: gatewayv1alpha2.Namespace("invalid"),
 			},
-			result: map[gatewayv1beta1.Namespace][]gatewayv1alpha2.ReferenceGrantTo{},
+			result: map[gatewayv1beta1.Namespace][]gatewayv1beta1.ReferenceGrantTo{},
 		},
 		{
 			msg: "non-matching namespace",
-			from: gatewayv1alpha2.ReferenceGrantFrom{
+			from: gatewayv1beta1.ReferenceGrantFrom{
 				Group:     gatewayv1alpha2.Group("gateway.networking.k8s.io"),
 				Kind:      gatewayv1alpha2.Kind("UDPRoute"),
 				Namespace: gatewayv1alpha2.Namespace("niyazi"),
 			},
-			result: map[gatewayv1beta1.Namespace][]gatewayv1alpha2.ReferenceGrantTo{},
+			result: map[gatewayv1beta1.Namespace][]gatewayv1beta1.ReferenceGrantTo{},
 		},
 		{
 			msg: "non-matching kind",
-			from: gatewayv1alpha2.ReferenceGrantFrom{
+			from: gatewayv1beta1.ReferenceGrantFrom{
 				Group:     gatewayv1alpha2.Group("gateway.networking.k8s.io"),
 				Kind:      gatewayv1alpha2.Kind("TLSRoute"),
 				Namespace: gatewayv1alpha2.Namespace("behbudiy"),
 			},
-			result: map[gatewayv1beta1.Namespace][]gatewayv1alpha2.ReferenceGrantTo{},
+			result: map[gatewayv1beta1.Namespace][]gatewayv1beta1.ReferenceGrantTo{},
 		},
 		{
 			msg: "non-matching group",
-			from: gatewayv1alpha2.ReferenceGrantFrom{
+			from: gatewayv1beta1.ReferenceGrantFrom{
 				Group:     gatewayv1alpha2.Group("invalid.example"),
 				Kind:      gatewayv1alpha2.Kind("UDPRoute"),
 				Namespace: gatewayv1alpha2.Namespace("behbudiy"),
 			},
-			result: map[gatewayv1beta1.Namespace][]gatewayv1alpha2.ReferenceGrantTo{},
+			result: map[gatewayv1beta1.Namespace][]gatewayv1beta1.ReferenceGrantTo{},
 		},
 		{
 			msg: "single match",
-			from: gatewayv1alpha2.ReferenceGrantFrom{
+			from: gatewayv1beta1.ReferenceGrantFrom{
 				Group:     gatewayv1alpha2.Group("gateway.networking.k8s.io"),
 				Kind:      gatewayv1alpha2.Kind("UDPRoute"),
 				Namespace: gatewayv1alpha2.Namespace("behbudiy"),
 			},
-			result: map[gatewayv1beta1.Namespace][]gatewayv1alpha2.ReferenceGrantTo{
+			result: map[gatewayv1beta1.Namespace][]gatewayv1beta1.ReferenceGrantTo{
 				"cholpon": {
 					{
 						Group: gatewayv1alpha2.Group(""),
@@ -299,12 +299,12 @@ func TestGetPermittedForReferenceGrantFrom(t *testing.T) {
 		},
 		{
 			msg: "multiple matches",
-			from: gatewayv1alpha2.ReferenceGrantFrom{
+			from: gatewayv1beta1.ReferenceGrantFrom{
 				Group:     gatewayv1alpha2.Group("gateway.networking.k8s.io"),
 				Kind:      gatewayv1alpha2.Kind("TCPRoute"),
 				Namespace: gatewayv1alpha2.Namespace("qodiriy"),
 			},
-			result: map[gatewayv1beta1.Namespace][]gatewayv1alpha2.ReferenceGrantTo{
+			result: map[gatewayv1beta1.Namespace][]gatewayv1beta1.ReferenceGrantTo{
 				"cholpon": {
 					{
 						Group: gatewayv1alpha2.Group(""),
@@ -329,15 +329,15 @@ func TestGetPermittedForReferenceGrantFrom(t *testing.T) {
 }
 
 func TestGenerateKongServiceFromBackendRef(t *testing.T) {
-	grants := []*gatewayv1alpha2.ReferenceGrant{
+	grants := []*gatewayv1beta1.ReferenceGrant{
 		{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:        uuid.NewString(),
 				Annotations: map[string]string{},
 				Namespace:   "fitrat",
 			},
-			Spec: gatewayv1alpha2.ReferenceGrantSpec{
-				From: []gatewayv1alpha2.ReferenceGrantFrom{
+			Spec: gatewayv1beta1.ReferenceGrantSpec{
+				From: []gatewayv1beta1.ReferenceGrantFrom{
 					{
 						Group:     gatewayv1alpha2.Group("gateway.networking.k8s.io"),
 						Kind:      gatewayv1alpha2.Kind("TCPRoute"),
@@ -354,7 +354,7 @@ func TestGenerateKongServiceFromBackendRef(t *testing.T) {
 						Namespace: gatewayv1alpha2.Namespace("qodiriy"),
 					},
 				},
-				To: []gatewayv1alpha2.ReferenceGrantTo{
+				To: []gatewayv1beta1.ReferenceGrantTo{
 					{
 						Group: gatewayv1alpha2.Group(""),
 						Kind:  gatewayv1alpha2.Kind("Service"),
@@ -368,8 +368,8 @@ func TestGenerateKongServiceFromBackendRef(t *testing.T) {
 				Annotations: map[string]string{},
 				Namespace:   "cholpon",
 			},
-			Spec: gatewayv1alpha2.ReferenceGrantSpec{
-				From: []gatewayv1alpha2.ReferenceGrantFrom{
+			Spec: gatewayv1beta1.ReferenceGrantSpec{
+				From: []gatewayv1beta1.ReferenceGrantFrom{
 					{
 						Group:     gatewayv1alpha2.Group("gateway.networking.k8s.io"),
 						Kind:      gatewayv1alpha2.Kind("UDPRoute"),
@@ -381,7 +381,7 @@ func TestGenerateKongServiceFromBackendRef(t *testing.T) {
 						Namespace: gatewayv1alpha2.Namespace("qodiriy"),
 					},
 				},
-				To: []gatewayv1alpha2.ReferenceGrantTo{
+				To: []gatewayv1beta1.ReferenceGrantTo{
 					{
 						Group: gatewayv1alpha2.Group(""),
 						Kind:  gatewayv1alpha2.Kind("Service"),

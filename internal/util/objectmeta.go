@@ -1,6 +1,7 @@
 package util
 
 import (
+	"golang.org/x/exp/maps"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -13,19 +14,11 @@ type K8sObjectInfo struct {
 	GroupVersionKind schema.GroupVersionKind
 }
 
-func deepCopy(m map[string]string) map[string]string {
-	result := map[string]string{}
-	for k, v := range m {
-		result[k] = v
-	}
-	return result
-}
-
 func FromK8sObject(obj client.Object) K8sObjectInfo {
 	ret := K8sObjectInfo{
 		Name:        obj.GetName(),
 		Namespace:   obj.GetNamespace(),
-		Annotations: deepCopy(obj.GetAnnotations()),
+		Annotations: maps.Clone(obj.GetAnnotations()),
 	}
 	if gvk := obj.GetObjectKind().GroupVersionKind(); gvk.String() != "" {
 		ret.GroupVersionKind = gvk

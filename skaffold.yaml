@@ -57,6 +57,21 @@ profiles:
           TAG: ${{ .TAG }}
           COMMIT: ${{ .COMMIT }}
           REPO_INFO: ${{ .REPO_INFO }}
+- name: multi_gw
+  manifests:
+    kustomize:
+      paths:
+      - config/variants/multi-gw/dev
+  build:
+    artifacts:
+    - image: kic-placeholder
+      docker:
+        dockerfile: Dockerfile
+        target: distroless
+        buildArgs:
+          TAG: ${{ .TAG }}
+          COMMIT: ${{ .COMMIT }}
+          REPO_INFO: ${{ .REPO_INFO }}
 - name: debug_multi_gw
   manifests:
     kustomize:

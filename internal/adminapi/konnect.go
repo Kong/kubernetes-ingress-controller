@@ -9,6 +9,8 @@ import (
 	"github.com/avast/retry-go/v4"
 	deckutils "github.com/kong/deck/utils"
 	"github.com/kong/go-kong/kong"
+
+	tlsutil "github.com/kong/kubernetes-ingress-controller/v2/internal/util/tls"
 )
 
 type KonnectConfig struct {
@@ -19,11 +21,11 @@ type KonnectConfig struct {
 }
 
 func NewKongClientForKonnectRuntimeGroup(ctx context.Context, c KonnectConfig) (Client, error) {
-	tlsClientCert, err := valueFromVariableOrFile([]byte(c.TLSClient.Cert), c.TLSClient.CertFile)
+	tlsClientCert, err := tlsutil.ValueFromVariableOrFile([]byte(c.TLSClient.Cert), c.TLSClient.CertFile)
 	if err != nil {
 		return Client{}, fmt.Errorf("could not extract TLS client cert: %w", err)
 	}
-	tlsClientKey, err := valueFromVariableOrFile([]byte(c.TLSClient.Key), c.TLSClient.KeyFile)
+	tlsClientKey, err := tlsutil.ValueFromVariableOrFile([]byte(c.TLSClient.Key), c.TLSClient.KeyFile)
 	if err != nil {
 		return Client{}, fmt.Errorf("could not extract TLS client key: %w", err)
 	}

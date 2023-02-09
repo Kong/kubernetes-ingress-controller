@@ -72,10 +72,10 @@ func setupControllers(
 		return nil, fmt.Errorf("ingress version picker failed: %w", err)
 	}
 
-	referenceGrantsEnabled := featureGates[gatewayAlphaFeature] && ShouldEnableCRDController(
+	referenceGrantsEnabled := featureGates[gatewayFeature] && ShouldEnableCRDController(
 		schema.GroupVersionResource{
-			Group:    gatewayv1alpha2.GroupVersion.Group,
-			Version:  gatewayv1alpha2.GroupVersion.Version,
+			Group:    gatewayv1beta1.GroupVersion.Group,
+			Version:  gatewayv1beta1.GroupVersion.Version,
 			Resource: "referencegrants",
 		},
 		restMapper,

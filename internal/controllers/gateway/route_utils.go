@@ -598,7 +598,7 @@ func isRouteAccepted(gateways []supportedGatewayWithCondition) bool {
 }
 
 // isHTTPReferenceGranted checks that the backendRef referenced by the HTTPRoute is granted by a ReferenceGrant.
-func isHTTPReferenceGranted(grantSpec gatewayv1alpha2.ReferenceGrantSpec, backendRef gatewayv1beta1.HTTPBackendRef, fromNamespace string) bool {
+func isHTTPReferenceGranted(grantSpec gatewayv1beta1.ReferenceGrantSpec, backendRef gatewayv1beta1.HTTPBackendRef, fromNamespace string) bool {
 	var backendRefGroup gatewayv1beta1.Group
 	var backendRefKind Kind
 

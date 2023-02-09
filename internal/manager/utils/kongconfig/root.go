@@ -27,9 +27,9 @@ func ValidateRoots(roots []Root, skipCACerts bool) (string, kong.Version, error)
 	}
 
 	uniqs := lo.UniqBy(roots, getRootKeyFunc(skipCACerts))
-	if len(uniqs) > 1 {
+	if len(uniqs) != 1 {
 		return "", kong.Version{},
-			fmt.Errorf("there should only be one dbmode:version combination across configured kong instances while there are: %v", uniqs)
+			fmt.Errorf("there should only be one dbmode:version combination across configured kong instances while there are (%d): %v", len(uniqs), uniqs)
 	}
 
 	dbMode, err := DBModeFromRoot(uniqs[0])

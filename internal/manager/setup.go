@@ -7,6 +7,7 @@ import (
 	"io"
 	"time"
 
+	"github.com/avast/retry-go/v4"
 	"github.com/bombsimon/logrusr/v2"
 	"github.com/go-logr/logr"
 	"github.com/kong/deck/cprint"
@@ -160,7 +161,7 @@ func setupAdmissionServer(
 		return nil
 	}
 
-	kongclients, err := getKongClients(ctx, managerConfig, logger)
+	kongclients, err := managerConfig.getKongClients(ctx, logger)
 	if err != nil {
 		return err
 	}
@@ -260,24 +261,71 @@ func generateAddressFinderGetter(mgrc client.Client, publishServiceNn types.Name
 	}
 }
 
-// getKongClients returns the kong clients.
-func getKongClients(ctx context.Context, cfg *Config, logger logr.Logger) ([]adminapi.Client, error) {
-	httpclient, err := adminapi.MakeHTTPClient(&cfg.KongAdminAPIConfig)
+// getKongClients returns the kong clients given the config.
+// When a list of URLs is provided via --kong-admin-url then those are used
+// to create the list of clients.
+// When a headless service name is provided via --kong-admin-svc then that is used
+// to obtain a list of endpoints via EndpointSlice lookup in kubernetes API.
+func (c *Config) getKongClients(ctx context.Context, logger logr.Logger) ([]adminapi.Client, error) {
+	httpclient, err := adminapi.MakeHTTPClient(&c.KongAdminAPIConfig, c.KongAdminToken)
 	if err != nil {
 		return nil, err
 	}
 
-	clients := make([]adminapi.Client, 0, len(cfg.KongAdminURL))
-	for _, url := range cfg.KongAdminURL {
-		client, err := adminapi.NewKongClientForWorkspace(ctx, url, cfg.KongWorkspace, httpclient)
+	var addresses []string
+
+	// If kong-admin-svc flag has been specified then use it to get the list
+	// of Kong Admin API endpoints.
+	if c.KongAdminSvc.Name != "" {
+		kubeClient, err := c.GetKubeClient()
+		if err != nil {
+			return nil, err
+		}
+
+		// Retry this as we may encounter an error of getting 0 addresses,
+		// which can mean that Kong instances meant to be configured by this controller
+		// are not yet ready.
+		// If we end up in a situation where none of them are ready then bail
+		// because we have more code that relies on the configuration of Kong
+		// instance and without an address and there's no way to initialize the
+		// configuration validation and sending code.
+		err = retry.Do(func() error {
+			s, err := adminapi.GetURLsForService(ctx, kubeClient, c.KongAdminSvc)
+			if err != nil {
+				return err
+			}
+			if s.Len() == 0 {
+				return fmt.Errorf("no endpoints for kong admin service: %q", c.KongAdminSvc)
+			}
+			addresses = s.UnsortedList()
+			return nil
+		},
+			retry.Attempts(60),
+			retry.DelayType(retry.FixedDelay),
+			retry.Delay(time.Second),
+			retry.OnRetry(func(_ uint, err error) {
+				logrus.New().WithError(err).Error("failed to create kong client(s)")
+			}),
+		)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		// Otherwise fallback to the list of kong admin URLs.
+		addresses = c.KongAdminURLs
+	}
+
+	clients := make([]adminapi.Client, 0, len(addresses))
+	for _, address := range addresses {
+		client, err := adminapi.NewKongClientForWorkspace(ctx, address, c.KongWorkspace, httpclient)
 		if err != nil {
 			return nil, err
 		}
 		clients = append(clients, client)
 	}
 
-	if cfg.Konnect.ConfigSynchronizationEnabled {
-		konnectClient, err := adminapi.NewKongClientForKonnectRuntimeGroup(ctx, cfg.Konnect)
+	if c.Konnect.ConfigSynchronizationEnabled {
+		konnectClient, err := adminapi.NewKongClientForKonnectRuntimeGroup(ctx, c.Konnect)
 		if err != nil {
 			logger.Error(err, "failed creating Konnect Runtime Group Admin API client, skipping synchronisation")
 		} else {

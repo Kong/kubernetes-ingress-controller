@@ -49,7 +49,8 @@ type Config struct {
 	APIServerBurst      int
 	MetricsAddr         string
 	ProbeAddr           string
-	KongAdminURL        []string
+	KongAdminURLs       []string
+	KongAdminSvc        types.NamespacedName
 	ProxySyncSeconds    float32
 	ProxyTimeoutSeconds float32
 
@@ -142,15 +143,19 @@ func (c *Config) FlagSet() *pflag.FlagSet {
 	flagSet.StringVar(&c.KongAdminAPIConfig.TLSClient.Cert, "kong-admin-tls-client-cert", "", "mTLS client certificate for authentication.")
 	flagSet.StringVar(&c.KongAdminAPIConfig.TLSClient.Key, "kong-admin-tls-client-key", "", "mTLS client key for authentication.")
 
+	// Kong Admin API configuration
+	flagSet.StringSliceVar(&c.KongAdminURLs, "kong-admin-url", []string{"http://localhost:8001"},
+		`Kong Admin URL(s) to connect to in the format "protocol://address:port". `+
+			`More than 1 URL can be provided, in such case the flag should be used multiple times or a corresponding env variable should use comma delimited addresses.`)
+	flagSet.Var(NewValidatedValue(&c.KongAdminSvc, namespacedNameFromFlagValue), "kong-admin-svc",
+		`Kong Admin API Service namespaced name in "namespace/name" format, to use for Kong Gateway service discovery.`)
+
 	// Kong Proxy and Proxy Cache configurations
 	flagSet.StringVar(&c.APIServerHost, "apiserver-host", "", `The Kubernetes API server URL. If not set, the controller will use cluster config discovery.`)
 	flagSet.IntVar(&c.APIServerQPS, "apiserver-qps", 100, "The Kubernetes API RateLimiter maximum queries per second")
 	flagSet.IntVar(&c.APIServerBurst, "apiserver-burst", 300, "The Kubernetes API RateLimiter maximum burst queries per second")
 	flagSet.StringVar(&c.MetricsAddr, "metrics-bind-address", fmt.Sprintf(":%v", MetricsPort), "The address the metric endpoint binds to.")
 	flagSet.StringVar(&c.ProbeAddr, "health-probe-bind-address", fmt.Sprintf(":%v", HealthzPort), "The address the probe endpoint binds to.")
-	flagSet.StringSliceVar(&c.KongAdminURL, "kong-admin-url", []string{"http://localhost:8001"},
-		`Kong Admin URL(s) to connect to in the format "protocol://address:port". `+
-			`More than 1 URL can be provided, in such case the flag should be used multiple times or a corresponding env variable should use comma delimited addresses.`)
 	flagSet.Float32Var(&c.ProxySyncSeconds, "proxy-sync-seconds", dataplane.DefaultSyncSeconds,
 		"Define the rate (in seconds) in which configuration updates will be applied to the Kong Admin API.",
 	)

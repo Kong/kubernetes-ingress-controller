@@ -11,8 +11,7 @@ spec:
       containers:
       - name: ingress-controller
         env:
-        - name: CONTROLLER_LOG_LEVEL
-          value: debug
         - name: CONTROLLER_KONG_ADMIN_SVC
           value: kong/kong-admin
-        image: kic-placeholder:placeholder
+        - name: CONTROLLER_KONG_ADMIN_URL
+          $patch: delete

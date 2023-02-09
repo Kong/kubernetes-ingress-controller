@@ -63,6 +63,7 @@ func setupControllers(
 	kubernetesStatusQueue *status.Queue,
 	c *Config,
 	featureGates map[string]bool,
+	kongAdminAPIEndpointsNotifier configuration.EndpointsNotifier,
 ) ([]ControllerDef, error) {
 	restMapper := mgr.GetClient().RESTMapper()
 
@@ -84,6 +85,19 @@ func setupControllers(
 	referenceIndexers := ctrlref.NewCacheIndexers()
 
 	controllers := []ControllerDef{
+		// ---------------------------------------------------------------------------
+		// Kong Gateway Admin API Service discovery
+		// ---------------------------------------------------------------------------
+		{
+			Enabled: c.KongAdminSvc.Name != "",
+			Controller: &configuration.KongAdminAPIServiceReconciler{
+				Client:            mgr.GetClient(),
+				ServiceNN:         c.KongAdminSvc,
+				Log:               ctrl.Log.WithName("controllers").WithName("KongAdminAPIService"),
+				CacheSyncTimeout:  c.CacheSyncTimeout,
+				EndpointsNotifier: kongAdminAPIEndpointsNotifier,
+			},
+		},
 		// ---------------------------------------------------------------------------
 		// Core API Controllers
 		// ---------------------------------------------------------------------------

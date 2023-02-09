@@ -33,6 +33,8 @@ type AdminAPIClientsManager struct {
 	clients     []*adminapi.Client
 	clientsLock sync.RWMutex
 
+	konnectClient *adminapi.Client
+
 	logger logrus.FieldLogger
 }
 
@@ -85,8 +87,31 @@ func (c *AdminAPIClientsManager) Notify(addresses []string) {
 	}
 }
 
-// Clients returns a copy of current client's slice.
-func (c *AdminAPIClientsManager) Clients() []*adminapi.Client {
+// SetKonnectClient sets a client that will be used to communicate with Konnect Runtime Group API.
+func (c *AdminAPIClientsManager) SetKonnectClient(client *adminapi.Client) {
+	c.clientsLock.Lock()
+	defer c.clientsLock.Unlock()
+	c.clients = append(c.clients, client)
+}
+
+// Clients returns a copy of current client's slice. It will also include Konnect client if set.
+func (c *AdminAPIClientsManager) AllClients() []*adminapi.Client {
+	c.clientsLock.RLock()
+	defer c.clientsLock.RUnlock()
+
+	copied := make([]*adminapi.Client, len(c.clients))
+	copy(copied, c.clients)
+
+	if c.konnectClient != nil {
+		copied = append(copied, c.konnectClient)
+	}
+
+	return copied
+}
+
+// KongGatewayClients returns a copy of current client's slice. Konnect client won't be included.
+// This method can be used when some actions need to be performed only against Kong Gateway clients.
+func (c *AdminAPIClientsManager) KongGatewayClients() []*adminapi.Client {
 	c.clientsLock.RLock()
 	defer c.clientsLock.RUnlock()
 

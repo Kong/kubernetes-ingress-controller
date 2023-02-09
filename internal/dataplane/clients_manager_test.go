@@ -117,7 +117,7 @@ func TestClientAddressesNotifications(t *testing.T) {
 
 	requireClientsCountEventually := func(t *testing.T, c *AdminAPIClientsManager, addresses []string, args ...any) {
 		require.Eventually(t, func() bool {
-			clientAddresses := lo.Map(c.Clients(), func(cl *adminapi.Client, _ int) string {
+			clientAddresses := lo.Map(c.AllClients(), func(cl *adminapi.Client, _ int) string {
 				return cl.BaseRootURL()
 			})
 			return slices.Equal(addresses, clientAddresses)
@@ -178,7 +178,7 @@ func TestClientAdjustInternalClientsAfterNotification(t *testing.T) {
 	manager.RunNotifyLoop()
 	<-manager.Running()
 
-	clients := manager.Clients()
+	clients := manager.AllClients()
 	require.Len(t, clients, 1)
 	require.Equal(t, "localhost:8083", clients[0].BaseRootURL())
 

@@ -32,13 +32,27 @@ func ResolveUpdateStrategy(
 ) UpdateStrategy {
 	adminAPIClient := client.AdminAPIClient()
 
-	if !config.InMemory || client.IsKonnect() {
+	// In case the client communicates with Konnect Admin API, we know it has to use DB-mode. There's no need to check
+	// config.InMemory that is meant for regular Kong Gateway clients.
+	if client.IsKonnect() {
 		return NewUpdateStrategyDBMode(
 			adminAPIClient,
 			dump.Config{
 				SkipCACerts:         config.SkipCACertificates,
 				SelectorTags:        config.FilterTags,
-				KonnectRuntimeGroup: getKonnectRuntimeGroup(client),
+				KonnectRuntimeGroup: client.KonnectRuntimeGroup(),
+			},
+			config.Version,
+			config.Concurrency,
+		)
+	}
+
+	if !config.InMemory {
+		return NewUpdateStrategyDBMode(
+			adminAPIClient,
+			dump.Config{
+				SkipCACerts:  config.SkipCACertificates,
+				SelectorTags: config.FilterTags,
 			},
 			config.Version,
 			config.Concurrency,
@@ -46,13 +60,4 @@ func ResolveUpdateStrategy(
 	}
 
 	return NewUpdateStrategyInMemory(adminAPIClient)
-}
-
-// getKonnectRuntimeGroup returns Konnect's Runtime Group UUID if the client is Konnect-compatible.
-// Otherwise, it returns an empty string.
-func getKonnectRuntimeGroup(client UpdateClient) string {
-	if client.IsKonnect() {
-		return client.KonnectRuntimeGroup()
-	}
-	return ""
 }

@@ -42,7 +42,8 @@ const (
 )
 
 type ClientsProvider interface {
-	Clients() []*adminapi.Client
+	AllClients() []*adminapi.Client
+	KongGatewayClients() []*adminapi.Client
 }
 
 // -----------------------------------------------------------------------------
@@ -258,13 +259,8 @@ func (c *KongClient) Listeners(ctx context.Context) ([]kong.ProxyListener, []kon
 	// between reading the client(s) and setting the last applied SHA via client's
 	// SetLastConfigSHA() method. It's not ideal but it should do for now.
 	c.lock.RLock()
-	for _, cl := range c.clientsProvider.Clients() {
+	for _, cl := range c.clientsProvider.KongGatewayClients() {
 		cl := cl
-
-		// We don't take Konnect into consideration as it doesn't expose any listeners.
-		if cl.IsKonnect() {
-			continue
-		}
 
 		errg.Go(func() error {
 			listeners, streamListeners, err := cl.AdminAPIClient().Listeners(ctx)
@@ -453,7 +449,7 @@ func (c *KongClient) Update(ctx context.Context) error {
 func (c *KongClient) sendOutToClients(
 	ctx context.Context, s *kongstate.KongState, formatVersion string, config sendconfig.Config,
 ) ([]string, error) {
-	clients := c.clientsProvider.Clients()
+	clients := c.clientsProvider.AllClients()
 	c.logger.Debugf("sending configuration to %d clients", len(clients))
 	shas, err := iter.MapErr(clients, func(client **adminapi.Client) (string, error) {
 		newSHA, err := c.sendToClient(ctx, *client, s, formatVersion, config)

@@ -324,14 +324,5 @@ func (c *Config) getKongClients(ctx context.Context, logger logr.Logger) ([]*adm
 		clients = append(clients, client)
 	}
 
-	if c.Konnect.ConfigSynchronizationEnabled {
-		konnectClient, err := adminapi.NewKongClientForKonnectRuntimeGroup(ctx, c.Konnect)
-		if err != nil {
-			logger.Error(err, "failed creating Konnect Runtime Group Admin API client, skipping synchronisation")
-		} else {
-			clients = append(clients, konnectClient)
-		}
-	}
-
 	return clients, nil
 }

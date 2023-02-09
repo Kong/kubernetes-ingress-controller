@@ -191,15 +191,27 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 	}
 
 	if c.Konnect.ConfigSynchronizationEnabled {
+		// In case of failures when building Konnect related objects, we're not returning errors as Konnect is not
+		// considered critical feature, and it should not break the basic functionality of the controller.
+
 		setupLog.Info("Start Konnect client to register runtime instances to Konnect")
 		konnectClient, err := konnect.NewClient(c.Konnect)
 		if err != nil {
-			return fmt.Errorf("failed to create konnect client: %w", err)
+			setupLog.Error(err, "failed creating konnect client, skipping running NodeAgent")
+		} else {
+			hostname, _ := os.Hostname()
+			version := metadata.Release
+			agent := konnect.NewNodeAgent(hostname, version, setupLog, konnectClient)
+			agent.Run()
 		}
-		hostname, _ := os.Hostname()
-		version := metadata.Release
-		agent := konnect.NewNodeAgent(hostname, version, setupLog, konnectClient)
-		agent.Run()
+
+		konnectAdminAPIClient, err := adminapi.NewKongClientForKonnectRuntimeGroup(ctx, c.Konnect)
+		if err != nil {
+			setupLog.Error(err, "failed creating Konnect Runtime Group Admin API client, skipping synchronisation")
+		} else {
+			setupLog.Info("Initialized Konnect Admin API client")
+			clientsManager.SetKonnectClient(konnectAdminAPIClient)
+		}
 	}
 
 	if c.AnonymousReports {

@@ -11,13 +11,14 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/adminapi"
 )
 
-// Config gathers parameters that are needed for sending configuration to Kong Admin API.
+// Config gathers parameters that are needed for sending configuration to Kong Admin APIs.
 type Config struct {
 	// Currently, this assumes that all underlying clients are using the same version
 	// hence this shared field in here.
 	Version semver.Version
 
-	// InMemory
+	// InMemory tells whether a Kong Gateway Admin APIs should be communicated in DB-less mode.
+	// It's not relevant for Konnect client.
 	InMemory bool
 
 	// Concurrency defines how many concurrent goroutines should be used when syncing configuration in DB-mode.

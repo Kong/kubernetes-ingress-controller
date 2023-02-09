@@ -770,7 +770,7 @@ func getIngressRulesFromHTTPRoutesCombinedRoutesTestCases() []testCaseIngressRul
 								Filters: []gatewayv1beta1.HTTPRouteFilter{
 									{
 										Type: gatewayv1beta1.HTTPRouteFilterRequestHeaderModifier,
-										RequestHeaderModifier: &gatewayv1beta1.HTTPRequestHeaderFilter{
+										RequestHeaderModifier: &gatewayv1beta1.HTTPHeaderFilter{
 											Add: []gatewayv1beta1.HTTPHeader{
 												{Name: "X-Test-Header-1", Value: "test-value-1"},
 											},
@@ -788,7 +788,7 @@ func getIngressRulesFromHTTPRoutesCombinedRoutesTestCases() []testCaseIngressRul
 								Filters: []gatewayv1beta1.HTTPRouteFilter{
 									{
 										Type: gatewayv1beta1.HTTPRouteFilterRequestHeaderModifier,
-										RequestHeaderModifier: &gatewayv1beta1.HTTPRequestHeaderFilter{
+										RequestHeaderModifier: &gatewayv1beta1.HTTPHeaderFilter{
 											Add: []gatewayv1beta1.HTTPHeader{
 												{Name: "X-Test-Header-2", Value: "test-value-2"},
 											},
@@ -1100,7 +1100,7 @@ func getIngressRulesFromHTTPRoutesCombinedRoutesTestCases() []testCaseIngressRul
 							Filters: []gatewayv1beta1.HTTPRouteFilter{
 								{
 									Type: gatewayv1beta1.HTTPRouteFilterRequestHeaderModifier,
-									RequestHeaderModifier: &gatewayv1beta1.HTTPRequestHeaderFilter{
+									RequestHeaderModifier: &gatewayv1beta1.HTTPHeaderFilter{
 										Add: []gatewayv1beta1.HTTPHeader{
 											{Name: "X-Test-Header-1", Value: "test-value-1"},
 										},

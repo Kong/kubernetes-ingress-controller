@@ -26,6 +26,7 @@ import (
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/types/kind"
 	"github.com/kong/kubernetes-testing-framework/pkg/environments"
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
+	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
@@ -166,6 +167,8 @@ func createGKEBuilder() (*environments.Builder, error) {
 }
 
 func deployKong(ctx context.Context, t *testing.T, env environments.Environment, manifest io.Reader, additionalSecrets ...*corev1.Secret) *appsv1.Deployment {
+	t.Helper()
+
 	t.Log("waiting for testing environment to be ready")
 	require.NoError(t, <-env.WaitForReady(ctx))
 
@@ -199,11 +202,23 @@ func deployKong(ctx context.Context, t *testing.T, env environments.Environment,
 			return false
 		}
 		return deployment.Status.ReadyReplicas == *deployment.Spec.Replicas
-	}, kongComponentWait, time.Second)
+	}, kongComponentWait, time.Second,
+		func() string {
+			if deployment == nil {
+				return ""
+			}
+			return fmt.Sprintf(
+				"deployment %s: ready replicas %d, spec replicas: %d",
+				deployment.Name, deployment.Status.ReadyReplicas, *deployment.Spec.Replicas,
+			)
+		}(),
+	)
 	return deployment
 }
 
 func deployIngress(ctx context.Context, t *testing.T, env environments.Environment) {
+	t.Helper()
+
 	c, err := clientset.NewForConfig(env.Cluster().Config())
 	assert.NoError(t, err)
 	t.Log("deploying an HTTP service to test the ingress controller and proxy")
@@ -217,17 +232,17 @@ func deployIngress(ctx context.Context, t *testing.T, env environments.Environme
 	_, err = env.Cluster().Client().CoreV1().Services(corev1.NamespaceDefault).Create(ctx, service, metav1.CreateOptions{})
 	require.NoError(t, err)
 
-	getString := "GET"
+	kongIngressName := uuid.NewString()
 	king := &kongv1.KongIngress{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "testki",
+			Name:      kongIngressName,
 			Namespace: corev1.NamespaceDefault,
 			Annotations: map[string]string{
 				annotations.IngressClassKey: ingressClass,
 			},
 		},
 		Route: &kongv1.KongIngressRoute{
-			Methods: []*string{&getString},
+			Methods: []*string{lo.ToPtr("GET")},
 		},
 	}
 	_, err = c.ConfigurationV1().KongIngresses(corev1.NamespaceDefault).Create(ctx, king, metav1.CreateOptions{})
@@ -238,12 +253,14 @@ func deployIngress(ctx context.Context, t *testing.T, env environments.Environme
 	ingress := generators.NewIngressForServiceWithClusterVersion(kubernetesVersion, "/httpbin", map[string]string{
 		annotations.IngressClassKey: ingressClass,
 		"konghq.com/strip-path":     "true",
-		"konghq.com/override":       "testki",
+		"konghq.com/override":       kongIngressName,
 	}, service)
 	require.NoError(t, clusters.DeployIngress(ctx, env.Cluster(), corev1.NamespaceDefault, ingress))
 }
 
 func verifyIngress(ctx context.Context, t *testing.T, env environments.Environment) {
+	t.Helper()
+
 	t.Log("finding the kong proxy service ip")
 	proxyIP := getKongProxyIP(ctx, t, env)
 
@@ -275,13 +292,15 @@ func verifyIngress(ctx context.Context, t *testing.T, env environments.Environme
 		}
 		defer resp.Body.Close()
 		return resp.StatusCode == http.StatusNotFound
-	}, ingressWait, time.Second)
+	}, ingressWait, 100*time.Millisecond)
 }
 
 // verifyEnterprise performs some basic tests of the Kong Admin API in the provided
 // environment to ensure that the Admin API that responds is in fact the enterprise
 // version of Kong.
 func verifyEnterprise(ctx context.Context, t *testing.T, env environments.Environment, adminPassword string) {
+	t.Helper()
+
 	t.Log("finding the ip address for the admin API")
 	service, err := env.Cluster().Client().CoreV1().Services(namespace).Get(ctx, adminServiceName, metav1.GetOptions{})
 	require.NoError(t, err)
@@ -333,6 +352,8 @@ func verifyEnterprise(ctx context.Context, t *testing.T, env environments.Enviro
 }
 
 func verifyEnterpriseWithPostgres(ctx context.Context, t *testing.T, env environments.Environment, adminPassword string) {
+	t.Helper()
+
 	t.Log("finding the ip address for the admin API")
 	service, err := env.Cluster().Client().CoreV1().Services(namespace).Get(ctx, adminServiceName, metav1.GetOptions{})
 	require.NoError(t, err)
@@ -370,6 +391,8 @@ func verifyPostgres(ctx context.Context, t *testing.T, env environments.Environm
 
 // killKong kills the Kong container in a given Pod and returns when it has restarted.
 func killKong(ctx context.Context, t *testing.T, env environments.Environment, pod *corev1.Pod) {
+	t.Helper()
+
 	var orig, after int32
 	for _, status := range pod.Status.ContainerStatuses {
 		if status.Name == "proxy" {
@@ -418,6 +441,8 @@ func buildImageLoadAddons(images ...string) []clusters.Addon {
 // `kong-enterprise-edition-docker` for kong enterprise image
 // from env TEST_KONG_PULL_USERNAME and TEST_KONG_PULL_PASSWORD.
 func createKongImagePullSecret(ctx context.Context, t *testing.T, env environments.Environment) {
+	t.Helper()
+
 	if kongImagePullUsername == "" || kongImagePullPassword == "" {
 		return
 	}
@@ -464,6 +489,8 @@ func getEnvValueInContainer(container *corev1.Container, name string) string {
 
 // getTemporaryKubeconfig dumps an environment's kubeconfig to a temporary file.
 func getTemporaryKubeconfig(t *testing.T, env environments.Environment) string {
+	t.Helper()
+
 	t.Log("creating a tempfile for kubeconfig")
 	kubeconfig, err := generators.NewKubeConfigForRestConfig(env.Name(), env.Cluster().Config())
 	require.NoError(t, err)
@@ -483,6 +510,8 @@ func getTemporaryKubeconfig(t *testing.T, env environments.Environment) string {
 }
 
 func runOnlyOnKindClusters(t *testing.T) {
+	t.Helper()
+
 	existingClusterIsKind := strings.Split(existingCluster, ":")[0] == string(kind.KindClusterType)
 	clusterProviderIsKind := clusterProvider == "" || clusterProvider == string(kind.KindClusterType)
 

@@ -424,11 +424,11 @@ func (r *TCPRouteReconciler) ensureGatewayReferenceStatusAdded(
 		gatewayParentStatus := &gatewayv1alpha2.RouteParentStatus{
 			ParentRef: gatewayv1alpha2.ParentReference{
 				Group:     (*gatewayv1alpha2.Group)(&gatewayv1beta1.GroupVersion.Group),
-				Kind:      (*gatewayv1alpha2.Kind)(util.StringToGatewayAPIKindPtr(tcprouteParentKind)),
+				Kind:      util.StringToGatewayAPIKindPtr(tcprouteParentKind),
 				Namespace: (*gatewayv1alpha2.Namespace)(&gateway.gateway.Namespace),
 				Name:      (gatewayv1alpha2.ObjectName)(gateway.gateway.Name),
 			},
-			ControllerName: (gatewayv1alpha2.GatewayController)(GetControllerName()),
+			ControllerName: GetControllerName(),
 			Conditions: []metav1.Condition{{
 				Type:               string(gatewayv1beta1.RouteConditionAccepted),
 				Status:             metav1.ConditionTrue,
@@ -501,7 +501,7 @@ func (r *TCPRouteReconciler) ensureGatewayReferenceStatusRemoved(ctx context.Con
 	// drop all status references to supported Gateway objects
 	newStatuses := make([]gatewayv1alpha2.RouteParentStatus, 0)
 	for _, status := range tcproute.Status.Parents {
-		if status.ControllerName != (gatewayv1alpha2.GatewayController)(GetControllerName()) {
+		if status.ControllerName != GetControllerName() {
 			newStatuses = append(newStatuses, status)
 		}
 	}
@@ -558,7 +558,7 @@ func (r *TCPRouteReconciler) ensureParentsProgrammedCondition(
 					Name:      gatewayv1alpha2.ObjectName(gateway.Name),
 					// TODO: set port after gateway port matching implemented: https://github.com/Kong/kubernetes-ingress-controller/issues/3016
 				},
-				ControllerName: gatewayv1alpha2.GatewayController(GetControllerName()),
+				ControllerName: GetControllerName(),
 				Conditions: []metav1.Condition{
 					programmedCondition,
 				},

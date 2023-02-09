@@ -73,7 +73,6 @@ func DeployCRDsForCluster(ctx context.Context, cluster clusters.Cluster) error {
 		"gateways.gateway.networking.k8s.io",
 		"httproutes.gateway.networking.k8s.io",
 		"referencegrants.gateway.networking.k8s.io",
-		"referencepolicies.gateway.networking.k8s.io",
 		"tcproutes.gateway.networking.k8s.io",
 		"tlsroutes.gateway.networking.k8s.io",
 		"udproutes.gateway.networking.k8s.io",

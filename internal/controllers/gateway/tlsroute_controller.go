@@ -410,11 +410,11 @@ func (r *TLSRouteReconciler) ensureGatewayReferenceStatusAdded(ctx context.Conte
 		gatewayParentStatus := &gatewayv1alpha2.RouteParentStatus{
 			ParentRef: gatewayv1alpha2.ParentReference{
 				Group:     (*gatewayv1alpha2.Group)(&gatewayv1alpha2.GroupVersion.Group),
-				Kind:      (*gatewayv1alpha2.Kind)(util.StringToGatewayAPIKindPtr(tlsrouteParentKind)),
+				Kind:      util.StringToGatewayAPIKindPtr(tlsrouteParentKind),
 				Namespace: (*gatewayv1alpha2.Namespace)(&gateway.gateway.Namespace),
 				Name:      gatewayv1alpha2.ObjectName(gateway.gateway.Name),
 			},
-			ControllerName: (gatewayv1alpha2.GatewayController)(GetControllerName()),
+			ControllerName: GetControllerName(),
 			Conditions: []metav1.Condition{{
 				Type:               string(gatewayv1alpha2.RouteConditionAccepted),
 				Status:             metav1.ConditionTrue,
@@ -492,7 +492,7 @@ func (r *TLSRouteReconciler) ensureGatewayReferenceStatusRemoved(ctx context.Con
 	// drop all status references to supported Gateway objects
 	newStatuses := make([]gatewayv1alpha2.RouteParentStatus, 0)
 	for _, status := range tlsroute.Status.Parents {
-		if status.ControllerName != (gatewayv1alpha2.GatewayController)(GetControllerName()) {
+		if status.ControllerName != GetControllerName() {
 			newStatuses = append(newStatuses, status)
 		}
 	}
@@ -549,7 +549,7 @@ func (r *TLSRouteReconciler) ensureParentsProgrammedCondition(
 					Name:      gatewayv1alpha2.ObjectName(gateway.Name),
 					// TODO: set port after gateway port matching implemented: https://github.com/Kong/kubernetes-ingress-controller/issues/3016
 				},
-				ControllerName: gatewayv1alpha2.GatewayController(GetControllerName()),
+				ControllerName: GetControllerName(),
 				Conditions: []metav1.Condition{
 					programmedCondition,
 				},

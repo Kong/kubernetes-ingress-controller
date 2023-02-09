@@ -88,6 +88,26 @@ Adding a new version? You'll need three changes:
   be used to deploy a DB-less variant of KIC that will also synchronise its
   data-plane configuration with Konnect cloud.
   [#3448](https://github.com/Kong/kubernetes-ingress-controller/pull/3448)
+- The Gateway API has been bumped to 0.6.0. The `GatewayConditionScheduled` has
+  been replaced by the `GatewayConditionAccepted`, and the `ListenerConditionDetached`
+  condition has been replaced by the `ListenerConditionAccepted`.
+  [#3496](https://github.com/Kong/kubernetes-ingress-controller/pull/3496)
+- The `ReferenceGrant` has been promoted to beta.
+  [#3507](https://github.com/Kong/kubernetes-ingress-controller/pull/3507)
+- Enable `ReferenceGrant` if `Gateway` feature gate is turned on (default).
+  [#3519](https://github.com/Kong/kubernetes-ingress-controller/pull/3519)
+- Added Konnect client to upload status of KIC instance to Konnect cloud if
+  flag `--konnect-sync-enabled` is set to `true`.
+  [#3469](https://github.com/Kong/kubernetes-ingress-controller/pull/3469)
+- Added service discovery for kong admin service configured via `--kong-admin-svc`
+  which accepts a namespaced name of headless kong admin service which should have
+  Admin API endpoints exposed under a named port called `admin`
+  [#3421](https://github.com/Kong/kubernetes-ingress-controller/pull/3421)
+- Added `dataplane` metrics label for `ingress_controller_configuration_push_count`
+  and `ingress_controller_configuration_push_duration_milliseconds`. This means
+  that all time series for those metrics will get a new label designating the
+  address of the dataplane that the configuration push has been targeted for.
+  [#3521](https://github.com/Kong/kubernetes-ingress-controller/pull/3521)
 
 ### Fixed
 

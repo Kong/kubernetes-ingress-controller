@@ -99,7 +99,7 @@ func TestConfigErrorEventGeneration(t *testing.T) {
 			return false
 		}
 		for _, event := range events.Items {
-			if event.Reason == dataplane.KongConfigurationTranslationFailedEventReason {
+			if event.Reason == dataplane.KongConfigurationApplyFailedEventReason {
 				if event.InvolvedObject.Kind == "Service" {
 					if event.InvolvedObject.Name == service.ObjectMeta.Name {
 						return true

@@ -10,7 +10,6 @@ import (
 
 	"github.com/kong/deck/file"
 	"github.com/kong/go-kong/kong"
-	"github.com/prometheus/client_golang/prometheus"
 	"github.com/samber/lo"
 	"github.com/sirupsen/logrus"
 	"github.com/sourcegraph/conc/iter"
@@ -126,11 +125,26 @@ type KongClient struct {
 
 	// SHAs is a slice is configuration hashes send in last batch send.
 	SHAs []string
+
+	// adminAPIClientFactory is a factory used for creating Admin API clients.
+	adminAPIClientFactory ClientFactory
+
+	// adminAPIAddressNotifyChan is used for notifications that contain Admin API
+	// endpoints list that should be used for configuring the dataplane.
+	adminAPIAddressNotifyChan chan []string
+
+	close     chan struct{}
+	onceClose sync.Once
+}
+
+type ClientFactory interface {
+	CreateAdminAPIClient(ctx context.Context, address string) (adminapi.Client, error)
 }
 
 // NewKongClient provides a new KongClient object after connecting to the
 // data-plane API and verifying integrity.
 func NewKongClient(
+	ctx context.Context,
 	logger logrus.FieldLogger,
 	timeout time.Duration,
 	ingressClass string,
@@ -140,22 +154,28 @@ func NewKongClient(
 	kongConfig sendconfig.Kong,
 	eventRecorder record.EventRecorder,
 	dbMode string,
+	kongClientFactory ClientFactory,
 ) (*KongClient, error) {
 	// build the client object
 	cache := store.NewCacheStores()
 	c := &KongClient{
-		logger:             logger,
-		ingressClass:       ingressClass,
-		enableReverseSync:  enableReverseSync,
-		skipCACertificates: skipCACertificates,
-		requestTimeout:     timeout,
-		diagnostic:         diagnostic,
-		prometheusMetrics:  metrics.NewCtrlFuncMetrics(),
-		cache:              &cache,
-		kongConfig:         kongConfig,
-		eventRecorder:      eventRecorder,
-		dbmode:             dbMode,
+		logger:                    logger,
+		ingressClass:              ingressClass,
+		enableReverseSync:         enableReverseSync,
+		skipCACertificates:        skipCACertificates,
+		requestTimeout:            timeout,
+		diagnostic:                diagnostic,
+		prometheusMetrics:         metrics.NewCtrlFuncMetrics(),
+		cache:                     &cache,
+		kongConfig:                kongConfig,
+		eventRecorder:             eventRecorder,
+		dbmode:                    dbMode,
+		adminAPIClientFactory:     kongClientFactory,
+		adminAPIAddressNotifyChan: make(chan []string),
+		close:                     make(chan struct{}),
 	}
+
+	go c.adminAPIAddressNotifyLoop(ctx)
 
 	return c, nil
 }
@@ -368,6 +388,14 @@ func (c *KongClient) DBMode() string {
 	return c.dbmode
 }
 
+// Shutdown shuts down the internal loops and synchronization workers.
+func (c *KongClient) Shutdown(ctx context.Context) error {
+	c.onceClose.Do(func() {
+		close(c.close)
+	})
+	return nil
+}
+
 // Update parses the Cache present in the client and converts current
 // Kubernetes state into Kong objects and state, and then ships the
 // resulting configuration to the data-plane (Kong Admin API).
@@ -401,15 +429,11 @@ func (c *KongClient) Update(ctx context.Context) error {
 	// parse the Kubernetes objects from the storer into Kong configuration
 	kongstate, translationFailures := p.Build()
 	if failuresCount := len(translationFailures); failuresCount > 0 {
-		c.prometheusMetrics.TranslationCount.With(prometheus.Labels{
-			metrics.SuccessKey: metrics.SuccessFalse,
-		}).Inc()
-		c.recordResourceFailureEvents(translationFailures, KongConfigurationApplyFailedEventReason)
+		c.prometheusMetrics.RecordTranslationFailure()
+		c.recordResourceFailureEvents(translationFailures, KongConfigurationTranslationFailedEventReason)
 		c.logger.Debugf("%d translation failures have occurred when building data-plane configuration", failuresCount)
 	} else {
-		c.prometheusMetrics.TranslationCount.With(prometheus.Labels{
-			metrics.SuccessKey: metrics.SuccessTrue,
-		}).Inc()
+		c.prometheusMetrics.RecordTranslationSuccess()
 		c.logger.Debug("successfully built data-plane configuration")
 	}
 
@@ -438,6 +462,7 @@ func (c *KongClient) Update(ctx context.Context) error {
 func (c *KongClient) sendOutToClients(
 	ctx context.Context, s *kongstate.KongState, formatVersion string, config sendconfig.Config,
 ) ([]string, error) {
+	c.logger.Debugf("sending configuration to %d clients", len(c.kongConfig.Clients))
 	shas, err := iter.MapErr(c.kongConfig.Clients, func(client *adminapi.Client) (string, error) {
 		return c.sendToClient(ctx, client, s, formatVersion, config)
 	},
@@ -486,7 +511,7 @@ func (c *KongClient) sendToClient(
 		c.prometheusMetrics,
 	)
 
-	c.recordResourceFailureEvents(entityErrors, KongConfigurationTranslationFailedEventReason)
+	c.recordResourceFailureEvents(entityErrors, KongConfigurationApplyFailedEventReason)
 	sendDiagnostic(err != nil)
 
 	if err != nil {
@@ -500,6 +525,97 @@ func (c *KongClient) sendToClient(
 	client.SetLastConfigSHA(newConfigSHA)
 
 	return string(newConfigSHA), nil
+}
+
+// adminAPIAddressNotifyLoop is an inner loop listening on notifyChan which are received via
+// Notify() calls. Each time it receives on notifyChan tt will take the provided
+// list of addresses and update the internally held list of clients such that:
+//   - the internal list of kong clients contains only the provided addresses
+//   - if a client for a provided address already exists it's not recreated again
+//     (hence no external calls are made to check the provided endpoint if there
+//     exists a client already using it)
+//   - client that do not exist in the provided address list are removed if they
+//     are present in the current state
+//
+// This function whill acquire the internal lock to prevent the modification of
+// internal clients list.
+func (c *KongClient) adminAPIAddressNotifyLoop(ctx context.Context) {
+	for {
+		select {
+		case <-c.close:
+			c.adminAPIAddressNotifyChan = nil
+			return
+
+		case addresses := <-c.adminAPIAddressNotifyChan:
+			// This call will only log errors e.g. during creation of new clients.
+			// If need be we might consider propagating those errors up the stack.
+			c.adjustKongClients(ctx, addresses)
+		}
+	}
+}
+
+// adjustKongClients adjusts internally stored clients slice based on the provided
+// addresses slice. It consults BaseRootURLs of already stored clients with each
+// of the addreses and creates only those clients that we don't have.
+func (c *KongClient) adjustKongClients(ctx context.Context, addresses []string) {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+
+	toAdd := lo.Filter(addresses, func(addr string, _ int) bool {
+		// If we already have a client with a provided address then great, no need
+		// to do anything.
+
+		// If we don't have a client with new address then filter it and add
+		// a client for this address.
+		return !lo.ContainsBy(c.kongConfig.Clients, func(cl adminapi.Client) bool {
+			return addr == cl.BaseRootURL()
+		})
+	})
+
+	var idxToRemove []int
+	for i, cl := range c.kongConfig.Clients {
+		// If the new address set contains a client that we already have then
+		// good, no need to do anything for it.
+		if lo.Contains(addresses, cl.BaseRootURL()) {
+			continue
+		}
+		// If the new address set does not contain an address that we already
+		// have then remove it.
+		idxToRemove = append(idxToRemove, i)
+	}
+
+	for i := len(idxToRemove) - 1; i >= 0; i-- {
+		idx := idxToRemove[i]
+		c.kongConfig.Clients = append(c.kongConfig.Clients[:idx], c.kongConfig.Clients[idx+1:]...)
+	}
+
+	for _, addr := range toAdd {
+		client, err := c.adminAPIClientFactory.CreateAdminAPIClient(ctx, addr)
+		if err != nil {
+			c.logger.WithError(err).Errorf("failed to create a client for %s", addr)
+			continue
+		}
+
+		c.kongConfig.Clients = append(c.kongConfig.Clients, client)
+	}
+}
+
+// Notify receives a list of addresses that KongClient should use from now on as
+// a list of Kong Admin API endpoints.
+func (c *KongClient) Notify(addresses []string) {
+	// Ensure here that we're not closed.
+	select {
+	case <-c.close:
+		return
+	default:
+	}
+
+	// And here also listen on c.close to allow the notification to be interrupted
+	// by Shutdown().
+	select {
+	case <-c.close:
+	case c.adminAPIAddressNotifyChan <- addresses:
+	}
 }
 
 // -----------------------------------------------------------------------------

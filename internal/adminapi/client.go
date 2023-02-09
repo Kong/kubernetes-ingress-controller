@@ -1,6 +1,8 @@
 package adminapi
 
 import (
+	"context"
+
 	"github.com/kong/go-kong/kong"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
@@ -75,4 +77,26 @@ func (c *Client) SetLastConfigSHA(s []byte) {
 // LastConfigSHA returns a checksum of the last successful configuration push.
 func (c *Client) LastConfigSHA() []byte {
 	return c.lastConfigSHA
+}
+
+type ClientFactory struct {
+	workspace      string
+	httpClientOpts HTTPClientOpts
+	adminToken     string
+}
+
+func NewClientFactoryForWorkspace(workspace string, httpClientOpts HTTPClientOpts, adminToken string) ClientFactory {
+	return ClientFactory{
+		workspace:      workspace,
+		httpClientOpts: httpClientOpts,
+		adminToken:     adminToken,
+	}
+}
+
+func (cf ClientFactory) CreateAdminAPIClient(ctx context.Context, address string) (Client, error) {
+	httpclient, err := MakeHTTPClient(&cf.httpClientOpts, cf.adminToken)
+	if err != nil {
+		return Client{}, err
+	}
+	return NewKongClientForWorkspace(ctx, address, cf.workspace, httpclient)
 }

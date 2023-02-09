@@ -1,24 +1,14 @@
 package sendconfig
 
 import (
-	"bytes"
-	"context"
-	"encoding/hex"
 	"encoding/json"
-	"errors"
 	"fmt"
-	"net"
-	"net/http"
 	"strings"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 
-	deckutils "github.com/kong/deck/utils"
-	"github.com/kong/go-kong/kong"
 	"github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/metrics"
 )
 
 // ResourceError is a Kong configuration error associated with a Kubernetes resource.
@@ -155,116 +145,4 @@ func parseRawResourceError(raw rawResourceError) (ResourceError, error) {
 		return re, fmt.Errorf("no uid")
 	}
 	return re, nil
-}
-
-// deckConfigConflictError is an error used to wrap deck config conflict errors returned from deck functions
-// transforming KongRawState to KongState (e.g. state.Get, dump.Get).
-type deckConfigConflictError struct {
-	err error
-}
-
-func (e deckConfigConflictError) Error() string {
-	return e.err.Error()
-}
-
-func (e deckConfigConflictError) Is(target error) bool {
-	_, ok := target.(deckConfigConflictError)
-	return ok
-}
-
-func (e deckConfigConflictError) Unwrap() error {
-	return e.err
-}
-
-// pushFailureReason extracts config push failure reason from an error returned from onUpdateInMemoryMode or onUpdateDBMode.
-func pushFailureReason(err error) string {
-	var netErr net.Error
-	if errors.As(err, &netErr) {
-		return metrics.FailureReasonNetwork
-	}
-
-	if isConflictErr(err) {
-		return metrics.FailureReasonConflict
-	}
-
-	return metrics.FailureReasonOther
-}
-
-func isConflictErr(err error) bool {
-	var apiErr *kong.APIError
-	if errors.As(err, &apiErr) && apiErr.Code() == http.StatusConflict ||
-		errors.Is(err, deckConfigConflictError{}) {
-		return true
-	}
-
-	var deckErrArray deckutils.ErrArray
-	if errors.As(err, &deckErrArray) {
-		for _, err := range deckErrArray.Errors {
-			if isConflictErr(err) {
-				return true
-			}
-		}
-	}
-
-	return false
-}
-
-type KonnectAwareClient interface {
-	IsKonnect() bool
-}
-
-type StatusClient interface {
-	Status(context.Context) (*kong.Status, error)
-}
-
-// hasConfigurationChanged verifies whether configuration has changed by comparing old and new config's SHAs.
-// In case the SHAs are equal, it still can return true if a client is considered crashed based on its status.
-func hasConfigurationChanged(
-	ctx context.Context,
-	oldSHA, newSHA []byte,
-	client KonnectAwareClient,
-	statusClient StatusClient,
-	log logrus.FieldLogger,
-) (bool, error) {
-	if !bytes.Equal(oldSHA, newSHA) {
-		return true, nil
-	}
-	if !hasSHAUpdateAlreadyBeenReported(newSHA) {
-		log.Debugf("sha %s has been reported", hex.EncodeToString(newSHA))
-	}
-	// In case of Konnect, we skip further steps as it doesn't report its configuration hash.
-	if client.IsKonnect() {
-		return false, nil
-	}
-
-	hasNoConfiguration, err := kongHasNoConfiguration(ctx, statusClient, log)
-	if err != nil {
-		return false, fmt.Errorf("failed to verify kong readiness: %w", err)
-	}
-	// Kong instance has no configuration, we should push despite the oldSHA and newSHA being equal.
-	if hasNoConfiguration {
-		return true, nil
-	}
-
-	return false, nil
-}
-
-const wellKnownInitialHash = "00000000000000000000000000000000"
-
-// kongHasNoConfiguration checks Kong's status endpoint and read its config hash.
-// If the config hash reported by Kong is the known empty hash, it's considered crashed.
-// This allows providing configuration to Kong instances that have unexpectedly crashed and
-// lost their configuration.
-func kongHasNoConfiguration(ctx context.Context, client StatusClient, log logrus.FieldLogger) (bool, error) {
-	status, err := client.Status(ctx)
-	if err != nil {
-		return false, err
-	}
-
-	if hasNoConfig := status.ConfigurationHash == wellKnownInitialHash; hasNoConfig {
-		log.Debugf("starting to send configuration (hash: %s)", status.ConfigurationHash)
-		return true, nil
-	}
-
-	return false, nil
 }

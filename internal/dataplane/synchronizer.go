@@ -174,6 +174,10 @@ func (p *Synchronizer) startUpdateServer(ctx context.Context) {
 			}
 			p.syncTicker.Stop()
 
+			if err := p.dataplaneClient.Shutdown(ctx); err != nil {
+				p.logger.Error(err, "failed to shut down the dataplane client")
+			}
+
 			p.lock.Lock()
 			defer p.lock.Unlock()
 			p.isServerRunning = false

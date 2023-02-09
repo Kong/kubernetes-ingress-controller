@@ -16,7 +16,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	knative "knative.dev/networking/pkg/apis/networking/v1alpha1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
@@ -402,29 +401,30 @@ func (p *Parser) getGatewayCerts() []certWrapper {
 		for _, status := range gateway.Status.Listeners {
 			statuses[status.Name] = status
 		}
+
 		for _, listener := range gateway.Spec.Listeners {
-			ready := false
-			// TODO: invert the logic to prevent logs about missing listener status
-			// where it's actually in place?
-			// Relevant issue: https://github.com/Kong/kubernetes-ingress-controller/issues/3133
-			if status, ok := statuses[listener.Name]; ok {
+			status, ok := statuses[listener.Name]
+			if !ok {
 				log.WithFields(logrus.Fields{
-					"gateway":  gateway.Name,
-					"listener": listener.Name,
+					"gateway":           gateway.Name,
+					"listener":          listener.Name,
+					"listener_protocol": listener.Protocol,
+					"listener_port":     listener.Port,
 				}).Debug("listener missing status information")
-				if ok := util.CheckCondition(
-					status.Conditions,
-					util.ConditionType(gatewayv1alpha2.ListenerConditionReady),
-					util.ConditionReason(gatewayv1alpha2.ListenerReasonReady),
-					metav1.ConditionTrue,
-					gateway.Generation,
-				); ok {
-					ready = true
-				}
-			}
-			if !ready {
 				continue
 			}
+
+			// Check if listener is marked as ready
+			if !util.CheckCondition(
+				status.Conditions,
+				util.ConditionType(gatewayv1beta1.ListenerConditionReady),
+				util.ConditionReason(gatewayv1beta1.ListenerReasonReady),
+				metav1.ConditionTrue,
+				gateway.Generation,
+			) {
+				continue
+			}
+
 			if listener.TLS != nil {
 				if len(listener.TLS.CertificateRefs) > 0 {
 					if len(listener.TLS.CertificateRefs) > 1 {

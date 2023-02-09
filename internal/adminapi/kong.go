@@ -8,8 +8,12 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"strings"
 
 	"github.com/kong/go-kong/kong"
+	"github.com/samber/lo"
+
+	tlsutil "github.com/kong/kubernetes-ingress-controller/v2/internal/util/tls"
 )
 
 // NewKongClientForWorkspace returns a Kong API client for a given root API URL and workspace.
@@ -65,8 +69,12 @@ type HTTPClientOpts struct {
 	TLSClient TLSClientConfig
 }
 
+const (
+	headerNameAdminToken = "Kong-Admin-Token"
+)
+
 // MakeHTTPClient returns an HTTP client with the specified mTLS/headers configuration.
-func MakeHTTPClient(opts *HTTPClientOpts) (*http.Client, error) {
+func MakeHTTPClient(opts *HTTPClientOpts, kongAdminToken string) (*http.Client, error) {
 	var tlsConfig tls.Config
 
 	if opts.TLSSkipVerify {
@@ -103,18 +111,34 @@ func MakeHTTPClient(opts *HTTPClientOpts) (*http.Client, error) {
 		tlsConfig.RootCAs = certPool
 	}
 
-	clientCertificates, err := extractClientCertificates(opts.TLSClient)
+	clientCertificate, err := tlsutil.ExtractClientCertificates(
+		[]byte(opts.TLSClient.Cert), opts.TLSClient.CertFile, []byte(opts.TLSClient.Key), opts.TLSClient.KeyFile)
 	if err != nil {
 		return nil, fmt.Errorf("failed to extract client certificates: %w", err)
 	}
-	tlsConfig.Certificates = append(tlsConfig.Certificates, clientCertificates...)
+	if clientCertificate != nil {
+		tlsConfig.Certificates = append(tlsConfig.Certificates, *clientCertificate)
+	}
 
 	transport := http.DefaultTransport.(*http.Transport).Clone()
 	transport.TLSClientConfig = &tlsConfig
 	return &http.Client{
 		Transport: &HeaderRoundTripper{
-			headers: opts.Headers,
+			headers: prepareHeaders(opts.Headers, kongAdminToken),
 			rt:      transport,
 		},
 	}, nil
+}
+
+func prepareHeaders(headers []string, kongAdminToken string) []string {
+	if kongAdminToken != "" {
+		contains := lo.ContainsBy(headers, func(header string) bool {
+			return strings.HasPrefix(header, headerNameAdminToken+":")
+		})
+
+		if !contains {
+			headers = append(headers, headerNameAdminToken+":"+kongAdminToken)
+		}
+	}
+	return headers
 }

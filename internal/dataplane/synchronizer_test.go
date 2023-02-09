@@ -102,6 +102,10 @@ func (c *fakeDataplaneClient) Update(ctx context.Context) error {
 	return nil
 }
 
+func (c *fakeDataplaneClient) Shutdown(ctx context.Context) error {
+	return nil
+}
+
 func (c *fakeDataplaneClient) totalUpdates() int {
 	c.lock.RLock()
 	defer c.lock.RUnlock()

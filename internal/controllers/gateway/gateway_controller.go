@@ -117,7 +117,7 @@ func (r *GatewayReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	// watch ReferenceGrants, which may invalidate or allow cross-namespace TLSConfigs
 	if r.EnableReferenceGrant {
 		if err := c.Watch(
-			&source.Kind{Type: &gatewayv1alpha2.ReferenceGrant{}},
+			&source.Kind{Type: &gatewayv1beta1.ReferenceGrant{}},
 			handler.EnqueueRequestsFromMapFunc(r.listReferenceGrantsForGateway),
 			predicate.NewPredicateFuncs(referenceGrantHasGatewayFrom),
 		); err != nil {
@@ -190,12 +190,12 @@ func (r *GatewayReconciler) listGatewaysForGatewayClass(gatewayClass client.Obje
 // listReferenceGrantsForGateway is a watch predicate which finds all Gateways mentioned in a From clause for a
 // ReferenceGrant.
 func (r *GatewayReconciler) listReferenceGrantsForGateway(obj client.Object) []reconcile.Request {
-	grant, ok := obj.(*gatewayv1alpha2.ReferenceGrant)
+	grant, ok := obj.(*gatewayv1beta1.ReferenceGrant)
 	if !ok {
 		r.Log.Error(
 			fmt.Errorf("unexpected object type"),
 			"referencegrant watch predicate received unexpected object type",
-			"expected", "*gatewayv1alpha2.ReferenceGrant", "found", reflect.TypeOf(obj),
+			"expected", "*gatewayv1beta1.ReferenceGrant", "found", reflect.TypeOf(obj),
 		)
 		return nil
 	}
@@ -257,7 +257,7 @@ func (r *GatewayReconciler) isGatewayService(obj client.Object) bool {
 }
 
 func referenceGrantHasGatewayFrom(obj client.Object) bool {
-	grant, ok := obj.(*gatewayv1alpha2.ReferenceGrant)
+	grant, ok := obj.(*gatewayv1beta1.ReferenceGrant)
 	if !ok {
 		return false
 	}
@@ -410,13 +410,13 @@ func (r *GatewayReconciler) reconcileUnmanagedGateway(ctx context.Context, log l
 	// set the Gateway as scheduled to indicate that validation is complete and reconciliation work
 	// on the object is ready to begin.
 	if !isGatewayScheduled(gateway) {
-		info(log, gateway, "marking gateway as scheduled")
+		info(log, gateway, "marking gateway as accepted")
 		scheduledCondition := metav1.Condition{
-			Type:               string(gatewayv1beta1.GatewayConditionScheduled),
+			Type:               string(gatewayv1beta1.GatewayConditionAccepted),
 			Status:             metav1.ConditionTrue,
 			ObservedGeneration: gateway.Generation,
 			LastTransitionTime: metav1.Now(),
-			Reason:             string(gatewayv1beta1.GatewayReasonScheduled),
+			Reason:             string(gatewayv1beta1.GatewayReasonAccepted),
 			Message:            "this unmanaged gateway has been picked up by the controller and will be processed",
 		}
 		setGatewayCondition(gateway, scheduledCondition)
@@ -455,7 +455,7 @@ func (r *GatewayReconciler) reconcileUnmanagedGateway(ctx context.Context, log l
 
 	// the ReferenceGrants need to be retrieved to ensure that all gateway listeners reference
 	// TLS secrets they are granted for
-	referenceGrantList := &gatewayv1alpha2.ReferenceGrantList{}
+	referenceGrantList := &gatewayv1beta1.ReferenceGrantList{}
 	if r.EnableReferenceGrant {
 		if err := r.Client.List(ctx, referenceGrantList); err != nil {
 			return ctrl.Result{}, err

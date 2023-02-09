@@ -4,13 +4,8 @@ import (
 	"fmt"
 
 	"github.com/samber/lo"
-	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 )
-
-type RouteParentStatusT interface {
-	gatewayv1beta1.RouteParentStatus | gatewayv1alpha2.RouteParentStatus
-}
 
 type namespacedObjectT interface {
 	GetNamespace() string
@@ -18,12 +13,12 @@ type namespacedObjectT interface {
 
 // getParentStatuses creates a parent status map for the provided route given the
 // route parent status slice.
-func getParentStatuses[routeT namespacedObjectT, parentStatusT RouteParentStatusT](
-	route routeT, parentStatuses []parentStatusT,
-) map[string]*parentStatusT {
+func getParentStatuses[routeT namespacedObjectT](
+	route routeT, parentStatuses []gatewayv1beta1.RouteParentStatus,
+) map[string]*gatewayv1beta1.RouteParentStatus {
 	var (
 		namespace = route.GetNamespace()
-		m         = make(map[string]*parentStatusT)
+		m         = make(map[string]*gatewayv1beta1.RouteParentStatus)
 	)
 
 	for _, existingParent := range parentStatuses {
@@ -59,28 +54,15 @@ type parentRef struct {
 
 // getParentRef serves as glue code to generically get parentRef from either
 // gatewayv1alpha2.RouteParentStatus or gatewayv1beta1.RouteParentStatus.
-func getParentRef[T RouteParentStatusT](parentStatus T) parentRef {
+func getParentRef(parentStatus gatewayv1beta1.RouteParentStatus) parentRef {
 	var sectionName *string
 
-	switch ps := any(parentStatus).(type) {
-	case gatewayv1beta1.RouteParentStatus:
-		if ps.ParentRef.SectionName != nil {
-			sectionName = lo.ToPtr(string(*ps.ParentRef.SectionName))
-		}
-		return parentRef{
-			Namespace:   lo.ToPtr(string(*ps.ParentRef.Namespace)),
-			Name:        string(ps.ParentRef.Name),
-			SectionName: sectionName,
-		}
-	case gatewayv1alpha2.RouteParentStatus:
-		if ps.ParentRef.SectionName != nil {
-			sectionName = lo.ToPtr(string(*ps.ParentRef.SectionName))
-		}
-		return parentRef{
-			Namespace:   lo.ToPtr(string(*ps.ParentRef.Namespace)),
-			Name:        string(ps.ParentRef.Name),
-			SectionName: sectionName,
-		}
+	if parentStatus.ParentRef.SectionName != nil {
+		sectionName = lo.ToPtr(string(*parentStatus.ParentRef.SectionName))
 	}
-	return parentRef{}
+	return parentRef{
+		Namespace:   lo.ToPtr(string(*parentStatus.ParentRef.Namespace)),
+		Name:        string(parentStatus.ParentRef.Name),
+		SectionName: sectionName,
+	}
 }

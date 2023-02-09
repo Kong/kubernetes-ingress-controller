@@ -92,7 +92,7 @@ type Storer interface {
 	ListUDPRoutes() ([]*gatewayv1alpha2.UDPRoute, error)
 	ListTCPRoutes() ([]*gatewayv1alpha2.TCPRoute, error)
 	ListTLSRoutes() ([]*gatewayv1alpha2.TLSRoute, error)
-	ListReferenceGrants() ([]*gatewayv1alpha2.ReferenceGrant, error)
+	ListReferenceGrants() ([]*gatewayv1beta1.ReferenceGrant, error)
 	ListGateways() ([]*gatewayv1beta1.Gateway, error)
 	ListTCPIngresses() ([]*kongv1beta1.TCPIngress, error)
 	ListUDPIngresses() ([]*kongv1beta1.UDPIngress, error)
@@ -268,7 +268,7 @@ func (c CacheStores) Get(obj runtime.Object) (item interface{}, exists bool, err
 		return c.TCPRoute.Get(obj)
 	case *gatewayv1alpha2.TLSRoute:
 		return c.TLSRoute.Get(obj)
-	case *gatewayv1alpha2.ReferenceGrant:
+	case *gatewayv1beta1.ReferenceGrant:
 		return c.ReferenceGrant.Get(obj)
 	case *gatewayv1beta1.Gateway:
 		return c.Gateway.Get(obj)
@@ -333,7 +333,7 @@ func (c CacheStores) Add(obj runtime.Object) error {
 		return c.TCPRoute.Add(obj)
 	case *gatewayv1alpha2.TLSRoute:
 		return c.TLSRoute.Add(obj)
-	case *gatewayv1alpha2.ReferenceGrant:
+	case *gatewayv1beta1.ReferenceGrant:
 		return c.ReferenceGrant.Add(obj)
 	case *gatewayv1beta1.Gateway:
 		return c.Gateway.Add(obj)
@@ -399,7 +399,7 @@ func (c CacheStores) Delete(obj runtime.Object) error {
 		return c.TCPRoute.Delete(obj)
 	case *gatewayv1alpha2.TLSRoute:
 		return c.TLSRoute.Delete(obj)
-	case *gatewayv1alpha2.ReferenceGrant:
+	case *gatewayv1beta1.ReferenceGrant:
 		return c.ReferenceGrant.Delete(obj)
 	case *gatewayv1beta1.Gateway:
 		return c.Gateway.Delete(obj)
@@ -657,11 +657,11 @@ func (s Store) ListTLSRoutes() ([]*gatewayv1alpha2.TLSRoute, error) {
 }
 
 // ListReferenceGrants returns the list of ReferenceGrants in the ReferenceGrant cache store.
-func (s Store) ListReferenceGrants() ([]*gatewayv1alpha2.ReferenceGrant, error) {
-	var grants []*gatewayv1alpha2.ReferenceGrant
+func (s Store) ListReferenceGrants() ([]*gatewayv1beta1.ReferenceGrant, error) {
+	var grants []*gatewayv1beta1.ReferenceGrant
 	if err := cache.ListAll(s.stores.ReferenceGrant, labels.NewSelector(),
 		func(ob interface{}) {
-			grant, ok := ob.(*gatewayv1alpha2.ReferenceGrant)
+			grant, ok := ob.(*gatewayv1beta1.ReferenceGrant)
 			if ok {
 				grants = append(grants, grant)
 			}

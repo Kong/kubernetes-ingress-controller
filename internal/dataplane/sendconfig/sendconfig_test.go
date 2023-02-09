@@ -120,5 +120,4 @@ func TestHasConfigurationChanged(t *testing.T) {
 			require.Equal(t, tc.expectedResult, result)
 		})
 	}
-
 }

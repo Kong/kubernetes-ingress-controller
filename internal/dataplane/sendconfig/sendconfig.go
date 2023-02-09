@@ -3,6 +3,7 @@ package sendconfig
 import (
 	"bytes"
 	"context"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -15,12 +16,13 @@ import (
 	"github.com/kong/deck/file"
 	"github.com/kong/deck/state"
 	deckutils "github.com/kong/deck/utils"
-	"github.com/prometheus/client_golang/prometheus"
+	"github.com/kong/go-kong/kong"
 	"github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/adminapi"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/deckerrors"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/deckgen"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/failures"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/metrics"
@@ -52,7 +54,7 @@ func PerformUpdate(ctx context.Context, log logrus.FieldLogger, client *adminapi
 	}
 
 	var (
-		metricsProtocol string
+		metricsProtocol metrics.Protocol
 		parseErr        error
 		resourceErrors  []ResourceError
 	)
@@ -65,7 +67,7 @@ func PerformUpdate(ctx context.Context, log logrus.FieldLogger, client *adminapi
 		dumpConfig := dump.Config{SelectorTags: config.FilterTags, SkipCACerts: config.SkipCACertificates}
 		err = onUpdateDBMode(ctx, targetContent, client, dumpConfig, config)
 	}
-	timeEnd := time.Now()
+	duration := time.Since(timeStart)
 
 	if err != nil {
 		dblessFailures := []failures.ResourceFailure{}
@@ -96,27 +98,11 @@ func PerformUpdate(ctx context.Context, log logrus.FieldLogger, client *adminapi
 			}
 		}
 
-		promMetrics.ConfigPushCount.With(prometheus.Labels{
-			metrics.SuccessKey:       metrics.SuccessFalse,
-			metrics.ProtocolKey:      metricsProtocol,
-			metrics.FailureReasonKey: pushFailureReason(err),
-		}).Inc()
-		promMetrics.ConfigPushDuration.With(prometheus.Labels{
-			metrics.SuccessKey:  metrics.SuccessFalse,
-			metrics.ProtocolKey: metricsProtocol,
-		}).Observe(float64(timeEnd.Sub(timeStart).Milliseconds()))
+		promMetrics.RecordPushFailure(metricsProtocol, duration, client.BaseRootURL(), err)
 		return nil, dblessFailures, err
 	}
 
-	promMetrics.ConfigPushCount.With(prometheus.Labels{
-		metrics.SuccessKey:       metrics.SuccessTrue,
-		metrics.ProtocolKey:      metricsProtocol,
-		metrics.FailureReasonKey: "",
-	}).Inc()
-	promMetrics.ConfigPushDuration.With(prometheus.Labels{
-		metrics.SuccessKey:  metrics.SuccessTrue,
-		metrics.ProtocolKey: metricsProtocol,
-	}).Observe(float64(timeEnd.Sub(timeStart).Milliseconds()))
+	promMetrics.RecordPushSuccess(metricsProtocol, duration, client.BaseRootURL())
 	log.Info("successfully synced configuration to kong.")
 	return newSHA, []failures.ResourceFailure{}, nil
 }
@@ -182,7 +168,7 @@ func onUpdateDBMode(
 
 	ts, err := targetState(ctx, targetContent, cs, config.Version, client, dumpConfig)
 	if err != nil {
-		return deckConfigConflictError{err}
+		return deckerrors.ConfigConflictError{Err: err}
 	}
 
 	syncer, err := diff.NewSyncer(diff.SyncerOpts{
@@ -255,4 +241,64 @@ func hasSHAUpdateAlreadyBeenReported(latestUpdateSHA []byte) bool {
 	}
 	latestReportedSHA = latestUpdateSHA
 	return false
+}
+
+type KonnectAwareClient interface {
+	IsKonnect() bool
+}
+
+type StatusClient interface {
+	Status(context.Context) (*kong.Status, error)
+}
+
+// hasConfigurationChanged verifies whether configuration has changed by comparing old and new config's SHAs.
+// In case the SHAs are equal, it still can return true if a client is considered crashed based on its status.
+func hasConfigurationChanged(
+	ctx context.Context,
+	oldSHA, newSHA []byte,
+	client KonnectAwareClient,
+	statusClient StatusClient,
+	log logrus.FieldLogger,
+) (bool, error) {
+	if !bytes.Equal(oldSHA, newSHA) {
+		return true, nil
+	}
+	if !hasSHAUpdateAlreadyBeenReported(newSHA) {
+		log.Debugf("sha %s has been reported", hex.EncodeToString(newSHA))
+	}
+	// In case of Konnect, we skip further steps as it doesn't report its configuration hash.
+	if client.IsKonnect() {
+		return false, nil
+	}
+
+	hasNoConfiguration, err := kongHasNoConfiguration(ctx, statusClient, log)
+	if err != nil {
+		return false, fmt.Errorf("failed to verify kong readiness: %w", err)
+	}
+	// Kong instance has no configuration, we should push despite the oldSHA and newSHA being equal.
+	if hasNoConfiguration {
+		return true, nil
+	}
+
+	return false, nil
+}
+
+const wellKnownInitialHash = "00000000000000000000000000000000"
+
+// kongHasNoConfiguration checks Kong's status endpoint and read its config hash.
+// If the config hash reported by Kong is the known empty hash, it's considered crashed.
+// This allows providing configuration to Kong instances that have unexpectedly crashed and
+// lost their configuration.
+func kongHasNoConfiguration(ctx context.Context, client StatusClient, log logrus.FieldLogger) (bool, error) {
+	status, err := client.Status(ctx)
+	if err != nil {
+		return false, err
+	}
+
+	if hasNoConfig := status.ConfigurationHash == wellKnownInitialHash; hasNoConfig {
+		log.Debugf("starting to send configuration (hash: %s)", status.ConfigurationHash)
+		return true, nil
+	}
+
+	return false, nil
 }

@@ -117,7 +117,7 @@ func getTestManifest(t *testing.T, baseManifestPath string) (io.Reader, error) {
 		return nil, err
 	}
 
-	manifestsReader, err = patchControllerImageHelper(manifestsReader, baseManifestPath)
+	manifestsReader, err = patchControllerImageFromEnv(manifestsReader, baseManifestPath)
 	if err != nil {
 		t.Logf("failed patching controller image (%v), using default manifest %v", err, baseManifestPath)
 		return manifestsReader, nil

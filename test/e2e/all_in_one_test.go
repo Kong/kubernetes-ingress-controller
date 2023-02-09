@@ -5,6 +5,7 @@ package e2e
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
 	"io"
 	"net/http"
@@ -12,6 +13,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/kong/deck/dump"
+	gokong "github.com/kong/go-kong/kong"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/kong"
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
@@ -408,7 +411,7 @@ func TestDeployAllInOneDBLESSMultiGW(t *testing.T) {
 	defer f.Close()
 	var manifest io.Reader = f
 
-	manifest, err = patchControllerImageHelper(manifest, manifestFilePath)
+	manifest, err = patchControllerImageFromEnv(manifest, manifestFilePath)
 	require.NoError(t, err)
 	deployment := deployKong(ctx, t, env, manifest)
 
@@ -422,8 +425,65 @@ func TestDeployAllInOneDBLESSMultiGW(t *testing.T) {
 	_, err = env.Cluster().Client().AppsV1().Deployments(deployment.Namespace).Update(ctx, gatewayDeployment, metav1.UpdateOptions{})
 	require.NoError(t, err)
 
-	t.Log("confirming that routes are stil served after scaling out")
-	verifyIngress(ctx, t, env)
-	verifyIngress(ctx, t, env)
-	verifyIngress(ctx, t, env)
+	var podList *corev1.PodList
+
+	t.Log("waiting all the dataplane instances to be ready")
+	require.Eventually(t, func() bool {
+		forDeployment := metav1.ListOptions{
+			LabelSelector: "app=proxy-kong",
+		}
+		podList, err = env.Cluster().Client().CoreV1().Pods(deployment.Namespace).List(ctx, forDeployment)
+		require.NoError(t, err)
+		return len(podList.Items) == 3
+	}, time.Minute, time.Second)
+
+	t.Log("confirming that all dataplanes got the config")
+	for _, pod := range podList.Items {
+		client := &http.Client{
+			Timeout: time.Second * 30,
+			Transport: &http.Transport{
+				TLSClientConfig: &tls.Config{
+					InsecureSkipVerify: true, //nolint:gosec
+				},
+			},
+		}
+
+		forwardCtx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+		localPort := startPortForwarder(forwardCtx, t, env, deployment.Namespace, pod.Name, "8444")
+		address := fmt.Sprintf("https://localhost:%d", localPort)
+
+		kongClient, err := gokong.NewClient(lo.ToPtr(address), client)
+		require.NoError(t, err)
+
+		require.Eventually(t, func() bool {
+			d, err := dump.Get(ctx, kongClient, dump.Config{})
+			if err != nil {
+				return false
+			}
+			if len(d.Services) != 1 {
+				return false
+			}
+			if len(d.Routes) != 1 {
+				return false
+			}
+
+			if d.Services[0].ID == nil ||
+				d.Routes[0].Service.ID == nil ||
+				*d.Services[0].ID != *d.Routes[0].Service.ID {
+				return false
+			}
+
+			if len(d.Targets) != 1 {
+				return false
+			}
+
+			if len(d.Upstreams) != 1 {
+				return false
+			}
+
+			return true
+		}, time.Minute, time.Second, "pod: %s/%s didn't get the config", pod.Namespace, pod.Name)
+		t.Logf("proxy pod %s/%s: got the config", pod.Namespace, pod.Name)
+	}
 }

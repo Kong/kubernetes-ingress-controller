@@ -133,6 +133,8 @@ Adding a new version? You'll need three changes:
 - Replaced service account's token static secret with a projected volume in 
   deployment manifests.
   [#3563](https://github.com/Kong/kubernetes-ingress-controller/pull/3563)
+- Added `GRPCRoute` controller and implemented basic `GRPCRoute` functionality.
+  [#3537](https://github.com/Kong/kubernetes-ingress-controller/pull/3537)
 
 ### Fixed
 

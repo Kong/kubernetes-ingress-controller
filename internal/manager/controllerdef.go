@@ -467,6 +467,23 @@ func setupControllers(
 				CacheSyncTimeout: c.CacheSyncTimeout,
 			},
 		},
+		{
+			Enabled: featureGates[featuregates.GatewayAlphaFeature] && ShouldEnableCRDController(
+				schema.GroupVersionResource{
+					Group:    gatewayv1alpha2.GroupVersion.Group,
+					Version:  gatewayv1alpha2.GroupVersion.Version,
+					Resource: "grpcroutes",
+				},
+				restMapper,
+			),
+			Controller: &gateway.GRPCRouteReconciler{
+				Client:           mgr.GetClient(),
+				Log:              ctrl.Log.WithName("controllers").WithName("GRPCRoute"),
+				Scheme:           mgr.GetScheme(),
+				DataplaneClient:  dataplaneClient,
+				CacheSyncTimeout: c.CacheSyncTimeout,
+			},
+		},
 	}
 
 	return controllers, nil

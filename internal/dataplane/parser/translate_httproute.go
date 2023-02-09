@@ -289,7 +289,7 @@ func generateKongRouteFromHTTPRouteMatches(
 		return kongstate.Route{}, errRouteValidationQueryParamMatchesUnsupported
 	}
 
-	r := generateKongstateRoute(routeName, ingressObjectInfo, hostnames)
+	r := generateKongstateHTTPRoute(routeName, ingressObjectInfo, hostnames)
 	r.Tags = tags
 
 	// convert header matching from HTTPRoute to Route format
@@ -362,7 +362,7 @@ func generateKongRoutePathFromHTTPRouteMatch(match gatewayv1beta1.HTTPRouteMatch
 	return "" // unreachable code
 }
 
-func generateKongstateRoute(routeName string, ingressObjectInfo util.K8sObjectInfo, hostnames []*string) kongstate.Route {
+func generateKongstateHTTPRoute(routeName string, ingressObjectInfo util.K8sObjectInfo, hostnames []*string) kongstate.Route {
 	// build the route object using the method and pathing information
 	r := kongstate.Route{
 		Ingress: ingressObjectInfo,

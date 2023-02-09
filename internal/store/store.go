@@ -92,6 +92,7 @@ type Storer interface {
 	ListUDPRoutes() ([]*gatewayv1alpha2.UDPRoute, error)
 	ListTCPRoutes() ([]*gatewayv1alpha2.TCPRoute, error)
 	ListTLSRoutes() ([]*gatewayv1alpha2.TLSRoute, error)
+	ListGRPCRoutes() ([]*gatewayv1alpha2.GRPCRoute, error)
 	ListReferenceGrants() ([]*gatewayv1beta1.ReferenceGrant, error)
 	ListGateways() ([]*gatewayv1beta1.Gateway, error)
 	ListTCPIngresses() ([]*kongv1beta1.TCPIngress, error)
@@ -139,6 +140,7 @@ type CacheStores struct {
 	UDPRoute       cache.Store
 	TCPRoute       cache.Store
 	TLSRoute       cache.Store
+	GRPCRoute      cache.Store
 	ReferenceGrant cache.Store
 	Gateway        cache.Store
 
@@ -172,6 +174,7 @@ func NewCacheStores() CacheStores {
 		UDPRoute:       cache.NewStore(keyFunc),
 		TCPRoute:       cache.NewStore(keyFunc),
 		TLSRoute:       cache.NewStore(keyFunc),
+		GRPCRoute:      cache.NewStore(keyFunc),
 		ReferenceGrant: cache.NewStore(keyFunc),
 		Gateway:        cache.NewStore(keyFunc),
 		// Kong Stores
@@ -265,6 +268,8 @@ func (c CacheStores) Get(obj runtime.Object) (item interface{}, exists bool, err
 		return c.TCPRoute.Get(obj)
 	case *gatewayv1alpha2.TLSRoute:
 		return c.TLSRoute.Get(obj)
+	case *gatewayv1alpha2.GRPCRoute:
+		return c.GRPCRoute.Get(obj)
 	case *gatewayv1beta1.ReferenceGrant:
 		return c.ReferenceGrant.Get(obj)
 	case *gatewayv1beta1.Gateway:
@@ -330,6 +335,8 @@ func (c CacheStores) Add(obj runtime.Object) error {
 		return c.TCPRoute.Add(obj)
 	case *gatewayv1alpha2.TLSRoute:
 		return c.TLSRoute.Add(obj)
+	case *gatewayv1alpha2.GRPCRoute:
+		return c.GRPCRoute.Add(obj)
 	case *gatewayv1beta1.ReferenceGrant:
 		return c.ReferenceGrant.Add(obj)
 	case *gatewayv1beta1.Gateway:
@@ -396,6 +403,8 @@ func (c CacheStores) Delete(obj runtime.Object) error {
 		return c.TCPRoute.Delete(obj)
 	case *gatewayv1alpha2.TLSRoute:
 		return c.TLSRoute.Delete(obj)
+	case *gatewayv1alpha2.GRPCRoute:
+		return c.GRPCRoute.Delete(obj)
 	case *gatewayv1beta1.ReferenceGrant:
 		return c.ReferenceGrant.Delete(obj)
 	case *gatewayv1beta1.Gateway:
@@ -629,6 +638,22 @@ func (s Store) ListTLSRoutes() ([]*gatewayv1alpha2.TLSRoute, error) {
 		return nil, err
 	}
 	return tlsroutes, nil
+}
+
+// ListGRPCRoutes returns the list of GRPCRoutes in the GRPCRoute cache store.
+func (s Store) ListGRPCRoutes() ([]*gatewayv1alpha2.GRPCRoute, error) {
+	var grpcroutes []*gatewayv1alpha2.GRPCRoute
+	if err := cache.ListAll(s.stores.GRPCRoute, labels.NewSelector(),
+		func(ob interface{}) {
+			tlsroute, ok := ob.(*gatewayv1alpha2.GRPCRoute)
+			if ok {
+				grpcroutes = append(grpcroutes, tlsroute)
+			}
+		},
+	); err != nil {
+		return nil, err
+	}
+	return grpcroutes, nil
 }
 
 // ListReferenceGrants returns the list of ReferenceGrants in the ReferenceGrant cache store.

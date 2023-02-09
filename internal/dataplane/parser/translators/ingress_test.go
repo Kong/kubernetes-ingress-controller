@@ -94,6 +94,7 @@ func TestTranslateIngress(t *testing.T) {
 						StripPath:         kong.Bool(false),
 						ResponseBuffering: kong.Bool(true),
 						RequestBuffering:  kong.Bool(true),
+						Tags:              kong.StringSlice("k8s-name:test-ingress", "k8s-namespace:default"),
 					},
 				}},
 				Backends: []kongstate.ServiceBackend{{
@@ -164,6 +165,7 @@ func TestTranslateIngress(t *testing.T) {
 						StripPath:         kong.Bool(false),
 						ResponseBuffering: kong.Bool(true),
 						RequestBuffering:  kong.Bool(true),
+						Tags:              kong.StringSlice("k8s-name:test-ingress", "k8s-namespace:default"),
 					},
 				}},
 				Backends: []kongstate.ServiceBackend{{
@@ -235,6 +237,7 @@ func TestTranslateIngress(t *testing.T) {
 						StripPath:         kong.Bool(false),
 						ResponseBuffering: kong.Bool(true),
 						RequestBuffering:  kong.Bool(true),
+						Tags:              kong.StringSlice("k8s-name:test-ingress", "k8s-namespace:default"),
 					},
 				}},
 				Backends: []kongstate.ServiceBackend{{
@@ -306,6 +309,7 @@ func TestTranslateIngress(t *testing.T) {
 						StripPath:         kong.Bool(false),
 						ResponseBuffering: kong.Bool(true),
 						RequestBuffering:  kong.Bool(true),
+						Tags:              kong.StringSlice("k8s-name:test-ingress", "k8s-namespace:default"),
 					},
 				}},
 				Backends: []kongstate.ServiceBackend{{
@@ -377,6 +381,7 @@ func TestTranslateIngress(t *testing.T) {
 						StripPath:         kong.Bool(false),
 						ResponseBuffering: kong.Bool(true),
 						RequestBuffering:  kong.Bool(true),
+						Tags:              kong.StringSlice("k8s-name:test-ingress", "k8s-namespace:default"),
 					},
 				}},
 				Backends: []kongstate.ServiceBackend{{
@@ -447,6 +452,7 @@ func TestTranslateIngress(t *testing.T) {
 						StripPath:         kong.Bool(false),
 						ResponseBuffering: kong.Bool(true),
 						RequestBuffering:  kong.Bool(true),
+						Tags:              kong.StringSlice("k8s-name:test-ingress", "k8s-namespace:default"),
 					},
 				}},
 				Backends: []kongstate.ServiceBackend{{
@@ -517,6 +523,7 @@ func TestTranslateIngress(t *testing.T) {
 						StripPath:         kong.Bool(false),
 						ResponseBuffering: kong.Bool(true),
 						RequestBuffering:  kong.Bool(true),
+						Tags:              kong.StringSlice("k8s-name:test-ingress", "k8s-namespace:default"),
 					},
 				}},
 				Backends: []kongstate.ServiceBackend{{
@@ -659,6 +666,7 @@ func TestTranslateIngress(t *testing.T) {
 						StripPath:         kong.Bool(false),
 						ResponseBuffering: kong.Bool(true),
 						RequestBuffering:  kong.Bool(true),
+						Tags:              kong.StringSlice("k8s-name:test-ingress", "k8s-namespace:default"),
 					},
 				}},
 				Backends: []kongstate.ServiceBackend{{
@@ -799,6 +807,7 @@ func TestTranslateIngress(t *testing.T) {
 						StripPath:         kong.Bool(false),
 						ResponseBuffering: kong.Bool(true),
 						RequestBuffering:  kong.Bool(true),
+						Tags:              kong.StringSlice("k8s-name:test-ingress", "k8s-namespace:default"),
 					},
 				}},
 				Backends: []kongstate.ServiceBackend{{
@@ -885,6 +894,7 @@ func TestTranslateIngress(t *testing.T) {
 								StripPath:         kong.Bool(false),
 								ResponseBuffering: kong.Bool(true),
 								RequestBuffering:  kong.Bool(true),
+								Tags:              kong.StringSlice("k8s-name:test-ingress", "k8s-namespace:default"),
 							},
 						},
 					},
@@ -927,6 +937,7 @@ func TestTranslateIngress(t *testing.T) {
 								StripPath:         kong.Bool(false),
 								ResponseBuffering: kong.Bool(true),
 								RequestBuffering:  kong.Bool(true),
+								Tags:              kong.StringSlice("k8s-name:test-ingress", "k8s-namespace:default"),
 							},
 						},
 					},
@@ -1026,6 +1037,7 @@ func TestTranslateIngress(t *testing.T) {
 								StripPath:         kong.Bool(false),
 								ResponseBuffering: kong.Bool(true),
 								RequestBuffering:  kong.Bool(true),
+								Tags:              kong.StringSlice("k8s-name:test-ingress", "k8s-namespace:default"),
 							},
 						},
 					},
@@ -1068,6 +1080,7 @@ func TestTranslateIngress(t *testing.T) {
 								StripPath:         kong.Bool(false),
 								ResponseBuffering: kong.Bool(true),
 								RequestBuffering:  kong.Bool(true),
+								Tags:              kong.StringSlice("k8s-name:test-ingress", "k8s-namespace:default"),
 							},
 						},
 					},
@@ -1140,6 +1153,7 @@ func TestTranslateIngress(t *testing.T) {
 						StripPath:         kong.Bool(false),
 						ResponseBuffering: kong.Bool(true),
 						RequestBuffering:  kong.Bool(true),
+						Tags:              kong.StringSlice("k8s-name:test-ingress", "k8s-namespace:default"),
 					},
 				}},
 				Backends: []kongstate.ServiceBackend{{
@@ -1213,6 +1227,13 @@ func TestTranslateIngress(t *testing.T) {
 						StripPath:         kong.Bool(false),
 						ResponseBuffering: kong.Bool(true),
 						RequestBuffering:  kong.Bool(true),
+						Tags: kong.StringSlice(
+							"k8s-name:test-ingress",
+							"k8s-namespace:default",
+							"k8s-kind:Ingress",
+							"k8s-group:networking.k8s.io",
+							"k8s-version:v1",
+						),
 					},
 				}},
 				Backends: []kongstate.ServiceBackend{{

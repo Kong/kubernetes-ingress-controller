@@ -3086,6 +3086,8 @@ func TestParserSecret(t *testing.T) {
 			return strings.Compare(*state.Certificates[0].SNIs[i],
 				*state.Certificates[0].SNIs[j]) > 0
 		})
+		// parser tests do not check tags, these are tested independently
+		state.Certificates[0].Tags = nil
 		assert.Equal(kongstate.Certificate{
 			Certificate: kong.Certificate{
 				ID:   kong.String("3e8edeca-7d23-4e02-84c9-437d11b746a6"),
@@ -3213,6 +3215,8 @@ func TestParserSecret(t *testing.T) {
 			return strings.Compare(*state.Certificates[0].SNIs[i],
 				*state.Certificates[0].SNIs[j]) > 0
 		})
+		// parser tests do not check tags, these are tested independently
+		state.Certificates[0].Tags = nil
 		assert.Equal(kongstate.Certificate{
 			Certificate: kong.Certificate{
 				ID:   kong.String("2c28a22c-41e1-4cd6-9099-fd7756ffe58e"),
@@ -3371,6 +3375,9 @@ func TestParserSNI(t *testing.T) {
 		state, translationFailures := p.Build()
 		require.Empty(t, translationFailures)
 		assert.NotNil(state)
+		// parser tests do not check tags, these are tested independently
+		state.Services[0].Routes[0].Route.Tags = nil
+		state.Services[0].Routes[1].Route.Tags = nil
 		assert.Equal(kong.Route{
 			Name:              kong.String("default.foo.00"),
 			StripPath:         kong.Bool(false),
@@ -3436,6 +3443,8 @@ func TestParserSNI(t *testing.T) {
 		state, translationFailures := p.Build()
 		require.Empty(t, translationFailures)
 		assert.NotNil(state)
+		// parser tests do not check tags, these are tested independently
+		state.Services[0].Routes[0].Route.Tags = nil
 		assert.Equal(kong.Route{
 			Name:              kong.String("default.foo.00"),
 			StripPath:         kong.Bool(false),
@@ -3496,6 +3505,8 @@ func TestParserHostAliases(t *testing.T) {
 		state, translationFailures := p.Build()
 		require.Empty(t, translationFailures)
 		assert.NotNil(state)
+		// parser tests do not check tags, these are tested independently
+		state.Services[0].Routes[0].Route.Tags = nil
 		assert.Equal(kong.Route{
 			Name:              kong.String("default.foo.00"),
 			StripPath:         kong.Bool(false),
@@ -3549,6 +3560,8 @@ func TestParserHostAliases(t *testing.T) {
 		state, translationFailures := p.Build()
 		require.Empty(t, translationFailures)
 		assert.NotNil(state)
+		// parser tests do not check tags, these are tested independently
+		state.Services[0].Routes[0].Route.Tags = nil
 		assert.Equal(kong.Route{
 			Name:              kong.String("default.foo.00"),
 			StripPath:         kong.Bool(false),
@@ -3603,6 +3616,8 @@ func TestParserHostAliases(t *testing.T) {
 		state, translationFailures := p.Build()
 		require.Empty(t, translationFailures)
 		assert.NotNil(state)
+		// parser tests do not check tags, these are tested independently
+		state.Services[0].Routes[0].Route.Tags = nil
 		assert.Equal(kong.Route{
 			Name:              kong.String("default.foo.00"),
 			StripPath:         kong.Bool(false),
@@ -3697,6 +3712,8 @@ func TestPluginAnnotations(t *testing.T) {
 			"expected no plugins to be rendered with missing plugin")
 		pl := state.Plugins[0].Plugin
 		pl.Route = nil
+		// parser tests do not check tags, these are tested independently
+		pl.Tags = nil
 		assert.Equal(pl, kong.Plugin{
 			Name:      kong.String("key-auth"),
 			Protocols: kong.StringSlice("grpc"),
@@ -4795,6 +4812,11 @@ func TestCertificate(t *testing.T) {
 				Cert: kong.String(tlsPairs[0].Cert),
 				Key:  kong.String(tlsPairs[0].Key),
 				SNIs: []*string{kong.String("foo.com")},
+				Tags: []*string{
+					kong.String("k8s-name:secret1"),
+					kong.String("k8s-namespace:ns1"),
+					kong.String("k8s-uid:7428fb98-180b-4702-a91f-61351a33c6e4"),
+				},
 			},
 		}
 		store, err := store.NewFakeStore(store.FakeObjects{
@@ -4900,6 +4922,8 @@ func TestCertificate(t *testing.T) {
 		require.Empty(t, translationFailures)
 		assert.NotNil(state)
 		assert.Equal(1, len(state.Certificates))
+		// parser tests do not check tags, these are tested independently
+		state.Certificates[0].Tags = nil
 		assert.Equal(state.Certificates[0], fooCertificate)
 	})
 }

@@ -55,6 +55,10 @@ func TestGenerateKongRoutesFromRouteRule_TCP(t *testing.T) {
 						Protocols: []*string{
 							lo.ToPtr("tcp"),
 						},
+						Tags: []*string{
+							kong.String("k8s-name:mytcproute-name"),
+							kong.String("k8s-namespace:mynamespace"),
+						},
 					},
 				},
 			},
@@ -116,6 +120,10 @@ func TestGenerateKongRoutesFromRouteRule_UDP(t *testing.T) {
 						Protocols: []*string{
 							lo.ToPtr("udp"),
 						},
+						Tags: []*string{
+							kong.String("k8s-name:myudproute-name"),
+							kong.String("k8s-namespace:mynamespace"),
+						},
 					},
 				},
 			},
@@ -174,6 +182,10 @@ func TestGenerateKongRoutesFromRouteRule_TLS(t *testing.T) {
 						Protocols: []*string{
 							lo.ToPtr("tls"),
 						},
+						Tags: []*string{
+							kong.String("k8s-name:mytlsroute-name"),
+							kong.String("k8s-namespace:mynamespace"),
+						},
 					},
 				},
 			},
@@ -200,6 +212,10 @@ func TestGenerateKongRoutesFromRouteRule_TLS(t *testing.T) {
 						SNIs: []*string{},
 						Protocols: []*string{
 							lo.ToPtr("tls"),
+						},
+						Tags: []*string{
+							kong.String("k8s-name:mytlsroute-name"),
+							kong.String("k8s-namespace:mynamespace"),
 						},
 					},
 				},

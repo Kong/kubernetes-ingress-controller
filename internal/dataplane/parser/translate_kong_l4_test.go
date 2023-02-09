@@ -6,6 +6,7 @@ import (
 	"github.com/kong/go-kong/kong"
 	"github.com/stretchr/testify/assert"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
@@ -108,6 +109,7 @@ func TestFromTCPIngressV1beta1(t *testing.T) {
 		parsedInfo := p.ingressRulesFromTCPIngressV1beta1()
 		assert.Equal(ingressRules{
 			ServiceNameToServices: make(map[string]kongstate.Service),
+			ServiceNameToParent:   make(map[string]client.Object),
 			SecretNameToSNIs:      newSecretNameToSNIs(),
 		}, parsedInfo)
 	})
@@ -123,6 +125,7 @@ func TestFromTCPIngressV1beta1(t *testing.T) {
 		parsedInfo := p.ingressRulesFromTCPIngressV1beta1()
 		assert.Equal(ingressRules{
 			ServiceNameToServices: make(map[string]kongstate.Service),
+			ServiceNameToParent:   make(map[string]client.Object),
 			SecretNameToSNIs:      newSecretNameToSNIs(),
 		}, parsedInfo)
 	})
@@ -152,6 +155,10 @@ func TestFromTCPIngressV1beta1(t *testing.T) {
 					Port: kong.Int(9000),
 				},
 			},
+			Tags: []*string{
+				kong.String("k8s-name:foo"),
+				kong.String("k8s-namespace:default"),
+			},
 		}, route.Route)
 	})
 	t.Run("TCPIngress rule with host is parsed", func(t *testing.T) {
@@ -180,6 +187,10 @@ func TestFromTCPIngressV1beta1(t *testing.T) {
 				{
 					Port: kong.Int(9000),
 				},
+			},
+			Tags: []*string{
+				kong.String("k8s-name:foo"),
+				kong.String("k8s-namespace:default"),
 			},
 		}, route.Route)
 	})

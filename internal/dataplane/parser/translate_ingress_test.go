@@ -9,6 +9,7 @@ import (
 	netv1beta1 "k8s.io/api/networking/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
@@ -274,6 +275,7 @@ func TestFromIngressV1beta1(t *testing.T) {
 		parsedInfo := p.ingressRulesFromIngressV1beta1()
 		assert.Equal(ingressRules{
 			ServiceNameToServices: make(map[string]kongstate.Service),
+			ServiceNameToParent:   make(map[string]client.Object),
 			SecretNameToSNIs:      newSecretNameToSNIs(),
 		}, parsedInfo)
 	})
@@ -747,6 +749,7 @@ func TestFromIngressV1(t *testing.T) {
 		parsedInfo := p.ingressRulesFromIngressV1()
 		assert.Equal(ingressRules{
 			ServiceNameToServices: make(map[string]kongstate.Service),
+			ServiceNameToParent:   make(map[string]client.Object),
 			SecretNameToSNIs:      newSecretNameToSNIs(),
 		}, parsedInfo)
 	})

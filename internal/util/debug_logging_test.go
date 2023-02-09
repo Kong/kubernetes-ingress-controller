@@ -131,22 +131,35 @@ func TestDebugLoggerThreadSafety(t *testing.T) {
 	buf := &threadSafeBuffer{buf: new(bytes.Buffer), l: &sync.RWMutex{}}
 	log := MakeDebugLoggerWithReducedRedudancy(buf, &logrus.JSONFormatter{}, 0, time.Minute*30)
 
-	// spam the logger concurrently across several goroutines to ensure no dataraces
-	wg := &sync.WaitGroup{}
-	total := 100
-	wg.Add(total)
-	for i := 0; i < total; i++ {
-		go func() {
-			defer wg.Done()
-			log.Debug("unique")
-		}()
+	const total = 100
+	writeToLogger := func() {
+		// spam the logger concurrently across several goroutines to ensure no dataraces
+		wg := &sync.WaitGroup{}
+		wg.Add(total)
+		for i := 0; i < total; i++ {
+			go func() {
+				defer wg.Done()
+				log.Debug("unique")
+			}()
+		}
+		wg.Wait()
 	}
-	wg.Wait()
-	assert.Contains(t, buf.String(), "unique")
+	assert.Eventually(t, func() bool {
+		writeToLogger()
 
-	// Ensure that _some_ lines have been stifled. The actual number is not deterministic.
-	lines := strings.Split(buf.String(), "\n")
-	assert.True(t, len(lines) < total)
+		if !strings.Contains(buf.String(), "unique") {
+			return false
+		}
+
+		// Ensure that _some_ lines have been stifled. The actual number is not deterministic.
+		lines := strings.Split(buf.String(), "\n")
+		if !(len(lines) < total) {
+			t.Logf("we haven't filtered any logs out, since the logger is indeterministic in nature let's retry")
+			buf.buf.Reset()
+			return false
+		}
+		return true
+	}, time.Second, time.Millisecond)
 }
 
 // -----------------------------------------------------------------------------

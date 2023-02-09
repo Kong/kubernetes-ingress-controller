@@ -39,7 +39,7 @@ type Config struct {
 func (c *Config) Init(
 	ctx context.Context,
 	logger logr.Logger,
-	kongClients []adminapi.Client,
+	kongClients []*adminapi.Client,
 ) {
 	if err := tagsFilteringEnabled(ctx, kongClients); err != nil {
 		logger.Error(err, "tag filtering disabled")
@@ -49,7 +49,7 @@ func (c *Config) Init(
 	}
 }
 
-func tagsFilteringEnabled(ctx context.Context, kongClients []adminapi.Client) error {
+func tagsFilteringEnabled(ctx context.Context, kongClients []*adminapi.Client) error {
 	var errg errgroup.Group
 	for _, cl := range kongClients {
 		cl := cl

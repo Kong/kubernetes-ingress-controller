@@ -52,7 +52,7 @@ func TestSerializeMeshDeploymentResults(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		// t.RunNotifyLoop runs function in separate goroutine, so we need to assign tc to a local variable.
+		// t.Run runs function in separate goroutine, so we need to assign tc to a local variable.
 		tc := tc
 		t.Run(tc.caseName, func(t *testing.T) {
 			serialized := serializeMeshDeploymentResults(tc.results)

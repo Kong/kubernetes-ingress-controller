@@ -12,7 +12,7 @@ import (
 )
 
 type ClientFactory interface {
-	CreateAdminAPIClient(ctx context.Context, address string) (adminapi.Client, error)
+	CreateAdminAPIClient(ctx context.Context, address string) (*adminapi.Client, error)
 }
 
 // AdminAPIClientsManager keeps track of current Admin API clients of Gateways that we should configure.
@@ -30,7 +30,7 @@ type AdminAPIClientsManager struct {
 	onceRunning sync.Once
 	running     chan struct{}
 
-	clients     []adminapi.Client
+	clients     []*adminapi.Client
 	clientsLock sync.RWMutex
 
 	logger logrus.FieldLogger
@@ -39,7 +39,7 @@ type AdminAPIClientsManager struct {
 func NewAdminAPIClientsManager(
 	ctx context.Context,
 	logger logrus.FieldLogger,
-	initialClients []adminapi.Client,
+	initialClients []*adminapi.Client,
 	kongClientFactory ClientFactory,
 ) (*AdminAPIClientsManager, error) {
 	if len(initialClients) == 0 {
@@ -86,11 +86,11 @@ func (c *AdminAPIClientsManager) Notify(addresses []string) {
 }
 
 // Clients returns a copy of current client's slice.
-func (c *AdminAPIClientsManager) Clients() []adminapi.Client {
+func (c *AdminAPIClientsManager) Clients() []*adminapi.Client {
 	c.clientsLock.RLock()
 	defer c.clientsLock.RUnlock()
 
-	copied := make([]adminapi.Client, len(c.clients))
+	copied := make([]*adminapi.Client, len(c.clients))
 	copy(copied, c.clients)
 	return copied
 }
@@ -137,7 +137,7 @@ func (c *AdminAPIClientsManager) adjustKongClients(addresses []string) {
 
 		// If we don't have a client with new address then filter it and add
 		// a client for this address.
-		return !lo.ContainsBy(c.clients, func(cl adminapi.Client) bool {
+		return !lo.ContainsBy(c.clients, func(cl *adminapi.Client) bool {
 			return addr == cl.BaseRootURL()
 		})
 	})

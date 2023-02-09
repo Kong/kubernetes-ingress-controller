@@ -36,7 +36,7 @@ import (
 )
 
 // -----------------------------------------------------------------------------
-// Controller Manager - Setup & RunNotifyLoop
+// Controller Manager - Setup & Run
 // -----------------------------------------------------------------------------
 
 // Run starts the controller manager and blocks until it exits.

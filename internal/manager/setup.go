@@ -265,7 +265,7 @@ func generateAddressFinderGetter(mgrc client.Client, publishServiceNn types.Name
 // to create the list of clients.
 // When a headless service name is provided via --kong-admin-svc then that is used
 // to obtain a list of endpoints via EndpointSlice lookup in kubernetes API.
-func (c *Config) getKongClients(ctx context.Context) ([]adminapi.Client, error) {
+func (c *Config) getKongClients(ctx context.Context) ([]*adminapi.Client, error) {
 	httpclient, err := adminapi.MakeHTTPClient(&c.KongAdminAPIConfig, c.KongAdminToken)
 	if err != nil {
 		return nil, err
@@ -314,7 +314,7 @@ func (c *Config) getKongClients(ctx context.Context) ([]adminapi.Client, error) 
 		addresses = c.KongAdminURLs
 	}
 
-	clients := make([]adminapi.Client, 0, len(addresses))
+	clients := make([]*adminapi.Client, 0, len(addresses))
 	for _, address := range addresses {
 		client, err := adminapi.NewKongClientForWorkspace(ctx, address, c.KongWorkspace, httpclient)
 		if err != nil {

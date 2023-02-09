@@ -59,13 +59,13 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 		return fmt.Errorf("get kubeconfig from file %q: %w", c.KubeconfigPath, err)
 	}
 	setupLog.Info("getting the kong admin api client configuration")
-	kongClients, err := c.getKongClients(ctx, setupLog)
+	initialKongClients, err := c.getKongClients(ctx, setupLog)
 	if err != nil {
 		return fmt.Errorf("unable to build kong api client(s): %w", err)
 	}
 
 	// Get Kong configuration root(s) to validate them and extract Kong's version.
-	kongRoots, err := kongconfig.GetRoots(ctx, setupLog, c.KongAdminInitializationRetries, c.KongAdminInitializationRetryDelay, kongClients)
+	kongRoots, err := kongconfig.GetRoots(ctx, setupLog, c.KongAdminInitializationRetries, c.KongAdminInitializationRetryDelay, initialKongClients)
 	if err != nil {
 		return fmt.Errorf("could not retrieve Kong admin root(s): %w", err)
 	}
@@ -77,13 +77,14 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 	semV := semver.Version{Major: v.Major(), Minor: v.Minor(), Patch: v.Patch()}
 	versions.SetKongVersion(semV)
 
-	kongConfig := sendconfig.New(ctx, setupLog, kongClients, sendconfig.Config{
+	kongConfig := sendconfig.Config{
 		Version:            semV,
 		InMemory:           (dbMode == "off") || (dbMode == ""),
 		Concurrency:        c.Concurrency,
 		FilterTags:         c.FilterTags,
 		SkipCACertificates: c.SkipCACertificates,
-	})
+	}
+	kongConfig.Init(ctx, setupLog, initialKongClients)
 
 	setupLog.Info("configuring and building the controller manager")
 	controllerOpts, err := setupControllerOptions(setupLog, c, dbMode)
@@ -103,8 +104,22 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 
 	setupLog.Info("Initializing Dataplane Client")
 	eventRecorder := mgr.GetEventRecorderFor(KongClientEventRecorderComponentName)
-	dataplaneClient, err := dataplane.NewKongClient(
+
+	clientsManager, err := dataplane.NewAdminAPIClientsManager(
 		ctx,
+		deprecatedLogger,
+		initialKongClients,
+		adminapi.NewClientFactoryForWorkspace(c.KongWorkspace, c.KongAdminAPIConfig, c.KongAdminToken),
+	)
+	if err != nil {
+		return fmt.Errorf("failed to create AdminAPIClientsManager: %w", err)
+	}
+	if c.KongAdminSvc.Name != "" {
+		setupLog.Info("Running AdminAPIClientsManager notify loop")
+		clientsManager.RunNotifyLoop()
+	}
+
+	dataplaneClient, err := dataplane.NewKongClient(
 		deprecatedLogger,
 		time.Duration(c.ProxyTimeoutSeconds*float32(time.Second)),
 		c.IngressClassName,
@@ -114,7 +129,7 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 		kongConfig,
 		eventRecorder,
 		dbMode,
-		adminapi.NewClientFactoryForWorkspace(c.KongWorkspace, c.KongAdminAPIConfig, c.KongAdminToken),
+		clientsManager,
 	)
 	if err != nil {
 		return fmt.Errorf("failed to initialize kong data-plane client: %w", err)
@@ -148,7 +163,7 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 
 	setupLog.Info("Starting Enabled Controllers")
 	controllers, err := setupControllers(mgr, dataplaneClient,
-		dataplaneAddressFinder, udpDataplaneAddressFinder, kubernetesStatusQueue, c, featureGates, dataplaneClient)
+		dataplaneAddressFinder, udpDataplaneAddressFinder, kubernetesStatusQueue, c, featureGates, clientsManager)
 	if err != nil {
 		return fmt.Errorf("unable to setup controller as expected %w", err)
 	}
@@ -192,8 +207,15 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 		// the argument checking the watch namespaces length enables or disables mesh detection. the mesh detect client
 		// attempts to use all namespaces and can't utilize a manager multi-namespaced cache, so if we need to limit
 		// namespace access we just disable mesh detection altogether.
-		if err := mgrutils.RunReport(ctx, kubeconfig, kongConfig, c.PublishService.String(), metadata.Release,
-			len(c.WatchNamespaces) == 0, featureGates); err != nil {
+		if err := mgrutils.RunReport(
+			ctx,
+			kubeconfig,
+			c.PublishService.String(),
+			metadata.Release,
+			len(c.WatchNamespaces) == 0,
+			featureGates,
+			clientsManager,
+		); err != nil {
 			setupLog.Error(err, "anonymous reporting failed")
 		}
 	} else {

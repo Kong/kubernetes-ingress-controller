@@ -94,6 +94,8 @@ Adding a new version? You'll need three changes:
   [#3496](https://github.com/Kong/kubernetes-ingress-controller/pull/3496)
 - The `ReferenceGrant` has been promoted to beta.
   [#3507](https://github.com/Kong/kubernetes-ingress-controller/pull/3507)
+  Enable `ReferenceGrant` if `Gateway` feature gate is turned on.
+- [#3519](https://github.com/Kong/kubernetes-ingress-controller/pull/3519)
 
 ### Fixed
 

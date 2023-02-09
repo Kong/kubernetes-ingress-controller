@@ -167,7 +167,8 @@ func getTestManifest(t *testing.T, baseManifestPath string) (io.Reader, error) {
 	return manifestsReader, nil
 }
 
-func patchControllerImageHelper(manifestReader io.Reader, baseManifestPath string) (io.Reader, error) {
+// patchControllerImageFromEnv will optionally replace a default controller image in manifests with one of `imageLoad` or `imageOverride` if any is set.
+func patchControllerImageFromEnv(manifestReader io.Reader, baseManifestPath string) (io.Reader, error) {
 	var imageFullname string
 	if imageLoad != "" {
 		imageFullname = imageLoad

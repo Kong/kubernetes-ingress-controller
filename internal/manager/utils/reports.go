@@ -65,7 +65,7 @@ func RunReport(
 	// https://github.com/Kong/kubernetes-ingress-controller/issues/3362
 
 	// gather versioning information from the kong client
-	root, err := clientsProvider.AllClients()[0].AdminAPIClient().Root(ctx)
+	root, err := clientsProvider.GatewayClients()[0].AdminAPIClient().Root(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to get Kong root config data: %w", err)
 	}

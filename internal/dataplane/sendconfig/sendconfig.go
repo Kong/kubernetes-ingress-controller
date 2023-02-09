@@ -10,7 +10,6 @@ import (
 
 	"github.com/kong/deck/file"
 	"github.com/kong/go-kong/kong"
-	"github.com/prometheus/client_golang/prometheus"
 	"github.com/sirupsen/logrus"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/adminapi"
@@ -52,31 +51,15 @@ func PerformUpdate(ctx context.Context,
 
 	timeStart := time.Now()
 	err = updateStrategy.Update(ctx, targetContent)
-	timeEnd := time.Now()
+	duration := time.Since(timeStart)
 
 	metricsProtocol := updateStrategy.MetricsProtocol()
 	if err != nil {
-		promMetrics.ConfigPushCount.With(prometheus.Labels{
-			metrics.SuccessKey:       metrics.SuccessFalse,
-			metrics.ProtocolKey:      metricsProtocol,
-			metrics.FailureReasonKey: pushFailureReason(err),
-		}).Inc()
-		promMetrics.ConfigPushDuration.With(prometheus.Labels{
-			metrics.SuccessKey:  metrics.SuccessFalse,
-			metrics.ProtocolKey: metricsProtocol,
-		}).Observe(float64(timeEnd.Sub(timeStart).Milliseconds()))
+		promMetrics.RecordPushFailure(metricsProtocol, duration, client.BaseRootURL(), err)
 		return nil, err
 	}
 
-	promMetrics.ConfigPushCount.With(prometheus.Labels{
-		metrics.SuccessKey:       metrics.SuccessTrue,
-		metrics.ProtocolKey:      metricsProtocol,
-		metrics.FailureReasonKey: "",
-	}).Inc()
-	promMetrics.ConfigPushDuration.With(prometheus.Labels{
-		metrics.SuccessKey:  metrics.SuccessTrue,
-		metrics.ProtocolKey: metricsProtocol,
-	}).Observe(float64(timeEnd.Sub(timeStart).Milliseconds()))
+	promMetrics.RecordPushSuccess(metricsProtocol, duration, client.BaseRootURL())
 	log.Info("successfully synced configuration to kong.")
 	return newSHA, nil
 }

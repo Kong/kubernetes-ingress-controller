@@ -58,6 +58,6 @@ func (s UpdateStrategyInMemory) Update(
 	return nil
 }
 
-func (s UpdateStrategyInMemory) MetricsProtocol() string {
+func (s UpdateStrategyInMemory) MetricsProtocol() metrics.Protocol {
 	return metrics.ProtocolDBLess
 }

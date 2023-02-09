@@ -110,6 +110,11 @@ Adding a new version? You'll need three changes:
   which accepts a namespaced name of headless kong admin service which should have
   Admin API endpoints exposed under a named port called `admin`
   [#3421](https://github.com/Kong/kubernetes-ingress-controller/pull/3421)
+- Added `dataplane` metrics label for `ingress_controller_configuration_push_count`
+  and `ingress_controller_configuration_push_duration_milliseconds`. This means
+  that all time series for those metrics will get a new label designating the
+  address of the dataplane that the configuration push has been targeted for.
+  [#3521](https://github.com/Kong/kubernetes-ingress-controller/pull/3521)
 
 ### Fixed
 

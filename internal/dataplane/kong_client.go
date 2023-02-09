@@ -10,7 +10,6 @@ import (
 
 	"github.com/kong/deck/file"
 	"github.com/kong/go-kong/kong"
-	"github.com/prometheus/client_golang/prometheus"
 	"github.com/samber/lo"
 	"github.com/sirupsen/logrus"
 	"github.com/sourcegraph/conc/iter"
@@ -43,7 +42,7 @@ const (
 
 type ClientsProvider interface {
 	AllClients() []*adminapi.Client
-	KongGatewayClients() []*adminapi.Client
+	GatewayClients() []*adminapi.Client
 }
 
 // -----------------------------------------------------------------------------
@@ -259,7 +258,7 @@ func (c *KongClient) Listeners(ctx context.Context) ([]kong.ProxyListener, []kon
 	// between reading the client(s) and setting the last applied SHA via client's
 	// SetLastConfigSHA() method. It's not ideal but it should do for now.
 	c.lock.RLock()
-	for _, cl := range c.clientsProvider.KongGatewayClients() {
+	for _, cl := range c.clientsProvider.GatewayClients() {
 		cl := cl
 
 		errg.Go(func() error {
@@ -412,15 +411,11 @@ func (c *KongClient) Update(ctx context.Context) error {
 	// parse the Kubernetes objects from the storer into Kong configuration
 	kongstate, translationFailures := p.Build()
 	if failuresCount := len(translationFailures); failuresCount > 0 {
-		c.prometheusMetrics.TranslationCount.With(prometheus.Labels{
-			metrics.SuccessKey: metrics.SuccessFalse,
-		}).Inc()
+		c.prometheusMetrics.RecordTranslationFailure()
 		c.recordResourceFailureEvents(translationFailures, KongConfigurationTranslationFailedEventReason)
 		c.logger.Debugf("%d translation failures have occurred when building data-plane configuration", failuresCount)
 	} else {
-		c.prometheusMetrics.TranslationCount.With(prometheus.Labels{
-			metrics.SuccessKey: metrics.SuccessTrue,
-		}).Inc()
+		c.prometheusMetrics.RecordTranslationSuccess()
 		c.logger.Debug("successfully built data-plane configuration")
 	}
 

@@ -2,10 +2,7 @@ package sendconfig
 
 import (
 	"context"
-	"errors"
 	"fmt"
-	"net"
-	"net/http"
 
 	"github.com/blang/semver/v4"
 	"github.com/kong/deck/diff"
@@ -15,6 +12,7 @@ import (
 	deckutils "github.com/kong/deck/utils"
 	"github.com/kong/go-kong/kong"
 
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/deckerrors"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/metrics"
 )
 
@@ -49,7 +47,7 @@ func (s UpdateStrategyDBMode) Update(ctx context.Context, targetContent *file.Co
 
 	ts, err := s.targetState(ctx, cs, targetContent)
 	if err != nil {
-		return deckConfigConflictError{err}
+		return deckerrors.ConfigConflictError{Err: err}
 	}
 
 	syncer, err := diff.NewSyncer(diff.SyncerOpts{
@@ -70,7 +68,7 @@ func (s UpdateStrategyDBMode) Update(ctx context.Context, targetContent *file.Co
 	return nil
 }
 
-func (s UpdateStrategyDBMode) MetricsProtocol() string {
+func (s UpdateStrategyDBMode) MetricsProtocol() metrics.Protocol {
 	return metrics.ProtocolDeck
 }
 
@@ -97,56 +95,4 @@ func (s UpdateStrategyDBMode) targetState(
 	}
 
 	return state.Get(rawState)
-}
-
-// deckConfigConflictError is an error used to wrap deck config conflict errors returned from deck functions
-// transforming KongRawState to KongState (e.g. state.Get, dump.Get).
-type deckConfigConflictError struct {
-	err error
-}
-
-func (e deckConfigConflictError) Error() string {
-	return e.err.Error()
-}
-
-func (e deckConfigConflictError) Is(target error) bool {
-	_, ok := target.(deckConfigConflictError)
-	return ok
-}
-
-func (e deckConfigConflictError) Unwrap() error {
-	return e.err
-}
-
-// pushFailureReason extracts config push failure reason from an error returned from onUpdateInMemoryMode or onUpdateDBMode.
-func pushFailureReason(err error) string {
-	var netErr net.Error
-	if errors.As(err, &netErr) {
-		return metrics.FailureReasonNetwork
-	}
-
-	if isConflictErr(err) {
-		return metrics.FailureReasonConflict
-	}
-
-	return metrics.FailureReasonOther
-}
-
-func isConflictErr(err error) bool {
-	var apiErr *kong.APIError
-	if errors.As(err, &apiErr) && apiErr.Code() == http.StatusConflict ||
-		errors.Is(err, deckConfigConflictError{}) {
-		return true
-	}
-
-	var deckErrArray deckutils.ErrArray
-	if errors.As(err, &deckErrArray) {
-		for _, err := range deckErrArray.Errors {
-			if isConflictErr(err) {
-				return true
-			}
-		}
-	}
-
-	return false
 }

@@ -151,17 +151,16 @@ func setupAdmissionServer(
 	ctx context.Context,
 	managerConfig *Config,
 	managerClient client.Client,
-	logger logr.Logger,
 	deprecatedLogger logrus.FieldLogger,
 ) error {
-	deprecatedLogger = deprecatedLogger.WithField("component", "admission-server")
+	logger := deprecatedLogger.WithField("component", "admission-server")
 
 	if managerConfig.AdmissionServer.ListenAddr == "off" {
-		deprecatedLogger.Info("admission webhook server disabled")
+		logger.Info("admission webhook server disabled")
 		return nil
 	}
 
-	kongclients, err := managerConfig.getKongClients(ctx, logger)
+	kongclients, err := managerConfig.getKongClients(ctx)
 	if err != nil {
 		return err
 	}
@@ -178,18 +177,18 @@ func setupAdmissionServer(
 		Validator: admission.NewKongHTTPValidator(
 			designatedKongClient.Consumers,
 			designatedKongClient.Plugins,
-			deprecatedLogger,
+			logger,
 			managerClient,
 			managerConfig.IngressClassName,
 		),
-		Logger: deprecatedLogger,
-	}, deprecatedLogger)
+		Logger: logger,
+	}, logger)
 	if err != nil {
 		return err
 	}
 	go func() {
 		err := srv.ListenAndServeTLS("", "")
-		deprecatedLogger.WithError(err).Error("admission webhook server stopped")
+		logger.WithError(err).Error("admission webhook server stopped")
 	}()
 	return nil
 }
@@ -266,7 +265,7 @@ func generateAddressFinderGetter(mgrc client.Client, publishServiceNn types.Name
 // to create the list of clients.
 // When a headless service name is provided via --kong-admin-svc then that is used
 // to obtain a list of endpoints via EndpointSlice lookup in kubernetes API.
-func (c *Config) getKongClients(ctx context.Context, logger logr.Logger) ([]*adminapi.Client, error) {
+func (c *Config) getKongClients(ctx context.Context) ([]*adminapi.Client, error) {
 	httpclient, err := adminapi.MakeHTTPClient(&c.KongAdminAPIConfig, c.KongAdminToken)
 	if err != nil {
 		return nil, err

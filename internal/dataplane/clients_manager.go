@@ -87,14 +87,14 @@ func (c *AdminAPIClientsManager) Notify(addresses []string) {
 	}
 }
 
-// SetKonnectClient sets a client that will be used to communicate with Konnect Runtime Group API.
+// SetKonnectClient sets a client that will be used to communicate with Konnect Runtime Group Admin API.
 func (c *AdminAPIClientsManager) SetKonnectClient(client *adminapi.Client) {
 	c.clientsLock.Lock()
 	defer c.clientsLock.Unlock()
 	c.clients = append(c.clients, client)
 }
 
-// Clients returns a copy of current client's slice. It will also include Konnect client if set.
+// AllClients returns a copy of current client's slice. It will also include Konnect client if set.
 func (c *AdminAPIClientsManager) AllClients() []*adminapi.Client {
 	c.clientsLock.RLock()
 	defer c.clientsLock.RUnlock()
@@ -109,9 +109,9 @@ func (c *AdminAPIClientsManager) AllClients() []*adminapi.Client {
 	return copied
 }
 
-// KongGatewayClients returns a copy of current client's slice. Konnect client won't be included.
+// GatewayClients returns a copy of current client's slice. Konnect client won't be included.
 // This method can be used when some actions need to be performed only against Kong Gateway clients.
-func (c *AdminAPIClientsManager) KongGatewayClients() []*adminapi.Client {
+func (c *AdminAPIClientsManager) GatewayClients() []*adminapi.Client {
 	c.clientsLock.RLock()
 	defer c.clientsLock.RUnlock()
 

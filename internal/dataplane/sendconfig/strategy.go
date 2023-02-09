@@ -6,6 +6,8 @@ import (
 	"github.com/kong/deck/dump"
 	"github.com/kong/deck/file"
 	"github.com/kong/go-kong/kong"
+
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/metrics"
 )
 
 // UpdateStrategy is the way we approach updating data-plane's configuration, depending on its type.
@@ -14,7 +16,7 @@ type UpdateStrategy interface {
 	Update(ctx context.Context, targetContent *file.Content) error
 
 	// MetricsProtocol returns a string describing the update strategy type to be used in metrics.
-	MetricsProtocol() string
+	MetricsProtocol() metrics.Protocol
 }
 
 type UpdateClient interface {

@@ -59,7 +59,7 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 		return fmt.Errorf("get kubeconfig from file %q: %w", c.KubeconfigPath, err)
 	}
 	setupLog.Info("getting the kong admin api client configuration")
-	initialKongClients, err := c.getKongClients(ctx, setupLog)
+	initialKongClients, err := c.getKongClients(ctx)
 	if err != nil {
 		return fmt.Errorf("unable to build kong api client(s): %w", err)
 	}
@@ -98,7 +98,7 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 	}
 
 	setupLog.Info("Starting Admission Server")
-	if err := setupAdmissionServer(ctx, c, mgr.GetClient(), setupLog, deprecatedLogger); err != nil {
+	if err := setupAdmissionServer(ctx, c, mgr.GetClient(), deprecatedLogger); err != nil {
 		return err
 	}
 

@@ -5,11 +5,8 @@ import (
 	"context"
 	"encoding/hex"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
-	"net"
-	"net/http"
 	"sync"
 	"time"
 
@@ -20,10 +17,10 @@ import (
 	"github.com/kong/deck/state"
 	deckutils "github.com/kong/deck/utils"
 	"github.com/kong/go-kong/kong"
-	"github.com/prometheus/client_golang/prometheus"
 	"github.com/sirupsen/logrus"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/adminapi"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/deckerrors"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/deckgen"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/metrics"
 )
@@ -58,7 +55,7 @@ func PerformUpdate(ctx context.Context,
 		}
 	}
 
-	var metricsProtocol string
+	var metricsProtocol metrics.Protocol
 	timeStart := time.Now()
 	if config.InMemory {
 		metricsProtocol = metrics.ProtocolDBLess
@@ -68,30 +65,14 @@ func PerformUpdate(ctx context.Context,
 		dumpConfig := dump.Config{SelectorTags: config.FilterTags, SkipCACerts: config.SkipCACertificates}
 		err = onUpdateDBMode(ctx, targetContent, client, dumpConfig, config)
 	}
-	timeEnd := time.Now()
+	duration := time.Since(timeStart)
 
 	if err != nil {
-		promMetrics.ConfigPushCount.With(prometheus.Labels{
-			metrics.SuccessKey:       metrics.SuccessFalse,
-			metrics.ProtocolKey:      metricsProtocol,
-			metrics.FailureReasonKey: pushFailureReason(err),
-		}).Inc()
-		promMetrics.ConfigPushDuration.With(prometheus.Labels{
-			metrics.SuccessKey:  metrics.SuccessFalse,
-			metrics.ProtocolKey: metricsProtocol,
-		}).Observe(float64(timeEnd.Sub(timeStart).Milliseconds()))
+		promMetrics.RecordPushFailure(metricsProtocol, duration, client.BaseRootURL(), err)
 		return nil, err
 	}
 
-	promMetrics.ConfigPushCount.With(prometheus.Labels{
-		metrics.SuccessKey:       metrics.SuccessTrue,
-		metrics.ProtocolKey:      metricsProtocol,
-		metrics.FailureReasonKey: "",
-	}).Inc()
-	promMetrics.ConfigPushDuration.With(prometheus.Labels{
-		metrics.SuccessKey:  metrics.SuccessTrue,
-		metrics.ProtocolKey: metricsProtocol,
-	}).Observe(float64(timeEnd.Sub(timeStart).Milliseconds()))
+	promMetrics.RecordPushSuccess(metricsProtocol, duration, client.BaseRootURL())
 	log.Info("successfully synced configuration to kong.")
 	return newSHA, nil
 }
@@ -143,7 +124,7 @@ func onUpdateDBMode(
 
 	ts, err := targetState(ctx, targetContent, cs, config.Version, client, dumpConfig)
 	if err != nil {
-		return deckConfigConflictError{err}
+		return deckerrors.ConfigConflictError{Err: err}
 	}
 
 	syncer, err := diff.NewSyncer(diff.SyncerOpts{
@@ -215,58 +196,6 @@ func hasSHAUpdateAlreadyBeenReported(latestUpdateSHA []byte) bool {
 		return true
 	}
 	latestReportedSHA = latestUpdateSHA
-	return false
-}
-
-// deckConfigConflictError is an error used to wrap deck config conflict errors returned from deck functions
-// transforming KongRawState to KongState (e.g. state.Get, dump.Get).
-type deckConfigConflictError struct {
-	err error
-}
-
-func (e deckConfigConflictError) Error() string {
-	return e.err.Error()
-}
-
-func (e deckConfigConflictError) Is(target error) bool {
-	_, ok := target.(deckConfigConflictError)
-	return ok
-}
-
-func (e deckConfigConflictError) Unwrap() error {
-	return e.err
-}
-
-// pushFailureReason extracts config push failure reason from an error returned from onUpdateInMemoryMode or onUpdateDBMode.
-func pushFailureReason(err error) string {
-	var netErr net.Error
-	if errors.As(err, &netErr) {
-		return metrics.FailureReasonNetwork
-	}
-
-	if isConflictErr(err) {
-		return metrics.FailureReasonConflict
-	}
-
-	return metrics.FailureReasonOther
-}
-
-func isConflictErr(err error) bool {
-	var apiErr *kong.APIError
-	if errors.As(err, &apiErr) && apiErr.Code() == http.StatusConflict ||
-		errors.Is(err, deckConfigConflictError{}) {
-		return true
-	}
-
-	var deckErrArray deckutils.ErrArray
-	if errors.As(err, &deckErrArray) {
-		for _, err := range deckErrArray.Errors {
-			if isConflictErr(err) {
-				return true
-			}
-		}
-	}
-
 	return false
 }
 

@@ -14,6 +14,7 @@ import (
 	"github.com/samber/lo"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
+	"golang.org/x/exp/slices"
 	corev1 "k8s.io/api/core/v1"
 	netv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -129,12 +130,12 @@ type clientFactoryWithExpected struct {
 }
 
 func (cf clientFactoryWithExpected) CreateAdminAPIClient(ctx context.Context, address string) (adminapi.Client, error) {
-	num, ok := cf.expected[address]
+	stillExpecting, ok := cf.expected[address]
 	if !ok {
 		cf.t.Errorf("got %s which was unexpected", address)
 		return adminapi.Client{}, fmt.Errorf("got %s which was unexpected", address)
 	}
-	if !num {
+	if !stillExpecting {
 		cf.t.Errorf("got %s more than once", address)
 		return adminapi.Client{}, fmt.Errorf("got %s more than once", address)
 	}
@@ -146,6 +147,14 @@ func (cf clientFactoryWithExpected) CreateAdminAPIClient(ctx context.Context, ad
 	}
 
 	return adminapi.NewClient(kongClient), nil
+}
+
+func (cf clientFactoryWithExpected) AssertExpectedCalls() {
+	for addr, stillExpected := range cf.expected {
+		if stillExpected {
+			cf.t.Errorf("%s client expected to be called, but wasn't", addr)
+		}
+	}
 }
 
 func TestClientAddressesNotifications(t *testing.T) {
@@ -185,6 +194,10 @@ func TestClientAddressesNotifications(t *testing.T) {
 	defer srv2.Close()
 	expected[srv2.URL] = true
 
+	testClientFactoryWithExpected := clientFactoryWithExpected{
+		expected: expected,
+		t:        t,
+	}
 	client, err := NewKongClient(ctx, logger, time.Second, "", false, true, util.ConfigDumpDiagnostic{},
 		sendconfig.New(ctx, logr.Discard(), []adminapi.Client{},
 			sendconfig.Config{
@@ -194,47 +207,48 @@ func TestClientAddressesNotifications(t *testing.T) {
 		),
 		nil,
 		"off",
-		clientFactoryWithExpected{
-			expected: expected,
-			t:        t,
-		},
+		testClientFactoryWithExpected,
 	)
 	require.NoError(t, err)
+	defer testClientFactoryWithExpected.AssertExpectedCalls()
 
-	requireClientsCountEventually := func(t *testing.T, c *KongClient, n int, args ...any) {
+	requireClientsCountEventually := func(t *testing.T, c *KongClient, addresses []string, args ...any) {
 		require.Eventually(t, func() bool {
 			c.lock.RLock()
 			defer c.lock.RUnlock()
-			return len(c.kongConfig.Clients) == n
+			clientAddresses := lo.Map(c.kongConfig.Clients, func(cl adminapi.Client, _ int) string {
+				return cl.BaseRootURL()
+			})
+			return slices.Equal(addresses, clientAddresses)
 		}, time.Second, time.Millisecond, args...,
 		)
 	}
 
-	requireClientsCountEventually(t, client, 0,
+	requireClientsCountEventually(t, client, []string{},
 		"initially there should be 0 clients")
 
 	client.Notify([]string{srv.URL})
-	requireClientsCountEventually(t, client, 1,
+	requireClientsCountEventually(t, client, []string{srv.URL},
 		"after notifying about a new address we should get 1 client eventually")
 
 	client.Notify([]string{srv.URL})
-	requireClientsCountEventually(t, client, 1,
+	requireClientsCountEventually(t, client, []string{srv.URL},
 		"after notifying the same address there's no update in clients")
 
 	client.Notify([]string{srv.URL, srv2.URL})
-	requireClientsCountEventually(t, client, 2,
+	requireClientsCountEventually(t, client, []string{srv.URL, srv2.URL},
 		"after notifying new address set including the old already existing one we get both the old and the new")
 
 	client.Notify([]string{srv.URL, srv2.URL})
-	requireClientsCountEventually(t, client, 2,
+	requireClientsCountEventually(t, client, []string{srv.URL, srv2.URL},
 		"notifying again with the same set of URLs should not change the existing URLs")
 
 	client.Notify([]string{srv.URL})
-	requireClientsCountEventually(t, client, 1,
+	requireClientsCountEventually(t, client, []string{srv.URL},
 		"notifying again with just one URL should decrease the set of URLs to just this one")
 
 	client.Notify([]string{})
-	requireClientsCountEventually(t, client, 0)
+	requireClientsCountEventually(t, client, []string{})
 
 	// We could test here notifying about srv.URL and srv2.URL again but there's
 	// no data structure in the client that could notify us about a removal of
@@ -255,6 +269,7 @@ func TestClientAdjustInternalClientsAfterNotification(t *testing.T) {
 	cf := &clientFactoryWithExpected{
 		t: t,
 	}
+	defer cf.AssertExpectedCalls()
 	client, err := NewKongClient(ctx, logger, time.Second, "", false, true, util.ConfigDumpDiagnostic{},
 		sendconfig.New(ctx, logr.Discard(), []adminapi.Client{},
 			sendconfig.Config{

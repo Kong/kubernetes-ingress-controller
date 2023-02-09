@@ -150,7 +150,7 @@ func GetRoots(
 	setupLog logr.Logger,
 	retries uint,
 	retryDelay time.Duration,
-	kongClients []adminapi.Client,
+	kongClients []*adminapi.Client,
 ) ([]Root, error) {
 	var (
 		roots []Root

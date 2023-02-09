@@ -26,15 +26,15 @@ type clientFactoryWithExpected struct {
 	t        *testing.T
 }
 
-func (cf clientFactoryWithExpected) CreateAdminAPIClient(ctx context.Context, address string) (adminapi.Client, error) {
+func (cf clientFactoryWithExpected) CreateAdminAPIClient(ctx context.Context, address string) (*adminapi.Client, error) {
 	stillExpecting, ok := cf.expected[address]
 	if !ok {
 		cf.t.Errorf("got %s which was unexpected", address)
-		return adminapi.Client{}, fmt.Errorf("got %s which was unexpected", address)
+		return nil, fmt.Errorf("got %s which was unexpected", address)
 	}
 	if !stillExpecting {
 		cf.t.Errorf("got %s more than once", address)
-		return adminapi.Client{}, fmt.Errorf("got %s more than once", address)
+		return nil, fmt.Errorf("got %s more than once", address)
 	}
 	cf.expected[address] = false
 
@@ -105,7 +105,7 @@ func TestClientAddressesNotifications(t *testing.T) {
 	manager, err := NewAdminAPIClientsManager(
 		ctx,
 		logger,
-		[]adminapi.Client{initialClient},
+		[]*adminapi.Client{initialClient},
 		testClientFactoryWithExpected,
 	)
 	require.NoError(t, err)
@@ -117,7 +117,7 @@ func TestClientAddressesNotifications(t *testing.T) {
 
 	requireClientsCountEventually := func(t *testing.T, c *AdminAPIClientsManager, addresses []string, args ...any) {
 		require.Eventually(t, func() bool {
-			clientAddresses := lo.Map(c.Clients(), func(cl adminapi.Client, _ int) string {
+			clientAddresses := lo.Map(c.Clients(), func(cl *adminapi.Client, _ int) string {
 				return cl.BaseRootURL()
 			})
 			return slices.Equal(addresses, clientAddresses)
@@ -172,7 +172,7 @@ func TestClientAdjustInternalClientsAfterNotification(t *testing.T) {
 	// Initial client is expected to be replaced later on.
 	testClient, err := adminapi.NewTestClient("localhost:8083")
 	require.NoError(t, err)
-	manager, err := NewAdminAPIClientsManager(ctx, logger, []adminapi.Client{testClient}, cf)
+	manager, err := NewAdminAPIClientsManager(ctx, logger, []*adminapi.Client{testClient}, cf)
 	require.NoError(t, err)
 	require.NotNil(t, manager)
 	manager.RunNotifyLoop()

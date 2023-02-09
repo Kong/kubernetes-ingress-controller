@@ -42,7 +42,7 @@ const (
 )
 
 type ClientsProvider interface {
-	Clients() []adminapi.Client
+	Clients() []*adminapi.Client
 }
 
 // -----------------------------------------------------------------------------
@@ -455,9 +455,9 @@ func (c *KongClient) sendOutToClients(
 ) ([]string, error) {
 	clients := c.clientsProvider.Clients()
 	c.logger.Debugf("sending configuration to %d clients", len(clients))
-	shas, err := iter.MapErr(clients, func(client *adminapi.Client) (string, error) {
-		newSHA, err := c.sendToClient(ctx, client, s, formatVersion, config)
-		return handleSendToClientResult(client, newSHA, err)
+	shas, err := iter.MapErr(clients, func(client **adminapi.Client) (string, error) {
+		newSHA, err := c.sendToClient(ctx, *client, s, formatVersion, config)
+		return handleSendToClientResult(*client, newSHA, err)
 	},
 	)
 	if err != nil {

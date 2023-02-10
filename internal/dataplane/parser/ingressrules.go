@@ -101,14 +101,13 @@ func (ir *ingressRules) populateServices(log logrus.FieldLogger, s store.Storer,
 					"service": *service.Name,
 				}).Error("multi-service backend lacks parent info, cannot generate tags")
 			}
-		}
-		// TODO https://github.com/Kong/kubernetes-ingress-controller/issues/3484
-		// somehow https://gist.github.com/rainest/8d5a067e9c8b93c98100559fcbe75631 results in _ZERO_
-		// k8sServices, causing a panic here without this if clause.
-		// That shouldn't happen and requires further investigation.
-		if len(k8sServices) > 0 {
+		} else if len(k8sServices) > 0 {
 			service.Tags = util.GenerateTagsForObject(k8sServices[0])
 		} else {
+			// TODO https://github.com/Kong/kubernetes-ingress-controller/issues/3484
+			// somehow https://gist.github.com/rainest/8d5a067e9c8b93c98100559fcbe75631 results in _ZERO_
+			// k8sServices, causing a panic here without this if clause.
+			// That shouldn't happen and requires further investigation.
 			log.WithFields(logrus.Fields{
 				"service": *service.Name,
 			}).Error("service has zero k8sServices backends, cannot generate tags for it properly")

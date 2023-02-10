@@ -10,7 +10,7 @@ import (
 	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/sendconfig"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/meshdetect"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 )
@@ -19,11 +19,11 @@ import (
 func RunReport(
 	ctx context.Context,
 	kubeCfg *rest.Config,
-	kongCfg sendconfig.Kong,
 	publishServiceName string,
 	kicVersion string,
 	meshDetection bool,
 	featureGates map[string]bool,
+	clientsProvider dataplane.AdminAPIClientsProvider,
 ) error {
 	// if anonymous reports are enabled this helps provide Kong with insights about usage of the ingress controller
 	// which is non-sensitive and predominantly informs us of the controller and cluster versions in use.
@@ -65,7 +65,7 @@ func RunReport(
 	// https://github.com/Kong/kubernetes-ingress-controller/issues/3362
 
 	// gather versioning information from the kong client
-	root, err := kongCfg.Clients[0].AdminAPIClient().Root(ctx)
+	root, err := clientsProvider.Clients()[0].AdminAPIClient().Root(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to get Kong root config data: %w", err)
 	}

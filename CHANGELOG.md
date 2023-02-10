@@ -113,7 +113,8 @@ Adding a new version? You'll need three changes:
   indicating which Kubernetes resource was responsible for the broken Kong
   configuration.
   [#3446](https://github.com/Kong/kubernetes-ingress-controller/pull/3446)
-
+- Leader election is enabled by default then kong admin service discovery is enabled.
+  [#3529](https://github.com/Kong/kubernetes-ingress-controller/pull/3529)
 
 ### Fixed
 
@@ -130,7 +131,7 @@ Adding a new version? You'll need three changes:
   [#3318](https://github.com/Kong/kubernetes-ingress-controller/pull/3318)
 - `--konnect-sync-enabled` feature flag has been introduced. It enables the
   integration with Kong's Konnect cloud. It's turned off by default.
-  When enabled, it allows to synchronise data-plane configuration with
+  When enabled, it allows synchronising data-plane configuration with
   a Konnect Runtime Group specified by `--konnect-runtime-group-id`.
   It requires `--konnect-tls-client-*` set of flags to be set to provide
   Runtime Group's TLS client certificates for authentication.

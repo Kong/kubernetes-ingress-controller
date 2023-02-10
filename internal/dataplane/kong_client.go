@@ -419,10 +419,18 @@ func (c *KongClient) Update(ctx context.Context) error {
 		c.prometheusMetrics.RecordTranslationSuccess()
 		c.logger.Debug("successfully built data-plane configuration")
 	}
+	// send the status whether translation errors happened if there is a channel to receive the status.
+	if c.hasTranslationErrorChan != nil {
+		c.hasTranslationErrorChan <- (len(translationFailures) > 0)
+	}
 
 	shas, err := c.sendOutToClients(ctx, kongstate, formatVersion, c.kongConfig)
 	if err != nil {
 		return err
+	}
+	// send the error on applying kong configurations if  there is a channel to receive it.
+	if c.sendConfigErrorChan != nil {
+		c.sendConfigErrorChan <- err
 	}
 
 	// report on configured Kubernetes objects if enabled

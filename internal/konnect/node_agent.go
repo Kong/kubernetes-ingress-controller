@@ -20,6 +20,12 @@ type NodeAgent struct {
 
 	konnectClient   *NodeAPIClient
 	refreshInterval time.Duration
+
+	hasTranslationFailureChan chan bool
+	hasTranslationFailure     bool
+
+	sendConfigErrorChan chan error
+	sendCondifError     error
 }
 
 func NewNodeAgent(hostname string, version string, logger logr.Logger, client *NodeAPIClient) *NodeAgent {
@@ -71,6 +77,16 @@ func (a *NodeAgent) clearOutdatedNodes() error {
 	return nil
 }
 
+func (a *NodeAgent) calculateStatus() IngressControllerState {
+	if a.sendCondifError != nil {
+		return IngressControllerStateInoperable
+	}
+	if a.hasTranslationFailure {
+		return IngressControllerStatePartialConfigFail
+	}
+	return IngressControllerStateOperational
+}
+
 func (a *NodeAgent) updateNode() error {
 	err := a.clearOutdatedNodes()
 	if err != nil {
@@ -78,9 +94,7 @@ func (a *NodeAgent) updateNode() error {
 		return err
 	}
 
-	// TODO: retrieve the real state of KIC
-	// https://github.com/Kong/kubernetes-ingress-controller/issues/3515
-	ingressControllerStatus := IngressControllerStateOperational
+	ingressControllerStatus := a.calculateStatus()
 
 	updateNodeReq := &UpdateNodeRequest{
 		Hostname: a.Hostname,
@@ -112,6 +126,16 @@ func (a *NodeAgent) updateNodeLoop() {
 	}
 }
 
+// receiveStatus receives the necessary information to set the status.
+func (a *NodeAgent) receiveStatus() {
+	for {
+		select {
+		case a.hasTranslationFailure = <-a.hasTranslationFailureChan:
+		case a.sendCondifError = <-a.sendConfigErrorChan:
+		}
+	}
+}
+
 func (a *NodeAgent) Run() {
 	err := a.createNode()
 	if err != nil {
@@ -119,4 +143,5 @@ func (a *NodeAgent) Run() {
 		return
 	}
 	go a.updateNodeLoop()
+	go a.receiveStatus()
 }

@@ -81,6 +81,7 @@ func parseFlatEntityErrors(body []byte, log logrus.FieldLogger) ([]ResourceError
 				log.WithFields(logrus.Fields{
 					"name":  ee.Name,
 					"field": p.Field}).Error("entity has both single and array errors for field")
+
 				continue
 			}
 			if len(p.Message) > 0 {
@@ -88,7 +89,7 @@ func parseFlatEntityErrors(body []byte, log logrus.FieldLogger) ([]ResourceError
 			}
 			if len(p.Messages) > 0 {
 				for i, message := range p.Messages {
-					if len(message) > 0 { // TODO how are the nulls treated?
+					if len(message) > 0 {
 						raw.Problems[fmt.Sprintf("%s[%d]", p.Field, i)] = message
 					}
 				}

@@ -60,7 +60,7 @@ func PerformUpdate(ctx context.Context,
 	}
 
 	promMetrics.RecordPushSuccess(metricsProtocol, duration, client.BaseRootURL())
-	log.Info("successfully synced configuration to kong.")
+	log.Info("successfully synced configuration to kong")
 	return newSHA, nil
 }
 

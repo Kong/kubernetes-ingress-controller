@@ -449,7 +449,7 @@ func (c *KongClient) sendOutToClients(
 	c.logger.Debugf("sending configuration to %d clients", len(clients))
 	shas, err := iter.MapErr(clients, func(client **adminapi.Client) (string, error) {
 		newSHA, err := c.sendToClient(ctx, *client, s, formatVersion, config)
-		return handleSendToClientResult(*client, newSHA, err)
+		return handleSendToClientResult(*client, c.logger, newSHA, err)
 	},
 	)
 	if err != nil {
@@ -511,10 +511,11 @@ func (c *KongClient) sendToClient(
 
 // handleSendToClientResult handles a result returned from sendToClient.
 // It will ignore errors that are returned from Konnect client.
-func handleSendToClientResult(client sendconfig.KonnectAwareClient, newSHA string, err error) (string, error) {
+func handleSendToClientResult(client sendconfig.KonnectAwareClient, logger logrus.FieldLogger, newSHA string, err error) (string, error) {
 	if err != nil {
 		// We do not collect errors from Konnect as they should not break the data-plane loop.
 		if client.IsKonnect() {
+			logger.Error(err, "failed pushing configuration to Konnect")
 			return "", nil
 		}
 		return "", err

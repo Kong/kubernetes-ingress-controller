@@ -40,8 +40,7 @@ func ResolveUpdateStrategy(
 		return NewUpdateStrategyDBMode(
 			adminAPIClient,
 			dump.Config{
-				SkipCACerts:         config.SkipCACertificates,
-				SelectorTags:        config.FilterTags,
+				SkipCACerts:         true,
 				KonnectRuntimeGroup: client.KonnectRuntimeGroup(),
 			},
 			config.Version,

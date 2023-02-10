@@ -4,6 +4,7 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
@@ -163,7 +164,7 @@ func TestHandleSendToClientResult(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			c := konnectClient{isKonnect: tc.isKonnect}
-			resultSHA, err := handleSendToClientResult(c, tc.inputSHA, tc.inputErr)
+			resultSHA, err := handleSendToClientResult(c, logrus.New(), tc.inputSHA, tc.inputErr)
 			assert.Equal(t, tc.expectedErr, err)
 			assert.Equal(t, tc.expectedSHA, resultSHA)
 		})

@@ -85,7 +85,7 @@ func (c *AdminAPIClientsManager) Notify(addresses []string) {
 	}
 }
 
-// Clients returns a copy of current client's slice.
+// Clients returns a copy of current clients slice.
 func (c *AdminAPIClientsManager) Clients() []*adminapi.Client {
 	c.clientsLock.RLock()
 	defer c.clientsLock.RUnlock()

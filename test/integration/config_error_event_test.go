@@ -35,14 +35,6 @@ func TestConfigErrorEventGeneration(t *testing.T) {
 	}
 	ctx := context.Background()
 	ns, cleaner := helpers.Setup(ctx, t, env)
-	defer func() {
-		if t.Failed() {
-			output, err := cleaner.DumpDiagnostics(ctx, t.Name())
-			t.Logf("%s failed, dumped diagnostics to %s", t.Name(), output)
-			assert.NoError(t, err)
-		}
-		assert.NoError(t, cleaner.Cleanup(ctx))
-	}()
 
 	t.Log("deploying a minimal HTTP container deployment to test Ingress routes")
 	container := generators.NewContainer("httpbin", test.HTTPBinImage, 80)
@@ -109,4 +101,5 @@ func TestConfigErrorEventGeneration(t *testing.T) {
 		}
 		return false
 	}, statusWait, waitTick, true)
+	t.Log("push failure events recorded successfully")
 }

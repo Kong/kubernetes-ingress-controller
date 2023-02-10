@@ -41,7 +41,9 @@ const (
 	KongConfigurationApplyFailedEventReason = "KongConfigurationApplyFailed"
 )
 
-type ClientsProvider interface {
+// AdminAPIClientsProvider allows fetching the most recent list of Admin API clients of Gateways that
+// we should configure.
+type AdminAPIClientsProvider interface {
 	Clients() []*adminapi.Client
 }
 
@@ -132,7 +134,7 @@ type KongClient struct {
 	SHAs []string
 
 	// clientsProvider allows retrieving the most recent set of clients.
-	clientsProvider ClientsProvider
+	clientsProvider AdminAPIClientsProvider
 }
 
 // NewKongClient provides a new KongClient object after connecting to the
@@ -147,7 +149,7 @@ func NewKongClient(
 	kongConfig sendconfig.Config,
 	eventRecorder record.EventRecorder,
 	dbMode string,
-	clientsProvider ClientsProvider,
+	clientsProvider AdminAPIClientsProvider,
 ) (*KongClient, error) {
 	// build the client object
 	cache := store.NewCacheStores()

@@ -112,11 +112,8 @@ type Storer interface {
 type Store struct {
 	stores CacheStores
 
-	ingressClass string
-
-	ingressV1Beta1ClassMatching annotations.ClassMatching
-	ingressV1ClassMatching      annotations.ClassMatching
-	kongConsumerClassMatching   annotations.ClassMatching
+	ingressClass         string
+	ingressClassMatching annotations.ClassMatching
 
 	isValidIngressClass   func(objectMeta *metav1.ObjectMeta, annotation string, handling annotations.ClassMatching) bool
 	isValidIngressV1Class func(ingress *netv1.Ingress, handling annotations.ClassMatching) bool
@@ -431,36 +428,14 @@ func (c CacheStores) Delete(obj runtime.Object) error {
 }
 
 // New creates a new object store to be used in the ingress controller.
-func New(cs CacheStores, ingressClass string, processClasslessIngressV1Beta1 bool, processClasslessIngressV1 bool,
-	processClasslessKongConsumer bool, logger logrus.FieldLogger,
-) Storer {
-	var ingressV1Beta1ClassMatching annotations.ClassMatching
-	var ingressV1ClassMatching annotations.ClassMatching
-	var kongConsumerClassMatching annotations.ClassMatching
-	if processClasslessIngressV1Beta1 {
-		ingressV1Beta1ClassMatching = annotations.ExactOrEmptyClassMatch
-	} else {
-		ingressV1Beta1ClassMatching = annotations.ExactClassMatch
-	}
-	if processClasslessIngressV1 {
-		ingressV1ClassMatching = annotations.ExactOrEmptyClassMatch
-	} else {
-		ingressV1ClassMatching = annotations.ExactClassMatch
-	}
-	if processClasslessKongConsumer {
-		kongConsumerClassMatching = annotations.ExactOrEmptyClassMatch
-	} else {
-		kongConsumerClassMatching = annotations.ExactClassMatch
-	}
+func New(cs CacheStores, ingressClass string, logger logrus.FieldLogger) Storer {
 	return Store{
-		stores:                      cs,
-		ingressClass:                ingressClass,
-		ingressV1Beta1ClassMatching: ingressV1Beta1ClassMatching,
-		ingressV1ClassMatching:      ingressV1ClassMatching,
-		kongConsumerClassMatching:   kongConsumerClassMatching,
-		isValidIngressClass:         annotations.IngressClassValidatorFuncFromObjectMeta(ingressClass),
-		isValidIngressV1Class:       annotations.IngressClassValidatorFuncFromV1Ingress(ingressClass),
-		logger:                      logger,
+		stores:                cs,
+		ingressClass:          ingressClass,
+		ingressClassMatching:  annotations.ExactClassMatch,
+		isValidIngressClass:   annotations.IngressClassValidatorFuncFromObjectMeta(ingressClass),
+		isValidIngressV1Class: annotations.IngressClassValidatorFuncFromV1Ingress(ingressClass),
+		logger:                logger,
 	}
 }
 
@@ -501,11 +476,11 @@ func (s Store) ListIngressesV1() []*netv1.Ingress {
 			continue
 		}
 		if ing.ObjectMeta.GetAnnotations()[annotations.IngressClassKey] != "" {
-			if !s.isValidIngressClass(&ing.ObjectMeta, annotations.IngressClassKey, s.ingressV1ClassMatching) {
+			if !s.isValidIngressClass(&ing.ObjectMeta, annotations.IngressClassKey, s.ingressClassMatching) {
 				continue
 			}
 		} else if ing.Spec.IngressClassName != nil {
-			if !s.isValidIngressV1Class(ing, s.ingressV1ClassMatching) {
+			if !s.isValidIngressV1Class(ing, s.ingressClassMatching) {
 				continue
 			}
 		} else {
@@ -580,7 +555,7 @@ func (s Store) ListIngressesV1beta1() []*netv1beta1.Ingress {
 	var ingresses []*netv1beta1.Ingress
 	for _, item := range s.stores.IngressV1beta1.List() {
 		ing := s.networkingIngressV1Beta1(item)
-		if !s.isValidIngressClass(&ing.ObjectMeta, annotations.IngressClassKey, s.ingressV1Beta1ClassMatching) {
+		if !s.isValidIngressClass(&ing.ObjectMeta, annotations.IngressClassKey, s.ingressClassMatching) {
 			continue
 		}
 		ingresses = append(ingresses, ing)

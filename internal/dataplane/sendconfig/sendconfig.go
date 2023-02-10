@@ -116,6 +116,13 @@ type InMemoryClient interface {
 	ReloadDeclarativeRawConfig(ctx context.Context, config io.Reader, checkHash bool, flattenErrors bool) ([]byte, error)
 }
 
+// onUpdateInMemoryMode takes a context, logger, deck state file struct, and a Kong client. It POSTs the state to
+// the Kong DB-less /config endpoint, setting that Kong instance's configuration to the configuration in the state.
+// It returns an error, a slice of ResourceErrors, and a second error. The first error indicates any overall issues
+// POSTing configuration to the Kong instance. If the first error is not nil, the ResourceError slice contains a
+// ResourceError for each Kubernetes resource that generated invalid Kong configuration. The second error is non-nil if
+// onUpdateInMemoryMode could not parse Kong's error response into a slice of ResourceError, and indicates why parsing
+// failed if so.
 func onUpdateInMemoryMode(
 	ctx context.Context,
 	log logrus.FieldLogger,

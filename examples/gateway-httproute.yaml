@@ -1,5 +1,3 @@
-# WARNING: Gateway APIs support is still experimental. Use as your own risk.
-#
 # NOTE: You need to install the Gateway APIs CRDs before using this example,
 #       they are external and can be deployed with the following one-liner:
 #

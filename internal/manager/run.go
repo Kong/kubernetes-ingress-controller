@@ -16,6 +16,7 @@ import (
 	knativev1alpha1 "knative.dev/networking/pkg/apis/networking/v1alpha1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
@@ -181,12 +182,7 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 	if err := mgr.AddHealthzCheck("health", healthz.Ping); err != nil {
 		return fmt.Errorf("unable to setup healthz: %w", err)
 	}
-	if err := mgr.AddReadyzCheck("check", func(_ *http.Request) error {
-		if !synchronizer.IsReady() {
-			return errors.New("synchronizer not yet configured")
-		}
-		return nil
-	}); err != nil {
+	if err := mgr.AddReadyzCheck("check", readyzHandler(mgr, synchronizer)); err != nil {
 		return fmt.Errorf("unable to setup readyz: %w", err)
 	}
 
@@ -236,6 +232,26 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 
 	setupLog.Info("Starting manager")
 	return mgr.Start(ctx)
+}
+
+type IsReady interface {
+	IsReady() bool
+}
+
+func readyzHandler(mgr manager.Manager, dataplaneSynchronizer IsReady) func(*http.Request) error {
+	return func(_ *http.Request) error {
+		select {
+		// If we're elected as leader then report readiness based on the readiness
+		// of dataplane synchronizer.
+		case <-mgr.Elected():
+			if !dataplaneSynchronizer.IsReady() {
+				return errors.New("synchronizer not yet configured")
+			}
+		// If we're not the leader then just report as ready.
+		default:
+		}
+		return nil
+	}
 }
 
 func getScheme() (*runtime.Scheme, error) {

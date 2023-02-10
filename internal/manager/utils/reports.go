@@ -23,7 +23,7 @@ func RunReport(
 	kicVersion string,
 	meshDetection bool,
 	featureGates map[string]bool,
-	clientsProvider dataplane.ClientsProvider,
+	clientsProvider dataplane.AdminAPIClientsProvider,
 ) error {
 	// if anonymous reports are enabled this helps provide Kong with insights about usage of the ingress controller
 	// which is non-sensitive and predominantly informs us of the controller and cluster versions in use.

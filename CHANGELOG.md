@@ -115,6 +115,8 @@ Adding a new version? You'll need three changes:
   that all time series for those metrics will get a new label designating the
   address of the dataplane that the configuration push has been targeted for.
   [#3521](https://github.com/Kong/kubernetes-ingress-controller/pull/3521)
+- Leader election is enabled by default then kong admin service discovery is enabled.
+  [#3529](https://github.com/Kong/kubernetes-ingress-controller/pull/3529)
 
 ### Fixed
 

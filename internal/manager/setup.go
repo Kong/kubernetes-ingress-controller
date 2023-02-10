@@ -107,6 +107,10 @@ func leaderElectionEnabled(logger logr.Logger, c *Config, dbmode string) bool {
 	}
 
 	if dbmode == "off" {
+		if c.KongAdminSvc.Name != "" {
+			logger.Info("DB-less mode detected with service detection, enabling leader election")
+			return true
+		}
 		logger.Info("DB-less mode detected, disabling leader election")
 		return false
 	}

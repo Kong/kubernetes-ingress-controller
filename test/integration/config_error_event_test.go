@@ -29,7 +29,7 @@ func TestConfigErrorEventGeneration(t *testing.T) {
 		t.Skip("config errors are only supported on DB-less mode")
 	}
 	if versions.GetKongVersion().MajorMinorOnly().LTE(versions.FlattenedErrorCutoff) {
-		t.Skipf("kong version is %s <= 3.2, skipping testing config error parsing", versions.GetKongVersion().MajorMinorOnly().String())
+		t.Skipf("kong version is %s < 3.2, skipping testing config error parsing", versions.GetKongVersion().MajorMinorOnly().String())
 	} else {
 		t.Logf("kong version is %s >= 3.2, testing config error parsing", versions.GetKongVersion().MajorMinorOnly().String())
 	}

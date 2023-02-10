@@ -108,6 +108,12 @@ Adding a new version? You'll need three changes:
   that all time series for those metrics will get a new label designating the
   address of the dataplane that the configuration push has been targeted for.
   [#3521](https://github.com/Kong/kubernetes-ingress-controller/pull/3521)
+- In DB-less mode, failure to push a config will now generate Kubernetes Events
+  with the reason `KongConfigurationApplyFailed` and an `InvolvedObject`
+  indicating which Kubernetes resource was responsible for the broken Kong
+  configuration.
+  [#3446](https://github.com/Kong/kubernetes-ingress-controller/pull/3446)
+
 
 ### Fixed
 

@@ -2,8 +2,10 @@ package adminapi
 
 import (
 	"context"
+	"net/http"
 
 	"github.com/kong/go-kong/kong"
+	"github.com/samber/lo"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 )
@@ -22,21 +24,31 @@ type Client struct {
 }
 
 // NewClient creates an Admin API client that is to be used with a regular Admin API exposed by Kong Gateways.
-func NewClient(c *kong.Client) Client {
-	return Client{
+func NewClient(c *kong.Client) *Client {
+	return &Client{
 		adminAPIClient:    c,
 		pluginSchemaStore: util.NewPluginSchemaStore(c),
 	}
 }
 
 // NewKonnectClient creates an Admin API client that is to be used with a Konnect Runtime Group Admin API.
-func NewKonnectClient(c *kong.Client, runtimeGroup string) Client {
-	return Client{
+func NewKonnectClient(c *kong.Client, runtimeGroup string) *Client {
+	return &Client{
 		adminAPIClient:      c,
 		isKonnect:           true,
 		konnectRuntimeGroup: runtimeGroup,
 		pluginSchemaStore:   util.NewPluginSchemaStore(c),
 	}
+}
+
+// NewTestClient creates a client for test purposes.
+func NewTestClient(address string) (*Client, error) {
+	kongClient, err := kong.NewTestClient(lo.ToPtr(address), &http.Client{})
+	if err != nil {
+		return nil, err
+	}
+
+	return NewClient(kongClient), nil
 }
 
 // AdminAPIClient returns an underlying go-kong's Admin API client.
@@ -93,10 +105,10 @@ func NewClientFactoryForWorkspace(workspace string, httpClientOpts HTTPClientOpt
 	}
 }
 
-func (cf ClientFactory) CreateAdminAPIClient(ctx context.Context, address string) (Client, error) {
+func (cf ClientFactory) CreateAdminAPIClient(ctx context.Context, address string) (*Client, error) {
 	httpclient, err := MakeHTTPClient(&cf.httpClientOpts, cf.adminToken)
 	if err != nil {
-		return Client{}, err
+		return nil, err
 	}
 	return NewKongClientForWorkspace(ctx, address, cf.workspace, httpclient)
 }

@@ -116,7 +116,7 @@ func (ir *ingressRules) populateServices(log logrus.FieldLogger, s store.Storer,
 				util.K8sNameTagPrefix+"UNKNOWN",
 				util.K8sNamespaceTagPrefix+"UNKNOWN",
 				util.K8sKindTagPrefix+"Service",
-				util.K8sUIDTagPrefix+"efcde2e6-9aef-4ea1-af0e-dda4cfe13807",
+				util.K8sUIDTagPrefix+"00000000-0000-0000-0000-000000000000",
 				util.K8sGroupTagPrefix+"core",
 				util.K8sVersionTagPrefix+"v1",
 			)

@@ -95,9 +95,9 @@ func GetPodDetails(ctx context.Context, kubeClient clientset.Interface) (*PodInf
 		return nil, fmt.Errorf("unable to get POD information (missing POD_NAME or POD_NAMESPACE environment variable")
 	}
 
-	pod, _ := kubeClient.CoreV1().Pods(podNs).Get(ctx, podName, metav1.GetOptions{})
+	pod, err := kubeClient.CoreV1().Pods(podNs).Get(ctx, podName, metav1.GetOptions{})
 	if pod == nil {
-		return nil, fmt.Errorf("unable to get POD information")
+		return nil, fmt.Errorf("unable to get POD information: %w", err)
 	}
 
 	return &PodInfo{

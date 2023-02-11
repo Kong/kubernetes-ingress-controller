@@ -23,7 +23,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/konnect"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/manager/featuregates"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/manager/metadata"
-	mgrutils "github.com/kong/kubernetes-ingress-controller/v2/internal/manager/utils"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/manager/telemetry"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/manager/utils/kongconfig"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util/kubernetes/object/status"
@@ -216,21 +216,21 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 	}
 
 	if c.AnonymousReports {
-		setupLog.Info("Starting anonymous reports")
-		// the argument checking the watch namespaces length enables or disables mesh detection. the mesh detect client
-		// attempts to use all namespaces and can't utilize a manager multi-namespaced cache, so if we need to limit
-		// namespace access we just disable mesh detection altogether.
-		if err := mgrutils.RunReport(
+		stopAnonymousReports, err := telemetry.SetupAnonymousReports(
 			ctx,
 			kubeconfig,
-			c.PublishService.String(),
+			c.PublishService,
 			metadata.Release,
 			len(c.WatchNamespaces) == 0,
 			featureGates,
 			clientsManager,
-		); err != nil {
-			setupLog.Error(err, "anonymous reporting failed")
+		)
+		if err != nil {
+			setupLog.Error(err, "failed setting up anonymous reports")
+		} else {
+			defer stopAnonymousReports()
 		}
+		setupLog.Info("anonymous reports enabled")
 	} else {
 		setupLog.Info("anonymous reports disabled, skipping")
 	}

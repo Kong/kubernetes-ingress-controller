@@ -1,6 +1,7 @@
 package parser
 
 import (
+	"context"
 	"fmt"
 	"reflect"
 	"sort"
@@ -282,7 +283,7 @@ func TestGlobalPlugin(t *testing.T) {
 		})
 		assert.Nil(err)
 		p := mustNewParser(t, store)
-		state, translationFailures := p.Build()
+		state, translationFailures := p.Build(context.TODO())
 		require.Empty(t, translationFailures)
 		assert.NotNil(state)
 		assert.Equal(1, len(state.Plugins),
@@ -464,7 +465,7 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 			store, err := store.NewFakeStore(objects)
 			assert.Nil(err)
 			p := mustNewParser(t, store)
-			state, translationFailures := p.Build()
+			state, translationFailures := p.Build(context.TODO())
 			require.Empty(t, translationFailures)
 			assert.Nil(err)
 			assert.NotNil(state)
@@ -570,7 +571,7 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 			store, err := store.NewFakeStore(objects)
 			assert.Nil(err)
 			p := mustNewParser(t, store)
-			state, translationFailures := p.Build()
+			state, translationFailures := p.Build(context.TODO())
 			require.Empty(t, translationFailures)
 			assert.Nil(err)
 			assert.NotNil(state)
@@ -673,7 +674,7 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 			store, err := store.NewFakeStore(objects)
 			assert.Nil(err)
 			p := mustNewParser(t, store)
-			state, translationFailures := p.Build()
+			state, translationFailures := p.Build(context.TODO())
 			require.Empty(t, translationFailures)
 			assert.NotNil(state)
 			assert.Equal(0, len(state.Plugins),
@@ -725,7 +726,7 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 		store, err := store.NewFakeStore(objects)
 		assert.Nil(err)
 		p := mustNewParser(t, store)
-		state, translationFailures := p.Build()
+		state, translationFailures := p.Build(context.TODO())
 		require.Empty(t, translationFailures)
 		assert.NotNil(state)
 		for _, testcase := range references {
@@ -824,7 +825,7 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 			store, err := store.NewFakeStore(objects)
 			assert.Nil(err)
 			p := mustNewParser(t, store)
-			state, translationFailures := p.Build()
+			state, translationFailures := p.Build(context.TODO())
 			require.Empty(t, translationFailures)
 			assert.NotNil(state)
 			assert.Equal(0, len(state.Plugins),
@@ -860,7 +861,7 @@ func TestCACertificate(t *testing.T) {
 		})
 		assert.Nil(err)
 		p := mustNewParser(t, store)
-		state, translationFailures := p.Build()
+		state, translationFailures := p.Build(context.TODO())
 		require.Empty(t, translationFailures)
 		assert.NotNil(state)
 
@@ -915,7 +916,7 @@ func TestCACertificate(t *testing.T) {
 		})
 		assert.Nil(err)
 		p := mustNewParser(t, store)
-		state, translationFailures := p.Build()
+		state, translationFailures := p.Build(context.TODO())
 		require.Empty(t, translationFailures)
 		assert.NotNil(state)
 
@@ -998,7 +999,7 @@ func TestCACertificate(t *testing.T) {
 		})
 		assert.Nil(err)
 		p := mustNewParser(t, store)
-		state, translationFailures := p.Build()
+		state, translationFailures := p.Build(context.TODO())
 		assert.Len(translationFailures, 3)
 		assert.NotNil(state)
 
@@ -1084,7 +1085,7 @@ func TestServiceClientCertificate(t *testing.T) {
 		})
 		assert.Nil(err)
 		p := mustNewParser(t, store)
-		state, translationFailures := p.Build()
+		state, translationFailures := p.Build(context.TODO())
 		require.Empty(t, translationFailures)
 		assert.NotNil(state)
 		assert.Equal(1, len(state.Certificates),
@@ -1153,7 +1154,7 @@ func TestServiceClientCertificate(t *testing.T) {
 		})
 		assert.Nil(err)
 		p := mustNewParser(t, store)
-		state, translationFailures := p.Build()
+		state, translationFailures := p.Build(context.TODO())
 		require.Len(t, translationFailures, 1)
 		assert.NotNil(state)
 		assert.Equal(0, len(state.Certificates),
@@ -1214,7 +1215,7 @@ func TestKongRouteAnnotations(t *testing.T) {
 		})
 		assert.Nil(err)
 		p := mustNewParser(t, store)
-		state, translationFailures := p.Build()
+		state, translationFailures := p.Build(context.TODO())
 		require.Empty(t, translationFailures)
 		assert.NotNil(state)
 
@@ -1298,7 +1299,7 @@ func TestKongRouteAnnotations(t *testing.T) {
 		})
 		assert.Nil(err)
 		p := mustNewParser(t, store)
-		state, translationFailures := p.Build()
+		state, translationFailures := p.Build(context.TODO())
 		require.Empty(t, translationFailures)
 		assert.NotNil(state)
 
@@ -1383,7 +1384,7 @@ func TestKongRouteAnnotations(t *testing.T) {
 			})
 			assert.Nil(err)
 			p := mustNewParser(t, store)
-			state, translationFailures := p.Build()
+			state, translationFailures := p.Build(context.TODO())
 			require.Empty(t, translationFailures)
 			assert.NotNil(state)
 
@@ -1469,7 +1470,7 @@ func TestKongRouteAnnotations(t *testing.T) {
 			})
 			assert.Nil(err)
 			p := mustNewParser(t, store)
-			state, translationFailures := p.Build()
+			state, translationFailures := p.Build(context.TODO())
 			require.Empty(t, translationFailures)
 			assert.NotNil(state)
 
@@ -1554,7 +1555,7 @@ func TestKongRouteAnnotations(t *testing.T) {
 			})
 			assert.Nil(err)
 			p := mustNewParser(t, store)
-			state, translationFailures := p.Build()
+			state, translationFailures := p.Build(context.TODO())
 			require.Empty(t, translationFailures)
 			assert.NotNil(state)
 
@@ -1639,7 +1640,7 @@ func TestKongRouteAnnotations(t *testing.T) {
 			})
 			assert.Nil(err)
 			p := mustNewParser(t, store)
-			state, translationFailures := p.Build()
+			state, translationFailures := p.Build(context.TODO())
 			require.Empty(t, translationFailures)
 			assert.NotNil(state)
 
@@ -1724,7 +1725,7 @@ func TestKongRouteAnnotations(t *testing.T) {
 			})
 			assert.Nil(err)
 			p := mustNewParser(t, store)
-			state, translationFailures := p.Build()
+			state, translationFailures := p.Build(context.TODO())
 			require.Empty(t, translationFailures)
 			assert.NotNil(state)
 
@@ -1809,7 +1810,7 @@ func TestKongRouteAnnotations(t *testing.T) {
 			})
 			assert.Nil(err)
 			p := mustNewParser(t, store)
-			state, translationFailures := p.Build()
+			state, translationFailures := p.Build(context.TODO())
 			require.Empty(t, translationFailures)
 			assert.NotNil(state)
 
@@ -1894,7 +1895,7 @@ func TestKongRouteAnnotations(t *testing.T) {
 		})
 		assert.Nil(err)
 		p := mustNewParser(t, store)
-		state, translationFailures := p.Build()
+		state, translationFailures := p.Build(context.TODO())
 		require.Empty(t, translationFailures)
 		assert.NotNil(state)
 
@@ -1977,7 +1978,7 @@ func TestKongRouteAnnotations(t *testing.T) {
 		})
 		assert.Nil(err)
 		p := mustNewParser(t, store)
-		state, translationFailures := p.Build()
+		state, translationFailures := p.Build(context.TODO())
 		require.Empty(t, translationFailures)
 		assert.NotNil(state)
 
@@ -2060,7 +2061,7 @@ func TestKongRouteAnnotations(t *testing.T) {
 		})
 		assert.Nil(err)
 		p := mustNewParser(t, store)
-		state, translationFailures := p.Build()
+		state, translationFailures := p.Build(context.TODO())
 		require.Empty(t, translationFailures)
 		assert.NotNil(state)
 
@@ -2121,7 +2122,7 @@ func TestKongProcessClasslessIngress(t *testing.T) {
 		})
 		assert.Nil(err)
 		p := mustNewParser(t, store)
-		state, translationFailures := p.Build()
+		state, translationFailures := p.Build(context.TODO())
 		require.Empty(t, translationFailures)
 		assert.NotNil(state)
 
@@ -2172,7 +2173,7 @@ func TestKongProcessClasslessIngress(t *testing.T) {
 		})
 		assert.Nil(err)
 		p := mustNewParser(t, store)
-		state, translationFailures := p.Build()
+		state, translationFailures := p.Build(context.TODO())
 		require.Empty(t, translationFailures)
 		assert.NotNil(state)
 
@@ -2250,7 +2251,7 @@ func TestKnativeIngressAndPlugins(t *testing.T) {
 		})
 		assert.Nil(err)
 		p := mustNewParser(t, store)
-		state, translationFailures := p.Build()
+		state, translationFailures := p.Build(context.TODO())
 		require.Empty(t, translationFailures)
 		assert.NotNil(state)
 
@@ -2329,7 +2330,7 @@ func TestKnativeIngressAndPlugins(t *testing.T) {
 		})
 		assert.Nil(err)
 		p := mustNewParser(t, store)
-		state, translationFailures := p.Build()
+		state, translationFailures := p.Build(context.TODO())
 		require.Empty(t, translationFailures)
 		assert.NotNil(state)
 
@@ -2399,7 +2400,7 @@ func TestKnativeIngressAndPlugins(t *testing.T) {
 		})
 		assert.Nil(err)
 		p := mustNewParser(t, store)
-		state, translationFailures := p.Build()
+		state, translationFailures := p.Build(context.TODO())
 		require.Empty(t, translationFailures)
 		assert.NotNil(state)
 
@@ -2485,7 +2486,7 @@ func TestKnativeIngressAndPlugins(t *testing.T) {
 		})
 		assert.Nil(err)
 		p := mustNewParser(t, store)
-		state, translationFailures := p.Build()
+		state, translationFailures := p.Build(context.TODO())
 		require.Empty(t, translationFailures)
 		assert.NotNil(state)
 
@@ -2602,7 +2603,7 @@ func TestKongServiceAnnotations(t *testing.T) {
 		})
 		assert.Nil(err)
 		p := mustNewParser(t, store)
-		state, translationFailures := p.Build()
+		state, translationFailures := p.Build(context.TODO())
 		require.Empty(t, translationFailures)
 		assert.NotNil(state)
 
@@ -2689,7 +2690,7 @@ func TestKongServiceAnnotations(t *testing.T) {
 		})
 		assert.Nil(err)
 		p := mustNewParser(t, store)
-		state, translationFailures := p.Build()
+		state, translationFailures := p.Build(context.TODO())
 		require.Empty(t, translationFailures)
 		assert.NotNil(state)
 
@@ -2784,7 +2785,7 @@ func TestKongServiceAnnotations(t *testing.T) {
 			})
 			assert.Nil(err)
 			p := mustNewParser(t, store)
-			state, translationFailures := p.Build()
+			state, translationFailures := p.Build(context.TODO())
 			require.Empty(t, translationFailures)
 			assert.NotNil(state)
 
@@ -2858,7 +2859,7 @@ func TestDefaultBackend(t *testing.T) {
 		})
 		assert.Nil(err)
 		p := mustNewParser(t, store)
-		state, translationFailures := p.Build()
+		state, translationFailures := p.Build(context.TODO())
 		require.Empty(t, translationFailures)
 		assert.NotNil(state)
 		assert.Equal(1, len(state.Services),
@@ -2928,7 +2929,7 @@ func TestDefaultBackend(t *testing.T) {
 		})
 		assert.Nil(err)
 		p := mustNewParser(t, store)
-		state, translationFailures := p.Build()
+		state, translationFailures := p.Build(context.TODO())
 		require.Len(t, translationFailures, 1)
 		assert.NotNil(state)
 		assert.Equal(0, len(state.Certificates),
@@ -2994,7 +2995,7 @@ func TestParserSecret(t *testing.T) {
 		})
 		assert.Nil(err)
 		p := mustNewParser(t, store)
-		state, translationFailures := p.Build()
+		state, translationFailures := p.Build(context.TODO())
 		require.Empty(t, translationFailures)
 		assert.NotNil(state)
 		assert.Equal(0, len(state.Certificates),
@@ -3076,7 +3077,7 @@ func TestParserSecret(t *testing.T) {
 		})
 		assert.Nil(err)
 		p := mustNewParser(t, store)
-		state, translationFailures := p.Build()
+		state, translationFailures := p.Build(context.TODO())
 		require.Empty(t, translationFailures)
 		assert.NotNil(state)
 		assert.Equal(1, len(state.Certificates),
@@ -3205,7 +3206,7 @@ func TestParserSecret(t *testing.T) {
 		})
 		assert.Nil(err)
 		p := mustNewParser(t, store)
-		state, translationFailures := p.Build()
+		state, translationFailures := p.Build(context.TODO())
 		require.Empty(t, translationFailures)
 		assert.NotNil(state)
 		assert.Equal(1, len(state.Certificates),
@@ -3289,7 +3290,7 @@ func TestParserSecret(t *testing.T) {
 		})
 		assert.Nil(err)
 		p := mustNewParser(t, store)
-		state, translationFailures := p.Build()
+		state, translationFailures := p.Build(context.TODO())
 		require.Empty(t, translationFailures)
 		assert.NotNil(state)
 		assert.Equal(1, len(state.Certificates),
@@ -3372,7 +3373,7 @@ func TestParserSNI(t *testing.T) {
 		})
 		assert.Nil(err)
 		p := mustNewParser(t, store)
-		state, translationFailures := p.Build()
+		state, translationFailures := p.Build(context.TODO())
 		require.Empty(t, translationFailures)
 		assert.NotNil(state)
 		// parser tests do not check tags, these are tested independently
@@ -3440,7 +3441,7 @@ func TestParserSNI(t *testing.T) {
 		})
 		assert.Nil(err)
 		p := mustNewParser(t, store)
-		state, translationFailures := p.Build()
+		state, translationFailures := p.Build(context.TODO())
 		require.Empty(t, translationFailures)
 		assert.NotNil(state)
 		// parser tests do not check tags, these are tested independently
@@ -3502,7 +3503,7 @@ func TestParserHostAliases(t *testing.T) {
 		})
 		assert.Nil(err)
 		p := mustNewParser(t, store)
-		state, translationFailures := p.Build()
+		state, translationFailures := p.Build(context.TODO())
 		require.Empty(t, translationFailures)
 		assert.NotNil(state)
 		// parser tests do not check tags, these are tested independently
@@ -3557,7 +3558,7 @@ func TestParserHostAliases(t *testing.T) {
 		})
 		assert.Nil(err)
 		p := mustNewParser(t, store)
-		state, translationFailures := p.Build()
+		state, translationFailures := p.Build(context.TODO())
 		require.Empty(t, translationFailures)
 		assert.NotNil(state)
 		// parser tests do not check tags, these are tested independently
@@ -3613,7 +3614,7 @@ func TestParserHostAliases(t *testing.T) {
 		})
 		assert.Nil(err)
 		p := mustNewParser(t, store)
-		state, translationFailures := p.Build()
+		state, translationFailures := p.Build(context.TODO())
 		require.Empty(t, translationFailures)
 		assert.NotNil(state)
 		// parser tests do not check tags, these are tested independently
@@ -3705,7 +3706,7 @@ func TestPluginAnnotations(t *testing.T) {
 		})
 		assert.Nil(err)
 		p := mustNewParser(t, store)
-		state, translationFailures := p.Build()
+		state, translationFailures := p.Build(context.TODO())
 		require.Empty(t, translationFailures)
 		assert.NotNil(state)
 		assert.Equal(1, len(state.Plugins),
@@ -3805,7 +3806,7 @@ func TestPluginAnnotations(t *testing.T) {
 		})
 		assert.Nil(err)
 		p := mustNewParser(t, store)
-		state, translationFailures := p.Build()
+		state, translationFailures := p.Build(context.TODO())
 		require.Empty(t, translationFailures)
 		assert.NotNil(state)
 		assert.Equal(1, len(state.Plugins),
@@ -3876,7 +3877,7 @@ func TestPluginAnnotations(t *testing.T) {
 		})
 		assert.Nil(err)
 		p := mustNewParser(t, store)
-		state, translationFailures := p.Build()
+		state, translationFailures := p.Build(context.TODO())
 		require.Empty(t, translationFailures)
 		assert.NotNil(state)
 		assert.Equal(1, len(state.Plugins),
@@ -3923,7 +3924,7 @@ func TestPluginAnnotations(t *testing.T) {
 		})
 		assert.Nil(err)
 		p := mustNewParser(t, store)
-		state, translationFailures := p.Build()
+		state, translationFailures := p.Build(context.TODO())
 		require.Empty(t, translationFailures)
 		assert.NotNil(state)
 		assert.Equal(0, len(state.Plugins),
@@ -4706,7 +4707,7 @@ func TestPickPort(t *testing.T) {
 			assert.NoError(err)
 
 			p := mustNewParser(t, store)
-			state, translationFailures := p.Build()
+			state, translationFailures := p.Build(context.TODO())
 			require.Empty(t, translationFailures)
 
 			assert.Equal(tt.wantTarget, *state.Upstreams[0].Targets[0].Target.Target)
@@ -4825,7 +4826,7 @@ func TestCertificate(t *testing.T) {
 		})
 		assert.Nil(err)
 		p := mustNewParser(t, store)
-		state, translationFailures := p.Build()
+		state, translationFailures := p.Build(context.TODO())
 		require.Empty(t, translationFailures)
 		assert.NotNil(state)
 		assert.Equal(3, len(state.Certificates))
@@ -4918,7 +4919,7 @@ func TestCertificate(t *testing.T) {
 		})
 		assert.Nil(err)
 		p := mustNewParser(t, store)
-		state, translationFailures := p.Build()
+		state, translationFailures := p.Build(context.TODO())
 		require.Empty(t, translationFailures)
 		assert.NotNil(state)
 		assert.Equal(1, len(state.Certificates))

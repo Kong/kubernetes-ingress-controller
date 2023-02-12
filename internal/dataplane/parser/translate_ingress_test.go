@@ -1,6 +1,7 @@
 package parser
 
 import (
+	"context"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -272,7 +273,7 @@ func TestFromIngressV1beta1(t *testing.T) {
 		require.NoError(t, err)
 		p := mustNewParser(t, store)
 
-		parsedInfo := p.ingressRulesFromIngressV1beta1()
+		parsedInfo := p.ingressRulesFromIngressV1beta1(context.TODO())
 		assert.Equal(ingressRules{
 			ServiceNameToServices: make(map[string]kongstate.Service),
 			ServiceNameToParent:   make(map[string]client.Object),
@@ -288,7 +289,7 @@ func TestFromIngressV1beta1(t *testing.T) {
 		require.NoError(t, err)
 		p := mustNewParser(t, store)
 
-		parsedInfo := p.ingressRulesFromIngressV1beta1()
+		parsedInfo := p.ingressRulesFromIngressV1beta1(context.TODO())
 		assert.Equal(1, len(parsedInfo.ServiceNameToServices))
 		assert.Equal("foo-svc.foo-namespace.80.svc", *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.80"].Host)
 		assert.Equal(80, *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.80"].Port)
@@ -303,7 +304,7 @@ func TestFromIngressV1beta1(t *testing.T) {
 		require.NoError(t, err)
 		p := mustNewParser(t, store)
 
-		parsedInfo := p.ingressRulesFromIngressV1beta1()
+		parsedInfo := p.ingressRulesFromIngressV1beta1(context.TODO())
 		assert.Equal(2, len(parsedInfo.ServiceNameToServices))
 		assert.Equal("foo-svc.foo-namespace.80.svc", *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.80"].Host)
 		assert.Equal(80, *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.80"].Port)
@@ -324,7 +325,7 @@ func TestFromIngressV1beta1(t *testing.T) {
 		require.NoError(t, err)
 		p := mustNewParser(t, store)
 
-		parsedInfo := p.ingressRulesFromIngressV1beta1()
+		parsedInfo := p.ingressRulesFromIngressV1beta1(context.TODO())
 		assert.Equal(2, len(parsedInfo.SecretNameToSNIs.Hosts("bar-namespace/sooper-secret")))
 		assert.Equal(2, len(parsedInfo.SecretNameToSNIs.Hosts("bar-namespace/sooper-secret2")))
 	})
@@ -337,7 +338,7 @@ func TestFromIngressV1beta1(t *testing.T) {
 		require.NoError(t, err)
 		p := mustNewParser(t, store)
 
-		parsedInfo := p.ingressRulesFromIngressV1beta1()
+		parsedInfo := p.ingressRulesFromIngressV1beta1(context.TODO())
 		assert.Equal(1, len(parsedInfo.ServiceNameToServices))
 		assert.Equal("cert-manager-solver-pod.foo-namespace.80.svc",
 			*parsedInfo.ServiceNameToServices["foo-namespace.cert-manager-solver-pod.80"].Host)
@@ -358,7 +359,7 @@ func TestFromIngressV1beta1(t *testing.T) {
 		require.NoError(t, err)
 		p := mustNewParser(t, store)
 
-		parsedInfo := p.ingressRulesFromIngressV1beta1()
+		parsedInfo := p.ingressRulesFromIngressV1beta1(context.TODO())
 		assert.Equal("/", *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.80"].Routes[0].Paths[0])
 		assert.Equal("example.com", *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.80"].Routes[0].Hosts[0])
 	})
@@ -372,7 +373,7 @@ func TestFromIngressV1beta1(t *testing.T) {
 		p := mustNewParser(t, store)
 
 		assert.NotPanics(func() {
-			p.ingressRulesFromIngressV1beta1()
+			p.ingressRulesFromIngressV1beta1(context.TODO())
 		})
 	})
 	t.Run("Ingress rules with multiple ports for one Service use separate hostnames for each port", func(t *testing.T) {
@@ -384,7 +385,7 @@ func TestFromIngressV1beta1(t *testing.T) {
 		require.NoError(t, err)
 		p := mustNewParser(t, store)
 
-		parsedInfo := p.ingressRulesFromIngressV1beta1()
+		parsedInfo := p.ingressRulesFromIngressV1beta1(context.TODO())
 		assert.Equal("foo-svc.foo-namespace.80.svc", *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.80"].Host)
 		assert.Equal("foo-svc.foo-namespace.8000.svc", *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.8000"].Host)
 	})
@@ -397,7 +398,7 @@ func TestFromIngressV1beta1(t *testing.T) {
 		require.NoError(t, err)
 		p := mustNewParser(t, store)
 
-		parsedInfo := p.ingressRulesFromIngressV1beta1()
+		parsedInfo := p.ingressRulesFromIngressV1beta1(context.TODO())
 		assert.Equal(translators.KongPathRegexPrefix+"/foo/\\d{3}", *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.80"].Routes[0].Paths[0])
 	})
 }
@@ -746,7 +747,7 @@ func TestFromIngressV1(t *testing.T) {
 		require.NoError(t, err)
 		p := mustNewParser(t, store)
 
-		parsedInfo := p.ingressRulesFromIngressV1()
+		parsedInfo := p.ingressRulesFromIngressV1(context.TODO())
 		assert.Equal(ingressRules{
 			ServiceNameToServices: make(map[string]kongstate.Service),
 			ServiceNameToParent:   make(map[string]client.Object),
@@ -762,7 +763,7 @@ func TestFromIngressV1(t *testing.T) {
 		require.NoError(t, err)
 		p := mustNewParser(t, store)
 
-		parsedInfo := p.ingressRulesFromIngressV1()
+		parsedInfo := p.ingressRulesFromIngressV1(context.TODO())
 		assert.Equal(1, len(parsedInfo.ServiceNameToServices))
 		assert.Equal("foo-svc.foo-namespace.80.svc", *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.pnum-80"].Host)
 		assert.Equal(80, *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.pnum-80"].Port)
@@ -780,15 +781,15 @@ func TestFromIngressV1(t *testing.T) {
 		require.NoError(t, err)
 		p := mustNewParser(t, store)
 
-		parsedInfo := p.ingressRulesFromIngressV1()
-		assert.Equal(2, len(parsedInfo.ServiceNameToServices))
+		parsedInfo := p.ingressRulesFromIngressV1(context.TODO())
+		require.Len(t, parsedInfo.ServiceNameToServices, 2)
 		assert.Equal("foo-svc.foo-namespace.80.svc", *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.pnum-80"].Host)
 		assert.Equal(80, *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.pnum-80"].Port)
 
 		assert.Equal("/", *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.pnum-80"].Routes[0].Paths[0])
 		assert.Equal("example.com", *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.pnum-80"].Routes[0].Hosts[0])
 
-		assert.Equal(1, len(parsedInfo.ServiceNameToServices["bar-namespace.default-svc.80"].Routes))
+		require.Len(t, parsedInfo.ServiceNameToServices["bar-namespace.default-svc.80"].Routes, 1)
 		assert.Equal("/", *parsedInfo.ServiceNameToServices["bar-namespace.default-svc.80"].Routes[0].Paths[0])
 		assert.Equal(0, len(parsedInfo.ServiceNameToServices["bar-namespace.default-svc.80"].Routes[0].Hosts))
 	})
@@ -801,7 +802,7 @@ func TestFromIngressV1(t *testing.T) {
 		require.NoError(t, err)
 		p := mustNewParser(t, store)
 
-		parsedInfo := p.ingressRulesFromIngressV1()
+		parsedInfo := p.ingressRulesFromIngressV1(context.TODO())
 		assert.Equal(2, len(parsedInfo.SecretNameToSNIs.Hosts("bar-namespace/sooper-secret")))
 		assert.Equal(2, len(parsedInfo.SecretNameToSNIs.Hosts("bar-namespace/sooper-secret2")))
 	})
@@ -814,7 +815,7 @@ func TestFromIngressV1(t *testing.T) {
 		require.NoError(t, err)
 		p := mustNewParser(t, store)
 
-		parsedInfo := p.ingressRulesFromIngressV1()
+		parsedInfo := p.ingressRulesFromIngressV1(context.TODO())
 		assert.Equal(1, len(parsedInfo.ServiceNameToServices))
 		assert.Equal("cert-manager-solver-pod.foo-namespace.80.svc",
 			*parsedInfo.ServiceNameToServices["foo-namespace.cert-manager-solver-pod.pnum-80"].Host)
@@ -835,7 +836,7 @@ func TestFromIngressV1(t *testing.T) {
 		require.NoError(t, err)
 		p := mustNewParser(t, store)
 
-		parsedInfo := p.ingressRulesFromIngressV1()
+		parsedInfo := p.ingressRulesFromIngressV1(context.TODO())
 		assert.Equal("/", *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.pnum-80"].Routes[0].Paths[0])
 		assert.Equal("example.com", *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.pnum-80"].Routes[0].Hosts[0])
 	})
@@ -849,7 +850,7 @@ func TestFromIngressV1(t *testing.T) {
 		p := mustNewParser(t, store)
 
 		assert.NotPanics(func() {
-			p.ingressRulesFromIngressV1()
+			p.ingressRulesFromIngressV1(context.TODO())
 		})
 	})
 	t.Run("Ingress rules with multiple ports for one Service use separate hostnames for each port", func(t *testing.T) {
@@ -861,7 +862,7 @@ func TestFromIngressV1(t *testing.T) {
 		require.NoError(t, err)
 		p := mustNewParser(t, store)
 
-		parsedInfo := p.ingressRulesFromIngressV1()
+		parsedInfo := p.ingressRulesFromIngressV1(context.TODO())
 		assert.Equal("foo-svc.foo-namespace.80.svc",
 			*parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.pnum-80"].Host)
 		assert.Equal("foo-svc.foo-namespace.8000.svc",
@@ -876,7 +877,7 @@ func TestFromIngressV1(t *testing.T) {
 		require.NoError(t, err)
 		p := mustNewParser(t, store)
 
-		parsedInfo := p.ingressRulesFromIngressV1()
+		parsedInfo := p.ingressRulesFromIngressV1(context.TODO())
 		_, ok := parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.pnum-80"]
 		assert.True(ok)
 	})
@@ -889,7 +890,7 @@ func TestFromIngressV1(t *testing.T) {
 		require.NoError(t, err)
 		p := mustNewParser(t, store)
 
-		parsedInfo := p.ingressRulesFromIngressV1()
+		parsedInfo := p.ingressRulesFromIngressV1(context.TODO())
 		assert.Equal(translators.KongPathRegexPrefix+"/foo/\\d{3}", *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.pnum-80"].Routes[0].Paths[0])
 	})
 }
@@ -943,7 +944,7 @@ func TestFromIngressV1_RegexPrefix(t *testing.T) {
 
 		p.EnableRegexPathPrefix()
 
-		parsedInfo := p.ingressRulesFromIngressV1()
+		parsedInfo := p.ingressRulesFromIngressV1(context.TODO())
 		assert.Equal("~/whatever$", *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.pnum-80"].Routes[0].Paths[0])
 	})
 }

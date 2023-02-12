@@ -9,10 +9,13 @@ import (
 	netv1beta1 "k8s.io/api/networking/v1beta1"
 	"k8s.io/client-go/tools/cache"
 	knative "knative.dev/networking/pkg/apis/networking/v1alpha1"
+	ctrlclientfake "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/manager/featuregates"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/manager/scheme"
 	configurationv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
 	configurationv1alpha1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1alpha1"
 	configurationv1beta1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1beta1"
@@ -60,7 +63,17 @@ type FakeObjects struct {
 func NewFakeStore(
 	objects FakeObjects,
 ) (Storer, error) {
-	var s Storer
+	fg := featuregates.GetFeatureGatesDefaults()
+	fg[featuregates.KnativeFeature] = true
+	fg[featuregates.GatewayAlphaFeature] = true
+
+	scheme, err := scheme.Get(fg)
+	if err != nil {
+		return nil, err
+	}
+
+	clientBuilder := ctrlclientfake.NewClientBuilder().
+		WithScheme(scheme)
 
 	ingressV1beta1Store := cache.NewStore(keyFunc)
 	for _, ingress := range objects.IngressesV1beta1 {
@@ -68,6 +81,7 @@ func NewFakeStore(
 		if err != nil {
 			return nil, err
 		}
+		clientBuilder.WithObjects(ingress)
 	}
 	ingressV1Store := cache.NewStore(keyFunc)
 	for _, ingress := range objects.IngressesV1 {
@@ -75,6 +89,7 @@ func NewFakeStore(
 		if err != nil {
 			return nil, err
 		}
+		clientBuilder.WithObjects(ingress)
 	}
 	ingressClassV1Store := cache.NewStore(clusterResourceKeyFunc)
 	for _, ingress := range objects.IngressClassesV1 {
@@ -82,6 +97,7 @@ func NewFakeStore(
 		if err != nil {
 			return nil, err
 		}
+		clientBuilder.WithObjects(ingress)
 	}
 	IngressClassParametersV1alpha1Store := cache.NewStore(clusterResourceKeyFunc)
 	for _, IngressClassParametersV1alpha1 := range objects.IngressClassParametersV1alpha1 {
@@ -89,30 +105,35 @@ func NewFakeStore(
 		if err != nil {
 			return nil, err
 		}
+		clientBuilder.WithObjects(IngressClassParametersV1alpha1)
 	}
 	httprouteStore := cache.NewStore(keyFunc)
 	for _, httproute := range objects.HTTPRoutes {
 		if err := httprouteStore.Add(httproute); err != nil {
 			return nil, err
 		}
+		clientBuilder.WithObjects(httproute)
 	}
 	udprouteStore := cache.NewStore(keyFunc)
 	for _, udproute := range objects.UDPRoutes {
 		if err := udprouteStore.Add(udproute); err != nil {
 			return nil, err
 		}
+		clientBuilder.WithObjects(udproute)
 	}
 	tcprouteStore := cache.NewStore(keyFunc)
 	for _, tcproute := range objects.TCPRoutes {
 		if err := tcprouteStore.Add(tcproute); err != nil {
 			return nil, err
 		}
+		clientBuilder.WithObjects(tcproute)
 	}
 	tlsrouteStore := cache.NewStore(keyFunc)
 	for _, tlsroute := range objects.TLSRoutes {
 		if err := tlsrouteStore.Add(tlsroute); err != nil {
 			return nil, err
 		}
+		clientBuilder.WithObjects(tlsroute)
 	}
 	grpcrouteStore := cache.NewStore(keyFunc)
 	for _, grpcroute := range objects.GRPCRoutes {
@@ -125,12 +146,14 @@ func NewFakeStore(
 		if err := referencegrantStore.Add(referencegrant); err != nil {
 			return nil, err
 		}
+		clientBuilder.WithObjects(referencegrant)
 	}
 	gatewayStore := cache.NewStore(keyFunc)
 	for _, gw := range objects.Gateways {
 		if err := gatewayStore.Add(gw); err != nil {
 			return nil, err
 		}
+		clientBuilder.WithObjects(gw)
 	}
 	tcpIngressStore := cache.NewStore(keyFunc)
 	for _, ingress := range objects.TCPIngresses {
@@ -138,12 +161,14 @@ func NewFakeStore(
 		if err != nil {
 			return nil, err
 		}
+		clientBuilder.WithObjects(ingress)
 	}
 	udpIngressStore := cache.NewStore(keyFunc)
 	for _, ingress := range objects.UDPIngresses {
 		if err := udpIngressStore.Add(ingress); err != nil {
 			return nil, err
 		}
+		clientBuilder.WithObjects(ingress)
 	}
 	serviceStore := cache.NewStore(keyFunc)
 	for _, s := range objects.Services {
@@ -151,6 +176,7 @@ func NewFakeStore(
 		if err != nil {
 			return nil, err
 		}
+		clientBuilder.WithObjects(s)
 	}
 	secretsStore := cache.NewStore(keyFunc)
 	for _, s := range objects.Secrets {
@@ -158,6 +184,7 @@ func NewFakeStore(
 		if err != nil {
 			return nil, err
 		}
+		clientBuilder.WithObjects(s)
 	}
 	endpointStore := cache.NewStore(keyFunc)
 	for _, e := range objects.Endpoints {
@@ -165,6 +192,7 @@ func NewFakeStore(
 		if err != nil {
 			return nil, err
 		}
+		clientBuilder.WithObjects(e)
 	}
 	kongIngressStore := cache.NewStore(keyFunc)
 	for _, k := range objects.KongIngresses {
@@ -172,6 +200,7 @@ func NewFakeStore(
 		if err != nil {
 			return nil, err
 		}
+		clientBuilder.WithObjects(k)
 	}
 	consumerStore := cache.NewStore(keyFunc)
 	for _, c := range objects.KongConsumers {
@@ -179,6 +208,7 @@ func NewFakeStore(
 		if err != nil {
 			return nil, err
 		}
+		clientBuilder.WithObjects(c)
 	}
 	kongPluginsStore := cache.NewStore(keyFunc)
 	for _, p := range objects.KongPlugins {
@@ -186,6 +216,7 @@ func NewFakeStore(
 		if err != nil {
 			return nil, err
 		}
+		clientBuilder.WithObjects(p)
 	}
 	kongClusterPluginsStore := cache.NewStore(clusterResourceKeyFunc)
 	for _, p := range objects.KongClusterPlugins {
@@ -193,6 +224,7 @@ func NewFakeStore(
 		if err != nil {
 			return nil, err
 		}
+		clientBuilder.WithObjects(p)
 	}
 
 	knativeIngressStore := cache.NewStore(keyFunc)
@@ -201,12 +233,14 @@ func NewFakeStore(
 		if err != nil {
 			return nil, err
 		}
+		clientBuilder.WithObjects(ingress)
 	}
-	s = Store{
+
+	client := clientBuilder.Build()
+
+	s := Store{
+		client: client,
 		stores: CacheStores{
-			IngressV1beta1: ingressV1beta1Store,
-			IngressV1:      ingressV1Store,
-			IngressClassV1: ingressClassV1Store,
 			HTTPRoute:      httprouteStore,
 			UDPRoute:       udprouteStore,
 			TCPRoute:       tcprouteStore,

@@ -57,6 +57,8 @@ type AdminAPIClientsProvider interface {
 type KongClient struct {
 	logger logrus.FieldLogger
 
+	client client.Client
+
 	// ingressClass indicates the Kubernetes ingress class that should be
 	// used to qualify support for any given Kubernetes object to be parsed
 	// into data-plane configuration.
@@ -148,12 +150,13 @@ func NewKongClient(
 	kongConfig sendconfig.Config,
 	eventRecorder record.EventRecorder,
 	dbMode string,
+	client client.Client,
 	clientsProvider AdminAPIClientsProvider,
 	updateStrategyResolver sendconfig.UpdateStrategyResolver,
 	configChangeDetector sendconfig.ConfigurationChangeDetector,
 ) (*KongClient, error) {
 	// build the client object
-	cache := store.NewCacheStores()
+	cache := store.NewCacheStores(client)
 	c := &KongClient{
 		logger:                 logger,
 		ingressClass:           ingressClass,
@@ -161,6 +164,7 @@ func NewKongClient(
 		diagnostic:             diagnostic,
 		prometheusMetrics:      metrics.NewCtrlFuncMetrics(),
 		cache:                  &cache,
+		client:                 client,
 		kongConfig:             kongConfig,
 		eventRecorder:          eventRecorder,
 		dbmode:                 dbMode,
@@ -389,7 +393,7 @@ func (c *KongClient) Update(ctx context.Context) error {
 	defer c.lock.Unlock()
 
 	// build the kongstate object from the Kubernetes objects in the storer
-	storer := store.New(*c.cache, c.ingressClass, c.logger)
+	storer := store.New(c.client, *c.cache, c.ingressClass, c.logger)
 
 	// initialize a parser
 	c.logger.Debug("parsing kubernetes objects into data-plane configuration")
@@ -412,7 +416,7 @@ func (c *KongClient) Update(ctx context.Context) error {
 	}
 
 	// parse the Kubernetes objects from the storer into Kong configuration
-	kongstate, translationFailures := p.Build()
+	kongstate, translationFailures := p.Build(ctx)
 	if failuresCount := len(translationFailures); failuresCount > 0 {
 		c.prometheusMetrics.RecordTranslationFailure()
 		c.recordResourceFailureEvents(translationFailures, KongConfigurationTranslationFailedEventReason)

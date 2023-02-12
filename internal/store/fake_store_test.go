@@ -1,6 +1,7 @@
 package store
 
 import (
+	"context"
 	"errors"
 	"testing"
 
@@ -158,8 +159,8 @@ func TestFakeStoreIngressV1beta1(t *testing.T) {
 	store, err := NewFakeStore(FakeObjects{IngressesV1beta1: ingresses})
 	require.Nil(err)
 	require.NotNil(store)
-	assert.Len(store.ListIngressesV1beta1(), 1)
-	assert.Len(store.ListIngressesV1(), 0)
+	assert.Len(store.ListIngressesV1beta1(context.TODO()), 1)
+	assert.Len(store.ListIngressesV1(context.TODO()), 0)
 }
 
 func TestFakeStoreIngressV1(t *testing.T) {
@@ -204,7 +205,7 @@ func TestFakeStoreIngressV1(t *testing.T) {
 		},
 		{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "bar",
+				Name:      "bar1",
 				Namespace: "default",
 				Annotations: map[string]string{
 					annotations.IngressClassKey: "not-kong",
@@ -238,7 +239,7 @@ func TestFakeStoreIngressV1(t *testing.T) {
 		},
 		{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "bar",
+				Name:      "bar2",
 				Namespace: "default",
 				Annotations: map[string]string{
 					annotations.IngressClassKey: "skip-me-im-not-default",
@@ -251,7 +252,7 @@ func TestFakeStoreIngressV1(t *testing.T) {
 		},
 		{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "bar",
+				Name:      "bar3",
 				Namespace: "default",
 			},
 			Spec: netv1.IngressSpec{
@@ -263,8 +264,8 @@ func TestFakeStoreIngressV1(t *testing.T) {
 	store, err := NewFakeStore(FakeObjects{IngressesV1: ingresses})
 	require.Nil(err)
 	require.NotNil(store)
-	assert.Len(store.ListIngressesV1(), 2)
-	assert.Len(store.ListIngressesV1beta1(), 0)
+	assert.Len(store.ListIngressesV1(context.TODO()), 2)
+	assert.Len(store.ListIngressesV1beta1(context.TODO()), 0)
 }
 
 func TestFakeStoreIngressClassV1(t *testing.T) {
@@ -300,7 +301,7 @@ func TestFakeStoreIngressClassV1(t *testing.T) {
 	store, err := NewFakeStore(FakeObjects{IngressClassesV1: classes})
 	require.Nil(err)
 	require.NotNil(store)
-	assert.Len(store.ListIngressClassesV1(), 2)
+	assert.Len(store.ListIngressClassesV1(context.TODO()), 2)
 }
 
 func TestFakeStoreListTCPIngress(t *testing.T) {

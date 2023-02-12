@@ -292,6 +292,8 @@ func TestGetK8sServicesForBackends(t *testing.T) {
 						Annotations: map[string]string{
 							"konghq.com/foo": "bar",
 						},
+						// https://github.com/kubernetes-sigs/controller-runtime/blob/22718275bffe3185276dc835d610c658f06dac07/pkg/client/fake/client.go#L247-L250
+						ResourceVersion: "999",
 					},
 				},
 				{
@@ -301,6 +303,8 @@ func TestGetK8sServicesForBackends(t *testing.T) {
 						Annotations: map[string]string{
 							"konghq.com/foo": "baz",
 						},
+						// https://github.com/kubernetes-sigs/controller-runtime/blob/22718275bffe3185276dc835d610c658f06dac07/pkg/client/fake/client.go#L247-L250
+						ResourceVersion: "999",
 					},
 				},
 			},
@@ -329,6 +333,8 @@ func TestGetK8sServicesForBackends(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-service1",
 					Namespace: corev1.NamespaceDefault,
+					// https://github.com/kubernetes-sigs/controller-runtime/blob/22718275bffe3185276dc835d610c658f06dac07/pkg/client/fake/client.go#L247-L250
+					ResourceVersion: "999",
 				},
 			}},
 			expectedAnnotations: map[string]string{},

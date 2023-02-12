@@ -2,6 +2,7 @@ package parser
 
 import (
 	"bytes"
+	"context"
 	"crypto/tls"
 	"fmt"
 	"reflect"
@@ -79,11 +80,11 @@ func NewParser(
 // Build creates a Kong configuration from Ingress and Custom resources
 // defined in Kubernetes. It returns a slice of ResourceFailures which should
 // be used to provide users with feedback on Kubernetes objects validity.
-func (p *Parser) Build() (*kongstate.KongState, []failures.ResourceFailure) {
+func (p *Parser) Build(ctx context.Context) (*kongstate.KongState, []failures.ResourceFailure) {
 	// parse and merge all rules together from all Kubernetes API sources
 	ingressRules := mergeIngressRules(
-		p.ingressRulesFromIngressV1beta1(),
-		p.ingressRulesFromIngressV1(),
+		p.ingressRulesFromIngressV1beta1(ctx),
+		p.ingressRulesFromIngressV1(ctx),
 		p.ingressRulesFromTCPIngressV1beta1(),
 		p.ingressRulesFromUDPIngressV1beta1(),
 		p.ingressRulesFromKnativeIngress(),
@@ -590,7 +591,7 @@ func getServiceEndpoints(
 
 	// Check if the service is an upstream service through Ingress Class parameters.
 	var isSvcUpstream bool
-	ingressClassParameters, err := getIngressClassParametersOrDefault(s)
+	ingressClassParameters, err := getIngressClassParametersOrDefault(context.TODO(), s)
 	if err != nil {
 		log.Debugf("error getting an IngressClassParameters: %v", err)
 	} else {
@@ -615,9 +616,9 @@ func getServiceEndpoints(
 // getIngressClassParametersOrDefault returns the parameters for the current ingress class.
 // If the cluster operators have specified a set of parameters explicitly, it returns those.
 // Otherwise, it returns a default set of parameters.
-func getIngressClassParametersOrDefault(s store.Storer) (configurationv1alpha1.IngressClassParametersSpec, error) {
+func getIngressClassParametersOrDefault(ctx context.Context, s store.Storer) (configurationv1alpha1.IngressClassParametersSpec, error) {
 	ingressClassName := s.GetIngressClassName()
-	ingressClass, err := s.GetIngressClassV1(ingressClassName)
+	ingressClass, err := s.GetIngressClassV1(ctx, ingressClassName)
 	if err != nil {
 		return configurationv1alpha1.IngressClassParametersSpec{}, err
 	}

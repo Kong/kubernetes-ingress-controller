@@ -1,6 +1,7 @@
 package parser
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"sort"
@@ -22,7 +23,7 @@ func (p *Parser) ingressRulesFromKnativeIngress() ingressRules {
 	// not a resource specific to Knative. However, the reason we're using it (enabling the 2.x regex heuristic) is
 	// Kong-specific, so in absence of a proper Knative IngressClass to attach our IngressClassParams to, we may as
 	// well use the stock Kubernetes resource.
-	icp, err := getIngressClassParametersOrDefault(p.storer)
+	icp, err := getIngressClassParametersOrDefault(context.TODO(), p.storer) 
 	if err != nil {
 		if !errors.As(err, &store.ErrNotFound{}) {
 			// anything else is unexpected

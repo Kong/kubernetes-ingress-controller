@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/kong/go-kong/kong"
+	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
@@ -372,6 +373,8 @@ func TestGetKongIngressForServices(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-kongingress2",
 					Namespace: corev1.NamespaceDefault,
+					// https://github.com/kubernetes-sigs/controller-runtime/blob/22718275bffe3185276dc835d610c658f06dac07/pkg/client/fake/client.go#L247-L250
+					ResourceVersion: "999",
 				},
 			},
 		},
@@ -430,6 +433,8 @@ func TestGetKongIngressForServices(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-kongingress2",
 					Namespace: corev1.NamespaceDefault,
+					// https://github.com/kubernetes-sigs/controller-runtime/blob/22718275bffe3185276dc835d610c658f06dac07/pkg/client/fake/client.go#L247-L250
+					ResourceVersion: "999",
 				},
 			},
 		},
@@ -437,6 +442,7 @@ func TestGetKongIngressForServices(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			storer, err := store.NewFakeStore(store.FakeObjects{
 				KongIngresses: tt.kongIngresses,
+				Services:      lo.Values(tt.services),
 			})
 			require.NoError(t, err)
 

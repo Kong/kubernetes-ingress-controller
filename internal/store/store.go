@@ -17,6 +17,7 @@ limitations under the License.
 package store
 
 import (
+	"context"
 	"fmt"
 	"reflect"
 	"sort"
@@ -27,6 +28,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	netv1 "k8s.io/api/networking/v1"
 	netv1beta1 "k8s.io/api/networking/v1beta1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured/unstructuredscheme"
 	"k8s.io/apimachinery/pkg/labels"
@@ -37,6 +39,7 @@ import (
 	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/client-go/tools/cache"
 	knative "knative.dev/networking/pkg/apis/networking/v1alpha1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 	"sigs.k8s.io/yaml"
@@ -78,13 +81,13 @@ type Storer interface {
 	GetKongClusterPlugin(name string) (*kongv1.KongClusterPlugin, error)
 	GetKongConsumer(namespace, name string) (*kongv1.KongConsumer, error)
 	GetIngressClassName() string
-	GetIngressClassV1(name string) (*netv1.IngressClass, error)
+	GetIngressClassV1(ctx context.Context, name string) (*netv1.IngressClass, error)
 	GetIngressClassParametersV1Alpha1(ingressClass *netv1.IngressClass) (*kongv1alpha1.IngressClassParameters, error)
 	GetGateway(namespace string, name string) (*gatewayv1beta1.Gateway, error)
 
-	ListIngressesV1beta1() []*netv1beta1.Ingress
-	ListIngressesV1() []*netv1.Ingress
-	ListIngressClassesV1() []*netv1.IngressClass
+	ListIngressesV1beta1(ctx context.Context) []*netv1beta1.Ingress
+	ListIngressesV1(ctx context.Context) []*netv1.Ingress
+	ListIngressClassesV1(ctx context.Context) []*netv1.IngressClass
 	ListIngressClassParametersV1Alpha1() []*kongv1alpha1.IngressClassParameters
 	ListHTTPRoutes() ([]*gatewayv1beta1.HTTPRoute, error)
 	ListUDPRoutes() ([]*gatewayv1alpha2.UDPRoute, error)
@@ -109,6 +112,8 @@ type Storer interface {
 // be synced and updated by the caller.
 // It is ingressClass filter aware.
 type Store struct {
+	client client.Client
+
 	stores CacheStores
 
 	ingressClass         string
@@ -126,12 +131,9 @@ var _ Storer = Store{}
 // the Ingress Controller reads.
 type CacheStores struct {
 	// Core Kubernetes Stores
-	IngressV1beta1 cache.Store
-	IngressV1      cache.Store
-	IngressClassV1 cache.Store
-	Service        cache.Store
-	Secret         cache.Store
-	Endpoint       cache.Store
+	Service  cache.Store
+	Secret   cache.Store
+	Endpoint cache.Store
 
 	// Gateway API Stores
 	HTTPRoute      cache.Store
@@ -155,18 +157,19 @@ type CacheStores struct {
 	KnativeIngress cache.Store
 
 	l *sync.RWMutex
+
+	client client.Client
 }
 
 // NewCacheStores is a convenience function for CacheStores to initialize all attributes with new cache stores.
-func NewCacheStores() CacheStores {
+func NewCacheStores(client client.Client) CacheStores {
 	return CacheStores{
+		client: client,
+
 		// Core Kubernetes Stores
-		IngressV1beta1: cache.NewStore(keyFunc),
-		IngressV1:      cache.NewStore(keyFunc),
-		IngressClassV1: cache.NewStore(clusterResourceKeyFunc),
-		Service:        cache.NewStore(keyFunc),
-		Secret:         cache.NewStore(keyFunc),
-		Endpoint:       cache.NewStore(keyFunc),
+		Service:  cache.NewStore(keyFunc),
+		Secret:   cache.NewStore(keyFunc),
+		Endpoint: cache.NewStore(keyFunc),
 		// Gateway API Stores
 		HTTPRoute:      cache.NewStore(keyFunc),
 		UDPRoute:       cache.NewStore(keyFunc),
@@ -192,7 +195,7 @@ func NewCacheStores() CacheStores {
 
 // NewCacheStoresFromObjYAML provides a new CacheStores object given any number of byte arrays containing
 // YAML Kubernetes objects. An error is returned if any provided YAML was not a valid Kubernetes object.
-func NewCacheStoresFromObjYAML(objs ...[]byte) (c CacheStores, err error) {
+func NewCacheStoresFromObjYAML(client client.Client, objs ...[]byte) (c CacheStores, err error) {
 	kobjs := make([]runtime.Object, 0, len(objs))
 	sr := serializer.NewYAMLSerializer(
 		yamlserializer.DefaultMetaFactory,
@@ -206,15 +209,15 @@ func NewCacheStoresFromObjYAML(objs ...[]byte) (c CacheStores, err error) {
 		}
 		kobjs = append(kobjs, kobj)
 	}
-	return NewCacheStoresFromObjs(kobjs...)
+	return NewCacheStoresFromObjs(client, kobjs...)
 }
 
 // NewCacheStoresFromObjs provides a new CacheStores object given any number of Kubernetes
 // objects that should be pre-populated. This function will sort objects into the appropriate
 // sub-storage (e.g. IngressV1, TCPIngress, e.t.c.) but will produce an error if any of the
 // input objects are erroneous or otherwise unusable as Kubernetes objects.
-func NewCacheStoresFromObjs(objs ...runtime.Object) (CacheStores, error) {
-	c := NewCacheStores()
+func NewCacheStoresFromObjs(client client.Client, objs ...runtime.Object) (CacheStores, error) {
+	c := NewCacheStores(client)
 	for _, obj := range objs {
 		typedObj, err := mkObjFromGVK(obj.GetObjectKind().GroupVersionKind())
 		if err != nil {
@@ -241,12 +244,6 @@ func (c CacheStores) Get(obj runtime.Object) (item interface{}, exists bool, err
 	// ----------------------------------------------------------------------------
 	// Kubernetes Core API Support
 	// ----------------------------------------------------------------------------
-	case *netv1beta1.Ingress:
-		return c.IngressV1beta1.Get(obj)
-	case *netv1.Ingress:
-		return c.IngressV1.Get(obj)
-	case *netv1.IngressClass:
-		return c.IngressClassV1.Get(obj)
 	case *corev1.Service:
 		return c.Service.Get(obj)
 	case *corev1.Secret:
@@ -306,12 +303,6 @@ func (c CacheStores) Add(obj runtime.Object) error {
 	// ----------------------------------------------------------------------------
 	// Kubernetes Core API Support
 	// ----------------------------------------------------------------------------
-	case *netv1beta1.Ingress:
-		return c.IngressV1beta1.Add(obj)
-	case *netv1.Ingress:
-		return c.IngressV1.Add(obj)
-	case *netv1.IngressClass:
-		return c.IngressClassV1.Add(obj)
 	case *corev1.Service:
 		return c.Service.Add(obj)
 	case *corev1.Secret:
@@ -372,12 +363,7 @@ func (c CacheStores) Delete(obj runtime.Object) error {
 	// ----------------------------------------------------------------------------
 	// Kubernetes Core API Support
 	// ----------------------------------------------------------------------------
-	case *netv1beta1.Ingress:
-		return c.IngressV1beta1.Delete(obj)
-	case *netv1.Ingress:
-		return c.IngressV1.Delete(obj)
-	case *netv1.IngressClass:
-		return c.IngressClassV1.Delete(obj)
+
 	case *corev1.Service:
 		return c.Service.Delete(obj)
 	case *corev1.Secret:
@@ -429,8 +415,9 @@ func (c CacheStores) Delete(obj runtime.Object) error {
 }
 
 // New creates a new object store to be used in the ingress controller.
-func New(cs CacheStores, ingressClass string, logger logrus.FieldLogger) Storer {
+func New(client client.Client, cs CacheStores, ingressClass string, logger logrus.FieldLogger) Storer {
 	return Store{
+		client:                client,
 		stores:                cs,
 		ingressClass:          ingressClass,
 		ingressClassMatching:  annotations.ExactClassMatch,
@@ -467,25 +454,25 @@ func (s Store) GetService(namespace, name string) (*corev1.Service, error) {
 }
 
 // ListIngressesV1 returns the list of Ingresses in the Ingress v1 store.
-func (s Store) ListIngressesV1() []*netv1.Ingress {
-	// filter ingress rules
+func (s Store) ListIngressesV1(ctx context.Context) []*netv1.Ingress {
 	var ingresses []*netv1.Ingress
-	for _, item := range s.stores.IngressV1.List() {
-		ing, ok := item.(*netv1.Ingress)
-		if !ok {
-			s.logger.Warnf("listIngressesV1: dropping object of unexpected type: %#v", item)
-			continue
-		}
+	var ingressesV1 netv1.IngressList
+	if err := s.client.List(ctx, &ingressesV1); err != nil {
+		s.logger.Errorf("failed to list networking v1 Ingresses: %v", err)
+	}
+
+	for i := range ingressesV1.Items {
+		ing := ingressesV1.Items[i]
 		if ing.ObjectMeta.GetAnnotations()[annotations.IngressClassKey] != "" {
 			if !s.isValidIngressClass(&ing.ObjectMeta, annotations.IngressClassKey, s.ingressClassMatching) {
 				continue
 			}
 		} else if ing.Spec.IngressClassName != nil {
-			if !s.isValidIngressV1Class(ing, s.ingressClassMatching) {
+			if !s.isValidIngressV1Class(&ing, s.ingressClassMatching) {
 				continue
 			}
 		} else {
-			class, err := s.GetIngressClassV1(s.ingressClass)
+			class, err := s.GetIngressClassV1(ctx, s.ingressClass)
 			if err != nil {
 				s.logger.Debugf("IngressClass %s not found", s.ingressClass)
 				continue
@@ -494,7 +481,7 @@ func (s Store) ListIngressesV1() []*netv1.Ingress {
 				continue
 			}
 		}
-		ingresses = append(ingresses, ing)
+		ingresses = append(ingresses, &ing)
 	}
 
 	sort.SliceStable(ingresses, func(i, j int) bool {
@@ -505,20 +492,19 @@ func (s Store) ListIngressesV1() []*netv1.Ingress {
 	return ingresses
 }
 
-// ListIngressClassesV1 returns the list of Ingresses in the Ingress v1 store.
-func (s Store) ListIngressClassesV1() []*netv1.IngressClass {
+// ListIngressClassesV1 returns the list of IngressClasses.
+func (s Store) ListIngressClassesV1(ctx context.Context) []*netv1.IngressClass {
 	// filter ingress rules
 	var classes []*netv1.IngressClass
-	for _, item := range s.stores.IngressClassV1.List() {
-		class, ok := item.(*netv1.IngressClass)
-		if !ok {
-			s.logger.Warnf("listIngressClassesV1: dropping object of unexpected type: %#v", item)
+	var classList netv1.IngressClassList
+	if err := s.client.List(ctx, &classList); err != nil {
+		s.logger.Errorf("failed to list networking v1 IngressClasses: %v", err)
+	}
+	for i := range classList.Items {
+		if classList.Items[i].Spec.Controller != IngressClassKongController {
 			continue
 		}
-		if class.Spec.Controller != IngressClassKongController {
-			continue
-		}
-		classes = append(classes, class)
+		classes = append(classes, &classList.Items[i])
 	}
 
 	sort.SliceStable(classes, func(i, j int) bool {
@@ -551,15 +537,19 @@ func (s Store) ListIngressClassParametersV1Alpha1() []*kongv1alpha1.IngressClass
 }
 
 // ListIngressesV1beta1 returns the list of Ingresses in the Ingress v1beta1 store.
-func (s Store) ListIngressesV1beta1() []*netv1beta1.Ingress {
+func (s Store) ListIngressesV1beta1(ctx context.Context) []*netv1beta1.Ingress {
 	// filter ingress rules
 	var ingresses []*netv1beta1.Ingress
-	for _, item := range s.stores.IngressV1beta1.List() {
-		ing := s.networkingIngressV1Beta1(item)
+	var ingressesV1Beta1 netv1beta1.IngressList
+	if err := s.client.List(ctx, &ingressesV1Beta1); err != nil {
+		s.logger.Errorf("failed to list networking v1 Ingresses: %v", err)
+	}
+	for _, item := range ingressesV1Beta1.Items {
+		ing := item
 		if !s.isValidIngressClass(&ing.ObjectMeta, annotations.IngressClassKey, s.ingressClassMatching) {
 			continue
 		}
-		ingresses = append(ingresses, ing)
+		ingresses = append(ingresses, &ing)
 	}
 	sort.SliceStable(ingresses, func(i, j int) bool {
 		return strings.Compare(fmt.Sprintf("%s/%s", ingresses[i].Namespace, ingresses[i].Name),
@@ -825,15 +815,22 @@ func (s Store) GetIngressClassName() string {
 }
 
 // GetIngressClassV1 returns the 'name' IngressClass resource.
-func (s Store) GetIngressClassV1(name string) (*netv1.IngressClass, error) {
-	p, exists, err := s.stores.IngressClassV1.GetByKey(name)
+func (s Store) GetIngressClassV1(ctx context.Context, name string) (*netv1.IngressClass, error) {
+	var (
+		ingressClass netv1.IngressClass
+		key          = client.ObjectKey{
+			Name: name,
+		}
+	)
+
+	err := s.client.Get(ctx, key, &ingressClass)
 	if err != nil {
 		return nil, err
 	}
-	if !exists {
+	if apierrors.IsNotFound(err) {
 		return nil, ErrNotFound{fmt.Sprintf("IngressClass %v not found", name)}
 	}
-	return p.(*netv1.IngressClass), nil
+	return &ingressClass, nil
 }
 
 // GetIngressClassParametersV1Alpha1 returns IngressClassParameters for provided
@@ -1016,7 +1013,7 @@ func (s Store) networkingIngressV1Beta1(obj interface{}) *netv1beta1.Ingress {
 // getIngressClassHandling returns annotations.ExactOrEmptyClassMatch if an IngressClass is the default class, or
 // annotations.ExactClassMatch if the IngressClass is not default or does not exist.
 func (s Store) getIngressClassHandling() annotations.ClassMatching {
-	class, err := s.GetIngressClassV1(s.ingressClass)
+	class, err := s.GetIngressClassV1(context.TODO(), s.ingressClass) //nolint:contextcheck
 	if err != nil {
 		s.logger.Debugf("IngressClass %s not found", s.ingressClass)
 		return annotations.ExactClassMatch
@@ -1052,6 +1049,8 @@ func mkObjFromGVK(gvk schema.GroupVersionKind) (runtime.Object, error) {
 	// ----------------------------------------------------------------------------
 	// Kubernetes Core APIs
 	// ----------------------------------------------------------------------------
+	case netv1.SchemeGroupVersion.WithKind("IngressClass"):
+		return &netv1.IngressClass{}, nil
 	case netv1.SchemeGroupVersion.WithKind("Ingress"):
 		return &netv1.Ingress{}, nil
 	case kongv1beta1.SchemeGroupVersion.WithKind("TCPIngress"):

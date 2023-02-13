@@ -223,6 +223,8 @@ func TestNewAdminAPIClientsManager_NoInitialClientsDisallowed(t *testing.T) {
 }
 
 func TestAdminAPIClientsManager_NotRunningNotifyLoop(t *testing.T) {
+	t.Parallel()
+
 	testClient, err := adminapi.NewTestClient("localhost:8080")
 	require.NoError(t, err)
 	m, err := NewAdminAPIClientsManager(
@@ -241,6 +243,8 @@ func TestAdminAPIClientsManager_NotRunningNotifyLoop(t *testing.T) {
 }
 
 func TestAdminAPIClientsManager_Clients(t *testing.T) {
+	t.Parallel()
+
 	testClient, err := adminapi.NewTestClient("localhost:8080")
 	require.NoError(t, err)
 	m, err := NewAdminAPIClientsManager(

@@ -30,10 +30,16 @@ type AdminAPIClientsManager struct {
 	onceRunning sync.Once
 	running     chan struct{}
 
-	clients     []*adminapi.Client
-	clientsLock sync.RWMutex
+	// kongGatewayClients represent all Kong Gateway data-planes that are configured by this KIC instance with use of
+	// their Admin API.
+	kongGatewayClients []*adminapi.Client
 
+	// konnectClient represents a special-case of the data-plane which is Konnect cloud.
+	// This client is used to synchronise configuration with Konnect's Runtime Group Admin API.
 	konnectClient *adminapi.Client
+
+	// clientsLock prevents concurrent reads and writes to both kongGatewayClients and konnectClient fields.
+	clientsLock sync.RWMutex
 
 	logger logrus.FieldLogger
 }
@@ -49,7 +55,7 @@ func NewAdminAPIClientsManager(
 	}
 
 	return &AdminAPIClientsManager{
-		clients:                   initialClients,
+		kongGatewayClients:        initialClients,
 		adminAPIClientFactory:     kongClientFactory,
 		adminAPIAddressNotifyChan: make(chan []string),
 		ctx:                       ctx,
@@ -100,8 +106,8 @@ func (c *AdminAPIClientsManager) AllClients() []*adminapi.Client {
 	c.clientsLock.RLock()
 	defer c.clientsLock.RUnlock()
 
-	copied := make([]*adminapi.Client, len(c.clients))
-	copy(copied, c.clients)
+	copied := make([]*adminapi.Client, len(c.kongGatewayClients))
+	copy(copied, c.kongGatewayClients)
 
 	if c.konnectClient != nil {
 		copied = append(copied, c.konnectClient)
@@ -116,8 +122,8 @@ func (c *AdminAPIClientsManager) GatewayClients() []*adminapi.Client {
 	c.clientsLock.RLock()
 	defer c.clientsLock.RUnlock()
 
-	copied := make([]*adminapi.Client, len(c.clients))
-	copy(copied, c.clients)
+	copied := make([]*adminapi.Client, len(c.kongGatewayClients))
+	copy(copied, c.kongGatewayClients)
 	return copied
 }
 
@@ -163,13 +169,13 @@ func (c *AdminAPIClientsManager) adjustKongClients(addresses []string) {
 
 		// If we don't have a client with new address then filter it and add
 		// a client for this address.
-		return !lo.ContainsBy(c.clients, func(cl *adminapi.Client) bool {
+		return !lo.ContainsBy(c.kongGatewayClients, func(cl *adminapi.Client) bool {
 			return addr == cl.BaseRootURL()
 		})
 	})
 
 	var idxToRemove []int
-	for i, cl := range c.clients {
+	for i, cl := range c.kongGatewayClients {
 		// If the new address set contains a client that we already have then
 		// good, no need to do anything for it.
 		if lo.Contains(addresses, cl.BaseRootURL()) {
@@ -182,7 +188,7 @@ func (c *AdminAPIClientsManager) adjustKongClients(addresses []string) {
 
 	for i := len(idxToRemove) - 1; i >= 0; i-- {
 		idx := idxToRemove[i]
-		c.clients = append(c.clients[:idx], c.clients[idx+1:]...)
+		c.kongGatewayClients = append(c.kongGatewayClients[:idx], c.kongGatewayClients[idx+1:]...)
 	}
 
 	for _, addr := range toAdd {
@@ -192,6 +198,6 @@ func (c *AdminAPIClientsManager) adjustKongClients(addresses []string) {
 			continue
 		}
 
-		c.clients = append(c.clients, client)
+		c.kongGatewayClients = append(c.kongGatewayClients, client)
 	}
 }

@@ -15,7 +15,7 @@ require (
 	github.com/google/uuid v1.3.0
 	github.com/kong/deck v1.18.1
 	github.com/kong/go-kong v0.38.0
-	github.com/kong/kubernetes-testing-framework v0.28.1
+	github.com/kong/kubernetes-testing-framework v0.29.0
 	github.com/lithammer/dedent v1.1.0
 	github.com/miekg/dns v1.1.50
 	github.com/mitchellh/mapstructure v1.5.0
@@ -161,7 +161,7 @@ require (
 	golang.org/x/crypto v0.3.0 // indirect
 	golang.org/x/exp v0.0.0-20220407100705-7b9b53b0aca4
 	golang.org/x/mod v0.6.0 // indirect
-	golang.org/x/oauth2 v0.4.0 // indirect
+	golang.org/x/oauth2 v0.5.0 // indirect
 	golang.org/x/sync v0.1.0
 	golang.org/x/sys v0.5.0 // indirect
 	golang.org/x/term v0.5.0 // indirect

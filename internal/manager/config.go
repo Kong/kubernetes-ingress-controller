@@ -16,6 +16,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/gateway"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/manager/featuregates"
 )
 
 // -----------------------------------------------------------------------------
@@ -224,7 +225,7 @@ func (c *Config) FlagSet() *pflag.FlagSet {
 
 	// Feature Gates (see FEATURE_GATES.md)
 	flagSet.Var(cliflag.NewMapStringBool(&c.FeatureGates), "feature-gates", "A set of key=value pairs that describe feature gates for alpha/beta/experimental features. "+
-		fmt.Sprintf("See the Feature Gates documentation for information and available options: %s", featureGatesDocsURL))
+		fmt.Sprintf("See the Feature Gates documentation for information and available options: %s", featuregates.DocsURL))
 
 	// SIGTERM or SIGINT signal delay
 	flagSet.DurationVar(&c.TermDelay, "term-delay", time.Second*0, "The time delay to sleep before SIGTERM or SIGINT will shut down the Ingress Controller")

@@ -16,6 +16,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/knative"
 	ctrlref "github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/reference"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/manager/featuregates"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util/kubernetes/object/status"
 	konghqcomv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
 	konghqcomv1alpha1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1alpha1"
@@ -73,7 +74,7 @@ func setupControllers(
 		return nil, fmt.Errorf("ingress version picker failed: %w", err)
 	}
 
-	referenceGrantsEnabled := featureGates[gatewayFeature] && ShouldEnableCRDController(
+	referenceGrantsEnabled := featureGates[featuregates.GatewayFeature] && ShouldEnableCRDController(
 		schema.GroupVersionResource{
 			Group:    gatewayv1beta1.GroupVersion.Group,
 			Version:  gatewayv1beta1.GroupVersion.Version,
@@ -337,7 +338,7 @@ func setupControllers(
 			// knative is a special case because it existed before we added feature gates functionality
 			// for this controller (only) the existing --enable-controller-knativeingress flag overrides
 			// any feature gate configuration. See FEATURE_GATES.md for more information.
-			Enabled: (featureGates[knativeFeature] || c.KnativeIngressEnabled) && ShouldEnableCRDController(
+			Enabled: (featureGates[featuregates.KnativeFeature] || c.KnativeIngressEnabled) && ShouldEnableCRDController(
 				schema.GroupVersionResource{
 					Group:    knativev1alpha1.SchemeGroupVersion.Group,
 					Version:  knativev1alpha1.SchemeGroupVersion.Version,
@@ -362,7 +363,7 @@ func setupControllers(
 		// Gateway API Controllers - Beta APIs
 		// ---------------------------------------------------------------------------
 		{
-			Enabled: featureGates[gatewayFeature] && ShouldEnableCRDController(
+			Enabled: featureGates[featuregates.GatewayFeature] && ShouldEnableCRDController(
 				schema.GroupVersionResource{
 					Group:    gatewayv1beta1.GroupVersion.Group,
 					Version:  gatewayv1beta1.GroupVersion.Version,
@@ -372,7 +373,7 @@ func setupControllers(
 			),
 			Controller: &gateway.GatewayReconciler{
 				Client:               mgr.GetClient(),
-				Log:                  ctrl.Log.WithName("controllers").WithName(gatewayFeature),
+				Log:                  ctrl.Log.WithName("controllers").WithName(featuregates.GatewayFeature),
 				Scheme:               mgr.GetScheme(),
 				DataplaneClient:      dataplaneClient,
 				PublishService:       c.PublishService.String(),
@@ -383,7 +384,7 @@ func setupControllers(
 			},
 		},
 		{
-			Enabled: featureGates[gatewayFeature] && ShouldEnableCRDController(
+			Enabled: featureGates[featuregates.GatewayFeature] && ShouldEnableCRDController(
 				schema.GroupVersionResource{
 					Group:    gatewayv1beta1.GroupVersion.Group,
 					Version:  gatewayv1beta1.GroupVersion.Version,
@@ -414,7 +415,7 @@ func setupControllers(
 			},
 		},
 		{
-			Enabled: featureGates[gatewayAlphaFeature] && ShouldEnableCRDController(
+			Enabled: featureGates[featuregates.GatewayAlphaFeature] && ShouldEnableCRDController(
 				schema.GroupVersionResource{
 					Group:    gatewayv1alpha2.GroupVersion.Group,
 					Version:  gatewayv1alpha2.GroupVersion.Version,
@@ -431,7 +432,7 @@ func setupControllers(
 			},
 		},
 		{
-			Enabled: featureGates[gatewayAlphaFeature] && ShouldEnableCRDController(
+			Enabled: featureGates[featuregates.GatewayAlphaFeature] && ShouldEnableCRDController(
 				schema.GroupVersionResource{
 					Group:    gatewayv1alpha2.GroupVersion.Group,
 					Version:  gatewayv1alpha2.GroupVersion.Version,
@@ -448,7 +449,7 @@ func setupControllers(
 			},
 		},
 		{
-			Enabled: featureGates[gatewayAlphaFeature] && ShouldEnableCRDController(
+			Enabled: featureGates[featuregates.GatewayAlphaFeature] && ShouldEnableCRDController(
 				schema.GroupVersionResource{
 					Group:    gatewayv1alpha2.GroupVersion.Group,
 					Version:  gatewayv1alpha2.GroupVersion.Version,

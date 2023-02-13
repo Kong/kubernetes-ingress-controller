@@ -93,6 +93,8 @@ func TestIstioWithKongIngressGateway(t *testing.T) {
 	env, err := envBuilder.WithAddons(istioAddon, kongAddon).Build(ctx)
 	require.NoError(t, err)
 
+	logClusterInfo(t, env.Cluster())
+
 	defer func() {
 		helpers.TeardownCluster(ctx, t, env.Cluster())
 	}()

@@ -9,7 +9,10 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 )
 
-const defaultRefreshNodeInterval = 30 * time.Second
+const (
+	MinRefreshNodePeriod     = 30 * time.Second
+	DefaultRefreshNodePeriod = 60 * time.Second
+)
 
 type NodeAgent struct {
 	NodeID   string
@@ -18,8 +21,8 @@ type NodeAgent struct {
 
 	Logger logr.Logger
 
-	konnectClient   *NodeAPIClient
-	refreshInterval time.Duration
+	konnectClient *Client
+	refreshPeriod time.Duration
 
 	hasTranslationFailureChan chan bool
 	hasTranslationFailure     bool
@@ -28,16 +31,25 @@ type NodeAgent struct {
 	sendCondifError     error
 }
 
-func NewNodeAgent(hostname string, version string, logger logr.Logger, client *NodeAPIClient) *NodeAgent {
+func NewNodeAgent(
+	hostname string,
+	version string,
+	refreshPeriod time.Duration,
+	hasTranslationFailureChan chan bool,
+	sendConfigErrorChan chan error,
+	logger logr.Logger,
+	client *Client,
+) *NodeAgent {
+	if refreshPeriod < MinRefreshNodePeriod {
+		refreshPeriod = MinRefreshNodePeriod
+	}
 	return &NodeAgent{
 		Hostname: hostname,
 		Version:  version,
 		Logger: logger.
 			WithName("konnect-node").WithValues("runtime_group_id", client.RuntimeGroupID),
 		konnectClient: client,
-		// TODO: set refresh interval by some flag
-		// https://github.com/Kong/kubernetes-ingress-controller/issues/3515
-		refreshInterval: defaultRefreshNodeInterval,
+		refreshPeriod: refreshPeriod,
 	}
 }
 
@@ -51,7 +63,7 @@ func (a *NodeAgent) createNode() error {
 	}
 	resp, err := a.konnectClient.CreateNode(createNodeReq)
 	if err != nil {
-		return fmt.Errorf("failed to update node, hostname %s: %w", a.Hostname, err)
+		return fmt.Errorf("failed to create node, hostname %s: %w", a.Hostname, err)
 	}
 
 	a.NodeID = resp.Item.ID
@@ -66,6 +78,10 @@ func (a *NodeAgent) clearOutdatedNodes() error {
 	}
 
 	for _, node := range nodes.Items {
+		// REVIEW: what should the condition be to delete the node in Konnect RG?
+		// (1) Do we check the "last update" of the node, and only delete it when the last update is too old(say, 5 mins ago)?
+		// (2) What if there is a node with the same name but not the same node exists?
+		// for example, When KIC runs in minikube/kind env and whole cluster is stopped then started again.
 		if node.Type == NodeTypeIngressController && node.Hostname != a.Hostname {
 			a.Logger.V(util.DebugLevel).Info("remove outdated KIC node", "node_id", node.ID, "hostname", node.Hostname)
 			err := a.konnectClient.DeleteNode(node.ID)
@@ -91,7 +107,6 @@ func (a *NodeAgent) updateNode() error {
 	err := a.clearOutdatedNodes()
 	if err != nil {
 		a.Logger.Error(err, "failed to clear outdated nodes")
-		return err
 	}
 
 	ingressControllerStatus := a.calculateStatus()
@@ -114,10 +129,8 @@ func (a *NodeAgent) updateNode() error {
 }
 
 func (a *NodeAgent) updateNodeLoop() {
-	ticker := time.NewTicker(a.refreshInterval)
+	ticker := time.NewTicker(a.refreshPeriod)
 	defer ticker.Stop()
-	// TODO: add some mechanism to break the loop
-	// https://github.com/Kong/kubernetes-ingress-controller/issues/3515
 	for range ticker.C {
 		err := a.updateNode()
 		if err != nil {

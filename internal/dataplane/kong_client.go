@@ -135,6 +135,14 @@ type KongClient struct {
 
 	// clientsProvider allows retrieving the most recent set of clients.
 	clientsProvider AdminAPIClientsProvider
+
+	// hasTranslationErrorChan is used to notify konnect node agent the whether
+	//	error happened in traslating k8s objects to kong configuration.
+	hasTranslationErrorChan chan bool
+
+	// sendConfigErrorChan is used to notify whether error happened in sending
+	// translated configurations to kong.
+	sendConfigErrorChan chan error
 }
 
 // NewKongClient provides a new KongClient object after connecting to the
@@ -528,6 +536,11 @@ func handleSendToClientResult(client sendconfig.KonnectAwareClient, logger logru
 		}
 		return "", err
 	}
+// SetHasTranslationFailureChan sets the channel to receive the status of whether
+// translation failure happens.
+func (c *KongClient) SetHasTranslationFailureChan(ch chan bool) {
+	c.hasTranslationErrorChan = ch
+}
 
 	return newSHA, nil
 }

@@ -211,6 +211,7 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 		version := metadata.Release
 		agent := konnect.NewNodeAgent(
 			hostname, version,
+			c.Konnect.RefreshNodePeriod,
 			hasTranslationFailureChan,
 			sendConfigErrorChan,
 			setupLog, konnectClient,

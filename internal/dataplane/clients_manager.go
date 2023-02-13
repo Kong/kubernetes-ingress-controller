@@ -88,10 +88,11 @@ func (c *AdminAPIClientsManager) Notify(addresses []string) {
 }
 
 // SetKonnectClient sets a client that will be used to communicate with Konnect Runtime Group Admin API.
+// If called multiple times, it will override the client.
 func (c *AdminAPIClientsManager) SetKonnectClient(client *adminapi.Client) {
 	c.clientsLock.Lock()
 	defer c.clientsLock.Unlock()
-	c.clients = append(c.clients, client)
+	c.konnectClient = client
 }
 
 // AllClients returns a copy of current client's slice. It will also include Konnect client if set.

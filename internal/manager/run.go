@@ -191,13 +191,13 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 		// considered critical feature, and it should not break the basic functionality of the controller.
 
 		setupLog.Info("Start Konnect client to register runtime instances to Konnect")
-		konnectClient, err := konnect.NewClient(c.Konnect)
+		konnectNodeAPIClient, err := konnect.NewNodeAPIClient(c.Konnect)
 		if err != nil {
 			setupLog.Error(err, "failed creating konnect client, skipping running NodeAgent")
 		} else {
 			hostname, _ := os.Hostname()
 			version := metadata.Release
-			agent := konnect.NewNodeAgent(hostname, version, setupLog, konnectClient)
+			agent := konnect.NewNodeAgent(hostname, version, setupLog, konnectNodeAPIClient)
 			agent.Run()
 		}
 

@@ -1,4 +1,4 @@
-package manager
+package featuregates
 
 import (
 	"bytes"
@@ -18,21 +18,21 @@ func TestFeatureGates(t *testing.T) {
 	setupLog := logrusr.New(baseLogger)
 
 	t.Log("verifying feature gates setup defaults when no feature gates are configured")
-	fgs, err := setupFeatureGates(setupLog, nil)
+	fgs, err := Setup(setupLog, nil)
 	assert.NoError(t, err)
-	assert.Len(t, fgs, len(getFeatureGatesDefaults()))
+	assert.Len(t, fgs, len(GetFeatureGatesDefaults()))
 
 	t.Log("verifying feature gates setup results when valid feature gates options are present")
-	featureGates := map[string]bool{gatewayFeature: true}
-	fgs, err = setupFeatureGates(setupLog, featureGates)
+	featureGates := map[string]bool{GatewayFeature: true}
+	fgs, err = Setup(setupLog, featureGates)
 	assert.NoError(t, err)
-	assert.True(t, fgs[gatewayFeature])
+	assert.True(t, fgs[GatewayFeature])
 
 	t.Log("configuring several invalid feature gates options")
 	featureGates = map[string]bool{"invalidGateway": true}
 
 	t.Log("verifying feature gates setup results when invalid feature gates options are present")
-	_, err = setupFeatureGates(setupLog, featureGates)
+	_, err = Setup(setupLog, featureGates)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "invalidGateway is not a valid feature")
 }

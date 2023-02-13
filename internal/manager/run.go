@@ -11,13 +11,9 @@ import (
 
 	"github.com/blang/semver/v4"
 	"github.com/sirupsen/logrus"
-	"k8s.io/apimachinery/pkg/runtime"
-	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
-	knativev1alpha1 "knative.dev/networking/pkg/apis/networking/v1alpha1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
-	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/adminapi"
@@ -25,15 +21,13 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/sendconfig"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/konnect"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/manager/featuregates"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/manager/metadata"
 	mgrutils "github.com/kong/kubernetes-ingress-controller/v2/internal/manager/utils"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/manager/utils/kongconfig"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util/kubernetes/object/status"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/versions"
-	konghqcomv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
-	konghqcomv1alpha1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1alpha1"
-	configurationv1beta1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1beta1"
 )
 
 // -----------------------------------------------------------------------------
@@ -49,7 +43,7 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 	gateway.SetControllerName(gatewayv1beta1.GatewayController(c.GatewayAPIControllerName))
 
 	setupLog.Info("getting enabled options and features")
-	featureGates, err := setupFeatureGates(setupLog, c.FeatureGates)
+	featureGates, err := featuregates.Setup(setupLog, c.FeatureGates)
 	if err != nil {
 		return fmt.Errorf("failed to configure feature gates: %w", err)
 	}
@@ -88,7 +82,7 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 	kongConfig.Init(ctx, setupLog, initialKongClients)
 
 	setupLog.Info("configuring and building the controller manager")
-	controllerOpts, err := setupControllerOptions(setupLog, c, dbMode)
+	controllerOpts, err := setupControllerOptions(setupLog, c, dbMode, featureGates)
 	if err != nil {
 		return fmt.Errorf("unable to setup controller options: %w", err)
 	}
@@ -142,7 +136,7 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 		return fmt.Errorf("unable to initialize dataplane synchronizer: %w", err)
 	}
 
-	if enabled, ok := featureGates[combinedRoutesFeature]; ok && enabled {
+	if enabled, ok := featureGates[featuregates.CombinedRoutesFeature]; ok && enabled {
 		dataplaneClient.EnableCombinedServiceRoutes()
 		setupLog.Info("combined routes mode has been enabled")
 	}
@@ -191,13 +185,13 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 		// considered critical feature, and it should not break the basic functionality of the controller.
 
 		setupLog.Info("Start Konnect client to register runtime instances to Konnect")
-		konnectClient, err := konnect.NewClient(c.Konnect)
+		konnectNodeAPIClient, err := konnect.NewNodeAPIClient(c.Konnect)
 		if err != nil {
 			setupLog.Error(err, "failed creating konnect client, skipping running NodeAgent")
 		} else {
 			hostname, _ := os.Hostname()
 			version := metadata.Release
-			agent := konnect.NewNodeAgent(hostname, version, setupLog, konnectClient)
+			agent := konnect.NewNodeAgent(hostname, version, setupLog, konnectNodeAPIClient)
 			agent.Run()
 		}
 
@@ -252,32 +246,4 @@ func readyzHandler(mgr manager.Manager, dataplaneSynchronizer IsReady) func(*htt
 		}
 		return nil
 	}
-}
-
-func getScheme() (*runtime.Scheme, error) {
-	scheme := runtime.NewScheme()
-
-	if err := clientgoscheme.AddToScheme(scheme); err != nil {
-		return nil, err
-	}
-	if err := konghqcomv1.AddToScheme(scheme); err != nil {
-		return nil, err
-	}
-	if err := konghqcomv1alpha1.AddToScheme(scheme); err != nil {
-		return nil, err
-	}
-	if err := configurationv1beta1.AddToScheme(scheme); err != nil {
-		return nil, err
-	}
-	if err := knativev1alpha1.AddToScheme(scheme); err != nil {
-		return nil, err
-	}
-	if err := gatewayv1alpha2.Install(scheme); err != nil {
-		return nil, err
-	}
-	if err := gatewayv1beta1.Install(scheme); err != nil {
-		return nil, err
-	}
-
-	return scheme, nil
 }

@@ -12,10 +12,9 @@ import (
 	tlsutil "github.com/kong/kubernetes-ingress-controller/v2/internal/util/tls"
 )
 
-// Client is used for sending requests to Konnect APIs which are not included
-// in Kong Admin APIs, like node registration APIs or runtime group operation APIs.
-// TODO(naming): give a better type name to this client?
-type Client struct {
+// NodeAPIClient is used for sending requests to Konnect Node API.
+// It can be used to register Nodes in Konnect's Runtime Groups.
+type NodeAPIClient struct {
 	Address        string
 	RuntimeGroupID string
 	Client         *http.Client
@@ -24,8 +23,8 @@ type Client struct {
 // KicNodeAPIPathPattern is the path pattern for KIC node operations.
 var KicNodeAPIPathPattern = "%s/kic/api/runtime_groups/%s/v1/kic-nodes"
 
-// NewClient creates a Konnect client.
-func NewClient(cfg adminapi.KonnectConfig) (*Client, error) {
+// NewNodeAPIClient creates a Konnect client.
+func NewNodeAPIClient(cfg adminapi.KonnectConfig) (*NodeAPIClient, error) {
 	tlsConfig := tls.Config{
 		MinVersion: tls.VersionTLS12,
 	}
@@ -42,22 +41,22 @@ func NewClient(cfg adminapi.KonnectConfig) (*Client, error) {
 	defaultTransport.TLSClientConfig = &tlsConfig
 	c.Transport = defaultTransport
 
-	return &Client{
+	return &NodeAPIClient{
 		Address:        cfg.Address,
 		RuntimeGroupID: cfg.RuntimeGroupID,
 		Client:         c,
 	}, nil
 }
 
-func (c *Client) kicNodeAPIEndpoint() string {
+func (c *NodeAPIClient) kicNodeAPIEndpoint() string {
 	return fmt.Sprintf(KicNodeAPIPathPattern, c.Address, c.RuntimeGroupID)
 }
 
-func (c *Client) kicNodeAPIEndpointWithNodeID(nodeID string) string {
+func (c *NodeAPIClient) kicNodeAPIEndpointWithNodeID(nodeID string) string {
 	return fmt.Sprintf(KicNodeAPIPathPattern, c.Address, c.RuntimeGroupID) + "/" + nodeID
 }
 
-func (c *Client) CreateNode(req *CreateNodeRequest) (*CreateNodeResponse, error) {
+func (c *NodeAPIClient) CreateNode(req *CreateNodeRequest) (*CreateNodeResponse, error) {
 	buf, err := json.Marshal(req)
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal create node request: %w", err)
@@ -92,7 +91,7 @@ func (c *Client) CreateNode(req *CreateNodeRequest) (*CreateNodeResponse, error)
 	return resp, nil
 }
 
-func (c *Client) UpdateNode(nodeID string, req *UpdateNodeRequest) (*UpdateNodeResponse, error) {
+func (c *NodeAPIClient) UpdateNode(nodeID string, req *UpdateNodeRequest) (*UpdateNodeResponse, error) {
 	buf, err := json.Marshal(req)
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal update node request: %w", err)
@@ -127,7 +126,7 @@ func (c *Client) UpdateNode(nodeID string, req *UpdateNodeRequest) (*UpdateNodeR
 	return resp, nil
 }
 
-func (c *Client) ListNodes() (*ListNodeResponse, error) {
+func (c *NodeAPIClient) ListNodes() (*ListNodeResponse, error) {
 	url := c.kicNodeAPIEndpoint()
 	httpResp, err := c.Client.Get(url)
 	if err != nil {
@@ -153,7 +152,7 @@ func (c *Client) ListNodes() (*ListNodeResponse, error) {
 	return resp, nil
 }
 
-func (c *Client) DeleteNode(nodeID string) error {
+func (c *NodeAPIClient) DeleteNode(nodeID string) error {
 	url := c.kicNodeAPIEndpointWithNodeID(nodeID)
 	httpReq, err := http.NewRequest("DELETE", url, nil)
 	if err != nil {

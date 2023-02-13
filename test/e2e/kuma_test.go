@@ -29,6 +29,7 @@ func TestDeployAllInOneDBLESSKuma(t *testing.T) {
 	builder = builder.WithAddons(kuma.New())
 	env, err := builder.Build(ctx)
 	require.NoError(t, err)
+	logClusterInfo(t, env.Cluster())
 
 	defer func() {
 		helpers.TeardownCluster(ctx, t, env.Cluster())
@@ -104,6 +105,8 @@ func TestDeployAllInOnePostgresKuma(t *testing.T) {
 	builder = builder.WithAddons(kuma.New())
 	env, err := builder.Build(ctx)
 	require.NoError(t, err)
+	logClusterInfo(t, env.Cluster())
+
 	defer func() {
 		helpers.TeardownCluster(ctx, t, env.Cluster())
 	}()

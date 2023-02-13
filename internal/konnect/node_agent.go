@@ -54,6 +54,7 @@ func NewNodeAgent(
 }
 
 func (a *NodeAgent) createNode() error {
+	// REVIEW: consider existing nodes in runtime group as outdated and delete them before creating?
 	createNodeReq := &CreateNodeRequest{
 		ID:       a.NodeID,
 		Hostname: a.Hostname,
@@ -106,6 +107,7 @@ func (a *NodeAgent) calculateStatus() IngressControllerState {
 func (a *NodeAgent) updateNode() error {
 	err := a.clearOutdatedNodes()
 	if err != nil {
+		// still continue to update the current status if cleanup failed.
 		a.Logger.Error(err, "failed to clear outdated nodes")
 	}
 

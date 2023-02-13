@@ -167,6 +167,9 @@ func TestWebhookUpdate(t *testing.T) {
 	env, err := builder.Build(ctx)
 	require.NoError(t, err)
 
+	cluster = env.Cluster()
+	logClusterInfo(t, cluster)
+
 	defer func() {
 		helpers.TeardownCluster(ctx, t, env.Cluster())
 	}()
@@ -294,6 +297,8 @@ func TestDeployAllInOneDBLESSGateway(t *testing.T) {
 	require.NoError(t, err)
 	env, err := builder.Build(ctx)
 	require.NoError(t, err)
+	cluster := env.Cluster()
+	logClusterInfo(t, cluster)
 
 	defer func() {
 		helpers.TeardownCluster(ctx, t, env.Cluster())
@@ -455,6 +460,8 @@ func TestDeployAllInOneDBLESSNoLoadBalancer(t *testing.T) {
 	require.NoError(t, err)
 	env, err := builder.Build(ctx)
 	require.NoError(t, err)
+	logClusterInfo(t, env.Cluster())
+
 	defer func() {
 		helpers.TeardownCluster(ctx, t, env.Cluster())
 	}()
@@ -514,6 +521,7 @@ func TestDefaultIngressClass(t *testing.T) {
 	require.NoError(t, err)
 	env, err := builder.Build(ctx)
 	require.NoError(t, err)
+	logClusterInfo(t, env.Cluster())
 
 	defer func() {
 		helpers.TeardownCluster(ctx, t, env.Cluster())
@@ -634,6 +642,7 @@ func TestMissingCRDsDontCrashTheController(t *testing.T) {
 	require.NoError(t, err)
 	env, err := builder.Build(ctx)
 	require.NoError(t, err)
+	logClusterInfo(t, env.Cluster())
 
 	defer func() {
 		helpers.TeardownCluster(ctx, t, env.Cluster())

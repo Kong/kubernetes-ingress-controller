@@ -26,8 +26,9 @@ func TestKongRouterFlavorCompatibility(t *testing.T) {
 	require.NoError(t, err)
 	env, err := builder.Build(ctx)
 	require.NoError(t, err)
-
 	cluster := env.Cluster()
+	logClusterInfo(t, cluster)
+
 	defer func() {
 		helpers.TeardownCluster(ctx, t, cluster)
 	}()

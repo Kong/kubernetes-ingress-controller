@@ -18,11 +18,11 @@ type NodeAgent struct {
 
 	Logger logr.Logger
 
-	konnectClient   *Client
+	konnectClient   *NodeAPIClient
 	refreshInterval time.Duration
 }
 
-func NewNodeAgent(hostname string, version string, logger logr.Logger, client *Client) *NodeAgent {
+func NewNodeAgent(hostname string, version string, logger logr.Logger, client *NodeAPIClient) *NodeAgent {
 	return &NodeAgent{
 		Hostname: hostname,
 		Version:  version,

@@ -22,6 +22,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/adminapi"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/admission"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/manager/scheme"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 )
 
@@ -52,9 +53,9 @@ func SetupLoggers(c *Config, output io.Writer) (logrus.FieldLogger, logr.Logger,
 	return deprecatedLogger, logger, nil
 }
 
-func setupControllerOptions(logger logr.Logger, c *Config, dbmode string) (ctrl.Options, error) {
+func setupControllerOptions(logger logr.Logger, c *Config, dbmode string, featureGates map[string]bool) (ctrl.Options, error) {
 	logger.Info("building the manager runtime scheme and loading apis into the scheme")
-	scheme, err := getScheme()
+	scheme, err := scheme.Get(featureGates)
 	if err != nil {
 		return ctrl.Options{}, err
 	}
@@ -326,5 +327,6 @@ func (c *Config) getKongClients(ctx context.Context) ([]*adminapi.Client, error)
 		}
 		clients = append(clients, client)
 	}
+
 	return clients, nil
 }

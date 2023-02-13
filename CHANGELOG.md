@@ -96,6 +96,13 @@ Adding a new version? You'll need three changes:
   [#3507](https://github.com/Kong/kubernetes-ingress-controller/pull/3507)
 - Enable `ReferenceGrant` if `Gateway` feature gate is turned on (default).
   [#3519](https://github.com/Kong/kubernetes-ingress-controller/pull/3519)
+- Experimental `--konnect-sync-enabled` feature flag has been introduced. It
+  enables the integration with Kong's Konnect cloud. It's turned off by default.
+  When enabled, it allows to synchronise data-plane configuration with
+  a Konnect Runtime Group specified by `--konnect-runtime-group-id`.
+  It requires `--konnect-tls-client-*` set of flags to be set to provide
+  Runtime Group's TLS client certificates for authentication.
+  [#3455](https://github.com/Kong/kubernetes-ingress-controller/pull/3455)
 - Added Konnect client to upload status of KIC instance to Konnect cloud if
   flag `--konnect-sync-enabled` is set to `true`.
   [#3469](https://github.com/Kong/kubernetes-ingress-controller/pull/3469)
@@ -139,6 +146,11 @@ Adding a new version? You'll need three changes:
 - Removed a duplicated status update of the HTTPRoute, which led to a potential
   status flickering.
   [#3451](https://github.com/Kong/kubernetes-ingress-controller/pull/3451)
+
+### Under the hood
+
+- Contorller manager scheme is contructed based on the provided feature gates
+  [#3539](https://github.com/Kong/kubernetes-ingress-controller/pull/3539)
 
 ### Deprecated
 

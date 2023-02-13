@@ -5,21 +5,11 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
-
 	"github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-)
 
-// ResourceError is a Kong configuration error associated with a Kubernetes resource.
-type ResourceError struct {
-	Name       string
-	Namespace  string
-	Kind       string
-	APIVersion string
-	UID        string
-	Problems   map[string]string
-}
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
+)
 
 // rawResourceError is a Kong configuration error associated with a Kubernetes resource with Kubernetes metadata stored
 // in raw Kong entity tags.

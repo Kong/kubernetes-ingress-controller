@@ -117,7 +117,7 @@ func TestClientAddressesNotifications(t *testing.T) {
 
 	requireClientsCountEventually := func(t *testing.T, c *AdminAPIClientsManager, addresses []string, args ...any) {
 		require.Eventually(t, func() bool {
-			clientAddresses := lo.Map(c.Clients(), func(cl *adminapi.Client, _ int) string {
+			clientAddresses := lo.Map(c.AllClients(), func(cl *adminapi.Client, _ int) string {
 				return cl.BaseRootURL()
 			})
 			return slices.Equal(addresses, clientAddresses)
@@ -178,7 +178,7 @@ func TestClientAdjustInternalClientsAfterNotification(t *testing.T) {
 	manager.RunNotifyLoop()
 	<-manager.Running()
 
-	clients := manager.Clients()
+	clients := manager.AllClients()
 	require.Len(t, clients, 1)
 	require.Equal(t, "localhost:8083", clients[0].BaseRootURL())
 
@@ -220,4 +220,46 @@ func TestNewAdminAPIClientsManager_NoInitialClientsDisallowed(t *testing.T) {
 	cf := &clientFactoryWithExpected{t: t}
 	_, err := NewAdminAPIClientsManager(context.Background(), logrus.New(), nil, cf)
 	require.Error(t, err)
+}
+
+func TestAdminAPIClientsManager_NotRunningNotifyLoop(t *testing.T) {
+	t.Parallel()
+
+	testClient, err := adminapi.NewTestClient("localhost:8080")
+	require.NoError(t, err)
+	m, err := NewAdminAPIClientsManager(
+		context.Background(),
+		logrus.New(),
+		[]*adminapi.Client{testClient},
+		&clientFactoryWithExpected{t: t},
+	)
+	require.NoError(t, err)
+
+	select {
+	case <-m.Running():
+		t.Error("expected manager to not run without explicitly running it with Run method")
+	case <-time.After(time.Millisecond * 100):
+	}
+}
+
+func TestAdminAPIClientsManager_Clients(t *testing.T) {
+	t.Parallel()
+
+	testClient, err := adminapi.NewTestClient("localhost:8080")
+	require.NoError(t, err)
+	m, err := NewAdminAPIClientsManager(
+		context.Background(),
+		logrus.New(),
+		[]*adminapi.Client{testClient},
+		&clientFactoryWithExpected{t: t},
+	)
+	require.NoError(t, err)
+	require.Len(t, m.GatewayClients(), 1, "expecting one initial client")
+	require.Len(t, m.AllClients(), 1, "expecting one initial client")
+
+	konnectTestClient, err := adminapi.NewTestClient("https://us.api.konghq.tech")
+	require.NoError(t, err)
+	m.SetKonnectClient(konnectTestClient)
+	require.Len(t, m.GatewayClients(), 1, "konnect client should not be returned from GatewayClients")
+	require.Len(t, m.AllClients(), 2, "konnect client should be returned from AllClients")
 }

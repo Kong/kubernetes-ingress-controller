@@ -231,6 +231,8 @@ func getPreviousGitTag(path string, cur semver.Version) (semver.Version, error) 
 
 // getKongProxyIP takes a Service with Kong proxy ports and returns and its IP, or fails the test if it cannot.
 func getKongProxyIP(ctx context.Context, t *testing.T, env environments.Environment) string {
+	t.Helper()
+
 	refreshService := func() *corev1.Service {
 		svc, err := env.Cluster().Client().CoreV1().Services(namespace).Get(ctx, "kong-proxy", metav1.GetOptions{})
 		require.NoError(t, err)
@@ -253,6 +255,8 @@ func getKongProxyIP(ctx context.Context, t *testing.T, env environments.Environm
 }
 
 func getKongProxyLoadBalancerIP(t *testing.T, refreshSvc func() *corev1.Service) string {
+	t.Helper()
+
 	var resIP string
 	require.Eventually(t, func() bool {
 		svc := refreshSvc()

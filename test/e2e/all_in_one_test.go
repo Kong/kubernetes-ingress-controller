@@ -15,6 +15,7 @@ import (
 
 	"github.com/kong/deck/dump"
 	gokong "github.com/kong/go-kong/kong"
+	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/kong"
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
@@ -41,6 +42,12 @@ const (
 	dblessURL  = "https://raw.githubusercontent.com/Kong/kubernetes-ingress-controller/%v.%v.x/deploy/single/all-in-one-dbless.yaml"
 )
 
+func logClusterInfo(t *testing.T, cluster clusters.Cluster) {
+	v, err := cluster.Version()
+	require.NoError(t, err)
+	t.Logf("cluster %s (type: %s, v: %s) is up", cluster.Name(), cluster.Type(), v)
+}
+
 func TestDeployAllInOneDBLESS(t *testing.T) {
 	t.Log("configuring all-in-one-dbless.yaml manifest test")
 	t.Parallel()
@@ -52,6 +59,7 @@ func TestDeployAllInOneDBLESS(t *testing.T) {
 	require.NoError(t, err)
 	env, err := builder.Build(ctx)
 	require.NoError(t, err)
+	logClusterInfo(t, env.Cluster())
 
 	defer func() {
 		helpers.TeardownCluster(ctx, t, env.Cluster())
@@ -104,6 +112,7 @@ func TestDeployAndUpgradeAllInOneDBLESS(t *testing.T) {
 
 	env, err := builder.Build(ctx)
 	require.NoError(t, err)
+	logClusterInfo(t, env.Cluster())
 
 	defer func() {
 		helpers.TeardownCluster(ctx, t, env.Cluster())
@@ -140,6 +149,7 @@ func TestDeployAllInOneEnterpriseDBLESS(t *testing.T) {
 	require.NoError(t, err)
 	env, err := builder.Build(ctx)
 	require.NoError(t, err)
+	logClusterInfo(t, env.Cluster())
 
 	createKongImagePullSecret(ctx, t, env)
 
@@ -184,6 +194,7 @@ func TestDeployAllInOnePostgres(t *testing.T) {
 	require.NoError(t, err)
 	env, err := builder.Build(ctx)
 	require.NoError(t, err)
+	logClusterInfo(t, env.Cluster())
 
 	defer func() {
 		helpers.TeardownCluster(ctx, t, env.Cluster())
@@ -213,6 +224,7 @@ func TestDeployAllInOnePostgresWithMultipleReplicas(t *testing.T) {
 	require.NoError(t, err)
 	env, err := builder.Build(ctx)
 	require.NoError(t, err)
+	logClusterInfo(t, env.Cluster())
 
 	defer func() {
 		helpers.TeardownCluster(ctx, t, env.Cluster())
@@ -352,6 +364,8 @@ func TestDeployAllInOneEnterprisePostgres(t *testing.T) {
 	require.NoError(t, err)
 	env, err := builder.Build(ctx)
 	require.NoError(t, err)
+	logClusterInfo(t, env.Cluster())
+
 	createKongImagePullSecret(ctx, t, env)
 
 	defer func() {
@@ -400,6 +414,7 @@ func TestDeployAllInOneDBLESSMultiGW(t *testing.T) {
 	require.NoError(t, err)
 	env, err := builder.Build(ctx)
 	require.NoError(t, err)
+	logClusterInfo(t, env.Cluster())
 
 	defer func() {
 		helpers.TeardownCluster(ctx, t, env.Cluster())

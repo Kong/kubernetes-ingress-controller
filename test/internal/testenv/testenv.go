@@ -2,8 +2,6 @@ package testenv
 
 import (
 	"os"
-
-	"github.com/kong/kubernetes-ingress-controller/v2/test/consts"
 )
 
 // -----------------------------------------------------------------------------
@@ -76,7 +74,7 @@ func ClusterVersion() string {
 func ControllerFeatureGates() string {
 	featureGates := os.Getenv("KONG_CONTROLLER_FEATURE_GATES")
 	if featureGates == "" {
-		featureGates = consts.DefaultFeatureGates
+		featureGates = getFeatureGates()
 	}
 	return featureGates
 }

@@ -69,7 +69,7 @@ Adding a new version? You'll need three changes:
 
 ### Added
 
-- Store status of whether configuration succedded or failed for Kubernetes
+- Store status of whether configuration succeeded or failed for Kubernetes
   objects in dataplane client and publish the events to let controllers know
   if the controlled objects succeeded or failed to be translated to Kong
   configuration.
@@ -137,8 +137,10 @@ Adding a new version? You'll need three changes:
 
 ### Under the hood
 
-- Contorller manager scheme is contructed based on the provided feature gates
+- Controller manager scheme is constructed based on the provided feature gates
   [#3539](https://github.com/Kong/kubernetes-ingress-controller/pull/3539)
+- Updated the compiler to [Go v1.20](https://golang.org/doc/go1.20)
+  [#3540](https://github.com/Kong/kubernetes-ingress-controller/issues/3540)
 
 ### Deprecated
 
@@ -181,7 +183,7 @@ Adding a new version? You'll need three changes:
 
 ### Known issues
 
-- Processing of custom entites through `--kong-custom-entities-secret` flag or
+- Processing of custom entities through `--kong-custom-entities-secret` flag or
   `CONTROLLER_KONG_CUSTOM_ENTITIES_SECRET` environment variable does not work.
   [#3278](https://github.com/Kong/kubernetes-ingress-controller/issues/3278)
 

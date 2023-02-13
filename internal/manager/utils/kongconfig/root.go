@@ -161,6 +161,7 @@ func GetRoots(
 
 	for _, client := range kongClients {
 		client := client
+
 		eg.Go(func() error {
 			return retry.Do(
 				func() error {

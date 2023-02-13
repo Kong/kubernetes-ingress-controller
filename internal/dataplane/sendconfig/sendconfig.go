@@ -4,23 +4,15 @@ import (
 	"bytes"
 	"context"
 	"encoding/hex"
-	"encoding/json"
 	"fmt"
-	"io"
 	"sync"
 	"time"
 
-	"github.com/blang/semver/v4"
-	"github.com/kong/deck/diff"
-	"github.com/kong/deck/dump"
 	"github.com/kong/deck/file"
-	"github.com/kong/deck/state"
-	deckutils "github.com/kong/deck/utils"
 	"github.com/kong/go-kong/kong"
 	"github.com/sirupsen/logrus"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/adminapi"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/deckerrors"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/deckgen"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/metrics"
 )
@@ -55,25 +47,20 @@ func PerformUpdate(ctx context.Context,
 		}
 	}
 
-	var metricsProtocol metrics.Protocol
+	updateStrategy := ResolveUpdateStrategy(client, config)
+
 	timeStart := time.Now()
-	if config.InMemory {
-		metricsProtocol = metrics.ProtocolDBLess
-		err = onUpdateInMemoryMode(ctx, log, targetContent, client.AdminAPIClient())
-	} else {
-		metricsProtocol = metrics.ProtocolDeck
-		dumpConfig := dump.Config{SelectorTags: config.FilterTags, SkipCACerts: config.SkipCACertificates}
-		err = onUpdateDBMode(ctx, targetContent, client, dumpConfig, config)
-	}
+	err = updateStrategy.Update(ctx, targetContent)
 	duration := time.Since(timeStart)
 
+	metricsProtocol := updateStrategy.MetricsProtocol()
 	if err != nil {
 		promMetrics.RecordPushFailure(metricsProtocol, duration, client.BaseRootURL(), err)
 		return nil, err
 	}
 
 	promMetrics.RecordPushSuccess(metricsProtocol, duration, client.BaseRootURL())
-	log.Info("successfully synced configuration to kong.")
+	log.Info("successfully synced configuration to kong")
 	return newSHA, nil
 }
 
@@ -81,96 +68,47 @@ func PerformUpdate(ctx context.Context,
 // Sendconfig - Private Functions
 // -----------------------------------------------------------------------------
 
-type InMemoryClient interface {
-	BaseRootURL() string
-	ReloadDeclarativeRawConfig(ctx context.Context, config io.Reader, checkHash bool, flattenErrors bool) ([]byte, error)
+type KonnectAwareClient interface {
+	IsKonnect() bool
 }
 
-func onUpdateInMemoryMode(
+type StatusClient interface {
+	Status(context.Context) (*kong.Status, error)
+}
+
+// hasConfigurationChanged verifies whether configuration has changed by comparing old and new config's SHAs.
+// In case the SHAs are equal, it still can return true if a client is considered crashed based on its status.
+func hasConfigurationChanged(
 	ctx context.Context,
+	oldSHA, newSHA []byte,
+	client KonnectAwareClient,
+	statusClient StatusClient,
 	log logrus.FieldLogger,
-	state *file.Content,
-	client InMemoryClient,
-) error {
-	// Kong will error out if this is set
-	state.Info = nil
-	// Kong errors out if `null`s are present in `config` of plugins
-	deckgen.CleanUpNullsInPluginConfigs(state)
+) (bool, error) {
+	if !bytes.Equal(oldSHA, newSHA) {
+		return true, nil
+	}
+	if !hasSHAUpdateAlreadyBeenReported(newSHA) {
+		log.Debugf("sha %s has been reported", hex.EncodeToString(newSHA))
+	}
+	// In case of Konnect, we skip further steps that are meant to detect Kong instances crash/reset
+	// that are not relevant for Konnect.
+	// We're sure that if oldSHA and newSHA are equal, we are safe to skip the update.
+	if client.IsKonnect() {
+		return false, nil
+	}
 
-	config, err := json.Marshal(state)
+	// Check if a Kong instance has no configuration yet (could mean it crashed, was rebooted, etc.).
+	hasNoConfiguration, err := kongHasNoConfiguration(ctx, statusClient, log)
 	if err != nil {
-		return fmt.Errorf("constructing kong configuration: %w", err)
+		return false, fmt.Errorf("failed to verify kong readiness: %w", err)
+	}
+	// Kong instance has no configuration, we should push despite the oldSHA and newSHA being equal.
+	if hasNoConfiguration {
+		return true, nil
 	}
 
-	log.Debug("sending configuration to Kong Admin API")
-	if _, err := client.ReloadDeclarativeRawConfig(ctx, bytes.NewReader(config), true, false); err != nil {
-		return fmt.Errorf("failed sending declarative config to %s: %w", client.BaseRootURL(), err)
-	}
-
-	return nil
-}
-
-func onUpdateDBMode(
-	ctx context.Context,
-	targetContent *file.Content,
-	client *adminapi.Client,
-	dumpConfig dump.Config,
-	config Config,
-) error {
-	cs, err := currentState(ctx, client, dumpConfig)
-	if err != nil {
-		return fmt.Errorf("failed getting current state for %s: %w", client.BaseRootURL(), err)
-	}
-
-	ts, err := targetState(ctx, targetContent, cs, config.Version, client, dumpConfig)
-	if err != nil {
-		return deckerrors.ConfigConflictError{Err: err}
-	}
-
-	syncer, err := diff.NewSyncer(diff.SyncerOpts{
-		CurrentState:    cs,
-		TargetState:     ts,
-		KongClient:      client.AdminAPIClient(),
-		SilenceWarnings: true,
-	})
-	if err != nil {
-		return fmt.Errorf("creating a new syncer for %s: %w", client.BaseRootURL(), err)
-	}
-
-	_, errs := syncer.Solve(ctx, config.Concurrency, false)
-	if errs != nil {
-		return deckutils.ErrArray{Errors: errs}
-	}
-
-	return nil
-}
-
-func currentState(ctx context.Context, kongClient *adminapi.Client, dumpConfig dump.Config) (*state.KongState, error) {
-	rawState, err := dump.Get(ctx, kongClient.AdminAPIClient(), dumpConfig)
-	if err != nil {
-		return nil, fmt.Errorf("loading configuration from kong: %w", err)
-	}
-
-	return state.Get(rawState)
-}
-
-func targetState(
-	ctx context.Context,
-	targetContent *file.Content,
-	currentState *state.KongState,
-	version semver.Version,
-	kongClient *adminapi.Client,
-	dumpConfig dump.Config,
-) (*state.KongState, error) {
-	rawState, err := file.Get(ctx, targetContent, file.RenderConfig{
-		CurrentState: currentState,
-		KongVersion:  version,
-	}, dumpConfig, kongClient.AdminAPIClient())
-	if err != nil {
-		return nil, err
-	}
-
-	return state.Get(rawState)
+	return false, nil
 }
 
 var (
@@ -197,46 +135,6 @@ func hasSHAUpdateAlreadyBeenReported(latestUpdateSHA []byte) bool {
 	}
 	latestReportedSHA = latestUpdateSHA
 	return false
-}
-
-type KonnectAwareClient interface {
-	IsKonnect() bool
-}
-
-type StatusClient interface {
-	Status(context.Context) (*kong.Status, error)
-}
-
-// hasConfigurationChanged verifies whether configuration has changed by comparing old and new config's SHAs.
-// In case the SHAs are equal, it still can return true if a client is considered crashed based on its status.
-func hasConfigurationChanged(
-	ctx context.Context,
-	oldSHA, newSHA []byte,
-	client KonnectAwareClient,
-	statusClient StatusClient,
-	log logrus.FieldLogger,
-) (bool, error) {
-	if !bytes.Equal(oldSHA, newSHA) {
-		return true, nil
-	}
-	if !hasSHAUpdateAlreadyBeenReported(newSHA) {
-		log.Debugf("sha %s has been reported", hex.EncodeToString(newSHA))
-	}
-	// In case of Konnect, we skip further steps as it doesn't report its configuration hash.
-	if client.IsKonnect() {
-		return false, nil
-	}
-
-	hasNoConfiguration, err := kongHasNoConfiguration(ctx, statusClient, log)
-	if err != nil {
-		return false, fmt.Errorf("failed to verify kong readiness: %w", err)
-	}
-	// Kong instance has no configuration, we should push despite the oldSHA and newSHA being equal.
-	if hasNoConfiguration {
-		return true, nil
-	}
-
-	return false, nil
 }
 
 const wellKnownInitialHash = "00000000000000000000000000000000"

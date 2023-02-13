@@ -43,7 +43,8 @@ const (
 // AdminAPIClientsProvider allows fetching the most recent list of Admin API clients of Gateways that
 // we should configure.
 type AdminAPIClientsProvider interface {
-	Clients() []*adminapi.Client
+	AllClients() []*adminapi.Client
+	GatewayClients() []*adminapi.Client
 }
 
 // -----------------------------------------------------------------------------
@@ -259,7 +260,7 @@ func (c *KongClient) Listeners(ctx context.Context) ([]kong.ProxyListener, []kon
 	// between reading the client(s) and setting the last applied SHA via client's
 	// SetLastConfigSHA() method. It's not ideal but it should do for now.
 	c.lock.RLock()
-	for _, cl := range c.clientsProvider.Clients() {
+	for _, cl := range c.clientsProvider.GatewayClients() {
 		cl := cl
 		errg.Go(func() error {
 			listeners, streamListeners, err := cl.AdminAPIClient().Listeners(ctx)
@@ -444,10 +445,11 @@ func (c *KongClient) Update(ctx context.Context) error {
 func (c *KongClient) sendOutToClients(
 	ctx context.Context, s *kongstate.KongState, formatVersion string, config sendconfig.Config,
 ) ([]string, error) {
-	clients := c.clientsProvider.Clients()
+	clients := c.clientsProvider.AllClients()
 	c.logger.Debugf("sending configuration to %d clients", len(clients))
 	shas, err := iter.MapErr(clients, func(client **adminapi.Client) (string, error) {
-		return c.sendToClient(ctx, *client, s, formatVersion, config)
+		newSHA, err := c.sendToClient(ctx, *client, s, formatVersion, config)
+		return handleSendToClientResult(*client, c.logger, newSHA, err)
 	},
 	)
 	if err != nil {
@@ -505,6 +507,21 @@ func (c *KongClient) sendToClient(
 	client.SetLastConfigSHA(newConfigSHA)
 
 	return string(newConfigSHA), nil
+}
+
+// handleSendToClientResult handles a result returned from sendToClient.
+// It will ignore errors that are returned from Konnect client.
+func handleSendToClientResult(client sendconfig.KonnectAwareClient, logger logrus.FieldLogger, newSHA string, err error) (string, error) {
+	if err != nil {
+		// We do not collect errors from Konnect as they should not break the data-plane loop.
+		if client.IsKonnect() {
+			logger.Error(err, "failed pushing configuration to Konnect")
+			return "", nil
+		}
+		return "", err
+	}
+
+	return newSHA, nil
 }
 
 // -----------------------------------------------------------------------------

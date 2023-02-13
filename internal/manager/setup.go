@@ -327,5 +327,6 @@ func (c *Config) getKongClients(ctx context.Context) ([]*adminapi.Client, error)
 		}
 		clients = append(clients, client)
 	}
+
 	return clients, nil
 }

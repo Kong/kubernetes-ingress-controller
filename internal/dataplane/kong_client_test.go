@@ -1,8 +1,11 @@
 package dataplane
 
 import (
+	"errors"
 	"testing"
 
+	"github.com/sirupsen/logrus"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	netv1 "k8s.io/api/networking/v1"
@@ -105,3 +108,65 @@ var (
 		Kind:    "Ingress",
 	}
 )
+
+type konnectClient struct {
+	isKonnect bool
+}
+
+func (c konnectClient) IsKonnect() bool {
+	return c.isKonnect
+}
+
+func TestHandleSendToClientResult(t *testing.T) {
+	const testSHA = "2110454484b88378619111aab0d8a8b8d0ecad5c0ad1120a19810c965f8652dd"
+	testError := errors.New("sending to client failure")
+
+	testCases := []struct {
+		name      string
+		isKonnect bool
+		inputSHA  string
+		inputErr  error
+
+		expectedErr error
+		expectedSHA string
+	}{
+		{
+			name:     "no error, sha is passed",
+			inputSHA: testSHA,
+
+			expectedSHA: testSHA,
+		},
+		{
+			name:     "error is passed",
+			inputSHA: testSHA,
+			inputErr: testError,
+
+			expectedErr: testError,
+		},
+		{
+			name:      "konnect - error is ignored",
+			isKonnect: true,
+			inputSHA:  testSHA,
+			inputErr:  testError,
+
+			expectedErr: nil,
+			expectedSHA: "",
+		},
+		{
+			name:      "konnect - no error, sha is passed",
+			isKonnect: true,
+			inputSHA:  testSHA,
+
+			expectedSHA: testSHA,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			c := konnectClient{isKonnect: tc.isKonnect}
+			resultSHA, err := handleSendToClientResult(c, logrus.New(), tc.inputSHA, tc.inputErr)
+			assert.Equal(t, tc.expectedErr, err)
+			assert.Equal(t, tc.expectedSHA, resultSHA)
+		})
+	}
+}

@@ -135,6 +135,11 @@ Adding a new version? You'll need three changes:
   status flickering.
   [#3451](https://github.com/Kong/kubernetes-ingress-controller/pull/3451)
 
+### Under the hood
+
+- Contorller manager scheme is contructed based on the provided feature gates
+  [#3539](https://github.com/Kong/kubernetes-ingress-controller/pull/3539)
+
 ### Deprecated
 
 - `kong-custom-entities-secret` flag has been marked as deprecated and will be

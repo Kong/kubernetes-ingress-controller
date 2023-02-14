@@ -14,9 +14,9 @@ require (
 	github.com/go-logr/logr v1.2.3
 	github.com/google/go-cmp v0.5.9
 	github.com/google/uuid v1.3.0
-	github.com/kong/deck v1.18.0
+	github.com/kong/deck v1.18.1
 	github.com/kong/go-kong v0.38.0
-	github.com/kong/kubernetes-testing-framework v0.28.1
+	github.com/kong/kubernetes-testing-framework v0.29.0
 	github.com/lithammer/dedent v1.1.0
 	github.com/miekg/dns v1.1.50
 	github.com/mitchellh/mapstructure v1.5.0
@@ -140,7 +140,6 @@ require (
 	github.com/prometheus/client_model v0.3.0 // indirect
 	github.com/prometheus/procfs v0.8.0 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
-	github.com/sergi/go-diff v1.2.0 // indirect
 	github.com/shirou/gopsutil/v3 v3.22.12 // indirect
 	github.com/shopspring/decimal v1.2.0 // indirect
 	github.com/sourcegraph/conc v0.2.0
@@ -163,7 +162,7 @@ require (
 	golang.org/x/crypto v0.3.0 // indirect
 	golang.org/x/exp v0.0.0-20220407100705-7b9b53b0aca4
 	golang.org/x/mod v0.7.0 // indirect
-	golang.org/x/oauth2 v0.4.0 // indirect
+	golang.org/x/oauth2 v0.5.0 // indirect
 	golang.org/x/sync v0.1.0
 	golang.org/x/sys v0.5.0 // indirect
 	golang.org/x/term v0.5.0 // indirect

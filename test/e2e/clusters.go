@@ -1,7 +1,11 @@
 package e2e
 
 import (
+	"testing"
+
 	"cloud.google.com/go/container/apiv1/containerpb"
+	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
+	"github.com/stretchr/testify/require"
 )
 
 const (
@@ -26,4 +30,10 @@ func gkeTestClusterLabels() map[string]string {
 	return map[string]string{
 		gkeTestClusterLabel: gkeLabelValueTrue,
 	}
+}
+
+func logClusterInfo(t *testing.T, cluster clusters.Cluster) {
+	v, err := cluster.Version()
+	require.NoError(t, err)
+	t.Logf("cluster %s (type: %s, v: %s) is up", cluster.Name(), cluster.Type(), v)
 }

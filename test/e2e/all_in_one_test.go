@@ -15,7 +15,6 @@ import (
 
 	"github.com/kong/deck/dump"
 	gokong "github.com/kong/go-kong/kong"
-	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/kong"
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
@@ -24,7 +23,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/metrics"
-	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/helpers"
 )
 
 // -----------------------------------------------------------------------------
@@ -42,28 +40,10 @@ const (
 	dblessURL  = "https://raw.githubusercontent.com/Kong/kubernetes-ingress-controller/%v.%v.x/deploy/single/all-in-one-dbless.yaml"
 )
 
-func logClusterInfo(t *testing.T, cluster clusters.Cluster) {
-	v, err := cluster.Version()
-	require.NoError(t, err)
-	t.Logf("cluster %s (type: %s, v: %s) is up", cluster.Name(), cluster.Type(), v)
-}
-
 func TestDeployAllInOneDBLESS(t *testing.T) {
 	t.Log("configuring all-in-one-dbless.yaml manifest test")
 	t.Parallel()
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	t.Log("building test cluster and environment")
-	builder, err := getEnvironmentBuilder(ctx)
-	require.NoError(t, err)
-	env, err := builder.Build(ctx)
-	require.NoError(t, err)
-	logClusterInfo(t, env.Cluster())
-
-	defer func() {
-		helpers.TeardownCluster(ctx, t, env.Cluster())
-	}()
+	ctx, env := setupE2ETest(t)
 
 	t.Log("deploying kong components")
 	manifest, err := getTestManifest(t, dblessPath)
@@ -103,20 +83,7 @@ func TestDeployAndUpgradeAllInOneDBLESS(t *testing.T) {
 
 	t.Log("configuring all-in-one-dbless.yaml manifest test")
 	t.Parallel()
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	t.Log("building test cluster and environment")
-	builder, err := getEnvironmentBuilder(ctx)
-	require.NoError(t, err)
-
-	env, err := builder.Build(ctx)
-	require.NoError(t, err)
-	logClusterInfo(t, env.Cluster())
-
-	defer func() {
-		helpers.TeardownCluster(ctx, t, env.Cluster())
-	}()
+	ctx, env := setupE2ETest(t)
 
 	t.Logf("deploying previous version %s kong manifest", preTag)
 	deployKong(ctx, t, env, oldManifest.Body)
@@ -141,21 +108,9 @@ func TestDeployAllInOneEnterpriseDBLESS(t *testing.T) {
 		t.Skipf("no license available to test enterprise: %s was not provided", kong.LicenseDataEnvVar)
 	}
 	t.Parallel()
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	t.Log("building test cluster and environment")
-	builder, err := getEnvironmentBuilder(ctx)
-	require.NoError(t, err)
-	env, err := builder.Build(ctx)
-	require.NoError(t, err)
-	logClusterInfo(t, env.Cluster())
+	ctx, env := setupE2ETest(t)
 
 	createKongImagePullSecret(ctx, t, env)
-
-	defer func() {
-		helpers.TeardownCluster(ctx, t, env.Cluster())
-	}()
 
 	t.Log("generating a superuser password")
 	adminPassword, adminPasswordSecretYAML, err := generateAdminPasswordSecret()
@@ -186,19 +141,7 @@ const postgresPath = "../../deploy/single/all-in-one-postgres.yaml"
 func TestDeployAllInOnePostgres(t *testing.T) {
 	t.Log("configuring all-in-one-postgres.yaml manifest test")
 	t.Parallel()
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	t.Log("building test cluster and environment")
-	builder, err := getEnvironmentBuilder(ctx)
-	require.NoError(t, err)
-	env, err := builder.Build(ctx)
-	require.NoError(t, err)
-	logClusterInfo(t, env.Cluster())
-
-	defer func() {
-		helpers.TeardownCluster(ctx, t, env.Cluster())
-	}()
+	ctx, env := setupE2ETest(t)
 
 	t.Log("deploying kong components")
 	manifest, err := getTestManifest(t, postgresPath)
@@ -216,19 +159,7 @@ func TestDeployAllInOnePostgres(t *testing.T) {
 func TestDeployAllInOnePostgresWithMultipleReplicas(t *testing.T) {
 	t.Log("configuring all-in-one-postgres.yaml manifest test")
 	t.Parallel()
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	t.Log("building test cluster and environment")
-	builder, err := getEnvironmentBuilder(ctx)
-	require.NoError(t, err)
-	env, err := builder.Build(ctx)
-	require.NoError(t, err)
-	logClusterInfo(t, env.Cluster())
-
-	defer func() {
-		helpers.TeardownCluster(ctx, t, env.Cluster())
-	}()
+	ctx, env := setupE2ETest(t)
 
 	t.Log("deploying kong components")
 	manifest, err := getTestManifest(t, postgresPath)
@@ -356,21 +287,9 @@ func TestDeployAllInOneEnterprisePostgres(t *testing.T) {
 		t.Skipf("no license available to test enterprise: %s was not provided", kong.LicenseDataEnvVar)
 	}
 	t.Parallel()
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	t.Log("building test cluster and environment")
-	builder, err := getEnvironmentBuilder(ctx)
-	require.NoError(t, err)
-	env, err := builder.Build(ctx)
-	require.NoError(t, err)
-	logClusterInfo(t, env.Cluster())
+	ctx, env := setupE2ETest(t)
 
 	createKongImagePullSecret(ctx, t, env)
-
-	defer func() {
-		helpers.TeardownCluster(ctx, t, env.Cluster())
-	}()
 
 	t.Log("generating a superuser password")
 	adminPassword, adminPasswordSecret, err := generateAdminPasswordSecret()
@@ -406,19 +325,7 @@ func TestDeployAllInOneDBLESSMultiGW(t *testing.T) {
 	)
 
 	t.Logf("configuring %s manifest test", manifestFileName)
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	t.Log("building test cluster and environment")
-	builder, err := getEnvironmentBuilder(ctx)
-	require.NoError(t, err)
-	env, err := builder.Build(ctx)
-	require.NoError(t, err)
-	logClusterInfo(t, env.Cluster())
-
-	defer func() {
-		helpers.TeardownCluster(ctx, t, env.Cluster())
-	}()
+	ctx, env := setupE2ETest(t)
 
 	t.Log("deploying kong components")
 	f, err := os.Open(manifestFilePath)
@@ -471,34 +378,48 @@ func TestDeployAllInOneDBLESSMultiGW(t *testing.T) {
 		kongClient, err := gokong.NewClient(lo.ToPtr(address), client)
 		require.NoError(t, err)
 
-		require.Eventually(t, func() bool {
-			d, err := dump.Get(ctx, kongClient, dump.Config{})
-			if err != nil {
-				return false
-			}
-			if len(d.Services) != 1 {
-				return false
-			}
-			if len(d.Routes) != 1 {
-				return false
-			}
-
-			if d.Services[0].ID == nil ||
-				d.Routes[0].Service.ID == nil ||
-				*d.Services[0].ID != *d.Routes[0].Service.ID {
-				return false
-			}
-
-			if len(d.Targets) != 1 {
-				return false
-			}
-
-			if len(d.Upstreams) != 1 {
-				return false
-			}
-
-			return true
-		}, time.Minute, time.Second, "pod: %s/%s didn't get the config", pod.Namespace, pod.Name)
+		requireGatewayConfiguredEventually(ctx, t, kongClient, pod)
 		t.Logf("proxy pod %s/%s: got the config", pod.Namespace, pod.Name)
 	}
+}
+
+func requireGatewayConfiguredEventually(
+	ctx context.Context,
+	t *testing.T,
+	kongClient *gokong.Client,
+	gatewayPod corev1.Pod,
+) {
+	require.Eventually(t, func() bool {
+		d, err := dump.Get(ctx, kongClient, dump.Config{})
+		if err != nil {
+			return false
+		}
+		if len(d.Services) != 1 {
+			t.Log("still not service found...")
+			return false
+		}
+		if len(d.Routes) != 1 {
+			t.Log("still no route found...")
+			return false
+		}
+
+		if d.Services[0].ID == nil ||
+			d.Routes[0].Service.ID == nil ||
+			*d.Services[0].ID != *d.Routes[0].Service.ID {
+			t.Log("still no matching service found...")
+			return false
+		}
+
+		if len(d.Targets) != 1 {
+			t.Log("still no target found...")
+			return false
+		}
+
+		if len(d.Upstreams) != 1 {
+			t.Log("still no upstream found...")
+			return false
+		}
+
+		return true
+	}, time.Minute*3, time.Second, "pod: %s/%s didn't get the config", gatewayPod.Namespace, gatewayPod.Name)
 }

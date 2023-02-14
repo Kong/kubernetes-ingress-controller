@@ -3,6 +3,7 @@ package konnect
 import (
 	"context"
 	"fmt"
+	"sync/atomic"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -27,7 +28,7 @@ type NodeAgent struct {
 	konnectClient *NodeAPIClient
 	refreshPeriod time.Duration
 
-	configStatus           dataplane.ConfigStatus
+	configStatus           atomic.Uint32
 	configStatusSubscriber dataplane.ConfigStatusSubscriber
 }
 
@@ -42,16 +43,17 @@ func NewNodeAgent(
 	if refreshPeriod < MinRefreshNodePeriod {
 		refreshPeriod = MinRefreshNodePeriod
 	}
-	return &NodeAgent{
+	a := &NodeAgent{
 		Hostname: hostname,
 		Version:  version,
 		Logger: logger.
 			WithName("konnect-node").WithValues("runtime_group_id", client.RuntimeGroupID),
 		konnectClient:          client,
 		refreshPeriod:          refreshPeriod,
-		configStatus:           dataplane.ConfigStatusOK,
 		configStatusSubscriber: configStatusSubscriber,
 	}
+	a.configStatus.Store(uint32(dataplane.ConfigStatusOK))
+	return a
 }
 
 func (a *NodeAgent) createNode() error {
@@ -112,7 +114,8 @@ func (a *NodeAgent) subscribeConfigStatus(ctx context.Context) {
 			err := ctx.Err()
 			a.Logger.Info("subscribe loop stopped", "message", err.Error())
 			return
-		case a.configStatus = <-a.configStatusSubscriber.SubscribeConfigStatus():
+		case configStatus := <-a.configStatusSubscriber.SubscribeConfigStatus():
+			a.configStatus.Store(uint32(configStatus))
 		}
 	}
 }
@@ -125,7 +128,8 @@ func (a *NodeAgent) updateNode() error {
 	}
 
 	var ingressControllerStatus IngressControllerState
-	switch a.configStatus {
+	configStatus := int(a.configStatus.Load())
+	switch dataplane.ConfigStatus(configStatus) {
 	case dataplane.ConfigStatusOK:
 		ingressControllerStatus = IngressControllerStateOperational
 	case dataplane.ConfigStatusTranslationErrorHappened:

@@ -413,19 +413,12 @@ func (c *KongClient) Update(ctx context.Context) error {
 		formatVersion = "3.0"
 	}
 
-	configStatus := new(ConfigStatus)
-	*configStatus = ConfigStatusOK
-	defer func(status *ConfigStatus) {
-		c.configStatusNotifier.NotifyConfigStatus(*status)
-	}(configStatus)
-
 	// parse the Kubernetes objects from the storer into Kong configuration
 	kongstate, translationFailures := p.Build()
 	if failuresCount := len(translationFailures); failuresCount > 0 {
 		c.prometheusMetrics.RecordTranslationFailure()
 		c.recordResourceFailureEvents(translationFailures, KongConfigurationTranslationFailedEventReason)
 		c.logger.Debugf("%d translation failures have occurred when building data-plane configuration", failuresCount)
-		*configStatus = ConfigStatusTranslationErrorHappened
 	} else {
 		c.prometheusMetrics.RecordTranslationSuccess()
 		c.logger.Debug("successfully built data-plane configuration")
@@ -433,8 +426,17 @@ func (c *KongClient) Update(ctx context.Context) error {
 
 	shas, err := c.sendOutToClients(ctx, kongstate, formatVersion, c.kongConfig)
 	if err != nil {
-		*configStatus = ConfigStatusApplyFailed
+		c.configStatusNotifier.NotifyConfigStatus(ConfigStatusApplyFailed)
 		return err
+	}
+
+	// succeeded to apply configuration to Kong gateway.
+	// notify the receiver of config status that translation error happened when there are translation errors,
+	// otherwise notify that config status is OK.
+	if len(translationFailures) > 0 {
+		c.configStatusNotifier.NotifyConfigStatus(ConfigStatusTranslationErrorHappened)
+	} else {
+		c.configStatusNotifier.NotifyConfigStatus(ConfigStatusOK)
 	}
 
 	// report on configured Kubernetes objects if enabled
@@ -535,6 +537,8 @@ func handleSendToClientResult(client sendconfig.KonnectAwareClient, logger logru
 	return newSHA, nil
 }
 
+// SetConfigStatusNotifier sets a notifier notifies configurations to subscribers
+// Currently it is used for uploading the node status to konnect runtime group.
 func (c *KongClient) SetConfigStatusNotifier(n ConfigStatusNotifier) {
 	c.lock.Lock()
 	defer c.lock.Unlock()

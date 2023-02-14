@@ -289,20 +289,7 @@ func TestWebhookUpdate(t *testing.T) {
 func TestDeployAllInOneDBLESSGateway(t *testing.T) {
 	t.Log("configuring all-in-one-dbless.yaml manifest test for Gateway")
 	t.Parallel()
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	t.Log("building test cluster and environment")
-	builder, err := getEnvironmentBuilder(ctx)
-	require.NoError(t, err)
-	env, err := builder.Build(ctx)
-	require.NoError(t, err)
-	cluster := env.Cluster()
-	logClusterInfo(t, cluster)
-
-	defer func() {
-		helpers.TeardownCluster(ctx, t, env.Cluster())
-	}()
+	ctx, env := setupE2ETest(t)
 
 	t.Log("deploying kong components")
 	manifest, err := getTestManifest(t, dblessPath)
@@ -452,19 +439,7 @@ func TestDeployAllInOneDBLESSGateway(t *testing.T) {
 func TestDeployAllInOneDBLESSNoLoadBalancer(t *testing.T) {
 	t.Log("configuring all-in-one-dbless.yaml manifest test")
 	t.Parallel()
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	t.Log("building test cluster and environment")
-	builder, err := getEnvironmentBuilder(ctx)
-	require.NoError(t, err)
-	env, err := builder.Build(ctx)
-	require.NoError(t, err)
-	logClusterInfo(t, env.Cluster())
-
-	defer func() {
-		helpers.TeardownCluster(ctx, t, env.Cluster())
-	}()
+	ctx, env := setupE2ETest(t)
 
 	t.Log("deploying kong components")
 	manifest, err := getTestManifest(t, dblessPath)
@@ -513,19 +488,7 @@ func TestDeployAllInOneDBLESSNoLoadBalancer(t *testing.T) {
 func TestDefaultIngressClass(t *testing.T) {
 	t.Log("configuring all-in-one-dbless.yaml manifest test")
 	t.Parallel()
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	t.Log("building test cluster and environment")
-	builder, err := getEnvironmentBuilder(ctx)
-	require.NoError(t, err)
-	env, err := builder.Build(ctx)
-	require.NoError(t, err)
-	logClusterInfo(t, env.Cluster())
-
-	defer func() {
-		helpers.TeardownCluster(ctx, t, env.Cluster())
-	}()
+	ctx, env := setupE2ETest(t)
 
 	t.Log("deploying kong components")
 	manifest, err := getTestManifest(t, dblessPath)
@@ -634,19 +597,7 @@ func TestDefaultIngressClass(t *testing.T) {
 // controllers are disabled, this fact is properly logged, and the controller doesn't crash.
 func TestMissingCRDsDontCrashTheController(t *testing.T) {
 	t.Parallel()
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	t.Log("building test cluster and environment")
-	builder, err := getEnvironmentBuilder(ctx)
-	require.NoError(t, err)
-	env, err := builder.Build(ctx)
-	require.NoError(t, err)
-	logClusterInfo(t, env.Cluster())
-
-	defer func() {
-		helpers.TeardownCluster(ctx, t, env.Cluster())
-	}()
+	ctx, env := setupE2ETest(t)
 
 	t.Log("deploying kong components")
 	manifest, err := getTestManifest(t, dblessPath)

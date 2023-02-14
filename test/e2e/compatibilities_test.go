@@ -4,34 +4,20 @@
 package e2e
 
 import (
-	"context"
 	"fmt"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
-	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/helpers"
 )
 
 // TestKongRouterCompatibility verifies that KIC behaves consistently with Kong routers
 // `traditional` and `traditional_compatible`.
 func TestKongRouterFlavorCompatibility(t *testing.T) {
 	t.Parallel()
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	builder, err := getEnvironmentBuilder(ctx)
-	require.NoError(t, err)
-	env, err := builder.Build(ctx)
-	require.NoError(t, err)
+	ctx, env := setupE2ETest(t)
 	cluster := env.Cluster()
-	logClusterInfo(t, cluster)
-
-	defer func() {
-		helpers.TeardownCluster(ctx, t, cluster)
-	}()
 
 	t.Log("deploying kong components with traditional Kong router")
 	manifest, err := getTestManifest(t, dblessPath)

@@ -20,20 +20,7 @@ import (
 func TestDeployAllInOneDBLESSKuma(t *testing.T) {
 	t.Log("configuring all-in-one-dbless.yaml manifest test")
 	t.Parallel()
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	t.Log("building test cluster and environment")
-	builder, err := getEnvironmentBuilder(ctx)
-	require.NoError(t, err)
-	builder = builder.WithAddons(kuma.New())
-	env, err := builder.Build(ctx)
-	require.NoError(t, err)
-	logClusterInfo(t, env.Cluster())
-
-	defer func() {
-		helpers.TeardownCluster(ctx, t, env.Cluster())
-	}()
+	ctx, env := setupE2ETest(t, kuma.New())
 
 	t.Log("deploying kong components")
 	manifest, err := getTestManifest(t, dblessPath)

@@ -4,7 +4,6 @@
 package e2e
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -54,9 +53,6 @@ var (
 func TestIstioWithKongIngressGateway(t *testing.T) {
 	t.Parallel()
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
 	// Logger needs to be configured before anything else happens.
 	// This is because the controller manager has a timeout for
 	// logger initialization, and if the logger isn't configured
@@ -87,17 +83,7 @@ func TestIstioWithKongIngressGateway(t *testing.T) {
 	}
 	istioAddon := istioBuilder.Build()
 
-	t.Log("deploying a testing environment and Kubernetes cluster with Istio enabled")
-	envBuilder, err := getEnvironmentBuilder(ctx)
-	require.NoError(t, err)
-	env, err := envBuilder.WithAddons(istioAddon, kongAddon).Build(ctx)
-	require.NoError(t, err)
-
-	logClusterInfo(t, env.Cluster())
-
-	defer func() {
-		helpers.TeardownCluster(ctx, t, env.Cluster())
-	}()
+	ctx, env := setupE2ETest(t, istioAddon, kongAddon)
 
 	t.Log("waiting for test cluster to be ready")
 	require.NoError(t, <-env.WaitForReady(ctx))

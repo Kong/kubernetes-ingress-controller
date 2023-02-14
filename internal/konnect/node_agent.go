@@ -17,6 +17,7 @@ const (
 	NodeOutdateInterval      = 5 * time.Minute
 )
 
+// ConfigStatusSubscriber subscribes status of configuring kong.
 // REVIEW: define the subscriber here, or internal/adminapi for common usage?
 type ConfigStatusSubscriber interface {
 	Subscribe() chan dataplane.ConfigStatus
@@ -32,7 +33,7 @@ func (s *configStatusSubscriber) Subscribe() chan dataplane.ConfigStatus {
 	return s.ch
 }
 
-func NewConfigStatusSubscriber(ch chan dataplane.ConfigStatus) *configStatusSubscriber {
+func NewConfigStatusSubscriber(ch chan dataplane.ConfigStatus) ConfigStatusSubscriber {
 	return &configStatusSubscriber{ch: ch}
 }
 
@@ -74,7 +75,6 @@ func NewNodeAgent(
 }
 
 func (a *NodeAgent) createNode() error {
-
 	err := a.clearOutdatedNodes()
 	if err != nil {
 		// still continue to update the current status if cleanup failed.
@@ -110,7 +110,7 @@ func (a *NodeAgent) clearOutdatedNodes() error {
 			// nodes to remove:
 			// (1) since only one KIC node is allowed in a runtime group, all the nodes with other hostnames are considered outdated.
 			// (2) in some cases(kind/minikube restart), rebuilt pod uses the same name. So nodes updated for >5mins before should be deleted.
-			if node.Hostname != a.Hostname || time.Now().Sub(time.Unix(node.UpdatedAt, 0)) > NodeOutdateInterval {
+			if node.Hostname != a.Hostname || time.Since(time.Unix(node.UpdatedAt, 0)) > NodeOutdateInterval {
 				deleteNode = true
 			}
 		}

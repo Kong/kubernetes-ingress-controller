@@ -211,7 +211,8 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 				c.Konnect.RefreshNodePeriod,
 				setupLog,
 				konnectNodeAPIClient,
-				configStatusSubscriber)
+				configStatusSubscriber,
+			)
 			agent.Run(ctx)
 		}
 	}

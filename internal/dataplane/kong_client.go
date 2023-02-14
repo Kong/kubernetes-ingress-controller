@@ -413,8 +413,11 @@ func (c *KongClient) Update(ctx context.Context) error {
 		formatVersion = "3.0"
 	}
 
-	configStatus := ConfigStatusOK
-	defer c.configStatusNotifier.NotifyConfigStatus(configStatus)
+	configStatus := new(ConfigStatus)
+	*configStatus = ConfigStatusOK
+	defer func(status *ConfigStatus) {
+		c.configStatusNotifier.NotifyConfigStatus(*status)
+	}(configStatus)
 
 	// parse the Kubernetes objects from the storer into Kong configuration
 	kongstate, translationFailures := p.Build()
@@ -422,7 +425,7 @@ func (c *KongClient) Update(ctx context.Context) error {
 		c.prometheusMetrics.RecordTranslationFailure()
 		c.recordResourceFailureEvents(translationFailures, KongConfigurationTranslationFailedEventReason)
 		c.logger.Debugf("%d translation failures have occurred when building data-plane configuration", failuresCount)
-		configStatus = ConfigStatusTranslationErrorHappened
+		*configStatus = ConfigStatusTranslationErrorHappened
 	} else {
 		c.prometheusMetrics.RecordTranslationSuccess()
 		c.logger.Debug("successfully built data-plane configuration")
@@ -430,7 +433,7 @@ func (c *KongClient) Update(ctx context.Context) error {
 
 	shas, err := c.sendOutToClients(ctx, kongstate, formatVersion, c.kongConfig)
 	if err != nil {
-		configStatus = ConfigStatusApplyFailed
+		*configStatus = ConfigStatusApplyFailed
 		return err
 	}
 

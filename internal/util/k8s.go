@@ -145,7 +145,7 @@ func GenerateTagsForObject(obj client.Object) []*string {
 	if obj == nil {
 		// this should never happen in practice, but it happen in some unit tests
 		// in those cases, the nil object has no tags
-		return kong.StringSlice("")
+		return nil
 	}
 	gvk := obj.GetObjectKind().GroupVersionKind()
 	tags := []string{}

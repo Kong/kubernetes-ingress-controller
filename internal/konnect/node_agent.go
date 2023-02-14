@@ -17,26 +17,6 @@ const (
 	NodeOutdateInterval      = 5 * time.Minute
 )
 
-// ConfigStatusSubscriber subscribes status of configuring kong.
-// REVIEW: define the subscriber here, or internal/adminapi for common usage?
-type ConfigStatusSubscriber interface {
-	Subscribe() chan dataplane.ConfigStatus
-}
-
-type configStatusSubscriber struct {
-	ch chan dataplane.ConfigStatus
-}
-
-var _ ConfigStatusSubscriber = &configStatusSubscriber{}
-
-func (s *configStatusSubscriber) Subscribe() chan dataplane.ConfigStatus {
-	return s.ch
-}
-
-func NewConfigStatusSubscriber(ch chan dataplane.ConfigStatus) ConfigStatusSubscriber {
-	return &configStatusSubscriber{ch: ch}
-}
-
 type NodeAgent struct {
 	NodeID   string
 	Hostname string
@@ -48,7 +28,7 @@ type NodeAgent struct {
 	refreshPeriod time.Duration
 
 	configStatus           dataplane.ConfigStatus
-	configStatusSubscriber ConfigStatusSubscriber
+	configStatusSubscriber dataplane.ConfigStatusSubscriber
 }
 
 func NewNodeAgent(
@@ -57,7 +37,7 @@ func NewNodeAgent(
 	refreshPeriod time.Duration,
 	logger logr.Logger,
 	client *NodeAPIClient,
-	configStatusSubscriber ConfigStatusSubscriber,
+	configStatusSubscriber dataplane.ConfigStatusSubscriber,
 ) *NodeAgent {
 	if refreshPeriod < MinRefreshNodePeriod {
 		refreshPeriod = MinRefreshNodePeriod
@@ -132,7 +112,7 @@ func (a *NodeAgent) subscribeConfigStatus(ctx context.Context) {
 			err := ctx.Err()
 			a.Logger.Info("subscribe loop stopped", "message", err.Error())
 			return
-		case a.configStatus = <-a.configStatusSubscriber.Subscribe():
+		case a.configStatus = <-a.configStatusSubscriber.SubscribeConfigStatus():
 		}
 	}
 }

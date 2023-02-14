@@ -1,13 +1,15 @@
 package dataplane
 
-// REVIEW: put the package here, or in internal/adminapi?
-
 type ConfigStatus int
 
 const (
-	// ConfigStatusOK: no error happens in translation from
+	// ConfigStatusOK: no error happens in translation from k8s objects to kong configuration
+	// and succeeded to apply kong configuration to kong gateway.
 	ConfigStatusOK ConfigStatus = iota
+	// ConfigStatusTranslationErrorHappened: error happened in translation of k8s objects
+	// but succeeded to apply kong configuration for remaining objects.
 	ConfigStatusTranslationErrorHappened
+	// ConfigStatusApplyFailed: failed to apply kong configurations.
 	ConfigStatusApplyFailed
 )
 
@@ -15,8 +17,11 @@ type ConfigStatusNotifier interface {
 	NotifyConfigStatus(ConfigStatus)
 }
 
-type NoOpConfigStatusNotifier struct {
+type ConfigStatusSubscriber interface {
+	SubscribeConfigStatus() chan ConfigStatus
 }
+
+type NoOpConfigStatusNotifier struct{}
 
 var _ ConfigStatusNotifier = NoOpConfigStatusNotifier{}
 
@@ -33,7 +38,11 @@ func (n *ChannelConfigNotifier) NotifyConfigStatus(status ConfigStatus) {
 	n.ch <- status
 }
 
-func NewChannelConfigNotifier(ch chan ConfigStatus) ConfigStatusNotifier {
+func (n *ChannelConfigNotifier) SubscribeConfigStatus() chan ConfigStatus {
+	return n.ch
+}
+
+func NewChannelConfigNotifier(ch chan ConfigStatus) *ChannelConfigNotifier {
 	return &ChannelConfigNotifier{
 		ch: ch,
 	}

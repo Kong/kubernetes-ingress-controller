@@ -201,17 +201,16 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 			version := metadata.Release
 			// set channel to send config status.
 			configStatusChan := make(chan dataplane.ConfigStatus, 1)
-			dataplaneClient.SetConfigStatusNotifier(
-				dataplane.NewChannelConfigNotifier(configStatusChan),
-			)
-			configStatusSubscriber := konnect.NewConfigStatusSubscriber(configStatusChan)
+			configStatusNotifier := dataplane.NewChannelConfigNotifier(configStatusChan)
+			dataplaneClient.SetConfigStatusNotifier(configStatusNotifier)
+
 			agent := konnect.NewNodeAgent(
 				hostname,
 				version,
 				c.Konnect.RefreshNodePeriod,
 				setupLog,
 				konnectNodeAPIClient,
-				configStatusSubscriber,
+				configStatusNotifier,
 			)
 			agent.Run(ctx)
 		}

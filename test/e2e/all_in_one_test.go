@@ -13,7 +13,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/kong/deck/dump"
 	gokong "github.com/kong/go-kong/kong"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/kong"
 	"github.com/samber/lo"
@@ -378,48 +377,7 @@ func TestDeployAllInOneDBLESSMultiGW(t *testing.T) {
 		kongClient, err := gokong.NewClient(lo.ToPtr(address), client)
 		require.NoError(t, err)
 
-		requireGatewayConfiguredEventually(ctx, t, kongClient, pod)
+		requireIngressConfiguredInAdminAPIEventually(ctx, t, kongClient)
 		t.Logf("proxy pod %s/%s: got the config", pod.Namespace, pod.Name)
 	}
-}
-
-func requireGatewayConfiguredEventually(
-	ctx context.Context,
-	t *testing.T,
-	kongClient *gokong.Client,
-	gatewayPod corev1.Pod,
-) {
-	require.Eventually(t, func() bool {
-		d, err := dump.Get(ctx, kongClient, dump.Config{})
-		if err != nil {
-			return false
-		}
-		if len(d.Services) != 1 {
-			t.Log("still not service found...")
-			return false
-		}
-		if len(d.Routes) != 1 {
-			t.Log("still no route found...")
-			return false
-		}
-
-		if d.Services[0].ID == nil ||
-			d.Routes[0].Service.ID == nil ||
-			*d.Services[0].ID != *d.Routes[0].Service.ID {
-			t.Log("still no matching service found...")
-			return false
-		}
-
-		if len(d.Targets) != 1 {
-			t.Log("still no target found...")
-			return false
-		}
-
-		if len(d.Upstreams) != 1 {
-			t.Log("still no upstream found...")
-			return false
-		}
-
-		return true
-	}, time.Minute*3, time.Second, "pod: %s/%s didn't get the config", gatewayPod.Namespace, gatewayPod.Name)
 }

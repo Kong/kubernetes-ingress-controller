@@ -19,6 +19,8 @@ import (
 
 	"github.com/blang/semver/v4"
 	"github.com/google/uuid"
+	"github.com/kong/deck/dump"
+	gokong "github.com/kong/go-kong/kong"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/loadimage"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/metallb"
@@ -313,6 +315,47 @@ func verifyIngress(ctx context.Context, t *testing.T, env environments.Environme
 		defer resp.Body.Close()
 		return resp.StatusCode == http.StatusNotFound
 	}, ingressWait, 100*time.Millisecond)
+}
+
+// requireIngressConfiguredInAdminAPIEventually ensures all expected Kong Admin API resources are created for the Ingress
+// deployed with deployIngress helper function.
+func requireIngressConfiguredInAdminAPIEventually(
+	ctx context.Context,
+	t *testing.T,
+	kongClient *gokong.Client,
+) {
+	t.Helper()
+
+	require.Eventually(t, func() bool {
+		d, err := dump.Get(ctx, kongClient, dump.Config{})
+		if err != nil {
+			t.Logf("failed dumping config: %s", err)
+			return false
+		}
+		if len(d.Services) != 1 {
+			t.Log("still no service found...")
+			return false
+		}
+		if len(d.Routes) != 1 {
+			t.Log("still no route found...")
+			return false
+		}
+		if d.Services[0].ID == nil ||
+			d.Routes[0].Service.ID == nil ||
+			*d.Services[0].ID != *d.Routes[0].Service.ID {
+			t.Log("still no matching service found...")
+			return false
+		}
+		if len(d.Targets) != 1 {
+			t.Log("still no target found...")
+			return false
+		}
+		if len(d.Upstreams) != 1 {
+			t.Log("still no upstream found...")
+			return false
+		}
+		return true
+	}, time.Minute*3, time.Second, "%q didn't get the config", kongClient.BaseRootURL())
 }
 
 // verifyEnterprise performs some basic tests of the Kong Admin API in the provided

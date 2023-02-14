@@ -28,9 +28,9 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/adminapi"
 	rg "github.com/kong/kubernetes-ingress-controller/v2/internal/konnect/runtimegroups"
 	rgc "github.com/kong/kubernetes-ingress-controller/v2/internal/konnect/runtimegroupsconfig"
-	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/helpers"
 )
 
 const (
@@ -57,7 +57,9 @@ func TestKonnectConfigPush(t *testing.T) {
 	deployIngress(ctx, t, env)
 	verifyIngress(ctx, t, env)
 
-	// TODO: verify Konnect Admin API is populated as expected
+	t.Log("ensuring ingress resources are correctly populated in Konnect Runtime Group's Admin API")
+	konnectAdminAPIClient := createKonnectAdminAPIClient(ctx, t, rgID, cert, key)
+	requireIngressConfiguredInAdminAPIEventually(ctx, t, konnectAdminAPIClient.AdminAPIClient())
 }
 
 func skipIfMissingRequiredKonnectEnvVariables(t *testing.T) {
@@ -79,23 +81,6 @@ func deployAllInOneKonnectManifest(ctx context.Context, t *testing.T, env enviro
 	manifest, err = patchControllerImageFromEnv(f, manifestFile)
 	require.NoError(t, err)
 	_ = deployKong(ctx, t, env, manifest)
-}
-
-// setupE2ETest prepares a cluster for E2E test to run against and sets up its teardown.
-// It also returns a context that's going to be cancelled at the end of the test.
-func setupE2ETest(t *testing.T) (context.Context, environment.Environment) {
-	ctx, cancel := context.WithCancel(context.Background())
-	t.Cleanup(cancel)
-
-	t.Log("building test cluster and environment")
-	builder, err := getEnvironmentBuilder(ctx)
-	require.NoError(t, err)
-	env, err := builder.Build(ctx)
-	require.NoError(t, err)
-	t.Cleanup(func() {
-		helpers.TeardownCluster(ctx, t, env.Cluster())
-	})
-	return ctx, env
 }
 
 // createTestRuntimeGroup creates a runtime group to be used in tests. It returns the created runtime group's ID.
@@ -210,7 +195,7 @@ func createKonnectClientSecretAndConfigMap(ctx context.Context, t *testing.T, en
 			"tls.crt": []byte(tlsCert),
 			"tls.key": []byte(tlsKey),
 		},
-		Type: corev1.SecretTypeOpaque,
+		Type: corev1.SecretTypeTLS,
 	}, metav1.CreateOptions{})
 	require.NoError(t, err)
 
@@ -225,4 +210,20 @@ func createKonnectClientSecretAndConfigMap(ctx context.Context, t *testing.T, en
 		},
 	}, metav1.CreateOptions{})
 	require.NoError(t, err)
+}
+
+// createKonnectAdminAPIClient creates an *kong.Client that will communicate with Konnect Runtime Group's Admin API.
+func createKonnectAdminAPIClient(ctx context.Context, t *testing.T, rgID, cert, key string) *adminapi.Client {
+	t.Helper()
+
+	c, err := adminapi.NewKongClientForKonnectRuntimeGroup(ctx, adminapi.KonnectConfig{
+		RuntimeGroupID: rgID,
+		Address:        konnectRuntimeGroupAdminAPIBaseURL,
+		TLSClient: adminapi.TLSClientConfig{
+			Cert: cert,
+			Key:  key,
+		},
+	})
+	require.NoError(t, err)
+	return c
 }

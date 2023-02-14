@@ -537,7 +537,7 @@ func handleSendToClientResult(client sendconfig.KonnectAwareClient, logger logru
 	return newSHA, nil
 }
 
-// SetConfigStatusNotifier sets a notifier notifies configurations to subscribers
+// SetConfigStatusNotifier sets a notifier which notifies subscribers about configuration sending results.
 // Currently it is used for uploading the node status to konnect runtime group.
 func (c *KongClient) SetConfigStatusNotifier(n ConfigStatusNotifier) {
 	c.lock.Lock()

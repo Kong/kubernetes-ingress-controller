@@ -42,8 +42,8 @@ func (n *ChannelConfigNotifier) SubscribeConfigStatus() chan ConfigStatus {
 	return n.ch
 }
 
-func NewChannelConfigNotifier(ch chan ConfigStatus) *ChannelConfigNotifier {
+func NewChannelConfigNotifier() *ChannelConfigNotifier {
 	return &ChannelConfigNotifier{
-		ch: ch,
+		ch: make(chan ConfigStatus, 1),
 	}
 }

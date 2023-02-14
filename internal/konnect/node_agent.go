@@ -108,13 +108,15 @@ func (a *NodeAgent) clearOutdatedNodes() error {
 }
 
 func (a *NodeAgent) subscribeConfigStatus(ctx context.Context) {
+	ch := a.configStatusSubscriber.SubscribeConfigStatus()
+	chDone := ctx.Done()
+
 	for {
 		select {
-		case <-ctx.Done():
-			err := ctx.Err()
-			a.Logger.Info("subscribe loop stopped", "message", err.Error())
+		case <-chDone:
+			a.Logger.Info("subscribe loop stopped", "message", ctx.Err().Error())
 			return
-		case configStatus := <-a.configStatusSubscriber.SubscribeConfigStatus():
+		case configStatus := <-ch:
 			a.configStatus.Store(uint32(configStatus))
 		}
 	}

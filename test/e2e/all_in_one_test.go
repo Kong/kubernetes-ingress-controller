@@ -23,7 +23,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/metrics"
-	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/helpers"
 )
 
 // -----------------------------------------------------------------------------
@@ -44,19 +43,7 @@ const (
 func TestDeployAllInOneDBLESS(t *testing.T) {
 	t.Log("configuring all-in-one-dbless.yaml manifest test")
 	t.Parallel()
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	t.Log("building test cluster and environment")
-	builder, err := getEnvironmentBuilder(ctx)
-	require.NoError(t, err)
-	env, err := builder.Build(ctx)
-	require.NoError(t, err)
-	logClusterInfo(t, env.Cluster())
-
-	defer func() {
-		helpers.TeardownCluster(ctx, t, env.Cluster())
-	}()
+	ctx, env := setupE2ETest(t)
 
 	t.Log("deploying kong components")
 	manifest, err := getTestManifest(t, dblessPath)
@@ -96,20 +83,7 @@ func TestDeployAndUpgradeAllInOneDBLESS(t *testing.T) {
 
 	t.Log("configuring all-in-one-dbless.yaml manifest test")
 	t.Parallel()
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	t.Log("building test cluster and environment")
-	builder, err := getEnvironmentBuilder(ctx)
-	require.NoError(t, err)
-
-	env, err := builder.Build(ctx)
-	require.NoError(t, err)
-	logClusterInfo(t, env.Cluster())
-
-	defer func() {
-		helpers.TeardownCluster(ctx, t, env.Cluster())
-	}()
+	ctx, env := setupE2ETest(t)
 
 	t.Logf("deploying previous version %s kong manifest", preTag)
 	deployKong(ctx, t, env, oldManifest.Body)
@@ -134,21 +108,9 @@ func TestDeployAllInOneEnterpriseDBLESS(t *testing.T) {
 		t.Skipf("no license available to test enterprise: %s was not provided", kong.LicenseDataEnvVar)
 	}
 	t.Parallel()
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	t.Log("building test cluster and environment")
-	builder, err := getEnvironmentBuilder(ctx)
-	require.NoError(t, err)
-	env, err := builder.Build(ctx)
-	require.NoError(t, err)
-	logClusterInfo(t, env.Cluster())
+	ctx, env := setupE2ETest(t)
 
 	createKongImagePullSecret(ctx, t, env)
-
-	defer func() {
-		helpers.TeardownCluster(ctx, t, env.Cluster())
-	}()
 
 	t.Log("generating a superuser password")
 	adminPassword, adminPasswordSecretYAML, err := generateAdminPasswordSecret()
@@ -179,19 +141,7 @@ const postgresPath = "../../deploy/single/all-in-one-postgres.yaml"
 func TestDeployAllInOnePostgres(t *testing.T) {
 	t.Log("configuring all-in-one-postgres.yaml manifest test")
 	t.Parallel()
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	t.Log("building test cluster and environment")
-	builder, err := getEnvironmentBuilder(ctx)
-	require.NoError(t, err)
-	env, err := builder.Build(ctx)
-	require.NoError(t, err)
-	logClusterInfo(t, env.Cluster())
-
-	defer func() {
-		helpers.TeardownCluster(ctx, t, env.Cluster())
-	}()
+	ctx, env := setupE2ETest(t)
 
 	t.Log("deploying kong components")
 	manifest, err := getTestManifest(t, postgresPath)
@@ -209,19 +159,7 @@ func TestDeployAllInOnePostgres(t *testing.T) {
 func TestDeployAllInOnePostgresWithMultipleReplicas(t *testing.T) {
 	t.Log("configuring all-in-one-postgres.yaml manifest test")
 	t.Parallel()
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	t.Log("building test cluster and environment")
-	builder, err := getEnvironmentBuilder(ctx)
-	require.NoError(t, err)
-	env, err := builder.Build(ctx)
-	require.NoError(t, err)
-	logClusterInfo(t, env.Cluster())
-
-	defer func() {
-		helpers.TeardownCluster(ctx, t, env.Cluster())
-	}()
+	ctx, env := setupE2ETest(t)
 
 	t.Log("deploying kong components")
 	manifest, err := getTestManifest(t, postgresPath)
@@ -349,21 +287,9 @@ func TestDeployAllInOneEnterprisePostgres(t *testing.T) {
 		t.Skipf("no license available to test enterprise: %s was not provided", kong.LicenseDataEnvVar)
 	}
 	t.Parallel()
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	t.Log("building test cluster and environment")
-	builder, err := getEnvironmentBuilder(ctx)
-	require.NoError(t, err)
-	env, err := builder.Build(ctx)
-	require.NoError(t, err)
-	logClusterInfo(t, env.Cluster())
+	ctx, env := setupE2ETest(t)
 
 	createKongImagePullSecret(ctx, t, env)
-
-	defer func() {
-		helpers.TeardownCluster(ctx, t, env.Cluster())
-	}()
 
 	t.Log("generating a superuser password")
 	adminPassword, adminPasswordSecret, err := generateAdminPasswordSecret()
@@ -399,19 +325,7 @@ func TestDeployAllInOneDBLESSMultiGW(t *testing.T) {
 	)
 
 	t.Logf("configuring %s manifest test", manifestFileName)
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	t.Log("building test cluster and environment")
-	builder, err := getEnvironmentBuilder(ctx)
-	require.NoError(t, err)
-	env, err := builder.Build(ctx)
-	require.NoError(t, err)
-	logClusterInfo(t, env.Cluster())
-
-	defer func() {
-		helpers.TeardownCluster(ctx, t, env.Cluster())
-	}()
+	ctx, env := setupE2ETest(t)
 
 	t.Log("deploying kong components")
 	f, err := os.Open(manifestFilePath)

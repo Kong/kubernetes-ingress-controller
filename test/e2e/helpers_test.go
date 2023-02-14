@@ -68,6 +68,26 @@ const (
 	tcpListnerPort = 8888
 )
 
+// setupE2ETest builds a testing environment for the E2E test. It also sets up the environment's teardown and test
+// context cancellation. It can accept optional addons to be passed to the environment builder.
+func setupE2ETest(t *testing.T, addons ...clusters.Addon) (context.Context, environments.Environment) {
+	ctx, cancel := context.WithCancel(context.Background())
+	t.Cleanup(cancel)
+
+	t.Log("building test cluster and environment")
+	builder, err := getEnvironmentBuilder(ctx)
+	require.NoError(t, err)
+	env, err := builder.WithAddons(addons...).Build(ctx)
+	require.NoError(t, err)
+	logClusterInfo(t, env.Cluster())
+
+	t.Cleanup(func() {
+		helpers.TeardownCluster(ctx, t, env.Cluster())
+	})
+
+	return ctx, env
+}
+
 func getEnvironmentBuilder(ctx context.Context) (*environments.Builder, error) {
 	if existingCluster == "" {
 		fmt.Printf("INFO: no existing cluster provided, creating a new one for %q type\n", clusterProvider)

@@ -136,13 +136,8 @@ type KongClient struct {
 	// clientsProvider allows retrieving the most recent set of clients.
 	clientsProvider AdminAPIClientsProvider
 
-	// hasTranslationErrorChan is used to notify konnect node agent the whether
-	//	error happened in traslating k8s objects to kong configuration.
-	hasTranslationErrorChan chan bool
-
-	// sendConfigErrorChan is used to notify whether error happened in sending
-	// translated configurations to kong.
-	sendConfigErrorChan chan error
+	// configStatusNotifier notifies status of cofiguring kong gateway.
+	configStatusNotifier ConfigStatusNotifier
 }
 
 // NewKongClient provides a new KongClient object after connecting to the
@@ -162,18 +157,19 @@ func NewKongClient(
 	// build the client object
 	cache := store.NewCacheStores()
 	c := &KongClient{
-		logger:             logger,
-		ingressClass:       ingressClass,
-		enableReverseSync:  enableReverseSync,
-		skipCACertificates: skipCACertificates,
-		requestTimeout:     timeout,
-		diagnostic:         diagnostic,
-		prometheusMetrics:  metrics.NewCtrlFuncMetrics(),
-		cache:              &cache,
-		kongConfig:         kongConfig,
-		eventRecorder:      eventRecorder,
-		dbmode:             dbMode,
-		clientsProvider:    clientsProvider,
+		logger:               logger,
+		ingressClass:         ingressClass,
+		enableReverseSync:    enableReverseSync,
+		skipCACertificates:   skipCACertificates,
+		requestTimeout:       timeout,
+		diagnostic:           diagnostic,
+		prometheusMetrics:    metrics.NewCtrlFuncMetrics(),
+		cache:                &cache,
+		kongConfig:           kongConfig,
+		eventRecorder:        eventRecorder,
+		dbmode:               dbMode,
+		clientsProvider:      clientsProvider,
+		configStatusNotifier: NoOpConfigStatusNotifier{},
 	}
 
 	return c, nil
@@ -417,28 +413,25 @@ func (c *KongClient) Update(ctx context.Context) error {
 		formatVersion = "3.0"
 	}
 
+	configStatus := ConfigStatusOK
+	defer c.configStatusNotifier.NotifyConfigStatus(configStatus)
+
 	// parse the Kubernetes objects from the storer into Kong configuration
 	kongstate, translationFailures := p.Build()
 	if failuresCount := len(translationFailures); failuresCount > 0 {
 		c.prometheusMetrics.RecordTranslationFailure()
 		c.recordResourceFailureEvents(translationFailures, KongConfigurationTranslationFailedEventReason)
 		c.logger.Debugf("%d translation failures have occurred when building data-plane configuration", failuresCount)
+		configStatus = ConfigStatusTranslationErrorHappened
 	} else {
 		c.prometheusMetrics.RecordTranslationSuccess()
 		c.logger.Debug("successfully built data-plane configuration")
 	}
-	// send the status whether translation errors happened if there is a channel to receive the status.
-	if c.hasTranslationErrorChan != nil {
-		c.hasTranslationErrorChan <- (len(translationFailures) > 0)
-	}
 
 	shas, err := c.sendOutToClients(ctx, kongstate, formatVersion, c.kongConfig)
 	if err != nil {
+		configStatus = ConfigStatusApplyFailed
 		return err
-	}
-	// send the error on applying kong configurations if  there is a channel to receive it.
-	if c.sendConfigErrorChan != nil {
-		c.sendConfigErrorChan <- err
 	}
 
 	// report on configured Kubernetes objects if enabled
@@ -536,13 +529,14 @@ func handleSendToClientResult(client sendconfig.KonnectAwareClient, logger logru
 		}
 		return "", err
 	}
-// SetHasTranslationFailureChan sets the channel to receive the status of whether
-// translation failure happens.
-func (c *KongClient) SetHasTranslationFailureChan(ch chan bool) {
-	c.hasTranslationErrorChan = ch
+	return newSHA, nil
 }
 
-	return newSHA, nil
+func (c *KongClient) SetConfigStatusNotifier(n ConfigStatusNotifier) {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+
+	c.configStatusNotifier = n
 }
 
 // -----------------------------------------------------------------------------

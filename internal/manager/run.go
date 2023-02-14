@@ -183,22 +183,6 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 	if c.Konnect.ConfigSynchronizationEnabled {
 		// In case of failures when building Konnect related objects, we're not returning errors as Konnect is not
 		// considered critical feature, and it should not break the basic functionality of the controller.
-		// set channel to send ingress controller status to dataplane client.
-		hasTranslationFailureChan := make(chan bool, 1)
-		dataplaneClient.SetHasTranslationFailureChan(hasTranslationFailureChan)
-		sendConfigErrorChan := make(chan error, 1)
-		dataplaneClient.SetSendConfigErrorChan(sendConfigErrorChan)
-
-		setupLog.Info("Start Konnect client to register runtime instances to Konnect")
-		konnectNodeAPIClient, err := konnect.NewNodeAPIClient(c.Konnect)
-		if err != nil {
-			setupLog.Error(err, "failed creating konnect client, skipping running NodeAgent")
-		} else {
-			hostname, _ := os.Hostname()
-			version := metadata.Release
-			agent := konnect.NewNodeAgent(hostname, version, setupLog, konnectNodeAPIClient)
-			agent.Run()
-		}
 
 		konnectAdminAPIClient, err := adminapi.NewKongClientForKonnectRuntimeGroup(ctx, c.Konnect)
 		if err != nil {
@@ -207,16 +191,29 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 			setupLog.Info("Initialized Konnect Admin API client")
 			clientsManager.SetKonnectClient(konnectAdminAPIClient)
 		}
-		hostname, _ := os.Hostname()
-		version := metadata.Release
-		agent := konnect.NewNodeAgent(
-			hostname, version,
-			c.Konnect.RefreshNodePeriod,
-			hasTranslationFailureChan,
-			sendConfigErrorChan,
-			setupLog, konnectClient,
-		)
-		agent.Run()
+
+		setupLog.Info("Start Konnect client to register runtime instances to Konnect")
+		konnectNodeAPIClient, err := konnect.NewNodeAPIClient(c.Konnect)
+		if err != nil {
+			setupLog.Error(err, "failed creating konnect client, skipping running NodeAgent")
+		} else {
+			hostname, _ := os.Hostname()
+			version := metadata.Release
+			// set channel to send config status.
+			configStatusChan := make(chan dataplane.ConfigStatus, 1)
+			dataplaneClient.SetConfigStatusNotifier(
+				dataplane.NewChannelConfigNotifier(configStatusChan),
+			)
+			configStatusSubscriber := konnect.NewConfigStatusSubscriber(configStatusChan)
+			agent := konnect.NewNodeAgent(
+				hostname,
+				version,
+				c.Konnect.RefreshNodePeriod,
+				setupLog,
+				konnectNodeAPIClient,
+				configStatusSubscriber)
+			agent.Run(ctx)
+		}
 	}
 
 	if c.AnonymousReports {

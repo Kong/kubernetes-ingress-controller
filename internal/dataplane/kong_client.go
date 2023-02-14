@@ -135,6 +135,9 @@ type KongClient struct {
 
 	// clientsProvider allows retrieving the most recent set of clients.
 	clientsProvider AdminAPIClientsProvider
+
+	// configStatusNotifier notifies status of cofiguring kong gateway.
+	configStatusNotifier ConfigStatusNotifier
 }
 
 // NewKongClient provides a new KongClient object after connecting to the
@@ -154,18 +157,19 @@ func NewKongClient(
 	// build the client object
 	cache := store.NewCacheStores()
 	c := &KongClient{
-		logger:             logger,
-		ingressClass:       ingressClass,
-		enableReverseSync:  enableReverseSync,
-		skipCACertificates: skipCACertificates,
-		requestTimeout:     timeout,
-		diagnostic:         diagnostic,
-		prometheusMetrics:  metrics.NewCtrlFuncMetrics(),
-		cache:              &cache,
-		kongConfig:         kongConfig,
-		eventRecorder:      eventRecorder,
-		dbmode:             dbMode,
-		clientsProvider:    clientsProvider,
+		logger:               logger,
+		ingressClass:         ingressClass,
+		enableReverseSync:    enableReverseSync,
+		skipCACertificates:   skipCACertificates,
+		requestTimeout:       timeout,
+		diagnostic:           diagnostic,
+		prometheusMetrics:    metrics.NewCtrlFuncMetrics(),
+		cache:                &cache,
+		kongConfig:           kongConfig,
+		eventRecorder:        eventRecorder,
+		dbmode:               dbMode,
+		clientsProvider:      clientsProvider,
+		configStatusNotifier: NoOpConfigStatusNotifier{},
 	}
 
 	return c, nil
@@ -422,7 +426,17 @@ func (c *KongClient) Update(ctx context.Context) error {
 
 	shas, err := c.sendOutToClients(ctx, kongstate, formatVersion, c.kongConfig)
 	if err != nil {
+		c.configStatusNotifier.NotifyConfigStatus(ConfigStatusApplyFailed)
 		return err
+	}
+
+	// succeeded to apply configuration to Kong gateway.
+	// notify the receiver of config status that translation error happened when there are translation errors,
+	// otherwise notify that config status is OK.
+	if len(translationFailures) > 0 {
+		c.configStatusNotifier.NotifyConfigStatus(ConfigStatusTranslationErrorHappened)
+	} else {
+		c.configStatusNotifier.NotifyConfigStatus(ConfigStatusOK)
 	}
 
 	// report on configured Kubernetes objects if enabled
@@ -520,8 +534,16 @@ func handleSendToClientResult(client sendconfig.KonnectAwareClient, logger logru
 		}
 		return "", err
 	}
-
 	return newSHA, nil
+}
+
+// SetConfigStatusNotifier sets a notifier which notifies subscribers about configuration sending results.
+// Currently it is used for uploading the node status to konnect runtime group.
+func (c *KongClient) SetConfigStatusNotifier(n ConfigStatusNotifier) {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+
+	c.configStatusNotifier = n
 }
 
 // -----------------------------------------------------------------------------

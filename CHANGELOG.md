@@ -117,6 +117,9 @@ Adding a new version? You'll need three changes:
   [#3521](https://github.com/Kong/kubernetes-ingress-controller/pull/3521)
 - Leader election is enabled by default then kong admin service discovery is enabled.
   [#3529](https://github.com/Kong/kubernetes-ingress-controller/pull/3529)
+- Added flag `--konnect-refresh-node-period` to set the period of uploading 
+  status of KIC instance to Konnect runtime group.
+  [#3533](https://github.com/Kong/kubernetes-ingress-controller/pull/3533)
 
 ### Fixed
 

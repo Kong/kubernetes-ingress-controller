@@ -184,6 +184,14 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 		// In case of failures when building Konnect related objects, we're not returning errors as Konnect is not
 		// considered critical feature, and it should not break the basic functionality of the controller.
 
+		konnectAdminAPIClient, err := adminapi.NewKongClientForKonnectRuntimeGroup(ctx, c.Konnect)
+		if err != nil {
+			setupLog.Error(err, "failed creating Konnect Runtime Group Admin API client, skipping synchronisation")
+		} else {
+			setupLog.Info("Initialized Konnect Admin API client")
+			clientsManager.SetKonnectClient(konnectAdminAPIClient)
+		}
+
 		setupLog.Info("Start Konnect client to register runtime instances to Konnect")
 		konnectNodeAPIClient, err := konnect.NewNodeAPIClient(c.Konnect)
 		if err != nil {
@@ -191,16 +199,19 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 		} else {
 			hostname, _ := os.Hostname()
 			version := metadata.Release
-			agent := konnect.NewNodeAgent(hostname, version, setupLog, konnectNodeAPIClient)
-			agent.Run()
-		}
+			// set channel to send config status.
+			configStatusNotifier := dataplane.NewChannelConfigNotifier()
+			dataplaneClient.SetConfigStatusNotifier(configStatusNotifier)
 
-		konnectAdminAPIClient, err := adminapi.NewKongClientForKonnectRuntimeGroup(ctx, c.Konnect)
-		if err != nil {
-			setupLog.Error(err, "failed creating Konnect Runtime Group Admin API client, skipping synchronisation")
-		} else {
-			setupLog.Info("Initialized Konnect Admin API client")
-			clientsManager.SetKonnectClient(konnectAdminAPIClient)
+			agent := konnect.NewNodeAgent(
+				hostname,
+				version,
+				c.Konnect.RefreshNodePeriod,
+				setupLog,
+				konnectNodeAPIClient,
+				configStatusNotifier,
+			)
+			agent.Run(ctx)
 		}
 	}
 

@@ -17,6 +17,7 @@ type KonnectConfig struct {
 	ConfigSynchronizationEnabled bool
 	RuntimeGroupID               string
 	Address                      string
+	RefreshNodePeriod            time.Duration
 	TLSClient                    TLSClientConfig
 }
 

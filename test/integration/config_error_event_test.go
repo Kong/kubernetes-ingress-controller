@@ -46,6 +46,7 @@ func TestConfigErrorEventGeneration(t *testing.T) {
 	t.Logf("exposing deployment %s via service", deployment.Name)
 	service := generators.NewServiceForDeployment(deployment, corev1.ServiceTypeLoadBalancer)
 	service.ObjectMeta.Annotations = map[string]string{}
+	// TCP services cannot have paths, and we don't catch this as a translation error
 	service.ObjectMeta.Annotations["konghq.com/protocol"] = "tcp"
 	service.ObjectMeta.Annotations["konghq.com/path"] = "/aitmatov"
 	_, err = env.Cluster().Client().CoreV1().Services(ns.Name).Create(ctx, service, metav1.CreateOptions{})
@@ -55,6 +56,7 @@ func TestConfigErrorEventGeneration(t *testing.T) {
 	t.Logf("creating an ingress for service %s with invalid configuration", service.Name)
 	kubernetesVersion, err := env.Cluster().Version()
 	require.NoError(t, err)
+	// GRPC routes cannot have methods, only HTTP, and we don't catch this as a translation error
 	ingress := generators.NewIngressForServiceWithClusterVersion(kubernetesVersion, "/bar", map[string]string{
 		annotations.IngressClassKey: consts.IngressClass,
 		"konghq.com/strip-path":     "true",

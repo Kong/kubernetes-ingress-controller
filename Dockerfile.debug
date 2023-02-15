@@ -1,5 +1,5 @@
 # Build a manager binary with debug symbols and download Delve
-FROM golang:1.20.0 as builder
+FROM golang:1.20.1 as builder
 
 ARG TARGETPLATFORM
 ARG TARGETOS
@@ -32,7 +32,7 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH="${TARGETARCH}" GO111MODULE=on make _build.d
 
 ### Debug
 # Create an image that runs a debug build with Delve installed
-FROM golang:1.20.0 AS debug
+FROM golang:1.20.1 AS debug
 RUN go install github.com/go-delve/delve/cmd/dlv@latest
 # We want all source so Delve file location operations work
 COPY --from=builder /workspace/bin/manager-debug /

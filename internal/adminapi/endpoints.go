@@ -14,7 +14,13 @@ import (
 
 // GetURLsForService performs an endpoint lookup, using provided kubeClient
 // to list provided Admin API Service EndpointSlices.
-func GetURLsForService(ctx context.Context, kubeClient client.Client, service types.NamespacedName) (sets.Set[string], error) {
+// The retrieved EndpointSlices' ports are compared with the provided portNames set.
+func GetURLsForService(
+	ctx context.Context,
+	kubeClient client.Client,
+	service types.NamespacedName,
+	portNames sets.Set[string],
+) (sets.Set[string], error) {
 	const (
 		defaultEndpointSliceListPagingLimit = 100
 	)
@@ -42,7 +48,7 @@ func GetURLsForService(ctx context.Context, kubeClient client.Client, service ty
 		}
 
 		for _, es := range endpointsList.Items {
-			addresses = addresses.Union(AddressesFromEndpointSlice(es))
+			addresses = addresses.Union(AddressesFromEndpointSlice(es, portNames))
 		}
 
 		if endpointsList.Continue == "" {
@@ -54,15 +60,14 @@ func GetURLsForService(ctx context.Context, kubeClient client.Client, service ty
 
 // AddressesFromEndpointSlice returns a list of Admin API addresses when given
 // an Endpointslice.
-func AddressesFromEndpointSlice(endpoints discoveryv1.EndpointSlice) sets.Set[string] {
+func AddressesFromEndpointSlice(endpoints discoveryv1.EndpointSlice, portNames sets.Set[string]) sets.Set[string] {
 	addresses := sets.New[string]()
 	for _, p := range endpoints.Ports {
 		if p.Name == nil {
 			continue
 		}
 
-		// NOTE: consider making this configurable.
-		if *p.Name != "admin" {
+		if !portNames.Has(*p.Name) {
 			continue
 		}
 

@@ -25,6 +25,7 @@ func TestAddressesFromEndpointSlice(t *testing.T) {
 		name      string
 		enspoints discoveryv1.EndpointSlice
 		want      sets.Set[string]
+		portNames sets.Set[string]
 	}{
 		{
 			enspoints: discoveryv1.EndpointSlice{
@@ -46,8 +47,9 @@ func TestAddressesFromEndpointSlice(t *testing.T) {
 					},
 				},
 			},
-			name: "basic",
-			want: sets.New("https://10.0.0.1:8444", "https://10.0.0.2:8444"),
+			name:      "basic",
+			want:      sets.New("https://10.0.0.1:8444", "https://10.0.0.2:8444"),
+			portNames: sets.New("admin"),
 		},
 		{
 			enspoints: discoveryv1.EndpointSlice{
@@ -69,8 +71,9 @@ func TestAddressesFromEndpointSlice(t *testing.T) {
 					},
 				},
 			},
-			name: "not ready endpoints are not returned",
-			want: sets.New[string](),
+			name:      "not ready endpoints are not returned",
+			want:      sets.New[string](),
+			portNames: sets.New("admin"),
 		},
 		{
 			enspoints: discoveryv1.EndpointSlice{
@@ -95,8 +98,9 @@ func TestAddressesFromEndpointSlice(t *testing.T) {
 					},
 				},
 			},
-			name: "not ready and terminating endpoints are not returned",
-			want: sets.New[string](),
+			name:      "not ready and terminating endpoints are not returned",
+			want:      sets.New[string](),
+			portNames: sets.New("admin"),
 		},
 		{
 			enspoints: discoveryv1.EndpointSlice{
@@ -132,8 +136,9 @@ func TestAddressesFromEndpointSlice(t *testing.T) {
 					},
 				},
 			},
-			name: "multiple enpoints are concatenated properly",
-			want: sets.New("https://10.0.0.1:8444", "https://10.0.0.2:8444", "https://10.0.0.3:8444", "https://10.0.1.1:8444", "https://10.0.1.2:8444"),
+			name:      "multiple enpoints are concatenated properly",
+			want:      sets.New("https://10.0.0.1:8444", "https://10.0.0.2:8444", "https://10.0.0.3:8444", "https://10.0.1.1:8444", "https://10.0.1.2:8444"),
+			portNames: sets.New("admin"),
 		},
 		{
 			enspoints: discoveryv1.EndpointSlice{
@@ -191,14 +196,46 @@ func TestAddressesFromEndpointSlice(t *testing.T) {
 					},
 				},
 			},
-			name: "ports without names are not taken into account ",
-			want: sets.New[string](),
+			name:      "ports without names are not taken into account ",
+			want:      sets.New[string](),
+			portNames: sets.New("admin"),
+		},
+		{
+			enspoints: discoveryv1.EndpointSlice{
+				ObjectMeta:  endpointsSliceObjectMeta,
+				AddressType: discoveryv1.AddressTypeIPv4,
+				Endpoints: []discoveryv1.Endpoint{
+					{
+						Addresses: []string{"10.0.0.1", "10.0.0.2", "10.0.0.3"},
+						Conditions: discoveryv1.EndpointConditions{
+							Ready:       lo.ToPtr(true),
+							Terminating: lo.ToPtr(false),
+						},
+					},
+				},
+				Ports: []discoveryv1.EndpointPort{
+					{
+						Name: lo.ToPtr("admin-tls"),
+						Port: lo.ToPtr(int32(8443)),
+					},
+					{
+						Name: lo.ToPtr("admin"),
+						Port: lo.ToPtr(int32(8444)),
+					},
+				},
+			},
+			name: "multiple ports names",
+			want: sets.New(
+				"https://10.0.0.1:8443", "https://10.0.0.2:8443", "https://10.0.0.3:8443",
+				"https://10.0.0.1:8444", "https://10.0.0.2:8444", "https://10.0.0.3:8444",
+			),
+			portNames: sets.New("admin", "admin-tls"),
 		},
 	}
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			require.Equal(t, tt.want, AddressesFromEndpointSlice(tt.enspoints))
+			require.Equal(t, tt.want, AddressesFromEndpointSlice(tt.enspoints, tt.portNames))
 		})
 	}
 }
@@ -344,7 +381,8 @@ func TestGetURLsForService(t *testing.T) {
 				WithLists(tt.objects...).
 				Build()
 
-			got, err := GetURLsForService(context.Background(), fakeClient, tt.service)
+			portNames := sets.New("admin")
+			got, err := GetURLsForService(context.Background(), fakeClient, tt.service, portNames)
 			if tt.wantErr {
 				require.Error(t, err)
 				return

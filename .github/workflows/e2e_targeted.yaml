@@ -158,6 +158,7 @@ jobs:
         E2E_TEST_RUN: ${{ matrix.test }}
         TEST_KONG_CONTROLLER_IMAGE_LOAD: ${{ github.event.inputs.controller-image }}
         TEST_KONG_CONTROLLER_IMAGE_OVERRIDE: ${{ github.event.inputs.controller-image }}
+        TEST_KONG_KONNECT_ACCESS_TOKEN: ${{ secrets.K8S_TEAM_KONNECT_ACCESS_TOKEN }}
         KONG_LICENSE_DATA: ${{ steps.license.outputs.license }}
         KONG_CLUSTER_VERSION: ${{ github.event.inputs.kubernetes-version }}
         ISTIO_VERSION: ${{ github.event.inputs.istio-version }}

@@ -2,13 +2,15 @@ package adminapi
 
 import (
 	"context"
+	"crypto/tls"
 	"errors"
 	"fmt"
+	"net/http"
 	"time"
 
 	"github.com/avast/retry-go/v4"
-	deckutils "github.com/kong/deck/utils"
 	"github.com/kong/go-kong/kong"
+	"github.com/samber/lo"
 
 	tlsutil "github.com/kong/kubernetes-ingress-controller/v2/internal/util/tls"
 )
@@ -22,20 +24,31 @@ type KonnectConfig struct {
 }
 
 func NewKongClientForKonnectRuntimeGroup(ctx context.Context, c KonnectConfig) (*Client, error) {
-	tlsClientCert, err := tlsutil.ValueFromVariableOrFile([]byte(c.TLSClient.Cert), c.TLSClient.CertFile)
+	clientCertificate, err := tlsutil.ExtractClientCertificates(
+		[]byte(c.TLSClient.Cert),
+		c.TLSClient.CertFile,
+		[]byte(c.TLSClient.Key),
+		c.TLSClient.KeyFile,
+	)
 	if err != nil {
-		return nil, fmt.Errorf("could not extract TLS client cert: %w", err)
+		return nil, fmt.Errorf("failed to extract client certificates: %w", err)
 	}
-	tlsClientKey, err := tlsutil.ValueFromVariableOrFile([]byte(c.TLSClient.Key), c.TLSClient.KeyFile)
-	if err != nil {
-		return nil, fmt.Errorf("could not extract TLS client key: %w", err)
+	if clientCertificate == nil {
+		return nil, fmt.Errorf("client ceritficate is missing")
 	}
 
-	client, err := deckutils.GetKongClient(deckutils.KongClientConfig{
-		Address:       fmt.Sprintf("%s/%s/%s", c.Address, "kic/api/runtime_groups", c.RuntimeGroupID),
-		TLSClientCert: string(tlsClientCert),
-		TLSClientKey:  string(tlsClientKey),
-	})
+	tlsConfig := tls.Config{
+		Certificates: []tls.Certificate{*clientCertificate},
+		MinVersion:   tls.VersionTLS12,
+	}
+	transport := http.DefaultTransport.(*http.Transport).Clone()
+	transport.TLSClientConfig = &tlsConfig
+	client, err := kong.NewClient(
+		lo.ToPtr(fmt.Sprintf("%s/%s/%s", c.Address, "kic/api/runtime_groups", c.RuntimeGroupID)),
+		&http.Client{
+			Transport: transport,
+		},
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -66,6 +79,7 @@ func ensureKonnectConnection(ctx context.Context, client *kong.Client) error {
 			return nil
 		},
 		retry.Attempts(retries),
+		retry.Context(ctx),
 		retry.Delay(delay),
 		retry.DelayType(retry.FixedDelay),
 		retry.LastErrorOnly(true),

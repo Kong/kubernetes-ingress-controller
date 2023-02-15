@@ -31,7 +31,7 @@ var udpMutex sync.Mutex
 
 // coreDNSImage is the image and version of CoreDNS that will be used for UDP
 // testing.
-const coreDNSImage = "k8s.gcr.io/coredns/coredns:v1.8.6"
+const coreDNSImage = "registry.k8s.io/coredns/coredns:v1.8.6"
 
 func TestUDPIngressEssentials(t *testing.T) {
 	t.Parallel()

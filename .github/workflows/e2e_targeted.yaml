@@ -27,13 +27,22 @@ jobs:
       test_names: ${{ steps.set_test_names.outputs.test_names }}
     steps:
       - uses: actions/checkout@v3
+      - id: test_files
+        name: Get test file names
+        working-directory: test/e2e/
+        # go list used to extract the test names from only those test files that
+        # match the specified tags: here e2e_tests.
+        # This filters out e.g. istio tests which we run separately.
+        run: echo "result=$(go list -tags e2e_tests -f '{{ range .TestGoFiles }} {{- . }} {{ end }}' .)" >> $GITHUB_OUTPUT
+      - name: Print test file names
+        run: echo "Test file names ${{ steps.test_files.outputs.result }}"
       - id: set_test_names
         name: Set test names
         working-directory: test/e2e/
         # grep magic described in https://unix.stackexchange.com/a/13472
         # sed to add the extra $ is because some of our test names overlap. we need it so the -run regex only matches one test
         run: |
-          echo "test_names=$(grep -shoP "(?<=^func )(Test[a-zA-z_0-9]+)(?=\(t \*testing.T\) {)" * | sed -e "s/$/\$/"| jq -R . | jq -cs .)" >> $GITHUB_OUTPUT
+          echo "test_names=$(grep -shoP "(?<=^func )(Test[a-zA-z_0-9]+)(?=\(t \*testing.T\) {)" ${{ steps.test_files.outputs.result }} | sed -e "s/$/\$/"| jq -R . | jq -cs .)" >> $GITHUB_OUTPUT
       - name: Print test names
         run: echo "Test names ${{ steps.set_test_names.outputs.test_names }}"
 

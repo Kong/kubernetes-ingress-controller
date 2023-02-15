@@ -270,14 +270,14 @@ func getListenerStatus(
 		// If the listener uses TLS, we need to ensure that the gateway is granted to reference
 		// all the secrets it references
 		if listener.TLS != nil {
-			TLSresolvedRefReason := string(gatewayv1beta1.ListenerReasonResolvedRefs)
+			tlsresolvedRefReason := string(gatewayv1beta1.ListenerReasonResolvedRefs)
 			for _, certRef := range listener.TLS.CertificateRefs {
 				// if the certificate is in the same namespace of the gateway, no ReferenceGrant is needed
 				if certRef.Namespace != nil && *certRef.Namespace != (Namespace)(gateway.Namespace) {
 					// get the result of the certificate reference. If the returned reason is not successful, the loop
 					// must be broken because the secret reference isn't granted
-					TLSresolvedRefReason = getReferenceGrantConditionReason(gateway.Namespace, certRef, referenceGrants)
-					if TLSresolvedRefReason != string(gatewayv1beta1.ListenerReasonResolvedRefs) {
+					tlsresolvedRefReason = getReferenceGrantConditionReason(gateway.Namespace, certRef, referenceGrants)
+					if tlsresolvedRefReason != string(gatewayv1beta1.ListenerReasonResolvedRefs) {
 						break
 					}
 				}
@@ -285,7 +285,7 @@ func getListenerStatus(
 				// only secrets are supported as certificate references
 				if (certRef.Group != nil && (*certRef.Group != "core" && *certRef.Group != "")) ||
 					(certRef.Kind != nil && *certRef.Kind != "Secret") {
-					TLSresolvedRefReason = string(gatewayv1beta1.ListenerReasonInvalidCertificateRef)
+					tlsresolvedRefReason = string(gatewayv1beta1.ListenerReasonInvalidCertificateRef)
 					break
 				}
 				secret := &corev1.Secret{}
@@ -297,11 +297,11 @@ func getListenerStatus(
 					if !apierrors.IsNotFound(err) {
 						return nil, err
 					}
-					TLSresolvedRefReason = string(gatewayv1beta1.ListenerReasonInvalidCertificateRef)
+					tlsresolvedRefReason = string(gatewayv1beta1.ListenerReasonInvalidCertificateRef)
 				}
 			}
-			if gatewayv1beta1.ListenerConditionReason(TLSresolvedRefReason) != gatewayv1beta1.ListenerReasonResolvedRefs {
-				ResolvedRefsReason = gatewayv1beta1.ListenerConditionReason(TLSresolvedRefReason)
+			if gatewayv1beta1.ListenerConditionReason(tlsresolvedRefReason) != gatewayv1beta1.ListenerReasonResolvedRefs {
+				ResolvedRefsReason = gatewayv1beta1.ListenerConditionReason(tlsresolvedRefReason)
 			}
 		}
 
@@ -456,7 +456,6 @@ func getListenerStatus(
 	// if we encountered conflicts, we must strip the ready status we originally set
 	for _, listener := range gateway.Spec.Listeners {
 		var conflictReason string
-		var TLSresolvedRefReason string
 
 		var hostname Hostname
 		if listener.Hostname != nil {
@@ -472,35 +471,6 @@ func getListenerStatus(
 		}
 
 		newConditions := []metav1.Condition{}
-
-		// if resolvedRefReason has any value, it means that the listener references a secret.
-		// A ListenerConditionResolvedRefs condition must be set to reflect in the gateway status
-		// the outcome of that reference (that means if the gateway is granted to access that secret)
-		if TLSresolvedRefReason != "" {
-			conditionStatus := metav1.ConditionTrue
-			message := "the listener is ready and available for routing"
-			if TLSresolvedRefReason != string(gatewayv1beta1.ListenerReasonResolvedRefs) {
-				conditionStatus = metav1.ConditionFalse
-				message = "the listener is not ready and cannot route requests"
-			}
-			newConditions = append(newConditions,
-				metav1.Condition{
-					Type:               string(gatewayv1beta1.ListenerConditionResolvedRefs),
-					Status:             conditionStatus,
-					ObservedGeneration: gateway.Generation,
-					LastTransitionTime: metav1.Now(),
-					Reason:             TLSresolvedRefReason,
-				},
-				metav1.Condition{
-					Type:               string(gatewayv1beta1.ListenerConditionReady),
-					Status:             conditionStatus,
-					ObservedGeneration: gateway.Generation,
-					LastTransitionTime: metav1.Now(),
-					Reason:             string(gatewayv1beta1.ListenerReasonReady),
-					Message:            message,
-				},
-			)
-		}
 
 		if len(conflictReason) > 0 {
 			for _, cond := range statuses[listener.Name].Conditions {

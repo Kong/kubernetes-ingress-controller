@@ -4,10 +4,6 @@ go 1.19
 
 replace github.com/imdario/mergo v0.3.12 => github.com/Kong/mergo v0.3.13
 
-// This is needed because github.com/kong/kubernetes-telemetry required
-// gateway-api v0.6.1. When we bump it to 0.6.1 this can be removed.
-replace sigs.k8s.io/gateway-api v0.6.1 => sigs.k8s.io/gateway-api v0.6.0
-
 require (
 	cloud.google.com/go/container v1.13.1
 	github.com/Masterminds/sprig/v3 v3.2.3

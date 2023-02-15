@@ -1766,15 +1766,22 @@ spec:
       serviceAccountName: kong-serviceaccount
       volumes:
       - name: kong-serviceaccount-token
-        secret:
-          items:
-          - key: token
-            path: token
-          - key: ca.crt
-            path: ca.crt
-          - key: namespace
-            path: namespace
-          secretName: kong-serviceaccount-token
+        projected:
+          sources:
+          - serviceAccountToken:
+              expirationSeconds: 3607
+              path: token
+          - configMap:
+              items:
+              - key: ca.crt
+                path: ca.crt
+              name: kube-root-ca.crt
+          - downwardAPI:
+              items:
+              - fieldRef:
+                  apiVersion: v1
+                  fieldPath: metadata.namespace
+                path: namespace
 ---
 apiVersion: networking.k8s.io/v1
 kind: IngressClass

@@ -17,7 +17,7 @@ func TeardownCluster(ctx context.Context, t *testing.T, cluster clusters.Cluster
 	t.Helper()
 
 	const (
-		environmentCleanupTimeout = 3 * time.Minute
+		environmentCleanupTimeout = 10 * time.Minute
 	)
 
 	DumpDiagnosticsIfFailed(ctx, t, cluster)

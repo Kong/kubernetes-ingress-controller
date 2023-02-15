@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
@@ -75,11 +76,16 @@ func TestGatewayConformance(t *testing.T) {
 		Debug:                showDebug,
 		CleanupBaseResources: shouldCleanup,
 		BaseManifests:        conformanceTestsBaseManifests,
-		SupportedFeatures: map[suite.SupportedFeature]bool{
-			suite.SupportReferenceGrant: true,
-
-			// TODO: https://github.com/Kong/kubernetes-ingress-controller/issues/2778
-			suite.SupportHTTPRouteQueryParamMatching: false,
+		SupportedFeatures:    sets.New(suite.SupportReferenceGrant),
+		SkipTests: []string{
+			// these tests are temporarily disabled to be able to bump the Gateway API to 0.6
+			// https://github.com/Kong/kubernetes-ingress-controller/issues/3305
+			tests.GatewayInvalidRouteKind.ShortName,
+			tests.GatewayInvalidTLSConfiguration.ShortName,
+			tests.GatewaySecretReferenceGrantAllInNamespace.ShortName,
+			tests.GatewaySecretReferenceGrantSpecific.ShortName,
+			tests.HTTPRouteHeaderMatching.ShortName,
+			tests.HTTPRouteObservedGenerationBump.ShortName,
 		},
 	})
 	cSuite.Setup(t)
@@ -91,26 +97,9 @@ func TestGatewayConformance(t *testing.T) {
 		}
 	}
 
-	// these tests are temporarily disabled to be able to bump the Gateway API to 0.6
-	// https://github.com/Kong/kubernetes-ingress-controller/issues/3305
-	skipTests := map[string]struct{}{
-		tests.GatewayInvalidRouteKind.ShortName:                   {},
-		tests.GatewayInvalidTLSConfiguration.ShortName:            {},
-		tests.GatewaySecretReferenceGrantAllInNamespace.ShortName: {},
-		tests.GatewaySecretReferenceGrantSpecific.ShortName:       {},
-		tests.HTTPRouteHeaderMatching.ShortName:                   {},
-		tests.HTTPRouteObservedGenerationBump.ShortName:           {},
-		tests.HTTPRouteRequestRedirect.ShortName:                  {},
-	}
-
 	t.Log("running gateway conformance tests")
 	for _, tt := range tests.ConformanceTests {
 		tt := tt
-		t.Run(tt.Description, func(t *testing.T) {
-			if _, ok := skipTests[tt.ShortName]; ok {
-				t.Skipf("skipping %s", tt.ShortName)
-			}
-			tt.Run(t, cSuite)
-		})
+		tt.Run(t, cSuite)
 	}
 }

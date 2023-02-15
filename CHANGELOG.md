@@ -130,6 +130,9 @@ Adding a new version? You'll need three changes:
 - Added flag `--konnect-refresh-node-period` to set the period of uploading 
   status of KIC instance to Konnect runtime group.
   [#3533](https://github.com/Kong/kubernetes-ingress-controller/pull/3533)
+- Replaced service account's token static secret with a projected volume in 
+  deployment manifests.
+  [#3563](https://github.com/Kong/kubernetes-ingress-controller/pull/3563)
 
 ### Fixed
 

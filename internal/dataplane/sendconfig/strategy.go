@@ -6,6 +6,7 @@ import (
 	"github.com/kong/deck/dump"
 	"github.com/kong/deck/file"
 	"github.com/kong/go-kong/kong"
+	"github.com/sirupsen/logrus"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/metrics"
 )
@@ -13,7 +14,11 @@ import (
 // UpdateStrategy is the way we approach updating data-plane's configuration, depending on its type.
 type UpdateStrategy interface {
 	// Update applies targetConfig to the data-plane.
-	Update(ctx context.Context, targetContent *file.Content) error
+	Update(ctx context.Context, targetContent *file.Content) (
+		err error,
+		resourceErrors []ResourceError,
+		resourceErrorsParseErr error,
+	)
 
 	// MetricsProtocol returns a string describing the update strategy type to be used in metrics.
 	MetricsProtocol() metrics.Protocol
@@ -25,12 +30,23 @@ type UpdateClient interface {
 	AdminAPIClient() *kong.Client
 }
 
+// ResourceError is a Kong configuration error associated with a Kubernetes resource.
+type ResourceError struct {
+	Name       string
+	Namespace  string
+	Kind       string
+	APIVersion string
+	UID        string
+	Problems   map[string]string
+}
+
 // ResolveUpdateStrategy returns an UpdateStrategy based on the client and configuration.
 // The UpdateStrategy can be either UpdateStrategyDBMode or UpdateStrategyInMemory. Both
 // of them implement different ways to populate Kong instances with data-plane configuration.
 func ResolveUpdateStrategy(
 	client UpdateClient,
 	config Config,
+	log logrus.FieldLogger,
 ) UpdateStrategy {
 	adminAPIClient := client.AdminAPIClient()
 
@@ -60,5 +76,5 @@ func ResolveUpdateStrategy(
 		)
 	}
 
-	return NewUpdateStrategyInMemory(adminAPIClient)
+	return NewUpdateStrategyInMemory(adminAPIClient, log)
 }

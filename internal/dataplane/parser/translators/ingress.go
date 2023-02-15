@@ -97,16 +97,21 @@ func (i *ingressTranslationIndex) add(ingress *netv1.Ingress) {
 			}
 
 			serviceName := httpIngressPath.Backend.Service.Name
+			// TODO KIC#3484 this does something screwy where you can get zero backends
 			port := PortDefFromServiceBackendPort(&httpIngressPath.Backend.Service.Port)
 
 			cacheKey := fmt.Sprintf("%s.%s.%s.%s.%s", ingress.Namespace, ingress.Name, ingressRule.Host, serviceName, port.CanonicalString())
 			meta, ok := i.cache[cacheKey]
 			if !ok {
 				meta = &ingressTranslationMeta{
-					ingressHost:    ingressRule.Host,
-					serviceName:    serviceName,
-					servicePort:    port,
-					addRegexPrefix: i.addRegexPrefix,
+					ingressNamespace: ingress.Namespace,
+					ingressName:      ingress.Name,
+					ingressUID:       string(ingress.UID),
+					ingressHost:      ingressRule.Host,
+					ingressTags:      util.GenerateTagsForObject(ingress),
+					serviceName:      serviceName,
+					servicePort:      port,
+					addRegexPrefix:   i.addRegexPrefix,
 				}
 			}
 
@@ -145,12 +150,16 @@ func (i *ingressTranslationIndex) translate() []*kongstate.Service {
 // -----------------------------------------------------------------------------
 
 type ingressTranslationMeta struct {
-	parentIngress  client.Object
-	ingressHost    string
-	serviceName    string
-	servicePort    kongstate.PortDef
-	paths          []netv1.HTTPIngressPath
-	addRegexPrefix bool
+	parentIngress    client.Object
+	ingressNamespace string
+	ingressName      string
+	ingressUID       string
+	ingressHost      string
+	ingressTags      []*string
+	serviceName      string
+	servicePort      kongstate.PortDef
+	paths            []netv1.HTTPIngressPath
+	addRegexPrefix   bool
 }
 
 func (m *ingressTranslationMeta) translateIntoKongStateService(kongServiceName string, portDef kongstate.PortDef) *kongstate.Service {
@@ -197,6 +206,7 @@ func (m *ingressTranslationMeta) translateIntoKongRoutes() *kongstate.Route {
 			RegexPriority:     kong.Int(0),
 			RequestBuffering:  kong.Bool(true),
 			ResponseBuffering: kong.Bool(true),
+			Tags:              m.ingressTags,
 		},
 	}
 

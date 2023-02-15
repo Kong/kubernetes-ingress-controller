@@ -42,6 +42,7 @@ func (p *Parser) ingressRulesFromTCPIngressV1beta1() ingressRules {
 							Port: kong.Int(rule.Port),
 						},
 					},
+					Tags: util.GenerateTagsForObject(ingress),
 				},
 			}
 			host := rule.Host
@@ -74,6 +75,7 @@ func (p *Parser) ingressRulesFromTCPIngressV1beta1() ingressRules {
 			}
 			service.Routes = append(service.Routes, r)
 			result.ServiceNameToServices[serviceName] = service
+			result.ServiceNameToParent[serviceName] = ingress
 			objectSuccessfullyParsed = true
 		}
 
@@ -110,6 +112,7 @@ func (p *Parser) ingressRulesFromUDPIngressV1beta1() ingressRules {
 					Name:         kong.String(ingress.Namespace + "." + ingress.Name + "." + strconv.Itoa(i) + ".udp"),
 					Protocols:    kong.StringSlice("udp"),
 					Destinations: []*kong.CIDRPort{{Port: kong.Int(rule.Port)}},
+					Tags:         util.GenerateTagsForObject(ingress),
 				},
 			}
 
@@ -135,6 +138,7 @@ func (p *Parser) ingressRulesFromUDPIngressV1beta1() ingressRules {
 			}
 			service.Routes = append(service.Routes, route)
 			result.ServiceNameToServices[serviceName] = service
+			result.ServiceNameToParent[serviceName] = ingress
 			objectSuccessfullyParsed = true
 		}
 

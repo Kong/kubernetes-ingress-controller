@@ -76,6 +76,7 @@ func (p *Parser) ingressRulesFromKnativeIngress() ingressRules {
 						RegexPriority:     kong.Int(0),
 						RequestBuffering:  kong.Bool(true),
 						ResponseBuffering: kong.Bool(true),
+						Tags:              util.GenerateTagsForObject(ingress),
 					},
 				}
 				r.Hosts = kong.StringSlice(hosts...)
@@ -136,6 +137,9 @@ func (p *Parser) ingressRulesFromKnativeIngress() ingressRules {
 		}
 	}
 
+	// Knative handling is odd and doesn't update SNTS like other translators, and it does not get parent info as such.
+	// It shouldn't need parent info since it doesn't have any of the special cases (multi-service backends, default
+	// backend) that require parent info to populate Kubernetes resource tags on Kong services
 	result.ServiceNameToServices = services
 	result.SecretNameToSNIs = secretToSNIs
 	return result

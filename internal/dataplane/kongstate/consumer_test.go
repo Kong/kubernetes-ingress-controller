@@ -106,7 +106,8 @@ func TestConsumer_SetCredential(t *testing.T) {
 			result: &Consumer{
 				KeyAuths: []*KeyAuth{
 					{kong.KeyAuth{
-						Key: kong.String("foo"),
+						Key:  kong.String("foo"),
+						Tags: []*string{},
 					}},
 				},
 			},
@@ -116,20 +117,20 @@ func TestConsumer_SetCredential(t *testing.T) {
 			name: "key-auth without key",
 			args: args{
 				credType:   "key-auth",
-				consumer:   &Consumer{Consumer: kong.Consumer{Username: &username}},
+				consumer:   &Consumer{Consumer: kong.Consumer{Username: &username, Tags: []*string{}}},
 				credConfig: map[string]string{},
 			},
-			result:  &Consumer{Consumer: kong.Consumer{Username: &username}},
+			result:  &Consumer{Consumer: kong.Consumer{Username: &username, Tags: []*string{}}},
 			wantErr: true,
 		},
 		{
 			name: "key-auth with invalid key type",
 			args: args{
 				credType:   "key-auth",
-				consumer:   &Consumer{Consumer: kong.Consumer{Username: &username}},
+				consumer:   &Consumer{Consumer: kong.Consumer{Username: &username, Tags: []*string{}}},
 				credConfig: map[string]interface{}{"key": true},
 			},
-			result:  &Consumer{Consumer: kong.Consumer{Username: &username}},
+			result:  &Consumer{Consumer: kong.Consumer{Username: &username, Tags: []*string{}}},
 			wantErr: true,
 		},
 		{
@@ -142,7 +143,8 @@ func TestConsumer_SetCredential(t *testing.T) {
 			result: &Consumer{
 				KeyAuths: []*KeyAuth{
 					{kong.KeyAuth{
-						Key: kong.String("foo"),
+						Key:  kong.String("foo"),
+						Tags: []*string{},
 					}},
 				},
 			},
@@ -163,6 +165,7 @@ func TestConsumer_SetCredential(t *testing.T) {
 					{kong.BasicAuth{
 						Username: kong.String("foo"),
 						Password: kong.String("bar"),
+						Tags:     []*string{},
 					}},
 				},
 			},
@@ -172,20 +175,20 @@ func TestConsumer_SetCredential(t *testing.T) {
 			name: "basic-auth without username",
 			args: args{
 				credType:   "basic-auth",
-				consumer:   &Consumer{Consumer: kong.Consumer{Username: &username}},
+				consumer:   &Consumer{Consumer: kong.Consumer{Username: &username, Tags: []*string{}}},
 				credConfig: map[string]string{},
 			},
-			result:  &Consumer{Consumer: kong.Consumer{Username: &username}},
+			result:  &Consumer{Consumer: kong.Consumer{Username: &username, Tags: []*string{}}},
 			wantErr: true,
 		},
 		{
 			name: "basic-auth with invalid username type",
 			args: args{
 				credType:   "basic-auth",
-				consumer:   &Consumer{Consumer: kong.Consumer{Username: &username}},
+				consumer:   &Consumer{Consumer: kong.Consumer{Username: &username, Tags: []*string{}}},
 				credConfig: map[string]interface{}{"username": true},
 			},
-			result:  &Consumer{Consumer: kong.Consumer{Username: &username}},
+			result:  &Consumer{Consumer: kong.Consumer{Username: &username, Tags: []*string{}}},
 			wantErr: true,
 		},
 		{
@@ -203,6 +206,7 @@ func TestConsumer_SetCredential(t *testing.T) {
 					{kong.BasicAuth{
 						Username: kong.String("foo"),
 						Password: kong.String("bar"),
+						Tags:     []*string{},
 					}},
 				},
 			},
@@ -223,6 +227,7 @@ func TestConsumer_SetCredential(t *testing.T) {
 					{kong.HMACAuth{
 						Username: kong.String("foo"),
 						Secret:   kong.String("bar"),
+						Tags:     []*string{},
 					}},
 				},
 			},
@@ -232,20 +237,20 @@ func TestConsumer_SetCredential(t *testing.T) {
 			name: "hmac-auth without username",
 			args: args{
 				credType:   "hmac-auth",
-				consumer:   &Consumer{Consumer: kong.Consumer{Username: &username}},
+				consumer:   &Consumer{Consumer: kong.Consumer{Username: &username, Tags: []*string{}}},
 				credConfig: map[string]string{},
 			},
-			result:  &Consumer{Consumer: kong.Consumer{Username: &username}},
+			result:  &Consumer{Consumer: kong.Consumer{Username: &username, Tags: []*string{}}},
 			wantErr: true,
 		},
 		{
 			name: "hmac-auth with invalid username type",
 			args: args{
 				credType:   "hmac-auth",
-				consumer:   &Consumer{Consumer: kong.Consumer{Username: &username}},
+				consumer:   &Consumer{Consumer: kong.Consumer{Username: &username, Tags: []*string{}}},
 				credConfig: map[string]interface{}{"username": true},
 			},
-			result:  &Consumer{Consumer: kong.Consumer{Username: &username}},
+			result:  &Consumer{Consumer: kong.Consumer{Username: &username, Tags: []*string{}}},
 			wantErr: true,
 		},
 		{
@@ -263,6 +268,7 @@ func TestConsumer_SetCredential(t *testing.T) {
 					{kong.HMACAuth{
 						Username: kong.String("foo"),
 						Secret:   kong.String("bar"),
+						Tags:     []*string{},
 					}},
 				},
 			},
@@ -287,6 +293,7 @@ func TestConsumer_SetCredential(t *testing.T) {
 						ClientID:     kong.String("bar"),
 						ClientSecret: kong.String("baz"),
 						RedirectURIs: kong.StringSlice("example.com"),
+						Tags:         []*string{},
 					}},
 				},
 			},
@@ -296,34 +303,34 @@ func TestConsumer_SetCredential(t *testing.T) {
 			name: "oauth2 without name",
 			args: args{
 				credType: "oauth2",
-				consumer: &Consumer{Consumer: kong.Consumer{Username: &username}},
+				consumer: &Consumer{Consumer: kong.Consumer{Username: &username, Tags: []*string{}}},
 				credConfig: map[string]interface{}{
 					"client_id": "bar",
 				},
 			},
-			result:  &Consumer{Consumer: kong.Consumer{Username: &username}},
+			result:  &Consumer{Consumer: kong.Consumer{Username: &username, Tags: []*string{}}},
 			wantErr: true,
 		},
 		{
 			name: "oauth2 without client_id",
 			args: args{
 				credType: "oauth2",
-				consumer: &Consumer{Consumer: kong.Consumer{Username: &username}},
+				consumer: &Consumer{Consumer: kong.Consumer{Username: &username, Tags: []*string{}}},
 				credConfig: map[string]interface{}{
 					"name": "bar",
 				},
 			},
-			result:  &Consumer{Consumer: kong.Consumer{Username: &username}},
+			result:  &Consumer{Consumer: kong.Consumer{Username: &username, Tags: []*string{}}},
 			wantErr: true,
 		},
 		{
 			name: "oauth2 with invalid client_id type",
 			args: args{
 				credType:   "oauth2",
-				consumer:   &Consumer{Consumer: kong.Consumer{Username: &username}},
+				consumer:   &Consumer{Consumer: kong.Consumer{Username: &username, Tags: []*string{}}},
 				credConfig: map[string]interface{}{"client_id": true},
 			},
-			result:  &Consumer{Consumer: kong.Consumer{Username: &username}},
+			result:  &Consumer{Consumer: kong.Consumer{Username: &username, Tags: []*string{}}},
 			wantErr: true,
 		},
 		{
@@ -345,6 +352,7 @@ func TestConsumer_SetCredential(t *testing.T) {
 						Secret:       kong.String("baz"),
 						// set by default
 						Algorithm: kong.String("HS256"),
+						Tags:      []*string{},
 					}},
 				},
 			},
@@ -354,20 +362,20 @@ func TestConsumer_SetCredential(t *testing.T) {
 			name: "jwt without key",
 			args: args{
 				credType:   "jwt",
-				consumer:   &Consumer{Consumer: kong.Consumer{Username: &username}},
+				consumer:   &Consumer{Consumer: kong.Consumer{Username: &username, Tags: []*string{}}},
 				credConfig: map[string]string{},
 			},
-			result:  &Consumer{Consumer: kong.Consumer{Username: &username}},
+			result:  &Consumer{Consumer: kong.Consumer{Username: &username, Tags: []*string{}}},
 			wantErr: true,
 		},
 		{
 			name: "jwt with invald key type",
 			args: args{
 				credType:   "jwt",
-				consumer:   &Consumer{Consumer: kong.Consumer{Username: &username}},
+				consumer:   &Consumer{Consumer: kong.Consumer{Username: &username, Tags: []*string{}}},
 				credConfig: map[string]interface{}{"key": true},
 			},
-			result:  &Consumer{Consumer: kong.Consumer{Username: &username}},
+			result:  &Consumer{Consumer: kong.Consumer{Username: &username, Tags: []*string{}}},
 			wantErr: true,
 		},
 		{
@@ -389,6 +397,7 @@ func TestConsumer_SetCredential(t *testing.T) {
 						Secret:       kong.String("baz"),
 						// set by default
 						Algorithm: kong.String("HS256"),
+						Tags:      []*string{},
 					}},
 				},
 			},
@@ -405,6 +414,7 @@ func TestConsumer_SetCredential(t *testing.T) {
 				ACLGroups: []*ACLGroup{
 					{kong.ACLGroup{
 						Group: kong.String("group-foo"),
+						Tags:  []*string{},
 					}},
 				},
 			},
@@ -414,41 +424,41 @@ func TestConsumer_SetCredential(t *testing.T) {
 			name: "acl without group",
 			args: args{
 				credType:   "acl",
-				consumer:   &Consumer{Consumer: kong.Consumer{Username: &username}},
+				consumer:   &Consumer{Consumer: kong.Consumer{Username: &username, Tags: []*string{}}},
 				credConfig: map[string]string{},
 			},
-			result:  &Consumer{Consumer: kong.Consumer{Username: &username}},
+			result:  &Consumer{Consumer: kong.Consumer{Username: &username, Tags: []*string{}}},
 			wantErr: true,
 		},
 		{
 			name: "acl with invalid group type",
 			args: args{
 				credType:   "acl",
-				consumer:   &Consumer{Consumer: kong.Consumer{Username: &username}},
+				consumer:   &Consumer{Consumer: kong.Consumer{Username: &username, Tags: []*string{}}},
 				credConfig: map[string]interface{}{"group": true},
 			},
-			result:  &Consumer{Consumer: kong.Consumer{Username: &username}},
+			result:  &Consumer{Consumer: kong.Consumer{Username: &username, Tags: []*string{}}},
 			wantErr: true,
 		},
 		{
 			name: "mtls-auth on unsupported version",
 			args: args{
 				credType:   "mtls-auth",
-				consumer:   &Consumer{Consumer: kong.Consumer{Username: &username}},
+				consumer:   &Consumer{Consumer: kong.Consumer{Username: &username, Tags: []*string{}}},
 				credConfig: map[string]string{"subject_name": "foo@example.com"},
 			},
-			result:  &Consumer{Consumer: kong.Consumer{Username: &username}},
+			result:  &Consumer{Consumer: kong.Consumer{Username: &username, Tags: []*string{}}},
 			wantErr: true,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if err := tt.args.consumer.SetCredential(tt.args.credType,
-				tt.args.credConfig); (err != nil) != tt.wantErr {
+				tt.args.credConfig, []*string{}); (err != nil) != tt.wantErr {
 				t.Errorf("processCredential() error = %v, wantErr %v",
 					err, tt.wantErr)
 			}
-			assert.Equal(t, tt.result, tt.args.consumer)
+			assert.Equal(t, tt.args.consumer, tt.result)
 		})
 	}
 
@@ -458,14 +468,15 @@ func TestConsumer_SetCredential(t *testing.T) {
 			name: "mtls-auth",
 			args: args{
 				credType:   "mtls-auth",
-				consumer:   &Consumer{Consumer: kong.Consumer{Username: &username}},
+				consumer:   &Consumer{Consumer: kong.Consumer{Username: &username, Tags: []*string{}}},
 				credConfig: map[string]string{"subject_name": "foo@example.com"},
 			},
 			result: &Consumer{
-				Consumer: kong.Consumer{Username: &username},
+				Consumer: kong.Consumer{Username: &username, Tags: []*string{}},
 				MTLSAuths: []*MTLSAuth{
 					{kong.MTLSAuth{
 						SubjectName: kong.String("foo@example.com"),
+						Tags:        []*string{},
 					}},
 				},
 			},
@@ -475,20 +486,20 @@ func TestConsumer_SetCredential(t *testing.T) {
 			name: "mtls-auth without subject_name",
 			args: args{
 				credType:   "mtls-auth",
-				consumer:   &Consumer{Consumer: kong.Consumer{Username: &username}},
+				consumer:   &Consumer{Consumer: kong.Consumer{Username: &username, Tags: []*string{}}},
 				credConfig: map[string]string{},
 			},
-			result:  &Consumer{Consumer: kong.Consumer{Username: &username}},
+			result:  &Consumer{Consumer: kong.Consumer{Username: &username, Tags: []*string{}}},
 			wantErr: true,
 		},
 		{
 			name: "mtls-auth with invalid subject_name type",
 			args: args{
 				credType:   "mtls-auth",
-				consumer:   &Consumer{Consumer: kong.Consumer{Username: &username}},
+				consumer:   &Consumer{Consumer: kong.Consumer{Username: &username, Tags: []*string{}}},
 				credConfig: map[string]interface{}{"subject_name": true},
 			},
-			result:  &Consumer{Consumer: kong.Consumer{Username: &username}},
+			result:  &Consumer{Consumer: kong.Consumer{Username: &username, Tags: []*string{}}},
 			wantErr: true,
 		},
 	}
@@ -496,11 +507,11 @@ func TestConsumer_SetCredential(t *testing.T) {
 	for _, tt := range mtlsSupportedTests {
 		t.Run(tt.name, func(t *testing.T) {
 			if err := tt.args.consumer.SetCredential(tt.args.credType,
-				tt.args.credConfig); (err != nil) != tt.wantErr {
+				tt.args.credConfig, []*string{}); (err != nil) != tt.wantErr {
 				t.Errorf("processCredential() error = %v, wantErr %v",
 					err, tt.wantErr)
 			}
-			assert.Equal(t, tt.result, tt.args.consumer)
+			assert.Equal(t, tt.args.consumer, tt.result)
 		})
 	}
 }

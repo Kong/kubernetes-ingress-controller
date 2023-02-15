@@ -22,9 +22,11 @@ import (
 	"os"
 	"strings"
 
+	"github.com/kong/go-kong/kong"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	clientset "k8s.io/client-go/kubernetes"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 )
 
@@ -127,4 +129,43 @@ func IsBackendRefGroupKindSupported(gatewayAPIGroup *gatewayv1beta1.Group, gatew
 
 	_, ok := backendRefSupportedGroupKinds[fmt.Sprintf("%s/%s", group, *gatewayAPIKind)]
 	return ok
+}
+
+const (
+	K8sNamespaceTagPrefix = "k8s-namespace:"
+	K8sNameTagPrefix      = "k8s-name:"
+	K8sUIDTagPrefix       = "k8s-uid:"
+	K8sKindTagPrefix      = "k8s-kind:"
+	K8sGroupTagPrefix     = "k8s-group:"
+	K8sVersionTagPrefix   = "k8s-version:"
+)
+
+// GenerateTagsForObject returns a subset of an object's metadata as a slice of prefixed string pointers.
+func GenerateTagsForObject(obj client.Object) []*string {
+	if obj == nil {
+		// this should never happen in practice, but it happen in some unit tests
+		// in those cases, the nil object has no tags
+		return nil
+	}
+	gvk := obj.GetObjectKind().GroupVersionKind()
+	tags := []string{}
+	if obj.GetName() != "" {
+		tags = append(tags, K8sNameTagPrefix+obj.GetName())
+	}
+	if obj.GetNamespace() != "" {
+		tags = append(tags, K8sNamespaceTagPrefix+obj.GetNamespace())
+	}
+	if gvk.Kind != "" {
+		tags = append(tags, K8sKindTagPrefix+gvk.Kind)
+	}
+	if string(obj.GetUID()) != "" {
+		tags = append(tags, K8sUIDTagPrefix+string(obj.GetUID()))
+	}
+	if gvk.Group != "" {
+		tags = append(tags, K8sGroupTagPrefix+gvk.Group)
+	}
+	if gvk.Version != "" {
+		tags = append(tags, K8sVersionTagPrefix+gvk.Version)
+	}
+	return kong.StringSlice(tags...)
 }

@@ -272,6 +272,10 @@ func TestFromKnativeIngress(t *testing.T) {
 			Hosts:             kong.StringSlice("my-func.example.com"),
 			ResponseBuffering: kong.Bool(true),
 			RequestBuffering:  kong.Bool(true),
+			Tags: []*string{
+				kong.String("k8s-name:foo"),
+				kong.String("k8s-namespace:foo-namespace"),
+			},
 		}, svc.Routes[0].Route)
 		assert.Equal(kong.Plugin{
 			Name: kong.String("request-transformer"),
@@ -332,6 +336,10 @@ func TestFromKnativeIngress(t *testing.T) {
 			Hosts:             kong.StringSlice("my-func.example.com"),
 			ResponseBuffering: kong.Bool(true),
 			RequestBuffering:  kong.Bool(true),
+			Tags: []*string{
+				kong.String("k8s-name:foo"),
+				kong.String("k8s-namespace:foo-namespace"),
+			},
 		}, svc.Routes[0].Route)
 		assert.Equal(kong.Plugin{
 			Name: kong.String("request-transformer"),

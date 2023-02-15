@@ -39,15 +39,19 @@ func NewUpdateStrategyDBMode(
 	}
 }
 
-func (s UpdateStrategyDBMode) Update(ctx context.Context, targetContent *file.Content) error {
+func (s UpdateStrategyDBMode) Update(ctx context.Context, targetContent *file.Content) (
+	err error,
+	resourceErrors []ResourceError,
+	resourceErrorsParseErr error,
+) {
 	cs, err := s.currentState(ctx)
 	if err != nil {
-		return fmt.Errorf("failed getting current state for %s: %w", s.client.BaseRootURL(), err)
+		return fmt.Errorf("failed getting current state for %s: %w", s.client.BaseRootURL(), err), nil, nil
 	}
 
 	ts, err := s.targetState(ctx, cs, targetContent)
 	if err != nil {
-		return deckerrors.ConfigConflictError{Err: err}
+		return deckerrors.ConfigConflictError{Err: err}, nil, nil
 	}
 
 	syncer, err := diff.NewSyncer(diff.SyncerOpts{
@@ -57,15 +61,15 @@ func (s UpdateStrategyDBMode) Update(ctx context.Context, targetContent *file.Co
 		SilenceWarnings: true,
 	})
 	if err != nil {
-		return fmt.Errorf("creating a new syncer for %s: %w", s.client.BaseRootURL(), err)
+		return fmt.Errorf("creating a new syncer for %s: %w", s.client.BaseRootURL(), err), nil, nil
 	}
 
 	_, errs := syncer.Solve(ctx, s.concurrency, false)
 	if errs != nil {
-		return deckutils.ErrArray{Errors: errs}
+		return deckutils.ErrArray{Errors: errs}, nil, nil
 	}
 
-	return nil
+	return nil, nil, nil
 }
 
 func (s UpdateStrategyDBMode) MetricsProtocol() metrics.Protocol {

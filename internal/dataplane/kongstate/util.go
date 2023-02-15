@@ -145,6 +145,7 @@ func kongPluginFromK8SClusterPlugin(
 		Ordering:  k8sPlugin.Ordering,
 		Disabled:  k8sPlugin.Disabled,
 		Protocols: protocolsToStrings(k8sPlugin.Protocols),
+		Tags:      util.GenerateTagsForObject(&k8sPlugin),
 	}.toKongPlugin()
 	return kongPlugin, nil
 }
@@ -197,6 +198,7 @@ func kongPluginFromK8SPlugin(
 		Ordering:  k8sPlugin.Ordering,
 		Disabled:  k8sPlugin.Disabled,
 		Protocols: protocolsToStrings(k8sPlugin.Protocols),
+		Tags:      util.GenerateTagsForObject(&k8sPlugin),
 	}.toKongPlugin()
 	return kongPlugin, nil
 }
@@ -284,12 +286,14 @@ type plugin struct {
 	Ordering  *kong.PluginOrdering
 	Disabled  bool
 	Protocols []string
+	Tags      []*string
 }
 
 func (p plugin) toKongPlugin() kong.Plugin {
 	result := kong.Plugin{
 		Name:   kong.String(p.Name),
 		Config: p.Config.DeepCopy(),
+		Tags:   p.Tags,
 	}
 	if p.RunOn != "" {
 		result.RunOn = kong.String(p.RunOn)

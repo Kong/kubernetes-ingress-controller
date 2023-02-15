@@ -83,6 +83,7 @@ func (p *Parser) ingressRulesFromIngressV1beta1() ingressRules {
 						RegexPriority:     kong.Int(0),
 						RequestBuffering:  kong.Bool(true),
 						ResponseBuffering: kong.Bool(true),
+						Tags:              util.GenerateTagsForObject(ingress),
 					},
 				}
 				if host != "" {
@@ -119,6 +120,7 @@ func (p *Parser) ingressRulesFromIngressV1beta1() ingressRules {
 				}
 				service.Routes = append(service.Routes, r)
 				result.ServiceNameToServices[serviceName] = service
+				result.ServiceNameToParent[serviceName] = ingress
 				objectSuccessfullyParsed = true
 			}
 		}
@@ -153,6 +155,7 @@ func (p *Parser) ingressRulesFromIngressV1beta1() ingressRules {
 					ReadTimeout:    kong.Int(DefaultServiceTimeout),
 					WriteTimeout:   kong.Int(DefaultServiceTimeout),
 					Retries:        kong.Int(DefaultRetries),
+					Tags:           util.GenerateTagsForObject(result.ServiceNameToParent[serviceName]),
 				},
 				Namespace: ingress.Namespace,
 				Backends: []kongstate.ServiceBackend{{
@@ -173,10 +176,12 @@ func (p *Parser) ingressRulesFromIngressV1beta1() ingressRules {
 				RegexPriority:     kong.Int(0),
 				RequestBuffering:  kong.Bool(true),
 				ResponseBuffering: kong.Bool(true),
+				Tags:              util.GenerateTagsForObject(result.ServiceNameToParent[serviceName]),
 			},
 		}
 		service.Routes = append(service.Routes, r)
 		result.ServiceNameToServices[serviceName] = service
+		result.ServiceNameToParent[serviceName] = &ingress
 	}
 
 	return result
@@ -224,6 +229,7 @@ func (p *Parser) ingressRulesFromIngressV1() ingressRules {
 					}
 				}
 				result.ServiceNameToServices[*kongStateService.Service.Name] = *kongStateService
+				result.ServiceNameToParent[*kongStateService.Service.Name] = ingress
 				objectSuccessfullyParsed = true
 			}
 		} else {
@@ -262,6 +268,7 @@ func (p *Parser) ingressRulesFromIngressV1() ingressRules {
 							RegexPriority:     kong.Int(priorityForPath[*rulePath.PathType]),
 							RequestBuffering:  kong.Bool(true),
 							ResponseBuffering: kong.Bool(true),
+							Tags:              util.GenerateTagsForObject(ingress),
 						},
 					}
 					if rule.Host != "" {
@@ -296,6 +303,7 @@ func (p *Parser) ingressRulesFromIngressV1() ingressRules {
 					}
 					service.Routes = append(service.Routes, r)
 					result.ServiceNameToServices[serviceName] = service
+					result.ServiceNameToParent[serviceName] = ingress
 					objectSuccessfullyParsed = true
 				}
 			}
@@ -330,6 +338,7 @@ func (p *Parser) ingressRulesFromIngressV1() ingressRules {
 					ReadTimeout:    kong.Int(DefaultServiceTimeout),
 					WriteTimeout:   kong.Int(DefaultServiceTimeout),
 					Retries:        kong.Int(DefaultRetries),
+					Tags:           util.GenerateTagsForObject(result.ServiceNameToParent[serviceName]),
 				},
 				Namespace: ingress.Namespace,
 				Backends: []kongstate.ServiceBackend{{
@@ -350,10 +359,12 @@ func (p *Parser) ingressRulesFromIngressV1() ingressRules {
 				RegexPriority:     kong.Int(0),
 				RequestBuffering:  kong.Bool(true),
 				ResponseBuffering: kong.Bool(true),
+				Tags:              util.GenerateTagsForObject(result.ServiceNameToParent[serviceName]),
 			},
 		}
 		service.Routes = append(service.Routes, r)
 		result.ServiceNameToServices[serviceName] = service
+		result.ServiceNameToParent[serviceName] = &ingress
 	}
 
 	return result

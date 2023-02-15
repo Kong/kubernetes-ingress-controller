@@ -54,6 +54,7 @@ func TestMergeIngressRules(t *testing.T) {
 			wantOutput: &ingressRules{
 				SecretNameToSNIs:      newSecretNameToSNIs(),
 				ServiceNameToServices: map[string]kongstate.Service{},
+				ServiceNameToParent:   map[string]client.Object{},
 			},
 		},
 		{
@@ -65,6 +66,7 @@ func TestMergeIngressRules(t *testing.T) {
 			wantOutput: &ingressRules{
 				SecretNameToSNIs:      newSecretNameToSNIs(),
 				ServiceNameToServices: map[string]kongstate.Service{},
+				ServiceNameToParent:   map[string]client.Object{},
 			},
 		},
 		{
@@ -78,6 +80,8 @@ func TestMergeIngressRules(t *testing.T) {
 			wantOutput: &ingressRules{
 				SecretNameToSNIs:      makeSecretToSNIs(map[string]testSNIs{"a": {hosts: []string{"b", "c"}}, "d": {hosts: []string{"e", "f"}}}),
 				ServiceNameToServices: map[string]kongstate.Service{"1": {Namespace: "potato"}},
+				// not all of the inputs have proper parents, so while they're not empty, this still is in the unit
+				ServiceNameToParent: map[string]client.Object{},
 			},
 		},
 		{
@@ -92,11 +96,13 @@ func TestMergeIngressRules(t *testing.T) {
 				},
 				{
 					ServiceNameToServices: map[string]kongstate.Service{"2": {Namespace: "carrot"}},
+					ServiceNameToParent:   map[string]client.Object{},
 				},
 			},
 			wantOutput: &ingressRules{
 				SecretNameToSNIs:      makeSecretToSNIs(map[string]testSNIs{"a": {hosts: []string{"b", "c"}}, "d": {hosts: []string{"e", "f"}}, "g": {hosts: []string{"h"}}}),
 				ServiceNameToServices: map[string]kongstate.Service{"1": {Namespace: "potato"}, "2": {Namespace: "carrot"}},
+				ServiceNameToParent:   map[string]client.Object{},
 			},
 		},
 		{
@@ -108,6 +114,7 @@ func TestMergeIngressRules(t *testing.T) {
 			wantOutput: &ingressRules{
 				SecretNameToSNIs:      makeSecretToSNIs(map[string]testSNIs{"a": {hosts: []string{"b", "c", "d", "e"}}}),
 				ServiceNameToServices: map[string]kongstate.Service{},
+				ServiceNameToParent:   map[string]client.Object{},
 			},
 		},
 		{
@@ -119,6 +126,7 @@ func TestMergeIngressRules(t *testing.T) {
 			wantOutput: &ingressRules{
 				SecretNameToSNIs:      makeSecretToSNIs(map[string]testSNIs{"a": {parents: []client.Object{parent1, parent2}, hosts: []string{"b", "c", "d", "e"}}}),
 				ServiceNameToServices: map[string]kongstate.Service{},
+				ServiceNameToParent:   map[string]client.Object{},
 			},
 		},
 		{
@@ -130,6 +138,7 @@ func TestMergeIngressRules(t *testing.T) {
 			wantOutput: &ingressRules{
 				SecretNameToSNIs:      makeSecretToSNIs(map[string]testSNIs{"a": {parents: []client.Object{parent1, parent2, parent1, parent2}, hosts: []string{"b", "c", "d", "e"}}}),
 				ServiceNameToServices: map[string]kongstate.Service{},
+				ServiceNameToParent:   map[string]client.Object{},
 			},
 		},
 		{
@@ -145,6 +154,7 @@ func TestMergeIngressRules(t *testing.T) {
 			wantOutput: &ingressRules{
 				SecretNameToSNIs:      newSecretNameToSNIs(),
 				ServiceNameToServices: map[string]kongstate.Service{"svc-name": {Namespace: "new"}},
+				ServiceNameToParent:   map[string]client.Object{},
 			},
 		},
 	} {

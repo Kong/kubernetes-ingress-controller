@@ -347,6 +347,7 @@ func (p *Parser) getUpstreams(serviceMap map[string]kongstate.Service) []kongsta
 			upstream := kongstate.Upstream{
 				Upstream: kong.Upstream{
 					Name: kong.String(name),
+					Tags: service.Tags, // populated by populateServices already
 				},
 				Service: service,
 				Targets: targets,
@@ -470,6 +471,7 @@ func (p *Parser) getGatewayCerts() []certWrapper {
 							ID:   kong.String(string(secret.UID)),
 							Cert: kong.String(cert),
 							Key:  kong.String(key),
+							Tags: util.GenerateTagsForObject(secret),
 						},
 						CreationTimestamp: secret.CreationTimestamp,
 						snis:              []string{hostname},
@@ -503,6 +505,7 @@ func (p *Parser) getCerts(secretsToSNIs SecretNameToSNIs) []certWrapper {
 				ID:   kong.String(string(secret.UID)),
 				Cert: kong.String(cert),
 				Key:  kong.String(key),
+				Tags: util.GenerateTagsForObject(secret),
 			},
 			CreationTimestamp: secret.CreationTimestamp,
 			snis:              SNIs.Hosts(),

@@ -6,6 +6,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/kong/go-kong/kong"
+	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -72,7 +73,7 @@ func TestResolveUpdateStrategy(t *testing.T) {
 
 			strategy := sendconfig.ResolveUpdateStrategy(client, sendconfig.Config{
 				InMemory: tc.inMemory,
-			})
+			}, logrus.New())
 			require.IsType(t, tc.expectedStrategy, strategy)
 			assert.True(t, client.adminAPIClientWasCalled)
 			assert.Equal(t, tc.expectKonnectRuntimeGroupCall, client.konnectRuntimeGroupWasCalled)

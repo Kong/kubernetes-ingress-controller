@@ -16,17 +16,20 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/failures"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/store"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 )
 
 type ingressRules struct {
 	SecretNameToSNIs      SecretNameToSNIs
 	ServiceNameToServices map[string]kongstate.Service
+	ServiceNameToParent   map[string]client.Object
 }
 
 func newIngressRules() ingressRules {
 	return ingressRules{
 		SecretNameToSNIs:      newSecretNameToSNIs(),
 		ServiceNameToServices: make(map[string]kongstate.Service),
+		ServiceNameToParent:   make(map[string]client.Object),
 	}
 }
 
@@ -89,6 +92,33 @@ func (ir *ingressRules) populateServices(log logrus.FieldLogger, s store.Storer,
 					ID: kong.String(string(secret.UID)),
 				}
 			}
+		}
+		if len(k8sServices) > 1 {
+			if parent, ok := ir.ServiceNameToParent[*service.Name]; ok {
+				service.Tags = util.GenerateTagsForObject(parent)
+			} else {
+				log.WithFields(logrus.Fields{
+					"service": *service.Name,
+				}).Error("multi-service backend lacks parent info, cannot generate tags")
+			}
+		} else if len(k8sServices) > 0 {
+			service.Tags = util.GenerateTagsForObject(k8sServices[0])
+		} else {
+			// TODO https://github.com/Kong/kubernetes-ingress-controller/issues/3484
+			// somehow https://gist.github.com/rainest/8d5a067e9c8b93c98100559fcbe75631 results in _ZERO_
+			// k8sServices, causing a panic here without this if clause.
+			// That shouldn't happen and requires further investigation.
+			log.WithFields(logrus.Fields{
+				"service": *service.Name,
+			}).Error("service has zero k8sServices backends, cannot generate tags for it properly")
+			service.Tags = kong.StringSlice(
+				util.K8sNameTagPrefix+"UNKNOWN",
+				util.K8sNamespaceTagPrefix+"UNKNOWN",
+				util.K8sKindTagPrefix+"Service",
+				util.K8sUIDTagPrefix+"00000000-0000-0000-0000-000000000000",
+				util.K8sGroupTagPrefix+"core",
+				util.K8sVersionTagPrefix+"v1",
+			)
 		}
 
 		// Kubernetes Services have been populated for this Kong Service, so it can

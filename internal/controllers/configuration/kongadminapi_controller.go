@@ -29,7 +29,10 @@ type KongAdminAPIServiceReconciler struct {
 	client.Client
 
 	// ServiceNN is the service NamespacedName to watch EndpointSlices for.
-	ServiceNN        types.NamespacedName
+	ServiceNN types.NamespacedName
+	// PortNames is the set of port names that Admin API Service ports will be
+	// matched against.
+	PortNames        sets.Set[string]
 	Log              logr.Logger
 	CacheSyncTimeout time.Duration
 	// EndpointsNotifier is used to notify about Admin API endpoints changes.
@@ -125,14 +128,14 @@ func (r *KongAdminAPIServiceReconciler) Reconcile(ctx context.Context, req ctrl.
 	if !ok {
 		// If we don't have an entry for this EndpointSlice then save it and notify
 		// about the change.
-		r.Cache[nn] = adminapi.AddressesFromEndpointSlice(endpoints)
+		r.Cache[nn] = adminapi.AddressesFromEndpointSlice(endpoints, r.PortNames)
 		r.notify()
 		return ctrl.Result{}, nil
 	}
 
 	// We do have an entry for this EndpointSlice.
 	// Let's check if it's the same that we're already aware of...
-	addresses := adminapi.AddressesFromEndpointSlice(endpoints)
+	addresses := adminapi.AddressesFromEndpointSlice(endpoints, r.PortNames)
 	if cached.Equal(addresses) {
 		// No change, don't notify
 		return ctrl.Result{}, nil

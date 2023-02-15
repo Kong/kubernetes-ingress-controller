@@ -46,15 +46,16 @@ type Config struct {
 	CacheSyncTimeout                  time.Duration
 
 	// Kong Proxy configurations
-	APIServerHost       string
-	APIServerQPS        int
-	APIServerBurst      int
-	MetricsAddr         string
-	ProbeAddr           string
-	KongAdminURLs       []string
-	KongAdminSvc        types.NamespacedName
-	ProxySyncSeconds    float32
-	ProxyTimeoutSeconds float32
+	APIServerHost         string
+	APIServerQPS          int
+	APIServerBurst        int
+	MetricsAddr           string
+	ProbeAddr             string
+	KongAdminURLs         []string
+	KongAdminSvc          types.NamespacedName
+	KondAdminSvcPortNames []string
+	ProxySyncSeconds      float32
+	ProxyTimeoutSeconds   float32
 
 	// Kubernetes configurations
 	KubeconfigPath           string
@@ -151,6 +152,8 @@ func (c *Config) FlagSet() *pflag.FlagSet {
 			`More than 1 URL can be provided, in such case the flag should be used multiple times or a corresponding env variable should use comma delimited addresses.`)
 	flagSet.Var(NewValidatedValue(&c.KongAdminSvc, namespacedNameFromFlagValue), "kong-admin-svc",
 		`Kong Admin API Service namespaced name in "namespace/name" format, to use for Kong Gateway service discovery.`)
+	flagSet.StringSliceVar(&c.KondAdminSvcPortNames, "kong-admin-svc-port-names", []string{"admin", "admin-tls", "kong-admin", "kong-admin-tls"},
+		"Names of ports on Kong Admin API service to take into account when doing service discovery.")
 
 	// Kong Proxy and Proxy Cache configurations
 	flagSet.StringVar(&c.APIServerHost, "apiserver-host", "", `The Kubernetes API server URL. If not set, the controller will use cluster config discovery.`)

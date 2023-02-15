@@ -14,6 +14,7 @@ import (
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/sets"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -294,7 +295,7 @@ func (c *Config) getKongClients(ctx context.Context) ([]*adminapi.Client, error)
 		// instance and without an address and there's no way to initialize the
 		// configuration validation and sending code.
 		err = retry.Do(func() error {
-			s, err := adminapi.GetURLsForService(ctx, kubeClient, c.KongAdminSvc)
+			s, err := adminapi.GetURLsForService(ctx, kubeClient, c.KongAdminSvc, sets.New(c.KondAdminSvcPortNames...))
 			if err != nil {
 				return err
 			}

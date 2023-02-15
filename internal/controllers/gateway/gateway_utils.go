@@ -321,6 +321,13 @@ func getListenerStatus(
 				Status:             metav1.ConditionFalse,
 				LastTransitionTime: metav1.Now(),
 				ObservedGeneration: gateway.Generation,
+			}, metav1.Condition{
+				Type:               string(gatewayv1beta1.ListenerConditionReady),
+				Status:             metav1.ConditionFalse,
+				ObservedGeneration: gateway.Generation,
+				LastTransitionTime: metav1.Now(),
+				Reason:             string(gatewayv1beta1.ListenerReasonInvalid),
+				Message:            "the listener is not ready and available for routing",
 			})
 		}
 

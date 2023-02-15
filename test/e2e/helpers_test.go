@@ -41,6 +41,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/pkg/clientset"
 	"github.com/kong/kubernetes-ingress-controller/v2/test"
 	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/helpers"
+	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/testenv"
 )
 
 const (
@@ -73,11 +74,13 @@ const (
 // setupE2ETest builds a testing environment for the E2E test. It also sets up the environment's teardown and test
 // context cancellation. It can accept optional addons to be passed to the environment builder.
 func setupE2ETest(t *testing.T, addons ...clusters.Addon) (context.Context, environments.Environment) {
+	t.Helper()
+
 	ctx, cancel := context.WithCancel(context.Background())
 	t.Cleanup(cancel)
 
 	t.Log("building test cluster and environment")
-	builder, err := getEnvironmentBuilder(ctx)
+	builder, err := getEnvironmentBuilder(ctx, t)
 	require.NoError(t, err)
 	env, err := builder.WithAddons(addons...).Build(ctx)
 	require.NoError(t, err)
@@ -90,15 +93,17 @@ func setupE2ETest(t *testing.T, addons ...clusters.Addon) (context.Context, envi
 	return ctx, env
 }
 
-func getEnvironmentBuilder(ctx context.Context) (*environments.Builder, error) {
+func getEnvironmentBuilder(ctx context.Context, t *testing.T) (*environments.Builder, error) {
+	t.Helper()
+
 	if existingCluster == "" {
-		fmt.Printf("INFO: no existing cluster provided, creating a new one for %q type\n", clusterProvider)
+		t.Logf("no existing cluster provided, creating a new one for %q type", clusterProvider)
 		switch clusterProvider {
 		case string(gke.GKEClusterType):
-			fmt.Println("INFO: creating a GKE cluster builder")
-			return createGKEBuilder()
+			t.Log("creating a GKE cluster builder")
+			return createGKEBuilder(t)
 		default:
-			fmt.Println("INFO: creating a Kind cluster builder")
+			t.Log("creating a Kind cluster builder")
 			return createKINDBuilder(), nil
 		}
 	}
@@ -113,7 +118,7 @@ func getEnvironmentBuilder(ctx context.Context) (*environments.Builder, error) {
 		return nil, fmt.Errorf("cannot provide cluster version with existing cluster")
 	}
 
-	fmt.Printf("INFO: using existing %s cluster %s\n", clusterType, clusterName)
+	t.Logf("using existing %s cluster %s", clusterType, clusterName)
 	switch clusterType {
 	case string(kind.KindClusterType):
 		return createExistingKINDBuilder(clusterName)
@@ -159,7 +164,9 @@ func createExistingGKEBuilder(ctx context.Context, name string) (*environments.B
 	return builder, nil
 }
 
-func createGKEBuilder() (*environments.Builder, error) {
+func createGKEBuilder(t *testing.T) (*environments.Builder, error) {
+	t.Helper()
+
 	var (
 		name        = "e2e-" + uuid.NewString()
 		gkeCreds    = os.Getenv(gke.GKECredsVar)
@@ -167,12 +174,12 @@ func createGKEBuilder() (*environments.Builder, error) {
 		gkeLocation = os.Getenv(gke.GKELocationVar)
 	)
 
-	fmt.Printf("INFO: cluster name: %q\n", name)
+	t.Logf("creating GKE cluster, name: %s", name)
 
 	clusterBuilder := gke.
 		NewBuilder([]byte(gkeCreds), gkeProject, gkeLocation).
 		WithName(name).
-		WithWaitForTeardown(true).
+		WithWaitForTeardown(testenv.WaitForClusterDelete()).
 		WithCreateSubnet(true).
 		WithLabels(gkeTestClusterLabels())
 
@@ -182,6 +189,7 @@ func createGKEBuilder() (*environments.Builder, error) {
 			return nil, err
 		}
 
+		t.Logf("creating GKE cluster, with requested version: %s", k8sVersion)
 		clusterBuilder = clusterBuilder.WithClusterMinorVersion(k8sVersion.Major, k8sVersion.Minor)
 	}
 

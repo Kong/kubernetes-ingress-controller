@@ -33,6 +33,8 @@ func gkeTestClusterLabels() map[string]string {
 }
 
 func logClusterInfo(t *testing.T, cluster clusters.Cluster) {
+	t.Helper()
+
 	v, err := cluster.Version()
 	require.NoError(t, err)
 	t.Logf("cluster %s (type: %s, v: %s) is up", cluster.Name(), cluster.Type(), v)

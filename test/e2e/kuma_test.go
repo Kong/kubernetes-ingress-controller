@@ -87,7 +87,7 @@ func TestDeployAllInOnePostgresKuma(t *testing.T) {
 	defer cancel()
 
 	t.Log("building test cluster and environment")
-	builder, err := getEnvironmentBuilder(ctx)
+	builder, err := getEnvironmentBuilder(ctx, t)
 	require.NoError(t, err)
 	builder = builder.WithAddons(kuma.New())
 	env, err := builder.Build(ctx)

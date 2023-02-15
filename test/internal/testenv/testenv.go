@@ -90,3 +90,8 @@ func KeepTestCluster() string {
 func ExistingClusterName() string {
 	return os.Getenv("KONG_TEST_CLUSTER")
 }
+
+// WaitForClusterDelete indicates whether or not to wait for cluster deletion to complete.
+func WaitForClusterDelete() bool {
+	return os.Getenv("KONG_TEST_CLUSTER_WAIT_FOR_DELETE") == "true"
+}

@@ -324,6 +324,8 @@ func getKongProxyNodePortIP(ctx context.Context, t *testing.T, env environments.
 // startPortForwarder runs "kubectl port-forward" in the background. It returns a local port that the traffic gets forward to.
 // It stops the forward when the provided context ends.
 func startPortForwarder(ctx context.Context, t *testing.T, env environments.Environment, namespace, name, targetPort string) int {
+	t.Helper()
+
 	localPort, err := freeport.GetFreePort()
 	require.NoError(t, err)
 

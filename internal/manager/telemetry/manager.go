@@ -33,7 +33,7 @@ const (
 
 type Payload = types.ProviderReport
 
-// CreateManager creates telemetry manager using the provider rest.Config.
+// CreateManager creates telemetry manager using the provided rest.Config.
 func CreateManager(
 	ctx context.Context,
 	restConfig *rest.Config,

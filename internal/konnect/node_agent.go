@@ -56,6 +56,25 @@ func NewNodeAgent(
 	return a
 }
 
+func (a *NodeAgent) Start(ctx context.Context) error {
+	err := a.createNode()
+	if err != nil {
+		return fmt.Errorf("failed creating a node: %w", err)
+	}
+	go a.updateNodeLoop(ctx)
+	go a.subscribeConfigStatus(ctx)
+
+	// We're waiting here as that's the manager.Runnable interface requirement to block until the context is done.
+	<-ctx.Done()
+	return nil
+}
+
+// NeedLeaderElection implements LeaderElectionRunnable interface to ensure that the node agent is run only when
+// the KIC instance is elected a leader.
+func (a *NodeAgent) NeedLeaderElection() bool {
+	return true
+}
+
 func (a *NodeAgent) createNode() error {
 	err := a.clearOutdatedNodes()
 	if err != nil {
@@ -175,14 +194,4 @@ func (a *NodeAgent) updateNodeLoop(ctx context.Context) {
 			}
 		}
 	}
-}
-
-func (a *NodeAgent) Run(ctx context.Context) {
-	err := a.createNode()
-	if err != nil {
-		a.Logger.Error(err, "failed to create node, agent abort")
-		return
-	}
-	go a.updateNodeLoop(ctx)
-	go a.subscribeConfigStatus(ctx)
 }

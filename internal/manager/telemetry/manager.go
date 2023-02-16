@@ -24,7 +24,7 @@ import (
 
 const (
 	splunkEndpoint  = "kong-hf.konghq.com:61833"
-	telemetryPeriod = time.Second * 3
+	telemetryPeriod = time.Hour
 
 	prefix      = "kic"
 	SignalStart = prefix + "-start"
@@ -118,7 +118,10 @@ func createManager(
 		if meshDetection {
 			podInfo, err := util.GetPodDetails(ctx, k)
 			if err != nil {
-				// return nil, fmt.Errorf("failed to get pod details: %w", err)
+				// Don't fail, just don't include mesh detection workflow.
+				// We could probably add conditions around this, so that only the
+				// part responsible for detecting the mesh that current pod is running
+				// gets disabled.
 			} else {
 				podNN := apitypes.NamespacedName{
 					Namespace: podInfo.Namespace,
@@ -163,7 +166,6 @@ func createManager(
 	return m, nil
 }
 
-// feature-gateway=false;feature-combinedroutes=false.
 func featureGatesToTelemetryPayload(featureGates map[string]bool) types.ProviderReport {
 	report := make(types.ProviderReport)
 	for k, v := range featureGates {
@@ -172,35 +174,3 @@ func featureGatesToTelemetryPayload(featureGates map[string]bool) types.Provider
 	}
 	return report
 }
-
-// signal=kic-ping
-// feature-combinedroutes=true
-// feature-gateway=true
-// feature-gatewayalpha=true
-// feature-knative=false
-//
-// hn=P-Maek-MBP
-// uptime=3
-// v=NOT_SET
-// k8s_arch=linux/arm64
-// k8s_provider=kind
-// k8sv=v1.26.0
-// k8sv_semver=v1.26.0
-// k8s_gateways_count=0
-// k8s_nodes_count=1
-// k8s_pods_count=14
-// k8s_services_count=6;
-
-// signal=kic-ping
-// uptime=3600
-// v=2.8.0
-// k8sv=v1.24.8
-// kv=2.8.3
-// db=off
-// id=4ef7d6df-553e-4c02-be63-e9e4f3a83014
-// hn=ingress-kong-8479884f54-pmfvw
-//
-// feature-knative=false
-// feature-gateway=true
-// feature-gatewayalpha=false
-// feature-combinedroutes=true;;;mdist="all113"

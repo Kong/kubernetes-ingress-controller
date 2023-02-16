@@ -134,8 +134,9 @@ func TestCreateManager(t *testing.T) {
 func prepareScheme(t *testing.T) *runtime.Scheme {
 	scheme := runtime.NewScheme()
 	require.NoError(t, testk8sclient.AddToScheme(scheme))
-	// This doesn't work :(
-	// https://kubernetes.slack.com/archives/C0EG7JC6T/p1676125039126589
+	// Note: this has no effect on the object listing because pluralising gateways
+	// does not work.
+	// Ref: https://github.com/kubernetes/kubernetes/pull/110053
 	require.NoError(t, gatewayv1beta1.Install(scheme))
 	return scheme
 }
@@ -202,7 +203,6 @@ func prepareObjects(pod apitypes.NamespacedName) []runtime.Object {
 				},
 			},
 		},
-		// &gatewayv1beta1.Gateway{},
 
 		setRandomUUIDName(&corev1.Node{}),
 		setRandomUUIDName(&corev1.Node{}),

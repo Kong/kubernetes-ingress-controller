@@ -300,11 +300,12 @@ func (c *Config) getKongClients(ctx context.Context) ([]*adminapi.Client, error)
 				return err
 			}
 			if s.Len() == 0 {
-				return fmt.Errorf("no endpoints for kong admin service: %q", c.KongAdminSvc)
+				return fmt.Errorf("no endpoints for kong admin service: %s", c.KongAdminSvc)
 			}
 			addresses = s.UnsortedList()
 			return nil
 		},
+			retry.Context(ctx),
 			retry.Attempts(60),
 			retry.DelayType(retry.FixedDelay),
 			retry.Delay(time.Second),

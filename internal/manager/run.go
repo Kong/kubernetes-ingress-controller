@@ -211,7 +211,9 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 				konnectNodeAPIClient,
 				configStatusNotifier,
 			)
-			agent.Run(ctx)
+			if err := mgr.Add(agent); err != nil {
+				setupLog.Error(err, "failed adding konnect.NodeAgent runnable to the manager")
+			}
 		}
 	}
 

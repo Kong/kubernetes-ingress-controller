@@ -84,7 +84,6 @@ func TestGatewayConformance(t *testing.T) {
 			tests.GatewaySecretReferenceGrantAllInNamespace.ShortName,
 			tests.GatewaySecretReferenceGrantSpecific.ShortName,
 			tests.HTTPRouteHeaderMatching.ShortName,
-			tests.HTTPRouteObservedGenerationBump.ShortName,
 		},
 	})
 	cSuite.Setup(t)

@@ -235,9 +235,10 @@ func getSupportedGatewayForRoute[T types.RouteT](ctx context.Context, mgrc clien
 				gateway:      &gateway,
 				listenerName: listenerName,
 				condition: metav1.Condition{
-					Type:   string(gatewayv1beta1.RouteConditionAccepted),
-					Status: metav1.ConditionTrue,
-					Reason: string(gatewayv1beta1.RouteReasonAccepted),
+					Type:               string(gatewayv1beta1.RouteConditionAccepted),
+					Status:             metav1.ConditionTrue,
+					Reason:             string(gatewayv1beta1.RouteReasonAccepted),
+					ObservedGeneration: route.GetGeneration(),
 				},
 			})
 		} else {
@@ -271,9 +272,10 @@ func getSupportedGatewayForRoute[T types.RouteT](ctx context.Context, mgrc clien
 				gateway:      &gateway,
 				listenerName: listenerName,
 				condition: metav1.Condition{
-					Type:   string(gatewayv1beta1.RouteConditionAccepted),
-					Status: metav1.ConditionFalse,
-					Reason: string(reason),
+					Type:               string(gatewayv1beta1.RouteConditionAccepted),
+					Status:             metav1.ConditionFalse,
+					Reason:             string(reason),
+					ObservedGeneration: route.GetGeneration(),
 				},
 			})
 		}
@@ -629,7 +631,8 @@ func sameCondition(a, b metav1.Condition) bool {
 	return a.Type == b.Type &&
 		a.Status == b.Status &&
 		a.Reason == b.Reason &&
-		a.Message == b.Message
+		a.Message == b.Message &&
+		a.ObservedGeneration == b.ObservedGeneration
 }
 
 func setRouteParentStatusCondition(parentStatus *gatewayv1beta1.RouteParentStatus, newCondition metav1.Condition) bool {

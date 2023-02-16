@@ -80,7 +80,6 @@ func TestGatewayConformance(t *testing.T) {
 		SkipTests: []string{
 			// these tests are temporarily disabled to be able to bump the Gateway API to 0.6
 			// https://github.com/Kong/kubernetes-ingress-controller/issues/3305
-			tests.GatewayInvalidRouteKind.ShortName,
 			tests.GatewayInvalidTLSConfiguration.ShortName,
 			tests.GatewaySecretReferenceGrantAllInNamespace.ShortName,
 			tests.GatewaySecretReferenceGrantSpecific.ShortName,

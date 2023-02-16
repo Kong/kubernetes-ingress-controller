@@ -179,6 +179,7 @@ func GetRoots(
 					lock.Unlock()
 					return nil
 				},
+				retry.Context(ctx),
 				retry.Attempts(retries),
 				retry.Delay(retryDelay),
 				retry.DelayType(retry.FixedDelay),

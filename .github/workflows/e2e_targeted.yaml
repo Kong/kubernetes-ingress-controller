@@ -86,6 +86,10 @@ jobs:
         tags: kong/kubernetes-ingress-controller:ci
         target: distroless
         outputs: type=docker,dest=/tmp/image.tar
+        build-args: |
+          TAG=ci-${{ github.sha }}
+          COMMIT=${{ github.sha }}
+          REPO_INFO=https://github.com/${{ github.repository }}.git
 
     - name: Upload image artifact
       uses: actions/upload-artifact@v3

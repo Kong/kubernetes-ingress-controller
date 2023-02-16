@@ -355,7 +355,13 @@ func TestDeployAllInOneDBLESSMultiGW(t *testing.T) {
 		}
 		podList, err = env.Cluster().Client().CoreV1().Pods(deployment.Namespace).List(ctx, forDeployment)
 		require.NoError(t, err)
-		return len(podList.Items) == 3
+
+		readyCount := lo.CountBy(podList.Items, func(item corev1.Pod) bool {
+			return lo.CountBy(item.Status.Conditions, func(item corev1.PodCondition) bool {
+				return item.Type == corev1.PodReady && item.Status == corev1.ConditionTrue
+			}) == 1
+		})
+		return readyCount == 3
 	}, time.Minute, time.Second)
 
 	t.Log("confirming that all dataplanes got the config")

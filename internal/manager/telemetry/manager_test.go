@@ -83,7 +83,7 @@ func TestCreateManager(t *testing.T) {
 		Platform:     "linux/amd64",
 	}
 
-	mgr, err := createManager(ctx, k8sclient, dyn, ctrlClient, payload, featureGates, meshDetection, publishService,
+	mgr, err := createManager(k8sclient, dyn, ctrlClient, payload, featureGates, meshDetection, publishService,
 		telemetry.OptManagerPeriod(time.Hour),
 		telemetry.OptManagerLogger(logr.Discard()),
 	)

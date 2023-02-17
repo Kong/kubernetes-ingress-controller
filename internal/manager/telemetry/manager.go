@@ -1,7 +1,6 @@
 package telemetry
 
 import (
-	"context"
 	"fmt"
 	"strings"
 	"time"
@@ -35,7 +34,6 @@ type Payload = types.ProviderReport
 
 // CreateManager creates telemetry manager using the provided rest.Config.
 func CreateManager(
-	ctx context.Context,
 	restConfig *rest.Config,
 	fixedPayload Payload,
 	featureGates map[string]bool,
@@ -54,7 +52,7 @@ func CreateManager(
 	}
 	dyn := dynamic.New(k.Discovery().RESTClient())
 
-	m, err := createManager(ctx, k, dyn, cl, fixedPayload, featureGates, meshDetection, publishServiceNN,
+	m, err := createManager(k, dyn, cl, fixedPayload, featureGates, meshDetection, publishServiceNN,
 		telemetry.OptManagerPeriod(telemetryPeriod),
 		telemetry.OptManagerLogger(logger),
 	)
@@ -76,7 +74,6 @@ func CreateManager(
 }
 
 func createManager(
-	ctx context.Context,
 	k kubernetes.Interface,
 	dyn dynamic.Interface,
 	cl client.Client,
@@ -116,18 +113,13 @@ func createManager(
 	// Add mesh detect workflow
 	{
 		if meshDetection {
-			podInfo, err := util.GetPodDetails(ctx, k)
+			podNN, err := util.GetPodNN()
 			if err != nil {
 				// Don't fail, just don't include mesh detection workflow.
 				// We could probably add conditions around this, so that only the
 				// part responsible for detecting the mesh that current pod is running
 				// gets disabled.
 			} else {
-				podNN := apitypes.NamespacedName{
-					Namespace: podInfo.Namespace,
-					Name:      podInfo.Name,
-				}
-
 				w, err := telemetry.NewMeshDetectWorkflow(cl, podNN, publishServiceNN)
 				if err != nil {
 					return nil, fmt.Errorf("failed to create mesh detect workflow: %w", err)

@@ -276,6 +276,7 @@ E2E_TEST_TIMEOUT ?= "45m"
 E2E_TEST_RUN ?= ""
 KONG_CONTROLLER_FEATURE_GATES ?= GatewayAlpha=true
 GOTESTSUM_FORMAT ?= standard-verbose
+KONG_CLUSTER_VERSION ?= v1.26.0
 
 .PHONY: test
 test: test.unit
@@ -323,7 +324,8 @@ _check.container.environment:
 
 .PHONY: _test.integration
 _test.integration: _check.container.environment gotestsum
-	TEST_DATABASE_MODE="$(DBMODE)" \
+	KONG_CLUSTER_VERSION="$(KONG_CLUSTER_VERSION)" \
+		TEST_DATABASE_MODE="$(DBMODE)" \
 		GOFLAGS="-tags=$(GOTAGS)" \
 		KONG_CONTROLLER_FEATURE_GATES=$(KONG_CONTROLLER_FEATURE_GATES) \
 		GOTESTSUM_FORMAT=$(GOTESTSUM_FORMAT) \

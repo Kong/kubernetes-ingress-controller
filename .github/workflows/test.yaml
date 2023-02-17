@@ -201,7 +201,6 @@ jobs:
         KONG_LICENSE_DATA: ${{ steps.license.outputs.license }}
         KONG_CONTROLLER_FEATURE_GATES: "${{ matrix.feature_gates }}"
         GOTESTSUM_JUNITFILE: "integration-tests-${{ matrix.name }}.xml"
-        KONG_CLUSTER_VERSION: "v1.26.0"
 
     - name: collect test coverage
       if: steps.detect_if_should_run.outputs.result

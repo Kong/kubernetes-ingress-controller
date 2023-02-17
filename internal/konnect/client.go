@@ -156,6 +156,7 @@ func (c *NodeAPIClient) ListNodes(pageNumber int) (*ListNodeResponse, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to read response body: %w", err)
 	}
+
 	return resp, nil
 }
 

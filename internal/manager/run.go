@@ -11,6 +11,7 @@ import (
 
 	"github.com/blang/semver/v4"
 	"github.com/sirupsen/logrus"
+	"k8s.io/apimachinery/pkg/util/sets"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -211,6 +212,29 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 			configStatusNotifier := dataplane.NewChannelConfigNotifier()
 			dataplaneClient.SetConfigStatusNotifier(configStatusNotifier)
 
+			initDiscoveredAdminAPIs := []adminapi.DiscoveredAdminAPI{}
+			if c.KongAdminSvc.Namespace != "" && c.KongAdminSvc.Name != "" {
+				kubeClient, err := c.GetKubeClient()
+				if err != nil {
+					setupLog.Error(err, "failed to get kubernetes client")
+				}
+				s, err := adminapi.GetAdminAPIsForService(
+					ctx, kubeClient, c.KongAdminSvc,
+					sets.Set[string](sets.NewString(c.KondAdminSvcPortNames...)),
+				)
+				if err != nil {
+					setupLog.Error(err, "failed to get admin APIs from service", "namespace", c.KongAdminSvc.Namespace, "name", c.KongAdminSvc.Name)
+				}
+				initDiscoveredAdminAPIs = s.UnsortedList()
+			}
+			gatewayPodGetter := konnect.NewGatewayEndpointStore(
+				ctx,
+				setupLog,
+				initDiscoveredAdminAPIs,
+				clientsManager.SubscribeDiscoveredAdminAPIs(),
+				clientsManager,
+			)
+
 			agent := konnect.NewNodeAgent(
 				hostname,
 				version,
@@ -218,6 +242,7 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 				setupLog,
 				konnectNodeAPIClient,
 				configStatusNotifier,
+				gatewayPodGetter,
 			)
 			if err := mgr.Add(agent); err != nil {
 				setupLog.Error(err, "failed adding konnect.NodeAgent runnable to the manager")

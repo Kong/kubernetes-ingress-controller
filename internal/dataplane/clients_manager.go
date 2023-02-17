@@ -99,6 +99,11 @@ func (c *AdminAPIClientsManager) Notify(discoveredAPIs []adminapi.DiscoveredAdmi
 	}
 }
 
+// SubscribeDiscoveredAdminAPIs returns a channel to subscribe list of Kong Admin APIs.
+func (c *AdminAPIClientsManager) SubscribeDiscoveredAdminAPIs() chan []adminapi.DiscoveredAdminAPI {
+	return c.discoveredAdminAPIsNotifyChan
+}
+
 // SetKonnectClient sets a client that will be used to communicate with Konnect Runtime Group Admin API.
 // If called multiple times, it will override the client.
 func (c *AdminAPIClientsManager) SetKonnectClient(client *adminapi.Client) {

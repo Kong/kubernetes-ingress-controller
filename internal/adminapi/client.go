@@ -2,6 +2,7 @@ package adminapi
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 
 	"github.com/kong/go-kong/kong"
@@ -63,6 +64,22 @@ func (c *Client) AdminAPIClient() *kong.Client {
 // BaseRootURL returns a base address used for communicating with the Admin API.
 func (c *Client) BaseRootURL() string {
 	return c.adminAPIClient.BaseRootURL()
+}
+
+// GetKongVersion returns version of the kong gateway.
+func (c *Client) GetKongVersion(ctx context.Context) (string, error) {
+	if c.isKonnect {
+		return "", fmt.Errorf("cannot get kong version from konnect")
+	}
+	rootConfig, err := c.adminAPIClient.Root(ctx)
+	if err != nil {
+		return "", err
+	}
+	version, ok := rootConfig["version"].(string)
+	if !ok {
+		return "", fmt.Errorf("malformed Kong version found in Kong client root")
+	}
+	return version, nil
 }
 
 // PluginSchemaStore returns client's PluginSchemaStore.

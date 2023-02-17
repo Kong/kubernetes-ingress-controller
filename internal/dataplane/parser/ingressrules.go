@@ -41,6 +41,9 @@ func mergeIngressRules(objs ...ingressRules) ingressRules {
 		for k, v := range obj.ServiceNameToServices {
 			result.ServiceNameToServices[k] = v
 		}
+		for k, v := range obj.ServiceNameToParent {
+			result.ServiceNameToParent[k] = v
+		}
 	}
 	return result
 }

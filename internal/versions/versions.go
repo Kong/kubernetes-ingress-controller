@@ -46,26 +46,26 @@ func SetKongVersion(version semver.Version) {
 }
 
 // GetKongVersion retrieves the Kong version. If the version is not set, it returns the lowest possible version.
-func GetKongVersion() *KongVersion {
-	return &kongVersion
+func GetKongVersion() KongVersion {
+	return kongVersion
 }
 
 // Full returns a complete Kong version as a semver.Version.
-func (v *KongVersion) Full() semver.Version {
-	return semver.Version(*v)
+func (v KongVersion) Full() semver.Version {
+	return semver.Version(v)
 }
 
 // MajorOnly returns a semver.Version with a KongVersion's major version only.
-func (v *KongVersion) MajorOnly() semver.Version {
+func (v KongVersion) MajorOnly() semver.Version {
 	return semver.Version{Major: v.Major}
 }
 
 // MajorMinorOnly returns a semver.Version with a KongVersion's major and minor versions only.
-func (v *KongVersion) MajorMinorOnly() semver.Version {
+func (v KongVersion) MajorMinorOnly() semver.Version {
 	return semver.Version{Major: v.Major, Minor: v.Minor}
 }
 
 // MajorMinorPatchOnly returns a semver.Version with a KongVersion's major, minor, and patch versions only.
-func (v *KongVersion) MajorMinorPatchOnly() semver.Version {
+func (v KongVersion) MajorMinorPatchOnly() semver.Version {
 	return semver.Version{Major: v.Major, Minor: v.Minor, Patch: v.Patch}
 }

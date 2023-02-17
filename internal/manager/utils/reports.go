@@ -50,11 +50,6 @@ func RunReport(
 		return fmt.Errorf("failed to fetch k8s api-server version: %w", err)
 	}
 
-	podInfo, err := util.GetPodDetails(ctx, kc)
-	if err != nil {
-		return fmt.Errorf("failed to get pod details: %w", err)
-	}
-
 	// This now only uses the first instance for telemetry reporting.
 	// That's fine because we allow for now only 1 set of version and db setting
 	// throughout all Kong instances that 1 KIC instance configures.
@@ -101,13 +96,18 @@ func RunReport(
 
 	if meshDetection {
 		// add mesh detector to reporter
-		detector, err := meshdetect.NewDetectorByConfig(kubeCfg, podInfo.Namespace, podInfo.Name, publishServiceName,
-			// logger=reporter.mesh
-			reporter.Logger.WithName("mesh"),
-		)
+		podNN, err := util.GetPodNN()
+		// Don't return the error when we can't get pod info.
+		// Just don't run the mesh detection.
 		if err == nil {
-			reporter.MeshDetectionEnabled = true
-			reporter.MeshDetector = detector
+			detector, err := meshdetect.NewDetectorByConfig(kubeCfg, podNN.Namespace, podNN.Name, publishServiceName,
+				// logger=reporter.mesh
+				reporter.Logger.WithName("mesh"),
+			)
+			if err == nil {
+				reporter.MeshDetectionEnabled = true
+				reporter.MeshDetector = detector
+			}
 		}
 	}
 

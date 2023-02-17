@@ -65,7 +65,7 @@ func SetupAnonymousReports(
 		"id": uuid.NewString(), // universal unique identifier for this system
 	}
 
-	tMgr, err := CreateManager(ctx, kubeCfg, fixedPayload, featureGates, meshDetection, publishService)
+	tMgr, err := CreateManager(kubeCfg, fixedPayload, featureGates, meshDetection, publishService)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create anonymous reports manager: %w", err)
 	}

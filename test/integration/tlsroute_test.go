@@ -836,7 +836,7 @@ func TestTLSRoutePassthrough(t *testing.T) {
 // It compares an expected message and its length against an expected message, returning true
 // if it is and false and an error explanation if it is not.
 func tlsEchoResponds(
-	url string, podName string, hostname, certHostname string, passthourgh bool,
+	url string, podName string, hostname, certHostname string, passthrough bool,
 ) (bool, error) {
 	dialer := net.Dialer{Timeout: time.Second * 10}
 	conn, err := tls.DialWithDialer(&dialer,
@@ -859,7 +859,7 @@ func tlsEchoResponds(
 	header := []byte(fmt.Sprintf("Running on Pod %s.", podName))
 	// if we are testing with passthrough, the go-echo service should return a message
 	// noting that it is listening in TLS mode.
-	if passthourgh {
+	if passthrough {
 		header = append(header, []byte("\nThrough TLS connection.")...)
 	}
 	message := []byte("testing tlsroute")

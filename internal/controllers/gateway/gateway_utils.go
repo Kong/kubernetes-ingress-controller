@@ -606,8 +606,13 @@ func isGatewayClassEventInClass(log logr.Logger, watchEvent interface{}) bool {
 func getListenerSupportedRouteKinds(l gatewayv1beta1.Listener) ([]gatewayv1beta1.RouteGroupKind, gatewayv1beta1.ListenerConditionReason) {
 	if l.AllowedRoutes == nil || len(l.AllowedRoutes.Kinds) == 0 {
 		switch string(l.Protocol) {
-		case string(gatewayv1beta1.HTTPProtocolType), string(gatewayv1beta1.HTTPSProtocolType):
+		case string(gatewayv1beta1.HTTPProtocolType):
 			return builder.NewRouteGroupKind().HTTPRoute().IntoSlice(), gatewayv1beta1.ListenerReasonResolvedRefs
+		case string(gatewayv1beta1.HTTPSProtocolType):
+			return []gatewayv1beta1.RouteGroupKind{
+				builder.NewRouteGroupKind().HTTPRoute().Build(),
+				builder.NewRouteGroupKind().GRPCRoute().Build(),
+			}, gatewayv1beta1.ListenerReasonResolvedRefs
 		case string(gatewayv1beta1.TCPProtocolType):
 			return builder.NewRouteGroupKind().TCPRoute().IntoSlice(), gatewayv1beta1.ListenerReasonResolvedRefs
 		case string(gatewayv1beta1.UDPProtocolType):

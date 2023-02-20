@@ -197,7 +197,15 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 		if err != nil {
 			setupLog.Error(err, "failed creating konnect client, skipping running NodeAgent")
 		} else {
-			hostname, _ := os.Hostname()
+			var hostname string
+			nn, err := util.GetPodNN()
+			if err != nil {
+				setupLog.Error(err, "failed to get pod name and/or namespace, fallback to use hostname as node name in konnect")
+				hostname, _ = os.Hostname()
+			} else {
+				hostname = nn.String()
+				setupLog.Info(fmt.Sprintf("use %s as node name in konnect", hostname))
+			}
 			version := metadata.Release
 			// set channel to send config status.
 			configStatusNotifier := dataplane.NewChannelConfigNotifier()

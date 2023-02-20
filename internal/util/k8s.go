@@ -25,6 +25,7 @@ import (
 	"github.com/kong/go-kong/kong"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	clientset "k8s.io/client-go/kubernetes"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
@@ -75,6 +76,20 @@ func GetNodeIPOrName(ctx context.Context, kubeClient clientset.Interface, name s
 	return ip
 }
 
+// GetPodNN returns NamespacedName of pod that this process is running in.
+func GetPodNN() (types.NamespacedName, error) {
+	nn := types.NamespacedName{
+		Namespace: os.Getenv("POD_NAMESPACE"),
+		Name:      os.Getenv("POD_NAME"),
+	}
+	if nn.Name == "" || nn.Namespace == "" {
+		return types.NamespacedName{},
+			fmt.Errorf("unable to get POD information (missing POD_NAME or POD_NAMESPACE environment variable")
+	}
+
+	return nn, nil
+}
+
 // PodInfo contains runtime information about the pod running the Ingres controller.
 type PodInfo struct {
 	Name      string
@@ -88,21 +103,19 @@ type PodInfo struct {
 // GetPodDetails returns runtime information about the pod:
 // name, namespace and IP of the node where it is running.
 func GetPodDetails(ctx context.Context, kubeClient clientset.Interface) (*PodInfo, error) {
-	podName := os.Getenv("POD_NAME")
-	podNs := os.Getenv("POD_NAMESPACE")
-
-	if podName == "" || podNs == "" {
-		return nil, fmt.Errorf("unable to get POD information (missing POD_NAME or POD_NAMESPACE environment variable")
+	nn, err := GetPodNN()
+	if err != nil {
+		return nil, err
 	}
 
-	pod, err := kubeClient.CoreV1().Pods(podNs).Get(ctx, podName, metav1.GetOptions{})
+	pod, err := kubeClient.CoreV1().Pods(nn.Namespace).Get(ctx, nn.Name, metav1.GetOptions{})
 	if pod == nil {
 		return nil, fmt.Errorf("unable to get POD information: %w", err)
 	}
 
 	return &PodInfo{
-		Name:      podName,
-		Namespace: podNs,
+		Name:      nn.Name,
+		Namespace: nn.Namespace,
 		NodeIP:    GetNodeIPOrName(ctx, kubeClient, pod.Spec.NodeName),
 		Labels:    pod.GetLabels(),
 	}, nil

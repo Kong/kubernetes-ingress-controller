@@ -324,6 +324,7 @@ func (c *Config) adminAPIClientFromServiceDiscovery(ctx context.Context, httpcli
 		adminAPIs = s.UnsortedList()
 		return nil
 	},
+		retry.Context(ctx),
 		retry.Attempts(60),
 		retry.DelayType(retry.FixedDelay),
 		retry.Delay(time.Second),

@@ -91,6 +91,7 @@ func (p *Parser) Build() (*kongstate.KongState, []failures.ResourceFailure) {
 		p.ingressRulesFromUDPRoutes(),
 		p.ingressRulesFromTCPRoutes(),
 		p.ingressRulesFromTLSRoutes(),
+		p.ingressRulesFromGRPCRoutes(),
 	)
 
 	// populate any Kubernetes Service objects relevant objects and get the

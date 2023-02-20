@@ -16,7 +16,8 @@ type RouteT interface {
 	*gatewayv1beta1.HTTPRoute |
 		*gatewayv1alpha2.UDPRoute |
 		*gatewayv1alpha2.TCPRoute |
-		*gatewayv1alpha2.TLSRoute
+		*gatewayv1alpha2.TLSRoute |
+		*gatewayv1alpha2.GRPCRoute
 }
 
 type BackendRefT interface {

@@ -342,7 +342,9 @@ func TestDeployAllInOneDBLESSMultiGW(t *testing.T) {
 
 	gatewayDeployment, err := env.Cluster().Client().AppsV1().Deployments(deployment.Namespace).Get(ctx, "proxy-kong", metav1.GetOptions{})
 	require.NoError(t, err)
-	gatewayDeployment.Spec.Replicas = lo.ToPtr(int32(3))
+
+	const replicasCount = 3
+	gatewayDeployment.Spec.Replicas = lo.ToPtr(int32(replicasCount))
 	_, err = env.Cluster().Client().AppsV1().Deployments(deployment.Namespace).Update(ctx, gatewayDeployment, metav1.UpdateOptions{})
 	require.NoError(t, err)
 
@@ -355,7 +357,13 @@ func TestDeployAllInOneDBLESSMultiGW(t *testing.T) {
 		}
 		podList, err = env.Cluster().Client().CoreV1().Pods(deployment.Namespace).List(ctx, forDeployment)
 		require.NoError(t, err)
-		return len(podList.Items) == 3
+
+		readyReplicasCount := lo.CountBy(podList.Items, func(pod corev1.Pod) bool {
+			return lo.ContainsBy(pod.Status.Conditions, func(cond corev1.PodCondition) bool {
+				return cond.Type == corev1.PodReady && cond.Status == corev1.ConditionTrue
+			})
+		})
+		return readyReplicasCount == replicasCount
 	}, time.Minute, time.Second)
 
 	t.Log("confirming that all dataplanes got the config")

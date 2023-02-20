@@ -12,7 +12,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-// DiscoveredAdminAPI is.
+// DiscoveredAdminAPI represents an Admin API discovered from a Kubernetes Service.
 type DiscoveredAdminAPI struct {
 	Address string
 	PodRef  types.NamespacedName
@@ -64,8 +64,8 @@ func GetAdminAPIsForService(
 	return addresses, nil
 }
 
-// AdminAPIsFromEndpointSlice returns a list of Admin API addresses when given
-// an Endpointslice.
+// AdminAPIsFromEndpointSlice returns a list of Admin APIs when given
+// an EndpointSlice.
 func AdminAPIsFromEndpointSlice(endpoints discoveryv1.EndpointSlice, portNames sets.Set[string]) sets.Set[DiscoveredAdminAPI] {
 	discoveredAdminAPIs := sets.New[DiscoveredAdminAPI]()
 	for _, p := range endpoints.Ports {
@@ -82,8 +82,8 @@ func AdminAPIsFromEndpointSlice(endpoints discoveryv1.EndpointSlice, portNames s
 				continue
 			}
 
+			// We do not take into account endpoints that are not backed by a Pod.
 			if e.TargetRef == nil || e.TargetRef.Kind != "Pod" {
-				// REVIEW: what do we do in such case?
 				continue
 			}
 			podNN := types.NamespacedName{
@@ -95,6 +95,7 @@ func AdminAPIsFromEndpointSlice(endpoints discoveryv1.EndpointSlice, portNames s
 				continue
 			}
 			// Endpoint's addresses are assumed to be fungible, therefore we pick only the first one.
+			// For the context please see the `Endpoint.Addresses` godoc.
 			addr := e.Addresses[0]
 
 			// NOTE: We assume https here because the referenced Admin API

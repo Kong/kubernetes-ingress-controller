@@ -39,10 +39,10 @@ type KongAdminAPIServiceReconciler struct {
 	// We're going to call this only with endpoints when they change.
 	EndpointsNotifier EndpointsNotifier
 
-	Cache CacheT
+	Cache DiscoveredAdminAPIsCache
 }
 
-type CacheT map[types.NamespacedName]sets.Set[adminapi.DiscoveredAdminAPI]
+type DiscoveredAdminAPIsCache map[types.NamespacedName]sets.Set[adminapi.DiscoveredAdminAPI]
 
 type EndpointsNotifier interface {
 	Notify(adminAPIs []adminapi.DiscoveredAdminAPI)
@@ -62,7 +62,7 @@ func (r *KongAdminAPIServiceReconciler) SetupWithManager(mgr ctrl.Manager) error
 	}
 
 	if r.Cache == nil {
-		r.Cache = make(CacheT)
+		r.Cache = make(DiscoveredAdminAPIsCache)
 	}
 
 	return c.Watch(
@@ -151,7 +151,7 @@ func (r *KongAdminAPIServiceReconciler) notify() {
 	r.EndpointsNotifier.Notify(discovered)
 }
 
-func flattenDiscoveredAdminAPIs(cache CacheT) []adminapi.DiscoveredAdminAPI {
+func flattenDiscoveredAdminAPIs(cache DiscoveredAdminAPIsCache) []adminapi.DiscoveredAdminAPI {
 	var adminAPIs []adminapi.DiscoveredAdminAPI
 	for _, v := range cache {
 		adminAPIs = append(adminAPIs, v.UnsortedList()...)

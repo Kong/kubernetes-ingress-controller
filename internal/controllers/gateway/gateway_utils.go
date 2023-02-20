@@ -321,13 +321,6 @@ func getListenerStatus(
 				Status:             metav1.ConditionFalse,
 				LastTransitionTime: metav1.Now(),
 				ObservedGeneration: gateway.Generation,
-			}, metav1.Condition{
-				Type:               string(gatewayv1beta1.ListenerConditionReady),
-				Status:             metav1.ConditionFalse,
-				ObservedGeneration: gateway.Generation,
-				LastTransitionTime: metav1.Now(),
-				Reason:             string(gatewayv1beta1.ListenerReasonInvalid),
-				Message:            "the listener is not ready and available for routing",
 			})
 		}
 
@@ -383,7 +376,7 @@ func getListenerStatus(
 		if len(kongProtocolsToPort[listener.Protocol]) == 0 {
 			status.Conditions = append(status.Conditions, metav1.Condition{
 				Type:               string(gatewayv1beta1.ListenerConditionAccepted),
-				Status:             metav1.ConditionTrue,
+				Status:             metav1.ConditionFalse,
 				ObservedGeneration: gateway.Generation,
 				LastTransitionTime: metav1.Now(),
 				Reason:             string(gatewayv1beta1.ListenerReasonUnsupportedProtocol),
@@ -393,7 +386,7 @@ func getListenerStatus(
 			if _, ok := kongProtocolsToPort[listener.Protocol][listener.Port]; !ok {
 				status.Conditions = append(status.Conditions, metav1.Condition{
 					Type:               string(gatewayv1beta1.ListenerConditionAccepted),
-					Status:             metav1.ConditionTrue,
+					Status:             metav1.ConditionFalse,
 					ObservedGeneration: gateway.Generation,
 					LastTransitionTime: metav1.Now(),
 					Reason:             string(gatewayv1beta1.ListenerReasonPortUnavailable),
@@ -443,7 +436,7 @@ func getListenerStatus(
 				Status:             metav1.ConditionFalse,
 				ObservedGeneration: gateway.Generation,
 				LastTransitionTime: metav1.Now(),
-				Reason:             string(gatewayv1beta1.ListenerReasonPending),
+				Reason:             string(gatewayv1beta1.ListenerReasonInvalid),
 				Message:            "the listener is not ready and cannot route requests",
 			})
 		}
@@ -613,8 +606,13 @@ func isGatewayClassEventInClass(log logr.Logger, watchEvent interface{}) bool {
 func getListenerSupportedRouteKinds(l gatewayv1beta1.Listener) ([]gatewayv1beta1.RouteGroupKind, gatewayv1beta1.ListenerConditionReason) {
 	if l.AllowedRoutes == nil || len(l.AllowedRoutes.Kinds) == 0 {
 		switch string(l.Protocol) {
-		case string(gatewayv1beta1.HTTPProtocolType), string(gatewayv1beta1.HTTPSProtocolType):
+		case string(gatewayv1beta1.HTTPProtocolType):
 			return builder.NewRouteGroupKind().HTTPRoute().IntoSlice(), gatewayv1beta1.ListenerReasonResolvedRefs
+		case string(gatewayv1beta1.HTTPSProtocolType):
+			return []gatewayv1beta1.RouteGroupKind{
+				builder.NewRouteGroupKind().HTTPRoute().Build(),
+				builder.NewRouteGroupKind().GRPCRoute().Build(),
+			}, gatewayv1beta1.ListenerReasonResolvedRefs
 		case string(gatewayv1beta1.TCPProtocolType):
 			return builder.NewRouteGroupKind().TCPRoute().IntoSlice(), gatewayv1beta1.ListenerReasonResolvedRefs
 		case string(gatewayv1beta1.UDPProtocolType):

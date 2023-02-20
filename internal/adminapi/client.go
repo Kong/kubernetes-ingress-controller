@@ -6,6 +6,7 @@ import (
 
 	"github.com/kong/go-kong/kong"
 	"github.com/samber/lo"
+	"k8s.io/apimachinery/pkg/types"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 )
@@ -21,6 +22,9 @@ type Client struct {
 	isKonnect           bool
 	konnectRuntimeGroup string
 	lastConfigSHA       []byte
+
+	// podRef (optional) describes the Pod that the Client communicates with.
+	podRef *types.NamespacedName
 }
 
 // NewClient creates an Admin API client that is to be used with a regular Admin API exposed by Kong Gateways.
@@ -89,6 +93,20 @@ func (c *Client) SetLastConfigSHA(s []byte) {
 // LastConfigSHA returns a checksum of the last successful configuration push.
 func (c *Client) LastConfigSHA() []byte {
 	return c.lastConfigSHA
+}
+
+// AttachPodReference allows attaching a Pod reference to the client. Should be used in case we know what Pod the client
+// will communicate with (e.g. when the gateway service discovery is used).
+func (c *Client) AttachPodReference(podNN types.NamespacedName) {
+	c.podRef = &podNN
+}
+
+// PodReference returns an optional reference to the Pod the client communicates with.
+func (c *Client) PodReference() (types.NamespacedName, bool) {
+	if c.podRef != nil {
+		return *c.podRef, true
+	}
+	return types.NamespacedName{}, false
 }
 
 type ClientFactory struct {

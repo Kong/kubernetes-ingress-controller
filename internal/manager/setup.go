@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net/http"
 	"time"
 
 	"github.com/avast/retry-go/v4"
@@ -166,7 +167,7 @@ func setupAdmissionServer(
 		return nil
 	}
 
-	kongclients, err := managerConfig.getKongClients(ctx)
+	kongclients, err := managerConfig.adminAPIClients(ctx)
 	if err != nil {
 		return err
 	}
@@ -266,67 +267,82 @@ func generateAddressFinderGetter(mgrc client.Client, publishServiceNn types.Name
 	}
 }
 
-// getKongClients returns the kong clients given the config.
+// adminAPIClients returns the kong clients given the config.
 // When a list of URLs is provided via --kong-admin-url then those are used
 // to create the list of clients.
 // When a headless service name is provided via --kong-admin-svc then that is used
 // to obtain a list of endpoints via EndpointSlice lookup in kubernetes API.
-func (c *Config) getKongClients(ctx context.Context) ([]*adminapi.Client, error) {
+func (c *Config) adminAPIClients(ctx context.Context) ([]*adminapi.Client, error) {
 	httpclient, err := adminapi.MakeHTTPClient(&c.KongAdminAPIConfig, c.KongAdminToken)
 	if err != nil {
 		return nil, err
 	}
 
-	var addresses []string
-
 	// If kong-admin-svc flag has been specified then use it to get the list
 	// of Kong Admin API endpoints.
 	if c.KongAdminSvc.Name != "" {
-		kubeClient, err := c.GetKubeClient()
-		if err != nil {
-			return nil, err
-		}
-
-		// Retry this as we may encounter an error of getting 0 addresses,
-		// which can mean that Kong instances meant to be configured by this controller
-		// are not yet ready.
-		// If we end up in a situation where none of them are ready then bail
-		// because we have more code that relies on the configuration of Kong
-		// instance and without an address and there's no way to initialize the
-		// configuration validation and sending code.
-		err = retry.Do(func() error {
-			s, err := adminapi.GetURLsForService(ctx, kubeClient, c.KongAdminSvc, sets.New(c.KondAdminSvcPortNames...))
-			if err != nil {
-				return err
-			}
-			if s.Len() == 0 {
-				return fmt.Errorf("no endpoints for kong admin service: %q", c.KongAdminSvc)
-			}
-			addresses = s.UnsortedList()
-			return nil
-		},
-			retry.Attempts(60),
-			retry.DelayType(retry.FixedDelay),
-			retry.Delay(time.Second),
-			retry.OnRetry(func(_ uint, err error) {
-				logrus.New().WithError(err).Error("failed to create kong client(s)")
-			}),
-		)
-		if err != nil {
-			return nil, err
-		}
-	} else {
-		// Otherwise fallback to the list of kong admin URLs.
-		addresses = c.KongAdminURLs
+		return c.adminAPIClientFromServiceDiscovery(ctx, httpclient)
 	}
 
+	// Otherwise fallback to the list of kong admin URLs.
+	addresses := c.KongAdminURLs
 	clients := make([]*adminapi.Client, 0, len(addresses))
 	for _, address := range addresses {
-		client, err := adminapi.NewKongClientForWorkspace(ctx, address, c.KongWorkspace, httpclient)
+		cl, err := adminapi.NewKongClientForWorkspace(ctx, address, c.KongWorkspace, httpclient)
 		if err != nil {
 			return nil, err
 		}
-		clients = append(clients, client)
+
+		clients = append(clients, cl)
+	}
+
+	return clients, nil
+}
+
+func (c *Config) adminAPIClientFromServiceDiscovery(ctx context.Context, httpclient *http.Client) ([]*adminapi.Client, error) {
+	kubeClient, err := c.GetKubeClient()
+	if err != nil {
+		return nil, err
+	}
+
+	// Retry this as we may encounter an error of getting 0 addresses,
+	// which can mean that Kong instances meant to be configured by this controller
+	// are not yet ready.
+	// If we end up in a situation where none of them are ready then bail
+	// because we have more code that relies on the configuration of Kong
+	// instance and without an address and there's no way to initialize the
+	// configuration validation and sending code.
+	var adminAPIs []adminapi.DiscoveredAdminAPI
+	err = retry.Do(func() error {
+		s, err := adminapi.GetAdminAPIsForService(ctx, kubeClient, c.KongAdminSvc, sets.New(c.KondAdminSvcPortNames...))
+		if err != nil {
+			return err
+		}
+		if s.Len() == 0 {
+			return fmt.Errorf("no endpoints for kong admin service: %q", c.KongAdminSvc)
+		}
+		adminAPIs = s.UnsortedList()
+		return nil
+	},
+		retry.Attempts(60),
+		retry.DelayType(retry.FixedDelay),
+		retry.Delay(time.Second),
+		retry.OnRetry(func(_ uint, err error) {
+			logrus.New().WithError(err).Error("failed to create kong client(s)")
+		}),
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	clients := make([]*adminapi.Client, 0, len(adminAPIs))
+	for _, adminAPI := range adminAPIs {
+		cl, err := adminapi.NewKongClientForWorkspace(ctx, adminAPI.Address, c.KongWorkspace, httpclient)
+		if err != nil {
+			return nil, err
+		}
+		cl.AttachPodReference(adminAPI.PodRef)
+		clients = append(clients, cl)
 	}
 
 	return clients, nil

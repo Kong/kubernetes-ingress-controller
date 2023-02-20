@@ -425,6 +425,13 @@ func getListenerStatus(
 					Reason:             string(gatewayv1beta1.ListenerReasonReady),
 					Message:            "the listener is ready and available for routing",
 				},
+				metav1.Condition{
+					Type:               string(gatewayv1beta1.ListenerConditionProgrammed),
+					Status:             metav1.ConditionTrue,
+					ObservedGeneration: gateway.Generation,
+					LastTransitionTime: metav1.Now(),
+					Reason:             string(gatewayv1beta1.ListenerReasonProgrammed),
+				},
 			)
 		} else {
 			// any conditions we added above will prevent the Listener from becoming ready
@@ -438,7 +445,14 @@ func getListenerStatus(
 				LastTransitionTime: metav1.Now(),
 				Reason:             string(gatewayv1beta1.ListenerReasonInvalid),
 				Message:            "the listener is not ready and cannot route requests",
-			})
+			},
+				metav1.Condition{
+					Type:               string(gatewayv1beta1.ListenerConditionProgrammed),
+					Status:             metav1.ConditionFalse,
+					ObservedGeneration: gateway.Generation,
+					LastTransitionTime: metav1.Now(),
+					Reason:             string(gatewayv1beta1.ListenerReasonInvalid),
+				})
 		}
 
 		// consistent sort statuses to allow equality comparisons

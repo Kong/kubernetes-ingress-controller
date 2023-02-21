@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	neturl "net/url"
+	"strconv"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/adminapi"
 	tlsutil "github.com/kong/kubernetes-ingress-controller/v2/internal/util/tls"
@@ -126,9 +128,14 @@ func (c *NodeAPIClient) UpdateNode(nodeID string, req *UpdateNodeRequest) (*Upda
 	return resp, nil
 }
 
-func (c *NodeAPIClient) ListNodes() (*ListNodeResponse, error) {
-	url := c.kicNodeAPIEndpoint()
-	httpResp, err := c.Client.Get(url)
+func (c *NodeAPIClient) ListNodes(pageNumber int) (*ListNodeResponse, error) {
+	url, _ := neturl.Parse(c.kicNodeAPIEndpoint())
+	if pageNumber != 0 {
+		q := url.Query()
+		q.Set("page.number", strconv.Itoa(pageNumber))
+		url.RawQuery = q.Encode()
+	}
+	httpResp, err := c.Client.Get(url.String())
 	if err != nil {
 		return nil, fmt.Errorf("failed to get response: %w", err)
 	}
@@ -150,6 +157,25 @@ func (c *NodeAPIClient) ListNodes() (*ListNodeResponse, error) {
 		return nil, fmt.Errorf("failed to read response body: %w", err)
 	}
 	return resp, nil
+}
+
+// ListAllNodes call ListNodes() repeatedly to get all nodes in a runtime group.
+func (c *NodeAPIClient) ListAllNodes() ([]*NodeItem, error) {
+	nodes := []*NodeItem{}
+	pageNum := 0
+	for {
+		resp, err := c.ListNodes(pageNum)
+		if err != nil {
+			return nil, err
+		}
+		nodes = append(nodes, resp.Items...)
+		if resp.Page.NextPageNum == 0 {
+			return nodes, nil
+		}
+		// if konnect returns a non-0 NextPageNum, the node are not all listed
+		// and we should start listing from the returned NextPageNum.
+		pageNum = int(resp.Page.NextPageNum)
+	}
 }
 
 func (c *NodeAPIClient) DeleteNode(nodeID string) error {

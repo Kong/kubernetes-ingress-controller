@@ -32,14 +32,16 @@ const (
 
 type Payload = types.ProviderReport
 
+type ReportValues struct {
+	FeatureGates                   map[string]bool
+	MeshDetection                  bool
+	PublishServiceNN               apitypes.NamespacedName
+	KonnectSyncEnabled             bool
+	GatewayServiceDiscoveryEnabled bool
+}
+
 // CreateManager creates telemetry manager using the provided rest.Config.
-func CreateManager(
-	restConfig *rest.Config,
-	fixedPayload Payload,
-	featureGates map[string]bool,
-	meshDetection bool,
-	publishServiceNN apitypes.NamespacedName,
-) (telemetry.Manager, error) {
+func CreateManager(restConfig *rest.Config, fixedPayload Payload, rv ReportValues) (telemetry.Manager, error) {
 	logger := logrusr.New(logrus.New())
 
 	k, err := kubernetes.NewForConfig(restConfig)
@@ -52,7 +54,7 @@ func CreateManager(
 	}
 	dyn := dynamic.New(k.Discovery().RESTClient())
 
-	m, err := createManager(k, dyn, cl, fixedPayload, featureGates, meshDetection, publishServiceNN,
+	m, err := createManager(k, dyn, cl, fixedPayload, rv,
 		telemetry.OptManagerPeriod(telemetryPeriod),
 		telemetry.OptManagerLogger(logger),
 	)
@@ -78,9 +80,7 @@ func createManager(
 	dyn dynamic.Interface,
 	cl client.Client,
 	fixedPayload Payload,
-	featureGates map[string]bool,
-	meshDetection bool,
-	publishServiceNN apitypes.NamespacedName,
+	rv ReportValues,
 	opts ...telemetry.OptManager,
 ) (telemetry.Manager, error) {
 	m, err := telemetry.NewManager(
@@ -112,7 +112,7 @@ func createManager(
 
 	// Add mesh detect workflow
 	{
-		if meshDetection {
+		if rv.MeshDetection {
 			podNN, err := util.GetPodNN()
 			if err != nil {
 				// Don't fail, just don't include mesh detection workflow.
@@ -120,7 +120,7 @@ func createManager(
 				// part responsible for detecting the mesh that current pod is running
 				// gets disabled.
 			} else {
-				w, err := telemetry.NewMeshDetectWorkflow(cl, podNN, publishServiceNN)
+				w, err := telemetry.NewMeshDetectWorkflow(cl, podNN, rv.PublishServiceNN)
 				if err != nil {
 					return nil, fmt.Errorf("failed to create mesh detect workflow: %w", err)
 				}
@@ -145,7 +145,17 @@ func createManager(
 			w.AddProvider(p)
 		}
 		{
-			p, err := provider.NewFixedValueProvider("feature-gates", featureGatesToTelemetryPayload(featureGates))
+			p, err := provider.NewFixedValueProvider("feature-gates", featureGatesToTelemetryPayload(rv.FeatureGates))
+			if err != nil {
+				return nil, fmt.Errorf("failed to create fixed value provider: %w", err)
+			}
+			w.AddProvider(p)
+		}
+		{
+			p, err := provider.NewFixedValueProvider("feature-flags", types.ProviderReport{
+				"feature-konnect-sync":              rv.KonnectSyncEnabled,
+				"feature-gateway-service-discovery": rv.GatewayServiceDiscoveryEnabled,
+			})
 			if err != nil {
 				return nil, fmt.Errorf("failed to create fixed value provider: %w", err)
 			}

@@ -14,7 +14,7 @@ require (
 	github.com/go-logr/logr v1.2.3
 	github.com/google/go-cmp v0.5.9
 	github.com/google/uuid v1.3.0
-	github.com/kong/deck v1.18.1
+	github.com/kong/deck v1.19.0
 	github.com/kong/go-kong v0.38.0
 	github.com/kong/kubernetes-telemetry v0.0.1
 	github.com/kong/kubernetes-testing-framework v0.29.0
@@ -147,7 +147,7 @@ require (
 	github.com/prometheus/client_model v0.3.0 // indirect
 	github.com/prometheus/procfs v0.8.0 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
-	github.com/shirou/gopsutil/v3 v3.22.12 // indirect
+	github.com/shirou/gopsutil/v3 v3.23.1 // indirect
 	github.com/shopspring/decimal v1.2.0 // indirect
 	github.com/sourcegraph/conc v0.2.0
 	github.com/spf13/cast v1.5.0 // indirect

@@ -33,7 +33,6 @@ type GatewayPodGetter interface {
 }
 
 type NodeAgent struct {
-	NodeID   string
 	Hostname string
 	Version  string
 
@@ -75,10 +74,12 @@ func NewNodeAgent(
 }
 
 func (a *NodeAgent) Start(ctx context.Context) error {
-	err := a.createNode()
+
+	err := a.updateNodes()
 	if err != nil {
-		return fmt.Errorf("failed creating a node: %w", err)
+		return fmt.Errorf("failed to run initial update of nodes, agent abort")
 	}
+
 	go a.updateNodeLoop(ctx)
 	go a.subscribeConfigStatus(ctx)
 
@@ -93,55 +94,12 @@ func (a *NodeAgent) NeedLeaderElection() bool {
 	return true
 }
 
-func (a *NodeAgent) createNode() error {
-	err := a.clearOutdatedNodes()
-	if err != nil {
-		// still continue to update the current status if cleanup failed.
-		a.Logger.Error(err, "failed to clear outdated nodes")
-	}
-
-	createNodeReq := &CreateNodeRequest{
-		ID:       a.NodeID,
-		Hostname: a.Hostname,
-		Version:  a.Version,
-		Type:     NodeTypeIngressController,
-		LastPing: time.Now().Unix(),
-	}
-	resp, err := a.konnectClient.CreateNode(createNodeReq)
-	if err != nil {
-		return fmt.Errorf("failed to create node, hostname %s: %w", a.Hostname, err)
-	}
-
-	a.NodeID = resp.Item.ID
-	a.Logger.V(util.DebugLevel).Info("created node for KIC", "node_id", a.NodeID, "hostname", a.Hostname)
-	return nil
-}
-
-func (a *NodeAgent) clearOutdatedNodes() error {
-	nodes, err := a.konnectClient.ListAllNodes()
-	if err != nil {
-		return fmt.Errorf("failed to list existing nodes: %w", err)
-	}
-
-	for _, node := range nodes {
-		deleteNode := false
-		if node.Type == NodeTypeIngressController {
-			// nodes to remove:
-			// (1) since only one KIC node is allowed in a runtime group, all the nodes with other hostnames are considered outdated.
-			// (2) in some cases(kind/minikube restart), rebuilt pod uses the same name. So nodes updated for >5mins before should be deleted.
-			if node.Hostname != a.Hostname || time.Since(time.Unix(node.UpdatedAt, 0)) > NodeOutdateInterval {
-				deleteNode = true
-			}
-		}
-		if deleteNode {
-			a.Logger.V(util.DebugLevel).Info("remove outdated KIC node", "node_id", node.ID, "hostname", node.Hostname)
-			err := a.konnectClient.DeleteNode(node.ID)
-			if err != nil {
-				return fmt.Errorf("failed to delete node %s: %w", node.ID, err)
-			}
-		}
-	}
-	return nil
+// sortNodesByLastPing sort nodes by descending order of last ping time
+// so that nodes are sorted by the newest order.
+func sortNodesByLastPing(nodes []*NodeItem) {
+	sort.Slice(nodes, func(i, j int) bool {
+		return nodes[i].LastPing > nodes[j].LastPing
+	})
 }
 
 func (a *NodeAgent) subscribeConfigStatus(ctx context.Context) {
@@ -159,12 +117,27 @@ func (a *NodeAgent) subscribeConfigStatus(ctx context.Context) {
 	}
 }
 
-func (a *NodeAgent) updateNode() error {
-	err := a.clearOutdatedNodes()
-	if err != nil {
-		// still continue to update the current status if cleanup failed.
-		a.Logger.Error(err, "failed to clear outdated nodes")
+func (a *NodeAgent) updateKICNode(existingNodes []*NodeItem) error {
+
+	nodesWithSameName := []*NodeItem{}
+	for _, node := range existingNodes {
+		if node.Type != NodeTypeIngressController {
+			continue
+		}
+
+		if node.Hostname == a.Hostname {
+			nodesWithSameName = append(nodesWithSameName, node)
+		} else {
+			a.Logger.V(util.DebugLevel).Info("remove outdated KIC node", "node_id", node.ID, "hostname", node.Hostname)
+			err := a.konnectClient.DeleteNode(node.ID)
+			if err != nil {
+				a.Logger.Error(err, "failed to delete KIC node", "node_id", node.ID, "hostname", node.Hostname)
+				continue
+			}
+		}
 	}
+
+	sortNodesByLastPing(nodesWithSameName)
 
 	var ingressControllerStatus IngressControllerState
 	configStatus := int(a.configStatus.Load())
@@ -179,41 +152,63 @@ func (a *NodeAgent) updateNode() error {
 		ingressControllerStatus = IngressControllerStateUnknown
 	}
 
+	if len(nodesWithSameName) == 0 {
+		a.Logger.V(util.DebugLevel).Info("no nodes found for KIC pod, should create one", "hostname", a.Hostname)
+		createNodeReq := &CreateNodeRequest{
+			Hostname: a.Hostname,
+			Version:  a.Version,
+			Type:     NodeTypeIngressController,
+			LastPing: time.Now().Unix(),
+			Status:   string(ingressControllerStatus),
+		}
+		resp, err := a.konnectClient.CreateNode(createNodeReq)
+		if err != nil {
+			return fmt.Errorf("failed to create node, hostname %s: %w", a.Hostname, err)
+		}
+		a.Logger.Info("created node for KIC pod", "node_id", resp.Item.ID, "hostname", a.Hostname)
+		return nil
+	}
+
+	latestNode := nodesWithSameName[0]
 	updateNodeReq := &UpdateNodeRequest{
 		Hostname: a.Hostname,
 		Type:     NodeTypeIngressController,
 		Version:  a.Version,
 		LastPing: time.Now().Unix(),
-
-		Status: string(ingressControllerStatus),
+		Status:   string(ingressControllerStatus),
 	}
-	_, err = a.konnectClient.UpdateNode(a.NodeID, updateNodeReq)
+	_, err := a.konnectClient.UpdateNode(latestNode.ID, updateNodeReq)
 	if err != nil {
 		a.Logger.Error(err, "failed to update node for KIC")
 		return err
 	}
-	a.Logger.V(util.DebugLevel).Info("updated last ping time of node for KIC", "node_id", a.NodeID, "hostname", a.Hostname)
+	a.Logger.V(util.DebugLevel).Info("updated last ping time of node for KIC", "node_id", latestNode.ID, "hostname", a.Hostname)
+
+	// treat more nodes with the same name as outdated, and remove them.
+	for i := 1; i < len(nodesWithSameName); i++ {
+		node := nodesWithSameName[i]
+		err := a.konnectClient.DeleteNode(node.ID)
+		if err != nil {
+			a.Logger.Error(err, "failed to delete outdated node", "node_id", node.ID, "hostname", node.Hostname)
+			continue
+		}
+		a.Logger.V(util.DebugLevel).Info("remove outdated kong gateway node", "node_id", node.ID, "hostname", node.Hostname)
+	}
 	return nil
 }
 
-func (a *NodeAgent) updateGatewayNodes() error {
+func (a *NodeAgent) updateGatewayNodes(existingNodes []*NodeItem) error {
 	gatewayPods, err := a.gatewayPodGetter.GetGatewayPods()
 	if err != nil {
 		return fmt.Errorf("failed to get controlled kong gateway pods: %w", err)
 	}
 	gatewayPodMap := make(map[string]struct{})
 
-	a.Logger.V(util.DebugLevel).Info(fmt.Sprintf("%d gateway pods", len(gatewayPods)))
-	existingNodes, err := a.konnectClient.ListNodes()
-	if err != nil {
-		return fmt.Errorf("failed to list existing nodes: %w", err)
-	}
-
 	// TODO: final confirmation on node type used for controlled gateway nodes.
 	nodeType := NodeTypeIngressProxy
 
 	existingNodeMap := make(map[string][]*NodeItem)
-	for _, node := range existingNodes.Items {
+	for _, node := range existingNodes {
 		if node.Type == nodeType {
 			existingNodeMap[node.Hostname] = append(existingNodeMap[node.Hostname], node)
 		}
@@ -258,13 +253,13 @@ func (a *NodeAgent) updateGatewayNodes() error {
 				a.Logger.Info("updated kong gateway node for pod", "pod_namespace", pod.namespace, "pod_name", pod.name, "node_id", latestNode.ID)
 				// succeeded to update node, remove the other outdated nodes.
 				for i := 1; i < len(nodes); i++ {
-					nodeItem := nodes[i]
-					err := a.konnectClient.DeleteNode(nodeItem.ID)
+					node := nodes[i]
+					err := a.konnectClient.DeleteNode(node.ID)
 					if err != nil {
-						a.Logger.Error(err, "failed to delete outdated node", "node_id", nodeItem.ID, "hostname", nodeItem.Hostname)
+						a.Logger.Error(err, "failed to delete outdated node", "node_id", node.ID, "hostname", node.Hostname)
 						continue
 					}
-					a.Logger.V(util.DebugLevel).Info("remove outdated kong gateway node", "node_id", nodeItem.ID, "hostname", nodeItem.Hostname)
+					a.Logger.V(util.DebugLevel).Info("remove outdated kong gateway node", "node_id", node.ID, "hostname", node.Hostname)
 				}
 			}
 
@@ -274,17 +269,36 @@ func (a *NodeAgent) updateGatewayNodes() error {
 	// delete nodes with no corresponding gateway pod.
 	for hostname, nodes := range existingNodeMap {
 		if _, ok := gatewayPodMap[hostname]; !ok {
-			for _, nodeItem := range nodes {
-				err := a.konnectClient.DeleteNode(nodeItem.ID)
+			for _, node := range nodes {
+				err := a.konnectClient.DeleteNode(node.ID)
 				if err != nil {
-					a.Logger.Error(err, "failed to delete outdated node", "node_id", nodeItem.ID, "hostname", nodeItem.Hostname)
+					a.Logger.Error(err, "failed to delete outdated node", "node_id", node.ID, "hostname", node.Hostname)
 					continue
 				}
-				a.Logger.V(util.DebugLevel).Info("remove outdated kong gateway node", "node_id", nodeItem.ID, "hostname", nodeItem.Hostname)
+				a.Logger.V(util.DebugLevel).Info("remove outdated kong gateway node", "node_id", node.ID, "hostname", node.Hostname)
 			}
 		}
 	}
 
+	return nil
+}
+
+func (a *NodeAgent) updateNodes() error {
+	existingNodes, err := a.konnectClient.ListAllNodes()
+	if err != nil {
+		return fmt.Errorf("failed to list existing nodes: %w", err)
+	}
+
+	err = a.updateKICNode(existingNodes)
+	if err != nil {
+		// REVIEW: not return here and continue to update kong gateway nodes?
+		return fmt.Errorf("failed to update KIC node: %w", err)
+	}
+
+	err = a.updateGatewayNodes(existingNodes)
+	if err != nil {
+		return fmt.Errorf("failed to update controlled kong gateway nodes: %w", err)
+	}
 	return nil
 }
 
@@ -298,26 +312,12 @@ func (a *NodeAgent) updateNodeLoop(ctx context.Context) {
 			a.Logger.Info("update node loop stopped", "message", err.Error())
 			return
 		case <-ticker.C:
-			err := a.updateNode()
+			err := a.updateNodes()
 			if err != nil {
-				a.Logger.Error(err, "failed to update node", "node_id", a.NodeID)
-			}
-			err = a.updateGatewayNodes()
-			if err != nil {
-				a.Logger.Error(err, "failed to update controlled gateway nodes")
+				a.Logger.Error(err, "failed to update nodes")
 			}
 		}
 	}
-}
-
-func (a *NodeAgent) Run(ctx context.Context) {
-	err := a.createNode()
-	if err != nil {
-		a.Logger.Error(err, "failed to create node, agent abort")
-		return
-	}
-	go a.updateNodeLoop(ctx)
-	go a.subscribeConfigStatus(ctx)
 }
 
 type GatewayEndpointStore struct {
@@ -349,6 +349,7 @@ func NewGatewayEndpointStore(
 		}
 	}
 	for _, endpoint := range initGatewayEndpoints {
+		logger.Info("init endpoint", "namespace", endpoint.PodRef.Namespace, "name", endpoint.PodRef.Name)
 		gatewayEndpointVersionMap[endpoint.PodRef] = kongVersion
 	}
 
@@ -393,10 +394,12 @@ func (s *GatewayEndpointStore) updateEndpoints(ctx context.Context, endpoints []
 			kongVersion = v
 		}
 	}
-
+	gatewayEndpointVersionMap := make(map[types.NamespacedName]string)
 	for _, endpoint := range endpoints {
-		s.gatewayEndpointVersionMap[endpoint.PodRef] = kongVersion
+		s.logger.Info("updated endpoint", "namespace", endpoint.PodRef.Namespace, "name", endpoint.PodRef.Name)
+		gatewayEndpointVersionMap[endpoint.PodRef] = kongVersion
 	}
+	s.gatewayEndpointVersionMap = gatewayEndpointVersionMap
 }
 
 func (s *GatewayEndpointStore) subscribeEndpointLoop(ctx context.Context) {

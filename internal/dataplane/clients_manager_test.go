@@ -13,6 +13,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/exp/slices"
+	"k8s.io/apimachinery/pkg/types"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/adminapi"
 )
@@ -26,7 +27,7 @@ type clientFactoryWithExpected struct {
 	t        *testing.T
 }
 
-func (cf clientFactoryWithExpected) CreateAdminAPIClient(ctx context.Context, address string) (*adminapi.Client, error) {
+func (cf clientFactoryWithExpected) CreateAdminAPIClient(_ context.Context, address string) (*adminapi.Client, error) {
 	stillExpecting, ok := cf.expected[address]
 	if !ok {
 		cf.t.Errorf("got %s which was unexpected", address)
@@ -128,27 +129,27 @@ func TestClientAddressesNotifications(t *testing.T) {
 	requireClientsCountEventually(t, manager, []string{"localhost:8083"},
 		"initially there should be the initial client")
 
-	manager.Notify([]string{srv.URL})
+	manager.Notify([]adminapi.DiscoveredAdminAPI{testDiscoveredAdminAPI(srv.URL)})
 	requireClientsCountEventually(t, manager, []string{srv.URL},
 		"after notifying about a new address we should get 1 client eventually")
 
-	manager.Notify([]string{srv.URL})
+	manager.Notify([]adminapi.DiscoveredAdminAPI{testDiscoveredAdminAPI(srv.URL)})
 	requireClientsCountEventually(t, manager, []string{srv.URL},
 		"after notifying the same address there's no update in clients")
 
-	manager.Notify([]string{srv.URL, srv2.URL})
+	manager.Notify([]adminapi.DiscoveredAdminAPI{testDiscoveredAdminAPI(srv.URL), testDiscoveredAdminAPI(srv2.URL)})
 	requireClientsCountEventually(t, manager, []string{srv.URL, srv2.URL},
 		"after notifying new address set including the old already existing one we get both the old and the new")
 
-	manager.Notify([]string{srv.URL, srv2.URL})
+	manager.Notify([]adminapi.DiscoveredAdminAPI{testDiscoveredAdminAPI(srv.URL), testDiscoveredAdminAPI(srv2.URL)})
 	requireClientsCountEventually(t, manager, []string{srv.URL, srv2.URL},
 		"notifying again with the same set of URLs should not change the existing URLs")
 
-	manager.Notify([]string{srv.URL})
+	manager.Notify([]adminapi.DiscoveredAdminAPI{testDiscoveredAdminAPI(srv.URL)})
 	requireClientsCountEventually(t, manager, []string{srv.URL},
 		"notifying again with just one URL should decrease the set of URLs to just this one")
 
-	manager.Notify([]string{})
+	manager.Notify([]adminapi.DiscoveredAdminAPI{})
 	requireClientsCountEventually(t, manager, []string{})
 
 	// We could test here notifying about srv.URL and srv2.URL again but there's
@@ -156,7 +157,7 @@ func TestClientAddressesNotifications(t *testing.T) {
 	// a manager which we could use here.
 
 	cancel()
-	require.NotPanics(t, func() { manager.Notify([]string{}) }, "notifying about new clients after manager has been shut down shouldn't panic")
+	require.NotPanics(t, func() { manager.Notify([]adminapi.DiscoveredAdminAPI{}) }, "notifying about new clients after manager has been shut down shouldn't panic")
 }
 
 func TestClientAdjustInternalClientsAfterNotification(t *testing.T) {
@@ -193,7 +194,7 @@ func TestClientAdjustInternalClientsAfterNotification(t *testing.T) {
 		cf.expected = map[string]bool{"localhost:8080": true, "localhost:8081": true}
 		// there are 2 addresses contained in the notification of which 2 are new
 		// and client creator should be called exactly 2 times
-		manager.adjustKongClients([]string{"localhost:8080", "localhost:8081"})
+		manager.adjustKongClients([]adminapi.DiscoveredAdminAPI{testDiscoveredAdminAPI("localhost:8080"), testDiscoveredAdminAPI("localhost:8081")})
 		requireNoExpectedCallsLeftEventually(t)
 	})
 
@@ -202,7 +203,7 @@ func TestClientAdjustInternalClientsAfterNotification(t *testing.T) {
 		cf.expected = map[string]bool{}
 		// there is address contained in the notification but a client for that
 		// address already exists, client creator should not be called
-		manager.adjustKongClients([]string{"localhost:8080"})
+		manager.adjustKongClients([]adminapi.DiscoveredAdminAPI{testDiscoveredAdminAPI("localhost:8080")})
 		requireNoExpectedCallsLeftEventually(t)
 	})
 
@@ -211,7 +212,7 @@ func TestClientAdjustInternalClientsAfterNotification(t *testing.T) {
 		cf.expected = map[string]bool{"localhost:8081": true}
 		// there are 2 addresses contained in the notification but only 1 is new
 		// hence the client creator should be called only once
-		manager.adjustKongClients([]string{"localhost:8080", "localhost:8081"})
+		manager.adjustKongClients([]adminapi.DiscoveredAdminAPI{testDiscoveredAdminAPI("localhost:8080"), testDiscoveredAdminAPI("localhost:8081")})
 		requireNoExpectedCallsLeftEventually(t)
 	})
 }
@@ -262,4 +263,42 @@ func TestAdminAPIClientsManager_Clients(t *testing.T) {
 	m.SetKonnectClient(konnectTestClient)
 	require.Len(t, m.GatewayClients(), 1, "konnect client should not be returned from GatewayClients")
 	require.Len(t, m.AllClients(), 2, "konnect client should be returned from AllClients")
+}
+
+func TestAdminAPIClientsManager_GatewayClientsFromNotificationsAreExpectedToHavePodRef(t *testing.T) {
+	t.Parallel()
+
+	cf := &clientFactoryWithExpected{t: t, expected: map[string]bool{"http://10.0.0.1:8080": true}}
+	testClient, err := adminapi.NewTestClient("http://localhost:8080")
+	require.NoError(t, err)
+	m, err := NewAdminAPIClientsManager(
+		context.Background(),
+		logrus.New(),
+		[]*adminapi.Client{testClient},
+		cf,
+	)
+	require.NoError(t, err)
+	m.RunNotifyLoop()
+
+	m.Notify([]adminapi.DiscoveredAdminAPI{testDiscoveredAdminAPI("http://10.0.0.1:8080")})
+
+	require.Eventually(t, func() bool {
+		gwClients := m.GatewayClients()
+		if len(gwClients) != 1 {
+			t.Log("there's no gateway clients...")
+			return false
+		}
+		_, ok := gwClients[0].PodReference()
+		if !ok {
+			t.Log("there's no pod reference attached")
+		}
+		return ok
+	}, time.Second, time.Millisecond)
+}
+
+func testDiscoveredAdminAPI(address string) adminapi.DiscoveredAdminAPI {
+	return adminapi.DiscoveredAdminAPI{
+		Address: address,
+		PodRef:  types.NamespacedName{Name: "pod-1", Namespace: "ns"},
+	}
 }

@@ -24,22 +24,24 @@ type AdminAPIClientsManager struct {
 
 	// discoveredAdminAPIsNotifyChan is used for notifications that contain Admin API
 	// endpoints list that should be used for configuring the dataplane.
-	discoveredAdminAPIsNotifyChan chan []adminapi.DiscoveredAdminAPI
+	discoveredAdminAPIsNotifyChan    chan []adminapi.DiscoveredAdminAPI
+	gatewayClientsChangesSubscribers []chan struct{}
 
-	ctx         context.Context
-	onceRunning sync.Once
-	running     chan struct{}
+	ctx                   context.Context
+	onceNotifyLoopRunning sync.Once
+	notifyLoopRunningCh   chan struct{}
+	isNotifyLoopRunning   bool
 
-	// kongGatewayClients represent all Kong Gateway data-planes that are configured by this KIC instance with use of
+	// gatewayClients represent all Kong Gateway data-planes that are configured by this KIC instance with use of
 	// their Admin API.
-	kongGatewayClients []*adminapi.Client
+	gatewayClients []*adminapi.Client
 
 	// konnectClient represents a special-case of the data-plane which is Konnect cloud.
 	// This client is used to synchronise configuration with Konnect's Runtime Group Admin API.
 	konnectClient *adminapi.Client
 
-	// clientsLock prevents concurrent reads and writes to both kongGatewayClients and konnectClient fields.
-	clientsLock sync.RWMutex
+	// lock prevents concurrent access to the manager's fields.
+	lock sync.RWMutex
 
 	logger logrus.FieldLogger
 }
@@ -55,24 +57,28 @@ func NewAdminAPIClientsManager(
 	}
 
 	return &AdminAPIClientsManager{
-		kongGatewayClients:            initialClients,
+		gatewayClients:                initialClients,
 		adminAPIClientFactory:         kongClientFactory,
 		discoveredAdminAPIsNotifyChan: make(chan []adminapi.DiscoveredAdminAPI),
 		ctx:                           ctx,
-		running:                       make(chan struct{}),
+		notifyLoopRunningCh:           make(chan struct{}),
 		logger:                        logger,
 	}, nil
 }
 
 // Running returns a channel that is closed when the manager's background tasks are already running.
 func (c *AdminAPIClientsManager) Running() chan struct{} {
-	return c.running
+	return c.notifyLoopRunningCh
 }
 
 // RunNotifyLoop runs a goroutine that will dynamically ingest new addresses of Kong Admin API endpoints.
 func (c *AdminAPIClientsManager) RunNotifyLoop() {
-	c.onceRunning.Do(func() {
+	c.onceNotifyLoopRunning.Do(func() {
 		go c.adminAPIAddressNotifyLoop()
+
+		c.lock.Lock()
+		defer c.lock.Unlock()
+		c.isNotifyLoopRunning = true
 	})
 }
 
@@ -96,18 +102,18 @@ func (c *AdminAPIClientsManager) Notify(discoveredAPIs []adminapi.DiscoveredAdmi
 // SetKonnectClient sets a client that will be used to communicate with Konnect Runtime Group Admin API.
 // If called multiple times, it will override the client.
 func (c *AdminAPIClientsManager) SetKonnectClient(client *adminapi.Client) {
-	c.clientsLock.Lock()
-	defer c.clientsLock.Unlock()
+	c.lock.Lock()
+	defer c.lock.Unlock()
 	c.konnectClient = client
 }
 
 // AllClients returns a copy of current client's slice. It will also include Konnect client if set.
 func (c *AdminAPIClientsManager) AllClients() []*adminapi.Client {
-	c.clientsLock.RLock()
-	defer c.clientsLock.RUnlock()
+	c.lock.RLock()
+	defer c.lock.RUnlock()
 
-	copied := make([]*adminapi.Client, len(c.kongGatewayClients))
-	copy(copied, c.kongGatewayClients)
+	copied := make([]*adminapi.Client, len(c.gatewayClients))
+	copy(copied, c.gatewayClients)
 
 	if c.konnectClient != nil {
 		copied = append(copied, c.konnectClient)
@@ -119,12 +125,36 @@ func (c *AdminAPIClientsManager) AllClients() []*adminapi.Client {
 // GatewayClients returns a copy of current client's slice. Konnect client won't be included.
 // This method can be used when some actions need to be performed only against Kong Gateway clients.
 func (c *AdminAPIClientsManager) GatewayClients() []*adminapi.Client {
-	c.clientsLock.RLock()
-	defer c.clientsLock.RUnlock()
+	c.lock.RLock()
+	defer c.lock.RUnlock()
 
-	copied := make([]*adminapi.Client, len(c.kongGatewayClients))
-	copy(copied, c.kongGatewayClients)
+	copied := make([]*adminapi.Client, len(c.gatewayClients))
+	copy(copied, c.gatewayClients)
 	return copied
+}
+
+// SubscribeToGatewayClientsChanges returns a channel that will receive a notification on every Gateway clients update.
+// Can be used to receive a signal when immediate reaction to the changes is needed. After receiving the notification,
+// GatewayClients call will return an already updated slice of clients.
+// It will return `false` as a second result in case the notifications loop is not running (e.g. static clients setup
+// is used and no updates are going to happen).
+func (c *AdminAPIClientsManager) SubscribeToGatewayClientsChanges() (<-chan struct{}, bool) {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+
+	// Context is already done, no subscriptions should be created.
+	if c.ctx.Err() != nil {
+		return nil, false
+	}
+
+	// No notify loop running, there will be no updates, let's propagate that to the caller.
+	if !c.isNotifyLoopRunning {
+		return nil, false
+	}
+
+	ch := make(chan struct{}, 1)
+	c.gatewayClientsChangesSubscribers = append(c.gatewayClientsChangesSubscribers, ch)
+	return ch, true
 }
 
 // adminAPIAddressNotifyLoop is an inner loop listening on notifyChan which are received via
@@ -140,28 +170,29 @@ func (c *AdminAPIClientsManager) GatewayClients() []*adminapi.Client {
 // This function will acquire the internal lock to prevent the modification of
 // internal clients list.
 func (c *AdminAPIClientsManager) adminAPIAddressNotifyLoop() {
-	close(c.running)
+	close(c.notifyLoopRunningCh)
 	for {
 		select {
 		case <-c.ctx.Done():
 			c.logger.Infof("closing AdminAPIClientsManager: %s", c.ctx.Err())
 			c.discoveredAdminAPIsNotifyChan = nil
+			c.closeGatewayClientsSubscribers()
 			return
 
 		case discoveredAdminAPIs := <-c.discoveredAdminAPIsNotifyChan:
 			// This call will only log errors e.g. during creation of new clients.
 			// If need be we might consider propagating those errors up the stack.
-			c.adjustKongClients(discoveredAdminAPIs)
+			c.adjustGatewayClients(discoveredAdminAPIs)
 		}
 	}
 }
 
-// adjustKongClients adjusts internally stored clients slice based on the provided
+// adjustGatewayClients adjusts internally stored clients slice based on the provided
 // discovered Admin APIs slice. It consults BaseRootURLs of already stored clients with each
 // of the discovered Admin APIs and creates only those clients that we don't have.
-func (c *AdminAPIClientsManager) adjustKongClients(discoveredAdminAPIs []adminapi.DiscoveredAdminAPI) {
-	c.clientsLock.Lock()
-	defer c.clientsLock.Unlock()
+func (c *AdminAPIClientsManager) adjustGatewayClients(discoveredAdminAPIs []adminapi.DiscoveredAdminAPI) {
+	c.lock.Lock()
+	defer c.lock.Unlock()
 
 	toAdd := lo.Filter(discoveredAdminAPIs, func(api adminapi.DiscoveredAdminAPI, _ int) bool {
 		// If we already have a client with a provided address then great, no need
@@ -169,13 +200,13 @@ func (c *AdminAPIClientsManager) adjustKongClients(discoveredAdminAPIs []adminap
 
 		// If we don't have a client with new address then filter it and add
 		// a client for this address.
-		return !lo.ContainsBy(c.kongGatewayClients, func(cl *adminapi.Client) bool {
+		return !lo.ContainsBy(c.gatewayClients, func(cl *adminapi.Client) bool {
 			return api.Address == cl.BaseRootURL()
 		})
 	})
 
 	var idxToRemove []int
-	for i, cl := range c.kongGatewayClients {
+	for i, cl := range c.gatewayClients {
 		// If the new address set contains a client that we already have then
 		// good, no need to do anything for it.
 		if lo.ContainsBy(discoveredAdminAPIs, func(api adminapi.DiscoveredAdminAPI) bool {
@@ -190,7 +221,7 @@ func (c *AdminAPIClientsManager) adjustKongClients(discoveredAdminAPIs []adminap
 
 	for i := len(idxToRemove) - 1; i >= 0; i-- {
 		idx := idxToRemove[i]
-		c.kongGatewayClients = append(c.kongGatewayClients[:idx], c.kongGatewayClients[idx+1:]...)
+		c.gatewayClients = append(c.gatewayClients[:idx], c.gatewayClients[idx+1:]...)
 	}
 
 	for _, adminAPI := range toAdd {
@@ -201,6 +232,21 @@ func (c *AdminAPIClientsManager) adjustKongClients(discoveredAdminAPIs []adminap
 		}
 		client.AttachPodReference(adminAPI.PodRef)
 
-		c.kongGatewayClients = append(c.kongGatewayClients, client)
+		c.gatewayClients = append(c.gatewayClients, client)
+	}
+
+	c.notifyGatewayClientsSubscribers()
+}
+
+// notifyGatewayClientsSubscribers sends notifications to all subscribers that have called SubscribeToGatewayClientsChanges.
+func (c *AdminAPIClientsManager) notifyGatewayClientsSubscribers() {
+	for _, sub := range c.gatewayClientsChangesSubscribers {
+		sub <- struct{}{}
+	}
+}
+
+func (c *AdminAPIClientsManager) closeGatewayClientsSubscribers() {
+	for _, sub := range c.gatewayClientsChangesSubscribers {
+		close(sub)
 	}
 }

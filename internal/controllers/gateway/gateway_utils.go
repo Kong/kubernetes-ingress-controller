@@ -301,21 +301,7 @@ func getListenerStatus(
 					tlsResolvedRefReason = string(gatewayv1beta1.ListenerReasonInvalidCertificateRef)
 					break
 				}
-				var ok bool
-				var crt, key []byte
-				if crt, ok = secret.Data["tls.crt"]; !ok {
-					tlsResolvedRefReason = string(gatewayv1beta1.ListenerReasonInvalidCertificateRef)
-					break
-				}
-				if key, ok = secret.Data["tls.key"]; !ok {
-					tlsResolvedRefReason = string(gatewayv1beta1.ListenerReasonInvalidCertificateRef)
-					break
-				}
-				if p, _ := pem.Decode(crt); p == nil {
-					tlsResolvedRefReason = string(gatewayv1beta1.ListenerReasonInvalidCertificateRef)
-					break
-				}
-				if p, _ := pem.Decode(key); p == nil {
+				if !isTLSSecretValid(secret) {
 					tlsResolvedRefReason = string(gatewayv1beta1.ListenerReasonInvalidCertificateRef)
 				}
 			}
@@ -675,4 +661,22 @@ func getListenerSupportedRouteKinds(l gatewayv1beta1.Listener) ([]gatewayv1beta1
 	}
 
 	return supportedRGK, reason
+}
+
+func isTLSSecretValid(secret *corev1.Secret) bool {
+	var ok bool
+	var crt, key []byte
+	if crt, ok = secret.Data["tls.crt"]; !ok {
+		return false
+	}
+	if key, ok = secret.Data["tls.key"]; !ok {
+		return false
+	}
+	if p, _ := pem.Decode(crt); p == nil {
+		return false
+	}
+	if p, _ := pem.Decode(key); p == nil {
+		return false
+	}
+	return true
 }

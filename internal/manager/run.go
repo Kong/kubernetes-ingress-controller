@@ -229,11 +229,14 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 		stopAnonymousReports, err := telemetry.SetupAnonymousReports(
 			ctx,
 			kubeconfig,
-			c.PublishService,
-			metadata.Release,
-			len(c.WatchNamespaces) == 0,
-			featureGates,
 			clientsManager,
+			telemetry.ReportValues{
+				PublishServiceNN:               c.PublishService,
+				FeatureGates:                   featureGates,
+				MeshDetection:                  len(c.WatchNamespaces) == 0,
+				KonnectSyncEnabled:             c.Konnect.ConfigSynchronizationEnabled,
+				GatewayServiceDiscoveryEnabled: c.KongAdminSvc.String() != "",
+			},
 		)
 		if err != nil {
 			setupLog.Error(err, "failed setting up anonymous reports")

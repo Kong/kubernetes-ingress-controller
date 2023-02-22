@@ -38,7 +38,6 @@ func TestCreateManager(t *testing.T) {
 			"knative": false,
 		}
 		ctx            = context.Background()
-		meshDetection  = true
 		publishService = apitypes.NamespacedName{
 			Namespace: "kong",
 			Name:      "kong-proxy",
@@ -83,7 +82,18 @@ func TestCreateManager(t *testing.T) {
 		Platform:     "linux/amd64",
 	}
 
-	mgr, err := createManager(k8sclient, dyn, ctrlClient, payload, featureGates, meshDetection, publishService,
+	mgr, err := createManager(
+		k8sclient,
+		dyn,
+		ctrlClient,
+		payload,
+		ReportValues{
+			FeatureGates:                   featureGates,
+			MeshDetection:                  true,
+			PublishServiceNN:               publishService,
+			KonnectSyncEnabled:             true,
+			GatewayServiceDiscoveryEnabled: true,
+		},
 		telemetry.OptManagerPeriod(time.Hour),
 		telemetry.OptManagerLogger(logr.Discard()),
 	)
@@ -107,8 +117,10 @@ func TestCreateManager(t *testing.T) {
 				"<14>"+
 					"signal=test-signal;"+
 					"db=off;"+
+					"feature-gateway-service-discovery=true;"+
 					"feature-gateway=true;"+
 					"feature-knative=false;"+
+					"feature-konnect-sync=true;"+
 					"hn=%s;"+
 					"kv=3.1.1;"+
 					"uptime=0;"+

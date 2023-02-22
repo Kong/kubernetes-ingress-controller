@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"github.com/google/uuid"
-	apitypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/rest"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane"
@@ -19,11 +18,8 @@ import (
 func SetupAnonymousReports(
 	ctx context.Context,
 	kubeCfg *rest.Config,
-	publishService apitypes.NamespacedName,
-	kicVersion string,
-	meshDetection bool,
-	featureGates map[string]bool,
 	clientsProvider dataplane.AdminAPIClientsProvider,
+	rv ReportValues,
 ) (func(), error) {
 	// if anonymous reports are enabled this helps provide Kong with insights about usage of the ingress controller
 	// which is non-sensitive and predominantly informs us of the controller and cluster versions in use.
@@ -35,10 +31,10 @@ func SetupAnonymousReports(
 	// That's fine because we allow for now only 1 set of version and db setting
 	// throughout all Kong instances that 1 KIC instance configures.
 	//
-	// When we change that and decide to allow heterogenous Kong instances to be
+	// When we change that and decide to allow heterogeneous Kong instances to be
 	// configured by 1 KIC instance then this will have to change.
 	//
-	// https://github.com/Kong/kubernetes-ingress-controller/issues/3362
+	// https://github.com/Kong/kubernetes-ingress-controller/issues/3589
 	root, err := clientsProvider.GatewayClients()[0].AdminAPIClient().Root(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get Kong root config data: %w", err)
@@ -65,7 +61,7 @@ func SetupAnonymousReports(
 		"id": uuid.NewString(), // universal unique identifier for this system
 	}
 
-	tMgr, err := CreateManager(kubeCfg, fixedPayload, featureGates, meshDetection, publishService)
+	tMgr, err := CreateManager(kubeCfg, fixedPayload, rv)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create anonymous reports manager: %w", err)
 	}

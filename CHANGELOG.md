@@ -135,6 +135,8 @@ Adding a new version? You'll need three changes:
   [#3563](https://github.com/Kong/kubernetes-ingress-controller/pull/3563)
 - Added `GRPCRoute` controller and implemented basic `GRPCRoute` functionality.
   [#3537](https://github.com/Kong/kubernetes-ingress-controller/pull/3537)
+- Included Konnect sync and Gateway Service discovery features in telemetry reports.
+  [#3588](https://github.com/Kong/kubernetes-ingress-controller/pull/3588)
 
 ### Fixed
 

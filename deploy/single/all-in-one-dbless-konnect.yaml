@@ -1591,15 +1591,6 @@ subjects:
   namespace: kong
 ---
 apiVersion: v1
-kind: Secret
-metadata:
-  annotations:
-    kubernetes.io/service-account.name: kong-serviceaccount
-  name: kong-serviceaccount-token
-  namespace: kong
-type: kubernetes.io/service-account-token
----
-apiVersion: v1
 kind: Service
 metadata:
   annotations:

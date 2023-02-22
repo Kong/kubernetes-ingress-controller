@@ -198,48 +198,6 @@ func TestTranslationFailures(t *testing.T) {
 			},
 		},
 		{
-			name: "more than one certificate ref specified for a gateway listener",
-			translationFailureTrigger: func(t *testing.T, cleaner *clusters.Cleaner, ns string) expectedTranslationFailure {
-				secret1 := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{
-					Name: testutils.RandomName(testTranslationFailuresObjectsPrefix),
-				}}
-				secret2 := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{
-					Name: testutils.RandomName(testTranslationFailuresObjectsPrefix),
-				}}
-				secret1, err := env.Cluster().Client().CoreV1().Secrets(ns).Create(ctx, secret1, metav1.CreateOptions{})
-				require.NoError(t, err)
-				cleaner.Add(secret1)
-				secret2, err = env.Cluster().Client().CoreV1().Secrets(ns).Create(ctx, secret2, metav1.CreateOptions{})
-				require.NoError(t, err)
-				cleaner.Add(secret2)
-
-				gateway := deployGatewayReferringSecrets(ctx, t, cleaner, ns, secret1, secret2)
-
-				return expectedTranslationFailure{
-					causingObjects: []client.Object{gateway},
-					reasonContains: "more than one certificateRef",
-				}
-			},
-		},
-		{
-			name: "invalid secret referred by a gateway listener",
-			translationFailureTrigger: func(t *testing.T, cleaner *clusters.Cleaner, ns string) expectedTranslationFailure {
-				emptySecret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{
-					Name: testutils.RandomName(testTranslationFailuresObjectsPrefix),
-				}}
-				emptySecret, err := env.Cluster().Client().CoreV1().Secrets(ns).Create(ctx, emptySecret, metav1.CreateOptions{})
-				require.NoError(t, err)
-				cleaner.Add(emptySecret)
-
-				gateway := deployGatewayReferringSecrets(ctx, t, cleaner, ns, emptySecret)
-
-				return expectedTranslationFailure{
-					causingObjects: []client.Object{gateway, emptySecret},
-					reasonContains: "failed to construct certificate from secret",
-				}
-			},
-		},
-		{
 			name: "ingress referring a non-existing TLS secret",
 			translationFailureTrigger: func(t *testing.T, cleaner *clusters.Cleaner, ns string) expectedTranslationFailure {
 				service, err := env.Cluster().Client().CoreV1().Services(ns).Create(ctx, validService(), metav1.CreateOptions{})

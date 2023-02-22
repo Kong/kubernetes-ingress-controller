@@ -232,6 +232,8 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 	return mgr.Start(ctx)
 }
 
+// startKonnectNodeRegistration starts node registration to konnect.
+// returns error if failed to create or run agent to maintain KIC and kong gateway nodes.
 func startKonnectNodeRegistration(
 	ctx context.Context, c *Config,
 	mgr manager.Manager,
@@ -242,13 +244,12 @@ func startKonnectNodeRegistration(
 	logger.Info("Start Konnect client to register runtime instances to Konnect")
 	konnectNodeAPIClient, err := konnect.NewNodeAPIClient(c.Konnect)
 	if err != nil {
-		logger.Error(err, "failed creating konnect client, skipping running NodeAgent")
-		return err
+		return fmt.Errorf("failed creating konnect client: %w", err)
 	}
 	var hostname string
 	nn, err := util.GetPodNN()
 	if err != nil {
-		logger.Error(err, "failed to get pod name and/or namespace, fallback to use hostname as node name in konnect")
+		logger.Error(err, "failed getting pod name and/or namespace, fallback to use hostname as node name in konnect")
 		hostname, _ = os.Hostname()
 	} else {
 		hostname = nn.String()
@@ -264,17 +265,19 @@ func startKonnectNodeRegistration(
 	if c.KongAdminSvc.Namespace != "" && c.KongAdminSvc.Name != "" {
 		kubeClient, err := c.GetKubeClient()
 		if err != nil {
-			logger.Error(err, "failed to get kubernetes client for getting admin APIs for service")
-			return err
+			return fmt.Errorf("failed getting kubernetes client for getting admin APIs for service: %w", err)
 		}
+		// get admin API endpoints from specified admin API service.
 		s, err := adminapi.GetAdminAPIsForService(
 			ctx, kubeClient, c.KongAdminSvc,
 			sets.Set[string](sets.NewString(c.KondAdminSvcPortNames...)),
 		)
 		if err != nil {
-			logger.Error(err, "failed to get admin APIs from service", "namespace", c.KongAdminSvc.Namespace, "name", c.KongAdminSvc.Name)
+			return fmt.Errorf("failed getting admin API endpoints from service %s: %w",
+				c.KongAdminSvc.String(), err)
 		}
 		initDiscoveredAdminAPIs := s.UnsortedList()
+		// start the gateway instance getter from endpoints.
 		gatewayInstanceGetter = konnect.NewGatewayEndpointStore(
 			ctx,
 			logger,
@@ -283,9 +286,11 @@ func startKonnectNodeRegistration(
 			clientsManager,
 		)
 	} else {
-		gatewayInstanceGetter = konnect.NewGatewayAdminAPIProvider(logger, clientsManager)
+		// if gateway discovery is not enabled, start the instance getter from gateway clients.
+		gatewayInstanceGetter = konnect.NewGatewayClientGetter(logger, clientsManager)
 	}
 
+	// create node agent and add it to manager.
 	agent := konnect.NewNodeAgent(
 		hostname,
 		version,
@@ -296,8 +301,7 @@ func startKonnectNodeRegistration(
 		gatewayInstanceGetter,
 	)
 	if err := mgr.Add(agent); err != nil {
-		logger.Error(err, "failed adding konnect.NodeAgent runnable to the manager")
-		return err
+		return fmt.Errorf("failed adding konnect.NodeAgent runnable to the manager: %w", err)
 	}
 	return nil
 }

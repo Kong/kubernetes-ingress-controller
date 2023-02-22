@@ -2,6 +2,7 @@ package gateway
 
 import (
 	"context"
+	"encoding/pem"
 	"fmt"
 	"reflect"
 	"sort"
@@ -270,14 +271,14 @@ func getListenerStatus(
 		// If the listener uses TLS, we need to ensure that the gateway is granted to reference
 		// all the secrets it references
 		if listener.TLS != nil {
-			tlsresolvedRefReason := string(gatewayv1beta1.ListenerReasonResolvedRefs)
+			tlsResolvedRefReason := string(gatewayv1beta1.ListenerReasonResolvedRefs)
 			for _, certRef := range listener.TLS.CertificateRefs {
 				// if the certificate is in the same namespace of the gateway, no ReferenceGrant is needed
 				if certRef.Namespace != nil && *certRef.Namespace != (Namespace)(gateway.Namespace) {
 					// get the result of the certificate reference. If the returned reason is not successful, the loop
 					// must be broken because the secret reference isn't granted
-					tlsresolvedRefReason = getReferenceGrantConditionReason(gateway.Namespace, certRef, referenceGrants)
-					if tlsresolvedRefReason != string(gatewayv1beta1.ListenerReasonResolvedRefs) {
+					tlsResolvedRefReason = getReferenceGrantConditionReason(gateway.Namespace, certRef, referenceGrants)
+					if tlsResolvedRefReason != string(gatewayv1beta1.ListenerReasonResolvedRefs) {
 						break
 					}
 				}
@@ -285,7 +286,7 @@ func getListenerStatus(
 				// only secrets are supported as certificate references
 				if (certRef.Group != nil && (*certRef.Group != "core" && *certRef.Group != "")) ||
 					(certRef.Kind != nil && *certRef.Kind != "Secret") {
-					tlsresolvedRefReason = string(gatewayv1beta1.ListenerReasonInvalidCertificateRef)
+					tlsResolvedRefReason = string(gatewayv1beta1.ListenerReasonInvalidCertificateRef)
 					break
 				}
 				secret := &corev1.Secret{}
@@ -297,11 +298,15 @@ func getListenerStatus(
 					if !apierrors.IsNotFound(err) {
 						return nil, err
 					}
-					tlsresolvedRefReason = string(gatewayv1beta1.ListenerReasonInvalidCertificateRef)
+					tlsResolvedRefReason = string(gatewayv1beta1.ListenerReasonInvalidCertificateRef)
+					break
+				}
+				if !isTLSSecretValid(secret) {
+					tlsResolvedRefReason = string(gatewayv1beta1.ListenerReasonInvalidCertificateRef)
 				}
 			}
-			if gatewayv1beta1.ListenerConditionReason(tlsresolvedRefReason) != gatewayv1beta1.ListenerReasonResolvedRefs {
-				ResolvedRefsReason = gatewayv1beta1.ListenerConditionReason(tlsresolvedRefReason)
+			if gatewayv1beta1.ListenerConditionReason(tlsResolvedRefReason) != gatewayv1beta1.ListenerReasonResolvedRefs {
+				ResolvedRefsReason = gatewayv1beta1.ListenerConditionReason(tlsResolvedRefReason)
 			}
 		}
 
@@ -656,4 +661,22 @@ func getListenerSupportedRouteKinds(l gatewayv1beta1.Listener) ([]gatewayv1beta1
 	}
 
 	return supportedRGK, reason
+}
+
+func isTLSSecretValid(secret *corev1.Secret) bool {
+	var ok bool
+	var crt, key []byte
+	if crt, ok = secret.Data["tls.crt"]; !ok {
+		return false
+	}
+	if key, ok = secret.Data["tls.key"]; !ok {
+		return false
+	}
+	if p, _ := pem.Decode(crt); p == nil {
+		return false
+	}
+	if p, _ := pem.Decode(key); p == nil {
+		return false
+	}
+	return true
 }

@@ -7,6 +7,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -23,12 +24,13 @@ func TestAddressesFromEndpointSlice(t *testing.T) {
 
 	tests := []struct {
 		name      string
-		enspoints discoveryv1.EndpointSlice
-		want      sets.Set[string]
+		endpoints discoveryv1.EndpointSlice
+		want      sets.Set[DiscoveredAdminAPI]
 		portNames sets.Set[string]
 	}{
 		{
-			enspoints: discoveryv1.EndpointSlice{
+			name: "basic",
+			endpoints: discoveryv1.EndpointSlice{
 				ObjectMeta:  endpointsSliceObjectMeta,
 				AddressType: discoveryv1.AddressTypeIPv4,
 				Endpoints: []discoveryv1.Endpoint{
@@ -38,6 +40,7 @@ func TestAddressesFromEndpointSlice(t *testing.T) {
 							Ready:       lo.ToPtr(true),
 							Terminating: lo.ToPtr(false),
 						},
+						TargetRef: testPodReference("pod-1"),
 					},
 				},
 				Ports: []discoveryv1.EndpointPort{
@@ -47,12 +50,16 @@ func TestAddressesFromEndpointSlice(t *testing.T) {
 					},
 				},
 			},
-			name:      "basic",
-			want:      sets.New("https://10.0.0.1:8444", "https://10.0.0.2:8444"),
 			portNames: sets.New("admin"),
+			want: sets.New(
+				DiscoveredAdminAPI{Address: "https://10.0.0.1:8444", PodRef: types.NamespacedName{
+					Name: "pod-1", Namespace: "ns",
+				}},
+			),
 		},
 		{
-			enspoints: discoveryv1.EndpointSlice{
+			name: "not ready endpoints are not returned",
+			endpoints: discoveryv1.EndpointSlice{
 				ObjectMeta:  endpointsSliceObjectMeta,
 				AddressType: discoveryv1.AddressTypeIPv4,
 				Endpoints: []discoveryv1.Endpoint{
@@ -62,6 +69,7 @@ func TestAddressesFromEndpointSlice(t *testing.T) {
 							Ready:       lo.ToPtr(false),
 							Terminating: lo.ToPtr(false),
 						},
+						TargetRef: testPodReference("pod-1"),
 					},
 				},
 				Ports: []discoveryv1.EndpointPort{
@@ -71,12 +79,12 @@ func TestAddressesFromEndpointSlice(t *testing.T) {
 					},
 				},
 			},
-			name:      "not ready endpoints are not returned",
-			want:      sets.New[string](),
 			portNames: sets.New("admin"),
+			want:      sets.New[DiscoveredAdminAPI](),
 		},
 		{
-			enspoints: discoveryv1.EndpointSlice{
+			name: "not ready and terminating endpoints are not returned",
+			endpoints: discoveryv1.EndpointSlice{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      uuid.NewString(),
 					Namespace: "ns",
@@ -89,6 +97,7 @@ func TestAddressesFromEndpointSlice(t *testing.T) {
 							Ready:       lo.ToPtr(false),
 							Terminating: lo.ToPtr(true),
 						},
+						TargetRef: testPodReference("pod-1"),
 					},
 				},
 				Ports: []discoveryv1.EndpointPort{
@@ -98,12 +107,12 @@ func TestAddressesFromEndpointSlice(t *testing.T) {
 					},
 				},
 			},
-			name:      "not ready and terminating endpoints are not returned",
-			want:      sets.New[string](),
 			portNames: sets.New("admin"),
+			want:      sets.New[DiscoveredAdminAPI](),
 		},
 		{
-			enspoints: discoveryv1.EndpointSlice{
+			name: "multiple endpoints are concatenated properly",
+			endpoints: discoveryv1.EndpointSlice{
 				ObjectMeta:  endpointsSliceObjectMeta,
 				AddressType: discoveryv1.AddressTypeIPv4,
 				Endpoints: []discoveryv1.Endpoint{
@@ -113,6 +122,7 @@ func TestAddressesFromEndpointSlice(t *testing.T) {
 							Ready:       lo.ToPtr(true),
 							Terminating: lo.ToPtr(false),
 						},
+						TargetRef: testPodReference("pod-1"),
 					},
 					{
 						Addresses: []string{"10.0.1.1", "10.0.1.2"},
@@ -120,6 +130,7 @@ func TestAddressesFromEndpointSlice(t *testing.T) {
 							Ready:       lo.ToPtr(true),
 							Terminating: lo.ToPtr(false),
 						},
+						TargetRef: testPodReference("pod-2"),
 					},
 					{
 						Addresses: []string{"10.0.2.1"},
@@ -127,6 +138,7 @@ func TestAddressesFromEndpointSlice(t *testing.T) {
 							Ready:       lo.ToPtr(false),
 							Terminating: lo.ToPtr(false),
 						},
+						TargetRef: testPodReference("pod-3"),
 					},
 				},
 				Ports: []discoveryv1.EndpointPort{
@@ -136,12 +148,21 @@ func TestAddressesFromEndpointSlice(t *testing.T) {
 					},
 				},
 			},
-			name:      "multiple enpoints are concatenated properly",
-			want:      sets.New("https://10.0.0.1:8444", "https://10.0.0.2:8444", "https://10.0.0.3:8444", "https://10.0.1.1:8444", "https://10.0.1.2:8444"),
 			portNames: sets.New("admin"),
+			want: sets.New(
+				DiscoveredAdminAPI{Address: "https://10.0.0.1:8444", PodRef: types.NamespacedName{
+					Namespace: "ns",
+					Name:      "pod-1",
+				}},
+				DiscoveredAdminAPI{Address: "https://10.0.1.1:8444", PodRef: types.NamespacedName{
+					Namespace: "ns",
+					Name:      "pod-2",
+				}},
+			),
 		},
 		{
-			enspoints: discoveryv1.EndpointSlice{
+			name: "ports not called 'admin' are not added",
+			endpoints: discoveryv1.EndpointSlice{
 				ObjectMeta:  endpointsSliceObjectMeta,
 				AddressType: discoveryv1.AddressTypeIPv4,
 				Endpoints: []discoveryv1.Endpoint{
@@ -151,6 +172,7 @@ func TestAddressesFromEndpointSlice(t *testing.T) {
 							Ready:       lo.ToPtr(true),
 							Terminating: lo.ToPtr(false),
 						},
+						TargetRef: testPodReference("pod-1"),
 					},
 					{
 						Addresses: []string{"10.0.1.1", "10.0.1.2"},
@@ -158,6 +180,7 @@ func TestAddressesFromEndpointSlice(t *testing.T) {
 							Ready:       lo.ToPtr(true),
 							Terminating: lo.ToPtr(false),
 						},
+						TargetRef: testPodReference("pod-2"),
 					},
 					{
 						Addresses: []string{"10.0.2.1"},
@@ -165,6 +188,7 @@ func TestAddressesFromEndpointSlice(t *testing.T) {
 							Ready:       lo.ToPtr(false),
 							Terminating: lo.ToPtr(false),
 						},
+						TargetRef: testPodReference("pod-3"),
 					},
 				},
 				Ports: []discoveryv1.EndpointPort{
@@ -174,11 +198,11 @@ func TestAddressesFromEndpointSlice(t *testing.T) {
 					},
 				},
 			},
-			name: "ports not called 'admin' are not added",
-			want: sets.New[string](),
+			want: sets.New[DiscoveredAdminAPI](),
 		},
 		{
-			enspoints: discoveryv1.EndpointSlice{
+			name: "ports without names are not taken into account ",
+			endpoints: discoveryv1.EndpointSlice{
 				ObjectMeta:  endpointsSliceObjectMeta,
 				AddressType: discoveryv1.AddressTypeIPv4,
 				Endpoints: []discoveryv1.Endpoint{
@@ -188,6 +212,7 @@ func TestAddressesFromEndpointSlice(t *testing.T) {
 							Ready:       lo.ToPtr(true),
 							Terminating: lo.ToPtr(false),
 						},
+						TargetRef: testPodReference("pod-1"),
 					},
 				},
 				Ports: []discoveryv1.EndpointPort{
@@ -196,12 +221,12 @@ func TestAddressesFromEndpointSlice(t *testing.T) {
 					},
 				},
 			},
-			name:      "ports without names are not taken into account ",
-			want:      sets.New[string](),
 			portNames: sets.New("admin"),
+			want:      sets.New[DiscoveredAdminAPI](),
 		},
 		{
-			enspoints: discoveryv1.EndpointSlice{
+			name: "multiple ports names",
+			endpoints: discoveryv1.EndpointSlice{
 				ObjectMeta:  endpointsSliceObjectMeta,
 				AddressType: discoveryv1.AddressTypeIPv4,
 				Endpoints: []discoveryv1.Endpoint{
@@ -211,6 +236,7 @@ func TestAddressesFromEndpointSlice(t *testing.T) {
 							Ready:       lo.ToPtr(true),
 							Terminating: lo.ToPtr(false),
 						},
+						TargetRef: testPodReference("pod-1"),
 					},
 				},
 				Ports: []discoveryv1.EndpointPort{
@@ -224,23 +250,78 @@ func TestAddressesFromEndpointSlice(t *testing.T) {
 					},
 				},
 			},
-			name: "multiple ports names",
-			want: sets.New(
-				"https://10.0.0.1:8443", "https://10.0.0.2:8443", "https://10.0.0.3:8443",
-				"https://10.0.0.1:8444", "https://10.0.0.2:8444", "https://10.0.0.3:8444",
-			),
 			portNames: sets.New("admin", "admin-tls"),
+			want: sets.New(
+				DiscoveredAdminAPI{Address: "https://10.0.0.1:8443", PodRef: types.NamespacedName{
+					Namespace: "ns",
+					Name:      "pod-1",
+				}},
+				DiscoveredAdminAPI{Address: "https://10.0.0.1:8444", PodRef: types.NamespacedName{
+					Namespace: "ns",
+					Name:      "pod-1",
+				}},
+			),
+		},
+		{
+			name: "endpoints with no target ref are ignored",
+			endpoints: discoveryv1.EndpointSlice{
+				ObjectMeta:  endpointsSliceObjectMeta,
+				AddressType: discoveryv1.AddressTypeIPv4,
+				Endpoints: []discoveryv1.Endpoint{
+					{
+						Addresses: []string{"10.0.0.1"},
+						Conditions: discoveryv1.EndpointConditions{
+							Ready:       lo.ToPtr(true),
+							Terminating: lo.ToPtr(false),
+						},
+						TargetRef: nil,
+					},
+				},
+				Ports: []discoveryv1.EndpointPort{
+					{
+						Name: lo.ToPtr("admin"),
+						Port: lo.ToPtr(int32(8444)),
+					},
+				},
+			},
+			portNames: sets.New("admin"),
+			want:      sets.New[DiscoveredAdminAPI](),
+		},
+		{
+			name: "endpoints with target ref other than Pod are ignored",
+			endpoints: discoveryv1.EndpointSlice{
+				ObjectMeta:  endpointsSliceObjectMeta,
+				AddressType: discoveryv1.AddressTypeIPv4,
+				Endpoints: []discoveryv1.Endpoint{
+					{
+						Addresses: []string{"10.0.0.1"},
+						Conditions: discoveryv1.EndpointConditions{
+							Ready:       lo.ToPtr(true),
+							Terminating: lo.ToPtr(false),
+						},
+						TargetRef: &corev1.ObjectReference{Kind: "Node", Namespace: "ns", Name: "node-1"},
+					},
+				},
+				Ports: []discoveryv1.EndpointPort{
+					{
+						Name: lo.ToPtr("admin"),
+						Port: lo.ToPtr(int32(8444)),
+					},
+				},
+			},
+			portNames: sets.New("admin"),
+			want:      sets.New[DiscoveredAdminAPI](),
 		},
 	}
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			require.Equal(t, tt.want, AddressesFromEndpointSlice(tt.enspoints, tt.portNames))
+			require.Equal(t, tt.want, AdminAPIsFromEndpointSlice(tt.endpoints, tt.portNames))
 		})
 	}
 }
 
-func TestGetURLsForService(t *testing.T) {
+func TestGetAdminAPIsForService(t *testing.T) {
 	var (
 		serviceName                   = uuid.NewString()
 		matchingServiceObjectMetaFunc = func() metav1.ObjectMeta {
@@ -258,10 +339,11 @@ func TestGetURLsForService(t *testing.T) {
 		name    string
 		service types.NamespacedName
 		objects []client.ObjectList
-		want    sets.Set[string]
+		want    sets.Set[DiscoveredAdminAPI]
 		wantErr bool
 	}{
 		{
+			name: "basic",
 			service: types.NamespacedName{
 				Namespace: "ns",
 				Name:      serviceName,
@@ -279,6 +361,7 @@ func TestGetURLsForService(t *testing.T) {
 										Ready:       lo.ToPtr(true),
 										Terminating: lo.ToPtr(false),
 									},
+									TargetRef: testPodReference("pod-1"),
 								},
 							},
 							Ports: []discoveryv1.EndpointPort{
@@ -302,6 +385,7 @@ func TestGetURLsForService(t *testing.T) {
 										Ready:       lo.ToPtr(true),
 										Terminating: lo.ToPtr(false),
 									},
+									TargetRef: testPodReference("pod-2"),
 								},
 							},
 							Ports: []discoveryv1.EndpointPort{
@@ -325,6 +409,7 @@ func TestGetURLsForService(t *testing.T) {
 										Ready:       lo.ToPtr(false),
 										Terminating: lo.ToPtr(false),
 									},
+									TargetRef: testPodReference("pod-3"),
 								},
 							},
 							Ports: []discoveryv1.EndpointPort{
@@ -337,10 +422,19 @@ func TestGetURLsForService(t *testing.T) {
 					},
 				},
 			},
-			want: sets.New("https://10.0.0.1:8444", "https://10.0.0.2:8444", "https://9.0.0.1:8444"),
-			name: "basic",
+			want: sets.New(
+				DiscoveredAdminAPI{Address: "https://10.0.0.1:8444", PodRef: types.NamespacedName{
+					Namespace: "ns",
+					Name:      "pod-1",
+				}},
+				DiscoveredAdminAPI{Address: "https://9.0.0.1:8444", PodRef: types.NamespacedName{
+					Namespace: "ns",
+					Name:      "pod-2",
+				}},
+			),
 		},
 		{
+			name: "port not called 'admin' are not taken into account",
 			service: types.NamespacedName{
 				Namespace: "ns",
 				Name:      serviceName,
@@ -358,6 +452,7 @@ func TestGetURLsForService(t *testing.T) {
 										Ready:       lo.ToPtr(true),
 										Terminating: lo.ToPtr(false),
 									},
+									TargetRef: testPodReference("pod-1"),
 								},
 							},
 							Ports: []discoveryv1.EndpointPort{
@@ -370,8 +465,7 @@ func TestGetURLsForService(t *testing.T) {
 					},
 				},
 			},
-			want: sets.New[string](),
-			name: "port not called 'admin' are not taken into account",
+			want: sets.New[DiscoveredAdminAPI](),
 		},
 	}
 	for _, tt := range tests {
@@ -382,7 +476,7 @@ func TestGetURLsForService(t *testing.T) {
 				Build()
 
 			portNames := sets.New("admin")
-			got, err := GetURLsForService(context.Background(), fakeClient, tt.service, portNames)
+			got, err := GetAdminAPIsForService(context.Background(), fakeClient, tt.service, portNames)
 			if tt.wantErr {
 				require.Error(t, err)
 				return
@@ -390,5 +484,13 @@ func TestGetURLsForService(t *testing.T) {
 
 			require.Equal(t, tt.want, got)
 		})
+	}
+}
+
+func testPodReference(name string) *corev1.ObjectReference {
+	return &corev1.ObjectReference{
+		Kind:      "Pod",
+		Namespace: "ns",
+		Name:      name,
 	}
 }

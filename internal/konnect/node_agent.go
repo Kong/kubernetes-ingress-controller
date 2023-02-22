@@ -100,12 +100,12 @@ func (a *NodeAgent) createNode() error {
 }
 
 func (a *NodeAgent) clearOutdatedNodes() error {
-	nodes, err := a.konnectClient.ListNodes()
+	nodes, err := a.konnectClient.ListAllNodes()
 	if err != nil {
 		return fmt.Errorf("failed to list nodes: %w", err)
 	}
 
-	for _, node := range nodes.Items {
+	for _, node := range nodes {
 		deleteNode := false
 		if node.Type == NodeTypeIngressController {
 			// nodes to remove:

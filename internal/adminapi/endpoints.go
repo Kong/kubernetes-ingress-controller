@@ -12,15 +12,21 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-// GetURLsForService performs an endpoint lookup, using provided kubeClient
+// DiscoveredAdminAPI represents an Admin API discovered from a Kubernetes Service.
+type DiscoveredAdminAPI struct {
+	Address string
+	PodRef  types.NamespacedName
+}
+
+// GetAdminAPIsForService performs an endpoint lookup, using provided kubeClient
 // to list provided Admin API Service EndpointSlices.
 // The retrieved EndpointSlices' ports are compared with the provided portNames set.
-func GetURLsForService(
+func GetAdminAPIsForService(
 	ctx context.Context,
 	kubeClient client.Client,
 	service types.NamespacedName,
 	portNames sets.Set[string],
-) (sets.Set[string], error) {
+) (sets.Set[DiscoveredAdminAPI], error) {
 	const (
 		defaultEndpointSliceListPagingLimit = 100
 	)
@@ -32,7 +38,7 @@ func GetURLsForService(
 	}
 
 	var (
-		addresses     = sets.New[string]()
+		addresses     = sets.New[DiscoveredAdminAPI]()
 		continueToken string
 		labelSelector = labels.NewSelector().Add(*labelReq)
 	)
@@ -48,7 +54,7 @@ func GetURLsForService(
 		}
 
 		for _, es := range endpointsList.Items {
-			addresses = addresses.Union(AddressesFromEndpointSlice(es, portNames))
+			addresses = addresses.Union(AdminAPIsFromEndpointSlice(es, portNames))
 		}
 
 		if endpointsList.Continue == "" {
@@ -58,10 +64,10 @@ func GetURLsForService(
 	return addresses, nil
 }
 
-// AddressesFromEndpointSlice returns a list of Admin API addresses when given
-// an Endpointslice.
-func AddressesFromEndpointSlice(endpoints discoveryv1.EndpointSlice, portNames sets.Set[string]) sets.Set[string] {
-	addresses := sets.New[string]()
+// AdminAPIsFromEndpointSlice returns a list of Admin APIs when given
+// an EndpointSlice.
+func AdminAPIsFromEndpointSlice(endpoints discoveryv1.EndpointSlice, portNames sets.Set[string]) sets.Set[DiscoveredAdminAPI] {
+	discoveredAdminAPIs := sets.New[DiscoveredAdminAPI]()
 	for _, p := range endpoints.Ports {
 		if p.Name == nil {
 			continue
@@ -76,13 +82,31 @@ func AddressesFromEndpointSlice(endpoints discoveryv1.EndpointSlice, portNames s
 				continue
 			}
 
-			for _, addr := range e.Addresses {
-				// NOTE: We assume https here because the referenced Admin API
-				// server will live in another Pod/elsewhere so allowing http would
-				// not be considered best practice.
-				addresses.Insert(fmt.Sprintf("https://%s:%d", addr, *p.Port))
+			// We do not take into account endpoints that are not backed by a Pod.
+			if e.TargetRef == nil || e.TargetRef.Kind != "Pod" {
+				continue
 			}
+			podNN := types.NamespacedName{
+				Name:      e.TargetRef.Name,
+				Namespace: e.TargetRef.Namespace,
+			}
+
+			if len(e.Addresses) < 1 {
+				continue
+			}
+			// Endpoint's addresses are assumed to be fungible, therefore we pick only the first one.
+			// For the context please see the `Endpoint.Addresses` godoc.
+			addr := e.Addresses[0]
+
+			// NOTE: We assume https here because the referenced Admin API
+			// server will live in another Pod/elsewhere so allowing http would
+			// not be considered best practice.
+			adminAPI := DiscoveredAdminAPI{
+				Address: fmt.Sprintf("https://%s:%d", addr, *p.Port),
+				PodRef:  podNN,
+			}
+			discoveredAdminAPIs.Insert(adminAPI)
 		}
 	}
-	return addresses
+	return discoveredAdminAPIs
 }

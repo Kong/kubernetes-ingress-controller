@@ -39,13 +39,13 @@ type KongAdminAPIServiceReconciler struct {
 	// We're going to call this only with endpoints when they change.
 	EndpointsNotifier EndpointsNotifier
 
-	Cache CacheT
+	Cache DiscoveredAdminAPIsCache
 }
 
-type CacheT map[types.NamespacedName]sets.Set[string]
+type DiscoveredAdminAPIsCache map[types.NamespacedName]sets.Set[adminapi.DiscoveredAdminAPI]
 
 type EndpointsNotifier interface {
-	Notify(addresses []string)
+	Notify(adminAPIs []adminapi.DiscoveredAdminAPI)
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -62,7 +62,7 @@ func (r *KongAdminAPIServiceReconciler) SetupWithManager(mgr ctrl.Manager) error
 	}
 
 	if r.Cache == nil {
-		r.Cache = make(CacheT)
+		r.Cache = make(DiscoveredAdminAPIsCache)
 	}
 
 	return c.Watch(
@@ -91,7 +91,7 @@ func (r *KongAdminAPIServiceReconciler) shouldReconcileEndpointSlice(obj client.
 	return true
 }
 
-//+kubebuilder:rbac:groups="discovery.k8s.io",resources=endpointslices,verbs=get;list;watch
+// +kubebuilder:rbac:groups="discovery.k8s.io",resources=endpointslices,verbs=get;list;watch
 
 // Reconcile processes the watched objects.
 func (r *KongAdminAPIServiceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -104,11 +104,7 @@ func (r *KongAdminAPIServiceReconciler) Reconcile(ctx context.Context, req ctrl.
 	}
 	r.Log.Info("reconciling EndpointSlice", "namespace", req.Namespace, "name", req.Name)
 
-	nn := types.NamespacedName{
-		Namespace: req.Namespace,
-		Name:      req.Name,
-	}
-
+	nn := req.NamespacedName
 	if !endpoints.DeletionTimestamp.IsZero() {
 		r.Log.V(util.DebugLevel).Info("EndpointSlice is being deleted",
 			"type", "EndpointSlice", "namespace", req.Namespace, "name", req.Name,
@@ -128,14 +124,14 @@ func (r *KongAdminAPIServiceReconciler) Reconcile(ctx context.Context, req ctrl.
 	if !ok {
 		// If we don't have an entry for this EndpointSlice then save it and notify
 		// about the change.
-		r.Cache[nn] = adminapi.AddressesFromEndpointSlice(endpoints, r.PortNames)
+		r.Cache[nn] = adminapi.AdminAPIsFromEndpointSlice(endpoints, r.PortNames)
 		r.notify()
 		return ctrl.Result{}, nil
 	}
 
 	// We do have an entry for this EndpointSlice.
 	// Let's check if it's the same that we're already aware of...
-	addresses := adminapi.AddressesFromEndpointSlice(endpoints, r.PortNames)
+	addresses := adminapi.AdminAPIsFromEndpointSlice(endpoints, r.PortNames)
 	if cached.Equal(addresses) {
 		// No change, don't notify
 		return ctrl.Result{}, nil
@@ -149,17 +145,16 @@ func (r *KongAdminAPIServiceReconciler) Reconcile(ctx context.Context, req ctrl.
 }
 
 func (r *KongAdminAPIServiceReconciler) notify() {
-	addresses := addressesFromAddressesMap(r.Cache)
-
+	discovered := flattenDiscoveredAdminAPIs(r.Cache)
 	r.Log.V(util.DebugLevel).
-		Info("notifying about newly detected Admin API addresses", "addresses", addresses)
-	r.EndpointsNotifier.Notify(addresses)
+		Info("notifying about newly detected Admin APIs", "admin_apis", discovered)
+	r.EndpointsNotifier.Notify(discovered)
 }
 
-func addressesFromAddressesMap(cache CacheT) []string {
-	addresses := []string{}
+func flattenDiscoveredAdminAPIs(cache DiscoveredAdminAPIsCache) []adminapi.DiscoveredAdminAPI {
+	var adminAPIs []adminapi.DiscoveredAdminAPI
 	for _, v := range cache {
-		addresses = append(addresses, v.UnsortedList()...)
+		adminAPIs = append(adminAPIs, v.UnsortedList()...)
 	}
-	return addresses
+	return adminAPIs
 }

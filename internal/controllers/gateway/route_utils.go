@@ -76,6 +76,8 @@ func parentRefsForRoute[T types.RouteT](route T) ([]ParentReference, error) {
 		return convertV1Alpha2ToV1Beta1ParentReference(r.Spec.ParentRefs), nil
 	case *gatewayv1alpha2.TLSRoute:
 		return convertV1Alpha2ToV1Beta1ParentReference(r.Spec.ParentRefs), nil
+	case *gatewayv1alpha2.GRPCRoute:
+		return convertV1Alpha2ToV1Beta1ParentReference(r.Spec.ParentRefs), nil
 	default:
 		return nil, fmt.Errorf("cant determine parent gateway for unsupported route type %s", reflect.TypeOf(route))
 	}
@@ -300,6 +302,8 @@ func routeHostnamesIntersectsWithListenerHostname[T types.RouteT](route T, liste
 		return true
 	case *gatewayv1alpha2.TLSRoute:
 		return listenerHostnameIntersectWithRouteHostnames(listener, r.Spec.Hostnames)
+	case *gatewayv1alpha2.GRPCRoute:
+		return listenerHostnameIntersectWithRouteHostnames(listener, r.Spec.Hostnames)
 	default:
 		return false
 	}
@@ -343,6 +347,10 @@ func routeTypeMatchesListenerType[T types.RouteT](route T, listener Listener) bo
 		// Note: this is a guess we are doing as the upstream documentation is unclear at the moment.
 		// see https://github.com/kubernetes-sigs/gateway-api/issues/1474
 		if listener.TLS != nil && *listener.TLS.Mode != gatewayv1beta1.TLSModePassthrough {
+			return false
+		}
+	case *gatewayv1alpha2.GRPCRoute:
+		if listener.Protocol != HTTPSProtocolType {
 			return false
 		}
 	default:

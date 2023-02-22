@@ -26,6 +26,7 @@ func ValidateRoots(roots []Root, skipCACerts bool) (string, kong.Version, error)
 		return "", kong.Version{}, fmt.Errorf("failed to validate kong Roots: %w", err)
 	}
 
+	// To be dropped as a part of https://github.com/Kong/kubernetes-ingress-controller/issues/3590.
 	uniqs := lo.UniqBy(roots, getRootKeyFunc(skipCACerts))
 	if len(uniqs) != 1 {
 		return "", kong.Version{},

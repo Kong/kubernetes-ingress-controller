@@ -411,7 +411,7 @@ func (r *GatewayReconciler) reconcileUnmanagedGateway(ctx context.Context, log l
 	// on the object is ready to begin.
 	if !isGatewayScheduled(gateway) {
 		info(log, gateway, "marking gateway as accepted")
-		scheduledCondition := metav1.Condition{
+		acceptedCondition := metav1.Condition{
 			Type:               string(gatewayv1beta1.GatewayConditionAccepted),
 			Status:             metav1.ConditionTrue,
 			ObservedGeneration: gateway.Generation,
@@ -419,7 +419,15 @@ func (r *GatewayReconciler) reconcileUnmanagedGateway(ctx context.Context, log l
 			Reason:             string(gatewayv1beta1.GatewayReasonAccepted),
 			Message:            "this unmanaged gateway has been picked up by the controller and will be processed",
 		}
-		setGatewayCondition(gateway, scheduledCondition)
+		setGatewayCondition(gateway, acceptedCondition)
+		programmedCondition := metav1.Condition{
+			Type:               string(gatewayv1beta1.GatewayConditionProgrammed),
+			Status:             metav1.ConditionFalse,
+			ObservedGeneration: gateway.Generation,
+			LastTransitionTime: metav1.Now(),
+			Reason:             string(gatewayv1beta1.GatewayReasonPending),
+		}
+		setGatewayCondition(gateway, programmedCondition)
 		return ctrl.Result{}, r.Status().Update(ctx, pruneGatewayStatusConds(gateway))
 	}
 
@@ -709,6 +717,14 @@ func (r *GatewayReconciler) updateAddressesAndListenersStatus(
 			Message:            "addresses and listeners for the Gateway resource were successfully updated",
 		}
 		setGatewayCondition(gateway, readyCondition)
+		programmedCondition := metav1.Condition{
+			Type:               string(gatewayv1beta1.GatewayConditionProgrammed),
+			Status:             metav1.ConditionTrue,
+			ObservedGeneration: gateway.Generation,
+			LastTransitionTime: metav1.Now(),
+			Reason:             string(gatewayv1beta1.GatewayReasonProgrammed),
+		}
+		setGatewayCondition(gateway, programmedCondition)
 		return true, r.Status().Update(ctx, pruneGatewayStatusConds(gateway))
 	}
 	if !reflect.DeepEqual(gateway.Status.Listeners, listenerStatuses) {

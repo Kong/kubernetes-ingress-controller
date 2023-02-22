@@ -204,6 +204,29 @@ func TestTLSRouteExample(t *testing.T) {
 	}, ingressWait, waitTick)
 }
 
+func TestGRPCRouteExample(t *testing.T) {
+	var (
+		grpcrouteExampleManifests = fmt.Sprintf("%s/gateway-grpcroute.yaml", examplesDIR)
+		ctx                       = context.Background()
+	)
+	_, cleaner := helpers.Setup(ctx, t, env)
+
+	t.Logf("applying yaml manifest %s", grpcrouteExampleManifests)
+	b, err := os.ReadFile(grpcrouteExampleManifests)
+	require.NoError(t, err)
+	require.NoError(t, clusters.ApplyManifestByYAML(ctx, env.Cluster(), string(b)))
+	cleaner.AddManifest(string(b))
+
+	t.Log("verifying that GRPCRoute becomes routable")
+	require.Eventually(t, func() bool {
+		responded, err := grpcEchoResponds(ctx, fmt.Sprintf("%s:%d", proxyURL.Hostname(), ktfkong.DefaultProxyTLSServicePort), "example.com", "kong")
+		if err != nil {
+			t.Log(err)
+		}
+		return err == nil && responded
+	}, ingressWait, waitTick)
+}
+
 func TestIngressExample(t *testing.T) {
 	var (
 		ingressExampleManifests = fmt.Sprintf("%s/ingress.yaml", examplesDIR)

@@ -54,7 +54,7 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 		return fmt.Errorf("get kubeconfig from file %q: %w", c.KubeconfigPath, err)
 	}
 	setupLog.Info("getting the kong admin api client configuration")
-	initialKongClients, err := c.getKongClients(ctx)
+	initialKongClients, err := c.adminAPIClients(ctx)
 	if err != nil {
 		return fmt.Errorf("unable to build kong api client(s): %w", err)
 	}
@@ -198,14 +198,13 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 			setupLog.Error(err, "failed creating konnect client, skipping running NodeAgent")
 		} else {
 			var hostname string
-			podName := os.Getenv("POD_NAME")
-			podNs := os.Getenv("POD_NAMESPACE")
-			if podName == "" || podNs == "" {
-				setupLog.Info("pod namespace or pod name not found, fallback to use hostname as node name in konnect")
+			nn, err := util.GetPodNN()
+			if err != nil {
+				setupLog.Error(err, "failed to get pod name and/or namespace, fallback to use hostname as node name in konnect")
 				hostname, _ = os.Hostname()
 			} else {
-				hostname = podNs + "/" + podName
-				setupLog.Info(fmt.Sprintf("using %s as node name in konnect", hostname))
+				hostname = nn.String()
+				setupLog.Info(fmt.Sprintf("use %s as node name in konnect", hostname))
 			}
 			version := metadata.Release
 			// set channel to send config status.
@@ -230,11 +229,14 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 		stopAnonymousReports, err := telemetry.SetupAnonymousReports(
 			ctx,
 			kubeconfig,
-			c.PublishService,
-			metadata.Release,
-			len(c.WatchNamespaces) == 0,
-			featureGates,
 			clientsManager,
+			telemetry.ReportValues{
+				PublishServiceNN:               c.PublishService,
+				FeatureGates:                   featureGates,
+				MeshDetection:                  len(c.WatchNamespaces) == 0,
+				KonnectSyncEnabled:             c.Konnect.ConfigSynchronizationEnabled,
+				GatewayServiceDiscoveryEnabled: c.KongAdminSvc.String() != "",
+			},
 		)
 		if err != nil {
 			setupLog.Error(err, "failed setting up anonymous reports")

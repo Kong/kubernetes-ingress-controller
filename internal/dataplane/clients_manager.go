@@ -22,9 +22,9 @@ type AdminAPIClientsManager struct {
 	// adminAPIClientFactory is a factory used for creating Admin API clients.
 	adminAPIClientFactory ClientFactory
 
-	// adminAPIAddressNotifyChan is used for notifications that contain Admin API
+	// discoveredAdminAPIsNotifyChan is used for notifications that contain Admin API
 	// endpoints list that should be used for configuring the dataplane.
-	adminAPIAddressNotifyChan chan []string
+	discoveredAdminAPIsNotifyChan chan []adminapi.DiscoveredAdminAPI
 
 	ctx         context.Context
 	onceRunning sync.Once
@@ -55,12 +55,12 @@ func NewAdminAPIClientsManager(
 	}
 
 	return &AdminAPIClientsManager{
-		kongGatewayClients:        initialClients,
-		adminAPIClientFactory:     kongClientFactory,
-		adminAPIAddressNotifyChan: make(chan []string),
-		ctx:                       ctx,
-		running:                   make(chan struct{}),
-		logger:                    logger,
+		kongGatewayClients:            initialClients,
+		adminAPIClientFactory:         kongClientFactory,
+		discoveredAdminAPIsNotifyChan: make(chan []adminapi.DiscoveredAdminAPI),
+		ctx:                           ctx,
+		running:                       make(chan struct{}),
+		logger:                        logger,
 	}, nil
 }
 
@@ -78,7 +78,7 @@ func (c *AdminAPIClientsManager) RunNotifyLoop() {
 
 // Notify receives a list of addresses that KongClient should use from now on as
 // a list of Kong Admin API endpoints.
-func (c *AdminAPIClientsManager) Notify(addresses []string) {
+func (c *AdminAPIClientsManager) Notify(discoveredAPIs []adminapi.DiscoveredAdminAPI) {
 	// Ensure here that we're not done.
 	select {
 	case <-c.ctx.Done():
@@ -89,7 +89,7 @@ func (c *AdminAPIClientsManager) Notify(addresses []string) {
 	// And here also listen on c.ctx.Done() to allow the notification to be interrupted.
 	select {
 	case <-c.ctx.Done():
-	case c.adminAPIAddressNotifyChan <- addresses:
+	case c.discoveredAdminAPIsNotifyChan <- discoveredAPIs:
 	}
 }
 
@@ -145,32 +145,32 @@ func (c *AdminAPIClientsManager) adminAPIAddressNotifyLoop() {
 		select {
 		case <-c.ctx.Done():
 			c.logger.Infof("closing AdminAPIClientsManager: %s", c.ctx.Err())
-			c.adminAPIAddressNotifyChan = nil
+			c.discoveredAdminAPIsNotifyChan = nil
 			return
 
-		case addresses := <-c.adminAPIAddressNotifyChan:
+		case discoveredAdminAPIs := <-c.discoveredAdminAPIsNotifyChan:
 			// This call will only log errors e.g. during creation of new clients.
 			// If need be we might consider propagating those errors up the stack.
-			c.adjustKongClients(addresses)
+			c.adjustKongClients(discoveredAdminAPIs)
 		}
 	}
 }
 
 // adjustKongClients adjusts internally stored clients slice based on the provided
-// addresses slice. It consults BaseRootURLs of already stored clients with each
-// of the addreses and creates only those clients that we don't have.
-func (c *AdminAPIClientsManager) adjustKongClients(addresses []string) {
+// discovered Admin APIs slice. It consults BaseRootURLs of already stored clients with each
+// of the discovered Admin APIs and creates only those clients that we don't have.
+func (c *AdminAPIClientsManager) adjustKongClients(discoveredAdminAPIs []adminapi.DiscoveredAdminAPI) {
 	c.clientsLock.Lock()
 	defer c.clientsLock.Unlock()
 
-	toAdd := lo.Filter(addresses, func(addr string, _ int) bool {
+	toAdd := lo.Filter(discoveredAdminAPIs, func(api adminapi.DiscoveredAdminAPI, _ int) bool {
 		// If we already have a client with a provided address then great, no need
 		// to do anything.
 
 		// If we don't have a client with new address then filter it and add
 		// a client for this address.
 		return !lo.ContainsBy(c.kongGatewayClients, func(cl *adminapi.Client) bool {
-			return addr == cl.BaseRootURL()
+			return api.Address == cl.BaseRootURL()
 		})
 	})
 
@@ -178,7 +178,9 @@ func (c *AdminAPIClientsManager) adjustKongClients(addresses []string) {
 	for i, cl := range c.kongGatewayClients {
 		// If the new address set contains a client that we already have then
 		// good, no need to do anything for it.
-		if lo.Contains(addresses, cl.BaseRootURL()) {
+		if lo.ContainsBy(discoveredAdminAPIs, func(api adminapi.DiscoveredAdminAPI) bool {
+			return api.Address == cl.BaseRootURL()
+		}) {
 			continue
 		}
 		// If the new address set does not contain an address that we already
@@ -191,12 +193,13 @@ func (c *AdminAPIClientsManager) adjustKongClients(addresses []string) {
 		c.kongGatewayClients = append(c.kongGatewayClients[:idx], c.kongGatewayClients[idx+1:]...)
 	}
 
-	for _, addr := range toAdd {
-		client, err := c.adminAPIClientFactory.CreateAdminAPIClient(c.ctx, addr)
+	for _, adminAPI := range toAdd {
+		client, err := c.adminAPIClientFactory.CreateAdminAPIClient(c.ctx, adminAPI.Address)
 		if err != nil {
-			c.logger.WithError(err).Errorf("failed to create a client for %s", addr)
+			c.logger.WithError(err).Errorf("failed to create a client for %s", adminAPI)
 			continue
 		}
+		client.AttachPodReference(adminAPI.PodRef)
 
 		c.kongGatewayClients = append(c.kongGatewayClients, client)
 	}

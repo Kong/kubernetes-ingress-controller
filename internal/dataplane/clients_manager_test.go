@@ -194,7 +194,7 @@ func TestClientAdjustInternalClientsAfterNotification(t *testing.T) {
 		cf.expected = map[string]bool{"localhost:8080": true, "localhost:8081": true}
 		// there are 2 addresses contained in the notification of which 2 are new
 		// and client creator should be called exactly 2 times
-		manager.adjustKongClients([]adminapi.DiscoveredAdminAPI{testDiscoveredAdminAPI("localhost:8080"), testDiscoveredAdminAPI("localhost:8081")})
+		manager.adjustGatewayClients([]adminapi.DiscoveredAdminAPI{testDiscoveredAdminAPI("localhost:8080"), testDiscoveredAdminAPI("localhost:8081")})
 		requireNoExpectedCallsLeftEventually(t)
 	})
 
@@ -203,7 +203,7 @@ func TestClientAdjustInternalClientsAfterNotification(t *testing.T) {
 		cf.expected = map[string]bool{}
 		// there is address contained in the notification but a client for that
 		// address already exists, client creator should not be called
-		manager.adjustKongClients([]adminapi.DiscoveredAdminAPI{testDiscoveredAdminAPI("localhost:8080")})
+		manager.adjustGatewayClients([]adminapi.DiscoveredAdminAPI{testDiscoveredAdminAPI("localhost:8080")})
 		requireNoExpectedCallsLeftEventually(t)
 	})
 
@@ -212,7 +212,7 @@ func TestClientAdjustInternalClientsAfterNotification(t *testing.T) {
 		cf.expected = map[string]bool{"localhost:8081": true}
 		// there are 2 addresses contained in the notification but only 1 is new
 		// hence the client creator should be called only once
-		manager.adjustKongClients([]adminapi.DiscoveredAdminAPI{testDiscoveredAdminAPI("localhost:8080"), testDiscoveredAdminAPI("localhost:8081")})
+		manager.adjustGatewayClients([]adminapi.DiscoveredAdminAPI{testDiscoveredAdminAPI("localhost:8080"), testDiscoveredAdminAPI("localhost:8081")})
 		requireNoExpectedCallsLeftEventually(t)
 	})
 }
@@ -238,7 +238,7 @@ func TestAdminAPIClientsManager_NotRunningNotifyLoop(t *testing.T) {
 
 	select {
 	case <-m.Running():
-		t.Error("expected manager to not run without explicitly running it with Run method")
+		t.Error("expected manager to not run without explicitly running it with RunNotifyLoop method")
 	case <-time.After(time.Millisecond * 100):
 	}
 }
@@ -294,6 +294,92 @@ func TestAdminAPIClientsManager_GatewayClientsFromNotificationsAreExpectedToHave
 		}
 		return ok
 	}, time.Second, time.Millisecond)
+}
+
+func TestAdminAPIClientsManager_SubscribeToGatewayClientsChanges(t *testing.T) {
+	t.Parallel()
+
+	cf := &clientFactoryWithExpected{t: t, expected: map[string]bool{
+		"http://10.0.0.1:8080": true,
+		"http://10.0.0.2:8080": true,
+	}}
+	testClient, err := adminapi.NewTestClient("http://localhost:8080")
+	require.NoError(t, err)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	m, err := NewAdminAPIClientsManager(ctx, logrus.New(), []*adminapi.Client{testClient}, cf)
+	require.NoError(t, err)
+
+	t.Run("no notify loop running should return false when subscribing", func(t *testing.T) {
+		ch, ok := m.SubscribeToGatewayClientsChanges()
+		require.Nil(t, ch)
+		require.Falsef(t, ok, "expected no subscription to be created because no notification loop is running")
+	})
+
+	m.RunNotifyLoop()
+
+	t.Run("when notification loop is running subscription should be created", func(t *testing.T) {
+		ch, ok := m.SubscribeToGatewayClientsChanges()
+		require.NotNil(t, ch)
+		require.True(t, ok)
+
+		m.Notify([]adminapi.DiscoveredAdminAPI{
+			testDiscoveredAdminAPI("http://10.0.0.1:8080"),
+			testDiscoveredAdminAPI("http://10.0.0.2:8080"),
+		})
+
+		select {
+		case <-ch:
+			require.Len(t, m.GatewayClients(), 2, "expected to get 2 clients after the update")
+		case <-time.After(time.Second):
+			t.Error("did not receive notification after gateway clients changes")
+		}
+	})
+
+	t.Run("when multiple subscriptions are created, each of them should receive notifications", func(t *testing.T) {
+		sub1, ok := m.SubscribeToGatewayClientsChanges()
+		require.NotNil(t, sub1)
+		require.True(t, ok)
+
+		sub2, ok := m.SubscribeToGatewayClientsChanges()
+		require.NotNil(t, sub2)
+		require.True(t, ok)
+
+		m.Notify([]adminapi.DiscoveredAdminAPI{testDiscoveredAdminAPI("http://10.0.0.1:8080")})
+
+		select {
+		case <-sub2:
+			require.Len(t, m.GatewayClients(), 1, "expected to get 1 client after the update")
+		case <-time.After(time.Second):
+			t.Error("did not receive notification after gateway clients changes")
+		}
+		select {
+		case <-sub1:
+			require.Len(t, m.GatewayClients(), 1, "expected to get 1 client after the update")
+		case <-time.After(time.Second):
+			t.Error("did not receive notification after gateway clients changes")
+		}
+	})
+
+	t.Run("when the context gets cancelled, subscriber channel gets closed", func(t *testing.T) {
+		ch, ok := m.SubscribeToGatewayClientsChanges()
+		require.NotNil(t, ch)
+		require.True(t, ok)
+
+		cancel()
+
+		select {
+		case <-ch:
+		case <-time.After(time.Second):
+			t.Error("subscription channel wasn't closed after cancelling the context")
+		}
+	})
+
+	t.Run("when the context is cancelled, subscriptions cannot be created", func(t *testing.T) {
+		ch, ok := m.SubscribeToGatewayClientsChanges()
+		require.Nil(t, ch)
+		require.False(t, ok)
+	})
 }
 
 func testDiscoveredAdminAPI(address string) adminapi.DiscoveredAdminAPI {

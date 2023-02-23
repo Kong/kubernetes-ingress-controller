@@ -153,7 +153,7 @@ func (c *Config) FlagSet() *pflag.FlagSet {
 	flagSet.Var(NewValidatedValue(&c.KongAdminSvc, namespacedNameFromFlagValue), "kong-admin-svc",
 		`Kong Admin API Service namespaced name in "namespace/name" format, to use for Kong Gateway service discovery.`)
 	flagSet.StringSliceVar(&c.KondAdminSvcPortNames, "kong-admin-svc-port-names", []string{"admin", "admin-tls", "kong-admin", "kong-admin-tls"},
-		"Names of ports on Kong Admin API service to take into account when doing service discovery.")
+		"Names of ports on Kong Admin API service to take into account when doing gateway discovery.")
 
 	// Kong Proxy and Proxy Cache configurations
 	flagSet.StringVar(&c.APIServerHost, "apiserver-host", "", `The Kubernetes API server URL. If not set, the controller will use cluster config discovery.`)

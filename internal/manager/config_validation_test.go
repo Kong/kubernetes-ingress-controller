@@ -82,6 +82,7 @@ func TestConfigValidate(t *testing.T) {
 	t.Run("konnect", func(t *testing.T) {
 		validEnabled := func() *manager.Config {
 			return &manager.Config{
+				KongAdminSvc: types.NamespacedName{Name: "admin-svc", Namespace: "ns"},
 				Konnect: adminapi.KonnectConfig{
 					ConfigSynchronizationEnabled: true,
 					RuntimeGroupID:               "fbd3036f-0f1c-4e98-b71c-d4cd61213f90",
@@ -148,6 +149,12 @@ func TestConfigValidate(t *testing.T) {
 			c := validEnabled()
 			c.Konnect.Address = ""
 			require.ErrorContains(t, c.Validate(), "address not specified")
+		})
+
+		t.Run("enabled with no gateway service discovery enabled", func(t *testing.T) {
+			c := validEnabled()
+			c.KongAdminSvc = types.NamespacedName{}
+			require.ErrorContains(t, c.Validate(), "--kong-admin-svc has to be set when using --konnect-sync-enabled")
 		})
 	})
 

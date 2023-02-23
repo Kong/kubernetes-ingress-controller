@@ -107,13 +107,13 @@ Adding a new version? You'll need three changes:
 - Added Konnect client to upload status of KIC instance to Konnect cloud if
   flag `--konnect-sync-enabled` is set to `true`.
   [#3469](https://github.com/Kong/kubernetes-ingress-controller/pull/3469)
-- Added service discovery for kong admin service configured via `--kong-admin-svc`
-  which accepts a namespaced name of headless kong admin service which should have
-  Admin API endpoints exposed under a named port called `admin`
+- Added Gateway discovery using Kong Admin API service configured via `--kong-admin-svc`
+  which accepts a namespaced name of a headless service which should have
+  Admin API endpoints exposed under a named port called `admin`.
   [#3421](https://github.com/Kong/kubernetes-ingress-controller/pull/3421)
-- Added configurable port names for Admin API service discovery through
+- Added configurable port names for Gateway discovery through
   `--kong-admin-svc-port-names`. This flag accepts a list of port names that
-  Admin API Service ports will be matched against.
+  Admin API service ports will be matched against.
   [#3556](https://github.com/Kong/kubernetes-ingress-controller/pull/3556)
 - Added `dataplane` metrics label for `ingress_controller_configuration_push_count`
   and `ingress_controller_configuration_push_duration_milliseconds`. This means
@@ -125,7 +125,7 @@ Adding a new version? You'll need three changes:
   indicating which Kubernetes resource was responsible for the broken Kong
   configuration.
   [#3446](https://github.com/Kong/kubernetes-ingress-controller/pull/3446)
-- Leader election is enabled by default then kong admin service discovery is enabled.
+- Leader election is enabled by default when Kong Gateway discovery is enabled.
   [#3529](https://github.com/Kong/kubernetes-ingress-controller/pull/3529)
 - Added flag `--konnect-refresh-node-period` to set the period of uploading 
   status of KIC instance to Konnect runtime group.
@@ -135,7 +135,7 @@ Adding a new version? You'll need three changes:
   [#3563](https://github.com/Kong/kubernetes-ingress-controller/pull/3563)
 - Added `GRPCRoute` controller and implemented basic `GRPCRoute` functionality.
   [#3537](https://github.com/Kong/kubernetes-ingress-controller/pull/3537)
-- Included Konnect sync and Gateway Service discovery features in telemetry reports.
+- Included Konnect sync and Gateway discovery features in telemetry reports.
   [#3588](https://github.com/Kong/kubernetes-ingress-controller/pull/3588)
 - Upload the status of controlled Kong gateway nodes to Konnect when syncing with 
   Konnect is enabled by setting the flag `--konnect-sync-enabled` to true. 

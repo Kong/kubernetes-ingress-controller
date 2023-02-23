@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -21,11 +22,15 @@ import (
 
 // mockKonnectNodeService provides a mock service for CRUD of konnect nodes.
 type mockKonnectNodeService struct {
+	lock      sync.RWMutex
 	clusterID string
 	nodes     []*NodeItem
 }
 
 func (s *mockKonnectNodeService) upsertNode(nodeID string, version string, hostname string, lastping int64, typ string, status string) *NodeItem {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+
 	for _, node := range s.nodes {
 		if node.ID == nodeID {
 			node.LastPing = lastping
@@ -95,6 +100,9 @@ func (s *mockKonnectNodeService) handleUpdateNode(rw http.ResponseWriter, nodeID
 }
 
 func (s *mockKonnectNodeService) handleListNodes(rw http.ResponseWriter) {
+	s.lock.RLock()
+	defer s.lock.RUnlock()
+
 	resp := ListNodeResponse{
 		Items: s.nodes,
 		Page: &PaginationInfo{
@@ -106,6 +114,9 @@ func (s *mockKonnectNodeService) handleListNodes(rw http.ResponseWriter) {
 }
 
 func (s *mockKonnectNodeService) handleDeleteNode(rw http.ResponseWriter, nodeID string) {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+
 	found := false
 	var deleteIdx int
 	for i, node := range s.nodes {
@@ -125,6 +136,15 @@ func (s *mockKonnectNodeService) handleDeleteNode(rw http.ResponseWriter, nodeID
 		s.nodes = nodes
 	}
 	rw.WriteHeader(http.StatusOK)
+}
+
+func (s *mockKonnectNodeService) dumpNodes() []*NodeItem {
+	s.lock.RLock()
+	defer s.lock.RUnlock()
+
+	copied := make([]*NodeItem, len(s.nodes))
+	copy(copied, s.nodes)
+	return copied
 }
 
 func (s *mockKonnectNodeService) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
@@ -372,13 +392,14 @@ func TestNodeAgentUpdateNodes(t *testing.T) {
 				err := nodeAgent.updateNodes()
 				require.NoError(t, err)
 				// check number of nodes in RG.
-				if len(nodeService.nodes) != tc.numNodes {
+				nodes := nodeService.dumpNodes()
+				if len(nodes) != tc.numNodes {
 					return false
 				}
 				// check for nodes that must be included in RG by hostname, type, version and status.
 				for _, node := range tc.containNodes {
 					if !lo.ContainsBy(
-						nodeService.nodes,
+						nodes,
 						func(n *NodeItem) bool {
 							return n.Hostname == node.Hostname &&
 								n.Type == node.Type &&
@@ -391,7 +412,7 @@ func TestNodeAgentUpdateNodes(t *testing.T) {
 				// check for nodes that must not be included by hostname and type.
 				for _, node := range tc.notContainNodes {
 					if lo.ContainsBy(
-						nodeService.nodes,
+						nodes,
 						func(n *NodeItem) bool {
 							return n.Hostname == node.Hostname && n.Type == node.Type
 						}) {

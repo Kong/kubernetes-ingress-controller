@@ -329,8 +329,6 @@ func (a *NodeAgent) updateNodeLoop(ctx context.Context) {
 }
 
 // GatewayClientGetter gets gateway instances from admin API clients.
-// It is used when gateway discovery is not enabled (`--kong-admin-svc` not set).
-// it will use `gateway_<address>` as node hostname, like `gateway_127.0.0.1`.
 type GatewayClientGetter struct {
 	logger          logr.Logger
 	clientsProvider dataplane.AdminAPIClientsProvider
@@ -375,7 +373,6 @@ func (p *GatewayClientGetter) GetGatewayInstances() ([]GatewayInstance, error) {
 				continue
 			}
 			// use "gateway_address" as hostname of konnect node.
-			// REVIEW: trim ports in addresses? like 127.0.0.1:8444 -> gateway_127.0.0.1
 			hostname = "gateway" + "_" + u.Host
 		}
 		gatewayInstances = append(gatewayInstances, GatewayInstance{

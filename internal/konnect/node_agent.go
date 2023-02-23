@@ -5,14 +5,11 @@ import (
 	"fmt"
 	"net/url"
 	"sort"
-	"sync"
 	"sync/atomic"
 	"time"
 
 	"github.com/go-logr/logr"
-	"k8s.io/apimachinery/pkg/types"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/adminapi"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 )
@@ -331,114 +328,6 @@ func (a *NodeAgent) updateNodeLoop(ctx context.Context) {
 	}
 }
 
-// GatewayEndpointStore used to subscribe and store endpoints of gateway admin APIs.
-// Used when gateway discovery is enabled. Use `pod_namespace/pod_name` for node hostnames of gateway nodes.
-type GatewayEndpointStore struct {
-	lock                      sync.RWMutex
-	logger                    logr.Logger
-	gatewayEndpointsChan      chan []adminapi.DiscoveredAdminAPI
-	gatewayEndpointVersionMap map[types.NamespacedName]string
-	clientsProvider           dataplane.AdminAPIClientsProvider
-}
-
-var _ GatewayInstanceGetter = &GatewayEndpointStore{}
-
-// NewGatewayEndpointStore creates a GatewayEndpointStore to subscribe endpoints of gateway admin APIs.
-func NewGatewayEndpointStore(
-	ctx context.Context,
-	logger logr.Logger,
-	initGatewayEndpoints []adminapi.DiscoveredAdminAPI,
-	gatewayEndpointsChan chan []adminapi.DiscoveredAdminAPI,
-	clientsProvider dataplane.AdminAPIClientsProvider,
-) *GatewayEndpointStore {
-	gatewayEndpointVersionMap := make(map[types.NamespacedName]string)
-	gatewayClients := clientsProvider.GatewayClients()
-
-	// TODO: get the address for each endpoint and get their versions
-	// https://github.com/Kong/kubernetes-ingress-controller/issues/3590
-	kongVersion := ""
-	if len(gatewayClients) != 0 {
-		v, err := gatewayClients[0].GetKongVersion(ctx)
-		if err != nil {
-			logger.Error(err, "failed to get kong version")
-		} else {
-			kongVersion = v
-		}
-	}
-	// store provided initial endpoints and their versions.
-	for _, endpoint := range initGatewayEndpoints {
-		logger.V(util.DebugLevel).Info("init gateway admin API endpoint", "namespace", endpoint.PodRef.Namespace, "name", endpoint.PodRef.Name)
-		gatewayEndpointVersionMap[endpoint.PodRef] = kongVersion
-	}
-
-	s := &GatewayEndpointStore{
-		logger:                    logger.WithName("gateway-endpoint-store"),
-		gatewayEndpointsChan:      gatewayEndpointsChan,
-		gatewayEndpointVersionMap: gatewayEndpointVersionMap,
-		clientsProvider:           clientsProvider,
-	}
-
-	// start loop to subscribe changes of endpoints.
-	go s.subscribeEndpointLoop(ctx)
-	return s
-}
-
-// GetGatewayInstances returns hostnames and versions of instances from gateway admin API endpoints.
-func (s *GatewayEndpointStore) GetGatewayInstances() ([]GatewayInstance, error) {
-	s.lock.RLock()
-	defer s.lock.RUnlock()
-
-	gatewayPods := []GatewayInstance{}
-	for podNN, version := range s.gatewayEndpointVersionMap {
-		gatewayPods = append(gatewayPods, GatewayInstance{
-			hostname: podNN.String(),
-			version:  version,
-		})
-	}
-
-	return gatewayPods, nil
-}
-
-// updateEndpoints updates endpoints of gateway admin API service and their versions.
-func (s *GatewayEndpointStore) updateEndpoints(ctx context.Context, endpoints []adminapi.DiscoveredAdminAPI) {
-	s.lock.Lock()
-	defer s.lock.Unlock()
-	gatewayClients := s.clientsProvider.GatewayClients()
-	// TODO: get the address for each endpoint and get their versions:
-	// https://github.com/Kong/kubernetes-ingress-controller/issues/3590
-	kongVersion := ""
-	if len(gatewayClients) != 0 {
-		v, err := gatewayClients[0].GetKongVersion(ctx)
-		if err != nil {
-			s.logger.Error(err, "failed to get kong version")
-		} else {
-			kongVersion = v
-		}
-	}
-	// update the versions of new endpoints.
-	gatewayEndpointVersionMap := make(map[types.NamespacedName]string)
-	for _, endpoint := range endpoints {
-		s.logger.Info("updated endpoint", "namespace", endpoint.PodRef.Namespace, "name", endpoint.PodRef.Name)
-		gatewayEndpointVersionMap[endpoint.PodRef] = kongVersion
-	}
-	s.gatewayEndpointVersionMap = gatewayEndpointVersionMap
-}
-
-// subscribeEndpointLoop runs the loop to receive new endpoints when endpoints changed.
-func (s *GatewayEndpointStore) subscribeEndpointLoop(ctx context.Context) {
-	for {
-		select {
-		case <-ctx.Done():
-			err := ctx.Err()
-			s.logger.Info("update node loop stopped", "message", err.Error())
-			return
-		case endpoints := <-s.gatewayEndpointsChan:
-			s.logger.V(util.DebugLevel).Info("update gateway endpoints")
-			s.updateEndpoints(ctx, endpoints)
-		}
-	}
-}
-
 // GatewayClientGetter gets gateway instances from admin API clients.
 // It is used when gateway discovery is not enabled (`--kong-admin-svc` not set).
 // it will use `gateway_<address>` as node hostname, like `gateway_127.0.0.1`.
@@ -474,15 +363,21 @@ func (p *GatewayClientGetter) GetGatewayInstances() ([]GatewayInstance, error) {
 
 	gatewayInstances := make([]GatewayInstance, 0, len(gatewayClients))
 	for _, client := range gatewayClients {
-		rootURL := client.BaseRootURL()
-		u, err := url.Parse(rootURL)
-		if err != nil {
-			p.logger.Error(err, "failed to parse URL of gateway admin API from raw URL, skipping", "url", rootURL)
-			continue
+		var hostname string
+		podNN, ok := client.PodReference()
+		if ok {
+			hostname = podNN.String()
+		} else {
+			rootURL := client.BaseRootURL()
+			u, err := url.Parse(rootURL)
+			if err != nil {
+				p.logger.Error(err, "failed to parse URL of gateway admin API from raw URL, skipping", "url", rootURL)
+				continue
+			}
+			// use "gateway_address" as hostname of konnect node.
+			// REVIEW: trim ports in addresses? like 127.0.0.1:8444 -> gateway_127.0.0.1
+			hostname = "gateway" + "_" + u.Host
 		}
-		// use "gateway_address" as hostname of konnect node.
-		// REVIEW: trim ports in addresses? like 127.0.0.1:8444 -> gateway_127.0.0.1
-		hostname := "gateway" + "_" + u.Host
 		gatewayInstances = append(gatewayInstances, GatewayInstance{
 			hostname: hostname,
 			version:  kongVersion,

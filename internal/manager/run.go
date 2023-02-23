@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/blang/semver/v4"
+	"github.com/go-logr/logr"
 	"github.com/sirupsen/logrus"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
@@ -192,36 +193,15 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 			clientsManager.SetKonnectClient(konnectAdminAPIClient)
 		}
 
-		setupLog.Info("Start Konnect client to register runtime instances to Konnect")
-		konnectNodeAPIClient, err := konnect.NewNodeAPIClient(c.Konnect)
-		if err != nil {
-			setupLog.Error(err, "failed creating konnect client, skipping running NodeAgent")
-		} else {
-			var hostname string
-			nn, err := util.GetPodNN()
-			if err != nil {
-				setupLog.Error(err, "failed to get pod name and/or namespace, fallback to use hostname as node name in konnect")
-				hostname, _ = os.Hostname()
-			} else {
-				hostname = nn.String()
-				setupLog.Info(fmt.Sprintf("use %s as node name in konnect", hostname))
-			}
-			version := metadata.Release
-			// set channel to send config status.
-			configStatusNotifier := dataplane.NewChannelConfigNotifier()
-			dataplaneClient.SetConfigStatusNotifier(configStatusNotifier)
-
-			agent := konnect.NewNodeAgent(
-				hostname,
-				version,
-				c.Konnect.RefreshNodePeriod,
-				setupLog,
-				konnectNodeAPIClient,
-				configStatusNotifier,
-			)
-			if err := mgr.Add(agent); err != nil {
-				setupLog.Error(err, "failed adding konnect.NodeAgent runnable to the manager")
-			}
+		// start node registration to konnect.
+		if err := startKonnectNodeRegistration(
+			c,
+			mgr,
+			dataplaneClient,
+			clientsManager,
+			setupLog,
+		); err != nil {
+			setupLog.Error(err, "failed to start node registration to konnect")
 		}
 	}
 
@@ -250,6 +230,49 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 
 	setupLog.Info("Starting manager")
 	return mgr.Start(ctx)
+}
+
+// startKonnectNodeRegistration starts node registration to konnect.
+// returns error if failed to create or run agent to maintain KIC and kong gateway nodes.
+func startKonnectNodeRegistration(
+	c *Config,
+	mgr manager.Manager,
+	dataplaneClient *dataplane.KongClient,
+	clientsManager *dataplane.AdminAPIClientsManager,
+	logger logr.Logger,
+) error {
+	logger.Info("Start Konnect client to register runtime instances to Konnect")
+	konnectNodeAPIClient, err := konnect.NewNodeAPIClient(c.Konnect)
+	if err != nil {
+		return fmt.Errorf("failed creating konnect client: %w", err)
+	}
+	var hostname string
+	nn, err := util.GetPodNN()
+	if err != nil {
+		logger.Error(err, "failed getting pod name and/or namespace, fallback to use hostname as node name in konnect")
+		hostname, _ = os.Hostname()
+	} else {
+		hostname = nn.String()
+		logger.Info(fmt.Sprintf("use %s as node name in konnect", hostname))
+	}
+	version := metadata.Release
+	// set channel to send config status.
+	configStatusNotifier := dataplane.NewChannelConfigNotifier()
+	dataplaneClient.SetConfigStatusNotifier(configStatusNotifier)
+
+	agent := konnect.NewNodeAgent(
+		hostname,
+		version,
+		c.Konnect.RefreshNodePeriod,
+		logger,
+		konnectNodeAPIClient,
+		configStatusNotifier,
+		konnect.NewGatewayClientGetter(logger, clientsManager),
+	)
+	if err := mgr.Add(agent); err != nil {
+		return fmt.Errorf("failed adding konnect.NodeAgent runnable to the manager: %w", err)
+	}
+	return nil
 }
 
 type IsReady interface {

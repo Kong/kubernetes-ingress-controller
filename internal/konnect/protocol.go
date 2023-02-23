@@ -3,7 +3,7 @@ package konnect
 const (
 	// NodeTypeIngressController is the type of nodes representing KIC instances.
 	NodeTypeIngressController = "ingress-controller"
-	// NodeTypeKongProxy is the type of nodes representing (KIC controlled) kong gateway instances.
+	// NodeTypeKongProxy is the type of nodes representing kong gateway instances.
 	NodeTypeKongProxy = "kong-proxy"
 )
 

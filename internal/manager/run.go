@@ -195,7 +195,8 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 
 		// start node registration to konnect.
 		if err := startKonnectNodeRegistration(
-			ctx, c, mgr,
+			c,
+			mgr,
 			dataplaneClient,
 			clientsManager,
 			setupLog,
@@ -234,7 +235,7 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 // startKonnectNodeRegistration starts node registration to konnect.
 // returns error if failed to create or run agent to maintain KIC and kong gateway nodes.
 func startKonnectNodeRegistration(
-	ctx context.Context, c *Config,
+	c *Config,
 	mgr manager.Manager,
 	dataplaneClient *dataplane.KongClient,
 	clientsManager *dataplane.AdminAPIClientsManager,

@@ -45,7 +45,7 @@ type NodeAgent struct {
 	configStatus           atomic.Uint32
 	configStatusSubscriber dataplane.ConfigStatusSubscriber
 
-	gatewayPodGetter GatewayInstanceGetter
+	gatewayInstanceGetter GatewayInstanceGetter
 }
 
 // NewNodeAgent creates a new node agent.
@@ -70,7 +70,7 @@ func NewNodeAgent(
 		konnectClient:          client,
 		refreshPeriod:          refreshPeriod,
 		configStatusSubscriber: configStatusSubscriber,
-		gatewayPodGetter:       gatewayGetter,
+		gatewayInstanceGetter:  gatewayGetter,
 	}
 	a.configStatus.Store(uint32(dataplane.ConfigStatusOK))
 	return a
@@ -207,7 +207,7 @@ func (a *NodeAgent) updateKICNode(existingNodes []*NodeItem) error {
 
 // updateGatewayNodes updates status of controlled kong gateway nodes to konnect.
 func (a *NodeAgent) updateGatewayNodes(existingNodes []*NodeItem) error {
-	gatewayInstances, err := a.gatewayPodGetter.GetGatewayInstances()
+	gatewayInstances, err := a.gatewayInstanceGetter.GetGatewayInstances()
 	if err != nil {
 		return fmt.Errorf("failed to get controlled kong gateway pods: %w", err)
 	}

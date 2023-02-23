@@ -138,13 +138,13 @@ Adding a new version? You'll need three changes:
 - Included Konnect sync and Gateway Service discovery features in telemetry reports.
   [#3588](https://github.com/Kong/kubernetes-ingress-controller/pull/3588)
 - Upload the status of controlled Kong gateway nodes to Konnect when syncing with 
-	Konnect is enabled by setting the flag `--konnect-sync-enabled` to true. 
-	If gateway discovery is enabled via `--kong-admin-svc` flag, the hostname of a node 
-	corresponding to each Kong gateway instance will use `<pod_namespace>/<pod_name>` 
-	format, where `pod_namespace` and `pod_name` are the namespace and name of the Kong 
-	gateway pod. If gateway discovery is disabled, the Kong gateway nodes will use `gateway_<address>` 
-	as the hostname, where `address` is the Admin API address used by KIC.
-	[#3587](https://github.com/Kong/kubernetes-ingress-controller/pull/3587)
+  Konnect is enabled by setting the flag `--konnect-sync-enabled` to true. 
+  If gateway discovery is enabled via `--kong-admin-svc` flag, the hostname of a node 
+  corresponding to each Kong gateway instance will use `<pod_namespace>/<pod_name>` 
+  format, where `pod_namespace` and `pod_name` are the namespace and name of the Kong 
+  gateway pod. If gateway discovery is disabled, the Kong gateway nodes will use `gateway_<address>` 
+  as the hostname, where `address` is the Admin API address used by KIC.
+  [#3587](https://github.com/Kong/kubernetes-ingress-controller/pull/3587)
 
 ### Fixed
 

@@ -52,7 +52,7 @@ type Config struct {
 	MetricsAddr           string
 	ProbeAddr             string
 	KongAdminURLs         []string
-	KongAdminSvc          types.NamespacedName
+	KongAdminSvc          ValidatedVar[types.NamespacedName]
 	KondAdminSvcPortNames []string
 	ProxySyncSeconds      float32
 	ProxyTimeoutSeconds   float32
@@ -68,8 +68,8 @@ type Config struct {
 	GatewayAPIControllerName string
 
 	// Ingress status
-	PublishServiceUDP       types.NamespacedName
-	PublishService          types.NamespacedName
+	PublishServiceUDP       ValidatedVar[types.NamespacedName]
+	PublishService          ValidatedVar[types.NamespacedName]
 	PublishStatusAddress    []string
 	PublishStatusAddressUDP []string
 	UpdateStatus            bool

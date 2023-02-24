@@ -11,18 +11,38 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/adminapi"
 )
 
+type ValidatedVar[T any] struct {
+	v *T
+}
+
+func NewValidatedVar[T any](v T) ValidatedVar[T] {
+	return ValidatedVar[T]{v: &v}
+}
+
+func (v ValidatedVar[T]) Value() T {
+	if v.v != nil {
+		return *v.v
+	}
+	var t T
+	return t
+}
+
+func (v ValidatedVar[T]) WasSet() bool {
+	return v.v != nil
+}
+
 // *FromFlagValue functions are used to validate single flag values and set those in Config.
 // They're meant to be used together with ValidatedValue[T] type.
 
-func namespacedNameFromFlagValue(flagValue string) (types.NamespacedName, error) {
+func namespacedNameFromFlagValue(flagValue string) (ValidatedVar[types.NamespacedName], error) {
 	parts := strings.SplitN(flagValue, "/", 3)
 	if len(parts) != 2 {
-		return types.NamespacedName{}, errors.New("the expected format is namespace/name")
+		return ValidatedVar[types.NamespacedName]{}, errors.New("the expected format is namespace/name")
 	}
-	return types.NamespacedName{
+	return NewValidatedVar(types.NamespacedName{
 		Namespace: parts[0],
 		Name:      parts[1],
-	}, nil
+	}), nil
 }
 
 func gatewayAPIControllerNameFromFlagValue(flagValue string) (string, error) {
@@ -59,7 +79,7 @@ func (c *Config) validateKonnect() error {
 		return nil
 	}
 
-	if c.KongAdminSvc.Name == "" || c.KongAdminSvc.Namespace == "" {
+	if !c.KongAdminSvc.WasSet() {
 		return errors.New("--kong-admin-svc has to be set when using --konnect-sync-enabled")
 	}
 	if konnect.Address == "" {

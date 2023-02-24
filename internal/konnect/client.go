@@ -169,7 +169,7 @@ func (c *NodeAPIClient) ListAllNodes() ([]*NodeItem, error) {
 			return nil, err
 		}
 		nodes = append(nodes, resp.Items...)
-		if resp.Page.NextPageNum == 0 {
+		if resp.Page == nil || resp.Page.NextPageNum == 0 {
 			return nodes, nil
 		}
 		// if konnect returns a non-0 NextPageNum, the node are not all listed

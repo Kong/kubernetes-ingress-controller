@@ -30,14 +30,20 @@ type KongValidator interface {
 	ValidateHTTPRoute(ctx context.Context, httproute gatewaycontroller.HTTPRoute) (bool, string, error)
 }
 
+// AdminAPIServicesProvider provides KongHTTPValidator with Kong Admin API services that are needed to perform
+// validation against entities stored by the Gateway.
+type AdminAPIServicesProvider interface {
+	GetConsumersService() (kong.AbstractConsumerService, bool)
+	GetPluginsService() (kong.AbstractPluginService, bool)
+}
+
 // KongHTTPValidator implements KongValidator interface to validate Kong
 // entities using the Admin API of Kong.
 type KongHTTPValidator struct {
-	ConsumerSvc   kong.AbstractConsumerService
-	PluginSvc     kong.AbstractPluginService
-	Logger        logrus.FieldLogger
-	SecretGetter  kongstate.SecretGetter
-	ManagerClient client.Client
+	Logger                   logrus.FieldLogger
+	SecretGetter             kongstate.SecretGetter
+	ManagerClient            client.Client
+	AdminAPIServicesProvider AdminAPIServicesProvider
 
 	ingressClassMatcher func(*metav1.ObjectMeta, string, annotations.ClassMatching) bool
 }
@@ -47,19 +53,17 @@ type KongHTTPValidator struct {
 // such as consumer credentials secrets. If you do not pass a cached client
 // here, the performance of this validator can get very poor at high scales.
 func NewKongHTTPValidator(
-	consumerSvc kong.AbstractConsumerService,
-	pluginSvc kong.AbstractPluginService,
 	logger logrus.FieldLogger,
 	managerClient client.Client,
 	ingressClass string,
+	servicesProvider AdminAPIServicesProvider,
 ) KongHTTPValidator {
 	matcher := annotations.IngressClassValidatorFuncFromObjectMeta(ingressClass)
 	return KongHTTPValidator{
-		ConsumerSvc:   consumerSvc,
-		PluginSvc:     pluginSvc,
-		Logger:        logger,
-		SecretGetter:  &managerClientSecretGetter{managerClient: managerClient},
-		ManagerClient: managerClient,
+		Logger:                   logger,
+		SecretGetter:             &managerClientSecretGetter{managerClient: managerClient},
+		ManagerClient:            managerClient,
+		AdminAPIServicesProvider: servicesProvider,
 
 		ingressClassMatcher: matcher,
 	}
@@ -84,16 +88,9 @@ func (validator KongHTTPValidator) ValidateConsumer(
 		return false, ErrTextConsumerUsernameEmpty, nil
 	}
 
-	// verify that the consumer is not already otherwise present in the data-plane
-	c, err := validator.ConsumerSvc.Get(ctx, &consumer.Username)
-	if err != nil {
-		if !kong.IsNotFoundErr(err) {
-			validator.Logger.WithError(err).Error("failed to fetch consumer from kong")
-			return false, ErrTextConsumerUnretrievable, err
-		}
-	}
-	if c != nil {
-		return false, ErrTextConsumerExists, nil
+	errText, err := validator.ensureConsumerDoesNotExistInGateway(ctx, consumer.Username)
+	if err != nil || errText != "" {
+		return false, errText, err
 	}
 
 	// if there are no credentials for this consumer, there's no need to move on
@@ -254,14 +251,12 @@ func (validator KongHTTPValidator) ValidatePlugin(
 	if len(k8sPlugin.Protocols) > 0 {
 		plugin.Protocols = kong.StringSlice(kongv1.KongProtocolsToStrings(k8sPlugin.Protocols)...)
 	}
-	isValid, msg, err := validator.PluginSvc.Validate(ctx, &plugin)
-	if err != nil {
-		return false, ErrTextPluginConfigValidationFailed, err
+	errText, err := validator.validatePluginAgainstGatewaySchema(ctx, plugin)
+	if err != nil || errText != "" {
+		return false, errText, err
 	}
-	if !isValid {
-		return isValid, fmt.Sprintf(ErrTextPluginConfigViolatesSchema, msg), nil
-	}
-	return isValid, "", nil
+
+	return true, "", nil
 }
 
 // ValidateClusterPlugin transfers relevant fields from a KongClusterPlugin into a KongPlugin and then returns
@@ -393,6 +388,41 @@ func (validator KongHTTPValidator) listManagedConsumers(ctx context.Context) ([]
 	}
 
 	return managedConsumers, nil
+}
+
+func (validator KongHTTPValidator) ensureConsumerDoesNotExistInGateway(ctx context.Context, username string) (string, error) {
+	if consumerSvc, hasClient := validator.AdminAPIServicesProvider.GetConsumersService(); hasClient {
+		// verify that the consumer is not already present in the data-plane
+		c, err := consumerSvc.Get(ctx, &username)
+		if err != nil {
+			if !kong.IsNotFoundErr(err) {
+				validator.Logger.WithError(err).Error("failed to fetch consumer from kong")
+				return ErrTextConsumerUnretrievable, err
+			}
+		}
+		if c != nil {
+			return ErrTextConsumerExists, nil
+		}
+	}
+
+	// if there's no client, do not verify existence with data-plane as there's none available
+	return "", nil
+}
+
+func (validator KongHTTPValidator) validatePluginAgainstGatewaySchema(ctx context.Context, plugin kong.Plugin) (string, error) {
+	pluginService, hasClient := validator.AdminAPIServicesProvider.GetPluginsService()
+	if hasClient {
+		isValid, msg, err := pluginService.Validate(ctx, &plugin)
+		if err != nil {
+			return ErrTextPluginConfigValidationFailed, err
+		}
+		if !isValid {
+			return fmt.Sprintf(ErrTextPluginConfigViolatesSchema, msg), nil
+		}
+	}
+
+	// if there's no client, do not verify with data-plane as there's none available
+	return "", nil
 }
 
 // -----------------------------------------------------------------------------

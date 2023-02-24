@@ -93,11 +93,6 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 		return fmt.Errorf("unable to start controller manager: %w", err)
 	}
 
-	setupLog.Info("Starting Admission Server")
-	if err := setupAdmissionServer(ctx, c, mgr.GetClient(), deprecatedLogger); err != nil {
-		return err
-	}
-
 	setupLog.Info("Initializing Dataplane Client")
 	eventRecorder := mgr.GetEventRecorderFor(KongClientEventRecorderComponentName)
 
@@ -113,6 +108,11 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 	if c.KongAdminSvc.Name != "" {
 		setupLog.Info("Running AdminAPIClientsManager notify loop")
 		clientsManager.RunNotifyLoop()
+	}
+
+	setupLog.Info("Starting Admission Server")
+	if err := setupAdmissionServer(ctx, c, clientsManager, mgr.GetClient(), deprecatedLogger); err != nil {
+		return err
 	}
 
 	dataplaneClient, err := dataplane.NewKongClient(
@@ -215,7 +215,7 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 				FeatureGates:                   featureGates,
 				MeshDetection:                  len(c.WatchNamespaces) == 0,
 				KonnectSyncEnabled:             c.Konnect.ConfigSynchronizationEnabled,
-				GatewayServiceDiscoveryEnabled: c.KongAdminSvc.String() != "",
+				GatewayServiceDiscoveryEnabled: c.KongAdminSvc.Name != "",
 			},
 		)
 		if err != nil {

@@ -158,6 +158,7 @@ func setupDataplaneSynchronizer(
 func setupAdmissionServer(
 	ctx context.Context,
 	managerConfig *Config,
+	clientsManager *dataplane.AdminAPIClientsManager,
 	managerClient client.Client,
 	deprecatedLogger logrus.FieldLogger,
 ) error {
@@ -168,26 +169,13 @@ func setupAdmissionServer(
 		return nil
 	}
 
-	kongclients, err := managerConfig.adminAPIClients(ctx)
-	if err != nil {
-		return err
-	}
-	// For now using first client is kind of OK. Using Consumer and Plugin
-	// services from first kong client should theoretically return the same
-	// results as for all other clients. There might be instances where
-	// configurations in different Kong Gateways are ever so slightly
-	// different but that shouldn't cause a fatal failure.
-	//
-	// TODO: We should take a look at this sooner rather than later.
-	// https://github.com/Kong/kubernetes-ingress-controller/issues/3363
-	designatedKongClient := kongclients[0].AdminAPIClient()
+	adminAPIServicesProvider := admission.NewDefaultAdminAPIServicesProvider(clientsManager)
 	srv, err := admission.MakeTLSServer(ctx, &managerConfig.AdmissionServer, &admission.RequestHandler{
 		Validator: admission.NewKongHTTPValidator(
-			designatedKongClient.Consumers,
-			designatedKongClient.Plugins,
 			logger,
 			managerClient,
 			managerConfig.IngressClassName,
+			adminAPIServicesProvider,
 		),
 		Logger: logger,
 	}, logger)

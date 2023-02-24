@@ -159,16 +159,12 @@ Adding a new version? You'll need three changes:
 - Event messages for invalid multi-Service backends now indicate their derived
   Kong resource name.
   [#3318](https://github.com/Kong/kubernetes-ingress-controller/pull/3318)
-- `--konnect-sync-enabled` feature flag has been introduced. It enables the
-  integration with Kong's Konnect cloud. It's turned off by default.
-  When enabled, it allows synchronising data-plane configuration with
-  a Konnect Runtime Group specified by `--konnect-runtime-group-id`.
-  It requires `--konnect-tls-client-*` set of flags to be set to provide
-  Runtime Group's TLS client certificates for authentication.
-  [#3455](https://github.com/Kong/kubernetes-ingress-controller/pull/3455)
 - Removed a duplicated status update of the HTTPRoute, which led to a potential
   status flickering.
   [#3451](https://github.com/Kong/kubernetes-ingress-controller/pull/3451)
+- Made Admission Webhook fetch the latest list of Gateways to avoid calling
+  outdated services set statically during the setup.
+  [#3601](https://github.com/Kong/kubernetes-ingress-controller/pull/3601)
 - Fixed the way configuration flags `KongAdminSvc` and `PublishService` are
   checked for being set. The old one was always evaluating to `true`.
   [#3602](https://github.com/Kong/kubernetes-ingress-controller/pull/3602)

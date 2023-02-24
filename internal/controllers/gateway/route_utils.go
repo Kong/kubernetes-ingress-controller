@@ -67,6 +67,27 @@ func parentRefsForRoute[T types.RouteT](route T) ([]ParentReference, error) {
 		return ret
 	}
 
+	var refs []gatewayv1alpha2.ParentReference
+	switch r := (interface{})(route).(type) {
+	case *gatewayv1beta1.HTTPRoute:
+		refs = r.Spec.ParentRefs
+	case *gatewayv1alpha2.UDPRoute:
+		refs = r.Spec.ParentRefs
+	case *gatewayv1alpha2.TCPRoute:
+		refs = r.Spec.ParentRefs
+	case *gatewayv1alpha2.TLSRoute:
+		refs = r.Spec.ParentRefs
+	case *gatewayv1alpha2.GRPCRoute:
+		refs = r.Spec.ParentRefs
+	default:
+		return nil, fmt.Errorf("can't determine parent Gateway for unsupported route type %s", reflect.TypeOf(route))
+	}
+	for _, ref := range refs {
+		if string(*ref.Group) != gatewayv1alpha2.GroupName || string(*ref.Kind) != "Gateway" {
+			return nil, fmt.Errorf("unsupported parent kind %s/%s", string(*ref.Group), string(*ref.Kind))
+		}
+	}
+
 	switch r := (interface{})(route).(type) {
 	case *gatewayv1beta1.HTTPRoute:
 		return r.Spec.ParentRefs, nil
@@ -79,7 +100,7 @@ func parentRefsForRoute[T types.RouteT](route T) ([]ParentReference, error) {
 	case *gatewayv1alpha2.GRPCRoute:
 		return convertV1Alpha2ToV1Beta1ParentReference(r.Spec.ParentRefs), nil
 	default:
-		return nil, fmt.Errorf("cant determine parent gateway for unsupported route type %s", reflect.TypeOf(route))
+		return nil, fmt.Errorf("can't determine parent Gateway for unsupported route type %s", reflect.TypeOf(route))
 	}
 }
 

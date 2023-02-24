@@ -249,35 +249,39 @@ func Test_getSupportedGatewayForRoute(t *testing.T) {
 		listenerName string
 	}
 
-	t.Run("HTTPRoute", func(t *testing.T) {
-		basicHTTPRoute := func() *HTTPRoute {
-			return &HTTPRoute{
-				TypeMeta: metav1.TypeMeta{
-					Kind:       "HTTPRoute",
-					APIVersion: gatewayv1beta1.GroupVersion.Group + "/" + gatewayv1beta1.GroupVersion.Version,
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "basic-httproute",
-					Namespace: "test-namespace",
-				},
-				Spec: gatewayv1beta1.HTTPRouteSpec{
-					CommonRouteSpec: gatewayv1beta1.CommonRouteSpec{
-						ParentRefs: []gatewayv1beta1.ParentReference{
-							{
-								Name: "test-gateway",
-							},
-						},
-					},
-					Rules: []gatewayv1beta1.HTTPRouteRule{
+	goodGroup := gatewayv1beta1.Group(gatewayv1alpha2.GroupName)
+	goodKind := gatewayv1beta1.Kind("Gateway")
+	basicHTTPRoute := func() *HTTPRoute {
+		return &HTTPRoute{
+			TypeMeta: metav1.TypeMeta{
+				Kind:       "HTTPRoute",
+				APIVersion: gatewayv1beta1.GroupVersion.Group + "/" + gatewayv1beta1.GroupVersion.Version,
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "basic-httproute",
+				Namespace: "test-namespace",
+			},
+			Spec: gatewayv1beta1.HTTPRouteSpec{
+				CommonRouteSpec: gatewayv1beta1.CommonRouteSpec{
+					ParentRefs: []gatewayv1beta1.ParentReference{
 						{
-							BackendRefs: []gatewayv1beta1.HTTPBackendRef{
-								builder.NewHTTPBackendRef("fake-service").WithPort(80).Build(),
-							},
+							Group: &goodGroup,
+							Kind:  &goodKind,
+							Name:  "test-gateway",
 						},
 					},
 				},
-			}
+				Rules: []gatewayv1beta1.HTTPRouteRule{
+					{
+						BackendRefs: []gatewayv1beta1.HTTPBackendRef{
+							builder.NewHTTPBackendRef("fake-service").WithPort(80).Build(),
+						},
+					},
+				},
+			},
 		}
+	}
+	t.Run("HTTPRoute", func(t *testing.T) {
 		gatewayWithHTTP80Ready := func() *Gateway {
 			return &Gateway{
 				TypeMeta: metav1.TypeMeta{
@@ -569,7 +573,9 @@ func Test_getSupportedGatewayForRoute(t *testing.T) {
 					CommonRouteSpec: gatewayv1alpha2.CommonRouteSpec{
 						ParentRefs: []gatewayv1alpha2.ParentReference{
 							{
-								Name: "test-gateway",
+								Group: &goodGroup,
+								Kind:  &goodKind,
+								Name:  "test-gateway",
 							},
 						},
 					},
@@ -774,7 +780,9 @@ func Test_getSupportedGatewayForRoute(t *testing.T) {
 					CommonRouteSpec: gatewayv1alpha2.CommonRouteSpec{
 						ParentRefs: []gatewayv1alpha2.ParentReference{
 							{
-								Name: "test-gateway",
+								Group: &goodGroup,
+								Kind:  &goodKind,
+								Name:  "test-gateway",
 							},
 						},
 					},
@@ -959,7 +967,9 @@ func Test_getSupportedGatewayForRoute(t *testing.T) {
 					CommonRouteSpec: gatewayv1alpha2.CommonRouteSpec{
 						ParentRefs: []gatewayv1alpha2.ParentReference{
 							{
-								Name: "test-gateway",
+								Group: &goodGroup,
+								Kind:  &goodKind,
+								Name:  "test-gateway",
 							},
 						},
 					},
@@ -1169,5 +1179,25 @@ func Test_getSupportedGatewayForRoute(t *testing.T) {
 				}
 			})
 		}
+	})
+
+	bustedParentHTTPRoute := basicHTTPRoute()
+	badGroup := gatewayv1beta1.Group("kechavakunduz.cholpon.uz")
+	badKind := gatewayv1beta1.Kind("razzoq")
+	bustedParentHTTPRoute.Spec.ParentRefs = []gatewayv1beta1.ParentReference{
+		{
+			Name:  "not-a-gateway",
+			Kind:  &badKind,
+			Group: &badGroup,
+		},
+	}
+	t.Run("invalid parentRef kind rejected", func(t *testing.T) {
+		fakeClient := fakeclient.
+			NewClientBuilder().
+			WithScheme(scheme.Scheme).
+			Build()
+
+		_, err := getSupportedGatewayForRoute(context.Background(), fakeClient, bustedParentHTTPRoute)
+		require.Equal(t, fmt.Errorf("unsupported parent kind %s/%s", string(badGroup), string(badKind)), err)
 	})
 }

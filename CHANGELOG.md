@@ -169,6 +169,9 @@ Adding a new version? You'll need three changes:
 - Removed a duplicated status update of the HTTPRoute, which led to a potential
   status flickering.
   [#3451](https://github.com/Kong/kubernetes-ingress-controller/pull/3451)
+- Fixed the way configuration flags `KongAdminSvc` and `PublishService` are
+  checked for being set. The old one was always evaluating to `true`.
+  [#3602](https://github.com/Kong/kubernetes-ingress-controller/pull/3602)
 
 ### Under the hood
 

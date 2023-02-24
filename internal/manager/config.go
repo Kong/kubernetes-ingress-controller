@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/samber/mo"
 	"github.com/spf13/pflag"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/rest"
@@ -52,7 +53,7 @@ type Config struct {
 	MetricsAddr           string
 	ProbeAddr             string
 	KongAdminURLs         []string
-	KongAdminSvc          ValidatedVar[types.NamespacedName]
+	KongAdminSvc          mo.Option[types.NamespacedName]
 	KondAdminSvcPortNames []string
 	ProxySyncSeconds      float32
 	ProxyTimeoutSeconds   float32
@@ -68,8 +69,8 @@ type Config struct {
 	GatewayAPIControllerName string
 
 	// Ingress status
-	PublishServiceUDP       ValidatedVar[types.NamespacedName]
-	PublishService          ValidatedVar[types.NamespacedName]
+	PublishServiceUDP       mo.Option[types.NamespacedName]
+	PublishService          mo.Option[types.NamespacedName]
 	PublishStatusAddress    []string
 	PublishStatusAddressUDP []string
 	UpdateStatus            bool

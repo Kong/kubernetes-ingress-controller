@@ -12,6 +12,7 @@ import (
 	"github.com/bombsimon/logrusr/v2"
 	"github.com/go-logr/logr"
 	"github.com/kong/deck/cprint"
+	"github.com/samber/mo"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -90,8 +91,8 @@ func setupControllerOptions(logger logr.Logger, c *Config, dbmode string, featur
 
 		// if publish service has been provided the namespace for it should be
 		// watched so that controllers can see updates to the service.
-		if c.PublishService.WasSet() {
-			watchNamespaces = append(c.WatchNamespaces, c.PublishService.Value().Namespace)
+		if s, ok := c.PublishService.Get(); ok {
+			watchNamespaces = append(c.WatchNamespaces, s.Namespace)
 		}
 		controllerOpts.NewCache = cache.MultiNamespacedCacheBuilder(watchNamespaces)
 	}
@@ -110,7 +111,7 @@ func leaderElectionEnabled(logger logr.Logger, c *Config, dbmode string) bool {
 	}
 
 	if dbmode == "off" {
-		if c.KongAdminSvc.WasSet() {
+		if c.KongAdminSvc.IsPresent() {
 			logger.Info("DB-less mode detected with service detection, enabling leader election")
 			return true
 		}
@@ -222,15 +223,15 @@ func setupDataplaneAddressFinder(mgrc client.Client, c *Config, log logr.Logger)
 	return defaultAddressFinder, udpAddressFinder, nil
 }
 
-func buildDataplaneAddressFinder(mgrc client.Client, publishStatusAddress []string, publishServiceNn ValidatedVar[types.NamespacedName]) (*dataplane.AddressFinder, error) {
+func buildDataplaneAddressFinder(mgrc client.Client, publishStatusAddress []string, publishServiceNn mo.Option[types.NamespacedName]) (*dataplane.AddressFinder, error) {
 	addressFinder := dataplane.NewAddressFinder()
 
 	if len(publishStatusAddress) > 0 {
 		addressFinder.SetOverrides(publishStatusAddress)
 		return addressFinder, nil
 	}
-	if publishServiceNn.WasSet() {
-		addressFinder.SetGetter(generateAddressFinderGetter(mgrc, publishServiceNn.Value()))
+	if serviceNn, ok := publishServiceNn.Get(); ok {
+		addressFinder.SetGetter(generateAddressFinderGetter(mgrc, serviceNn))
 		return addressFinder, nil
 	}
 
@@ -280,8 +281,8 @@ func (c *Config) adminAPIClients(ctx context.Context) ([]*adminapi.Client, error
 
 	// If kong-admin-svc flag has been specified then use it to get the list
 	// of Kong Admin API endpoints.
-	if c.KongAdminSvc.WasSet() {
-		return c.adminAPIClientFromServiceDiscovery(ctx, httpclient)
+	if adminSvc, ok := c.KongAdminSvc.Get(); ok {
+		return c.adminAPIClientFromServiceDiscovery(ctx, httpclient, adminSvc)
 	}
 
 	// Otherwise fallback to the list of kong admin URLs.
@@ -299,7 +300,7 @@ func (c *Config) adminAPIClients(ctx context.Context) ([]*adminapi.Client, error
 	return clients, nil
 }
 
-func (c *Config) adminAPIClientFromServiceDiscovery(ctx context.Context, httpclient *http.Client) ([]*adminapi.Client, error) {
+func (c *Config) adminAPIClientFromServiceDiscovery(ctx context.Context, httpclient *http.Client, adminSvc types.NamespacedName) ([]*adminapi.Client, error) {
 	kubeClient, err := c.GetKubeClient()
 	if err != nil {
 		return nil, err
@@ -314,12 +315,12 @@ func (c *Config) adminAPIClientFromServiceDiscovery(ctx context.Context, httpcli
 	// configuration validation and sending code.
 	var adminAPIs []adminapi.DiscoveredAdminAPI
 	err = retry.Do(func() error {
-		s, err := adminapi.GetAdminAPIsForService(ctx, kubeClient, c.KongAdminSvc.Value(), sets.New(c.KondAdminSvcPortNames...))
+		s, err := adminapi.GetAdminAPIsForService(ctx, kubeClient, adminSvc, sets.New(c.KondAdminSvcPortNames...))
 		if err != nil {
 			return err
 		}
 		if s.Len() == 0 {
-			return fmt.Errorf("no endpoints for kong admin service: %q", c.KongAdminSvc.Value())
+			return fmt.Errorf("no endpoints for kong admin service: %q", adminSvc)
 		}
 		adminAPIs = s.UnsortedList()
 		return nil

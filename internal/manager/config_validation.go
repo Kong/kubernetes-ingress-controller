@@ -59,7 +59,7 @@ func (c *Config) validateKonnect() error {
 		return nil
 	}
 
-	if c.KongAdminSvc.Name == "" && c.KongAdminSvc.Namespace == "" {
+	if c.KongAdminSvc.Name == "" || c.KongAdminSvc.Namespace == "" {
 		return errors.New("--kong-admin-svc has to be set when using --konnect-sync-enabled")
 	}
 	if konnect.Address == "" {

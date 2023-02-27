@@ -594,15 +594,15 @@ func runOnlyOnKindClusters(t *testing.T) {
 }
 
 func getPodByLabels(ctx context.Context,
-	t *testing.T, env environments.Environment, namespace string, podLabels map[string]string) ([]corev1.Pod, error) {
+	t *testing.T, env environments.Environment, namespace string, podLabels map[string]string,
+) ([]corev1.Pod, error) {
 	podClient := env.Cluster().Client().CoreV1().Pods(namespace)
 	selector := labels.NewSelector()
-	if podLabels != nil {
-		for k, v := range podLabels {
-			req, err := labels.NewRequirement(k, selection.Equals, []string{v})
-			require.NoError(t, err)
-			selector.Add(*req)
-		}
+
+	for k, v := range podLabels {
+		req, err := labels.NewRequirement(k, selection.Equals, []string{v})
+		require.NoError(t, err)
+		selector.Add(*req)
 	}
 
 	podList, err := podClient.List(ctx, metav1.ListOptions{

@@ -70,22 +70,27 @@ func TestKonnectConfigPush(t *testing.T) {
 	require.Eventually(t, func() bool {
 		nodes, err := konnectNodeClient.ListAllNodes()
 		if err != nil {
+			t.Logf("list all nodes failed: %v", err)
 			return false
 		}
 
 		kicPods, err := getPodByLabels(ctx, t, env, "kong", map[string]string{"app": "ingress-kong"})
 		if err != nil || len(kicPods) != 1 {
+			t.Logf("kic pods: %v", kicPods)
 			return false
 		}
 
 		kongPods, err := getPodByLabels(ctx, t, env, "kong", map[string]string{"app": "proxy-kong"})
 		if err != nil || len(kongPods) != 2 {
+			t.Logf("kong pods: %v", kicPods)
 			return false
 		}
 
 		kicNodes := []*konnect.NodeItem{}
 		kongNodes := []*konnect.NodeItem{}
+
 		for _, node := range nodes {
+			t.Logf("node %v", node)
 			if node.Type == konnect.NodeTypeIngressController {
 				kicNodes = append(kicNodes, node)
 			}

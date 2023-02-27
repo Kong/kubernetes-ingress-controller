@@ -15,16 +15,16 @@ import (
 // *FromFlagValue functions are used to validate single flag values and set those in Config.
 // They're meant to be used together with ValidatedValue[T] type.
 
-func namespacedNameFromFlagValue(flagValue string) (mo.Option[types.NamespacedName], error) {
+func namespacedNameFromFlagValue(flagValue string) (OptionalNamespacedName, error) {
 	parts := strings.SplitN(flagValue, "/", 3)
 	if len(parts) != 2 {
-		return mo.Option[types.NamespacedName]{}, errors.New("the expected format is namespace/name")
+		return OptionalNamespacedName{}, errors.New("the expected format is namespace/name")
 	}
 	if parts[0] == "" {
-		return mo.Option[types.NamespacedName]{}, errors.New("namespace cannot be empty")
+		return OptionalNamespacedName{}, errors.New("namespace cannot be empty")
 	}
 	if parts[1] == "" {
-		return mo.Option[types.NamespacedName]{}, errors.New("name cannot be empty")
+		return OptionalNamespacedName{}, errors.New("name cannot be empty")
 	}
 
 	return mo.Some(types.NamespacedName{

@@ -21,8 +21,10 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/manager/featuregates"
 )
 
-// Type override to be used with types.NamespacedName variables to override their type name printed in the help text.
-var nnTypeNameOverride = WithTypeNameOverride[mo.Option[types.NamespacedName]]("namespacedName")
+type OptionalNamespacedName = mo.Option[types.NamespacedName]
+
+// Type override to be used with OptionalNamespacedName variables to override their type name printed in the help text.
+var nnTypeNameOverride = WithTypeNameOverride[OptionalNamespacedName]("namespacedName")
 
 // -----------------------------------------------------------------------------
 // Controller Manager - Config
@@ -56,7 +58,7 @@ type Config struct {
 	MetricsAddr           string
 	ProbeAddr             string
 	KongAdminURLs         []string
-	KongAdminSvc          mo.Option[types.NamespacedName]
+	KongAdminSvc          OptionalNamespacedName
 	KondAdminSvcPortNames []string
 	ProxySyncSeconds      float32
 	ProxyTimeoutSeconds   float32
@@ -72,8 +74,8 @@ type Config struct {
 	GatewayAPIControllerName string
 
 	// Ingress status
-	PublishServiceUDP       mo.Option[types.NamespacedName]
-	PublishService          mo.Option[types.NamespacedName]
+	PublishServiceUDP       OptionalNamespacedName
+	PublishService          OptionalNamespacedName
 	PublishStatusAddress    []string
 	PublishStatusAddressUDP []string
 	UpdateStatus            bool

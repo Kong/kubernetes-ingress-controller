@@ -171,7 +171,7 @@ func TestConfigValidate(t *testing.T) {
 
 		t.Run("enabled with no gateway service discovery enabled", func(t *testing.T) {
 			c := validEnabled()
-			c.KongAdminSvc = mo.Option[types.NamespacedName]{}
+			c.KongAdminSvc = manager.OptionalNamespacedName{}
 			require.ErrorContains(t, c.Validate(), "--kong-admin-svc has to be set when using --konnect-sync-enabled")
 		})
 	})

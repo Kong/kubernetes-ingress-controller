@@ -36,9 +36,9 @@ type FakeUDPIngresses struct {
 	ns   string
 }
 
-var udpingressesResource = schema.GroupVersionResource{Group: "configuration", Version: "v1beta1", Resource: "udpingresses"}
+var udpingressesResource = schema.GroupVersionResource{Group: "configuration.konghq.com", Version: "v1beta1", Resource: "udpingresses"}
 
-var udpingressesKind = schema.GroupVersionKind{Group: "configuration", Version: "v1beta1", Kind: "UDPIngress"}
+var udpingressesKind = schema.GroupVersionKind{Group: "configuration.konghq.com", Version: "v1beta1", Kind: "UDPIngress"}
 
 // Get takes name of the uDPIngress, and returns the corresponding uDPIngress object, and an error if there is any.
 func (c *FakeUDPIngresses) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1beta1.UDPIngress, err error) {

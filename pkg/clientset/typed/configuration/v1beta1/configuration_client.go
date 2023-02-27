@@ -32,7 +32,7 @@ type ConfigurationV1beta1Interface interface {
 	UDPIngressesGetter
 }
 
-// ConfigurationV1beta1Client is used to interact with features provided by the configuration group.
+// ConfigurationV1beta1Client is used to interact with features provided by the configuration.konghq.com group.
 type ConfigurationV1beta1Client struct {
 	restClient rest.Interface
 }

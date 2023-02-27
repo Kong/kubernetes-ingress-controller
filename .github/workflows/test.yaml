@@ -326,7 +326,7 @@ jobs:
           path: report
 
       - name: Upload test results to BuildPulse for flaky test detection
-        uses: Workshop64/buildpulse-action@a0e683af4e5070c379e9801ee9b33792ff414936
+        uses: Workshop64/buildpulse-action@main
         with:
           account: 962416
           repository: 127765544

@@ -79,12 +79,12 @@ func (p *Parser) ingressRulesFromGRPCRoute(result *ingressRules, grpcroute *gate
 func generateKongRoutesFromGRPCRouteRule(grpcroute *gatewayv1alpha2.GRPCRoute, ruleNumber int, rule gatewayv1alpha2.GRPCRouteRule) []kongstate.Route {
 	routes := make([]kongstate.Route, 0, len(rule.Matches))
 
-	// gather the k8s object information and hostnames from the httproute
+	// gather the k8s object information and hostnames from the grpcroute
 	ingressObjectInfo := util.FromK8sObject(grpcroute)
 
 	for matchNumber := range rule.Matches {
 		routeName := fmt.Sprintf(
-			"httproute.%s.%s.%d.%d",
+			"grpcroute.%s.%s.%d.%d",
 			grpcroute.Namespace,
 			grpcroute.Name,
 			ruleNumber,
@@ -119,7 +119,7 @@ func grpcBackendRefsToBackendRefs(grpcBackendRef []gatewayv1alpha2.GRPCBackendRe
 }
 
 // -----------------------------------------------------------------------------
-// Translate HTTPRoute - Utils
+// Translate GRPCRoute - Utils
 // -----------------------------------------------------------------------------
 
 // getGRPCRouteHostnamesAsSliceOfStringPointers translates the hostnames defined

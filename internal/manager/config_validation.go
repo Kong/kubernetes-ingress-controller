@@ -6,6 +6,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/samber/mo"
 	"k8s.io/apimachinery/pkg/types"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/adminapi"
@@ -14,15 +15,22 @@ import (
 // *FromFlagValue functions are used to validate single flag values and set those in Config.
 // They're meant to be used together with ValidatedValue[T] type.
 
-func namespacedNameFromFlagValue(flagValue string) (types.NamespacedName, error) {
+func namespacedNameFromFlagValue(flagValue string) (OptionalNamespacedName, error) {
 	parts := strings.SplitN(flagValue, "/", 3)
 	if len(parts) != 2 {
-		return types.NamespacedName{}, errors.New("the expected format is namespace/name")
+		return OptionalNamespacedName{}, errors.New("the expected format is namespace/name")
 	}
-	return types.NamespacedName{
+	if parts[0] == "" {
+		return OptionalNamespacedName{}, errors.New("namespace cannot be empty")
+	}
+	if parts[1] == "" {
+		return OptionalNamespacedName{}, errors.New("name cannot be empty")
+	}
+
+	return mo.Some(types.NamespacedName{
 		Namespace: parts[0],
 		Name:      parts[1],
-	}, nil
+	}), nil
 }
 
 func gatewayAPIControllerNameFromFlagValue(flagValue string) (string, error) {
@@ -59,7 +67,7 @@ func (c *Config) validateKonnect() error {
 		return nil
 	}
 
-	if c.KongAdminSvc.Name == "" || c.KongAdminSvc.Namespace == "" {
+	if c.KongAdminSvc.IsAbsent() {
 		return errors.New("--kong-admin-svc has to be set when using --konnect-sync-enabled")
 	}
 	if konnect.Address == "" {

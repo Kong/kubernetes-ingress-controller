@@ -165,6 +165,9 @@ Adding a new version? You'll need three changes:
 - Made Admission Webhook fetch the latest list of Gateways to avoid calling
   outdated services set statically during the setup.
   [#3601](https://github.com/Kong/kubernetes-ingress-controller/pull/3601)
+- Konnect sync misconfiguration (e.g. specifying incorrect Runtime Group ID)
+  won't affect the basic functionality of the controller.
+  [#3617](https://github.com/Kong/kubernetes-ingress-controller/pull/3617)
 
 ### Under the hood
 

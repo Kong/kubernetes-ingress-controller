@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/avast/retry-go/v4"
+	"github.com/go-logr/logr"
 	"github.com/kong/go-kong/kong"
 	"github.com/samber/lo"
 
@@ -23,7 +24,7 @@ type KonnectConfig struct {
 	TLSClient                    TLSClientConfig
 }
 
-func NewKongClientForKonnectRuntimeGroup(ctx context.Context, c KonnectConfig) (*Client, error) {
+func NewKongClientForKonnectRuntimeGroup(c KonnectConfig) (*Client, error) {
 	clientCertificate, err := tlsutil.ExtractClientCertificates(
 		[]byte(c.TLSClient.Cert),
 		c.TLSClient.CertFile,
@@ -55,15 +56,13 @@ func NewKongClientForKonnectRuntimeGroup(ctx context.Context, c KonnectConfig) (
 	// Konnect supports tags, we don't need to verify that.
 	client.Tags = tagsStub{}
 
-	if err := ensureKonnectConnection(ctx, client); err != nil {
-		return nil, err
-	}
 	return NewKonnectClient(client, c.RuntimeGroupID), nil
 }
 
-func ensureKonnectConnection(ctx context.Context, client *kong.Client) error {
+// EnsureKonnectConnection ensures that the client is able to connect to Konnect.
+func EnsureKonnectConnection(ctx context.Context, client *kong.Client, logger logr.Logger) error {
 	const (
-		retries = 60
+		retries = 5
 		delay   = time.Second
 	)
 
@@ -83,6 +82,9 @@ func ensureKonnectConnection(ctx context.Context, client *kong.Client) error {
 		retry.Delay(delay),
 		retry.DelayType(retry.FixedDelay),
 		retry.LastErrorOnly(true),
+		retry.OnRetry(func(n uint, err error) {
+			logger.Info("Konnect Admin API client unhealthy, retrying", "retry", n, "error", err.Error())
+		}),
 	); err != nil {
 		return fmt.Errorf("konnect client unhealthy, no success after %d retries: %w", retries, err)
 	}

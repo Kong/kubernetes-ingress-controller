@@ -136,7 +136,7 @@ type KongClient struct {
 	// clientsProvider allows retrieving the most recent set of clients.
 	clientsProvider AdminAPIClientsProvider
 
-	// configStatusNotifier notifies status of cofiguring kong gateway.
+	// configStatusNotifier notifies status of configuring kong gateway.
 	configStatusNotifier ConfigStatusNotifier
 }
 
@@ -426,7 +426,7 @@ func (c *KongClient) Update(ctx context.Context) error {
 
 	shas, err := c.sendOutToClients(ctx, kongstate, formatVersion, c.kongConfig)
 	if err != nil {
-		c.configStatusNotifier.NotifyConfigStatus(ConfigStatusApplyFailed)
+		c.configStatusNotifier.NotifyConfigStatus(ctx, ConfigStatusApplyFailed)
 		return err
 	}
 
@@ -434,9 +434,9 @@ func (c *KongClient) Update(ctx context.Context) error {
 	// notify the receiver of config status that translation error happened when there are translation errors,
 	// otherwise notify that config status is OK.
 	if len(translationFailures) > 0 {
-		c.configStatusNotifier.NotifyConfigStatus(ConfigStatusTranslationErrorHappened)
+		c.configStatusNotifier.NotifyConfigStatus(ctx, ConfigStatusTranslationErrorHappened)
 	} else {
-		c.configStatusNotifier.NotifyConfigStatus(ConfigStatusOK)
+		c.configStatusNotifier.NotifyConfigStatus(ctx, ConfigStatusOK)
 	}
 
 	// report on configured Kubernetes objects if enabled

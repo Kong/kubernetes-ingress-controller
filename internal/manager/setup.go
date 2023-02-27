@@ -211,15 +211,15 @@ func setupDataplaneAddressFinder(mgrc client.Client, c *Config, log logr.Logger)
 	return defaultAddressFinder, udpAddressFinder, nil
 }
 
-func buildDataplaneAddressFinder(mgrc client.Client, publishStatusAddress []string, publishServiceNn mo.Option[types.NamespacedName]) (*dataplane.AddressFinder, error) {
+func buildDataplaneAddressFinder(mgrc client.Client, publishStatusAddress []string, publishServiceNN mo.Option[types.NamespacedName]) (*dataplane.AddressFinder, error) {
 	addressFinder := dataplane.NewAddressFinder()
 
 	if len(publishStatusAddress) > 0 {
 		addressFinder.SetOverrides(publishStatusAddress)
 		return addressFinder, nil
 	}
-	if serviceNn, ok := publishServiceNn.Get(); ok {
-		addressFinder.SetGetter(generateAddressFinderGetter(mgrc, serviceNn))
+	if serviceNN, ok := publishServiceNN.Get(); ok {
+		addressFinder.SetGetter(generateAddressFinderGetter(mgrc, serviceNN))
 		return addressFinder, nil
 	}
 
@@ -269,8 +269,8 @@ func (c *Config) adminAPIClients(ctx context.Context) ([]*adminapi.Client, error
 
 	// If kong-admin-svc flag has been specified then use it to get the list
 	// of Kong Admin API endpoints.
-	if adminSvc, ok := c.KongAdminSvc.Get(); ok {
-		return c.adminAPIClientFromServiceDiscovery(ctx, httpclient, adminSvc)
+	if c.KongAdminSvc.IsPresent() {
+		return c.adminAPIClientFromServiceDiscovery(ctx, httpclient)
 	}
 
 	// Otherwise fallback to the list of kong admin URLs.
@@ -288,10 +288,15 @@ func (c *Config) adminAPIClients(ctx context.Context) ([]*adminapi.Client, error
 	return clients, nil
 }
 
-func (c *Config) adminAPIClientFromServiceDiscovery(ctx context.Context, httpclient *http.Client, adminSvc types.NamespacedName) ([]*adminapi.Client, error) {
+func (c *Config) adminAPIClientFromServiceDiscovery(ctx context.Context, httpclient *http.Client) ([]*adminapi.Client, error) {
 	kubeClient, err := c.GetKubeClient()
 	if err != nil {
 		return nil, err
+	}
+
+	kongAdminSvcNN, ok := c.KongAdminSvc.Get()
+	if !ok {
+		return nil, errors.New("kong admin service namespaced name not provided")
 	}
 
 	// Retry this as we may encounter an error of getting 0 addresses,
@@ -303,12 +308,12 @@ func (c *Config) adminAPIClientFromServiceDiscovery(ctx context.Context, httpcli
 	// configuration validation and sending code.
 	var adminAPIs []adminapi.DiscoveredAdminAPI
 	err = retry.Do(func() error {
-		s, err := adminapi.GetAdminAPIsForService(ctx, kubeClient, adminSvc, sets.New(c.KondAdminSvcPortNames...))
+		s, err := adminapi.GetAdminAPIsForService(ctx, kubeClient, kongAdminSvcNN, sets.New(c.KondAdminSvcPortNames...))
 		if err != nil {
 			return err
 		}
 		if s.Len() == 0 {
-			return fmt.Errorf("no endpoints for kong admin service: %q", adminSvc)
+			return fmt.Errorf("no endpoints for kong admin service: %q", kongAdminSvcNN)
 		}
 		adminAPIs = s.UnsortedList()
 		return nil

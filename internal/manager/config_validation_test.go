@@ -55,6 +55,23 @@ func TestConfigValidatedVars(t *testing.T) {
 				ExpectedErrorContains: "the expected format is namespace/name",
 			},
 		},
+		"--kong-admin-svc": {
+			{
+				Input: "namespace/servicename",
+				ExtractValueFn: func(c manager.Config) any {
+					return c.KongAdminSvc
+				},
+				ExpectedValue: mo.Some(types.NamespacedName{Namespace: "namespace", Name: "servicename"}),
+			},
+			{
+				Input:                 "namespace/",
+				ExpectedErrorContains: "name cannot be empty",
+			},
+			{
+				Input:                 "/name",
+				ExpectedErrorContains: "namespace cannot be empty",
+			},
+		},
 	}
 
 	for flag, flagTestCases := range testCasesGroupedByFlag {

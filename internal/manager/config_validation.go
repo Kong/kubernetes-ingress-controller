@@ -20,6 +20,13 @@ func namespacedNameFromFlagValue(flagValue string) (mo.Option[types.NamespacedNa
 	if len(parts) != 2 {
 		return mo.Option[types.NamespacedName]{}, errors.New("the expected format is namespace/name")
 	}
+	if parts[0] == "" {
+		return mo.Option[types.NamespacedName]{}, errors.New("namespace cannot be empty")
+	}
+	if parts[1] == "" {
+		return mo.Option[types.NamespacedName]{}, errors.New("name cannot be empty")
+	}
+
 	return mo.Some(types.NamespacedName{
 		Namespace: parts[0],
 		Name:      parts[1],

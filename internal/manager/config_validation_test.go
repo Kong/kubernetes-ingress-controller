@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/samber/mo"
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/types"
 
@@ -47,11 +48,28 @@ func TestConfigValidatedVars(t *testing.T) {
 				ExtractValueFn: func(c manager.Config) any {
 					return c.PublishService
 				},
-				ExpectedValue: types.NamespacedName{Namespace: "namespace", Name: "servicename"},
+				ExpectedValue: mo.Some(types.NamespacedName{Namespace: "namespace", Name: "servicename"}),
 			},
 			{
 				Input:                 "servicename",
 				ExpectedErrorContains: "the expected format is namespace/name",
+			},
+		},
+		"--kong-admin-svc": {
+			{
+				Input: "namespace/servicename",
+				ExtractValueFn: func(c manager.Config) any {
+					return c.KongAdminSvc
+				},
+				ExpectedValue: mo.Some(types.NamespacedName{Namespace: "namespace", Name: "servicename"}),
+			},
+			{
+				Input:                 "namespace/",
+				ExpectedErrorContains: "name cannot be empty",
+			},
+			{
+				Input:                 "/name",
+				ExpectedErrorContains: "namespace cannot be empty",
 			},
 		},
 	}
@@ -82,7 +100,7 @@ func TestConfigValidate(t *testing.T) {
 	t.Run("konnect", func(t *testing.T) {
 		validEnabled := func() *manager.Config {
 			return &manager.Config{
-				KongAdminSvc: types.NamespacedName{Name: "admin-svc", Namespace: "ns"},
+				KongAdminSvc: mo.Some(types.NamespacedName{Name: "admin-svc", Namespace: "ns"}),
 				Konnect: adminapi.KonnectConfig{
 					ConfigSynchronizationEnabled: true,
 					RuntimeGroupID:               "fbd3036f-0f1c-4e98-b71c-d4cd61213f90",
@@ -153,19 +171,7 @@ func TestConfigValidate(t *testing.T) {
 
 		t.Run("enabled with no gateway service discovery enabled", func(t *testing.T) {
 			c := validEnabled()
-			c.KongAdminSvc = types.NamespacedName{}
-			require.ErrorContains(t, c.Validate(), "--kong-admin-svc has to be set when using --konnect-sync-enabled")
-		})
-
-		t.Run("enabled with gateway service discovery without name", func(t *testing.T) {
-			c := validEnabled()
-			c.KongAdminSvc.Name = ""
-			require.ErrorContains(t, c.Validate(), "--kong-admin-svc has to be set when using --konnect-sync-enabled")
-		})
-
-		t.Run("enabled with gateway service discovery without namespace", func(t *testing.T) {
-			c := validEnabled()
-			c.KongAdminSvc.Namespace = ""
+			c.KongAdminSvc = manager.OptionalNamespacedName{}
 			require.ErrorContains(t, c.Validate(), "--kong-admin-svc has to be set when using --konnect-sync-enabled")
 		})
 	})

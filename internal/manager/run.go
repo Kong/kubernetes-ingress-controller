@@ -105,7 +105,7 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 	if err != nil {
 		return fmt.Errorf("failed to create AdminAPIClientsManager: %w", err)
 	}
-	if c.KongAdminSvc.Name != "" {
+	if c.KongAdminSvc.IsPresent() {
 		setupLog.Info("Running AdminAPIClientsManager notify loop")
 		clientsManager.RunNotifyLoop()
 	}
@@ -207,11 +207,11 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 			kubeconfig,
 			clientsManager,
 			telemetry.ReportValues{
-				PublishServiceNN:               c.PublishService,
+				PublishServiceNN:               c.PublishService.OrEmpty(),
 				FeatureGates:                   featureGates,
 				MeshDetection:                  len(c.WatchNamespaces) == 0,
 				KonnectSyncEnabled:             c.Konnect.ConfigSynchronizationEnabled,
-				GatewayServiceDiscoveryEnabled: c.KongAdminSvc.Name != "",
+				GatewayServiceDiscoveryEnabled: c.KongAdminSvc.IsPresent(),
 			},
 		)
 		if err != nil {

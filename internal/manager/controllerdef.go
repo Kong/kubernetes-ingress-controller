@@ -91,10 +91,10 @@ func setupControllers(
 		// Kong Gateway Admin API Service discovery
 		// ---------------------------------------------------------------------------
 		{
-			Enabled: c.KongAdminSvc.Name != "",
+			Enabled: c.KongAdminSvc.IsPresent(),
 			Controller: &configuration.KongAdminAPIServiceReconciler{
 				Client:            mgr.GetClient(),
-				ServiceNN:         c.KongAdminSvc,
+				ServiceNN:         c.KongAdminSvc.OrEmpty(),
 				PortNames:         sets.New(c.KondAdminSvcPortNames...),
 				Log:               ctrl.Log.WithName("controllers").WithName("KongAdminAPIService"),
 				CacheSyncTimeout:  c.CacheSyncTimeout,
@@ -378,7 +378,7 @@ func setupControllers(
 				Log:                  ctrl.Log.WithName("controllers").WithName(featuregates.GatewayFeature),
 				Scheme:               mgr.GetScheme(),
 				DataplaneClient:      dataplaneClient,
-				PublishService:       c.PublishService.String(),
+				PublishService:       c.PublishService.OrEmpty().String(),
 				WatchNamespaces:      c.WatchNamespaces,
 				EnableReferenceGrant: referenceGrantsEnabled,
 				CacheSyncTimeout:     c.CacheSyncTimeout,

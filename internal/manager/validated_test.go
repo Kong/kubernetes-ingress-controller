@@ -71,12 +71,12 @@ func TestValidatedValue(t *testing.T) {
 	t.Run("with default", func(t *testing.T) {
 		flags := flags()
 		var validatedString string
-		flags.Var(manager.NewValidatedValueWithDefault(&validatedString, func(s string) (string, error) {
+		flags.Var(manager.NewValidatedValue(&validatedString, func(s string) (string, error) {
 			if !strings.Contains(s, "magic-token") {
 				return "", errors.New("no magic token passed")
 			}
 			return s, nil
-		}, "default-value"), "flag-with-default", "")
+		}, manager.WithDefault("default-value")), "flag-with-default", "")
 
 		t.Run("empty", func(t *testing.T) {
 			err := flags.Parse(nil)
@@ -99,5 +99,33 @@ func TestValidatedValue(t *testing.T) {
 			require.NoError(t, err)
 			require.Equal(t, "magic-token", validatedString)
 		})
+	})
+}
+
+func TestValidatedValue_Type(t *testing.T) {
+	t.Run("string", func(t *testing.T) {
+		var validatedString string
+		vv := manager.NewValidatedValue(&validatedString, func(s string) (string, error) {
+			return s, nil
+		})
+		require.Equal(t, "string", vv.Type())
+	})
+
+	t.Run("struct", func(t *testing.T) {
+		type customType struct{}
+		var customTypeVar customType
+		vv := manager.NewValidatedValue(&customTypeVar, func(s string) (customType, error) {
+			return customType{}, nil
+		})
+		require.Equal(t, "manager_test.customType", vv.Type())
+	})
+
+	t.Run("overridden type name", func(t *testing.T) {
+		type customType struct{}
+		var customTypeVar customType
+		vv := manager.NewValidatedValue(&customTypeVar, func(s string) (customType, error) {
+			return customType{}, nil
+		}, manager.WithTypeNameOverride[customType]("custom-type-override"))
+		require.Equal(t, "custom-type-override", vv.Type())
 	})
 }

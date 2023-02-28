@@ -78,7 +78,7 @@ func MakeHTTPClient(opts *HTTPClientOpts, kongAdminToken string) (*http.Client, 
 	var tlsConfig tls.Config
 
 	if opts.TLSSkipVerify {
-		tlsConfig.InsecureSkipVerify = true
+		tlsConfig.InsecureSkipVerify = true //nolint:gosec
 	}
 
 	if opts.TLSServerName != "" {

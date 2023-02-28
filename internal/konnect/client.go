@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/http/httputil"
 	neturl "net/url"
 	"strconv"
 
@@ -140,10 +141,17 @@ func (c *NodeAPIClient) ListNodes(ctx context.Context, pageNumber int) (*ListNod
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
+
+	reqDump, _ := httputil.DumpRequestOut(req, true)
+	fmt.Printf("REQUEST:\n%s", string(reqDump))
+
 	httpResp, err := c.Client.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get response: %w", err)
 	}
+
+	respDump, _ := httputil.DumpResponse(httpResp, true)
+	fmt.Printf("RESPONSE:\n%s", string(respDump))
 
 	defer httpResp.Body.Close()
 

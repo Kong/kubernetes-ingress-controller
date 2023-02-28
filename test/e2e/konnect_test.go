@@ -275,7 +275,7 @@ func createKonnectNodeClient(t *testing.T, rgID, cert, key string) *konnect.Node
 func requireKonnectNodesConsistentWithK8s(ctx context.Context, t *testing.T, env environment.Environment, rgID string, cert, key string) {
 	konnectNodeClient := createKonnectNodeClient(t, rgID, cert, key)
 	require.Eventually(t, func() bool {
-		nodes, err := konnectNodeClient.ListAllNodes()
+		nodes, err := konnectNodeClient.ListAllNodes(ctx)
 		if err != nil {
 			t.Logf("list all nodes failed: %v", err)
 			return false

@@ -158,10 +158,10 @@ jobs:
 
     - name: Detect if we should run if we're running enterprise tests but no license is available
       id: detect_if_should_run
-      run: echo "result=${{ toJSON((steps.license.outputs.license != '' && matrix.enterprise) || (!matrix.enterprise)) }}" >> $GITHUB_OUTPUT
+      run: echo "result=${{ (steps.license.outputs.license != '' && matrix.enterprise) || (!matrix.enterprise) }}" >> $GITHUB_OUTPUT
 
     - name: Set image and tag for enterprise
-      if: steps.detect_if_should_run.outputs.result && matrix.enterprise
+      if: steps.detect_if_should_run.outputs.result != 'false' && matrix.enterprise
       # TODO: We need a systematic approach to this. Either:
       # - leave this here and bump every GW release
       # - remove this and rely on bumping GW image in ktf
@@ -173,19 +173,19 @@ jobs:
         echo "TEST_KONG_TAG=3.1.1.3-alpine" >> $GITHUB_ENV
 
     - name: checkout repository
-      if: steps.detect_if_should_run.outputs.result
+      if: steps.detect_if_should_run.outputs.result != 'false'
       uses: actions/checkout@v3
       with:
         fetch-depth: 0
 
     - name: setup golang
-      if: steps.detect_if_should_run.outputs.result
+      if: steps.detect_if_should_run.outputs.result != 'false'
       uses: actions/setup-go@v3
       with:
         go-version: '^1.20'
 
     - name: cache go modules
-      if: steps.detect_if_should_run.outputs.result
+      if: steps.detect_if_should_run.outputs.result != 'false'
       uses: actions/cache@v3
       with:
         path: ~/go/pkg/mod
@@ -194,7 +194,7 @@ jobs:
           ${{ runner.os }}-build-codegen-
 
     - name: run make test.integration.${{ matrix.test }}
-      if: steps.detect_if_should_run.outputs.result
+      if: steps.detect_if_should_run.outputs.result != 'false'
       run: make test.integration.${{ matrix.test }}
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -203,14 +203,14 @@ jobs:
         GOTESTSUM_JUNITFILE: "integration-tests-${{ matrix.name }}.xml"
 
     - name: collect test coverage
-      if: steps.detect_if_should_run.outputs.result
+      if: steps.detect_if_should_run.outputs.result != 'false'
       uses: actions/upload-artifact@v3
       with:
         name: coverage
         path: coverage.*.out
 
     - name: upload diagnostics
-      if: ${{ !cancelled() && steps.detect_if_should_run.outputs.result }}
+      if: ${{ !cancelled() && steps.detect_if_should_run.outputs.result != 'false' }}
       uses: actions/upload-artifact@v3
       with:
         name: diagnostics-integration-tests-${{ matrix.name }}
@@ -218,7 +218,7 @@ jobs:
         if-no-files-found: ignore
 
     - name: collect test report
-      if: ${{ !cancelled() && steps.detect_if_should_run.outputs.result }}
+      if: ${{ !cancelled() && steps.detect_if_should_run.outputs.result != 'false' }}
       uses: actions/upload-artifact@v3
       with:
         name: tests-report

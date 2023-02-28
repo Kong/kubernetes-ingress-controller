@@ -175,6 +175,8 @@ Adding a new version? You'll need three changes:
   [#3539](https://github.com/Kong/kubernetes-ingress-controller/pull/3539)
 - Updated the compiler to [Go v1.20](https://golang.org/doc/go1.20)
   [#3540](https://github.com/Kong/kubernetes-ingress-controller/issues/3540)
+- Fixed an issue with the fake clientset using the wrong group name
+  [#3517](https://github.com/Kong/kubernetes-ingress-controller/issues/3517)
 
 ### Deprecated
 

@@ -108,5 +108,5 @@ issues:
   exclude-rules:
   - linters:
     - ineffassign
-    text: "ineffectual assignment" # ignore err not checked in test files
+    text: "ineffectual assignment2" # ignore err not checked in test files
     path: test\.go

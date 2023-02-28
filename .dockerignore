@@ -3,5 +3,6 @@
 !**/*.go
 !**/*.mod
 !**/*.sum
+!**/*.sum2
 .git
 kong-ingress-controller

@@ -185,23 +185,19 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 		// In case of failures when building Konnect related objects, we're not returning errors as Konnect is not
 		// considered critical feature, and it should not break the basic functionality of the controller.
 
-		konnectAdminAPIClient, err := adminapi.NewKongClientForKonnectRuntimeGroup(ctx, c.Konnect)
-		if err != nil {
-			setupLog.Error(err, "failed creating Konnect Runtime Group Admin API client, skipping synchronisation")
-		} else {
-			setupLog.Info("Initialized Konnect Admin API client")
-			clientsManager.SetKonnectClient(konnectAdminAPIClient)
-		}
+		// Run the Konnect Admin API client initialization in a separate goroutine to not block while ensuring
+		// connection.
+		go setupKonnectAdminAPIClientWithClientsMgr(ctx, c.Konnect, clientsManager, setupLog)
 
-		// start node registration to konnect.
-		if err := startKonnectNodeRegistration(
+		// Setup Konnect NodeAgent with manager.
+		if err := setupKonnectNodeAgentWithMgr(
 			c,
 			mgr,
 			dataplaneClient,
 			clientsManager,
 			setupLog,
 		); err != nil {
-			setupLog.Error(err, "failed to start node registration to konnect")
+			setupLog.Error(err, "Failed to setup Konnect NodeAgent with manager, skipping")
 		}
 	}
 
@@ -232,16 +228,15 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 	return mgr.Start(ctx)
 }
 
-// startKonnectNodeRegistration starts node registration to konnect.
-// returns error if failed to create or run agent to maintain KIC and kong gateway nodes.
-func startKonnectNodeRegistration(
+// setupKonnectNodeAgentWithMgr creates and adds Konnect NodeAgent as the manager's Runnable.
+// Returns error if failed to create Konnect NodeAgent.
+func setupKonnectNodeAgentWithMgr(
 	c *Config,
 	mgr manager.Manager,
 	dataplaneClient *dataplane.KongClient,
 	clientsManager *dataplane.AdminAPIClientsManager,
 	logger logr.Logger,
 ) error {
-	logger.Info("Start Konnect client to register runtime instances to Konnect")
 	konnectNodeAPIClient, err := konnect.NewNodeAPIClient(c.Konnect)
 	if err != nil {
 		return fmt.Errorf("failed creating konnect client: %w", err)
@@ -249,15 +244,16 @@ func startKonnectNodeRegistration(
 	var hostname string
 	nn, err := util.GetPodNN()
 	if err != nil {
-		logger.Error(err, "failed getting pod name and/or namespace, fallback to use hostname as node name in konnect")
+		logger.Error(err, "Failed getting pod name and/or namespace, fallback to use hostname as node name in Konnect")
 		hostname, _ = os.Hostname()
 	} else {
 		hostname = nn.String()
-		logger.Info(fmt.Sprintf("use %s as node name in konnect", hostname))
+		logger.Info(fmt.Sprintf("Using %s as controller's node name in Konnect", hostname))
 	}
 	version := metadata.Release
-	// set channel to send config status.
-	configStatusNotifier := dataplane.NewChannelConfigNotifier()
+
+	// Set channel to send config status.
+	configStatusNotifier := dataplane.NewChannelConfigNotifier(logger)
 	dataplaneClient.SetConfigStatusNotifier(configStatusNotifier)
 
 	agent := konnect.NewNodeAgent(
@@ -273,6 +269,28 @@ func startKonnectNodeRegistration(
 		return fmt.Errorf("failed adding konnect.NodeAgent runnable to the manager: %w", err)
 	}
 	return nil
+}
+
+// setupKonnectAdminAPIClientWithClientsMgr initializes Konnect Admin API client and sets it to clientsManager.
+// If it fails to initialize the client, it logs the error and returns.
+func setupKonnectAdminAPIClientWithClientsMgr(
+	ctx context.Context,
+	config adminapi.KonnectConfig,
+	clientsManager *dataplane.AdminAPIClientsManager,
+	logger logr.Logger,
+) {
+	konnectAdminAPIClient, err := adminapi.NewKongClientForKonnectRuntimeGroup(config)
+	if err != nil {
+		logger.Error(err, "Failed creating Konnect Runtime Group Admin API client, skipping synchronisation")
+		return
+	}
+	if err := adminapi.EnsureKonnectConnection(ctx, konnectAdminAPIClient.AdminAPIClient(), logger); err != nil {
+		logger.Error(err, "Failed to ensure connection to Konnect Admin API, skipping synchronisation")
+		return
+	}
+
+	clientsManager.SetKonnectClient(konnectAdminAPIClient)
+	logger.Info("Initialized Konnect Admin API client")
 }
 
 type IsReady interface {

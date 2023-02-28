@@ -62,11 +62,31 @@ func TestKonnectConfigPush(t *testing.T) {
 	verifyIngress(ctx, t, env)
 
 	t.Log("ensuring ingress resources are correctly populated in Konnect Runtime Group's Admin API")
-	konnectAdminAPIClient := createKonnectAdminAPIClient(ctx, t, rgID, cert, key)
+	konnectAdminAPIClient := createKonnectAdminAPIClient(t, rgID, cert, key)
 	requireIngressConfiguredInAdminAPIEventually(ctx, t, konnectAdminAPIClient.AdminAPIClient())
 
 	t.Log("ensuring KIC nodes and controlled kong gateway nodes are present in konnect runtime group")
 	requireKonnectNodesConsistentWithK8s(ctx, t, env, rgID, cert, key)
+}
+
+func TestKonnectWhenMisconfiguredBasicIngressNotAffected(t *testing.T) {
+	t.Parallel()
+	skipIfMissingRequiredKonnectEnvVariables(t)
+
+	ctx, env := setupE2ETest(t)
+
+	rgID := createTestRuntimeGroup(ctx, t)
+	cert, key := createClientCertificate(ctx, t, rgID)
+
+	// create a Konnect client secret and config map with a non-existing runtime group ID to simulate misconfiguration
+	notExistingRgID := "not-existing-rg-id"
+	createKonnectClientSecretAndConfigMap(ctx, t, env, cert, key, notExistingRgID)
+
+	deployAllInOneKonnectManifest(ctx, t, env)
+
+	t.Log("running ingress tests to verify misconfiguration doesn't affect basic ingress functionality")
+	deployIngress(ctx, t, env)
+	verifyIngress(ctx, t, env)
 }
 
 func skipIfMissingRequiredKonnectEnvVariables(t *testing.T) {
@@ -220,10 +240,10 @@ func createKonnectClientSecretAndConfigMap(ctx context.Context, t *testing.T, en
 }
 
 // createKonnectAdminAPIClient creates an *kong.Client that will communicate with Konnect Runtime Group's Admin API.
-func createKonnectAdminAPIClient(ctx context.Context, t *testing.T, rgID, cert, key string) *adminapi.Client {
+func createKonnectAdminAPIClient(t *testing.T, rgID, cert, key string) *adminapi.Client {
 	t.Helper()
 
-	c, err := adminapi.NewKongClientForKonnectRuntimeGroup(ctx, adminapi.KonnectConfig{
+	c, err := adminapi.NewKongClientForKonnectRuntimeGroup(adminapi.KonnectConfig{
 		RuntimeGroupID: rgID,
 		Address:        konnectRuntimeGroupAdminAPIBaseURL,
 		TLSClient: adminapi.TLSClientConfig{

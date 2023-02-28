@@ -39,13 +39,13 @@ const (
 	dblessURL  = "https://raw.githubusercontent.com/Kong/kubernetes-ingress-controller/%v.%v.x/deploy/single/all-in-one-dbless.yaml"
 )
 
-func TestDeployAllInOneDBLESS(t *testing.T) {
-	t.Log("configuring all-in-one-dbless.yaml manifest test")
+func TestDeployAllInOneDBLESSLegacy(t *testing.T) {
+	t.Log("configuring all-in-one-dbless-legacy.yaml manifest test")
 	t.Parallel()
 	ctx, env := setupE2ETest(t)
 
 	t.Log("deploying kong components")
-	manifest, err := getTestManifest(t, dblessPath)
+	manifest, err := getTestManifest(t, "../../deploy/single/all-in-one-dbless-legacy.yaml")
 	require.NoError(t, err)
 	deployment := deployKong(ctx, t, env, manifest)
 
@@ -315,11 +315,11 @@ func TestDeployAllInOneEnterprisePostgres(t *testing.T) {
 	verifyEnterpriseWithPostgres(ctx, t, env, adminPassword)
 }
 
-func TestDeployAllInOneDBLESSMultiGW(t *testing.T) {
+func TestDeployAllInOneDBLESS(t *testing.T) {
 	t.Parallel()
 
 	const (
-		manifestFileName = "all-in-one-dbless-multi-gw.yaml"
+		manifestFileName = "all-in-one-dbless.yaml"
 		manifestFilePath = "../../deploy/single/" + manifestFileName
 	)
 

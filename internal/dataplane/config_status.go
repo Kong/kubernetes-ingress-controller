@@ -47,11 +47,14 @@ func (n *ChannelConfigNotifier) NotifyConfigStatus(ctx context.Context, status C
 	const notifyTimeout = time.Second
 
 	go func() {
+		timeout := time.NewTimer(notifyTimeout)
+		defer timeout.Stop()
+
 		select {
 		case n.ch <- status:
 		case <-ctx.Done():
 			n.logger.Info("Context done, not notifying config status", "status", status)
-		case <-time.After(notifyTimeout):
+		case <-timeout.C:
 			n.logger.Info("Timed out notifying config status", "status", status)
 		}
 	}()

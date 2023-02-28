@@ -73,7 +73,9 @@ func validateHTTPRoute(httproute *gatewayv1beta1.HTTPRoute) error {
 // ingressRulesFromHTTPRouteWithCombinedServiceRoutes generates a set of proto-Kong routes (ingress rules) from an HTTPRoute.
 // If multiple rules in the HTTPRoute use the same Service, it combines them into a single Kong route.
 func (p *Parser) ingressRulesFromHTTPRouteWithCombinedServiceRoutes(httproute *gatewayv1beta1.HTTPRoute, result *ingressRules) error {
-	for _, kongServiceTranslation := range translators.TranslateHTTPRoute(httproute) {
+	kongServiceTranslations := translators.TranslateHTTPRoute(httproute)
+	for i := len(kongServiceTranslations) - 1; i >= 0; i-- {
+		kongServiceTranslation := kongServiceTranslations[i]
 		// HTTPRoute uses a wrapper HTTPBackendRef to add optional filters to its BackendRefs
 		backendRefs := httpBackendRefsToBackendRefs(kongServiceTranslation.BackendRefs)
 
@@ -100,6 +102,34 @@ func (p *Parser) ingressRulesFromHTTPRouteWithCombinedServiceRoutes(httproute *g
 		result.ServiceNameToServices[*service.Service.Name] = service
 		result.ServiceNameToParent[serviceName] = httproute
 	}
+
+	/*for _, kongServiceTranslation := range kongServiceTranslations {
+		// HTTPRoute uses a wrapper HTTPBackendRef to add optional filters to its BackendRefs
+		backendRefs := httpBackendRefsToBackendRefs(kongServiceTranslation.BackendRefs)
+
+		serviceName := kongServiceTranslation.Name
+
+		// create a service and attach the routes to it
+		service, err := generateKongServiceFromBackendRefWithName(p.logger, p.storer, result, serviceName, httproute, "http", backendRefs...)
+		if err != nil {
+			return err
+		}
+
+		// generate the routes for the service and attach them to the service
+		// Iterate over the matches backward to preserve the HTTPRoute matches sort.
+		for i := len(kongServiceTranslation.KongRoutes) - 1; i >= 0; i-- {
+			kongRouteTranslation := kongServiceTranslation.KongRoutes[i]
+			route, err := generateKongRouteFromTranslation(httproute, kongRouteTranslation, p.flagEnabledRegexPathPrefix)
+			if err != nil {
+				return err
+			}
+			service.Routes = append(service.Routes, route)
+		}
+
+		// cache the service to avoid duplicates in further loop iterations
+		result.ServiceNameToServices[*service.Service.Name] = service
+		result.ServiceNameToParent[serviceName] = httproute
+	}*/
 
 	return nil
 }

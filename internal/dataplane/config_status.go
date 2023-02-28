@@ -1,5 +1,12 @@
 package dataplane
 
+import (
+	"context"
+	"time"
+
+	"github.com/go-logr/logr"
+)
+
 type ConfigStatus int
 
 const (
@@ -14,7 +21,7 @@ const (
 )
 
 type ConfigStatusNotifier interface {
-	NotifyConfigStatus(ConfigStatus)
+	NotifyConfigStatus(context.Context, ConfigStatus)
 }
 
 type ConfigStatusSubscriber interface {
@@ -25,25 +32,39 @@ type NoOpConfigStatusNotifier struct{}
 
 var _ ConfigStatusNotifier = NoOpConfigStatusNotifier{}
 
-func (n NoOpConfigStatusNotifier) NotifyConfigStatus(status ConfigStatus) {
+func (n NoOpConfigStatusNotifier) NotifyConfigStatus(_ context.Context, _ ConfigStatus) {
 }
 
 type ChannelConfigNotifier struct {
-	ch chan ConfigStatus
+	ch     chan ConfigStatus
+	logger logr.Logger
 }
 
 var _ ConfigStatusNotifier = &ChannelConfigNotifier{}
 
-func (n *ChannelConfigNotifier) NotifyConfigStatus(status ConfigStatus) {
-	n.ch <- status
+// NotifyConfigStatus sends the status in a separate goroutine. If the notification is not received in 1s, it's dropped.
+func (n *ChannelConfigNotifier) NotifyConfigStatus(ctx context.Context, status ConfigStatus) {
+	const notifyTimeout = time.Second
+
+	go func() {
+		select {
+		case n.ch <- status:
+		case <-ctx.Done():
+			n.logger.Info("Context done, not notifying config status", "status", status)
+		case <-time.After(notifyTimeout):
+			n.logger.Info("Timed out notifying config status", "status", status)
+		}
+	}()
 }
 
 func (n *ChannelConfigNotifier) SubscribeConfigStatus() chan ConfigStatus {
+	// TODO: in case of multiple subscribers, we should use a fan-out pattern.
 	return n.ch
 }
 
-func NewChannelConfigNotifier() *ChannelConfigNotifier {
+func NewChannelConfigNotifier(logger logr.Logger) *ChannelConfigNotifier {
 	return &ChannelConfigNotifier{
-		ch: make(chan ConfigStatus, 1),
+		ch:     make(chan ConfigStatus, 1),
+		logger: logger,
 	}
 }

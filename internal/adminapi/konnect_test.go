@@ -18,7 +18,7 @@ func TestNewKongClientForKonnectRuntimeGroup(t *testing.T) {
 	ctx := context.Background()
 	const runtimeGroupID = "adf78c28-5763-4394-a9a4-a9436a1bea7d"
 
-	c, err := adminapi.NewKongClientForKonnectRuntimeGroup(ctx, adminapi.KonnectConfig{
+	c, err := adminapi.NewKongClientForKonnectRuntimeGroup(adminapi.KonnectConfig{
 		ConfigSynchronizationEnabled: true,
 		RuntimeGroupID:               runtimeGroupID,
 		Address:                      "https://us.kic.api.konghq.tech",

@@ -15,9 +15,16 @@ import (
 	"github.com/go-logr/logr/testr"
 	"github.com/google/uuid"
 	"github.com/samber/lo"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane"
+)
+
+const (
+	testKicVersion  = "2.9.0"
+	testKongVersion = "3.2.0.0"
+	testClusterID   = "cluster-00"
 )
 
 // mockKonnectNodeService provides a mock service for CRUD of konnect nodes.
@@ -25,6 +32,9 @@ type mockKonnectNodeService struct {
 	lock      sync.RWMutex
 	clusterID string
 	nodes     []*NodeItem
+
+	returnErrorFromListNodes bool
+	wasListNodesCalled       bool
 }
 
 func (s *mockKonnectNodeService) upsertNode(nodeID string, version string, hostname string, lastping int64, typ string, status string) *NodeItem {
@@ -100,8 +110,16 @@ func (s *mockKonnectNodeService) handleUpdateNode(rw http.ResponseWriter, nodeID
 }
 
 func (s *mockKonnectNodeService) handleListNodes(rw http.ResponseWriter) {
-	s.lock.RLock()
-	defer s.lock.RUnlock()
+	s.lock.Lock()
+	defer s.lock.Unlock()
+
+	s.wasListNodesCalled = true
+
+	if s.returnErrorFromListNodes {
+		rw.WriteHeader(http.StatusInternalServerError)
+		_, _ = rw.Write([]byte("cannot list nodes"))
+		return
+	}
 
 	resp := ListNodeResponse{
 		Items: s.nodes,
@@ -179,6 +197,12 @@ func (s *mockKonnectNodeService) ServeHTTP(rw http.ResponseWriter, req *http.Req
 	_, _ = rw.Write([]byte("Not Found"))
 }
 
+func (s *mockKonnectNodeService) WasListNodesCalled() bool {
+	s.lock.RLock()
+	defer s.lock.RUnlock()
+	return s.wasListNodesCalled
+}
+
 type mockGatewayInstanceGetter struct {
 	gatewayInstances []GatewayInstance
 }
@@ -188,12 +212,6 @@ func (m *mockGatewayInstanceGetter) GetGatewayInstances() ([]GatewayInstance, er
 }
 
 func TestNodeAgentUpdateNodes(t *testing.T) {
-	const (
-		testKicVersion  = "2.9.0"
-		testKongVersion = "3.2.0.0"
-		testClusterID   = "cluster-00"
-	)
-
 	testCases := []struct {
 		name         string
 		hostname     string
@@ -369,27 +387,30 @@ func TestNodeAgentUpdateNodes(t *testing.T) {
 				Client:         &http.Client{},
 			}
 
-			configStatusSubscriber := dataplane.NewChannelConfigNotifier()
+			logger := testr.New(t)
+			configStatusSubscriber := dataplane.NewChannelConfigNotifier(logger)
 
 			nodeAgent := NewNodeAgent(
 				tc.hostname, testKicVersion,
 				DefaultRefreshNodePeriod,
-				testr.New(t),
+				logger,
 				nodeClient,
 				configStatusSubscriber,
 				&mockGatewayInstanceGetter{tc.gatewayInstances},
 			)
+
+			ctx := context.Background()
 			go func() {
-				err := nodeAgent.Start(context.Background())
+				err := nodeAgent.Start(ctx)
 				require.NoError(t, err)
 			}()
 
 			if tc.configStatus != nil {
-				configStatusSubscriber.NotifyConfigStatus(*tc.configStatus)
+				configStatusSubscriber.NotifyConfigStatus(ctx, *tc.configStatus)
 			}
 
 			require.Eventually(t, func() bool {
-				err := nodeAgent.updateNodes()
+				err := nodeAgent.updateNodes(ctx)
 				require.NoError(t, err)
 				// check number of nodes in RG.
 				nodes := nodeService.dumpNodes()
@@ -423,5 +444,60 @@ func TestNodeAgentUpdateNodes(t *testing.T) {
 				return true
 			}, 2*time.Second, 100*time.Millisecond)
 		})
+	}
+}
+
+func TestNodeAgent_StartDoesntReturnUntilContextGetsCancelled(t *testing.T) {
+	t.Parallel()
+
+	nodeService := &mockKonnectNodeService{
+		clusterID: testClusterID,
+		// Always return errors from ListNodes to ensure that the agent doesn't propagate it to the Start() caller.
+		// ListNodes is the first call made by the agent in Start(), so we care only about this one.
+		returnErrorFromListNodes: true,
+	}
+	s := httptest.NewServer(nodeService)
+	nodeClient := &NodeAPIClient{
+		Address:        s.URL,
+		RuntimeGroupID: testClusterID,
+		Client:         &http.Client{},
+	}
+	logger := testr.New(t)
+	configStatusSubscriber := dataplane.NewChannelConfigNotifier(logger)
+
+	nodeAgent := NewNodeAgent(
+		"hostname", testKicVersion,
+		DefaultRefreshNodePeriod,
+		logger,
+		nodeClient,
+		configStatusSubscriber,
+		&mockGatewayInstanceGetter{},
+	)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	agentReturned := make(chan struct{})
+	go func() {
+		err := nodeAgent.Start(ctx)
+		assert.NoError(t, err, "expected no error even when the context is cancelled")
+		close(agentReturned)
+	}()
+
+	require.Eventually(t, func() bool {
+		return nodeService.WasListNodesCalled()
+	}, time.Second, time.Millisecond, "expected list nodes to be called when starting the agent")
+
+	// ensure that after list nodes returned an error, the agent didn't return.
+	select {
+	case <-agentReturned:
+		t.Fatal("expected the agent to not return yet")
+	default:
+	}
+
+	// Cancel the context and wait for the nodeAgent.Start() to return.
+	cancel()
+	select {
+	case <-time.After(time.Second):
+		t.Fatal("expected the agent to return after the context was cancelled")
+	case <-agentReturned:
 	}
 }

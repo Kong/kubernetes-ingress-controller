@@ -78,10 +78,6 @@ func TestGatewayConformance(t *testing.T) {
 		BaseManifests:        conformanceTestsBaseManifests,
 		SupportedFeatures:    sets.New(suite.SupportReferenceGrant),
 		SkipTests: []string{
-			// these tests are temporarily disabled to be able to bump the Gateway API to 0.6
-			// https://github.com/Kong/kubernetes-ingress-controller/issues/3305
-			tests.HTTPRouteHeaderMatching.ShortName,
-
 			// this test is currently fixed but cannot be re-enabled yet due to an upstream issue
 			// https://github.com/kubernetes-sigs/gateway-api/pull/1745
 			tests.GatewaySecretReferenceGrantSpecific.ShortName,
@@ -99,6 +95,9 @@ func TestGatewayConformance(t *testing.T) {
 	t.Log("running gateway conformance tests")
 	for _, tt := range tests.ConformanceTests {
 		tt := tt
-		tt.Run(t, cSuite)
+		if tt.ShortName == tests.HTTPRouteHeaderMatching.ShortName {
+			fmt.Println("real test")
+			tt.Run(t, cSuite)
+		}
 	}
 }

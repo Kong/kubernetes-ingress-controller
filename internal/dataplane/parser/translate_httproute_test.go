@@ -462,8 +462,8 @@ func getIngressRulesFromHTTPRoutesCombinedRoutesTestCases() []testCaseIngressRul
 									Route: kong.Route{
 										Name: kong.String("httproute.default.basic-httproute.0.0"),
 										Paths: []*string{
-											kong.String("/httpbin-1"),
 											kong.String("/httpbin-2"),
+											kong.String("/httpbin-1"),
 										},
 										PreserveHost: kong.Bool(true),
 										Protocols: []*string{
@@ -680,8 +680,8 @@ func getIngressRulesFromHTTPRoutesCombinedRoutesTestCases() []testCaseIngressRul
 									Route: kong.Route{
 										Name: kong.String("httproute.default.basic-httproute.0.0"),
 										Paths: []*string{
-											kong.String("/httpbin-1"),
 											kong.String("/httpbin-2"),
+											kong.String("/httpbin-1"),
 										},
 										PreserveHost: kong.Bool(true),
 										Protocols: []*string{

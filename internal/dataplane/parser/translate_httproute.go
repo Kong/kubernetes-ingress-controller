@@ -86,7 +86,9 @@ func (p *Parser) ingressRulesFromHTTPRouteWithCombinedServiceRoutes(httproute *g
 		}
 
 		// generate the routes for the service and attach them to the service
-		for _, kongRouteTranslation := range kongServiceTranslation.KongRoutes {
+		// Iterate over the matches backward to preserve the HTTPRoute matches sort.
+		for i := len(kongServiceTranslation.KongRoutes) - 1; i >= 0; i-- {
+			kongRouteTranslation := kongServiceTranslation.KongRoutes[i]
 			route, err := generateKongRouteFromTranslation(httproute, kongRouteTranslation, p.flagEnabledRegexPathPrefix)
 			if err != nil {
 				return err
@@ -314,7 +316,9 @@ func generateKongRouteFromHTTPRouteMatches(
 
 	seenMethods := make(map[string]struct{})
 
-	for _, match := range matches {
+	// Iterate over the matches backward to preserve the HTTPRoute matches sort.
+	for i := len(matches) - 1; i >= 0; i-- {
+		match := matches[i]
 		// configure path matching information about the route if paths matching was defined
 		// Kong automatically infers whether or not a path is a regular expression and uses a prefix match by
 		// default if it is not. For those types, we use the path value as-is and let Kong determine the type.

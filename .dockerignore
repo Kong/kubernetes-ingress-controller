@@ -2,6 +2,6 @@
 # Ignore all files which are not go type
 !**/*.go
 !**/*.mod
-!**/*.sum
+!**/*.sum2
 .git
 kong-ingress-controller

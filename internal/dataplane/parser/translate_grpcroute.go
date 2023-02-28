@@ -82,7 +82,7 @@ func generateKongRoutesFromGRPCRouteRule(grpcroute *gatewayv1alpha2.GRPCRoute, r
 	// gather the k8s object information and hostnames from the grpcroute
 	ingressObjectInfo := util.FromK8sObject(grpcroute)
 
-	for matchNumber := range rule.Matches {
+	for matchNumber, match := range rule.Matches {
 		routeName := fmt.Sprintf(
 			"grpcroute.%s.%s.%d.%d",
 			grpcroute.Namespace,
@@ -99,11 +99,57 @@ func generateKongRoutesFromGRPCRouteRule(grpcroute *gatewayv1alpha2.GRPCRoute, r
 			},
 		}
 
+		// Kong routes derived from a GRPCRoute use a path composed of the match's gRPC service and method
+		// If either the service or method is omitted, there is a default regex determined by the match type
+		// https://gateway-api.sigs.k8s.io/geps/gep-1016/#matcher-types describes the defaults
+		// TODO handle invalid cases?
+		if match.Method != nil {
+			var method, service string
+			matchMethod := match.Method.Method
+			matchService := match.Method.Service
+			var matchType gatewayv1alpha2.GRPCMethodMatchType
+			if match.Method.Type == nil {
+				matchType = gatewayv1alpha2.GRPCMethodMatchExact
+			} else {
+				matchType = *match.Method.Type
+			}
+			serviceMap := map[gatewayv1alpha2.GRPCMethodMatchType]string{
+				gatewayv1alpha2.GRPCMethodMatchType(""):          "/.+",
+				gatewayv1alpha2.GRPCMethodMatchExact:             "/.+",
+				gatewayv1alpha2.GRPCMethodMatchRegularExpression: "/.+",
+			}
+			methodMap := map[gatewayv1alpha2.GRPCMethodMatchType]string{
+				gatewayv1alpha2.GRPCMethodMatchType(""):          "",
+				gatewayv1alpha2.GRPCMethodMatchExact:             "",
+				gatewayv1alpha2.GRPCMethodMatchRegularExpression: ".+",
+			}
+			if matchMethod == nil {
+				method = methodMap[matchType]
+			} else {
+				method = *matchMethod
+			}
+			if matchService == nil {
+				service = serviceMap[matchType]
+			} else {
+				service = *matchService
+			}
+			r.Paths = append(r.Paths, kong.String(fmt.Sprintf("%s/%s", service, method)))
+		}
+
 		if len(grpcroute.Spec.Hostnames) > 0 {
 			r.Hosts = getGRPCRouteHostnamesAsSliceOfStringPointers(grpcroute)
 		}
 
 		routes = append(routes, r)
+
+		r.Headers = map[string][]string{}
+		for _, hmatch := range match.Headers {
+			name := string(hmatch.Name)
+			if _, ok := r.Headers[name]; !ok {
+				r.Headers[name] = []string{}
+			}
+			r.Headers[name] = append(r.Headers[name], hmatch.Value)
+		}
 	}
 
 	return routes

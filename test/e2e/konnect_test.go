@@ -66,59 +66,7 @@ func TestKonnectConfigPush(t *testing.T) {
 	requireIngressConfiguredInAdminAPIEventually(ctx, t, konnectAdminAPIClient.AdminAPIClient())
 
 	t.Log("ensuring KIC nodes and controlled kong gateway nodes are present in konnect runtime group")
-	konnectNodeClient := createKonnectNodeClient(t, rgID, cert, key)
-	require.Eventually(t, func() bool {
-		nodes, err := konnectNodeClient.ListAllNodes()
-		if err != nil {
-			t.Logf("list all nodes failed: %v", err)
-			return false
-		}
-
-		kicPods, err := getPodByLabels(ctx, t, env, "kong", map[string]string{"app": "ingress-kong"})
-		if err != nil || len(kicPods) != 1 {
-			t.Logf("kic pods: %v", kicPods)
-			return false
-		}
-
-		kongPods, err := getPodByLabels(ctx, t, env, "kong", map[string]string{"app": "proxy-kong"})
-		if err != nil || len(kongPods) != 2 {
-			t.Logf("kong pods: %v", kicPods)
-			return false
-		}
-
-		kicNodes := []*konnect.NodeItem{}
-		kongNodes := []*konnect.NodeItem{}
-
-		for _, node := range nodes {
-			t.Logf("node %v", node)
-			if node.Type == konnect.NodeTypeIngressController {
-				kicNodes = append(kicNodes, node)
-			}
-			if node.Type == konnect.NodeTypeKongProxy {
-				kongNodes = append(kongNodes, node)
-			}
-		}
-
-		// check for number of nodes in Konnect.
-		if len(kicNodes) != 1 || len(kongNodes) != 2 {
-			return false
-		}
-
-		if kicNodes[0].Hostname != fmt.Sprintf("%s/%s", kongPods[0].Namespace, kongPods[0].Name) {
-			return false
-		}
-
-		for _, pod := range kongPods {
-			nsName := fmt.Sprintf("%s/%s", pod.Namespace, pod.Name)
-			if !lo.ContainsBy(kongNodes, func(n *konnect.NodeItem) bool {
-				return n.Hostname == nsName
-			}) {
-				return false
-			}
-		}
-
-		return true
-	}, konnectNodeRegistrationTimeout, konnectNodeRegistrationCheck)
+	requireKonnectNodesConsistentWithK8s(ctx, t, env, rgID, cert, key)
 }
 
 func skipIfMissingRequiredKonnectEnvVariables(t *testing.T) {
@@ -302,4 +250,57 @@ func createKonnectNodeClient(t *testing.T, rgID, cert, key string) *konnect.Node
 	c, err := konnect.NewNodeAPIClient(cfg)
 	require.NoError(t, err)
 	return c
+}
+
+func requireKonnectNodesConsistentWithK8s(ctx context.Context, t *testing.T, env environment.Environment, rgID string, cert, key string) {
+	konnectNodeClient := createKonnectNodeClient(t, rgID, cert, key)
+	require.Eventually(t, func() bool {
+		nodes, err := konnectNodeClient.ListAllNodes()
+		if err != nil {
+			t.Logf("list all nodes failed: %v", err)
+			return false
+		}
+
+		kicPods, err := getPodByLabels(ctx, t, env, "kong", map[string]string{"app": "ingress-kong"})
+		if err != nil || len(kicPods) != 1 {
+			return false
+		}
+
+		kongPods, err := getPodByLabels(ctx, t, env, "kong", map[string]string{"app": "proxy-kong"})
+		if err != nil || len(kongPods) != 2 {
+			return false
+		}
+
+		kicNodes := []*konnect.NodeItem{}
+		kongNodes := []*konnect.NodeItem{}
+
+		for _, node := range nodes {
+			if node.Type == konnect.NodeTypeIngressController {
+				kicNodes = append(kicNodes, node)
+			}
+			if node.Type == konnect.NodeTypeKongProxy {
+				kongNodes = append(kongNodes, node)
+			}
+		}
+
+		// check for number of nodes in Konnect.
+		if len(kicNodes) != 1 || len(kongNodes) != 2 {
+			return false
+		}
+
+		if kicNodes[0].Hostname != fmt.Sprintf("%s/%s", kicPods[0].Namespace, kicPods[0].Name) {
+			return false
+		}
+
+		for _, pod := range kongPods {
+			nsName := fmt.Sprintf("%s/%s", pod.Namespace, pod.Name)
+			if !lo.ContainsBy(kongNodes, func(n *konnect.NodeItem) bool {
+				return n.Hostname == nsName
+			}) {
+				return false
+			}
+		}
+
+		return true
+	}, konnectNodeRegistrationTimeout, konnectNodeRegistrationCheck)
 }

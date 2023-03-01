@@ -35,6 +35,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/selection"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
@@ -589,4 +591,26 @@ func runOnlyOnKindClusters(t *testing.T) {
 	if !existingClusterIsKind || !clusterProviderIsKind {
 		t.Skip("test is supported only on Kind clusters")
 	}
+}
+
+func getPodByLabels(ctx context.Context,
+	t *testing.T, env environments.Environment, namespace string, podLabels map[string]string,
+) ([]corev1.Pod, error) {
+	t.Helper()
+	podClient := env.Cluster().Client().CoreV1().Pods(namespace)
+	selector := labels.NewSelector()
+
+	for k, v := range podLabels {
+		req, err := labels.NewRequirement(k, selection.Equals, []string{v})
+		require.NoError(t, err)
+		selector = selector.Add(*req)
+	}
+
+	podList, err := podClient.List(ctx, metav1.ListOptions{
+		LabelSelector: selector.String(),
+	})
+	if err != nil {
+		return nil, err
+	}
+	return podList.Items, nil
 }

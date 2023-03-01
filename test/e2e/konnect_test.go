@@ -29,6 +29,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/adminapi"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/konnect"
 	rg "github.com/kong/kubernetes-ingress-controller/v2/internal/konnect/runtimegroups"
 	rgc "github.com/kong/kubernetes-ingress-controller/v2/internal/konnect/runtimegroupsconfig"
 )
@@ -37,6 +38,9 @@ const (
 	konnectRuntimeGroupsBaseURL          = "https://us.kic.api.konghq.tech/v2"
 	konnectRuntimeGroupsConfigBaseURLFmt = "https://us.api.konghq.tech/konnect-api/api/runtime_groups/%s/v1"
 	konnectRuntimeGroupAdminAPIBaseURL   = "https://us.kic.api.konghq.tech"
+
+	konnectNodeRegistrationTimeout = 5 * time.Minute
+	konnectNodeRegistrationCheck   = 30 * time.Second
 )
 
 var konnectAccessToken = os.Getenv("TEST_KONG_KONNECT_ACCESS_TOKEN")
@@ -60,6 +64,9 @@ func TestKonnectConfigPush(t *testing.T) {
 	t.Log("ensuring ingress resources are correctly populated in Konnect Runtime Group's Admin API")
 	konnectAdminAPIClient := createKonnectAdminAPIClient(t, rgID, cert, key)
 	requireIngressConfiguredInAdminAPIEventually(ctx, t, konnectAdminAPIClient.AdminAPIClient())
+
+	t.Log("ensuring KIC nodes and controlled kong gateway nodes are present in konnect runtime group")
+	requireKonnectNodesConsistentWithK8s(ctx, t, env, rgID, cert, key)
 }
 
 func TestKonnectWhenMisconfiguredBasicIngressNotAffected(t *testing.T) {
@@ -246,4 +253,74 @@ func createKonnectAdminAPIClient(t *testing.T, rgID, cert, key string) *adminapi
 	})
 	require.NoError(t, err)
 	return c
+}
+
+// createKonnectNodeClient creates a konnect.NodeAPIClient to get nodes in konnect runtime group.
+func createKonnectNodeClient(t *testing.T, rgID, cert, key string) *konnect.NodeAPIClient {
+	cfg := adminapi.KonnectConfig{
+		ConfigSynchronizationEnabled: true,
+		RuntimeGroupID:               rgID,
+		Address:                      konnectRuntimeGroupAdminAPIBaseURL,
+		RefreshNodePeriod:            konnect.MinRefreshNodePeriod,
+		TLSClient: adminapi.TLSClientConfig{
+			Cert: cert,
+			Key:  key,
+		},
+	}
+	c, err := konnect.NewNodeAPIClient(cfg)
+	require.NoError(t, err)
+	return c
+}
+
+func requireKonnectNodesConsistentWithK8s(ctx context.Context, t *testing.T, env environment.Environment, rgID string, cert, key string) {
+	konnectNodeClient := createKonnectNodeClient(t, rgID, cert, key)
+	require.Eventually(t, func() bool {
+		nodes, err := konnectNodeClient.ListAllNodes(ctx)
+		if err != nil {
+			t.Logf("list all nodes failed: %v", err)
+			return false
+		}
+
+		kicPods, err := getPodByLabels(ctx, t, env, "kong", map[string]string{"app": "ingress-kong"})
+		if err != nil || len(kicPods) != 1 {
+			return false
+		}
+
+		kongPods, err := getPodByLabels(ctx, t, env, "kong", map[string]string{"app": "proxy-kong"})
+		if err != nil || len(kongPods) != 2 {
+			return false
+		}
+
+		kicNodes := []*konnect.NodeItem{}
+		kongNodes := []*konnect.NodeItem{}
+
+		for _, node := range nodes {
+			if node.Type == konnect.NodeTypeIngressController {
+				kicNodes = append(kicNodes, node)
+			}
+			if node.Type == konnect.NodeTypeKongProxy {
+				kongNodes = append(kongNodes, node)
+			}
+		}
+
+		// check for number of nodes in Konnect.
+		if len(kicNodes) != 1 || len(kongNodes) != 2 {
+			return false
+		}
+
+		if kicNodes[0].Hostname != fmt.Sprintf("%s/%s", kicPods[0].Namespace, kicPods[0].Name) {
+			return false
+		}
+
+		for _, pod := range kongPods {
+			nsName := fmt.Sprintf("%s/%s", pod.Namespace, pod.Name)
+			if !lo.ContainsBy(kongNodes, func(n *konnect.NodeItem) bool {
+				return n.Hostname == nsName
+			}) {
+				return false
+			}
+		}
+
+		return true
+	}, konnectNodeRegistrationTimeout, konnectNodeRegistrationCheck)
 }

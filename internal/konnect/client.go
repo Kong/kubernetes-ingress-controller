@@ -40,9 +40,9 @@ func NewNodeAPIClient(cfg adminapi.KonnectConfig) (*NodeAPIClient, error) {
 	}
 
 	c := &http.Client{}
-	defaultTransport := http.DefaultTransport.(*http.Transport)
-	defaultTransport.TLSClientConfig = &tlsConfig
-	c.Transport = defaultTransport
+	transport := http.DefaultTransport.(*http.Transport).Clone()
+	transport.TLSClientConfig = &tlsConfig
+	c.Transport = transport
 
 	return &NodeAPIClient{
 		Address:        cfg.Address,
@@ -140,6 +140,7 @@ func (c *NodeAPIClient) ListNodes(ctx context.Context, pageNumber int) (*ListNod
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
+
 	httpResp, err := c.Client.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get response: %w", err)

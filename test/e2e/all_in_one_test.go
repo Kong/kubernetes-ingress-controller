@@ -415,7 +415,13 @@ func TestDeployAllInOnePostgresMultipleGW(t *testing.T) {
 	deployIngress(ctx, t, env)
 	verifyIngress(ctx, t, env)
 
-	const replicasCount = 2
+	gatewayDeployment, err := env.Cluster().Client().AppsV1().Deployments(deployment.Namespace).Get(ctx, "proxy-kong", metav1.GetOptions{})
+	require.NoError(t, err)
+
+	const replicasCount = 3
+	gatewayDeployment.Spec.Replicas = lo.ToPtr(int32(replicasCount))
+	_, err = env.Cluster().Client().AppsV1().Deployments(deployment.Namespace).Update(ctx, gatewayDeployment, metav1.UpdateOptions{})
+	require.NoError(t, err)
 
 	var podList *corev1.PodList
 	t.Log("waiting all the dataplane instances to be ready")

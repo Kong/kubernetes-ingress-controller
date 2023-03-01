@@ -17,28 +17,28 @@ import (
 
 const (
 	initRetryPatch = `- op: add
-  path: /spec/template/spec/containers/1/env/-
+  path: /spec/template/spec/containers/0/env/-
   value:
     name: CONTROLLER_KONG_ADMIN_INIT_RETRY_DELAY
     value: "%s"
 - op: add
-  path: /spec/template/spec/containers/1/env/-
+  path: /spec/template/spec/containers/0/env/-
   value:
     name: CONTROLLER_KONG_ADMIN_INIT_RETRIES
     value: "%d"`
 
 	livenessProbePatch = `- op: replace
-  path: /spec/template/spec/containers/%[1]d/livenessProbe/initialDelaySeconds
+  path: /spec/template/spec/containers/0/livenessProbe/initialDelaySeconds
+  value: %[1]d
+- op: replace
+  path: /spec/template/spec/containers/0/livenessProbe/timeoutSeconds
   value: %[2]d
 - op: replace
-  path: /spec/template/spec/containers/%[1]d/livenessProbe/timeoutSeconds
-  value: %[3]d
-- op: replace
-  path: /spec/template/spec/containers/%[1]d/livenessProbe/failureThreshold
-  value: %[4]d`
+  path: /spec/template/spec/containers/0/livenessProbe/failureThreshold
+  value: %[3]d`
 
 	addControllerEnvPatch = `- op: add
-  path: "/spec/template/spec/containers/1/env/-"
+  path: "/spec/template/spec/containers/0/env/-"
   value:
     name: %s
     value: "%s"`
@@ -104,13 +104,13 @@ func patchControllerStartTimeout(baseManifestReader io.Reader, tries int, delay 
 	return kubectl.GetKustomizedManifest(kustomization, baseManifestReader)
 }
 
-// patchLivenessProbes patches the given container's liveness probe, replacing the initial delay, period, and failure
+// patchLivenessProbes patches the given deployment's liveness probe, replacing the initial delay, period, and failure
 // threshold.
-func patchLivenessProbes(baseManifestReader io.Reader, container, failure int, initial, period time.Duration) (io.Reader, error) {
+func patchLivenessProbes(baseManifestReader io.Reader, deployment string, failure int, initial, period time.Duration) (io.Reader, error) {
 	kustomization := types.Kustomization{
 		Patches: []types.Patch{
 			{
-				Patch: fmt.Sprintf(livenessProbePatch, container, int(initial.Seconds()), int(period.Seconds()), failure),
+				Patch: fmt.Sprintf(livenessProbePatch, int(initial.Seconds()), int(period.Seconds()), failure),
 				Target: &types.Selector{
 					ResId: resid.ResId{
 						Gvk: resid.Gvk{
@@ -118,7 +118,7 @@ func patchLivenessProbes(baseManifestReader io.Reader, container, failure int, i
 							Version: "v1",
 							Kind:    "Deployment",
 						},
-						Name:      "ingress-kong",
+						Name:      deployment,
 						Namespace: "kong",
 					},
 				},

@@ -145,6 +145,11 @@ Adding a new version? You'll need three changes:
   gateway pod. If gateway discovery is disabled, the Kong gateway nodes will use `gateway_<address>` 
   as the hostname, where `address` is the Admin API address used by KIC.
   [#3587](https://github.com/Kong/kubernetes-ingress-controller/pull/3587)
+- All all-in-one DB-less deployment manifests will now use separate deployments 
+  for the controller and the proxy. This enables the proxy to be scaled independently
+  of the controller. The old `all-in-one-dbless.yaml` manifest has been deprecated and 
+  renamed to `all-in-one-dbless-legacy.yaml`. It will be removed in a future release.
+  [#3692](https://github.com/Kong/kubernetes-ingress-controller/pull/3629)
 
 ### Fixed
 

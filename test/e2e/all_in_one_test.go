@@ -7,7 +7,6 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
-	"io"
 	"net/http"
 	"os"
 	"testing"
@@ -39,13 +38,13 @@ const (
 	dblessURL  = "https://raw.githubusercontent.com/Kong/kubernetes-ingress-controller/%v.%v.x/deploy/single/all-in-one-dbless.yaml"
 )
 
-func TestDeployAllInOneDBLESS(t *testing.T) {
-	t.Log("configuring all-in-one-dbless.yaml manifest test")
+func TestDeployAllInOneDBLESSLegacy(t *testing.T) {
+	t.Log("configuring all-in-one-dbless-legacy.yaml manifest test")
 	t.Parallel()
 	ctx, env := setupE2ETest(t)
 
 	t.Log("deploying kong components")
-	manifest, err := getTestManifest(t, dblessPath)
+	manifest, err := getTestManifest(t, "../../deploy/single/all-in-one-dbless-legacy.yaml")
 	require.NoError(t, err)
 	deployment := deployKong(ctx, t, env, manifest)
 
@@ -125,7 +124,7 @@ func TestDeployAllInOneEnterpriseDBLESS(t *testing.T) {
 	_ = deployKong(ctx, t, env, manifest, licenseSecret, adminPasswordSecretYAML)
 
 	t.Log("exposing the admin api so that enterprise features can be verified")
-	exposeAdminAPI(ctx, t, env)
+	exposeAdminAPI(ctx, t, env, "proxy-kong")
 
 	t.Log("running ingress tests to verify all-in-one deployed ingress controller and proxy are functional")
 	deployIngress(ctx, t, env)
@@ -310,16 +309,19 @@ func TestDeployAllInOneEnterprisePostgres(t *testing.T) {
 	deployIngress(ctx, t, env)
 	verifyIngress(ctx, t, env)
 
+	t.Log("exposing the admin api so that enterprise features can be verified")
+	exposeAdminAPI(ctx, t, env, "ingress-kong")
+
 	t.Log("this deployment used enterprise kong, verifying that enterprise functionality was set up properly")
 	verifyEnterprise(ctx, t, env, adminPassword)
 	verifyEnterpriseWithPostgres(ctx, t, env, adminPassword)
 }
 
-func TestDeployAllInOneDBLESSMultiGW(t *testing.T) {
+func TestDeployAllInOneDBLESS(t *testing.T) {
 	t.Parallel()
 
 	const (
-		manifestFileName = "all-in-one-dbless-multi-gw.yaml"
+		manifestFileName = "all-in-one-dbless.yaml"
 		manifestFilePath = "../../deploy/single/" + manifestFileName
 	)
 
@@ -327,12 +329,7 @@ func TestDeployAllInOneDBLESSMultiGW(t *testing.T) {
 	ctx, env := setupE2ETest(t)
 
 	t.Log("deploying kong components")
-	f, err := os.Open(manifestFilePath)
-	require.NoError(t, err)
-	defer f.Close()
-	var manifest io.Reader = f
-
-	manifest, err = patchControllerImageFromEnv(manifest, manifestFilePath)
+	manifest, err := getTestManifest(t, manifestFilePath)
 	require.NoError(t, err)
 	deployment := deployKong(ctx, t, env, manifest)
 

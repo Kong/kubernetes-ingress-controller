@@ -67,7 +67,7 @@ const (
 
 	ingressClass     = "kong"
 	namespace        = "kong"
-	adminServiceName = "kong-admin"
+	adminServiceName = "kong-admin-lb"
 
 	tcpEchoPort    = 1025
 	tcpListnerPort = 8888

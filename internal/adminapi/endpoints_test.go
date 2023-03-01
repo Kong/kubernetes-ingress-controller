@@ -434,7 +434,7 @@ func TestGetAdminAPIsForService(t *testing.T) {
 			),
 		},
 		{
-			name: "port not called 'admin' are not taken into account",
+			name: "ports not matching the specified port names are not taken into account",
 			service: types.NamespacedName{
 				Namespace: "ns",
 				Name:      serviceName,
@@ -458,6 +458,72 @@ func TestGetAdminAPIsForService(t *testing.T) {
 							Ports: []discoveryv1.EndpointPort{
 								{
 									Name: lo.ToPtr("non-admin-port"),
+									Port: lo.ToPtr(int32(8444)),
+								},
+							},
+						},
+					},
+				},
+			},
+			want: sets.New[DiscoveredAdminAPI](),
+		},
+		{
+			name: "Endpoints without a TargetRef are not matched",
+			service: types.NamespacedName{
+				Namespace: "ns",
+				Name:      serviceName,
+			},
+			objects: []client.ObjectList{
+				&discoveryv1.EndpointSliceList{
+					Items: []discoveryv1.EndpointSlice{
+						{
+							ObjectMeta:  matchingServiceObjectMetaFunc(),
+							AddressType: discoveryv1.AddressTypeIPv4,
+							Endpoints: []discoveryv1.Endpoint{
+								{
+									Addresses: []string{"7.0.0.1"},
+									Conditions: discoveryv1.EndpointConditions{
+										Ready:       lo.ToPtr(true),
+										Terminating: lo.ToPtr(false),
+									},
+								},
+							},
+							Ports: []discoveryv1.EndpointPort{
+								{
+									Name: lo.ToPtr("admin"),
+									Port: lo.ToPtr(int32(8444)),
+								},
+							},
+						},
+					},
+				},
+			},
+			want: sets.New[DiscoveredAdminAPI](),
+		},
+		{
+			name: "not Ready Endpoints are not matched",
+			service: types.NamespacedName{
+				Namespace: "ns",
+				Name:      serviceName,
+			},
+			objects: []client.ObjectList{
+				&discoveryv1.EndpointSliceList{
+					Items: []discoveryv1.EndpointSlice{
+						{
+							ObjectMeta:  matchingServiceObjectMetaFunc(),
+							AddressType: discoveryv1.AddressTypeIPv4,
+							Endpoints: []discoveryv1.Endpoint{
+								{
+									Addresses: []string{"7.0.0.1"},
+									Conditions: discoveryv1.EndpointConditions{
+										Ready: lo.ToPtr(false),
+									},
+									TargetRef: testPodReference("pod-1"),
+								},
+							},
+							Ports: []discoveryv1.EndpointPort{
+								{
+									Name: lo.ToPtr("admin"),
 									Port: lo.ToPtr(int32(8444)),
 								},
 							},

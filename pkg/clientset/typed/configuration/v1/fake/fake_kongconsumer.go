@@ -36,9 +36,9 @@ type FakeKongConsumers struct {
 	ns   string
 }
 
-var kongconsumersResource = schema.GroupVersionResource{Group: "configuration", Version: "v1", Resource: "kongconsumers"}
+var kongconsumersResource = schema.GroupVersionResource{Group: "configuration.konghq.com", Version: "v1", Resource: "kongconsumers"}
 
-var kongconsumersKind = schema.GroupVersionKind{Group: "configuration", Version: "v1", Kind: "KongConsumer"}
+var kongconsumersKind = schema.GroupVersionKind{Group: "configuration.konghq.com", Version: "v1", Kind: "KongConsumer"}
 
 // Get takes name of the kongConsumer, and returns the corresponding kongConsumer object, and an error if there is any.
 func (c *FakeKongConsumers) Get(ctx context.Context, name string, options v1.GetOptions) (result *configurationv1.KongConsumer, err error) {

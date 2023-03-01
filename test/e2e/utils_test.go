@@ -57,9 +57,9 @@ func generateAdminPasswordSecret() (string, *corev1.Secret, error) {
 // exposeAdminAPI will override the KONG_ADMIN_LISTEN for the cluster's proxy to expose the
 // Admin API via a service. Some deployments only expose this on localhost by default as there's
 // no authentication, so note that this is only for testing environment purposes.
-func exposeAdminAPI(ctx context.Context, t *testing.T, env environments.Environment) *corev1.Service {
+func exposeAdminAPI(ctx context.Context, t *testing.T, env environments.Environment, proxyDeployment string) {
 	t.Log("updating the proxy container KONG_ADMIN_LISTEN to expose the admin api")
-	deployment, err := env.Cluster().Client().AppsV1().Deployments(namespace).Get(ctx, "ingress-kong", metav1.GetOptions{})
+	deployment, err := env.Cluster().Client().AppsV1().Deployments(namespace).Get(ctx, proxyDeployment, metav1.GetOptions{})
 	require.NoError(t, err)
 	for i, containerSpec := range deployment.Spec.Template.Spec.Containers {
 		if containerSpec.Name == "proxy" {
@@ -99,8 +99,6 @@ func exposeAdminAPI(ctx context.Context, t *testing.T, env environments.Environm
 		require.NoError(t, err)
 		return len(service.Status.LoadBalancer.Ingress) == 1
 	}, time.Minute, time.Second)
-
-	return service
 }
 
 // getTestManifest checks if a controller image override is set. If not, it returns the original provided path.
@@ -117,32 +115,16 @@ func getTestManifest(t *testing.T, baseManifestPath string) (io.Reader, error) {
 		return nil, err
 	}
 
-	manifestsReader, err = patchControllerImageFromEnv(manifestsReader, baseManifestPath)
+	manifestsReader, err = patchControllerImageFromEnv(manifestsReader)
 	if err != nil {
 		t.Logf("failed patching controller image (%v), using default manifest %v", err, baseManifestPath)
 		return manifestsReader, nil
 	}
 
-	var kongImageFullname string
-	if kongImageLoad != "" {
-		kongImageFullname = kongImageLoad
-	} else {
-		kongImageFullname = kongImageOverride
-	}
-	if kongImageFullname != "" {
-		t.Logf("replace kong image to %s", kongImageFullname)
-		split := strings.Split(kongImageFullname, ":")
-		if len(split) < 2 {
-			t.Logf("could not parse override image '%v', using default manifest %v", kongImageFullname, baseManifestPath)
-			return manifestsReader, nil
-		}
-		repo := strings.Join(split[0:len(split)-1], ":")
-		tag := split[len(split)-1]
-		manifestsReader, err = patchKongImage(manifestsReader, repo, tag)
-		if err != nil {
-			t.Logf("failed patching override image '%v' (%v), using default manifest %v", kongImageFullname, err, baseManifestPath)
-			return manifestsReader, nil
-		}
+	manifestsReader, err = patchGatewayImageFromEnv(t, manifestsReader)
+	if err != nil {
+		t.Logf("failed patching gateway image (%v), using default manifest %v", err, baseManifestPath)
+		return manifestsReader, nil
 	}
 
 	manifestsReader, err = patchControllerStartTimeout(manifestsReader, 120, time.Second*3)
@@ -151,13 +133,13 @@ func getTestManifest(t *testing.T, baseManifestPath string) (io.Reader, error) {
 		return manifestsReader, nil
 	}
 
-	manifestsReader, err = patchLivenessProbes(manifestsReader, 0, 10, time.Second*15, time.Second*3)
+	manifestsReader, err = patchLivenessProbes(manifestsReader, "proxy-kong", 10, time.Second*15, time.Second*3)
 	if err != nil {
 		t.Logf("failed patching kong liveness (%v), using default manifest %v", err, baseManifestPath)
 		return manifestsReader, nil
 	}
 
-	manifestsReader, err = patchLivenessProbes(manifestsReader, 1, 15, time.Second*3, time.Second*10)
+	manifestsReader, err = patchLivenessProbes(manifestsReader, "ingress-kong", 15, time.Second*3, time.Second*10)
 	if err != nil {
 		t.Logf("failed patching controller liveness (%v), using default manifest %v", err, baseManifestPath)
 		return manifestsReader, nil
@@ -167,8 +149,37 @@ func getTestManifest(t *testing.T, baseManifestPath string) (io.Reader, error) {
 	return manifestsReader, nil
 }
 
-// patchControllerImageFromEnv will optionally replace a default controller image in manifests with one of `imageLoad` or `imageOverride` if any is set.
-func patchControllerImageFromEnv(manifestReader io.Reader, baseManifestPath string) (io.Reader, error) {
+// patchGatewayImageFromEnv will optionally replace a default controller image in manifests with one of `kongImageLoad`
+// or `kongImageOverride` if any is set.
+func patchGatewayImageFromEnv(t *testing.T, manifestsReader io.Reader) (io.Reader, error) {
+	var kongImageFullname string
+	if kongImageLoad != "" {
+		kongImageFullname = kongImageLoad
+	} else {
+		kongImageFullname = kongImageOverride
+	}
+
+	if kongImageFullname != "" {
+		t.Logf("replace kong image to %s", kongImageFullname)
+		split := strings.Split(kongImageFullname, ":")
+		if len(split) < 2 {
+			return nil, fmt.Errorf("invalid image name '%s', expected <repo>:<tag> format", kongImageFullname)
+		}
+		repo := strings.Join(split[0:len(split)-1], ":")
+		tag := split[len(split)-1]
+		patchedManifestsReader, err := patchKongImage(manifestsReader, repo, tag)
+		if err != nil {
+			return nil, fmt.Errorf("failed patching override image '%v'", kongImageFullname)
+		}
+		return patchedManifestsReader, nil
+	}
+
+	return manifestsReader, nil
+}
+
+// patchControllerImageFromEnv will optionally replace a default controller image in manifests with one of `imageLoad`
+// or `imageOverride` if any is set.
+func patchControllerImageFromEnv(manifestReader io.Reader) (io.Reader, error) {
 	var imageFullname string
 	if imageLoad != "" {
 		imageFullname = imageLoad
@@ -179,14 +190,14 @@ func patchControllerImageFromEnv(manifestReader io.Reader, baseManifestPath stri
 	if imageFullname != "" {
 		split := strings.Split(imageFullname, ":")
 		if len(split) < 2 {
-			return manifestReader, fmt.Errorf("could not parse override image '%v', using default manifest %v", imageFullname, baseManifestPath)
+			return nil, fmt.Errorf("could not parse override image '%v', expected <repo>:<tag> format", imageFullname)
 		}
 		repo := strings.Join(split[0:len(split)-1], ":")
 		tag := split[len(split)-1]
 		var err error
 		manifestReader, err = patchControllerImage(manifestReader, repo, tag)
 		if err != nil {
-			return manifestReader, fmt.Errorf("failed patching override image '%v' (%w), using default manifest %v", imageFullname, err, baseManifestPath)
+			return nil, fmt.Errorf("failed patching override image '%v': %w", imageFullname, err)
 		}
 	}
 	return manifestReader, nil

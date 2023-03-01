@@ -7,8 +7,10 @@ import (
 	"context"
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/kuma"
+	"github.com/kong/kubernetes-testing-framework/pkg/environments"
 	"github.com/stretchr/testify/require"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -25,7 +27,7 @@ func TestDeployAllInOneDBLESSKuma(t *testing.T) {
 	t.Log("deploying kong components")
 	manifest, err := getTestManifest(t, dblessPath)
 	require.NoError(t, err)
-	deployment := deployKong(ctx, t, env, manifest)
+	_ = deployKong(ctx, t, env, manifest)
 
 	t.Log("adding Kuma mesh")
 	require.NoError(t, kuma.EnableMeshForNamespace(ctx, env.Cluster(), "kong"))
@@ -33,22 +35,11 @@ func TestDeployAllInOneDBLESSKuma(t *testing.T) {
 
 	// scale to force a restart of pods and trigger mesh injection (we can't annotate the Kong namespace in advance,
 	// it gets clobbered by deployKong()). is there a "rollout restart" in client-go? who knows!
-	scale := &autoscalingv1.Scale{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      deployment.Name,
-			Namespace: deployment.Namespace,
-		},
-		Spec: autoscalingv1.ScaleSpec{
-			Replicas: 0,
-		},
-	}
-	_, err = env.Cluster().Client().AppsV1().Deployments(deployment.Namespace).UpdateScale(ctx,
-		deployment.Name, scale, metav1.UpdateOptions{})
-	require.NoError(t, err)
-	scale.Spec.Replicas = 2
-	_, err = env.Cluster().Client().AppsV1().Deployments(deployment.Namespace).UpdateScale(ctx,
-		deployment.Name, scale, metav1.UpdateOptions{})
-	require.NoError(t, err)
+	scaleDeployment(ctx, t, env, "proxy-kong", 0)
+	scaleDeployment(ctx, t, env, "ingress-kong", 0)
+
+	scaleDeployment(ctx, t, env, "proxy-kong", 2)
+	scaleDeployment(ctx, t, env, "ingress-kong", 2)
 
 	t.Log("running ingress tests to verify all-in-one deployed ingress controller and proxy are functional")
 	deployIngress(ctx, t, env)
@@ -80,6 +71,29 @@ func TestDeployAllInOneDBLESSKuma(t *testing.T) {
 	verifyIngress(ctx, t, env)
 }
 
+func scaleDeployment(ctx context.Context, t *testing.T, env environments.Environment, deploymentName string, replicas int32) {
+	t.Helper()
+
+	scale := &autoscalingv1.Scale{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: deploymentName,
+		},
+		Spec: autoscalingv1.ScaleSpec{
+			Replicas: replicas,
+		},
+	}
+	_, err := env.Cluster().Client().AppsV1().Deployments(namespace).UpdateScale(ctx, deploymentName, scale, metav1.UpdateOptions{})
+	require.NoError(t, err)
+
+	require.Eventually(t, func() bool {
+		deployment, err := env.Cluster().Client().AppsV1().Deployments(namespace).Get(ctx, deploymentName, metav1.GetOptions{})
+		if err != nil {
+			return false
+		}
+		return deployment.Status.ReadyReplicas == replicas
+	}, time.Minute*3, time.Second, "deployment %s did not scale to %d replicas", deploymentName, replicas)
+}
+
 func TestDeployAllInOnePostgresKuma(t *testing.T) {
 	t.Log("configuring all-in-one-postgres.yaml manifest test")
 	t.Parallel()
@@ -101,7 +115,7 @@ func TestDeployAllInOnePostgresKuma(t *testing.T) {
 	t.Log("deploying kong components")
 	manifest, err := getTestManifest(t, postgresPath)
 	require.NoError(t, err)
-	deployment := deployKong(ctx, t, env, manifest)
+	_ = deployKong(ctx, t, env, manifest)
 
 	t.Log("this deployment used a postgres backend, verifying that postgres migrations ran properly")
 	verifyPostgres(ctx, t, env)
@@ -112,22 +126,8 @@ func TestDeployAllInOnePostgresKuma(t *testing.T) {
 
 	// scale to force a restart of pods and trigger mesh injection (we can't annotate the Kong namespace in advance,
 	// it gets clobbered by deployKong()). is there a "rollout restart" in client-go? who knows!
-	scale := &autoscalingv1.Scale{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      deployment.Name,
-			Namespace: deployment.Namespace,
-		},
-		Spec: autoscalingv1.ScaleSpec{
-			Replicas: 0,
-		},
-	}
-	_, err = env.Cluster().Client().AppsV1().Deployments(deployment.Namespace).UpdateScale(ctx,
-		deployment.Name, scale, metav1.UpdateOptions{})
-	require.NoError(t, err)
-	scale.Spec.Replicas = 2
-	_, err = env.Cluster().Client().AppsV1().Deployments(deployment.Namespace).UpdateScale(ctx,
-		deployment.Name, scale, metav1.UpdateOptions{})
-	require.NoError(t, err)
+	scaleDeployment(ctx, t, env, "ingress-kong", 0)
+	scaleDeployment(ctx, t, env, "ingress-kong", 2)
 
 	t.Log("running ingress tests to verify all-in-one deployed ingress controller and proxy are functional")
 	deployIngress(ctx, t, env)

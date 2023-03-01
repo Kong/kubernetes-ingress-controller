@@ -399,20 +399,28 @@ func TestDeployAllInOneDBLESSGateway(t *testing.T) {
 	t.Logf("deploying Gateway APIs CRDs in experimental channel from %s", consts.GatewayExperimentalCRDsKustomizeURL)
 	require.NoError(t, clusters.KustomizeDeployForCluster(ctx, env.Cluster(), consts.GatewayExperimentalCRDsKustomizeURL))
 
-	deployment, err = env.Cluster().Client().AppsV1().Deployments(deployment.Namespace).Get(ctx, deployment.Name, metav1.GetOptions{})
+	t.Log("updating controller deployment to enable Gateway feature gate")
+	controllerDeployment, err := env.Cluster().Client().AppsV1().Deployments(namespace).Get(ctx, "ingress-kong", metav1.GetOptions{})
 	require.NoError(t, err)
-	t.Log("updating kong deployment to enable Gateway feature gate and admission controller")
-	for i, container := range deployment.Spec.Template.Spec.Containers {
+	for i, container := range controllerDeployment.Spec.Template.Spec.Containers {
 		if container.Name == "ingress-controller" {
-			deployment.Spec.Template.Spec.Containers[i].Env = append(deployment.Spec.Template.Spec.Containers[i].Env,
+			controllerDeployment.Spec.Template.Spec.Containers[i].Env = append(controllerDeployment.Spec.Template.Spec.Containers[i].Env,
 				corev1.EnvVar{Name: "CONTROLLER_FEATURE_GATES", Value: consts.DefaultFeatureGates})
 		}
+	}
+	_, err = env.Cluster().Client().AppsV1().Deployments(namespace).Update(ctx, controllerDeployment, metav1.UpdateOptions{})
+	require.NoError(t, err)
+
+	t.Log("updating proxy deployment to enable TCP listener")
+	proxyDeployment, err := env.Cluster().Client().AppsV1().Deployments(namespace).Get(ctx, "proxy-kong", metav1.GetOptions{})
+	require.NoError(t, err)
+	for i, container := range proxyDeployment.Spec.Template.Spec.Containers {
 		if container.Name == "proxy" {
-			deployment.Spec.Template.Spec.Containers[i].Env = append(deployment.Spec.Template.Spec.Containers[i].Env,
+			proxyDeployment.Spec.Template.Spec.Containers[i].Env = append(proxyDeployment.Spec.Template.Spec.Containers[i].Env,
 				corev1.EnvVar{Name: "KONG_STREAM_LISTEN", Value: fmt.Sprintf("0.0.0.0:%d", tcpListnerPort)})
 		}
 	}
-	_, err = env.Cluster().Client().AppsV1().Deployments(deployment.Namespace).Update(ctx, deployment, metav1.UpdateOptions{})
+	_, err = env.Cluster().Client().AppsV1().Deployments(namespace).Update(ctx, proxyDeployment, metav1.UpdateOptions{})
 	require.NoError(t, err)
 
 	t.Log("updating kong proxy service to enable TCP listener")

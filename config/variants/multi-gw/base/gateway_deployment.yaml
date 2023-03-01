@@ -24,15 +24,22 @@ spec:
       automountServiceAccountToken: false
       volumes:
       - name: kong-serviceaccount-token
-        secret:
-          secretName: kong-serviceaccount-token
-          items:
-          - key: token
-            path: token
-          - key: ca.crt
-            path: ca.crt
-          - key: namespace
-            path: namespace
+        projected:
+          sources:
+            - serviceAccountToken:
+                expirationSeconds: 3607
+                path: token
+            - configMap:
+                name: kube-root-ca.crt
+                items:
+                  - key: ca.crt
+                    path: ca.crt
+            - downwardAPI:
+                items:
+                  - fieldRef:
+                      apiVersion: v1
+                      fieldPath: metadata.namespace
+                    path: namespace
       containers:
       - name: proxy
         image: kong-placeholder:placeholder # This is replaced by the config/image.yaml component

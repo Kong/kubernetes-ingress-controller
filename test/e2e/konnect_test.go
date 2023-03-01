@@ -12,7 +12,6 @@ import (
 	"crypto/x509/pkix"
 	"encoding/pem"
 	"fmt"
-	"io"
 	"math/big"
 	"net/http"
 	"os"
@@ -93,12 +92,8 @@ func skipIfMissingRequiredKonnectEnvVariables(t *testing.T) {
 func deployAllInOneKonnectManifest(ctx context.Context, t *testing.T, env environment.Environment) {
 	const manifestFile = "../../deploy/single/all-in-one-dbless-konnect.yaml"
 	t.Logf("deploying %s manifest file", manifestFile)
-	f, err := os.Open(manifestFile)
-	require.NoError(t, err)
-	defer f.Close()
-	var manifest io.Reader = f
 
-	manifest, err = patchControllerImageFromEnv(f, manifestFile)
+	manifest, err := getTestManifest(t, manifestFile)
 	require.NoError(t, err)
 	_ = deployKong(ctx, t, env, manifest)
 }

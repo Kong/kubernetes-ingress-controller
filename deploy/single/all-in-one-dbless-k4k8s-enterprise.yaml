@@ -1593,6 +1593,21 @@ subjects:
 apiVersion: v1
 kind: Service
 metadata:
+  name: kong-admin
+  namespace: kong
+spec:
+  clusterIP: None
+  ports:
+  - name: admin
+    port: 8444
+    protocol: TCP
+    targetPort: 8444
+  selector:
+    app: proxy-kong
+---
+apiVersion: v1
+kind: Service
+metadata:
   annotations:
     service.beta.kubernetes.io/aws-load-balancer-backend-protocol: tcp
     service.beta.kubernetes.io/aws-load-balancer-type: nlb
@@ -1609,7 +1624,7 @@ spec:
     protocol: TCP
     targetPort: 8443
   selector:
-    app: ingress-kong
+    app: proxy-kong
   type: LoadBalancer
 ---
 apiVersion: v1
@@ -1650,6 +1665,100 @@ spec:
       automountServiceAccountToken: false
       containers:
       - env:
+        - name: CONTROLLER_KONG_ADMIN_SVC
+          value: kong/kong-admin
+        - name: CONTROLLER_KONG_ADMIN_TLS_SKIP_VERIFY
+          value: "true"
+        - name: CONTROLLER_PUBLISH_SERVICE
+          value: kong/kong-proxy
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.name
+        - name: POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.namespace
+        image: kong/kubernetes-ingress-controller:2.8.1
+        imagePullPolicy: IfNotPresent
+        livenessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /healthz
+            port: 10254
+            scheme: HTTP
+          initialDelaySeconds: 5
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 1
+        name: ingress-controller
+        ports:
+        - containerPort: 8080
+          name: webhook
+          protocol: TCP
+        - containerPort: 10255
+          name: cmetrics
+          protocol: TCP
+        readinessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /readyz
+            port: 10254
+            scheme: HTTP
+          initialDelaySeconds: 5
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 1
+        volumeMounts:
+        - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+          name: kong-serviceaccount-token
+          readOnly: true
+      serviceAccountName: kong-serviceaccount
+      volumes:
+      - name: kong-serviceaccount-token
+        projected:
+          sources:
+          - serviceAccountToken:
+              expirationSeconds: 3607
+              path: token
+          - configMap:
+              items:
+              - key: ca.crt
+                path: ca.crt
+              name: kube-root-ca.crt
+          - downwardAPI:
+              items:
+              - fieldRef:
+                  apiVersion: v1
+                  fieldPath: metadata.namespace
+                path: namespace
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: proxy-kong
+  name: proxy-kong
+  namespace: kong
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: proxy-kong
+  template:
+    metadata:
+      annotations:
+        kuma.io/gateway: enabled
+        kuma.io/service-account-token-volume: kong-serviceaccount-token
+        traffic.sidecar.istio.io/includeInboundPorts: ""
+      labels:
+        app: proxy-kong
+    spec:
+      automountServiceAccountToken: false
+      containers:
+      - env:
         - name: KONG_LICENSE_DATA
           valueFrom:
             secretKeyRef:
@@ -1661,7 +1770,7 @@ spec:
         - name: KONG_PORT_MAPS
           value: 80:8000, 443:8443
         - name: KONG_ADMIN_LISTEN
-          value: 127.0.0.1:8444 http2 ssl reuseport backlog=16384
+          value: 0.0.0.0:8444 http2 ssl reuseport backlog=16384
         - name: KONG_STATUS_LISTEN
           value: 0.0.0.0:8100
         - name: KONG_DATABASE
@@ -1717,57 +1826,6 @@ spec:
           periodSeconds: 10
           successThreshold: 1
           timeoutSeconds: 1
-      - env:
-        - name: CONTROLLER_KONG_ADMIN_URL
-          value: https://127.0.0.1:8444
-        - name: CONTROLLER_KONG_ADMIN_TLS_SKIP_VERIFY
-          value: "true"
-        - name: CONTROLLER_PUBLISH_SERVICE
-          value: kong/kong-proxy
-        - name: POD_NAME
-          valueFrom:
-            fieldRef:
-              apiVersion: v1
-              fieldPath: metadata.name
-        - name: POD_NAMESPACE
-          valueFrom:
-            fieldRef:
-              apiVersion: v1
-              fieldPath: metadata.namespace
-        image: kong/kubernetes-ingress-controller:2.8.1
-        imagePullPolicy: IfNotPresent
-        livenessProbe:
-          failureThreshold: 3
-          httpGet:
-            path: /healthz
-            port: 10254
-            scheme: HTTP
-          initialDelaySeconds: 5
-          periodSeconds: 10
-          successThreshold: 1
-          timeoutSeconds: 1
-        name: ingress-controller
-        ports:
-        - containerPort: 8080
-          name: webhook
-          protocol: TCP
-        - containerPort: 10255
-          name: cmetrics
-          protocol: TCP
-        readinessProbe:
-          failureThreshold: 3
-          httpGet:
-            path: /readyz
-            port: 10254
-            scheme: HTTP
-          initialDelaySeconds: 5
-          periodSeconds: 10
-          successThreshold: 1
-          timeoutSeconds: 1
-        volumeMounts:
-        - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
-          name: kong-serviceaccount-token
-          readOnly: true
       imagePullSecrets:
       - name: kong-enterprise-edition-docker
       serviceAccountName: kong-serviceaccount

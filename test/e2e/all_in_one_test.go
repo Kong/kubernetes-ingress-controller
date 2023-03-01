@@ -389,3 +389,71 @@ func TestDeployAllInOneDBLESSMultiGW(t *testing.T) {
 		t.Logf("proxy pod %s/%s: got the config", pod.Namespace, pod.Name)
 	}
 }
+
+func TestDeployAllInOnePostgresMultipleGW(t *testing.T) {
+	t.Parallel()
+
+	const (
+		manifestFileName = "all-in-one-postgres-multi-gw.yaml"
+		manifestFilePath = "../../deploy/single/" + manifestFileName
+	)
+
+	t.Logf("configuring %s manifest test", manifestFileName)
+	ctx, env := setupE2ETest(t)
+
+	t.Log("deploying kong components")
+	f, err := os.Open(manifestFilePath)
+	require.NoError(t, err)
+	defer f.Close()
+	var manifest io.Reader = f
+
+	manifest, err = patchControllerImageFromEnv(manifest, manifestFilePath)
+	require.NoError(t, err)
+	deployment := deployKong(ctx, t, env, manifest)
+
+	t.Log("running ingress tests to verify all-in-one deployed ingress controller and proxy are functional")
+	deployIngress(ctx, t, env)
+	verifyIngress(ctx, t, env)
+
+	const replicasCount = 2
+
+	var podList *corev1.PodList
+	t.Log("waiting all the dataplane instances to be ready")
+	require.Eventually(t, func() bool {
+		forDeployment := metav1.ListOptions{
+			LabelSelector: "app=proxy-kong",
+		}
+		podList, err = env.Cluster().Client().CoreV1().Pods(deployment.Namespace).List(ctx, forDeployment)
+		require.NoError(t, err)
+
+		readyReplicasCount := lo.CountBy(podList.Items, func(pod corev1.Pod) bool {
+			return lo.ContainsBy(pod.Status.Conditions, func(cond corev1.PodCondition) bool {
+				return cond.Type == corev1.PodReady && cond.Status == corev1.ConditionTrue
+			})
+		})
+		return readyReplicasCount == replicasCount
+	}, time.Minute, time.Second)
+
+	t.Log("confirming that all dataplanes got the config")
+	for _, pod := range podList.Items {
+		client := &http.Client{
+			Timeout: time.Second * 30,
+			Transport: &http.Transport{
+				TLSClientConfig: &tls.Config{
+					InsecureSkipVerify: true, //nolint:gosec
+				},
+			},
+		}
+
+		forwardCtx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+		localPort := startPortForwarder(forwardCtx, t, env, deployment.Namespace, pod.Name, "8444")
+		address := fmt.Sprintf("https://localhost:%d", localPort)
+
+		kongClient, err := gokong.NewClient(lo.ToPtr(address), client)
+		require.NoError(t, err)
+
+		requireIngressConfiguredInAdminAPIEventually(ctx, t, kongClient)
+		t.Logf("proxy pod %s/%s: got the config", pod.Namespace, pod.Name)
+	}
+}

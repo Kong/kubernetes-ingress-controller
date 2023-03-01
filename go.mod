@@ -33,11 +33,11 @@ require (
 	github.com/stretchr/testify v1.8.2
 	golang.org/x/net v0.7.0
 	google.golang.org/api v0.110.0
-	k8s.io/api v0.26.1
-	k8s.io/apiextensions-apiserver v0.26.1
-	k8s.io/apimachinery v0.26.1
-	k8s.io/client-go v0.26.1
-	k8s.io/component-base v0.26.1
+	k8s.io/api v0.26.2
+	k8s.io/apiextensions-apiserver v0.26.2
+	k8s.io/apimachinery v0.26.2
+	k8s.io/client-go v0.26.2
+	k8s.io/component-base v0.26.2
 	knative.dev/networking v0.0.0-20220302134042-e8b2eb995165
 	knative.dev/pkg v0.0.0-20220301181942-2fdd5f232e77
 	sigs.k8s.io/controller-runtime v0.14.4

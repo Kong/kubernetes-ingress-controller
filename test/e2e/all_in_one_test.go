@@ -44,8 +44,7 @@ func TestDeployAllInOneDBLESSLegacy(t *testing.T) {
 	ctx, env := setupE2ETest(t)
 
 	t.Log("deploying kong components")
-	manifest, err := getTestManifest(t, "../../deploy/single/all-in-one-dbless-legacy.yaml")
-	require.NoError(t, err)
+	manifest := getTestManifest(t, "../../deploy/single/all-in-one-dbless-legacy.yaml")
 	deployment := deployKong(ctx, t, env, manifest)
 
 	forDeployment := metav1.ListOptions{
@@ -92,8 +91,7 @@ func TestDeployAndUpgradeAllInOneDBLESS(t *testing.T) {
 
 	t.Logf("deploying current version %s kong manifest", curTag)
 
-	manifest, err := getTestManifest(t, dblessPath)
-	require.NoError(t, err)
+	manifest := getTestManifest(t, dblessPath)
 	deployKong(ctx, t, env, manifest)
 	verifyIngress(ctx, t, env)
 }
@@ -119,8 +117,7 @@ func TestDeployAllInOneEnterpriseDBLESS(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Log("deploying kong components")
-	manifest, err := getTestManifest(t, entDBLESSPath)
-	require.NoError(t, err)
+	manifest := getTestManifest(t, entDBLESSPath)
 	_ = deployKong(ctx, t, env, manifest, licenseSecret, adminPasswordSecretYAML)
 
 	t.Log("exposing the admin api so that enterprise features can be verified")
@@ -142,8 +139,7 @@ func TestDeployAllInOnePostgres(t *testing.T) {
 	ctx, env := setupE2ETest(t)
 
 	t.Log("deploying kong components")
-	manifest, err := getTestManifest(t, postgresPath)
-	require.NoError(t, err)
+	manifest := getTestManifest(t, postgresPath)
 	_ = deployKong(ctx, t, env, manifest)
 
 	t.Log("this deployment used a postgres backend, verifying that postgres migrations ran properly")
@@ -160,8 +156,7 @@ func TestDeployAllInOnePostgresWithMultipleReplicas(t *testing.T) {
 	ctx, env := setupE2ETest(t)
 
 	t.Log("deploying kong components")
-	manifest, err := getTestManifest(t, postgresPath)
-	require.NoError(t, err)
+	manifest := getTestManifest(t, postgresPath)
 	deployment := deployKong(ctx, t, env, manifest)
 
 	t.Log("this deployment used a postgres backend, verifying that postgres migrations ran properly")
@@ -298,8 +293,7 @@ func TestDeployAllInOneEnterprisePostgres(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Log("deploying kong components")
-	manifest, err := getTestManifest(t, entPostgresPath)
-	require.NoError(t, err)
+	manifest := getTestManifest(t, entPostgresPath)
 	_ = deployKong(ctx, t, env, manifest, licenseSecret, adminPasswordSecret)
 
 	t.Log("this deployment used a postgres backend, verifying that postgres migrations ran properly")
@@ -329,8 +323,7 @@ func TestDeployAllInOneDBLESS(t *testing.T) {
 	ctx, env := setupE2ETest(t)
 
 	t.Log("deploying kong components")
-	manifest, err := getTestManifest(t, manifestFilePath)
-	require.NoError(t, err)
+	manifest := getTestManifest(t, manifestFilePath)
 	deployment := deployKong(ctx, t, env, manifest)
 
 	t.Log("running ingress tests to verify all-in-one deployed ingress controller and proxy are functional")

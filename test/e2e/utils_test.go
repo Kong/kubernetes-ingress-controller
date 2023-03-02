@@ -101,52 +101,50 @@ func exposeAdminAPI(ctx context.Context, t *testing.T, env environments.Environm
 	}, time.Minute, time.Second)
 }
 
-// getTestManifest checks if a controller image override is set. If not, it returns the original provided path.
-// If an override is set, it runs a kustomize patch that replaces the controller image with the override image and
-// returns the modified manifest path. If there is any issue patching the manifest, it will log the issue and return
-// the original provided path.
-func getTestManifest(t *testing.T, baseManifestPath string) (io.Reader, error) {
+// getTestManifest gets a manifest io.Reader, applying optional patches to the base manifest provided.
+// In case of any failure while patching, the base manifest is returned.
+func getTestManifest(t *testing.T, baseManifestPath string) io.Reader {
+	t.Helper()
+
 	var (
 		manifestsReader io.Reader
 		err             error
 	)
 	manifestsReader, err = os.Open(baseManifestPath)
-	if err != nil {
-		return nil, err
-	}
+	require.NoError(t, err)
 
 	manifestsReader, err = patchControllerImageFromEnv(manifestsReader)
 	if err != nil {
 		t.Logf("failed patching controller image (%v), using default manifest %v", err, baseManifestPath)
-		return manifestsReader, nil
+		return manifestsReader
 	}
 
 	manifestsReader, err = patchGatewayImageFromEnv(t, manifestsReader)
 	if err != nil {
 		t.Logf("failed patching gateway image (%v), using default manifest %v", err, baseManifestPath)
-		return manifestsReader, nil
+		return manifestsReader
 	}
 
 	manifestsReader, err = patchControllerStartTimeout(manifestsReader, 120, time.Second*3)
 	if err != nil {
 		t.Logf("failed patching controller timeouts (%v), using default manifest %v", err, baseManifestPath)
-		return manifestsReader, nil
+		return manifestsReader
 	}
 
 	manifestsReader, err = patchLivenessProbes(manifestsReader, "proxy-kong", 10, time.Second*15, time.Second*3)
 	if err != nil {
 		t.Logf("failed patching kong liveness (%v), using default manifest %v", err, baseManifestPath)
-		return manifestsReader, nil
+		return manifestsReader
 	}
 
 	manifestsReader, err = patchLivenessProbes(manifestsReader, "ingress-kong", 15, time.Second*3, time.Second*10)
 	if err != nil {
 		t.Logf("failed patching controller liveness (%v), using default manifest %v", err, baseManifestPath)
-		return manifestsReader, nil
+		return manifestsReader
 	}
 
 	t.Logf("generated modified manifest at %v", baseManifestPath)
-	return manifestsReader, nil
+	return manifestsReader
 }
 
 // patchGatewayImageFromEnv will optionally replace a default controller image in manifests with one of `kongImageLoad`

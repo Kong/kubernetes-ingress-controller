@@ -100,8 +100,7 @@ func deployAllInOneKonnectManifest(ctx context.Context, t *testing.T, env enviro
 	const manifestFile = "../../deploy/single/all-in-one-dbless-konnect.yaml"
 	t.Logf("deploying %s manifest file", manifestFile)
 
-	manifest, err := getTestManifest(t, manifestFile)
-	require.NoError(t, err)
+	manifest := getTestManifest(t, manifestFile)
 	_ = deployKong(ctx, t, env, manifest)
 }
 

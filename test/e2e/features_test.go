@@ -175,8 +175,7 @@ func TestWebhookUpdate(t *testing.T) {
 	}()
 
 	t.Log("deploying kong components")
-	manifest, err := getTestManifest(t, dblessPath)
-	require.NoError(t, err)
+	manifest := getTestManifest(t, dblessPath)
 	deployment := deployKong(ctx, t, env, manifest)
 
 	firstCertificate := &corev1.Secret{
@@ -292,8 +291,7 @@ func TestDeployAllInOneDBLESSGateway(t *testing.T) {
 	ctx, env := setupE2ETest(t)
 
 	t.Log("deploying kong components")
-	manifest, err := getTestManifest(t, dblessPath)
-	require.NoError(t, err)
+	manifest := getTestManifest(t, dblessPath)
 	deployment := deployKong(ctx, t, env, manifest)
 	deploymentListOptions := metav1.ListOptions{
 		LabelSelector: "app=" + deployment.Name,
@@ -450,8 +448,7 @@ func TestDeployAllInOneDBLESSNoLoadBalancer(t *testing.T) {
 	ctx, env := setupE2ETest(t)
 
 	t.Log("deploying kong components")
-	manifest, err := getTestManifest(t, dblessPath)
-	require.NoError(t, err)
+	manifest := getTestManifest(t, dblessPath)
 	deployment := deployKong(ctx, t, env, manifest)
 
 	t.Log("running ingress tests to verify all-in-one deployed ingress controller and proxy are functional")
@@ -462,7 +459,7 @@ func TestDeployAllInOneDBLESSNoLoadBalancer(t *testing.T) {
 	t.Logf("deploying Gateway APIs CRDs from %s", consts.GatewayExperimentalCRDsKustomizeURL)
 	require.NoError(t, clusters.KustomizeDeployForCluster(ctx, env.Cluster(), consts.GatewayExperimentalCRDsKustomizeURL))
 
-	deployment, err = env.Cluster().Client().AppsV1().Deployments(deployment.Namespace).Get(ctx, deployment.Name, metav1.GetOptions{})
+	deployment, err := env.Cluster().Client().AppsV1().Deployments(deployment.Namespace).Get(ctx, deployment.Name, metav1.GetOptions{})
 	require.NoError(t, err)
 	t.Log("updating kong deployment to enable Gateway feature gate")
 	for i, container := range deployment.Spec.Template.Spec.Containers {
@@ -499,14 +496,13 @@ func TestDefaultIngressClass(t *testing.T) {
 	ctx, env := setupE2ETest(t)
 
 	t.Log("deploying kong components")
-	manifest, err := getTestManifest(t, dblessPath)
-	require.NoError(t, err)
+	manifest := getTestManifest(t, dblessPath)
 	kongDeployment := deployKong(ctx, t, env, manifest)
 
 	t.Log("deploying a minimal HTTP container deployment to test Ingress routes")
 	container := generators.NewContainer("httpbin", test.HTTPBinImage, 80)
 	deployment := generators.NewDeploymentForContainer(container)
-	deployment, err = env.Cluster().Client().AppsV1().Deployments(kongDeployment.Namespace).Create(ctx, deployment, metav1.CreateOptions{})
+	deployment, err := env.Cluster().Client().AppsV1().Deployments(kongDeployment.Namespace).Create(ctx, deployment, metav1.CreateOptions{})
 	require.NoError(t, err)
 
 	t.Logf("exposing deployment %s via service", deployment.Name)
@@ -608,8 +604,7 @@ func TestMissingCRDsDontCrashTheController(t *testing.T) {
 	ctx, env := setupE2ETest(t)
 
 	t.Log("deploying kong components")
-	manifest, err := getTestManifest(t, dblessPath)
-	require.NoError(t, err)
+	manifest := getTestManifest(t, dblessPath)
 
 	manifest = stripCRDs(t, manifest)
 

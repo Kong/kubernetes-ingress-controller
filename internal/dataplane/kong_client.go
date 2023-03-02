@@ -62,19 +62,11 @@ type KongClient struct {
 	// into data-plane configuration.
 	ingressClass string
 
-	// enableReverseSync indicates that reverse sync should be enabled for
-	// updates to the data-plane.
-	enableReverseSync bool
-
 	// enableCombinedServiceRoutes indicates that when translating Kubernetes
 	// ingress objects into Kong Admin API configuration we should disable the
 	// legacy logic which would create a single route per path and instead use
 	// the newer logic which combines them.
 	enableCombinedServiceRoutes bool
-
-	// skipCACertificates disables CA certificates, to avoid fighting over configuration in multi-workspace
-	// environments. See https://github.com/Kong/deck/pull/617
-	skipCACertificates bool
 
 	// requestTimeout is the maximum amount of time that should be waited for
 	// requests to the data-plane to receive a response.
@@ -138,6 +130,12 @@ type KongClient struct {
 
 	// configStatusNotifier notifies status of configuring kong gateway.
 	configStatusNotifier ConfigStatusNotifier
+
+	// updateStrategyResolver resolves the update strategy for a given Kong Gateway.
+	updateStrategyResolver sendconfig.UpdateStrategyResolver
+
+	// configChangeDetector detects changes in the configuration.
+	configChangeDetector sendconfig.ConfigurationChangeDetector
 }
 
 // NewKongClient provides a new KongClient object after connecting to the
@@ -146,30 +144,30 @@ func NewKongClient(
 	logger logrus.FieldLogger,
 	timeout time.Duration,
 	ingressClass string,
-	enableReverseSync bool,
-	skipCACertificates bool,
 	diagnostic util.ConfigDumpDiagnostic,
 	kongConfig sendconfig.Config,
 	eventRecorder record.EventRecorder,
 	dbMode string,
 	clientsProvider AdminAPIClientsProvider,
+	updateStrategyResolver sendconfig.UpdateStrategyResolver,
+	configChangeDetector sendconfig.ConfigurationChangeDetector,
 ) (*KongClient, error) {
 	// build the client object
 	cache := store.NewCacheStores()
 	c := &KongClient{
-		logger:               logger,
-		ingressClass:         ingressClass,
-		enableReverseSync:    enableReverseSync,
-		skipCACertificates:   skipCACertificates,
-		requestTimeout:       timeout,
-		diagnostic:           diagnostic,
-		prometheusMetrics:    metrics.NewCtrlFuncMetrics(),
-		cache:                &cache,
-		kongConfig:           kongConfig,
-		eventRecorder:        eventRecorder,
-		dbmode:               dbMode,
-		clientsProvider:      clientsProvider,
-		configStatusNotifier: NoOpConfigStatusNotifier{},
+		logger:                 logger,
+		ingressClass:           ingressClass,
+		requestTimeout:         timeout,
+		diagnostic:             diagnostic,
+		prometheusMetrics:      metrics.NewCtrlFuncMetrics(),
+		cache:                  &cache,
+		kongConfig:             kongConfig,
+		eventRecorder:          eventRecorder,
+		dbmode:                 dbMode,
+		clientsProvider:        clientsProvider,
+		configStatusNotifier:   NoOpConfigStatusNotifier{},
+		updateStrategyResolver: updateStrategyResolver,
+		configChangeDetector:   configChangeDetector,
 	}
 
 	return c, nil
@@ -463,7 +461,7 @@ func (c *KongClient) sendOutToClients(
 	c.logger.Debugf("sending configuration to %d clients", len(clients))
 	shas, err := iter.MapErr(clients, func(client **adminapi.Client) (string, error) {
 		newSHA, err := c.sendToClient(ctx, *client, s, formatVersion, config)
-		return handleSendToClientResult(*client, c.logger, newSHA, err)
+		return HandleSendToClientResult(*client, c.logger, newSHA, err)
 	},
 	)
 	if err != nil {
@@ -508,6 +506,8 @@ func (c *KongClient) sendToClient(
 		config,
 		targetConfig,
 		c.prometheusMetrics,
+		c.updateStrategyResolver,
+		c.configChangeDetector,
 	)
 
 	c.recordResourceFailureEvents(entityErrors, KongConfigurationApplyFailedEventReason)
@@ -526,13 +526,13 @@ func (c *KongClient) sendToClient(
 	return string(newConfigSHA), nil
 }
 
-// handleSendToClientResult handles a result returned from sendToClient.
+// HandleSendToClientResult handles a result returned from sendToClient.
 // It will ignore errors that are returned from Konnect client.
-func handleSendToClientResult(client sendconfig.KonnectAwareClient, logger logrus.FieldLogger, newSHA string, err error) (string, error) {
+func HandleSendToClientResult(client sendconfig.KonnectAwareClient, logger logrus.FieldLogger, newSHA string, err error) (string, error) {
 	if err != nil {
 		// We do not collect errors from Konnect as they should not break the data-plane loop.
 		if client.IsKonnect() {
-			logger.Error(err, "failed pushing configuration to Konnect")
+			logger.WithError(err).Error("Failed pushing configuration to Konnect")
 			return "", nil
 		}
 		return "", err
@@ -629,12 +629,12 @@ func (c *KongClient) triggerKubernetesObjectReport(reportedObjects []client.Obje
 	// control-plane can update the Kubernetes object statuses for affected objs.
 	// this has to be done in a separate loop so that the filter is in place
 	// before the objects are enqueued, as the filter is used by the control-plane
-	for _, obj := range uniqueObjects(reportedObjects, translationFailures) {
+	for _, obj := range UniqueObjects(reportedObjects, translationFailures) {
 		c.kubernetesObjectStatusQueue.Publish(obj)
 	}
 }
 
-func uniqueObjects(reportedObjects []client.Object, resourceFailures []failures.ResourceFailure) []client.Object {
+func UniqueObjects(reportedObjects []client.Object, resourceFailures []failures.ResourceFailure) []client.Object {
 	allCausingObjects := lo.FlatMap(resourceFailures, func(f failures.ResourceFailure, _ int) []client.Object {
 		return f.CausingObjects()
 	})

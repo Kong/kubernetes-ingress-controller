@@ -40,13 +40,23 @@ type ResourceError struct {
 	Problems   map[string]string
 }
 
+type DefaultUpdateStrategyResolver struct {
+	config Config
+	log    logrus.FieldLogger
+}
+
+func NewDefaultUpdateStrategyResolver(config Config, log logrus.FieldLogger) DefaultUpdateStrategyResolver {
+	return DefaultUpdateStrategyResolver{
+		config: config,
+		log:    log,
+	}
+}
+
 // ResolveUpdateStrategy returns an UpdateStrategy based on the client and configuration.
 // The UpdateStrategy can be either UpdateStrategyDBMode or UpdateStrategyInMemory. Both
 // of them implement different ways to populate Kong instances with data-plane configuration.
-func ResolveUpdateStrategy(
+func (r DefaultUpdateStrategyResolver) ResolveUpdateStrategy(
 	client UpdateClient,
-	config Config,
-	log logrus.FieldLogger,
 ) UpdateStrategy {
 	adminAPIClient := client.AdminAPIClient()
 
@@ -59,22 +69,22 @@ func ResolveUpdateStrategy(
 				SkipCACerts:         true,
 				KonnectRuntimeGroup: client.KonnectRuntimeGroup(),
 			},
-			config.Version,
-			config.Concurrency,
+			r.config.Version,
+			r.config.Concurrency,
 		)
 	}
 
-	if !config.InMemory {
+	if !r.config.InMemory {
 		return NewUpdateStrategyDBMode(
 			adminAPIClient,
 			dump.Config{
-				SkipCACerts:  config.SkipCACertificates,
-				SelectorTags: config.FilterTags,
+				SkipCACerts:  r.config.SkipCACertificates,
+				SelectorTags: r.config.FilterTags,
 			},
-			config.Version,
-			config.Concurrency,
+			r.config.Version,
+			r.config.Concurrency,
 		)
 	}
 
-	return NewUpdateStrategyInMemory(adminAPIClient, log)
+	return NewUpdateStrategyInMemory(adminAPIClient, r.log)
 }

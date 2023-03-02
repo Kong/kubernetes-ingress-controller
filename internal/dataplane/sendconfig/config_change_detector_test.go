@@ -1,4 +1,4 @@
-package sendconfig
+package sendconfig_test
 
 import (
 	"context"
@@ -7,20 +7,10 @@ import (
 
 	"github.com/kong/go-kong/kong"
 	"github.com/sirupsen/logrus"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-)
 
-func TestUpdateReportingUtilities(t *testing.T) {
-	assert.False(t, hasSHAUpdateAlreadyBeenReported([]byte("fake-sha")))
-	assert.True(t, hasSHAUpdateAlreadyBeenReported([]byte("fake-sha")))
-	assert.False(t, hasSHAUpdateAlreadyBeenReported([]byte("another-fake-sha")))
-	assert.True(t, hasSHAUpdateAlreadyBeenReported([]byte("another-fake-sha")))
-	assert.False(t, hasSHAUpdateAlreadyBeenReported([]byte("yet-another-fake-sha")))
-	assert.True(t, hasSHAUpdateAlreadyBeenReported([]byte("yet-another-fake-sha")))
-	assert.True(t, hasSHAUpdateAlreadyBeenReported([]byte("yet-another-fake-sha")))
-	assert.True(t, hasSHAUpdateAlreadyBeenReported([]byte("yet-another-fake-sha")))
-}
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/sendconfig"
+)
 
 type konnectAwareClientMock struct {
 	expected bool
@@ -39,7 +29,7 @@ func (c statusClientMock) Status(context.Context) (*kong.Status, error) {
 	return c.expectedValue, c.expectedError
 }
 
-func TestHasConfigurationChanged(t *testing.T) {
+func TestDefaultConfigurationChangeDetector_HasConfigurationChanged(t *testing.T) {
 	ctx := context.Background()
 	testSHAs := [][]byte{
 		[]byte("2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824"),
@@ -66,7 +56,7 @@ func TestHasConfigurationChanged(t *testing.T) {
 			name:           "oldSHA == newSHA, but status signals crash",
 			oldSHA:         testSHAs[0],
 			newSHA:         testSHAs[0],
-			statusSHA:      wellKnownInitialHash,
+			statusSHA:      sendconfig.WellKnownInitialHash,
 			expectedResult: true,
 		},
 		{
@@ -87,7 +77,7 @@ func TestHasConfigurationChanged(t *testing.T) {
 			name:           "oldSHA == newSHA, status would signal crash, but it's konnect",
 			oldSHA:         testSHAs[0],
 			newSHA:         testSHAs[0],
-			statusSHA:      wellKnownInitialHash,
+			statusSHA:      sendconfig.WellKnownInitialHash,
 			isKonnect:      true,
 			expectedResult: false,
 		},
@@ -109,8 +99,9 @@ func TestHasConfigurationChanged(t *testing.T) {
 				},
 				expectedError: tc.statusError,
 			}
+			detector := sendconfig.NewDefaultClientConfigurationChangeDetector(logrus.New())
 
-			result, err := hasConfigurationChanged(ctx, tc.oldSHA, tc.newSHA, konnectAwareClient, statusClient, logrus.New())
+			result, err := detector.HasConfigurationChanged(ctx, tc.oldSHA, tc.newSHA, konnectAwareClient, statusClient)
 			if tc.expectError {
 				require.Error(t, err)
 				return

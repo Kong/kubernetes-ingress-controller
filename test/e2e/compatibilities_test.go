@@ -23,8 +23,7 @@ func TestKongRouterFlavorCompatibility(t *testing.T) {
 	cluster := env.Cluster()
 
 	t.Log("deploying kong components with traditional Kong router")
-	manifest, err := getTestManifest(t, dblessPath)
-	require.NoError(t, err)
+	manifest := getTestManifest(t, dblessPath)
 	_ = deployKong(ctx, t, env, manifest)
 	ensureGatewayDeployedWithRouterFlavor(ctx, t, env, "traditional")
 

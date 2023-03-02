@@ -25,8 +25,7 @@ func TestDeployAllInOneDBLESSKuma(t *testing.T) {
 	ctx, env := setupE2ETest(t, kuma.New())
 
 	t.Log("deploying kong components")
-	manifest, err := getTestManifest(t, dblessPath)
-	require.NoError(t, err)
+	manifest := getTestManifest(t, dblessPath)
 	_ = deployKong(ctx, t, env, manifest)
 
 	t.Log("adding Kuma mesh")
@@ -45,7 +44,7 @@ func TestDeployAllInOneDBLESSKuma(t *testing.T) {
 	deployIngress(ctx, t, env)
 
 	// use retry.RetryOnConflict to update service, to avoid conflicts from different source.
-	err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
+	err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
 		service, err := env.Cluster().Client().CoreV1().Services("default").Get(ctx, "httpbin", metav1.GetOptions{})
 		if err != nil {
 			return err
@@ -114,8 +113,7 @@ func TestDeployAllInOnePostgresKuma(t *testing.T) {
 	}()
 
 	t.Log("deploying kong components")
-	manifest, err := getTestManifest(t, postgresPath)
-	require.NoError(t, err)
+	manifest := getTestManifest(t, postgresPath)
 	_ = deployKong(ctx, t, env, manifest)
 
 	t.Log("this deployment used a postgres backend, verifying that postgres migrations ran properly")

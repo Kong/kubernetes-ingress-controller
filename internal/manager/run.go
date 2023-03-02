@@ -70,6 +70,13 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 	if err != nil {
 		return fmt.Errorf("could not validate Kong admin root(s) configuration: %w", err)
 	}
+
+	// gateway discovery is only supported in db-less mode in its initial release:
+	// https://github.com/Kong/kubernetes-ingress-controller/issues/3401
+	if c.KongAdminSvc.IsPresent() && !((dbMode == "off") || (dbMode == "")) {
+		return fmt.Errorf("gateway discovery is only supported in dbless mode, not in db %s", dbMode)
+	}
+
 	semV := semver.Version{Major: v.Major(), Minor: v.Minor(), Patch: v.Patch()}
 	versions.SetKongVersion(semV)
 

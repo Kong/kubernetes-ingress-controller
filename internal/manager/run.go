@@ -121,17 +121,19 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 		return err
 	}
 
+	updateStrategyResolver := sendconfig.NewDefaultUpdateStrategyResolver(kongConfig, deprecatedLogger)
+	configurationChangeDetector := sendconfig.NewDefaultClientConfigurationChangeDetector(deprecatedLogger)
 	dataplaneClient, err := dataplane.NewKongClient(
 		deprecatedLogger,
 		time.Duration(c.ProxyTimeoutSeconds*float32(time.Second)),
 		c.IngressClassName,
-		c.EnableReverseSync,
-		c.SkipCACertificates,
 		diagnostic,
 		kongConfig,
 		eventRecorder,
 		dbMode,
 		clientsManager,
+		updateStrategyResolver,
+		configurationChangeDetector,
 	)
 	if err != nil {
 		return fmt.Errorf("failed to initialize kong data-plane client: %w", err)

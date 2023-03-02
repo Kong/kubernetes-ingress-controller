@@ -32,11 +32,13 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
+	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
+	"k8s.io/apimachinery/pkg/types"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
@@ -71,6 +73,15 @@ const (
 
 	tcpEchoPort    = 1025
 	tcpListnerPort = 8888
+
+	// controllerDeploymentName is the name of the controller deployment in all manifests variants.
+	controllerDeploymentName = "ingress-kong"
+
+	// controllerContainerName is the name of the controller container in all manifests variants.
+	controllerContainerName = "ingress-controller"
+
+	// proxyContainerName is the name of the proxy container in all manifests variants.
+	proxyContainerName = "proxy"
 )
 
 // setupE2ETest builds a testing environment for the E2E test. It also sets up the environment's teardown and test
@@ -198,7 +209,7 @@ func createGKEBuilder(t *testing.T) (*environments.Builder, error) {
 	return environments.NewBuilder().WithClusterBuilder(clusterBuilder), nil
 }
 
-func deployKong(ctx context.Context, t *testing.T, env environments.Environment, manifest io.Reader, additionalSecrets ...*corev1.Secret) *appsv1.Deployment {
+func deployKong(ctx context.Context, t *testing.T, env environments.Environment, manifest io.Reader, additionalSecrets ...*corev1.Secret) {
 	t.Helper()
 
 	t.Log("waiting for testing environment to be ready")
@@ -213,7 +224,7 @@ func deployKong(ctx context.Context, t *testing.T, env environments.Environment,
 
 	t.Logf("deploying any supplemental secrets (found: %d)", len(additionalSecrets))
 	for _, secret := range additionalSecrets {
-		_, err := env.Cluster().Client().CoreV1().Secrets("kong").Create(ctx, secret, metav1.CreateOptions{})
+		_, err := env.Cluster().Client().CoreV1().Secrets(namespace).Create(ctx, secret, metav1.CreateOptions{})
 		if !apierrors.IsAlreadyExists(err) {
 			require.NoError(t, err)
 		}
@@ -226,10 +237,10 @@ func deployKong(ctx context.Context, t *testing.T, env environments.Environment,
 	out, err := cmd.CombinedOutput()
 	require.NoError(t, err, string(out))
 
-	t.Log("waiting for kong to be ready")
+	t.Log("waiting for controller to be ready")
 	var deployment *appsv1.Deployment
 	require.Eventually(t, func() bool {
-		deployment, err = env.Cluster().Client().AppsV1().Deployments(namespace).Get(ctx, "ingress-kong", metav1.GetOptions{})
+		deployment, err = env.Cluster().Client().AppsV1().Deployments(namespace).Get(ctx, controllerDeploymentName, metav1.GetOptions{})
 		if err != nil {
 			return false
 		}
@@ -245,7 +256,63 @@ func deployKong(ctx context.Context, t *testing.T, env environments.Environment,
 			)
 		}(),
 	)
+}
+
+// Deployments represent the deployments that are deployed by the all-in-one manifests.
+type Deployments struct {
+	ProxyNN      types.NamespacedName
+	ControllerNN types.NamespacedName
+}
+
+// GetProxy gets the proxy deployment from the cluster.
+func (d Deployments) GetProxy(ctx context.Context, t *testing.T, env environments.Environment) *appsv1.Deployment {
+	t.Helper()
+	deployment, err := env.Cluster().Client().AppsV1().Deployments(d.ProxyNN.Namespace).Get(ctx, d.ProxyNN.Name, metav1.GetOptions{})
+	require.NoError(t, err)
 	return deployment
+}
+
+// GetController gets the controller deployment from the cluster.
+func (d Deployments) GetController(ctx context.Context, t *testing.T, env environments.Environment) *appsv1.Deployment {
+	t.Helper()
+	deployment, err := env.Cluster().Client().AppsV1().Deployments(d.ControllerNN.Namespace).Get(ctx, d.ControllerNN.Name, metav1.GetOptions{})
+	require.NoError(t, err)
+	return deployment
+}
+
+// getManifestDeployments returns the deployments for the proxy and controller that are expected to be deployed for a given
+// manifest.
+func getManifestDeployments(manifestPath string) Deployments {
+	proxyDeploymentName := getProxyDeploymentName(manifestPath)
+	return Deployments{
+		ProxyNN: types.NamespacedName{
+			Namespace: namespace,
+			Name:      proxyDeploymentName,
+		},
+		ControllerNN: types.NamespacedName{
+			Namespace: namespace,
+			Name:      controllerDeploymentName,
+		},
+	}
+}
+
+// getProxyDeploymentName returns the name of the proxy deployment that is expected to be deployed for a given manifest.
+func getProxyDeploymentName(manifestPath string) string {
+	const (
+		singlePodDeploymentName = controllerDeploymentName
+		multiPodDeploymentName  = "proxy-kong"
+	)
+
+	// special case for the old dbless-legacy that's still using a single-pod deployment
+	if strings.Contains(manifestPath, "dbless-legacy") {
+		return singlePodDeploymentName
+	}
+	// all non-legacy dbless manifests use a multi-pod deployment
+	if strings.Contains(manifestPath, "dbless") {
+		return multiPodDeploymentName
+	}
+
+	return singlePodDeploymentName
 }
 
 func deployIngress(ctx context.Context, t *testing.T, env environments.Environment) {
@@ -468,7 +535,7 @@ func killKong(ctx context.Context, t *testing.T, env environments.Environment, p
 
 	var orig, after int32
 	for _, status := range pod.Status.ContainerStatuses {
-		if status.Name == "proxy" {
+		if status.Name == proxyContainerName {
 			orig = status.RestartCount
 		}
 	}
@@ -484,7 +551,7 @@ func killKong(ctx context.Context, t *testing.T, env environments.Environment, p
 		pod, err = env.Cluster().Client().CoreV1().Pods(pod.Namespace).Get(ctx, pod.Name, metav1.GetOptions{})
 		require.NoError(t, err)
 		for _, status := range pod.Status.ContainerStatuses {
-			if status.Name == "proxy" {
+			if status.Name == proxyContainerName {
 				if status.RestartCount > orig {
 					after = status.RestartCount
 					return true
@@ -613,4 +680,30 @@ func getPodByLabels(ctx context.Context,
 		return nil, err
 	}
 	return podList.Items, nil
+}
+
+// scaleDeployment scales the deployment to the given number of replicas and waits for the replicas to be ready.
+func scaleDeployment(ctx context.Context, t *testing.T, env environments.Environment, deployment types.NamespacedName, replicas int32) {
+	t.Helper()
+
+	scale := &autoscalingv1.Scale{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: deployment.Namespace,
+			Name:      deployment.Name,
+		},
+		Spec: autoscalingv1.ScaleSpec{
+			Replicas: replicas,
+		},
+	}
+	deployments := env.Cluster().Client().AppsV1().Deployments(deployment.Namespace)
+	_, err := deployments.UpdateScale(ctx, deployment.Name, scale, metav1.UpdateOptions{})
+	require.NoError(t, err)
+
+	require.Eventually(t, func() bool {
+		deployment, err := deployments.Get(ctx, deployment.Name, metav1.GetOptions{})
+		if err != nil {
+			return false
+		}
+		return deployment.Status.ReadyReplicas == replicas
+	}, time.Minute*3, time.Second, "deployment %s did not scale to %d replicas", deployment.Name, replicas)
 }

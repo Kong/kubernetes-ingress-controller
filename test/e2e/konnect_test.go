@@ -101,7 +101,7 @@ func deployAllInOneKonnectManifest(ctx context.Context, t *testing.T, env enviro
 	t.Logf("deploying %s manifest file", manifestFile)
 
 	manifest := getTestManifest(t, manifestFile)
-	_ = deployKong(ctx, t, env, manifest)
+	deployKong(ctx, t, env, manifest)
 }
 
 // createTestRuntimeGroup creates a runtime group to be used in tests. It returns the created runtime group's ID.

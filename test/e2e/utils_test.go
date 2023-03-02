@@ -27,6 +27,7 @@ import (
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/yaml"
 )
@@ -57,12 +58,12 @@ func generateAdminPasswordSecret() (string, *corev1.Secret, error) {
 // exposeAdminAPI will override the KONG_ADMIN_LISTEN for the cluster's proxy to expose the
 // Admin API via a service. Some deployments only expose this on localhost by default as there's
 // no authentication, so note that this is only for testing environment purposes.
-func exposeAdminAPI(ctx context.Context, t *testing.T, env environments.Environment, proxyDeployment string) {
+func exposeAdminAPI(ctx context.Context, t *testing.T, env environments.Environment, proxyDeployment types.NamespacedName) {
 	t.Log("updating the proxy container KONG_ADMIN_LISTEN to expose the admin api")
-	deployment, err := env.Cluster().Client().AppsV1().Deployments(namespace).Get(ctx, proxyDeployment, metav1.GetOptions{})
+	deployment, err := env.Cluster().Client().AppsV1().Deployments(proxyDeployment.Namespace).Get(ctx, proxyDeployment.Name, metav1.GetOptions{})
 	require.NoError(t, err)
 	for i, containerSpec := range deployment.Spec.Template.Spec.Containers {
-		if containerSpec.Name == "proxy" {
+		if containerSpec.Name == proxyContainerName {
 			for j, envVar := range containerSpec.Env {
 				if envVar.Name == "KONG_ADMIN_LISTEN" {
 					deployment.Spec.Template.Spec.Containers[i].Env[j].Value = "0.0.0.0:8001, 0.0.0.0:8444 ssl"
@@ -70,7 +71,7 @@ func exposeAdminAPI(ctx context.Context, t *testing.T, env environments.Environm
 			}
 		}
 	}
-	deployment, err = env.Cluster().Client().AppsV1().Deployments(namespace).Update(ctx, deployment, metav1.UpdateOptions{})
+	deployment, err = env.Cluster().Client().AppsV1().Deployments(proxyDeployment.Namespace).Update(ctx, deployment, metav1.UpdateOptions{})
 	require.NoError(t, err)
 
 	t.Log("creating a loadbalancer service for the admin API")
@@ -131,13 +132,14 @@ func getTestManifest(t *testing.T, baseManifestPath string) io.Reader {
 		return manifestsReader
 	}
 
-	manifestsReader, err = patchLivenessProbes(manifestsReader, "proxy-kong", 10, time.Second*15, time.Second*3)
+	deployments := getManifestDeployments(baseManifestPath)
+	manifestsReader, err = patchLivenessProbes(manifestsReader, deployments.ProxyNN, 10, time.Second*15, time.Second*3)
 	if err != nil {
 		t.Logf("failed patching kong liveness (%v), using default manifest %v", err, baseManifestPath)
 		return manifestsReader
 	}
 
-	manifestsReader, err = patchLivenessProbes(manifestsReader, "ingress-kong", 15, time.Second*3, time.Second*10)
+	manifestsReader, err = patchLivenessProbes(manifestsReader, deployments.ControllerNN, 15, time.Second*3, time.Second*10)
 	if err != nil {
 		t.Logf("failed patching controller liveness (%v), using default manifest %v", err, baseManifestPath)
 		return manifestsReader

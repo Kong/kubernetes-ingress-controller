@@ -13,6 +13,7 @@ import (
 	"github.com/kong/kubernetes-testing-framework/pkg/environments"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 )
 
 // TestKongRouterCompatibility verifies that KIC behaves consistently with Kong routers
@@ -24,41 +25,55 @@ func TestKongRouterFlavorCompatibility(t *testing.T) {
 
 	t.Log("deploying kong components with traditional Kong router")
 	manifest := getTestManifest(t, dblessPath)
-	_ = deployKong(ctx, t, env, manifest)
-	ensureGatewayDeployedWithRouterFlavor(ctx, t, env, "traditional")
+	deployKong(ctx, t, env, manifest)
+	proxyDeploymentNN := getManifestDeployments(dblessPath).ProxyNN
+	ensureGatewayDeployedWithRouterFlavor(ctx, t, env, proxyDeploymentNN, "traditional")
 
 	t.Log("running ingress tests to verify that KIC with traditonal Kong router works")
 	deployIngress(ctx, t, env)
 	verifyIngress(ctx, t, env)
 
-	setGatewayRouterFlavor(ctx, t, cluster, "traditional_compatible")
+	setGatewayRouterFlavor(ctx, t, cluster, proxyDeploymentNN, "traditional_compatible")
 
 	t.Log("waiting for Kong with traditional_compatible router to start")
-	ensureGatewayDeployedWithRouterFlavor(ctx, t, env, "traditional_compatible")
+	ensureGatewayDeployedWithRouterFlavor(ctx, t, env, proxyDeploymentNN, "traditional_compatible")
 
 	t.Log("running ingress tests to verify that KIC with traditonal_compatible Kong router works")
 	verifyIngress(ctx, t, env)
 }
 
-func setGatewayRouterFlavor(ctx context.Context, t *testing.T, cluster clusters.Cluster, flavor string) {
+func setGatewayRouterFlavor(
+	ctx context.Context,
+	t *testing.T,
+	cluster clusters.Cluster,
+	proxyDeploymentNN types.NamespacedName,
+	flavor string,
+) {
 	// Since we cannot replace env vars in kustomize, here we update the deployment to set KONG_ROUTER_FLAVOR to traditional_compatible.
 	t.Log("update deployment to modify Kong's router to traditional_compatible")
-	gatewayDeployment, err := cluster.Client().AppsV1().Deployments(namespace).Get(ctx, "proxy-kong", metav1.GetOptions{})
+	deployments := cluster.Client().AppsV1().Deployments(proxyDeploymentNN.Namespace)
+	gatewayDeployment, err := deployments.Get(ctx, proxyDeploymentNN.Name, metav1.GetOptions{})
 	require.NoError(t, err)
-	container := getContainerInPodSpec(&gatewayDeployment.Spec.Template.Spec, "proxy")
+	container := getContainerInPodSpec(&gatewayDeployment.Spec.Template.Spec, proxyContainerName)
 	require.NotNil(t, container)
 	for i, env := range container.Env {
 		if env.Name == "KONG_ROUTER_FLAVOR" {
 			container.Env[i].Value = flavor
 		}
 	}
-	_, err = cluster.Client().AppsV1().Deployments(namespace).Update(ctx, gatewayDeployment, metav1.UpdateOptions{})
+	_, err = deployments.Update(ctx, gatewayDeployment, metav1.UpdateOptions{})
 	require.NoError(t, err)
 }
 
-func ensureGatewayDeployedWithRouterFlavor(ctx context.Context, t *testing.T, env environments.Environment, expectedFlavor string) {
+func ensureGatewayDeployedWithRouterFlavor(
+	ctx context.Context,
+	t *testing.T,
+	env environments.Environment,
+	proxyDeploymentNN types.NamespacedName,
+	expectedFlavor string,
+) {
 	labelsForDeployment := metav1.ListOptions{
-		LabelSelector: fmt.Sprintf("app=%s", "proxy-kong"),
+		LabelSelector: fmt.Sprintf("app=%s", proxyDeploymentNN.Name),
 	}
 	require.Eventually(t, func() bool {
 		podList, err := env.Cluster().Client().CoreV1().Pods(namespace).List(ctx, labelsForDeployment)
@@ -69,7 +84,7 @@ func ensureGatewayDeployedWithRouterFlavor(ctx context.Context, t *testing.T, en
 
 		allPodsMatch := true
 		for _, pod := range podList.Items {
-			proxyContainer := getContainerInPodSpec(&pod.Spec, "proxy")
+			proxyContainer := getContainerInPodSpec(&pod.Spec, proxyContainerName)
 			if proxyContainer == nil {
 				t.Logf("proxy container not found for Pod %s", pod.Name)
 				allPodsMatch = false

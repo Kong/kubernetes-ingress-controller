@@ -51,7 +51,8 @@ func setGatewayRouterFlavor(
 ) {
 	// Since we cannot replace env vars in kustomize, here we update the deployment to set KONG_ROUTER_FLAVOR to traditional_compatible.
 	t.Log("update deployment to modify Kong's router to traditional_compatible")
-	gatewayDeployment, err := cluster.Client().AppsV1().Deployments(proxyDeploymentNN.Namespace).Get(ctx, proxyDeploymentNN.Name, metav1.GetOptions{})
+	deployments := cluster.Client().AppsV1().Deployments(proxyDeploymentNN.Namespace)
+	gatewayDeployment, err := deployments.Get(ctx, proxyDeploymentNN.Name, metav1.GetOptions{})
 	require.NoError(t, err)
 	container := getContainerInPodSpec(&gatewayDeployment.Spec.Template.Spec, proxyContainerName)
 	require.NotNil(t, container)
@@ -60,7 +61,7 @@ func setGatewayRouterFlavor(
 			container.Env[i].Value = flavor
 		}
 	}
-	_, err = cluster.Client().AppsV1().Deployments(proxyDeploymentNN.Namespace).Update(ctx, gatewayDeployment, metav1.UpdateOptions{})
+	_, err = deployments.Update(ctx, gatewayDeployment, metav1.UpdateOptions{})
 	require.NoError(t, err)
 }
 

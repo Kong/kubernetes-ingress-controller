@@ -34,8 +34,9 @@ import (
 // -----------------------------------------------------------------------------
 
 const (
-	dblessPath = "../../deploy/single/all-in-one-dbless.yaml"
-	dblessURL  = "https://raw.githubusercontent.com/Kong/kubernetes-ingress-controller/%v.%v.x/deploy/single/all-in-one-dbless.yaml"
+	dblessLegacyPath = "../../deploy/single/all-in-one-dbless-legacy.yaml"
+	dblessPath       = "../../deploy/single/all-in-one-dbless.yaml"
+	dblessURL        = "https://raw.githubusercontent.com/Kong/kubernetes-ingress-controller/%v.%v.x/deploy/single/all-in-one-dbless.yaml"
 )
 
 func TestDeployAllInOneDBLESSLegacy(t *testing.T) {
@@ -44,10 +45,9 @@ func TestDeployAllInOneDBLESSLegacy(t *testing.T) {
 	ctx, env := setupE2ETest(t)
 
 	t.Log("deploying kong components")
-	const manifestPath = "../../deploy/single/all-in-one-dbless-legacy.yaml"
-	manifest := getTestManifest(t, manifestPath)
+	manifest := getTestManifest(t, dblessLegacyPath)
 	deployKong(ctx, t, env, manifest)
-	deployment := getManifestDeployments(manifestPath).ControllerNN
+	deployment := getManifestDeployments(dblessLegacyPath).ControllerNN
 	forDeployment := metav1.ListOptions{
 		LabelSelector: fmt.Sprintf("app=%s", deployment.Name),
 	}

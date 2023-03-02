@@ -695,11 +695,12 @@ func scaleDeployment(ctx context.Context, t *testing.T, env environments.Environ
 			Replicas: replicas,
 		},
 	}
-	_, err := env.Cluster().Client().AppsV1().Deployments(deployment.Namespace).UpdateScale(ctx, deployment.Name, scale, metav1.UpdateOptions{})
+	deployments := env.Cluster().Client().AppsV1().Deployments(deployment.Namespace)
+	_, err := deployments.UpdateScale(ctx, deployment.Name, scale, metav1.UpdateOptions{})
 	require.NoError(t, err)
 
 	require.Eventually(t, func() bool {
-		deployment, err := env.Cluster().Client().AppsV1().Deployments(deployment.Namespace).Get(ctx, deployment.Name, metav1.GetOptions{})
+		deployment, err := deployments.Get(ctx, deployment.Name, metav1.GetOptions{})
 		if err != nil {
 			return false
 		}

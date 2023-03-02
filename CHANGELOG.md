@@ -149,7 +149,10 @@ Adding a new version? You'll need three changes:
   for the controller and the proxy. This enables the proxy to be scaled independently
   of the controller. The old `all-in-one-dbless.yaml` manifest has been deprecated and 
   renamed to `all-in-one-dbless-legacy.yaml`. It will be removed in a future release.
-  [#3692](https://github.com/Kong/kubernetes-ingress-controller/pull/3629)
+  [#3629](https://github.com/Kong/kubernetes-ingress-controller/pull/3629)
+- Only allow gateway discovery to run with dbless kong gateways because it is
+  unnecessary to run gateway discovery with DB-backed kong gateways.
+  [#3642](https://github.com/Kong/kubernetes-ingress-controller/pull/3642)
 
 ### Fixed
 

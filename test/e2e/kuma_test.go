@@ -76,7 +76,8 @@ func scaleDeployment(ctx context.Context, t *testing.T, env environments.Environ
 
 	scale := &autoscalingv1.Scale{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: deploymentName,
+			Namespace: namespace,
+			Name:      deploymentName,
 		},
 		Spec: autoscalingv1.ScaleSpec{
 			Replicas: replicas,

@@ -109,8 +109,11 @@ Adding a new version? You'll need three changes:
   [#3469](https://github.com/Kong/kubernetes-ingress-controller/pull/3469)
 - Added Gateway discovery using Kong Admin API service configured via `--kong-admin-svc`
   which accepts a namespaced name of a headless service which should have
-  Admin API endpoints exposed under a named port called `admin`.
+  Admin API endpoints exposed under a named port called `admin`. Gateway 
+  discovery is only allowed to run with dbless kong gateways, because it is
+  unnecessary to run gateway discovery with DB-backed kong gateways
   [#3421](https://github.com/Kong/kubernetes-ingress-controller/pull/3421)
+  [#3642](https://github.com/Kong/kubernetes-ingress-controller/pull/3642)
 - Added configurable port names for Gateway discovery through
   `--kong-admin-svc-port-names`. This flag accepts a list of port names that
   Admin API service ports will be matched against.
@@ -149,7 +152,7 @@ Adding a new version? You'll need three changes:
   for the controller and the proxy. This enables the proxy to be scaled independently
   of the controller. The old `all-in-one-dbless.yaml` manifest has been deprecated and 
   renamed to `all-in-one-dbless-legacy.yaml`. It will be removed in a future release.
-  [#3692](https://github.com/Kong/kubernetes-ingress-controller/pull/3629)
+  [#3629](https://github.com/Kong/kubernetes-ingress-controller/pull/3629)
 
 ### Fixed
 

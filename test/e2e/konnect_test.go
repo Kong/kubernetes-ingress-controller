@@ -275,12 +275,12 @@ func requireKonnectNodesConsistentWithK8s(ctx context.Context, t *testing.T, env
 			return false
 		}
 
-		kicPods, err := getPodByLabels(ctx, t, env, "kong", map[string]string{"app": "ingress-kong"})
+		kicPods, err := listPodsByLabels(ctx, env, "kong", map[string]string{"app": "ingress-kong"})
 		if err != nil || len(kicPods) != 1 {
 			return false
 		}
 
-		kongPods, err := getPodByLabels(ctx, t, env, "kong", map[string]string{"app": "proxy-kong"})
+		kongPods, err := listPodsByLabels(ctx, env, "kong", map[string]string{"app": "proxy-kong"})
 		if err != nil || len(kongPods) != 2 {
 			return false
 		}

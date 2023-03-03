@@ -9,16 +9,19 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"sync"
 	"testing"
 	"time"
 
 	gokong "github.com/kong/go-kong/kong"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/kong"
+	"github.com/kong/kubernetes-testing-framework/pkg/environments"
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/metrics"
 )
@@ -336,52 +339,58 @@ func TestDeployAllInOneDBLESS(t *testing.T) {
 	t.Log("running ingress tests to verify all-in-one deployed ingress controller and proxy are functional")
 	deployIngress(ctx, t, env)
 	verifyIngress(ctx, t, env)
+	ensureAllProxyReplicasAreConfigured(ctx, t, env, deployments.ProxyNN)
 
-	const replicasCount = 3
-	gatewayDeployment := deployments.GetProxy(ctx, t, env)
-	gatewayDeployment.Spec.Replicas = lo.ToPtr(int32(replicasCount))
-	_, err := env.Cluster().Client().AppsV1().Deployments(gatewayDeployment.Namespace).Update(ctx, gatewayDeployment, metav1.UpdateOptions{})
+	t.Log("scale proxy to 0 replicas")
+	scaleDeployment(ctx, t, env, deployments.ProxyNN, 0)
+
+	t.Log("wait for 10 seconds to let controller reconcile")
+	<-time.After(10 * time.Second)
+
+	t.Log("ensure that controller pods didn't crash after scaling proxy to 0")
+	expectedControllerReplicas := *(deployments.GetController(ctx, t, env).Spec.Replicas)
+	readyControllerReplicas := deployments.GetController(ctx, t, env).Status.ReadyReplicas
+	require.Equal(t, expectedControllerReplicas, readyControllerReplicas,
+		"controller replicas count should not change after scaling proxy to 0")
+	ensureNoneOfDeploymentPodsHasCrashed(ctx, t, env, deployments.ControllerNN)
+
+	t.Log("scale proxy to 3 replicas and wait for all instances to be ready")
+	scaleDeployment(ctx, t, env, deployments.ProxyNN, 3)
+	ensureAllProxyReplicasAreConfigured(ctx, t, env, deployments.ProxyNN)
+}
+
+func ensureAllProxyReplicasAreConfigured(ctx context.Context, t *testing.T, env environments.Environment, proxyDeploymentNN types.NamespacedName) {
+	pods, err := listPodsByLabels(ctx, env, proxyDeploymentNN.Namespace, map[string]string{"app": proxyDeploymentNN.Name})
 	require.NoError(t, err)
 
-	var podList *corev1.PodList
-
-	t.Log("waiting all the dataplane instances to be ready")
-	require.Eventually(t, func() bool {
-		appLabel := gatewayDeployment.Labels["app"]
-		forDeployment := metav1.ListOptions{
-			LabelSelector: fmt.Sprintf("app=%s", appLabel),
-		}
-		podList, err = env.Cluster().Client().CoreV1().Pods(gatewayDeployment.Namespace).List(ctx, forDeployment)
-		require.NoError(t, err)
-
-		readyReplicasCount := lo.CountBy(podList.Items, func(pod corev1.Pod) bool {
-			return lo.ContainsBy(pod.Status.Conditions, func(cond corev1.PodCondition) bool {
-				return cond.Type == corev1.PodReady && cond.Status == corev1.ConditionTrue
-			})
-		})
-		return readyReplicasCount == replicasCount
-	}, time.Minute, time.Second)
-
-	t.Log("confirming that all dataplanes got the config")
-	for _, pod := range podList.Items {
-		client := &http.Client{
-			Timeout: time.Second * 30,
-			Transport: &http.Transport{
-				TLSClientConfig: &tls.Config{
-					InsecureSkipVerify: true, //nolint:gosec
+	t.Logf("ensuring all %d proxy replicas are configured", len(pods))
+	wg := sync.WaitGroup{}
+	for _, pod := range pods {
+		pod := pod
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			client := &http.Client{
+				Timeout: time.Second * 30,
+				Transport: &http.Transport{
+					TLSClientConfig: &tls.Config{
+						InsecureSkipVerify: true, //nolint:gosec
+					},
 				},
-			},
-		}
+			}
 
-		forwardCtx, cancel := context.WithCancel(context.Background())
-		defer cancel()
-		localPort := startPortForwarder(forwardCtx, t, env, gatewayDeployment.Namespace, pod.Name, "8444")
-		address := fmt.Sprintf("https://localhost:%d", localPort)
+			forwardCtx, cancel := context.WithCancel(ctx)
+			defer cancel()
+			localPort := startPortForwarder(forwardCtx, t, env, proxyDeploymentNN.Namespace, pod.Name, "8444")
+			address := fmt.Sprintf("https://localhost:%d", localPort)
 
-		kongClient, err := gokong.NewClient(lo.ToPtr(address), client)
-		require.NoError(t, err)
+			kongClient, err := gokong.NewClient(lo.ToPtr(address), client)
+			require.NoError(t, err)
 
-		requireIngressConfiguredInAdminAPIEventually(ctx, t, kongClient)
-		t.Logf("proxy pod %s/%s: got the config", pod.Namespace, pod.Name)
+			requireIngressConfiguredInAdminAPIEventually(ctx, t, kongClient)
+			t.Logf("proxy pod %s/%s: got the config", pod.Namespace, pod.Name)
+		}()
 	}
+
+	wg.Wait()
 }

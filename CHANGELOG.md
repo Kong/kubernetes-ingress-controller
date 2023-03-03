@@ -110,8 +110,7 @@ Adding a new version? You'll need three changes:
 - Added Gateway discovery using Kong Admin API service configured via `--kong-admin-svc`
   which accepts a namespaced name of a headless service which should have
   Admin API endpoints exposed under a named port called `admin`. Gateway 
-  discovery is only allowed to run with dbless kong gateways, because it is
-  unnecessary to run gateway discovery with DB-backed kong gateways
+  discovery is only allowed to run with dbless kong gateways.
   [#3421](https://github.com/Kong/kubernetes-ingress-controller/pull/3421)
   [#3642](https://github.com/Kong/kubernetes-ingress-controller/pull/3642)
 - Added configurable port names for Gateway discovery through

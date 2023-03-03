@@ -54,8 +54,11 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 	if err != nil {
 		return fmt.Errorf("get kubeconfig from file %q: %w", c.KubeconfigPath, err)
 	}
+
+	setupLog.Info("starting standalone liveness probe")
+
 	setupLog.Info("getting the kong admin api client configuration")
-	initialKongClients, err := c.adminAPIClients(ctx)
+	initialKongClients, err := c.adminAPIClients(ctx, setupLog.WithName("initialize-kong-clients"))
 	if err != nil {
 		return fmt.Errorf("unable to build kong api client(s): %w", err)
 	}
@@ -311,4 +314,50 @@ func readyzHandler(mgr manager.Manager, dataplaneSynchronizer IsReady) func(*htt
 		}
 		return nil
 	}
+}
+
+type healthCheckHandler struct {
+	healthzCheck healthz.Checker
+	readyzCheck  healthz.Checker
+}
+
+func (s *healthCheckHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
+	if req.Method != "GET" {
+		rw.WriteHeader(http.StatusNotFound)
+		rw.Write([]byte("not found"))
+		return
+	}
+	switch req.URL.Path {
+	case "/healthz":
+		if s.healthzCheck == nil {
+			rw.WriteHeader(http.StatusNotFound)
+			rw.Write([]byte("not found"))
+			return
+		}
+		err := s.healthzCheck(req)
+		if err != nil {
+			rw.WriteHeader(http.StatusInternalServerError)
+			rw.Write([]byte(err.Error()))
+			return
+		}
+		rw.Write([]byte(""))
+		return
+	case "/readyz":
+		if s.readyzCheck == nil {
+			rw.WriteHeader(http.StatusNotFound)
+			rw.Write([]byte("not found"))
+			return
+		}
+		err := s.readyzCheck(req)
+		if err != nil {
+			rw.WriteHeader(http.StatusInternalServerError)
+			rw.Write([]byte(err.Error()))
+			return
+		}
+		rw.Write([]byte(""))
+		return
+	}
+
+	rw.WriteHeader(http.StatusNotFound)
+	rw.Write([]byte("not found"))
 }

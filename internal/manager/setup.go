@@ -64,13 +64,12 @@ func setupControllerOptions(logger logr.Logger, c *Config, dbmode string, featur
 
 	// configure the general controller options
 	controllerOpts := ctrl.Options{
-		Scheme:                 scheme,
-		MetricsBindAddress:     c.MetricsAddr,
-		Port:                   9443,
-		HealthProbeBindAddress: c.ProbeAddr,
-		LeaderElection:         leaderElectionEnabled(logger, c, dbmode),
-		LeaderElectionID:       c.LeaderElectionID,
-		SyncPeriod:             &c.SyncPeriod,
+		Scheme:             scheme,
+		MetricsBindAddress: c.MetricsAddr,
+		Port:               9443,
+		LeaderElection:     leaderElectionEnabled(logger, c, dbmode),
+		LeaderElectionID:   c.LeaderElectionID,
+		SyncPeriod:         &c.SyncPeriod,
 	}
 
 	// configure the controller caching options

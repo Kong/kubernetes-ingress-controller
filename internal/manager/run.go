@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"sync"
 	"time"
 
 	"github.com/blang/semver/v4"
@@ -55,7 +56,15 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 		return fmt.Errorf("get kubeconfig from file %q: %w", c.KubeconfigPath, err)
 	}
 
-	setupLog.Info("starting standalone liveness probe")
+	setupLog.Info("starting standalone health check server")
+	healthHandler := &healthCheckHandler{}
+	healthHandler.setHealthzCheck(healthz.Ping)
+	go func() {
+		err := http.ListenAndServe(c.ProbeAddr, healthHandler)
+		if err != nil {
+			setupLog.Error(err, "healthz server failed")
+		}
+	}()
 
 	setupLog.Info("getting the kong admin api client configuration")
 	initialKongClients, err := c.adminAPIClients(ctx, setupLog.WithName("initialize-kong-clients"))
@@ -176,13 +185,8 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 	// See https://github.com/kubernetes-sigs/kubebuilder/issues/932
 	// +kubebuilder:scaffold:builder
 
-	setupLog.Info("Starting health check servers")
-	if err := mgr.AddHealthzCheck("health", healthz.Ping); err != nil {
-		return fmt.Errorf("unable to setup healthz: %w", err)
-	}
-	if err := mgr.AddReadyzCheck("check", readyzHandler(mgr, synchronizer)); err != nil {
-		return fmt.Errorf("unable to setup readyz: %w", err)
-	}
+	setupLog.Info("Add readiness probe to health server")
+	healthHandler.setReadyzCheck(readyzHandler(mgr, synchronizer))
 
 	if c.Konnect.ConfigSynchronizationEnabled {
 		// In case of failures when building Konnect related objects, we're not returning errors as Konnect is not
@@ -317,47 +321,59 @@ func readyzHandler(mgr manager.Manager, dataplaneSynchronizer IsReady) func(*htt
 }
 
 type healthCheckHandler struct {
+	lock         sync.RWMutex
 	healthzCheck healthz.Checker
 	readyzCheck  healthz.Checker
 }
 
+func (s *healthCheckHandler) getHealthzCheck() healthz.Checker {
+	s.lock.RLock()
+	defer s.lock.RUnlock()
+
+	return s.healthzCheck
+}
+
+func (s *healthCheckHandler) getReadyzCheck() healthz.Checker {
+	s.lock.RLock()
+	defer s.lock.RUnlock()
+
+	return s.readyzCheck
+}
+
+func (s *healthCheckHandler) setHealthzCheck(checker healthz.Checker) {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+
+	s.healthzCheck = checker
+}
+
+func (s *healthCheckHandler) setReadyzCheck(checker healthz.Checker) {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+
+	s.readyzCheck = checker
+}
+
 func (s *healthCheckHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
-	if req.Method != "GET" {
-		rw.WriteHeader(http.StatusNotFound)
-		rw.Write([]byte("not found"))
-		return
-	}
+	var check healthz.Checker
 	switch req.URL.Path {
 	case "/healthz":
-		if s.healthzCheck == nil {
-			rw.WriteHeader(http.StatusNotFound)
-			rw.Write([]byte("not found"))
-			return
-		}
-		err := s.healthzCheck(req)
-		if err != nil {
-			rw.WriteHeader(http.StatusInternalServerError)
-			rw.Write([]byte(err.Error()))
-			return
-		}
-		rw.Write([]byte(""))
-		return
+		check = s.getHealthzCheck()
 	case "/readyz":
-		if s.readyzCheck == nil {
-			rw.WriteHeader(http.StatusNotFound)
-			rw.Write([]byte("not found"))
-			return
-		}
-		err := s.readyzCheck(req)
-		if err != nil {
-			rw.WriteHeader(http.StatusInternalServerError)
-			rw.Write([]byte(err.Error()))
-			return
-		}
-		rw.Write([]byte(""))
+		check = s.getReadyzCheck()
+	}
+
+	if check == nil {
+		rw.WriteHeader(http.StatusNotFound)
+		_, _ = rw.Write([]byte("not found"))
 		return
 	}
 
-	rw.WriteHeader(http.StatusNotFound)
-	rw.Write([]byte("not found"))
+	err := check(req)
+	if err != nil {
+		rw.WriteHeader(http.StatusInternalServerError)
+		_, _ = rw.Write([]byte(err.Error()))
+		return
+	}
+	_, _ = rw.Write([]byte(""))
 }

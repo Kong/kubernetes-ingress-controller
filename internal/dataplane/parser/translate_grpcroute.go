@@ -114,9 +114,9 @@ func generateKongRoutesFromGRPCRouteRule(grpcroute *gatewayv1alpha2.GRPCRoute, r
 				matchType = *match.Method.Type
 			}
 			serviceMap := map[gatewayv1alpha2.GRPCMethodMatchType]string{
-				gatewayv1alpha2.GRPCMethodMatchType(""):          "/.+",
-				gatewayv1alpha2.GRPCMethodMatchExact:             "/.+",
-				gatewayv1alpha2.GRPCMethodMatchRegularExpression: "/.+",
+				gatewayv1alpha2.GRPCMethodMatchType(""):          ".+",
+				gatewayv1alpha2.GRPCMethodMatchExact:             ".+",
+				gatewayv1alpha2.GRPCMethodMatchRegularExpression: ".+",
 			}
 			methodMap := map[gatewayv1alpha2.GRPCMethodMatchType]string{
 				gatewayv1alpha2.GRPCMethodMatchType(""):          "",
@@ -133,7 +133,7 @@ func generateKongRoutesFromGRPCRouteRule(grpcroute *gatewayv1alpha2.GRPCRoute, r
 			} else {
 				service = *matchService
 			}
-			r.Paths = append(r.Paths, kong.String(fmt.Sprintf("%s/%s", service, method)))
+			r.Paths = append(r.Paths, kong.String(fmt.Sprintf("~/%s/%s", service, method)))
 		}
 
 		if len(grpcroute.Spec.Hostnames) > 0 {

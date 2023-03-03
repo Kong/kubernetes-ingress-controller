@@ -76,11 +76,18 @@ func DeployGateway(ctx context.Context, client *gatewayclient.Clientset, namespa
 		},
 		Spec: gatewayv1beta1.GatewaySpec{
 			GatewayClassName: gatewayv1beta1.ObjectName(gatewayClassName),
-			Listeners: []gatewayv1beta1.Listener{{
-				Name:     "http",
-				Protocol: gatewayv1beta1.HTTPProtocolType,
-				Port:     gatewayv1beta1.PortNumber(ktfkong.DefaultProxyTCPServicePort),
-			}},
+			Listeners: []gatewayv1beta1.Listener{
+				{
+					Name:     "http",
+					Protocol: gatewayv1beta1.HTTPProtocolType,
+					Port:     gatewayv1beta1.PortNumber(ktfkong.DefaultProxyTCPServicePort),
+				},
+				{
+					Name:     "https",
+					Protocol: gatewayv1beta1.HTTPSProtocolType,
+					Port:     gatewayv1beta1.PortNumber(ktfkong.DefaultProxyTLSServicePort),
+				},
+			},
 		},
 	}
 
@@ -232,11 +239,19 @@ func gatewayLinkStatusMatches(
 	switch protocolType { //nolint:exhaustive
 	case gatewayv1beta1.HTTPProtocolType:
 		route, err := c.GatewayV1beta1().HTTPRoutes(namespace).Get(ctx, name, metav1.GetOptions{})
-		if err != nil {
+		groute, gerr := c.GatewayV1alpha2().GRPCRoutes(namespace).Get(ctx, name, metav1.GetOptions{})
+		if err != nil && gerr != nil {
 			t.Logf("error getting http route: %v", err)
+			t.Logf("error getting grpc route: %v", err)
 		} else {
-			return newRouteParentsStatus(route.Status.Parents).
-				check(verifyLinked, string(gateway.GetControllerName()))
+			if err == nil {
+				return newRouteParentsStatus(route.Status.Parents).
+					check(verifyLinked, string(gateway.GetControllerName()))
+			}
+			if gerr == nil {
+				return newRouteParentsStatus(groute.Status.Parents).
+					check(verifyLinked, string(gateway.GetControllerName()))
+			}
 		}
 	case gatewayv1beta1.TCPProtocolType:
 		route, err := c.GatewayV1alpha2().TCPRoutes(namespace).Get(ctx, name, metav1.GetOptions{})
@@ -308,10 +323,17 @@ func verifyProgrammedConditionStatus(t *testing.T,
 	switch protocolType { //nolint:exhaustive
 	case gatewayv1beta1.HTTPProtocolType:
 		route, err := c.GatewayV1beta1().HTTPRoutes(namespace).Get(ctx, name, metav1.GetOptions{})
-		if err != nil {
+		groute, gerr := c.GatewayV1alpha2().GRPCRoutes(namespace).Get(ctx, name, metav1.GetOptions{})
+		if err != nil && gerr != nil {
 			t.Logf("error getting http route: %v", err)
+			t.Logf("error getting grpc route: %v", err)
 		} else {
-			return parentStatusContainsProgrammedCondition(route.Status.Parents, gateway.GetControllerName(), expectedStatus)
+			if err == nil {
+				return parentStatusContainsProgrammedCondition(route.Status.Parents, gateway.GetControllerName(), expectedStatus)
+			}
+			if gerr == nil {
+				return parentStatusContainsProgrammedCondition(groute.Status.Parents, gateway.GetControllerName(), expectedStatus)
+			}
 		}
 	case gateway.TCPProtocolType:
 		route, err := c.GatewayV1alpha2().TCPRoutes(namespace).Get(ctx, name, metav1.GetOptions{})

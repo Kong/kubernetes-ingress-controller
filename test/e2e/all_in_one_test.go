@@ -341,9 +341,6 @@ func TestDeployAllInOneDBLESS(t *testing.T) {
 	verifyIngress(ctx, t, env)
 	ensureAllProxyReplicasAreConfigured(ctx, t, env, deployments.ProxyNN)
 
-	expectedControllerReplicas := *(deployments.GetController(ctx, t, env).Spec.Replicas)
-	t.Logf("store expected controller replicas count = %d", expectedControllerReplicas)
-
 	t.Log("scale proxy to 0 replicas")
 	scaleDeployment(ctx, t, env, deployments.ProxyNN, 0)
 
@@ -351,6 +348,10 @@ func TestDeployAllInOneDBLESS(t *testing.T) {
 	<-time.After(10 * time.Second)
 
 	t.Log("ensure that controller pods didn't crash after scaling proxy to 0")
+	expectedControllerReplicas := *(deployments.GetController(ctx, t, env).Spec.Replicas)
+	readyControllerReplicas := deployments.GetController(ctx, t, env).Status.ReadyReplicas
+	require.Equal(t, expectedControllerReplicas, readyControllerReplicas,
+		"controller replicas count should not change after scaling proxy to 0")
 	ensureNoneOfDeploymentPodsHasCrashed(ctx, t, env, deployments.ControllerNN)
 
 	t.Log("scale proxy to 3 replicas and wait for all instances to be ready")
@@ -359,15 +360,12 @@ func TestDeployAllInOneDBLESS(t *testing.T) {
 }
 
 func ensureAllProxyReplicasAreConfigured(ctx context.Context, t *testing.T, env environments.Environment, proxyDeploymentNN types.NamespacedName) {
-	forDeployment := metav1.ListOptions{
-		LabelSelector: fmt.Sprintf("app=%s", proxyDeploymentNN.Name),
-	}
-	podList, err := env.Cluster().Client().CoreV1().Pods(proxyDeploymentNN.Namespace).List(ctx, forDeployment)
+	pods, err := listPodsByLabels(ctx, env, proxyDeploymentNN.Namespace, map[string]string{"app": proxyDeploymentNN.Name})
 	require.NoError(t, err)
 
-	t.Logf("ensuring all %d proxy replicas are configured", len(podList.Items))
+	t.Logf("ensuring all %d proxy replicas are configured", len(pods))
 	wg := sync.WaitGroup{}
-	for _, pod := range podList.Items {
+	for _, pod := range pods {
 		pod := pod
 		wg.Add(1)
 		go func() {

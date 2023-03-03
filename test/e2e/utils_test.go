@@ -457,13 +457,9 @@ func isPodReady(pod corev1.Pod) bool {
 // ensureNoneOfDeploymentPodsHasCrashed ensures that none of the pods of a deployment has crashed.
 func ensureNoneOfDeploymentPodsHasCrashed(ctx context.Context, t *testing.T, env environments.Environment, deploymentNN types.NamespacedName) {
 	t.Logf("ensuring none of %s deployment pods has crashed", deploymentNN.String())
-
-	pods, err := env.Cluster().Client().CoreV1().Pods(deploymentNN.Namespace).List(ctx, metav1.ListOptions{
-		LabelSelector: fmt.Sprintf("app=%s", deploymentNN.Name),
-	})
+	pods, err := listPodsByLabels(ctx, env, deploymentNN.Namespace, map[string]string{"app": deploymentNN.Name})
 	require.NoError(t, err)
-
-	for _, pod := range pods.Items {
+	for _, pod := range pods {
 		for _, container := range pod.Spec.Containers {
 			require.Truef(t, containerDidntCrash(pod, container.Name), "controller pod %s/%s crashed", pod.Namespace, pod.Name)
 		}

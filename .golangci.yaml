@@ -9,6 +9,7 @@ run:
   - e2e_tests
   - conformance_tests
   - istio_tests
+  - envtest
 linters:
   enable:
   - asasalint
@@ -106,7 +107,8 @@ issues:
   fix: true
   max-same-issues: 0
   exclude-rules:
-  - linters:
-    - ineffassign
-    text: "ineffectual assignment" # ignore err not checked in test files
-    path: test\.go
+  # Ignore insecure TLS in tests and hardcoded credentials
+  - path: _test\.go
+    linters:
+      - gosec
+    text: "TLS InsecureSkipVerify set true|Potential hardcoded credentials"

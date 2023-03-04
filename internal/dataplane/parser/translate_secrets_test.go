@@ -37,7 +37,6 @@ func TestGetPluginsAssociatedWithCACertSecret(t *testing.T) {
 		}
 	}
 
-	//nolint:gosec
 	const (
 		secretID        = "8a3753e0-093b-43d9-9d39-27985c987d92"
 		anotherSecretID = "99fa09c7-f849-4449-891e-19b9a0015763"

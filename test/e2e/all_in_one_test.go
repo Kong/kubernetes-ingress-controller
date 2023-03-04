@@ -374,7 +374,7 @@ func ensureAllProxyReplicasAreConfigured(ctx context.Context, t *testing.T, env 
 				Timeout: time.Second * 30,
 				Transport: &http.Transport{
 					TLSClientConfig: &tls.Config{
-						InsecureSkipVerify: true, //nolint:gosec
+						InsecureSkipVerify: true,
 					},
 				},
 			}

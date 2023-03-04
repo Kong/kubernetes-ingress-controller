@@ -4,40 +4,40 @@
 package integration
 
 import (
-	"bytes"
 	"context"
+	"crypto/tls"
 	"fmt"
-	"os/exec"
-	"strings"
+
+	pb "github.com/moul/pb/grpcbin/go-grpc"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 )
 
-func grpcRequest(input string) string {
-	return fmt.Sprintf(`{"greeting": "%s"}`, input)
-}
-
-func grpcResponse(input string) string {
-	return fmt.Sprintf("{\n  \"reply\": \"hello %s\"\n}\n", input)
-}
-
-func grpcEchoResponds(ctx context.Context, url, hostname, input string) (bool, error) {
-	args := []string{
-		"-d",
-		grpcRequest(input),
-		"-insecure",
-		"-servername",
-		hostname,
-		url,
-		"hello.HelloService.SayHello",
+func grpcEchoResponds(ctx context.Context, url, hostname, input string) error {
+	conn, err := grpc.DialContext(ctx, url,
+		grpc.WithTransportCredentials(credentials.NewTLS(
+			&tls.Config{
+				ServerName:         hostname,
+				InsecureSkipVerify: true, //nolint:gosec
+			},
+		)),
+	)
+	if err != nil {
+		return fmt.Errorf("failed to dial GRPC server: %w", err)
 	}
-	stdout, stderr := new(bytes.Buffer), new(bytes.Buffer)
+	defer conn.Close()
 
-	cmd := exec.CommandContext(ctx, "grpcurl", args...)
-	cmd.Stdout = stdout
-	cmd.Stderr = stderr
-
-	if err := cmd.Run(); err != nil {
-		return false, fmt.Errorf("failed to echo GRPC server STDOUT=(%s) STDERR=(%s): %w", strings.TrimSpace(stdout.String()), strings.TrimSpace(stderr.String()), err)
+	client := pb.NewGRPCBinClient(conn)
+	resp, err := client.DummyUnary(ctx, &pb.DummyMessage{
+		FString: input,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to send GRPC request: %w", err)
 	}
 
-	return stdout.String() == grpcResponse(input), nil
+	if resp.FString != input {
+		return fmt.Errorf("expected %q, got %q", input, resp.FString)
+	}
+
+	return nil
 }

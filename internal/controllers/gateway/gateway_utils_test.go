@@ -2,7 +2,6 @@ package gateway
 
 import (
 	"context"
-	"fmt"
 	"testing"
 
 	"github.com/samber/lo"

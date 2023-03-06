@@ -139,6 +139,6 @@ func assertOnlyOneConditionForType(t *testing.T, conditions []metav1.Condition) 
 		return c.Type
 	})
 	for c, n := range conditionsNum {
-		assert.Equal(t, 1, n, fmt.Sprintf("condition %s occurred %d times - expected 1 occurrence", c, n))
+		assert.Equalf(t, 1, n, "condition %s occurred %d times - expected 1 occurrence", c, n)
 	}
 }

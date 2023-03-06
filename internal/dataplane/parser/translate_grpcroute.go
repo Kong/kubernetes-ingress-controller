@@ -102,7 +102,6 @@ func generateKongRoutesFromGRPCRouteRule(grpcroute *gatewayv1alpha2.GRPCRoute, r
 		// Kong routes derived from a GRPCRoute use a path composed of the match's gRPC service and method
 		// If either the service or method is omitted, there is a default regex determined by the match type
 		// https://gateway-api.sigs.k8s.io/geps/gep-1016/#matcher-types describes the defaults
-		// TODO handle invalid cases?
 		if match.Method != nil {
 			var method, service string
 			matchMethod := match.Method.Method

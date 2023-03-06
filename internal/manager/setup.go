@@ -286,6 +286,14 @@ func (c *Config) adminAPIClients(ctx context.Context, logger logr.Logger) ([]*ad
 	return clients, nil
 }
 
+type NoAvailableEndpointsError struct {
+	serviceNN types.NamespacedName
+}
+
+func (e NoAvailableEndpointsError) Error() string {
+	return fmt.Sprintf("no endpoints for kong admin service: %q", e.serviceNN)
+}
+
 func (c *Config) adminAPIClientFromServiceDiscovery(ctx context.Context, logger logr.Logger, httpclient *http.Client) ([]*adminapi.Client, error) {
 	kubeClient, err := c.GetKubeClient()
 	if err != nil {
@@ -311,18 +319,19 @@ func (c *Config) adminAPIClientFromServiceDiscovery(ctx context.Context, logger 
 			return retry.Unrecoverable(err)
 		}
 		if s.Len() == 0 {
-			return fmt.Errorf("no endpoints for kong admin service: %q", kongAdminSvcNN)
+			return NoAvailableEndpointsError{serviceNN: kongAdminSvcNN}
 		}
 		adminAPIs = s.UnsortedList()
 		return nil
 	},
 		retry.Context(ctx),
 		retry.Attempts(0),
-		retry.DelayType(retry.BackOffDelay),
+		retry.DelayType(retry.FixedDelay),
 		retry.Delay(time.Second),
-		retry.MaxDelay(2*time.Minute),
-		retry.OnRetry(func(n uint, err error) {
-			logger.Error(err, "failed to create kong client(s)", "attempt", n)
+		retry.OnRetry(func(_ uint, err error) {
+			if !errors.As(err, &NoAvailableEndpointsError{}) {
+				logger.Error(err, "failed to create kong client(s)")
+			}
 		}),
 	)
 	if err != nil {

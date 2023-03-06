@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"net/http"
 	"os"
-	"sync"
 	"time"
 
 	"github.com/blang/semver/v4"
@@ -60,7 +59,12 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 	healthHandler := &healthCheckHandler{}
 	healthHandler.setHealthzCheck(healthz.Ping)
 	go func() {
-		err := http.ListenAndServe(c.ProbeAddr, healthHandler)
+		server := &http.Server{
+			Addr:              c.ProbeAddr,
+			Handler:           healthHandler,
+			ReadHeaderTimeout: 3 * time.Second,
+		}
+		err := server.ListenAndServe()
 		if err != nil {
 			setupLog.Error(err, "healthz server failed")
 		}
@@ -184,6 +188,21 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 	// BUG: kubebuilder (at the time of writing - 3.0.0-rc.1) does not allow this tag anywhere else than main.go
 	// See https://github.com/kubernetes-sigs/kubebuilder/issues/932
 	// +kubebuilder:scaffold:builder
+
+	// use standalone health check server instead of servers inside manager
+	// because manager depends on initial kong clients:
+	// https://github.com/Kong/kubernetes-ingress-controller/issues/3592
+	// After we implement the feature that manager does not depend on initial kong clients,
+	// we should move back to the health check server inside the manager.
+	/*
+		setupLog.Info("Starting health check servers")
+		if err := mgr.AddHealthzCheck("health", healthz.Ping); err != nil {
+			return fmt.Errorf("unable to setup healthz: %w", err)
+		}
+		if err := mgr.AddReadyzCheck("check", readyzHandler(mgr, synchronizer)); err != nil {
+			return fmt.Errorf("unable to setup readyz: %w", err)
+		}
+	*/
 
 	setupLog.Info("Add readiness probe to health server")
 	healthHandler.setReadyzCheck(readyzHandler(mgr, synchronizer))
@@ -318,62 +337,4 @@ func readyzHandler(mgr manager.Manager, dataplaneSynchronizer IsReady) func(*htt
 		}
 		return nil
 	}
-}
-
-type healthCheckHandler struct {
-	lock         sync.RWMutex
-	healthzCheck healthz.Checker
-	readyzCheck  healthz.Checker
-}
-
-func (s *healthCheckHandler) getHealthzCheck() healthz.Checker {
-	s.lock.RLock()
-	defer s.lock.RUnlock()
-
-	return s.healthzCheck
-}
-
-func (s *healthCheckHandler) getReadyzCheck() healthz.Checker {
-	s.lock.RLock()
-	defer s.lock.RUnlock()
-
-	return s.readyzCheck
-}
-
-func (s *healthCheckHandler) setHealthzCheck(checker healthz.Checker) {
-	s.lock.Lock()
-	defer s.lock.Unlock()
-
-	s.healthzCheck = checker
-}
-
-func (s *healthCheckHandler) setReadyzCheck(checker healthz.Checker) {
-	s.lock.Lock()
-	defer s.lock.Unlock()
-
-	s.readyzCheck = checker
-}
-
-func (s *healthCheckHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
-	var check healthz.Checker
-	switch req.URL.Path {
-	case "/healthz":
-		check = s.getHealthzCheck()
-	case "/readyz":
-		check = s.getReadyzCheck()
-	}
-
-	if check == nil {
-		rw.WriteHeader(http.StatusNotFound)
-		_, _ = rw.Write([]byte("not found"))
-		return
-	}
-
-	err := check(req)
-	if err != nil {
-		rw.WriteHeader(http.StatusInternalServerError)
-		_, _ = rw.Write([]byte(err.Error()))
-		return
-	}
-	_, _ = rw.Write([]byte(""))
 }

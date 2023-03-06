@@ -256,7 +256,7 @@ func TestWebhookUpdate(t *testing.T) {
 	t.Log("checking initial certificate")
 	require.Eventually(t, func() bool {
 		conn, err := tls.Dial("tcp", admissionAddress+":443",
-			&tls.Config{MinVersion: tls.VersionTLS12, InsecureSkipVerify: true}) //nolint:gosec
+			&tls.Config{MinVersion: tls.VersionTLS12, InsecureSkipVerify: true})
 		if err != nil {
 			t.Logf("failed to dial %s:443, error %v", admissionAddress, err)
 			return false
@@ -273,7 +273,7 @@ func TestWebhookUpdate(t *testing.T) {
 	t.Log("checking second certificate")
 	require.Eventually(t, func() bool {
 		conn, err := tls.Dial("tcp", admissionAddress+":443",
-			&tls.Config{MinVersion: tls.VersionTLS12, InsecureSkipVerify: true}) //nolint:gosec
+			&tls.Config{MinVersion: tls.VersionTLS12, InsecureSkipVerify: true})
 		if err != nil {
 			t.Logf("failed to dial %s:443, error %v", admissionAddress, err)
 			return false

@@ -249,7 +249,7 @@ func TestTCPIngressTLS(t *testing.T) {
 		t.Logf("verifying TCP Ingress for %s.example operational", i)
 		require.Eventually(t, func() bool {
 			conn, err := tls.Dial("tcp", fmt.Sprintf("%s:8899", proxyURL.Hostname()), &tls.Config{
-				InsecureSkipVerify: true, //nolint:gosec
+				InsecureSkipVerify: true,
 				ServerName:         fmt.Sprintf("%s.example", i),
 			})
 			if err != nil {
@@ -280,7 +280,7 @@ func TestTCPIngressTLS(t *testing.T) {
 	t.Logf("verifying TCP Ingress routes to new upstream after update")
 	require.Eventually(t, func() bool {
 		conn, err := tls.Dial("tcp", fmt.Sprintf("%s:8899", proxyURL.Hostname()), &tls.Config{
-			InsecureSkipVerify: true, //nolint:gosec
+			InsecureSkipVerify: true,
 			ServerName:         fmt.Sprintf("%s.example", testServiceSuffixes[0]),
 		})
 		if err != nil {
@@ -462,7 +462,7 @@ func TestTCPIngressTLSPassthrough(t *testing.T) {
 	t.Log("verifying TCP Ingress for redis.example operational")
 	require.Eventually(t, func() bool {
 		conn, err := tls.Dial("tcp", fmt.Sprintf("%s:8899", proxyURL.Hostname()), &tls.Config{
-			InsecureSkipVerify: true, //nolint:gosec
+			InsecureSkipVerify: true,
 			ServerName:         "redis.example",
 		})
 		if err != nil {

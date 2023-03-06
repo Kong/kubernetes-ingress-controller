@@ -350,7 +350,7 @@ func eventsToString(events []corev1.Event) string {
 	return strings.Join(rows, "\n")
 }
 
-const invalidCASecretID = "8214a145-a328-4c56-ab72-2973a56d4eae" //nolint:gosec
+const invalidCASecretID = "8214a145-a328-4c56-ab72-2973a56d4eae"
 
 func invalidCASecret(ns string) *corev1.Secret {
 	return &corev1.Secret{

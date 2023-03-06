@@ -226,12 +226,7 @@ func TestOverrideRoute(t *testing.T) {
 
 func TestOverrideRoutePriority(t *testing.T) {
 	assert := assert.New(t)
-	var route Route
-	route = Route{
-		Route: kong.Route{
-			Hosts: kong.StringSlice("foo.com", "bar.com"),
-		},
-	}
+
 	kongIngress := configurationv1.KongIngress{
 		Route: &configurationv1.KongIngressRoute{
 			Protocols: configurationv1.ProtocolSlice("http"),
@@ -244,7 +239,7 @@ func TestOverrideRoutePriority(t *testing.T) {
 		},
 	}
 
-	route = Route{
+	route := Route{
 		Route: kong.Route{
 			Hosts: kong.StringSlice("foo.com", "bar.com"),
 		},
@@ -278,12 +273,6 @@ func TestOverrideRouteByKongIngress(t *testing.T) {
 
 func TestOverrideRouteByAnnotation(t *testing.T) {
 	assert := assert.New(t)
-	var route Route
-	route = Route{
-		Route: kong.Route{
-			Hosts: kong.StringSlice("foo.com", "bar.com"),
-		},
-	}
 
 	ingMeta := util.K8sObjectInfo{
 		Annotations: map[string]string{
@@ -291,7 +280,7 @@ func TestOverrideRouteByAnnotation(t *testing.T) {
 		},
 	}
 
-	route = Route{
+	route := Route{
 		Route: kong.Route{
 			Hosts: kong.StringSlice("foo.com", "bar.com"),
 		},

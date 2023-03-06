@@ -113,3 +113,16 @@ func validateClientTLS(clientTLS adminapi.TLSClientConfig) error {
 
 	return nil
 }
+
+// ValidateGatewayDiscovery returns error if dbMode is not configured to db-less mode.
+// gateway discovery is only supported in db-less mode in its initial release:
+// https://github.com/Kong/kubernetes-ingress-controller/issues/3401
+func (c *Config) ValidateGatewayDiscovery(dbMode string) error {
+	if c.KongAdminSvc.IsAbsent() {
+		return nil
+	}
+	if dbMode != "off" && dbMode != "" {
+		return fmt.Errorf("gateway discovery is only supported in dbless mode, not db %s", dbMode)
+	}
+	return nil
+}

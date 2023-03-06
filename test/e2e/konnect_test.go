@@ -100,9 +100,8 @@ func deployAllInOneKonnectManifest(ctx context.Context, t *testing.T, env enviro
 	const manifestFile = "../../deploy/single/all-in-one-dbless-konnect.yaml"
 	t.Logf("deploying %s manifest file", manifestFile)
 
-	manifest, err := getTestManifest(t, manifestFile)
-	require.NoError(t, err)
-	_ = deployKong(ctx, t, env, manifest)
+	manifest := getTestManifest(t, manifestFile)
+	deployKong(ctx, t, env, manifest)
 }
 
 // createTestRuntimeGroup creates a runtime group to be used in tests. It returns the created runtime group's ID.
@@ -276,12 +275,12 @@ func requireKonnectNodesConsistentWithK8s(ctx context.Context, t *testing.T, env
 			return false
 		}
 
-		kicPods, err := getPodByLabels(ctx, t, env, "kong", map[string]string{"app": "ingress-kong"})
+		kicPods, err := listPodsByLabels(ctx, env, "kong", map[string]string{"app": "ingress-kong"})
 		if err != nil || len(kicPods) != 1 {
 			return false
 		}
 
-		kongPods, err := getPodByLabels(ctx, t, env, "kong", map[string]string{"app": "proxy-kong"})
+		kongPods, err := listPodsByLabels(ctx, env, "kong", map[string]string{"app": "proxy-kong"})
 		if err != nil || len(kongPods) != 2 {
 			return false
 		}

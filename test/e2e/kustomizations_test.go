@@ -11,6 +11,7 @@ import (
 
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/kubectl"
 	"github.com/stretchr/testify/require"
+	k8stypes "k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/kustomize/api/types"
 	"sigs.k8s.io/kustomize/kyaml/resid"
 )
@@ -94,7 +95,7 @@ func patchControllerStartTimeout(baseManifestReader io.Reader, tries int, delay 
 							Version: "v1",
 							Kind:    "Deployment",
 						},
-						Name:      "ingress-kong",
+						Name:      controllerDeploymentName,
 						Namespace: "kong",
 					},
 				},
@@ -106,7 +107,7 @@ func patchControllerStartTimeout(baseManifestReader io.Reader, tries int, delay 
 
 // patchLivenessProbes patches the given deployment's liveness probe, replacing the initial delay, period, and failure
 // threshold.
-func patchLivenessProbes(baseManifestReader io.Reader, deployment string, failure int, initial, period time.Duration) (io.Reader, error) {
+func patchLivenessProbes(baseManifestReader io.Reader, deployment k8stypes.NamespacedName, failure int, initial, period time.Duration) (io.Reader, error) {
 	kustomization := types.Kustomization{
 		Patches: []types.Patch{
 			{
@@ -118,8 +119,8 @@ func patchLivenessProbes(baseManifestReader io.Reader, deployment string, failur
 							Version: "v1",
 							Kind:    "Deployment",
 						},
-						Name:      deployment,
-						Namespace: "kong",
+						Name:      deployment.Name,
+						Namespace: deployment.Namespace,
 					},
 				},
 			},
@@ -141,7 +142,7 @@ func addControllerEnv(t *testing.T, baseManifestReader io.Reader, envName, value
 							Version: "v1",
 							Kind:    "Deployment",
 						},
-						Name:      "ingress-kong",
+						Name:      controllerDeploymentName,
 						Namespace: "kong",
 					},
 				},

@@ -27,6 +27,7 @@ import (
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/yaml"
 )
@@ -57,12 +58,12 @@ func generateAdminPasswordSecret() (string, *corev1.Secret, error) {
 // exposeAdminAPI will override the KONG_ADMIN_LISTEN for the cluster's proxy to expose the
 // Admin API via a service. Some deployments only expose this on localhost by default as there's
 // no authentication, so note that this is only for testing environment purposes.
-func exposeAdminAPI(ctx context.Context, t *testing.T, env environments.Environment, proxyDeployment string) {
+func exposeAdminAPI(ctx context.Context, t *testing.T, env environments.Environment, proxyDeployment types.NamespacedName) {
 	t.Log("updating the proxy container KONG_ADMIN_LISTEN to expose the admin api")
-	deployment, err := env.Cluster().Client().AppsV1().Deployments(namespace).Get(ctx, proxyDeployment, metav1.GetOptions{})
+	deployment, err := env.Cluster().Client().AppsV1().Deployments(proxyDeployment.Namespace).Get(ctx, proxyDeployment.Name, metav1.GetOptions{})
 	require.NoError(t, err)
 	for i, containerSpec := range deployment.Spec.Template.Spec.Containers {
-		if containerSpec.Name == "proxy" {
+		if containerSpec.Name == proxyContainerName {
 			for j, envVar := range containerSpec.Env {
 				if envVar.Name == "KONG_ADMIN_LISTEN" {
 					deployment.Spec.Template.Spec.Containers[i].Env[j].Value = "0.0.0.0:8001, 0.0.0.0:8444 ssl"
@@ -70,7 +71,7 @@ func exposeAdminAPI(ctx context.Context, t *testing.T, env environments.Environm
 			}
 		}
 	}
-	deployment, err = env.Cluster().Client().AppsV1().Deployments(namespace).Update(ctx, deployment, metav1.UpdateOptions{})
+	deployment, err = env.Cluster().Client().AppsV1().Deployments(proxyDeployment.Namespace).Update(ctx, deployment, metav1.UpdateOptions{})
 	require.NoError(t, err)
 
 	t.Log("creating a loadbalancer service for the admin API")
@@ -101,52 +102,51 @@ func exposeAdminAPI(ctx context.Context, t *testing.T, env environments.Environm
 	}, time.Minute, time.Second)
 }
 
-// getTestManifest checks if a controller image override is set. If not, it returns the original provided path.
-// If an override is set, it runs a kustomize patch that replaces the controller image with the override image and
-// returns the modified manifest path. If there is any issue patching the manifest, it will log the issue and return
-// the original provided path.
-func getTestManifest(t *testing.T, baseManifestPath string) (io.Reader, error) {
+// getTestManifest gets a manifest io.Reader, applying optional patches to the base manifest provided.
+// In case of any failure while patching, the base manifest is returned.
+func getTestManifest(t *testing.T, baseManifestPath string) io.Reader {
+	t.Helper()
+
 	var (
 		manifestsReader io.Reader
 		err             error
 	)
 	manifestsReader, err = os.Open(baseManifestPath)
-	if err != nil {
-		return nil, err
-	}
+	require.NoError(t, err)
 
 	manifestsReader, err = patchControllerImageFromEnv(manifestsReader)
 	if err != nil {
 		t.Logf("failed patching controller image (%v), using default manifest %v", err, baseManifestPath)
-		return manifestsReader, nil
+		return manifestsReader
 	}
 
 	manifestsReader, err = patchGatewayImageFromEnv(t, manifestsReader)
 	if err != nil {
 		t.Logf("failed patching gateway image (%v), using default manifest %v", err, baseManifestPath)
-		return manifestsReader, nil
+		return manifestsReader
 	}
 
 	manifestsReader, err = patchControllerStartTimeout(manifestsReader, 120, time.Second*3)
 	if err != nil {
 		t.Logf("failed patching controller timeouts (%v), using default manifest %v", err, baseManifestPath)
-		return manifestsReader, nil
+		return manifestsReader
 	}
 
-	manifestsReader, err = patchLivenessProbes(manifestsReader, "proxy-kong", 10, time.Second*15, time.Second*3)
+	deployments := getManifestDeployments(baseManifestPath)
+	manifestsReader, err = patchLivenessProbes(manifestsReader, deployments.ProxyNN, 10, time.Second*15, time.Second*3)
 	if err != nil {
 		t.Logf("failed patching kong liveness (%v), using default manifest %v", err, baseManifestPath)
-		return manifestsReader, nil
+		return manifestsReader
 	}
 
-	manifestsReader, err = patchLivenessProbes(manifestsReader, "ingress-kong", 15, time.Second*3, time.Second*10)
+	manifestsReader, err = patchLivenessProbes(manifestsReader, deployments.ControllerNN, 15, time.Second*3, time.Second*10)
 	if err != nil {
 		t.Logf("failed patching controller liveness (%v), using default manifest %v", err, baseManifestPath)
-		return manifestsReader, nil
+		return manifestsReader
 	}
 
 	t.Logf("generated modified manifest at %v", baseManifestPath)
-	return manifestsReader, nil
+	return manifestsReader
 }
 
 // patchGatewayImageFromEnv will optionally replace a default controller image in manifests with one of `kongImageLoad`
@@ -452,4 +452,16 @@ func isPodReady(pod corev1.Pod) bool {
 		}
 	}
 	return false
+}
+
+// ensureNoneOfDeploymentPodsHasCrashed ensures that none of the pods of a deployment has crashed.
+func ensureNoneOfDeploymentPodsHasCrashed(ctx context.Context, t *testing.T, env environments.Environment, deploymentNN types.NamespacedName) {
+	t.Logf("ensuring none of %s deployment pods has crashed", deploymentNN.String())
+	pods, err := listPodsByLabels(ctx, env, deploymentNN.Namespace, map[string]string{"app": deploymentNN.Name})
+	require.NoError(t, err)
+	for _, pod := range pods {
+		for _, container := range pod.Spec.Containers {
+			require.Truef(t, containerDidntCrash(pod, container.Name), "controller pod %s/%s crashed", pod.Namespace, pod.Name)
+		}
+	}
 }

@@ -112,7 +112,7 @@ func TestGetListenerSupportedRouteKinds(t *testing.T) {
 	}
 }
 
-func TestGetListenerStatus_no_duplicated_Detached_condition(t *testing.T) {
+func TestGetListenerStatus_no_duplicated_condition(t *testing.T) {
 	ctx := context.Background()
 	client := fake.NewClientBuilder().Build()
 
@@ -130,15 +130,14 @@ func TestGetListenerStatus_no_duplicated_Detached_condition(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, statuses, 1, "only one listener status expected as only one listener was defined")
 	listenerStatus := statuses[0]
-	assertOnlyOneConditionOfType(t, listenerStatus.Conditions, gatewayv1beta1.ListenerConditionAccepted)
+	assertOnlyOneConditionForType(t, listenerStatus.Conditions)
 }
 
-func assertOnlyOneConditionOfType(t *testing.T, conditions []metav1.Condition, typ gatewayv1beta1.ListenerConditionType) {
-	conditionNum := 0
-	for _, condition := range conditions {
-		if condition.Type == string(typ) {
-			conditionNum++
-		}
+func assertOnlyOneConditionForType(t *testing.T, conditions []metav1.Condition) {
+	conditionsNum := lo.CountValuesBy(conditions, func(c metav1.Condition) string {
+		return c.Type
+	})
+	for c, n := range conditionsNum {
+		assert.Equalf(t, 1, n, "condition %s occurred %d times - expected 1 occurrence", c, n)
 	}
-	assert.Equal(t, 1, conditionNum)
 }

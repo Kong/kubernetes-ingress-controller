@@ -4,18 +4,20 @@
 package integration
 
 import (
-	"bytes"
 	"context"
+	"crypto/tls"
 	"fmt"
-	"os/exec"
-	"strings"
 	"testing"
 
 	"github.com/google/uuid"
 	"github.com/kong/go-kong/kong"
 	ktfkong "github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/kong"
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
+	pb "github.com/moul/pb/grpcbin/go-grpc"
 	"github.com/stretchr/testify/require"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/metadata"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
@@ -25,60 +27,41 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/helpers"
 )
 
-func grpcRequest(input string) string {
-	return fmt.Sprintf(`{"greeting": "%s"}`, input)
+func grpcbinClient(ctx context.Context, url, hostname string) (pb.GRPCBinClient, func() error, error) {
+	conn, err := grpc.DialContext(ctx, url,
+		grpc.WithTransportCredentials(credentials.NewTLS(
+			&tls.Config{
+				ServerName:         hostname,
+				InsecureSkipVerify: true,
+			},
+		)),
+	)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to dial GRPC server: %w", err)
+	}
+
+	client := pb.NewGRPCBinClient(conn)
+	return client, conn.Close, nil
 }
 
-func grpcResponse(input string) string {
-	return fmt.Sprintf("{\n  \"reply\": \"hello %s\"\n}\n", input)
-}
-
-func grpcEchoResponds(ctx context.Context, url, hostname, input string) (bool, error) {
-	args := []string{
-		"-d",
-		grpcRequest(input),
-		"-insecure",
-		"-servername",
-		hostname,
-		url,
-		"hello.HelloService.SayHello",
+func grpcEchoResponds(ctx context.Context, url, hostname, input string) error {
+	client, closeConn, err := grpcbinClient(ctx, url, hostname)
+	if err != nil {
+		return err
 	}
-	stdout, stderr := new(bytes.Buffer), new(bytes.Buffer)
+	defer closeConn() //nolint:errcheck
 
-	cmd := exec.CommandContext(ctx, "grpcurl", args...)
-	cmd.Stdout = stdout
-	cmd.Stderr = stderr
-
-	if err := cmd.Run(); err != nil {
-		return false, fmt.Errorf("failed to echo GRPC server STDOUT=(%s) STDERR=(%s): %w", strings.TrimSpace(stdout.String()), strings.TrimSpace(stderr.String()), err)
+	resp, err := client.DummyUnary(ctx, &pb.DummyMessage{
+		FString: input,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to send GRPC request: %w", err)
+	}
+	if resp.FString != input {
+		return fmt.Errorf("unexpected response from GRPC server: %s", resp.FString)
 	}
 
-	return stdout.String() == grpcResponse(input), nil
-}
-
-func grpcCurl(ctx context.Context, url, hostname, input, service, method string, headers map[string]string) (bool, error) {
-	args := []string{
-		"-d",
-		grpcRequest(input),
-		"-insecure",
-		"-servername",
-		hostname,
-	}
-	for name, value := range headers {
-		args = append(args, "-rpc-header", fmt.Sprintf("%s:%s", name, value))
-	}
-	args = append(args, url, fmt.Sprintf("%s.%s", service, method))
-	stdout, stderr := new(bytes.Buffer), new(bytes.Buffer)
-
-	cmd := exec.CommandContext(ctx, "grpcurl", args...)
-	cmd.Stdout = stdout
-	cmd.Stderr = stderr
-
-	if err := cmd.Run(); err != nil {
-		return false, fmt.Errorf("failed to echo GRPC server STDOUT=(%s) STDERR=(%s): %w", strings.TrimSpace(stdout.String()), strings.TrimSpace(stderr.String()), err)
-	}
-
-	return stdout.String() == grpcResponse(input), nil
+	return nil
 }
 
 func TestGRPCRouteEssentials(t *testing.T) {
@@ -135,16 +118,14 @@ func TestGRPCRouteEssentials(t *testing.T) {
 			Rules: []gatewayv1alpha2.GRPCRouteRule{{
 				Matches: []gatewayv1alpha2.GRPCRouteMatch{
 					{
+						// this will match only the DummyUnary method without any headers
 						Method: &gatewayv1alpha2.GRPCMethodMatch{
-							Service: kong.String("hello.HelloService"),
-							Method:  kong.String("SayHello"),
+							Service: kong.String("grpcbin.GRPCBin"),
+							Method:  kong.String("DummyUnary"),
 						},
 					},
 					{
-						Method: &gatewayv1alpha2.GRPCMethodMatch{
-							Service: kong.String("hello.HelloService"),
-							Method:  kong.String("BidiHello"),
-						},
+						// this will match all methods with the x-hello header
 						Headers: []gatewayv1alpha2.GRPCHeaderMatch{
 							{
 								Name:  gatewayv1alpha2.GRPCHeaderName("x-hello"),
@@ -178,32 +159,47 @@ func TestGRPCRouteEssentials(t *testing.T) {
 		ingressWait, waitTick,
 	)
 
+	grpcAddr := fmt.Sprintf("%s:%d", proxyURL.Hostname(), ktfkong.DefaultProxyTLSServicePort)
+	const grpcRouteHostname = "cholpon.example"
 	t.Log("waiting for routes from GRPCRoute to become operational")
 	require.Eventually(t, func() bool {
-		responded, err := grpcEchoResponds(ctx, fmt.Sprintf("%s:%d", proxyURL.Hostname(), ktfkong.DefaultProxyTLSServicePort), "cholpon.example", "kong")
+		err := grpcEchoResponds(ctx, grpcAddr, grpcRouteHostname, "kong")
 		if err != nil {
 			t.Log(err)
 		}
-		return err == nil && responded
+		return err == nil
 	}, ingressWait, waitTick)
 
+	client, closeGrpcConn, err := grpcbinClient(ctx, grpcAddr, grpcRouteHostname)
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		err := closeGrpcConn()
+		require.NoError(t, err)
+	})
+
+	t.Log("ensure that the method HeadersUnary is not matched when headers are not passed")
 	require.Eventually(t, func() bool {
-		responded, err := grpcCurl(ctx, fmt.Sprintf("%s:%d", proxyURL.Hostname(), ktfkong.DefaultProxyTLSServicePort),
-			"cholpon.example", "kong",
-			"hello.HelloService", "SayHello", map[string]string{})
-		if err != nil {
-			t.Log(err)
+		_, err := client.HeadersUnary(ctx, &pb.EmptyMessage{})
+		if err == nil {
+			t.Log("expected error, got nil")
+			return false
 		}
-		return err == nil && responded
+
+		t.Log(err)
+		return true
 	}, ingressWait, waitTick)
 
+	t.Log("ensure that the method HeadersUnary is matched when headers passed")
 	require.Eventually(t, func() bool {
-		responded, err := grpcCurl(ctx, fmt.Sprintf("%s:%d", proxyURL.Hostname(), ktfkong.DefaultProxyTLSServicePort),
-			"cholpon.example", "kong",
-			"hello.HelloService", "BidiHello", map[string]string{"x-hello": "bidi"})
+		// Set the headers in the context as that's how grpc-go propagates them.
+		md := metadata.New(map[string]string{"x-hello": "bidi"})
+		ctx := metadata.NewOutgoingContext(ctx, md)
+		_, err := client.HeadersUnary(ctx, &pb.EmptyMessage{}, grpc.Header(&metadata.MD{"x-hello": []string{"bidi"}}))
 		if err != nil {
-			t.Log(err)
+			t.Logf("expected no error, got: %v", err)
+			return false
 		}
-		return err == nil && responded
+
+		return true
 	}, ingressWait, waitTick)
 }

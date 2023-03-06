@@ -140,8 +140,6 @@ func generateKongRoutesFromGRPCRouteRule(grpcroute *gatewayv1alpha2.GRPCRoute, r
 			r.Hosts = getGRPCRouteHostnamesAsSliceOfStringPointers(grpcroute)
 		}
 
-		routes = append(routes, r)
-
 		r.Headers = map[string][]string{}
 		for _, hmatch := range match.Headers {
 			name := string(hmatch.Name)
@@ -150,6 +148,8 @@ func generateKongRoutesFromGRPCRouteRule(grpcroute *gatewayv1alpha2.GRPCRoute, r
 			}
 			r.Headers[name] = append(r.Headers[name], hmatch.Value)
 		}
+
+		routes = append(routes, r)
 	}
 
 	return routes

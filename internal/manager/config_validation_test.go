@@ -232,3 +232,53 @@ func TestConfigValidate(t *testing.T) {
 		})
 	})
 }
+
+func TestConfigValidateGatewayDiscovery(t *testing.T) {
+	testCases := []struct {
+		name             string
+		gatewayDiscovery bool
+		dbMode           string
+		expectError      bool
+	}{
+		{
+			name:             "gateway discovery disabled should pass in db-less mode",
+			gatewayDiscovery: false,
+			dbMode:           "off",
+			expectError:      false,
+		},
+		{
+			name:             "gateway discovery disabled should pass in db-backed mode",
+			gatewayDiscovery: false,
+			dbMode:           "postgres",
+			expectError:      false,
+		},
+		{
+			name:             "gateway discovery enabled should pass in db-less mode",
+			gatewayDiscovery: true,
+			dbMode:           "",
+			expectError:      false,
+		},
+		{
+			name:             "gateway discovery enabled should not pass in db-backed mode",
+			gatewayDiscovery: true,
+			dbMode:           "postgres",
+			expectError:      true,
+		},
+	}
+
+	for _, tc := range testCases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			c := &manager.Config{}
+			if tc.gatewayDiscovery {
+				c.KongAdminSvc = mo.Some(types.NamespacedName{Name: "admin-svc", Namespace: "ns"})
+			}
+			err := c.ValidateGatewayDiscovery(tc.dbMode)
+			if !tc.expectError {
+				require.NoError(t, err)
+			} else {
+				require.Error(t, err)
+			}
+		})
+	}
+}

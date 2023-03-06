@@ -84,4 +84,4 @@ spec:
       port: 443
     matches:
     - method:
-        service: "hello.HelloService"
+        service: "grpcbin.GRPCBin"

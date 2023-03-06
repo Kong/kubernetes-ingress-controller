@@ -43,7 +43,7 @@ _download_tool:
 		GOBIN=$(PROJECT_DIR)/bin go generate -tags=third_party ./$(TOOL).go )
 
 .PHONY: tools
-tools: controller-gen kustomize client-gen golangci-lint gotestsum crd-ref-docs grpcurl
+tools: controller-gen kustomize client-gen golangci-lint gotestsum crd-ref-docs
 
 CONTROLLER_GEN = $(PROJECT_DIR)/bin/controller-gen
 .PHONY: controller-gen
@@ -102,11 +102,6 @@ STATICCHECK = $(PROJECT_DIR)/bin/staticcheck
 .PHONY: staticcheck
 staticcheck.download: ## Download staticcheck locally if necessary.
 	@$(MAKE) _download_tool TOOL=staticcheck
-
-GRPCURL = $(PROJECT_DIR)/bin/grpcurl
-.PHONY: grpcurl
-grpcurl: ## Download grpcurl locally if necessary.
-	@$(MAKE) _download_tool TOOL=grpcurl
 
 # ------------------------------------------------------------------------------
 # Build
@@ -345,7 +340,7 @@ _check.container.environment:
 	@./scripts/check-container-environment.sh
 
 .PHONY: _test.integration
-_test.integration: _check.container.environment gotestsum grpcurl
+_test.integration: _check.container.environment gotestsum
 	KONG_CLUSTER_VERSION="$(KONG_CLUSTER_VERSION)" \
 		TEST_DATABASE_MODE="$(DBMODE)" \
 		GOFLAGS="-tags=$(GOTAGS)" \

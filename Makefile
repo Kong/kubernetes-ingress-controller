@@ -162,7 +162,7 @@ lint: verify.tidy golangci-lint staticcheck
 
 .PHONY: staticcheck
 staticcheck: staticcheck.download
-	$(STATICCHECK) -tags e2e_tests,integration_tests,istio_tests,conformance_tests \
+	$(STATICCHECK) -tags envtest,e2e_tests,integration_tests,istio_tests,conformance_tests \
 		-f stylish \
 		./...
 

@@ -18,7 +18,7 @@ func grpcEchoResponds(ctx context.Context, url, hostname, input string) error {
 		grpc.WithTransportCredentials(credentials.NewTLS(
 			&tls.Config{
 				ServerName:         hostname,
-				InsecureSkipVerify: true, //nolint:gosec
+				InsecureSkipVerify: true,
 			},
 		)),
 	)

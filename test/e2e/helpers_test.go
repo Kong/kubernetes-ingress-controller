@@ -660,16 +660,18 @@ func runOnlyOnKindClusters(t *testing.T) {
 	}
 }
 
-func getPodByLabels(ctx context.Context,
-	t *testing.T, env environments.Environment, namespace string, podLabels map[string]string,
+// listPodsByLabels returns a list of pods in the given namespace that match the given labels map.
+func listPodsByLabels(
+	ctx context.Context, env environments.Environment, namespace string, podLabels map[string]string,
 ) ([]corev1.Pod, error) {
-	t.Helper()
 	podClient := env.Cluster().Client().CoreV1().Pods(namespace)
 	selector := labels.NewSelector()
 
 	for k, v := range podLabels {
 		req, err := labels.NewRequirement(k, selection.Equals, []string{v})
-		require.NoError(t, err)
+		if err != nil {
+			return nil, err
+		}
 		selector = selector.Add(*req)
 	}
 

@@ -843,7 +843,7 @@ func tlsEchoResponds(
 		"tcp",
 		url,
 		&tls.Config{
-			InsecureSkipVerify: true, //nolint:gosec
+			InsecureSkipVerify: true,
 			ServerName:         hostname,
 		})
 	if err != nil {

@@ -205,7 +205,7 @@ func TestHTTPSIngress(t *testing.T) {
 			}
 			return dialer.DialContext(ctx, network, addr)
 		},
-		TLSClientConfig: &tls.Config{InsecureSkipVerify: true}, //nolint:gosec
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 	}
 	httpcStatic := http.Client{
 		Timeout:   httpcTimeout,

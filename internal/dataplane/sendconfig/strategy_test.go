@@ -34,7 +34,7 @@ func (c *clientMock) AdminAPIClient() *kong.Client {
 	return &kong.Client{}
 }
 
-func TestResolveUpdateStrategy(t *testing.T) {
+func TestDefaultUpdateStrategyResolver_ResolveUpdateStrategy(t *testing.T) {
 	testCases := []struct {
 		isKonnect                     bool
 		inMemory                      bool
@@ -71,9 +71,11 @@ func TestResolveUpdateStrategy(t *testing.T) {
 				isKonnect: tc.isKonnect,
 			}
 
-			strategy := sendconfig.ResolveUpdateStrategy(client, sendconfig.Config{
+			resolver := sendconfig.NewDefaultUpdateStrategyResolver(sendconfig.Config{
 				InMemory: tc.inMemory,
 			}, logrus.New())
+
+			strategy := resolver.ResolveUpdateStrategy(client)
 			require.IsType(t, tc.expectedStrategy, strategy)
 			assert.True(t, client.adminAPIClientWasCalled)
 			assert.Equal(t, tc.expectKonnectRuntimeGroupCall, client.konnectRuntimeGroupWasCalled)

@@ -164,7 +164,7 @@ func accessKnativeSrv(ctx context.Context, proxy, nsn string, t *testing.T) bool
 	url := "http://" + proxy
 	tr := &http.Transport{
 		TLSClientConfig: &tls.Config{
-			InsecureSkipVerify: true, //nolint:gosec
+			InsecureSkipVerify: true,
 		},
 	}
 	client := http.Client{

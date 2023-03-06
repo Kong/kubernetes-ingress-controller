@@ -219,11 +219,11 @@ func TestGRPCRouteExample(t *testing.T) {
 
 	t.Log("verifying that GRPCRoute becomes routable")
 	require.Eventually(t, func() bool {
-		responded, err := grpcEchoResponds(ctx, fmt.Sprintf("%s:%d", proxyURL.Hostname(), ktfkong.DefaultProxyTLSServicePort), "example.com", "kong")
+		err := grpcEchoResponds(ctx, fmt.Sprintf("%s:%d", proxyURL.Hostname(), ktfkong.DefaultProxyTLSServicePort), "example.com", "kong")
 		if err != nil {
 			t.Log(err)
 		}
-		return err == nil && responded
+		return err == nil
 	}, ingressWait, waitTick)
 }
 

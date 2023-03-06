@@ -50,7 +50,7 @@ func TestHealthCheckServer(t *testing.T) {
 	for _, tc := range testCases {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
-			h := &healthCheckHandler{}
+			h := &healthCheckServer{}
 			h.setHealthzCheck(tc.healthzChecker)
 			h.setReadyzCheck(tc.readyzChecker)
 			s := httptest.NewServer(h)

@@ -4,7 +4,9 @@ import (
 	"fmt"
 	"net/http"
 	"sync"
+	"time"
 
+	"github.com/go-logr/logr"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 )
 
@@ -19,15 +21,15 @@ import (
 // https://github.com/Kong/kubernetes-ingress-controller/issues/3590
 
 // healthCheckHandler provides health checks for
-// liveness probe (/healthz)and readiness probe (/readyz).
-type healthCheckHandler struct {
+// liveness probe (/healthz) and readiness probe (/readyz).
+type healthCheckServer struct {
 	lock         sync.RWMutex
 	healthzCheck healthz.Checker
 	readyzCheck  healthz.Checker
 }
 
 // getHealthzCheck gets the checker function for liveness probe.
-func (s *healthCheckHandler) getHealthzCheck() healthz.Checker {
+func (s *healthCheckServer) getHealthzCheck() healthz.Checker {
 	s.lock.RLock()
 	defer s.lock.RUnlock()
 
@@ -35,7 +37,7 @@ func (s *healthCheckHandler) getHealthzCheck() healthz.Checker {
 }
 
 // getReadyzCheck gets the check function for readiness probe.
-func (s *healthCheckHandler) getReadyzCheck() healthz.Checker {
+func (s *healthCheckServer) getReadyzCheck() healthz.Checker {
 	s.lock.RLock()
 	defer s.lock.RUnlock()
 
@@ -43,7 +45,7 @@ func (s *healthCheckHandler) getReadyzCheck() healthz.Checker {
 }
 
 // setHealthzCheck sets the checker function for liveness probe. The old checker function is replaced.
-func (s *healthCheckHandler) setHealthzCheck(checker healthz.Checker) {
+func (s *healthCheckServer) setHealthzCheck(checker healthz.Checker) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
@@ -51,7 +53,7 @@ func (s *healthCheckHandler) setHealthzCheck(checker healthz.Checker) {
 }
 
 // setReadyzCheck sets the checker function for readiness probe. The old checker function is replaced.
-func (s *healthCheckHandler) setReadyzCheck(checker healthz.Checker) {
+func (s *healthCheckServer) setReadyzCheck(checker healthz.Checker) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
@@ -59,7 +61,7 @@ func (s *healthCheckHandler) setReadyzCheck(checker healthz.Checker) {
 }
 
 // ServeHTTP serves for liveness probe (/healthz) and readiness probe (/readyz).
-func (s *healthCheckHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
+func (s *healthCheckServer) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	var check healthz.Checker
 	switch req.URL.Path {
 	case "/healthz", "/healthz/":
@@ -79,6 +81,19 @@ func (s *healthCheckHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request
 		return
 	}
 	// check passed, return 200 OK
-	rw.WriteHeader(http.StatusOK)
 	fmt.Fprint(rw, "ok")
+}
+
+func (s *healthCheckServer) Start(addr string, logger logr.Logger) {
+	go func() {
+		server := &http.Server{
+			Addr:              addr,
+			Handler:           s,
+			ReadHeaderTimeout: 3 * time.Second,
+		}
+		err := server.ListenAndServe()
+		if err != nil {
+			logger.Error(err, "healthz server failed")
+		}
+	}()
 }

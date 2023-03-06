@@ -56,19 +56,9 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 	}
 
 	setupLog.Info("starting standalone health check server")
-	healthHandler := &healthCheckHandler{}
-	healthHandler.setHealthzCheck(healthz.Ping)
-	go func() {
-		server := &http.Server{
-			Addr:              c.ProbeAddr,
-			Handler:           healthHandler,
-			ReadHeaderTimeout: 3 * time.Second,
-		}
-		err := server.ListenAndServe()
-		if err != nil {
-			setupLog.Error(err, "healthz server failed")
-		}
-	}()
+	healthServer := &healthCheckServer{}
+	healthServer.setHealthzCheck(healthz.Ping)
+	healthServer.Start(c.ProbeAddr, setupLog.WithName("health-check"))
 
 	setupLog.Info("getting the kong admin api client configuration")
 	initialKongClients, err := c.adminAPIClients(ctx, setupLog.WithName("initialize-kong-clients"))
@@ -205,7 +195,7 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 	*/
 
 	setupLog.Info("Add readiness probe to health server")
-	healthHandler.setReadyzCheck(readyzHandler(mgr, synchronizer))
+	healthServer.setReadyzCheck(readyzHandler(mgr, synchronizer))
 
 	if c.Konnect.ConfigSynchronizationEnabled {
 		// In case of failures when building Konnect related objects, we're not returning errors as Konnect is not

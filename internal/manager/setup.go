@@ -330,7 +330,7 @@ func (c *Config) adminAPIClientFromServiceDiscovery(ctx context.Context, logger 
 		retry.Delay(time.Second),
 		retry.OnRetry(func(_ uint, err error) {
 			if !errors.As(err, &NoAvailableEndpointsError{}) {
-				logger.Error(err, "failed to create kong client(s)")
+				logger.Error(err, fmt.Sprintf("No endpoints for %q service discovered, retrying", kongAdminSvcNN))
 			}
 		}),
 	)

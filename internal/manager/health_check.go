@@ -1,6 +1,7 @@
 package manager
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"sync"
@@ -84,16 +85,33 @@ func (s *healthCheckServer) ServeHTTP(rw http.ResponseWriter, req *http.Request)
 	fmt.Fprint(rw, "ok")
 }
 
-func (s *healthCheckServer) Start(addr string, logger logr.Logger) {
+func (s *healthCheckServer) Start(ctx context.Context, addr string, logger logr.Logger) {
+	server := &http.Server{
+		Addr:              addr,
+		Handler:           s,
+		ReadHeaderTimeout: 3 * time.Second,
+	}
 	go func() {
-		server := &http.Server{
-			Addr:              addr,
-			Handler:           s,
-			ReadHeaderTimeout: 3 * time.Second,
-		}
 		err := server.ListenAndServe()
 		if err != nil {
-			logger.Error(err, "healthz server failed")
+			if err == http.ErrServerClosed {
+				logger.Info("healthz server closed")
+			} else {
+				logger.Error(err, "healthz server failed")
+			}
+		}
+	}()
+
+	go func() {
+		<-ctx.Done()
+
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		// We don't use the original context here as it's already done.
+		//nolint:contextcheck
+		err := server.Shutdown(shutdownCtx)
+		if err != nil {
+			logger.Error(err, "healthz server shutdown failed")
 		}
 	}()
 }

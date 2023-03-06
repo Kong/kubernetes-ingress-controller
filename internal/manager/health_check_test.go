@@ -2,11 +2,17 @@ package manager
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
+	"time"
 
+	"github.com/go-logr/logr/testr"
+	"github.com/phayes/freeport"
 	"github.com/stretchr/testify/require"
+	"golang.org/x/net/context"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 )
 
@@ -67,4 +73,38 @@ func TestHealthCheckServer(t *testing.T) {
 			require.Equal(t, tc.readinessProbeCode, readinessResp.StatusCode)
 		})
 	}
+}
+
+func TestHealthCheckServer_Start(t *testing.T) {
+	h := &healthCheckServer{}
+	h.setHealthzCheck(healthz.Ping)
+
+	// Get free local port.
+	port, err := freeport.GetFreePort()
+	require.NoError(t, err)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	addr := fmt.Sprintf("localhost:%d", port)
+	h.Start(ctx, addr, testr.New(t))
+
+	healtzEndpoint := fmt.Sprintf("http://%s/healthz", addr)
+	resp, err := http.Get(healtzEndpoint)
+	require.NoError(t, err)
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+	defer resp.Body.Close()
+
+	// Cancel the context to stop the server and check it is no longer listening.
+	cancel()
+
+	require.Eventually(t, func() bool {
+		resp, err := http.Get(healtzEndpoint)
+		if err == nil {
+			defer resp.Body.Close()
+		}
+		if !strings.Contains(err.Error(), "connection refused") {
+			t.Log("expected error to contain 'connection refused', got:", err)
+			return false
+		}
+		return true
+	}, time.Second, time.Millisecond)
 }

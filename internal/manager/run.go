@@ -58,7 +58,7 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 	setupLog.Info("starting standalone health check server")
 	healthServer := &healthCheckServer{}
 	healthServer.setHealthzCheck(healthz.Ping)
-	healthServer.Start(c.ProbeAddr, setupLog.WithName("health-check"))
+	healthServer.Start(ctx, c.ProbeAddr, setupLog.WithName("health-check"))
 
 	setupLog.Info("getting the kong admin api client configuration")
 	initialKongClients, err := c.adminAPIClients(ctx, setupLog.WithName("initialize-kong-clients"))

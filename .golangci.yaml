@@ -110,3 +110,7 @@ issues:
     - ineffassign
     text: "ineffectual assignment" # ignore err not checked in test files
     path: test\.go
+  - linters:
+      - gosec
+    text: "Potential HTTP request made with variable url" # it's fine to use variable url in tests
+    path: test\.go

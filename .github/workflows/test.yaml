@@ -177,7 +177,7 @@ jobs:
       # Related issue: https://github.com/Kong/kubernetes-testing-framework/issues/542
       run: |
         echo "TEST_KONG_IMAGE=kong/kong-gateway" >> $GITHUB_ENV
-        echo "TEST_KONG_TAG=3.2.1.0-alpine" >> $GITHUB_ENV
+        echo "TEST_KONG_TAG=3.2.1.0" >> $GITHUB_ENV
 
     - name: checkout repository
       if: steps.detect_if_should_run.outputs.result != 'false'

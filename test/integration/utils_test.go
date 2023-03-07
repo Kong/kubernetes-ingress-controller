@@ -60,7 +60,7 @@ func exitOnErrWithCode(ctx context.Context, err error, exitCode int) {
 
 		fmt.Printf("INFO: cluster %s is being deleted\n", env.Cluster().Name())
 		if cleanupErr := env.Cleanup(ctx); cleanupErr != nil {
-			err = fmt.Errorf("cleanup failed after test failure occurred CLEANUP_FAILURE=(%v): %w", cleanupErr, err)
+			err = fmt.Errorf("cleanup failed after test failure occurred CLEANUP_FAILURE=(%w): %w", cleanupErr, err)
 		}
 	}
 

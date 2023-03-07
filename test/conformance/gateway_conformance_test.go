@@ -88,17 +88,25 @@ func TestGatewayConformance(t *testing.T) {
 			tests.HTTPRouteRedirectHostAndStatus.ShortName,
 
 			// extended conformance
+			// https://github.com/Kong/kubernetes-ingress-controller/issues/3680
 			tests.GatewayClassObservedGenerationBump.ShortName,
+			// https://github.com/Kong/kubernetes-ingress-controller/issues/3678
 			tests.TLSRouteSimpleSameNamespace.ShortName,
-			tests.HTTPRouteRewritePath.ShortName,
+			// https://github.com/Kong/kubernetes-ingress-controller/issues/3679
 			tests.HTTPRouteQueryParamMatching.ShortName,
+			// https://github.com/Kong/kubernetes-ingress-controller/issues/3681
 			tests.HTTPRouteRedirectPort.ShortName,
+			// https://github.com/Kong/kubernetes-ingress-controller/issues/3682
 			tests.HTTPRouteRedirectScheme.ShortName,
+			// https://github.com/Kong/kubernetes-ingress-controller/issues/3683
 			tests.HTTPRouteResponseHeaderModifier.ShortName,
 
 			// experimental conformance
+			// https://github.com/Kong/kubernetes-ingress-controller/issues/3684
 			tests.HTTPRouteRedirectPath.ShortName,
+			// https://github.com/Kong/kubernetes-ingress-controller/issues/3685
 			tests.HTTPRouteRewriteHost.ShortName,
+			// https://github.com/Kong/kubernetes-ingress-controller/issues/3686
 			tests.HTTPRouteRewritePath.ShortName,
 		},
 	})

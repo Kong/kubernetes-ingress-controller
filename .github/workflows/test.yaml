@@ -160,6 +160,13 @@ jobs:
       id: detect_if_should_run
       run: echo "result=${{ (steps.license.outputs.license != '' && matrix.enterprise) || (!matrix.enterprise) }}" >> $GITHUB_OUTPUT
 
+    - name: Set image of Kong
+      id: set_kong_image
+      if: (!matrix.enterprise)
+      run: |
+        echo "TEST_KONG_IMAGE=kong/kong" >> $GITHUB_ENV
+        echo "TEST_KONG_TAG=3.2.1" >> $GITHUB_ENV
+
     - name: Set image and tag for enterprise
       if: steps.detect_if_should_run.outputs.result != 'false' && matrix.enterprise
       # TODO: We need a systematic approach to this. Either:
@@ -170,7 +177,7 @@ jobs:
       # Related issue: https://github.com/Kong/kubernetes-testing-framework/issues/542
       run: |
         echo "TEST_KONG_IMAGE=kong/kong-gateway" >> $GITHUB_ENV
-        echo "TEST_KONG_TAG=3.1.1.3-alpine" >> $GITHUB_ENV
+        echo "TEST_KONG_TAG=3.2.1.0" >> $GITHUB_ENV
 
     - name: checkout repository
       if: steps.detect_if_should_run.outputs.result != 'false'

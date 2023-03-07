@@ -1,6 +1,7 @@
 package manager
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net/http"
@@ -12,7 +13,6 @@ import (
 	"github.com/go-logr/logr/testr"
 	"github.com/phayes/freeport"
 	"github.com/stretchr/testify/require"
-	"golang.org/x/net/context"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 )
 

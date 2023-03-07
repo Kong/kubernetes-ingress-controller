@@ -11,7 +11,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
@@ -24,12 +23,13 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/test/consts"
 )
 
-var (
-	showDebug     = true
-	shouldCleanup = true
-
-	conformanceTestsBaseManifests = fmt.Sprintf("%s/conformance/base/manifests.yaml", consts.GatewayRawRepoURL)
+const (
+	showDebug                  = true
+	shouldCleanup              = true
+	enableAllSupportedFeatures = true
 )
+
+var conformanceTestsBaseManifests = fmt.Sprintf("%s/conformance/base/manifests.yaml", consts.GatewayRawRepoURL)
 
 func TestGatewayConformance(t *testing.T) {
 	t.Log("configuring environment for gateway conformance tests")
@@ -55,7 +55,7 @@ func TestGatewayConformance(t *testing.T) {
 	require.NoError(t, testutils.DeployControllerManagerForCluster(ctx, globalDeprecatedLogger, globalLogger, env.Cluster(), args...))
 
 	t.Log("creating GatewayClass for gateway conformance tests")
-	gwc := &gatewayv1beta1.GatewayClass{
+	gatewayClass := &gatewayv1beta1.GatewayClass{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: uuid.NewString(),
 			Annotations: map[string]string{
@@ -66,39 +66,50 @@ func TestGatewayConformance(t *testing.T) {
 			ControllerName: gateway.GetControllerName(),
 		},
 	}
-	require.NoError(t, client.Create(ctx, gwc))
-	t.Cleanup(func() { assert.NoError(t, client.Delete(ctx, gwc)) })
+	require.NoError(t, client.Create(ctx, gatewayClass))
+	t.Cleanup(func() { assert.NoError(t, client.Delete(ctx, gatewayClass)) })
 
 	t.Log("starting the gateway conformance test suite")
 	cSuite := suite.New(suite.Options{
-		Client:               client,
-		GatewayClassName:     gwc.Name,
-		Debug:                showDebug,
-		CleanupBaseResources: shouldCleanup,
-		BaseManifests:        conformanceTestsBaseManifests,
-		SupportedFeatures:    sets.New(suite.SupportReferenceGrant),
+		Client:                     client,
+		GatewayClassName:           gatewayClass.Name,
+		Debug:                      showDebug,
+		CleanupBaseResources:       shouldCleanup,
+		EnableAllSupportedFeatures: enableAllSupportedFeatures,
+		BaseManifests:              conformanceTestsBaseManifests,
 		SkipTests: []string{
-			// these tests are temporarily disabled to be able to bump the Gateway API to 0.6
-			// https://github.com/Kong/kubernetes-ingress-controller/issues/3305
-			tests.HTTPRouteHeaderMatching.ShortName,
-
 			// this test is currently fixed but cannot be re-enabled yet due to an upstream issue
 			// https://github.com/kubernetes-sigs/gateway-api/pull/1745
 			tests.GatewaySecretReferenceGrantSpecific.ShortName,
+
+			// standard conformance
+			tests.HTTPRouteMatching.ShortName,
+			tests.HTTPRouteHeaderMatching.ShortName,
+			tests.HTTPRouteRedirectHostAndStatus.ShortName,
+
+			// extended conformance
+			// https://github.com/Kong/kubernetes-ingress-controller/issues/3680
+			tests.GatewayClassObservedGenerationBump.ShortName,
+			// https://github.com/Kong/kubernetes-ingress-controller/issues/3678
+			tests.TLSRouteSimpleSameNamespace.ShortName,
+			// https://github.com/Kong/kubernetes-ingress-controller/issues/3679
+			tests.HTTPRouteQueryParamMatching.ShortName,
+			// https://github.com/Kong/kubernetes-ingress-controller/issues/3681
+			tests.HTTPRouteRedirectPort.ShortName,
+			// https://github.com/Kong/kubernetes-ingress-controller/issues/3682
+			tests.HTTPRouteRedirectScheme.ShortName,
+			// https://github.com/Kong/kubernetes-ingress-controller/issues/3683
+			tests.HTTPRouteResponseHeaderModifier.ShortName,
+
+			// experimental conformance
+			// https://github.com/Kong/kubernetes-ingress-controller/issues/3684
+			tests.HTTPRouteRedirectPath.ShortName,
+			// https://github.com/Kong/kubernetes-ingress-controller/issues/3685
+			tests.HTTPRouteRewriteHost.ShortName,
+			// https://github.com/Kong/kubernetes-ingress-controller/issues/3686
+			tests.HTTPRouteRewritePath.ShortName,
 		},
 	})
 	cSuite.Setup(t)
-
-	t.Log("configuring gateway conformance tests")
-	for i := range tests.ConformanceTests {
-		for j, manifest := range tests.ConformanceTests[i].Manifests {
-			tests.ConformanceTests[i].Manifests[j] = fmt.Sprintf("%s/conformance/%s", consts.GatewayRawRepoURL, manifest)
-		}
-	}
-
-	t.Log("running gateway conformance tests")
-	for _, tt := range tests.ConformanceTests {
-		tt := tt
-		tt.Run(t, cSuite)
-	}
+	cSuite.Run(t, tests.ConformanceTests)
 }

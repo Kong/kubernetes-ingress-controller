@@ -187,21 +187,6 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 	// See https://github.com/kubernetes-sigs/kubebuilder/issues/932
 	// +kubebuilder:scaffold:builder
 
-	// use standalone health check server instead of servers inside manager
-	// because manager depends on initial kong clients:
-	// https://github.com/Kong/kubernetes-ingress-controller/issues/3592
-	// After we implement the feature that manager does not depend on initial kong clients,
-	// we should move back to the health check server inside the manager.
-	/*
-		setupLog.Info("Starting health check servers")
-		if err := mgr.AddHealthzCheck("health", healthz.Ping); err != nil {
-			return fmt.Errorf("unable to setup healthz: %w", err)
-		}
-		if err := mgr.AddReadyzCheck("check", readyzHandler(mgr, synchronizer)); err != nil {
-			return fmt.Errorf("unable to setup readyz: %w", err)
-		}
-	*/
-
 	setupLog.Info("Add readiness probe to health server")
 	healthServer.setReadyzCheck(readyzHandler(mgr, synchronizer))
 

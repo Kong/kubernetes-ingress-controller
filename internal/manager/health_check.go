@@ -85,6 +85,7 @@ func (s *healthCheckServer) ServeHTTP(rw http.ResponseWriter, req *http.Request)
 	fmt.Fprint(rw, "ok")
 }
 
+// Start starts the HTTP server serving healthz and readyz endpoints in a separate goroutine.
 func (s *healthCheckServer) Start(ctx context.Context, addr string, logger logr.Logger) {
 	server := &http.Server{
 		Addr:              addr,

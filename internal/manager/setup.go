@@ -291,7 +291,7 @@ type NoAvailableEndpointsError struct {
 }
 
 func (e NoAvailableEndpointsError) Error() string {
-	return fmt.Sprintf("no endpoints for kong admin service: %q", e.serviceNN)
+	return fmt.Sprintf("no endpoints for service: %q", e.serviceNN)
 }
 
 func (c *Config) adminAPIClientFromServiceDiscovery(ctx context.Context, logger logr.Logger, httpclient *http.Client) ([]*adminapi.Client, error) {
@@ -329,8 +329,9 @@ func (c *Config) adminAPIClientFromServiceDiscovery(ctx context.Context, logger 
 		retry.DelayType(retry.FixedDelay),
 		retry.Delay(time.Second),
 		retry.OnRetry(func(_ uint, err error) {
+			// log the error if the error is NOT caused by 0 available gateway endpoints.
 			if !errors.As(err, &NoAvailableEndpointsError{}) {
-				logger.Error(err, fmt.Sprintf("No endpoints for %q service discovered, retrying", kongAdminSvcNN))
+				logger.Error(err, "failed to create kong client(s)")
 			}
 		}),
 	)

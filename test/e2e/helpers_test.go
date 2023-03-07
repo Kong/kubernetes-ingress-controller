@@ -663,7 +663,8 @@ func runOnlyOnKindClusters(t *testing.T) {
 	}
 
 	clusterProviderUnspecified := clusterProvider == ""
-	if clusterProviderUnspecified {
+	existingClusterUnspecified := existingCluster == ""
+	if clusterProviderUnspecified && existingClusterUnspecified {
 		return
 	}
 

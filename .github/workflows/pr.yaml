@@ -52,5 +52,8 @@ jobs:
     uses: ./.github/workflows/reusable_tests.yaml
     secrets: inherit
     with:
+      image: true
+      unit: true
+      integration: true
+      conformance: true
       e2e: false
-      only-latest-k8s: true

@@ -252,6 +252,7 @@ jobs:
           path: conformance-tests.xml
 
   e2e-tests:
+    if: ${{ inputs.e2e }}
     uses: ./.github/workflows/reusable_e2e.yaml
     secrets: inherit
     with:

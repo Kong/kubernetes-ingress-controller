@@ -6,7 +6,7 @@ on:
   workflow_dispatch: {}
 
 jobs:
-  - name: e2e tests
+  run:
     uses: ./.github/workflows/reusable_e2e.yaml
     secrets: inherit
     with:

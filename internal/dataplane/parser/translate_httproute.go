@@ -2,7 +2,6 @@ package parser
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/kong/go-kong/kong"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
@@ -350,8 +349,8 @@ func generateKongRoutePathFromHTTPRouteMatch(match gatewayv1beta1.HTTPRouteMatch
 
 	case gatewayv1beta1.PathMatchPathPrefix:
 		path := *match.Path.Value
-		if !strings.HasSuffix(path, "/") {
-			path = fmt.Sprintf("%s/", path)
+		if addRegexPrefix {
+			path = translators.KongPathRegexPrefix + path + "(\\/|$)"
 		}
 		return path
 

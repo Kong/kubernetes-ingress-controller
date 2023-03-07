@@ -24,10 +24,7 @@ func (p *Parser) ingressRulesFromKnativeIngress() ingressRules {
 	// well use the stock Kubernetes resource.
 	icp, err := getIngressClassParametersOrDefault(p.storer)
 	if err != nil {
-		if errors.As(err, &store.ErrNotFound{}) {
-			// not found is expected if no IngressClass exists or IngressClassParameters isn't configured
-			p.logger.Debugf("could not find IngressClassParameters, using defaults: %s", err)
-		} else {
+		if !errors.As(err, &store.ErrNotFound{}) {
 			// anything else is unexpected
 			p.logger.Errorf("could not find IngressClassParameters, using defaults: %s", err)
 		}
@@ -79,6 +76,7 @@ func (p *Parser) ingressRulesFromKnativeIngress() ingressRules {
 						RegexPriority:     kong.Int(0),
 						RequestBuffering:  kong.Bool(true),
 						ResponseBuffering: kong.Bool(true),
+						Tags:              util.GenerateTagsForObject(ingress),
 					},
 				}
 				r.Hosts = kong.StringSlice(hosts...)
@@ -139,6 +137,9 @@ func (p *Parser) ingressRulesFromKnativeIngress() ingressRules {
 		}
 	}
 
+	// Knative handling is odd and doesn't update SNTS like other translators, and it does not get parent info as such.
+	// It shouldn't need parent info since it doesn't have any of the special cases (multi-service backends, default
+	// backend) that require parent info to populate Kubernetes resource tags on Kong services
 	result.ServiceNameToServices = services
 	result.SecretNameToSNIs = secretToSNIs
 	return result

@@ -1,5 +1,3 @@
-# WARNING: Gateway APIs support is still experimental. Use as your own risk.
-#
 # NOTE: You need to install the Gateway APIs CRDs before using this example,
 #       they are external and can be deployed with the following one-liner:
 #
@@ -51,7 +49,7 @@ spec:
       - args:
         - -conf
         - /etc/coredns/Corefile
-        image: k8s.gcr.io/coredns/coredns:v1.8.6
+        image: registry.k8s.io/coredns/coredns:v1.8.6
         imagePullPolicy: IfNotPresent
         name: coredns
         ports:

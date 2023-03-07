@@ -1,5 +1,11 @@
 name: tests
 
+concurrency:
+  # Run only for most recent commit in PRs but for all tags and commits on main
+  # Ref: https://docs.github.com/en/actions/using-jobs/using-concurrency
+  group: ${{ github.workflow }}-${{ github.head_ref || github.sha }}
+  cancel-in-progress: true
+
 on:
   pull_request:
     branches:
@@ -15,11 +21,15 @@ jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
 
     - name: Setup go
       uses: actions/setup-go@v3
       with:
-        go-version: '^1.19'
+        go-version: '^1.20'
 
     - name: Cache Go modules
       uses: actions/cache@v3
@@ -28,11 +38,6 @@ jobs:
         key: ${{ runner.os }}-build-codegen-${{ hashFiles('**/go.sum') }}
         restore-keys: |
           ${{ runner.os }}-build-codegen-
-
-    - name: Checkout repository
-      uses: actions/checkout@v3
-      with:
-        fetch-depth: 0
 
     - name: Run lint
       run: make lint
@@ -64,7 +69,7 @@ jobs:
             ${{ runner.os }}-buildx-
 
       - name: Verify Docker Build
-        uses: docker/build-push-action@v3
+        uses: docker/build-push-action@v4
         with:
           push: false
           file: Dockerfile
@@ -75,11 +80,15 @@ jobs:
   unit-tests:
     runs-on: ubuntu-latest
     steps:
+    - name: checkout repository
+      uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
 
     - name: setup golang
       uses: actions/setup-go@v3
       with:
-        go-version: '^1.19'
+        go-version: '^1.20'
 
     - name: cache go modules
       uses: actions/cache@v3
@@ -88,11 +97,6 @@ jobs:
         key: ${{ runner.os }}-build-codegen-${{ hashFiles('**/go.sum') }}
         restore-keys: |
           ${{ runner.os }}-build-codegen-
-
-    - name: checkout repository
-      uses: actions/checkout@v3
-      with:
-        fetch-depth: 0
 
     - name: run unit tests
       run: make test.unit
@@ -112,7 +116,8 @@ jobs:
         name: tests-report
         path: unit-tests.xml
 
-  integration-tests-enterprise-postgres:
+  integration-tests:
+    name: integration-tests-${{ matrix.name }}
     runs-on: ubuntu-latest
     env:
       PULP_PASSWORD: ${{ secrets.PULP_PASSWORD }}
@@ -124,22 +129,70 @@ jobs:
     # secrets context is only available at this level.
     #
     # ref: https://docs.github.com/en/actions/learn-github-actions/contexts#context-availability
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+        - name: dbless
+          test: dbless
+        - name: postgres
+          test: postgres
+        - name: feature-gates
+          test: dbless
+          feature_gates: "GatewayAlpha=true,CombinedRoutes=false"
+        - name: dbless-knative
+          test: dbless.knative
+        - name: postgres-knative
+          test: postgres.knative
+        - name: enterprise-postgres
+          test: enterprise.postgres
+          enterprise: true
+
     steps:
 
     - uses: Kong/kong-license@master
-      if: env.PULP_PASSWORD != ''
+      if: env.PULP_PASSWORD != '' && matrix.enterprise
       id: license
       with:
         password: ${{ env.PULP_PASSWORD }}
 
+    - name: Detect if we should run if we're running enterprise tests but no license is available
+      id: detect_if_should_run
+      run: echo "result=${{ (steps.license.outputs.license != '' && matrix.enterprise) || (!matrix.enterprise) }}" >> $GITHUB_OUTPUT
+
+    - name: Set image of Kong
+      id: set_kong_image
+      if: (!matrix.enterprise)
+      run: |
+        echo "TEST_KONG_IMAGE=kong/kong" >> $GITHUB_ENV
+        echo "TEST_KONG_TAG=3.2.1" >> $GITHUB_ENV
+
+    - name: Set image and tag for enterprise
+      if: steps.detect_if_should_run.outputs.result != 'false' && matrix.enterprise
+      # TODO: We need a systematic approach to this. Either:
+      # - leave this here and bump every GW release
+      # - remove this and rely on bumping GW image in ktf
+      # - rely on a mechanism in ktf that will always, by default return the newest
+      #   Gateway tag.
+      # Related issue: https://github.com/Kong/kubernetes-testing-framework/issues/542
+      run: |
+        echo "TEST_KONG_IMAGE=kong/kong-gateway" >> $GITHUB_ENV
+        echo "TEST_KONG_TAG=3.2.1.0" >> $GITHUB_ENV
+
+    - name: checkout repository
+      if: steps.detect_if_should_run.outputs.result != 'false'
+      uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+
     - name: setup golang
-      if: env.PULP_PASSWORD != ''
+      if: steps.detect_if_should_run.outputs.result != 'false'
       uses: actions/setup-go@v3
       with:
-        go-version: '^1.19'
+        go-version: '^1.20'
 
     - name: cache go modules
-      if: env.PULP_PASSWORD != ''
+      if: steps.detect_if_should_run.outputs.result != 'false'
       uses: actions/cache@v3
       with:
         path: ~/go/pkg/mod
@@ -147,198 +200,50 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-build-codegen-
 
-    - name: checkout repository
-      if: env.PULP_PASSWORD != ''
-      uses: actions/checkout@v3
-      with:
-        fetch-depth: 0
-
-    - name: run integration tests
-      if: env.PULP_PASSWORD != ''
-      run: make test.integration.enterprise.postgres
+    - name: run make test.integration.${{ matrix.test }}
+      if: steps.detect_if_should_run.outputs.result != 'false'
+      run: make test.integration.${{ matrix.test }}
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         KONG_LICENSE_DATA: ${{ steps.license.outputs.license }}
-        GOTESTSUM_JUNITFILE: "integration-tests-enterprise-postgres.xml"
+        KONG_CONTROLLER_FEATURE_GATES: "${{ matrix.feature_gates }}"
+        GOTESTSUM_JUNITFILE: "integration-tests-${{ matrix.name }}.xml"
 
     - name: collect test coverage
-      if: env.PULP_PASSWORD != ''
+      if: steps.detect_if_should_run.outputs.result != 'false'
       uses: actions/upload-artifact@v3
       with:
         name: coverage
-        path: coverage.enterprisepostgres.out
+        path: coverage.*.out
 
     - name: upload diagnostics
-      if: env.PULP_PASSWORD != ''
+      if: ${{ !cancelled() && steps.detect_if_should_run.outputs.result != 'false' }}
       uses: actions/upload-artifact@v3
       with:
-        name: diagnostics-integration-tests-enterprise-postgres
+        name: diagnostics-integration-tests-${{ matrix.name }}
         path: /tmp/ktf-diag*
         if-no-files-found: ignore
 
     - name: collect test report
-      if: env.PULP_PASSWORD != ''
+      if: ${{ !cancelled() && steps.detect_if_should_run.outputs.result != 'false' }}
       uses: actions/upload-artifact@v3
       with:
         name: tests-report
-        path: integration-tests-enterprise-postgres.xml
-
-  integration-tests-dbless:
-    runs-on: ubuntu-latest
-    steps:
-
-    - name: setup golang
-      uses: actions/setup-go@v3
-      with:
-        go-version: '^1.19'
-
-    - name: cache go modules
-      uses: actions/cache@v3
-      with:
-        path: ~/go/pkg/mod
-        key: ${{ runner.os }}-build-codegen-${{ hashFiles('**/go.sum') }}
-        restore-keys: |
-          ${{ runner.os }}-build-codegen-
-
-    - name: checkout repository
-      uses: actions/checkout@v3
-      with:
-        fetch-depth: 0
-
-    - name: run integration tests
-      run: make test.integration.dbless
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        GOTESTSUM_JUNITFILE: "integration-tests-dbless.xml"
-
-    - name: collect test coverage
-      uses: actions/upload-artifact@v3
-      with:
-        name: coverage
-        path: coverage.dbless.out
-
-    - name: upload diagnostics
-      if: ${{ always() }}
-      uses: actions/upload-artifact@v3
-      with:
-        name: diagnostics-integration-tests-dbless
-        path: /tmp/ktf-diag*
-        if-no-files-found: ignore
-
-    - name: collect test report
-      if: ${{ always() }}
-      uses: actions/upload-artifact@v3
-      with:
-        name: tests-report
-        path: integration-tests-dbless.xml
-
-  integration-tests-postgres:
-    runs-on: ubuntu-latest
-    steps:
-
-    - name: setup golang
-      uses: actions/setup-go@v3
-      with:
-        go-version: '^1.19'
-
-    - name: cache go modules
-      uses: actions/cache@v3
-      with:
-        path: ~/go/pkg/mod
-        key: ${{ runner.os }}-build-codegen-${{ hashFiles('**/go.sum') }}
-        restore-keys: |
-          ${{ runner.os }}-build-codegen-
-
-    - name: checkout repository
-      uses: actions/checkout@v3
-      with:
-        fetch-depth: 0
-
-    - name: run integration tests
-      run: make test.integration.postgres
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        GOTESTSUM_JUNITFILE: "integration-tests-postgres.xml"
-
-    - name: collect test coverage
-      uses: actions/upload-artifact@v3
-      with:
-        name: coverage
-        path: coverage.postgres.out
-
-    - name: upload diagnostics
-      if: ${{ always() }}
-      uses: actions/upload-artifact@v3
-      with:
-        name: diagnostics-integration-tests-postgres
-        path: /tmp/ktf-diag*
-        if-no-files-found: ignore
-
-    - name: collect test report
-      if: ${{ always() }}
-      uses: actions/upload-artifact@v3
-      with:
-        name: tests-report
-        path: integration-tests-postgres.xml
-
-  integration-tests-feature-gates:
-    runs-on: ubuntu-latest
-    steps:
-
-    - name: setup golang
-      uses: actions/setup-go@v3
-      with:
-        go-version: '^1.19'
-
-    - name: cache go modules
-      uses: actions/cache@v3
-      with:
-        path: ~/go/pkg/mod
-        key: ${{ runner.os }}-build-codegen-${{ hashFiles('**/go.sum') }}
-        restore-keys: |
-          ${{ runner.os }}-build-codegen-
-
-    - name: checkout repository
-      uses: actions/checkout@v3
-      with:
-        fetch-depth: 0
-
-    - name: run integration tests
-      run: make test.integration.dbless
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        KONG_CONTROLLER_FEATURE_GATES: "GatewayAlpha=true,CombinedRoutes=false"
-        GOTESTSUM_JUNITFILE: "integration-tests-feature-gates.xml"
-
-    - name: collect test coverage
-      uses: actions/upload-artifact@v3
-      with:
-        name: coverage
-        path: coverage.featuregates.out
-
-    - name: upload diagnostics
-      if: ${{ always() }}
-      uses: actions/upload-artifact@v3
-      with:
-        name: diagnostics-integration-tests-feature-gates
-        path: /tmp/ktf-diag*
-        if-no-files-found: ignore
-
-    - name: collect test report
-      if: ${{ always() }}
-      uses: actions/upload-artifact@v3
-      with:
-        name: tests-report
-        path: integration-tests-feature-gates.xml
+        path: integration-tests-${{ matrix.name }}.xml
 
   conformance-tests:
     runs-on: ubuntu-latest
     steps:
 
+    - name: checkout repository
+      uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+
     - name: setup golang
       uses: actions/setup-go@v3
       with:
-        go-version: '^1.19'
+        go-version: '^1.20'
 
     - name: cache go modules
       uses: actions/cache@v3
@@ -347,11 +252,6 @@ jobs:
         key: ${{ runner.os }}-build-codegen-${{ hashFiles('**/go.sum') }}
         restore-keys: |
           ${{ runner.os }}-build-codegen-
-
-    - name: checkout repository
-      uses: actions/checkout@v3
-      with:
-        fetch-depth: 0
 
     - name: run conformance tests
       run: make test.conformance
@@ -365,13 +265,28 @@ jobs:
         name: tests-report
         path: conformance-tests.xml
 
+  test-passed:
+    runs-on: ubuntu-latest
+    needs:
+      - "unit-tests"
+      - "integration-tests"
+      - "conformance-tests"
+    if: always()
+    steps:
+    - name: Set workflow outcome based on unit-tests
+      if: needs.unit-tests.result == 'failure' || needs.unit-tests.result == 'cancelled'
+      run: ${{ false }}
+    - name: Set workflow outcome based on integration-tests
+      if: needs.integration-tests.result == 'failure' || needs.integration-tests.result == 'cancelled'
+      run: ${{ false }}
+    - name: Set workflow outcome based on conformance-tests
+      if: needs.conformance-tests.result == 'failure' || needs.conformance-tests.result == 'cancelled'
+      run: ${{ false }}
+
   coverage:
     needs:
       - "unit-tests"
-      - "integration-tests-dbless"
-      - "integration-tests-postgres"
-      - "integration-tests-enterprise-postgres"
-      - "integration-tests-feature-gates"
+      - "integration-tests"
     runs-on: ubuntu-latest
     steps:
 
@@ -399,12 +314,9 @@ jobs:
   buildpulse-report:
     needs:
       - "unit-tests"
-      - "integration-tests-dbless"
-      - "integration-tests-postgres"
-      - "integration-tests-enterprise-postgres"
-      - "integration-tests-feature-gates"
+      - "integration-tests"
       - "conformance-tests"
-    if: ${{ always() }}
+    if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
     steps:
 
@@ -421,8 +333,7 @@ jobs:
           path: report
 
       - name: Upload test results to BuildPulse for flaky test detection
-        if: ${{ !cancelled() }}
-        uses: Workshop64/buildpulse-action@a0e683af4e5070c379e9801ee9b33792ff414936
+        uses: Workshop64/buildpulse-action@main
         with:
           account: 962416
           repository: 127765544

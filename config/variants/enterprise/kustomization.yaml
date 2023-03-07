@@ -1,5 +1,5 @@
 resources:
-- ../../base/
+- ../multi-gw/base
 patchesStrategicMerge:
 - kong-enterprise.yaml
 images:

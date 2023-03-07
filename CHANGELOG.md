@@ -67,10 +67,129 @@ Adding a new version? You'll need three changes:
 
 > Release date: TBD
 
+### Added
+
+- Store status of whether configuration succeeded or failed for Kubernetes
+  objects in dataplane client and publish the events to let controllers know
+  if the controlled objects succeeded or failed to be translated to Kong
+  configuration.
+  [#3359](https://github.com/Kong/kubernetes-ingress-controller/pull/3359)
+- Added `version` command
+  [#3379](https://github.com/Kong/kubernetes-ingress-controller/pull/3379)  
+- Added `--publish-service-udp` to indicate the Service that handles inbound
+  UDP traffic.
+  [#3325](https://github.com/Kong/kubernetes-ingress-controller/pull/3325)
+- Added possibility to configure multiple Kong Gateways through the
+  `--kong-admin-url` CLI flag (which can be specified multiple times) or through
+  a corresponding environment variable `CONTROLLER_KONG_ADMIN_URL` (which can
+  specify multiple values separated by a comma).
+  [#3268](https://github.com/Kong/kubernetes-ingress-controller/pull/3268)
+- Added a new `dbless-konnect` configuration variant to the manifests. It can
+  be used to deploy a DB-less variant of KIC that will also synchronise its
+  data-plane configuration with Konnect cloud.
+  [#3448](https://github.com/Kong/kubernetes-ingress-controller/pull/3448)
+- The Gateway API has been bumped to 0.6.1. The `GatewayConditionScheduled` has
+  been replaced by the `GatewayConditionAccepted`, and the `ListenerConditionDetached`
+  condition has been replaced by the `ListenerConditionAccepted`.
+  [#3496](https://github.com/Kong/kubernetes-ingress-controller/pull/3496)
+  [#3524](https://github.com/Kong/kubernetes-ingress-controller/pull/3524)
+- The `ReferenceGrant` has been promoted to beta.
+  [#3507](https://github.com/Kong/kubernetes-ingress-controller/pull/3507)
+- Enable `ReferenceGrant` if `Gateway` feature gate is turned on (default).
+  [#3519](https://github.com/Kong/kubernetes-ingress-controller/pull/3519)
+- Experimental `--konnect-sync-enabled` feature flag has been introduced. It
+  enables the integration with Kong's Konnect cloud. It's turned off by default.
+  When enabled, it allows to synchronise data-plane configuration with
+  a Konnect Runtime Group specified by `--konnect-runtime-group-id`.
+  It requires `--konnect-tls-client-*` set of flags to be set to provide
+  Runtime Group's TLS client certificates for authentication.
+  [#3455](https://github.com/Kong/kubernetes-ingress-controller/pull/3455)
+- Added Konnect client to upload status of KIC instance to Konnect cloud if
+  flag `--konnect-sync-enabled` is set to `true`.
+  [#3469](https://github.com/Kong/kubernetes-ingress-controller/pull/3469)
+- Added Gateway discovery using Kong Admin API service configured via `--kong-admin-svc`
+  which accepts a namespaced name of a headless service which should have
+  Admin API endpoints exposed under a named port called `admin`. Gateway 
+  discovery is only allowed to run with dbless kong gateways.
+  [#3421](https://github.com/Kong/kubernetes-ingress-controller/pull/3421)
+  [#3642](https://github.com/Kong/kubernetes-ingress-controller/pull/3642)
+- Added configurable port names for Gateway discovery through
+  `--kong-admin-svc-port-names`. This flag accepts a list of port names that
+  Admin API service ports will be matched against.
+  [#3556](https://github.com/Kong/kubernetes-ingress-controller/pull/3556)
+- Added `dataplane` metrics label for `ingress_controller_configuration_push_count`
+  and `ingress_controller_configuration_push_duration_milliseconds`. This means
+  that all time series for those metrics will get a new label designating the
+  address of the dataplane that the configuration push has been targeted for.
+  [#3521](https://github.com/Kong/kubernetes-ingress-controller/pull/3521)
+- In DB-less mode, failure to push a config will now generate Kubernetes Events
+  with the reason `KongConfigurationApplyFailed` and an `InvolvedObject`
+  indicating which Kubernetes resource was responsible for the broken Kong
+  configuration.
+  [#3446](https://github.com/Kong/kubernetes-ingress-controller/pull/3446)
+- Leader election is enabled by default when Kong Gateway discovery is enabled.
+  [#3529](https://github.com/Kong/kubernetes-ingress-controller/pull/3529)
+- Added flag `--konnect-refresh-node-period` to set the period of uploading 
+  status of KIC instance to Konnect runtime group.
+  [#3533](https://github.com/Kong/kubernetes-ingress-controller/pull/3533)
+- Replaced service account's token static secret with a projected volume in 
+  deployment manifests.
+  [#3563](https://github.com/Kong/kubernetes-ingress-controller/pull/3563)
+- Added `GRPCRoute` controller and implemented basic `GRPCRoute` functionality.
+  [#3537](https://github.com/Kong/kubernetes-ingress-controller/pull/3537)
+- Included Konnect sync and Gateway discovery features in telemetry reports.
+  [#3588](https://github.com/Kong/kubernetes-ingress-controller/pull/3588)
+- Upload the status of controlled Kong gateway nodes to Konnect when syncing with 
+  Konnect is enabled by setting the flag `--konnect-sync-enabled` to true. 
+  If gateway discovery is enabled via `--kong-admin-svc` flag, the hostname of a node 
+  corresponding to each Kong gateway instance will use `<pod_namespace>/<pod_name>` 
+  format, where `pod_namespace` and `pod_name` are the namespace and name of the Kong 
+  gateway pod. If gateway discovery is disabled, the Kong gateway nodes will use `gateway_<address>` 
+  as the hostname, where `address` is the Admin API address used by KIC.
+  [#3587](https://github.com/Kong/kubernetes-ingress-controller/pull/3587)
+- All all-in-one DB-less deployment manifests will now use separate deployments 
+  for the controller and the proxy. This enables the proxy to be scaled independently
+  of the controller. The old `all-in-one-dbless.yaml` manifest has been deprecated and 
+  renamed to `all-in-one-dbless-legacy.yaml`. It will be removed in a future release.
+  [#3629](https://github.com/Kong/kubernetes-ingress-controller/pull/3629)
+
 ### Fixed
 
 - Disabled non-functioning mesh reporting when `--watch-namespaces` flag set.
   [#3336](https://github.com/Kong/kubernetes-ingress-controller/pull/3336)
+- Fixed the duplicate update of status of `HTTPRoute` caused by incorrect check
+  of whether status is changed.
+  [#3346](https://github.com/Kong/kubernetes-ingress-controller/pull/3346)
+- Change existing `resolvedRefs` condition in status `HTTPRoute` if there is
+  already one to avoid multiple appearance of conditions with same type
+  [#3386](https://github.com/Kong/kubernetes-ingress-controller/pull/3386)
+- Event messages for invalid multi-Service backends now indicate their derived
+  Kong resource name.
+  [#3318](https://github.com/Kong/kubernetes-ingress-controller/pull/3318)
+- Removed a duplicated status update of the HTTPRoute, which led to a potential
+  status flickering.
+  [#3451](https://github.com/Kong/kubernetes-ingress-controller/pull/3451)
+- Made Admission Webhook fetch the latest list of Gateways to avoid calling
+  outdated services set statically during the setup.
+  [#3601](https://github.com/Kong/kubernetes-ingress-controller/pull/3601)
+- Fixed the way configuration flags `KongAdminSvc` and `PublishService` are
+  checked for being set. The old one was always evaluating to `true`.
+  [#3602](https://github.com/Kong/kubernetes-ingress-controller/pull/3602)
+
+### Under the hood
+
+- Controller manager scheme is constructed based on the provided feature gates
+  [#3539](https://github.com/Kong/kubernetes-ingress-controller/pull/3539)
+- Updated the compiler to [Go v1.20](https://golang.org/doc/go1.20)
+  [#3540](https://github.com/Kong/kubernetes-ingress-controller/issues/3540)
+- Fixed an issue with the fake clientset using the wrong group name
+  [#3517](https://github.com/Kong/kubernetes-ingress-controller/issues/3517)
+
+### Deprecated
+
+- `kong-custom-entities-secret` flag has been marked as deprecated and will be
+  removed in 3.0.
+  [#3262](https://github.com/Kong/kubernetes-ingress-controller/pull/3262)
 
 ## [2.8.1]
 
@@ -79,7 +198,7 @@ Adding a new version? You'll need three changes:
 ### Fixed
 
 - When `CombinedRoutes` is turned on, translator will replace each occurrence of
- `*` in `Ingress`'s host to `_` in kong route names because `*` is not
+  `*` in `Ingress`'s host to `_` in kong route names because `*` is not
   allowed in kong route names.
   [#3312](https://github.com/Kong/kubernetes-ingress-controller/pull/3312)
 - Fix an issue with `CombinedRoutes`, which caused the controller to fail when
@@ -107,7 +226,7 @@ Adding a new version? You'll need three changes:
 
 ### Known issues
 
-- Processing of custom entites through `--kong-custom-entities-secret` flag or
+- Processing of custom entities through `--kong-custom-entities-secret` flag or
   `CONTROLLER_KONG_CUSTOM_ENTITIES_SECRET` environment variable does not work.
   [#3278](https://github.com/Kong/kubernetes-ingress-controller/issues/3278)
 
@@ -2161,7 +2280,7 @@ Please read the changelog and test in your environment.
    [#92](https://github.com/Kong/kubernetes-ingress-controller/pull/92)
 
 
-## [v0.0.5]
+## [0.0.5]
 
 > Release date: 2018/06/02
 
@@ -2169,7 +2288,7 @@ Please read the changelog and test in your environment.
 
  - Add support for Kong Enterprise Edition 0.32 and above
 
-## [v0.0.4] and prior
+## [0.0.4] and prior
 
  - The initial versions  were rapildy iterated to deliver
    a working ingress controller.

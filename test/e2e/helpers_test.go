@@ -18,6 +18,9 @@ import (
 	"time"
 
 	"github.com/blang/semver/v4"
+	"github.com/google/uuid"
+	"github.com/kong/deck/dump"
+	gokong "github.com/kong/go-kong/kong"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/loadimage"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/metallb"
@@ -25,17 +28,24 @@ import (
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/types/kind"
 	"github.com/kong/kubernetes-testing-framework/pkg/environments"
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
+	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
+	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
-	kerrors "k8s.io/apimachinery/pkg/api/errors"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/selection"
+	"k8s.io/apimachinery/pkg/types"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
 	"github.com/kong/kubernetes-ingress-controller/v2/pkg/clientset"
 	"github.com/kong/kubernetes-ingress-controller/v2/test"
+	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/helpers"
+	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/testenv"
 )
 
 const (
@@ -59,37 +69,80 @@ const (
 
 	ingressClass     = "kong"
 	namespace        = "kong"
-	adminServiceName = "kong-admin"
+	adminServiceName = "kong-admin-lb"
 
 	tcpEchoPort    = 1025
 	tcpListnerPort = 8888
+
+	// controllerDeploymentName is the name of the controller deployment in all manifests variants.
+	controllerDeploymentName = "ingress-kong"
+
+	// controllerContainerName is the name of the controller container in all manifests variants.
+	controllerContainerName = "ingress-controller"
+
+	// proxyContainerName is the name of the proxy container in all manifests variants.
+	proxyContainerName = "proxy"
 )
 
-func getEnvironmentBuilder(ctx context.Context) (*environments.Builder, error) {
-	if existingCluster != "" {
-		if clusterVersionStr != "" {
-			return nil, fmt.Errorf("cannot provide cluster version with existing cluster")
-		}
-		clusterParts := strings.Split(existingCluster, ":")
-		if len(clusterParts) != 2 {
-			return nil, fmt.Errorf("existing cluster in wrong format (%s): format is <TYPE>:<NAME> (e.g. kind:test-cluster)", existingCluster)
-		}
-		clusterType, clusterName := clusterParts[0], clusterParts[1]
+// setupE2ETest builds a testing environment for the E2E test. It also sets up the environment's teardown and test
+// context cancellation. It can accept optional addons to be passed to the environment builder.
+func setupE2ETest(t *testing.T, addons ...clusters.Addon) (context.Context, environments.Environment) {
+	t.Helper()
 
-		fmt.Printf("INFO: using existing %s cluster %s\n", clusterType, clusterName)
-		switch clusterType {
-		case string(kind.KindClusterType):
-			return createExistingKINDBuilder(clusterName)
-		case string(gke.GKEClusterType):
-			return createExistingGKEBuilder(ctx, clusterName)
-		default:
-			return nil, fmt.Errorf("unrecognized cluster type %s", clusterType)
-		}
-	}
-	return createDefaultKINDBuilder(), nil
+	ctx, cancel := context.WithCancel(context.Background())
+	t.Cleanup(cancel)
+
+	t.Log("building test cluster and environment")
+	builder, err := getEnvironmentBuilder(ctx, t)
+	require.NoError(t, err)
+	env, err := builder.WithAddons(addons...).Build(ctx)
+	require.NoError(t, err)
+	logClusterInfo(t, env.Cluster())
+
+	t.Cleanup(func() {
+		helpers.TeardownCluster(ctx, t, env.Cluster())
+	})
+
+	return ctx, env
 }
 
-func createDefaultKINDBuilder() *environments.Builder {
+func getEnvironmentBuilder(ctx context.Context, t *testing.T) (*environments.Builder, error) {
+	t.Helper()
+
+	if existingCluster == "" {
+		t.Logf("no existing cluster provided, creating a new one for %q type", clusterProvider)
+		switch clusterProvider {
+		case string(gke.GKEClusterType):
+			t.Log("creating a GKE cluster builder")
+			return createGKEBuilder(t)
+		default:
+			t.Log("creating a Kind cluster builder")
+			return createKINDBuilder(), nil
+		}
+	}
+
+	clusterParts := strings.Split(existingCluster, ":")
+	if len(clusterParts) < 2 {
+		return nil, fmt.Errorf("expected existing cluster in format <type>:<name>, got %s", existingCluster)
+	}
+
+	clusterType, clusterName := clusterParts[0], clusterParts[1]
+	if clusterVersionStr != "" {
+		return nil, fmt.Errorf("cannot provide cluster version with existing cluster")
+	}
+
+	t.Logf("using existing %s cluster %s", clusterType, clusterName)
+	switch clusterType {
+	case string(kind.KindClusterType):
+		return createExistingKINDBuilder(clusterName)
+	case string(gke.GKEClusterType):
+		return createExistingGKEBuilder(ctx, clusterName)
+	default:
+		return nil, fmt.Errorf("unrecognized cluster type %s", clusterType)
+	}
+}
+
+func createKINDBuilder() *environments.Builder {
 	builder := environments.NewBuilder()
 	clusterBuilder := kind.NewBuilder()
 	if clusterVersionStr != "" {
@@ -114,10 +167,6 @@ func createExistingKINDBuilder(name string) (*environments.Builder, error) {
 	return builder, nil
 }
 
-// existing GKE patterns rely on running hack/e2e/cluster/deploy/main.go (integration too) and then just loading
-// an existing cluster. this could probably avoid the hack script, and may be reasonable to integrate into KTF.
-// there is no default GKE builder as such: https://github.com/Kong/kubernetes-ingress-controller/issues/1613
-
 func createExistingGKEBuilder(ctx context.Context, name string) (*environments.Builder, error) {
 	cluster, err := gke.NewFromExistingWithEnv(ctx, name)
 	if err != nil {
@@ -128,60 +177,147 @@ func createExistingGKEBuilder(ctx context.Context, name string) (*environments.B
 	return builder, nil
 }
 
-func deployKong(ctx context.Context, t *testing.T, env environments.Environment, manifest io.Reader, additionalSecrets ...*corev1.Secret) *appsv1.Deployment {
-	t.Log("creating a tempfile for kubeconfig")
-	kubeconfig, err := generators.NewKubeConfigForRestConfig(env.Name(), env.Cluster().Config())
-	require.NoError(t, err)
-	kubeconfigFile, err := os.CreateTemp(os.TempDir(), "manifest-tests-kubeconfig-")
-	require.NoError(t, err)
-	defer os.Remove(kubeconfigFile.Name())
-	defer kubeconfigFile.Close()
+func createGKEBuilder(t *testing.T) (*environments.Builder, error) {
+	t.Helper()
 
-	t.Log("dumping kubeconfig to tempfile")
-	written, err := kubeconfigFile.Write(kubeconfig)
-	require.NoError(t, err)
-	require.Equal(t, len(kubeconfig), written)
-	kubeconfigFilename := kubeconfigFile.Name()
+	var (
+		name        = "e2e-" + uuid.NewString()
+		gkeCreds    = os.Getenv(gke.GKECredsVar)
+		gkeProject  = os.Getenv(gke.GKEProjectVar)
+		gkeLocation = os.Getenv(gke.GKELocationVar)
+	)
+
+	t.Logf("creating GKE cluster, name: %s", name)
+
+	clusterBuilder := gke.
+		NewBuilder([]byte(gkeCreds), gkeProject, gkeLocation).
+		WithName(name).
+		WithWaitForTeardown(testenv.WaitForClusterDelete()).
+		WithCreateSubnet(true).
+		WithLabels(gkeTestClusterLabels())
+
+	if clusterVersionStr != "" {
+		k8sVersion, err := semver.Parse(strings.TrimPrefix(clusterVersionStr, "v"))
+		if err != nil {
+			return nil, err
+		}
+
+		t.Logf("creating GKE cluster, with requested version: %s", k8sVersion)
+		clusterBuilder = clusterBuilder.WithClusterMinorVersion(k8sVersion.Major, k8sVersion.Minor)
+	}
+
+	return environments.NewBuilder().WithClusterBuilder(clusterBuilder), nil
+}
+
+func deployKong(ctx context.Context, t *testing.T, env environments.Environment, manifest io.Reader, additionalSecrets ...*corev1.Secret) {
+	t.Helper()
 
 	t.Log("waiting for testing environment to be ready")
 	require.NoError(t, <-env.WaitForReady(ctx))
 
 	t.Log("creating the kong namespace")
 	ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "kong"}}
-	_, err = env.Cluster().Client().CoreV1().Namespaces().Create(ctx, ns, metav1.CreateOptions{})
-	if !kerrors.IsAlreadyExists(err) {
+	_, err := env.Cluster().Client().CoreV1().Namespaces().Create(ctx, ns, metav1.CreateOptions{})
+	if !apierrors.IsAlreadyExists(err) {
 		require.NoError(t, err)
 	}
 
 	t.Logf("deploying any supplemental secrets (found: %d)", len(additionalSecrets))
 	for _, secret := range additionalSecrets {
-		_, err := env.Cluster().Client().CoreV1().Secrets("kong").Create(ctx, secret, metav1.CreateOptions{})
-		if !kerrors.IsAlreadyExists(err) {
+		_, err := env.Cluster().Client().CoreV1().Secrets(namespace).Create(ctx, secret, metav1.CreateOptions{})
+		if !apierrors.IsAlreadyExists(err) {
 			require.NoError(t, err)
 		}
 	}
 
 	t.Log("deploying the manifest to the cluster")
-	stdout, stderr := new(bytes.Buffer), new(bytes.Buffer)
+	kubeconfigFilename := getTemporaryKubeconfig(t, env)
 	cmd := exec.CommandContext(ctx, "kubectl", "--kubeconfig", kubeconfigFilename, "apply", "-f", "-")
-	cmd.Stdout = stdout
-	cmd.Stderr = stderr
 	cmd.Stdin = manifest
-	require.NoError(t, cmd.Run(), fmt.Sprintf("STDOUT=(%s), STDERR=(%s)", stdout.String(), stderr.String()))
+	out, err := cmd.CombinedOutput()
+	require.NoError(t, err, string(out))
 
-	t.Log("waiting for kong to be ready")
+	t.Log("waiting for controller to be ready")
 	var deployment *appsv1.Deployment
 	require.Eventually(t, func() bool {
-		deployment, err = env.Cluster().Client().AppsV1().Deployments(namespace).Get(ctx, "ingress-kong", metav1.GetOptions{})
+		deployment, err = env.Cluster().Client().AppsV1().Deployments(namespace).Get(ctx, controllerDeploymentName, metav1.GetOptions{})
 		if err != nil {
 			return false
 		}
 		return deployment.Status.ReadyReplicas == *deployment.Spec.Replicas
-	}, kongComponentWait, time.Second)
+	}, kongComponentWait, time.Second,
+		func() string {
+			if deployment == nil {
+				return ""
+			}
+			return fmt.Sprintf(
+				"deployment %s: ready replicas %d, spec replicas: %d",
+				deployment.Name, deployment.Status.ReadyReplicas, *deployment.Spec.Replicas,
+			)
+		}(),
+	)
+}
+
+// Deployments represent the deployments that are deployed by the all-in-one manifests.
+type Deployments struct {
+	ProxyNN      types.NamespacedName
+	ControllerNN types.NamespacedName
+}
+
+// GetProxy gets the proxy deployment from the cluster.
+func (d Deployments) GetProxy(ctx context.Context, t *testing.T, env environments.Environment) *appsv1.Deployment {
+	t.Helper()
+	deployment, err := env.Cluster().Client().AppsV1().Deployments(d.ProxyNN.Namespace).Get(ctx, d.ProxyNN.Name, metav1.GetOptions{})
+	require.NoError(t, err)
 	return deployment
 }
 
+// GetController gets the controller deployment from the cluster.
+func (d Deployments) GetController(ctx context.Context, t *testing.T, env environments.Environment) *appsv1.Deployment {
+	t.Helper()
+	deployment, err := env.Cluster().Client().AppsV1().Deployments(d.ControllerNN.Namespace).Get(ctx, d.ControllerNN.Name, metav1.GetOptions{})
+	require.NoError(t, err)
+	return deployment
+}
+
+// getManifestDeployments returns the deployments for the proxy and controller that are expected to be deployed for a given
+// manifest.
+func getManifestDeployments(manifestPath string) Deployments {
+	proxyDeploymentName := getProxyDeploymentName(manifestPath)
+	return Deployments{
+		ProxyNN: types.NamespacedName{
+			Namespace: namespace,
+			Name:      proxyDeploymentName,
+		},
+		ControllerNN: types.NamespacedName{
+			Namespace: namespace,
+			Name:      controllerDeploymentName,
+		},
+	}
+}
+
+// getProxyDeploymentName returns the name of the proxy deployment that is expected to be deployed for a given manifest.
+func getProxyDeploymentName(manifestPath string) string {
+	const (
+		singlePodDeploymentName = controllerDeploymentName
+		multiPodDeploymentName  = "proxy-kong"
+	)
+
+	// special case for the old dbless-legacy that's still using a single-pod deployment
+	if strings.Contains(manifestPath, "dbless-legacy") {
+		return singlePodDeploymentName
+	}
+	// all non-legacy dbless manifests use a multi-pod deployment
+	if strings.Contains(manifestPath, "dbless") {
+		return multiPodDeploymentName
+	}
+
+	return singlePodDeploymentName
+}
+
 func deployIngress(ctx context.Context, t *testing.T, env environments.Environment) {
+	t.Helper()
+
 	c, err := clientset.NewForConfig(env.Cluster().Config())
 	assert.NoError(t, err)
 	t.Log("deploying an HTTP service to test the ingress controller and proxy")
@@ -195,17 +331,17 @@ func deployIngress(ctx context.Context, t *testing.T, env environments.Environme
 	_, err = env.Cluster().Client().CoreV1().Services(corev1.NamespaceDefault).Create(ctx, service, metav1.CreateOptions{})
 	require.NoError(t, err)
 
-	getString := "GET"
+	kongIngressName := uuid.NewString()
 	king := &kongv1.KongIngress{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "testki",
+			Name:      kongIngressName,
 			Namespace: corev1.NamespaceDefault,
 			Annotations: map[string]string{
 				annotations.IngressClassKey: ingressClass,
 			},
 		},
 		Route: &kongv1.KongIngressRoute{
-			Methods: []*string{&getString},
+			Methods: []*string{lo.ToPtr("GET")},
 		},
 	}
 	_, err = c.ConfigurationV1().KongIngresses(corev1.NamespaceDefault).Create(ctx, king, metav1.CreateOptions{})
@@ -216,21 +352,20 @@ func deployIngress(ctx context.Context, t *testing.T, env environments.Environme
 	ingress := generators.NewIngressForServiceWithClusterVersion(kubernetesVersion, "/httpbin", map[string]string{
 		annotations.IngressClassKey: ingressClass,
 		"konghq.com/strip-path":     "true",
-		"konghq.com/override":       "testki",
+		"konghq.com/override":       kongIngressName,
 	}, service)
 	require.NoError(t, clusters.DeployIngress(ctx, env.Cluster(), corev1.NamespaceDefault, ingress))
 }
 
 func verifyIngress(ctx context.Context, t *testing.T, env environments.Environment) {
+	t.Helper()
+
 	t.Log("finding the kong proxy service ip")
-	svc, err := env.Cluster().Client().CoreV1().Services(namespace).Get(ctx, "kong-proxy", metav1.GetOptions{})
-	require.NoError(t, err)
-	proxyIP := getKongProxyIP(ctx, t, env, svc)
+	proxyIP := getKongProxyIP(ctx, t, env)
 
 	t.Logf("waiting for route from Ingress to be operational at http://%s/httpbin", proxyIP)
-	httpc := http.Client{Timeout: time.Second * 10}
 	require.Eventually(t, func() bool {
-		resp, err := httpc.Get(fmt.Sprintf("http://%s/httpbin", proxyIP))
+		resp, err := helpers.DefaultHTTPClient().Get(fmt.Sprintf("http://%s/httpbin", proxyIP))
 		if err != nil {
 			return false
 		}
@@ -250,19 +385,62 @@ func verifyIngress(ctx context.Context, t *testing.T, env environments.Environme
 		// verify the KongIngress method restriction
 		fakeData := url.Values{}
 		fakeData.Set("foo", "bar")
-		resp, err = httpc.PostForm(fmt.Sprintf("http://%s/httpbin", proxyIP), fakeData)
+		resp, err = helpers.DefaultHTTPClient().PostForm(fmt.Sprintf("http://%s/httpbin", proxyIP), fakeData)
 		if err != nil {
 			return false
 		}
 		defer resp.Body.Close()
 		return resp.StatusCode == http.StatusNotFound
-	}, ingressWait, time.Second)
+	}, ingressWait, 100*time.Millisecond)
+}
+
+// requireIngressConfiguredInAdminAPIEventually ensures all expected Kong Admin API resources are created for the Ingress
+// deployed with deployIngress helper function.
+func requireIngressConfiguredInAdminAPIEventually(
+	ctx context.Context,
+	t *testing.T,
+	kongClient *gokong.Client,
+) {
+	t.Helper()
+
+	require.Eventually(t, func() bool {
+		d, err := dump.Get(ctx, kongClient, dump.Config{})
+		if err != nil {
+			t.Logf("failed dumping config: %s", err)
+			return false
+		}
+		if len(d.Services) != 1 {
+			t.Log("still no service found...")
+			return false
+		}
+		if len(d.Routes) != 1 {
+			t.Log("still no route found...")
+			return false
+		}
+		if d.Services[0].ID == nil ||
+			d.Routes[0].Service.ID == nil ||
+			*d.Services[0].ID != *d.Routes[0].Service.ID {
+			t.Log("still no matching service found...")
+			return false
+		}
+		if len(d.Targets) != 1 {
+			t.Log("still no target found...")
+			return false
+		}
+		if len(d.Upstreams) != 1 {
+			t.Log("still no upstream found...")
+			return false
+		}
+		return true
+	}, time.Minute*3, time.Second, "%q didn't get the config", kongClient.BaseRootURL())
 }
 
 // verifyEnterprise performs some basic tests of the Kong Admin API in the provided
 // environment to ensure that the Admin API that responds is in fact the enterprise
 // version of Kong.
 func verifyEnterprise(ctx context.Context, t *testing.T, env environments.Environment, adminPassword string) {
+	t.Helper()
+
 	t.Log("finding the ip address for the admin API")
 	service, err := env.Cluster().Client().CoreV1().Services(namespace).Get(ctx, adminServiceName, metav1.GetOptions{})
 	require.NoError(t, err)
@@ -278,7 +456,7 @@ func verifyEnterprise(ctx context.Context, t *testing.T, env environments.Enviro
 	adminOutput := struct {
 		Version string `json:"version"`
 	}{}
-	httpc := http.Client{Timeout: time.Second * 10}
+
 	require.Eventually(t, func() bool {
 		// at the time of writing it was seen that the admin API had
 		// brief timing windows where it could respond 200 OK but
@@ -286,7 +464,7 @@ func verifyEnterprise(ctx context.Context, t *testing.T, env environments.Enviro
 		// decode would fail. Thus this check actually waits until
 		// the response body is fully decoded with a non-empty value
 		// before considering this complete.
-		resp, err := httpc.Do(req)
+		resp, err := helpers.DefaultHTTPClient().Do(req)
 		if err != nil {
 			return false
 		}
@@ -314,6 +492,8 @@ func verifyEnterprise(ctx context.Context, t *testing.T, env environments.Enviro
 }
 
 func verifyEnterpriseWithPostgres(ctx context.Context, t *testing.T, env environments.Environment, adminPassword string) {
+	t.Helper()
+
 	t.Log("finding the ip address for the admin API")
 	service, err := env.Cluster().Client().CoreV1().Services(namespace).Get(ctx, adminServiceName, metav1.GetOptions{})
 	require.NoError(t, err)
@@ -328,8 +508,8 @@ func verifyEnterpriseWithPostgres(ctx context.Context, t *testing.T, env environ
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
 	t.Log("creating a workspace to validate enterprise functionality")
-	httpc := http.Client{Timeout: time.Second * 10}
-	resp, err := httpc.Do(req)
+
+	resp, err := helpers.DefaultHTTPClient().Do(req)
 	require.NoError(t, err)
 	defer resp.Body.Close()
 	body, err := io.ReadAll(resp.Body)
@@ -351,33 +531,27 @@ func verifyPostgres(ctx context.Context, t *testing.T, env environments.Environm
 
 // killKong kills the Kong container in a given Pod and returns when it has restarted.
 func killKong(ctx context.Context, t *testing.T, env environments.Environment, pod *corev1.Pod) {
+	t.Helper()
+
 	var orig, after int32
 	for _, status := range pod.Status.ContainerStatuses {
-		if status.Name == "proxy" {
+		if status.Name == proxyContainerName {
 			orig = status.RestartCount
 		}
 	}
-	t.Logf("kong container has %v restart currently", orig)
-	kubeconfig, err := generators.NewKubeConfigForRestConfig(env.Name(), env.Cluster().Config())
-	require.NoError(t, err)
-	kubeconfigFile, err := os.CreateTemp(os.TempDir(), "kill-tests-kubeconfig-")
-	require.NoError(t, err)
-	defer os.Remove(kubeconfigFile.Name())
-	defer kubeconfigFile.Close()
-	written, err := kubeconfigFile.Write(kubeconfig)
-	require.NoError(t, err)
-	require.Equal(t, len(kubeconfig), written)
-	cmd := exec.Command("kubectl", "--kubeconfig", kubeconfigFile.Name(), "exec", "-n", pod.Namespace, pod.Name, "--", "bash", "-c", "kill 1") //nolint:gosec
+
+	kubeconfig := getTemporaryKubeconfig(t, env)
+	cmd := exec.Command("kubectl", "--kubeconfig", kubeconfig, "exec", "-n", pod.Namespace, pod.Name, "--", "bash", "-c", "kill 1")
 	stdout, stderr := new(bytes.Buffer), new(bytes.Buffer)
 	cmd.Stdout = stdout
 	cmd.Stderr = stderr
-	err = cmd.Run()
+	err := cmd.Run()
 	require.NoErrorf(t, err, "kill failed: STDOUT(%s) STDERR(%s)", stdout.String(), stderr.String())
 	require.Eventually(t, func() bool {
 		pod, err = env.Cluster().Client().CoreV1().Pods(pod.Namespace).Get(ctx, pod.Name, metav1.GetOptions{})
 		require.NoError(t, err)
 		for _, status := range pod.Status.ContainerStatuses {
-			if status.Name == "proxy" {
+			if status.Name == proxyContainerName {
 				if status.RestartCount > orig {
 					after = status.RestartCount
 					return true
@@ -407,19 +581,14 @@ func buildImageLoadAddons(images ...string) []clusters.Addon {
 // `kong-enterprise-edition-docker` for kong enterprise image
 // from env TEST_KONG_PULL_USERNAME and TEST_KONG_PULL_PASSWORD.
 func createKongImagePullSecret(ctx context.Context, t *testing.T, env environments.Environment) {
+	t.Helper()
+
 	if kongImagePullUsername == "" || kongImagePullPassword == "" {
 		return
 	}
-	secretName := "kong-enterprise-edition-docker"
-	kubeconfig, err := generators.NewKubeConfigForRestConfig(env.Name(), env.Cluster().Config())
-	require.NoError(t, err)
-	kubeconfigFile, err := os.CreateTemp(os.TempDir(), "create-pull-secret-kubeconfig-")
-	require.NoError(t, err)
-	t.Log("dumping kubeconfig to tempfile")
-	written, err := kubeconfigFile.Write(kubeconfig)
-	require.NoError(t, err)
-	require.Len(t, kubeconfig, written)
-	kubeconfigFilename := kubeconfigFile.Name()
+	kubeconfigFilename := getTemporaryKubeconfig(t, env)
+
+	const secretName = "kong-enterprise-edition-docker"
 	cmd := exec.CommandContext(
 		ctx,
 		"kubectl", "--kubeconfig", kubeconfigFilename,
@@ -429,18 +598,6 @@ func createKongImagePullSecret(ctx context.Context, t *testing.T, env environmen
 	)
 	out, err := cmd.CombinedOutput()
 	require.NoError(t, err, "command output: "+string(out))
-}
-
-// setBuilderKubernetesVersion configures the kubernetes version of test environment builder
-// and returns the updated builder.
-func setBuilderKubernetesVersion(t *testing.T, b *environments.Builder, clusterVersionStr string) *environments.Builder {
-	if clusterVersionStr == "" {
-		return b
-	}
-	clusterVersion, err := semver.ParseTolerant(clusterVersionStr)
-	require.NoError(t, err)
-	t.Logf("k8s cluster version is set to %v", clusterVersion)
-	return b.WithKubernetesVersion(clusterVersion)
 }
 
 // getContainerInPodSpec returns the spec of container having the given name.
@@ -468,4 +625,87 @@ func getEnvValueInContainer(container *corev1.Container, name string) string {
 		}
 	}
 	return value
+}
+
+// getTemporaryKubeconfig dumps an environment's kubeconfig to a temporary file.
+func getTemporaryKubeconfig(t *testing.T, env environments.Environment) string {
+	t.Helper()
+
+	t.Log("creating a tempfile for kubeconfig")
+	kubeconfig, err := generators.NewKubeConfigForRestConfig(env.Name(), env.Cluster().Config())
+	require.NoError(t, err)
+	kubeconfigFile, err := os.CreateTemp(os.TempDir(), "manifest-tests-kubeconfig-")
+	require.NoError(t, err)
+	defer kubeconfigFile.Close()
+	t.Cleanup(func() {
+		assert.NoError(t, os.Remove(kubeconfigFile.Name()))
+	})
+
+	t.Logf("dumping kubeconfig to tempfile: %s", kubeconfigFile.Name())
+	written, err := kubeconfigFile.Write(kubeconfig)
+	require.NoError(t, err)
+	require.Equal(t, len(kubeconfig), written)
+
+	return kubeconfigFile.Name()
+}
+
+func runOnlyOnKindClusters(t *testing.T) {
+	t.Helper()
+
+	existingClusterIsKind := strings.Split(existingCluster, ":")[0] == string(kind.KindClusterType)
+	clusterProviderIsKind := clusterProvider == "" || clusterProvider == string(kind.KindClusterType)
+
+	if !existingClusterIsKind || !clusterProviderIsKind {
+		t.Skip("test is supported only on Kind clusters")
+	}
+}
+
+// listPodsByLabels returns a list of pods in the given namespace that match the given labels map.
+func listPodsByLabels(
+	ctx context.Context, env environments.Environment, namespace string, podLabels map[string]string,
+) ([]corev1.Pod, error) {
+	podClient := env.Cluster().Client().CoreV1().Pods(namespace)
+	selector := labels.NewSelector()
+
+	for k, v := range podLabels {
+		req, err := labels.NewRequirement(k, selection.Equals, []string{v})
+		if err != nil {
+			return nil, err
+		}
+		selector = selector.Add(*req)
+	}
+
+	podList, err := podClient.List(ctx, metav1.ListOptions{
+		LabelSelector: selector.String(),
+	})
+	if err != nil {
+		return nil, err
+	}
+	return podList.Items, nil
+}
+
+// scaleDeployment scales the deployment to the given number of replicas and waits for the replicas to be ready.
+func scaleDeployment(ctx context.Context, t *testing.T, env environments.Environment, deployment types.NamespacedName, replicas int32) {
+	t.Helper()
+
+	scale := &autoscalingv1.Scale{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: deployment.Namespace,
+			Name:      deployment.Name,
+		},
+		Spec: autoscalingv1.ScaleSpec{
+			Replicas: replicas,
+		},
+	}
+	deployments := env.Cluster().Client().AppsV1().Deployments(deployment.Namespace)
+	_, err := deployments.UpdateScale(ctx, deployment.Name, scale, metav1.UpdateOptions{})
+	require.NoError(t, err)
+
+	require.Eventually(t, func() bool {
+		deployment, err := deployments.Get(ctx, deployment.Name, metav1.GetOptions{})
+		if err != nil {
+			return false
+		}
+		return deployment.Status.ReadyReplicas == replicas
+	}, time.Minute*3, time.Second, "deployment %s did not scale to %d replicas", deployment.Name, replicas)
 }

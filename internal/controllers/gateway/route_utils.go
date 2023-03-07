@@ -8,7 +8,7 @@ import (
 
 	"github.com/samber/lo"
 	corev1 "k8s.io/api/core/v1"
-	k8serrors "k8s.io/apimachinery/pkg/api/errors"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -25,6 +25,13 @@ import (
 
 const (
 	unsupportedGW = "no supported Gateway found for route"
+)
+
+const (
+	ConditionTypeProgrammed                                                = "Programmed"
+	ConditionReasonProgrammedUnknown   gatewayv1beta1.RouteConditionReason = "Unknown"
+	ConditionReasonConfiguredInGateway gatewayv1beta1.RouteConditionReason = "ConfiguredInGateway"
+	ConditionReasonTranslationError    gatewayv1beta1.RouteConditionReason = "TranslationError"
 )
 
 var ErrNoMatchingListenerHostname = fmt.Errorf("no matching hostnames in listener")
@@ -49,15 +56,36 @@ func parentRefsForRoute[T types.RouteT](route T) ([]ParentReference, error) {
 		ret := make([]ParentReference, len(refsAlpha))
 		for i, v := range refsAlpha {
 			ret[i] = ParentReference{
-				Group:       (*Group)(v.Group),
-				Kind:        (*Kind)(v.Kind),
-				Namespace:   (*Namespace)(v.Namespace),
-				Name:        (ObjectName)(v.Name),
-				SectionName: (*SectionName)(v.SectionName),
-				Port:        (*PortNumber)(v.Port),
+				Group:       v.Group,
+				Kind:        v.Kind,
+				Namespace:   v.Namespace,
+				Name:        v.Name,
+				SectionName: v.SectionName,
+				Port:        v.Port,
 			}
 		}
 		return ret
+	}
+
+	var refs []gatewayv1alpha2.ParentReference
+	switch r := (interface{})(route).(type) {
+	case *gatewayv1beta1.HTTPRoute:
+		refs = r.Spec.ParentRefs
+	case *gatewayv1alpha2.UDPRoute:
+		refs = r.Spec.ParentRefs
+	case *gatewayv1alpha2.TCPRoute:
+		refs = r.Spec.ParentRefs
+	case *gatewayv1alpha2.TLSRoute:
+		refs = r.Spec.ParentRefs
+	case *gatewayv1alpha2.GRPCRoute:
+		refs = r.Spec.ParentRefs
+	default:
+		return nil, fmt.Errorf("can't determine parent Gateway for unsupported route type %s", reflect.TypeOf(route))
+	}
+	for _, ref := range refs {
+		if string(*ref.Group) != gatewayv1alpha2.GroupName || string(*ref.Kind) != "Gateway" {
+			return nil, fmt.Errorf("unsupported parent kind %s/%s", string(*ref.Group), string(*ref.Kind))
+		}
 	}
 
 	switch r := (interface{})(route).(type) {
@@ -69,8 +97,10 @@ func parentRefsForRoute[T types.RouteT](route T) ([]ParentReference, error) {
 		return convertV1Alpha2ToV1Beta1ParentReference(r.Spec.ParentRefs), nil
 	case *gatewayv1alpha2.TLSRoute:
 		return convertV1Alpha2ToV1Beta1ParentReference(r.Spec.ParentRefs), nil
+	case *gatewayv1alpha2.GRPCRoute:
+		return convertV1Alpha2ToV1Beta1ParentReference(r.Spec.ParentRefs), nil
 	default:
-		return nil, fmt.Errorf("cant determine parent gateway for unsupported route type %s", reflect.TypeOf(route))
+		return nil, fmt.Errorf("can't determine parent Gateway for unsupported route type %s", reflect.TypeOf(route))
 	}
 }
 
@@ -116,7 +146,7 @@ func getSupportedGatewayForRoute[T types.RouteT](ctx context.Context, mgrc clien
 			Namespace: namespace,
 			Name:      name,
 		}, &gateway); err != nil {
-			if k8serrors.IsNotFound(err) {
+			if apierrors.IsNotFound(err) {
 				// if a configured gateway is not found it's still possible
 				// that there's another gateway, so keep searching through the list.
 				continue
@@ -129,7 +159,7 @@ func getSupportedGatewayForRoute[T types.RouteT](ctx context.Context, mgrc clien
 		if err := mgrc.Get(ctx, client.ObjectKey{
 			Name: string(gateway.Spec.GatewayClassName),
 		}, &gatewayClass); err != nil {
-			if k8serrors.IsNotFound(err) {
+			if apierrors.IsNotFound(err) {
 				// if a configured gatewayClass is not found it's still possible
 				// that there's another properly configured gateway in the parentRefs,
 				// so keep searching through the list.
@@ -139,7 +169,7 @@ func getSupportedGatewayForRoute[T types.RouteT](ctx context.Context, mgrc clien
 		}
 
 		// If the GatewayClass does not match this controller then skip it
-		if gatewayClass.Spec.ControllerName != ControllerName {
+		if gatewayClass.Spec.ControllerName != GetControllerName() {
 			continue
 		}
 
@@ -228,9 +258,10 @@ func getSupportedGatewayForRoute[T types.RouteT](ctx context.Context, mgrc clien
 				gateway:      &gateway,
 				listenerName: listenerName,
 				condition: metav1.Condition{
-					Type:   string(gatewayv1beta1.RouteConditionAccepted),
-					Status: metav1.ConditionTrue,
-					Reason: string(gatewayv1beta1.RouteReasonAccepted),
+					Type:               string(gatewayv1beta1.RouteConditionAccepted),
+					Status:             metav1.ConditionTrue,
+					Reason:             string(gatewayv1beta1.RouteReasonAccepted),
+					ObservedGeneration: route.GetGeneration(),
 				},
 			})
 		} else {
@@ -264,9 +295,10 @@ func getSupportedGatewayForRoute[T types.RouteT](ctx context.Context, mgrc clien
 				gateway:      &gateway,
 				listenerName: listenerName,
 				condition: metav1.Condition{
-					Type:   string(gatewayv1beta1.RouteConditionAccepted),
-					Status: metav1.ConditionFalse,
-					Reason: string(reason),
+					Type:               string(gatewayv1beta1.RouteConditionAccepted),
+					Status:             metav1.ConditionFalse,
+					Reason:             string(reason),
+					ObservedGeneration: route.GetGeneration(),
 				},
 			})
 		}
@@ -290,6 +322,8 @@ func routeHostnamesIntersectsWithListenerHostname[T types.RouteT](route T, liste
 	case *gatewayv1alpha2.UDPRoute:
 		return true
 	case *gatewayv1alpha2.TLSRoute:
+		return listenerHostnameIntersectWithRouteHostnames(listener, r.Spec.Hostnames)
+	case *gatewayv1alpha2.GRPCRoute:
 		return listenerHostnameIntersectWithRouteHostnames(listener, r.Spec.Hostnames)
 	default:
 		return false
@@ -334,6 +368,10 @@ func routeTypeMatchesListenerType[T types.RouteT](route T, listener Listener) bo
 		// Note: this is a guess we are doing as the upstream documentation is unclear at the moment.
 		// see https://github.com/kubernetes-sigs/gateway-api/issues/1474
 		if listener.TLS != nil && *listener.TLS.Mode != gatewayv1beta1.TLSModePassthrough {
+			return false
+		}
+	case *gatewayv1alpha2.GRPCRoute:
+		if listener.Protocol != HTTPSProtocolType {
 			return false
 		}
 	default:
@@ -461,34 +499,20 @@ func existsMatchingReadyListenerInStatus[T types.RouteT](route T, listener Liste
 	return nil
 }
 
-func listenerHostnameIntersectWithRouteHostnames[H types.HostnameT, L types.ListenerT](listener L, hostnames []H) bool {
+func listenerHostnameIntersectWithRouteHostnames[H types.HostnameT](listener gatewayv1beta1.Listener, hostnames []H) bool {
 	if len(hostnames) == 0 {
 		return true
 	}
 
 	// if the listener has no hostname, all hostnames automatically intersect
-	switch l := (any)(listener).(type) {
-	case gatewayv1alpha2.Listener:
-		if l.Hostname == nil || *l.Hostname == "" {
-			return true
-		}
+	if listener.Hostname == nil || *listener.Hostname == "" {
+		return true
+	}
 
-		// iterate over all the hostnames and check that at least one intersect with the listener hostname
-		for _, hostname := range hostnames {
-			if util.HostnamesIntersect(*l.Hostname, hostname) {
-				return true
-			}
-		}
-	case Listener:
-		if l.Hostname == nil || *l.Hostname == "" {
+	// iterate over all the hostnames and check that at least one intersect with the listener hostname
+	for _, hostname := range hostnames {
+		if util.HostnamesIntersect(*listener.Hostname, hostname) {
 			return true
-		}
-
-		// iterate over all the hostnames and check that at least one intersect with the listener hostname
-		for _, hostname := range hostnames {
-			if util.HostnamesIntersect(*l.Hostname, hostname) {
-				return true
-			}
 		}
 	}
 
@@ -605,7 +629,7 @@ func isRouteAccepted(gateways []supportedGatewayWithCondition) bool {
 }
 
 // isHTTPReferenceGranted checks that the backendRef referenced by the HTTPRoute is granted by a ReferenceGrant.
-func isHTTPReferenceGranted(grantSpec gatewayv1alpha2.ReferenceGrantSpec, backendRef gatewayv1beta1.HTTPBackendRef, fromNamespace string) bool {
+func isHTTPReferenceGranted(grantSpec gatewayv1beta1.ReferenceGrantSpec, backendRef gatewayv1beta1.HTTPBackendRef, fromNamespace string) bool {
 	var backendRefGroup gatewayv1beta1.Group
 	var backendRefKind Kind
 
@@ -621,11 +645,48 @@ func isHTTPReferenceGranted(grantSpec gatewayv1alpha2.ReferenceGrantSpec, backen
 		}
 
 		for _, to := range grantSpec.To {
-			if backendRefGroup == (gatewayv1beta1.Group)(to.Group) &&
-				backendRefKind == (Kind)(to.Kind) &&
-				(to.Name == nil || (gatewayv1beta1.ObjectName)(*to.Name) == backendRef.Name) {
+			if backendRefGroup == to.Group &&
+				backendRefKind == to.Kind &&
+				(to.Name == nil || *to.Name == backendRef.Name) {
 				return true
 			}
+		}
+	}
+	return false
+}
+
+// sameCondition returns true if the conditions in parameter has the same type, status, reason and message.
+func sameCondition(a, b metav1.Condition) bool {
+	return a.Type == b.Type &&
+		a.Status == b.Status &&
+		a.Reason == b.Reason &&
+		a.Message == b.Message &&
+		a.ObservedGeneration == b.ObservedGeneration
+}
+
+func setRouteParentStatusCondition(parentStatus *gatewayv1beta1.RouteParentStatus, newCondition metav1.Condition) bool {
+	var conditionFound, changed bool
+	for i, condition := range parentStatus.Conditions {
+		if condition.Type == newCondition.Type {
+			conditionFound = true
+			if !sameCondition(condition, newCondition) {
+				parentStatus.Conditions[i] = newCondition
+				changed = true
+			}
+		}
+	}
+
+	if !conditionFound {
+		parentStatus.Conditions = append(parentStatus.Conditions, newCondition)
+		changed = true
+	}
+	return changed
+}
+
+func parentStatusHasProgrammedCondition(parentStatus *gatewayv1beta1.RouteParentStatus) bool {
+	for _, condition := range parentStatus.Conditions {
+		if condition.Type == ConditionTypeProgrammed {
+			return true
 		}
 	}
 	return false

@@ -31,7 +31,7 @@ type ConfigurationV1alpha1Interface interface {
 	IngressClassParametersesGetter
 }
 
-// ConfigurationV1alpha1Client is used to interact with features provided by the configuration group.
+// ConfigurationV1alpha1Client is used to interact with features provided by the configuration.konghq.com group.
 type ConfigurationV1alpha1Client struct {
 	restClient rest.Interface
 }

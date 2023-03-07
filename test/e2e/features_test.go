@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"net/http"
 	"os"
-	"os/exec"
 	"strings"
 	"testing"
 	"time"
@@ -22,22 +21,20 @@ import (
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/types/kind"
 	"github.com/kong/kubernetes-testing-framework/pkg/environments"
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
 	"github.com/kong/kubernetes-ingress-controller/v2/pkg/clientset"
 	"github.com/kong/kubernetes-ingress-controller/v2/test"
 	"github.com/kong/kubernetes-ingress-controller/v2/test/consts"
+	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/helpers"
 )
 
 // -----------------------------------------------------------------------------
@@ -130,22 +127,17 @@ PMxZ3NvEwhsJgDJ82D7OUR2G7wZtgUj/WFj14XOofpZJmhzTQrtbbuc=
 // the mounted Secret updates. This requires E2E because we can't mount Secrets with the locally-run integration
 // test controller instance.
 func TestWebhookUpdate(t *testing.T) {
-	t.Log("configuring all-in-one-dbless.yaml manifest test")
-	t.Parallel()
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
 	// on KIND, this test requires webhookKINDConfig. the generic getEnvironmentBuilder we use for most tests doesn't
 	// support this: the configuration is specific to KIND but should not be used by default, and the scaffolding isn't
 	// flexible enough to support tests building their own clusters or passing additional builder functions. this still
 	// uses the setup style from before getEnvironmentBuilder/GKE support as such, and just skips if it's attempting
 	// to run on GKE
-	if existingCluster != "" {
-		clusterType := strings.Split(existingCluster, ":")[0]
-		if clusterType != string(kind.KindClusterType) {
-			t.Skip("test not supported on non-KIND clusters")
-		}
-	}
+	runOnlyOnKindClusters(t)
+
+	t.Log("configuring all-in-one-dbless.yaml manifest test")
+	t.Parallel()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
 	t.Log("building test cluster and environment")
 	configFile, err := os.CreateTemp(os.TempDir(), "webhook-kind-config-")
@@ -175,21 +167,16 @@ func TestWebhookUpdate(t *testing.T) {
 	env, err := builder.Build(ctx)
 	require.NoError(t, err)
 
-	t.Logf("build a cleaner to dump diagnostics...")
-	cleaner := clusters.NewCleaner(env.Cluster())
+	cluster = env.Cluster()
+	logClusterInfo(t, cluster)
+
 	defer func() {
-		if t.Failed() {
-			output, err := cleaner.DumpDiagnostics(ctx, t.Name())
-			t.Logf("%s failed, dumped diagnostics to %s", t.Name(), output)
-			assert.NoError(t, err)
-		}
-		assert.NoError(t, cleaner.Cleanup(ctx))
+		helpers.TeardownCluster(ctx, t, env.Cluster())
 	}()
 
 	t.Log("deploying kong components")
-	manifest, err := getTestManifest(t, dblessPath)
-	require.NoError(t, err)
-	deployment := deployKong(ctx, t, env, manifest)
+	manifest := getTestManifest(t, dblessPath)
+	deployKong(ctx, t, env, manifest)
 
 	firstCertificate := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
@@ -212,15 +199,6 @@ func TestWebhookUpdate(t *testing.T) {
 			"tls.key": []byte(tlsPairs[1].Key),
 		},
 	}
-
-	// dump diagnostics and print out logs of KIC pod to a temporary directory, if the test failed.
-	defer func() {
-		if t.Failed() {
-			outputDir, err := cleaner.DumpDiagnostics(ctx, t.Name())
-			assert.NoError(t, err, "failed to dump diagnostics")
-			t.Logf("%s failed, dumped diagnostics to directory %s", t.Name(), outputDir)
-		}
-	}()
 
 	_, err = env.Cluster().Client().CoreV1().Secrets(kongNamespace).Create(ctx, firstCertificate, metav1.CreateOptions{})
 	require.NoError(t, err)
@@ -247,8 +225,9 @@ func TestWebhookUpdate(t *testing.T) {
 	}, time.Minute, time.Second)
 
 	t.Log("updating kong deployment to use admission certificate")
+	deployment := getManifestDeployments(dblessPath).GetController(ctx, t, env)
 	for i, container := range deployment.Spec.Template.Spec.Containers {
-		if container.Name == "ingress-controller" {
+		if container.Name == controllerContainerName {
 			deployment.Spec.Template.Spec.Containers[i].Env = append(deployment.Spec.Template.Spec.Containers[i].Env,
 				corev1.EnvVar{Name: "CONTROLLER_ADMISSION_WEBHOOK_CERT_FILE", Value: "/admission-webhook/tls.crt"},
 				corev1.EnvVar{Name: "CONTROLLER_ADMISSION_WEBHOOK_KEY_FILE", Value: "/admission-webhook/tls.key"},
@@ -277,7 +256,7 @@ func TestWebhookUpdate(t *testing.T) {
 	t.Log("checking initial certificate")
 	require.Eventually(t, func() bool {
 		conn, err := tls.Dial("tcp", admissionAddress+":443",
-			&tls.Config{MinVersion: tls.VersionTLS12, InsecureSkipVerify: true}) //nolint:gosec
+			&tls.Config{MinVersion: tls.VersionTLS12, InsecureSkipVerify: true})
 		if err != nil {
 			t.Logf("failed to dial %s:443, error %v", admissionAddress, err)
 			return false
@@ -294,7 +273,7 @@ func TestWebhookUpdate(t *testing.T) {
 	t.Log("checking second certificate")
 	require.Eventually(t, func() bool {
 		conn, err := tls.Dial("tcp", admissionAddress+":443",
-			&tls.Config{MinVersion: tls.VersionTLS12, InsecureSkipVerify: true}) //nolint:gosec
+			&tls.Config{MinVersion: tls.VersionTLS12, InsecureSkipVerify: true})
 		if err != nil {
 			t.Logf("failed to dial %s:443, error %v", admissionAddress, err)
 			return false
@@ -310,59 +289,20 @@ func TestWebhookUpdate(t *testing.T) {
 func TestDeployAllInOneDBLESSGateway(t *testing.T) {
 	t.Log("configuring all-in-one-dbless.yaml manifest test for Gateway")
 	t.Parallel()
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	t.Log("building test cluster and environment")
-	builder, err := getEnvironmentBuilder(ctx)
-	require.NoError(t, err)
-	env, err := builder.Build(ctx)
-	require.NoError(t, err)
-
-	t.Logf("build a cleaner to dump diagnostics...")
-	cleaner := clusters.NewCleaner(env.Cluster())
-	defer func() {
-		if t.Failed() {
-			output, err := cleaner.DumpDiagnostics(ctx, t.Name())
-			t.Logf("%s failed, dumped diagnostics to %s", t.Name(), output)
-			assert.NoError(t, err)
-		}
-		assert.NoError(t, cleaner.Cleanup(ctx))
-	}()
+	ctx, env := setupE2ETest(t)
 
 	t.Log("deploying kong components")
-	manifest, err := getTestManifest(t, dblessPath)
-	require.NoError(t, err)
-	deployment := deployKong(ctx, t, env, manifest)
-	deploymentListOptions := metav1.ListOptions{
-		LabelSelector: "app=" + deployment.Name,
+	manifest := getTestManifest(t, dblessPath)
+	deployKong(ctx, t, env, manifest)
+	deployments := getManifestDeployments(dblessPath)
+	controllerDeploymentNN := deployments.ControllerNN
+	controllerDeploymentListOptions := metav1.ListOptions{
+		LabelSelector: "app=" + controllerDeploymentNN.Name,
 	}
-
-	t.Log("running the admission webhook setup script")
-	cmd := exec.Command("bash", admissionScriptPath)
-	require.NoError(t, cmd.Run())
-
-	// vov it's easier than tracking the deployment state
-	t.Log("creating a consumer to ensure the admission webhook is online")
-	consumer := &kongv1.KongConsumer{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "nihoniy",
-			Annotations: map[string]string{
-				annotations.IngressClassKey: ingressClass,
-			},
-		},
-		Username: "nihoniy",
-	}
-
-	kongClient, err := clientset.NewForConfig(env.Cluster().Config())
-	require.Eventually(t, func() bool {
-		_, err = kongClient.ConfigurationV1().KongConsumers(namespace).Create(ctx, consumer, metav1.CreateOptions{})
-		return err == nil
-	}, time.Minute*2, time.Second*1)
 
 	t.Log("verifying that KIC disabled controllers for Gateway API and printed proper log")
 	require.Eventually(t, func() bool {
-		pods, err := env.Cluster().Client().CoreV1().Pods(deployment.Namespace).List(ctx, deploymentListOptions)
+		pods, err := env.Cluster().Client().CoreV1().Pods(controllerDeploymentNN.Namespace).List(ctx, controllerDeploymentListOptions)
 		require.NoError(t, err)
 		for _, pod := range pods.Items {
 			logs, err := getPodLogs(ctx, t, env, pod.Namespace, pod.Name)
@@ -381,10 +321,10 @@ func TestDeployAllInOneDBLESSGateway(t *testing.T) {
 	require.NoError(t, clusters.KustomizeDeployForCluster(ctx, env.Cluster(), consts.GatewayStandardCRDsKustomizeURL))
 
 	t.Logf("deleting KIC pods to restart them after Gateway APIs CRDs installed")
-	pods, err := env.Cluster().Client().CoreV1().Pods(deployment.Namespace).List(ctx, deploymentListOptions)
+	pods, err := env.Cluster().Client().CoreV1().Pods(controllerDeploymentNN.Namespace).List(ctx, controllerDeploymentListOptions)
 	require.NoError(t, err)
 	for _, pod := range pods.Items {
-		err = env.Cluster().Client().CoreV1().Pods(deployment.Namespace).Delete(ctx, pod.Name, metav1.DeleteOptions{})
+		err = env.Cluster().Client().CoreV1().Pods(controllerDeploymentNN.Namespace).Delete(ctx, pod.Name, metav1.DeleteOptions{})
 		require.NoError(t, err)
 	}
 
@@ -421,8 +361,8 @@ func TestDeployAllInOneDBLESSGateway(t *testing.T) {
 			if lstatus.Name == "badhttp" {
 				if util.CheckCondition(
 					lstatus.Conditions,
-					util.ConditionType(gatewayv1alpha2.ListenerConditionDetached),
-					util.ConditionReason(gatewayv1alpha2.ListenerReasonPortUnavailable),
+					util.ConditionType(gatewayv1beta1.ListenerConditionAccepted),
+					util.ConditionReason(gatewayv1beta1.ListenerReasonPortUnavailable),
 					metav1.ConditionTrue,
 					gw.Generation,
 				) {
@@ -431,8 +371,8 @@ func TestDeployAllInOneDBLESSGateway(t *testing.T) {
 
 				if util.CheckCondition(
 					lstatus.Conditions,
-					util.ConditionType(gatewayv1alpha2.ListenerConditionDetached),
-					util.ConditionReason(gatewayv1alpha2.ListenerReasonUnsupportedProtocol),
+					util.ConditionType(gatewayv1beta1.ListenerConditionAccepted),
+					util.ConditionReason(gatewayv1beta1.ListenerReasonUnsupportedProtocol),
 					metav1.ConditionTrue,
 					gw.Generation,
 				) {
@@ -442,8 +382,8 @@ func TestDeployAllInOneDBLESSGateway(t *testing.T) {
 			if lstatus.Name == "badudp" {
 				if util.CheckCondition(
 					lstatus.Conditions,
-					util.ConditionType(gatewayv1alpha2.ListenerConditionDetached),
-					util.ConditionReason(gatewayv1alpha2.ListenerReasonUnsupportedProtocol),
+					util.ConditionType(gatewayv1beta1.ListenerConditionAccepted),
+					util.ConditionReason(gatewayv1beta1.ListenerReasonUnsupportedProtocol),
 					metav1.ConditionTrue,
 					gw.Generation,
 				) {
@@ -460,20 +400,26 @@ func TestDeployAllInOneDBLESSGateway(t *testing.T) {
 	t.Logf("deploying Gateway APIs CRDs in experimental channel from %s", consts.GatewayExperimentalCRDsKustomizeURL)
 	require.NoError(t, clusters.KustomizeDeployForCluster(ctx, env.Cluster(), consts.GatewayExperimentalCRDsKustomizeURL))
 
-	deployment, err = env.Cluster().Client().AppsV1().Deployments(deployment.Namespace).Get(ctx, deployment.Name, metav1.GetOptions{})
-	require.NoError(t, err)
-	t.Log("updating kong deployment to enable Gateway feature gate and admission controller")
-	for i, container := range deployment.Spec.Template.Spec.Containers {
-		if container.Name == "ingress-controller" {
-			deployment.Spec.Template.Spec.Containers[i].Env = append(deployment.Spec.Template.Spec.Containers[i].Env,
-				corev1.EnvVar{Name: "CONTROLLER_FEATURE_GATES", Value: "GatewayAlpha=true"})
+	t.Log("updating controller deployment to enable Gateway feature gate")
+	controllerDeployment := deployments.GetController(ctx, t, env)
+	for i, container := range controllerDeployment.Spec.Template.Spec.Containers {
+		if container.Name == controllerContainerName {
+			controllerDeployment.Spec.Template.Spec.Containers[i].Env = append(controllerDeployment.Spec.Template.Spec.Containers[i].Env,
+				corev1.EnvVar{Name: "CONTROLLER_FEATURE_GATES", Value: consts.DefaultFeatureGates})
 		}
-		if container.Name == "proxy" {
-			deployment.Spec.Template.Spec.Containers[i].Env = append(deployment.Spec.Template.Spec.Containers[i].Env,
+	}
+	_, err = env.Cluster().Client().AppsV1().Deployments(namespace).Update(ctx, controllerDeployment, metav1.UpdateOptions{})
+	require.NoError(t, err)
+
+	t.Log("updating proxy deployment to enable TCP listener")
+	proxyDeployment := deployments.GetProxy(ctx, t, env)
+	for i, container := range proxyDeployment.Spec.Template.Spec.Containers {
+		if container.Name == proxyContainerName {
+			proxyDeployment.Spec.Template.Spec.Containers[i].Env = append(proxyDeployment.Spec.Template.Spec.Containers[i].Env,
 				corev1.EnvVar{Name: "KONG_STREAM_LISTEN", Value: fmt.Sprintf("0.0.0.0:%d", tcpListnerPort)})
 		}
 	}
-	_, err = env.Cluster().Client().AppsV1().Deployments(deployment.Namespace).Update(ctx, deployment, metav1.UpdateOptions{})
+	_, err = env.Cluster().Client().AppsV1().Deployments(namespace).Update(ctx, proxyDeployment, metav1.UpdateOptions{})
 	require.NoError(t, err)
 
 	t.Log("updating kong proxy service to enable TCP listener")
@@ -500,28 +446,11 @@ func TestDeployAllInOneDBLESSGateway(t *testing.T) {
 func TestDeployAllInOneDBLESSNoLoadBalancer(t *testing.T) {
 	t.Log("configuring all-in-one-dbless.yaml manifest test")
 	t.Parallel()
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	t.Log("building test cluster and environment")
-	builder, err := getEnvironmentBuilder(ctx)
-	require.NoError(t, err)
-	env, err := builder.Build(ctx)
-	require.NoError(t, err)
-	cleaner := clusters.NewCleaner(env.Cluster())
-	defer func() {
-		if t.Failed() {
-			output, err := cleaner.DumpDiagnostics(ctx, t.Name())
-			t.Logf("%s failed, dumped diagnostics to %s", t.Name(), output)
-			assert.NoError(t, err)
-		}
-		assert.NoError(t, cleaner.Cleanup(ctx))
-	}()
+	ctx, env := setupE2ETest(t)
 
 	t.Log("deploying kong components")
-	manifest, err := getTestManifest(t, dblessPath)
-	require.NoError(t, err)
-	deployment := deployKong(ctx, t, env, manifest)
+	manifest := getTestManifest(t, dblessPath)
+	deployKong(ctx, t, env, manifest)
 
 	t.Log("running ingress tests to verify all-in-one deployed ingress controller and proxy are functional")
 	deployIngress(ctx, t, env)
@@ -531,23 +460,22 @@ func TestDeployAllInOneDBLESSNoLoadBalancer(t *testing.T) {
 	t.Logf("deploying Gateway APIs CRDs from %s", consts.GatewayExperimentalCRDsKustomizeURL)
 	require.NoError(t, clusters.KustomizeDeployForCluster(ctx, env.Cluster(), consts.GatewayExperimentalCRDsKustomizeURL))
 
-	deployment, err = env.Cluster().Client().AppsV1().Deployments(deployment.Namespace).Get(ctx, deployment.Name, metav1.GetOptions{})
-	require.NoError(t, err)
-	t.Log("updating kong deployment to enable Gateway feature gate")
+	deployment := getManifestDeployments(dblessPath).GetController(ctx, t, env)
+	t.Log("updating controller deployment to enable Gateway feature gate")
 	for i, container := range deployment.Spec.Template.Spec.Containers {
-		if container.Name == "ingress-controller" {
+		if container.Name == controllerContainerName {
 			deployment.Spec.Template.Spec.Containers[i].Env = append(deployment.Spec.Template.Spec.Containers[i].Env,
-				corev1.EnvVar{Name: "CONTROLLER_FEATURE_GATES", Value: "GatewayAlpha=true"})
+				corev1.EnvVar{Name: "CONTROLLER_FEATURE_GATES", Value: consts.DefaultFeatureGates})
 		}
 	}
-	_, err = env.Cluster().Client().AppsV1().Deployments(deployment.Namespace).Update(ctx,
+	_, err := env.Cluster().Client().AppsV1().Deployments(deployment.Namespace).Update(ctx,
 		deployment, metav1.UpdateOptions{})
 	require.NoError(t, err)
 
 	t.Log("updating service type to NodePort")
 	svc, err := env.Cluster().Client().CoreV1().Services(deployment.Namespace).Get(ctx, "kong-proxy", metav1.GetOptions{})
 	require.NoError(t, err)
-	svc.Spec.Type = "NodePort"
+	svc.Spec.Type = corev1.ServiceTypeNodePort
 	_, err = env.Cluster().Client().CoreV1().Services(deployment.Namespace).Update(ctx, svc, metav1.UpdateOptions{})
 	require.NoError(t, err)
 
@@ -565,35 +493,17 @@ func TestDeployAllInOneDBLESSNoLoadBalancer(t *testing.T) {
 func TestDefaultIngressClass(t *testing.T) {
 	t.Log("configuring all-in-one-dbless.yaml manifest test")
 	t.Parallel()
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	t.Log("building test cluster and environment")
-	builder, err := getEnvironmentBuilder(ctx)
-	require.NoError(t, err)
-	env, err := builder.Build(ctx)
-	require.NoError(t, err)
-
-	t.Logf("build a cleaner to dump diagnostics...")
-	cleaner := clusters.NewCleaner(env.Cluster())
-	defer func() {
-		if t.Failed() {
-			output, err := cleaner.DumpDiagnostics(ctx, t.Name())
-			t.Logf("%s failed, dumped diagnostics to %s", t.Name(), output)
-			assert.NoError(t, err)
-		}
-		assert.NoError(t, cleaner.Cleanup(ctx))
-	}()
+	ctx, env := setupE2ETest(t)
 
 	t.Log("deploying kong components")
-	manifest, err := getTestManifest(t, dblessPath)
-	require.NoError(t, err)
-	kongDeployment := deployKong(ctx, t, env, manifest)
+	manifest := getTestManifest(t, dblessPath)
+	deployKong(ctx, t, env, manifest)
+	kongDeployment := getManifestDeployments(dblessPath).ControllerNN
 
 	t.Log("deploying a minimal HTTP container deployment to test Ingress routes")
 	container := generators.NewContainer("httpbin", test.HTTPBinImage, 80)
 	deployment := generators.NewDeploymentForContainer(container)
-	deployment, err = env.Cluster().Client().AppsV1().Deployments(kongDeployment.Namespace).Create(ctx, deployment, metav1.CreateOptions{})
+	deployment, err := env.Cluster().Client().AppsV1().Deployments(kongDeployment.Namespace).Create(ctx, deployment, metav1.CreateOptions{})
 	require.NoError(t, err)
 
 	t.Logf("exposing deployment %s via service", deployment.Name)
@@ -609,12 +519,10 @@ func TestDefaultIngressClass(t *testing.T) {
 	}, service)
 	require.NoError(t, clusters.DeployIngress(ctx, env.Cluster(), kongDeployment.Namespace, ingress))
 
-	svc, err := env.Cluster().Client().CoreV1().Services(namespace).Get(ctx, "kong-proxy", metav1.GetOptions{})
-	require.NoError(t, err)
-	proxyURL := "http://" + getKongProxyIP(ctx, t, env, svc)
+	proxyURL := "http://" + getKongProxyIP(ctx, t, env)
 	t.Log("ensuring Ingress does not become live")
 	require.Never(t, func() bool {
-		resp, err := httpc.Get(fmt.Sprintf("%s/abbosiysaltanati", proxyURL))
+		resp, err := helpers.DefaultHTTPClient().Get(fmt.Sprintf("%s/abbosiysaltanati", proxyURL))
 		if err != nil {
 			t.Logf("WARNING: error while waiting for %s: %v", proxyURL, err)
 			return false
@@ -640,8 +548,14 @@ func TestDefaultIngressClass(t *testing.T) {
 		if err != nil {
 			return false
 		}
-		return len(lbstatus.Ingress) > 0
-	}, time.Minute, time.Second)
+		if len(lbstatus.Ingress) == 0 || lbstatus.Ingress[0].IP == "" {
+			return false
+		}
+		return true
+	}, ingressWait, time.Second)
+
+	t.Log("getting kong proxy IP after LB provisioning")
+	proxyURL = "http://" + getKongProxyIP(ctx, t, env)
 
 	t.Log("creating classless global KongClusterPlugin")
 	kongclusterplugin := &kongv1.KongClusterPlugin{
@@ -663,7 +577,7 @@ func TestDefaultIngressClass(t *testing.T) {
 
 	t.Log("waiting for routes from Ingress to be operational")
 	require.Eventually(t, func() bool {
-		resp, err := httpc.Get(fmt.Sprintf("%s/abbosiysaltanati", proxyURL))
+		resp, err := helpers.DefaultHTTPClient().Get(fmt.Sprintf("%s/abbosiysaltanati", proxyURL))
 		if err != nil {
 			t.Logf("WARNING: error while waiting for %s: %v", proxyURL, err)
 			return false
@@ -688,30 +602,10 @@ func TestDefaultIngressClass(t *testing.T) {
 // controllers are disabled, this fact is properly logged, and the controller doesn't crash.
 func TestMissingCRDsDontCrashTheController(t *testing.T) {
 	t.Parallel()
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	t.Log("building test cluster and environment")
-	builder, err := getEnvironmentBuilder(ctx)
-	require.NoError(t, err)
-	env, err := builder.Build(ctx)
-	require.NoError(t, err)
-
-	t.Logf("building cleaner to dump diagnostics...")
-	cleaner := clusters.NewCleaner(env.Cluster())
-	defer func() {
-		if t.Failed() {
-			output, err := cleaner.DumpDiagnostics(ctx, t.Name())
-			if assert.NoError(t, err, "failed to dump diagnostics") {
-				t.Logf("%s failed, dumped diagnostics to %s", t.Name(), output)
-			}
-		}
-		assert.NoError(t, cleaner.Cleanup(ctx))
-	}()
+	ctx, env := setupE2ETest(t)
 
 	t.Log("deploying kong components")
-	manifest, err := getTestManifest(t, dblessPath)
-	require.NoError(t, err)
+	manifest := getTestManifest(t, dblessPath)
 
 	manifest = stripCRDs(t, manifest)
 
@@ -719,7 +613,8 @@ func TestMissingCRDsDontCrashTheController(t *testing.T) {
 	cacheSyncTimeout := time.Second
 	manifest = addControllerEnv(t, manifest, "CONTROLLER_CACHE_SYNC_TIMEOUT", cacheSyncTimeout.String())
 
-	deployment := deployKong(ctx, t, env, manifest)
+	deployKong(ctx, t, env, manifest)
+	deployment := getManifestDeployments(dblessPath).ControllerNN
 
 	t.Log("ensuring pod's ready and controller didn't crash")
 	require.Never(t, func() bool {
@@ -731,7 +626,7 @@ func TestMissingCRDsDontCrashTheController(t *testing.T) {
 		}
 
 		pod := pods.Items[0]
-		if !containerDidntCrash(pod, "ingress-controller") {
+		if !containerDidntCrash(pod, controllerContainerName) {
 			t.Log("controller crashed")
 			return true
 		}

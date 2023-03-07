@@ -4,6 +4,7 @@
 package integration
 
 import (
+	"context"
 	"net/http"
 	"testing"
 	"time"
@@ -12,17 +13,20 @@ import (
 	"github.com/kong/go-kong/kong"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
+	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/util/builder"
 	"github.com/kong/kubernetes-ingress-controller/v2/test"
+	"github.com/kong/kubernetes-ingress-controller/v2/test/consts"
+	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/helpers"
 )
 
 const (
@@ -36,13 +40,14 @@ const (
 )
 
 func TestUnmanagedGatewayBasics(t *testing.T) {
+	ctx := context.Background()
+
 	var gw *gatewayv1beta1.Gateway
 
-	ns, cleaner := setup(t)
-	defer func() { assert.NoError(t, cleaner.Cleanup(ctx)) }()
+	ns, cleaner := helpers.Setup(ctx, t, env)
 
 	t.Log("gathering test data and generating a gateway kubernetes client")
-	pubsvc, err := env.Cluster().Client().CoreV1().Services(controllerNamespace).Get(ctx, "ingress-controller-kong-proxy", metav1.GetOptions{})
+	pubsvc, err := env.Cluster().Client().CoreV1().Services(consts.ControllerNamespace).Get(ctx, "ingress-controller-kong-proxy", metav1.GetOptions{})
 	require.NoError(t, err)
 	gatewayClient, err := gatewayclient.NewForConfig(env.Cluster().Config())
 	require.NoError(t, err)
@@ -125,10 +130,11 @@ func TestUnmanagedGatewayBasics(t *testing.T) {
 }
 
 func TestGatewayListenerConflicts(t *testing.T) {
+	ctx := context.Background()
+
 	var gw *gatewayv1beta1.Gateway
 
-	ns, cleaner := setup(t)
-	defer func() { assert.NoError(t, cleaner.Cleanup(ctx)) }()
+	ns, cleaner := helpers.Setup(ctx, t, env)
 
 	t.Log("generating a gateway kubernetes client and gathering test data")
 	gatewayClient, err := gatewayclient.NewForConfig(env.Cluster().Config())
@@ -350,8 +356,9 @@ func TestGatewayListenerConflicts(t *testing.T) {
 }
 
 func TestUnmanagedGatewayControllerSupport(t *testing.T) {
-	ns, cleaner := setup(t)
-	defer func() { assert.NoError(t, cleaner.Cleanup(ctx)) }()
+	ctx := context.Background()
+
+	ns, cleaner := helpers.Setup(ctx, t, env)
 
 	t.Log("generating a gateway kubernetes client")
 	gatewayClient, err := gatewayclient.NewForConfig(env.Cluster().Config())
@@ -375,13 +382,16 @@ func TestUnmanagedGatewayControllerSupport(t *testing.T) {
 		unsupportedGateway, err = gatewayClient.GatewayV1beta1().Gateways(ns.Name).Get(ctx, unsupportedGateway.Name, metav1.GetOptions{})
 		require.NoError(t, err)
 		require.Len(t, unsupportedGateway.Status.Conditions, 1)
+		//lint:ignore SA1019 the default upstream reason is still NotReconciled https://github.com/kubernetes-sigs/gateway-api/pull/1701
+		//nolint:staticcheck
 		require.Equal(t, string(gatewayv1beta1.GatewayReasonNotReconciled), unsupportedGateway.Status.Conditions[0].Reason)
 	}
 }
 
 func TestUnmanagedGatewayClass(t *testing.T) {
-	ns, cleaner := setup(t)
-	defer func() { assert.NoError(t, cleaner.Cleanup(ctx)) }()
+	ctx := context.Background()
+
+	ns, cleaner := helpers.Setup(ctx, t, env)
 
 	t.Log("generating a gateway kubernetes client")
 	gatewayClient, err := gatewayclient.NewForConfig(env.Cluster().Config())
@@ -402,6 +412,8 @@ func TestUnmanagedGatewayClass(t *testing.T) {
 		gateway, err = gatewayClient.GatewayV1beta1().Gateways(ns.Name).Get(ctx, gateway.Name, metav1.GetOptions{})
 		require.NoError(t, err)
 		require.Len(t, gateway.Status.Conditions, 1)
+		//lint:ignore SA1019 the default upstream reason is still NotReconciled https://github.com/kubernetes-sigs/gateway-api/pull/1701
+		//nolint:staticcheck
 		require.Equal(t, string(gatewayv1beta1.GatewayReasonNotReconciled), gateway.Status.Conditions[0].Reason)
 	}
 
@@ -424,8 +436,9 @@ func TestUnmanagedGatewayClass(t *testing.T) {
 }
 
 func TestManagedGatewayClass(t *testing.T) {
-	ns, cleaner := setup(t)
-	defer func() { assert.NoError(t, cleaner.Cleanup(ctx)) }()
+	ctx := context.Background()
+
+	ns, cleaner := helpers.Setup(ctx, t, env)
 
 	t.Log("generating a gateway kubernetes client")
 	gatewayClient, err := gatewayclient.NewForConfig(env.Cluster().Config())
@@ -446,6 +459,8 @@ func TestManagedGatewayClass(t *testing.T) {
 		gateway, err = gatewayClient.GatewayV1beta1().Gateways(ns.Name).Get(ctx, gateway.Name, metav1.GetOptions{})
 		require.NoError(t, err)
 		require.Len(t, gateway.Status.Conditions, 1)
+		//lint:ignore SA1019 the default upstream reason is still NotReconciled https://github.com/kubernetes-sigs/gateway-api/pull/1701
+		//nolint:staticcheck
 		require.Equal(t, string(gatewayv1beta1.GatewayReasonNotReconciled), gateway.Status.Conditions[0].Reason)
 	}
 
@@ -474,8 +489,9 @@ func TestManagedGatewayClass(t *testing.T) {
 }
 
 func TestGatewayFilters(t *testing.T) {
-	ns, cleaner := setup(t)
-	defer func() { assert.NoError(t, cleaner.Cleanup(ctx)) }()
+	ctx := context.Background()
+
+	ns, cleaner := helpers.Setup(ctx, t, env)
 
 	other, err := clusters.GenerateNamespace(ctx, env.Cluster(), t.Name()+"other")
 	require.NoError(t, err)
@@ -484,155 +500,97 @@ func TestGatewayFilters(t *testing.T) {
 	}(t)
 
 	t.Log("deploying a supported gatewayclass to the test cluster")
-	gatewayClient, err := gatewayclient.NewForConfig(env.Cluster().Config())
+	gwClientSet, err := gatewayclient.NewForConfig(env.Cluster().Config())
 	require.NoError(t, err)
 
 	t.Log("deploying a gateway that allows routes in all namespaces")
-	gatewayName := uuid.NewString()
-	fromAll := gatewayv1beta1.NamespacesFromAll
-	gateway, err := DeployGateway(ctx, gatewayClient, ns.Name, unmanagedGatewayClassName, func(gw *gatewayv1beta1.Gateway) {
-		gw.Name = gatewayName
+	gateway, err := DeployGateway(ctx, gwClientSet, ns.Name, unmanagedGatewayClassName, func(gw *gatewayv1beta1.Gateway) {
+		gw.Name = uuid.NewString()
 		gw.Spec.Listeners = []gatewayv1beta1.Listener{
-			{
-				Name:     "http",
-				Protocol: gatewayv1beta1.HTTPProtocolType,
-				Port:     gatewayv1beta1.PortNumber(80),
-				AllowedRoutes: &gatewayv1beta1.AllowedRoutes{
-					Namespaces: &gatewayv1beta1.RouteNamespaces{
-						From: &fromAll,
-					},
-				},
-			},
-			{
-				Name:     "https",
-				Protocol: gatewayv1beta1.HTTPSProtocolType,
-				Port:     gatewayv1beta1.PortNumber(443),
-				AllowedRoutes: &gatewayv1beta1.AllowedRoutes{
-					Namespaces: &gatewayv1beta1.RouteNamespaces{
-						From: &fromAll,
-					},
-				},
-			},
+			builder.NewListener("http").HTTP().WithPort(80).
+				WithAllowedRoutes(builder.NewAllowedRoutesFromAllNamespaces()).Build(),
+			builder.NewListener("https").HTTPS().WithPort(443).
+				WithAllowedRoutes(builder.NewAllowedRoutesFromAllNamespaces()).Build(),
 		}
 	})
 	require.NoError(t, err)
 	cleaner.Add(gateway)
 
+	client := env.Cluster().Client()
+
 	t.Log("deploying a minimal HTTP container deployment to test Ingress routes")
 	container := generators.NewContainer("httpbin", test.HTTPBinImage, 80)
 	deploymentTemplate := generators.NewDeploymentForContainer(container)
-	deployment, err := env.Cluster().Client().AppsV1().Deployments(ns.Name).Create(ctx, deploymentTemplate, metav1.CreateOptions{})
+	deployment, err := client.AppsV1().Deployments(ns.Name).Create(ctx, deploymentTemplate, metav1.CreateOptions{})
 	require.NoError(t, err)
-	otherDeployment, err := env.Cluster().Client().AppsV1().Deployments(other.Name).Create(ctx, deploymentTemplate, metav1.CreateOptions{})
+	cleaner.Add(deployment)
+	otherDeployment, err := client.AppsV1().Deployments(other.Name).Create(ctx, deploymentTemplate, metav1.CreateOptions{})
 	require.NoError(t, err)
+	cleaner.Add(otherDeployment)
 
-	defer func() {
-		t.Logf("cleaning up deployments %s/%s and %s/%s", ns.Name, deployment.Name, other.Name, otherDeployment.Name)
-		if err := env.Cluster().Client().AppsV1().Deployments(ns.Name).Delete(ctx, deployment.Name, metav1.DeleteOptions{}); err != nil {
-			if !errors.IsNotFound(err) {
-				assert.NoError(t, err)
-			}
-		}
-		if err := env.Cluster().Client().AppsV1().Deployments(other.Name).Delete(ctx, otherDeployment.Name, metav1.DeleteOptions{}); err != nil {
-			if !errors.IsNotFound(err) {
-				assert.NoError(t, err)
-			}
-		}
-	}()
-
-	t.Logf("exposing deployment %s via service", deployment.Name)
+	t.Logf("exposing deployment %s/%s via service", ns.Name, deployment.Name)
 	service := generators.NewServiceForDeployment(deployment, corev1.ServiceTypeLoadBalancer)
-	_, err = env.Cluster().Client().CoreV1().Services(ns.Name).Create(ctx, service, metav1.CreateOptions{})
+	service, err = client.CoreV1().Services(ns.Name).Create(ctx, service, metav1.CreateOptions{})
 	require.NoError(t, err)
-	_, err = env.Cluster().Client().CoreV1().Services(other.Name).Create(ctx, service, metav1.CreateOptions{})
-	require.NoError(t, err)
+	cleaner.Add(service)
 
-	defer func() {
-		t.Logf("cleaning up the services %s/%s and %s/%s", ns.Name, service.Name, other.Name, service.Name)
-		if err := env.Cluster().Client().CoreV1().Services(ns.Name).Delete(ctx, service.Name, metav1.DeleteOptions{}); err != nil {
-			if !errors.IsNotFound(err) {
-				assert.NoError(t, err)
-			}
-		}
-		if err := env.Cluster().Client().CoreV1().Services(other.Name).Delete(ctx, service.Name, metav1.DeleteOptions{}); err != nil {
-			if !errors.IsNotFound(err) {
-				assert.NoError(t, err)
-			}
-		}
-	}()
+	t.Logf("exposing deployment %s/%s via service", other.Name, deployment.Name)
+	otherService := generators.NewServiceForDeployment(deployment, corev1.ServiceTypeLoadBalancer)
+	otherService, err = client.CoreV1().Services(other.Name).Create(ctx, otherService, metav1.CreateOptions{})
+	require.NoError(t, err)
+	cleaner.Add(otherService)
 
 	t.Logf("creating an httproute to access deployment %s via kong", deployment.Name)
-	httpPort := gatewayv1beta1.PortNumber(80)
-	pathMatchPrefix := gatewayv1beta1.PathMatchPathPrefix
-	refNamespace := gatewayv1beta1.Namespace(gateway.Namespace)
-	httprouteTemplate := &gatewayv1beta1.HTTPRoute{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: uuid.NewString(),
-			Annotations: map[string]string{
-				annotations.AnnotationPrefix + annotations.StripPathKey: "true",
-			},
-		},
-		Spec: gatewayv1beta1.HTTPRouteSpec{
-			CommonRouteSpec: gatewayv1beta1.CommonRouteSpec{
-				ParentRefs: []gatewayv1beta1.ParentReference{{
-					Name:      gatewayv1beta1.ObjectName(gateway.Name),
-					Namespace: &refNamespace,
-				}},
-			},
-			Rules: []gatewayv1beta1.HTTPRouteRule{{
-				Matches: []gatewayv1beta1.HTTPRouteMatch{
-					{
-						Path: &gatewayv1beta1.HTTPPathMatch{
-							Type:  &pathMatchPrefix,
-							Value: kong.String("/test_gateway_filters"),
-						},
-					},
+	HTTPRoute := func() *gatewayv1beta1.HTTPRoute {
+		return &gatewayv1beta1.HTTPRoute{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: uuid.NewString(),
+				Annotations: map[string]string{
+					annotations.AnnotationPrefix + annotations.StripPathKey: "true",
 				},
-				BackendRefs: []gatewayv1beta1.HTTPBackendRef{{
-					BackendRef: gatewayv1beta1.BackendRef{
-						BackendObjectReference: gatewayv1beta1.BackendObjectReference{
-							Name: gatewayv1beta1.ObjectName(service.Name),
-							Port: &httpPort,
-						},
+			},
+			Spec: gatewayv1beta1.HTTPRouteSpec{
+				CommonRouteSpec: gatewayv1beta1.CommonRouteSpec{
+					ParentRefs: []gatewayv1beta1.ParentReference{{
+						Name:      gatewayv1beta1.ObjectName(gateway.Name),
+						Namespace: lo.ToPtr(gatewayv1beta1.Namespace(gateway.Namespace)),
+					}},
+				},
+				Rules: []gatewayv1beta1.HTTPRouteRule{{
+					Matches: []gatewayv1beta1.HTTPRouteMatch{
+						builder.NewHTTPRouteMatch().WithPathPrefix("/test_gateway_filters").Build(),
+					},
+					BackendRefs: []gatewayv1beta1.HTTPBackendRef{
+						builder.NewHTTPBackendRef(service.Name).WithPort(80).Build(),
 					},
 				}},
-			}},
-		},
+			},
+		}
 	}
-	httpRoute, err := gatewayClient.GatewayV1beta1().HTTPRoutes(ns.Name).Create(ctx, httprouteTemplate, metav1.CreateOptions{})
-	require.NoError(t, err)
 
-	otherRoute, err := gatewayClient.GatewayV1beta1().HTTPRoutes(other.Name).Create(ctx, httprouteTemplate, metav1.CreateOptions{})
+	gatewayClient := gwClientSet.GatewayV1beta1()
+
+	httpRoute, err := gatewayClient.HTTPRoutes(ns.Name).Create(ctx, HTTPRoute(), metav1.CreateOptions{})
 	require.NoError(t, err)
+	cleaner.Add(httpRoute)
+
+	otherRoute := HTTPRoute()
 	otherRoute.Spec.Rules[0].Matches[0].Path.Value = kong.String("/other_test_gateway_filters")
-	_, err = gatewayClient.GatewayV1beta1().HTTPRoutes(other.Name).Update(ctx, otherRoute, metav1.UpdateOptions{})
+	otherRoute, err = gatewayClient.HTTPRoutes(other.Name).Create(ctx, otherRoute, metav1.CreateOptions{})
 	require.NoError(t, err)
-
-	defer func() {
-		t.Logf("cleaning up the httproute %s", httpRoute.Name)
-		if err := gatewayClient.GatewayV1beta1().HTTPRoutes(ns.Name).Delete(ctx, httpRoute.Name, metav1.DeleteOptions{}); err != nil {
-			if !errors.IsNotFound(err) {
-				assert.NoError(t, err)
-			}
-		}
-		if err := gatewayClient.GatewayV1beta1().HTTPRoutes(other.Name).Delete(ctx, httpRoute.Name, metav1.DeleteOptions{}); err != nil {
-			if !errors.IsNotFound(err) {
-				assert.NoError(t, err)
-			}
-		}
-	}()
+	cleaner.Add(otherRoute)
 
 	t.Log("verifying that the Gateway gets linked to the route via status")
-	callback := GetGatewayIsLinkedCallback(t, gatewayClient, gatewayv1beta1.HTTPProtocolType, ns.Name, httpRoute.Name)
+	callback := GetGatewayIsLinkedCallback(t, gwClientSet, gatewayv1beta1.HTTPProtocolType, ns.Name, httpRoute.Name)
 	require.Eventually(t, callback, ingressWait, waitTick)
 
 	t.Log("waiting for routes from HTTPRoute to become operational")
-	eventuallyGETPath(t, "test_gateway_filters", http.StatusOK, "<title>httpbin.org</title>", emptyHeaderSet)
+	helpers.EventuallyGETPath(t, proxyURL, "test_gateway_filters", http.StatusOK, "<title>httpbin.org</title>", emptyHeaderSet, ingressWait, waitTick)
 	t.Log("waiting for routes from HTTPRoute in other namespace to become operational")
-	eventuallyGETPath(t, "other_test_gateway_filters", http.StatusOK, "<title>httpbin.org</title>", emptyHeaderSet)
+	helpers.EventuallyGETPath(t, proxyURL, "other_test_gateway_filters", http.StatusOK, "<title>httpbin.org</title>", emptyHeaderSet, ingressWait, waitTick)
 
 	t.Log("changing to the same namespace filter")
-	gateway, err = gatewayClient.GatewayV1beta1().Gateways(ns.Name).Get(ctx, gateway.Name, metav1.GetOptions{})
+	gateway, err = gatewayClient.Gateways(ns.Name).Get(ctx, gateway.Name, metav1.GetOptions{})
 	require.NoError(t, err)
 	fromSame := gatewayv1beta1.NamespacesFromSame
 	gateway.Spec.Listeners = []gatewayv1beta1.Listener{
@@ -657,16 +615,16 @@ func TestGatewayFilters(t *testing.T) {
 			},
 		},
 	}
-	_, err = gatewayClient.GatewayV1beta1().Gateways(ns.Name).Update(ctx, gateway, metav1.UpdateOptions{})
+	_, err = gatewayClient.Gateways(ns.Name).Update(ctx, gateway, metav1.UpdateOptions{})
 	require.NoError(t, err)
 
 	t.Log("confirming other namespace route becomes inaccessible")
-	eventuallyGETPath(t, "other_test_gateway_filters", http.StatusNotFound, "no Route matched", emptyHeaderSet)
+	helpers.EventuallyGETPath(t, proxyURL, "other_test_gateway_filters", http.StatusNotFound, "no Route matched", emptyHeaderSet, ingressWait, waitTick)
 	t.Log("confirming same namespace route still operational")
-	eventuallyGETPath(t, "test_gateway_filters", http.StatusOK, "<title>httpbin.org</title>", emptyHeaderSet)
+	helpers.EventuallyGETPath(t, proxyURL, "test_gateway_filters", http.StatusOK, "<title>httpbin.org</title>", emptyHeaderSet, ingressWait, waitTick)
 
 	t.Log("changing to a selector filter")
-	gateway, err = gatewayClient.GatewayV1beta1().Gateways(ns.Name).Get(ctx, gateway.Name, metav1.GetOptions{})
+	gateway, err = gatewayClient.Gateways(ns.Name).Get(ctx, gateway.Name, metav1.GetOptions{})
 	require.NoError(t, err)
 	fromSelector := gatewayv1beta1.NamespacesFromSelector
 	gateway.Spec.Listeners = []gatewayv1beta1.Listener{
@@ -702,11 +660,11 @@ func TestGatewayFilters(t *testing.T) {
 		},
 	}
 
-	_, err = gatewayClient.GatewayV1beta1().Gateways(ns.Name).Update(ctx, gateway, metav1.UpdateOptions{})
+	_, err = gatewayClient.Gateways(ns.Name).Update(ctx, gateway, metav1.UpdateOptions{})
 	require.NoError(t, err)
 
 	t.Log("confirming wrong selector namespace route becomes inaccessible")
-	eventuallyGETPath(t, "test_gateway_filters", http.StatusNotFound, "no Route matched", emptyHeaderSet)
+	helpers.EventuallyGETPath(t, proxyURL, "test_gateway_filters", http.StatusNotFound, "no Route matched", emptyHeaderSet, ingressWait, waitTick)
 	t.Log("confirming right selector namespace route becomes operational")
-	eventuallyGETPath(t, "other_test_gateway_filters", http.StatusOK, "<title>httpbin.org</title>", emptyHeaderSet)
+	helpers.EventuallyGETPath(t, proxyURL, "other_test_gateway_filters", http.StatusOK, "<title>httpbin.org</title>", emptyHeaderSet, ingressWait, waitTick)
 }

@@ -21,7 +21,7 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
-	"k8s.io/apimachinery/pkg/api/errors"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -29,7 +29,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
-	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane"
 )
@@ -58,7 +58,7 @@ func (r *ReferenceGrantReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	}
 
 	return c.Watch(
-		&source.Kind{Type: &gatewayv1alpha2.ReferenceGrant{}},
+		&source.Kind{Type: &gatewayv1beta1.ReferenceGrant{}},
 		&handler.EnqueueRequestForObject{},
 	)
 }
@@ -69,12 +69,12 @@ func (r *ReferenceGrantReconciler) SetupWithManager(mgr ctrl.Manager) error {
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
 func (r *ReferenceGrantReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	log := r.Log.WithValues("NetV1Alpha2ReferenceGrant", req.NamespacedName)
-	grant := new(gatewayv1alpha2.ReferenceGrant)
+	log := r.Log.WithValues("GatewayV1Alpha2ReferenceGrant", req.NamespacedName)
+	grant := new(gatewayv1beta1.ReferenceGrant)
 	if err := r.Get(ctx, req.NamespacedName, grant); err != nil {
 		// if the queued object is no longer present in the proxy cache we need
 		// to ensure that if it was ever added to the cache, it gets removed.
-		if errors.IsNotFound(err) {
+		if apierrors.IsNotFound(err) {
 			debug(log, grant, "object does not exist, ensuring it is not present in the proxy cache")
 			grant.Namespace = req.Namespace
 			grant.Name = req.Name

@@ -14,7 +14,6 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/parser/translators"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/store"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/types"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/versions"
 )
 
@@ -34,9 +33,8 @@ func convertGatewayMatchHeadersToKongRouteMatchHeaders(headers []gatewayv1beta1.
 				string(header.Name))
 		}
 		if header.Type != nil && *header.Type == gatewayv1beta1.HeaderMatchRegularExpression {
-			if !versions.GetKongVersion().MajorMinorOnly().GTE(versions.RegexHeaderVersionCutoff) {
-				return nil, fmt.Errorf("Kong version %s does not support HeaderMatchRegularExpression",
-					versions.GetKongVersion().Full().String())
+			if v := versions.GetKongVersion(); !v.MajorMinorOnly().GTE(versions.RegexHeaderVersionCutoff) {
+				return nil, fmt.Errorf("Kong version %s does not support HeaderMatchRegularExpression", v.Full())
 			}
 			convertedHeaders[string(header.Name)] = []string{kongHeaderRegexPrefix + header.Value}
 		} else if header.Type == nil || *header.Type == gatewayv1beta1.HeaderMatchExact {
@@ -53,10 +51,10 @@ func convertGatewayMatchHeadersToKongRouteMatchHeaders(headers []gatewayv1beta1.
 // from a namespace to a slice of ReferenceGrant Tos. When a To is included in the slice, the key namespace has a
 // ReferenceGrant with those Tos and the input From.
 func getPermittedForReferenceGrantFrom(
-	from gatewayv1alpha2.ReferenceGrantFrom,
-	grants []*gatewayv1alpha2.ReferenceGrant,
-) map[gatewayv1beta1.Namespace][]gatewayv1alpha2.ReferenceGrantTo {
-	allowed := make(map[gatewayv1beta1.Namespace][]gatewayv1alpha2.ReferenceGrantTo)
+	from gatewayv1beta1.ReferenceGrantFrom,
+	grants []*gatewayv1beta1.ReferenceGrant,
+) map[gatewayv1beta1.Namespace][]gatewayv1beta1.ReferenceGrantTo {
+	allowed := make(map[gatewayv1beta1.Namespace][]gatewayv1beta1.ReferenceGrantTo)
 	// loop over all From values in all grants. if we find a match, add all Tos to the list of Tos allowed for the
 	// grant namespace. this technically could add duplicate copies of the Tos if there are duplicate Froms (it makes
 	// no sense to add them, but it's allowed), but duplicate Tos are harmless (we only care about having at least one
@@ -74,16 +72,14 @@ func getPermittedForReferenceGrantFrom(
 
 // generateKongServiceFromBackendRefWithName translates backendRefs into a Kong service for use with the
 // rules generated from a Gateway APIs route. The service name is provided by the caller.
-func generateKongServiceFromBackendRefWithName[
-	T types.BackendRefT,
-](
+func generateKongServiceFromBackendRefWithName(
 	logger logrus.FieldLogger,
 	storer store.Storer,
 	rules *ingressRules,
 	serviceName string,
 	route client.Object,
 	protocol string,
-	backendRefs ...T,
+	backendRefs ...gatewayv1beta1.BackendRef,
 ) (kongstate.Service, error) {
 	objName := fmt.Sprintf("%s %s/%s",
 		route.GetObjectKind().GroupVersionKind().String(), route.GetNamespace(), route.GetName())
@@ -95,7 +91,7 @@ func generateKongServiceFromBackendRefWithName[
 	if err != nil {
 		return kongstate.Service{}, fmt.Errorf("could not retrieve ReferenceGrants for %s: %w", objName, err)
 	}
-	allowed := getPermittedForReferenceGrantFrom(gatewayv1alpha2.ReferenceGrantFrom{
+	allowed := getPermittedForReferenceGrantFrom(gatewayv1beta1.ReferenceGrantFrom{
 		Group:     gatewayv1alpha2.Group(route.GetObjectKind().GroupVersionKind().Group),
 		Kind:      gatewayv1alpha2.Kind(route.GetObjectKind().GroupVersionKind().Kind),
 		Namespace: gatewayv1alpha2.Namespace(route.GetNamespace()),
@@ -148,16 +144,14 @@ func generateKongServiceFromBackendRefWithName[
 
 // generateKongServiceFromBackendRefWithRuleNumber translates backendRefs for rule ruleNumber into a Kong service for use with the
 // rules generated from a Gateway APIs route. The service name is computed from route and ruleNumber by the function.
-func generateKongServiceFromBackendRefWithRuleNumber[
-	T types.BackendRefT,
-](
+func generateKongServiceFromBackendRefWithRuleNumber(
 	logger logrus.FieldLogger,
 	storer store.Storer,
 	rules *ingressRules,
 	route client.Object,
 	ruleNumber int,
 	protocol string,
-	backendRefs ...T,
+	backendRefs ...gatewayv1beta1.BackendRef,
 ) (kongstate.Service, error) {
 	// the service name needs to uniquely identify this service given it's list of
 	// one or more backends.

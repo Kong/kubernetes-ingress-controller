@@ -33,7 +33,23 @@ type ServerConfig struct {
 	Key     string
 }
 
-func (sc *ServerConfig) toTLSConfig(ctx context.Context, log logrus.FieldLogger) (*tls.Config, error) {
+func MakeTLSServer(ctx context.Context, config *ServerConfig, handler http.Handler,
+	log logrus.FieldLogger,
+) (*http.Server, error) {
+	const defaultHTTPReadHeaderTimeout = 10 * time.Second
+	tlsConfig, err := serverConfigToTLSConfig(ctx, config, log)
+	if err != nil {
+		return nil, err
+	}
+	return &http.Server{
+		Addr:              config.ListenAddr,
+		TLSConfig:         tlsConfig,
+		Handler:           handler,
+		ReadHeaderTimeout: defaultHTTPReadHeaderTimeout,
+	}, nil
+}
+
+func serverConfigToTLSConfig(ctx context.Context, sc *ServerConfig, log logrus.FieldLogger) (*tls.Config, error) {
 	var watcher *certwatcher.CertWatcher
 	var cert, key []byte
 	switch {
@@ -79,24 +95,5 @@ func (sc *ServerConfig) toTLSConfig(ctx context.Context, log logrus.FieldLogger)
 		MinVersion:     tls.VersionTLS12,
 		MaxVersion:     tls.VersionTLS13,
 		GetCertificate: watcher.GetCertificate,
-	}, nil
-}
-
-const (
-	defaultHTTPReadHeaderTimeout = 10 * time.Second
-)
-
-func MakeTLSServer(ctx context.Context, config *ServerConfig, handler http.Handler,
-	log logrus.FieldLogger,
-) (*http.Server, error) {
-	tlsConfig, err := config.toTLSConfig(ctx, log)
-	if err != nil {
-		return nil, err
-	}
-	return &http.Server{
-		Addr:              config.ListenAddr,
-		TLSConfig:         tlsConfig,
-		Handler:           handler,
-		ReadHeaderTimeout: defaultHTTPReadHeaderTimeout,
 	}, nil
 }

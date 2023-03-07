@@ -73,7 +73,7 @@ Gn+T2uCyOP4a1DTUoPyoNJXo
 func TestMain(m *testing.M) {
 	reportsHost = "localhost"
 	pingInterval = 1
-	tlsConf = tls.Config{InsecureSkipVerify: true} //nolint:gosec
+	tlsConf = tls.Config{InsecureSkipVerify: true}
 	os.Exit(m.Run())
 }
 

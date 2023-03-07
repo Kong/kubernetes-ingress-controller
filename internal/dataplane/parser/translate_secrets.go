@@ -14,6 +14,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/store"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 )
 
 // getCACerts translates CA certificates Secrets to kong.CACertificates. It ensures every certificate's structure and
@@ -71,6 +72,7 @@ func toKongCACertificate(certSecret *corev1.Secret, secretID string) (kong.CACer
 	return kong.CACertificate{
 		ID:   kong.String(secretID),
 		Cert: kong.String(string(caCertbytes)),
+		Tags: util.GenerateTagsForObject(certSecret),
 	}, nil
 }
 

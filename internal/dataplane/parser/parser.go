@@ -16,7 +16,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	knative "knative.dev/networking/pkg/apis/networking/v1alpha1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
@@ -92,6 +91,7 @@ func (p *Parser) Build() (*kongstate.KongState, []failures.ResourceFailure) {
 		p.ingressRulesFromUDPRoutes(),
 		p.ingressRulesFromTCPRoutes(),
 		p.ingressRulesFromTLSRoutes(),
+		p.ingressRulesFromGRPCRoutes(),
 	)
 
 	// populate any Kubernetes Service objects relevant objects and get the
@@ -348,6 +348,7 @@ func (p *Parser) getUpstreams(serviceMap map[string]kongstate.Service) []kongsta
 			upstream := kongstate.Upstream{
 				Upstream: kong.Upstream{
 					Name: kong.String(name),
+					Tags: service.Tags, // populated by populateServices already
 				},
 				Service: service,
 				Targets: targets,
@@ -401,29 +402,30 @@ func (p *Parser) getGatewayCerts() []certWrapper {
 		for _, status := range gateway.Status.Listeners {
 			statuses[status.Name] = status
 		}
+
 		for _, listener := range gateway.Spec.Listeners {
-			ready := false
-			// TODO: invert the logic to prevent logs about missing listener status
-			// where it's actually in place?
-			// Relevant issue: https://github.com/Kong/kubernetes-ingress-controller/issues/3133
-			if status, ok := statuses[listener.Name]; ok {
+			status, ok := statuses[listener.Name]
+			if !ok {
 				log.WithFields(logrus.Fields{
-					"gateway":  gateway.Name,
-					"listener": listener.Name,
+					"gateway":           gateway.Name,
+					"listener":          listener.Name,
+					"listener_protocol": listener.Protocol,
+					"listener_port":     listener.Port,
 				}).Debug("listener missing status information")
-				if ok := util.CheckCondition(
-					status.Conditions,
-					util.ConditionType(gatewayv1alpha2.ListenerConditionReady),
-					util.ConditionReason(gatewayv1alpha2.ListenerReasonReady),
-					metav1.ConditionTrue,
-					gateway.Generation,
-				); ok {
-					ready = true
-				}
-			}
-			if !ready {
 				continue
 			}
+
+			// Check if listener is marked as ready
+			if !util.CheckCondition(
+				status.Conditions,
+				util.ConditionType(gatewayv1beta1.ListenerConditionReady),
+				util.ConditionReason(gatewayv1beta1.ListenerReasonReady),
+				metav1.ConditionTrue,
+				gateway.Generation,
+			) {
+				continue
+			}
+
 			if listener.TLS != nil {
 				if len(listener.TLS.CertificateRefs) > 0 {
 					if len(listener.TLS.CertificateRefs) > 1 {
@@ -470,6 +472,7 @@ func (p *Parser) getGatewayCerts() []certWrapper {
 							ID:   kong.String(string(secret.UID)),
 							Cert: kong.String(cert),
 							Key:  kong.String(key),
+							Tags: util.GenerateTagsForObject(secret),
 						},
 						CreationTimestamp: secret.CreationTimestamp,
 						snis:              []string{hostname},
@@ -503,6 +506,7 @@ func (p *Parser) getCerts(secretsToSNIs SecretNameToSNIs) []certWrapper {
 				ID:   kong.String(string(secret.UID)),
 				Cert: kong.String(cert),
 				Key:  kong.String(key),
+				Tags: util.GenerateTagsForObject(secret),
 			},
 			CreationTimestamp: secret.CreationTimestamp,
 			snis:              SNIs.Hosts(),
@@ -584,7 +588,7 @@ func getServiceEndpoints(
 	// for TCP as this is the default protocol for service ports.
 	protocols := listProtocols(svc)
 
-	// Check if the service is an upstream service either by annotation or controller configuration.
+	// Check if the service is an upstream service through Ingress Class parameters.
 	var isSvcUpstream bool
 	ingressClassParameters, err := getIngressClassParametersOrDefault(s)
 	if err != nil {
@@ -612,7 +616,13 @@ func getServiceEndpoints(
 // If the cluster operators have specified a set of parameters explicitly, it returns those.
 // Otherwise, it returns a default set of parameters.
 func getIngressClassParametersOrDefault(s store.Storer) (configurationv1alpha1.IngressClassParametersSpec, error) {
-	params, err := s.GetIngressClassParametersV1Alpha1()
+	ingressClassName := s.GetIngressClassName()
+	ingressClass, err := s.GetIngressClassV1(ingressClassName)
+	if err != nil {
+		return configurationv1alpha1.IngressClassParametersSpec{}, err
+	}
+
+	params, err := s.GetIngressClassParametersV1Alpha1(ingressClass)
 	if err != nil {
 		return configurationv1alpha1.IngressClassParametersSpec{}, err
 	}
@@ -631,19 +641,19 @@ func getEndpoints(
 	getEndpoints func(string, string) (*corev1.Endpoints, error),
 	isSvcUpstream bool,
 ) []util.Endpoint {
-	upsServers := []util.Endpoint{}
-
 	if s == nil || port == nil {
-		return upsServers
+		return []util.Endpoint{}
 	}
 
 	// If service is an upstream service...
 	if isSvcUpstream || annotations.HasServiceUpstreamAnnotation(s.Annotations) {
 		// ... return its address as the only endpoint.
-		return append(upsServers, util.Endpoint{
-			Address: s.Name + "." + s.Namespace + ".svc",
-			Port:    fmt.Sprintf("%v", port.Port),
-		})
+		return []util.Endpoint{
+			{
+				Address: s.Name + "." + s.Namespace + ".svc",
+				Port:    fmt.Sprintf("%v", port.Port),
+			},
+		}
 	}
 
 	log = log.WithFields(logrus.Fields{
@@ -660,26 +670,22 @@ func getEndpoints(
 	// ExternalName services
 	if s.Spec.Type == corev1.ServiceTypeExternalName {
 		log.Debug("found service of type=ExternalName")
-
-		return append(upsServers, util.Endpoint{
-			Address: s.Spec.ExternalName,
-			Port:    port.TargetPort.String(),
-		})
-	}
-	if annotations.HasServiceUpstreamAnnotation(s.Annotations) {
-		return append(upsServers, util.Endpoint{
-			Address: s.Name + "." + s.Namespace + ".svc",
-			Port:    fmt.Sprintf("%v", port.Port),
-		})
+		return []util.Endpoint{
+			{
+				Address: s.Spec.ExternalName,
+				Port:    port.TargetPort.String(),
+			},
+		}
 	}
 
 	log.Debugf("fetching endpoints")
 	ep, err := getEndpoints(s.Namespace, s.Name)
 	if err != nil {
 		log.WithError(err).Error("failed to fetch endpoints")
-		return upsServers
+		return []util.Endpoint{}
 	}
 
+	upsServers := []util.Endpoint{}
 	for _, ss := range ep.Subsets {
 		for _, epPort := range ss.Ports {
 			if !reflect.DeepEqual(epPort.Protocol, proto) {

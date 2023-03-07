@@ -23,6 +23,10 @@ profiles:
       docker:
         dockerfile: Dockerfile
         target: distroless
+        buildArgs:
+          TAG: ${{ .TAG }}
+          COMMIT: ${{ .COMMIT }}
+          REPO_INFO: ${{ .REPO_INFO }}
 - name: dev
   manifests:
     kustomize:
@@ -34,14 +38,67 @@ profiles:
       docker:
         dockerfile: Dockerfile
         target: distroless
+        buildArgs:
+          TAG: ${{ .TAG }}
+          COMMIT: ${{ .COMMIT }}
+          REPO_INFO: ${{ .REPO_INFO }}
 - name: debug
   manifests:
     kustomize:
       paths:
-      - config/debug
+      - config/debug/base
+  build:
+    artifacts:
+    - image: kic-placeholder
+      docker:
+        dockerfile: Dockerfile.debug
+        target: debug
+        buildArgs:
+          TAG: ${{ .TAG }}
+          COMMIT: ${{ .COMMIT }}
+          REPO_INFO: ${{ .REPO_INFO }}
+- name: multi_gw
+  manifests:
+    kustomize:
+      paths:
+      - config/variants/multi-gw/dev
   build:
     artifacts:
     - image: kic-placeholder
       docker:
         dockerfile: Dockerfile
+        target: distroless
+        buildArgs:
+          TAG: ${{ .TAG }}
+          COMMIT: ${{ .COMMIT }}
+          REPO_INFO: ${{ .REPO_INFO }}
+- name: debug_multi_gw
+  manifests:
+    kustomize:
+      paths:
+      - config/variants/multi-gw/debug
+  build:
+    artifacts:
+    - image: kic-placeholder
+      docker:
+        dockerfile: Dockerfile.debug
         target: debug
+        buildArgs:
+          TAG: ${{ .TAG }}
+          COMMIT: ${{ .COMMIT }}
+          REPO_INFO: ${{ .REPO_INFO }}
+- name: debug-konnect
+  manifests:
+    kustomize:
+      paths:
+        - config/variants/konnect/debug
+  build:
+    artifacts:
+      - image: kic-placeholder
+        docker:
+          dockerfile: Dockerfile.debug
+          target: debug
+          buildArgs:
+            TAG: ${{ .TAG }}
+            COMMIT: ${{ .COMMIT }}
+            REPO_INFO: ${{ .REPO_INFO }}

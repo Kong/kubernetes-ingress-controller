@@ -46,6 +46,42 @@ func TestBindEnvVars(t *testing.T) {
 	assert.NoError(t, err)
 }
 
+func TestBindEnvVarsSlice(t *testing.T) {
+	t.Run("set by flags", func(t *testing.T) {
+		cmd := &cobra.Command{
+			PreRunE: bindEnvVars,
+			Run:     func(cmd *cobra.Command, args []string) {},
+		}
+
+		ss := cmd.Flags().StringSlice("flag-string-slice", []string{"default"}, "No description")
+
+		t.Setenv("CONTROLLER_FLAG_STRING_SLICE", "q,w,e,r,t,y")
+
+		cmd.SetArgs([]string{
+			"--flag-string-slice=1",
+			"--flag-string-slice=2",
+			"--flag-string-slice=3",
+		})
+		assert.NoError(t, cmd.Execute())
+		assert.Equal(t, []string{"1", "2", "3"}, *ss)
+	})
+
+	t.Run("set by env", func(t *testing.T) {
+		cmd := &cobra.Command{
+			PreRunE: bindEnvVars,
+			Run:     func(cmd *cobra.Command, args []string) {},
+		}
+
+		ss := cmd.Flags().StringSlice("flag-string-slice", []string{"default"}, "No description")
+
+		t.Setenv("CONTROLLER_FLAG_STRING_SLICE", "q,w,e,r,t,y")
+
+		cmd.SetArgs([]string{})
+		assert.NoError(t, cmd.Execute())
+		assert.Equal(t, []string{"q", "w", "e", "r", "t", "y"}, *ss)
+	})
+}
+
 func TestBindEnvVarsValidation(t *testing.T) {
 	cmd := &cobra.Command{
 		PreRunE: bindEnvVars,

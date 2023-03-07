@@ -70,10 +70,11 @@ func generateKongRoutesFromRouteRule[T tRoute, TRule tRouteRule](
 		return []kongstate.Route{}, err
 	}
 
+	tags := util.GenerateTagsForObject(route)
 	return []kongstate.Route{
 		{
 			Ingress: util.FromK8sObject(route),
-			Route:   routeToKongRoute(route, backendRefs, ruleNumber),
+			Route:   routeToKongRoute(route, backendRefs, ruleNumber, tags),
 		},
 	}, nil
 }
@@ -83,17 +84,22 @@ func routeToKongRoute[TRoute tTCPorUDPorTLSRoute](
 	r TRoute,
 	backendRefs []gatewayv1alpha2.BackendRef,
 	ruleNumber int,
+	tags []*string,
 ) kong.Route {
+	var kr kong.Route
 	switch rr := any(r).(type) {
 	case *gatewayv1alpha2.UDPRoute:
-		return udpRouteToKongRoute(rr, backendRefs, ruleNumber)
+		kr = udpRouteToKongRoute(rr, backendRefs, ruleNumber)
 	case *gatewayv1alpha2.TCPRoute:
-		return tcpRouteToKongRoute(rr, backendRefs, ruleNumber)
+		kr = tcpRouteToKongRoute(rr, backendRefs, ruleNumber)
 	case *gatewayv1alpha2.TLSRoute:
-		return tlsRouteToKongRoute(rr, ruleNumber)
+		kr = tlsRouteToKongRoute(rr, ruleNumber)
+	default:
+		kr = kong.Route{}
 	}
 
-	return kong.Route{}
+	kr.Tags = tags
+	return kr
 }
 
 func udpRouteToKongRoute(

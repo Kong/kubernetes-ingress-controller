@@ -13,25 +13,24 @@ import (
 	"os"
 	"os/exec"
 	"sort"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/blang/semver/v4"
+	"github.com/kong/kubernetes-testing-framework/pkg/clusters/types/gke"
 	"github.com/kong/kubernetes-testing-framework/pkg/environments"
-	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
+	"github.com/phayes/freeport"
 	"github.com/sethvargo/go-password/password"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/yaml"
 )
-
-// httpc is a standard HTTP client for tests to use that has a low default
-// timeout instead of the longer default provided by the http stdlib.
-var httpc = http.Client{Timeout: time.Second * 10}
 
 const (
 	// adminPasswordSecretName is the name of the secret which will house the admin
@@ -59,12 +58,12 @@ func generateAdminPasswordSecret() (string, *corev1.Secret, error) {
 // exposeAdminAPI will override the KONG_ADMIN_LISTEN for the cluster's proxy to expose the
 // Admin API via a service. Some deployments only expose this on localhost by default as there's
 // no authentication, so note that this is only for testing environment purposes.
-func exposeAdminAPI(ctx context.Context, t *testing.T, env environments.Environment) *corev1.Service {
+func exposeAdminAPI(ctx context.Context, t *testing.T, env environments.Environment, proxyDeployment types.NamespacedName) {
 	t.Log("updating the proxy container KONG_ADMIN_LISTEN to expose the admin api")
-	deployment, err := env.Cluster().Client().AppsV1().Deployments(namespace).Get(ctx, "ingress-kong", metav1.GetOptions{})
+	deployment, err := env.Cluster().Client().AppsV1().Deployments(proxyDeployment.Namespace).Get(ctx, proxyDeployment.Name, metav1.GetOptions{})
 	require.NoError(t, err)
 	for i, containerSpec := range deployment.Spec.Template.Spec.Containers {
-		if containerSpec.Name == "proxy" {
+		if containerSpec.Name == proxyContainerName {
 			for j, envVar := range containerSpec.Env {
 				if envVar.Name == "KONG_ADMIN_LISTEN" {
 					deployment.Spec.Template.Spec.Containers[i].Env[j].Value = "0.0.0.0:8001, 0.0.0.0:8444 ssl"
@@ -72,7 +71,7 @@ func exposeAdminAPI(ctx context.Context, t *testing.T, env environments.Environm
 			}
 		}
 	}
-	deployment, err = env.Cluster().Client().AppsV1().Deployments(namespace).Update(ctx, deployment, metav1.UpdateOptions{})
+	deployment, err = env.Cluster().Client().AppsV1().Deployments(proxyDeployment.Namespace).Update(ctx, deployment, metav1.UpdateOptions{})
 	require.NoError(t, err)
 
 	t.Log("creating a loadbalancer service for the admin API")
@@ -101,21 +100,86 @@ func exposeAdminAPI(ctx context.Context, t *testing.T, env environments.Environm
 		require.NoError(t, err)
 		return len(service.Status.LoadBalancer.Ingress) == 1
 	}, time.Minute, time.Second)
-
-	return service
 }
 
-// getTestManifest checks if a controller image override is set. If not, it returns the original provided path.
-// If an override is set, it runs a kustomize patch that replaces the controller image with the override image and
-// returns the modified manifest path. If there is any issue patching the manifest, it will log the issue and return
-// the original provided path.
-func getTestManifest(t *testing.T, baseManifestPath string) (io.Reader, error) {
-	var manifestsReader io.Reader
-	manifestsReader, err := os.Open(baseManifestPath)
+// getTestManifest gets a manifest io.Reader, applying optional patches to the base manifest provided.
+// In case of any failure while patching, the base manifest is returned.
+func getTestManifest(t *testing.T, baseManifestPath string) io.Reader {
+	t.Helper()
+
+	var (
+		manifestsReader io.Reader
+		err             error
+	)
+	manifestsReader, err = os.Open(baseManifestPath)
+	require.NoError(t, err)
+
+	manifestsReader, err = patchControllerImageFromEnv(manifestsReader)
 	if err != nil {
-		return nil, err
+		t.Logf("failed patching controller image (%v), using default manifest %v", err, baseManifestPath)
+		return manifestsReader
 	}
 
+	manifestsReader, err = patchGatewayImageFromEnv(t, manifestsReader)
+	if err != nil {
+		t.Logf("failed patching gateway image (%v), using default manifest %v", err, baseManifestPath)
+		return manifestsReader
+	}
+
+	manifestsReader, err = patchControllerStartTimeout(manifestsReader, 120, time.Second*3)
+	if err != nil {
+		t.Logf("failed patching controller timeouts (%v), using default manifest %v", err, baseManifestPath)
+		return manifestsReader
+	}
+
+	deployments := getManifestDeployments(baseManifestPath)
+	manifestsReader, err = patchLivenessProbes(manifestsReader, deployments.ProxyNN, 10, time.Second*15, time.Second*3)
+	if err != nil {
+		t.Logf("failed patching kong liveness (%v), using default manifest %v", err, baseManifestPath)
+		return manifestsReader
+	}
+
+	manifestsReader, err = patchLivenessProbes(manifestsReader, deployments.ControllerNN, 15, time.Second*3, time.Second*10)
+	if err != nil {
+		t.Logf("failed patching controller liveness (%v), using default manifest %v", err, baseManifestPath)
+		return manifestsReader
+	}
+
+	t.Logf("generated modified manifest at %v", baseManifestPath)
+	return manifestsReader
+}
+
+// patchGatewayImageFromEnv will optionally replace a default controller image in manifests with one of `kongImageLoad`
+// or `kongImageOverride` if any is set.
+func patchGatewayImageFromEnv(t *testing.T, manifestsReader io.Reader) (io.Reader, error) {
+	var kongImageFullname string
+	if kongImageLoad != "" {
+		kongImageFullname = kongImageLoad
+	} else {
+		kongImageFullname = kongImageOverride
+	}
+
+	if kongImageFullname != "" {
+		t.Logf("replace kong image to %s", kongImageFullname)
+		split := strings.Split(kongImageFullname, ":")
+		if len(split) < 2 {
+			return nil, fmt.Errorf("invalid image name '%s', expected <repo>:<tag> format", kongImageFullname)
+		}
+		repo := strings.Join(split[0:len(split)-1], ":")
+		tag := split[len(split)-1]
+		patchedManifestsReader, err := patchKongImage(manifestsReader, repo, tag)
+		if err != nil {
+			return nil, fmt.Errorf("failed patching override image '%v'", kongImageFullname)
+		}
+		return patchedManifestsReader, nil
+	}
+
+	return manifestsReader, nil
+}
+
+// patchControllerImageFromEnv will optionally replace a default controller image in manifests with one of `imageLoad`
+// or `imageOverride` if any is set.
+func patchControllerImageFromEnv(manifestReader io.Reader) (io.Reader, error) {
 	var imageFullname string
 	if imageLoad != "" {
 		imageFullname = imageLoad
@@ -126,66 +190,26 @@ func getTestManifest(t *testing.T, baseManifestPath string) (io.Reader, error) {
 	if imageFullname != "" {
 		split := strings.Split(imageFullname, ":")
 		if len(split) < 2 {
-			t.Logf("could not parse override image '%v', using default manifest %v", imageFullname, baseManifestPath)
-			return manifestsReader, nil
+			return nil, fmt.Errorf("could not parse override image '%v', expected <repo>:<tag> format", imageFullname)
 		}
 		repo := strings.Join(split[0:len(split)-1], ":")
 		tag := split[len(split)-1]
-		manifestsReader, err = patchControllerImage(manifestsReader, repo, tag)
+		var err error
+		manifestReader, err = patchControllerImage(manifestReader, repo, tag)
 		if err != nil {
-			t.Logf("failed patching override image '%v' (%v), using default manifest %v", imageFullname, err, baseManifestPath)
-			return manifestsReader, nil
+			return nil, fmt.Errorf("failed patching override image '%v': %w", imageFullname, err)
 		}
 	}
-
-	var kongImageFullname string
-	if kongImageLoad != "" {
-		kongImageFullname = kongImageLoad
-	} else {
-		kongImageFullname = kongImageOverride
-	}
-	if kongImageFullname != "" {
-		t.Logf("replace kong image to %s", kongImageFullname)
-		split := strings.Split(kongImageFullname, ":")
-		if len(split) < 2 {
-			t.Logf("could not parse override image '%v', using default manifest %v", kongImageFullname, baseManifestPath)
-			return manifestsReader, nil
-		}
-		repo := strings.Join(split[0:len(split)-1], ":")
-		tag := split[len(split)-1]
-		manifestsReader, err = patchKongImage(manifestsReader, repo, tag)
-		if err != nil {
-			t.Logf("failed patching override image '%v' (%v), using default manifest %v", kongImageFullname, err, baseManifestPath)
-			return manifestsReader, nil
-		}
-	}
-
-	manifestsReader, err = patchControllerStartTimeout(manifestsReader, 120, time.Second*3)
-	if err != nil {
-		t.Logf("failed patching controller timeouts (%v), using default manifest %v", err, baseManifestPath)
-		return manifestsReader, nil
-	}
-
-	manifestsReader, err = patchLivenessProbes(manifestsReader, 0, 10, time.Second*15, time.Second*3)
-	if err != nil {
-		t.Logf("failed patching kong liveness (%v), using default manifest %v", err, baseManifestPath)
-		return manifestsReader, nil
-	}
-
-	manifestsReader, err = patchLivenessProbes(manifestsReader, 1, 15, time.Second*3, time.Second*10)
-	if err != nil {
-		t.Logf("failed patching controller liveness (%v), using default manifest %v", err, baseManifestPath)
-		return manifestsReader, nil
-	}
-
-	t.Logf("generated modified manifest at %v", baseManifestPath)
-	return manifestsReader, nil
+	return manifestReader, nil
 }
 
 func getCurrentGitTag(path string) (semver.Version, error) {
 	cmd := exec.Command("git", "describe", "--tags")
 	cmd.Dir = path
-	tagBytes, _ := cmd.Output()
+	tagBytes, err := cmd.Output()
+	if err != nil {
+		return semver.Version{}, fmt.Errorf("%q command failed: %w", cmd.String(), err)
+	}
 	tag, err := semver.ParseTolerant(string(tagBytes))
 	if err != nil {
 		return semver.Version{}, err
@@ -217,80 +241,127 @@ func getPreviousGitTag(path string, cur semver.Version) (semver.Version, error) 
 }
 
 // getKongProxyIP takes a Service with Kong proxy ports and returns and its IP, or fails the test if it cannot.
-func getKongProxyIP(ctx context.Context, t *testing.T, env environments.Environment, svc *corev1.Service) string {
-	proxyIP := ""
-	require.NotEqual(t, svc.Spec.Type, svc.Spec.ClusterIP)
-	if svc.Spec.Type == corev1.ServiceTypeLoadBalancer {
-		if len(svc.Status.LoadBalancer.Ingress) > 0 {
-			proxyIP = svc.Status.LoadBalancer.Ingress[0].IP
-			t.Logf("found loadbalancer IP for the Kong Proxy: %s", proxyIP)
-		}
-	}
-	// the above failed to find an address. either the LB didn't provision or we're using a NodePort
-	if proxyIP == "" {
-		var port int32
-		for _, sport := range svc.Spec.Ports {
-			if sport.Name == "kong-proxy" || sport.Name == "proxy" {
-				port = sport.NodePort
-			}
-		}
-		var extAddrs []string
-		var intAddrs []string
-		nodes, err := env.Cluster().Client().CoreV1().Nodes().List(ctx, metav1.ListOptions{})
+func getKongProxyIP(ctx context.Context, t *testing.T, env environments.Environment) string {
+	t.Helper()
+
+	refreshService := func() *corev1.Service {
+		svc, err := env.Cluster().Client().CoreV1().Services(namespace).Get(ctx, "kong-proxy", metav1.GetOptions{})
 		require.NoError(t, err)
-		for _, node := range nodes.Items {
-			for _, naddr := range node.Status.Addresses {
-				if naddr.Type == corev1.NodeExternalIP {
-					extAddrs = append(extAddrs, naddr.Address)
-				}
-				if naddr.Type == corev1.NodeInternalIP {
-					extAddrs = append(intAddrs, naddr.Address)
-				}
-			}
-		}
-		// local clusters (KIND, minikube) typically provide no external addresses, but their internal addresses are
-		// routeable from their host. We prefer external addresses if they're available, but fall back to internal
-		// in their absence
-		if len(extAddrs) > 0 {
-			proxyIP = fmt.Sprintf("%v:%v", extAddrs[0], port)
-		} else if len(intAddrs) > 0 {
-			proxyIP = fmt.Sprintf("%v:%v", intAddrs[0], port)
-		} else {
-			assert.Fail(t, "both extAddrs and intAddrs are empty")
-		}
+		return svc
 	}
-	return proxyIP
+
+	svc := refreshService()
+	require.NotEqual(t, svc.Spec.Type, corev1.ServiceTypeClusterIP, "ClusterIP service is not supported")
+
+	//nolint: exhaustive
+	switch svc.Spec.Type {
+	case corev1.ServiceTypeLoadBalancer:
+		return getKongProxyLoadBalancerIP(t, refreshService)
+	case corev1.ServiceTypeNodePort:
+		return getKongProxyNodePortIP(ctx, t, env, svc)
+	default:
+		t.Fatalf("unknown service type: %q", svc.Spec.Type)
+		return ""
+	}
 }
 
-// startPortForwarder runs "kubectl port-forward" in the background. It stops the forward when the provided context
-// ends.
-func startPortForwarder(ctx context.Context, t *testing.T, env environments.Environment, namespace, name, localPort,
-	targetPort string,
-) {
-	kubeconfig, err := generators.NewKubeConfigForRestConfig(env.Name(), env.Cluster().Config())
+func getKongProxyLoadBalancerIP(t *testing.T, refreshSvc func() *corev1.Service) string {
+	t.Helper()
+
+	var resIP string
+	require.Eventually(t, func() bool {
+		svc := refreshSvc()
+
+		if len(svc.Status.LoadBalancer.Ingress) > 0 {
+			ip := svc.Status.LoadBalancer.Ingress[0].IP
+			t.Logf("found loadbalancer IP for the Kong Proxy: %s", ip)
+			resIP = ip
+			return true
+		}
+
+		t.Log("no IP for LoadBalancer found yet")
+		return false
+	}, ingressWait, time.Second)
+
+	return resIP
+}
+
+func getKongProxyNodePortIP(ctx context.Context, t *testing.T, env environments.Environment, svc *corev1.Service) string {
+	t.Helper()
+
+	var port corev1.ServicePort
+	for _, sport := range svc.Spec.Ports {
+		if sport.Name == "kong-proxy" || sport.Name == "proxy" {
+			port = sport
+		}
+	}
+
+	// GKE clusters by default do not allow ingress traffic to its nodes
+	// TODO: consider adding an option to create firewall rules in KTF GKE provider
+	if env.Cluster().Type() == gke.GKEClusterType {
+		kongProxyLocalPort := startPortForwarder(ctx, t, env, svc.Namespace, fmt.Sprintf("service/%s", svc.Name), strconv.Itoa(int(port.Port)))
+		return fmt.Sprintf("localhost:%d", kongProxyLocalPort)
+	}
+
+	var extAddrs []string
+	var intAddrs []string
+	nodes, err := env.Cluster().Client().CoreV1().Nodes().List(ctx, metav1.ListOptions{})
 	require.NoError(t, err)
-	kubeconfigFile, err := os.CreateTemp(os.TempDir(), "portforward-tests-kubeconfig-")
+	for _, node := range nodes.Items {
+		for _, naddr := range node.Status.Addresses {
+			if naddr.Type == corev1.NodeExternalIP {
+				extAddrs = append(extAddrs, naddr.Address)
+			}
+			if naddr.Type == corev1.NodeInternalIP {
+				intAddrs = append(intAddrs, naddr.Address)
+			}
+		}
+	}
+	// local clusters (KIND, minikube) typically provide no external addresses, but their internal addresses are
+	// routeable from their host. We prefer external addresses if they're available, but fall back to internal
+	// in their absence
+	if len(extAddrs) > 0 {
+		t.Logf("picking an external NodePort address: %s", extAddrs[0])
+		return fmt.Sprintf("%v:%v", extAddrs[0], port.NodePort)
+	} else if len(intAddrs) > 0 {
+		t.Logf("picking an internal NodePort address: %s", intAddrs[0])
+		return fmt.Sprintf("%v:%v", intAddrs[0], port.NodePort)
+	}
+
+	assert.Fail(t, "both extAddrs and intAddrs are empty")
+	return ""
+}
+
+// startPortForwarder runs "kubectl port-forward" in the background. It returns a local port that the traffic gets forward to.
+// It stops the forward when the provided context ends.
+func startPortForwarder(ctx context.Context, t *testing.T, env environments.Environment, namespace, name, targetPort string) int {
+	t.Helper()
+
+	localPort, err := freeport.GetFreePort()
 	require.NoError(t, err)
-	defer os.Remove(kubeconfigFile.Name())
-	defer kubeconfigFile.Close()
-	written, err := kubeconfigFile.Write(kubeconfig)
-	require.NoError(t, err)
-	require.Equal(t, len(kubeconfig), written)
-	cmd := exec.CommandContext(ctx, "kubectl", "--kubeconfig", kubeconfigFile.Name(), "port-forward", "-n", namespace, name, fmt.Sprintf("%s:%s", localPort, targetPort)) //nolint:gosec
-	t.Logf("forwarding port %s to %s/%s:%s", localPort, namespace, name, targetPort)
+
+	kubeconfig := getTemporaryKubeconfig(t, env)
+	cmd := exec.CommandContext(ctx, "kubectl", "--kubeconfig", kubeconfig, "port-forward", "-n", namespace, name, fmt.Sprintf("%d:%s", localPort, targetPort))
+	out := new(bytes.Buffer)
+	cmd.Stderr = out
+	cmd.Stdout = out
+
+	t.Logf("forwarding port %d to %s/%s:%s", localPort, namespace, name, targetPort)
 	if startErr := cmd.Start(); startErr != nil {
-		startOutput, outputErr := cmd.Output()
-		assert.NoError(t, outputErr)
-		require.NoError(t, startErr, string(startOutput))
+		require.NoError(t, startErr, out.String())
 	}
 	require.Eventually(t, func() bool {
-		conn, err := net.Dial("tcp", fmt.Sprintf("localhost:%s", localPort))
+		conn, err := net.Dial("tcp", fmt.Sprintf("localhost:%d", localPort))
 		if err == nil {
 			conn.Close()
 			return true
 		}
+
+		t.Logf("port forwarding (via %q) not ready....", cmd.String())
 		return false
 	}, kongComponentWait, time.Second)
+
+	return localPort
 }
 
 // httpGetResponseContains returns true if the response body of GETting the URL contains specified substring.
@@ -325,19 +396,9 @@ func getPodLogs(
 	ctx context.Context, t *testing.T, env environments.Environment,
 	namespace string, podName string,
 ) (string, error) {
-	kubeconfig, err := generators.NewKubeConfigForRestConfig(env.Name(), env.Cluster().Config())
-	require.NoError(t, err)
-	kubeconfigFile, err := os.CreateTemp(os.TempDir(), "podlogs-tests-kubeconfig-")
-	require.NoError(t, err)
-	defer os.Remove(kubeconfigFile.Name())
-	defer kubeconfigFile.Close()
-
-	written, err := kubeconfigFile.Write(kubeconfig)
-	require.NoError(t, err)
-	require.Equal(t, len(kubeconfig), written)
-
+	kubeconfig := getTemporaryKubeconfig(t, env)
 	stderr := new(bytes.Buffer)
-	cmd := exec.CommandContext(ctx, "kubectl", "--kubeconfig", kubeconfigFile.Name(), "logs", podName, "-n", namespace, "--all-containers") //nolint:gosec
+	cmd := exec.CommandContext(ctx, "kubectl", "--kubeconfig", kubeconfig, "logs", podName, "-n", namespace, "--all-containers")
 	cmd.Stderr = stderr
 	out, err := cmd.Output()
 	if err != nil {
@@ -391,4 +452,16 @@ func isPodReady(pod corev1.Pod) bool {
 		}
 	}
 	return false
+}
+
+// ensureNoneOfDeploymentPodsHasCrashed ensures that none of the pods of a deployment has crashed.
+func ensureNoneOfDeploymentPodsHasCrashed(ctx context.Context, t *testing.T, env environments.Environment, deploymentNN types.NamespacedName) {
+	t.Logf("ensuring none of %s deployment pods has crashed", deploymentNN.String())
+	pods, err := listPodsByLabels(ctx, env, deploymentNN.Namespace, map[string]string{"app": deploymentNN.Name})
+	require.NoError(t, err)
+	for _, pod := range pods {
+		for _, container := range pod.Spec.Containers {
+			require.Truef(t, containerDidntCrash(pod, container.Name), "controller pod %s/%s crashed", pod.Namespace, pod.Name)
+		}
+	}
 }

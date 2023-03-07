@@ -131,7 +131,7 @@ KongIngressRoute contains KongIngress route configuration. It contains the subse
 
 | Field | Description |
 | --- | --- |
-| `methods` _string array_ | Methods is a list of HTTP methods that match this Route. Deprecated: use Ingress' "konghq.com/override-protocols" annotation instead. |
+| `methods` _string array_ | Methods is a list of HTTP methods that match this Route. Deprecated: use Ingress' "konghq.com/methods" annotation instead. |
 | `headers` _object (keys:string, values:string array)_ | Headers contains one or more lists of values indexed by header name that will cause this Route to match if present in the request. The Host header cannot be used with this attribute. Deprecated: use Ingress' "konghq.com/headers" annotation instead. |
 | `protocols` _[KongProtocol](#kongprotocol) array_ | Protocols is an array of the protocols this Route should allow. Deprecated: use Ingress' "konghq.com/protocols" annotation instead. |
 | `regex_priority` _integer_ | RegexPriority is a number used to choose which route resolves a given request when several routes match it using regexes simultaneously. Deprecated: use Ingress' "konghq.com/regex-priority" annotation instead. |
@@ -151,7 +151,7 @@ _Appears in:_
 
 
 
-KongIngressService contains KongIngress service configuration. Deprecated: use Service's annotations instead.
+KongIngressService contains KongIngress service configuration. It contains the subset of go-kong.kong.Service fields supported by kongstate.Service.overrideByKongIngress. Deprecated: use Service's annotations instead.
 
 
 
@@ -201,7 +201,7 @@ _Appears in:_
 
 _Underlying type:_ `string`
 
-
+KongProtocol is a valid Kong protocol. This alias is necessary to deal with https://github.com/kubernetes-sigs/controller-tools/issues/342
 
 
 

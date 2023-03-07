@@ -5,6 +5,7 @@ package integration
 
 import (
 	"bytes"
+	"context"
 	"crypto/tls"
 	"errors"
 	"fmt"
@@ -17,7 +18,6 @@ import (
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	ktfkong "github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/kong"
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -29,6 +29,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util/builder"
 	"github.com/kong/kubernetes-ingress-controller/v2/test"
+	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/helpers"
 )
 
 const (
@@ -99,16 +100,15 @@ const (
 )
 
 func TestTLSRouteEssentials(t *testing.T) {
-	backendPort := gatewayv1alpha2.PortNumber(tcpEchoPort)
-	t.Log("locking TLS port")
+	t.Log("locking Gateway TLS ports")
 	tlsMutex.Lock()
-	defer func() {
+	t.Cleanup(func() {
 		t.Log("unlocking TLS port")
 		tlsMutex.Unlock()
-	}()
+	})
 
-	ns, cleaner := setup(t)
-	defer func() { assert.NoError(t, cleaner.Cleanup(ctx)) }()
+	ctx := context.Background()
+	ns, cleaner := helpers.Setup(ctx, t, env)
 
 	t.Log("getting gateway client")
 	gatewayClient, err := gatewayclient.NewForConfig(env.Cluster().Config())
@@ -206,6 +206,7 @@ func TestTLSRouteEssentials(t *testing.T) {
 	require.NoError(t, err)
 	cleaner.Add(service2)
 
+	backendPort := gatewayv1alpha2.PortNumber(tcpEchoPort)
 	t.Logf("creating a tlsroute to access deployment %s via kong", deployment.Name)
 	tlsRoute := &gatewayv1alpha2.TLSRoute{
 		ObjectMeta: metav1.ObjectMeta{
@@ -236,6 +237,11 @@ func TestTLSRouteEssentials(t *testing.T) {
 	t.Log("verifying that the Gateway gets linked to the route via status")
 	callback := GetGatewayIsLinkedCallback(t, gatewayClient, gatewayv1beta1.TLSProtocolType, ns.Name, tlsRoute.Name)
 	require.Eventually(t, callback, ingressWait, waitTick)
+	t.Log("verifying that the tlsroute contains 'Programmed' condition")
+	require.Eventually(t,
+		GetVerifyProgrammedConditionCallback(t, gatewayClient, gatewayv1beta1.TLSProtocolType, ns.Name, tlsRoute.Name, metav1.ConditionTrue),
+		ingressWait, waitTick,
+	)
 
 	t.Log("verifying that the tcpecho is responding properly over TLS")
 	require.Eventually(t, func() bool {
@@ -462,16 +468,15 @@ func TestTLSRouteEssentials(t *testing.T) {
 // TestTLSRouteReferenceGrant tests cross-namespace certificate references. These are technically implemented within
 // Gateway Listeners, but require an attached Route to see the associated certificate behavior on the proxy.
 func TestTLSRouteReferenceGrant(t *testing.T) {
-	backendPort := gatewayv1alpha2.PortNumber(tcpEchoPort)
-	t.Log("locking TLS port")
+	t.Log("locking Gateway TLS ports")
 	tlsMutex.Lock()
-	defer func() {
+	t.Cleanup(func() {
 		t.Log("unlocking TLS port")
 		tlsMutex.Unlock()
-	}()
+	})
 
-	ns, cleaner := setup(t)
-	defer func() { assert.NoError(t, cleaner.Cleanup(ctx)) }()
+	ctx := context.Background()
+	ns, cleaner := helpers.Setup(ctx, t, env)
 
 	otherNs, err := clusters.GenerateNamespace(ctx, env.Cluster(), t.Name())
 	require.NoError(t, err)
@@ -552,20 +557,20 @@ func TestTLSRouteReferenceGrant(t *testing.T) {
 
 	secret2Name := gatewayv1alpha2.ObjectName(secrets[1].Name)
 	t.Logf("creating a ReferenceGrant that permits tcproute access from %s to services in %s", ns.Name, otherNs.Name)
-	grant := &gatewayv1alpha2.ReferenceGrant{
+	grant := &gatewayv1beta1.ReferenceGrant{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        uuid.NewString(),
 			Annotations: map[string]string{},
 		},
-		Spec: gatewayv1alpha2.ReferenceGrantSpec{
-			From: []gatewayv1alpha2.ReferenceGrantFrom{
+		Spec: gatewayv1beta1.ReferenceGrantSpec{
+			From: []gatewayv1beta1.ReferenceGrantFrom{
 				{
 					Group:     gatewayv1alpha2.Group("gateway.networking.k8s.io"),
 					Kind:      gatewayv1alpha2.Kind("Gateway"),
 					Namespace: gatewayv1alpha2.Namespace(gateway.Namespace),
 				},
 			},
-			To: []gatewayv1alpha2.ReferenceGrantTo{
+			To: []gatewayv1beta1.ReferenceGrantTo{
 				{
 					Group: gatewayv1alpha2.Group(""),
 					Kind:  gatewayv1alpha2.Kind("Secret"),
@@ -575,7 +580,7 @@ func TestTLSRouteReferenceGrant(t *testing.T) {
 		},
 	}
 
-	grant, err = gatewayClient.GatewayV1alpha2().ReferenceGrants(otherNs.Name).Create(ctx, grant, metav1.CreateOptions{})
+	grant, err = gatewayClient.GatewayV1beta1().ReferenceGrants(otherNs.Name).Create(ctx, grant, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(grant)
 
@@ -600,6 +605,7 @@ func TestTLSRouteReferenceGrant(t *testing.T) {
 	require.NoError(t, err)
 	cleaner.Add(service)
 
+	backendPort := gatewayv1alpha2.PortNumber(tcpEchoPort)
 	t.Logf("creating a tlsroute to access deployment %s via kong", deployment.Name)
 	tlsroute := &gatewayv1alpha2.TLSRoute{
 		ObjectMeta: metav1.ObjectMeta{
@@ -651,7 +657,7 @@ func TestTLSRouteReferenceGrant(t *testing.T) {
 	t.Log("verifying that using the wrong name in the ReferenceGrant removes the related certificate")
 	badName := gatewayv1alpha2.ObjectName("garbage")
 	grant.Spec.To[0].Name = &badName
-	grant, err = gatewayClient.GatewayV1alpha2().ReferenceGrants(otherNs.Name).Update(ctx, grant, metav1.UpdateOptions{})
+	grant, err = gatewayClient.GatewayV1beta1().ReferenceGrants(otherNs.Name).Update(ctx, grant, metav1.UpdateOptions{})
 	require.NoError(t, err)
 
 	require.Eventually(t, func() bool {
@@ -666,8 +672,8 @@ func TestTLSRouteReferenceGrant(t *testing.T) {
 	for _, status := range gateway.Status.Listeners {
 		if ok := util.CheckCondition(
 			status.Conditions,
-			util.ConditionType(gatewayv1alpha2.ListenerConditionResolvedRefs),
-			util.ConditionReason(gatewayv1alpha2.ListenerReasonRefNotPermitted),
+			util.ConditionType(gatewayv1beta1.ListenerConditionResolvedRefs),
+			util.ConditionReason(gatewayv1beta1.ListenerReasonRefNotPermitted),
 			metav1.ConditionFalse,
 			gateway.Generation,
 		); ok {
@@ -678,7 +684,7 @@ func TestTLSRouteReferenceGrant(t *testing.T) {
 
 	t.Log("verifying the certificate returns when using a ReferenceGrant with no name restrictions")
 	grant.Spec.To[0].Name = nil
-	_, err = gatewayClient.GatewayV1alpha2().ReferenceGrants(otherNs.Name).Update(ctx, grant, metav1.UpdateOptions{})
+	_, err = gatewayClient.GatewayV1beta1().ReferenceGrants(otherNs.Name).Update(ctx, grant, metav1.UpdateOptions{})
 	require.NoError(t, err)
 
 	require.Eventually(t, func() bool {
@@ -692,16 +698,15 @@ func TestTLSRouteReferenceGrant(t *testing.T) {
 }
 
 func TestTLSRoutePassthrough(t *testing.T) {
-	backendTLSPort := gatewayv1alpha2.PortNumber(tlsEchoPort)
-	t.Log("locking TLS port")
+	t.Log("locking Gateway TLS ports")
 	tlsMutex.Lock()
-	defer func() {
+	t.Cleanup(func() {
 		t.Log("unlocking TLS port")
 		tlsMutex.Unlock()
-	}()
+	})
 
-	ns, cleaner := setup(t)
-	defer func() { assert.NoError(t, cleaner.Cleanup(ctx)) }()
+	ctx := context.Background()
+	ns, cleaner := helpers.Setup(ctx, t, env)
 
 	t.Log("getting gateway client")
 	gatewayClient, err := gatewayclient.NewForConfig(env.Cluster().Config())
@@ -784,6 +789,7 @@ func TestTLSRoutePassthrough(t *testing.T) {
 	require.NoError(t, err)
 	cleaner.Add(service)
 
+	backendTLSPort := gatewayv1alpha2.PortNumber(tlsEchoPort)
 	t.Logf("create a TLSRoute using passthrough listner")
 	sectionName := gatewayv1alpha2.SectionName("tls-passthrough")
 	tlsroute := &gatewayv1alpha2.TLSRoute{
@@ -830,14 +836,14 @@ func TestTLSRoutePassthrough(t *testing.T) {
 // It compares an expected message and its length against an expected message, returning true
 // if it is and false and an error explanation if it is not.
 func tlsEchoResponds(
-	url string, podName string, hostname, certHostname string, passthourgh bool,
+	url string, podName string, hostname, certHostname string, passthrough bool,
 ) (bool, error) {
 	dialer := net.Dialer{Timeout: time.Second * 10}
 	conn, err := tls.DialWithDialer(&dialer,
 		"tcp",
 		url,
 		&tls.Config{
-			InsecureSkipVerify: true, //nolint:gosec
+			InsecureSkipVerify: true,
 			ServerName:         hostname,
 		})
 	if err != nil {
@@ -853,7 +859,7 @@ func tlsEchoResponds(
 	header := []byte(fmt.Sprintf("Running on Pod %s.", podName))
 	// if we are testing with passthrough, the go-echo service should return a message
 	// noting that it is listening in TLS mode.
-	if passthourgh {
+	if passthrough {
 		header = append(header, []byte("\nThrough TLS connection.")...)
 	}
 	message := []byte("testing tlsroute")

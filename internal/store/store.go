@@ -59,14 +59,14 @@ const (
 // ErrNotFound error is returned when a lookup results in no resource.
 // This type is meant to be used for error handling using `errors.As()`.
 type ErrNotFound struct {
-	message string
+	Message string
 }
 
 func (e ErrNotFound) Error() string {
-	if e.message == "" {
+	if e.Message == "" {
 		return "not found"
 	}
-	return e.message
+	return e.Message
 }
 
 // Storer is the interface that wraps the required methods to gather information
@@ -79,8 +79,9 @@ type Storer interface {
 	GetKongPlugin(namespace, name string) (*kongv1.KongPlugin, error)
 	GetKongClusterPlugin(name string) (*kongv1.KongClusterPlugin, error)
 	GetKongConsumer(namespace, name string) (*kongv1.KongConsumer, error)
+	GetIngressClassName() string
 	GetIngressClassV1(name string) (*netv1.IngressClass, error)
-	GetIngressClassParametersV1Alpha1() (*kongv1alpha1.IngressClassParameters, error)
+	GetIngressClassParametersV1Alpha1(ingressClass *netv1.IngressClass) (*kongv1alpha1.IngressClassParameters, error)
 	GetGateway(namespace string, name string) (*gatewayv1beta1.Gateway, error)
 
 	ListIngressesV1beta1() []*netv1beta1.Ingress
@@ -91,7 +92,8 @@ type Storer interface {
 	ListUDPRoutes() ([]*gatewayv1alpha2.UDPRoute, error)
 	ListTCPRoutes() ([]*gatewayv1alpha2.TCPRoute, error)
 	ListTLSRoutes() ([]*gatewayv1alpha2.TLSRoute, error)
-	ListReferenceGrants() ([]*gatewayv1alpha2.ReferenceGrant, error)
+	ListGRPCRoutes() ([]*gatewayv1alpha2.GRPCRoute, error)
+	ListReferenceGrants() ([]*gatewayv1beta1.ReferenceGrant, error)
 	ListGateways() ([]*gatewayv1beta1.Gateway, error)
 	ListTCPIngresses() ([]*kongv1beta1.TCPIngress, error)
 	ListUDPIngresses() ([]*kongv1beta1.UDPIngress, error)
@@ -111,11 +113,8 @@ type Storer interface {
 type Store struct {
 	stores CacheStores
 
-	ingressClass string
-
-	ingressV1Beta1ClassMatching annotations.ClassMatching
-	ingressV1ClassMatching      annotations.ClassMatching
-	kongConsumerClassMatching   annotations.ClassMatching
+	ingressClass         string
+	ingressClassMatching annotations.ClassMatching
 
 	isValidIngressClass   func(objectMeta *metav1.ObjectMeta, annotation string, handling annotations.ClassMatching) bool
 	isValidIngressV1Class func(ingress *netv1.Ingress, handling annotations.ClassMatching) bool
@@ -141,6 +140,7 @@ type CacheStores struct {
 	UDPRoute       cache.Store
 	TCPRoute       cache.Store
 	TLSRoute       cache.Store
+	GRPCRoute      cache.Store
 	ReferenceGrant cache.Store
 	Gateway        cache.Store
 
@@ -174,6 +174,7 @@ func NewCacheStores() CacheStores {
 		UDPRoute:       cache.NewStore(keyFunc),
 		TCPRoute:       cache.NewStore(keyFunc),
 		TLSRoute:       cache.NewStore(keyFunc),
+		GRPCRoute:      cache.NewStore(keyFunc),
 		ReferenceGrant: cache.NewStore(keyFunc),
 		Gateway:        cache.NewStore(keyFunc),
 		// Kong Stores
@@ -267,7 +268,9 @@ func (c CacheStores) Get(obj runtime.Object) (item interface{}, exists bool, err
 		return c.TCPRoute.Get(obj)
 	case *gatewayv1alpha2.TLSRoute:
 		return c.TLSRoute.Get(obj)
-	case *gatewayv1alpha2.ReferenceGrant:
+	case *gatewayv1alpha2.GRPCRoute:
+		return c.GRPCRoute.Get(obj)
+	case *gatewayv1beta1.ReferenceGrant:
 		return c.ReferenceGrant.Get(obj)
 	case *gatewayv1beta1.Gateway:
 		return c.Gateway.Get(obj)
@@ -332,7 +335,9 @@ func (c CacheStores) Add(obj runtime.Object) error {
 		return c.TCPRoute.Add(obj)
 	case *gatewayv1alpha2.TLSRoute:
 		return c.TLSRoute.Add(obj)
-	case *gatewayv1alpha2.ReferenceGrant:
+	case *gatewayv1alpha2.GRPCRoute:
+		return c.GRPCRoute.Add(obj)
+	case *gatewayv1beta1.ReferenceGrant:
 		return c.ReferenceGrant.Add(obj)
 	case *gatewayv1beta1.Gateway:
 		return c.Gateway.Add(obj)
@@ -398,7 +403,9 @@ func (c CacheStores) Delete(obj runtime.Object) error {
 		return c.TCPRoute.Delete(obj)
 	case *gatewayv1alpha2.TLSRoute:
 		return c.TLSRoute.Delete(obj)
-	case *gatewayv1alpha2.ReferenceGrant:
+	case *gatewayv1alpha2.GRPCRoute:
+		return c.GRPCRoute.Delete(obj)
+	case *gatewayv1beta1.ReferenceGrant:
 		return c.ReferenceGrant.Delete(obj)
 	case *gatewayv1beta1.Gateway:
 		return c.Gateway.Delete(obj)
@@ -430,36 +437,14 @@ func (c CacheStores) Delete(obj runtime.Object) error {
 }
 
 // New creates a new object store to be used in the ingress controller.
-func New(cs CacheStores, ingressClass string, processClasslessIngressV1Beta1 bool, processClasslessIngressV1 bool,
-	processClasslessKongConsumer bool, logger logrus.FieldLogger,
-) Storer {
-	var ingressV1Beta1ClassMatching annotations.ClassMatching
-	var ingressV1ClassMatching annotations.ClassMatching
-	var kongConsumerClassMatching annotations.ClassMatching
-	if processClasslessIngressV1Beta1 {
-		ingressV1Beta1ClassMatching = annotations.ExactOrEmptyClassMatch
-	} else {
-		ingressV1Beta1ClassMatching = annotations.ExactClassMatch
-	}
-	if processClasslessIngressV1 {
-		ingressV1ClassMatching = annotations.ExactOrEmptyClassMatch
-	} else {
-		ingressV1ClassMatching = annotations.ExactClassMatch
-	}
-	if processClasslessKongConsumer {
-		kongConsumerClassMatching = annotations.ExactOrEmptyClassMatch
-	} else {
-		kongConsumerClassMatching = annotations.ExactClassMatch
-	}
+func New(cs CacheStores, ingressClass string, logger logrus.FieldLogger) Storer {
 	return Store{
-		stores:                      cs,
-		ingressClass:                ingressClass,
-		ingressV1Beta1ClassMatching: ingressV1Beta1ClassMatching,
-		ingressV1ClassMatching:      ingressV1ClassMatching,
-		kongConsumerClassMatching:   kongConsumerClassMatching,
-		isValidIngressClass:         annotations.IngressClassValidatorFuncFromObjectMeta(ingressClass),
-		isValidIngressV1Class:       annotations.IngressClassValidatorFuncFromV1Ingress(ingressClass),
-		logger:                      logger,
+		stores:                cs,
+		ingressClass:          ingressClass,
+		ingressClassMatching:  annotations.ExactClassMatch,
+		isValidIngressClass:   annotations.IngressClassValidatorFuncFromObjectMeta(ingressClass),
+		isValidIngressV1Class: annotations.IngressClassValidatorFuncFromV1Ingress(ingressClass),
+		logger:                logger,
 	}
 }
 
@@ -500,11 +485,11 @@ func (s Store) ListIngressesV1() []*netv1.Ingress {
 			continue
 		}
 		if ing.ObjectMeta.GetAnnotations()[annotations.IngressClassKey] != "" {
-			if !s.isValidIngressClass(&ing.ObjectMeta, annotations.IngressClassKey, s.ingressV1ClassMatching) {
+			if !s.isValidIngressClass(&ing.ObjectMeta, annotations.IngressClassKey, s.ingressClassMatching) {
 				continue
 			}
 		} else if ing.Spec.IngressClassName != nil {
-			if !s.isValidIngressV1Class(ing, s.ingressV1ClassMatching) {
+			if !s.isValidIngressV1Class(ing, s.ingressClassMatching) {
 				continue
 			}
 		} else {
@@ -579,7 +564,7 @@ func (s Store) ListIngressesV1beta1() []*netv1beta1.Ingress {
 	var ingresses []*netv1beta1.Ingress
 	for _, item := range s.stores.IngressV1beta1.List() {
 		ing := s.networkingIngressV1Beta1(item)
-		if !s.isValidIngressClass(&ing.ObjectMeta, annotations.IngressClassKey, s.ingressV1Beta1ClassMatching) {
+		if !s.isValidIngressClass(&ing.ObjectMeta, annotations.IngressClassKey, s.ingressClassMatching) {
 			continue
 		}
 		ingresses = append(ingresses, ing)
@@ -655,12 +640,28 @@ func (s Store) ListTLSRoutes() ([]*gatewayv1alpha2.TLSRoute, error) {
 	return tlsroutes, nil
 }
 
+// ListGRPCRoutes returns the list of GRPCRoutes in the GRPCRoute cache store.
+func (s Store) ListGRPCRoutes() ([]*gatewayv1alpha2.GRPCRoute, error) {
+	var grpcroutes []*gatewayv1alpha2.GRPCRoute
+	if err := cache.ListAll(s.stores.GRPCRoute, labels.NewSelector(),
+		func(ob interface{}) {
+			tlsroute, ok := ob.(*gatewayv1alpha2.GRPCRoute)
+			if ok {
+				grpcroutes = append(grpcroutes, tlsroute)
+			}
+		},
+	); err != nil {
+		return nil, err
+	}
+	return grpcroutes, nil
+}
+
 // ListReferenceGrants returns the list of ReferenceGrants in the ReferenceGrant cache store.
-func (s Store) ListReferenceGrants() ([]*gatewayv1alpha2.ReferenceGrant, error) {
-	var grants []*gatewayv1alpha2.ReferenceGrant
+func (s Store) ListReferenceGrants() ([]*gatewayv1beta1.ReferenceGrant, error) {
+	var grants []*gatewayv1beta1.ReferenceGrant
 	if err := cache.ListAll(s.stores.ReferenceGrant, labels.NewSelector(),
 		func(ob interface{}) {
-			grant, ok := ob.(*gatewayv1alpha2.ReferenceGrant)
+			grant, ok := ob.(*gatewayv1beta1.ReferenceGrant)
 			if ok {
 				grants = append(grants, grant)
 			}
@@ -827,6 +828,10 @@ func (s Store) GetKongConsumer(namespace, name string) (*kongv1.KongConsumer, er
 	return p.(*kongv1.KongConsumer), nil
 }
 
+func (s Store) GetIngressClassName() string {
+	return s.ingressClass
+}
+
 // GetIngressClassV1 returns the 'name' IngressClass resource.
 func (s Store) GetIngressClassV1(name string) (*netv1.IngressClass, error) {
 	p, exists, err := s.stores.IngressClassV1.GetByKey(name)
@@ -839,42 +844,36 @@ func (s Store) GetIngressClassV1(name string) (*netv1.IngressClass, error) {
 	return p.(*netv1.IngressClass), nil
 }
 
-// GetIngressClassV1 returns the 'name' IngressClass resource.
-func (s Store) GetIngressClassParametersV1Alpha1() (*kongv1alpha1.IngressClassParameters, error) {
-	class, exists, err := s.stores.IngressClassV1.GetByKey(s.ingressClass)
-	if err != nil {
-		return nil, err
-	}
-	if !exists {
-		return nil, ErrNotFound{fmt.Sprintf("IngressClass %s not found", s.ingressClass)}
+// GetIngressClassParametersV1Alpha1 returns IngressClassParameters for provided
+// IngressClass.
+func (s Store) GetIngressClassParametersV1Alpha1(ingressClass *netv1.IngressClass) (*kongv1alpha1.IngressClassParameters, error) {
+	if ingressClass == nil {
+		return nil, fmt.Errorf("provided IngressClass is nil")
 	}
 
-	ingressClass := class.(*netv1.IngressClass)
 	if ingressClass.Spec.Parameters == nil {
-		return nil, ErrNotFound{fmt.Sprintf("IngressClass %s doesn't reference any parameters", s.ingressClass)}
+		return &kongv1alpha1.IngressClassParameters{}, nil
 	}
 
 	if ingressClass.Spec.Parameters.APIGroup == nil ||
 		*ingressClass.Spec.Parameters.APIGroup != kongv1alpha1.GroupVersion.Group {
-		return nil, ErrNotFound{fmt.Sprintf(
+		return nil, fmt.Errorf(
 			"IngressClass %s should reference parameters in apiGroup:%s",
-			s.ingressClass,
+			ingressClass.Name,
 			kongv1alpha1.GroupVersion.Group,
-		)}
+		)
 	}
 
 	if ingressClass.Spec.Parameters.Kind != kongv1alpha1.IngressClassParametersKind {
-		return nil, ErrNotFound{fmt.Sprintf(
+		return nil, fmt.Errorf(
 			"IngressClass %s should reference parameters with kind:%s",
-			s.ingressClass,
+			ingressClass.Name,
 			kongv1alpha1.IngressClassParametersKind,
-		)}
+		)
 	}
 
 	if ingressClass.Spec.Parameters.Scope == nil || ingressClass.Spec.Parameters.Namespace == nil {
-		return nil, ErrNotFound{
-			message: fmt.Sprintf("IngressClass %s should reference namespaced parameters", ingressClass),
-		}
+		return nil, fmt.Errorf("IngressClass %s should reference namespaced parameters", ingressClass.Name)
 	}
 
 	key := fmt.Sprintf("%v/%v", *ingressClass.Spec.Parameters.Namespace, ingressClass.Spec.Parameters.Name)

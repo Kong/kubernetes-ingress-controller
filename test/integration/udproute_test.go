@@ -17,18 +17,21 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
+
+	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/helpers"
 )
 
 const testdomain = "konghq.com"
 
 func TestUDPRouteEssentials(t *testing.T) {
-	ns, cleaner := setup(t)
-	defer func() { assert.NoError(t, cleaner.Cleanup(ctx)) }()
+	ctx := context.Background()
+
+	ns, cleaner := helpers.Setup(ctx, t, env)
 
 	t.Log("locking UDP port")
 	udpMutex.Lock()
@@ -184,7 +187,7 @@ func TestUDPRouteEssentials(t *testing.T) {
 	defer func() {
 		t.Logf("cleaning up the udproute %s", udpRoute.Name)
 		if err := gatewayClient.GatewayV1alpha2().UDPRoutes(ns.Name).Delete(ctx, udpRoute.Name, metav1.DeleteOptions{}); err != nil {
-			if !errors.IsNotFound(err) {
+			if !apierrors.IsNotFound(err) {
 				assert.NoError(t, err)
 			}
 		}
@@ -193,6 +196,11 @@ func TestUDPRouteEssentials(t *testing.T) {
 	t.Log("verifying that the Gateway gets linked to the route via status")
 	callback := GetGatewayIsLinkedCallback(t, gatewayClient, gatewayv1beta1.UDPProtocolType, ns.Name, udpRoute.Name)
 	require.Eventually(t, callback, ingressWait, waitTick)
+	t.Log("verifying that the udproute contains 'Programmed' condition")
+	require.Eventually(t,
+		GetVerifyProgrammedConditionCallback(t, gatewayClient, gatewayv1beta1.UDPProtocolType, ns.Name, udpRoute.Name, metav1.ConditionTrue),
+		ingressWait, waitTick,
+	)
 
 	t.Logf("checking DNS to resolve via UDPIngress %s", udpRoute.Name)
 	require.Eventually(t, func() bool {
@@ -330,10 +338,10 @@ func TestUDPRouteEssentials(t *testing.T) {
 	}, ingressWait, waitTick)
 
 	t.Log("verifying that DNS queries are being load-balanced between multiple CoreDNS pods")
-	require.Eventually(t, func() bool { return isDNSResolverReturningExpectedResult(resolver, testdomain, "10.0.0.1") }, ingressWait, waitTick)
-	require.Eventually(t, func() bool { return isDNSResolverReturningExpectedResult(resolver, testdomain, "10.0.0.2") }, ingressWait, waitTick)
-	require.Eventually(t, func() bool { return isDNSResolverReturningExpectedResult(resolver, testdomain, "10.0.0.1") }, ingressWait, waitTick)
-	require.Eventually(t, func() bool { return isDNSResolverReturningExpectedResult(resolver, testdomain, "10.0.0.2") }, ingressWait, waitTick)
+	require.Eventually(t, func() bool { return isDNSResolverReturningExpectedResult(ctx, resolver, testdomain, "10.0.0.1") }, ingressWait, waitTick)
+	require.Eventually(t, func() bool { return isDNSResolverReturningExpectedResult(ctx, resolver, testdomain, "10.0.0.2") }, ingressWait, waitTick)
+	require.Eventually(t, func() bool { return isDNSResolverReturningExpectedResult(ctx, resolver, testdomain, "10.0.0.1") }, ingressWait, waitTick)
+	require.Eventually(t, func() bool { return isDNSResolverReturningExpectedResult(ctx, resolver, testdomain, "10.0.0.2") }, ingressWait, waitTick)
 
 	t.Log("deleting both GatewayClass and Gateway rapidly")
 	require.NoError(t, gatewayClient.GatewayV1beta1().GatewayClasses().Delete(ctx, gatewayClassName, metav1.DeleteOptions{}))
@@ -350,7 +358,7 @@ func TestUDPRouteEssentials(t *testing.T) {
 	}, ingressWait, waitTick)
 }
 
-func isDNSResolverReturningExpectedResult(resolver *net.Resolver, host, addr string) bool { //nolint:unparam
+func isDNSResolverReturningExpectedResult(ctx context.Context, resolver *net.Resolver, host, addr string) bool { //nolint:unparam
 	addrs, err := resolver.LookupHost(ctx, host)
 	if err != nil {
 		return false

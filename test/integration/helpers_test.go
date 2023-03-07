@@ -10,6 +10,7 @@ import (
 	"time"
 
 	ktfkong "github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/kong"
+	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
 	netv1 "k8s.io/api/networking/v1"
 	netv1beta1 "k8s.io/api/networking/v1beta1"
@@ -17,7 +18,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/util/retry"
-	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
 
@@ -47,7 +47,7 @@ func DeployGatewayClass(ctx context.Context, client *gatewayclient.Clientset, ga
 			},
 		},
 		Spec: gatewayv1beta1.GatewayClassSpec{
-			ControllerName: gateway.ControllerName,
+			ControllerName: gateway.GetControllerName(),
 		},
 	}
 
@@ -152,7 +152,7 @@ func HTTPRouteMatchesAcceptedCallback(t *testing.T, c *gatewayclient.Clientset, 
 
 func httpRouteAcceptedConditionMatches(t *testing.T, c *gatewayclient.Clientset, httpRoute *gatewayv1beta1.HTTPRoute, accepted bool, reason gatewayv1beta1.RouteConditionReason) bool {
 	var err error
-	httpRoute, err = c.GatewayV1beta1().HTTPRoutes(httpRoute.Namespace).Get(ctx, httpRoute.Name, metav1.GetOptions{})
+	httpRoute, err = c.GatewayV1beta1().HTTPRoutes(httpRoute.Namespace).Get(context.Background(), httpRoute.Name, metav1.GetOptions{})
 	require.NoError(t, err)
 
 	if len(httpRoute.Status.Parents) <= 0 {
@@ -191,35 +191,22 @@ func GetGatewayIsUnlinkedCallback(t *testing.T, c *gatewayclient.Clientset, prot
 	}
 }
 
-type routeParentStatusT interface {
-	gatewayv1alpha2.RouteParentStatus | gatewayv1beta1.RouteParentStatus
+type routeParents struct {
+	parents []gatewayv1beta1.RouteParentStatus
 }
 
-type routeParents[T routeParentStatusT] struct {
-	parents []T
-}
-
-func newRouteParentsStatus[T routeParentStatusT](parents []T) routeParents[T] {
-	return routeParents[T]{
+func newRouteParentsStatus(parents []gatewayv1beta1.RouteParentStatus) routeParents {
+	return routeParents{
 		parents: parents,
 	}
 }
 
-func (rp routeParents[T]) check(verifyLinked bool, controllerName string) bool {
+func (rp routeParents) check(verifyLinked bool, controllerName string) bool {
 	for _, ps := range rp.parents {
-		switch parentStatus := (interface{})(ps).(type) {
-		case gatewayv1alpha2.RouteParentStatus:
-			if string(parentStatus.ControllerName) == controllerName {
-				// supported Gateway link was found, hence if we want to ensure
-				// the link existence return true
-				return verifyLinked
-			}
-		case gatewayv1beta1.RouteParentStatus:
-			if string(parentStatus.ControllerName) == controllerName {
-				// supported Gateway link was found, hence if we want to ensure
-				// the link existence return true
-				return verifyLinked
-			}
+		if string(ps.ControllerName) == controllerName {
+			// supported Gateway link was found, hence if we want to ensure
+			// the link existence return true
+			return verifyLinked
 		}
 	}
 
@@ -239,6 +226,8 @@ func gatewayLinkStatusMatches(
 	protocolType gatewayv1beta1.ProtocolType,
 	namespace, name string,
 ) bool {
+	ctx := context.Background()
+
 	// gather a fresh copy of the route, given the specific protocol type
 	switch protocolType { //nolint:exhaustive
 	case gatewayv1beta1.HTTPProtocolType:
@@ -247,31 +236,31 @@ func gatewayLinkStatusMatches(
 			t.Logf("error getting http route: %v", err)
 		} else {
 			return newRouteParentsStatus(route.Status.Parents).
-				check(verifyLinked, string(gateway.ControllerName))
+				check(verifyLinked, string(gateway.GetControllerName()))
 		}
-	case (gatewayv1beta1.ProtocolType)(gatewayv1alpha2.TCPProtocolType):
+	case gatewayv1beta1.TCPProtocolType:
 		route, err := c.GatewayV1alpha2().TCPRoutes(namespace).Get(ctx, name, metav1.GetOptions{})
 		if err != nil {
 			t.Logf("error getting tcp route: %v", err)
 		} else {
 			return newRouteParentsStatus(route.Status.Parents).
-				check(verifyLinked, string(gateway.ControllerName))
+				check(verifyLinked, string(gateway.GetControllerName()))
 		}
-	case (gatewayv1beta1.ProtocolType)(gatewayv1alpha2.UDPProtocolType):
+	case gatewayv1beta1.UDPProtocolType:
 		route, err := c.GatewayV1alpha2().UDPRoutes(namespace).Get(ctx, name, metav1.GetOptions{})
 		if err != nil {
 			t.Logf("error getting udp route: %v", err)
 		} else {
 			return newRouteParentsStatus(route.Status.Parents).
-				check(verifyLinked, string(gateway.ControllerName))
+				check(verifyLinked, string(gateway.GetControllerName()))
 		}
-	case (gatewayv1beta1.ProtocolType)(gatewayv1alpha2.TLSProtocolType):
+	case gatewayv1beta1.TLSProtocolType:
 		route, err := c.GatewayV1alpha2().TLSRoutes(namespace).Get(ctx, name, metav1.GetOptions{})
 		if err != nil {
 			t.Logf("error getting tls route: %v", err)
 		} else {
 			return newRouteParentsStatus(route.Status.Parents).
-				check(verifyLinked, string(gateway.ControllerName))
+				check(verifyLinked, string(gateway.GetControllerName()))
 		}
 	default:
 		t.Fatalf("protocol %s not supported", string(protocolType))
@@ -279,6 +268,88 @@ func gatewayLinkStatusMatches(
 
 	t.Fatal("this should not happen")
 	return false
+}
+
+func parentStatusContainsProgrammedCondition(
+	parentStatuses []gatewayv1beta1.RouteParentStatus,
+	controllerName gatewayv1beta1.GatewayController,
+	expectedStatus metav1.ConditionStatus,
+) bool {
+	var conditions []metav1.Condition
+	parentFound := false
+	for _, parentStatus := range parentStatuses {
+		if parentStatus.ControllerName == controllerName {
+			conditions = parentStatus.Conditions
+			parentFound = true
+		}
+
+		if parentFound {
+			break
+		}
+	}
+
+	if !parentFound {
+		return false
+	}
+	return lo.ContainsBy(conditions, func(cond metav1.Condition) bool {
+		return cond.Type == "Programmed" && cond.Status == expectedStatus
+	})
+}
+
+func verifyProgrammedConditionStatus(t *testing.T,
+	c *gatewayclient.Clientset,
+	protocolType gatewayv1beta1.ProtocolType,
+	namespace, name string,
+	expectedStatus metav1.ConditionStatus,
+) bool {
+	ctx := context.Background()
+
+	// gather a fresh copy of the route, given the specific protocol type
+	switch protocolType { //nolint:exhaustive
+	case gatewayv1beta1.HTTPProtocolType:
+		route, err := c.GatewayV1beta1().HTTPRoutes(namespace).Get(ctx, name, metav1.GetOptions{})
+		if err != nil {
+			t.Logf("error getting http route: %v", err)
+		} else {
+			return parentStatusContainsProgrammedCondition(route.Status.Parents, gateway.GetControllerName(), expectedStatus)
+		}
+	case gateway.TCPProtocolType:
+		route, err := c.GatewayV1alpha2().TCPRoutes(namespace).Get(ctx, name, metav1.GetOptions{})
+		if err != nil {
+			t.Logf("error getting tcp route: %v", err)
+		} else {
+			return parentStatusContainsProgrammedCondition(route.Status.Parents, gateway.GetControllerName(), expectedStatus)
+		}
+	case gateway.TLSProtocolType:
+		route, err := c.GatewayV1alpha2().TLSRoutes(namespace).Get(ctx, name, metav1.GetOptions{})
+		if err != nil {
+			t.Logf("error getting tls route: %v", err)
+		} else {
+			return parentStatusContainsProgrammedCondition(route.Status.Parents, gateway.GetControllerName(), expectedStatus)
+		}
+	case gateway.UDPProtocolType:
+		route, err := c.GatewayV1alpha2().UDPRoutes(namespace).Get(ctx, name, metav1.GetOptions{})
+		if err != nil {
+			t.Logf("error getting udp route: %v", err)
+		} else {
+			return parentStatusContainsProgrammedCondition(route.Status.Parents, gateway.GetControllerName(), expectedStatus)
+		}
+	default:
+		t.Fatalf("protocol %s not supported", string(protocolType))
+	}
+
+	return false
+}
+
+func GetVerifyProgrammedConditionCallback(t *testing.T,
+	c *gatewayclient.Clientset,
+	protocolType gatewayv1beta1.ProtocolType,
+	namespace, name string,
+	expectedStatus metav1.ConditionStatus,
+) func() bool {
+	return func() bool {
+		return verifyProgrammedConditionStatus(t, c, protocolType, namespace, name, expectedStatus)
+	}
 }
 
 // setIngressClassNameWithRetry changes Ingress.Spec.IngressClassName to specified value

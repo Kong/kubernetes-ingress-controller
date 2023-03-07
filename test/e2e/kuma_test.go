@@ -4,15 +4,11 @@
 package e2e
 
 import (
-	"context"
 	"fmt"
 	"testing"
 
-	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/kuma"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/util/retry"
 )
@@ -20,30 +16,12 @@ import (
 func TestDeployAllInOneDBLESSKuma(t *testing.T) {
 	t.Log("configuring all-in-one-dbless.yaml manifest test")
 	t.Parallel()
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	t.Log("building test cluster and environment")
-	builder, err := getEnvironmentBuilder(ctx)
-	require.NoError(t, err)
-	builder = builder.WithAddons(kuma.New())
-	env, err := builder.Build(ctx)
-	require.NoError(t, err)
-
-	defer func() { assert.NoError(t, env.Cleanup(ctx)) }()
-	defer func() {
-		if t.Failed() {
-			output, err := clusters.NewCleaner(env.Cluster()).DumpDiagnostics(ctx, t.Name())
-			if assert.NoErrorf(t, err, "failed dumping diagnostics to %s", output) {
-				t.Logf("%s failed, dumped diagnostics to %s", t.Name(), output)
-			}
-		}
-	}()
+	ctx, env := setupE2ETest(t, kuma.New())
 
 	t.Log("deploying kong components")
-	manifest, err := getTestManifest(t, dblessPath)
-	require.NoError(t, err)
-	deployment := deployKong(ctx, t, env, manifest)
+	manifest := getTestManifest(t, dblessPath)
+	deployKong(ctx, t, env, manifest)
+	deployments := getManifestDeployments(dblessPath)
 
 	t.Log("adding Kuma mesh")
 	require.NoError(t, kuma.EnableMeshForNamespace(ctx, env.Cluster(), "kong"))
@@ -51,28 +29,17 @@ func TestDeployAllInOneDBLESSKuma(t *testing.T) {
 
 	// scale to force a restart of pods and trigger mesh injection (we can't annotate the Kong namespace in advance,
 	// it gets clobbered by deployKong()). is there a "rollout restart" in client-go? who knows!
-	scale := &autoscalingv1.Scale{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      deployment.Name,
-			Namespace: deployment.Namespace,
-		},
-		Spec: autoscalingv1.ScaleSpec{
-			Replicas: 0,
-		},
-	}
-	_, err = env.Cluster().Client().AppsV1().Deployments(deployment.Namespace).UpdateScale(ctx,
-		deployment.Name, scale, metav1.UpdateOptions{})
-	require.NoError(t, err)
-	scale.Spec.Replicas = 2
-	_, err = env.Cluster().Client().AppsV1().Deployments(deployment.Namespace).UpdateScale(ctx,
-		deployment.Name, scale, metav1.UpdateOptions{})
-	require.NoError(t, err)
+	scaleDeployment(ctx, t, env, deployments.ProxyNN, 0)
+	scaleDeployment(ctx, t, env, deployments.ControllerNN, 0)
+
+	scaleDeployment(ctx, t, env, deployments.ProxyNN, 2)
+	scaleDeployment(ctx, t, env, deployments.ControllerNN, 2)
 
 	t.Log("running ingress tests to verify all-in-one deployed ingress controller and proxy are functional")
 	deployIngress(ctx, t, env)
 
 	// use retry.RetryOnConflict to update service, to avoid conflicts from different source.
-	err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
+	err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
 		service, err := env.Cluster().Client().CoreV1().Services("default").Get(ctx, "httpbin", metav1.GetOptions{})
 		if err != nil {
 			return err
@@ -101,23 +68,13 @@ func TestDeployAllInOneDBLESSKuma(t *testing.T) {
 func TestDeployAllInOnePostgresKuma(t *testing.T) {
 	t.Log("configuring all-in-one-postgres.yaml manifest test")
 	t.Parallel()
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
 
-	t.Log("building test cluster and environment")
-	builder, err := getEnvironmentBuilder(ctx)
-	require.NoError(t, err)
-	builder = builder.WithAddons(kuma.New())
-	env, err := builder.Build(ctx)
-	require.NoError(t, err)
-	defer func() {
-		assert.NoError(t, env.Cleanup(ctx))
-	}()
+	ctx, env := setupE2ETest(t, kuma.New())
 
 	t.Log("deploying kong components")
-	manifest, err := getTestManifest(t, postgresPath)
-	require.NoError(t, err)
-	deployment := deployKong(ctx, t, env, manifest)
+	manifest := getTestManifest(t, postgresPath)
+	deployKong(ctx, t, env, manifest)
+	deployments := getManifestDeployments(postgresPath)
 
 	t.Log("this deployment used a postgres backend, verifying that postgres migrations ran properly")
 	verifyPostgres(ctx, t, env)
@@ -128,27 +85,13 @@ func TestDeployAllInOnePostgresKuma(t *testing.T) {
 
 	// scale to force a restart of pods and trigger mesh injection (we can't annotate the Kong namespace in advance,
 	// it gets clobbered by deployKong()). is there a "rollout restart" in client-go? who knows!
-	scale := &autoscalingv1.Scale{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      deployment.Name,
-			Namespace: deployment.Namespace,
-		},
-		Spec: autoscalingv1.ScaleSpec{
-			Replicas: 0,
-		},
-	}
-	_, err = env.Cluster().Client().AppsV1().Deployments(deployment.Namespace).UpdateScale(ctx,
-		deployment.Name, scale, metav1.UpdateOptions{})
-	require.NoError(t, err)
-	scale.Spec.Replicas = 2
-	_, err = env.Cluster().Client().AppsV1().Deployments(deployment.Namespace).UpdateScale(ctx,
-		deployment.Name, scale, metav1.UpdateOptions{})
-	require.NoError(t, err)
+	scaleDeployment(ctx, t, env, deployments.ControllerNN, 0)
+	scaleDeployment(ctx, t, env, deployments.ControllerNN, 2)
 
 	t.Log("running ingress tests to verify all-in-one deployed ingress controller and proxy are functional")
 	deployIngress(ctx, t, env)
 	// use retry.RetryOnConflict to update service, to avoid conflicts from different source.
-	err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
+	err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
 		service, err := env.Cluster().Client().CoreV1().Services("default").Get(ctx, "httpbin", metav1.GetOptions{})
 		if err != nil {
 			return err

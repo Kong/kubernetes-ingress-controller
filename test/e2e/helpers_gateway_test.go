@@ -19,7 +19,7 @@ import (
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
-	kerrors "k8s.io/apimachinery/pkg/api/errors"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
@@ -30,6 +30,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/gateway"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 	"github.com/kong/kubernetes-ingress-controller/v2/test"
+	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/helpers"
 )
 
 // deployGateway deploys a gateway with a new created gateway class and a fixed name `kong`.
@@ -47,7 +48,7 @@ func deployGateway(ctx context.Context, t *testing.T, env environments.Environme
 			},
 		},
 		Spec: gatewayv1beta1.GatewayClassSpec{
-			ControllerName: gateway.ControllerName,
+			ControllerName: gateway.GetControllerName(),
 		},
 	}
 	supportedGatewayClass, err = gc.GatewayV1beta1().GatewayClasses().Create(ctx, supportedGatewayClass, metav1.CreateOptions{})
@@ -111,7 +112,7 @@ func deployGatewayWithTCPListener(ctx context.Context, t *testing.T, env environ
 			},
 		},
 		Spec: gatewayv1beta1.GatewayClassSpec{
-			ControllerName: gateway.ControllerName,
+			ControllerName: gateway.GetControllerName(),
 		},
 	}
 	supportedGatewayClass, err = gc.GatewayV1beta1().GatewayClasses().Create(ctx, supportedGatewayClass, metav1.CreateOptions{})
@@ -146,7 +147,7 @@ func deployGatewayWithTCPListener(ctx context.Context, t *testing.T, env environ
 		gw, err = gc.GatewayV1beta1().Gateways(corev1.NamespaceDefault).Create(ctx, gw, metav1.CreateOptions{})
 		require.NoError(t, err)
 	} else {
-		require.True(t, kerrors.IsNotFound(err))
+		require.True(t, apierrors.IsNotFound(err))
 		gw, err = gc.GatewayV1beta1().Gateways(corev1.NamespaceDefault).Create(ctx, gw, metav1.CreateOptions{})
 		require.NoError(t, err)
 	}
@@ -213,14 +214,12 @@ func deployHTTPRoute(ctx context.Context, t *testing.T, env environments.Environ
 // Once we support HTTPMethod HTTPRouteMatch handling, we can combine the two into a single generic function.
 func verifyHTTPRoute(ctx context.Context, t *testing.T, env environments.Environment) {
 	t.Log("finding the kong proxy service ip")
-	svc, err := env.Cluster().Client().CoreV1().Services(namespace).Get(ctx, "kong-proxy", metav1.GetOptions{})
-	require.NoError(t, err)
-	proxyIP := getKongProxyIP(ctx, t, env, svc)
+	proxyIP := getKongProxyIP(ctx, t, env)
 
 	t.Logf("waiting for route from Ingress to be operational at http://%s/httpbin", proxyIP)
-	httpc := http.Client{Timeout: time.Second * 10}
+
 	require.Eventually(t, func() bool {
-		resp, err := httpc.Get(fmt.Sprintf("http://%s/httpbin", proxyIP))
+		resp, err := helpers.DefaultHTTPClient().Get(fmt.Sprintf("http://%s/httpbin", proxyIP))
 		if err != nil {
 			return false
 		}
@@ -299,9 +298,7 @@ func deployTCPRoute(ctx context.Context, t *testing.T, env environments.Environm
 // using eventually testing helper.
 func verifyTCPRoute(ctx context.Context, t *testing.T, env environments.Environment) {
 	t.Log("finding the kong proxy service ip")
-	svc, err := env.Cluster().Client().CoreV1().Services(namespace).Get(ctx, "kong-proxy", metav1.GetOptions{})
-	require.NoError(t, err)
-	proxyIP := getKongProxyIP(ctx, t, env, svc)
+	proxyIP := getKongProxyIP(ctx, t, env)
 
 	t.Logf("waiting for route from TCPRoute to be operational at %s:%d", proxyIP, tcpListnerPort)
 	require.Eventually(t, func() bool {

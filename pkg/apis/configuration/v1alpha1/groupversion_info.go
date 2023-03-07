@@ -14,16 +14,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// Package v1alpha1 contains API Schema definitions for the configuration.konghq.com v1alpha1 API group.
 package v1alpha1
 
 import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/scheme"
 )
-
-// +kubebuilder:object:generate=true
-// +groupName=configuration.konghq.com
 
 var (
 	// GroupVersion is group version used to register these objects.

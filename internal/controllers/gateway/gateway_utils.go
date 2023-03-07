@@ -2,6 +2,7 @@ package gateway
 
 import (
 	"context"
+	"encoding/pem"
 	"fmt"
 	"reflect"
 	"sort"
@@ -10,7 +11,7 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/samber/lo"
 	corev1 "k8s.io/api/core/v1"
-	k8serrors "k8s.io/apimachinery/pkg/api/errors"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -53,8 +54,8 @@ func setGatewayCondition(gateway *Gateway, newCondition metav1.Condition) {
 func isGatewayScheduled(gateway *Gateway) bool {
 	return util.CheckCondition(
 		gateway.Status.Conditions,
-		util.ConditionType(gatewayv1beta1.GatewayConditionScheduled),
-		util.ConditionReason(gatewayv1beta1.GatewayReasonScheduled),
+		util.ConditionType(gatewayv1beta1.GatewayConditionAccepted),
+		util.ConditionReason(gatewayv1beta1.GatewayReasonAccepted),
 		metav1.ConditionTrue,
 		gateway.Generation,
 	)
@@ -82,7 +83,7 @@ func isObjectUnmanaged(anns map[string]string) bool {
 // isGatewayClassControlledAndUnmanaged returns boolean if the GatewayClass
 // is controlled by this controller and is configured for unmanaged mode.
 func isGatewayClassControlledAndUnmanaged(gatewayClass *GatewayClass) bool {
-	return gatewayClass.Spec.ControllerName == ControllerName && isObjectUnmanaged(gatewayClass.Annotations)
+	return gatewayClass.Spec.ControllerName == GetControllerName() && isObjectUnmanaged(gatewayClass.Annotations)
 }
 
 // getRefFromPublishService splits a publish service string in the format namespace/name into a types.NamespacedName
@@ -215,22 +216,22 @@ func initializeListenerMaps(gateway *Gateway) (
 }
 
 func canSharePort(requested, existing ProtocolType) bool {
-	switch requested { //nolint:exhaustive
+	switch requested {
 	// TCP and UDP listeners must always use unique ports
-	case (ProtocolType)(gatewayv1alpha2.TCPProtocolType), (ProtocolType)(gatewayv1alpha2.UDPProtocolType):
+	case gatewayv1beta1.TCPProtocolType, gatewayv1beta1.UDPProtocolType:
 		return false
 	// HTTPS and TLS Listeners can share ports with others of their type or the other TLS type
 	// note that this is not actually possible in Kong: TLS is a stream listen and HTTPS is an http listen
 	// however, this section implements the spec ignoring Kong's reality
-	case (ProtocolType)(gatewayv1alpha2.HTTPSProtocolType):
-		if existing == (ProtocolType)(gatewayv1alpha2.HTTPSProtocolType) ||
-			existing == (ProtocolType)(gatewayv1alpha2.TLSProtocolType) {
+	case gatewayv1beta1.HTTPSProtocolType:
+		if existing == gatewayv1beta1.HTTPSProtocolType ||
+			existing == gatewayv1beta1.TLSProtocolType {
 			return true
 		}
 		return false
-	case (ProtocolType)(gatewayv1alpha2.TLSProtocolType):
-		if existing == (ProtocolType)(gatewayv1alpha2.HTTPSProtocolType) ||
-			existing == (ProtocolType)(gatewayv1alpha2.TLSProtocolType) {
+	case gatewayv1beta1.TLSProtocolType:
+		if existing == gatewayv1beta1.HTTPSProtocolType ||
+			existing == gatewayv1beta1.TLSProtocolType {
 			return true
 		}
 		return false
@@ -249,7 +250,7 @@ func getListenerStatus(
 	ctx context.Context,
 	gateway *Gateway,
 	kongListens []Listener,
-	referenceGrants []gatewayv1alpha2.ReferenceGrant,
+	referenceGrants []gatewayv1beta1.ReferenceGrant,
 	client client.Client,
 ) ([]ListenerStatus, error) {
 	statuses := make(map[SectionName]ListenerStatus, len(gateway.Spec.Listeners))
@@ -265,13 +266,69 @@ func getListenerStatus(
 		if listener.Hostname != nil {
 			hostname = *listener.Hostname
 		}
+		supportedkinds, ResolvedRefsReason := getListenerSupportedRouteKinds(listener)
+
+		// If the listener uses TLS, we need to ensure that the gateway is granted to reference
+		// all the secrets it references
+		if listener.TLS != nil {
+			tlsResolvedRefReason := string(gatewayv1beta1.ListenerReasonResolvedRefs)
+			for _, certRef := range listener.TLS.CertificateRefs {
+				// if the certificate is in the same namespace of the gateway, no ReferenceGrant is needed
+				if certRef.Namespace != nil && *certRef.Namespace != (Namespace)(gateway.Namespace) {
+					// get the result of the certificate reference. If the returned reason is not successful, the loop
+					// must be broken because the secret reference isn't granted
+					tlsResolvedRefReason = getReferenceGrantConditionReason(gateway.Namespace, certRef, referenceGrants)
+					if tlsResolvedRefReason != string(gatewayv1beta1.ListenerReasonResolvedRefs) {
+						break
+					}
+				}
+
+				// only secrets are supported as certificate references
+				if (certRef.Group != nil && (*certRef.Group != "core" && *certRef.Group != "")) ||
+					(certRef.Kind != nil && *certRef.Kind != "Secret") {
+					tlsResolvedRefReason = string(gatewayv1beta1.ListenerReasonInvalidCertificateRef)
+					break
+				}
+				secret := &corev1.Secret{}
+				secretNamespace := gateway.Namespace
+				if certRef.Namespace != nil {
+					secretNamespace = string(*certRef.Namespace)
+				}
+				if err := client.Get(ctx, types.NamespacedName{Namespace: secretNamespace, Name: string(certRef.Name)}, secret); err != nil {
+					if !apierrors.IsNotFound(err) {
+						return nil, err
+					}
+					tlsResolvedRefReason = string(gatewayv1beta1.ListenerReasonInvalidCertificateRef)
+					break
+				}
+				if !isTLSSecretValid(secret) {
+					tlsResolvedRefReason = string(gatewayv1beta1.ListenerReasonInvalidCertificateRef)
+				}
+			}
+			if gatewayv1beta1.ListenerConditionReason(tlsResolvedRefReason) != gatewayv1beta1.ListenerReasonResolvedRefs {
+				ResolvedRefsReason = gatewayv1beta1.ListenerConditionReason(tlsResolvedRefReason)
+			}
+		}
+
 		status := ListenerStatus{
 			Name:           listener.Name,
 			Conditions:     []metav1.Condition{},
-			SupportedKinds: getListenerSupportedRouteKinds(listener),
+			SupportedKinds: supportedkinds,
 			// this has been populated by initializeListenerMaps()
 			AttachedRoutes: listenerToAttached[listener.Name],
 		}
+
+		// if the resolvedRefs condition is not successful, append the resolvedRefs condition failed with the proper reason
+		if ResolvedRefsReason != gatewayv1beta1.ListenerReasonResolvedRefs {
+			status.Conditions = append(status.Conditions, metav1.Condition{
+				Type:               string(gatewayv1beta1.ListenerConditionResolvedRefs),
+				Reason:             string(ResolvedRefsReason),
+				Status:             metav1.ConditionFalse,
+				LastTransitionTime: metav1.Now(),
+				ObservedGeneration: gateway.Generation,
+			})
+		}
+
 		// TODO this only handles some Listener conditions and reasons as needed to check cross-listener compatibility
 		// and unattachability due to missing Kong configuration. There are others available and it may be appropriate
 		// for us to add them https://github.com/Kong/kubernetes-ingress-controller/issues/2558
@@ -308,11 +365,11 @@ func getListenerStatus(
 					portToHostname[listener.Port][hostname] = true
 				} else {
 					status.Conditions = append(status.Conditions, metav1.Condition{
-						Type:               string(gatewayv1alpha2.ListenerConditionConflicted),
+						Type:               string(gatewayv1beta1.ListenerConditionConflicted),
 						Status:             metav1.ConditionTrue,
 						ObservedGeneration: gateway.Generation,
 						LastTransitionTime: metav1.Now(),
-						Reason:             string(gatewayv1alpha2.ListenerReasonHostnameConflict),
+						Reason:             string(gatewayv1beta1.ListenerReasonHostnameConflict),
 					})
 					conflictedHostnames[listener.Port][hostname] = true
 				}
@@ -323,21 +380,21 @@ func getListenerStatus(
 		// does not provide should be both Conflicted and Detached
 		if len(kongProtocolsToPort[listener.Protocol]) == 0 {
 			status.Conditions = append(status.Conditions, metav1.Condition{
-				Type:               string(gatewayv1alpha2.ListenerConditionDetached),
-				Status:             metav1.ConditionTrue,
+				Type:               string(gatewayv1beta1.ListenerConditionAccepted),
+				Status:             metav1.ConditionFalse,
 				ObservedGeneration: gateway.Generation,
 				LastTransitionTime: metav1.Now(),
-				Reason:             string(gatewayv1alpha2.ListenerReasonUnsupportedProtocol),
+				Reason:             string(gatewayv1beta1.ListenerReasonUnsupportedProtocol),
 				Message:            "no Kong listen with the requested protocol is configured",
 			})
 		} else {
 			if _, ok := kongProtocolsToPort[listener.Protocol][listener.Port]; !ok {
 				status.Conditions = append(status.Conditions, metav1.Condition{
-					Type:               string(gatewayv1alpha2.ListenerConditionDetached),
-					Status:             metav1.ConditionTrue,
+					Type:               string(gatewayv1beta1.ListenerConditionAccepted),
+					Status:             metav1.ConditionFalse,
 					ObservedGeneration: gateway.Generation,
 					LastTransitionTime: metav1.Now(),
-					Reason:             string(gatewayv1alpha2.ListenerReasonPortUnavailable),
+					Reason:             string(gatewayv1beta1.ListenerReasonPortUnavailable),
 					Message:            "no Kong listen with the requested protocol is configured for the requested port",
 				})
 			}
@@ -352,19 +409,33 @@ func getListenerStatus(
 			// if we've gotten this far with no conditions, the listener is good to go
 			status.Conditions = append(status.Conditions,
 				metav1.Condition{
-					Type:               string(gatewayv1alpha2.ListenerConditionConflicted),
+					Type:               string(gatewayv1beta1.ListenerConditionConflicted),
 					Status:             metav1.ConditionFalse,
 					ObservedGeneration: gateway.Generation,
 					LastTransitionTime: metav1.Now(),
-					Reason:             string(gatewayv1alpha2.ListenerReasonNoConflicts),
+					Reason:             string(gatewayv1beta1.ListenerReasonNoConflicts),
 				},
 				metav1.Condition{
-					Type:               string(gatewayv1alpha2.ListenerConditionReady),
+					Type:               string(gatewayv1beta1.ListenerConditionResolvedRefs),
 					Status:             metav1.ConditionTrue,
 					ObservedGeneration: gateway.Generation,
 					LastTransitionTime: metav1.Now(),
-					Reason:             string(gatewayv1alpha2.ListenerReasonReady),
+					Reason:             string(gatewayv1beta1.ListenerReasonResolvedRefs),
+				},
+				metav1.Condition{
+					Type:               string(gatewayv1beta1.ListenerConditionReady),
+					Status:             metav1.ConditionTrue,
+					ObservedGeneration: gateway.Generation,
+					LastTransitionTime: metav1.Now(),
+					Reason:             string(gatewayv1beta1.ListenerReasonReady),
 					Message:            "the listener is ready and available for routing",
+				},
+				metav1.Condition{
+					Type:               string(gatewayv1beta1.ListenerConditionProgrammed),
+					Status:             metav1.ConditionTrue,
+					ObservedGeneration: gateway.Generation,
+					LastTransitionTime: metav1.Now(),
+					Reason:             string(gatewayv1beta1.ListenerReasonProgrammed),
 				},
 			)
 		} else {
@@ -373,13 +444,20 @@ func getListenerStatus(
 			// it generic unready if we hit anything bad. do any failure conditions block readiness? do we care about
 			// having distinct ready false messages, assuming we have more descriptive messages in the other conditions?
 			status.Conditions = append(status.Conditions, metav1.Condition{
-				Type:               string(gatewayv1alpha2.ListenerConditionReady),
+				Type:               string(gatewayv1beta1.ListenerConditionReady),
 				Status:             metav1.ConditionFalse,
 				ObservedGeneration: gateway.Generation,
 				LastTransitionTime: metav1.Now(),
-				Reason:             string(gatewayv1alpha2.ListenerReasonPending),
+				Reason:             string(gatewayv1beta1.ListenerReasonInvalid),
 				Message:            "the listener is not ready and cannot route requests",
-			})
+			},
+				metav1.Condition{
+					Type:               string(gatewayv1beta1.ListenerConditionProgrammed),
+					Status:             metav1.ConditionFalse,
+					ObservedGeneration: gateway.Generation,
+					LastTransitionTime: metav1.Now(),
+					Reason:             string(gatewayv1beta1.ListenerReasonInvalid),
+				})
 		}
 
 		// consistent sort statuses to allow equality comparisons
@@ -397,7 +475,6 @@ func getListenerStatus(
 	// if we encountered conflicts, we must strip the ready status we originally set
 	for _, listener := range gateway.Spec.Listeners {
 		var conflictReason string
-		var resolvedRefReason string
 
 		var hostname Hostname
 		if listener.Hostname != nil {
@@ -405,84 +482,20 @@ func getListenerStatus(
 		}
 		// there's no filter for protocols that don't use Hostname, but this won't be populated from earlier for those
 		if _, ok := conflictedHostnames[listener.Port][hostname]; ok {
-			conflictReason = string(gatewayv1alpha2.ListenerReasonHostnameConflict)
+			conflictReason = string(gatewayv1beta1.ListenerReasonHostnameConflict)
 		}
 
 		if _, ok := conflictedPorts[listener.Port]; ok {
-			conflictReason = string(gatewayv1alpha2.ListenerReasonProtocolConflict)
-		}
-
-		// If the listener uses TLS, we need to ensure that the gateway is granted to reference
-		// all the secrets it references
-		if listener.TLS != nil {
-			resolvedRefReason = string(gatewayv1alpha2.ListenerReasonResolvedRefs)
-			for _, certRef := range listener.TLS.CertificateRefs {
-				// if the certificate is in the same namespace of the gateway, no ReferenceGrant is needed
-				if certRef.Namespace != nil && *certRef.Namespace != (Namespace)(gateway.Namespace) {
-					// get the result of the certificate reference. If the returned reason is not successful, the loop
-					// must be broken because the secret reference isn't granted
-					resolvedRefReason = getReferenceGrantConditionReason(gateway.Namespace, certRef, referenceGrants)
-					if resolvedRefReason != string(gatewayv1alpha2.ListenerReasonResolvedRefs) {
-						break
-					}
-				}
-
-				// only secrets are supported as certificate references
-				if (certRef.Group != nil && (*certRef.Group != "core" && *certRef.Group != "")) ||
-					(certRef.Kind != nil && *certRef.Kind != "Secret") {
-					resolvedRefReason = string(gatewayv1alpha2.ListenerReasonInvalidCertificateRef)
-					break
-				}
-				secret := &corev1.Secret{}
-				secretNamespace := gateway.Namespace
-				if certRef.Namespace != nil {
-					secretNamespace = string(*certRef.Namespace)
-				}
-				if err := client.Get(ctx, types.NamespacedName{Namespace: secretNamespace, Name: string(certRef.Name)}, secret); err != nil {
-					if !k8serrors.IsNotFound(err) {
-						return nil, err
-					}
-					resolvedRefReason = string(gatewayv1alpha2.ListenerReasonInvalidCertificateRef)
-				}
-			}
+			conflictReason = string(gatewayv1beta1.ListenerReasonProtocolConflict)
 		}
 
 		newConditions := []metav1.Condition{}
-
-		// if resolvedRefReason has any value, it means that the listener references a secret.
-		// A ListenerConditionResolvedRefs condition must be set to reflect in the gateway status
-		// the outcome of that reference (that means if the gateway is granted to access that secret)
-		if resolvedRefReason != "" {
-			conditionStatus := metav1.ConditionTrue
-			message := "the listener is ready and available for routing"
-			if resolvedRefReason != string(gatewayv1alpha2.ListenerReasonResolvedRefs) {
-				conditionStatus = metav1.ConditionFalse
-				message = "the listener is not ready and cannot route requests"
-			}
-			newConditions = append(newConditions,
-				metav1.Condition{
-					Type:               string(gatewayv1alpha2.ListenerConditionResolvedRefs),
-					Status:             conditionStatus,
-					ObservedGeneration: gateway.Generation,
-					LastTransitionTime: metav1.Now(),
-					Reason:             resolvedRefReason,
-				},
-				metav1.Condition{
-					Type:               string(gatewayv1alpha2.ListenerConditionReady),
-					Status:             conditionStatus,
-					ObservedGeneration: gateway.Generation,
-					LastTransitionTime: metav1.Now(),
-					Reason:             string(gatewayv1alpha2.ListenerReasonReady),
-					Message:            message,
-				},
-			)
-		}
 
 		if len(conflictReason) > 0 {
 			for _, cond := range statuses[listener.Name].Conditions {
 				// shut up linter, there's a default
 				switch gatewayv1alpha2.ListenerConditionType(cond.Type) { //nolint:exhaustive
-				case gatewayv1alpha2.ListenerConditionReady, gatewayv1alpha2.ListenerConditionConflicted:
+				case gatewayv1beta1.ListenerConditionReady, gatewayv1beta1.ListenerConditionConflicted:
 					continue
 				default:
 					newConditions = append(newConditions, cond)
@@ -490,18 +503,18 @@ func getListenerStatus(
 			}
 			newConditions = append(newConditions,
 				metav1.Condition{
-					Type:               string(gatewayv1alpha2.ListenerConditionConflicted),
+					Type:               string(gatewayv1beta1.ListenerConditionConflicted),
 					Status:             metav1.ConditionTrue,
 					ObservedGeneration: gateway.Generation,
 					LastTransitionTime: metav1.Now(),
 					Reason:             conflictReason,
 				},
 				metav1.Condition{
-					Type:               string(gatewayv1alpha2.ListenerConditionReady),
+					Type:               string(gatewayv1beta1.ListenerConditionReady),
 					Status:             metav1.ConditionFalse,
 					ObservedGeneration: gateway.Generation,
 					LastTransitionTime: metav1.Now(),
-					Reason:             string(gatewayv1alpha2.ListenerReasonReady),
+					Reason:             string(gatewayv1beta1.ListenerReasonReady),
 					Message:            "the listener is not ready and cannot route requests",
 				},
 			)
@@ -531,11 +544,11 @@ func getListenerStatus(
 func getReferenceGrantConditionReason(
 	gatewayNamespace string,
 	certRef gatewayv1beta1.SecretObjectReference,
-	referenceGrants []gatewayv1alpha2.ReferenceGrant,
+	referenceGrants []gatewayv1beta1.ReferenceGrant,
 ) string {
 	// no need to have this reference granted
 	if certRef.Namespace == nil || *certRef.Namespace == (Namespace)(gatewayNamespace) {
-		return string(gatewayv1alpha2.ListenerReasonResolvedRefs)
+		return string(gatewayv1beta1.ListenerReasonResolvedRefs)
 	}
 
 	certRefNamespace := string(*certRef.Namespace)
@@ -546,7 +559,7 @@ func getReferenceGrantConditionReason(
 		}
 		for _, from := range grant.Spec.From {
 			// we are interested only in grants for gateways that want to reference secrets
-			if (Group)(from.Group) != gatewayV1beta1Group || from.Kind != "Gateway" {
+			if from.Group != gatewayV1beta1Group || from.Kind != "Gateway" {
 				continue
 			}
 			if from.Namespace == gatewayv1alpha2.Namespace(gatewayNamespace) {
@@ -557,14 +570,14 @@ func getReferenceGrantConditionReason(
 					// if all the above conditions are satisfied, and the name of the referenced secret matches
 					// the granted resource name, then return a reason "ResolvedRefs"
 					if to.Name == nil || string(*to.Name) == string(certRef.Name) {
-						return string(gatewayv1alpha2.ListenerReasonResolvedRefs)
+						return string(gatewayv1beta1.ListenerReasonResolvedRefs)
 					}
 				}
 			}
 		}
 	}
 	// if no grants have been found for the reference, return an "InvalidCertificateRef" reason
-	return string(gatewayv1alpha2.ListenerReasonRefNotPermitted)
+	return string(gatewayv1beta1.ListenerReasonRefNotPermitted)
 }
 
 // -----------------------------------------------------------------------------
@@ -597,7 +610,7 @@ func isGatewayClassEventInClass(log logr.Logger, watchEvent interface{}) bool {
 			log.Error(fmt.Errorf("invalid type"), "received invalid object type in event handlers", "expected", "GatewayClass", "found", reflect.TypeOf(obj))
 			continue
 		}
-		if gwc.Spec.ControllerName == ControllerName {
+		if gwc.Spec.ControllerName == GetControllerName() {
 			return true
 		}
 	}
@@ -609,24 +622,29 @@ func isGatewayClassEventInClass(log logr.Logger, watchEvent interface{}) bool {
 // If no AllowedRoutes.Kinds are specified for the Listener, the supported RouteGroupKind is derived directly
 // from the Listener's Protocol.
 // Otherwise, user specified AllowedRoutes.Kinds are used, filtered by the global Gateway supported kinds.
-//
-// TODO: Make ListenerStatus.SupportedKinds compliant with GW API specification
-// https://github.com/Kong/kubernetes-ingress-controller/issues/3228
-func getListenerSupportedRouteKinds(l gatewayv1beta1.Listener) []gatewayv1beta1.RouteGroupKind {
+func getListenerSupportedRouteKinds(l gatewayv1beta1.Listener) ([]gatewayv1beta1.RouteGroupKind, gatewayv1beta1.ListenerConditionReason) {
 	if l.AllowedRoutes == nil || len(l.AllowedRoutes.Kinds) == 0 {
 		switch string(l.Protocol) {
-		case string(gatewayv1beta1.HTTPProtocolType), string(gatewayv1beta1.HTTPSProtocolType):
-			return builder.NewRouteGroupKind().HTTPRoute().IntoSlice()
+		case string(gatewayv1beta1.HTTPProtocolType):
+			return builder.NewRouteGroupKind().HTTPRoute().IntoSlice(), gatewayv1beta1.ListenerReasonResolvedRefs
+		case string(gatewayv1beta1.HTTPSProtocolType):
+			return []gatewayv1beta1.RouteGroupKind{
+				builder.NewRouteGroupKind().HTTPRoute().Build(),
+				builder.NewRouteGroupKind().GRPCRoute().Build(),
+			}, gatewayv1beta1.ListenerReasonResolvedRefs
 		case string(gatewayv1beta1.TCPProtocolType):
-			return builder.NewRouteGroupKind().TCPRoute().IntoSlice()
+			return builder.NewRouteGroupKind().TCPRoute().IntoSlice(), gatewayv1beta1.ListenerReasonResolvedRefs
 		case string(gatewayv1beta1.UDPProtocolType):
-			return builder.NewRouteGroupKind().UDPRoute().IntoSlice()
+			return builder.NewRouteGroupKind().UDPRoute().IntoSlice(), gatewayv1beta1.ListenerReasonResolvedRefs
 		case string(gatewayv1beta1.TLSProtocolType):
-			return builder.NewRouteGroupKind().TLSRoute().IntoSlice()
+			return builder.NewRouteGroupKind().TLSRoute().IntoSlice(), gatewayv1beta1.ListenerReasonResolvedRefs
 		}
 	}
 
-	var supportedRGK []gatewayv1beta1.RouteGroupKind
+	var (
+		supportedRGK = []gatewayv1beta1.RouteGroupKind{}
+		reason       = gatewayv1beta1.ListenerReasonResolvedRefs
+	)
 	for _, gk := range l.AllowedRoutes.Kinds {
 		if gk.Group != nil && *gk.Group == gatewayv1beta1.GroupName {
 			_, ok := lo.Find(supportedKinds, func(k Kind) bool {
@@ -634,9 +652,31 @@ func getListenerSupportedRouteKinds(l gatewayv1beta1.Listener) []gatewayv1beta1.
 			})
 			if ok {
 				supportedRGK = append(supportedRGK, gk)
+				continue
 			}
+			reason = gatewayv1beta1.ListenerReasonInvalidRouteKinds
+		} else {
+			reason = gatewayv1beta1.ListenerReasonInvalidRouteKinds
 		}
 	}
 
-	return supportedRGK
+	return supportedRGK, reason
+}
+
+func isTLSSecretValid(secret *corev1.Secret) bool {
+	var ok bool
+	var crt, key []byte
+	if crt, ok = secret.Data["tls.crt"]; !ok {
+		return false
+	}
+	if key, ok = secret.Data["tls.key"]; !ok {
+		return false
+	}
+	if p, _ := pem.Decode(crt); p == nil {
+		return false
+	}
+	if p, _ := pem.Decode(key); p == nil {
+		return false
+	}
+	return true
 }

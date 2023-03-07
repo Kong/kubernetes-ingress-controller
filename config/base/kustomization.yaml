@@ -6,7 +6,6 @@ resources:
 - ../rbac/gateway
 - ../rbac/knative
 - ingressclass.yaml
-- secret-sa-token.yaml
 - service.yaml
 - serviceaccount.yaml
 - validation-service.yaml

@@ -7,7 +7,8 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
-	"k8s.io/apimachinery/pkg/api/errors"
+	"github.com/samber/lo"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -24,6 +25,7 @@ import (
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
+	k8sobj "github.com/kong/kubernetes-ingress-controller/v2/internal/util/kubernetes/object"
 )
 
 // -----------------------------------------------------------------------------
@@ -234,13 +236,13 @@ func (r *TCPRouteReconciler) listTCPRoutesForGateway(obj client.Object) []reconc
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
 func (r *TCPRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	log := r.Log.WithValues("NetV1Alpha2TCPRoute", req.NamespacedName)
+	log := r.Log.WithValues("GatewayV1Alpha2TCPRoute", req.NamespacedName)
 
 	tcproute := new(gatewayv1alpha2.TCPRoute)
 	if err := r.Get(ctx, req.NamespacedName, tcproute); err != nil {
 		// if the queued object is no longer present in the proxy cache we need
 		// to ensure that if it was ever added to the cache, it gets removed.
-		if errors.IsNotFound(err) {
+		if apierrors.IsNotFound(err) {
 			debug(log, tcproute, "object does not exist, ensuring it is not present in the proxy cache")
 			tcproute.Namespace = req.Namespace
 			tcproute.Name = req.Name
@@ -349,6 +351,48 @@ func (r *TCPRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		return ctrl.Result{}, nil
 	}
 
+	// update "Programmed" condition if the TCPRoute is translated to Kong configuration.
+	// if the TCPRoute is not configured in the dataplane, leave it unchanged and requeue.
+	// if it is successfully configured, update its "Programmed" condition to True.
+	// if translation failure happens, update its "Programmed" condition to False.
+	debug(log, tcproute, "ensuring status contains Programmed condition")
+	if r.DataplaneClient.AreKubernetesObjectReportsEnabled() {
+		// if the dataplane client has reporting enabled (this is the default and is
+		// tied in with status updates being enabled in the controller manager) then
+		// we will wait until the object is reported as successfully configured before
+		// moving on to status updates.
+		configurationStatus := r.DataplaneClient.KubernetesObjectConfigurationStatus(tcproute)
+		if configurationStatus == k8sobj.ConfigurationStatusUnknown {
+			// requeue until tcproute is configured.
+			debug(log, tcproute, "tcproute not configured,requeueing")
+			return ctrl.Result{Requeue: true}, nil
+		}
+
+		if configurationStatus == k8sobj.ConfigurationStatusFailed {
+			debug(log, tcproute, "tcproute configuration failed")
+			statusUpdated, err := r.ensureParentsProgrammedCondition(ctx, tcproute, gateways, metav1.ConditionFalse, ConditionReasonTranslationError, "")
+			if err != nil {
+				// don't proceed until the statuses can be updated appropriately
+				debug(log, tcproute, "failed to update programmed condition")
+				return ctrl.Result{}, err
+			}
+			return ctrl.Result{Requeue: !statusUpdated}, nil
+		}
+
+		statusUpdated, err := r.ensureParentsProgrammedCondition(ctx, tcproute, gateways, metav1.ConditionTrue, ConditionReasonConfiguredInGateway, "")
+		if err != nil {
+			// don't proceed until the statuses can be updated appropriately
+			debug(log, tcproute, "failed to update programmed condition")
+			return ctrl.Result{}, err
+		}
+		if statusUpdated {
+			// if the status was updated it will trigger a follow-up reconciliation
+			// so we don't need to do anything further here.
+			debug(log, tcproute, "programmed condition updated")
+			return ctrl.Result{}, nil
+		}
+	}
+
 	// once the data-plane has accepted the TCPRoute object, we're all set.
 	info(log, tcproute, "tcproute has been configured on the data-plane")
 	return ctrl.Result{}, nil
@@ -371,15 +415,7 @@ func (r *TCPRouteReconciler) ensureGatewayReferenceStatusAdded(
 	gateways ...supportedGatewayWithCondition,
 ) (bool, error) {
 	// map the existing parentStatues to avoid duplications
-	parentStatuses := make(map[string]*gatewayv1alpha2.RouteParentStatus)
-	for _, existingParent := range tcproute.Status.Parents {
-		namespace := tcproute.Namespace
-		if existingParent.ParentRef.Namespace != nil {
-			namespace = string(*existingParent.ParentRef.Namespace)
-		}
-		existingParentCopy := existingParent
-		parentStatuses[namespace+string(existingParent.ParentRef.Name)] = &existingParentCopy
-	}
+	parentStatuses := getParentStatuses(tcproute, tcproute.Status.Parents)
 
 	// overlay the parent ref statuses for all new gateway references
 	statusChangesWereMade := false
@@ -388,11 +424,11 @@ func (r *TCPRouteReconciler) ensureGatewayReferenceStatusAdded(
 		gatewayParentStatus := &gatewayv1alpha2.RouteParentStatus{
 			ParentRef: gatewayv1alpha2.ParentReference{
 				Group:     (*gatewayv1alpha2.Group)(&gatewayv1beta1.GroupVersion.Group),
-				Kind:      (*gatewayv1alpha2.Kind)(util.StringToGatewayAPIKindPtr(tcprouteParentKind)),
+				Kind:      util.StringToGatewayAPIKindPtr(tcprouteParentKind),
 				Namespace: (*gatewayv1alpha2.Namespace)(&gateway.gateway.Namespace),
 				Name:      (gatewayv1alpha2.ObjectName)(gateway.gateway.Name),
 			},
-			ControllerName: (gatewayv1alpha2.GatewayController)(ControllerName),
+			ControllerName: GetControllerName(),
 			Conditions: []metav1.Condition{{
 				Type:               string(gatewayv1beta1.RouteConditionAccepted),
 				Status:             metav1.ConditionTrue,
@@ -404,25 +440,42 @@ func (r *TCPRouteReconciler) ensureGatewayReferenceStatusAdded(
 
 		// if the reference already exists and doesn't require any changes
 		// then just leave it alone.
-		if existingGatewayParentStatus, exists := parentStatuses[gateway.gateway.Namespace+gateway.gateway.Name]; exists {
-			// fake the time of the existing status as this wont be equal
-			for i := range existingGatewayParentStatus.Conditions {
-				existingGatewayParentStatus.Conditions[i].LastTransitionTime = gatewayParentStatus.Conditions[0].LastTransitionTime
-			}
-
-			// other than the condition timestamps, check if the statuses are equal
-			if reflect.DeepEqual(existingGatewayParentStatus, gatewayParentStatus) {
+		parentRefKey := gateway.gateway.Namespace + "/" + gateway.gateway.Name
+		if existingGatewayParentStatus, exists := parentStatuses[parentRefKey]; exists {
+			//  check if the parentRef and controllerName are equal, and whether the new condition is present in existing conditions
+			if reflect.DeepEqual(existingGatewayParentStatus.ParentRef, gatewayParentStatus.ParentRef) &&
+				existingGatewayParentStatus.ControllerName == gatewayParentStatus.ControllerName &&
+				lo.ContainsBy(existingGatewayParentStatus.Conditions, func(condition metav1.Condition) bool {
+					return sameCondition(gatewayParentStatus.Conditions[0], condition)
+				}) {
 				continue
 			}
 		}
 
 		// otherwise overlay the new status on top the list of parentStatuses
-		parentStatuses[gateway.gateway.Namespace+gateway.gateway.Name] = gatewayParentStatus
+		parentStatuses[parentRefKey] = gatewayParentStatus
 		statusChangesWereMade = true
 	}
 
+	// initialize "programmed" condition to Unknown.
+	// do not update the condition If a "Programmed" condition is already present.
+	programmedConditionChanged := false
+	programmedConditionUnknown := metav1.Condition{
+		Type:               ConditionTypeProgrammed,
+		Status:             metav1.ConditionUnknown,
+		Reason:             string(ConditionReasonProgrammedUnknown),
+		ObservedGeneration: tcproute.Generation,
+		LastTransitionTime: metav1.Now(),
+	}
+	for _, parentStatus := range parentStatuses {
+		if !parentStatusHasProgrammedCondition(parentStatus) {
+			programmedConditionChanged = true
+			parentStatus.Conditions = append(parentStatus.Conditions, programmedConditionUnknown)
+		}
+	}
+
 	// if we didn't have to actually make any changes, no status update is needed
-	if !statusChangesWereMade {
+	if !statusChangesWereMade && !programmedConditionChanged {
 		return false, nil
 	}
 
@@ -448,7 +501,7 @@ func (r *TCPRouteReconciler) ensureGatewayReferenceStatusRemoved(ctx context.Con
 	// drop all status references to supported Gateway objects
 	newStatuses := make([]gatewayv1alpha2.RouteParentStatus, 0)
 	for _, status := range tcproute.Status.Parents {
-		if status.ControllerName != (gatewayv1alpha2.GatewayController)(ControllerName) {
+		if status.ControllerName != GetControllerName() {
 			newStatuses = append(newStatuses, status)
 		}
 	}
@@ -467,4 +520,62 @@ func (r *TCPRouteReconciler) ensureGatewayReferenceStatusRemoved(ctx context.Con
 
 	// the status needed an update and it was updated successfully
 	return true, nil
+}
+
+func (r *TCPRouteReconciler) ensureParentsProgrammedCondition(
+	ctx context.Context,
+	tcproute *gatewayv1alpha2.TCPRoute,
+	gateways []supportedGatewayWithCondition,
+	conditionStatus metav1.ConditionStatus,
+	conditionReason gatewayv1beta1.RouteConditionReason,
+	conditionMessage string,
+) (bool, error) {
+	// map the existing parentStatues to avoid duplications
+	parentStatuses := getParentStatuses(tcproute, tcproute.Status.Parents)
+
+	programmedCondition := metav1.Condition{
+		Type:               ConditionTypeProgrammed,
+		Status:             conditionStatus,
+		Reason:             string(conditionReason),
+		ObservedGeneration: tcproute.Generation,
+		Message:            conditionMessage,
+		LastTransitionTime: metav1.Now(),
+	}
+	statusChanged := false
+	for _, g := range gateways {
+		gateway := g.gateway
+		parentRefKey := gateway.Namespace + "/" + gateway.Name
+		parentStatus, ok := parentStatuses[parentRefKey]
+		if ok {
+			// update existing parent in status.
+			changed := setRouteParentStatusCondition(parentStatus, programmedCondition)
+			statusChanged = statusChanged || changed
+		} else {
+			// add a new parent if the parent is not found in status.
+			newParentStatus := &gatewayv1alpha2.RouteParentStatus{
+				ParentRef: gatewayv1alpha2.ParentReference{
+					Namespace: lo.ToPtr(gatewayv1alpha2.Namespace(gateway.Namespace)),
+					Name:      gatewayv1alpha2.ObjectName(gateway.Name),
+					// TODO: set port after gateway port matching implemented: https://github.com/Kong/kubernetes-ingress-controller/issues/3016
+				},
+				ControllerName: GetControllerName(),
+				Conditions: []metav1.Condition{
+					programmedCondition,
+				},
+			}
+			tcproute.Status.Parents = append(tcproute.Status.Parents, *newParentStatus)
+			parentStatuses[parentRefKey] = newParentStatus
+			statusChanged = true
+		}
+	}
+
+	// update status if needed.
+	if statusChanged {
+		if err := r.Status().Update(ctx, tcproute); err != nil {
+			return false, err
+		}
+		return true, nil
+	}
+	// no need to update if no status is changed.
+	return false, nil
 }

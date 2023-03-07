@@ -10,7 +10,7 @@ import (
 
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	apiextclient "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset/typed/apiextensions/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/util/retry"
 
@@ -73,14 +73,13 @@ func DeployCRDsForCluster(ctx context.Context, cluster clusters.Cluster) error {
 		"gateways.gateway.networking.k8s.io",
 		"httproutes.gateway.networking.k8s.io",
 		"referencegrants.gateway.networking.k8s.io",
-		"referencepolicies.gateway.networking.k8s.io",
 		"tcproutes.gateway.networking.k8s.io",
 		"tlsroutes.gateway.networking.k8s.io",
 		"udproutes.gateway.networking.k8s.io",
 	} {
 		if err := retry.OnError(
 			retry.DefaultRetry,
-			errors.IsNotFound,
+			apierrors.IsNotFound,
 			func() error {
 				_, err := apiextClient.CustomResourceDefinitions().Get(ctx, crd, metav1.GetOptions{})
 				return err

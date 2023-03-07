@@ -288,6 +288,8 @@ func TestKongPluginFromK8SPlugin(t *testing.T) {
 				t.Errorf("kongPluginFromK8SPlugin error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
+			// don't care about tags in this test
+			got.Tags = nil
 			assert.Equal(tt.want, got)
 		})
 	}

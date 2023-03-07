@@ -4,6 +4,7 @@
 package integration
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -26,6 +27,7 @@ import (
 	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/test"
+	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/helpers"
 )
 
 const (
@@ -33,23 +35,16 @@ const (
 )
 
 func TestTCPRouteEssentials(t *testing.T) {
+	ctx := context.Background()
+
 	t.Log("locking TCP port")
 	tcpMutex.Lock()
-	defer func() {
-		// Free up the TCP port
+	t.Cleanup(func() {
 		t.Log("unlocking TCP port")
 		tcpMutex.Unlock()
-	}()
+	})
 
-	ns, cleaner := setup(t)
-	defer func() {
-		if t.Failed() {
-			output, err := cleaner.DumpDiagnostics(ctx, t.Name())
-			t.Logf("%s failed, dumped diagnostics to %s", t.Name(), output)
-			assert.NoError(t, err)
-		}
-		assert.NoError(t, cleaner.Cleanup(ctx))
-	}()
+	ns, cleaner := helpers.Setup(ctx, t, env)
 
 	t.Log("getting gateway client")
 	gatewayClient, err := gatewayclient.NewForConfig(env.Cluster().Config())
@@ -168,6 +163,11 @@ func TestTCPRouteEssentials(t *testing.T) {
 	t.Log("verifying that the Gateway gets linked to the route via status")
 	callback := GetGatewayIsLinkedCallback(t, gatewayClient, gatewayv1beta1.TCPProtocolType, ns.Name, tcpRoute.Name)
 	require.Eventually(t, callback, ingressWait, waitTick)
+	t.Log("verifying that the tcproute contains 'Programmed' condition")
+	require.Eventually(t,
+		GetVerifyProgrammedConditionCallback(t, gatewayClient, gatewayv1beta1.TCPProtocolType, ns.Name, tcpRoute.Name, metav1.ConditionTrue),
+		ingressWait, waitTick,
+	)
 
 	t.Log("verifying that the tcpecho is responding properly")
 	require.Eventually(t, func() bool {
@@ -418,22 +418,16 @@ func TestTCPRouteEssentials(t *testing.T) {
 }
 
 func TestTCPRouteReferenceGrant(t *testing.T) {
+	ctx := context.Background()
+
 	t.Log("locking TCP port")
 	tcpMutex.Lock()
-	defer func() {
+	t.Cleanup(func() {
 		t.Log("unlocking TCP port")
 		tcpMutex.Unlock()
-	}()
+	})
 
-	ns, cleaner := setup(t)
-	defer func() {
-		if t.Failed() {
-			output, err := cleaner.DumpDiagnostics(ctx, t.Name())
-			t.Logf("%s failed, dumped diagnostics to %s", t.Name(), output)
-			assert.NoError(t, err)
-		}
-		assert.NoError(t, cleaner.Cleanup(ctx))
-	}()
+	ns, cleaner := helpers.Setup(ctx, t, env)
 
 	otherNs, err := clusters.GenerateNamespace(ctx, env.Cluster(), t.Name())
 	require.NoError(t, err)
@@ -583,13 +577,13 @@ func TestTCPRouteReferenceGrant(t *testing.T) {
 	}, time.Second*10, time.Second)
 
 	t.Logf("creating a ReferenceGrant that permits tcproute access from %s to services in %s", ns.Name, otherNs.Name)
-	grant := &gatewayv1alpha2.ReferenceGrant{
+	grant := &gatewayv1beta1.ReferenceGrant{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        uuid.NewString(),
 			Annotations: map[string]string{},
 		},
-		Spec: gatewayv1alpha2.ReferenceGrantSpec{
-			From: []gatewayv1alpha2.ReferenceGrantFrom{
+		Spec: gatewayv1beta1.ReferenceGrantSpec{
+			From: []gatewayv1beta1.ReferenceGrantFrom{
 				{
 					// this isn't actually used, it's just a dummy extra from to confirm we handle multiple fine
 					Group:     gatewayv1alpha2.Group("gateway.networking.k8s.io"),
@@ -602,7 +596,7 @@ func TestTCPRouteReferenceGrant(t *testing.T) {
 					Namespace: gatewayv1alpha2.Namespace(tcproute.Namespace),
 				},
 			},
-			To: []gatewayv1alpha2.ReferenceGrantTo{
+			To: []gatewayv1beta1.ReferenceGrantTo{
 				// also a dummy
 				{
 					Group: gatewayv1alpha2.Group(""),
@@ -616,7 +610,7 @@ func TestTCPRouteReferenceGrant(t *testing.T) {
 		},
 	}
 
-	grant, err = gatewayClient.GatewayV1alpha2().ReferenceGrants(otherNs.Name).Create(ctx, grant, metav1.CreateOptions{})
+	grant, err = gatewayClient.GatewayV1beta1().ReferenceGrants(otherNs.Name).Create(ctx, grant, metav1.CreateOptions{})
 	require.NoError(t, err)
 
 	t.Log("verifying that requests reach both the local and remote namespace echo instances")
@@ -631,13 +625,13 @@ func TestTCPRouteReferenceGrant(t *testing.T) {
 
 	t.Logf("testing specific name references")
 	serviceName := gatewayv1alpha2.ObjectName(service2.ObjectMeta.Name)
-	grant.Spec.To[1] = gatewayv1alpha2.ReferenceGrantTo{
+	grant.Spec.To[1] = gatewayv1beta1.ReferenceGrantTo{
 		Kind:  gatewayv1alpha2.Kind("Service"),
 		Group: gatewayv1alpha2.Group(""),
 		Name:  &serviceName,
 	}
 
-	grant, err = gatewayClient.GatewayV1alpha2().ReferenceGrants(otherNs.Name).Update(ctx, grant, metav1.UpdateOptions{})
+	grant, err = gatewayClient.GatewayV1beta1().ReferenceGrants(otherNs.Name).Update(ctx, grant, metav1.UpdateOptions{})
 	require.NoError(t, err)
 
 	require.Eventually(t, func() bool {
@@ -648,7 +642,7 @@ func TestTCPRouteReferenceGrant(t *testing.T) {
 	t.Logf("testing incorrect name does not match")
 	blueguyName := gatewayv1alpha2.ObjectName("blueguy")
 	grant.Spec.To[1].Name = &blueguyName
-	_, err = gatewayClient.GatewayV1alpha2().ReferenceGrants(otherNs.Name).Update(ctx, grant, metav1.UpdateOptions{})
+	_, err = gatewayClient.GatewayV1beta1().ReferenceGrants(otherNs.Name).Update(ctx, grant, metav1.UpdateOptions{})
 	require.NoError(t, err)
 
 	require.Eventually(t, func() bool {

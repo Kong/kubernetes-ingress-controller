@@ -53,13 +53,13 @@ jobs:
           password: ${{ secrets.DOCKER_TOKEN }}
       - name: Docker meta
         id: meta
-        uses: docker/metadata-action@v4.1.1
+        uses: docker/metadata-action@v4.3.0
         with:
           images: kong/nightly-ingress-controller
           tags: ${{ steps.tags-standard.outputs.TAGS_STANDARD }}
       - name: Docker meta (redhat)
         id: meta_redhat
-        uses: docker/metadata-action@v4.1.1
+        uses: docker/metadata-action@v4.3.0
         with:
           images: kong/nightly-ingress-controller
           flavor: |
@@ -67,7 +67,7 @@ jobs:
           tags: ${{ steps.tags-redhat-standard.outputs.TAGS_REDHAT_STANDARD }}
       - name: Build binary
         id: docker_build_binary
-        uses: docker/build-push-action@v3
+        uses: docker/build-push-action@v4
         with:
           push: false
           file: Dockerfile
@@ -81,7 +81,7 @@ jobs:
             REPO_INFO=https://github.com/${{ github.repository }}.git
       - name: Build and push distroless image to DockerHub
         id: docker_build
-        uses: docker/build-push-action@v3
+        uses: docker/build-push-action@v4
         with:
           push: true
           file: Dockerfile
@@ -97,7 +97,7 @@ jobs:
         id: docker_build_redhat
         env:
           TAG: ${{ steps.meta.outputs.version }}
-        uses: docker/build-push-action@v3
+        uses: docker/build-push-action@v4
         with:
           push: true
           file: Dockerfile
@@ -142,7 +142,7 @@ jobs:
           password: ${{ secrets.RH_TOKEN }}
       - name: Docker meta (redhat scan registry)
         id: meta_redhat_scan_registry
-        uses: docker/metadata-action@v4.1.1
+        uses: docker/metadata-action@v4.3.0
         with:
           images: ${{ env.RH_SCAN_REGISTRY }}/${{ env.RH_SCAN_REGISTRY_IMAGE_NAME }}
           flavor: |
@@ -152,7 +152,7 @@ jobs:
         id: docker_build_redhat_scan_registry
         env:
           TAG: ${{ steps.meta_redhat_scan_registry.outputs.version }}
-        uses: docker/build-push-action@v3.1.1
+        uses: docker/build-push-action@v4
         with:
           push: false
           file: Dockerfile
@@ -190,10 +190,14 @@ jobs:
           - 'traditional'
           - 'traditional_compatible'
     steps:
+      - name: checkout repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
       - name: setup golang
         uses: actions/setup-go@v3
         with:
-          go-version: '^1.19'
+          go-version: '^1.20'
       - name: cache go modules
         uses: actions/cache@v3
         with:
@@ -201,10 +205,6 @@ jobs:
           key: ${{ runner.os }}-build-codegen-${{ hashFiles('**/go.sum') }}
           restore-keys: |
             ${{ runner.os }}-build-codegen-
-      - name: checkout repository
-        uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
       - name: Kubernetes ${{ matrix.kubernetes-version }} ${{ matrix.dbmode }} Integration Tests With ${{ matrix.kong-router-flavor }} Kong Router
         run: KONG_CLUSTER_VERSION=${{ matrix.kubernetes-version }} make test.integration.${{ matrix.dbmode }}
         env:

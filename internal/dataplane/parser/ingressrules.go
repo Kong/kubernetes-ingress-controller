@@ -16,17 +16,20 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/failures"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/store"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 )
 
 type ingressRules struct {
 	SecretNameToSNIs      SecretNameToSNIs
 	ServiceNameToServices map[string]kongstate.Service
+	ServiceNameToParent   map[string]client.Object
 }
 
 func newIngressRules() ingressRules {
 	return ingressRules{
 		SecretNameToSNIs:      newSecretNameToSNIs(),
 		ServiceNameToServices: make(map[string]kongstate.Service),
+		ServiceNameToParent:   make(map[string]client.Object),
 	}
 }
 
@@ -37,6 +40,9 @@ func mergeIngressRules(objs ...ingressRules) ingressRules {
 		result.SecretNameToSNIs.merge(obj.SecretNameToSNIs)
 		for k, v := range obj.ServiceNameToServices {
 			result.ServiceNameToServices[k] = v
+		}
+		for k, v := range obj.ServiceNameToParent {
+			result.ServiceNameToParent[k] = v
 		}
 	}
 	return result
@@ -59,7 +65,7 @@ func (ir *ingressRules) populateServices(log logrus.FieldLogger, s store.Storer,
 
 		// if the Kubernetes services have been deemed invalid, log an error message
 		// and skip the current service.
-		if !servicesAllUseTheSameKongAnnotations(k8sServices, seenAnnotations, failuresCollector) {
+		if !servicesAllUseTheSameKongAnnotations(k8sServices, seenAnnotations, failuresCollector, key) {
 			// The Kong services not having all the k8s services correctly annotated must be marked
 			// as to be skipped.
 			serviceNamesToSkip[key] = nil
@@ -89,6 +95,33 @@ func (ir *ingressRules) populateServices(log logrus.FieldLogger, s store.Storer,
 					ID: kong.String(string(secret.UID)),
 				}
 			}
+		}
+		if len(k8sServices) > 1 {
+			if parent, ok := ir.ServiceNameToParent[*service.Name]; ok {
+				service.Tags = util.GenerateTagsForObject(parent)
+			} else {
+				log.WithFields(logrus.Fields{
+					"service": *service.Name,
+				}).Error("multi-service backend lacks parent info, cannot generate tags")
+			}
+		} else if len(k8sServices) > 0 {
+			service.Tags = util.GenerateTagsForObject(k8sServices[0])
+		} else {
+			// TODO https://github.com/Kong/kubernetes-ingress-controller/issues/3484
+			// somehow https://gist.github.com/rainest/8d5a067e9c8b93c98100559fcbe75631 results in _ZERO_
+			// k8sServices, causing a panic here without this if clause.
+			// That shouldn't happen and requires further investigation.
+			log.WithFields(logrus.Fields{
+				"service": *service.Name,
+			}).Error("service has zero k8sServices backends, cannot generate tags for it properly")
+			service.Tags = kong.StringSlice(
+				util.K8sNameTagPrefix+"UNKNOWN",
+				util.K8sNamespaceTagPrefix+"UNKNOWN",
+				util.K8sKindTagPrefix+"Service",
+				util.K8sUIDTagPrefix+"00000000-0000-0000-0000-000000000000",
+				util.K8sGroupTagPrefix+"core",
+				util.K8sVersionTagPrefix+"v1",
+			)
 		}
 
 		// Kubernetes Services have been populated for this Kong Service, so it can
@@ -255,6 +288,7 @@ func servicesAllUseTheSameKongAnnotations(
 	services []*corev1.Service,
 	annotations map[string]string,
 	failuresCollector *failures.ResourceFailuresCollector,
+	kongServiceName string,
 ) bool {
 	match := true
 	for _, service := range services {
@@ -270,9 +304,10 @@ func servicesAllUseTheSameKongAnnotations(
 			valueForThisObject, ok := service.Annotations[k]
 			if !ok {
 				failuresCollector.PushResourceFailure(
-					fmt.Sprintf("in the backend group of %d kubernetes services some have the %s annotation while others don't. "+
-						"this is not supported: when multiple services comprise a backend all kong annotations "+
-						"between them must be set to the same value", len(services), k),
+					fmt.Sprintf("Service has inconsistent %s annotation and is used in multi-Service backend %s. "+
+						"All Services in a multi-Service backend must have matching Kong annotations. Review the "+
+						"associated route resource and align annotations in its multi-Service backends.",
+						k, kongServiceName),
 					service.DeepCopy(),
 				)
 				match = false
@@ -282,9 +317,10 @@ func servicesAllUseTheSameKongAnnotations(
 
 			if valueForThisObject != v {
 				failuresCollector.PushResourceFailure(
-					fmt.Sprintf("the value of annotation %s is different between the %d services which comprise this backend. "+
-						"this is not supported: when multiple services comprise a backend all kong annotations "+
-						"between them must be set to the same value", k, len(services)),
+					fmt.Sprintf("Service has inconsistent %s annotation and is used in multi-Service backend %s. "+
+						"All Services in a multi-Service backend must have matching Kong annotations. Review the "+
+						"associated route resource and align annotations in its multi-Service backends.",
+						k, kongServiceName),
 					service.DeepCopy(),
 				)
 				match = false

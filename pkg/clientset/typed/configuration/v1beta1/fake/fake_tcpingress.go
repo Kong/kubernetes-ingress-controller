@@ -36,9 +36,9 @@ type FakeTCPIngresses struct {
 	ns   string
 }
 
-var tcpingressesResource = schema.GroupVersionResource{Group: "configuration", Version: "v1beta1", Resource: "tcpingresses"}
+var tcpingressesResource = schema.GroupVersionResource{Group: "configuration.konghq.com", Version: "v1beta1", Resource: "tcpingresses"}
 
-var tcpingressesKind = schema.GroupVersionKind{Group: "configuration", Version: "v1beta1", Kind: "TCPIngress"}
+var tcpingressesKind = schema.GroupVersionKind{Group: "configuration.konghq.com", Version: "v1beta1", Kind: "TCPIngress"}
 
 // Get takes name of the tCPIngress, and returns the corresponding tCPIngress object, and an error if there is any.
 func (c *FakeTCPIngresses) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1beta1.TCPIngress, err error) {

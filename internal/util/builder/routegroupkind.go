@@ -49,3 +49,8 @@ func (b *RouteGroupKindBuilder) TLSRoute() *RouteGroupKindBuilder {
 	b.routeGroupKind.Kind = "TLSRoute"
 	return b
 }
+
+func (b *RouteGroupKindBuilder) GRPCRoute() *RouteGroupKindBuilder {
+	b.routeGroupKind.Kind = "GRPCRoute"
+	return b
+}

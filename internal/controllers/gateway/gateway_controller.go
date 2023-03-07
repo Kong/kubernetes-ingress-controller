@@ -10,7 +10,7 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/kong/go-kong/kong"
 	corev1 "k8s.io/api/core/v1"
-	k8serrors "k8s.io/apimachinery/pkg/api/errors"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -117,7 +117,7 @@ func (r *GatewayReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	// watch ReferenceGrants, which may invalidate or allow cross-namespace TLSConfigs
 	if r.EnableReferenceGrant {
 		if err := c.Watch(
-			&source.Kind{Type: &gatewayv1alpha2.ReferenceGrant{}},
+			&source.Kind{Type: &gatewayv1beta1.ReferenceGrant{}},
 			handler.EnqueueRequestsFromMapFunc(r.listReferenceGrantsForGateway),
 			predicate.NewPredicateFuncs(referenceGrantHasGatewayFrom),
 		); err != nil {
@@ -190,12 +190,12 @@ func (r *GatewayReconciler) listGatewaysForGatewayClass(gatewayClass client.Obje
 // listReferenceGrantsForGateway is a watch predicate which finds all Gateways mentioned in a From clause for a
 // ReferenceGrant.
 func (r *GatewayReconciler) listReferenceGrantsForGateway(obj client.Object) []reconcile.Request {
-	grant, ok := obj.(*gatewayv1alpha2.ReferenceGrant)
+	grant, ok := obj.(*gatewayv1beta1.ReferenceGrant)
 	if !ok {
 		r.Log.Error(
 			fmt.Errorf("unexpected object type"),
 			"referencegrant watch predicate received unexpected object type",
-			"expected", "*gatewayv1alpha2.ReferenceGrant", "found", reflect.TypeOf(obj),
+			"expected", "*gatewayv1beta1.ReferenceGrant", "found", reflect.TypeOf(obj),
 		)
 		return nil
 	}
@@ -257,7 +257,7 @@ func (r *GatewayReconciler) isGatewayService(obj client.Object) bool {
 }
 
 func referenceGrantHasGatewayFrom(obj client.Object) bool {
-	grant, ok := obj.(*gatewayv1alpha2.ReferenceGrant)
+	grant, ok := obj.(*gatewayv1beta1.ReferenceGrant)
 	if !ok {
 		return false
 	}
@@ -279,13 +279,13 @@ func referenceGrantHasGatewayFrom(obj client.Object) bool {
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
 func (r *GatewayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	log := r.Log.WithValues("V1Beta1Gateway", req.NamespacedName)
+	log := r.Log.WithValues("GatewayV1Beta1Gateway", req.NamespacedName)
 
 	// gather the gateway object based on the reconciliation trigger. It's possible for the object
 	// to be gone at this point in which case it will be ignored.
 	gateway := new(gatewayv1beta1.Gateway)
 	if err := r.Get(ctx, req.NamespacedName, gateway); err != nil {
-		if k8serrors.IsNotFound(err) {
+		if apierrors.IsNotFound(err) {
 			gateway.Namespace = req.Namespace
 			gateway.Name = req.Name
 			// delete reference relationships where the gateway is the referrer.
@@ -317,10 +317,10 @@ func (r *GatewayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 			debug(log, gateway, "failed to delete object from data-plane, requeuing")
 			return ctrl.Result{}, err
 		}
-		debug(log, gateway, "ensured object was removed from the data-plane (if ever present)")
+		debug(log, gateway, "ensured gateway was removed from the data-plane (if ever present)")
 		return ctrl.Result{}, nil
 	}
-	if gwc.Spec.ControllerName != ControllerName {
+	if gwc.Spec.ControllerName != GetControllerName() {
 		debug(log, gateway, "unsupported gatewayclass controllername, ignoring", "gatewayclass", gwc.Name, "controllername", gwc.Spec.ControllerName)
 		// delete reference relationships where the gateway is the referrer, as we will not process the gateway.
 		err := ctrlref.DeleteReferencesByReferrer(r.ReferenceIndexers, r.DataplaneClient, gateway)
@@ -331,7 +331,7 @@ func (r *GatewayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 			debug(log, gateway, "failed to delete object from data-plane, requeuing")
 			return ctrl.Result{}, err
 		}
-		debug(log, gateway, "ensured object was removed from the data-plane (if ever present)")
+		debug(log, gateway, "ensured gateway was removed from the data-plane (if ever present)")
 		return ctrl.Result{}, nil
 	}
 
@@ -367,7 +367,7 @@ func (r *GatewayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		if err := ctrlref.UpdateReferencesToSecret(
 			ctx, r.Client, r.ReferenceIndexers, r.DataplaneClient,
 			gateway, referredSecretNames); err != nil {
-			if k8serrors.IsNotFound(err) {
+			if apierrors.IsNotFound(err) {
 				result.Requeue = true
 				return result, nil
 			}
@@ -410,16 +410,24 @@ func (r *GatewayReconciler) reconcileUnmanagedGateway(ctx context.Context, log l
 	// set the Gateway as scheduled to indicate that validation is complete and reconciliation work
 	// on the object is ready to begin.
 	if !isGatewayScheduled(gateway) {
-		info(log, gateway, "marking gateway as scheduled")
-		scheduledCondition := metav1.Condition{
-			Type:               string(gatewayv1beta1.GatewayConditionScheduled),
+		info(log, gateway, "marking gateway as accepted")
+		acceptedCondition := metav1.Condition{
+			Type:               string(gatewayv1beta1.GatewayConditionAccepted),
 			Status:             metav1.ConditionTrue,
 			ObservedGeneration: gateway.Generation,
 			LastTransitionTime: metav1.Now(),
-			Reason:             string(gatewayv1beta1.GatewayReasonScheduled),
+			Reason:             string(gatewayv1beta1.GatewayReasonAccepted),
 			Message:            "this unmanaged gateway has been picked up by the controller and will be processed",
 		}
-		setGatewayCondition(gateway, scheduledCondition)
+		setGatewayCondition(gateway, acceptedCondition)
+		programmedCondition := metav1.Condition{
+			Type:               string(gatewayv1beta1.GatewayConditionProgrammed),
+			Status:             metav1.ConditionFalse,
+			ObservedGeneration: gateway.Generation,
+			LastTransitionTime: metav1.Now(),
+			Reason:             string(gatewayv1beta1.GatewayReasonPending),
+		}
+		setGatewayCondition(gateway, programmedCondition)
 		return ctrl.Result{}, r.Status().Update(ctx, pruneGatewayStatusConds(gateway))
 	}
 
@@ -444,7 +452,7 @@ func (r *GatewayReconciler) reconcileUnmanagedGateway(ctx context.Context, log l
 		debug(log, gateway, "updating addresses to match Kong proxy Service")
 		gateway.Spec.Addresses = kongAddresses
 		if err := r.Update(ctx, gateway); err != nil {
-			if k8serrors.IsConflict(err) {
+			if apierrors.IsConflict(err) {
 				// if there's a conflict that's normal just requeue to retry, no need to make noise.
 				return ctrl.Result{Requeue: true}, nil
 			}
@@ -455,7 +463,7 @@ func (r *GatewayReconciler) reconcileUnmanagedGateway(ctx context.Context, log l
 
 	// the ReferenceGrants need to be retrieved to ensure that all gateway listeners reference
 	// TLS secrets they are granted for
-	referenceGrantList := &gatewayv1alpha2.ReferenceGrantList{}
+	referenceGrantList := &gatewayv1beta1.ReferenceGrantList{}
 	if r.EnableReferenceGrant {
 		if err := r.Client.List(ctx, referenceGrantList); err != nil {
 			return ctrl.Result{}, err
@@ -480,7 +488,7 @@ func (r *GatewayReconciler) reconcileUnmanagedGateway(ctx context.Context, log l
 	debug(log, gateway, "updating the gateway status if necessary")
 	isChanged, err := r.updateAddressesAndListenersStatus(ctx, gateway, listenerStatuses)
 	if err != nil {
-		if k8serrors.IsConflict(err) {
+		if apierrors.IsConflict(err) {
 			// if there's a conflict that's normal just requeue to retry, no need to make noise.
 			return ctrl.Result{Requeue: true}, nil
 		}
@@ -709,6 +717,14 @@ func (r *GatewayReconciler) updateAddressesAndListenersStatus(
 			Message:            "addresses and listeners for the Gateway resource were successfully updated",
 		}
 		setGatewayCondition(gateway, readyCondition)
+		programmedCondition := metav1.Condition{
+			Type:               string(gatewayv1beta1.GatewayConditionProgrammed),
+			Status:             metav1.ConditionTrue,
+			ObservedGeneration: gateway.Generation,
+			LastTransitionTime: metav1.Now(),
+			Reason:             string(gatewayv1beta1.GatewayReasonProgrammed),
+		}
+		setGatewayCondition(gateway, programmedCondition)
 		return true, r.Status().Update(ctx, pruneGatewayStatusConds(gateway))
 	}
 	if !reflect.DeepEqual(gateway.Status.Listeners, listenerStatuses) {

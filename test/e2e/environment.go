@@ -15,5 +15,14 @@ var (
 	kongImageLoad         = os.Getenv("TEST_KONG_IMAGE_LOAD")
 	kongImagePullUsername = os.Getenv("TEST_KONG_PULL_USERNAME")
 	kongImagePullPassword = os.Getenv("TEST_KONG_PULL_PASSWORD")
-	existingCluster       = os.Getenv("KONG_TEST_CLUSTER")
+
+	// KONG_TEST_CLUSTER is to be filled when an already existing cluster should be used
+	// in tests. It should be in a `<gke|kind>:<name>` format.
+	// It takes precedence over KONG_TEST_CLUSTER_PROVIDER.
+	existingCluster = os.Getenv("KONG_TEST_CLUSTER")
+
+	// KONG_TEST_CLUSTER_PROVIDER is to be filled when a cluster of a given kind should
+	// be created in tests. It can be either `gke` or `kind`.
+	// It's not used when KONG_TEST_CLUSTER is set.
+	clusterProvider = os.Getenv("KONG_TEST_CLUSTER_PROVIDER")
 )

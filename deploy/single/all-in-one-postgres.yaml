@@ -7,7 +7,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.11.1
+    controller-gen.kubebuilder.io/version: v0.11.3
   creationTimestamp: null
   name: ingressclassparameterses.configuration.konghq.com
 spec:
@@ -60,7 +60,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.11.1
+    controller-gen.kubebuilder.io/version: v0.11.3
   creationTimestamp: null
   name: kongclusterplugins.configuration.konghq.com
 spec:
@@ -187,6 +187,8 @@ spec:
             description: Protocols configures plugin to run on requests received on
               specific protocols.
             items:
+              description: KongProtocol is a valid Kong protocol. This alias is necessary
+                to deal with https://github.com/kubernetes-sigs/controller-tools/issues/342
               enum:
               - http
               - https
@@ -217,7 +219,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.11.1
+    controller-gen.kubebuilder.io/version: v0.11.3
   creationTimestamp: null
   name: kongconsumers.configuration.konghq.com
 spec:
@@ -282,7 +284,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.11.1
+    controller-gen.kubebuilder.io/version: v0.11.3
   creationTimestamp: null
   name: kongingresses.configuration.konghq.com
 spec:
@@ -385,8 +387,7 @@ spec:
                 type: integer
               methods:
                 description: 'Methods is a list of HTTP methods that match this Route.
-                  Deprecated: use Ingress'' "konghq.com/override-protocols" annotation
-                  instead.'
+                  Deprecated: use Ingress'' "konghq.com/methods" annotation instead.'
                 items:
                   type: string
                 type: array
@@ -411,6 +412,8 @@ spec:
                   allow. Deprecated: use Ingress'' "konghq.com/protocols" annotation
                   instead.'
                 items:
+                  description: KongProtocol is a valid Kong protocol. This alias is
+                    necessary to deal with https://github.com/kubernetes-sigs/controller-tools/issues/342
                   enum:
                   - http
                   - https
@@ -630,7 +633,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.11.1
+    controller-gen.kubebuilder.io/version: v0.11.3
   creationTimestamp: null
   name: kongplugins.configuration.konghq.com
 spec:
@@ -753,6 +756,8 @@ spec:
             description: Protocols configures plugin to run on requests received on
               specific protocols.
             items:
+              description: KongProtocol is a valid Kong protocol. This alias is necessary
+                to deal with https://github.com/kubernetes-sigs/controller-tools/issues/342
               enum:
               - http
               - https
@@ -783,7 +788,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.11.1
+    controller-gen.kubebuilder.io/version: v0.11.3
   creationTimestamp: null
   name: tcpingresses.configuration.konghq.com
 spec:
@@ -970,7 +975,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.11.1
+    controller-gen.kubebuilder.io/version: v0.11.3
   creationTimestamp: null
   name: udpingresses.configuration.konghq.com
 spec:
@@ -1333,6 +1338,14 @@ rules:
   - patch
   - update
 - apiGroups:
+  - discovery.k8s.io
+  resources:
+  - endpointslices
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
   - extensions
   resources:
   - ingresses
@@ -1409,6 +1422,22 @@ rules:
   - gateways/status
   verbs:
   - get
+  - update
+- apiGroups:
+  - gateway.networking.k8s.io
+  resources:
+  - grpcroutes
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - gateway.networking.k8s.io
+  resources:
+  - grpcroutes/status
+  verbs:
+  - get
+  - patch
   - update
 - apiGroups:
   - gateway.networking.k8s.io
@@ -1560,15 +1589,6 @@ subjects:
 - kind: ServiceAccount
   name: kong-serviceaccount
   namespace: kong
----
-apiVersion: v1
-kind: Secret
-metadata:
-  annotations:
-    kubernetes.io/service-account.name: kong-serviceaccount
-  name: kong-serviceaccount-token
-  namespace: kong
-type: kubernetes.io/service-account-token
 ---
 apiVersion: v1
 kind: Service
@@ -1777,15 +1797,22 @@ spec:
       serviceAccountName: kong-serviceaccount
       volumes:
       - name: kong-serviceaccount-token
-        secret:
-          items:
-          - key: token
-            path: token
-          - key: ca.crt
-            path: ca.crt
-          - key: namespace
-            path: namespace
-          secretName: kong-serviceaccount-token
+        projected:
+          sources:
+          - serviceAccountToken:
+              expirationSeconds: 3607
+              path: token
+          - configMap:
+              items:
+              - key: ca.crt
+                path: ca.crt
+              name: kube-root-ca.crt
+          - downwardAPI:
+              items:
+              - fieldRef:
+                  apiVersion: v1
+                  fieldPath: metadata.namespace
+                path: namespace
 ---
 apiVersion: apps/v1
 kind: StatefulSet

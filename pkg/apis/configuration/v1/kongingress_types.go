@@ -59,7 +59,7 @@ type KongIngressList struct {
 }
 
 // KongIngressService contains KongIngress service configuration.
-// + It contains the subset of go-kong.kong.Service fields supported by kongstate.Service.overrideByKongIngress.
+// It contains the subset of go-kong.kong.Service fields supported by kongstate.Service.overrideByKongIngress.
 // Deprecated: use Service's annotations instead.
 type KongIngressService struct {
 	// The protocol used to communicate with the upstream.
@@ -100,7 +100,7 @@ type KongIngressService struct {
 // Deprecated: use Ingress' annotations instead.
 type KongIngressRoute struct {
 	// Methods is a list of HTTP methods that match this Route.
-	// Deprecated: use Ingress' "konghq.com/override-protocols" annotation instead.
+	// Deprecated: use Ingress' "konghq.com/methods" annotation instead.
 	Methods []*string `json:"methods,omitempty" yaml:"methods,omitempty"`
 
 	// Headers contains one or more lists of values indexed by header name

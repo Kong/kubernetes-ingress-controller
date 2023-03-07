@@ -34,7 +34,7 @@ type ConfigurationV1Interface interface {
 	KongPluginsGetter
 }
 
-// ConfigurationV1Client is used to interact with features provided by the configuration group.
+// ConfigurationV1Client is used to interact with features provided by the configuration.konghq.com group.
 type ConfigurationV1Client struct {
 	restClient rest.Interface
 }

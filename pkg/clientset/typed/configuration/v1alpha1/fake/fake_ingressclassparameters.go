@@ -36,9 +36,9 @@ type FakeIngressClassParameterses struct {
 	ns   string
 }
 
-var ingressclassparametersesResource = schema.GroupVersionResource{Group: "configuration", Version: "v1alpha1", Resource: "ingressclassparameterses"}
+var ingressclassparametersesResource = schema.GroupVersionResource{Group: "configuration.konghq.com", Version: "v1alpha1", Resource: "ingressclassparameterses"}
 
-var ingressclassparametersesKind = schema.GroupVersionKind{Group: "configuration", Version: "v1alpha1", Kind: "IngressClassParameters"}
+var ingressclassparametersesKind = schema.GroupVersionKind{Group: "configuration.konghq.com", Version: "v1alpha1", Kind: "IngressClassParameters"}
 
 // Get takes name of the ingressClassParameters, and returns the corresponding ingressClassParameters object, and an error if there is any.
 func (c *FakeIngressClassParameterses) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1alpha1.IngressClassParameters, err error) {

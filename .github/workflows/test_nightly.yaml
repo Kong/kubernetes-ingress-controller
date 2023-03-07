@@ -17,10 +17,15 @@ jobs:
       with:
         password: ${{ secrets.PULP_PASSWORD }}
 
+    - name: checkout repository
+      uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+
     - name: setup golang
       uses: actions/setup-go@v3
       with:
-        go-version: '^1.19'
+        go-version: '^1.20'
 
     - name: cache go modules
       uses: actions/cache@v3
@@ -29,11 +34,6 @@ jobs:
         key: ${{ runner.os }}-build-codegen-${{ hashFiles('**/go.sum') }}
         restore-keys: |
           ${{ runner.os }}-build-codegen-
-
-    - name: checkout repository
-      uses: actions/checkout@v3
-      with:
-        fetch-depth: 0
 
     - name: run integration tests
       run: make test.integration.enterprise.postgres
@@ -63,11 +63,15 @@ jobs:
     if: ${{ github.event.label.name == 'ci/run-nightly' || github.event_name == 'workflow_dispatch' }}
     runs-on: ubuntu-latest
     steps:
+    - name: checkout repository
+      uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
 
     - name: setup golang
       uses: actions/setup-go@v3
       with:
-        go-version: '^1.19'
+        go-version: '^1.20'
 
     - name: cache go modules
       uses: actions/cache@v3
@@ -76,11 +80,6 @@ jobs:
         key: ${{ runner.os }}-build-codegen-${{ hashFiles('**/go.sum') }}
         restore-keys: |
           ${{ runner.os }}-build-codegen-
-
-    - name: checkout repository
-      uses: actions/checkout@v3
-      with:
-        fetch-depth: 0
 
     - name: run integration tests
       run: make test.integration.postgres
@@ -108,10 +107,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
 
+    - name: checkout repository
+      uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+
     - name: setup golang
       uses: actions/setup-go@v3
       with:
-        go-version: '^1.19'
+        go-version: '^1.20'
 
     - name: cache go modules
       uses: actions/cache@v3
@@ -120,11 +124,6 @@ jobs:
         key: ${{ runner.os }}-build-codegen-${{ hashFiles('**/go.sum') }}
         restore-keys: |
           ${{ runner.os }}-build-codegen-
-
-    - name: checkout repository
-      uses: actions/checkout@v3
-      with:
-        fetch-depth: 0
 
     - name: run integration tests
       run: make test.integration.dbless

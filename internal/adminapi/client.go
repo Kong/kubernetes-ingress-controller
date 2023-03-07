@@ -2,179 +2,149 @@ package adminapi
 
 import (
 	"context"
-	"crypto/tls"
-	"crypto/x509"
+	"errors"
 	"fmt"
 	"net/http"
-	"os"
-	"sync"
 
 	"github.com/kong/go-kong/kong"
+	"github.com/samber/lo"
+	"k8s.io/apimachinery/pkg/types"
+
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 )
 
-var clientSetup sync.Mutex
+// Client is a wrapper around raw *kong.Client. It's advised to pass this wrapper across the codebase, and
+// fallback to the underlying *kong.Client only when it's passed to external functions that require
+// it. Also, where it's possible, use a specific Abstract*Service interfaces that *kong.Client includes.
+// Each Client holds its own PluginSchemaStore to cache plugins' schemas as they may theoretically differ between
+// instances.
+type Client struct {
+	adminAPIClient      *kong.Client
+	pluginSchemaStore   *util.PluginSchemaStore
+	isKonnect           bool
+	konnectRuntimeGroup string
+	lastConfigSHA       []byte
 
-// HTTPClientOpts defines parameters that configure an HTTP client.
-type HTTPClientOpts struct {
-	// Disable verification of TLS certificate of Kong's Admin endpoint.
-	TLSSkipVerify bool
-	// SNI name to use to verify the certificate presented by Kong in TLS.
-	TLSServerName string
-	// Path to PEM-encoded CA certificate file to verify Kong's Admin SSL certificate.
-	CACertPath string
-	// PEM-encoded CA certificate to verify Kong's Admin SSL certificate.
-	CACert string
-	// Array of headers added to every Admin API call.
-	Headers []string
-	// mTLS client certificate file for authentication.
-	TLSClientCertPath string
-	// mTLS client key file for authentication.
-	TLSClientCert string
-	// mTLS client certificate for authentication.
-	TLSClientKeyPath string
-	// mTLS client key for authentication.
-	TLSClientKey string
+	// podRef (optional) describes the Pod that the Client communicates with.
+	podRef *types.NamespacedName
 }
 
-// MakeHTTPClient returns an HTTP client with the specified mTLS/headers configuration.
-func MakeHTTPClient(opts *HTTPClientOpts) (*http.Client, error) {
-	var tlsConfig tls.Config
-
-	if opts.TLSSkipVerify {
-		tlsConfig.InsecureSkipVerify = true
+// NewClient creates an Admin API client that is to be used with a regular Admin API exposed by Kong Gateways.
+func NewClient(c *kong.Client) *Client {
+	return &Client{
+		adminAPIClient:    c,
+		pluginSchemaStore: util.NewPluginSchemaStore(c),
 	}
-
-	if opts.TLSServerName != "" {
-		tlsConfig.ServerName = opts.TLSServerName
-	}
-
-	if opts.CACertPath != "" && opts.CACert != "" {
-		return nil, fmt.Errorf("both --kong-admin-ca-cert-file and --kong-admin-ca-cert are set; " +
-			"please remove one or the other")
-	}
-	if opts.CACert != "" {
-		certPool := x509.NewCertPool()
-		ok := certPool.AppendCertsFromPEM([]byte(opts.CACert))
-		if !ok {
-			// TODO give user an error to make this actionable
-			return nil, fmt.Errorf("failed to load kong-admin-ca-cert")
-		}
-		tlsConfig.RootCAs = certPool
-	}
-	if opts.CACertPath != "" {
-		certPath := opts.CACertPath
-		certPool := x509.NewCertPool()
-		cert, err := os.ReadFile(certPath)
-		if err != nil {
-			return nil, fmt.Errorf("failed to read kong-admin-ca-cert from path '%s': %w", certPath, err)
-		}
-		ok := certPool.AppendCertsFromPEM(cert)
-		if !ok {
-			// TODO give user an error to make this actionable
-			return nil, fmt.Errorf("failed to load kong-admin-ca-cert from path '%s'", certPath)
-		}
-		tlsConfig.RootCAs = certPool
-	}
-
-	// don't allow the caller to specify both the literal and path versions to supply the
-	// certificate and key, they must choose one or the other for each.
-	if opts.TLSClientCertPath != "" && opts.TLSClientCert != "" {
-		return nil, fmt.Errorf("both --kong-admin-tls-client-cert-file and --kong-admin-tls-client-cert are set; " +
-			"please remove one or the other")
-	}
-	if opts.TLSClientKeyPath != "" && opts.TLSClientKey != "" {
-		return nil, fmt.Errorf("both --kong-admin-tls-client-key-file and --kong-admin-tls-client-key are set; " +
-			"please remove one or the other")
-	}
-
-	// if the caller has supplied either the cert or the key but not both, this is
-	// erroneous input.
-	if opts.TLSClientCert != "" && opts.TLSClientKey == "" {
-		return nil, fmt.Errorf("client certificate was provided, but the client key was not")
-	}
-	if opts.TLSClientKey != "" && opts.TLSClientCert == "" {
-		return nil, fmt.Errorf("client key was provided, but the client certificate was not")
-	}
-
-	var clientCert, clientKey []byte
-	var err error
-
-	// if a path to the certificate or key has been provided, retrieve the file contents
-	if opts.TLSClientCertPath != "" {
-		tlsClientCertPath := opts.TLSClientCertPath
-		clientCert, err = os.ReadFile(tlsClientCertPath)
-		if err != nil {
-			return nil, fmt.Errorf("failed to read certificate file %s: %w", tlsClientCertPath, err)
-		}
-	}
-	if opts.TLSClientKeyPath != "" {
-		tlsClientKeyPath := opts.TLSClientKeyPath
-		clientKey, err = os.ReadFile(tlsClientKeyPath)
-		if err != nil {
-			return nil, fmt.Errorf("failed to read key file %s: %w", tlsClientKeyPath, err)
-		}
-	}
-	if opts.TLSClientCert != "" {
-		clientCert = []byte(opts.TLSClientCert)
-	}
-	if opts.TLSClientKey != "" {
-		clientKey = []byte(opts.TLSClientKey)
-	}
-
-	if len(clientCert) != 0 && len(clientKey) != 0 {
-		// Read the key pair to create certificate
-		cert, err := tls.X509KeyPair(clientCert, clientKey)
-		if err != nil {
-			return nil, fmt.Errorf("failed to load client certificate: %w", err)
-		}
-		tlsConfig.Certificates = []tls.Certificate{cert}
-	}
-
-	transport := http.DefaultTransport.(*http.Transport).Clone()
-	transport.TLSClientConfig = &tlsConfig
-	return &http.Client{
-		Transport: &HeaderRoundTripper{
-			headers: opts.Headers,
-			rt:      transport,
-		},
-	}, nil
 }
 
-// GetKongClientForWorkspace returns a Kong API client for a given root API URL and workspace.
-// If the workspace does not already exist, GetKongClientForWorkspace will create it.
-func GetKongClientForWorkspace(ctx context.Context, adminURL string, wsName string,
-	httpclient *http.Client,
-) (*kong.Client, error) {
-	// create the base client, and if no workspace was provided then return that.
-	client, err := kong.NewClient(kong.String(adminURL), httpclient)
+// NewKonnectClient creates an Admin API client that is to be used with a Konnect Runtime Group Admin API.
+func NewKonnectClient(c *kong.Client, runtimeGroup string) *Client {
+	return &Client{
+		adminAPIClient:      c,
+		isKonnect:           true,
+		konnectRuntimeGroup: runtimeGroup,
+		pluginSchemaStore:   util.NewPluginSchemaStore(c),
+	}
+}
+
+// NewTestClient creates a client for test purposes.
+func NewTestClient(address string) (*Client, error) {
+	kongClient, err := kong.NewTestClient(lo.ToPtr(address), &http.Client{})
 	if err != nil {
-		return nil, fmt.Errorf("creating Kong client: %w", err)
-	}
-	if wsName == "" {
-		return client, nil
+		return nil, err
 	}
 
-	// if a workspace was provided, verify whether or not it exists.
-	clientSetup.Lock()
-	exists, err := client.Workspaces.ExistsByName(ctx, kong.String(wsName))
+	return NewClient(kongClient), nil
+}
+
+// AdminAPIClient returns an underlying go-kong's Admin API client.
+func (c *Client) AdminAPIClient() *kong.Client {
+	return c.adminAPIClient
+}
+
+// BaseRootURL returns a base address used for communicating with the Admin API.
+func (c *Client) BaseRootURL() string {
+	return c.adminAPIClient.BaseRootURL()
+}
+
+// GetKongVersion returns version of the kong gateway.
+func (c *Client) GetKongVersion(ctx context.Context) (string, error) {
+	if c.isKonnect {
+		return "", errors.New("cannot get kong version from konnect")
+	}
+	rootConfig, err := c.adminAPIClient.Root(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("looking up workspace: %w", err)
+		return "", fmt.Errorf("failed fetching Kong client root: %w", err)
+	}
+	version, ok := rootConfig["version"].(string)
+	if !ok {
+		return "", errors.New("malformed Kong version found in Kong client root")
+	}
+	return version, nil
+}
+
+// PluginSchemaStore returns client's PluginSchemaStore.
+func (c *Client) PluginSchemaStore() *util.PluginSchemaStore {
+	return c.pluginSchemaStore
+}
+
+// IsKonnect tells if a client is used for communication with Konnect Runtime Group Admin API.
+func (c *Client) IsKonnect() bool {
+	return c.isKonnect
+}
+
+// KonnectRuntimeGroup gets a unique identifier of a Konnect's Runtime Group that config should
+// be synchronised with. Empty in case of non-Konnect clients.
+func (c *Client) KonnectRuntimeGroup() string {
+	if !c.isKonnect {
+		return ""
 	}
 
-	// if the provided workspace does not exist, for convenience we create it.
-	if !exists {
-		workspace := kong.Workspace{
-			Name: kong.String(wsName),
-		}
-		_, err := client.Workspaces.Create(ctx, &workspace)
-		if err != nil {
-			return nil, fmt.Errorf("creating workspace: %w", err)
-		}
+	return c.konnectRuntimeGroup
+}
+
+// SetLastConfigSHA overrides last config SHA.
+func (c *Client) SetLastConfigSHA(s []byte) {
+	c.lastConfigSHA = s
+}
+
+// LastConfigSHA returns a checksum of the last successful configuration push.
+func (c *Client) LastConfigSHA() []byte {
+	return c.lastConfigSHA
+}
+
+// AttachPodReference allows attaching a Pod reference to the client. Should be used in case we know what Pod the client
+// will communicate with (e.g. when the gateway service discovery is used).
+func (c *Client) AttachPodReference(podNN types.NamespacedName) {
+	c.podRef = &podNN
+}
+
+// PodReference returns an optional reference to the Pod the client communicates with.
+func (c *Client) PodReference() (types.NamespacedName, bool) {
+	if c.podRef != nil {
+		return *c.podRef, true
 	}
-	clientSetup.Unlock()
+	return types.NamespacedName{}, false
+}
 
-	// ensure that we set the workspace appropriately
-	client.SetWorkspace(wsName)
+type ClientFactory struct {
+	workspace      string
+	httpClientOpts HTTPClientOpts
+	adminToken     string
+}
 
-	return client, nil
+func NewClientFactoryForWorkspace(workspace string, httpClientOpts HTTPClientOpts, adminToken string) ClientFactory {
+	return ClientFactory{
+		workspace:      workspace,
+		httpClientOpts: httpClientOpts,
+		adminToken:     adminToken,
+	}
+}
+
+func (cf ClientFactory) CreateAdminAPIClient(ctx context.Context, address string) (*Client, error) {
+	httpclient, err := MakeHTTPClient(&cf.httpClientOpts, cf.adminToken)
+	if err != nil {
+		return nil, err
+	}
+	return NewKongClientForWorkspace(ctx, address, cf.workspace, httpclient)
 }

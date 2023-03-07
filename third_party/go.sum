@@ -1269,8 +1269,8 @@ rsc.io/binaryregexp v0.2.0/go.mod h1:qTv7/COck+e2FymRvadv62gMdZztPaShugOCi3I+8D8
 rsc.io/pdf v0.1.1/go.mod h1:n8OzWcQ6Sp37PL01nO98y4iUCRdTGarVfzxY20ICaU4=
 rsc.io/quote/v3 v3.1.0/go.mod h1:yEA65RcK8LyAZtP9Kv3t0HmxON59tX3rD+tICJqUlj0=
 rsc.io/sampler v1.3.0/go.mod h1:T1hPZKmBbMNahiBKFy5HrXp6adAjACjK9JXDnKaTXpA=
-sigs.k8s.io/controller-runtime/tools/setup-envtest v0.0.0-20230221102149-f6f37e6cc1ec h1:NypTW99ygj1bLBoJWEe17qUXHfNa8hk44Y+6/YuQYas=
-sigs.k8s.io/controller-runtime/tools/setup-envtest v0.0.0-20230221102149-f6f37e6cc1ec/go.mod h1:Lm5xRgQejdMHAz81exSpqvwEkIdTfoNtUDA6MM4kltw=
+sigs.k8s.io/controller-runtime/tools/setup-envtest v0.0.0-20230307042619-c304e7ec2ee7 h1:IxfIt+FAgOU9Dzg+SsPPFyHayYcC/OMsQQ6nPILxf5o=
+sigs.k8s.io/controller-runtime/tools/setup-envtest v0.0.0-20230307042619-c304e7ec2ee7/go.mod h1:Lm5xRgQejdMHAz81exSpqvwEkIdTfoNtUDA6MM4kltw=
 sigs.k8s.io/controller-tools v0.11.3 h1:T1xzLkog9saiyQSLz1XOImu4OcbdXWytc5cmYsBeBiE=
 sigs.k8s.io/controller-tools v0.11.3/go.mod h1:qcfX7jfcfYD/b7lAhvqAyTbt/px4GpvN88WKLFFv7p8=
 sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd h1:EDPBXCAspyGV4jQlpZSudPeMmr1bNJefnuqLsRAsHZo=

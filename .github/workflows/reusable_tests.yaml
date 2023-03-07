@@ -1,24 +1,34 @@
-name: tests suite
+name: tests base
 
 on:
   workflow_call:
     inputs:
       image:
+        description: 'Run image tests'
         type: boolean
         default: true
       unit:
+        description: 'Run unit tests'
         type: boolean
         default: true
       integration:
+        description: 'Run integration tests'
         type: boolean
         default: true
       conformance:
+        description: 'Run conformance tests'
         type: boolean
         default: true
       e2e:
+        description: 'Run E2E tests'
         type: boolean
         default: true
-      only-latest-k8s:
+      e2e-only-latest-k8s:
+        description: 'Run tests only against the latest Kubernetes version. Otherwise, E2E and integration tests will run against all supported versions.'
+        type: boolean
+        default: true
+      e2e-build-kic-image:
+        description: 'Build the KIC image from source to be used in E2E tests. If false, the latest nightly image will be pulled from Docker Hub.'
         type: boolean
         default: true
 
@@ -241,13 +251,21 @@ jobs:
           name: tests-report
           path: conformance-tests.xml
 
+  e2e-tests:
+    uses: ./.github/workflows/reusable_e2e.yaml
+    secrets: inherit
+    with:
+      only-latest-k8s: ${{ inputs.e2e-only-latest-k8s }}
+      build-kic-image: ${{ inputs.e2e-build-kic-image }}
+
   passed:
     runs-on: ubuntu-latest
     needs:
       - "unit-tests"
       - "integration-tests"
       - "conformance-tests"
-    if: always()
+      - "e2e-tests"
+    if: ${{ !cancelled() }}
     steps:
       - name: Set workflow outcome based on unit-tests
         if: needs.unit-tests.result == 'failure' || needs.unit-tests.result == 'cancelled'
@@ -261,11 +279,16 @@ jobs:
         if: needs.conformance-tests.result == 'failure' || needs.conformance-tests.result == 'cancelled'
         run: ${{ false }}
 
+      - name: Set workflow outcome based on e2e-tests
+        if: needs.e2e-tests.result == 'failure' || needs.e2e-tests.result == 'cancelled'
+        run: ${{ false }}
+
   coverage:
     needs:
       - "unit-tests"
       - "integration-tests"
       - "conformance-tests"
+    if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
     steps:
     - name: checkout repository
@@ -294,7 +317,8 @@ jobs:
       - "unit-tests"
       - "integration-tests"
       - "conformance-tests"
-    if: ${{ always() }}
+      - "e2e-tests"
+    if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
     steps:
       - name: checkout repository

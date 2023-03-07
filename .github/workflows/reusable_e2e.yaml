@@ -1,0 +1,369 @@
+name: e2e tests base
+
+on:
+  workflow_call:
+    inputs:
+      only-latest-k8s:
+        description: 'Run tests only against the latest Kubernetes version. Otherwise, run tests against all supported Kubernetes versions.'
+        type: boolean
+        default: true
+      build-kic-image:
+        description: 'Build the KIC image from source. If false, the latest nightly image will be pulled from Docker Hub.'
+        type: boolean
+        default: true
+      run-gke:
+        description: 'Run E2E tests on GKE as well as on Kind.'
+        type: boolean
+        default: false
+      run-istio:
+        description: 'Run E2E tests against all supported Kubernetes/Istio versions combinations.'
+        type: boolean
+        default: false
+
+jobs:
+  build-kic-image:
+    runs-on: ubuntu-latest
+    if: ${{ inputs.build-kic-image }}
+    outputs:
+      tag: ${{ steps.image_tag.outputs.tag }}
+    steps:
+      - name: checkout repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: setup golang
+        uses: actions/setup-go@v3
+        with:
+          go-version: '^1.20'
+
+      - name: cache go modules
+        uses: actions/cache@v3
+        with:
+          path: ~/go/pkg/mod
+          key: ${{ runner.os }}-build-codegen-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-build-codegen-
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v2
+
+      - name: Set image tag
+        id: image_tag
+        run: echo "tag=kong/kubernetes-ingress-controller:ci-${{ github.sha }}" >> $GITHUB_OUTPUT
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+        with:
+          driver-opts: network=host
+
+      - name: Build and push to local registry
+        id: docker_build
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          load: true
+          file: Dockerfile
+          tags: ${{ steps.image_tag.outputs.tag }}
+          target: distroless
+          outputs: type=docker,dest=/tmp/image.tar
+          build-args: |
+            TAG=ci-${{ github.sha }}
+            COMMIT=${{ github.sha }}
+            REPO_INFO=https://github.com/${{ github.repository }}.git
+
+      - name: Upload image artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: kic-image
+          path: /tmp/image.tar
+
+  setup-e2e-tests:
+    runs-on: ubuntu-latest
+    outputs:
+      test_names: ${{ steps.set_test_names.outputs.test_names }}
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - id: test_files
+        name: Get test file names
+        working-directory: test/e2e/
+        # go list used to extract the test names from only those test files that
+        # match the specified tags: here e2e_tests.
+        # This filters out e.g. istio tests which we run separately.
+        run: echo "result=$(go list -tags e2e_tests -f '{{ range .TestGoFiles }} {{- . }} {{ end }}' .)" >> $GITHUB_OUTPUT
+
+      - name: Print test file names
+        run: echo "Test file names ${{ steps.test_files.outputs.result }}"
+
+      - id: set_test_names
+        name: Set test names
+        working-directory: test/e2e/
+        # grep magic described in https://unix.stackexchange.com/a/13472
+        # sed to add the extra $ is because some of our test names overlap. we need it so the -run regex only matches one test
+        run: |
+          echo "test_names=$(grep -shoP "(?<=^func )(Test[a-zA-z_0-9]+)(?=\(t \*testing.T\) {)" ${{ steps.test_files.outputs.result }} | sed -e "s/$/\$/"| jq -R . | jq -cs .)" >> $GITHUB_OUTPUT
+
+      - name: Print test names
+        run: echo "Test names ${{ steps.set_test_names.outputs.test_names }}"
+
+  setup-k8s-versions:
+    runs-on: ubuntu-latest
+    outputs:
+      kubernetes-versions: ${{ steps.set-kubernetes-versions.outputs.kubernetes-versions }}
+      kubernetes-gke-versions: ${{ steps.set-kubernetes-versions.outputs.kubernetes-gke-versions }}
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Set version query
+        id: set-version-query
+        run: |
+          if ${{ inputs.only-latest-k8s }}; then
+              echo "version-query=kubernetes.latest" >> $GITHUB_OUTPUT
+          else
+              echo "version-query=kubernetes.allSupported" >> $GITHUB_OUTPUT
+          fi
+
+      - uses: CumulusDS/get-yaml-paths-action@v1.0.1
+        id: read-versions
+        with:
+          file: .github/workflows/data/dependencies.yaml
+          versions: ${{ steps.set-version-query.outputs.version-query }}
+          gke-versions: kubernetes.gke
+
+      - name: Set kubernetes versions
+        id: set-kubernetes-versions
+        run: |
+            echo "kubernetes-versions=$(echo ${{ steps.read-versions.outputs.versions }} | yq -o json . | jq -c .)" >> $GITHUB_OUTPUT
+            echo "kubernetes-gke-versions=$(echo ${{ steps.read-versions.outputs.gke-versions }} | yq -o json . | jq -c .)" >> $GITHUB_OUTPUT
+
+      - name: Print Kubernetes versions
+        run: |
+          echo "Kubernetes versions ${{ steps.set-kubernetes-versions.outputs.kubernetes-versions }}"
+          echo "GKE versions ${{ steps.set-kubernetes-versions.outputs.kubernetes-gke-versions }}"
+
+  kind-e2e-tests:
+    runs-on: ubuntu-latest
+    # We have to use the if: ${{ !cancelled() }} trick here because "build-kic-image" is a job that is only run if the
+    # build-kic-image input is set to true. If it is not set to true, then the "build-kic-image" job will not be run,
+    # and it will not be available to the "needs" section of this job.
+    if: ${{ !cancelled() }}
+    needs:
+      - "setup-e2e-tests"
+      - "setup-k8s-versions"
+      - "build-kic-image"
+    strategy:
+      fail-fast: false
+      matrix:
+        kubernetes-version: ${{ fromJSON(needs.setup-k8s-versions.outputs.kubernetes-versions) }}
+        test: ${{ fromJSON(needs.setup-e2e-tests.outputs.test_names) }}
+    steps:
+      - name: Download built image artifact
+        if: ${{ inputs.build-kic-image }}
+        uses: actions/download-artifact@v3
+        with:
+          name: kic-image
+          path: /tmp
+
+      - name: Load built image
+        if: ${{ inputs.build-kic-image }}
+        run: |
+          docker load --input /tmp/image.tar
+          docker image ls -a
+
+      - name: checkout repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: setup golang
+        uses: actions/setup-go@v3
+        with:
+          go-version: '^1.20'
+
+      - name: cache go modules
+        uses: actions/cache@v3
+        with:
+          path: ~/go/pkg/mod
+          key: ${{ runner.os }}-build-codegen-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-build-codegen-
+
+      - uses: Kong/kong-license@master
+        id: license
+        with:
+          # todo: handle for forks
+          password: ${{ secrets.PULP_PASSWORD }}
+
+      # The only reason we need those 2 is the fact that TEST_KONG_CONTROLLER_IMAGE_LOAD
+      # is ultimately passed down to ktf's loadimage.Addon which uses "kind load docker-image ..."
+      # which fails when an image is not available on the cluster.
+      # Hence the non local version (where the image is pulled from an external registry)
+      # doesn't define TEST_KONG_CONTROLLER_IMAGE_LOAD.
+
+      - name: run ${{ matrix.test }} with latest nightly image
+        if: ${{ !inputs.build-kic-image }}
+        run: make test.e2e
+        env:
+          E2E_TEST_RUN: ${{ matrix.test }}
+          KONG_CLUSTER_VERSION: ${{ matrix.kubernetes-version }}
+          TEST_KONG_CONTROLLER_IMAGE_OVERRIDE: "kong/nightly-ingress-controller:nightly"
+          TEST_KONG_KONNECT_ACCESS_TOKEN: ${{ secrets.K8S_TEAM_KONNECT_ACCESS_TOKEN }}
+          KONG_LICENSE_DATA: ${{ steps.license.outputs.license }}
+          GOTESTSUM_JUNITFILE: "e2e-${{ matrix.test }}${{ matrix.kubernetes-version }}-tests.xml"
+
+      - name: run ${{ matrix.test }} with local image
+        if: ${{ inputs.build-kic-image }}
+        run: make test.e2e
+        env:
+          E2E_TEST_RUN: ${{ matrix.test }}
+          KONG_CLUSTER_VERSION: ${{ matrix.kubernetes-version }}
+          TEST_KONG_CONTROLLER_IMAGE_LOAD: ${{ needs.build-kic-image.outputs.tag }}
+          TEST_KONG_KONNECT_ACCESS_TOKEN: ${{ secrets.K8S_TEAM_KONNECT_ACCESS_TOKEN }}
+          KONG_LICENSE_DATA: ${{ steps.license.outputs.license }}
+          GOTESTSUM_JUNITFILE: "e2e-${{ matrix.test }}${{ matrix.kubernetes-version }}-tests.xml"
+
+      - name: upload diagnostics
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v3
+        with:
+          name: "diagnostics-e2e-tests-${{ matrix.test }}-${{ matrix.kubernetes-version }}"
+          path: /tmp/ktf-diag*
+          if-no-files-found: ignore
+
+      - name: collect test report
+        uses: actions/upload-artifact@v3
+        with:
+          name: tests-report
+          path: "*-tests.xml"
+
+  e2e-gke-tests:
+    if: ${{ inputs.run-gke }}
+    environment: "gcloud"
+    runs-on: ubuntu-latest
+    needs:
+      - "setup-e2e-tests"
+      - "setup-k8s-versions"
+    strategy:
+      fail-fast: false
+      matrix:
+        kubernetes-version: ${{ fromJSON(needs.setup-k8s-versions.outputs.kubernetes-gke-versions) }}
+        test: ${{ fromJSON(needs.setup-e2e-tests.outputs.test_names) }}
+    steps:
+      - name: checkout repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: setup golang
+        uses: actions/setup-go@v3
+        with:
+          go-version: '^1.20'
+
+      - name: cache go modules
+        uses: actions/cache@v3
+        with:
+          path: ~/go/pkg/mod
+          key: ${{ runner.os }}-build-codegen-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-build-codegen-
+
+      - uses: Kong/kong-license@master
+        id: license
+        with:
+          password: ${{ secrets.PULP_PASSWORD }}
+
+      - name: run ${{ matrix.test }}
+        run: make test.e2e
+        env:
+          TEST_KONG_CONTROLLER_IMAGE_OVERRIDE: "kong/nightly-ingress-controller:nightly"
+          KONG_LICENSE_DATA: ${{ steps.license.outputs.license }}
+          KONG_CLUSTER_VERSION: ${{ matrix.kubernetes-version }}
+          KONG_TEST_CLUSTER_PROVIDER: gke
+          E2E_TEST_RUN: ${{ matrix.test }}
+          GOTESTSUM_JUNITFILE: "e2e-gke-${{ matrix.test }}-${{ matrix.kubernetes-version }}-tests.xml"
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}
+          GOOGLE_PROJECT: ${{ secrets.GOOGLE_PROJECT }}
+          GOOGLE_LOCATION: ${{ secrets.GOOGLE_LOCATION }}
+
+      - name: upload diagnostics
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v3
+        with:
+          name: "diagnostics-e2e-gke-tests-${{ matrix.test }}-${{ matrix.kubernetes-version }}"
+          path: /tmp/ktf-diag*
+          if-no-files-found: ignore
+
+      - name: collect test report
+        uses: actions/upload-artifact@v3
+        with:
+          name: tests-report
+          path: "*-tests.xml"
+
+  istio-tests:
+    if: ${{ inputs.run-istio }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - kubernetes-version: 'v1.26.0'
+            istio-version: 'v1.17.1'
+          - kubernetes-version: 'v1.25.3'
+            istio-version: 'v1.17.1'
+          - kubernetes-version: 'v1.25.3'
+            istio-version: 'v1.16.3'
+          - kubernetes-version: 'v1.25.3'
+            istio-version: 'v1.15.6'
+    steps:
+      - name: checkout repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: setup golang
+        uses: actions/setup-go@v3
+        with:
+          go-version: '^1.20'
+
+      - name: cache go modules
+        uses: actions/cache@v3
+        with:
+          path: ~/go/pkg/mod
+          key: ${{ runner.os }}-build-codegen-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-build-codegen-
+
+      - uses: Kong/kong-license@master
+        id: license
+        with:
+          password: ${{ secrets.PULP_PASSWORD }}
+
+      - name: run Istio tests
+        run: make test.istio
+        env:
+          TEST_KONG_CONTROLLER_IMAGE_OVERRIDE: "kong/nightly-ingress-controller:nightly"
+          KONG_LICENSE_DATA: ${{ steps.license.outputs.license }}
+          KONG_CLUSTER_VERSION: ${{ matrix.kubernetes-version }}
+          ISTIO_VERSION: ${{ matrix.istio-version }}
+          NCPU: 1 # it was found that github actions (specifically) did not seem to perform well when spawning
+          # multiple kind clusters within a single job, so only 1 is allowed at a time.
+          GOTESTSUM_JUNITFILE: "istio-${{ matrix.kubernetes-version }}-${{ matrix.istio-version }}-tests.xml"
+
+      - name: upload diagnostics
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v3
+        with:
+          name: diagnostics-e2e-tests
+          path: /tmp/ktf-diag*
+          if-no-files-found: ignore
+
+      - name: collect test report
+        uses: actions/upload-artifact@v3
+        with:
+          name: tests-report
+          path: "*-tests.xml"

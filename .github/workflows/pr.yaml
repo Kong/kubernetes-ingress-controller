@@ -49,7 +49,7 @@ jobs:
       run: make verify.generators
 
   tests:
-    uses: ./.github/workflows/reusable_tests_suite.yaml
+    uses: ./.github/workflows/reusable_tests.yaml
     secrets: inherit
     with:
       e2e: false

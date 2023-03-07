@@ -1,0 +1,56 @@
+name: PR checks
+
+concurrency:
+  # Run only for most recent commit in PRs but for all tags and commits on main
+  # Ref: https://docs.github.com/en/actions/using-jobs/using-concurrency
+  group: ${{ github.workflow }}-${{ github.head_ref || github.sha }}
+  cancel-in-progress: true
+
+on:
+  pull_request:
+    branches:
+      - '*'
+  push:
+    branches:
+      - 'main'
+    tags:
+      - '*'
+  workflow_dispatch: {}
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+
+    - name: Setup go
+      uses: actions/setup-go@v3
+      with:
+        go-version: '^1.20'
+
+    - name: Cache Go modules
+      uses: actions/cache@v3
+      with:
+        path: ~/go/pkg/mod
+        key: ${{ runner.os }}-build-codegen-${{ hashFiles('**/go.sum') }}
+        restore-keys: |
+          ${{ runner.os }}-build-codegen-
+
+    - name: Run lint
+      run: make lint
+
+    - name: Verify manifest consistency
+      run: make verify.manifests
+
+    - name: Verify generators consistency
+      run: make verify.generators
+
+  tests:
+    uses: ./.github/workflows/reusable_tests_suite.yaml
+    secrets: inherit
+    with:
+      e2e: false
+      only-latest-k8s: true

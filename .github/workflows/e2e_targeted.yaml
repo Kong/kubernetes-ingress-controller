@@ -10,7 +10,7 @@ on:
       istio-version:
         description: 'Istio version to test with'
         required: true
-        default: 'v1.15.1'
+        default: 'v1.17.1'
       controller-image:
         description: 'KIC Docker image to test with. The default "kong/kubernetes-ingress-controller:ci" builds an image from the dispatch branch'
         required: true

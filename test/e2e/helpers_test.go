@@ -653,11 +653,21 @@ func runOnlyOnKindClusters(t *testing.T) {
 	t.Helper()
 
 	existingClusterIsKind := strings.Split(existingCluster, ":")[0] == string(kind.KindClusterType)
-	clusterProviderIsKind := clusterProvider == "" || clusterProvider == string(kind.KindClusterType)
-
-	if !existingClusterIsKind || !clusterProviderIsKind {
-		t.Skip("test is supported only on Kind clusters")
+	if existingClusterIsKind {
+		return
 	}
+
+	clusterProviderIsKind := clusterProvider == string(kind.KindClusterType)
+	if clusterProviderIsKind {
+		return
+	}
+
+	clusterProviderUnspecified := clusterProvider == ""
+	if clusterProviderUnspecified {
+		return
+	}
+
+	t.Skip("test is supported only on Kind clusters")
 }
 
 // listPodsByLabels returns a list of pods in the given namespace that match the given labels map.

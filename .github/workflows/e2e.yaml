@@ -37,7 +37,6 @@ jobs:
       fail-fast: false
       matrix:
         kubernetes-version:
-          - 'v1.21.14'
           - 'v1.22.15'
           - 'v1.23.13'
           - 'v1.24.7'
@@ -159,18 +158,15 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        kubernetes-version:
-          # v1.25 is the latest Kubernetes version supported by Istio: https://istio.io/latest/docs/releases/supported-releases/
-          - 'v1.25.3'
-          - 'v1.24.7'
-        istio-version:
-          - 'v1.16.1'
-          - 'v1.15.4'
-          - 'v1.14.6'
-        exclude:
-          # Istio v1.14 does not support Kubernetes v1.25: https://istio.io/latest/docs/releases/supported-releases/
+        include:
+          - kubernetes-version: 'v1.26.0'
+            istio-version: 'v1.17.1'
           - kubernetes-version: 'v1.25.3'
-            istio-version: 'v1.14.6'
+            istio-version: 'v1.17.1'
+          - kubernetes-version: 'v1.25.3'
+            istio-version: 'v1.16.3'
+          - kubernetes-version: 'v1.25.3'
+            istio-version: 'v1.15.6'
 
     steps:
       - name: checkout repository

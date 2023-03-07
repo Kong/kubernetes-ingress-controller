@@ -32,7 +32,6 @@ require (
 	github.com/spf13/cobra v1.6.1
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.8.2
-	golang.org/x/net v0.8.0
 	google.golang.org/api v0.111.0
 	k8s.io/api v0.26.2
 	k8s.io/apiextensions-apiserver v0.26.2
@@ -57,6 +56,7 @@ require (
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
 	github.com/puzpuzpuz/xsync/v2 v2.4.0 // indirect
 	go.uber.org/atomic v1.10.0 // indirect
+	golang.org/x/net v0.8.0 // indirect
 )
 
 require (

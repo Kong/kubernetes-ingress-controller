@@ -54,8 +54,14 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 	if err != nil {
 		return fmt.Errorf("get kubeconfig from file %q: %w", c.KubeconfigPath, err)
 	}
+
+	setupLog.Info("starting standalone health check server")
+	healthServer := &healthCheckServer{}
+	healthServer.setHealthzCheck(healthz.Ping)
+	healthServer.Start(ctx, c.ProbeAddr, setupLog.WithName("health-check"))
+
 	setupLog.Info("getting the kong admin api client configuration")
-	initialKongClients, err := c.adminAPIClients(ctx)
+	initialKongClients, err := c.adminAPIClients(ctx, setupLog.WithName("initialize-kong-clients"))
 	if err != nil {
 		return fmt.Errorf("unable to build kong api client(s): %w", err)
 	}
@@ -181,13 +187,8 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 	// See https://github.com/kubernetes-sigs/kubebuilder/issues/932
 	// +kubebuilder:scaffold:builder
 
-	setupLog.Info("Starting health check servers")
-	if err := mgr.AddHealthzCheck("health", healthz.Ping); err != nil {
-		return fmt.Errorf("unable to setup healthz: %w", err)
-	}
-	if err := mgr.AddReadyzCheck("check", readyzHandler(mgr, synchronizer)); err != nil {
-		return fmt.Errorf("unable to setup readyz: %w", err)
-	}
+	setupLog.Info("Add readiness probe to health server")
+	healthServer.setReadyzCheck(readyzHandler(mgr, synchronizer))
 
 	if c.Konnect.ConfigSynchronizationEnabled {
 		// In case of failures when building Konnect related objects, we're not returning errors as Konnect is not

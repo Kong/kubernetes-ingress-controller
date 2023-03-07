@@ -112,3 +112,8 @@ issues:
     linters:
       - gosec
     text: "TLS InsecureSkipVerify set true|Potential hardcoded credentials"
+  # It's fine to use variable urls in tests.
+  - linters:
+      - gosec
+    text: "Potential HTTP request made with variable url"
+    path: test\.go

@@ -4,9 +4,9 @@ kind: Component
 # Some resources may not have been processed by the base, so we have to replace
 # both kong and kong-placeholder
 images:
-- name: kong
+- name: kong/kong
   newName: kong/kong-gateway
-  newTag: '3.1'
+  newTag: '3.2'
 - name: kong-placeholder
   newName: kong/kong-gateway
-  newTag: '3.1'
+  newTag: '3.2'

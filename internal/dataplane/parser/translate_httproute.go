@@ -2,6 +2,7 @@ package parser
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/kong/go-kong/kong"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
@@ -320,8 +321,10 @@ func generateKongRouteFromHTTPRouteMatches(
 		// default if it is not. For those types, we use the path value as-is and let Kong determine the type.
 		// For exact matches, we transform the path into a regular expression that terminates after the value
 		if match.Path != nil {
-			path := generateKongRoutePathFromHTTPRouteMatch(match, addRegexPrefix)
-			r.Route.Paths = append(r.Route.Paths, kong.String(path))
+			paths := generateKongRoutePathFromHTTPRouteMatch(match, addRegexPrefix)
+			for _, p := range paths {
+				r.Route.Paths = append(r.Route.Paths, kong.String(p))
+			}
 		}
 
 		// configure method matching information about the route if method
@@ -338,28 +341,35 @@ func generateKongRouteFromHTTPRouteMatches(
 	return r, nil
 }
 
-func generateKongRoutePathFromHTTPRouteMatch(match gatewayv1beta1.HTTPRouteMatch, addRegexPrefix bool) string {
+func generateKongRoutePathFromHTTPRouteMatch(match gatewayv1beta1.HTTPRouteMatch, addRegexPrefix bool) []string {
 	switch *match.Path.Type {
 	case gatewayv1beta1.PathMatchExact:
 		terminated := *match.Path.Value + "$"
 		if addRegexPrefix {
 			terminated = translators.KongPathRegexPrefix + terminated
 		}
-		return terminated
+		return []string{terminated}
 
 	case gatewayv1beta1.PathMatchPathPrefix:
+		paths := make([]string, 0, 2)
 		path := *match.Path.Value
-		return path
+		if addRegexPrefix {
+			paths = append(paths, fmt.Sprintf("%s%s$", translators.KongPathRegexPrefix, path))
+			if !strings.HasSuffix(path, "/") {
+				path = fmt.Sprintf("%s/", path)
+			}
+		}
+		return append(paths, path)
 
 	case gatewayv1beta1.PathMatchRegularExpression:
 		path := *match.Path.Value
 		if addRegexPrefix {
 			path = translators.KongPathRegexPrefix + path
 		}
-		return path
+		return []string{path}
 	}
 
-	return "" // unreachable code
+	return []string{""} // unreachable code
 }
 
 func generateKongstateHTTPRoute(routeName string, ingressObjectInfo util.K8sObjectInfo, hostnames []*string) kongstate.Route {

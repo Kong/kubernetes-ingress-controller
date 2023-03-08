@@ -83,7 +83,6 @@ func TestGatewayConformance(t *testing.T) {
 			tests.GatewaySecretReferenceGrantSpecific.ShortName,
 
 			// standard conformance
-			tests.HTTPRouteMatching.ShortName,
 			tests.HTTPRouteHeaderMatching.ShortName,
 			tests.HTTPRouteRedirectHostAndStatus.ShortName,
 

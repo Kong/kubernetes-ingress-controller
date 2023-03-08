@@ -1,0 +1,16 @@
+name: e2e tests
+
+on:
+  schedule:
+    - cron: '30 4 * * *'
+  workflow_dispatch: {}
+
+jobs:
+  run:
+    uses: ./.github/workflows/_e2e_tests.yaml
+    secrets: inherit
+    with:
+      kic-image: kong/nightly-ingress-controller:nightly
+      all-supported-k8s-versions: true
+      run-gke: true
+      run-istio: true

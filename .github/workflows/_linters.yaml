@@ -1,0 +1,35 @@
+name: linters
+
+on:
+  workflow_call: {}
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Setup go
+        uses: actions/setup-go@v3
+        with:
+          go-version: '^1.20'
+
+      - name: Cache Go modules
+        uses: actions/cache@v3
+        with:
+          path: ~/go/pkg/mod
+          key: ${{ runner.os }}-build-codegen-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-build-codegen-
+
+      - name: Run lint
+        run: make lint
+
+      - name: Verify manifest consistency
+        run: make verify.manifests
+
+      - name: Verify generators consistency
+        run: make verify.generators

@@ -1,0 +1,52 @@
+# Extracts versions of dependencies from test/dependencies.yaml to be used in other workflows.
+
+name: dependencies versions
+
+on:
+  workflow_call:
+    inputs:
+      only-latest-kind-version:
+        description: "Only extract the latest Kind (Kubernetes in Docker) version"
+        type: boolean
+        default: false
+    outputs:
+      kind-versions:
+        description: "Kind (Kubernetes in Docker) versions"
+        value: ${{ jobs.extract-dependencies-versions.outputs.kind-versions }}
+      gke-versions:
+        description: "GKE (Google Kubernetes Engine) versions"
+        value: ${{ jobs.extract-dependencies-versions.outputs.gke-versions }}
+
+jobs:
+  extract-dependencies-versions:
+    runs-on: ubuntu-latest
+    outputs:
+      kind-versions: ${{ steps.set-kubernetes-versions.outputs.kind-versions }}
+      gke-versions: ${{ steps.set-kubernetes-versions.outputs.gke-versions }}
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - uses: CumulusDS/get-yaml-paths-action@v1.0.1
+        id: read-versions
+        with:
+          file: ./test/dependencies.yaml
+          kind-versions: kubernetes.kind
+          gke-versions: kubernetes.gke
+
+      - name: Set kubernetes versions
+        id: set-kubernetes-versions
+        run: |
+          if [ "${{ inputs.only-latest-kind-version }}" == "true" ]; then
+            echo "kind-versions=$(echo ${{ steps.read-versions.outputs.kind-versions }} | yq -o json . | jq -c 'max' | jq -cs)" >> $GITHUB_OUTPUT
+          else
+            echo "kind-versions=$(echo ${{ steps.read-versions.outputs.kind-versions }} | yq -o json . | jq -c .)" >> $GITHUB_OUTPUT
+          fi
+          
+          echo "gke-versions=$(echo ${{ steps.read-versions.outputs.gke-versions }} | yq -o json . | jq -c .)" >> $GITHUB_OUTPUT
+
+      - name: Print versions
+        run: |
+          echo "Kind versions ${{ steps.set-kubernetes-versions.outputs.kind-versions }}"
+          echo "GKE versions ${{ steps.set-kubernetes-versions.outputs.gke-versions }}"

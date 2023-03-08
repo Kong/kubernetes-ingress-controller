@@ -1,0 +1,59 @@
+# Uploads test reports to Codecov and BuildPulse.
+# The contract for Codecov is that all test reports are uploaded to the same "coverage" artifact location.
+# The contract for BuildPulse is that all test reports are uploaded to the same "tests-report" artifact location.
+
+name: test reports
+
+on:
+  workflow_call: {}
+
+jobs:
+  coverage:
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: collect test coverage artifacts
+        id: download-coverage
+        uses: actions/download-artifact@v3
+        with:
+          name: coverage
+          path: coverage
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          name: combined-coverage
+          token: ${{ secrets.CODECOV_TOKEN }}
+          directory: ${{ steps.download-coverage.outputs.download-path }}
+          fail_ci_if_error: true
+          verbose: true
+
+  buildpulse-report:
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: download tests report
+        id: download-coverage
+        uses: actions/download-artifact@v3
+        with:
+          name: tests-report
+          path: report
+
+      - name: Upload test results to BuildPulse for flaky test detection
+        if: ${{ !cancelled() }}
+        uses: Workshop64/buildpulse-action@a0e683af4e5070c379e9801ee9b33792ff414936
+        with:
+          account: 962416
+          repository: 127765544
+          path: report/*.xml
+          key: ${{ secrets.BUILDPULSE_ACCESS_KEY_ID }}
+          secret: ${{ secrets.BUILDPULSE_SECRET_ACCESS_KEY }}

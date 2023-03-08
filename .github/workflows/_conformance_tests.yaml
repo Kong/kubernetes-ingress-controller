@@ -1,0 +1,38 @@
+name: conformance tests
+
+on:
+  workflow_call: {}
+
+jobs:
+  conformance-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: setup golang
+        uses: actions/setup-go@v3
+        with:
+          go-version: '^1.20'
+
+      - name: cache go modules
+        uses: actions/cache@v3
+        with:
+          path: ~/go/pkg/mod
+          key: ${{ runner.os }}-build-codegen-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-build-codegen-
+
+      - name: run conformance tests
+        run: make test.conformance
+        env:
+          GOTESTSUM_JUNITFILE: "conformance-tests.xml"
+
+      - name: collect test report
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v3
+        with:
+          name: tests-report
+          path: conformance-tests.xml

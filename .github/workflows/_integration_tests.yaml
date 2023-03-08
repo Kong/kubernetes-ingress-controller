@@ -1,0 +1,132 @@
+name: integration tests
+
+on:
+  workflow_call: {}
+
+jobs:
+  integration-tests:
+    name: integration-tests-${{ matrix.name }}
+    runs-on: ubuntu-latest
+    env:
+      PULP_PASSWORD: ${{ secrets.PULP_PASSWORD }}
+    # We don't want to run enterprise tests for contributors whose workflow runs
+    # do not have access to enterprise license (here, through the means of
+    # kong-license action) so don't run this job when the required secret is not
+    # available.
+    # Instead of making it conditional on job level we need to job.env because
+    # secrets context is only available at this level.
+    #
+    # ref: https://docs.github.com/en/actions/learn-github-actions/contexts#context-availability
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: dbless
+            test: dbless
+          - name: postgres
+            test: postgres
+          - name: feature-gates
+            test: dbless
+            feature_gates: "GatewayAlpha=true,CombinedRoutes=false"
+          - name: dbless-knative
+            test: dbless.knative
+          - name: postgres-knative
+            test: postgres.knative
+          - name: enterprise-postgres
+            test: enterprise.postgres
+            enterprise: true
+
+    steps:
+      - uses: Kong/kong-license@master
+        if: env.PULP_PASSWORD != '' && matrix.enterprise
+        id: license
+        with:
+          password: ${{ env.PULP_PASSWORD }}
+
+      - name: Detect if we should run if we're running enterprise tests but no license is available
+        id: detect_if_should_run
+        run: echo "result=${{ (steps.license.outputs.license != '' && matrix.enterprise) || (!matrix.enterprise) }}" >> $GITHUB_OUTPUT
+
+      - name: Set image of Kong
+        id: set_kong_image
+        if: (!matrix.enterprise)
+        run: |
+          echo "TEST_KONG_IMAGE=kong/kong" >> $GITHUB_ENV
+          echo "TEST_KONG_TAG=3.2.1" >> $GITHUB_ENV
+
+      - name: Set image and tag for enterprise
+        if: steps.detect_if_should_run.outputs.result != 'false' && matrix.enterprise
+        # TODO: We need a systematic approach to this. Either:
+        # - leave this here and bump every GW release
+        # - remove this and rely on bumping GW image in ktf
+        # - rely on a mechanism in ktf that will always, by default return the newest
+        #   Gateway tag.
+        # Related issue: https://github.com/Kong/kubernetes-testing-framework/issues/542
+        run: |
+          echo "TEST_KONG_IMAGE=kong/kong-gateway" >> $GITHUB_ENV
+          echo "TEST_KONG_TAG=3.2.1.0" >> $GITHUB_ENV
+
+      - name: checkout repository
+        if: steps.detect_if_should_run.outputs.result != 'false'
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: setup golang
+        if: steps.detect_if_should_run.outputs.result != 'false'
+        uses: actions/setup-go@v3
+        with:
+          go-version: '^1.20'
+
+      - name: cache go modules
+        if: steps.detect_if_should_run.outputs.result != 'false'
+        uses: actions/cache@v3
+        with:
+          path: ~/go/pkg/mod
+          key: ${{ runner.os }}-build-codegen-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-build-codegen-
+
+      - name: run make test.integration.${{ matrix.test }}
+        if: steps.detect_if_should_run.outputs.result != 'false'
+        run: make test.integration.${{ matrix.test }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          KONG_LICENSE_DATA: ${{ steps.license.outputs.license }}
+          KONG_CONTROLLER_FEATURE_GATES: "${{ matrix.feature_gates }}"
+          GOTESTSUM_JUNITFILE: "integration-tests-${{ matrix.name }}.xml"
+          TEST_KONG_ROUTER_FLAVOR: "traditional"
+
+      - name: run make test.integration.${{ matrix.test }} - router traditional
+        if: ${{ steps.detect_if_should_run.outputs.result != 'false' && inputs.integration-router-compatible }}
+        run: make test.integration.${{ matrix.test }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          KONG_LICENSE_DATA: ${{ steps.license.outputs.license }}
+          KONG_CONTROLLER_FEATURE_GATES: "${{ matrix.feature_gates }}"
+          GOTESTSUM_JUNITFILE: "integration-tests-router-traditional-compatible-${{ matrix.name }}.xml"
+          TEST_KONG_ROUTER_FLAVOR: "traditional_compatible"
+
+      # todo: add optional TEST_RUN_INVALID_CONFIG_CASES step (or separate job) that will be run only nightly
+
+      - name: collect test coverage
+        if: steps.detect_if_should_run.outputs.result != 'false'
+        uses: actions/upload-artifact@v3
+        with:
+          name: coverage
+          path: coverage.*.out
+
+      - name: upload diagnostics
+        if: ${{ !cancelled() && steps.detect_if_should_run.outputs.result != 'false' }}
+        uses: actions/upload-artifact@v3
+        with:
+          name: diagnostics-integration-tests-${{ matrix.name }}
+          path: /tmp/ktf-diag*
+          if-no-files-found: ignore
+
+      - name: collect test report
+        if: ${{ !cancelled() && steps.detect_if_should_run.outputs.result != 'false' }}
+        uses: actions/upload-artifact@v3
+        with:
+          name: tests-report
+          path: integration-tests-${{ matrix.name }}.xml

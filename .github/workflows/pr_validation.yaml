@@ -1,0 +1,47 @@
+name: PR checks
+
+concurrency:
+  # Run only for most recent commit in PRs but for all tags and commits on main
+  # Ref: https://docs.github.com/en/actions/using-jobs/using-concurrency
+  group: ${{ github.workflow }}-${{ github.head_ref || github.sha }}
+  cancel-in-progress: true
+
+on:
+  pull_request:
+    branches:
+      - '*'
+  push:
+    branches:
+      - 'main'
+    tags:
+      - '*'
+  workflow_dispatch: {}
+
+jobs:
+  linters:
+    uses: ./.github/workflows/_linters.yaml
+    secrets: inherit
+
+  unit-tests:
+    uses: ./.github/workflows/_unit_tests.yaml
+    secrets: inherit
+
+  integration-tests:
+    uses: ./.github/workflows/_integration_tests.yaml
+    secrets: inherit
+
+  conformance-tests:
+    uses: ./.github/workflows/_conformance_tests.yaml
+    secrets: inherit
+
+  build-docker-image:
+    uses: ./.github/workflows/_docker_build.yaml
+    secrets: inherit
+
+  e2e-tests:
+    needs: build-docker-image
+    uses: ./.github/workflows/_e2e_tests.yaml
+    secrets: inherit
+    with:
+      kic-image: ${{ needs.build-docker-image.outputs.image }}
+      load-local-image: true

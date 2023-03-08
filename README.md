@@ -33,7 +33,7 @@ Custom Resource Definitions (CRDs) and Kubernetes-native tooling.
 - **Declarative configuration for Kong**
   Configure all of Kong using CRDs in Kubernetes and manage Kong declaratively.
 - **Gateway Discovery**
-  Dynamically provision and scale your Kong Gateway deployments for KIC to discover.
+  Monitors your Kong Gateways and pushes configuration to all replicas.
 
 ## Get started
 

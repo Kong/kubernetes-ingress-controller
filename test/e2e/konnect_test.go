@@ -121,9 +121,10 @@ func createTestRuntimeGroup(ctx context.Context, t *testing.T) string {
 		Description: lo.ToPtr("This is a description"),
 		Labels:      &rg.Labels{"created_in_tests": "true"},
 		Name:        uuid.NewString(),
+		ClusterType: rg.ClusterTypeKubernetesIngressController,
 	})
 	require.NoError(t, err, "failed to create runtime group")
-	require.Equal(t, http.StatusCreated, createRgResp.StatusCode())
+	require.Equalf(t, http.StatusCreated, createRgResp.StatusCode(), "failed creating RG: %s", string(createRgResp.Body))
 	require.NotNil(t, createRgResp.JSON201)
 	require.NotNil(t, createRgResp.JSON201.Id)
 	id := *createRgResp.JSON201.Id
@@ -181,7 +182,7 @@ func createClientCertificate(ctx context.Context, t *testing.T, rgID string) (ce
 		Cert: cert,
 	})
 	require.NoError(t, err)
-	require.Equal(t, http.StatusCreated, resp.StatusCode())
+	require.Equalf(t, http.StatusCreated, resp.StatusCode(), "failed creating client certificate: %s", string(resp.Body))
 
 	return cert, key
 }

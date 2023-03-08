@@ -25,9 +25,10 @@ type (
 	RouteParentStatus = gatewayv1beta1.RouteParentStatus
 	SectionName       = gatewayv1beta1.SectionName
 
-	TCPRoute = gatewayv1alpha2.TCPRoute
-	UDPRoute = gatewayv1alpha2.UDPRoute
-	TLSRoute = gatewayv1alpha2.TLSRoute
+	TCPRoute  = gatewayv1alpha2.TCPRoute
+	UDPRoute  = gatewayv1alpha2.UDPRoute
+	TLSRoute  = gatewayv1alpha2.TLSRoute
+	GRPCRoute = gatewayv1alpha2.GRPCRoute
 )
 
 const (

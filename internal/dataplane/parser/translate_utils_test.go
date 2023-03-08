@@ -412,13 +412,6 @@ func TestGenerateKongServiceFromBackendRef(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			msg:     "empty backend list",
-			route:   &gatewayv1beta1.HTTPRoute{},
-			refs:    []gatewayv1beta1.BackendRef{},
-			result:  kongstate.Service{},
-			wantErr: true,
-		},
-		{
 			msg: "all backends in route namespace",
 			route: &gatewayv1beta1.HTTPRoute{
 				// normally the k8s api call populates TypeMeta properly, but we have no such luxuries here

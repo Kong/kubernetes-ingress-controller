@@ -84,7 +84,6 @@ func TestGatewayConformance(t *testing.T) {
 
 			// standard conformance
 			tests.HTTPRouteHeaderMatching.ShortName,
-			tests.HTTPRouteRedirectHostAndStatus.ShortName,
 
 			// extended conformance
 			// https://github.com/Kong/kubernetes-ingress-controller/issues/3680

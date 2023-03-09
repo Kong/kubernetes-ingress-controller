@@ -8,7 +8,7 @@ Adding a new version? You'll need three changes:
   This is all the way at the bottom. It's the thing we always forget.
 --->
 
- - [2.9.0](#290)
+ - [2.9.0-rc.1](#290-rc1)
  - [2.8.1](#281)
  - [2.8.0](#280)
  - [2.7.0](#270)
@@ -63,9 +63,9 @@ Adding a new version? You'll need three changes:
  - [0.0.5](#005)
  - [0.0.4 and prior](#004-and-prior)
 
-## [2.9.0]
+## [2.9.0-rc.1]
 
-> Release date: TBD
+> Release date: 2023-03-09
 
 ### Added
 
@@ -2293,7 +2293,7 @@ Please read the changelog and test in your environment.
  - The initial versions  were rapildy iterated to deliver
    a working ingress controller.
 
-[2.9.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.8.1...v2.9.0
+[2.9.0-rc.1]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.8.1...v2.9.0-rc.1
 [2.8.1]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.8.0...v2.8.1
 [2.8.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.7.0...v2.8.0
 [2.7.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.6.0...v2.7.0

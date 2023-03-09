@@ -2,10 +2,11 @@ package parser
 
 import (
 	"fmt"
-	"path"
+	pathlib "path"
 	"strings"
 
 	"github.com/kong/go-kong/kong"
+	"github.com/samber/lo"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
@@ -180,7 +181,7 @@ func generateKongRoutesFromHTTPRouteRule(
 				matchNumber,
 			)
 
-			r, err := generateKongRouteFromHTTPRouteMatches(
+			r, err := generateKongRoutesFromHTTPRouteMatches(
 				routeName,
 				rule.Matches[matchNumber:matchNumber+1],
 				rule.Filters,
@@ -198,7 +199,7 @@ func generateKongRoutesFromHTTPRouteRule(
 		}
 	} else {
 		routeName := fmt.Sprintf("httproute.%s.%s.0.0", httproute.Namespace, httproute.Name)
-		r, err := generateKongRouteFromHTTPRouteMatches(routeName,
+		r, err := generateKongRoutesFromHTTPRouteMatches(routeName,
 			rule.Matches,
 			rule.Filters,
 			objectInfo,
@@ -228,7 +229,7 @@ func generateKongRouteFromTranslation(
 	// get the hostnames from the HTTPRoute
 	hostnames := getHTTPRouteHostnamesAsSliceOfStringPointers(httproute)
 
-	return generateKongRouteFromHTTPRouteMatches(
+	return generateKongRoutesFromHTTPRouteMatches(
 		translation.Name,
 		translation.Matches,
 		translation.Filters,
@@ -239,9 +240,9 @@ func generateKongRouteFromTranslation(
 	)
 }
 
-// generateKongRouteFromHTTPRouteMatches converts an HTTPRouteMatches to a Kong Route object.
+// generateKongRoutesFromHTTPRouteMatches converts an HTTPRouteMatches to a slice of Kong Route objects.
 // This function assumes that the HTTPRouteMatches share the query params, headers and methods.
-func generateKongRouteFromHTTPRouteMatches(
+func generateKongRoutesFromHTTPRouteMatches(
 	routeName string,
 	matches []gatewayv1beta1.HTTPRouteMatch,
 	filters []gatewayv1beta1.HTTPRouteFilter,
@@ -282,7 +283,6 @@ func generateKongRouteFromHTTPRouteMatches(
 		return []kongstate.Route{}, errRouteValidationQueryParamMatchesUnsupported
 	}
 
-	routes := make([]kongstate.Route, 0)
 	r := generateKongstateHTTPRoute(routeName, ingressObjectInfo, hostnames)
 	r.Tags = tags
 
@@ -298,20 +298,38 @@ func generateKongRouteFromHTTPRouteMatches(
 	// stripPath needs to be disabled by default to be conformant with the Gateway API
 	r.StripPath = kong.Bool(false)
 
-	seenMethods := make(map[string]struct{})
+	_, hasRedirectFilter := lo.Find(filters, func(filter gatewayv1beta1.HTTPRouteFilter) bool {
+		return filter.Type == gatewayv1beta1.HTTPRouteFilterRequestRedirect
+	})
 
-	var hasRedirectFilter bool
-	for _, f := range filters {
-		if f.Type == gatewayv1beta1.HTTPRouteFilterRequestRedirect {
-			hasRedirectFilter = true
-		}
+	routes := getRoutesFromMatches(matches, &r, filters, tags, hasRedirectFilter, addRegexPrefix)
+
+	// if the redirect filter has not been set, we still need to set the route plugins
+	if !hasRedirectFilter {
+		plugins := generatePluginsFromHTTPRouteFilters(filters, "", tags)
+		r.Plugins = append(r.Plugins, plugins...)
+		routes = []kongstate.Route{r}
 	}
+
+	return routes, nil
+}
+
+// getRoutesFromMatches converts all the httpRoute matches to the proper set of kong routes.
+func getRoutesFromMatches(matches []gatewayv1beta1.HTTPRouteMatch,
+	route *kongstate.Route,
+	filters []gatewayv1beta1.HTTPRouteFilter,
+	tags []*string,
+	hasRedirectFilter bool,
+	addRegexPrefix bool,
+) []kongstate.Route {
+	seenMethods := make(map[string]struct{})
+	routes := make([]kongstate.Route, 0)
 
 	for _, match := range matches {
 		// if the rule specifies the redirectFilter, we cannot put all the paths under the same route,
 		// as the kong plugin needs to know the exact path to use to perform redirection.
 		if hasRedirectFilter {
-			matchRoute := r
+			matchRoute := route
 			// configure path matching information about the route if paths matching was defined
 			// Kong automatically infers whether or not a path is a regular expression and uses a prefix match by
 			// default if it is not. For those types, we use the path value as-is and let Kong determine the type.
@@ -341,7 +359,7 @@ func generateKongRouteFromHTTPRouteMatches(
 			plugins := generatePluginsFromHTTPRouteFilters(filters, path, tags)
 			matchRoute.Plugins = append(matchRoute.Plugins, plugins...)
 
-			routes = append(routes, matchRoute)
+			routes = append(routes, *route)
 		} else {
 			// configure path matching information about the route if paths matching was defined
 			// Kong automatically infers whether or not a path is a regular expression and uses a prefix match by
@@ -350,27 +368,20 @@ func generateKongRouteFromHTTPRouteMatches(
 			if match.Path != nil {
 				paths := generateKongRoutePathFromHTTPRouteMatch(match, addRegexPrefix)
 				for _, p := range paths {
-					r.Route.Paths = append(r.Route.Paths, kong.String(p))
+					route.Route.Paths = append(route.Route.Paths, kong.String(p))
 				}
 			}
 
 			if match.Method != nil {
 				method := string(*match.Method)
 				if _, ok := seenMethods[method]; !ok {
-					r.Route.Methods = append(r.Route.Methods, kong.String(string(*match.Method)))
+					route.Route.Methods = append(route.Route.Methods, kong.String(string(*match.Method)))
 					seenMethods[method] = struct{}{}
 				}
 			}
 		}
 	}
-	// if the redirect filter has not been set, we still need to set the route plugins
-	if !hasRedirectFilter {
-		plugins := generatePluginsFromHTTPRouteFilters(filters, "", tags)
-		r.Plugins = append(r.Plugins, plugins...)
-		routes = []kongstate.Route{r}
-	}
-
-	return routes, nil
+	return routes
 }
 
 func generateKongRoutePathFromHTTPRouteMatch(match gatewayv1beta1.HTTPRouteMatch, addRegexPrefix bool) []string {
@@ -424,7 +435,8 @@ func generateKongstateHTTPRoute(routeName string, ingressObjectInfo util.K8sObje
 	return r
 }
 
-// generatePluginsFromHTTPRouteFilters  converts HTTPRouteFilter into Kong filters.
+// generatePluginsFromHTTPRouteFilters converts HTTPRouteFilter into Kong plugins.
+// path is the parameter to be used by the redirect plugin, to perform redirection.
 func generatePluginsFromHTTPRouteFilters(filters []gatewayv1beta1.HTTPRouteFilter, path string, tags []*string) []kong.Plugin {
 	kongPlugins := make([]kong.Plugin, 0)
 	if len(filters) == 0 {
@@ -453,7 +465,7 @@ func generatePluginsFromHTTPRouteFilters(filters []gatewayv1beta1.HTTPRouteFilte
 	return kongPlugins
 }
 
-func generateRequestRedirectKongPlugin(modifier *gatewayv1beta1.HTTPRequestRedirectFilter, p string) []kong.Plugin {
+func generateRequestRedirectKongPlugin(modifier *gatewayv1beta1.HTTPRequestRedirectFilter, path string) []kong.Plugin {
 	plugins := make([]kong.Plugin, 2)
 	plugins[0] = kong.Plugin{
 		Name: kong.String("request-termination"),
@@ -474,12 +486,12 @@ func generateRequestRedirectKongPlugin(modifier *gatewayv1beta1.HTTPRequestRedir
 	}
 	if modifier.Path != nil && modifier.Path.Type == gatewayv1beta1.FullPathHTTPPathModifier && modifier.Path.ReplaceFullPath != nil {
 		// only ReplaceFullPath currently supported
-		p = *modifier.Path.ReplaceFullPath
+		path = *modifier.Path.ReplaceFullPath
 	}
 	if modifier.Hostname != nil {
-		locationHeader = fmt.Sprintf("Location: %s://%s", scheme, path.Join(fmt.Sprintf("%s:%d", *modifier.Hostname, port), p))
+		locationHeader = fmt.Sprintf("Location: %s://%s", scheme, pathlib.Join(fmt.Sprintf("%s:%d", *modifier.Hostname, port), path))
 	} else {
-		locationHeader = fmt.Sprintf("Location: %s", p)
+		locationHeader = fmt.Sprintf("Location: %s", path)
 	}
 
 	plugins[1] = kong.Plugin{

@@ -1438,7 +1438,9 @@ func TestGeneratePluginsFromHTTPRouteFilters(t *testing.T) {
 
 	for _, tc := range testCases {
 		plugins := generatePluginsFromHTTPRouteFilters(tc.filters, tc.path, nil)
-		assert.Equal(t, tc.expectedPlugins, plugins, tc.name)
+		t.Run(tc.name, func(t *testing.T) {
+			assert.Equal(t, tc.expectedPlugins, plugins)
+		})
 	}
 }
 

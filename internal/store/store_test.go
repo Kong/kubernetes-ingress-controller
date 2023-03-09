@@ -10,7 +10,6 @@ import (
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	extensions "k8s.io/api/extensions/v1beta1"
 	netv1 "k8s.io/api/networking/v1"
 	netv1beta1 "k8s.io/api/networking/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -52,73 +51,6 @@ func TestNetworkingIngressV1Beta1(t *testing.T) {
 				},
 			},
 			want: nil,
-		},
-		{
-			name: "correctly transformers from extensions to networking group",
-			args: args{
-				obj: &extensions.Ingress{
-					TypeMeta: metav1.TypeMeta{
-						APIVersion: "extensions/v1beta1",
-						Kind:       "Ingress",
-					},
-					Spec: extensions.IngressSpec{
-						Rules: []extensions.IngressRule{
-							{
-								Host: "example.com",
-								IngressRuleValue: extensions.IngressRuleValue{
-									HTTP: &extensions.HTTPIngressRuleValue{
-										Paths: []extensions.HTTPIngressPath{
-											{
-												Path: "/",
-												Backend: extensions.IngressBackend{
-													ServiceName: "foo-svc",
-													ServicePort: intstr.FromInt(80),
-												},
-											},
-										},
-									},
-								},
-							},
-						},
-					},
-					Status: extensions.IngressStatus{
-						LoadBalancer: extensions.IngressLoadBalancerStatus{
-							Ingress: []extensions.IngressLoadBalancerIngress{{IP: "1.2.3.4"}},
-						},
-					},
-				},
-			},
-			want: &netv1beta1.Ingress{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: "networking.k8s.io/v1beta1",
-					Kind:       "Ingress",
-				},
-				Spec: netv1beta1.IngressSpec{
-					Rules: []netv1beta1.IngressRule{
-						{
-							Host: "example.com",
-							IngressRuleValue: netv1beta1.IngressRuleValue{
-								HTTP: &netv1beta1.HTTPIngressRuleValue{
-									Paths: []netv1beta1.HTTPIngressPath{
-										{
-											Path: "/",
-											Backend: netv1beta1.IngressBackend{
-												ServiceName: "foo-svc",
-												ServicePort: intstr.FromInt(80),
-											},
-										},
-									},
-								},
-							},
-						},
-					},
-				},
-				Status: netv1beta1.IngressStatus{
-					LoadBalancer: netv1beta1.IngressLoadBalancerStatus{
-						Ingress: []netv1beta1.IngressLoadBalancerIngress{{IP: "1.2.3.4"}},
-					},
-				},
-			},
 		},
 	}
 	for _, tt := range tests {

@@ -63,6 +63,14 @@ Adding a new version? You'll need three changes:
  - [0.0.5](#005)
  - [0.0.4 and prior](#004-and-prior)
 
+## Unreleased
+
+### Deprecated
+
+- Removed support for extensions/v1beta1 Ingress which was removed in kubernetes 1.22.
+  At the same time deprecate `--enable-controller-ingress-extensionsv1beta1` CLI flag.
+  [#3710](https://github.com/Kong/kubernetes-ingress-controller/pull/3710)
+
 ## [2.9.0]
 
 > Release date: TBD

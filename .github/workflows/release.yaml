@@ -174,7 +174,7 @@ jobs:
 
   publish-release:
     runs-on: ubuntu-latest
-    needs: [build-push-images, test-current-kubernetes, test-previous-kubernetes]
+    needs: [build-push-images, test-e2e]
     steps:
     - name: Parse semver string
       id: semver_parser

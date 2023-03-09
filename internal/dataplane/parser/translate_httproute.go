@@ -459,6 +459,8 @@ func generatePluginsFromHTTPRouteFilters(filters []gatewayv1beta1.HTTPRouteFilte
 		}
 	}
 	for _, p := range kongPlugins {
+		// This plugin is derived from an HTTPRoute filter, not a KongPlugin, so we apply tags indicating that
+		// HTTPRoute as the parent Kubernetes resource for these generated plugins.
 		p.Tags = tags
 	}
 

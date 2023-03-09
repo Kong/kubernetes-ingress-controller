@@ -15,6 +15,11 @@ on:
         description: Whether to tag the image as `latest`.
         type: boolean
         default: false
+      platforms:
+        description: The platforms to build for.
+        type: string
+        default: linux/amd64
+        required: true
     outputs:
       image:
         description: The image name and tag.
@@ -118,13 +123,13 @@ jobs:
           cache-from: type=local,src=/tmp/.buildx-cache
           cache-to: type=local,dest=/tmp/.buildx-cache
           target: distroless
-          # todo: add linux/arm64 as optional to speed up builds when it's not needed (in most cases)
-          platforms: linux/amd64
+          platforms: ${{ inputs.platforms }}
           build-args: |
             TAG=${{ steps.meta.outputs.version }}
             COMMIT=${{ github.sha }}
             REPO_INFO=https://github.com/${{ github.repository }}.git
 
+      # Build locally with outputs set to `type=docker,dest=/tmp/image.tar` to save the image as a `kic-image` artifact.
       - name: Build locally
         id: docker-build-local
         uses: docker/build-push-action@v4

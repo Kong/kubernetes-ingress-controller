@@ -6,7 +6,7 @@ on:
   workflow_dispatch: {}
 
 jobs:
-  run:
+  e2e-tests:
     uses: ./.github/workflows/_e2e_tests.yaml
     secrets: inherit
     with:
@@ -14,3 +14,8 @@ jobs:
       all-supported-k8s-versions: true
       run-gke: true
       run-istio: true
+
+  test-reports:
+    needs: e2e-tests
+    uses: ./.github/workflows/_test_reports.yaml
+    secrets: inherit

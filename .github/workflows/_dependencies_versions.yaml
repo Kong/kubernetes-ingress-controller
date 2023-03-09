@@ -6,15 +6,15 @@ on:
   workflow_call:
     inputs:
       only-latest-kind-version:
-        description: "Only extract the latest Kind (Kubernetes in Docker) version"
+        description: Only extract the latest Kind (Kubernetes in Docker) version.
         type: boolean
         default: false
     outputs:
       kind-versions:
-        description: "Kind (Kubernetes in Docker) versions"
+        description: Kind (Kubernetes in Docker) versions.
         value: ${{ jobs.extract-dependencies-versions.outputs.kind-versions }}
       gke-versions:
-        description: "GKE (Google Kubernetes Engine) versions"
+        description: GKE (Google Kubernetes Engine) versions.
         value: ${{ jobs.extract-dependencies-versions.outputs.gke-versions }}
 
 jobs:

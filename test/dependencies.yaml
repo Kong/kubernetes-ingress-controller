@@ -1,4 +1,5 @@
 # This file defines versions of KIC dependencies that we test against.
+# It's used by `_dependencies_versions.yaml` to extract versions to be used in other workflows.
 
 kubernetes:
   kind:
@@ -10,3 +11,36 @@ kubernetes:
 
   gke:
     - 'v1.25.5'
+
+# https://hub.docker.com/_/kong
+kong-oss:
+  - '2.1.4'
+  - '2.2.2'
+  - '2.3.3'
+  - '2.4.1'
+  - '2.5.2'
+  - '2.6.1'
+  - '2.7.2'
+  - '2.8.3'
+  - '3.0.2'
+  - '3.1.1'
+#  - '3.2.1'
+
+# https://hub.docker.com/r/kong/kong-gateway
+kong-enterprise:
+  - '2.1.4.6'
+  - '2.2.1.5'
+  - '2.3.3.4'
+  - '2.4.1.3'
+  - '2.5.1.2'
+  - '2.6.1.0'
+  - '2.7.2.0'
+  - '2.8.2.4'
+  - '3.0.2.0'
+  - '3.1.1.3'
+  - '3.2.1.0'
+
+istio:
+  - 'v1.15.6'
+  - 'v1.16.3'
+  - 'v1.17.1'

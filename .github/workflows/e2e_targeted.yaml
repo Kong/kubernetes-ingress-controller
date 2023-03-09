@@ -4,18 +4,18 @@ on:
   workflow_dispatch:
     inputs:
       controller-image:
-        description: 'KIC Docker image to test with. If empty, builds an image from the dispatch branch.'
+        description: KIC Docker image to test with. If empty, builds an image from the dispatch branch.
         required: false
       run-gke:
-        description: 'Run E2E tests on GKE as well as on Kind.'
+        description: Run E2E tests on GKE as well as on Kind.
         type: boolean
         default: false
       run-istio:
-        description: 'Run Istio E2E tests.'
+        description: Run Istio E2E tests.
         type: boolean
         default: false
       all-supported-k8s-versions:
-        description: 'Run tests against all supported Kubernetes versions. Otherwise, only against the latest one.'
+        description: Run tests against all supported Kubernetes versions. Otherwise, only against the latest one.
         type: boolean
         default: false
 
@@ -25,13 +25,40 @@ jobs:
     uses: ./.github/workflows/_docker_build.yaml
     secrets: inherit
 
-  run:
+  # We need to pick an image to use for the tests. If the user specified one, we use that. Otherwise, we use the one
+  # built by the previous job.
+  choose-image:
+    runs-on: ubuntu-latest
+    if: ${{ !cancelled() }}
     needs: build-image
+    outputs:
+      image: ${{ steps.choose.outputs.image }}
+    steps:
+      - name: Choose image
+        id: choose
+        run: |
+          if [ "${{ inputs.controller-image }}" == "" ]; then
+            echo "image=${{ needs.build-image.outputs.image }}" >> $GITHUB_OUTPUT
+          else
+            echo "image=${{ inputs.controller-image }}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Print image
+        run: echo "Using ${{ steps.choose.outputs.image }}"
+
+  run:
+    needs: choose-image
+    if: ${{ !cancelled() }}
     uses: ./.github/workflows/_e2e_tests.yaml
     secrets: inherit
     with:
-      kic-image: ${{ needs.build-image.outputs.image }}
+      kic-image: ${{ needs.choose-image.outputs.image }}
       load-local-image: ${{ inputs.controller-image == '' }}
       run-gke: ${{ inputs.run-gke }}
       run-istio: ${{ inputs.run-istio }}
       all-supported-k8s-versions: ${{ inputs.all-supported-k8s-versions }}
+
+  test-reports:
+    needs: run
+    uses: ./.github/workflows/_test_reports.yaml
+    secrets: inherit

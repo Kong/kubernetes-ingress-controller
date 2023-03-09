@@ -45,3 +45,8 @@ jobs:
     with:
       kic-image: ${{ needs.build-docker-image.outputs.image }}
       load-local-image: true
+
+  test-reports:
+    needs: [unit-tests, integration-tests, conformance-tests, e2e-tests]
+    uses: ./.github/workflows/_test_reports.yaml
+    secrets: inherit

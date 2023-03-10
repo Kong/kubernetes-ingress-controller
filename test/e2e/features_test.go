@@ -25,12 +25,15 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
+	kongv1alpha1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1alpha1"
+	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1beta1"
 	"github.com/kong/kubernetes-ingress-controller/v2/pkg/clientset"
 	"github.com/kong/kubernetes-ingress-controller/v2/test"
 	"github.com/kong/kubernetes-ingress-controller/v2/test/consts"
@@ -303,6 +306,12 @@ func TestDeployAllInOneDBLESSGateway(t *testing.T) {
 	t.Log("verifying that KIC disabled controllers for Gateway API and printed proper log")
 	require.Eventually(t, func() bool {
 		pods, err := env.Cluster().Client().CoreV1().Pods(controllerDeploymentNN.Namespace).List(ctx, controllerDeploymentListOptions)
+		gatewayGVR := schema.GroupVersionResource{
+			Group:    gatewayv1beta1.GroupVersion.Group,
+			Version:  gatewayv1beta1.GroupVersion.Version,
+			Resource: "gateways",
+		}
+		msg := fmt.Sprintf("Disabling controller for Group=%s, Resource=%s due to missing CRD", gatewayGVR.GroupVersion(), gatewayGVR.Resource)
 		require.NoError(t, err)
 		for _, pod := range pods.Items {
 			logs, err := getPodLogs(ctx, t, env, pod.Namespace, pod.Name)
@@ -310,7 +319,7 @@ func TestDeployAllInOneDBLESSGateway(t *testing.T) {
 				t.Logf("failed to get logs of pods %s/%s, error %v", pod.Namespace, pod.Name, err)
 				return false
 			}
-			if !strings.Contains(logs, "disabling the 'gateways' controller due to missing CRD installation") {
+			if !strings.Contains(logs, msg) {
 				return false
 			}
 		}
@@ -654,20 +663,56 @@ func TestMissingCRDsDontCrashTheController(t *testing.T) {
 			return false
 		}
 
-		resources := []string{
-			"udpingresses",
-			"tcpingresses",
-			"kongingresses",
-			"ingressclassparameterses",
-			"kongplugins",
-			"kongconsumers",
-			"kongclusterplugins",
-			"ingresses",
-			"gateways",
-			"httproutes",
+		gvrs := []schema.GroupVersionResource{
+			{
+				Group:    kongv1beta1.GroupVersion.Group,
+				Version:  kongv1beta1.GroupVersion.Version,
+				Resource: "udpingresses",
+			},
+			{
+				Group:    kongv1beta1.GroupVersion.Group,
+				Version:  kongv1beta1.GroupVersion.Version,
+				Resource: "tcpingresses",
+			},
+			{
+				Group:    kongv1.GroupVersion.Group,
+				Version:  kongv1.GroupVersion.Version,
+				Resource: "kongingresses",
+			},
+			{
+				Group:    kongv1alpha1.GroupVersion.Group,
+				Version:  kongv1alpha1.GroupVersion.Version,
+				Resource: "ingressclassparameterses",
+			},
+			{
+				Group:    kongv1.GroupVersion.Group,
+				Version:  kongv1.GroupVersion.Version,
+				Resource: "kongplugins",
+			},
+			{
+				Group:    kongv1.GroupVersion.Group,
+				Version:  kongv1.GroupVersion.Version,
+				Resource: "kongconsumers",
+			},
+			{
+				Group:    kongv1.GroupVersion.Group,
+				Version:  kongv1.GroupVersion.Version,
+				Resource: "kongclusterplugins",
+			},
+			{
+				Group:    gatewayv1beta1.GroupVersion.Group,
+				Version:  gatewayv1beta1.GroupVersion.Version,
+				Resource: "gateways",
+			},
+			{
+				Group:    gatewayv1beta1.GroupVersion.Group,
+				Version:  gatewayv1beta1.GroupVersion.Version,
+				Resource: "httproutes",
+			},
 		}
-		for _, resource := range resources {
-			if !strings.Contains(logs, fmt.Sprintf("disabling the '%s' controller due to missing CRD installation", resource)) {
+
+		for _, gvr := range gvrs {
+			if !strings.Contains(logs, fmt.Sprintf("Disabling controller for Group=%s, Resource=%s due to missing CRD", gvr.GroupVersion(), gvr.Resource)) {
 				return false
 			}
 		}

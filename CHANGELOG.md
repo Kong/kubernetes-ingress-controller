@@ -152,6 +152,9 @@ Adding a new version? You'll need three changes:
   of the controller. The old `all-in-one-dbless.yaml` manifest has been deprecated and 
   renamed to `all-in-one-dbless-legacy.yaml`. It will be removed in a future release.
   [#3629](https://github.com/Kong/kubernetes-ingress-controller/pull/3629)
+- The RequestRedirect Gateway API filter is now supported and translated
+  to the proper set of Kong plugins.
+  [#3702](https://github.com/Kong/kubernetes-ingress-controller/pull/3702)
 
 ### Fixed
 

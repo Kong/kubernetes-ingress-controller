@@ -1,6 +1,7 @@
 package manager
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net/http"
@@ -9,10 +10,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/go-logr/logr/testr"
+	"github.com/go-logr/logr"
 	"github.com/phayes/freeport"
 	"github.com/stretchr/testify/require"
-	"golang.org/x/net/context"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 )
 
@@ -85,13 +85,27 @@ func TestHealthCheckServer_Start(t *testing.T) {
 
 	ctx, cancel := context.WithCancel(context.Background())
 	addr := fmt.Sprintf("localhost:%d", port)
-	h.Start(ctx, addr, testr.New(t))
+	// Use discard logger to prevent:
+	// panic: Log in goroutine after TestHealthCheckServer_Start has completed: "level"=0 "msg"="healthz server closed"
+	h.Start(ctx, addr, logr.Discard())
 
 	healtzEndpoint := fmt.Sprintf("http://%s/healthz", addr)
-	resp, err := http.Get(healtzEndpoint)
-	require.NoError(t, err)
-	require.Equal(t, http.StatusOK, resp.StatusCode)
-	defer resp.Body.Close()
+	// Allow some failures just after the server gets started.
+	require.Eventually(t, func() bool {
+		resp, err := http.Get(healtzEndpoint)
+		if err != nil {
+			t.Logf("got error: %v but none expected", err)
+			return false
+		}
+
+		defer resp.Body.Close()
+		if resp.StatusCode != http.StatusOK {
+			t.Logf("got %d status code but expected 200", resp.StatusCode)
+			return false
+		}
+
+		return true
+	}, time.Second, time.Millisecond)
 
 	// Cancel the context to stop the server and check it is no longer listening.
 	cancel()
@@ -101,7 +115,7 @@ func TestHealthCheckServer_Start(t *testing.T) {
 		if err == nil {
 			defer resp.Body.Close()
 		}
-		if !strings.Contains(err.Error(), "connection refused") {
+		if err != nil && !strings.Contains(err.Error(), "connection refused") {
 			t.Log("expected error to contain 'connection refused', got:", err)
 			return false
 		}

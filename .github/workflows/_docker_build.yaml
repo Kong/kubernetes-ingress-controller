@@ -19,7 +19,6 @@ on:
         description: The platforms to build for.
         type: string
         default: linux/amd64
-        required: true
     outputs:
       image:
         description: The image name and tag.

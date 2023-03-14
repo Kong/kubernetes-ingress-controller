@@ -1,6 +1,7 @@
 package dataplane
 
 import (
+	"context"
 	"sync"
 	"testing"
 	"time"
@@ -8,7 +9,6 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"golang.org/x/net/context"
 )
 
 func TestSynchronizer(t *testing.T) {

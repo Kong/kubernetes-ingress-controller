@@ -107,13 +107,13 @@ func (ir *ingressRules) populateServices(log logrus.FieldLogger, s store.Storer,
 		} else if len(k8sServices) > 0 {
 			service.Tags = util.GenerateTagsForObject(k8sServices[0])
 		} else {
-			// TODO https://github.com/Kong/kubernetes-ingress-controller/issues/3484
-			// somehow https://gist.github.com/rainest/8d5a067e9c8b93c98100559fcbe75631 results in _ZERO_
-			// k8sServices, causing a panic here without this if clause.
-			// That shouldn't happen and requires further investigation.
+			// this tag generation code runs _before_ we would discard routes that are invalid because their backend
+			// Service doesn't actually exist. attempting to generate tags for that Service would trigger a panic.
+			// the parser should discard this invalid route later, but this adds a placeholder value in case it doesn't.
+			// if you encounter an actual config where a service has these tags, something strange has happened.
 			log.WithFields(logrus.Fields{
 				"service": *service.Name,
-			}).Error("service has zero k8sServices backends, cannot generate tags for it properly")
+			}).Debug("service has zero k8sServices backends, cannot generate tags for it properly")
 			service.Tags = kong.StringSlice(
 				util.K8sNameTagPrefix+"UNKNOWN",
 				util.K8sNamespaceTagPrefix+"UNKNOWN",

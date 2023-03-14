@@ -83,10 +83,6 @@ func generateKongServiceFromBackendRefWithName(
 ) (kongstate.Service, error) {
 	objName := fmt.Sprintf("%s %s/%s",
 		route.GetObjectKind().GroupVersionKind().String(), route.GetNamespace(), route.GetName())
-	if len(backendRefs) == 0 {
-		return kongstate.Service{}, fmt.Errorf("no backendRefs present for %s, cannot build Kong service", objName)
-	}
-
 	grants, err := storer.ListReferenceGrants()
 	if err != nil {
 		return kongstate.Service{}, fmt.Errorf("could not retrieve ReferenceGrants for %s: %w", objName, err)
@@ -126,7 +122,7 @@ func generateKongServiceFromBackendRefWithName(
 	// the response must have a status code of 500. Since The default behavior of Kong is returning 503
 	// if there is no backend for a service, we inject a plugin that terminates all requests with 500
 	// as status code
-	if len(service.Backends) == 0 {
+	if len(service.Backends) == 0 && len(backendRefs) != 0 {
 		if service.Plugins == nil {
 			service.Plugins = make([]kong.Plugin, 0)
 		}

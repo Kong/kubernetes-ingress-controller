@@ -58,6 +58,12 @@ const (
 	N503 Status503 = 503
 )
 
+type ClusterType string
+
+const (
+	ClusterTypeKubernetesIngressController ClusterType = "CLUSTER_TYPE_K8S_INGRESS_CONTROLLER"
+)
+
 // AdditionalErrorInformation An array of objects that contains information related to the error response.
 type AdditionalErrorInformation = []AdditionalErrorInformation_Item
 
@@ -79,6 +85,9 @@ type CreateRuntimeGroupRequest struct {
 
 	// Name The name of the runtime group.
 	Name string `json:"name"`
+
+	// ClusterType is the type of cluster this runtime group is associated with.
+	ClusterType ClusterType `json:"cluster_type,omitempty"`
 }
 
 // Labels Labels to facilitate tagged search on runtime groups. Keys must be of length 1-63 characters, and cannot start with 'kong', 'konnect', 'mesh', 'kic', or '_'.

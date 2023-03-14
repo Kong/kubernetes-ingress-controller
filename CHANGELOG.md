@@ -7,8 +7,8 @@ Adding a new version? You'll need three changes:
 * Add the diff link, like "[2.7.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v1.2.2...v1.2.3".
   This is all the way at the bottom. It's the thing we always forget.
 --->
-
  - [2.9.0](#290)
+ - [2.9.0-rc.1](#290-rc1)
  - [2.8.1](#281)
  - [2.8.0](#280)
  - [2.7.0](#270)
@@ -66,6 +66,16 @@ Adding a new version? You'll need three changes:
 ## [2.9.0]
 
 > Release date: TBD
+
+### Fixed
+
+- Fixed the issue where the status of an ingress is not updated when `secretName` is
+  not specified in `ingress.spec.tls`.
+  [#3719](https://github.com/Kong/kubernetes-ingress-controller/pull/3719)
+
+## [2.9.0-rc.1]
+
+> Release date: 2023-03-09
 
 ### Added
 
@@ -152,6 +162,9 @@ Adding a new version? You'll need three changes:
   of the controller. The old `all-in-one-dbless.yaml` manifest has been deprecated and 
   renamed to `all-in-one-dbless-legacy.yaml`. It will be removed in a future release.
   [#3629](https://github.com/Kong/kubernetes-ingress-controller/pull/3629)
+- The RequestRedirect Gateway API filter is now supported and translated
+  to the proper set of Kong plugins.
+  [#3702](https://github.com/Kong/kubernetes-ingress-controller/pull/3702)
 
 ### Fixed
 
@@ -2293,7 +2306,7 @@ Please read the changelog and test in your environment.
  - The initial versions  were rapildy iterated to deliver
    a working ingress controller.
 
-[2.9.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.8.1...v2.9.0
+[2.9.0-rc.1]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.8.1...v2.9.0-rc.1
 [2.8.1]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.8.0...v2.8.1
 [2.8.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.7.0...v2.8.0
 [2.7.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.6.0...v2.7.0

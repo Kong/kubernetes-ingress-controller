@@ -97,7 +97,6 @@ func (i *ingressTranslationIndex) add(ingress *netv1.Ingress) {
 			}
 
 			serviceName := httpIngressPath.Backend.Service.Name
-			// TODO KIC#3484 this does something screwy where you can get zero backends
 			port := PortDefFromServiceBackendPort(&httpIngressPath.Backend.Service.Port)
 
 			cacheKey := fmt.Sprintf("%s.%s.%s.%s.%s", ingress.Namespace, ingress.Name, ingressRule.Host, serviceName, port.CanonicalString())

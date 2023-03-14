@@ -6,11 +6,13 @@ import (
 	"os"
 	"testing"
 
+	"github.com/google/go-cmp/cmp"
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
@@ -1199,5 +1201,419 @@ func Test_getSupportedGatewayForRoute(t *testing.T) {
 
 		_, err := getSupportedGatewayForRoute(context.Background(), fakeClient, bustedParentHTTPRoute)
 		require.Equal(t, fmt.Errorf("unsupported parent kind %s/%s", string(badGroup), string(badKind)), err)
+	})
+}
+
+func Test_ensureParentsProgrammedCondition(t *testing.T) {
+	t.Run("HTTPRoute", func(t *testing.T) {
+		gatewayNN := types.NamespacedName{
+			Namespace: "test-namespace",
+			Name:      "test-gateway",
+		}
+
+		gateway := &Gateway{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: gatewayv1beta1.GroupVersion.String(),
+				Kind:       "Gateway",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      gatewayNN.Name,
+				Namespace: gatewayNN.Namespace,
+				UID:       "ce7f0678-f59a-483c-80d1-243d3738d22c",
+			},
+			Spec: gatewayv1beta1.GatewaySpec{
+				GatewayClassName: "test-gatewayclass",
+				Listeners:        builder.NewListener("http").WithPort(80).HTTP().IntoSlice(),
+			},
+			Status: gatewayv1beta1.GatewayStatus{
+				Listeners: []gatewayv1beta1.ListenerStatus{
+					{
+						Name: "http",
+						Conditions: []metav1.Condition{
+							{
+								Type:   "Ready",
+								Status: metav1.ConditionTrue,
+							},
+						},
+						SupportedKinds: supportedRouteGroupKinds,
+					},
+				},
+			},
+		}
+
+		tests := []struct {
+			name           string
+			httpRouteFunc  func() *HTTPRoute
+			gatewayFunc    func() *Gateway
+			expectedUpdate bool
+			expectedStatus *gatewayv1beta1.HTTPRouteStatus
+		}{
+			{
+				name: "Programmed condition gets properly set to Status True when parent status is already set in route",
+				httpRouteFunc: func() *HTTPRoute {
+					return &HTTPRoute{
+						TypeMeta: metav1.TypeMeta{
+							Kind:       "HTTPRoute",
+							APIVersion: gatewayv1beta1.GroupVersion.Group + "/" + gatewayv1beta1.GroupVersion.Version,
+						},
+						ObjectMeta: metav1.ObjectMeta{
+							Name:       "basic-httproute",
+							Namespace:  gatewayNN.Namespace,
+							Generation: 42,
+						},
+						Spec: gatewayv1beta1.HTTPRouteSpec{
+							CommonRouteSpec: gatewayv1beta1.CommonRouteSpec{
+								ParentRefs: []gatewayv1beta1.ParentReference{
+									{
+										Group: lo.ToPtr(gatewayv1beta1.Group(gatewayv1beta1.GroupName)),
+										Kind:  lo.ToPtr(gatewayv1beta1.Kind("Gateway")),
+										Name:  "test-gateway",
+									},
+								},
+							},
+							Rules: []gatewayv1beta1.HTTPRouteRule{
+								{
+									BackendRefs: []gatewayv1beta1.HTTPBackendRef{
+										builder.NewHTTPBackendRef("fake-service").WithPort(80).Build(),
+									},
+								},
+							},
+						},
+						Status: gatewayv1beta1.HTTPRouteStatus{
+							RouteStatus: gatewayv1beta1.RouteStatus{
+								Parents: []gatewayv1beta1.RouteParentStatus{
+									{
+										ParentRef: gatewayv1beta1.ParentReference{
+											Kind:      lo.ToPtr(gatewayv1beta1.Kind("Gateway")),
+											Group:     lo.ToPtr(gatewayv1beta1.Group(gatewayv1beta1.GroupName)),
+											Name:      gatewayv1beta1.ObjectName(gatewayNN.Name),
+											Namespace: (*gatewayv1beta1.Namespace)(&gatewayNN.Namespace),
+										},
+										ControllerName: "konghq.com/kic-gateway-controller",
+										Conditions: []metav1.Condition{
+											{
+												Type:               string(gatewayv1beta1.GatewayConditionAccepted),
+												Message:            "",
+												ObservedGeneration: 1,
+												Status:             metav1.ConditionTrue,
+												Reason:             string(gatewayv1beta1.RouteConditionAccepted),
+												LastTransitionTime: metav1.Now(),
+											},
+											{
+												Type:               ConditionTypeProgrammed,
+												Message:            "",
+												ObservedGeneration: 1,
+												Status:             metav1.ConditionUnknown,
+												Reason:             string(metav1.ConditionUnknown),
+												LastTransitionTime: metav1.Now(),
+											},
+										},
+									},
+								},
+							},
+						},
+					}
+				},
+				expectedUpdate: true,
+				expectedStatus: &gatewayv1beta1.HTTPRouteStatus{
+					RouteStatus: gatewayv1beta1.RouteStatus{
+						Parents: []gatewayv1beta1.RouteParentStatus{
+							{
+								ParentRef: gatewayv1beta1.ParentReference{
+									Kind:      lo.ToPtr(gatewayv1beta1.Kind("Gateway")),
+									Group:     lo.ToPtr(gatewayv1beta1.Group(gatewayv1beta1.GroupName)),
+									Name:      gatewayv1beta1.ObjectName(gatewayNN.Name),
+									Namespace: (*gatewayv1beta1.Namespace)(&gatewayNN.Namespace),
+								},
+								ControllerName: "konghq.com/kic-gateway-controller",
+								Conditions: []metav1.Condition{
+									{
+										Type:               string(gatewayv1beta1.GatewayConditionAccepted),
+										Message:            "",
+										ObservedGeneration: 1,
+										Status:             metav1.ConditionTrue,
+										Reason:             string(gatewayv1beta1.RouteConditionAccepted),
+										LastTransitionTime: metav1.Now(),
+									},
+									{
+										Type:               ConditionTypeProgrammed,
+										Message:            "",
+										ObservedGeneration: 42,
+										Status:             metav1.ConditionTrue,
+										Reason:             string(gatewayv1beta1.RouteConditionAccepted),
+										LastTransitionTime: metav1.Now(),
+									},
+								},
+							},
+						},
+					},
+				},
+				gatewayFunc: func() *Gateway { return gateway },
+			},
+			{
+				name: "Programmed condition gets properly set to Status True when Programmed condition is not present in route's parent status",
+				httpRouteFunc: func() *HTTPRoute {
+					return &HTTPRoute{
+						TypeMeta: metav1.TypeMeta{
+							Kind:       "HTTPRoute",
+							APIVersion: gatewayv1beta1.GroupVersion.Group + "/" + gatewayv1beta1.GroupVersion.Version,
+						},
+						ObjectMeta: metav1.ObjectMeta{
+							Name:       "basic-httproute",
+							Namespace:  gatewayNN.Namespace,
+							Generation: 42,
+						},
+						Spec: gatewayv1beta1.HTTPRouteSpec{
+							CommonRouteSpec: gatewayv1beta1.CommonRouteSpec{
+								ParentRefs: []gatewayv1beta1.ParentReference{
+									{
+										Group: lo.ToPtr(gatewayv1beta1.Group(gatewayv1beta1.GroupName)),
+										Kind:  lo.ToPtr(gatewayv1beta1.Kind("Gateway")),
+										Name:  "test-gateway",
+									},
+								},
+							},
+							Rules: []gatewayv1beta1.HTTPRouteRule{
+								{
+									BackendRefs: []gatewayv1beta1.HTTPBackendRef{
+										builder.NewHTTPBackendRef("fake-service").WithPort(80).Build(),
+									},
+								},
+							},
+						},
+						Status: gatewayv1beta1.HTTPRouteStatus{
+							RouteStatus: gatewayv1beta1.RouteStatus{
+								Parents: []gatewayv1beta1.RouteParentStatus{
+									{
+										ParentRef: gatewayv1beta1.ParentReference{
+											Kind:      lo.ToPtr(gatewayv1beta1.Kind("Gateway")),
+											Group:     lo.ToPtr(gatewayv1beta1.Group(gatewayv1beta1.GroupName)),
+											Name:      gatewayv1beta1.ObjectName(gatewayNN.Name),
+											Namespace: (*gatewayv1beta1.Namespace)(&gatewayNN.Namespace),
+										},
+										ControllerName: "konghq.com/kic-gateway-controller",
+										Conditions: []metav1.Condition{
+											{
+												Type:               string(gatewayv1beta1.GatewayConditionAccepted),
+												Message:            "",
+												ObservedGeneration: 1,
+												Status:             metav1.ConditionTrue,
+												Reason:             string(gatewayv1beta1.RouteConditionAccepted),
+												LastTransitionTime: metav1.Now(),
+											},
+										},
+									},
+								},
+							},
+						},
+					}
+				},
+				expectedUpdate: true,
+				expectedStatus: &gatewayv1beta1.HTTPRouteStatus{
+					RouteStatus: gatewayv1beta1.RouteStatus{
+						Parents: []gatewayv1beta1.RouteParentStatus{
+							{
+								ParentRef: gatewayv1beta1.ParentReference{
+									Kind:      lo.ToPtr(gatewayv1beta1.Kind("Gateway")),
+									Group:     lo.ToPtr(gatewayv1beta1.Group(gatewayv1beta1.GroupName)),
+									Name:      gatewayv1beta1.ObjectName(gatewayNN.Name),
+									Namespace: (*gatewayv1beta1.Namespace)(&gatewayNN.Namespace),
+								},
+								ControllerName: "konghq.com/kic-gateway-controller",
+								Conditions: []metav1.Condition{
+									{
+										Type:               string(gatewayv1beta1.GatewayConditionAccepted),
+										Message:            "",
+										ObservedGeneration: 1,
+										Status:             metav1.ConditionTrue,
+										Reason:             string(gatewayv1beta1.RouteConditionAccepted),
+										LastTransitionTime: metav1.Now(),
+									},
+									{
+										Type:               ConditionTypeProgrammed,
+										Message:            "",
+										ObservedGeneration: 42,
+										Status:             metav1.ConditionTrue,
+										Reason:             string(gatewayv1beta1.RouteConditionAccepted),
+										LastTransitionTime: metav1.Now(),
+									},
+								},
+							},
+						},
+					},
+				},
+				gatewayFunc: func() *Gateway { return gateway },
+			},
+			{
+				name: "Programmed condition gets properly added to route's parents status when no status for that parent is present yet",
+				httpRouteFunc: func() *HTTPRoute {
+					return &HTTPRoute{
+						TypeMeta: metav1.TypeMeta{
+							Kind:       "HTTPRoute",
+							APIVersion: gatewayv1beta1.GroupVersion.Group + "/" + gatewayv1beta1.GroupVersion.Version,
+						},
+						ObjectMeta: metav1.ObjectMeta{
+							Name:       "basic-httproute",
+							Namespace:  gatewayNN.Namespace,
+							Generation: 42,
+						},
+						Spec: gatewayv1beta1.HTTPRouteSpec{
+							CommonRouteSpec: gatewayv1beta1.CommonRouteSpec{
+								ParentRefs: []gatewayv1beta1.ParentReference{
+									{
+										Group: lo.ToPtr(gatewayv1beta1.Group(gatewayv1beta1.GroupName)),
+										Kind:  lo.ToPtr(gatewayv1beta1.Kind("Gateway")),
+										Name:  "test-gateway",
+									},
+								},
+							},
+							Rules: []gatewayv1beta1.HTTPRouteRule{
+								{
+									BackendRefs: []gatewayv1beta1.HTTPBackendRef{
+										builder.NewHTTPBackendRef("fake-service").WithPort(80).Build(),
+									},
+								},
+							},
+						},
+					}
+				},
+				expectedUpdate: true,
+				expectedStatus: &gatewayv1beta1.HTTPRouteStatus{
+					RouteStatus: gatewayv1beta1.RouteStatus{
+						Parents: []gatewayv1beta1.RouteParentStatus{
+							{
+								ParentRef: gatewayv1beta1.ParentReference{
+									Kind:      lo.ToPtr(gatewayv1beta1.Kind("Gateway")),
+									Group:     lo.ToPtr(gatewayv1beta1.Group(gatewayv1beta1.GroupName)),
+									Name:      gatewayv1beta1.ObjectName(gatewayNN.Name),
+									Namespace: (*gatewayv1beta1.Namespace)(&gatewayNN.Namespace),
+								},
+								ControllerName: "konghq.com/kic-gateway-controller",
+								Conditions: []metav1.Condition{
+									{
+										Type:               ConditionTypeProgrammed,
+										Message:            "",
+										ObservedGeneration: 42,
+										Status:             metav1.ConditionTrue,
+										Reason:             string(gatewayv1beta1.RouteConditionAccepted),
+										LastTransitionTime: metav1.Now(),
+									},
+								},
+							},
+						},
+					},
+				},
+				gatewayFunc: func() *Gateway { return gateway },
+			},
+			{
+				name: "no update is being done when an expected Programmed condition is already in place",
+				httpRouteFunc: func() *HTTPRoute {
+					return &HTTPRoute{
+						TypeMeta: metav1.TypeMeta{
+							Kind:       "HTTPRoute",
+							APIVersion: gatewayv1beta1.GroupVersion.Group + "/" + gatewayv1beta1.GroupVersion.Version,
+						},
+						ObjectMeta: metav1.ObjectMeta{
+							Name:       "basic-httproute",
+							Namespace:  gatewayNN.Namespace,
+							Generation: 42,
+						},
+						Spec: gatewayv1beta1.HTTPRouteSpec{
+							CommonRouteSpec: gatewayv1beta1.CommonRouteSpec{
+								ParentRefs: []gatewayv1beta1.ParentReference{
+									{
+										Group: lo.ToPtr(gatewayv1beta1.Group(gatewayv1beta1.GroupName)),
+										Kind:  lo.ToPtr(gatewayv1beta1.Kind("Gateway")),
+										Name:  "test-gateway",
+									},
+								},
+							},
+							Rules: []gatewayv1beta1.HTTPRouteRule{
+								{
+									BackendRefs: []gatewayv1beta1.HTTPBackendRef{
+										builder.NewHTTPBackendRef("fake-service").WithPort(80).Build(),
+									},
+								},
+							},
+						},
+						Status: gatewayv1beta1.HTTPRouteStatus{
+							RouteStatus: gatewayv1beta1.RouteStatus{
+								Parents: []gatewayv1beta1.RouteParentStatus{
+									{
+										ParentRef: gatewayv1beta1.ParentReference{
+											Kind:      lo.ToPtr(gatewayv1beta1.Kind("Gateway")),
+											Group:     lo.ToPtr(gatewayv1beta1.Group(gatewayv1beta1.GroupName)),
+											Name:      gatewayv1beta1.ObjectName(gatewayNN.Name),
+											Namespace: (*gatewayv1beta1.Namespace)(&gatewayNN.Namespace),
+										},
+										ControllerName: "konghq.com/kic-gateway-controller",
+										Conditions: []metav1.Condition{
+											{
+												Type:               ConditionTypeProgrammed,
+												Message:            "",
+												ObservedGeneration: 42,
+												Status:             metav1.ConditionTrue,
+												Reason:             string(gatewayv1beta1.RouteConditionAccepted),
+												LastTransitionTime: metav1.Now(),
+											},
+										},
+									},
+								},
+							},
+						},
+					}
+				},
+				expectedUpdate: false,
+				gatewayFunc:    func() *Gateway { return gateway },
+			},
+		}
+
+		for _, tc := range tests {
+			tc := tc
+
+			t.Run(tc.name, func(t *testing.T) {
+				var (
+					ctx       = context.Background()
+					gateway   = tc.gatewayFunc()
+					httproute = tc.httpRouteFunc()
+					gateways  = []supportedGatewayWithCondition{
+						{
+							gateway: gateway,
+						},
+					}
+				)
+
+				fakeClient := fakeclient.
+					NewClientBuilder().
+					WithScheme(scheme.Scheme).
+					WithObjects(httproute).
+					Build()
+
+				updated, err := ensureParentsProgrammedCondition(ctx, fakeClient.Status(), httproute, httproute.Status.Parents, gateways,
+					metav1.Condition{
+						Status: metav1.ConditionTrue,
+						Reason: string(gatewayv1beta1.RouteConditionAccepted),
+					},
+				)
+				require.NoError(t, err)
+				if tc.expectedUpdate {
+					require.True(t, updated)
+					require.NoError(t, fakeClient.Get(ctx, client.ObjectKeyFromObject(httproute), httproute))
+
+					diff := cmp.Diff(*tc.expectedStatus, httproute.Status,
+						// Don't compare the time since metav1.Now() is used.
+						cmp.FilterPath(
+							func(p cmp.Path) bool { return p.String() == "RouteStatus.Parents.Conditions.LastTransitionTime" },
+							cmp.Ignore(),
+						),
+					)
+					if diff != "" {
+						t.Errorf("HTTPRoute Status not as expected:\n%s", diff)
+					}
+				} else {
+					require.False(t, updated)
+				}
+			})
+		}
 	})
 }

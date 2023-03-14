@@ -130,6 +130,7 @@ jobs:
             ${{ runner.os }}-build-codegen-
 
       - uses: Kong/kong-license@master
+        continue-on-error: true
         id: license
         with:
           password: ${{ secrets.PULP_PASSWORD }}

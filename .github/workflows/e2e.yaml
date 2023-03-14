@@ -1,9 +1,17 @@
 name: e2e tests
+run-name: e2e tests, branch:${{ github.ref_name }}, triggered by @${{ github.actor }}
+
+concurrency:
+  # Limit the concurrency of e2e tests to run only 1 workflow for ref (branch).
+  # Ref: https://docs.github.com/en/actions/using-jobs/using-concurrency
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 on:
   schedule:
     - cron: '30 4 * * *'
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs: {}
 
 jobs:
   setup-e2e-tests:

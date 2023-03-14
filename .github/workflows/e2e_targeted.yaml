@@ -1,4 +1,11 @@
 name: e2e tests (targeted)
+run-name: e2e tests (targeted), branch:${{ github.ref_name }}, triggered by @${{ github.actor }}
+
+concurrency:
+  # Limit the concurrency of e2e tests to run only 1 workflow for ref (branch).
+  # Ref: https://docs.github.com/en/actions/using-jobs/using-concurrency
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 on:
   workflow_dispatch:
@@ -19,8 +26,37 @@ on:
         description: 'Set to "true" to run integration tests also'
         required: true
         default: 'false'
+      pr-number:
+        description:
+          Optional PR number, this workflow has been triggered from.
+          This will be used for commenting and removing the ci/run-e2e label.
+        required: false
 
 jobs:
+  post-comment-in-pr:
+    if: ${{ github.event.inputs.pr-number != '' }}
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.K8S_TEAM_BOT_GH_PAT }}
+      # URL is the current's workflow run URL.
+      # Sadly this is not readily available in github's context.
+      URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+      PR_NUMBER: ${{ github.event.inputs.pr-number }}
+    steps:
+    - uses: actions/checkout@v3
+    # We use github.sha in the comment to indicate which SHA was used to build
+    # the controller image which is fine becuase this is only meant to be run
+    # with default params which build tha controller from current SHA sources.
+    - run: |
+        gh pr comment ${PR_NUMBER} --body \
+          "E2E (targeted) tests were started at ${URL}
+          
+          | controller version | k8s | istio |
+          | - | - | - |
+          | ${{ github.sha }} | \`${{ github.event.inputs.kubernetes-version }}\` | \`${{ github.event.inputs.istio-version }}\` |
+          "
+    - run: gh pr edit ${PR_NUMBER} --remove-label ci/run-e2e
+
   setup-e2e-tests:
     runs-on: ubuntu-latest
     outputs:

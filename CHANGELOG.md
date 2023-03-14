@@ -69,8 +69,8 @@ Adding a new version? You'll need three changes:
 
 ### Fixed
 
-- Fixed the issue that status of ingress is not updated when `secretName` is
-  not spefied in `ingress.spec.tls`.
+- Fixed the issue where the status of an ingress is not updated when `secretName` is
+  not specified in `ingress.spec.tls`.
   [#3719](https://github.com/Kong/kubernetes-ingress-controller/pull/3719)
 
 ## [2.9.0-rc.1]

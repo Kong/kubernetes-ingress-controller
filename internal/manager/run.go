@@ -273,6 +273,7 @@ func setupKonnectNodeAgentWithMgr(
 		konnectNodeAPIClient,
 		configStatusNotifier,
 		konnect.NewGatewayClientGetter(logger, clientsManager),
+		clientsManager,
 	)
 	if err := mgr.Add(agent); err != nil {
 		return fmt.Errorf("failed adding konnect.NodeAgent runnable to the manager: %w", err)

@@ -88,6 +88,21 @@ jobs:
       run-istio: ${{ inputs.run-istio }}
       all-supported-k8s-versions: ${{ inputs.all-supported-k8s-versions }}
 
+  run-unreleased-kong:
+    needs: choose-image
+    if: ${{ !cancelled() }}
+    uses: ./.github/workflows/_e2e_tests.yaml
+    secrets: inherit
+    with:
+      kic-image: kong/nightly-ingress-controller:nightly
+      kong-image: kong/kong:amd64-latest
+      # these do not honor the inputs, as this job is intended to be a minimal
+      # test against unreleased kong images, with the main run covering the
+      # other test conditions
+      all-supported-k8s-versions: false
+      run-gke: false
+      run-istio: false
+
   test-reports:
     needs: run
     uses: ./.github/workflows/_test_reports.yaml

@@ -18,4 +18,10 @@ jobs:
 
     steps:
     - uses: actions/checkout@v3
-    - run: gh workflow run ${WORKFLOW} --ref ${BRANCH} -f pr-number=${PR_NUMBER}
+    - run: |
+        gh workflow run ${WORKFLOW} --ref ${BRANCH} \
+          -f run-gke=true \
+          -f run-istio=true \
+          -f all-supported-k8s-versions=true \
+          -f pr-number=${PR_NUMBER}
+    - run: gh pr edit ${PR_NUMBER} --remove-label ci/run-e2e

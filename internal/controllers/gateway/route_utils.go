@@ -754,6 +754,15 @@ func ensureParentsProgrammedCondition[
 					Name:      ObjectName(gateway.Name),
 					Kind:      lo.ToPtr(Kind("Gateway")),
 					Group:     lo.ToPtr(Group(gatewayv1beta1.GroupName)),
+					SectionName: func() *SectionName {
+						// We don't need to check whether the listener matches route's spec
+						// because that should already be done via getSupportedGatewayForRoute
+						// at this point.
+						if g.listenerName != "" {
+							return lo.ToPtr(gatewayv1beta1.SectionName(g.listenerName))
+						}
+						return nil
+					}(),
 
 					// TODO: set port after gateway port matching implemented:
 					// https://github.com/Kong/kubernetes-ingress-controller/issues/3016
@@ -799,41 +808,38 @@ func setRouteParentInStatusForParent[
 ) {
 	switch r := any(route).(type) {
 	case *HTTPRoute:
-		for i, p := range r.Status.Parents {
-			if ensureParentsStatusUpdated(p.ParentRef, parent, r.Status.Parents, i, routeStatusParent) {
-				return
-			}
-		}
-		r.Status.Parents = append(r.Status.Parents, routeStatusParent)
+		r.Status.Parents = ensureRoutesParents(r.Status.Parents, routeStatusParent, parent)
 	case *TCPRoute:
-		for i, p := range r.Status.Parents {
-			if ensureParentsStatusUpdated(p.ParentRef, parent, r.Status.Parents, i, routeStatusParent) {
-				return
-			}
-		}
-		r.Status.Parents = append(r.Status.Parents, routeStatusParent)
+		r.Status.Parents = ensureRoutesParents(r.Status.Parents, routeStatusParent, parent)
 	case *UDPRoute:
-		for i, p := range r.Status.Parents {
-			if ensureParentsStatusUpdated(p.ParentRef, parent, r.Status.Parents, i, routeStatusParent) {
-				return
-			}
-		}
-		r.Status.Parents = append(r.Status.Parents, routeStatusParent)
+		r.Status.Parents = ensureRoutesParents(r.Status.Parents, routeStatusParent, parent)
 	case *TLSRoute:
-		for i, p := range r.Status.Parents {
-			if ensureParentsStatusUpdated(p.ParentRef, parent, r.Status.Parents, i, routeStatusParent) {
-				return
-			}
-		}
-		r.Status.Parents = append(r.Status.Parents, routeStatusParent)
+		r.Status.Parents = ensureRoutesParents(r.Status.Parents, routeStatusParent, parent)
 	case *GRPCRoute:
-		for i, p := range r.Status.Parents {
-			if ensureParentsStatusUpdated(p.ParentRef, parent, r.Status.Parents, i, routeStatusParent) {
-				return
-			}
-		}
-		r.Status.Parents = append(r.Status.Parents, routeStatusParent)
+		r.Status.Parents = ensureRoutesParents(r.Status.Parents, routeStatusParent, parent)
 	}
+}
+
+// ensureRoutesParents ensures that the provided RouteStatusParents are updated.
+// This function checks if the provided []RouteStatusParents contains a parentRef
+// status for the provided status.
+// If it doesn't then it adds it to the provided []RouteStatusParents and returns it.
+// If it does then it overwrites the provious status for that parent and returns
+// the updates []RouteStatusParents.
+func ensureRoutesParents[
+	parentT namespacedNamer,
+](
+	routeStatusParents []RouteParentStatus,
+	routeStatusParent RouteParentStatus,
+	parent parentT,
+) []RouteParentStatus {
+	for i, p := range routeStatusParents {
+		if ensureParentsStatusUpdated(p.ParentRef, parent, routeStatusParents, i, routeStatusParent) {
+			return routeStatusParents
+		}
+	}
+	routeStatusParents = append(routeStatusParents, routeStatusParent)
+	return routeStatusParents
 }
 
 func ensureParentsStatusUpdated[
@@ -871,7 +877,7 @@ func isParentRefEqualToParent[
 	if parentRef.Namespace != nil && string(*parentRef.Namespace) != parent.GetNamespace() {
 		return false
 	}
-	if parentRef.SectionName != nil && string(*parentRef.Namespace) != parent.GetSectionName().OrEmpty() {
+	if parentRef.SectionName != nil && string(*parentRef.SectionName) != parent.GetSectionName().OrEmpty() {
 		return false
 	}
 

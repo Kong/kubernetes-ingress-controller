@@ -15,7 +15,7 @@ require (
 	github.com/kong/deck v1.19.0
 	github.com/kong/go-kong v0.38.1
 	github.com/kong/kubernetes-telemetry v0.0.1
-	github.com/kong/kubernetes-testing-framework v0.29.0
+	github.com/kong/kubernetes-testing-framework v0.29.1-0.20230315222808-bb07f80edaa4
 	github.com/lithammer/dedent v1.1.0
 	github.com/miekg/dns v1.1.52
 	github.com/mitchellh/mapstructure v1.5.0
@@ -39,7 +39,7 @@ require (
 	knative.dev/networking v0.0.0-20220302134042-e8b2eb995165
 	knative.dev/pkg v0.0.0-20220301181942-2fdd5f232e77
 	sigs.k8s.io/controller-runtime v0.14.5
-	sigs.k8s.io/gateway-api v0.6.1
+	sigs.k8s.io/gateway-api v0.6.2
 	sigs.k8s.io/kustomize/api v0.12.1
 	sigs.k8s.io/kustomize/kyaml v0.13.9
 	sigs.k8s.io/yaml v1.3.0
@@ -176,10 +176,10 @@ require (
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
-	k8s.io/cli-runtime v0.26.1 // indirect
+	k8s.io/cli-runtime v0.26.2 // indirect
 	k8s.io/klog/v2 v2.80.1 // indirect
 	k8s.io/kube-openapi v0.0.0-20221012153701-172d655c2280 // indirect
-	k8s.io/kubectl v0.26.1 // indirect
+	k8s.io/kubectl v0.26.2 // indirect
 	k8s.io/utils v0.0.0-20221128185143-99ec85e7a448 // indirect
 	sigs.k8s.io/json v0.0.0-20220713155537-f223a00ba0e2 // indirect
 	sigs.k8s.io/kind v0.17.0 // indirect

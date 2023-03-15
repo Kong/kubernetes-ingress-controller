@@ -293,7 +293,8 @@ test.conformance: gotestsum
 	@./scripts/check-container-environment.sh
 	@TEST_DATABASE_MODE="off" GOFLAGS="-tags=conformance_tests" \
 	GOTESTSUM_FORMAT=$(GOTESTSUM_FORMAT) \
-	$(GOTESTSUM) -- -race \
+	$(GOTESTSUM) -- \
+		-race $(GOTESTFLAGS) \
 		-timeout $(INTEGRATION_TEST_TIMEOUT) \
 		-parallel $(NCPU) \
 		./test/conformance

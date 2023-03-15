@@ -78,6 +78,8 @@ Adding a new version? You'll need three changes:
 - Fixed the issue where the status of an ingress is not updated when `secretName` is
   not specified in `ingress.spec.tls`.
   [#3719](https://github.com/Kong/kubernetes-ingress-controller/pull/3719)
+- Fixed incorrectly set parent status for Gateway API routes
+  [#3732](https://github.com/Kong/kubernetes-ingress-controller/pull/3732)
 
 ## [2.9.0-rc.1]
 

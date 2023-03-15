@@ -2,8 +2,6 @@ module github.com/kong/kubernetes-ingress-controller/v2
 
 go 1.19
 
-replace github.com/imdario/mergo v0.3.12 => github.com/Kong/mergo v0.3.13
-
 require (
 	cloud.google.com/go/container v1.13.1
 	github.com/Masterminds/sprig/v3 v3.2.3

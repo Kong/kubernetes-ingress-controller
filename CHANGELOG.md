@@ -67,6 +67,12 @@ Adding a new version? You'll need three changes:
 
 > Release date: TBD
 
+### Added
+
+- Konnect Runtime Group's nodes are reactively updated on each discovered Gateway clients
+  change.
+  [#3727](https://github.com/Kong/kubernetes-ingress-controller/pull/3727)
+
 ### Fixed
 
 - Fixed the issue where the status of an ingress is not updated when `secretName` is

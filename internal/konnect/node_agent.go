@@ -22,13 +22,17 @@ const (
 // GatewayInstance is a controlled kong gateway instance.
 // its hostname and version will be used to update status of nodes corresponding to the instance in konnect.
 type GatewayInstance struct {
-	hostname string
-	version  string
+	Hostname string
+	Version  string
 }
 
 // GatewayInstanceGetter is the interface to get currently running gateway instances in the kubernetes cluster.
 type GatewayInstanceGetter interface {
 	GetGatewayInstances() ([]GatewayInstance, error)
+}
+
+type GatewayClientsChangesNotifier interface {
+	SubscribeToGatewayClientsChanges() (<-chan struct{}, bool)
 }
 
 // NodeAgent gets the running status of KIC node and controlled kong gateway nodes,
@@ -45,7 +49,8 @@ type NodeAgent struct {
 	configStatus           atomic.Uint32
 	configStatusSubscriber dataplane.ConfigStatusSubscriber
 
-	gatewayInstanceGetter GatewayInstanceGetter
+	gatewayInstanceGetter         GatewayInstanceGetter
+	gatewayClientsChangesNotifier GatewayClientsChangesNotifier
 }
 
 // NewNodeAgent creates a new node agent.
@@ -58,6 +63,7 @@ func NewNodeAgent(
 	client *NodeAPIClient,
 	configStatusSubscriber dataplane.ConfigStatusSubscriber,
 	gatewayGetter GatewayInstanceGetter,
+	gatewayClientsChangesNotifier GatewayClientsChangesNotifier,
 ) *NodeAgent {
 	if refreshPeriod < MinRefreshNodePeriod {
 		refreshPeriod = MinRefreshNodePeriod
@@ -67,10 +73,11 @@ func NewNodeAgent(
 		Version:  version,
 		Logger: logger.
 			WithName("konnect-node").WithValues("runtime_group_id", client.RuntimeGroupID),
-		konnectClient:          client,
-		refreshPeriod:          refreshPeriod,
-		configStatusSubscriber: configStatusSubscriber,
-		gatewayInstanceGetter:  gatewayGetter,
+		konnectClient:                 client,
+		refreshPeriod:                 refreshPeriod,
+		configStatusSubscriber:        configStatusSubscriber,
+		gatewayInstanceGetter:         gatewayGetter,
+		gatewayClientsChangesNotifier: gatewayClientsChangesNotifier,
 	}
 	a.configStatus.Store(uint32(dataplane.ConfigStatusOK))
 	return a
@@ -88,6 +95,8 @@ func (a *NodeAgent) Start(ctx context.Context) error {
 		// Run the goroutines only in case we succeeded to run initial update of nodes.
 		go a.updateNodeLoop(ctx)
 		go a.subscribeConfigStatus(ctx)
+		go a.subscribeToGatewayClientsChanges(ctx)
+
 	}
 
 	// We're waiting here as that's the manager.Runnable interface requirement to block until the context is done.
@@ -121,6 +130,26 @@ func (a *NodeAgent) subscribeConfigStatus(ctx context.Context) {
 			return
 		case configStatus := <-ch:
 			a.configStatus.Store(uint32(configStatus))
+		}
+	}
+}
+
+func (a *NodeAgent) subscribeToGatewayClientsChanges(ctx context.Context) {
+	gatewayClientsChangedCh, changesAreExpected := a.gatewayClientsChangesNotifier.SubscribeToGatewayClientsChanges()
+	if !changesAreExpected {
+		// There are no changes of gateway clients going to happen, we don't have to watch them.
+		return
+	}
+
+	for {
+		select {
+		case <-ctx.Done():
+			a.Logger.Info("subscribe gateway clients changes loop stopped", "message", ctx.Err().Error())
+			return
+		case <-gatewayClientsChangedCh:
+			if err := a.updateNodes(ctx); err != nil {
+				a.Logger.Error(err, "failed to update nodes after gateway clients changed")
+			}
 		}
 	}
 }
@@ -227,22 +256,22 @@ func (a *NodeAgent) updateGatewayNodes(ctx context.Context, existingNodes []*Nod
 	}
 
 	for _, gateway := range gatewayInstances {
-		gatewayInstanceMap[gateway.hostname] = struct{}{}
-		nodes, ok := existingNodeMap[gateway.hostname]
+		gatewayInstanceMap[gateway.Hostname] = struct{}{}
+		nodes, ok := existingNodeMap[gateway.Hostname]
 
 		// hostname in existing nodes, should create a new node.
 		if !ok || len(nodes) == 0 {
 			createNodeReq := &CreateNodeRequest{
-				Hostname: gateway.hostname,
-				Version:  gateway.version,
+				Hostname: gateway.Hostname,
+				Version:  gateway.Version,
 				Type:     nodeType,
 				LastPing: time.Now().Unix(),
 			}
 			newNode, err := a.konnectClient.CreateNode(ctx, createNodeReq)
 			if err != nil {
-				a.Logger.Error(err, "failed to create kong gateway node", "hostname", gateway.hostname)
+				a.Logger.Error(err, "failed to create kong gateway node", "hostname", gateway.Hostname)
 			} else {
-				a.Logger.Info("created kong gateway node", "hostname", gateway.hostname, "node_id", newNode.Item.ID)
+				a.Logger.Info("created kong gateway node", "hostname", gateway.Hostname, "node_id", newNode.Item.ID)
 			}
 			continue
 		}
@@ -250,8 +279,8 @@ func (a *NodeAgent) updateGatewayNodes(ctx context.Context, existingNodes []*Nod
 		// sort the nodes by last ping, and only reserve the latest node.
 		sortNodesByLastPing(nodes)
 		updateNodeReq := &UpdateNodeRequest{
-			Hostname: gateway.hostname,
-			Version:  gateway.version,
+			Hostname: gateway.Hostname,
+			Version:  gateway.Version,
 			Type:     nodeType,
 			LastPing: time.Now().Unix(),
 		}
@@ -259,10 +288,10 @@ func (a *NodeAgent) updateGatewayNodes(ctx context.Context, existingNodes []*Nod
 		latestNode := nodes[0]
 		_, err := a.konnectClient.UpdateNode(ctx, latestNode.ID, updateNodeReq)
 		if err != nil {
-			a.Logger.Error(err, "failed to update kong gateway node", "hostname", gateway.hostname, "node_id", latestNode.ID)
+			a.Logger.Error(err, "failed to update kong gateway node", "hostname", gateway.Hostname, "node_id", latestNode.ID)
 			continue
 		}
-		a.Logger.V(util.DebugLevel).Info("updated kong gateway node", "hostname", gateway.hostname, "node_id", latestNode.ID)
+		a.Logger.V(util.DebugLevel).Info("updated kong gateway node", "hostname", gateway.Hostname, "node_id", latestNode.ID)
 		// succeeded to update node, remove the other outdated nodes.
 		for i := 1; i < len(nodes); i++ {
 			node := nodes[i]
@@ -379,8 +408,8 @@ func (p *GatewayClientGetter) GetGatewayInstances() ([]GatewayInstance, error) {
 			hostname = "gateway" + "_" + u.Host
 		}
 		gatewayInstances = append(gatewayInstances, GatewayInstance{
-			hostname: hostname,
-			version:  kongVersion,
+			Hostname: hostname,
+			Version:  kongVersion,
 		})
 	}
 

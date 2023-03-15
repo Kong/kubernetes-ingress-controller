@@ -1,4 +1,4 @@
-package konnect
+package konnect_test
 
 import (
 	"context"
@@ -19,6 +19,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/konnect"
 )
 
 const (
@@ -31,13 +32,13 @@ const (
 type mockKonnectNodeService struct {
 	lock      sync.RWMutex
 	clusterID string
-	nodes     []*NodeItem
+	nodes     []*konnect.NodeItem
 
 	returnErrorFromListNodes bool
 	wasListNodesCalled       bool
 }
 
-func (s *mockKonnectNodeService) upsertNode(nodeID string, version string, hostname string, lastping int64, typ string, status string) *NodeItem {
+func (s *mockKonnectNodeService) upsertNode(nodeID string, version string, hostname string, lastping int64, typ string, status string) *konnect.NodeItem {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
@@ -51,7 +52,7 @@ func (s *mockKonnectNodeService) upsertNode(nodeID string, version string, hostn
 		}
 	}
 
-	node := &NodeItem{
+	node := &konnect.NodeItem{
 		ID:        uuid.NewString(),
 		Version:   version,
 		Hostname:  hostname,
@@ -66,7 +67,7 @@ func (s *mockKonnectNodeService) upsertNode(nodeID string, version string, hostn
 }
 
 func (s *mockKonnectNodeService) handleCreateNode(rw http.ResponseWriter, body []byte) {
-	createNodeReq := &CreateNodeRequest{}
+	createNodeReq := &konnect.CreateNodeRequest{}
 	err := json.Unmarshal(body, createNodeReq)
 	if err != nil {
 		rw.WriteHeader(http.StatusBadRequest)
@@ -82,13 +83,13 @@ func (s *mockKonnectNodeService) handleCreateNode(rw http.ResponseWriter, body [
 		createNodeReq.Type,
 		createNodeReq.Status,
 	)
-	resp := CreateNodeResponse{Item: node}
+	resp := konnect.CreateNodeResponse{Item: node}
 	buf, _ := json.Marshal(resp)
 	_, _ = rw.Write(buf)
 }
 
 func (s *mockKonnectNodeService) handleUpdateNode(rw http.ResponseWriter, nodeID string, body []byte) {
-	updateNodeReq := &UpdateNodeRequest{}
+	updateNodeReq := &konnect.UpdateNodeRequest{}
 	err := json.Unmarshal(body, updateNodeReq)
 	if err != nil {
 		rw.WriteHeader(http.StatusBadRequest)
@@ -104,7 +105,7 @@ func (s *mockKonnectNodeService) handleUpdateNode(rw http.ResponseWriter, nodeID
 		updateNodeReq.Type,
 		updateNodeReq.Status,
 	)
-	resp := UpdateNodeResponse{Item: node}
+	resp := konnect.UpdateNodeResponse{Item: node}
 	buf, _ := json.Marshal(resp)
 	_, _ = rw.Write(buf)
 }
@@ -121,9 +122,9 @@ func (s *mockKonnectNodeService) handleListNodes(rw http.ResponseWriter) {
 		return
 	}
 
-	resp := ListNodeResponse{
+	resp := konnect.ListNodeResponse{
 		Items: s.nodes,
-		Page: &PaginationInfo{
+		Page: &konnect.PaginationInfo{
 			TotalCount: int32(len(s.nodes)),
 		},
 	}
@@ -144,7 +145,7 @@ func (s *mockKonnectNodeService) handleDeleteNode(rw http.ResponseWriter, nodeID
 		}
 	}
 	if found {
-		nodes := []*NodeItem{}
+		nodes := []*konnect.NodeItem{}
 		if deleteIdx > 0 {
 			nodes = s.nodes[0 : deleteIdx-1]
 		}
@@ -156,17 +157,17 @@ func (s *mockKonnectNodeService) handleDeleteNode(rw http.ResponseWriter, nodeID
 	rw.WriteHeader(http.StatusOK)
 }
 
-func (s *mockKonnectNodeService) dumpNodes() []*NodeItem {
+func (s *mockKonnectNodeService) dumpNodes() []*konnect.NodeItem {
 	s.lock.RLock()
 	defer s.lock.RUnlock()
 
-	copied := make([]*NodeItem, len(s.nodes))
+	copied := make([]*konnect.NodeItem, len(s.nodes))
 	copy(copied, s.nodes)
 	return copied
 }
 
 func (s *mockKonnectNodeService) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
-	kicNodeAPIRoot := fmt.Sprintf(KicNodeAPIPathPattern, "", s.clusterID)
+	kicNodeAPIRoot := fmt.Sprintf(konnect.KicNodeAPIPathPattern, "", s.clusterID)
 	body, err := io.ReadAll(req.Body)
 	if err != nil {
 		rw.WriteHeader(http.StatusBadRequest)
@@ -204,23 +205,41 @@ func (s *mockKonnectNodeService) WasListNodesCalled() bool {
 }
 
 type mockGatewayInstanceGetter struct {
-	gatewayInstances []GatewayInstance
+	gatewayInstances []konnect.GatewayInstance
 }
 
-func (m *mockGatewayInstanceGetter) GetGatewayInstances() ([]GatewayInstance, error) {
+func (m *mockGatewayInstanceGetter) GetGatewayInstances() ([]konnect.GatewayInstance, error) {
 	return m.gatewayInstances, nil
+}
+
+type mockGatewayClientsNotifier struct {
+	ch chan struct{}
+}
+
+func newMockGatewayClientsNotifier() *mockGatewayClientsNotifier {
+	return &mockGatewayClientsNotifier{
+		ch: make(chan struct{}),
+	}
+}
+
+func (m *mockGatewayClientsNotifier) SubscribeToGatewayClientsChanges() (<-chan struct{}, bool) {
+	return m.ch, true
+}
+
+func (m *mockGatewayClientsNotifier) Notify() {
+	m.ch <- struct{}{}
 }
 
 func TestNodeAgentUpdateNodes(t *testing.T) {
 	testCases := []struct {
 		name         string
 		hostname     string
-		initialNodes []*NodeItem
+		initialNodes []*konnect.NodeItem
 		// when configStatus is non-nil, notify the status to node agent in the test case.
 		configStatus     *dataplane.ConfigStatus
-		gatewayInstances []GatewayInstance
-		containNodes     []*NodeItem
-		notContainNodes  []*NodeItem
+		gatewayInstances []konnect.GatewayInstance
+		containNodes     []*konnect.NodeItem
+		notContainNodes  []*konnect.NodeItem
 		numNodes         int
 	}{
 		{
@@ -229,11 +248,11 @@ func TestNodeAgentUpdateNodes(t *testing.T) {
 			// no existing nodes
 			initialNodes: nil,
 			configStatus: lo.ToPtr(dataplane.ConfigStatusOK),
-			containNodes: []*NodeItem{
+			containNodes: []*konnect.NodeItem{
 				{
 					Hostname: "ingress-0",
-					Type:     NodeTypeIngressController,
-					Status:   string(IngressControllerStateOperational),
+					Type:     konnect.NodeTypeIngressController,
+					Status:   string(konnect.IngressControllerStateOperational),
 					Version:  testKicVersion,
 				},
 			},
@@ -242,21 +261,21 @@ func TestNodeAgentUpdateNodes(t *testing.T) {
 		{
 			name:     "update status existing kic node",
 			hostname: "ingress-0",
-			initialNodes: []*NodeItem{
+			initialNodes: []*konnect.NodeItem{
 				{
 					Hostname: "ingress-0",
 					ID:       uuid.NewString(),
-					Type:     NodeTypeIngressController,
-					Status:   string(IngressControllerStateOperational),
+					Type:     konnect.NodeTypeIngressController,
+					Status:   string(konnect.IngressControllerStateOperational),
 					Version:  testKicVersion,
 				},
 			},
 			configStatus: lo.ToPtr(dataplane.ConfigStatusTranslationErrorHappened),
-			containNodes: []*NodeItem{
+			containNodes: []*konnect.NodeItem{
 				{
 					Hostname: "ingress-0",
-					Type:     NodeTypeIngressController,
-					Status:   string(IngressControllerStatePartialConfigFail),
+					Type:     konnect.NodeTypeIngressController,
+					Status:   string(konnect.IngressControllerStatePartialConfigFail),
 					Version:  testKicVersion,
 				},
 			},
@@ -265,13 +284,13 @@ func TestNodeAgentUpdateNodes(t *testing.T) {
 		{
 			name:     "remove outdated KIC nodes",
 			hostname: "ingress-0",
-			initialNodes: []*NodeItem{
+			initialNodes: []*konnect.NodeItem{
 				// older node with same hostname, should delete this.
 				{
 					Hostname: "ingress-0",
 					ID:       uuid.NewString(),
-					Type:     NodeTypeIngressController,
-					Status:   string(IngressControllerStatePartialConfigFail),
+					Type:     konnect.NodeTypeIngressController,
+					Status:   string(konnect.IngressControllerStatePartialConfigFail),
 					Version:  testKicVersion,
 					LastPing: time.Now().Unix() - 10,
 				},
@@ -279,8 +298,8 @@ func TestNodeAgentUpdateNodes(t *testing.T) {
 				{
 					Hostname: "ingress-0",
 					ID:       uuid.NewString(),
-					Type:     NodeTypeIngressController,
-					Status:   string(IngressControllerStateOperational),
+					Type:     konnect.NodeTypeIngressController,
+					Status:   string(konnect.IngressControllerStateOperational),
 					Version:  testKicVersion,
 					LastPing: time.Now().Unix() - 3,
 				},
@@ -288,26 +307,26 @@ func TestNodeAgentUpdateNodes(t *testing.T) {
 				{
 					Hostname: "ingress-1",
 					ID:       uuid.NewString(),
-					Type:     NodeTypeIngressController,
-					Status:   string(IngressControllerStateOperational),
+					Type:     konnect.NodeTypeIngressController,
+					Status:   string(konnect.IngressControllerStateOperational),
 					Version:  testKicVersion,
 					LastPing: time.Now().Unix() - 3,
 				},
 			},
-			containNodes: []*NodeItem{
+			containNodes: []*konnect.NodeItem{
 				{
 					Hostname: "ingress-0",
 
-					Type:    NodeTypeIngressController,
-					Status:  string(IngressControllerStateOperational),
+					Type:    konnect.NodeTypeIngressController,
+					Status:  string(konnect.IngressControllerStateOperational),
 					Version: testKicVersion,
 				},
 			},
-			notContainNodes: []*NodeItem{
+			notContainNodes: []*konnect.NodeItem{
 				{
 					Hostname: "ingress-1",
-					Type:     NodeTypeIngressController,
-					Status:   string(IngressControllerStateOperational),
+					Type:     konnect.NodeTypeIngressController,
+					Status:   string(konnect.IngressControllerStateOperational),
 					Version:  testKicVersion,
 				},
 			},
@@ -316,56 +335,56 @@ func TestNodeAgentUpdateNodes(t *testing.T) {
 		{
 			name:     "update gateway nodes and remove outdated nodes",
 			hostname: "ingress-0",
-			initialNodes: []*NodeItem{
+			initialNodes: []*konnect.NodeItem{
 				{
 					Hostname: "ingress-0",
 					ID:       uuid.NewString(),
-					Type:     NodeTypeIngressController,
-					Status:   string(IngressControllerStateOperational),
+					Type:     konnect.NodeTypeIngressController,
+					Status:   string(konnect.IngressControllerStateOperational),
 					Version:  testKicVersion,
 				},
 				{
 					Hostname: "proxy-0",
 					ID:       uuid.NewString(),
-					Type:     NodeTypeKongProxy,
+					Type:     konnect.NodeTypeKongProxy,
 					Version:  testKongVersion,
 				},
 				// 2 gateway nodes with same name, should reserve newer one.
 				{
 					Hostname: "proxy-1",
 					ID:       uuid.NewString(),
-					Type:     NodeTypeKongProxy,
+					Type:     konnect.NodeTypeKongProxy,
 					Version:  testKongVersion,
 					LastPing: time.Now().Unix() - 10,
 				},
 				{
 					Hostname: "proxy-1",
 					ID:       uuid.NewString(),
-					Type:     NodeTypeKongProxy,
+					Type:     konnect.NodeTypeKongProxy,
 					Version:  testKongVersion,
 					LastPing: time.Now().Unix() - 5,
 				},
 			},
-			gatewayInstances: []GatewayInstance{
-				{hostname: "proxy-1", version: testKongVersion},
+			gatewayInstances: []konnect.GatewayInstance{
+				{Hostname: "proxy-1", Version: testKongVersion},
 			},
-			containNodes: []*NodeItem{
+			containNodes: []*konnect.NodeItem{
 				{
 					Hostname: "ingress-0",
-					Type:     NodeTypeIngressController,
-					Status:   string(IngressControllerStateOperational),
+					Type:     konnect.NodeTypeIngressController,
+					Status:   string(konnect.IngressControllerStateOperational),
 					Version:  testKicVersion,
 				},
 				{
 					Hostname: "proxy-1",
-					Type:     NodeTypeKongProxy,
+					Type:     konnect.NodeTypeKongProxy,
 					Version:  testKongVersion,
 				},
 			},
-			notContainNodes: []*NodeItem{
+			notContainNodes: []*konnect.NodeItem{
 				{
 					Hostname: "proxy-0",
-					Type:     NodeTypeKongProxy,
+					Type:     konnect.NodeTypeKongProxy,
 					Version:  testKongVersion,
 				},
 			},
@@ -381,7 +400,7 @@ func TestNodeAgentUpdateNodes(t *testing.T) {
 				nodes:     tc.initialNodes,
 			}
 			s := httptest.NewServer(nodeService)
-			nodeClient := &NodeAPIClient{
+			nodeClient := &konnect.NodeAPIClient{
 				Address:        s.URL,
 				RuntimeGroupID: testClusterID,
 				Client:         &http.Client{},
@@ -389,14 +408,16 @@ func TestNodeAgentUpdateNodes(t *testing.T) {
 
 			logger := testr.New(t)
 			configStatusSubscriber := dataplane.NewChannelConfigNotifier(logger)
+			gatewayClientsChangesNotifier := newMockGatewayClientsNotifier()
 
-			nodeAgent := NewNodeAgent(
+			nodeAgent := konnect.NewNodeAgent(
 				tc.hostname, testKicVersion,
-				DefaultRefreshNodePeriod,
+				konnect.DefaultRefreshNodePeriod,
 				logger,
 				nodeClient,
 				configStatusSubscriber,
 				&mockGatewayInstanceGetter{tc.gatewayInstances},
+				gatewayClientsChangesNotifier,
 			)
 
 			ctx := context.Background()
@@ -409,9 +430,8 @@ func TestNodeAgentUpdateNodes(t *testing.T) {
 				configStatusSubscriber.NotifyConfigStatus(ctx, *tc.configStatus)
 			}
 
+			gatewayClientsChangesNotifier.Notify()
 			require.Eventually(t, func() bool {
-				err := nodeAgent.updateNodes(ctx)
-				require.NoError(t, err)
 				// check number of nodes in RG.
 				nodes := nodeService.dumpNodes()
 				if len(nodes) != tc.numNodes {
@@ -421,7 +441,7 @@ func TestNodeAgentUpdateNodes(t *testing.T) {
 				for _, node := range tc.containNodes {
 					if !lo.ContainsBy(
 						nodes,
-						func(n *NodeItem) bool {
+						func(n *konnect.NodeItem) bool {
 							return n.Hostname == node.Hostname &&
 								n.Type == node.Type &&
 								n.Version == node.Version &&
@@ -434,7 +454,7 @@ func TestNodeAgentUpdateNodes(t *testing.T) {
 				for _, node := range tc.notContainNodes {
 					if lo.ContainsBy(
 						nodes,
-						func(n *NodeItem) bool {
+						func(n *konnect.NodeItem) bool {
 							return n.Hostname == node.Hostname && n.Type == node.Type
 						}) {
 						return false
@@ -457,7 +477,7 @@ func TestNodeAgent_StartDoesntReturnUntilContextGetsCancelled(t *testing.T) {
 		returnErrorFromListNodes: true,
 	}
 	s := httptest.NewServer(nodeService)
-	nodeClient := &NodeAPIClient{
+	nodeClient := &konnect.NodeAPIClient{
 		Address:        s.URL,
 		RuntimeGroupID: testClusterID,
 		Client:         &http.Client{},
@@ -465,13 +485,14 @@ func TestNodeAgent_StartDoesntReturnUntilContextGetsCancelled(t *testing.T) {
 	logger := testr.New(t)
 	configStatusSubscriber := dataplane.NewChannelConfigNotifier(logger)
 
-	nodeAgent := NewNodeAgent(
+	nodeAgent := konnect.NewNodeAgent(
 		"hostname", testKicVersion,
-		DefaultRefreshNodePeriod,
+		konnect.DefaultRefreshNodePeriod,
 		logger,
 		nodeClient,
 		configStatusSubscriber,
 		&mockGatewayInstanceGetter{},
+		newMockGatewayClientsNotifier(),
 	)
 
 	ctx, cancel := context.WithCancel(context.Background())

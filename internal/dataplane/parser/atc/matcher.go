@@ -1,74 +1,50 @@
 package atc
 
-import (
-	"fmt"
-	"strings"
-)
+import "net/http"
 
-// Matcher is a sub-expression within a Kong router expression. It can be a single predicate expression, a
-// group of predicates joined by logical operators, or a recursive combination of either of the previous components.
 type Matcher interface {
-	// Expression returns a string representation of the Matcher that could be a valid Kong route expression.
 	Expression() string
-
-	// IsEmpty() returns a boolean indicating if the Matcher is empty. It is true if the Matcher is an empty struct,
-	// if the Matcher has zero subMatchers, or if a single-predicate Matcher has no value.
-	IsEmpty() bool
+	Matches(*http.Request) bool
 }
 
-var (
-	_ Matcher = &OrMatcher{}
-	_ Matcher = &AndMatcher{}
-)
+var _ Matcher = &OrMatcher{}
+var _ Matcher = &AndMatcher{}
 
-// OrMatcher is a group of Matchers joined by logical ORs.
 type OrMatcher struct {
 	subMatchers []Matcher
 }
 
-func (m *OrMatcher) IsEmpty() bool {
-	if m == nil {
-		return true
-	}
-	return len(m.subMatchers) == 0
-}
-
 func (m *OrMatcher) Expression() string {
-	if m == nil || m.IsEmpty() {
+	if len(m.subMatchers) == 0 {
 		return ""
 	}
 	if len(m.subMatchers) == 1 {
 		return m.subMatchers[0].Expression()
 	}
 
-	var grouped []string
-
-	for _, m := range m.subMatchers {
-		grouped = append(grouped, fmt.Sprintf("(%s)", m.Expression()))
+	ret := ""
+	for i, subMathcher := range m.subMatchers {
+		exp := "( " + subMathcher.Expression() + " )"
+		if i != len(m.subMatchers)-1 {
+			exp = exp + " || "
+		}
+		ret = ret + exp
 	}
-
-	return strings.Join(grouped, " || ")
+	return ret
 }
 
-// Or appends an additional Matcher to an existing OrMatcher. If the given Matcher is empty, it returns the original
-// OrMatcher.
-func (m *OrMatcher) Or(matcher Matcher) *OrMatcher {
-	if matcher != nil && !matcher.IsEmpty() {
-		m.subMatchers = append(m.subMatchers, matcher)
-	}
-	return m
-}
-
-// Or constructs an OrMatcher from a list of Matchers. If any of the given Matchers is empty, Or skips adding it.
-func Or(matchers ...Matcher) *OrMatcher {
-	actual := []Matcher{}
-	for _, m := range matchers {
-		if m != nil && !m.IsEmpty() {
-			actual = append(actual, m)
+func (m *OrMatcher) Matches(req *http.Request) bool {
+	for _, subMatcher := range m.subMatchers {
+		if subMatcher.Matches(req) {
+			return true
 		}
 	}
+	return false
+}
+
+func Or(matchers ...Matcher) Matcher {
 	return &OrMatcher{
-		subMatchers: actual,
+		subMatchers: matchers,
 	}
 }
 
@@ -76,48 +52,37 @@ type AndMatcher struct {
 	subMatchers []Matcher
 }
 
-func (m *AndMatcher) IsEmpty() bool {
-	if m == nil {
-		return true
-	}
-	return len(m.subMatchers) == 0
-}
-
 func (m *AndMatcher) Expression() string {
-	if m == nil || m.IsEmpty() {
+	if len(m.subMatchers) == 0 {
 		return ""
 	}
 	if len(m.subMatchers) == 1 {
 		return m.subMatchers[0].Expression()
 	}
 
-	var grouped []string
-
-	for _, m := range m.subMatchers {
-		grouped = append(grouped, fmt.Sprintf("(%s)", m.Expression()))
+	ret := ""
+	for i, subMathcher := range m.subMatchers {
+		exp := "( " + subMathcher.Expression() + " )"
+		if i != len(m.subMatchers)-1 {
+			exp = exp + " && "
+		}
+		ret = ret + exp
 	}
-
-	return strings.Join(grouped, " && ")
+	return ret
 }
 
-// And appends an additional Matcher to an existing AndMatcher. If the given Matcher is empty, it returns the original
-// AndMatcher.
-func (m *AndMatcher) And(matcher Matcher) *AndMatcher {
-	if matcher != nil && !matcher.IsEmpty() {
-		m.subMatchers = append(m.subMatchers, matcher)
-	}
-	return m
-}
-
-// And constructs an AndMatcher from a list of Matchers. If any of the given Matchers is empty, And skips adding it.
-func And(matchers ...Matcher) *AndMatcher {
-	actual := []Matcher{}
-	for _, m := range matchers {
-		if m != nil && !m.IsEmpty() {
-			actual = append(actual, m)
+func (m *AndMatcher) Matches(req *http.Request) bool {
+	for _, subMatcher := range m.subMatchers {
+		if !subMatcher.Matches(req) {
+			return false
 		}
 	}
+
+	return true
+}
+
+func And(matchers ...Matcher) Matcher {
 	return &AndMatcher{
-		subMatchers: actual,
+		subMatchers: matchers,
 	}
 }

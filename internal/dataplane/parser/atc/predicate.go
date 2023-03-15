@@ -1,7 +1,7 @@
 package atc
 
 import (
-	"fmt"
+	"net/http"
 	"strconv"
 	"strings"
 )
@@ -15,27 +15,106 @@ const (
 	FieldTypeIPCIDR
 )
 
-// LHS is the left hand side (the field) of a predicate expression.
 type LHS interface {
-	// FieldType returns the FieldType iota indicating the LHS type.
 	FieldType() FieldType
-
-	// String returns a string representation of the LHS.
+	// TODO(naming): use a better name for this method? "String" is too gerneral
 	String() string
 }
 
-// BinaryOperator is an operator that accepts two arguments within a predicate expression.
+type TransformLower struct {
+	inner LHS
+}
+
+func (t TransformLower) FieldType() FieldType {
+	return FieldTypeString
+}
+
+func (t TransformLower) String() string {
+	return "lower(" + t.inner.String() + ")"
+}
+
+type FieldNetProtocol struct{}
+
+func (f FieldNetProtocol) FieldType() FieldType {
+	return FieldTypeString
+}
+
+func (f FieldNetProtocol) String() string {
+	return "net.protocol"
+}
+
+type FieldNetPort struct{}
+
+func (f FieldNetPort) FieldType() FieldType {
+	return FieldTypeInt
+}
+
+func (f FieldNetPort) String() string {
+	return "net.port"
+}
+
+type FieldTLSSNI struct{}
+
+func (f FieldTLSSNI) FieldType() FieldType {
+	return FieldTypeString
+}
+
+func (f FieldTLSSNI) String() string {
+	return "tls.sni"
+}
+
+type FieldHTTPMethod struct{}
+
+func (f FieldHTTPMethod) FieldType() FieldType {
+	return FieldTypeString
+}
+
+func (f FieldHTTPMethod) String() string {
+	return "http.method"
+}
+
+type FieldHTTPHost struct{}
+
+func (f FieldHTTPHost) FieldType() FieldType {
+	return FieldTypeString
+}
+
+func (f FieldHTTPHost) String() string {
+	return "http.host"
+}
+
+type FieldHTTPPath struct{}
+
+func (f FieldHTTPPath) FieldType() FieldType {
+	return FieldTypeString
+}
+
+func (f FieldHTTPPath) String() string {
+	return "http.path"
+}
+
+type FieldHTTPHeader struct {
+	headerName string
+}
+
+func (f FieldHTTPHeader) FieldType() FieldType {
+	return FieldTypeString
+}
+
+func (f FieldHTTPHeader) String() string {
+	return "http.header." + strings.ToLower(strings.ReplaceAll(f.headerName, "-", "_"))
+}
+
 type BinaryOperator string
 
-const (
+var (
 	OpEqual        BinaryOperator = "=="
 	OpNotEqual     BinaryOperator = "!="
 	OpRegexMatch   BinaryOperator = "~"
 	OpPrefixMatch  BinaryOperator = "^="
 	OpSuffixMatch  BinaryOperator = "=^"
-	OpIn           BinaryOperator = "in"
-	OpNotIn        BinaryOperator = "not in"
-	OpContains     BinaryOperator = "contains"
+	OpContains     BinaryOperator = "in"
+	OpNotContains  BinaryOperator = "not in"
 	OpLessThan     BinaryOperator = "<"
 	OpLessEqual    BinaryOperator = "<="
 	OpGreaterThan  BinaryOperator = ">"
@@ -47,22 +126,17 @@ type LiteralType int
 const (
 	LiteralTypeInt LiteralType = iota
 	LiteralTypeString
-	// TODO: define subtypes of IP literals(IPv4/IPv6;single IP/IP CIDR).
+	// TODO: define subtypes of IP literals(IPv4/IPv6;single IP/IP CIDR)
 	LiteralTypeIP
 )
 
-// Literal is the right hand side (the value) of a predicate expression.
 type Literal interface {
-	// Type returns the LiteralType iota indicating the Literal type.
 	Type() LiteralType
-
-	// String returns a string representation of the Literal.
 	String() string
 }
 
 var _ Literal = StringLiteral("")
 
-// StringLiteral is a string Literal.
 type StringLiteral string
 
 func (l StringLiteral) Type() LiteralType {
@@ -71,19 +145,17 @@ func (l StringLiteral) Type() LiteralType {
 
 func (l StringLiteral) String() string {
 	str := string(l)
-	// replace the escape characters: '\', '\n', '\t', '\r', '\"'
 	str = strings.ReplaceAll(str, "\\", "\\\\")
 	str = strings.ReplaceAll(str, "\"", "\\\"")
 	str = strings.ReplaceAll(str, "\n", "\\n")
 	str = strings.ReplaceAll(str, "\r", "\\r")
 	str = strings.ReplaceAll(str, "\t", "\\t")
 
-	return fmt.Sprintf("\"%s\"", str)
+	return "\"" + str + "\""
 }
 
 var _ Literal = IntLiteral(0)
 
-// IntLiteral is an integer Literal.
 type IntLiteral int
 
 func (l IntLiteral) Type() LiteralType {
@@ -94,30 +166,26 @@ func (l IntLiteral) String() string {
 	return strconv.Itoa(int(l))
 }
 
-// Predicate is an expression consisting of two arguments and a comparison operator. Kong's expression router evaluates
-// these to true or false.
 type Predicate struct {
 	field LHS
 	op    BinaryOperator
 	value Literal
 }
 
-// Expression returns a string representation of a Predicate.
+func (p Predicate) Matches(req *http.Request) bool {
+	// TODO: add logics to the matches
+	return true
+}
+
 func (p Predicate) Expression() string {
 	lhs := p.field.String()
 	op := string(p.op)
 	rhs := p.value.String()
-	return fmt.Sprintf("%s %s %s", lhs, op, rhs)
-}
-
-// IsEmpty returns true if a Predicate has no value to compare against.
-func (p Predicate) IsEmpty() bool {
-	return p.value == nil
+	return lhs + " " + op + " " + rhs
 }
 
 // NewPredicate generates a single predicate.
-// TODO: check validity of LHS, op and RHS:
-// https://github.com/Kong/kubernetes-ingress-controller/issues/3822.
+// TODO: check validity of LHS, op and RHS.
 func NewPredicate(lhs LHS, op BinaryOperator, rhs Literal) Predicate {
 	return Predicate{
 		field: lhs,
@@ -126,52 +194,5 @@ func NewPredicate(lhs LHS, op BinaryOperator, rhs Literal) Predicate {
 	}
 }
 
-func NewPredicateNetProtocol(op BinaryOperator, value string) Predicate {
-	return Predicate{
-		field: FieldNetProtocol,
-		op:    op,
-		value: StringLiteral(value),
-	}
-}
-
-func NewPredicateHTTPPath(op BinaryOperator, value string) Predicate {
-	return Predicate{
-		field: FieldHTTPPath,
-		op:    op,
-		value: StringLiteral(value),
-	}
-}
-
-func NewPrediacteHTTPHost(op BinaryOperator, value string) Predicate {
-	return Predicate{
-		field: FieldHTTPHost,
-		op:    op,
-		value: StringLiteral(value),
-	}
-}
-
-func NewPredicateHTTPMethod(op BinaryOperator, value string) Predicate {
-	return Predicate{
-		field: FieldHTTPMethod,
-		op:    op,
-		value: StringLiteral(value),
-	}
-}
-
-func NewPredicateHTTPHeader(key string, op BinaryOperator, value string) Predicate {
-	return Predicate{
-		field: HTTPHeaderField{
-			HeaderName: key,
-		},
-		op:    op,
-		value: StringLiteral(value),
-	}
-}
-
-func NewPredicateTLSSNI(op BinaryOperator, value string) Predicate {
-	return Predicate{
-		field: FieldTLSSNI,
-		op:    op,
-		value: StringLiteral(value),
-	}
-}
+// TODO: define more concrete function to generate predicates with specified fields
+// like NewPredicateHTTPPath(path string, op BinaryOperator, value string) Predicate

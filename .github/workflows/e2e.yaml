@@ -62,14 +62,6 @@ jobs:
         with:
           go-version: '^1.20'
 
-      - name: cache go modules
-        uses: actions/cache@v3
-        with:
-          path: ~/go/pkg/mod
-          key: ${{ runner.os }}-build-codegen-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-build-codegen-
-
       - uses: Kong/kong-license@master
         id: license
         with:
@@ -120,14 +112,6 @@ jobs:
         uses: actions/setup-go@v4
         with:
           go-version: '^1.20'
-
-      - name: cache go modules
-        uses: actions/cache@v3
-        with:
-          path: ~/go/pkg/mod
-          key: ${{ runner.os }}-build-codegen-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-build-codegen-
 
       - uses: Kong/kong-license@master
         continue-on-error: true
@@ -188,14 +172,6 @@ jobs:
         uses: actions/setup-go@v4
         with:
           go-version: '^1.20'
-
-      - name: cache go modules
-        uses: actions/cache@v3
-        with:
-          path: ~/go/pkg/mod
-          key: ${{ runner.os }}-build-codegen-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-build-codegen-
 
       - uses: Kong/kong-license@master
         id: license

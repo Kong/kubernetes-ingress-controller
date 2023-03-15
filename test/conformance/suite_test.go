@@ -16,6 +16,12 @@ import (
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/types/kind"
 	"github.com/kong/kubernetes-testing-framework/pkg/environments"
 	"github.com/sirupsen/logrus"
+	"golang.org/x/sync/errgroup"
+	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/watch"
+	"k8s.io/client-go/kubernetes"
 
 	testutils "github.com/kong/kubernetes-ingress-controller/v2/internal/util/test"
 )
@@ -57,6 +63,7 @@ func TestMain(m *testing.M) {
 
 	env, err = builder.Build(ctx)
 	exitOnErr(err)
+
 	defer func() {
 		if existingCluster == "" {
 			exitOnErr(env.Cleanup(ctx))
@@ -66,13 +73,65 @@ func TestMain(m *testing.M) {
 	fmt.Println("INFO: waiting for cluster and addons to be ready")
 	exitOnErr(<-env.WaitForReady(ctx))
 
+	// To allow running conformance tests in a loop to e.g. detect flaky tests
+	// let's ensure that conformance related namespaced are deleted from the cluster.
+	exitOnErr(ensureConformanceTestsNamespacesAreNotPresent(ctx, env.Cluster().Client()))
+
 	code := m.Run()
 
-	if existingCluster == "" {
-		exitOnErr(env.Cleanup(ctx))
+	os.Exit(code)
+}
+
+func ensureConformanceTestsNamespacesAreNotPresent(ctx context.Context, client *kubernetes.Clientset) error {
+	g, ctx := errgroup.WithContext(ctx)
+	g.SetLimit(3) //nolint:gomnd
+
+	for _, namespace := range []string{"gateway-conformance-infra", "gateway-conformance-web-backend", "gateway-conformance-app-backend"} {
+		namespace := namespace
+		g.Go(func() error {
+			return ensureNamespaceDeleted(ctx, namespace, client)
+		})
+	}
+	return g.Wait()
+}
+
+func ensureNamespaceDeleted(ctx context.Context, ns string, client *kubernetes.Clientset) error {
+	namespaceClient := client.CoreV1().Namespaces()
+	namespace, err := namespaceClient.Get(ctx, ns, metav1.GetOptions{})
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			// If the namespace cannot be found then we're good to go.
+			return nil
+		}
+		return err
 	}
 
-	os.Exit(code)
+	if namespace.Status.Phase == corev1.NamespaceActive {
+		fmt.Printf("INFO: removing %s namespace for clean test run\n", ns)
+		err := namespaceClient.Delete(ctx, ns, metav1.DeleteOptions{})
+		if err != nil {
+			return err
+		}
+	}
+
+	w, err := namespaceClient.Watch(ctx, metav1.ListOptions{
+		LabelSelector: "kubernetes.io/metadata.name=" + ns,
+	})
+	if err != nil {
+		return err
+	}
+
+	defer w.Stop()
+	for {
+		select {
+		case event := <-w.ResultChan():
+			if event.Type == watch.Deleted {
+				return nil
+			}
+		case <-ctx.Done():
+			return ctx.Err()
+		}
+	}
 }
 
 func useExistingClusterIfPresent(builder *environments.Builder) {

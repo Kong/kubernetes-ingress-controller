@@ -31,14 +31,6 @@ jobs:
       with:
         go-version: '^1.20'
 
-    - name: Cache Go modules
-      uses: actions/cache@v3
-      with:
-        path: ~/go/pkg/mod
-        key: ${{ runner.os }}-build-codegen-${{ hashFiles('**/go.sum') }}
-        restore-keys: |
-          ${{ runner.os }}-build-codegen-
-
     - name: Run lint
       run: make lint
 
@@ -89,14 +81,6 @@ jobs:
       uses: actions/setup-go@v4
       with:
         go-version: '^1.20'
-
-    - name: cache go modules
-      uses: actions/cache@v3
-      with:
-        path: ~/go/pkg/mod
-        key: ${{ runner.os }}-build-codegen-${{ hashFiles('**/go.sum') }}
-        restore-keys: |
-          ${{ runner.os }}-build-codegen-
 
     - name: run unit tests
       run: make test.unit
@@ -191,15 +175,6 @@ jobs:
       with:
         go-version: '^1.20'
 
-    - name: cache go modules
-      if: steps.detect_if_should_run.outputs.result != 'false'
-      uses: actions/cache@v3
-      with:
-        path: ~/go/pkg/mod
-        key: ${{ runner.os }}-build-codegen-${{ hashFiles('**/go.sum') }}
-        restore-keys: |
-          ${{ runner.os }}-build-codegen-
-
     - name: run make test.integration.${{ matrix.test }}
       if: steps.detect_if_should_run.outputs.result != 'false'
       run: make test.integration.${{ matrix.test }}
@@ -244,14 +219,6 @@ jobs:
       uses: actions/setup-go@v4
       with:
         go-version: '^1.20'
-
-    - name: cache go modules
-      uses: actions/cache@v3
-      with:
-        path: ~/go/pkg/mod
-        key: ${{ runner.os }}-build-codegen-${{ hashFiles('**/go.sum') }}
-        restore-keys: |
-          ${{ runner.os }}-build-codegen-
 
     - name: run conformance tests
       run: make test.conformance

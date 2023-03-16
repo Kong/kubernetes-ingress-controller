@@ -46,6 +46,9 @@ jobs:
       - run: |
           gh pr comment ${PR_NUMBER} --body \
             "E2E (targeted) tests were started at ${URL}"
+      # Remove the 'ci/run-e2e' label from the PR to prevent the `e2e_trigger_via_label.yaml`
+      # workflow from running the `e2e_targeted.yaml` again.
+      - run: gh pr edit ${PR_NUMBER} --remove-label ci/run-e2e
 
   build-image:
     if: ${{ inputs.controller-image == '' }}

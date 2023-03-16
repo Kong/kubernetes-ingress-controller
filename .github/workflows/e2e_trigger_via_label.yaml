@@ -24,4 +24,3 @@ jobs:
           -f run-istio=true \
           -f all-supported-k8s-versions=true \
           -f pr-number=${PR_NUMBER}
-    - run: gh pr edit ${PR_NUMBER} --remove-label ci/run-e2e

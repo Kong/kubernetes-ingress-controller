@@ -370,7 +370,10 @@ func (r *HTTPRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 
 		if configurationStatus == k8sobj.ConfigurationStatusFailed {
 			debug(log, httproute, "httproute configuration failed")
-			statusUpdated, err := r.ensureParentsProgrammedCondition(ctx, httproute, gateways, metav1.ConditionFalse, ConditionReasonTranslationError, "")
+			statusUpdated, err := ensureParentsProgrammedCondition(ctx, r.Status(), httproute, httproute.Status.Parents, gateways, metav1.Condition{
+				Status: metav1.ConditionFalse,
+				Reason: string(ConditionReasonTranslationError),
+			})
 			if err != nil {
 				// don't proceed until the statuses can be updated appropriately
 				debug(log, httproute, "failed to update programmed condition")
@@ -379,7 +382,10 @@ func (r *HTTPRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 			return ctrl.Result{Requeue: !statusUpdated}, nil
 		}
 
-		statusUpdated, err := r.ensureParentsProgrammedCondition(ctx, httproute, gateways, metav1.ConditionTrue, ConditionReasonConfiguredInGateway, "")
+		statusUpdated, err := ensureParentsProgrammedCondition(ctx, r.Status(), httproute, httproute.Status.Parents, gateways, metav1.Condition{
+			Status: metav1.ConditionTrue,
+			Reason: string(ConditionReasonConfiguredInGateway),
+		})
 		if err != nil {
 			// don't proceed until the statuses can be updated appropriately
 			debug(log, httproute, "failed to update programmed condition")
@@ -627,65 +633,4 @@ func (r *HTTPRouteReconciler) getHTTPRouteRuleReason(ctx context.Context, httpRo
 		}
 	}
 	return gatewayv1beta1.RouteReasonResolvedRefs, nil
-}
-
-// TODO: extract method for different types of *Routes to update conditions:
-// https://github.com/Kong/kubernetes-ingress-controller/issues/3390
-func (r *HTTPRouteReconciler) ensureParentsProgrammedCondition(
-	ctx context.Context,
-	httproute *gatewayv1beta1.HTTPRoute,
-	gateways []supportedGatewayWithCondition,
-	conditionStatus metav1.ConditionStatus,
-	conditionReason gatewayv1beta1.RouteConditionReason,
-	conditionMessage string,
-) (bool, error) {
-	// map the existing parentStatues to avoid duplications
-	parentStatuses := getParentStatuses(httproute, httproute.Status.Parents)
-
-	programmedCondition := metav1.Condition{
-		Type:               ConditionTypeProgrammed,
-		Status:             conditionStatus,
-		Reason:             string(conditionReason),
-		ObservedGeneration: httproute.Generation,
-		Message:            conditionMessage,
-		LastTransitionTime: metav1.Now(),
-	}
-	statusChanged := false
-	for _, g := range gateways {
-		gateway := g.gateway
-		parentRefKey := fmt.Sprintf("%s/%s/%s", gateway.Namespace, gateway.Name, g.listenerName)
-		parentStatus, ok := parentStatuses[parentRefKey]
-		if ok {
-			// update existing parent in status.
-			changed := setRouteParentStatusCondition(parentStatus, programmedCondition)
-			statusChanged = statusChanged || changed
-		} else {
-			// add a new parent if the parent is not found in status.
-			newParentStatus := &gatewayv1beta1.RouteParentStatus{
-				ParentRef: gatewayv1beta1.ParentReference{
-					Namespace:   lo.ToPtr(gatewayv1beta1.Namespace(gateway.Namespace)),
-					Name:        gatewayv1beta1.ObjectName(gateway.Name),
-					SectionName: lo.ToPtr(gatewayv1beta1.SectionName(g.listenerName)),
-					// TODO: set port after gateway port matching implemented: https://github.com/Kong/kubernetes-ingress-controller/issues/3016
-				},
-				ControllerName: GetControllerName(),
-				Conditions: []metav1.Condition{
-					programmedCondition,
-				},
-			}
-			httproute.Status.Parents = append(httproute.Status.Parents, *newParentStatus)
-			parentStatuses[parentRefKey] = newParentStatus
-			statusChanged = true
-		}
-	}
-
-	// update status if needed.
-	if statusChanged {
-		if err := r.Status().Update(ctx, httproute); err != nil {
-			return false, err
-		}
-		return true, nil
-	}
-	// no need to update if no status is changed.
-	return false, nil
 }

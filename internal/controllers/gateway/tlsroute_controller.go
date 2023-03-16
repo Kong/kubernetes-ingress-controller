@@ -360,7 +360,10 @@ func (r *TLSRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 
 		if configurationStatus == k8sobj.ConfigurationStatusFailed {
 			debug(log, tlsroute, "tlsroute configuration failed")
-			statusUpdated, err := r.ensureParentsProgrammedCondition(ctx, tlsroute, gateways, metav1.ConditionFalse, ConditionReasonTranslationError, "")
+			statusUpdated, err := ensureParentsProgrammedCondition(ctx, r.Status(), tlsroute, tlsroute.Status.Parents, gateways, metav1.Condition{
+				Status: metav1.ConditionFalse,
+				Reason: string(ConditionReasonTranslationError),
+			})
 			if err != nil {
 				// don't proceed until the statuses can be updated appropriately
 				debug(log, tlsroute, "failed to update programmed condition")
@@ -369,7 +372,10 @@ func (r *TLSRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 			return ctrl.Result{Requeue: !statusUpdated}, nil
 		}
 
-		statusUpdated, err := r.ensureParentsProgrammedCondition(ctx, tlsroute, gateways, metav1.ConditionTrue, ConditionReasonConfiguredInGateway, "")
+		statusUpdated, err := ensureParentsProgrammedCondition(ctx, r.Status(), tlsroute, tlsroute.Status.Parents, gateways, metav1.Condition{
+			Status: metav1.ConditionTrue,
+			Reason: string(ConditionReasonConfiguredInGateway),
+		})
 		if err != nil {
 			// don't proceed until the statuses can be updated appropriately
 			debug(log, tlsroute, "failed to update programmed condition")
@@ -511,62 +517,4 @@ func (r *TLSRouteReconciler) ensureGatewayReferenceStatusRemoved(ctx context.Con
 
 	// the status needed an update and it was updated successfully
 	return true, nil
-}
-
-func (r *TLSRouteReconciler) ensureParentsProgrammedCondition(
-	ctx context.Context,
-	tlsroute *gatewayv1alpha2.TLSRoute,
-	gateways []supportedGatewayWithCondition,
-	conditionStatus metav1.ConditionStatus,
-	conditionReason gatewayv1beta1.RouteConditionReason,
-	conditionMessage string,
-) (bool, error) {
-	// map the existing parentStatues to avoid duplications
-	parentStatuses := getParentStatuses(tlsroute, tlsroute.Status.Parents)
-
-	programmedCondition := metav1.Condition{
-		Type:               ConditionTypeProgrammed,
-		Status:             conditionStatus,
-		Reason:             string(conditionReason),
-		ObservedGeneration: tlsroute.Generation,
-		Message:            conditionMessage,
-		LastTransitionTime: metav1.Now(),
-	}
-	statusChanged := false
-	for _, g := range gateways {
-		gateway := g.gateway
-		parentRefKey := gateway.Namespace + "/" + gateway.Name
-		parentStatus, ok := parentStatuses[parentRefKey]
-		if ok {
-			// update existing parent in status.
-			changed := setRouteParentStatusCondition(parentStatus, programmedCondition)
-			statusChanged = statusChanged || changed
-		} else {
-			// add a new parent if the parent is not found in status.
-			newParentStatus := &gatewayv1alpha2.RouteParentStatus{
-				ParentRef: gatewayv1alpha2.ParentReference{
-					Namespace: lo.ToPtr(gatewayv1alpha2.Namespace(gateway.Namespace)),
-					Name:      gatewayv1alpha2.ObjectName(gateway.Name),
-					// TODO: set port after gateway port matching implemented: https://github.com/Kong/kubernetes-ingress-controller/issues/3016
-				},
-				ControllerName: GetControllerName(),
-				Conditions: []metav1.Condition{
-					programmedCondition,
-				},
-			}
-			tlsroute.Status.Parents = append(tlsroute.Status.Parents, *newParentStatus)
-			parentStatuses[parentRefKey] = newParentStatus
-			statusChanged = true
-		}
-	}
-
-	// update status if needed.
-	if statusChanged {
-		if err := r.Status().Update(ctx, tlsroute); err != nil {
-			return false, err
-		}
-		return true, nil
-	}
-	// no need to update if no status is changed.
-	return false, nil
 }

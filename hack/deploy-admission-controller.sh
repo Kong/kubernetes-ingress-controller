@@ -1,8 +1,7 @@
 #!/bin/bash
 
-KUBECONFIG_OPTION=""
 if [[ -n "${1}" ]]; then
-  KUBECONFIG_OPTION="--kubeconfig=${1}"
+  export KUBECONFIG="${1}"
 fi
 
 BASE64_OPTIONS=""
@@ -12,18 +11,20 @@ fi
 
 # create a self-signed certificate
 TMPDIR="$(mktemp -d )"
-openssl req -x509 -newkey rsa:2048 -keyout "${TMPDIR}"/tls.key -out "${TMPDIR}"/tls.crt -days 365  \
+openssl req -x509 -newkey rsa:2048 -keyout "${TMPDIR}/tls.key" -out "${TMPDIR}/tls.crt" -days 365  \
     -nodes -subj "/CN=kong-validation-webhook.kong.svc" \
     -extensions EXT -config <( \
    printf "[dn]\nCN=kong-validation-webhook.kong.svc\n[req]\ndistinguished_name = dn\n[EXT]\nsubjectAltName=DNS:kong-validation-webhook.kong.svc\nkeyUsage=digitalSignature\nextendedKeyUsage=serverAuth")
 # create a secret out of this self-signed cert-key pair
-kubectl create secret "${KUBECONFIG_OPTION}" tls kong-validation-webhook -n kong \
-      --key "${TMPDIR}"/tls.key --cert "${TMPDIR}"/tls.crt
+kubectl create secret tls kong-validation-webhook -n kong \
+      --key "${TMPDIR}/tls.key" --cert "${TMPDIR}/tls.crt"
 # enable the Admission Webhook Server server
-kubectl patch deploy "${KUBECONFIG_OPTION}" -n kong ingress-kong \
+kubectl patch -n kong deploy/ingress-kong \
   -p '{"spec":{"template":{"spec":{"containers":[{"name":"ingress-controller","env":[{"name":"CONTROLLER_ADMISSION_WEBHOOK_LISTEN","value":":8080"}],"volumeMounts":[{"name":"validation-webhook","mountPath":"/admission-webhook"}]}],"volumes":[{"secret":{"secretName":"kong-validation-webhook"},"name":"validation-webhook"}]}}}}'
 # configure k8s apiserver to send validations to the webhook
-echo "apiVersion: admissionregistration.k8s.io/v1
+(
+cat << EOF
+apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingWebhookConfiguration
 metadata:
   name: kong-validations
@@ -37,7 +38,7 @@ webhooks:
       - helm
   failurePolicy: Ignore
   sideEffects: None
-  admissionReviewVersions: [\"v1\", \"v1beta1\"]
+  admissionReviewVersions: ["v1", "v1beta1"]
   rules:
   - apiGroups:
     - configuration.konghq.com
@@ -73,4 +74,6 @@ webhooks:
     service:
       namespace: kong
       name: kong-validation-webhook
-    caBundle: $(cat ${TMPDIR}/tls.crt | base64 \"${BASE64_OPTIONS}\")" | kubectl apply "${KUBECONFIG_OPTION}" -f -
+    caBundle: $(base64 ${BASE64_OPTIONS:+${BASE64_OPTIONS}} "${TMPDIR}/tls.crt") 
+EOF
+) | kubectl apply -f -

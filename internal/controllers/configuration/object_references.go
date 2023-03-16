@@ -75,6 +75,9 @@ func listCoreV1ServiceReferredSecrets(service *corev1.Service) []types.Namespace
 func listNetV1IngressReferredSecrets(ingress *netv1.Ingress) []types.NamespacedName {
 	referredSecretNames := make([]types.NamespacedName, 0, len(ingress.Spec.TLS))
 	for _, tls := range ingress.Spec.TLS {
+		if tls.SecretName == "" {
+			continue
+		}
 		nsName := types.NamespacedName{
 			Namespace: ingress.Namespace,
 			Name:      tls.SecretName,
@@ -87,6 +90,9 @@ func listNetV1IngressReferredSecrets(ingress *netv1.Ingress) []types.NamespacedN
 func listNetV1beta1IngressReferredSecrets(ingress *netv1beta1.Ingress) []types.NamespacedName {
 	referredSecretNames := make([]types.NamespacedName, 0, len(ingress.Spec.TLS))
 	for _, tls := range ingress.Spec.TLS {
+		if tls.SecretName == "" {
+			continue
+		}
 		nsName := types.NamespacedName{
 			Namespace: ingress.Namespace,
 			Name:      tls.SecretName,
@@ -99,6 +105,9 @@ func listNetV1beta1IngressReferredSecrets(ingress *netv1beta1.Ingress) []types.N
 func listExtensionV1beta1IngressReferredSecrets(ingress *extv1beta1.Ingress) []types.NamespacedName {
 	referredSecretNames := make([]types.NamespacedName, 0, len(ingress.Spec.TLS))
 	for _, tls := range ingress.Spec.TLS {
+		if tls.SecretName == "" {
+			continue
+		}
 		nsName := types.NamespacedName{
 			Namespace: ingress.Namespace,
 			Name:      tls.SecretName,
@@ -147,6 +156,9 @@ func listKongConsumerReferredSecrets(consumer *kongv1.KongConsumer) []types.Name
 func listTCPIngressReferredSecrets(tcpIngress *kongv1beta1.TCPIngress) []types.NamespacedName {
 	referredSecretNames := make([]types.NamespacedName, 0, len(tcpIngress.Spec.TLS))
 	for _, tls := range tcpIngress.Spec.TLS {
+		if tls.SecretName == "" {
+			continue
+		}
 		nsName := types.NamespacedName{
 			Namespace: tcpIngress.Namespace,
 			Name:      tls.SecretName,

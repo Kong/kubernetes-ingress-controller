@@ -446,7 +446,7 @@ func (c *KongClient) Update(ctx context.Context) error {
 			c.logger.Debugf("triggering report for %d configured Kubernetes objects", len(report))
 			c.triggerKubernetesObjectReport(report, translationFailures)
 		} else {
-			c.logger.Debug("no configuration change, skipping kubernetes object report")
+			c.logger.Debug("no configuration change; resource status update not necessary, skipping")
 		}
 	}
 	return nil

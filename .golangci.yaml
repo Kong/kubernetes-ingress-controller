@@ -89,13 +89,14 @@ linters-settings:
           - sigs.k8s.io/yaml
       - github.com/pkg/errors:
           recommendations:
-            - fmt
-            - errors
+          - fmt
+          - errors
   depguard:
-    list-type: blacklist
+    list-type: denylist
     include-go-root: false
     packages-with-error-message:
       - k8s.io/utils/pointer: "Use github.com/samber/lo ToPtr instead"
+      - golang.org/x/net/context: "use regular context instead"
   tenv:
     all: true
   loggercheck:
@@ -112,3 +113,8 @@ issues:
     linters:
       - gosec
     text: "TLS InsecureSkipVerify set true|Potential hardcoded credentials"
+  # It's fine to use variable urls in tests.
+  - linters:
+      - gosec
+    text: "Potential HTTP request made with variable url"
+    path: test\.go

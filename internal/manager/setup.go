@@ -64,13 +64,12 @@ func setupControllerOptions(logger logr.Logger, c *Config, dbmode string, featur
 
 	// configure the general controller options
 	controllerOpts := ctrl.Options{
-		Scheme:                 scheme,
-		MetricsBindAddress:     c.MetricsAddr,
-		Port:                   9443,
-		HealthProbeBindAddress: c.ProbeAddr,
-		LeaderElection:         leaderElectionEnabled(logger, c, dbmode),
-		LeaderElectionID:       c.LeaderElectionID,
-		SyncPeriod:             &c.SyncPeriod,
+		Scheme:             scheme,
+		MetricsBindAddress: c.MetricsAddr,
+		Port:               9443,
+		LeaderElection:     leaderElectionEnabled(logger, c, dbmode),
+		LeaderElectionID:   c.LeaderElectionID,
+		SyncPeriod:         &c.SyncPeriod,
 	}
 
 	// configure the controller caching options
@@ -260,7 +259,7 @@ func generateAddressFinderGetter(mgrc client.Client, publishServiceNn types.Name
 // to create the list of clients.
 // When a headless service name is provided via --kong-admin-svc then that is used
 // to obtain a list of endpoints via EndpointSlice lookup in kubernetes API.
-func (c *Config) adminAPIClients(ctx context.Context) ([]*adminapi.Client, error) {
+func (c *Config) adminAPIClients(ctx context.Context, logger logr.Logger) ([]*adminapi.Client, error) {
 	httpclient, err := adminapi.MakeHTTPClient(&c.KongAdminAPIConfig, c.KongAdminToken)
 	if err != nil {
 		return nil, err
@@ -269,7 +268,7 @@ func (c *Config) adminAPIClients(ctx context.Context) ([]*adminapi.Client, error
 	// If kong-admin-svc flag has been specified then use it to get the list
 	// of Kong Admin API endpoints.
 	if c.KongAdminSvc.IsPresent() {
-		return c.adminAPIClientFromServiceDiscovery(ctx, httpclient)
+		return c.adminAPIClientFromServiceDiscovery(ctx, logger, httpclient)
 	}
 
 	// Otherwise fallback to the list of kong admin URLs.
@@ -287,7 +286,15 @@ func (c *Config) adminAPIClients(ctx context.Context) ([]*adminapi.Client, error
 	return clients, nil
 }
 
-func (c *Config) adminAPIClientFromServiceDiscovery(ctx context.Context, httpclient *http.Client) ([]*adminapi.Client, error) {
+type NoAvailableEndpointsError struct {
+	serviceNN types.NamespacedName
+}
+
+func (e NoAvailableEndpointsError) Error() string {
+	return fmt.Sprintf("no endpoints for service: %q", e.serviceNN)
+}
+
+func (c *Config) adminAPIClientFromServiceDiscovery(ctx context.Context, logger logr.Logger, httpclient *http.Client) ([]*adminapi.Client, error) {
 	kubeClient, err := c.GetKubeClient()
 	if err != nil {
 		return nil, err
@@ -309,20 +316,23 @@ func (c *Config) adminAPIClientFromServiceDiscovery(ctx context.Context, httpcli
 	err = retry.Do(func() error {
 		s, err := adminapi.GetAdminAPIsForService(ctx, kubeClient, kongAdminSvcNN, sets.New(c.KondAdminSvcPortNames...))
 		if err != nil {
-			return err
+			return retry.Unrecoverable(err)
 		}
 		if s.Len() == 0 {
-			return fmt.Errorf("no endpoints for kong admin service: %q", kongAdminSvcNN)
+			return NoAvailableEndpointsError{serviceNN: kongAdminSvcNN}
 		}
 		adminAPIs = s.UnsortedList()
 		return nil
 	},
 		retry.Context(ctx),
-		retry.Attempts(60),
+		retry.Attempts(0),
 		retry.DelayType(retry.FixedDelay),
 		retry.Delay(time.Second),
 		retry.OnRetry(func(_ uint, err error) {
-			logrus.New().WithError(err).Error("failed to create kong client(s)")
+			// log the error if the error is NOT caused by 0 available gateway endpoints.
+			if !errors.As(err, &NoAvailableEndpointsError{}) {
+				logger.Error(err, "failed to create kong client(s)")
+			}
 		}),
 	)
 	if err != nil {

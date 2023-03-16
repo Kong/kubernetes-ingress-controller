@@ -103,7 +103,7 @@ func negotiateIngressAPI(config *Config, mapper meta.RESTMapper) (IngressAPI, er
 func ShouldEnableCRDController(gvr schema.GroupVersionResource, restMapper meta.RESTMapper) bool {
 	if !ctrlutils.CRDExists(restMapper, gvr) {
 		ctrl.Log.WithName("controllers").WithName("crdCondition").
-			Info(fmt.Sprintf("disabling the '%s' controller due to missing CRD installation", gvr.Resource))
+			Info(fmt.Sprintf("Disabling controller for Group=%s, Resource=%s due to missing CRD", gvr.GroupVersion(), gvr.Resource))
 		return false
 	}
 	return true

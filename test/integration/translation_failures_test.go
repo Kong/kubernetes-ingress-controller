@@ -249,35 +249,6 @@ func TestTranslationFailures(t *testing.T) {
 				}
 			},
 		},
-		{
-			name: "httproute rule has no backendRefs defined",
-			translationFailureTrigger: func(t *testing.T, cleaner *clusters.Cleaner, ns string) expectedTranslationFailure {
-				gatewayClient, err := gatewayclient.NewForConfig(env.Cluster().Config())
-				require.NoError(t, err)
-
-				gatewayClassName := testutils.RandomName(testTranslationFailuresObjectsPrefix)
-				gwc, err := DeployGatewayClass(ctx, gatewayClient, gatewayClassName)
-				require.NoError(t, err)
-				cleaner.Add(gwc)
-
-				gatewayName := testutils.RandomName(testTranslationFailuresObjectsPrefix)
-				gateway, err := DeployGateway(ctx, gatewayClient, ns, gatewayClassName, func(gw *gatewayv1beta1.Gateway) {
-					gw.Name = gatewayName
-				})
-				require.NoError(t, err)
-				cleaner.Add(gateway)
-
-				httpRoute := httpRouteWithBackends(gatewayName)
-				httpRoute, err = gatewayClient.GatewayV1beta1().HTTPRoutes(ns).Create(ctx, httpRoute, metav1.CreateOptions{})
-				require.NoError(t, err)
-				cleaner.Add(httpRoute)
-
-				return expectedTranslationFailure{
-					causingObjects: []client.Object{httpRoute},
-					reasonContains: "missing backendRef in rule",
-				}
-			},
-		},
 	}
 
 	for _, tt := range testCases {

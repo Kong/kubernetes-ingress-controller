@@ -23,17 +23,9 @@ jobs:
         fetch-depth: 0
 
     - name: setup golang
-      uses: actions/setup-go@v3
+      uses: actions/setup-go@v4
       with:
         go-version: '^1.20'
-
-    - name: cache go modules
-      uses: actions/cache@v3
-      with:
-        path: ~/go/pkg/mod
-        key: ${{ runner.os }}-build-codegen-${{ hashFiles('**/go.sum') }}
-        restore-keys: |
-          ${{ runner.os }}-build-codegen-
 
     - name: run integration tests
       run: make test.integration.enterprise.postgres
@@ -69,17 +61,9 @@ jobs:
         fetch-depth: 0
 
     - name: setup golang
-      uses: actions/setup-go@v3
+      uses: actions/setup-go@v4
       with:
         go-version: '^1.20'
-
-    - name: cache go modules
-      uses: actions/cache@v3
-      with:
-        path: ~/go/pkg/mod
-        key: ${{ runner.os }}-build-codegen-${{ hashFiles('**/go.sum') }}
-        restore-keys: |
-          ${{ runner.os }}-build-codegen-
 
     - name: run integration tests
       run: make test.integration.postgres
@@ -113,17 +97,9 @@ jobs:
         fetch-depth: 0
 
     - name: setup golang
-      uses: actions/setup-go@v3
+      uses: actions/setup-go@v4
       with:
         go-version: '^1.20'
-
-    - name: cache go modules
-      uses: actions/cache@v3
-      with:
-        path: ~/go/pkg/mod
-        key: ${{ runner.os }}-build-codegen-${{ hashFiles('**/go.sum') }}
-        restore-keys: |
-          ${{ runner.os }}-build-codegen-
 
     - name: run integration tests
       run: make test.integration.dbless

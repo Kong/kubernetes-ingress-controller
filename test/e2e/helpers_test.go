@@ -151,7 +151,9 @@ func createKINDBuilder() *environments.Builder {
 	}
 	builder = builder.WithClusterBuilder(clusterBuilder)
 	builder = builder.WithAddons(metallb.New())
-	builder = builder.WithAddons(buildImageLoadAddons(imageLoad, kongImageLoad)...)
+	if shouldLoadImages() {
+		builder = builder.WithAddons(buildImageLoadAddons(controllerImageOverride, kongImageOverride)...)
+	}
 	return builder
 }
 
@@ -163,7 +165,9 @@ func createExistingKINDBuilder(name string) (*environments.Builder, error) {
 	}
 	builder = builder.WithExistingCluster(cluster)
 	builder = builder.WithAddons(metallb.New())
-	builder = builder.WithAddons(buildImageLoadAddons(imageLoad, kongImageLoad)...)
+	if shouldLoadImages() {
+		builder = builder.WithAddons(buildImageLoadAddons(controllerImageOverride, kongImageOverride)...)
+	}
 	return builder, nil
 }
 
@@ -653,11 +657,22 @@ func runOnlyOnKindClusters(t *testing.T) {
 	t.Helper()
 
 	existingClusterIsKind := strings.Split(existingCluster, ":")[0] == string(kind.KindClusterType)
-	clusterProviderIsKind := clusterProvider == "" || clusterProvider == string(kind.KindClusterType)
-
-	if !existingClusterIsKind || !clusterProviderIsKind {
-		t.Skip("test is supported only on Kind clusters")
+	if existingClusterIsKind {
+		return
 	}
+
+	clusterProviderIsKind := clusterProvider == string(kind.KindClusterType)
+	if clusterProviderIsKind {
+		return
+	}
+
+	clusterProviderUnspecified := clusterProvider == ""
+	existingClusterUnspecified := existingCluster == ""
+	if clusterProviderUnspecified && existingClusterUnspecified {
+		return
+	}
+
+	t.Skip("test is supported only on Kind clusters")
 }
 
 // listPodsByLabels returns a list of pods in the given namespace that match the given labels map.

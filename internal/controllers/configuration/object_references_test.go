@@ -104,6 +104,21 @@ func TestListIngressReferredSecrets(t *testing.T) {
 			secretNum:     1,
 			refSecretName: types.NamespacedName{Namespace: "ns", Name: "secret1"},
 		},
+		{
+			name: "ingress_has_tls_without_secretName_should_refer_no_secrets",
+			ingress: &netv1.Ingress{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "ns",
+					Name:      "ing1",
+				},
+				Spec: netv1.IngressSpec{
+					TLS: []netv1.IngressTLS{
+						{Hosts: []string{"example.com"}},
+					},
+				},
+			},
+			secretNum: 0,
+		},
 	}
 
 	for _, tc := range testCases {
@@ -289,11 +304,11 @@ func TestListTCPIngressReferredSecrets(t *testing.T) {
 				Spec: kongv1beta1.TCPIngressSpec{
 					TLS: []kongv1beta1.IngressTLS{
 						{Hosts: []string{"example.com"}, SecretName: "secret1"},
-						{Hosts: []string{"konghq.com"}, SecretName: "secret2"},
+						{Hosts: []string{"konghq.com"}, SecretName: ""},
 					},
 				},
 			},
-			secretNum: 2,
+			secretNum: 1,
 			refSecretName: types.NamespacedName{
 				Namespace: "ns",
 				Name:      "secret1",

@@ -7,6 +7,7 @@ import (
 	"reflect"
 
 	"github.com/samber/lo"
+	"github.com/samber/mo"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -42,6 +43,21 @@ type supportedGatewayWithCondition struct {
 	gateway      *Gateway
 	condition    metav1.Condition
 	listenerName string
+}
+
+func (g supportedGatewayWithCondition) GetName() string {
+	return g.gateway.GetName()
+}
+
+func (g supportedGatewayWithCondition) GetNamespace() string {
+	return g.gateway.GetNamespace()
+}
+
+func (g supportedGatewayWithCondition) GetSectionName() mo.Option[string] {
+	if g.listenerName != "" {
+		return mo.Some(g.listenerName)
+	}
+	return mo.None[string]()
 }
 
 // parentRefsForRoute provides a list of the parentRefs given a Gateway APIs route object
@@ -690,4 +706,180 @@ func parentStatusHasProgrammedCondition(parentStatus *gatewayv1beta1.RouteParent
 		}
 	}
 	return false
+}
+
+// ensureParentsProgrammedCondition ensures that provided route's parent statuses
+// have Programmed condition set properly. It returns a boolean flag indicating
+// whether an update to the provided route has been performed.
+//
+// Use the condition argument to specify the Reason, Status and Message.
+// Type will be set to Programmed whereas ObservedGeneration and LastTransitionTime
+// will be set accordingly based on the route's generation and current time.
+func ensureParentsProgrammedCondition[
+	routeT types.RouteT,
+](
+	ctx context.Context,
+	client client.SubResourceWriter,
+	route routeT,
+	routeParentStatuses []RouteParentStatus,
+	gateways []supportedGatewayWithCondition,
+	condition metav1.Condition,
+) (bool, error) {
+	// map the existing parentStatues to avoid duplications
+	parentStatuses := getParentStatuses(route, routeParentStatuses)
+
+	condition.Type = ConditionTypeProgrammed
+	condition.ObservedGeneration = route.GetGeneration()
+	condition.LastTransitionTime = metav1.Now()
+
+	statusChanged := false
+	for _, g := range gateways {
+		gateway := g.gateway
+
+		parentRefKey := routeParentStatusKey(route, g)
+		parentStatus, ok := parentStatuses[parentRefKey]
+		if ok {
+			// update existing parent in status.
+			changed := setRouteParentStatusCondition(parentStatus, condition)
+			if changed {
+				parentStatuses[parentRefKey] = parentStatus
+				setRouteParentInStatusForParent(route, *parentStatus, g)
+			}
+			statusChanged = statusChanged || changed
+		} else {
+			// add a new parent if the parent is not found in status.
+			newParentStatus := RouteParentStatus{
+				ParentRef: ParentReference{
+					Namespace: lo.ToPtr(Namespace(gateway.Namespace)),
+					Name:      ObjectName(gateway.Name),
+					Kind:      lo.ToPtr(Kind("Gateway")),
+					Group:     lo.ToPtr(Group(gatewayv1beta1.GroupName)),
+					SectionName: func() *SectionName {
+						// We don't need to check whether the listener matches route's spec
+						// because that should already be done via getSupportedGatewayForRoute
+						// at this point.
+						if g.listenerName != "" {
+							return lo.ToPtr(gatewayv1beta1.SectionName(g.listenerName))
+						}
+						return nil
+					}(),
+
+					// TODO: set port after gateway port matching implemented:
+					// https://github.com/Kong/kubernetes-ingress-controller/issues/3016
+				},
+				ControllerName: GetControllerName(),
+				Conditions: []metav1.Condition{
+					condition,
+				},
+			}
+			setRouteParentInStatusForParent(route, newParentStatus, g)
+
+			routeParentStatuses = append(routeParentStatuses, newParentStatus)
+			parentStatuses[parentRefKey] = &newParentStatus
+			statusChanged = true
+		}
+	}
+
+	// update status if needed.
+	if statusChanged {
+		if err := client.Update(ctx, route); err != nil {
+			return false, err
+		}
+		return true, nil
+	}
+	// no need to update if no status is changed.
+	return false, nil
+}
+
+// setRouteParentInStatusForParent checks if the provided route Status, contains
+// status for the provided parent and if it does it sets it to the provided
+// RouteStatusParent. If it does not then it appends the provided RouteStatusParent
+// to provided route's Status.Parents field.
+//
+// This might come in useful when the caller wants to set only one parent's
+// status.
+func setRouteParentInStatusForParent[
+	routeT types.RouteT,
+	parentT namespacedNamer,
+](
+	route routeT,
+	routeStatusParent RouteParentStatus,
+	parent parentT,
+) {
+	switch r := any(route).(type) {
+	case *HTTPRoute:
+		r.Status.Parents = ensureRoutesParents(r.Status.Parents, routeStatusParent, parent)
+	case *TCPRoute:
+		r.Status.Parents = ensureRoutesParents(r.Status.Parents, routeStatusParent, parent)
+	case *UDPRoute:
+		r.Status.Parents = ensureRoutesParents(r.Status.Parents, routeStatusParent, parent)
+	case *TLSRoute:
+		r.Status.Parents = ensureRoutesParents(r.Status.Parents, routeStatusParent, parent)
+	case *GRPCRoute:
+		r.Status.Parents = ensureRoutesParents(r.Status.Parents, routeStatusParent, parent)
+	}
+}
+
+// ensureRoutesParents ensures that the provided RouteStatusParents are updated.
+// This function checks if the provided []RouteStatusParents contains a parentRef
+// status for the provided status.
+// If it doesn't then it adds it to the provided []RouteStatusParents and returns it.
+// If it does then it overwrites the provious status for that parent and returns
+// the updates []RouteStatusParents.
+func ensureRoutesParents[
+	parentT namespacedNamer,
+](
+	routeStatusParents []RouteParentStatus,
+	routeStatusParent RouteParentStatus,
+	parent parentT,
+) []RouteParentStatus {
+	for i, p := range routeStatusParents {
+		if ensureParentsStatusUpdated(p.ParentRef, parent, routeStatusParents, i, routeStatusParent) {
+			return routeStatusParents
+		}
+	}
+	routeStatusParents = append(routeStatusParents, routeStatusParent)
+	return routeStatusParents
+}
+
+func ensureParentsStatusUpdated[
+	parentT namespacedNamer,
+](
+	parentRef ParentReference,
+	parent parentT,
+	routeStatusParents []RouteParentStatus,
+	i int,
+	routeStatusParent RouteParentStatus,
+) bool {
+	if !isParentRefEqualToParent(parentRef, parent) {
+		return false
+	}
+
+	routeStatusParents[i] = routeStatusParent
+	return true
+}
+
+func isParentRefEqualToParent[
+	parentT namespacedNamer,
+](
+	parentRef ParentReference,
+	parent parentT,
+) bool {
+	if *parentRef.Group != gatewayv1beta1.GroupName {
+		return false
+	}
+	if *parentRef.Kind != "Gateway" {
+		return false
+	}
+	if string(parentRef.Name) != parent.GetName() {
+		return false
+	}
+	if parentRef.Namespace != nil && string(*parentRef.Namespace) != parent.GetNamespace() {
+		return false
+	}
+	if parentRef.SectionName != nil && string(*parentRef.SectionName) != parent.GetSectionName().OrEmpty() {
+		return false
+	}
+
+	return true
 }

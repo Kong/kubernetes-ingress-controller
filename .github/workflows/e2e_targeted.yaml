@@ -168,30 +168,12 @@ jobs:
       with:
         password: ${{ secrets.PULP_PASSWORD }}
 
-    # The only reason we need those 2 is the fact that TEST_KONG_CONTROLLER_IMAGE_LOAD
-    # is ultimately passed down to ktf's loadimage.Addon which uses "kind load docker-image ..."
-    # which fails when an image is not available on the cluster.
-    # Hence the non local version (where the image is pulled from an external registry)
-    # doesn't define TEST_KONG_CONTROLLER_IMAGE_LOAD.
-
     - name: run ${{ matrix.test }} with ${{ github.event.inputs.controller-image }} image
-      if: ${{ github.event.inputs.controller-image != 'kong/kubernetes-ingress-controller:ci' }}
       run: make test.e2e
       env:
         E2E_TEST_RUN: ${{ matrix.test }}
         TEST_KONG_CONTROLLER_IMAGE_OVERRIDE: ${{ github.event.inputs.controller-image }}
-        KONG_LICENSE_DATA: ${{ steps.license.outputs.license }}
-        KONG_CLUSTER_VERSION: ${{ github.event.inputs.kubernetes-version }}
-        ISTIO_VERSION: ${{ github.event.inputs.istio-version }}
-
-    - name: run ${{ matrix.test }} with ${{ github.event.inputs.controller-image }} image (local)
-      if: ${{ github.event.inputs.controller-image == 'kong/kubernetes-ingress-controller:ci' }}
-      run: make test.e2e
-      env:
-        E2E_TEST_RUN: ${{ matrix.test }}
-        TEST_KONG_CONTROLLER_IMAGE_LOAD: ${{ github.event.inputs.controller-image }}
-        TEST_KONG_CONTROLLER_IMAGE_OVERRIDE: ${{ github.event.inputs.controller-image }}
-        TEST_KONG_KONNECT_ACCESS_TOKEN: ${{ secrets.K8S_TEAM_KONNECT_ACCESS_TOKEN }}
+        TEST_KONG_LOAD_IMAGES: ${{ github.event.inputs.controller-image == 'kong/kubernetes-ingress-controller:ci' }}
         KONG_LICENSE_DATA: ${{ steps.license.outputs.license }}
         KONG_CLUSTER_VERSION: ${{ github.event.inputs.kubernetes-version }}
         ISTIO_VERSION: ${{ github.event.inputs.istio-version }}

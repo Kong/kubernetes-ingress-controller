@@ -9,10 +9,14 @@ var (
 	// provisioner in the testing framework will be used.
 	clusterVersionStr = os.Getenv("KONG_CLUSTER_VERSION")
 
-	imageOverride         = os.Getenv("TEST_KONG_CONTROLLER_IMAGE_OVERRIDE")
-	imageLoad             = os.Getenv("TEST_KONG_CONTROLLER_IMAGE_LOAD")
+	// controllerImageOverride is the controller image to use in lieu of the default.
+	controllerImageOverride = os.Getenv("TEST_KONG_CONTROLLER_IMAGE_OVERRIDE")
+
+	// imageLoad is a boolean flag that indicates whether the controller and kong images should be loaded into the cluster.
+	imageLoad = os.Getenv("TEST_KONG_LOAD_IMAGES")
+
+	// kongImageOverride is the Kong image to use in lieu of the default.
 	kongImageOverride     = os.Getenv("TEST_KONG_IMAGE_OVERRIDE")
-	kongImageLoad         = os.Getenv("TEST_KONG_IMAGE_LOAD")
 	kongImagePullUsername = os.Getenv("TEST_KONG_PULL_USERNAME")
 	kongImagePullPassword = os.Getenv("TEST_KONG_PULL_PASSWORD")
 
@@ -26,3 +30,8 @@ var (
 	// It's not used when KONG_TEST_CLUSTER is set.
 	clusterProvider = os.Getenv("KONG_TEST_CLUSTER_PROVIDER")
 )
+
+// shouldLoadImages tells whether the controller and kong images should be loaded into the cluster.
+func shouldLoadImages() bool {
+	return imageLoad == "true"
+}

@@ -151,7 +151,9 @@ func createKINDBuilder() *environments.Builder {
 	}
 	builder = builder.WithClusterBuilder(clusterBuilder)
 	builder = builder.WithAddons(metallb.New())
-	builder = builder.WithAddons(buildImageLoadAddons(imageLoad, kongImageLoad)...)
+	if shouldLoadImages() {
+		builder = builder.WithAddons(buildImageLoadAddons(controllerImageOverride, kongImageOverride)...)
+	}
 	return builder
 }
 
@@ -163,7 +165,9 @@ func createExistingKINDBuilder(name string) (*environments.Builder, error) {
 	}
 	builder = builder.WithExistingCluster(cluster)
 	builder = builder.WithAddons(metallb.New())
-	builder = builder.WithAddons(buildImageLoadAddons(imageLoad, kongImageLoad)...)
+	if shouldLoadImages() {
+		builder = builder.WithAddons(buildImageLoadAddons(controllerImageOverride, kongImageOverride)...)
+	}
 	return builder, nil
 }
 

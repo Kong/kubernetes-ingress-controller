@@ -5,7 +5,7 @@ on:
 
 jobs:
   integration-tests:
-    name: integration-tests-${{ matrix.name }}
+    name: ${{ matrix.name }}
     runs-on: ubuntu-latest
     env:
       KONG_CLUSTER_VERSION: 'v1.26.0'

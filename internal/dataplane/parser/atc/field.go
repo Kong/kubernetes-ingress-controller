@@ -1,16 +1,13 @@
 package atc
 
 import (
-	"fmt"
+	"errors"
+	"net"
+	"net/http"
+	"strconv"
 	"strings"
 )
 
-// This file defines the field types, field transforms, and field constants used in Kong's expression router.
-// https://docs.konghq.com/gateway/latest/reference/router-expressions-language/ is the upstream reference that
-// describes these fields.
-
-// TransformLower instructs Kong to transform a field (for example, http.path) to lowercase before comparing it to
-// a value in a predicate expression. It can only be applied to the left side of a predicate expression.
 type TransformLower struct {
 	inner LHS
 }
@@ -20,62 +17,137 @@ func (t TransformLower) FieldType() FieldType {
 }
 
 func (t TransformLower) String() string {
-	return fmt.Sprintf("lower(%s)", t.inner.String())
+	return "lower(" + t.inner.String() + ")"
 }
 
-func NewTransformerLower(inner LHS) TransformLower {
-	return TransformLower{inner: inner}
+func (t TransformLower) ExtractValue(req *http.Request) Literal {
+	innerVal := t.inner.ExtractValue(req)
+	str, ok := innerVal.(StringLiteral)
+	if !ok {
+		return StringLiteral("")
+	}
+	return StringLiteral(string(str))
 }
 
-// StringField is defined for fields with constant name and having string type.
-// The inner string value is the name of the field.
-type StringField string
+type FieldNetProtocol struct{}
 
-func (f StringField) FieldType() FieldType {
+func (f FieldNetProtocol) FieldType() FieldType {
 	return FieldTypeString
 }
 
-func (f StringField) String() string {
-	return string(f)
+func (f FieldNetProtocol) String() string {
+	return "net.protocol"
 }
 
-// https://docs.konghq.com/gateway/latest/reference/router-expressions-language/#available-fields
+func (f FieldNetProtocol) ExtractValue(req *http.Request) Literal {
+	if req.TLS != nil {
+		return StringLiteral("https")
+	}
+	return StringLiteral("http")
+}
 
-const (
-	FieldNetProtocol StringField = "net.protocol"
-	FieldTLSSNI      StringField = "tls.sni"
-	FieldHTTPMethod  StringField = "http.method"
-	FieldHTTPHost    StringField = "http.host"
-	FieldHTTPPath    StringField = "http.path"
-)
+type FieldNetPort struct{}
 
-// IntField is defined for fields with constant name and having integer type.
-// The inner string value is the name of the field.
-type IntField string
-
-func (f IntField) FieldType() FieldType {
+func (f FieldNetPort) FieldType() FieldType {
 	return FieldTypeInt
 }
 
-func (f IntField) String() string {
-	return string(f)
+func (f FieldNetPort) String() string {
+	return "net.port"
 }
 
-// https://docs.konghq.com/gateway/latest/reference/router-expressions-language/#available-fields
-
-const (
-	FieldNetPort IntField = "net.port"
-)
-
-// HTTPHeaderField extracts the value of an HTTP header from the request.
-type HTTPHeaderField struct {
-	HeaderName string
+func (f FieldNetPort) ExtractValue(req *http.Request) Literal {
+	_, port, err := net.SplitHostPort(req.Host)
+	if err != nil {
+		if errors.Is(err, &net.AddrError{}) && strings.Contains(err.Error(), "missing ports") {
+			if req.TLS != nil {
+				return IntLiteral(443)
+			}
+			return IntLiteral(80)
+		}
+	}
+	intPort, err := strconv.Atoi(port)
+	if err != nil {
+		return IntLiteral(0)
+	}
+	return IntLiteral(intPort)
 }
 
-func (f HTTPHeaderField) FieldType() FieldType {
+type FieldTLSSNI struct{}
+
+func (f FieldTLSSNI) FieldType() FieldType {
 	return FieldTypeString
 }
 
-func (f HTTPHeaderField) String() string {
-	return "http.headers." + strings.ToLower(strings.ReplaceAll(f.HeaderName, "-", "_"))
+func (f FieldTLSSNI) String() string {
+	return "tls.sni"
+}
+
+func (f FieldTLSSNI) ExtractValue(req *http.Request) Literal {
+	host, _, _ := net.SplitHostPort(req.Host)
+	return StringLiteral(host)
+}
+
+type FieldHTTPMethod struct{}
+
+func (f FieldHTTPMethod) FieldType() FieldType {
+	return FieldTypeString
+}
+
+func (f FieldHTTPMethod) String() string {
+	return "http.method"
+}
+
+func (f FieldHTTPMethod) ExtractValue(req *http.Request) Literal {
+	method := req.Method
+	if method == "" {
+		method = "GET"
+	}
+	return StringLiteral(method)
+}
+
+type FieldHTTPHost struct{}
+
+func (f FieldHTTPHost) FieldType() FieldType {
+	return FieldTypeString
+}
+
+func (f FieldHTTPHost) String() string {
+	return "http.host"
+}
+
+func (f FieldHTTPHost) ExtractValue(req *http.Request) Literal {
+	host, _, _ := net.SplitHostPort(req.Host)
+	return StringLiteral(host)
+}
+
+type FieldHTTPPath struct{}
+
+func (f FieldHTTPPath) FieldType() FieldType {
+	return FieldTypeString
+}
+
+func (f FieldHTTPPath) String() string {
+	return "http.path"
+}
+
+func (f FieldHTTPPath) ExtractValue(req *http.Request) Literal {
+	return StringLiteral(req.URL.RawPath)
+}
+
+type FieldHTTPHeader struct {
+	headerName string
+}
+
+func (f FieldHTTPHeader) FieldType() FieldType {
+	return FieldTypeString
+}
+
+func (f FieldHTTPHeader) String() string {
+	return "http.header." + strings.ToLower(strings.ReplaceAll(f.headerName, "-", "_"))
+}
+
+func (f FieldHTTPHeader) ExtractValue(req *http.Request) Literal {
+	return (StringLiteral(req.Header.Get(f.headerName)))
+
 }

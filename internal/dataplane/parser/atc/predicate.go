@@ -19,90 +19,7 @@ type LHS interface {
 	FieldType() FieldType
 	// TODO(naming): use a better name for this method? "String" is too gerneral
 	String() string
-}
-
-type TransformLower struct {
-	inner LHS
-}
-
-func (t TransformLower) FieldType() FieldType {
-	return FieldTypeString
-}
-
-func (t TransformLower) String() string {
-	return "lower(" + t.inner.String() + ")"
-}
-
-type FieldNetProtocol struct{}
-
-func (f FieldNetProtocol) FieldType() FieldType {
-	return FieldTypeString
-}
-
-func (f FieldNetProtocol) String() string {
-	return "net.protocol"
-}
-
-type FieldNetPort struct{}
-
-func (f FieldNetPort) FieldType() FieldType {
-	return FieldTypeInt
-}
-
-func (f FieldNetPort) String() string {
-	return "net.port"
-}
-
-type FieldTLSSNI struct{}
-
-func (f FieldTLSSNI) FieldType() FieldType {
-	return FieldTypeString
-}
-
-func (f FieldTLSSNI) String() string {
-	return "tls.sni"
-}
-
-type FieldHTTPMethod struct{}
-
-func (f FieldHTTPMethod) FieldType() FieldType {
-	return FieldTypeString
-}
-
-func (f FieldHTTPMethod) String() string {
-	return "http.method"
-}
-
-type FieldHTTPHost struct{}
-
-func (f FieldHTTPHost) FieldType() FieldType {
-	return FieldTypeString
-}
-
-func (f FieldHTTPHost) String() string {
-	return "http.host"
-}
-
-type FieldHTTPPath struct{}
-
-func (f FieldHTTPPath) FieldType() FieldType {
-	return FieldTypeString
-}
-
-func (f FieldHTTPPath) String() string {
-	return "http.path"
-}
-
-type FieldHTTPHeader struct {
-	headerName string
-}
-
-func (f FieldHTTPHeader) FieldType() FieldType {
-	return FieldTypeString
-}
-
-func (f FieldHTTPHeader) String() string {
-	return "http.header." + strings.ToLower(strings.ReplaceAll(f.headerName, "-", "_"))
+	ExtractValue(*http.Request) Literal
 }
 
 type BinaryOperator string
@@ -194,5 +111,36 @@ func NewPredicate(lhs LHS, op BinaryOperator, rhs Literal) Predicate {
 	}
 }
 
-// TODO: define more concrete function to generate predicates with specified fields
-// like NewPredicateHTTPPath(path string, op BinaryOperator, value string) Predicate
+func NewPredicateHTTPPath(op BinaryOperator, value string) Predicate {
+	return Predicate{
+		field: FieldHTTPPath{},
+		op:    op,
+		value: StringLiteral(value),
+	}
+}
+
+func NewPrediacteHTTPHost(op BinaryOperator, value string) Predicate {
+	return Predicate{
+		field: FieldHTTPHost{},
+		op:    op,
+		value: StringLiteral(value),
+	}
+}
+
+func NewPredicateHTTPMethod(op BinaryOperator, value string) Predicate {
+	return Predicate{
+		field: FieldHTTPMethod{},
+		op:    op,
+		value: StringLiteral(value),
+	}
+}
+
+func NewPredicateHTTPHeader(key string, op BinaryOperator, value string) Predicate {
+	return Predicate{
+		field: FieldHTTPHeader{
+			headerName: key,
+		},
+		op:    op,
+		value: StringLiteral(value),
+	}
+}

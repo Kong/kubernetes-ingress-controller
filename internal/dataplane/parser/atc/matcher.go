@@ -42,7 +42,12 @@ func (m *OrMatcher) Matches(req *http.Request) bool {
 	return false
 }
 
-func Or(matchers ...Matcher) Matcher {
+func (m *OrMatcher) Or(matcher Matcher) *OrMatcher {
+	m.subMatchers = append(m.subMatchers, matcher)
+	return m
+}
+
+func Or(matchers ...Matcher) *OrMatcher {
 	return &OrMatcher{
 		subMatchers: matchers,
 	}
@@ -81,7 +86,12 @@ func (m *AndMatcher) Matches(req *http.Request) bool {
 	return true
 }
 
-func And(matchers ...Matcher) Matcher {
+func (m *AndMatcher) And(matcher Matcher) *AndMatcher {
+	m.subMatchers = append(m.subMatchers, matcher)
+	return m
+}
+
+func And(matchers ...Matcher) *AndMatcher {
 	return &AndMatcher{
 		subMatchers: matchers,
 	}

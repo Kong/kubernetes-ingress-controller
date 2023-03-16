@@ -58,7 +58,7 @@ jobs:
 
   # TODO: extract this as a separate workflow reading the dependencies versions from a file (not only Kind, but also
   # GKE, Istio, Kong, etc.)
-  # https://github.com/Kong/kubernetes-ingress-controller/pull/3724
+  # https://github.com/Kong/kubernetes-ingress-controller/issues/3349
   dependencies-versions:
     runs-on: ubuntu-latest
     outputs:
@@ -113,31 +113,13 @@ jobs:
         with:
           password: ${{ secrets.PULP_PASSWORD }}
 
-      # The only reason we need those 2 is the fact that TEST_KONG_CONTROLLER_IMAGE_LOAD
-      # is ultimately passed down to ktf's loadimage.Addon which uses "kind load docker-image ..."
-      # which fails when an image is not available on the cluster.
-      # Hence the non local version (where the image is pulled from an external registry)
-      # doesn't define TEST_KONG_CONTROLLER_IMAGE_LOAD.
-      # todo: consider adapting go code to handle both cases (local and non local) using a single env var.
-
-      - name: run ${{ matrix.test }} with remote image
-        if: ${{ !inputs.load-local-image }}
+      - name: run ${{ matrix.test }}
         run: make test.e2e
         env:
           E2E_TEST_RUN: ${{ matrix.test }}
           KONG_CLUSTER_VERSION: ${{ matrix.kubernetes-version }}
           TEST_KONG_CONTROLLER_IMAGE_OVERRIDE: ${{ inputs.kic-image }}
-          TEST_KONG_KONNECT_ACCESS_TOKEN: ${{ secrets.K8S_TEAM_KONNECT_ACCESS_TOKEN }}
-          KONG_LICENSE_DATA: ${{ steps.license.outputs.license }}
-          GOTESTSUM_JUNITFILE: "e2e-${{ matrix.test }}${{ matrix.kubernetes-version }}-tests.xml"
-
-      - name: run ${{ matrix.test }} with local image
-        if: ${{ inputs.load-local-image }}
-        run: make test.e2e
-        env:
-          E2E_TEST_RUN: ${{ matrix.test }}
-          KONG_CLUSTER_VERSION: ${{ matrix.kubernetes-version }}
-          TEST_KONG_CONTROLLER_IMAGE_LOAD: ${{ inputs.kic-image }}
+          TEST_KONG_LOAD_IMAGES: ${{ inputs.load-local-image }}
           TEST_KONG_KONNECT_ACCESS_TOKEN: ${{ secrets.K8S_TEAM_KONNECT_ACCESS_TOKEN }}
           KONG_LICENSE_DATA: ${{ steps.license.outputs.license }}
           GOTESTSUM_JUNITFILE: "e2e-${{ matrix.test }}${{ matrix.kubernetes-version }}-tests.xml"
@@ -189,7 +171,10 @@ jobs:
       - name: run ${{ matrix.test }}
         run: make test.e2e
         env:
-          # todo: make it possible to run GKE tests against a local image
+          # NOTE: The limitation of the GKE setup is that we cannot run tests against a local image,
+          # therefore we need to use the nightly one.
+          # TODO: Once we have a way to load images into GKE, we can use the local image.
+          # KTF issue that should enable it: https://github.com/Kong/kubernetes-testing-framework/issues/587
           TEST_KONG_CONTROLLER_IMAGE_OVERRIDE: "kong/nightly-ingress-controller:nightly"
           KONG_LICENSE_DATA: ${{ steps.license.outputs.license }}
           KONG_CLUSTER_VERSION: ${{ matrix.kubernetes-version }}
@@ -258,30 +243,11 @@ jobs:
         with:
           password: ${{ secrets.PULP_PASSWORD }}
 
-      # The only reason we need those 2 is the fact that TEST_KONG_CONTROLLER_IMAGE_LOAD
-      # is ultimately passed down to ktf's loadimage.Addon which uses "kind load docker-image ..."
-      # which fails when an image is not available on the cluster.
-      # Hence the non local version (where the image is pulled from an external registry)
-      # doesn't define TEST_KONG_CONTROLLER_IMAGE_LOAD.
-      # todo: consider adapting go code to handle both cases (local and non local) using a single env var.
-
-      - name: run Istio tests (local image)
-        if: ${{ inputs.load-local-image }}
-        run: make test.istio
-        env:
-          TEST_KONG_CONTROLLER_IMAGE_LOAD: ${{ inputs.kic-image }}
-          KONG_LICENSE_DATA: ${{ steps.license.outputs.license }}
-          KONG_CLUSTER_VERSION: ${{ matrix.kubernetes-version }}
-          ISTIO_VERSION: ${{ matrix.istio-version }}
-          NCPU: 1 # it was found that github actions (specifically) did not seem to perform well when spawning
-          # multiple kind clusters within a single job, so only 1 is allowed at a time.
-          GOTESTSUM_JUNITFILE: "istio-${{ matrix.kubernetes-version }}-${{ matrix.istio-version }}-tests.xml"
-
       - name: run Istio tests
-        if: ${{ !inputs.load-local-image }}
         run: make test.istio
         env:
           TEST_KONG_CONTROLLER_IMAGE_OVERRIDE: ${{ inputs.kic-image }}
+          TEST_KONG_LOAD_IMAGES: ${{ inputs.load-local-image }}
           KONG_LICENSE_DATA: ${{ steps.license.outputs.license }}
           KONG_CLUSTER_VERSION: ${{ matrix.kubernetes-version }}
           ISTIO_VERSION: ${{ matrix.istio-version }}

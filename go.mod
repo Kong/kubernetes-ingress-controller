@@ -3,7 +3,7 @@ module github.com/kong/kubernetes-ingress-controller/v2
 go 1.19
 
 require (
-	cloud.google.com/go/container v1.13.1
+	cloud.google.com/go/container v1.14.0
 	github.com/Masterminds/sprig/v3 v3.2.3
 	github.com/avast/retry-go/v4 v4.3.3
 	github.com/blang/semver/v4 v4.0.0
@@ -170,7 +170,7 @@ require (
 	golang.org/x/tools v0.6.0 // indirect
 	gomodules.xyz/jsonpatch/v2 v2.2.0 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
-	google.golang.org/genproto v0.0.0-20230303212802-e74f57abe488 // indirect
+	google.golang.org/genproto v0.0.0-20230306155012-7f2fa6fef1f4 // indirect
 	google.golang.org/grpc v1.53.0
 	google.golang.org/protobuf v1.28.1 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect

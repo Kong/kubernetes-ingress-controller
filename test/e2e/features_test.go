@@ -163,8 +163,10 @@ func TestWebhookUpdate(t *testing.T) {
 	require.NoError(t, err)
 	addons := []clusters.Addon{}
 	addons = append(addons, metallb.New())
-	if b, err := loadimage.NewBuilder().WithImage(imageLoad); err == nil {
-		addons = append(addons, b.Build())
+	if shouldLoadImages() {
+		if b, err := loadimage.NewBuilder().WithImage(controllerImageOverride); err == nil {
+			addons = append(addons, b.Build())
+		}
 	}
 	builder := environments.NewBuilder().WithExistingCluster(cluster).WithAddons(addons...)
 	env, err := builder.Build(ctx)

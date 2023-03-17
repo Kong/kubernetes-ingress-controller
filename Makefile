@@ -339,7 +339,6 @@ _test.integration: _check.container.environment gotestsum
 		GOFLAGS="-tags=$(GOTAGS)" \
 		KONG_CONTROLLER_FEATURE_GATES=$(KONG_CONTROLLER_FEATURE_GATES) \
 		GOTESTSUM_FORMAT=$(GOTESTSUM_FORMAT) \
-		PATH=$$PATH:$(PROJECT_DIR)/bin \
 		$(GOTESTSUM) -- $(GOTESTFLAGS) \
 		-timeout $(INTEGRATION_TEST_TIMEOUT) \
 		-parallel $(NCPU) \

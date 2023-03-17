@@ -61,7 +61,7 @@ func (p *Parser) ingressRulesFromKnativeIngress() ingressRules {
 			for j, rule := range rule.HTTP.Paths {
 				path := rule.Path
 
-				path = maybePrependRegexPrefix(path, regexPrefix, icp.EnableLegacyRegexDetection && p.flagEnabledRegexPathPrefix)
+				path = translators.MaybePrependRegexPrefix(path, regexPrefix, icp.EnableLegacyRegexDetection && p.flagEnabledRegexPathPrefix)
 				if path == "" {
 					path = "/"
 				}

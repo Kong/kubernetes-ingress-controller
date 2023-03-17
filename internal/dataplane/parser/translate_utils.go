@@ -3,7 +3,6 @@ package parser
 import (
 	"fmt"
 	"reflect"
-	"strings"
 
 	"github.com/kong/go-kong/kong"
 	"github.com/sirupsen/logrus"
@@ -12,7 +11,6 @@ import (
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/parser/translators"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/versions"
 )
@@ -162,21 +160,4 @@ func generateKongServiceFromBackendRefWithRuleNumber(
 		protocol,
 		backendRefs...,
 	)
-}
-
-// maybePrependRegexPrefix takes a path, controller regex prefix, and a legacy heuristic toggle. It returns the path
-// with the Kong regex path prefix if it either began with the controller prefix or did not, but matched the legacy
-// heuristic, and the heuristic was enabled.
-func maybePrependRegexPrefix(path, controllerPrefix string, applyLegacyHeuristic bool) string {
-	if strings.HasPrefix(path, controllerPrefix) {
-		path = strings.Replace(path, controllerPrefix, translators.KongPathRegexPrefix, 1)
-	} else if applyLegacyHeuristic {
-		// this regex matches if the path _is not_ considered a regex by Kong 2.x
-		if LegacyRegexPathExpression.FindString(path) == "" {
-			if !strings.HasPrefix(path, translators.KongPathRegexPrefix) {
-				path = translators.KongPathRegexPrefix + path
-			}
-		}
-	}
-	return path
 }

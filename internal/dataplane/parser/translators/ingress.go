@@ -2,16 +2,19 @@ package translators
 
 import (
 	"fmt"
-	"sort"
+	"regexp"
 	"strings"
 	"time"
 
 	"github.com/kong/go-kong/kong"
+	"github.com/samber/lo"
 	netv1 "k8s.io/api/networking/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
+	"github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1alpha1"
 )
 
 // -----------------------------------------------------------------------------
@@ -22,15 +25,22 @@ import (
 // produce a translated set of kong.Services and kong.Routes which will come
 // wrapped in a kongstate.Service object.
 func TranslateIngress(
-	ingress *netv1.Ingress,
-	index *IngressTranslationIndex,
-	addRegexPrefixFn func(string) *string,
+	ingressList []*netv1.Ingress,
+	icp v1alpha1.IngressClassParametersSpec,
 	flagEnabledRegexPathPrefix bool,
-) []*kongstate.Service {
-	index.add(ingress, addRegexPrefixFn)
-	kongStateServices := kongstate.Services(index.translate(flagEnabledRegexPathPrefix))
-	sort.Sort(kongStateServices)
-	return kongStateServices
+	reportKubernetesObjectUpdateFn func(client.Object),
+) kongstate.Services {
+	ingressTranslationIndex := NewIngressTranslationIndex()
+
+	// Add every ingress to the index.
+	for _, ingress := range ingressList {
+		maybePrependRegexPrefixFn := MaybePrependRegexPrefixForIngressV1Fn(ingress, icp.EnableLegacyRegexDetection && flagEnabledRegexPathPrefix)
+		ingressTranslationIndex.Add(ingress, maybePrependRegexPrefixFn)
+		reportKubernetesObjectUpdateFn(ingress)
+	}
+
+	// Translate the index into Kong Services.
+	return ingressTranslationIndex.Translate(flagEnabledRegexPathPrefix)
 }
 
 // -----------------------------------------------------------------------------
@@ -85,7 +95,7 @@ func NewIngressTranslationIndex() *IngressTranslationIndex {
 	}
 }
 
-func (i *IngressTranslationIndex) add(ingress *netv1.Ingress, addRegexPrefixFn func(string) *string) {
+func (i *IngressTranslationIndex) Add(ingress *netv1.Ingress, addRegexPrefixFn func(string) *string) {
 	for _, ingressRule := range ingress.Spec.Rules {
 		if ingressRule.HTTP == nil || len(ingressRule.HTTP.Paths) < 1 {
 			continue
@@ -134,7 +144,7 @@ func (i *IngressTranslationIndex) add(ingress *netv1.Ingress, addRegexPrefixFn f
 	}
 }
 
-func (i *IngressTranslationIndex) translate(flagEnabledRegexPathPrefix bool) []*kongstate.Service {
+func (i *IngressTranslationIndex) Translate(flagEnabledRegexPathPrefix bool) kongstate.Services {
 	kongStateServiceCache := make(map[string]*kongstate.Service)
 	for _, meta := range i.cache {
 		kongServiceName := fmt.Sprintf(
@@ -148,7 +158,7 @@ func (i *IngressTranslationIndex) translate(flagEnabledRegexPathPrefix bool) []*
 			kongStateService = meta.translateIntoKongStateService(kongServiceName, meta.servicePort)
 		}
 
-		route := meta.translateIntoKongRoutes(flagEnabledRegexPathPrefix)
+		route := meta.translateIntoKongRoute(flagEnabledRegexPathPrefix)
 		kongStateService.Routes = append(kongStateService.Routes, *route)
 
 		kongStateServiceCache[kongServiceName] = kongStateService
@@ -159,7 +169,9 @@ func (i *IngressTranslationIndex) translate(flagEnabledRegexPathPrefix bool) []*
 		kongStateServices = append(kongStateServices, kongStateService)
 	}
 
-	return kongStateServices
+	out := kongstate.Services(kongStateServices)
+
+	return out
 }
 
 // -----------------------------------------------------------------------------
@@ -207,7 +219,7 @@ func (m *ingressTranslationMeta) translateIntoKongStateService(kongServiceName s
 	}
 }
 
-func (m *ingressTranslationMeta) translateIntoKongRoutes(flagEnabledRegexPathPrefix bool) *kongstate.Route {
+func (m *ingressTranslationMeta) translateIntoKongRoute(flagEnabledRegexPathPrefix bool) *kongstate.Route {
 	ingressHost := m.ingressHost
 	if strings.Contains(ingressHost, "*") {
 		// '_' is not allowed in host, so we use '_' to replace '*' since '*' is not allowed in Kong.
@@ -321,4 +333,37 @@ func flattenMultipleSlashes(path string) string {
 		out = append(out, c)
 	}
 	return string(out)
+}
+
+// legacyRegexPathExpression is the regular expression used by Kong <3.0 to determine if a path is not a regex.
+var legacyRegexPathExpression = regexp.MustCompile(`^[a-zA-Z0-9\.\-_~/%]*$`)
+
+// MaybePrependRegexPrefix takes a path, controller regex prefix, and a legacy heuristic toggle. It returns the path
+// with the Kong regex path prefix if it either began with the controller prefix or did not, but matched the legacy
+// heuristic, and the heuristic was enabled.
+func MaybePrependRegexPrefix(path, controllerPrefix string, applyLegacyHeuristic bool) string {
+	if strings.HasPrefix(path, controllerPrefix) {
+		path = strings.Replace(path, controllerPrefix, KongPathRegexPrefix, 1)
+	} else if applyLegacyHeuristic {
+		// this regex matches if the path _is not_ considered a regex by Kong 2.x
+		if legacyRegexPathExpression.FindString(path) == "" {
+			if !strings.HasPrefix(path, KongPathRegexPrefix) {
+				path = KongPathRegexPrefix + path
+			}
+		}
+	}
+	return path
+}
+
+// MaybePrependRegexPrefixForIngressV1Fn returns a function that prepends a regex prefix to a path for a given netv1.Ingress.
+func MaybePrependRegexPrefixForIngressV1Fn(ingress *netv1.Ingress, applyLegacyHeuristic bool) func(path string) *string {
+	// If the ingress has a regex prefix annotation, use that, otherwise use the controller default.
+	regexPrefix := ControllerPathRegexPrefix
+	if prefix, ok := ingress.ObjectMeta.Annotations[annotations.AnnotationPrefix+annotations.RegexPrefixKey]; ok {
+		regexPrefix = prefix
+	}
+
+	return func(path string) *string {
+		return lo.ToPtr(MaybePrependRegexPrefix(path, regexPrefix, applyLegacyHeuristic))
+	}
 }

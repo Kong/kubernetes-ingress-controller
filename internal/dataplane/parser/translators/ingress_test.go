@@ -1,19 +1,21 @@
 package translators
 
 import (
+	"sort"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/kong/go-kong/kong"
-	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	netv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
+	"github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1alpha1"
 )
 
 var (
@@ -32,14 +34,14 @@ func expectedParentIngress() *netv1.Ingress {
 func TestTranslateIngress(t *testing.T) {
 	tts := []struct {
 		name           string
-		ingress        *netv1.Ingress
+		ingress        []*netv1.Ingress
 		addRegexPrefix bool
-		expected       []*kongstate.Service
+		expected       kongstate.Services
 	}{
 		{
 			name:           "a basic ingress resource with a single rule and prefix path type",
 			addRegexPrefix: true,
-			ingress: &netv1.Ingress{
+			ingress: []*netv1.Ingress{{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-ingress",
 					Namespace: corev1.NamespaceDefault,
@@ -66,7 +68,7 @@ func TestTranslateIngress(t *testing.T) {
 						},
 					}},
 				},
-			},
+			}},
 			expected: []*kongstate.Service{{
 				Namespace: corev1.NamespaceDefault,
 				Service: kong.Service{
@@ -111,78 +113,82 @@ func TestTranslateIngress(t *testing.T) {
 		},
 		{
 			name: "a basic ingress resource with a single rule, and only one path results in a single kong service and route",
-			ingress: &netv1.Ingress{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-ingress",
-					Namespace: corev1.NamespaceDefault,
-				},
-				Spec: netv1.IngressSpec{
-					Rules: []netv1.IngressRule{{
-						Host: "konghq.com",
-						IngressRuleValue: netv1.IngressRuleValue{
-							HTTP: &netv1.HTTPIngressRuleValue{
-								Paths: []netv1.HTTPIngressPath{{
-									Path: "/api/",
-									Backend: netv1.IngressBackend{
-										Service: &netv1.IngressServiceBackend{
-											Name: "test-service",
-											Port: netv1.ServiceBackendPort{
-												Name:   "http",
-												Number: 80,
-											},
-										},
-									},
-								}},
-							},
-						},
-					}},
-				},
-			},
-			expected: []*kongstate.Service{{
-				Namespace: corev1.NamespaceDefault,
-				Service: kong.Service{
-					Name:           kong.String("default.test-service.80"),
-					Host:           kong.String("test-service.default.80.svc"),
-					ConnectTimeout: kong.Int(int(defaultServiceTimeout.Milliseconds())),
-					Path:           kong.String("/"),
-					Port:           kong.Int(80),
-					Protocol:       kong.String("http"),
-					Retries:        kong.Int(defaultRetries),
-					ReadTimeout:    kong.Int(int(defaultServiceTimeout.Milliseconds())),
-					WriteTimeout:   kong.Int(int(defaultServiceTimeout.Milliseconds())),
-				},
-				Routes: []kongstate.Route{{
-					Ingress: util.K8sObjectInfo{
+			ingress: []*netv1.Ingress{
+				{
+					ObjectMeta: metav1.ObjectMeta{
 						Name:      "test-ingress",
 						Namespace: corev1.NamespaceDefault,
 					},
-					Route: kong.Route{
-						Name:              kong.String("default.test-ingress.test-service.konghq.com.80"),
-						Hosts:             kong.StringSlice("konghq.com"),
-						Paths:             kong.StringSlice("/api/"), // default ImplementationSpecific
-						PreserveHost:      kong.Bool(true),
-						Protocols:         kong.StringSlice("http", "https"),
-						RegexPriority:     kong.Int(0),
-						StripPath:         kong.Bool(false),
-						ResponseBuffering: kong.Bool(true),
-						RequestBuffering:  kong.Bool(true),
-						Tags:              kong.StringSlice("k8s-name:test-ingress", "k8s-namespace:default"),
+					Spec: netv1.IngressSpec{
+						Rules: []netv1.IngressRule{{
+							Host: "konghq.com",
+							IngressRuleValue: netv1.IngressRuleValue{
+								HTTP: &netv1.HTTPIngressRuleValue{
+									Paths: []netv1.HTTPIngressPath{{
+										Path: "/api/",
+										Backend: netv1.IngressBackend{
+											Service: &netv1.IngressServiceBackend{
+												Name: "test-service",
+												Port: netv1.ServiceBackendPort{
+													Name:   "http",
+													Number: 80,
+												},
+											},
+										},
+									}},
+								},
+							},
+						}},
 					},
-				}},
-				Backends: []kongstate.ServiceBackend{{
-					Name:      "test-service",
+				},
+			},
+			expected: []*kongstate.Service{
+				{
 					Namespace: corev1.NamespaceDefault,
-					PortDef: kongstate.PortDef{
-						Mode:   kongstate.PortModeByNumber,
-						Number: 80,
+					Service: kong.Service{
+						Name:           kong.String("default.test-service.80"),
+						Host:           kong.String("test-service.default.80.svc"),
+						ConnectTimeout: kong.Int(int(defaultServiceTimeout.Milliseconds())),
+						Path:           kong.String("/"),
+						Port:           kong.Int(80),
+						Protocol:       kong.String("http"),
+						Retries:        kong.Int(defaultRetries),
+						ReadTimeout:    kong.Int(int(defaultServiceTimeout.Milliseconds())),
+						WriteTimeout:   kong.Int(int(defaultServiceTimeout.Milliseconds())),
 					},
-				}},
-				Parent: expectedParentIngress(),
-			}},
+					Routes: []kongstate.Route{{
+						Ingress: util.K8sObjectInfo{
+							Name:      "test-ingress",
+							Namespace: corev1.NamespaceDefault,
+						},
+						Route: kong.Route{
+							Name:              kong.String("default.test-ingress.test-service.konghq.com.80"),
+							Hosts:             kong.StringSlice("konghq.com"),
+							Paths:             kong.StringSlice("/api/"), // default ImplementationSpecific
+							PreserveHost:      kong.Bool(true),
+							Protocols:         kong.StringSlice("http", "https"),
+							RegexPriority:     kong.Int(0),
+							StripPath:         kong.Bool(false),
+							ResponseBuffering: kong.Bool(true),
+							RequestBuffering:  kong.Bool(true),
+							Tags:              kong.StringSlice("k8s-name:test-ingress", "k8s-namespace:default"),
+						},
+					}},
+					Backends: []kongstate.ServiceBackend{{
+						Name:      "test-service",
+						Namespace: corev1.NamespaceDefault,
+						PortDef: kongstate.PortDef{
+							Mode:   kongstate.PortModeByNumber,
+							Number: 80,
+						},
+					}},
+					Parent: expectedParentIngress(),
+				},
+			},
 		},
 		{
 			name: "a basic ingress resource with a single rule and prefix path type",
-			ingress: &netv1.Ingress{
+			ingress: []*netv1.Ingress{{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-ingress",
 					Namespace: corev1.NamespaceDefault,
@@ -209,7 +215,7 @@ func TestTranslateIngress(t *testing.T) {
 						},
 					}},
 				},
-			},
+			}},
 			expected: []*kongstate.Service{{
 				Namespace: corev1.NamespaceDefault,
 				Service: kong.Service{
@@ -254,7 +260,7 @@ func TestTranslateIngress(t *testing.T) {
 		},
 		{
 			name: "an ingress with path type exact gets a kong route with an exact path match",
-			ingress: &netv1.Ingress{
+			ingress: []*netv1.Ingress{{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-ingress",
 					Namespace: corev1.NamespaceDefault,
@@ -281,7 +287,7 @@ func TestTranslateIngress(t *testing.T) {
 						},
 					}},
 				},
-			},
+			}},
 			expected: []*kongstate.Service{{
 				Namespace: corev1.NamespaceDefault,
 				Service: kong.Service{
@@ -326,7 +332,7 @@ func TestTranslateIngress(t *testing.T) {
 		},
 		{
 			name: "an Ingress resource with implementation specific path type doesn't modify the path",
-			ingress: &netv1.Ingress{
+			ingress: []*netv1.Ingress{{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-ingress",
 					Namespace: corev1.NamespaceDefault,
@@ -353,7 +359,7 @@ func TestTranslateIngress(t *testing.T) {
 						},
 					}},
 				},
-			},
+			}},
 			expected: []*kongstate.Service{{
 				Namespace: corev1.NamespaceDefault,
 				Service: kong.Service{
@@ -398,7 +404,7 @@ func TestTranslateIngress(t *testing.T) {
 		},
 		{
 			name: "an Ingress resource with paths with double /'s gets flattened",
-			ingress: &netv1.Ingress{
+			ingress: []*netv1.Ingress{{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-ingress",
 					Namespace: corev1.NamespaceDefault,
@@ -424,7 +430,7 @@ func TestTranslateIngress(t *testing.T) {
 						},
 					}},
 				},
-			},
+			}},
 			expected: []*kongstate.Service{{
 				Namespace: corev1.NamespaceDefault,
 				Service: kong.Service{
@@ -469,7 +475,7 @@ func TestTranslateIngress(t *testing.T) {
 		},
 		{
 			name: "empty paths get treated as '/'",
-			ingress: &netv1.Ingress{
+			ingress: []*netv1.Ingress{{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-ingress",
 					Namespace: corev1.NamespaceDefault,
@@ -495,7 +501,7 @@ func TestTranslateIngress(t *testing.T) {
 						},
 					}},
 				},
-			},
+			}},
 			expected: []*kongstate.Service{{
 				Namespace: corev1.NamespaceDefault,
 				Service: kong.Service{
@@ -540,7 +546,7 @@ func TestTranslateIngress(t *testing.T) {
 		},
 		{
 			name: "multiple and various paths get compiled together properly",
-			ingress: &netv1.Ingress{
+			ingress: []*netv1.Ingress{{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-ingress",
 					Namespace: corev1.NamespaceDefault,
@@ -631,7 +637,7 @@ func TestTranslateIngress(t *testing.T) {
 						},
 					}},
 				},
-			},
+			}},
 			expected: []*kongstate.Service{{
 				Namespace: corev1.NamespaceDefault,
 				Service: kong.Service{
@@ -683,7 +689,7 @@ func TestTranslateIngress(t *testing.T) {
 		},
 		{
 			name: "when no host is provided, all hosts are matched",
-			ingress: &netv1.Ingress{
+			ingress: []*netv1.Ingress{{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-ingress",
 					Namespace: corev1.NamespaceDefault,
@@ -773,7 +779,7 @@ func TestTranslateIngress(t *testing.T) {
 						},
 					}},
 				},
-			},
+			}},
 			expected: []*kongstate.Service{{
 				Namespace: corev1.NamespaceDefault,
 				Service: kong.Service{
@@ -824,7 +830,7 @@ func TestTranslateIngress(t *testing.T) {
 		},
 		{
 			name: "when there are multiple backends services, paths wont be combined and separate kong services will be provided",
-			ingress: &netv1.Ingress{
+			ingress: []*netv1.Ingress{{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-ingress",
 					Namespace: corev1.NamespaceDefault,
@@ -864,7 +870,7 @@ func TestTranslateIngress(t *testing.T) {
 						},
 					}},
 				},
-			},
+			}},
 			expected: []*kongstate.Service{
 				{
 					Namespace: corev1.NamespaceDefault,
@@ -956,7 +962,7 @@ func TestTranslateIngress(t *testing.T) {
 		},
 		{
 			name: "when there are multiple ingress rules with overlapping host and service, separate kong services will be provided",
-			ingress: &netv1.Ingress{
+			ingress: []*netv1.Ingress{{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-ingress",
 					Namespace: corev1.NamespaceDefault,
@@ -1007,7 +1013,7 @@ func TestTranslateIngress(t *testing.T) {
 						},
 					},
 				},
-			},
+			}},
 			expected: []*kongstate.Service{
 				{
 					Namespace: corev1.NamespaceDefault,
@@ -1099,7 +1105,7 @@ func TestTranslateIngress(t *testing.T) {
 		},
 		{
 			name: "* in host is replaced to _",
-			ingress: &netv1.Ingress{
+			ingress: []*netv1.Ingress{{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-ingress",
 					Namespace: corev1.NamespaceDefault,
@@ -1125,7 +1131,7 @@ func TestTranslateIngress(t *testing.T) {
 						},
 					}},
 				},
-			},
+			}},
 			expected: []*kongstate.Service{{
 				Namespace: corev1.NamespaceDefault,
 				Service: kong.Service{
@@ -1170,7 +1176,7 @@ func TestTranslateIngress(t *testing.T) {
 		},
 		{
 			name: "use port name when service port number is not provided",
-			ingress: &netv1.Ingress{
+			ingress: []*netv1.Ingress{{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-ingress",
 					Namespace: corev1.NamespaceDefault,
@@ -1199,7 +1205,7 @@ func TestTranslateIngress(t *testing.T) {
 						},
 					}},
 				},
-			},
+			}},
 			expected: []*kongstate.Service{{
 				Namespace: corev1.NamespaceDefault,
 				Service: kong.Service{
@@ -1248,13 +1254,90 @@ func TestTranslateIngress(t *testing.T) {
 				Parent: expectedParentIngress(),
 			}},
 		},
+		{
+			name: "use implicit port in service name when service port number nor name is provided",
+			ingress: []*netv1.Ingress{{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-ingress",
+					Namespace: corev1.NamespaceDefault,
+				},
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "Ingress",
+					APIVersion: "networking.k8s.io/v1",
+				},
+				Spec: netv1.IngressSpec{
+					Rules: []netv1.IngressRule{
+						{
+							Host: "konghq.com",
+							IngressRuleValue: netv1.IngressRuleValue{
+								HTTP: &netv1.HTTPIngressRuleValue{
+									Paths: []netv1.HTTPIngressPath{{
+										Path: "/v1/api/",
+										Backend: netv1.IngressBackend{
+											Service: &netv1.IngressServiceBackend{
+												Name: "test-service",
+												Port: netv1.ServiceBackendPort{}, // no port number or name
+											},
+										},
+									}},
+								},
+							},
+						},
+					},
+				},
+			}},
+			expected: []*kongstate.Service{{
+				Namespace: corev1.NamespaceDefault,
+				Service: kong.Service{
+					Name:           kong.String("default.test-service.implicitPort"),
+					Host:           kong.String("test-service.default.implicitPort.svc"),
+					ConnectTimeout: kong.Int(int(defaultServiceTimeout.Milliseconds())),
+					Path:           kong.String("/"),
+					Port:           kong.Int(80),
+					Protocol:       kong.String("http"),
+					Retries:        kong.Int(defaultRetries),
+					ReadTimeout:    kong.Int(int(defaultServiceTimeout.Milliseconds())),
+					WriteTimeout:   kong.Int(int(defaultServiceTimeout.Milliseconds())),
+				},
+				Routes: []kongstate.Route{{
+					Ingress: util.K8sObjectInfo{
+						Name:      "test-ingress",
+						Namespace: corev1.NamespaceDefault,
+					},
+					Route: kong.Route{
+						Name:              kong.String("default.test-ingress.test-service.konghq.com.implicitPort"),
+						Hosts:             kong.StringSlice("konghq.com"),
+						Paths:             kong.StringSlice("/v1/api/"),
+						PreserveHost:      kong.Bool(true),
+						Protocols:         kong.StringSlice("http", "https"),
+						RegexPriority:     kong.Int(0),
+						StripPath:         kong.Bool(false),
+						ResponseBuffering: kong.Bool(true),
+						RequestBuffering:  kong.Bool(true),
+						Tags: kong.StringSlice(
+							"k8s-name:test-ingress",
+							"k8s-namespace:default",
+							"k8s-kind:Ingress",
+							"k8s-group:networking.k8s.io",
+							"k8s-version:v1",
+						),
+					},
+				}},
+				Backends: []kongstate.ServiceBackend{{
+					Name:      "test-service",
+					Namespace: corev1.NamespaceDefault,
+					PortDef: kongstate.PortDef{
+						Mode: kongstate.PortModeImplicit,
+					},
+				}},
+				Parent: expectedParentIngress(),
+			}},
+		},
 	}
 
 	for _, tt := range tts {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			index := NewIngressTranslationIndex()
-
 			checkOnlyObjectMeta := cmp.Transformer("checkOnlyObjectMeta", func(i *netv1.Ingress) *netv1.Ingress {
 				// In the result we only care about ingresses' metadata being equal.
 				// We ignore specification to simplify tests.
@@ -1262,8 +1345,14 @@ func TestTranslateIngress(t *testing.T) {
 					ObjectMeta: i.ObjectMeta,
 				}
 			})
-			noopAddRegexPrefix := func(s string) *string { return lo.ToPtr(s) }
-			diff := cmp.Diff(tt.expected, TranslateIngress(tt.ingress, index, noopAddRegexPrefix, tt.addRegexPrefix), checkOnlyObjectMeta)
+			noopRegisterObjectUpdate := func(client.Object) {}
+			icp := v1alpha1.IngressClassParametersSpec{}
+			services := TranslateIngress(tt.ingress, icp, tt.addRegexPrefix, noopRegisterObjectUpdate)
+
+			// Sort the services to ensure consistent ordering when comparing expected results.
+			sort.Sort(services)
+
+			diff := cmp.Diff(tt.expected, services, checkOnlyObjectMeta)
 			require.Empty(t, diff, "expected no difference between expected and translated ingress")
 		})
 	}

@@ -20,7 +20,7 @@ jobs:
       - name: run unit tests
         run: make test.unit
         env:
-          JUNIT_REPORT: unit-tests.xml
+          GOTESTSUM_JUNITFILE: unit-tests.xml
 
       - name: collect test coverage
         uses: actions/upload-artifact@v3

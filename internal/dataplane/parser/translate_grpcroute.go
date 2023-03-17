@@ -76,13 +76,35 @@ func (p *Parser) ingressRulesFromGRPCRoute(result *ingressRules, grpcroute *gate
 	return nil
 }
 
+func getGRPCMatchDefaults() (
+	map[gatewayv1alpha2.GRPCMethodMatchType]string,
+	map[gatewayv1alpha2.GRPCMethodMatchType]string,
+) {
+	// Kong routes derived from a GRPCRoute use a path composed of the match's gRPC service and method
+	// If either the service or method is omitted, there is a default regex determined by the match type
+	// https://gateway-api.sigs.k8s.io/geps/gep-1016/#matcher-types describes the defaults
+
+	// default path components for the GRPC service
+	return map[gatewayv1alpha2.GRPCMethodMatchType]string{
+			gatewayv1alpha2.GRPCMethodMatchType(""):          ".+",
+			gatewayv1alpha2.GRPCMethodMatchExact:             ".+",
+			gatewayv1alpha2.GRPCMethodMatchRegularExpression: ".+",
+		},
+		// default path components for the GRPC method
+		map[gatewayv1alpha2.GRPCMethodMatchType]string{
+			gatewayv1alpha2.GRPCMethodMatchType(""):          "",
+			gatewayv1alpha2.GRPCMethodMatchExact:             "",
+			gatewayv1alpha2.GRPCMethodMatchRegularExpression: ".+",
+		}
+}
+
 func generateKongRoutesFromGRPCRouteRule(grpcroute *gatewayv1alpha2.GRPCRoute, ruleNumber int, rule gatewayv1alpha2.GRPCRouteRule) []kongstate.Route {
 	routes := make([]kongstate.Route, 0, len(rule.Matches))
 
 	// gather the k8s object information and hostnames from the grpcroute
 	ingressObjectInfo := util.FromK8sObject(grpcroute)
 
-	for matchNumber := range rule.Matches {
+	for matchNumber, match := range rule.Matches {
 		routeName := fmt.Sprintf(
 			"grpcroute.%s.%s.%d.%d",
 			grpcroute.Namespace,
@@ -99,8 +121,38 @@ func generateKongRoutesFromGRPCRouteRule(grpcroute *gatewayv1alpha2.GRPCRoute, r
 			},
 		}
 
+		if match.Method != nil {
+			serviceMap, methodMap := getGRPCMatchDefaults()
+			var method, service string
+			matchMethod := match.Method.Method
+			matchService := match.Method.Service
+			var matchType gatewayv1alpha2.GRPCMethodMatchType
+			if match.Method.Type == nil {
+				matchType = gatewayv1alpha2.GRPCMethodMatchExact
+			} else {
+				matchType = *match.Method.Type
+			}
+			if matchMethod == nil {
+				method = methodMap[matchType]
+			} else {
+				method = *matchMethod
+			}
+			if matchService == nil {
+				service = serviceMap[matchType]
+			} else {
+				service = *matchService
+			}
+			r.Paths = append(r.Paths, kong.String(fmt.Sprintf("~/%s/%s", service, method)))
+		}
+
 		if len(grpcroute.Spec.Hostnames) > 0 {
 			r.Hosts = getGRPCRouteHostnamesAsSliceOfStringPointers(grpcroute)
+		}
+
+		r.Headers = map[string][]string{}
+		for _, hmatch := range match.Headers {
+			name := string(hmatch.Name)
+			r.Headers[name] = append(r.Headers[name], hmatch.Value)
 		}
 
 		routes = append(routes, r)

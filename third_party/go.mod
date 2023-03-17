@@ -7,6 +7,7 @@ require (
 	github.com/elastic/crd-ref-docs v0.0.8
 	github.com/go-delve/delve v1.20.1
 	github.com/golangci/golangci-lint v1.51.2
+	github.com/jstemmer/go-junit-report/v2 v2.0.0
 	gotest.tools/gotestsum v1.9.0
 	honnef.co/go/tools v0.4.3
 	k8s.io/code-generator v0.26.2

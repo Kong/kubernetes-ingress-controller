@@ -20,7 +20,7 @@ jobs:
       - name: run conformance tests
         run: make test.conformance
         env:
-          GOTESTSUM_JUNITFILE: "conformance-tests.xml"
+          JUNIT_REPORT: "conformance-tests.xml"
 
       - name: collect test report
         if: ${{ always() }}

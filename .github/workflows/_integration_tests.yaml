@@ -74,7 +74,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           KONG_LICENSE_DATA: ${{ steps.license.outputs.license }}
           KONG_CONTROLLER_FEATURE_GATES: "${{ matrix.feature_gates }}"
-          GOTESTSUM_JUNITFILE: "integration-tests-${{ matrix.name }}.xml"
+          JUNIT_REPORT: "integration-tests-${{ matrix.name }}.xml"
           TEST_KONG_ROUTER_FLAVOR: ${{ matrix.router-flavor }}
 
       - name: run ${{ matrix.name }} - invalid config
@@ -83,7 +83,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           KONG_LICENSE_DATA: ${{ steps.license.outputs.license }}
           KONG_CONTROLLER_FEATURE_GATES: "${{ matrix.feature_gates }}"
-          GOTESTSUM_JUNITFILE: "integration-tests-invalid-config-${{ matrix.name }}.xml"
+          JUNIT_REPORT: "integration-tests-invalid-config-${{ matrix.name }}.xml"
           GOTESTFLAGS: "-run=TestIngressRecoverFromInvalidPath"
           TEST_RUN_INVALID_CONFIG_CASES: "true"
 

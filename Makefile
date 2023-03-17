@@ -339,6 +339,13 @@ test.unit.pretty:
 _check.container.environment:
 	@./scripts/check-container-environment.sh
 
+# Integration tests don't use gotestsum because there's a data race issue
+# when go toolchain is writing to os.Stderr which is being read in go-kong
+# https://github.com/Kong/go-kong/blob/c71247b5c8aae2/kong/client.go#L182
+# which in turn produces a data race becuase gotestsum needs go test invoked with
+# -json which enables the problematic branch in go toolchain (that writes to os.Stderr).
+#
+# Related issue: https://github.com/Kong/kubernetes-ingress-controller/issues/3754
 .PHONY: _test.integration
 _test.integration: _check.container.environment go-junit-report
 	KONG_CLUSTER_VERSION="$(KONG_CLUSTER_VERSION)" \

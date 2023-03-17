@@ -91,9 +91,14 @@ skaffold: ## Download skaffold locally if necessary.
 	@$(MAKE) _download_tool TOOL=skaffold
 
 STATICCHECK = $(PROJECT_DIR)/bin/staticcheck
-.PHONY: staticcheck
+.PHONY: staticcheck.download
 staticcheck.download: ## Download staticcheck locally if necessary.
 	@$(MAKE) _download_tool TOOL=staticcheck
+
+GOJUNIT= $(PROJECT_DIR)/bin/go-junit-report
+.PHONY: go-junit-report
+go-junit-report: ## Download go-junit-report locally if necessary.
+	@$(MAKE) _download_tool TOOL=go-junit-report
 
 # ------------------------------------------------------------------------------
 # Build
@@ -289,15 +294,17 @@ test: test.unit
 test.all: test.unit test.integration test.conformance
 
 .PHONY: test.conformance
-test.conformance: gotestsum
+test.conformance: go-junit-report
 	@./scripts/check-container-environment.sh
-	@TEST_DATABASE_MODE="off" GOFLAGS="-tags=conformance_tests" \
-	GOTESTSUM_FORMAT=$(GOTESTSUM_FORMAT) \
-	$(GOTESTSUM) -- \
+	@TEST_DATABASE_MODE="off" \
+		GOFLAGS="-tags=conformance_tests" \
+		go test \
+		-v \
 		-race $(GOTESTFLAGS) \
 		-timeout $(INTEGRATION_TEST_TIMEOUT) \
 		-parallel $(NCPU) \
-		./test/conformance
+		./test/conformance |
+	$(GOJUNIT) -iocopy -out $(JUNIT_REPORT) -set-exit-code --parser gotest
 
 .PHONY: test.integration
 test.integration: test.integration.dbless test.integration.postgres test.integration.cp
@@ -333,20 +340,21 @@ _check.container.environment:
 	@./scripts/check-container-environment.sh
 
 .PHONY: _test.integration
-_test.integration: _check.container.environment gotestsum
+_test.integration: _check.container.environment go-junit-report
 	KONG_CLUSTER_VERSION="$(KONG_CLUSTER_VERSION)" \
 		TEST_DATABASE_MODE="$(DBMODE)" \
 		GOFLAGS="-tags=$(GOTAGS)" \
 		KONG_CONTROLLER_FEATURE_GATES=$(KONG_CONTROLLER_FEATURE_GATES) \
-		GOTESTSUM_FORMAT=$(GOTESTSUM_FORMAT) \
-		$(GOTESTSUM) -- $(GOTESTFLAGS) \
+		go test $(GOTESTFLAGS) \
+		-v \
 		-timeout $(INTEGRATION_TEST_TIMEOUT) \
 		-parallel $(NCPU) \
 		-race \
 		-covermode=atomic \
 		-coverpkg=$(PKG_LIST) \
 		-coverprofile=$(COVERAGE_OUT) \
-		./test/integration
+		./test/integration | \
+	$(GOJUNIT) -iocopy -out $(JUNIT_REPORT) -set-exit-code --parser gotest
 
 .PHONY: test.integration.dbless.knative
 test.integration.dbless.knative:
@@ -361,14 +369,6 @@ test.integration.dbless:
 	@$(MAKE) _test.integration \
 		GOTAGS="integration_tests" \
 		DBMODE=off \
-		COVERAGE_OUT=coverage.dbless.out
-
-.PHONY: test.integration.dbless.pretty
-test.integration.dbless.pretty:
-	@$(MAKE) GOTESTSUM_FORMAT=pkgname _test.integration \
-		GOTAGS="integration_tests" \
-		DBMODE=off \
-		GOTESTFLAGS="-json" \
 		COVERAGE_OUT=coverage.dbless.out
 
 .PHONY: test.integration.postgres.knative
@@ -386,30 +386,12 @@ test.integration.postgres:
 		DBMODE=postgres \
 		COVERAGE_OUT=coverage.postgres.out
 
-.PHONY: test.integration.postgres.pretty
-test.integration.postgres.pretty:
-	@$(MAKE) GOTESTSUM_FORMAT=pkgname _test.integration \
-		GOTAGS="integration_tests" \
-		DBMODE=postgres \
-		GOTESTFLAGS="-json" \
-		COVERAGE_OUT=coverage.postgres.out
-
 .PHONY: test.integration.enterprise.postgres
 test.integration.enterprise.postgres:
 	@TEST_KONG_ENTERPRISE="true" \
 		GOTAGS="integration_tests" \
 		$(MAKE) _test.integration \
 		DBMODE=postgres \
-		COVERAGE_OUT=coverage.enterprisepostgres.out
-
-.PHONY: test.integration.enterprise.postgres.pretty
-test.integration.enterprise.postgres.pretty:
-	@TEST_KONG_ENTERPRISE="true" \
-		GOTAGS="integration_tests" \
-		GOTESTSUM_FORMAT=pkgname \
-		$(MAKE) _test.integration \
-		DBMODE=postgres \
-		GOTESTFLAGS="-json" \
 		COVERAGE_OUT=coverage.enterprisepostgres.out
 
 .PHONY: test.e2e

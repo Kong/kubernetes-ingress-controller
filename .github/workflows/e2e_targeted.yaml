@@ -94,7 +94,8 @@ jobs:
     uses: ./.github/workflows/_e2e_tests.yaml
     secrets: inherit
     with:
-      kic-image: kong/nightly-ingress-controller:nightly
+      kic-image: ${{ needs.choose-image.outputs.image }}
+      load-local-image: ${{ inputs.controller-image == '' }}
       kong-image: kong/kong:amd64-latest
       # these do not honor the inputs, as this job is intended to be a minimal
       # test against unreleased kong images, with the main run covering the

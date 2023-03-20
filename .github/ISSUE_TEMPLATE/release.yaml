@@ -1,7 +1,8 @@
 name: Release
 description: Release checklist
 title: "Replace with your release version (e.g: 2.4.0)"
-labels: [release]
+labels:
+- area/release
 body:
 - type: dropdown
   id: release_type
@@ -9,9 +10,9 @@ body:
     label: Release Type
     description: which type of release is this release?
     options:
-    - major release
-    - minor release
-    - patch release
+    - major
+    - minor
+    - patch
   validations:
     required: true
 - type: checkboxes
@@ -19,7 +20,7 @@ body:
   attributes:
     label: "**For all releases** Github Workflow Test Matrix Checkup"
     options:
-      - label: check the testing workflow ([.github/workflows/test.yaml](/Kong/kubernetes-ingress-controller/blob/main/.github/workflows/test.yaml)) and ensure that all matrix versions ([.github/workflows/e2e.yaml](/Kong/kubernetes-ingress-controller/blob/main/.github/workflows/e2e.yaml) and [.github/workflows/release.yaml](/Kong/kubernetes-ingress-controller/blob/main/.github/workflows/release.yaml))  are up to date for various component releases. If there have been any new releases (major, minor or patch) of those components since the latest version seen in that configuration make sure the new versions get added before proceeding with the release. Remove any versions that are no longer supported by the environment provider.
+      - label: Check the testing workflow ([.github/workflows/test.yaml](/Kong/kubernetes-ingress-controller/blob/main/.github/workflows/test.yaml)) and ensure that all matrix versions ([.github/workflows/e2e.yaml](/Kong/kubernetes-ingress-controller/blob/main/.github/workflows/e2e.yaml) and [.github/workflows/release.yaml](/Kong/kubernetes-ingress-controller/blob/main/.github/workflows/release.yaml))  are up to date for various component releases. If there have been any new releases (major, minor or patch) of those components since the latest version seen in that configuration make sure the new versions get added before proceeding with the release. Remove any versions that are no longer supported by the environment provider.
       - label: Kubernetes (via [KIND](https://hub.docker.com/r/kindest/node/tags) and the latest image available when creating a new rapid channel cluster from the GKE new cluster wizard)
       - label: Istio (via [Istio's releases page](https://github.com/istio/istio/releases))
 - type: checkboxes
@@ -34,24 +35,31 @@ body:
 - type: checkboxes
   id: release_branch
   attributes:
-    label: "**For all releases** Create Release Branch"
+    label: "**For major/minor releases** Create `release/<MAJOR>.<MINOR>.x` Branch"
     options:
-      - label: "ensure that you have up to date copy of `main`: git checkout main; git pull"
-      - label: "create the release branch for the version (e.g. `release/1.3.1`): `git branch -m release/x.y.z`"
+      # This can be automated. https://github.com/Kong/kubernetes-ingress-controller/issues/3772 tracks this effort
+      - label: "Create the `release/<MAJOR>.<MINOR>.x` branch at the place where you want to branch of off main"
+- type: checkboxes
+  id: prepare_release_branch
+  attributes:
+    label: "**For all releases** Create `prepare-release/x.y.z` Branch"
+    options:
+      - label: "Ensure that you have up to date copy of `main`: `git checkout main; git pull` or a targeted release branch e.g. `release/2.7.x`: `git checkout release/2.7.x; git pull`"
+      - label: "Create the `prepare-release` branch for the version (e.g. `prepare-release/2.7.1`): `git branch -m prepare-release/2.7.1`"
       - label: Make any final adjustments to CHANGELOG.md. Double-check that dates are correct, that link anchors point to the correct header, and that you've included a link to the Github compare link at the end.
       - label: Resolve all licensing issues that FOSSA has detected. Go to Issues tab in FOSSA's KIC project and resolve every issue, inspecting if it's a false positive or not. [ignored.go](https://github.com/Kong/team-k8s/blob/main/fossa/ignored.go) script should be useful to look for issues that have been already resolved and reappeared due to version changes.
       - label: Update [ignored.json](https://github.com/Kong/team-k8s/blob/main/fossa/kubernetes-ingress-controller/ignored.json) following instructions in [README](https://github.com/Kong/team-k8s/blob/main/fossa/README.md).
       - label: Retrieve the latest license report from FOSSA and save it to LICENSES (go to Reports tab in FOSSA's KIC project, select 'plain text' format, tick 'direct dependencies' and download it).
-      - label: "ensure base manifest versions use the new version (`config/image/enterprise/kustomization.yaml` and `config/image/oss/kustomization.yaml`) and update manifest files: `make manifests`"
-      - label: "push the branch up to the remote: `git push --set-upstream origin release/x.y.z`"
+      - label: "Ensure base manifest versions use the new version (`config/image/enterprise/kustomization.yaml` and `config/image/oss/kustomization.yaml`) and update manifest files: `make manifests`"
+      - label: "Push the branch up to the remote: `git push --set-upstream origin prepare-release/x.y.z`"
 - type: checkboxes
   id: release_pr
   attributes:
     label: "**For all releases** Create a Release Pull Request"
     options:
-      - label: Check the [latest test run](https://github.com/Kong/kubernetes-ingress-controller/actions/workflows/e2e.yaml) to confirm that E2E tests are succeeding. If you are backporting features into a non-main branch, run a [targeted E2E job against that branch](https://github.com/Kong/kubernetes-ingress-controller/actions/workflows/e2e_targeted.yaml).
+      - label: Check the [latest E2E nightly test run](https://github.com/Kong/kubernetes-ingress-controller/actions/workflows/e2e_nightly.yaml) to confirm that E2E tests are succeeding. If you are backporting features into a non-main branch, run a [targeted E2E job against that branch](https://github.com/Kong/kubernetes-ingress-controller/actions/workflows/e2e_targeted.yaml) or use `ci/run-e2e` label on the PR preparing the release.
       - label: Open a PR from your branch to `main`.
-      - label: Once the PR is merged, [initiate a release job](https://github.com/Kong/kubernetes-ingress-controller/actions/workflows/release.yaml). Your tag must use `vX.Y.Z` format. Set `latest` to true if this will be the latest release.
+      - label: Once the PR is merged (the `prepare-release/x.y.z` branch will get automatically removed), [initiate a release job](https://github.com/Kong/kubernetes-ingress-controller/actions/workflows/release.yaml). Your tag must use `vX.Y.Z` format. Set `latest` to true if this will be the latest release.
       - label: CI will validate the requested version, build and push an image, and run tests against the image before finally creating a tag and publishing a release. If tests fail, CI will push the image but not the tag or release. Investigate the failure, correct it as needed, and start a new release job.
 - type: checkboxes
   id: release_documents

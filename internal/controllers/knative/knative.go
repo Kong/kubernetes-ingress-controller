@@ -95,7 +95,7 @@ func (r *Knativev1alpha1IngressReconciler) SetupWithManager(mgr ctrl.Manager) er
 }
 
 // listClassless finds and reconciles all objects without ingress class information.
-func (r *Knativev1alpha1IngressReconciler) listClassless(obj client.Object) []reconcile.Request {
+func (r *Knativev1alpha1IngressReconciler) listClassless(_ client.Object) []reconcile.Request {
 	resourceList := &knativev1alpha1.IngressList{}
 	if err := r.Client.List(context.Background(), resourceList); err != nil {
 		r.Log.Error(err, "failed to list classless ingresses")

@@ -114,12 +114,11 @@ func createManager(
 	{
 		if rv.MeshDetection {
 			podNN, err := util.GetPodNN()
-			if err != nil {
-				// Don't fail, just don't include mesh detection workflow.
-				// We could probably add conditions around this, so that only the
-				// part responsible for detecting the mesh that current pod is running
-				// gets disabled.
-			} else {
+			// Don't fail if an err is no nil, just don't include mesh detection workflow.
+			// We could probably add conditions around this, so that only the
+			// part responsible for detecting the mesh that current pod is running
+			// gets disabled.
+			if err == nil {
 				w, err := telemetry.NewMeshDetectWorkflow(cl, podNN, rv.PublishServiceNN)
 				if err != nil {
 					return nil, fmt.Errorf("failed to create mesh detect workflow: %w", err)

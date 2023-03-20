@@ -67,7 +67,7 @@ func (m *AndMatcher) Expression() string {
 
 	ret := ""
 	for i, subMathcher := range m.subMatchers {
-		exp := "( " + subMathcher.Expression() + " )"
+		exp := " (" + subMathcher.Expression() + ") "
 		if i != len(m.subMatchers)-1 {
 			exp = exp + " && "
 		}

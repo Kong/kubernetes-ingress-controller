@@ -424,6 +424,7 @@ func setupTestKongClient(
 	config := sendconfig.Config{}
 	eventRecorder := record.NewFakeRecorder(0)
 	dbMode := "off"
+	routerFlavor := "traditional"
 
 	kongClient, err := dataplane.NewKongClient(
 		logger,
@@ -433,6 +434,7 @@ func setupTestKongClient(
 		config,
 		eventRecorder,
 		dbMode,
+		routerFlavor,
 		clientsProvider,
 		updateStrategyResolver,
 		configChangeDetector,

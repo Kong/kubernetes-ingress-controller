@@ -77,6 +77,12 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 		return fmt.Errorf("could not validate Kong admin root(s) configuration: %w", err)
 	}
 
+	routerFlavor, err := kongconfig.RouterFlavorFromRoot(kongRoots[0])
+	setupLog.Info("Got kong router flavor", "router_flavor", routerFlavor)
+	if err != nil {
+		return fmt.Errorf("could not get router flavor from Kong admin root(s) configuration: %w", err)
+	}
+
 	err = c.ValidateGatewayDiscovery(dbMode)
 	if err != nil {
 		return err
@@ -137,6 +143,7 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 		kongConfig,
 		eventRecorder,
 		dbMode,
+		routerFlavor,
 		clientsManager,
 		updateStrategyResolver,
 		configurationChangeDetector,

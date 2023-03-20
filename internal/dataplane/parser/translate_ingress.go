@@ -11,6 +11,7 @@ import (
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/parser/atc"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/parser/translators"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
@@ -221,8 +222,13 @@ func (p *Parser) ingressRulesFromIngressV1() ingressRules {
 		var objectSuccessfullyParsed bool
 
 		if p.featureEnabledCombinedServiceRoutes {
-			for _, kongStateService := range translators.TranslateIngress(ingress, p.flagEnabledRegexPathPrefix) {
+			for _, kongStateService := range translators.TranslateIngress(ingress, p.flagEnabledRegexPathPrefix, p.featureEnabledExpressionRouter) {
+
 				for _, route := range kongStateService.Routes {
+					if p.featureEnabledExpressionRouter {
+						p.logger.Debugf("translated to expression: %s", *route.Expression)
+						continue
+					}
 					for i, path := range route.Paths {
 						newPath := maybePrependRegexPrefix(*path, regexPrefix, icp.EnableLegacyRegexDetection && p.flagEnabledRegexPathPrefix)
 						route.Paths[i] = &newPath
@@ -350,17 +356,11 @@ func (p *Parser) ingressRulesFromIngressV1() ingressRules {
 		}
 		r := kongstate.Route{
 			Ingress: util.FromK8sObject(&ingress),
-			Route: kong.Route{
-				Name:              kong.String(ingress.Namespace + "." + ingress.Name),
-				Paths:             kong.StringSlice("/"),
-				StripPath:         kong.Bool(false),
-				PreserveHost:      kong.Bool(true),
-				Protocols:         kong.StringSlice("http", "https"),
-				RegexPriority:     kong.Int(0),
-				RequestBuffering:  kong.Bool(true),
-				ResponseBuffering: kong.Bool(true),
-				Tags:              util.GenerateTagsForObject(result.ServiceNameToParent[serviceName]),
-			},
+			Route: generateIngressDefaultBackendKongRoute(
+				&ingress,
+				util.GenerateTagsForObject(result.ServiceNameToParent[serviceName]),
+				p.featureEnabledExpressionRouter,
+			),
 		}
 		service.Routes = append(service.Routes, r)
 		result.ServiceNameToServices[serviceName] = service
@@ -368,4 +368,31 @@ func (p *Parser) ingressRulesFromIngressV1() ingressRules {
 	}
 
 	return result
+}
+
+func generateIngressDefaultBackendKongRoute(ingress *netv1.Ingress, tags []*string, useATC bool) kong.Route {
+	r := kong.Route{
+		Name:              kong.String(ingress.Namespace + "." + ingress.Name),
+		StripPath:         kong.Bool(false),
+		PreserveHost:      kong.Bool(true),
+		RequestBuffering:  kong.Bool(true),
+		ResponseBuffering: kong.Bool(true),
+		Tags:              tags,
+	}
+
+	if useATC {
+		matcher := atc.Or(
+			atc.NewPredicateNetProtocol(atc.OpEqual, "http"),
+			atc.NewPredicateNetProtocol(atc.OpEqual, "https"),
+		)
+
+		r.Expression = kong.String(matcher.Expression())
+		r.Priority = kong.Int(0)
+	} else {
+		r.Paths = kong.StringSlice("/")
+		r.Protocols = kong.StringSlice("http", "https")
+		r.RegexPriority = kong.Int(0)
+	}
+
+	return r
 }

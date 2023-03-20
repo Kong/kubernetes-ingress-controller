@@ -30,8 +30,9 @@ var (
 	OpRegexMatch   BinaryOperator = "~"
 	OpPrefixMatch  BinaryOperator = "^="
 	OpSuffixMatch  BinaryOperator = "=^"
-	OpContains     BinaryOperator = "in"
-	OpNotContains  BinaryOperator = "not in"
+	OpIn           BinaryOperator = "in"
+	OpNotIn        BinaryOperator = "not in"
+	OpContains     BinaryOperator = "contains"
 	OpLessThan     BinaryOperator = "<"
 	OpLessEqual    BinaryOperator = "<="
 	OpGreaterThan  BinaryOperator = ">"
@@ -108,6 +109,14 @@ func NewPredicate(lhs LHS, op BinaryOperator, rhs Literal) Predicate {
 		field: lhs,
 		op:    op,
 		value: rhs,
+	}
+}
+
+func NewPredicateNetProtocol(op BinaryOperator, value string) Predicate {
+	return Predicate{
+		field: FieldNetProtocol{},
+		op:    op,
+		value: StringLiteral(value),
 	}
 }
 

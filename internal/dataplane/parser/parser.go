@@ -50,6 +50,8 @@ type Parser struct {
 	featureEnabledReportConfiguredKubernetesObjects bool
 	featureEnabledCombinedServiceRoutes             bool
 
+	featureEnabledExpressionRouter bool
+
 	flagEnabledRegexPathPrefix bool
 	failuresCollector          *failures.ResourceFailuresCollector
 }
@@ -181,6 +183,11 @@ func (p *Parser) EnableCombinedServiceRoutes() {
 // paths, which require an IngressClass setting.
 func (p *Parser) EnableRegexPathPrefix() {
 	p.flagEnabledRegexPathPrefix = true
+}
+
+func (p *Parser) EnableTranslateToExpressionRoutes() {
+	p.featureEnabledExpressionRouter = true
+	p.logger.Info("enabled translating to expression based routes")
 }
 
 // -----------------------------------------------------------------------------

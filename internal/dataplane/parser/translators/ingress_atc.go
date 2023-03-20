@@ -8,7 +8,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/parser/atc"
 )
 
-func MatcherFromIngressPath(ingressPath netv1.HTTPIngressPath, regexPathPrefix string) atc.Matcher {
+func matcherFromIngressPath(ingressPath netv1.HTTPIngressPath, regexPathPrefix string) atc.Matcher {
 	switch *ingressPath.PathType {
 	case netv1.PathTypeExact:
 		relative := strings.TrimLeft(ingressPath.Path, "/")
@@ -34,4 +34,11 @@ func MatcherFromIngressPath(ingressPath netv1.HTTPIngressPath, regexPathPrefix s
 	return nil
 }
 
-func MatcherFromIngressHost()
+func matcherFromIngressHost(host string) atc.Matcher {
+	if strings.HasPrefix(host, "*") && len(host) > 1 {
+		// wildcard hosts like *.foo.com should use suffix match.
+		// also, a single `*` is not a valid host in ingressRules.
+		return atc.NewPrediacteHTTPHost(atc.OpSuffixMatch, host[1:])
+	}
+	return atc.NewPrediacteHTTPHost(atc.OpEqual, host)
+}

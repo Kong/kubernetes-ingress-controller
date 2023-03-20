@@ -12,9 +12,9 @@ const (
 	// PortModeImplicit means that the Ingress does not specify the Kubernetes Service port, and that KIC should expect
 	// the Service to have only one port defined.
 	PortModeImplicit PortMode = iota
-	// PortModeNumber means that the Ingress specifies the Service port by raw port number.
+	// PortModeByNumber means that the Ingress specifies the Service port by raw port number.
 	PortModeByNumber PortMode = iota
-	// PortModeNumber means that the Ingress specifies the Service port by its name field.
+	// PortModeByName means that the Ingress specifies the Service port by its name field.
 	PortModeByName PortMode = iota
 )
 
@@ -30,12 +30,12 @@ type PortDef struct {
 
 const ImplicitPort = "implicitPort"
 
-func (p *PortDef) CanonicalString() string {
+func (p PortDef) CanonicalString() string {
 	switch p.Mode {
 	case PortModeByNumber:
-		return fmt.Sprintf("%d", p.Number)
+		return fmt.Sprintf("pnum-%d", p.Number)
 	case PortModeByName:
-		return p.Name
+		return fmt.Sprintf("pname-%s", p.Name)
 	case PortModeImplicit:
 		return ImplicitPort
 	}

@@ -277,86 +277,90 @@ func (p *Parser) getUpstreams(serviceMap map[string]kongstate.Service) []kongsta
 		// resolve the host otherwise.
 		name := *service.Host
 
-		if _, exists := upstreamDedup[name]; !exists {
-			// populate all the kong targets for the upstream given all the backends
-			var targets []kongstate.Target
-			for _, backend := range service.Backends {
-				// gather the Kubernetes service for the backend
-				k8sService, ok := service.K8sServices[backend.Name]
-				if !ok {
-					p.registerTranslationFailure(
-						fmt.Sprintf("can't add target for backend %s: no kubernetes service found", backend.Name),
-						service.Parent,
-					)
-					continue
-				}
-
-				// determine the port for the backend
-				port, err := findPort(k8sService, backend.PortDef)
-				if err != nil {
-					p.registerTranslationFailure(
-						fmt.Sprintf("can't find port for backend kubernetes service: %v", err),
-						k8sService, service.Parent,
-					)
-					continue
-				}
-
-				// get the new targets for this backend service
-				newTargets := getServiceEndpoints(p.logger, p.storer, k8sService, port)
-
-				if len(newTargets) == 0 {
-					p.logger.WithField("service_name", *service.Name).Infof("no targets could be found for kubernetes service %s/%s", k8sService.Namespace, k8sService.Name)
-				}
-
-				// if weights were set for the backend then that weight needs to be
-				// distributed equally among all the targets.
-				if backend.Weight != nil && len(newTargets) != 0 {
-					// initialize the weight of the target based on the weight of the backend
-					// which governs that target (and potentially more). If the weight of the
-					// backend is 0 then this indicates an intention to drop all targets from
-					// this backend from the load-balancer and is a special situation where
-					// all derived targets will receive a weight of 0.
-					targetWeight := int(*backend.Weight)
-
-					// if the backend governing this target is not set to a weight of 0,
-					// all targets derived from the backend split the weight, therefore
-					// equally splitting the traffic load.
-					if *backend.Weight != 0 {
-						targetWeight = int(*backend.Weight) / len(newTargets)
-						// minimum weight of 1 if weight zero was not specifically set.
-						if targetWeight == 0 {
-							targetWeight = 1
-						}
-					}
-
-					for i := range newTargets {
-						newTargets[i].Weight = &targetWeight
-					}
-				}
-
-				// add the new targets to the existing pool of targets for the Upstream.
-				targets = append(targets, newTargets...)
-			}
-
-			// warn if an upstream was created with 0 targets
-			if len(targets) == 0 {
-				p.logger.WithField("service_name", *service.Name).Infof("no targets found to create upstream")
-			}
-
-			// define the upstream including all the newly populated targets
-			// to load-balance traffic to.
-			upstream := kongstate.Upstream{
-				Upstream: kong.Upstream{
-					Name: kong.String(name),
-					Tags: service.Tags, // populated by populateServices already
-				},
-				Service: service,
-				Targets: targets,
-			}
-			upstreams = append(upstreams, upstream)
-			upstreamDedup[name] = empty
+		// Skip upstreams that have already been handled.
+		if _, exists := upstreamDedup[name]; exists {
+			continue
 		}
+
+		// populate all the kong targets for the upstream given all the backends
+		var targets []kongstate.Target
+		for _, backend := range service.Backends {
+			// gather the Kubernetes service for the backend
+			k8sService, ok := service.K8sServices[backend.Name]
+			if !ok {
+				p.registerTranslationFailure(
+					fmt.Sprintf("can't add target for backend %s: no kubernetes service found", backend.Name),
+					service.Parent,
+				)
+				continue
+			}
+
+			// determine the port for the backend
+			port, err := findPort(k8sService, backend.PortDef)
+			if err != nil {
+				p.registerTranslationFailure(
+					fmt.Sprintf("can't find port for backend kubernetes service: %v", err),
+					k8sService, service.Parent,
+				)
+				continue
+			}
+
+			// get the new targets for this backend service
+			newTargets := getServiceEndpoints(p.logger, p.storer, k8sService, port)
+
+			if len(newTargets) == 0 {
+				p.logger.WithField("service_name", *service.Name).Infof("no targets could be found for kubernetes service %s/%s", k8sService.Namespace, k8sService.Name)
+			}
+
+			// if weights were set for the backend then that weight needs to be
+			// distributed equally among all the targets.
+			if backend.Weight != nil && len(newTargets) != 0 {
+				// initialize the weight of the target based on the weight of the backend
+				// which governs that target (and potentially more). If the weight of the
+				// backend is 0 then this indicates an intention to drop all targets from
+				// this backend from the load-balancer and is a special situation where
+				// all derived targets will receive a weight of 0.
+				targetWeight := int(*backend.Weight)
+
+				// if the backend governing this target is not set to a weight of 0,
+				// all targets derived from the backend split the weight, therefore
+				// equally splitting the traffic load.
+				if *backend.Weight != 0 {
+					targetWeight = int(*backend.Weight) / len(newTargets)
+					// minimum weight of 1 if weight zero was not specifically set.
+					if targetWeight == 0 {
+						targetWeight = 1
+					}
+				}
+
+				for i := range newTargets {
+					newTargets[i].Weight = &targetWeight
+				}
+			}
+
+			// add the new targets to the existing pool of targets for the Upstream.
+			targets = append(targets, newTargets...)
+		}
+
+		// warn if an upstream was created with 0 targets
+		if len(targets) == 0 {
+			p.logger.WithField("service_name", *service.Name).Infof("no targets found to create upstream")
+		}
+
+		// define the upstream including all the newly populated targets
+		// to load-balance traffic to.
+		upstream := kongstate.Upstream{
+			Upstream: kong.Upstream{
+				Name: kong.String(name),
+				Tags: service.Tags, // populated by populateServices already
+			},
+			Service: service,
+			Targets: targets,
+		}
+		upstreams = append(upstreams, upstream)
+		upstreamDedup[name] = empty
 	}
+
 	return upstreams
 }
 

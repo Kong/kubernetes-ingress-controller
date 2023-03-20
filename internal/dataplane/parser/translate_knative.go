@@ -39,7 +39,6 @@ func (p *Parser) ingressRulesFromKnativeIngress() ingressRules {
 		return ingressList[i].CreationTimestamp.Before(
 			&ingressList[j].CreationTimestamp)
 	})
-
 	services := map[string]kongstate.Service{}
 	secretToSNIs := newSecretNameToSNIs()
 
@@ -82,10 +81,19 @@ func (p *Parser) ingressRulesFromKnativeIngress() ingressRules {
 				r.Hosts = kong.StringSlice(hosts...)
 
 				knativeBackend := knativeSelectSplit(rule.Splits)
-				serviceName := fmt.Sprintf("%s.%s.%s", knativeBackend.ServiceNamespace, knativeBackend.ServiceName,
-					knativeBackend.ServicePort.String())
-				serviceHost := fmt.Sprintf("%s.%s.%s.svc", knativeBackend.ServiceName, knativeBackend.ServiceNamespace,
-					knativeBackend.ServicePort.String())
+				port := translators.PortDefFromIntStr(knativeBackend.ServicePort)
+				serviceName := fmt.Sprintf(
+					"%s.%s.%s",
+					knativeBackend.ServiceNamespace,
+					knativeBackend.ServiceName,
+					port.CanonicalString(),
+				)
+				serviceHost := fmt.Sprintf(
+					"%s.%s.%s.svc",
+					knativeBackend.ServiceName,
+					knativeBackend.ServiceNamespace,
+					port.CanonicalString(),
+				)
 				service, ok := services[serviceName]
 				if !ok {
 					var headers []string

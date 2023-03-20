@@ -250,11 +250,11 @@ func TestFromKnativeIngress(t *testing.T) {
 
 		parsedInfo := p.ingressRulesFromKnativeIngress()
 		assert.Equal(1, len(parsedInfo.ServiceNameToServices))
-		svc := parsedInfo.ServiceNameToServices["foo-ns.foo-svc.42"]
+		svc := parsedInfo.ServiceNameToServices["foo-ns.foo-svc.pnum-42"]
 		assert.Equal(kong.Service{
-			Name:           kong.String("foo-ns.foo-svc.42"),
+			Name:           kong.String("foo-ns.foo-svc.pnum-42"),
 			Port:           kong.Int(80),
-			Host:           kong.String("foo-svc.foo-ns.42.svc"),
+			Host:           kong.String("foo-svc.foo-ns.pnum-42.svc"),
 			Path:           kong.String("/"),
 			Protocol:       kong.String("http"),
 			WriteTimeout:   kong.Int(60000),
@@ -314,11 +314,11 @@ func TestFromKnativeIngress(t *testing.T) {
 
 		parsedInfo := p.ingressRulesFromKnativeIngress()
 		assert.Equal(1, len(parsedInfo.ServiceNameToServices))
-		svc := parsedInfo.ServiceNameToServices["foo-ns.foo-svc.42"]
+		svc := parsedInfo.ServiceNameToServices["foo-ns.foo-svc.pnum-42"]
 		assert.Equal(kong.Service{
-			Name:           kong.String("foo-ns.foo-svc.42"),
+			Name:           kong.String("foo-ns.foo-svc.pnum-42"),
 			Port:           kong.Int(80),
-			Host:           kong.String("foo-svc.foo-ns.42.svc"),
+			Host:           kong.String("foo-svc.foo-ns.pnum-42.svc"),
 			Path:           kong.String("/"),
 			Protocol:       kong.String("http"),
 			WriteTimeout:   kong.Int(60000),
@@ -363,7 +363,7 @@ func TestFromKnativeIngress(t *testing.T) {
 
 		parsedInfo := p.ingressRulesFromKnativeIngress()
 		assert.Equal(1, len(parsedInfo.ServiceNameToServices))
-		svc := parsedInfo.ServiceNameToServices["foo-ns.foo-svc.42"]
+		svc := parsedInfo.ServiceNameToServices["foo-ns.foo-svc.pnum-42"]
 		assert.Equal(translators.KongPathRegexPrefix+"/foo/\\d{3}", *svc.Routes[0].Route.Paths[0])
 
 		assert.Equal(newSecretNameToSNIs(), parsedInfo.SecretNameToSNIs)

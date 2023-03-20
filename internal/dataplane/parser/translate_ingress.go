@@ -16,13 +16,6 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 )
 
-func serviceBackendPortToStr(port netv1.ServiceBackendPort) string {
-	if port.Name != "" {
-		return fmt.Sprintf("pname-%s", port.Name)
-	}
-	return fmt.Sprintf("pnum-%d", port.Number)
-}
-
 var priorityForPath = map[netv1.PathType]int{
 	netv1.PathTypeExact:                  300,
 	netv1.PathTypePrefix:                 200,
@@ -91,17 +84,24 @@ func (p *Parser) ingressRulesFromIngressV1beta1() ingressRules {
 					r.Hosts = hosts
 				}
 
-				serviceName := ingress.Namespace + "." +
-					rule.Backend.ServiceName + "." +
-					rule.Backend.ServicePort.String()
+				port := translators.PortDefFromIntStr(rule.Backend.ServicePort)
+				serviceName := fmt.Sprintf(
+					"%s.%s.%s",
+					ingress.Namespace,
+					rule.Backend.ServiceName,
+					port.CanonicalString(),
+				)
 				service, ok := result.ServiceNameToServices[serviceName]
 				if !ok {
 					service = kongstate.Service{
 						Service: kong.Service{
 							Name: kong.String(serviceName),
-							Host: kong.String(rule.Backend.ServiceName +
-								"." + ingress.Namespace + "." +
-								rule.Backend.ServicePort.String() + ".svc"),
+							Host: kong.String(fmt.Sprintf(
+								"%s.%s.%s.svc",
+								rule.Backend.ServiceName,
+								ingress.Namespace,
+								port.CanonicalString(),
+							)),
 							Port:           kong.Int(DefaultHTTPPort),
 							Protocol:       kong.String("http"),
 							Path:           kong.String("/"),
@@ -138,17 +138,24 @@ func (p *Parser) ingressRulesFromIngressV1beta1() ingressRules {
 	if len(allDefaultBackends) > 0 {
 		ingress := allDefaultBackends[0]
 		defaultBackend := allDefaultBackends[0].Spec.Backend
-		serviceName := allDefaultBackends[0].Namespace + "." +
-			defaultBackend.ServiceName + "." +
-			defaultBackend.ServicePort.String()
+
+		port := translators.PortDefFromIntStr(defaultBackend.ServicePort)
+		serviceName := fmt.Sprintf("%s.%s.%s",
+			allDefaultBackends[0].Namespace,
+			defaultBackend.ServiceName,
+			port.CanonicalString(),
+		)
 		service, ok := result.ServiceNameToServices[serviceName]
 		if !ok {
 			service = kongstate.Service{
 				Service: kong.Service{
 					Name: kong.String(serviceName),
-					Host: kong.String(defaultBackend.ServiceName + "." +
-						ingress.Namespace + "." +
-						defaultBackend.ServicePort.String() + ".svc"),
+					Host: kong.String(fmt.Sprintf(
+						"%s.%s.%s.svc",
+						defaultBackend.ServiceName,
+						ingress.Namespace,
+						port.CanonicalString(),
+					)),
 					Port:           kong.Int(DefaultHTTPPort),
 					Protocol:       kong.String("http"),
 					ConnectTimeout: kong.Int(DefaultServiceTimeout),
@@ -276,15 +283,23 @@ func (p *Parser) ingressRulesFromIngressV1() ingressRules {
 					}
 
 					port := translators.PortDefFromServiceBackendPort(&rulePath.Backend.Service.Port)
-					serviceName := fmt.Sprintf("%s.%s.%s", ingress.Namespace, rulePath.Backend.Service.Name,
-						serviceBackendPortToStr(rulePath.Backend.Service.Port))
+					serviceName := fmt.Sprintf(
+						"%s.%s.%s",
+						ingress.Namespace,
+						rulePath.Backend.Service.Name,
+						port.CanonicalString(),
+					)
 					service, ok := result.ServiceNameToServices[serviceName]
 					if !ok {
 						service = kongstate.Service{
 							Service: kong.Service{
 								Name: kong.String(serviceName),
-								Host: kong.String(fmt.Sprintf("%s.%s.%s.svc", rulePath.Backend.Service.Name, ingress.Namespace,
-									port.CanonicalString())),
+								Host: kong.String(fmt.Sprintf(
+									"%s.%s.%s.svc",
+									rulePath.Backend.Service.Name,
+									ingress.Namespace,
+									port.CanonicalString(),
+								)),
 								Port:           kong.Int(DefaultHTTPPort),
 								Protocol:       kong.String("http"),
 								Path:           kong.String("/"),
@@ -323,15 +338,23 @@ func (p *Parser) ingressRulesFromIngressV1() ingressRules {
 		ingress := allDefaultBackends[0]
 		defaultBackend := allDefaultBackends[0].Spec.DefaultBackend
 		port := translators.PortDefFromServiceBackendPort(&defaultBackend.Service.Port)
-		serviceName := fmt.Sprintf("%s.%s.%s", allDefaultBackends[0].Namespace, defaultBackend.Service.Name,
-			port.CanonicalString())
+		serviceName := fmt.Sprintf(
+			"%s.%s.%s",
+			allDefaultBackends[0].Namespace,
+			defaultBackend.Service.Name,
+			port.CanonicalString(),
+		)
 		service, ok := result.ServiceNameToServices[serviceName]
 		if !ok {
 			service = kongstate.Service{
 				Service: kong.Service{
 					Name: kong.String(serviceName),
-					Host: kong.String(fmt.Sprintf("%s.%s.%d.svc", defaultBackend.Service.Name, ingress.Namespace,
-						defaultBackend.Service.Port.Number)),
+					Host: kong.String(fmt.Sprintf(
+						"%s.%s.%s.svc",
+						defaultBackend.Service.Name,
+						ingress.Namespace,
+						port.CanonicalString(),
+					)),
 					Port:           kong.Int(DefaultHTTPPort),
 					Protocol:       kong.String("http"),
 					ConnectTimeout: kong.Int(DefaultServiceTimeout),

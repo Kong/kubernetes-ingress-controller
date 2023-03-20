@@ -1223,8 +1223,8 @@ func TestKongRouteAnnotations(t *testing.T) {
 		// parser tests do not check tags, these are tested independently
 		state.Services[0].Service.Tags = nil
 		assert.Equal(kong.Service{
-			Name:           kong.String("default.foo-svc.80"),
-			Host:           kong.String("foo-svc.default.80.svc"),
+			Name:           kong.String("default.foo-svc.pnum-80"),
+			Host:           kong.String("foo-svc.default.pnum-80.svc"),
 			Path:           kong.String("/"),
 			Port:           kong.Int(80),
 			ConnectTimeout: kong.Int(60000),
@@ -1307,8 +1307,8 @@ func TestKongRouteAnnotations(t *testing.T) {
 		// parser tests do not check tags, these are tested independently
 		state.Services[0].Service.Tags = nil
 		assert.Equal(kong.Service{
-			Name:           kong.String("default.foo-svc.80"),
-			Host:           kong.String("foo-svc.default.80.svc"),
+			Name:           kong.String("default.foo-svc.pnum-80"),
+			Host:           kong.String("foo-svc.default.pnum-80.svc"),
 			Path:           kong.String("/"),
 			Port:           kong.Int(80),
 			ConnectTimeout: kong.Int(60000),
@@ -1392,8 +1392,8 @@ func TestKongRouteAnnotations(t *testing.T) {
 			// parser tests do not check tags, these are tested independently
 			state.Services[0].Service.Tags = nil
 			assert.Equal(kong.Service{
-				Name:           kong.String("default.foo-svc.80"),
-				Host:           kong.String("foo-svc.default.80.svc"),
+				Name:           kong.String("default.foo-svc.pnum-80"),
+				Host:           kong.String("foo-svc.default.pnum-80.svc"),
 				Path:           kong.String("/"),
 				Port:           kong.Int(80),
 				ConnectTimeout: kong.Int(60000),
@@ -1478,8 +1478,8 @@ func TestKongRouteAnnotations(t *testing.T) {
 			// parser tests do not check tags, these are tested independently
 			state.Services[0].Service.Tags = nil
 			assert.Equal(kong.Service{
-				Name:           kong.String("default.foo-svc.80"),
-				Host:           kong.String("foo-svc.default.80.svc"),
+				Name:           kong.String("default.foo-svc.pnum-80"),
+				Host:           kong.String("foo-svc.default.pnum-80.svc"),
 				Path:           kong.String("/"),
 				Port:           kong.Int(80),
 				ConnectTimeout: kong.Int(60000),
@@ -1563,8 +1563,8 @@ func TestKongRouteAnnotations(t *testing.T) {
 			// parser tests do not check tags, these are tested independently
 			state.Services[0].Service.Tags = nil
 			assert.Equal(kong.Service{
-				Name:           kong.String("default.foo-svc.80"),
-				Host:           kong.String("foo-svc.default.80.svc"),
+				Name:           kong.String("default.foo-svc.pnum-80"),
+				Host:           kong.String("foo-svc.default.pnum-80.svc"),
 				Path:           kong.String("/"),
 				Port:           kong.Int(80),
 				ConnectTimeout: kong.Int(60000),
@@ -1648,8 +1648,8 @@ func TestKongRouteAnnotations(t *testing.T) {
 			// parser tests do not check tags, these are tested independently
 			state.Services[0].Service.Tags = nil
 			assert.Equal(kong.Service{
-				Name:           kong.String("default.foo-svc.80"),
-				Host:           kong.String("foo-svc.default.80.svc"),
+				Name:           kong.String("default.foo-svc.pnum-80"),
+				Host:           kong.String("foo-svc.default.pnum-80.svc"),
 				Path:           kong.String("/"),
 				Port:           kong.Int(80),
 				ConnectTimeout: kong.Int(60000),
@@ -1733,8 +1733,8 @@ func TestKongRouteAnnotations(t *testing.T) {
 			// parser tests do not check tags, these are tested independently
 			state.Services[0].Service.Tags = nil
 			assert.Equal(kong.Service{
-				Name:           kong.String("default.foo-svc.80"),
-				Host:           kong.String("foo-svc.default.80.svc"),
+				Name:           kong.String("default.foo-svc.pnum-80"),
+				Host:           kong.String("foo-svc.default.pnum-80.svc"),
 				Path:           kong.String("/"),
 				Port:           kong.Int(80),
 				ConnectTimeout: kong.Int(60000),
@@ -1818,8 +1818,8 @@ func TestKongRouteAnnotations(t *testing.T) {
 			// parser tests do not check tags, these are tested independently
 			state.Services[0].Service.Tags = nil
 			assert.Equal(kong.Service{
-				Name:           kong.String("default.foo-svc.80"),
-				Host:           kong.String("foo-svc.default.80.svc"),
+				Name:           kong.String("default.foo-svc.pnum-80"),
+				Host:           kong.String("foo-svc.default.pnum-80.svc"),
 				Path:           kong.String("/"),
 				Port:           kong.Int(80),
 				ConnectTimeout: kong.Int(60000),
@@ -1902,8 +1902,8 @@ func TestKongRouteAnnotations(t *testing.T) {
 		// parser tests do not check tags, these are tested independently
 		state.Services[0].Service.Tags = nil
 		assert.Equal(kong.Service{
-			Name:           kong.String("default.foo-svc.80"),
-			Host:           kong.String("foo-svc.default.80.svc"),
+			Name:           kong.String("default.foo-svc.pnum-80"),
+			Host:           kong.String("foo-svc.default.pnum-80.svc"),
 			Path:           kong.String("/"),
 			Port:           kong.Int(80),
 			ConnectTimeout: kong.Int(60000),
@@ -1985,8 +1985,8 @@ func TestKongRouteAnnotations(t *testing.T) {
 		// parser tests do not check tags, these are tested independently
 		state.Services[0].Service.Tags = nil
 		assert.Equal(kong.Service{
-			Name:           kong.String("default.foo-svc.80"),
-			Host:           kong.String("foo-svc.default.80.svc"),
+			Name:           kong.String("default.foo-svc.pnum-80"),
+			Host:           kong.String("foo-svc.default.pnum-80.svc"),
 			Path:           kong.String("/"),
 			Port:           kong.Int(80),
 			ConnectTimeout: kong.Int(60000),
@@ -2496,8 +2496,8 @@ func TestKnativeIngressAndPlugins(t *testing.T) {
 		svc := state.Services[0]
 
 		assert.Equal(kong.Service{
-			Name:           kong.String("foo-ns.foo-svc.42"),
-			Host:           kong.String("foo-svc.foo-ns.42.svc"),
+			Name:           kong.String("foo-ns.foo-svc.pnum-42"),
+			Host:           kong.String("foo-svc.foo-ns.pnum-42.svc"),
 			Path:           kong.String("/"),
 			Port:           kong.Int(80),
 			ConnectTimeout: kong.Int(60000),
@@ -2543,7 +2543,7 @@ func TestKnativeIngressAndPlugins(t *testing.T) {
 				"knative": "yo",
 			},
 			Service: &kong.Service{
-				ID: kong.String("foo-ns.foo-svc.42"),
+				ID: kong.String("foo-ns.foo-svc.pnum-42"),
 			},
 			Protocols: kong.StringSlice("http"),
 		}, state.Plugins[0].Plugin)
@@ -2611,8 +2611,8 @@ func TestKongServiceAnnotations(t *testing.T) {
 		// parser tests do not check tags, these are tested independently
 		state.Services[0].Service.Tags = nil
 		assert.Equal(kong.Service{
-			Name:           kong.String("default.foo-svc.80"),
-			Host:           kong.String("foo-svc.default.80.svc"),
+			Name:           kong.String("default.foo-svc.pnum-80"),
+			Host:           kong.String("foo-svc.default.pnum-80.svc"),
 			Path:           kong.String("/baz"),
 			Port:           kong.Int(80),
 			ConnectTimeout: kong.Int(60000),
@@ -2698,8 +2698,8 @@ func TestKongServiceAnnotations(t *testing.T) {
 		// parser tests do not check tags, these are tested independently
 		state.Services[0].Service.Tags = nil
 		assert.Equal(kong.Service{
-			Name:           kong.String("default.foo-svc.80"),
-			Host:           kong.String("foo-svc.default.80.svc"),
+			Name:           kong.String("default.foo-svc.pnum-80"),
+			Host:           kong.String("foo-svc.default.pnum-80.svc"),
 			Path:           kong.String("/"),
 			Port:           kong.Int(80),
 			ConnectTimeout: kong.Int(60000),
@@ -2714,7 +2714,7 @@ func TestKongServiceAnnotations(t *testing.T) {
 		// parser tests do not check tags, these are tested independently
 		state.Upstreams[0].Upstream.Tags = nil
 		assert.Equal(kong.Upstream{
-			Name:       kong.String("foo-svc.default.80.svc"),
+			Name:       kong.String("foo-svc.default.pnum-80.svc"),
 			HostHeader: kong.String("example.com"),
 		}, state.Upstreams[0].Upstream)
 
@@ -2793,8 +2793,8 @@ func TestKongServiceAnnotations(t *testing.T) {
 			// parser tests do not check tags, these are tested independently
 			state.Services[0].Service.Tags = nil
 			assert.Equal(kong.Service{
-				Name:           kong.String("default.foo-svc.80"),
-				Host:           kong.String("foo-svc.default.80.svc"),
+				Name:           kong.String("default.foo-svc.pnum-80"),
+				Host:           kong.String("foo-svc.default.pnum-80.svc"),
 				Path:           kong.String("/"),
 				Port:           kong.Int(80),
 				ConnectTimeout: kong.Int(60000),
@@ -2863,8 +2863,8 @@ func TestDefaultBackend(t *testing.T) {
 		assert.NotNil(state)
 		assert.Equal(1, len(state.Services),
 			"expected one service to be rendered")
-		assert.Equal("default.default-svc.80", *state.Services[0].Name)
-		assert.Equal("default-svc.default.80.svc", *state.Services[0].Host)
+		assert.Equal("default.default-svc.pnum-80", *state.Services[0].Name)
+		assert.Equal("default-svc.default.pnum-80.svc", *state.Services[0].Host)
 		assert.Equal(1, len(state.Services[0].Routes),
 			"expected one routes to be rendered")
 		assert.Equal("default.ing-with-default-backend", *state.Services[0].Routes[0].Name)

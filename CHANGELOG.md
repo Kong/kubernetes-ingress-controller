@@ -65,6 +65,16 @@ Adding a new version? You'll need three changes:
 
 ## Unreleased
 
+> Release date: TBD
+
+### Fixed
+
+- Kong Services' names now refer to backend service port number/name uniformly
+  across `netv1.Ingress`, `netv1beta1.Ingress`, and `knative.Ingress`
+  implementations. `pname-{portName}` format is used for named ports, and
+  `pnum-{portNumber}` for the ones referred by number.
+  [#3776](https://github.com/Kong/kubernetes-ingress-controller/pull/3776)
+
 ### Deprecated
 
 - Removed support for extensions/v1beta1 Ingress which was removed in kubernetes 1.22.

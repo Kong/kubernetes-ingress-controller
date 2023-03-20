@@ -12,7 +12,7 @@ import (
 
 // GenerateKongBuilder returns a Kong KTF addon builder, a string slice
 // of controller arguments needed to interact with the addon and an error.
-func GenerateKongBuilder(ctx context.Context) (*kong.Builder, []string, error) {
+func GenerateKongBuilder(_ context.Context) (*kong.Builder, []string, error) {
 	kongbuilder := kong.NewBuilder()
 	extraControllerArgs := []string{}
 	if testenv.KongEnterpriseEnabled() {

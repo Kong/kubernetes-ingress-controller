@@ -226,7 +226,7 @@ func getSupportedGatewayForRoute[T types.RouteT](ctx context.Context, mgrc clien
 			// - And finally check if that listeners is marked as Ready.
 			if err := existsMatchingReadyListenerInStatus(route, listener, gateway.Status.Listeners); err != nil {
 				continue
-			} else {
+			} else { //nolint:revive
 				allowedBySupportedKinds = true
 			}
 

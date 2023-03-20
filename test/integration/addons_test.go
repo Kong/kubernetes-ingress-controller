@@ -9,6 +9,6 @@ import (
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 )
 
-func DeployAddonsForCluster(ctx context.Context, cluster clusters.Cluster) error {
+func DeployAddonsForCluster(_ context.Context, _ clusters.Cluster) error {
 	return nil
 }

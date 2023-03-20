@@ -29,6 +29,8 @@ import (
 	clientset "k8s.io/client-go/kubernetes"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
+
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
 )
 
 // ParseNameNS parses a string searching a namespace and name.
@@ -180,5 +182,7 @@ func GenerateTagsForObject(obj client.Object) []*string {
 	if gvk.Version != "" {
 		tags = append(tags, K8sVersionTagPrefix+gvk.Version)
 	}
+	user := annotations.ExtractUserTags(obj.GetAnnotations())
+	tags = append(tags, user...)
 	return kong.StringSlice(tags...)
 }

@@ -7,6 +7,10 @@ on:
         description: KIC image to be tested (e.g. `kong/kubernetes-ingress-controller:v2.9.0`).
         type: string
         required: true
+      kong-image:
+        description: Kong image to be tested (e.g. `kong:3.1.0`).
+        type: string
+        required: false
       load-local-image:
         description: Whether to load the local built image into the Docker daemon (from artifact).
         type: boolean
@@ -120,6 +124,7 @@ jobs:
           KONG_CLUSTER_VERSION: ${{ matrix.kubernetes-version }}
           TEST_KONG_CONTROLLER_IMAGE_OVERRIDE: ${{ inputs.kic-image }}
           TEST_KONG_LOAD_IMAGES: ${{ inputs.load-local-image }}
+          TEST_KONG_KONG_IMAGE_OVERRIDE: ${{ inputs.kong-image }}
           TEST_KONG_KONNECT_ACCESS_TOKEN: ${{ secrets.K8S_TEAM_KONNECT_ACCESS_TOKEN }}
           KONG_LICENSE_DATA: ${{ steps.license.outputs.license }}
           GOTESTSUM_JUNITFILE: "e2e-${{ matrix.test }}${{ matrix.kubernetes-version }}-tests.xml"
@@ -176,6 +181,7 @@ jobs:
           # TODO: Once we have a way to load images into GKE, we can use the local image.
           # KTF issue that should enable it: https://github.com/Kong/kubernetes-testing-framework/issues/587
           TEST_KONG_CONTROLLER_IMAGE_OVERRIDE: "kong/nightly-ingress-controller:nightly"
+          TEST_KONG_KONG_IMAGE_OVERRIDE: ${{ inputs.kong-image }}
           KONG_LICENSE_DATA: ${{ steps.license.outputs.license }}
           KONG_CLUSTER_VERSION: ${{ matrix.kubernetes-version }}
           KONG_TEST_CLUSTER_PROVIDER: gke
@@ -248,6 +254,7 @@ jobs:
         env:
           TEST_KONG_CONTROLLER_IMAGE_OVERRIDE: ${{ inputs.kic-image }}
           TEST_KONG_LOAD_IMAGES: ${{ inputs.load-local-image }}
+          TEST_KONG_KONG_IMAGE_OVERRIDE: ${{ inputs.kong-image }}
           KONG_LICENSE_DATA: ${{ steps.license.outputs.license }}
           KONG_CLUSTER_VERSION: ${{ matrix.kubernetes-version }}
           ISTIO_VERSION: ${{ matrix.istio-version }}

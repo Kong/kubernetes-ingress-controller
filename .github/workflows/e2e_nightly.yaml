@@ -15,6 +15,16 @@ jobs:
       run-gke: true
       run-istio: true
 
+  e2e-tests-unreleased-kong:
+    uses: ./.github/workflows/_e2e_tests.yaml
+    secrets: inherit
+    with:
+      kic-image: kong/nightly-ingress-controller:nightly
+      kong-image: kong/kong:amd64-latest
+      all-supported-k8s-versions: false
+      run-gke: false
+      run-istio: false
+
   test-reports:
     needs: e2e-tests
     uses: ./.github/workflows/_test_reports.yaml

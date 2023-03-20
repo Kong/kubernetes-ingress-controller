@@ -1,7 +1,6 @@
-# NOTE: You need to install the Gateway APIs CRDs before using this example,
-#       they are external and can be deployed with the following one-liner:
-#
-# kubectl kustomize https://github.com/kubernetes-sigs/gateway-api.git/config/crd?ref=master | kubectl apply -f -
+# NOTE The Gateway APIs are not yet available by default in Kubernetes.
+# Follow these instructions to install them before using this example:
+# https://gateway-api.sigs.k8s.io/guides/#install-experimental-channel
 ---
 apiVersion: v1
 kind: Namespace

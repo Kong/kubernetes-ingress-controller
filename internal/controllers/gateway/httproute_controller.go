@@ -23,7 +23,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 	k8sobj "github.com/kong/kubernetes-ingress-controller/v2/internal/util/kubernetes/object"
 )
@@ -38,7 +37,7 @@ type HTTPRouteReconciler struct {
 
 	Log             logr.Logger
 	Scheme          *runtime.Scheme
-	DataplaneClient *dataplane.KongClient
+	DataplaneClient DataPlane
 	// If EnableReferenceGrant is true, we will check for ReferenceGrant if backend in another
 	// namespace is in backendRefs.
 	// If it is false, referencing backend in different namespace will be rejected.
@@ -691,4 +690,9 @@ func (r *HTTPRouteReconciler) getHTTPRouteRuleReason(ctx context.Context, httpRo
 		}
 	}
 	return gatewayv1beta1.RouteReasonResolvedRefs, nil
+}
+
+// SetLogger sets the logger.
+func (r *HTTPRouteReconciler) SetLogger(l logr.Logger) {
+	r.Log = l
 }

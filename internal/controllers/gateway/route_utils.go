@@ -12,6 +12,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
@@ -487,7 +488,20 @@ func existsMatchingReadyListenerInStatus[T types.RouteT](route T, listener Liste
 		// Find if the route has a type that's within the supported types, listed
 		// in listener's status.
 		_, ok := lo.Find(ls.SupportedKinds, func(rgk gatewayv1beta1.RouteGroupKind) bool {
-			gvk := route.GetObjectKind().GroupVersionKind()
+			// The artificially filled in GVK is needed for testing mostly and for
+			// situations when the object is not coming from the api server.
+			// Related upstream issue: https://github.com/kubernetes/kubernetes/issues/3030
+			var gvk schema.GroupVersionKind
+			switch any(route).(type) {
+			case *HTTPRoute:
+				gvk = schema.GroupVersionKind{
+					Group:   gatewayv1beta1.GroupVersion.Group,
+					Version: gatewayv1beta1.GroupVersion.Version,
+					Kind:    "HTTPRoute",
+				}
+			default:
+				gvk = route.GetObjectKind().GroupVersionKind()
+			}
 			return (rgk.Group != nil && string(*rgk.Group) == gvk.Group) && string(rgk.Kind) == gvk.Kind
 		})
 		return ok

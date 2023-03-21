@@ -13,6 +13,8 @@ import (
 
 // CreateNamespace creates namespace using the provided client and returns it.
 func CreateNamespace(ctx context.Context, t *testing.T, client ctrlclient.Client) corev1.Namespace {
+	t.Helper()
+
 	ns := corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: uuid.NewString(),
@@ -29,6 +31,8 @@ func CreateNamespace(ctx context.Context, t *testing.T, client ctrlclient.Client
 
 // CreatePod creates pod using the provided client and returns it.
 func CreatePod(ctx context.Context, t *testing.T, client ctrlclient.Client, ns string) corev1.Pod {
+	t.Helper()
+
 	pod := corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: ns,

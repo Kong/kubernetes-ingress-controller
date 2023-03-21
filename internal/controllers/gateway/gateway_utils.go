@@ -83,7 +83,8 @@ func isObjectUnmanaged(anns map[string]string) bool {
 // isGatewayClassControlledAndUnmanaged returns boolean if the GatewayClass
 // is controlled by this controller and is configured for unmanaged mode.
 func isGatewayClassControlledAndUnmanaged(gatewayClass *GatewayClass) bool {
-	return gatewayClass.Spec.ControllerName == GetControllerName() && isObjectUnmanaged(gatewayClass.Annotations)
+	isUnamanaged := isObjectUnmanaged(gatewayClass.Annotations)
+	return gatewayClass.Spec.ControllerName == GetControllerName() && isUnamanaged
 }
 
 // getRefFromPublishService splits a publish service string in the format namespace/name into a types.NamespacedName

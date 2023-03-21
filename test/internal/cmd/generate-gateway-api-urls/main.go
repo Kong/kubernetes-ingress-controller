@@ -15,9 +15,10 @@ import (
 	"text/template"
 )
 
-//go:generate go run --tags generate_gateway_api_urls . -crds-standard-url $CRDS_STANDARD_URL -crds-experimental-url $CRDS_EXPERIMENTAL_URL -raw-repo-url $RAW_REPO_URL -in $INPUT -out $OUTPUT
+//go:generate go run --tags generate_gateway_api_urls . -gateway-api-version $GATEWAY_API_VERSION -crds-standard-url $CRDS_STANDARD_URL -crds-experimental-url $CRDS_EXPERIMENTAL_URL -raw-repo-url $RAW_REPO_URL -in $INPUT -out $OUTPUT
 
 var (
+	gatewayAPIVersionFlag   = flag.String("gateway-api-version", "", "The semver version of Gateway API that should be used")
 	crdsStandardURLFlag     = flag.String("crds-standard-url", "", "The URL of standard Gateway API CRDs to be consumed by kustomize")
 	crdsExperimentalURLFlag = flag.String("crds-experimental-url", "", "The URL of experimental Gateway API CRDs to be consumed by kustomize")
 	rawRepoURLFlag          = flag.String("raw-repo-url", "", "The raw URL of Gateway API repository")
@@ -26,6 +27,7 @@ var (
 )
 
 type Data struct {
+	GatewayAPIVersion            string
 	CRDsStandardKustomizeURL     string
 	CRDsExperimentalKustomizeURL string
 	RawRepoURL                   string
@@ -35,6 +37,7 @@ func main() {
 	flagParse()
 
 	data := Data{
+		GatewayAPIVersion:            *gatewayAPIVersionFlag,
 		CRDsStandardKustomizeURL:     *crdsStandardURLFlag,
 		CRDsExperimentalKustomizeURL: *crdsExperimentalURLFlag,
 		RawRepoURL:                   *rawRepoURLFlag,
@@ -50,6 +53,10 @@ func must(err error, errMsg string) {
 
 func flagParse() {
 	flag.Parse()
+	if *gatewayAPIVersionFlag == "" {
+		log.Print("Please provide the 'gateway-api-version' flag")
+		os.Exit(0)
+	}
 	if *crdsStandardURLFlag == "" {
 		log.Print("Please provide the 'crds-standard-url' flag")
 		os.Exit(0)

@@ -575,7 +575,8 @@ print-gateway-api-raw-repo-url:
 
 .PHONY: generate.gateway-api-urls
 generate.gateway-api-urls:
-	CRDS_STANDARD_URL=$(shell GATEWAY_API_RELEASE_CHANNEL="" $(MAKE) print-gateway-api-crds-url)\
+	GATEWAY_API_VERSION=$(GATEWAY_API_VERSION) \
+		CRDS_STANDARD_URL=$(shell GATEWAY_API_RELEASE_CHANNEL="" $(MAKE) print-gateway-api-crds-url) \
 		CRDS_EXPERIMENTAL_URL=$(shell GATEWAY_API_RELEASE_CHANNEL="experimental" $(MAKE) print-gateway-api-crds-url) \
 		RAW_REPO_URL=$(shell $(MAKE) print-gateway-api-raw-repo-url) \
 		INPUT=$(shell pwd)/test/internal/cmd/generate-gateway-api-urls/gateway_consts.tmpl \

@@ -136,9 +136,6 @@ type KongClient struct {
 
 	// configChangeDetector detects changes in the configuration.
 	configChangeDetector sendconfig.ConfigurationChangeDetector
-
-	// routerFlavor router flavor of Kong
-	routerFlavor string
 }
 
 // NewKongClient provides a new KongClient object after connecting to the
@@ -151,7 +148,6 @@ func NewKongClient(
 	kongConfig sendconfig.Config,
 	eventRecorder record.EventRecorder,
 	dbMode string,
-	routerFlavor string,
 	clientsProvider AdminAPIClientsProvider,
 	updateStrategyResolver sendconfig.UpdateStrategyResolver,
 	configChangeDetector sendconfig.ConfigurationChangeDetector,
@@ -168,7 +164,6 @@ func NewKongClient(
 		kongConfig:             kongConfig,
 		eventRecorder:          eventRecorder,
 		dbmode:                 dbMode,
-		routerFlavor:           routerFlavor,
 		clientsProvider:        clientsProvider,
 		configStatusNotifier:   NoOpConfigStatusNotifier{},
 		updateStrategyResolver: updateStrategyResolver,
@@ -410,11 +405,6 @@ func (c *KongClient) Update(ctx context.Context) error {
 	if c.AreCombinedServiceRoutesEnabled() {
 		p.EnableCombinedServiceRoutes()
 	}
-	if c.routerFlavor == "expressions" {
-		c.logger.Debug("use expression based router, create a parser to generate expression based routes")
-		p.EnableTranslateToExpressionRoutes()
-	}
-
 	formatVersion := "1.1"
 	if versions.GetKongVersion().MajorMinorOnly().GTE(versions.ExplicitRegexPathVersionCutoff) {
 		p.EnableRegexPathPrefix()
@@ -502,7 +492,6 @@ func (c *KongClient) sendToClient(
 		client.PluginSchemaStore(),
 		config.FilterTags,
 		formatVersion,
-		c.routerFlavor == "expressions",
 	)
 
 	sendDiagnostic := prepareSendDiagnosticFn(ctx, logger, c.diagnostic, s, targetConfig, client.PluginSchemaStore(), config.FilterTags, formatVersion)
@@ -591,7 +580,6 @@ func prepareSendDiagnosticFn(
 			pluginSchemaStore,
 			filterTags,
 			formatVersion,
-			false,
 		)
 		config = redactedConfig
 	} else {

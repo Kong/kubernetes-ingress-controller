@@ -73,25 +73,6 @@ func KongVersionFromRoot(r Root) (kong.Version, error) {
 	return kv, nil
 }
 
-func RouterFlavorFromRoot(r Root) (string, error) {
-	rootConfig, ok := r["configuration"].(map[string]any)
-	if !ok {
-		return "", fmt.Errorf(
-			"invalid root configuration, expected a map[string]any got %T",
-			r["configuration"],
-		)
-	}
-
-	rotuerFlavor, ok := rootConfig["router_flavor"].(string)
-	if !ok {
-		return "", fmt.Errorf(
-			"invalid router flavor configuration, expected a string got %t",
-			rootConfig["router_flavor"],
-		)
-	}
-	return rotuerFlavor, nil
-}
-
 // Root represents Kong Gateway configuration root.
 type Root map[string]any
 

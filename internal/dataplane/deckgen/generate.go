@@ -25,7 +25,6 @@ func ToDeckContent(
 	schemas PluginSchemaStore,
 	selectorTags []string,
 	formatVersion string,
-	expressionRoutes bool,
 ) *file.Content {
 	var content file.Content
 	content.FormatVersion = formatVersion
@@ -49,7 +48,7 @@ func ToDeckContent(
 
 		for _, r := range s.Routes {
 			route := file.FRoute{Route: r.Route}
-			fillRoute(&route.Route, expressionRoutes)
+			fillRoute(&route.Route)
 
 			for _, p := range r.Plugins {
 				plugin := file.FPlugin{
@@ -172,11 +171,11 @@ func ToDeckContent(
 	return &content
 }
 
-func fillRoute(route *kong.Route, expressionRoute bool) {
+func fillRoute(route *kong.Route) {
 	if route.HTTPSRedirectStatusCode == nil {
 		route.HTTPSRedirectStatusCode = kong.Int(426)
 	}
-	if route.PathHandling == nil && !expressionRoute {
+	if route.PathHandling == nil {
 		route.PathHandling = kong.String("v0")
 	}
 }

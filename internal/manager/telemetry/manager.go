@@ -18,6 +18,7 @@ import (
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/manager/telemetry/workflows"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 )
 
@@ -41,7 +42,7 @@ type ReportValues struct {
 }
 
 // CreateManager creates telemetry manager using the provided rest.Config.
-func CreateManager(restConfig *rest.Config, fixedPayload Payload, rv ReportValues) (telemetry.Manager, error) {
+func CreateManager(restConfig *rest.Config, gatewaysCounter workflows.DiscoveredGatewaysCounter, fixedPayload Payload, rv ReportValues) (telemetry.Manager, error) {
 	logger := logrusr.New(logrus.New())
 
 	k, err := kubernetes.NewForConfig(restConfig)
@@ -54,7 +55,7 @@ func CreateManager(restConfig *rest.Config, fixedPayload Payload, rv ReportValue
 	}
 	dyn := dynamic.New(k.Discovery().RESTClient())
 
-	m, err := createManager(k, dyn, cl, fixedPayload, rv,
+	m, err := createManager(k, dyn, cl, gatewaysCounter, fixedPayload, rv,
 		telemetry.OptManagerPeriod(telemetryPeriod),
 		telemetry.OptManagerLogger(logger),
 	)
@@ -79,6 +80,7 @@ func createManager(
 	k kubernetes.Interface,
 	dyn dynamic.Interface,
 	cl client.Client,
+	gatewaysCounter workflows.DiscoveredGatewaysCounter,
 	fixedPayload Payload,
 	rv ReportValues,
 	opts ...telemetry.OptManager,
@@ -161,6 +163,14 @@ func createManager(
 			w.AddProvider(p)
 		}
 
+		m.AddWorkflow(w)
+	}
+
+	if rv.GatewayServiceDiscoveryEnabled {
+		w, err := workflows.NewGatewayDiscoveryWorkflow(gatewaysCounter)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create gateway discovery workflow: %w", err)
+		}
 		m.AddWorkflow(w)
 	}
 

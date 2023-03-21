@@ -27,6 +27,12 @@ import (
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 )
 
+type mockGatewaysCounter struct{}
+
+func (m mockGatewaysCounter) GatewayClientsCount() int {
+	return 5
+}
+
 func TestCreateManager(t *testing.T) {
 	var (
 		payload = types.ProviderReport{
@@ -37,7 +43,6 @@ func TestCreateManager(t *testing.T) {
 			"gateway": true,
 			"knative": false,
 		}
-		ctx            = context.Background()
 		publishService = apitypes.NamespacedName{
 			Namespace: "kong",
 			Name:      "kong-proxy",
@@ -82,18 +87,138 @@ func TestCreateManager(t *testing.T) {
 		Platform:     "linux/amd64",
 	}
 
+	reportValues := ReportValues{
+		FeatureGates:                   featureGates,
+		MeshDetection:                  true,
+		PublishServiceNN:               publishService,
+		KonnectSyncEnabled:             true,
+		GatewayServiceDiscoveryEnabled: true,
+	}
+
+	runManagerTest(
+		t,
+		k8sclient,
+		dyn,
+		ctrlClient,
+		mockGatewaysCounter{},
+		payload,
+		reportValues,
+		func(t *testing.T, actualReport string) {
+			require.Equal(t,
+				fmt.Sprintf(
+					"<14>"+
+						"signal=test-signal;"+
+						"db=off;"+
+						"feature-gateway-service-discovery=true;"+
+						"feature-gateway=true;"+
+						"feature-knative=false;"+
+						"feature-konnect-sync=true;"+
+						"hn=%s;"+
+						"kv=3.1.1;"+
+						"uptime=0;"+
+						"discovered_gateways_count=5;"+
+						"k8s_arch=linux/amd64;"+
+						"k8s_provider=UNKNOWN;"+
+						"k8sv=v1.24.5;"+
+						"k8sv_semver=v1.24.5;"+
+						"k8s_nodes_count=4;"+
+						"k8s_pods_count=8;"+
+						"k8s_services_count=17;"+
+						"kinm=c3,l2,l3,l4;"+
+						"mdep=i3,k3,km3,l3,t3;"+
+						"mdist=all17,c1,i2,k1,km1,l2,t1;"+
+						"\n",
+					hostname),
+				actualReport,
+			)
+		},
+	)
+}
+
+func TestCreateManager_GatewayDiscoverySpecifics(t *testing.T) {
+	testCases := []struct {
+		name                           string
+		gatewayServiceDiscoveryEnabled bool
+		expectReportToContain          []string
+		expectReportToNotContain       []string
+	}{
+		{
+			name:                           "gateway service discovery disabled",
+			gatewayServiceDiscoveryEnabled: false,
+			expectReportToContain: []string{
+				"feature-gateway-service-discovery=false",
+			},
+			expectReportToNotContain: []string{
+				"discovered_gateways_count=",
+			},
+		},
+		{
+			name:                           "gateway service discovery enabled",
+			gatewayServiceDiscoveryEnabled: true,
+			expectReportToContain: []string{
+				"feature-gateway-service-discovery=true",
+				"discovered_gateways_count=5",
+			},
+		},
+	}
+
+	scheme := prepareScheme(t)
+	dyn := testdynclient.NewSimpleDynamicClient(scheme)
+	ctrlClient := fakeclient.NewClientBuilder().Build()
+	k8sclient := testk8sclient.NewSimpleClientset()
+
+	for _, tc := range testCases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			runManagerTest(
+				t,
+				k8sclient,
+				dyn,
+				ctrlClient,
+				mockGatewaysCounter{},
+				Payload{},
+				ReportValues{
+					GatewayServiceDiscoveryEnabled: tc.gatewayServiceDiscoveryEnabled,
+				},
+				func(t *testing.T, actualReport string) {
+					for _, expected := range tc.expectReportToContain {
+						require.Contains(t, actualReport, expected)
+					}
+					for _, expected := range tc.expectReportToNotContain {
+						require.NotContains(t, actualReport, expected)
+					}
+				})
+		})
+	}
+}
+
+// runManagerTest is a helper function that creates a manager with the dependencies provided as arguments, and
+// calls the testFn with the actual report string it receives after triggering `test-signal` execution.
+func runManagerTest(
+	t *testing.T,
+
+	// Following arguments map with the arguments of the createManager function, but instead of interfaces,
+	// concrete test types are used.
+	k8sclient *testk8sclient.Clientset,
+	dyn *testdynclient.FakeDynamicClient,
+	ctrlClient client.Client,
+	gatewaysCounter mockGatewaysCounter,
+	payload Payload,
+	reportValues ReportValues,
+
+	// testFn is a function that will be called with the actual report string.
+	testFn func(t *testing.T, actualReport string),
+) {
+	ctx := context.Background()
 	mgr, err := createManager(
 		k8sclient,
 		dyn,
 		ctrlClient,
+		gatewaysCounter,
 		payload,
-		ReportValues{
-			FeatureGates:                   featureGates,
-			MeshDetection:                  true,
-			PublishServiceNN:               publishService,
-			KonnectSyncEnabled:             true,
-			GatewayServiceDiscoveryEnabled: true,
-		},
+		reportValues,
 		telemetry.OptManagerPeriod(time.Hour),
 		telemetry.OptManagerLogger(logr.Discard()),
 	)
@@ -112,32 +237,7 @@ func TestCreateManager(t *testing.T) {
 	require.NoError(t, mgr.TriggerExecute(ctx, "test-signal"))
 	select {
 	case b := <-ch:
-		require.Equal(t,
-			fmt.Sprintf(
-				"<14>"+
-					"signal=test-signal;"+
-					"db=off;"+
-					"feature-gateway-service-discovery=true;"+
-					"feature-gateway=true;"+
-					"feature-knative=false;"+
-					"feature-konnect-sync=true;"+
-					"hn=%s;"+
-					"kv=3.1.1;"+
-					"uptime=0;"+
-					"k8s_arch=linux/amd64;"+
-					"k8s_provider=UNKNOWN;"+
-					"k8sv=v1.24.5;"+
-					"k8sv_semver=v1.24.5;"+
-					"k8s_nodes_count=4;"+
-					"k8s_pods_count=8;"+
-					"k8s_services_count=17;"+
-					"kinm=c3,l2,l3,l4;"+
-					"mdep=i3,k3,km3,l3,t3;"+
-					"mdist=all17,c1,i2,k1,km1,l2,t1;"+
-					"\n",
-				hostname),
-			string(b),
-		)
+		testFn(t, string(b))
 	case <-time.After(time.Second):
 		t.Fatal("we should get a report but we didn't")
 	}

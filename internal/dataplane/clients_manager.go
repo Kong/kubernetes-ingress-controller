@@ -133,6 +133,12 @@ func (c *AdminAPIClientsManager) GatewayClients() []*adminapi.Client {
 	return copied
 }
 
+func (c *AdminAPIClientsManager) GatewayClientsCount() int {
+	c.lock.RLock()
+	defer c.lock.RUnlock()
+	return len(c.gatewayClients)
+}
+
 // SubscribeToGatewayClientsChanges returns a channel that will receive a notification on every Gateway clients update.
 // Can be used to receive a signal when immediate reaction to the changes is needed. After receiving the notification,
 // GatewayClients call will return an already updated slice of clients.

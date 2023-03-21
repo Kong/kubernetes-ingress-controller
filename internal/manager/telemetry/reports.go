@@ -7,9 +7,15 @@ import (
 	"github.com/google/uuid"
 	"k8s.io/client-go/rest"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/adminapi"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/manager/metadata"
 )
+
+// GatewayClientsProvider is an interface that provides clients for the currently discovered Gateway instances.
+type GatewayClientsProvider interface {
+	GatewayClients() []*adminapi.Client
+	GatewayClientsCount() int
+}
 
 // SetupAnonymousReports sets up and starts the anonymous reporting and returns
 // a cleanup function and an error.
@@ -18,7 +24,7 @@ import (
 func SetupAnonymousReports(
 	ctx context.Context,
 	kubeCfg *rest.Config,
-	clientsProvider dataplane.AdminAPIClientsProvider,
+	clientsProvider GatewayClientsProvider,
 	rv ReportValues,
 ) (func(), error) {
 	// if anonymous reports are enabled this helps provide Kong with insights about usage of the ingress controller
@@ -61,7 +67,7 @@ func SetupAnonymousReports(
 		"id": uuid.NewString(), // universal unique identifier for this system
 	}
 
-	tMgr, err := CreateManager(kubeCfg, fixedPayload, rv)
+	tMgr, err := CreateManager(kubeCfg, clientsProvider, fixedPayload, rv)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create anonymous reports manager: %w", err)
 	}

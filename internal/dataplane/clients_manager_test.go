@@ -256,12 +256,14 @@ func TestAdminAPIClientsManager_Clients(t *testing.T) {
 	)
 	require.NoError(t, err)
 	require.Len(t, m.GatewayClients(), 1, "expecting one initial client")
+	require.Equal(t, m.GatewayClientsCount(), 1, "expecting one initial client")
 	require.Len(t, m.AllClients(), 1, "expecting one initial client")
 
 	konnectTestClient, err := adminapi.NewTestClient("https://us.api.konghq.tech")
 	require.NoError(t, err)
 	m.SetKonnectClient(konnectTestClient)
 	require.Len(t, m.GatewayClients(), 1, "konnect client should not be returned from GatewayClients")
+	require.Equal(t, m.GatewayClientsCount(), 1, "konnect client should not be counted in GatewayClientsCount")
 	require.Len(t, m.AllClients(), 2, "konnect client should be returned from AllClients")
 }
 

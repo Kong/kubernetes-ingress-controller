@@ -170,10 +170,21 @@ func TestIngressRegexMatchPath(t *testing.T) {
 
 			t.Log("testing paths expected not to match")
 			for _, path := range tc.notMatchPaths {
-				resp, err := helpers.DefaultHTTPClient().Get(fmt.Sprintf("%s%s", proxyURL, path))
-				require.NoError(t, err)
-				defer resp.Body.Close()
-				require.Equalf(t, http.StatusNotFound, resp.StatusCode, "should not match path %s: %s", path, tc.description)
+				require.Eventually(t, func() bool {
+					resp, err := helpers.DefaultHTTPClient().Get(fmt.Sprintf("%s%s", proxyURL, path))
+					if err != nil {
+						t.Logf("WARNING: error while waiting for %s: %v", proxyURL, err)
+						return false
+					}
+					defer resp.Body.Close()
+
+					if resp.StatusCode != http.StatusNotFound {
+						t.Logf("WARNING: unexpected status code %d while waiting for %s: %v", resp.StatusCode, proxyURL, err)
+						return false
+					}
+
+					return true
+				}, ingressWait, waitTick)
 			}
 		})
 	}

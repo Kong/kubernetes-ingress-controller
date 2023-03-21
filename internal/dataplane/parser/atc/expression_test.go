@@ -36,6 +36,6 @@ func TestGenerateExpression(t *testing.T) {
 	)
 
 	require.Equal(t,
-		`( http.header.x_kong_test == "test" ) && ( http.host ^= ".konghq.com" ) && ( ( lower(http.path) ^= "/abc/def/" ) || ( lower(http.path) == "/abc/def" ) )`,
+		`(http.header.x_kong_test == "test") && (http.host ^= ".konghq.com") && ((lower(http.path) ^= "/abc/def/") || (lower(http.path) == "/abc/def"))`,
 		And(p, q, Or(p2, q2)).Expression())
 }

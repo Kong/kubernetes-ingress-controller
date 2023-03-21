@@ -149,5 +149,4 @@ func (f FieldHTTPHeader) String() string {
 
 func (f FieldHTTPHeader) ExtractValue(req *http.Request) Literal {
 	return (StringLiteral(req.Header.Get(f.headerName)))
-
 }

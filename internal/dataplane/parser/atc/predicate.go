@@ -44,7 +44,7 @@ type LiteralType int
 const (
 	LiteralTypeInt LiteralType = iota
 	LiteralTypeString
-	// TODO: define subtypes of IP literals(IPv4/IPv6;single IP/IP CIDR)
+	// TODO: define subtypes of IP literals(IPv4/IPv6;single IP/IP CIDR).
 	LiteralTypeIP
 )
 

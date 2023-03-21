@@ -5,7 +5,6 @@ import (
 )
 
 func ApplyExpression(r *kong.Route, m Matcher, priority int) {
-	exp := m.Expression()
-	r.Expression = &exp
-	r.Priority = &priority
+	r.Expression = kong.String(m.Expression())
+	r.Priority = kong.Int(priority)
 }

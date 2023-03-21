@@ -7,8 +7,10 @@ type Matcher interface {
 	Matches(*http.Request) bool
 }
 
-var _ Matcher = &OrMatcher{}
-var _ Matcher = &AndMatcher{}
+var (
+	_ Matcher = &OrMatcher{}
+	_ Matcher = &AndMatcher{}
+)
 
 type OrMatcher struct {
 	subMatchers []Matcher
@@ -24,7 +26,7 @@ func (m *OrMatcher) Expression() string {
 
 	ret := ""
 	for i, subMathcher := range m.subMatchers {
-		exp := "( " + subMathcher.Expression() + " )"
+		exp := "(" + subMathcher.Expression() + ")"
 		if i != len(m.subMatchers)-1 {
 			exp = exp + " || "
 		}
@@ -67,7 +69,7 @@ func (m *AndMatcher) Expression() string {
 
 	ret := ""
 	for i, subMathcher := range m.subMatchers {
-		exp := " (" + subMathcher.Expression() + ") "
+		exp := "(" + subMathcher.Expression() + ")"
 		if i != len(m.subMatchers)-1 {
 			exp = exp + " && "
 		}

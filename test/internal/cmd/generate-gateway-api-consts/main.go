@@ -1,5 +1,5 @@
-//go:build generate_gateway_api_urls
-// +build generate_gateway_api_urls
+//go:build generate_gateway_api_consts
+// +build generate_gateway_api_consts
 
 package main
 
@@ -15,7 +15,7 @@ import (
 	"text/template"
 )
 
-//go:generate go run --tags generate_gateway_api_urls . -gateway-api-version $GATEWAY_API_VERSION -crds-standard-url $CRDS_STANDARD_URL -crds-experimental-url $CRDS_EXPERIMENTAL_URL -raw-repo-url $RAW_REPO_URL -in $INPUT -out $OUTPUT
+//go:generate go run --tags generate_gateway_api_consts . -gateway-api-version $GATEWAY_API_VERSION -crds-standard-url $CRDS_STANDARD_URL -crds-experimental-url $CRDS_EXPERIMENTAL_URL -raw-repo-url $RAW_REPO_URL -in $INPUT -out $OUTPUT
 
 var (
 	gatewayAPIVersionFlag   = flag.String("gateway-api-version", "", "The semver version of Gateway API that should be used")
@@ -23,7 +23,7 @@ var (
 	crdsExperimentalURLFlag = flag.String("crds-experimental-url", "", "The URL of experimental Gateway API CRDs to be consumed by kustomize")
 	rawRepoURLFlag          = flag.String("raw-repo-url", "", "The raw URL of Gateway API repository")
 	inFlag                  = flag.String("in", "", "Template file path")
-	outFlag                 = flag.String("out", "", "Output file path where the generate file will be placed")
+	outFlag                 = flag.String("out", "", "Output file path where the generated file will be placed")
 )
 
 type Data struct {

@@ -214,7 +214,7 @@ manifests.single: kustomize ## Compose single-file deployment manifests from bui
 # ------------------------------------------------------------------------------
 
 .PHONY: generate
-generate: generate.controllers generate.clientsets generate.gateway-api-urls generate.docs fmt
+generate: generate.controllers generate.clientsets generate.gateway-api-consts generate.docs fmt
 
 .PHONY: generate.controllers
 generate.controllers: controller-gen
@@ -573,15 +573,15 @@ print-gateway-api-crds-url:
 print-gateway-api-raw-repo-url:
 	@echo $(GATEWAY_API_RAW_REPO_URL)
 
-.PHONY: generate.gateway-api-urls
-generate.gateway-api-urls:
+.PHONY: generate.gateway-api-consts
+generate.gateway-api-consts:
 	GATEWAY_API_VERSION=$(GATEWAY_API_VERSION) \
 		CRDS_STANDARD_URL=$(shell GATEWAY_API_RELEASE_CHANNEL="" $(MAKE) print-gateway-api-crds-url) \
 		CRDS_EXPERIMENTAL_URL=$(shell GATEWAY_API_RELEASE_CHANNEL="experimental" $(MAKE) print-gateway-api-crds-url) \
 		RAW_REPO_URL=$(shell $(MAKE) print-gateway-api-raw-repo-url) \
-		INPUT=$(shell pwd)/test/internal/cmd/generate-gateway-api-urls/gateway_consts.tmpl \
+		INPUT=$(shell pwd)/test/internal/cmd/generate-gateway-api-consts/gateway_consts.tmpl \
 		OUTPUT=$(shell pwd)/test/consts/zz_generated_gateway.go \
-		go generate -tags=generate_gateway_api_urls ./test/internal/cmd/generate-gateway-api-urls
+		go generate -tags=generate_gateway_api_consts ./test/internal/cmd/generate-gateway-api-consts
 
 .PHONY: go-mod-download-gateway-api
 go-mod-download-gateway-api:

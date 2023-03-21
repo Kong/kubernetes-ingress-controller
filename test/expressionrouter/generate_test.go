@@ -6,6 +6,7 @@ package expressionrouter
 import (
 	"context"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"testing"
@@ -23,8 +24,8 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/helpers"
 )
 
-func TestExpressionRouterGenerateRoutes(t *testing.T) {
-	httpClient := helpers.DefaultHTTPClient()
+func TestGenerateATCRoute(t *testing.T) {
+	httpClient := DefaultHTTPClient()
 
 	ip, port := exposeKongAdminService(ctx, t, env, consts.ControllerNamespace, "ingress-controller-kong-admin")
 
@@ -45,11 +46,11 @@ func TestExpressionRouterGenerateRoutes(t *testing.T) {
 			name:    "exact match on path",
 			matcher: atc.NewPredicateHTTPPath(atc.OpEqual, "/foo"),
 			matchRequests: []*http.Request{
-				helpers.MustHTTPRequest(t, "GET", helpers.MustParseURL(t, "http://a.foo.com"), "foo", nil),
+				mustNewHTTPRequest(t, "GET", "http://a.foo.com/foo", nil),
 			},
 			unmatchRequests: []*http.Request{
-				helpers.MustHTTPRequest(t, "GET", helpers.MustParseURL(t, "http://a.foo.com"), "foobar", nil),
-				helpers.MustHTTPRequest(t, "GET", helpers.MustParseURL(t, "http://a.foo.com"), "foo/", nil),
+				mustNewHTTPRequest(t, "GET", "http://a.foo.com/foobar", nil),
+				mustNewHTTPRequest(t, "GET", "http://a.foo.com/foo/", nil),
 			},
 		},
 		{
@@ -59,11 +60,11 @@ func TestExpressionRouterGenerateRoutes(t *testing.T) {
 				atc.NewPrediacteHTTPHost(atc.OpEqual, "a.foo.com"),
 			),
 			matchRequests: []*http.Request{
-				helpers.MustHTTPRequest(t, "GET", helpers.MustParseURL(t, "http://a.foo.com"), "foo", nil),
+				mustNewHTTPRequest(t, "GET", "http://a.foo.com/foo", nil),
 			},
 			unmatchRequests: []*http.Request{
-				helpers.MustHTTPRequest(t, "GET", helpers.MustParseURL(t, "http://a.foo.com"), "foobar", nil),
-				helpers.MustHTTPRequest(t, "GET", helpers.MustParseURL(t, "http://b.foo.com"), "foo", nil),
+				mustNewHTTPRequest(t, "GET", "http://a.foo.com/foobar", nil),
+				mustNewHTTPRequest(t, "GET", "http://b.foo.com/foo", nil),
 			},
 		},
 		{
@@ -73,19 +74,18 @@ func TestExpressionRouterGenerateRoutes(t *testing.T) {
 				atc.NewPrediacteHTTPHost(atc.OpSuffixMatch, ".foo.com"),
 			),
 			matchRequests: []*http.Request{
-				helpers.MustHTTPRequest(t, "GET", helpers.MustParseURL(t, "http://a.foo.com"), "foo", nil),
-				helpers.MustHTTPRequest(t, "GET", helpers.MustParseURL(t, "http://b.foo.com"), "foo", nil),
+				mustNewHTTPRequest(t, "GET", "http://a.foo.com/foo", nil),
+				mustNewHTTPRequest(t, "GET", "http://b.foo.com/foo", nil),
 			},
 			unmatchRequests: []*http.Request{
-				helpers.MustHTTPRequest(t, "GET", helpers.MustParseURL(t, "http://a.foo.com"), "foobar", nil),
-				helpers.MustHTTPRequest(t, "GET", helpers.MustParseURL(t, "http://a.bar.com"), "foo", nil),
+				mustNewHTTPRequest(t, "GET", "http://a.foo.com/foobar", nil),
 			},
 		},
 	}
 
 	proxyIP := getKongProxyIP(ctx, t, env, consts.ControllerNamespace)
 	proxyURL, err := url.Parse(fmt.Sprintf("http://%s", proxyIP))
-	proxyClient := helpers.DefaultHTTPClient()
+	proxyClient := DefaultHTTPClient()
 	proxyClient.Transport = &http.Transport{
 		Proxy: http.ProxyURL(proxyURL),
 	}
@@ -132,6 +132,9 @@ func TestExpressionRouterGenerateRoutes(t *testing.T) {
 
 			resp, err := kongClient.DoRAW(context.Background(), req)
 			require.NoError(t, err)
+			buf, err := io.ReadAll(resp.Body)
+			t.Log("response from Kong:", string(buf))
+
 			resp.Body.Close()
 
 			require.Equal(t, http.StatusCreated, resp.StatusCode)

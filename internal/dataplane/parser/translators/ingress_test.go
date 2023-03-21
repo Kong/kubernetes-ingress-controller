@@ -1259,7 +1259,7 @@ func TestTranslateIngress(t *testing.T) {
 					ObjectMeta: i.ObjectMeta,
 				}
 			})
-			diff := cmp.Diff(tt.expected, TranslateIngress(tt.ingress, tt.addRegexPrefix, false), checkOnlyObjectMeta)
+			diff := cmp.Diff(tt.expected, TranslateIngress(tt.ingress, tt.addRegexPrefix), checkOnlyObjectMeta)
 			require.Empty(t, diff, "expected no difference between expected and translated ingress")
 		})
 	}

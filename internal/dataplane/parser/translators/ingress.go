@@ -11,7 +11,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/parser/atc"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 )
 
@@ -22,11 +21,10 @@ import (
 // TranslateIngress receives a Kubernetes ingress object and from it will
 // produce a translated set of kong.Services and kong.Routes which will come
 // wrapped in a kongstate.Service object.
-func TranslateIngress(ingress *netv1.Ingress, addRegexPrefix bool, translateToATCRoute bool) []*kongstate.Service {
+func TranslateIngress(ingress *netv1.Ingress, addRegexPrefix bool) []*kongstate.Service {
 	index := &ingressTranslationIndex{
-		cache:               make(map[string]*ingressTranslationMeta),
-		addRegexPrefix:      addRegexPrefix,
-		translateToATCRoute: translateToATCRoute,
+		cache:          make(map[string]*ingressTranslationMeta),
+		addRegexPrefix: addRegexPrefix,
 	}
 	index.add(ingress)
 	kongStateServices := kongstate.Services(index.translate())
@@ -77,9 +75,8 @@ const (
 // The addRegexPrefix flag indicates if generated regex paths for path type handling include the Kong 3.0+ "~" regular
 // expression prefix.
 type ingressTranslationIndex struct {
-	cache               map[string]*ingressTranslationMeta
-	addRegexPrefix      bool
-	translateToATCRoute bool
+	cache          map[string]*ingressTranslationMeta
+	addRegexPrefix bool
 }
 
 func (i *ingressTranslationIndex) add(ingress *netv1.Ingress) {
@@ -133,13 +130,7 @@ func (i *ingressTranslationIndex) translate() []*kongstate.Service {
 			kongStateService = meta.translateIntoKongStateService(kongServiceName, meta.servicePort)
 		}
 
-		var route *kongstate.Route
-		if i.translateToATCRoute {
-			route = meta.translateIntoKongATCRoutes()
-		} else {
-			route = meta.translateIntoKongRoutes()
-		}
-
+		route := meta.translateIntoKongRoutes()
 		kongStateService.Routes = append(kongStateService.Routes, *route)
 
 		kongStateServiceCache[kongServiceName] = kongStateService
@@ -226,58 +217,6 @@ func (m *ingressTranslationMeta) translateIntoKongRoutes() *kongstate.Route {
 		paths := PathsFromIngressPaths(httpIngressPath, m.addRegexPrefix)
 		route.Paths = append(route.Paths, paths...)
 	}
-
-	return route
-}
-
-func (m *ingressTranslationMeta) translateIntoKongATCRoutes() *kongstate.Route {
-	ingressHost := m.ingressHost
-	if strings.Contains(ingressHost, "*") {
-		// '_' is not allowed in host, so we use '_' to replace '*' since '*' is not allowed in Kong.
-		ingressHost = strings.ReplaceAll(ingressHost, "*", "_")
-	}
-	routeName := fmt.Sprintf("%s.%s.%s.%s.%s", m.parentIngress.GetNamespace(), m.parentIngress.GetName(), m.serviceName, ingressHost, m.servicePort.CanonicalString())
-	route := &kongstate.Route{
-		Ingress: util.K8sObjectInfo{
-			Namespace:   m.parentIngress.GetNamespace(),
-			Name:        m.parentIngress.GetName(),
-			Annotations: m.parentIngress.GetAnnotations(),
-		},
-		Route: kong.Route{
-			Name:              kong.String(routeName),
-			StripPath:         kong.Bool(false),
-			PreserveHost:      kong.Bool(true),
-			RequestBuffering:  kong.Bool(true),
-			ResponseBuffering: kong.Bool(true),
-			Tags:              m.ingressTags,
-		},
-	}
-
-	matcher := atc.AndMatcher{}
-
-	protocolMatcher := atc.Or(
-		atc.NewPredicateNetProtocol(atc.OpEqual, "http"),
-		atc.NewPredicateNetProtocol(atc.OpEqual, "https"),
-	)
-	matcher.And(protocolMatcher)
-
-	pathMatchers := []atc.Matcher{}
-	for _, httpIngressPath := range m.paths {
-		pathMatchers = append(pathMatchers, matcherFromIngressPath(httpIngressPath, "/~"))
-	}
-	if len(pathMatchers) > 0 {
-		matcher.And(atc.Or(pathMatchers...))
-	}
-
-	if m.ingressHost != "" {
-		hostMatcher := matcherFromIngressHost(m.ingressHost)
-		// TODO: add matchers for host aliases in annotations
-		matcher.And(hostMatcher)
-	}
-
-	route.Expression = kong.String(matcher.Expression())
-	// TODO: define a priority > 0 for mathchers fro m matching rules
-	route.Priority = kong.Int(1)
 
 	return route
 }

@@ -27,10 +27,10 @@ import (
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 )
 
-type mockGatewaysCounter struct{}
+type mockGatewaysCounter int
 
 func (m mockGatewaysCounter) GatewayClientsCount() int {
-	return 5
+	return int(m)
 }
 
 func TestCreateManager(t *testing.T) {
@@ -100,7 +100,7 @@ func TestCreateManager(t *testing.T) {
 		k8sclient,
 		dyn,
 		ctrlClient,
-		mockGatewaysCounter{},
+		mockGatewaysCounter(5),
 		payload,
 		reportValues,
 		func(t *testing.T, actualReport string) {
@@ -177,7 +177,7 @@ func TestCreateManager_GatewayDiscoverySpecifics(t *testing.T) {
 				k8sclient,
 				dyn,
 				ctrlClient,
-				mockGatewaysCounter{},
+				mockGatewaysCounter(5),
 				Payload{},
 				ReportValues{
 					GatewayServiceDiscoveryEnabled: tc.gatewayServiceDiscoveryEnabled,

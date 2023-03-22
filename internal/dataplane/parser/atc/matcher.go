@@ -1,10 +1,7 @@
 package atc
 
-import "net/http"
-
 type Matcher interface {
 	Expression() string
-	Matches(*http.Request) bool
 }
 
 var (
@@ -33,15 +30,6 @@ func (m *OrMatcher) Expression() string {
 		ret = ret + exp
 	}
 	return ret
-}
-
-func (m *OrMatcher) Matches(req *http.Request) bool {
-	for _, subMatcher := range m.subMatchers {
-		if subMatcher.Matches(req) {
-			return true
-		}
-	}
-	return false
 }
 
 func (m *OrMatcher) Or(matcher Matcher) *OrMatcher {
@@ -76,16 +64,6 @@ func (m *AndMatcher) Expression() string {
 		ret = ret + exp
 	}
 	return ret
-}
-
-func (m *AndMatcher) Matches(req *http.Request) bool {
-	for _, subMatcher := range m.subMatchers {
-		if !subMatcher.Matches(req) {
-			return false
-		}
-	}
-
-	return true
 }
 
 func (m *AndMatcher) And(matcher Matcher) *AndMatcher {

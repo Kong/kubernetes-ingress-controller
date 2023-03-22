@@ -8,7 +8,6 @@ import (
 	"context"
 	"encoding/json"
 	"io"
-	"net/http"
 	"testing"
 	"time"
 
@@ -93,8 +92,6 @@ func getKongProxyLoadBalancerIP(t *testing.T, refreshSvc func() *corev1.Service)
 			resIP = ip
 			return true
 		}
-
-		t.Log("no IP for LoadBalancer found yet")
 		return false
 	}, 2*time.Minute, time.Second)
 
@@ -121,18 +118,4 @@ func marshalKongConfig(t *testing.T, s kong.Service, r kong.Route) io.Reader {
 	require.NoError(t, err)
 
 	return bytes.NewReader(config)
-}
-
-func mustNewHTTPRequest(t *testing.T, method string, url string, body io.Reader) *http.Request {
-	t.Helper()
-
-	req, err := http.NewRequest(method, url, body)
-	require.NoError(t, err)
-	return req
-}
-
-func DefaultHTTPClient() *http.Client {
-	return &http.Client{
-		Timeout: 10 * time.Second,
-	}
 }

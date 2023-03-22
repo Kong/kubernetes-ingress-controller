@@ -2,7 +2,6 @@ package helpers
 
 import (
 	"bytes"
-	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -82,25 +81,25 @@ func EventuallyGETPath(
 	}, waitDuration, waitTick)
 }
 
-// ExpectHTTP404WithNoRoute is used to check whether a given http response is (specifically) a Kong 404.
-func ExpectHTTP404WithNoRoute(t *testing.T, proxyURL *url.URL, resp *http.Response) bool {
-	if resp.StatusCode != http.StatusNotFound {
-		return false
-	}
-
-	// once the route is torn down and returning 404's, ensure that we got the expected response body back from Kong
-	// Expected: {"message":"no Route matched with those values"}
-	b := new(bytes.Buffer)
-	_, err := b.ReadFrom(resp.Body)
-	require.NoError(t, err)
-	body := struct {
-		Message string `json:"message"`
-	}{}
-	if err := json.NewDecoder(b).Decode(&body); err != nil {
-		t.Logf("WARNING: error decoding JSON from proxy while waiting for %s: %v", proxyURL, err)
-		return false
-	}
-	return body.Message == "no Route matched with those values"
+// EventuallyExpectHTTP404WithNoRoute is used to check whether a given http response is (specifically) a Kong 404.
+func EventuallyExpectHTTP404WithNoRoute(
+	t *testing.T,
+	proxyURL *url.URL,
+	path string,
+	waitDuration time.Duration,
+	waitTick time.Duration,
+	headers map[string]string,
+) {
+	EventuallyGETPath(
+		t,
+		proxyURL,
+		path,
+		http.StatusNotFound,
+		"no Route matched with those values",
+		headers,
+		waitDuration,
+		waitTick,
+	)
 }
 
 // ResponseMatcher is a function that returns match-name and whether the response

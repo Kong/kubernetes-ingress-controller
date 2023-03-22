@@ -184,15 +184,7 @@ func TestPluginEssentials(t *testing.T) {
 
 	t.Log("deleting Ingress and waiting for routes to be torn down")
 	require.NoError(t, clusters.DeleteIngress(ctx, env.Cluster(), ns.Name, ingress))
-	assert.Eventually(t, func() bool {
-		resp, err := helpers.DefaultHTTPClient().Get(fmt.Sprintf("%s/test_plugin_essentials", proxyURL))
-		if err != nil {
-			t.Logf("WARNING: error while waiting for %s: %v", proxyURL, err)
-			return false
-		}
-		defer resp.Body.Close()
-		return helpers.ExpectHTTP404WithNoRoute(t, proxyURL, resp)
-	}, ingressWait, waitTick)
+	helpers.EventuallyExpectHTTP404WithNoRoute(t, proxyURL, "/test_plugin_essentials", ingressWait, waitTick, nil)
 }
 
 func TestPluginOrdering(t *testing.T) {
@@ -350,13 +342,5 @@ func TestPluginOrdering(t *testing.T) {
 
 	t.Log("deleting Ingress and waiting for routes to be torn down")
 	require.NoError(t, clusters.DeleteIngress(ctx, env.Cluster(), ns.Name, ingress))
-	assert.Eventually(t, func() bool {
-		resp, err := helpers.DefaultHTTPClient().Get(fmt.Sprintf("%s/test_plugin_ordering", proxyURL))
-		if err != nil {
-			t.Logf("WARNING: error while waiting for %s: %v", proxyURL, err)
-			return false
-		}
-		defer resp.Body.Close()
-		return helpers.ExpectHTTP404WithNoRoute(t, proxyURL, resp)
-	}, ingressWait, waitTick)
+	helpers.EventuallyExpectHTTP404WithNoRoute(t, proxyURL, "/test_plugin_ordering", ingressWait, waitTick, nil)
 }

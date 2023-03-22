@@ -4,7 +4,6 @@
 package integration
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"net/http"
@@ -137,54 +136,12 @@ func TestIngressRegexMatchPath(t *testing.T) {
 			}()
 
 			t.Log("testing paths expected to match")
-			notMatchedPaths := []string{}
-			require.Eventually(t, func() bool {
-				notMatchedPaths = []string{}
-				for _, path := range tc.matchPaths {
-					resp, err := helpers.DefaultHTTPClient().Get(fmt.Sprintf("%s%s", proxyURL, path))
-					if err != nil {
-						t.Logf("WARNING: error while waiting for %s: %v", proxyURL, err)
-						notMatchedPaths = append(notMatchedPaths, path)
-						return false
-					}
-					defer resp.Body.Close()
-					// returns false if one path is not matched.
-					if resp.StatusCode == http.StatusOK {
-						b := new(bytes.Buffer)
-						n, err := b.ReadFrom(resp.Body)
-						require.NoError(t, err)
-						require.True(t, n > 0)
-						if !strings.Contains(b.String(), "<title>httpbin.org</title>") {
-							notMatchedPaths = append(notMatchedPaths, path)
-							return false
-						}
-					} else {
-						notMatchedPaths = append(notMatchedPaths, path)
-						return false
-					}
-				}
-				// returns true if all testing paths matched.
-				return true
-			}, ingressWait, waitTick,
-				fmt.Sprintf("paths %v not matched %s", notMatchedPaths, tc.description))
-
+			for _, path := range tc.matchPaths {
+				helpers.EventuallyGETPath(t, proxyURL, path, http.StatusOK, "<title>httpbin.org</title>", nil, ingressWait, waitTick)
+			}
 			t.Log("testing paths expected not to match")
 			for _, path := range tc.notMatchPaths {
-				require.Eventually(t, func() bool {
-					resp, err := helpers.DefaultHTTPClient().Get(fmt.Sprintf("%s%s", proxyURL, path))
-					if err != nil {
-						t.Logf("WARNING: error while waiting for %s: %v", proxyURL, err)
-						return false
-					}
-					defer resp.Body.Close()
-
-					if resp.StatusCode != http.StatusNotFound {
-						t.Logf("WARNING: unexpected status code %d while waiting for %s: %v", resp.StatusCode, proxyURL, err)
-						return false
-					}
-
-					return true
-				}, ingressWait, waitTick)
+				helpers.EventuallyExpectHTTP404WithNoRoute(t, proxyURL, path, ingressWait, waitTick, nil)
 			}
 		})
 	}
@@ -277,41 +234,29 @@ func TestIngressRegexMatchHeader(t *testing.T) {
 			}()
 
 			t.Log("testing headers expected to match")
-			require.Eventually(t, func() bool {
-				for _, header := range tc.matchHeaders {
-					req := helpers.MustHTTPRequest(t, "GET", proxyURL, "/", nil)
-					req.Header.Add(matchHeaderKey, header)
-					resp, err := helpers.DefaultHTTPClient().Do(req)
-					if err != nil {
-						t.Logf("WARNING: error while waiting for %s: %v", proxyURL, err)
-						return false
-					}
-					defer resp.Body.Close()
-					// returns false if one of test requests is not matched.
-					if resp.StatusCode == http.StatusOK {
-						b := new(bytes.Buffer)
-						n, err := b.ReadFrom(resp.Body)
-						require.NoError(t, err)
-						require.True(t, n > 0)
-						if !strings.Contains(b.String(), "<title>httpbin.org</title>") {
-							return false
-						}
-					} else {
-						return false
-					}
-				}
-				// returns true if all testing requests matched.
-				return true
-			}, ingressWait, waitTick)
+			for _, header := range tc.matchHeaders {
+				helpers.EventuallyGETPath(
+					t,
+					proxyURL,
+					"/",
+					http.StatusOK,
+					"<title>httpbin.org</title>",
+					map[string]string{matchHeaderKey: header},
+					ingressWait,
+					waitTick,
+				)
+			}
 
 			t.Log("testing headers expected not to match")
 			for _, header := range tc.notMatchHeaders {
-				req := helpers.MustHTTPRequest(t, "GET", proxyURL, "/", nil)
-				req.Header.Add(matchHeaderKey, header)
-				resp, err := helpers.DefaultHTTPClient().Do(req)
-				require.NoError(t, err)
-				defer resp.Body.Close()
-				require.Equalf(t, http.StatusNotFound, resp.StatusCode, "should not match host %s", header)
+				helpers.EventuallyExpectHTTP404WithNoRoute(
+					t,
+					proxyURL,
+					"/",
+					ingressWait,
+					waitTick,
+					map[string]string{matchHeaderKey: header},
+				)
 			}
 		})
 	}

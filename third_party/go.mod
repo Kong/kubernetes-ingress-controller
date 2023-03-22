@@ -6,7 +6,7 @@ require (
 	github.com/GoogleContainerTools/skaffold/v2 v2.2.0
 	github.com/elastic/crd-ref-docs v0.0.8
 	github.com/go-delve/delve v1.20.1
-	github.com/golangci/golangci-lint v1.52.0
+	github.com/golangci/golangci-lint v1.52.1
 	github.com/jstemmer/go-junit-report/v2 v2.0.0
 	gotest.tools/gotestsum v1.9.0
 	honnef.co/go/tools v0.4.3

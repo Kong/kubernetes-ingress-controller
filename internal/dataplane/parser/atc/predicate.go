@@ -1,7 +1,6 @@
 package atc
 
 import (
-	"net/http"
 	"strconv"
 	"strings"
 )
@@ -19,12 +18,11 @@ type LHS interface {
 	FieldType() FieldType
 	// TODO(naming): use a better name for this method? "String" is too gerneral
 	String() string
-	ExtractValue(*http.Request) Literal
 }
 
 type BinaryOperator string
 
-var (
+const (
 	OpEqual        BinaryOperator = "=="
 	OpNotEqual     BinaryOperator = "!="
 	OpRegexMatch   BinaryOperator = "~"
@@ -63,6 +61,7 @@ func (l StringLiteral) Type() LiteralType {
 
 func (l StringLiteral) String() string {
 	str := string(l)
+	// replace the escape characters: '\', '\n', '\t', '\r', '\"'
 	str = strings.ReplaceAll(str, "\\", "\\\\")
 	str = strings.ReplaceAll(str, "\"", "\\\"")
 	str = strings.ReplaceAll(str, "\n", "\\n")
@@ -88,11 +87,6 @@ type Predicate struct {
 	field LHS
 	op    BinaryOperator
 	value Literal
-}
-
-func (p Predicate) Matches(req *http.Request) bool {
-	// TODO: add logics to the matches
-	return true
 }
 
 func (p Predicate) Expression() string {

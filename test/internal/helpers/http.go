@@ -37,6 +37,13 @@ func MustHTTPRequest(t *testing.T, method string, proxyURL *url.URL, path string
 	return req
 }
 
+// MustParseURL parses a string format URL to *url.URL. If error happens, fails the test.
+func MustParseURL(t *testing.T, urlStr string) *url.URL {
+	u, err := url.Parse(urlStr)
+	require.NoErrorf(t, err, "failed to parse URL %s: %v", urlStr, err)
+	return u
+}
+
 // -----------------------------------------------------------------------------
 // Testing Utility Functions - Various HTTP related
 // -----------------------------------------------------------------------------

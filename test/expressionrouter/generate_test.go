@@ -25,7 +25,7 @@ import (
 )
 
 func TestGenerateATCRoute(t *testing.T) {
-	httpClient := DefaultHTTPClient()
+	httpClient := helpers.DefaultHTTPClient()
 
 	ip, port := exposeKongAdminService(ctx, t, env, consts.ControllerNamespace, "ingress-controller-kong-admin")
 
@@ -46,11 +46,11 @@ func TestGenerateATCRoute(t *testing.T) {
 			name:    "exact match on path",
 			matcher: atc.NewPredicateHTTPPath(atc.OpEqual, "/foo"),
 			matchRequests: []*http.Request{
-				mustNewHTTPRequest(t, "GET", "http://a.foo.com/foo", nil),
+				helpers.MustHTTPRequest(t, "GET", helpers.MustParseURL(t, "http://a.foo.com"), "foo", nil),
 			},
 			unmatchRequests: []*http.Request{
-				mustNewHTTPRequest(t, "GET", "http://a.foo.com/foobar", nil),
-				mustNewHTTPRequest(t, "GET", "http://a.foo.com/foo/", nil),
+				helpers.MustHTTPRequest(t, "GET", helpers.MustParseURL(t, "http://a.foo.com"), "foobar", nil),
+				helpers.MustHTTPRequest(t, "GET", helpers.MustParseURL(t, "http://a.foo.com"), "foo/", nil),
 			},
 		},
 		{
@@ -60,11 +60,11 @@ func TestGenerateATCRoute(t *testing.T) {
 				atc.NewPrediacteHTTPHost(atc.OpEqual, "a.foo.com"),
 			),
 			matchRequests: []*http.Request{
-				mustNewHTTPRequest(t, "GET", "http://a.foo.com/foo", nil),
+				helpers.MustHTTPRequest(t, "GET", helpers.MustParseURL(t, "http://a.foo.com"), "foo", nil),
 			},
 			unmatchRequests: []*http.Request{
-				mustNewHTTPRequest(t, "GET", "http://a.foo.com/foobar", nil),
-				mustNewHTTPRequest(t, "GET", "http://b.foo.com/foo", nil),
+				helpers.MustHTTPRequest(t, "GET", helpers.MustParseURL(t, "http://a.foo.com"), "foobar", nil),
+				helpers.MustHTTPRequest(t, "GET", helpers.MustParseURL(t, "http://b.foo.com"), "foo", nil),
 			},
 		},
 		{
@@ -74,18 +74,19 @@ func TestGenerateATCRoute(t *testing.T) {
 				atc.NewPrediacteHTTPHost(atc.OpSuffixMatch, ".foo.com"),
 			),
 			matchRequests: []*http.Request{
-				mustNewHTTPRequest(t, "GET", "http://a.foo.com/foo", nil),
-				mustNewHTTPRequest(t, "GET", "http://b.foo.com/foo", nil),
+				helpers.MustHTTPRequest(t, "GET", helpers.MustParseURL(t, "http://a.foo.com"), "foo", nil),
+				helpers.MustHTTPRequest(t, "GET", helpers.MustParseURL(t, "http://b.foo.com"), "foo", nil),
 			},
 			unmatchRequests: []*http.Request{
-				mustNewHTTPRequest(t, "GET", "http://a.foo.com/foobar", nil),
+				helpers.MustHTTPRequest(t, "GET", helpers.MustParseURL(t, "http://a.foo.com"), "foobar", nil),
+				helpers.MustHTTPRequest(t, "GET", helpers.MustParseURL(t, "http://a.bar.com"), "foo", nil),
 			},
 		},
 	}
 
 	proxyIP := getKongProxyIP(ctx, t, env, consts.ControllerNamespace)
 	proxyURL, err := url.Parse(fmt.Sprintf("http://%s", proxyIP))
-	proxyClient := DefaultHTTPClient()
+	proxyClient := helpers.DefaultHTTPClient()
 	proxyClient.Transport = &http.Transport{
 		Proxy: http.ProxyURL(proxyURL),
 	}

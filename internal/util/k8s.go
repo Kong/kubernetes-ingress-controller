@@ -23,6 +23,7 @@ import (
 	"strings"
 
 	"github.com/kong/go-kong/kong"
+	"github.com/samber/lo"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -182,7 +183,7 @@ func GenerateTagsForObject(obj client.Object) []*string {
 	if gvk.Version != "" {
 		tags = append(tags, K8sVersionTagPrefix+gvk.Version)
 	}
-	user := annotations.ExtractUserTags(obj.GetAnnotations())
-	tags = append(tags, user...)
+	tags = append(tags, annotations.ExtractUserTags(obj.GetAnnotations())...)
+	tags = lo.Uniq(tags)
 	return kong.StringSlice(tags...)
 }

@@ -75,6 +75,9 @@ Adding a new version? You'll need three changes:
 - Telemetry reports now include a number of discovered Gateways when the Gateway Discovery
   feature is turned on.
   [#3783](https://github.com/Kong/kubernetes-ingress-controller/pull/3783)
+- Adding the `konghq.com/tags: csv,of,tags` annotation will add tags to
+  generated resources.
+  [#3778](https://github.com/Kong/kubernetes-ingress-controller/pull/3778)
 
 ### Fixed
 

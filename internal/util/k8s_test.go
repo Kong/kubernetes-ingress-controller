@@ -20,9 +20,14 @@ import (
 	"context"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	testclient "k8s.io/client-go/kubernetes/fake"
+	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
+
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
 )
 
 func TestParseNameNS(t *testing.T) {
@@ -240,5 +245,55 @@ func TestGetPodDetails(t *testing.T) {
 
 	if epi == nil {
 		t.Errorf("expected a PodInfo but returned nil")
+	}
+}
+
+func TestGenerateTagsForObject(t *testing.T) {
+	actualTagSet := map[string]bool{}
+	expectedTagSet := map[string]bool{
+		K8sNamespaceTagPrefix + "aitmatov": true,
+		K8sNameTagPrefix + "yedigei":       true,
+		K8sUIDTagPrefix + "buryani":        true,
+		K8sKindTagPrefix + "adam":          true,
+		K8sGroupTagPrefix + "sary.ozek":    true,
+		K8sVersionTagPrefix + "v1beta100":  true,
+		"snaryad-soqqısı":                  true,
+		"temir-jol":                        true,
+	}
+
+	// somewhat unintuitively, declaring a static HTTPRoute does not inherently give it HTTPRoute TypeMeta
+	// to deal with this, the test manually sets fake values, allowing the tag generator to run as if it
+	// had an object with actual meta, like you'd get if you used the API server get functions.
+	tmeta := metav1.TypeMeta{}
+	tmeta.SetGroupVersionKind(schema.GroupVersionKind{
+		Group:   "sary.ozek",
+		Version: "v1beta100",
+		Kind:    "adam",
+	})
+	testObj := &gatewayv1beta1.HTTPRoute{
+		TypeMeta: tmeta,
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "yedigei",
+			Namespace: "aitmatov",
+			UID:       "buryani",
+			Annotations: map[string]string{
+				annotations.AnnotationPrefix + annotations.UserTagKey: "snaryad-soqqısı,temir-jol",
+			},
+		},
+	}
+
+	tags := GenerateTagsForObject(testObj)
+	for _, tag := range tags {
+		actualTagSet[*tag] = true
+	}
+
+	for e := range expectedTagSet {
+		_, ok := actualTagSet[e]
+		assert.Truef(t, ok, "expected %s tag not present", e)
+	}
+
+	for a := range actualTagSet {
+		_, ok := expectedTagSet[a]
+		assert.Truef(t, ok, "unexpected %s tag present", a)
 	}
 }

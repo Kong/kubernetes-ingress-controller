@@ -81,7 +81,6 @@ type Config struct {
 	UpdateStatus            bool
 
 	// Kubernetes API toggling
-	IngressExtV1beta1Enabled      bool
 	IngressNetV1beta1Enabled      bool
 	IngressNetV1Enabled           bool
 	IngressClassNetV1Enabled      bool
@@ -204,7 +203,6 @@ func (c *Config) FlagSet() *pflag.FlagSet {
 	flagSet.BoolVar(&c.IngressClassNetV1Enabled, "enable-controller-ingress-class-networkingv1", true, "Enable the networking.k8s.io/v1 IngressClass controller.")
 	flagSet.BoolVar(&c.IngressClassParametersEnabled, "enable-controller-ingress-class-parameters", true, "Enable the IngressClassParameters controller.")
 	flagSet.BoolVar(&c.IngressNetV1beta1Enabled, "enable-controller-ingress-networkingv1beta1", true, "Enable the networking.k8s.io/v1beta1 Ingress controller.")
-	flagSet.BoolVar(&c.IngressExtV1beta1Enabled, "enable-controller-ingress-extensionsv1beta1", true, "Enable the extensions/v1beta1 Ingress controller.")
 	flagSet.BoolVar(&c.UDPIngressEnabled, "enable-controller-udpingress", true, "Enable the UDPIngress controller.")
 	flagSet.BoolVar(&c.TCPIngressEnabled, "enable-controller-tcpingress", true, "Enable the TCPIngress controller.")
 	flagSet.BoolVar(&c.KnativeIngressEnabled, "enable-controller-knativeingress", true, "Enable the KnativeIngress controller.")
@@ -265,6 +263,9 @@ func (c *Config) FlagSet() *pflag.FlagSet {
 
 	_ = flagSet.Bool("leader-elect", false, "DEPRECATED as of 2.1.0: leader election behavior is determined automatically based on the Kong database setting and this flag has no effect")
 	_ = flagSet.MarkDeprecated("leader-elect", "DEPRECATED as of 2.1.0: leader election behavior is determined automatically based on the Kong database setting and this flag has no effect")
+
+	_ = flagSet.Bool("enable-controller-ingress-extensionsv1beta1", true, "DEPRECATED: Enable the extensions/v1beta1 Ingress controller.")
+	_ = flagSet.MarkDeprecated("enable-controller-ingress-extensionsv1beta1", "DEPRECATED: Enable the extensions/v1beta1 Ingress controller.")
 
 	c.flagSet = flagSet
 	return flagSet

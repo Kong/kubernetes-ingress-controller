@@ -5,7 +5,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	extensionsv1beta1 "k8s.io/api/extensions/v1beta1"
 	netv1 "k8s.io/api/networking/v1"
 	netv1beta1 "k8s.io/api/networking/v1beta1"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -27,11 +26,6 @@ func TestIngressControllerConditions(t *testing.T) {
 			Version:  netv1beta1.SchemeGroupVersion.Version,
 			Resource: "ingresses",
 		}
-		extensionsV1beta1 = schema.GroupVersionResource{
-			Group:    extensionsv1beta1.SchemeGroupVersion.Group,
-			Version:  extensionsv1beta1.SchemeGroupVersion.Version,
-			Resource: "ingresses",
-		}
 	)
 
 	type ingressTestOpts struct {
@@ -45,12 +39,10 @@ func TestIngressControllerConditions(t *testing.T) {
 		ingressNetV1      ingressTestOpts
 		ingressClassNetV1 ingressTestOpts
 		ingressNetV1beta  ingressTestOpts
-		ingressExtV1beta  ingressTestOpts
 
 		expectIngressNetV1      bool
 		expectIngressClassNetV1 bool
 		expectIngressNetV1beta  bool
-		expectIngressExtV1beta  bool
 		expectError             bool
 	}{
 		{
@@ -58,7 +50,6 @@ func TestIngressControllerConditions(t *testing.T) {
 			ingressNetV1:            ingressTestOpts{enabled: true, crdInstalled: true},
 			ingressClassNetV1:       ingressTestOpts{enabled: true, crdInstalled: true},
 			ingressNetV1beta:        ingressTestOpts{enabled: true, crdInstalled: true},
-			ingressExtV1beta:        ingressTestOpts{enabled: true, crdInstalled: true},
 			expectIngressNetV1:      true,
 			expectIngressClassNetV1: true,
 		},
@@ -67,23 +58,13 @@ func TestIngressControllerConditions(t *testing.T) {
 			ingressNetV1:           ingressTestOpts{enabled: true},
 			ingressClassNetV1:      ingressTestOpts{enabled: true},
 			ingressNetV1beta:       ingressTestOpts{enabled: true, crdInstalled: true},
-			ingressExtV1beta:       ingressTestOpts{enabled: true, crdInstalled: true},
 			expectIngressNetV1beta: true,
-		},
-		{
-			name:                   "extV1beta_wins_when_netV1_netV1beta_crds_not_installed",
-			ingressNetV1:           ingressTestOpts{enabled: true},
-			ingressClassNetV1:      ingressTestOpts{enabled: true},
-			ingressNetV1beta:       ingressTestOpts{enabled: true},
-			ingressExtV1beta:       ingressTestOpts{enabled: true, crdInstalled: true},
-			expectIngressExtV1beta: true,
 		},
 		{
 			name:                   "netV1_not_picked_when_disabled",
 			ingressNetV1:           ingressTestOpts{crdInstalled: true},
 			ingressClassNetV1:      ingressTestOpts{enabled: true, crdInstalled: true},
 			ingressNetV1beta:       ingressTestOpts{enabled: true, crdInstalled: true},
-			ingressExtV1beta:       ingressTestOpts{enabled: true, crdInstalled: true},
 			expectIngressNetV1beta: true,
 		},
 		{
@@ -91,7 +72,6 @@ func TestIngressControllerConditions(t *testing.T) {
 			ingressNetV1:      ingressTestOpts{enabled: true},
 			ingressClassNetV1: ingressTestOpts{enabled: true},
 			ingressNetV1beta:  ingressTestOpts{enabled: true},
-			ingressExtV1beta:  ingressTestOpts{enabled: true},
 			expectError:       true,
 		},
 	}
@@ -113,20 +93,12 @@ func TestIngressControllerConditions(t *testing.T) {
 					Kind:    kind,
 				}, meta.RESTScopeRoot)
 			}
-			if tc.ingressExtV1beta.crdInstalled {
-				restMapper.Add(schema.GroupVersionKind{
-					Group:   extensionsV1beta1.Group,
-					Version: extensionsV1beta1.Version,
-					Kind:    kind,
-				}, meta.RESTScopeRoot)
-			}
 
 			conditions, err := manager.NewIngressControllersConditions(
 				&manager.Config{
 					IngressNetV1Enabled:      tc.ingressNetV1.enabled,
 					IngressClassNetV1Enabled: tc.ingressClassNetV1.enabled,
 					IngressNetV1beta1Enabled: tc.ingressNetV1beta.enabled,
-					IngressExtV1beta1Enabled: tc.ingressExtV1beta.enabled,
 				},
 				restMapper,
 			)
@@ -139,7 +111,6 @@ func TestIngressControllerConditions(t *testing.T) {
 			assert.Equal(t, tc.expectIngressNetV1, conditions.IngressNetV1Enabled())
 			assert.Equal(t, tc.expectIngressClassNetV1, conditions.IngressClassNetV1Enabled())
 			assert.Equal(t, tc.expectIngressNetV1beta, conditions.IngressNetV1beta1Enabled())
-			assert.Equal(t, tc.expectIngressExtV1beta, conditions.IngressExtV1beta1Enabled())
 		})
 	}
 }

@@ -4,7 +4,6 @@ import (
 	"context"
 
 	corev1 "k8s.io/api/core/v1"
-	extv1beta1 "k8s.io/api/extensions/v1beta1"
 	netv1 "k8s.io/api/networking/v1"
 	netv1beta1 "k8s.io/api/networking/v1beta1"
 	"k8s.io/apimachinery/pkg/types"
@@ -21,9 +20,9 @@ import (
 // currently it only updates reference records to secrets, since we wanted to limit cache size of secrets:
 // https://github.com/Kong/kubernetes-ingress-controller/issues/2868
 func updateReferredObjects(
-	ctx context.Context, client client.Client, refIndexers ctrlref.CacheIndexers, dataplaneClient *dataplane.KongClient, obj client.Object) error {
-
-	var referredSecretNameMap = make(map[types.NamespacedName]struct{})
+	ctx context.Context, client client.Client, refIndexers ctrlref.CacheIndexers, dataplaneClient *dataplane.KongClient, obj client.Object,
+) error {
+	referredSecretNameMap := make(map[types.NamespacedName]struct{})
 	var referredSecretList []types.NamespacedName
 	switch obj := obj.(type) {
 	// functions update***ReferredSecrets first list the secrets referred by object,
@@ -35,8 +34,6 @@ func updateReferredObjects(
 		referredSecretList = listNetV1IngressReferredSecrets(obj)
 	case *netv1beta1.Ingress:
 		referredSecretList = listNetV1beta1IngressReferredSecrets(obj)
-	case *extv1beta1.Ingress:
-		referredSecretList = listExtensionV1beta1IngressReferredSecrets(obj)
 	case *kongv1.KongPlugin:
 		referredSecretList = listKongPluginReferredSecrets(obj)
 	case *kongv1.KongClusterPlugin:
@@ -54,7 +51,6 @@ func updateReferredObjects(
 }
 
 func listCoreV1ServiceReferredSecrets(service *corev1.Service) []types.NamespacedName {
-
 	if service.Annotations == nil {
 		return nil
 	}
@@ -88,21 +84,6 @@ func listNetV1IngressReferredSecrets(ingress *netv1.Ingress) []types.NamespacedN
 }
 
 func listNetV1beta1IngressReferredSecrets(ingress *netv1beta1.Ingress) []types.NamespacedName {
-	referredSecretNames := make([]types.NamespacedName, 0, len(ingress.Spec.TLS))
-	for _, tls := range ingress.Spec.TLS {
-		if tls.SecretName == "" {
-			continue
-		}
-		nsName := types.NamespacedName{
-			Namespace: ingress.Namespace,
-			Name:      tls.SecretName,
-		}
-		referredSecretNames = append(referredSecretNames, nsName)
-	}
-	return referredSecretNames
-}
-
-func listExtensionV1beta1IngressReferredSecrets(ingress *extv1beta1.Ingress) []types.NamespacedName {
 	referredSecretNames := make([]types.NamespacedName, 0, len(ingress.Spec.TLS))
 	for _, tls := range ingress.Spec.TLS {
 		if tls.SecretName == "" {

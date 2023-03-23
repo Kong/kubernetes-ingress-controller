@@ -19,7 +19,6 @@ const (
 	corev1     = "k8s.io/api/core/v1"
 	netv1      = "k8s.io/api/networking/v1"
 	netv1beta1 = "k8s.io/api/networking/v1beta1"
-	extv1beta1 = "k8s.io/api/extensions/v1beta1"
 
 	kongv1       = "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
 	kongv1beta1  = "github.com/kong/kubernetes-ingress-controller/v2/api/configuration/v1beta1"
@@ -97,22 +96,6 @@ var inputControllersNeeded = &typesNeeded{
 		PackageImportAlias:                "netv1beta1",
 		PackageAlias:                      "NetV1Beta1",
 		Package:                           netv1beta1,
-		Plural:                            "ingresses",
-		CacheType:                         "IngressV1beta1",
-		NeedsStatusPermissions:            true,
-		CapableOfStatusUpdates:            true,
-		AcceptsIngressClassNameAnnotation: true,
-		AcceptsIngressClassNameSpec:       true,
-		NeedsUpdateReferences:             true,
-		RBACVerbs:                         []string{"get", "list", "watch"},
-	},
-	typeNeeded{
-		Group:                             "extensions",
-		Version:                           "v1beta1",
-		Kind:                              "Ingress",
-		PackageImportAlias:                "extv1beta1",
-		PackageAlias:                      "ExtV1Beta1",
-		Package:                           extv1beta1,
 		Plural:                            "ingresses",
 		CacheType:                         "IngressV1beta1",
 		NeedsStatusPermissions:            true,
@@ -394,7 +377,6 @@ import (
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
-	extv1beta1 "k8s.io/api/extensions/v1beta1"
 	netv1 "k8s.io/api/networking/v1"
 	netv1beta1 "k8s.io/api/networking/v1beta1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"

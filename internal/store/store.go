@@ -17,7 +17,6 @@ limitations under the License.
 package store
 
 import (
-	"encoding/json"
 	"fmt"
 	"reflect"
 	"sort"
@@ -26,7 +25,6 @@ import (
 
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
-	extensions "k8s.io/api/extensions/v1beta1"
 	netv1 "k8s.io/api/networking/v1"
 	netv1beta1 "k8s.io/api/networking/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -243,8 +241,6 @@ func (c CacheStores) Get(obj runtime.Object) (item interface{}, exists bool, err
 	// ----------------------------------------------------------------------------
 	// Kubernetes Core API Support
 	// ----------------------------------------------------------------------------
-	case *extensions.Ingress:
-		return c.IngressV1beta1.Get(obj)
 	case *netv1beta1.Ingress:
 		return c.IngressV1beta1.Get(obj)
 	case *netv1.Ingress:
@@ -310,8 +306,6 @@ func (c CacheStores) Add(obj runtime.Object) error {
 	// ----------------------------------------------------------------------------
 	// Kubernetes Core API Support
 	// ----------------------------------------------------------------------------
-	case *extensions.Ingress:
-		return c.IngressV1beta1.Add(obj)
 	case *netv1beta1.Ingress:
 		return c.IngressV1beta1.Add(obj)
 	case *netv1.Ingress:
@@ -378,8 +372,6 @@ func (c CacheStores) Delete(obj runtime.Object) error {
 	// ----------------------------------------------------------------------------
 	// Kubernetes Core API Support
 	// ----------------------------------------------------------------------------
-	case *extensions.Ingress:
-		return c.IngressV1beta1.Delete(obj)
 	case *netv1beta1.Ingress:
 		return c.IngressV1beta1.Delete(obj)
 	case *netv1.Ingress:
@@ -1015,14 +1007,6 @@ func (s Store) networkingIngressV1Beta1(obj interface{}) *netv1beta1.Ingress {
 	case *netv1beta1.Ingress:
 		return obj
 
-	case *extensions.Ingress:
-		out, err := toNetworkingIngressV1Beta1(obj)
-		if err != nil {
-			s.logger.Errorf("cannot convert to networking v1beta1 Ingress: %v", err)
-			return nil
-		}
-		return out
-
 	default:
 		s.logger.Errorf("cannot convert to networking v1beta1 Ingress: unsupported type: %v", reflect.TypeOf(obj))
 		return nil
@@ -1041,19 +1025,6 @@ func (s Store) getIngressClassHandling() annotations.ClassMatching {
 		return annotations.ExactOrEmptyClassMatch
 	}
 	return annotations.ExactClassMatch
-}
-
-func toNetworkingIngressV1Beta1(obj *extensions.Ingress) (*netv1beta1.Ingress, error) {
-	js, err := json.Marshal(obj)
-	if err != nil {
-		return nil, fmt.Errorf("failed to serialize object of type %v: %w", reflect.TypeOf(obj), err)
-	}
-	var out netv1beta1.Ingress
-	if err := json.Unmarshal(js, &out); err != nil {
-		return nil, fmt.Errorf("failed to deserialize json: %w", err)
-	}
-	out.APIVersion = netv1beta1.SchemeGroupVersion.String()
-	return &out, nil
 }
 
 // convUnstructuredObj is a convenience function to quickly convert any runtime.Object where the underlying type
@@ -1081,8 +1052,6 @@ func mkObjFromGVK(gvk schema.GroupVersionKind) (runtime.Object, error) {
 	// ----------------------------------------------------------------------------
 	// Kubernetes Core APIs
 	// ----------------------------------------------------------------------------
-	case extensions.SchemeGroupVersion.WithKind("Ingress"):
-		return &extensions.Ingress{}, nil
 	case netv1.SchemeGroupVersion.WithKind("Ingress"):
 		return &netv1.Ingress{}, nil
 	case kongv1beta1.SchemeGroupVersion.WithKind("TCPIngress"):

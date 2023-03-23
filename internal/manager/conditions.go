@@ -3,7 +3,6 @@ package manager
 import (
 	"fmt"
 
-	extensionsv1beta1 "k8s.io/api/extensions/v1beta1"
 	netv1 "k8s.io/api/networking/v1"
 	netv1beta1 "k8s.io/api/networking/v1beta1"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -19,7 +18,6 @@ const (
 	OtherAPI IngressAPI = iota
 	NetworkingV1
 	NetworkingV1beta1
-	ExtensionsV1beta1
 )
 
 // IngressControllerConditions negotiates the best Ingress API version supported by both KIC and the k8s apiserver and
@@ -37,11 +35,6 @@ func NewIngressControllersConditions(cfg *Config, mapper meta.RESTMapper) (*Ingr
 	}
 
 	return &IngressControllerConditions{chosenVersion: chosenVersion, cfg: cfg}, nil
-}
-
-// IngressExtV1beta1Enabled returns true if the chosen ingress API version is extensions/v1beta1 and it's enabled.
-func (s *IngressControllerConditions) IngressExtV1beta1Enabled() bool {
-	return s.chosenVersion == ExtensionsV1beta1 && s.cfg.IngressExtV1beta1Enabled
 }
 
 // IngressNetV1beta1Enabled returns true if the chosen ingress API version is networking.k8s.io/v1beta1 and it's enabled.
@@ -72,11 +65,6 @@ func negotiateIngressAPI(config *Config, mapper meta.RESTMapper) (IngressAPI, er
 			Version:  netv1beta1.SchemeGroupVersion.Version,
 			Resource: "ingresses",
 		},
-		ExtensionsV1beta1: {
-			Group:    extensionsv1beta1.SchemeGroupVersion.Group,
-			Version:  extensionsv1beta1.SchemeGroupVersion.Version,
-			Resource: "ingresses",
-		},
 	}
 
 	// Please note the order is not arbitrary - the most mature APIs will get picked first.
@@ -86,10 +74,6 @@ func negotiateIngressAPI(config *Config, mapper meta.RESTMapper) (IngressAPI, er
 
 	if config.IngressNetV1beta1Enabled {
 		allowedAPIs = append(allowedAPIs, NetworkingV1beta1)
-	}
-
-	if config.IngressExtV1beta1Enabled {
-		allowedAPIs = append(allowedAPIs, ExtensionsV1beta1)
 	}
 
 	for _, candidate := range allowedAPIs {

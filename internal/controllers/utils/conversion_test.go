@@ -7,7 +7,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
-	extv1beta1 "k8s.io/api/extensions/v1beta1"
 	netv1 "k8s.io/api/networking/v1"
 	netv1beta1 "k8s.io/api/networking/v1beta1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -27,18 +26,6 @@ func TestUpdateLoadBalancerIngress(t *testing.T) {
 				Status: netv1.IngressStatus{
 					LoadBalancer: netv1.IngressLoadBalancerStatus{
 						Ingress: []netv1.IngressLoadBalancerIngress{
-							{
-								IP:       oldIP,
-								Hostname: oldHostname,
-							},
-						},
-					},
-				},
-			},
-			&extv1beta1.Ingress{
-				Status: extv1beta1.IngressStatus{
-					LoadBalancer: extv1beta1.IngressLoadBalancerStatus{
-						Ingress: []extv1beta1.IngressLoadBalancerIngress{
 							{
 								IP:       oldIP,
 								Hostname: oldHostname,

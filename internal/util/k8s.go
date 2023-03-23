@@ -23,12 +23,15 @@ import (
 	"strings"
 
 	"github.com/kong/go-kong/kong"
+	"github.com/samber/lo"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	clientset "k8s.io/client-go/kubernetes"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
+
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
 )
 
 // ParseNameNS parses a string searching a namespace and name.
@@ -180,5 +183,7 @@ func GenerateTagsForObject(obj client.Object) []*string {
 	if gvk.Version != "" {
 		tags = append(tags, K8sVersionTagPrefix+gvk.Version)
 	}
+	tags = append(tags, annotations.ExtractUserTags(obj.GetAnnotations())...)
+	tags = lo.Uniq(tags)
 	return kong.StringSlice(tags...)
 }

@@ -63,6 +63,14 @@ Adding a new version? You'll need three changes:
  - [0.0.5](#005)
  - [0.0.4 and prior](#004-and-prior)
 
+## Unreleased
+
+### Deprecated
+
+- Removed support for extensions/v1beta1 Ingress which was removed in kubernetes 1.22.
+  At the same time deprecate `--enable-controller-ingress-extensionsv1beta1` CLI flag.
+  [#3710](https://github.com/Kong/kubernetes-ingress-controller/pull/3710)
+
 ## [2.9.0]
 
 > Release date: TBD
@@ -75,6 +83,9 @@ Adding a new version? You'll need three changes:
 - Telemetry reports now include a number of discovered Gateways when the Gateway Discovery
   feature is turned on.
   [#3783](https://github.com/Kong/kubernetes-ingress-controller/pull/3783)
+- Adding the `konghq.com/tags: csv,of,tags` annotation will add tags to
+  generated resources.
+  [#3778](https://github.com/Kong/kubernetes-ingress-controller/pull/3778)
 - `HTTPRoute` reconciler now watches relevant `ReferenceGrant`s for changes.
   [#3759](https://github.com/Kong/kubernetes-ingress-controller/pull/3759)
 

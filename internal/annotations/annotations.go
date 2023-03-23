@@ -62,6 +62,7 @@ const (
 	RetriesKey           = "/retries"
 	HeadersKey           = "/headers"
 	PathHandlingKey      = "/path-handling"
+	UserTagKey           = "/tags"
 
 	// GatewayClassUnmanagedAnnotationSuffix is an annotation used on a Gateway resource to
 	// indicate that the GatewayClass should be reconciled according to unmanaged
@@ -335,4 +336,15 @@ func ExtractUnmanagedGatewayClassMode(anns map[string]string) string {
 // UpdateUnmanagedAnnotation updates the value of the annotation konghq.com/gatewayclass-unmanaged.
 func UpdateUnmanagedAnnotation(anns map[string]string, annotationValue string) {
 	anns[GatewayClassUnmanagedAnnotation] = annotationValue
+}
+
+// ExtractUserTags extracts a set of tags from a comma-separated string.
+func ExtractUserTags(anns map[string]string) []string {
+	val := anns[AnnotationPrefix+UserTagKey]
+	// If the annotation is not present, the map provides an empty value, and splitting that will create a slice
+	// containing a single empty string tag. These aren't valid, hence this special case.
+	if len(val) == 0 {
+		return []string{}
+	}
+	return strings.Split(val, ",")
 }

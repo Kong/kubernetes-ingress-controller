@@ -128,15 +128,7 @@ func TestIngressEssentials(t *testing.T) {
 	}
 
 	t.Logf("verifying that removing the ingress.class annotation %q from ingress causes routes to disconnect", consts.IngressClass)
-	require.Eventually(t, func() bool {
-		resp, err := helpers.DefaultHTTPClient().Get(fmt.Sprintf("%s/test_ingress_essentials", proxyURL))
-		if err != nil {
-			t.Logf("WARNING: error while waiting for %s: %v", proxyURL, err)
-			return false
-		}
-		defer resp.Body.Close()
-		return helpers.ExpectHTTP404WithNoRoute(t, proxyURL, resp)
-	}, ingressWait, waitTick)
+	helpers.EventuallyExpectHTTP404WithNoRoute(t, proxyURL, "/test_ingress_essentials", ingressWait, waitTick, nil)
 
 	t.Logf("putting the ingress.class annotation %q back on ingress", consts.IngressClass)
 	switch obj := ingress.(type) {
@@ -186,15 +178,7 @@ func TestIngressEssentials(t *testing.T) {
 
 	t.Log("deleting Ingress and waiting for routes to be torn down")
 	require.NoError(t, clusters.DeleteIngress(ctx, env.Cluster(), ns.Name, ingress))
-	require.Eventually(t, func() bool {
-		resp, err := helpers.DefaultHTTPClient().Get(fmt.Sprintf("%s/test_ingress_essentials", proxyURL))
-		if err != nil {
-			t.Logf("WARNING: error while waiting for %s: %v", proxyURL, err)
-			return false
-		}
-		defer resp.Body.Close()
-		return helpers.ExpectHTTP404WithNoRoute(t, proxyURL, resp)
-	}, ingressWait, waitTick)
+	helpers.EventuallyExpectHTTP404WithNoRoute(t, proxyURL, "/test_ingress_essentials", ingressWait, waitTick, nil)
 }
 
 func TestGRPCIngressEssentials(t *testing.T) {
@@ -324,15 +308,7 @@ func TestIngressClassNameSpec(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Logf("verifying that removing the IngressClassName %q from ingress causes routes to disconnect", consts.IngressClass)
-	require.Eventually(t, func() bool {
-		resp, err := helpers.DefaultHTTPClient().Get(fmt.Sprintf("%s/test_ingressclassname_spec", proxyURL))
-		if err != nil {
-			t.Logf("WARNING: error while waiting for %s: %v", proxyURL, err)
-			return false
-		}
-		defer resp.Body.Close()
-		return helpers.ExpectHTTP404WithNoRoute(t, proxyURL, resp)
-	}, ingressWait, waitTick)
+	helpers.EventuallyExpectHTTP404WithNoRoute(t, proxyURL, "/test_ingressclassname_spec", ingressWait, waitTick, nil)
 
 	t.Logf("putting the IngressClassName %q back on ingress", consts.IngressClass)
 	err = setIngressClassNameWithRetry(ctx, ns.Name, ingress, kong.String(consts.IngressClass))
@@ -361,15 +337,7 @@ func TestIngressClassNameSpec(t *testing.T) {
 
 	t.Log("deleting Ingress and waiting for routes to be torn down")
 	require.NoError(t, clusters.DeleteIngress(ctx, env.Cluster(), ns.Name, ingress))
-	require.Eventually(t, func() bool {
-		resp, err := helpers.DefaultHTTPClient().Get(fmt.Sprintf("%s/test_ingressclassname_spec", proxyURL))
-		if err != nil {
-			t.Logf("WARNING: error while waiting for %s: %v", proxyURL, err)
-			return false
-		}
-		defer resp.Body.Close()
-		return helpers.ExpectHTTP404WithNoRoute(t, proxyURL, resp)
-	}, ingressWait, waitTick)
+	helpers.EventuallyExpectHTTP404WithNoRoute(t, proxyURL, "/test_ingressclassname_spec", ingressWait, waitTick, nil)
 }
 
 func TestIngressNamespaces(t *testing.T) {

@@ -67,12 +67,15 @@ Adding a new version? You'll need three changes:
 
 > Release date: TBD
 
-### Fixed
+### Breaking changes
 
-- Kong Services' names now refer to backend service port number/name uniformly
-  across `netv1.Ingress`, `netv1beta1.Ingress`, and `knative.Ingress`
-  implementations. `pname-{portName}` format is used for named ports, and
-  `pnum-{portNumber}` for the ones referred by number.
+- When `CombinedRoutes` feature flag is explicitly turned off, Kong Services
+  generated from `netv1.Ingress` will now refer to the backend services' ports
+  in their names the same way as the ones generated from `netv1beta1.Ingress`
+  and `knative.Ingress`, i.e. Kong Service named `foo-namespace.foo-svc.pnum-80`
+  will turn into `foo-namespace.foo-svc.80` instead.
+  This can break Prometheus queries that use fixed Service names. Please make
+  sure you align your monitoring when upgrading.
   [#3776](https://github.com/Kong/kubernetes-ingress-controller/pull/3776)
 
 ### Deprecated

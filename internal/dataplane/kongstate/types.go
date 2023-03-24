@@ -33,9 +33,9 @@ const ImplicitPort = "implicitPort"
 func (p PortDef) CanonicalString() string {
 	switch p.Mode {
 	case PortModeByNumber:
-		return fmt.Sprintf("pnum-%d", p.Number)
+		return fmt.Sprintf("%d", p.Number)
 	case PortModeByName:
-		return fmt.Sprintf("pname-%s", p.Name)
+		return p.Name
 	case PortModeImplicit:
 		return ImplicitPort
 	}

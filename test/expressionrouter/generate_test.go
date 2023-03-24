@@ -6,7 +6,6 @@ package expressionrouter
 import (
 	"context"
 	"fmt"
-	"io"
 	"net/http"
 	"net/url"
 	"testing"
@@ -24,7 +23,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/helpers"
 )
 
-func TestGenerateATCRoute(t *testing.T) {
+func TestExpressionRouterGenerateRoutes(t *testing.T) {
 	httpClient := helpers.DefaultHTTPClient()
 
 	ip, port := exposeKongAdminService(ctx, t, env, consts.ControllerNamespace, "ingress-controller-kong-admin")
@@ -133,9 +132,6 @@ func TestGenerateATCRoute(t *testing.T) {
 
 			resp, err := kongClient.DoRAW(context.Background(), req)
 			require.NoError(t, err)
-			buf, err := io.ReadAll(resp.Body)
-			t.Log("response from Kong:", string(buf))
-
 			resp.Body.Close()
 
 			require.Equal(t, http.StatusCreated, resp.StatusCode)

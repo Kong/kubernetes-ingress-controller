@@ -108,7 +108,7 @@ func NewPredicate(lhs LHS, op BinaryOperator, rhs Literal) Predicate {
 
 func NewPredicateNetProtocol(op BinaryOperator, value string) Predicate {
 	return Predicate{
-		field: FieldNetProtocol{},
+		field: FieldNetProtocol,
 		op:    op,
 		value: StringLiteral(value),
 	}
@@ -116,7 +116,7 @@ func NewPredicateNetProtocol(op BinaryOperator, value string) Predicate {
 
 func NewPredicateHTTPPath(op BinaryOperator, value string) Predicate {
 	return Predicate{
-		field: FieldHTTPPath{},
+		field: FieldHTTPPath,
 		op:    op,
 		value: StringLiteral(value),
 	}
@@ -124,7 +124,7 @@ func NewPredicateHTTPPath(op BinaryOperator, value string) Predicate {
 
 func NewPrediacteHTTPHost(op BinaryOperator, value string) Predicate {
 	return Predicate{
-		field: FieldHTTPHost{},
+		field: FieldHTTPHost,
 		op:    op,
 		value: StringLiteral(value),
 	}
@@ -132,7 +132,7 @@ func NewPrediacteHTTPHost(op BinaryOperator, value string) Predicate {
 
 func NewPredicateHTTPMethod(op BinaryOperator, value string) Predicate {
 	return Predicate{
-		field: FieldHTTPMethod{},
+		field: FieldHTTPMethod,
 		op:    op,
 		value: StringLiteral(value),
 	}
@@ -141,8 +141,16 @@ func NewPredicateHTTPMethod(op BinaryOperator, value string) Predicate {
 func NewPredicateHTTPHeader(key string, op BinaryOperator, value string) Predicate {
 	return Predicate{
 		field: FieldHTTPHeader{
-			headerName: key,
+			HeaderName: key,
 		},
+		op:    op,
+		value: StringLiteral(value),
+	}
+}
+
+func NewPredicateTLSSNI(op BinaryOperator, value string) Predicate {
+	return Predicate{
+		field: FieldTLSSNI,
 		op:    op,
 		value: StringLiteral(value),
 	}

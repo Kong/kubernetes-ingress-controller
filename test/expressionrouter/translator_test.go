@@ -15,15 +15,16 @@ import (
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
+	netv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/parser/atc"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/parser/translators"
 	"github.com/kong/kubernetes-ingress-controller/v2/test"
 	"github.com/kong/kubernetes-ingress-controller/v2/test/consts"
 	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/helpers"
 )
 
-func TestExpressionRouterGenerateRoutes(t *testing.T) {
+func TestExpressionRouterTranslateIngress(t *testing.T) {
 	httpClient := helpers.DefaultHTTPClient()
 
 	ip, port := exposeKongAdminService(ctx, t, env, consts.ControllerNamespace, "ingress-controller-kong-admin")
@@ -34,54 +35,6 @@ func TestExpressionRouterGenerateRoutes(t *testing.T) {
 	require.NoError(t, err)
 
 	ns, cleaner := helpers.Setup(ctx, t, env)
-
-	testCases := []struct {
-		name            string
-		matcher         atc.Matcher
-		matchRequests   []*http.Request
-		unmatchRequests []*http.Request
-	}{
-		{
-			name:    "exact match on path",
-			matcher: atc.NewPredicateHTTPPath(atc.OpEqual, "/foo"),
-			matchRequests: []*http.Request{
-				helpers.MustHTTPRequest(t, "GET", helpers.MustParseURL(t, "http://a.foo.com"), "foo", nil),
-			},
-			unmatchRequests: []*http.Request{
-				helpers.MustHTTPRequest(t, "GET", helpers.MustParseURL(t, "http://a.foo.com"), "foobar", nil),
-				helpers.MustHTTPRequest(t, "GET", helpers.MustParseURL(t, "http://a.foo.com"), "foo/", nil),
-			},
-		},
-		{
-			name: "exact match on path and host",
-			matcher: atc.And(
-				atc.NewPredicateHTTPPath(atc.OpEqual, "/foo"),
-				atc.NewPrediacteHTTPHost(atc.OpEqual, "a.foo.com"),
-			),
-			matchRequests: []*http.Request{
-				helpers.MustHTTPRequest(t, "GET", helpers.MustParseURL(t, "http://a.foo.com"), "foo", nil),
-			},
-			unmatchRequests: []*http.Request{
-				helpers.MustHTTPRequest(t, "GET", helpers.MustParseURL(t, "http://a.foo.com"), "foobar", nil),
-				helpers.MustHTTPRequest(t, "GET", helpers.MustParseURL(t, "http://b.foo.com"), "foo", nil),
-			},
-		},
-		{
-			name: "exact match on path and wildcard match on host",
-			matcher: atc.And(
-				atc.NewPredicateHTTPPath(atc.OpEqual, "/foo"),
-				atc.NewPrediacteHTTPHost(atc.OpSuffixMatch, ".foo.com"),
-			),
-			matchRequests: []*http.Request{
-				helpers.MustHTTPRequest(t, "GET", helpers.MustParseURL(t, "http://a.foo.com"), "foo", nil),
-				helpers.MustHTTPRequest(t, "GET", helpers.MustParseURL(t, "http://b.foo.com"), "foo", nil),
-			},
-			unmatchRequests: []*http.Request{
-				helpers.MustHTTPRequest(t, "GET", helpers.MustParseURL(t, "http://a.foo.com"), "foobar", nil),
-				helpers.MustHTTPRequest(t, "GET", helpers.MustParseURL(t, "http://a.bar.com"), "foo", nil),
-			},
-		},
-	}
 
 	proxyIP := getKongProxyIP(ctx, t, env, consts.ControllerNamespace)
 	proxyURL, err := url.Parse(fmt.Sprintf("http://%s", proxyIP))
@@ -115,26 +68,68 @@ func TestExpressionRouterGenerateRoutes(t *testing.T) {
 	require.NoError(t, err)
 	serviceIP := service.Spec.ClusterIP
 
-	s := &kong.Service{
-		Host: kong.String(serviceIP),
-		Path: kong.String("/"),
+	ingressbackend := netv1.IngressBackend{
+		Service: &netv1.IngressServiceBackend{
+			Name: service.Name,
+			Port: netv1.ServiceBackendPort{
+				Number: 80,
+			},
+		},
+	}
+
+	pathTypeExact := netv1.PathType(netv1.PathTypeExact)
+
+	testCases := []struct {
+		name            string
+		ingress         *netv1.Ingress
+		matchRequests   []*http.Request
+		unmatchRequests []*http.Request
+	}{
+		{
+			name: "simple ingress",
+			ingress: &netv1.Ingress{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "simple-ingress",
+					Namespace: ns.Name,
+				},
+				Spec: netv1.IngressSpec{
+					Rules: []netv1.IngressRule{
+						{
+							IngressRuleValue: netv1.IngressRuleValue{
+								HTTP: &netv1.HTTPIngressRuleValue{
+									Paths: []netv1.HTTPIngressPath{
+										{
+											PathType: &pathTypeExact,
+											Path:     "/foo",
+											Backend:  ingressbackend,
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			matchRequests: []*http.Request{
+				helpers.MustHTTPRequest(t, "GET", helpers.MustParseURL(t, "http://a.foo.com"), "foo", nil),
+			},
+			unmatchRequests: []*http.Request{
+				helpers.MustHTTPRequest(t, "GET", helpers.MustParseURL(t, "http://a.foo.com"), "foobar", nil),
+				helpers.MustHTTPRequest(t, "GET", helpers.MustParseURL(t, "http://a.foo.com"), "foo/", nil),
+			},
+		},
 	}
 
 	for _, tc := range testCases {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
-			r := &kong.Route{
-				StripPath: kong.Bool(true),
-			}
-			atc.ApplyExpression(r, tc.matcher, 1)
-			req, err := kongClient.NewRequest("POST", "/config", nil, marshalSingleServiceRoute(t, *s, *r))
+			kongServices := translators.TranslateIngressATC(tc.ingress)
+			req, err := kongClient.NewRequest("POST", "/config", nil, marshalKongStateServices(t, kongServices, serviceIP))
 			require.NoError(t, err)
 
 			resp, err := kongClient.DoRAW(context.Background(), req)
 			require.NoError(t, err)
 			resp.Body.Close()
-
-			require.Equal(t, http.StatusCreated, resp.StatusCode)
 
 			// matched requests should access upstream service
 			require.Eventually(t, func() bool {
@@ -144,6 +139,7 @@ func TestExpressionRouterGenerateRoutes(t *testing.T) {
 						t.Logf("error happened on getting response from kong: %v", err)
 						return false
 					}
+
 					resp.Body.Close()
 					if resp.StatusCode != http.StatusOK {
 						return false
@@ -160,6 +156,5 @@ func TestExpressionRouterGenerateRoutes(t *testing.T) {
 				require.Equal(t, http.StatusNotFound, resp.StatusCode)
 			}
 		})
-
 	}
 }

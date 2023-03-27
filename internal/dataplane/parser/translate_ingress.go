@@ -221,6 +221,14 @@ func (p *Parser) ingressRulesFromIngressV1() ingressRules {
 		var objectSuccessfullyParsed bool
 
 		if p.featureEnabledCombinedServiceRoutes {
+			if p.flagTranslateToATCRoutes {
+				for _, kongStateService := range translators.TranslateIngress(ingress, p.flagEnabledRegexPathPrefix) {
+					result.ServiceNameToServices[*kongStateService.Service.Name] = *kongStateService
+					result.ServiceNameToParent[*kongStateService.Service.Name] = ingress
+					objectSuccessfullyParsed = true
+				}
+				continue
+			}
 			for _, kongStateService := range translators.TranslateIngress(ingress, p.flagEnabledRegexPathPrefix) {
 				for _, route := range kongStateService.Routes {
 					for i, path := range route.Paths {

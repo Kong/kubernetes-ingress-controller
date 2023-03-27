@@ -17,6 +17,8 @@ import (
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
 )
 
 func exposeKongAdminService(ctx context.Context, t *testing.T,
@@ -98,7 +100,7 @@ func getKongProxyLoadBalancerIP(t *testing.T, refreshSvc func() *corev1.Service)
 	return resIP
 }
 
-func marshalKongConfig(t *testing.T, s kong.Service, r kong.Route) io.Reader {
+func marshalSingleServiceRoute(t *testing.T, s kong.Service, r kong.Route) io.Reader {
 	t.Helper()
 
 	content := &file.Content{
@@ -114,6 +116,42 @@ func marshalKongConfig(t *testing.T, s kong.Service, r kong.Route) io.Reader {
 			},
 		},
 	}
+	config, err := json.Marshal(content)
+	require.NoError(t, err)
+
+	return bytes.NewReader(config)
+}
+
+func marshalKongStateServices(t *testing.T, services []*kongstate.Service, hostOverride string) io.Reader {
+	t.Helper()
+
+	content := &file.Content{
+		FormatVersion: "3.0",
+	}
+
+	for _, service := range services {
+		fService := file.FService{
+			Service: service.Service,
+		}
+		// temporarily put a override host here, because translated host
+		// (like name.namespace.port.svc) could not be resolved.
+		// TODO: test for whole generated Kong config after finished implenting parser and translators.
+		if hostOverride != "" {
+			fService.Service.Host = kong.String(hostOverride)
+		}
+
+		for _, route := range service.Routes {
+			// TODO: set route for annotations in translators
+			r := route.Route
+			r.StripPath = kong.Bool(true)
+			fService.Routes = append(fService.Routes, &file.FRoute{
+				Route: r,
+			})
+		}
+		content.Services = append(content.Services, fService)
+
+	}
+
 	config, err := json.Marshal(content)
 	require.NoError(t, err)
 

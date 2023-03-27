@@ -51,7 +51,9 @@ type Parser struct {
 	featureEnabledCombinedServiceRoutes             bool
 
 	flagEnabledRegexPathPrefix bool
-	failuresCollector          *failures.ResourceFailuresCollector
+
+	flagTranslateToATCRoutes bool
+	failuresCollector        *failures.ResourceFailuresCollector
 }
 
 // NewParser produces a new Parser object provided a logging mechanism
@@ -181,6 +183,11 @@ func (p *Parser) EnableCombinedServiceRoutes() {
 // paths, which require an IngressClass setting.
 func (p *Parser) EnableRegexPathPrefix() {
 	p.flagEnabledRegexPathPrefix = true
+}
+
+// EnableTranslateToATCRoutes enables parser to translate k8s objects to ATC routes.
+func (p *Parser) EnableTranslateToATCRoutes() {
+	p.flagTranslateToATCRoutes = true
 }
 
 // -----------------------------------------------------------------------------

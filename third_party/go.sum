@@ -1424,8 +1424,8 @@ github.com/golangci/gofmt v0.0.0-20220901101216-f2edd75033f2/go.mod h1:9wOXstvyD
 github.com/golangci/golangci-lint v1.23.7/go.mod h1:g/38bxfhp4rI7zeWSxcdIeHTQGS58TCak8FYcyCmavQ=
 github.com/golangci/golangci-lint v1.27.0/go.mod h1:+eZALfxIuthdrHPtfM7w/R3POJLjHDfJJw8XZl9xOng=
 github.com/golangci/golangci-lint v1.43.0/go.mod h1:VIFlUqidx5ggxDfQagdvd9E67UjMXtTHBkBQ7sHoC5Q=
-github.com/golangci/golangci-lint v1.52.0 h1:T7w3tuF1goz64qGV+ML4MgysSl/yUfA3UZJK92oE48A=
-github.com/golangci/golangci-lint v1.52.0/go.mod h1:wlTh+d/oVlgZC2yCe6nlxrxNAnuhEQC0Zdygoh72Uak=
+github.com/golangci/golangci-lint v1.52.2 h1:FrPElUUI5rrHXg1mQ7KxI1MXPAw5lBVskiz7U7a8a1A=
+github.com/golangci/golangci-lint v1.52.2/go.mod h1:S5fhC5sHM5kE22/HcATKd1XLWQxX+y7mHj8B5H91Q/0=
 github.com/golangci/ineffassign v0.0.0-20190609212857-42439a7714cc/go.mod h1:e5tpTHCfVze+7EpLEozzMB3eafxo2KT5veNg1k6byQU=
 github.com/golangci/lint-1 v0.0.0-20191013205115-297bf364a8e0 h1:MfyDlzVjl1hoaPzPD4Gpb/QgoRfSBR0jdhwGyAWwMSA=
 github.com/golangci/lint-1 v0.0.0-20191013205115-297bf364a8e0/go.mod h1:66R6K6P6VWk9I95jvqGxkqJxVWGFy9XlDwLwVz1RCFg=
@@ -2202,8 +2202,8 @@ github.com/monochromegane/go-gitignore v0.0.0-20200626010858-205db1a8cc00 h1:n6/
 github.com/monochromegane/go-gitignore v0.0.0-20200626010858-205db1a8cc00/go.mod h1:Pm3mSP3c5uWn86xMLZ5Sa7JB9GsEZySvHYXCTK4E9q4=
 github.com/montanaflynn/stats v0.0.0-20171201202039-1bf9dbcd8cbe/go.mod h1:wL8QJuTMNUDYhXwkmfOly8iTdp5TEcJFWZD2D7SIkUc=
 github.com/moricho/tparallel v0.2.1/go.mod h1:fXEIZxG2vdfl0ZF8b42f5a78EhjjD5mX8qUplsoSU4k=
-github.com/moricho/tparallel v0.3.0 h1:8dDx3S3e+jA+xiQXC7O3dvfRTe/J+FYlTDDW01Y7z/Q=
-github.com/moricho/tparallel v0.3.0/go.mod h1:leENX2cUv7Sv2qDgdi0D0fCftN8fRC67Bcn8pqzeYNI=
+github.com/moricho/tparallel v0.3.1 h1:fQKD4U1wRMAYNngDonW5XupoB/ZGJHdpzrWqgyg9krA=
+github.com/moricho/tparallel v0.3.1/go.mod h1:leENX2cUv7Sv2qDgdi0D0fCftN8fRC67Bcn8pqzeYNI=
 github.com/morikuni/aec v1.0.0 h1:nP9CBfwrvYnBRgY6qfDQkygYDmYwOilePFkwzv4dU8A=
 github.com/morikuni/aec v1.0.0/go.mod h1:BbKIizmSmc5MMPqRYbxO4ZU0S0+P200+tUnFx7PXmsc=
 github.com/mozilla/scribe v0.0.0-20180711195314-fb71baf557c1/go.mod h1:FIczTrinKo8VaLxe6PWTPEXRXDIHz2QAwiaBaP5/4a8=

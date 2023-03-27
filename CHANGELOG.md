@@ -88,6 +88,8 @@ Adding a new version? You'll need three changes:
   [#3778](https://github.com/Kong/kubernetes-ingress-controller/pull/3778)
 - `HTTPRoute` reconciler now watches relevant `ReferenceGrant`s for changes.
   [#3759](https://github.com/Kong/kubernetes-ingress-controller/pull/3759)
+- Bumped Kong version in manifests to 3.2.
+  [#3804](https://github.com/Kong/kubernetes-ingress-controller/pull/3804)
 
 ### Fixed
 

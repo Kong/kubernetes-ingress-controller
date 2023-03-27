@@ -59,6 +59,57 @@ func TestGenerateExpression(t *testing.T) {
 			).And(NewPredicateHTTPPath(OpEqual, "/foo")),
 			expression: `(http.host == "test.konghq.com") && ((net.protocol == "http") || (net.protocol == "https")) && (http.path == "/foo")`,
 		},
+		{
+			name:       "empty Or matcher",
+			matcher:    Or(),
+			expression: "",
+		},
+		{
+			name: "single element And matcher",
+			matcher: And(
+				NewPrediacteHTTPHost(OpSuffixMatch, ".konghq.com"),
+			),
+			expression: `http.host =^ ".konghq.com"`,
+		},
+		{
+			name: "call Or() with nils",
+			matcher: Or(
+				nil,
+				NewPredicateHTTPMethod(OpEqual, "GET"),
+				NewPredicateHTTPMethod(OpEqual, "POST"),
+			).Or(nil).Or(NewPredicateHTTPMethod(OpEqual, "DELETE")),
+			expression: `(http.method == "GET") || (http.method == "POST") || (http.method == "DELETE")`,
+		},
+		{
+			name: "call And() with nils",
+			matcher: And(
+				NewPredicateHTTPHeader("X-Header-1", OpEqual, "v1"),
+				nil,
+			).And(NewPredicateHTTPHeader("X-Header-2", OpEqual, "v2")).And(nil),
+			expression: `(http.header.x_header_1 == "v1") && (http.header.x_header_2 == "v2")`,
+		},
+		{
+			name: "empty expression in Or",
+			matcher: Or(
+				And(),
+				NewPredicateHTTPPath(OpEqual, "/foo"),
+			),
+			expression: `http.path == "/foo"`,
+		},
+		{
+			name: "empty expression in And",
+			matcher: And(
+				And(),
+				NewPredicateHTTPPath(OpEqual, "/foo"),
+				NewPredicateHTTPMethod(OpEqual, "GET"),
+			),
+			expression: `(http.path == "/foo") && (http.method == "GET")`,
+		},
+		{
+			name:       "nil Or",
+			matcher:    (*OrMatcher)(nil),
+			expression: "",
+		},
 	}
 
 	for _, tc := range testCases {

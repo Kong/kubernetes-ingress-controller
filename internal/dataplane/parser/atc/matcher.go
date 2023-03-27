@@ -1,5 +1,10 @@
 package atc
 
+import (
+	"fmt"
+	"strings"
+)
+
 type Matcher interface {
 	Expression() string
 }
@@ -14,33 +19,49 @@ type OrMatcher struct {
 }
 
 func (m *OrMatcher) Expression() string {
-	if len(m.subMatchers) == 0 {
+	if m == nil {
 		return ""
 	}
-	if len(m.subMatchers) == 1 {
-		return m.subMatchers[0].Expression()
+	expressions := []string{}
+	for _, subMathcher := range m.subMatchers {
+		exp := subMathcher.Expression()
+		if len(exp) == 0 {
+			continue
+		}
+		expressions = append(expressions, exp)
 	}
 
-	ret := ""
-	for i, subMathcher := range m.subMatchers {
-		exp := "(" + subMathcher.Expression() + ")"
-		if i != len(m.subMatchers)-1 {
-			exp = exp + " || "
-		}
-		ret = ret + exp
+	if len(expressions) == 0 {
+		return ""
 	}
-	return ret
+	if len(expressions) == 1 {
+		return expressions[0]
+	}
+
+	for i, exp := range expressions {
+		expressions[i] = fmt.Sprintf("(%s)", exp)
+	}
+
+	return strings.Join(expressions, " || ")
 }
 
 func (m *OrMatcher) Or(matcher Matcher) *OrMatcher {
+	if matcher == nil {
+		return m
+	}
 	m.subMatchers = append(m.subMatchers, matcher)
 	return m
 }
 
 func Or(matchers ...Matcher) *OrMatcher {
-	return &OrMatcher{
-		subMatchers: matchers,
+	ret := &OrMatcher{}
+	for _, m := range matchers {
+		if m == nil {
+			continue
+		}
+		ret.subMatchers = append(ret.subMatchers, m)
 	}
+	return ret
 }
 
 type AndMatcher struct {
@@ -48,31 +69,47 @@ type AndMatcher struct {
 }
 
 func (m *AndMatcher) Expression() string {
-	if len(m.subMatchers) == 0 {
+	if m == nil {
 		return ""
 	}
-	if len(m.subMatchers) == 1 {
-		return m.subMatchers[0].Expression()
+	expressions := []string{}
+	for _, subMathcher := range m.subMatchers {
+		exp := subMathcher.Expression()
+		if len(exp) == 0 {
+			continue
+		}
+		expressions = append(expressions, exp)
 	}
 
-	ret := ""
-	for i, subMathcher := range m.subMatchers {
-		exp := "(" + subMathcher.Expression() + ")"
-		if i != len(m.subMatchers)-1 {
-			exp = exp + " && "
-		}
-		ret = ret + exp
+	if len(expressions) == 0 {
+		return ""
 	}
-	return ret
+	if len(expressions) == 1 {
+		return expressions[0]
+	}
+
+	for i, exp := range expressions {
+		expressions[i] = fmt.Sprintf("(%s)", exp)
+	}
+
+	return strings.Join(expressions, " && ")
 }
 
 func (m *AndMatcher) And(matcher Matcher) *AndMatcher {
+	if matcher == nil {
+		return m
+	}
 	m.subMatchers = append(m.subMatchers, matcher)
 	return m
 }
 
 func And(matchers ...Matcher) *AndMatcher {
-	return &AndMatcher{
-		subMatchers: matchers,
+	ret := &AndMatcher{}
+	for _, m := range matchers {
+		if m == nil {
+			continue
+		}
+		ret.subMatchers = append(ret.subMatchers, m)
 	}
+	return ret
 }

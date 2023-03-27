@@ -23,7 +23,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 	k8sobj "github.com/kong/kubernetes-ingress-controller/v2/internal/util/kubernetes/object"
 )
@@ -38,7 +37,7 @@ type HTTPRouteReconciler struct {
 
 	Log             logr.Logger
 	Scheme          *runtime.Scheme
-	DataplaneClient *dataplane.KongClient
+	DataplaneClient DataPlane
 	// If EnableReferenceGrant is true, we will check for ReferenceGrant if backend in another
 	// namespace is in backendRefs.
 	// If it is false, referencing backend in different namespace will be rejected.
@@ -87,6 +86,16 @@ func (r *HTTPRouteReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		return err
 	}
 
+	if r.EnableReferenceGrant {
+		if err := c.Watch(
+			&source.Kind{Type: &gatewayv1beta1.ReferenceGrant{}},
+			handler.EnqueueRequestsFromMapFunc(r.listReferenceGrantsForHTTPRoute),
+			predicate.NewPredicateFuncs(referenceGrantHasHTTPRouteFrom),
+		); err != nil {
+			return err
+		}
+	}
+
 	// because of the additional burden of having to manage reference data-plane
 	// configurations for HTTPRoute objects in the underlying Kong Gateway, we
 	// simply reconcile ALL HTTPRoute objects. This allows us to drop the backend
@@ -101,6 +110,54 @@ func (r *HTTPRouteReconciler) SetupWithManager(mgr ctrl.Manager) error {
 // -----------------------------------------------------------------------------
 // HTTPRoute Controller - Event Handlers
 // -----------------------------------------------------------------------------
+
+// listReferenceGrantsForHTTPRoute is a watch predicate which finds all HTTPRoutes
+// mentioned in a From clause for a ReferenceGrant.
+func (r *HTTPRouteReconciler) listReferenceGrantsForHTTPRoute(obj client.Object) []reconcile.Request {
+	grant, ok := obj.(*gatewayv1beta1.ReferenceGrant)
+	if !ok {
+		r.Log.Error(
+			fmt.Errorf("unexpected object type"),
+			"referencegrant watch predicate received unexpected object type",
+			"expected", "*gatewayv1beta1.ReferenceGrant", "found", reflect.TypeOf(obj),
+		)
+		return nil
+	}
+	httproutes := &gatewayv1beta1.HTTPRouteList{}
+	if err := r.Client.List(context.Background(), httproutes); err != nil {
+		r.Log.Error(err, "failed to list httproutes in watch", "referencegrant", grant.Name)
+		return nil
+	}
+	recs := []reconcile.Request{}
+	for _, gateway := range httproutes.Items {
+		for _, from := range grant.Spec.From {
+			if string(from.Namespace) == gateway.Namespace &&
+				from.Kind == gatewayv1beta1.Kind("HTTPRoute") &&
+				from.Group == gatewayv1beta1.Group("gateway.networking.k8s.io") {
+				recs = append(recs, reconcile.Request{
+					NamespacedName: types.NamespacedName{
+						Namespace: gateway.Namespace,
+						Name:      gateway.Name,
+					},
+				})
+			}
+		}
+	}
+	return recs
+}
+
+func referenceGrantHasHTTPRouteFrom(obj client.Object) bool {
+	grant, ok := obj.(*gatewayv1beta1.ReferenceGrant)
+	if !ok {
+		return false
+	}
+	for _, from := range grant.Spec.From {
+		if from.Kind == "HTTPRoute" && from.Group == "gateway.networking.k8s.io" {
+			return true
+		}
+	}
+	return false
+}
 
 // listHTTPRoutesForGatewayClass is a controller-runtime event.Handler which
 // produces a list of HTTPRoutes which were bound to a Gateway which is or was
@@ -633,4 +690,9 @@ func (r *HTTPRouteReconciler) getHTTPRouteRuleReason(ctx context.Context, httpRo
 		}
 	}
 	return gatewayv1beta1.RouteReasonResolvedRefs, nil
+}
+
+// SetLogger sets the logger.
+func (r *HTTPRouteReconciler) SetLogger(l logr.Logger) {
+	r.Log = l
 }

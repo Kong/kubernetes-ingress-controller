@@ -60,7 +60,7 @@ func startKongAdminAPIServiceReconciler(ctx context.Context, t *testing.T, clien
 
 	mgr, err := ctrl.NewManager(cfg, ctrl.Options{
 		Logger:             logrusr.New(logrus.New()),
-		Scheme:             scheme.Scheme,
+		Scheme:             client.Scheme(),
 		SyncPeriod:         lo.ToPtr(2 * time.Second),
 		MetricsBindAddress: "0",
 	})
@@ -106,7 +106,7 @@ func TestKongAdminAPIController(t *testing.T) {
 	// In tests below we use a deferred cancel to stop the manager and not wait
 	// for its timeout.
 
-	cfg := envtest.Setup(t)
+	cfg := envtest.Setup(t, scheme.Scheme)
 	client, err := ctrlclient.New(cfg, ctrlclient.Options{})
 	require.NoError(t, err)
 

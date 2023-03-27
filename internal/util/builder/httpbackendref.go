@@ -31,6 +31,10 @@ func (b *HTTPBackendRefBuilder) Build() gatewayv1beta1.HTTPBackendRef {
 	return b.httpBackendRef
 }
 
+func (b *HTTPBackendRefBuilder) ToSlice() []gatewayv1beta1.HTTPBackendRef {
+	return []gatewayv1beta1.HTTPBackendRef{b.httpBackendRef}
+}
+
 func (b *HTTPBackendRefBuilder) WithPort(port int) *HTTPBackendRefBuilder {
 	val := gatewayv1beta1.PortNumber(port)
 	b.httpBackendRef.Port = &val

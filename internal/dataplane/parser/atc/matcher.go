@@ -31,10 +31,7 @@ func (m *OrMatcher) IsEmpty() bool {
 }
 
 func (m *OrMatcher) Expression() string {
-	if m == nil {
-		return ""
-	}
-	if m.IsEmpty() {
+	if m == nil || m.IsEmpty() {
 		return ""
 	}
 	if len(m.subMatchers) == 1 {
@@ -51,10 +48,7 @@ func (m *OrMatcher) Expression() string {
 }
 
 func (m *OrMatcher) Or(matcher Matcher) *OrMatcher {
-	if matcher == nil {
-		return m
-	}
-	if !matcher.IsEmpty() {
+	if matcher != nil && !matcher.IsEmpty() {
 		m.subMatchers = append(m.subMatchers, matcher)
 	}
 	return m
@@ -86,10 +80,7 @@ func (m *AndMatcher) IsEmpty() bool {
 }
 
 func (m *AndMatcher) Expression() string {
-	if m == nil {
-		return ""
-	}
-	if m.IsEmpty() {
+	if m == nil || m.IsEmpty() {
 		return ""
 	}
 	if len(m.subMatchers) == 1 {
@@ -106,10 +97,7 @@ func (m *AndMatcher) Expression() string {
 }
 
 func (m *AndMatcher) And(matcher Matcher) *AndMatcher {
-	if matcher == nil {
-		return m
-	}
-	if !matcher.IsEmpty() {
+	if matcher != nil && !matcher.IsEmpty() {
 		m.subMatchers = append(m.subMatchers, matcher)
 	}
 	return m

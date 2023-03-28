@@ -71,15 +71,15 @@ const (
 	FieldNetPort IntField = "net.port"
 )
 
-// FieldHTTPHeader extracts the value of an HTTP header from the request.
-type FieldHTTPHeader struct {
+// HTTPHeaderField extracts the value of an HTTP header from the request.
+type HTTPHeaderField struct {
 	HeaderName string
 }
 
-func (f FieldHTTPHeader) FieldType() FieldType {
+func (f HTTPHeaderField) FieldType() FieldType {
 	return FieldTypeString
 }
 
-func (f FieldHTTPHeader) String() string {
+func (f HTTPHeaderField) String() string {
 	return "http.headers." + strings.ToLower(strings.ReplaceAll(f.HeaderName, "-", "_"))
 }

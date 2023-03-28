@@ -66,5 +66,5 @@ func (f FieldHTTPHeader) FieldType() FieldType {
 }
 
 func (f FieldHTTPHeader) String() string {
-	return "http.header." + strings.ToLower(strings.ReplaceAll(f.HeaderName, "-", "_"))
+	return "http.headers." + strings.ToLower(strings.ReplaceAll(f.HeaderName, "-", "_"))
 }

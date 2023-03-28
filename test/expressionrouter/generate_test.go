@@ -81,6 +81,24 @@ func TestExpressionRouterGenerateRoutes(t *testing.T) {
 				helpers.MustHTTPRequest(t, "GET", helpers.MustParseURL(t, "http://a.bar.com"), "foo", nil),
 			},
 		},
+		{
+			name: "match on header and path",
+			matcher: atc.And(
+				atc.NewPredicateHTTPPath(atc.OpPrefixMatch, "/foo"),
+				atc.NewPredicateHTTPHeader("X-Kong-Test", atc.OpEqual, "bar"),
+			),
+			matchRequests: []*http.Request{
+				helpers.MustHTTPRequest(t, "GET", helpers.MustParseURL(t, "http://a.foo.com"), "foo", map[string]string{
+					"X-Kong-Test": "bar",
+				}),
+			},
+			unmatchRequests: []*http.Request{
+				helpers.MustHTTPRequest(t, "GET", helpers.MustParseURL(t, "http://a.foo.com"), "foo", map[string]string{
+					"X-Kong-Test": "baz",
+				}),
+				helpers.MustHTTPRequest(t, "GET", helpers.MustParseURL(t, "http://a.foo.com"), "foo", nil),
+			},
+		},
 	}
 
 	proxyIP := getKongProxyIP(ctx, t, env, consts.ControllerNamespace)

@@ -77,6 +77,18 @@ func (r *MatchRules) Merge(other *MatchRules, overrideHeaders bool) *MatchRules 
 	return r
 }
 
+func (r *MatchRules) IsEmpty() bool {
+	if r == nil {
+		return true
+	}
+	return len(r.Protocols) == 0 &&
+		len(r.Hosts) == 0 &&
+		len(r.Methods) == 0 &&
+		len(r.Paths) == 0 &&
+		len(r.Headers) == 0 &&
+		len(r.SNIs) == 0
+}
+
 func (r *MatchRules) Expression() string {
 	fieldMatchers := []Matcher{}
 

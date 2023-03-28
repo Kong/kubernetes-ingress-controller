@@ -67,7 +67,6 @@ func TestMain(m *testing.M) {
 
 	fmt.Printf("INFO: cleaning up cluster for env %s\n", env.Name())
 	if err := cleaner.Cleanup(ctx); err != nil {
-		// TODO:
 		fmt.Printf("ERROR: failed cleaning up the cluster: %v\n", err)
 		code = 1
 	}

@@ -141,11 +141,8 @@ func marshalKongStateServices(t *testing.T, services []*kongstate.Service, hostO
 		}
 
 		for _, route := range service.Routes {
-			// TODO: set route for annotations in translators
-			r := route.Route
-			r.StripPath = kong.Bool(true)
 			fService.Routes = append(fService.Routes, &file.FRoute{
-				Route: r,
+				Route: route.Route,
 			})
 		}
 		content.Services = append(content.Services, fService)

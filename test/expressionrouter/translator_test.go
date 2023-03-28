@@ -91,6 +91,9 @@ func TestExpressionRouterTranslateIngress(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "simple-ingress",
 					Namespace: ns.Name,
+					Annotations: map[string]string{
+						"konghq.com/strip-path": "true",
+					},
 				},
 				Spec: netv1.IngressSpec{
 					Rules: []netv1.IngressRule{
@@ -116,6 +119,46 @@ func TestExpressionRouterTranslateIngress(t *testing.T) {
 			unmatchRequests: []*http.Request{
 				helpers.MustHTTPRequest(t, "GET", helpers.MustParseURL(t, "http://a.foo.com"), "foobar", nil),
 				helpers.MustHTTPRequest(t, "GET", helpers.MustParseURL(t, "http://a.foo.com"), "foo/", nil),
+			},
+		},
+		{
+			name: "ingress with host match and host alias",
+			ingress: &netv1.Ingress{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "ingress-host-match",
+					Namespace: ns.Name,
+					Annotations: map[string]string{
+						"konghq.com/strip-path":   "true",
+						"konghq.com/host-aliases": "a.bar.com",
+					},
+				},
+				Spec: netv1.IngressSpec{
+					Rules: []netv1.IngressRule{
+						{
+							Host: "*.foo.com",
+							IngressRuleValue: netv1.IngressRuleValue{
+								HTTP: &netv1.HTTPIngressRuleValue{
+									Paths: []netv1.HTTPIngressPath{
+										{
+											PathType: &pathTypeExact,
+											Path:     "/foo",
+											Backend:  ingressbackend,
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			matchRequests: []*http.Request{
+				helpers.MustHTTPRequest(t, "GET", helpers.MustParseURL(t, "http://a.foo.com"), "foo", nil),
+				helpers.MustHTTPRequest(t, "GET", helpers.MustParseURL(t, "http://b.foo.com"), "foo", nil),
+				helpers.MustHTTPRequest(t, "GET", helpers.MustParseURL(t, "http://a.bar.com"), "foo", nil),
+			},
+			unmatchRequests: []*http.Request{
+				helpers.MustHTTPRequest(t, "GET", helpers.MustParseURL(t, "http://b.bar.com"), "foo", nil),
+				helpers.MustHTTPRequest(t, "GET", helpers.MustParseURL(t, "http://a.bla.com"), "foo", nil),
 			},
 		},
 	}

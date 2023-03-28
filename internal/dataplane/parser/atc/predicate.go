@@ -1,6 +1,7 @@
 package atc
 
 import (
+	"fmt"
 	"strconv"
 	"strings"
 )
@@ -77,7 +78,7 @@ func (l StringLiteral) String() string {
 	str = strings.ReplaceAll(str, "\r", "\\r")
 	str = strings.ReplaceAll(str, "\t", "\\t")
 
-	return "\"" + str + "\""
+	return fmt.Sprintf("\"%s\"", str)
 }
 
 var _ Literal = IntLiteral(0)
@@ -106,7 +107,7 @@ func (p Predicate) Expression() string {
 	lhs := p.field.String()
 	op := string(p.op)
 	rhs := p.value.String()
-	return lhs + " " + op + " " + rhs
+	return fmt.Sprintf("%s %s %s", lhs, op, rhs)
 }
 
 // IsEmpty returns true if a Predicate has no value to compare against.

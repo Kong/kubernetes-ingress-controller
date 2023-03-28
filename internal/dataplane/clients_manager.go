@@ -189,6 +189,9 @@ func (c *AdminAPIClientsManager) adminAPIAddressNotifyLoop() {
 			// This call will only log errors e.g. during creation of new clients.
 			// If need be we might consider propagating those errors up the stack.
 			c.adjustGatewayClients(discoveredAdminAPIs)
+
+			// Notify subscribers that the clients list has been updated.
+			c.notifyGatewayClientsSubscribers()
 		}
 	}
 }
@@ -240,14 +243,17 @@ func (c *AdminAPIClientsManager) adjustGatewayClients(discoveredAdminAPIs []admi
 
 		c.gatewayClients = append(c.gatewayClients, client)
 	}
-
-	c.notifyGatewayClientsSubscribers()
 }
 
 // notifyGatewayClientsSubscribers sends notifications to all subscribers that have called SubscribeToGatewayClientsChanges.
 func (c *AdminAPIClientsManager) notifyGatewayClientsSubscribers() {
 	for _, sub := range c.gatewayClientsChangesSubscribers {
-		sub <- struct{}{}
+		select {
+		case <-c.ctx.Done():
+			c.logger.Info("not sending notification to subscribers as the context is done")
+			return
+		case sub <- struct{}{}:
+		}
 	}
 }
 

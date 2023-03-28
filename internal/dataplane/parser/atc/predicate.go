@@ -14,12 +14,16 @@ const (
 	FieldTypeIPCIDR
 )
 
+// LHS is the left hand side (the field) of a predicate expression.
 type LHS interface {
+	// FieldType returns the FieldType iota indicating the LHS type.
 	FieldType() FieldType
-	// TODO(naming): use a better name for this method? "String" is too gerneral
+
+	// String returns a string representation of the LHS.
 	String() string
 }
 
+// BinaryOperator is an operator that accepts two arguments within a predicate expression.
 type BinaryOperator string
 
 const (
@@ -46,13 +50,18 @@ const (
 	LiteralTypeIP
 )
 
+// Literal is the right hand side (the value) of a predicate expression.
 type Literal interface {
+	// Type returns the LiteralType iota indicating the Literal type.
 	Type() LiteralType
+
+	// String returns a string representation of the Literal.
 	String() string
 }
 
 var _ Literal = StringLiteral("")
 
+// StringLiteral is a string Literal.
 type StringLiteral string
 
 func (l StringLiteral) Type() LiteralType {
@@ -73,6 +82,7 @@ func (l StringLiteral) String() string {
 
 var _ Literal = IntLiteral(0)
 
+// IntLiteral is an integer Literal.
 type IntLiteral int
 
 func (l IntLiteral) Type() LiteralType {
@@ -83,12 +93,15 @@ func (l IntLiteral) String() string {
 	return strconv.Itoa(int(l))
 }
 
+// Predicate is an expression consisting of two arguments and a comparison operator. Kong's expression router evaluates
+// these to true or false.
 type Predicate struct {
 	field LHS
 	op    BinaryOperator
 	value Literal
 }
 
+// Expression returns a string representation of a Predicate.
 func (p Predicate) Expression() string {
 	lhs := p.field.String()
 	op := string(p.op)
@@ -96,6 +109,7 @@ func (p Predicate) Expression() string {
 	return lhs + " " + op + " " + rhs
 }
 
+// IsEmpty returns true if a Predicate has no value to compare against.
 func (p Predicate) IsEmpty() bool {
 	return p.value == nil
 }

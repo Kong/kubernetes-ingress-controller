@@ -65,7 +65,7 @@ Adding a new version? You'll need three changes:
 
 ## [2.9.0]
 
-> Release date: TBD
+> Release date: 2023-03-27
 
 ### Added
 

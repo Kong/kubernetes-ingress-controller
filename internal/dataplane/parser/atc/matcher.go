@@ -6,7 +6,12 @@ import (
 )
 
 type Matcher interface {
+	// Expression returns a string representation of the Matcher.
 	Expression() string
+
+	// IsEmpty() returns a boolean indicating if the Matcher is empty. It is true if the Matcher is an empty struct,
+	// if the Matcher has zero subMatchers, or if a single-predicate Matcher has no value.
+	IsEmpty() bool
 }
 
 var (
@@ -18,98 +23,108 @@ type OrMatcher struct {
 	subMatchers []Matcher
 }
 
+func (m *OrMatcher) IsEmpty() bool {
+	if m == nil {
+		return true
+	}
+	return len(m.subMatchers) == 0
+}
+
 func (m *OrMatcher) Expression() string {
 	if m == nil {
 		return ""
 	}
-	expressions := []string{}
-	for _, subMathcher := range m.subMatchers {
-		exp := subMathcher.Expression()
-		if len(exp) == 0 {
-			continue
-		}
-		expressions = append(expressions, exp)
-	}
-
-	if len(expressions) == 0 {
+	if m.IsEmpty() {
 		return ""
 	}
-	if len(expressions) == 1 {
-		return expressions[0]
+	if len(m.subMatchers) == 1 {
+		return m.subMatchers[0].Expression()
 	}
 
-	for i, exp := range expressions {
-		expressions[i] = fmt.Sprintf("(%s)", exp)
+	var grouped []string
+
+	for _, m := range m.subMatchers {
+		grouped = append(grouped, fmt.Sprintf("(%s)", m.Expression()))
 	}
 
-	return strings.Join(expressions, " || ")
+	return strings.Join(grouped, " || ")
 }
 
 func (m *OrMatcher) Or(matcher Matcher) *OrMatcher {
 	if matcher == nil {
 		return m
 	}
-	m.subMatchers = append(m.subMatchers, matcher)
+	if !matcher.IsEmpty() {
+		m.subMatchers = append(m.subMatchers, matcher)
+	}
 	return m
 }
 
 func Or(matchers ...Matcher) *OrMatcher {
-	ret := &OrMatcher{}
+	actual := []Matcher{}
 	for _, m := range matchers {
-		if m == nil {
-			continue
+		if m != nil {
+			if !m.IsEmpty() {
+				actual = append(actual, m)
+			}
 		}
-		ret.subMatchers = append(ret.subMatchers, m)
 	}
-	return ret
+	return &OrMatcher{
+		subMatchers: actual,
+	}
 }
 
 type AndMatcher struct {
 	subMatchers []Matcher
 }
 
+func (m *AndMatcher) IsEmpty() bool {
+	if m == nil {
+		return true
+	}
+	return len(m.subMatchers) == 0
+}
+
 func (m *AndMatcher) Expression() string {
 	if m == nil {
 		return ""
 	}
-	expressions := []string{}
-	for _, subMathcher := range m.subMatchers {
-		exp := subMathcher.Expression()
-		if len(exp) == 0 {
-			continue
-		}
-		expressions = append(expressions, exp)
-	}
-
-	if len(expressions) == 0 {
+	if m.IsEmpty() {
 		return ""
 	}
-	if len(expressions) == 1 {
-		return expressions[0]
+	if len(m.subMatchers) == 1 {
+		return m.subMatchers[0].Expression()
 	}
 
-	for i, exp := range expressions {
-		expressions[i] = fmt.Sprintf("(%s)", exp)
+	var grouped []string
+
+	for _, m := range m.subMatchers {
+		grouped = append(grouped, fmt.Sprintf("(%s)", m.Expression()))
 	}
 
-	return strings.Join(expressions, " && ")
+	return strings.Join(grouped, " && ")
 }
 
 func (m *AndMatcher) And(matcher Matcher) *AndMatcher {
 	if matcher == nil {
 		return m
 	}
-	m.subMatchers = append(m.subMatchers, matcher)
+	if !matcher.IsEmpty() {
+		m.subMatchers = append(m.subMatchers, matcher)
+	}
 	return m
 }
 
 func And(matchers ...Matcher) *AndMatcher {
-	ret := &AndMatcher{}
+	actual := []Matcher{}
 	for _, m := range matchers {
-		if m == nil {
-			continue
+		if m != nil {
+			if !m.IsEmpty() {
+				actual = append(actual, m)
+			}
 		}
-		ret.subMatchers = append(ret.subMatchers, m)
 	}
-	return ret
+	return &AndMatcher{
+		subMatchers: actual,
+	}
 }

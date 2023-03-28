@@ -107,8 +107,13 @@ func (m *ingressTranslationMeta) translateIntoKongATCRoutes() *kongstate.Route {
 		}
 	}
 
+	regexPrefix := annotations.ExtractRegexPrefix(route.Ingress.Annotations)
+	if regexPrefix == "" {
+		regexPrefix = ControllerPathRegexPrefix
+	}
+
 	for _, httpIngressPath := range m.paths {
-		paths := atcPathMatchesFromIngressPath(httpIngressPath, ControllerPathRegexPrefix)
+		paths := atcPathMatchesFromIngressPath(httpIngressPath, regexPrefix)
 		matchRules.Paths = append(matchRules.Paths, paths...)
 	}
 

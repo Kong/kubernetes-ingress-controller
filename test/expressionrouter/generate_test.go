@@ -18,7 +18,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/parser/atc"
-	"github.com/kong/kubernetes-ingress-controller/v2/test"
 	"github.com/kong/kubernetes-ingress-controller/v2/test/consts"
 	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/helpers"
 )
@@ -99,6 +98,19 @@ func TestExpressionRouterGenerateRoutes(t *testing.T) {
 				helpers.MustHTTPRequest(t, "GET", helpers.MustParseURL(t, "http://a.foo.com"), "foo", nil),
 			},
 		},
+		{
+			name:    "regex match on path",
+			matcher: atc.NewPredicateHTTPPath(atc.OpRegexMatch, "/foo/[a-z]{3}$"),
+			matchRequests: []*http.Request{
+				helpers.MustHTTPRequest(t, "GET", helpers.MustParseURL(t, "http://a.foo.com"), "foo/abc", nil),
+				helpers.MustHTTPRequest(t, "GET", helpers.MustParseURL(t, "http://a.foo.com"), "foo/zzz", nil),
+			},
+			unmatchRequests: []*http.Request{
+				helpers.MustHTTPRequest(t, "GET", helpers.MustParseURL(t, "http://a.foo.com"), "foo/123", nil),
+				helpers.MustHTTPRequest(t, "GET", helpers.MustParseURL(t, "http://a.foo.com"), "foo/", nil),
+				helpers.MustHTTPRequest(t, "GET", helpers.MustParseURL(t, "http://a.foo.com"), "foo/defg", nil),
+			},
+		},
 	}
 
 	proxyIP := getKongProxyIP(ctx, t, env, consts.ControllerNamespace)
@@ -109,8 +121,7 @@ func TestExpressionRouterGenerateRoutes(t *testing.T) {
 	}
 
 	t.Log("deploying HTTP container deployment to test generating expression routes")
-	// TODO: use another HTTP server image that can return 200 on any path
-	container := generators.NewContainer("httpbin", test.HTTPBinImage, 80)
+	container := generators.NewContainer("echo-server", HTTPEchoServerImage, 80)
 	deployment := generators.NewDeploymentForContainer(container)
 	deployment, err = env.Cluster().Client().AppsV1().Deployments(ns.Name).Create(ctx, deployment, metav1.CreateOptions{})
 	require.NoError(t, err)

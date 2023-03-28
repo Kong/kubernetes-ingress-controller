@@ -19,9 +19,12 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/parser/translators"
-	"github.com/kong/kubernetes-ingress-controller/v2/test"
 	"github.com/kong/kubernetes-ingress-controller/v2/test/consts"
 	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/helpers"
+)
+
+const (
+	HTTPEchoServerImage = "ealen/echo-server:latest"
 )
 
 func TestExpressionRouterTranslateIngress(t *testing.T) {
@@ -45,7 +48,7 @@ func TestExpressionRouterTranslateIngress(t *testing.T) {
 
 	t.Log("deploying HTTP container deployment to test generating expression routes")
 	// TODO: use another HTTP server image that can return 200 on any path
-	container := generators.NewContainer("httpbin", test.HTTPBinImage, 80)
+	container := generators.NewContainer("echo-server", HTTPEchoServerImage, 80)
 	deployment := generators.NewDeploymentForContainer(container)
 	deployment, err = env.Cluster().Client().AppsV1().Deployments(ns.Name).Create(ctx, deployment, metav1.CreateOptions{})
 	require.NoError(t, err)
@@ -78,6 +81,8 @@ func TestExpressionRouterTranslateIngress(t *testing.T) {
 	}
 
 	pathTypeExact := netv1.PathType(netv1.PathTypeExact)
+	pathTypePrefix := netv1.PathTypePrefix
+	pathTypeImplementationSpecific := netv1.PathTypeImplementationSpecific
 
 	testCases := []struct {
 		name            string
@@ -102,7 +107,7 @@ func TestExpressionRouterTranslateIngress(t *testing.T) {
 								HTTP: &netv1.HTTPIngressRuleValue{
 									Paths: []netv1.HTTPIngressPath{
 										{
-											PathType: &pathTypeExact,
+											PathType: &pathTypePrefix,
 											Path:     "/foo",
 											Backend:  ingressbackend,
 										},
@@ -115,10 +120,11 @@ func TestExpressionRouterTranslateIngress(t *testing.T) {
 			},
 			matchRequests: []*http.Request{
 				helpers.MustHTTPRequest(t, "GET", helpers.MustParseURL(t, "http://a.foo.com"), "foo", nil),
+				helpers.MustHTTPRequest(t, "GET", helpers.MustParseURL(t, "http://a.foo.com"), "foo/", nil),
+				helpers.MustHTTPRequest(t, "GET", helpers.MustParseURL(t, "http://b.foo.com"), "foo/bar", nil),
 			},
 			unmatchRequests: []*http.Request{
 				helpers.MustHTTPRequest(t, "GET", helpers.MustParseURL(t, "http://a.foo.com"), "foobar", nil),
-				helpers.MustHTTPRequest(t, "GET", helpers.MustParseURL(t, "http://a.foo.com"), "foo/", nil),
 			},
 		},
 		{
@@ -159,6 +165,44 @@ func TestExpressionRouterTranslateIngress(t *testing.T) {
 			unmatchRequests: []*http.Request{
 				helpers.MustHTTPRequest(t, "GET", helpers.MustParseURL(t, "http://b.bar.com"), "foo", nil),
 				helpers.MustHTTPRequest(t, "GET", helpers.MustParseURL(t, "http://a.bla.com"), "foo", nil),
+			},
+		},
+		{
+			name: "ingress with regex path match",
+			ingress: &netv1.Ingress{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "ingress-regex-path",
+					Namespace: ns.Name,
+					Annotations: map[string]string{
+						"konghq.com/strip-path": "true",
+					},
+				},
+				Spec: netv1.IngressSpec{
+					Rules: []netv1.IngressRule{
+						{
+							IngressRuleValue: netv1.IngressRuleValue{
+								HTTP: &netv1.HTTPIngressRuleValue{
+									Paths: []netv1.HTTPIngressPath{
+										{
+											PathType: &pathTypeImplementationSpecific,
+											Path:     "/~/foo/[a-z]{3}$",
+											Backend:  ingressbackend,
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			matchRequests: []*http.Request{
+				helpers.MustHTTPRequest(t, "GET", helpers.MustParseURL(t, "http://a.foo.com"), "foo/abc", nil),
+				helpers.MustHTTPRequest(t, "GET", helpers.MustParseURL(t, "http://b.foo.com"), "foo/zzz", nil),
+			},
+			unmatchRequests: []*http.Request{
+				helpers.MustHTTPRequest(t, "GET", helpers.MustParseURL(t, "http://a.foo.com"), "foo", nil),
+				helpers.MustHTTPRequest(t, "GET", helpers.MustParseURL(t, "http://a.foo.com"), "foo/123", nil),
+				helpers.MustHTTPRequest(t, "GET", helpers.MustParseURL(t, "http://a.foo.com"), "foo/abcd", nil),
 			},
 		},
 	}

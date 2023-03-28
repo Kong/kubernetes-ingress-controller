@@ -333,6 +333,14 @@ func ExtractUnmanagedGatewayClassMode(anns map[string]string) string {
 	return anns[GatewayClassUnmanagedAnnotation]
 }
 
+// ExtractRegexPrefix exteract the value of regex prefix in annotations.
+func ExtractRegexPrefix(anns map[string]string) string {
+	if anns == nil {
+		return ""
+	}
+	return anns[AnnotationPrefix+RegexPrefixKey]
+}
+
 // UpdateUnmanagedAnnotation updates the value of the annotation konghq.com/gatewayclass-unmanaged.
 func UpdateUnmanagedAnnotation(anns map[string]string, annotationValue string) {
 	anns[GatewayClassUnmanagedAnnotation] = annotationValue

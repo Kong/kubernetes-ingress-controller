@@ -6,7 +6,7 @@ require (
 	github.com/GoogleContainerTools/skaffold/v2 v2.2.0
 	github.com/elastic/crd-ref-docs v0.0.8
 	github.com/go-delve/delve v1.20.1
-	github.com/golangci/golangci-lint v1.52.0
+	github.com/golangci/golangci-lint v1.52.2
 	github.com/jstemmer/go-junit-report/v2 v2.0.0
 	gotest.tools/gotestsum v1.9.0
 	honnef.co/go/tools v0.4.3
@@ -262,7 +262,7 @@ require (
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/monochromegane/go-gitignore v0.0.0-20200626010858-205db1a8cc00 // indirect
-	github.com/moricho/tparallel v0.3.0 // indirect
+	github.com/moricho/tparallel v0.3.1 // indirect
 	github.com/morikuni/aec v1.0.0 // indirect
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 	github.com/nakabonne/nestif v0.3.1 // indirect

@@ -20,7 +20,7 @@ func TestGenerateExpression(t *testing.T) {
 		{
 			name:       "simple predicate matching HTTP header",
 			matcher:    NewPredicateHTTPHeader("X-Kong-Test", OpEqual, "test"),
-			expression: `http.header.x_kong_test == "test"`,
+			expression: `http.headers.x_kong_test == "test"`,
 		},
 		{
 			name: "simple predicate with lower() transformer",
@@ -38,7 +38,7 @@ func TestGenerateExpression(t *testing.T) {
 				NewPrediacteHTTPHost(OpSuffixMatch, ".konghq.com"),
 				NewPredicateTLSSNI(OpSuffixMatch, ".konghq.com"),
 			),
-			expression: `(http.header.x_kong_test == "test") && (http.host =^ ".konghq.com") && (tls.sni =^ ".konghq.com")`,
+			expression: `(http.headers.x_kong_test == "test") && (http.host =^ ".konghq.com") && (tls.sni =^ ".konghq.com")`,
 		},
 		{
 			name: "multiple predicates connected by OR(||)",
@@ -86,7 +86,7 @@ func TestGenerateExpression(t *testing.T) {
 				NewPredicateHTTPHeader("X-Header-1", OpEqual, "v1"),
 				nil,
 			).And(NewPredicateHTTPHeader("X-Header-2", OpEqual, "v2")).And(nil),
-			expression: `(http.header.x_header_1 == "v1") && (http.header.x_header_2 == "v2")`,
+			expression: `(http.headers.x_header_1 == "v1") && (http.headers.x_header_2 == "v2")`,
 		},
 		{
 			name: "empty expression in Or",

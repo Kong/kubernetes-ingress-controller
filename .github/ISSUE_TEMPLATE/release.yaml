@@ -46,7 +46,7 @@ body:
     options:
       - label: "Ensure that you have up to date copy of `main`: `git checkout main; git pull` or a targeted release branch e.g. `release/2.7.x`: `git checkout release/2.7.x; git pull`"
       - label: "Create the `prepare-release` branch for the version (e.g. `prepare-release/2.7.1`): `git branch -m prepare-release/2.7.1`"
-      - label: Make any final adjustments to CHANGELOG.md. Double-check that dates are correct, that link anchors point to the correct header, and that you've included a link to the Github compare link at the end.
+      - label: Make any final adjustments to CHANGELOG.md. Double-check that dates are correct, that link anchors point to the correct header, and that you've included a link to the Github compare link at the end. If there were any RC releases before this version, fold their changes into the final release entry.
       - label: Resolve all licensing issues that FOSSA has detected. Go to Issues tab in FOSSA's KIC project and resolve every issue, inspecting if it's a false positive or not. [ignored.go](https://github.com/Kong/team-k8s/blob/main/fossa/ignored.go) script should be useful to look for issues that have been already resolved and reappeared due to version changes.
       - label: Update [ignored.json](https://github.com/Kong/team-k8s/blob/main/fossa/kubernetes-ingress-controller/ignored.json) following instructions in [README](https://github.com/Kong/team-k8s/blob/main/fossa/README.md).
       - label: Retrieve the latest license report from FOSSA and save it to LICENSES (go to Reports tab in FOSSA's KIC project, select 'plain text' format, tick 'direct dependencies' and download it).
@@ -58,8 +58,8 @@ body:
     label: "**For all releases** Create a Release Pull Request"
     options:
       - label: Check the [latest E2E nightly test run](https://github.com/Kong/kubernetes-ingress-controller/actions/workflows/e2e_nightly.yaml) to confirm that E2E tests are succeeding. If you are backporting features into a non-main branch, run a [targeted E2E job against that branch](https://github.com/Kong/kubernetes-ingress-controller/actions/workflows/e2e_targeted.yaml) or use `ci/run-e2e` label on the PR preparing the release.
-      - label: Open a PR from your branch to `main`.
-      - label: Once the PR is merged (the `prepare-release/x.y.z` branch will get automatically removed), [initiate a release job](https://github.com/Kong/kubernetes-ingress-controller/actions/workflows/release.yaml). Your tag must use `vX.Y.Z` format. Set `latest` to true if this will be the latest release.
+      - label: Open a PR from your branch to `main`. Set a `backport release/X.Y.Z` label.
+      - label: Once the PR is merged (the `prepare-release/x.y.z` branch will get automatically removed), approve and merge the automatic backport PR and [initiate a release job](https://github.com/Kong/kubernetes-ingress-controller/actions/workflows/release.yaml) on the release branch. Your tag must use `vX.Y.Z` format. Set `latest` to true if this will be the latest release.
       - label: CI will validate the requested version, build and push an image, and run tests against the image before finally creating a tag and publishing a release. If tests fail, CI will push the image but not the tag or release. Investigate the failure, correct it as needed, and start a new release job.
 - type: checkboxes
   id: release_documents

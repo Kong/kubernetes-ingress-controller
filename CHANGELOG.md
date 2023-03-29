@@ -70,6 +70,13 @@ Adding a new version? You'll need three changes:
   At the same time deprecate `--enable-controller-ingress-extensionsv1beta1` CLI flag.
   [#3710](https://github.com/Kong/kubernetes-ingress-controller/pull/3710)
 
+### Fixed 
+
+- Fixed a deadlock in `AdminAPIClientsManager` which could occur when Konnect integration
+  was enabled, and multiple `Notify` calls were made in parallel (e.g. when scaling Gateway
+  deployment up).
+  [#3816](https://github.com/Kong/kubernetes-ingress-controller/pull/3816)
+
 ## [2.9.0]
 
 > Release date: 2023-03-27

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"strings"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -50,8 +51,9 @@ type GatewayReconciler struct { //nolint:revive
 	Scheme          *runtime.Scheme
 	DataplaneClient *dataplane.KongClient
 
-	PublishService  string
-	WatchNamespaces []string
+	PublishService    string
+	PublishServiceUDP string
+	WatchNamespaces   []string
 	// If EnableReferenceGrant is true, controller will watch ReferenceGrants
 	// to invalidate or allow cross-namespace TLSConfigs in gateways.
 	EnableReferenceGrant bool
@@ -59,7 +61,8 @@ type GatewayReconciler struct { //nolint:revive
 
 	ReferenceIndexers ctrlref.CacheIndexers
 
-	publishServiceRef types.NamespacedName
+	publishServiceRef    types.NamespacedName
+	publishServiceUDPRef types.NamespacedName
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -67,6 +70,10 @@ func (r *GatewayReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	// verify that the PublishService was configured properly
 	var err error
 	r.publishServiceRef, err = getRefFromPublishService(r.PublishService)
+	if err != nil {
+		return err
+	}
+	r.publishServiceUDPRef, err = getRefFromPublishService(r.PublishServiceUDP)
 	if err != nil {
 		return err
 	}
@@ -389,22 +396,27 @@ func (r *GatewayReconciler) reconcileUnmanagedGateway(ctx context.Context, log l
 	// enforce the service reference as the annotation value for the key UnmanagedGateway.
 	debug(log, gateway, "initializing admin service annotation if unset")
 	if !isObjectUnmanaged(gateway.GetAnnotations()) {
-		debug(log, gateway, fmt.Sprintf("a placeholder value was provided for %s, adding the default service ref %s", annotations.GatewayClassUnmanagedAnnotation, r.PublishService))
+		services := strings.Join([]string{r.PublishService, r.PublishServiceUDP}, ",")
+		debug(log, gateway, fmt.Sprintf("no unmanaged annotation, setting it to proxy services %s", services))
 		if gateway.Annotations == nil {
 			gateway.Annotations = map[string]string{}
 		}
-		annotations.UpdateUnmanagedAnnotation(gateway.Annotations, r.PublishService)
+		annotations.UpdateUnmanagedAnnotation(gateway.Annotations, services)
 		return ctrl.Result{}, r.Update(ctx, gateway)
 	}
 
-	serviceRef := annotations.ExtractUnmanagedGatewayClassMode(gateway.Annotations)
+	serviceRefs := strings.Split(annotations.ExtractUnmanagedGatewayClassMode(gateway.Annotations), ",")
 	// validation check of the Gateway to ensure that the publish service is actually available
 	// in the cluster. If it is not the object will be requeued until it exists (or is otherwise retrievable).
 	debug(log, gateway, "gathering the gateway publish service") // this will also be done by the validating webhook, this is a fallback
-	svc, err := r.determineServiceForGateway(ctx, serviceRef)
-	if err != nil {
-		log.Error(err, "could not determine service for gateway", "namespace", gateway.Namespace, "name", gateway.Name)
-		return ctrl.Result{Requeue: true}, err
+	var gatewayServices []*corev1.Service
+	for _, ref := range serviceRefs {
+		svc, err := r.determineServiceForGateway(ctx, ref)
+		if err != nil {
+			log.Error(err, "could not determine service for gateway", "namespace", gateway.Namespace, "name", gateway.Name)
+			return ctrl.Result{Requeue: true}, err
+		}
+		gatewayServices = append(gatewayServices, svc)
 	}
 
 	// set the Gateway as scheduled to indicate that validation is complete and reconciliation work
@@ -437,20 +449,26 @@ func (r *GatewayReconciler) reconcileUnmanagedGateway(ctx context.Context, log l
 	// from the Kubernetes Service which will also give us all the L4 information about the proxy. From there
 	// we can use that L4 information to derive the higher level TLS and HTTP,GRPC, e.t.c. information from
 	// the data-plane's metadata.
-	debug(log, gateway, "determining listener configurations from publish service")
-	kongAddresses, kongListeners, err := r.determineL4ListenersFromService(log, svc)
-	if err != nil {
-		return ctrl.Result{}, err
-	}
-	debug(log, gateway, "determining listener configurations from Kong data-plane")
-	kongListeners, err = r.determineListenersFromDataPlane(ctx, svc, kongListeners)
-	if err != nil {
-		return ctrl.Result{}, err
+	debug(log, gateway, "determining listener configurations from publish services")
+	var combinedAddresses []gatewayv1beta1.GatewayAddress
+	var combinedListeners []gatewayv1beta1.Listener
+	for _, svc := range gatewayServices {
+		kongAddresses, kongListeners, err := r.determineL4ListenersFromService(log, svc)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+		debug(log, gateway, "determining listener configurations from Kong data-plane")
+		kongListeners, err = r.determineListenersFromDataPlane(ctx, svc, kongListeners)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+		combinedAddresses = append(combinedAddresses, kongAddresses...)
+		combinedListeners = append(combinedListeners, kongListeners...)
 	}
 
-	if !reflect.DeepEqual(gateway.Spec.Addresses, kongAddresses) {
-		debug(log, gateway, "updating addresses to match Kong proxy Service")
-		gateway.Spec.Addresses = kongAddresses
+	if !reflect.DeepEqual(gateway.Spec.Addresses, combinedAddresses) {
+		debug(log, gateway, "updating addresses to match Kong proxy Services")
+		gateway.Spec.Addresses = combinedAddresses
 		if err := r.Update(ctx, gateway); err != nil {
 			if apierrors.IsConflict(err) {
 				// if there's a conflict that's normal just requeue to retry, no need to make noise.
@@ -477,7 +495,7 @@ func (r *GatewayReconciler) reconcileUnmanagedGateway(ctx context.Context, log l
 	// a single set of shared listens. We lack knowledge of whether this is compatible with user intent, and it may
 	// be incompatible with the spec, so we should consider evaluating cross-Gateway compatibility and raising error
 	// conditions in the event of a problem
-	listenerStatuses, err := getListenerStatus(ctx, gateway, kongListeners, referenceGrantList.Items, r.Client)
+	listenerStatuses, err := getListenerStatus(ctx, gateway, combinedListeners, referenceGrantList.Items, r.Client)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
@@ -537,13 +555,20 @@ func (r *GatewayReconciler) determineServiceForGateway(ctx context.Context, ref 
 	// currently the gateway controller ONLY supports service references that correspond with the --publish-service
 	// provided to the controller manager via flags when operating on unmanaged gateways. This constraint may
 	// be loosened in later iterations if there is need.
-	if ref != r.PublishService {
-		return nil, fmt.Errorf("service ref %s did not match controller manager ref %s", ref, r.PublishService)
+	var name types.NamespacedName
+	switch ref {
+	case r.PublishService:
+		name = r.publishServiceRef
+	case r.PublishServiceUDP:
+		name = r.publishServiceUDPRef
+	default:
+		return nil, fmt.Errorf("service ref %s did not match controller manager ref %s or %s",
+			ref, r.PublishService, r.PublishServiceUDP)
 	}
 
 	// retrieve the service for the kong gateway
 	svc := &corev1.Service{}
-	return svc, r.Client.Get(ctx, r.publishServiceRef, svc)
+	return svc, r.Client.Get(ctx, name, svc)
 }
 
 // determineL4ListenersFromService generates L4 addresses and listeners for a

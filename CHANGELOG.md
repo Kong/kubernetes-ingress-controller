@@ -9,7 +9,6 @@ Adding a new version? You'll need three changes:
 --->
  - [2.9.1](#291)
  - [2.9.0](#290)
- - [2.9.0-rc.1](#290-rc1)
  - [2.8.1](#281)
  - [2.8.0](#280)
  - [2.7.0](#270)
@@ -81,7 +80,7 @@ Adding a new version? You'll need three changes:
 - Fixed a deadlock in `AdminAPIClientsManager` which could occur when Konnect integration
   was enabled, and multiple `Notify` calls were made in parallel (e.g. when scaling Gateway
   deployment up).
-  [#3815](https://github.com/Kong/kubernetes-ingress-controller/pull/3815)
+  [#3816](https://github.com/Kong/kubernetes-ingress-controller/pull/3816)
 
 ## [2.9.0]
 
@@ -102,21 +101,6 @@ Adding a new version? You'll need three changes:
   [#3759](https://github.com/Kong/kubernetes-ingress-controller/pull/3759)
 - Bumped Kong version in manifests to 3.2.
   [#3804](https://github.com/Kong/kubernetes-ingress-controller/pull/3804)
-
-### Fixed
-
-- Fixed the issue where the status of an ingress is not updated when `secretName` is
-  not specified in `ingress.spec.tls`.
-  [#3719](https://github.com/Kong/kubernetes-ingress-controller/pull/3719)
-- Fixed incorrectly set parent status for Gateway API routes
-  [#3732](https://github.com/Kong/kubernetes-ingress-controller/pull/3732)
-
-## [2.9.0-rc.1]
-
-> Release date: 2023-03-09
-
-### Added
-
 - Store status of whether configuration succeeded or failed for Kubernetes
   objects in dataplane client and publish the events to let controllers know
   if the controlled objects succeeded or failed to be translated to Kong
@@ -206,6 +190,11 @@ Adding a new version? You'll need three changes:
 
 ### Fixed
 
+- Fixed the issue where the status of an ingress is not updated when `secretName` is
+  not specified in `ingress.spec.tls`.
+  [#3719](https://github.com/Kong/kubernetes-ingress-controller/pull/3719)
+- Fixed incorrectly set parent status for Gateway API routes
+  [#3732](https://github.com/Kong/kubernetes-ingress-controller/pull/3732)
 - Disabled non-functioning mesh reporting when `--watch-namespaces` flag set.
   [#3336](https://github.com/Kong/kubernetes-ingress-controller/pull/3336)
 - Fixed the duplicate update of status of `HTTPRoute` caused by incorrect check
@@ -2344,8 +2333,9 @@ Please read the changelog and test in your environment.
  - The initial versions  were rapildy iterated to deliver
    a working ingress controller.
 
+
 [2.9.1]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.9.0...v2.9.1
-[2.9.0-rc.1]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.8.1...v2.9.0-rc.1
+[2.9.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.8.1...v2.9.0
 [2.8.1]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.8.0...v2.8.1
 [2.8.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.7.0...v2.8.0
 [2.7.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.6.0...v2.7.0

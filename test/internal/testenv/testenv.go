@@ -39,7 +39,7 @@ func KongTag() string {
 // - `traditional_compatible`.
 func KongRouterFlavor() string {
 	rf := os.Getenv("TEST_KONG_ROUTER_FLAVOR")
-	if rf != "" && rf != "traditional" && rf != "traditional_compatible" {
+	if rf != "" && rf != "traditional" && rf != "traditional_compatible" && rf != "expressions" {
 		// TODO
 		os.Exit(1)
 	}

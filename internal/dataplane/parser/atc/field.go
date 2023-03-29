@@ -61,10 +61,6 @@ func (f IntField) String() string {
 	return string(f)
 }
 
-func NewIntField(value int) IntField {
-	return IntField(value)
-}
-
 // https://docs.konghq.com/gateway/latest/reference/router-expressions-language/#available-fields
 
 const (

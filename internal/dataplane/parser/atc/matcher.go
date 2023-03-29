@@ -8,7 +8,7 @@ import (
 // Matcher is a sub-expression within a Kong router expression. It can be a single predicate expression, a
 // group of predicates joined by logical operators, or a recursive combination of either of the previous components.
 type Matcher interface {
-	// Expression returns a string representation of the Matcher.
+	// Expression returns a string representation of the Matcher that could be a valid Kong route expression.
 	Expression() string
 
 	// IsEmpty() returns a boolean indicating if the Matcher is empty. It is true if the Matcher is an empty struct,
@@ -63,10 +63,8 @@ func (m *OrMatcher) Or(matcher Matcher) *OrMatcher {
 func Or(matchers ...Matcher) *OrMatcher {
 	actual := []Matcher{}
 	for _, m := range matchers {
-		if m != nil {
-			if !m.IsEmpty() {
-				actual = append(actual, m)
-			}
+		if m != nil && !m.IsEmpty() {
+			actual = append(actual, m)
 		}
 	}
 	return &OrMatcher{
@@ -115,10 +113,8 @@ func (m *AndMatcher) And(matcher Matcher) *AndMatcher {
 func And(matchers ...Matcher) *AndMatcher {
 	actual := []Matcher{}
 	for _, m := range matchers {
-		if m != nil {
-			if !m.IsEmpty() {
-				actual = append(actual, m)
-			}
+		if m != nil && !m.IsEmpty() {
+			actual = append(actual, m)
 		}
 	}
 	return &AndMatcher{

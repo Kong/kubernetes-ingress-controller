@@ -116,7 +116,7 @@ func (p Predicate) IsEmpty() bool {
 }
 
 // NewPredicate generates a single predicate.
-// TODO: check validity of LHS, op and RHS.
+// TODO: check validity of LHS, op and RHS:
 func NewPredicate(lhs LHS, op BinaryOperator, rhs Literal) Predicate {
 	return Predicate{
 		field: lhs,

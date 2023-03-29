@@ -5,6 +5,12 @@ import (
 	"strings"
 )
 
+// This file defines the field types, field transforms, and field constants used in Kong's expression router.
+// https://docs.konghq.com/gateway/latest/reference/router-expressions-language/ is the upstream reference that
+// describes these fields.
+
+// TransformLower instructs Kong to transform a field (for example, http.path) to lowercase before comparing it to
+// a value in a predicate expression. It can only be applied to the left side of a predicate expression.
 type TransformLower struct {
 	inner LHS
 }
@@ -33,6 +39,8 @@ func (f StringField) String() string {
 	return string(f)
 }
 
+// https://docs.konghq.com/gateway/latest/reference/router-expressions-language/#available-fields
+
 const (
 	FieldNetProtocol StringField = "net.protocol"
 	FieldTLSSNI      StringField = "tls.sni"
@@ -53,18 +61,25 @@ func (f IntField) String() string {
 	return string(f)
 }
 
+func NewIntField(value int) IntField {
+	return IntField(value)
+}
+
+// https://docs.konghq.com/gateway/latest/reference/router-expressions-language/#available-fields
+
 const (
 	FieldNetPort IntField = "net.port"
 )
 
-type FieldHTTPHeader struct {
+// HTTPHeaderField extracts the value of an HTTP header from the request.
+type HTTPHeaderField struct {
 	HeaderName string
 }
 
-func (f FieldHTTPHeader) FieldType() FieldType {
+func (f HTTPHeaderField) FieldType() FieldType {
 	return FieldTypeString
 }
 
-func (f FieldHTTPHeader) String() string {
+func (f HTTPHeaderField) String() string {
 	return "http.headers." + strings.ToLower(strings.ReplaceAll(f.HeaderName, "-", "_"))
 }

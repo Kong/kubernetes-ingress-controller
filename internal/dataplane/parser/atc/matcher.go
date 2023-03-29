@@ -5,6 +5,8 @@ import (
 	"strings"
 )
 
+// Matcher is a sub-expression within a Kong router expression. It can be a single predicate expression, a
+// group of predicates joined by logical operators, or a recursive combination of either of the previous components.
 type Matcher interface {
 	// Expression returns a string representation of the Matcher.
 	Expression() string
@@ -19,6 +21,7 @@ var (
 	_ Matcher = &AndMatcher{}
 )
 
+// OrMatcher is a group of Matchers joined by logical ORs.
 type OrMatcher struct {
 	subMatchers []Matcher
 }
@@ -47,6 +50,8 @@ func (m *OrMatcher) Expression() string {
 	return strings.Join(grouped, " || ")
 }
 
+// Or appends an additional Matcher to an existing OrMatcher. If the given Matcher is empty, it returns the original
+// OrMatcher.
 func (m *OrMatcher) Or(matcher Matcher) *OrMatcher {
 	if matcher != nil && !matcher.IsEmpty() {
 		m.subMatchers = append(m.subMatchers, matcher)
@@ -54,6 +59,7 @@ func (m *OrMatcher) Or(matcher Matcher) *OrMatcher {
 	return m
 }
 
+// Or constructs an OrMatcher from a list of Matchers. If any of the given Matchers is empty, Or skips adding it.
 func Or(matchers ...Matcher) *OrMatcher {
 	actual := []Matcher{}
 	for _, m := range matchers {
@@ -96,6 +102,8 @@ func (m *AndMatcher) Expression() string {
 	return strings.Join(grouped, " && ")
 }
 
+// And appends an additional Matcher to an existing AndMatcher. If the given Matcher is empty, it returns the original
+// AndMatcher.
 func (m *AndMatcher) And(matcher Matcher) *AndMatcher {
 	if matcher != nil && !matcher.IsEmpty() {
 		m.subMatchers = append(m.subMatchers, matcher)
@@ -103,6 +111,7 @@ func (m *AndMatcher) And(matcher Matcher) *AndMatcher {
 	return m
 }
 
+// And constructs an AndMatcher from a list of Matchers. If any of the given Matchers is empty, And skips adding it.
 func And(matchers ...Matcher) *AndMatcher {
 	actual := []Matcher{}
 	for _, m := range matchers {

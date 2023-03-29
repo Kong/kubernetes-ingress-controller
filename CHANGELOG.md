@@ -76,7 +76,7 @@ Adding a new version? You'll need three changes:
 - Fixed a deadlock in `AdminAPIClientsManager` which could occur when Konnect integration
   was enabled, and multiple `Notify` calls were made in parallel (e.g. when scaling Gateway
   deployment up).
-  [#3815](https://github.com/Kong/kubernetes-ingress-controller/pull/3815)
+  [#3816](https://github.com/Kong/kubernetes-ingress-controller/pull/3816)
 
 ## [2.9.0]
 

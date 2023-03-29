@@ -312,14 +312,28 @@ func (r *UDPRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		}
 	}
 
-	// TODO: UDPRoute should be 'Accepted' before proceeding further. Get here back once
-	// https://github.com/Kong/kubernetes-ingress-controller/issues/2544 is implemented.
-
-	// if the gateways are ready, and the UDPRoute is destined for them, ensure that
-	// the object is pushed to the dataplane.
-	if err := r.DataplaneClient.UpdateObject(udproute); err != nil {
-		debug(log, udproute, "failed to update object in data-plane, requeueing")
-		return ctrl.Result{}, err
+	if isRouteAccepted(gateways) {
+		// if the gateways are ready, and the UDPRoute is destined for them, ensure that
+		// the object is pushed to the dataplane.
+		if err := r.DataplaneClient.UpdateObject(udproute); err != nil {
+			debug(log, udproute, "failed to update object in data-plane, requeueing")
+			return ctrl.Result{}, err
+		}
+		if r.DataplaneClient.AreKubernetesObjectReportsEnabled() {
+			// if the dataplane client has reporting enabled (this is the default and is
+			// tied in with status updates being enabled in the controller manager) then
+			// we will wait until the object is reported as successfully configured before
+			// moving on to status updates.
+			if !r.DataplaneClient.KubernetesObjectIsConfigured(udproute) {
+				return ctrl.Result{Requeue: true}, nil
+			}
+		}
+	} else {
+		// route is not accepted, remove it from kong store
+		if err := r.DataplaneClient.DeleteObject(udproute); err != nil {
+			debug(log, udproute, "failed to delete object in data-plane, requeueing")
+			return ctrl.Result{}, err
+		}
 	}
 
 	// now that the object has been successfully configured for in the dataplane

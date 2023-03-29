@@ -73,6 +73,9 @@ func isGatewayReady(gateway *Gateway) bool {
 	)
 }
 
+// Warning: this function is used for both GatewayClasses and Gateways.
+// The former uses "true" as the value, whereas the latter uses "namespace/service" CSVs for the proxy services.
+
 // isObjectUnmanaged returns boolean if the object is configured
 // for unmanaged mode.
 func isObjectUnmanaged(anns map[string]string) bool {

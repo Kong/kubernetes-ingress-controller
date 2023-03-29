@@ -364,6 +364,7 @@ func setupControllers(
 				Scheme:               mgr.GetScheme(),
 				DataplaneClient:      dataplaneClient,
 				PublishService:       c.PublishService.OrEmpty().String(),
+				PublishServiceUDP:    c.PublishServiceUDP.OrEmpty().String(),
 				WatchNamespaces:      c.WatchNamespaces,
 				EnableReferenceGrant: referenceGrantsEnabled,
 				CacheSyncTimeout:     c.CacheSyncTimeout,

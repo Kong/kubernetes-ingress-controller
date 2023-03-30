@@ -9,6 +9,7 @@ Adding a new version? You'll need three changes:
 --->
  - [2.9.1](#291)
  - [2.9.0](#290)
+ - [2.8.2](#282)
  - [2.8.1](#281)
  - [2.8.0](#280)
  - [2.7.0](#270)
@@ -230,6 +231,16 @@ Adding a new version? You'll need three changes:
 - `kong-custom-entities-secret` flag has been marked as deprecated and will be
   removed in 3.0.
   [#3262](https://github.com/Kong/kubernetes-ingress-controller/pull/3262)
+
+## [2.8.2]
+
+> Release date: 2022-03-30
+
+### Under the hood
+
+- Updated Golang from 1.19.4 to 1.20.1 to address several CVEs.
+  [#3775](https://github.com/Kong/kubernetes-ingress-controller/pull/3775)
+
 
 ## [2.8.1]
 
@@ -2336,6 +2347,7 @@ Please read the changelog and test in your environment.
 
 [2.9.1]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.9.0...v2.9.1
 [2.9.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.8.1...v2.9.0
+[2.8.2]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.8.1...v2.8.2
 [2.8.1]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.8.0...v2.8.1
 [2.8.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.7.0...v2.8.0
 [2.7.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.6.0...v2.7.0

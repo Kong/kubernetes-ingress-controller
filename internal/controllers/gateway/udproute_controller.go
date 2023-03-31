@@ -312,23 +312,28 @@ func (r *UDPRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		}
 	}
 
+	debug(log, udproute, "gateway is ready")
 	if isRouteAccepted(gateways) {
 		// if the gateways are ready, and the UDPRoute is destined for them, ensure that
 		// the object is pushed to the dataplane.
+		debug(log, udproute, "route is accepted")
 		if err := r.DataplaneClient.UpdateObject(udproute); err != nil {
 			debug(log, udproute, "failed to update object in data-plane, requeueing")
 			return ctrl.Result{}, err
 		}
 		if r.DataplaneClient.AreKubernetesObjectReportsEnabled() {
+			debug(log, udproute, "reports are enabled")
 			// if the dataplane client has reporting enabled (this is the default and is
 			// tied in with status updates being enabled in the controller manager) then
 			// we will wait until the object is reported as successfully configured before
 			// moving on to status updates.
 			if !r.DataplaneClient.KubernetesObjectIsConfigured(udproute) {
+				debug(log, udproute, "object is not configured, requeueing")
 				return ctrl.Result{Requeue: true}, nil
 			}
 		}
 	} else {
+		debug(log, udproute, "route is not accepted, deleting it")
 		// route is not accepted, remove it from kong store
 		if err := r.DataplaneClient.DeleteObject(udproute); err != nil {
 			debug(log, udproute, "failed to delete object in data-plane, requeueing")

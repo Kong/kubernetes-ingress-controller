@@ -430,8 +430,8 @@ func TestAdminAPIClientsManager_ConcurrentNotify(t *testing.T) {
 	}
 
 	require.Eventually(t, func() bool {
-		if receivedNotificationsCount.Load() != 10 {
-			t.Logf("Received %d notifications, expected 10, waiting...", receivedNotificationsCount.Load())
+		if count := receivedNotificationsCount.Load(); count != 10 {
+			t.Logf("Received %d notifications, expected 10, waiting...", count)
 			return false
 		}
 		return true

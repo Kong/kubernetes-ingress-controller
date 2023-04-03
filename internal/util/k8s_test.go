@@ -20,10 +20,10 @@ import (
 	"context"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/google/go-cmp/cmp"
+	"github.com/samber/lo"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	testclient "k8s.io/client-go/kubernetes/fake"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
@@ -249,51 +249,36 @@ func TestGetPodDetails(t *testing.T) {
 }
 
 func TestGenerateTagsForObject(t *testing.T) {
-	actualTagSet := map[string]bool{}
-	expectedTagSet := map[string]bool{
-		K8sNamespaceTagPrefix + "aitmatov": true,
-		K8sNameTagPrefix + "yedigei":       true,
-		K8sUIDTagPrefix + "buryani":        true,
-		K8sKindTagPrefix + "adam":          true,
-		K8sGroupTagPrefix + "sary.ozek":    true,
-		K8sVersionTagPrefix + "v1beta100":  true,
-		"snaryad-soqqısı":                  true,
-		"temir-jol":                        true,
+	expectedTagSet := []*string{
+		lo.ToPtr(K8sNameTagPrefix + "yedigei"),
+		lo.ToPtr(K8sNamespaceTagPrefix + "aitmatov"),
+		lo.ToPtr(K8sKindTagPrefix + "HTTPRoute"),
+		lo.ToPtr(K8sUIDTagPrefix + "buryani"),
+		lo.ToPtr(K8sGroupTagPrefix + "gateway.networking.k8s.io"),
+		lo.ToPtr(K8sVersionTagPrefix + "v1beta1"),
+		lo.ToPtr("temir-jol"),
+		lo.ToPtr("snaryad-soqqısı"),
 	}
 
-	// somewhat unintuitively, declaring a static HTTPRoute does not inherently give it HTTPRoute TypeMeta
-	// to deal with this, the test manually sets fake values, allowing the tag generator to run as if it
-	// had an object with actual meta, like you'd get if you used the API server get functions.
-	tmeta := metav1.TypeMeta{}
-	tmeta.SetGroupVersionKind(schema.GroupVersionKind{
-		Group:   "sary.ozek",
-		Version: "v1beta100",
-		Kind:    "adam",
-	})
+	// In memory kubernetes objects do not have GVK filled in.
+	// Relevant kubernetes issue: https://github.com/kubernetes/kubernetes/issues/80609
 	testObj := &gatewayv1beta1.HTTPRoute{
-		TypeMeta: tmeta,
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "gateway.networking.k8s.io/v1beta1",
+			Kind:       "HTTPRoute",
+		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "yedigei",
 			Namespace: "aitmatov",
 			UID:       "buryani",
 			Annotations: map[string]string{
-				annotations.AnnotationPrefix + annotations.UserTagKey: "snaryad-soqqısı,temir-jol",
+				annotations.AnnotationPrefix + annotations.UserTagKey: "temir-jol,snaryad-soqqısı,temir-jol,temir-jol",
 			},
 		},
 	}
 
 	tags := GenerateTagsForObject(testObj)
-	for _, tag := range tags {
-		actualTagSet[*tag] = true
-	}
-
-	for e := range expectedTagSet {
-		_, ok := actualTagSet[e]
-		assert.Truef(t, ok, "expected %s tag not present", e)
-	}
-
-	for a := range actualTagSet {
-		_, ok := expectedTagSet[a]
-		assert.Truef(t, ok, "unexpected %s tag present", a)
+	if diff := cmp.Diff(expectedTagSet, tags); diff != "" {
+		t.Fatalf("generated tags are not as expected, diff:\n%s", diff)
 	}
 }

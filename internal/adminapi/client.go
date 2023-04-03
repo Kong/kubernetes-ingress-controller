@@ -67,6 +67,20 @@ func (c *Client) BaseRootURL() string {
 	return c.adminAPIClient.BaseRootURL()
 }
 
+func (c *Client) NodeID(ctx context.Context) (string, error) {
+	data, err := c.adminAPIClient.Root(ctx)
+	if err != nil {
+		return "", fmt.Errorf("failed fetching Kong client root: %w", err)
+	}
+
+	nodeID, ok := data["node_id"].(string)
+	if !ok {
+		return "", errors.New("malformed Kong node ID found in Kong client root")
+	}
+
+	return nodeID, nil
+}
+
 // GetKongVersion returns version of the kong gateway.
 func (c *Client) GetKongVersion(ctx context.Context) (string, error) {
 	if c.isKonnect {

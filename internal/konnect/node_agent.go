@@ -24,11 +24,12 @@ const (
 type GatewayInstance struct {
 	Hostname string
 	Version  string
+	NodeID   string
 }
 
 // GatewayInstanceGetter is the interface to get currently running gateway instances in the kubernetes cluster.
 type GatewayInstanceGetter interface {
-	GetGatewayInstances() ([]GatewayInstance, error)
+	GetGatewayInstances(ctx context.Context) ([]GatewayInstance, error)
 }
 
 type GatewayClientsChangesNotifier interface {
@@ -240,7 +241,7 @@ func (a *NodeAgent) updateKICNode(ctx context.Context, existingNodes []*NodeItem
 
 // updateGatewayNodes updates status of controlled kong gateway nodes to konnect.
 func (a *NodeAgent) updateGatewayNodes(ctx context.Context, existingNodes []*NodeItem) error {
-	gatewayInstances, err := a.gatewayInstanceGetter.GetGatewayInstances()
+	gatewayInstances, err := a.gatewayInstanceGetter.GetGatewayInstances(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to get controlled kong gateway pods: %w", err)
 	}
@@ -262,6 +263,7 @@ func (a *NodeAgent) updateGatewayNodes(ctx context.Context, existingNodes []*Nod
 		// hostname in existing nodes, should create a new node.
 		if !ok || len(nodes) == 0 {
 			createNodeReq := &CreateNodeRequest{
+				ID:       gateway.NodeID,
 				Hostname: gateway.Hostname,
 				Version:  gateway.Version,
 				Type:     nodeType,
@@ -377,13 +379,13 @@ func NewGatewayClientGetter(logger logr.Logger, clientsProvider dataplane.AdminA
 }
 
 // GetGatewayInstances gets gateway instances from currently available gateway API clients.
-func (p *GatewayClientGetter) GetGatewayInstances() ([]GatewayInstance, error) {
+func (p *GatewayClientGetter) GetGatewayInstances(ctx context.Context) ([]GatewayInstance, error) {
 	gatewayClients := p.clientsProvider.GatewayClients()
 	// TODO: get version of each kong gateway instance behind clients:
 	// https://github.com/Kong/kubernetes-ingress-controller/issues/3590
 	kongVersion := ""
 	if len(gatewayClients) != 0 {
-		v, err := gatewayClients[0].GetKongVersion(context.Background())
+		v, err := gatewayClients[0].GetKongVersion(ctx)
 		if err != nil {
 			p.logger.Error(err, "failed to get kong version")
 		} else {
@@ -407,9 +409,17 @@ func (p *GatewayClientGetter) GetGatewayInstances() ([]GatewayInstance, error) {
 			// use "gateway_address" as hostname of konnect node.
 			hostname = "gateway" + "_" + u.Host
 		}
+
+		nodeID, err := client.NodeID(ctx)
+		if err != nil {
+			p.logger.Error(err, "failed to get node ID from gateway admin API, skipping", "url", client.BaseRootURL())
+			continue
+		}
+
 		gatewayInstances = append(gatewayInstances, GatewayInstance{
 			Hostname: hostname,
 			Version:  kongVersion,
+			NodeID:   nodeID,
 		})
 	}
 

@@ -183,7 +183,11 @@ func GenerateTagsForObject(obj client.Object) []*string {
 	if gvk.Version != "" {
 		tags = append(tags, K8sVersionTagPrefix+gvk.Version)
 	}
-	tags = append(tags, annotations.ExtractUserTags(obj.GetAnnotations())...)
-	tags = lo.Uniq(tags)
+
+	tags = append(tags,
+		lo.Uniq(
+			annotations.ExtractUserTags(obj.GetAnnotations()),
+		)...,
+	)
 	return kong.StringSlice(tags...)
 }

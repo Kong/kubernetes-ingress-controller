@@ -7,6 +7,7 @@ Adding a new version? You'll need three changes:
 * Add the diff link, like "[2.7.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v1.2.2...v1.2.3".
   This is all the way at the bottom. It's the thing we always forget.
 --->
+ - [2.9.2](#292)
  - [2.9.1](#291)
  - [2.9.0](#290)
  - [2.9.0-rc.1](#290-rc1)
@@ -64,16 +65,24 @@ Adding a new version? You'll need three changes:
  - [0.0.5](#005)
  - [0.0.4 and prior](#004-and-prior)
 
-## [2.9.1]
+## [2.9.2]
 
-> Release date: 2023-03-29
+> Release date: 2023-04-03
 
-### Fixed 
+### Fixed
 
 - Fixed a deadlock in `AdminAPIClientsManager` which could occur when Konnect integration
   was enabled, and multiple `Notify` calls were made in parallel (e.g. when scaling Gateway
   deployment up).
   [#3816](https://github.com/Kong/kubernetes-ingress-controller/pull/3816)
+
+## [2.9.1]
+
+> Release date: 2023-03-29
+
+This release was intended to include a fix for a deadlock in `AdminAPIClientsManager`
+([#3816](https://github.com/Kong/kubernetes-ingress-controller/pull/3816)), but it wasn't
+backported properly. It is included in the next patch release.
 
 ## [2.9.0]
 
@@ -2336,6 +2345,7 @@ Please read the changelog and test in your environment.
  - The initial versions  were rapildy iterated to deliver
    a working ingress controller.
 
+[2.9.2]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.9.1...v2.9.2
 [2.9.1]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.9.0...v2.9.1
 [2.9.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.8.1...v2.9.0
 [2.8.1]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.8.0...v2.8.1

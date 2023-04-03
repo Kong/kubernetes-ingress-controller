@@ -129,6 +129,8 @@ func (p *Parser) Build() (*kongstate.KongState, []failures.ResourceFailure) {
 	// populate CA certificates in Kong
 	result.CACertificates = p.getCACerts()
 
+	result = p.FillEntitiesIDs(result)
+
 	return &result, p.popTranslationFailures()
 }
 
@@ -514,6 +516,34 @@ func (p *Parser) getCerts(secretsToSNIs SecretNameToSNIs) []certWrapper {
 	}
 
 	return certs
+}
+
+func (p *Parser) FillEntitiesIDs(result kongstate.KongState) kongstate.KongState {
+	for i := range result.Services {
+		service := result.Services[i].Service
+		if err := kong.FillEntityID(&service); err != nil {
+			p.logger.WithError(err).Error("Failed to fill service ID")
+		}
+		result.Services[i].Service = service
+
+		for j := range result.Services[i].Routes {
+			route := result.Services[i].Routes[j]
+			if err := kong.FillEntityID(&route.Route); err != nil {
+				p.logger.WithError(err).Error("Failed to fill route ID")
+			}
+			result.Services[i].Routes[j] = route
+		}
+	}
+
+	for i := range result.Consumers {
+		consumer := result.Consumers[i]
+		if err := kong.FillEntityID(&consumer.Consumer); err != nil {
+			p.logger.WithError(err).Error("Failed to fill consumer ID")
+		}
+		result.Consumers[i] = consumer
+	}
+
+	return result
 }
 
 func mergeCerts(log logrus.FieldLogger, certLists ...[]certWrapper) []kongstate.Certificate {

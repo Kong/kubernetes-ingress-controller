@@ -16,7 +16,7 @@ require (
 	github.com/google/go-cmp v0.5.9
 	github.com/google/uuid v1.3.0
 	github.com/kong/deck v1.19.1
-	github.com/kong/go-kong v0.40.0
+	github.com/kong/go-kong v0.39.1-0.20230403183650-c4499c7b76c7
 	github.com/kong/kubernetes-telemetry v0.0.2
 	github.com/kong/kubernetes-testing-framework v0.30.1
 	github.com/lithammer/dedent v1.1.0
@@ -53,6 +53,7 @@ require (
 	github.com/bombsimon/logrusr/v3 v3.1.0 // indirect
 	github.com/gammazero/deque v0.2.0 // indirect
 	github.com/gammazero/workerpool v1.1.3 // indirect
+	github.com/gofrs/uuid v4.4.0+incompatible // indirect
 	github.com/google/s2a-go v0.1.0 // indirect
 	github.com/hashicorp/errwrap v1.0.0 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect

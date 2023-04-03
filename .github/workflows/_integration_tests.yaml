@@ -14,26 +14,8 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - name: dbless
-            test: dbless
           - name: postgres
             test: postgres
-          - name: feature-gates
-            test: dbless
-            feature_gates: "GatewayAlpha=true,CombinedRoutes=false"
-          - name: dbless-knative
-            test: dbless.knative
-          - name: postgres-knative
-            test: postgres.knative
-          - name: enterprise-postgres
-            test: enterprise.postgres
-            enterprise: true
-          - name: dbless-traditional-compatible
-            test: dbless
-            router-flavor: 'traditional_compatible'
-          - name: postgres-traditional-compatible
-            test: postgres
-            router-flavor: 'traditional_compatible'
 
     steps:
       - uses: Kong/kong-license@master

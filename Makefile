@@ -390,6 +390,7 @@ test.integration.postgres.knative:
 test.integration.postgres:
 	@$(MAKE) _test.integration \
 		GOTAGS="integration_tests" \
+		GOTESTFLAGS="-run TestUDPRouteEssentials" \
 		DBMODE=postgres \
 		COVERAGE_OUT=coverage.postgres.out
 

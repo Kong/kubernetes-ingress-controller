@@ -384,6 +384,60 @@ func TestAdminAPIClientsManager_SubscribeToGatewayClientsChanges(t *testing.T) {
 	})
 }
 
+func TestAdminAPIClientsManager_ConcurrentNotify(t *testing.T) {
+	t.Parallel()
+
+	cf := &clientFactoryWithExpected{t: t, expected: map[string]bool{
+		"http://10.0.0.1:8080": true,
+	}}
+	testClient, err := adminapi.NewTestClient("http://10.0.0.1:8080")
+	require.NoError(t, err)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	m, err := NewAdminAPIClientsManager(ctx, logrus.New(), []*adminapi.Client{testClient}, cf)
+	require.NoError(t, err)
+	m.RunNotifyLoop()
+
+	var receivedNotificationsCount atomic.Uint32
+	ch, ok := m.SubscribeToGatewayClientsChanges()
+	require.NotNil(t, ch)
+	require.True(t, ok)
+
+	// Run subscriber worker in a separate goroutine to consume notifications.
+	go func() {
+		for {
+			select {
+			case <-ch:
+				// Call GatewayClients() here to make sure that we can access the clients safely
+				// from the subscriber goroutine without causing a deadlock in the notify loop.
+				require.Len(t, m.GatewayClients(), 1, "expected to get 1 client")
+				receivedNotificationsCount.Add(1)
+			case <-ctx.Done():
+				t.Log("Test is done, stopping subscriber worker")
+				return
+			}
+		}
+	}()
+
+	// Run multiple notifiers in parallel to make sure that Notify is safe for concurrent use.
+	for i := 0; i < 10; i++ {
+		go func() {
+			m.Notify([]adminapi.DiscoveredAdminAPI{
+				testDiscoveredAdminAPI("http://10.0.0.1:8080"),
+			})
+		}()
+	}
+
+	require.Eventually(t, func() bool {
+		if receivedNotificationsCount.Load() != 10 {
+			t.Logf("Received %d notifications, expected 10, waiting...", receivedNotificationsCount.Load())
+			return false
+		}
+		return true
+	}, time.Second, time.Millisecond, "expected to receive 10 notifications")
+}
+
 func testDiscoveredAdminAPI(address string) adminapi.DiscoveredAdminAPI {
 	return adminapi.DiscoveredAdminAPI{
 		Address: address,

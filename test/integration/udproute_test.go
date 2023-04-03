@@ -103,7 +103,7 @@ func TestUDPRouteEssentials(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Log("configuring alternative coredns deployent for load-balanced UDP testing")
-	container2 := generators.NewContainer("coredns", coreDNSImage, ktfkong.DefaultUDPServicePort)
+	container2 := generators.NewContainer("coredns2", coreDNSImage, ktfkong.DefaultUDPServicePort)
 	container2.Ports[0].Protocol = corev1.ProtocolUDP
 	container2.VolumeMounts = []corev1.VolumeMount{{Name: "config-volume", MountPath: "/etc/coredns"}}
 	container2.Args = []string{"-conf", "/etc/coredns/Corefile"}

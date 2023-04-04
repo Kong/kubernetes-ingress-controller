@@ -569,6 +569,127 @@ var (
 			"querystring": []
 		}
 	}`
+	StatsDConfigNonEmptyConfig = `{
+		"host": "localhost",
+        "metrics": [
+            {
+                "name": "request_count",
+                "sample_rate": 1,
+                "stat_type": "counter"
+            },
+            {
+                "name": "latency",
+                "stat_type": "timer"
+            },
+            {
+                "name": "request_size",
+                "stat_type": "timer"
+            },
+            {
+                "name": "status_count",
+                "sample_rate": 1,
+                "stat_type": "counter"
+            },
+            {
+                "name": "response_size",
+                "stat_type": "timer"
+            },
+            {
+                "consumer_identifier": "custom_id",
+                "name": "unique_users",
+                "stat_type": "set"
+            },
+            {
+                "consumer_identifier": "custom_id",
+                "name": "request_per_user",
+                "sample_rate": 1,
+                "stat_type": "counter"
+            },
+            {
+                "name": "upstream_latency",
+                "stat_type": "timer"
+            },
+            {
+                "name": "kong_latency",
+                "stat_type": "timer"
+            },
+            {
+                "consumer_identifier": "custom_id",
+                "name": "status_count_per_user",
+                "sample_rate": 1,
+                "stat_type": "counter"
+            }
+        ],
+        "port": 8125,
+        "prefix": "kong"
+	}`
+	StatsDConfigNonEmptyFilledConfig = `{
+		"host": "localhost",
+        "metrics": [
+            {
+                "name": "request_count",
+                "sample_rate": 1,
+                "stat_type": "counter",
+				"consumer_identifier": null
+            },
+            {
+                "name": "latency",
+                "stat_type": "timer",
+				"sample_rate": null,
+				"consumer_identifier": null
+            },
+            {
+                "name": "request_size",
+                "stat_type": "timer",
+				"sample_rate": null,
+				"consumer_identifier": null
+            },
+            {
+                "name": "status_count",
+                "sample_rate": 1,
+                "stat_type": "counter",
+				"consumer_identifier": null
+            },
+            {
+                "name": "response_size",
+                "stat_type": "timer",
+				"sample_rate": null,
+				"consumer_identifier": null
+            },
+            {
+                "consumer_identifier": "custom_id",
+                "name": "unique_users",
+                "stat_type": "set",
+				"sample_rate": null
+            },
+            {
+                "consumer_identifier": "custom_id",
+                "name": "request_per_user",
+                "sample_rate": 1,
+                "stat_type": "counter"
+            },
+            {
+                "name": "upstream_latency",
+                "stat_type": "timer",
+				"sample_rate": null,
+				"consumer_identifier": null
+            },
+            {
+                "name": "kong_latency",
+                "stat_type": "timer",
+				"sample_rate": null,
+				"consumer_identifier": null
+            },
+            {
+                "consumer_identifier": "custom_id",
+                "name": "status_count_per_user",
+                "sample_rate": 1,
+                "stat_type": "counter"
+            }
+        ],
+        "port": 8125,
+        "prefix": "kong"
+	}`
 )
 
 func TestFillNil(t *testing.T) {
@@ -659,6 +780,23 @@ func TestFillReqeustTransformerNestedConfig(t *testing.T) {
 	assert.Nil(err)
 	want := make(kong.Configuration)
 	err = json.Unmarshal([]byte(RequestTransformerNonEmptyFilledConfig), &want)
+	assert.NoError(err)
+	res, err := FillPluginConfig(schema, config)
+	assert.Equal(want, res)
+	assert.Nil(err)
+}
+
+func Test_FillPluginConfig(t *testing.T) {
+	assert := assert.New(t)
+	var schema map[string]interface{}
+	err := json.Unmarshal([]byte(StatsDSchema), &schema)
+	assert.Nil(err)
+
+	config := make(kong.Configuration)
+	err = json.Unmarshal([]byte(StatsDConfigNonEmptyConfig), &config)
+	assert.Nil(err)
+	want := make(kong.Configuration)
+	err = json.Unmarshal([]byte(StatsDConfigNonEmptyFilledConfig), &want)
 	assert.NoError(err)
 	res, err := FillPluginConfig(schema, config)
 	assert.Equal(want, res)

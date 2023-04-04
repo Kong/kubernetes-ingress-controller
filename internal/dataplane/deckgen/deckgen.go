@@ -159,6 +159,37 @@ func fillRecord(schema gjson.Result, config kong.Configuration) (kong.Configurat
 			res[fname] = map[string]interface{}(newSubConfig)
 			return true
 		}
+
+		// Check if field is of type array of records (in Schema)
+		// If this array is non-nil and non-empty (in Config), go through all the records in this array and add defaults
+		// If the array has only primitives like string/number/boolean then the value is already set
+		// If the array is empty or nil, then no defaults need to be set for its elements
+		if ftype.String() == "array" &&
+			value.Get(fname).Get("elements.type").String() == "record" &&
+			config[fname] != nil {
+
+			// Check sub config is of type array and it is non-empty
+			if subConfigArray, ok := config[fname].([]interface{}); ok && len(subConfigArray) > 0 {
+				processedSubConfigArray := make([]interface{}, len(subConfigArray))
+
+				for i, configRecord := range subConfigArray {
+					// Check if element is of type record, if it is, set default values by recursively calling `fillConfigRecord`
+					if configRecordMap, ok := configRecord.(map[string]interface{}); ok {
+						processedConfigRecord, err := fillRecord(value.Get(fname).Get("elements"), configRecordMap)
+						if err != nil {
+							panic(err)
+						}
+						processedSubConfigArray[i] = map[string]interface{}(processedConfigRecord)
+						continue
+					}
+					// Element not of type record, keep the value as is
+					processedSubConfigArray[i] = configRecord
+				}
+				res[fname] = processedSubConfigArray
+				return true
+			}
+		}
+
 		// check if key is already set in the config
 		if _, ok := config[fname]; ok {
 			// yes, don't set it

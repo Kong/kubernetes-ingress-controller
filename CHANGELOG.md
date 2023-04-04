@@ -1,5 +1,6 @@
 # Table of Contents
 
+ - [2.6.1](#261)
  - [2.6.0](#260)
  - [2.5.0](#250)
  - [2.4.2](#242)
@@ -50,6 +51,14 @@
  - [0.1.0](#010)
  - [0.0.5](#005)
  - [0.0.4 and prior](#004-and-prior)
+
+## [2.6.1]
+
+> Release date: 2023-04-04
+
+#### Fixed
+
+- Backport commit [9787cb5](https://github.com/Kong/go-kong/commit/9787cb561e4c40bbc6392be4a61960c711e63a84) applied in [go-kong](https://github.com/Kong/go-kong) which fixes handling of records nested under array in plugin config while filling default values. Fixes #3805 
 
 ## [2.6.0]
 
@@ -1934,6 +1943,7 @@ Please read the changelog and test in your environment.
  - The initial versions  were rapildy iterated to deliver
    a working ingress controller.
 
+[2.6.1]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.6.0...v2.6.1
 [2.6.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.5.0...v2.6.0
 [2.5.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.4.2...v2.5.0
 [2.4.2]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.4.1...v2.4.2

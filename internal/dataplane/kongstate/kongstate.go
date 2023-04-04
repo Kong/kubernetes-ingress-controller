@@ -21,6 +21,7 @@ type KongState struct {
 	Upstreams      []Upstream
 	Certificates   []Certificate
 	CACertificates []kong.CACertificate
+	Licenses       []kong.License
 	Plugins        []Plugin
 	Consumers      []Consumer
 	Version        semver.Version

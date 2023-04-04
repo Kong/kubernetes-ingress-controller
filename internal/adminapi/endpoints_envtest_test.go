@@ -99,7 +99,7 @@ func TestGetAdminAPIsForServiceReturnsAllAddressesCorrectlyPagingThroughResults(
 				}
 			}
 
-			got, err := adminapi.GetAdminAPIsForService(context.Background(), client, service, sets.New("admin"))
+			got, err := adminapi.GetAdminAPIsForService(ctx, client, service, sets.New("admin"))
 			require.NoError(t, err)
 			require.Len(t, got, tc.subnetD*tc.subnetC, "GetAdminAPIsForService should return all valid addresses")
 		})

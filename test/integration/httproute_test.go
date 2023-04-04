@@ -153,7 +153,7 @@ func TestHTTPRouteEssentials(t *testing.T) {
 	cleaner.Add(httpRoute)
 
 	t.Log("verifying that the Gateway gets linked to the route via status")
-	callback := GetGatewayIsLinkedCallback(t, gatewayClient, gatewayv1beta1.HTTPProtocolType, ns.Name, httpRoute.Name)
+	callback := GetGatewayIsLinkedCallback(ctx, t, gatewayClient, gatewayv1beta1.HTTPProtocolType, ns.Name, httpRoute.Name)
 	require.Eventually(t, callback, ingressWait, waitTick)
 	t.Log("verifying that the httproute contains 'Programmed' condition")
 	require.Eventually(t,
@@ -203,7 +203,7 @@ func TestHTTPRouteEssentials(t *testing.T) {
 	}, time.Minute, time.Second)
 
 	t.Log("verifying that the Gateway gets unlinked from the route via status")
-	callback = GetGatewayIsUnlinkedCallback(t, gatewayClient, gatewayv1beta1.HTTPProtocolType, ns.Name, httpRoute.Name)
+	callback = GetGatewayIsUnlinkedCallback(ctx, t, gatewayClient, gatewayv1beta1.HTTPProtocolType, ns.Name, httpRoute.Name)
 	require.Eventually(t, callback, ingressWait, waitTick)
 
 	t.Log("verifying that the data-plane configuration from the HTTPRoute gets dropped with the parentRefs now removed")
@@ -219,7 +219,7 @@ func TestHTTPRouteEssentials(t *testing.T) {
 	}, time.Minute, time.Second)
 
 	t.Log("verifying that the Gateway gets linked to the route via status")
-	callback = GetGatewayIsLinkedCallback(t, gatewayClient, gatewayv1beta1.HTTPProtocolType, ns.Name, httpRoute.Name)
+	callback = GetGatewayIsLinkedCallback(ctx, t, gatewayClient, gatewayv1beta1.HTTPProtocolType, ns.Name, httpRoute.Name)
 	require.Eventually(t, callback, ingressWait, waitTick)
 
 	t.Log("verifying that putting the parentRefs back results in the routes becoming available again")
@@ -229,7 +229,7 @@ func TestHTTPRouteEssentials(t *testing.T) {
 	require.NoError(t, gatewayClient.GatewayV1beta1().GatewayClasses().Delete(ctx, gatewayClassName, metav1.DeleteOptions{}))
 
 	t.Log("verifying that the Gateway gets unlinked from the route via status")
-	callback = GetGatewayIsUnlinkedCallback(t, gatewayClient, gatewayv1beta1.HTTPProtocolType, ns.Name, httpRoute.Name)
+	callback = GetGatewayIsUnlinkedCallback(ctx, t, gatewayClient, gatewayv1beta1.HTTPProtocolType, ns.Name, httpRoute.Name)
 	require.Eventually(t, callback, ingressWait, waitTick)
 	t.Log("verifying that the data-plane configuration from the HTTPRoute gets dropped with the GatewayClass now removed")
 	helpers.EventuallyGETPath(t, proxyURL, "test-http-route-essentials", http.StatusNotFound, "", emptyHeaderSet, ingressWait, waitTick)
@@ -240,7 +240,7 @@ func TestHTTPRouteEssentials(t *testing.T) {
 	cleaner.Add(gwc)
 
 	t.Log("verifying that the Gateway gets linked to the route via status")
-	callback = GetGatewayIsLinkedCallback(t, gatewayClient, gatewayv1beta1.HTTPProtocolType, ns.Name, httpRoute.Name)
+	callback = GetGatewayIsLinkedCallback(ctx, t, gatewayClient, gatewayv1beta1.HTTPProtocolType, ns.Name, httpRoute.Name)
 	require.Eventually(t, callback, ingressWait, waitTick)
 
 	t.Log("verifying that creating the GatewayClass again triggers reconciliation of HTTPRoutes and the route becomes available again")
@@ -250,7 +250,7 @@ func TestHTTPRouteEssentials(t *testing.T) {
 	require.NoError(t, gatewayClient.GatewayV1beta1().Gateways(ns.Name).Delete(ctx, gatewayName, metav1.DeleteOptions{}))
 
 	t.Log("verifying that the Gateway gets unlinked from the route via status")
-	callback = GetGatewayIsUnlinkedCallback(t, gatewayClient, gatewayv1beta1.HTTPProtocolType, ns.Name, httpRoute.Name)
+	callback = GetGatewayIsUnlinkedCallback(ctx, t, gatewayClient, gatewayv1beta1.HTTPProtocolType, ns.Name, httpRoute.Name)
 	require.Eventually(t, callback, ingressWait, waitTick)
 
 	t.Log("verifying that the data-plane configuration from the HTTPRoute gets dropped with the Gateway now removed")
@@ -263,7 +263,7 @@ func TestHTTPRouteEssentials(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Log("verifying that the Gateway gets linked to the route via status")
-	callback = GetGatewayIsLinkedCallback(t, gatewayClient, gatewayv1beta1.HTTPProtocolType, ns.Name, httpRoute.Name)
+	callback = GetGatewayIsLinkedCallback(ctx, t, gatewayClient, gatewayv1beta1.HTTPProtocolType, ns.Name, httpRoute.Name)
 	require.Eventually(t, callback, ingressWait, waitTick)
 
 	t.Log("verifying that creating the Gateway again triggers reconciliation of HTTPRoutes and the route becomes available again")
@@ -274,7 +274,7 @@ func TestHTTPRouteEssentials(t *testing.T) {
 	require.NoError(t, gatewayClient.GatewayV1beta1().Gateways(ns.Name).Delete(ctx, gateway.Name, metav1.DeleteOptions{}))
 
 	t.Log("verifying that the Gateway gets unlinked from the route via status")
-	callback = GetGatewayIsUnlinkedCallback(t, gatewayClient, gatewayv1beta1.HTTPProtocolType, ns.Name, httpRoute.Name)
+	callback = GetGatewayIsUnlinkedCallback(ctx, t, gatewayClient, gatewayv1beta1.HTTPProtocolType, ns.Name, httpRoute.Name)
 	require.Eventually(t, callback, ingressWait, waitTick)
 
 	t.Log("verifying that the data-plane configuration from the HTTPRoute does not get orphaned with the GatewayClass and Gateway gone")

@@ -161,7 +161,7 @@ func TestTCPRouteEssentials(t *testing.T) {
 	cleaner.Add(tcpRoute)
 
 	t.Log("verifying that the Gateway gets linked to the route via status")
-	callback := GetGatewayIsLinkedCallback(t, gatewayClient, gatewayv1beta1.TCPProtocolType, ns.Name, tcpRoute.Name)
+	callback := GetGatewayIsLinkedCallback(ctx, t, gatewayClient, gatewayv1beta1.TCPProtocolType, ns.Name, tcpRoute.Name)
 	require.Eventually(t, callback, ingressWait, waitTick)
 	t.Log("verifying that the tcproute contains 'Programmed' condition")
 	require.Eventually(t,
@@ -186,7 +186,7 @@ func TestTCPRouteEssentials(t *testing.T) {
 	}, time.Minute, time.Second)
 
 	t.Log("verifying that the Gateway gets unlinked from the route via status")
-	callback = GetGatewayIsUnlinkedCallback(t, gatewayClient, gatewayv1beta1.TCPProtocolType, ns.Name, tcpRoute.Name)
+	callback = GetGatewayIsUnlinkedCallback(ctx, t, gatewayClient, gatewayv1beta1.TCPProtocolType, ns.Name, tcpRoute.Name)
 	require.Eventually(t, callback, ingressWait, waitTick)
 
 	t.Log("verifying that the tcpecho is no longer responding")
@@ -212,7 +212,7 @@ func TestTCPRouteEssentials(t *testing.T) {
 	}, time.Minute, time.Second)
 
 	t.Log("verifying that the Gateway gets linked to the route via status")
-	callback = GetGatewayIsLinkedCallback(t, gatewayClient, gatewayv1beta1.TCPProtocolType, ns.Name, tcpRoute.Name)
+	callback = GetGatewayIsLinkedCallback(ctx, t, gatewayClient, gatewayv1beta1.TCPProtocolType, ns.Name, tcpRoute.Name)
 	require.Eventually(t, callback, ingressWait, waitTick)
 
 	t.Log("verifying that putting the parentRefs back results in the routes becoming available again")
@@ -225,7 +225,7 @@ func TestTCPRouteEssentials(t *testing.T) {
 	require.NoError(t, gatewayClient.GatewayV1beta1().GatewayClasses().Delete(ctx, gwc.Name, metav1.DeleteOptions{}))
 
 	t.Log("verifying that the Gateway gets unlinked from the route via status")
-	callback = GetGatewayIsUnlinkedCallback(t, gatewayClient, gatewayv1beta1.TCPProtocolType, ns.Name, tcpRoute.Name)
+	callback = GetGatewayIsUnlinkedCallback(ctx, t, gatewayClient, gatewayv1beta1.TCPProtocolType, ns.Name, tcpRoute.Name)
 	require.Eventually(t, callback, ingressWait, waitTick)
 
 	t.Log("verifying that the data-plane configuration from the TCPRoute gets dropped with the GatewayClass now removed")
@@ -239,7 +239,7 @@ func TestTCPRouteEssentials(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Log("verifying that the Gateway gets linked to the route via status")
-	callback = GetGatewayIsLinkedCallback(t, gatewayClient, gatewayv1beta1.TCPProtocolType, ns.Name, tcpRoute.Name)
+	callback = GetGatewayIsLinkedCallback(ctx, t, gatewayClient, gatewayv1beta1.TCPProtocolType, ns.Name, tcpRoute.Name)
 	require.Eventually(t, callback, ingressWait, waitTick)
 
 	t.Log("verifying that creating the GatewayClass again triggers reconciliation of TCPRoutes and the route becomes available again")
@@ -252,7 +252,7 @@ func TestTCPRouteEssentials(t *testing.T) {
 	require.NoError(t, gatewayClient.GatewayV1beta1().Gateways(ns.Name).Delete(ctx, gatewayName, metav1.DeleteOptions{}))
 
 	t.Log("verifying that the Gateway gets unlinked from the route via status")
-	callback = GetGatewayIsUnlinkedCallback(t, gatewayClient, gatewayv1beta1.TCPProtocolType, ns.Name, tcpRoute.Name)
+	callback = GetGatewayIsUnlinkedCallback(ctx, t, gatewayClient, gatewayv1beta1.TCPProtocolType, ns.Name, tcpRoute.Name)
 	require.Eventually(t, callback, ingressWait, waitTick)
 
 	t.Log("verifying that the data-plane configuration from the TCPRoute gets dropped with the Gateway now removed")
@@ -273,7 +273,7 @@ func TestTCPRouteEssentials(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Log("verifying that the Gateway gets linked to the route via status")
-	callback = GetGatewayIsLinkedCallback(t, gatewayClient, gatewayv1beta1.TCPProtocolType, ns.Name, tcpRoute.Name)
+	callback = GetGatewayIsLinkedCallback(ctx, t, gatewayClient, gatewayv1beta1.TCPProtocolType, ns.Name, tcpRoute.Name)
 	require.Eventually(t, callback, ingressWait, waitTick)
 
 	t.Log("verifying that creating the Gateway again triggers reconciliation of TCPRoutes and the route becomes available again")
@@ -287,7 +287,7 @@ func TestTCPRouteEssentials(t *testing.T) {
 	require.NoError(t, gatewayClient.GatewayV1beta1().Gateways(ns.Name).Delete(ctx, gateway.Name, metav1.DeleteOptions{}))
 
 	t.Log("verifying that the Gateway gets unlinked from the route via status")
-	callback = GetGatewayIsUnlinkedCallback(t, gatewayClient, gatewayv1beta1.TCPProtocolType, ns.Name, tcpRoute.Name)
+	callback = GetGatewayIsUnlinkedCallback(ctx, t, gatewayClient, gatewayv1beta1.TCPProtocolType, ns.Name, tcpRoute.Name)
 	require.Eventually(t, callback, ingressWait, waitTick)
 
 	t.Log("verifying that the data-plane configuration from the TCPRoute does not get orphaned with the GatewayClass and Gateway gone")
@@ -312,7 +312,7 @@ func TestTCPRouteEssentials(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Log("verifying that the Gateway gets linked to the route via status")
-	callback = GetGatewayIsLinkedCallback(t, gatewayClient, gatewayv1beta1.TCPProtocolType, ns.Name, tcpRoute.Name)
+	callback = GetGatewayIsLinkedCallback(ctx, t, gatewayClient, gatewayv1beta1.TCPProtocolType, ns.Name, tcpRoute.Name)
 	require.Eventually(t, callback, ingressWait, waitTick)
 
 	t.Log("verifying that creating the Gateway again triggers reconciliation of TCPRoutes and the route becomes available again")
@@ -368,7 +368,7 @@ func TestTCPRouteEssentials(t *testing.T) {
 	require.NoError(t, gatewayClient.GatewayV1beta1().Gateways(ns.Name).Delete(ctx, gateway.Name, metav1.DeleteOptions{}))
 
 	t.Log("verifying that the Gateway gets unlinked from the route via status")
-	callback = GetGatewayIsUnlinkedCallback(t, gatewayClient, gatewayv1beta1.TCPProtocolType, ns.Name, tcpRoute.Name)
+	callback = GetGatewayIsUnlinkedCallback(ctx, t, gatewayClient, gatewayv1beta1.TCPProtocolType, ns.Name, tcpRoute.Name)
 	require.Eventually(t, callback, ingressWait, waitTick)
 
 	t.Log("verifying that the data-plane configuration from the TCPRoute does not get orphaned with the GatewayClass and Gateway gone")

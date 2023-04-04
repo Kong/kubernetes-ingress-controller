@@ -67,6 +67,12 @@ Adding a new version? You'll need three changes:
 
 ## Unreleased
 
+### Fixed
+
+- Fix paging in `GetAdminAPIsForService` which might have caused the controller
+  to only return the head of the list of Endpoints for Admin API service.
+  [#3846](https://github.com/Kong/kubernetes-ingress-controller/pull/3846)
+
 ### Deprecated
 
 - Removed support for extensions/v1beta1 Ingress which was removed in kubernetes 1.22.
@@ -88,8 +94,8 @@ Adding a new version? You'll need three changes:
 
 > Release date: 2023-03-29
 
-This release was intended to include a fix for a deadlock in `AdminAPIClientsManager` 
-([#3816](https://github.com/Kong/kubernetes-ingress-controller/pull/3816)), but it wasn't 
+This release was intended to include a fix for a deadlock in `AdminAPIClientsManager`
+([#3816](https://github.com/Kong/kubernetes-ingress-controller/pull/3816)), but it wasn't
 backported properly. It is included in the next patch release.
 
 ## [2.9.0]

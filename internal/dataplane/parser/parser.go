@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"crypto/tls"
 	"fmt"
+	"os"
 	"reflect"
 	"sort"
 	"strings"
@@ -128,6 +129,14 @@ func (p *Parser) Build() (*kongstate.KongState, []failures.ResourceFailure) {
 
 	// populate CA certificates in Kong
 	result.CACertificates = p.getCACerts()
+
+	// TODO this is a shortcut to properly loading a license from somewhere that doesn't exist yet
+	result.Licenses = []kong.License{
+		{
+			ID:      kong.String("ed34890a-5726-4305-8a07-902a4af3ae99"),
+			Payload: kong.String(os.Getenv("KONG_FAKE_LICENSE")),
+		},
+	}
 
 	return &result, p.popTranslationFailures()
 }

@@ -11,7 +11,6 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/kong/go-kong/kong"
 	"github.com/samber/lo"
-	"go.uber.org/multierr"
 	"golang.org/x/sync/errgroup"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/adminapi"
@@ -22,7 +21,7 @@ import (
 // - database setting
 // - kong version.
 func ValidateRoots(roots []Root, skipCACerts bool) (string, kong.Version, error) {
-	if err := multierr.Combine(lo.Map(roots, validateRootFunc(skipCACerts))...); err != nil {
+	if err := errors.Join(lo.Map(roots, validateRootFunc(skipCACerts))...); err != nil {
 		return "", kong.Version{}, fmt.Errorf("failed to validate kong Roots: %w", err)
 	}
 

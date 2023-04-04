@@ -60,6 +60,7 @@ func GetAdminAPIsForService(
 		if endpointsList.Continue == "" {
 			break
 		}
+		continueToken = endpointsList.Continue
 	}
 	return addresses, nil
 }

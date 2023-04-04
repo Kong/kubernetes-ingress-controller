@@ -136,6 +136,8 @@ type KongClient struct {
 
 	// configChangeDetector detects changes in the configuration.
 	configChangeDetector sendconfig.ConfigurationChangeDetector
+
+	generateExpressionRoutes bool
 }
 
 // NewKongClient provides a new KongClient object after connecting to the
@@ -370,6 +372,18 @@ func (c *KongClient) AreCombinedServiceRoutesEnabled() bool {
 	return c.enableCombinedServiceRoutes
 }
 
+func (c *KongClient) AreExpressionRoutesEnabled() bool {
+	c.additionalFeaturesLock.RLock()
+	defer c.additionalFeaturesLock.RUnlock()
+	return c.generateExpressionRoutes
+}
+
+func (c *KongClient) EnableGenerateExpressionRoutes() {
+	c.additionalFeaturesLock.Lock()
+	defer c.additionalFeaturesLock.Unlock()
+	c.generateExpressionRoutes = true
+}
+
 // -----------------------------------------------------------------------------
 // Dataplane Client - Kong - Interface Implementation
 // -----------------------------------------------------------------------------
@@ -409,6 +423,10 @@ func (c *KongClient) Update(ctx context.Context) error {
 	if versions.GetKongVersion().MajorMinorOnly().GTE(versions.ExplicitRegexPathVersionCutoff) {
 		p.EnableRegexPathPrefix()
 		formatVersion = "3.0"
+	}
+	if c.AreExpressionRoutesEnabled() {
+		c.logger.Debug("translate to expression routes")
+		p.EnableTranslateToATCRoutes()
 	}
 
 	// parse the Kubernetes objects from the storer into Kong configuration
@@ -492,6 +510,7 @@ func (c *KongClient) sendToClient(
 		client.PluginSchemaStore(),
 		config.FilterTags,
 		formatVersion,
+		c.AreExpressionRoutesEnabled(),
 	)
 
 	sendDiagnostic := prepareSendDiagnosticFn(ctx, logger, c.diagnostic, s, targetConfig, client.PluginSchemaStore(), config.FilterTags, formatVersion)
@@ -580,6 +599,7 @@ func prepareSendDiagnosticFn(
 			pluginSchemaStore,
 			filterTags,
 			formatVersion,
+			false,
 		)
 		config = redactedConfig
 	} else {

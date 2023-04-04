@@ -113,6 +113,9 @@ func (p *Parser) Build() (*kongstate.KongState, []failures.ResourceFailure) {
 	// generate Upstreams and Targets from service defs
 	result.Upstreams = p.getUpstreams(ingressRules.ServiceNameToServices)
 
+	// set expression route before overriding routes.
+	result.ExpressionRoute = p.flagTranslateToATCRoutes
+
 	// merge KongIngress with Routes, Services and Upstream
 	result.FillOverrides(p.logger, p.storer)
 

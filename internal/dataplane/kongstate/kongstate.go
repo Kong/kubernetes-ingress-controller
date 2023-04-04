@@ -24,6 +24,9 @@ type KongState struct {
 	Plugins        []Plugin
 	Consumers      []Consumer
 	Version        semver.Version
+
+	// ExpressionRoute is set to true when we enabled KIC to generate expression based routes.
+	ExpressionRoute bool
 }
 
 // SanitizedCopy returns a shallow copy with sensitive values redacted best-effort.
@@ -171,7 +174,7 @@ func (ks *KongState) FillOverrides(log logrus.FieldLogger, s store.Storer) {
 				}).WithError(err).Errorf("failed to fetch KongIngress resource")
 			}
 
-			ks.Services[i].Routes[j].override(log, kongIngress)
+			ks.Services[i].Routes[j].override(log, kongIngress, ks.ExpressionRoute)
 		}
 	}
 

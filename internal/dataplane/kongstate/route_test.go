@@ -214,13 +214,13 @@ func TestOverrideRoute(t *testing.T) {
 	}
 
 	for _, testcase := range testTable {
-		testcase.inRoute.override(logrus.New(), &testcase.inKongIngresss)
+		testcase.inRoute.override(logrus.New(), &testcase.inKongIngresss, false)
 		assert.Equal(testcase.inRoute, testcase.outRoute)
 	}
 
 	assert.NotPanics(func() {
 		var nilRoute *Route
-		nilRoute.override(logrus.New(), nil)
+		nilRoute.override(logrus.New(), nil, false)
 	})
 }
 
@@ -245,7 +245,7 @@ func TestOverrideRoutePriority(t *testing.T) {
 		},
 		Ingress: ingMeta,
 	}
-	route.override(logrus.New(), &kongIngress)
+	route.override(logrus.New(), &kongIngress, false)
 	assert.Equal(route.Hosts, kong.StringSlice("foo.com", "bar.com"))
 	assert.Equal(route.Protocols, kong.StringSlice("grpc", "grpcs"))
 }
@@ -267,7 +267,7 @@ func TestOverrideRouteByKongIngress(t *testing.T) {
 	assert.Equal(route.Protocols, kong.StringSlice("http"))
 	assert.NotPanics(func() {
 		var nilRoute *Route
-		nilRoute.override(logrus.New(), nil)
+		nilRoute.override(logrus.New(), nil, false)
 	})
 }
 
@@ -286,13 +286,13 @@ func TestOverrideRouteByAnnotation(t *testing.T) {
 		},
 		Ingress: ingMeta,
 	}
-	route.overrideByAnnotation(logrus.New())
+	route.overrideByAnnotation(logrus.New(), false)
 	assert.Equal(route.Hosts, kong.StringSlice("foo.com", "bar.com"))
 	assert.Equal(route.Protocols, kong.StringSlice("grpc", "grpcs"))
 
 	assert.NotPanics(func() {
 		var nilRoute *Route
-		nilRoute.override(logrus.New(), nil)
+		nilRoute.override(logrus.New(), nil, false)
 	})
 }
 

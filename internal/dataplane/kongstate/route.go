@@ -217,25 +217,35 @@ func (r *Route) overrideSNIs(log logrus.FieldLogger, anns map[string]string) {
 }
 
 // overrideByAnnotation sets Route protocols via annotation.
-func (r *Route) overrideByAnnotation(log logrus.FieldLogger) {
-	r.overrideProtocols(r.Ingress.Annotations)
+func (r *Route) overrideByAnnotation(log logrus.FieldLogger, expressionRoute bool) {
+
 	r.overrideStripPath(r.Ingress.Annotations)
 	r.overrideHTTPSRedirectCode(r.Ingress.Annotations)
 	r.overridePreserveHost(r.Ingress.Annotations)
-	r.overrideRegexPriority(r.Ingress.Annotations)
-	r.overrideMethods(log, r.Ingress.Annotations)
-	r.overrideSNIs(log, r.Ingress.Annotations)
 	r.overrideRequestBuffering(log, r.Ingress.Annotations)
 	r.overrideResponseBuffering(log, r.Ingress.Annotations)
-	r.overrideHosts(log, r.Ingress.Annotations)
-	r.overrideHeaders(r.Ingress.Annotations)
-	r.overridePathHandling(log, r.Ingress.Annotations)
+
+	// The following fields are not available in expression based routes.
+	if !expressionRoute {
+		r.overrideRegexPriority(r.Ingress.Annotations)
+		r.overrideProtocols(r.Ingress.Annotations)
+		r.overrideMethods(log, r.Ingress.Annotations)
+		r.overrideSNIs(log, r.Ingress.Annotations)
+		r.overrideHosts(log, r.Ingress.Annotations)
+		r.overrideHeaders(r.Ingress.Annotations)
+		r.overridePathHandling(log, r.Ingress.Annotations)
+	}
+
 }
 
 // override sets Route fields by KongIngress first, then by annotation.
-func (r *Route) override(log logrus.FieldLogger, kongIngress *configurationv1.KongIngress) {
+func (r *Route) override(log logrus.FieldLogger, kongIngress *configurationv1.KongIngress, experssionRoute bool) {
 	if r == nil {
 		return
+	}
+
+	if experssionRoute {
+		log.Debug("expression route enabled for overriding routes")
 	}
 
 	// Check if we're trying to get KongIngress configuration based on an annotation
@@ -251,17 +261,23 @@ func (r *Route) override(log logrus.FieldLogger, kongIngress *configurationv1.Ko
 		}).Warn("KongIngress annotation is not allowed on Gateway API objects.")
 		return
 	}
+	if !experssionRoute {
+		r.overrideByKongIngress(log, kongIngress)
+	}
 
-	r.overrideByKongIngress(log, kongIngress)
-	r.overrideByAnnotation(log)
-	r.normalizeProtocols()
-	for _, val := range r.Protocols {
-		if *val == "grpc" || *val == "grpcs" {
-			// grpc(s) doesn't accept strip_path
-			r.StripPath = nil
-			break
+	r.overrideByAnnotation(log, experssionRoute)
+
+	if !experssionRoute {
+		r.normalizeProtocols()
+		for _, val := range r.Protocols {
+			if *val == "grpc" || *val == "grpcs" {
+				// grpc(s) doesn't accept strip_path
+				r.StripPath = nil
+				break
+			}
 		}
 	}
+
 }
 
 // overrideByKongIngress sets Route fields by KongIngress.

@@ -19,30 +19,36 @@ import (
 // ValidateRoots checks if all provided kong roots are the same given that we
 // only care about the fact that the following fields are the same:
 // - database setting
+// - router flavor
 // - kong version.
-func ValidateRoots(roots []Root, skipCACerts bool) (string, kong.Version, error) {
+func ValidateRoots(roots []Root, skipCACerts bool) (string, string, kong.Version, error) {
 	if err := errors.Join(lo.Map(roots, validateRootFunc(skipCACerts))...); err != nil {
-		return "", kong.Version{}, fmt.Errorf("failed to validate kong Roots: %w", err)
+		return "", "", kong.Version{}, fmt.Errorf("failed to validate kong Roots: %w", err)
 	}
 
 	// To be dropped as a part of https://github.com/Kong/kubernetes-ingress-controller/issues/3590.
 	uniqs := lo.UniqBy(roots, getRootKeyFunc(skipCACerts))
 	if len(uniqs) != 1 {
-		return "", kong.Version{},
+		return "", "", kong.Version{},
 			fmt.Errorf("there should only be one dbmode:version combination across configured kong instances while there are (%d): %v", len(uniqs), uniqs)
 	}
 
 	dbMode, err := DBModeFromRoot(uniqs[0])
 	if err != nil {
-		return "", kong.Version{}, err
+		return "", "", kong.Version{}, err
+	}
+
+	routerFlavor, err := RouterFlavorFromRoot(uniqs[0])
+	if err != nil {
+		return "", "", kong.Version{}, err
 	}
 
 	kongVersion, err := KongVersionFromRoot(uniqs[0])
 	if err != nil {
-		return "", kong.Version{}, err
+		return "", "", kong.Version{}, err
 	}
 
-	return dbMode, kongVersion, nil
+	return dbMode, routerFlavor, kongVersion, nil
 }
 
 func DBModeFromRoot(r Root) (string, error) {
@@ -71,6 +77,25 @@ func KongVersionFromRoot(r Root) (kong.Version, error) {
 		return kong.Version{}, fmt.Errorf("could not parse Kong version (%s): %w", v, err)
 	}
 	return kv, nil
+}
+
+func RouterFlavorFromRoot(r Root) (string, error) {
+	rootConfig, ok := r["configuration"].(map[string]any)
+	if !ok {
+		return "", fmt.Errorf(
+			"invalid root configuration, expected a map[string]any got %T",
+			r["configuration"],
+		)
+	}
+
+	routerFlavor, ok := rootConfig["router_flavor"].(string)
+	if !ok {
+		return "", fmt.Errorf(
+			"invalid router flavor configuration, expected a string got %t",
+			rootConfig["router_flavor"],
+		)
+	}
+	return routerFlavor, nil
 }
 
 // Root represents Kong Gateway configuration root.

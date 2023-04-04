@@ -222,7 +222,8 @@ func (p *Parser) ingressRulesFromIngressV1() ingressRules {
 
 		if p.featureEnabledCombinedServiceRoutes {
 			if p.flagTranslateToATCRoutes {
-				for _, kongStateService := range translators.TranslateIngress(ingress, p.flagEnabledRegexPathPrefix) {
+				p.logger.Info("translate ingresses to expression routes")
+				for _, kongStateService := range translators.TranslateIngressATC(ingress) {
 					result.ServiceNameToServices[*kongStateService.Service.Name] = *kongStateService
 					result.ServiceNameToParent[*kongStateService.Service.Name] = ingress
 					objectSuccessfullyParsed = true

@@ -32,6 +32,8 @@ var (
 	kongVersion = KongVersion(semver.MustParse("0.0.0"))
 
 	kongVersionOnce sync.Once
+
+	kongVersionLock sync.RWMutex
 )
 
 // KongVersion is a Kong version.
@@ -41,12 +43,16 @@ type KongVersion semver.Version
 // version.
 func SetKongVersion(version semver.Version) {
 	kongVersionOnce.Do(func() {
+		kongVersionLock.Lock()
+		defer kongVersionLock.Unlock()
 		kongVersion = KongVersion(version)
 	})
 }
 
 // GetKongVersion retrieves the Kong version. If the version is not set, it returns the lowest possible version.
 func GetKongVersion() KongVersion {
+	kongVersionLock.Lock()
+	defer kongVersionLock.Unlock()
 	return kongVersion
 }
 

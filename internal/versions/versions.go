@@ -51,8 +51,8 @@ func SetKongVersion(version semver.Version) {
 
 // GetKongVersion retrieves the Kong version. If the version is not set, it returns the lowest possible version.
 func GetKongVersion() KongVersion {
-	kongVersionLock.Lock()
-	defer kongVersionLock.Unlock()
+	kongVersionLock.RLock()
+	defer kongVersionLock.RUnlock()
 	return kongVersion
 }
 

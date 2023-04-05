@@ -67,11 +67,20 @@ Adding a new version? You'll need three changes:
 
 ## Unreleased
 
+### Added
+
+- Gateways now track UDP Listener status when `--publish-service-udp` is set.
+  UDPRoutes that do not match a valid UDP Listener are excluded from
+  configuration. Previously KIC added any UDPRoute that indicated an associated
+  Gateway as its parent regardless of Listener configuration or status.
+  [#3832](https://github.com/Kong/kubernetes-ingress-controller/pull/3832)
+
 ### Fixed
 
 - Fix paging in `GetAdminAPIsForService` which might have caused the controller
   to only return the head of the list of Endpoints for Admin API service.
   [#3846](https://github.com/Kong/kubernetes-ingress-controller/pull/3846)
+
 
 ### Deprecated
 

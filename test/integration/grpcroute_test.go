@@ -151,7 +151,7 @@ func TestGRPCRouteEssentials(t *testing.T) {
 	cleaner.Add(grpcRoute)
 
 	t.Log("verifying that the Gateway gets linked to the route via status")
-	callback := GetGatewayIsLinkedCallback(t, gatewayClient, gatewayv1beta1.HTTPProtocolType, ns.Name, grpcRoute.Name)
+	callback := GetGatewayIsLinkedCallback(ctx, t, gatewayClient, gatewayv1beta1.HTTPProtocolType, ns.Name, grpcRoute.Name)
 	require.Eventually(t, callback, ingressWait, waitTick)
 	t.Log("verifying that the grpcroute contains 'Programmed' condition")
 	require.Eventually(t,

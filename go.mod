@@ -1,6 +1,6 @@
 module github.com/kong/kubernetes-ingress-controller/v2
 
-go 1.19
+go 1.20
 
 // TODO: https://github.com/Kong/kubernetes-ingress-controller/issues/2953
 exclude sigs.k8s.io/gateway-api v0.6.2

@@ -80,6 +80,8 @@ Adding a new version? You'll need three changes:
 - Fix paging in `GetAdminAPIsForService` which might have caused the controller
   to only return the head of the list of Endpoints for Admin API service.
   [#3846](https://github.com/Kong/kubernetes-ingress-controller/pull/3846)
+- Fixed a race condition in the version-specific feature system.
+  [#3852](https://github.com/Kong/kubernetes-ingress-controller/pull/3852)
 
 
 ### Deprecated

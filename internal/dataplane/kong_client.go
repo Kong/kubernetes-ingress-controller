@@ -482,7 +482,7 @@ func (c *KongClient) sendToClient(
 	formatVersion string,
 	config sendconfig.Config,
 ) (string, error) {
-	logger := c.logger.WithField("kong_url", client.AdminAPIClient().BaseRootURL())
+	logger := c.logger.WithField("url", client.AdminAPIClient().BaseRootURL())
 
 	// generate the deck configuration to be applied to the admin API
 	logger.Debug("converting configuration to deck config")

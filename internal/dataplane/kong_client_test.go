@@ -290,7 +290,7 @@ type mockConfigurationChangeDetector struct {
 }
 
 func (m mockConfigurationChangeDetector) HasConfigurationChanged(
-	context.Context, []byte, []byte, sendconfig.KonnectAwareClient, sendconfig.StatusClient,
+	context.Context, []byte, []byte, *file.Content, sendconfig.KonnectAwareClient, sendconfig.StatusClient,
 ) (bool, error) {
 	return m.hasConfigurationChanged, nil
 }

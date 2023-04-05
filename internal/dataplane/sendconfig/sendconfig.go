@@ -43,12 +43,16 @@ func PerformUpdate(
 
 	// disable optimization if reverse sync is enabled
 	if !config.EnableReverseSync {
-		configurationChanged, err := configChangeDetector.HasConfigurationChanged(ctx, oldSHA, newSHA, client, client.AdminAPIClient())
+		configurationChanged, err := configChangeDetector.HasConfigurationChanged(ctx, oldSHA, newSHA, targetContent, client, client.AdminAPIClient())
 		if err != nil {
 			return nil, []failures.ResourceFailure{}, err
 		}
 		if !configurationChanged {
-			log.Debug("no configuration change, skipping sync to Kong")
+			if client.IsKonnect() {
+				log.Debug("no configuration change, skipping sync to Konnect")
+			} else {
+				log.Debug("no configuration change, skipping sync to Kong")
+			}
 			return oldSHA, []failures.ResourceFailure{}, nil
 		}
 	}
@@ -66,7 +70,13 @@ func PerformUpdate(
 	}
 
 	promMetrics.RecordPushSuccess(metricsProtocol, duration, client.BaseRootURL())
-	log.Info("successfully synced configuration to kong")
+
+	if client.IsKonnect() {
+		log.Info("successfully synced configuration to Konnect")
+	} else {
+		log.Info("successfully synced configuration to Kong")
+	}
+
 	return newSHA, nil, nil
 }
 

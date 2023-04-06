@@ -75,6 +75,9 @@ linters-settings:
       alias: metav1
     - pkg: sigs.k8s.io/gateway-api/apis/(v[\w\d]+)
       alias: gateway${1}
+
+    - pkg: sigs.k8s.io/controller-runtime/pkg/client/fake
+      alias: ctrlclientfake
   gomodguard:
     blocked:
       modules:

@@ -22,7 +22,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	ctrlfake "sigs.k8s.io/controller-runtime/pkg/client/fake"
+	ctrlclientfake "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/adminapi"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane"
@@ -425,7 +425,7 @@ func setupTestKongClient(
 	config := sendconfig.Config{}
 	eventRecorder := record.NewFakeRecorder(0)
 	dbMode := "off"
-	client := ctrlfake.NewClientBuilder().Build()
+	client := ctrlclientfake.NewClientBuilder().Build()
 
 	kongClient, err := dataplane.NewKongClient(
 		logger,

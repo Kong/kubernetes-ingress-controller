@@ -246,7 +246,7 @@ func (r *UDPRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 			debug(log, udproute, "object does not exist, ensuring it is not present in the proxy cache")
 			udproute.Namespace = req.Namespace
 			udproute.Name = req.Name
-			return ctrl.Result{}, r.DataplaneClient.DeleteObject(udproute)
+			return ctrl.Result{}, r.DataplaneClient.DeleteObject(ctx, udproute)
 		}
 
 		// for any error other than 404, requeue
@@ -261,12 +261,12 @@ func (r *UDPRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	debug(log, udproute, "checking deletion timestamp")
 	if udproute.DeletionTimestamp != nil {
 		debug(log, udproute, "udproute is being deleted, re-configuring data-plane")
-		if err := r.DataplaneClient.DeleteObject(udproute); err != nil {
+		if err := r.DataplaneClient.DeleteObject(ctx, udproute); err != nil {
 			debug(log, udproute, "failed to delete object from data-plane, requeuing")
 			return ctrl.Result{}, err
 		}
 		debug(log, udproute, "ensured object was removed from the data-plane (if ever present)")
-		return ctrl.Result{}, r.DataplaneClient.DeleteObject(udproute)
+		return ctrl.Result{}, r.DataplaneClient.DeleteObject(ctx, udproute)
 	}
 
 	// we need to pull the Gateway parent objects for the UDPRoute to verify
@@ -296,7 +296,7 @@ func (r *UDPRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 			// ensure that it's removed from the proxy cache to avoid orphaned data-plane
 			// configurations.
 			debug(log, udproute, "ensuring that dataplane is updated to remove unsupported route (if applicable)")
-			return ctrl.Result{}, r.DataplaneClient.DeleteObject(udproute)
+			return ctrl.Result{}, r.DataplaneClient.DeleteObject(ctx, udproute)
 		}
 		return ctrl.Result{}, err
 	}
@@ -315,7 +315,7 @@ func (r *UDPRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	if isRouteAccepted(gateways) {
 		// if the gateways are ready, and the UDPRoute is destined for them, ensure that
 		// the object is pushed to the dataplane.
-		if err := r.DataplaneClient.UpdateObject(udproute); err != nil {
+		if err := r.DataplaneClient.UpdateObject(ctx, udproute); err != nil {
 			debug(log, udproute, "failed to update object in data-plane, requeueing")
 			return ctrl.Result{}, err
 		}
@@ -330,7 +330,7 @@ func (r *UDPRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		}
 	} else {
 		// route is not accepted, remove it from kong store
-		if err := r.DataplaneClient.DeleteObject(udproute); err != nil {
+		if err := r.DataplaneClient.DeleteObject(ctx, udproute); err != nil {
 			debug(log, udproute, "failed to delete object in data-plane, requeueing")
 			return ctrl.Result{}, err
 		}

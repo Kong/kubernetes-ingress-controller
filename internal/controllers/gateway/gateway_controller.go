@@ -296,12 +296,12 @@ func (r *GatewayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 			gateway.Namespace = req.Namespace
 			gateway.Name = req.Name
 			// delete reference relationships where the gateway is the referrer.
-			err := ctrlref.DeleteReferencesByReferrer(r.ReferenceIndexers, r.DataplaneClient, gateway)
+			err := ctrlref.DeleteReferencesByReferrer(ctx, r.ReferenceIndexers, r.DataplaneClient, gateway)
 			if err != nil {
 				return ctrl.Result{}, err
 			}
 			debug(log, gateway, "reconciliation triggered but gateway does not exist, deleting it in dataplane")
-			return ctrl.Result{}, r.DataplaneClient.DeleteObject(gateway)
+			return ctrl.Result{}, r.DataplaneClient.DeleteObject(ctx, gateway)
 		}
 		return ctrl.Result{Requeue: true}, err
 	}
@@ -316,11 +316,11 @@ func (r *GatewayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	if err := r.Client.Get(ctx, client.ObjectKey{Name: string(gateway.Spec.GatewayClassName)}, gwc); err != nil {
 		debug(log, gateway, "could not retrieve gatewayclass for gateway", "gatewayclass", string(gateway.Spec.GatewayClassName))
 		// delete reference relationships where the gateway is the referrer, as we will not process the gateway.
-		err := ctrlref.DeleteReferencesByReferrer(r.ReferenceIndexers, r.DataplaneClient, gateway)
+		err := ctrlref.DeleteReferencesByReferrer(ctx, r.ReferenceIndexers, r.DataplaneClient, gateway)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
-		if err := r.DataplaneClient.DeleteObject(gateway); err != nil {
+		if err := r.DataplaneClient.DeleteObject(ctx, gateway); err != nil {
 			debug(log, gateway, "failed to delete object from data-plane, requeuing")
 			return ctrl.Result{}, err
 		}
@@ -330,11 +330,11 @@ func (r *GatewayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	if gwc.Spec.ControllerName != GetControllerName() {
 		debug(log, gateway, "unsupported gatewayclass controllername, ignoring", "gatewayclass", gwc.Name, "controllername", gwc.Spec.ControllerName)
 		// delete reference relationships where the gateway is the referrer, as we will not process the gateway.
-		err := ctrlref.DeleteReferencesByReferrer(r.ReferenceIndexers, r.DataplaneClient, gateway)
+		err := ctrlref.DeleteReferencesByReferrer(ctx, r.ReferenceIndexers, r.DataplaneClient, gateway)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
-		if err := r.DataplaneClient.DeleteObject(gateway); err != nil {
+		if err := r.DataplaneClient.DeleteObject(ctx, gateway); err != nil {
 			debug(log, gateway, "failed to delete object from data-plane, requeuing")
 			return ctrl.Result{}, err
 		}
@@ -365,7 +365,7 @@ func (r *GatewayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	// reconcileUnmanagedGateway has side effects and modifies the referenced gateway object. dataplane updates must
 	// happen afterwards
 	if err == nil {
-		if err := r.DataplaneClient.UpdateObject(gateway); err != nil {
+		if err := r.DataplaneClient.UpdateObject(ctx, gateway); err != nil {
 			debug(log, gateway, "failed to update object in data-plane, requeueing")
 			return result, err
 		}

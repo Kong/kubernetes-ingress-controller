@@ -103,7 +103,7 @@ func (r *CoreV1SecretReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		if apierrors.IsNotFound(err) {
 			secret.Namespace = req.Namespace
 			secret.Name = req.Name
-			return ctrl.Result{}, r.DataplaneClient.DeleteObject(secret)
+			return ctrl.Result{}, r.DataplaneClient.DeleteObject(ctx, secret)
 		}
 		return ctrl.Result{}, err
 	}
@@ -112,12 +112,12 @@ func (r *CoreV1SecretReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	// clean the object up if it's being deleted
 	if !secret.DeletionTimestamp.IsZero() && time.Now().After(secret.DeletionTimestamp.Time) {
 		log.V(util.DebugLevel).Info("resource is being deleted, its configuration will be removed", "type", "Secret", "namespace", req.Namespace, "name", req.Name)
-		objectExistsInCache, err := r.DataplaneClient.ObjectExists(secret)
+		objectExistsInCache, err := r.DataplaneClient.ObjectExists(ctx, secret)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
 		if objectExistsInCache {
-			if err := r.DataplaneClient.DeleteObject(secret); err != nil {
+			if err := r.DataplaneClient.DeleteObject(ctx, secret); err != nil {
 				return ctrl.Result{}, err
 			}
 			return ctrl.Result{Requeue: true}, nil // wait until the object is no longer present in the cache
@@ -126,7 +126,7 @@ func (r *CoreV1SecretReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	}
 
 	// update the kong Admin API with the changes
-	if err := r.DataplaneClient.UpdateObject(secret); err != nil {
+	if err := r.DataplaneClient.UpdateObject(ctx, secret); err != nil {
 		return ctrl.Result{}, err
 	}
 

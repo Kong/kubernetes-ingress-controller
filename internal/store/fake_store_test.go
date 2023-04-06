@@ -371,7 +371,7 @@ func TestFakeStoreListTCPIngress(t *testing.T) {
 	store, err := NewFakeStore(FakeObjects{TCPIngresses: ingresses})
 	require.Nil(err)
 	require.NotNil(store)
-	ings, err := store.ListTCPIngresses(context.TODO()) 
+	ings, err := store.ListTCPIngresses(context.TODO())
 	assert.Nil(err)
 	assert.Len(ings, 1)
 }
@@ -444,7 +444,7 @@ func TestFakeStoreListKnativeIngress(t *testing.T) {
 	store, err := NewFakeStore(FakeObjects{KnativeIngresses: ingresses})
 	require.Nil(err)
 	require.NotNil(store)
-	ings, err := store.ListKnativeIngresses(context.TODO()) 
+	ings, err := store.ListKnativeIngresses(context.TODO())
 	assert.Len(ings, 1)
 	assert.Nil(err)
 }
@@ -667,11 +667,11 @@ func TestFakeKongIngress(t *testing.T) {
 	store, err := NewFakeStore(FakeObjects{KongIngresses: kongIngresses})
 	require.Nil(err)
 	require.NotNil(store)
-	kingress, err := store.GetKongIngress(context.TODO(), "default", "foo") 
+	kingress, err := store.GetKongIngress(context.TODO(), "default", "foo")
 	assert.Nil(err)
 	assert.NotNil(kingress)
 
-	kingress, err = store.GetKongIngress(context.TODO(), "default", "does-not-exist") 
+	kingress, err = store.GetKongIngress(context.TODO(), "default", "does-not-exist")
 	assert.NotNil(err)
 	assert.Nil(kingress)
 	assert.True(errors.As(err, &ErrNotFound{}))
@@ -751,7 +751,7 @@ func TestFakeStoreHTTPRoute(t *testing.T) {
 	store, err := NewFakeStore(FakeObjects{HTTPRoutes: classes})
 	require.Nil(err)
 	require.NotNil(store)
-	routes, err := store.ListHTTPRoutes(context.TODO()) 
+	routes, err := store.ListHTTPRoutes(context.TODO())
 	assert.Nil(err)
 	assert.Len(routes, 2, "expect two HTTPRoutes")
 }
@@ -777,7 +777,7 @@ func TestFakeStoreUDPRoute(t *testing.T) {
 	store, err := NewFakeStore(FakeObjects{UDPRoutes: classes})
 	require.Nil(err)
 	require.NotNil(store)
-	routes, err := store.ListUDPRoutes(context.TODO()) 
+	routes, err := store.ListUDPRoutes(context.TODO())
 	assert.Nil(err)
 	assert.Len(routes, 2, "expect two UDPRoutes")
 }
@@ -803,7 +803,7 @@ func TestFakeStoreTCPRoute(t *testing.T) {
 	store, err := NewFakeStore(FakeObjects{TCPRoutes: classes})
 	require.Nil(err)
 	require.NotNil(store)
-	routes, err := store.ListTCPRoutes(context.TODO()) 
+	routes, err := store.ListTCPRoutes(context.TODO())
 	assert.Nil(err)
 	assert.Len(routes, 2, "expect two TCPRoutes")
 }
@@ -829,7 +829,7 @@ func TestFakeStoreTLSRoute(t *testing.T) {
 	store, err := NewFakeStore(FakeObjects{TLSRoutes: classes})
 	require.Nil(err)
 	require.NotNil(store)
-	routes, err := store.ListTLSRoutes(context.TODO()) 
+	routes, err := store.ListTLSRoutes(context.TODO())
 	assert.Nil(err)
 	assert.Len(routes, 2, "expect two TLSRoutes")
 }
@@ -855,7 +855,7 @@ func TestFakeStoreReferenceGrant(t *testing.T) {
 	store, err := NewFakeStore(FakeObjects{ReferenceGrants: grants})
 	require.Nil(err)
 	require.NotNil(store)
-	routes, err := store.ListReferenceGrants(context.TODO()) 
+	routes, err := store.ListReferenceGrants(context.TODO())
 	assert.Nil(err)
 	assert.Len(routes, 2, "expect two ReferenceGrants")
 }
@@ -881,7 +881,7 @@ func TestFakeStoreGateway(t *testing.T) {
 	store, err := NewFakeStore(FakeObjects{Gateways: grants})
 	require.Nil(err)
 	require.NotNil(store)
-	routes, err := store.ListGateways(context.TODO()) 
+	routes, err := store.ListGateways(context.TODO())
 	assert.Nil(err)
 	assert.Len(routes, 2, "expect two Gateways")
 }

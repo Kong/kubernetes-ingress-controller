@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	ctrlclientfake "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util/builder"
@@ -114,7 +114,7 @@ func TestGetListenerSupportedRouteKinds(t *testing.T) {
 
 func TestGetListenerStatus_no_duplicated_condition(t *testing.T) {
 	ctx := context.Background()
-	client := fake.NewClientBuilder().Build()
+	client := ctrlclientfake.NewClientBuilder().Build()
 
 	statuses, err := getListenerStatus(ctx, &Gateway{
 		Spec: gatewayv1beta1.GatewaySpec{

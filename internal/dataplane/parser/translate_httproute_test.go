@@ -1249,7 +1249,7 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 				httproute.SetGroupVersionKind(httprouteGVK)
 
 				// generate the ingress rules
-				err := p.ingressRulesFromHTTPRoute(context.TODO(), &ingressRules, httproute) 
+				err := p.ingressRulesFromHTTPRoute(context.TODO(), &ingressRules, httproute)
 				if err != nil {
 					errs = append(errs, err)
 				}
@@ -1287,7 +1287,7 @@ func TestIngressRulesFromHTTPRoutesWithCombinedServiceRoutes(t *testing.T) {
 				httproute.SetGroupVersionKind(httprouteGVK)
 
 				// generate the ingress rules
-				err := p.ingressRulesFromHTTPRoute(context.TODO(), &ingressRules, httproute) 
+				err := p.ingressRulesFromHTTPRoute(context.TODO(), &ingressRules, httproute)
 				if err != nil {
 					errs = append(errs, err)
 				}
@@ -1542,7 +1542,7 @@ func TestIngressRulesFromHTTPRoutes_RegexPrefix(t *testing.T) {
 					httproute.SetGroupVersionKind(httprouteGVK)
 
 					// generate the ingress rules
-					err := p.ingressRulesFromHTTPRoute(context.TODO(), &ingressRules, httproute) 
+					err := p.ingressRulesFromHTTPRoute(context.TODO(), &ingressRules, httproute)
 					if err != nil {
 						errs = append(errs, err)
 					}

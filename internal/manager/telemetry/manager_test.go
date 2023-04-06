@@ -23,7 +23,7 @@ import (
 	testdynclient "k8s.io/client-go/dynamic/fake"
 	testk8sclient "k8s.io/client-go/kubernetes/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
+	ctrlclientfake "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 )
 
@@ -62,7 +62,7 @@ func TestCreateManager(t *testing.T) {
 	objs := prepareObjects(pod)
 
 	dyn := testdynclient.NewSimpleDynamicClient(scheme, objs...)
-	ctrlClient := fakeclient.NewClientBuilder().
+	ctrlClient := ctrlclientfake.NewClientBuilder().
 		WithScheme(scheme).
 		// We need this for mesh detection which lists services.
 		WithIndex(&corev1.Service{}, "metadata.name", func(o client.Object) []string {
@@ -164,7 +164,7 @@ func TestCreateManager_GatewayDiscoverySpecifics(t *testing.T) {
 
 	scheme := prepareScheme(t)
 	dyn := testdynclient.NewSimpleDynamicClient(scheme)
-	ctrlClient := fakeclient.NewClientBuilder().Build()
+	ctrlClient := ctrlclientfake.NewClientBuilder().Build()
 	k8sclient := testk8sclient.NewSimpleClientset()
 
 	for _, tc := range testCases {

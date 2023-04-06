@@ -75,10 +75,6 @@ type KongClient struct {
 	// requests to the data-plane to receive a response.
 	requestTimeout time.Duration
 
-	// cache is the Kubernetes object cache which is used to list Kubernetes
-	// objects for parsing into Kong objects.
-	cache *store.CacheStores
-
 	// kongConfig is the client configuration for the Kong Admin API
 	kongConfig sendconfig.Config
 
@@ -157,14 +153,12 @@ func NewKongClient(
 	configChangeDetector sendconfig.ConfigurationChangeDetector,
 ) (*KongClient, error) {
 	// build the client object
-	cache := store.NewCacheStores(client)
 	c := &KongClient{
 		logger:                 logger,
 		ingressClass:           ingressClass,
 		requestTimeout:         timeout,
 		diagnostic:             diagnostic,
 		prometheusMetrics:      metrics.NewCtrlFuncMetrics(),
-		cache:                  &cache,
 		client:                 client,
 		kongConfig:             kongConfig,
 		eventRecorder:          eventRecorder,
@@ -185,8 +179,8 @@ func NewKongClient(
 // UpdateObject accepts a Kubernetes controller-runtime client.Object and adds/updates that to the configuration cache.
 // It will be asynchronously converted into the upstream Kong DSL and applied to the Kong Admin API.
 // A status will later be added to the object whether the configuration update succeeds or fails.
-func (c *KongClient) UpdateObject(obj client.Object) error {
-	return c.client.Update(context.TODO(), obj)
+func (c *KongClient) UpdateObject(ctx context.Context, obj client.Object) error {
+	return c.client.Update(ctx, obj)
 }
 
 // DeleteObject accepts a Kubernetes controller-runtime client.Object and removes it from the configuration.
@@ -194,8 +188,8 @@ func (c *KongClient) UpdateObject(obj client.Object) error {
 // A status will later be added to the object whether the configuration update succeeds or fails.
 //
 // The implementation will ignore deletions on objects that are not present, so in those cases this is a no-op.
-func (c *KongClient) DeleteObject(obj client.Object) error {
-	err := c.client.Delete(context.TODO(), obj)
+func (c *KongClient) DeleteObject(ctx context.Context, obj client.Object) error {
+	err := c.client.Delete(ctx, obj)
 	if apierrors.IsNotFound(err) {
 		return nil
 	}
@@ -203,9 +197,12 @@ func (c *KongClient) DeleteObject(obj client.Object) error {
 }
 
 // ObjectExists indicates whether or not any version of the provided object is already present in the proxy.
-func (c *KongClient) ObjectExists(obj client.Object) (bool, error) {
-	err := c.client.Get(context.TODO(), client.ObjectKeyFromObject(obj), obj)
-	if apierrors.IsNotFound(err) {
+func (c *KongClient) ObjectExists(ctx context.Context, obj client.Object) (bool, error) {
+	err := c.client.Get(ctx, client.ObjectKeyFromObject(obj), obj)
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			return false, nil
+		}
 		return false, err
 	}
 	return true, nil
@@ -390,9 +387,9 @@ func (c *KongClient) DBMode() string {
 	return c.dbmode
 }
 
-// Update parses the Cache present in the client and converts current
-// Kubernetes state into Kong objects and state, and then ships the
-// resulting configuration to the data-plane (Kong Admin API).
+// Update parses the objects, fetched using the provided manager's client,
+// converts current Kubernetes state into Kong objects and state and then ships
+// the resulting configuration to the data-plane (Kong Admin API).
 func (c *KongClient) Update(ctx context.Context) error {
 	c.lock.Lock()
 	defer c.lock.Unlock()

@@ -22,7 +22,6 @@ import (
 	"reflect"
 	"sort"
 	"strings"
-	"sync"
 
 	"github.com/samber/lo"
 	"github.com/sirupsen/logrus"
@@ -31,18 +30,12 @@ import (
 	netv1beta1 "k8s.io/api/networking/v1beta1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured/unstructuredscheme"
 	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/schema"
-	serializer "k8s.io/apimachinery/pkg/runtime/serializer/json"
-	yamlserializer "k8s.io/apimachinery/pkg/runtime/serializer/yaml"
 	"k8s.io/apimachinery/pkg/selection"
 	knative "knative.dev/networking/pkg/apis/networking/v1alpha1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
-	"sigs.k8s.io/yaml"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
 	ctrlutils "github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/utils"
@@ -114,8 +107,6 @@ type Storer interface {
 type Store struct {
 	client client.Client
 
-	stores CacheStores
-
 	ingressClass         string
 	ingressClassMatching annotations.ClassMatching
 
@@ -126,71 +117,6 @@ type Store struct {
 }
 
 var _ Storer = Store{}
-
-// CacheStores stores cache.Store for all Kinds of k8s objects that
-// the Ingress Controller reads.
-type CacheStores struct {
-	l *sync.RWMutex
-
-	client client.Client
-}
-
-// NewCacheStores is a convenience function for CacheStores to initialize all attributes with new cache stores.
-func NewCacheStores(client client.Client) CacheStores {
-	return CacheStores{
-		client: client,
-
-		// Core Kubernetes Stores
-		// Gateway API Stores
-		// Kong Stores
-		// Knative Stores
-
-		l: &sync.RWMutex{},
-	}
-}
-
-// NewCacheStoresFromObjYAML provides a new CacheStores object given any number of byte arrays containing
-// YAML Kubernetes objects. An error is returned if any provided YAML was not a valid Kubernetes object.
-func NewCacheStoresFromObjYAML(client client.Client, objs ...[]byte) (c CacheStores, err error) {
-	kobjs := make([]runtime.Object, 0, len(objs))
-	sr := serializer.NewYAMLSerializer(
-		yamlserializer.DefaultMetaFactory,
-		unstructuredscheme.NewUnstructuredCreator(),
-		unstructuredscheme.NewUnstructuredObjectTyper(),
-	)
-	for _, yaml := range objs {
-		kobj, _, decodeErr := sr.Decode(yaml, nil, nil)
-		if err = decodeErr; err != nil {
-			return
-		}
-		kobjs = append(kobjs, kobj)
-	}
-	return NewCacheStoresFromObjs(client, kobjs...)
-}
-
-// NewCacheStoresFromObjs provides a new CacheStores object given any number of Kubernetes
-// objects that should be pre-populated. This function will sort objects into the appropriate
-// sub-storage (e.g. IngressV1, TCPIngress, e.t.c.) but will produce an error if any of the
-// input objects are erroneous or otherwise unusable as Kubernetes objects.
-func NewCacheStoresFromObjs(client client.Client, objs ...runtime.Object) (CacheStores, error) {
-	c := NewCacheStores(client)
-	for _, obj := range objs {
-		typedObj, err := mkObjFromGVK(obj.GetObjectKind().GroupVersionKind())
-		if err != nil {
-			return c, err
-		}
-
-		if err := convUnstructuredObj(obj, typedObj); err != nil {
-			return c, err
-		}
-
-		// TODO(pmalek)
-		// if err := c.Add(typedObj); err != nil {
-		// 	return c, err
-		// }
-	}
-	return c, nil
-}
 
 // New creates a new object store to be used in the ingress controller.
 func New(client client.Client, ingressClass string, logger logrus.FieldLogger) Storer {
@@ -231,7 +157,7 @@ func (s Store) GetService(ctx context.Context, namespace, name string) (*corev1.
 	err := s.client.Get(ctx, key, &svc)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
-			return nil, ErrNotFound{fmt.Sprintf("Service %v not found", name)}
+			return nil, ErrNotFound{fmt.Sprintf("Service %v not found", key)}
 		}
 		return nil, err
 	}
@@ -949,71 +875,4 @@ func (s Store) getIngressClassHandling(ctx context.Context) annotations.ClassMat
 		return annotations.ExactOrEmptyClassMatch
 	}
 	return annotations.ExactClassMatch
-}
-
-// convUnstructuredObj is a convenience function to quickly convert any runtime.Object where the underlying type
-// is an *unstructured.Unstructured (client-go's dynamic client type) and convert that object to a runtime.Object
-// which is backed by the API type it represents. You can use the GVK of the runtime.Object to determine what type
-// you want to convert to. This function is meant so that storer implementations can optionally work with YAML files
-// for caller convenience when initializing new CacheStores objects.
-//
-// TODO: upon some searching I didn't find an analog to this over in client-go (https://github.com/kubernetes/client-go)
-// however I could have just missed it. We should switch if we find something better, OR we should contribute
-// this functionality upstream.
-func convUnstructuredObj(from, to runtime.Object) error {
-	b, err := yaml.Marshal(from)
-	if err != nil {
-		return fmt.Errorf("failed to convert object %s to yaml: %w", from.GetObjectKind().GroupVersionKind(), err)
-	}
-	return yaml.Unmarshal(b, to)
-}
-
-// mkObjFromGVK is a factory function that returns a concrete implementation runtime.Object
-// for the given GVK. Callers can then use `convert()` to convert an unstructured
-// runtime.Object into a concrete one.
-func mkObjFromGVK(gvk schema.GroupVersionKind) (runtime.Object, error) {
-	switch gvk {
-	// ----------------------------------------------------------------------------
-	// Kubernetes Core APIs
-	// ----------------------------------------------------------------------------
-	case netv1.SchemeGroupVersion.WithKind("IngressClass"):
-		return &netv1.IngressClass{}, nil
-	case netv1.SchemeGroupVersion.WithKind("Ingress"):
-		return &netv1.Ingress{}, nil
-	case kongv1beta1.SchemeGroupVersion.WithKind("TCPIngress"):
-		return &kongv1beta1.TCPIngress{}, nil
-	case corev1.SchemeGroupVersion.WithKind("Service"):
-		return &corev1.Service{}, nil
-	case corev1.SchemeGroupVersion.WithKind("Secret"):
-		return &corev1.Secret{}, nil
-	case corev1.SchemeGroupVersion.WithKind("Endpoints"):
-		return &corev1.Endpoints{}, nil
-	// ----------------------------------------------------------------------------
-	// Kubernetes Gateway APIs
-	// ----------------------------------------------------------------------------
-	case gatewayv1beta1.SchemeGroupVersion.WithKind("HTTPRoutes"):
-		return &gatewayv1beta1.HTTPRoute{}, nil
-	// ----------------------------------------------------------------------------
-	// Kong APIs
-	// ----------------------------------------------------------------------------
-	case kongv1.SchemeGroupVersion.WithKind("KongIngress"):
-		return &kongv1.KongIngress{}, nil
-	case kongv1beta1.SchemeGroupVersion.WithKind("UDPIngress"):
-		return &kongv1beta1.UDPIngress{}, nil
-	case kongv1.SchemeGroupVersion.WithKind("KongPlugin"):
-		return &kongv1.KongPlugin{}, nil
-	case kongv1.SchemeGroupVersion.WithKind("KongClusterPlugin"):
-		return &kongv1.KongClusterPlugin{}, nil
-	case kongv1.SchemeGroupVersion.WithKind("KongConsumer"):
-		return &kongv1.KongConsumer{}, nil
-	case kongv1alpha1.SchemeGroupVersion.WithKind("IngressClassParameters"):
-		return &kongv1alpha1.IngressClassParameters{}, nil
-	// ----------------------------------------------------------------------------
-	// Knative APIs
-	// ----------------------------------------------------------------------------
-	case knative.SchemeGroupVersion.WithKind("Ingress"):
-		return &knative.Ingress{}, nil
-	default:
-		return nil, fmt.Errorf("%s is not a supported runtime.Object", gvk)
-	}
 }

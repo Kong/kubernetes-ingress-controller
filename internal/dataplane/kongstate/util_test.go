@@ -7,12 +7,15 @@ import (
 
 	"github.com/kong/go-kong/kong"
 	"github.com/samber/lo"
+	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	ctrlclientfake "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
@@ -20,6 +23,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 	configurationv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
+	"github.com/kong/kubernetes-ingress-controller/v2/pkg/clientset/fake"
 )
 
 func TestKongPluginFromK8SClusterPlugin(t *testing.T) {
@@ -307,12 +311,18 @@ func TestGetKongIngressForServices(t *testing.T) {
 	}{
 		{
 			name: "when no services are provided, no KongIngress will be provided",
-			kongIngresses: []*configurationv1.KongIngress{{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-kongingress1",
-					Namespace: corev1.NamespaceDefault,
+			kongIngresses: []*configurationv1.KongIngress{
+				{
+					TypeMeta: metav1.TypeMeta{
+						Kind:       "KongIngress",
+						APIVersion: "configuration.konghq.com/v1",
+					},
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-kongingress1",
+						Namespace: corev1.NamespaceDefault,
+					},
 				},
-			}},
+			},
 		},
 		{
 			name: "when none of the provided services have attached KongIngress resources, no KongIngress resources will be provided",
@@ -330,12 +340,18 @@ func TestGetKongIngressForServices(t *testing.T) {
 					},
 				},
 			},
-			kongIngresses: []*configurationv1.KongIngress{{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-kongingress1",
-					Namespace: corev1.NamespaceDefault,
+			kongIngresses: []*configurationv1.KongIngress{
+				{
+					TypeMeta: metav1.TypeMeta{
+						Kind:       "KongIngress",
+						APIVersion: "configuration.konghq.com/v1",
+					},
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-kongingress1",
+						Namespace: corev1.NamespaceDefault,
+					},
 				},
-			}},
+			},
 		},
 		{
 			name: "if at least one KongIngress resource is attached to a Service, it will be returned",
@@ -358,12 +374,20 @@ func TestGetKongIngressForServices(t *testing.T) {
 			},
 			kongIngresses: []*configurationv1.KongIngress{
 				{
+					TypeMeta: metav1.TypeMeta{
+						Kind:       "KongIngress",
+						APIVersion: "configuration.konghq.com/v1",
+					},
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "test-kongingress1",
 						Namespace: corev1.NamespaceDefault,
 					},
 				},
 				{
+					TypeMeta: metav1.TypeMeta{
+						Kind:       "KongIngress",
+						APIVersion: "configuration.konghq.com/v1",
+					},
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "test-kongingress2",
 						Namespace: corev1.NamespaceDefault,
@@ -371,6 +395,10 @@ func TestGetKongIngressForServices(t *testing.T) {
 				},
 			},
 			expectedKongIngress: &configurationv1.KongIngress{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "KongIngress",
+					APIVersion: "configuration.konghq.com/v1",
+				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-kongingress2",
 					Namespace: corev1.NamespaceDefault,
@@ -412,18 +440,30 @@ func TestGetKongIngressForServices(t *testing.T) {
 			},
 			kongIngresses: []*configurationv1.KongIngress{
 				{
+					TypeMeta: metav1.TypeMeta{
+						Kind:       "KongIngress",
+						APIVersion: "configuration.konghq.com/v1",
+					},
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "test-kongingress1",
 						Namespace: corev1.NamespaceDefault,
 					},
 				},
 				{
+					TypeMeta: metav1.TypeMeta{
+						Kind:       "KongIngress",
+						APIVersion: "configuration.konghq.com/v1",
+					},
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "test-kongingress2",
 						Namespace: corev1.NamespaceDefault,
 					},
 				},
 				{
+					TypeMeta: metav1.TypeMeta{
+						Kind:       "KongIngress",
+						APIVersion: "configuration.konghq.com/v1",
+					},
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "test-kongingress3",
 						Namespace: corev1.NamespaceDefault,
@@ -431,6 +471,10 @@ func TestGetKongIngressForServices(t *testing.T) {
 				},
 			},
 			expectedKongIngress: &configurationv1.KongIngress{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "KongIngress",
+					APIVersion: "configuration.konghq.com/v1",
+				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-kongingress2",
 					Namespace: corev1.NamespaceDefault,
@@ -441,13 +485,22 @@ func TestGetKongIngressForServices(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			storer, err := store.NewFakeStore(store.FakeObjects{
-				KongIngresses: tt.kongIngresses,
-				Services:      lo.Values(tt.services),
-			})
-			require.NoError(t, err)
+			require.NoError(t, fake.AddToScheme(scheme.Scheme))
+			client := ctrlclientfake.NewClientBuilder().
+				WithObjects(
+					append(
+						lo.MapToSlice(tt.services, func(k string, v *corev1.Service) client.Object {
+							return v
+						}),
+						lo.Map(tt.kongIngresses, func(ki *configurationv1.KongIngress, _ int) client.Object {
+							return ki
+						})...,
+					)...,
+				).
+				Build()
+			storer := store.New(client, "dummy", logrus.New())
 
-			kongIngress, err := getKongIngressForServices(context.TODO(), storer, tt.services) 
+			kongIngress, err := getKongIngressForServices(context.TODO(), storer, tt.services)
 			if tt.expectedError == nil {
 				assert.Equal(t, tt.expectedKongIngress, kongIngress)
 			} else {
@@ -574,7 +627,7 @@ func TestGetKongIngressFromObjectMeta(t *testing.T) {
 			require.NoError(t, err)
 
 			obj := util.FromK8sObject(tt.route)
-			kongIngress, err := getKongIngressFromObjectMeta(context.TODO(), storer, obj) 
+			kongIngress, err := getKongIngressFromObjectMeta(context.TODO(), storer, obj)
 
 			if tt.expectedError == nil {
 				require.NoError(t, err)

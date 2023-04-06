@@ -1,6 +1,8 @@
 package gateway
 
 import (
+	"context"
+
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	k8sobj "github.com/kong/kubernetes-ingress-controller/v2/internal/util/kubernetes/object"
@@ -15,11 +17,11 @@ type DataplaneMock struct {
 	ObjectsStatuses map[string]map[string]k8sobj.ConfigurationStatus
 }
 
-func (d DataplaneMock) UpdateObject(_ client.Object) error {
+func (d DataplaneMock) UpdateObject(_ context.Context, _ client.Object) error {
 	return nil
 }
 
-func (d DataplaneMock) DeleteObject(_ client.Object) error {
+func (d DataplaneMock) DeleteObject(_ context.Context, _ client.Object) error {
 	return nil
 }
 

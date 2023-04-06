@@ -10,7 +10,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	ctrlclientfake "sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
 func TestDetectMeshDeployment(t *testing.T) {
@@ -18,7 +18,7 @@ func TestDetectMeshDeployment(t *testing.T) {
 	err := corev1.AddToScheme(testScheme)
 	require.NoErrorf(t, err, "should add corev1 to scheme successfully")
 
-	b := fake.NewClientBuilder().
+	b := ctrlclientfake.NewClientBuilder().
 		WithScheme(testScheme).
 		WithIndex(&corev1.Service{}, "metadata.name", func(object client.Object) []string {
 			return []string{object.GetNamespace(), object.GetName()}
@@ -92,7 +92,7 @@ func TestDetectMeshDeployment(t *testing.T) {
 }
 
 func TestDetectRunUnder(t *testing.T) {
-	b := fake.NewClientBuilder()
+	b := ctrlclientfake.NewClientBuilder()
 	b.WithObjects(
 		// add KIC pod.
 		&corev1.Pod{
@@ -321,7 +321,7 @@ func TestDetectRunUnder(t *testing.T) {
 }
 
 func TestDetectServiceDistribution(t *testing.T) {
-	b := fake.NewClientBuilder()
+	b := ctrlclientfake.NewClientBuilder()
 	// add services/endpoints/pods.
 	b.WithObjects(
 		// services.

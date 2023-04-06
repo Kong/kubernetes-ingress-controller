@@ -1,6 +1,7 @@
 package reference
 
 import (
+	"context"
 	"fmt"
 
 	"k8s.io/client-go/tools/cache"
@@ -155,13 +156,13 @@ func (c CacheIndexers) DeleteReferencesByReferrer(referrer client.Object) error 
 
 // DeleteObjectIfNotReferred deletes object from object cach by dataplaneClient
 // the object is not referenced in reference cache.
-func (c CacheIndexers) DeleteObjectIfNotReferred(obj client.Object, dataplaneClient *dataplane.KongClient) error {
+func (c CacheIndexers) DeleteObjectIfNotReferred(ctx context.Context, obj client.Object, dataplaneClient *dataplane.KongClient) error {
 	referred, err := c.ObjectReferred(obj)
 	if err != nil {
 		return err
 	}
 	if !referred {
-		return dataplaneClient.DeleteObject(obj)
+		return dataplaneClient.DeleteObject(ctx, obj)
 	}
 	return nil
 }

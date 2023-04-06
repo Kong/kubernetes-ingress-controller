@@ -246,7 +246,7 @@ func (r *TCPRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 			debug(log, tcproute, "object does not exist, ensuring it is not present in the proxy cache")
 			tcproute.Namespace = req.Namespace
 			tcproute.Name = req.Name
-			return ctrl.Result{}, r.DataplaneClient.DeleteObject(tcproute)
+			return ctrl.Result{}, r.DataplaneClient.DeleteObject(ctx, tcproute)
 		}
 
 		// for any error other than 404, requeue
@@ -261,12 +261,12 @@ func (r *TCPRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	debug(log, tcproute, "checking deletion timestamp")
 	if tcproute.DeletionTimestamp != nil {
 		debug(log, tcproute, "tcproute is being deleted, re-configuring data-plane")
-		if err := r.DataplaneClient.DeleteObject(tcproute); err != nil {
+		if err := r.DataplaneClient.DeleteObject(ctx, tcproute); err != nil {
 			debug(log, tcproute, "failed to delete object from data-plane, requeuing")
 			return ctrl.Result{}, err
 		}
 		debug(log, tcproute, "ensured object was removed from the data-plane (if ever present)")
-		return ctrl.Result{}, r.DataplaneClient.DeleteObject(tcproute)
+		return ctrl.Result{}, r.DataplaneClient.DeleteObject(ctx, tcproute)
 	}
 
 	// we need to pull the Gateway parent objects for the TCPRoute to verify
@@ -296,7 +296,7 @@ func (r *TCPRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 			// ensure that it's removed from the proxy cache to avoid orphaned data-plane
 			// configurations.
 			debug(log, tcproute, "ensuring that dataplane is updated to remove unsupported route (if applicable)")
-			return ctrl.Result{}, r.DataplaneClient.DeleteObject(tcproute)
+			return ctrl.Result{}, r.DataplaneClient.DeleteObject(ctx, tcproute)
 		}
 		return ctrl.Result{}, err
 	}
@@ -315,7 +315,7 @@ func (r *TCPRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	if isRouteAccepted(gateways) {
 		// if the gateways are ready, and the TCPRoute is destined for them, ensure that
 		// the object is pushed to the dataplane.
-		if err := r.DataplaneClient.UpdateObject(tcproute); err != nil {
+		if err := r.DataplaneClient.UpdateObject(ctx, tcproute); err != nil {
 			debug(log, tcproute, "failed to update object in data-plane, requeueing")
 			return ctrl.Result{}, err
 		}
@@ -330,7 +330,7 @@ func (r *TCPRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		}
 	} else {
 		// route is not accepted, remove it from kong store
-		if err := r.DataplaneClient.DeleteObject(tcproute); err != nil {
+		if err := r.DataplaneClient.DeleteObject(ctx, tcproute); err != nil {
 			debug(log, tcproute, "failed to delete object in data-plane, requeueing")
 			return ctrl.Result{}, err
 		}

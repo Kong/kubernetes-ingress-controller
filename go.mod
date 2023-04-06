@@ -18,7 +18,7 @@ require (
 	github.com/kong/deck v1.19.1
 	github.com/kong/go-kong v0.39.0
 	github.com/kong/kubernetes-telemetry v0.0.2
-	github.com/kong/kubernetes-testing-framework v0.30.0
+	github.com/kong/kubernetes-testing-framework v0.30.1
 	github.com/lithammer/dedent v1.1.0
 	github.com/miekg/dns v1.1.53
 	github.com/mitchellh/mapstructure v1.5.0
@@ -179,10 +179,10 @@ require (
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
-	k8s.io/cli-runtime v0.26.2 // indirect
+	k8s.io/cli-runtime v0.26.3 // indirect
 	k8s.io/klog/v2 v2.80.1 // indirect
 	k8s.io/kube-openapi v0.0.0-20221012153701-172d655c2280 // indirect
-	k8s.io/kubectl v0.26.2 // indirect
+	k8s.io/kubectl v0.26.3 // indirect
 	k8s.io/utils v0.0.0-20221128185143-99ec85e7a448 // indirect
 	sigs.k8s.io/json v0.0.0-20220713155537-f223a00ba0e2 // indirect
 	sigs.k8s.io/kind v0.17.0 // indirect

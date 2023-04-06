@@ -1,6 +1,7 @@
 package kongstate
 
 import (
+	"context"
 	"reflect"
 	"testing"
 
@@ -386,7 +387,7 @@ func TestFillConsumersAndCredentials(t *testing.T) {
 		state := KongState{
 			Version: semver.MustParse("2.3.2"),
 		}
-		state.FillConsumersAndCredentials(logrus.New(), store)
+		state.FillConsumersAndCredentials(context.TODO(), logrus.New(), store) //nolint:contextcheck
 		assert.Equal(t, want.Consumers[0].Consumer.Username, state.Consumers[0].Consumer.Username)
 		assert.Equal(t, want.Consumers[0].Consumer.CustomID, state.Consumers[0].Consumer.CustomID)
 		assert.Equal(t, want.Consumers[0].KeyAuths[0].Key, state.Consumers[0].KeyAuths[0].Key)

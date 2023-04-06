@@ -1,6 +1,7 @@
 package kongstate
 
 import (
+	"context"
 	"regexp"
 	"testing"
 
@@ -145,7 +146,7 @@ func TestKongPluginFromK8SClusterPlugin(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := kongPluginFromK8SClusterPlugin(store, tt.args.plugin)
+			got, err := kongPluginFromK8SClusterPlugin(context.TODO(), store, tt.args.plugin) //nolint:contextcheck
 			if (err != nil) != tt.wantErr {
 				t.Errorf("kongPluginFromK8SClusterPlugin error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -284,7 +285,7 @@ func TestKongPluginFromK8SPlugin(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := kongPluginFromK8SPlugin(store, tt.args.plugin)
+			got, err := kongPluginFromK8SPlugin(context.TODO(), store, tt.args.plugin) //nolint:contextcheck
 			if (err != nil) != tt.wantErr {
 				t.Errorf("kongPluginFromK8SPlugin error = %v, wantErr %v", err, tt.wantErr)
 				return

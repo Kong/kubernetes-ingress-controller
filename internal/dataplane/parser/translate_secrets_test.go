@@ -1,6 +1,7 @@
 package parser
 
 import (
+	"context"
 	"fmt"
 	"testing"
 
@@ -53,7 +54,7 @@ func TestGetPluginsAssociatedWithCACertSecret(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	gotPlugins := getPluginsAssociatedWithCACertSecret(secretID, storer)
+	gotPlugins := getPluginsAssociatedWithCACertSecret(context.TODO(), secretID, storer) //nolint:contextcheck
 	expectedPlugins := []client.Object{associatedPlugin, associatedClusterPlugin}
 	require.ElementsMatch(t, expectedPlugins, gotPlugins, "expected plugins do not match actual ones")
 }

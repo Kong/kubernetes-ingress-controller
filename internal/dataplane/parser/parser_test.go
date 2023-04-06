@@ -730,12 +730,12 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 		require.Empty(t, translationFailures)
 		assert.NotNil(state)
 		for _, testcase := range references {
-			config, err := kongstate.SecretToConfiguration(store, *testcase, "default")
+			config, err := kongstate.SecretToConfiguration(context.TODO(), store, *testcase, "default") //nolint:contextcheck
 			assert.NotEmpty(config)
 			assert.Nil(err)
 		}
 		for _, testcase := range badReferences {
-			config, err := kongstate.SecretToConfiguration(store, *testcase, "default")
+			config, err := kongstate.SecretToConfiguration(context.TODO(), store, *testcase, "default") //nolint:contextcheck
 			assert.Empty(config)
 			assert.NotEmpty(err)
 		}
@@ -3938,7 +3938,7 @@ func TestGetEndpoints(t *testing.T) {
 		svc               *corev1.Service
 		port              *corev1.ServicePort
 		proto             corev1.Protocol
-		fn                func(string, string) (*corev1.Endpoints, error)
+		fn                func(context.Context, string, string) (*corev1.Endpoints, error)
 		result            []util.Endpoint
 		isServiceUpstream bool
 	}{
@@ -3947,7 +3947,7 @@ func TestGetEndpoints(t *testing.T) {
 			svc:    nil,
 			port:   nil,
 			proto:  corev1.ProtocolTCP,
-			fn:     func(string, string) (*corev1.Endpoints, error) { return nil, nil },
+			fn:     func(context.Context, string, string) (*corev1.Endpoints, error) { return nil, nil },
 			result: []util.Endpoint{},
 		},
 		{
@@ -3955,7 +3955,7 @@ func TestGetEndpoints(t *testing.T) {
 			svc:    &corev1.Service{},
 			port:   nil,
 			proto:  corev1.ProtocolTCP,
-			fn:     func(string, string) (*corev1.Endpoints, error) { return nil, nil },
+			fn:     func(context.Context, string, string) (*corev1.Endpoints, error) { return nil, nil },
 			result: []util.Endpoint{},
 		},
 		{
@@ -3963,7 +3963,7 @@ func TestGetEndpoints(t *testing.T) {
 			svc:    &corev1.Service{},
 			port:   &corev1.ServicePort{Name: "default"},
 			proto:  corev1.ProtocolTCP,
-			fn:     func(string, string) (*corev1.Endpoints, error) { return &corev1.Endpoints{}, nil },
+			fn:     func(context.Context, string, string) (*corev1.Endpoints, error) { return &corev1.Endpoints{}, nil },
 			result: []util.Endpoint{},
 		},
 		{
@@ -3985,7 +3985,7 @@ func TestGetEndpoints(t *testing.T) {
 				TargetPort: intstr.FromInt(80),
 			},
 			proto: corev1.ProtocolTCP,
-			fn: func(string, string) (*corev1.Endpoints, error) {
+			fn: func(context.Context, string, string) (*corev1.Endpoints, error) {
 				return &corev1.Endpoints{}, nil
 			},
 			result: []util.Endpoint{
@@ -4020,7 +4020,7 @@ func TestGetEndpoints(t *testing.T) {
 				TargetPort: intstr.FromInt(2080),
 			},
 			proto: corev1.ProtocolTCP,
-			fn: func(string, string) (*corev1.Endpoints, error) {
+			fn: func(context.Context, string, string) (*corev1.Endpoints, error) {
 				return &corev1.Endpoints{}, nil
 			},
 			result: []util.Endpoint{
@@ -4052,7 +4052,7 @@ func TestGetEndpoints(t *testing.T) {
 				TargetPort: intstr.FromInt(2080),
 			},
 			proto: corev1.ProtocolTCP,
-			fn: func(string, string) (*corev1.Endpoints, error) {
+			fn: func(context.Context, string, string) (*corev1.Endpoints, error) {
 				return &corev1.Endpoints{}, nil
 			},
 			result: []util.Endpoint{
@@ -4082,7 +4082,7 @@ func TestGetEndpoints(t *testing.T) {
 				TargetPort: intstr.FromInt(80),
 			},
 			proto: corev1.ProtocolTCP,
-			fn: func(string, string) (*corev1.Endpoints, error) {
+			fn: func(context.Context, string, string) (*corev1.Endpoints, error) {
 				return nil, fmt.Errorf("unexpected error")
 			},
 			result: []util.Endpoint{},
@@ -4106,7 +4106,7 @@ func TestGetEndpoints(t *testing.T) {
 				TargetPort: intstr.FromInt(80),
 			},
 			proto: corev1.ProtocolTCP,
-			fn: func(string, string) (*corev1.Endpoints, error) {
+			fn: func(context.Context, string, string) (*corev1.Endpoints, error) {
 				nodeName := "dummy"
 				return &corev1.Endpoints{
 					Subsets: []corev1.EndpointSubset{
@@ -4147,7 +4147,7 @@ func TestGetEndpoints(t *testing.T) {
 				TargetPort: intstr.FromInt(80),
 			},
 			proto: corev1.ProtocolTCP,
-			fn: func(string, string) (*corev1.Endpoints, error) {
+			fn: func(context.Context, string, string) (*corev1.Endpoints, error) {
 				nodeName := "dummy"
 				return &corev1.Endpoints{
 					Subsets: []corev1.EndpointSubset{
@@ -4188,7 +4188,7 @@ func TestGetEndpoints(t *testing.T) {
 				TargetPort: intstr.FromInt(80),
 			},
 			proto: corev1.ProtocolTCP,
-			fn: func(string, string) (*corev1.Endpoints, error) {
+			fn: func(context.Context, string, string) (*corev1.Endpoints, error) {
 				nodeName := "dummy"
 				return &corev1.Endpoints{
 					Subsets: []corev1.EndpointSubset{
@@ -4231,7 +4231,7 @@ func TestGetEndpoints(t *testing.T) {
 				TargetPort: intstr.FromInt(80),
 			},
 			proto: corev1.ProtocolTCP,
-			fn: func(string, string) (*corev1.Endpoints, error) {
+			fn: func(context.Context, string, string) (*corev1.Endpoints, error) {
 				nodeName := "dummy"
 				return &corev1.Endpoints{
 					Subsets: []corev1.EndpointSubset{
@@ -4279,7 +4279,7 @@ func TestGetEndpoints(t *testing.T) {
 				TargetPort: intstr.FromString("port-1"),
 			},
 			proto: corev1.ProtocolTCP,
-			fn: func(string, string) (*corev1.Endpoints, error) {
+			fn: func(context.Context, string, string) (*corev1.Endpoints, error) {
 				nodeName := "dummy"
 				return &corev1.Endpoints{
 					Subsets: []corev1.EndpointSubset{
@@ -4317,7 +4317,7 @@ func TestGetEndpoints(t *testing.T) {
 
 	for _, testCase := range tests {
 		t.Run(testCase.name, func(t *testing.T) {
-			result := getEndpoints(logrus.New(), testCase.svc, testCase.port, testCase.proto, testCase.fn, testCase.isServiceUpstream)
+			result := getEndpoints(context.TODO(), logrus.New(), testCase.svc, testCase.port, testCase.proto, testCase.fn, testCase.isServiceUpstream) //nolint:contextcheck
 			if len(testCase.result) != len(result) {
 				t.Errorf("expected %v Endpoints but got %v", testCase.result, len(result))
 			}

@@ -250,13 +250,7 @@ func NewFakeStore(
 			Gateway:        gatewayStore,
 			TCPIngress:     tcpIngressStore,
 			UDPIngress:     udpIngressStore,
-			Service:        serviceStore,
-			Endpoint:       endpointStore,
-			Secret:         secretsStore,
 
-			Plugin:                         kongPluginsStore,
-			ClusterPlugin:                  kongClusterPluginsStore,
-			Consumer:                       consumerStore,
 			KongIngress:                    kongIngressStore,
 			IngressClassParametersV1alpha1: IngressClassParametersV1alpha1Store,
 

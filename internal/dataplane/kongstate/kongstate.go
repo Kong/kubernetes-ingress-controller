@@ -1,6 +1,7 @@
 package kongstate
 
 import (
+	"context"
 	"fmt"
 	"strconv"
 	"strings"
@@ -48,11 +49,11 @@ func (ks *KongState) SanitizedCopy() *KongState {
 	}
 }
 
-func (ks *KongState) FillConsumersAndCredentials(log logrus.FieldLogger, s store.Storer) {
+func (ks *KongState) FillConsumersAndCredentials(ctx context.Context, log logrus.FieldLogger, s store.Storer) {
 	consumerIndex := make(map[string]Consumer)
 
 	// build consumer index
-	for _, consumer := range s.ListKongConsumers() {
+	for _, consumer := range s.ListKongConsumers(ctx) {
 		var c Consumer
 		if consumer.Username == "" && consumer.CustomID == "" {
 			continue
@@ -75,7 +76,7 @@ func (ks *KongState) FillConsumersAndCredentials(log logrus.FieldLogger, s store
 				"secret_name":      cred,
 				"secret_namespace": consumer.Namespace,
 			})
-			secret, err := s.GetSecret(consumer.Namespace, cred)
+			secret, err := s.GetSecret(ctx, consumer.Namespace, cred) //nolint:contextcheck
 			if err != nil {
 				log.WithError(err).Error("failed to fetch secret")
 				continue
@@ -250,13 +251,13 @@ func (ks *KongState) getPluginRelations() map[string]util.ForeignRelations {
 	return pluginRels
 }
 
-func buildPlugins(log logrus.FieldLogger, s store.Storer, pluginRels map[string]util.ForeignRelations) []Plugin {
+func buildPlugins(ctx context.Context, log logrus.FieldLogger, s store.Storer, pluginRels map[string]util.ForeignRelations) []Plugin {
 	var plugins []Plugin
 
 	for pluginIdentifier, relations := range pluginRels {
 		identifier := strings.Split(pluginIdentifier, ":")
 		namespace, kongPluginName := identifier[0], identifier[1]
-		plugin, err := getPlugin(s, namespace, kongPluginName)
+		plugin, err := getPlugin(ctx, s, namespace, kongPluginName)
 		if err != nil {
 			log.WithFields(logrus.Fields{
 				"kongplugin_name":      kongPluginName,
@@ -282,7 +283,7 @@ func buildPlugins(log logrus.FieldLogger, s store.Storer, pluginRels map[string]
 		}
 	}
 
-	globalPlugins, err := globalPlugins(log, s)
+	globalPlugins, err := globalPlugins(ctx, log, s)
 	if err != nil {
 		log.WithError(err).Error("failed to fetch global plugins")
 	}
@@ -291,10 +292,10 @@ func buildPlugins(log logrus.FieldLogger, s store.Storer, pluginRels map[string]
 	return plugins
 }
 
-func globalPlugins(log logrus.FieldLogger, s store.Storer) ([]Plugin, error) {
+func globalPlugins(ctx context.Context, log logrus.FieldLogger, s store.Storer) ([]Plugin, error) {
 	// removed as of 0.10.0
 	// only retrieved now to warn users
-	globalPlugins, err := s.ListGlobalKongPlugins()
+	globalPlugins, err := s.ListGlobalKongPlugins(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("error listing global KongPlugins: %w", err)
 	}
@@ -311,7 +312,7 @@ func globalPlugins(log logrus.FieldLogger, s store.Storer) ([]Plugin, error) {
 	// This is important since if a user comes in to k8s and creates a new
 	// CRD, the user now deleted an older plugin
 
-	globalClusterPlugins, err := s.ListGlobalKongClusterPlugins()
+	globalClusterPlugins, err := s.ListGlobalKongClusterPlugins(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("error listing global KongClusterPlugins: %w", err)
 	}
@@ -332,7 +333,7 @@ func globalPlugins(log logrus.FieldLogger, s store.Storer) ([]Plugin, error) {
 			duplicates = append(duplicates, pluginName)
 			continue
 		}
-		if plugin, err := kongPluginFromK8SClusterPlugin(s, k8sPlugin); err == nil {
+		if plugin, err := kongPluginFromK8SClusterPlugin(ctx, s, k8sPlugin); err == nil {
 			res[pluginName] = Plugin{
 				Plugin: plugin,
 			}
@@ -352,6 +353,6 @@ func globalPlugins(log logrus.FieldLogger, s store.Storer) ([]Plugin, error) {
 	return plugins, nil
 }
 
-func (ks *KongState) FillPlugins(log logrus.FieldLogger, s store.Storer) {
-	ks.Plugins = buildPlugins(log, s, ks.getPluginRelations())
+func (ks *KongState) FillPlugins(ctx context.Context, log logrus.FieldLogger, s store.Storer) {
+	ks.Plugins = buildPlugins(ctx, log, s, ks.getPluginRelations())
 }

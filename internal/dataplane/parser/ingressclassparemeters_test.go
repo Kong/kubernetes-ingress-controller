@@ -12,10 +12,12 @@ import (
 	"github.com/stretchr/testify/require"
 	netv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes/scheme"
 	ctrlfake "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/store"
 	configurationv1alpha1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1alpha1"
+	"github.com/kong/kubernetes-ingress-controller/v2/pkg/clientset/fake"
 )
 
 func TestGetIngressClassParameters(t *testing.T) {
@@ -143,18 +145,15 @@ func TestGetIngressClassParameters(t *testing.T) {
 					Parameters: tc.paramRef,
 				},
 			}
+
+			require.NoError(t, fake.AddToScheme(scheme.Scheme))
 			client := ctrlfake.NewClientBuilder().
 				WithObjects(
 					ingressClass,
+					icp,
 				).
 				Build()
-			cacheStores, err := store.NewCacheStoresFromObjs(client, ingressClass, icp) // TODO(pmalek)
-			require.NoError(t, err)
-			err = cacheStores.Add(ingressClass)
-			require.NoError(t, err)
-			err = cacheStores.Add(icp)
-			require.NoError(t, err)
-			s := store.New(client, cacheStores, ingressClass.Name, logrus.New()) // TODO(pmalek)
+			s := store.New(client, ingressClass.Name, logrus.New())
 			icpSpec, err := getIngressClassParametersOrDefault(context.TODO(), s)
 			assert.Truef(t, reflect.DeepEqual(*tc.parameterSpec, icpSpec),
 				fmt.Sprintf("should get same ingress parameter spec: expected %+v, actual %+v", tc.parameterSpec, icpSpec),

@@ -1,6 +1,7 @@
 package parser
 
 import (
+	"context"
 	"errors"
 	"fmt"
 
@@ -17,10 +18,10 @@ import (
 
 // ingressRulesFromTLSRoutes processes a list of TLSRoute objects and translates
 // then into Kong configuration objects.
-func (p *Parser) ingressRulesFromTLSRoutes() ingressRules {
+func (p *Parser) ingressRulesFromTLSRoutes(ctx context.Context) ingressRules {
 	result := newIngressRules()
 
-	tlsRouteList, err := p.storer.ListTLSRoutes()
+	tlsRouteList, err := p.storer.ListTLSRoutes(ctx)
 	if err != nil {
 		p.logger.WithError(err).Error("failed to list TLSRoutes")
 		return result
@@ -28,7 +29,7 @@ func (p *Parser) ingressRulesFromTLSRoutes() ingressRules {
 
 	var errs []error
 	for _, tlsroute := range tlsRouteList {
-		if err := p.ingressRulesFromTLSRoute(&result, tlsroute); err != nil {
+		if err := p.ingressRulesFromTLSRoute(ctx, &result, tlsroute); err != nil {
 			err = fmt.Errorf("TLSRoute %s/%s can't be routed: %w", tlsroute.Namespace, tlsroute.Name, err)
 			errs = append(errs, err)
 		} else {
@@ -47,7 +48,7 @@ func (p *Parser) ingressRulesFromTLSRoutes() ingressRules {
 	return result
 }
 
-func (p *Parser) ingressRulesFromTLSRoute(result *ingressRules, tlsroute *gatewayv1alpha2.TLSRoute) error {
+func (p *Parser) ingressRulesFromTLSRoute(ctx context.Context, result *ingressRules, tlsroute *gatewayv1alpha2.TLSRoute) error {
 	// first we grab the spec and gather some metdata about the object
 	spec := tlsroute.Spec
 
@@ -58,7 +59,7 @@ func (p *Parser) ingressRulesFromTLSRoute(result *ingressRules, tlsroute *gatewa
 		return errRouteValidationNoRules
 	}
 
-	tlsPassthrough, err := p.isTLSRoutePassthrough(tlsroute)
+	tlsPassthrough, err := p.isTLSRoutePassthrough(ctx, tlsroute)
 	if err != nil {
 		return err
 	}
@@ -79,7 +80,7 @@ func (p *Parser) ingressRulesFromTLSRoute(result *ingressRules, tlsroute *gatewa
 		}
 
 		// create a service and attach the routes to it
-		service, err := generateKongServiceFromBackendRefWithRuleNumber(p.logger, p.storer, result, tlsroute, ruleNumber, "tcp", rule.BackendRefs...)
+		service, err := generateKongServiceFromBackendRefWithRuleNumber(ctx, p.logger, p.storer, result, tlsroute, ruleNumber, "tcp", rule.BackendRefs...)
 		if err != nil {
 			return err
 		}
@@ -96,7 +97,7 @@ func (p *Parser) ingressRulesFromTLSRoute(result *ingressRules, tlsroute *gatewa
 // isTLSRoutePassthrough returns true if we need to configure TLS passthrough to kong
 // for the tlsroute object.
 // returns a non-nil error if we failed to get the supported gateway.
-func (p *Parser) isTLSRoutePassthrough(tlsroute *gatewayv1alpha2.TLSRoute) (bool, error) {
+func (p *Parser) isTLSRoutePassthrough(ctx context.Context, tlsroute *gatewayv1alpha2.TLSRoute) (bool, error) {
 	// reconcile loop will push TLSRoute object with updated status when
 	// gateway is ready and TLSRoute object becomes stable.
 	// so we get the supported gateways from status.parents.
@@ -116,7 +117,7 @@ func (p *Parser) isTLSRoutePassthrough(tlsroute *gatewayv1alpha2.TLSRoute) (bool
 			gatewayNamespace = string(*parentRef.Namespace)
 		}
 
-		gateway, err := p.storer.GetGateway(gatewayNamespace, string(parentRef.Name))
+		gateway, err := p.storer.GetGateway(ctx, gatewayNamespace, string(parentRef.Name))
 		if err != nil {
 			if errors.As(err, &store.ErrNotFound{}) {
 				// log an error if the gateway expected to support the TLSRoute is not found in our cache.

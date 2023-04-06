@@ -16,21 +16,21 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 )
 
-func (p *Parser) ingressRulesFromKnativeIngress() ingressRules {
+func (p *Parser) ingressRulesFromKnativeIngress(ctx context.Context) ingressRules {
 	result := newIngressRules()
 
 	// IngressClass is not actually part of the Knative spec, and we are getting networking.k8s.io IngressClasses here,
 	// not a resource specific to Knative. However, the reason we're using it (enabling the 2.x regex heuristic) is
 	// Kong-specific, so in absence of a proper Knative IngressClass to attach our IngressClassParams to, we may as
 	// well use the stock Kubernetes resource.
-	icp, err := getIngressClassParametersOrDefault(context.TODO(), p.storer) 
+	icp, err := getIngressClassParametersOrDefault(ctx, p.storer)
 	if err != nil {
 		if !errors.As(err, &store.ErrNotFound{}) {
 			// anything else is unexpected
 			p.logger.Errorf("could not find IngressClassParameters, using defaults: %s", err)
 		}
 	}
-	ingressList, err := p.storer.ListKnativeIngresses()
+	ingressList, err := p.storer.ListKnativeIngresses(ctx)
 	if err != nil {
 		p.logger.WithError(err).Error("failed to list Knative Ingresses")
 		return result

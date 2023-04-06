@@ -371,7 +371,7 @@ func TestFakeStoreListTCPIngress(t *testing.T) {
 	store, err := NewFakeStore(FakeObjects{TCPIngresses: ingresses})
 	require.Nil(err)
 	require.NotNil(store)
-	ings, err := store.ListTCPIngresses()
+	ings, err := store.ListTCPIngresses(context.TODO()) 
 	assert.Nil(err)
 	assert.Len(ings, 1)
 }
@@ -444,7 +444,7 @@ func TestFakeStoreListKnativeIngress(t *testing.T) {
 	store, err := NewFakeStore(FakeObjects{KnativeIngresses: ingresses})
 	require.Nil(err)
 	require.NotNil(store)
-	ings, err := store.ListKnativeIngresses()
+	ings, err := store.ListKnativeIngresses(context.TODO()) 
 	assert.Len(ings, 1)
 	assert.Nil(err)
 }
@@ -464,11 +464,11 @@ func TestFakeStoreService(t *testing.T) {
 	store, err := NewFakeStore(FakeObjects{Services: services})
 	require.Nil(err)
 	require.NotNil(store)
-	service, err := store.GetService(context.TODO(), "default", "foo") //nolint:contextcheck
+	service, err := store.GetService(context.TODO(), "default", "foo")
 	assert.NotNil(service)
 	assert.Nil(err)
 
-	service, err = store.GetService(context.TODO(), "default", "does-not-exists") //nolint:contextcheck
+	service, err = store.GetService(context.TODO(), "default", "does-not-exists")
 	assert.NotNil(err)
 	assert.True(errors.As(err, &ErrNotFound{}))
 	assert.Nil(service)
@@ -489,11 +489,11 @@ func TestFakeStoreEndpiont(t *testing.T) {
 	store, err := NewFakeStore(FakeObjects{Endpoints: endpoints})
 	require.Nil(err)
 	require.NotNil(store)
-	c, err := store.GetEndpointsForService(context.TODO(), "default", "foo") //nolint:contextcheck
+	c, err := store.GetEndpointsForService(context.TODO(), "default", "foo")
 	assert.Nil(err)
 	assert.NotNil(c)
 
-	c, err = store.GetEndpointsForService(context.TODO(), "default", "does-not-exist") //nolint:contextcheck
+	c, err = store.GetEndpointsForService(context.TODO(), "default", "does-not-exist")
 	assert.NotNil(err)
 	assert.True(errors.As(err, &ErrNotFound{}))
 	assert.Nil(c)
@@ -517,12 +517,12 @@ func TestFakeStoreConsumer(t *testing.T) {
 	store, err := NewFakeStore(FakeObjects{KongConsumers: consumers})
 	require.Nil(err)
 	require.NotNil(store)
-	assert.Len(store.ListKongConsumers(context.TODO()), 1)            //nolint:contextcheck
-	c, err := store.GetKongConsumer(context.TODO(), "default", "foo") //nolint:contextcheck
+	assert.Len(store.ListKongConsumers(context.TODO()), 1)
+	c, err := store.GetKongConsumer(context.TODO(), "default", "foo")
 	assert.Nil(err)
 	assert.NotNil(c)
 
-	c, err = store.GetKongConsumer(context.TODO(), "default", "does-not-exist") //nolint:contextcheck
+	c, err = store.GetKongConsumer(context.TODO(), "default", "does-not-exist")
 	assert.Nil(c)
 	assert.NotNil(err)
 	assert.True(errors.As(err, &ErrNotFound{}))
@@ -555,11 +555,11 @@ func TestFakeStorePlugins(t *testing.T) {
 	store, err = NewFakeStore(FakeObjects{KongPlugins: plugins})
 	require.Nil(err)
 	require.NotNil(store)
-	plugins, err = store.ListGlobalKongPlugins(context.TODO()) //nolint:contextcheck
+	plugins, err = store.ListGlobalKongPlugins(context.TODO())
 	assert.NoError(err)
 	assert.Len(plugins, 0)
 
-	plugin, err := store.GetKongPlugin(context.TODO(), "default", "does-not-exist") //nolint:contextcheck
+	plugin, err := store.GetKongPlugin(context.TODO(), "default", "does-not-exist")
 	assert.NotNil(err)
 	assert.True(errors.As(err, &ErrNotFound{}))
 	assert.Nil(plugin)
@@ -579,7 +579,7 @@ func TestFakeStoreClusterPlugins(t *testing.T) {
 	store, err := NewFakeStore(FakeObjects{KongClusterPlugins: plugins})
 	require.Nil(err)
 	require.NotNil(store)
-	plugins, err = store.ListGlobalKongClusterPlugins(context.TODO()) //nolint:contextcheck
+	plugins, err = store.ListGlobalKongClusterPlugins(context.TODO())
 	assert.NoError(err)
 	assert.Len(plugins, 0)
 
@@ -613,15 +613,15 @@ func TestFakeStoreClusterPlugins(t *testing.T) {
 	store, err = NewFakeStore(FakeObjects{KongClusterPlugins: plugins})
 	require.Nil(err)
 	require.NotNil(store)
-	plugins, err = store.ListGlobalKongClusterPlugins(context.TODO()) //nolint:contextcheck
+	plugins, err = store.ListGlobalKongClusterPlugins(context.TODO())
 	assert.NoError(err)
 	assert.Len(plugins, 1)
 
-	plugin, err := store.GetKongClusterPlugin(context.TODO(), "foo") //nolint:contextcheck
+	plugin, err := store.GetKongClusterPlugin(context.TODO(), "foo")
 	assert.NotNil(plugin)
 	assert.Nil(err)
 
-	plugin, err = store.GetKongClusterPlugin(context.TODO(), "does-not-exist") //nolint:contextcheck
+	plugin, err = store.GetKongClusterPlugin(context.TODO(), "does-not-exist")
 	assert.NotNil(err)
 	assert.True(errors.As(err, &ErrNotFound{}))
 	assert.Nil(plugin)
@@ -642,11 +642,11 @@ func TestFakeStoreSecret(t *testing.T) {
 	store, err := NewFakeStore(FakeObjects{Secrets: secrets})
 	require.Nil(err)
 	require.NotNil(store)
-	secret, err := store.GetSecret(context.TODO(), "default", "foo") //nolint:contextcheck
+	secret, err := store.GetSecret(context.TODO(), "default", "foo")
 	assert.Nil(err)
 	assert.NotNil(secret)
 
-	secret, err = store.GetSecret(context.TODO(), "default", "does-not-exist") //nolint:contextcheck
+	secret, err = store.GetSecret(context.TODO(), "default", "does-not-exist")
 	assert.Nil(secret)
 	assert.NotNil(err)
 	assert.True(errors.As(err, &ErrNotFound{}))
@@ -667,11 +667,11 @@ func TestFakeKongIngress(t *testing.T) {
 	store, err := NewFakeStore(FakeObjects{KongIngresses: kongIngresses})
 	require.Nil(err)
 	require.NotNil(store)
-	kingress, err := store.GetKongIngress("default", "foo")
+	kingress, err := store.GetKongIngress(context.TODO(), "default", "foo") 
 	assert.Nil(err)
 	assert.NotNil(kingress)
 
-	kingress, err = store.GetKongIngress("default", "does-not-exist")
+	kingress, err = store.GetKongIngress(context.TODO(), "default", "does-not-exist") 
 	assert.NotNil(err)
 	assert.Nil(kingress)
 	assert.True(errors.As(err, &ErrNotFound{}))
@@ -692,7 +692,7 @@ func TestFakeStore_ListCACerts(t *testing.T) {
 	store, err := NewFakeStore(FakeObjects{Secrets: secrets})
 	require.Nil(err)
 	require.NotNil(store)
-	certs, err := store.ListCACerts(context.TODO()) //nolint:contextcheck
+	certs, err := store.ListCACerts(context.TODO())
 	assert.Nil(err)
 	assert.Len(certs, 0)
 
@@ -725,7 +725,7 @@ func TestFakeStore_ListCACerts(t *testing.T) {
 	store, err = NewFakeStore(FakeObjects{Secrets: secrets})
 	require.Nil(err)
 	require.NotNil(store)
-	certs, err = store.ListCACerts(context.TODO()) //nolint:contextcheck
+	certs, err = store.ListCACerts(context.TODO())
 	assert.Nil(err)
 	assert.Len(certs, 2, "expect two secrets as CA certificates")
 }
@@ -751,7 +751,7 @@ func TestFakeStoreHTTPRoute(t *testing.T) {
 	store, err := NewFakeStore(FakeObjects{HTTPRoutes: classes})
 	require.Nil(err)
 	require.NotNil(store)
-	routes, err := store.ListHTTPRoutes()
+	routes, err := store.ListHTTPRoutes(context.TODO()) 
 	assert.Nil(err)
 	assert.Len(routes, 2, "expect two HTTPRoutes")
 }
@@ -777,7 +777,7 @@ func TestFakeStoreUDPRoute(t *testing.T) {
 	store, err := NewFakeStore(FakeObjects{UDPRoutes: classes})
 	require.Nil(err)
 	require.NotNil(store)
-	routes, err := store.ListUDPRoutes()
+	routes, err := store.ListUDPRoutes(context.TODO()) 
 	assert.Nil(err)
 	assert.Len(routes, 2, "expect two UDPRoutes")
 }
@@ -803,7 +803,7 @@ func TestFakeStoreTCPRoute(t *testing.T) {
 	store, err := NewFakeStore(FakeObjects{TCPRoutes: classes})
 	require.Nil(err)
 	require.NotNil(store)
-	routes, err := store.ListTCPRoutes()
+	routes, err := store.ListTCPRoutes(context.TODO()) 
 	assert.Nil(err)
 	assert.Len(routes, 2, "expect two TCPRoutes")
 }
@@ -829,7 +829,7 @@ func TestFakeStoreTLSRoute(t *testing.T) {
 	store, err := NewFakeStore(FakeObjects{TLSRoutes: classes})
 	require.Nil(err)
 	require.NotNil(store)
-	routes, err := store.ListTLSRoutes()
+	routes, err := store.ListTLSRoutes(context.TODO()) 
 	assert.Nil(err)
 	assert.Len(routes, 2, "expect two TLSRoutes")
 }
@@ -855,7 +855,7 @@ func TestFakeStoreReferenceGrant(t *testing.T) {
 	store, err := NewFakeStore(FakeObjects{ReferenceGrants: grants})
 	require.Nil(err)
 	require.NotNil(store)
-	routes, err := store.ListReferenceGrants()
+	routes, err := store.ListReferenceGrants(context.TODO()) 
 	assert.Nil(err)
 	assert.Len(routes, 2, "expect two ReferenceGrants")
 }
@@ -881,7 +881,7 @@ func TestFakeStoreGateway(t *testing.T) {
 	store, err := NewFakeStore(FakeObjects{Gateways: grants})
 	require.Nil(err)
 	require.NotNil(store)
-	routes, err := store.ListGateways()
+	routes, err := store.ListGateways(context.TODO()) 
 	assert.Nil(err)
 	assert.Len(routes, 2, "expect two Gateways")
 }

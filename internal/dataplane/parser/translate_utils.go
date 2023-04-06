@@ -1,6 +1,7 @@
 package parser
 
 import (
+	"context"
 	"fmt"
 	"reflect"
 	"strings"
@@ -73,6 +74,7 @@ func getPermittedForReferenceGrantFrom(
 // generateKongServiceFromBackendRefWithName translates backendRefs into a Kong service for use with the
 // rules generated from a Gateway APIs route. The service name is provided by the caller.
 func generateKongServiceFromBackendRefWithName(
+	ctx context.Context,
 	logger logrus.FieldLogger,
 	storer store.Storer,
 	rules *ingressRules,
@@ -83,7 +85,7 @@ func generateKongServiceFromBackendRefWithName(
 ) (kongstate.Service, error) {
 	objName := fmt.Sprintf("%s %s/%s",
 		route.GetObjectKind().GroupVersionKind().String(), route.GetNamespace(), route.GetName())
-	grants, err := storer.ListReferenceGrants()
+	grants, err := storer.ListReferenceGrants(ctx)
 	if err != nil {
 		return kongstate.Service{}, fmt.Errorf("could not retrieve ReferenceGrants for %s: %w", objName, err)
 	}
@@ -141,6 +143,7 @@ func generateKongServiceFromBackendRefWithName(
 // generateKongServiceFromBackendRefWithRuleNumber translates backendRefs for rule ruleNumber into a Kong service for use with the
 // rules generated from a Gateway APIs route. The service name is computed from route and ruleNumber by the function.
 func generateKongServiceFromBackendRefWithRuleNumber(
+	ctx context.Context,
 	logger logrus.FieldLogger,
 	storer store.Storer,
 	rules *ingressRules,
@@ -154,6 +157,7 @@ func generateKongServiceFromBackendRefWithRuleNumber(
 	serviceName := fmt.Sprintf("%s.%d", getUniqueKongServiceNameForObject(route), ruleNumber)
 
 	return generateKongServiceFromBackendRefWithName(
+		ctx,
 		logger,
 		storer,
 		rules,

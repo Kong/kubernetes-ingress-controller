@@ -1,6 +1,7 @@
 package parser
 
 import (
+	"context"
 	"fmt"
 	"testing"
 
@@ -678,7 +679,7 @@ func TestGenerateKongServiceFromBackendRef(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.msg, func(t *testing.T) {
-			result, err := generateKongServiceFromBackendRefWithRuleNumber(p.logger, p.storer, &rules, tt.route, ruleNumber, protocol, tt.refs...)
+			result, err := generateKongServiceFromBackendRefWithRuleNumber(context.TODO(), p.logger, p.storer, &rules, tt.route, ruleNumber, protocol, tt.refs...) 
 			assert.Equal(t, tt.result, result)
 			if tt.wantErr {
 				assert.NotNil(t, err)

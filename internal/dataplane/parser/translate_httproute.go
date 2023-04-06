@@ -1,6 +1,7 @@
 package parser
 
 import (
+	"context"
 	"fmt"
 	pathlib "path"
 	"strings"
@@ -20,17 +21,17 @@ import (
 
 // ingressRulesFromHTTPRoutes processes a list of HTTPRoute objects and translates
 // then into Kong configuration objects.
-func (p *Parser) ingressRulesFromHTTPRoutes() ingressRules {
+func (p *Parser) ingressRulesFromHTTPRoutes(ctx context.Context) ingressRules {
 	result := newIngressRules()
 
-	httpRouteList, err := p.storer.ListHTTPRoutes()
+	httpRouteList, err := p.storer.ListHTTPRoutes(ctx)
 	if err != nil {
 		p.logger.WithError(err).Error("failed to list HTTPRoutes")
 		return result
 	}
 
 	for _, httproute := range httpRouteList {
-		if err := p.ingressRulesFromHTTPRoute(&result, httproute); err != nil {
+		if err := p.ingressRulesFromHTTPRoute(ctx, &result, httproute); err != nil {
 			p.registerTranslationFailure(fmt.Sprintf("HTTPRoute can't be routed: %s", err), httproute)
 		} else {
 			// at this point the object has been configured and can be
@@ -42,16 +43,16 @@ func (p *Parser) ingressRulesFromHTTPRoutes() ingressRules {
 	return result
 }
 
-func (p *Parser) ingressRulesFromHTTPRoute(result *ingressRules, httproute *gatewayv1beta1.HTTPRoute) error {
+func (p *Parser) ingressRulesFromHTTPRoute(ctx context.Context, result *ingressRules, httproute *gatewayv1beta1.HTTPRoute) error {
 	if err := validateHTTPRoute(httproute); err != nil {
 		return fmt.Errorf("validation failed : %w", err)
 	}
 
 	if p.featureEnabledCombinedServiceRoutes {
-		return p.ingressRulesFromHTTPRouteWithCombinedServiceRoutes(httproute, result)
+		return p.ingressRulesFromHTTPRouteWithCombinedServiceRoutes(ctx, httproute, result)
 	}
 
-	return p.ingressRulesFromHTTPRouteLegacyFallback(httproute, result)
+	return p.ingressRulesFromHTTPRouteLegacyFallback(ctx, httproute, result)
 }
 
 func validateHTTPRoute(httproute *gatewayv1beta1.HTTPRoute) error {
@@ -70,7 +71,7 @@ func validateHTTPRoute(httproute *gatewayv1beta1.HTTPRoute) error {
 
 // ingressRulesFromHTTPRouteWithCombinedServiceRoutes generates a set of proto-Kong routes (ingress rules) from an HTTPRoute.
 // If multiple rules in the HTTPRoute use the same Service, it combines them into a single Kong route.
-func (p *Parser) ingressRulesFromHTTPRouteWithCombinedServiceRoutes(httproute *gatewayv1beta1.HTTPRoute, result *ingressRules) error {
+func (p *Parser) ingressRulesFromHTTPRouteWithCombinedServiceRoutes(ctx context.Context, httproute *gatewayv1beta1.HTTPRoute, result *ingressRules) error {
 	for _, kongServiceTranslation := range translators.TranslateHTTPRoute(httproute) {
 		// HTTPRoute uses a wrapper HTTPBackendRef to add optional filters to its BackendRefs
 		backendRefs := httpBackendRefsToBackendRefs(kongServiceTranslation.BackendRefs)
@@ -78,7 +79,7 @@ func (p *Parser) ingressRulesFromHTTPRouteWithCombinedServiceRoutes(httproute *g
 		serviceName := kongServiceTranslation.Name
 
 		// create a service and attach the routes to it
-		service, err := generateKongServiceFromBackendRefWithName(p.logger, p.storer, result, serviceName, httproute, "http", backendRefs...)
+		service, err := generateKongServiceFromBackendRefWithName(ctx, p.logger, p.storer, result, serviceName, httproute, "http", backendRefs...)
 		if err != nil {
 			return err
 		}
@@ -103,7 +104,7 @@ func (p *Parser) ingressRulesFromHTTPRouteWithCombinedServiceRoutes(httproute *g
 // ingressRulesFromHTTPRouteLegacyFallback generates a set of proto-Kong routes (ingress rules) from an HTTPRoute.
 // It generates a separate route for each rule.
 // It is planned for deprecation in favor of ingressRulesFromHTTPRouteWithCombinedServiceRoutes.
-func (p *Parser) ingressRulesFromHTTPRouteLegacyFallback(httproute *gatewayv1beta1.HTTPRoute, result *ingressRules) error {
+func (p *Parser) ingressRulesFromHTTPRouteLegacyFallback(ctx context.Context, httproute *gatewayv1beta1.HTTPRoute, result *ingressRules) error {
 	// each rule may represent a different set of backend services that will be accepting
 	// traffic, so we make separate routes and Kong services for every present rule.
 	for ruleNumber, rule := range httproute.Spec.Rules {
@@ -117,7 +118,7 @@ func (p *Parser) ingressRulesFromHTTPRouteLegacyFallback(httproute *gatewayv1bet
 		backendRefs := httpBackendRefsToBackendRefs(rule.BackendRefs)
 
 		// create a service and attach the routes to it
-		service, err := generateKongServiceFromBackendRefWithRuleNumber(p.logger, p.storer, result, httproute, ruleNumber, "http", backendRefs...)
+		service, err := generateKongServiceFromBackendRefWithRuleNumber(ctx, p.logger, p.storer, result, httproute, ruleNumber, "http", backendRefs...)
 		if err != nil {
 			return err
 		}

@@ -1,6 +1,7 @@
 package parser
 
 import (
+	"context"
 	"fmt"
 	"sort"
 	"strconv"
@@ -11,10 +12,10 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 )
 
-func (p *Parser) ingressRulesFromTCPIngressV1beta1() ingressRules {
+func (p *Parser) ingressRulesFromTCPIngressV1beta1(ctx context.Context) ingressRules {
 	result := newIngressRules()
 
-	ingressList, err := p.storer.ListTCPIngresses()
+	ingressList, err := p.storer.ListTCPIngresses(ctx)
 	if err != nil {
 		p.logger.WithError(err).Error("failed to list TCPIngresses")
 		return result
@@ -87,10 +88,10 @@ func (p *Parser) ingressRulesFromTCPIngressV1beta1() ingressRules {
 	return result
 }
 
-func (p *Parser) ingressRulesFromUDPIngressV1beta1() ingressRules {
+func (p *Parser) ingressRulesFromUDPIngressV1beta1(ctx context.Context) ingressRules {
 	result := newIngressRules()
 
-	ingressList, err := p.storer.ListUDPIngresses()
+	ingressList, err := p.storer.ListUDPIngresses(ctx)
 	if err != nil {
 		p.logger.WithError(err).Errorf("failed to list UDPIngresses")
 		return result

@@ -1,6 +1,7 @@
 package parser
 
 import (
+	"context"
 	"testing"
 
 	"github.com/kong/go-kong/kong"
@@ -106,7 +107,7 @@ func TestFromTCPIngressV1beta1(t *testing.T) {
 		assert.NoError(err)
 		p := mustNewParser(t, store)
 
-		parsedInfo := p.ingressRulesFromTCPIngressV1beta1()
+		parsedInfo := p.ingressRulesFromTCPIngressV1beta1(context.TODO()) 
 		assert.Equal(ingressRules{
 			ServiceNameToServices: make(map[string]kongstate.Service),
 			ServiceNameToParent:   make(map[string]client.Object),
@@ -122,7 +123,7 @@ func TestFromTCPIngressV1beta1(t *testing.T) {
 		assert.NoError(err)
 		p := mustNewParser(t, store)
 
-		parsedInfo := p.ingressRulesFromTCPIngressV1beta1()
+		parsedInfo := p.ingressRulesFromTCPIngressV1beta1(context.TODO()) 
 		assert.Equal(ingressRules{
 			ServiceNameToServices: make(map[string]kongstate.Service),
 			ServiceNameToParent:   make(map[string]client.Object),
@@ -138,7 +139,7 @@ func TestFromTCPIngressV1beta1(t *testing.T) {
 		assert.NoError(err)
 		p := mustNewParser(t, store)
 
-		parsedInfo := p.ingressRulesFromTCPIngressV1beta1()
+		parsedInfo := p.ingressRulesFromTCPIngressV1beta1(context.TODO()) 
 		assert.Equal(1, len(parsedInfo.ServiceNameToServices))
 		svc := parsedInfo.ServiceNameToServices["default.foo-svc.80"]
 		assert.Equal("foo-svc.default.80.svc", *svc.Host)
@@ -170,7 +171,7 @@ func TestFromTCPIngressV1beta1(t *testing.T) {
 		assert.NoError(err)
 		p := mustNewParser(t, store)
 
-		parsedInfo := p.ingressRulesFromTCPIngressV1beta1()
+		parsedInfo := p.ingressRulesFromTCPIngressV1beta1(context.TODO()) 
 		assert.Equal(1, len(parsedInfo.ServiceNameToServices))
 		svc := parsedInfo.ServiceNameToServices["default.foo-svc.80"]
 		assert.Equal("foo-svc.default.80.svc", *svc.Host)
@@ -203,7 +204,7 @@ func TestFromTCPIngressV1beta1(t *testing.T) {
 		assert.NoError(err)
 		p := mustNewParser(t, store)
 
-		parsedInfo := p.ingressRulesFromTCPIngressV1beta1()
+		parsedInfo := p.ingressRulesFromTCPIngressV1beta1(context.TODO()) 
 		assert.Equal(2, len(parsedInfo.SecretNameToSNIs.Hosts("default/sooper-secret")))
 		assert.Equal(2, len(parsedInfo.SecretNameToSNIs.Hosts("default/sooper-secret2")))
 	})

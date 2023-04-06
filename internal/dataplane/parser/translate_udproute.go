@@ -1,6 +1,7 @@
 package parser
 
 import (
+	"context"
 	"fmt"
 
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
@@ -12,10 +13,10 @@ import (
 
 // ingressRulesFromUDPRoutes processes a list of UDPRoute objects and translates
 // then into Kong configuration objects.
-func (p *Parser) ingressRulesFromUDPRoutes() ingressRules {
+func (p *Parser) ingressRulesFromUDPRoutes(ctx context.Context) ingressRules {
 	result := newIngressRules()
 
-	udpRouteList, err := p.storer.ListUDPRoutes()
+	udpRouteList, err := p.storer.ListUDPRoutes(ctx)
 	if err != nil {
 		p.logger.WithError(err).Errorf("failed to list UDPRoutes")
 		return result
@@ -23,7 +24,7 @@ func (p *Parser) ingressRulesFromUDPRoutes() ingressRules {
 
 	var errs []error
 	for _, udproute := range udpRouteList {
-		if err := p.ingressRulesFromUDPRoute(&result, udproute); err != nil {
+		if err := p.ingressRulesFromUDPRoute(ctx, &result, udproute); err != nil {
 			err = fmt.Errorf("UDPRoute %s/%s can't be routed: %w", udproute.Namespace, udproute.Name, err)
 			errs = append(errs, err)
 		} else {
@@ -42,7 +43,7 @@ func (p *Parser) ingressRulesFromUDPRoutes() ingressRules {
 	return result
 }
 
-func (p *Parser) ingressRulesFromUDPRoute(result *ingressRules, udproute *gatewayv1alpha2.UDPRoute) error {
+func (p *Parser) ingressRulesFromUDPRoute(ctx context.Context, result *ingressRules, udproute *gatewayv1alpha2.UDPRoute) error {
 	// first we grab the spec and gather some metdata about the object
 	spec := udproute.Spec
 
@@ -71,7 +72,7 @@ func (p *Parser) ingressRulesFromUDPRoute(result *ingressRules, udproute *gatewa
 		}
 
 		// create a service and attach the routes to it
-		service, err := generateKongServiceFromBackendRefWithRuleNumber(p.logger, p.storer, result, udproute, ruleNumber, "udp", rule.BackendRefs...)
+		service, err := generateKongServiceFromBackendRefWithRuleNumber(ctx, p.logger, p.storer, result, udproute, ruleNumber, "udp", rule.BackendRefs...)
 		if err != nil {
 			return err
 		}

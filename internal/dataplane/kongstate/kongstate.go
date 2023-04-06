@@ -76,7 +76,7 @@ func (ks *KongState) FillConsumersAndCredentials(ctx context.Context, log logrus
 				"secret_name":      cred,
 				"secret_namespace": consumer.Namespace,
 			})
-			secret, err := s.GetSecret(ctx, consumer.Namespace, cred) //nolint:contextcheck
+			secret, err := s.GetSecret(ctx, consumer.Namespace, cred)
 			if err != nil {
 				log.WithError(err).Error("failed to fetch secret")
 				continue
@@ -146,10 +146,10 @@ func (ks *KongState) FillConsumersAndCredentials(ctx context.Context, log logrus
 	}
 }
 
-func (ks *KongState) FillOverrides(log logrus.FieldLogger, s store.Storer) {
+func (ks *KongState) FillOverrides(ctx context.Context, log logrus.FieldLogger, s store.Storer) {
 	for i := 0; i < len(ks.Services); i++ {
 		// Services
-		kongIngress, err := getKongIngressForServices(s, ks.Services[i].K8sServices)
+		kongIngress, err := getKongIngressForServices(ctx, s, ks.Services[i].K8sServices)
 		if err != nil {
 			log.WithError(err).
 				Errorf("failed to fetch KongIngress resource for Services %s",
@@ -164,7 +164,7 @@ func (ks *KongState) FillOverrides(log logrus.FieldLogger, s store.Storer) {
 
 		// Routes
 		for j := 0; j < len(ks.Services[i].Routes); j++ {
-			kongIngress, err := getKongIngressFromObjectMeta(s, ks.Services[i].Routes[j].Ingress)
+			kongIngress, err := getKongIngressFromObjectMeta(ctx, s, ks.Services[i].Routes[j].Ingress)
 			if err != nil {
 				log.WithFields(logrus.Fields{
 					"resource_name":      ks.Services[i].Routes[j].Ingress.Name,
@@ -178,7 +178,7 @@ func (ks *KongState) FillOverrides(log logrus.FieldLogger, s store.Storer) {
 
 	// Upstreams
 	for i := 0; i < len(ks.Upstreams); i++ {
-		kongIngress, err := getKongIngressForServices(s, ks.Upstreams[i].Service.K8sServices)
+		kongIngress, err := getKongIngressForServices(ctx, s, ks.Upstreams[i].Service.K8sServices)
 		if err != nil {
 			log.WithError(err).
 				Errorf("failed to fetch KongIngress resource for Services %s",

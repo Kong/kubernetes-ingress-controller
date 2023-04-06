@@ -352,7 +352,7 @@ func TestGetK8sServicesForBackends(t *testing.T) {
 			logger := logrus.New()
 			logger.SetOutput(stdout)
 
-			services, annotations := getK8sServicesForBackends(context.TODO(), logger, storer, tt.namespace, tt.backends) //nolint:contextcheck
+			services, annotations := getK8sServicesForBackends(context.TODO(), logger, storer, tt.namespace, tt.backends)
 			assert.Equal(t, tt.expectedServices, services)
 			assert.Equal(t, tt.expectedAnnotations, annotations)
 			for _, expectedLogEntry := range tt.expectedLogEntries {
@@ -655,7 +655,7 @@ func TestPopulateServices(t *testing.T) {
 			logger, _ := test.NewNullLogger()
 			failuresCollector, err := failures.NewResourceFailuresCollector(logger)
 			require.NoError(t, err)
-			servicesToBeSkipped := ingressRules.populateServices(context.TODO(), logrus.New(), fakeStore, failuresCollector) //nolint:contextcheck
+			servicesToBeSkipped := ingressRules.populateServices(context.TODO(), logrus.New(), fakeStore, failuresCollector)
 			require.Equal(t, tc.serviceNamesToSkip, servicesToBeSkipped)
 			require.Len(t, failuresCollector.PopResourceFailures(), len(servicesToBeSkipped), "expecting as many translation failures as services to skip")
 		})

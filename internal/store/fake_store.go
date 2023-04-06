@@ -239,23 +239,7 @@ func NewFakeStore(
 	client := clientBuilder.Build()
 
 	s := Store{
-		client: client,
-		stores: CacheStores{
-			HTTPRoute:      httprouteStore,
-			UDPRoute:       udprouteStore,
-			TCPRoute:       tcprouteStore,
-			TLSRoute:       tlsrouteStore,
-			GRPCRoute:      grpcrouteStore,
-			ReferenceGrant: referencegrantStore,
-			Gateway:        gatewayStore,
-			TCPIngress:     tcpIngressStore,
-			UDPIngress:     udpIngressStore,
-
-			KongIngress:                    kongIngressStore,
-			IngressClassParametersV1alpha1: IngressClassParametersV1alpha1Store,
-
-			KnativeIngress: knativeIngressStore,
-		},
+		client:                client,
 		ingressClass:          annotations.DefaultIngressClass,
 		isValidIngressClass:   annotations.IngressClassValidatorFuncFromObjectMeta(annotations.DefaultIngressClass),
 		isValidIngressV1Class: annotations.IngressClassValidatorFuncFromV1Ingress(annotations.DefaultIngressClass),

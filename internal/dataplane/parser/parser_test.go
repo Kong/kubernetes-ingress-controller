@@ -730,12 +730,12 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 		require.Empty(t, translationFailures)
 		assert.NotNil(state)
 		for _, testcase := range references {
-			config, err := kongstate.SecretToConfiguration(context.TODO(), store, *testcase, "default") //nolint:contextcheck
+			config, err := kongstate.SecretToConfiguration(context.TODO(), store, *testcase, "default")
 			assert.NotEmpty(config)
 			assert.Nil(err)
 		}
 		for _, testcase := range badReferences {
-			config, err := kongstate.SecretToConfiguration(context.TODO(), store, *testcase, "default") //nolint:contextcheck
+			config, err := kongstate.SecretToConfiguration(context.TODO(), store, *testcase, "default")
 			assert.Empty(config)
 			assert.NotEmpty(err)
 		}
@@ -4317,7 +4317,7 @@ func TestGetEndpoints(t *testing.T) {
 
 	for _, testCase := range tests {
 		t.Run(testCase.name, func(t *testing.T) {
-			result := getEndpoints(context.TODO(), logrus.New(), testCase.svc, testCase.port, testCase.proto, testCase.fn, testCase.isServiceUpstream) //nolint:contextcheck
+			result := getEndpoints(context.TODO(), logrus.New(), testCase.svc, testCase.port, testCase.proto, testCase.fn, testCase.isServiceUpstream)
 			if len(testCase.result) != len(result) {
 				t.Errorf("expected %v Endpoints but got %v", testCase.result, len(result))
 			}

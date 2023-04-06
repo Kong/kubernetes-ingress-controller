@@ -146,7 +146,7 @@ func TestKongPluginFromK8SClusterPlugin(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := kongPluginFromK8SClusterPlugin(context.TODO(), store, tt.args.plugin) //nolint:contextcheck
+			got, err := kongPluginFromK8SClusterPlugin(context.TODO(), store, tt.args.plugin)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("kongPluginFromK8SClusterPlugin error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -285,7 +285,7 @@ func TestKongPluginFromK8SPlugin(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := kongPluginFromK8SPlugin(context.TODO(), store, tt.args.plugin) //nolint:contextcheck
+			got, err := kongPluginFromK8SPlugin(context.TODO(), store, tt.args.plugin)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("kongPluginFromK8SPlugin error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -447,7 +447,7 @@ func TestGetKongIngressForServices(t *testing.T) {
 			})
 			require.NoError(t, err)
 
-			kongIngress, err := getKongIngressForServices(storer, tt.services)
+			kongIngress, err := getKongIngressForServices(context.TODO(), storer, tt.services) 
 			if tt.expectedError == nil {
 				assert.Equal(t, tt.expectedKongIngress, kongIngress)
 			} else {
@@ -574,7 +574,7 @@ func TestGetKongIngressFromObjectMeta(t *testing.T) {
 			require.NoError(t, err)
 
 			obj := util.FromK8sObject(tt.route)
-			kongIngress, err := getKongIngressFromObjectMeta(storer, obj)
+			kongIngress, err := getKongIngressFromObjectMeta(context.TODO(), storer, obj) 
 
 			if tt.expectedError == nil {
 				require.NoError(t, err)

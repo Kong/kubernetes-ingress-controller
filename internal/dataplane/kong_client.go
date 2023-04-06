@@ -16,6 +16,7 @@ import (
 	"golang.org/x/exp/slices"
 	"golang.org/x/sync/errgroup"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -185,25 +186,29 @@ func NewKongClient(
 // It will be asynchronously converted into the upstream Kong DSL and applied to the Kong Admin API.
 // A status will later be added to the object whether the configuration update succeeds or fails.
 func (c *KongClient) UpdateObject(obj client.Object) error {
-	// we do a deep copy of the object here so that the caller can continue to use
-	// the original object in a threadsafe manner.
-	return c.cache.Add(obj.DeepCopyObject())
+	return c.client.Update(context.TODO(), obj)
 }
 
-// DeleteObject accepts a Kubernetes controller-runtime client.Object and removes it from the configuration cache.
+// DeleteObject accepts a Kubernetes controller-runtime client.Object and removes it from the configuration.
 // The delete action will asynchronously be converted to Kong DSL and applied to the Kong Admin API.
 // A status will later be added to the object whether the configuration update succeeds or fails.
 //
-// under the hood the cache implementation will ignore deletions on objects
-// that are not present in the cache, so in those cases this is a no-op.
+// The implementation will ignore deletions on objects that are not present, so in those cases this is a no-op.
 func (c *KongClient) DeleteObject(obj client.Object) error {
-	return c.cache.Delete(obj)
+	err := c.client.Delete(context.TODO(), obj)
+	if apierrors.IsNotFound(err) {
+		return nil
+	}
+	return err
 }
 
 // ObjectExists indicates whether or not any version of the provided object is already present in the proxy.
 func (c *KongClient) ObjectExists(obj client.Object) (bool, error) {
-	_, exists, err := c.cache.Get(obj)
-	return exists, err
+	err := c.client.Get(context.TODO(), client.ObjectKeyFromObject(obj), obj)
+	if apierrors.IsNotFound(err) {
+		return false, err
+	}
+	return true, nil
 }
 
 // allEqual returns true if all provided objects are equal.
@@ -393,7 +398,7 @@ func (c *KongClient) Update(ctx context.Context) error {
 	defer c.lock.Unlock()
 
 	// build the kongstate object from the Kubernetes objects in the storer
-	storer := store.New(c.client, *c.cache, c.ingressClass, c.logger)
+	storer := store.New(c.client, c.ingressClass, c.logger)
 
 	// initialize a parser
 	c.logger.Debug("parsing kubernetes objects into data-plane configuration")

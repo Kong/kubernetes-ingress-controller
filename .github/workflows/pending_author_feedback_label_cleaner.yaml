@@ -1,0 +1,22 @@
+name: Pending author feedback label cleaner
+on:
+  issue_comment:
+    types:
+    - created
+
+jobs:
+  issue_commented:
+    runs-on: ubuntu-latest
+    # This job only runs for issue comments
+    name: |
+      Remove "pending author feedback" label if it exists on issue #${{ github.event.issue.number }}
+      and if the commenter - ${{ github.event.comment.user.login }} - is the issue author -
+      ${{ github.event.issue.user.login }}.
+    if: ${{ !github.event.issue.pull_request && github.event.comment.user.login == github.event.issue.user.login && contains(github.event.issue.labels.*.name, 'pending author feedback')}}
+    env:
+      GH_TOKEN: ${{ secrets.K8S_TEAM_BOT_GH_PAT }}
+
+    steps:
+    # Specifying --repo saves us the checkout
+    - run: |
+        gh --repo ${{ github.repositoryUrl }} issue edit ${{ github.event.issue.number }} --remove-label "pending author feedback"

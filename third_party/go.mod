@@ -5,7 +5,7 @@ go 1.19
 require (
 	github.com/GoogleContainerTools/skaffold/v2 v2.3.0
 	github.com/elastic/crd-ref-docs v0.0.8
-	github.com/go-delve/delve v1.20.1
+	github.com/go-delve/delve v1.20.2
 	github.com/golangci/golangci-lint v1.52.2
 	github.com/jstemmer/go-junit-report/v2 v2.0.0
 	gotest.tools/gotestsum v1.9.0

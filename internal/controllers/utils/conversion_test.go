@@ -8,7 +8,6 @@ import (
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	netv1 "k8s.io/api/networking/v1"
-	netv1beta1 "k8s.io/api/networking/v1beta1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1beta1"
@@ -34,10 +33,10 @@ func TestUpdateLoadBalancerIngress(t *testing.T) {
 					},
 				},
 			},
-			&netv1beta1.Ingress{
-				Status: netv1beta1.IngressStatus{
-					LoadBalancer: netv1beta1.IngressLoadBalancerStatus{
-						Ingress: []netv1beta1.IngressLoadBalancerIngress{
+			&netv1.Ingress{
+				Status: netv1.IngressStatus{
+					LoadBalancer: netv1.IngressLoadBalancerStatus{
+						Ingress: []netv1.IngressLoadBalancerIngress{
 							{
 								IP:       oldIP,
 								Hostname: oldHostname,

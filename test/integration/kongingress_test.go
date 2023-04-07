@@ -59,9 +59,7 @@ func TestKongIngressEssentials(t *testing.T) {
 	}()
 
 	t.Logf("routing to service %s via Ingress", service.Name)
-	kubernetesVersion, err := env.Cluster().Version()
-	require.NoError(t, err)
-	ingress := generators.NewIngressForServiceWithClusterVersion(kubernetesVersion, "/test_kongingress_essentials", map[string]string{
+	ingress := generators.NewIngressForService("/test_kongingress_essentials", map[string]string{
 		annotations.IngressClassKey: consts.IngressClass,
 		"konghq.com/strip-path":     "true",
 	}, service)

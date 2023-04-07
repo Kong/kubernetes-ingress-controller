@@ -8,7 +8,6 @@ import (
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	netv1 "k8s.io/api/networking/v1"
-	netv1beta1 "k8s.io/api/networking/v1beta1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -329,12 +328,4 @@ func servicesAllUseTheSameKongAnnotations(
 	}
 
 	return match
-}
-
-func v1beta1toV1TLS(tlsSections []netv1beta1.IngressTLS) []netv1.IngressTLS {
-	var v1 []netv1.IngressTLS
-	for _, item := range tlsSections {
-		v1 = append(v1, netv1.IngressTLS{Hosts: item.Hosts, SecretName: item.SecretName})
-	}
-	return v1
 }

@@ -12,7 +12,6 @@ import (
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	netv1 "k8s.io/api/networking/v1"
-	netv1beta1 "k8s.io/api/networking/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/uuid"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -168,11 +167,11 @@ func TestMergeIngressRules(t *testing.T) {
 	}
 }
 
-func TestAddFromIngressV1beta1TLS(t *testing.T) {
-	parentIngress := &netv1beta1.Ingress{ObjectMeta: metav1.ObjectMeta{Namespace: "foo"}}
+func TestAddFromIngressV1TLS(t *testing.T) {
+	parentIngress := &netv1.Ingress{ObjectMeta: metav1.ObjectMeta{Namespace: "foo"}}
 
 	type args struct {
-		tlsSections []netv1beta1.IngressTLS
+		tlsSections []netv1.IngressTLS
 	}
 	tests := []struct {
 		name string
@@ -182,7 +181,7 @@ func TestAddFromIngressV1beta1TLS(t *testing.T) {
 		{
 			name: "different secrets with no overlapping hosts",
 			args: args{
-				tlsSections: []netv1beta1.IngressTLS{
+				tlsSections: []netv1.IngressTLS{
 					{
 						Hosts: []string{
 							"1.example.com",
@@ -207,7 +206,7 @@ func TestAddFromIngressV1beta1TLS(t *testing.T) {
 		{
 			name: "different secrets with one overlapping host",
 			args: args{
-				tlsSections: []netv1beta1.IngressTLS{
+				tlsSections: []netv1.IngressTLS{
 					{
 						Hosts: []string{
 							"1.example.com",
@@ -233,7 +232,7 @@ func TestAddFromIngressV1beta1TLS(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			m := newSecretNameToSNIs()
-			m.addFromIngressV1TLS(v1beta1toV1TLS(tt.args.tlsSections), parentIngress)
+			m.addFromIngressV1TLS(tt.args.tlsSections, parentIngress)
 
 			for k, v := range tt.want {
 				assert.ElementsMatch(t, v.parents, m.Parents(k))

@@ -18,7 +18,6 @@ package store
 
 import (
 	"fmt"
-	"reflect"
 	"sort"
 	"strings"
 	"sync"
@@ -26,7 +25,6 @@ import (
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	netv1 "k8s.io/api/networking/v1"
-	netv1beta1 "k8s.io/api/networking/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured/unstructuredscheme"
 	"k8s.io/apimachinery/pkg/labels"
@@ -82,7 +80,6 @@ type Storer interface {
 	GetIngressClassParametersV1Alpha1(ingressClass *netv1.IngressClass) (*kongv1alpha1.IngressClassParameters, error)
 	GetGateway(namespace string, name string) (*gatewayv1beta1.Gateway, error)
 
-	ListIngressesV1beta1() []*netv1beta1.Ingress
 	ListIngressesV1() []*netv1.Ingress
 	ListIngressClassesV1() []*netv1.IngressClass
 	ListIngressClassParametersV1Alpha1() []*kongv1alpha1.IngressClassParameters
@@ -126,7 +123,6 @@ var _ Storer = Store{}
 // the Ingress Controller reads.
 type CacheStores struct {
 	// Core Kubernetes Stores
-	IngressV1beta1 cache.Store
 	IngressV1      cache.Store
 	IngressClassV1 cache.Store
 	Service        cache.Store
@@ -161,7 +157,6 @@ type CacheStores struct {
 func NewCacheStores() CacheStores {
 	return CacheStores{
 		// Core Kubernetes Stores
-		IngressV1beta1: cache.NewStore(keyFunc),
 		IngressV1:      cache.NewStore(keyFunc),
 		IngressClassV1: cache.NewStore(clusterResourceKeyFunc),
 		Service:        cache.NewStore(keyFunc),
@@ -241,8 +236,6 @@ func (c CacheStores) Get(obj runtime.Object) (item interface{}, exists bool, err
 	// ----------------------------------------------------------------------------
 	// Kubernetes Core API Support
 	// ----------------------------------------------------------------------------
-	case *netv1beta1.Ingress:
-		return c.IngressV1beta1.Get(obj)
 	case *netv1.Ingress:
 		return c.IngressV1.Get(obj)
 	case *netv1.IngressClass:
@@ -306,8 +299,6 @@ func (c CacheStores) Add(obj runtime.Object) error {
 	// ----------------------------------------------------------------------------
 	// Kubernetes Core API Support
 	// ----------------------------------------------------------------------------
-	case *netv1beta1.Ingress:
-		return c.IngressV1beta1.Add(obj)
 	case *netv1.Ingress:
 		return c.IngressV1.Add(obj)
 	case *netv1.IngressClass:
@@ -372,8 +363,6 @@ func (c CacheStores) Delete(obj runtime.Object) error {
 	// ----------------------------------------------------------------------------
 	// Kubernetes Core API Support
 	// ----------------------------------------------------------------------------
-	case *netv1beta1.Ingress:
-		return c.IngressV1beta1.Delete(obj)
 	case *netv1.Ingress:
 		return c.IngressV1.Delete(obj)
 	case *netv1.IngressClass:
@@ -548,24 +537,6 @@ func (s Store) ListIngressClassParametersV1Alpha1() []*kongv1alpha1.IngressClass
 	})
 
 	return classParams
-}
-
-// ListIngressesV1beta1 returns the list of Ingresses in the Ingress v1beta1 store.
-func (s Store) ListIngressesV1beta1() []*netv1beta1.Ingress {
-	// filter ingress rules
-	var ingresses []*netv1beta1.Ingress
-	for _, item := range s.stores.IngressV1beta1.List() {
-		ing := s.networkingIngressV1Beta1(item)
-		if !s.isValidIngressClass(&ing.ObjectMeta, annotations.IngressClassKey, s.ingressClassMatching) {
-			continue
-		}
-		ingresses = append(ingresses, ing)
-	}
-	sort.SliceStable(ingresses, func(i, j int) bool {
-		return strings.Compare(fmt.Sprintf("%s/%s", ingresses[i].Namespace, ingresses[i].Name),
-			fmt.Sprintf("%s/%s", ingresses[j].Namespace, ingresses[j].Name)) < 0
-	})
-	return ingresses
 }
 
 // ListHTTPRoutes returns the list of HTTPRoutes in the HTTPRoute cache store.
@@ -1000,17 +971,6 @@ func (s Store) ListCACerts() ([]*corev1.Secret, error) {
 		return nil, err
 	}
 	return secrets, nil
-}
-
-func (s Store) networkingIngressV1Beta1(obj interface{}) *netv1beta1.Ingress {
-	switch obj := obj.(type) {
-	case *netv1beta1.Ingress:
-		return obj
-
-	default:
-		s.logger.Errorf("cannot convert to networking v1beta1 Ingress: unsupported type: %v", reflect.TypeOf(obj))
-		return nil
-	}
 }
 
 // getIngressClassHandling returns annotations.ExactOrEmptyClassMatch if an IngressClass is the default class, or

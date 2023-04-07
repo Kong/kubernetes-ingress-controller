@@ -170,7 +170,6 @@ type KongConfigBuildingResult struct {
 func (p *Parser) BuildKongConfig() KongConfigBuildingResult {
 	// parse and merge all rules together from all Kubernetes API sources
 	ingressRules := mergeIngressRules(
-		p.ingressRulesFromIngressV1beta1(),
 		p.ingressRulesFromIngressV1(),
 		p.ingressRulesFromTCPIngressV1beta1(),
 		p.ingressRulesFromUDPIngressV1beta1(),

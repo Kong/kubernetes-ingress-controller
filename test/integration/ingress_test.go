@@ -21,7 +21,6 @@ import (
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	netv1 "k8s.io/api/networking/v1"
-	netv1beta1 "k8s.io/api/networking/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/util/retry"
 
@@ -63,14 +62,12 @@ func TestIngressEssentials(t *testing.T) {
 	cleaner.Add(service)
 
 	t.Logf("creating an ingress for service %s with ingress.class %s", service.Name, consts.IngressClass)
-	kubernetesVersion, err := env.Cluster().Version()
-	require.NoError(t, err)
-	ingress := generators.NewIngressForServiceWithClusterVersion(kubernetesVersion, "/test_ingress_essentials", map[string]string{
+	ingress := generators.NewIngressForService("/test_ingress_essentials", map[string]string{
 		annotations.IngressClassKey: consts.IngressClass,
 		"konghq.com/strip-path":     "true",
 	}, service)
 	require.NoError(t, clusters.DeployIngress(ctx, env.Cluster(), ns.Name, ingress))
-	helpers.AddIngressToCleaner(cleaner, ingress)
+	cleaner.Add(ingress)
 
 	t.Log("waiting for updated ingress status to include IP")
 	require.Eventually(t, func() bool {
@@ -102,59 +99,31 @@ func TestIngressEssentials(t *testing.T) {
 	}, ingressWait, waitTick)
 
 	t.Logf("removing the ingress.class annotation %q from ingress", consts.IngressClass)
-	switch obj := ingress.(type) {
-	case *netv1.Ingress:
-		err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
-			ingress, err := env.Cluster().Client().NetworkingV1().Ingresses(ns.Name).Get(ctx, obj.Name, metav1.GetOptions{})
-			if err != nil {
-				return err
-			}
-			delete(ingress.ObjectMeta.Annotations, annotations.IngressClassKey)
-			_, err = env.Cluster().Client().NetworkingV1().Ingresses(ns.Name).Update(ctx, ingress, metav1.UpdateOptions{})
+	err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		ingress, err := env.Cluster().Client().NetworkingV1().Ingresses(ns.Name).Get(ctx, ingress.Name, metav1.GetOptions{})
+		if err != nil {
 			return err
-		})
-		require.NoError(t, err)
-	case *netv1beta1.Ingress:
-		err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
-			ingress, err := env.Cluster().Client().NetworkingV1beta1().Ingresses(ns.Name).Get(ctx, obj.Name, metav1.GetOptions{})
-			if err != nil {
-				return err
-			}
-			delete(ingress.ObjectMeta.Annotations, annotations.IngressClassKey)
-			_, err = env.Cluster().Client().NetworkingV1beta1().Ingresses(ns.Name).Update(ctx, ingress, metav1.UpdateOptions{})
-			return err
-		})
-		require.NoError(t, err)
-	}
+		}
+		delete(ingress.ObjectMeta.Annotations, annotations.IngressClassKey)
+		_, err = env.Cluster().Client().NetworkingV1().Ingresses(ns.Name).Update(ctx, ingress, metav1.UpdateOptions{})
+		return err
+	})
+	require.NoError(t, err)
 
 	t.Logf("verifying that removing the ingress.class annotation %q from ingress causes routes to disconnect", consts.IngressClass)
 	helpers.EventuallyExpectHTTP404WithNoRoute(t, proxyURL, "/test_ingress_essentials", ingressWait, waitTick, nil)
 
 	t.Logf("putting the ingress.class annotation %q back on ingress", consts.IngressClass)
-	switch obj := ingress.(type) {
-	case *netv1.Ingress:
-		err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
-			ingress, err := env.Cluster().Client().NetworkingV1().Ingresses(ns.Name).Get(ctx, obj.Name, metav1.GetOptions{})
-			if err != nil {
-				return err
-			}
-			ingress.ObjectMeta.Annotations[annotations.IngressClassKey] = consts.IngressClass
-			_, err = env.Cluster().Client().NetworkingV1().Ingresses(ns.Name).Update(ctx, ingress, metav1.UpdateOptions{})
+	err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		ingress, err := env.Cluster().Client().NetworkingV1().Ingresses(ns.Name).Get(ctx, ingress.Name, metav1.GetOptions{})
+		if err != nil {
 			return err
-		})
-		require.NoError(t, err)
-	case *netv1beta1.Ingress:
-		err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
-			ingress, err := env.Cluster().Client().NetworkingV1beta1().Ingresses(ns.Name).Get(ctx, obj.Name, metav1.GetOptions{})
-			if err != nil {
-				return err
-			}
-			ingress.ObjectMeta.Annotations[annotations.IngressClassKey] = consts.IngressClass
-			_, err = env.Cluster().Client().NetworkingV1beta1().Ingresses(ns.Name).Update(ctx, ingress, metav1.UpdateOptions{})
-			return err
-		})
-		require.NoError(t, err)
-	}
+		}
+		ingress.ObjectMeta.Annotations[annotations.IngressClassKey] = consts.IngressClass
+		_, err = env.Cluster().Client().NetworkingV1().Ingresses(ns.Name).Update(ctx, ingress, metav1.UpdateOptions{})
+		return err
+	})
+	require.NoError(t, err)
 
 	t.Log("waiting for routes from Ingress to be operational after reintroducing ingress class annotation")
 	require.Eventually(t, func() bool {
@@ -203,15 +172,13 @@ func TestGRPCIngressEssentials(t *testing.T) {
 	cleaner.Add(service)
 
 	t.Logf("creating an ingress for service %s with ingress.class %s", service.Name, consts.IngressClass)
-	kubernetesVersion, err := env.Cluster().Version()
-	require.NoError(t, err)
-	ingress := generators.NewIngressForServiceWithClusterVersion(kubernetesVersion, "/", map[string]string{
+	ingress := generators.NewIngressForService("/", map[string]string{
 		annotations.IngressClassKey:                             consts.IngressClass,
 		annotations.AnnotationPrefix + annotations.ProtocolsKey: "grpc,grpcs",
 		annotations.AnnotationPrefix + annotations.StripPathKey: "false",
 	}, service)
 	require.NoError(t, clusters.DeployIngress(ctx, env.Cluster(), ns.Name, ingress))
-	helpers.AddIngressToCleaner(cleaner, ingress)
+	cleaner.Add(ingress)
 
 	t.Log("waiting for updated ingress status to include IP")
 	require.Eventually(t, func() bool {
@@ -259,17 +226,10 @@ func TestIngressClassNameSpec(t *testing.T) {
 	cleaner.Add(service)
 
 	t.Logf("creating an ingress for service %s with ingress.class %s", service.Name, consts.IngressClass)
-	kubernetesVersion, err := env.Cluster().Version()
-	require.NoError(t, err)
-	ingress := generators.NewIngressForServiceWithClusterVersion(kubernetesVersion, "/test_ingressclassname_spec/", map[string]string{"konghq.com/strip-path": "true"}, service)
-	switch obj := ingress.(type) {
-	case *netv1.Ingress:
-		obj.Spec.IngressClassName = kong.String(consts.IngressClass)
-	case *netv1beta1.Ingress:
-		obj.Spec.IngressClassName = kong.String(consts.IngressClass)
-	}
+	ingress := generators.NewIngressForService("/test_ingressclassname_spec/", map[string]string{"konghq.com/strip-path": "true"}, service)
+	ingress.Spec.IngressClassName = kong.String(consts.IngressClass)
 	require.NoError(t, clusters.DeployIngress(ctx, env.Cluster(), ns.Name, ingress))
-	helpers.AddIngressToCleaner(cleaner, ingress)
+	cleaner.Add(ingress)
 
 	t.Log("waiting for routes from Ingress to be operational")
 	defer func() {
@@ -362,14 +322,12 @@ func TestIngressNamespaces(t *testing.T) {
 	cleaner.Add(service)
 
 	t.Logf("creating an ingress for service %s with ingress.class %s", service.Name, consts.IngressClass)
-	kubernetesVersion, err := env.Cluster().Version()
-	require.NoError(t, err)
-	ingress := generators.NewIngressForServiceWithClusterVersion(kubernetesVersion, "/elsewhere", map[string]string{
+	ingress := generators.NewIngressForService("/elsewhere", map[string]string{
 		annotations.IngressClassKey: consts.IngressClass,
 		"konghq.com/strip-path":     "true",
 	}, service)
 	require.NoError(t, clusters.DeployIngress(ctx, env.Cluster(), ns.Name, ingress))
-	helpers.AddIngressToCleaner(cleaner, ingress)
+	cleaner.Add(ingress)
 
 	t.Log("waiting for routes from Ingress to be operational")
 	require.Eventually(t, func() bool {
@@ -490,7 +448,7 @@ func TestIngressStatusUpdatesExtended(t *testing.T) {
 		t.Logf("creating ingress %s and verifying status updates", ing.Name)
 		createdIngress, err := env.Cluster().Client().NetworkingV1().Ingresses(ns.Name).Create(ctx, ing, metav1.CreateOptions{})
 		require.NoError(t, err)
-		helpers.AddIngressToCleaner(cleaner, createdIngress)
+		cleaner.Add(createdIngress)
 	}
 
 	t.Log("verifying that an ingress with periods in the name has its status populated")

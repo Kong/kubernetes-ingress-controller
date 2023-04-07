@@ -20,7 +20,6 @@ import (
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	netv1 "k8s.io/api/networking/v1"
-	netv1beta1 "k8s.io/api/networking/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
@@ -157,15 +156,13 @@ func TestHTTPSRedirect(t *testing.T) {
 	cleaner.Add(service)
 
 	t.Logf("exposing Service %s via Ingress", service.Name)
-	kubernetesVersion, err := env.Cluster().Version()
-	require.NoError(t, err)
-	ingress := generators.NewIngressForServiceWithClusterVersion(kubernetesVersion, "/test_https_redirect", map[string]string{
+	ingress := generators.NewIngressForService("/test_https_redirect", map[string]string{
 		annotations.IngressClassKey:             consts.IngressClass,
 		"konghq.com/protocols":                  "https",
 		"konghq.com/https-redirect-status-code": "301",
 	}, service)
 	assert.NoError(t, clusters.DeployIngress(ctx, env.Cluster(), ns.Name, ingress))
-	helpers.AddIngressToCleaner(cleaner, ingress)
+	cleaner.Add(ingress)
 
 	t.Log("waiting for Ingress to be operational and properly redirect")
 	client := &http.Client{
@@ -228,34 +225,20 @@ func TestHTTPSIngress(t *testing.T) {
 	cleaner.Add(service)
 
 	t.Logf("creating an ingress for service %s with ingress.class %s", service.Name, consts.IngressClass)
-	kubernetesVersion, err := env.Cluster().Version()
-	require.NoError(t, err)
-	ingress1 := generators.NewIngressForServiceWithClusterVersion(kubernetesVersion, "/foo", map[string]string{
+	ingress1 := generators.NewIngressForService("/foo", map[string]string{
 		annotations.IngressClassKey: consts.IngressClass,
 		"konghq.com/strip-path":     "true",
 	}, service)
-	ingress2 := generators.NewIngressForServiceWithClusterVersion(kubernetesVersion, "/bar", map[string]string{
+	ingress2 := generators.NewIngressForService("/bar", map[string]string{
 		annotations.IngressClassKey: consts.IngressClass,
 		"konghq.com/strip-path":     "true",
 	}, service)
 
 	t.Log("configuring ingress tls spec")
-	switch obj := ingress1.(type) {
-	case *netv1.Ingress:
-		obj.Spec.TLS = []netv1.IngressTLS{{SecretName: "secret1", Hosts: []string{"foo.example"}}}
-		obj.ObjectMeta.Name = "ingress1"
-	case *netv1beta1.Ingress:
-		obj.Spec.TLS = []netv1beta1.IngressTLS{{SecretName: "secret1", Hosts: []string{"foo.example"}}}
-		obj.ObjectMeta.Name = "ingress1"
-	}
-	switch obj := ingress2.(type) {
-	case *netv1.Ingress:
-		obj.Spec.TLS = []netv1.IngressTLS{{SecretName: "secret2", Hosts: []string{"bar.example"}}}
-		obj.ObjectMeta.Name = "ingress2"
-	case *netv1beta1.Ingress:
-		obj.Spec.TLS = []netv1beta1.IngressTLS{{SecretName: "secret2", Hosts: []string{"bar.example"}}}
-		obj.ObjectMeta.Name = "ingress2"
-	}
+	ingress1.Spec.TLS = []netv1.IngressTLS{{SecretName: "secret1", Hosts: []string{"foo.example"}}}
+	ingress1.ObjectMeta.Name = "ingress1"
+	ingress2.Spec.TLS = []netv1.IngressTLS{{SecretName: "secret2", Hosts: []string{"bar.example"}}}
+	ingress2.ObjectMeta.Name = "ingress2"
 
 	t.Log("configuring secrets")
 	secrets := []*corev1.Secret{
@@ -289,7 +272,7 @@ func TestHTTPSIngress(t *testing.T) {
 	// so here we interleave the creating process of deploying 2 ingresses and secrets.
 	t.Log("deploying secrets and ingresses")
 	require.NoError(t, clusters.DeployIngress(ctx, env.Cluster(), ns.Name, ingress1))
-	helpers.AddIngressToCleaner(cleaner, ingress1)
+	cleaner.Add(ingress1)
 
 	secret1, err := env.Cluster().Client().CoreV1().Secrets(ns.Name).Create(ctx, secrets[0], metav1.CreateOptions{})
 	assert.NoError(t, err)
@@ -300,7 +283,7 @@ func TestHTTPSIngress(t *testing.T) {
 	cleaner.Add(secret2)
 
 	require.NoError(t, clusters.DeployIngress(ctx, env.Cluster(), ns.Name, ingress2))
-	helpers.AddIngressToCleaner(cleaner, ingress2)
+	cleaner.Add(ingress2)
 
 	t.Log("checking first ingress status readiness")
 	require.Eventually(t, func() bool {
@@ -389,20 +372,11 @@ func TestHTTPSIngress(t *testing.T) {
 		return false
 	}, ingressWait, waitTick)
 
-	switch obj := ingress2.(type) {
-	case *netv1.Ingress:
-		ingress2, err := env.Cluster().Client().NetworkingV1().Ingresses(ns.Name).Get(ctx, obj.Name, metav1.GetOptions{})
-		assert.NoError(t, err)
-		ingress2.ObjectMeta.Annotations["konghq.com/snis"] = "bar.example"
-		_, err = env.Cluster().Client().NetworkingV1().Ingresses(ns.Name).Update(ctx, ingress2, metav1.UpdateOptions{})
-		assert.NoError(t, err)
-	case *netv1beta1.Ingress:
-		ingress2, err := env.Cluster().Client().NetworkingV1beta1().Ingresses(ns.Name).Get(ctx, obj.Name, metav1.GetOptions{})
-		assert.NoError(t, err)
-		ingress2.ObjectMeta.Annotations["konghq.com/snis"] = "bar.example"
-		_, err = env.Cluster().Client().NetworkingV1beta1().Ingresses(ns.Name).Update(ctx, ingress2, metav1.UpdateOptions{})
-		assert.NoError(t, err)
-	}
+	ingress2, err = env.Cluster().Client().NetworkingV1().Ingresses(ns.Name).Get(ctx, ingress2.Name, metav1.GetOptions{})
+	assert.NoError(t, err)
+	ingress2.ObjectMeta.Annotations["konghq.com/snis"] = "bar.example"
+	_, err = env.Cluster().Client().NetworkingV1().Ingresses(ns.Name).Update(ctx, ingress2, metav1.UpdateOptions{})
+	assert.NoError(t, err)
 
 	t.Log("confirm Ingress no longer routes without matching SNI")
 	assert.Eventually(t, func() bool {

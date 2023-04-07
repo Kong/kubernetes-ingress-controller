@@ -6,7 +6,6 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	netv1 "k8s.io/api/networking/v1"
-	netv1beta1 "k8s.io/api/networking/v1beta1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1beta1"
@@ -36,25 +35,11 @@ func UpdateLoadBalancerIngress(
 		obj.Status.LoadBalancer.Ingress = netV1ToCoreV1LoadBalancerIngress(newAddresses)
 	case *kongv1beta1.UDPIngress:
 		obj.Status.LoadBalancer.Ingress = netV1ToCoreV1LoadBalancerIngress(newAddresses)
-	case *netv1beta1.Ingress:
-		obj.Status.LoadBalancer.Ingress = netV1ToV1beta1LoadBalancerIngress(newAddresses)
 	default:
 		return false, fmt.Errorf("unsupported ingress type: %T", obj)
 	}
 
 	return true, nil
-}
-
-func netV1ToV1beta1LoadBalancerIngress(in []netv1.IngressLoadBalancerIngress) []netv1beta1.IngressLoadBalancerIngress {
-	out := make([]netv1beta1.IngressLoadBalancerIngress, 0, len(in))
-	for _, i := range in {
-		out = append(out, netv1beta1.IngressLoadBalancerIngress{
-			IP:       i.IP,
-			Hostname: i.Hostname,
-			// consciously omitting ports as we do not populate them
-		})
-	}
-	return out
 }
 
 func netV1ToCoreV1LoadBalancerIngress(in []netv1.IngressLoadBalancerIngress) []corev1.LoadBalancerIngress {
@@ -77,23 +62,9 @@ func ingressToNetV1LoadBalancerIngressStatus(in any) ([]netv1.IngressLoadBalance
 		return coreV1ToNetV1LoadBalancerIngress(obj.Status.LoadBalancer.Ingress), nil
 	case *kongv1beta1.UDPIngress:
 		return coreV1ToNetV1LoadBalancerIngress(obj.Status.LoadBalancer.Ingress), nil
-	case *netv1beta1.Ingress:
-		return v1beta1ToNetV1LoadBalancerIngress(obj.Status.LoadBalancer.Ingress), nil
 	default:
 		return nil, fmt.Errorf("unsupported ingress type: %T", obj)
 	}
-}
-
-func v1beta1ToNetV1LoadBalancerIngress(in []netv1beta1.IngressLoadBalancerIngress) []netv1.IngressLoadBalancerIngress {
-	out := make([]netv1.IngressLoadBalancerIngress, 0, len(in))
-	for _, i := range in {
-		out = append(out, netv1.IngressLoadBalancerIngress{
-			IP:       i.IP,
-			Hostname: i.Hostname,
-			// consciously omitting ports as we do not populate them
-		})
-	}
-	return out
 }
 
 func coreV1ToNetV1LoadBalancerIngress(in []corev1.LoadBalancerIngress) []netv1.IngressLoadBalancerIngress {

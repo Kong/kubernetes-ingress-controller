@@ -25,6 +25,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/parser"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/sendconfig"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/license"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/metrics"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
@@ -136,6 +137,9 @@ type KongClient struct {
 
 	// configChangeDetector detects changes in the configuration.
 	configChangeDetector sendconfig.ConfigurationChangeDetector
+
+	// licenseAgent manages Konnect license retrieval.
+	licenseAgent *license.Agent
 }
 
 // NewKongClient provides a new KongClient object after connecting to the
@@ -370,6 +374,10 @@ func (c *KongClient) AreCombinedServiceRoutesEnabled() bool {
 	return c.enableCombinedServiceRoutes
 }
 
+func (c *KongClient) EnableLicenseAgent(agent *license.Agent) {
+	c.licenseAgent = agent
+}
+
 // -----------------------------------------------------------------------------
 // Dataplane Client - Kong - Interface Implementation
 // -----------------------------------------------------------------------------
@@ -404,6 +412,9 @@ func (c *KongClient) Update(ctx context.Context) error {
 	}
 	if c.AreCombinedServiceRoutesEnabled() {
 		p.EnableCombinedServiceRoutes()
+	}
+	if c.licenseAgent != nil {
+		p.InjectLicense(c.licenseAgent.GetLicense())
 	}
 	formatVersion := "1.1"
 	if versions.GetKongVersion().MajorMinorOnly().GTE(versions.ExplicitRegexPathVersionCutoff) {

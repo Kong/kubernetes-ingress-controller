@@ -254,6 +254,9 @@ func generateAddressFinderGetter(mgrc client.Client, publishServiceNn types.Name
 	}
 }
 
+func setupLicenseAgent(c *Config) {
+}
+
 // adminAPIClients returns the kong clients given the config.
 // When a list of URLs is provided via --kong-admin-url then those are used
 // to create the list of clients.

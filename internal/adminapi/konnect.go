@@ -17,6 +17,10 @@ import (
 )
 
 type KonnectConfig struct {
+	// TODO ConfigSynchronizationEnabled is the only toggle we have at present
+	// we do not want to require a separate license toggle. it should be always or at least default on
+	// if Konnect is enabled at all. do we want to allow konnect enabled _without_ config sync? should
+	// that be a separate toggle from an umbrella "enable konnect" toggle?
 	ConfigSynchronizationEnabled bool
 	RuntimeGroupID               string
 	Address                      string

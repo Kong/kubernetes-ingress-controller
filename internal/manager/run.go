@@ -22,6 +22,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/sendconfig"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/konnect"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/license"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/manager/featuregates"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/manager/metadata"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/manager/telemetry"
@@ -208,6 +209,16 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 		); err != nil {
 			setupLog.Error(err, "Failed to setup Konnect NodeAgent with manager, skipping")
 		}
+	}
+
+	// TODO see internal/adminapi/konnect.go this is piggybacking off the existing konnect toggle for something else
+	// we need to figure out how the toggles will work. It does need to come after we get the client, since this
+	// requires that client. currently we only get the client if c.Konnect.ConfigSynchronizationEnabled is set
+	// we also need that client to be ready before we call Start
+	if c.Konnect.ConfigSynchronizationEnabled {
+		agent := license.NewLicenseAgent(ctx, time.Hour*12, "https://example.com")
+		mgr.Add(agent)
+		dataplaneClient.EnableLicenseAgent(agent)
 	}
 
 	if c.AnonymousReports {

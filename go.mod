@@ -2,8 +2,14 @@ module github.com/kong/kubernetes-ingress-controller/v2
 
 go 1.20
 
-// TODO: https://github.com/Kong/kubernetes-ingress-controller/issues/2953
-exclude sigs.k8s.io/gateway-api v0.6.2
+exclude (
+	github.com/kong/go-kong v0.39.1
+	github.com/kong/go-kong v0.39.2
+	github.com/kong/go-kong v0.40.0
+
+	// TODO: https://github.com/Kong/kubernetes-ingress-controller/issues/2953
+	sigs.k8s.io/gateway-api v0.6.2
+)
 
 require (
 	cloud.google.com/go/container v1.15.0
@@ -16,7 +22,7 @@ require (
 	github.com/google/go-cmp v0.5.9
 	github.com/google/uuid v1.3.0
 	github.com/kong/deck v1.19.1
-	github.com/kong/go-kong v0.40.0
+	github.com/kong/go-kong v0.39.0
 	github.com/kong/kubernetes-telemetry v0.0.2
 	github.com/kong/kubernetes-testing-framework v0.30.1
 	github.com/lithammer/dedent v1.1.0

@@ -88,6 +88,31 @@ func TestKonnectWhenMisconfiguredBasicIngressNotAffected(t *testing.T) {
 	verifyIngress(ctx, t, env)
 }
 
+func TestKonnectLicensePull(t *testing.T) {
+	t.Parallel()
+	// TODO enable for real API
+	//skipIfMissingRequiredKonnectEnvVariables(t)
+
+	ctx, env := setupE2ETest(t)
+
+	// TODO enable for real API
+	//cert, key := createClientCertificate(ctx, t, rgID)
+	//createKonnectClientSecretAndConfigMap(ctx, t, env, cert, key, rgID)
+
+	deployAllInOneKonnectManifest(ctx, t, env)
+
+	t.Log("running ingress tests to verify all-in-one deployed ingress controller and proxy are functional")
+	deployIngress(ctx, t, env)
+	verifyIngress(ctx, t, env)
+
+	// TODO maybe keep this to verify that the license matches, but probably not
+	//konnectAdminAPIClient := createKonnectAdminAPIClient(t, rgID, cert, key)
+	//requireIngressConfiguredInAdminAPIEventually(ctx, t, konnectAdminAPIClient.AdminAPIClient())
+
+	t.Log("ensuring KIC nodes and controlled kong gateway nodes are present in konnect runtime group")
+	requireKonnectNodesConsistentWithK8s(ctx, t, env, rgID, cert, key)
+}
+
 func skipIfMissingRequiredKonnectEnvVariables(t *testing.T) {
 	if konnectAccessToken == "" {
 		t.Skip("missing TEST_KONG_KONNECT_ACCESS_TOKEN")

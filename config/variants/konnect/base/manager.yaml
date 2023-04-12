@@ -17,6 +17,8 @@ spec:
         env:
           - name: CONTROLLER_KONNECT_SYNC_ENABLED
             value: "true"
+          - name: CONTROLLER_KONNECT_LICENSING_ENABLED
+            value: "true"
           - name: CONTROLLER_KONNECT_TLS_CLIENT_CERT
             valueFrom:
               secretKeyRef:

@@ -25,13 +25,18 @@ func NewLicenseAgent(ctx context.Context, period time.Duration, url string) *Age
 }
 
 // TODO there's a decent chance that Koko license is 100% compatible with the Kong license entity. we may be able to
-// just alias go-kong License here.
+// just alias go-kong License here. However, we still need the Items wrapper because the admin API represents them as
+// an array.
+
+type LicenseCollection struct {
+	Items []License `json:"items"`
+}
 
 // License represents the response body of the upstream license API
 type License struct {
-	License   string    `json:"payload,omitempty"`
-	UpdatedAt time.Time `json:"updated_at,omitempty"` // TODO these will be unix timestamps, which do not natively unmarshal
-	CreatedAt time.Time `json:"created_at,omitempty"` // need either a custom unmarshal or handle it downstream
+	License   string `json:"payload,omitempty"`
+	UpdatedAt uint64 `json:"updated_at,omitempty"`
+	CreatedAt uint64 `json:"created_at,omitempty"`
 }
 
 // Agent handles retrieving a Kong license and providing it to other KIC subsystems.
@@ -98,12 +103,18 @@ func (a *Agent) UpdateLicense(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	var license License
-	err = json.Unmarshal(body, &license)
+	var licenses LicenseCollection
+	err = json.Unmarshal(body, &licenses)
 	if err != nil {
 		return err
 	}
-	if license.UpdatedAt.After(a.license.UpdatedAt) {
+	// TODO this is proposed as an array because it's a Kong entity collection, even though we only expect to have
+	// exactly one license. this is manageable, but a bit messy
+	if len(licenses.Items) == 0 {
+		return fmt.Errorf("received empty license response")
+	}
+	license := licenses.Items[0]
+	if license.UpdatedAt > a.license.UpdatedAt {
 		a.mutex.Lock()
 		defer a.mutex.Unlock()
 		a.license = license

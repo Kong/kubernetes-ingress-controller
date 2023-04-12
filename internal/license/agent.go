@@ -3,8 +3,10 @@ package license
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -18,13 +20,18 @@ func NewLicenseAgent(ctx context.Context, period time.Duration, url string) *Age
 		client:      client,
 		upstreamURL: url,
 		ticker:      time.NewTicker(period),
+		mutex:       sync.RWMutex{},
 	}
 }
 
+// TODO there's a decent chance that Koko license is 100% compatible with the Kong license entity. we may be able to
+// just alias go-kong License here.
+
 // License represents the response body of the upstream license API
 type License struct {
-	License string    `json:"license,omitempty"`
-	Updated time.Time `json:"updated,omitempty"`
+	License   string    `json:"payload,omitempty"`
+	UpdatedAt time.Time `json:"updated_at,omitempty"` // TODO these will be unix timestamps, which do not natively unmarshal
+	CreatedAt time.Time `json:"created_at,omitempty"` // need either a custom unmarshal or handle it downstream
 }
 
 // Agent handles retrieving a Kong license and providing it to other KIC subsystems.
@@ -34,6 +41,7 @@ type Agent struct {
 	client      http.Client // TODO this needs to be a Konnect client eventually
 	upstreamURL string
 	ticker      *time.Ticker
+	mutex       sync.RWMutex
 }
 
 // NeedLeaderElection indicates if the Agent requires leadership to run. It always returns true.
@@ -51,7 +59,7 @@ func (a *Agent) Start(ctx context.Context) error {
 		a.logger.WithError(err).Errorf("could not retrieve license from upstream")
 		err := a.UpdateLicenseFromCache(ctx)
 		if err != nil {
-			return err
+			a.logger.WithError(err).Errorf("could not retrieve license from local cache")
 		}
 	}
 	go a.Run(ctx)
@@ -95,7 +103,9 @@ func (a *Agent) UpdateLicense(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	if license.Updated.After(a.license.Updated) {
+	if license.UpdatedAt.After(a.license.UpdatedAt) {
+		a.mutex.Lock()
+		defer a.mutex.Unlock()
 		a.license = license
 
 		err = persistLicense(license.License)
@@ -109,11 +119,13 @@ func (a *Agent) UpdateLicense(ctx context.Context) error {
 // UpdateLicenseFromCache retrieves a license from a local cache.
 func (a *Agent) UpdateLicenseFromCache(ctx context.Context) error {
 	// TODO make this not a stub
-	return nil
+	return fmt.Errorf("not implemented")
 }
 
 // GetLicense returns the agent's current license.
 func (a *Agent) GetLicense() string {
+	a.mutex.RLock()
+	defer a.mutex.RUnlock()
 	return a.license.License
 }
 

@@ -240,6 +240,9 @@ func (c *Config) FlagSet() *pflag.FlagSet {
 
 	// Konnect
 	flagSet.BoolVar(&c.Konnect.ConfigSynchronizationEnabled, "konnect-sync-enabled", false, "Enable synchronization of data plane configuration with a Konnect runtime group.")
+	// TODO we expect this to probably be folded into a general-purpose "Konnect-enabled" flag as an always-on default. for initial rollout we may want to offer static non-Konnect licenses as an
+	// alternative. Needs a proper product issue, as well as research to confirm behavior when you load a license from environment but then also apply one via the API.
+	flagSet.BoolVar(&c.Konnect.LicenseSynchronizationEnabled, "konnect-licensing-enabled", false, "Retrieve licenses from Konnect if available. Overrides licenses provided via the environment.")
 	flagSet.StringVar(&c.Konnect.RuntimeGroupID, "konnect-runtime-group-id", "", "An ID of a runtime group that is to be synchronized with data plane configuration.")
 	flagSet.StringVar(&c.Konnect.Address, "konnect-address", "https://us.kic.api.konghq.com", "Base address of Konnect API.")
 	flagSet.StringVar(&c.Konnect.TLSClient.Cert, "konnect-tls-client-cert", "", "Konnect TLS client certificate.")

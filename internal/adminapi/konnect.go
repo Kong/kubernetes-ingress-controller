@@ -21,11 +21,12 @@ type KonnectConfig struct {
 	// we do not want to require a separate license toggle. it should be always or at least default on
 	// if Konnect is enabled at all. do we want to allow konnect enabled _without_ config sync? should
 	// that be a separate toggle from an umbrella "enable konnect" toggle?
-	ConfigSynchronizationEnabled bool
-	RuntimeGroupID               string
-	Address                      string
-	RefreshNodePeriod            time.Duration
-	TLSClient                    TLSClientConfig
+	ConfigSynchronizationEnabled  bool
+	LicenseSynchronizationEnabled bool
+	RuntimeGroupID                string
+	Address                       string
+	RefreshNodePeriod             time.Duration
+	TLSClient                     TLSClientConfig
 }
 
 func NewKongClientForKonnectRuntimeGroup(c KonnectConfig) (*Client, error) {

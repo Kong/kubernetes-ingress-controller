@@ -211,11 +211,11 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 		}
 	}
 
-	// TODO see internal/adminapi/konnect.go this is piggybacking off the existing konnect toggle for something else
-	// we need to figure out how the toggles will work. It does need to come after we get the client, since this
-	// requires that client. currently we only get the client if c.Konnect.ConfigSynchronizationEnabled is set
-	// we also need that client to be ready before we call Start
-	if c.Konnect.ConfigSynchronizationEnabled {
+	// TODO This requires the Konnect client, which currently requires c.Konnect.ConfigSynchronizationEnabled also.
+	// We need to figure out exactly how that config surface works. Initial direction says add a separate toggle, but
+	// we probably want to avoid that long term. If we do have separate toggles, we need an AND condition that sets up
+	// the client and makes it available to all Konnect-related subsystems.
+	if c.Konnect.LicenseSynchronizationEnabled {
 		agent := license.NewLicenseAgent(ctx, time.Hour*12, "https://example.com")
 		mgr.Add(agent)
 		dataplaneClient.EnableLicenseAgent(agent)

@@ -136,6 +136,7 @@ func (p *Parser) Build() (*kongstate.KongState, []failures.ResourceFailure) {
 			{
 				// TODO generate an ID? arguably the static one is fine if we only have one
 				// not sure if changing license IDs has any effect
+				// we may be able to get one from upstream.
 				ID:      kong.String("ed34890a-5726-4305-8a07-902a4af3ae99"),
 				Payload: kong.String(p.license),
 			},

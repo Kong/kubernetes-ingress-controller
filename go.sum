@@ -111,6 +111,8 @@ github.com/armon/go-metrics v0.0.0-20180917152333-f0300d1749da/go.mod h1:Q73ZrmV
 github.com/armon/go-radix v0.0.0-20180808171621-7fddfc383310/go.mod h1:ufUuZ+zHj4x4TnLV4JWEpy2hxWSpsRywHrMgIH9cCH8=
 github.com/armon/go-socks5 v0.0.0-20160902184237-e75332964ef5 h1:0CwZNZbxp69SHPdPJAN/hZIm0C4OItdklCFmMRWYpio=
 github.com/asaskevich/govalidator v0.0.0-20190424111038-f61b66f89f4a/go.mod h1:lB+ZfQJz7igIIfQNfa7Ml4HSf2uFQQRzpGGRXenZAgY=
+github.com/astoycos/kubernetes-testing-framework v0.0.0-20230322131517-9861d533cdf6 h1:QipGhqpibq2w9ybpq2qcDNtFsqjMAs6YTqcjL281oFQ=
+github.com/astoycos/kubernetes-testing-framework v0.0.0-20230322131517-9861d533cdf6/go.mod h1:6dEQ2SC/P0c/KG6kWSEjmq0rlkfil3dotrTOy97Qq3Y=
 github.com/avast/retry-go/v4 v4.3.3 h1:G56Bp6mU0b5HE1SkaoVjscZjlQb0oy4mezwY/cGH19w=
 github.com/avast/retry-go/v4 v4.3.3/go.mod h1:rg6XFaiuFYII0Xu3RDbZQkxCofFwruZKW8oEF1jpWiU=
 github.com/benbjohnson/clock v1.0.3/go.mod h1:bGMdMPoPVvcYyt1gHDf4J2KE153Yf9BuiUKYMaxlTDM=
@@ -510,8 +512,6 @@ github.com/kong/go-kong v0.40.0 h1:6rd70L4GbPz90j3ey+wjHd4aC21uFgbqsoASJhbcbdU=
 github.com/kong/go-kong v0.40.0/go.mod h1:t3siZEEGBB3FA5EQv9CL5EcaiogPTG0A175VQ6KvEHE=
 github.com/kong/kubernetes-telemetry v0.0.2 h1:ZLoctQzvo0onCxbMgFMGsIGu6qAXWaMrd4o5Rv//C68=
 github.com/kong/kubernetes-telemetry v0.0.2/go.mod h1:lOeCASSR93hssoiOI2HUHoMFLffo/4lLsk74pIqMcyo=
-github.com/kong/kubernetes-testing-framework v0.30.1 h1:FZCThCgf2xOi/pUbSzd5hW1ghUnZYihmvy9a3DHMRAE=
-github.com/kong/kubernetes-testing-framework v0.30.1/go.mod h1:gnq+/PEPMXqH1lc1/tR4O9goQ3P2pR0T9llthQYebGQ=
 github.com/kong/semver/v4 v4.0.1 h1:DIcNR8W3gfx0KabFBADPalxxsp+q/5COwIFkkhrFQ2Y=
 github.com/kong/semver/v4 v4.0.1/go.mod h1:LImQ0oT15pJvSns/hs2laLca2zcYoHu5EsSNY0J6/QA=
 github.com/konsorten/go-windows-terminal-sequences v1.0.1/go.mod h1:T0+1ngSBFLxvqU3pZ+m/2kptfBszLMUkC4ZK/EgS/cQ=

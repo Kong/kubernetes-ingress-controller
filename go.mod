@@ -5,6 +5,8 @@ go 1.20
 // TODO: https://github.com/Kong/kubernetes-ingress-controller/issues/2953
 exclude sigs.k8s.io/gateway-api v0.6.2
 
+replace github.com/kong/kubernetes-testing-framework v0.30.1 => github.com/astoycos/kubernetes-testing-framework v0.0.0-20230322131517-9861d533cdf6
+
 require (
 	cloud.google.com/go/container v1.15.0
 	github.com/Masterminds/sprig/v3 v3.2.3

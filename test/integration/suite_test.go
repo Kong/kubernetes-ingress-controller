@@ -9,6 +9,7 @@ import (
 	"os"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/blang/semver/v4"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
@@ -127,6 +128,11 @@ func TestMain(m *testing.M) {
 
 	exitOnErr(ctx, DeployAddonsForCluster(ctx, env.Cluster()))
 	fmt.Printf("INFO: waiting for cluster %s and all addons to become ready\n", env.Cluster().Name())
+	go func() {
+		time.Sleep(time.Minute * 10)
+		output, _ := env.Cluster().DumpDiagnostics(ctx, "suite")
+		fmt.Printf("%s failed, dumped diagnostics to %s", "suite", output)
+	}()
 	exitOnErr(ctx, <-env.WaitForReady(ctx))
 
 	fmt.Println("INFO: collecting urls from the kong proxy deployment")

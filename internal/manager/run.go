@@ -18,6 +18,7 @@ import (
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/adminapi"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/clients"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/gateway"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/sendconfig"
@@ -109,7 +110,7 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 	setupLog.Info("Initializing Dataplane Client")
 	eventRecorder := mgr.GetEventRecorderFor(KongClientEventRecorderComponentName)
 
-	clientsManager, err := dataplane.NewAdminAPIClientsManager(
+	clientsManager, err := clients.NewAdminAPIClientsManager(
 		ctx,
 		deprecatedLogger,
 		initialKongClients,
@@ -191,6 +192,14 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 	setupLog.Info("Add readiness probe to health server")
 	healthServer.setReadyzCheck(readyzHandler(mgr, synchronizer))
 
+	var konnectAPIClient *konnect.NodeAPIClient
+	if c.Konnect.ConfigSynchronizationEnabled || c.Konnect.LicenseSynchronizationEnabled {
+		konnectAPIClient, err = konnect.NewNodeAPIClient(c.Konnect)
+		if err != nil {
+			return fmt.Errorf("failed creating konnect client: %w", err)
+		}
+	}
+
 	if c.Konnect.ConfigSynchronizationEnabled {
 		// In case of failures when building Konnect related objects, we're not returning errors as Konnect is not
 		// considered critical feature, and it should not break the basic functionality of the controller.
@@ -203,6 +212,7 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 		if err := setupKonnectNodeAgentWithMgr(
 			c,
 			mgr,
+			konnectAPIClient,
 			dataplaneClient,
 			clientsManager,
 			setupLog,
@@ -216,8 +226,11 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 	// we probably want to avoid that long term. If we do have separate toggles, we need an AND condition that sets up
 	// the client and makes it available to all Konnect-related subsystems.
 	if c.Konnect.LicenseSynchronizationEnabled {
-		agent := license.NewLicenseAgent(ctx, time.Hour*12, "https://example.com")
-		mgr.Add(agent)
+		agent := license.NewLicenseAgent(time.Hour*12, "https://example.com", konnectAPIClient)
+		err := mgr.Add(agent)
+		if err != nil {
+			return fmt.Errorf("could not add license agent to manager: %w", err)
+		}
 		dataplaneClient.EnableLicenseAgent(agent)
 	}
 
@@ -253,14 +266,11 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 func setupKonnectNodeAgentWithMgr(
 	c *Config,
 	mgr manager.Manager,
+	konnectAPIClient *konnect.NodeAPIClient,
 	dataplaneClient *dataplane.KongClient,
-	clientsManager *dataplane.AdminAPIClientsManager,
+	clientsManager *clients.AdminAPIClientsManager,
 	logger logr.Logger,
 ) error {
-	konnectNodeAPIClient, err := konnect.NewNodeAPIClient(c.Konnect)
-	if err != nil {
-		return fmt.Errorf("failed creating konnect client: %w", err)
-	}
 	var hostname string
 	nn, err := util.GetPodNN()
 	if err != nil {
@@ -273,7 +283,7 @@ func setupKonnectNodeAgentWithMgr(
 	version := metadata.Release
 
 	// Set channel to send config status.
-	configStatusNotifier := dataplane.NewChannelConfigNotifier(logger)
+	configStatusNotifier := clients.NewChannelConfigNotifier(logger)
 	dataplaneClient.SetConfigStatusNotifier(configStatusNotifier)
 
 	agent := konnect.NewNodeAgent(
@@ -281,7 +291,7 @@ func setupKonnectNodeAgentWithMgr(
 		version,
 		c.Konnect.RefreshNodePeriod,
 		logger,
-		konnectNodeAPIClient,
+		konnectAPIClient,
 		configStatusNotifier,
 		konnect.NewGatewayClientGetter(logger, clientsManager),
 		clientsManager,
@@ -297,7 +307,7 @@ func setupKonnectNodeAgentWithMgr(
 func setupKonnectAdminAPIClientWithClientsMgr(
 	ctx context.Context,
 	config adminapi.KonnectConfig,
-	clientsManager *dataplane.AdminAPIClientsManager,
+	clientsManager *clients.AdminAPIClientsManager,
 	logger logr.Logger,
 ) {
 	konnectAdminAPIClient, err := adminapi.NewKongClientForKonnectRuntimeGroup(config)

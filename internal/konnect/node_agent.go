@@ -10,7 +10,7 @@ import (
 
 	"github.com/go-logr/logr"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/clients"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 )
 
@@ -47,7 +47,7 @@ type NodeAgent struct {
 	refreshPeriod time.Duration
 
 	configStatus           atomic.Uint32
-	configStatusSubscriber dataplane.ConfigStatusSubscriber
+	configStatusSubscriber clients.ConfigStatusSubscriber
 
 	gatewayInstanceGetter         GatewayInstanceGetter
 	gatewayClientsChangesNotifier GatewayClientsChangesNotifier
@@ -61,7 +61,7 @@ func NewNodeAgent(
 	refreshPeriod time.Duration,
 	logger logr.Logger,
 	client *NodeAPIClient,
-	configStatusSubscriber dataplane.ConfigStatusSubscriber,
+	configStatusSubscriber clients.ConfigStatusSubscriber,
 	gatewayGetter GatewayInstanceGetter,
 	gatewayClientsChangesNotifier GatewayClientsChangesNotifier,
 ) *NodeAgent {
@@ -79,7 +79,7 @@ func NewNodeAgent(
 		gatewayInstanceGetter:         gatewayGetter,
 		gatewayClientsChangesNotifier: gatewayClientsChangesNotifier,
 	}
-	a.configStatus.Store(uint32(dataplane.ConfigStatusOK))
+	a.configStatus.Store(uint32(clients.ConfigStatusOK))
 	return a
 }
 
@@ -180,12 +180,12 @@ func (a *NodeAgent) updateKICNode(ctx context.Context, existingNodes []*NodeItem
 
 	var ingressControllerStatus IngressControllerState
 	configStatus := int(a.configStatus.Load())
-	switch dataplane.ConfigStatus(configStatus) {
-	case dataplane.ConfigStatusOK:
+	switch clients.ConfigStatus(configStatus) {
+	case clients.ConfigStatusOK:
 		ingressControllerStatus = IngressControllerStateOperational
-	case dataplane.ConfigStatusTranslationErrorHappened:
+	case clients.ConfigStatusTranslationErrorHappened:
 		ingressControllerStatus = IngressControllerStatePartialConfigFail
-	case dataplane.ConfigStatusApplyFailed:
+	case clients.ConfigStatusApplyFailed:
 		ingressControllerStatus = IngressControllerStateInoperable
 	default:
 		ingressControllerStatus = IngressControllerStateUnknown
@@ -363,13 +363,13 @@ func (a *NodeAgent) updateNodeLoop(ctx context.Context) {
 // GatewayClientGetter gets gateway instances from admin API clients.
 type GatewayClientGetter struct {
 	logger          logr.Logger
-	clientsProvider dataplane.AdminAPIClientsProvider
+	clientsProvider clients.AdminAPIClientsProvider
 }
 
 var _ GatewayInstanceGetter = &GatewayClientGetter{}
 
 // NewGatewayClientGetter creates a GatewayClientGetter to get gateway instances from client provider.
-func NewGatewayClientGetter(logger logr.Logger, clientsProvider dataplane.AdminAPIClientsProvider) *GatewayClientGetter {
+func NewGatewayClientGetter(logger logr.Logger, clientsProvider clients.AdminAPIClientsProvider) *GatewayClientGetter {
 	return &GatewayClientGetter{
 		logger:          logger.WithName("gateway-admin-api-getter"),
 		clientsProvider: clientsProvider,

@@ -10,17 +10,24 @@ import (
 	"time"
 
 	"github.com/sirupsen/logrus"
+
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/konnect"
 )
 
 // NewLicenseAgent creates a new license agent that retrieves a license from the given url once every given period.
-func NewLicenseAgent(ctx context.Context, period time.Duration, url string) *Agent {
+func NewLicenseAgent(
+	period time.Duration,
+	url string,
+	konnectAPIClient *konnect.NodeAPIClient,
+) *Agent {
 	client := http.Client{} // TODO pass in a konnect client instead
 	return &Agent{
-		logger:      logrus.New(), // TODO figure out how we're supposed to actually create new loggers
-		client:      client,
-		upstreamURL: url,
-		ticker:      time.NewTicker(period),
-		mutex:       sync.RWMutex{},
+		logger:           logrus.New(), // TODO figure out how we're supposed to actually create new loggers
+		client:           client,
+		upstreamURL:      url,
+		ticker:           time.NewTicker(period),
+		mutex:            sync.RWMutex{},
+		konnectAPIClient: konnectAPIClient,
 	}
 }
 
@@ -32,7 +39,7 @@ type LicenseCollection struct {
 	Items []License `json:"items"`
 }
 
-// License represents the response body of the upstream license API
+// License represents the response body of the upstream license API.
 type License struct {
 	License   string `json:"payload,omitempty"`
 	UpdatedAt uint64 `json:"updated_at,omitempty"`
@@ -41,12 +48,13 @@ type License struct {
 
 // Agent handles retrieving a Kong license and providing it to other KIC subsystems.
 type Agent struct {
-	license     License // TODO maybe separate types
-	logger      logrus.FieldLogger
-	client      http.Client // TODO this needs to be a Konnect client eventually
-	upstreamURL string
-	ticker      *time.Ticker
-	mutex       sync.RWMutex
+	license          License // TODO maybe separate types
+	logger           logrus.FieldLogger
+	client           http.Client // TODO this needs to be a Konnect client eventually
+	upstreamURL      string
+	ticker           *time.Ticker
+	mutex            sync.RWMutex
+	konnectAPIClient *konnect.NodeAPIClient
 }
 
 // NeedLeaderElection indicates if the Agent requires leadership to run. It always returns true.
@@ -99,6 +107,7 @@ func (a *Agent) UpdateLicense(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+	defer response.Body.Close()
 	body, err := io.ReadAll(response.Body)
 	if err != nil {
 		return err

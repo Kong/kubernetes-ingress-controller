@@ -122,6 +122,10 @@ func TestMain(m *testing.M) {
 	clusterVersion, err = env.Cluster().Version()
 	exitOnErr(ctx, err)
 
+	defer func() {
+		output, _ := env.Cluster().DumpDiagnostics(ctx, "suite")
+		fmt.Printf("%s failed, dumped diagnostics to %s", "suite", output)
+	}()
 	exitOnErr(ctx, DeployAddonsForCluster(ctx, env.Cluster()))
 	fmt.Printf("INFO: waiting for cluster %s and all addons to become ready\n", env.Cluster().Name())
 	exitOnErr(ctx, <-env.WaitForReady(ctx))

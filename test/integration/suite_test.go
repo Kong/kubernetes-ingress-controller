@@ -30,6 +30,8 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/testenv"
 )
 
+var cluster clusters.Cluster
+
 // -----------------------------------------------------------------------------
 // Testing Main
 // -----------------------------------------------------------------------------
@@ -106,6 +108,7 @@ func TestMain(m *testing.M) {
 	env, err = builder.Build(ctx)
 	exitOnErr(ctx, err)
 
+	cluster = env.Cluster()
 	cleaner := clusters.NewCleaner(env.Cluster())
 	defer func() {
 		if err := cleaner.Cleanup(ctx); err != nil {
@@ -122,10 +125,6 @@ func TestMain(m *testing.M) {
 	clusterVersion, err = env.Cluster().Version()
 	exitOnErr(ctx, err)
 
-	defer func() {
-		output, _ := env.Cluster().DumpDiagnostics(ctx, "suite")
-		fmt.Printf("%s failed, dumped diagnostics to %s", "suite", output)
-	}()
 	exitOnErr(ctx, DeployAddonsForCluster(ctx, env.Cluster()))
 	fmt.Printf("INFO: waiting for cluster %s and all addons to become ready\n", env.Cluster().Name())
 	exitOnErr(ctx, <-env.WaitForReady(ctx))

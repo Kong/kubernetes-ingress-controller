@@ -52,6 +52,8 @@ func exitOnErrWithCode(ctx context.Context, err error, exitCode int) {
 	if err == nil {
 		return
 	}
+	output, _ := cluster.DumpDiagnostics(ctx, "suite")
+	fmt.Printf("%s failed, dumped diagnostics to %s", "suite", output)
 
 	fmt.Println("WARNING: failure occurred, performing test cleanup")
 	if env != nil && testenv.ExistingClusterName() == "" && testenv.KeepTestCluster() == "" {

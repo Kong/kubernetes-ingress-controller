@@ -280,7 +280,7 @@ container.debug:
 
 NCPU ?= $(shell getconf _NPROCESSORS_ONLN)
 PKG_LIST = ./pkg/...,./internal/...
-INTEGRATION_TEST_TIMEOUT ?= "45m"
+INTEGRATION_TEST_TIMEOUT ?= "20m"
 E2E_TEST_TIMEOUT ?= "45m"
 E2E_TEST_RUN ?= ""
 KONG_CONTROLLER_FEATURE_GATES ?= GatewayAlpha=true

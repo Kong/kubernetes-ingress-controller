@@ -64,7 +64,6 @@ func (i *ingressTranslationIndex) translateATC() []*kongstate.Service {
 }
 
 func (m *ingressTranslationMeta) translateIntoKongATCRoutes() *kongstate.Route {
-
 	routeName := fmt.Sprintf("%s.%s.%s.%s.%s",
 		m.parentIngress.GetNamespace(),
 		m.parentIngress.GetName(),
@@ -138,11 +137,10 @@ func atcPathMatchesFromIngressPath(httpIngressPath netv1.HTTPIngressPath, regexP
 			return []atc.MatchRulePath{
 				{Type: atc.PathMatchPrefix, Path: "/"},
 			}
-		} else {
-			return []atc.MatchRulePath{
-				{Type: atc.PathMatchPrefix, Path: "/" + base + "/"},
-				{Type: atc.PathMatchExact, Path: "/" + base},
-			}
+		}
+		return []atc.MatchRulePath{
+			{Type: atc.PathMatchPrefix, Path: "/" + base + "/"},
+			{Type: atc.PathMatchExact, Path: "/" + base},
 		}
 	case netv1.PathTypeExact:
 		relative := strings.TrimLeft(httpIngressPath.Path, "/")
@@ -159,7 +157,7 @@ func atcPathMatchesFromIngressPath(httpIngressPath netv1.HTTPIngressPath, regexP
 		// starts with specified regex prefix, translate to regex match on path.
 		if strings.HasPrefix(httpIngressPath.Path, regexPrefix) {
 			regexPath := strings.TrimPrefix(httpIngressPath.Path, regexPrefix)
-			// The existing regex path matches in Kong traditional/tranditional_compatible
+			// The existing regex path matches in Kong traditional/transitional_compatible
 			// applies on prefix of path, but Kong expressions router matches in any place.
 			// so we need to prepend a `^` if there is no existing one.
 			if !strings.HasPrefix(regexPath, "^") {
@@ -185,7 +183,6 @@ func atcPathMatchesFromIngressPath(httpIngressPath netv1.HTTPIngressPath, regexP
 }
 
 func overrideIngressMatchRulesByAnnotations(matchRules *atc.MatchRules, anns map[string]string) *atc.MatchRules {
-
 	// override protocols.
 	matchRules = overrideIngressMatchRuleProtocolsByAnnotation(matchRules, anns)
 	// override methods.
@@ -217,7 +214,6 @@ func overrideIngressMatchRuleProtocolsByAnnotation(matchRules *atc.MatchRules, a
 }
 
 func overrideIngressMatchRuleMethodsByAnnotation(matchRules *atc.MatchRules, anns map[string]string) *atc.MatchRules {
-
 	var methods []string
 	for _, method := range annotations.ExtractMethods(anns) {
 		sanitizedMethod := strings.TrimSpace(strings.ToUpper(method))

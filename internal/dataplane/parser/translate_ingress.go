@@ -221,22 +221,23 @@ func (p *Parser) ingressRulesFromIngressV1() ingressRules {
 		var objectSuccessfullyParsed bool
 
 		if p.featureEnabledCombinedServiceRoutes {
+			var kongStateServices []*kongstate.Service
 			if p.flagTranslateToATCRoutes {
 				p.logger.Info("translate ingresses to expression routes")
-				for _, kongStateService := range translators.TranslateIngressATC(ingress) {
-					result.ServiceNameToServices[*kongStateService.Service.Name] = *kongStateService
-					result.ServiceNameToParent[*kongStateService.Service.Name] = ingress
-					objectSuccessfullyParsed = true
-				}
-				continue
-			}
-			for _, kongStateService := range translators.TranslateIngress(ingress, p.flagEnabledRegexPathPrefix) {
-				for _, route := range kongStateService.Routes {
-					for i, path := range route.Paths {
-						newPath := maybePrependRegexPrefix(*path, regexPrefix, icp.EnableLegacyRegexDetection && p.flagEnabledRegexPathPrefix)
-						route.Paths[i] = &newPath
+				kongStateServices = translators.TranslateIngressATC(ingress)
+			} else {
+				kongStateServices = translators.TranslateIngress(ingress, p.flagEnabledRegexPathPrefix)
+				for _, kongStateService := range kongStateServices {
+					for _, route := range kongStateService.Routes {
+						for i, path := range route.Paths {
+							newPath := maybePrependRegexPrefix(*path, regexPrefix, icp.EnableLegacyRegexDetection && p.flagEnabledRegexPathPrefix)
+							route.Paths[i] = &newPath
+						}
 					}
 				}
+			}
+
+			for _, kongStateService := range kongStateServices {
 				result.ServiceNameToServices[*kongStateService.Service.Name] = *kongStateService
 				result.ServiceNameToParent[*kongStateService.Service.Name] = ingress
 				objectSuccessfullyParsed = true

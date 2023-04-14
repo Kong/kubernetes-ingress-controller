@@ -98,33 +98,38 @@ func (r *KongAdminAPIServiceReconciler) Reconcile(ctx context.Context, req ctrl.
 	var endpoints discoveryv1.EndpointSlice
 	if err := r.Get(ctx, req.NamespacedName, &endpoints); err != nil {
 		if apierrors.IsNotFound(err) {
+			// If we have an entry for this EndpointSlice...
+			if _, ok := r.Cache[req.NamespacedName]; ok {
+				// ... remove it and notify about the change.
+				delete(r.Cache, req.NamespacedName)
+				r.notify()
+			}
 			return ctrl.Result{}, nil
 		}
 		return ctrl.Result{}, err
 	}
-	r.Log.Info("reconciling EndpointSlice", "namespace", req.Namespace, "name", req.Name)
+	r.Log.Info("reconciling Admin API EndpointSlice", "namespace", req.Namespace, "name", req.Name)
 
-	nn := req.NamespacedName
 	if !endpoints.DeletionTimestamp.IsZero() {
 		r.Log.V(util.DebugLevel).Info("EndpointSlice is being deleted",
 			"type", "EndpointSlice", "namespace", req.Namespace, "name", req.Name,
 		)
 
 		// If we have an entry for this EndpointSlice...
-		if _, ok := r.Cache[nn]; ok {
+		if _, ok := r.Cache[req.NamespacedName]; ok {
 			// ... remove it and notify about the change.
-			delete(r.Cache, nn)
+			delete(r.Cache, req.NamespacedName)
 			r.notify()
 		}
 
 		return ctrl.Result{}, nil
 	}
 
-	cached, ok := r.Cache[nn]
+	cached, ok := r.Cache[req.NamespacedName]
 	if !ok {
 		// If we don't have an entry for this EndpointSlice then save it and notify
 		// about the change.
-		r.Cache[nn] = adminapi.AdminAPIsFromEndpointSlice(endpoints, r.PortNames)
+		r.Cache[req.NamespacedName] = adminapi.AdminAPIsFromEndpointSlice(endpoints, r.PortNames)
 		r.notify()
 		return ctrl.Result{}, nil
 	}
@@ -138,7 +143,7 @@ func (r *KongAdminAPIServiceReconciler) Reconcile(ctx context.Context, req ctrl.
 	}
 
 	// ... it's not the same. Store it and notify.
-	r.Cache[nn] = addresses
+	r.Cache[req.NamespacedName] = addresses
 	r.notify()
 
 	return ctrl.Result{}, nil

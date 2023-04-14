@@ -56,10 +56,9 @@ Features that reach GA and over time become stable will be removed from this tab
 
 | Feature                | Default | Stage | Since | Until |
 |------------------------|---------|-------|-------|-------|
-| Knative                | `true`  | Alpha | 0.8.0 | TBD   |
+| Knative                | `false` | Alpha | 0.8.0 | TBD   |
 | Gateway                | `true`  | Beta  | 2.2.0 | TBD   |
 | CombinedRoutes         | `true`  | Beta  | 2.8.0 | TBD   |
-| IngressClassParameters | `false` | Alpha | 2.6.0 | TBD   |
 | GatewayAlpha           | `false` | Alpha | 2.6.0 | TBD   |
 
 **NOTE**: The `Gateway` feature gate refers to [Gateway

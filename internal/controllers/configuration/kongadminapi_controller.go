@@ -98,47 +98,50 @@ func (r *KongAdminAPIServiceReconciler) Reconcile(ctx context.Context, req ctrl.
 	var endpoints discoveryv1.EndpointSlice
 	if err := r.Get(ctx, req.NamespacedName, &endpoints); err != nil {
 		if apierrors.IsNotFound(err) {
+			// If we have an entry for this EndpointSlice, remove it and notify about the change.
+			if _, ok := r.Cache[req.NamespacedName]; ok {
+				delete(r.Cache, req.NamespacedName)
+				r.notify()
+			}
 			return ctrl.Result{}, nil
 		}
 		return ctrl.Result{}, err
 	}
-	r.Log.Info("reconciling EndpointSlice", "namespace", req.Namespace, "name", req.Name)
+	r.Log.Info("reconciling Admin API EndpointSlice", "namespace", req.Namespace, "name", req.Name)
 
-	nn := req.NamespacedName
 	if !endpoints.DeletionTimestamp.IsZero() {
 		r.Log.V(util.DebugLevel).Info("EndpointSlice is being deleted",
 			"type", "EndpointSlice", "namespace", req.Namespace, "name", req.Name,
 		)
 
-		// If we have an entry for this EndpointSlice...
-		if _, ok := r.Cache[nn]; ok {
-			// ... remove it and notify about the change.
-			delete(r.Cache, nn)
+		// If we have an entry for this EndpointSlice, remove it and notify about the change.
+		if _, ok := r.Cache[req.NamespacedName]; ok {
+			delete(r.Cache, req.NamespacedName)
 			r.notify()
 		}
 
 		return ctrl.Result{}, nil
 	}
 
-	cached, ok := r.Cache[nn]
+	cached, ok := r.Cache[req.NamespacedName]
 	if !ok {
 		// If we don't have an entry for this EndpointSlice then save it and notify
 		// about the change.
-		r.Cache[nn] = adminapi.AdminAPIsFromEndpointSlice(endpoints, r.PortNames)
+		r.Cache[req.NamespacedName] = adminapi.AdminAPIsFromEndpointSlice(endpoints, r.PortNames)
 		r.notify()
 		return ctrl.Result{}, nil
 	}
 
 	// We do have an entry for this EndpointSlice.
-	// Let's check if it's the same that we're already aware of...
+	// If the address set is the same, do nothing.
+	// If the address set has changed, update the cache and send a notification.
 	addresses := adminapi.AdminAPIsFromEndpointSlice(endpoints, r.PortNames)
 	if cached.Equal(addresses) {
 		// No change, don't notify
 		return ctrl.Result{}, nil
 	}
 
-	// ... it's not the same. Store it and notify.
-	r.Cache[nn] = addresses
+	r.Cache[req.NamespacedName] = addresses
 	r.notify()
 
 	return ctrl.Result{}, nil

@@ -82,7 +82,10 @@ Adding a new version? You'll need three changes:
   [#3846](https://github.com/Kong/kubernetes-ingress-controller/pull/3846)
 - Fixed a race condition in the version-specific feature system.
   [#3852](https://github.com/Kong/kubernetes-ingress-controller/pull/3852)
-
+- Fixed a missing reconciliation behavior for Admin API EndpointSlice reconciler
+  when the EndpointSlice that we receive a reconciliation request for is already
+  missing
+  [#3889](https://github.com/Kong/kubernetes-ingress-controller/pull/3889)
 
 ### Deprecated
 

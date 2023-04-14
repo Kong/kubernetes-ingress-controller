@@ -203,6 +203,12 @@ func (c *AdminAPIClientsManager) adjustGatewayClients(discoveredAdminAPIs []admi
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
+	// Short circuit
+	if len(discoveredAdminAPIs) == 0 {
+		c.gatewayClients = c.gatewayClients[:0]
+		return
+	}
+
 	toAdd := lo.Filter(discoveredAdminAPIs, func(api adminapi.DiscoveredAdminAPI, _ int) bool {
 		// If we already have a client with a provided address then great, no need
 		// to do anything.

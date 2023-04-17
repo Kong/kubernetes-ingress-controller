@@ -4,6 +4,7 @@
 package e2e
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -29,6 +30,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/pkg/clientset"
 	"github.com/kong/kubernetes-ingress-controller/v2/test"
 	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/helpers"
+	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/testenv"
 )
 
 var (
@@ -86,7 +88,9 @@ func TestIstioWithKongIngressGateway(t *testing.T) {
 	ctx, env := setupE2ETest(t, istioAddon, kongAddon)
 
 	t.Log("waiting for test cluster to be ready")
-	require.NoError(t, <-env.WaitForReady(ctx))
+	envReadyCtx, envReadyCancel := context.WithTimeout(ctx, testenv.EnvironmentReadyTimeout())
+	defer envReadyCancel()
+	require.NoError(t, <-env.WaitForReady(envReadyCtx))
 
 	t.Logf("istio version %s was deployed, enabling istio mesh network for the Kong Gateway's namespace", istioAddon.Version().String())
 	require.NoError(t, istioAddon.EnableMeshForNamespace(ctx, env.Cluster(), kongAddon.Namespace()))

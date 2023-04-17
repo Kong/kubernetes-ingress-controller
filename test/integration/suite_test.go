@@ -124,7 +124,9 @@ func TestMain(m *testing.M) {
 
 	exitOnErr(ctx, DeployAddonsForCluster(ctx, env.Cluster()))
 	fmt.Printf("INFO: waiting for cluster %s and all addons to become ready\n", env.Cluster().Name())
-	exitOnErr(ctx, <-env.WaitForReady(ctx))
+	envReadyCtx, envReadyCancel := context.WithTimeout(ctx, testenv.EnvironmentReadyTimeout())
+	defer envReadyCancel()
+	exitOnErr(ctx, <-env.WaitForReady(envReadyCtx))
 
 	fmt.Println("INFO: collecting urls from the kong proxy deployment")
 	proxyURL, err = kongAddon.ProxyURL(ctx, env.Cluster())

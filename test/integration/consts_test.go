@@ -16,12 +16,6 @@ const (
 	// httpcTimeout is the default client timeout for HTTP clients used in tests.
 	httpcTimeout = time.Second * 3
 
-	// environmentReadyTimeout is the amout of time that will be given to wait for the environemnt
-	// of the test suite ready, including all the dependencies (kong, metallb, etc)
-	// used here to make up a context to pass into environments.WaitForReady to trigger cleanup when timed out.
-	// TODO: make it configurable by environment variable.
-	environmentReadyTimeout = time.Minute * 10
-
 	// environmentCleanupTimeout is the amount of time that will be given by the test suite to the
 	// testing environment to perform its cleanup when the test suite is shutting down.
 	environmentCleanupTimeout = time.Minute * 3

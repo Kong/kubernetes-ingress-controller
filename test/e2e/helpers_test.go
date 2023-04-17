@@ -217,7 +217,9 @@ func deployKong(ctx context.Context, t *testing.T, env environments.Environment,
 	t.Helper()
 
 	t.Log("waiting for testing environment to be ready")
-	require.NoError(t, <-env.WaitForReady(ctx))
+	envReadyCtx, envReadyCancel := context.WithTimeout(ctx, testenv.EnvironmentReadyTimeout())
+	defer envReadyCancel()
+	require.NoError(t, <-env.WaitForReady(envReadyCtx))
 
 	t.Log("creating the kong namespace")
 	ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "kong"}}

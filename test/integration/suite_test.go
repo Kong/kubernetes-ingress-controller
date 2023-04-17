@@ -124,7 +124,7 @@ func TestMain(m *testing.M) {
 
 	exitOnErr(ctx, DeployAddonsForCluster(ctx, env.Cluster()))
 	fmt.Printf("INFO: waiting for cluster %s and all addons to become ready\n", env.Cluster().Name())
-	envReadyCtx, envReadyCancel := context.WithTimeout(ctx, environmentReadyTimeout)
+	envReadyCtx, envReadyCancel := context.WithTimeout(ctx, testenv.EnvironmentReadyTimeout())
 	defer envReadyCancel()
 	exitOnErr(ctx, <-env.WaitForReady(envReadyCtx))
 

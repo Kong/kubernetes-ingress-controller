@@ -61,7 +61,9 @@ func TestMain(m *testing.M) {
 	cleaner := clusters.NewCleaner(env.Cluster())
 
 	fmt.Println("INFO: waiting for cluster and addons to be ready")
-	exitOnErr(<-env.WaitForReady(ctx))
+	envReadyCtx, envReadyCancel := context.WithTimeout(ctx, testenv.EnvironmentReadyTimeout())
+	defer envReadyCancel()
+	exitOnErr(<-env.WaitForReady(envReadyCtx))
 
 	code = m.Run()
 

@@ -423,7 +423,6 @@ func TestAdminAPIClientsManager_ConcurrentNotify(t *testing.T) {
 				require.Len(t, m.GatewayClients(), 1, "expected to get 1 client")
 				receivedNotificationsCount.Add(1)
 			case <-ctx.Done():
-				t.Log("Test is done, stopping subscriber worker")
 				return
 			}
 		}

@@ -24,7 +24,6 @@ import (
 	v1beta1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1beta1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
-	schema "k8s.io/apimachinery/pkg/runtime/schema"
 	types "k8s.io/apimachinery/pkg/types"
 	watch "k8s.io/apimachinery/pkg/watch"
 	testing "k8s.io/client-go/testing"
@@ -36,9 +35,9 @@ type FakeTCPIngresses struct {
 	ns   string
 }
 
-var tcpingressesResource = schema.GroupVersionResource{Group: "configuration.konghq.com", Version: "v1beta1", Resource: "tcpingresses"}
+var tcpingressesResource = v1beta1.SchemeGroupVersion.WithResource("tcpingresses")
 
-var tcpingressesKind = schema.GroupVersionKind{Group: "configuration.konghq.com", Version: "v1beta1", Kind: "TCPIngress"}
+var tcpingressesKind = v1beta1.SchemeGroupVersion.WithKind("TCPIngress")
 
 // Get takes name of the tCPIngress, and returns the corresponding tCPIngress object, and an error if there is any.
 func (c *FakeTCPIngresses) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1beta1.TCPIngress, err error) {

@@ -289,8 +289,8 @@ github.com/GoogleCloudPlatform/opentelemetry-operations-go/exporter/trace v1.11.
 github.com/GoogleCloudPlatform/opentelemetry-operations-go/internal/cloudmock v0.35.1 h1:s503Jzh+SCMN557CUTsenBo8vNxmGZK7zWdNlePQ9TU=
 github.com/GoogleCloudPlatform/opentelemetry-operations-go/internal/resourcemapping v0.35.1 h1:IB4aQsSppxP/PVmnCstDm9v00hsPowqrohoW4FZ+amc=
 github.com/GoogleCloudPlatform/opentelemetry-operations-go/internal/resourcemapping v0.35.1/go.mod h1:H785fvlgotVZqht+1rHhXSs8EJ8uPVmpBYkTYO3ccpc=
-github.com/GoogleContainerTools/skaffold/v2 v2.3.0 h1:IMZiHdoPasOhjxA5O7cz1BrliTZ3DlhkugjqnOe402w=
-github.com/GoogleContainerTools/skaffold/v2 v2.3.0/go.mod h1:NjfdUZV1v7btgXHKGYI/U3C7xpy1aaZmOoNTV+1asMI=
+github.com/GoogleContainerTools/skaffold/v2 v2.3.1 h1:6bOA4EZOEItTPL3O/W5OPuGLofRmJkfTblJbP09tktQ=
+github.com/GoogleContainerTools/skaffold/v2 v2.3.1/go.mod h1:NjfdUZV1v7btgXHKGYI/U3C7xpy1aaZmOoNTV+1asMI=
 github.com/Knetic/govaluate v3.0.1-0.20171022003610-9aa49832a739+incompatible/go.mod h1:r7JcOSlj0wfOMncg0iLm8Leh48TZaKVeNIfJntJ2wa0=
 github.com/MakeNowJust/heredoc v0.0.0-20170808103936-bb23615498cd h1:sjQovDkwrZp8u+gxLtPgKGjk5hCxuy2hrRejBTA9xFU=
 github.com/MakeNowJust/heredoc v0.0.0-20170808103936-bb23615498cd/go.mod h1:64YHyfSL2R96J44Nlwm39UHepQbyR5q10x7iYa1ks2E=

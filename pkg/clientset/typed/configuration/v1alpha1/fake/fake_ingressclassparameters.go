@@ -24,7 +24,6 @@ import (
 	v1alpha1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1alpha1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
-	schema "k8s.io/apimachinery/pkg/runtime/schema"
 	types "k8s.io/apimachinery/pkg/types"
 	watch "k8s.io/apimachinery/pkg/watch"
 	testing "k8s.io/client-go/testing"
@@ -36,9 +35,9 @@ type FakeIngressClassParameterses struct {
 	ns   string
 }
 
-var ingressclassparametersesResource = schema.GroupVersionResource{Group: "configuration.konghq.com", Version: "v1alpha1", Resource: "ingressclassparameterses"}
+var ingressclassparametersesResource = v1alpha1.SchemeGroupVersion.WithResource("ingressclassparameterses")
 
-var ingressclassparametersesKind = schema.GroupVersionKind{Group: "configuration.konghq.com", Version: "v1alpha1", Kind: "IngressClassParameters"}
+var ingressclassparametersesKind = v1alpha1.SchemeGroupVersion.WithKind("IngressClassParameters")
 
 // Get takes name of the ingressClassParameters, and returns the corresponding ingressClassParameters object, and an error if there is any.
 func (c *FakeIngressClassParameterses) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1alpha1.IngressClassParameters, err error) {

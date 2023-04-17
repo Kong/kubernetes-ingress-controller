@@ -21,10 +21,9 @@ package fake
 import (
 	"context"
 
-	configurationv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	v1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
-	schema "k8s.io/apimachinery/pkg/runtime/schema"
 	types "k8s.io/apimachinery/pkg/types"
 	watch "k8s.io/apimachinery/pkg/watch"
 	testing "k8s.io/client-go/testing"
@@ -35,24 +34,24 @@ type FakeKongClusterPlugins struct {
 	Fake *FakeConfigurationV1
 }
 
-var kongclusterpluginsResource = schema.GroupVersionResource{Group: "configuration.konghq.com", Version: "v1", Resource: "kongclusterplugins"}
+var kongclusterpluginsResource = v1.SchemeGroupVersion.WithResource("kongclusterplugins")
 
-var kongclusterpluginsKind = schema.GroupVersionKind{Group: "configuration.konghq.com", Version: "v1", Kind: "KongClusterPlugin"}
+var kongclusterpluginsKind = v1.SchemeGroupVersion.WithKind("KongClusterPlugin")
 
 // Get takes name of the kongClusterPlugin, and returns the corresponding kongClusterPlugin object, and an error if there is any.
-func (c *FakeKongClusterPlugins) Get(ctx context.Context, name string, options v1.GetOptions) (result *configurationv1.KongClusterPlugin, err error) {
+func (c *FakeKongClusterPlugins) Get(ctx context.Context, name string, options metav1.GetOptions) (result *v1.KongClusterPlugin, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewRootGetAction(kongclusterpluginsResource, name), &configurationv1.KongClusterPlugin{})
+		Invokes(testing.NewRootGetAction(kongclusterpluginsResource, name), &v1.KongClusterPlugin{})
 	if obj == nil {
 		return nil, err
 	}
-	return obj.(*configurationv1.KongClusterPlugin), err
+	return obj.(*v1.KongClusterPlugin), err
 }
 
 // List takes label and field selectors, and returns the list of KongClusterPlugins that match those selectors.
-func (c *FakeKongClusterPlugins) List(ctx context.Context, opts v1.ListOptions) (result *configurationv1.KongClusterPluginList, err error) {
+func (c *FakeKongClusterPlugins) List(ctx context.Context, opts metav1.ListOptions) (result *v1.KongClusterPluginList, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewRootListAction(kongclusterpluginsResource, kongclusterpluginsKind, opts), &configurationv1.KongClusterPluginList{})
+		Invokes(testing.NewRootListAction(kongclusterpluginsResource, kongclusterpluginsKind, opts), &v1.KongClusterPluginList{})
 	if obj == nil {
 		return nil, err
 	}
@@ -61,8 +60,8 @@ func (c *FakeKongClusterPlugins) List(ctx context.Context, opts v1.ListOptions) 
 	if label == nil {
 		label = labels.Everything()
 	}
-	list := &configurationv1.KongClusterPluginList{ListMeta: obj.(*configurationv1.KongClusterPluginList).ListMeta}
-	for _, item := range obj.(*configurationv1.KongClusterPluginList).Items {
+	list := &v1.KongClusterPluginList{ListMeta: obj.(*v1.KongClusterPluginList).ListMeta}
+	for _, item := range obj.(*v1.KongClusterPluginList).Items {
 		if label.Matches(labels.Set(item.Labels)) {
 			list.Items = append(list.Items, item)
 		}
@@ -71,52 +70,52 @@ func (c *FakeKongClusterPlugins) List(ctx context.Context, opts v1.ListOptions) 
 }
 
 // Watch returns a watch.Interface that watches the requested kongClusterPlugins.
-func (c *FakeKongClusterPlugins) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
+func (c *FakeKongClusterPlugins) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
 	return c.Fake.
 		InvokesWatch(testing.NewRootWatchAction(kongclusterpluginsResource, opts))
 }
 
 // Create takes the representation of a kongClusterPlugin and creates it.  Returns the server's representation of the kongClusterPlugin, and an error, if there is any.
-func (c *FakeKongClusterPlugins) Create(ctx context.Context, kongClusterPlugin *configurationv1.KongClusterPlugin, opts v1.CreateOptions) (result *configurationv1.KongClusterPlugin, err error) {
+func (c *FakeKongClusterPlugins) Create(ctx context.Context, kongClusterPlugin *v1.KongClusterPlugin, opts metav1.CreateOptions) (result *v1.KongClusterPlugin, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewRootCreateAction(kongclusterpluginsResource, kongClusterPlugin), &configurationv1.KongClusterPlugin{})
+		Invokes(testing.NewRootCreateAction(kongclusterpluginsResource, kongClusterPlugin), &v1.KongClusterPlugin{})
 	if obj == nil {
 		return nil, err
 	}
-	return obj.(*configurationv1.KongClusterPlugin), err
+	return obj.(*v1.KongClusterPlugin), err
 }
 
 // Update takes the representation of a kongClusterPlugin and updates it. Returns the server's representation of the kongClusterPlugin, and an error, if there is any.
-func (c *FakeKongClusterPlugins) Update(ctx context.Context, kongClusterPlugin *configurationv1.KongClusterPlugin, opts v1.UpdateOptions) (result *configurationv1.KongClusterPlugin, err error) {
+func (c *FakeKongClusterPlugins) Update(ctx context.Context, kongClusterPlugin *v1.KongClusterPlugin, opts metav1.UpdateOptions) (result *v1.KongClusterPlugin, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewRootUpdateAction(kongclusterpluginsResource, kongClusterPlugin), &configurationv1.KongClusterPlugin{})
+		Invokes(testing.NewRootUpdateAction(kongclusterpluginsResource, kongClusterPlugin), &v1.KongClusterPlugin{})
 	if obj == nil {
 		return nil, err
 	}
-	return obj.(*configurationv1.KongClusterPlugin), err
+	return obj.(*v1.KongClusterPlugin), err
 }
 
 // Delete takes name of the kongClusterPlugin and deletes it. Returns an error if one occurs.
-func (c *FakeKongClusterPlugins) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
+func (c *FakeKongClusterPlugins) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
 	_, err := c.Fake.
-		Invokes(testing.NewRootDeleteActionWithOptions(kongclusterpluginsResource, name, opts), &configurationv1.KongClusterPlugin{})
+		Invokes(testing.NewRootDeleteActionWithOptions(kongclusterpluginsResource, name, opts), &v1.KongClusterPlugin{})
 	return err
 }
 
 // DeleteCollection deletes a collection of objects.
-func (c *FakeKongClusterPlugins) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
+func (c *FakeKongClusterPlugins) DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error {
 	action := testing.NewRootDeleteCollectionAction(kongclusterpluginsResource, listOpts)
 
-	_, err := c.Fake.Invokes(action, &configurationv1.KongClusterPluginList{})
+	_, err := c.Fake.Invokes(action, &v1.KongClusterPluginList{})
 	return err
 }
 
 // Patch applies the patch and returns the patched kongClusterPlugin.
-func (c *FakeKongClusterPlugins) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *configurationv1.KongClusterPlugin, err error) {
+func (c *FakeKongClusterPlugins) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.KongClusterPlugin, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewRootPatchSubresourceAction(kongclusterpluginsResource, name, pt, data, subresources...), &configurationv1.KongClusterPlugin{})
+		Invokes(testing.NewRootPatchSubresourceAction(kongclusterpluginsResource, name, pt, data, subresources...), &v1.KongClusterPlugin{})
 	if obj == nil {
 		return nil, err
 	}
-	return obj.(*configurationv1.KongClusterPlugin), err
+	return obj.(*v1.KongClusterPlugin), err
 }

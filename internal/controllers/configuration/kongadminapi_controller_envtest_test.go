@@ -510,4 +510,87 @@ func TestKongAdminAPIController(t *testing.T) {
 			n.LastNotified(),
 		)
 	})
+
+	t.Run("when deleted EndpointsSlice is observed notifications are sent properly", func(t *testing.T) {
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+		adminService, adminPod, n := startKongAdminAPIServiceReconciler(ctx, t, client, cfg)
+
+		endpoints := discoveryv1.EndpointSlice{
+			ObjectMeta: metav1.ObjectMeta{
+				OwnerReferences: []metav1.OwnerReference{
+					{
+						Kind:       "Service",
+						Name:       adminService.Name,
+						APIVersion: "v1",
+						UID:        adminService.UID,
+					},
+				},
+				Name:      uuid.NewString(),
+				Namespace: adminService.Namespace,
+				Labels: map[string]string{
+					"kubernetes.io/service-name": adminService.Name,
+				},
+			},
+			AddressType: discoveryv1.AddressTypeIPv4,
+			Endpoints: []discoveryv1.Endpoint{
+				{
+					Addresses: []string{"10.0.0.1"},
+					Conditions: discoveryv1.EndpointConditions{
+						Ready: lo.ToPtr(true),
+					},
+					TargetRef: &corev1.ObjectReference{
+						Kind:      "Pod",
+						Name:      adminPod.Name,
+						Namespace: adminPod.Namespace,
+					},
+				},
+				{
+					Addresses: []string{"10.0.0.2"},
+					Conditions: discoveryv1.EndpointConditions{
+						Ready: lo.ToPtr(true),
+					},
+					TargetRef: &corev1.ObjectReference{
+						Kind:      "Pod",
+						Name:      adminPod.Name,
+						Namespace: adminPod.Namespace,
+					},
+				},
+			},
+			Ports: []discoveryv1.EndpointPort{
+				{
+					Name: lo.ToPtr("admin"),
+					Port: lo.ToPtr(int32(8080)),
+				},
+			},
+		}
+		require.NoError(t, client.Create(ctx, &endpoints, &ctrlclient.CreateOptions{}))
+
+		assert.Eventually(t, func() bool { return len(n.LastNotified()) == 2 }, 3*time.Second, time.Millisecond)
+		assert.ElementsMatch(t,
+			[]adminapi.DiscoveredAdminAPI{
+				{
+					Address: "https://10.0.0.1:8080",
+					PodRef: types.NamespacedName{
+						Namespace: adminPod.Namespace,
+						Name:      adminPod.Name,
+					},
+				},
+				{
+					Address: "https://10.0.0.2:8080",
+					PodRef: types.NamespacedName{
+						Namespace: adminPod.Namespace,
+						Name:      adminPod.Name,
+					},
+				},
+			},
+			n.LastNotified(),
+		)
+
+		// Mark EndpointSlice deleted
+		require.NoError(t, client.Delete(ctx, &endpoints, &ctrlclient.DeleteOptions{}))
+
+		assert.Eventually(t, func() bool { return len(n.LastNotified()) == 0 }, 3*time.Second, time.Millisecond)
+		assert.Nil(t, n.LastNotified())
+	})
 }

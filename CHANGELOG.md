@@ -65,6 +65,19 @@ Adding a new version? You'll need three changes:
  - [0.0.5](#005)
  - [0.0.4 and prior](#004-and-prior)
 
+## [2.9.3]
+
+> Release date: TBA
+
+### Fixed
+
+- Fixed a missing reconciliation behavior for Admin API EndpointSlice reconciler
+  when the EndpointSlice that we receive a reconciliation request for is already
+  missing
+  [#3889](https://github.com/Kong/kubernetes-ingress-controller/pull/3889)
+- Update enterprise manifests to use Kong Gateway 3.2
+  [#3885](https://github.com/Kong/kubernetes-ingress-controller/pull/3885)
+
 ## [2.9.2]
 
 > Release date: 2023-04-03

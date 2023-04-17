@@ -7,6 +7,7 @@ Adding a new version? You'll need three changes:
 * Add the diff link, like "[2.7.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v1.2.2...v1.2.3".
   This is all the way at the bottom. It's the thing we always forget.
 --->
+ - [2.9.3](#293)
  - [2.9.2](#292)
  - [2.9.1](#291)
  - [2.9.0](#290)
@@ -92,6 +93,19 @@ Adding a new version? You'll need three changes:
 - Removed support for extensions/v1beta1 Ingress which was removed in kubernetes 1.22.
   At the same time deprecate `--enable-controller-ingress-extensionsv1beta1` CLI flag.
   [#3710](https://github.com/Kong/kubernetes-ingress-controller/pull/3710)
+
+## [2.9.3]
+
+> Release date: 2023-04-17
+
+### Fixed
+
+- Fixed a missing reconciliation behavior for Admin API EndpointSlice reconciler
+  when the EndpointSlice that we receive a reconciliation request for is already
+  missing
+  [#3889](https://github.com/Kong/kubernetes-ingress-controller/pull/3889)
+- Update enterprise manifests to use Kong Gateway 3.2
+  [#3885](https://github.com/Kong/kubernetes-ingress-controller/pull/3885)
 
 ## [2.9.2]
 
@@ -2374,6 +2388,7 @@ Please read the changelog and test in your environment.
    a working ingress controller.
 
 
+[2.9.3]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.9.2...v2.9.3
 [2.9.2]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.9.1...v2.9.2
 [2.9.1]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.9.0...v2.9.1
 [2.9.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.8.1...v2.9.0

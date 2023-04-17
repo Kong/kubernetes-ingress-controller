@@ -7,4 +7,4 @@ images:
   newTag: '3.2'
 - name: kic-placeholder
   newName: kong/kubernetes-ingress-controller
-  newTag: '2.9.1'
+  newTag: '2.9.3'

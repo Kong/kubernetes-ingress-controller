@@ -67,7 +67,7 @@ Adding a new version? You'll need three changes:
 
 ## [2.9.3]
 
-> Release date: TBA
+> Release date: 2023-04-17
 
 ### Fixed
 

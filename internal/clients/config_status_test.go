@@ -1,4 +1,4 @@
-package dataplane_test
+package clients_test
 
 import (
 	"context"
@@ -7,12 +7,12 @@ import (
 
 	"github.com/go-logr/logr/testr"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/clients"
 )
 
 func TestChannelConfigNotifier(t *testing.T) {
 	logger := testr.New(t)
-	n := dataplane.NewChannelConfigNotifier(logger)
+	n := clients.NewChannelConfigNotifier(logger)
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
@@ -20,7 +20,7 @@ func TestChannelConfigNotifier(t *testing.T) {
 
 	// Call NotifyConfigStatus 5 times to make sure that the method is non-blocking.
 	for i := 0; i < 5; i++ {
-		n.NotifyConfigStatus(ctx, dataplane.ConfigStatusOK)
+		n.NotifyConfigStatus(ctx, clients.ConfigStatusOK)
 	}
 
 	for i := 0; i < 5; i++ {

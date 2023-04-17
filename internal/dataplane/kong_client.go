@@ -20,6 +20,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/adminapi"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/clients"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/deckgen"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/failures"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
@@ -129,7 +130,7 @@ type KongClient struct {
 	clientsProvider AdminAPIClientsProvider
 
 	// configStatusNotifier notifies status of configuring kong gateway.
-	configStatusNotifier ConfigStatusNotifier
+	configStatusNotifier clients.ConfigStatusNotifier
 
 	// updateStrategyResolver resolves the update strategy for a given Kong Gateway.
 	updateStrategyResolver sendconfig.UpdateStrategyResolver
@@ -165,7 +166,7 @@ func NewKongClient(
 		eventRecorder:          eventRecorder,
 		dbmode:                 dbMode,
 		clientsProvider:        clientsProvider,
-		configStatusNotifier:   NoOpConfigStatusNotifier{},
+		configStatusNotifier:   clients.NoOpConfigStatusNotifier{},
 		updateStrategyResolver: updateStrategyResolver,
 		configChangeDetector:   configChangeDetector,
 	}
@@ -424,7 +425,7 @@ func (c *KongClient) Update(ctx context.Context) error {
 
 	shas, err := c.sendOutToClients(ctx, kongstate, formatVersion, c.kongConfig)
 	if err != nil {
-		c.configStatusNotifier.NotifyConfigStatus(ctx, ConfigStatusApplyFailed)
+		c.configStatusNotifier.NotifyConfigStatus(ctx, clients.ConfigStatusApplyFailed)
 		return err
 	}
 
@@ -432,9 +433,9 @@ func (c *KongClient) Update(ctx context.Context) error {
 	// notify the receiver of config status that translation error happened when there are translation errors,
 	// otherwise notify that config status is OK.
 	if len(translationFailures) > 0 {
-		c.configStatusNotifier.NotifyConfigStatus(ctx, ConfigStatusTranslationErrorHappened)
+		c.configStatusNotifier.NotifyConfigStatus(ctx, clients.ConfigStatusTranslationErrorHappened)
 	} else {
-		c.configStatusNotifier.NotifyConfigStatus(ctx, ConfigStatusOK)
+		c.configStatusNotifier.NotifyConfigStatus(ctx, clients.ConfigStatusOK)
 	}
 
 	// report on configured Kubernetes objects if enabled
@@ -542,7 +543,7 @@ func HandleSendToClientResult(client sendconfig.KonnectAwareClient, logger logru
 
 // SetConfigStatusNotifier sets a notifier which notifies subscribers about configuration sending results.
 // Currently it is used for uploading the node status to konnect runtime group.
-func (c *KongClient) SetConfigStatusNotifier(n ConfigStatusNotifier) {
+func (c *KongClient) SetConfigStatusNotifier(n clients.ConfigStatusNotifier) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 

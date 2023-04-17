@@ -18,6 +18,7 @@ import (
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/adminapi"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/clients"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/gateway"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/sendconfig"
@@ -108,7 +109,7 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 	setupLog.Info("Initializing Dataplane Client")
 	eventRecorder := mgr.GetEventRecorderFor(KongClientEventRecorderComponentName)
 
-	clientsManager, err := dataplane.NewAdminAPIClientsManager(
+	clientsManager, err := clients.NewAdminAPIClientsManager(
 		ctx,
 		deprecatedLogger,
 		initialKongClients,
@@ -243,7 +244,7 @@ func setupKonnectNodeAgentWithMgr(
 	c *Config,
 	mgr manager.Manager,
 	dataplaneClient *dataplane.KongClient,
-	clientsManager *dataplane.AdminAPIClientsManager,
+	clientsManager *clients.AdminAPIClientsManager,
 	logger logr.Logger,
 ) error {
 	konnectNodeAPIClient, err := konnect.NewNodeAPIClient(c.Konnect)
@@ -262,7 +263,7 @@ func setupKonnectNodeAgentWithMgr(
 	version := metadata.Release
 
 	// Set channel to send config status.
-	configStatusNotifier := dataplane.NewChannelConfigNotifier(logger)
+	configStatusNotifier := clients.NewChannelConfigNotifier(logger)
 	dataplaneClient.SetConfigStatusNotifier(configStatusNotifier)
 
 	agent := konnect.NewNodeAgent(
@@ -286,7 +287,7 @@ func setupKonnectNodeAgentWithMgr(
 func setupKonnectAdminAPIClientWithClientsMgr(
 	ctx context.Context,
 	config adminapi.KonnectConfig,
-	clientsManager *dataplane.AdminAPIClientsManager,
+	clientsManager *clients.AdminAPIClientsManager,
 	logger logr.Logger,
 ) {
 	konnectAdminAPIClient, err := adminapi.NewKongClientForKonnectRuntimeGroup(config)

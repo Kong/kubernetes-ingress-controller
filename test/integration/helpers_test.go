@@ -184,17 +184,31 @@ func httpRouteAcceptedConditionMatches(t *testing.T, c *gatewayclient.Clientset,
 
 // GetGatewayIsLinkedCallback returns a callback that checks if the specific Route (HTTP, TCP, TLS, or UDP)
 // is correctly linked to a supported gateway.
-func GetGatewayIsLinkedCallback(t *testing.T, c *gatewayclient.Clientset, protocolType gatewayv1beta1.ProtocolType, namespace, name string) func() bool {
+func GetGatewayIsLinkedCallback(
+	ctx context.Context,
+	t *testing.T,
+	c *gatewayclient.Clientset,
+	protocolType gatewayv1beta1.ProtocolType,
+	namespace,
+	name string,
+) func() bool {
 	return func() bool {
-		return gatewayLinkStatusMatches(t, c, true, protocolType, namespace, name)
+		return gatewayLinkStatusMatches(ctx, t, c, true, protocolType, namespace, name)
 	}
 }
 
 // GetGatewayIsUnlinkedCallback returns a callback that checks if the specific Route (HTTP, TCP, TLS, or UDP)
 // is correctly unlinked from a supported gateway.
-func GetGatewayIsUnlinkedCallback(t *testing.T, c *gatewayclient.Clientset, protocolType gatewayv1beta1.ProtocolType, namespace, name string) func() bool {
+func GetGatewayIsUnlinkedCallback(
+	ctx context.Context,
+	t *testing.T,
+	c *gatewayclient.Clientset,
+	protocolType gatewayv1beta1.ProtocolType,
+	namespace,
+	name string,
+) func() bool {
 	return func() bool {
-		return gatewayLinkStatusMatches(t, c, false, protocolType, namespace, name)
+		return gatewayLinkStatusMatches(ctx, t, c, false, protocolType, namespace, name)
 	}
 }
 
@@ -227,14 +241,13 @@ func (rp routeParents) check(verifyLinked bool, controllerName string) bool {
 // that the route must be linked to the gateway, or unlinked from the gateway, the
 // verifyLinked boolean arg must be set accordingly.
 func gatewayLinkStatusMatches(
+	ctx context.Context,
 	t *testing.T,
 	c *gatewayclient.Clientset,
 	verifyLinked bool,
 	protocolType gatewayv1beta1.ProtocolType,
 	namespace, name string,
 ) bool {
-	ctx := context.Background()
-
 	// gather a fresh copy of the route, given the specific protocol type
 	switch protocolType { //nolint:exhaustive
 	case gatewayv1beta1.HTTPProtocolType:

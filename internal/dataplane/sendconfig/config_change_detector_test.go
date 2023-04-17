@@ -5,6 +5,7 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/kong/deck/file"
 	"github.com/kong/go-kong/kong"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
@@ -36,9 +37,24 @@ func TestDefaultConfigurationChangeDetector_HasConfigurationChanged(t *testing.T
 		[]byte("82e35a63ceba37e9646434c5dd412ea577147f1e4a41ccde1614253187e3dbf9"),
 	}
 
+	createConfigContent := func() *file.Content {
+		return &file.Content{
+			FormatVersion: "1.1",
+			Services: []file.FService{
+				{
+					Service: kong.Service{
+						ID:   kong.String("id"),
+						Name: kong.String("name"),
+					},
+				},
+			},
+		}
+	}
+
 	testCases := []struct {
 		name           string
 		oldSHA, newSHA []byte
+		targetConfig   *file.Content
 		statusSHA      string
 		isKonnect      bool
 		statusError    error
@@ -50,19 +66,32 @@ func TestDefaultConfigurationChangeDetector_HasConfigurationChanged(t *testing.T
 			name:           "oldSHA != newSHA",
 			oldSHA:         testSHAs[0],
 			newSHA:         testSHAs[1],
+			targetConfig:   createConfigContent(),
 			expectedResult: true,
 		},
 		{
 			name:           "oldSHA == newSHA, but status signals crash",
 			oldSHA:         testSHAs[0],
 			newSHA:         testSHAs[0],
+			targetConfig:   createConfigContent(),
 			statusSHA:      sendconfig.WellKnownInitialHash,
 			expectedResult: true,
+		},
+		{
+			name:   "oldSHA == newSHA, status signals init hash and we're trying to push empty config",
+			oldSHA: testSHAs[0],
+			newSHA: testSHAs[0],
+			targetConfig: &file.Content{
+				FormatVersion: "1.1",
+			},
+			statusSHA:      sendconfig.WellKnownInitialHash,
+			expectedResult: false,
 		},
 		{
 			name:           "oldSHA == newSHA and status signals same",
 			oldSHA:         testSHAs[0],
 			newSHA:         testSHAs[0],
+			targetConfig:   createConfigContent(),
 			statusSHA:      string(testSHAs[0]),
 			expectedResult: false,
 		},
@@ -70,6 +99,7 @@ func TestDefaultConfigurationChangeDetector_HasConfigurationChanged(t *testing.T
 			name:           "oldSHA == newSHA and status signals other",
 			oldSHA:         testSHAs[0],
 			newSHA:         testSHAs[0],
+			targetConfig:   createConfigContent(),
 			statusSHA:      string(testSHAs[1]),
 			expectedResult: false,
 		},
@@ -77,16 +107,18 @@ func TestDefaultConfigurationChangeDetector_HasConfigurationChanged(t *testing.T
 			name:           "oldSHA == newSHA, status would signal crash, but it's konnect",
 			oldSHA:         testSHAs[0],
 			newSHA:         testSHAs[0],
+			targetConfig:   createConfigContent(),
 			statusSHA:      sendconfig.WellKnownInitialHash,
 			isKonnect:      true,
 			expectedResult: false,
 		},
 		{
-			name:        "oldSHA == newSHA, status returns error",
-			oldSHA:      testSHAs[0],
-			newSHA:      testSHAs[0],
-			statusError: errors.New("getting kong status failure"),
-			expectError: true,
+			name:         "oldSHA == newSHA, status returns error",
+			oldSHA:       testSHAs[0],
+			newSHA:       testSHAs[0],
+			targetConfig: createConfigContent(),
+			statusError:  errors.New("getting kong status failure"),
+			expectError:  true,
 		},
 	}
 
@@ -101,7 +133,7 @@ func TestDefaultConfigurationChangeDetector_HasConfigurationChanged(t *testing.T
 			}
 			detector := sendconfig.NewDefaultClientConfigurationChangeDetector(logrus.New())
 
-			result, err := detector.HasConfigurationChanged(ctx, tc.oldSHA, tc.newSHA, konnectAwareClient, statusClient)
+			result, err := detector.HasConfigurationChanged(ctx, tc.oldSHA, tc.newSHA, tc.targetConfig, konnectAwareClient, statusClient)
 			if tc.expectError {
 				require.Error(t, err)
 				return

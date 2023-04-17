@@ -24,6 +24,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 
 	testutils "github.com/kong/kubernetes-ingress-controller/v2/internal/util/test"
+	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/testenv"
 )
 
 var (
@@ -71,7 +72,9 @@ func TestMain(m *testing.M) {
 	}()
 
 	fmt.Println("INFO: waiting for cluster and addons to be ready")
-	exitOnErr(<-env.WaitForReady(ctx))
+	envReadyCtx, envReadyCancel := context.WithTimeout(ctx, testenv.EnvironmentReadyTimeout())
+	defer envReadyCancel()
+	exitOnErr(<-env.WaitForReady(envReadyCtx))
 
 	// To allow running conformance tests in a loop to e.g. detect flaky tests
 	// let's ensure that conformance related namespaced are deleted from the cluster.

@@ -1665,7 +1665,7 @@ spec:
             fieldRef:
               apiVersion: v1
               fieldPath: metadata.namespace
-        image: kong/kubernetes-ingress-controller:2.9.1
+        image: kong/kubernetes-ingress-controller:2.9.3
         imagePullPolicy: IfNotPresent
         livenessProbe:
           failureThreshold: 3
@@ -1771,7 +1771,7 @@ spec:
           value: /dev/stderr
         - name: KONG_ROUTER_FLAVOR
           value: traditional
-        image: kong/kong-gateway:3.1
+        image: kong/kong-gateway:3.2
         lifecycle:
           preStop:
             exec:

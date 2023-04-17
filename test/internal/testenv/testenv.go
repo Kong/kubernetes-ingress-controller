@@ -2,6 +2,7 @@ package testenv
 
 import (
 	"os"
+	"time"
 )
 
 // -----------------------------------------------------------------------------
@@ -37,6 +38,7 @@ func KongTag() string {
 // KongRouterFlavor returns router mode of Kong in tests. Currently supports:
 // - `traditional`
 // - `traditional_compatible`.
+// - `expressions` (experimental, only for testing expression route related tests).
 func KongRouterFlavor() string {
 	rf := os.Getenv("TEST_KONG_ROUTER_FLAVOR")
 	if rf != "" && rf != "traditional" && rf != "traditional_compatible" && rf != "expressions" {
@@ -99,4 +101,16 @@ func ExistingClusterName() string {
 // WaitForClusterDelete indicates whether or not to wait for cluster deletion to complete.
 func WaitForClusterDelete() bool {
 	return os.Getenv("KONG_TEST_CLUSTER_WAIT_FOR_DELETE") == "true"
+}
+
+// EnvironmentReadyTimeout returns the amount of time that will be given to wait for the environment
+// ready, including all the dependencies (kong, metallb, etc)
+// used here to make up a context to pass into environments.WaitForReady to trigger cleanup when timed out.
+func EnvironmentReadyTimeout() time.Duration {
+	const DefaultEnvironmentReadyTimeout = time.Minute * 10
+	timeout, err := time.ParseDuration(os.Getenv("KONG_TEST_ENVIRONMENT_READY_TIMEOUT"))
+	if err != nil {
+		timeout = DefaultEnvironmentReadyTimeout
+	}
+	return timeout
 }

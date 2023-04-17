@@ -19,7 +19,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
@@ -161,7 +160,7 @@ func TestTCPRouteEssentials(t *testing.T) {
 	cleaner.Add(tcpRoute)
 
 	t.Log("verifying that the Gateway gets linked to the route via status")
-	callback := GetGatewayIsLinkedCallback(t, gatewayClient, gatewayv1beta1.TCPProtocolType, ns.Name, tcpRoute.Name)
+	callback := GetGatewayIsLinkedCallback(ctx, t, gatewayClient, gatewayv1beta1.TCPProtocolType, ns.Name, tcpRoute.Name)
 	require.Eventually(t, callback, ingressWait, waitTick)
 	t.Log("verifying that the tcproute contains 'Programmed' condition")
 	require.Eventually(t,
@@ -186,7 +185,7 @@ func TestTCPRouteEssentials(t *testing.T) {
 	}, time.Minute, time.Second)
 
 	t.Log("verifying that the Gateway gets unlinked from the route via status")
-	callback = GetGatewayIsUnlinkedCallback(t, gatewayClient, gatewayv1beta1.TCPProtocolType, ns.Name, tcpRoute.Name)
+	callback = GetGatewayIsUnlinkedCallback(ctx, t, gatewayClient, gatewayv1beta1.TCPProtocolType, ns.Name, tcpRoute.Name)
 	require.Eventually(t, callback, ingressWait, waitTick)
 
 	t.Log("verifying that the tcpecho is no longer responding")
@@ -212,7 +211,7 @@ func TestTCPRouteEssentials(t *testing.T) {
 	}, time.Minute, time.Second)
 
 	t.Log("verifying that the Gateway gets linked to the route via status")
-	callback = GetGatewayIsLinkedCallback(t, gatewayClient, gatewayv1beta1.TCPProtocolType, ns.Name, tcpRoute.Name)
+	callback = GetGatewayIsLinkedCallback(ctx, t, gatewayClient, gatewayv1beta1.TCPProtocolType, ns.Name, tcpRoute.Name)
 	require.Eventually(t, callback, ingressWait, waitTick)
 
 	t.Log("verifying that putting the parentRefs back results in the routes becoming available again")
@@ -225,7 +224,7 @@ func TestTCPRouteEssentials(t *testing.T) {
 	require.NoError(t, gatewayClient.GatewayV1beta1().GatewayClasses().Delete(ctx, gwc.Name, metav1.DeleteOptions{}))
 
 	t.Log("verifying that the Gateway gets unlinked from the route via status")
-	callback = GetGatewayIsUnlinkedCallback(t, gatewayClient, gatewayv1beta1.TCPProtocolType, ns.Name, tcpRoute.Name)
+	callback = GetGatewayIsUnlinkedCallback(ctx, t, gatewayClient, gatewayv1beta1.TCPProtocolType, ns.Name, tcpRoute.Name)
 	require.Eventually(t, callback, ingressWait, waitTick)
 
 	t.Log("verifying that the data-plane configuration from the TCPRoute gets dropped with the GatewayClass now removed")
@@ -239,7 +238,7 @@ func TestTCPRouteEssentials(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Log("verifying that the Gateway gets linked to the route via status")
-	callback = GetGatewayIsLinkedCallback(t, gatewayClient, gatewayv1beta1.TCPProtocolType, ns.Name, tcpRoute.Name)
+	callback = GetGatewayIsLinkedCallback(ctx, t, gatewayClient, gatewayv1beta1.TCPProtocolType, ns.Name, tcpRoute.Name)
 	require.Eventually(t, callback, ingressWait, waitTick)
 
 	t.Log("verifying that creating the GatewayClass again triggers reconciliation of TCPRoutes and the route becomes available again")
@@ -252,7 +251,7 @@ func TestTCPRouteEssentials(t *testing.T) {
 	require.NoError(t, gatewayClient.GatewayV1beta1().Gateways(ns.Name).Delete(ctx, gatewayName, metav1.DeleteOptions{}))
 
 	t.Log("verifying that the Gateway gets unlinked from the route via status")
-	callback = GetGatewayIsUnlinkedCallback(t, gatewayClient, gatewayv1beta1.TCPProtocolType, ns.Name, tcpRoute.Name)
+	callback = GetGatewayIsUnlinkedCallback(ctx, t, gatewayClient, gatewayv1beta1.TCPProtocolType, ns.Name, tcpRoute.Name)
 	require.Eventually(t, callback, ingressWait, waitTick)
 
 	t.Log("verifying that the data-plane configuration from the TCPRoute gets dropped with the Gateway now removed")
@@ -273,7 +272,7 @@ func TestTCPRouteEssentials(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Log("verifying that the Gateway gets linked to the route via status")
-	callback = GetGatewayIsLinkedCallback(t, gatewayClient, gatewayv1beta1.TCPProtocolType, ns.Name, tcpRoute.Name)
+	callback = GetGatewayIsLinkedCallback(ctx, t, gatewayClient, gatewayv1beta1.TCPProtocolType, ns.Name, tcpRoute.Name)
 	require.Eventually(t, callback, ingressWait, waitTick)
 
 	t.Log("verifying that creating the Gateway again triggers reconciliation of TCPRoutes and the route becomes available again")
@@ -287,7 +286,7 @@ func TestTCPRouteEssentials(t *testing.T) {
 	require.NoError(t, gatewayClient.GatewayV1beta1().Gateways(ns.Name).Delete(ctx, gateway.Name, metav1.DeleteOptions{}))
 
 	t.Log("verifying that the Gateway gets unlinked from the route via status")
-	callback = GetGatewayIsUnlinkedCallback(t, gatewayClient, gatewayv1beta1.TCPProtocolType, ns.Name, tcpRoute.Name)
+	callback = GetGatewayIsUnlinkedCallback(ctx, t, gatewayClient, gatewayv1beta1.TCPProtocolType, ns.Name, tcpRoute.Name)
 	require.Eventually(t, callback, ingressWait, waitTick)
 
 	t.Log("verifying that the data-plane configuration from the TCPRoute does not get orphaned with the GatewayClass and Gateway gone")
@@ -312,7 +311,7 @@ func TestTCPRouteEssentials(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Log("verifying that the Gateway gets linked to the route via status")
-	callback = GetGatewayIsLinkedCallback(t, gatewayClient, gatewayv1beta1.TCPProtocolType, ns.Name, tcpRoute.Name)
+	callback = GetGatewayIsLinkedCallback(ctx, t, gatewayClient, gatewayv1beta1.TCPProtocolType, ns.Name, tcpRoute.Name)
 	require.Eventually(t, callback, ingressWait, waitTick)
 
 	t.Log("verifying that creating the Gateway again triggers reconciliation of TCPRoutes and the route becomes available again")
@@ -368,7 +367,7 @@ func TestTCPRouteEssentials(t *testing.T) {
 	require.NoError(t, gatewayClient.GatewayV1beta1().Gateways(ns.Name).Delete(ctx, gateway.Name, metav1.DeleteOptions{}))
 
 	t.Log("verifying that the Gateway gets unlinked from the route via status")
-	callback = GetGatewayIsUnlinkedCallback(t, gatewayClient, gatewayv1beta1.TCPProtocolType, ns.Name, tcpRoute.Name)
+	callback = GetGatewayIsUnlinkedCallback(ctx, t, gatewayClient, gatewayv1beta1.TCPProtocolType, ns.Name, tcpRoute.Name)
 	require.Eventually(t, callback, ingressWait, waitTick)
 
 	t.Log("verifying that the data-plane configuration from the TCPRoute does not get orphaned with the GatewayClass and Gateway gone")
@@ -467,6 +466,7 @@ func TestTCPRouteReferenceGrant(t *testing.T) {
 	deployment1 := generators.NewDeploymentForContainer(container1)
 	deployment1, err = env.Cluster().Client().AppsV1().Deployments(ns.Name).Create(ctx, deployment1, metav1.CreateOptions{})
 	require.NoError(t, err)
+	cleaner.Add(deployment1)
 
 	t.Log("creating an additional tcpecho pod to test TCPRoute multiple backendRef loadbalancing")
 	container2 := generators.NewContainer("tcpecho-2", test.TCPEchoImage, tcpEchoPort)
@@ -481,12 +481,7 @@ func TestTCPRouteReferenceGrant(t *testing.T) {
 	deployment2 := generators.NewDeploymentForContainer(container2)
 	deployment2, err = env.Cluster().Client().AppsV1().Deployments(otherNs.Name).Create(ctx, deployment2, metav1.CreateOptions{})
 	require.NoError(t, err)
-
-	defer func() {
-		t.Logf("cleaning up the deployments %s/%s and %s/%s", deployment1.Namespace, deployment1.Name, deployment2.Namespace, deployment2.Name)
-		assert.NoError(t, env.Cluster().Client().AppsV1().Deployments(ns.Name).Delete(ctx, deployment1.Name, metav1.DeleteOptions{}))
-		assert.NoError(t, env.Cluster().Client().AppsV1().Deployments(otherNs.Name).Delete(ctx, deployment2.Name, metav1.DeleteOptions{}))
-	}()
+	cleaner.Add(deployment2)
 
 	t.Logf("exposing deployment %s/%s via service", deployment1.Namespace, deployment1.Name)
 	service1 := generators.NewServiceForDeployment(deployment1, corev1.ServiceTypeLoadBalancer)
@@ -503,6 +498,7 @@ func TestTCPRouteReferenceGrant(t *testing.T) {
 	}}
 	service1, err = env.Cluster().Client().CoreV1().Services(ns.Name).Create(ctx, service1, metav1.CreateOptions{})
 	assert.NoError(t, err)
+	cleaner.Add(service1)
 
 	t.Logf("exposing deployment %s/%s via service", deployment2.Namespace, deployment2.Name)
 	service2 := generators.NewServiceForDeployment(deployment2, corev1.ServiceTypeLoadBalancer)
@@ -514,12 +510,7 @@ func TestTCPRouteReferenceGrant(t *testing.T) {
 	}}
 	service2, err = env.Cluster().Client().CoreV1().Services(otherNs.Name).Create(ctx, service2, metav1.CreateOptions{})
 	assert.NoError(t, err)
-
-	defer func() {
-		t.Logf("cleaning up the service %s", service1.Name)
-		assert.NoError(t, env.Cluster().Client().CoreV1().Services(ns.Name).Delete(ctx, service1.Name, metav1.DeleteOptions{}))
-		assert.NoError(t, env.Cluster().Client().CoreV1().Services(otherNs.Name).Delete(ctx, service2.Name, metav1.DeleteOptions{}))
-	}()
+	cleaner.Add(service2)
 
 	t.Logf("creating a tcproute to access deployment %s via kong", deployment1.Name)
 	tcpPortDefault := gatewayv1alpha2.PortNumber(ktfkong.DefaultTCPServicePort)
@@ -556,15 +547,7 @@ func TestTCPRouteReferenceGrant(t *testing.T) {
 	}
 	tcproute, err = gatewayClient.GatewayV1alpha2().TCPRoutes(ns.Name).Create(ctx, tcproute, metav1.CreateOptions{})
 	require.NoError(t, err)
-
-	defer func() {
-		t.Logf("cleaning up the tcproute %s", tcproute.Name)
-		if err := gatewayClient.GatewayV1alpha2().TCPRoutes(ns.Name).Delete(ctx, tcproute.Name, metav1.DeleteOptions{}); err != nil {
-			if !apierrors.IsNotFound(err) {
-				assert.NoError(t, err)
-			}
-		}
-	}()
+	cleaner.Add(tcproute)
 
 	t.Log("verifying that only the local tcpecho is responding without a ReferenceGrant")
 	require.Eventually(t, func() bool {

@@ -49,6 +49,8 @@ func TestUnmanagedGatewayBasics(t *testing.T) {
 	t.Log("gathering test data and generating a gateway kubernetes client")
 	pubsvc, err := env.Cluster().Client().CoreV1().Services(consts.ControllerNamespace).Get(ctx, "ingress-controller-kong-proxy", metav1.GetOptions{})
 	require.NoError(t, err)
+	pubsvcUDP, err := env.Cluster().Client().CoreV1().Services(consts.ControllerNamespace).Get(ctx, "ingress-controller-kong-udp-proxy", metav1.GetOptions{})
+	require.NoError(t, err)
 	gatewayClient, err := gatewayclient.NewForConfig(env.Cluster().Config())
 	require.NoError(t, err)
 
@@ -63,30 +65,31 @@ func TestUnmanagedGatewayBasics(t *testing.T) {
 	require.Eventually(t, func() bool {
 		gw, err = gatewayClient.GatewayV1beta1().Gateways(ns.Name).Get(ctx, defaultGatewayName, metav1.GetOptions{})
 		require.NoError(t, err)
-		return gw.Annotations[annotations.GatewayClassUnmanagedAnnotation] == "kong-system/ingress-controller-kong-proxy"
+		return gw.Annotations[annotations.GatewayClassUnmanagedAnnotation] == "kong-system/ingress-controller-kong-proxy,kong-system/ingress-controller-kong-udp-proxy"
 	}, gatewayUpdateWaitTime, time.Second)
 
 	t.Log("verifying that the gateway address is populated from the publish service")
 	require.Eventually(t, func() bool {
 		gw, err = gatewayClient.GatewayV1beta1().Gateways(ns.Name).Get(ctx, gw.Name, metav1.GetOptions{})
 		require.NoError(t, err)
-		if len(gw.Spec.Addresses) == len(pubsvc.Status.LoadBalancer.Ingress) {
-			addrs := make(map[string]bool, len(pubsvc.Status.LoadBalancer.Ingress))
-			for _, ing := range pubsvc.Status.LoadBalancer.Ingress {
-				// taking a slight shortcut by using the same map for both types. value lookups will still work
-				// and the test isn't concerned with the weird case where you've somehow wound up with
-				// LB Hostname 10.0.0.1 and GW IP 10.0.0.1. the GW type is also optional, so we don't always know
-				addrs[ing.IP] = true
-				addrs[ing.Hostname] = true
-			}
-			for _, addr := range gw.Spec.Addresses {
-				if _, ok := addrs[addr.Value]; !ok {
-					return false
-				}
-			}
-			return true
+		addrs := make(map[string]bool, len(pubsvc.Status.LoadBalancer.Ingress))
+		for _, ing := range pubsvc.Status.LoadBalancer.Ingress {
+			// taking a slight shortcut by using the same map for both types. value lookups will still work
+			// and the test isn't concerned with the weird case where you've somehow wound up with
+			// LB Hostname 10.0.0.1 and GW IP 10.0.0.1. the GW type is also optional, so we don't always know
+			addrs[ing.IP] = true
+			addrs[ing.Hostname] = true
 		}
-		return false
+		for _, ing := range pubsvcUDP.Status.LoadBalancer.Ingress {
+			addrs[ing.IP] = true
+			addrs[ing.Hostname] = true
+		}
+		for _, addr := range gw.Spec.Addresses {
+			if _, ok := addrs[addr.Value]; !ok {
+				return false
+			}
+		}
+		return true
 	}, gatewayUpdateWaitTime, time.Second)
 
 	t.Log("verifying that the gateway status gets updated to match the publish service")
@@ -581,7 +584,7 @@ func TestGatewayFilters(t *testing.T) {
 	cleaner.Add(otherRoute)
 
 	t.Log("verifying that the Gateway gets linked to the route via status")
-	callback := GetGatewayIsLinkedCallback(t, gwClientSet, gatewayv1beta1.HTTPProtocolType, ns.Name, httpRoute.Name)
+	callback := GetGatewayIsLinkedCallback(ctx, t, gwClientSet, gatewayv1beta1.HTTPProtocolType, ns.Name, httpRoute.Name)
 	require.Eventually(t, callback, ingressWait, waitTick)
 
 	t.Log("waiting for routes from HTTPRoute to become operational")

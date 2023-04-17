@@ -7,6 +7,7 @@ Adding a new version? You'll need three changes:
 * Add the diff link, like "[2.7.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v1.2.2...v1.2.3".
   This is all the way at the bottom. It's the thing we always forget.
 --->
+ - [2.9.3](#293)
  - [2.9.2](#292)
  - [2.9.1](#291)
  - [2.9.0](#290)
@@ -67,11 +68,44 @@ Adding a new version? You'll need three changes:
 
 ## Unreleased
 
+### Added
+
+- Gateways now track UDP Listener status when `--publish-service-udp` is set.
+  UDPRoutes that do not match a valid UDP Listener are excluded from
+  configuration. Previously KIC added any UDPRoute that indicated an associated
+  Gateway as its parent regardless of Listener configuration or status.
+  [#3832](https://github.com/Kong/kubernetes-ingress-controller/pull/3832)
+
+### Fixed
+
+- Fix paging in `GetAdminAPIsForService` which might have caused the controller
+  to only return the head of the list of Endpoints for Admin API service.
+  [#3846](https://github.com/Kong/kubernetes-ingress-controller/pull/3846)
+- Fixed a race condition in the version-specific feature system.
+  [#3852](https://github.com/Kong/kubernetes-ingress-controller/pull/3852)
+- Fixed a missing reconciliation behavior for Admin API EndpointSlice reconciler
+  when the EndpointSlice that we receive a reconciliation request for is already
+  missing
+  [#3889](https://github.com/Kong/kubernetes-ingress-controller/pull/3889)
+
 ### Deprecated
 
 - Removed support for extensions/v1beta1 Ingress which was removed in kubernetes 1.22.
   At the same time deprecate `--enable-controller-ingress-extensionsv1beta1` CLI flag.
   [#3710](https://github.com/Kong/kubernetes-ingress-controller/pull/3710)
+
+## [2.9.3]
+
+> Release date: 2023-04-17
+
+### Fixed
+
+- Fixed a missing reconciliation behavior for Admin API EndpointSlice reconciler
+  when the EndpointSlice that we receive a reconciliation request for is already
+  missing
+  [#3889](https://github.com/Kong/kubernetes-ingress-controller/pull/3889)
+- Update enterprise manifests to use Kong Gateway 3.2
+  [#3885](https://github.com/Kong/kubernetes-ingress-controller/pull/3885)
 
 ## [2.9.2]
 
@@ -88,8 +122,8 @@ Adding a new version? You'll need three changes:
 
 > Release date: 2023-03-29
 
-This release was intended to include a fix for a deadlock in `AdminAPIClientsManager` 
-([#3816](https://github.com/Kong/kubernetes-ingress-controller/pull/3816)), but it wasn't 
+This release was intended to include a fix for a deadlock in `AdminAPIClientsManager`
+([#3816](https://github.com/Kong/kubernetes-ingress-controller/pull/3816)), but it wasn't
 backported properly. It is included in the next patch release.
 
 ## [2.9.0]
@@ -2354,6 +2388,7 @@ Please read the changelog and test in your environment.
    a working ingress controller.
 
 
+[2.9.3]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.9.2...v2.9.3
 [2.9.2]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.9.1...v2.9.2
 [2.9.1]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.9.0...v2.9.1
 [2.9.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.8.1...v2.9.0

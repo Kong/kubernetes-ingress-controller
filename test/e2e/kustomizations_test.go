@@ -6,11 +6,9 @@ package e2e
 import (
 	"fmt"
 	"io"
-	"testing"
 	"time"
 
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/kubectl"
-	"github.com/stretchr/testify/require"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/kustomize/api/types"
 	"sigs.k8s.io/kustomize/kyaml/resid"
@@ -130,7 +128,7 @@ func patchLivenessProbes(baseManifestReader io.Reader, deployment k8stypes.Names
 }
 
 // addControllerEnv adds an environment variable to ingress-controller container.
-func addControllerEnv(t *testing.T, baseManifestReader io.Reader, envName, value string) io.Reader {
+func addControllerEnv(baseManifestReader io.Reader, envName, value string) (io.Reader, error) {
 	kustomization := types.Kustomization{
 		Patches: []types.Patch{
 			{
@@ -149,7 +147,5 @@ func addControllerEnv(t *testing.T, baseManifestReader io.Reader, envName, value
 			},
 		},
 	}
-	k, err := kubectl.GetKustomizedManifest(kustomization, baseManifestReader)
-	require.NoError(t, err)
-	return k
+	return kubectl.GetKustomizedManifest(kustomization, baseManifestReader)
 }

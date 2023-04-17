@@ -12,6 +12,5 @@ ${REPO_ROOT}/bin/kustomize build config/base > deploy/single/all-in-one-dbless-l
 ${REPO_ROOT}/bin/kustomize build config/variants/postgres > deploy/single/all-in-one-postgres.yaml
 ${REPO_ROOT}/bin/kustomize build config/variants/enterprise > deploy/single/all-in-one-dbless-k4k8s-enterprise.yaml
 ${REPO_ROOT}/bin/kustomize build config/variants/enterprise-postgres > deploy/single/all-in-one-postgres-enterprise.yaml
-${REPO_ROOT}/bin/kustomize build config/variants/multi-gw/oss > deploy/single/all-in-one-dbless.yaml
-${REPO_ROOT}/bin/kustomize build config/variants/multi-gw/enterprise > deploy/single/all-in-one-dbless-enterprise.yaml
 ${REPO_ROOT}/bin/kustomize build config/variants/konnect/base > deploy/single/all-in-one-dbless-konnect.yaml
+${REPO_ROOT}/bin/kustomize build config/variants/multi-gw/base > deploy/single/all-in-one-dbless.yaml

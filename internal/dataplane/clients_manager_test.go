@@ -215,6 +215,15 @@ func TestClientAdjustInternalClientsAfterNotification(t *testing.T) {
 		manager.adjustGatewayClients([]adminapi.DiscoveredAdminAPI{testDiscoveredAdminAPI("localhost:8080"), testDiscoveredAdminAPI("localhost:8081")})
 		requireNoExpectedCallsLeftEventually(t)
 	})
+
+	t.Run("0 addresses", func(t *testing.T) {
+		// Change expected addresses
+		cf.expected = map[string]bool{}
+		// there are 0 addresses contained in the notification hence the client
+		// creator should not be called
+		manager.adjustGatewayClients([]adminapi.DiscoveredAdminAPI(nil))
+		requireNoExpectedCallsLeftEventually(t)
+	})
 }
 
 func TestNewAdminAPIClientsManager_NoInitialClientsDisallowed(t *testing.T) {

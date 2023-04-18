@@ -15,6 +15,7 @@ import (
 	"math/big"
 	"net/http"
 	"os"
+	"os/exec"
 	"testing"
 	"time"
 
@@ -26,6 +27,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/adminapi"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/konnect"
@@ -68,6 +70,73 @@ func TestKonnectConfigPush(t *testing.T) {
 	requireKonnectNodesConsistentWithK8s(ctx, t, env, rgID, cert, key)
 }
 
+func TestKonnectLicenseActivation(t *testing.T) {
+	t.Parallel()
+	// TODO enable once real API is available
+	//skipIfMissingRequiredKonnectEnvVariables(t)
+
+	ctx, env := setupE2ETest(t)
+
+	// TODO ditto. unsure if we need the rgID truly, but the other functions require it
+	//rgID := createTestRuntimeGroup(ctx, t)
+	//cert, key := createClientCertificate(ctx, t, rgID)
+	//createKonnectClientSecretAndConfigMap(ctx, t, env, cert, key, rgID)
+
+	manifestFile := "../../deploy/single/all-in-one-dbless-konnect-enterprise.yaml"
+	t.Logf("deploying %s manifest file", manifestFile)
+
+	manifest := getTestManifest(t, manifestFile)
+	deployKong(ctx, t, env, manifest)
+
+	exposeAdminAPI(ctx, t, env, types.NamespacedName{Namespace: "kong", Name: "proxy-kong"})
+
+	t.Log("disabling license management")
+	kubeconfig := getTemporaryKubeconfig(t, env)
+	cmd := exec.Command("kubectl", "--kubeconfig", kubeconfig, "set", "env", "-n", "kong", "deployment/ingress-kong",
+		"CONTROLLER_KONNECT_LICENSING_ENABLED-")
+	stdout, stderr := new(bytes.Buffer), new(bytes.Buffer)
+	cmd.Stdout = stdout
+	cmd.Stderr = stderr
+	err := cmd.Run()
+	require.NoErrorf(t, err, "disabling licensing failed: STDOUT(%s) STDERR(%s)", stdout.String(), stderr.String())
+
+	t.Log("restarting proxy")
+	cmd = exec.Command("kubectl", "--kubeconfig", kubeconfig, "rollout", "-n", "kong", "restart", "deployment", "proxy-kong")
+	stdout, stderr = new(bytes.Buffer), new(bytes.Buffer)
+	cmd.Stdout = stdout
+	cmd.Stderr = stderr
+	err = cmd.Run()
+	require.NoErrorf(t, err, "restarting proxy failed: STDOUT(%s) STDERR(%s)", stdout.String(), stderr.String())
+
+	t.Log("confirming that the license is empty")
+	require.Eventually(t, func() bool {
+		license, err := getLicense(ctx, env, "")
+		if err != nil {
+			return false
+		}
+		return license.License.Expiration == ""
+	}, adminAPIWait, time.Second)
+
+	t.Log("re-enabling license management")
+	cmd = exec.Command("kubectl", "--kubeconfig", kubeconfig, "set", "env", "-n", "kong", "deployment/ingress-kong",
+		"CONTROLLER_KONNECT_LICENSING_ENABLED=true")
+	stdout, stderr = new(bytes.Buffer), new(bytes.Buffer)
+	cmd.Stdout = stdout
+	cmd.Stderr = stderr
+	err = cmd.Run()
+	require.NoErrorf(t, err, "enabling licensing failed: STDOUT(%s) STDERR(%s)", stdout.String(), stderr.String())
+
+	t.Log("confirming that the license is set")
+	assert.Eventually(t, func() bool {
+		license, err := getLicense(ctx, env, "")
+		if err != nil {
+			return false
+		}
+		return license.License.Expiration != ""
+	}, adminAPIWait, time.Second)
+	t.Log("done")
+}
+
 func TestKonnectWhenMisconfiguredBasicIngressNotAffected(t *testing.T) {
 	t.Parallel()
 	skipIfMissingRequiredKonnectEnvVariables(t)
@@ -86,31 +155,6 @@ func TestKonnectWhenMisconfiguredBasicIngressNotAffected(t *testing.T) {
 	t.Log("running ingress tests to verify misconfiguration doesn't affect basic ingress functionality")
 	deployIngress(ctx, t, env)
 	verifyIngress(ctx, t, env)
-}
-
-func TestKonnectLicensePull(t *testing.T) {
-	t.Parallel()
-	// TODO enable for real API
-	//skipIfMissingRequiredKonnectEnvVariables(t)
-
-	ctx, env := setupE2ETest(t)
-
-	// TODO enable for real API
-	//cert, key := createClientCertificate(ctx, t, rgID)
-	//createKonnectClientSecretAndConfigMap(ctx, t, env, cert, key, rgID)
-
-	deployAllInOneKonnectManifest(ctx, t, env)
-
-	t.Log("running ingress tests to verify all-in-one deployed ingress controller and proxy are functional")
-	deployIngress(ctx, t, env)
-	verifyIngress(ctx, t, env)
-
-	// TODO maybe keep this to verify that the license matches, but probably not
-	//konnectAdminAPIClient := createKonnectAdminAPIClient(t, rgID, cert, key)
-	//requireIngressConfiguredInAdminAPIEventually(ctx, t, konnectAdminAPIClient.AdminAPIClient())
-
-	t.Log("ensuring KIC nodes and controlled kong gateway nodes are present in konnect runtime group")
-	requireKonnectNodesConsistentWithK8s(ctx, t, env, rgID, cert, key)
 }
 
 func skipIfMissingRequiredKonnectEnvVariables(t *testing.T) {

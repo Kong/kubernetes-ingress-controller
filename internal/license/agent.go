@@ -9,9 +9,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/sirupsen/logrus"
+	"github.com/go-logr/logr"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/konnect"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 )
 
 // NewLicenseAgent creates a new license agent that retrieves a license from the given url once every given period.
@@ -19,10 +20,11 @@ func NewLicenseAgent(
 	period time.Duration,
 	url string,
 	konnectAPIClient *konnect.NodeAPIClient,
+	logger logr.Logger,
 ) *Agent {
-	client := http.Client{} // TODO pass in a konnect client instead
+	client := http.Client{} // TODO remove once konnect client has added functionality for license
 	return &Agent{
-		logger:           logrus.New(), // TODO figure out how we're supposed to actually create new loggers
+		logger:           logger,
 		client:           client,
 		upstreamURL:      url,
 		ticker:           time.NewTicker(period),
@@ -49,7 +51,7 @@ type License struct {
 // Agent handles retrieving a Kong license and providing it to other KIC subsystems.
 type Agent struct {
 	license          License // TODO maybe separate types
-	logger           logrus.FieldLogger
+	logger           logr.Logger
 	client           http.Client // TODO this needs to be a Konnect client eventually
 	upstreamURL      string
 	ticker           *time.Ticker
@@ -65,14 +67,15 @@ func (a *Agent) NeedLeaderElection() bool {
 // Start starts the Agent. It attempts to pull an initial license from upstream, and failing that, pulls it from local
 // cache. If both fail, startup fails.
 func (a *Agent) Start(ctx context.Context) error {
+	a.logger.V(util.DebugLevel).Info("starting license agent")
 	updateTimeout, cancel := context.WithTimeout(ctx, time.Minute*1)
 	defer cancel()
 	err := a.UpdateLicense(updateTimeout)
 	if err != nil {
-		a.logger.WithError(err).Errorf("could not retrieve license from upstream")
+		a.logger.Error(err, "could not retrieve license from upstream")
 		err := a.UpdateLicenseFromCache(ctx)
 		if err != nil {
-			a.logger.WithError(err).Errorf("could not retrieve license from local cache")
+			a.logger.Error(err, "could not retrieve license from local cache")
 		}
 	}
 	go a.Run(ctx)
@@ -84,14 +87,15 @@ func (a *Agent) Run(ctx context.Context) {
 	for {
 		select {
 		case <-ctx.Done():
-			a.logger.Infof("context done, shutting down license agent")
+			a.logger.Info("context done, shutting down license agent")
 			a.ticker.Stop()
 			return
 		case <-a.ticker.C:
+			a.logger.V(util.DebugLevel).Info("retrieving license from external service")
 			updateTimeout, cancel := context.WithTimeout(ctx, time.Minute*5)
 			defer cancel()
 			if err := a.UpdateLicense(updateTimeout); err != nil {
-				a.logger.WithError(err).Errorf("could not update license")
+				a.logger.Error(err, "could not update license")
 			}
 		}
 	}
@@ -112,6 +116,7 @@ func (a *Agent) UpdateLicense(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+	a.logger.V(util.DebugLevel).Info("retrieved license")
 	var licenses LicenseCollection
 	err = json.Unmarshal(body, &licenses)
 	if err != nil {
@@ -124,13 +129,14 @@ func (a *Agent) UpdateLicense(ctx context.Context) error {
 	}
 	license := licenses.Items[0]
 	if license.UpdatedAt > a.license.UpdatedAt {
+		a.logger.V(util.DebugLevel).Info("retrieved license has later expiration than current license, updating license cache")
 		a.mutex.Lock()
 		defer a.mutex.Unlock()
 		a.license = license
 
 		err = persistLicense(license.License)
 		if err != nil {
-			a.logger.WithError(err).Errorf("could not store license in Secret")
+			a.logger.Error(err, "could not store license in Secret")
 		}
 	}
 	return nil
@@ -145,6 +151,7 @@ func (a *Agent) UpdateLicenseFromCache(ctx context.Context) error {
 // GetLicense returns the agent's current license.
 func (a *Agent) GetLicense() string {
 	a.mutex.RLock()
+	a.logger.V(util.DebugLevel).Info("retrieving license from cache")
 	defer a.mutex.RUnlock()
 	return a.license.License
 }

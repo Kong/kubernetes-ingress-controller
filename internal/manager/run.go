@@ -226,7 +226,9 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 	// we probably want to avoid that long term. If we do have separate toggles, we need an AND condition that sets up
 	// the client and makes it available to all Konnect-related subsystems.
 	if c.Konnect.LicenseSynchronizationEnabled {
-		agent := license.NewLicenseAgent(time.Hour*12, "https://example.com", konnectAPIClient)
+		setupLog.Info("starting license agent")
+		agent := license.NewLicenseAgent(time.Hour*12, "http://example.com", konnectAPIClient,
+			ctrl.Log.WithName("license-agent"))
 		err := mgr.Add(agent)
 		if err != nil {
 			return fmt.Errorf("could not add license agent to manager: %w", err)

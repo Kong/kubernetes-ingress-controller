@@ -408,6 +408,7 @@ func (c *KongClient) Update(ctx context.Context) error {
 		p.EnableCombinedServiceRoutes()
 	}
 	if c.licenseAgent != nil {
+		c.logger.Debug("retrieving license from agent and adding it to config")
 		p.InjectLicense(c.licenseAgent.GetLicense())
 	}
 	formatVersion := "1.1"

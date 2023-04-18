@@ -7,7 +7,7 @@ import (
 
 	"github.com/go-logr/logr/testr"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/clients"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/clients"
 )
 
 func TestChannelConfigNotifier(t *testing.T) {

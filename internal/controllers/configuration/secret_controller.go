@@ -18,7 +18,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	ctrlref "github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/reference"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/clients"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 )
 
@@ -36,7 +36,7 @@ type CoreV1SecretReconciler struct {
 
 	Log              logr.Logger
 	Scheme           *runtime.Scheme
-	DataplaneClient  *dataplane.KongClient
+	DataplaneClient  *clients.KongClient
 	CacheSyncTimeout time.Duration
 
 	ReferenceIndexers ctrlref.CacheIndexers

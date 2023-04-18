@@ -1,4 +1,4 @@
-package dataplane
+package clients
 
 import (
 	"context"
@@ -20,7 +20,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/adminapi"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/clients"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/deckgen"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/failures"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
@@ -39,7 +38,27 @@ const (
 	KongConfigurationTranslationFailedEventReason = "KongConfigurationTranslationFailed"
 	// KongConfigurationApplyFailedEventReason defines an event reason used for creating all config apply resource failure events.
 	KongConfigurationApplyFailedEventReason = "KongConfigurationApplyFailed"
+	// DefaultTimeoutSeconds indicates the time.Duration allowed for responses to
+	// come back from the backend data-plane API.
+	//
+	// NOTE: the current default is based on observed latency in a CI environment using
+	// the GKE cloud provider with the Kong Admin API.
+	DefaultTimeoutSeconds float32 = 30.0
 )
+
+// -----------------------------------------------------------------------------
+// Dataplane Client - Public Interface
+// -----------------------------------------------------------------------------
+
+type Client interface {
+	// DBMode informs the caller which DB mode the data-plane has employed
+	// (e.g. "off" (dbless) or "postgres").
+	DBMode() string
+
+	// Update the data-plane by parsing the current configuring and applying
+	// it to the backend API.
+	Update(ctx context.Context) error
+}
 
 // AdminAPIClientsProvider allows fetching the most recent list of Admin API clients of Gateways that
 // we should configure.
@@ -130,7 +149,7 @@ type KongClient struct {
 	clientsProvider AdminAPIClientsProvider
 
 	// configStatusNotifier notifies status of configuring kong gateway.
-	configStatusNotifier clients.ConfigStatusNotifier
+	configStatusNotifier ConfigStatusNotifier
 
 	// updateStrategyResolver resolves the update strategy for a given Kong Gateway.
 	updateStrategyResolver sendconfig.UpdateStrategyResolver
@@ -166,7 +185,7 @@ func NewKongClient(
 		eventRecorder:          eventRecorder,
 		dbmode:                 dbMode,
 		clientsProvider:        clientsProvider,
-		configStatusNotifier:   clients.NoOpConfigStatusNotifier{},
+		configStatusNotifier:   NoOpConfigStatusNotifier{},
 		updateStrategyResolver: updateStrategyResolver,
 		configChangeDetector:   configChangeDetector,
 	}
@@ -425,7 +444,7 @@ func (c *KongClient) Update(ctx context.Context) error {
 
 	shas, err := c.sendOutToClients(ctx, kongstate, formatVersion, c.kongConfig)
 	if err != nil {
-		c.configStatusNotifier.NotifyConfigStatus(ctx, clients.ConfigStatusApplyFailed)
+		c.configStatusNotifier.NotifyConfigStatus(ctx, ConfigStatusApplyFailed)
 		return err
 	}
 
@@ -433,9 +452,9 @@ func (c *KongClient) Update(ctx context.Context) error {
 	// notify the receiver of config status that translation error happened when there are translation errors,
 	// otherwise notify that config status is OK.
 	if len(translationFailures) > 0 {
-		c.configStatusNotifier.NotifyConfigStatus(ctx, clients.ConfigStatusTranslationErrorHappened)
+		c.configStatusNotifier.NotifyConfigStatus(ctx, ConfigStatusTranslationErrorHappened)
 	} else {
-		c.configStatusNotifier.NotifyConfigStatus(ctx, clients.ConfigStatusOK)
+		c.configStatusNotifier.NotifyConfigStatus(ctx, ConfigStatusOK)
 	}
 
 	// report on configured Kubernetes objects if enabled
@@ -543,7 +562,7 @@ func HandleSendToClientResult(client sendconfig.KonnectAwareClient, logger logru
 
 // SetConfigStatusNotifier sets a notifier which notifies subscribers about configuration sending results.
 // Currently it is used for uploading the node status to konnect runtime group.
-func (c *KongClient) SetConfigStatusNotifier(n clients.ConfigStatusNotifier) {
+func (c *KongClient) SetConfigStatusNotifier(n ConfigStatusNotifier) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 

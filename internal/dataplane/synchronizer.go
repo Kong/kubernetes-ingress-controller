@@ -10,6 +10,8 @@ import (
 	"github.com/bombsimon/logrusr/v2"
 	"github.com/go-logr/logr"
 	"github.com/sirupsen/logrus"
+
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/clients"
 )
 
 // -----------------------------------------------------------------------------
@@ -41,7 +43,7 @@ type Synchronizer struct {
 	logger logr.Logger
 
 	// dataplane client to send updates to the Kong Admin API
-	dataplaneClient Client
+	dataplaneClient clients.Client
 	dbMode          string
 
 	// server configuration, flow control, channels and utility attributes
@@ -74,7 +76,7 @@ func WithInitWaitPeriod(period time.Duration) SynchronizerOption {
 // stagger time for data-plane updates to occur. Note that this starts some
 // background goroutines and the caller is resonsible for marking the provided
 // context.Context as "Done()" to shut down the background routines.
-func NewSynchronizer(logger logrus.FieldLogger, client Client, opts ...SynchronizerOption) (*Synchronizer, error) {
+func NewSynchronizer(logger logrus.FieldLogger, client clients.Client, opts ...SynchronizerOption) (*Synchronizer, error) {
 	synchronizer := &Synchronizer{
 		logger:          logrusr.New(logger),
 		stagger:         time.Duration(DefaultSyncSeconds),

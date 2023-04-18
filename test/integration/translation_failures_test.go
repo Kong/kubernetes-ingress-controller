@@ -23,7 +23,7 @@ import (
 	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/clients"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 	testutils "github.com/kong/kubernetes-ingress-controller/v2/internal/util/test"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
@@ -267,7 +267,7 @@ func TestTranslationFailures(t *testing.T) {
 					events, err := env.Cluster().Client().CoreV1().Events(ns.GetName()).List(ctx, metav1.ListOptions{
 						FieldSelector: fmt.Sprintf(
 							"reason=%s,type=%s,involvedObject.name=%s",
-							dataplane.KongConfigurationTranslationFailedEventReason,
+							clients.KongConfigurationTranslationFailedEventReason,
 							corev1.EventTypeWarning,
 							expectedCausingObject.GetName(),
 						),

@@ -6,7 +6,7 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/clients"
 )
 
 const (
@@ -155,7 +155,7 @@ func (c CacheIndexers) DeleteReferencesByReferrer(referrer client.Object) error 
 
 // DeleteObjectIfNotReferred deletes object from object cach by dataplaneClient
 // the object is not referenced in reference cache.
-func (c CacheIndexers) DeleteObjectIfNotReferred(obj client.Object, dataplaneClient *dataplane.KongClient) error {
+func (c CacheIndexers) DeleteObjectIfNotReferred(obj client.Object, dataplaneClient *clients.KongClient) error {
 	referred, err := c.ObjectReferred(obj)
 	if err != nil {
 		return err

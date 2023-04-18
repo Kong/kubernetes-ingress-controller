@@ -11,7 +11,6 @@ import (
 	"github.com/go-logr/logr"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/clients"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 )
 
@@ -364,13 +363,13 @@ func (a *NodeAgent) updateNodeLoop(ctx context.Context) {
 // GatewayClientGetter gets gateway instances from admin API clients.
 type GatewayClientGetter struct {
 	logger          logr.Logger
-	clientsProvider dataplane.AdminAPIClientsProvider
+	clientsProvider clients.AdminAPIClientsProvider
 }
 
 var _ GatewayInstanceGetter = &GatewayClientGetter{}
 
 // NewGatewayClientGetter creates a GatewayClientGetter to get gateway instances from client provider.
-func NewGatewayClientGetter(logger logr.Logger, clientsProvider dataplane.AdminAPIClientsProvider) *GatewayClientGetter {
+func NewGatewayClientGetter(logger logr.Logger, clientsProvider clients.AdminAPIClientsProvider) *GatewayClientGetter {
 	return &GatewayClientGetter{
 		logger:          logger.WithName("gateway-admin-api-getter"),
 		clientsProvider: clientsProvider,

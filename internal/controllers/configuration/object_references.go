@@ -11,7 +11,7 @@ import (
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
 	ctrlref "github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/reference"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/clients"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
 	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1beta1"
 )
@@ -20,7 +20,7 @@ import (
 // currently it only updates reference records to secrets, since we wanted to limit cache size of secrets:
 // https://github.com/Kong/kubernetes-ingress-controller/issues/2868
 func updateReferredObjects(
-	ctx context.Context, client client.Client, refIndexers ctrlref.CacheIndexers, dataplaneClient *dataplane.KongClient, obj client.Object,
+	ctx context.Context, client client.Client, refIndexers ctrlref.CacheIndexers, dataplaneClient *clients.KongClient, obj client.Object,
 ) error {
 	referredSecretNameMap := make(map[types.NamespacedName]struct{})
 	var referredSecretList []types.NamespacedName

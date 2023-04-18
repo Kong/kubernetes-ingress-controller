@@ -1,4 +1,4 @@
-package dataplane_test
+package clients_test
 
 import (
 	"context"
@@ -24,7 +24,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/adminapi"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/clients"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/failures"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/sendconfig"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/metrics"
@@ -108,7 +108,7 @@ func TestUniqueObjects(t *testing.T) {
 				require.NoError(t, err)
 				translationFailures = append(translationFailures, translationFailure)
 			}
-			uniqueObjs := dataplane.UniqueObjects(tc.reportedObjs, translationFailures)
+			uniqueObjs := clients.UniqueObjects(tc.reportedObjs, translationFailures)
 			require.Len(t, uniqueObjs, len(tc.uniqueObjs))
 			require.ElementsMatch(t, tc.uniqueObjs, uniqueObjs)
 		})
@@ -179,7 +179,7 @@ func TestHandleSendToClientResult(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			c := konnectClient{isKonnect: tc.isKonnect}
-			resultSHA, err := dataplane.HandleSendToClientResult(c, logrus.New(), tc.inputSHA, tc.inputErr)
+			resultSHA, err := clients.HandleSendToClientResult(c, logrus.New(), tc.inputSHA, tc.inputErr)
 			assert.Equal(t, tc.expectedErr, err)
 			assert.Equal(t, tc.expectedSHA, resultSHA)
 		})
@@ -416,7 +416,7 @@ func setupTestKongClient(
 	updateStrategyResolver *mockUpdateStrategyResolver,
 	clientsProvider mockGatewayClientsProvider,
 	configChangeDetector sendconfig.ConfigurationChangeDetector,
-) *dataplane.KongClient {
+) *clients.KongClient {
 	logger := logrus.New()
 	timeout := time.Second
 	ingressClass := "kong"
@@ -425,7 +425,7 @@ func setupTestKongClient(
 	eventRecorder := record.NewFakeRecorder(0)
 	dbMode := "off"
 
-	kongClient, err := dataplane.NewKongClient(
+	kongClient, err := clients.NewKongClient(
 		logger,
 		timeout,
 		ingressClass,

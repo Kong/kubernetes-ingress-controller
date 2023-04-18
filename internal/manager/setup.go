@@ -23,8 +23,8 @@ import (
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/adminapi"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/admission"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/clients"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/clients"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/manager/scheme"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 )
@@ -126,7 +126,7 @@ func setupDataplaneSynchronizer(
 	logger logr.Logger,
 	fieldLogger logrus.FieldLogger,
 	mgr manager.Manager,
-	dataplaneClient dataplane.Client,
+	dataplaneClient clients.Client,
 	proxySyncSeconds float32,
 ) (*dataplane.Synchronizer, error) {
 	if proxySyncSeconds < dataplane.DefaultSyncSeconds {

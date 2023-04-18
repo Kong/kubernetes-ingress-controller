@@ -9,7 +9,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/clients"
 )
 
 const (
@@ -22,7 +22,7 @@ const (
 // in namespacedNames in record cache.
 func UpdateReferencesToSecret(
 	ctx context.Context,
-	c client.Client, indexers CacheIndexers, dataplaneClient *dataplane.KongClient,
+	c client.Client, indexers CacheIndexers, dataplaneClient *clients.KongClient,
 	referrer client.Object, referencedSecretNameMap map[types.NamespacedName]struct{},
 ) error {
 	for nsName := range referencedSecretNameMap {
@@ -60,7 +60,7 @@ func UpdateReferencesToSecret(
 // and should be removed from the object cache inside KongClient.
 func removeOutdatedReferencesToSecret(
 	ctx context.Context,
-	indexers CacheIndexers, c client.Client, dataplaneClient *dataplane.KongClient,
+	indexers CacheIndexers, c client.Client, dataplaneClient *clients.KongClient,
 	referrer client.Object, referredSecretNameMap map[types.NamespacedName]struct{},
 ) error {
 	referents, err := indexers.ListReferredObjects(referrer)
@@ -114,7 +114,7 @@ func removeOutdatedReferencesToSecret(
 // DeleteReferencesByReferrer deletes all reference records with specified referrer
 // in reference cache.
 // If the affected secret is not referred by any other objects, it deletes the secret in object cache.
-func DeleteReferencesByReferrer(indexers CacheIndexers, dataplaneClient *dataplane.KongClient, referrer client.Object) error {
+func DeleteReferencesByReferrer(indexers CacheIndexers, dataplaneClient *clients.KongClient, referrer client.Object) error {
 	referents, err := indexers.ListReferredObjects(referrer)
 	if err != nil {
 		return err

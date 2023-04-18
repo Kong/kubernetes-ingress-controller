@@ -15,7 +15,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/clients"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/versions"
 	"github.com/kong/kubernetes-ingress-controller/v2/test"
 	"github.com/kong/kubernetes-ingress-controller/v2/test/consts"
@@ -75,7 +75,7 @@ func TestConfigErrorEventGeneration(t *testing.T) {
 			return false
 		}
 		for _, event := range events.Items {
-			if event.Reason == dataplane.KongConfigurationApplyFailedEventReason {
+			if event.Reason == clients.KongConfigurationApplyFailedEventReason {
 				if event.InvolvedObject.Kind == "Ingress" {
 					// this is a runtime.Object because of v1/v1beta1 handling, so no ObjectMeta or other obvious way
 					// to get the name. we can reasonably assume it's the only Ingress in the namespace
@@ -93,7 +93,7 @@ func TestConfigErrorEventGeneration(t *testing.T) {
 			return false
 		}
 		for _, event := range events.Items {
-			if event.Reason == dataplane.KongConfigurationApplyFailedEventReason {
+			if event.Reason == clients.KongConfigurationApplyFailedEventReason {
 				if event.InvolvedObject.Kind == "Service" {
 					if event.InvolvedObject.Name == service.ObjectMeta.Name {
 						return true

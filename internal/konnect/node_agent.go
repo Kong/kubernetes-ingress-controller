@@ -43,7 +43,7 @@ type NodeAgent struct {
 
 	Logger logr.Logger
 
-	konnectClient AbstractNodeAPI
+	konnectClient *NodeAPIClient
 	refreshPeriod time.Duration
 
 	configStatus           atomic.Uint32
@@ -60,7 +60,7 @@ func NewNodeAgent(
 	version string,
 	refreshPeriod time.Duration,
 	logger logr.Logger,
-	client AbstractNodeAPI,
+	client *NodeAPIClient,
 	configStatusSubscriber clients.ConfigStatusSubscriber,
 	gatewayGetter GatewayInstanceGetter,
 	gatewayClientsChangesNotifier GatewayClientsChangesNotifier,
@@ -71,11 +71,8 @@ func NewNodeAgent(
 	a := &NodeAgent{
 		Hostname: hostname,
 		Version:  version,
-		// TODO figure out how to refactor access to RGID without it being a property of the Client itself
-		//Logger: logger.
-		//	WithName("konnect-node").WithValues("runtime_group_id", Client.Client.RuntimeGroupID),
 		Logger: logger.
-			WithName("konnect-node"),
+			WithName("konnect-node").WithValues("runtime_group_id", client.RuntimeGroupID),
 		konnectClient:                 client,
 		refreshPeriod:                 refreshPeriod,
 		configStatusSubscriber:        configStatusSubscriber,
@@ -371,7 +368,7 @@ type GatewayClientGetter struct {
 
 var _ GatewayInstanceGetter = &GatewayClientGetter{}
 
-// NewGatewayClientGetter creates a GatewayClientGetter to get gateway instances from Client provider.
+// NewGatewayClientGetter creates a GatewayClientGetter to get gateway instances from client provider.
 func NewGatewayClientGetter(logger logr.Logger, clientsProvider clients.AdminAPIClientsProvider) *GatewayClientGetter {
 	return &GatewayClientGetter{
 		logger:          logger.WithName("gateway-admin-api-getter"),

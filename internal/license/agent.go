@@ -2,7 +2,9 @@ package license
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"sync"
 	"time"
@@ -17,7 +19,7 @@ import (
 func NewLicenseAgent(
 	period time.Duration,
 	url string,
-	konnectAPIClient konnect.AbstractLicenseAPI,
+	konnectAPIClient *konnect.NodeAPIClient,
 	logger logr.Logger,
 ) *Agent {
 	client := http.Client{} // TODO remove once konnect client has added functionality for license
@@ -34,9 +36,6 @@ func NewLicenseAgent(
 // TODO there's a decent chance that Koko license is 100% compatible with the Kong license entity. we may be able to
 // just alias go-kong License here. However, we still need the Items wrapper because the admin API represents them as
 // an array.
-//
-// Nodes does not do that since they don't exist in the Kong admin API, so licenses are the odd thing out, and maybe
-// we don't try to use the go-kong type for consistency.
 
 type LicenseCollection struct {
 	Items []License `json:"items"`
@@ -47,18 +46,17 @@ type License struct {
 	License   string `json:"payload,omitempty"`
 	UpdatedAt uint64 `json:"updated_at,omitempty"`
 	CreatedAt uint64 `json:"created_at,omitempty"`
-	ID        string `json:"id,omitempty"`
 }
 
 // Agent handles retrieving a Kong license and providing it to other KIC subsystems.
 type Agent struct {
-	license          konnect.LicenseItem // TODO maybe separate types
+	license          License // TODO maybe separate types
 	logger           logr.Logger
 	client           http.Client // TODO this needs to be a Konnect client eventually
 	upstreamURL      string
 	ticker           *time.Ticker
 	mutex            sync.RWMutex
-	konnectAPIClient konnect.AbstractLicenseAPI
+	konnectAPIClient *konnect.NodeAPIClient
 }
 
 // NeedLeaderElection indicates if the Agent requires leadership to run. It always returns true.
@@ -105,29 +103,27 @@ func (a *Agent) Run(ctx context.Context) {
 
 // Update retrievs a license from an outside system. If it successfully retrieves a license, it TODO.
 func (a *Agent) UpdateLicense(ctx context.Context) error {
-	// TODO fake API cruft to remove
-	//request, err := http.NewRequestWithContext(ctx, "GET", a.upstreamURL, nil)
-	//if err != nil {
-	//	return err
-	//}
-	//response, err := a.client.Do(request)
-	//if err != nil {
-	//	return err
-	//}
-	//defer response.Body.Close()
-	//body, err := io.ReadAll(response.Body)
-	//if err != nil {
-	//	return err
-	//}
-	//a.logger.V(util.DebugLevel).Info("retrieved license")
-	//var licenses LicenseCollection
-	//err = json.Unmarshal(body, &licenses)
-	//if err != nil {
-	//	return err
-	//}
+	request, err := http.NewRequestWithContext(ctx, "GET", a.upstreamURL, nil)
+	if err != nil {
+		return err
+	}
+	response, err := a.client.Do(request)
+	if err != nil {
+		return err
+	}
+	defer response.Body.Close()
+	body, err := io.ReadAll(response.Body)
+	if err != nil {
+		return err
+	}
+	a.logger.V(util.DebugLevel).Info("retrieved license")
+	var licenses LicenseCollection
+	err = json.Unmarshal(body, &licenses)
+	if err != nil {
+		return err
+	}
 	// TODO this is proposed as an array because it's a Kong entity collection, even though we only expect to have
 	// exactly one license. this is manageable, but a bit messy
-	licenses, err := a.konnectAPIClient.List(ctx, 0)
 	if len(licenses.Items) == 0 {
 		return fmt.Errorf("received empty license response")
 	}
@@ -136,7 +132,7 @@ func (a *Agent) UpdateLicense(ctx context.Context) error {
 		a.logger.V(util.DebugLevel).Info("retrieved license has later expiration than current license, updating license cache")
 		a.mutex.Lock()
 		defer a.mutex.Unlock()
-		a.license = *license
+		a.license = license
 
 		err = persistLicense(license.License)
 		if err != nil {

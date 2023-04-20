@@ -192,9 +192,9 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 	setupLog.Info("Add readiness probe to health server")
 	healthServer.setReadyzCheck(readyzHandler(mgr, synchronizer))
 
-	var konnectAPIClient *konnect.Client
+	var konnectAPIClient *konnect.NodeAPIClient
 	if c.Konnect.ConfigSynchronizationEnabled || c.Konnect.LicenseSynchronizationEnabled {
-		konnectAPIClient, err = konnect.NewKonnectAPIClient(c.Konnect)
+		konnectAPIClient, err = konnect.NewNodeAPIClient(c.Konnect)
 		if err != nil {
 			return fmt.Errorf("failed creating konnect client: %w", err)
 		}
@@ -227,7 +227,7 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 	// the client and makes it available to all Konnect-related subsystems.
 	if c.Konnect.LicenseSynchronizationEnabled {
 		setupLog.Info("starting license agent")
-		agent := license.NewLicenseAgent(time.Hour*12, "http://example.com", konnectAPIClient.License,
+		agent := license.NewLicenseAgent(time.Hour*12, "http://example.com", konnectAPIClient,
 			ctrl.Log.WithName("license-agent"))
 		err := mgr.Add(agent)
 		if err != nil {
@@ -268,7 +268,7 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 func setupKonnectNodeAgentWithMgr(
 	c *Config,
 	mgr manager.Manager,
-	konnectAPIClient *konnect.Client,
+	konnectAPIClient *konnect.NodeAPIClient,
 	dataplaneClient *dataplane.KongClient,
 	clientsManager *clients.AdminAPIClientsManager,
 	logger logr.Logger,
@@ -293,7 +293,7 @@ func setupKonnectNodeAgentWithMgr(
 		version,
 		c.Konnect.RefreshNodePeriod,
 		logger,
-		konnectAPIClient.Node,
+		konnectAPIClient,
 		configStatusNotifier,
 		konnect.NewGatewayClientGetter(logger, clientsManager),
 		clientsManager,

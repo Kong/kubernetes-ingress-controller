@@ -217,7 +217,8 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 		}
 	}
 
-	// TODO This requires the Konnect client, which currently requires c.Konnect.ConfigSynchronizationEnabled also.
+	// TODO https://github.com/Kong/kubernetes-ingress-controller/issues/3922
+	// This requires the Konnect client, which currently requires c.Konnect.ConfigSynchronizationEnabled also.
 	// We need to figure out exactly how that config surface works. Initial direction says add a separate toggle, but
 	// we probably want to avoid that long term. If we do have separate toggles, we need an AND condition that sets up
 	// the client and makes it available to all Konnect-related subsystems.

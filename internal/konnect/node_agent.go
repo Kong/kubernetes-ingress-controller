@@ -24,7 +24,6 @@ const (
 type GatewayInstance struct {
 	Hostname string
 	Version  string
-	NodeID   string
 }
 
 // GatewayInstanceGetter is the interface to get currently running gateway instances in the kubernetes cluster.
@@ -263,7 +262,6 @@ func (a *NodeAgent) updateGatewayNodes(ctx context.Context, existingNodes []*Nod
 		// hostname in existing nodes, should create a new node.
 		if !ok || len(nodes) == 0 {
 			createNodeReq := &CreateNodeRequest{
-				ID:       gateway.NodeID,
 				Hostname: gateway.Hostname,
 				Version:  gateway.Version,
 				Type:     nodeType,
@@ -410,16 +408,9 @@ func (p *GatewayClientGetter) GetGatewayInstances(ctx context.Context) ([]Gatewa
 			hostname = "gateway" + "_" + u.Host
 		}
 
-		nodeID, err := client.NodeID(ctx)
-		if err != nil {
-			p.logger.Error(err, "failed to get node ID from gateway admin API, skipping", "url", client.BaseRootURL())
-			continue
-		}
-
 		gatewayInstances = append(gatewayInstances, GatewayInstance{
 			Hostname: hostname,
 			Version:  kongVersion,
-			NodeID:   nodeID,
 		})
 	}
 

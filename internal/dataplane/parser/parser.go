@@ -521,14 +521,14 @@ func (p *Parser) getCerts(secretsToSNIs SecretNameToSNIs) []certWrapper {
 func (p *Parser) FillEntitiesIDs(result kongstate.KongState) kongstate.KongState {
 	for i := range result.Services {
 		service := result.Services[i].Service
-		if err := kong.FillEntityID(&service); err != nil {
+		if err := service.FillID(); err != nil {
 			p.logger.WithError(err).Error("Failed to fill service ID")
 		}
 		result.Services[i].Service = service
 
 		for j := range result.Services[i].Routes {
 			route := result.Services[i].Routes[j]
-			if err := kong.FillEntityID(&route.Route); err != nil {
+			if err := route.FillID(); err != nil {
 				p.logger.WithError(err).Error("Failed to fill route ID")
 			}
 			result.Services[i].Routes[j] = route
@@ -537,7 +537,7 @@ func (p *Parser) FillEntitiesIDs(result kongstate.KongState) kongstate.KongState
 
 	for i := range result.Consumers {
 		consumer := result.Consumers[i]
-		if err := kong.FillEntityID(&consumer.Consumer); err != nil {
+		if err := consumer.FillID(); err != nil {
 			p.logger.WithError(err).Error("Failed to fill consumer ID")
 		}
 		result.Consumers[i] = consumer

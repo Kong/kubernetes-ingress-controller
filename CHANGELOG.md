@@ -91,7 +91,7 @@ Adding a new version? You'll need three changes:
   [#3852](https://github.com/Kong/kubernetes-ingress-controller/pull/3852)
 - Fixed a missing reconciliation behavior for Admin API EndpointSlice reconciler
   when the EndpointSlice that we receive a reconciliation request for is already
-  missing
+  missing.
   [#3889](https://github.com/Kong/kubernetes-ingress-controller/pull/3889)
 - Fixed leader election role manifest where `""` and `"coordination"` API groups
   together with the related manifest resources (`configmaps` and `leases`) might

@@ -21,46 +21,6 @@ func GenerateSHA(targetContent *file.Content) ([]byte, error) {
 	return shaSum[:], nil
 }
 
-// CleanUpNullsInPluginConfigs modifies `state` by deleting plugin config map keys that have nil as their value.
-func CleanUpNullsInPluginConfigs(state *file.Content) {
-	for _, s := range state.Services {
-		for _, p := range s.Plugins {
-			for k, v := range p.Config {
-				if v == nil {
-					delete(p.Config, k)
-				}
-			}
-		}
-		for _, r := range state.Routes {
-			for _, p := range r.Plugins {
-				for k, v := range p.Config {
-					if v == nil {
-						delete(p.Config, k)
-					}
-				}
-			}
-		}
-	}
-
-	for _, c := range state.Consumers {
-		for _, p := range c.Plugins {
-			for k, v := range p.Config {
-				if v == nil {
-					delete(p.Config, k)
-				}
-			}
-		}
-	}
-
-	for _, p := range state.Plugins {
-		for k, v := range p.Config {
-			if v == nil {
-				delete(p.Config, k)
-			}
-		}
-	}
-}
-
 // GetFCertificateFromKongCert converts a kong.Certificate to a file.FCertificate.
 func GetFCertificateFromKongCert(kongCert kong.Certificate) file.FCertificate {
 	var res file.FCertificate

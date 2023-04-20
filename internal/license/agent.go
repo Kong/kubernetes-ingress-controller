@@ -9,6 +9,7 @@ import (
 
 	"github.com/go-logr/logr"
 
+	"github.com/kong/go-kong/kong"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/konnect"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 )
@@ -148,12 +149,16 @@ func (a *Agent) UpdateLicenseFromCache(ctx context.Context) error {
 	return fmt.Errorf("not implemented")
 }
 
-// GetLicense returns the agent's current license.
-func (a *Agent) GetLicense() string {
+// GetLicense returns the agent's current license as a go-kong License struct. It omits the origin timestamps,
+// as Kong will auto-populate these when adding the license to its config database.
+func (a *Agent) GetLicense() kong.License {
 	a.mutex.RLock()
 	a.logger.V(util.DebugLevel).Info("retrieving license from cache")
 	defer a.mutex.RUnlock()
-	return a.license.License
+	return kong.License{
+		ID:      kong.String(a.license.ID),
+		Payload: kong.String(a.license.License),
+	}
 }
 
 // PersistLicense saves the current license to a Secret.

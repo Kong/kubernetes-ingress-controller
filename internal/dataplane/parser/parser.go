@@ -50,7 +50,7 @@ type Parser struct {
 	featureEnabledReportConfiguredKubernetesObjects bool
 	featureEnabledCombinedServiceRoutes             bool
 
-	license string
+	license *kong.License
 
 	flagEnabledRegexPathPrefix bool
 	failuresCollector          *failures.ResourceFailuresCollector
@@ -131,16 +131,9 @@ func (p *Parser) Build() (*kongstate.KongState, []failures.ResourceFailure) {
 	// populate CA certificates in Kong
 	result.CACertificates = p.getCACerts()
 
-	if p.license != "" {
-		result.Licenses = []kong.License{
-			{
-				// TODO generate an ID? arguably the static one is fine if we only have one
-				// not sure if changing license IDs has any effect
-				// we may be able to get one from upstream.
-				ID:      kong.String("ed34890a-5726-4305-8a07-902a4af3ae99"),
-				Payload: kong.String(p.license),
-			},
-		}
+	if p.license != nil {
+		result.Licenses = []kong.License{}
+		result.Licenses = append(result.Licenses, *p.license)
 	}
 
 	return &result, p.popTranslationFailures()
@@ -198,8 +191,8 @@ func (p *Parser) EnableRegexPathPrefix() {
 }
 
 // InjectLicense sets a license to inject into configuration.
-func (p *Parser) InjectLicense(license string) {
-	p.license = license
+func (p *Parser) InjectLicense(license kong.License) {
+	p.license = &license
 }
 
 // -----------------------------------------------------------------------------

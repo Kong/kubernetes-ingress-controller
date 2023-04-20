@@ -2,9 +2,7 @@ package license
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
 	"sync"
 	"time"
@@ -50,7 +48,7 @@ type License struct {
 
 // Agent handles retrieving a Kong license and providing it to other KIC subsystems.
 type Agent struct {
-	license          License // TODO maybe separate types
+	license          konnect.LicenseItem // TODO maybe separate types
 	logger           logr.Logger
 	client           http.Client // TODO this needs to be a Konnect client eventually
 	upstreamURL      string
@@ -103,27 +101,29 @@ func (a *Agent) Run(ctx context.Context) {
 
 // Update retrievs a license from an outside system. If it successfully retrieves a license, it TODO.
 func (a *Agent) UpdateLicense(ctx context.Context) error {
-	request, err := http.NewRequestWithContext(ctx, "GET", a.upstreamURL, nil)
-	if err != nil {
-		return err
-	}
-	response, err := a.client.Do(request)
-	if err != nil {
-		return err
-	}
-	defer response.Body.Close()
-	body, err := io.ReadAll(response.Body)
-	if err != nil {
-		return err
-	}
-	a.logger.V(util.DebugLevel).Info("retrieved license")
-	var licenses LicenseCollection
-	err = json.Unmarshal(body, &licenses)
-	if err != nil {
-		return err
-	}
+	// TODO fake API cruft to remove
+	//request, err := http.NewRequestWithContext(ctx, "GET", a.upstreamURL, nil)
+	//if err != nil {
+	//	return err
+	//}
+	//response, err := a.client.Do(request)
+	//if err != nil {
+	//	return err
+	//}
+	//defer response.Body.Close()
+	//body, err := io.ReadAll(response.Body)
+	//if err != nil {
+	//	return err
+	//}
+	//a.logger.V(util.DebugLevel).Info("retrieved license")
+	//var licenses LicenseCollection
+	//err = json.Unmarshal(body, &licenses)
+	//if err != nil {
+	//	return err
+	//}
 	// TODO this is proposed as an array because it's a Kong entity collection, even though we only expect to have
 	// exactly one license. this is manageable, but a bit messy
+	licenses, err := a.konnectAPIClient.List(ctx, 0)
 	if len(licenses.Items) == 0 {
 		return fmt.Errorf("received empty license response")
 	}
@@ -132,7 +132,7 @@ func (a *Agent) UpdateLicense(ctx context.Context) error {
 		a.logger.V(util.DebugLevel).Info("retrieved license has later expiration than current license, updating license cache")
 		a.mutex.Lock()
 		defer a.mutex.Unlock()
-		a.license = license
+		a.license = *license
 
 		err = persistLicense(license.License)
 		if err != nil {

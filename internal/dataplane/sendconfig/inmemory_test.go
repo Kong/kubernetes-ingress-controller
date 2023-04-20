@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"reflect"
 	"sync"
 	"testing"
 
@@ -106,7 +105,7 @@ func TestUpdateInMemoryPlugin(t *testing.T) {
 			require.NoError(t, err)
 			plugin, err := extractPluginInFileContentByID(currentState, *tc.plugin.ID)
 			require.NoError(t, err)
-			require.True(t, reflect.DeepEqual(plugin.Config, tc.plugin.Config))
+			require.Equal(t, tc.plugin.Config, plugin.Config)
 		})
 	}
 }

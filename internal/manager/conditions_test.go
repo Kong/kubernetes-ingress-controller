@@ -43,11 +43,6 @@ func TestIngressControllerConditions(t *testing.T) {
 			expectIngressClassNetV1: true,
 		},
 		{
-			name:              "netV1_not_picked_when_disabled",
-			ingressNetV1:      ingressTestOpts{crdInstalled: true},
-			ingressClassNetV1: ingressTestOpts{enabled: true, crdInstalled: true},
-		},
-		{
 			name:              "no_crds_installed",
 			ingressNetV1:      ingressTestOpts{enabled: true},
 			ingressClassNetV1: ingressTestOpts{enabled: true},

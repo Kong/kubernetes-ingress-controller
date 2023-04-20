@@ -123,6 +123,18 @@ Adding a new version? You'll need three changes:
   At the same time deprecate `--enable-controller-ingress-extensionsv1beta1` CLI flag.
   [#3710](https://github.com/Kong/kubernetes-ingress-controller/pull/3710)
 
+  This changes the:
+  - Names of Kong services generated from Ingress v1.
+    From now on, they will contain the `pnum-` prefix in the part designating
+    the service port.
+    So, for example, instead of `default.foo-svc.80` we'll get
+    `default.foo-svc.pnum-80`.
+  - Regex priorioty of Kong routes generated from Ingress v1.
+    Now route's regex priority will be set using the following mapping:
+    - 300 for `PathTypeExact`
+    - 200 for `PathTypePrefix`
+    - 100 for `PathTypeImplementationSpecific`
+
 ## [2.9.3]
 
 > Release date: 2023-04-17

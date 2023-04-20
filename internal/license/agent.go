@@ -107,7 +107,7 @@ func (a *Agent) UpdateLicense(ctx context.Context) error {
 
 // UpdateLicenseFromCache retrieves a license from a local cache.
 func (a *Agent) UpdateLicenseFromCache(ctx context.Context) error {
-	// TODO make this not a stub
+	// TODO make this not a stub https://github.com/Kong/kubernetes-ingress-controller/issues/3923
 	return fmt.Errorf("not implemented")
 }
 
@@ -125,6 +125,6 @@ func (a *Agent) GetLicense() kong.License {
 
 // PersistLicense saves the current license to a Secret.
 func persistLicense(license string) error {
-	// TODO make this not a stub
+	// TODO make this not a stub https://github.com/Kong/kubernetes-ingress-controller/issues/3923
 	return nil
 }

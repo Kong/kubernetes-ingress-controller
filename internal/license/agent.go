@@ -7,8 +7,8 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
-
 	"github.com/kong/go-kong/kong"
+
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/konnect"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 )
@@ -87,6 +87,9 @@ func (a *Agent) UpdateLicense(ctx context.Context) error {
 	// TODO this is an array because it's a Kong entity collection, even though we only expect to have
 	// exactly one license. this is manageable, but a bit messy
 	licenses, err := a.konnectAPIClient.List(ctx, 0)
+	if err != nil {
+		return fmt.Errorf("could not retrieve license: %w", err)
+	}
 	if len(licenses.Items) == 0 {
 		return fmt.Errorf("received empty license response")
 	}
@@ -106,7 +109,7 @@ func (a *Agent) UpdateLicense(ctx context.Context) error {
 }
 
 // UpdateLicenseFromCache retrieves a license from a local cache.
-func (a *Agent) UpdateLicenseFromCache(ctx context.Context) error {
+func (a *Agent) UpdateLicenseFromCache(_ context.Context) error {
 	// TODO make this not a stub https://github.com/Kong/kubernetes-ingress-controller/issues/3923
 	return fmt.Errorf("not implemented")
 }
@@ -124,7 +127,7 @@ func (a *Agent) GetLicense() kong.License {
 }
 
 // PersistLicense saves the current license to a Secret.
-func persistLicense(license string) error {
+func persistLicense(_ string) error {
 	// TODO make this not a stub https://github.com/Kong/kubernetes-ingress-controller/issues/3923
 	return nil
 }

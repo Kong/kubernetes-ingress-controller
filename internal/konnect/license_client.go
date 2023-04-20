@@ -53,10 +53,6 @@ func (c *LicenseAPIClient) kicLicenseAPIEndpoint() string {
 	return fmt.Sprintf(KICLicenseAPIPathPattern, c.Address, c.RuntimeGroupID)
 }
 
-func (c *LicenseAPIClient) kicLicenseAPIEndpointWithLicenseID(licenseID string) string {
-	return fmt.Sprintf(KICLicenseAPIPathPattern, c.Address, c.RuntimeGroupID) + "/" + licenseID
-}
-
 func (c *LicenseAPIClient) List(ctx context.Context, pageNumber int) (*ListLicenseResponse, error) {
 	// TODO this is another case where we have a pseudo-unary object. The page is always 0 in practice, but if we have
 	// separate functions per entity, we end up with effectively dead code for some

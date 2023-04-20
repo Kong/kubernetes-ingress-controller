@@ -523,7 +523,7 @@ func verifyEnterpriseWithPostgres(ctx context.Context, t *testing.T, env environ
 	require.Equal(t, http.StatusCreated, resp.StatusCode, fmt.Sprintf("STATUS=(%s), BODY=(%s)", resp.Status, string(body)))
 }
 
-// licenseOutput is the license section of the admin API root response
+// licenseOutput is the license section of the admin API root response.
 type licenseOutput struct {
 	License struct {
 		Customer   string `json:"customer"`

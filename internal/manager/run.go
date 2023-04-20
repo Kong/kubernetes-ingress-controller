@@ -192,15 +192,11 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 	setupLog.Info("Add readiness probe to health server")
 	healthServer.setReadyzCheck(readyzHandler(mgr, synchronizer))
 
-	var konnectAPIClient *konnect.NodeAPIClient
-	if c.Konnect.ConfigSynchronizationEnabled || c.Konnect.LicenseSynchronizationEnabled {
-		konnectAPIClient, err = konnect.NewNodeAPIClient(c.Konnect)
+	if c.Konnect.ConfigSynchronizationEnabled {
+		konnectAPIClient, err := konnect.NewNodeAPIClient(c.Konnect)
 		if err != nil {
 			return fmt.Errorf("failed creating konnect client: %w", err)
 		}
-	}
-
-	if c.Konnect.ConfigSynchronizationEnabled {
 		// In case of failures when building Konnect related objects, we're not returning errors as Konnect is not
 		// considered critical feature, and it should not break the basic functionality of the controller.
 
@@ -226,10 +222,14 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 	// we probably want to avoid that long term. If we do have separate toggles, we need an AND condition that sets up
 	// the client and makes it available to all Konnect-related subsystems.
 	if c.Konnect.LicenseSynchronizationEnabled {
+		konnectAPIClient, err := konnect.NewLicenseAPIClient(c.Konnect)
+		if err != nil {
+			return fmt.Errorf("failed creating konnect client: %w", err)
+		}
 		setupLog.Info("starting license agent")
 		agent := license.NewLicenseAgent(time.Hour*12, "http://example.com", konnectAPIClient,
 			ctrl.Log.WithName("license-agent"))
-		err := mgr.Add(agent)
+		err = mgr.Add(agent)
 		if err != nil {
 			return fmt.Errorf("could not add license agent to manager: %w", err)
 		}

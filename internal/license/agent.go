@@ -19,7 +19,7 @@ import (
 func NewLicenseAgent(
 	period time.Duration,
 	url string,
-	konnectAPIClient *konnect.NodeAPIClient,
+	konnectAPIClient *konnect.LicenseAPIClient,
 	logger logr.Logger,
 ) *Agent {
 	client := http.Client{} // TODO remove once konnect client has added functionality for license
@@ -56,7 +56,7 @@ type Agent struct {
 	upstreamURL      string
 	ticker           *time.Ticker
 	mutex            sync.RWMutex
-	konnectAPIClient *konnect.NodeAPIClient
+	konnectAPIClient *konnect.LicenseAPIClient
 }
 
 // NeedLeaderElection indicates if the Agent requires leadership to run. It always returns true.

@@ -72,15 +72,13 @@ func TestKonnectConfigPush(t *testing.T) {
 
 func TestKonnectLicenseActivation(t *testing.T) {
 	t.Parallel()
-	// TODO enable once real API is available
-	//skipIfMissingRequiredKonnectEnvVariables(t)
+	skipIfMissingRequiredKonnectEnvVariables(t)
 
 	ctx, env := setupE2ETest(t)
 
-	// TODO ditto. unsure if we need the rgID truly, but the other functions require it
-	//rgID := createTestRuntimeGroup(ctx, t)
-	//cert, key := createClientCertificate(ctx, t, rgID)
-	//createKonnectClientSecretAndConfigMap(ctx, t, env, cert, key, rgID)
+	rgID := createTestRuntimeGroup(ctx, t)
+	cert, key := createClientCertificate(ctx, t, rgID)
+	createKonnectClientSecretAndConfigMap(ctx, t, env, cert, key, rgID)
 
 	manifestFile := "../../deploy/single/all-in-one-dbless-konnect-enterprise.yaml"
 	t.Logf("deploying %s manifest file", manifestFile)

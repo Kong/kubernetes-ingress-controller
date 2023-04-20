@@ -15,7 +15,7 @@ require (
 	github.com/go-logr/logr v1.2.4
 	github.com/google/go-cmp v0.5.9
 	github.com/google/uuid v1.3.0
-	github.com/kong/deck v1.19.2-0.20230403224054-0c44ea000a18
+	github.com/kong/deck v1.19.2-0.20230419232402-32c304f0dad7
 	github.com/kong/go-kong v0.40.0
 	github.com/kong/kubernetes-telemetry v0.0.2
 	github.com/kong/kubernetes-testing-framework v0.30.1
@@ -57,6 +57,7 @@ require (
 	github.com/hashicorp/errwrap v1.0.0 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
 	github.com/puzpuzpuz/xsync/v2 v2.4.0 // indirect
+	github.com/shoenig/go-m1cpu v0.1.4 // indirect
 	go.uber.org/atomic v1.10.0 // indirect
 	golang.org/x/net v0.9.0 // indirect
 )
@@ -86,7 +87,7 @@ require (
 	github.com/evanphx/json-patch/v5 v5.6.0 // indirect
 	github.com/exponent-io/jsonpath v0.0.0-20151013193312-d6023ce2651d // indirect
 	github.com/fatih/camelcase v1.0.0 // indirect
-	github.com/fatih/color v1.14.1 // indirect
+	github.com/fatih/color v1.15.0 // indirect
 	github.com/fsnotify/fsnotify v1.6.0 // indirect
 	github.com/fvbommel/sortorder v1.0.1 // indirect
 	github.com/go-errors/errors v1.0.1 // indirect
@@ -114,7 +115,7 @@ require (
 	github.com/hashicorp/golang-lru v0.5.4 // indirect
 	github.com/hexops/gotextdiff v1.0.3 // indirect
 	github.com/huandu/xstrings v1.3.3 // indirect
-	github.com/imdario/mergo v0.3.14 // indirect
+	github.com/imdario/mergo v0.3.15 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
@@ -143,7 +144,7 @@ require (
 	github.com/prometheus/client_model v0.3.0 // indirect
 	github.com/prometheus/procfs v0.8.0 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
-	github.com/shirou/gopsutil/v3 v3.23.2 // indirect
+	github.com/shirou/gopsutil/v3 v3.23.3 // indirect
 	github.com/shopspring/decimal v1.2.0 // indirect
 	github.com/sourcegraph/conc v0.3.0
 	github.com/spf13/cast v1.5.0 // indirect

@@ -17,10 +17,9 @@ import (
 )
 
 type KonnectConfig struct {
-	// TODO ConfigSynchronizationEnabled is the only toggle we have at present
-	// we do not want to require a separate license toggle. it should be always or at least default on
-	// if Konnect is enabled at all. do we want to allow konnect enabled _without_ config sync? should
-	// that be a separate toggle from an umbrella "enable konnect" toggle?
+	// TODO https://github.com/Kong/kubernetes-ingress-controller/issues/3922
+	// ConfigSynchronizationEnabled is the only toggle we had prior to the addition of the license agent.
+	// We likely want to combine these into a single Konnect toggle or piggyback off other Konnect functionality.
 	ConfigSynchronizationEnabled  bool
 	LicenseSynchronizationEnabled bool
 	RuntimeGroupID                string

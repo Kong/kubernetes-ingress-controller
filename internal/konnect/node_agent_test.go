@@ -167,7 +167,7 @@ func (s *mockKonnectNodeService) dumpNodes() []*konnect.NodeItem {
 }
 
 func (s *mockKonnectNodeService) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
-	kicNodeAPIRoot := fmt.Sprintf(konnect.KicNodeAPIPathPattern, "", s.clusterID)
+	kicNodeAPIRoot := fmt.Sprintf(konnect.KICNodeAPIPathPattern, "", s.clusterID)
 	body, err := io.ReadAll(req.Body)
 	if err != nil {
 		rw.WriteHeader(http.StatusBadRequest)
@@ -400,11 +400,13 @@ func TestNodeAgentUpdateNodes(t *testing.T) {
 				nodes:     tc.initialNodes,
 			}
 			s := httptest.NewServer(nodeService)
-			nodeClient := &konnect.NodeAPIClient{
+			konnectClient := &konnect.Client{
 				Address:        s.URL,
 				RuntimeGroupID: testClusterID,
 				Client:         &http.Client{},
 			}
+			konnectClient.Common.Client = konnectClient
+			nodeClient := (*konnect.NodeAPIClient)(&konnectClient.Common)
 
 			logger := testr.New(t)
 			configStatusSubscriber := clients.NewChannelConfigNotifier(logger)
@@ -477,11 +479,13 @@ func TestNodeAgent_StartDoesntReturnUntilContextGetsCancelled(t *testing.T) {
 		returnErrorFromListNodes: true,
 	}
 	s := httptest.NewServer(nodeService)
-	nodeClient := &konnect.NodeAPIClient{
+	konnectClient := &konnect.Client{
 		Address:        s.URL,
 		RuntimeGroupID: testClusterID,
 		Client:         &http.Client{},
 	}
+	konnectClient.Common.Client = konnectClient
+	nodeClient := (*konnect.NodeAPIClient)(&konnectClient.Common)
 	logger := testr.New(t)
 	configStatusSubscriber := clients.NewChannelConfigNotifier(logger)
 

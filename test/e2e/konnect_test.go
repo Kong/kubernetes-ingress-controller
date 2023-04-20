@@ -319,8 +319,8 @@ func createKonnectAdminAPIClient(t *testing.T, rgID, cert, key string) *adminapi
 	return c
 }
 
-// createKonnectNodeClient creates a konnect.NodeAPIClient to get nodes in konnect runtime group.
-func createKonnectNodeClient(t *testing.T, rgID, cert, key string) *konnect.NodeAPIClient {
+// createKonnectNodeClient creates a konnect.KonnectAPIClient to get nodes in konnect runtime group.
+func createKonnectNodeClient(t *testing.T, rgID, cert, key string) *konnect.KonnectAPIClient {
 	cfg := adminapi.KonnectConfig{
 		ConfigSynchronizationEnabled: true,
 		RuntimeGroupID:               rgID,
@@ -331,7 +331,7 @@ func createKonnectNodeClient(t *testing.T, rgID, cert, key string) *konnect.Node
 			Key:  key,
 		},
 	}
-	c, err := konnect.NewNodeAPIClient(cfg)
+	c, err := konnect.NewKonnectAPIClient(cfg)
 	require.NoError(t, err)
 	return c
 }

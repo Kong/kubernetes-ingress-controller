@@ -90,20 +90,14 @@ func TestKonnectLicenseActivation(t *testing.T) {
 
 	t.Log("disabling license management")
 	kubeconfig := getTemporaryKubeconfig(t, env)
-	cmd := exec.Command("kubectl", "--kubeconfig", kubeconfig, "set", "env", "-n", "kong", "deployment/ingress-kong",
-		"CONTROLLER_KONNECT_LICENSING_ENABLED-")
+	require.NoError(t, setEnv(ctx, kubeconfig, "kong", "deployment/ingress-kong", "CONTROLLER_KONNECT_LICENSING_ENABLED", ""))
+
+	t.Log("restarting proxy")
+	cmd := exec.Command("kubectl", "--kubeconfig", kubeconfig, "rollout", "-n", "kong", "restart", "deployment", "proxy-kong")
 	stdout, stderr := new(bytes.Buffer), new(bytes.Buffer)
 	cmd.Stdout = stdout
 	cmd.Stderr = stderr
 	err := cmd.Run()
-	require.NoErrorf(t, err, "disabling licensing failed: STDOUT(%s) STDERR(%s)", stdout.String(), stderr.String())
-
-	t.Log("restarting proxy")
-	cmd = exec.Command("kubectl", "--kubeconfig", kubeconfig, "rollout", "-n", "kong", "restart", "deployment", "proxy-kong")
-	stdout, stderr = new(bytes.Buffer), new(bytes.Buffer)
-	cmd.Stdout = stdout
-	cmd.Stderr = stderr
-	err = cmd.Run()
 	require.NoErrorf(t, err, "restarting proxy failed: STDOUT(%s) STDERR(%s)", stdout.String(), stderr.String())
 
 	t.Log("confirming that the license is empty")
@@ -116,13 +110,7 @@ func TestKonnectLicenseActivation(t *testing.T) {
 	}, adminAPIWait, time.Second)
 
 	t.Log("re-enabling license management")
-	cmd = exec.Command("kubectl", "--kubeconfig", kubeconfig, "set", "env", "-n", "kong", "deployment/ingress-kong",
-		"CONTROLLER_KONNECT_LICENSING_ENABLED=true")
-	stdout, stderr = new(bytes.Buffer), new(bytes.Buffer)
-	cmd.Stdout = stdout
-	cmd.Stderr = stderr
-	err = cmd.Run()
-	require.NoErrorf(t, err, "enabling licensing failed: STDOUT(%s) STDERR(%s)", stdout.String(), stderr.String())
+	require.NoError(t, setEnv(ctx, kubeconfig, "kong", "deployment/ingress-kong", "CONTROLLER_KONNECT_LICENSING_ENABLED", "true"))
 
 	t.Log("confirming that the license is set")
 	assert.Eventually(t, func() bool {

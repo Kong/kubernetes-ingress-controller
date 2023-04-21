@@ -108,7 +108,7 @@ func TestKonnectLicenseActivation(t *testing.T) {
 
 	t.Log("confirming that the license is empty")
 	require.Eventually(t, func() bool {
-		license, err := getLicense(ctx, env, "")
+		license, err := getLicenseFromAdminAPI(ctx, env, "")
 		if err != nil {
 			return false
 		}
@@ -126,7 +126,7 @@ func TestKonnectLicenseActivation(t *testing.T) {
 
 	t.Log("confirming that the license is set")
 	assert.Eventually(t, func() bool {
-		license, err := getLicense(ctx, env, "")
+		license, err := getLicenseFromAdminAPI(ctx, env, "")
 		if err != nil {
 			return false
 		}

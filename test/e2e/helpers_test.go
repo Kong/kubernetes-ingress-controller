@@ -536,7 +536,7 @@ type licenseOutput struct {
 	} `json:"license"`
 }
 
-func getLicense(ctx context.Context, env environments.Environment, adminPassword string) (licenseOutput, error) {
+func getLicenseFromAdminAPI(ctx context.Context, env environments.Environment, adminPassword string) (licenseOutput, error) {
 	var license licenseOutput
 	// find the admin service
 	service, err := env.Cluster().Client().CoreV1().Services(namespace).Get(ctx, adminServiceName, metav1.GetOptions{})

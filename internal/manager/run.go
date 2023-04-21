@@ -223,12 +223,12 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 	// we probably want to avoid that long term. If we do have separate toggles, we need an AND condition that sets up
 	// the client and makes it available to all Konnect-related subsystems.
 	if c.Konnect.LicenseSynchronizationEnabled {
-		konnectAPIClient, err := konnect.NewLicenseAPIClient(c.Konnect)
+		konnectLicenseAPIClient, err := konnect.NewLicenseAPIClient(c.Konnect)
 		if err != nil {
 			return fmt.Errorf("failed creating konnect client: %w", err)
 		}
 		setupLog.Info("starting license agent")
-		agent := license.NewLicenseAgent(time.Hour*12, "http://example.com", konnectAPIClient,
+		agent := license.NewLicenseAgent(time.Hour*12, "http://example.com", konnectLicenseAPIClient,
 			ctrl.Log.WithName("license-agent"))
 		err = mgr.Add(agent)
 		if err != nil {
@@ -269,7 +269,7 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 func setupKonnectNodeAgentWithMgr(
 	c *Config,
 	mgr manager.Manager,
-	konnectAPIClient *konnect.NodeAPIClient,
+	konnectNodeAPIClient *konnect.NodeAPIClient,
 	dataplaneClient *dataplane.KongClient,
 	clientsManager *clients.AdminAPIClientsManager,
 	logger logr.Logger,
@@ -294,7 +294,7 @@ func setupKonnectNodeAgentWithMgr(
 		version,
 		c.Konnect.RefreshNodePeriod,
 		logger,
-		konnectAPIClient,
+		konnectNodeAPIClient,
 		configStatusNotifier,
 		konnect.NewGatewayClientGetter(logger, clientsManager),
 		clientsManager,

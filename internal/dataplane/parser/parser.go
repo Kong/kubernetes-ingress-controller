@@ -132,7 +132,6 @@ func (p *Parser) Build() (*kongstate.KongState, []failures.ResourceFailure) {
 	result.CACertificates = p.getCACerts()
 
 	if p.license != nil {
-		result.Licenses = []kong.License{}
 		result.Licenses = append(result.Licenses, *p.license)
 	}
 

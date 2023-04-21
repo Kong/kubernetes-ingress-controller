@@ -90,7 +90,7 @@ func TestKonnectLicenseActivation(t *testing.T) {
 
 	t.Log("disabling license management")
 	kubeconfig := getTemporaryKubeconfig(t, env)
-	require.NoError(t, setEnv(ctx, kubeconfig, "kong", "deployment/ingress-kong", "CONTROLLER_KONNECT_LICENSING_ENABLED", ""))
+	require.NoError(t, setEnv(kubeconfig, "kong", "deployment/ingress-kong", "CONTROLLER_KONNECT_LICENSING_ENABLED", ""))
 
 	t.Log("restarting proxy")
 	cmd := exec.Command("kubectl", "--kubeconfig", kubeconfig, "rollout", "-n", "kong", "restart", "deployment", "proxy-kong")
@@ -110,7 +110,7 @@ func TestKonnectLicenseActivation(t *testing.T) {
 	}, adminAPIWait, time.Second)
 
 	t.Log("re-enabling license management")
-	require.NoError(t, setEnv(ctx, kubeconfig, "kong", "deployment/ingress-kong", "CONTROLLER_KONNECT_LICENSING_ENABLED", "true"))
+	require.NoError(t, setEnv(kubeconfig, "kong", "deployment/ingress-kong", "CONTROLLER_KONNECT_LICENSING_ENABLED", "true"))
 
 	t.Log("confirming that the license is set")
 	assert.Eventually(t, func() bool {

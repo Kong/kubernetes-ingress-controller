@@ -452,7 +452,7 @@ func ensureNoneOfDeploymentPodsHasCrashed(ctx context.Context, t *testing.T, env
 	}
 }
 
-func setEnv(ctx context.Context, kubecfg, namespace, target, variable, value string) error {
+func setEnv(kubecfg, namespace, target, variable, value string) error {
 	var envvar string
 	if value == "" {
 		envvar = fmt.Sprintf("%s-", variable)

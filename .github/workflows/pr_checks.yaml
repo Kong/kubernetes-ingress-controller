@@ -80,6 +80,6 @@ jobs:
       - unit-tests
       - integration-tests
       - conformance-tests
-    if: ${{ needs.should-run-with-secrets.outputs.result == 'true' }}
+    if: ${{ always() && needs.should-run-with-secrets.outputs.result == 'true' }}
     uses: ./.github/workflows/_test_reports.yaml
     secrets: inherit

@@ -81,7 +81,7 @@ func (a *Agent) Run(ctx context.Context) {
 	}
 }
 
-// Update retrievs a license from an outside system. If it successfully retrieves a license, it updates the in-memory
+// UpdateLicense retrievs a license from an outside system. If it successfully retrieves a license, it updates the in-memory
 // and persistent license caches.
 func (a *Agent) UpdateLicense(ctx context.Context) error {
 	// TODO this is an array because it's a Kong entity collection, even though we only expect to have

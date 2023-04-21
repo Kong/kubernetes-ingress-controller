@@ -133,7 +133,11 @@ type KongClient struct {
 	configChangeDetector sendconfig.ConfigurationChangeDetector
 
 	// licenseAgent manages Konnect license retrieval.
-	licenseAgent *license.Agent
+	licenseAgent licenseGetter
+}
+
+type licenseGetter interface {
+	GetLicense() kong.License
 }
 
 // NewKongClient provides a new KongClient object after connecting to the

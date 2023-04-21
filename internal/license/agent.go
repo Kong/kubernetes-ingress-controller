@@ -50,10 +50,10 @@ func (a *Agent) Start(ctx context.Context) error {
 	a.logger.V(util.DebugLevel).Info("starting license agent")
 	updateTimeout, cancel := context.WithTimeout(ctx, time.Minute*1)
 	defer cancel()
-	err := a.UpdateLicense(updateTimeout)
+	err := a.updateLicense(updateTimeout)
 	if err != nil {
 		a.logger.Error(err, "could not retrieve license from upstream")
-		err := a.UpdateLicenseFromCache(ctx)
+		err := a.updateLicenseFromCache(ctx)
 		if err != nil {
 			a.logger.Error(err, "could not retrieve license from local cache")
 		}
@@ -74,16 +74,16 @@ func (a *Agent) Run(ctx context.Context) {
 			a.logger.V(util.DebugLevel).Info("retrieving license from external service")
 			updateTimeout, cancel := context.WithTimeout(ctx, time.Minute*5)
 			defer cancel()
-			if err := a.UpdateLicense(updateTimeout); err != nil {
+			if err := a.updateLicense(updateTimeout); err != nil {
 				a.logger.Error(err, "could not update license")
 			}
 		}
 	}
 }
 
-// UpdateLicense retrievs a license from an outside system. If it successfully retrieves a license, it updates the in-memory
+// updateLicense retrievs a license from an outside system. If it successfully retrieves a license, it updates the in-memory
 // and persistent license caches.
-func (a *Agent) UpdateLicense(ctx context.Context) error {
+func (a *Agent) updateLicense(ctx context.Context) error {
 	// TODO this is an array because it's a Kong entity collection, even though we only expect to have
 	// exactly one license. this is manageable, but a bit messy
 	licenses, err := a.konnectAPIClient.List(ctx, 0)
@@ -108,8 +108,8 @@ func (a *Agent) UpdateLicense(ctx context.Context) error {
 	return nil
 }
 
-// UpdateLicenseFromCache retrieves a license from a local cache.
-func (a *Agent) UpdateLicenseFromCache(_ context.Context) error {
+// updateLicenseFromCache retrieves a license from a local cache.
+func (a *Agent) updateLicenseFromCache(_ context.Context) error {
 	// TODO make this not a stub https://github.com/Kong/kubernetes-ingress-controller/issues/3923
 	return fmt.Errorf("not implemented")
 }

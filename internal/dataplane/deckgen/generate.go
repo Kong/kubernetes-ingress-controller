@@ -126,8 +126,8 @@ func ToDeckContent(
 			file.FLicense{License: c})
 	}
 
-	sort.SliceStable(content.CACertificates, func(i, j int) bool {
-		return strings.Compare(*content.CACertificates[i].Cert, *content.CACertificates[j].Cert) > 0
+	sort.SliceStable(content.Licenses, func(i, j int) bool {
+		return strings.Compare(*content.Licenses[i].Payload, *content.Licenses[j].Payload) > 0
 	})
 
 	for _, c := range k8sState.Consumers {

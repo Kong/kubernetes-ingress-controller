@@ -58,7 +58,7 @@ func (a *Agent) Start(ctx context.Context) error {
 			a.logger.Error(err, "could not retrieve license from local cache")
 		}
 	}
-	go a.Run(ctx)
+	a.Run(ctx)
 	return nil
 }
 

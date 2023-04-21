@@ -28,6 +28,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
 	ctrlref "github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/reference"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 )
 
 // -----------------------------------------------------------------------------
@@ -411,12 +412,15 @@ func (r *GatewayReconciler) reconcileUnmanagedGateway(ctx context.Context, log l
 	debug(log, gateway, "gathering the gateway publish service") // this will also be done by the validating webhook, this is a fallback
 	var gatewayServices []*corev1.Service
 	for _, ref := range serviceRefs {
+		r.Log.V(util.DebugLevel).Info("determining service for ref", "ref", ref)
 		svc, err := r.determineServiceForGateway(ctx, ref)
 		if err != nil {
 			log.Error(err, "could not determine service for gateway", "namespace", gateway.Namespace, "name", gateway.Name)
 			return ctrl.Result{Requeue: true}, err
 		}
-		gatewayServices = append(gatewayServices, svc)
+		if svc != nil {
+			gatewayServices = append(gatewayServices, svc)
+		}
 	}
 
 	// set the Gateway as scheduled to indicate that validation is complete and reconciliation work
@@ -568,6 +572,10 @@ func (r *GatewayReconciler) determineServiceForGateway(ctx context.Context, ref 
 
 	// retrieve the service for the kong gateway
 	svc := &corev1.Service{}
+	if name.Name == "" && name.Namespace == "" {
+		r.Log.V(util.DebugLevel).Info("service not configured, discarding it", "ref", ref)
+		return nil, nil
+	}
 	return svc, r.Client.Get(ctx, name, svc)
 }
 

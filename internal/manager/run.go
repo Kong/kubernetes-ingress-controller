@@ -189,6 +189,7 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 
 	setupLog.Info("Add readiness probe to health server")
 	healthServer.setReadyzCheck(readyzHandler(mgr, synchronizer))
+	instanceIDProvider := NewInstanceIDProvider()
 
 	if c.Konnect.ConfigSynchronizationEnabled {
 		// In case of failures when building Konnect related objects, we're not returning errors as Konnect is not
@@ -205,6 +206,7 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 			dataplaneClient,
 			clientsManager,
 			setupLog,
+			instanceIDProvider,
 		); err != nil {
 			setupLog.Error(err, "Failed to setup Konnect NodeAgent with manager, skipping")
 		}
@@ -222,6 +224,7 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 				KonnectSyncEnabled:             c.Konnect.ConfigSynchronizationEnabled,
 				GatewayServiceDiscoveryEnabled: c.KongAdminSvc.IsPresent(),
 			},
+			instanceIDProvider,
 		)
 		if err != nil {
 			setupLog.Error(err, "failed setting up anonymous reports")
@@ -245,6 +248,7 @@ func setupKonnectNodeAgentWithMgr(
 	dataplaneClient *dataplane.KongClient,
 	clientsManager *dataplane.AdminAPIClientsManager,
 	logger logr.Logger,
+	instanceIDProvider *InstanceIDProvider,
 ) error {
 	konnectNodeAPIClient, err := konnect.NewNodeAPIClient(c.Konnect)
 	if err != nil {
@@ -274,6 +278,7 @@ func setupKonnectNodeAgentWithMgr(
 		configStatusNotifier,
 		konnect.NewGatewayClientGetter(logger, clientsManager),
 		clientsManager,
+		instanceIDProvider,
 	)
 	if err := mgr.Add(agent); err != nil {
 		return fmt.Errorf("failed adding konnect.NodeAgent runnable to the manager: %w", err)

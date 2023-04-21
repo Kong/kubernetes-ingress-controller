@@ -203,6 +203,35 @@ func (c *NodeAPIClient) DeleteNode(ctx context.Context, nodeID string) error {
 	return nil
 }
 
+func (c *NodeAPIClient) GetNode(ctx context.Context, nodeID string) (*NodeItem, error) {
+	url := c.kicNodeAPIEndpointWithNodeID(nodeID)
+	httpReq, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create request: %w", err)
+	}
+	httpResp, err := c.Client.Do(httpReq)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get response: %w", err)
+	}
+	defer httpResp.Body.Close()
+
+	respBuf, err := io.ReadAll(httpResp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read response body: %w", err)
+	}
+
+	if !isOKStatusCode(httpResp.StatusCode) {
+		return nil, fmt.Errorf("non-success response from Koko: %d, resp body %s", httpResp.StatusCode, string(respBuf))
+	}
+
+	resp := &NodeItem{}
+	err = json.Unmarshal(respBuf, resp)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read response body: %w", err)
+	}
+	return resp, nil
+}
+
 // isOKStatusCode returns true if the input HTTP status code is 2xx, in [200,300).
 func isOKStatusCode(code int) bool {
 	return code >= 200 && code < 300

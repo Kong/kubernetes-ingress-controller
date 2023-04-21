@@ -17,6 +17,10 @@ type GatewayClientsProvider interface {
 	GatewayClientsCount() int
 }
 
+type InstanceIDProvider interface {
+	GetID() uuid.UUID
+}
+
 // SetupAnonymousReports sets up and starts the anonymous reporting and returns
 // a cleanup function and an error.
 // The caller is responsible to call the returned function - when the returned
@@ -26,6 +30,7 @@ func SetupAnonymousReports(
 	kubeCfg *rest.Config,
 	clientsProvider GatewayClientsProvider,
 	rv ReportValues,
+	instanceIDProvider InstanceIDProvider,
 ) (func(), error) {
 	// if anonymous reports are enabled this helps provide Kong with insights about usage of the ingress controller
 	// which is non-sensitive and predominantly informs us of the controller and cluster versions in use.
@@ -64,7 +69,7 @@ func SetupAnonymousReports(
 		"v":  metadata.Release,
 		"kv": kongVersion,
 		"db": kongDB,
-		"id": uuid.NewString(), // universal unique identifier for this system
+		"id": instanceIDProvider.GetID(), // universal unique identifier for this system
 	}
 
 	tMgr, err := CreateManager(kubeCfg, clientsProvider, fixedPayload, rv)

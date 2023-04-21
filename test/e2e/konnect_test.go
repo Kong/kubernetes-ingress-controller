@@ -8,6 +8,7 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
+	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/pem"
@@ -15,10 +16,12 @@ import (
 	"math/big"
 	"net/http"
 	"os"
+	"sync"
 	"testing"
 	"time"
 
 	"github.com/google/uuid"
+	gokong "github.com/kong/go-kong/kong"
 	environment "github.com/kong/kubernetes-testing-framework/pkg/environments"
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
@@ -26,6 +29,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/adminapi"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/konnect"
@@ -54,7 +58,7 @@ func TestKonnectConfigPush(t *testing.T) {
 	cert, key := createClientCertificate(ctx, t, rgID)
 	createKonnectClientSecretAndConfigMap(ctx, t, env, cert, key, rgID)
 
-	deployAllInOneKonnectManifest(ctx, t, env)
+	deployments := deployAllInOneKonnectManifest(ctx, t, env)
 
 	t.Log("running ingress tests to verify all-in-one deployed ingress controller and proxy are functional")
 	deployIngress(ctx, t, env)
@@ -65,7 +69,8 @@ func TestKonnectConfigPush(t *testing.T) {
 	requireIngressConfiguredInAdminAPIEventually(ctx, t, konnectAdminAPIClient.AdminAPIClient())
 
 	t.Log("ensuring KIC nodes and controlled kong gateway nodes are present in konnect runtime group")
-	requireKonnectNodesConsistentWithK8s(ctx, t, env, rgID, cert, key)
+	requireKonnectNodesConsistentWithK8s(ctx, t, env, deployments, rgID, cert, key)
+	requireAllProxyReplicasIDsConsistentWithKonnect(ctx, t, env, deployments.ProxyNN, rgID, cert, key)
 }
 
 func TestKonnectWhenMisconfiguredBasicIngressNotAffected(t *testing.T) {
@@ -96,12 +101,13 @@ func skipIfMissingRequiredKonnectEnvVariables(t *testing.T) {
 
 // deployAllInOneKonnectManifest deploys all-in-one-dbless-konnect.yaml manifest, replacing the controller image
 // if specified by environment variables.
-func deployAllInOneKonnectManifest(ctx context.Context, t *testing.T, env environment.Environment) {
+func deployAllInOneKonnectManifest(ctx context.Context, t *testing.T, env environment.Environment) Deployments {
 	const manifestFile = "../../deploy/single/all-in-one-dbless-konnect.yaml"
 	t.Logf("deploying %s manifest file", manifestFile)
 
 	manifest := getTestManifest(t, manifestFile)
 	deployKong(ctx, t, env, manifest)
+	return getManifestDeployments(manifestFile)
 }
 
 // createTestRuntimeGroup creates a runtime group to be used in tests. It returns the created runtime group's ID.
@@ -267,7 +273,7 @@ func createKonnectNodeClient(t *testing.T, rgID, cert, key string) *konnect.Node
 	return c
 }
 
-func requireKonnectNodesConsistentWithK8s(ctx context.Context, t *testing.T, env environment.Environment, rgID string, cert, key string) {
+func requireKonnectNodesConsistentWithK8s(ctx context.Context, t *testing.T, env environment.Environment, deployments Deployments, rgID string, cert, key string) {
 	konnectNodeClient := createKonnectNodeClient(t, rgID, cert, key)
 	require.Eventually(t, func() bool {
 		nodes, err := konnectNodeClient.ListAllNodes(ctx)
@@ -276,12 +282,12 @@ func requireKonnectNodesConsistentWithK8s(ctx context.Context, t *testing.T, env
 			return false
 		}
 
-		kicPods, err := listPodsByLabels(ctx, env, "kong", map[string]string{"app": "ingress-kong"})
+		kicPods, err := listPodsByLabels(ctx, env, "kong", map[string]string{"app": deployments.ControllerNN.Name})
 		if err != nil || len(kicPods) != 1 {
 			return false
 		}
 
-		kongPods, err := listPodsByLabels(ctx, env, "kong", map[string]string{"app": "proxy-kong"})
+		kongPods, err := listPodsByLabels(ctx, env, "kong", map[string]string{"app": deployments.ProxyNN.Name})
 		if err != nil || len(kongPods) != 2 {
 			return false
 		}
@@ -318,4 +324,67 @@ func requireKonnectNodesConsistentWithK8s(ctx context.Context, t *testing.T, env
 
 		return true
 	}, konnectNodeRegistrationTimeout, konnectNodeRegistrationCheck)
+}
+
+// requireAllProxyReplicasIDsConsistentWithKonnect ensures that all proxy replicas are registered in Konnect's Node API with
+// their respective IDs.
+func requireAllProxyReplicasIDsConsistentWithKonnect(
+	ctx context.Context,
+	t *testing.T,
+	env environment.Environment,
+	proxyDeploymentNN types.NamespacedName,
+	rg, cert, key string,
+) {
+	pods, err := listPodsByLabels(ctx, env, proxyDeploymentNN.Namespace, map[string]string{"app": proxyDeploymentNN.Name})
+	require.NoError(t, err)
+
+	nodeAPIClient := createKonnectNodeClient(t, rg, cert, key)
+
+	getNodeIDFromAdminAPI := func(proxyPod corev1.Pod) string {
+		client := &http.Client{
+			Timeout: time.Second * 30,
+			Transport: &http.Transport{
+				TLSClientConfig: &tls.Config{
+					InsecureSkipVerify: true,
+				},
+			},
+		}
+
+		forwardCtx, cancel := context.WithCancel(ctx)
+		defer cancel()
+		localPort := startPortForwarder(forwardCtx, t, env, proxyDeploymentNN.Namespace, proxyPod.Name, "8444")
+		address := fmt.Sprintf("https://localhost:%d", localPort)
+
+		kongClient, err := gokong.NewClient(lo.ToPtr(address), client)
+		require.NoError(t, err)
+
+		nodeID, err := adminapi.NewClient(kongClient).NodeID(ctx)
+		require.NoError(t, err)
+		return nodeID
+	}
+
+	t.Logf("ensuring all %d proxy replicas have consistent IDs assigned in Node API", len(pods))
+	wg := sync.WaitGroup{}
+	for _, pod := range pods {
+		pod := pod
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			nodeIDInAdminAPI := getNodeIDFromAdminAPI(pod)
+
+			require.Eventually(t, func() bool {
+				_, err := nodeAPIClient.GetNode(ctx, nodeIDInAdminAPI)
+				if err != nil {
+					t.Logf("failed to get node %s from Node API: %v", nodeIDInAdminAPI, err)
+					return false
+				}
+
+				return true
+			}, konnectNodeRegistrationTimeout, konnectNodeRegistrationCheck)
+
+			t.Logf("proxy pod %s/%s has consistent ID %s in Node API", pod.Namespace, pod.Name, nodeIDInAdminAPI)
+		}()
+	}
+
+	wg.Wait()
 }

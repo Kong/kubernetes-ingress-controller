@@ -8,7 +8,7 @@ exclude sigs.k8s.io/gateway-api v0.6.2
 require (
 	cloud.google.com/go/container v1.16.0
 	github.com/Masterminds/sprig/v3 v3.2.3
-	github.com/avast/retry-go/v4 v4.3.3
+	github.com/avast/retry-go/v4 v4.3.4
 	github.com/blang/semver/v4 v4.0.0
 	github.com/bombsimon/logrusr/v2 v2.0.1
 	github.com/deepmap/oapi-codegen v1.12.4

@@ -10,6 +10,7 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/kong/go-kong/kong"
+	"github.com/samber/mo"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -51,9 +52,7 @@ type GatewayReconciler struct { //nolint:revive
 	Scheme          *runtime.Scheme
 	DataplaneClient *dataplane.KongClient
 
-	PublishService    string
-	PublishServiceUDP string
-	WatchNamespaces   []string
+	WatchNamespaces []string
 	// If EnableReferenceGrant is true, controller will watch ReferenceGrants
 	// to invalidate or allow cross-namespace TLSConfigs in gateways.
 	EnableReferenceGrant bool
@@ -61,21 +60,15 @@ type GatewayReconciler struct { //nolint:revive
 
 	ReferenceIndexers ctrlref.CacheIndexers
 
-	publishServiceRef    types.NamespacedName
-	publishServiceUDPRef types.NamespacedName
+	PublishServiceRef    types.NamespacedName
+	PublishServiceUDPRef mo.Option[types.NamespacedName]
 }
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *GatewayReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	// verify that the PublishService was configured properly
-	var err error
-	r.publishServiceRef, err = getRefFromPublishService(r.PublishService)
-	if err != nil {
-		return err
-	}
-	r.publishServiceUDPRef, err = getRefFromPublishService(r.PublishServiceUDP)
-	if err != nil {
-		return err
+	if r.PublishServiceRef.Name == "" || r.PublishServiceRef.Namespace == "" {
+		return fmt.Errorf("publish service must be configured")
 	}
 
 	// generate the controller object and attach it to the manager and link the reconciler object
@@ -260,7 +253,11 @@ func (r *GatewayReconciler) listGatewaysForService(svc client.Object) (recs []re
 // isGatewayService is a watch predicate that filters out events for objects that aren't
 // the gateway service referenced by --publish-service.
 func (r *GatewayReconciler) isGatewayService(obj client.Object) bool {
-	return fmt.Sprintf("%s/%s", obj.GetNamespace(), obj.GetName()) == r.PublishService
+	isPublishService := fmt.Sprintf("%s/%s", obj.GetNamespace(), obj.GetName()) == r.PublishServiceRef.String()
+	isUDPPublishService := r.PublishServiceUDPRef.IsPresent() &&
+		fmt.Sprintf("%s/%s", obj.GetNamespace(), obj.GetName()) == r.PublishServiceUDPRef.MustGet().String()
+
+	return isPublishService || isUDPPublishService
 }
 
 func referenceGrantHasGatewayFrom(obj client.Object) bool {
@@ -396,12 +393,19 @@ func (r *GatewayReconciler) reconcileUnmanagedGateway(ctx context.Context, log l
 	// enforce the service reference as the annotation value for the key UnmanagedGateway.
 	debug(log, gateway, "initializing admin service annotation if unset")
 	if !isObjectUnmanaged(gateway.GetAnnotations()) {
-		services := strings.Join([]string{r.PublishService, r.PublishServiceUDP}, ",")
+		services := []string{r.PublishServiceRef.String()}
+
+		// UDP service is optional.
+		if udpRef, ok := r.PublishServiceUDPRef.Get(); ok {
+			services = append(services, udpRef.String())
+		}
+
+		servicesAnnotation := strings.Join(services, ",")
 		debug(log, gateway, fmt.Sprintf("no unmanaged annotation, setting it to proxy services %s", services))
 		if gateway.Annotations == nil {
 			gateway.Annotations = map[string]string{}
 		}
-		annotations.UpdateUnmanagedAnnotation(gateway.Annotations, services)
+		annotations.UpdateUnmanagedAnnotation(gateway.Annotations, servicesAnnotation)
 		return ctrl.Result{}, r.Update(ctx, gateway)
 	}
 
@@ -555,15 +559,16 @@ func (r *GatewayReconciler) determineServiceForGateway(ctx context.Context, ref 
 	// currently the gateway controller ONLY supports service references that correspond with the --publish-service
 	// provided to the controller manager via flags when operating on unmanaged gateways. This constraint may
 	// be loosened in later iterations if there is need.
+
 	var name types.NamespacedName
-	switch ref {
-	case r.PublishService:
-		name = r.publishServiceRef
-	case r.PublishServiceUDP:
-		name = r.publishServiceUDPRef
+	switch {
+	case ref == r.PublishServiceRef.String():
+		name = r.PublishServiceRef
+	case r.PublishServiceUDPRef.IsPresent() && ref == r.PublishServiceUDPRef.MustGet().String():
+		name = r.PublishServiceUDPRef.MustGet()
 	default:
 		return nil, fmt.Errorf("service ref %s did not match controller manager ref %s or %s",
-			ref, r.PublishService, r.PublishServiceUDP)
+			ref, r.PublishServiceRef.String(), r.PublishServiceUDPRef.OrEmpty())
 	}
 
 	// retrieve the service for the kong gateway

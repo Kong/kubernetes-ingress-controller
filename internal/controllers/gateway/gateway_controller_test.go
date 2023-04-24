@@ -185,23 +185,6 @@ func TestIsGatewayMarkedAsAccepted(t *testing.T) {
 	assert.False(t, isGatewayScheduled(unscheduledGateway))
 }
 
-func TestGetRefFromPublishService(t *testing.T) {
-	t.Log("verifying refs for valid publish services")
-	valid := "california/sanfrancisco"
-	nsn, err := getRefFromPublishService(valid)
-	assert.NoError(t, err)
-	assert.Equal(t, "california", nsn.Namespace)
-	assert.Equal(t, "sanfrancisco", nsn.Name)
-
-	t.Log("verifying failure conditions for invalid publish services")
-	invalid := "california.sanfrancisco"
-	_, err = getRefFromPublishService(invalid)
-	assert.Error(t, err)
-	moreInvalid := "california/sanfrancisco/losangelos"
-	_, err = getRefFromPublishService(moreInvalid)
-	assert.Error(t, err)
-}
-
 func TestPruneStatusConditions(t *testing.T) {
 	t.Log("verifying that a gateway with minimal status conditions is not pruned")
 	gateway := &gatewayv1beta1.Gateway{}

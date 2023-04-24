@@ -251,7 +251,7 @@ func (r *GatewayReconciler) listGatewaysForService(svc client.Object) (recs []re
 }
 
 // isGatewayService is a watch predicate that filters out events for objects that aren't
-// the gateway service referenced by --publish-service.
+// the gateway service referenced by --publish-service or --publish-service-udp.
 func (r *GatewayReconciler) isGatewayService(obj client.Object) bool {
 	isPublishService := fmt.Sprintf("%s/%s", obj.GetNamespace(), obj.GetName()) == r.PublishServiceRef.String()
 	isUDPPublishService := r.PublishServiceUDPRef.IsPresent() &&

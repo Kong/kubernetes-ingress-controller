@@ -53,7 +53,7 @@ func (s *mockKonnectNodeService) upsertNode(nodeID string, version string, hostn
 	}
 
 	node := &konnect.NodeItem{
-		ID:        uuid.NewString(),
+		ID:        nodeID,
 		Version:   version,
 		Hostname:  hostname,
 		LastPing:  lastping,
@@ -208,7 +208,7 @@ type mockGatewayInstanceGetter struct {
 	gatewayInstances []konnect.GatewayInstance
 }
 
-func (m *mockGatewayInstanceGetter) GetGatewayInstances() ([]konnect.GatewayInstance, error) {
+func (m *mockGatewayInstanceGetter) GetGatewayInstances(context.Context) ([]konnect.GatewayInstance, error) {
 	return m.gatewayInstances, nil
 }
 
@@ -230,7 +230,18 @@ func (m *mockGatewayClientsNotifier) Notify() {
 	m.ch <- struct{}{}
 }
 
+type mockManagerInstanceIDProvider struct {
+	instanceID uuid.UUID
+}
+
+func (m *mockManagerInstanceIDProvider) GetID() uuid.UUID {
+	return m.instanceID
+}
+
 func TestNodeAgentUpdateNodes(t *testing.T) {
+	testManagerID := uuid.New()
+	testNodeIDs := lo.Map(lo.Range(3), func(_, _ int) string { return uuid.NewString() })
+
 	testCases := []struct {
 		name         string
 		hostname     string
@@ -251,6 +262,7 @@ func TestNodeAgentUpdateNodes(t *testing.T) {
 			containNodes: []*konnect.NodeItem{
 				{
 					Hostname: "ingress-0",
+					ID:       testManagerID.String(),
 					Type:     konnect.NodeTypeIngressController,
 					Status:   string(konnect.IngressControllerStateOperational),
 					Version:  testKicVersion,
@@ -264,7 +276,7 @@ func TestNodeAgentUpdateNodes(t *testing.T) {
 			initialNodes: []*konnect.NodeItem{
 				{
 					Hostname: "ingress-0",
-					ID:       uuid.NewString(),
+					ID:       testNodeIDs[0],
 					Type:     konnect.NodeTypeIngressController,
 					Status:   string(konnect.IngressControllerStateOperational),
 					Version:  testKicVersion,
@@ -274,6 +286,7 @@ func TestNodeAgentUpdateNodes(t *testing.T) {
 			containNodes: []*konnect.NodeItem{
 				{
 					Hostname: "ingress-0",
+					ID:       testNodeIDs[0],
 					Type:     konnect.NodeTypeIngressController,
 					Status:   string(konnect.IngressControllerStatePartialConfigFail),
 					Version:  testKicVersion,
@@ -288,7 +301,7 @@ func TestNodeAgentUpdateNodes(t *testing.T) {
 				// older node with same hostname, should delete this.
 				{
 					Hostname: "ingress-0",
-					ID:       uuid.NewString(),
+					ID:       testNodeIDs[0],
 					Type:     konnect.NodeTypeIngressController,
 					Status:   string(konnect.IngressControllerStatePartialConfigFail),
 					Version:  testKicVersion,
@@ -297,7 +310,7 @@ func TestNodeAgentUpdateNodes(t *testing.T) {
 				// newer node, should reserve this.
 				{
 					Hostname: "ingress-0",
-					ID:       uuid.NewString(),
+					ID:       testManagerID.String(),
 					Type:     konnect.NodeTypeIngressController,
 					Status:   string(konnect.IngressControllerStateOperational),
 					Version:  testKicVersion,
@@ -306,7 +319,7 @@ func TestNodeAgentUpdateNodes(t *testing.T) {
 				// KIC node with other name, should delete this.
 				{
 					Hostname: "ingress-1",
-					ID:       uuid.NewString(),
+					ID:       testNodeIDs[2],
 					Type:     konnect.NodeTypeIngressController,
 					Status:   string(konnect.IngressControllerStateOperational),
 					Version:  testKicVersion,
@@ -316,10 +329,10 @@ func TestNodeAgentUpdateNodes(t *testing.T) {
 			containNodes: []*konnect.NodeItem{
 				{
 					Hostname: "ingress-0",
-
-					Type:    konnect.NodeTypeIngressController,
-					Status:  string(konnect.IngressControllerStateOperational),
-					Version: testKicVersion,
+					ID:       testManagerID.String(),
+					Type:     konnect.NodeTypeIngressController,
+					Status:   string(konnect.IngressControllerStateOperational),
+					Version:  testKicVersion,
 				},
 			},
 			notContainNodes: []*konnect.NodeItem{
@@ -338,45 +351,47 @@ func TestNodeAgentUpdateNodes(t *testing.T) {
 			initialNodes: []*konnect.NodeItem{
 				{
 					Hostname: "ingress-0",
-					ID:       uuid.NewString(),
+					ID:       testManagerID.String(),
 					Type:     konnect.NodeTypeIngressController,
 					Status:   string(konnect.IngressControllerStateOperational),
 					Version:  testKicVersion,
 				},
 				{
 					Hostname: "proxy-0",
-					ID:       uuid.NewString(),
+					ID:       testNodeIDs[0],
 					Type:     konnect.NodeTypeKongProxy,
 					Version:  testKongVersion,
 				},
 				// 2 gateway nodes with same name, should reserve newer one.
 				{
 					Hostname: "proxy-1",
-					ID:       uuid.NewString(),
+					ID:       testNodeIDs[1],
 					Type:     konnect.NodeTypeKongProxy,
 					Version:  testKongVersion,
 					LastPing: time.Now().Unix() - 10,
 				},
 				{
 					Hostname: "proxy-1",
-					ID:       uuid.NewString(),
+					ID:       testNodeIDs[2],
 					Type:     konnect.NodeTypeKongProxy,
 					Version:  testKongVersion,
 					LastPing: time.Now().Unix() - 5,
 				},
 			},
 			gatewayInstances: []konnect.GatewayInstance{
-				{Hostname: "proxy-1", Version: testKongVersion},
+				{Hostname: "proxy-1", Version: testKongVersion, NodeID: testNodeIDs[2]},
 			},
 			containNodes: []*konnect.NodeItem{
 				{
 					Hostname: "ingress-0",
+					ID:       testManagerID.String(),
 					Type:     konnect.NodeTypeIngressController,
 					Status:   string(konnect.IngressControllerStateOperational),
 					Version:  testKicVersion,
 				},
 				{
 					Hostname: "proxy-1",
+					ID:       testNodeIDs[2],
 					Type:     konnect.NodeTypeKongProxy,
 					Version:  testKongVersion,
 				},
@@ -418,6 +433,7 @@ func TestNodeAgentUpdateNodes(t *testing.T) {
 				configStatusSubscriber,
 				&mockGatewayInstanceGetter{tc.gatewayInstances},
 				gatewayClientsChangesNotifier,
+				&mockManagerInstanceIDProvider{testManagerID},
 			)
 
 			ctx := context.Background()
@@ -438,14 +454,15 @@ func TestNodeAgentUpdateNodes(t *testing.T) {
 					return false
 				}
 				// check for nodes that must be included in RG by hostname, type, version and status.
-				for _, node := range tc.containNodes {
+				for _, expectedNode := range tc.containNodes {
 					if !lo.ContainsBy(
 						nodes,
 						func(n *konnect.NodeItem) bool {
-							return n.Hostname == node.Hostname &&
-								n.Type == node.Type &&
-								n.Version == node.Version &&
-								n.Status == node.Status
+							return n.Hostname == expectedNode.Hostname &&
+								n.Type == expectedNode.Type &&
+								n.Version == expectedNode.Version &&
+								n.Status == expectedNode.Status &&
+								n.ID == expectedNode.ID
 						}) {
 						return false
 					}
@@ -493,6 +510,7 @@ func TestNodeAgent_StartDoesntReturnUntilContextGetsCancelled(t *testing.T) {
 		configStatusSubscriber,
 		&mockGatewayInstanceGetter{},
 		newMockGatewayClientsNotifier(),
+		&mockManagerInstanceIDProvider{uuid.New()},
 	)
 
 	ctx, cancel := context.WithCancel(context.Background())

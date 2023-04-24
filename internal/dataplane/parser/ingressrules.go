@@ -1,6 +1,7 @@
 package parser
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
@@ -50,7 +51,7 @@ func mergeIngressRules(objs ...ingressRules) ingressRules {
 
 // populateServices populates the ServiceNameToServices map with additional information
 // and returns a map of services to be skipped.
-func (ir *ingressRules) populateServices(log logrus.FieldLogger, s store.Storer, failuresCollector *failures.ResourceFailuresCollector) map[string]interface{} {
+func (ir *ingressRules) populateServices(ctx context.Context, log logrus.FieldLogger, s store.Storer, failuresCollector *failures.ResourceFailuresCollector) map[string]interface{} {
 	serviceNamesToSkip := make(map[string]interface{})
 
 	// populate Kubernetes Service
@@ -61,7 +62,7 @@ func (ir *ingressRules) populateServices(log logrus.FieldLogger, s store.Storer,
 
 		// collect all the Kubernetes services configured for the service backends,
 		// and all the annotations in use across all services (when applicable).
-		k8sServices, seenAnnotations := getK8sServicesForBackends(log, s, service.Namespace, service.Backends)
+		k8sServices, seenAnnotations := getK8sServicesForBackends(ctx, log, s, service.Namespace, service.Backends)
 
 		// if the Kubernetes services have been deemed invalid, log an error message
 		// and skip the current service.
@@ -81,7 +82,7 @@ func (ir *ingressRules) populateServices(log logrus.FieldLogger, s store.Storer,
 			secretName := annotations.ExtractClientCertificate(k8sService.Annotations)
 			if secretName != "" {
 				secretKey := k8sService.Namespace + "/" + secretName
-				secret, err := s.GetSecret(k8sService.Namespace, secretName)
+				secret, err := s.GetSecret(ctx, k8sService.Namespace, secretName)
 				if err != nil {
 					failuresCollector.PushResourceFailure(
 						fmt.Sprintf("failed to fetch secret '%s': %v", secretKey, err), k8sService,
@@ -243,6 +244,7 @@ func (s SNIs) Hosts() []string {
 }
 
 func getK8sServicesForBackends(
+	ctx context.Context,
 	log logrus.FieldLogger,
 	storer store.Storer,
 	namespace string,
@@ -260,7 +262,7 @@ func getK8sServicesForBackends(
 		if backend.Namespace != "" {
 			backendNamespace = backend.Namespace
 		}
-		k8sService, err := storer.GetService(backendNamespace, backend.Name)
+		k8sService, err := storer.GetService(ctx, backendNamespace, backend.Name)
 		if err != nil {
 			log.WithFields(logrus.Fields{
 				"service_name":      backend.PortDef.Name,

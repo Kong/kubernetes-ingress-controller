@@ -97,11 +97,11 @@ func (r *CoreV1ServiceReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 			obj.Name = req.Name
 
 			// remove reference record where the Service is the referrer
-			if err := ctrlref.DeleteReferencesByReferrer(r.ReferenceIndexers, r.DataplaneClient, obj); err != nil {
+			if err := ctrlref.DeleteReferencesByReferrer(ctx, r.ReferenceIndexers, r.DataplaneClient, obj); err != nil {
 				return ctrl.Result{}, err
 			}
 
-			return ctrl.Result{}, r.DataplaneClient.DeleteObject(obj)
+			return ctrl.Result{}, r.DataplaneClient.DeleteObject(ctx, obj)
 		}
 		return ctrl.Result{}, err
 	}
@@ -112,16 +112,16 @@ func (r *CoreV1ServiceReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		log.V(util.DebugLevel).Info("resource is being deleted, its configuration will be removed", "type", "Service", "namespace", req.Namespace, "name", req.Name)
 
 		// remove reference record where the Service is the referrer
-		if err := ctrlref.DeleteReferencesByReferrer(r.ReferenceIndexers, r.DataplaneClient, obj); err != nil {
+		if err := ctrlref.DeleteReferencesByReferrer(ctx, r.ReferenceIndexers, r.DataplaneClient, obj); err != nil {
 			return ctrl.Result{}, err
 		}
 
-		objectExistsInCache, err := r.DataplaneClient.ObjectExists(obj)
+		objectExistsInCache, err := r.DataplaneClient.ObjectExists(ctx, obj)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
 		if objectExistsInCache {
-			if err := r.DataplaneClient.DeleteObject(obj); err != nil {
+			if err := r.DataplaneClient.DeleteObject(ctx, obj); err != nil {
 				return ctrl.Result{}, err
 			}
 			return ctrl.Result{Requeue: true}, nil // wait until the object is no longer present in the cache
@@ -130,7 +130,7 @@ func (r *CoreV1ServiceReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	}
 
 	// update the kong Admin API with the changes
-	if err := r.DataplaneClient.UpdateObject(obj); err != nil {
+	if err := r.DataplaneClient.UpdateObject(ctx, obj); err != nil {
 		return ctrl.Result{}, err
 	}
 	// update reference relationship from the Service to other objects.
@@ -193,7 +193,7 @@ func (r *CoreV1EndpointsReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 			obj.Namespace = req.Namespace
 			obj.Name = req.Name
 
-			return ctrl.Result{}, r.DataplaneClient.DeleteObject(obj)
+			return ctrl.Result{}, r.DataplaneClient.DeleteObject(ctx, obj)
 		}
 		return ctrl.Result{}, err
 	}
@@ -203,12 +203,12 @@ func (r *CoreV1EndpointsReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	if !obj.DeletionTimestamp.IsZero() && time.Now().After(obj.DeletionTimestamp.Time) {
 		log.V(util.DebugLevel).Info("resource is being deleted, its configuration will be removed", "type", "Endpoints", "namespace", req.Namespace, "name", req.Name)
 
-		objectExistsInCache, err := r.DataplaneClient.ObjectExists(obj)
+		objectExistsInCache, err := r.DataplaneClient.ObjectExists(ctx, obj)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
 		if objectExistsInCache {
-			if err := r.DataplaneClient.DeleteObject(obj); err != nil {
+			if err := r.DataplaneClient.DeleteObject(ctx, obj); err != nil {
 				return ctrl.Result{}, err
 			}
 			return ctrl.Result{Requeue: true}, nil // wait until the object is no longer present in the cache
@@ -217,7 +217,7 @@ func (r *CoreV1EndpointsReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	}
 
 	// update the kong Admin API with the changes
-	if err := r.DataplaneClient.UpdateObject(obj); err != nil {
+	if err := r.DataplaneClient.UpdateObject(ctx, obj); err != nil {
 		return ctrl.Result{}, err
 	}
 
@@ -324,11 +324,11 @@ func (r *NetV1IngressReconciler) Reconcile(ctx context.Context, req ctrl.Request
 			obj.Name = req.Name
 
 			// remove reference record where the Ingress is the referrer
-			if err := ctrlref.DeleteReferencesByReferrer(r.ReferenceIndexers, r.DataplaneClient, obj); err != nil {
+			if err := ctrlref.DeleteReferencesByReferrer(ctx, r.ReferenceIndexers, r.DataplaneClient, obj); err != nil {
 				return ctrl.Result{}, err
 			}
 
-			return ctrl.Result{}, r.DataplaneClient.DeleteObject(obj)
+			return ctrl.Result{}, r.DataplaneClient.DeleteObject(ctx, obj)
 		}
 		return ctrl.Result{}, err
 	}
@@ -339,16 +339,16 @@ func (r *NetV1IngressReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		log.V(util.DebugLevel).Info("resource is being deleted, its configuration will be removed", "type", "Ingress", "namespace", req.Namespace, "name", req.Name)
 
 		// remove reference record where the Ingress is the referrer
-		if err := ctrlref.DeleteReferencesByReferrer(r.ReferenceIndexers, r.DataplaneClient, obj); err != nil {
+		if err := ctrlref.DeleteReferencesByReferrer(ctx, r.ReferenceIndexers, r.DataplaneClient, obj); err != nil {
 			return ctrl.Result{}, err
 		}
 
-		objectExistsInCache, err := r.DataplaneClient.ObjectExists(obj)
+		objectExistsInCache, err := r.DataplaneClient.ObjectExists(ctx, obj)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
 		if objectExistsInCache {
-			if err := r.DataplaneClient.DeleteObject(obj); err != nil {
+			if err := r.DataplaneClient.DeleteObject(ctx, obj); err != nil {
 				return ctrl.Result{}, err
 			}
 			return ctrl.Result{Requeue: true}, nil // wait until the object is no longer present in the cache
@@ -370,14 +370,14 @@ func (r *NetV1IngressReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	if !ctrlutils.MatchesIngressClass(obj, r.IngressClassName, ctrlutils.IsDefaultIngressClass(class)) {
 		log.V(util.DebugLevel).Info("object missing ingress class, ensuring it's removed from configuration",
 			"namespace", req.Namespace, "name", req.Name, "class", r.IngressClassName)
-		return ctrl.Result{}, r.DataplaneClient.DeleteObject(obj)
+		return ctrl.Result{}, r.DataplaneClient.DeleteObject(ctx, obj)
 	} else {
 		log.V(util.DebugLevel).Info("object has matching ingress class", "namespace", req.Namespace, "name", req.Name,
 			"class", r.IngressClassName)
 	}
 
 	// update the kong Admin API with the changes
-	if err := r.DataplaneClient.UpdateObject(obj); err != nil {
+	if err := r.DataplaneClient.UpdateObject(ctx, obj); err != nil {
 		return ctrl.Result{}, err
 	}
 	// update reference relationship from the Ingress to other objects.
@@ -464,7 +464,7 @@ func (r *NetV1IngressClassReconciler) Reconcile(ctx context.Context, req ctrl.Re
 			obj.Namespace = req.Namespace
 			obj.Name = req.Name
 
-			return ctrl.Result{}, r.DataplaneClient.DeleteObject(obj)
+			return ctrl.Result{}, r.DataplaneClient.DeleteObject(ctx, obj)
 		}
 		return ctrl.Result{}, err
 	}
@@ -474,12 +474,12 @@ func (r *NetV1IngressClassReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	if !obj.DeletionTimestamp.IsZero() && time.Now().After(obj.DeletionTimestamp.Time) {
 		log.V(util.DebugLevel).Info("resource is being deleted, its configuration will be removed", "type", "IngressClass", "namespace", req.Namespace, "name", req.Name)
 
-		objectExistsInCache, err := r.DataplaneClient.ObjectExists(obj)
+		objectExistsInCache, err := r.DataplaneClient.ObjectExists(ctx, obj)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
 		if objectExistsInCache {
-			if err := r.DataplaneClient.DeleteObject(obj); err != nil {
+			if err := r.DataplaneClient.DeleteObject(ctx, obj); err != nil {
 				return ctrl.Result{}, err
 			}
 			return ctrl.Result{Requeue: true}, nil // wait until the object is no longer present in the cache
@@ -488,7 +488,7 @@ func (r *NetV1IngressClassReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	}
 
 	// update the kong Admin API with the changes
-	if err := r.DataplaneClient.UpdateObject(obj); err != nil {
+	if err := r.DataplaneClient.UpdateObject(ctx, obj); err != nil {
 		return ctrl.Result{}, err
 	}
 
@@ -595,11 +595,11 @@ func (r *NetV1Beta1IngressReconciler) Reconcile(ctx context.Context, req ctrl.Re
 			obj.Name = req.Name
 
 			// remove reference record where the Ingress is the referrer
-			if err := ctrlref.DeleteReferencesByReferrer(r.ReferenceIndexers, r.DataplaneClient, obj); err != nil {
+			if err := ctrlref.DeleteReferencesByReferrer(ctx, r.ReferenceIndexers, r.DataplaneClient, obj); err != nil {
 				return ctrl.Result{}, err
 			}
 
-			return ctrl.Result{}, r.DataplaneClient.DeleteObject(obj)
+			return ctrl.Result{}, r.DataplaneClient.DeleteObject(ctx, obj)
 		}
 		return ctrl.Result{}, err
 	}
@@ -610,16 +610,16 @@ func (r *NetV1Beta1IngressReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		log.V(util.DebugLevel).Info("resource is being deleted, its configuration will be removed", "type", "Ingress", "namespace", req.Namespace, "name", req.Name)
 
 		// remove reference record where the Ingress is the referrer
-		if err := ctrlref.DeleteReferencesByReferrer(r.ReferenceIndexers, r.DataplaneClient, obj); err != nil {
+		if err := ctrlref.DeleteReferencesByReferrer(ctx, r.ReferenceIndexers, r.DataplaneClient, obj); err != nil {
 			return ctrl.Result{}, err
 		}
 
-		objectExistsInCache, err := r.DataplaneClient.ObjectExists(obj)
+		objectExistsInCache, err := r.DataplaneClient.ObjectExists(ctx, obj)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
 		if objectExistsInCache {
-			if err := r.DataplaneClient.DeleteObject(obj); err != nil {
+			if err := r.DataplaneClient.DeleteObject(ctx, obj); err != nil {
 				return ctrl.Result{}, err
 			}
 			return ctrl.Result{Requeue: true}, nil // wait until the object is no longer present in the cache
@@ -641,14 +641,14 @@ func (r *NetV1Beta1IngressReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	if !ctrlutils.MatchesIngressClass(obj, r.IngressClassName, ctrlutils.IsDefaultIngressClass(class)) {
 		log.V(util.DebugLevel).Info("object missing ingress class, ensuring it's removed from configuration",
 			"namespace", req.Namespace, "name", req.Name, "class", r.IngressClassName)
-		return ctrl.Result{}, r.DataplaneClient.DeleteObject(obj)
+		return ctrl.Result{}, r.DataplaneClient.DeleteObject(ctx, obj)
 	} else {
 		log.V(util.DebugLevel).Info("object has matching ingress class", "namespace", req.Namespace, "name", req.Name,
 			"class", r.IngressClassName)
 	}
 
 	// update the kong Admin API with the changes
-	if err := r.DataplaneClient.UpdateObject(obj); err != nil {
+	if err := r.DataplaneClient.UpdateObject(ctx, obj); err != nil {
 		return ctrl.Result{}, err
 	}
 	// update reference relationship from the Ingress to other objects.
@@ -736,7 +736,7 @@ func (r *KongV1KongIngressReconciler) Reconcile(ctx context.Context, req ctrl.Re
 			obj.Namespace = req.Namespace
 			obj.Name = req.Name
 
-			return ctrl.Result{}, r.DataplaneClient.DeleteObject(obj)
+			return ctrl.Result{}, r.DataplaneClient.DeleteObject(ctx, obj)
 		}
 		return ctrl.Result{}, err
 	}
@@ -746,12 +746,12 @@ func (r *KongV1KongIngressReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	if !obj.DeletionTimestamp.IsZero() && time.Now().After(obj.DeletionTimestamp.Time) {
 		log.V(util.DebugLevel).Info("resource is being deleted, its configuration will be removed", "type", "KongIngress", "namespace", req.Namespace, "name", req.Name)
 
-		objectExistsInCache, err := r.DataplaneClient.ObjectExists(obj)
+		objectExistsInCache, err := r.DataplaneClient.ObjectExists(ctx, obj)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
 		if objectExistsInCache {
-			if err := r.DataplaneClient.DeleteObject(obj); err != nil {
+			if err := r.DataplaneClient.DeleteObject(ctx, obj); err != nil {
 				return ctrl.Result{}, err
 			}
 			return ctrl.Result{Requeue: true}, nil // wait until the object is no longer present in the cache
@@ -760,7 +760,7 @@ func (r *KongV1KongIngressReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	}
 
 	// update the kong Admin API with the changes
-	if err := r.DataplaneClient.UpdateObject(obj); err != nil {
+	if err := r.DataplaneClient.UpdateObject(ctx, obj); err != nil {
 		return ctrl.Result{}, err
 	}
 
@@ -815,11 +815,11 @@ func (r *KongV1KongPluginReconciler) Reconcile(ctx context.Context, req ctrl.Req
 			obj.Name = req.Name
 
 			// remove reference record where the KongPlugin is the referrer
-			if err := ctrlref.DeleteReferencesByReferrer(r.ReferenceIndexers, r.DataplaneClient, obj); err != nil {
+			if err := ctrlref.DeleteReferencesByReferrer(ctx, r.ReferenceIndexers, r.DataplaneClient, obj); err != nil {
 				return ctrl.Result{}, err
 			}
 
-			return ctrl.Result{}, r.DataplaneClient.DeleteObject(obj)
+			return ctrl.Result{}, r.DataplaneClient.DeleteObject(ctx, obj)
 		}
 		return ctrl.Result{}, err
 	}
@@ -830,16 +830,16 @@ func (r *KongV1KongPluginReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		log.V(util.DebugLevel).Info("resource is being deleted, its configuration will be removed", "type", "KongPlugin", "namespace", req.Namespace, "name", req.Name)
 
 		// remove reference record where the KongPlugin is the referrer
-		if err := ctrlref.DeleteReferencesByReferrer(r.ReferenceIndexers, r.DataplaneClient, obj); err != nil {
+		if err := ctrlref.DeleteReferencesByReferrer(ctx, r.ReferenceIndexers, r.DataplaneClient, obj); err != nil {
 			return ctrl.Result{}, err
 		}
 
-		objectExistsInCache, err := r.DataplaneClient.ObjectExists(obj)
+		objectExistsInCache, err := r.DataplaneClient.ObjectExists(ctx, obj)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
 		if objectExistsInCache {
-			if err := r.DataplaneClient.DeleteObject(obj); err != nil {
+			if err := r.DataplaneClient.DeleteObject(ctx, obj); err != nil {
 				return ctrl.Result{}, err
 			}
 			return ctrl.Result{Requeue: true}, nil // wait until the object is no longer present in the cache
@@ -848,7 +848,7 @@ func (r *KongV1KongPluginReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	}
 
 	// update the kong Admin API with the changes
-	if err := r.DataplaneClient.UpdateObject(obj); err != nil {
+	if err := r.DataplaneClient.UpdateObject(ctx, obj); err != nil {
 		return ctrl.Result{}, err
 	}
 	// update reference relationship from the KongPlugin to other objects.
@@ -949,11 +949,11 @@ func (r *KongV1KongClusterPluginReconciler) Reconcile(ctx context.Context, req c
 			obj.Name = req.Name
 
 			// remove reference record where the KongClusterPlugin is the referrer
-			if err := ctrlref.DeleteReferencesByReferrer(r.ReferenceIndexers, r.DataplaneClient, obj); err != nil {
+			if err := ctrlref.DeleteReferencesByReferrer(ctx, r.ReferenceIndexers, r.DataplaneClient, obj); err != nil {
 				return ctrl.Result{}, err
 			}
 
-			return ctrl.Result{}, r.DataplaneClient.DeleteObject(obj)
+			return ctrl.Result{}, r.DataplaneClient.DeleteObject(ctx, obj)
 		}
 		return ctrl.Result{}, err
 	}
@@ -964,16 +964,16 @@ func (r *KongV1KongClusterPluginReconciler) Reconcile(ctx context.Context, req c
 		log.V(util.DebugLevel).Info("resource is being deleted, its configuration will be removed", "type", "KongClusterPlugin", "namespace", req.Namespace, "name", req.Name)
 
 		// remove reference record where the KongClusterPlugin is the referrer
-		if err := ctrlref.DeleteReferencesByReferrer(r.ReferenceIndexers, r.DataplaneClient, obj); err != nil {
+		if err := ctrlref.DeleteReferencesByReferrer(ctx, r.ReferenceIndexers, r.DataplaneClient, obj); err != nil {
 			return ctrl.Result{}, err
 		}
 
-		objectExistsInCache, err := r.DataplaneClient.ObjectExists(obj)
+		objectExistsInCache, err := r.DataplaneClient.ObjectExists(ctx, obj)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
 		if objectExistsInCache {
-			if err := r.DataplaneClient.DeleteObject(obj); err != nil {
+			if err := r.DataplaneClient.DeleteObject(ctx, obj); err != nil {
 				return ctrl.Result{}, err
 			}
 			return ctrl.Result{Requeue: true}, nil // wait until the object is no longer present in the cache
@@ -995,14 +995,14 @@ func (r *KongV1KongClusterPluginReconciler) Reconcile(ctx context.Context, req c
 	if !ctrlutils.MatchesIngressClass(obj, r.IngressClassName, ctrlutils.IsDefaultIngressClass(class)) {
 		log.V(util.DebugLevel).Info("object missing ingress class, ensuring it's removed from configuration",
 			"namespace", req.Namespace, "name", req.Name, "class", r.IngressClassName)
-		return ctrl.Result{}, r.DataplaneClient.DeleteObject(obj)
+		return ctrl.Result{}, r.DataplaneClient.DeleteObject(ctx, obj)
 	} else {
 		log.V(util.DebugLevel).Info("object has matching ingress class", "namespace", req.Namespace, "name", req.Name,
 			"class", r.IngressClassName)
 	}
 
 	// update the kong Admin API with the changes
-	if err := r.DataplaneClient.UpdateObject(obj); err != nil {
+	if err := r.DataplaneClient.UpdateObject(ctx, obj); err != nil {
 		return ctrl.Result{}, err
 	}
 	// update reference relationship from the KongClusterPlugin to other objects.
@@ -1103,11 +1103,11 @@ func (r *KongV1KongConsumerReconciler) Reconcile(ctx context.Context, req ctrl.R
 			obj.Name = req.Name
 
 			// remove reference record where the KongConsumer is the referrer
-			if err := ctrlref.DeleteReferencesByReferrer(r.ReferenceIndexers, r.DataplaneClient, obj); err != nil {
+			if err := ctrlref.DeleteReferencesByReferrer(ctx, r.ReferenceIndexers, r.DataplaneClient, obj); err != nil {
 				return ctrl.Result{}, err
 			}
 
-			return ctrl.Result{}, r.DataplaneClient.DeleteObject(obj)
+			return ctrl.Result{}, r.DataplaneClient.DeleteObject(ctx, obj)
 		}
 		return ctrl.Result{}, err
 	}
@@ -1118,16 +1118,16 @@ func (r *KongV1KongConsumerReconciler) Reconcile(ctx context.Context, req ctrl.R
 		log.V(util.DebugLevel).Info("resource is being deleted, its configuration will be removed", "type", "KongConsumer", "namespace", req.Namespace, "name", req.Name)
 
 		// remove reference record where the KongConsumer is the referrer
-		if err := ctrlref.DeleteReferencesByReferrer(r.ReferenceIndexers, r.DataplaneClient, obj); err != nil {
+		if err := ctrlref.DeleteReferencesByReferrer(ctx, r.ReferenceIndexers, r.DataplaneClient, obj); err != nil {
 			return ctrl.Result{}, err
 		}
 
-		objectExistsInCache, err := r.DataplaneClient.ObjectExists(obj)
+		objectExistsInCache, err := r.DataplaneClient.ObjectExists(ctx, obj)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
 		if objectExistsInCache {
-			if err := r.DataplaneClient.DeleteObject(obj); err != nil {
+			if err := r.DataplaneClient.DeleteObject(ctx, obj); err != nil {
 				return ctrl.Result{}, err
 			}
 			return ctrl.Result{Requeue: true}, nil // wait until the object is no longer present in the cache
@@ -1149,14 +1149,14 @@ func (r *KongV1KongConsumerReconciler) Reconcile(ctx context.Context, req ctrl.R
 	if !ctrlutils.MatchesIngressClass(obj, r.IngressClassName, ctrlutils.IsDefaultIngressClass(class)) {
 		log.V(util.DebugLevel).Info("object missing ingress class, ensuring it's removed from configuration",
 			"namespace", req.Namespace, "name", req.Name, "class", r.IngressClassName)
-		return ctrl.Result{}, r.DataplaneClient.DeleteObject(obj)
+		return ctrl.Result{}, r.DataplaneClient.DeleteObject(ctx, obj)
 	} else {
 		log.V(util.DebugLevel).Info("object has matching ingress class", "namespace", req.Namespace, "name", req.Name,
 			"class", r.IngressClassName)
 	}
 
 	// update the kong Admin API with the changes
-	if err := r.DataplaneClient.UpdateObject(obj); err != nil {
+	if err := r.DataplaneClient.UpdateObject(ctx, obj); err != nil {
 		return ctrl.Result{}, err
 	}
 	// update reference relationship from the KongConsumer to other objects.
@@ -1273,11 +1273,11 @@ func (r *KongV1Beta1TCPIngressReconciler) Reconcile(ctx context.Context, req ctr
 			obj.Name = req.Name
 
 			// remove reference record where the TCPIngress is the referrer
-			if err := ctrlref.DeleteReferencesByReferrer(r.ReferenceIndexers, r.DataplaneClient, obj); err != nil {
+			if err := ctrlref.DeleteReferencesByReferrer(ctx, r.ReferenceIndexers, r.DataplaneClient, obj); err != nil {
 				return ctrl.Result{}, err
 			}
 
-			return ctrl.Result{}, r.DataplaneClient.DeleteObject(obj)
+			return ctrl.Result{}, r.DataplaneClient.DeleteObject(ctx, obj)
 		}
 		return ctrl.Result{}, err
 	}
@@ -1288,16 +1288,16 @@ func (r *KongV1Beta1TCPIngressReconciler) Reconcile(ctx context.Context, req ctr
 		log.V(util.DebugLevel).Info("resource is being deleted, its configuration will be removed", "type", "TCPIngress", "namespace", req.Namespace, "name", req.Name)
 
 		// remove reference record where the TCPIngress is the referrer
-		if err := ctrlref.DeleteReferencesByReferrer(r.ReferenceIndexers, r.DataplaneClient, obj); err != nil {
+		if err := ctrlref.DeleteReferencesByReferrer(ctx, r.ReferenceIndexers, r.DataplaneClient, obj); err != nil {
 			return ctrl.Result{}, err
 		}
 
-		objectExistsInCache, err := r.DataplaneClient.ObjectExists(obj)
+		objectExistsInCache, err := r.DataplaneClient.ObjectExists(ctx, obj)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
 		if objectExistsInCache {
-			if err := r.DataplaneClient.DeleteObject(obj); err != nil {
+			if err := r.DataplaneClient.DeleteObject(ctx, obj); err != nil {
 				return ctrl.Result{}, err
 			}
 			return ctrl.Result{Requeue: true}, nil // wait until the object is no longer present in the cache
@@ -1319,14 +1319,14 @@ func (r *KongV1Beta1TCPIngressReconciler) Reconcile(ctx context.Context, req ctr
 	if !ctrlutils.MatchesIngressClass(obj, r.IngressClassName, ctrlutils.IsDefaultIngressClass(class)) {
 		log.V(util.DebugLevel).Info("object missing ingress class, ensuring it's removed from configuration",
 			"namespace", req.Namespace, "name", req.Name, "class", r.IngressClassName)
-		return ctrl.Result{}, r.DataplaneClient.DeleteObject(obj)
+		return ctrl.Result{}, r.DataplaneClient.DeleteObject(ctx, obj)
 	} else {
 		log.V(util.DebugLevel).Info("object has matching ingress class", "namespace", req.Namespace, "name", req.Name,
 			"class", r.IngressClassName)
 	}
 
 	// update the kong Admin API with the changes
-	if err := r.DataplaneClient.UpdateObject(obj); err != nil {
+	if err := r.DataplaneClient.UpdateObject(ctx, obj); err != nil {
 		return ctrl.Result{}, err
 	}
 	// update reference relationship from the TCPIngress to other objects.
@@ -1466,7 +1466,7 @@ func (r *KongV1Beta1UDPIngressReconciler) Reconcile(ctx context.Context, req ctr
 			obj.Namespace = req.Namespace
 			obj.Name = req.Name
 
-			return ctrl.Result{}, r.DataplaneClient.DeleteObject(obj)
+			return ctrl.Result{}, r.DataplaneClient.DeleteObject(ctx, obj)
 		}
 		return ctrl.Result{}, err
 	}
@@ -1476,12 +1476,12 @@ func (r *KongV1Beta1UDPIngressReconciler) Reconcile(ctx context.Context, req ctr
 	if !obj.DeletionTimestamp.IsZero() && time.Now().After(obj.DeletionTimestamp.Time) {
 		log.V(util.DebugLevel).Info("resource is being deleted, its configuration will be removed", "type", "UDPIngress", "namespace", req.Namespace, "name", req.Name)
 
-		objectExistsInCache, err := r.DataplaneClient.ObjectExists(obj)
+		objectExistsInCache, err := r.DataplaneClient.ObjectExists(ctx, obj)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
 		if objectExistsInCache {
-			if err := r.DataplaneClient.DeleteObject(obj); err != nil {
+			if err := r.DataplaneClient.DeleteObject(ctx, obj); err != nil {
 				return ctrl.Result{}, err
 			}
 			return ctrl.Result{Requeue: true}, nil // wait until the object is no longer present in the cache
@@ -1503,14 +1503,14 @@ func (r *KongV1Beta1UDPIngressReconciler) Reconcile(ctx context.Context, req ctr
 	if !ctrlutils.MatchesIngressClass(obj, r.IngressClassName, ctrlutils.IsDefaultIngressClass(class)) {
 		log.V(util.DebugLevel).Info("object missing ingress class, ensuring it's removed from configuration",
 			"namespace", req.Namespace, "name", req.Name, "class", r.IngressClassName)
-		return ctrl.Result{}, r.DataplaneClient.DeleteObject(obj)
+		return ctrl.Result{}, r.DataplaneClient.DeleteObject(ctx, obj)
 	} else {
 		log.V(util.DebugLevel).Info("object has matching ingress class", "namespace", req.Namespace, "name", req.Name,
 			"class", r.IngressClassName)
 	}
 
 	// update the kong Admin API with the changes
-	if err := r.DataplaneClient.UpdateObject(obj); err != nil {
+	if err := r.DataplaneClient.UpdateObject(ctx, obj); err != nil {
 		return ctrl.Result{}, err
 	}
 	// if status updates are enabled report the status for the object
@@ -1587,7 +1587,7 @@ func (r *KongV1Alpha1IngressClassParametersReconciler) Reconcile(ctx context.Con
 			obj.Namespace = req.Namespace
 			obj.Name = req.Name
 
-			return ctrl.Result{}, r.DataplaneClient.DeleteObject(obj)
+			return ctrl.Result{}, r.DataplaneClient.DeleteObject(ctx, obj)
 		}
 		return ctrl.Result{}, err
 	}
@@ -1597,12 +1597,12 @@ func (r *KongV1Alpha1IngressClassParametersReconciler) Reconcile(ctx context.Con
 	if !obj.DeletionTimestamp.IsZero() && time.Now().After(obj.DeletionTimestamp.Time) {
 		log.V(util.DebugLevel).Info("resource is being deleted, its configuration will be removed", "type", "IngressClassParameters", "namespace", req.Namespace, "name", req.Name)
 
-		objectExistsInCache, err := r.DataplaneClient.ObjectExists(obj)
+		objectExistsInCache, err := r.DataplaneClient.ObjectExists(ctx, obj)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
 		if objectExistsInCache {
-			if err := r.DataplaneClient.DeleteObject(obj); err != nil {
+			if err := r.DataplaneClient.DeleteObject(ctx, obj); err != nil {
 				return ctrl.Result{}, err
 			}
 			return ctrl.Result{Requeue: true}, nil // wait until the object is no longer present in the cache
@@ -1611,7 +1611,7 @@ func (r *KongV1Alpha1IngressClassParametersReconciler) Reconcile(ctx context.Con
 	}
 
 	// update the kong Admin API with the changes
-	if err := r.DataplaneClient.UpdateObject(obj); err != nil {
+	if err := r.DataplaneClient.UpdateObject(ctx, obj); err != nil {
 		return ctrl.Result{}, err
 	}
 

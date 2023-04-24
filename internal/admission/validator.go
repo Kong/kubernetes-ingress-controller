@@ -111,7 +111,7 @@ func (validator KongHTTPValidator) ValidateConsumer(
 	ignoredSecrets := make(map[string]map[string]struct{})
 	for _, secretName := range consumer.Credentials {
 		// retrieve the credentials secret
-		secret, err := validator.SecretGetter.GetSecret(consumer.Namespace, secretName)
+		secret, err := validator.SecretGetter.GetSecret(ctx, consumer.Namespace, secretName)
 		if err != nil {
 			if apierrors.IsNotFound(err) {
 				return false, ErrTextConsumerCredentialSecretNotFound, err
@@ -236,7 +236,7 @@ func (validator KongHTTPValidator) ValidatePlugin(
 		if len(plugin.Config) > 0 {
 			return false, ErrTextPluginUsesBothConfigTypes, nil
 		}
-		config, err := kongstate.SecretToConfiguration(validator.SecretGetter, (*k8sPlugin.ConfigFrom).SecretValue, k8sPlugin.Namespace)
+		config, err := kongstate.SecretToConfiguration(ctx, validator.SecretGetter, (*k8sPlugin.ConfigFrom).SecretValue, k8sPlugin.Namespace)
 		if err != nil {
 			return false, ErrTextPluginSecretConfigUnretrievable, err
 		}
@@ -433,9 +433,9 @@ type managerClientSecretGetter struct {
 	managerClient client.Client
 }
 
-func (m *managerClientSecretGetter) GetSecret(namespace, name string) (*corev1.Secret, error) {
+func (m *managerClientSecretGetter) GetSecret(ctx context.Context, namespace, name string) (*corev1.Secret, error) {
 	secret := &corev1.Secret{}
-	return secret, m.managerClient.Get(context.Background(), client.ObjectKey{
+	return secret, m.managerClient.Get(ctx, client.ObjectKey{
 		Namespace: namespace,
 		Name:      name,
 	}, secret)

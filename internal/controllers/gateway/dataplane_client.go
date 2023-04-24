@@ -1,6 +1,8 @@
 package gateway
 
 import (
+	"context"
+
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	k8sobj "github.com/kong/kubernetes-ingress-controller/v2/internal/util/kubernetes/object"
@@ -21,6 +23,6 @@ type DataPlane interface {
 // DataPlaneClient is a common client interface that is used by reconcilers to interact
 // with the dataplane to perform CRUD operations on provided objects.
 type DataPlaneClient interface {
-	UpdateObject(obj client.Object) error
-	DeleteObject(obj client.Object) error
+	UpdateObject(ctx context.Context, obj client.Object) error
+	DeleteObject(ctx context.Context, obj client.Object) error
 }

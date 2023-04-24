@@ -45,7 +45,7 @@ func UpdateReferencesToSecret(
 			return err
 		}
 
-		if err := dataplaneClient.UpdateObject(secret); err != nil {
+		if err := dataplaneClient.UpdateObject(ctx, secret); err != nil {
 			return err
 		}
 	}
@@ -103,7 +103,7 @@ func removeOutdatedReferencesToSecret(
 				}
 			}
 
-			if err := indexers.DeleteObjectIfNotReferred(obj, dataplaneClient); err != nil {
+			if err := indexers.DeleteObjectIfNotReferred(ctx, obj, dataplaneClient); err != nil {
 				return err
 			}
 		}
@@ -114,7 +114,7 @@ func removeOutdatedReferencesToSecret(
 // DeleteReferencesByReferrer deletes all reference records with specified referrer
 // in reference cache.
 // If the affected secret is not referred by any other objects, it deletes the secret in object cache.
-func DeleteReferencesByReferrer(indexers CacheIndexers, dataplaneClient *dataplane.KongClient, referrer client.Object) error {
+func DeleteReferencesByReferrer(ctx context.Context, indexers CacheIndexers, dataplaneClient *dataplane.KongClient, referrer client.Object) error {
 	referents, err := indexers.ListReferredObjects(referrer)
 	if err != nil {
 		return err
@@ -134,7 +134,7 @@ func DeleteReferencesByReferrer(indexers CacheIndexers, dataplaneClient *datapla
 		if !(gvk.Group == corev1.GroupName && gvk.Version == VersionV1 && gvk.Kind == KindSecret) {
 			continue
 		}
-		err := indexers.DeleteObjectIfNotReferred(referent, dataplaneClient)
+		err := indexers.DeleteObjectIfNotReferred(ctx, referent, dataplaneClient)
 		if err != nil {
 			return err
 		}

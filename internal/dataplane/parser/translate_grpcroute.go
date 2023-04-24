@@ -1,6 +1,7 @@
 package parser
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/kong/go-kong/kong"
@@ -18,10 +19,10 @@ import (
 
 // ingressRulesFromGRPCRoutes processes a list of GRPCRoute objects and translates
 // then into Kong configuration objects.
-func (p *Parser) ingressRulesFromGRPCRoutes() ingressRules {
+func (p *Parser) ingressRulesFromGRPCRoutes(ctx context.Context) ingressRules {
 	result := newIngressRules()
 
-	grpcRouteList, err := p.storer.ListGRPCRoutes()
+	grpcRouteList, err := p.storer.ListGRPCRoutes(ctx)
 	if err != nil {
 		p.logger.WithError(err).Error("failed to list GRPCRoutes")
 		return result
@@ -29,7 +30,7 @@ func (p *Parser) ingressRulesFromGRPCRoutes() ingressRules {
 
 	var errs []error
 	for _, grpcroute := range grpcRouteList {
-		if err := p.ingressRulesFromGRPCRoute(&result, grpcroute); err != nil {
+		if err := p.ingressRulesFromGRPCRoute(ctx, &result, grpcroute); err != nil {
 			err = fmt.Errorf("GRPCRoute %s/%s can't be routed: %w", grpcroute.Namespace, grpcroute.Name, err)
 			errs = append(errs, err)
 		} else {
@@ -48,7 +49,7 @@ func (p *Parser) ingressRulesFromGRPCRoutes() ingressRules {
 	return result
 }
 
-func (p *Parser) ingressRulesFromGRPCRoute(result *ingressRules, grpcroute *gatewayv1alpha2.GRPCRoute) error {
+func (p *Parser) ingressRulesFromGRPCRoute(ctx context.Context, result *ingressRules, grpcroute *gatewayv1alpha2.GRPCRoute) error {
 	// first we grab the spec and gather some metdata about the object
 	spec := grpcroute.Spec
 
@@ -63,7 +64,7 @@ func (p *Parser) ingressRulesFromGRPCRoute(result *ingressRules, grpcroute *gate
 		routes := generateKongRoutesFromGRPCRouteRule(grpcroute, ruleNumber, rule)
 
 		// create a service and attach the routes to it
-		service, err := generateKongServiceFromBackendRefWithRuleNumber(p.logger, p.storer, result, grpcroute, ruleNumber, "grpcs", grpcBackendRefsToBackendRefs(rule.BackendRefs)...)
+		service, err := generateKongServiceFromBackendRefWithRuleNumber(ctx, p.logger, p.storer, result, grpcroute, ruleNumber, "grpcs", grpcBackendRefsToBackendRefs(rule.BackendRefs)...)
 		if err != nil {
 			return err
 		}

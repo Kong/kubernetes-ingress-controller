@@ -1,6 +1,7 @@
 package parser
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"sort"
@@ -29,11 +30,11 @@ var priorityForPath = map[netv1.PathType]int{
 	netv1.PathTypeImplementationSpecific: 100,
 }
 
-func (p *Parser) ingressRulesFromIngressV1beta1() ingressRules {
+func (p *Parser) ingressRulesFromIngressV1beta1(ctx context.Context) ingressRules {
 	result := newIngressRules()
 
-	ingressList := p.storer.ListIngressesV1beta1()
-	icp, err := getIngressClassParametersOrDefault(p.storer)
+	ingressList := p.storer.ListIngressesV1beta1(ctx)
+	icp, err := getIngressClassParametersOrDefault(ctx, p.storer)
 	if err != nil {
 		if !errors.As(err, &store.ErrNotFound{}) {
 			// anything else is unexpected
@@ -187,11 +188,11 @@ func (p *Parser) ingressRulesFromIngressV1beta1() ingressRules {
 	return result
 }
 
-func (p *Parser) ingressRulesFromIngressV1() ingressRules {
+func (p *Parser) ingressRulesFromIngressV1(ctx context.Context) ingressRules {
 	result := newIngressRules()
 
-	ingressList := p.storer.ListIngressesV1()
-	icp, err := getIngressClassParametersOrDefault(p.storer)
+	ingressList := p.storer.ListIngressesV1(ctx)
+	icp, err := getIngressClassParametersOrDefault(ctx, p.storer)
 	if err != nil {
 		if !errors.As(err, &store.ErrNotFound{}) {
 			// anything else is unexpected

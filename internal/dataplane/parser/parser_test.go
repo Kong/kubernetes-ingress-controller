@@ -1,6 +1,7 @@
 package parser
 
 import (
+	"context"
 	"fmt"
 	"reflect"
 	"sort"
@@ -19,13 +20,18 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/client-go/kubernetes/scheme"
 	knative "knative.dev/networking/pkg/apis/networking/v1alpha1"
+	ctrlclientfake "sigs.k8s.io/controller-runtime/pkg/client/fake"
+	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 	configurationv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
+	"github.com/kong/kubernetes-ingress-controller/v2/pkg/clientset/fake"
 )
 
 type TLSPair struct {
@@ -282,7 +288,7 @@ func TestGlobalPlugin(t *testing.T) {
 		})
 		assert.Nil(err)
 		p := mustNewParser(t, store)
-		state, translationFailures := p.Build()
+		state, translationFailures := p.Build(context.TODO())
 		require.Empty(t, translationFailures)
 		assert.NotNil(state)
 		assert.Equal(1, len(state.Plugins),
@@ -464,7 +470,7 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 			store, err := store.NewFakeStore(objects)
 			assert.Nil(err)
 			p := mustNewParser(t, store)
-			state, translationFailures := p.Build()
+			state, translationFailures := p.Build(context.TODO())
 			require.Empty(t, translationFailures)
 			assert.Nil(err)
 			assert.NotNil(state)
@@ -570,7 +576,7 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 			store, err := store.NewFakeStore(objects)
 			assert.Nil(err)
 			p := mustNewParser(t, store)
-			state, translationFailures := p.Build()
+			state, translationFailures := p.Build(context.TODO())
 			require.Empty(t, translationFailures)
 			assert.Nil(err)
 			assert.NotNil(state)
@@ -673,7 +679,7 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 			store, err := store.NewFakeStore(objects)
 			assert.Nil(err)
 			p := mustNewParser(t, store)
-			state, translationFailures := p.Build()
+			state, translationFailures := p.Build(context.TODO())
 			require.Empty(t, translationFailures)
 			assert.NotNil(state)
 			assert.Equal(0, len(state.Plugins),
@@ -725,16 +731,16 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 		store, err := store.NewFakeStore(objects)
 		assert.Nil(err)
 		p := mustNewParser(t, store)
-		state, translationFailures := p.Build()
+		state, translationFailures := p.Build(context.TODO())
 		require.Empty(t, translationFailures)
 		assert.NotNil(state)
 		for _, testcase := range references {
-			config, err := kongstate.SecretToConfiguration(store, *testcase, "default")
+			config, err := kongstate.SecretToConfiguration(context.TODO(), store, *testcase, "default")
 			assert.NotEmpty(config)
 			assert.Nil(err)
 		}
 		for _, testcase := range badReferences {
-			config, err := kongstate.SecretToConfiguration(store, *testcase, "default")
+			config, err := kongstate.SecretToConfiguration(context.TODO(), store, *testcase, "default")
 			assert.Empty(config)
 			assert.NotEmpty(err)
 		}
@@ -824,7 +830,7 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 			store, err := store.NewFakeStore(objects)
 			assert.Nil(err)
 			p := mustNewParser(t, store)
-			state, translationFailures := p.Build()
+			state, translationFailures := p.Build(context.TODO())
 			require.Empty(t, translationFailures)
 			assert.NotNil(state)
 			assert.Equal(0, len(state.Plugins),
@@ -860,7 +866,7 @@ func TestCACertificate(t *testing.T) {
 		})
 		assert.Nil(err)
 		p := mustNewParser(t, store)
-		state, translationFailures := p.Build()
+		state, translationFailures := p.Build(context.TODO())
 		require.Empty(t, translationFailures)
 		assert.NotNil(state)
 
@@ -915,7 +921,7 @@ func TestCACertificate(t *testing.T) {
 		})
 		assert.Nil(err)
 		p := mustNewParser(t, store)
-		state, translationFailures := p.Build()
+		state, translationFailures := p.Build(context.TODO())
 		require.Empty(t, translationFailures)
 		assert.NotNil(state)
 
@@ -998,7 +1004,7 @@ func TestCACertificate(t *testing.T) {
 		})
 		assert.Nil(err)
 		p := mustNewParser(t, store)
-		state, translationFailures := p.Build()
+		state, translationFailures := p.Build(context.TODO())
 		assert.Len(translationFailures, 3)
 		assert.NotNil(state)
 
@@ -1084,7 +1090,7 @@ func TestServiceClientCertificate(t *testing.T) {
 		})
 		assert.Nil(err)
 		p := mustNewParser(t, store)
-		state, translationFailures := p.Build()
+		state, translationFailures := p.Build(context.TODO())
 		require.Empty(t, translationFailures)
 		assert.NotNil(state)
 		assert.Equal(1, len(state.Certificates),
@@ -1153,7 +1159,7 @@ func TestServiceClientCertificate(t *testing.T) {
 		})
 		assert.Nil(err)
 		p := mustNewParser(t, store)
-		state, translationFailures := p.Build()
+		state, translationFailures := p.Build(context.TODO())
 		require.Len(t, translationFailures, 1)
 		assert.NotNil(state)
 		assert.Equal(0, len(state.Certificates),
@@ -1214,7 +1220,7 @@ func TestKongRouteAnnotations(t *testing.T) {
 		})
 		assert.Nil(err)
 		p := mustNewParser(t, store)
-		state, translationFailures := p.Build()
+		state, translationFailures := p.Build(context.TODO())
 		require.Empty(t, translationFailures)
 		assert.NotNil(state)
 
@@ -1298,7 +1304,7 @@ func TestKongRouteAnnotations(t *testing.T) {
 		})
 		assert.Nil(err)
 		p := mustNewParser(t, store)
-		state, translationFailures := p.Build()
+		state, translationFailures := p.Build(context.TODO())
 		require.Empty(t, translationFailures)
 		assert.NotNil(state)
 
@@ -1383,7 +1389,7 @@ func TestKongRouteAnnotations(t *testing.T) {
 			})
 			assert.Nil(err)
 			p := mustNewParser(t, store)
-			state, translationFailures := p.Build()
+			state, translationFailures := p.Build(context.TODO())
 			require.Empty(t, translationFailures)
 			assert.NotNil(state)
 
@@ -1469,7 +1475,7 @@ func TestKongRouteAnnotations(t *testing.T) {
 			})
 			assert.Nil(err)
 			p := mustNewParser(t, store)
-			state, translationFailures := p.Build()
+			state, translationFailures := p.Build(context.TODO())
 			require.Empty(t, translationFailures)
 			assert.NotNil(state)
 
@@ -1554,7 +1560,7 @@ func TestKongRouteAnnotations(t *testing.T) {
 			})
 			assert.Nil(err)
 			p := mustNewParser(t, store)
-			state, translationFailures := p.Build()
+			state, translationFailures := p.Build(context.TODO())
 			require.Empty(t, translationFailures)
 			assert.NotNil(state)
 
@@ -1639,7 +1645,7 @@ func TestKongRouteAnnotations(t *testing.T) {
 			})
 			assert.Nil(err)
 			p := mustNewParser(t, store)
-			state, translationFailures := p.Build()
+			state, translationFailures := p.Build(context.TODO())
 			require.Empty(t, translationFailures)
 			assert.NotNil(state)
 
@@ -1724,7 +1730,7 @@ func TestKongRouteAnnotations(t *testing.T) {
 			})
 			assert.Nil(err)
 			p := mustNewParser(t, store)
-			state, translationFailures := p.Build()
+			state, translationFailures := p.Build(context.TODO())
 			require.Empty(t, translationFailures)
 			assert.NotNil(state)
 
@@ -1809,7 +1815,7 @@ func TestKongRouteAnnotations(t *testing.T) {
 			})
 			assert.Nil(err)
 			p := mustNewParser(t, store)
-			state, translationFailures := p.Build()
+			state, translationFailures := p.Build(context.TODO())
 			require.Empty(t, translationFailures)
 			assert.NotNil(state)
 
@@ -1894,7 +1900,7 @@ func TestKongRouteAnnotations(t *testing.T) {
 		})
 		assert.Nil(err)
 		p := mustNewParser(t, store)
-		state, translationFailures := p.Build()
+		state, translationFailures := p.Build(context.TODO())
 		require.Empty(t, translationFailures)
 		assert.NotNil(state)
 
@@ -1977,7 +1983,7 @@ func TestKongRouteAnnotations(t *testing.T) {
 		})
 		assert.Nil(err)
 		p := mustNewParser(t, store)
-		state, translationFailures := p.Build()
+		state, translationFailures := p.Build(context.TODO())
 		require.Empty(t, translationFailures)
 		assert.NotNil(state)
 
@@ -2060,7 +2066,7 @@ func TestKongRouteAnnotations(t *testing.T) {
 		})
 		assert.Nil(err)
 		p := mustNewParser(t, store)
-		state, translationFailures := p.Build()
+		state, translationFailures := p.Build(context.TODO())
 		require.Empty(t, translationFailures)
 		assert.NotNil(state)
 
@@ -2121,7 +2127,7 @@ func TestKongProcessClasslessIngress(t *testing.T) {
 		})
 		assert.Nil(err)
 		p := mustNewParser(t, store)
-		state, translationFailures := p.Build()
+		state, translationFailures := p.Build(context.TODO())
 		require.Empty(t, translationFailures)
 		assert.NotNil(state)
 
@@ -2172,7 +2178,7 @@ func TestKongProcessClasslessIngress(t *testing.T) {
 		})
 		assert.Nil(err)
 		p := mustNewParser(t, store)
-		state, translationFailures := p.Build()
+		state, translationFailures := p.Build(context.TODO())
 		require.Empty(t, translationFailures)
 		assert.NotNil(state)
 
@@ -2250,7 +2256,7 @@ func TestKnativeIngressAndPlugins(t *testing.T) {
 		})
 		assert.Nil(err)
 		p := mustNewParser(t, store)
-		state, translationFailures := p.Build()
+		state, translationFailures := p.Build(context.TODO())
 		require.Empty(t, translationFailures)
 		assert.NotNil(state)
 
@@ -2329,7 +2335,7 @@ func TestKnativeIngressAndPlugins(t *testing.T) {
 		})
 		assert.Nil(err)
 		p := mustNewParser(t, store)
-		state, translationFailures := p.Build()
+		state, translationFailures := p.Build(context.TODO())
 		require.Empty(t, translationFailures)
 		assert.NotNil(state)
 
@@ -2399,7 +2405,7 @@ func TestKnativeIngressAndPlugins(t *testing.T) {
 		})
 		assert.Nil(err)
 		p := mustNewParser(t, store)
-		state, translationFailures := p.Build()
+		state, translationFailures := p.Build(context.TODO())
 		require.Empty(t, translationFailures)
 		assert.NotNil(state)
 
@@ -2485,7 +2491,7 @@ func TestKnativeIngressAndPlugins(t *testing.T) {
 		})
 		assert.Nil(err)
 		p := mustNewParser(t, store)
-		state, translationFailures := p.Build()
+		state, translationFailures := p.Build(context.TODO())
 		require.Empty(t, translationFailures)
 		assert.NotNil(state)
 
@@ -2602,7 +2608,7 @@ func TestKongServiceAnnotations(t *testing.T) {
 		})
 		assert.Nil(err)
 		p := mustNewParser(t, store)
-		state, translationFailures := p.Build()
+		state, translationFailures := p.Build(context.TODO())
 		require.Empty(t, translationFailures)
 		assert.NotNil(state)
 
@@ -2689,7 +2695,7 @@ func TestKongServiceAnnotations(t *testing.T) {
 		})
 		assert.Nil(err)
 		p := mustNewParser(t, store)
-		state, translationFailures := p.Build()
+		state, translationFailures := p.Build(context.TODO())
 		require.Empty(t, translationFailures)
 		assert.NotNil(state)
 
@@ -2784,7 +2790,7 @@ func TestKongServiceAnnotations(t *testing.T) {
 			})
 			assert.Nil(err)
 			p := mustNewParser(t, store)
-			state, translationFailures := p.Build()
+			state, translationFailures := p.Build(context.TODO())
 			require.Empty(t, translationFailures)
 			assert.NotNil(state)
 
@@ -2858,7 +2864,7 @@ func TestDefaultBackend(t *testing.T) {
 		})
 		assert.Nil(err)
 		p := mustNewParser(t, store)
-		state, translationFailures := p.Build()
+		state, translationFailures := p.Build(context.TODO())
 		require.Empty(t, translationFailures)
 		assert.NotNil(state)
 		assert.Equal(1, len(state.Services),
@@ -2928,7 +2934,7 @@ func TestDefaultBackend(t *testing.T) {
 		})
 		assert.Nil(err)
 		p := mustNewParser(t, store)
-		state, translationFailures := p.Build()
+		state, translationFailures := p.Build(context.TODO())
 		require.Len(t, translationFailures, 1)
 		assert.NotNil(state)
 		assert.Equal(0, len(state.Certificates),
@@ -2994,7 +3000,7 @@ func TestParserSecret(t *testing.T) {
 		})
 		assert.Nil(err)
 		p := mustNewParser(t, store)
-		state, translationFailures := p.Build()
+		state, translationFailures := p.Build(context.TODO())
 		require.Empty(t, translationFailures)
 		assert.NotNil(state)
 		assert.Equal(0, len(state.Certificates),
@@ -3076,7 +3082,7 @@ func TestParserSecret(t *testing.T) {
 		})
 		assert.Nil(err)
 		p := mustNewParser(t, store)
-		state, translationFailures := p.Build()
+		state, translationFailures := p.Build(context.TODO())
 		require.Empty(t, translationFailures)
 		assert.NotNil(state)
 		assert.Equal(1, len(state.Certificates),
@@ -3205,7 +3211,7 @@ func TestParserSecret(t *testing.T) {
 		})
 		assert.Nil(err)
 		p := mustNewParser(t, store)
-		state, translationFailures := p.Build()
+		state, translationFailures := p.Build(context.TODO())
 		require.Empty(t, translationFailures)
 		assert.NotNil(state)
 		assert.Equal(1, len(state.Certificates),
@@ -3289,7 +3295,7 @@ func TestParserSecret(t *testing.T) {
 		})
 		assert.Nil(err)
 		p := mustNewParser(t, store)
-		state, translationFailures := p.Build()
+		state, translationFailures := p.Build(context.TODO())
 		require.Empty(t, translationFailures)
 		assert.NotNil(state)
 		assert.Equal(1, len(state.Certificates),
@@ -3372,7 +3378,7 @@ func TestParserSNI(t *testing.T) {
 		})
 		assert.Nil(err)
 		p := mustNewParser(t, store)
-		state, translationFailures := p.Build()
+		state, translationFailures := p.Build(context.TODO())
 		require.Empty(t, translationFailures)
 		assert.NotNil(state)
 		// parser tests do not check tags, these are tested independently
@@ -3440,7 +3446,7 @@ func TestParserSNI(t *testing.T) {
 		})
 		assert.Nil(err)
 		p := mustNewParser(t, store)
-		state, translationFailures := p.Build()
+		state, translationFailures := p.Build(context.TODO())
 		require.Empty(t, translationFailures)
 		assert.NotNil(state)
 		// parser tests do not check tags, these are tested independently
@@ -3502,7 +3508,7 @@ func TestParserHostAliases(t *testing.T) {
 		})
 		assert.Nil(err)
 		p := mustNewParser(t, store)
-		state, translationFailures := p.Build()
+		state, translationFailures := p.Build(context.TODO())
 		require.Empty(t, translationFailures)
 		assert.NotNil(state)
 		// parser tests do not check tags, these are tested independently
@@ -3557,7 +3563,7 @@ func TestParserHostAliases(t *testing.T) {
 		})
 		assert.Nil(err)
 		p := mustNewParser(t, store)
-		state, translationFailures := p.Build()
+		state, translationFailures := p.Build(context.TODO())
 		require.Empty(t, translationFailures)
 		assert.NotNil(state)
 		// parser tests do not check tags, these are tested independently
@@ -3613,7 +3619,7 @@ func TestParserHostAliases(t *testing.T) {
 		})
 		assert.Nil(err)
 		p := mustNewParser(t, store)
-		state, translationFailures := p.Build()
+		state, translationFailures := p.Build(context.TODO())
 		require.Empty(t, translationFailures)
 		assert.NotNil(state)
 		// parser tests do not check tags, these are tested independently
@@ -3635,38 +3641,50 @@ func TestParserHostAliases(t *testing.T) {
 func TestPluginAnnotations(t *testing.T) {
 	assert := assert.New(t)
 	t.Run("simple association", func(t *testing.T) {
-		services := []*corev1.Service{
-			{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:        "foo-svc",
-					Namespace:   "default",
-					Annotations: map[string]string{},
+		svc := &corev1.Service{
+			TypeMeta: metav1.TypeMeta{
+				Kind:       "Service",
+				APIVersion: "v1",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:        "foo-svc",
+				Namespace:   "default",
+				Annotations: map[string]string{},
+			},
+			Spec: corev1.ServiceSpec{
+				Ports: []corev1.ServicePort{
+					{
+						Port: 80,
+						Name: "foo-svc",
+					},
 				},
 			},
 		}
-		ingresses := []*netv1beta1.Ingress{
-			{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "foo",
-					Namespace: "default",
-					Annotations: map[string]string{
-						annotations.AnnotationPrefix + annotations.PluginsKey: "foo-plugin",
-						annotations.IngressClassKey:                           annotations.DefaultIngressClass,
-					},
+		ingress := &netv1beta1.Ingress{
+			TypeMeta: metav1.TypeMeta{
+				Kind:       "Ingress",
+				APIVersion: "networking.k8s.io/v1beta1",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "foo",
+				Namespace: "default",
+				Annotations: map[string]string{
+					annotations.AnnotationPrefix + annotations.PluginsKey: "foo-plugin",
+					annotations.IngressClassKey:                           annotations.DefaultIngressClass,
 				},
-				Spec: netv1beta1.IngressSpec{
-					Rules: []netv1beta1.IngressRule{
-						{
-							Host: "example.com",
-							IngressRuleValue: netv1beta1.IngressRuleValue{
-								HTTP: &netv1beta1.HTTPIngressRuleValue{
-									Paths: []netv1beta1.HTTPIngressPath{
-										{
-											Path: "/",
-											Backend: netv1beta1.IngressBackend{
-												ServiceName: "foo-svc",
-												ServicePort: intstr.FromInt(80),
-											},
+			},
+			Spec: netv1beta1.IngressSpec{
+				Rules: []netv1beta1.IngressRule{
+					{
+						Host: "example.com",
+						IngressRuleValue: netv1beta1.IngressRuleValue{
+							HTTP: &netv1beta1.HTTPIngressRuleValue{
+								Paths: []netv1beta1.HTTPIngressPath{
+									{
+										Path: "/",
+										Backend: netv1beta1.IngressBackend{
+											ServiceName: "foo-svc",
+											ServicePort: intstr.FromInt(80),
 										},
 									},
 								},
@@ -3676,16 +3694,19 @@ func TestPluginAnnotations(t *testing.T) {
 				},
 			},
 		}
-		plugins := []*configurationv1.KongPlugin{
-			{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "foo-plugin",
-					Namespace: "default",
-				},
-				PluginName: "key-auth",
-				Protocols:  []configurationv1.KongProtocol{"grpc"},
-				Config: apiextensionsv1.JSON{
-					Raw: []byte(`{
+		kongPlugin := &configurationv1.KongPlugin{
+			TypeMeta: metav1.TypeMeta{
+				Kind:       "KongPlugin",
+				APIVersion: "configuration.konghq.com/v1",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "foo-plugin",
+				Namespace: "default",
+			},
+			PluginName: "key-auth",
+			Protocols:  []configurationv1.KongProtocol{"grpc"},
+			Config: apiextensionsv1.JSON{
+				Raw: []byte(`{
 					"foo": "bar",
 					"add": {
 						"headers": [
@@ -3694,22 +3715,35 @@ func TestPluginAnnotations(t *testing.T) {
 							]
 						}
 					}`),
-				},
 			},
 		}
 
-		store, err := store.NewFakeStore(store.FakeObjects{
-			IngressesV1beta1: ingresses,
-			Services:         services,
-			KongPlugins:      plugins,
-		})
-		assert.Nil(err)
+		require.NoError(t, fake.AddToScheme(scheme.Scheme))
+		require.NoError(t, gatewayv1alpha2.AddToScheme(scheme.Scheme))
+		require.NoError(t, gatewayv1beta1.AddToScheme(scheme.Scheme))
+		require.NoError(t, knative.AddToScheme(scheme.Scheme))
+
+		client := ctrlclientfake.NewClientBuilder().
+			WithObjects(svc).
+			WithLists(
+				&configurationv1.KongPluginList{
+					Items: []configurationv1.KongPlugin{
+						*kongPlugin,
+					},
+				},
+				&netv1beta1.IngressList{
+					Items: []netv1beta1.Ingress{
+						*ingress,
+					},
+				},
+			).
+			Build()
+		store := store.New(client, annotations.DefaultIngressClass, logrus.New())
 		p := mustNewParser(t, store)
-		state, translationFailures := p.Build()
+		state, translationFailures := p.Build(context.TODO())
 		require.Empty(t, translationFailures)
 		assert.NotNil(state)
-		assert.Equal(1, len(state.Plugins),
-			"expected no plugins to be rendered with missing plugin")
+		require.Len(t, state.Plugins, 1, "expected no plugins to be rendered with missing plugin")
 		pl := state.Plugins[0].Plugin
 		pl.Route = nil
 		// parser tests do not check tags, these are tested independently
@@ -3729,38 +3763,50 @@ func TestPluginAnnotations(t *testing.T) {
 		})
 	})
 	t.Run("KongPlugin takes precedence over KongPlugin", func(t *testing.T) {
-		services := []*corev1.Service{
-			{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:        "foo-svc",
-					Namespace:   "default",
-					Annotations: map[string]string{},
+		service := &corev1.Service{
+			TypeMeta: metav1.TypeMeta{
+				Kind:       "Service",
+				APIVersion: "v1",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:        "foo-svc",
+				Namespace:   "default",
+				Annotations: map[string]string{},
+			},
+			Spec: corev1.ServiceSpec{
+				Ports: []corev1.ServicePort{
+					{
+						Port: 80,
+						Name: "foo-svc",
+					},
 				},
 			},
 		}
-		ingresses := []*netv1beta1.Ingress{
-			{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "foo",
-					Namespace: "default",
-					Annotations: map[string]string{
-						annotations.AnnotationPrefix + annotations.PluginsKey: "foo-plugin",
-						annotations.IngressClassKey:                           annotations.DefaultIngressClass,
-					},
+		ingress := &netv1beta1.Ingress{
+			TypeMeta: metav1.TypeMeta{
+				Kind:       "Ingress",
+				APIVersion: "networking.k8s.io/v1beta1",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "foo",
+				Namespace: "default",
+				Annotations: map[string]string{
+					annotations.AnnotationPrefix + annotations.PluginsKey: "foo-plugin",
+					annotations.IngressClassKey:                           annotations.DefaultIngressClass,
 				},
-				Spec: netv1beta1.IngressSpec{
-					Rules: []netv1beta1.IngressRule{
-						{
-							Host: "example.com",
-							IngressRuleValue: netv1beta1.IngressRuleValue{
-								HTTP: &netv1beta1.HTTPIngressRuleValue{
-									Paths: []netv1beta1.HTTPIngressPath{
-										{
-											Path: "/",
-											Backend: netv1beta1.IngressBackend{
-												ServiceName: "foo-svc",
-												ServicePort: intstr.FromInt(80),
-											},
+			},
+			Spec: netv1beta1.IngressSpec{
+				Rules: []netv1beta1.IngressRule{
+					{
+						Host: "example.com",
+						IngressRuleValue: netv1beta1.IngressRuleValue{
+							HTTP: &netv1beta1.HTTPIngressRuleValue{
+								Paths: []netv1beta1.HTTPIngressPath{
+									{
+										Path: "/",
+										Backend: netv1beta1.IngressBackend{
+											ServiceName: "foo-svc",
+											ServicePort: intstr.FromInt(80),
 										},
 									},
 								},
@@ -3770,82 +3816,117 @@ func TestPluginAnnotations(t *testing.T) {
 				},
 			},
 		}
-		clusterPlugins := []*configurationv1.KongClusterPlugin{
-			{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "foo-plugin",
-					Namespace: "default",
-				},
-				PluginName: "basic-auth",
-				Protocols:  []configurationv1.KongProtocol{"grpc"},
-				Config: apiextensionsv1.JSON{
-					Raw: []byte(`{"foo": "bar"}`),
-				},
+		kongClusterPlugin := &configurationv1.KongClusterPlugin{
+			TypeMeta: metav1.TypeMeta{
+				Kind:       "KongClusterPlugin",
+				APIVersion: "configuration.konghq.com/v1",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "foo-plugin",
+				Namespace: "default",
+			},
+			PluginName: "basic-auth",
+			Protocols:  []configurationv1.KongProtocol{"grpc"},
+			Config: apiextensionsv1.JSON{
+				Raw: []byte(`{"foo": "bar"}`),
 			},
 		}
-		plugins := []*configurationv1.KongPlugin{
-			{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "foo-plugin",
-					Namespace: "default",
-				},
-				PluginName: "key-auth",
-				Protocols:  []configurationv1.KongProtocol{"grpc"},
-				Config: apiextensionsv1.JSON{
-					Raw: []byte(`{"foo": "bar"}`),
-				},
+		kongPlugin := &configurationv1.KongPlugin{
+			TypeMeta: metav1.TypeMeta{
+				Kind:       "KongPlugin",
+				APIVersion: "configuration.konghq.com/v1",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "foo-plugin",
+				Namespace: "default",
+			},
+			PluginName: "key-auth",
+			Protocols:  []configurationv1.KongProtocol{"grpc"},
+			Config: apiextensionsv1.JSON{
+				Raw: []byte(`{"foo": "bar"}`),
 			},
 		}
 
-		store, err := store.NewFakeStore(store.FakeObjects{
-			IngressesV1beta1:   ingresses,
-			Services:           services,
-			KongPlugins:        plugins,
-			KongClusterPlugins: clusterPlugins,
-		})
-		assert.Nil(err)
+		require.NoError(t, fake.AddToScheme(scheme.Scheme))
+		require.NoError(t, gatewayv1alpha2.AddToScheme(scheme.Scheme))
+		require.NoError(t, gatewayv1beta1.AddToScheme(scheme.Scheme))
+		require.NoError(t, knative.AddToScheme(scheme.Scheme))
+
+		client := ctrlclientfake.NewClientBuilder().
+			WithObjects(service).
+			WithLists(
+				&configurationv1.KongPluginList{
+					Items: []configurationv1.KongPlugin{
+						*kongPlugin,
+					},
+				},
+				&configurationv1.KongClusterPluginList{
+					Items: []configurationv1.KongClusterPlugin{
+						*kongClusterPlugin,
+					},
+				},
+				&netv1beta1.IngressList{
+					Items: []netv1beta1.Ingress{
+						*ingress,
+					},
+				},
+			).
+			Build()
+
+		store := store.New(client, annotations.DefaultIngressClass, logrus.New())
 		p := mustNewParser(t, store)
-		state, translationFailures := p.Build()
+		state, translationFailures := p.Build(context.TODO())
 		require.Empty(t, translationFailures)
 		assert.NotNil(state)
-		assert.Equal(1, len(state.Plugins),
-			"expected no plugins to be rendered with missing plugin")
+		require.Len(t, state.Plugins, 1, "expected no plugins to be rendered with missing plugin")
 		assert.Equal("key-auth", *state.Plugins[0].Name)
 		assert.Equal("grpc", *state.Plugins[0].Protocols[0])
 	})
 	t.Run("KongClusterPlugin association", func(t *testing.T) {
-		services := []*corev1.Service{
-			{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:        "foo-svc",
-					Namespace:   "default",
-					Annotations: map[string]string{},
+		service := &corev1.Service{
+			TypeMeta: metav1.TypeMeta{
+				Kind:       "Service",
+				APIVersion: "v1",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:        "foo-svc",
+				Namespace:   "default",
+				Annotations: map[string]string{},
+			},
+			Spec: corev1.ServiceSpec{
+				Ports: []corev1.ServicePort{
+					{
+						Port: 80,
+						Name: "foo-svc",
+					},
 				},
 			},
 		}
-		ingresses := []*netv1beta1.Ingress{
-			{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "foo",
-					Namespace: "default",
-					Annotations: map[string]string{
-						annotations.AnnotationPrefix + annotations.PluginsKey: "foo-plugin",
-						annotations.IngressClassKey:                           annotations.DefaultIngressClass,
-					},
+		ingress := &netv1beta1.Ingress{
+			TypeMeta: metav1.TypeMeta{
+				Kind:       "Ingress",
+				APIVersion: "networking.k8s.io/v1beta1",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "foo",
+				Namespace: "default",
+				Annotations: map[string]string{
+					annotations.AnnotationPrefix + annotations.PluginsKey: "foo-plugin",
+					annotations.IngressClassKey:                           annotations.DefaultIngressClass,
 				},
-				Spec: netv1beta1.IngressSpec{
-					Rules: []netv1beta1.IngressRule{
-						{
-							Host: "example.com",
-							IngressRuleValue: netv1beta1.IngressRuleValue{
-								HTTP: &netv1beta1.HTTPIngressRuleValue{
-									Paths: []netv1beta1.HTTPIngressPath{
-										{
-											Path: "/",
-											Backend: netv1beta1.IngressBackend{
-												ServiceName: "foo-svc",
-												ServicePort: intstr.FromInt(80),
-											},
+			},
+			Spec: netv1beta1.IngressSpec{
+				Rules: []netv1beta1.IngressRule{
+					{
+						Host: "example.com",
+						IngressRuleValue: netv1beta1.IngressRuleValue{
+							HTTP: &netv1beta1.HTTPIngressRuleValue{
+								Paths: []netv1beta1.HTTPIngressPath{
+									{
+										Path: "/",
+										Backend: netv1beta1.IngressBackend{
+											ServiceName: "foo-svc",
+											ServicePort: intstr.FromInt(80),
 										},
 									},
 								},
@@ -3855,59 +3936,73 @@ func TestPluginAnnotations(t *testing.T) {
 				},
 			},
 		}
-		clusterPlugins := []*configurationv1.KongClusterPlugin{
-			{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "foo-plugin",
-					Namespace: "default",
-				},
-				PluginName: "basic-auth",
-				Protocols:  []configurationv1.KongProtocol{"grpc"},
-				Config: apiextensionsv1.JSON{
-					Raw: []byte(`{"foo": "bar"}`),
-				},
+		kongClusterPlugin := &configurationv1.KongClusterPlugin{
+			TypeMeta: metav1.TypeMeta{
+				Kind:       "KongClusterPlugin",
+				APIVersion: "configuration.konghq.com/v1",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "foo-plugin",
+			},
+			PluginName: "basic-auth",
+			Protocols:  []configurationv1.KongProtocol{"grpc"},
+			Config: apiextensionsv1.JSON{
+				Raw: []byte(`{"foo": "bar"}`),
 			},
 		}
 
-		store, err := store.NewFakeStore(store.FakeObjects{
-			IngressesV1beta1:   ingresses,
-			Services:           services,
-			KongClusterPlugins: clusterPlugins,
-		})
-		assert.Nil(err)
+		require.NoError(t, fake.AddToScheme(scheme.Scheme))
+		require.NoError(t, gatewayv1alpha2.AddToScheme(scheme.Scheme))
+		require.NoError(t, gatewayv1beta1.AddToScheme(scheme.Scheme))
+		require.NoError(t, knative.AddToScheme(scheme.Scheme))
+
+		client := ctrlclientfake.NewClientBuilder().
+			WithObjects(service).
+			WithLists(
+				&configurationv1.KongClusterPluginList{
+					Items: []configurationv1.KongClusterPlugin{
+						*kongClusterPlugin,
+					},
+				},
+				&netv1beta1.IngressList{
+					Items: []netv1beta1.Ingress{
+						*ingress,
+					},
+				},
+			).
+			Build()
+
+		store := store.New(client, annotations.DefaultIngressClass, logrus.New())
 		p := mustNewParser(t, store)
-		state, translationFailures := p.Build()
+		state, translationFailures := p.Build(context.TODO())
 		require.Empty(t, translationFailures)
 		assert.NotNil(state)
-		assert.Equal(1, len(state.Plugins),
-			"expected no plugins to be rendered with missing plugin")
+		require.Len(t, state.Plugins, 1, "expected no plugins to be rendered with missing plugin")
 		assert.Equal("basic-auth", *state.Plugins[0].Name)
 		assert.Equal("grpc", *state.Plugins[0].Protocols[0])
 	})
 	t.Run("missing plugin", func(t *testing.T) {
-		ingresses := []*netv1beta1.Ingress{
-			{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "foo",
-					Namespace: "default",
-					Annotations: map[string]string{
-						annotations.AnnotationPrefix + annotations.PluginsKey: "does-not-exist",
-						annotations.IngressClassKey:                           annotations.DefaultIngressClass,
-					},
+		ingress := &netv1beta1.Ingress{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "foo",
+				Namespace: "default",
+				Annotations: map[string]string{
+					annotations.AnnotationPrefix + annotations.PluginsKey: "does-not-exist",
+					annotations.IngressClassKey:                           annotations.DefaultIngressClass,
 				},
-				Spec: netv1beta1.IngressSpec{
-					Rules: []netv1beta1.IngressRule{
-						{
-							Host: "example.com",
-							IngressRuleValue: netv1beta1.IngressRuleValue{
-								HTTP: &netv1beta1.HTTPIngressRuleValue{
-									Paths: []netv1beta1.HTTPIngressPath{
-										{
-											Path: "/",
-											Backend: netv1beta1.IngressBackend{
-												ServiceName: "foo-svc",
-												ServicePort: intstr.FromInt(80),
-											},
+			},
+			Spec: netv1beta1.IngressSpec{
+				Rules: []netv1beta1.IngressRule{
+					{
+						Host: "example.com",
+						IngressRuleValue: netv1beta1.IngressRuleValue{
+							HTTP: &netv1beta1.HTTPIngressRuleValue{
+								Paths: []netv1beta1.HTTPIngressPath{
+									{
+										Path: "/",
+										Backend: netv1beta1.IngressBackend{
+											ServiceName: "foo-svc",
+											ServicePort: intstr.FromInt(80),
 										},
 									},
 								},
@@ -3918,16 +4013,27 @@ func TestPluginAnnotations(t *testing.T) {
 			},
 		}
 
-		store, err := store.NewFakeStore(store.FakeObjects{
-			IngressesV1beta1: ingresses,
-		})
-		assert.Nil(err)
+		require.NoError(t, fake.AddToScheme(scheme.Scheme))
+		require.NoError(t, gatewayv1alpha2.AddToScheme(scheme.Scheme))
+		require.NoError(t, gatewayv1beta1.AddToScheme(scheme.Scheme))
+		require.NoError(t, knative.AddToScheme(scheme.Scheme))
+
+		client := ctrlclientfake.NewClientBuilder().
+			WithLists(
+				&netv1beta1.IngressList{
+					Items: []netv1beta1.Ingress{
+						*ingress,
+					},
+				},
+			).
+			Build()
+
+		store := store.New(client, annotations.DefaultIngressClass, logrus.New())
 		p := mustNewParser(t, store)
-		state, translationFailures := p.Build()
+		state, translationFailures := p.Build(context.TODO())
 		require.Empty(t, translationFailures)
 		assert.NotNil(state)
-		assert.Equal(0, len(state.Plugins),
-			"expected no plugins to be rendered with missing plugin")
+		assert.Empty(state.Plugins, "expected no plugins to be rendered with missing plugin")
 	})
 }
 
@@ -3937,7 +4043,7 @@ func TestGetEndpoints(t *testing.T) {
 		svc               *corev1.Service
 		port              *corev1.ServicePort
 		proto             corev1.Protocol
-		fn                func(string, string) (*corev1.Endpoints, error)
+		fn                func(context.Context, string, string) (*corev1.Endpoints, error)
 		result            []util.Endpoint
 		isServiceUpstream bool
 	}{
@@ -3946,7 +4052,7 @@ func TestGetEndpoints(t *testing.T) {
 			svc:    nil,
 			port:   nil,
 			proto:  corev1.ProtocolTCP,
-			fn:     func(string, string) (*corev1.Endpoints, error) { return nil, nil },
+			fn:     func(context.Context, string, string) (*corev1.Endpoints, error) { return nil, nil },
 			result: []util.Endpoint{},
 		},
 		{
@@ -3954,7 +4060,7 @@ func TestGetEndpoints(t *testing.T) {
 			svc:    &corev1.Service{},
 			port:   nil,
 			proto:  corev1.ProtocolTCP,
-			fn:     func(string, string) (*corev1.Endpoints, error) { return nil, nil },
+			fn:     func(context.Context, string, string) (*corev1.Endpoints, error) { return nil, nil },
 			result: []util.Endpoint{},
 		},
 		{
@@ -3962,7 +4068,7 @@ func TestGetEndpoints(t *testing.T) {
 			svc:    &corev1.Service{},
 			port:   &corev1.ServicePort{Name: "default"},
 			proto:  corev1.ProtocolTCP,
-			fn:     func(string, string) (*corev1.Endpoints, error) { return &corev1.Endpoints{}, nil },
+			fn:     func(context.Context, string, string) (*corev1.Endpoints, error) { return &corev1.Endpoints{}, nil },
 			result: []util.Endpoint{},
 		},
 		{
@@ -3984,7 +4090,7 @@ func TestGetEndpoints(t *testing.T) {
 				TargetPort: intstr.FromInt(80),
 			},
 			proto: corev1.ProtocolTCP,
-			fn: func(string, string) (*corev1.Endpoints, error) {
+			fn: func(context.Context, string, string) (*corev1.Endpoints, error) {
 				return &corev1.Endpoints{}, nil
 			},
 			result: []util.Endpoint{
@@ -4019,7 +4125,7 @@ func TestGetEndpoints(t *testing.T) {
 				TargetPort: intstr.FromInt(2080),
 			},
 			proto: corev1.ProtocolTCP,
-			fn: func(string, string) (*corev1.Endpoints, error) {
+			fn: func(context.Context, string, string) (*corev1.Endpoints, error) {
 				return &corev1.Endpoints{}, nil
 			},
 			result: []util.Endpoint{
@@ -4051,7 +4157,7 @@ func TestGetEndpoints(t *testing.T) {
 				TargetPort: intstr.FromInt(2080),
 			},
 			proto: corev1.ProtocolTCP,
-			fn: func(string, string) (*corev1.Endpoints, error) {
+			fn: func(context.Context, string, string) (*corev1.Endpoints, error) {
 				return &corev1.Endpoints{}, nil
 			},
 			result: []util.Endpoint{
@@ -4081,7 +4187,7 @@ func TestGetEndpoints(t *testing.T) {
 				TargetPort: intstr.FromInt(80),
 			},
 			proto: corev1.ProtocolTCP,
-			fn: func(string, string) (*corev1.Endpoints, error) {
+			fn: func(context.Context, string, string) (*corev1.Endpoints, error) {
 				return nil, fmt.Errorf("unexpected error")
 			},
 			result: []util.Endpoint{},
@@ -4105,7 +4211,7 @@ func TestGetEndpoints(t *testing.T) {
 				TargetPort: intstr.FromInt(80),
 			},
 			proto: corev1.ProtocolTCP,
-			fn: func(string, string) (*corev1.Endpoints, error) {
+			fn: func(context.Context, string, string) (*corev1.Endpoints, error) {
 				nodeName := "dummy"
 				return &corev1.Endpoints{
 					Subsets: []corev1.EndpointSubset{
@@ -4146,7 +4252,7 @@ func TestGetEndpoints(t *testing.T) {
 				TargetPort: intstr.FromInt(80),
 			},
 			proto: corev1.ProtocolTCP,
-			fn: func(string, string) (*corev1.Endpoints, error) {
+			fn: func(context.Context, string, string) (*corev1.Endpoints, error) {
 				nodeName := "dummy"
 				return &corev1.Endpoints{
 					Subsets: []corev1.EndpointSubset{
@@ -4187,7 +4293,7 @@ func TestGetEndpoints(t *testing.T) {
 				TargetPort: intstr.FromInt(80),
 			},
 			proto: corev1.ProtocolTCP,
-			fn: func(string, string) (*corev1.Endpoints, error) {
+			fn: func(context.Context, string, string) (*corev1.Endpoints, error) {
 				nodeName := "dummy"
 				return &corev1.Endpoints{
 					Subsets: []corev1.EndpointSubset{
@@ -4230,7 +4336,7 @@ func TestGetEndpoints(t *testing.T) {
 				TargetPort: intstr.FromInt(80),
 			},
 			proto: corev1.ProtocolTCP,
-			fn: func(string, string) (*corev1.Endpoints, error) {
+			fn: func(context.Context, string, string) (*corev1.Endpoints, error) {
 				nodeName := "dummy"
 				return &corev1.Endpoints{
 					Subsets: []corev1.EndpointSubset{
@@ -4278,7 +4384,7 @@ func TestGetEndpoints(t *testing.T) {
 				TargetPort: intstr.FromString("port-1"),
 			},
 			proto: corev1.ProtocolTCP,
-			fn: func(string, string) (*corev1.Endpoints, error) {
+			fn: func(context.Context, string, string) (*corev1.Endpoints, error) {
 				nodeName := "dummy"
 				return &corev1.Endpoints{
 					Subsets: []corev1.EndpointSubset{
@@ -4316,7 +4422,7 @@ func TestGetEndpoints(t *testing.T) {
 
 	for _, testCase := range tests {
 		t.Run(testCase.name, func(t *testing.T) {
-			result := getEndpoints(logrus.New(), testCase.svc, testCase.port, testCase.proto, testCase.fn, testCase.isServiceUpstream)
+			result := getEndpoints(context.TODO(), logrus.New(), testCase.svc, testCase.port, testCase.proto, testCase.fn, testCase.isServiceUpstream)
 			if len(testCase.result) != len(result) {
 				t.Errorf("expected %v Endpoints but got %v", testCase.result, len(result))
 			}
@@ -4706,7 +4812,7 @@ func TestPickPort(t *testing.T) {
 			assert.NoError(err)
 
 			p := mustNewParser(t, store)
-			state, translationFailures := p.Build()
+			state, translationFailures := p.Build(context.TODO())
 			require.Empty(t, translationFailures)
 
 			assert.Equal(tt.wantTarget, *state.Upstreams[0].Targets[0].Target.Target)
@@ -4715,10 +4821,13 @@ func TestPickPort(t *testing.T) {
 }
 
 func TestCertificate(t *testing.T) {
-	assert := assert.New(t)
 	t.Run("same host with multiple namespace return the first namespace/secret by asc", func(t *testing.T) {
-		ingresses := []*netv1beta1.Ingress{
+		ingresses := []netv1beta1.Ingress{
 			{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "Ingress",
+					APIVersion: "networking.k8s.io/v1beta1",
+				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "foo",
 					Namespace: "ns3",
@@ -4736,6 +4845,10 @@ func TestCertificate(t *testing.T) {
 				},
 			},
 			{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "Ingress",
+					APIVersion: "networking.k8s.io/v1beta1",
+				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "foo",
 					Namespace: "ns2",
@@ -4753,6 +4866,10 @@ func TestCertificate(t *testing.T) {
 				},
 			},
 			{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "Ingress",
+					APIVersion: "networking.k8s.io/v1beta1",
+				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "foo",
 					Namespace: "ns1",
@@ -4771,8 +4888,12 @@ func TestCertificate(t *testing.T) {
 			},
 		}
 
-		secrets := []*corev1.Secret{
+		secrets := []corev1.Secret{
 			{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "Secret",
+					APIVersion: "v1",
+				},
 				ObjectMeta: metav1.ObjectMeta{
 					UID:       types.UID("7428fb98-180b-4702-a91f-61351a33c6e4"),
 					Name:      "secret1",
@@ -4784,6 +4905,10 @@ func TestCertificate(t *testing.T) {
 				},
 			},
 			{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "Secret",
+					APIVersion: "v1",
+				},
 				ObjectMeta: metav1.ObjectMeta{
 					UID:       types.UID("6392jz73-180b-4702-a91f-61351a33c6e4"),
 					Name:      "secret1",
@@ -4795,6 +4920,10 @@ func TestCertificate(t *testing.T) {
 				},
 			},
 			{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "Secret",
+					APIVersion: "v1",
+				},
 				ObjectMeta: metav1.ObjectMeta{
 					UID:       types.UID("72x2j56k-180b-4702-a91f-61351a33c6e4"),
 					Name:      "secret1",
@@ -4815,26 +4944,42 @@ func TestCertificate(t *testing.T) {
 				Tags: []*string{
 					kong.String("k8s-name:secret1"),
 					kong.String("k8s-namespace:ns1"),
+					kong.String("k8s-kind:Secret"),
 					kong.String("k8s-uid:7428fb98-180b-4702-a91f-61351a33c6e4"),
+					kong.String("k8s-version:v1"),
 				},
 			},
 		}
-		store, err := store.NewFakeStore(store.FakeObjects{
-			IngressesV1beta1: ingresses,
-			Secrets:          secrets,
-		})
-		assert.Nil(err)
+
+		require.NoError(t, fake.AddToScheme(scheme.Scheme))
+		require.NoError(t, gatewayv1alpha2.AddToScheme(scheme.Scheme))
+		require.NoError(t, gatewayv1beta1.AddToScheme(scheme.Scheme))
+		require.NoError(t, knative.AddToScheme(scheme.Scheme))
+
+		client := ctrlclientfake.NewClientBuilder().
+			WithObjects(&secrets[0], &secrets[1], &secrets[2]).
+			WithLists(
+				&netv1beta1.IngressList{
+					Items: ingresses,
+				},
+			).
+			Build()
+		store := store.New(client, annotations.DefaultIngressClass, logrus.New())
+
 		p := mustNewParser(t, store)
-		state, translationFailures := p.Build()
+		state, translationFailures := p.Build(context.TODO())
 		require.Empty(t, translationFailures)
-		assert.NotNil(state)
-		assert.Equal(3, len(state.Certificates))
+		assert.NotNil(t, state)
 		// foo.com with cert should be fixed
-		assert.Contains(state.Certificates, fooCertificate)
+		assert.Contains(t, state.Certificates, fooCertificate)
 	})
 	t.Run("SNIs slice with same certificate should be ordered by asc", func(t *testing.T) {
-		ingresses := []*netv1beta1.Ingress{
+		ingresses := []netv1beta1.Ingress{
 			{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "Ingress",
+					APIVersion: "networking.k8s.io/v1beta1",
+				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "foo3",
 					Namespace: "ns1",
@@ -4852,6 +4997,10 @@ func TestCertificate(t *testing.T) {
 				},
 			},
 			{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "Ingress",
+					APIVersion: "networking.k8s.io/v1beta1",
+				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "foo2",
 					Namespace: "ns1",
@@ -4869,6 +5018,10 @@ func TestCertificate(t *testing.T) {
 				},
 			},
 			{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "Ingress",
+					APIVersion: "networking.k8s.io/v1beta1",
+				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "foo1",
 					Namespace: "ns1",
@@ -4887,17 +5040,15 @@ func TestCertificate(t *testing.T) {
 			},
 		}
 
-		secrets := []*corev1.Secret{
-			{
-				ObjectMeta: metav1.ObjectMeta{
-					UID:       types.UID("7428fb98-180b-4702-a91f-61351a33c6e4"),
-					Name:      "secret",
-					Namespace: "ns1",
-				},
-				Data: map[string][]byte{
-					"tls.crt": []byte(tlsPairs[0].Cert),
-					"tls.key": []byte(tlsPairs[0].Key),
-				},
+		secret := corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				UID:       types.UID("7428fb98-180b-4702-a91f-61351a33c6e4"),
+				Name:      "secret",
+				Namespace: "ns1",
+			},
+			Data: map[string][]byte{
+				"tls.crt": []byte(tlsPairs[0].Cert),
+				"tls.key": []byte(tlsPairs[0].Key),
 			},
 		}
 		fooCertificate := kongstate.Certificate{
@@ -4912,19 +5063,29 @@ func TestCertificate(t *testing.T) {
 				},
 			},
 		}
-		store, err := store.NewFakeStore(store.FakeObjects{
-			IngressesV1beta1: ingresses,
-			Secrets:          secrets,
-		})
-		assert.Nil(err)
+
+		require.NoError(t, fake.AddToScheme(scheme.Scheme))
+		require.NoError(t, gatewayv1alpha2.AddToScheme(scheme.Scheme))
+		require.NoError(t, gatewayv1beta1.AddToScheme(scheme.Scheme))
+		require.NoError(t, knative.AddToScheme(scheme.Scheme))
+
+		client := ctrlclientfake.NewClientBuilder().
+			WithObjects(&secret).
+			WithLists(
+				&netv1beta1.IngressList{
+					Items: ingresses,
+				},
+			).
+			Build()
+		store := store.New(client, annotations.DefaultIngressClass, logrus.New())
 		p := mustNewParser(t, store)
-		state, translationFailures := p.Build()
+		state, translationFailures := p.Build(context.TODO())
 		require.Empty(t, translationFailures)
-		assert.NotNil(state)
-		assert.Equal(1, len(state.Certificates))
+		assert.NotNil(t, state)
+		require.Len(t, state.Certificates, 1)
 		// parser tests do not check tags, these are tested independently
 		state.Certificates[0].Tags = nil
-		assert.Equal(state.Certificates[0], fooCertificate)
+		assert.Equal(t, state.Certificates[0], fooCertificate)
 	})
 }
 

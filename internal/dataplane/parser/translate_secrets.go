@@ -1,6 +1,7 @@
 package parser
 
 import (
+	"context"
 	"crypto/x509"
 	"encoding/json"
 	"encoding/pem"
@@ -19,8 +20,8 @@ import (
 
 // getCACerts translates CA certificates Secrets to kong.CACertificates. It ensures every certificate's structure and
 // validity. It skips Secrets that do not contain a valid certificate and reports translation failures for them.
-func (p *Parser) getCACerts() []kong.CACertificate {
-	caCertSecrets, err := p.storer.ListCACerts()
+func (p *Parser) getCACerts(ctx context.Context) []kong.CACertificate {
+	caCertSecrets, err := p.storer.ListCACerts(ctx)
 	if err != nil {
 		p.logger.WithError(err).Error("failed to list CA certs")
 		return nil
@@ -37,7 +38,7 @@ func (p *Parser) getCACerts() []kong.CACertificate {
 
 		caCert, err := toKongCACertificate(certSecret, secretID)
 		if err != nil {
-			relatedObjects := getPluginsAssociatedWithCACertSecret(secretID, p.storer)
+			relatedObjects := getPluginsAssociatedWithCACertSecret(ctx, secretID, p.storer)
 			relatedObjects = append(relatedObjects, certSecret.DeepCopy())
 			p.registerTranslationFailure(fmt.Sprintf("invalid CA certificate: %s", err), relatedObjects...)
 			continue
@@ -76,7 +77,7 @@ func toKongCACertificate(certSecret *corev1.Secret, secretID string) (kong.CACer
 	}, nil
 }
 
-func getPluginsAssociatedWithCACertSecret(secretID string, storer store.Storer) []client.Object {
+func getPluginsAssociatedWithCACertSecret(ctx context.Context, secretID string, storer store.Storer) []client.Object {
 	refersToSecret := func(pluginConfig v1.JSON) bool {
 		cfg := struct {
 			CACertificates []string `json:"ca_certificates,omitempty"`
@@ -95,12 +96,12 @@ func getPluginsAssociatedWithCACertSecret(secretID string, storer store.Storer) 
 	}
 
 	var affectedPlugins []client.Object
-	for _, p := range storer.ListKongPlugins() {
+	for _, p := range storer.ListKongPlugins(ctx) {
 		if refersToSecret(p.Config) {
 			affectedPlugins = append(affectedPlugins, p.DeepCopy())
 		}
 	}
-	for _, p := range storer.ListKongClusterPlugins() {
+	for _, p := range storer.ListKongClusterPlugins(ctx) {
 		if refersToSecret(p.Config) {
 			affectedPlugins = append(affectedPlugins, p.DeepCopy())
 		}

@@ -307,7 +307,7 @@ func (r *HTTPRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 			debug(log, httproute, "object does not exist, ensuring it is not present in the proxy cache")
 			httproute.Namespace = req.Namespace
 			httproute.Name = req.Name
-			return ctrl.Result{}, r.DataplaneClient.DeleteObject(httproute)
+			return ctrl.Result{}, r.DataplaneClient.DeleteObject(ctx, httproute)
 		}
 
 		// for any error other than 404, requeue
@@ -322,12 +322,12 @@ func (r *HTTPRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	debug(log, httproute, "checking deletion timestamp")
 	if httproute.DeletionTimestamp != nil {
 		debug(log, httproute, "httproute is being deleted, re-configuring data-plane")
-		if err := r.DataplaneClient.DeleteObject(httproute); err != nil {
+		if err := r.DataplaneClient.DeleteObject(ctx, httproute); err != nil {
 			debug(log, httproute, "failed to delete object from data-plane, requeuing")
 			return ctrl.Result{}, err
 		}
 		debug(log, httproute, "ensured object was removed from the data-plane (if ever present)")
-		return ctrl.Result{}, r.DataplaneClient.DeleteObject(httproute)
+		return ctrl.Result{}, r.DataplaneClient.DeleteObject(ctx, httproute)
 	}
 
 	// we need to pull the Gateway parent objects for the HTTPRoute to verify
@@ -357,7 +357,7 @@ func (r *HTTPRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 			// ensure that it's removed from the proxy cache to avoid orphaned data-plane
 			// configurations.
 			debug(log, httproute, "ensuring that dataplane is updated to remove unsupported route (if applicable)")
-			return ctrl.Result{}, r.DataplaneClient.DeleteObject(httproute)
+			return ctrl.Result{}, r.DataplaneClient.DeleteObject(ctx, httproute)
 		}
 		return ctrl.Result{}, err
 	}
@@ -381,13 +381,13 @@ func (r *HTTPRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	if isRouteAccepted(gateways) && err == nil {
 		// if the gateways are ready, and the HTTPRoute is destined for them, ensure that
 		// the object is pushed to the dataplane.
-		if err := r.DataplaneClient.UpdateObject(filteredHTTPRoute); err != nil {
+		if err := r.DataplaneClient.UpdateObject(ctx, filteredHTTPRoute); err != nil {
 			debug(log, httproute, "failed to update object in data-plane, requeueing")
 			return ctrl.Result{}, err
 		}
 	} else {
 		// route is not accepted, remove it from kong store
-		if err := r.DataplaneClient.DeleteObject(httproute); err != nil {
+		if err := r.DataplaneClient.DeleteObject(ctx, httproute); err != nil {
 			debug(log, httproute, "failed to delete object in data-plane, requeueing")
 			return ctrl.Result{}, err
 		}

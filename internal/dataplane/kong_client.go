@@ -16,6 +16,7 @@ import (
 	"golang.org/x/exp/slices"
 	"golang.org/x/sync/errgroup"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -57,6 +58,8 @@ type AdminAPIClientsProvider interface {
 type KongClient struct {
 	logger logrus.FieldLogger
 
+	client client.Client
+
 	// ingressClass indicates the Kubernetes ingress class that should be
 	// used to qualify support for any given Kubernetes object to be parsed
 	// into data-plane configuration.
@@ -71,10 +74,6 @@ type KongClient struct {
 	// requestTimeout is the maximum amount of time that should be waited for
 	// requests to the data-plane to receive a response.
 	requestTimeout time.Duration
-
-	// cache is the Kubernetes object cache which is used to list Kubernetes
-	// objects for parsing into Kong objects.
-	cache *store.CacheStores
 
 	// kongConfig is the client configuration for the Kong Admin API
 	kongConfig sendconfig.Config
@@ -148,19 +147,19 @@ func NewKongClient(
 	kongConfig sendconfig.Config,
 	eventRecorder record.EventRecorder,
 	dbMode string,
+	client client.Client,
 	clientsProvider AdminAPIClientsProvider,
 	updateStrategyResolver sendconfig.UpdateStrategyResolver,
 	configChangeDetector sendconfig.ConfigurationChangeDetector,
 ) (*KongClient, error) {
 	// build the client object
-	cache := store.NewCacheStores()
 	c := &KongClient{
 		logger:                 logger,
 		ingressClass:           ingressClass,
 		requestTimeout:         timeout,
 		diagnostic:             diagnostic,
 		prometheusMetrics:      metrics.NewCtrlFuncMetrics(),
-		cache:                  &cache,
+		client:                 client,
 		kongConfig:             kongConfig,
 		eventRecorder:          eventRecorder,
 		dbmode:                 dbMode,
@@ -180,26 +179,33 @@ func NewKongClient(
 // UpdateObject accepts a Kubernetes controller-runtime client.Object and adds/updates that to the configuration cache.
 // It will be asynchronously converted into the upstream Kong DSL and applied to the Kong Admin API.
 // A status will later be added to the object whether the configuration update succeeds or fails.
-func (c *KongClient) UpdateObject(obj client.Object) error {
-	// we do a deep copy of the object here so that the caller can continue to use
-	// the original object in a threadsafe manner.
-	return c.cache.Add(obj.DeepCopyObject())
+func (c *KongClient) UpdateObject(ctx context.Context, obj client.Object) error {
+	return c.client.Update(ctx, obj)
 }
 
-// DeleteObject accepts a Kubernetes controller-runtime client.Object and removes it from the configuration cache.
+// DeleteObject accepts a Kubernetes controller-runtime client.Object and removes it from the configuration.
 // The delete action will asynchronously be converted to Kong DSL and applied to the Kong Admin API.
 // A status will later be added to the object whether the configuration update succeeds or fails.
 //
-// under the hood the cache implementation will ignore deletions on objects
-// that are not present in the cache, so in those cases this is a no-op.
-func (c *KongClient) DeleteObject(obj client.Object) error {
-	return c.cache.Delete(obj)
+// The implementation will ignore deletions on objects that are not present, so in those cases this is a no-op.
+func (c *KongClient) DeleteObject(ctx context.Context, obj client.Object) error {
+	err := c.client.Delete(ctx, obj)
+	if apierrors.IsNotFound(err) {
+		return nil
+	}
+	return err
 }
 
 // ObjectExists indicates whether or not any version of the provided object is already present in the proxy.
-func (c *KongClient) ObjectExists(obj client.Object) (bool, error) {
-	_, exists, err := c.cache.Get(obj)
-	return exists, err
+func (c *KongClient) ObjectExists(ctx context.Context, obj client.Object) (bool, error) {
+	err := c.client.Get(ctx, client.ObjectKeyFromObject(obj), obj)
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			return false, nil
+		}
+		return false, err
+	}
+	return true, nil
 }
 
 // allEqual returns true if all provided objects are equal.
@@ -381,15 +387,15 @@ func (c *KongClient) DBMode() string {
 	return c.dbmode
 }
 
-// Update parses the Cache present in the client and converts current
-// Kubernetes state into Kong objects and state, and then ships the
-// resulting configuration to the data-plane (Kong Admin API).
+// Update parses the objects, fetched using the provided manager's client,
+// converts current Kubernetes state into Kong objects and state and then ships
+// the resulting configuration to the data-plane (Kong Admin API).
 func (c *KongClient) Update(ctx context.Context) error {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
 	// build the kongstate object from the Kubernetes objects in the storer
-	storer := store.New(*c.cache, c.ingressClass, c.logger)
+	storer := store.New(c.client, c.ingressClass, c.logger)
 
 	// initialize a parser
 	c.logger.Debug("parsing kubernetes objects into data-plane configuration")
@@ -412,7 +418,7 @@ func (c *KongClient) Update(ctx context.Context) error {
 	}
 
 	// parse the Kubernetes objects from the storer into Kong configuration
-	kongstate, translationFailures := p.Build()
+	kongstate, translationFailures := p.Build(ctx)
 	if failuresCount := len(translationFailures); failuresCount > 0 {
 		c.prometheusMetrics.RecordTranslationFailure()
 		c.recordResourceFailureEvents(translationFailures, KongConfigurationTranslationFailedEventReason)

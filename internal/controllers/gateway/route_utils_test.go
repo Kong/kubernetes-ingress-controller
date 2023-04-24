@@ -15,7 +15,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
+	ctrlclientfake "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
@@ -541,7 +541,7 @@ func Test_getSupportedGatewayForRoute(t *testing.T) {
 		for _, tt := range tests {
 			tt := tt
 			t.Run(tt.name, func(t *testing.T) {
-				fakeClient := fakeclient.
+				fakeClient := ctrlclientfake.
 					NewClientBuilder().
 					WithScheme(scheme.Scheme).
 					WithObjects(tt.objects...).
@@ -749,7 +749,7 @@ func Test_getSupportedGatewayForRoute(t *testing.T) {
 		for _, tt := range tests {
 			tt := tt
 			t.Run(tt.name, func(t *testing.T) {
-				fakeClient := fakeclient.
+				fakeClient := ctrlclientfake.
 					NewClientBuilder().
 					WithScheme(scheme.Scheme).
 					WithObjects(tt.objects...).
@@ -936,7 +936,7 @@ func Test_getSupportedGatewayForRoute(t *testing.T) {
 		for _, tt := range tests {
 			tt := tt
 			t.Run(tt.name, func(t *testing.T) {
-				fakeClient := fakeclient.
+				fakeClient := ctrlclientfake.
 					NewClientBuilder().
 					WithScheme(scheme.Scheme).
 					WithObjects(tt.objects...).
@@ -1164,7 +1164,7 @@ func Test_getSupportedGatewayForRoute(t *testing.T) {
 		for _, tt := range tests {
 			tt := tt
 			t.Run(tt.name, func(t *testing.T) {
-				fakeClient := fakeclient.
+				fakeClient := ctrlclientfake.
 					NewClientBuilder().
 					WithScheme(scheme.Scheme).
 					WithObjects(tt.objects...).
@@ -1195,7 +1195,7 @@ func Test_getSupportedGatewayForRoute(t *testing.T) {
 		},
 	}
 	t.Run("invalid parentRef kind rejected", func(t *testing.T) {
-		fakeClient := fakeclient.
+		fakeClient := ctrlclientfake.
 			NewClientBuilder().
 			WithScheme(scheme.Scheme).
 			Build()
@@ -1801,7 +1801,7 @@ func Test_ensureParentsProgrammedCondition(t *testing.T) {
 					gateways  = tc.gatewayFunc()
 				)
 
-				fakeClient := fakeclient.
+				fakeClient := ctrlclientfake.
 					NewClientBuilder().
 					WithScheme(scheme.Scheme).
 					WithObjects(httproute).

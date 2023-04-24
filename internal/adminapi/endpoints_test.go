@@ -13,7 +13,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
+	ctrlclientfake "sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
 func TestAddressesFromEndpointSlice(t *testing.T) {
@@ -537,7 +537,7 @@ func TestGetAdminAPIsForService(t *testing.T) {
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			fakeClient := fakeclient.NewClientBuilder().
+			fakeClient := ctrlclientfake.NewClientBuilder().
 				WithLists(tt.objects...).
 				Build()
 

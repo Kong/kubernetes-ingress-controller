@@ -528,11 +528,11 @@ func (r *{{.PackageAlias}}{{.Kind}}Reconciler) Reconcile(ctx context.Context, re
 			obj.Name = req.Name
 			{{if .NeedsUpdateReferences}}
 			// remove reference record where the {{.Kind}} is the referrer
-			if err := ctrlref.DeleteReferencesByReferrer(r.ReferenceIndexers, r.DataplaneClient, obj); err != nil {
+			if err := ctrlref.DeleteReferencesByReferrer(ctx, r.ReferenceIndexers, r.DataplaneClient, obj); err != nil {
 				return ctrl.Result{}, err
 			}
 			{{end}}
-			return ctrl.Result{}, r.DataplaneClient.DeleteObject(obj)
+			return ctrl.Result{}, r.DataplaneClient.DeleteObject(ctx, obj)
 		}
 		return ctrl.Result{}, err
 	}
@@ -543,16 +543,16 @@ func (r *{{.PackageAlias}}{{.Kind}}Reconciler) Reconcile(ctx context.Context, re
 		log.V(util.DebugLevel).Info("resource is being deleted, its configuration will be removed", "type", "{{.Kind}}", "namespace", req.Namespace, "name", req.Name)
 		{{if .NeedsUpdateReferences}}
 		// remove reference record where the {{.Kind}} is the referrer
-		if err := ctrlref.DeleteReferencesByReferrer(r.ReferenceIndexers, r.DataplaneClient, obj); err != nil {
+		if err := ctrlref.DeleteReferencesByReferrer(ctx, r.ReferenceIndexers, r.DataplaneClient, obj); err != nil {
 			return ctrl.Result{}, err
 		}
 		{{end}}
-		objectExistsInCache, err := r.DataplaneClient.ObjectExists(obj)
+		objectExistsInCache, err := r.DataplaneClient.ObjectExists(ctx, obj)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
 		if objectExistsInCache {
-			if err := r.DataplaneClient.DeleteObject(obj); err != nil {
+			if err := r.DataplaneClient.DeleteObject(ctx, obj); err != nil {
 				return ctrl.Result{}, err
 			}
 			return ctrl.Result{Requeue: true}, nil // wait until the object is no longer present in the cache
@@ -574,14 +574,14 @@ func (r *{{.PackageAlias}}{{.Kind}}Reconciler) Reconcile(ctx context.Context, re
 	if !ctrlutils.MatchesIngressClass(obj, r.IngressClassName, ctrlutils.IsDefaultIngressClass(class)) {
 		log.V(util.DebugLevel).Info("object missing ingress class, ensuring it's removed from configuration",
 		"namespace", req.Namespace, "name", req.Name, "class", r.IngressClassName)
-		return ctrl.Result{}, r.DataplaneClient.DeleteObject(obj)
+		return ctrl.Result{}, r.DataplaneClient.DeleteObject(ctx, obj)
 	} else {
 		log.V(util.DebugLevel).Info("object has matching ingress class", "namespace", req.Namespace, "name", req.Name,
 		"class", r.IngressClassName)
 	}
 {{end}}
 	// update the kong Admin API with the changes
-	if err := r.DataplaneClient.UpdateObject(obj); err != nil {
+	if err := r.DataplaneClient.UpdateObject(ctx, obj); err != nil {
 		return ctrl.Result{}, err
 	}
 

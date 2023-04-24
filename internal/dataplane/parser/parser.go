@@ -2,6 +2,7 @@ package parser
 
 import (
 	"bytes"
+	"context"
 	"crypto/tls"
 	"fmt"
 	"reflect"
@@ -79,24 +80,24 @@ func NewParser(
 // Build creates a Kong configuration from Ingress and Custom resources
 // defined in Kubernetes. It returns a slice of ResourceFailures which should
 // be used to provide users with feedback on Kubernetes objects validity.
-func (p *Parser) Build() (*kongstate.KongState, []failures.ResourceFailure) {
+func (p *Parser) Build(ctx context.Context) (*kongstate.KongState, []failures.ResourceFailure) {
 	// parse and merge all rules together from all Kubernetes API sources
 	ingressRules := mergeIngressRules(
-		p.ingressRulesFromIngressV1beta1(),
-		p.ingressRulesFromIngressV1(),
-		p.ingressRulesFromTCPIngressV1beta1(),
-		p.ingressRulesFromUDPIngressV1beta1(),
-		p.ingressRulesFromKnativeIngress(),
-		p.ingressRulesFromHTTPRoutes(),
-		p.ingressRulesFromUDPRoutes(),
-		p.ingressRulesFromTCPRoutes(),
-		p.ingressRulesFromTLSRoutes(),
-		p.ingressRulesFromGRPCRoutes(),
+		p.ingressRulesFromIngressV1beta1(ctx),
+		p.ingressRulesFromIngressV1(ctx),
+		p.ingressRulesFromTCPIngressV1beta1(ctx),
+		p.ingressRulesFromUDPIngressV1beta1(ctx),
+		p.ingressRulesFromKnativeIngress(ctx),
+		p.ingressRulesFromHTTPRoutes(ctx),
+		p.ingressRulesFromUDPRoutes(ctx),
+		p.ingressRulesFromTCPRoutes(ctx),
+		p.ingressRulesFromTLSRoutes(ctx),
+		p.ingressRulesFromGRPCRoutes(ctx),
 	)
 
 	// populate any Kubernetes Service objects relevant objects and get the
 	// services to be skipped because of annotations inconsistency
-	servicesToBeSkipped := ingressRules.populateServices(p.logger, p.storer, p.failuresCollector)
+	servicesToBeSkipped := ingressRules.populateServices(ctx, p.logger, p.storer, p.failuresCollector)
 
 	// add the routes and services to the state
 	var result kongstate.KongState
@@ -109,25 +110,25 @@ func (p *Parser) Build() (*kongstate.KongState, []failures.ResourceFailure) {
 	}
 
 	// generate Upstreams and Targets from service defs
-	result.Upstreams = p.getUpstreams(ingressRules.ServiceNameToServices)
+	result.Upstreams = p.getUpstreams(ctx, ingressRules.ServiceNameToServices)
 
 	// merge KongIngress with Routes, Services and Upstream
-	result.FillOverrides(p.logger, p.storer)
+	result.FillOverrides(ctx, p.logger, p.storer)
 
 	// generate consumers and credentials
-	result.FillConsumersAndCredentials(p.logger, p.storer)
+	result.FillConsumersAndCredentials(ctx, p.logger, p.storer)
 
 	// process annotation plugins
-	result.FillPlugins(p.logger, p.storer)
+	result.FillPlugins(ctx, p.logger, p.storer)
 
 	// generate Certificates and SNIs
-	ingressCerts := p.getCerts(ingressRules.SecretNameToSNIs)
-	gatewayCerts := p.getGatewayCerts()
+	ingressCerts := p.getCerts(ctx, ingressRules.SecretNameToSNIs)
+	gatewayCerts := p.getGatewayCerts(ctx)
 	// note that ingress-derived certificates will take precedence over gateway-derived certificates for SNI assignment
 	result.Certificates = mergeCerts(p.logger, ingressCerts, gatewayCerts)
 
 	// populate CA certificates in Kong
-	result.CACertificates = p.getCACerts()
+	result.CACertificates = p.getCACerts(ctx)
 
 	return &result, p.popTranslationFailures()
 }
@@ -267,7 +268,7 @@ func findPort(svc *corev1.Service, wantPort kongstate.PortDef) (*corev1.ServiceP
 	return nil, fmt.Errorf("no suitable port found")
 }
 
-func (p *Parser) getUpstreams(serviceMap map[string]kongstate.Service) []kongstate.Upstream {
+func (p *Parser) getUpstreams(ctx context.Context, serviceMap map[string]kongstate.Service) []kongstate.Upstream {
 	upstreamDedup := make(map[string]struct{}, len(serviceMap))
 	var empty struct{}
 	upstreams := make([]kongstate.Upstream, 0, len(serviceMap))
@@ -302,7 +303,7 @@ func (p *Parser) getUpstreams(serviceMap map[string]kongstate.Service) []kongsta
 				}
 
 				// get the new targets for this backend service
-				newTargets := getServiceEndpoints(p.logger, p.storer, k8sService, port)
+				newTargets := getServiceEndpoints(ctx, p.logger, p.storer, k8sService, port)
 
 				if len(newTargets) == 0 {
 					p.logger.WithField("service_name", *service.Name).Infof("no targets could be found for kubernetes service %s/%s", k8sService.Namespace, k8sService.Name)
@@ -388,11 +389,11 @@ type certWrapper struct {
 	CreationTimestamp metav1.Time
 }
 
-func (p *Parser) getGatewayCerts() []certWrapper {
+func (p *Parser) getGatewayCerts(ctx context.Context) []certWrapper {
 	log := p.logger
 	s := p.storer
 	certs := []certWrapper{}
-	gateways, err := s.ListGateways()
+	gateways, err := s.ListGateways(ctx)
 	if err != nil {
 		log.WithError(err).Error("failed to list Gateways")
 		return certs
@@ -443,7 +444,7 @@ func (p *Parser) getGatewayCerts() []certWrapper {
 					}
 
 					// retrieve the Secret and extract the PEM strings
-					secret, err := s.GetSecret(namespace, string(ref.Name))
+					secret, err := s.GetSecret(ctx, namespace, string(ref.Name))
 					if err != nil {
 						log.WithFields(logrus.Fields{
 							"gateway":          gateway.Name,
@@ -484,12 +485,12 @@ func (p *Parser) getGatewayCerts() []certWrapper {
 	return certs
 }
 
-func (p *Parser) getCerts(secretsToSNIs SecretNameToSNIs) []certWrapper {
+func (p *Parser) getCerts(ctx context.Context, secretsToSNIs SecretNameToSNIs) []certWrapper {
 	certs := []certWrapper{}
 
 	for secretKey, SNIs := range secretsToSNIs.secretToSNIs {
 		namespaceName := strings.Split(secretKey, "/")
-		secret, err := p.storer.GetSecret(namespaceName[0], namespaceName[1])
+		secret, err := p.storer.GetSecret(ctx, namespaceName[0], namespaceName[1])
 		if err != nil {
 			p.registerTranslationFailure(fmt.Sprintf("failed to fetch the secret (%s)", secretKey), SNIs.Parents()...)
 			continue
@@ -572,6 +573,7 @@ func mergeCerts(log logrus.FieldLogger, certLists ...[]certWrapper) []kongstate.
 }
 
 func getServiceEndpoints(
+	ctx context.Context,
 	log logrus.FieldLogger,
 	s store.Storer,
 	svc *corev1.Service,
@@ -590,7 +592,7 @@ func getServiceEndpoints(
 
 	// Check if the service is an upstream service through Ingress Class parameters.
 	var isSvcUpstream bool
-	ingressClassParameters, err := getIngressClassParametersOrDefault(s)
+	ingressClassParameters, err := getIngressClassParametersOrDefault(ctx, s)
 	if err != nil {
 		log.Debugf("error getting an IngressClassParameters: %v", err)
 	} else {
@@ -600,7 +602,7 @@ func getServiceEndpoints(
 	// check all protocols for associated endpoints
 	endpoints := []util.Endpoint{}
 	for protocol := range protocols {
-		newEndpoints := getEndpoints(log, svc, servicePort, protocol, s.GetEndpointsForService, isSvcUpstream)
+		newEndpoints := getEndpoints(ctx, log, svc, servicePort, protocol, s.GetEndpointsForService, isSvcUpstream)
 		if len(newEndpoints) > 0 {
 			endpoints = append(endpoints, newEndpoints...)
 		}
@@ -615,14 +617,14 @@ func getServiceEndpoints(
 // getIngressClassParametersOrDefault returns the parameters for the current ingress class.
 // If the cluster operators have specified a set of parameters explicitly, it returns those.
 // Otherwise, it returns a default set of parameters.
-func getIngressClassParametersOrDefault(s store.Storer) (configurationv1alpha1.IngressClassParametersSpec, error) {
+func getIngressClassParametersOrDefault(ctx context.Context, s store.Storer) (configurationv1alpha1.IngressClassParametersSpec, error) {
 	ingressClassName := s.GetIngressClassName()
-	ingressClass, err := s.GetIngressClassV1(ingressClassName)
+	ingressClass, err := s.GetIngressClassV1(ctx, ingressClassName)
 	if err != nil {
 		return configurationv1alpha1.IngressClassParametersSpec{}, err
 	}
 
-	params, err := s.GetIngressClassParametersV1Alpha1(ingressClass)
+	params, err := s.GetIngressClassParametersV1Alpha1(ctx, ingressClass)
 	if err != nil {
 		return configurationv1alpha1.IngressClassParametersSpec{}, err
 	}
@@ -634,11 +636,12 @@ func getIngressClassParametersOrDefault(s store.Storer) (configurationv1alpha1.I
 // It also checks if the service is an upstream service either by its annotations
 // of by IngressClassParameters configuration provided as a flag.
 func getEndpoints(
+	ctx context.Context,
 	log logrus.FieldLogger,
 	s *corev1.Service,
 	port *corev1.ServicePort,
 	proto corev1.Protocol,
-	getEndpoints func(string, string) (*corev1.Endpoints, error),
+	getEndpoints func(context.Context, string, string) (*corev1.Endpoints, error),
 	isSvcUpstream bool,
 ) []util.Endpoint {
 	if s == nil || port == nil {
@@ -679,7 +682,7 @@ func getEndpoints(
 	}
 
 	log.Debugf("fetching endpoints")
-	ep, err := getEndpoints(s.Namespace, s.Name)
+	ep, err := getEndpoints(ctx, s.Namespace, s.Name)
 	if err != nil {
 		log.WithError(err).Error("failed to fetch endpoints")
 		return []util.Endpoint{}

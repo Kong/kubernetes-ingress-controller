@@ -78,7 +78,7 @@ func (r *ReferenceGrantReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 			debug(log, grant, "object does not exist, ensuring it is not present in the proxy cache")
 			grant.Namespace = req.Namespace
 			grant.Name = req.Name
-			return ctrl.Result{}, r.DataplaneClient.DeleteObject(grant)
+			return ctrl.Result{}, r.DataplaneClient.DeleteObject(ctx, grant)
 		}
 
 		// for any error other than 404, requeue
@@ -89,15 +89,15 @@ func (r *ReferenceGrantReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	debug(log, grant, "checking deletion timestamp")
 	if grant.DeletionTimestamp != nil {
 		debug(log, grant, "referencegrant is being deleted, re-configuring data-plane")
-		if err := r.DataplaneClient.DeleteObject(grant); err != nil {
+		if err := r.DataplaneClient.DeleteObject(ctx, grant); err != nil {
 			debug(log, grant, "failed to delete object from data-plane, requeuing")
 			return ctrl.Result{}, err
 		}
 		debug(log, grant, "ensured object was removed from the data-plane (if ever present)")
-		return ctrl.Result{}, r.DataplaneClient.DeleteObject(grant)
+		return ctrl.Result{}, r.DataplaneClient.DeleteObject(ctx, grant)
 	}
 
-	if err := r.DataplaneClient.UpdateObject(grant); err != nil {
+	if err := r.DataplaneClient.UpdateObject(ctx, grant); err != nil {
 		debug(log, grant, "failed to update object in data-plane, requeueing")
 		return ctrl.Result{}, err
 	}

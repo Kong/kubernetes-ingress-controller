@@ -246,7 +246,7 @@ func (r *TLSRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 			debug(log, tlsroute, "object does not exist, ensuring it is not present in the proxy cache")
 			tlsroute.Namespace = req.Namespace
 			tlsroute.Name = req.Name
-			return ctrl.Result{}, r.DataplaneClient.DeleteObject(tlsroute)
+			return ctrl.Result{}, r.DataplaneClient.DeleteObject(ctx, tlsroute)
 		}
 
 		// for any error other than 404, requeue
@@ -261,12 +261,12 @@ func (r *TLSRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	debug(log, tlsroute, "checking deletion timestamp")
 	if tlsroute.DeletionTimestamp != nil {
 		debug(log, tlsroute, "tlsroute is being deleted, re-configuring data-plane")
-		if err := r.DataplaneClient.DeleteObject(tlsroute); err != nil {
+		if err := r.DataplaneClient.DeleteObject(ctx, tlsroute); err != nil {
 			debug(log, tlsroute, "failed to delete object from data-plane, requeuing")
 			return ctrl.Result{}, err
 		}
 		debug(log, tlsroute, "ensured object was removed from the data-plane (if ever present)")
-		return ctrl.Result{}, r.DataplaneClient.DeleteObject(tlsroute)
+		return ctrl.Result{}, r.DataplaneClient.DeleteObject(ctx, tlsroute)
 	}
 
 	// we need to pull the Gateway parent objects for the TLSRoute to verify
@@ -296,7 +296,7 @@ func (r *TLSRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 			// ensure that it's removed from the proxy cache to avoid orphaned data-plane
 			// configurations.
 			debug(log, tlsroute, "ensuring that dataplane is updated to remove unsupported route (if applicable)")
-			return ctrl.Result{}, r.DataplaneClient.DeleteObject(tlsroute)
+			return ctrl.Result{}, r.DataplaneClient.DeleteObject(ctx, tlsroute)
 		}
 		return ctrl.Result{}, err
 	}
@@ -315,13 +315,13 @@ func (r *TLSRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	if isRouteAccepted(gateways) {
 		// if the gateways are ready, and the TLSRoute is destined for them, ensure that
 		// the object is pushed to the dataplane.
-		if err := r.DataplaneClient.UpdateObject(tlsroute); err != nil {
+		if err := r.DataplaneClient.UpdateObject(ctx, tlsroute); err != nil {
 			debug(log, tlsroute, "failed to update object in data-plane, requeueing")
 			return ctrl.Result{}, err
 		}
 	} else {
 		// route is not accepted, remove it from kong store
-		if err := r.DataplaneClient.DeleteObject(tlsroute); err != nil {
+		if err := r.DataplaneClient.DeleteObject(ctx, tlsroute); err != nil {
 			debug(log, tlsroute, "failed to delete object in data-plane, requeueing")
 			return ctrl.Result{}, err
 		}

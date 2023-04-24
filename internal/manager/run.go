@@ -137,6 +137,7 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 		kongConfig,
 		eventRecorder,
 		dbMode,
+		mgr.GetClient(),
 		clientsManager,
 		updateStrategyResolver,
 		configurationChangeDetector,

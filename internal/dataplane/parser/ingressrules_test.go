@@ -2,6 +2,7 @@ package parser
 
 import (
 	"bytes"
+	"context"
 	"testing"
 
 	"github.com/kong/go-kong/kong"
@@ -15,11 +16,14 @@ import (
 	netv1beta1 "k8s.io/api/networking/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/uuid"
+	"k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	ctrlclientfake "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/failures"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/store"
+	"github.com/kong/kubernetes-ingress-controller/v2/pkg/clientset/fake"
 )
 
 type testSNIs struct {
@@ -266,6 +270,10 @@ func TestGetK8sServicesForBackends(t *testing.T) {
 			},
 			services: []*corev1.Service{
 				{
+					TypeMeta: metav1.TypeMeta{
+						Kind:       "Service",
+						APIVersion: "v1",
+					},
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "test-service1",
 						Namespace: corev1.NamespaceDefault,
@@ -275,6 +283,10 @@ func TestGetK8sServicesForBackends(t *testing.T) {
 					},
 				},
 				{
+					TypeMeta: metav1.TypeMeta{
+						Kind:       "Service",
+						APIVersion: "v1",
+					},
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "test-service2",
 						Namespace: corev1.NamespaceDefault,
@@ -286,21 +298,33 @@ func TestGetK8sServicesForBackends(t *testing.T) {
 			},
 			expectedServices: []*corev1.Service{
 				{
+					TypeMeta: metav1.TypeMeta{
+						Kind:       "Service",
+						APIVersion: "v1",
+					},
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "test-service1",
 						Namespace: corev1.NamespaceDefault,
 						Annotations: map[string]string{
 							"konghq.com/foo": "bar",
 						},
+						// https://github.com/kubernetes-sigs/controller-runtime/blob/22718275bffe3185276dc835d610c658f06dac07/pkg/client/fake/client.go#L247-L250
+						ResourceVersion: "999",
 					},
 				},
 				{
+					TypeMeta: metav1.TypeMeta{
+						Kind:       "Service",
+						APIVersion: "v1",
+					},
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "test-service2",
 						Namespace: corev1.NamespaceDefault,
 						Annotations: map[string]string{
 							"konghq.com/foo": "baz",
 						},
+						// https://github.com/kubernetes-sigs/controller-runtime/blob/22718275bffe3185276dc835d610c658f06dac07/pkg/client/fake/client.go#L247-L250
+						ResourceVersion: "999",
 					},
 				},
 			},
@@ -320,15 +344,25 @@ func TestGetK8sServicesForBackends(t *testing.T) {
 				},
 			},
 			services: []*corev1.Service{{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "Service",
+					APIVersion: "v1",
+				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-service1",
 					Namespace: corev1.NamespaceDefault,
 				},
 			}},
 			expectedServices: []*corev1.Service{{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "Service",
+					APIVersion: "v1",
+				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-service1",
 					Namespace: corev1.NamespaceDefault,
+					// https://github.com/kubernetes-sigs/controller-runtime/blob/22718275bffe3185276dc835d610c658f06dac07/pkg/client/fake/client.go#L247-L250
+					ResourceVersion: "999",
 				},
 			}},
 			expectedAnnotations: map[string]string{},
@@ -338,14 +372,21 @@ func TestGetK8sServicesForBackends(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			storer, err := store.NewFakeStore(store.FakeObjects{Services: tt.services})
-			require.NoError(t, err)
+			require.NoError(t, fake.AddToScheme(scheme.Scheme))
+			client := ctrlclientfake.NewClientBuilder().
+				WithObjects(
+					lo.Map(tt.services, func(v *corev1.Service, _ int) client.Object {
+						return v
+					})...,
+				).
+				Build()
+			storer := store.New(client, "dummy", logrus.New())
 
 			stdout := new(bytes.Buffer)
 			logger := logrus.New()
 			logger.SetOutput(stdout)
 
-			services, annotations := getK8sServicesForBackends(logger, storer, tt.namespace, tt.backends)
+			services, annotations := getK8sServicesForBackends(context.TODO(), logger, storer, tt.namespace, tt.backends)
 			assert.Equal(t, tt.expectedServices, services)
 			assert.Equal(t, tt.expectedAnnotations, annotations)
 			for _, expectedLogEntry := range tt.expectedLogEntries {
@@ -648,7 +689,7 @@ func TestPopulateServices(t *testing.T) {
 			logger, _ := test.NewNullLogger()
 			failuresCollector, err := failures.NewResourceFailuresCollector(logger)
 			require.NoError(t, err)
-			servicesToBeSkipped := ingressRules.populateServices(logrus.New(), fakeStore, failuresCollector)
+			servicesToBeSkipped := ingressRules.populateServices(context.TODO(), logrus.New(), fakeStore, failuresCollector)
 			require.Equal(t, tc.serviceNamesToSkip, servicesToBeSkipped)
 			require.Len(t, failuresCollector.PopResourceFailures(), len(servicesToBeSkipped), "expecting as many translation failures as services to skip")
 		})

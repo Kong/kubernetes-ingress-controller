@@ -1,6 +1,7 @@
 package parser
 
 import (
+	"context"
 	"fmt"
 
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
@@ -12,10 +13,10 @@ import (
 
 // ingressRulesFromTCPRoutes processes a list of TCPRoute objects and translates
 // then into Kong configuration objects.
-func (p *Parser) ingressRulesFromTCPRoutes() ingressRules {
+func (p *Parser) ingressRulesFromTCPRoutes(ctx context.Context) ingressRules {
 	result := newIngressRules()
 
-	tcpRouteList, err := p.storer.ListTCPRoutes()
+	tcpRouteList, err := p.storer.ListTCPRoutes(ctx)
 	if err != nil {
 		p.logger.WithError(err).Error("failed to list TCPRoutes")
 		return result
@@ -23,7 +24,7 @@ func (p *Parser) ingressRulesFromTCPRoutes() ingressRules {
 
 	var errs []error
 	for _, tcproute := range tcpRouteList {
-		if err := p.ingressRulesFromTCPRoute(&result, tcproute); err != nil {
+		if err := p.ingressRulesFromTCPRoute(ctx, &result, tcproute); err != nil {
 			err = fmt.Errorf("TCPRoute %s/%s can't be routed: %w", tcproute.Namespace, tcproute.Name, err)
 			errs = append(errs, err)
 		} else {
@@ -42,7 +43,7 @@ func (p *Parser) ingressRulesFromTCPRoutes() ingressRules {
 	return result
 }
 
-func (p *Parser) ingressRulesFromTCPRoute(result *ingressRules, tcproute *gatewayv1alpha2.TCPRoute) error {
+func (p *Parser) ingressRulesFromTCPRoute(ctx context.Context, result *ingressRules, tcproute *gatewayv1alpha2.TCPRoute) error {
 	// first we grab the spec and gather some metdata about the object
 	spec := tcproute.Spec
 
@@ -71,7 +72,7 @@ func (p *Parser) ingressRulesFromTCPRoute(result *ingressRules, tcproute *gatewa
 		}
 
 		// create a service and attach the routes to it
-		service, err := generateKongServiceFromBackendRefWithRuleNumber(p.logger, p.storer, result, tcproute, ruleNumber, "tcp", rule.BackendRefs...)
+		service, err := generateKongServiceFromBackendRefWithRuleNumber(ctx, p.logger, p.storer, result, tcproute, ruleNumber, "tcp", rule.BackendRefs...)
 		if err != nil {
 			return err
 		}

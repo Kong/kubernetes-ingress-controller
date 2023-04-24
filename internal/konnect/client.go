@@ -11,6 +11,8 @@ import (
 	neturl "net/url"
 	"strconv"
 
+	"github.com/samber/lo"
+
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/adminapi"
 	tlsutil "github.com/kong/kubernetes-ingress-controller/v2/internal/util/tls"
 )
@@ -68,27 +70,27 @@ func (c *NodeAPIClient) CreateNode(ctx context.Context, req *CreateNodeRequest) 
 	url := c.kicNodeAPIEndpoint()
 	httpReq, err := http.NewRequestWithContext(ctx, "POST", url, reqReader)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create request: %w", err)
+		return nil, fmt.Errorf("failed to create request for url %s: %w", url, err)
 	}
 	httpResp, err := c.Client.Do(httpReq)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get response: %w", err)
+		return nil, fmt.Errorf("failed to get response from url %s: %w", url, err)
 	}
 	defer httpResp.Body.Close()
 
 	respBuf, err := io.ReadAll(httpResp.Body)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read response body: %w", err)
+		return nil, fmt.Errorf("failed to read response body from url %s: %w", url, err)
 	}
 
 	if !isOKStatusCode(httpResp.StatusCode) {
-		return nil, fmt.Errorf("non-success response code from Koko: %d, resp body: %s", httpResp.StatusCode, string(respBuf))
+		return nil, fmt.Errorf("non-success response code from url %s: %d, resp body: %s", url, httpResp.StatusCode, string(respBuf))
 	}
 
 	resp := &CreateNodeResponse{}
 	err = json.Unmarshal(respBuf, resp)
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse JSON body: %w", err)
+		return nil, fmt.Errorf("failed to unmarshal create node response from body %q: %w", maxFirst64Bytes(respBuf), err)
 	}
 
 	return resp, nil
@@ -103,28 +105,28 @@ func (c *NodeAPIClient) UpdateNode(ctx context.Context, nodeID string, req *Upda
 	url := c.kicNodeAPIEndpointWithNodeID(nodeID)
 	httpReq, err := http.NewRequestWithContext(ctx, "PUT", url, reqReader)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create request:%w", err)
+		return nil, fmt.Errorf("failed to create request for url %s: %w", url, err)
 	}
 	httpResp, err := c.Client.Do(httpReq)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get response: %w", err)
+		return nil, fmt.Errorf("failed to get response from url %s: %w", url, err)
 	}
 	defer httpResp.Body.Close()
 
 	respBuf, err := io.ReadAll(httpResp.Body)
 	if err != nil {
-		err := fmt.Errorf("failed to read response body: %w", err)
+		err := fmt.Errorf("failed to read response body from url %s: %w", url, err)
 		return nil, err
 	}
 
 	if !isOKStatusCode(httpResp.StatusCode) {
-		return nil, fmt.Errorf("non-success response code from Koko: %d, resp body %s", httpResp.StatusCode, string(respBuf))
+		return nil, fmt.Errorf("non-success response code from url %s: %d, resp body %s", url, httpResp.StatusCode, string(respBuf))
 	}
 
 	resp := &UpdateNodeResponse{}
 	err = json.Unmarshal(respBuf, resp)
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse JSON body: %w", err)
+		return nil, fmt.Errorf("failed to unmarshal update node response from body %q: %w", maxFirst64Bytes(respBuf), err)
 	}
 	return resp, nil
 }
@@ -138,29 +140,29 @@ func (c *NodeAPIClient) ListNodes(ctx context.Context, pageNumber int) (*ListNod
 	}
 	req, err := http.NewRequestWithContext(ctx, "GET", url.String(), nil)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create request: %w", err)
+		return nil, fmt.Errorf("failed to create request for url %s: %w", url, err)
 	}
 
 	httpResp, err := c.Client.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get response: %w", err)
+		return nil, fmt.Errorf("failed to get response from url %s: %w", url, err)
 	}
 
 	defer httpResp.Body.Close()
 
 	respBuf, err := io.ReadAll(httpResp.Body)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read response body: %w", err)
+		return nil, fmt.Errorf("failed to read response body from url %s: %w", url, err)
 	}
 
 	if !isOKStatusCode(httpResp.StatusCode) {
-		return nil, fmt.Errorf("non-success response from Koko: %d, resp body %s", httpResp.StatusCode, string(respBuf))
+		return nil, fmt.Errorf("non-success response from url %s: %d, resp body %s", url, httpResp.StatusCode, string(respBuf))
 	}
 
 	resp := &ListNodeResponse{}
 	err = json.Unmarshal(respBuf, resp)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read response body: %w", err)
+		return nil, fmt.Errorf("failed to unmarshal node items from body %q: %w", maxFirst64Bytes(respBuf), err)
 	}
 	return resp, nil
 }
@@ -188,22 +190,56 @@ func (c *NodeAPIClient) DeleteNode(ctx context.Context, nodeID string) error {
 	url := c.kicNodeAPIEndpointWithNodeID(nodeID)
 	httpReq, err := http.NewRequestWithContext(ctx, "DELETE", url, nil)
 	if err != nil {
-		return fmt.Errorf("failed to create request: %w", err)
+		return fmt.Errorf("failed to create request for url %s: %w", url, err)
 	}
 	httpResp, err := c.Client.Do(httpReq)
 	if err != nil {
-		return fmt.Errorf("failed to get response: %w", err)
+		return fmt.Errorf("failed to get response from url %s: %w", url, err)
 	}
 	defer httpResp.Body.Close()
 
 	if !isOKStatusCode(httpResp.StatusCode) {
-		return fmt.Errorf("non-success response from Koko: %d", httpResp.StatusCode)
+		return fmt.Errorf("non-success response from url %s: %d", url, httpResp.StatusCode)
 	}
 
 	return nil
 }
 
+func (c *NodeAPIClient) GetNode(ctx context.Context, nodeID string) (*NodeItem, error) {
+	url := c.kicNodeAPIEndpointWithNodeID(nodeID)
+	httpReq, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create request for url %s: %w", url, err)
+	}
+	httpResp, err := c.Client.Do(httpReq)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get response from url %s: %w", url, err)
+	}
+	defer httpResp.Body.Close()
+
+	respBuf, err := io.ReadAll(httpResp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read response body from url %s: %w", url, err)
+	}
+
+	if !isOKStatusCode(httpResp.StatusCode) {
+		return nil, fmt.Errorf("non-success response from url %s: %d, resp body %s", url, httpResp.StatusCode, maxFirst64Bytes(respBuf))
+	}
+
+	resp := &NodeItem{}
+	err = json.Unmarshal(respBuf, resp)
+	if err != nil {
+		return nil, fmt.Errorf("failed to unmarshal node item from body %q: %w", maxFirst64Bytes(respBuf), err)
+	}
+	return resp, nil
+}
+
 // isOKStatusCode returns true if the input HTTP status code is 2xx, in [200,300).
 func isOKStatusCode(code int) bool {
 	return code >= 200 && code < 300
+}
+
+// maxFirst64Bytes returns the first 64 bytes of the input byte slice as a string for debug purposes.
+func maxFirst64Bytes(b []byte) string {
+	return string(b[:lo.Clamp(len(b), 0, 64)])
 }

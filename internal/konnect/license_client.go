@@ -86,7 +86,7 @@ func (c *LicenseAPIClient) List(ctx context.Context, pageNumber int) (*ListLicen
 	resp := &ListLicenseResponse{}
 	err = json.Unmarshal(respBuf, resp)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read response body: %w", err)
+		return nil, fmt.Errorf("failed to parse response body: %w", err)
 	}
 	return resp, nil
 }

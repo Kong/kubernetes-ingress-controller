@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"reflect"
 	"sort"
-	"strings"
 
 	"github.com/go-logr/logr"
 	"github.com/samber/lo"
@@ -88,19 +87,6 @@ func isObjectUnmanaged(anns map[string]string) bool {
 func isGatewayClassControlledAndUnmanaged(gatewayClass *GatewayClass) bool {
 	isUnamanaged := isObjectUnmanaged(gatewayClass.Annotations)
 	return gatewayClass.Spec.ControllerName == GetControllerName() && isUnamanaged
-}
-
-// getRefFromPublishService splits a publish service string in the format namespace/name into a types.NamespacedName
-// and verifies the contents producing an error if they don't match namespace/name format.
-func getRefFromPublishService(publishService string) (types.NamespacedName, error) {
-	publishServiceSplit := strings.SplitN(publishService, "/", 3)
-	if len(publishServiceSplit) != 2 {
-		return types.NamespacedName{}, fmt.Errorf("--publish-service expected in format 'namespace/name' but got %s", publishService)
-	}
-	return types.NamespacedName{
-		Namespace: publishServiceSplit[0],
-		Name:      publishServiceSplit[1],
-	}, nil
 }
 
 // pruneGatewayStatusConds cleans out old status conditions if the Gateway currently has more

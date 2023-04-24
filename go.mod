@@ -15,7 +15,7 @@ require (
 	github.com/go-logr/logr v1.2.4
 	github.com/google/go-cmp v0.5.9
 	github.com/google/uuid v1.3.0
-	github.com/kong/deck v1.19.2-0.20230424190423-3d91fdc83a61
+	github.com/kong/deck v1.20.0
 	github.com/kong/go-kong v0.40.0
 	github.com/kong/kubernetes-telemetry v0.0.2
 	github.com/kong/kubernetes-testing-framework v0.30.1

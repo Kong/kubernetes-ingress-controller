@@ -15,7 +15,7 @@ require (
 	github.com/go-logr/logr v1.2.4
 	github.com/google/go-cmp v0.5.9
 	github.com/google/uuid v1.3.0
-	github.com/kong/deck v1.19.2-0.20230419232402-32c304f0dad7
+	github.com/kong/deck v1.19.2-0.20230424190423-3d91fdc83a61
 	github.com/kong/go-kong v0.40.0
 	github.com/kong/kubernetes-telemetry v0.0.2
 	github.com/kong/kubernetes-testing-framework v0.30.1
@@ -56,10 +56,19 @@ require (
 	github.com/google/s2a-go v0.1.2 // indirect
 	github.com/hashicorp/errwrap v1.0.0 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
+	github.com/hashicorp/hcl v1.0.0 // indirect
+	github.com/magiconair/properties v1.8.7 // indirect
+	github.com/mitchellh/go-homedir v1.1.0 // indirect
+	github.com/pelletier/go-toml/v2 v2.0.6 // indirect
 	github.com/puzpuzpuz/xsync/v2 v2.4.0 // indirect
 	github.com/shoenig/go-m1cpu v0.1.4 // indirect
+	github.com/spf13/afero v1.9.3 // indirect
+	github.com/spf13/jwalterweatherman v1.1.0 // indirect
+	github.com/spf13/viper v1.15.0 // indirect
+	github.com/subosito/gotenv v1.4.2 // indirect
 	go.uber.org/atomic v1.10.0 // indirect
 	golang.org/x/net v0.9.0 // indirect
+	gopkg.in/ini.v1 v1.67.0 // indirect
 )
 
 require (

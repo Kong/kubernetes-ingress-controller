@@ -16,11 +16,8 @@ import (
 	"math/big"
 	"net/http"
 	"os"
-<<<<<<< HEAD
 	"os/exec"
-=======
 	"sync"
->>>>>>> 7a1595df (feat(konnect): assign gateway nodes their respective ids (#3927))
 	"testing"
 	"time"
 

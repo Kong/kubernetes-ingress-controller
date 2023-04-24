@@ -73,9 +73,10 @@ func (c *Client) NodeID(ctx context.Context) (string, error) {
 		return "", fmt.Errorf("failed fetching Kong client root: %w", err)
 	}
 
-	nodeID, ok := data["node_id"].(string)
-	if !ok {
-		return "", errors.New("malformed Kong node ID found in Kong client root")
+	const nodeIDKey = "node_id"
+	nodeID, err := extractStringFromRoot(data, nodeIDKey)
+	if err != nil {
+		return "", fmt.Errorf("malformed node ID found in Kong client root: %w", err)
 	}
 
 	return nodeID, nil
@@ -90,11 +91,28 @@ func (c *Client) GetKongVersion(ctx context.Context) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("failed fetching Kong client root: %w", err)
 	}
-	version, ok := rootConfig["version"].(string)
-	if !ok {
-		return "", errors.New("malformed Kong version found in Kong client root")
+
+	versionKey := "version"
+	version, err := extractStringFromRoot(rootConfig, versionKey)
+	if err != nil {
+		return "", fmt.Errorf("malformed Kong version found in Kong client root: %w", err)
 	}
+
 	return version, nil
+}
+
+func extractStringFromRoot(data map[string]interface{}, key string) (string, error) {
+	val, ok := data[key]
+	if !ok {
+		return "", fmt.Errorf("%q key not found", key)
+	}
+
+	valStr, ok := val.(string)
+	if !ok {
+		return "", fmt.Errorf("%q key is not a string, actual type: %T", key, val)
+	}
+
+	return valStr, nil
 }
 
 // PluginSchemaStore returns client's PluginSchemaStore.

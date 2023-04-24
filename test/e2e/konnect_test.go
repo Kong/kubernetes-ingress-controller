@@ -326,8 +326,11 @@ func requireKonnectNodesConsistentWithK8s(ctx context.Context, t *testing.T, env
 	}, konnectNodeRegistrationTimeout, konnectNodeRegistrationCheck)
 }
 
-// requireAllProxyReplicasIDsConsistentWithKonnect ensures that all proxy replicas are registered in Konnect's Node API with
-// their respective IDs.
+// requireAllProxyReplicasIDsConsistentWithKonnect ensures that all proxy replicas are registered in Konnect's Node API
+// with their respective Admin API Node IDs.
+// It's required because when a proxy replica connects with Konnect (e.g. to report Analytics data), it uses its locally
+// generated Node ID (KIC knows it via calling gateway's Admin API) to identify itself. If the Node is not registered
+// in Konnect using the same ID, it won't be possible to associate requests with the correct node.
 func requireAllProxyReplicasIDsConsistentWithKonnect(
 	ctx context.Context,
 	t *testing.T,

@@ -77,6 +77,10 @@ Adding a new version? You'll need three changes:
   [#3832](https://github.com/Kong/kubernetes-ingress-controller/pull/3832)
 - Added license agent for Konnect-managed instances.
   [#3883](https://github.com/Kong/kubernetes-ingress-controller/pull/3883)
+- `Service`, `Route` and `Consumer` Kong entities now get assigned deterministic
+  IDs based on their unique properties (name, username, etc.) instead of random
+  UUIDs.
+  [#3933](https://github.com/Kong/kubernetes-ingress-controller/pull/3933)
 
 ### Fixed
 

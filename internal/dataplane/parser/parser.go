@@ -135,6 +135,9 @@ func (p *Parser) Build() (*kongstate.KongState, []failures.ResourceFailure) {
 		result.Licenses = append(result.Licenses, *p.license)
 	}
 
+	// generate IDs for Kong entities
+	result.FillIDs(p.logger)
+
 	return &result, p.popTranslationFailures()
 }
 

@@ -8,6 +8,7 @@ import (
 	"github.com/kong/go-kong/kong"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -395,4 +396,122 @@ func TestFillConsumersAndCredentials(t *testing.T) {
 		assert.Equal(t, want.Consumers[0].Oauth2Creds[0].HashSecret, state.Consumers[0].Oauth2Creds[0].HashSecret)
 		assert.Equal(t, want.Consumers[0].Oauth2Creds[0].RedirectURIs, state.Consumers[0].Oauth2Creds[0].RedirectURIs)
 	})
+}
+
+func TestKongState_FillIDs(t *testing.T) {
+	testCases := []struct {
+		name   string
+		state  KongState
+		expect func(t *testing.T, s KongState)
+	}{
+		{
+			name: "fills service IDs",
+			state: KongState{
+				Services: []Service{
+					{
+						Service: kong.Service{
+							Name: kong.String("service.foo"),
+						},
+					},
+					{
+						Service: kong.Service{
+							Name: kong.String("service.bar"),
+						},
+					},
+				},
+			},
+			expect: func(t *testing.T, s KongState) {
+				require.NotEmpty(t, s.Services[0].ID)
+				require.NotEmpty(t, s.Services[1].ID)
+			},
+		},
+		{
+			name: "fills route IDs",
+			state: KongState{
+				Services: []Service{
+					{
+						Service: kong.Service{
+							Name: kong.String("service.foo"),
+						},
+						Routes: []Route{
+							{
+								Route: kong.Route{
+									Name: kong.String("route.foo"),
+								},
+							},
+							{
+								Route: kong.Route{
+									Name: kong.String("route.bar"),
+								},
+							},
+						},
+					},
+				},
+			},
+			expect: func(t *testing.T, s KongState) {
+				require.NotEmpty(t, s.Services[0].ID)
+				require.NotEmpty(t, s.Services[0].Routes[0].ID)
+				require.NotEmpty(t, s.Services[0].Routes[1].ID)
+			},
+		},
+		{
+			name: "fills consumer IDs",
+			state: KongState{
+				Consumers: []Consumer{
+					{
+						Consumer: kong.Consumer{
+							Username: kong.String("user.foo"),
+						},
+					},
+					{
+						Consumer: kong.Consumer{
+							Username: kong.String("user.bar"),
+						},
+					},
+				},
+			},
+			expect: func(t *testing.T, s KongState) {
+				require.NotEmpty(t, s.Consumers[0].ID)
+				require.NotEmpty(t, s.Consumers[1].ID)
+			},
+		},
+		{
+			name: "fills services, routes, and consumer IDs",
+			state: KongState{
+				Services: []Service{
+					{
+						Service: kong.Service{
+							Name: kong.String("service.foo"),
+						},
+						Routes: []Route{
+							{
+								Route: kong.Route{
+									Name: kong.String("route.bar"),
+								},
+							},
+						},
+					},
+				},
+				Consumers: []Consumer{
+					{
+						Consumer: kong.Consumer{
+							Username: kong.String("user.baz"),
+						},
+					},
+				},
+			},
+			expect: func(t *testing.T, s KongState) {
+				require.NotEmpty(t, s.Services[0].ID)
+				require.NotEmpty(t, s.Services[0].Routes[0].ID)
+				require.NotEmpty(t, s.Consumers[0].ID)
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			tc.state.FillIDs(logrus.New())
+			tc.expect(t, tc.state)
+		})
+	}
 }

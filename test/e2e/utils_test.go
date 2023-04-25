@@ -451,3 +451,21 @@ func ensureNoneOfDeploymentPodsHasCrashed(ctx context.Context, t *testing.T, env
 		}
 	}
 }
+
+func setEnv(kubecfg, namespace, target, variable, value string) error {
+	var envvar string
+	if value == "" {
+		envvar = fmt.Sprintf("%s-", variable)
+	} else {
+		envvar = fmt.Sprintf("%s=%s", variable, value)
+	}
+	cmd := exec.Command("kubectl", "--kubeconfig", kubecfg, "set", "env", "-n", namespace, target, envvar)
+	stdout, stderr := new(bytes.Buffer), new(bytes.Buffer)
+	cmd.Stdout = stdout
+	cmd.Stderr = stderr
+	err := cmd.Run()
+	if err != nil {
+		return fmt.Errorf("updating envvar failed: STDOUT(%s) STDERR(%s): %w", stdout, stderr, err)
+	}
+	return nil
+}

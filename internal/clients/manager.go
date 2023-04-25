@@ -1,4 +1,4 @@
-package dataplane
+package clients
 
 import (
 	"context"
@@ -267,4 +267,11 @@ func (c *AdminAPIClientsManager) closeGatewayClientsSubscribers() {
 	for _, sub := range c.gatewayClientsChangesSubscribers {
 		close(sub)
 	}
+}
+
+// AdminAPIClientsProvider allows fetching the most recent list of Admin API clients of Gateways that
+// we should configure.
+type AdminAPIClientsProvider interface {
+	AllClients() []*adminapi.Client
+	GatewayClients() []*adminapi.Client
 }

@@ -16,6 +16,7 @@ import (
 	"math/big"
 	"net/http"
 	"os"
+	"os/exec"
 	"sync"
 	"testing"
 	"time"
@@ -71,6 +72,59 @@ func TestKonnectConfigPush(t *testing.T) {
 	t.Log("ensuring KIC nodes and controlled kong gateway nodes are present in konnect runtime group")
 	requireKonnectNodesConsistentWithK8s(ctx, t, env, deployments, rgID, cert, key)
 	requireAllProxyReplicasIDsConsistentWithKonnect(ctx, t, env, deployments.ProxyNN, rgID, cert, key)
+}
+
+func TestKonnectLicenseActivation(t *testing.T) {
+	t.Parallel()
+	skipIfMissingRequiredKonnectEnvVariables(t)
+
+	ctx, env := setupE2ETest(t)
+
+	rgID := createTestRuntimeGroup(ctx, t)
+	cert, key := createClientCertificate(ctx, t, rgID)
+	createKonnectClientSecretAndConfigMap(ctx, t, env, cert, key, rgID)
+
+	manifestFile := "../../deploy/single/all-in-one-dbless-konnect-enterprise.yaml"
+	t.Logf("deploying %s manifest file", manifestFile)
+
+	manifest := getTestManifest(t, manifestFile)
+	deployKong(ctx, t, env, manifest)
+
+	exposeAdminAPI(ctx, t, env, types.NamespacedName{Namespace: "kong", Name: "proxy-kong"})
+
+	t.Log("disabling license management")
+	kubeconfig := getTemporaryKubeconfig(t, env)
+	require.NoError(t, setEnv(kubeconfig, "kong", "deployment/ingress-kong", "CONTROLLER_KONNECT_LICENSING_ENABLED", ""))
+
+	t.Log("restarting proxy")
+	cmd := exec.Command("kubectl", "--kubeconfig", kubeconfig, "rollout", "-n", "kong", "restart", "deployment", "proxy-kong")
+	stdout, stderr := new(bytes.Buffer), new(bytes.Buffer)
+	cmd.Stdout = stdout
+	cmd.Stderr = stderr
+	err := cmd.Run()
+	require.NoErrorf(t, err, "restarting proxy failed: STDOUT(%s) STDERR(%s)", stdout.String(), stderr.String())
+
+	t.Log("confirming that the license is empty")
+	require.Eventually(t, func() bool {
+		license, err := getLicenseFromAdminAPI(ctx, env, "")
+		if err != nil {
+			return false
+		}
+		return license.License.Expiration == ""
+	}, adminAPIWait, time.Second)
+
+	t.Log("re-enabling license management")
+	require.NoError(t, setEnv(kubeconfig, "kong", "deployment/ingress-kong", "CONTROLLER_KONNECT_LICENSING_ENABLED", "true"))
+
+	t.Log("confirming that the license is set")
+	assert.Eventually(t, func() bool {
+		license, err := getLicenseFromAdminAPI(ctx, env, "")
+		if err != nil {
+			return false
+		}
+		return license.License.Expiration != ""
+	}, adminAPIWait, time.Second)
+	t.Log("done")
 }
 
 func TestKonnectWhenMisconfiguredBasicIngressNotAffected(t *testing.T) {

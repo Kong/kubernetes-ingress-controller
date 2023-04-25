@@ -20,11 +20,13 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/adminapi"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/clients"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/deckgen"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/failures"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/parser"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/sendconfig"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/license"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/metrics"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
@@ -39,13 +41,6 @@ const (
 	// KongConfigurationApplyFailedEventReason defines an event reason used for creating all config apply resource failure events.
 	KongConfigurationApplyFailedEventReason = "KongConfigurationApplyFailed"
 )
-
-// AdminAPIClientsProvider allows fetching the most recent list of Admin API clients of Gateways that
-// we should configure.
-type AdminAPIClientsProvider interface {
-	AllClients() []*adminapi.Client
-	GatewayClients() []*adminapi.Client
-}
 
 // -----------------------------------------------------------------------------
 // Dataplane Client - Kong - Public Types
@@ -126,16 +121,23 @@ type KongClient struct {
 	SHAs []string
 
 	// clientsProvider allows retrieving the most recent set of clients.
-	clientsProvider AdminAPIClientsProvider
+	clientsProvider clients.AdminAPIClientsProvider
 
 	// configStatusNotifier notifies status of configuring kong gateway.
-	configStatusNotifier ConfigStatusNotifier
+	configStatusNotifier clients.ConfigStatusNotifier
 
 	// updateStrategyResolver resolves the update strategy for a given Kong Gateway.
 	updateStrategyResolver sendconfig.UpdateStrategyResolver
 
 	// configChangeDetector detects changes in the configuration.
 	configChangeDetector sendconfig.ConfigurationChangeDetector
+
+	// licenseAgent manages Konnect license retrieval.
+	licenseAgent licenseGetter
+}
+
+type licenseGetter interface {
+	GetLicense() kong.License
 }
 
 // NewKongClient provides a new KongClient object after connecting to the
@@ -148,7 +150,7 @@ func NewKongClient(
 	kongConfig sendconfig.Config,
 	eventRecorder record.EventRecorder,
 	dbMode string,
-	clientsProvider AdminAPIClientsProvider,
+	clientsProvider clients.AdminAPIClientsProvider,
 	updateStrategyResolver sendconfig.UpdateStrategyResolver,
 	configChangeDetector sendconfig.ConfigurationChangeDetector,
 ) (*KongClient, error) {
@@ -165,7 +167,7 @@ func NewKongClient(
 		eventRecorder:          eventRecorder,
 		dbmode:                 dbMode,
 		clientsProvider:        clientsProvider,
-		configStatusNotifier:   NoOpConfigStatusNotifier{},
+		configStatusNotifier:   clients.NoOpConfigStatusNotifier{},
 		updateStrategyResolver: updateStrategyResolver,
 		configChangeDetector:   configChangeDetector,
 	}
@@ -370,6 +372,10 @@ func (c *KongClient) AreCombinedServiceRoutesEnabled() bool {
 	return c.enableCombinedServiceRoutes
 }
 
+func (c *KongClient) EnableLicenseAgent(agent *license.Agent) {
+	c.licenseAgent = agent
+}
+
 // -----------------------------------------------------------------------------
 // Dataplane Client - Kong - Interface Implementation
 // -----------------------------------------------------------------------------
@@ -405,6 +411,10 @@ func (c *KongClient) Update(ctx context.Context) error {
 	if c.AreCombinedServiceRoutesEnabled() {
 		p.EnableCombinedServiceRoutes()
 	}
+	if c.licenseAgent != nil {
+		c.logger.Debug("retrieving license from agent and adding it to config")
+		p.InjectLicense(c.licenseAgent.GetLicense())
+	}
 	formatVersion := "1.1"
 	if versions.GetKongVersion().MajorMinorOnly().GTE(versions.ExplicitRegexPathVersionCutoff) {
 		p.EnableRegexPathPrefix()
@@ -424,7 +434,7 @@ func (c *KongClient) Update(ctx context.Context) error {
 
 	shas, err := c.sendOutToClients(ctx, kongstate, formatVersion, c.kongConfig)
 	if err != nil {
-		c.configStatusNotifier.NotifyConfigStatus(ctx, ConfigStatusApplyFailed)
+		c.configStatusNotifier.NotifyConfigStatus(ctx, clients.ConfigStatusApplyFailed)
 		return err
 	}
 
@@ -432,9 +442,9 @@ func (c *KongClient) Update(ctx context.Context) error {
 	// notify the receiver of config status that translation error happened when there are translation errors,
 	// otherwise notify that config status is OK.
 	if len(translationFailures) > 0 {
-		c.configStatusNotifier.NotifyConfigStatus(ctx, ConfigStatusTranslationErrorHappened)
+		c.configStatusNotifier.NotifyConfigStatus(ctx, clients.ConfigStatusTranslationErrorHappened)
 	} else {
-		c.configStatusNotifier.NotifyConfigStatus(ctx, ConfigStatusOK)
+		c.configStatusNotifier.NotifyConfigStatus(ctx, clients.ConfigStatusOK)
 	}
 
 	// report on configured Kubernetes objects if enabled
@@ -542,7 +552,7 @@ func HandleSendToClientResult(client sendconfig.KonnectAwareClient, logger logru
 
 // SetConfigStatusNotifier sets a notifier which notifies subscribers about configuration sending results.
 // Currently it is used for uploading the node status to konnect runtime group.
-func (c *KongClient) SetConfigStatusNotifier(n ConfigStatusNotifier) {
+func (c *KongClient) SetConfigStatusNotifier(n clients.ConfigStatusNotifier) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 

@@ -523,6 +523,55 @@ func verifyEnterpriseWithPostgres(ctx context.Context, t *testing.T, env environ
 	require.Equal(t, http.StatusCreated, resp.StatusCode, fmt.Sprintf("STATUS=(%s), BODY=(%s)", resp.Status, string(body)))
 }
 
+// licenseOutput is the license section of the admin API root response.
+type licenseOutput struct {
+	License struct {
+		Customer   string `json:"customer"`
+		Dataplanes string `json:"dataplanes"`
+		Creation   string `json:"license_creation_date"`
+		Seats      string `json:"admin_seats"`
+		Product    string `json:"product_subscription"`
+		Plan       string `json:"support_plan"`
+		Expiration string `json:"license_expiration_date"`
+	} `json:"license"`
+}
+
+func getLicenseFromAdminAPI(ctx context.Context, env environments.Environment, adminPassword string) (licenseOutput, error) {
+	var license licenseOutput
+	// find the admin service
+	service, err := env.Cluster().Client().CoreV1().Services(namespace).Get(ctx, adminServiceName, metav1.GetOptions{})
+	if err != nil {
+		return license, fmt.Errorf("could not retrieve admin service: %w", err)
+	}
+	if len(service.Status.LoadBalancer.Ingress) == 0 {
+		return license, fmt.Errorf("service %s has no external IPs", service.Name)
+	}
+	adminIP := service.Status.LoadBalancer.Ingress[0].IP
+
+	// pull the root response
+	req, err := http.NewRequestWithContext(ctx, "GET", fmt.Sprintf("http://%s/", adminIP), nil)
+	if err != nil {
+		return license, fmt.Errorf("could not create license request: %w", err)
+	}
+	req.Header.Set("Kong-Admin-Token", adminPassword)
+
+	// read, unmarshal, and return result
+	resp, err := helpers.DefaultHTTPClient().Do(req)
+	if err != nil {
+		return license, err
+	}
+	defer resp.Body.Close()
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return license, err
+	}
+	if resp.StatusCode != http.StatusOK {
+		return license, nil
+	}
+	err = json.Unmarshal(body, &license)
+	return license, err
+}
+
 func verifyPostgres(ctx context.Context, t *testing.T, env environments.Environment) {
 	t.Log("verifying that postgres pod was deployed and is running")
 	postgresPod, err := env.Cluster().Client().CoreV1().Pods(namespace).Get(ctx, "postgres-0", metav1.GetOptions{})

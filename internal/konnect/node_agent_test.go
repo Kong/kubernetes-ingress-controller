@@ -18,7 +18,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/clients"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/konnect"
 )
 
@@ -247,7 +247,7 @@ func TestNodeAgentUpdateNodes(t *testing.T) {
 		hostname     string
 		initialNodes []*konnect.NodeItem
 		// when configStatus is non-nil, notify the status to node agent in the test case.
-		configStatus     *dataplane.ConfigStatus
+		configStatus     *clients.ConfigStatus
 		gatewayInstances []konnect.GatewayInstance
 		containNodes     []*konnect.NodeItem
 		notContainNodes  []*konnect.NodeItem
@@ -258,7 +258,7 @@ func TestNodeAgentUpdateNodes(t *testing.T) {
 			hostname: "ingress-0",
 			// no existing nodes
 			initialNodes: nil,
-			configStatus: lo.ToPtr(dataplane.ConfigStatusOK),
+			configStatus: lo.ToPtr(clients.ConfigStatusOK),
 			containNodes: []*konnect.NodeItem{
 				{
 					Hostname: "ingress-0",
@@ -282,7 +282,7 @@ func TestNodeAgentUpdateNodes(t *testing.T) {
 					Version:  testKicVersion,
 				},
 			},
-			configStatus: lo.ToPtr(dataplane.ConfigStatusTranslationErrorHappened),
+			configStatus: lo.ToPtr(clients.ConfigStatusTranslationErrorHappened),
 			containNodes: []*konnect.NodeItem{
 				{
 					Hostname: "ingress-0",
@@ -422,7 +422,7 @@ func TestNodeAgentUpdateNodes(t *testing.T) {
 			}
 
 			logger := testr.New(t)
-			configStatusSubscriber := dataplane.NewChannelConfigNotifier(logger)
+			configStatusSubscriber := clients.NewChannelConfigNotifier(logger)
 			gatewayClientsChangesNotifier := newMockGatewayClientsNotifier()
 
 			nodeAgent := konnect.NewNodeAgent(
@@ -500,7 +500,7 @@ func TestNodeAgent_StartDoesntReturnUntilContextGetsCancelled(t *testing.T) {
 		Client:         &http.Client{},
 	}
 	logger := testr.New(t)
-	configStatusSubscriber := dataplane.NewChannelConfigNotifier(logger)
+	configStatusSubscriber := clients.NewChannelConfigNotifier(logger)
 
 	nodeAgent := konnect.NewNodeAgent(
 		"hostname", testKicVersion,

@@ -17,11 +17,15 @@ import (
 )
 
 type KonnectConfig struct {
-	ConfigSynchronizationEnabled bool
-	RuntimeGroupID               string
-	Address                      string
-	RefreshNodePeriod            time.Duration
-	TLSClient                    TLSClientConfig
+	// TODO https://github.com/Kong/kubernetes-ingress-controller/issues/3922
+	// ConfigSynchronizationEnabled is the only toggle we had prior to the addition of the license agent.
+	// We likely want to combine these into a single Konnect toggle or piggyback off other Konnect functionality.
+	ConfigSynchronizationEnabled  bool
+	LicenseSynchronizationEnabled bool
+	RuntimeGroupID                string
+	Address                       string
+	RefreshNodePeriod             time.Duration
+	TLSClient                     TLSClientConfig
 }
 
 func NewKongClientForKonnectRuntimeGroup(c KonnectConfig) (*Client, error) {

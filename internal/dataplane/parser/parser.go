@@ -50,6 +50,8 @@ type Parser struct {
 	featureEnabledReportConfiguredKubernetesObjects bool
 	featureEnabledCombinedServiceRoutes             bool
 
+	license *kong.License
+
 	flagEnabledRegexPathPrefix bool
 	failuresCollector          *failures.ResourceFailuresCollector
 }
@@ -129,6 +131,10 @@ func (p *Parser) Build() (*kongstate.KongState, []failures.ResourceFailure) {
 	// populate CA certificates in Kong
 	result.CACertificates = p.getCACerts()
 
+	if p.license != nil {
+		result.Licenses = append(result.Licenses, *p.license)
+	}
+
 	return &result, p.popTranslationFailures()
 }
 
@@ -181,6 +187,11 @@ func (p *Parser) EnableCombinedServiceRoutes() {
 // paths, which require an IngressClass setting.
 func (p *Parser) EnableRegexPathPrefix() {
 	p.flagEnabledRegexPathPrefix = true
+}
+
+// InjectLicense sets a license to inject into configuration.
+func (p *Parser) InjectLicense(license kong.License) {
+	p.license = &license
 }
 
 // -----------------------------------------------------------------------------

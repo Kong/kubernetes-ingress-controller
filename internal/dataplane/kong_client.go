@@ -63,6 +63,10 @@ type KongClient struct {
 	// the newer logic which combines them.
 	enableCombinedServiceRoutes bool
 
+	// enableExpressionRoutes indacates whether to the data-plane client will
+	// translate kubernetes object to expression based routes.
+	enableExpressionRoutes bool
+
 	// requestTimeout is the maximum amount of time that should be waited for
 	// requests to the data-plane to receive a response.
 	requestTimeout time.Duration
@@ -372,6 +376,18 @@ func (c *KongClient) AreCombinedServiceRoutesEnabled() bool {
 	return c.enableCombinedServiceRoutes
 }
 
+func (c *KongClient) EnableExpressionRoutes() {
+	c.additionalFeaturesLock.Lock()
+	defer c.additionalFeaturesLock.Unlock()
+	c.enableExpressionRoutes = true
+}
+
+func (c *KongClient) AreExpressionRoutesEnabled() bool {
+	c.additionalFeaturesLock.RLock()
+	defer c.additionalFeaturesLock.RUnlock()
+	return c.enableExpressionRoutes
+}
+
 func (c *KongClient) EnableLicenseAgent(agent *license.Agent) {
 	c.licenseAgent = agent
 }
@@ -411,6 +427,10 @@ func (c *KongClient) Update(ctx context.Context) error {
 	if c.AreCombinedServiceRoutesEnabled() {
 		p.EnableCombinedServiceRoutes()
 	}
+	if c.AreExpressionRoutesEnabled() {
+		p.EnableExpressionRoutes()
+	}
+
 	if c.licenseAgent != nil {
 		c.logger.Debug("retrieving license from agent and adding it to config")
 		p.InjectLicense(c.licenseAgent.GetLicense())

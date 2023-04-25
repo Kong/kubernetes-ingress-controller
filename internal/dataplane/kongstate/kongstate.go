@@ -17,14 +17,15 @@ import (
 
 // KongState holds the configuration that should be applied to Kong.
 type KongState struct {
-	Services       []Service
-	Upstreams      []Upstream
-	Certificates   []Certificate
-	CACertificates []kong.CACertificate
-	Licenses       []kong.License
-	Plugins        []Plugin
-	Consumers      []Consumer
-	Version        semver.Version
+	Services         []Service
+	Upstreams        []Upstream
+	Certificates     []Certificate
+	CACertificates   []kong.CACertificate
+	Licenses         []kong.License
+	Plugins          []Plugin
+	Consumers        []Consumer
+	Version          semver.Version
+	ExpressionRoutes bool
 }
 
 // SanitizedCopy returns a shallow copy with sensitive values redacted best-effort.

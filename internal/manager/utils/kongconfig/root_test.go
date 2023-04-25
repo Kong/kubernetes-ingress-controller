@@ -18,9 +18,10 @@ func TestRoot(t *testing.T) {
 func TestValidateRoots(t *testing.T) {
 	var root Root
 	require.NoError(t, json.Unmarshal([]byte(dblessConfigJSON), &root))
-	dbmode, v, err := ValidateRoots([]Root{root, root}, false)
+	dbmode, routerFlavor, v, err := ValidateRoots([]Root{root, root}, false)
 	require.NoError(t, err)
 	assert.Equal(t, "off", dbmode)
+	assert.Equal(t, "traditional", routerFlavor)
 	assert.Equal(t, "3.1.1", v.String())
 }
 

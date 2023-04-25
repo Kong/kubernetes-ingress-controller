@@ -49,6 +49,7 @@ type Parser struct {
 
 	featureEnabledReportConfiguredKubernetesObjects bool
 	featureEnabledCombinedServiceRoutes             bool
+	featureEnabledExpressionRoutes                  bool
 
 	license *kong.License
 
@@ -109,6 +110,8 @@ func (p *Parser) Build() (*kongstate.KongState, []failures.ResourceFailure) {
 			result.Services = append(result.Services, service)
 		}
 	}
+
+	result.ExpressionRoutes = p.featureEnabledExpressionRoutes
 
 	// generate Upstreams and Targets from service defs
 	result.Upstreams = p.getUpstreams(ingressRules.ServiceNameToServices)
@@ -190,6 +193,10 @@ func (p *Parser) EnableCombinedServiceRoutes() {
 // paths, which require an IngressClass setting.
 func (p *Parser) EnableRegexPathPrefix() {
 	p.flagEnabledRegexPathPrefix = true
+}
+
+func (p *Parser) EnableExpressionRoutes() {
+	p.featureEnabledExpressionRoutes = true
 }
 
 // InjectLicense sets a license to inject into configuration.

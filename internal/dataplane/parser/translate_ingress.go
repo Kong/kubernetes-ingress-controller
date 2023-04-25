@@ -11,6 +11,7 @@ import (
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/parser/atc"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/parser/translators"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
@@ -416,23 +417,38 @@ func getDefaultBackendService(allDefaultBackends []netv1.Ingress) (kongstate.Ser
 			}},
 			Parent: &ingress,
 		}
-		r := kongstate.Route{
-			Ingress: util.FromK8sObject(&ingress),
-			Route: kong.Route{
-				Name:              kong.String(ingress.Namespace + "." + ingress.Name),
-				Paths:             kong.StringSlice("/"),
-				StripPath:         kong.Bool(false),
-				PreserveHost:      kong.Bool(true),
-				Protocols:         kong.StringSlice("http", "https"),
-				RegexPriority:     kong.Int(0),
-				RequestBuffering:  kong.Bool(true),
-				ResponseBuffering: kong.Bool(true),
-				Tags:              util.GenerateTagsForObject(&ingress),
-			},
-		}
+		r := p.translateIngressDefaultBackendRoute(&ingress, util.GenerateTagsForObject(result.ServiceNameToParent[serviceName]))
 		service.Routes = append(service.Routes, r)
 		return service, true
 	}
 
 	return kongstate.Service{}, false
+}
+
+func (p *Parser) translateIngressDefaultBackendRoute(ingress *netv1.Ingress, tags []*string) *kongstate.Route {
+	r := &kongstate.Route{
+		Ingress: util.FromK8sObject(ingress),
+		Route: kong.Route{
+			Name:              kong.String(ingress.Namespace + "." + ingress.Name),
+			StripPath:         kong.Bool(false),
+			PreserveHost:      kong.Bool(true),
+			RequestBuffering:  kong.Bool(true),
+			ResponseBuffering: kong.Bool(true),
+			Tags:              tags,
+		},
+		ExpressionRoutes: p.featureEnabledExpressionRoutes,
+	}
+
+	if p.featureEnabledExpressionRoutes {
+		catchAllMatcher := atc.And(
+			atc.NewPredicateHTTPPath(atc.OpEqual, "/"),
+			atc.Or(atc.NewPredicateNetProtocol(atc.OpEqual, "http"), atc.NewPredicateNetProtocol(atc.OpEqual, "https")),
+		)
+		atc.ApplyExpression(&r.Route, catchAllMatcher, translators.IngressDefaultBackendPriority)
+	} else {
+		r.Route.Paths = kong.StringSlice("/")
+		r.Route.Protocols = kong.StringSlice("http", "https")
+		r.Route.RegexPriority = kong.Int(0)
+	}
+	return r
 }

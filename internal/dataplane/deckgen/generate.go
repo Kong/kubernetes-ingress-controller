@@ -48,7 +48,7 @@ func ToDeckContent(
 
 		for _, r := range s.Routes {
 			route := file.FRoute{Route: r.Route}
-			fillRoute(&route.Route)
+			fillRoute(&route.Route, k8sState.ExpressionRoutes)
 
 			for _, p := range r.Plugins {
 				plugin := file.FPlugin{
@@ -180,11 +180,11 @@ func ToDeckContent(
 	return &content
 }
 
-func fillRoute(route *kong.Route) {
+func fillRoute(route *kong.Route, expressionRoutes bool) {
 	if route.HTTPSRedirectStatusCode == nil {
 		route.HTTPSRedirectStatusCode = kong.Int(426)
 	}
-	if route.PathHandling == nil {
+	if route.PathHandling == nil && !expressionRoutes {
 		route.PathHandling = kong.String("v0")
 	}
 }

@@ -74,7 +74,7 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 		return fmt.Errorf("could not retrieve Kong admin root(s): %w", err)
 	}
 
-	dbMode, v, err := kongconfig.ValidateRoots(kongRoots, c.SkipCACertificates)
+	dbMode, routerFlavor, v, err := kongconfig.ValidateRoots(kongRoots, c.SkipCACertificates)
 	if err != nil {
 		return fmt.Errorf("could not validate Kong admin root(s) configuration: %w", err)
 	}
@@ -156,6 +156,13 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 	if enabled, ok := featureGates[featuregates.CombinedRoutesFeature]; ok && enabled {
 		dataplaneClient.EnableCombinedServiceRoutes()
 		setupLog.Info("combined routes mode has been enabled")
+	}
+
+	if enabled, ok := featureGates[featuregates.ExpressionRoutesFeature]; ok && enabled {
+		if routerFlavor == "expressions" {
+			dataplaneClient.EnableExpressionRoutes()
+			setupLog.Info("expression routes mode has been enabled")
+		}
 	}
 
 	var kubernetesStatusQueue *status.Queue

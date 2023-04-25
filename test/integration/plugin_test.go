@@ -446,7 +446,7 @@ func TestPluginNullInConfig(t *testing.T) {
 
 	t.Log("should be OK to update the field back to null")
 	datadogPlugin.Config.Raw = []byte(`{"host":null,"port":8125}`)
-	datadogPlugin, err = c.ConfigurationV1().KongPlugins(ns.Name).Update(ctx, datadogPlugin, metav1.UpdateOptions{})
+	_, err = c.ConfigurationV1().KongPlugins(ns.Name).Update(ctx, datadogPlugin, metav1.UpdateOptions{})
 	require.NoError(t, err)
 	require.Eventually(t, func() bool {
 		kongPlugins, err := kongClient.Plugins.ListAll(ctx)

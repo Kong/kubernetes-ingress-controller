@@ -356,3 +356,33 @@ func globalPlugins(log logrus.FieldLogger, s store.Storer) ([]Plugin, error) {
 func (ks *KongState) FillPlugins(log logrus.FieldLogger, s store.Storer) {
 	ks.Plugins = buildPlugins(log, s, ks.getPluginRelations())
 }
+
+// FillIDs iterates over the KongState and fills in the ID field for each entity
+// that supports the FillID method (these are Service, Route and Consumer). It makes
+// their IDs deterministic, enabling their correct identification in external systems
+// (e.g. Konnect Analytics).
+func (ks *KongState) FillIDs(logger logrus.FieldLogger) {
+	for svcIndex, svc := range ks.Services {
+		if err := svc.FillID(); err != nil {
+			logger.WithError(err).Errorf("failed to fill ID for service %s", *svc.Name)
+		} else {
+			ks.Services[svcIndex] = svc
+		}
+
+		for routeIndex, route := range svc.Routes {
+			if err := route.FillID(); err != nil {
+				logger.WithError(err).Errorf("failed to fill ID for route %s", *route.Name)
+			} else {
+				ks.Services[svcIndex].Routes[routeIndex] = route
+			}
+		}
+	}
+
+	for consumerIndex, consumer := range ks.Consumers {
+		if err := consumer.FillID(); err != nil {
+			logger.WithError(err).Errorf("failed to fill ID for consumer %s", *consumer.Username)
+		} else {
+			ks.Consumers[consumerIndex] = consumer
+		}
+	}
+}

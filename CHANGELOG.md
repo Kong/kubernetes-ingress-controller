@@ -89,6 +89,10 @@ Adding a new version? You'll need three changes:
   when the EndpointSlice that we receive a reconciliation request for is already
   missing
   [#3889](https://github.com/Kong/kubernetes-ingress-controller/pull/3889)
+- Fixed leader election role manifest where `""` and `"coordination"` API groups
+  together with the related manifest resources (`configmaps` and `leases`) might
+  become mixed up when the manifest is unmarshalled.
+  [#3932](https://github.com/Kong/kubernetes-ingress-controller/pull/3932)
 
 ### Deprecated
 

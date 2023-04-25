@@ -86,5 +86,5 @@ func (r DefaultUpdateStrategyResolver) ResolveUpdateStrategy(
 		)
 	}
 
-	return NewUpdateStrategyInMemory(adminAPIClient, r.log)
+	return NewUpdateStrategyInMemory(adminAPIClient, r.config.PreserveNullsInPluginConfig, r.log)
 }

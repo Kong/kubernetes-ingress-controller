@@ -70,7 +70,7 @@ func extractPluginInFileContentByID(c *file.Content, id string) (*file.FPlugin, 
 
 func TestUpdateInMemoryPlugin(t *testing.T) {
 	m := &configServiceMock{}
-	s := NewUpdateStrategyInMemory(m, logrus.New())
+	s := NewUpdateStrategyInMemory(m, false, logrus.New())
 	ctx := context.Background()
 
 	testCases := []struct {

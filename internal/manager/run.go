@@ -96,6 +96,10 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 	}
 	kongConfig.Init(ctx, setupLog, initialKongClients)
 
+	if enabled, ok := c.FeatureGates[featuregates.PreserveNullsInPluginConfigFeature]; enabled && ok {
+		kongConfig.PreserveNullsInPluginConfig = true
+	}
+
 	setupLog.Info("configuring and building the controller manager")
 	controllerOpts, err := setupControllerOptions(setupLog, c, dbMode, featureGates)
 	if err != nil {

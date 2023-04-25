@@ -344,3 +344,129 @@ func TestPluginOrdering(t *testing.T) {
 	require.NoError(t, clusters.DeleteIngress(ctx, env.Cluster(), ns.Name, ingress))
 	helpers.EventuallyExpectHTTP404WithNoRoute(t, proxyURL, "/test_plugin_ordering", ingressWait, waitTick, nil)
 }
+
+func TestPluginNullInConfig(t *testing.T) {
+	if !strings.Contains(testenv.ControllerFeatureGates(), "PreserveNullsInPluginConfiguration=true") {
+		t.Skip("Need to configure feature gate PreserveNullsInPluginConfiguration to true to enable nulls in plugin config")
+	}
+
+	ctx := context.Background()
+	t.Parallel()
+	ns, cleaner := helpers.Setup(ctx, t, env)
+
+	t.Log("create a plugin with a null field in its configuration")
+	datadogPlugin := &kongv1.KongPlugin{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: ns.Name,
+			Name:      "datadog",
+		},
+		PluginName: "datadog",
+		Config: apiextensionsv1.JSON{
+			Raw: []byte(`{"host":null,"port":8125}`),
+		},
+	}
+	c, err := clientset.NewForConfig(env.Cluster().Config())
+	require.NoError(t, err)
+	datadogPlugin, err = c.ConfigurationV1().KongPlugins(ns.Name).Create(ctx, datadogPlugin, metav1.CreateOptions{})
+	require.NoError(t, err)
+
+	t.Log("deploying a minimal HTTP container deployment to test Ingress routes")
+	container := generators.NewContainer("httpbin", test.HTTPBinImage, 80)
+	deployment := generators.NewDeploymentForContainer(container)
+	deployment, err = env.Cluster().Client().AppsV1().Deployments(ns.Name).Create(ctx, deployment, metav1.CreateOptions{})
+	require.NoError(t, err)
+	cleaner.Add(deployment)
+
+	t.Logf("exposing deployment %s via service", deployment.Name)
+	service := generators.NewServiceForDeployment(deployment, corev1.ServiceTypeLoadBalancer)
+	_, err = env.Cluster().Client().CoreV1().Services(ns.Name).Create(ctx, service, metav1.CreateOptions{})
+	require.NoError(t, err)
+	cleaner.Add(service)
+
+	t.Logf("creating an ingress for service %s with ingress.class %s", service.Name, consts.IngressClass)
+	kubernetesVersion, err := env.Cluster().Version()
+	require.NoError(t, err)
+	ingress := generators.NewIngressForServiceWithClusterVersion(kubernetesVersion, "/test_plugin_essentials", map[string]string{
+		annotations.IngressClassKey: consts.IngressClass,
+		"konghq.com/plugins":        "datadog",
+	}, service)
+	require.NoError(t, clusters.DeployIngress(ctx, env.Cluster(), ns.Name, ingress))
+	helpers.AddIngressToCleaner(cleaner, ingress)
+
+	t.Log("call admin API to see actual configuration of plugin")
+	kongClient, err := kong.NewClient(kong.String(proxyAdminURL.String()), http.DefaultClient)
+	require.NoError(t, err)
+	require.Eventually(t, func() bool {
+		kongPlugins, err := kongClient.Plugins.ListAll(ctx)
+		if err != nil {
+			return false
+		}
+
+		for _, plugin := range kongPlugins {
+			if plugin.Name != nil && *plugin.Name == "datadog" {
+				host, ok := plugin.Config["host"]
+				if !ok {
+					return false
+				}
+				if host != nil {
+					return false
+				}
+				return true
+			}
+		}
+		// datadog plugin not found, return false
+		return false
+	}, ingressWait, waitTick)
+
+	t.Log("should be OK to update to the field of config to a non-null value")
+	datadogPlugin.Config.Raw = []byte(`{"host":"localhost","port":8125}`)
+	datadogPlugin, err = c.ConfigurationV1().KongPlugins(ns.Name).Update(ctx, datadogPlugin, metav1.UpdateOptions{})
+	require.NoError(t, err)
+	require.Eventually(t, func() bool {
+		kongPlugins, err := kongClient.Plugins.ListAll(ctx)
+		if err != nil {
+			return false
+		}
+
+		for _, plugin := range kongPlugins {
+			if plugin.Name != nil && *plugin.Name == "datadog" {
+				host, ok := plugin.Config["host"].(string)
+				if !ok {
+					return false
+				}
+				if host != "localhost" {
+					return false
+				}
+				return true
+			}
+		}
+		// datadog plugin not found, return false
+		return false
+	}, ingressWait, waitTick)
+
+	t.Log("should be OK to update the field back to null")
+	datadogPlugin.Config.Raw = []byte(`{"host":null,"port":8125}`)
+	datadogPlugin, err = c.ConfigurationV1().KongPlugins(ns.Name).Update(ctx, datadogPlugin, metav1.UpdateOptions{})
+	require.NoError(t, err)
+	require.Eventually(t, func() bool {
+		kongPlugins, err := kongClient.Plugins.ListAll(ctx)
+		if err != nil {
+			return false
+		}
+
+		for _, plugin := range kongPlugins {
+			if plugin.Name != nil && *plugin.Name == "datadog" {
+				host, ok := plugin.Config["host"]
+				if !ok {
+					return false
+				}
+				if host != nil {
+					return false
+				}
+				return true
+			}
+		}
+		// datadog plugin not found, return false
+		return false
+	}, ingressWait, waitTick)
+}

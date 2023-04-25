@@ -10,6 +10,7 @@ import (
 	"github.com/kong/deck/file"
 	"github.com/sirupsen/logrus"
 
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/deckgen"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/metrics"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/versions"
 )
@@ -26,17 +27,20 @@ type ConfigService interface {
 // UpdateStrategyInMemory implements the UpdateStrategy interface. It updates Kong's data-plane
 // configuration using its `POST /config` endpoint that is used by ConfigService.ReloadDeclarativeRawConfig.
 type UpdateStrategyInMemory struct {
-	configService ConfigService
-	log           logrus.FieldLogger
+	configService               ConfigService
+	preserveNullsinPluginConfig bool
+	log                         logrus.FieldLogger
 }
 
 func NewUpdateStrategyInMemory(
 	configService ConfigService,
+	preserveNullsinPluginConfig bool,
 	log logrus.FieldLogger,
 ) UpdateStrategyInMemory {
 	return UpdateStrategyInMemory{
-		configService: configService,
-		log:           log,
+		configService:               configService,
+		preserveNullsinPluginConfig: preserveNullsinPluginConfig,
+		log:                         log,
 	}
 }
 
@@ -47,6 +51,10 @@ func (s UpdateStrategyInMemory) Update(ctx context.Context, targetState *file.Co
 ) {
 	// Kong will error out if this is set
 	targetState.Info = nil
+
+	if !s.preserveNullsinPluginConfig {
+		deckgen.CleanUpNullsInPluginConfigs(targetState)
+	}
 
 	config, err := json.Marshal(targetState)
 	if err != nil {

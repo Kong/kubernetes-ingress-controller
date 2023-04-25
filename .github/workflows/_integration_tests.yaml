@@ -20,7 +20,7 @@ jobs:
             test: postgres
           - name: feature-gates
             test: dbless
-            feature_gates: "GatewayAlpha=true,CombinedRoutes=false"
+            feature_gates: "GatewayAlpha=true,CombinedRoutes=false,PreserveNullsInPluginConfiguration=true"
           - name: dbless-knative
             test: dbless.knative
           - name: postgres-knative

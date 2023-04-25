@@ -26,6 +26,8 @@ const (
 	// objects like Ingress instead of creating a route per path.
 	CombinedRoutesFeature = "CombinedRoutes"
 
+	PreserveNullsInPluginConfigFeature = "PreserveNullsInPluginConfiguration"
+
 	// DocsURL provides a link to the documentation for feature gates in the KIC repository.
 	DocsURL = "https://github.com/Kong/kubernetes-ingress-controller/blob/main/FEATURE_GATES.md"
 )
@@ -55,9 +57,10 @@ func Setup(setupLog logr.Logger, featureGates map[string]bool) (map[string]bool,
 // NOTE: if you're adding a new feature gate, it needs to be added here.
 func GetFeatureGatesDefaults() map[string]bool {
 	return map[string]bool{
-		KnativeFeature:        false,
-		GatewayFeature:        true,
-		GatewayAlphaFeature:   false,
-		CombinedRoutesFeature: true,
+		KnativeFeature:                     false,
+		GatewayFeature:                     true,
+		GatewayAlphaFeature:                false,
+		CombinedRoutesFeature:              true,
+		PreserveNullsInPluginConfigFeature: false,
 	}
 }

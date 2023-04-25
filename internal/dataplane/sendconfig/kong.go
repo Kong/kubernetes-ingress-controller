@@ -34,6 +34,9 @@ type Config struct {
 	// EnableReverseSync indicates that reverse sync should be enabled for
 	// updates to the data-plane.
 	EnableReverseSync bool
+
+	// PreserveNullsInPluginConfig indicates that whether we keep `null`s in configurations of plugins.
+	PreserveNullsInPluginConfig bool
 }
 
 // Init sets up variables that need external calls.

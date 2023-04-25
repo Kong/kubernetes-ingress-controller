@@ -17,7 +17,7 @@ require (
 	github.com/google/uuid v1.3.0
 	github.com/kong/deck v1.20.0
 	github.com/kong/go-kong v0.41.0
-	github.com/kong/kubernetes-telemetry v0.0.2
+	github.com/kong/kubernetes-telemetry v0.0.3
 	github.com/kong/kubernetes-testing-framework v0.30.1
 	github.com/lithammer/dedent v1.1.0
 	github.com/miekg/dns v1.1.53
@@ -34,10 +34,10 @@ require (
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.8.2
 	google.golang.org/api v0.119.0
-	k8s.io/api v0.26.3
+	k8s.io/api v0.27.1
 	k8s.io/apiextensions-apiserver v0.26.3
 	k8s.io/apimachinery v0.27.1
-	k8s.io/client-go v0.26.3
+	k8s.io/client-go v0.27.1
 	k8s.io/component-base v0.26.3
 	knative.dev/networking v0.0.0-20220302134042-e8b2eb995165
 	knative.dev/pkg v0.0.0-20220301181942-2fdd5f232e77
@@ -54,8 +54,6 @@ require (
 	github.com/gammazero/deque v0.2.0 // indirect
 	github.com/gammazero/workerpool v1.1.3 // indirect
 	github.com/google/s2a-go v0.1.2 // indirect
-	github.com/hashicorp/errwrap v1.0.0 // indirect
-	github.com/hashicorp/go-multierror v1.1.1 // indirect
 	github.com/puzpuzpuz/xsync/v2 v2.4.0 // indirect
 	github.com/shoenig/go-m1cpu v0.1.4 // indirect
 	go.uber.org/atomic v1.10.0 // indirect

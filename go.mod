@@ -5,6 +5,13 @@ go 1.20
 // TODO: https://github.com/Kong/kubernetes-ingress-controller/issues/2953
 exclude sigs.k8s.io/gateway-api v0.6.2
 
+exclude (
+	// NOTE: excluded until https://github.com/kubernetes-sigs/controller-runtime/pull/2189
+	// gets resolved
+	k8s.io/api v0.27.1
+	k8s.io/client-go v0.27.1
+)
+
 require (
 	cloud.google.com/go/container v1.16.0
 	github.com/Masterminds/sprig/v3 v3.2.3
@@ -34,10 +41,10 @@ require (
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.8.2
 	google.golang.org/api v0.119.0
-	k8s.io/api v0.27.1
+	k8s.io/api v0.26.3
 	k8s.io/apiextensions-apiserver v0.26.3
 	k8s.io/apimachinery v0.27.1
-	k8s.io/client-go v0.27.1
+	k8s.io/client-go v0.26.3
 	k8s.io/component-base v0.26.3
 	knative.dev/networking v0.0.0-20220302134042-e8b2eb995165
 	knative.dev/pkg v0.0.0-20220301181942-2fdd5f232e77

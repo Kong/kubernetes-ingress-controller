@@ -34,6 +34,10 @@ jobs:
           - name: postgres-traditional-compatible
             test: postgres
             router-flavor: 'traditional_compatible'
+          - name: dbless-expression-router
+            test: dbless
+            feature_gates: "ExpressionRoutes=true"
+            router-flavor: "expressions"
 
     steps:
       - uses: Kong/kong-license@master

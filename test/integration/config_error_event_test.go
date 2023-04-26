@@ -24,6 +24,7 @@ import (
 )
 
 func TestConfigErrorEventGeneration(t *testing.T) {
+	skipTestForExpressionRouter(t)
 	// this test is NOT parallel. the broken configuration prevents all updates and will break unrelated tests
 	if testenv.DBMode() != "off" {
 		t.Skip("config errors are only supported on DB-less mode")

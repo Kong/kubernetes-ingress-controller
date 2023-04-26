@@ -200,6 +200,10 @@ func ExtractPreserveHost(anns map[string]string) string {
 	return anns[AnnotationPrefix+PreserveHostKey]
 }
 
+func ExtractRegexPrefix(anns map[string]string) string {
+	return anns[AnnotationPrefix+RegexPrefixKey]
+}
+
 // HasServiceUpstreamAnnotation returns true if the annotation
 // ingress.kubernetes.io/service-upstream is set to "true" in anns.
 func HasServiceUpstreamAnnotation(anns map[string]string) bool {

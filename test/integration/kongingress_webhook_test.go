@@ -22,6 +22,7 @@ import (
 )
 
 func TestKongIngressValidationWebhook(t *testing.T) {
+	skipTestForExpressionRouter(t)
 	ctx := context.Background()
 
 	if env.Cluster().Type() != kind.KindClusterType {

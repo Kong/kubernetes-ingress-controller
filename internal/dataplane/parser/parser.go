@@ -195,6 +195,9 @@ func (p *Parser) EnableRegexPathPrefix() {
 	p.flagEnabledRegexPathPrefix = true
 }
 
+// EnableExpressionRoutes enables parser to translate kubernetes managed resources (like Ingresses, HTTPRoutes)
+// into expression based routes in kong configurations. It should be turned on when kong is running with
+// expressions router flavor and feature gate `ExpressionRoutes` is turned on.
 func (p *Parser) EnableExpressionRoutes() {
 	p.featureEnabledExpressionRoutes = true
 }

@@ -28,6 +28,7 @@ import (
 )
 
 func TestKongIngressEssentials(t *testing.T) {
+	skipTestForExpressionRouter(t)
 	ctx := context.Background()
 
 	t.Parallel()

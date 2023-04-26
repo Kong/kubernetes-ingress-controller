@@ -24,6 +24,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/gateway"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
+	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/testenv"
 )
 
 const (
@@ -415,4 +416,12 @@ func setIngressClassNameWithRetry(ctx context.Context, namespace string, obj run
 		})
 	}
 	return fmt.Errorf("unsupported GroupVersionKind %v", obj.GetObjectKind())
+}
+
+func skipTestForExpressionRouter(t *testing.T) {
+	t.Helper()
+	routerFlavor := testenv.KongRouterFlavor()
+	if routerFlavor == "expressions" {
+		t.Skipf("skip test case %s when expression router enabled", t.Name())
+	}
 }

@@ -100,6 +100,7 @@ const (
 )
 
 func TestTLSRouteEssentials(t *testing.T) {
+	skipTestForExpressionRouter(t)
 	t.Log("locking Gateway TLS ports")
 	tlsMutex.Lock()
 	t.Cleanup(func() {
@@ -468,6 +469,7 @@ func TestTLSRouteEssentials(t *testing.T) {
 // TestTLSRouteReferenceGrant tests cross-namespace certificate references. These are technically implemented within
 // Gateway Listeners, but require an attached Route to see the associated certificate behavior on the proxy.
 func TestTLSRouteReferenceGrant(t *testing.T) {
+	skipTestForExpressionRouter(t)
 	t.Log("locking Gateway TLS ports")
 	tlsMutex.Lock()
 	t.Cleanup(func() {
@@ -698,6 +700,7 @@ func TestTLSRouteReferenceGrant(t *testing.T) {
 }
 
 func TestTLSRoutePassthrough(t *testing.T) {
+	skipTestForExpressionRouter(t)
 	t.Log("locking Gateway TLS ports")
 	tlsMutex.Lock()
 	t.Cleanup(func() {

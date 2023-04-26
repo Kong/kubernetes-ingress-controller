@@ -72,8 +72,12 @@ func (m *ingressTranslationMeta) translateIntoKongExpressionRoutes() *kongstate.
 
 	// translate paths.
 	pathMatchers := make([]atc.Matcher, 0, len(m.paths))
+	pathRegexPrefix := annotations.ExtractRegexPrefix(ingressAnnotations)
+	if pathRegexPrefix == "" {
+		pathRegexPrefix = ControllerPathRegexPrefix
+	}
 	for _, path := range m.paths {
-		pathMatchers = append(pathMatchers, pathMatcherFromIngressPath(path, ControllerPathRegexPrefix))
+		pathMatchers = append(pathMatchers, pathMatcherFromIngressPath(path, pathRegexPrefix))
 	}
 	routeMatcher.And(atc.Or(pathMatchers...))
 
@@ -117,8 +121,8 @@ func hostMatcherFromIngressHosts(hosts []string) atc.Matcher {
 		}
 
 		if strings.HasPrefix(host, "*") {
-			// wildcard match on hosts, genreate a prefix match.
-			matchers = append(matchers, atc.NewPrediacteHTTPHost(atc.OpPrefixMatch, strings.TrimPrefix(host, "*")))
+			// wildcard match on hosts (like *.foo.com), genreate a suffix match.
+			matchers = append(matchers, atc.NewPrediacteHTTPHost(atc.OpSuffixMatch, strings.TrimPrefix(host, "*")))
 		} else {
 			// exact match on hosts, generate an exact match.
 			matchers = append(matchers, atc.NewPrediacteHTTPHost(atc.OpEqual, host))

@@ -29,6 +29,7 @@ import (
 const testdomain = "konghq.com"
 
 func TestUDPRouteEssentials(t *testing.T) {
+	skipTestForExpressionRouter(t)
 	ctx := context.Background()
 
 	ns, cleaner := helpers.Setup(ctx, t, env)

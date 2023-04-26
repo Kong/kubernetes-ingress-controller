@@ -34,6 +34,7 @@ const (
 )
 
 func TestTCPRouteEssentials(t *testing.T) {
+	skipTestForExpressionRouter(t)
 	ctx := context.Background()
 
 	t.Log("locking TCP port")
@@ -417,6 +418,7 @@ func TestTCPRouteEssentials(t *testing.T) {
 }
 
 func TestTCPRouteReferenceGrant(t *testing.T) {
+	skipTestForExpressionRouter(t)
 	ctx := context.Background()
 
 	t.Log("locking TCP port")

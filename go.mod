@@ -5,6 +5,13 @@ go 1.20
 // TODO: https://github.com/Kong/kubernetes-ingress-controller/issues/2953
 exclude sigs.k8s.io/gateway-api v0.6.2
 
+exclude (
+	// NOTE: excluded until https://github.com/kubernetes-sigs/controller-runtime/pull/2189
+	// gets resolved
+	k8s.io/api v0.27.1
+	k8s.io/client-go v0.27.1
+)
+
 require (
 	cloud.google.com/go/container v1.16.0
 	github.com/Masterminds/sprig/v3 v3.2.3
@@ -17,7 +24,7 @@ require (
 	github.com/google/uuid v1.3.0
 	github.com/kong/deck v1.20.0
 	github.com/kong/go-kong v0.41.0
-	github.com/kong/kubernetes-telemetry v0.0.2
+	github.com/kong/kubernetes-telemetry v0.0.3
 	github.com/kong/kubernetes-testing-framework v0.30.1
 	github.com/lithammer/dedent v1.1.0
 	github.com/miekg/dns v1.1.53
@@ -54,8 +61,6 @@ require (
 	github.com/gammazero/deque v0.2.0 // indirect
 	github.com/gammazero/workerpool v1.1.3 // indirect
 	github.com/google/s2a-go v0.1.2 // indirect
-	github.com/hashicorp/errwrap v1.0.0 // indirect
-	github.com/hashicorp/go-multierror v1.1.1 // indirect
 	github.com/puzpuzpuz/xsync/v2 v2.4.0 // indirect
 	github.com/shoenig/go-m1cpu v0.1.4 // indirect
 	go.uber.org/atomic v1.10.0 // indirect

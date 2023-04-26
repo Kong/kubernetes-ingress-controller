@@ -223,7 +223,6 @@ func (r *Route) overrideSNIs(log logrus.FieldLogger, anns map[string]string) {
 
 // overrideByAnnotation sets Route protocols via annotation.
 func (r *Route) overrideByAnnotation(log logrus.FieldLogger) {
-
 	r.overrideStripPath(r.Ingress.Annotations)
 	r.overrideHTTPSRedirectCode(r.Ingress.Annotations)
 	r.overridePreserveHost(r.Ingress.Annotations)
@@ -274,7 +273,6 @@ func (r *Route) override(log logrus.FieldLogger, kongIngress *configurationv1.Ko
 			}
 		}
 	}
-
 }
 
 // overrideByKongIngress sets Route fields by KongIngress.

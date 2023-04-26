@@ -81,6 +81,13 @@ Adding a new version? You'll need three changes:
   IDs based on their unique properties (name, username, etc.) instead of random
   UUIDs.
   [#3933](https://github.com/Kong/kubernetes-ingress-controller/pull/3933)
+- Added translator to translate ingresses under `networking.k8s.io/v1` to
+  expression based Kong routes. The translator is enabled when feature gate
+  `ExpressionRoutes` is turned on and the managed Kong gateway runs in router
+  flavor `expressions`.
+  Note: this feature is experimental, and not available to translate other
+  kubernetes objects that was originally supported.
+  [#3935](https://github.com/Kong/kubernetes-ingress-controller/pull/3935)
 
 ### Fixed
 

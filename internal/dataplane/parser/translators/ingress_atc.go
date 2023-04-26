@@ -64,11 +64,11 @@ func (m *ingressTranslationMeta) translateIntoKongExpressionRoutes() *kongstate.
 		hosts = append(hosts, m.ingressHost)
 	}
 	hostAliases, _ := annotations.ExtractHostAliases(ingressAnnotations)
-	for _, hostAlias := range hostAliases {
-		hosts = append(hosts, hostAlias)
+	hosts = append(hosts, hostAliases...)
+	if len(hosts) > 0 {
+		hostMatcher := hostMatcherFromIngressHosts(hosts)
+		routeMatcher.And(hostMatcher)
 	}
-	hostMatcher := hostMatcherFromIngressHosts(hosts)
-	routeMatcher.And(hostMatcher)
 
 	// translate paths.
 	pathMatchers := make([]atc.Matcher, 0, len(m.paths))
@@ -81,7 +81,7 @@ func (m *ingressTranslationMeta) translateIntoKongExpressionRoutes() *kongstate.
 	}
 	routeMatcher.And(atc.Or(pathMatchers...))
 
-	// default protocols
+	// translate protocols.
 	protocols := []string{"http", "https"}
 	annonationProtocols := annotations.ExtractProtocolNames(ingressAnnotations)
 	if len(annonationProtocols) > 0 {
@@ -90,18 +90,21 @@ func (m *ingressTranslationMeta) translateIntoKongExpressionRoutes() *kongstate.
 	protocolMatcher := protocolMatcherFromProtocols(protocols)
 	routeMatcher.And(protocolMatcher)
 
+	// translate headers.
 	headers, exist := annotations.ExtractHeaders(ingressAnnotations)
 	if len(headers) > 0 && exist {
 		headerMatcher := headerMatcherFromHeaders(headers)
 		routeMatcher.And(headerMatcher)
 	}
 
+	// translate methods.
 	methods := annotations.ExtractMethods(ingressAnnotations)
 	if len(methods) > 0 {
 		methodMatcher := methodMatcherFromMethods(methods)
 		routeMatcher.And(methodMatcher)
 	}
 
+	// translate SNIs.
 	snis, exist := annotations.ExtractSNIs(ingressAnnotations)
 	if exist && len(snis) > 0 {
 		sniMatcher := sniMatcherFromSNIs(snis)
@@ -131,43 +134,49 @@ func hostMatcherFromIngressHosts(hosts []string) atc.Matcher {
 	return atc.Or(matchers...)
 }
 
+// pathMatcherFromIngressPath translate ingress path into matcher to match the path.
 func pathMatcherFromIngressPath(httpIngressPath netv1.HTTPIngressPath, regexPathPrefix string) atc.Matcher {
 	switch *httpIngressPath.PathType {
+	// Prefix paths.
 	case netv1.PathTypePrefix:
 		base := strings.Trim(httpIngressPath.Path, "/")
 		if base == "" {
+			// empty string in prefix path matches prefix "/".
 			return atc.NewPredicateHTTPPath(atc.OpPrefixMatch, "/")
 		}
 		return atc.Or(
+			// otherwise, match /<path>/* or /<path>.
 			atc.NewPredicateHTTPPath(atc.OpEqual, "/"+base+"/"),
 			atc.NewPredicateHTTPPath(atc.OpPrefixMatch, "/"+base),
 		)
+	// Exact paths.
 	case netv1.PathTypeExact:
 		relative := strings.TrimLeft(httpIngressPath.Path, "/")
 		return atc.NewPredicateHTTPPath(atc.OpEqual, "/"+relative)
+	// Implementation Specific match. treat it as regex match if it begins with a regex prefix (/~ by default),
+	// otherwise generate a prefix match.
 	case netv1.PathTypeImplementationSpecific:
+		// empty path. matches prefix "/" to match any path.
 		if httpIngressPath.Path == "" {
 			return atc.NewPredicateHTTPPath(atc.OpPrefixMatch, "/")
 		}
+		// regex match.
 		if regexPathPrefix != "" && strings.HasPrefix(httpIngressPath.Path, regexPathPrefix) {
 			regex := strings.TrimPrefix(httpIngressPath.Path, regexPathPrefix)
+			// regex match matches a prefix of the whole path, so we need to add a line start annotation in the regex.
 			if !strings.HasPrefix(regex, "^") {
 				regex = "^" + regex
 			}
 			return atc.NewPredicateHTTPPath(atc.OpRegexMatch, regex)
 		}
-
 		return atc.NewPredicateHTTPPath(atc.OpPrefixMatch, httpIngressPath.Path)
-
 	}
 
 	return nil
 }
 
+// protocolMatcherFromProtocols gernerates matchers from protocols.
 func protocolMatcherFromProtocols(protocols []string) atc.Matcher {
-	if len(protocols) == 0 {
-		return nil
-	}
 	matchers := []atc.Matcher{}
 	for _, protocol := range protocols {
 		if !util.ValidateProtocol(protocol) {
@@ -178,11 +187,11 @@ func protocolMatcherFromProtocols(protocols []string) atc.Matcher {
 	return atc.Or(matchers...)
 }
 
+// headerMatcherFromHeaders generates matcher to match headers in HTTP requests.
 func headerMatcherFromHeaders(headers map[string][]string) atc.Matcher {
-
 	matchers := make([]atc.Matcher, 0, len(headers))
 	for headerName, values := range headers {
-		// transfer header name to lowercase and replace "-" with "_"
+		// transfer header name to lowercase and replace "-" with "_", which is used in expressions of kong routes.
 		headerName = strings.ReplaceAll(strings.ToLower(headerName), "-", "_")
 		// header "Host" should be skipped, they are processed in "http.host".
 		if headerName == "host" {
@@ -191,7 +200,7 @@ func headerMatcherFromHeaders(headers map[string][]string) atc.Matcher {
 		if len(values) == 0 {
 			continue
 		}
-
+		// values for the same headers ar "or"ed to match any of the values.
 		singleHeaderMatcher := atc.Or()
 		for _, val := range values {
 			// generate a predicate using regex match if value starts with the special prefix "~*".
@@ -205,10 +214,11 @@ func headerMatcherFromHeaders(headers map[string][]string) atc.Matcher {
 		}
 		matchers = append(matchers, singleHeaderMatcher)
 	}
-
+	// matchers from different headers are "and"ed to match all rules to match headers.
 	return atc.And(matchers...)
 }
 
+// methodMatcherFromMethods generates matcher to match http methods.
 func methodMatcherFromMethods(methods []string) atc.Matcher {
 	matchers := make([]atc.Matcher, 0, len(methods))
 	for _, method := range methods {
@@ -220,6 +230,7 @@ func methodMatcherFromMethods(methods []string) atc.Matcher {
 	return atc.Or(matchers...)
 }
 
+// sniMatcherFromSNIs generates matchers to match TLS SNIs.
 func sniMatcherFromSNIs(snis []string) atc.Matcher {
 	matchers := make([]atc.Matcher, 0, len(snis))
 	for _, sni := range snis {

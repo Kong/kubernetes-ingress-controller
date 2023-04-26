@@ -53,7 +53,10 @@ func (s UpdateStrategyInMemory) Update(ctx context.Context, targetState *file.Co
 	targetState.Info = nil
 
 	if !s.preserveNullsinPluginConfig {
+		s.log.Debug("===== clean up nulls in plugin configs =====")
 		deckgen.CleanUpNullsInPluginConfigs(targetState)
+	} else {
+		s.log.Debug("===== keep nulls in plugin configs =====")
 	}
 
 	config, err := json.Marshal(targetState)

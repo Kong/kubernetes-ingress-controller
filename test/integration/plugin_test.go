@@ -351,7 +351,6 @@ func TestPluginNullInConfig(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	t.Parallel()
 	ns, cleaner := helpers.Setup(ctx, t, env)
 
 	t.Log("create a plugin with a null field in its configuration")

@@ -81,6 +81,10 @@ Adding a new version? You'll need three changes:
   IDs based on their unique properties (name, username, etc.) instead of random
   UUIDs.
   [#3933](https://github.com/Kong/kubernetes-ingress-controller/pull/3933)
+- Preserve `null`s in plugin configurations to allow users to explicitly set 
+  fields of plugin configurations to `null` in `KongPlugin`s, when feature gate
+  `PreserveNullsInPluginConfigurations` is turned on (default off).
+  [#3914](https://github.com/Kong/kubernetes-ingress-controller/pull/3914)
 
 ### Fixed
 

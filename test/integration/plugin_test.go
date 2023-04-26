@@ -346,8 +346,8 @@ func TestPluginOrdering(t *testing.T) {
 }
 
 func TestPluginNullInConfig(t *testing.T) {
-	if !strings.Contains(testenv.ControllerFeatureGates(), "PreserveNullsInPluginConfiguration=true") {
-		t.Skip("Need to configure feature gate PreserveNullsInPluginConfiguration to true to enable nulls in plugin config")
+	if !strings.Contains(testenv.ControllerFeatureGates(), "PreserveNullsInPluginConfigurations=true") {
+		t.Skip("Need to configure feature gate PreserveNullsInPluginConfigurations to true to enable nulls in plugin config")
 	}
 
 	ctx := context.Background()
@@ -369,6 +369,7 @@ func TestPluginNullInConfig(t *testing.T) {
 	require.NoError(t, err)
 	datadogPlugin, err = c.ConfigurationV1().KongPlugins(ns.Name).Create(ctx, datadogPlugin, metav1.CreateOptions{})
 	require.NoError(t, err)
+	cleaner.Add(datadogPlugin)
 
 	t.Log("deploying a minimal HTTP container deployment to test Ingress routes")
 	container := generators.NewContainer("httpbin", test.HTTPBinImage, 80)

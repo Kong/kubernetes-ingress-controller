@@ -26,7 +26,10 @@ const (
 	// objects like Ingress instead of creating a route per path.
 	CombinedRoutesFeature = "CombinedRoutes"
 
-	PreserveNullsInPluginConfigFeature = "PreserveNullsInPluginConfiguration"
+	// PreserveNullsInPluginConfigFeature is the name of the feature-gate for preserving
+	// `null`s in configurations of plugins from `config` field of resource
+	// `KongPlugin` and `KongClusterPlugin`.
+	PreserveNullsInPluginConfigFeature = "PreserveNullsInPluginConfigurations"
 
 	// DocsURL provides a link to the documentation for feature gates in the KIC repository.
 	DocsURL = "https://github.com/Kong/kubernetes-ingress-controller/blob/main/FEATURE_GATES.md"

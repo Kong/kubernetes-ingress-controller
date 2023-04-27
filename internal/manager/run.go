@@ -230,8 +230,7 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 			return fmt.Errorf("failed creating konnect client: %w", err)
 		}
 		setupLog.Info("starting license agent")
-		agent := license.NewLicenseAgent(time.Hour*12, "http://example.com", konnectLicenseAPIClient,
-			ctrl.Log.WithName("license-agent"))
+		agent := license.NewAgent(konnectLicenseAPIClient, ctrl.Log.WithName("license-agent"))
 		err = mgr.Add(agent)
 		if err != nil {
 			return fmt.Errorf("could not add license agent to manager: %w", err)

@@ -46,5 +46,5 @@ func TestAgent(t *testing.T) {
 			return false
 		}
 		return *actualLicense.Payload == expectedLicense.License
-	}, time.Second*5, time.Millisecond*100)
+	}, time.Second*5, time.Millisecond)
 }

@@ -18,7 +18,6 @@ import (
 )
 
 func TestFromIngressV1beta1(t *testing.T) {
-	assert := assert.New(t)
 	ingressList := []*netv1beta1.Ingress{
 		// 0
 		{
@@ -273,7 +272,7 @@ func TestFromIngressV1beta1(t *testing.T) {
 		p := mustNewParser(t, store)
 
 		parsedInfo := p.ingressRulesFromIngressV1beta1()
-		assert.Equal(ingressRules{
+		assert.Equal(t, ingressRules{
 			ServiceNameToServices: make(map[string]kongstate.Service),
 			ServiceNameToParent:   make(map[string]client.Object),
 			SecretNameToSNIs:      newSecretNameToSNIs(),
@@ -289,12 +288,12 @@ func TestFromIngressV1beta1(t *testing.T) {
 		p := mustNewParser(t, store)
 
 		parsedInfo := p.ingressRulesFromIngressV1beta1()
-		assert.Equal(1, len(parsedInfo.ServiceNameToServices))
-		assert.Equal("foo-svc.foo-namespace.80.svc", *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.80"].Host)
-		assert.Equal(80, *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.80"].Port)
+		assert.Equal(t, 1, len(parsedInfo.ServiceNameToServices))
+		assert.Equal(t, "foo-svc.foo-namespace.80.svc", *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.80"].Host)
+		assert.Equal(t, 80, *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.80"].Port)
 
-		assert.Equal("/", *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.80"].Routes[0].Paths[0])
-		assert.Equal("example.com", *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.80"].Routes[0].Hosts[0])
+		assert.Equal(t, "/", *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.80"].Routes[0].Paths[0])
+		assert.Equal(t, "example.com", *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.80"].Routes[0].Hosts[0])
 	})
 	t.Run("ingress rule with default backend", func(t *testing.T) {
 		store, err := store.NewFakeStore(store.FakeObjects{
@@ -304,16 +303,16 @@ func TestFromIngressV1beta1(t *testing.T) {
 		p := mustNewParser(t, store)
 
 		parsedInfo := p.ingressRulesFromIngressV1beta1()
-		assert.Equal(2, len(parsedInfo.ServiceNameToServices))
-		assert.Equal("foo-svc.foo-namespace.80.svc", *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.80"].Host)
-		assert.Equal(80, *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.80"].Port)
+		assert.Equal(t, 2, len(parsedInfo.ServiceNameToServices))
+		assert.Equal(t, "foo-svc.foo-namespace.80.svc", *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.80"].Host)
+		assert.Equal(t, 80, *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.80"].Port)
 
-		assert.Equal("/", *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.80"].Routes[0].Paths[0])
-		assert.Equal("example.com", *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.80"].Routes[0].Hosts[0])
+		assert.Equal(t, "/", *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.80"].Routes[0].Paths[0])
+		assert.Equal(t, "example.com", *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.80"].Routes[0].Hosts[0])
 
-		assert.Equal(1, len(parsedInfo.ServiceNameToServices["bar-namespace.default-svc.80"].Routes))
-		assert.Equal("/", *parsedInfo.ServiceNameToServices["bar-namespace.default-svc.80"].Routes[0].Paths[0])
-		assert.Equal(0, len(parsedInfo.ServiceNameToServices["bar-namespace.default-svc.80"].Routes[0].Hosts))
+		assert.Equal(t, 1, len(parsedInfo.ServiceNameToServices["bar-namespace.default-svc.80"].Routes))
+		assert.Equal(t, "/", *parsedInfo.ServiceNameToServices["bar-namespace.default-svc.80"].Routes[0].Paths[0])
+		assert.Equal(t, 0, len(parsedInfo.ServiceNameToServices["bar-namespace.default-svc.80"].Routes[0].Hosts))
 	})
 	t.Run("ingress rule with TLS", func(t *testing.T) {
 		store, err := store.NewFakeStore(store.FakeObjects{
@@ -325,8 +324,8 @@ func TestFromIngressV1beta1(t *testing.T) {
 		p := mustNewParser(t, store)
 
 		parsedInfo := p.ingressRulesFromIngressV1beta1()
-		assert.Equal(2, len(parsedInfo.SecretNameToSNIs.Hosts("bar-namespace/sooper-secret")))
-		assert.Equal(2, len(parsedInfo.SecretNameToSNIs.Hosts("bar-namespace/sooper-secret2")))
+		assert.Equal(t, 2, len(parsedInfo.SecretNameToSNIs.Hosts("bar-namespace/sooper-secret")))
+		assert.Equal(t, 2, len(parsedInfo.SecretNameToSNIs.Hosts("bar-namespace/sooper-secret2")))
 	})
 	t.Run("ingress rule with ACME like path has strip_path set to false", func(t *testing.T) {
 		store, err := store.NewFakeStore(store.FakeObjects{
@@ -338,16 +337,16 @@ func TestFromIngressV1beta1(t *testing.T) {
 		p := mustNewParser(t, store)
 
 		parsedInfo := p.ingressRulesFromIngressV1beta1()
-		assert.Equal(1, len(parsedInfo.ServiceNameToServices))
-		assert.Equal("cert-manager-solver-pod.foo-namespace.80.svc",
+		assert.Equal(t, 1, len(parsedInfo.ServiceNameToServices))
+		assert.Equal(t, "cert-manager-solver-pod.foo-namespace.80.svc",
 			*parsedInfo.ServiceNameToServices["foo-namespace.cert-manager-solver-pod.80"].Host)
-		assert.Equal(80, *parsedInfo.ServiceNameToServices["foo-namespace.cert-manager-solver-pod.80"].Port)
+		assert.Equal(t, 80, *parsedInfo.ServiceNameToServices["foo-namespace.cert-manager-solver-pod.80"].Port)
 
-		assert.Equal("/.well-known/acme-challenge/yolo",
+		assert.Equal(t, "/.well-known/acme-challenge/yolo",
 			*parsedInfo.ServiceNameToServices["foo-namespace.cert-manager-solver-pod.80"].Routes[0].Paths[0])
-		assert.Equal("example.com",
+		assert.Equal(t, "example.com",
 			*parsedInfo.ServiceNameToServices["foo-namespace.cert-manager-solver-pod.80"].Routes[0].Hosts[0])
-		assert.False(*parsedInfo.ServiceNameToServices["foo-namespace.cert-manager-solver-pod.80"].Routes[0].StripPath)
+		assert.False(t, *parsedInfo.ServiceNameToServices["foo-namespace.cert-manager-solver-pod.80"].Routes[0].StripPath)
 	})
 	t.Run("ingress with empty path is correctly parsed", func(t *testing.T) {
 		store, err := store.NewFakeStore(store.FakeObjects{
@@ -359,8 +358,8 @@ func TestFromIngressV1beta1(t *testing.T) {
 		p := mustNewParser(t, store)
 
 		parsedInfo := p.ingressRulesFromIngressV1beta1()
-		assert.Equal("/", *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.80"].Routes[0].Paths[0])
-		assert.Equal("example.com", *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.80"].Routes[0].Hosts[0])
+		assert.Equal(t, "/", *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.80"].Routes[0].Paths[0])
+		assert.Equal(t, "example.com", *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.80"].Routes[0].Hosts[0])
 	})
 	t.Run("empty Ingress rule doesn't cause a panic", func(t *testing.T) {
 		store, err := store.NewFakeStore(store.FakeObjects{
@@ -371,7 +370,7 @@ func TestFromIngressV1beta1(t *testing.T) {
 		require.NoError(t, err)
 		p := mustNewParser(t, store)
 
-		assert.NotPanics(func() {
+		assert.NotPanics(t, func() {
 			p.ingressRulesFromIngressV1beta1()
 		})
 	})
@@ -385,8 +384,8 @@ func TestFromIngressV1beta1(t *testing.T) {
 		p := mustNewParser(t, store)
 
 		parsedInfo := p.ingressRulesFromIngressV1beta1()
-		assert.Equal("foo-svc.foo-namespace.80.svc", *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.80"].Host)
-		assert.Equal("foo-svc.foo-namespace.8000.svc", *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.8000"].Host)
+		assert.Equal(t, "foo-svc.foo-namespace.80.svc", *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.80"].Host)
+		assert.Equal(t, "foo-svc.foo-namespace.8000.svc", *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.8000"].Host)
 	})
 	t.Run("Ingress rule with regex prefixed path creates route with Kong regex prefix", func(t *testing.T) {
 		store, err := store.NewFakeStore(store.FakeObjects{
@@ -398,12 +397,11 @@ func TestFromIngressV1beta1(t *testing.T) {
 		p := mustNewParser(t, store)
 
 		parsedInfo := p.ingressRulesFromIngressV1beta1()
-		assert.Equal(translators.KongPathRegexPrefix+"/foo/\\d{3}", *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.80"].Routes[0].Paths[0])
+		assert.Equal(t, translators.KongPathRegexPrefix+"/foo/\\d{3}", *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.80"].Routes[0].Paths[0])
 	})
 }
 
 func TestFromIngressV1(t *testing.T) {
-	assert := assert.New(t)
 	ingressList := []*netv1.Ingress{
 		// 0
 		{
@@ -737,160 +735,371 @@ func TestFromIngressV1(t *testing.T) {
 				},
 			},
 		},
+		// 10
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "foo-2",
+				Namespace: "foo-namespace",
+				Annotations: map[string]string{
+					annotations.IngressClassKey: annotations.DefaultIngressClass,
+				},
+			},
+			Spec: netv1.IngressSpec{
+				Rules: []netv1.IngressRule{
+					{
+						Host: "example.com",
+						IngressRuleValue: netv1.IngressRuleValue{
+							HTTP: &netv1.HTTPIngressRuleValue{
+								Paths: []netv1.HTTPIngressPath{
+									{
+										Path: "/",
+										Backend: netv1.IngressBackend{
+											Service: &netv1.IngressServiceBackend{
+												Name: "foo-svc",
+												Port: netv1.ServiceBackendPort{Number: 80},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
 	}
 
-	t.Run("no ingress returns empty info", func(t *testing.T) {
-		store, err := store.NewFakeStore(store.FakeObjects{
-			IngressesV1: []*netv1.Ingress{},
-		})
-		require.NoError(t, err)
-		p := mustNewParser(t, store)
+	t.Run("CombinedRoutes=off", func(t *testing.T) {
+		t.Run("no ingress returns empty info", func(t *testing.T) {
+			store, err := store.NewFakeStore(store.FakeObjects{
+				IngressesV1: []*netv1.Ingress{},
+			})
+			require.NoError(t, err)
+			p := mustNewParser(t, store)
 
-		parsedInfo := p.ingressRulesFromIngressV1()
-		assert.Equal(ingressRules{
-			ServiceNameToServices: make(map[string]kongstate.Service),
-			ServiceNameToParent:   make(map[string]client.Object),
-			SecretNameToSNIs:      newSecretNameToSNIs(),
-		}, parsedInfo)
+			parsedInfo := p.ingressRulesFromIngressV1()
+			assert.Equal(t, ingressRules{
+				ServiceNameToServices: make(map[string]kongstate.Service),
+				ServiceNameToParent:   make(map[string]client.Object),
+				SecretNameToSNIs:      newSecretNameToSNIs(),
+			}, parsedInfo)
+		})
+		t.Run("simple ingress rule is parsed", func(t *testing.T) {
+			store, err := store.NewFakeStore(store.FakeObjects{
+				IngressesV1: []*netv1.Ingress{
+					ingressList[0],
+				},
+			})
+			require.NoError(t, err)
+			p := mustNewParser(t, store)
+
+			parsedInfo := p.ingressRulesFromIngressV1()
+			assert.Equal(t, 1, len(parsedInfo.ServiceNameToServices))
+			assert.Equal(t, "foo-svc.foo-namespace.80.svc", *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.pnum-80"].Host)
+			assert.Equal(t, 80, *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.pnum-80"].Port)
+
+			assert.Equal(t, "/", *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.pnum-80"].Routes[0].Paths[0])
+			assert.Equal(t, "example.com", *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.pnum-80"].Routes[0].Hosts[0])
+		})
+		t.Run("ingress rule with default backend", func(t *testing.T) {
+			store, err := store.NewFakeStore(store.FakeObjects{
+				IngressesV1: []*netv1.Ingress{
+					ingressList[0],
+					ingressList[2],
+				},
+			})
+			require.NoError(t, err)
+			p := mustNewParser(t, store)
+
+			parsedInfo := p.ingressRulesFromIngressV1()
+			assert.Equal(t, 2, len(parsedInfo.ServiceNameToServices))
+			assert.Equal(t, "foo-svc.foo-namespace.80.svc", *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.pnum-80"].Host)
+			assert.Equal(t, 80, *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.pnum-80"].Port)
+
+			assert.Equal(t, "/", *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.pnum-80"].Routes[0].Paths[0])
+			assert.Equal(t, "example.com", *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.pnum-80"].Routes[0].Hosts[0])
+
+			assert.Equal(t, 1, len(parsedInfo.ServiceNameToServices["bar-namespace.default-svc.80"].Routes))
+			assert.Equal(t, "/", *parsedInfo.ServiceNameToServices["bar-namespace.default-svc.80"].Routes[0].Paths[0])
+			assert.Equal(t, 0, len(parsedInfo.ServiceNameToServices["bar-namespace.default-svc.80"].Routes[0].Hosts))
+		})
+		t.Run("ingress rule with TLS", func(t *testing.T) {
+			store, err := store.NewFakeStore(store.FakeObjects{
+				IngressesV1: []*netv1.Ingress{
+					ingressList[1],
+				},
+			})
+			require.NoError(t, err)
+			p := mustNewParser(t, store)
+
+			parsedInfo := p.ingressRulesFromIngressV1()
+			assert.Equal(t, 2, len(parsedInfo.SecretNameToSNIs.Hosts("bar-namespace/sooper-secret")))
+			assert.Equal(t, 2, len(parsedInfo.SecretNameToSNIs.Hosts("bar-namespace/sooper-secret2")))
+		})
+		t.Run("ingress rule with ACME like path has strip_path set to false", func(t *testing.T) {
+			store, err := store.NewFakeStore(store.FakeObjects{
+				IngressesV1: []*netv1.Ingress{
+					ingressList[3],
+				},
+			})
+			require.NoError(t, err)
+			p := mustNewParser(t, store)
+
+			parsedInfo := p.ingressRulesFromIngressV1()
+			assert.Equal(t, 1, len(parsedInfo.ServiceNameToServices))
+			assert.Equal(t, "cert-manager-solver-pod.foo-namespace.80.svc",
+				*parsedInfo.ServiceNameToServices["foo-namespace.cert-manager-solver-pod.pnum-80"].Host)
+			assert.Equal(t, 80, *parsedInfo.ServiceNameToServices["foo-namespace.cert-manager-solver-pod.pnum-80"].Port)
+
+			assert.Equal(t, "/.well-known/acme-challenge/yolo",
+				*parsedInfo.ServiceNameToServices["foo-namespace.cert-manager-solver-pod.pnum-80"].Routes[0].Paths[0])
+			assert.Equal(t, "example.com",
+				*parsedInfo.ServiceNameToServices["foo-namespace.cert-manager-solver-pod.pnum-80"].Routes[0].Hosts[0])
+			assert.False(t, *parsedInfo.ServiceNameToServices["foo-namespace.cert-manager-solver-pod.pnum-80"].Routes[0].StripPath)
+		})
+		t.Run("ingress with empty path is correctly parsed", func(t *testing.T) {
+			store, err := store.NewFakeStore(store.FakeObjects{
+				IngressesV1: []*netv1.Ingress{
+					ingressList[4],
+				},
+			})
+			require.NoError(t, err)
+			p := mustNewParser(t, store)
+
+			parsedInfo := p.ingressRulesFromIngressV1()
+			assert.Equal(t, "/", *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.pnum-80"].Routes[0].Paths[0])
+			assert.Equal(t, "example.com", *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.pnum-80"].Routes[0].Hosts[0])
+		})
+		t.Run("empty Ingress rule doesn't cause a panic", func(t *testing.T) {
+			store, err := store.NewFakeStore(store.FakeObjects{
+				IngressesV1: []*netv1.Ingress{
+					ingressList[5],
+				},
+			})
+			require.NoError(t, err)
+			p := mustNewParser(t, store)
+
+			assert.NotPanics(t, func() {
+				p.ingressRulesFromIngressV1()
+			})
+		})
+		t.Run("Ingress rules with multiple ports for one Service use separate hostnames for each port", func(t *testing.T) {
+			store, err := store.NewFakeStore(store.FakeObjects{
+				IngressesV1: []*netv1.Ingress{
+					ingressList[6],
+				},
+			})
+			require.NoError(t, err)
+			p := mustNewParser(t, store)
+
+			parsedInfo := p.ingressRulesFromIngressV1()
+			assert.Equal(t, "foo-svc.foo-namespace.80.svc",
+				*parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.pnum-80"].Host)
+			assert.Equal(t, "foo-svc.foo-namespace.8000.svc",
+				*parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.pnum-8000"].Host)
+		})
+		t.Run("Ingress rule with ports defined by name", func(t *testing.T) {
+			store, err := store.NewFakeStore(store.FakeObjects{
+				IngressesV1: []*netv1.Ingress{
+					ingressList[9],
+				},
+			})
+			require.NoError(t, err)
+			p := mustNewParser(t, store)
+
+			parsedInfo := p.ingressRulesFromIngressV1()
+			_, ok := parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.pnum-80"]
+			assert.True(t, ok)
+		})
+		t.Run("Ingress rule with regex prefixed path creates route with Kong regex prefix", func(t *testing.T) {
+			store, err := store.NewFakeStore(store.FakeObjects{
+				IngressesV1: []*netv1.Ingress{
+					ingressList[9],
+				},
+			})
+			require.NoError(t, err)
+			p := mustNewParser(t, store)
+
+			parsedInfo := p.ingressRulesFromIngressV1()
+			assert.Equal(t, translators.KongPathRegexPrefix+"/foo/\\d{3}", *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.pnum-80"].Routes[0].Paths[0])
+		})
 	})
-	t.Run("simple ingress rule is parsed", func(t *testing.T) {
-		store, err := store.NewFakeStore(store.FakeObjects{
-			IngressesV1: []*netv1.Ingress{
-				ingressList[0],
-			},
+
+	t.Run("CombinedRoutes=on", func(t *testing.T) {
+		setupParser := func(t *testing.T, store store.Storer) *Parser {
+			p := mustNewParser(t, store)
+			p.EnableCombinedServiceRoutes()
+			return p
+		}
+
+		t.Run("no ingress returns empty info", func(t *testing.T) {
+			store, err := store.NewFakeStore(store.FakeObjects{
+				IngressesV1: []*netv1.Ingress{},
+			})
+			require.NoError(t, err)
+			p := setupParser(t, store)
+
+			parsedInfo := p.ingressRulesFromIngressV1()
+			assert.Equal(t, ingressRules{
+				ServiceNameToServices: make(map[string]kongstate.Service),
+				ServiceNameToParent:   make(map[string]client.Object),
+				SecretNameToSNIs:      newSecretNameToSNIs(),
+			}, parsedInfo)
 		})
-		require.NoError(t, err)
-		p := mustNewParser(t, store)
+		t.Run("simple ingress rule is parsed", func(t *testing.T) {
+			store, err := store.NewFakeStore(store.FakeObjects{
+				IngressesV1: []*netv1.Ingress{
+					ingressList[0],
+				},
+			})
+			require.NoError(t, err)
+			p := setupParser(t, store)
 
-		parsedInfo := p.ingressRulesFromIngressV1()
-		assert.Equal(1, len(parsedInfo.ServiceNameToServices))
-		assert.Equal("foo-svc.foo-namespace.80.svc", *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.pnum-80"].Host)
-		assert.Equal(80, *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.pnum-80"].Port)
+			parsedInfo := p.ingressRulesFromIngressV1()
+			assert.Equal(t, 1, len(parsedInfo.ServiceNameToServices))
+			assert.Equal(t, "foo-svc.foo-namespace.80.svc", *parsedInfo.ServiceNameToServices["foo-namespace.foo.foo-svc.80"].Host)
+			assert.Equal(t, 80, *parsedInfo.ServiceNameToServices["foo-namespace.foo.foo-svc.80"].Port)
 
-		assert.Equal("/", *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.pnum-80"].Routes[0].Paths[0])
-		assert.Equal("example.com", *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.pnum-80"].Routes[0].Hosts[0])
-	})
-	t.Run("ingress rule with default backend", func(t *testing.T) {
-		store, err := store.NewFakeStore(store.FakeObjects{
-			IngressesV1: []*netv1.Ingress{
-				ingressList[0],
-				ingressList[2],
-			},
+			assert.Equal(t, "/", *parsedInfo.ServiceNameToServices["foo-namespace.foo.foo-svc.80"].Routes[0].Paths[0])
+			assert.Equal(t, "example.com", *parsedInfo.ServiceNameToServices["foo-namespace.foo.foo-svc.80"].Routes[0].Hosts[0])
 		})
-		require.NoError(t, err)
-		p := mustNewParser(t, store)
+		t.Run("ingress rule with default backend", func(t *testing.T) {
+			store, err := store.NewFakeStore(store.FakeObjects{
+				IngressesV1: []*netv1.Ingress{
+					ingressList[0],
+					ingressList[2],
+				},
+			})
+			require.NoError(t, err)
+			p := setupParser(t, store)
 
-		parsedInfo := p.ingressRulesFromIngressV1()
-		assert.Equal(2, len(parsedInfo.ServiceNameToServices))
-		assert.Equal("foo-svc.foo-namespace.80.svc", *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.pnum-80"].Host)
-		assert.Equal(80, *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.pnum-80"].Port)
+			parsedInfo := p.ingressRulesFromIngressV1()
+			assert.Equal(t, 2, len(parsedInfo.ServiceNameToServices))
+			assert.Equal(t, "foo-svc.foo-namespace.80.svc", *parsedInfo.ServiceNameToServices["foo-namespace.foo.foo-svc.80"].Host)
+			assert.Equal(t, 80, *parsedInfo.ServiceNameToServices["foo-namespace.foo.foo-svc.80"].Port)
 
-		assert.Equal("/", *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.pnum-80"].Routes[0].Paths[0])
-		assert.Equal("example.com", *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.pnum-80"].Routes[0].Hosts[0])
+			assert.Equal(t, "/", *parsedInfo.ServiceNameToServices["foo-namespace.foo.foo-svc.80"].Routes[0].Paths[0])
+			assert.Equal(t, "example.com", *parsedInfo.ServiceNameToServices["foo-namespace.foo.foo-svc.80"].Routes[0].Hosts[0])
 
-		assert.Equal(1, len(parsedInfo.ServiceNameToServices["bar-namespace.default-svc.80"].Routes))
-		assert.Equal("/", *parsedInfo.ServiceNameToServices["bar-namespace.default-svc.80"].Routes[0].Paths[0])
-		assert.Equal(0, len(parsedInfo.ServiceNameToServices["bar-namespace.default-svc.80"].Routes[0].Hosts))
-	})
-	t.Run("ingress rule with TLS", func(t *testing.T) {
-		store, err := store.NewFakeStore(store.FakeObjects{
-			IngressesV1: []*netv1.Ingress{
-				ingressList[1],
-			},
+			assert.Equal(t, 1, len(parsedInfo.ServiceNameToServices["bar-namespace.default-svc.80"].Routes))
+			assert.Equal(t, "/", *parsedInfo.ServiceNameToServices["bar-namespace.default-svc.80"].Routes[0].Paths[0])
+			assert.Equal(t, 0, len(parsedInfo.ServiceNameToServices["bar-namespace.default-svc.80"].Routes[0].Hosts))
 		})
-		require.NoError(t, err)
-		p := mustNewParser(t, store)
+		t.Run("ingress rule with TLS", func(t *testing.T) {
+			store, err := store.NewFakeStore(store.FakeObjects{
+				IngressesV1: []*netv1.Ingress{
+					ingressList[1],
+				},
+			})
+			require.NoError(t, err)
+			p := setupParser(t, store)
 
-		parsedInfo := p.ingressRulesFromIngressV1()
-		assert.Equal(2, len(parsedInfo.SecretNameToSNIs.Hosts("bar-namespace/sooper-secret")))
-		assert.Equal(2, len(parsedInfo.SecretNameToSNIs.Hosts("bar-namespace/sooper-secret2")))
-	})
-	t.Run("ingress rule with ACME like path has strip_path set to false", func(t *testing.T) {
-		store, err := store.NewFakeStore(store.FakeObjects{
-			IngressesV1: []*netv1.Ingress{
-				ingressList[3],
-			},
+			parsedInfo := p.ingressRulesFromIngressV1()
+			assert.Equal(t, 2, len(parsedInfo.SecretNameToSNIs.Hosts("bar-namespace/sooper-secret")))
+			assert.Equal(t, 2, len(parsedInfo.SecretNameToSNIs.Hosts("bar-namespace/sooper-secret2")))
 		})
-		require.NoError(t, err)
-		p := mustNewParser(t, store)
+		t.Run("ingress rule with ACME like path has strip_path set to false", func(t *testing.T) {
+			store, err := store.NewFakeStore(store.FakeObjects{
+				IngressesV1: []*netv1.Ingress{
+					ingressList[3],
+				},
+			})
+			require.NoError(t, err)
+			p := setupParser(t, store)
 
-		parsedInfo := p.ingressRulesFromIngressV1()
-		assert.Equal(1, len(parsedInfo.ServiceNameToServices))
-		assert.Equal("cert-manager-solver-pod.foo-namespace.80.svc",
-			*parsedInfo.ServiceNameToServices["foo-namespace.cert-manager-solver-pod.pnum-80"].Host)
-		assert.Equal(80, *parsedInfo.ServiceNameToServices["foo-namespace.cert-manager-solver-pod.pnum-80"].Port)
+			parsedInfo := p.ingressRulesFromIngressV1()
+			assert.Equal(t, 1, len(parsedInfo.ServiceNameToServices))
+			assert.Equal(t, "cert-manager-solver-pod.foo-namespace.80.svc",
+				*parsedInfo.ServiceNameToServices["foo-namespace.foo.cert-manager-solver-pod.80"].Host)
+			assert.Equal(t, 80, *parsedInfo.ServiceNameToServices["foo-namespace.foo.cert-manager-solver-pod.80"].Port)
 
-		assert.Equal("/.well-known/acme-challenge/yolo",
-			*parsedInfo.ServiceNameToServices["foo-namespace.cert-manager-solver-pod.pnum-80"].Routes[0].Paths[0])
-		assert.Equal("example.com",
-			*parsedInfo.ServiceNameToServices["foo-namespace.cert-manager-solver-pod.pnum-80"].Routes[0].Hosts[0])
-		assert.False(*parsedInfo.ServiceNameToServices["foo-namespace.cert-manager-solver-pod.pnum-80"].Routes[0].StripPath)
-	})
-	t.Run("ingress with empty path is correctly parsed", func(t *testing.T) {
-		store, err := store.NewFakeStore(store.FakeObjects{
-			IngressesV1: []*netv1.Ingress{
-				ingressList[4],
-			},
+			assert.Equal(t, "/.well-known/acme-challenge/yolo",
+				*parsedInfo.ServiceNameToServices["foo-namespace.foo.cert-manager-solver-pod.80"].Routes[0].Paths[0])
+			assert.Equal(t, "example.com",
+				*parsedInfo.ServiceNameToServices["foo-namespace.foo.cert-manager-solver-pod.80"].Routes[0].Hosts[0])
+			assert.False(t, *parsedInfo.ServiceNameToServices["foo-namespace.foo.cert-manager-solver-pod.80"].Routes[0].StripPath)
 		})
-		require.NoError(t, err)
-		p := mustNewParser(t, store)
+		t.Run("ingress with empty path is correctly parsed", func(t *testing.T) {
+			store, err := store.NewFakeStore(store.FakeObjects{
+				IngressesV1: []*netv1.Ingress{
+					ingressList[4],
+				},
+			})
+			require.NoError(t, err)
+			p := setupParser(t, store)
 
-		parsedInfo := p.ingressRulesFromIngressV1()
-		assert.Equal("/", *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.pnum-80"].Routes[0].Paths[0])
-		assert.Equal("example.com", *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.pnum-80"].Routes[0].Hosts[0])
-	})
-	t.Run("empty Ingress rule doesn't cause a panic", func(t *testing.T) {
-		store, err := store.NewFakeStore(store.FakeObjects{
-			IngressesV1: []*netv1.Ingress{
-				ingressList[5],
-			},
+			parsedInfo := p.ingressRulesFromIngressV1()
+			assert.Equal(t, "/", *parsedInfo.ServiceNameToServices["foo-namespace.foo.foo-svc.80"].Routes[0].Paths[0])
+			assert.Equal(t, "example.com", *parsedInfo.ServiceNameToServices["foo-namespace.foo.foo-svc.80"].Routes[0].Hosts[0])
 		})
-		require.NoError(t, err)
-		p := mustNewParser(t, store)
+		t.Run("empty Ingress rule doesn't cause a panic", func(t *testing.T) {
+			store, err := store.NewFakeStore(store.FakeObjects{
+				IngressesV1: []*netv1.Ingress{
+					ingressList[5],
+				},
+			})
+			require.NoError(t, err)
+			p := setupParser(t, store)
 
-		assert.NotPanics(func() {
-			p.ingressRulesFromIngressV1()
+			assert.NotPanics(t, func() {
+				p.ingressRulesFromIngressV1()
+			})
 		})
-	})
-	t.Run("Ingress rules with multiple ports for one Service use separate hostnames for each port", func(t *testing.T) {
-		store, err := store.NewFakeStore(store.FakeObjects{
-			IngressesV1: []*netv1.Ingress{
-				ingressList[6],
-			},
-		})
-		require.NoError(t, err)
-		p := mustNewParser(t, store)
+		t.Run("Ingress rules with multiple ports for one Service use separate hostnames for each port", func(t *testing.T) {
+			store, err := store.NewFakeStore(store.FakeObjects{
+				IngressesV1: []*netv1.Ingress{
+					ingressList[6],
+				},
+			})
+			require.NoError(t, err)
+			p := setupParser(t, store)
 
-		parsedInfo := p.ingressRulesFromIngressV1()
-		assert.Equal("foo-svc.foo-namespace.80.svc",
-			*parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.pnum-80"].Host)
-		assert.Equal("foo-svc.foo-namespace.8000.svc",
-			*parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.pnum-8000"].Host)
-	})
-	t.Run("Ingress rule with ports defined by name", func(t *testing.T) {
-		store, err := store.NewFakeStore(store.FakeObjects{
-			IngressesV1: []*netv1.Ingress{
-				ingressList[9],
-			},
+			parsedInfo := p.ingressRulesFromIngressV1()
+			assert.Equal(t, "foo-svc.foo-namespace.80.svc",
+				*parsedInfo.ServiceNameToServices["foo-namespace.foo.foo-svc.80"].Host)
+			assert.Equal(t, "foo-svc.foo-namespace.8000.svc",
+				*parsedInfo.ServiceNameToServices["foo-namespace.foo.foo-svc.8000"].Host)
 		})
-		require.NoError(t, err)
-		p := mustNewParser(t, store)
+		t.Run("Ingress rule with ports defined by name", func(t *testing.T) {
+			store, err := store.NewFakeStore(store.FakeObjects{
+				IngressesV1: []*netv1.Ingress{
+					ingressList[9],
+				},
+			})
+			require.NoError(t, err)
+			p := setupParser(t, store)
 
-		parsedInfo := p.ingressRulesFromIngressV1()
-		_, ok := parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.pnum-80"]
-		assert.True(ok)
-	})
-	t.Run("Ingress rule with regex prefixed path creates route with Kong regex prefix", func(t *testing.T) {
-		store, err := store.NewFakeStore(store.FakeObjects{
-			IngressesV1: []*netv1.Ingress{
-				ingressList[9],
-			},
+			parsedInfo := p.ingressRulesFromIngressV1()
+			_, ok := parsedInfo.ServiceNameToServices["foo-namespace.regex-prefix.foo-svc.80"]
+			assert.True(t, ok)
 		})
-		require.NoError(t, err)
-		p := mustNewParser(t, store)
+		t.Run("Ingress rule with regex prefixed path creates route with Kong regex prefix", func(t *testing.T) {
+			store, err := store.NewFakeStore(store.FakeObjects{
+				IngressesV1: []*netv1.Ingress{
+					ingressList[9],
+				},
+			})
+			require.NoError(t, err)
+			p := setupParser(t, store)
 
-		parsedInfo := p.ingressRulesFromIngressV1()
-		assert.Equal(translators.KongPathRegexPrefix+"/foo/\\d{3}", *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.pnum-80"].Routes[0].Paths[0])
+			parsedInfo := p.ingressRulesFromIngressV1()
+			assert.Equal(t, translators.KongPathRegexPrefix+"/foo/\\d{3}", *parsedInfo.ServiceNameToServices["foo-namespace.regex-prefix.foo-svc.80"].Routes[0].Paths[0])
+		})
+		t.Run("single service in multiple ingresses generates multiple kong services", func(t *testing.T) {
+			store, err := store.NewFakeStore(store.FakeObjects{
+				IngressesV1: []*netv1.Ingress{
+					ingressList[0],
+					ingressList[10],
+				},
+			})
+			require.NoError(t, err)
+			p := setupParser(t, store)
+
+			parsedInfo := p.ingressRulesFromIngressV1()
+			require.Len(t, parsedInfo.ServiceNameToServices, 2)
+			assert.Equal(t, *parsedInfo.ServiceNameToServices["foo-namespace.foo.foo-svc.80"].Host, "foo-svc.foo-namespace.80.svc")
+			assert.Equal(t, *parsedInfo.ServiceNameToServices["foo-namespace.foo-2.foo-svc.80"].Host, "foo-svc.foo-namespace.80.svc")
+		})
 	})
 }
 

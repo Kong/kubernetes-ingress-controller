@@ -376,6 +376,7 @@ func (p *Parser) ingressV1ToKongServiceLegacy(
 	return wasServicesCacheUpdated
 }
 
+// getDefaultBackendService picks the oldest Ingress with a DefaultBackend defined and returns a Kong Service for it.
 func getDefaultBackendService(allDefaultBackends []netv1.Ingress) (kongstate.Service, bool) {
 	sort.SliceStable(allDefaultBackends, func(i, j int) bool {
 		return allDefaultBackends[i].CreationTimestamp.Before(&allDefaultBackends[j].CreationTimestamp)

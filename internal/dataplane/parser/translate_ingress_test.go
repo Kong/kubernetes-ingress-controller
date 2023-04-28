@@ -2,6 +2,7 @@ package parser
 
 import (
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -794,7 +795,7 @@ func TestFromIngressV1(t *testing.T) {
 			p := mustNewParser(t, store)
 
 			parsedInfo := p.ingressRulesFromIngressV1()
-			assert.Equal(t, 1, len(parsedInfo.ServiceNameToServices))
+			assert.Len(t, parsedInfo.ServiceNameToServices, 1)
 			assert.Equal(t, "foo-svc.foo-namespace.80.svc", *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.pnum-80"].Host)
 			assert.Equal(t, 80, *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.pnum-80"].Port)
 
@@ -812,16 +813,16 @@ func TestFromIngressV1(t *testing.T) {
 			p := mustNewParser(t, store)
 
 			parsedInfo := p.ingressRulesFromIngressV1()
-			assert.Equal(t, 2, len(parsedInfo.ServiceNameToServices))
+			assert.Len(t, parsedInfo.ServiceNameToServices, 2)
 			assert.Equal(t, "foo-svc.foo-namespace.80.svc", *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.pnum-80"].Host)
 			assert.Equal(t, 80, *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.pnum-80"].Port)
 
 			assert.Equal(t, "/", *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.pnum-80"].Routes[0].Paths[0])
 			assert.Equal(t, "example.com", *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.pnum-80"].Routes[0].Hosts[0])
 
-			assert.Equal(t, 1, len(parsedInfo.ServiceNameToServices["bar-namespace.default-svc.80"].Routes))
+			assert.Len(t, parsedInfo.ServiceNameToServices["bar-namespace.default-svc.80"].Routes, 1)
 			assert.Equal(t, "/", *parsedInfo.ServiceNameToServices["bar-namespace.default-svc.80"].Routes[0].Paths[0])
-			assert.Equal(t, 0, len(parsedInfo.ServiceNameToServices["bar-namespace.default-svc.80"].Routes[0].Hosts))
+			assert.Empty(t, parsedInfo.ServiceNameToServices["bar-namespace.default-svc.80"].Routes[0].Hosts)
 		})
 		t.Run("ingress rule with TLS", func(t *testing.T) {
 			store, err := store.NewFakeStore(store.FakeObjects{
@@ -833,8 +834,8 @@ func TestFromIngressV1(t *testing.T) {
 			p := mustNewParser(t, store)
 
 			parsedInfo := p.ingressRulesFromIngressV1()
-			assert.Equal(t, 2, len(parsedInfo.SecretNameToSNIs.Hosts("bar-namespace/sooper-secret")))
-			assert.Equal(t, 2, len(parsedInfo.SecretNameToSNIs.Hosts("bar-namespace/sooper-secret2")))
+			assert.Len(t, parsedInfo.SecretNameToSNIs.Hosts("bar-namespace/sooper-secret"), 2)
+			assert.Len(t, parsedInfo.SecretNameToSNIs.Hosts("bar-namespace/sooper-secret2"), 2)
 		})
 		t.Run("ingress rule with ACME like path has strip_path set to false", func(t *testing.T) {
 			store, err := store.NewFakeStore(store.FakeObjects{
@@ -846,7 +847,7 @@ func TestFromIngressV1(t *testing.T) {
 			p := mustNewParser(t, store)
 
 			parsedInfo := p.ingressRulesFromIngressV1()
-			assert.Equal(t, 1, len(parsedInfo.ServiceNameToServices))
+			assert.Len(t, parsedInfo.ServiceNameToServices, 1)
 			assert.Equal(t, "cert-manager-solver-pod.foo-namespace.80.svc",
 				*parsedInfo.ServiceNameToServices["foo-namespace.cert-manager-solver-pod.pnum-80"].Host)
 			assert.Equal(t, 80, *parsedInfo.ServiceNameToServices["foo-namespace.cert-manager-solver-pod.pnum-80"].Port)
@@ -956,7 +957,7 @@ func TestFromIngressV1(t *testing.T) {
 			p := setupParser(t, store)
 
 			parsedInfo := p.ingressRulesFromIngressV1()
-			assert.Equal(t, 1, len(parsedInfo.ServiceNameToServices))
+			assert.Len(t, parsedInfo.ServiceNameToServices, 1)
 			assert.Equal(t, "foo-svc.foo-namespace.80.svc", *parsedInfo.ServiceNameToServices["foo-namespace.foo.foo-svc.80"].Host)
 			assert.Equal(t, 80, *parsedInfo.ServiceNameToServices["foo-namespace.foo.foo-svc.80"].Port)
 
@@ -974,16 +975,16 @@ func TestFromIngressV1(t *testing.T) {
 			p := setupParser(t, store)
 
 			parsedInfo := p.ingressRulesFromIngressV1()
-			assert.Equal(t, 2, len(parsedInfo.ServiceNameToServices))
+			assert.Len(t, parsedInfo.ServiceNameToServices, 2)
 			assert.Equal(t, "foo-svc.foo-namespace.80.svc", *parsedInfo.ServiceNameToServices["foo-namespace.foo.foo-svc.80"].Host)
 			assert.Equal(t, 80, *parsedInfo.ServiceNameToServices["foo-namespace.foo.foo-svc.80"].Port)
 
 			assert.Equal(t, "/", *parsedInfo.ServiceNameToServices["foo-namespace.foo.foo-svc.80"].Routes[0].Paths[0])
 			assert.Equal(t, "example.com", *parsedInfo.ServiceNameToServices["foo-namespace.foo.foo-svc.80"].Routes[0].Hosts[0])
 
-			assert.Equal(t, 1, len(parsedInfo.ServiceNameToServices["bar-namespace.default-svc.80"].Routes))
+			assert.Len(t, parsedInfo.ServiceNameToServices["bar-namespace.default-svc.80"].Routes, 1)
 			assert.Equal(t, "/", *parsedInfo.ServiceNameToServices["bar-namespace.default-svc.80"].Routes[0].Paths[0])
-			assert.Equal(t, 0, len(parsedInfo.ServiceNameToServices["bar-namespace.default-svc.80"].Routes[0].Hosts))
+			assert.Empty(t, parsedInfo.ServiceNameToServices["bar-namespace.default-svc.80"].Routes[0].Hosts)
 		})
 		t.Run("ingress rule with TLS", func(t *testing.T) {
 			store, err := store.NewFakeStore(store.FakeObjects{
@@ -995,8 +996,8 @@ func TestFromIngressV1(t *testing.T) {
 			p := setupParser(t, store)
 
 			parsedInfo := p.ingressRulesFromIngressV1()
-			assert.Equal(t, 2, len(parsedInfo.SecretNameToSNIs.Hosts("bar-namespace/sooper-secret")))
-			assert.Equal(t, 2, len(parsedInfo.SecretNameToSNIs.Hosts("bar-namespace/sooper-secret2")))
+			assert.Len(t, parsedInfo.SecretNameToSNIs.Hosts("bar-namespace/sooper-secret"), 2)
+			assert.Len(t, parsedInfo.SecretNameToSNIs.Hosts("bar-namespace/sooper-secret2"), 2)
 		})
 		t.Run("ingress rule with ACME like path has strip_path set to false", func(t *testing.T) {
 			store, err := store.NewFakeStore(store.FakeObjects{
@@ -1008,7 +1009,7 @@ func TestFromIngressV1(t *testing.T) {
 			p := setupParser(t, store)
 
 			parsedInfo := p.ingressRulesFromIngressV1()
-			assert.Equal(t, 1, len(parsedInfo.ServiceNameToServices))
+			assert.Len(t, parsedInfo.ServiceNameToServices, 1)
 			assert.Equal(t, "cert-manager-solver-pod.foo-namespace.80.svc",
 				*parsedInfo.ServiceNameToServices["foo-namespace.foo.cert-manager-solver-pod.80"].Host)
 			assert.Equal(t, 80, *parsedInfo.ServiceNameToServices["foo-namespace.foo.cert-manager-solver-pod.80"].Port)
@@ -1154,5 +1155,66 @@ func TestFromIngressV1_RegexPrefix(t *testing.T) {
 
 		parsedInfo := p.ingressRulesFromIngressV1()
 		assert.Equal("~/whatever$", *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.pnum-80"].Routes[0].Paths[0])
+	})
+}
+
+func TestGetDefaultBackendService(t *testing.T) {
+	someIngress := func(creationTimestamp time.Time, serviceName string) netv1.Ingress {
+		return netv1.Ingress{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:              "foo",
+				Namespace:         "foo-namespace",
+				CreationTimestamp: metav1.NewTime(creationTimestamp),
+			},
+			Spec: netv1.IngressSpec{
+				DefaultBackend: &netv1.IngressBackend{
+					Service: &netv1.IngressServiceBackend{
+						Name: serviceName,
+						Port: netv1.ServiceBackendPort{Number: 80},
+					},
+				},
+			},
+		}
+	}
+
+	t.Run("no ingresses", func(t *testing.T) {
+		_, ok := getDefaultBackendService([]netv1.Ingress{})
+		require.False(t, ok, "expected no default backend service when no ingress has one defined")
+	})
+
+	t.Run("one ingress with default backend", func(t *testing.T) {
+		ingresses := []netv1.Ingress{
+			someIngress(time.Now(), "foo-svc"),
+		}
+
+		svc, ok := getDefaultBackendService(ingresses)
+		require.True(t, ok, "expected default backend service when one ingress has one defined")
+
+		assert.Equal(t, "foo-namespace.foo-svc.80", *svc.Name)
+		assert.Equal(t, "foo-svc.foo-namespace.80.svc", *svc.Host)
+		assert.NotNil(t, svc.Parent)
+
+		require.Len(t, svc.Routes, 1)
+		require.Len(t, svc.Routes[0].Paths, 1)
+		assert.Equal(t, "/", *svc.Routes[0].Paths[0])
+	})
+
+	t.Run("multiple ingresses with default backend", func(t *testing.T) {
+		now := time.Now()
+		ingresses := []netv1.Ingress{
+			someIngress(now.Add(time.Second), "newer"),
+			someIngress(now, "older"),
+		}
+
+		svc, ok := getDefaultBackendService(ingresses)
+		require.True(t, ok, "expected default backend service when there's at least one ingress with one defined")
+
+		assert.Equal(t, "foo-namespace.older.80", *svc.Name, "expected older ingress to be selected")
+		assert.Equal(t, "older.foo-namespace.80.svc", *svc.Host)
+		assert.NotNil(t, svc.Parent)
+
+		require.Len(t, svc.Routes, 1)
+		require.Len(t, svc.Routes[0].Paths, 1)
+		assert.Equal(t, "/", *svc.Routes[0].Paths[0])
 	})
 }

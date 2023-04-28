@@ -111,8 +111,6 @@ func (p *Parser) Build() (*kongstate.KongState, []failures.ResourceFailure) {
 		}
 	}
 
-	result.ExpressionRoutes = p.featureEnabledExpressionRoutes
-
 	// generate Upstreams and Targets from service defs
 	result.Upstreams = p.getUpstreams(ingressRules.ServiceNameToServices)
 

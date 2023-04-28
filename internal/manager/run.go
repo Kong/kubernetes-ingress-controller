@@ -74,12 +74,15 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 		return fmt.Errorf("could not retrieve Kong admin root(s): %w", err)
 	}
 
-	dbMode, routerFlavor, v, err := kongconfig.ValidateRoots(kongRoots, c.SkipCACertificates)
+	kongStartUpConfig, err := kongconfig.ValidateRoots(kongRoots, c.SkipCACertificates)
 	if err != nil {
 		return fmt.Errorf("could not validate Kong admin root(s) configuration: %w", err)
 	}
+	dbMode := kongStartUpConfig.DBMode
+	routerFlavor := kongStartUpConfig.RouterFlavor
+	v := kongStartUpConfig.Version
 
-	err = c.ValidateGatewayDiscovery(dbMode)
+	err = c.ValidateGatewayDiscovery(kongStartUpConfig.DBMode)
 	if err != nil {
 		return err
 	}
@@ -163,6 +166,8 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 			dataplaneClient.EnableExpressionRoutes()
 			setupLog.Info("expression routes mode has been enabled")
 		}
+	} else {
+		setupLog.Info(fmt.Sprintf("ExpressionRoutes feature gate enabled, but Gateway run with %q router flavor, using this instead", routerFlavor))
 	}
 
 	var kubernetesStatusQueue *status.Queue

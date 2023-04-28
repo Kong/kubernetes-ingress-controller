@@ -18,11 +18,11 @@ func TestRoot(t *testing.T) {
 func TestValidateRoots(t *testing.T) {
 	var root Root
 	require.NoError(t, json.Unmarshal([]byte(dblessConfigJSON), &root))
-	dbmode, routerFlavor, v, err := ValidateRoots([]Root{root, root}, false)
+	kongOptions, err := ValidateRoots([]Root{root, root}, false)
 	require.NoError(t, err)
-	assert.Equal(t, "off", dbmode)
-	assert.Equal(t, "traditional", routerFlavor)
-	assert.Equal(t, "3.1.1", v.String())
+	assert.Equal(t, "off", kongOptions.DBMode)
+	assert.Equal(t, "traditional", kongOptions.RouterFlavor)
+	assert.Equal(t, "3.1.1", kongOptions.Version.String())
 }
 
 const dblessConfigJSON = `{

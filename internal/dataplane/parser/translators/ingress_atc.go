@@ -16,7 +16,7 @@ import (
 
 var (
 	headerAnnotationRegexPrefix = "~*"
-	// TODO: list all available matchers instead.
+
 	validMethods = regexp.MustCompile(`\A[A-Z]+$`)
 
 	// hostnames are complicated. shamelessly cribbed from https://stackoverflow.com/a/18494710
@@ -146,8 +146,8 @@ func pathMatcherFromIngressPath(httpIngressPath netv1.HTTPIngressPath, regexPath
 		}
 		return atc.Or(
 			// otherwise, match /<path>/* or /<path>.
-			atc.NewPredicateHTTPPath(atc.OpEqual, "/"+base+"/"),
-			atc.NewPredicateHTTPPath(atc.OpPrefixMatch, "/"+base),
+			atc.NewPredicateHTTPPath(atc.OpEqual, "/"+base),
+			atc.NewPredicateHTTPPath(atc.OpPrefixMatch, "/"+base+"/"),
 		)
 	// Exact paths.
 	case netv1.PathTypeExact:
@@ -180,6 +180,7 @@ func protocolMatcherFromProtocols(protocols []string) atc.Matcher {
 	matchers := []atc.Matcher{}
 	for _, protocol := range protocols {
 		if !util.ValidateProtocol(protocol) {
+			fmt.Println("invalid protocol: ", protocol)
 			continue
 		}
 		matchers = append(matchers, atc.NewPredicateNetProtocol(atc.OpEqual, protocol))
@@ -214,7 +215,7 @@ func headerMatcherFromHeaders(headers map[string][]string) atc.Matcher {
 		}
 		matchers = append(matchers, singleHeaderMatcher)
 	}
-	// matchers from different headers are "and"ed to match all rules to match headers.
+	// matchers from different headers are "and"ed to match al rules to match headers.
 	return atc.And(matchers...)
 }
 

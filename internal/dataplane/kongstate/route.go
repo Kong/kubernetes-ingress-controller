@@ -58,6 +58,11 @@ func (r *Route) normalizeProtocols() {
 	if grpc && http {
 		r.Protocols = kong.StringSlice("http", "https")
 	}
+
+	if grpc {
+		// grpc(s) doesn't accept strip_path
+		r.StripPath = nil
+	}
 }
 
 // useSSLProtocol updates the protocol of the route to either https or grpcs, or https and grpcs.
@@ -263,16 +268,6 @@ func (r *Route) override(log logrus.FieldLogger, kongIngress *configurationv1.Ko
 	r.overrideByKongIngress(log, kongIngress)
 	r.overrideByAnnotation(log)
 	r.normalizeProtocols()
-
-	if !r.ExpressionRoutes {
-		for _, val := range r.Protocols {
-			if *val == "grpc" || *val == "grpcs" {
-				// grpc(s) doesn't accept strip_path
-				r.StripPath = nil
-				break
-			}
-		}
-	}
 }
 
 // overrideByKongIngress sets Route fields by KongIngress.

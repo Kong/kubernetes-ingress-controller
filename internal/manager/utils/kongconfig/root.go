@@ -16,39 +16,51 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/adminapi"
 )
 
+// KongStartUpOptions includes start up configurations of Kong that could change behavior of Kong Ingress Controller.
+// The fields are extracted from results of Kong gateway configuration root.
+type KongStartUpOptions struct {
+	DBMode       string
+	RouterFlavor string
+	Version      kong.Version
+}
+
 // ValidateRoots checks if all provided kong roots are the same given that we
 // only care about the fact that the following fields are the same:
 // - database setting
 // - router flavor
 // - kong version.
-func ValidateRoots(roots []Root, skipCACerts bool) (string, string, kong.Version, error) {
+func ValidateRoots(roots []Root, skipCACerts bool) (*KongStartUpOptions, error) {
 	if err := errors.Join(lo.Map(roots, validateRootFunc(skipCACerts))...); err != nil {
-		return "", "", kong.Version{}, fmt.Errorf("failed to validate kong Roots: %w", err)
+		return nil, fmt.Errorf("failed to validate kong Roots: %w", err)
 	}
 
 	// To be dropped as a part of https://github.com/Kong/kubernetes-ingress-controller/issues/3590.
 	uniqs := lo.UniqBy(roots, getRootKeyFunc(skipCACerts))
 	if len(uniqs) != 1 {
-		return "", "", kong.Version{},
+		return nil,
 			fmt.Errorf("there should only be one dbmode:version combination across configured kong instances while there are (%d): %v", len(uniqs), uniqs)
 	}
 
 	dbMode, err := DBModeFromRoot(uniqs[0])
 	if err != nil {
-		return "", "", kong.Version{}, err
+		return nil, err
 	}
 
 	routerFlavor, err := RouterFlavorFromRoot(uniqs[0])
 	if err != nil {
-		return "", "", kong.Version{}, err
+		return nil, err
 	}
 
 	kongVersion, err := KongVersionFromRoot(uniqs[0])
 	if err != nil {
-		return "", "", kong.Version{}, err
+		return nil, err
 	}
 
-	return dbMode, routerFlavor, kongVersion, nil
+	return &KongStartUpOptions{
+		DBMode:       dbMode,
+		RouterFlavor: routerFlavor,
+		Version:      kongVersion,
+	}, nil
 }
 
 func extractConfigurationFromRoot(r Root) (map[string]any, error) {
@@ -72,7 +84,7 @@ func DBModeFromRoot(r Root) (string, error) {
 	dbMode, ok := rootConfig["database"].(string)
 	if !ok {
 		return "", fmt.Errorf(
-			"invalid database configuration, expected a string got %t",
+			"invalid database configuration, expected a string got %T",
 			rootConfig["database"],
 		)
 	}
@@ -88,7 +100,7 @@ func RouterFlavorFromRoot(r Root) (string, error) {
 	routerFlavor, ok := rootConfig["router_flavor"].(string)
 	if !ok {
 		return "", fmt.Errorf(
-			"invalid router_flavor configuration, expected a string got %t",
+			"invalid router_flavor configuration, expected a string got %T",
 			rootConfig["router_flavor"],
 		)
 	}

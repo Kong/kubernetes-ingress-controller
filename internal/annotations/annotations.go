@@ -162,6 +162,9 @@ func ExtractProtocolName(anns map[string]string) string {
 // ExtractProtocolNames extracts the protocols supplied in the annotation.
 func ExtractProtocolNames(anns map[string]string) []string {
 	val := anns[AnnotationPrefix+ProtocolsKey]
+	if len(val) == 0 {
+		return nil
+	}
 	return strings.Split(val, ",")
 }
 

@@ -17,17 +17,23 @@ type PluginSchemaStore interface {
 	Schema(ctx context.Context, pluginName string) (map[string]interface{}, error)
 }
 
+// GenerateDeckContentParams is the parameters used to generate deck contents.
+type GenerateDeckContentParams struct {
+	FormatVersion    string
+	SelectorTags     []string
+	ExpressionRoutes bool
+	PluginSchemas    PluginSchemaStore
+}
+
 // ToDeckContent generates a decK configuration from `k8sState` and auxiliary parameters.
 func ToDeckContent(
 	ctx context.Context,
 	log logrus.FieldLogger,
 	k8sState *kongstate.KongState,
-	schemas PluginSchemaStore,
-	selectorTags []string,
-	formatVersion string,
+	params GenerateDeckContentParams,
 ) *file.Content {
 	var content file.Content
-	content.FormatVersion = formatVersion
+	content.FormatVersion = params.FormatVersion
 	var err error
 
 	for _, s := range k8sState.Services {
@@ -36,7 +42,7 @@ func ToDeckContent(
 			plugin := file.FPlugin{
 				Plugin: *p.DeepCopy(),
 			}
-			err = fillPlugin(ctx, &plugin, schemas)
+			err = fillPlugin(ctx, &plugin, params.PluginSchemas)
 			if err != nil {
 				log.Errorf("failed to fill-in defaults for plugin: %s", *plugin.Name)
 			}
@@ -48,13 +54,13 @@ func ToDeckContent(
 
 		for _, r := range s.Routes {
 			route := file.FRoute{Route: r.Route}
-			fillRoute(&route.Route, k8sState.ExpressionRoutes)
+			fillRoute(&route.Route, params.ExpressionRoutes)
 
 			for _, p := range r.Plugins {
 				plugin := file.FPlugin{
 					Plugin: *p.DeepCopy(),
 				}
-				err = fillPlugin(ctx, &plugin, schemas)
+				err = fillPlugin(ctx, &plugin, params.PluginSchemas)
 				if err != nil {
 					log.Errorf("failed to fill-in defaults for plugin: %s", *plugin.Name)
 				}
@@ -78,7 +84,7 @@ func ToDeckContent(
 		plugin := file.FPlugin{
 			Plugin: plugin.Plugin,
 		}
-		err = fillPlugin(ctx, &plugin, schemas)
+		err = fillPlugin(ctx, &plugin, params.PluginSchemas)
 		if err != nil {
 			log.Errorf("failed to fill-in defaults for plugin: %s", *plugin.Name)
 		}
@@ -171,9 +177,9 @@ func ToDeckContent(
 	sort.SliceStable(content.Consumers, func(i, j int) bool {
 		return strings.Compare(*content.Consumers[i].Username, *content.Consumers[j].Username) > 0
 	})
-	if len(selectorTags) > 0 {
+	if len(params.SelectorTags) > 0 {
 		content.Info = &file.Info{
-			SelectorTags: selectorTags,
+			SelectorTags: params.SelectorTags,
 		}
 	}
 

@@ -63,6 +63,7 @@ func (r *Route) normalizeProtocols() {
 		// grpc(s) doesn't accept strip_path
 		r.StripPath = nil
 	}
+
 }
 
 // useSSLProtocol updates the protocol of the route to either https or grpcs, or https and grpcs.
@@ -116,6 +117,9 @@ func (r *Route) overrideStripPath(anns map[string]string) {
 
 func (r *Route) overrideProtocols(anns map[string]string) {
 	protocols := annotations.ExtractProtocolNames(anns)
+	if len(protocols) == 0 {
+		return
+	}
 	var prots []*string
 	for _, prot := range protocols {
 		if !util.ValidateProtocol(prot) {

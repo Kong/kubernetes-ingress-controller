@@ -11,6 +11,7 @@ import (
 	netv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 )
@@ -1472,4 +1473,85 @@ func TestPathsFromIngressPathsRegexPrefix(t *testing.T) {
 			assert.Equal(t, tt.out, PathsFromIngressPaths(tt.in, true))
 		})
 	}
+}
+
+func TestMaybePrependRegexPrefix(t *testing.T) {
+	testCases := []struct {
+		name                 string
+		path                 string
+		controllerPrefix     string
+		applyLegacyHeuristic bool
+		expected             string
+	}{
+		{
+			name:             "default controller regex prefix - prefixed path",
+			path:             "/~/v1/api/packages",
+			controllerPrefix: ControllerPathRegexPrefix,
+			expected:         "~/v1/api/packages",
+		},
+		{
+			name:             "default controller regex prefix - not prefixed path",
+			path:             "/v1/api/packages",
+			controllerPrefix: ControllerPathRegexPrefix,
+			expected:         "/v1/api/packages",
+		},
+		{
+			name:             "custom controller regex prefix - prefixed path",
+			path:             "##/v1/api/packages",
+			controllerPrefix: "##",
+			expected:         "~/v1/api/packages",
+		},
+		{
+			name:             "custom controller regex prefix - not prefixed path",
+			path:             "/v1/api/packages",
+			controllerPrefix: "##",
+			expected:         "/v1/api/packages",
+		},
+		{
+			name:                 "default controller regex prefix - path not prefixed, but legacy heuristic is applied",
+			path:                 "/v1/api/resource/\\d+/",
+			controllerPrefix:     ControllerPathRegexPrefix,
+			applyLegacyHeuristic: true,
+			expected:             "~/v1/api/resource/\\d+/",
+		},
+		{
+			name:                 "default controller regex prefix - path not prefixed, no legacy heuristic is applied",
+			path:                 "/v1/api/resource/\\d+/",
+			controllerPrefix:     ControllerPathRegexPrefix,
+			applyLegacyHeuristic: false,
+			expected:             "/v1/api/resource/\\d+/",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			result := MaybePrependRegexPrefix(tc.path, tc.controllerPrefix, tc.applyLegacyHeuristic)
+			require.Equal(t, tc.expected, result)
+		})
+	}
+}
+
+func TestMaybePrependRegexPrefixForIngressV1Fn(t *testing.T) {
+	// Let it be const as the heuristic logic is already tested in TestMaybePrependRegexPrefix.
+	const applyLegacyHeuristic = true
+
+	t.Run("ingress with a custom regex prefix generates fn with a custom prefix", func(t *testing.T) {
+		ingress := &netv1.Ingress{
+			ObjectMeta: metav1.ObjectMeta{
+				Annotations: map[string]string{
+					annotations.AnnotationPrefix + annotations.RegexPrefixKey: "##",
+				},
+			},
+		}
+
+		generatedMaybePrependRegexPrefixFn := MaybePrependRegexPrefixForIngressV1Fn(ingress, applyLegacyHeuristic)
+		result := generatedMaybePrependRegexPrefixFn("##/v1/api/packages")
+		require.Equal(t, "~/v1/api/packages", *result)
+	})
+
+	t.Run("ingress with no custom regex prefix generates fn with default prefix", func(t *testing.T) {
+		generatedMaybePrependRegexPrefixFn := MaybePrependRegexPrefixForIngressV1Fn(&netv1.Ingress{}, applyLegacyHeuristic)
+		result := generatedMaybePrependRegexPrefixFn("/~/v1/api/packages")
+		require.Equal(t, "~/v1/api/packages", *result)
+	})
 }

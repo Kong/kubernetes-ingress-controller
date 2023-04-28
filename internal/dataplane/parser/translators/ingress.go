@@ -2,14 +2,17 @@ package translators
 
 import (
 	"fmt"
+	"regexp"
 	"sort"
 	"strings"
 	"time"
 
 	"github.com/kong/go-kong/kong"
+	"github.com/samber/lo"
 	netv1 "k8s.io/api/networking/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 )
@@ -288,4 +291,37 @@ func flattenMultipleSlashes(path string) string {
 		out = append(out, c)
 	}
 	return string(out)
+}
+
+// legacyRegexPathExpression is the regular expression used by Kong <3.0 to determine if a path is not a regex.
+var legacyRegexPathExpression = regexp.MustCompile(`^[a-zA-Z0-9\.\-_~/%]*$`)
+
+// MaybePrependRegexPrefix takes a path, controller regex prefix, and a legacy heuristic toggle. It returns the path
+// with the Kong regex path prefix if it either began with the controller prefix or did not, but matched the legacy
+// heuristic, and the heuristic was enabled.
+func MaybePrependRegexPrefix(path, controllerPrefix string, applyLegacyHeuristic bool) string {
+	if strings.HasPrefix(path, controllerPrefix) {
+		path = strings.Replace(path, controllerPrefix, KongPathRegexPrefix, 1)
+	} else if applyLegacyHeuristic {
+		// this regex matches if the path _is not_ considered a regex by Kong 2.x
+		if legacyRegexPathExpression.FindString(path) == "" {
+			if !strings.HasPrefix(path, KongPathRegexPrefix) {
+				path = KongPathRegexPrefix + path
+			}
+		}
+	}
+	return path
+}
+
+// MaybePrependRegexPrefixForIngressV1Fn returns a function that prepends a regex prefix to a path for a given netv1.Ingress.
+func MaybePrependRegexPrefixForIngressV1Fn(ingress *netv1.Ingress, applyLegacyHeuristic bool) func(path string) *string {
+	// If the ingress has a regex prefix annotation, use that, otherwise use the controller default.
+	regexPrefix := ControllerPathRegexPrefix
+	if prefix, ok := ingress.ObjectMeta.Annotations[annotations.AnnotationPrefix+annotations.RegexPrefixKey]; ok {
+		regexPrefix = prefix
+	}
+
+	return func(path string) *string {
+		return lo.ToPtr(MaybePrependRegexPrefix(path, regexPrefix, applyLegacyHeuristic))
+	}
 }

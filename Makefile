@@ -286,6 +286,7 @@ E2E_TEST_RUN ?= ""
 KONG_CONTROLLER_FEATURE_GATES ?= GatewayAlpha=true
 GOTESTSUM_FORMAT ?= standard-verbose
 KONG_CLUSTER_VERSION ?= v1.26.0
+JUNIT_REPORT ?= /dev/null	
 
 .PHONY: test
 test: test.unit

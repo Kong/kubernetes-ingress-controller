@@ -929,7 +929,7 @@ func TestFromIngressV1(t *testing.T) {
 	t.Run("CombinedRoutes=on", func(t *testing.T) {
 		setupParser := func(t *testing.T, store store.Storer) *Parser {
 			p := mustNewParser(t, store)
-			p.EnableCombinedServiceRoutes()
+			p.featureFlags.CombinedServiceRoutes = true
 			return p
 		}
 
@@ -1150,8 +1150,7 @@ func TestFromIngressV1_RegexPrefix(t *testing.T) {
 		})
 		require.NoError(t, err)
 		p := mustNewParser(t, store)
-
-		p.EnableRegexPathPrefix()
+		p.featureFlags.RegexPathPrefix = true
 
 		parsedInfo := p.ingressRulesFromIngressV1()
 		assert.Equal("~/whatever$", *parsedInfo.ServiceNameToServices["foo-namespace.foo-svc.pnum-80"].Routes[0].Paths[0])

@@ -26,8 +26,11 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/adminapi"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/failures"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/parser"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/sendconfig"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/metrics"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 )
 
@@ -295,6 +298,14 @@ func (m mockConfigurationChangeDetector) HasConfigurationChanged(
 	return m.hasConfigurationChanged, nil
 }
 
+type noopKongConfigBuilder struct{}
+
+func (p noopKongConfigBuilder) BuildKongConfig() parser.KongConfigBuildingResult {
+	return parser.KongConfigBuildingResult{
+		KongState: &kongstate.KongState{},
+	}
+}
+
 func TestKongClientUpdate_AllExpectedClientsAreCalled(t *testing.T) {
 	t.Parallel()
 
@@ -436,6 +447,8 @@ func setupTestKongClient(
 		clientsProvider,
 		updateStrategyResolver,
 		configChangeDetector,
+		noopKongConfigBuilder{},
+		store.NewCacheStores(),
 	)
 	require.NoError(t, err)
 	return kongClient

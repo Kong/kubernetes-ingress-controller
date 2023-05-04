@@ -26,13 +26,11 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/parser"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/sendconfig"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/license"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/metrics"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 	k8sobj "github.com/kong/kubernetes-ingress-controller/v2/internal/util/kubernetes/object"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util/kubernetes/object/status"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/versions"
 )
 
 const (
@@ -46,6 +44,11 @@ const (
 // Dataplane Client - Kong - Public Types
 // -----------------------------------------------------------------------------
 
+// KongConfigBuilder builds a Kong configuration from a Kubernetes object cache.
+type KongConfigBuilder interface {
+	BuildKongConfig() parser.KongConfigBuildingResult
+}
+
 // KongClient is a threadsafe high level API client for the Kong data-plane(s)
 // which parses Kubernetes object caches into Kong Admin configurations and
 // sends them as updates to the data-plane(s) (Kong Admin API).
@@ -56,16 +59,6 @@ type KongClient struct {
 	// used to qualify support for any given Kubernetes object to be parsed
 	// into data-plane configuration.
 	ingressClass string
-
-	// enableCombinedServiceRoutes indicates that when translating Kubernetes
-	// ingress objects into Kong Admin API configuration we should disable the
-	// legacy logic which would create a single route per path and instead use
-	// the newer logic which combines them.
-	enableCombinedServiceRoutes bool
-
-	// enableExpressionRoutes indicates whether the data-plane client will
-	// translate kubernetes object to expression based routes.
-	enableExpressionRoutes bool
 
 	// requestTimeout is the maximum amount of time that should be waited for
 	// requests to the data-plane to receive a response.
@@ -95,10 +88,6 @@ type KongClient struct {
 	// kubernetesObjectReportLock is a mutex for thread-safety of
 	// kubernetes object reporting functionality.
 	kubernetesObjectReportLock sync.RWMutex
-
-	// additionalFeaturesLock is a mutex to enable thread-safety of enabling or
-	// disabling various features.
-	additionalFeaturesLock sync.RWMutex
 
 	// kubernetesObjectStatusQueue is a queue that needs to be messaged whenever
 	// a Kubernetes object has had configuration for itself successfully applied
@@ -136,12 +125,8 @@ type KongClient struct {
 	// configChangeDetector detects changes in the configuration.
 	configChangeDetector sendconfig.ConfigurationChangeDetector
 
-	// licenseAgent manages Konnect license retrieval.
-	licenseAgent licenseGetter
-}
-
-type licenseGetter interface {
-	GetLicense() kong.License
+	// kongConfigBuilder is used to translate Kubernetes objects into Kong configuration.
+	kongConfigBuilder KongConfigBuilder
 }
 
 // NewKongClient provides a new KongClient object after connecting to the
@@ -157,16 +142,16 @@ func NewKongClient(
 	clientsProvider clients.AdminAPIClientsProvider,
 	updateStrategyResolver sendconfig.UpdateStrategyResolver,
 	configChangeDetector sendconfig.ConfigurationChangeDetector,
+	parser KongConfigBuilder,
+	cacheStores store.CacheStores,
 ) (*KongClient, error) {
-	// build the client object
-	cache := store.NewCacheStores()
 	c := &KongClient{
 		logger:                 logger,
 		ingressClass:           ingressClass,
 		requestTimeout:         timeout,
 		diagnostic:             diagnostic,
 		prometheusMetrics:      metrics.NewCtrlFuncMetrics(),
-		cache:                  &cache,
+		cache:                  &cacheStores,
 		kongConfig:             kongConfig,
 		eventRecorder:          eventRecorder,
 		dbmode:                 dbMode,
@@ -174,6 +159,7 @@ func NewKongClient(
 		configStatusNotifier:   clients.NoOpConfigStatusNotifier{},
 		updateStrategyResolver: updateStrategyResolver,
 		configChangeDetector:   configChangeDetector,
+		kongConfigBuilder:      parser,
 	}
 
 	return c, nil
@@ -353,46 +339,6 @@ func (c *KongClient) KubernetesObjectConfigurationStatus(obj client.Object) k8so
 }
 
 // -----------------------------------------------------------------------------
-// Dataplane Client - Kong - Optional Features
-// -----------------------------------------------------------------------------
-
-// EnableCombinedServiceRoutes turns on the combined service routes feature for
-// the Kong Dataplane client.
-func (c *KongClient) EnableCombinedServiceRoutes() {
-	c.additionalFeaturesLock.Lock()
-	defer c.additionalFeaturesLock.Unlock()
-	c.enableCombinedServiceRoutes = true
-}
-
-// AreCombinedServiceRoutesEnabled determines whether the combined service
-// routes translation mode has been enabled, or if the legacy logic is being
-// used. When enabled this changes the logic to try and combine multiple paths
-// into single routes, but it also changes the names of existing routes and so
-// it should be considered disruptive as it will temporarily drop routes when
-// it's first enabled.
-func (c *KongClient) AreCombinedServiceRoutesEnabled() bool {
-	c.additionalFeaturesLock.RLock()
-	defer c.additionalFeaturesLock.RUnlock()
-	return c.enableCombinedServiceRoutes
-}
-
-func (c *KongClient) EnableExpressionRoutes() {
-	c.additionalFeaturesLock.Lock()
-	defer c.additionalFeaturesLock.Unlock()
-	c.enableExpressionRoutes = true
-}
-
-func (c *KongClient) AreExpressionRoutesEnabled() bool {
-	c.additionalFeaturesLock.RLock()
-	defer c.additionalFeaturesLock.RUnlock()
-	return c.enableExpressionRoutes
-}
-
-func (c *KongClient) EnableLicenseAgent(agent *license.Agent) {
-	c.licenseAgent = agent
-}
-
-// -----------------------------------------------------------------------------
 // Dataplane Client - Kong - Interface Implementation
 // -----------------------------------------------------------------------------
 
@@ -410,49 +356,18 @@ func (c *KongClient) Update(ctx context.Context) error {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
-	// build the kongstate object from the Kubernetes objects in the storer
-	storer := store.New(*c.cache, c.ingressClass, c.logger)
-
-	// initialize a parser
 	c.logger.Debug("parsing kubernetes objects into data-plane configuration")
-
-	p, err := parser.NewParser(c.logger, storer)
-	if err != nil {
-		return fmt.Errorf("failed to create parser: %w", err)
-	}
-
-	if c.AreKubernetesObjectReportsEnabled() {
-		p.EnableKubernetesObjectReports()
-	}
-	if c.AreCombinedServiceRoutesEnabled() {
-		p.EnableCombinedServiceRoutes()
-	}
-	if c.AreExpressionRoutesEnabled() {
-		p.EnableExpressionRoutes()
-	}
-
-	if c.licenseAgent != nil {
-		c.logger.Debug("retrieving license from agent and adding it to config")
-		p.InjectLicense(c.licenseAgent.GetLicense())
-	}
-	formatVersion := "1.1"
-	if versions.GetKongVersion().MajorMinorOnly().GTE(versions.ExplicitRegexPathVersionCutoff) {
-		p.EnableRegexPathPrefix()
-		formatVersion = "3.0"
-	}
-
-	// parse the Kubernetes objects from the storer into Kong configuration
-	kongstate, translationFailures := p.Build()
-	if failuresCount := len(translationFailures); failuresCount > 0 {
+	parsingResult := c.kongConfigBuilder.BuildKongConfig()
+	if failuresCount := len(parsingResult.TranslationFailures); failuresCount > 0 {
 		c.prometheusMetrics.RecordTranslationFailure()
-		c.recordResourceFailureEvents(translationFailures, KongConfigurationTranslationFailedEventReason)
+		c.recordResourceFailureEvents(parsingResult.TranslationFailures, KongConfigurationTranslationFailedEventReason)
 		c.logger.Debugf("%d translation failures have occurred when building data-plane configuration", failuresCount)
 	} else {
 		c.prometheusMetrics.RecordTranslationSuccess()
 		c.logger.Debug("successfully built data-plane configuration")
 	}
 
-	shas, err := c.sendOutToClients(ctx, kongstate, formatVersion, c.kongConfig)
+	shas, err := c.sendOutToClients(ctx, parsingResult.KongState, c.kongConfig)
 	if err != nil {
 		c.configStatusNotifier.NotifyConfigStatus(ctx, clients.ConfigStatusApplyFailed)
 		return err
@@ -461,7 +376,7 @@ func (c *KongClient) Update(ctx context.Context) error {
 	// succeeded to apply configuration to Kong gateway.
 	// notify the receiver of config status that translation error happened when there are translation errors,
 	// otherwise notify that config status is OK.
-	if len(translationFailures) > 0 {
+	if len(parsingResult.TranslationFailures) > 0 {
 		c.configStatusNotifier.NotifyConfigStatus(ctx, clients.ConfigStatusTranslationErrorHappened)
 	} else {
 		c.configStatusNotifier.NotifyConfigStatus(ctx, clients.ConfigStatusOK)
@@ -472,9 +387,8 @@ func (c *KongClient) Update(ctx context.Context) error {
 		// if the configuration SHAs that have just been pushed are different than
 		// what's been previously pushed.
 		if !slices.Equal(shas, c.SHAs) {
-			report := p.GenerateKubernetesObjectReport()
-			c.logger.Debugf("triggering report for %d configured Kubernetes objects", len(report))
-			c.triggerKubernetesObjectReport(report, translationFailures)
+			c.logger.Debugf("triggering report for %d configured Kubernetes objects", len(parsingResult.ConfiguredKubernetesObjects))
+			c.triggerKubernetesObjectReport(parsingResult.ConfiguredKubernetesObjects, parsingResult.TranslationFailures)
 		} else {
 			c.logger.Debug("no configuration change; resource status update not necessary, skipping")
 		}
@@ -485,12 +399,12 @@ func (c *KongClient) Update(ctx context.Context) error {
 // sendOutToClients will generate deck content (config) from the provided kong state
 // and send it out to each of the configured clients.
 func (c *KongClient) sendOutToClients(
-	ctx context.Context, s *kongstate.KongState, formatVersion string, config sendconfig.Config,
+	ctx context.Context, s *kongstate.KongState, config sendconfig.Config,
 ) ([]string, error) {
 	clients := c.clientsProvider.AllClients()
 	c.logger.Debugf("sending configuration to %d clients", len(clients))
 	shas, err := iter.MapErr(clients, func(client **adminapi.Client) (string, error) {
-		newSHA, err := c.sendToClient(ctx, *client, s, formatVersion, config)
+		newSHA, err := c.sendToClient(ctx, *client, s, config)
 		return HandleSendToClientResult(*client, c.logger, newSHA, err)
 	},
 	)
@@ -509,16 +423,15 @@ func (c *KongClient) sendToClient(
 	ctx context.Context,
 	client *adminapi.Client,
 	s *kongstate.KongState,
-	formatVersion string,
 	config sendconfig.Config,
 ) (string, error) {
 	logger := c.logger.WithField("url", client.AdminAPIClient().BaseRootURL())
 
 	// generate the deck configuration to be applied to the admin API
 	deckGenParams := deckgen.GenerateDeckContentParams{
-		FormatVersion:    formatVersion,
+		FormatVersion:    config.DeckFileFormatVersion,
 		SelectorTags:     config.FilterTags,
-		ExpressionRoutes: c.AreExpressionRoutesEnabled(),
+		ExpressionRoutes: config.ExpressionRoutes,
 		PluginSchemas:    client.PluginSchemaStore(),
 	}
 	logger.Debug("converting configuration to deck config")

@@ -1276,7 +1276,7 @@ func TestIngressRulesFromHTTPRoutesWithCombinedServiceRoutes(t *testing.T) {
 	for _, tt := range testCases {
 		t.Run(tt.msg, func(t *testing.T) {
 			p := mustNewParser(t, fakestore)
-			p.EnableCombinedServiceRoutes()
+			p.featureFlags.CombinedServiceRoutes = true
 
 			ingressRules := newIngressRules()
 
@@ -1449,10 +1449,10 @@ func TestIngressRulesFromHTTPRoutes_RegexPrefix(t *testing.T) {
 	require.NoError(t, err)
 	parser := mustNewParser(t, fakestore)
 	require.NoError(t, err)
-	parser.EnableRegexPathPrefix()
+	parser.featureFlags.RegexPathPrefix = true
 	parserWithCombinedServiceRoutes := mustNewParser(t, fakestore)
-	parserWithCombinedServiceRoutes.EnableRegexPathPrefix()
-	parserWithCombinedServiceRoutes.EnableCombinedServiceRoutes()
+	parserWithCombinedServiceRoutes.featureFlags.RegexPathPrefix = true
+	parserWithCombinedServiceRoutes.featureFlags.CombinedServiceRoutes = true
 	httpPort := gatewayv1beta1.PortNumber(80)
 
 	for _, tt := range []testCaseIngressRulesFromHTTPRoutes{

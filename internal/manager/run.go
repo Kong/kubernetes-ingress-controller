@@ -21,6 +21,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/clients"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/gateway"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/parser"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/sendconfig"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/konnect"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/license"
@@ -28,15 +29,10 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/manager/metadata"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/manager/telemetry"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/manager/utils/kongconfig"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util/kubernetes/object/status"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/versions"
-)
-
-const (
-	// kongRouterFlavorExpressions is the value used in router_flavor of kong configuration
-	// to enable expression based router of kong.
-	kongRouterFlavorExpressions = "expressions"
 )
 
 // -----------------------------------------------------------------------------
@@ -52,7 +48,7 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 	gateway.SetControllerName(gatewayv1beta1.GatewayController(c.GatewayAPIControllerName))
 
 	setupLog.Info("getting enabled options and features")
-	featureGates, err := featuregates.Setup(setupLog, c.FeatureGates)
+	featureGates, err := featuregates.New(setupLog, c.FeatureGates)
 	if err != nil {
 		return fmt.Errorf("failed to configure feature gates: %w", err)
 	}
@@ -93,15 +89,18 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 		return err
 	}
 
-	semV := semver.Version{Major: v.Major(), Minor: v.Minor(), Patch: v.Patch()}
-	versions.SetKongVersion(semV)
+	kongSemVersion := semver.Version{Major: v.Major(), Minor: v.Minor(), Patch: v.Patch()}
+	versions.SetKongVersion(kongSemVersion)
 
 	kongConfig := sendconfig.Config{
-		Version:            semV,
-		InMemory:           (dbMode == "off") || (dbMode == ""),
-		Concurrency:        c.Concurrency,
-		FilterTags:         c.FilterTags,
-		SkipCACertificates: c.SkipCACertificates,
+		Version:               kongSemVersion,
+		InMemory:              (dbMode == "off") || (dbMode == ""),
+		Concurrency:           c.Concurrency,
+		FilterTags:            c.FilterTags,
+		SkipCACertificates:    c.SkipCACertificates,
+		EnableReverseSync:     c.EnableReverseSync,
+		ExpressionRoutes:      featureGates.Enabled(featuregates.ExpressionRoutesFeature),
+		DeckFileFormatVersion: versions.DeckFileFormat(versions.GetKongVersion()),
 	}
 	kongConfig.Init(ctx, setupLog, initialKongClients)
 
@@ -138,6 +137,23 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 		return err
 	}
 
+	parserFeatureFlags := parser.NewFeatureFlags(
+		deprecatedLogger,
+		featureGates,
+		versions.GetKongVersion(),
+		routerFlavor,
+		c.UpdateStatus,
+	)
+	cache := store.NewCacheStores()
+	configParser, err := parser.NewParser(
+		deprecatedLogger,
+		store.New(cache, c.IngressClassName, deprecatedLogger),
+		parserFeatureFlags,
+	)
+	if err != nil {
+		return fmt.Errorf("failed to create parser: %w", err)
+	}
+
 	updateStrategyResolver := sendconfig.NewDefaultUpdateStrategyResolver(kongConfig, deprecatedLogger)
 	configurationChangeDetector := sendconfig.NewDefaultClientConfigurationChangeDetector(deprecatedLogger)
 	dataplaneClient, err := dataplane.NewKongClient(
@@ -151,6 +167,8 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 		clientsManager,
 		updateStrategyResolver,
 		configurationChangeDetector,
+		configParser,
+		cache,
 	)
 	if err != nil {
 		return fmt.Errorf("failed to initialize kong data-plane client: %w", err)
@@ -160,20 +178,6 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 	synchronizer, err := setupDataplaneSynchronizer(setupLog, deprecatedLogger, mgr, dataplaneClient, c.ProxySyncSeconds)
 	if err != nil {
 		return fmt.Errorf("unable to initialize dataplane synchronizer: %w", err)
-	}
-
-	if enabled, ok := featureGates[featuregates.CombinedRoutesFeature]; ok && enabled {
-		dataplaneClient.EnableCombinedServiceRoutes()
-		setupLog.Info("combined routes mode has been enabled")
-	}
-
-	if enabled, ok := featureGates[featuregates.ExpressionRoutesFeature]; ok && enabled {
-		if routerFlavor == kongRouterFlavorExpressions {
-			dataplaneClient.EnableExpressionRoutes()
-			setupLog.Info("expression routes mode has been enabled")
-		}
-	} else {
-		setupLog.Info(fmt.Sprintf("ExpressionRoutes feature gate enabled, but Gateway run with %q router flavor, using this instead", routerFlavor))
 	}
 
 	var kubernetesStatusQueue *status.Queue
@@ -253,7 +257,7 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 		if err != nil {
 			return fmt.Errorf("could not add license agent to manager: %w", err)
 		}
-		dataplaneClient.EnableLicenseAgent(agent)
+		configParser.InjectLicenseGetter(agent)
 	}
 
 	if c.AnonymousReports {

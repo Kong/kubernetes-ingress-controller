@@ -29,7 +29,7 @@ func (p *Parser) ingressRulesFromUDPRoutes() ingressRules {
 		} else {
 			// at this point the object has been configured and can be
 			// reported as successfully parsed.
-			p.ReportKubernetesObjectUpdate(udproute)
+			p.reportKubernetesObjectUpdate(udproute)
 		}
 	}
 

@@ -80,7 +80,7 @@ func (p *Parser) ingressRulesFromTCPIngressV1beta1() ingressRules {
 		}
 
 		if objectSuccessfullyParsed {
-			p.ReportKubernetesObjectUpdate(ingress)
+			p.reportKubernetesObjectUpdate(ingress)
 		}
 	}
 
@@ -143,7 +143,7 @@ func (p *Parser) ingressRulesFromUDPIngressV1beta1() ingressRules {
 		}
 
 		if objectSuccessfullyParsed {
-			p.ReportKubernetesObjectUpdate(ingress)
+			p.reportKubernetesObjectUpdate(ingress)
 		}
 	}
 

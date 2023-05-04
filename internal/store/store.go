@@ -24,6 +24,7 @@ import (
 
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
+	discoveryv1 "k8s.io/api/discovery/v1"
 	netv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured/unstructuredscheme"
@@ -70,7 +71,7 @@ func (e ErrNotFound) Error() string {
 type Storer interface {
 	GetSecret(namespace, name string) (*corev1.Secret, error)
 	GetService(namespace, name string) (*corev1.Service, error)
-	GetEndpointsForService(namespace, name string) (*corev1.Endpoints, error)
+	GetEndpointSlicesForService(namespace, name string) ([]*discoveryv1.EndpointSlice, error)
 	GetKongIngress(namespace, name string) (*kongv1.KongIngress, error)
 	GetKongPlugin(namespace, name string) (*kongv1.KongPlugin, error)
 	GetKongClusterPlugin(name string) (*kongv1.KongClusterPlugin, error)
@@ -127,7 +128,7 @@ type CacheStores struct {
 	IngressClassV1 cache.Store
 	Service        cache.Store
 	Secret         cache.Store
-	Endpoint       cache.Store
+	EndpointSlice  cache.Store
 
 	// Gateway API Stores
 	HTTPRoute      cache.Store
@@ -161,7 +162,7 @@ func NewCacheStores() CacheStores {
 		IngressClassV1: cache.NewStore(clusterResourceKeyFunc),
 		Service:        cache.NewStore(keyFunc),
 		Secret:         cache.NewStore(keyFunc),
-		Endpoint:       cache.NewStore(keyFunc),
+		EndpointSlice:  cache.NewStore(keyFunc),
 		// Gateway API Stores
 		HTTPRoute:      cache.NewStore(keyFunc),
 		UDPRoute:       cache.NewStore(keyFunc),
@@ -244,8 +245,8 @@ func (c CacheStores) Get(obj runtime.Object) (item interface{}, exists bool, err
 		return c.Service.Get(obj)
 	case *corev1.Secret:
 		return c.Secret.Get(obj)
-	case *corev1.Endpoints:
-		return c.Endpoint.Get(obj)
+	case *discoveryv1.EndpointSlice:
+		return c.EndpointSlice.Get(obj)
 	// ----------------------------------------------------------------------------
 	// Kubernetes Gateway API Support
 	// ----------------------------------------------------------------------------
@@ -307,8 +308,8 @@ func (c CacheStores) Add(obj runtime.Object) error {
 		return c.Service.Add(obj)
 	case *corev1.Secret:
 		return c.Secret.Add(obj)
-	case *corev1.Endpoints:
-		return c.Endpoint.Add(obj)
+	case *discoveryv1.EndpointSlice:
+		return c.EndpointSlice.Add(obj)
 	// ----------------------------------------------------------------------------
 	// Kubernetes Gateway API Support
 	// ----------------------------------------------------------------------------
@@ -371,8 +372,8 @@ func (c CacheStores) Delete(obj runtime.Object) error {
 		return c.Service.Delete(obj)
 	case *corev1.Secret:
 		return c.Secret.Delete(obj)
-	case *corev1.Endpoints:
-		return c.Endpoint.Delete(obj)
+	case *discoveryv1.EndpointSlice:
+		return c.EndpointSlice.Delete(obj)
 	// ----------------------------------------------------------------------------
 	// Kubernetes Gateway API Support
 	// ----------------------------------------------------------------------------
@@ -726,18 +727,30 @@ func (s Store) ListKnativeIngresses() ([]*knative.Ingress, error) {
 	return ingresses, nil
 }
 
-// GetEndpointsForService returns the internal endpoints for service
-// 'namespace/name' inside k8s.
-func (s Store) GetEndpointsForService(namespace, name string) (*corev1.Endpoints, error) {
-	key := fmt.Sprintf("%v/%v", namespace, name)
-	eps, exists, err := s.stores.Endpoint.GetByKey(key)
+// GetEndpointSlicesForService returns all EndpointSlices for service
+// 'namespace/name' inside K8s.
+func (s Store) GetEndpointSlicesForService(namespace, name string) ([]*discoveryv1.EndpointSlice, error) {
+	// EndpointSlices are tied to a Service via a label.
+	req, err := labels.NewRequirement(discoveryv1.LabelServiceName, selection.Equals, []string{name})
 	if err != nil {
 		return nil, err
 	}
-	if !exists {
-		return nil, ErrNotFound{fmt.Sprintf("Endpoints for service %v not found", key)}
+	var endpointSlices []*discoveryv1.EndpointSlice
+	if err := cache.ListAll(
+		s.stores.EndpointSlice, labels.NewSelector().Add(*req),
+		func(obj interface{}) {
+			// Ensure the EndpointSlice is for the Service from the requested namespace.
+			if eps, ok := obj.(*discoveryv1.EndpointSlice); ok && eps.Namespace == namespace {
+				endpointSlices = append(endpointSlices, eps)
+			}
+		},
+	); err != nil {
+		return nil, err
 	}
-	return eps.(*corev1.Endpoints), nil
+	if len(endpointSlices) == 0 {
+		return nil, ErrNotFound{fmt.Sprintf("EndpointSlices for Service %s/%s not found", namespace, name)}
+	}
+	return endpointSlices, nil
 }
 
 // GetKongPlugin returns the 'name' KongPlugin resource in namespace.
@@ -1020,8 +1033,11 @@ func mkObjFromGVK(gvk schema.GroupVersionKind) (runtime.Object, error) {
 		return &corev1.Service{}, nil
 	case corev1.SchemeGroupVersion.WithKind("Secret"):
 		return &corev1.Secret{}, nil
-	case corev1.SchemeGroupVersion.WithKind("Endpoints"):
-		return &corev1.Endpoints{}, nil
+	// ----------------------------------------------------------------------------
+	// Kubernetes Discovery APIs
+	// ----------------------------------------------------------------------------
+	case discoveryv1.SchemeGroupVersion.WithKind("EndpointSlice"):
+		return &discoveryv1.EndpointSlice{}, nil
 	// ----------------------------------------------------------------------------
 	// Kubernetes Gateway APIs
 	// ----------------------------------------------------------------------------

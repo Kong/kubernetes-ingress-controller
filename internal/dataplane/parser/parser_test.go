@@ -2,7 +2,6 @@ package parser
 
 import (
 	"fmt"
-	"reflect"
 	"sort"
 	"strings"
 	"testing"
@@ -4044,13 +4043,15 @@ func TestGetEndpoints(t *testing.T) {
 						{
 							Name:       "default",
 							TargetPort: intstr.FromInt(80),
+							Port:       2080,
 						},
 					},
 				},
 			},
 			port: &corev1.ServicePort{
 				Name:       "default",
-				TargetPort: intstr.FromInt(2080),
+				TargetPort: intstr.FromInt(80),
+				Port:       2080,
 			},
 			proto: corev1.ProtocolTCP,
 			fn: func(string, string) (*corev1.Endpoints, error) {
@@ -4076,13 +4077,15 @@ func TestGetEndpoints(t *testing.T) {
 						{
 							Name:       "default",
 							TargetPort: intstr.FromInt(80),
+							Port:       2080,
 						},
 					},
 				},
 			},
 			port: &corev1.ServicePort{
 				Name:       "default",
-				TargetPort: intstr.FromInt(2080),
+				TargetPort: intstr.FromInt(80),
+				Port:       2080,
 			},
 			proto: corev1.ProtocolTCP,
 			fn: func(string, string) (*corev1.Endpoints, error) {
@@ -4113,6 +4116,7 @@ func TestGetEndpoints(t *testing.T) {
 			port: &corev1.ServicePort{
 				Name:       "default",
 				TargetPort: intstr.FromInt(80),
+				Port:       2080,
 			},
 			proto: corev1.ProtocolTCP,
 			fn: func(string, string) (*corev1.Endpoints, error) {
@@ -4351,9 +4355,7 @@ func TestGetEndpoints(t *testing.T) {
 	for _, testCase := range tests {
 		t.Run(testCase.name, func(t *testing.T) {
 			result := getEndpoints(logrus.New(), testCase.svc, testCase.port, testCase.proto, testCase.fn, testCase.isServiceUpstream)
-			if len(testCase.result) != len(result) {
-				t.Errorf("expected %v Endpoints but got %v", testCase.result, len(result))
-			}
+			require.Equal(t, testCase.result, result)
 		})
 	}
 }
@@ -4489,9 +4491,8 @@ func TestKnativeSelectSplit(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := knativeSelectSplit(tt.args.splits); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("knativeSelectSplit() = %v, want %v", got, tt.want)
-			}
+			result := knativeSelectSplit(tt.args.splits)
+			require.Equal(t, tt.want, result)
 		})
 	}
 }

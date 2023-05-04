@@ -63,7 +63,6 @@ func (r *Route) normalizeProtocols() {
 		// grpc(s) doesn't accept strip_path
 		r.StripPath = nil
 	}
-
 }
 
 // useSSLProtocol updates the protocol of the route to either https or grpcs, or https and grpcs.
@@ -237,7 +236,8 @@ func (r *Route) overrideByAnnotation(log logrus.FieldLogger) {
 	r.overridePreserveHost(r.Ingress.Annotations)
 	r.overrideRequestBuffering(log, r.Ingress.Annotations)
 	r.overrideResponseBuffering(log, r.Ingress.Annotations)
-
+	// skip the fields that are not supported when kong is using expression router:
+	// `protocols`, `regexPriority`, `methods`, `snis`, `hosts`, `headers`, `pathHandling`,
 	if !r.ExpressionRoutes {
 		r.overrideProtocols(r.Ingress.Annotations)
 		r.overrideRegexPriority(r.Ingress.Annotations)

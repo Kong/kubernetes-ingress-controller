@@ -33,6 +33,12 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/versions"
 )
 
+const (
+	// kongRouterFlavorExpressions is the value used in router_flavor of kong configuration
+	// to enable expression based router of kong.
+	kongRouterFlavorExpressions = "expressions"
+)
+
 // -----------------------------------------------------------------------------
 // Controller Manager - Setup & Run
 // -----------------------------------------------------------------------------
@@ -162,7 +168,7 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 	}
 
 	if enabled, ok := featureGates[featuregates.ExpressionRoutesFeature]; ok && enabled {
-		if routerFlavor == "expressions" {
+		if routerFlavor == kongRouterFlavorExpressions {
 			dataplaneClient.EnableExpressionRoutes()
 			setupLog.Info("expression routes mode has been enabled")
 		}

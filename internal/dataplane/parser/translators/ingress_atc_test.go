@@ -212,10 +212,42 @@ func TestPathMatcherFromIngressPath(t *testing.T) {
 			expression: `http.path ~ "^/[a-z]+"`,
 		},
 		{
-			name: "empty path",
+			name: "regex match with initial ^",
+			path: netv1.HTTPIngressPath{
+				Path:     "/~^/foo/[a-z]+",
+				PathType: &pathTypeImplementationSpecific,
+			},
+			expression: `http.path ~ "^/foo/[a-z]+"`,
+		},
+		{
+			name: "empty prefix path",
 			path: netv1.HTTPIngressPath{
 				Path:     "",
 				PathType: &pathTypePrefix,
+			},
+			expression: `http.path ^= "/"`,
+		},
+		{
+			name: "empty exact match",
+			path: netv1.HTTPIngressPath{
+				Path:     "",
+				PathType: &pathTypeExact,
+			},
+			expression: `http.path == "/"`,
+		},
+		{
+			name: "empty regex match",
+			path: netv1.HTTPIngressPath{
+				Path:     "/~",
+				PathType: &pathTypeImplementationSpecific,
+			},
+			expression: `http.path ~ "^/"`,
+		},
+		{
+			name: "empty implementation specific (non-regex) match",
+			path: netv1.HTTPIngressPath{
+				Path:     "",
+				PathType: &pathTypeImplementationSpecific,
 			},
 			expression: `http.path ^= "/"`,
 		},
@@ -247,6 +279,37 @@ func TestHeaderMatcherFromHeaders(t *testing.T) {
 			},
 			expression: `http.headers.x_key1 == "value1"`,
 		},
+		{
+			name: "header 'Host' is skipped and multiple headers",
+			headers: map[string][]string{
+				"Host":   {"konghq.com"},
+				"X-Key1": {"value1"},
+				"X-Key2": {"value2"},
+			},
+			expression: `(http.headers.x_key1 == "value1") && (http.headers.x_key2 == "value2")`,
+		},
+		{
+			name: "single header with multiple values",
+			headers: map[string][]string{
+				"X-Key1": {"value1", "value2"},
+			},
+			expression: `(http.headers.x_key1 == "value1") || (http.headers.x_key1 == "value2")`,
+		},
+		{
+			name: "single header with regex value",
+			headers: map[string][]string{
+				"X-Key1": {"~*[a-z]+"},
+			},
+			expression: `http.headers.x_key1 ~ "[a-z]+"`,
+		},
+		{
+			name: "empty value",
+			headers: map[string][]string{
+				"X-Key1": nil,
+				"X-Key2": {},
+			},
+			expression: "",
+		},
 	}
 
 	for _, tc := range testCases {
@@ -255,5 +318,137 @@ func TestHeaderMatcherFromHeaders(t *testing.T) {
 			matcher := headerMatcherFromHeaders(tc.headers)
 			require.Equal(t, tc.expression, matcher.Expression())
 		})
+	}
+}
+
+func TestHostMatcherFromIngressHosts(t *testing.T) {
+	testCases := []struct {
+		name       string
+		hosts      []string
+		expression string
+	}{
+		{
+			name:       "simple exact host",
+			hosts:      []string{"a.example.com"},
+			expression: `http.host == "a.example.com"`,
+		},
+		{
+			name:       "single wildcard host",
+			hosts:      []string{"*.example.com"},
+			expression: `http.host =^ ".example.com"`,
+		},
+		{
+			name:       "multiple hosts with mixture of exact and wildcard",
+			hosts:      []string{"foo.com", "*.bar.com"},
+			expression: `(http.host == "foo.com") || (http.host =^ ".bar.com")`,
+		},
+		{
+			name:       "multiple hosts including invalid host",
+			hosts:      []string{"foo.com", "a..bar.com"},
+			expression: `http.host == "foo.com"`,
+		},
+	}
+
+	for _, tc := range testCases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			matcher := hostMatcherFromIngressHosts(tc.hosts)
+			require.Equal(t, tc.expression, matcher.Expression())
+		})
+	}
+}
+
+func TestProtocolMatcherFromProtocols(t *testing.T) {
+	testCases := []struct {
+		name       string
+		protocols  []string
+		expression string
+	}{
+		{
+			name:       "single protocol",
+			protocols:  []string{"https"},
+			expression: `net.protocol == "https"`,
+		},
+		{
+			name:       "multiple protocols",
+			protocols:  []string{"http", "https"},
+			expression: `(net.protocol == "http") || (net.protocol == "https")`,
+		},
+		{
+			name:       "multiple protocols including invalid protocol",
+			protocols:  []string{"http", "ppp"},
+			expression: `net.protocol == "http"`,
+		},
+	}
+
+	for _, tc := range testCases {
+		tc := tc
+		matcher := protocolMatcherFromProtocols(tc.protocols)
+		require.Equal(t, tc.expression, matcher.Expression())
+	}
+}
+
+func TestMethodMatcherFromMethods(t *testing.T) {
+	testCases := []struct {
+		name       string
+		methods    []string
+		expression string
+	}{
+		{
+			name:       "single method",
+			methods:    []string{"GET"},
+			expression: `http.method == "GET"`,
+		},
+		{
+			name:       "multiple methods",
+			methods:    []string{"POST", "PUT"},
+			expression: `(http.method == "POST") || (http.method == "PUT")`,
+		},
+		{
+			name:       "multiple methods with invalid method",
+			methods:    []string{"HEAD", "OPTIONS", "paTch"},
+			expression: `(http.method == "HEAD") || (http.method == "OPTIONS")`,
+		},
+	}
+
+	for _, tc := range testCases {
+		tc := tc
+		matcher := methodMatcherFromMethods(tc.methods)
+		require.Equal(t, tc.expression, matcher.Expression())
+	}
+}
+
+func TestSNIMatcherFromSNIs(t *testing.T) {
+	testCases := []struct {
+		name       string
+		snis       []string
+		expression string
+	}{
+		{
+			name:       "single SNI",
+			snis:       []string{"konghq.com"},
+			expression: `tls.sni == "konghq.com"`,
+		},
+		{
+			name:       "multiple SNIs",
+			snis:       []string{"docs.konghq.com", "apis.konghq.com"},
+			expression: `(tls.sni == "docs.konghq.com") || (tls.sni == "apis.konghq.com")`,
+		},
+		{
+			name:       "multiple SNIs with wildcard SNI, which should be omitted",
+			snis:       []string{"foo.com", "*.bar.com"},
+			expression: `tls.sni == "foo.com"`,
+		},
+		{
+			name:       "multiple SNIs with invalid SNI",
+			snis:       []string{"foo.com", "a..bar.com"},
+			expression: `tls.sni == "foo.com"`,
+		},
+	}
+
+	for _, tc := range testCases {
+		tc := tc
+		matcher := sniMatcherFromSNIs(tc.snis)
+		require.Equal(t, tc.expression, matcher.Expression())
 	}
 }

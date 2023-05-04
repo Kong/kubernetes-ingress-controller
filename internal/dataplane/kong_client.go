@@ -63,7 +63,7 @@ type KongClient struct {
 	// the newer logic which combines them.
 	enableCombinedServiceRoutes bool
 
-	// enableExpressionRoutes indacates whether the data-plane client will
+	// enableExpressionRoutes indicates whether the data-plane client will
 	// translate kubernetes object to expression based routes.
 	enableExpressionRoutes bool
 

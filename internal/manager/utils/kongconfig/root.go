@@ -81,14 +81,17 @@ func DBModeFromRoot(r Root) (string, error) {
 		return "", err
 	}
 
-	dbMode, ok := rootConfig["database"].(string)
-	if !ok {
-		return "", fmt.Errorf(
-			"invalid database configuration, expected a string got %T",
-			rootConfig["database"],
-		)
+	const dbModeKey = "database"
+	dbMode, exist := rootConfig["database"]
+	if !exist {
+		return "", fmt.Errorf("no value in root configuration for key %q", dbModeKey)
 	}
-	return dbMode, nil
+	dbModeStr, ok := dbMode.(string)
+	if !ok {
+		return "", fmt.Errorf("invalid %q type, expected a string, got %T", dbModeKey, dbMode)
+	}
+
+	return dbModeStr, nil
 }
 
 func RouterFlavorFromRoot(r Root) (string, error) {
@@ -97,14 +100,16 @@ func RouterFlavorFromRoot(r Root) (string, error) {
 		return "", err
 	}
 
-	routerFlavor, ok := rootConfig["router_flavor"].(string)
-	if !ok {
-		return "", fmt.Errorf(
-			"invalid router_flavor configuration, expected a string got %T",
-			rootConfig["router_flavor"],
-		)
+	const routerFlavorKey = "router_flavor"
+	routerFlavor, exist := rootConfig[routerFlavorKey]
+	if !exist {
+		return "", fmt.Errorf("no value in root configuration for key %q", routerFlavorKey)
 	}
-	return routerFlavor, nil
+	routerFlvorStr, ok := routerFlavor.(string)
+	if !ok {
+		return "", fmt.Errorf("invalid %q type, expected a string, got %T", routerFlavorKey, routerFlavor)
+	}
+	return routerFlvorStr, nil
 }
 
 func KongVersionFromRoot(r Root) (kong.Version, error) {

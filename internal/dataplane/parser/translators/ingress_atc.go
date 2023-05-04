@@ -3,6 +3,7 @@ package translators
 import (
 	"fmt"
 	"regexp"
+	"sort"
 	"strings"
 
 	"github.com/kong/go-kong/kong"
@@ -163,6 +164,9 @@ func pathMatcherFromIngressPath(httpIngressPath netv1.HTTPIngressPath, regexPath
 		// regex match.
 		if regexPathPrefix != "" && strings.HasPrefix(httpIngressPath.Path, regexPathPrefix) {
 			regex := strings.TrimPrefix(httpIngressPath.Path, regexPathPrefix)
+			if regex == "" {
+				regex = "^/"
+			}
 			// regex match matches a prefix of the whole path, so we need to add a line start annotation in the regex.
 			if !strings.HasPrefix(regex, "^") {
 				regex = "^" + regex
@@ -191,16 +195,28 @@ func protocolMatcherFromProtocols(protocols []string) atc.Matcher {
 // headerMatcherFromHeaders generates matcher to match headers in HTTP requests.
 func headerMatcherFromHeaders(headers map[string][]string) atc.Matcher {
 	matchers := make([]atc.Matcher, 0, len(headers))
-	for headerName, values := range headers {
+
+	// To make a stable result from the same annotations, sort the header names first.
+	headerNames := []string{}
+	for headerName := range headers {
+		headerNames = append(headerNames, headerName)
+	}
+	sort.Strings(headerNames)
+
+	for _, headerName := range headerNames {
+		// extract values.
+		values := headers[headerName]
+		if len(values) == 0 {
+			continue
+		}
+
 		// transfer header name to lowercase and replace "-" with "_", which is used in expressions of kong routes.
 		headerName = strings.ReplaceAll(strings.ToLower(headerName), "-", "_")
 		// header "Host" should be skipped, they are processed in "http.host".
 		if headerName == "host" {
 			continue
 		}
-		if len(values) == 0 {
-			continue
-		}
+
 		// values for the same headers ar "or"ed to match any of the values.
 		singleHeaderMatcher := atc.Or()
 		for _, val := range values {

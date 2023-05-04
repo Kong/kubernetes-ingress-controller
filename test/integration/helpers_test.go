@@ -35,6 +35,9 @@ const (
 	// unsupportedControllerName is the name of the controller used for those gateways that are not supported
 	// by an actual controller (i.e., they won't be scheduled).
 	unsupportedControllerName gatewayv1beta1.GatewayController = "example.com/unsupported-gateway-controller"
+	// kongRouterFlavorExpressions is the value used in router_flavor of kong configuration
+	// to enable expression based router of kong.
+	kongRouterFlavorExpressions = "expressions"
 )
 
 // DeployGateway creates a default gatewayClass, accepts a variadic set of options,
@@ -418,10 +421,14 @@ func setIngressClassNameWithRetry(ctx context.Context, namespace string, obj run
 	return fmt.Errorf("unsupported GroupVersionKind %v", obj.GetObjectKind())
 }
 
+// Expression router is not supported for some objects and features.
+// For example, KongIngress is not supported by intention;
+// TCPRoute is not supported because Kong does not support expression router on stream proxy.
+// When the test case depends on the object or feature not supported, we skip it if expression router is used.
 func skipTestForExpressionRouter(t *testing.T) {
 	t.Helper()
 	routerFlavor := testenv.KongRouterFlavor()
-	if routerFlavor == "expressions" {
+	if routerFlavor == kongRouterFlavorExpressions {
 		t.Skipf("skip test case %s when expression router enabled", t.Name())
 	}
 }

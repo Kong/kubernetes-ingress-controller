@@ -35,6 +35,8 @@ import (
 var emptyHeaderSet = make(map[string]string)
 
 func TestHTTPRouteEssentials(t *testing.T) {
+	// TODO: implement translator for HTTPRoutes:
+	// https://github.com/Kong/kubernetes-ingress-controller/issues/3751
 	skipTestForExpressionRouter(t)
 	ctx := context.Background()
 

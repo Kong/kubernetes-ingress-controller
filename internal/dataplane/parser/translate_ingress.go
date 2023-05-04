@@ -228,7 +228,7 @@ func (p *Parser) ingressRulesFromIngressV1() ingressRules {
 	}
 
 	// Add a default backend if it exists.
-	defaultBackendService, ok := getDefaultBackendService(allDefaultBackends)
+	defaultBackendService, ok := getDefaultBackendService(allDefaultBackends, p.featureEnabledExpressionRoutes)
 	if ok {
 		result.ServiceNameToServices[*defaultBackendService.Name] = defaultBackendService
 		result.ServiceNameToParent[*defaultBackendService.Name] = defaultBackendService.Parent
@@ -267,7 +267,7 @@ func (p *Parser) ingressV1ToKongServiceCombinedRoutes(
 	if prefix, ok := ingress.ObjectMeta.Annotations[annotations.AnnotationPrefix+annotations.RegexPrefixKey]; ok {
 		regexPrefix = prefix
 	}
-	for _, kongStateService := range translators.TranslateIngress(ingress, p.flagEnabledRegexPathPrefix) {
+	for _, kongStateService := range translators.TranslateIngress(ingress, p.flagEnabledRegexPathPrefix, p.featureEnabledExpressionRoutes) {
 		for _, route := range kongStateService.Routes {
 			for i, path := range route.Paths {
 				newPath := translators.MaybePrependRegexPrefix(*path, regexPrefix, icp.EnableLegacyRegexDetection && p.flagEnabledRegexPathPrefix)
@@ -378,7 +378,7 @@ func (p *Parser) ingressV1ToKongServiceLegacy(
 }
 
 // getDefaultBackendService picks the oldest Ingress with a DefaultBackend defined and returns a Kong Service for it.
-func getDefaultBackendService(allDefaultBackends []netv1.Ingress) (kongstate.Service, bool) {
+func getDefaultBackendService(allDefaultBackends []netv1.Ingress, expressionRoutes bool) (kongstate.Service, bool) {
 	sort.SliceStable(allDefaultBackends, func(i, j int) bool {
 		return allDefaultBackends[i].CreationTimestamp.Before(&allDefaultBackends[j].CreationTimestamp)
 	})
@@ -417,15 +417,15 @@ func getDefaultBackendService(allDefaultBackends []netv1.Ingress) (kongstate.Ser
 			}},
 			Parent: &ingress,
 		}
-		r := p.translateIngressDefaultBackendRoute(&ingress, util.GenerateTagsForObject(result.ServiceNameToParent[serviceName]))
-		service.Routes = append(service.Routes, r)
+		r := translateIngressDefaultBackendRoute(&ingress, util.GenerateTagsForObject(&ingress), expressionRoutes)
+		service.Routes = append(service.Routes, *r)
 		return service, true
 	}
 
 	return kongstate.Service{}, false
 }
 
-func (p *Parser) translateIngressDefaultBackendRoute(ingress *netv1.Ingress, tags []*string) *kongstate.Route {
+func translateIngressDefaultBackendRoute(ingress *netv1.Ingress, tags []*string, expressionRoutes bool) *kongstate.Route {
 	r := &kongstate.Route{
 		Ingress: util.FromK8sObject(ingress),
 		Route: kong.Route{
@@ -436,10 +436,10 @@ func (p *Parser) translateIngressDefaultBackendRoute(ingress *netv1.Ingress, tag
 			ResponseBuffering: kong.Bool(true),
 			Tags:              tags,
 		},
-		ExpressionRoutes: p.featureEnabledExpressionRoutes,
+		ExpressionRoutes: expressionRoutes,
 	}
 
-	if p.featureEnabledExpressionRoutes {
+	if expressionRoutes {
 		catchAllMatcher := atc.And(
 			atc.NewPredicateHTTPPath(atc.OpEqual, "/"),
 			atc.Or(atc.NewPredicateNetProtocol(atc.OpEqual, "http"), atc.NewPredicateNetProtocol(atc.OpEqual, "https")),

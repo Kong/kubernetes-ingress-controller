@@ -65,7 +65,8 @@ func grpcEchoResponds(ctx context.Context, url, hostname, input string) error {
 }
 
 func TestGRPCRouteEssentials(t *testing.T) {
-	// TODO: implement translator for grpc routes
+	// TODO: implement translator for grpc routes:
+	// https://github.com/Kong/kubernetes-ingress-controller/issues/3752
 	skipTestForExpressionRouter(t)
 	ctx := context.Background()
 

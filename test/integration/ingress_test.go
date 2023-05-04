@@ -1064,7 +1064,7 @@ func TestIngressMatchByHost(t *testing.T) {
 	cleaner.Add(ingress)
 
 	t.Log("try to access the ingress by matching host")
-	req := helpers.MustHTTPRequest(t, "GET", proxyURL, "/", nil)
+	req := helpers.MustHTTPRequest(t, "GET", proxyURL, "", nil)
 	req.Host = "test.example"
 	require.Eventually(t, func() bool {
 		resp, err := helpers.DefaultHTTPClient().Do(req)

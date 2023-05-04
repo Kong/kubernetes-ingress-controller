@@ -35,6 +35,7 @@ const (
 )
 
 func TestKnativeIngress(t *testing.T) {
+	skipTestForExpressionRouter(t)
 	ctx := context.Background()
 
 	if clusterVersion.LT(knativeMinKubernetesVersion) {

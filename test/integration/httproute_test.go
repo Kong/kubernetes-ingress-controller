@@ -35,6 +35,9 @@ import (
 var emptyHeaderSet = make(map[string]string)
 
 func TestHTTPRouteEssentials(t *testing.T) {
+	// TODO: implement translator for HTTPRoutes:
+	// https://github.com/Kong/kubernetes-ingress-controller/issues/3751
+	skipTestForExpressionRouter(t)
 	ctx := context.Background()
 
 	ns, cleaner := helpers.Setup(ctx, t, env)
@@ -308,6 +311,7 @@ func TestHTTPRouteEssentials(t *testing.T) {
 }
 
 func TestHTTPRouteMultipleServices(t *testing.T) {
+	skipTestForExpressionRouter(t)
 	ctx := context.Background()
 
 	ns, cleaner := helpers.Setup(ctx, t, env)
@@ -495,6 +499,7 @@ func TestHTTPRouteMultipleServices(t *testing.T) {
 }
 
 func TestHTTPRouteFilterHosts(t *testing.T) {
+	skipTestForExpressionRouter(t)
 	ctx := context.Background()
 
 	ns, cleaner := helpers.Setup(ctx, t, env)

@@ -26,6 +26,13 @@ const (
 	// objects like Ingress instead of creating a route per path.
 	CombinedRoutesFeature = "CombinedRoutes"
 
+	// ExpressionRoutesFeature is the name of the feature-gate for enabling KIC to translate
+	// supported kubernetes objects into expression based routes in kong configrurations
+	// when controlled kong gateway uses expression based router by configuring `router_flavor` to `expressions`.
+	// Note: this feature is experimental and some resources and features may not be supported.
+	// See: https://docs.konghq.com/gateway/latest/key-concepts/routes/expressions/ about expression based routes in Kong 3.0+.
+	ExpressionRoutesFeature = "ExpressionRoutes"
+
 	// DocsURL provides a link to the documentation for feature gates in the KIC repository.
 	DocsURL = "https://github.com/Kong/kubernetes-ingress-controller/blob/main/FEATURE_GATES.md"
 )
@@ -55,9 +62,10 @@ func Setup(setupLog logr.Logger, featureGates map[string]bool) (map[string]bool,
 // NOTE: if you're adding a new feature gate, it needs to be added here.
 func GetFeatureGatesDefaults() map[string]bool {
 	return map[string]bool{
-		KnativeFeature:        false,
-		GatewayFeature:        true,
-		GatewayAlphaFeature:   false,
-		CombinedRoutesFeature: true,
+		KnativeFeature:          false,
+		GatewayFeature:          true,
+		GatewayAlphaFeature:     false,
+		CombinedRoutesFeature:   true,
+		ExpressionRoutesFeature: false,
 	}
 }

@@ -32,6 +32,7 @@ import (
 const examplesDIR = "../../examples"
 
 func TestHTTPRouteExample(t *testing.T) {
+	skipTestForExpressionRouter(t)
 	var (
 		httprouteExampleManifests = fmt.Sprintf("%s/gateway-httproute.yaml", examplesDIR)
 		ctx                       = context.Background()
@@ -103,6 +104,7 @@ func TestHTTPRouteExample(t *testing.T) {
 }
 
 func TestUDPRouteExample(t *testing.T) {
+	skipTestForExpressionRouter(t)
 	t.Log("locking UDP port")
 	udpMutex.Lock()
 	t.Cleanup(func() {
@@ -150,6 +152,7 @@ func TestUDPRouteExample(t *testing.T) {
 }
 
 func TestTCPRouteExample(t *testing.T) {
+	skipTestForExpressionRouter(t)
 	t.Log("locking TCP port")
 	tcpMutex.Lock()
 	t.Cleanup(func() {
@@ -177,6 +180,7 @@ func TestTCPRouteExample(t *testing.T) {
 }
 
 func TestTLSRouteExample(t *testing.T) {
+	skipTestForExpressionRouter(t)
 	t.Log("locking Gateway TLS ports")
 	tlsMutex.Lock()
 	t.Cleanup(func() {
@@ -205,6 +209,7 @@ func TestTLSRouteExample(t *testing.T) {
 }
 
 func TestGRPCRouteExample(t *testing.T) {
+	skipTestForExpressionRouter(t)
 	var (
 		grpcrouteExampleManifests = fmt.Sprintf("%s/gateway-grpcroute.yaml", examplesDIR)
 		ctx                       = context.Background()
@@ -279,6 +284,7 @@ func TestIngressExample(t *testing.T) {
 }
 
 func TestUDPIngressExample(t *testing.T) {
+	skipTestForExpressionRouter(t)
 	t.Log("locking UDP port")
 	udpMutex.Lock()
 	t.Cleanup(func() {

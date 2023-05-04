@@ -36,6 +36,7 @@ var (
 )
 
 func TestTCPIngressEssentials(t *testing.T) {
+	skipTestForExpressionRouter(t)
 	ctx := context.Background()
 
 	t.Parallel()
@@ -142,6 +143,7 @@ func TestTCPIngressEssentials(t *testing.T) {
 }
 
 func TestTCPIngressTLS(t *testing.T) {
+	skipTestForExpressionRouter(t)
 	t.Parallel()
 
 	t.Log("locking Gateway TLS ports")
@@ -301,6 +303,7 @@ func TestTCPIngressTLS(t *testing.T) {
 }
 
 func TestTCPIngressTLSPassthrough(t *testing.T) {
+	skipTestForExpressionRouter(t)
 	version, err := helpers.GetKongVersion(proxyAdminURL, consts.KongTestPassword)
 	if err != nil {
 		t.Logf("attempting TLS passthrough test despite unknown kong version: %v", err)

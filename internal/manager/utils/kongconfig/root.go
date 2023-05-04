@@ -16,52 +16,100 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/adminapi"
 )
 
+// KongStartUpOptions includes start up configurations of Kong that could change behavior of Kong Ingress Controller.
+// The fields are extracted from results of Kong gateway configuration root.
+type KongStartUpOptions struct {
+	DBMode       string
+	RouterFlavor string
+	Version      kong.Version
+}
+
 // ValidateRoots checks if all provided kong roots are the same given that we
 // only care about the fact that the following fields are the same:
 // - database setting
+// - router flavor
 // - kong version.
-func ValidateRoots(roots []Root, skipCACerts bool) (string, kong.Version, error) {
+func ValidateRoots(roots []Root, skipCACerts bool) (*KongStartUpOptions, error) {
 	if err := errors.Join(lo.Map(roots, validateRootFunc(skipCACerts))...); err != nil {
-		return "", kong.Version{}, fmt.Errorf("failed to validate kong Roots: %w", err)
+		return nil, fmt.Errorf("failed to validate kong Roots: %w", err)
 	}
 
 	// To be dropped as a part of https://github.com/Kong/kubernetes-ingress-controller/issues/3590.
 	uniqs := lo.UniqBy(roots, getRootKeyFunc(skipCACerts))
 	if len(uniqs) != 1 {
-		return "", kong.Version{},
+		return nil,
 			fmt.Errorf("there should only be one dbmode:version combination across configured kong instances while there are (%d): %v", len(uniqs), uniqs)
 	}
 
 	dbMode, err := DBModeFromRoot(uniqs[0])
 	if err != nil {
-		return "", kong.Version{}, err
+		return nil, err
+	}
+
+	routerFlavor, err := RouterFlavorFromRoot(uniqs[0])
+	if err != nil {
+		return nil, err
 	}
 
 	kongVersion, err := KongVersionFromRoot(uniqs[0])
 	if err != nil {
-		return "", kong.Version{}, err
+		return nil, err
 	}
 
-	return dbMode, kongVersion, nil
+	return &KongStartUpOptions{
+		DBMode:       dbMode,
+		RouterFlavor: routerFlavor,
+		Version:      kongVersion,
+	}, nil
 }
 
-func DBModeFromRoot(r Root) (string, error) {
+func extractConfigurationFromRoot(r Root) (map[string]any, error) {
 	rootConfig, ok := r["configuration"].(map[string]any)
 	if !ok {
-		return "", fmt.Errorf(
+		return nil, fmt.Errorf(
 			"invalid root configuration, expected a map[string]any got %T",
 			r["configuration"],
 		)
 	}
 
-	dbMode, ok := rootConfig["database"].(string)
-	if !ok {
-		return "", fmt.Errorf(
-			"invalid database configuration, expected a string got %t",
-			rootConfig["database"],
-		)
+	return rootConfig, nil
+}
+
+func DBModeFromRoot(r Root) (string, error) {
+	rootConfig, err := extractConfigurationFromRoot(r)
+	if err != nil {
+		return "", err
 	}
-	return dbMode, nil
+
+	const dbModeKey = "database"
+	dbMode, exist := rootConfig["database"]
+	if !exist {
+		return "", fmt.Errorf("no value in root configuration for key %q", dbModeKey)
+	}
+	dbModeStr, ok := dbMode.(string)
+	if !ok {
+		return "", fmt.Errorf("invalid %q type, expected a string, got %T", dbModeKey, dbMode)
+	}
+
+	return dbModeStr, nil
+}
+
+func RouterFlavorFromRoot(r Root) (string, error) {
+	rootConfig, err := extractConfigurationFromRoot(r)
+	if err != nil {
+		return "", err
+	}
+
+	const routerFlavorKey = "router_flavor"
+	routerFlavor, exist := rootConfig[routerFlavorKey]
+	if !exist {
+		return "", fmt.Errorf("no value in root configuration for key %q", routerFlavorKey)
+	}
+	routerFlvorStr, ok := routerFlavor.(string)
+	if !ok {
+		return "", fmt.Errorf("invalid %q type, expected a string, got %T", routerFlavorKey, routerFlavor)
+	}
+	return routerFlvorStr, nil
 }
 
 func KongVersionFromRoot(r Root) (kong.Version, error) {

@@ -19,8 +19,9 @@ import (
 type Route struct {
 	kong.Route
 
-	Ingress util.K8sObjectInfo
-	Plugins []kong.Plugin
+	Ingress          util.K8sObjectInfo
+	Plugins          []kong.Plugin
+	ExpressionRoutes bool
 }
 
 var (
@@ -35,6 +36,10 @@ var (
 
 // normalizeProtocols prevents users from mismatching grpc/http.
 func (r *Route) normalizeProtocols() {
+	// skip updating protocols if expression routes enabled.
+	if r.ExpressionRoutes {
+		return
+	}
 	protocols := r.Protocols
 	var http, grpc bool
 
@@ -52,6 +57,11 @@ func (r *Route) normalizeProtocols() {
 
 	if grpc && http {
 		r.Protocols = kong.StringSlice("http", "https")
+	}
+
+	if grpc {
+		// grpc(s) doesn't accept strip_path
+		r.StripPath = nil
 	}
 }
 
@@ -106,6 +116,9 @@ func (r *Route) overrideStripPath(anns map[string]string) {
 
 func (r *Route) overrideProtocols(anns map[string]string) {
 	protocols := annotations.ExtractProtocolNames(anns)
+	if len(protocols) == 0 {
+		return
+	}
 	var prots []*string
 	for _, prot := range protocols {
 		if !util.ValidateProtocol(prot) {
@@ -218,18 +231,22 @@ func (r *Route) overrideSNIs(log logrus.FieldLogger, anns map[string]string) {
 
 // overrideByAnnotation sets Route protocols via annotation.
 func (r *Route) overrideByAnnotation(log logrus.FieldLogger) {
-	r.overrideProtocols(r.Ingress.Annotations)
 	r.overrideStripPath(r.Ingress.Annotations)
 	r.overrideHTTPSRedirectCode(r.Ingress.Annotations)
 	r.overridePreserveHost(r.Ingress.Annotations)
-	r.overrideRegexPriority(r.Ingress.Annotations)
-	r.overrideMethods(log, r.Ingress.Annotations)
-	r.overrideSNIs(log, r.Ingress.Annotations)
 	r.overrideRequestBuffering(log, r.Ingress.Annotations)
 	r.overrideResponseBuffering(log, r.Ingress.Annotations)
-	r.overrideHosts(log, r.Ingress.Annotations)
-	r.overrideHeaders(r.Ingress.Annotations)
-	r.overridePathHandling(log, r.Ingress.Annotations)
+	// skip the fields that are not supported when kong is using expression router:
+	// `protocols`, `regexPriority`, `methods`, `snis`, `hosts`, `headers`, `pathHandling`,
+	if !r.ExpressionRoutes {
+		r.overrideProtocols(r.Ingress.Annotations)
+		r.overrideRegexPriority(r.Ingress.Annotations)
+		r.overrideMethods(log, r.Ingress.Annotations)
+		r.overrideSNIs(log, r.Ingress.Annotations)
+		r.overrideHosts(log, r.Ingress.Annotations)
+		r.overrideHeaders(r.Ingress.Annotations)
+		r.overridePathHandling(log, r.Ingress.Annotations)
+	}
 }
 
 // override sets Route fields by KongIngress first, then by annotation.
@@ -255,17 +272,15 @@ func (r *Route) override(log logrus.FieldLogger, kongIngress *configurationv1.Ko
 	r.overrideByKongIngress(log, kongIngress)
 	r.overrideByAnnotation(log)
 	r.normalizeProtocols()
-	for _, val := range r.Protocols {
-		if *val == "grpc" || *val == "grpcs" {
-			// grpc(s) doesn't accept strip_path
-			r.StripPath = nil
-			break
-		}
-	}
 }
 
 // overrideByKongIngress sets Route fields by KongIngress.
 func (r *Route) overrideByKongIngress(log logrus.FieldLogger, kongIngress *configurationv1.KongIngress) {
+	// disable overriding routes by KongIngress if expression routes is enabled.
+	if r.ExpressionRoutes {
+		return
+	}
+
 	if kongIngress == nil || kongIngress.Route == nil {
 		return
 	}

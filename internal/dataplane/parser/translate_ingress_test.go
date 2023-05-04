@@ -1178,7 +1178,7 @@ func TestGetDefaultBackendService(t *testing.T) {
 	}
 
 	t.Run("no ingresses", func(t *testing.T) {
-		_, ok := getDefaultBackendService([]netv1.Ingress{})
+		_, ok := getDefaultBackendService([]netv1.Ingress{}, false)
 		require.False(t, ok, "expected no default backend service when no ingress has one defined")
 	})
 
@@ -1187,7 +1187,7 @@ func TestGetDefaultBackendService(t *testing.T) {
 			someIngress(time.Now(), "foo-svc"),
 		}
 
-		svc, ok := getDefaultBackendService(ingresses)
+		svc, ok := getDefaultBackendService(ingresses, false)
 		require.True(t, ok, "expected default backend service when one ingress has one defined")
 
 		assert.Equal(t, "foo-namespace.foo-svc.80", *svc.Name)
@@ -1206,7 +1206,7 @@ func TestGetDefaultBackendService(t *testing.T) {
 			someIngress(now, "older"),
 		}
 
-		svc, ok := getDefaultBackendService(ingresses)
+		svc, ok := getDefaultBackendService(ingresses, false)
 		require.True(t, ok, "expected default backend service when there's at least one ingress with one defined")
 
 		assert.Equal(t, "foo-namespace.older.80", *svc.Name, "expected older ingress to be selected")

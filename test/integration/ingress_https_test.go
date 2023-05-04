@@ -135,6 +135,8 @@ QLAtVaZd9SSi4Z/RX6B4L3Rj0Mwfn+tbrtYO5Pyhi40hiXf4aMgbVDFYMR0MMmH0
 }
 
 func TestHTTPSRedirect(t *testing.T) {
+	// kong does not support HTTPS redirect yet.
+	skipTestForExpressionRouter(t)
 	ctx := context.Background()
 
 	t.Parallel()

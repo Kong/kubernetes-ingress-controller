@@ -63,6 +63,10 @@ type KongClient struct {
 	// the newer logic which combines them.
 	enableCombinedServiceRoutes bool
 
+	// enableExpressionRoutes indicates whether the data-plane client will
+	// translate kubernetes object to expression based routes.
+	enableExpressionRoutes bool
+
 	// requestTimeout is the maximum amount of time that should be waited for
 	// requests to the data-plane to receive a response.
 	requestTimeout time.Duration
@@ -372,6 +376,18 @@ func (c *KongClient) AreCombinedServiceRoutesEnabled() bool {
 	return c.enableCombinedServiceRoutes
 }
 
+func (c *KongClient) EnableExpressionRoutes() {
+	c.additionalFeaturesLock.Lock()
+	defer c.additionalFeaturesLock.Unlock()
+	c.enableExpressionRoutes = true
+}
+
+func (c *KongClient) AreExpressionRoutesEnabled() bool {
+	c.additionalFeaturesLock.RLock()
+	defer c.additionalFeaturesLock.RUnlock()
+	return c.enableExpressionRoutes
+}
+
 func (c *KongClient) EnableLicenseAgent(agent *license.Agent) {
 	c.licenseAgent = agent
 }
@@ -411,6 +427,10 @@ func (c *KongClient) Update(ctx context.Context) error {
 	if c.AreCombinedServiceRoutesEnabled() {
 		p.EnableCombinedServiceRoutes()
 	}
+	if c.AreExpressionRoutesEnabled() {
+		p.EnableExpressionRoutes()
+	}
+
 	if c.licenseAgent != nil {
 		c.logger.Debug("retrieving license from agent and adding it to config")
 		p.InjectLicense(c.licenseAgent.GetLicense())
@@ -495,16 +515,20 @@ func (c *KongClient) sendToClient(
 	logger := c.logger.WithField("url", client.AdminAPIClient().BaseRootURL())
 
 	// generate the deck configuration to be applied to the admin API
+	deckGenParams := deckgen.GenerateDeckContentParams{
+		FormatVersion:    formatVersion,
+		SelectorTags:     config.FilterTags,
+		ExpressionRoutes: c.AreExpressionRoutesEnabled(),
+		PluginSchemas:    client.PluginSchemaStore(),
+	}
 	logger.Debug("converting configuration to deck config")
 	targetConfig := deckgen.ToDeckContent(ctx,
 		logger,
 		s,
-		client.PluginSchemaStore(),
-		config.FilterTags,
-		formatVersion,
+		deckGenParams,
 	)
 
-	sendDiagnostic := prepareSendDiagnosticFn(ctx, logger, c.diagnostic, s, targetConfig, client.PluginSchemaStore(), config.FilterTags, formatVersion)
+	sendDiagnostic := prepareSendDiagnosticFn(ctx, logger, c.diagnostic, s, targetConfig, deckGenParams)
 
 	// apply the configuration update in Kong
 	timedCtx, cancel := context.WithTimeout(ctx, c.requestTimeout)
@@ -573,9 +597,7 @@ func prepareSendDiagnosticFn(
 	diagnosticConfig util.ConfigDumpDiagnostic,
 	targetState *kongstate.KongState,
 	targetContent *file.Content,
-	pluginSchemaStore deckgen.PluginSchemaStore,
-	filterTags []string,
-	formatVersion string,
+	deckGenParams deckgen.GenerateDeckContentParams,
 ) sendDiagnosticFn {
 	if diagnosticConfig == (util.ConfigDumpDiagnostic{}) {
 		// noop, diagnostics won't be sent
@@ -587,9 +609,7 @@ func prepareSendDiagnosticFn(
 		redactedConfig := deckgen.ToDeckContent(ctx,
 			log,
 			targetState.SanitizedCopy(),
-			pluginSchemaStore,
-			filterTags,
-			formatVersion,
+			deckGenParams,
 		)
 		config = redactedConfig
 	} else {

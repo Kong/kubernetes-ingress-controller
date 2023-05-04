@@ -24,10 +24,11 @@ import (
 // TranslateIngress receives a Kubernetes ingress object and from it will
 // produce a translated set of kong.Services and kong.Routes which will come
 // wrapped in a kongstate.Service object.
-func TranslateIngress(ingress *netv1.Ingress, addRegexPrefix bool) []*kongstate.Service {
+func TranslateIngress(ingress *netv1.Ingress, addRegexPrefix bool, expressionRoutes bool) []*kongstate.Service {
 	index := &ingressTranslationIndex{
-		cache:          make(map[string]*ingressTranslationMeta),
-		addRegexPrefix: addRegexPrefix,
+		cache:            make(map[string]*ingressTranslationMeta),
+		addRegexPrefix:   addRegexPrefix,
+		expressionRoutes: expressionRoutes,
 	}
 	index.add(ingress)
 	kongStateServices := kongstate.Services(index.translate())
@@ -78,8 +79,9 @@ const (
 // The addRegexPrefix flag indicates if generated regex paths for path type handling include the Kong 3.0+ "~" regular
 // expression prefix.
 type ingressTranslationIndex struct {
-	cache          map[string]*ingressTranslationMeta
-	addRegexPrefix bool
+	cache            map[string]*ingressTranslationMeta
+	addRegexPrefix   bool
+	expressionRoutes bool
 }
 
 func (i *ingressTranslationIndex) add(ingress *netv1.Ingress) {
@@ -133,8 +135,14 @@ func (i *ingressTranslationIndex) translate() []*kongstate.Service {
 			kongStateService = meta.translateIntoKongStateService(kongServiceName, meta.servicePort)
 		}
 
-		route := meta.translateIntoKongRoutes()
-		kongStateService.Routes = append(kongStateService.Routes, *route)
+		if i.expressionRoutes {
+			route := meta.translateIntoKongExpressionRoutes()
+			kongStateService.Routes = append(kongStateService.Routes, *route)
+
+		} else {
+			route := meta.translateIntoKongRoutes()
+			kongStateService.Routes = append(kongStateService.Routes, *route)
+		}
 
 		kongStateServiceCache[kongServiceName] = kongStateService
 	}

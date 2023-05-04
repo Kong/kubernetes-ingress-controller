@@ -33,6 +33,12 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/versions"
 )
 
+const (
+	// kongRouterFlavorExpressions is the value used in router_flavor of kong configuration
+	// to enable expression based router of kong.
+	kongRouterFlavorExpressions = "expressions"
+)
+
 // -----------------------------------------------------------------------------
 // Controller Manager - Setup & Run
 // -----------------------------------------------------------------------------
@@ -74,12 +80,15 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 		return fmt.Errorf("could not retrieve Kong admin root(s): %w", err)
 	}
 
-	dbMode, v, err := kongconfig.ValidateRoots(kongRoots, c.SkipCACertificates)
+	kongStartUpConfig, err := kongconfig.ValidateRoots(kongRoots, c.SkipCACertificates)
 	if err != nil {
 		return fmt.Errorf("could not validate Kong admin root(s) configuration: %w", err)
 	}
+	dbMode := kongStartUpConfig.DBMode
+	routerFlavor := kongStartUpConfig.RouterFlavor
+	v := kongStartUpConfig.Version
 
-	err = c.ValidateGatewayDiscovery(dbMode)
+	err = c.ValidateGatewayDiscovery(kongStartUpConfig.DBMode)
 	if err != nil {
 		return err
 	}
@@ -156,6 +165,15 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 	if enabled, ok := featureGates[featuregates.CombinedRoutesFeature]; ok && enabled {
 		dataplaneClient.EnableCombinedServiceRoutes()
 		setupLog.Info("combined routes mode has been enabled")
+	}
+
+	if enabled, ok := featureGates[featuregates.ExpressionRoutesFeature]; ok && enabled {
+		if routerFlavor == kongRouterFlavorExpressions {
+			dataplaneClient.EnableExpressionRoutes()
+			setupLog.Info("expression routes mode has been enabled")
+		}
+	} else {
+		setupLog.Info(fmt.Sprintf("ExpressionRoutes feature gate enabled, but Gateway run with %q router flavor, using this instead", routerFlavor))
 	}
 
 	var kubernetesStatusQueue *status.Queue

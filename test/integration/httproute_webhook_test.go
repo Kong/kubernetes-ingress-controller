@@ -20,6 +20,7 @@ import (
 )
 
 func TestHTTPRouteValidationWebhook(t *testing.T) {
+	skipTestForExpressionRouter(t)
 	ctx := context.Background()
 
 	ns, cleaner := helpers.Setup(ctx, t, env)

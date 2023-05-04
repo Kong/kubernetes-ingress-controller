@@ -162,6 +162,9 @@ func ExtractProtocolName(anns map[string]string) string {
 // ExtractProtocolNames extracts the protocols supplied in the annotation.
 func ExtractProtocolNames(anns map[string]string) []string {
 	val := anns[AnnotationPrefix+ProtocolsKey]
+	if len(val) == 0 {
+		return nil
+	}
 	return strings.Split(val, ",")
 }
 
@@ -198,6 +201,10 @@ func HasForceSSLRedirectAnnotation(anns map[string]string) bool {
 // ExtractPreserveHost extracts the preserve-host annotation value.
 func ExtractPreserveHost(anns map[string]string) string {
 	return anns[AnnotationPrefix+PreserveHostKey]
+}
+
+func ExtractRegexPrefix(anns map[string]string) string {
+	return anns[AnnotationPrefix+RegexPrefixKey]
 }
 
 // HasServiceUpstreamAnnotation returns true if the annotation

@@ -1,6 +1,6 @@
 ### Standard binary
 # Build the manager binary
-FROM golang:1.20.3 as builder
+FROM golang:1.20.4 as builder
 
 ARG TARGETPLATFORM
 ARG TARGETOS

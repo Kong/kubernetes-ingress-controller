@@ -184,7 +184,6 @@ func protocolMatcherFromProtocols(protocols []string) atc.Matcher {
 	matchers := []atc.Matcher{}
 	for _, protocol := range protocols {
 		if !util.ValidateProtocol(protocol) {
-			fmt.Println("invalid protocol: ", protocol)
 			continue
 		}
 		matchers = append(matchers, atc.NewPredicateNetProtocol(atc.OpEqual, protocol))
@@ -197,7 +196,7 @@ func headerMatcherFromHeaders(headers map[string][]string) atc.Matcher {
 	matchers := make([]atc.Matcher, 0, len(headers))
 
 	// To make a stable result from the same annotations, sort the header names first.
-	headerNames := []string{}
+	headerNames := make([]string, 0, len(headers))
 	for headerName := range headers {
 		headerNames = append(headerNames, headerName)
 	}

@@ -26,6 +26,11 @@ const (
 	// objects like Ingress instead of creating a route per path.
 	CombinedRoutesFeature = "CombinedRoutes"
 
+	// ExpressionRoutesFeature is the name of the feature-gate for enabling KIC to translate
+	// supported kubernetes objects into expression based routes in kong configrurations
+	// when controlled kong gateway uses expression based router by configuring `router_flavor` to `expressions`.
+	// Note: this feature is experimental and some resources and features may not be supported.
+	// See: https://docs.konghq.com/gateway/latest/key-concepts/routes/expressions/ about expression based routes in Kong 3.0+.
 	ExpressionRoutesFeature = "ExpressionRoutes"
 
 	// DocsURL provides a link to the documentation for feature gates in the KIC repository.

@@ -321,7 +321,7 @@ func TestHeaderMatcherFromHeaders(t *testing.T) {
 	}
 }
 
-func TestHostMatcherFromIngressHosts(t *testing.T) {
+func TestHostMatcherFromHosts(t *testing.T) {
 	testCases := []struct {
 		name       string
 		hosts      []string
@@ -352,7 +352,7 @@ func TestHostMatcherFromIngressHosts(t *testing.T) {
 	for _, tc := range testCases {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
-			matcher := hostMatcherFromIngressHosts(tc.hosts)
+			matcher := hostMatcherFromHosts(tc.hosts)
 			require.Equal(t, tc.expression, matcher.Expression())
 		})
 	}

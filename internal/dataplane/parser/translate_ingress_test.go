@@ -1177,44 +1177,86 @@ func TestGetDefaultBackendService(t *testing.T) {
 		}
 	}
 
-	t.Run("no ingresses", func(t *testing.T) {
-		_, ok := getDefaultBackendService([]netv1.Ingress{}, false)
-		require.False(t, ok, "expected no default backend service when no ingress has one defined")
-	})
+	now := time.Now()
+	testCases := []struct {
+		name             string
+		ingresses        []netv1.Ingress
+		expressionRoutes bool
+		// expected results.
+		haveBackendService bool
+		serviceName        string
+		serciceHost        string
+	}{
+		{
+			name:               "no ingresses",
+			ingresses:          []netv1.Ingress{},
+			expressionRoutes:   false,
+			haveBackendService: false,
+		},
+		{
+			name:               "no ingresses with expression routes",
+			ingresses:          []netv1.Ingress{},
+			expressionRoutes:   true,
+			haveBackendService: false,
+		},
+		{
+			name:               "one ingress with default backend",
+			ingresses:          []netv1.Ingress{someIngress(now, "foo-svc")},
+			expressionRoutes:   false,
+			haveBackendService: true,
+			serviceName:        "foo-namespace.foo-svc.80",
+			serciceHost:        "foo-svc.foo-namespace.80.svc",
+		},
+		{
+			name:               "one ingress with default backend and expression routes enabled",
+			ingresses:          []netv1.Ingress{someIngress(now, "foo-svc")},
+			expressionRoutes:   true,
+			haveBackendService: true,
+			serviceName:        "foo-namespace.foo-svc.80",
+			serciceHost:        "foo-svc.foo-namespace.80.svc",
+		},
+		{
+			name: "multiple ingresses with default backend",
+			ingresses: []netv1.Ingress{
+				someIngress(now.Add(time.Second), "newer"),
+				someIngress(now, "older"),
+			},
+			expressionRoutes:   false,
+			haveBackendService: true,
+			serviceName:        "foo-namespace.older.80",
+			serciceHost:        "older.foo-namespace.80.svc",
+		},
+		{
+			name: "multiple ingresses with default backend and expression routes enabled",
+			ingresses: []netv1.Ingress{
+				someIngress(now.Add(time.Second), "newer"),
+				someIngress(now, "older"),
+			},
+			expressionRoutes:   true,
+			haveBackendService: true,
+			serviceName:        "foo-namespace.older.80",
+			serciceHost:        "older.foo-namespace.80.svc",
+		},
+	}
 
-	t.Run("one ingress with default backend", func(t *testing.T) {
-		ingresses := []netv1.Ingress{
-			someIngress(time.Now(), "foo-svc"),
-		}
-
-		svc, ok := getDefaultBackendService(ingresses, false)
-		require.True(t, ok, "expected default backend service when one ingress has one defined")
-
-		assert.Equal(t, "foo-namespace.foo-svc.80", *svc.Name)
-		assert.Equal(t, "foo-svc.foo-namespace.80.svc", *svc.Host)
-		assert.NotNil(t, svc.Parent)
-
-		require.Len(t, svc.Routes, 1)
-		require.Len(t, svc.Routes[0].Paths, 1)
-		assert.Equal(t, "/", *svc.Routes[0].Paths[0])
-	})
-
-	t.Run("multiple ingresses with default backend", func(t *testing.T) {
-		now := time.Now()
-		ingresses := []netv1.Ingress{
-			someIngress(now.Add(time.Second), "newer"),
-			someIngress(now, "older"),
-		}
-
-		svc, ok := getDefaultBackendService(ingresses, false)
-		require.True(t, ok, "expected default backend service when there's at least one ingress with one defined")
-
-		assert.Equal(t, "foo-namespace.older.80", *svc.Name, "expected older ingress to be selected")
-		assert.Equal(t, "older.foo-namespace.80.svc", *svc.Host)
-		assert.NotNil(t, svc.Parent)
-
-		require.Len(t, svc.Routes, 1)
-		require.Len(t, svc.Routes[0].Paths, 1)
-		assert.Equal(t, "/", *svc.Routes[0].Paths[0])
-	})
+	for _, tc := range testCases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			svc, ok := getDefaultBackendService(tc.ingresses, tc.expressionRoutes)
+			require.Equal(t, tc.haveBackendService, ok)
+			if tc.haveBackendService {
+				require.Equal(t, tc.serviceName, *svc.Name)
+				require.Equal(t, tc.serciceHost, *svc.Host)
+				require.Len(t, svc.Routes, 1)
+				route := svc.Routes[0]
+				if tc.expressionRoutes {
+					require.Equal(t, `(http.path ^= "/") && ((net.protocol == "http") || (net.protocol == "https"))`, *route.Expression)
+					require.Equal(t, translators.IngressDefaultBackendPriority, *route.Priority)
+				} else {
+					require.Len(t, route.Paths, 1)
+					require.Equal(t, *route.Paths[0], "/")
+				}
+			}
+		})
+	}
 }

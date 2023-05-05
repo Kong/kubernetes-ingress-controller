@@ -33,6 +33,10 @@ const (
 	// See: https://docs.konghq.com/gateway/latest/key-concepts/routes/expressions/ about expression based routes in Kong 3.0+.
 	ExpressionRoutesFeature = "ExpressionRoutes"
 
+	// CombinedServicesFeature is the name of the feature-gate that makes KIC create a single Kong Service when
+	// a Kubernetes Service is referenced by multiple netv1.Ingresses. It's effective only when CombinedRoutesFeature is enabled.
+	CombinedServicesFeature = "CombinedServices"
+
 	// DocsURL provides a link to the documentation for feature gates in the KIC repository.
 	DocsURL = "https://github.com/Kong/kubernetes-ingress-controller/blob/main/FEATURE_GATES.md"
 )
@@ -73,5 +77,6 @@ func GetFeatureGatesDefaults() map[string]bool {
 		GatewayAlphaFeature:     false,
 		CombinedRoutesFeature:   true,
 		ExpressionRoutesFeature: false,
+		CombinedServicesFeature: false,
 	}
 }

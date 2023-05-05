@@ -133,7 +133,7 @@ func (p *Parser) ingressRulesFromKnativeIngress() ingressRules {
 		}
 
 		if objectSuccessfullyParsed {
-			p.reportKubernetesObjectUpdate(ingress)
+			p.registerSuccessfullyParsedObject(ingress)
 		}
 	}
 

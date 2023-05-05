@@ -29,7 +29,7 @@ func (p *Parser) ingressRulesFromTCPRoutes() ingressRules {
 		} else {
 			// at this point the object has been configured and can be
 			// reported as successfully parsed.
-			p.reportKubernetesObjectUpdate(tcproute)
+			p.registerSuccessfullyParsedObject(tcproute)
 		}
 	}
 

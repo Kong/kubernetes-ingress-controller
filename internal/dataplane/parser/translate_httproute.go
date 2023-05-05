@@ -35,7 +35,7 @@ func (p *Parser) ingressRulesFromHTTPRoutes() ingressRules {
 		} else {
 			// at this point the object has been configured and can be
 			// reported as successfully parsed.
-			p.reportKubernetesObjectUpdate(httproute)
+			p.registerSuccessfullyParsedObject(httproute)
 		}
 	}
 

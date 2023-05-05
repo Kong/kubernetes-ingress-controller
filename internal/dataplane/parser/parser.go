@@ -66,6 +66,10 @@ type FeatureFlags struct {
 
 	// ExpressionRoutes indicates whether to translate Kubernetes objects to expression based Kong Routes.
 	ExpressionRoutes bool
+
+	// CombinedServices enables parser to create a single Kong Service when a Kubernetes Service is referenced
+	// by multiple Ingresses. This is effective only when EnableCombinedServiceRoutes is enabled.
+	CombinedServices bool
 }
 
 func NewFeatureFlags(
@@ -111,8 +115,8 @@ type Parser struct {
 	licenseGetter LicenseGetter
 	featureFlags  FeatureFlags
 
-	failuresCollector           *failures.ResourceFailuresCollector
-	configuredKubernetesObjects []client.Object
+	failuresCollector      *failures.ResourceFailuresCollector
+	parsedObjectsCollector *ObjectsCollector
 }
 
 // NewParser produces a new Parser object provided a logging mechanism
@@ -127,11 +131,18 @@ func NewParser(
 		return nil, fmt.Errorf("failed to create translation errors collector: %w", err)
 	}
 
+	// If the feature flag is enabled, create a new collector for parsed objects.
+	var parsedObjectsCollector *ObjectsCollector
+	if featureFlags.ReportConfiguredKubernetesObjects {
+		parsedObjectsCollector = NewObjectsCollector()
+	}
+
 	return &Parser{
-		logger:            logger,
-		storer:            storer,
-		featureFlags:      featureFlags,
-		failuresCollector: failuresCollector,
+		logger:                 logger,
+		storer:                 storer,
+		featureFlags:           featureFlags,
+		failuresCollector:      failuresCollector,
+		parsedObjectsCollector: parsedObjectsCollector,
 	}, nil
 }
 
@@ -240,23 +251,16 @@ func (p *Parser) popTranslationFailures() []failures.ResourceFailure {
 	return p.failuresCollector.PopResourceFailures()
 }
 
-// reportKubernetesObjectUpdate reports an update to a Kubernetes object if
-// updates have been requested. If the parser has not been configured to
-// report Kubernetes object updates this is a no-op.
-func (p *Parser) reportKubernetesObjectUpdate(obj client.Object) {
-	if p.featureFlags.ReportConfiguredKubernetesObjects {
-		p.configuredKubernetesObjects = append(p.configuredKubernetesObjects, obj)
-	}
+// registerSuccessfullyParsedObject should be called when any Kubernetes object is successfully parsed.
+// It collects the object for reporting purposes.
+func (p *Parser) registerSuccessfullyParsedObject(obj client.Object) {
+	p.parsedObjectsCollector.Add(obj)
 }
 
 // popConfiguredKubernetesObjects provides a list of all the Kubernetes objects
-// that have been successfully parsed as part of Build() calls so far. The
-// objects are consumed: the parser's internal list will be emptied once this
-// method is called, until more builds are run.
+// that have been successfully parsed as part of BuildKongConfig() call so far.
 func (p *Parser) popConfiguredKubernetesObjects() []client.Object {
-	report := p.configuredKubernetesObjects
-	p.configuredKubernetesObjects = nil
-	return report
+	return p.parsedObjectsCollector.Pop()
 }
 
 func knativeIngressToNetworkingTLS(tls []knative.IngressTLS) []netv1.IngressTLS {

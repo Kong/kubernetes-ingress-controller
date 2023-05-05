@@ -31,7 +31,7 @@ var (
 	IngressDefaultBackendPriority   = 0
 )
 
-func (m *ingressTranslationMeta) translateIntoKongExpressionRoutes() *kongstate.Route {
+func (m *ingressTranslationMeta) translateIntoKongExpressionRoute() *kongstate.Route {
 	ingressHost := m.ingressHost
 	if strings.Contains(ingressHost, "*") {
 		// '_' is not allowed in host, so we use '_' to replace '*' since '*' is not allowed in Kong.

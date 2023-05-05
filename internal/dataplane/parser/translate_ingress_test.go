@@ -1179,41 +1179,40 @@ func TestGetDefaultBackendService(t *testing.T) {
 
 	now := time.Now()
 	testCases := []struct {
-		name             string
-		ingresses        []netv1.Ingress
-		expressionRoutes bool
-		// expected results.
-		haveBackendService bool
-		serviceName        string
-		serciceHost        string
+		name                      string
+		ingresses                 []netv1.Ingress
+		expressionRoutes          bool
+		expectedHveBackendService bool
+		expectedServiceName       string
+		expectedServiceHost       string
 	}{
 		{
-			name:               "no ingresses",
-			ingresses:          []netv1.Ingress{},
-			expressionRoutes:   false,
-			haveBackendService: false,
+			name:                      "no ingresses",
+			ingresses:                 []netv1.Ingress{},
+			expressionRoutes:          false,
+			expectedHveBackendService: false,
 		},
 		{
-			name:               "no ingresses with expression routes",
-			ingresses:          []netv1.Ingress{},
-			expressionRoutes:   true,
-			haveBackendService: false,
+			name:                      "no ingresses with expression routes",
+			ingresses:                 []netv1.Ingress{},
+			expressionRoutes:          true,
+			expectedHveBackendService: false,
 		},
 		{
-			name:               "one ingress with default backend",
-			ingresses:          []netv1.Ingress{someIngress(now, "foo-svc")},
-			expressionRoutes:   false,
-			haveBackendService: true,
-			serviceName:        "foo-namespace.foo-svc.80",
-			serciceHost:        "foo-svc.foo-namespace.80.svc",
+			name:                      "one ingress with default backend",
+			ingresses:                 []netv1.Ingress{someIngress(now, "foo-svc")},
+			expressionRoutes:          false,
+			expectedHveBackendService: true,
+			expectedServiceName:       "foo-namespace.foo-svc.80",
+			expectedServiceHost:       "foo-svc.foo-namespace.80.svc",
 		},
 		{
-			name:               "one ingress with default backend and expression routes enabled",
-			ingresses:          []netv1.Ingress{someIngress(now, "foo-svc")},
-			expressionRoutes:   true,
-			haveBackendService: true,
-			serviceName:        "foo-namespace.foo-svc.80",
-			serciceHost:        "foo-svc.foo-namespace.80.svc",
+			name:                      "one ingress with default backend and expression routes enabled",
+			ingresses:                 []netv1.Ingress{someIngress(now, "foo-svc")},
+			expressionRoutes:          true,
+			expectedHveBackendService: true,
+			expectedServiceName:       "foo-namespace.foo-svc.80",
+			expectedServiceHost:       "foo-svc.foo-namespace.80.svc",
 		},
 		{
 			name: "multiple ingresses with default backend",
@@ -1221,10 +1220,10 @@ func TestGetDefaultBackendService(t *testing.T) {
 				someIngress(now.Add(time.Second), "newer"),
 				someIngress(now, "older"),
 			},
-			expressionRoutes:   false,
-			haveBackendService: true,
-			serviceName:        "foo-namespace.older.80",
-			serciceHost:        "older.foo-namespace.80.svc",
+			expressionRoutes:          false,
+			expectedHveBackendService: true,
+			expectedServiceName:       "foo-namespace.older.80",
+			expectedServiceHost:       "older.foo-namespace.80.svc",
 		},
 		{
 			name: "multiple ingresses with default backend and expression routes enabled",
@@ -1232,10 +1231,10 @@ func TestGetDefaultBackendService(t *testing.T) {
 				someIngress(now.Add(time.Second), "newer"),
 				someIngress(now, "older"),
 			},
-			expressionRoutes:   true,
-			haveBackendService: true,
-			serviceName:        "foo-namespace.older.80",
-			serciceHost:        "older.foo-namespace.80.svc",
+			expressionRoutes:          true,
+			expectedHveBackendService: true,
+			expectedServiceName:       "foo-namespace.older.80",
+			expectedServiceHost:       "older.foo-namespace.80.svc",
 		},
 	}
 
@@ -1243,10 +1242,10 @@ func TestGetDefaultBackendService(t *testing.T) {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			svc, ok := getDefaultBackendService(tc.ingresses, tc.expressionRoutes)
-			require.Equal(t, tc.haveBackendService, ok)
-			if tc.haveBackendService {
-				require.Equal(t, tc.serviceName, *svc.Name)
-				require.Equal(t, tc.serciceHost, *svc.Host)
+			require.Equal(t, tc.expectedHveBackendService, ok)
+			if tc.expectedHveBackendService {
+				require.Equal(t, tc.expectedServiceName, *svc.Name)
+				require.Equal(t, tc.expectedServiceHost, *svc.Host)
 				require.Len(t, svc.Routes, 1)
 				route := svc.Routes[0]
 				if tc.expressionRoutes {

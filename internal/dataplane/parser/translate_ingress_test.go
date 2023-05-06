@@ -1179,40 +1179,40 @@ func TestGetDefaultBackendService(t *testing.T) {
 
 	now := time.Now()
 	testCases := []struct {
-		name                      string
-		ingresses                 []netv1.Ingress
-		expressionRoutes          bool
-		expectedHveBackendService bool
-		expectedServiceName       string
-		expectedServiceHost       string
+		name                       string
+		ingresses                  []netv1.Ingress
+		expressionRoutes           bool
+		expectedHaveBackendService bool
+		expectedServiceName        string
+		expectedServiceHost        string
 	}{
 		{
-			name:                      "no ingresses",
-			ingresses:                 []netv1.Ingress{},
-			expressionRoutes:          false,
-			expectedHveBackendService: false,
+			name:                       "no ingresses",
+			ingresses:                  []netv1.Ingress{},
+			expressionRoutes:           false,
+			expectedHaveBackendService: false,
 		},
 		{
-			name:                      "no ingresses with expression routes",
-			ingresses:                 []netv1.Ingress{},
-			expressionRoutes:          true,
-			expectedHveBackendService: false,
+			name:                       "no ingresses with expression routes",
+			ingresses:                  []netv1.Ingress{},
+			expressionRoutes:           true,
+			expectedHaveBackendService: false,
 		},
 		{
-			name:                      "one ingress with default backend",
-			ingresses:                 []netv1.Ingress{someIngress(now, "foo-svc")},
-			expressionRoutes:          false,
-			expectedHveBackendService: true,
-			expectedServiceName:       "foo-namespace.foo-svc.80",
-			expectedServiceHost:       "foo-svc.foo-namespace.80.svc",
+			name:                       "one ingress with default backend",
+			ingresses:                  []netv1.Ingress{someIngress(now, "foo-svc")},
+			expressionRoutes:           false,
+			expectedHaveBackendService: true,
+			expectedServiceName:        "foo-namespace.foo-svc.80",
+			expectedServiceHost:        "foo-svc.foo-namespace.80.svc",
 		},
 		{
-			name:                      "one ingress with default backend and expression routes enabled",
-			ingresses:                 []netv1.Ingress{someIngress(now, "foo-svc")},
-			expressionRoutes:          true,
-			expectedHveBackendService: true,
-			expectedServiceName:       "foo-namespace.foo-svc.80",
-			expectedServiceHost:       "foo-svc.foo-namespace.80.svc",
+			name:                       "one ingress with default backend and expression routes enabled",
+			ingresses:                  []netv1.Ingress{someIngress(now, "foo-svc")},
+			expressionRoutes:           true,
+			expectedHaveBackendService: true,
+			expectedServiceName:        "foo-namespace.foo-svc.80",
+			expectedServiceHost:        "foo-svc.foo-namespace.80.svc",
 		},
 		{
 			name: "multiple ingresses with default backend",
@@ -1220,10 +1220,10 @@ func TestGetDefaultBackendService(t *testing.T) {
 				someIngress(now.Add(time.Second), "newer"),
 				someIngress(now, "older"),
 			},
-			expressionRoutes:          false,
-			expectedHveBackendService: true,
-			expectedServiceName:       "foo-namespace.older.80",
-			expectedServiceHost:       "older.foo-namespace.80.svc",
+			expressionRoutes:           false,
+			expectedHaveBackendService: true,
+			expectedServiceName:        "foo-namespace.older.80",
+			expectedServiceHost:        "older.foo-namespace.80.svc",
 		},
 		{
 			name: "multiple ingresses with default backend and expression routes enabled",
@@ -1231,10 +1231,10 @@ func TestGetDefaultBackendService(t *testing.T) {
 				someIngress(now.Add(time.Second), "newer"),
 				someIngress(now, "older"),
 			},
-			expressionRoutes:          true,
-			expectedHveBackendService: true,
-			expectedServiceName:       "foo-namespace.older.80",
-			expectedServiceHost:       "older.foo-namespace.80.svc",
+			expressionRoutes:           true,
+			expectedHaveBackendService: true,
+			expectedServiceName:        "foo-namespace.older.80",
+			expectedServiceHost:        "older.foo-namespace.80.svc",
 		},
 	}
 
@@ -1242,8 +1242,8 @@ func TestGetDefaultBackendService(t *testing.T) {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			svc, ok := getDefaultBackendService(tc.ingresses, tc.expressionRoutes)
-			require.Equal(t, tc.expectedHveBackendService, ok)
-			if tc.expectedHveBackendService {
+			require.Equal(t, tc.expectedHaveBackendService, ok)
+			if tc.expectedHaveBackendService {
 				require.Equal(t, tc.expectedServiceName, *svc.Name)
 				require.Equal(t, tc.expectedServiceHost, *svc.Host)
 				require.Len(t, svc.Routes, 1)

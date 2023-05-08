@@ -70,7 +70,7 @@ func (p *Parser) ingressRulesFromIngressV1beta1() ingressRules {
 			}
 			for j, rule := range rule.HTTP.Paths {
 				path := rule.Path
-				path = maybePrependRegexPrefix(path, regexPrefix, icp.EnableLegacyRegexDetection && p.flagEnabledRegexPathPrefix)
+				path = maybePrependRegexPrefix(path, regexPrefix, icp.EnableLegacyRegexDetection && p.featureFlags.RegexPathPrefix)
 				if path == "" {
 					path = "/"
 				}
@@ -128,7 +128,7 @@ func (p *Parser) ingressRulesFromIngressV1beta1() ingressRules {
 		}
 
 		if objectSuccessfullyParsed {
-			p.ReportKubernetesObjectUpdate(ingress)
+			p.reportKubernetesObjectUpdate(ingress)
 		}
 	}
 
@@ -218,7 +218,7 @@ func (p *Parser) ingressRulesFromIngressV1() ingressRules {
 		result.SecretNameToSNIs.addFromIngressV1TLS(ingressSpec.TLS, ingress)
 
 		if wasServicesCacheUpdated := p.ingressV1ToKongService(ingress, icp, servicesCache); wasServicesCacheUpdated {
-			p.ReportKubernetesObjectUpdate(ingress)
+			p.reportKubernetesObjectUpdate(ingress)
 		}
 	}
 
@@ -228,7 +228,7 @@ func (p *Parser) ingressRulesFromIngressV1() ingressRules {
 	}
 
 	// Add a default backend if it exists.
-	defaultBackendService, ok := getDefaultBackendService(allDefaultBackends, p.featureEnabledExpressionRoutes)
+	defaultBackendService, ok := getDefaultBackendService(allDefaultBackends, p.featureFlags.ExpressionRoutes)
 	if ok {
 		result.ServiceNameToServices[*defaultBackendService.Name] = defaultBackendService
 		result.ServiceNameToParent[*defaultBackendService.Name] = defaultBackendService.Parent
@@ -247,7 +247,7 @@ func (p *Parser) ingressV1ToKongService(
 	icp v1alpha1.IngressClassParametersSpec,
 	servicesCache kongServicesCache,
 ) bool {
-	if p.featureEnabledCombinedServiceRoutes {
+	if p.featureFlags.CombinedServiceRoutes {
 		return p.ingressV1ToKongServiceCombinedRoutes(ingress, icp, servicesCache)
 	}
 
@@ -267,10 +267,10 @@ func (p *Parser) ingressV1ToKongServiceCombinedRoutes(
 	if prefix, ok := ingress.ObjectMeta.Annotations[annotations.AnnotationPrefix+annotations.RegexPrefixKey]; ok {
 		regexPrefix = prefix
 	}
-	for _, kongStateService := range translators.TranslateIngress(ingress, p.flagEnabledRegexPathPrefix, p.featureEnabledExpressionRoutes) {
+	for _, kongStateService := range translators.TranslateIngress(ingress, p.featureFlags.RegexPathPrefix, p.featureFlags.ExpressionRoutes) {
 		for _, route := range kongStateService.Routes {
 			for i, path := range route.Paths {
-				newPath := translators.MaybePrependRegexPrefix(*path, regexPrefix, icp.EnableLegacyRegexDetection && p.flagEnabledRegexPathPrefix)
+				newPath := translators.MaybePrependRegexPrefix(*path, regexPrefix, icp.EnableLegacyRegexDetection && p.featureFlags.RegexPathPrefix)
 				route.Paths[i] = &newPath
 			}
 		}
@@ -292,7 +292,7 @@ func (p *Parser) ingressV1ToKongServiceLegacy(
 	wasServicesCacheUpdated := false
 
 	ingressSpec := ingress.Spec
-	maybePrependRegexPrefixFn := translators.MaybePrependRegexPrefixForIngressV1Fn(ingress, icp.EnableLegacyRegexDetection && p.flagEnabledRegexPathPrefix)
+	maybePrependRegexPrefixFn := translators.MaybePrependRegexPrefixForIngressV1Fn(ingress, icp.EnableLegacyRegexDetection && p.featureFlags.RegexPathPrefix)
 	for i, rule := range ingressSpec.Rules {
 		if rule.HTTP == nil {
 			continue
@@ -303,7 +303,7 @@ func (p *Parser) ingressV1ToKongServiceLegacy(
 				rulePath.PathType = &pathTypeImplementationSpecific
 			}
 
-			paths := translators.PathsFromIngressPaths(rulePath, p.flagEnabledRegexPathPrefix)
+			paths := translators.PathsFromIngressPaths(rulePath, p.featureFlags.RegexPathPrefix)
 			if paths == nil {
 				// registering a failure, but technically it should never happen thanks to Kubernetes API validations
 				p.registerTranslationFailure(

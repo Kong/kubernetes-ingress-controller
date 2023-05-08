@@ -37,8 +37,10 @@ const (
 	DocsURL = "https://github.com/Kong/kubernetes-ingress-controller/blob/main/FEATURE_GATES.md"
 )
 
-// Setup converts feature gates to controller enablement.
-func Setup(setupLog logr.Logger, featureGates map[string]bool) (map[string]bool, error) {
+type FeatureGates map[string]bool
+
+// New creates FeatureGates from the given feature gate map, overriding the default settings.
+func New(setupLog logr.Logger, featureGates map[string]bool) (FeatureGates, error) {
 	// generate a map of feature gates by string names to their controller enablement
 	ctrlMap := GetFeatureGatesDefaults()
 
@@ -53,6 +55,10 @@ func Setup(setupLog logr.Logger, featureGates map[string]bool) (map[string]bool,
 	}
 
 	return ctrlMap, nil
+}
+
+func (fg FeatureGates) Enabled(feature string) bool {
+	return fg[feature]
 }
 
 // GetFeatureGatesDefaults initializes a feature gate map given the currently

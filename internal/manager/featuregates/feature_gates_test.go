@@ -18,13 +18,13 @@ func TestFeatureGates(t *testing.T) {
 	setupLog := logrusr.New(baseLogger)
 
 	t.Log("verifying feature gates setup defaults when no feature gates are configured")
-	fgs, err := Setup(setupLog, nil)
+	fgs, err := New(setupLog, nil)
 	assert.NoError(t, err)
 	assert.Len(t, fgs, len(GetFeatureGatesDefaults()))
 
 	t.Log("verifying feature gates setup results when valid feature gates options are present")
 	featureGates := map[string]bool{GatewayFeature: true}
-	fgs, err = Setup(setupLog, featureGates)
+	fgs, err = New(setupLog, featureGates)
 	assert.NoError(t, err)
 	assert.True(t, fgs[GatewayFeature])
 
@@ -32,7 +32,7 @@ func TestFeatureGates(t *testing.T) {
 	featureGates = map[string]bool{"invalidGateway": true}
 
 	t.Log("verifying feature gates setup results when invalid feature gates options are present")
-	_, err = Setup(setupLog, featureGates)
+	_, err = New(setupLog, featureGates)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "invalidGateway is not a valid feature")
 }

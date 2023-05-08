@@ -35,7 +35,7 @@ func (p *Parser) ingressRulesFromHTTPRoutes() ingressRules {
 		} else {
 			// at this point the object has been configured and can be
 			// reported as successfully parsed.
-			p.ReportKubernetesObjectUpdate(httproute)
+			p.reportKubernetesObjectUpdate(httproute)
 		}
 	}
 
@@ -47,7 +47,7 @@ func (p *Parser) ingressRulesFromHTTPRoute(result *ingressRules, httproute *gate
 		return fmt.Errorf("validation failed : %w", err)
 	}
 
-	if p.featureEnabledCombinedServiceRoutes {
+	if p.featureFlags.CombinedServiceRoutes {
 		return p.ingressRulesFromHTTPRouteWithCombinedServiceRoutes(httproute, result)
 	}
 
@@ -85,7 +85,7 @@ func (p *Parser) ingressRulesFromHTTPRouteWithCombinedServiceRoutes(httproute *g
 
 		// generate the routes for the service and attach them to the service
 		for _, kongRouteTranslation := range kongServiceTranslation.KongRoutes {
-			routes, err := generateKongRouteFromTranslation(httproute, kongRouteTranslation, p.flagEnabledRegexPathPrefix)
+			routes, err := generateKongRouteFromTranslation(httproute, kongRouteTranslation, p.featureFlags.RegexPathPrefix)
 			if err != nil {
 				return err
 			}
@@ -108,7 +108,7 @@ func (p *Parser) ingressRulesFromHTTPRouteLegacyFallback(httproute *gatewayv1bet
 	// traffic, so we make separate routes and Kong services for every present rule.
 	for ruleNumber, rule := range httproute.Spec.Rules {
 		// determine the routes needed to route traffic to services for this rule
-		routes, err := generateKongRoutesFromHTTPRouteRule(httproute, ruleNumber, rule, p.flagEnabledRegexPathPrefix)
+		routes, err := generateKongRoutesFromHTTPRouteRule(httproute, ruleNumber, rule, p.featureFlags.RegexPathPrefix)
 		if err != nil {
 			return err
 		}

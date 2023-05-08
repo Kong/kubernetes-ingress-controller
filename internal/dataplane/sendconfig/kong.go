@@ -34,6 +34,12 @@ type Config struct {
 	// EnableReverseSync indicates that reverse sync should be enabled for
 	// updates to the data-plane.
 	EnableReverseSync bool
+
+	// ExpressionRoutes indicates whether to use Kong's expression routes.
+	ExpressionRoutes bool
+
+	// DeckFileFormatVersion indicates the version of the Kong configuration format to use when using DB-mode.
+	DeckFileFormatVersion string
 }
 
 // Init sets up variables that need external calls.

@@ -9,6 +9,7 @@ import (
 
 	"github.com/kong/go-kong/kong"
 	"github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus/hooks/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
@@ -22,8 +23,10 @@ import (
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/manager/featuregates"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/versions"
 	configurationv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
 )
 
@@ -281,8 +284,9 @@ func TestGlobalPlugin(t *testing.T) {
 		})
 		assert.Nil(err)
 		p := mustNewParser(t, store)
-		state, translationFailures := p.Build()
-		require.Empty(t, translationFailures)
+		result := p.BuildKongConfig()
+		require.Empty(t, result.TranslationFailures)
+		state := result.KongState
 		assert.NotNil(state)
 		assert.Equal(1, len(state.Plugins),
 			"expected one plugin to be rendered")
@@ -463,9 +467,10 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 			store, err := store.NewFakeStore(objects)
 			assert.Nil(err)
 			p := mustNewParser(t, store)
-			state, translationFailures := p.Build()
-			require.Empty(t, translationFailures)
+			result := p.BuildKongConfig()
+			require.Empty(t, result.TranslationFailures)
 			assert.Nil(err)
+			state := result.KongState
 			assert.NotNil(state)
 			assert.Equal(3, len(state.Plugins),
 				"expected three plugins to be rendered")
@@ -569,9 +574,10 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 			store, err := store.NewFakeStore(objects)
 			assert.Nil(err)
 			p := mustNewParser(t, store)
-			state, translationFailures := p.Build()
-			require.Empty(t, translationFailures)
+			result := p.BuildKongConfig()
+			require.Empty(t, result.TranslationFailures)
 			assert.Nil(err)
+			state := result.KongState
 			assert.NotNil(state)
 			assert.Equal(0, len(state.Plugins),
 				"expected no plugins to be rendered")
@@ -672,8 +678,9 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 			store, err := store.NewFakeStore(objects)
 			assert.Nil(err)
 			p := mustNewParser(t, store)
-			state, translationFailures := p.Build()
-			require.Empty(t, translationFailures)
+			result := p.BuildKongConfig()
+			require.Empty(t, result.TranslationFailures)
+			state := result.KongState
 			assert.NotNil(state)
 			assert.Equal(0, len(state.Plugins),
 				"expected no plugins to be rendered")
@@ -724,8 +731,9 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 		store, err := store.NewFakeStore(objects)
 		assert.Nil(err)
 		p := mustNewParser(t, store)
-		state, translationFailures := p.Build()
-		require.Empty(t, translationFailures)
+		result := p.BuildKongConfig()
+		require.Empty(t, result.TranslationFailures)
+		state := result.KongState
 		assert.NotNil(state)
 		for _, testcase := range references {
 			config, err := kongstate.SecretToConfiguration(store, *testcase, "default")
@@ -823,8 +831,9 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 			store, err := store.NewFakeStore(objects)
 			assert.Nil(err)
 			p := mustNewParser(t, store)
-			state, translationFailures := p.Build()
-			require.Empty(t, translationFailures)
+			result := p.BuildKongConfig()
+			require.Empty(t, result.TranslationFailures)
+			state := result.KongState
 			assert.NotNil(state)
 			assert.Equal(0, len(state.Plugins),
 				"expected no plugins to be rendered")
@@ -859,8 +868,9 @@ func TestCACertificate(t *testing.T) {
 		})
 		assert.Nil(err)
 		p := mustNewParser(t, store)
-		state, translationFailures := p.Build()
-		require.Empty(t, translationFailures)
+		result := p.BuildKongConfig()
+		require.Empty(t, result.TranslationFailures)
+		state := result.KongState
 		assert.NotNil(state)
 
 		assert.Equal(1, len(state.CACertificates))
@@ -914,8 +924,9 @@ func TestCACertificate(t *testing.T) {
 		})
 		assert.Nil(err)
 		p := mustNewParser(t, store)
-		state, translationFailures := p.Build()
-		require.Empty(t, translationFailures)
+		result := p.BuildKongConfig()
+		require.Empty(t, result.TranslationFailures)
+		state := result.KongState
 		assert.NotNil(state)
 
 		assert.Equal(2, len(state.CACertificates))
@@ -997,8 +1008,9 @@ func TestCACertificate(t *testing.T) {
 		})
 		assert.Nil(err)
 		p := mustNewParser(t, store)
-		state, translationFailures := p.Build()
-		assert.Len(translationFailures, 3)
+		result := p.BuildKongConfig()
+		assert.Len(result.TranslationFailures, 3)
+		state := result.KongState
 		assert.NotNil(state)
 
 		assert.Equal(1, len(state.CACertificates))
@@ -1083,8 +1095,9 @@ func TestServiceClientCertificate(t *testing.T) {
 		})
 		assert.Nil(err)
 		p := mustNewParser(t, store)
-		state, translationFailures := p.Build()
-		require.Empty(t, translationFailures)
+		result := p.BuildKongConfig()
+		require.Empty(t, result.TranslationFailures)
+		state := result.KongState
 		assert.NotNil(state)
 		assert.Equal(1, len(state.Certificates),
 			"expected one certificates to be rendered")
@@ -1152,8 +1165,9 @@ func TestServiceClientCertificate(t *testing.T) {
 		})
 		assert.Nil(err)
 		p := mustNewParser(t, store)
-		state, translationFailures := p.Build()
-		require.Len(t, translationFailures, 1)
+		result := p.BuildKongConfig()
+		require.Len(t, result.TranslationFailures, 1)
+		state := result.KongState
 		assert.NotNil(state)
 		assert.Equal(0, len(state.Certificates),
 			"expected no certificates to be rendered")
@@ -1213,8 +1227,9 @@ func TestKongRouteAnnotations(t *testing.T) {
 		})
 		assert.Nil(err)
 		p := mustNewParser(t, store)
-		state, translationFailures := p.Build()
-		require.Empty(t, translationFailures)
+		result := p.BuildKongConfig()
+		require.Empty(t, result.TranslationFailures)
+		state := result.KongState
 		assert.NotNil(state)
 
 		assert.Equal(1, len(state.Services),
@@ -1299,8 +1314,9 @@ func TestKongRouteAnnotations(t *testing.T) {
 		})
 		assert.Nil(err)
 		p := mustNewParser(t, store)
-		state, translationFailures := p.Build()
-		require.Empty(t, translationFailures)
+		result := p.BuildKongConfig()
+		require.Empty(t, result.TranslationFailures)
+		state := result.KongState
 		assert.NotNil(state)
 
 		assert.Equal(1, len(state.Services),
@@ -1386,8 +1402,9 @@ func TestKongRouteAnnotations(t *testing.T) {
 			})
 			assert.Nil(err)
 			p := mustNewParser(t, store)
-			state, translationFailures := p.Build()
-			require.Empty(t, translationFailures)
+			result := p.BuildKongConfig()
+			require.Empty(t, result.TranslationFailures)
+			state := result.KongState
 			assert.NotNil(state)
 
 			assert.Equal(1, len(state.Services),
@@ -1474,8 +1491,9 @@ func TestKongRouteAnnotations(t *testing.T) {
 			})
 			assert.Nil(err)
 			p := mustNewParser(t, store)
-			state, translationFailures := p.Build()
-			require.Empty(t, translationFailures)
+			result := p.BuildKongConfig()
+			require.Empty(t, result.TranslationFailures)
+			state := result.KongState
 			assert.NotNil(state)
 
 			assert.Equal(1, len(state.Services),
@@ -1561,8 +1579,9 @@ func TestKongRouteAnnotations(t *testing.T) {
 			})
 			assert.Nil(err)
 			p := mustNewParser(t, store)
-			state, translationFailures := p.Build()
-			require.Empty(t, translationFailures)
+			result := p.BuildKongConfig()
+			require.Empty(t, result.TranslationFailures)
+			state := result.KongState
 			assert.NotNil(state)
 
 			assert.Equal(1, len(state.Services),
@@ -1648,8 +1667,9 @@ func TestKongRouteAnnotations(t *testing.T) {
 			})
 			assert.Nil(err)
 			p := mustNewParser(t, store)
-			state, translationFailures := p.Build()
-			require.Empty(t, translationFailures)
+			result := p.BuildKongConfig()
+			require.Empty(t, result.TranslationFailures)
+			state := result.KongState
 			assert.NotNil(state)
 
 			assert.Equal(1, len(state.Services),
@@ -1735,8 +1755,9 @@ func TestKongRouteAnnotations(t *testing.T) {
 			})
 			assert.Nil(err)
 			p := mustNewParser(t, store)
-			state, translationFailures := p.Build()
-			require.Empty(t, translationFailures)
+			result := p.BuildKongConfig()
+			require.Empty(t, result.TranslationFailures)
+			state := result.KongState
 			assert.NotNil(state)
 
 			assert.Equal(1, len(state.Services),
@@ -1822,8 +1843,9 @@ func TestKongRouteAnnotations(t *testing.T) {
 			})
 			assert.Nil(err)
 			p := mustNewParser(t, store)
-			state, translationFailures := p.Build()
-			require.Empty(t, translationFailures)
+			result := p.BuildKongConfig()
+			require.Empty(t, result.TranslationFailures)
+			state := result.KongState
 			assert.NotNil(state)
 
 			assert.Equal(1, len(state.Services),
@@ -1909,8 +1931,9 @@ func TestKongRouteAnnotations(t *testing.T) {
 		})
 		assert.Nil(err)
 		p := mustNewParser(t, store)
-		state, translationFailures := p.Build()
-		require.Empty(t, translationFailures)
+		result := p.BuildKongConfig()
+		require.Empty(t, result.TranslationFailures)
+		state := result.KongState
 		assert.NotNil(state)
 
 		assert.Equal(1, len(state.Services), "expected one service to be rendered")
@@ -1994,8 +2017,9 @@ func TestKongRouteAnnotations(t *testing.T) {
 		})
 		assert.Nil(err)
 		p := mustNewParser(t, store)
-		state, translationFailures := p.Build()
-		require.Empty(t, translationFailures)
+		result := p.BuildKongConfig()
+		require.Empty(t, result.TranslationFailures)
+		state := result.KongState
 		assert.NotNil(state)
 
 		assert.Equal(1, len(state.Services), "expected one service to be rendered")
@@ -2079,8 +2103,9 @@ func TestKongRouteAnnotations(t *testing.T) {
 		})
 		assert.Nil(err)
 		p := mustNewParser(t, store)
-		state, translationFailures := p.Build()
-		require.Empty(t, translationFailures)
+		result := p.BuildKongConfig()
+		require.Empty(t, result.TranslationFailures)
+		state := result.KongState
 		assert.NotNil(state)
 
 		kongTrue := kong.Bool(true)
@@ -2140,8 +2165,9 @@ func TestKongProcessClasslessIngress(t *testing.T) {
 		})
 		assert.Nil(err)
 		p := mustNewParser(t, store)
-		state, translationFailures := p.Build()
-		require.Empty(t, translationFailures)
+		result := p.BuildKongConfig()
+		require.Empty(t, result.TranslationFailures)
+		state := result.KongState
 		assert.NotNil(state)
 
 		assert.Equal(1, len(state.Services),
@@ -2191,8 +2217,9 @@ func TestKongProcessClasslessIngress(t *testing.T) {
 		})
 		assert.Nil(err)
 		p := mustNewParser(t, store)
-		state, translationFailures := p.Build()
-		require.Empty(t, translationFailures)
+		result := p.BuildKongConfig()
+		require.Empty(t, result.TranslationFailures)
+		state := result.KongState
 		assert.NotNil(state)
 
 		assert.Equal(0, len(state.Services),
@@ -2269,8 +2296,9 @@ func TestKnativeIngressAndPlugins(t *testing.T) {
 		})
 		assert.Nil(err)
 		p := mustNewParser(t, store)
-		state, translationFailures := p.Build()
-		require.Empty(t, translationFailures)
+		result := p.BuildKongConfig()
+		require.Empty(t, result.TranslationFailures)
+		state := result.KongState
 		assert.NotNil(state)
 
 		assert.Equal(1, len(state.Services), "expected one knative service")
@@ -2348,8 +2376,9 @@ func TestKnativeIngressAndPlugins(t *testing.T) {
 		})
 		assert.Nil(err)
 		p := mustNewParser(t, store)
-		state, translationFailures := p.Build()
-		require.Empty(t, translationFailures)
+		result := p.BuildKongConfig()
+		require.Empty(t, result.TranslationFailures)
+		state := result.KongState
 		assert.NotNil(state)
 
 		assert.Equal(1, len(state.Services), "expected one knative service")
@@ -2418,8 +2447,9 @@ func TestKnativeIngressAndPlugins(t *testing.T) {
 		})
 		assert.Nil(err)
 		p := mustNewParser(t, store)
-		state, translationFailures := p.Build()
-		require.Empty(t, translationFailures)
+		result := p.BuildKongConfig()
+		require.Empty(t, result.TranslationFailures)
+		state := result.KongState
 		assert.NotNil(state)
 
 		assert.Equal(1, len(state.Services), "expected one knative service")
@@ -2504,8 +2534,9 @@ func TestKnativeIngressAndPlugins(t *testing.T) {
 		})
 		assert.Nil(err)
 		p := mustNewParser(t, store)
-		state, translationFailures := p.Build()
-		require.Empty(t, translationFailures)
+		result := p.BuildKongConfig()
+		require.Empty(t, result.TranslationFailures)
+		state := result.KongState
 		assert.NotNil(state)
 
 		assert.Equal(1, len(state.Services),
@@ -2623,8 +2654,9 @@ func TestKongServiceAnnotations(t *testing.T) {
 		})
 		assert.Nil(err)
 		p := mustNewParser(t, store)
-		state, translationFailures := p.Build()
-		require.Empty(t, translationFailures)
+		result := p.BuildKongConfig()
+		require.Empty(t, result.TranslationFailures)
+		state := result.KongState
 		assert.NotNil(state)
 
 		assert.Equal(1, len(state.Services),
@@ -2712,8 +2744,9 @@ func TestKongServiceAnnotations(t *testing.T) {
 		})
 		assert.Nil(err)
 		p := mustNewParser(t, store)
-		state, translationFailures := p.Build()
-		require.Empty(t, translationFailures)
+		result := p.BuildKongConfig()
+		require.Empty(t, result.TranslationFailures)
+		state := result.KongState
 		assert.NotNil(state)
 
 		assert.Equal(1, len(state.Services),
@@ -2809,8 +2842,9 @@ func TestKongServiceAnnotations(t *testing.T) {
 			})
 			assert.Nil(err)
 			p := mustNewParser(t, store)
-			state, translationFailures := p.Build()
-			require.Empty(t, translationFailures)
+			result := p.BuildKongConfig()
+			require.Empty(t, result.TranslationFailures)
+			state := result.KongState
 			assert.NotNil(state)
 
 			assert.Equal(1, len(state.Services),
@@ -2885,8 +2919,9 @@ func TestDefaultBackend(t *testing.T) {
 		})
 		assert.Nil(err)
 		p := mustNewParser(t, store)
-		state, translationFailures := p.Build()
-		require.Empty(t, translationFailures)
+		result := p.BuildKongConfig()
+		require.Empty(t, result.TranslationFailures)
+		state := result.KongState
 		assert.NotNil(state)
 		assert.Equal(1, len(state.Services),
 			"expected one service to be rendered")
@@ -2955,8 +2990,9 @@ func TestDefaultBackend(t *testing.T) {
 		})
 		assert.Nil(err)
 		p := mustNewParser(t, store)
-		state, translationFailures := p.Build()
-		require.Len(t, translationFailures, 1)
+		result := p.BuildKongConfig()
+		require.Len(t, result.TranslationFailures, 1)
+		state := result.KongState
 		assert.NotNil(state)
 		assert.Equal(0, len(state.Certificates),
 			"expected no certificates to be rendered")
@@ -3021,8 +3057,9 @@ func TestParserSecret(t *testing.T) {
 		})
 		assert.Nil(err)
 		p := mustNewParser(t, store)
-		state, translationFailures := p.Build()
-		require.Empty(t, translationFailures)
+		result := p.BuildKongConfig()
+		require.Empty(t, result.TranslationFailures)
+		state := result.KongState
 		assert.NotNil(state)
 		assert.Equal(0, len(state.Certificates),
 			"expected no certificates to be rendered with empty secret")
@@ -3103,8 +3140,9 @@ func TestParserSecret(t *testing.T) {
 		})
 		assert.Nil(err)
 		p := mustNewParser(t, store)
-		state, translationFailures := p.Build()
-		require.Empty(t, translationFailures)
+		result := p.BuildKongConfig()
+		require.Empty(t, result.TranslationFailures)
+		state := result.KongState
 		assert.NotNil(state)
 		assert.Equal(1, len(state.Certificates),
 			"certificates are de-duplicated")
@@ -3232,8 +3270,9 @@ func TestParserSecret(t *testing.T) {
 		})
 		assert.Nil(err)
 		p := mustNewParser(t, store)
-		state, translationFailures := p.Build()
-		require.Empty(t, translationFailures)
+		result := p.BuildKongConfig()
+		require.Empty(t, result.TranslationFailures)
+		state := result.KongState
 		assert.NotNil(state)
 		assert.Equal(1, len(state.Certificates),
 			"certificates are de-duplicated")
@@ -3316,8 +3355,9 @@ func TestParserSecret(t *testing.T) {
 		})
 		assert.Nil(err)
 		p := mustNewParser(t, store)
-		state, translationFailures := p.Build()
-		require.Empty(t, translationFailures)
+		result := p.BuildKongConfig()
+		require.Empty(t, result.TranslationFailures)
+		state := result.KongState
 		assert.NotNil(state)
 		assert.Equal(1, len(state.Certificates),
 			"SNIs are de-duplicated")
@@ -3399,8 +3439,9 @@ func TestParserSNI(t *testing.T) {
 		})
 		assert.Nil(err)
 		p := mustNewParser(t, store)
-		state, translationFailures := p.Build()
-		require.Empty(t, translationFailures)
+		result := p.BuildKongConfig()
+		require.Empty(t, result.TranslationFailures)
+		state := result.KongState
 		assert.NotNil(state)
 		// parser tests do not check tags, these are tested independently
 		state.Services[0].Routes[0].Route.Tags = nil
@@ -3469,8 +3510,9 @@ func TestParserSNI(t *testing.T) {
 		})
 		assert.Nil(err)
 		p := mustNewParser(t, store)
-		state, translationFailures := p.Build()
-		require.Empty(t, translationFailures)
+		result := p.BuildKongConfig()
+		require.Empty(t, result.TranslationFailures)
+		state := result.KongState
 		assert.NotNil(state)
 		// parser tests do not check tags, these are tested independently
 		state.Services[0].Routes[0].Route.Tags = nil
@@ -3532,8 +3574,9 @@ func TestParserHostAliases(t *testing.T) {
 		})
 		assert.Nil(err)
 		p := mustNewParser(t, store)
-		state, translationFailures := p.Build()
-		require.Empty(t, translationFailures)
+		result := p.BuildKongConfig()
+		require.Empty(t, result.TranslationFailures)
+		state := result.KongState
 		assert.NotNil(state)
 		// parser tests do not check tags, these are tested independently
 		state.Services[0].Routes[0].Route.Tags = nil
@@ -3588,8 +3631,9 @@ func TestParserHostAliases(t *testing.T) {
 		})
 		assert.Nil(err)
 		p := mustNewParser(t, store)
-		state, translationFailures := p.Build()
-		require.Empty(t, translationFailures)
+		result := p.BuildKongConfig()
+		require.Empty(t, result.TranslationFailures)
+		state := result.KongState
 		assert.NotNil(state)
 		// parser tests do not check tags, these are tested independently
 		state.Services[0].Routes[0].Route.Tags = nil
@@ -3645,8 +3689,9 @@ func TestParserHostAliases(t *testing.T) {
 		})
 		assert.Nil(err)
 		p := mustNewParser(t, store)
-		state, translationFailures := p.Build()
-		require.Empty(t, translationFailures)
+		result := p.BuildKongConfig()
+		require.Empty(t, result.TranslationFailures)
+		state := result.KongState
 		assert.NotNil(state)
 		// parser tests do not check tags, these are tested independently
 		state.Services[0].Routes[0].Route.Tags = nil
@@ -3738,8 +3783,9 @@ func TestPluginAnnotations(t *testing.T) {
 		})
 		assert.Nil(err)
 		p := mustNewParser(t, store)
-		state, translationFailures := p.Build()
-		require.Empty(t, translationFailures)
+		result := p.BuildKongConfig()
+		require.Empty(t, result.TranslationFailures)
+		state := result.KongState
 		assert.NotNil(state)
 		assert.Equal(1, len(state.Plugins),
 			"expected no plugins to be rendered with missing plugin")
@@ -3838,8 +3884,9 @@ func TestPluginAnnotations(t *testing.T) {
 		})
 		assert.Nil(err)
 		p := mustNewParser(t, store)
-		state, translationFailures := p.Build()
-		require.Empty(t, translationFailures)
+		result := p.BuildKongConfig()
+		require.Empty(t, result.TranslationFailures)
+		state := result.KongState
 		assert.NotNil(state)
 		assert.Equal(1, len(state.Plugins),
 			"expected no plugins to be rendered with missing plugin")
@@ -3909,8 +3956,9 @@ func TestPluginAnnotations(t *testing.T) {
 		})
 		assert.Nil(err)
 		p := mustNewParser(t, store)
-		state, translationFailures := p.Build()
-		require.Empty(t, translationFailures)
+		result := p.BuildKongConfig()
+		require.Empty(t, result.TranslationFailures)
+		state := result.KongState
 		assert.NotNil(state)
 		assert.Equal(1, len(state.Plugins),
 			"expected no plugins to be rendered with missing plugin")
@@ -3956,8 +4004,9 @@ func TestPluginAnnotations(t *testing.T) {
 		})
 		assert.Nil(err)
 		p := mustNewParser(t, store)
-		state, translationFailures := p.Build()
-		require.Empty(t, translationFailures)
+		result := p.BuildKongConfig()
+		require.Empty(t, result.TranslationFailures)
+		state := result.KongState
 		assert.NotNil(state)
 		assert.Equal(0, len(state.Plugins),
 			"expected no plugins to be rendered with missing plugin")
@@ -4741,10 +4790,10 @@ func TestPickPort(t *testing.T) {
 			assert.NoError(err)
 
 			p := mustNewParser(t, store)
-			state, translationFailures := p.Build()
-			require.Empty(t, translationFailures)
+			result := p.BuildKongConfig()
+			require.Empty(t, result.TranslationFailures)
 
-			assert.Equal(tt.wantTarget, *state.Upstreams[0].Targets[0].Target.Target)
+			assert.Equal(tt.wantTarget, *result.KongState.Upstreams[0].Targets[0].Target.Target)
 		})
 	}
 }
@@ -4860,8 +4909,9 @@ func TestCertificate(t *testing.T) {
 		})
 		assert.Nil(err)
 		p := mustNewParser(t, store)
-		state, translationFailures := p.Build()
-		require.Empty(t, translationFailures)
+		result := p.BuildKongConfig()
+		require.Empty(t, result.TranslationFailures)
+		state := result.KongState
 		assert.NotNil(state)
 		assert.Equal(3, len(state.Certificates))
 		// foo.com with cert should be fixed
@@ -4953,8 +5003,9 @@ func TestCertificate(t *testing.T) {
 		})
 		assert.Nil(err)
 		p := mustNewParser(t, store)
-		state, translationFailures := p.Build()
-		require.Empty(t, translationFailures)
+		result := p.BuildKongConfig()
+		require.Empty(t, result.TranslationFailures)
+		state := result.KongState
 		assert.NotNil(state)
 		assert.Equal(1, len(state.Certificates))
 		// parser tests do not check tags, these are tested independently
@@ -5032,8 +5083,9 @@ func TestParser_FillsEntitiesIDs(t *testing.T) {
 	require.NoError(t, err)
 	p := mustNewParser(t, s)
 
-	state, translationFailures := p.Build()
-	require.Empty(t, translationFailures)
+	result := p.BuildKongConfig()
+	require.Empty(t, result.TranslationFailures)
+	state := result.KongState
 	require.NotNil(t, state)
 
 	require.Len(t, state.Services, 1)
@@ -5049,8 +5101,85 @@ func TestParser_FillsEntitiesIDs(t *testing.T) {
 	assert.Equal(t, "93c4b796-7cc1-5f86-834c-3bbdf00a806c", *state.Consumers[0].ID, "expected deterministic ID")
 }
 
+func TestNewFeatureFlags(t *testing.T) {
+	testCases := []struct {
+		name string
+
+		featureGates     map[string]bool
+		kongVersion      versions.KongVersion
+		routerFlavor     string
+		updateStatusFlag bool
+
+		expectedFeatureFlags FeatureFlags
+		expectInfoLog        string
+	}{
+		{
+			name:             "default",
+			featureGates:     map[string]bool{},
+			routerFlavor:     "traditional",
+			updateStatusFlag: true,
+			expectedFeatureFlags: FeatureFlags{
+				ReportConfiguredKubernetesObjects: true,
+			},
+		},
+		{
+			name: "expression routes feature gate enabled and router flavor matches",
+			featureGates: map[string]bool{
+				featuregates.ExpressionRoutesFeature: true,
+			},
+			routerFlavor: kongRouterFlavorExpressions,
+			expectedFeatureFlags: FeatureFlags{
+				ExpressionRoutes: true,
+			},
+			expectInfoLog: "expression routes mode has been enabled",
+		},
+		{
+			name: "expression routes feature gate enabled and router flavor does not match",
+			featureGates: map[string]bool{
+				featuregates.ExpressionRoutesFeature: true,
+			},
+			routerFlavor:         "any_other_router_mode",
+			expectedFeatureFlags: FeatureFlags{},
+			expectInfoLog:        "ExpressionRoutes feature gate enabled, but Gateway run with \"any_other_router_mode\" router flavor, using this instead",
+		},
+		{
+			name: "combined routes feature gate enabled",
+			featureGates: map[string]bool{
+				featuregates.CombinedRoutesFeature: true,
+			},
+			expectedFeatureFlags: FeatureFlags{
+				CombinedServiceRoutes: true,
+			},
+			expectInfoLog: "combined routes mode has been enabled",
+		},
+		{
+			name:        "kong version >= 3.0 enables regex path prefix",
+			kongVersion: versions.KongVersion{Major: 3, Minor: 0},
+			expectedFeatureFlags: FeatureFlags{
+				RegexPathPrefix: true,
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			log, logHook := test.NewNullLogger()
+			actualFlags := NewFeatureFlags(log, tc.featureGates, tc.kongVersion, tc.routerFlavor, tc.updateStatusFlag)
+
+			require.Equal(t, tc.expectedFeatureFlags, actualFlags)
+
+			if tc.expectInfoLog != "" {
+				lastEntry := logHook.LastEntry()
+				require.NotNil(t, lastEntry)
+				require.Equal(t, logrus.InfoLevel, lastEntry.Level)
+				require.Equal(t, tc.expectInfoLog, lastEntry.Message)
+			}
+		})
+	}
+}
+
 func mustNewParser(t *testing.T, storer store.Storer) *Parser {
-	p, err := NewParser(logrus.New(), storer)
+	p, err := NewParser(logrus.New(), storer, FeatureFlags{})
 	require.NoError(t, err)
 	return p
 }

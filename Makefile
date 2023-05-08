@@ -366,10 +366,10 @@ _test.integration: _check.container.environment go-junit-report
 
 .PHONY: test.integration.dbless.knative
 test.integration.dbless.knative:
-	@$(MAKE) _test.integration \
+	@KONG_CONTROLLER_FEATURE_GATES="Knative=true" \
+	$(MAKE) _test.integration \
 		GOTAGS="integration_tests,knative" \
 		GOTESTFLAGS="-run TestKnative" \
-		KONG_CONTROLLER_FEATURE_GATES="Knative=true" \
 		DBMODE=off \
 		COVERAGE_OUT=coverage.dbless.knative.out
 
@@ -382,10 +382,10 @@ test.integration.dbless:
 
 .PHONY: test.integration.postgres.knative
 test.integration.postgres.knative:
-	@$(MAKE) _test.integration \
+	@KONG_CONTROLLER_FEATURE_GATES="Knative=true" \
+	$(MAKE) _test.integration \
 		GOTAGS="integration_tests,knative" \
 		GOTESTFLAGS="-run TestKnative" \
-		KONG_CONTROLLER_FEATURE_GATES="Knative=true" \
 		DBMODE=postgres \
 		COVERAGE_OUT=coverage.postgres.knative.out
 

@@ -1,4 +1,4 @@
-package konnect
+package license
 
 import (
 	"context"
@@ -14,8 +14,8 @@ import (
 	tlsutil "github.com/kong/kubernetes-ingress-controller/v2/internal/util/tls"
 )
 
-// LicenseAPIClient interacts with the Konnect license API.
-type LicenseAPIClient struct {
+// APIClient interacts with the Konnect license API.
+type APIClient struct {
 	Address        string
 	RuntimeGroupID string
 	Client         *http.Client
@@ -24,8 +24,8 @@ type LicenseAPIClient struct {
 // KICLicenseAPIPathPattern is the path pattern for KIC license operations.
 var KICLicenseAPIPathPattern = "%s/kic/api/runtime_groups/%s/v1/licenses"
 
-// NewLicenseAPIClient creates a Konnect client.
-func NewLicenseAPIClient(cfg adminapi.KonnectConfig) (*LicenseAPIClient, error) {
+// NewAPIClient creates a License API Konnect client.
+func NewAPIClient(cfg adminapi.KonnectConfig) (*APIClient, error) {
 	tlsConfig := tls.Config{
 		MinVersion: tls.VersionTLS12,
 	}
@@ -42,18 +42,18 @@ func NewLicenseAPIClient(cfg adminapi.KonnectConfig) (*LicenseAPIClient, error) 
 	transport.TLSClientConfig = &tlsConfig
 	c.Transport = transport
 
-	return &LicenseAPIClient{
+	return &APIClient{
 		Address:        cfg.Address,
 		RuntimeGroupID: cfg.RuntimeGroupID,
 		Client:         c,
 	}, nil
 }
 
-func (c *LicenseAPIClient) kicLicenseAPIEndpoint() string {
+func (c *APIClient) kicLicenseAPIEndpoint() string {
 	return fmt.Sprintf(KICLicenseAPIPathPattern, c.Address, c.RuntimeGroupID)
 }
 
-func (c *LicenseAPIClient) List(ctx context.Context, pageNumber int) (*ListLicenseResponse, error) {
+func (c *APIClient) List(ctx context.Context, pageNumber int) (*ListLicenseResponse, error) {
 	// TODO this is another case where we have a pseudo-unary object. The page is always 0 in practice, but if we have
 	// separate functions per entity, we end up with effectively dead code for some
 	url, _ := neturl.Parse(c.kicLicenseAPIEndpoint())
@@ -89,4 +89,9 @@ func (c *LicenseAPIClient) List(ctx context.Context, pageNumber int) (*ListLicen
 		return nil, fmt.Errorf("failed to parse response body: %w", err)
 	}
 	return resp, nil
+}
+
+// isOKStatusCode returns true if the input HTTP status code is 2xx, in [200,300).
+func isOKStatusCode(code int) bool {
+	return code >= 200 && code < 300
 }

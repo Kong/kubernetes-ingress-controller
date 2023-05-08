@@ -1,4 +1,4 @@
-package konnect
+package nodes
 
 const (
 	// NodeTypeIngressController is the type of nodes representing KIC instances.

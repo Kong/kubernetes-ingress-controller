@@ -42,6 +42,13 @@ type ChannelConfigNotifier struct {
 
 var _ ConfigStatusNotifier = &ChannelConfigNotifier{}
 
+func NewChannelConfigNotifier(logger logr.Logger) *ChannelConfigNotifier {
+	return &ChannelConfigNotifier{
+		ch:     make(chan ConfigStatus),
+		logger: logger,
+	}
+}
+
 // NotifyConfigStatus sends the status in a separate goroutine. If the notification is not received in 1s, it's dropped.
 func (n *ChannelConfigNotifier) NotifyConfigStatus(ctx context.Context, status ConfigStatus) {
 	const notifyTimeout = time.Second
@@ -63,11 +70,4 @@ func (n *ChannelConfigNotifier) NotifyConfigStatus(ctx context.Context, status C
 func (n *ChannelConfigNotifier) SubscribeConfigStatus() chan ConfigStatus {
 	// TODO: in case of multiple subscribers, we should use a fan-out pattern.
 	return n.ch
-}
-
-func NewChannelConfigNotifier(logger logr.Logger) *ChannelConfigNotifier {
-	return &ChannelConfigNotifier{
-		ch:     make(chan ConfigStatus, 1),
-		logger: logger,
-	}
 }

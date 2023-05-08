@@ -24,6 +24,8 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/parser"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/sendconfig"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/konnect"
+	konnectLicense "github.com/kong/kubernetes-ingress-controller/v2/internal/konnect/license"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/konnect/nodes"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/license"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/manager/featuregates"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/manager/metadata"
@@ -216,7 +218,7 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 	instanceIDProvider := NewInstanceIDProvider()
 
 	if c.Konnect.ConfigSynchronizationEnabled {
-		konnectAPIClient, err := konnect.NewNodeAPIClient(c.Konnect)
+		konnectNodesAPIClient, err := nodes.NewAPIClient(c.Konnect)
 		if err != nil {
 			return fmt.Errorf("failed creating konnect client: %w", err)
 		}
@@ -231,7 +233,7 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 		if err := setupKonnectNodeAgentWithMgr(
 			c,
 			mgr,
-			konnectAPIClient,
+			konnectNodesAPIClient,
 			dataplaneClient,
 			clientsManager,
 			setupLog,
@@ -247,7 +249,7 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 	// we probably want to avoid that long term. If we do have separate toggles, we need an AND condition that sets up
 	// the client and makes it available to all Konnect-related subsystems.
 	if c.Konnect.LicenseSynchronizationEnabled {
-		konnectLicenseAPIClient, err := konnect.NewLicenseAPIClient(c.Konnect)
+		konnectLicenseAPIClient, err := konnectLicense.NewAPIClient(c.Konnect)
 		if err != nil {
 			return fmt.Errorf("failed creating konnect client: %w", err)
 		}
@@ -293,7 +295,7 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 func setupKonnectNodeAgentWithMgr(
 	c *Config,
 	mgr manager.Manager,
-	konnectNodeAPIClient *konnect.NodeAPIClient,
+	konnectNodeAPIClient *nodes.APIClient,
 	dataplaneClient *dataplane.KongClient,
 	clientsManager *clients.AdminAPIClientsManager,
 	logger logr.Logger,

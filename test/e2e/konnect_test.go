@@ -34,6 +34,7 @@ import (
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/adminapi"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/konnect"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/konnect/nodes"
 	rg "github.com/kong/kubernetes-ingress-controller/v2/internal/konnect/runtimegroups"
 	rgc "github.com/kong/kubernetes-ingress-controller/v2/internal/konnect/runtimegroupsconfig"
 )
@@ -311,7 +312,7 @@ func createKonnectAdminAPIClient(t *testing.T, rgID, cert, key string) *adminapi
 }
 
 // createKonnectNodeClient creates a konnect.NodeAPIClient to get nodes in konnect runtime group.
-func createKonnectNodeClient(t *testing.T, rgID, cert, key string) *konnect.NodeAPIClient {
+func createKonnectNodeClient(t *testing.T, rgID, cert, key string) *nodes.APIClient {
 	cfg := adminapi.KonnectConfig{
 		ConfigSynchronizationEnabled: true,
 		RuntimeGroupID:               rgID,
@@ -322,7 +323,7 @@ func createKonnectNodeClient(t *testing.T, rgID, cert, key string) *konnect.Node
 			Key:  key,
 		},
 	}
-	c, err := konnect.NewNodeAPIClient(cfg)
+	c, err := nodes.NewAPIClient(cfg)
 	require.NoError(t, err)
 	return c
 }
@@ -330,7 +331,7 @@ func createKonnectNodeClient(t *testing.T, rgID, cert, key string) *konnect.Node
 func requireKonnectNodesConsistentWithK8s(ctx context.Context, t *testing.T, env environment.Environment, deployments Deployments, rgID string, cert, key string) {
 	konnectNodeClient := createKonnectNodeClient(t, rgID, cert, key)
 	require.Eventually(t, func() bool {
-		nodes, err := konnectNodeClient.ListAllNodes(ctx)
+		ns, err := konnectNodeClient.ListAllNodes(ctx)
 		if err != nil {
 			t.Logf("list all nodes failed: %v", err)
 			return false
@@ -346,14 +347,14 @@ func requireKonnectNodesConsistentWithK8s(ctx context.Context, t *testing.T, env
 			return false
 		}
 
-		kicNodes := []*konnect.NodeItem{}
-		kongNodes := []*konnect.NodeItem{}
+		kicNodes := []*nodes.NodeItem{}
+		kongNodes := []*nodes.NodeItem{}
 
-		for _, node := range nodes {
-			if node.Type == konnect.NodeTypeIngressController {
+		for _, node := range ns {
+			if node.Type == nodes.NodeTypeIngressController {
 				kicNodes = append(kicNodes, node)
 			}
-			if node.Type == konnect.NodeTypeKongProxy {
+			if node.Type == nodes.NodeTypeKongProxy {
 				kongNodes = append(kongNodes, node)
 			}
 		}
@@ -369,7 +370,7 @@ func requireKonnectNodesConsistentWithK8s(ctx context.Context, t *testing.T, env
 
 		for _, pod := range kongPods {
 			nsName := fmt.Sprintf("%s/%s", pod.Namespace, pod.Name)
-			if !lo.ContainsBy(kongNodes, func(n *konnect.NodeItem) bool {
+			if !lo.ContainsBy(kongNodes, func(n *nodes.NodeItem) bool {
 				return n.Hostname == nsName
 			}) {
 				return false

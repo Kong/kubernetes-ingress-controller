@@ -12,6 +12,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/clients"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/konnect/nodes"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 )
 
@@ -41,15 +42,23 @@ type ManagerInstanceIDProvider interface {
 	GetID() uuid.UUID
 }
 
+// NodeAPIClient is the interface to Konnect Runtime Group Node API.
+type NodeAPIClient interface {
+	CreateNode(ctx context.Context, req *nodes.CreateNodeRequest) (*nodes.CreateNodeResponse, error)
+	UpdateNode(ctx context.Context, nodeID string, req *nodes.UpdateNodeRequest) (*nodes.UpdateNodeResponse, error)
+	DeleteNode(ctx context.Context, nodeID string) error
+	ListAllNodes(ctx context.Context) ([]*nodes.NodeItem, error)
+}
+
 // NodeAgent gets the running status of KIC node and controlled kong gateway nodes,
 // and update their statuses to konnect.
 type NodeAgent struct {
-	Hostname string
-	Version  string
+	hostname string
+	version  string
 
-	Logger logr.Logger
+	logger logr.Logger
 
-	konnectClient *NodeAPIClient
+	nodeAPIClient NodeAPIClient
 	refreshPeriod time.Duration
 
 	configStatus           atomic.Uint32
@@ -67,7 +76,7 @@ func NewNodeAgent(
 	version string,
 	refreshPeriod time.Duration,
 	logger logr.Logger,
-	client *NodeAPIClient,
+	client NodeAPIClient,
 	configStatusSubscriber clients.ConfigStatusSubscriber,
 	gatewayGetter GatewayInstanceGetter,
 	gatewayClientsChangesNotifier GatewayClientsChangesNotifier,
@@ -77,11 +86,10 @@ func NewNodeAgent(
 		refreshPeriod = MinRefreshNodePeriod
 	}
 	a := &NodeAgent{
-		Hostname: hostname,
-		Version:  version,
-		Logger: logger.
-			WithName("konnect-node").WithValues("runtime_group_id", client.RuntimeGroupID),
-		konnectClient:                 client,
+		hostname:                      hostname,
+		version:                       version,
+		logger:                        logger.WithName("konnect-node-agent"),
+		nodeAPIClient:                 client,
 		refreshPeriod:                 refreshPeriod,
 		configStatusSubscriber:        configStatusSubscriber,
 		gatewayInstanceGetter:         gatewayGetter,
@@ -94,10 +102,10 @@ func NewNodeAgent(
 
 // Start runs the process of maintaining and uploading of KIC and kong gateway nodes.
 func (a *NodeAgent) Start(ctx context.Context) error {
-	a.Logger.Info("Starting Konnect NodeAgent")
+	a.logger.Info("Starting Konnect NodeAgent")
 
 	if err := a.updateNodes(ctx); err != nil {
-		a.Logger.Error(err, "Failed to run initial update of Konnect nodes, no further updates will be performed")
+		a.logger.Error(err, "Failed to run initial update of Konnect nodes, no further updates will be performed")
 		// Do not return here as we don't want NodeAgent to affect the manager health.
 		// If we returned, it would cause the manager to exit.
 	} else {
@@ -105,7 +113,6 @@ func (a *NodeAgent) Start(ctx context.Context) error {
 		go a.updateNodeLoop(ctx)
 		go a.subscribeConfigStatus(ctx)
 		go a.subscribeToGatewayClientsChanges(ctx)
-
 	}
 
 	// We're waiting here as that's the manager.Runnable interface requirement to block until the context is done.
@@ -121,7 +128,7 @@ func (a *NodeAgent) NeedLeaderElection() bool {
 
 // sortNodesByLastPing sort nodes by descending order of last ping time
 // so that nodes are sorted by the newest order.
-func sortNodesByLastPing(nodes []*NodeItem) {
+func sortNodesByLastPing(nodes []*nodes.NodeItem) {
 	sort.Slice(nodes, func(i, j int) bool {
 		return nodes[i].LastPing > nodes[j].LastPing
 	})
@@ -135,7 +142,7 @@ func (a *NodeAgent) subscribeConfigStatus(ctx context.Context) {
 	for {
 		select {
 		case <-chDone:
-			a.Logger.Info("subscribe loop stopped", "message", ctx.Err().Error())
+			a.logger.Info("subscribe loop stopped", "message", ctx.Err().Error())
 			return
 		case configStatus := <-ch:
 			a.configStatus.Store(uint32(configStatus))
@@ -153,33 +160,33 @@ func (a *NodeAgent) subscribeToGatewayClientsChanges(ctx context.Context) {
 	for {
 		select {
 		case <-ctx.Done():
-			a.Logger.Info("subscribe gateway clients changes loop stopped", "message", ctx.Err().Error())
+			a.logger.Info("subscribe gateway clients changes loop stopped", "message", ctx.Err().Error())
 			return
 		case <-gatewayClientsChangedCh:
 			if err := a.updateNodes(ctx); err != nil {
-				a.Logger.Error(err, "failed to update nodes after gateway clients changed")
+				a.logger.Error(err, "failed to update nodes after gateway clients changed")
 			}
 		}
 	}
 }
 
 // updateKICNode updates status of KIC node in konnect.
-func (a *NodeAgent) updateKICNode(ctx context.Context, existingNodes []*NodeItem) error {
-	nodesWithSameName := []*NodeItem{}
+func (a *NodeAgent) updateKICNode(ctx context.Context, existingNodes []*nodes.NodeItem) error {
+	nodesWithSameName := []*nodes.NodeItem{}
 	for _, node := range existingNodes {
-		if node.Type != NodeTypeIngressController {
+		if node.Type != nodes.NodeTypeIngressController {
 			continue
 		}
 
-		if node.Hostname == a.Hostname {
+		if node.Hostname == a.hostname {
 			// save all nodes with same name as current KIC node, update the latest one and delete others.
 			nodesWithSameName = append(nodesWithSameName, node)
 		} else {
 			// delete the nodes with different name of the current node, since only on KIC node is allowed in the runtime group.
-			a.Logger.V(util.DebugLevel).Info("remove outdated KIC node", "node_id", node.ID, "hostname", node.Hostname)
-			err := a.konnectClient.DeleteNode(ctx, node.ID)
+			a.logger.V(util.DebugLevel).Info("remove outdated KIC node", "node_id", node.ID, "hostname", node.Hostname)
+			err := a.nodeAPIClient.DeleteNode(ctx, node.ID)
 			if err != nil {
-				a.Logger.Error(err, "failed to delete KIC node", "node_id", node.ID, "hostname", node.Hostname)
+				a.logger.Error(err, "failed to delete KIC node", "node_id", node.ID, "hostname", node.Hostname)
 				continue
 			}
 		}
@@ -187,78 +194,78 @@ func (a *NodeAgent) updateKICNode(ctx context.Context, existingNodes []*NodeItem
 	// sort nodes by last ping and reserve the latest node.
 	sortNodesByLastPing(nodesWithSameName)
 
-	var ingressControllerStatus IngressControllerState
+	var ingressControllerStatus nodes.IngressControllerState
 	configStatus := int(a.configStatus.Load())
 	switch clients.ConfigStatus(configStatus) {
 	case clients.ConfigStatusOK:
-		ingressControllerStatus = IngressControllerStateOperational
+		ingressControllerStatus = nodes.IngressControllerStateOperational
 	case clients.ConfigStatusTranslationErrorHappened:
-		ingressControllerStatus = IngressControllerStatePartialConfigFail
+		ingressControllerStatus = nodes.IngressControllerStatePartialConfigFail
 	case clients.ConfigStatusApplyFailed:
-		ingressControllerStatus = IngressControllerStateInoperable
+		ingressControllerStatus = nodes.IngressControllerStateInoperable
 	default:
-		ingressControllerStatus = IngressControllerStateUnknown
+		ingressControllerStatus = nodes.IngressControllerStateUnknown
 	}
 
 	// create a new node if there is no existing node with same name as the current KIC node.
 	if len(nodesWithSameName) == 0 {
-		a.Logger.V(util.DebugLevel).Info("no nodes found for KIC pod, should create one", "hostname", a.Hostname)
-		createNodeReq := &CreateNodeRequest{
+		a.logger.V(util.DebugLevel).Info("no nodes found for KIC pod, should create one", "hostname", a.hostname)
+		createNodeReq := &nodes.CreateNodeRequest{
 			ID:       a.managerInstanceIDProvider.GetID().String(),
-			Hostname: a.Hostname,
-			Version:  a.Version,
-			Type:     NodeTypeIngressController,
+			Hostname: a.hostname,
+			Version:  a.version,
+			Type:     nodes.NodeTypeIngressController,
 			LastPing: time.Now().Unix(),
 			Status:   string(ingressControllerStatus),
 		}
-		resp, err := a.konnectClient.CreateNode(ctx, createNodeReq)
+		resp, err := a.nodeAPIClient.CreateNode(ctx, createNodeReq)
 		if err != nil {
-			return fmt.Errorf("failed to create KIC node, hostname %s: %w", a.Hostname, err)
+			return fmt.Errorf("failed to create KIC node, hostname %s: %w", a.hostname, err)
 		}
-		a.Logger.Info("created KIC node", "node_id", resp.Item.ID, "hostname", a.Hostname)
+		a.logger.Info("created KIC node", "node_id", resp.Item.ID, "hostname", a.hostname)
 		return nil
 	}
 
 	// update the node with latest last ping time.
 	latestNode := nodesWithSameName[0]
-	updateNodeReq := &UpdateNodeRequest{
-		Hostname: a.Hostname,
-		Type:     NodeTypeIngressController,
-		Version:  a.Version,
+	updateNodeReq := &nodes.UpdateNodeRequest{
+		Hostname: a.hostname,
+		Type:     nodes.NodeTypeIngressController,
+		Version:  a.version,
 		LastPing: time.Now().Unix(),
 		Status:   string(ingressControllerStatus),
 	}
-	_, err := a.konnectClient.UpdateNode(ctx, latestNode.ID, updateNodeReq)
+	_, err := a.nodeAPIClient.UpdateNode(ctx, latestNode.ID, updateNodeReq)
 	if err != nil {
-		a.Logger.Error(err, "failed to update node for KIC")
+		a.logger.Error(err, "failed to update node for KIC")
 		return err
 	}
-	a.Logger.V(util.DebugLevel).Info("updated last ping time of node for KIC", "node_id", latestNode.ID, "hostname", a.Hostname)
+	a.logger.V(util.DebugLevel).Info("updated last ping time of node for KIC", "node_id", latestNode.ID, "hostname", a.hostname)
 
 	// treat more nodes with the same name as outdated, and remove them.
 	for i := 1; i < len(nodesWithSameName); i++ {
 		node := nodesWithSameName[i]
-		err := a.konnectClient.DeleteNode(ctx, node.ID)
+		err := a.nodeAPIClient.DeleteNode(ctx, node.ID)
 		if err != nil {
-			a.Logger.Error(err, "failed to delete outdated KIC node", "node_id", node.ID, "hostname", node.Hostname)
+			a.logger.Error(err, "failed to delete outdated KIC node", "node_id", node.ID, "hostname", node.Hostname)
 			continue
 		}
-		a.Logger.V(util.DebugLevel).Info("removed outdated KIC node", "node_id", node.ID, "hostname", node.Hostname)
+		a.logger.V(util.DebugLevel).Info("removed outdated KIC node", "node_id", node.ID, "hostname", node.Hostname)
 	}
 	return nil
 }
 
 // updateGatewayNodes updates status of controlled kong gateway nodes to konnect.
-func (a *NodeAgent) updateGatewayNodes(ctx context.Context, existingNodes []*NodeItem) error {
+func (a *NodeAgent) updateGatewayNodes(ctx context.Context, existingNodes []*nodes.NodeItem) error {
 	gatewayInstances, err := a.gatewayInstanceGetter.GetGatewayInstances(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to get controlled kong gateway pods: %w", err)
 	}
 	gatewayInstanceMap := make(map[string]struct{})
 
-	nodeType := NodeTypeKongProxy
+	nodeType := nodes.NodeTypeKongProxy
 
-	existingNodeMap := make(map[string][]*NodeItem)
+	existingNodeMap := make(map[string][]*nodes.NodeItem)
 	for _, node := range existingNodes {
 		if node.Type == nodeType {
 			existingNodeMap[node.Hostname] = append(existingNodeMap[node.Hostname], node)
@@ -267,65 +274,65 @@ func (a *NodeAgent) updateGatewayNodes(ctx context.Context, existingNodes []*Nod
 
 	for _, gateway := range gatewayInstances {
 		gatewayInstanceMap[gateway.Hostname] = struct{}{}
-		nodes, ok := existingNodeMap[gateway.Hostname]
+		ns, ok := existingNodeMap[gateway.Hostname]
 
 		// hostname in existing nodes, should create a new node.
-		if !ok || len(nodes) == 0 {
-			createNodeReq := &CreateNodeRequest{
+		if !ok || len(ns) == 0 {
+			createNodeReq := &nodes.CreateNodeRequest{
 				ID:       gateway.NodeID,
 				Hostname: gateway.Hostname,
 				Version:  gateway.Version,
 				Type:     nodeType,
 				LastPing: time.Now().Unix(),
 			}
-			newNode, err := a.konnectClient.CreateNode(ctx, createNodeReq)
+			newNode, err := a.nodeAPIClient.CreateNode(ctx, createNodeReq)
 			if err != nil {
-				a.Logger.Error(err, "failed to create kong gateway node", "hostname", gateway.Hostname)
+				a.logger.Error(err, "failed to create kong gateway node", "hostname", gateway.Hostname)
 			} else {
-				a.Logger.Info("created kong gateway node", "hostname", gateway.Hostname, "node_id", newNode.Item.ID)
+				a.logger.Info("created kong gateway node", "hostname", gateway.Hostname, "node_id", newNode.Item.ID)
 			}
 			continue
 		}
 
 		// sort the nodes by last ping, and only reserve the latest node.
-		sortNodesByLastPing(nodes)
-		updateNodeReq := &UpdateNodeRequest{
+		sortNodesByLastPing(ns)
+		updateNodeReq := &nodes.UpdateNodeRequest{
 			Hostname: gateway.Hostname,
 			Version:  gateway.Version,
 			Type:     nodeType,
 			LastPing: time.Now().Unix(),
 		}
 		// update the latest node.
-		latestNode := nodes[0]
-		_, err := a.konnectClient.UpdateNode(ctx, latestNode.ID, updateNodeReq)
+		latestNode := ns[0]
+		_, err := a.nodeAPIClient.UpdateNode(ctx, latestNode.ID, updateNodeReq)
 		if err != nil {
-			a.Logger.Error(err, "failed to update kong gateway node", "hostname", gateway.Hostname, "node_id", latestNode.ID)
+			a.logger.Error(err, "failed to update kong gateway node", "hostname", gateway.Hostname, "node_id", latestNode.ID)
 			continue
 		}
-		a.Logger.V(util.DebugLevel).Info("updated kong gateway node", "hostname", gateway.Hostname, "node_id", latestNode.ID)
+		a.logger.V(util.DebugLevel).Info("updated kong gateway node", "hostname", gateway.Hostname, "node_id", latestNode.ID)
 		// succeeded to update node, remove the other outdated nodes.
-		for i := 1; i < len(nodes); i++ {
-			node := nodes[i]
-			err := a.konnectClient.DeleteNode(ctx, node.ID)
+		for i := 1; i < len(ns); i++ {
+			node := ns[i]
+			err := a.nodeAPIClient.DeleteNode(ctx, node.ID)
 			if err != nil {
-				a.Logger.Error(err, "failed to delete outdated kong gateway node", "node_id", node.ID, "hostname", node.Hostname)
+				a.logger.Error(err, "failed to delete outdated kong gateway node", "node_id", node.ID, "hostname", node.Hostname)
 				continue
 			}
-			a.Logger.V(util.DebugLevel).Info("removed outdated kong gateway node", "node_id", node.ID, "hostname", node.Hostname)
+			a.logger.V(util.DebugLevel).Info("removed outdated kong gateway node", "node_id", node.ID, "hostname", node.Hostname)
 		}
 
 	}
 
 	// delete nodes with no corresponding gateway pod.
-	for hostname, nodes := range existingNodeMap {
+	for hostname, ns := range existingNodeMap {
 		if _, ok := gatewayInstanceMap[hostname]; !ok {
-			for _, node := range nodes {
-				err := a.konnectClient.DeleteNode(ctx, node.ID)
+			for _, node := range ns {
+				err := a.nodeAPIClient.DeleteNode(ctx, node.ID)
 				if err != nil {
-					a.Logger.Error(err, "failed to delete outdated kong gateway node", "node_id", node.ID, "hostname", node.Hostname)
+					a.logger.Error(err, "failed to delete outdated kong gateway node", "node_id", node.ID, "hostname", node.Hostname)
 					continue
 				}
-				a.Logger.V(util.DebugLevel).Info("removed outdated kong gateway node", "node_id", node.ID, "hostname", node.Hostname)
+				a.logger.V(util.DebugLevel).Info("removed outdated kong gateway node", "node_id", node.ID, "hostname", node.Hostname)
 			}
 		}
 	}
@@ -335,7 +342,7 @@ func (a *NodeAgent) updateGatewayNodes(ctx context.Context, existingNodes []*Nod
 
 // updateNodes updates current status of KIC and controlled kong gateway nodes.
 func (a *NodeAgent) updateNodes(ctx context.Context) error {
-	existingNodes, err := a.konnectClient.ListAllNodes(ctx)
+	existingNodes, err := a.nodeAPIClient.ListAllNodes(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to list existing nodes: %w", err)
 	}
@@ -360,12 +367,12 @@ func (a *NodeAgent) updateNodeLoop(ctx context.Context) {
 		select {
 		case <-ctx.Done():
 			err := ctx.Err()
-			a.Logger.Info("update node loop stopped", "message", err.Error())
+			a.logger.Info("update node loop stopped", "message", err.Error())
 			return
 		case <-ticker.C:
 			err := a.updateNodes(ctx)
 			if err != nil {
-				a.Logger.Error(err, "failed to update nodes")
+				a.logger.Error(err, "failed to update nodes")
 			}
 		}
 	}

@@ -1,4 +1,4 @@
-package konnect
+package nodes
 
 import (
 	"bytes"
@@ -17,9 +17,9 @@ import (
 	tlsutil "github.com/kong/kubernetes-ingress-controller/v2/internal/util/tls"
 )
 
-// NodeAPIClient is used for sending requests to Konnect Node API.
+// APIClient is used for sending requests to Konnect Node API.
 // It can be used to register Nodes in Konnect's Runtime Groups.
-type NodeAPIClient struct {
+type APIClient struct {
 	Address        string
 	RuntimeGroupID string
 	Client         *http.Client
@@ -28,8 +28,8 @@ type NodeAPIClient struct {
 // KicNodeAPIPathPattern is the path pattern for KIC node operations.
 var KicNodeAPIPathPattern = "%s/kic/api/runtime_groups/%s/v1/kic-nodes"
 
-// NewNodeAPIClient creates a Konnect client.
-func NewNodeAPIClient(cfg adminapi.KonnectConfig) (*NodeAPIClient, error) {
+// NewAPIClient creates a Node API Konnect client.
+func NewAPIClient(cfg adminapi.KonnectConfig) (*APIClient, error) {
 	tlsConfig := tls.Config{
 		MinVersion: tls.VersionTLS12,
 	}
@@ -46,22 +46,22 @@ func NewNodeAPIClient(cfg adminapi.KonnectConfig) (*NodeAPIClient, error) {
 	transport.TLSClientConfig = &tlsConfig
 	c.Transport = transport
 
-	return &NodeAPIClient{
+	return &APIClient{
 		Address:        cfg.Address,
 		RuntimeGroupID: cfg.RuntimeGroupID,
 		Client:         c,
 	}, nil
 }
 
-func (c *NodeAPIClient) kicNodeAPIEndpoint() string {
+func (c *APIClient) kicNodeAPIEndpoint() string {
 	return fmt.Sprintf(KicNodeAPIPathPattern, c.Address, c.RuntimeGroupID)
 }
 
-func (c *NodeAPIClient) kicNodeAPIEndpointWithNodeID(nodeID string) string {
+func (c *APIClient) kicNodeAPIEndpointWithNodeID(nodeID string) string {
 	return fmt.Sprintf(KicNodeAPIPathPattern, c.Address, c.RuntimeGroupID) + "/" + nodeID
 }
 
-func (c *NodeAPIClient) CreateNode(ctx context.Context, req *CreateNodeRequest) (*CreateNodeResponse, error) {
+func (c *APIClient) CreateNode(ctx context.Context, req *CreateNodeRequest) (*CreateNodeResponse, error) {
 	buf, err := json.Marshal(req)
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal create node request: %w", err)
@@ -96,7 +96,7 @@ func (c *NodeAPIClient) CreateNode(ctx context.Context, req *CreateNodeRequest) 
 	return resp, nil
 }
 
-func (c *NodeAPIClient) UpdateNode(ctx context.Context, nodeID string, req *UpdateNodeRequest) (*UpdateNodeResponse, error) {
+func (c *APIClient) UpdateNode(ctx context.Context, nodeID string, req *UpdateNodeRequest) (*UpdateNodeResponse, error) {
 	buf, err := json.Marshal(req)
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal update node request: %w", err)
@@ -131,7 +131,26 @@ func (c *NodeAPIClient) UpdateNode(ctx context.Context, nodeID string, req *Upda
 	return resp, nil
 }
 
-func (c *NodeAPIClient) ListNodes(ctx context.Context, pageNumber int) (*ListNodeResponse, error) {
+// ListAllNodes call ListNodes() repeatedly to get all nodes in a runtime group.
+func (c *APIClient) ListAllNodes(ctx context.Context) ([]*NodeItem, error) {
+	nodes := []*NodeItem{}
+	pageNum := 0
+	for {
+		resp, err := c.listNodes(ctx, pageNum)
+		if err != nil {
+			return nil, err
+		}
+		nodes = append(nodes, resp.Items...)
+		if resp.Page == nil || resp.Page.NextPageNum == 0 {
+			return nodes, nil
+		}
+		// if konnect returns a non-0 NextPageNum, the node are not all listed
+		// and we should start listing from the returned NextPageNum.
+		pageNum = int(resp.Page.NextPageNum)
+	}
+}
+
+func (c *APIClient) listNodes(ctx context.Context, pageNumber int) (*ListNodeResponse, error) {
 	url, _ := neturl.Parse(c.kicNodeAPIEndpoint())
 	if pageNumber != 0 {
 		q := url.Query()
@@ -167,26 +186,7 @@ func (c *NodeAPIClient) ListNodes(ctx context.Context, pageNumber int) (*ListNod
 	return resp, nil
 }
 
-// ListAllNodes call ListNodes() repeatedly to get all nodes in a runtime group.
-func (c *NodeAPIClient) ListAllNodes(ctx context.Context) ([]*NodeItem, error) {
-	nodes := []*NodeItem{}
-	pageNum := 0
-	for {
-		resp, err := c.ListNodes(ctx, pageNum)
-		if err != nil {
-			return nil, err
-		}
-		nodes = append(nodes, resp.Items...)
-		if resp.Page == nil || resp.Page.NextPageNum == 0 {
-			return nodes, nil
-		}
-		// if konnect returns a non-0 NextPageNum, the node are not all listed
-		// and we should start listing from the returned NextPageNum.
-		pageNum = int(resp.Page.NextPageNum)
-	}
-}
-
-func (c *NodeAPIClient) DeleteNode(ctx context.Context, nodeID string) error {
+func (c *APIClient) DeleteNode(ctx context.Context, nodeID string) error {
 	url := c.kicNodeAPIEndpointWithNodeID(nodeID)
 	httpReq, err := http.NewRequestWithContext(ctx, "DELETE", url, nil)
 	if err != nil {
@@ -205,7 +205,7 @@ func (c *NodeAPIClient) DeleteNode(ctx context.Context, nodeID string) error {
 	return nil
 }
 
-func (c *NodeAPIClient) GetNode(ctx context.Context, nodeID string) (*NodeItem, error) {
+func (c *APIClient) GetNode(ctx context.Context, nodeID string) (*NodeItem, error) {
 	url := c.kicNodeAPIEndpointWithNodeID(nodeID)
 	httpReq, err := http.NewRequestWithContext(ctx, "GET", url, nil)
 	if err != nil {

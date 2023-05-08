@@ -18,7 +18,7 @@ import (
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	types "k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/types"
 	knativenetworkingversioned "knative.dev/networking/pkg/client/clientset/versioned"
 	"knative.dev/pkg/apis"
 	kservingv1 "knative.dev/serving/pkg/apis/serving/v1"

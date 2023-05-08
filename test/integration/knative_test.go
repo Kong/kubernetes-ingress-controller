@@ -43,7 +43,7 @@ func TestKnativeIngress(t *testing.T) {
 	}
 
 	t.Parallel()
-	ns := helpers.Namespace(ctx, t, env)
+	ns, cleaner := helpers.Setup(ctx, t, env)
 
 	t.Log("creating a knative client")
 	kservingClient, err := kservingclientsetv.NewForConfig(env.Cluster().Config())
@@ -61,7 +61,7 @@ func TestKnativeIngress(t *testing.T) {
 			APIVersion: "serving.knative.dev/v1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "helloworld-rust",
+			Name:      "httpbin",
 			Namespace: ns.Name,
 		},
 		Spec: kservingv1.ServiceSpec{
@@ -71,11 +71,10 @@ func TestKnativeIngress(t *testing.T) {
 						PodSpec: corev1.PodSpec{
 							Containers: []corev1.Container{
 								{
-									Image: "gcr.io/knative-samples/helloworld-rust",
-									Env: []corev1.EnvVar{
+									Image: "kong/httpbin:0.1.0",
+									Ports: []corev1.ContainerPort{
 										{
-											Name:  "TARGET",
-											Value: "Go Sample v1",
+											ContainerPort: 80,
 										},
 									},
 								},
@@ -86,6 +85,7 @@ func TestKnativeIngress(t *testing.T) {
 			},
 		},
 	}
+	cleaner.Add(service)
 
 	t.Logf("deploying knative service %s to test routing", service.GetName())
 	require.Eventually(t, func() bool {
@@ -96,12 +96,6 @@ func TestKnativeIngress(t *testing.T) {
 		}
 		return true
 	}, knativeWaitTime, waitTick)
-
-	t.Cleanup(func() {
-		t.Log("cleaning up knative services used for testing")
-		assert.NoError(t, kservingClient.ServingV1().Services(ns.Name).Delete(ctx, service.GetName(), metav1.DeleteOptions{}))
-		t.Log("done cleaning up knative services")
-	})
 
 	t.Log("test knative service using kong")
 	require.True(t, accessKnativeSrv(t, ctx, proxyURL.Hostname(), ns.Name, service.GetName()))
@@ -182,6 +176,7 @@ func accessKnativeSrv(t *testing.T, ctx context.Context, proxy, nsn, serviceName
 	req := helpers.MustHTTPRequest(t, "GET", proxyURL, url, nil)
 	req.Header.Set("Host", host)
 	req.Host = host
+	req.URL.Path = "/status/200"
 
 	return assert.Eventually(t, func() bool {
 		resp, err := client.Do(req)

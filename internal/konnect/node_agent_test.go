@@ -239,6 +239,11 @@ func (m *mockManagerInstanceIDProvider) GetID() uuid.UUID {
 }
 
 func TestNodeAgentUpdateNodes(t *testing.T) {
+	const (
+		timeout = 10 * time.Second
+		tick    = 10 * time.Millisecond
+	)
+
 	testManagerID := uuid.New()
 	testNodeIDs := lo.Map(lo.Range(3), func(_, _ int) string { return uuid.NewString() })
 
@@ -415,6 +420,8 @@ func TestNodeAgentUpdateNodes(t *testing.T) {
 				nodes:     tc.initialNodes,
 			}
 			s := httptest.NewServer(nodeService)
+			t.Cleanup(func() { s.Close() })
+
 			nodeClient := &konnect.NodeAPIClient{
 				Address:        s.URL,
 				RuntimeGroupID: testClusterID,
@@ -438,8 +445,7 @@ func TestNodeAgentUpdateNodes(t *testing.T) {
 
 			ctx := context.Background()
 			go func() {
-				err := nodeAgent.Start(ctx)
-				require.NoError(t, err)
+				require.NoError(t, nodeAgent.Start(ctx))
 			}()
 
 			if tc.configStatus != nil {
@@ -447,12 +453,14 @@ func TestNodeAgentUpdateNodes(t *testing.T) {
 			}
 
 			gatewayClientsChangesNotifier.Notify()
+
+			var nodes []*konnect.NodeItem
 			require.Eventually(t, func() bool {
-				// check number of nodes in RG.
-				nodes := nodeService.dumpNodes()
-				if len(nodes) != tc.numNodes {
-					return false
-				}
+				nodes = nodeService.dumpNodes()
+				return len(nodes) == tc.numNodes
+			}, timeout, tick, "number of nodes in RG should be %d", tc.numNodes)
+
+			require.Eventually(t, func() bool {
 				// check for nodes that must be included in RG by hostname, type, version and status.
 				for _, expectedNode := range tc.containNodes {
 					if !lo.ContainsBy(
@@ -479,7 +487,7 @@ func TestNodeAgentUpdateNodes(t *testing.T) {
 				}
 
 				return true
-			}, 2*time.Second, 100*time.Millisecond)
+			}, timeout, tick)
 		})
 	}
 }

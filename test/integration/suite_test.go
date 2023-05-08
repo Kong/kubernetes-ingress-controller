@@ -108,9 +108,17 @@ func TestMain(m *testing.M) {
 
 	cleaner := clusters.NewCleaner(env.Cluster())
 	defer func() {
+		if os.Getenv("CI") != "" {
+			fmt.Printf("INFO: skipping cleaning up the environment because running on CI\n")
+			return
+		}
+
 		if err := cleaner.Cleanup(ctx); err != nil {
 			fmt.Printf("ERROR: failed cleaning up the cluster: %v\n", err)
+			return
 		}
+
+		fmt.Printf("INFO: done cleaning up the environment\n")
 	}()
 
 	fmt.Printf("INFO: reconfiguring the kong admin service as LoadBalancer type\n")
@@ -187,7 +195,7 @@ func TestMain(m *testing.M) {
 		}
 	}
 	ingClasses := env.Cluster().Client().NetworkingV1().IngressClasses()
-	_, err = ingClasses.Create(ctx, createIngressClass(), metav1.CreateOptions{})
+	ingClass, err := ingClasses.Create(ctx, createIngressClass(), metav1.CreateOptions{})
 	if apierrors.IsAlreadyExists(err) {
 		// If for some reason the ingress class is already in the cluster don't
 		// fail the whole test suite but recreate it and continue.
@@ -197,11 +205,7 @@ func TestMain(m *testing.M) {
 		exitOnErr(ctx, err)
 	}
 	exitOnErr(ctx, err)
-	defer func() {
-		// deleting this directly instead of adding it to the cleaner because
-		// the cleaner always gets a 404 on it for unknown reasons
-		_ = ingClasses.Delete(ctx, consts.IngressClass, metav1.DeleteOptions{})
-	}()
+	cleaner.Add(ingClass)
 
 	if os.Getenv("TEST_RUN_INVALID_CONFIG_CASES") == "true" {
 		fmt.Println("INFO: run tests with invalid configurations")

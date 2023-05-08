@@ -85,13 +85,16 @@ func GenerateKongExpressionRoutesFromHTTPRouteMatches(
 		return routes, nil
 	}
 
+	// if we do not need to generate a kong route for each match, we OR matchers from all matches together.
 	routeMatcher := atc.And(atc.Or(generateMatchersFromHTTPRouteMatches(matches)...))
+	// add matcher from parent httproute (hostnames, protocols, SNIs) to be ANDed with the matcher from match.
 	matchersFromParent := matchersFromParentHTTPRoute(hostnames, ingressObjectInfo.Annotations)
 	for _, matcher := range matchersFromParent {
 		routeMatcher.And(matcher)
 	}
 
 	atc.ApplyExpression(&r.Route, routeMatcher, 1)
+	// generate plugins.
 	plugins := GeneratePluginsFromHTTPRouteFilters(filters, "", tags)
 	r.Plugins = plugins
 	return []kongstate.Route{r}, nil
@@ -107,31 +110,24 @@ func generateMatchersFromHTTPRouteMatches(matches []gatewayv1beta1.HTTPRouteMatc
 }
 
 func generateMatcherFromHTTPRouteMatch(match gatewayv1beta1.HTTPRouteMatch) atc.Matcher {
-	var matcher atc.Matcher
+	matcher := atc.And()
 
 	if match.Path != nil {
 		pathMatcher := pathMatcherFromHTTPPathMatch(match.Path)
-		matcher = atc.And(matcher, pathMatcher)
+		matcher.And(pathMatcher)
 	}
 
 	if len(match.Headers) > 0 {
 		headerMatcher := headerMatcherFromHTTPHeaderMatches(match.Headers)
-		matcher = atc.And(matcher, headerMatcher)
+		matcher.And(headerMatcher)
 	}
 
 	if match.Method != nil {
 		method := *match.Method
 		methodMatcher := methodMatcherFromMethods([]string{string(method)})
-		matcher = atc.And(matcher, methodMatcher)
+		matcher.And(methodMatcher)
 	}
 	return matcher
-}
-
-func appendSuffixSlashIfNotExist(path string) string {
-	if !strings.HasSuffix(path, "/") {
-		return path + "/"
-	}
-	return path
 }
 
 func appendRegexBeginIfNotExist(regex string) string {
@@ -150,11 +146,19 @@ func pathMatcherFromHTTPPathMatch(pathMatch *gatewayv1beta1.HTTPPathMatch) atc.M
 	case gatewayv1beta1.PathMatchExact:
 		return atc.NewPredicateHTTPPath(atc.OpEqual, path)
 	case gatewayv1beta1.PathMatchPathPrefix:
+		if path == "" || path == "/" {
+			return atc.NewPredicateHTTPPath(atc.OpPrefixMatch, "/")
+		}
+		// if path ends with /, we should remove the trailing / because it should be ignored:
+		// https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1beta1.PathMatchType
+		path = strings.TrimSuffix(path, "/")
 		return atc.Or(
 			atc.NewPredicateHTTPPath(atc.OpEqual, path),
-			atc.NewPredicateHTTPPath(atc.OpPrefixMatch, appendSuffixSlashIfNotExist(path)),
+			atc.NewPredicateHTTPPath(atc.OpPrefixMatch, path+"/"),
 		)
 	case gatewayv1beta1.PathMatchRegularExpression:
+		// TODO: for compatibility with kong traditional routes, here we append the ^ prefix to match the path from beginning.
+		// Could we allow the regex to match any part of path?
 		return atc.NewPredicateHTTPPath(atc.OpRegexMatch, appendRegexBeginIfNotExist(path))
 	}
 
@@ -185,7 +189,6 @@ func headerMatcherFromHTTPHeaderMatches(headerMatches []gatewayv1beta1.HTTPHeade
 }
 
 func matchersFromParentHTTPRoute(hostnames []string, metaAnnotations map[string]string) []atc.Matcher {
-
 	// translate hostnames.
 	ret := []atc.Matcher{}
 	if len(hostnames) > 0 {

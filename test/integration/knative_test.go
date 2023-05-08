@@ -12,20 +12,20 @@ import (
 	"testing"
 	"time"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/test/consts"
-	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/helpers"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/knative"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	types "k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/dynamic"
 	knativenetworkingversioned "knative.dev/networking/pkg/client/clientset/versioned"
 	"knative.dev/pkg/apis"
+	kservingv1 "knative.dev/serving/pkg/apis/serving/v1"
+	kservingclientsetv "knative.dev/serving/pkg/client/clientset/versioned"
+
+	"github.com/kong/kubernetes-ingress-controller/v2/test/consts"
+	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/helpers"
 )
 
 const (
@@ -45,15 +45,9 @@ func TestKnativeIngress(t *testing.T) {
 	t.Parallel()
 	ns := helpers.Namespace(ctx, t, env)
 
-	t.Log("generating a knative clientset")
-	dynamicClient, err := dynamic.NewForConfig(env.Cluster().Config())
+	t.Log("creating a knative client")
+	kservingClient, err := kservingclientsetv.NewForConfig(env.Cluster().Config())
 	require.NoError(t, err)
-	knativeGVR := schema.GroupVersionResource{
-		Group:    "serving.knative.dev",
-		Version:  "v1",
-		Resource: "services",
-	}
-	knativeClient := dynamicClient.Resource(knativeGVR).Namespace(ns.Name)
 
 	t.Logf("configure knative network for ingress class %s", consts.IngressClass)
 	payloadBytes := []byte(fmt.Sprintf("{\"data\": {\"ingress-class\": \"%s\"}}", consts.IngressClass))
@@ -61,25 +55,29 @@ func TestKnativeIngress(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, configKnativeDomain(ctx, proxyURL.Hostname(), knative.DefaultNamespace, env.Cluster()))
 
-	t.Log("deploying a native service to test routing")
-	service := &unstructured.Unstructured{}
-	service.SetUnstructuredContent(map[string]interface{}{
-		"apiVersion": "serving.knative.dev/v1",
-		"kind":       "Service",
-		"metadata": map[string]interface{}{
-			"name":      "helloworld-go",
-			"namespace": ns.Name,
+	service := &kservingv1.Service{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "Service",
+			APIVersion: "serving.knative.dev/v1",
 		},
-		"spec": map[string]interface{}{
-			"template": map[string]interface{}{
-				"spec": map[string]interface{}{
-					"containers": []map[string]interface{}{
-						{
-							"image": "gcr.io/knative-samples/helloworld-go",
-							"env": []map[string]interface{}{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "helloworld-rust",
+			Namespace: ns.Name,
+		},
+		Spec: kservingv1.ServiceSpec{
+			ConfigurationSpec: kservingv1.ConfigurationSpec{
+				Template: kservingv1.RevisionTemplateSpec{
+					Spec: kservingv1.RevisionSpec{
+						PodSpec: corev1.PodSpec{
+							Containers: []corev1.Container{
 								{
-									"name":  "TARGET",
-									"value": "Go Sample v1",
+									Image: "gcr.io/knative-samples/helloworld-rust",
+									Env: []corev1.EnvVar{
+										{
+											Name:  "TARGET",
+											Value: "Go Sample v1",
+										},
+									},
 								},
 							},
 						},
@@ -87,19 +85,26 @@ func TestKnativeIngress(t *testing.T) {
 				},
 			},
 		},
-	})
+	}
+
+	t.Logf("deploying knative service %s to test routing", service.GetName())
 	require.Eventually(t, func() bool {
-		_, err = knativeClient.Create(ctx, service, metav1.CreateOptions{})
-		return err == nil
-	}, knativeWaitTime, waitTick, true)
+		_, err = kservingClient.ServingV1().Services(ns.Name).Create(ctx, service, metav1.CreateOptions{})
+		if err != nil {
+			t.Logf("failed creating knative service: %v", err)
+			return false
+		}
+		return true
+	}, knativeWaitTime, waitTick)
 
-	defer func() {
+	t.Cleanup(func() {
 		t.Log("cleaning up knative services used for testing")
-		assert.NoError(t, knativeClient.Delete(ctx, "helloworld-go", metav1.DeleteOptions{}))
-	}()
+		assert.NoError(t, kservingClient.ServingV1().Services(ns.Name).Delete(ctx, service.GetName(), metav1.DeleteOptions{}))
+		t.Log("done cleaning up knative services")
+	})
 
-	t.Log("Test knative service using kong.")
-	require.True(t, accessKnativeSrv(ctx, proxyURL.Hostname(), ns.Name, t), true)
+	t.Log("test knative service using kong")
+	require.True(t, accessKnativeSrv(t, ctx, proxyURL.Hostname(), ns.Name, service.GetName()))
 }
 
 // -----------------------------------------------------------------------------
@@ -134,14 +139,14 @@ func configKnativeDomain(ctx context.Context, proxy, nsn string, cluster cluster
 	return nil
 }
 
-func accessKnativeSrv(ctx context.Context, proxy, nsn string, t *testing.T) bool {
+func accessKnativeSrv(t *testing.T, ctx context.Context, proxy, nsn, serviceName string) bool {
 	knativec, err := knativenetworkingversioned.NewForConfig(env.Cluster().Config())
 	if err != nil {
 		return false
 	}
 	ingCli := knativec.NetworkingV1alpha1().Ingresses(nsn)
 	assert.Eventually(t, func() bool {
-		curIng, err := ingCli.Get(ctx, "helloworld-go", metav1.GetOptions{})
+		curIng, err := ingCli.Get(ctx, serviceName, metav1.GetOptions{})
 		if err != nil {
 			t.Logf("error getting knative ingress: %v", err)
 			return false
@@ -173,9 +178,10 @@ func accessKnativeSrv(ctx context.Context, proxy, nsn string, t *testing.T) bool
 		Timeout:   time.Second * 60,
 	}
 
+	host := fmt.Sprintf("%s.%s.%s", serviceName, nsn, proxy)
 	req := helpers.MustHTTPRequest(t, "GET", proxyURL, url, nil)
-	req.Header.Set("Host", fmt.Sprintf("helloworld-go.%s.%s", nsn, proxy))
-	req.Host = fmt.Sprintf("helloworld-go.%s.%s", nsn, proxy)
+	req.Header.Set("Host", host)
+	req.Host = host
 
 	return assert.Eventually(t, func() bool {
 		resp, err := client.Do(req)

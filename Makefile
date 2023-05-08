@@ -352,7 +352,7 @@ _test.integration: _check.container.environment go-junit-report
 	KONG_CLUSTER_VERSION="$(KONG_CLUSTER_VERSION)" \
 		TEST_DATABASE_MODE="$(DBMODE)" \
 		GOFLAGS="-tags=$(GOTAGS)" \
-		KONG_CONTROLLER_FEATURE_GATES=$(KONG_CONTROLLER_FEATURE_GATES) \
+		KONG_CONTROLLER_FEATURE_GATES="$(KONG_CONTROLLER_FEATURE_GATES)" \
 		go test $(GOTESTFLAGS) \
 		-v \
 		-timeout $(INTEGRATION_TEST_TIMEOUT) \
@@ -369,6 +369,7 @@ test.integration.dbless.knative:
 	@$(MAKE) _test.integration \
 		GOTAGS="integration_tests,knative" \
 		GOTESTFLAGS="-run TestKnative" \
+		KONG_CONTROLLER_FEATURE_GATES="Knative=true" \
 		DBMODE=off \
 		COVERAGE_OUT=coverage.dbless.knative.out
 
@@ -384,6 +385,7 @@ test.integration.postgres.knative:
 	@$(MAKE) _test.integration \
 		GOTAGS="integration_tests,knative" \
 		GOTESTFLAGS="-run TestKnative" \
+		KONG_CONTROLLER_FEATURE_GATES="Knative=true" \
 		DBMODE=postgres \
 		COVERAGE_OUT=coverage.postgres.knative.out
 

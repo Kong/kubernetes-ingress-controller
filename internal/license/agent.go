@@ -9,7 +9,7 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/kong/go-kong/kong"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/konnect"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/konnect/license"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 )
 
@@ -22,7 +22,7 @@ const (
 )
 
 type UpstreamClient interface {
-	List(ctx context.Context, pageNumber int) (*konnect.ListLicenseResponse, error)
+	List(ctx context.Context, pageNumber int) (*license.ListLicenseResponse, error)
 }
 
 // NewAgent creates a new license agent that retrieves a license from the given url once every given period.
@@ -46,7 +46,7 @@ type Agent struct {
 	konnectAPIClient UpstreamClient
 
 	// license is the current license retrieved from upstream.
-	license konnect.LicenseItem
+	license license.Item
 }
 
 // NeedLeaderElection indicates if the Agent requires leadership to run. It always returns true.

@@ -8,26 +8,26 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/stretchr/testify/require"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/konnect"
+	konnectLicense "github.com/kong/kubernetes-ingress-controller/v2/internal/konnect/license"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/license"
 )
 
 type mockUpstreamClient struct {
-	listResponse *konnect.ListLicenseResponse
+	listResponse *konnectLicense.ListLicenseResponse
 }
 
-func (m *mockUpstreamClient) List(context.Context, int) (*konnect.ListLicenseResponse, error) {
+func (m *mockUpstreamClient) List(context.Context, int) (*konnectLicense.ListLicenseResponse, error) {
 	return m.listResponse, nil
 }
 
 func TestAgent(t *testing.T) {
-	expectedLicense := &konnect.LicenseItem{
+	expectedLicense := &konnectLicense.Item{
 		License:   "test-license",
 		UpdatedAt: 1234567890,
 	}
 	upstreamClient := &mockUpstreamClient{
-		listResponse: &konnect.ListLicenseResponse{
-			Items: []*konnect.LicenseItem{
+		listResponse: &konnectLicense.ListLicenseResponse{
+			Items: []*konnectLicense.Item{
 				expectedLicense,
 			},
 		},

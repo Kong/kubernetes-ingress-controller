@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/kong/deck/file"
 	"github.com/sirupsen/logrus"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/deckgen"
@@ -41,7 +40,7 @@ func NewUpdateStrategyInMemory(
 	}
 }
 
-func (s UpdateStrategyInMemory) Update(ctx context.Context, targetState *file.Content) (
+func (s UpdateStrategyInMemory) Update(ctx context.Context, targetState ContentWithHash) (
 	err error,
 	resourceErrors []ResourceError,
 	resourceErrorsParseErr error,
@@ -50,7 +49,7 @@ func (s UpdateStrategyInMemory) Update(ctx context.Context, targetState *file.Co
 	targetState.Info = nil
 
 	// Kong errors out if `null`s are present in `config` of plugins
-	deckgen.CleanUpNullsInPluginConfigs(targetState)
+	deckgen.CleanUpNullsInPluginConfigs(targetState.Content)
 
 	config, err := json.Marshal(targetState)
 	if err != nil {

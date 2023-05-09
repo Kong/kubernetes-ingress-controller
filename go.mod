@@ -22,6 +22,7 @@ require (
 	github.com/go-logr/logr v1.2.4
 	github.com/google/go-cmp v0.5.9
 	github.com/google/uuid v1.3.0
+	github.com/jpillora/backoff v1.0.0
 	github.com/kong/deck v1.20.0
 	github.com/kong/go-kong v0.41.0
 	github.com/kong/kubernetes-telemetry v0.0.4

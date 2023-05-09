@@ -39,7 +39,7 @@ func NewUpdateStrategyDBMode(
 	}
 }
 
-func (s UpdateStrategyDBMode) Update(ctx context.Context, targetContent *file.Content) (
+func (s UpdateStrategyDBMode) Update(ctx context.Context, targetContent ContentWithHash) (
 	err error,
 	resourceErrors []ResourceError,
 	resourceErrorsParseErr error,
@@ -49,7 +49,7 @@ func (s UpdateStrategyDBMode) Update(ctx context.Context, targetContent *file.Co
 		return fmt.Errorf("failed getting current state for %s: %w", s.client.BaseRootURL(), err), nil, nil
 	}
 
-	ts, err := s.targetState(ctx, cs, targetContent)
+	ts, err := s.targetState(ctx, cs, targetContent.Content)
 	if err != nil {
 		return deckerrors.ConfigConflictError{Err: err}, nil, nil
 	}

@@ -274,7 +274,7 @@ type mockUpdateStrategy struct {
 	onUpdate func() error
 }
 
-func (m *mockUpdateStrategy) Update(context.Context, *file.Content) (
+func (m *mockUpdateStrategy) Update(context.Context, sendconfig.ContentWithHash) (
 	err error,
 	resourceErrors []sendconfig.ResourceError,
 	resourceErrorsParseErr error,

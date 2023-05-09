@@ -11,10 +11,15 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/metrics"
 )
 
+type ContentWithHash struct {
+	*file.Content
+	Hash []byte
+}
+
 // UpdateStrategy is the way we approach updating data-plane's configuration, depending on its type.
 type UpdateStrategy interface {
 	// Update applies targetConfig to the data-plane.
-	Update(ctx context.Context, targetContent *file.Content) (
+	Update(ctx context.Context, targetContent ContentWithHash) (
 		err error,
 		resourceErrors []ResourceError,
 		resourceErrorsParseErr error,
@@ -41,14 +46,16 @@ type ResourceError struct {
 }
 
 type DefaultUpdateStrategyResolver struct {
-	config Config
-	log    logrus.FieldLogger
+	config                 Config
+	log                    logrus.FieldLogger
+	konnectBackoffStrategy *KonnectBackoffStrategy
 }
 
 func NewDefaultUpdateStrategyResolver(config Config, log logrus.FieldLogger) DefaultUpdateStrategyResolver {
 	return DefaultUpdateStrategyResolver{
-		config: config,
-		log:    log,
+		config:                 config,
+		log:                    log,
+		konnectBackoffStrategy: NewKonnectBackoffStrategy(SystemClock{}),
 	}
 }
 
@@ -63,7 +70,7 @@ func (r DefaultUpdateStrategyResolver) ResolveUpdateStrategy(
 	// In case the client communicates with Konnect Admin API, we know it has to use DB-mode. There's no need to check
 	// config.InMemory that is meant for regular Kong Gateway clients.
 	if client.IsKonnect() {
-		return NewUpdateStrategyDBMode(
+		dbModeStrategy := NewUpdateStrategyDBMode(
 			adminAPIClient,
 			dump.Config{
 				SkipCACerts:         true,
@@ -71,6 +78,13 @@ func (r DefaultUpdateStrategyResolver) ResolveUpdateStrategy(
 			},
 			r.config.Version,
 			r.config.Concurrency,
+		)
+
+		// Decorate the standard DB-mode with a backoff strategy dedicated for Konnect.
+		return NewUpdateStrategyWithBackoff(
+			dbModeStrategy,
+			r.konnectBackoffStrategy,
+			r.log.WithField("name", "konnect-backoff-strategy"),
 		)
 	}
 

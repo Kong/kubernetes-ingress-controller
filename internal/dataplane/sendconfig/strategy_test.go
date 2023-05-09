@@ -44,13 +44,13 @@ func TestDefaultUpdateStrategyResolver_ResolveUpdateStrategy(t *testing.T) {
 		{
 			isKonnect:                     true,
 			inMemory:                      false,
-			expectedStrategy:              sendconfig.UpdateStrategyDBMode{},
+			expectedStrategy:              sendconfig.UpdateStrategyWithBackoff{},
 			expectKonnectRuntimeGroupCall: true,
 		},
 		{
 			isKonnect:                     true,
 			inMemory:                      true,
-			expectedStrategy:              sendconfig.UpdateStrategyDBMode{},
+			expectedStrategy:              sendconfig.UpdateStrategyWithBackoff{},
 			expectKonnectRuntimeGroupCall: true,
 		},
 		{

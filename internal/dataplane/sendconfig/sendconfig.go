@@ -2,6 +2,7 @@ package sendconfig
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -59,11 +60,19 @@ func PerformUpdate(
 
 	updateStrategy := updateStrategyResolver.ResolveUpdateStrategy(client)
 	timeStart := time.Now()
-	err, resourceErrors, resourceErrorsParseErr := updateStrategy.Update(ctx, targetContent)
+	err, resourceErrors, resourceErrorsParseErr := updateStrategy.Update(ctx, ContentWithHash{
+		Content: targetContent,
+		Hash:    newSHA,
+	})
 	duration := time.Since(timeStart)
 
 	metricsProtocol := updateStrategy.MetricsProtocol()
 	if err != nil {
+		// Not pushing metrics in case it's an update skip due to a backoff.
+		if errors.Is(err, ErrUpdateSkippedDueToBackoffStrategy{}) {
+			return nil, []failures.ResourceFailure{}, err
+		}
+
 		resourceFailures := resourceErrorsToResourceFailures(resourceErrors, resourceErrorsParseErr, log)
 		promMetrics.RecordPushFailure(metricsProtocol, duration, client.BaseRootURL(), err)
 		return nil, resourceFailures, err

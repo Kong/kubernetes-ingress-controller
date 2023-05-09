@@ -93,11 +93,13 @@ func NewFeatureFlags(
 		}
 	}
 
+	combinedRoutesEnabled := featureGates.Enabled(featuregates.CombinedRoutesFeature)
 	return FeatureFlags{
 		ReportConfiguredKubernetesObjects: updateStatusFlag,
-		CombinedServiceRoutes:             featureGates.Enabled(featuregates.CombinedRoutesFeature),
+		CombinedServiceRoutes:             combinedRoutesEnabled,
 		RegexPathPrefix:                   kongVersion.MajorMinorOnly().GTE(versions.ExplicitRegexPathVersionCutoff),
 		ExpressionRoutes:                  expressionRoutesEnabled,
+		CombinedServices:                  combinedRoutesEnabled && featureGates.Enabled(featuregates.CombinedServicesFeature),
 	}
 }
 

@@ -52,7 +52,12 @@ type Service struct {
 
 	Backends    []ServiceBackend
 	K8sServices map[string]*corev1.Service
-	Parent      client.Object
+
+	// Parent is the parent object of this Service.
+	// It is expected to be a Kubernetes object which translation resulted in creating this Kong Service.
+	// For example, if this Service was created as a result of translating a Kubernetes Ingress, then
+	// Parent is expected to be the Ingress object itself.
+	Parent client.Object
 }
 
 // overrideByKongIngress sets Service fields by KongIngress.

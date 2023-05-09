@@ -5159,6 +5159,28 @@ func TestNewFeatureFlags(t *testing.T) {
 				RegexPathPrefix: true,
 			},
 		},
+		{
+			name: "combined services and routes enabled",
+			featureGates: map[string]bool{
+				featuregates.CombinedRoutesFeature:   true,
+				featuregates.CombinedServicesFeature: true,
+			},
+			expectedFeatureFlags: FeatureFlags{
+				CombinedServiceRoutes: true,
+				CombinedServices:      true,
+			},
+		},
+		{
+			name: "combined services enabled, but routes disabled",
+			featureGates: map[string]bool{
+				featuregates.CombinedRoutesFeature:   false,
+				featuregates.CombinedServicesFeature: true,
+			},
+			expectedFeatureFlags: FeatureFlags{
+				CombinedServiceRoutes: false,
+				CombinedServices:      false,
+			},
+		},
 	}
 
 	for _, tc := range testCases {

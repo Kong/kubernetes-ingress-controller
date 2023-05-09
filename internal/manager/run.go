@@ -191,7 +191,7 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 		setupLog.Info("status updates disabled, skipping status updater")
 	}
 
-	setupLog.Info("Initializing Dataplane Address Discovery")
+	setupLog.Info("Initializing Dataplane address Discovery")
 	dataplaneAddressFinder, udpDataplaneAddressFinder, err := setupDataplaneAddressFinder(mgr.GetClient(), c, setupLog)
 	if err != nil {
 		return err
@@ -218,7 +218,7 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 	instanceIDProvider := NewInstanceIDProvider()
 
 	if c.Konnect.ConfigSynchronizationEnabled {
-		konnectNodesAPIClient, err := nodes.NewAPIClient(c.Konnect)
+		konnectNodesAPIClient, err := nodes.NewClient(c.Konnect)
 		if err != nil {
 			return fmt.Errorf("failed creating konnect client: %w", err)
 		}
@@ -249,7 +249,7 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 	// we probably want to avoid that long term. If we do have separate toggles, we need an AND condition that sets up
 	// the client and makes it available to all Konnect-related subsystems.
 	if c.Konnect.LicenseSynchronizationEnabled {
-		konnectLicenseAPIClient, err := konnectLicense.NewAPIClient(c.Konnect)
+		konnectLicenseAPIClient, err := konnectLicense.NewClient(c.Konnect)
 		if err != nil {
 			return fmt.Errorf("failed creating konnect client: %w", err)
 		}
@@ -295,7 +295,7 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 func setupKonnectNodeAgentWithMgr(
 	c *Config,
 	mgr manager.Manager,
-	konnectNodeAPIClient *nodes.APIClient,
+	konnectNodeAPIClient *nodes.Client,
 	dataplaneClient *dataplane.KongClient,
 	clientsManager *clients.AdminAPIClientsManager,
 	logger logr.Logger,

@@ -14,18 +14,18 @@ import (
 	tlsutil "github.com/kong/kubernetes-ingress-controller/v2/internal/util/tls"
 )
 
-// APIClient interacts with the Konnect license API.
-type APIClient struct {
-	Address        string
-	RuntimeGroupID string
-	Client         *http.Client
+// Client interacts with the Konnect license API.
+type Client struct {
+	address        string
+	runtimeGroupID string
+	httpClient     *http.Client
 }
 
 // KICLicenseAPIPathPattern is the path pattern for KIC license operations.
 var KICLicenseAPIPathPattern = "%s/kic/api/runtime_groups/%s/v1/licenses"
 
-// NewAPIClient creates a License API Konnect client.
-func NewAPIClient(cfg adminapi.KonnectConfig) (*APIClient, error) {
+// NewClient creates a License API Konnect client.
+func NewClient(cfg adminapi.KonnectConfig) (*Client, error) {
 	tlsConfig := tls.Config{
 		MinVersion: tls.VersionTLS12,
 	}
@@ -42,18 +42,18 @@ func NewAPIClient(cfg adminapi.KonnectConfig) (*APIClient, error) {
 	transport.TLSClientConfig = &tlsConfig
 	c.Transport = transport
 
-	return &APIClient{
-		Address:        cfg.Address,
-		RuntimeGroupID: cfg.RuntimeGroupID,
-		Client:         c,
+	return &Client{
+		address:        cfg.Address,
+		runtimeGroupID: cfg.RuntimeGroupID,
+		httpClient:     c,
 	}, nil
 }
 
-func (c *APIClient) kicLicenseAPIEndpoint() string {
-	return fmt.Sprintf(KICLicenseAPIPathPattern, c.Address, c.RuntimeGroupID)
+func (c *Client) kicLicenseAPIEndpoint() string {
+	return fmt.Sprintf(KICLicenseAPIPathPattern, c.address, c.runtimeGroupID)
 }
 
-func (c *APIClient) List(ctx context.Context, pageNumber int) (*ListLicenseResponse, error) {
+func (c *Client) List(ctx context.Context, pageNumber int) (*ListLicenseResponse, error) {
 	// TODO this is another case where we have a pseudo-unary object. The page is always 0 in practice, but if we have
 	// separate functions per entity, we end up with effectively dead code for some
 	url, _ := neturl.Parse(c.kicLicenseAPIEndpoint())
@@ -67,7 +67,7 @@ func (c *APIClient) List(ctx context.Context, pageNumber int) (*ListLicenseRespo
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
 
-	httpResp, err := c.Client.Do(req)
+	httpResp, err := c.httpClient.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get response: %w", err)
 	}

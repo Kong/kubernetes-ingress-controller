@@ -17,19 +17,19 @@ import (
 	tlsutil "github.com/kong/kubernetes-ingress-controller/v2/internal/util/tls"
 )
 
-// APIClient is used for sending requests to Konnect Node API.
+// Client is used for sending requests to Konnect Node API.
 // It can be used to register Nodes in Konnect's Runtime Groups.
-type APIClient struct {
-	Address        string
-	RuntimeGroupID string
-	Client         *http.Client
+type Client struct {
+	address        string
+	runtimeGroupID string
+	httpClient     *http.Client
 }
 
 // KicNodeAPIPathPattern is the path pattern for KIC node operations.
 var KicNodeAPIPathPattern = "%s/kic/api/runtime_groups/%s/v1/kic-nodes"
 
-// NewAPIClient creates a Node API Konnect client.
-func NewAPIClient(cfg adminapi.KonnectConfig) (*APIClient, error) {
+// NewClient creates a Node API Konnect client.
+func NewClient(cfg adminapi.KonnectConfig) (*Client, error) {
 	tlsConfig := tls.Config{
 		MinVersion: tls.VersionTLS12,
 	}
@@ -46,22 +46,22 @@ func NewAPIClient(cfg adminapi.KonnectConfig) (*APIClient, error) {
 	transport.TLSClientConfig = &tlsConfig
 	c.Transport = transport
 
-	return &APIClient{
-		Address:        cfg.Address,
-		RuntimeGroupID: cfg.RuntimeGroupID,
-		Client:         c,
+	return &Client{
+		address:        cfg.Address,
+		runtimeGroupID: cfg.RuntimeGroupID,
+		httpClient:     c,
 	}, nil
 }
 
-func (c *APIClient) kicNodeAPIEndpoint() string {
-	return fmt.Sprintf(KicNodeAPIPathPattern, c.Address, c.RuntimeGroupID)
+func (c *Client) kicNodeAPIEndpoint() string {
+	return fmt.Sprintf(KicNodeAPIPathPattern, c.address, c.runtimeGroupID)
 }
 
-func (c *APIClient) kicNodeAPIEndpointWithNodeID(nodeID string) string {
-	return fmt.Sprintf(KicNodeAPIPathPattern, c.Address, c.RuntimeGroupID) + "/" + nodeID
+func (c *Client) kicNodeAPIEndpointWithNodeID(nodeID string) string {
+	return fmt.Sprintf(KicNodeAPIPathPattern, c.address, c.runtimeGroupID) + "/" + nodeID
 }
 
-func (c *APIClient) CreateNode(ctx context.Context, req *CreateNodeRequest) (*CreateNodeResponse, error) {
+func (c *Client) CreateNode(ctx context.Context, req *CreateNodeRequest) (*CreateNodeResponse, error) {
 	buf, err := json.Marshal(req)
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal create node request: %w", err)
@@ -72,7 +72,7 @@ func (c *APIClient) CreateNode(ctx context.Context, req *CreateNodeRequest) (*Cr
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request for url %s: %w", url, err)
 	}
-	httpResp, err := c.Client.Do(httpReq)
+	httpResp, err := c.httpClient.Do(httpReq)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get response from url %s: %w", url, err)
 	}
@@ -96,7 +96,7 @@ func (c *APIClient) CreateNode(ctx context.Context, req *CreateNodeRequest) (*Cr
 	return resp, nil
 }
 
-func (c *APIClient) UpdateNode(ctx context.Context, nodeID string, req *UpdateNodeRequest) (*UpdateNodeResponse, error) {
+func (c *Client) UpdateNode(ctx context.Context, nodeID string, req *UpdateNodeRequest) (*UpdateNodeResponse, error) {
 	buf, err := json.Marshal(req)
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal update node request: %w", err)
@@ -107,7 +107,7 @@ func (c *APIClient) UpdateNode(ctx context.Context, nodeID string, req *UpdateNo
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request for url %s: %w", url, err)
 	}
-	httpResp, err := c.Client.Do(httpReq)
+	httpResp, err := c.httpClient.Do(httpReq)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get response from url %s: %w", url, err)
 	}
@@ -132,7 +132,7 @@ func (c *APIClient) UpdateNode(ctx context.Context, nodeID string, req *UpdateNo
 }
 
 // ListAllNodes call ListNodes() repeatedly to get all nodes in a runtime group.
-func (c *APIClient) ListAllNodes(ctx context.Context) ([]*NodeItem, error) {
+func (c *Client) ListAllNodes(ctx context.Context) ([]*NodeItem, error) {
 	nodes := []*NodeItem{}
 	pageNum := 0
 	for {
@@ -150,7 +150,7 @@ func (c *APIClient) ListAllNodes(ctx context.Context) ([]*NodeItem, error) {
 	}
 }
 
-func (c *APIClient) listNodes(ctx context.Context, pageNumber int) (*ListNodeResponse, error) {
+func (c *Client) listNodes(ctx context.Context, pageNumber int) (*ListNodeResponse, error) {
 	url, _ := neturl.Parse(c.kicNodeAPIEndpoint())
 	if pageNumber != 0 {
 		q := url.Query()
@@ -162,7 +162,7 @@ func (c *APIClient) listNodes(ctx context.Context, pageNumber int) (*ListNodeRes
 		return nil, fmt.Errorf("failed to create request for url %s: %w", url, err)
 	}
 
-	httpResp, err := c.Client.Do(req)
+	httpResp, err := c.httpClient.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get response from url %s: %w", url, err)
 	}
@@ -186,13 +186,13 @@ func (c *APIClient) listNodes(ctx context.Context, pageNumber int) (*ListNodeRes
 	return resp, nil
 }
 
-func (c *APIClient) DeleteNode(ctx context.Context, nodeID string) error {
+func (c *Client) DeleteNode(ctx context.Context, nodeID string) error {
 	url := c.kicNodeAPIEndpointWithNodeID(nodeID)
 	httpReq, err := http.NewRequestWithContext(ctx, "DELETE", url, nil)
 	if err != nil {
 		return fmt.Errorf("failed to create request for url %s: %w", url, err)
 	}
-	httpResp, err := c.Client.Do(httpReq)
+	httpResp, err := c.httpClient.Do(httpReq)
 	if err != nil {
 		return fmt.Errorf("failed to get response from url %s: %w", url, err)
 	}
@@ -205,13 +205,13 @@ func (c *APIClient) DeleteNode(ctx context.Context, nodeID string) error {
 	return nil
 }
 
-func (c *APIClient) GetNode(ctx context.Context, nodeID string) (*NodeItem, error) {
+func (c *Client) GetNode(ctx context.Context, nodeID string) (*NodeItem, error) {
 	url := c.kicNodeAPIEndpointWithNodeID(nodeID)
 	httpReq, err := http.NewRequestWithContext(ctx, "GET", url, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request for url %s: %w", url, err)
 	}
-	httpResp, err := c.Client.Do(httpReq)
+	httpResp, err := c.httpClient.Do(httpReq)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get response from url %s: %w", url, err)
 	}

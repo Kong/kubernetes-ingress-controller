@@ -42,8 +42,8 @@ type ManagerInstanceIDProvider interface {
 	GetID() uuid.UUID
 }
 
-// NodeAPIClient is the interface to Konnect Runtime Group Node API.
-type NodeAPIClient interface {
+// NodeClient is the interface to Konnect Runtime Group Node API.
+type NodeClient interface {
 	CreateNode(ctx context.Context, req *nodes.CreateNodeRequest) (*nodes.CreateNodeResponse, error)
 	UpdateNode(ctx context.Context, nodeID string, req *nodes.UpdateNodeRequest) (*nodes.UpdateNodeResponse, error)
 	DeleteNode(ctx context.Context, nodeID string) error
@@ -58,7 +58,7 @@ type NodeAgent struct {
 
 	logger logr.Logger
 
-	nodeAPIClient NodeAPIClient
+	nodeClient    NodeClient
 	refreshPeriod time.Duration
 
 	configStatus           atomic.Uint32
@@ -76,7 +76,7 @@ func NewNodeAgent(
 	version string,
 	refreshPeriod time.Duration,
 	logger logr.Logger,
-	client NodeAPIClient,
+	client NodeClient,
 	configStatusSubscriber clients.ConfigStatusSubscriber,
 	gatewayGetter GatewayInstanceGetter,
 	gatewayClientsChangesNotifier GatewayClientsChangesNotifier,
@@ -89,7 +89,7 @@ func NewNodeAgent(
 		hostname:                      hostname,
 		version:                       version,
 		logger:                        logger.WithName("konnect-node-agent"),
-		nodeAPIClient:                 client,
+		nodeClient:                    client,
 		refreshPeriod:                 refreshPeriod,
 		configStatusSubscriber:        configStatusSubscriber,
 		gatewayInstanceGetter:         gatewayGetter,
@@ -184,7 +184,7 @@ func (a *NodeAgent) updateKICNode(ctx context.Context, existingNodes []*nodes.No
 		} else {
 			// delete the nodes with different name of the current node, since only on KIC node is allowed in the runtime group.
 			a.logger.V(util.DebugLevel).Info("remove outdated KIC node", "node_id", node.ID, "hostname", node.Hostname)
-			err := a.nodeAPIClient.DeleteNode(ctx, node.ID)
+			err := a.nodeClient.DeleteNode(ctx, node.ID)
 			if err != nil {
 				a.logger.Error(err, "failed to delete KIC node", "node_id", node.ID, "hostname", node.Hostname)
 				continue
@@ -218,7 +218,7 @@ func (a *NodeAgent) updateKICNode(ctx context.Context, existingNodes []*nodes.No
 			LastPing: time.Now().Unix(),
 			Status:   string(ingressControllerStatus),
 		}
-		resp, err := a.nodeAPIClient.CreateNode(ctx, createNodeReq)
+		resp, err := a.nodeClient.CreateNode(ctx, createNodeReq)
 		if err != nil {
 			return fmt.Errorf("failed to create KIC node, hostname %s: %w", a.hostname, err)
 		}
@@ -235,7 +235,7 @@ func (a *NodeAgent) updateKICNode(ctx context.Context, existingNodes []*nodes.No
 		LastPing: time.Now().Unix(),
 		Status:   string(ingressControllerStatus),
 	}
-	_, err := a.nodeAPIClient.UpdateNode(ctx, latestNode.ID, updateNodeReq)
+	_, err := a.nodeClient.UpdateNode(ctx, latestNode.ID, updateNodeReq)
 	if err != nil {
 		a.logger.Error(err, "failed to update node for KIC")
 		return err
@@ -245,7 +245,7 @@ func (a *NodeAgent) updateKICNode(ctx context.Context, existingNodes []*nodes.No
 	// treat more nodes with the same name as outdated, and remove them.
 	for i := 1; i < len(nodesWithSameName); i++ {
 		node := nodesWithSameName[i]
-		err := a.nodeAPIClient.DeleteNode(ctx, node.ID)
+		err := a.nodeClient.DeleteNode(ctx, node.ID)
 		if err != nil {
 			a.logger.Error(err, "failed to delete outdated KIC node", "node_id", node.ID, "hostname", node.Hostname)
 			continue
@@ -285,7 +285,7 @@ func (a *NodeAgent) updateGatewayNodes(ctx context.Context, existingNodes []*nod
 				Type:     nodeType,
 				LastPing: time.Now().Unix(),
 			}
-			newNode, err := a.nodeAPIClient.CreateNode(ctx, createNodeReq)
+			newNode, err := a.nodeClient.CreateNode(ctx, createNodeReq)
 			if err != nil {
 				a.logger.Error(err, "failed to create kong gateway node", "hostname", gateway.Hostname)
 			} else {
@@ -304,7 +304,7 @@ func (a *NodeAgent) updateGatewayNodes(ctx context.Context, existingNodes []*nod
 		}
 		// update the latest node.
 		latestNode := ns[0]
-		_, err := a.nodeAPIClient.UpdateNode(ctx, latestNode.ID, updateNodeReq)
+		_, err := a.nodeClient.UpdateNode(ctx, latestNode.ID, updateNodeReq)
 		if err != nil {
 			a.logger.Error(err, "failed to update kong gateway node", "hostname", gateway.Hostname, "node_id", latestNode.ID)
 			continue
@@ -313,7 +313,7 @@ func (a *NodeAgent) updateGatewayNodes(ctx context.Context, existingNodes []*nod
 		// succeeded to update node, remove the other outdated nodes.
 		for i := 1; i < len(ns); i++ {
 			node := ns[i]
-			err := a.nodeAPIClient.DeleteNode(ctx, node.ID)
+			err := a.nodeClient.DeleteNode(ctx, node.ID)
 			if err != nil {
 				a.logger.Error(err, "failed to delete outdated kong gateway node", "node_id", node.ID, "hostname", node.Hostname)
 				continue
@@ -327,7 +327,7 @@ func (a *NodeAgent) updateGatewayNodes(ctx context.Context, existingNodes []*nod
 	for hostname, ns := range existingNodeMap {
 		if _, ok := gatewayInstanceMap[hostname]; !ok {
 			for _, node := range ns {
-				err := a.nodeAPIClient.DeleteNode(ctx, node.ID)
+				err := a.nodeClient.DeleteNode(ctx, node.ID)
 				if err != nil {
 					a.logger.Error(err, "failed to delete outdated kong gateway node", "node_id", node.ID, "hostname", node.Hostname)
 					continue
@@ -342,7 +342,7 @@ func (a *NodeAgent) updateGatewayNodes(ctx context.Context, existingNodes []*nod
 
 // updateNodes updates current status of KIC and controlled kong gateway nodes.
 func (a *NodeAgent) updateNodes(ctx context.Context) error {
-	existingNodes, err := a.nodeAPIClient.ListAllNodes(ctx)
+	existingNodes, err := a.nodeClient.ListAllNodes(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to list existing nodes: %w", err)
 	}

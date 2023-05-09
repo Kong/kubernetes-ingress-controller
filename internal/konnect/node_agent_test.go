@@ -255,7 +255,7 @@ func TestNodeAgentUpdateNodes(t *testing.T) {
 	for _, tc := range testCases {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
-			nodeClient := newMockNodeAPIClient(tc.initialNodesInNodeAPI)
+			nodeClient := newMockNodeClient(tc.initialNodesInNodeAPI)
 			configStatusQueue := newMockConfigStatusNotifier()
 			gatewayClientsChangesNotifier := newMockGatewayClientsNotifier()
 
@@ -337,7 +337,7 @@ func TestNodeAgentUpdateNodes(t *testing.T) {
 func TestNodeAgent_StartDoesntReturnUntilContextGetsCancelled(t *testing.T) {
 	t.Parallel()
 
-	nodeClient := newMockNodeAPIClient(nil)
+	nodeClient := newMockNodeClient(nil)
 	// Always return errors from ListNodes to ensure that the agent doesn't propagate it to the Start() caller.
 	// ListNodes is the first call made by the agent in Start(), so we care only about this one.
 	nodeClient.ReturnErrorFromListAllNodes(true)

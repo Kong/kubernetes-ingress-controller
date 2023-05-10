@@ -50,8 +50,8 @@ require (
 	knative.dev/pkg v0.0.0-20230502134655-db8a35330281
 	sigs.k8s.io/controller-runtime v0.14.6
 	sigs.k8s.io/gateway-api v0.6.1
-	sigs.k8s.io/kustomize/api v0.12.1
-	sigs.k8s.io/kustomize/kyaml v0.13.9
+	sigs.k8s.io/kustomize/api v0.13.4
+	sigs.k8s.io/kustomize/kyaml v0.14.2
 	sigs.k8s.io/yaml v1.3.0
 )
 
@@ -98,7 +98,7 @@ require (
 	github.com/fatih/color v1.15.0 // indirect
 	github.com/fsnotify/fsnotify v1.6.0 // indirect
 	github.com/fvbommel/sortorder v1.0.1 // indirect
-	github.com/go-errors/errors v1.0.1 // indirect
+	github.com/go-errors/errors v1.4.2 // indirect
 	github.com/go-ole/go-ole v1.2.6 // indirect
 	github.com/go-openapi/jsonpointer v0.19.6 // indirect
 	github.com/go-openapi/jsonreference v0.20.1 // indirect

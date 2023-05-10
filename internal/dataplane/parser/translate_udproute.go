@@ -4,6 +4,8 @@ import (
 	"fmt"
 
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/parser/translators"
 )
 
 // -----------------------------------------------------------------------------
@@ -51,7 +53,7 @@ func (p *Parser) ingressRulesFromUDPRoute(result *ingressRules, udproute *gatewa
 	// are invalid somehow make it past validation (e.g. the webhook is not enabled) we can
 	// at least try to provide a helpful message about the situation in the manager logs.
 	if len(spec.Rules) == 0 {
-		return errRouteValidationNoRules
+		return translators.ErrRouteValidationNoRules
 	}
 
 	// each rule may represent a different set of backend services that will be accepting

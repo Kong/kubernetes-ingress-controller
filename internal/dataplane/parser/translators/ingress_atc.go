@@ -67,7 +67,7 @@ func (m *ingressTranslationMeta) translateIntoKongExpressionRoute() *kongstate.R
 	hostAliases, _ := annotations.ExtractHostAliases(ingressAnnotations)
 	hosts = append(hosts, hostAliases...)
 	if len(hosts) > 0 {
-		hostMatcher := hostMatcherFromIngressHosts(hosts)
+		hostMatcher := hostMatcherFromHosts(hosts)
 		routeMatcher.And(hostMatcher)
 	}
 
@@ -116,8 +116,8 @@ func (m *ingressTranslationMeta) translateIntoKongExpressionRoute() *kongstate.R
 	return route
 }
 
-// hostMatcherFromIngressHosts translates hosts in IngressHost format to ATC matcher that matches any of them.
-func hostMatcherFromIngressHosts(hosts []string) atc.Matcher {
+// hostMatcherFromHosts translates hosts in IngressHost format to ATC matcher that matches any of them.
+func hostMatcherFromHosts(hosts []string) atc.Matcher {
 	matchers := make([]atc.Matcher, 0, len(hosts))
 	for _, host := range hosts {
 		if !validHosts.MatchString(host) {

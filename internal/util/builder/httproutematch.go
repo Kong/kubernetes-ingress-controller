@@ -1,6 +1,7 @@
 package builder
 
 import (
+	"github.com/samber/lo"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 )
 
@@ -23,19 +24,15 @@ func (b *HTTPRouteMatchBuilder) Build() gatewayv1beta1.HTTPRouteMatch {
 }
 
 func (b *HTTPRouteMatchBuilder) WithPathPrefix(pathPrefix string) *HTTPRouteMatchBuilder {
-	return b.WithPathType(&pathPrefix, pathMatchTypePtr(gatewayv1beta1.PathMatchPathPrefix))
+	return b.WithPathType(&pathPrefix, lo.ToPtr(gatewayv1beta1.PathMatchPathPrefix))
 }
 
 func (b *HTTPRouteMatchBuilder) WithPathRegex(pathRegexp string) *HTTPRouteMatchBuilder {
-	return b.WithPathType(&pathRegexp, pathMatchTypePtr(gatewayv1beta1.PathMatchRegularExpression))
+	return b.WithPathType(&pathRegexp, lo.ToPtr(gatewayv1beta1.PathMatchRegularExpression))
 }
 
 func (b *HTTPRouteMatchBuilder) WithPathExact(pathRegexp string) *HTTPRouteMatchBuilder {
-	return b.WithPathType(&pathRegexp, pathMatchTypePtr(gatewayv1beta1.PathMatchExact))
-}
-
-func pathMatchTypePtr(pathMatchType gatewayv1beta1.PathMatchType) *gatewayv1beta1.PathMatchType {
-	return &pathMatchType
+	return b.WithPathType(&pathRegexp, lo.ToPtr(gatewayv1beta1.PathMatchExact))
 }
 
 func (b *HTTPRouteMatchBuilder) WithPathType(pathValuePtr *string, pathTypePtr *gatewayv1beta1.PathMatchType) *HTTPRouteMatchBuilder {
@@ -63,6 +60,15 @@ func (b *HTTPRouteMatchBuilder) WithHeader(name, value string) *HTTPRouteMatchBu
 	b.httpRouteMatch.Headers = append(b.httpRouteMatch.Headers, gatewayv1beta1.HTTPHeaderMatch{
 		Name:  gatewayv1beta1.HTTPHeaderName(name),
 		Value: value,
+	})
+	return b
+}
+
+func (b *HTTPRouteMatchBuilder) WithHeaderRegex(name, value string) *HTTPRouteMatchBuilder {
+	b.httpRouteMatch.Headers = append(b.httpRouteMatch.Headers, gatewayv1beta1.HTTPHeaderMatch{
+		Name:  gatewayv1beta1.HTTPHeaderName(name),
+		Value: value,
+		Type:  lo.ToPtr(gatewayv1beta1.HeaderMatchRegularExpression),
 	})
 	return b
 }

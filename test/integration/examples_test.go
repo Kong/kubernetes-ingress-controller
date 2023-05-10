@@ -32,7 +32,6 @@ import (
 const examplesDIR = "../../examples"
 
 func TestHTTPRouteExample(t *testing.T) {
-	skipTestForExpressionRouter(t)
 	var (
 		httprouteExampleManifests = fmt.Sprintf("%s/gateway-httproute.yaml", examplesDIR)
 		ctx                       = context.Background()

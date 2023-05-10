@@ -88,6 +88,18 @@ Adding a new version? You'll need three changes:
   Note: this feature is experimental, and not available to translate other
   kubernetes objects that was originally supported.
   [#3935](https://github.com/Kong/kubernetes-ingress-controller/pull/3935)
+- Added `CombinedServices` feature gate that prevents the controller from
+  creating a separate Kong `Service` for each `netv1.Ingress` that uses
+  the same Kubernetes `Service` as its backend when `CombinedRoutes` feature
+  is turned on. Instead, the controller will create a single Kong `Service`
+  in such circumstances.
+  The feature is disabled by default to allow users to adapt to the changed
+  Kong Services naming scheme (`<namespace>.<service-name>.<port>` instead
+  of `<namespace>.<ingress-name>.<service-name>.<port>`) - it could break
+  existing monitoring rules that rely on the old naming scheme.
+  It will become the default behavior in the next minor release with the possibility
+  to opt-out.
+  [#3963](https://github.com/Kong/kubernetes-ingress-controller/pull/3963)
 
 ### Fixed
 

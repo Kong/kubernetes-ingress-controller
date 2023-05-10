@@ -38,6 +38,11 @@ jobs:
             test: dbless
             feature_gates: "ExpressionRoutes=true"
             router-flavor: "expressions"
+          # TODO: remove this once CombinedServices is enabled by default.
+          # https://github.com/Kong/kubernetes-ingress-controller/issues/3979
+          - name: dbless-combined-services
+            test: dbless
+            feature_gates: "GatewayAlpha=true,CombinedServices=true"
 
     steps:
       - uses: Kong/kong-license@master

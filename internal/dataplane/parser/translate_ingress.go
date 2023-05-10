@@ -128,7 +128,7 @@ func (p *Parser) ingressRulesFromIngressV1beta1() ingressRules {
 		}
 
 		if objectSuccessfullyParsed {
-			p.reportKubernetesObjectUpdate(ingress)
+			p.registerSuccessfullyParsedObject(ingress)
 		}
 	}
 
@@ -206,23 +206,18 @@ func (p *Parser) ingressRulesFromIngressV1() ingressRules {
 			&ingressList[j].CreationTimestamp)
 	})
 
-	servicesCache := make(kongServicesCache)
+	// Collect all default backends and TLS SNIs.
 	var allDefaultBackends []netv1.Ingress
 	for _, ingress := range ingressList {
 		ingressSpec := ingress.Spec
-
 		if ingressSpec.DefaultBackend != nil {
 			allDefaultBackends = append(allDefaultBackends, *ingress)
 		}
-
 		result.SecretNameToSNIs.addFromIngressV1TLS(ingressSpec.TLS, ingress)
-
-		if wasServicesCacheUpdated := p.ingressV1ToKongService(ingress, icp, servicesCache); wasServicesCacheUpdated {
-			p.reportKubernetesObjectUpdate(ingress)
-		}
 	}
 
-	for _, service := range servicesCache {
+	// Translate Ingress objects into Kong Services.
+	for _, service := range p.ingressesV1ToKongServices(ingressList, icp) {
 		result.ServiceNameToServices[*service.Name] = service
 		result.ServiceNameToParent[*service.Name] = service.Parent
 	}
@@ -240,141 +235,121 @@ func (p *Parser) ingressRulesFromIngressV1() ingressRules {
 // ingressV1ToKongServicesCache is a cache of Kong Services indexed by their name.
 type kongServicesCache map[string]kongstate.Service
 
-// ingressV1ToKongService translates IngressV1 object into Kong Service. It inserts the Kong Service into the passed servicesCache.
+// ingressesV1ToKongServices translates IngressV1 object into Kong Service. It inserts the Kong Service into the passed servicesCache.
 // Returns true if the passed servicesCache was updated.
-func (p *Parser) ingressV1ToKongService(
-	ingress *netv1.Ingress,
+func (p *Parser) ingressesV1ToKongServices(
+	ingresses []*netv1.Ingress,
 	icp v1alpha1.IngressClassParametersSpec,
-	servicesCache kongServicesCache,
-) bool {
+) kongServicesCache {
 	if p.featureFlags.CombinedServiceRoutes {
-		return p.ingressV1ToKongServiceCombinedRoutes(ingress, icp, servicesCache)
+		return p.ingressV1ToKongServiceCombinedRoutes(ingresses, icp)
 	}
-
-	return p.ingressV1ToKongServiceLegacy(ingress, icp, servicesCache)
+	return p.ingressV1ToKongServiceLegacy(ingresses, icp)
 }
 
-// ingressV1ToKongServiceLegacy translates IngressV1 object into Kong Service. It inserts the Kong Service into the passed servicesCache.
-// Returns true if the passed servicesCache was updated. It is used when CombinedRoutes feature flag is enabled.
+// ingressV1ToKongServiceLegacy translates a slice of IngressV1 object into Kong Services.
 func (p *Parser) ingressV1ToKongServiceCombinedRoutes(
-	ingress *netv1.Ingress,
+	ingresses []*netv1.Ingress,
 	icp v1alpha1.IngressClassParametersSpec,
-	servicesCache kongServicesCache,
-) bool {
-	wasServicesCacheUpdated := false
-
-	regexPrefix := translators.ControllerPathRegexPrefix
-	if prefix, ok := ingress.ObjectMeta.Annotations[annotations.AnnotationPrefix+annotations.RegexPrefixKey]; ok {
-		regexPrefix = prefix
-	}
-	for _, kongStateService := range translators.TranslateIngress(ingress, p.featureFlags.RegexPathPrefix, p.featureFlags.ExpressionRoutes) {
-		for _, route := range kongStateService.Routes {
-			for i, path := range route.Paths {
-				newPath := translators.MaybePrependRegexPrefix(*path, regexPrefix, icp.EnableLegacyRegexDetection && p.featureFlags.RegexPathPrefix)
-				route.Paths[i] = &newPath
-			}
-		}
-
-		servicesCache[*kongStateService.Service.Name] = *kongStateService
-		wasServicesCacheUpdated = true
-	}
-
-	return wasServicesCacheUpdated
+) kongServicesCache {
+	return translators.TranslateIngresses(ingresses, icp, translators.TranslateIngressFeatureFlags{
+		RegexPathPrefix:  p.featureFlags.RegexPathPrefix,
+		ExpressionRoutes: p.featureFlags.ExpressionRoutes,
+		CombinedServices: p.featureFlags.CombinedServices,
+	}, p.parsedObjectsCollector)
 }
 
-// ingressV1ToKongServiceLegacy translates IngressV1 object into Kong Service. It inserts the Kong Service into the passed servicesCache.
-// Returns true if the passed servicesCache was updated. It is used when the CombinedRoutes feature flag is disabled.
-func (p *Parser) ingressV1ToKongServiceLegacy(
-	ingress *netv1.Ingress,
-	icp v1alpha1.IngressClassParametersSpec,
-	servicesCache kongServicesCache,
-) bool {
-	wasServicesCacheUpdated := false
+// ingressV1ToKongServiceLegacy translates a slice IngressV1 object into Kong Services.
+func (p *Parser) ingressV1ToKongServiceLegacy(ingresses []*netv1.Ingress, icp v1alpha1.IngressClassParametersSpec) kongServicesCache {
+	servicesCache := make(kongServicesCache)
 
-	ingressSpec := ingress.Spec
-	maybePrependRegexPrefixFn := translators.MaybePrependRegexPrefixForIngressV1Fn(ingress, icp.EnableLegacyRegexDetection && p.featureFlags.RegexPathPrefix)
-	for i, rule := range ingressSpec.Rules {
-		if rule.HTTP == nil {
-			continue
-		}
-		for j, rulePath := range rule.HTTP.Paths {
-			pathTypeImplementationSpecific := netv1.PathTypeImplementationSpecific
-			if rulePath.PathType == nil {
-				rulePath.PathType = &pathTypeImplementationSpecific
-			}
-
-			paths := translators.PathsFromIngressPaths(rulePath, p.featureFlags.RegexPathPrefix)
-			if paths == nil {
-				// registering a failure, but technically it should never happen thanks to Kubernetes API validations
-				p.registerTranslationFailure(
-					fmt.Sprintf("could not translate Ingress Path %s to Kong paths", rulePath.Path), ingress,
-				)
+	for _, ingress := range ingresses {
+		ingressSpec := ingress.Spec
+		maybePrependRegexPrefixFn := translators.MaybePrependRegexPrefixForIngressV1Fn(ingress, icp.EnableLegacyRegexDetection && p.featureFlags.RegexPathPrefix)
+		for i, rule := range ingressSpec.Rules {
+			if rule.HTTP == nil {
 				continue
 			}
-
-			for i, path := range paths {
-				paths[i] = maybePrependRegexPrefixFn(*path)
-			}
-
-			r := kongstate.Route{
-				Ingress: util.FromK8sObject(ingress),
-				Route: kong.Route{
-					Name:              kong.String(fmt.Sprintf("%s.%s.%d%d", ingress.Namespace, ingress.Name, i, j)),
-					Paths:             paths,
-					StripPath:         kong.Bool(false),
-					PreserveHost:      kong.Bool(true),
-					Protocols:         kong.StringSlice("http", "https"),
-					RegexPriority:     kong.Int(priorityForPath[*rulePath.PathType]),
-					RequestBuffering:  kong.Bool(true),
-					ResponseBuffering: kong.Bool(true),
-					Tags:              util.GenerateTagsForObject(ingress),
-				},
-			}
-			if rule.Host != "" {
-				r.Hosts = kong.StringSlice(rule.Host)
-			}
-
-			port := translators.PortDefFromServiceBackendPort(&rulePath.Backend.Service.Port)
-			serviceName := fmt.Sprintf(
-				"%s.%s.%s",
-				ingress.Namespace,
-				rulePath.Backend.Service.Name,
-				serviceBackendPortToStr(rulePath.Backend.Service.Port),
-			)
-			service, ok := servicesCache[serviceName]
-			if !ok {
-				service = kongstate.Service{
-					Service: kong.Service{
-						Name: kong.String(serviceName),
-						Host: kong.String(fmt.Sprintf(
-							"%s.%s.%s.svc",
-							rulePath.Backend.Service.Name,
-							ingress.Namespace,
-							port.CanonicalString(),
-						)),
-						Port:           kong.Int(DefaultHTTPPort),
-						Protocol:       kong.String("http"),
-						Path:           kong.String("/"),
-						ConnectTimeout: kong.Int(DefaultServiceTimeout),
-						ReadTimeout:    kong.Int(DefaultServiceTimeout),
-						WriteTimeout:   kong.Int(DefaultServiceTimeout),
-						Retries:        kong.Int(DefaultRetries),
-					},
-					Namespace: ingress.Namespace,
-					Backends: []kongstate.ServiceBackend{{
-						Name:    rulePath.Backend.Service.Name,
-						PortDef: port,
-					}},
-					Parent: ingress,
+			for j, rulePath := range rule.HTTP.Paths {
+				pathTypeImplementationSpecific := netv1.PathTypeImplementationSpecific
+				if rulePath.PathType == nil {
+					rulePath.PathType = &pathTypeImplementationSpecific
 				}
+
+				paths := translators.PathsFromIngressPaths(rulePath, p.featureFlags.RegexPathPrefix)
+				if paths == nil {
+					// registering a failure, but technically it should never happen thanks to Kubernetes API validations
+					p.registerTranslationFailure(
+						fmt.Sprintf("could not translate Ingress Path %s to Kong paths", rulePath.Path), ingress,
+					)
+					continue
+				}
+
+				for i, path := range paths {
+					paths[i] = maybePrependRegexPrefixFn(*path)
+				}
+
+				r := kongstate.Route{
+					Ingress: util.FromK8sObject(ingress),
+					Route: kong.Route{
+						Name:              kong.String(fmt.Sprintf("%s.%s.%d%d", ingress.Namespace, ingress.Name, i, j)),
+						Paths:             paths,
+						StripPath:         kong.Bool(false),
+						PreserveHost:      kong.Bool(true),
+						Protocols:         kong.StringSlice("http", "https"),
+						RegexPriority:     kong.Int(priorityForPath[*rulePath.PathType]),
+						RequestBuffering:  kong.Bool(true),
+						ResponseBuffering: kong.Bool(true),
+						Tags:              util.GenerateTagsForObject(ingress),
+					},
+				}
+				if rule.Host != "" {
+					r.Hosts = kong.StringSlice(rule.Host)
+				}
+
+				port := translators.PortDefFromServiceBackendPort(&rulePath.Backend.Service.Port)
+				serviceName := fmt.Sprintf(
+					"%s.%s.%s",
+					ingress.Namespace,
+					rulePath.Backend.Service.Name,
+					serviceBackendPortToStr(rulePath.Backend.Service.Port),
+				)
+				service, ok := servicesCache[serviceName]
+				if !ok {
+					service = kongstate.Service{
+						Service: kong.Service{
+							Name: kong.String(serviceName),
+							Host: kong.String(fmt.Sprintf(
+								"%s.%s.%s.svc",
+								rulePath.Backend.Service.Name,
+								ingress.Namespace,
+								port.CanonicalString(),
+							)),
+							Port:           kong.Int(DefaultHTTPPort),
+							Protocol:       kong.String("http"),
+							Path:           kong.String("/"),
+							ConnectTimeout: kong.Int(DefaultServiceTimeout),
+							ReadTimeout:    kong.Int(DefaultServiceTimeout),
+							WriteTimeout:   kong.Int(DefaultServiceTimeout),
+							Retries:        kong.Int(DefaultRetries),
+						},
+						Namespace: ingress.Namespace,
+						Backends: []kongstate.ServiceBackend{{
+							Name:    rulePath.Backend.Service.Name,
+							PortDef: port,
+						}},
+						Parent: ingress,
+					}
+				}
+
+				service.Routes = append(service.Routes, r)
+				servicesCache[serviceName] = service
+				p.registerSuccessfullyParsedObject(ingress)
 			}
-			service.Routes = append(service.Routes, r)
-			servicesCache[serviceName] = service
-			wasServicesCacheUpdated = true
 		}
 	}
 
-	return wasServicesCacheUpdated
+	return servicesCache
 }
 
 // getDefaultBackendService picks the oldest Ingress with a DefaultBackend defined and returns a Kong Service for it.

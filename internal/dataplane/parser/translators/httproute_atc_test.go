@@ -234,9 +234,11 @@ func TestGenerateKongExpressionRoutesFromHTTPRouteMatches(t *testing.T) {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			routes, err := GenerateKongExpressionRoutesFromHTTPRouteMatches(
-				tc.routeName,
-				tc.matches,
-				tc.filters,
+				KongRouteTranslation{
+					Name:    tc.routeName,
+					Matches: tc.matches,
+					Filters: tc.filters,
+				},
 				tc.ingressObjectInfo,
 				tc.hostnames,
 				kong.StringSlice(tc.tags...),

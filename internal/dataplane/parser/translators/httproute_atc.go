@@ -17,9 +17,7 @@ import (
 // GenerateKongExpressionRoutesFromHTTPRouteMatches generates Kong routes from HTTPRouteRule
 // pointing to a specific backend.
 func GenerateKongExpressionRoutesFromHTTPRouteMatches(
-	routeName string,
-	matches []gatewayv1beta1.HTTPRouteMatch,
-	filters []gatewayv1beta1.HTTPRouteFilter,
+	translation KongRouteTranslation,
 	ingressObjectInfo util.K8sObjectInfo,
 	hostnames []string,
 	tags []*string,
@@ -28,14 +26,14 @@ func GenerateKongExpressionRoutesFromHTTPRouteMatches(
 	r := kongstate.Route{
 		Ingress: ingressObjectInfo,
 		Route: kong.Route{
-			Name:         kong.String(routeName),
+			Name:         kong.String(translation.Name),
 			PreserveHost: kong.Bool(true),
 			Tags:         tags,
 		},
 		ExpressionRoutes: true,
 	}
 
-	if len(matches) == 0 {
+	if len(translation.Matches) == 0 {
 		if len(hostnames) == 0 {
 			return []kongstate.Route{}, ErrRouteValidationNoMatchRulesOrHostnamesSpecified
 		}
@@ -45,48 +43,17 @@ func GenerateKongExpressionRoutesFromHTTPRouteMatches(
 		return []kongstate.Route{r}, nil
 	}
 
-	_, hasRedirectFilter := lo.Find(filters, func(filter gatewayv1beta1.HTTPRouteFilter) bool {
+	_, hasRedirectFilter := lo.Find(translation.Filters, func(filter gatewayv1beta1.HTTPRouteFilter) bool {
 		return filter.Type == gatewayv1beta1.HTTPRouteFilterRequestRedirect
 	})
 	// if the rule has request redirect filter(s), we need to generate a route for each match to
 	// attach plugins for the filter.
 	if hasRedirectFilter {
-		routes := make([]kongstate.Route, 0, len(matches))
-		for _, match := range matches {
-			matchRoute := kongstate.Route{
-				Ingress: ingressObjectInfo,
-				Route: kong.Route{
-					Name:         kong.String(routeName),
-					PreserveHost: kong.Bool(true),
-					Tags:         tags,
-				},
-				ExpressionRoutes: true,
-			}
-			// generate matcher for this HTTPRoute Match.
-			matcher := atc.And(generateMatcherFromHTTPRouteMatch(match))
-
-			// add matcher from parent httproute (hostnames, protocols, SNIs) to be ANDed with the matcher from match.
-			matchersFromParent := matchersFromParentHTTPRoute(hostnames, ingressObjectInfo.Annotations)
-			for _, m := range matchersFromParent {
-				matcher.And(m)
-			}
-			atc.ApplyExpression(&matchRoute.Route, matcher, 1)
-
-			// we need to extract the path to configure redirect path of the plugins for request redirect filter.
-			path := ""
-			if match.Path != nil && match.Path.Value != nil {
-				path = *match.Path.Value
-			}
-			plugins := GeneratePluginsFromHTTPRouteFilters(filters, path, tags)
-			matchRoute.Plugins = plugins
-
-			routes = append(routes, matchRoute)
-		}
-		return routes, nil
+		return generateKongExpressionRoutesWithRequestRedirectFilter(translation, ingressObjectInfo, hostnames, tags)
 	}
 
 	// if we do not need to generate a kong route for each match, we OR matchers from all matches together.
-	routeMatcher := atc.And(atc.Or(generateMatchersFromHTTPRouteMatches(matches)...))
+	routeMatcher := atc.And(atc.Or(generateMatchersFromHTTPRouteMatches(translation.Matches)...))
 	// add matcher from parent httproute (hostnames, protocols, SNIs) to be ANDed with the matcher from match.
 	matchersFromParent := matchersFromParentHTTPRoute(hostnames, ingressObjectInfo.Annotations)
 	for _, matcher := range matchersFromParent {
@@ -95,9 +62,49 @@ func GenerateKongExpressionRoutesFromHTTPRouteMatches(
 
 	atc.ApplyExpression(&r.Route, routeMatcher, 1)
 	// generate plugins.
-	plugins := GeneratePluginsFromHTTPRouteFilters(filters, "", tags)
+	plugins := GeneratePluginsFromHTTPRouteFilters(translation.Filters, "", tags)
 	r.Plugins = plugins
 	return []kongstate.Route{r}, nil
+}
+
+func generateKongExpressionRoutesWithRequestRedirectFilter(
+	translation KongRouteTranslation,
+	ingressObjectInfo util.K8sObjectInfo,
+	hostnames []string,
+	tags []*string,
+) ([]kongstate.Route, error) {
+	routes := make([]kongstate.Route, 0, len(translation.Matches))
+	for _, match := range translation.Matches {
+		matchRoute := kongstate.Route{
+			Ingress: ingressObjectInfo,
+			Route: kong.Route{
+				Name:         kong.String(translation.Name),
+				PreserveHost: kong.Bool(true),
+				Tags:         tags,
+			},
+			ExpressionRoutes: true,
+		}
+		// generate matcher for this HTTPRoute Match.
+		matcher := atc.And(generateMatcherFromHTTPRouteMatch(match))
+
+		// add matcher from parent httproute (hostnames, protocols, SNIs) to be ANDed with the matcher from match.
+		matchersFromParent := matchersFromParentHTTPRoute(hostnames, ingressObjectInfo.Annotations)
+		for _, m := range matchersFromParent {
+			matcher.And(m)
+		}
+		atc.ApplyExpression(&matchRoute.Route, matcher, 1)
+
+		// we need to extract the path to configure redirect path of the plugins for request redirect filter.
+		path := ""
+		if match.Path != nil && match.Path.Value != nil {
+			path = *match.Path.Value
+		}
+		plugins := GeneratePluginsFromHTTPRouteFilters(translation.Filters, path, tags)
+		matchRoute.Plugins = plugins
+
+		routes = append(routes, matchRoute)
+	}
+	return routes, nil
 }
 
 func generateMatchersFromHTTPRouteMatches(matches []gatewayv1beta1.HTTPRouteMatch) []atc.Matcher {
@@ -158,7 +165,8 @@ func pathMatcherFromHTTPPathMatch(pathMatch *gatewayv1beta1.HTTPPathMatch) atc.M
 		)
 	case gatewayv1beta1.PathMatchRegularExpression:
 		// TODO: for compatibility with kong traditional routes, here we append the ^ prefix to match the path from beginning.
-		// Could we allow the regex to match any part of path?
+		// Could we allow the regex to match any part of the path?
+		// https://github.com/Kong/kubernetes-ingress-controller/issues/3983
 		return atc.NewPredicateHTTPPath(atc.OpRegexMatch, appendRegexBeginIfNotExist(path))
 	}
 

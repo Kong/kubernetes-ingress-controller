@@ -14,6 +14,7 @@ import (
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/parser/translators"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util/builder"
@@ -143,7 +144,7 @@ func getIngressRulesFromHTTPRoutesCommonTestCases() []testCaseIngressRulesFromHT
 				}
 			},
 			errs: []error{
-				errRouteValidationNoMatchRulesOrHostnamesSpecified,
+				translators.ErrRouteValidationNoMatchRulesOrHostnamesSpecified,
 			},
 		},
 		{
@@ -233,7 +234,7 @@ func getIngressRulesFromHTTPRoutesCommonTestCases() []testCaseIngressRulesFromHT
 				}
 			},
 			errs: []error{
-				errRouteValidationNoRules,
+				translators.ErrRouteValidationNoRules,
 			},
 		},
 		{
@@ -263,7 +264,7 @@ func getIngressRulesFromHTTPRoutesCommonTestCases() []testCaseIngressRulesFromHT
 				}
 			},
 			errs: []error{
-				errRouteValidationQueryParamMatchesUnsupported,
+				translators.ErrRouteValidationQueryParamMatchesUnsupported,
 			},
 		},
 		{

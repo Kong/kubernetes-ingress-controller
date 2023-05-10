@@ -61,7 +61,7 @@ func validateHTTPRoute(httproute *gatewayv1beta1.HTTPRoute) error {
 	// are invalid somehow make it past validation (e.g. the webhook is not enabled) we can
 	// at least try to provide a helpful message about the situation in the manager logs.
 	if len(spec.Rules) == 0 {
-		return errRouteValidationNoRules
+		return translators.ErrRouteValidationNoRules
 	}
 
 	return nil
@@ -137,22 +137,18 @@ func (p *Parser) ingressRulesFromHTTPRouteLegacyFallback(httproute *gatewayv1bet
 // HTTPRoute specification into a []*string slice, which is the type required by translating to matchers
 // in expression based routes.
 func getHTTPRouteHostnamesAsSliceOfStrings(httproute *gatewayv1beta1.HTTPRoute) []string {
-	hostnames := make([]string, 0, len(httproute.Spec.Hostnames))
-	for _, hostname := range httproute.Spec.Hostnames {
-		hostnames = append(hostnames, string(hostname))
-	}
-	return hostnames
+	return lo.Map(httproute.Spec.Hostnames, func(h gatewayv1beta1.Hostname, _ int) string {
+		return string(h)
+	})
 }
 
 // getHTTPRouteHostnamesAsSliceOfStringPointers translates the hostnames defined
 // in an HTTPRoute specification into a []*string slice, which is the type required
 // by kong.Route{}.
 func getHTTPRouteHostnamesAsSliceOfStringPointers(httproute *gatewayv1beta1.HTTPRoute) []*string {
-	hostnames := make([]*string, 0, len(httproute.Spec.Hostnames))
-	for _, hostname := range httproute.Spec.Hostnames {
-		hostnames = append(hostnames, kong.String(string(hostname)))
-	}
-	return hostnames
+	return lo.Map(httproute.Spec.Hostnames, func(h gatewayv1beta1.Hostname, _ int) *string {
+		return kong.String(string(h))
+	})
 }
 
 // generateKongRoutesFromHTTPRouteRule converts an HTTPRoute rule to one or more
@@ -242,9 +238,7 @@ func generateKongRouteFromTranslation(
 		// get the hostnames from the HTTPRoute
 		hostnames := getHTTPRouteHostnamesAsSliceOfStrings(httproute)
 		return translators.GenerateKongExpressionRoutesFromHTTPRouteMatches(
-			translation.Name,
-			translation.Matches,
-			translation.Filters,
+			translation,
 			objectInfo,
 			hostnames,
 			tags,
@@ -294,7 +288,7 @@ func generateKongRoutesFromHTTPRouteMatches(
 		// however in this case there must actually be some present hostnames
 		// configured for the HTTPRoute or else it's not valid.
 		if len(hostnames) == 0 {
-			return []kongstate.Route{}, errRouteValidationNoMatchRulesOrHostnamesSpecified
+			return []kongstate.Route{}, translators.ErrRouteValidationNoMatchRulesOrHostnamesSpecified
 		}
 
 		// otherwise apply the hostnames to the route
@@ -305,7 +299,7 @@ func generateKongRoutesFromHTTPRouteMatches(
 
 	// TODO: implement query param matches (https://github.com/Kong/kubernetes-ingress-controller/issues/2778)
 	if len(matches[0].QueryParams) > 0 {
-		return []kongstate.Route{}, errRouteValidationQueryParamMatchesUnsupported
+		return []kongstate.Route{}, translators.ErrRouteValidationQueryParamMatchesUnsupported
 	}
 
 	r := generateKongstateHTTPRoute(routeName, ingressObjectInfo, hostnames)

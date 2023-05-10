@@ -9,6 +9,7 @@ import (
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/parser/translators"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 )
 
@@ -53,7 +54,7 @@ func (p *Parser) ingressRulesFromGRPCRoute(result *ingressRules, grpcroute *gate
 	spec := grpcroute.Spec
 
 	if len(spec.Rules) == 0 {
-		return errRouteValidationNoRules
+		return translators.ErrRouteValidationNoRules
 	}
 
 	// each rule may represent a different set of backend services that will be accepting

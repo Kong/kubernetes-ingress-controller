@@ -116,25 +116,6 @@ func (m *ingressTranslationMeta) translateIntoKongExpressionRoute() *kongstate.R
 	return route
 }
 
-// hostMatcherFromHosts translates hosts in IngressHost format to ATC matcher that matches any of them.
-func hostMatcherFromHosts(hosts []string) atc.Matcher {
-	matchers := make([]atc.Matcher, 0, len(hosts))
-	for _, host := range hosts {
-		if !validHosts.MatchString(host) {
-			continue
-		}
-
-		if strings.HasPrefix(host, "*") {
-			// wildcard match on hosts (like *.foo.com), genreate a suffix match.
-			matchers = append(matchers, atc.NewPrediacteHTTPHost(atc.OpSuffixMatch, strings.TrimPrefix(host, "*")))
-		} else {
-			// exact match on hosts, generate an exact match.
-			matchers = append(matchers, atc.NewPrediacteHTTPHost(atc.OpEqual, host))
-		}
-	}
-	return atc.Or(matchers...)
-}
-
 // pathMatcherFromIngressPath translate ingress path into matcher to match the path.
 func pathMatcherFromIngressPath(httpIngressPath netv1.HTTPIngressPath, regexPathPrefix string) atc.Matcher {
 	switch *httpIngressPath.PathType {

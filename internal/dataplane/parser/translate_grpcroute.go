@@ -61,7 +61,13 @@ func (p *Parser) ingressRulesFromGRPCRoute(result *ingressRules, grpcroute *gate
 	// traffic, so we make separate routes and Kong services for every present rule.
 	for ruleNumber, rule := range spec.Rules {
 		// determine the routes needed to route traffic to services for this rule
-		routes := generateKongRoutesFromGRPCRouteRule(grpcroute, ruleNumber, rule)
+		var routes []kongstate.Route
+		if p.featureFlags.ExpressionRoutes {
+			routes = translators.GenerateKongExpressionRoutesFromGRPCRouteRule(grpcroute, ruleNumber, rule)
+		} else {
+			// REVIEW: move generateKongRoutesFromGRPCRouteRule to package translators?
+			routes = generateKongRoutesFromGRPCRouteRule(grpcroute, ruleNumber, rule)
+		}
 
 		// create a service and attach the routes to it
 		service, err := generateKongServiceFromBackendRefWithRuleNumber(p.logger, p.storer, result, grpcroute, ruleNumber, "grpcs", grpcBackendRefsToBackendRefs(rule.BackendRefs)...)

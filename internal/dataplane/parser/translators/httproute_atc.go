@@ -173,6 +173,21 @@ func pathMatcherFromHTTPPathMatch(pathMatch *gatewayv1beta1.HTTPPathMatch) atc.M
 	return nil // should be unreachable
 }
 
+func headerMatcherFromHTTPHeaderMatch(headerMatch gatewayv1beta1.HTTPHeaderMatch) atc.Matcher {
+	matchType := gatewayv1beta1.HeaderMatchExact
+	if headerMatch.Type != nil {
+		matchType = *headerMatch.Type
+	}
+	headerKey := strings.ReplaceAll(strings.ToLower(string(headerMatch.Name)), "-", "_")
+	switch matchType {
+	case gatewayv1beta1.HeaderMatchExact:
+		return atc.NewPredicateHTTPHeader(headerKey, atc.OpEqual, headerMatch.Value)
+	case gatewayv1beta1.HeaderMatchRegularExpression:
+		return atc.NewPredicateHTTPHeader(headerKey, atc.OpRegexMatch, headerMatch.Value)
+	}
+	return nil // should be unreachable
+}
+
 func headerMatcherFromHTTPHeaderMatches(headerMatches []gatewayv1beta1.HTTPHeaderMatch) atc.Matcher {
 	// sort headerMatches by names to generate a stable output.
 	sort.Slice(headerMatches, func(i, j int) bool {
@@ -181,17 +196,7 @@ func headerMatcherFromHTTPHeaderMatches(headerMatches []gatewayv1beta1.HTTPHeade
 
 	matchers := make([]atc.Matcher, 0, len(headerMatches))
 	for _, headerMatch := range headerMatches {
-		matchType := gatewayv1beta1.HeaderMatchExact
-		if headerMatch.Type != nil {
-			matchType = *headerMatch.Type
-		}
-		headerKey := strings.ReplaceAll(strings.ToLower(string(headerMatch.Name)), "-", "_")
-		switch matchType {
-		case gatewayv1beta1.HeaderMatchExact:
-			matchers = append(matchers, atc.NewPredicateHTTPHeader(headerKey, atc.OpEqual, headerMatch.Value))
-		case gatewayv1beta1.HeaderMatchRegularExpression:
-			matchers = append(matchers, atc.NewPredicateHTTPHeader(headerKey, atc.OpRegexMatch, headerMatch.Value))
-		}
+		matchers = append(matchers, headerMatcherFromHTTPHeaderMatch(headerMatch))
 	}
 	return atc.And(matchers...)
 }

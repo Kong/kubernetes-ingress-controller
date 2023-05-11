@@ -5,6 +5,7 @@ resources:
 - ../rbac
 - ../rbac/gateway
 - ../rbac/knative
+- ../rbac/crds
 - ingressclass.yaml
 - service.yaml
 - serviceaccount.yaml

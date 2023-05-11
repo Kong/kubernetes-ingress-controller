@@ -15,6 +15,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -28,6 +29,7 @@ import (
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
 	ctrlref "github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/reference"
+	ctrlutils "github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/utils"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 )
@@ -71,6 +73,12 @@ func (r *GatewayReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	if r.PublishServiceRef.Name == "" || r.PublishServiceRef.Namespace == "" {
 		return fmt.Errorf("publish service must be configured")
 	}
+
+	r.EnableReferenceGrant = ctrlutils.CRDExists(mgr.GetRESTMapper(), schema.GroupVersionResource{
+		Group:    gatewayv1beta1.GroupVersion.Group,
+		Version:  gatewayv1beta1.GroupVersion.Version,
+		Resource: "referencegrants",
+	})
 
 	// generate the controller object and attach it to the manager and link the reconciler object
 	c, err := controller.New("gateway-controller", mgr, controller.Options{

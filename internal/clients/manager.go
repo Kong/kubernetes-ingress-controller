@@ -38,7 +38,7 @@ type AdminAPIClientsManager struct {
 
 	// konnectClient represents a special-case of the data-plane which is Konnect cloud.
 	// This client is used to synchronise configuration with Konnect's Runtime Group Admin API.
-	konnectClient *adminapi.Client
+	konnectClient *adminapi.KonnectClient
 
 	// lock prevents concurrent access to the manager's fields.
 	lock sync.RWMutex
@@ -101,25 +101,16 @@ func (c *AdminAPIClientsManager) Notify(discoveredAPIs []adminapi.DiscoveredAdmi
 
 // SetKonnectClient sets a client that will be used to communicate with Konnect Runtime Group Admin API.
 // If called multiple times, it will override the client.
-func (c *AdminAPIClientsManager) SetKonnectClient(client *adminapi.Client) {
+func (c *AdminAPIClientsManager) SetKonnectClient(client *adminapi.KonnectClient) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 	c.konnectClient = client
 }
 
-// AllClients returns a copy of current client's slice. It will also include Konnect client if set.
-func (c *AdminAPIClientsManager) AllClients() []*adminapi.Client {
+func (c *AdminAPIClientsManager) KonnectClient() *adminapi.KonnectClient {
 	c.lock.RLock()
 	defer c.lock.RUnlock()
-
-	copied := make([]*adminapi.Client, len(c.gatewayClients))
-	copy(copied, c.gatewayClients)
-
-	if c.konnectClient != nil {
-		copied = append(copied, c.konnectClient)
-	}
-
-	return copied
+	return c.konnectClient
 }
 
 // GatewayClients returns a copy of current client's slice. Konnect client won't be included.
@@ -272,6 +263,6 @@ func (c *AdminAPIClientsManager) closeGatewayClientsSubscribers() {
 // AdminAPIClientsProvider allows fetching the most recent list of Admin API clients of Gateways that
 // we should configure.
 type AdminAPIClientsProvider interface {
-	AllClients() []*adminapi.Client
+	KonnectClient() *adminapi.KonnectClient
 	GatewayClients() []*adminapi.Client
 }

@@ -76,6 +76,10 @@ func (s UpdateStrategyDBMode) MetricsProtocol() metrics.Protocol {
 	return metrics.ProtocolDeck
 }
 
+func (s UpdateStrategyDBMode) Type() string {
+	return "DBMode"
+}
+
 func (s UpdateStrategyDBMode) currentState(ctx context.Context) (*state.KongState, error) {
 	rawState, err := dump.Get(ctx, s.client, s.dumpConfig)
 	if err != nil {

@@ -14,7 +14,6 @@ import (
 	gokong "github.com/kong/go-kong/kong"
 	"github.com/samber/lo"
 	"github.com/sirupsen/logrus"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	netv1 "k8s.io/api/networking/v1"
@@ -127,81 +126,14 @@ var (
 	}
 )
 
-type konnectClient struct {
-	isKonnect bool
-}
-
-func (c konnectClient) IsKonnect() bool {
-	return c.isKonnect
-}
-
-func TestHandleSendToClientResult(t *testing.T) {
-	const testSHA = "2110454484b88378619111aab0d8a8b8d0ecad5c0ad1120a19810c965f8652dd"
-	testError := errors.New("sending to client failure")
-
-	testCases := []struct {
-		name      string
-		isKonnect bool
-		inputSHA  string
-		inputErr  error
-
-		expectedErr error
-		expectedSHA string
-	}{
-		{
-			name:     "no error, sha is passed",
-			inputSHA: testSHA,
-
-			expectedSHA: testSHA,
-		},
-		{
-			name:     "error is passed",
-			inputSHA: testSHA,
-			inputErr: testError,
-
-			expectedErr: testError,
-		},
-		{
-			name:      "konnect - error is ignored",
-			isKonnect: true,
-			inputSHA:  testSHA,
-			inputErr:  testError,
-
-			expectedErr: nil,
-			expectedSHA: "",
-		},
-		{
-			name:      "konnect - no error, sha is passed",
-			isKonnect: true,
-			inputSHA:  testSHA,
-
-			expectedSHA: testSHA,
-		},
-	}
-
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			c := konnectClient{isKonnect: tc.isKonnect}
-			resultSHA, err := dataplane.HandleSendToClientResult(c, logrus.New(), tc.inputSHA, tc.inputErr)
-			assert.Equal(t, tc.expectedErr, err)
-			assert.Equal(t, tc.expectedSHA, resultSHA)
-		})
-	}
-}
-
 // mockGatewayClientsProvider is a mock implementation of dataplane.AdminAPIClientsProvider.
 type mockGatewayClientsProvider struct {
 	gatewayClients []*adminapi.Client
-	konnectClient  *adminapi.Client
+	konnectClient  *adminapi.KonnectClient
 }
 
-func (f mockGatewayClientsProvider) AllClients() []*adminapi.Client {
-	all := make([]*adminapi.Client, len(f.gatewayClients))
-	copy(all, f.gatewayClients)
-	if f.konnectClient != nil {
-		all = append(all, f.konnectClient)
-	}
-	return all
+func (f mockGatewayClientsProvider) KonnectClient() *adminapi.KonnectClient {
+	return f.konnectClient
 }
 
 func (f mockGatewayClientsProvider) GatewayClients() []*adminapi.Client {
@@ -287,6 +219,10 @@ func (m *mockUpdateStrategy) MetricsProtocol() metrics.Protocol {
 	return metrics.ProtocolDBLess
 }
 
+func (m *mockUpdateStrategy) Type() string {
+	return "Mock"
+}
+
 // mockConfigurationChangeDetector is a mock implementation of sendconfig.ConfigurationChangeDetector.
 type mockConfigurationChangeDetector struct {
 	hasConfigurationChanged bool
@@ -321,7 +257,7 @@ func TestKongClientUpdate_AllExpectedClientsAreCalled(t *testing.T) {
 	testCases := []struct {
 		name                 string
 		gatewayClients       []*adminapi.Client
-		konnectClient        *adminapi.Client
+		konnectClient        *adminapi.KonnectClient
 		errorOnUpdateForURLs []string
 		expectError          bool
 	}{
@@ -393,7 +329,7 @@ func TestKongClientUpdate_AllExpectedClientsAreCalled(t *testing.T) {
 			}
 			require.NoError(t, err)
 
-			allExpectedURLs := mapClientsToUrls(clientsProvider.AllClients())
+			allExpectedURLs := mapClientsToUrls(clientsProvider)
 			updateStrategyResolver.assertUpdateCalledForURLs(allExpectedURLs)
 		})
 	}
@@ -461,7 +397,7 @@ func mustSampleGatewayClient(t *testing.T) *adminapi.Client {
 	return c
 }
 
-func mustSampleKonnectClient(t *testing.T) *adminapi.Client {
+func mustSampleKonnectClient(t *testing.T) *adminapi.KonnectClient {
 	t.Helper()
 
 	c, err := gokong.NewClient(lo.ToPtr(fmt.Sprintf("https://%s.konghq.tech", uuid.NewString())), &http.Client{})
@@ -471,8 +407,12 @@ func mustSampleKonnectClient(t *testing.T) *adminapi.Client {
 	return adminapi.NewKonnectClient(c, rgID)
 }
 
-func mapClientsToUrls(clients []*adminapi.Client) []string {
-	return lo.Map(clients, func(c *adminapi.Client, _ int) string {
+func mapClientsToUrls(clients mockGatewayClientsProvider) []string {
+	urls := lo.Map(clients.GatewayClients(), func(c *adminapi.Client, _ int) string {
 		return c.BaseRootURL()
 	})
+	if clients.KonnectClient() != nil {
+		urls = append(urls, clients.KonnectClient().BaseRootURL())
+	}
+	return urls
 }

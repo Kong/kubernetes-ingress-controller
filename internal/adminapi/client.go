@@ -37,16 +37,6 @@ func NewClient(c *kong.Client) *Client {
 	}
 }
 
-// NewKonnectClient creates an Admin API client that is to be used with a Konnect Runtime Group Admin API.
-func NewKonnectClient(c *kong.Client, runtimeGroup string) *Client {
-	return &Client{
-		adminAPIClient:      c,
-		isKonnect:           true,
-		konnectRuntimeGroup: runtimeGroup,
-		pluginSchemaStore:   util.NewPluginSchemaStore(c),
-	}
-}
-
 // NewTestClient creates a client for test purposes.
 func NewTestClient(address string) (*Client, error) {
 	kongClient, err := kong.NewTestClient(lo.ToPtr(address), &http.Client{})
@@ -55,6 +45,28 @@ func NewTestClient(address string) (*Client, error) {
 	}
 
 	return NewClient(kongClient), nil
+}
+
+type KonnectClient struct {
+	Client
+	backoffStrategy *KonnectBackoffStrategy
+}
+
+// NewKonnectClient creates an Admin API client that is to be used with a Konnect Runtime Group Admin API.
+func NewKonnectClient(c *kong.Client, runtimeGroup string) *KonnectClient {
+	return &KonnectClient{
+		Client: Client{
+			adminAPIClient:      c,
+			isKonnect:           true,
+			konnectRuntimeGroup: runtimeGroup,
+			pluginSchemaStore:   util.NewPluginSchemaStore(c),
+		},
+		backoffStrategy: NewKonnectBackoffStrategy(SystemClock{}),
+	}
+}
+
+func (c *KonnectClient) BackoffStrategy() UpdateBackoffStrategy {
+	return c.backoffStrategy
 }
 
 // AdminAPIClient returns an underlying go-kong's Admin API client.

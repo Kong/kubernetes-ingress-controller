@@ -37,7 +37,11 @@ func (m *mockUpdateStrategy) Update(context.Context, sendconfig.ContentWithHash)
 }
 
 func (m *mockUpdateStrategy) MetricsProtocol() metrics.Protocol {
-	return "mock"
+	return "Mock"
+}
+
+func (m *mockUpdateStrategy) Type() string {
+	return "Mock"
 }
 
 type mockBackoffStrategy struct {
@@ -125,5 +129,4 @@ func TestUpdateStrategyWithBackoff(t *testing.T) {
 			assert.Equal(t, tc.expectFailureRegistered, backoffStrategy.wasFailureRegistered)
 		})
 	}
-
 }

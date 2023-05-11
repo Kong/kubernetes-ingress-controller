@@ -10,6 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/adminapi"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/sendconfig"
 )
 
@@ -34,34 +35,42 @@ func (c *clientMock) AdminAPIClient() *kong.Client {
 	return &kong.Client{}
 }
 
+type clientWithBackoffMock struct {
+	*clientMock
+}
+
+func (c clientWithBackoffMock) BackoffStrategy() adminapi.UpdateBackoffStrategy {
+	return newMockBackoffStrategy(true)
+}
+
 func TestDefaultUpdateStrategyResolver_ResolveUpdateStrategy(t *testing.T) {
 	testCases := []struct {
 		isKonnect                     bool
 		inMemory                      bool
-		expectedStrategy              sendconfig.UpdateStrategy
+		expectedStrategyType          string
 		expectKonnectRuntimeGroupCall bool
 	}{
 		{
 			isKonnect:                     true,
 			inMemory:                      false,
-			expectedStrategy:              sendconfig.UpdateStrategyWithBackoff{},
+			expectedStrategyType:          "WithBackoff(DBMode)",
 			expectKonnectRuntimeGroupCall: true,
 		},
 		{
 			isKonnect:                     true,
 			inMemory:                      true,
-			expectedStrategy:              sendconfig.UpdateStrategyWithBackoff{},
+			expectedStrategyType:          "WithBackoff(DBMode)",
 			expectKonnectRuntimeGroupCall: true,
 		},
 		{
-			isKonnect:        false,
-			inMemory:         false,
-			expectedStrategy: sendconfig.UpdateStrategyDBMode{},
+			isKonnect:            false,
+			inMemory:             false,
+			expectedStrategyType: "DBMode",
 		},
 		{
-			isKonnect:        false,
-			inMemory:         true,
-			expectedStrategy: sendconfig.UpdateStrategyInMemory{},
+			isKonnect:            false,
+			inMemory:             true,
+			expectedStrategyType: "InMemory",
 		},
 	}
 
@@ -71,12 +80,19 @@ func TestDefaultUpdateStrategyResolver_ResolveUpdateStrategy(t *testing.T) {
 				isKonnect: tc.isKonnect,
 			}
 
+			var updateClient sendconfig.UpdateClient
+			if tc.isKonnect {
+				updateClient = &clientWithBackoffMock{client}
+			} else {
+				updateClient = client
+			}
+
 			resolver := sendconfig.NewDefaultUpdateStrategyResolver(sendconfig.Config{
 				InMemory: tc.inMemory,
 			}, logrus.New())
 
-			strategy := resolver.ResolveUpdateStrategy(client)
-			require.IsType(t, tc.expectedStrategy, strategy)
+			strategy := resolver.ResolveUpdateStrategy(updateClient)
+			require.Equal(t, tc.expectedStrategyType, strategy.Type())
 			assert.True(t, client.adminAPIClientWasCalled)
 			assert.Equal(t, tc.expectKonnectRuntimeGroupCall, client.konnectRuntimeGroupWasCalled)
 		})

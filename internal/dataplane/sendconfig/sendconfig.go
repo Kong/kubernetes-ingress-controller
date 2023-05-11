@@ -7,14 +7,15 @@ import (
 	"time"
 
 	"github.com/kong/deck/file"
+	"github.com/kong/go-kong/kong"
 	"github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/adminapi"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/deckgen"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/failures"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/metrics"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 )
 
 // -----------------------------------------------------------------------------
@@ -25,11 +26,22 @@ type UpdateStrategyResolver interface {
 	ResolveUpdateStrategy(client UpdateClient) UpdateStrategy
 }
 
+type AdminAPIClient interface {
+	AdminAPIClient() *kong.Client
+	LastConfigSHA() []byte
+	SetLastConfigSHA([]byte)
+	BaseRootURL() string
+	PluginSchemaStore() *util.PluginSchemaStore
+
+	IsKonnect() bool
+	KonnectRuntimeGroup() string
+}
+
 // PerformUpdate writes `targetContent` to Kong Admin API specified by `kongConfig`.
 func PerformUpdate(
 	ctx context.Context,
 	log logrus.FieldLogger,
-	client *adminapi.Client,
+	client AdminAPIClient,
 	config Config,
 	targetContent *file.Content,
 	promMetrics *metrics.CtrlFuncMetrics,

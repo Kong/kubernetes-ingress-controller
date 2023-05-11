@@ -118,7 +118,7 @@ func TestClientAddressesNotifications(t *testing.T) {
 
 	requireClientsCountEventually := func(t *testing.T, c *AdminAPIClientsManager, addresses []string, args ...any) {
 		require.Eventually(t, func() bool {
-			clientAddresses := lo.Map(c.AllClients(), func(cl *adminapi.Client, _ int) string {
+			clientAddresses := lo.Map(c.GatewayClients(), func(cl *adminapi.Client, _ int) string {
 				return cl.BaseRootURL()
 			})
 			return slices.Equal(addresses, clientAddresses)
@@ -179,7 +179,7 @@ func TestClientAdjustInternalClientsAfterNotification(t *testing.T) {
 	manager.RunNotifyLoop()
 	<-manager.Running()
 
-	clients := manager.AllClients()
+	clients := manager.GatewayClients()
 	require.Len(t, clients, 1)
 	require.Equal(t, "localhost:8083", clients[0].BaseRootURL())
 
@@ -266,14 +266,12 @@ func TestAdminAPIClientsManager_Clients(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, m.GatewayClients(), 1, "expecting one initial client")
 	require.Equal(t, m.GatewayClientsCount(), 1, "expecting one initial client")
-	require.Len(t, m.AllClients(), 1, "expecting one initial client")
 
-	konnectTestClient, err := adminapi.NewTestClient("https://us.api.konghq.tech")
-	require.NoError(t, err)
+	konnectTestClient := &adminapi.KonnectClient{}
 	m.SetKonnectClient(konnectTestClient)
 	require.Len(t, m.GatewayClients(), 1, "konnect client should not be returned from GatewayClients")
 	require.Equal(t, m.GatewayClientsCount(), 1, "konnect client should not be counted in GatewayClientsCount")
-	require.Len(t, m.AllClients(), 2, "konnect client should be returned from AllClients")
+	require.Equal(t, konnectTestClient, m.KonnectClient(), "konnect client should be returned from KonnectClient")
 }
 
 func TestAdminAPIClientsManager_GatewayClientsFromNotificationsAreExpectedToHavePodRef(t *testing.T) {

@@ -1,4 +1,4 @@
-package sendconfig
+package adminapi
 
 import (
 	"bytes"

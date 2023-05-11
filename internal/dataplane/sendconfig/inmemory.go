@@ -46,12 +46,12 @@ func (s UpdateStrategyInMemory) Update(ctx context.Context, targetState ContentW
 	resourceErrorsParseErr error,
 ) {
 	// Kong will error out if this is set
-	targetState.Info = nil
+	targetState.Content.Info = nil
 
 	// Kong errors out if `null`s are present in `config` of plugins
 	deckgen.CleanUpNullsInPluginConfigs(targetState.Content)
 
-	config, err := json.Marshal(targetState)
+	config, err := json.Marshal(targetState.Content)
 	if err != nil {
 		return fmt.Errorf("constructing kong configuration: %w", err), nil, nil
 	}
@@ -67,6 +67,10 @@ func (s UpdateStrategyInMemory) Update(ctx context.Context, targetState ContentW
 
 func (s UpdateStrategyInMemory) MetricsProtocol() metrics.Protocol {
 	return metrics.ProtocolDBLess
+}
+
+func (s UpdateStrategyInMemory) Type() string {
+	return "InMemory"
 }
 
 // shouldUseFlattenedErrors verifies whether we should pass flatten errors flag to ReloadDeclarativeRawConfig.

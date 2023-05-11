@@ -5,7 +5,6 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	netv1 "k8s.io/api/networking/v1"
-	netv1beta1 "k8s.io/api/networking/v1beta1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -32,8 +31,6 @@ func updateReferredObjects(
 		referredSecretList = listCoreV1ServiceReferredSecrets(obj)
 	case *netv1.Ingress:
 		referredSecretList = listNetV1IngressReferredSecrets(obj)
-	case *netv1beta1.Ingress:
-		referredSecretList = listNetV1beta1IngressReferredSecrets(obj)
 	case *kongv1.KongPlugin:
 		referredSecretList = listKongPluginReferredSecrets(obj)
 	case *kongv1.KongClusterPlugin:
@@ -69,21 +66,6 @@ func listCoreV1ServiceReferredSecrets(service *corev1.Service) []types.Namespace
 }
 
 func listNetV1IngressReferredSecrets(ingress *netv1.Ingress) []types.NamespacedName {
-	referredSecretNames := make([]types.NamespacedName, 0, len(ingress.Spec.TLS))
-	for _, tls := range ingress.Spec.TLS {
-		if tls.SecretName == "" {
-			continue
-		}
-		nsName := types.NamespacedName{
-			Namespace: ingress.Namespace,
-			Name:      tls.SecretName,
-		}
-		referredSecretNames = append(referredSecretNames, nsName)
-	}
-	return referredSecretNames
-}
-
-func listNetV1beta1IngressReferredSecrets(ingress *netv1beta1.Ingress) []types.NamespacedName {
 	referredSecretNames := make([]types.NamespacedName, 0, len(ingress.Spec.TLS))
 	for _, tls := range ingress.Spec.TLS {
 		if tls.SecretName == "" {

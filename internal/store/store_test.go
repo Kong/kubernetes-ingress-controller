@@ -1,69 +1,18 @@
 package store
 
 import (
-	"reflect"
 	"strings"
 	"testing"
 
-	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	netv1 "k8s.io/api/networking/v1"
-	netv1beta1 "k8s.io/api/networking/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/intstr"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
 )
-
-func TestNetworkingIngressV1Beta1(t *testing.T) {
-	type args struct {
-		obj interface{}
-	}
-	tests := []struct {
-		name string
-		args args
-		want *netv1beta1.Ingress
-	}{
-		{
-			name: "networking.Ingress is returned as is",
-			args: args{
-				obj: &netv1beta1.Ingress{},
-			},
-			want: &netv1beta1.Ingress{},
-		},
-		{
-			name: "returns nil if a non-ingress object is passed in",
-			args: args{
-				&corev1.Service{
-					Spec: corev1.ServiceSpec{
-						Type:      corev1.ServiceTypeClusterIP,
-						ClusterIP: "1.1.1.1",
-						Ports: []corev1.ServicePort{
-							{
-								Name:       "default",
-								TargetPort: intstr.FromString("port-1"),
-							},
-						},
-					},
-				},
-			},
-			want: nil,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			s := Store{
-				logger: logrus.New(),
-			}
-			if got := s.networkingIngressV1Beta1(tt.args.obj); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("networkingIngressV1Beta1() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
 
 func TestCacheStoresGet(t *testing.T) {
 	t.Log("configuring some yaml objects to store in the cache")
@@ -119,7 +68,6 @@ spec:
 	t.Log("verifying the integrity of the cache store")
 	assert.Len(t, cs.IngressV1.List(), 1)
 	assert.Len(t, cs.Service.List(), 1)
-	assert.Len(t, cs.IngressV1beta1.List(), 0)
 	assert.Len(t, cs.KongIngress.List(), 0)
 	_, exists, err = cs.Get(&corev1.Service{ObjectMeta: metav1.ObjectMeta{Namespace: "doesntexist", Name: "doesntexist"}})
 	assert.NoError(t, err)

@@ -130,25 +130,6 @@ func setupControllers(
 			},
 		},
 		{
-			Enabled: ingressConditions.IngressNetV1beta1Enabled(),
-			Controller: &configuration.NetV1Beta1IngressReconciler{
-				Client:           mgr.GetClient(),
-				Log:              ctrl.Log.WithName("controllers").WithName("Ingress").WithName("netv1beta1"),
-				Scheme:           mgr.GetScheme(),
-				DataplaneClient:  dataplaneClient,
-				IngressClassName: c.IngressClassName,
-				// this and other resources that support class get an additional watch to account for the default
-				// IngressClass even if the cluster uses an Ingress version other than networking/v1 (the only version
-				// we support IngressClass for). we pass the v1 controller disable flag to them to avoid
-				// https://github.com/Kong/kubernetes-ingress-controller/issues/2563
-				DisableIngressClassLookups: !c.IngressClassNetV1Enabled,
-				StatusQueue:                kubernetesStatusQueue,
-				DataplaneAddressFinder:     dataplaneAddressFinder,
-				CacheSyncTimeout:           c.CacheSyncTimeout,
-				ReferenceIndexers:          referenceIndexers,
-			},
-		},
-		{
 			Enabled: c.ServiceEnabled,
 			Controller: &configuration.CoreV1ServiceReconciler{
 				Client:            mgr.GetClient(),

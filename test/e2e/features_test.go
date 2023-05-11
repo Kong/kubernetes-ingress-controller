@@ -523,9 +523,7 @@ func TestDefaultIngressClass(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Logf("creating a classless ingress for service %s", service.Name)
-	kubernetesVersion, err := env.Cluster().Version()
-	require.NoError(t, err)
-	ingress := generators.NewIngressForServiceWithClusterVersion(kubernetesVersion, "/abbosiysaltanati", map[string]string{
+	ingress := generators.NewIngressForService("/abbosiysaltanati", map[string]string{
 		"konghq.com/strip-path": "true",
 	}, service)
 	require.NoError(t, clusters.DeployIngress(ctx, env.Cluster(), kongDeployment.Namespace, ingress))

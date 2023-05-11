@@ -136,9 +136,7 @@ func TestIstioWithKongIngressGateway(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Logf("creating an ingress resource for service %s with ingress.class %s", service.Name, ingressClass)
-	kubernetesVersion, err := env.Cluster().Version()
-	require.NoError(t, err)
-	ingress := generators.NewIngressForServiceWithClusterVersion(kubernetesVersion, "/httpbin", map[string]string{
+	ingress := generators.NewIngressForService("/httpbin", map[string]string{
 		annotations.IngressClassKey: ingressClass,
 		"konghq.com/strip-path":     "true",
 	}, service)

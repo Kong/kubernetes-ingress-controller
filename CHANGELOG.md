@@ -119,9 +119,13 @@ Adding a new version? You'll need three changes:
 
 ### Deprecated
 
-- Removed support for extensions/v1beta1 Ingress which was removed in kubernetes 1.22.
+- Removed support for `extensions/v1beta1` `Ingress` which was removed in kubernetes 1.22.
   At the same time deprecate `--enable-controller-ingress-extensionsv1beta1` CLI flag.
   [#3710](https://github.com/Kong/kubernetes-ingress-controller/pull/3710)
+
+- Removed support for `networking.k8s.io/v1beta1` `Ingress` which was removed in kubernetes 1.22.
+  At the same time deprecate `--enable-controller-ingress-networkingv1beta1` CLI flag.
+  [#3867](https://github.com/Kong/kubernetes-ingress-controller/pull/3867)
 
 ## [2.9.3]
 

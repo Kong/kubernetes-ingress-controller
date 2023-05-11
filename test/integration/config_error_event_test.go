@@ -55,10 +55,8 @@ func TestConfigErrorEventGeneration(t *testing.T) {
 	cleaner.Add(service)
 
 	t.Logf("creating an ingress for service %s with invalid configuration", service.Name)
-	kubernetesVersion, err := env.Cluster().Version()
-	require.NoError(t, err)
 	// GRPC routes cannot have methods, only HTTP, and we don't catch this as a translation error
-	ingress := generators.NewIngressForServiceWithClusterVersion(kubernetesVersion, "/bar", map[string]string{
+	ingress := generators.NewIngressForService("/bar", map[string]string{
 		annotations.IngressClassKey: consts.IngressClass,
 		"konghq.com/strip-path":     "true",
 		"konghq.com/protocols":      "grpcs",
@@ -67,7 +65,7 @@ func TestConfigErrorEventGeneration(t *testing.T) {
 
 	t.Log("deploying ingress")
 	require.NoError(t, clusters.DeployIngress(ctx, env.Cluster(), ns.Name, ingress))
-	helpers.AddIngressToCleaner(cleaner, ingress)
+	cleaner.Add(ingress)
 
 	t.Log("checking ingress event creation")
 	require.Eventually(t, func() bool {

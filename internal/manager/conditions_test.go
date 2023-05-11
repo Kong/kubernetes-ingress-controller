@@ -6,7 +6,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	netv1 "k8s.io/api/networking/v1"
-	netv1beta1 "k8s.io/api/networking/v1beta1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
@@ -15,18 +14,11 @@ import (
 
 func TestIngressControllerConditions(t *testing.T) {
 	const kind = "Ingress"
-	var (
-		networkingV1 = schema.GroupVersionResource{
-			Group:    netv1.SchemeGroupVersion.Group,
-			Version:  netv1.SchemeGroupVersion.Version,
-			Resource: "ingresses",
-		}
-		networkingV1beta1 = schema.GroupVersionResource{
-			Group:    netv1beta1.SchemeGroupVersion.Group,
-			Version:  netv1beta1.SchemeGroupVersion.Version,
-			Resource: "ingresses",
-		}
-	)
+	networkingV1 := schema.GroupVersionResource{
+		Group:    netv1.SchemeGroupVersion.Group,
+		Version:  netv1.SchemeGroupVersion.Version,
+		Resource: "ingresses",
+	}
 
 	type ingressTestOpts struct {
 		enabled      bool
@@ -38,40 +30,22 @@ func TestIngressControllerConditions(t *testing.T) {
 
 		ingressNetV1      ingressTestOpts
 		ingressClassNetV1 ingressTestOpts
-		ingressNetV1beta  ingressTestOpts
 
 		expectIngressNetV1      bool
 		expectIngressClassNetV1 bool
-		expectIngressNetV1beta  bool
 		expectError             bool
 	}{
 		{
 			name:                    "netV1_takes_precedence_over_all",
 			ingressNetV1:            ingressTestOpts{enabled: true, crdInstalled: true},
 			ingressClassNetV1:       ingressTestOpts{enabled: true, crdInstalled: true},
-			ingressNetV1beta:        ingressTestOpts{enabled: true, crdInstalled: true},
 			expectIngressNetV1:      true,
 			expectIngressClassNetV1: true,
-		},
-		{
-			name:                   "netV1beta_wins_when_netV1_crds_not_installed",
-			ingressNetV1:           ingressTestOpts{enabled: true},
-			ingressClassNetV1:      ingressTestOpts{enabled: true},
-			ingressNetV1beta:       ingressTestOpts{enabled: true, crdInstalled: true},
-			expectIngressNetV1beta: true,
-		},
-		{
-			name:                   "netV1_not_picked_when_disabled",
-			ingressNetV1:           ingressTestOpts{crdInstalled: true},
-			ingressClassNetV1:      ingressTestOpts{enabled: true, crdInstalled: true},
-			ingressNetV1beta:       ingressTestOpts{enabled: true, crdInstalled: true},
-			expectIngressNetV1beta: true,
 		},
 		{
 			name:              "no_crds_installed",
 			ingressNetV1:      ingressTestOpts{enabled: true},
 			ingressClassNetV1: ingressTestOpts{enabled: true},
-			ingressNetV1beta:  ingressTestOpts{enabled: true},
 			expectError:       true,
 		},
 	}
@@ -86,19 +60,11 @@ func TestIngressControllerConditions(t *testing.T) {
 					Kind:    kind,
 				}, meta.RESTScopeRoot)
 			}
-			if tc.ingressNetV1beta.crdInstalled {
-				restMapper.Add(schema.GroupVersionKind{
-					Group:   networkingV1beta1.Group,
-					Version: networkingV1beta1.Version,
-					Kind:    kind,
-				}, meta.RESTScopeRoot)
-			}
 
 			conditions, err := manager.NewIngressControllersConditions(
 				&manager.Config{
 					IngressNetV1Enabled:      tc.ingressNetV1.enabled,
 					IngressClassNetV1Enabled: tc.ingressClassNetV1.enabled,
-					IngressNetV1beta1Enabled: tc.ingressNetV1beta.enabled,
 				},
 				restMapper,
 			)
@@ -110,7 +76,6 @@ func TestIngressControllerConditions(t *testing.T) {
 			require.NoError(t, err)
 			assert.Equal(t, tc.expectIngressNetV1, conditions.IngressNetV1Enabled())
 			assert.Equal(t, tc.expectIngressClassNetV1, conditions.IngressClassNetV1Enabled())
-			assert.Equal(t, tc.expectIngressNetV1beta, conditions.IngressNetV1beta1Enabled())
 		})
 	}
 }

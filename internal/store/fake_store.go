@@ -6,7 +6,6 @@ import (
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	netv1 "k8s.io/api/networking/v1"
-	netv1beta1 "k8s.io/api/networking/v1beta1"
 	"k8s.io/client-go/tools/cache"
 	knative "knative.dev/networking/pkg/apis/networking/v1alpha1"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
@@ -32,7 +31,6 @@ func clusterResourceKeyFunc(obj interface{}) (string, error) {
 
 // FakeObjects can be used to populate a fake Store.
 type FakeObjects struct {
-	IngressesV1beta1               []*netv1beta1.Ingress
 	IngressesV1                    []*netv1.Ingress
 	IngressClassesV1               []*netv1.IngressClass
 	HTTPRoutes                     []*gatewayv1beta1.HTTPRoute
@@ -62,13 +60,6 @@ func NewFakeStore(
 ) (Storer, error) {
 	var s Storer
 
-	ingressV1beta1Store := cache.NewStore(keyFunc)
-	for _, ingress := range objects.IngressesV1beta1 {
-		err := ingressV1beta1Store.Add(ingress)
-		if err != nil {
-			return nil, err
-		}
-	}
 	ingressV1Store := cache.NewStore(keyFunc)
 	for _, ingress := range objects.IngressesV1 {
 		err := ingressV1Store.Add(ingress)
@@ -204,7 +195,6 @@ func NewFakeStore(
 	}
 	s = Store{
 		stores: CacheStores{
-			IngressV1beta1: ingressV1beta1Store,
 			IngressV1:      ingressV1Store,
 			IngressClassV1: ingressClassV1Store,
 			HTTPRoute:      httprouteStore,

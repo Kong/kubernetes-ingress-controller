@@ -14,6 +14,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/types/kind"
+	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	admregv1 "k8s.io/api/admissionregistration/v1"
@@ -636,24 +637,29 @@ func ensureWebhookService(ctx context.Context, name string) (func() error, error
 	}
 
 	nodeName := "aaaa"
-	endpoints, err := env.Cluster().Client().CoreV1().Endpoints(consts.ControllerNamespace).Create(ctx, &corev1.Endpoints{
-		TypeMeta:   metav1.TypeMeta{APIVersion: "v1", Kind: "Endpoints"},
-		ObjectMeta: metav1.ObjectMeta{Name: name},
-		Subsets: []corev1.EndpointSubset{
+	endpoints, err := env.Cluster().Client().DiscoveryV1().EndpointSlices(consts.ControllerNamespace).Create(ctx, &discoveryv1.EndpointSlice{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "discovery.k8s.io/v1",
+			Kind:       "EndpointSlice",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name: fmt.Sprintf("%s-1", name),
+			Labels: map[string]string{
+				discoveryv1.LabelServiceName: name,
+			},
+		},
+		AddressType: discoveryv1.AddressTypeIPv4,
+		Endpoints: []discoveryv1.Endpoint{
 			{
-				Addresses: []corev1.EndpointAddress{
-					{
-						IP:       testutils.AdmissionWebhookListenHost,
-						NodeName: &nodeName,
-					},
-				},
-				Ports: []corev1.EndpointPort{
-					{
-						Name:     "default",
-						Port:     testutils.AdmissionWebhookListenPort,
-						Protocol: corev1.ProtocolTCP,
-					},
-				},
+				Addresses: []string{testutils.AdmissionWebhookListenHost},
+				NodeName:  &nodeName,
+			},
+		},
+		Ports: []discoveryv1.EndpointPort{
+			{
+				Name:     lo.ToPtr("default"),
+				Port:     lo.ToPtr(int32(testutils.AdmissionWebhookListenPort)),
+				Protocol: lo.ToPtr(corev1.ProtocolTCP),
 			},
 		},
 	}, metav1.CreateOptions{})
@@ -666,7 +672,7 @@ func ensureWebhookService(ctx context.Context, name string) (func() error, error
 			return err
 		}
 
-		if err := env.Cluster().Client().CoreV1().Endpoints(consts.ControllerNamespace).Delete(ctx, endpoints.Name, metav1.DeleteOptions{}); err != nil && !apierrors.IsNotFound(err) {
+		if err := env.Cluster().Client().DiscoveryV1().EndpointSlices(consts.ControllerNamespace).Delete(ctx, endpoints.Name, metav1.DeleteOptions{}); err != nil && !apierrors.IsNotFound(err) {
 			return err
 		}
 		return nil

@@ -121,7 +121,7 @@ func TestUpdateStrategyWithBackoff(t *testing.T) {
 			if tc.expectError != nil {
 				require.Equal(t, tc.expectError, err)
 			} else {
-				require.Nil(t, err)
+				require.NoError(t, err)
 			}
 
 			assert.Equal(t, tc.expectUpdateCalled, updateStrategy.wasUpdateCalled)

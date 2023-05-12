@@ -15,9 +15,15 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 )
 
-func GenerateKongExpressionRoutesFromGRPCRouteRule(grpcroute *gatewayv1alpha2.GRPCRoute, ruleNumber int, rule gatewayv1alpha2.GRPCRouteRule) []kongstate.Route {
-	routes := make([]kongstate.Route, 0, len(rule.Matches))
+// GenerateKongExpressionRoutesFromGRPCRouteRule generates expression based kong routes
+// from a single GRPCRouteRule.
+func GenerateKongExpressionRoutesFromGRPCRouteRule(grpcroute *gatewayv1alpha2.GRPCRoute, ruleNumber int) []kongstate.Route {
+	if ruleNumber >= len(grpcroute.Spec.Rules) {
+		return nil
+	}
+	rule := grpcroute.Spec.Rules[ruleNumber]
 
+	routes := make([]kongstate.Route, 0, len(rule.Matches))
 	// gather the k8s object information and hostnames from the grpcroute
 	ingressObjectInfo := util.FromK8sObject(grpcroute)
 
@@ -66,6 +72,10 @@ func generateMathcherFromGRPCMatch(match gatewayv1alpha2.GRPCRouteMatch, hostnam
 		routeMatcher.And(hostMatcher)
 	}
 
+	// override protocols from annotations.
+	// Because Kong expression based router extracts net.protocol field from scheme of request,
+	// GRPC over HTTP/2 requests could not be matched if protocol is set to grpc/grpcs since protocol could only be http or https.
+	// So we do not AND a protocol matcher if no protocol is specified in annotations.
 	protocols := annotations.ExtractProtocolNames(metaAnnotations)
 	if len(protocols) > 0 {
 		protocolMatcher := protocolMatcherFromProtocols(protocols)
@@ -82,7 +92,6 @@ func generateMathcherFromGRPCMatch(match gatewayv1alpha2.GRPCRouteMatch, hostnam
 }
 
 // methodMatcherFromGRPCMethodMatch translates ONE GRPC method match in GRPCRoute to ATC matcher.
-// REVIEW(naming): this function actually generates matcher to match HTTP path but not HTTP method. rename to pathMatcher...?
 func methodMatcherFromGRPCMethodMatch(methodMatch *gatewayv1alpha2.GRPCMethodMatch) atc.Matcher {
 	matchType := gatewayv1alpha2.GRPCMethodMatchExact
 	if methodMatch.Type != nil {

@@ -6,45 +6,13 @@ import (
 	"github.com/kong/go-kong/kong"
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
-	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 )
 
-var grpcRouteGVK = schema.GroupVersionKind{
-	Group:   "gateway.networking.k8s.io",
-	Version: "v1alpha2",
-	Kind:    "GRPCRoute",
-}
-
 func TestGenerateKongExpressionRoutesFromGRPCRouteRule(t *testing.T) {
-	makeGRPCRoute := func(
-		name string, namespace string, annotations map[string]string,
-		hostnames []string,
-		rules []gatewayv1alpha2.GRPCRouteRule,
-	) *gatewayv1alpha2.GRPCRoute {
-		return &gatewayv1alpha2.GRPCRoute{
-			TypeMeta: metav1.TypeMeta{
-				Kind:       "GRPCRoute",
-				APIVersion: "gateway.networking.k8s.io/v1alpha2",
-			},
-			ObjectMeta: metav1.ObjectMeta{
-				Name:        name,
-				Namespace:   namespace,
-				Annotations: annotations,
-			},
-			Spec: gatewayv1alpha2.GRPCRouteSpec{
-				Hostnames: lo.Map(hostnames, func(h string, _ int) gatewayv1beta1.Hostname {
-					return gatewayv1beta1.Hostname(h)
-				}),
-				Rules: rules,
-			},
-		}
-	}
 	testCases := []struct {
 		name           string
 		objectName     string
@@ -226,8 +194,8 @@ func TestGenerateKongExpressionRoutesFromGRPCRouteRule(t *testing.T) {
 	for _, tc := range testCases {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
-			grpcroute := makeGRPCRoute(tc.objectName, "default", tc.annotations, tc.hostnames, []gatewayv1alpha2.GRPCRouteRule{tc.rule})
-			routes := GenerateKongExpressionRoutesFromGRPCRouteRule(grpcroute, 0, tc.rule)
+			grpcroute := makeTestGRPCRoute(tc.objectName, "default", tc.annotations, tc.hostnames, []gatewayv1alpha2.GRPCRouteRule{tc.rule})
+			routes := GenerateKongExpressionRoutesFromGRPCRouteRule(grpcroute, 0)
 			require.Equal(t, tc.expectedRoutes, routes)
 		})
 	}

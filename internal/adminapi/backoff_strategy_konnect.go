@@ -29,6 +29,17 @@ type SystemClock struct{}
 func (SystemClock) Now() time.Time { return time.Now() }
 
 // KonnectBackoffStrategy keeps track of Konnect config push backoffs.
+//
+// It takes into account:
+// - a regular exponential backoff that is incremented on every Update failure,
+// - a last failed configuration hash (where we skip Update until a config changes).
+//
+// It's important to note that KonnectBackoffStrategy can use the latter (config hash)
+// because of the nature of the one-directional integration where KIC is the only
+// component responsible for populating configuration of Konnect's Runtime Group.
+// In case that changes in the future (e.g. manual modifications to parts of the
+// configuration are allowed on Konnect side for some reason), we might have to
+// drop this part of the backoff strategy.
 type KonnectBackoffStrategy struct {
 	b                    *backoff.Backoff
 	nextAttempt          time.Time
@@ -59,7 +70,7 @@ func (s *KonnectBackoffStrategy) CanUpdate(configHash []byte) (bool, string) {
 	// The exponential backoff duration is satisfied.
 	// In case of the first attempt it will be satisfied as s.nextAttempt will be a zero value which is always in the past.
 	timeLeft := s.nextAttempt.Sub(s.clock.Now())
-	exponentialBackoffSatisfied := timeLeft.Seconds() <= 0
+	exponentialBackoffSatisfied := timeLeft <= 0
 
 	// The configuration we're attempting to update is not the same faulty config we've already tried pushing.
 	isTheSameFaultyConfig := s.lastFailedConfigHash != nil && bytes.Equal(s.lastFailedConfigHash, configHash)
@@ -123,7 +134,7 @@ func (s *KonnectBackoffStrategy) whyCannotUpdate(
 		))
 	}
 
-	if timeLeft.Seconds() > 0 {
+	if timeLeft > 0 {
 		reasons = append(reasons, fmt.Sprintf("next attempt allowed in %s", timeLeft))
 	}
 

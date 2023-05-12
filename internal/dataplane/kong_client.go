@@ -2,6 +2,7 @@ package dataplane
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"reflect"
 	"sort"
@@ -430,7 +431,13 @@ func (c *KongClient) trySendOutToKonnectClient(ctx context.Context, s *kongstate
 	if _, err := c.sendToClient(ctx, konnectClient, s, config); err != nil {
 		// In case of an error, we only log it since we don't want make Konnect affect the basic functionality
 		// of the controller.
-		c.logger.WithError(err).Error("Failed pushing configuration to Konnect")
+
+		if errors.Is(err, sendconfig.ErrUpdateSkippedDueToBackoffStrategy{}) {
+			c.logger.WithError(err).Warn("Skipped pushing configuration to Konnect")
+			return
+		}
+
+		c.logger.WithError(err).Warn("Failed pushing configuration to Konnect")
 	}
 }
 

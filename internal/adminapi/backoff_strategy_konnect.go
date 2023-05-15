@@ -3,6 +3,7 @@ package adminapi
 import (
 	"bytes"
 	"fmt"
+	"net/http"
 	"strings"
 	"sync"
 	"time"
@@ -88,28 +89,25 @@ func (s *KonnectBackoffStrategy) RegisterUpdateFailure(err error, configHash []b
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
-	if errs := deckerrors.ExtractAPIErrors(err); len(errs) > 0 {
-		_, hasClientError := lo.Find(errs, func(item *kong.APIError) bool {
-			return item.Code() >= 400 && item.Code() < 500
-		})
-
-		// We store the failed configuration hash only in case we receive a client error code [400, 500).
-		// It's because we don't want to repeatedly try sending the config that we know is faulty on our side.
-		// It only makes sense to retry when the config changes.
-		if hasClientError {
-			s.lastFailedConfigHash = configHash
-		} else {
-			s.lastFailedConfigHash = nil
-		}
+	apiErrs := deckerrors.ExtractAPIErrors(err)
+	tooManyRequestsErr, isTooManyRequests := lo.Find(apiErrs, func(err *kong.APIError) bool {
+		return err.Code() == http.StatusTooManyRequests
+	})
+	if isTooManyRequests {
+		s.handleTooManyRequests(tooManyRequestsErr)
+		return
 	}
 
-	// Backoff.Duration() call returns backoff time we need to wait until next attempt.
-	// It also increments the internal attempts counter so the next time we call it, the
-	// duration will be multiplied accordingly.
-	timeLeft := s.b.Duration()
+	isClientError := lo.ContainsBy(apiErrs, func(err *kong.APIError) bool {
+		return err.Code() >= 400 && err.Code() < 500
+	})
+	if isClientError {
+		s.handleGenericClientError(configHash)
+		return
+	}
 
-	// We're storing the exact point in time after which we'll be allowed to perform the next update attempt.
-	s.nextAttempt = s.clock.Now().Add(timeLeft)
+	// If it's neither of the specific cases above, we just increment the standard exponential backoff.
+	s.incrementExponentialBackoff()
 }
 
 func (s *KonnectBackoffStrategy) RegisterUpdateSuccess() {
@@ -119,6 +117,36 @@ func (s *KonnectBackoffStrategy) RegisterUpdateSuccess() {
 	s.b.Reset()
 	s.nextAttempt = time.Time{}
 	s.lastFailedConfigHash = nil
+}
+
+func (s *KonnectBackoffStrategy) handleTooManyRequests(tooManyRequestsErr *kong.APIError) {
+	if details, ok := tooManyRequestsErr.Details().(kong.ErrTooManyRequestsDetails); ok && details.RetryAfter != 0 {
+		// In case we get 429 with details embedded, we just retry after the suggested Retry-After time.
+		s.nextAttempt = s.clock.Now().Add(details.RetryAfter)
+	} else {
+		// In case the details for 429 are missing, we retry after the standard exponential backoff time.
+		s.incrementExponentialBackoff()
+	}
+
+	// Despite whether we've got details or not, we prune the last failed config hash to not block update after the
+	// period we set up above.
+	s.lastFailedConfigHash = nil
+}
+
+func (s *KonnectBackoffStrategy) handleGenericClientError(configHash []byte) {
+	// We increment the standard exponential backoff time and store the faulty config hash to prevent pushing it again.
+	s.incrementExponentialBackoff()
+	s.lastFailedConfigHash = configHash
+}
+
+func (s *KonnectBackoffStrategy) incrementExponentialBackoff() {
+	// Backoff.Duration() call returns backoff time we need to wait until next attempt.
+	// It also increments the internal attempts counter so the next time we call it, the
+	// duration will be multiplied accordingly.
+	timeLeft := s.b.Duration()
+
+	// We're storing the exact point in time after which we'll be allowed to perform the next update attempt.
+	s.nextAttempt = s.clock.Now().Add(timeLeft)
 }
 
 func (s *KonnectBackoffStrategy) whyCannotUpdate(

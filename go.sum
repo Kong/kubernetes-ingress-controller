@@ -249,8 +249,8 @@ github.com/kisielk/errcheck v1.5.0/go.mod h1:pFxgyoBC7bSaBwPgfKdkLd5X25qrDl4LWUI
 github.com/kisielk/gotool v1.0.0/go.mod h1:XhKaO+MFFWcvkIS/tQcRk01m1F5IRFswLeQ+oQHNcck=
 github.com/kong/deck v1.20.0 h1:q8+8VBnvv0O+9mYjcPdJP5prG3KzbvR4XfePwkTx+Zc=
 github.com/kong/deck v1.20.0/go.mod h1:yJWEu6/xnYiaNBg2vP4EsYLtbt33J67Zsolye3JpJmI=
-github.com/kong/go-kong v0.41.0 h1:0rn+Haf8wfT0VWFVjQPNETLju5ZuNhfbrHYyjpliDBU=
-github.com/kong/go-kong v0.41.0/go.mod h1:S/Mx/ZjgwsREPcpMXgCFt5wX7LBpyFlTKENri7E3KTg=
+github.com/kong/go-kong v0.42.0 h1:N0Rth32eGq6S5x33Txu+Gv9ZJ3gG5noffDjqezwutfA=
+github.com/kong/go-kong v0.42.0/go.mod h1:YUq7A3gcwk+9Z1ajwzVY2HnSyL/IKq/TJHsJDqT8hJM=
 github.com/kong/kubernetes-telemetry v0.0.4 h1:6iDDocM4b/pIKJ/KrSSoQjvyaHBIBtBb4U9LdOqg8Js=
 github.com/kong/kubernetes-telemetry v0.0.4/go.mod h1:xopN/XY+5xCXoY8kfnjHf83yT6n4ezVcWKJxA7gmJUw=
 github.com/kong/kubernetes-testing-framework v0.30.1 h1:FZCThCgf2xOi/pUbSzd5hW1ghUnZYihmvy9a3DHMRAE=

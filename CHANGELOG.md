@@ -100,6 +100,12 @@ Adding a new version? You'll need three changes:
   It will become the default behavior in the next minor release with the possibility
   to opt-out.
   [#3963](https://github.com/Kong/kubernetes-ingress-controller/pull/3963)
+- Added translator to translate `HTTPRoute` and `GRPCRoute` in gateway APIs to
+  expression based kong routes. Similar to ingresses, this translator is only
+  enabled when feature gate `ExpressionRoutes` is turned on and the managed 
+  Kong gateway runs in router flavor `expressions`.
+  [#3956](https://github.com/Kong/kubernetes-ingress-controller/pull/3956)
+  [#3988](https://github.com/Kong/kubernetes-ingress-controller/pull/3988)
 
 ### Fixed
 

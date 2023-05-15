@@ -36,7 +36,7 @@ jobs:
             router-flavor: 'traditional_compatible'
           - name: dbless-expression-router
             test: dbless
-            feature_gates: "ExpressionRoutes=true"
+            feature_gates: "ExpressionRoutes=true,GatewayAlpha=true"
             router-flavor: "expressions"
           # TODO: remove this once CombinedServices is enabled by default.
           # https://github.com/Kong/kubernetes-ingress-controller/issues/3979

@@ -208,7 +208,6 @@ func TestTLSRouteExample(t *testing.T) {
 }
 
 func TestGRPCRouteExample(t *testing.T) {
-	skipTestForExpressionRouter(t)
 	var (
 		grpcrouteExampleManifests = fmt.Sprintf("%s/gateway-grpcroute.yaml", examplesDIR)
 		ctx                       = context.Background()

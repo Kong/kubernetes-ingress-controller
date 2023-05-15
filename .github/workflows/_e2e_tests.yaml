@@ -117,6 +117,16 @@ jobs:
         with:
           password: ${{ secrets.PULP_PASSWORD }}
 
+      # We need to pull the Gateway image locally if loading local image was specified.
+      # This is a "workaround" of the fact that we bind the env variable - responsible for
+      # indicating whether we'd like to load the images - for both controller
+      # and gateway. Hence when that's set to true we try to load the Gateway
+      # image which is available in the external container image registry but not
+      # locally and that fails.
+      - name: Pull Gateway image for tests
+        if: ${{ inputs.kong-image != '' && inputs.load-local-image }}
+        run: docker pull ${{ inputs.kong-image }}
+
       - name: run ${{ matrix.test }}
         run: make test.e2e
         env:
@@ -124,7 +134,7 @@ jobs:
           KONG_CLUSTER_VERSION: ${{ matrix.kubernetes-version }}
           TEST_KONG_CONTROLLER_IMAGE_OVERRIDE: ${{ inputs.kic-image }}
           TEST_KONG_LOAD_IMAGES: ${{ inputs.load-local-image }}
-          TEST_KONG_KONG_IMAGE_OVERRIDE: ${{ inputs.kong-image }}
+          TEST_KONG_IMAGE_OVERRIDE: ${{ inputs.kong-image }}
           TEST_KONG_KONNECT_ACCESS_TOKEN: ${{ secrets.K8S_TEAM_KONNECT_ACCESS_TOKEN }}
           KONG_LICENSE_DATA: ${{ steps.license.outputs.license }}
           GOTESTSUM_JUNITFILE: "e2e-${{ matrix.test }}${{ matrix.kubernetes-version }}-tests.xml"
@@ -181,7 +191,7 @@ jobs:
           # TODO: Once we have a way to load images into GKE, we can use the local image.
           # KTF issue that should enable it: https://github.com/Kong/kubernetes-testing-framework/issues/587
           TEST_KONG_CONTROLLER_IMAGE_OVERRIDE: "kong/nightly-ingress-controller:nightly"
-          TEST_KONG_KONG_IMAGE_OVERRIDE: ${{ inputs.kong-image }}
+          TEST_KONG_IMAGE_OVERRIDE: ${{ inputs.kong-image }}
           KONG_LICENSE_DATA: ${{ steps.license.outputs.license }}
           TEST_KONG_KONNECT_ACCESS_TOKEN: ${{ secrets.K8S_TEAM_KONNECT_ACCESS_TOKEN }}
           KONG_CLUSTER_VERSION: ${{ matrix.kubernetes-version }}
@@ -255,7 +265,7 @@ jobs:
         env:
           TEST_KONG_CONTROLLER_IMAGE_OVERRIDE: ${{ inputs.kic-image }}
           TEST_KONG_LOAD_IMAGES: ${{ inputs.load-local-image }}
-          TEST_KONG_KONG_IMAGE_OVERRIDE: ${{ inputs.kong-image }}
+          TEST_KONG_IMAGE_OVERRIDE: ${{ inputs.kong-image }}
           KONG_LICENSE_DATA: ${{ steps.license.outputs.license }}
           KONG_CLUSTER_VERSION: ${{ matrix.kubernetes-version }}
           ISTIO_VERSION: ${{ matrix.istio-version }}

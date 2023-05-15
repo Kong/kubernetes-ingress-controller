@@ -1,0 +1,30 @@
+name: 🦍 Testing Request
+description: Choose this type to request KIC integration tests with your component.
+title: "Test Request: Kong Gateway [OSS|EE] version X.X.X.X-rc.X"
+labels: [area/testing, test-request]
+body:
+- type: dropdown
+  id: component
+  attributes:
+    label: What component needs testing with KIC?
+    options:
+      - Kong Gateway OSS
+      - Kong Gateway EE
+      - Other
+  validations:
+    required: true
+- type: input
+  id: container_image
+  attributes:
+    label: Container image
+    description: "Docker repository and tag of the image to be tested with KIC."
+    placeholder: "kong/kong-gateway-dev:3.3.0.0-rc.2"
+  validations:
+    required: true
+- type: textarea
+  attributes:
+    label: Additional information
+    placeholder: |
+      Any further information
+  validations:
+    required: false

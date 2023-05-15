@@ -429,7 +429,7 @@ func (c *KongClient) trySendOutToKonnectClient(ctx context.Context, s *kongstate
 	}
 
 	if _, err := c.sendToClient(ctx, konnectClient, s, config); err != nil {
-		// In case of an error, we only log it since we don't want make Konnect affect the basic functionality
+		// In case of an error, we only log it since we don't want the Konnect to affect the basic functionality
 		// of the controller.
 
 		if errors.Is(err, sendconfig.ErrUpdateSkippedDueToBackoffStrategy{}) {

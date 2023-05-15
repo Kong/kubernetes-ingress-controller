@@ -49,7 +49,7 @@ func NewTestClient(address string) (*Client, error) {
 
 type KonnectClient struct {
 	Client
-	backoffStrategy *KonnectBackoffStrategy
+	backoffStrategy UpdateBackoffStrategy
 }
 
 // NewKonnectClient creates an Admin API client that is to be used with a Konnect Runtime Group Admin API.

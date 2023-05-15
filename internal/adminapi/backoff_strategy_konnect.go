@@ -108,7 +108,7 @@ func (s *KonnectBackoffStrategy) RegisterUpdateFailure(err error, configHash []b
 	// duration will be multiplied accordingly.
 	timeLeft := s.b.Duration()
 
-	// We're storing the exact point in time after that we'll be allowed to perform the next update attempt.
+	// We're storing the exact point in time after which we'll be allowed to perform the next update attempt.
 	s.nextAttempt = s.clock.Now().Add(timeLeft)
 }
 

@@ -71,6 +71,7 @@ func PerformUpdate(
 	}
 
 	updateStrategy := updateStrategyResolver.ResolveUpdateStrategy(client)
+	log = log.WithField("update_strategy", updateStrategy.Type())
 	timeStart := time.Now()
 	err, resourceErrors, resourceErrorsParseErr := updateStrategy.Update(ctx, ContentWithHash{
 		Content: targetContent,

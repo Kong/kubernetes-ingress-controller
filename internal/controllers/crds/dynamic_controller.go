@@ -29,11 +29,11 @@ type Controller interface {
 	SetupWithManager(mgr ctrl.Manager) error
 }
 
-// DynamicController ensures that RequiredCRDs are installed in the cluster and only then sets up all of its Controllers
+// DynamicCRDController ensures that RequiredCRDs are installed in the cluster and only then sets up all of its Controllers
 // that depends on them.
-// In case the CRDs are not installed at start-up time, DynamicController will set up a watch for CustomResourceDefinition
+// In case the CRDs are not installed at start-up time, DynamicCRDController will set up a watch for CustomResourceDefinition
 // and will dynamically set up its Controllers once it detects that all RequiredCRDs are already in place.
-type DynamicController struct {
+type DynamicCRDController struct {
 	Log              logr.Logger
 	Manager          ctrl.Manager
 	CacheSyncTimeout time.Duration
@@ -43,15 +43,15 @@ type DynamicController struct {
 	startControllersOnce sync.Once
 }
 
-func (r *DynamicController) SetupWithManager(mgr ctrl.Manager) error {
+func (r *DynamicCRDController) SetupWithManager(mgr ctrl.Manager) error {
 	if r.allRequiredCRDsInstalled() {
-		r.Log.V(util.DebugLevel).Info("All required CustomResourceDefinitions are installed, skipping DynamicController set up")
+		r.Log.V(util.DebugLevel).Info("All required CustomResourceDefinitions are installed, skipping DynamicCRDController set up")
 		return r.setupControllers(mgr)
 	}
 
 	r.Log.Info("Required CustomResourceDefinitions are not installed, setting up a watch for them in case they are installed afterward")
 
-	c, err := controller.New("DynamicController", mgr, controller.Options{
+	c, err := controller.New("DynamicCRDController", mgr, controller.Options{
 		Reconciler: r,
 		LogConstructor: func(_ *reconcile.Request) logr.Logger {
 			return r.Log
@@ -69,7 +69,7 @@ func (r *DynamicController) SetupWithManager(mgr ctrl.Manager) error {
 	)
 }
 
-func (r *DynamicController) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+func (r *DynamicCRDController) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := r.Log.WithValues("CustomResourceDefinition", req.NamespacedName)
 
 	crd := new(apiextensionsv1.CustomResourceDefinition)
@@ -99,13 +99,13 @@ func (r *DynamicController) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	return ctrl.Result{}, nil
 }
 
-func (r *DynamicController) allRequiredCRDsInstalled() bool {
+func (r *DynamicCRDController) allRequiredCRDsInstalled() bool {
 	return lo.EveryBy(r.RequiredCRDs, func(gvr schema.GroupVersionResource) bool {
 		return utils.CRDExists(r.Manager.GetClient().RESTMapper(), gvr)
 	})
 }
 
-func (r *DynamicController) isOneOfRequiredCRDs(obj client.Object) bool {
+func (r *DynamicCRDController) isOneOfRequiredCRDs(obj client.Object) bool {
 	crd, ok := obj.(*apiextensionsv1.CustomResourceDefinition)
 	if !ok {
 		return false
@@ -122,7 +122,7 @@ func (r *DynamicController) isOneOfRequiredCRDs(obj client.Object) bool {
 	})
 }
 
-func (r *DynamicController) setupControllers(mgr ctrl.Manager) error {
+func (r *DynamicCRDController) setupControllers(mgr ctrl.Manager) error {
 	errs := lo.FilterMap(r.Controllers, func(c Controller, _ int) (error, bool) {
 		if err := c.SetupWithManager(mgr); err != nil {
 			return err, true

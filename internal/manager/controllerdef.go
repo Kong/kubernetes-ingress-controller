@@ -324,7 +324,7 @@ func setupControllers(
 		// ---------------------------------------------------------------------------
 		{
 			Enabled: featureGates[featuregates.GatewayFeature],
-			Controller: &crds.DynamicController{
+			Controller: &crds.DynamicCRDController{
 				Manager:          mgr,
 				Log:              ctrl.Log.WithName("controllers").WithName("Dynamic/gatewayv1beta1"),
 				CacheSyncTimeout: c.CacheSyncTimeout,
@@ -372,7 +372,7 @@ func setupControllers(
 		// ---------------------------------------------------------------------------
 		{
 			Enabled: featureGates[featuregates.GatewayAlphaFeature],
-			Controller: &crds.DynamicController{
+			Controller: &crds.DynamicCRDController{
 				Manager:          mgr,
 				Log:              ctrl.Log.WithName("controllers").WithName("Dynamic/gatewayv1alpha2"),
 				CacheSyncTimeout: c.CacheSyncTimeout,

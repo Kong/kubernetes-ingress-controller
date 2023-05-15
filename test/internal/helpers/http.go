@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hashicorp/go-retryablehttp"
 	"github.com/stretchr/testify/require"
 )
 
@@ -19,6 +20,14 @@ func DefaultHTTPClient() *http.Client {
 	return &http.Client{
 		Timeout: 10 * time.Second,
 	}
+}
+
+// RetryableHTTPClient wraps a client with retry logic. That should be used when calling external services that might
+// temporarily fail (e.g. Konnect APIs), and we don't want them to affect the test results.
+func RetryableHTTPClient(base *http.Client) *http.Client {
+	retryable := retryablehttp.NewClient()
+	retryable.HTTPClient = base
+	return retryable.StandardClient()
 }
 
 // -----------------------------------------------------------------------------

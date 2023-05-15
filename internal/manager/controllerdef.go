@@ -326,44 +326,39 @@ func setupControllers(
 			Enabled: featureGates[featuregates.GatewayFeature],
 			Controller: &crds.DynamicCRDController{
 				Manager:          mgr,
-				Log:              ctrl.Log.WithName("controllers").WithName("Dynamic/gatewayv1beta1"),
+				Log:              ctrl.Log.WithName("controllers").WithName("Dynamic/Gateway"),
 				CacheSyncTimeout: c.CacheSyncTimeout,
-				RequiredCRDs: []schema.GroupVersionResource{
-					{
-						Group:    gatewayv1beta1.GroupVersion.Group,
-						Version:  gatewayv1beta1.GroupVersion.Version,
-						Resource: "gateways",
-					},
-					{
-						Group:    gatewayv1beta1.GroupVersion.Group,
-						Version:  gatewayv1beta1.GroupVersion.Version,
-						Resource: "gatewayclasses",
-					},
-					{
-						Group:    gatewayv1beta1.GroupVersion.Group,
-						Version:  gatewayv1beta1.GroupVersion.Version,
-						Resource: "httproutes",
-					},
+				RequiredCRDs:     baseGatewayCRDs(),
+				Controller: &gateway.GatewayReconciler{
+					Client:               mgr.GetClient(),
+					Log:                  ctrl.Log.WithName("controllers").WithName("Gateway"),
+					Scheme:               mgr.GetScheme(),
+					DataplaneClient:      dataplaneClient,
+					PublishServiceRef:    c.PublishService.OrEmpty(),
+					PublishServiceUDPRef: c.PublishServiceUDP,
+					WatchNamespaces:      c.WatchNamespaces,
+					CacheSyncTimeout:     c.CacheSyncTimeout,
+					ReferenceIndexers:    referenceIndexers,
 				},
-				Controllers: []crds.Controller{
-					&gateway.GatewayReconciler{
-						Client:               mgr.GetClient(),
-						Log:                  ctrl.Log.WithName("controllers").WithName("Gateway"),
-						Scheme:               mgr.GetScheme(),
-						DataplaneClient:      dataplaneClient,
-						PublishServiceRef:    c.PublishService.OrEmpty(),
-						PublishServiceUDPRef: c.PublishServiceUDP,
-						WatchNamespaces:      c.WatchNamespaces,
-						CacheSyncTimeout:     c.CacheSyncTimeout,
-						ReferenceIndexers:    referenceIndexers,
-					},
-					&gateway.HTTPRouteReconciler{
-						Client:           mgr.GetClient(),
-						Log:              ctrl.Log.WithName("controllers").WithName("HTTPRoute"),
-						Scheme:           mgr.GetScheme(),
-						DataplaneClient:  dataplaneClient,
-						CacheSyncTimeout: c.CacheSyncTimeout,
-					},
+			},
+		},
+		{
+			Enabled: featureGates[featuregates.GatewayFeature],
+			Controller: &crds.DynamicCRDController{
+				Manager:          mgr,
+				Log:              ctrl.Log.WithName("controllers").WithName("Dynamic/HTTPRoute"),
+				CacheSyncTimeout: c.CacheSyncTimeout,
+				RequiredCRDs: append(baseGatewayCRDs(), schema.GroupVersionResource{
+					Group:    gatewayv1beta1.GroupVersion.Group,
+					Version:  gatewayv1beta1.GroupVersion.Version,
+					Resource: "httproutes",
+				}),
+				Controller: &gateway.HTTPRouteReconciler{
+					Client:           mgr.GetClient(),
+					Log:              ctrl.Log.WithName("controllers").WithName("HTTPRoute"),
+					Scheme:           mgr.GetScheme(),
+					DataplaneClient:  dataplaneClient,
+					CacheSyncTimeout: c.CacheSyncTimeout,
 				},
 			},
 		},
@@ -374,75 +369,119 @@ func setupControllers(
 			Enabled: featureGates[featuregates.GatewayAlphaFeature],
 			Controller: &crds.DynamicCRDController{
 				Manager:          mgr,
-				Log:              ctrl.Log.WithName("controllers").WithName("Dynamic/gatewayv1alpha2"),
+				Log:              ctrl.Log.WithName("controllers").WithName("Dynamic/ReferenceGrant"),
 				CacheSyncTimeout: c.CacheSyncTimeout,
-				RequiredCRDs: []schema.GroupVersionResource{
-					{
-						Group:    gatewayv1beta1.GroupVersion.Group,
-						Version:  gatewayv1beta1.GroupVersion.Version,
-						Resource: "referencegrants",
-					},
-					{
-						Group:    gatewayv1alpha2.GroupVersion.Group,
-						Version:  gatewayv1alpha2.GroupVersion.Version,
-						Resource: "udproutes",
-					},
-					{
-						Group:    gatewayv1alpha2.GroupVersion.Group,
-						Version:  gatewayv1alpha2.GroupVersion.Version,
-						Resource: "tcproutes",
-					},
-					{
-						Group:    gatewayv1alpha2.GroupVersion.Group,
-						Version:  gatewayv1alpha2.GroupVersion.Version,
-						Resource: "tlsroutes",
-					},
-					{
-						Group:    gatewayv1alpha2.GroupVersion.Group,
-						Version:  gatewayv1alpha2.GroupVersion.Version,
-						Resource: "grpcroutes",
-					},
+				RequiredCRDs: append(baseGatewayCRDs(), schema.GroupVersionResource{
+					Group:    gatewayv1beta1.GroupVersion.Group,
+					Version:  gatewayv1beta1.GroupVersion.Version,
+					Resource: "referencegrants",
+				}),
+				Controller: &gateway.ReferenceGrantReconciler{
+					Client:           mgr.GetClient(),
+					Log:              ctrl.Log.WithName("controllers").WithName("ReferenceGrant"),
+					Scheme:           mgr.GetScheme(),
+					DataplaneClient:  dataplaneClient,
+					CacheSyncTimeout: c.CacheSyncTimeout,
 				},
-				Controllers: []crds.Controller{
-					&gateway.ReferenceGrantReconciler{
-						Client:           mgr.GetClient(),
-						Log:              ctrl.Log.WithName("controllers").WithName("ReferenceGrant"),
-						Scheme:           mgr.GetScheme(),
-						DataplaneClient:  dataplaneClient,
-						CacheSyncTimeout: c.CacheSyncTimeout,
-					},
-					&gateway.UDPRouteReconciler{
-						Client:           mgr.GetClient(),
-						Log:              ctrl.Log.WithName("controllers").WithName("UDPRoute"),
-						Scheme:           mgr.GetScheme(),
-						DataplaneClient:  dataplaneClient,
-						CacheSyncTimeout: c.CacheSyncTimeout,
-					},
-					&gateway.TCPRouteReconciler{
-						Client:           mgr.GetClient(),
-						Log:              ctrl.Log.WithName("controllers").WithName("TCPRoute"),
-						Scheme:           mgr.GetScheme(),
-						DataplaneClient:  dataplaneClient,
-						CacheSyncTimeout: c.CacheSyncTimeout,
-					},
-					&gateway.TLSRouteReconciler{
-						Client:           mgr.GetClient(),
-						Log:              ctrl.Log.WithName("controllers").WithName("TLSRoute"),
-						Scheme:           mgr.GetScheme(),
-						DataplaneClient:  dataplaneClient,
-						CacheSyncTimeout: c.CacheSyncTimeout,
-					},
-					&gateway.GRPCRouteReconciler{
-						Client:           mgr.GetClient(),
-						Log:              ctrl.Log.WithName("controllers").WithName("GRPCRoute"),
-						Scheme:           mgr.GetScheme(),
-						DataplaneClient:  dataplaneClient,
-						CacheSyncTimeout: c.CacheSyncTimeout,
-					},
+			},
+		},
+		{
+			Enabled: featureGates[featuregates.GatewayAlphaFeature],
+			Controller: &crds.DynamicCRDController{
+				Manager:          mgr,
+				Log:              ctrl.Log.WithName("controllers").WithName("Dynamic/UDPRoute"),
+				CacheSyncTimeout: c.CacheSyncTimeout,
+				RequiredCRDs: append(baseGatewayCRDs(), schema.GroupVersionResource{
+					Group:    gatewayv1alpha2.GroupVersion.Group,
+					Version:  gatewayv1alpha2.GroupVersion.Version,
+					Resource: "udproutes",
+				}),
+				Controller: &gateway.UDPRouteReconciler{
+					Client:           mgr.GetClient(),
+					Log:              ctrl.Log.WithName("controllers").WithName("UDPRoute"),
+					Scheme:           mgr.GetScheme(),
+					DataplaneClient:  dataplaneClient,
+					CacheSyncTimeout: c.CacheSyncTimeout,
+				},
+			},
+		},
+		{
+			Enabled: featureGates[featuregates.GatewayAlphaFeature],
+			Controller: &crds.DynamicCRDController{
+				Manager:          mgr,
+				Log:              ctrl.Log.WithName("controllers").WithName("Dynamic/TCPRoute"),
+				CacheSyncTimeout: c.CacheSyncTimeout,
+				RequiredCRDs: append(baseGatewayCRDs(), schema.GroupVersionResource{
+					Group:    gatewayv1alpha2.GroupVersion.Group,
+					Version:  gatewayv1alpha2.GroupVersion.Version,
+					Resource: "tcproutes",
+				}),
+				Controller: &gateway.TCPRouteReconciler{
+					Client:           mgr.GetClient(),
+					Log:              ctrl.Log.WithName("controllers").WithName("TCPRoute"),
+					Scheme:           mgr.GetScheme(),
+					DataplaneClient:  dataplaneClient,
+					CacheSyncTimeout: c.CacheSyncTimeout,
+				},
+			},
+		},
+		{
+			Enabled: featureGates[featuregates.GatewayAlphaFeature],
+			Controller: &crds.DynamicCRDController{
+				Manager:          mgr,
+				Log:              ctrl.Log.WithName("controllers").WithName("Dynamic/TLSRoute"),
+				CacheSyncTimeout: c.CacheSyncTimeout,
+				RequiredCRDs: append(baseGatewayCRDs(), schema.GroupVersionResource{
+					Group:    gatewayv1alpha2.GroupVersion.Group,
+					Version:  gatewayv1alpha2.GroupVersion.Version,
+					Resource: "tlsroutes",
+				}),
+				Controller: &gateway.TLSRouteReconciler{
+					Client:           mgr.GetClient(),
+					Log:              ctrl.Log.WithName("controllers").WithName("TLSRoute"),
+					Scheme:           mgr.GetScheme(),
+					DataplaneClient:  dataplaneClient,
+					CacheSyncTimeout: c.CacheSyncTimeout,
+				},
+			},
+		},
+		{
+			Enabled: featureGates[featuregates.GatewayAlphaFeature],
+			Controller: &crds.DynamicCRDController{
+				Manager:          mgr,
+				Log:              ctrl.Log.WithName("controllers").WithName("Dynamic/GRPCRoute"),
+				CacheSyncTimeout: c.CacheSyncTimeout,
+				RequiredCRDs: append(baseGatewayCRDs(), schema.GroupVersionResource{
+					Group:    gatewayv1alpha2.GroupVersion.Group,
+					Version:  gatewayv1alpha2.GroupVersion.Version,
+					Resource: "grpcroutes",
+				}),
+				Controller: &gateway.GRPCRouteReconciler{
+					Client:           mgr.GetClient(),
+					Log:              ctrl.Log.WithName("controllers").WithName("GRPCRoute"),
+					Scheme:           mgr.GetScheme(),
+					DataplaneClient:  dataplaneClient,
+					CacheSyncTimeout: c.CacheSyncTimeout,
 				},
 			},
 		},
 	}
 
 	return controllers, nil
+}
+
+// baseGatewayCRDs returns a slice of base CRDs required for running all the Gateway API controllers.
+func baseGatewayCRDs() []schema.GroupVersionResource {
+	return []schema.GroupVersionResource{
+		{
+			Group:    gatewayv1beta1.GroupVersion.Group,
+			Version:  gatewayv1beta1.GroupVersion.Version,
+			Resource: "gateways",
+		},
+		{
+			Group:    gatewayv1beta1.GroupVersion.Group,
+			Version:  gatewayv1beta1.GroupVersion.Version,
+			Resource: "gatewayclasses",
+		},
+	}
 }

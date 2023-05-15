@@ -28,16 +28,18 @@ func (p *Parser) ingressRulesFromHTTPRoutes() ingressRules {
 		p.logger.WithError(err).Error("failed to list HTTPRoutes")
 		return result
 	}
+	httpRouteRules := mergeAllRoutesIntoSeparateRules(httpRouteList)
+	fmt.Println(httpRouteRules)
 
-	for _, httproute := range httpRouteList {
-		if err := p.ingressRulesFromHTTPRoute(&result, httproute); err != nil {
-			p.registerTranslationFailure(fmt.Sprintf("HTTPRoute can't be routed: %s", err), httproute)
-		} else {
-			// at this point the object has been configured and can be
-			// reported as successfully parsed.
-			p.ReportKubernetesObjectUpdate(httproute)
-		}
-	}
+	// for _, httproute := range httpRouteList {
+	// 	if err := p.ingressRulesFromHTTPRoute(&result, httproute); err != nil {
+	// 		p.registerTranslationFailure(fmt.Sprintf("HTTPRoute can't be routed: %s", err), httproute)
+	// 	} else {
+	// 		// at this point the object has been configured and can be
+	// 		// reported as successfully parsed.
+	// 		p.ReportKubernetesObjectUpdate(httproute)
+	// 	}
+	// }
 
 	return result
 }
@@ -561,4 +563,30 @@ func httpBackendRefsToBackendRefs(httpBackendRef []gatewayv1beta1.HTTPBackendRef
 		backendRefs = append(backendRefs, hRef.BackendRef)
 	}
 	return backendRefs
+}
+
+// ---------------------
+// POC methods
+// ---------------------
+
+func mergeAllRoutesIntoSeparateRules(httpRoutes []*gatewayv1beta1.HTTPRoute) []gatewayv1beta1.HTTPRouteRule {
+	httpRouteRules := []gatewayv1beta1.HTTPRouteRule{}
+	for _, route := range httpRoutes {
+		for _, rule := range route.Spec.Rules {
+			for _, match := range rule.Matches {
+				httpRouteRules = append(httpRouteRules, gatewayv1beta1.HTTPRouteRule{
+					Matches: []gatewayv1beta1.HTTPRouteMatch{
+						match,
+					},
+					BackendRefs: rule.BackendRefs,
+					Filters:     rule.Filters,
+				})
+			}
+		}
+	}
+	return httpRouteRules
+}
+
+func sortHTTPRouteRules([]gatewayv1beta1.HTTPRouteRule) []gatewayv1beta1.HTTPRouteRule {
+	
 }

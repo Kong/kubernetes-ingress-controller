@@ -1,6 +1,7 @@
 package parser
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/kong/go-kong/kong"
@@ -1227,6 +1228,116 @@ func getIngressRulesFromHTTPRoutesCombinedRoutesTestCases() []testCaseIngressRul
 				}
 			},
 		},
+	}
+}
+
+// common test cases  should work with legacy parser and combined routes parser.
+func pocTestCases() []testCaseIngressRulesFromHTTPRoutes {
+	return []testCaseIngressRulesFromHTTPRoutes{
+		{
+			msg: "multiple HTTPRoutes",
+			routes: []*gatewayv1beta1.HTTPRoute{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "httproute-1",
+						Namespace: corev1.NamespaceDefault,
+					},
+					Spec: gatewayv1beta1.HTTPRouteSpec{
+						CommonRouteSpec: commonRouteSpecMock("fake-gateway"),
+						Rules: []gatewayv1beta1.HTTPRouteRule{
+							{
+								Matches: []gatewayv1beta1.HTTPRouteMatch{
+									builder.NewHTTPRouteMatch().WithPathExact("/a/b/c").Build(),
+									builder.NewHTTPRouteMatch().WithPathExact("/foo/bar").Build(),
+								},
+								BackendRefs: []gatewayv1beta1.HTTPBackendRef{
+									builder.NewHTTPBackendRef("fake-service").WithPort(80).Build(),
+								},
+							},
+						},
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "httproute-2",
+						Namespace: corev1.NamespaceDefault,
+					},
+					Spec: gatewayv1beta1.HTTPRouteSpec{
+						CommonRouteSpec: commonRouteSpecMock("fake-gateway"),
+						Rules: []gatewayv1beta1.HTTPRouteRule{
+							{
+								Matches: []gatewayv1beta1.HTTPRouteMatch{
+									builder.NewHTTPRouteMatch().WithPathExact("/a/b").Build(),
+									builder.NewHTTPRouteMatch().WithHeader("name", "value").Build(),
+								},
+								BackendRefs: []gatewayv1beta1.HTTPBackendRef{
+									builder.NewHTTPBackendRef("fake-service").WithPort(80).Build(),
+								},
+							},
+						},
+					}},
+			},
+			expected: func(routes []*gatewayv1beta1.HTTPRoute) ingressRules {
+				return ingressRules{
+					SecretNameToSNIs: newSecretNameToSNIs(),
+					ServiceNameToParent: map[string]client.Object{
+						"httproute.default.basic-httproute.0": routes[0],
+					},
+					ServiceNameToServices: map[string]kongstate.Service{
+						"httproute.default.basic-httproute.0": {
+							Service: kong.Service{ // only 1 service should be created
+								ConnectTimeout: kong.Int(60000),
+								Host:           kong.String("httproute.default.basic-httproute.0"),
+								Name:           kong.String("httproute.default.basic-httproute.0"),
+								Protocol:       kong.String("http"),
+								ReadTimeout:    kong.Int(60000),
+								Retries:        kong.Int(5),
+								WriteTimeout:   kong.Int(60000),
+							},
+							Backends: kongstate.ServiceBackends{
+								builder.NewKongstateServiceBackend("fake-service").WithPortNumber(80).Build(),
+							},
+							Namespace: "default",
+							Routes: []kongstate.Route{{ // only 1 route should be created
+								Route: kong.Route{
+									Name: kong.String("httproute.default.basic-httproute.0.0"),
+									Paths: []*string{
+										kong.String("/httpbin$"),
+									},
+									PreserveHost: kong.Bool(true),
+									Protocols: []*string{
+										kong.String("http"),
+										kong.String("https"),
+									},
+									StripPath: lo.ToPtr(false),
+									Tags: []*string{
+										kong.String("k8s-name:basic-httproute"),
+										kong.String("k8s-namespace:default"),
+										kong.String("k8s-kind:HTTPRoute"),
+										kong.String("k8s-group:gateway.networking.k8s.io"),
+										kong.String("k8s-version:v1beta1"),
+									},
+								},
+								Ingress: k8sObjectInfoOfHTTPRoute(routes[0]),
+							}},
+							Parent: routes[0],
+						},
+					},
+				}
+			},
+		},
+	}
+}
+
+func TestPoc(t *testing.T) {
+	testCases := pocTestCases()
+
+	for _, tt := range testCases {
+		t.Run(tt.msg, func(t *testing.T) {
+			rules := mergeAllRoutesIntoSeparateRules(tt.routes)
+			sortedRules := sortHTTPRouteRules(rules)
+			fmt.Println(sortedRules)
+		})
 	}
 }
 

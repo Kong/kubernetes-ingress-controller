@@ -31,9 +31,9 @@ type KongRouteTranslation struct {
 // The translation is done by grouping the HTTPRoutes by their backendRefs.
 // This means that all the rules of a single HTTPRoute will be grouped together
 // if they share the same backendRefs.
-func TranslateHTTPRoute(route *gatewayv1beta1.HTTPRoute) []*KongServiceTranslation {
+func TranslateHTTPRoute(route *gatewayv1beta1.HTTPRoute, priority int) []*KongServiceTranslation {
 	index := httpRouteTranslationIndex{}
-	index.setRoute(route)
+	index.setRoute(route, priority)
 	return index.translate()
 }
 
@@ -47,17 +47,17 @@ type httpRouteTranslationIndex struct {
 	rulesMeta []httpRouteRuleMeta
 }
 
-func (i *httpRouteTranslationIndex) setRoute(route *gatewayv1beta1.HTTPRoute) {
+func (i *httpRouteTranslationIndex) setRoute(route *gatewayv1beta1.HTTPRoute, priority int) {
 	i.httpRoute = route
-	i.extractRulesMeta(route)
+	i.extractRulesMeta(route, priority)
 }
 
-func (i *httpRouteTranslationIndex) extractRulesMeta(route *gatewayv1beta1.HTTPRoute) {
+func (i *httpRouteTranslationIndex) extractRulesMeta(route *gatewayv1beta1.HTTPRoute, priority int) {
 	i.rulesMeta = make([]httpRouteRuleMeta, 0, len(route.Spec.Rules))
 
-	for ruleNumber, rule := range route.Spec.Rules {
+	for _, rule := range route.Spec.Rules {
 		i.rulesMeta = append(i.rulesMeta, httpRouteRuleMeta{
-			RuleNumber: ruleNumber,
+			RuleNumber: priority,
 			Rule:       rule,
 		})
 	}
@@ -86,18 +86,10 @@ func (i *httpRouteTranslationIndex) translateToKongService(rulesMeta []httpRoute
 }
 
 func (i *httpRouteTranslationIndex) translateToKongServiceName(rulesMeta []httpRouteRuleMeta) string {
-	// this should never happen, as we validate for the number of matches in the parser,
-	// but just in case anything changes in the future to avoid panics
-	firstRuleInGroup := -1
-	if len(rulesMeta) > 0 {
-		// rules are guaranteed to retain their order, so we can use the first one
-		firstRuleInGroup = rulesMeta[0].RuleNumber
-	}
 	return fmt.Sprintf(
-		"httproute.%s.%s.%d",
+		"httproute.%s.%s",
 		i.httpRoute.Namespace,
 		i.httpRoute.Name,
-		firstRuleInGroup,
 	)
 }
 

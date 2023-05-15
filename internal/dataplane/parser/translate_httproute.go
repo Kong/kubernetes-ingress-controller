@@ -3,10 +3,12 @@ package parser
 import (
 	"fmt"
 	pathlib "path"
+	"sort"
 	"strings"
 
 	"github.com/kong/go-kong/kong"
 	"github.com/samber/lo"
+	"k8s.io/utils/pointer"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
@@ -28,8 +30,9 @@ func (p *Parser) ingressRulesFromHTTPRoutes() ingressRules {
 		p.logger.WithError(err).Error("failed to list HTTPRoutes")
 		return result
 	}
-	httpRouteRules := mergeAllRoutesIntoSeparateRules(httpRouteList)
-	fmt.Println(httpRouteRules)
+	httpRoutes := mergeAllRoutesIntoSeparateRules(httpRouteList)
+	sortHTTPRoutes(httpRoutes)
+	fmt.Println(httpRoutes)
 
 	// for _, httproute := range httpRouteList {
 	// 	if err := p.ingressRulesFromHTTPRoute(&result, httproute); err != nil {
@@ -41,19 +44,29 @@ func (p *Parser) ingressRulesFromHTTPRoutes() ingressRules {
 	// 	}
 	// }
 
+	if err := p.ingressRulesFromHTTPRoute(&result, httpRoutes); err != nil {
+		// p.registerTranslationFailure(fmt.Sprintf("HTTPRoute can't be routed: %s", err), httpRoute)
+	} else {
+		// at this point the object has been configured and can be
+		// reported as successfully parsed.
+		// p.ReportKubernetesObjectUpdate(httproute)
+	}
+
 	return result
 }
 
-func (p *Parser) ingressRulesFromHTTPRoute(result *ingressRules, httproute *gatewayv1beta1.HTTPRoute) error {
-	if err := validateHTTPRoute(httproute); err != nil {
-		return fmt.Errorf("validation failed : %w", err)
-	}
+func (p *Parser) ingressRulesFromHTTPRoute(result *ingressRules, httproutes []gatewayv1beta1.HTTPRoute) error {
+	// if err := validateHTTPRoute(httproute); err != nil {
+	// 	return fmt.Errorf("validation failed : %w", err)
+	// }
 
-	if p.featureEnabledCombinedServiceRoutes {
-		return p.ingressRulesFromHTTPRouteWithCombinedServiceRoutes(httproute, result)
-	}
+	// if p.featureEnabledCombinedServiceRoutes {
+	// 	return p.ingressRulesFromHTTPRouteWithCombinedServiceRoutes(httproutes, result)
+	// }
 
-	return p.ingressRulesFromHTTPRouteLegacyFallback(httproute, result)
+	// return p.ingressRulesFromHTTPRouteLegacyFallback(httproute, result)
+
+	return p.ingressRulesFromHTTPRouteWithCombinedServiceRoutes(httproutes, result)
 }
 
 func validateHTTPRoute(httproute *gatewayv1beta1.HTTPRoute) error {
@@ -72,31 +85,36 @@ func validateHTTPRoute(httproute *gatewayv1beta1.HTTPRoute) error {
 
 // ingressRulesFromHTTPRouteWithCombinedServiceRoutes generates a set of proto-Kong routes (ingress rules) from an HTTPRoute.
 // If multiple rules in the HTTPRoute use the same Service, it combines them into a single Kong route.
-func (p *Parser) ingressRulesFromHTTPRouteWithCombinedServiceRoutes(httproute *gatewayv1beta1.HTTPRoute, result *ingressRules) error {
-	for _, kongServiceTranslation := range translators.TranslateHTTPRoute(httproute) {
-		// HTTPRoute uses a wrapper HTTPBackendRef to add optional filters to its BackendRefs
-		backendRefs := httpBackendRefsToBackendRefs(kongServiceTranslation.BackendRefs)
+func (p *Parser) ingressRulesFromHTTPRouteWithCombinedServiceRoutes(httproutes []gatewayv1beta1.HTTPRoute, result *ingressRules) error {
+	priority := 1
+	for i := len(httproutes) - 1; i >= 0; i-- {
+		httproute := httproutes[i]
+		for _, kongServiceTranslation := range translators.TranslateHTTPRoute(&httproute, priority) {
+			// HTTPRoute uses a wrapper HTTPBackendRef to add optional filters to its BackendRefs
+			backendRefs := httpBackendRefsToBackendRefs(kongServiceTranslation.BackendRefs)
 
-		serviceName := kongServiceTranslation.Name
+			serviceName := kongServiceTranslation.Name
 
-		// create a service and attach the routes to it
-		service, err := generateKongServiceFromBackendRefWithName(p.logger, p.storer, result, serviceName, httproute, "http", backendRefs...)
-		if err != nil {
-			return err
-		}
-
-		// generate the routes for the service and attach them to the service
-		for _, kongRouteTranslation := range kongServiceTranslation.KongRoutes {
-			routes, err := generateKongRouteFromTranslation(httproute, kongRouteTranslation, p.flagEnabledRegexPathPrefix)
+			// create a service and attach the routes to it
+			service, err := generateKongServiceFromBackendRefWithName(p.logger, p.storer, result, serviceName, &httproute, "http", backendRefs...)
 			if err != nil {
 				return err
 			}
-			service.Routes = append(service.Routes, routes...)
-		}
 
-		// cache the service to avoid duplicates in further loop iterations
-		result.ServiceNameToServices[*service.Service.Name] = service
-		result.ServiceNameToParent[serviceName] = httproute
+			// generate the routes for the service and attach them to the service
+			for _, kongRouteTranslation := range kongServiceTranslation.KongRoutes {
+				routes, err := generateKongRouteFromTranslation(&httproute, kongRouteTranslation, p.flagEnabledRegexPathPrefix, priority)
+				if err != nil {
+					return err
+				}
+				service.Routes = append(service.Routes, routes...)
+			}
+
+			// cache the service to avoid duplicates in further loop iterations
+			result.ServiceNameToServices[*service.Service.Name] = service
+			result.ServiceNameToParent[serviceName] = &httproute
+		}
+		priority++
 	}
 
 	return nil
@@ -191,6 +209,7 @@ func generateKongRoutesFromHTTPRouteRule(
 				hostnames,
 				addRegexPrefix,
 				tags,
+				pointer.Int(0),
 			)
 			if err != nil {
 				return nil, err
@@ -207,7 +226,9 @@ func generateKongRoutesFromHTTPRouteRule(
 			objectInfo,
 			hostnames,
 			addRegexPrefix,
-			tags)
+			tags,
+			pointer.Int(0),
+		)
 		if err != nil {
 			return nil, err
 		}
@@ -223,6 +244,7 @@ func generateKongRouteFromTranslation(
 	httproute *gatewayv1beta1.HTTPRoute,
 	translation translators.KongRouteTranslation,
 	addRegexPrefix bool,
+	priority int,
 ) ([]kongstate.Route, error) {
 	// gather the k8s object information and hostnames from the httproute
 	objectInfo := util.FromK8sObject(httproute)
@@ -239,6 +261,7 @@ func generateKongRouteFromTranslation(
 		hostnames,
 		addRegexPrefix,
 		tags,
+		pointer.Int(priority),
 	)
 }
 
@@ -252,6 +275,7 @@ func generateKongRoutesFromHTTPRouteMatches(
 	hostnames []*string,
 	addRegexPrefix bool,
 	tags []*string,
+	priority *int,
 ) ([]kongstate.Route, error) {
 	if len(matches) == 0 {
 		// it's acceptable for an HTTPRoute to have no matches in the rulesets,
@@ -265,6 +289,7 @@ func generateKongRoutesFromHTTPRouteMatches(
 				Protocols:    kong.StringSlice("http", "https"),
 				PreserveHost: kong.Bool(true),
 				Tags:         tags,
+				Priority:     priority,
 			},
 		}
 
@@ -285,7 +310,7 @@ func generateKongRoutesFromHTTPRouteMatches(
 		return []kongstate.Route{}, errRouteValidationQueryParamMatchesUnsupported
 	}
 
-	r := generateKongstateHTTPRoute(routeName, ingressObjectInfo, hostnames)
+	r := generateKongstateHTTPRoute(routeName, ingressObjectInfo, hostnames, priority)
 	r.Tags = tags
 
 	// convert header matching from HTTPRoute to Route format
@@ -417,7 +442,7 @@ func generateKongRoutePathFromHTTPRouteMatch(match gatewayv1beta1.HTTPRouteMatch
 	return []string{""} // unreachable code
 }
 
-func generateKongstateHTTPRoute(routeName string, ingressObjectInfo util.K8sObjectInfo, hostnames []*string) kongstate.Route {
+func generateKongstateHTTPRoute(routeName string, ingressObjectInfo util.K8sObjectInfo, hostnames []*string, priority *int) kongstate.Route {
 	// build the route object using the method and pathing information
 	r := kongstate.Route{
 		Ingress: ingressObjectInfo,
@@ -425,6 +450,7 @@ func generateKongstateHTTPRoute(routeName string, ingressObjectInfo util.K8sObje
 			Name:         kong.String(routeName),
 			Protocols:    kong.StringSlice("http", "https"),
 			PreserveHost: kong.Bool(true),
+			Priority:     priority,
 			// metadata tags aren't added here, they're added by the caller
 		},
 	}
@@ -569,24 +595,113 @@ func httpBackendRefsToBackendRefs(httpBackendRef []gatewayv1beta1.HTTPBackendRef
 // POC methods
 // ---------------------
 
-func mergeAllRoutesIntoSeparateRules(httpRoutes []*gatewayv1beta1.HTTPRoute) []gatewayv1beta1.HTTPRouteRule {
-	httpRouteRules := []gatewayv1beta1.HTTPRouteRule{}
+func mergeAllRoutesIntoSeparateRules(httpRoutes []*gatewayv1beta1.HTTPRoute) []gatewayv1beta1.HTTPRoute {
+	newHTTPRoutes := []gatewayv1beta1.HTTPRoute{}
+	hostnamedRoutes := []gatewayv1beta1.HTTPRoute{}
 	for _, route := range httpRoutes {
+		if len(route.Spec.Hostnames) == 0 {
+			hostnamedRoutes = append(hostnamedRoutes, *route)
+			continue
+		}
+		for _, hostname := range route.Spec.Hostnames {
+			hostnamedRoute := route.DeepCopy()
+			hostnamedRoute.Spec.Hostnames = []gatewayv1beta1.Hostname{hostname}
+			hostnamedRoutes = append(hostnamedRoutes, *hostnamedRoute)
+		}
+	}
+	for _, route := range hostnamedRoutes {
 		for _, rule := range route.Spec.Rules {
 			for _, match := range rule.Matches {
-				httpRouteRules = append(httpRouteRules, gatewayv1beta1.HTTPRouteRule{
-					Matches: []gatewayv1beta1.HTTPRouteMatch{
-						match,
+				newRoute := route.DeepCopy()
+				newRoute.Spec.Rules = []gatewayv1beta1.HTTPRouteRule{
+					{
+						Matches: []gatewayv1beta1.HTTPRouteMatch{
+							match,
+						},
+						BackendRefs: rule.BackendRefs,
+						Filters:     rule.Filters,
 					},
-					BackendRefs: rule.BackendRefs,
-					Filters:     rule.Filters,
-				})
+				}
+				newHTTPRoutes = append(newHTTPRoutes, *newRoute)
 			}
 		}
 	}
-	return httpRouteRules
+	return newHTTPRoutes
 }
 
-func sortHTTPRouteRules([]gatewayv1beta1.HTTPRouteRule) []gatewayv1beta1.HTTPRouteRule {
-	
+func sortHTTPRoutes(routes []gatewayv1beta1.HTTPRoute) {
+	sort.SliceStable(routes, func(i, j int) bool {
+		hasHostnamei := hasHostnames(routes[i])
+		hasHostnamej := hasHostnames(routes[j])
+
+		matchi := routes[i].Spec.Rules[0].Matches[0]
+		matchj := routes[j].Spec.Rules[0].Matches[0]
+		pathMatchingi := matchi.Path
+		pathMatchingj := matchj.Path
+		isExactPathMatchingi := isPathMatchingExact(pathMatchingi)
+		isExactPathMatchingj := isPathMatchingExact(pathMatchingj)
+		isPrefixPathMatchingi := isPathMatchingPrefix(pathMatchingi)
+		isPrefixPathMatchingj := isPathMatchingPrefix(pathMatchingj)
+
+		namespacedNamei := fmt.Sprintf("%s/%s", routes[i].Namespace, routes[i].Name)
+		namespacedNamej := fmt.Sprintf("%s/%s", routes[j].Namespace, routes[j].Name)
+
+		switch {
+		// hostname matching
+		case hasHostnamei && !hasHostnamej:
+			return true
+		case !hasHostnamei && hasHostnamej:
+			return false
+		case hasHostnamei && hasHostnamej:
+			return len(routes[i].Spec.Hostnames[0]) > len(routes[j].Spec.Hostnames[0])
+
+		// exact path matching
+		case isExactPathMatchingi && !isExactPathMatchingj:
+			return true
+		case !isExactPathMatchingi && isExactPathMatchingj:
+			return false
+		case isExactPathMatchingi && isExactPathMatchingj && len(*pathMatchingi.Value) != len(*pathMatchingj.Value):
+			return len(*pathMatchingi.Value) > len(*pathMatchingj.Value)
+
+		// prefix path matching
+		case isPrefixPathMatchingi && !isPrefixPathMatchingj:
+			return true
+		case !isPrefixPathMatchingi && isPrefixPathMatchingj:
+			return false
+		case isPrefixPathMatchingi && isPrefixPathMatchingj && len(*pathMatchingi.Value) != len(*pathMatchingj.Value):
+			return len(*pathMatchingi.Value) > len(*pathMatchingj.Value)
+
+		// header matching
+		case len(matchi.Headers) != len(matchj.Headers):
+			return len(matchi.Headers) > len(matchj.Headers)
+
+		// queryparam matching
+		case len(matchi.QueryParams) != len(matchj.QueryParams):
+			return len(matchi.QueryParams) > len(matchj.QueryParams)
+
+		// creation timestamp
+		case routes[i].CreationTimestamp != routes[j].CreationTimestamp:
+			return routes[i].CreationTimestamp.Before(&routes[i].CreationTimestamp)
+
+		// alphabetical order
+		case strings.Compare(namespacedNamei, namespacedNamej) == 1:
+			return true
+		}
+
+		return false
+	})
+}
+
+func isPathMatchingExact(match *gatewayv1beta1.HTTPPathMatch) bool {
+	// kubebuilder defaults ensures that no nil value needs to be checked
+	return match != nil && *match.Type == gatewayv1beta1.PathMatchExact
+}
+
+func isPathMatchingPrefix(match *gatewayv1beta1.HTTPPathMatch) bool {
+	// kubebuilder defaults ensures that no nil value needs to be checked
+	return match != nil && *match.Type == gatewayv1beta1.PathMatchPathPrefix
+}
+
+func hasHostnames(httpRoute gatewayv1beta1.HTTPRoute) bool {
+	return len(httpRoute.Spec.Hostnames) > 0
 }

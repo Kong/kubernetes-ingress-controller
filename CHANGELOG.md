@@ -106,6 +106,9 @@ Adding a new version? You'll need three changes:
   Kong gateway runs in router flavor `expressions`.
   [#3956](https://github.com/Kong/kubernetes-ingress-controller/pull/3956)
   [#3988](https://github.com/Kong/kubernetes-ingress-controller/pull/3988)
+- Configuration updates to Konnect Runtime Group's Admin API now respect a backoff
+  strategy that prevents KIC from exceeding API calls limits.
+  [#3989](https://github.com/Kong/kubernetes-ingress-controller/pull/3989)
 
 ### Fixed
 

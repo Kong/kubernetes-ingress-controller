@@ -296,7 +296,7 @@ func createKonnectClientSecretAndConfigMap(ctx context.Context, t *testing.T, en
 }
 
 // createKonnectAdminAPIClient creates an *kong.Client that will communicate with Konnect Runtime Group's Admin API.
-func createKonnectAdminAPIClient(t *testing.T, rgID, cert, key string) *adminapi.Client {
+func createKonnectAdminAPIClient(t *testing.T, rgID, cert, key string) *adminapi.KonnectClient {
 	t.Helper()
 
 	c, err := adminapi.NewKongClientForKonnectRuntimeGroup(adminapi.KonnectConfig{

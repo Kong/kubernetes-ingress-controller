@@ -2,6 +2,7 @@ package dataplane
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"reflect"
 	"sort"
@@ -367,11 +368,13 @@ func (c *KongClient) Update(ctx context.Context) error {
 		c.logger.Debug("successfully built data-plane configuration")
 	}
 
-	shas, err := c.sendOutToClients(ctx, parsingResult.KongState, c.kongConfig)
+	shas, err := c.sendOutToGatewayClients(ctx, parsingResult.KongState, c.kongConfig)
 	if err != nil {
 		c.configStatusNotifier.NotifyConfigStatus(ctx, clients.ConfigStatusApplyFailed)
 		return err
 	}
+
+	c.trySendOutToKonnectClient(ctx, parsingResult.KongState, c.kongConfig)
 
 	// succeeded to apply configuration to Kong gateway.
 	// notify the receiver of config status that translation error happened when there are translation errors,
@@ -396,18 +399,16 @@ func (c *KongClient) Update(ctx context.Context) error {
 	return nil
 }
 
-// sendOutToClients will generate deck content (config) from the provided kong state
-// and send it out to each of the configured clients.
-func (c *KongClient) sendOutToClients(
+// sendOutToGatewayClients will generate deck content (config) from the provided kong state
+// and send it out to each of the configured gateway clients.
+func (c *KongClient) sendOutToGatewayClients(
 	ctx context.Context, s *kongstate.KongState, config sendconfig.Config,
 ) ([]string, error) {
-	clients := c.clientsProvider.AllClients()
-	c.logger.Debugf("sending configuration to %d clients", len(clients))
-	shas, err := iter.MapErr(clients, func(client **adminapi.Client) (string, error) {
-		newSHA, err := c.sendToClient(ctx, *client, s, config)
-		return HandleSendToClientResult(*client, c.logger, newSHA, err)
-	},
-	)
+	gatewayClients := c.clientsProvider.GatewayClients()
+	c.logger.Debugf("sending configuration to %d gateway clients", len(gatewayClients))
+	shas, err := iter.MapErr(gatewayClients, func(client **adminapi.Client) (string, error) {
+		return c.sendToClient(ctx, *client, s, config)
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -419,9 +420,30 @@ func (c *KongClient) sendOutToClients(
 	return previousSHAs, nil
 }
 
+// It will try to send ignore errors that are returned from Konnect client.
+func (c *KongClient) trySendOutToKonnectClient(ctx context.Context, s *kongstate.KongState, config sendconfig.Config) {
+	konnectClient := c.clientsProvider.KonnectClient()
+	// There's no KonnectClient configured, that's totally fine.
+	if konnectClient == nil {
+		return
+	}
+
+	if _, err := c.sendToClient(ctx, konnectClient, s, config); err != nil {
+		// In case of an error, we only log it since we don't want the Konnect to affect the basic functionality
+		// of the controller.
+
+		if errors.Is(err, sendconfig.ErrUpdateSkippedDueToBackoffStrategy{}) {
+			c.logger.WithError(err).Warn("Skipped pushing configuration to Konnect")
+			return
+		}
+
+		c.logger.WithError(err).Warn("Failed pushing configuration to Konnect")
+	}
+}
+
 func (c *KongClient) sendToClient(
 	ctx context.Context,
-	client *adminapi.Client,
+	client sendconfig.AdminAPIClient,
 	s *kongstate.KongState,
 	config sendconfig.Config,
 ) (string, error) {
@@ -471,20 +493,6 @@ func (c *KongClient) sendToClient(
 	client.SetLastConfigSHA(newConfigSHA)
 
 	return string(newConfigSHA), nil
-}
-
-// HandleSendToClientResult handles a result returned from sendToClient.
-// It will ignore errors that are returned from Konnect client.
-func HandleSendToClientResult(client sendconfig.KonnectAwareClient, logger logrus.FieldLogger, newSHA string, err error) (string, error) {
-	if err != nil {
-		// We do not collect errors from Konnect as they should not break the data-plane loop.
-		if client.IsKonnect() {
-			logger.WithError(err).Error("Failed pushing configuration to Konnect")
-			return "", nil
-		}
-		return "", err
-	}
-	return newSHA, nil
 }
 
 // SetConfigStatusNotifier sets a notifier which notifies subscribers about configuration sending results.

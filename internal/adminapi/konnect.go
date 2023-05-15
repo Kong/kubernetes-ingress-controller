@@ -28,7 +28,7 @@ type KonnectConfig struct {
 	TLSClient                     TLSClientConfig
 }
 
-func NewKongClientForKonnectRuntimeGroup(c KonnectConfig) (*Client, error) {
+func NewKongClientForKonnectRuntimeGroup(c KonnectConfig) (*KonnectClient, error) {
 	clientCertificate, err := tlsutil.ExtractClientCertificates(
 		[]byte(c.TLSClient.Cert),
 		c.TLSClient.CertFile,

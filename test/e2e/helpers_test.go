@@ -117,7 +117,7 @@ func getEnvironmentBuilder(ctx context.Context, t *testing.T) (*environments.Bui
 			return createGKEBuilder(t)
 		default:
 			t.Log("creating a Kind cluster builder")
-			return createKINDBuilder(), nil
+			return createKINDBuilder(t), nil
 		}
 	}
 
@@ -134,7 +134,7 @@ func getEnvironmentBuilder(ctx context.Context, t *testing.T) (*environments.Bui
 	t.Logf("using existing %s cluster %s", clusterType, clusterName)
 	switch clusterType {
 	case string(kind.KindClusterType):
-		return createExistingKINDBuilder(clusterName)
+		return createExistingKINDBuilder(t, clusterName)
 	case string(gke.GKEClusterType):
 		return createExistingGKEBuilder(ctx, clusterName)
 	default:
@@ -142,7 +142,7 @@ func getEnvironmentBuilder(ctx context.Context, t *testing.T) (*environments.Bui
 	}
 }
 
-func createKINDBuilder() *environments.Builder {
+func createKINDBuilder(t *testing.T) *environments.Builder {
 	builder := environments.NewBuilder()
 	clusterBuilder := kind.NewBuilder()
 	if clusterVersionStr != "" {
@@ -152,21 +152,20 @@ func createKINDBuilder() *environments.Builder {
 	builder = builder.WithClusterBuilder(clusterBuilder)
 	builder = builder.WithAddons(metallb.New())
 	if shouldLoadImages() {
-		builder = builder.WithAddons(buildImageLoadAddons(controllerImageOverride, kongImageOverride)...)
+		builder = builder.WithAddons(buildImageLoadAddon(t, controllerImageOverride, kongImageOverride))
 	}
 	return builder
 }
 
-func createExistingKINDBuilder(name string) (*environments.Builder, error) {
+func createExistingKINDBuilder(t *testing.T, name string) (*environments.Builder, error) {
 	builder := environments.NewBuilder()
 	cluster, err := kind.NewFromExisting(name)
-	if err != nil {
-		return nil, err
-	}
+	require.NoError(t, err)
+
 	builder = builder.WithExistingCluster(cluster)
 	builder = builder.WithAddons(metallb.New())
 	if shouldLoadImages() {
-		builder = builder.WithAddons(buildImageLoadAddons(controllerImageOverride, kongImageOverride)...)
+		builder = builder.WithAddons(buildImageLoadAddon(t, controllerImageOverride, kongImageOverride))
 	}
 	return builder, nil
 }
@@ -245,23 +244,23 @@ func deployKong(ctx context.Context, t *testing.T, env environments.Environment,
 
 	t.Log("waiting for controller to be ready")
 	var deployment *appsv1.Deployment
-	require.Eventually(t, func() bool {
+	if !assert.Eventually(t, func() bool {
 		deployment, err = env.Cluster().Client().AppsV1().Deployments(namespace).Get(ctx, controllerDeploymentName, metav1.GetOptions{})
 		if err != nil {
 			return false
 		}
 		return deployment.Status.ReadyReplicas == *deployment.Spec.Replicas
-	}, kongComponentWait, time.Second,
-		func() string {
-			if deployment == nil {
-				return ""
-			}
-			return fmt.Sprintf(
-				"deployment %s: ready replicas %d, spec replicas: %d",
+	}, kongComponentWait, time.Second) {
+		if err != nil {
+			t.Fatalf("controller didn't get ready: %s", err)
+		}
+		if deployment != nil {
+			t.Fatalf(
+				"controller didn't get ready: deployment %q: ready replicas %d, spec replicas: %d",
 				deployment.Name, deployment.Status.ReadyReplicas, *deployment.Spec.Replicas,
 			)
-		}(),
-	)
+		}
+	}
 }
 
 // Deployments represent the deployments that are deployed by the all-in-one manifests.
@@ -616,18 +615,25 @@ func killKong(ctx context.Context, t *testing.T, env environments.Environment, p
 	t.Logf("kong container has %v restart after kill", after)
 }
 
-// buildImageLoadAddons creates addons to load KIC and kong images.
-func buildImageLoadAddons(images ...string) []clusters.Addon {
-	addons := []clusters.Addon{}
+// buildImageLoadAddon creates addon to load KIC and kong images.
+func buildImageLoadAddon(t *testing.T, images ...string) clusters.Addon {
+	t.Helper()
+	t.Log("building image load addon")
+
+	if len(images) == 0 {
+		return nil
+	}
+
+	builder := loadimage.NewBuilder()
 	for _, image := range images {
 		if image != "" {
+			t.Logf("adding image %q to load image addon", image)
 			// https://github.com/Kong/kubernetes-testing-framework/issues/440 this error only occurs if image == ""
 			// it will eventually be removed from the WithImage return signature
-			b, _ := loadimage.NewBuilder().WithImage(image)
-			addons = append(addons, b.Build())
+			builder, _ = builder.WithImage(image)
 		}
 	}
-	return addons
+	return builder.Build()
 }
 
 // createKongImagePullSecret creates the image pull secret

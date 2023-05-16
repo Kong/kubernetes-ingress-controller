@@ -37,6 +37,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/konnect/nodes"
 	rg "github.com/kong/kubernetes-ingress-controller/v2/internal/konnect/runtimegroups"
 	rgc "github.com/kong/kubernetes-ingress-controller/v2/internal/konnect/runtimegroupsconfig"
+	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/helpers"
 )
 
 const (
@@ -175,6 +176,7 @@ func createTestRuntimeGroup(ctx context.Context, t *testing.T) string {
 			req.Header.Set("Authorization", "Bearer "+konnectAccessToken)
 			return nil
 		}),
+		rg.WithHTTPClient(helpers.RetryableHTTPClient(helpers.DefaultHTTPClient())),
 	)
 	require.NoError(t, err)
 
@@ -208,6 +210,7 @@ func createClientCertificate(ctx context.Context, t *testing.T, rgID string) (ce
 			req.Header.Set("Authorization", "Bearer "+konnectAccessToken)
 			return nil
 		}),
+		rgc.WithHTTPClient(helpers.RetryableHTTPClient(helpers.DefaultHTTPClient())),
 	)
 	require.NoError(t, err)
 

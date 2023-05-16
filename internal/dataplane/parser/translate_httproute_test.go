@@ -1264,75 +1264,78 @@ func pocTestCases() []testCaseIngressRulesFromHTTPRoutes {
 						},
 					},
 				},
-				// {
-				// 	ObjectMeta: metav1.ObjectMeta{
-				// 		Name:      "httproute-2",
-				// 		Namespace: corev1.NamespaceDefault,
-				// 	},
-				// 	Spec: gatewayv1beta1.HTTPRouteSpec{
-				// 		Hostnames: []gatewayv1beta1.Hostname{
-				// 			"foo.bar.com",
-				// 		},
-				// 		CommonRouteSpec: commonRouteSpecMock("fake-gateway"),
-				// 		Rules: []gatewayv1beta1.HTTPRouteRule{
-				// 			{
-				// 				Matches: []gatewayv1beta1.HTTPRouteMatch{
-				// 					builder.NewHTTPRouteMatch().WithPathExact("/a/b/c").Build(),
-				// 					builder.NewHTTPRouteMatch().WithPathExact("/foo/bar").Build(),
-				// 				},
-				// 				BackendRefs: []gatewayv1beta1.HTTPBackendRef{
-				// 					builder.NewHTTPBackendRef("fake-service").WithPort(80).Build(),
-				// 				},
-				// 			},
-				// 			{
-				// 				Matches: []gatewayv1beta1.HTTPRouteMatch{
-				// 					builder.NewHTTPRouteMatch().WithPathPrefix("/d/e/f").Build(),
-				// 				},
-				// 				BackendRefs: []gatewayv1beta1.HTTPBackendRef{
-				// 					builder.NewHTTPBackendRef("fake-service").WithPort(80).Build(),
-				// 				},
-				// 			},
-				// 		},
-				// 	},
-				// },
-				// {
-				// 	ObjectMeta: metav1.ObjectMeta{
-				// 		Name:      "httproute-3",
-				// 		Namespace: corev1.NamespaceDefault,
-				// 	},
-				// 	Spec: gatewayv1beta1.HTTPRouteSpec{
-				// 		Hostnames: []gatewayv1beta1.Hostname{
-				// 			"foo.com",
-				// 			"bar.net",
-				// 		},
-				// 		CommonRouteSpec: commonRouteSpecMock("fake-gateway"),
-				// 		Rules: []gatewayv1beta1.HTTPRouteRule{
-				// 			{
-				// 				Matches: []gatewayv1beta1.HTTPRouteMatch{
-				// 					builder.NewHTTPRouteMatch().WithPathExact("/a/b").Build(),
-				// 					builder.NewHTTPRouteMatch().WithHeader("name", "value").Build(),
-				// 				},
-				// 				BackendRefs: []gatewayv1beta1.HTTPBackendRef{
-				// 					builder.NewHTTPBackendRef("fake-service").WithPort(80).Build(),
-				// 				},
-				// 			},
-				// 			{
-				// 				Matches: []gatewayv1beta1.HTTPRouteMatch{
-				// 					builder.NewHTTPRouteMatch().WithHeader("name", "value").Build(),
-				// 				},
-				// 				BackendRefs: []gatewayv1beta1.HTTPBackendRef{
-				// 					builder.NewHTTPBackendRef("fake-service").WithPort(80).Build(),
-				// 				},
-				// 			},
-				// 		},
-				// 	},
-				// },
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "httproute-2",
+						Namespace: corev1.NamespaceDefault,
+					},
+					Spec: gatewayv1beta1.HTTPRouteSpec{
+						Hostnames: []gatewayv1beta1.Hostname{
+							"foo.bar.com",
+						},
+						CommonRouteSpec: commonRouteSpecMock("fake-gateway"),
+						Rules: []gatewayv1beta1.HTTPRouteRule{
+							{
+								Matches: []gatewayv1beta1.HTTPRouteMatch{
+									builder.NewHTTPRouteMatch().WithPathExact("/a/b/c").Build(),
+									builder.NewHTTPRouteMatch().WithPathExact("/foo/bar").Build(),
+								},
+								BackendRefs: []gatewayv1beta1.HTTPBackendRef{
+									builder.NewHTTPBackendRef("fake-service").WithPort(80).Build(),
+								},
+							},
+							{
+								Matches: []gatewayv1beta1.HTTPRouteMatch{
+									builder.NewHTTPRouteMatch().WithPathPrefix("/d/e/f").Build(),
+								},
+								BackendRefs: []gatewayv1beta1.HTTPBackendRef{
+									builder.NewHTTPBackendRef("fake-service").WithPort(80).Build(),
+								},
+							},
+						},
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "httproute-3",
+						Namespace: corev1.NamespaceDefault,
+					},
+					Spec: gatewayv1beta1.HTTPRouteSpec{
+						Hostnames: []gatewayv1beta1.Hostname{
+							"foo.com",
+							"bar.net",
+						},
+						CommonRouteSpec: commonRouteSpecMock("fake-gateway"),
+						Rules: []gatewayv1beta1.HTTPRouteRule{
+							{
+								Matches: []gatewayv1beta1.HTTPRouteMatch{
+									builder.NewHTTPRouteMatch().WithPathExact("/a/b").Build(),
+									builder.NewHTTPRouteMatch().WithHeader("name", "value").Build(),
+								},
+								BackendRefs: []gatewayv1beta1.HTTPBackendRef{
+									builder.NewHTTPBackendRef("fake-service").WithPort(80).Build(),
+								},
+							},
+							{
+								Matches: []gatewayv1beta1.HTTPRouteMatch{
+									builder.NewHTTPRouteMatch().WithHeader("fake", "header").Build(),
+									builder.NewHTTPRouteMatch().WithHeader("fake-2", "header").Build(),
+								},
+								BackendRefs: []gatewayv1beta1.HTTPBackendRef{
+									builder.NewHTTPBackendRef("fake-service").WithPort(80).Build(),
+								},
+							},
+						},
+					},
+				},
 			},
 			expected: func(routes []*gatewayv1beta1.HTTPRoute) ingressRules {
 				return ingressRules{
 					SecretNameToSNIs: newSecretNameToSNIs(),
 					ServiceNameToParent: map[string]client.Object{
 						"httproute.default.httproute-1": routes[0],
+						"httproute.default.httproute-2": routes[1],
+						"httproute.default.httproute-3": routes[2],
 					},
 					ServiceNameToServices: map[string]kongstate.Service{
 						"httproute.default.httproute-1": {
@@ -1420,6 +1423,175 @@ func pocTestCases() []testCaseIngressRulesFromHTTPRoutes {
 								},
 							},
 						},
+						"httproute.default.httproute-3": {
+							Service: kong.Service{
+								ConnectTimeout: kong.Int(60000),
+								Host:           kong.String("httproute.default.httproute-3"),
+								Name:           kong.String("httproute.default.httproute-3"),
+								Protocol:       kong.String("http"),
+								ReadTimeout:    kong.Int(60000),
+								Retries:        kong.Int(5),
+								WriteTimeout:   kong.Int(60000),
+							},
+							Backends: kongstate.ServiceBackends{
+								builder.NewKongstateServiceBackend("fake-service").WithPortNumber(80).Build(),
+							},
+							Namespace: "default",
+							Parent:    routes[0],
+							Routes: []kongstate.Route{
+								{
+									Route: kong.Route{
+										Name:         kong.String("httproute.default.httproute-3.4.0"),
+										PreserveHost: kong.Bool(true),
+										Priority:     kong.Int(4),
+										Hosts:        kong.StringSlice("bar.net"),
+										Headers:      map[string][]string{"name": {"value"}},
+										Protocols: []*string{
+											kong.String("http"),
+											kong.String("https"),
+										},
+										StripPath: lo.ToPtr(false),
+										Tags: []*string{
+											kong.String("k8s-name:httproute-3"),
+											kong.String("k8s-namespace:default"),
+											kong.String("k8s-kind:HTTPRoute"),
+											kong.String("k8s-group:gateway.networking.k8s.io"),
+											kong.String("k8s-version:v1beta1"),
+										},
+									},
+									Ingress: k8sObjectInfoOfHTTPRoute(routes[3]),
+								},
+								{
+									Route: kong.Route{
+										Name:         kong.String("httproute.default.httproute-3.5.0"),
+										PreserveHost: kong.Bool(true),
+										Priority:     kong.Int(4),
+										Hosts:        kong.StringSlice("bar.net"),
+										Headers:      map[string][]string{"name": {"value"}},
+										Protocols: []*string{
+											kong.String("http"),
+											kong.String("https"),
+										},
+										StripPath: lo.ToPtr(false),
+										Tags: []*string{
+											kong.String("k8s-name:httproute-3"),
+											kong.String("k8s-namespace:default"),
+											kong.String("k8s-kind:HTTPRoute"),
+											kong.String("k8s-group:gateway.networking.k8s.io"),
+											kong.String("k8s-version:v1beta1"),
+										},
+									},
+									Ingress: k8sObjectInfoOfHTTPRoute(routes[3]),
+								},
+								{
+									Route: kong.Route{
+										Name: kong.String("httproute.default.httproute-1.3.0"),
+										Paths: []*string{
+											kong.String("~/foo/bar$"),
+										},
+										PreserveHost: kong.Bool(true),
+										Priority:     kong.Int(3),
+										Protocols: []*string{
+											kong.String("http"),
+											kong.String("https"),
+										},
+										StripPath: lo.ToPtr(false),
+										Tags: []*string{
+											kong.String("k8s-name:httproute-1"),
+											kong.String("k8s-namespace:default"),
+											kong.String("k8s-kind:HTTPRoute"),
+											kong.String("k8s-group:gateway.networking.k8s.io"),
+											kong.String("k8s-version:v1beta1"),
+										},
+									},
+									Ingress: k8sObjectInfoOfHTTPRoute(routes[0]),
+								},
+							},
+						},
+						"httproute.default.httproute-2": {
+							Service: kong.Service{
+								ConnectTimeout: kong.Int(60000),
+								Host:           kong.String("httproute.default.httproute-2"),
+								Name:           kong.String("httproute.default.httproute-2"),
+								Protocol:       kong.String("http"),
+								ReadTimeout:    kong.Int(60000),
+								Retries:        kong.Int(5),
+								WriteTimeout:   kong.Int(60000),
+							},
+							Backends: kongstate.ServiceBackends{
+								builder.NewKongstateServiceBackend("fake-service").WithPortNumber(80).Build(),
+							},
+							Namespace: "default",
+							Parent:    routes[1],
+							Routes: []kongstate.Route{
+								{
+									Route: kong.Route{
+										Name:         kong.String("httproute.default.httproute-2.4.0"),
+										PreserveHost: kong.Bool(true),
+										Priority:     kong.Int(4),
+										Hosts:        kong.StringSlice("foo.bar.com"),
+										Paths:        kong.StringSlice("~/d/e/f$", "/d/e/f/"),
+										Protocols: []*string{
+											kong.String("http"),
+											kong.String("https"),
+										},
+										StripPath: lo.ToPtr(false),
+										Tags: []*string{
+											kong.String("k8s-name:httproute-2"),
+											kong.String("k8s-namespace:default"),
+											kong.String("k8s-kind:HTTPRoute"),
+											kong.String("k8s-group:gateway.networking.k8s.io"),
+											kong.String("k8s-version:v1beta1"),
+										},
+									},
+									Ingress: k8sObjectInfoOfHTTPRoute(routes[1]),
+								},
+								{
+									Route: kong.Route{
+										Name:         kong.String("httproute.default.httproute-2.5.0"),
+										Hosts:        kong.StringSlice("foo.bar.com"),
+										Paths:        kong.StringSlice("~/a/b/c$"),
+										PreserveHost: kong.Bool(true),
+										Priority:     kong.Int(5),
+										Protocols: []*string{
+											kong.String("http"),
+											kong.String("https"),
+										},
+										StripPath: lo.ToPtr(false),
+										Tags: []*string{
+											kong.String("k8s-name:httproute-2"),
+											kong.String("k8s-namespace:default"),
+											kong.String("k8s-kind:HTTPRoute"),
+											kong.String("k8s-group:gateway.networking.k8s.io"),
+											kong.String("k8s-version:v1beta1"),
+										},
+									},
+									Ingress: k8sObjectInfoOfHTTPRoute(routes[1]),
+								},
+								{
+									Route: kong.Route{
+										Name:         kong.String("httproute.default.httproute-2.6.0"),
+										Hosts:        kong.StringSlice("foo.bar.com"),
+										Paths:        kong.StringSlice("~/foo/bar$"),
+										PreserveHost: kong.Bool(true),
+										Priority:     kong.Int(6),
+										Protocols: []*string{
+											kong.String("http"),
+											kong.String("https"),
+										},
+										StripPath: lo.ToPtr(false),
+										Tags: []*string{
+											kong.String("k8s-name:httproute-2"),
+											kong.String("k8s-namespace:default"),
+											kong.String("k8s-kind:HTTPRoute"),
+											kong.String("k8s-group:gateway.networking.k8s.io"),
+											kong.String("k8s-version:v1beta1"),
+										},
+									},
+									Ingress: k8sObjectInfoOfHTTPRoute(routes[1]),
+								},
+							},
+						},
 					},
 				}
 			},
@@ -1445,10 +1617,11 @@ func TestPoc(t *testing.T) {
 		t.Run(tt.msg, func(t *testing.T) {
 			result := newIngressRules()
 
-			newRoutes := mergeAllRoutesIntoSeparateRules(tt.routes)
+			newRoutes := splitHTTPRouteRules(tt.routes)
 			sortHTTPRoutes(newRoutes)
+			indexedHTTPRoutes := indexHTTPRoutes(tt.routes)
 
-			err := parser.ingressRulesFromHTTPRoute(&result, newRoutes)
+			err := parser.ingressRulesFromHTTPRoute(&result, newRoutes, indexedHTTPRoutes)
 			assert.NoError(t, err)
 
 			expected := tt.expected(tt.routes)

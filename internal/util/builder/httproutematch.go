@@ -60,9 +60,11 @@ func (b *HTTPRouteMatchBuilder) WithMethod(method gatewayv1beta1.HTTPMethod) *HT
 }
 
 func (b *HTTPRouteMatchBuilder) WithHeader(name, value string) *HTTPRouteMatchBuilder {
+	t := gatewayv1beta1.HeaderMatchType(gatewayv1beta1.HeaderMatchExact)
 	b.httpRouteMatch.Headers = append(b.httpRouteMatch.Headers, gatewayv1beta1.HTTPHeaderMatch{
 		Name:  gatewayv1beta1.HTTPHeaderName(name),
 		Value: value,
+		Type:  &t,
 	})
 	return b
 }

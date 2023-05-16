@@ -78,6 +78,7 @@ func generateKongServiceFromBackendRefWithName(
 	rules *ingressRules,
 	serviceName string,
 	route client.Object,
+	parentRoute client.Object,
 	protocol string,
 	backendRefs ...gatewayv1beta1.BackendRef,
 ) (kongstate.Service, error) {
@@ -114,7 +115,7 @@ func generateKongServiceFromBackendRefWithName(
 			},
 			Namespace: route.GetNamespace(),
 			Backends:  backends,
-			Parent:    route,
+			Parent:    parentRoute,
 		}
 	}
 
@@ -158,6 +159,7 @@ func generateKongServiceFromBackendRefWithRuleNumber(
 		storer,
 		rules,
 		serviceName,
+		route,
 		route,
 		protocol,
 		backendRefs...,

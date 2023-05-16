@@ -30,9 +30,9 @@ func (p *Parser) ingressRulesFromHTTPRoutes() ingressRules {
 		p.logger.WithError(err).Error("failed to list HTTPRoutes")
 		return result
 	}
-	httpRoutes := mergeAllRoutesIntoSeparateRules(httpRouteList)
+	indexedHTTPRoutes := indexHTTPRoutes(httpRouteList)
+	httpRoutes := splitHTTPRouteRules(httpRouteList)
 	sortHTTPRoutes(httpRoutes)
-	fmt.Println(httpRoutes)
 
 	// for _, httproute := range httpRouteList {
 	// 	if err := p.ingressRulesFromHTTPRoute(&result, httproute); err != nil {
@@ -44,7 +44,7 @@ func (p *Parser) ingressRulesFromHTTPRoutes() ingressRules {
 	// 	}
 	// }
 
-	if err := p.ingressRulesFromHTTPRoute(&result, httpRoutes); err != nil {
+	if err := p.ingressRulesFromHTTPRoute(&result, httpRoutes, indexedHTTPRoutes); err != nil {
 		// p.registerTranslationFailure(fmt.Sprintf("HTTPRoute can't be routed: %s", err), httpRoute)
 	} else {
 		// at this point the object has been configured and can be
@@ -55,7 +55,7 @@ func (p *Parser) ingressRulesFromHTTPRoutes() ingressRules {
 	return result
 }
 
-func (p *Parser) ingressRulesFromHTTPRoute(result *ingressRules, httproutes []gatewayv1beta1.HTTPRoute) error {
+func (p *Parser) ingressRulesFromHTTPRoute(result *ingressRules, httproutes []gatewayv1beta1.HTTPRoute, indexedHTTPRoutes map[string]*gatewayv1beta1.HTTPRoute) error {
 	// if err := validateHTTPRoute(httproute); err != nil {
 	// 	return fmt.Errorf("validation failed : %w", err)
 	// }
@@ -66,7 +66,7 @@ func (p *Parser) ingressRulesFromHTTPRoute(result *ingressRules, httproutes []ga
 
 	// return p.ingressRulesFromHTTPRouteLegacyFallback(httproute, result)
 
-	return p.ingressRulesFromHTTPRouteWithCombinedServiceRoutes(httproutes, result)
+	return p.ingressRulesFromHTTPRouteWithCombinedServiceRoutes(httproutes, result, indexedHTTPRoutes)
 }
 
 func validateHTTPRoute(httproute *gatewayv1beta1.HTTPRoute) error {
@@ -85,10 +85,11 @@ func validateHTTPRoute(httproute *gatewayv1beta1.HTTPRoute) error {
 
 // ingressRulesFromHTTPRouteWithCombinedServiceRoutes generates a set of proto-Kong routes (ingress rules) from an HTTPRoute.
 // If multiple rules in the HTTPRoute use the same Service, it combines them into a single Kong route.
-func (p *Parser) ingressRulesFromHTTPRouteWithCombinedServiceRoutes(httproutes []gatewayv1beta1.HTTPRoute, result *ingressRules) error {
+func (p *Parser) ingressRulesFromHTTPRouteWithCombinedServiceRoutes(httproutes []gatewayv1beta1.HTTPRoute, result *ingressRules, indexedHTTPRoutes map[string]*gatewayv1beta1.HTTPRoute) error {
 	priority := 1
 	for i := len(httproutes) - 1; i >= 0; i-- {
 		httproute := httproutes[i]
+		parentRoute := indexedHTTPRoutes[httpRouteNamespacedName(httproute)]
 		for _, kongServiceTranslation := range translators.TranslateHTTPRoute(&httproute, priority) {
 			// HTTPRoute uses a wrapper HTTPBackendRef to add optional filters to its BackendRefs
 			backendRefs := httpBackendRefsToBackendRefs(kongServiceTranslation.BackendRefs)
@@ -96,7 +97,7 @@ func (p *Parser) ingressRulesFromHTTPRouteWithCombinedServiceRoutes(httproutes [
 			serviceName := kongServiceTranslation.Name
 
 			// create a service and attach the routes to it
-			service, err := generateKongServiceFromBackendRefWithName(p.logger, p.storer, result, serviceName, &httproute, "http", backendRefs...)
+			service, err := generateKongServiceFromBackendRefWithName(p.logger, p.storer, result, serviceName, &httproute, parentRoute, "http", backendRefs...)
 			if err != nil {
 				return err
 			}
@@ -112,7 +113,7 @@ func (p *Parser) ingressRulesFromHTTPRouteWithCombinedServiceRoutes(httproutes [
 
 			// cache the service to avoid duplicates in further loop iterations
 			result.ServiceNameToServices[*service.Service.Name] = service
-			result.ServiceNameToParent[serviceName] = &httproute
+			result.ServiceNameToParent[serviceName] = parentRoute
 		}
 		priority++
 	}
@@ -595,7 +596,7 @@ func httpBackendRefsToBackendRefs(httpBackendRef []gatewayv1beta1.HTTPBackendRef
 // POC methods
 // ---------------------
 
-func mergeAllRoutesIntoSeparateRules(httpRoutes []*gatewayv1beta1.HTTPRoute) []gatewayv1beta1.HTTPRoute {
+func splitHTTPRouteRules(httpRoutes []*gatewayv1beta1.HTTPRoute) []gatewayv1beta1.HTTPRoute {
 	newHTTPRoutes := []gatewayv1beta1.HTTPRoute{}
 	hostnamedRoutes := []gatewayv1beta1.HTTPRoute{}
 	for _, route := range httpRoutes {
@@ -626,6 +627,7 @@ func mergeAllRoutesIntoSeparateRules(httpRoutes []*gatewayv1beta1.HTTPRoute) []g
 			}
 		}
 	}
+
 	return newHTTPRoutes
 }
 
@@ -652,7 +654,7 @@ func sortHTTPRoutes(routes []gatewayv1beta1.HTTPRoute) {
 			return true
 		case !hasHostnamei && hasHostnamej:
 			return false
-		case hasHostnamei && hasHostnamej:
+		case hasHostnamei && hasHostnamej && len(routes[i].Spec.Hostnames[0]) != len(routes[j].Spec.Hostnames[0]):
 			return len(routes[i].Spec.Hostnames[0]) > len(routes[j].Spec.Hostnames[0])
 
 		// exact path matching
@@ -680,16 +682,26 @@ func sortHTTPRoutes(routes []gatewayv1beta1.HTTPRoute) {
 			return len(matchi.QueryParams) > len(matchj.QueryParams)
 
 		// creation timestamp
-		case routes[i].CreationTimestamp != routes[j].CreationTimestamp:
-			return routes[i].CreationTimestamp.Before(&routes[i].CreationTimestamp)
+		case routes[i].CreationTimestamp.Compare(routes[j].CreationTimestamp.Time) != 0:
+			return routes[i].CreationTimestamp.After(routes[j].CreationTimestamp.Time)
 
 		// alphabetical order
-		case strings.Compare(namespacedNamei, namespacedNamej) == 1:
+		case strings.Compare(namespacedNamei, namespacedNamej) == -1:
 			return true
 		}
 
 		return false
 	})
+}
+
+func indexHTTPRoutes(httproutes []*gatewayv1beta1.HTTPRoute) map[string]*gatewayv1beta1.HTTPRoute {
+	indexedRoutes := make(map[string]*gatewayv1beta1.HTTPRoute)
+
+	for _, route := range httproutes {
+		indexedRoutes[httpRouteNamespacedName(*route)] = route
+	}
+
+	return indexedRoutes
 }
 
 func isPathMatchingExact(match *gatewayv1beta1.HTTPPathMatch) bool {
@@ -704,4 +716,8 @@ func isPathMatchingPrefix(match *gatewayv1beta1.HTTPPathMatch) bool {
 
 func hasHostnames(httpRoute gatewayv1beta1.HTTPRoute) bool {
 	return len(httpRoute.Spec.Hostnames) > 0
+}
+
+func httpRouteNamespacedName(route gatewayv1beta1.HTTPRoute) string {
+	return fmt.Sprintf("%s/%s", route.Namespace, route.Name)
 }

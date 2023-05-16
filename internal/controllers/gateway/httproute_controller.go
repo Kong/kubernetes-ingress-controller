@@ -13,7 +13,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apimachinery/pkg/types"
+	k8stypes "k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -150,7 +150,7 @@ func (r *HTTPRouteReconciler) listReferenceGrantsForHTTPRoute(obj client.Object)
 				from.Kind == ("HTTPRoute") &&
 				from.Group == ("gateway.networking.k8s.io") {
 				recs = append(recs, reconcile.Request{
-					NamespacedName: types.NamespacedName{
+					NamespacedName: k8stypes.NamespacedName{
 						Namespace: gateway.Namespace,
 						Name:      gateway.Name,
 					},
@@ -234,7 +234,7 @@ func (r *HTTPRouteReconciler) listHTTPRoutesForGatewayClass(obj client.Object) [
 			if gatewaysForNamespace, ok := gateways[namespace]; ok {
 				if _, ok := gatewaysForNamespace[string(parentRef.Name)]; ok {
 					queue = append(queue, reconcile.Request{
-						NamespacedName: types.NamespacedName{
+						NamespacedName: k8stypes.NamespacedName{
 							Namespace: httproute.Namespace,
 							Name:      httproute.Name,
 						},
@@ -290,7 +290,7 @@ func (r *HTTPRouteReconciler) listHTTPRoutesForGateway(obj client.Object) []reco
 			}
 			if namespace == gw.Namespace && string(parentRef.Name) == gw.Name {
 				queue = append(queue, reconcile.Request{
-					NamespacedName: types.NamespacedName{
+					NamespacedName: k8stypes.NamespacedName{
 						Namespace: httproute.Namespace,
 						Name:      httproute.Name,
 					},
@@ -669,7 +669,7 @@ func (r *HTTPRouteReconciler) getHTTPRouteRuleReason(ctx context.Context, httpRo
 			// Check if all the objects referenced actually exist
 			// Only services are currently supported as BackendRef objects
 			service := &corev1.Service{}
-			err := r.Client.Get(ctx, types.NamespacedName{Namespace: backendNamespace, Name: string(backendRef.Name)}, service)
+			err := r.Client.Get(ctx, k8stypes.NamespacedName{Namespace: backendNamespace, Name: string(backendRef.Name)}, service)
 			if err != nil {
 				if !apierrors.IsNotFound(err) {
 					return "", err

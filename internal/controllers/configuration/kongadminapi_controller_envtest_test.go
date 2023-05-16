@@ -18,7 +18,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
+	k8stypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
@@ -70,7 +70,7 @@ func startKongAdminAPIServiceReconciler(ctx context.Context, t *testing.T, clien
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "kong-admin",
 			Namespace: ns.Name,
-			UID:       types.UID(uuid.NewString()),
+			UID:       k8stypes.UID(uuid.NewString()),
 		},
 	}
 
@@ -78,7 +78,7 @@ func startKongAdminAPIServiceReconciler(ctx context.Context, t *testing.T, clien
 	require.NoError(t,
 		(&configuration.KongAdminAPIServiceReconciler{
 			Client: mgr.GetClient(),
-			ServiceNN: types.NamespacedName{
+			ServiceNN: k8stypes.NamespacedName{
 				Name:      adminService.Name,
 				Namespace: adminService.Namespace,
 			},
@@ -178,14 +178,14 @@ func TestKongAdminAPIController(t *testing.T) {
 			[]adminapi.DiscoveredAdminAPI{
 				{
 					Address: "https://10.0.0.1:8080",
-					PodRef: types.NamespacedName{
+					PodRef: k8stypes.NamespacedName{
 						Namespace: adminPod.Namespace,
 						Name:      adminPod.Name,
 					},
 				},
 				{
 					Address: "https://10.0.0.2:8080",
-					PodRef: types.NamespacedName{
+					PodRef: k8stypes.NamespacedName{
 						Namespace: adminPod.Namespace,
 						Name:      adminPod.Name,
 					},
@@ -255,7 +255,7 @@ func TestKongAdminAPIController(t *testing.T) {
 			[]adminapi.DiscoveredAdminAPI{
 				{
 					Address: "https://10.0.0.2:8080",
-					PodRef: types.NamespacedName{
+					PodRef: k8stypes.NamespacedName{
 						Namespace: adminPod.Namespace,
 						Name:      adminPod.Name,
 					},
@@ -375,28 +375,28 @@ func TestKongAdminAPIController(t *testing.T) {
 			[]adminapi.DiscoveredAdminAPI{
 				{
 					Address: "https://10.0.0.1:8080",
-					PodRef: types.NamespacedName{
+					PodRef: k8stypes.NamespacedName{
 						Namespace: adminPod.Namespace,
 						Name:      adminPod.Name,
 					},
 				},
 				{
 					Address: "https://10.0.0.2:8080",
-					PodRef: types.NamespacedName{
+					PodRef: k8stypes.NamespacedName{
 						Namespace: adminPod.Namespace,
 						Name:      adminPod.Name,
 					},
 				},
 				{
 					Address: "https://10.0.0.10:8080",
-					PodRef: types.NamespacedName{
+					PodRef: k8stypes.NamespacedName{
 						Namespace: adminPod.Namespace,
 						Name:      adminPod.Name,
 					},
 				},
 				{
 					Address: "https://10.0.0.20:8080",
-					PodRef: types.NamespacedName{
+					PodRef: k8stypes.NamespacedName{
 						Namespace: adminPod.Namespace,
 						Name:      adminPod.Name,
 					},
@@ -466,14 +466,14 @@ func TestKongAdminAPIController(t *testing.T) {
 			[]adminapi.DiscoveredAdminAPI{
 				{
 					Address: "https://10.0.0.1:8080",
-					PodRef: types.NamespacedName{
+					PodRef: k8stypes.NamespacedName{
 						Namespace: adminPod.Namespace,
 						Name:      adminPod.Name,
 					},
 				},
 				{
 					Address: "https://10.0.0.2:8080",
-					PodRef: types.NamespacedName{
+					PodRef: k8stypes.NamespacedName{
 						Namespace: adminPod.Namespace,
 						Name:      adminPod.Name,
 					},
@@ -487,21 +487,21 @@ func TestKongAdminAPIController(t *testing.T) {
 			endpoints.Endpoints[i].Conditions.Ready = lo.ToPtr(false)
 		}
 		require.NoError(t, client.Update(ctx, &endpoints, &ctrlclient.UpdateOptions{}))
-		require.NoError(t, client.Get(ctx, types.NamespacedName{Name: endpoints.Name, Namespace: endpoints.Namespace}, &endpoints, &ctrlclient.GetOptions{}))
+		require.NoError(t, client.Get(ctx, k8stypes.NamespacedName{Name: endpoints.Name, Namespace: endpoints.Namespace}, &endpoints, &ctrlclient.GetOptions{}))
 		assert.Eventually(t, func() bool { return len(n.LastNotified()) == 0 }, 3*time.Second, time.Millisecond)
 
 		// Update 1 endpoint so that that it's Ready.
 		endpoints.Endpoints[0].Conditions.Ready = lo.ToPtr(true)
 
 		require.NoError(t, client.Update(ctx, &endpoints, &ctrlclient.UpdateOptions{}))
-		require.NoError(t, client.Get(ctx, types.NamespacedName{Name: endpoints.Name, Namespace: endpoints.Namespace}, &endpoints, &ctrlclient.GetOptions{}))
+		require.NoError(t, client.Get(ctx, k8stypes.NamespacedName{Name: endpoints.Name, Namespace: endpoints.Namespace}, &endpoints, &ctrlclient.GetOptions{}))
 		assert.Eventually(t, func() bool { return len(n.LastNotified()) == 1 }, 3*time.Second, time.Millisecond)
 
 		assert.ElementsMatch(t,
 			[]adminapi.DiscoveredAdminAPI{
 				{
 					Address: "https://10.0.0.1:8080",
-					PodRef: types.NamespacedName{
+					PodRef: k8stypes.NamespacedName{
 						Namespace: adminPod.Namespace,
 						Name:      adminPod.Name,
 					},
@@ -571,14 +571,14 @@ func TestKongAdminAPIController(t *testing.T) {
 			[]adminapi.DiscoveredAdminAPI{
 				{
 					Address: "https://10.0.0.1:8080",
-					PodRef: types.NamespacedName{
+					PodRef: k8stypes.NamespacedName{
 						Namespace: adminPod.Namespace,
 						Name:      adminPod.Name,
 					},
 				},
 				{
 					Address: "https://10.0.0.2:8080",
-					PodRef: types.NamespacedName{
+					PodRef: k8stypes.NamespacedName{
 						Namespace: adminPod.Namespace,
 						Name:      adminPod.Name,
 					},

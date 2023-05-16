@@ -21,7 +21,7 @@ import (
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
+	k8stypes "k8s.io/apimachinery/pkg/types"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/metrics"
 )
@@ -359,7 +359,7 @@ func TestDeployAllInOneDBLESS(t *testing.T) {
 	ensureAllProxyReplicasAreConfigured(ctx, t, env, deployments.ProxyNN)
 }
 
-func ensureAllProxyReplicasAreConfigured(ctx context.Context, t *testing.T, env environments.Environment, proxyDeploymentNN types.NamespacedName) {
+func ensureAllProxyReplicasAreConfigured(ctx context.Context, t *testing.T, env environments.Environment, proxyDeploymentNN k8stypes.NamespacedName) {
 	pods, err := listPodsByLabels(ctx, env, proxyDeploymentNN.Namespace, map[string]string{"app": proxyDeploymentNN.Name})
 	require.NoError(t, err)
 

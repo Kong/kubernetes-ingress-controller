@@ -8,7 +8,7 @@ import (
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	netv1 "k8s.io/api/networking/v1"
-	"k8s.io/apimachinery/pkg/types"
+	k8stypes "k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
@@ -219,13 +219,13 @@ func (m SecretNameToSNIs) merge(o SecretNameToSNIs) {
 
 type SNIs struct {
 	// parents are objects that the SNIs are inherited from
-	parents map[types.UID]client.Object
+	parents map[k8stypes.UID]client.Object
 	hosts   []string
 }
 
 func newSNIs() *SNIs {
 	return &SNIs{
-		parents: map[types.UID]client.Object{},
+		parents: map[k8stypes.UID]client.Object{},
 	}
 }
 

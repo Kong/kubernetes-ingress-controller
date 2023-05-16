@@ -18,7 +18,7 @@ import (
 	netv1 "k8s.io/api/networking/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
+	k8stypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	knative "knative.dev/networking/pkg/apis/networking/v1alpha1"
 
@@ -463,7 +463,7 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 			objects.Secrets = []*corev1.Secret{
 				{
 					ObjectMeta: metav1.ObjectMeta{
-						UID:       types.UID("7428fb98-180b-4702-a91f-61351a33c6e4"),
+						UID:       k8stypes.UID("7428fb98-180b-4702-a91f-61351a33c6e4"),
 						Name:      "conf-secret",
 						Namespace: "default",
 					},
@@ -570,7 +570,7 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 			objects.Secrets = []*corev1.Secret{
 				{
 					ObjectMeta: metav1.ObjectMeta{
-						UID:       types.UID("7428fb98-180b-4702-a91f-61351a33c6e4"),
+						UID:       k8stypes.UID("7428fb98-180b-4702-a91f-61351a33c6e4"),
 						Name:      "conf-secret",
 						Namespace: "default",
 					},
@@ -674,7 +674,7 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 			objects.Secrets = []*corev1.Secret{
 				{
 					ObjectMeta: metav1.ObjectMeta{
-						UID:       types.UID("7428fb98-180b-4702-a91f-61351a33c6e4"),
+						UID:       k8stypes.UID("7428fb98-180b-4702-a91f-61351a33c6e4"),
 						Name:      "conf-secret",
 						Namespace: "default",
 					},
@@ -705,7 +705,7 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 		objects.Secrets = []*corev1.Secret{
 			{
 				ObjectMeta: metav1.ObjectMeta{
-					UID:       types.UID("7428fb98-180b-4702-a91f-61351a33c6e4"),
+					UID:       k8stypes.UID("7428fb98-180b-4702-a91f-61351a33c6e4"),
 					Name:      "conf-secret",
 					Namespace: "default",
 				},
@@ -827,7 +827,7 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 			objects.Secrets = []*corev1.Secret{
 				{
 					ObjectMeta: metav1.ObjectMeta{
-						UID:       types.UID("7428fb98-180b-4702-a91f-61351a33c6e4"),
+						UID:       k8stypes.UID("7428fb98-180b-4702-a91f-61351a33c6e4"),
 						Name:      "conf-secret",
 						Namespace: "default",
 					},
@@ -1080,7 +1080,7 @@ func TestServiceClientCertificate(t *testing.T) {
 		secrets := []*corev1.Secret{
 			{
 				ObjectMeta: metav1.ObjectMeta{
-					UID:       types.UID("7428fb98-180b-4702-a91f-61351a33c6e4"),
+					UID:       k8stypes.UID("7428fb98-180b-4702-a91f-61351a33c6e4"),
 					Name:      "secret1",
 					Namespace: "default",
 				},
@@ -4984,7 +4984,7 @@ func TestCertificate(t *testing.T) {
 		secrets := []*corev1.Secret{
 			{
 				ObjectMeta: metav1.ObjectMeta{
-					UID:       types.UID("7428fb98-180b-4702-a91f-61351a33c6e4"),
+					UID:       k8stypes.UID("7428fb98-180b-4702-a91f-61351a33c6e4"),
 					Name:      "secret1",
 					Namespace: "ns1",
 				},
@@ -4995,7 +4995,7 @@ func TestCertificate(t *testing.T) {
 			},
 			{
 				ObjectMeta: metav1.ObjectMeta{
-					UID:       types.UID("6392jz73-180b-4702-a91f-61351a33c6e4"),
+					UID:       k8stypes.UID("6392jz73-180b-4702-a91f-61351a33c6e4"),
 					Name:      "secret1",
 					Namespace: "ns2",
 				},
@@ -5006,7 +5006,7 @@ func TestCertificate(t *testing.T) {
 			},
 			{
 				ObjectMeta: metav1.ObjectMeta{
-					UID:       types.UID("72x2j56k-180b-4702-a91f-61351a33c6e4"),
+					UID:       k8stypes.UID("72x2j56k-180b-4702-a91f-61351a33c6e4"),
 					Name:      "secret1",
 					Namespace: "ns3",
 				},
@@ -5101,7 +5101,7 @@ func TestCertificate(t *testing.T) {
 		secrets := []*corev1.Secret{
 			{
 				ObjectMeta: metav1.ObjectMeta{
-					UID:       types.UID("7428fb98-180b-4702-a91f-61351a33c6e4"),
+					UID:       k8stypes.UID("7428fb98-180b-4702-a91f-61351a33c6e4"),
 					Name:      "secret",
 					Namespace: "ns1",
 				},

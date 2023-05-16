@@ -16,7 +16,7 @@ import (
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
+	k8stypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/kubernetes/scheme"
 	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
@@ -202,7 +202,7 @@ func TestHTTPRouteReconcilerProperlyReactsToReferenceGrant(t *testing.T) {
 	}
 	require.NoError(t, client.Create(ctx, &route))
 
-	nn := types.NamespacedName{
+	nn := k8stypes.NamespacedName{
 		Namespace: route.GetNamespace(),
 		Name:      route.GetName(),
 	}
@@ -285,7 +285,7 @@ func TestHTTPRouteReconcilerProperlyReactsToReferenceGrant(t *testing.T) {
 	}
 }
 
-func printHTTPRoutesConditions(ctx context.Context, client ctrlclient.Client, nn types.NamespacedName) string {
+func printHTTPRoutesConditions(ctx context.Context, client ctrlclient.Client, nn k8stypes.NamespacedName) string {
 	var route gateway.HTTPRoute
 	err := client.Get(ctx, ctrlclient.ObjectKey{Namespace: nn.Namespace, Name: nn.Name}, &route)
 	if err != nil {

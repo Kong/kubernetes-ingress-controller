@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	v1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -20,7 +20,7 @@ func TestGetPluginsAssociatedWithCACertSecret(t *testing.T) {
 			ObjectMeta: metav1.ObjectMeta{
 				Name: name,
 			},
-			Config: v1.JSON{
+			Config: apiextensionsv1.JSON{
 				Raw: []byte(fmt.Sprintf(`{"ca_certificates": ["%s"]}`, secretID)),
 			},
 		}
@@ -31,7 +31,7 @@ func TestGetPluginsAssociatedWithCACertSecret(t *testing.T) {
 				Name:        name,
 				Annotations: map[string]string{annotations.IngressClassKey: annotations.DefaultIngressClass},
 			},
-			Config: v1.JSON{
+			Config: apiextensionsv1.JSON{
 				Raw: []byte(fmt.Sprintf(`{"ca_certificates": ["%s"]}`, secretID)),
 			},
 		}

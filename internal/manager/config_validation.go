@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"github.com/samber/mo"
-	"k8s.io/apimachinery/pkg/types"
+	k8stypes "k8s.io/apimachinery/pkg/types"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/adminapi"
 )
@@ -27,7 +27,7 @@ func namespacedNameFromFlagValue(flagValue string) (OptionalNamespacedName, erro
 		return OptionalNamespacedName{}, errors.New("name cannot be empty")
 	}
 
-	return mo.Some(types.NamespacedName{
+	return mo.Some(k8stypes.NamespacedName{
 		Namespace: parts[0],
 		Name:      parts[1],
 	}), nil

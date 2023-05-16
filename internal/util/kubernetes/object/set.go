@@ -1,7 +1,7 @@
 package object
 
 import (
-	"k8s.io/apimachinery/pkg/types"
+	k8stypes "k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -25,27 +25,27 @@ const (
 // ConfigurationStatusSet is a de-duplicate set to store the configure status
 // (succeeded, failed, unknown) of kubernetes objects.
 type ConfigurationStatusSet struct {
-	store map[gvk]map[types.NamespacedName]objectConfigurationStatus
+	store map[gvk]map[k8stypes.NamespacedName]objectConfigurationStatus
 }
 
 func NewConfigurationStatusSet() *ConfigurationStatusSet {
 	return &ConfigurationStatusSet{
-		store: map[gvk]map[types.NamespacedName]objectConfigurationStatus{},
+		store: map[gvk]map[k8stypes.NamespacedName]objectConfigurationStatus{},
 	}
 }
 
 func (s *ConfigurationStatusSet) Insert(obj client.Object, succeeded bool) {
 	if s.store == nil {
-		s.store = make(map[gvk]map[types.NamespacedName]objectConfigurationStatus)
+		s.store = make(map[gvk]map[k8stypes.NamespacedName]objectConfigurationStatus)
 	}
 
 	objGVK := gvk(obj.GetObjectKind().GroupVersionKind().String())
-	nsName := types.NamespacedName{
+	nsName := k8stypes.NamespacedName{
 		Namespace: obj.GetNamespace(),
 		Name:      obj.GetName(),
 	}
 	if s.store[objGVK] == nil {
-		s.store[objGVK] = make(map[types.NamespacedName]objectConfigurationStatus)
+		s.store[objGVK] = make(map[k8stypes.NamespacedName]objectConfigurationStatus)
 	}
 	s.store[objGVK][nsName] = objectConfigurationStatus{
 		generation: obj.GetGeneration(),
@@ -59,7 +59,7 @@ func (s *ConfigurationStatusSet) Get(obj client.Object) ConfigurationStatus {
 	}
 
 	objGVK := gvk(obj.GetObjectKind().GroupVersionKind().String())
-	nsName := types.NamespacedName{
+	nsName := k8stypes.NamespacedName{
 		Namespace: obj.GetNamespace(),
 		Name:      obj.GetName(),
 	}

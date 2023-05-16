@@ -23,6 +23,7 @@ linters:
   - errorlint
   - exhaustive
   - exportloopref
+  - forbidigo
   - gci
   - godot
   - gofmt
@@ -64,17 +65,30 @@ linters-settings:
       alias: appsv1
     - pkg: k8s.io/api/admission/v1
       alias: admissionv1
+    - pkg: k8s.io/api/admissionregistration/v1
+      alias: admregv1
+    - pkg: k8s.io/api/discovery/v1
+      alias: discoveryv1
     - pkg: k8s.io/api/networking/v1
       alias: netv1
-    - pkg: k8s.io/api/networking/v1beta1
-      alias: netv1beta1
 
+    - pkg: k8s.io/apimachinery/pkg/types
+      alias: k8stypes
+    - pkg: k8s.io/apimachinery/pkg/util/validation
+      alias: utilvalidation      
+    - pkg: k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1
+      alias: apiextensionsv1
     - pkg: k8s.io/apimachinery/pkg/api/errors
       alias: apierrors
     - pkg: k8s.io/apimachinery/pkg/apis/meta/v1
       alias: metav1
     - pkg: sigs.k8s.io/gateway-api/apis/(v[\w\d]+)
       alias: gateway${1}
+  forbidigo:
+    exclude_godoc_examples: false
+    forbid:
+      - 'CoreV1\(\)\.Endpoints(# use DiscoveryV1 EndpointSlices API instead)?'
+      - 'corev1\.Endpoint(# use DiscoveryV1 EndpointSlices API instead)?'
   gomodguard:
     blocked:
       modules:

@@ -12,7 +12,7 @@ import (
 	"github.com/kong/kubernetes-telemetry/pkg/telemetry"
 	"github.com/kong/kubernetes-telemetry/pkg/types"
 	"github.com/sirupsen/logrus"
-	apitypes "k8s.io/apimachinery/pkg/types"
+	k8stypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -36,7 +36,7 @@ type Payload = types.ProviderReport
 type ReportValues struct {
 	FeatureGates                   map[string]bool
 	MeshDetection                  bool
-	PublishServiceNN               apitypes.NamespacedName
+	PublishServiceNN               k8stypes.NamespacedName
 	KonnectSyncEnabled             bool
 	GatewayServiceDiscoveryEnabled bool
 }

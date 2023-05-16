@@ -3,17 +3,17 @@ package admission
 import (
 	admissionv1 "k8s.io/api/admission/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
+	k8stypes "k8s.io/apimachinery/pkg/types"
 )
 
 type ResponseBuilder struct {
-	uid      types.UID
+	uid      k8stypes.UID
 	message  string
 	allowed  bool
 	warnings []string
 }
 
-func NewResponseBuilder(uid types.UID) *ResponseBuilder {
+func NewResponseBuilder(uid k8stypes.UID) *ResponseBuilder {
 	return &ResponseBuilder{uid: uid}
 }
 

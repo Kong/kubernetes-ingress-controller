@@ -12,7 +12,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
+	k8stypes "k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -104,7 +104,7 @@ func reconcileGatewaysIfClassMatches(gatewayClass client.Object, gateways []Gate
 	for _, gateway := range gateways {
 		if string(gateway.Spec.GatewayClassName) == gatewayClass.GetName() {
 			recs = append(recs, reconcile.Request{
-				NamespacedName: types.NamespacedName{
+				NamespacedName: k8stypes.NamespacedName{
 					Namespace: gateway.Namespace,
 					Name:      gateway.Name,
 				},
@@ -115,8 +115,8 @@ func reconcileGatewaysIfClassMatches(gatewayClass client.Object, gateways []Gate
 }
 
 // list namespaced names of secrets referred by the gateway.
-func listSecretNamesReferredByGateway(gateway *gatewayv1beta1.Gateway) map[types.NamespacedName]struct{} {
-	nsNames := make(map[types.NamespacedName]struct{})
+func listSecretNamesReferredByGateway(gateway *gatewayv1beta1.Gateway) map[k8stypes.NamespacedName]struct{} {
+	nsNames := make(map[k8stypes.NamespacedName]struct{})
 
 	for _, listener := range gateway.Spec.Listeners {
 		if listener.TLS == nil {
@@ -137,7 +137,7 @@ func listSecretNamesReferredByGateway(gateway *gatewayv1beta1.Gateway) map[types
 				refNamespace = string(*certRef.Namespace)
 			}
 
-			nsNames[types.NamespacedName{
+			nsNames[k8stypes.NamespacedName{
 				Namespace: refNamespace,
 				Name:      string(certRef.Name),
 			}] = struct{}{}
@@ -284,7 +284,7 @@ func getListenerStatus(
 				if certRef.Namespace != nil {
 					secretNamespace = string(*certRef.Namespace)
 				}
-				if err := client.Get(ctx, types.NamespacedName{Namespace: secretNamespace, Name: string(certRef.Name)}, secret); err != nil {
+				if err := client.Get(ctx, k8stypes.NamespacedName{Namespace: secretNamespace, Name: string(certRef.Name)}, secret); err != nil {
 					if !apierrors.IsNotFound(err) {
 						return nil, err
 					}

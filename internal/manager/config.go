@@ -6,7 +6,7 @@ import (
 
 	"github.com/samber/mo"
 	"github.com/spf13/pflag"
-	"k8s.io/apimachinery/pkg/types"
+	k8stypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	cliflag "k8s.io/component-base/cli/flag"
@@ -21,7 +21,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/manager/featuregates"
 )
 
-type OptionalNamespacedName = mo.Option[types.NamespacedName]
+type OptionalNamespacedName = mo.Option[k8stypes.NamespacedName]
 
 // Type override to be used with OptionalNamespacedName variables to override their type name printed in the help text.
 var nnTypeNameOverride = WithTypeNameOverride[OptionalNamespacedName]("namespacedName")

@@ -30,7 +30,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
+	k8stypes "k8s.io/apimachinery/pkg/types"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/adminapi"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/konnect"
@@ -92,7 +92,7 @@ func TestKonnectLicenseActivation(t *testing.T) {
 	manifest := getTestManifest(t, manifestFile)
 	deployKong(ctx, t, env, manifest)
 
-	exposeAdminAPI(ctx, t, env, types.NamespacedName{Namespace: "kong", Name: "proxy-kong"})
+	exposeAdminAPI(ctx, t, env, k8stypes.NamespacedName{Namespace: "kong", Name: "proxy-kong"})
 
 	t.Log("disabling license management")
 	kubeconfig := getTemporaryKubeconfig(t, env)
@@ -393,7 +393,7 @@ func requireAllProxyReplicasIDsConsistentWithKonnect(
 	ctx context.Context,
 	t *testing.T,
 	env environment.Environment,
-	proxyDeploymentNN types.NamespacedName,
+	proxyDeploymentNN k8stypes.NamespacedName,
 	rg, cert, key string,
 ) {
 	pods, err := listPodsByLabels(ctx, env, proxyDeploymentNN.Namespace, map[string]string{"app": proxyDeploymentNN.Name})

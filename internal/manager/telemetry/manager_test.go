@@ -18,7 +18,7 @@ import (
 	discoveryv1 "k8s.io/api/discovery/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	apitypes "k8s.io/apimachinery/pkg/types"
+	k8stypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/version"
 	fakediscovery "k8s.io/client-go/discovery/fake"
 	testdynclient "k8s.io/client-go/dynamic/fake"
@@ -44,11 +44,11 @@ func TestCreateManager(t *testing.T) {
 			"gateway": true,
 			"knative": false,
 		}
-		publishService = apitypes.NamespacedName{
+		publishService = k8stypes.NamespacedName{
 			Namespace: "kong",
 			Name:      "kong-proxy",
 		}
-		pod = apitypes.NamespacedName{
+		pod = k8stypes.NamespacedName{
 			Namespace: "kong",
 			Name:      "kong-ingress-controller",
 		}
@@ -255,7 +255,7 @@ func prepareScheme(t *testing.T) *runtime.Scheme {
 	return scheme
 }
 
-func prepareObjects(pod apitypes.NamespacedName) []runtime.Object {
+func prepareObjects(pod k8stypes.NamespacedName) []runtime.Object {
 	setRandomUUIDName := func(o client.Object) runtime.Object {
 		o.SetName(uuid.NewString())
 		return o

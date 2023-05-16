@@ -10,7 +10,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
+	k8stypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -52,7 +52,7 @@ func TestAddressesFromEndpointSlice(t *testing.T) {
 			},
 			portNames: sets.New("admin"),
 			want: sets.New(
-				DiscoveredAdminAPI{Address: "https://10.0.0.1:8444", PodRef: types.NamespacedName{
+				DiscoveredAdminAPI{Address: "https://10.0.0.1:8444", PodRef: k8stypes.NamespacedName{
 					Name: "pod-1", Namespace: "ns",
 				}},
 			),
@@ -150,11 +150,11 @@ func TestAddressesFromEndpointSlice(t *testing.T) {
 			},
 			portNames: sets.New("admin"),
 			want: sets.New(
-				DiscoveredAdminAPI{Address: "https://10.0.0.1:8444", PodRef: types.NamespacedName{
+				DiscoveredAdminAPI{Address: "https://10.0.0.1:8444", PodRef: k8stypes.NamespacedName{
 					Namespace: "ns",
 					Name:      "pod-1",
 				}},
-				DiscoveredAdminAPI{Address: "https://10.0.1.1:8444", PodRef: types.NamespacedName{
+				DiscoveredAdminAPI{Address: "https://10.0.1.1:8444", PodRef: k8stypes.NamespacedName{
 					Namespace: "ns",
 					Name:      "pod-2",
 				}},
@@ -252,11 +252,11 @@ func TestAddressesFromEndpointSlice(t *testing.T) {
 			},
 			portNames: sets.New("admin", "admin-tls"),
 			want: sets.New(
-				DiscoveredAdminAPI{Address: "https://10.0.0.1:8443", PodRef: types.NamespacedName{
+				DiscoveredAdminAPI{Address: "https://10.0.0.1:8443", PodRef: k8stypes.NamespacedName{
 					Namespace: "ns",
 					Name:      "pod-1",
 				}},
-				DiscoveredAdminAPI{Address: "https://10.0.0.1:8444", PodRef: types.NamespacedName{
+				DiscoveredAdminAPI{Address: "https://10.0.0.1:8444", PodRef: k8stypes.NamespacedName{
 					Namespace: "ns",
 					Name:      "pod-1",
 				}},
@@ -337,14 +337,14 @@ func TestGetAdminAPIsForService(t *testing.T) {
 
 	tests := []struct {
 		name    string
-		service types.NamespacedName
+		service k8stypes.NamespacedName
 		objects []client.ObjectList
 		want    sets.Set[DiscoveredAdminAPI]
 		wantErr bool
 	}{
 		{
 			name: "basic",
-			service: types.NamespacedName{
+			service: k8stypes.NamespacedName{
 				Namespace: "ns",
 				Name:      serviceName,
 			},
@@ -423,11 +423,11 @@ func TestGetAdminAPIsForService(t *testing.T) {
 				},
 			},
 			want: sets.New(
-				DiscoveredAdminAPI{Address: "https://10.0.0.1:8444", PodRef: types.NamespacedName{
+				DiscoveredAdminAPI{Address: "https://10.0.0.1:8444", PodRef: k8stypes.NamespacedName{
 					Namespace: "ns",
 					Name:      "pod-1",
 				}},
-				DiscoveredAdminAPI{Address: "https://9.0.0.1:8444", PodRef: types.NamespacedName{
+				DiscoveredAdminAPI{Address: "https://9.0.0.1:8444", PodRef: k8stypes.NamespacedName{
 					Namespace: "ns",
 					Name:      "pod-2",
 				}},
@@ -435,7 +435,7 @@ func TestGetAdminAPIsForService(t *testing.T) {
 		},
 		{
 			name: "ports not matching the specified port names are not taken into account",
-			service: types.NamespacedName{
+			service: k8stypes.NamespacedName{
 				Namespace: "ns",
 				Name:      serviceName,
 			},
@@ -469,7 +469,7 @@ func TestGetAdminAPIsForService(t *testing.T) {
 		},
 		{
 			name: "Endpoints without a TargetRef are not matched",
-			service: types.NamespacedName{
+			service: k8stypes.NamespacedName{
 				Namespace: "ns",
 				Name:      serviceName,
 			},
@@ -502,7 +502,7 @@ func TestGetAdminAPIsForService(t *testing.T) {
 		},
 		{
 			name: "not Ready Endpoints are not matched",
-			service: types.NamespacedName{
+			service: k8stypes.NamespacedName{
 				Namespace: "ns",
 				Name:      serviceName,
 			},

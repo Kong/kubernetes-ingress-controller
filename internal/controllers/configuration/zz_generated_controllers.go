@@ -30,7 +30,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apimachinery/pkg/types"
+	k8stypes "k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -298,7 +298,7 @@ func (r *NetV1IngressReconciler) listClassless(obj client.Object) []reconcile.Re
 	for i, resource := range resourceList.Items {
 		if ctrlutils.IsIngressClassEmpty(&resourceList.Items[i]) {
 			recs = append(recs, reconcile.Request{
-				NamespacedName: types.NamespacedName{
+				NamespacedName: k8stypes.NamespacedName{
 					Namespace: resource.Namespace,
 					Name:      resource.Name,
 				},
@@ -357,7 +357,7 @@ func (r *NetV1IngressReconciler) Reconcile(ctx context.Context, req ctrl.Request
 
 	class := new(netv1.IngressClass)
 	if !r.DisableIngressClassLookups {
-		if err := r.Get(ctx, types.NamespacedName{Name: r.IngressClassName}, class); err != nil {
+		if err := r.Get(ctx, k8stypes.NamespacedName{Name: r.IngressClassName}, class); err != nil {
 			// we log this without taking action to support legacy configurations that only set ingressClassName or
 			// used the class annotation and did not create a corresponding IngressClass. We only need this to determine
 			// if the IngressClass is default or to configure default settings, and can assume no/no additional defaults
@@ -728,7 +728,7 @@ func (r *KongV1KongClusterPluginReconciler) listClassless(obj client.Object) []r
 	for i, resource := range resourceList.Items {
 		if ctrlutils.IsIngressClassEmpty(&resourceList.Items[i]) {
 			recs = append(recs, reconcile.Request{
-				NamespacedName: types.NamespacedName{
+				NamespacedName: k8stypes.NamespacedName{
 					Namespace: resource.Namespace,
 					Name:      resource.Name,
 				},
@@ -787,7 +787,7 @@ func (r *KongV1KongClusterPluginReconciler) Reconcile(ctx context.Context, req c
 
 	class := new(netv1.IngressClass)
 	if !r.DisableIngressClassLookups {
-		if err := r.Get(ctx, types.NamespacedName{Name: r.IngressClassName}, class); err != nil {
+		if err := r.Get(ctx, k8stypes.NamespacedName{Name: r.IngressClassName}, class); err != nil {
 			// we log this without taking action to support legacy configurations that only set ingressClassName or
 			// used the class annotation and did not create a corresponding IngressClass. We only need this to determine
 			// if the IngressClass is default or to configure default settings, and can assume no/no additional defaults
@@ -882,7 +882,7 @@ func (r *KongV1KongConsumerReconciler) listClassless(obj client.Object) []reconc
 	for i, resource := range resourceList.Items {
 		if ctrlutils.IsIngressClassEmpty(&resourceList.Items[i]) {
 			recs = append(recs, reconcile.Request{
-				NamespacedName: types.NamespacedName{
+				NamespacedName: k8stypes.NamespacedName{
 					Namespace: resource.Namespace,
 					Name:      resource.Name,
 				},
@@ -941,7 +941,7 @@ func (r *KongV1KongConsumerReconciler) Reconcile(ctx context.Context, req ctrl.R
 
 	class := new(netv1.IngressClass)
 	if !r.DisableIngressClassLookups {
-		if err := r.Get(ctx, types.NamespacedName{Name: r.IngressClassName}, class); err != nil {
+		if err := r.Get(ctx, k8stypes.NamespacedName{Name: r.IngressClassName}, class); err != nil {
 			// we log this without taking action to support legacy configurations that only set ingressClassName or
 			// used the class annotation and did not create a corresponding IngressClass. We only need this to determine
 			// if the IngressClass is default or to configure default settings, and can assume no/no additional defaults
@@ -1052,7 +1052,7 @@ func (r *KongV1Beta1TCPIngressReconciler) listClassless(obj client.Object) []rec
 	for i, resource := range resourceList.Items {
 		if ctrlutils.IsIngressClassEmpty(&resourceList.Items[i]) {
 			recs = append(recs, reconcile.Request{
-				NamespacedName: types.NamespacedName{
+				NamespacedName: k8stypes.NamespacedName{
 					Namespace: resource.Namespace,
 					Name:      resource.Name,
 				},
@@ -1111,7 +1111,7 @@ func (r *KongV1Beta1TCPIngressReconciler) Reconcile(ctx context.Context, req ctr
 
 	class := new(netv1.IngressClass)
 	if !r.DisableIngressClassLookups {
-		if err := r.Get(ctx, types.NamespacedName{Name: r.IngressClassName}, class); err != nil {
+		if err := r.Get(ctx, k8stypes.NamespacedName{Name: r.IngressClassName}, class); err != nil {
 			// we log this without taking action to support legacy configurations that only set ingressClassName or
 			// used the class annotation and did not create a corresponding IngressClass. We only need this to determine
 			// if the IngressClass is default or to configure default settings, and can assume no/no additional defaults
@@ -1246,7 +1246,7 @@ func (r *KongV1Beta1UDPIngressReconciler) listClassless(obj client.Object) []rec
 	for i, resource := range resourceList.Items {
 		if ctrlutils.IsIngressClassEmpty(&resourceList.Items[i]) {
 			recs = append(recs, reconcile.Request{
-				NamespacedName: types.NamespacedName{
+				NamespacedName: k8stypes.NamespacedName{
 					Namespace: resource.Namespace,
 					Name:      resource.Name,
 				},
@@ -1295,7 +1295,7 @@ func (r *KongV1Beta1UDPIngressReconciler) Reconcile(ctx context.Context, req ctr
 
 	class := new(netv1.IngressClass)
 	if !r.DisableIngressClassLookups {
-		if err := r.Get(ctx, types.NamespacedName{Name: r.IngressClassName}, class); err != nil {
+		if err := r.Get(ctx, k8stypes.NamespacedName{Name: r.IngressClassName}, class); err != nil {
 			// we log this without taking action to support legacy configurations that only set ingressClassName or
 			// used the class annotation and did not create a corresponding IngressClass. We only need this to determine
 			// if the IngressClass is default or to configure default settings, and can assume no/no additional defaults

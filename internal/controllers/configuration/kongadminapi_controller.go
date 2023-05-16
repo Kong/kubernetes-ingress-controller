@@ -9,7 +9,7 @@ import (
 	discoveryv1 "k8s.io/api/discovery/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
+	k8stypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -29,7 +29,7 @@ type KongAdminAPIServiceReconciler struct {
 	client.Client
 
 	// ServiceNN is the service NamespacedName to watch EndpointSlices for.
-	ServiceNN types.NamespacedName
+	ServiceNN k8stypes.NamespacedName
 	// PortNames is the set of port names that Admin API Service ports will be
 	// matched against.
 	PortNames        sets.Set[string]
@@ -42,7 +42,7 @@ type KongAdminAPIServiceReconciler struct {
 	Cache DiscoveredAdminAPIsCache
 }
 
-type DiscoveredAdminAPIsCache map[types.NamespacedName]sets.Set[adminapi.DiscoveredAdminAPI]
+type DiscoveredAdminAPIsCache map[k8stypes.NamespacedName]sets.Set[adminapi.DiscoveredAdminAPI]
 
 type EndpointsNotifier interface {
 	Notify(adminAPIs []adminapi.DiscoveredAdminAPI)

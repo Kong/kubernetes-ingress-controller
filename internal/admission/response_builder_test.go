@@ -7,13 +7,13 @@ import (
 	"github.com/stretchr/testify/require"
 	admissionv1 "k8s.io/api/admission/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
+	k8stypes "k8s.io/apimachinery/pkg/types"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/admission"
 )
 
 func TestResponseBuilder(t *testing.T) {
-	someUID := types.UID("f0c595d0-09f5-4dca-95b7-80869e250068")
+	someUID := k8stypes.UID("f0c595d0-09f5-4dca-95b7-80869e250068")
 	testCases := []struct {
 		name             string
 		modifyBuilderFn  func(b *admission.ResponseBuilder)

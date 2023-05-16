@@ -7,7 +7,7 @@ import (
 	discoveryv1 "k8s.io/api/discovery/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
-	"k8s.io/apimachinery/pkg/types"
+	k8stypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -15,7 +15,7 @@ import (
 // DiscoveredAdminAPI represents an Admin API discovered from a Kubernetes Service.
 type DiscoveredAdminAPI struct {
 	Address string
-	PodRef  types.NamespacedName
+	PodRef  k8stypes.NamespacedName
 }
 
 // GetAdminAPIsForService performs an endpoint lookup, using provided kubeClient
@@ -24,7 +24,7 @@ type DiscoveredAdminAPI struct {
 func GetAdminAPIsForService(
 	ctx context.Context,
 	kubeClient client.Client,
-	service types.NamespacedName,
+	service k8stypes.NamespacedName,
 	portNames sets.Set[string],
 ) (sets.Set[DiscoveredAdminAPI], error) {
 	const (
@@ -87,7 +87,7 @@ func AdminAPIsFromEndpointSlice(endpoints discoveryv1.EndpointSlice, portNames s
 			if e.TargetRef == nil || e.TargetRef.Kind != "Pod" {
 				continue
 			}
-			podNN := types.NamespacedName{
+			podNN := k8stypes.NamespacedName{
 				Name:      e.TargetRef.Name,
 				Namespace: e.TargetRef.Namespace,
 			}

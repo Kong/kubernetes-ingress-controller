@@ -6,7 +6,7 @@ import (
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
+	k8stypes "k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
@@ -286,19 +286,19 @@ func TestReconcileGatewaysIfClassMatches(t *testing.T) {
 	t.Log("verifying reconciliation results")
 	expected := []reconcile.Request{
 		{
-			NamespacedName: types.NamespacedName{
+			NamespacedName: k8stypes.NamespacedName{
 				Name:      "sanfrancisco",
 				Namespace: "california",
 			},
 		},
 		{
-			NamespacedName: types.NamespacedName{
+			NamespacedName: k8stypes.NamespacedName{
 				Name:      "sandiego",
 				Namespace: "california",
 			},
 		},
 		{
-			NamespacedName: types.NamespacedName{
+			NamespacedName: k8stypes.NamespacedName{
 				Name:      "losangelos",
 				Namespace: "california",
 			},

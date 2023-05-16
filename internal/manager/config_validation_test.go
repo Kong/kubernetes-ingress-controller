@@ -6,7 +6,7 @@ import (
 
 	"github.com/samber/mo"
 	"github.com/stretchr/testify/require"
-	"k8s.io/apimachinery/pkg/types"
+	k8stypes "k8s.io/apimachinery/pkg/types"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/adminapi"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/gateway"
@@ -48,7 +48,7 @@ func TestConfigValidatedVars(t *testing.T) {
 				ExtractValueFn: func(c manager.Config) any {
 					return c.PublishService
 				},
-				ExpectedValue: mo.Some(types.NamespacedName{Namespace: "namespace", Name: "servicename"}),
+				ExpectedValue: mo.Some(k8stypes.NamespacedName{Namespace: "namespace", Name: "servicename"}),
 			},
 			{
 				Input:                 "servicename",
@@ -61,7 +61,7 @@ func TestConfigValidatedVars(t *testing.T) {
 				ExtractValueFn: func(c manager.Config) any {
 					return c.KongAdminSvc
 				},
-				ExpectedValue: mo.Some(types.NamespacedName{Namespace: "namespace", Name: "servicename"}),
+				ExpectedValue: mo.Some(k8stypes.NamespacedName{Namespace: "namespace", Name: "servicename"}),
 			},
 			{
 				Input:                 "namespace/",
@@ -100,7 +100,7 @@ func TestConfigValidate(t *testing.T) {
 	t.Run("konnect", func(t *testing.T) {
 		validEnabled := func() *manager.Config {
 			return &manager.Config{
-				KongAdminSvc: mo.Some(types.NamespacedName{Name: "admin-svc", Namespace: "ns"}),
+				KongAdminSvc: mo.Some(k8stypes.NamespacedName{Name: "admin-svc", Namespace: "ns"}),
 				Konnect: adminapi.KonnectConfig{
 					ConfigSynchronizationEnabled: true,
 					RuntimeGroupID:               "fbd3036f-0f1c-4e98-b71c-d4cd61213f90",
@@ -271,7 +271,7 @@ func TestConfigValidateGatewayDiscovery(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			c := &manager.Config{}
 			if tc.gatewayDiscovery {
-				c.KongAdminSvc = mo.Some(types.NamespacedName{Name: "admin-svc", Namespace: "ns"})
+				c.KongAdminSvc = mo.Some(k8stypes.NamespacedName{Name: "admin-svc", Namespace: "ns"})
 			}
 			err := c.ValidateGatewayDiscovery(tc.dbMode)
 			if !tc.expectError {

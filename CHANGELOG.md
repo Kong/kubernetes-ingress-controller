@@ -115,6 +115,16 @@ Adding a new version? You'll need three changes:
   once their installation is detected, making restarting the process unnecessary.
   [#3996](https://github.com/Kong/kubernetes-ingress-controller/pull/3996)
 
+### Changed
+
+- Kong Ingress Controller no longer relies on `k8s.io.api.core.v1` `Endpoints`,
+  and instead uses `discovery.k8s.io/v1` `EndpointSlice` to discover endpoints
+  for Kubernetes Services.
+  [#3997](https://github.com/Kong/kubernetes-ingress-controller/pull/3997)
+  [#3998](https://github.com/Kong/kubernetes-ingress-controller/pull/3998)
+  [#3980](https://github.com/Kong/kubernetes-ingress-controller/pull/3980)
+  [#3977](https://github.com/Kong/kubernetes-ingress-controller/pull/3977)
+  
 ### Fixed
 
 - Fix paging in `GetAdminAPIsForService` which might have caused the controller

@@ -25,6 +25,7 @@ import (
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
+	discoveryv1 "k8s.io/api/discovery/v1"
 	netv1 "k8s.io/api/networking/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -147,11 +148,11 @@ func (r *CoreV1ServiceReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 }
 
 // -----------------------------------------------------------------------------
-// CoreV1 Endpoints - Reconciler
+// DiscoveryV1 EndpointSlice - Reconciler
 // -----------------------------------------------------------------------------
 
-// CoreV1EndpointsReconciler reconciles Endpoints resources
-type CoreV1EndpointsReconciler struct {
+// DiscoveryV1EndpointSliceReconciler reconciles EndpointSlice resources
+type DiscoveryV1EndpointSliceReconciler struct {
 	client.Client
 
 	Log              logr.Logger
@@ -161,8 +162,8 @@ type CoreV1EndpointsReconciler struct {
 }
 
 // SetupWithManager sets up the controller with the Manager.
-func (r *CoreV1EndpointsReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	c, err := controller.New("CoreV1Endpoints", mgr, controller.Options{
+func (r *DiscoveryV1EndpointSliceReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	c, err := controller.New("DiscoveryV1EndpointSlice", mgr, controller.Options{
 		Reconciler: r,
 		LogConstructor: func(_ *reconcile.Request) logr.Logger {
 			return r.Log
@@ -173,20 +174,19 @@ func (r *CoreV1EndpointsReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		return err
 	}
 	return c.Watch(
-		&source.Kind{Type: &corev1.Endpoints{}},
+		&source.Kind{Type: &discoveryv1.EndpointSlice{}},
 		&handler.EnqueueRequestForObject{},
 	)
 }
 
-//+kubebuilder:rbac:groups="",resources=endpoints,verbs=list;watch
-//+kubebuilder:rbac:groups="",resources=endpoints/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups=discovery.k8s.io,resources=endpointslices,verbs=list;watch
 
 // Reconcile processes the watched objects
-func (r *CoreV1EndpointsReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	log := r.Log.WithValues("CoreV1Endpoints", req.NamespacedName)
+func (r *DiscoveryV1EndpointSliceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+	log := r.Log.WithValues("DiscoveryV1EndpointSlice", req.NamespacedName)
 
 	// get the relevant object
-	obj := new(corev1.Endpoints)
+	obj := new(discoveryv1.EndpointSlice)
 	if err := r.Get(ctx, req.NamespacedName, obj); err != nil {
 		if apierrors.IsNotFound(err) {
 			obj.Namespace = req.Namespace
@@ -200,7 +200,7 @@ func (r *CoreV1EndpointsReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 
 	// clean the object up if it's being deleted
 	if !obj.DeletionTimestamp.IsZero() && time.Now().After(obj.DeletionTimestamp.Time) {
-		log.V(util.DebugLevel).Info("resource is being deleted, its configuration will be removed", "type", "Endpoints", "namespace", req.Namespace, "name", req.Name)
+		log.V(util.DebugLevel).Info("resource is being deleted, its configuration will be removed", "type", "EndpointSlice", "namespace", req.Namespace, "name", req.Name)
 
 		objectExistsInCache, err := r.DataplaneClient.ObjectExists(obj)
 		if err != nil {

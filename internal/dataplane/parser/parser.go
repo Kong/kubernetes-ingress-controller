@@ -4,13 +4,13 @@ import (
 	"bytes"
 	"crypto/tls"
 	"fmt"
-	"reflect"
 	"sort"
 	"strings"
 
 	"github.com/kong/go-kong/kong"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
+	discoveryv1 "k8s.io/api/discovery/v1"
 	netv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -651,7 +651,7 @@ func getServiceEndpoints(
 		"service_port":      servicePort,
 	})
 
-	// in theory a Service could have multiple port protocols, we need to ensure we gather
+	// In theory a Service could have multiple port protocols, we need to ensure we gather
 	// endpoints based on all the protocols the service is configured for. We always check
 	// for TCP as this is the default protocol for service ports.
 	protocols := listProtocols(svc)
@@ -665,13 +665,11 @@ func getServiceEndpoints(
 		isSvcUpstream = ingressClassParameters.ServiceUpstream
 	}
 
-	// check all protocols for associated endpoints
+	// Check all protocols for associated endpoints.
 	endpoints := []util.Endpoint{}
 	for protocol := range protocols {
-		newEndpoints := getEndpoints(log, svc, servicePort, protocol, s.GetEndpointsForService, isSvcUpstream)
-		if len(newEndpoints) > 0 {
-			endpoints = append(endpoints, newEndpoints...)
-		}
+		newEndpoints := getEndpoints(log, svc, servicePort, protocol, s.GetEndpointSlicesForService, isSvcUpstream)
+		endpoints = append(endpoints, newEndpoints...)
 	}
 	if len(endpoints) == 0 {
 		log.Warningf("no active endpoints")
@@ -703,94 +701,87 @@ func getIngressClassParametersOrDefault(s store.Storer) (configurationv1alpha1.I
 // of by IngressClassParameters configuration provided as a flag.
 func getEndpoints(
 	log logrus.FieldLogger,
-	s *corev1.Service,
+	service *corev1.Service,
 	port *corev1.ServicePort,
 	proto corev1.Protocol,
-	getEndpoints func(string, string) (*corev1.Endpoints, error),
+	getEndpointSlices func(string, string) ([]*discoveryv1.EndpointSlice, error),
 	isSvcUpstream bool,
 ) []util.Endpoint {
-	if s == nil || port == nil {
+	if service == nil || port == nil {
 		return []util.Endpoint{}
 	}
 
 	// If service is an upstream service...
-	if isSvcUpstream || annotations.HasServiceUpstreamAnnotation(s.Annotations) {
+	if isSvcUpstream || annotations.HasServiceUpstreamAnnotation(service.Annotations) {
 		// ... return its address as the only endpoint.
 		return []util.Endpoint{
 			{
-				Address: s.Name + "." + s.Namespace + ".svc",
-				Port:    fmt.Sprintf("%v", port.Port),
+				Address: service.Name + "." + service.Namespace + ".svc",
+				Port:    fmt.Sprint(port.Port),
 			},
 		}
 	}
 
 	log = log.WithFields(logrus.Fields{
-		"service_name":      s.Name,
-		"service_namespace": s.Namespace,
+		"service_name":      service.Name,
+		"service_namespace": service.Namespace,
 		"service_port":      port.String(),
 	})
 
-	// avoid duplicated upstream servers when the service
-	// contains multiple port definitions sharing the same
-	// targetport.
-	adus := make(map[string]bool)
-
 	// ExternalName services
-	if s.Spec.Type == corev1.ServiceTypeExternalName {
+	if service.Spec.Type == corev1.ServiceTypeExternalName {
 		log.Debug("found service of type=ExternalName")
 		return []util.Endpoint{
 			{
-				Address: s.Spec.ExternalName,
+				Address: service.Spec.ExternalName,
 				Port:    port.TargetPort.String(),
 			},
 		}
 	}
 
-	log.Debugf("fetching endpoints")
-	ep, err := getEndpoints(s.Namespace, s.Name)
+	log.Debugf("fetching EndpointSlices")
+	endpointSlices, err := getEndpointSlices(service.Namespace, service.Name)
 	if err != nil {
-		log.WithError(err).Error("failed to fetch endpoints")
+		log.WithError(err).Error("error fetching EndpointSlices")
 		return []util.Endpoint{}
 	}
+	log.Debugf("fetched %d EndpointSlices", len(endpointSlices))
 
-	upsServers := []util.Endpoint{}
-	for _, ss := range ep.Subsets {
-		for _, epPort := range ss.Ports {
-			if !reflect.DeepEqual(epPort.Protocol, proto) {
+	// Avoid duplicated upstream servers when the service contains
+	// multiple port definitions sharing the same target port.
+	uniqueUpstream := make(map[util.Endpoint]struct{})
+	upstreamServers := make([]util.Endpoint, 0)
+	for _, endpointSlice := range endpointSlices {
+		for _, p := range endpointSlice.Ports {
+			if p.Port == nil || *p.Port < 0 || *p.Protocol != proto || *p.Name != port.Name {
 				continue
 			}
-
-			var targetPort int32
-
-			if port.Name == "" {
-				// port.Name is optional if there is only one port
-				targetPort = epPort.Port
-			} else if port.Name == epPort.Name {
-				targetPort = epPort.Port
-			}
-
-			// check for invalid port value
-			if targetPort <= 0 {
-				continue
-			}
-
-			for _, epAddress := range ss.Addresses {
-				ep := fmt.Sprintf("%v:%v", epAddress.IP, targetPort)
-				if _, exists := adus[ep]; exists {
+			upstreamPort := fmt.Sprint(*p.Port)
+			for _, endpoint := range endpointSlice.Endpoints {
+				// Ready indicates that this endpoint is prepared to receive traffic, according to whatever
+				// system is managing the endpoint. A nil value indicates an unknown state.
+				// In most cases consumers should interpret this unknown state as ready.
+				// Field Ready has the same semantic as Endpoints from CoreV1 in Addresses.
+				// https://kubernetes.io/docs/concepts/services-networking/endpoint-slices/#conditions
+				if endpoint.Conditions.Ready != nil && !*endpoint.Conditions.Ready {
 					continue
 				}
-				ups := util.Endpoint{
-					Address: epAddress.IP,
-					Port:    fmt.Sprintf("%v", targetPort),
+				// One address per endpoint is rather expected (allowing multiple is due to historical reasons)
+				// read more https://github.com/kubernetes/kubernetes/issues/106267#issuecomment-978770401.
+				// These are all assumed to be fungible and clients may choose to only use the first element.
+				upstreamServer := util.Endpoint{
+					Address: endpoint.Addresses[0],
+					Port:    upstreamPort,
 				}
-				upsServers = append(upsServers, ups)
-				adus[ep] = true
+				if _, exists := uniqueUpstream[upstreamServer]; !exists {
+					upstreamServers = append(upstreamServers, upstreamServer)
+					uniqueUpstream[upstreamServer] = struct{}{}
+				}
 			}
 		}
 	}
-
-	log.Debugf("found endpoints: %v", upsServers)
-	return upsServers
+	log.Debugf("found endpoints: %v", upstreamServers)
+	return upstreamServers
 }
 
 // listProtocols is a helper function to map out all the in-use corev1.Protocols

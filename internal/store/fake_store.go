@@ -5,6 +5,7 @@ import (
 
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
+	discoveryv1 "k8s.io/api/discovery/v1"
 	netv1 "k8s.io/api/networking/v1"
 	"k8s.io/client-go/tools/cache"
 	knative "knative.dev/networking/pkg/apis/networking/v1alpha1"
@@ -44,7 +45,7 @@ type FakeObjects struct {
 	UDPIngresses                   []*configurationv1beta1.UDPIngress
 	IngressClassParametersV1alpha1 []*configurationv1alpha1.IngressClassParameters
 	Services                       []*corev1.Service
-	Endpoints                      []*corev1.Endpoints
+	EndpointSlices                 []*discoveryv1.EndpointSlice
 	Secrets                        []*corev1.Secret
 	KongPlugins                    []*configurationv1.KongPlugin
 	KongClusterPlugins             []*configurationv1.KongClusterPlugin
@@ -150,9 +151,9 @@ func NewFakeStore(
 			return nil, err
 		}
 	}
-	endpointStore := cache.NewStore(keyFunc)
-	for _, e := range objects.Endpoints {
-		err := endpointStore.Add(e)
+	endpointSliceStore := cache.NewStore(keyFunc)
+	for _, e := range objects.EndpointSlices {
+		err := endpointSliceStore.Add(e)
 		if err != nil {
 			return nil, err
 		}
@@ -207,7 +208,7 @@ func NewFakeStore(
 			TCPIngress:     tcpIngressStore,
 			UDPIngress:     udpIngressStore,
 			Service:        serviceStore,
-			Endpoint:       endpointStore,
+			EndpointSlice:  endpointSliceStore,
 			Secret:         secretsStore,
 
 			Plugin:                         kongPluginsStore,

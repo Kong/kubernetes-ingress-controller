@@ -8,11 +8,13 @@ import (
 	"time"
 
 	"github.com/kong/go-kong/kong"
+	"github.com/samber/lo"
 	"github.com/sirupsen/logrus"
 	"github.com/sirupsen/logrus/hooks/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
+	discoveryv1 "k8s.io/api/discovery/v1"
 	netv1 "k8s.io/api/networking/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -4117,32 +4119,38 @@ func TestGetEndpoints(t *testing.T) {
 		svc               *corev1.Service
 		port              *corev1.ServicePort
 		proto             corev1.Protocol
-		fn                func(string, string) (*corev1.Endpoints, error)
+		fn                func(string, string) ([]*discoveryv1.EndpointSlice, error)
 		result            []util.Endpoint
 		isServiceUpstream bool
 	}{
 		{
-			name:   "no service should return 0 endpoints",
-			svc:    nil,
-			port:   nil,
-			proto:  corev1.ProtocolTCP,
-			fn:     func(string, string) (*corev1.Endpoints, error) { return nil, nil },
+			name:  "no service should return 0 endpoints",
+			svc:   nil,
+			port:  nil,
+			proto: corev1.ProtocolTCP,
+			fn: func(string, string) ([]*discoveryv1.EndpointSlice, error) {
+				return nil, nil
+			},
 			result: []util.Endpoint{},
 		},
 		{
-			name:   "no service port should return 0 endpoints",
-			svc:    &corev1.Service{},
-			port:   nil,
-			proto:  corev1.ProtocolTCP,
-			fn:     func(string, string) (*corev1.Endpoints, error) { return nil, nil },
+			name:  "no service port should return 0 endpoints",
+			svc:   &corev1.Service{},
+			port:  nil,
+			proto: corev1.ProtocolTCP,
+			fn: func(string, string) ([]*discoveryv1.EndpointSlice, error) {
+				return nil, nil
+			},
 			result: []util.Endpoint{},
 		},
 		{
-			name:   "a service without endpoints should return 0 endpoints",
-			svc:    &corev1.Service{},
-			port:   &corev1.ServicePort{Name: "default"},
-			proto:  corev1.ProtocolTCP,
-			fn:     func(string, string) (*corev1.Endpoints, error) { return &corev1.Endpoints{}, nil },
+			name:  "a service without endpoints should return 0 endpoints",
+			svc:   &corev1.Service{},
+			port:  &corev1.ServicePort{Name: "default"},
+			proto: corev1.ProtocolTCP,
+			fn: func(string, string) ([]*discoveryv1.EndpointSlice, error) {
+				return []*discoveryv1.EndpointSlice{}, nil
+			},
 			result: []util.Endpoint{},
 		},
 		{
@@ -4164,8 +4172,8 @@ func TestGetEndpoints(t *testing.T) {
 				TargetPort: intstr.FromInt(80),
 			},
 			proto: corev1.ProtocolTCP,
-			fn: func(string, string) (*corev1.Endpoints, error) {
-				return &corev1.Endpoints{}, nil
+			fn: func(string, string) ([]*discoveryv1.EndpointSlice, error) {
+				return []*discoveryv1.EndpointSlice{}, nil
 			},
 			result: []util.Endpoint{
 				{
@@ -4201,8 +4209,8 @@ func TestGetEndpoints(t *testing.T) {
 				Port:       2080,
 			},
 			proto: corev1.ProtocolTCP,
-			fn: func(string, string) (*corev1.Endpoints, error) {
-				return &corev1.Endpoints{}, nil
+			fn: func(string, string) ([]*discoveryv1.EndpointSlice, error) {
+				return []*discoveryv1.EndpointSlice{}, nil
 			},
 			result: []util.Endpoint{
 				{
@@ -4235,8 +4243,8 @@ func TestGetEndpoints(t *testing.T) {
 				Port:       2080,
 			},
 			proto: corev1.ProtocolTCP,
-			fn: func(string, string) (*corev1.Endpoints, error) {
-				return &corev1.Endpoints{}, nil
+			fn: func(string, string) ([]*discoveryv1.EndpointSlice, error) {
+				return []*discoveryv1.EndpointSlice{}, nil
 			},
 			result: []util.Endpoint{
 				{
@@ -4266,7 +4274,7 @@ func TestGetEndpoints(t *testing.T) {
 				Port:       2080,
 			},
 			proto: corev1.ProtocolTCP,
-			fn: func(string, string) (*corev1.Endpoints, error) {
+			fn: func(string, string) ([]*discoveryv1.EndpointSlice, error) {
 				return nil, fmt.Errorf("unexpected error")
 			},
 			result: []util.Endpoint{},
@@ -4290,21 +4298,18 @@ func TestGetEndpoints(t *testing.T) {
 				TargetPort: intstr.FromInt(80),
 			},
 			proto: corev1.ProtocolTCP,
-			fn: func(string, string) (*corev1.Endpoints, error) {
-				nodeName := "dummy"
-				return &corev1.Endpoints{
-					Subsets: []corev1.EndpointSubset{
-						{
-							Addresses: []corev1.EndpointAddress{
-								{
-									IP:       "1.1.1.1",
-									NodeName: &nodeName,
-								},
+			fn: func(string, string) ([]*discoveryv1.EndpointSlice, error) {
+				return []*discoveryv1.EndpointSlice{
+					{
+						Endpoints: []discoveryv1.Endpoint{
+							{
+								Addresses: []string{"1.1.1.1"},
+								NodeName:  lo.ToPtr("dummy"),
 							},
-							Ports: []corev1.EndpointPort{
-								{
-									Protocol: corev1.ProtocolUDP,
-								},
+						},
+						Ports: []discoveryv1.EndpointPort{
+							{
+								Protocol: lo.ToPtr(corev1.ProtocolUDP),
 							},
 						},
 					},
@@ -4331,21 +4336,21 @@ func TestGetEndpoints(t *testing.T) {
 				TargetPort: intstr.FromInt(80),
 			},
 			proto: corev1.ProtocolTCP,
-			fn: func(string, string) (*corev1.Endpoints, error) {
-				nodeName := "dummy"
-				return &corev1.Endpoints{
-					Subsets: []corev1.EndpointSubset{
-						{
-							NotReadyAddresses: []corev1.EndpointAddress{
-								{
-									IP:       "1.1.1.1",
-									NodeName: &nodeName,
+			fn: func(string, string) ([]*discoveryv1.EndpointSlice, error) {
+				return []*discoveryv1.EndpointSlice{
+					{
+						Endpoints: []discoveryv1.Endpoint{
+							{
+								Addresses: []string{"1.1.1.1"},
+								NodeName:  lo.ToPtr("dummy"),
+								Conditions: discoveryv1.EndpointConditions{
+									Ready: lo.ToPtr(false),
 								},
 							},
-							Ports: []corev1.EndpointPort{
-								{
-									Protocol: corev1.ProtocolUDP,
-								},
+						},
+						Ports: []discoveryv1.EndpointPort{
+							{
+								Protocol: lo.ToPtr(corev1.ProtocolUDP),
 							},
 						},
 					},
@@ -4372,23 +4377,20 @@ func TestGetEndpoints(t *testing.T) {
 				TargetPort: intstr.FromInt(80),
 			},
 			proto: corev1.ProtocolTCP,
-			fn: func(string, string) (*corev1.Endpoints, error) {
-				nodeName := "dummy"
-				return &corev1.Endpoints{
-					Subsets: []corev1.EndpointSubset{
-						{
-							Addresses: []corev1.EndpointAddress{
-								{
-									IP:       "1.1.1.1",
-									NodeName: &nodeName,
-								},
+			fn: func(string, string) ([]*discoveryv1.EndpointSlice, error) {
+				return []*discoveryv1.EndpointSlice{
+					{
+						Endpoints: []discoveryv1.Endpoint{
+							{
+								Addresses: []string{"1.1.1.1"},
+								NodeName:  lo.ToPtr("dummy"),
 							},
-							Ports: []corev1.EndpointPort{
-								{
-									Protocol: corev1.ProtocolTCP,
-									Port:     int32(80),
-									Name:     "another-name",
-								},
+						},
+						Ports: []discoveryv1.EndpointPort{
+							{
+								Protocol: lo.ToPtr(corev1.ProtocolTCP),
+								Port:     lo.ToPtr(int32(80)),
+								Name:     lo.ToPtr("another-name"),
 							},
 						},
 					},
@@ -4397,7 +4399,7 @@ func TestGetEndpoints(t *testing.T) {
 			result: []util.Endpoint{},
 		},
 		{
-			name: "should return one endpoint when the name of the port name match a port in the endpoint Subsets",
+			name: "should return one endpoint when the name of the port name match a port in the EndpointSlices",
 			svc: &corev1.Service{
 				Spec: corev1.ServiceSpec{
 					Type:      corev1.ServiceTypeClusterIP,
@@ -4415,23 +4417,20 @@ func TestGetEndpoints(t *testing.T) {
 				TargetPort: intstr.FromInt(80),
 			},
 			proto: corev1.ProtocolTCP,
-			fn: func(string, string) (*corev1.Endpoints, error) {
-				nodeName := "dummy"
-				return &corev1.Endpoints{
-					Subsets: []corev1.EndpointSubset{
-						{
-							Addresses: []corev1.EndpointAddress{
-								{
-									IP:       "1.1.1.1",
-									NodeName: &nodeName,
-								},
+			fn: func(string, string) ([]*discoveryv1.EndpointSlice, error) {
+				return []*discoveryv1.EndpointSlice{
+					{
+						Endpoints: []discoveryv1.Endpoint{
+							{
+								Addresses: []string{"1.1.1.1"},
+								NodeName:  lo.ToPtr("dummy"),
 							},
-							Ports: []corev1.EndpointPort{
-								{
-									Protocol: corev1.ProtocolTCP,
-									Port:     int32(80),
-									Name:     "default",
-								},
+						},
+						Ports: []discoveryv1.EndpointPort{
+							{
+								Protocol: lo.ToPtr(corev1.ProtocolTCP),
+								Port:     lo.ToPtr(int32(80)),
+								Name:     lo.ToPtr("default"),
 							},
 						},
 					},
@@ -4445,7 +4444,7 @@ func TestGetEndpoints(t *testing.T) {
 			},
 		},
 		{
-			name: "should return one endpoint when the name of the port name match more than one port in the endpoint Subsets",
+			name: "should return one endpoint when the name of the port name match more than one port in the endpointSlice",
 			svc: &corev1.Service{
 				Spec: corev1.ServiceSpec{
 					Type:      corev1.ServiceTypeClusterIP,
@@ -4463,28 +4462,25 @@ func TestGetEndpoints(t *testing.T) {
 				TargetPort: intstr.FromString("port-1"),
 			},
 			proto: corev1.ProtocolTCP,
-			fn: func(string, string) (*corev1.Endpoints, error) {
-				nodeName := "dummy"
-				return &corev1.Endpoints{
-					Subsets: []corev1.EndpointSubset{
-						{
-							Addresses: []corev1.EndpointAddress{
-								{
-									IP:       "1.1.1.1",
-									NodeName: &nodeName,
-								},
+			fn: func(string, string) ([]*discoveryv1.EndpointSlice, error) {
+				return []*discoveryv1.EndpointSlice{
+					{
+						Endpoints: []discoveryv1.Endpoint{
+							{
+								Addresses: []string{"1.1.1.1"},
+								NodeName:  lo.ToPtr("dummy"),
 							},
-							Ports: []corev1.EndpointPort{
-								{
-									Name:     "port-1",
-									Protocol: corev1.ProtocolTCP,
-									Port:     80,
-								},
-								{
-									Name:     "port-1",
-									Protocol: corev1.ProtocolTCP,
-									Port:     80,
-								},
+						},
+						Ports: []discoveryv1.EndpointPort{
+							{
+								Name:     lo.ToPtr("port-1"),
+								Protocol: lo.ToPtr(corev1.ProtocolTCP),
+								Port:     lo.ToPtr(int32(80)),
+							},
+							{
+								Name:     lo.ToPtr("port-1"),
+								Protocol: lo.ToPtr(corev1.ProtocolTCP),
+								Port:     lo.ToPtr(int32(80)),
 							},
 						},
 					},
@@ -4693,26 +4689,58 @@ func TestPickPort(t *testing.T) {
 		},
 	}
 
-	endpointList := []*corev1.Endpoints{
+	endpointSliceList := []*discoveryv1.EndpointSlice{
 		{
-			ObjectMeta: metav1.ObjectMeta{Name: "service-0", Namespace: "foo-namespace"},
-			Subsets: []corev1.EndpointSubset{{
-				Addresses: []corev1.EndpointAddress{{IP: "1.1.1.1"}},
-				Ports: []corev1.EndpointPort{
-					{Name: "port1", Port: 111, Protocol: "TCP"},
-					{Name: "port2", Port: 222, Protocol: "TCP"},
-					{Name: "port3", Port: 333, Protocol: "TCP"},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "service-0-1",
+				Namespace: "foo-namespace",
+				Labels: map[string]string{
+					discoveryv1.LabelServiceName: "service-0",
 				},
-			}},
+			},
+			Endpoints: []discoveryv1.Endpoint{
+				{
+					Addresses: []string{"1.1.1.1"},
+				},
+			},
+			Ports: []discoveryv1.EndpointPort{
+				{
+					Name:     lo.ToPtr("port1"),
+					Port:     lo.ToPtr(int32(111)),
+					Protocol: lo.ToPtr(corev1.ProtocolTCP),
+				},
+				{
+					Name:     lo.ToPtr("port2"),
+					Port:     lo.ToPtr(int32(222)),
+					Protocol: lo.ToPtr(corev1.ProtocolTCP),
+				},
+				{
+					Name:     lo.ToPtr("port3"),
+					Port:     lo.ToPtr(int32(333)),
+					Protocol: lo.ToPtr(corev1.ProtocolTCP),
+				},
+			},
 		},
 		{
-			ObjectMeta: metav1.ObjectMeta{Name: "service-1", Namespace: "foo-namespace"},
-			Subsets: []corev1.EndpointSubset{{
-				Addresses: []corev1.EndpointAddress{{IP: "2.2.2.2"}},
-				Ports: []corev1.EndpointPort{
-					{Name: "port1", Port: 9999, Protocol: "TCP"},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "service-1-1",
+				Namespace: "foo-namespace",
+				Labels: map[string]string{
+					discoveryv1.LabelServiceName: "service-1",
 				},
-			}},
+			},
+			Endpoints: []discoveryv1.Endpoint{
+				{
+					Addresses: []string{"2.2.2.2"},
+				},
+			},
+			Ports: []discoveryv1.EndpointPort{
+				{
+					Name:     lo.ToPtr("port1"),
+					Port:     lo.ToPtr(int32(9999)),
+					Protocol: lo.ToPtr(corev1.ProtocolTCP),
+				},
+			},
 		},
 	}
 
@@ -4726,8 +4754,8 @@ func TestPickPort(t *testing.T) {
 		{
 			name: "port by number",
 			objs: store.FakeObjects{
-				Services:  []*corev1.Service{&svc0},
-				Endpoints: endpointList,
+				Services:       []*corev1.Service{&svc0},
+				EndpointSlices: endpointSliceList,
 
 				IngressesV1: []*netv1.Ingress{
 					{
@@ -4766,8 +4794,8 @@ func TestPickPort(t *testing.T) {
 		{
 			name: "port by number external name",
 			objs: store.FakeObjects{
-				Services:  []*corev1.Service{&svc2},
-				Endpoints: endpointList,
+				Services:       []*corev1.Service{&svc2},
+				EndpointSlices: endpointSliceList,
 
 				IngressesV1: []*netv1.Ingress{
 					{
@@ -4806,8 +4834,8 @@ func TestPickPort(t *testing.T) {
 		{
 			name: "port by name",
 			objs: store.FakeObjects{
-				Services:  []*corev1.Service{&svc0},
-				Endpoints: endpointList,
+				Services:       []*corev1.Service{&svc0},
+				EndpointSlices: endpointSliceList,
 
 				IngressesV1: []*netv1.Ingress{
 					{
@@ -4846,8 +4874,8 @@ func TestPickPort(t *testing.T) {
 		{
 			name: "port implicit",
 			objs: store.FakeObjects{
-				Services:  []*corev1.Service{&svc1},
-				Endpoints: endpointList,
+				Services:       []*corev1.Service{&svc1},
+				EndpointSlices: endpointSliceList,
 
 				IngressesV1: []*netv1.Ingress{
 					{

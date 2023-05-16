@@ -7,6 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
+	discoveryv1 "k8s.io/api/discovery/v1"
 	netv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -400,29 +401,59 @@ func TestFakeStoreService(t *testing.T) {
 	assert.Nil(service)
 }
 
-func TestFakeStoreEndpiont(t *testing.T) {
-	assert := assert.New(t)
-	require := require.New(t)
-
-	endpoints := []*corev1.Endpoints{
+func TestFakeStoreEndpointSlice(t *testing.T) {
+	t.Parallel()
+	endpoints := []*discoveryv1.EndpointSlice{
 		{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "foo",
+				Name:      "foo-1",
 				Namespace: "default",
+				Labels: map[string]string{
+					discoveryv1.LabelServiceName: "foo",
+				},
+			},
+		},
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "foo-1",
+				Namespace: "bar",
+				Labels: map[string]string{
+					discoveryv1.LabelServiceName: "foo",
+				},
+			},
+		},
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "foo-2",
+				Namespace: "bar",
+				Labels: map[string]string{
+					discoveryv1.LabelServiceName: "foo",
+				},
 			},
 		},
 	}
-	store, err := NewFakeStore(FakeObjects{Endpoints: endpoints})
-	require.Nil(err)
-	require.NotNil(store)
-	c, err := store.GetEndpointsForService("default", "foo")
-	assert.Nil(err)
-	assert.NotNil(c)
 
-	c, err = store.GetEndpointsForService("default", "does-not-exist")
-	assert.NotNil(err)
-	assert.True(errors.As(err, &ErrNotFound{}))
-	assert.Nil(c)
+	store, err := NewFakeStore(FakeObjects{EndpointSlices: endpoints})
+	require.Nil(t, err)
+	require.NotNil(t, store)
+
+	t.Run("Get EndpointSlices for Service with single EndpointSlice", func(t *testing.T) {
+		c, err := store.GetEndpointSlicesForService("default", "foo")
+		require.Nil(t, err)
+		require.Len(t, c, 1)
+	})
+
+	t.Run("Get EndpointSlices for Service with multiple EndpointSlices", func(t *testing.T) {
+		c, err := store.GetEndpointSlicesForService("bar", "foo")
+		require.Nil(t, err)
+		require.Len(t, c, 2)
+	})
+
+	t.Run("Get EndpointSlices for non-existing Service", func(t *testing.T) {
+		c, err := store.GetEndpointSlicesForService("default", "does-not-exist")
+		require.ErrorAs(t, err, &ErrNotFound{})
+		require.Nil(t, c)
+	})
 }
 
 func TestFakeStoreConsumer(t *testing.T) {

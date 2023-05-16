@@ -134,9 +134,9 @@ func setupControllers(
 		},
 		{
 			Enabled: c.ServiceEnabled,
-			Controller: &configuration.CoreV1EndpointsReconciler{
+			Controller: &configuration.DiscoveryV1EndpointSliceReconciler{
 				Client:           mgr.GetClient(),
-				Log:              ctrl.Log.WithName("controllers").WithName("Endpoints"),
+				Log:              ctrl.Log.WithName("controllers").WithName("EndpointSlice"),
 				Scheme:           mgr.GetScheme(),
 				DataplaneClient:  dataplaneClient,
 				CacheSyncTimeout: c.CacheSyncTimeout,

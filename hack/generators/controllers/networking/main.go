@@ -16,8 +16,9 @@ import (
 const (
 	outputFile = "../../internal/controllers/configuration/zz_generated_controllers.go"
 
-	corev1 = "k8s.io/api/core/v1"
-	netv1  = "k8s.io/api/networking/v1"
+	corev1      = "k8s.io/api/core/v1"
+	discoveryv1 = "k8s.io/api/discovery/v1"
+	netv1       = "k8s.io/api/networking/v1"
 
 	kongv1       = "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
 	kongv1beta1  = "github.com/kong/kubernetes-ingress-controller/v2/api/configuration/v1beta1"
@@ -45,15 +46,15 @@ var inputControllersNeeded = &typesNeeded{
 		RBACVerbs:                         []string{"get", "list", "watch"},
 	},
 	typeNeeded{
-		Group:                             "\"\"",
+		Group:                             "discovery.k8s.io",
 		Version:                           "v1",
-		Kind:                              "Endpoints",
-		PackageImportAlias:                "corev1",
-		PackageAlias:                      "CoreV1",
-		Package:                           corev1,
-		Plural:                            "endpoints",
-		CacheType:                         "Endpoint",
-		NeedsStatusPermissions:            true,
+		Kind:                              "EndpointSlice",
+		PackageImportAlias:                "discoveryv1",
+		PackageAlias:                      "DiscoveryV1",
+		Package:                           discoveryv1,
+		Plural:                            "endpointslices",
+		CacheType:                         "EndpointSlice",
+		NeedsStatusPermissions:            false,
 		AcceptsIngressClassNameAnnotation: false,
 		AcceptsIngressClassNameSpec:       false,
 		RBACVerbs:                         []string{"list", "watch"},
@@ -360,6 +361,7 @@ import (
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
+	discoveryv1 "k8s.io/api/discovery/v1"
 	netv1 "k8s.io/api/networking/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -584,7 +586,7 @@ func (r *{{.PackageAlias}}{{.Kind}}Reconciler) Reconcile(ctx context.Context, re
 	// if status updates are enabled report the status for the object
 	if r.DataplaneClient.AreKubernetesObjectReportsEnabled() {
 		log.V(util.DebugLevel).Info("determining whether data-plane configuration has succeeded", "namespace", req.Namespace, "name", req.Name)
-		
+
 		if  !r.DataplaneClient.KubernetesObjectIsConfigured(obj) {
 			log.V(util.DebugLevel).Info("resource not yet configured in the data-plane", "namespace", req.Namespace, "name", req.Name)
 			return ctrl.Result{Requeue: true}, nil // requeue until the object has been properly configured

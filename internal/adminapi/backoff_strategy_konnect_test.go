@@ -120,4 +120,46 @@ func TestKonnectBackoffStrategy(t *testing.T) {
 		assert.True(t, canUpdate, "should allow update for another hash")
 		assert.Empty(t, whyNot)
 	})
+
+	t.Run("too many requests code with no details embedded", func(t *testing.T) {
+		strategy := adminapi.NewKonnectBackoffStrategy(clock)
+		strategy.RegisterUpdateFailure(kong.NewAPIError(http.StatusTooManyRequests, ""), hashOne)
+
+		canUpdate, whyNot := strategy.CanUpdate(hashOne)
+		assert.False(t, canUpdate, "shouldn't allow update due to a standard backoff time")
+		assert.Equal(t, "next attempt allowed in 3s", whyNot)
+
+		clock.MoveBy(time.Second * 5)
+
+		canUpdate, whyNot = strategy.CanUpdate(hashOne)
+		assert.True(t, canUpdate, "should allow update for the same hash after standard backoff time")
+		assert.Empty(t, whyNot)
+
+		canUpdate, whyNot = strategy.CanUpdate(hashTwo)
+		assert.True(t, canUpdate, "should allow update for another hash")
+		assert.Empty(t, whyNot)
+	})
+
+	t.Run("too many requests code with details embedded", func(t *testing.T) {
+		strategy := adminapi.NewKonnectBackoffStrategy(clock)
+		tooManyRequestsAPIErr := kong.NewAPIError(http.StatusTooManyRequests, "")
+		const retryAfter = time.Minute
+		tooManyRequestsAPIErr.SetDetails(kong.ErrTooManyRequestsDetails{
+			RetryAfter: retryAfter,
+		})
+		strategy.RegisterUpdateFailure(tooManyRequestsAPIErr, hashOne)
+
+		canUpdate, whyNot := strategy.CanUpdate(hashOne)
+		assert.False(t, canUpdate, "shouldn't allow update due to the suggested retry-after backoff")
+		assert.Equal(t, "next attempt allowed in 1m0s", whyNot)
+
+		canUpdate, whyNot = strategy.CanUpdate(hashTwo)
+		assert.False(t, canUpdate, "shouldn't allow update due to the suggested retry-after backoff (different hash)")
+		assert.Equal(t, "next attempt allowed in 1m0s", whyNot)
+
+		clock.MoveBy(time.Minute + time.Second)
+		canUpdate, whyNot = strategy.CanUpdate(hashOne)
+		assert.True(t, canUpdate, "should allow update after the suggested retry-after backoff")
+		assert.Empty(t, whyNot)
+	})
 }

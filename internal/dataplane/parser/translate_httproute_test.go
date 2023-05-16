@@ -1318,8 +1318,7 @@ func pocTestCases() []testCaseIngressRulesFromHTTPRoutes {
 							},
 							{
 								Matches: []gatewayv1beta1.HTTPRouteMatch{
-									builder.NewHTTPRouteMatch().WithHeader("fake", "header").Build(),
-									builder.NewHTTPRouteMatch().WithHeader("fake-2", "header").Build(),
+									builder.NewHTTPRouteMatch().WithHeader("fake", "header").WithHeader("fake-2", "header-2").Build(),
 								},
 								BackendRefs: []gatewayv1beta1.HTTPBackendRef{
 									builder.NewHTTPBackendRef("fake-service").WithPort(80).Build(),
@@ -1437,7 +1436,7 @@ func pocTestCases() []testCaseIngressRulesFromHTTPRoutes {
 								builder.NewKongstateServiceBackend("fake-service").WithPortNumber(80).Build(),
 							},
 							Namespace: "default",
-							Parent:    routes[0],
+							Parent:    routes[2],
 							Routes: []kongstate.Route{
 								{
 									Route: kong.Route{
@@ -1459,14 +1458,14 @@ func pocTestCases() []testCaseIngressRulesFromHTTPRoutes {
 											kong.String("k8s-version:v1beta1"),
 										},
 									},
-									Ingress: k8sObjectInfoOfHTTPRoute(routes[3]),
+									Ingress: k8sObjectInfoOfHTTPRoute(routes[2]),
 								},
 								{
 									Route: kong.Route{
 										Name:         kong.String("httproute.default.httproute-3.5.0"),
 										PreserveHost: kong.Bool(true),
-										Priority:     kong.Int(4),
-										Hosts:        kong.StringSlice("bar.net"),
+										Priority:     kong.Int(5),
+										Hosts:        kong.StringSlice("foo.com"),
 										Headers:      map[string][]string{"name": {"value"}},
 										Protocols: []*string{
 											kong.String("http"),
@@ -1481,30 +1480,101 @@ func pocTestCases() []testCaseIngressRulesFromHTTPRoutes {
 											kong.String("k8s-version:v1beta1"),
 										},
 									},
-									Ingress: k8sObjectInfoOfHTTPRoute(routes[3]),
+									Ingress: k8sObjectInfoOfHTTPRoute(routes[2]),
 								},
 								{
 									Route: kong.Route{
-										Name: kong.String("httproute.default.httproute-1.3.0"),
-										Paths: []*string{
-											kong.String("~/foo/bar$"),
+										Name:  kong.String("httproute.default.httproute-3.6.0"),
+										Hosts: kong.StringSlice("bar.net"),
+										Headers: map[string][]string{
+											"fake":   {"header"},
+											"fake-2": {"header-2"},
 										},
 										PreserveHost: kong.Bool(true),
-										Priority:     kong.Int(3),
+										Priority:     kong.Int(6),
 										Protocols: []*string{
 											kong.String("http"),
 											kong.String("https"),
 										},
 										StripPath: lo.ToPtr(false),
 										Tags: []*string{
-											kong.String("k8s-name:httproute-1"),
+											kong.String("k8s-name:httproute-3"),
 											kong.String("k8s-namespace:default"),
 											kong.String("k8s-kind:HTTPRoute"),
 											kong.String("k8s-group:gateway.networking.k8s.io"),
 											kong.String("k8s-version:v1beta1"),
 										},
 									},
-									Ingress: k8sObjectInfoOfHTTPRoute(routes[0]),
+									Ingress: k8sObjectInfoOfHTTPRoute(routes[2]),
+								},
+								{
+									Route: kong.Route{
+										Name:  kong.String("httproute.default.httproute-3.7.0"),
+										Hosts: kong.StringSlice("foo.com"),
+										Headers: map[string][]string{
+											"fake":   {"header"},
+											"fake-2": {"header-2"},
+										},
+										PreserveHost: kong.Bool(true),
+										Priority:     kong.Int(7),
+										Protocols: []*string{
+											kong.String("http"),
+											kong.String("https"),
+										},
+										StripPath: lo.ToPtr(false),
+										Tags: []*string{
+											kong.String("k8s-name:httproute-3"),
+											kong.String("k8s-namespace:default"),
+											kong.String("k8s-kind:HTTPRoute"),
+											kong.String("k8s-group:gateway.networking.k8s.io"),
+											kong.String("k8s-version:v1beta1"),
+										},
+									},
+									Ingress: k8sObjectInfoOfHTTPRoute(routes[2]),
+								},
+								{
+									Route: kong.Route{
+										Name:         kong.String("httproute.default.httproute-3.8.0"),
+										Hosts:        kong.StringSlice("bar.net"),
+										Paths:        kong.StringSlice("~/a/b$"),
+										PreserveHost: kong.Bool(true),
+										Priority:     kong.Int(8),
+										Protocols: []*string{
+											kong.String("http"),
+											kong.String("https"),
+										},
+										StripPath: lo.ToPtr(false),
+										Tags: []*string{
+											kong.String("k8s-name:httproute-3"),
+											kong.String("k8s-namespace:default"),
+											kong.String("k8s-kind:HTTPRoute"),
+											kong.String("k8s-group:gateway.networking.k8s.io"),
+											kong.String("k8s-version:v1beta1"),
+										},
+									},
+									Ingress: k8sObjectInfoOfHTTPRoute(routes[2]),
+								},
+								{
+									Route: kong.Route{
+										Name:         kong.String("httproute.default.httproute-3.9.0"),
+										Hosts:        kong.StringSlice("foo.com"),
+										Paths:        kong.StringSlice("~/a/b$"),
+										PreserveHost: kong.Bool(true),
+										Priority:     kong.Int(9),
+										Protocols: []*string{
+											kong.String("http"),
+											kong.String("https"),
+										},
+										StripPath: lo.ToPtr(false),
+										Tags: []*string{
+											kong.String("k8s-name:httproute-3"),
+											kong.String("k8s-namespace:default"),
+											kong.String("k8s-kind:HTTPRoute"),
+											kong.String("k8s-group:gateway.networking.k8s.io"),
+											kong.String("k8s-version:v1beta1"),
+										},
+									},
+									Ingress: k8sObjectInfoOfHTTPRoute(routes[2]),
 								},
 							},
 						},
@@ -1526,9 +1596,9 @@ func pocTestCases() []testCaseIngressRulesFromHTTPRoutes {
 							Routes: []kongstate.Route{
 								{
 									Route: kong.Route{
-										Name:         kong.String("httproute.default.httproute-2.4.0"),
+										Name:         kong.String("httproute.default.httproute-2.10.0"),
 										PreserveHost: kong.Bool(true),
-										Priority:     kong.Int(4),
+										Priority:     kong.Int(10),
 										Hosts:        kong.StringSlice("foo.bar.com"),
 										Paths:        kong.StringSlice("~/d/e/f$", "/d/e/f/"),
 										Protocols: []*string{
@@ -1548,11 +1618,11 @@ func pocTestCases() []testCaseIngressRulesFromHTTPRoutes {
 								},
 								{
 									Route: kong.Route{
-										Name:         kong.String("httproute.default.httproute-2.5.0"),
+										Name:         kong.String("httproute.default.httproute-2.11.0"),
 										Hosts:        kong.StringSlice("foo.bar.com"),
 										Paths:        kong.StringSlice("~/a/b/c$"),
 										PreserveHost: kong.Bool(true),
-										Priority:     kong.Int(5),
+										Priority:     kong.Int(11),
 										Protocols: []*string{
 											kong.String("http"),
 											kong.String("https"),
@@ -1570,11 +1640,11 @@ func pocTestCases() []testCaseIngressRulesFromHTTPRoutes {
 								},
 								{
 									Route: kong.Route{
-										Name:         kong.String("httproute.default.httproute-2.6.0"),
+										Name:         kong.String("httproute.default.httproute-2.12.0"),
 										Hosts:        kong.StringSlice("foo.bar.com"),
 										Paths:        kong.StringSlice("~/foo/bar$"),
 										PreserveHost: kong.Bool(true),
-										Priority:     kong.Int(6),
+										Priority:     kong.Int(12),
 										Protocols: []*string{
 											kong.String("http"),
 											kong.String("https"),

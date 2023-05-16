@@ -110,6 +110,10 @@ Adding a new version? You'll need three changes:
   strategy that prevents KIC from exceeding API calls limits.
   [#3989](https://github.com/Kong/kubernetes-ingress-controller/pull/3989)
   [#4015](https://github.com/Kong/kubernetes-ingress-controller/pull/4015)
+- When Gateway API CRDs are not installed, the controllers of those are not started
+  during the start-up phase. From now on, they will be dynamically started in runtime
+  once their installation is detected, making restarting the process unnecessary.
+  [#3996](https://github.com/Kong/kubernetes-ingress-controller/pull/3996)
 
 ### Fixed
 

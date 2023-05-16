@@ -55,16 +55,18 @@ type GatewayReconciler struct { //nolint:revive
 	Scheme          *runtime.Scheme
 	DataplaneClient *dataplane.KongClient
 
-	WatchNamespaces []string
-	// If EnableReferenceGrant is true, controller will watch ReferenceGrants
-	// to invalidate or allow cross-namespace TLSConfigs in gateways.
-	EnableReferenceGrant bool
-	CacheSyncTimeout     time.Duration
+	WatchNamespaces  []string
+	CacheSyncTimeout time.Duration
 
 	ReferenceIndexers ctrlref.CacheIndexers
 
 	PublishServiceRef    types.NamespacedName
 	PublishServiceUDPRef mo.Option[types.NamespacedName]
+
+	// If enableReferenceGrant is true, controller will watch ReferenceGrants
+	// to invalidate or allow cross-namespace TLSConfigs in gateways.
+	// It's resolved on SetupWithManager call.
+	enableReferenceGrant bool
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -74,7 +76,12 @@ func (r *GatewayReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		return fmt.Errorf("publish service must be configured")
 	}
 
-	r.EnableReferenceGrant = ctrlutils.CRDExists(mgr.GetRESTMapper(), schema.GroupVersionResource{
+	// We're verifying whether ReferenceGrant CRD is installed at setup of the GatewayReconciler
+	// to decide whether we should run additional ReferenceGrant watch and handle ReferenceGrants
+	// when reconciling Gateways.
+	// Once the GatewayReconciler is set up without ReferenceGrant, there's no possibility to enable
+	// ReferenceGrant handling again in this reconciler at runtime.
+	r.enableReferenceGrant = ctrlutils.CRDExists(mgr.GetRESTMapper(), schema.GroupVersionResource{
 		Group:    gatewayv1beta1.GroupVersion.Group,
 		Version:  gatewayv1beta1.GroupVersion.Version,
 		Resource: "referencegrants",
@@ -124,7 +131,7 @@ func (r *GatewayReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	}
 
 	// watch ReferenceGrants, which may invalidate or allow cross-namespace TLSConfigs
-	if r.EnableReferenceGrant {
+	if r.enableReferenceGrant {
 		if err := c.Watch(
 			&source.Kind{Type: &gatewayv1beta1.ReferenceGrant{}},
 			handler.EnqueueRequestsFromMapFunc(r.listReferenceGrantsForGateway),
@@ -498,7 +505,7 @@ func (r *GatewayReconciler) reconcileUnmanagedGateway(ctx context.Context, log l
 	// the ReferenceGrants need to be retrieved to ensure that all gateway listeners reference
 	// TLS secrets they are granted for
 	referenceGrantList := &gatewayv1beta1.ReferenceGrantList{}
-	if r.EnableReferenceGrant {
+	if r.enableReferenceGrant {
 		if err := r.Client.List(ctx, referenceGrantList); err != nil {
 			return ctrl.Result{}, err
 		}

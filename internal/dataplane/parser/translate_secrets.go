@@ -10,7 +10,7 @@ import (
 
 	"github.com/kong/go-kong/kong"
 	corev1 "k8s.io/api/core/v1"
-	v1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/store"
@@ -77,7 +77,7 @@ func toKongCACertificate(certSecret *corev1.Secret, secretID string) (kong.CACer
 }
 
 func getPluginsAssociatedWithCACertSecret(secretID string, storer store.Storer) []client.Object {
-	refersToSecret := func(pluginConfig v1.JSON) bool {
+	refersToSecret := func(pluginConfig apiextensionsv1.JSON) bool {
 		cfg := struct {
 			CACertificates []string `json:"ca_certificates,omitempty"`
 		}{}

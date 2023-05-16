@@ -27,7 +27,7 @@ import (
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
+	k8stypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/yaml"
 )
@@ -58,7 +58,7 @@ func generateAdminPasswordSecret() (string, *corev1.Secret, error) {
 // exposeAdminAPI will override the KONG_ADMIN_LISTEN for the cluster's proxy to expose the
 // Admin API via a service. Some deployments only expose this on localhost by default as there's
 // no authentication, so note that this is only for testing environment purposes.
-func exposeAdminAPI(ctx context.Context, t *testing.T, env environments.Environment, proxyDeployment types.NamespacedName) {
+func exposeAdminAPI(ctx context.Context, t *testing.T, env environments.Environment, proxyDeployment k8stypes.NamespacedName) {
 	t.Log("updating the proxy container KONG_ADMIN_LISTEN to expose the admin api")
 	deployment, err := env.Cluster().Client().AppsV1().Deployments(proxyDeployment.Namespace).Get(ctx, proxyDeployment.Name, metav1.GetOptions{})
 	require.NoError(t, err)
@@ -451,7 +451,7 @@ func isPodReady(pod corev1.Pod) bool {
 }
 
 // ensureNoneOfDeploymentPodsHasCrashed ensures that none of the pods of a deployment has crashed.
-func ensureNoneOfDeploymentPodsHasCrashed(ctx context.Context, t *testing.T, env environments.Environment, deploymentNN types.NamespacedName) {
+func ensureNoneOfDeploymentPodsHasCrashed(ctx context.Context, t *testing.T, env environments.Environment, deploymentNN k8stypes.NamespacedName) {
 	t.Logf("ensuring none of %s deployment pods has crashed", deploymentNN.String())
 	pods, err := listPodsByLabels(ctx, env, deploymentNN.Namespace, map[string]string{"app": deploymentNN.Name})
 	require.NoError(t, err)

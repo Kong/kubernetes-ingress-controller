@@ -14,7 +14,7 @@ import (
 	admregv1 "k8s.io/api/admissionregistration/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
+	k8stypes "k8s.io/apimachinery/pkg/types"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
 
@@ -98,7 +98,7 @@ func TestGatewayValidationWebhook(t *testing.T) {
 			}
 
 			if len(tt.patch) > 0 {
-				_, gotUpdateErr := gatewayClient.GatewayV1beta1().Gateways(ns.Name).Patch(ctx, tt.createdGW.Name, types.MergePatchType, tt.patch, metav1.PatchOptions{})
+				_, gotUpdateErr := gatewayClient.GatewayV1beta1().Gateways(ns.Name).Patch(ctx, tt.createdGW.Name, k8stypes.MergePatchType, tt.patch, metav1.PatchOptions{})
 				if tt.wantPatchErr {
 					require.Error(t, gotUpdateErr)
 					require.Contains(t, gotUpdateErr.Error(), tt.wantPatchErrSubstring)

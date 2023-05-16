@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
-	v1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
@@ -46,45 +46,45 @@ func Setup(t *testing.T, scheme *runtime.Scheme) *rest.Config {
 	require.NoError(t, err)
 
 	t.Logf("waiting for Gateway API CRDs to be available...")
-	require.NoError(t, envtest.WaitForCRDs(cfg, []*v1.CustomResourceDefinition{
+	require.NoError(t, envtest.WaitForCRDs(cfg, []*apiextensionsv1.CustomResourceDefinition{
 		{
-			Spec: v1.CustomResourceDefinitionSpec{
+			Spec: apiextensionsv1.CustomResourceDefinitionSpec{
 				Group: gatewayv1beta1.GroupVersion.Group,
-				Versions: []v1.CustomResourceDefinitionVersion{
+				Versions: []apiextensionsv1.CustomResourceDefinitionVersion{
 					{
 						Name:   gatewayv1beta1.GroupVersion.Version,
 						Served: true,
 					},
 				},
-				Names: v1.CustomResourceDefinitionNames{
+				Names: apiextensionsv1.CustomResourceDefinitionNames{
 					Plural: "gateways",
 				},
 			},
 		},
 		{
-			Spec: v1.CustomResourceDefinitionSpec{
+			Spec: apiextensionsv1.CustomResourceDefinitionSpec{
 				Group: gatewayv1beta1.GroupVersion.Group,
-				Versions: []v1.CustomResourceDefinitionVersion{
+				Versions: []apiextensionsv1.CustomResourceDefinitionVersion{
 					{
 						Name:   gatewayv1beta1.GroupVersion.Version,
 						Served: true,
 					},
 				},
-				Names: v1.CustomResourceDefinitionNames{
+				Names: apiextensionsv1.CustomResourceDefinitionNames{
 					Plural: "httproutes",
 				},
 			},
 		},
 		{
-			Spec: v1.CustomResourceDefinitionSpec{
+			Spec: apiextensionsv1.CustomResourceDefinitionSpec{
 				Group: gatewayv1beta1.GroupVersion.Group,
-				Versions: []v1.CustomResourceDefinitionVersion{
+				Versions: []apiextensionsv1.CustomResourceDefinitionVersion{
 					{
 						Name:   gatewayv1beta1.GroupVersion.Version,
 						Served: true,
 					},
 				},
-				Names: v1.CustomResourceDefinitionNames{
+				Names: apiextensionsv1.CustomResourceDefinitionNames{
 					Plural: "referencegrants",
 				},
 			},

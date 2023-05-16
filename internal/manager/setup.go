@@ -14,7 +14,7 @@ import (
 	"github.com/kong/deck/cprint"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/types"
+	k8stypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
@@ -225,7 +225,7 @@ func buildDataplaneAddressFinder(mgrc client.Client, publishStatusAddress []stri
 	return nil, errors.New("no publish status address or publish service were provided")
 }
 
-func generateAddressFinderGetter(mgrc client.Client, publishServiceNn types.NamespacedName) func(context.Context) ([]string, error) {
+func generateAddressFinderGetter(mgrc client.Client, publishServiceNn k8stypes.NamespacedName) func(context.Context) ([]string, error) {
 	return func(ctx context.Context) ([]string, error) {
 		svc := new(corev1.Service)
 		if err := mgrc.Get(ctx, publishServiceNn, svc); err != nil {
@@ -288,7 +288,7 @@ func (c *Config) adminAPIClients(ctx context.Context, logger logr.Logger) ([]*ad
 }
 
 type NoAvailableEndpointsError struct {
-	serviceNN types.NamespacedName
+	serviceNN k8stypes.NamespacedName
 }
 
 func (e NoAvailableEndpointsError) Error() string {

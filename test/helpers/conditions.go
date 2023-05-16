@@ -7,7 +7,7 @@ import (
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
+	k8stypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/net"
 	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -25,7 +25,7 @@ import (
 // used with assert.Eventually or require.Eventually in order to check - via the
 // provided client - that the HTTPRoute with the NamespacedName as provided in
 // the arguments, does indeed contain the provied conditions in the status.
-func HTTPRouteEventuallyContainsConditions(ctx context.Context, t *testing.T, client ctrlclient.Client, nn types.NamespacedName, conds ...metav1.Condition) func() bool {
+func HTTPRouteEventuallyContainsConditions(ctx context.Context, t *testing.T, client ctrlclient.Client, nn k8stypes.NamespacedName, conds ...metav1.Condition) func() bool {
 	return func() bool {
 		t.Helper()
 
@@ -65,7 +65,7 @@ func HTTPRouteEventuallyContainsConditions(ctx context.Context, t *testing.T, cl
 	}
 }
 
-func HTTPRouteEventuallyNotContainsConditions(ctx context.Context, t *testing.T, client ctrlclient.Client, nn types.NamespacedName, conds ...metav1.Condition) func() bool {
+func HTTPRouteEventuallyNotContainsConditions(ctx context.Context, t *testing.T, client ctrlclient.Client, nn k8stypes.NamespacedName, conds ...metav1.Condition) func() bool {
 	return func() bool {
 		t.Helper()
 

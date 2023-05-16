@@ -11,7 +11,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apimachinery/pkg/types"
+	k8stypes "k8s.io/apimachinery/pkg/types"
 	knativev1alpha1 "knative.dev/networking/pkg/apis/networking/v1alpha1"
 	knativeApis "knative.dev/pkg/apis"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -105,7 +105,7 @@ func (r *Knativev1alpha1IngressReconciler) listClassless(_ client.Object) []reco
 	for i, resource := range resourceList.Items {
 		if ctrlutils.IsIngressClassEmpty(&resourceList.Items[i]) {
 			recs = append(recs, reconcile.Request{
-				NamespacedName: types.NamespacedName{
+				NamespacedName: k8stypes.NamespacedName{
 					Namespace: resource.Namespace,
 					Name:      resource.Name,
 				},
@@ -162,7 +162,7 @@ func (r *Knativev1alpha1IngressReconciler) Reconcile(ctx context.Context, req ct
 
 	class := new(netv1.IngressClass)
 	if !r.DisableIngressClassLookups {
-		if err := r.Get(ctx, types.NamespacedName{Name: r.IngressClassName}, class); err != nil {
+		if err := r.Get(ctx, k8stypes.NamespacedName{Name: r.IngressClassName}, class); err != nil {
 			// we log this without taking action to support legacy configurations that only set ingressClassName or
 			// used the class annotation and did not create a corresponding IngressClass. We only need this to determine
 			// if the IngressClass is default or to configure default settings, and can assume no/no additional defaults
@@ -177,13 +177,13 @@ func (r *Knativev1alpha1IngressReconciler) Reconcile(ctx context.Context, req ct
 	}
 
 	// update reference records for secrets referred by the ingress
-	referredSecretNames := make(map[types.NamespacedName]struct{}, len(obj.Spec.TLS))
+	referredSecretNames := make(map[k8stypes.NamespacedName]struct{}, len(obj.Spec.TLS))
 	for _, tls := range obj.Spec.TLS {
 		secretNamespace := tls.SecretNamespace
 		if tls.SecretNamespace != "" {
 			secretNamespace = tls.SecretNamespace
 		}
-		nsName := types.NamespacedName{
+		nsName := k8stypes.NamespacedName{
 			Namespace: secretNamespace,
 			Name:      tls.SecretName,
 		}

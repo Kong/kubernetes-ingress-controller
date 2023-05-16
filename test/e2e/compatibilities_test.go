@@ -13,7 +13,7 @@ import (
 	"github.com/kong/kubernetes-testing-framework/pkg/environments"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
+	k8stypes "k8s.io/apimachinery/pkg/types"
 )
 
 // TestKongRouterCompatibility verifies that KIC behaves consistently with Kong routers
@@ -46,7 +46,7 @@ func setGatewayRouterFlavor(
 	ctx context.Context,
 	t *testing.T,
 	cluster clusters.Cluster,
-	proxyDeploymentNN types.NamespacedName,
+	proxyDeploymentNN k8stypes.NamespacedName,
 	flavor string,
 ) {
 	// Since we cannot replace env vars in kustomize, here we update the deployment to set KONG_ROUTER_FLAVOR to traditional_compatible.
@@ -69,7 +69,7 @@ func ensureGatewayDeployedWithRouterFlavor(
 	ctx context.Context,
 	t *testing.T,
 	env environments.Environment,
-	proxyDeploymentNN types.NamespacedName,
+	proxyDeploymentNN k8stypes.NamespacedName,
 	expectedFlavor string,
 ) {
 	labelsForDeployment := metav1.ListOptions{

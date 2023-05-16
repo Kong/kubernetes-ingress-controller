@@ -38,7 +38,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
-	"k8s.io/apimachinery/pkg/types"
+	k8stypes "k8s.io/apimachinery/pkg/types"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
@@ -265,8 +265,8 @@ func deployKong(ctx context.Context, t *testing.T, env environments.Environment,
 
 // Deployments represent the deployments that are deployed by the all-in-one manifests.
 type Deployments struct {
-	ProxyNN      types.NamespacedName
-	ControllerNN types.NamespacedName
+	ProxyNN      k8stypes.NamespacedName
+	ControllerNN k8stypes.NamespacedName
 }
 
 // GetProxy gets the proxy deployment from the cluster.
@@ -290,11 +290,11 @@ func (d Deployments) GetController(ctx context.Context, t *testing.T, env enviro
 func getManifestDeployments(manifestPath string) Deployments {
 	proxyDeploymentName := getProxyDeploymentName(manifestPath)
 	return Deployments{
-		ProxyNN: types.NamespacedName{
+		ProxyNN: k8stypes.NamespacedName{
 			Namespace: namespace,
 			Name:      proxyDeploymentName,
 		},
-		ControllerNN: types.NamespacedName{
+		ControllerNN: k8stypes.NamespacedName{
 			Namespace: namespace,
 			Name:      controllerDeploymentName,
 		},
@@ -755,7 +755,7 @@ func listPodsByLabels(
 }
 
 // scaleDeployment scales the deployment to the given number of replicas and waits for the replicas to be ready.
-func scaleDeployment(ctx context.Context, t *testing.T, env environments.Environment, deployment types.NamespacedName, replicas int32) {
+func scaleDeployment(ctx context.Context, t *testing.T, env environments.Environment, deployment k8stypes.NamespacedName, replicas int32) {
 	t.Helper()
 
 	scale := &autoscalingv1.Scale{

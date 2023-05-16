@@ -6,7 +6,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
+	k8stypes "k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane"
@@ -23,7 +23,7 @@ const (
 func UpdateReferencesToSecret(
 	ctx context.Context,
 	c client.Client, indexers CacheIndexers, dataplaneClient *dataplane.KongClient,
-	referrer client.Object, referencedSecretNameMap map[types.NamespacedName]struct{},
+	referrer client.Object, referencedSecretNameMap map[k8stypes.NamespacedName]struct{},
 ) error {
 	for nsName := range referencedSecretNameMap {
 		secret := &corev1.Secret{
@@ -61,7 +61,7 @@ func UpdateReferencesToSecret(
 func removeOutdatedReferencesToSecret(
 	ctx context.Context,
 	indexers CacheIndexers, c client.Client, dataplaneClient *dataplane.KongClient,
-	referrer client.Object, referredSecretNameMap map[types.NamespacedName]struct{},
+	referrer client.Object, referredSecretNameMap map[k8stypes.NamespacedName]struct{},
 ) error {
 	referents, err := indexers.ListReferredObjects(referrer)
 	if err != nil {
@@ -71,7 +71,7 @@ func removeOutdatedReferencesToSecret(
 		gvk := obj.GetObjectKind().GroupVersionKind()
 		// delete the reference record if the secret is not referred by the service.
 		if gvk.Group == corev1.GroupName && gvk.Version == VersionV1 && gvk.Kind == KindSecret {
-			namespacedName := types.NamespacedName{
+			namespacedName := k8stypes.NamespacedName{
 				Namespace: obj.GetNamespace(),
 				Name:      obj.GetName(),
 			}

@@ -16,7 +16,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apimachinery/pkg/types"
+	k8stypes "k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -60,8 +60,8 @@ type GatewayReconciler struct { //nolint:revive
 
 	ReferenceIndexers ctrlref.CacheIndexers
 
-	PublishServiceRef    types.NamespacedName
-	PublishServiceUDPRef mo.Option[types.NamespacedName]
+	PublishServiceRef    k8stypes.NamespacedName
+	PublishServiceUDPRef mo.Option[k8stypes.NamespacedName]
 
 	// If enableReferenceGrant is true, controller will watch ReferenceGrants
 	// to invalidate or allow cross-namespace TLSConfigs in gateways.
@@ -227,7 +227,7 @@ func (r *GatewayReconciler) listReferenceGrantsForGateway(obj client.Object) []r
 				from.Kind == gatewayv1alpha2.Kind("Gateway") &&
 				from.Group == gatewayv1alpha2.Group("gateway.networking.k8s.io") {
 				recs = append(recs, reconcile.Request{
-					NamespacedName: types.NamespacedName{
+					NamespacedName: k8stypes.NamespacedName{
 						Namespace: gateway.Namespace,
 						Name:      gateway.Name,
 					},
@@ -250,13 +250,13 @@ func (r *GatewayReconciler) listGatewaysForService(svc client.Object) (recs []re
 	}
 	for _, gateway := range gateways.Items {
 		gatewayClass := &gatewayv1beta1.GatewayClass{}
-		if err := r.Client.Get(context.Background(), types.NamespacedName{Name: string(gateway.Spec.GatewayClassName)}, gatewayClass); err != nil {
+		if err := r.Client.Get(context.Background(), k8stypes.NamespacedName{Name: string(gateway.Spec.GatewayClassName)}, gatewayClass); err != nil {
 			r.Log.Error(err, "failed to retrieve gateway class in watch predicates", "gatewayclass", gateway.Spec.GatewayClassName)
 			return
 		}
 		if isGatewayClassControlledAndUnmanaged(gatewayClass) {
 			recs = append(recs, reconcile.Request{
-				NamespacedName: types.NamespacedName{
+				NamespacedName: k8stypes.NamespacedName{
 					Namespace: gateway.Namespace,
 					Name:      gateway.Name,
 				},
@@ -579,7 +579,7 @@ func (r *GatewayReconciler) determineServiceForGateway(ctx context.Context, ref 
 	// provided to the controller manager via flags when operating on unmanaged gateways. This constraint may
 	// be loosened in later iterations if there is need.
 
-	var name types.NamespacedName
+	var name k8stypes.NamespacedName
 	switch {
 	case ref == r.PublishServiceRef.String():
 		name = r.PublishServiceRef

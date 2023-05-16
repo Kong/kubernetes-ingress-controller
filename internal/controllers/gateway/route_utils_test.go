@@ -13,7 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
+	k8stypes "k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
@@ -1206,7 +1206,7 @@ func Test_getSupportedGatewayForRoute(t *testing.T) {
 }
 
 func Test_ensureParentsProgrammedCondition(t *testing.T) {
-	createGateway := func(nn types.NamespacedName) *Gateway {
+	createGateway := func(nn k8stypes.NamespacedName) *Gateway {
 		return &Gateway{
 			TypeMeta: metav1.TypeMeta{
 				APIVersion: gatewayv1beta1.GroupVersion.String(),
@@ -1215,7 +1215,7 @@ func Test_ensureParentsProgrammedCondition(t *testing.T) {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      nn.Name,
 				Namespace: nn.Namespace,
-				UID:       types.UID(uuid.NewString()),
+				UID:       k8stypes.UID(uuid.NewString()),
 			},
 			Spec: gatewayv1beta1.GatewaySpec{
 				GatewayClassName: "test-gatewayclass",
@@ -1249,12 +1249,12 @@ func Test_ensureParentsProgrammedCondition(t *testing.T) {
 	}
 
 	t.Run("HTTPRoute", func(t *testing.T) {
-		gatewayNN1 := types.NamespacedName{
+		gatewayNN1 := k8stypes.NamespacedName{
 			Namespace: "test-namespace",
 			Name:      "test-gateway",
 		}
 		gateway1 := createGateway(gatewayNN1)
-		gatewayNN2 := types.NamespacedName{
+		gatewayNN2 := k8stypes.NamespacedName{
 			Namespace: "test-namespace",
 			Name:      "test-gateway-2",
 		}

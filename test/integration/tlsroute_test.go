@@ -21,7 +21,7 @@ import (
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
+	k8stypes "k8s.io/apimachinery/pkg/types"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
@@ -119,7 +119,7 @@ func TestTLSRouteEssentials(t *testing.T) {
 	secrets := []*corev1.Secret{
 		{
 			ObjectMeta: metav1.ObjectMeta{
-				UID:       types.UID("7428fb98-180b-4702-a91f-61351a33c6e8"),
+				UID:       k8stypes.UID("7428fb98-180b-4702-a91f-61351a33c6e8"),
 				Name:      tlsSecretName,
 				Namespace: ns.Name,
 			},
@@ -492,7 +492,7 @@ func TestTLSRouteReferenceGrant(t *testing.T) {
 	secrets := []*corev1.Secret{
 		{
 			ObjectMeta: metav1.ObjectMeta{
-				UID:       types.UID("7428fb98-180b-4702-a91f-61351a33c6e8"),
+				UID:       k8stypes.UID("7428fb98-180b-4702-a91f-61351a33c6e8"),
 				Name:      tlsSecretName,
 				Namespace: ns.Name,
 			},
@@ -503,7 +503,7 @@ func TestTLSRouteReferenceGrant(t *testing.T) {
 		},
 		{
 			ObjectMeta: metav1.ObjectMeta{
-				UID:  types.UID("7428fb98-180b-4702-a91f-61351a33c6e9"),
+				UID:  k8stypes.UID("7428fb98-180b-4702-a91f-61351a33c6e9"),
 				Name: "secret2",
 			},
 			Data: map[string][]byte{

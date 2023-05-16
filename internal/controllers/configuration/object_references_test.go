@@ -7,7 +7,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	netv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
+	k8stypes "k8s.io/apimachinery/pkg/types"
 
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
 	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1beta1"
@@ -18,7 +18,7 @@ func TestListCoreV1ServiceReferredSecrets(t *testing.T) {
 		name          string
 		service       *corev1.Service
 		secretNum     int
-		refSecretName types.NamespacedName
+		refSecretName k8stypes.NamespacedName
 	}{
 		{
 			name: "service_has_no_annotations",
@@ -55,7 +55,7 @@ func TestListCoreV1ServiceReferredSecrets(t *testing.T) {
 				},
 			},
 			secretNum:     1,
-			refSecretName: types.NamespacedName{Namespace: "ns1", Name: "secret1"},
+			refSecretName: k8stypes.NamespacedName{Namespace: "ns1", Name: "secret1"},
 		},
 	}
 
@@ -76,7 +76,7 @@ func TestListIngressReferredSecrets(t *testing.T) {
 		name          string
 		ingress       *netv1.Ingress
 		secretNum     int
-		refSecretName types.NamespacedName
+		refSecretName k8stypes.NamespacedName
 	}{
 		{
 			name: "ingress_has_no_tls_should_refer_no_secrets",
@@ -102,7 +102,7 @@ func TestListIngressReferredSecrets(t *testing.T) {
 				},
 			},
 			secretNum:     1,
-			refSecretName: types.NamespacedName{Namespace: "ns", Name: "secret1"},
+			refSecretName: k8stypes.NamespacedName{Namespace: "ns", Name: "secret1"},
 		},
 		{
 			name: "ingress_has_tls_without_secretName_should_refer_no_secrets",
@@ -138,7 +138,7 @@ func TestListKongPluginReferredSecrets(t *testing.T) {
 		name          string
 		plugin        *kongv1.KongPlugin
 		secretNum     int
-		refSecretName types.NamespacedName
+		refSecretName k8stypes.NamespacedName
 	}{
 		{
 			name: "kong_plugin_refer_no_secrets",
@@ -165,7 +165,7 @@ func TestListKongPluginReferredSecrets(t *testing.T) {
 				},
 			},
 			secretNum: 1,
-			refSecretName: types.NamespacedName{
+			refSecretName: k8stypes.NamespacedName{
 				Namespace: "ns",
 				Name:      "secret1",
 			},
@@ -188,7 +188,7 @@ func TestListKongClusterPluginReferredSecrets(t *testing.T) {
 		name          string
 		plugin        *kongv1.KongClusterPlugin
 		secretNum     int
-		refSecretName types.NamespacedName
+		refSecretName k8stypes.NamespacedName
 	}{
 		{
 			name: "kong_cluster_plugin_refer_no_secrets",
@@ -214,7 +214,7 @@ func TestListKongClusterPluginReferredSecrets(t *testing.T) {
 				},
 			},
 			secretNum: 1,
-			refSecretName: types.NamespacedName{
+			refSecretName: k8stypes.NamespacedName{
 				Namespace: "ns",
 				Name:      "secret1",
 			},
@@ -237,7 +237,7 @@ func TestListKongConsumerReferredSecrets(t *testing.T) {
 		name          string
 		consumer      *kongv1.KongConsumer
 		secretNum     int
-		refSecretName types.NamespacedName
+		refSecretName k8stypes.NamespacedName
 	}{
 		{
 			name: "consumer_refer_no_secrets",
@@ -259,7 +259,7 @@ func TestListKongConsumerReferredSecrets(t *testing.T) {
 				Credentials: []string{"secret1", "secret2"},
 			},
 			secretNum: 2,
-			refSecretName: types.NamespacedName{
+			refSecretName: k8stypes.NamespacedName{
 				Namespace: "ns",
 				Name:      "secret1",
 			},
@@ -282,7 +282,7 @@ func TestListTCPIngressReferredSecrets(t *testing.T) {
 		name          string
 		tcpIngress    *kongv1beta1.TCPIngress
 		secretNum     int
-		refSecretName types.NamespacedName
+		refSecretName k8stypes.NamespacedName
 	}{
 		{
 			name: "tcp_ingress_refer_no_secrets",
@@ -309,7 +309,7 @@ func TestListTCPIngressReferredSecrets(t *testing.T) {
 				},
 			},
 			secretNum: 1,
-			refSecretName: types.NamespacedName{
+			refSecretName: k8stypes.NamespacedName{
 				Namespace: "ns",
 				Name:      "secret1",
 			},

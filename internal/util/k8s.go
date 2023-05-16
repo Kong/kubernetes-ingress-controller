@@ -26,7 +26,7 @@ import (
 	"github.com/samber/lo"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
+	k8stypes "k8s.io/apimachinery/pkg/types"
 	clientset "k8s.io/client-go/kubernetes"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
@@ -80,13 +80,13 @@ func GetNodeIPOrName(ctx context.Context, kubeClient clientset.Interface, name s
 }
 
 // GetPodNN returns NamespacedName of pod that this process is running in.
-func GetPodNN() (types.NamespacedName, error) {
-	nn := types.NamespacedName{
+func GetPodNN() (k8stypes.NamespacedName, error) {
+	nn := k8stypes.NamespacedName{
 		Namespace: os.Getenv("POD_NAMESPACE"),
 		Name:      os.Getenv("POD_NAME"),
 	}
 	if nn.Name == "" || nn.Namespace == "" {
-		return types.NamespacedName{},
+		return k8stypes.NamespacedName{},
 			fmt.Errorf("unable to get POD information (missing POD_NAME or POD_NAMESPACE environment variable")
 	}
 

@@ -13,7 +13,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/exp/slices"
-	"k8s.io/apimachinery/pkg/types"
+	k8stypes "k8s.io/apimachinery/pkg/types"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/adminapi"
 )
@@ -447,6 +447,6 @@ func TestAdminAPIClientsManager_ConcurrentNotify(t *testing.T) {
 func testDiscoveredAdminAPI(address string) adminapi.DiscoveredAdminAPI {
 	return adminapi.DiscoveredAdminAPI{
 		Address: address,
-		PodRef:  types.NamespacedName{Name: "pod-1", Namespace: "ns"},
+		PodRef:  k8stypes.NamespacedName{Name: "pod-1", Namespace: "ns"},
 	}
 }

@@ -21,7 +21,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	netv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
+	k8stypes "k8s.io/apimachinery/pkg/types"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v2/test"
@@ -244,7 +244,7 @@ func TestHTTPSIngress(t *testing.T) {
 	secrets := []*corev1.Secret{
 		{
 			ObjectMeta: metav1.ObjectMeta{
-				UID:       types.UID("7428fb98-180b-4702-a91f-61351a33c6e4"),
+				UID:       k8stypes.UID("7428fb98-180b-4702-a91f-61351a33c6e4"),
 				Name:      "secret1",
 				Namespace: ns.Name,
 			},
@@ -255,7 +255,7 @@ func TestHTTPSIngress(t *testing.T) {
 		},
 		{
 			ObjectMeta: metav1.ObjectMeta{
-				UID:       types.UID("7428fb98-180b-4702-a91f-61351a33c6e5"),
+				UID:       k8stypes.UID("7428fb98-180b-4702-a91f-61351a33c6e5"),
 				Name:      "secret2",
 				Namespace: ns.Name,
 			},

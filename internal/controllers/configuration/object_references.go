@@ -25,7 +25,7 @@ func updateReferredObjects(
 	var referredSecretList []types.NamespacedName
 	switch obj := obj.(type) {
 	// functions update***ReferredSecrets first list the secrets referred by object,
-	// then call UpdateReferencesToSecret to store referrence records between the object and referred secrets,
+	// then call UpdateReferencesToSecret to store reference records between the object and referred secrets,
 	// and also to remove the outdated reference records in cache where the secret is not referred by the obj specification anymore.
 	case *corev1.Service:
 		referredSecretList = listCoreV1ServiceReferredSecrets(obj)

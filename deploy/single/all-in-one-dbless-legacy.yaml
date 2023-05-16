@@ -1214,14 +1214,6 @@ rules:
 - apiGroups:
   - ""
   resources:
-  - secrets/status
-  verbs:
-  - get
-  - patch
-  - update
-- apiGroups:
-  - ""
-  resources:
   - services
   verbs:
   - get

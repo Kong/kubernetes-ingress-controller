@@ -30,7 +30,7 @@ const (
 	CACertLabelKey = "konghq.com/ca-cert"
 )
 
-// CoreV1SecretReconciler reconciles Secret resources
+// CoreV1SecretReconciler reconciles Secret resources.
 type CoreV1SecretReconciler struct {
 	client.Client
 
@@ -91,9 +91,8 @@ func (r *CoreV1SecretReconciler) shouldReconcileSecret(obj client.Object) bool {
 }
 
 //+kubebuilder:rbac:groups="",resources=secrets,verbs=list;watch
-//+kubebuilder:rbac:groups="",resources=secrets/status,verbs=get;update;patch
 
-// Reconcile processes the watched objects
+// Reconcile processes the watched objects.
 func (r *CoreV1SecretReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := r.Log.WithValues("CoreV1Secret", req.NamespacedName)
 

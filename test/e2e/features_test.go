@@ -305,23 +305,31 @@ func TestDeployAllInOneDBLESSGateway(t *testing.T) {
 		LabelSelector: "app=" + controllerDeploymentNN.Name,
 	}
 
-	t.Log("verifying that KIC disabled controllers for Gateway API and printed proper log")
+	t.Log("updating controller deployment to enable alpha Gateway feature gate")
+	controllerDeployment := deployments.GetController(ctx, t, env)
+	for i, container := range controllerDeployment.Spec.Template.Spec.Containers {
+		if container.Name == controllerContainerName {
+			controllerDeployment.Spec.Template.Spec.Containers[i].Env = append(controllerDeployment.Spec.Template.Spec.Containers[i].Env,
+				corev1.EnvVar{Name: "CONTROLLER_FEATURE_GATES", Value: consts.DefaultFeatureGates})
+		}
+	}
+
+	_, err := env.Cluster().Client().AppsV1().Deployments(namespace).Update(ctx, controllerDeployment, metav1.UpdateOptions{})
+	require.NoError(t, err)
+
+	t.Log("verifying that KIC waits for Gateway API CRDs and prints proper log")
 	require.Eventually(t, func() bool {
 		pods, err := env.Cluster().Client().CoreV1().Pods(controllerDeploymentNN.Namespace).List(ctx, controllerDeploymentListOptions)
-		gatewayGVR := schema.GroupVersionResource{
-			Group:    gatewayv1beta1.GroupVersion.Group,
-			Version:  gatewayv1beta1.GroupVersion.Version,
-			Resource: "gateways",
-		}
-		msg := fmt.Sprintf("Disabling controller for Group=%s, Resource=%s due to missing CRD", gatewayGVR.GroupVersion(), gatewayGVR.Resource)
 		require.NoError(t, err)
+
+		expectedMsg := "Required CustomResourceDefinitions are not installed, setting up a watch for them in case they are installed afterward"
 		for _, pod := range pods.Items {
 			logs, err := getPodLogs(ctx, t, env, pod.Namespace, pod.Name)
 			if err != nil {
 				t.Logf("failed to get logs of pods %s/%s, error %v", pod.Namespace, pod.Name, err)
 				return false
 			}
-			if !strings.Contains(logs, msg) {
+			if !strings.Contains(logs, expectedMsg) {
 				return false
 			}
 		}
@@ -330,14 +338,6 @@ func TestDeployAllInOneDBLESSGateway(t *testing.T) {
 
 	t.Logf("deploying Gateway APIs CRDs in standard channel from %s", consts.GatewayStandardCRDsKustomizeURL)
 	require.NoError(t, clusters.KustomizeDeployForCluster(ctx, env.Cluster(), consts.GatewayStandardCRDsKustomizeURL))
-
-	t.Logf("deleting KIC pods to restart them after Gateway APIs CRDs installed")
-	pods, err := env.Cluster().Client().CoreV1().Pods(controllerDeploymentNN.Namespace).List(ctx, controllerDeploymentListOptions)
-	require.NoError(t, err)
-	for _, pod := range pods.Items {
-		err = env.Cluster().Client().CoreV1().Pods(controllerDeploymentNN.Namespace).Delete(ctx, pod.Name, metav1.DeleteOptions{})
-		require.NoError(t, err)
-	}
 
 	t.Log("verifying controller updates associated Gateway resoures")
 	gw := deployGateway(ctx, t, env)
@@ -410,17 +410,6 @@ func TestDeployAllInOneDBLESSGateway(t *testing.T) {
 
 	t.Logf("deploying Gateway APIs CRDs in experimental channel from %s", consts.GatewayExperimentalCRDsKustomizeURL)
 	require.NoError(t, clusters.KustomizeDeployForCluster(ctx, env.Cluster(), consts.GatewayExperimentalCRDsKustomizeURL))
-
-	t.Log("updating controller deployment to enable Gateway feature gate")
-	controllerDeployment := deployments.GetController(ctx, t, env)
-	for i, container := range controllerDeployment.Spec.Template.Spec.Containers {
-		if container.Name == controllerContainerName {
-			controllerDeployment.Spec.Template.Spec.Containers[i].Env = append(controllerDeployment.Spec.Template.Spec.Containers[i].Env,
-				corev1.EnvVar{Name: "CONTROLLER_FEATURE_GATES", Value: consts.DefaultFeatureGates})
-		}
-	}
-	_, err = env.Cluster().Client().AppsV1().Deployments(namespace).Update(ctx, controllerDeployment, metav1.UpdateOptions{})
-	require.NoError(t, err)
 
 	t.Log("updating proxy deployment to enable TCP listener")
 	proxyDeployment := deployments.GetProxy(ctx, t, env)

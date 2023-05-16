@@ -52,282 +52,236 @@ func TestHTTPRouteReconcilerProperlyReactsToReferenceGrant(t *testing.T) {
 		require.NoError(t, err)
 	}
 
-	// In tests below we use a deferred cancel to stop the manager and not wait
-	// for its timeout.
+	reconciler := &gateway.HTTPRouteReconciler{
+		Client:          client,
+		DataplaneClient: gateway.DataplaneMock{},
+	}
 
-	testcases := []struct {
-		name       string
-		reconciler *gateway.HTTPRouteReconciler
-	}{
-		{
-			name: "with ReferenceGrant enabled",
-			reconciler: &gateway.HTTPRouteReconciler{
-				Client:               client,
-				EnableReferenceGrant: true,
-			},
+	// We use a deferred cancel to stop the manager and not wait for its timeout.
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	ns := envtest.CreateNamespace(ctx, t, client)
+	nsRoute := envtest.CreateNamespace(ctx, t, client)
+
+	svc := corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: ns.Name,
+			Name:      "backend-1",
 		},
-		{
-			name: "with ReferenceGrant disabled",
-			reconciler: &gateway.HTTPRouteReconciler{
-				Client:               client,
-				EnableReferenceGrant: false,
+		Spec: corev1.ServiceSpec{
+			Ports: []corev1.ServicePort{
+				{
+					Name:       "http",
+					Protocol:   corev1.ProtocolTCP,
+					Port:       80,
+					TargetPort: intstr.FromInt(80),
+				},
 			},
 		},
 	}
+	require.NoError(t, client.Create(ctx, &svc))
+	envtest.StartReconciler(ctx, t, client.Scheme(), cfg, reconciler, nil)
 
-	for _, tc := range testcases {
-		tc := tc
-		t.Run(tc.name, func(t *testing.T) {
-			ctx, cancel := context.WithCancel(context.Background())
-			defer cancel()
+	gwc := gatewayv1beta1.GatewayClass{
+		Spec: gatewayv1beta1.GatewayClassSpec{
+			ControllerName: gateway.GetControllerName(),
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name: uuid.NewString(),
+			Annotations: map[string]string{
+				"konghq.com/gatewayclass-unmanaged": "placeholder",
+			},
+		},
+	}
+	require.NoError(t, client.Create(ctx, &gwc))
+	t.Cleanup(func() { _ = client.Delete(ctx, &gwc) })
 
-			ns := envtest.CreateNamespace(ctx, t, client)
-			nsRoute := envtest.CreateNamespace(ctx, t, client)
-
-			svc := corev1.Service{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: ns.Name,
-					Name:      "backend-1",
-				},
-				Spec: corev1.ServiceSpec{
-					Ports: []corev1.ServicePort{
-						{
-							Name:       "http",
-							Protocol:   corev1.ProtocolTCP,
-							Port:       80,
-							TargetPort: intstr.FromInt(80),
+	gw := gatewayv1beta1.Gateway{
+		Spec: gatewayv1beta1.GatewaySpec{
+			GatewayClassName: gatewayv1beta1.ObjectName(gwc.Name),
+			Listeners: []gatewayv1beta1.Listener{
+				{
+					Name:     gatewayv1beta1.SectionName("http"),
+					Port:     gatewayv1beta1.PortNumber(80),
+					Protocol: gatewayv1beta1.HTTPProtocolType,
+					AllowedRoutes: &gatewayv1beta1.AllowedRoutes{
+						Namespaces: &gatewayv1beta1.RouteNamespaces{
+							From: lo.ToPtr(gatewayv1beta1.NamespacesFromAll),
 						},
 					},
 				},
-			}
-			require.NoError(t, client.Create(ctx, &svc))
+			},
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: ns.Name,
+			Name:      uuid.NewString(),
+		},
+	}
+	require.NoError(t, client.Create(ctx, &gw))
 
-			tc.reconciler.DataplaneClient = gateway.DataplaneMock{}
-			envtest.StartReconciler(ctx, t, client.Scheme(), cfg, tc.reconciler, nil)
-
-			gwc := gatewayv1beta1.GatewayClass{
-				Spec: gatewayv1beta1.GatewayClassSpec{
-					ControllerName: gateway.GetControllerName(),
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name: uuid.NewString(),
-					Annotations: map[string]string{
-						"konghq.com/gatewayclass-unmanaged": "placeholder",
-					},
-				},
-			}
-			require.NoError(t, client.Create(ctx, &gwc))
-			t.Cleanup(func() { _ = client.Delete(ctx, &gwc) })
-
-			gw := gatewayv1beta1.Gateway{
-				Spec: gatewayv1beta1.GatewaySpec{
-					GatewayClassName: gatewayv1beta1.ObjectName(gwc.Name),
-					Listeners: []gatewayv1beta1.Listener{
-						{
-							Name:     gatewayv1beta1.SectionName("http"),
-							Port:     gatewayv1beta1.PortNumber(80),
-							Protocol: gatewayv1beta1.HTTPProtocolType,
-							AllowedRoutes: &gatewayv1beta1.AllowedRoutes{
-								Namespaces: &gatewayv1beta1.RouteNamespaces{
-									From: lo.ToPtr(gatewayv1beta1.NamespacesFromAll),
-								},
-							},
-						},
-					},
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: ns.Name,
-					Name:      uuid.NewString(),
-				},
-			}
-			require.NoError(t, client.Create(ctx, &gw))
-
-			gwOld := gw.DeepCopy()
-			gw.Status = gatewayv1beta1.GatewayStatus{
-				Addresses: []gatewayv1beta1.GatewayAddress{
-					{
-						Type:  lo.ToPtr(gatewayv1beta1.IPAddressType),
-						Value: "10.0.0.1",
-					},
-				},
+	gwOld := gw.DeepCopy()
+	gw.Status = gatewayv1beta1.GatewayStatus{
+		Addresses: []gatewayv1beta1.GatewayAddress{
+			{
+				Type:  lo.ToPtr(gatewayv1beta1.IPAddressType),
+				Value: "10.0.0.1",
+			},
+		},
+		Conditions: []metav1.Condition{
+			{
+				Type:               "Ready",
+				Status:             metav1.ConditionTrue,
+				Reason:             "Ready",
+				LastTransitionTime: metav1.Now(),
+				ObservedGeneration: gw.Generation,
+			},
+			{
+				Type:               "Accepted",
+				Status:             metav1.ConditionTrue,
+				Reason:             "Accepted",
+				LastTransitionTime: metav1.Now(),
+				ObservedGeneration: gw.Generation,
+			},
+			{
+				Type:               "Programmed",
+				Status:             metav1.ConditionTrue,
+				Reason:             "Programmed",
+				LastTransitionTime: metav1.Now(),
+				ObservedGeneration: gw.Generation,
+			},
+		},
+		Listeners: []gatewayv1beta1.ListenerStatus{
+			{
+				Name: "http",
 				Conditions: []metav1.Condition{
-					{
-						Type:               "Ready",
-						Status:             metav1.ConditionTrue,
-						Reason:             "Ready",
-						LastTransitionTime: metav1.Now(),
-						ObservedGeneration: gw.Generation,
-					},
 					{
 						Type:               "Accepted",
 						Status:             metav1.ConditionTrue,
 						Reason:             "Accepted",
 						LastTransitionTime: metav1.Now(),
-						ObservedGeneration: gw.Generation,
 					},
 					{
-						Type:               "Programmed",
+						Type:               "Ready",
 						Status:             metav1.ConditionTrue,
-						Reason:             "Programmed",
+						Reason:             "Ready",
 						LastTransitionTime: metav1.Now(),
-						ObservedGeneration: gw.Generation,
 					},
 				},
-				Listeners: []gatewayv1beta1.ListenerStatus{
+				SupportedKinds: []gatewayv1beta1.RouteGroupKind{
 					{
-						Name: gatewayv1beta1.SectionName("http"),
-						Conditions: []metav1.Condition{
-							{
-								Type:               "Accepted",
-								Status:             metav1.ConditionTrue,
-								Reason:             "Accepted",
-								LastTransitionTime: metav1.Now(),
-							},
-							{
-								Type:               "Ready",
-								Status:             metav1.ConditionTrue,
-								Reason:             "Ready",
-								LastTransitionTime: metav1.Now(),
-							},
-						},
-						SupportedKinds: []gatewayv1beta1.RouteGroupKind{
-							{
-								Group: lo.ToPtr(gatewayv1beta1.Group(gatewayv1beta1.GroupVersion.Group)),
-								Kind:  "HTTPRoute",
-							},
-						},
+						Group: lo.ToPtr(gatewayv1beta1.Group(gatewayv1beta1.GroupVersion.Group)),
+						Kind:  "HTTPRoute",
 					},
 				},
-			}
-			require.NoError(t, client.Status().Patch(ctx, &gw, ctrlclient.MergeFrom(gwOld)))
+			},
+		},
+	}
+	require.NoError(t, client.Status().Patch(ctx, &gw, ctrlclient.MergeFrom(gwOld)))
 
-			route := gatewayv1beta1.HTTPRoute{
-				TypeMeta: metav1.TypeMeta{
-					Kind:       "HTTPRoute",
-					APIVersion: "v1beta1",
+	route := gatewayv1beta1.HTTPRoute{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "HTTPRoute",
+			APIVersion: "v1beta1",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: nsRoute.Name,
+			Name:      uuid.NewString(),
+		},
+		Spec: gatewayv1beta1.HTTPRouteSpec{
+			CommonRouteSpec: gatewayv1beta1.CommonRouteSpec{
+				ParentRefs: []gatewayv1beta1.ParentReference{{
+					Name:      gatewayv1beta1.ObjectName(gw.Name),
+					Namespace: lo.ToPtr(gatewayv1beta1.Namespace(ns.Name)),
+				}},
+			},
+			Rules: []gatewayv1beta1.HTTPRouteRule{{
+				BackendRefs: builder.NewHTTPBackendRef("backend-1").WithNamespace(ns.Name).ToSlice(),
+			}},
+		},
+	}
+	require.NoError(t, client.Create(ctx, &route))
+
+	nn := types.NamespacedName{
+		Namespace: route.GetNamespace(),
+		Name:      route.GetName(),
+	}
+
+	t.Logf("verifying that HTTPRoute has ResolvedRefs set to Status False and Reason RefNotPermitted")
+	if !assert.Eventually(t,
+		helpers.HTTPRouteEventuallyContainsConditions(ctx, t, client, nn,
+			metav1.Condition{
+				Type:   "ResolvedRefs",
+				Status: "False",
+				Reason: "RefNotPermitted",
+			},
+		),
+		waitDuration, tickDuration,
+	) {
+		t.Fatal(printHTTPRoutesConditions(ctx, client, nn))
+	}
+
+	rg := gatewayv1beta1.ReferenceGrant{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: ns.Name,
+			Name:      uuid.NewString(),
+		},
+		Spec: gatewayv1beta1.ReferenceGrantSpec{
+			From: []gatewayv1beta1.ReferenceGrantFrom{
+				{
+					Group:     gatewayv1beta1.Group(gatewayv1beta1.GroupVersion.Group),
+					Kind:      "HTTPRoute",
+					Namespace: gatewayv1beta1.Namespace(nsRoute.Name),
 				},
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: nsRoute.Name,
-					Name:      uuid.NewString(),
+			},
+			To: []gatewayv1beta1.ReferenceGrantTo{
+				{
+					Group: "",
+					Kind:  "Service",
 				},
-				Spec: gatewayv1beta1.HTTPRouteSpec{
-					CommonRouteSpec: gatewayv1beta1.CommonRouteSpec{
-						ParentRefs: []gatewayv1beta1.ParentReference{{
-							Name:      gatewayv1beta1.ObjectName(gw.Name),
-							Namespace: lo.ToPtr(gatewayv1beta1.Namespace(ns.Name)),
-						}},
-					},
-					Rules: []gatewayv1beta1.HTTPRouteRule{{
-						BackendRefs: builder.NewHTTPBackendRef("backend-1").WithNamespace(ns.Name).ToSlice(),
-					}},
-				},
-			}
-			require.NoError(t, client.Create(ctx, &route))
+			},
+		},
+	}
+	require.NoError(t, client.Create(ctx, &rg))
+	t.Logf("verifying that HTTPRoute gets accepted by HTTPRouteReconciler after relevant ReferenceGrant gets created")
+	if !assert.Eventually(t,
+		helpers.HTTPRouteEventuallyContainsConditions(ctx, t, client, nn,
+			metav1.Condition{
+				Type:   "ResolvedRefs",
+				Status: "True",
+				Reason: "ResolvedRefs",
+			},
+			metav1.Condition{
+				Type:   "Accepted",
+				Status: "True",
+				Reason: "Accepted",
+			},
+			// Programmed condition requires a bit more work with mocks.
+			// It's set only when KubernetesObjectReports are enabled in the underlying
+			// dataplane client and then it relies on what's returned by
+			// dataplane client in KubernetesObjectConfigurationStatus().
+			// This can be done but it's not the main focus of this test.
+			// Related: https://github.com/Kong/kubernetes-ingress-controller/issues/3793
+		),
+		waitDuration, tickDuration,
+	) {
+		t.Fatal(printHTTPRoutesConditions(ctx, client, nn))
+	}
 
-			nn := types.NamespacedName{
-				Namespace: route.GetNamespace(),
-				Name:      route.GetName(),
-			}
+	require.NoError(t, client.Delete(ctx, &rg))
+	t.Logf("verifying that HTTPRoute gets its ResolvedRefs condition to Status False and Reason RefNotPermitted when relevant ReferenceGrant gets deleted")
 
-			t.Logf("verifying that HTTPRoute has ResolvedRefs set to Status False and Reason RefNotPermitted")
-			if !assert.Eventually(t,
-				helpers.HTTPRouteEventuallyContainsConditions(ctx, t, client, nn,
-					metav1.Condition{
-						Type:   "ResolvedRefs",
-						Status: "False",
-						Reason: "RefNotPermitted",
-					},
-				),
-				waitDuration, tickDuration,
-			) {
-				t.Fatal(printHTTPRoutesConditions(ctx, client, nn))
-			}
-
-			rg := gatewayv1beta1.ReferenceGrant{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: ns.Name,
-					Name:      uuid.NewString(),
-				},
-				Spec: gatewayv1beta1.ReferenceGrantSpec{
-					From: []gatewayv1beta1.ReferenceGrantFrom{
-						{
-							Group:     gatewayv1beta1.Group(gatewayv1beta1.GroupVersion.Group),
-							Kind:      "HTTPRoute",
-							Namespace: gatewayv1beta1.Namespace(nsRoute.Name),
-						},
-					},
-					To: []gatewayv1beta1.ReferenceGrantTo{
-						{
-							Group: "",
-							Kind:  "Service",
-						},
-					},
-				},
-			}
-			require.NoError(t, client.Create(ctx, &rg))
-			if tc.reconciler.EnableReferenceGrant {
-				t.Logf("verifying that HTTPRoute gets accepted by HTTPRouteReconciler after relevant ReferenceGrant gets created")
-				if !assert.Eventually(t,
-					helpers.HTTPRouteEventuallyContainsConditions(ctx, t, client, nn,
-						metav1.Condition{
-							Type:   "ResolvedRefs",
-							Status: "True",
-							Reason: "ResolvedRefs",
-						},
-						metav1.Condition{
-							Type:   "Accepted",
-							Status: "True",
-							Reason: "Accepted",
-						},
-						// Programmed condition requires a bit more work with mocks.
-						// It's set only when KubernetesObjectReports are enabled in the underlying
-						// dataplane client and then it relies on what's returned by
-						// dataplane client in KubernetesObjectConfigurationStatus().
-						// This can be done but it's not the main focus of this test.
-						// Related: https://github.com/Kong/kubernetes-ingress-controller/issues/3793
-					),
-					waitDuration, tickDuration,
-				) {
-					t.Fatal(printHTTPRoutesConditions(ctx, client, nn))
-				}
-			} else {
-				t.Logf("verifying that HTTPRoute's status doesn't change after relevant ReferenceGrant gets created")
-
-				if !assert.Eventually(t,
-					helpers.HTTPRouteEventuallyNotContainsConditions(ctx, t, client, nn,
-						metav1.Condition{
-							Type:   "ResolvedRefs",
-							Status: "True",
-							Reason: "ResolvedRefs",
-						},
-						metav1.Condition{
-							Type:   "Accepted",
-							Status: "True",
-							Reason: "Accepted",
-						},
-					),
-					waitDuration, tickDuration,
-				) {
-					t.Fatal(printHTTPRoutesConditions(ctx, client, nn))
-				}
-			}
-
-			require.NoError(t, client.Delete(ctx, &rg))
-			t.Logf("verifying that HTTPRoute gets its ResolvedRefs condition to Status False and Reason RefNotPermitted when relevant ReferenceGrant gets deleted")
-
-			if !assert.Eventually(t,
-				helpers.HTTPRouteEventuallyContainsConditions(ctx, t, client, nn,
-					metav1.Condition{
-						Type:   "ResolvedRefs",
-						Status: "False",
-						Reason: "RefNotPermitted",
-					},
-				),
-				waitDuration, tickDuration,
-			) {
-				t.Fatal(printHTTPRoutesConditions(ctx, client, nn))
-			}
-		})
+	if !assert.Eventually(t,
+		helpers.HTTPRouteEventuallyContainsConditions(ctx, t, client, nn,
+			metav1.Condition{
+				Type:   "ResolvedRefs",
+				Status: "False",
+				Reason: "RefNotPermitted",
+			},
+		),
+		waitDuration, tickDuration,
+	) {
+		t.Fatal(printHTTPRoutesConditions(ctx, client, nn))
 	}
 }
 

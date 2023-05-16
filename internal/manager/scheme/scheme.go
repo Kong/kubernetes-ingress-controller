@@ -1,6 +1,7 @@
 package scheme
 
 import (
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	knativev1alpha1 "knative.dev/networking/pkg/apis/networking/v1alpha1"
@@ -17,6 +18,10 @@ import (
 // those that were enabled via the feature flags.
 func Get(fg map[string]bool) (*runtime.Scheme, error) {
 	scheme := runtime.NewScheme()
+
+	if err := apiextensionsv1.AddToScheme(scheme); err != nil {
+		return nil, err
+	}
 
 	if err := clientgoscheme.AddToScheme(scheme); err != nil {
 		return nil, err

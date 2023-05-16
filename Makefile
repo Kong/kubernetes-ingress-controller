@@ -204,6 +204,7 @@ manifests.rbac: controller-gen
 	$(CONTROLLER_GEN) rbac:roleName=kong-ingress paths="./internal/controllers/configuration/"
 	$(CONTROLLER_GEN) rbac:roleName=kong-ingress-knative paths="./internal/controllers/knative/" output:rbac:artifacts:config=config/rbac/knative
 	$(CONTROLLER_GEN) rbac:roleName=kong-ingress-gateway paths="./internal/controllers/gateway/" output:rbac:artifacts:config=config/rbac/gateway
+	$(CONTROLLER_GEN) rbac:roleName=kong-ingress-crds paths="./internal/controllers/crds/" output:rbac:artifacts:config=config/rbac/crds
 
 .PHONY: manifests.single
 manifests.single: kustomize ## Compose single-file deployment manifests from building blocks

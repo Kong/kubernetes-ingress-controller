@@ -12,6 +12,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -23,6 +24,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
+	ctrlutils "github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/utils"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 	k8sobj "github.com/kong/kubernetes-ingress-controller/v2/internal/util/kubernetes/object"
 )
@@ -35,14 +37,16 @@ import (
 type HTTPRouteReconciler struct {
 	client.Client
 
-	Log             logr.Logger
-	Scheme          *runtime.Scheme
-	DataplaneClient DataPlane
-	// If EnableReferenceGrant is true, we will check for ReferenceGrant if backend in another
+	Log              logr.Logger
+	Scheme           *runtime.Scheme
+	DataplaneClient  DataPlane
+	CacheSyncTimeout time.Duration
+
+	// If enableReferenceGrant is true, we will check for ReferenceGrant if backend in another
 	// namespace is in backendRefs.
 	// If it is false, referencing backend in different namespace will be rejected.
-	EnableReferenceGrant bool
-	CacheSyncTimeout     time.Duration
+	// It's resolved on SetupWithManager call.
+	enableReferenceGrant bool
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -57,6 +61,17 @@ func (r *HTTPRouteReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	if err != nil {
 		return err
 	}
+
+	// We're verifying whether ReferenceGrant CRD is installed at setup of the HTTPRouteReconciler
+	// to decide whether we should run additional ReferenceGrant watch and handle ReferenceGrants
+	// when reconciling HTTPRoutes.
+	// Once the HTTPRouteReconciler is set up without ReferenceGrant, there's no possibility to enable
+	// ReferenceGrant handling again in this reconciler at runtime.
+	r.enableReferenceGrant = ctrlutils.CRDExists(mgr.GetRESTMapper(), schema.GroupVersionResource{
+		Group:    gatewayv1beta1.GroupVersion.Group,
+		Version:  gatewayv1beta1.GroupVersion.Version,
+		Resource: "referencegrants",
+	})
 
 	// if a GatewayClass updates then we need to enqueue the linked HTTPRoutes to
 	// ensure that any route objects that may have been orphaned by that change get
@@ -86,7 +101,7 @@ func (r *HTTPRouteReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		return err
 	}
 
-	if r.EnableReferenceGrant {
+	if r.enableReferenceGrant {
 		if err := c.Watch(
 			&source.Kind{Type: &gatewayv1beta1.ReferenceGrant{}},
 			handler.EnqueueRequestsFromMapFunc(r.listReferenceGrantsForHTTPRoute),
@@ -132,8 +147,8 @@ func (r *HTTPRouteReconciler) listReferenceGrantsForHTTPRoute(obj client.Object)
 	for _, gateway := range httproutes.Items {
 		for _, from := range grant.Spec.From {
 			if string(from.Namespace) == gateway.Namespace &&
-				from.Kind == gatewayv1beta1.Kind("HTTPRoute") &&
-				from.Group == gatewayv1beta1.Group("gateway.networking.k8s.io") {
+				from.Kind == ("HTTPRoute") &&
+				from.Group == ("gateway.networking.k8s.io") {
 				recs = append(recs, reconcile.Request{
 					NamespacedName: types.NamespacedName{
 						Namespace: gateway.Namespace,
@@ -665,7 +680,7 @@ func (r *HTTPRouteReconciler) getHTTPRouteRuleReason(ctx context.Context, httpRo
 			// Check if the object referenced is in another namespace,
 			// and if there is grant for that reference
 			if httpRoute.Namespace != backendNamespace {
-				if !r.EnableReferenceGrant {
+				if !r.enableReferenceGrant {
 					return gatewayv1beta1.RouteReasonRefNotPermitted, nil
 				}
 

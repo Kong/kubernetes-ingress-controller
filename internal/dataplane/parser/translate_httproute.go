@@ -635,6 +635,11 @@ func sortHTTPRoutes(routes []gatewayv1beta1.HTTPRoute) {
 	sort.SliceStable(routes, func(i, j int) bool {
 		hasHostnamei := hasHostnames(routes[i])
 		hasHostnamej := hasHostnames(routes[j])
+		hasWildcardHostnamei := hasWildcardHostname(routes[i])
+		hasWildcardHostnamej := hasWildcardHostname(routes[j])
+
+		// here we have no nil checks as it is a POC. In the actual implementation
+		// we need to be sure that no below field is nil.
 
 		matchi := routes[i].Spec.Rules[0].Matches[0]
 		matchj := routes[j].Spec.Rules[0].Matches[0]
@@ -653,6 +658,10 @@ func sortHTTPRoutes(routes []gatewayv1beta1.HTTPRoute) {
 		case hasHostnamei && !hasHostnamej:
 			return true
 		case !hasHostnamei && hasHostnamej:
+			return false
+		case !hasWildcardHostnamei && hasWildcardHostnamej:
+			return true
+		case hasWildcardHostnamei && !hasWildcardHostnamej:
 			return false
 		case hasHostnamei && hasHostnamej && len(routes[i].Spec.Hostnames[0]) != len(routes[j].Spec.Hostnames[0]):
 			return len(routes[i].Spec.Hostnames[0]) > len(routes[j].Spec.Hostnames[0])
@@ -683,10 +692,10 @@ func sortHTTPRoutes(routes []gatewayv1beta1.HTTPRoute) {
 
 		// creation timestamp
 		case routes[i].CreationTimestamp.Compare(routes[j].CreationTimestamp.Time) != 0:
-			return routes[i].CreationTimestamp.After(routes[j].CreationTimestamp.Time)
+			return routes[i].CreationTimestamp.Before(&routes[j].CreationTimestamp)
 
 		// alphabetical order
-		case strings.Compare(namespacedNamei, namespacedNamej) == -1:
+		case namespacedNamei < namespacedNamej:
 			return true
 		}
 
@@ -716,6 +725,10 @@ func isPathMatchingPrefix(match *gatewayv1beta1.HTTPPathMatch) bool {
 
 func hasHostnames(httpRoute gatewayv1beta1.HTTPRoute) bool {
 	return len(httpRoute.Spec.Hostnames) > 0
+}
+
+func hasWildcardHostname(httpRoute gatewayv1beta1.HTTPRoute) bool {
+	return len(httpRoute.Spec.Hostnames) > 0 && strings.HasSuffix(string(httpRoute.Spec.Hostnames[0]), ".*")
 }
 
 func httpRouteNamespacedName(route gatewayv1beta1.HTTPRoute) string {

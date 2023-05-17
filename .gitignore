@@ -83,3 +83,9 @@ TODO
 
 # user specific dlv config
 .config/dlv
+
+# OS specific
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride

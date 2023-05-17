@@ -78,7 +78,7 @@ jobs:
             echo "TEST_KONG_IMAGE=${{ github.event.inputs.kong-container-repo }}" >> $GITHUB_ENV
             echo "TEST_KONG_TAG=${{ github.event.inputs.kong-container-tag }}" >> $GITHUB_ENV
           else
-            echo "TEST_KONG_IMAGE=${{ github.event.inputs.kong-enterprise--container-repo }}" >> $GITHUB_ENV
+            echo "TEST_KONG_IMAGE=${{ github.event.inputs.kong-enterprise-container-repo }}" >> $GITHUB_ENV
             echo "TEST_KONG_TAG=${{ github.event.inputs.kong-enterprise-container-tag }}" >> $GITHUB_ENV
           fi
 

@@ -13,7 +13,7 @@ on:
         # See https://github.com/Kong/kubernetes-testing-framework/issues/542
         default: "3.2"
         required: false
-      kong-enteprise-container-repo:
+      kong-enterprise-container-repo:
         type: string
         default: "kong/kong-gateway"
         required: false

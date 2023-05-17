@@ -1234,7 +1234,7 @@ func getIngressRulesFromHTTPRoutesCombinedRoutesTestCases() []testCaseIngressRul
 func pocTestCases() []testCaseIngressRulesFromHTTPRoutes {
 	return []testCaseIngressRulesFromHTTPRoutes{
 		{
-			msg: "multiple HTTPRoutes",
+			msg: "multiple HTTPRoutes with combination of multiple matches and hostnames",
 			routes: []*gatewayv1beta1.HTTPRoute{
 				{
 					ObjectMeta: metav1.ObjectMeta{
@@ -1645,6 +1645,160 @@ func pocTestCases() []testCaseIngressRulesFromHTTPRoutes {
 										Paths:        kong.StringSlice("~/foo/bar$"),
 										PreserveHost: kong.Bool(true),
 										Priority:     kong.Int(12),
+										Protocols: []*string{
+											kong.String("http"),
+											kong.String("https"),
+										},
+										StripPath: lo.ToPtr(false),
+										Tags: []*string{
+											kong.String("k8s-name:httproute-2"),
+											kong.String("k8s-namespace:default"),
+											kong.String("k8s-kind:HTTPRoute"),
+											kong.String("k8s-group:gateway.networking.k8s.io"),
+											kong.String("k8s-version:v1beta1"),
+										},
+									},
+									Ingress: k8sObjectInfoOfHTTPRoute(routes[1]),
+								},
+							},
+						},
+					},
+				}
+			},
+		},
+		{
+			msg: "two httpRoutes with intertwined priorities",
+			routes: []*gatewayv1beta1.HTTPRoute{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "httproute-1",
+						Namespace: corev1.NamespaceDefault,
+					},
+					Spec: gatewayv1beta1.HTTPRouteSpec{
+						CommonRouteSpec: commonRouteSpecMock("fake-gateway"),
+						Rules: []gatewayv1beta1.HTTPRouteRule{
+							{
+								Matches: []gatewayv1beta1.HTTPRouteMatch{
+									builder.NewHTTPRouteMatch().WithPathExact("/a/b/c").Build(),
+									builder.NewHTTPRouteMatch().WithPathExact("/a").Build(),
+								},
+								BackendRefs: []gatewayv1beta1.HTTPBackendRef{
+									builder.NewHTTPBackendRef("fake-service").WithPort(80).Build(),
+								},
+							},
+						},
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "httproute-2",
+						Namespace: corev1.NamespaceDefault,
+					},
+					Spec: gatewayv1beta1.HTTPRouteSpec{
+						CommonRouteSpec: commonRouteSpecMock("fake-gateway"),
+						Rules: []gatewayv1beta1.HTTPRouteRule{
+							{
+								Matches: []gatewayv1beta1.HTTPRouteMatch{
+									builder.NewHTTPRouteMatch().WithPathExact("/a/b").Build(),
+								},
+								BackendRefs: []gatewayv1beta1.HTTPBackendRef{
+									builder.NewHTTPBackendRef("fake-service").WithPort(80).Build(),
+								},
+							},
+						},
+					},
+				},
+			},
+			expected: func(routes []*gatewayv1beta1.HTTPRoute) ingressRules {
+				return ingressRules{
+					SecretNameToSNIs: newSecretNameToSNIs(),
+					ServiceNameToParent: map[string]client.Object{
+						"httproute.default.httproute-1": routes[0],
+						"httproute.default.httproute-2": routes[1],
+					},
+					ServiceNameToServices: map[string]kongstate.Service{
+						"httproute.default.httproute-1": {
+							Service: kong.Service{
+								ConnectTimeout: kong.Int(60000),
+								Host:           kong.String("httproute.default.httproute-1"),
+								Name:           kong.String("httproute.default.httproute-1"),
+								Protocol:       kong.String("http"),
+								ReadTimeout:    kong.Int(60000),
+								Retries:        kong.Int(5),
+								WriteTimeout:   kong.Int(60000),
+							},
+							Backends: kongstate.ServiceBackends{
+								builder.NewKongstateServiceBackend("fake-service").WithPortNumber(80).Build(),
+							},
+							Namespace: "default",
+							Parent:    routes[0],
+							Routes: []kongstate.Route{
+								{
+									Route: kong.Route{
+										Name:         kong.String("httproute.default.httproute-1.1.0"),
+										PreserveHost: kong.Bool(true),
+										Priority:     kong.Int(1),
+										Paths:        kong.StringSlice("~/a$"),
+										Protocols: []*string{
+											kong.String("http"),
+											kong.String("https"),
+										},
+										StripPath: lo.ToPtr(false),
+										Tags: []*string{
+											kong.String("k8s-name:httproute-1"),
+											kong.String("k8s-namespace:default"),
+											kong.String("k8s-kind:HTTPRoute"),
+											kong.String("k8s-group:gateway.networking.k8s.io"),
+											kong.String("k8s-version:v1beta1"),
+										},
+									},
+									Ingress: k8sObjectInfoOfHTTPRoute(routes[0]),
+								},
+								{
+									Route: kong.Route{
+										Name:         kong.String("httproute.default.httproute-1.3.0"),
+										Paths:        kong.StringSlice("~/a/b/c$"),
+										PreserveHost: kong.Bool(true),
+										Priority:     kong.Int(3),
+										Protocols: []*string{
+											kong.String("http"),
+											kong.String("https"),
+										},
+										StripPath: lo.ToPtr(false),
+										Tags: []*string{
+											kong.String("k8s-name:httproute-1"),
+											kong.String("k8s-namespace:default"),
+											kong.String("k8s-kind:HTTPRoute"),
+											kong.String("k8s-group:gateway.networking.k8s.io"),
+											kong.String("k8s-version:v1beta1"),
+										},
+									},
+									Ingress: k8sObjectInfoOfHTTPRoute(routes[0]),
+								},
+							},
+						},
+						"httproute.default.httproute-2": {
+							Service: kong.Service{
+								ConnectTimeout: kong.Int(60000),
+								Host:           kong.String("httproute.default.httproute-2"),
+								Name:           kong.String("httproute.default.httproute-2"),
+								Protocol:       kong.String("http"),
+								ReadTimeout:    kong.Int(60000),
+								Retries:        kong.Int(5),
+								WriteTimeout:   kong.Int(60000),
+							},
+							Backends: kongstate.ServiceBackends{
+								builder.NewKongstateServiceBackend("fake-service").WithPortNumber(80).Build(),
+							},
+							Namespace: "default",
+							Parent:    routes[1],
+							Routes: []kongstate.Route{
+								{
+									Route: kong.Route{
+										Name:         kong.String("httproute.default.httproute-2.2.0"),
+										PreserveHost: kong.Bool(true),
+										Priority:     kong.Int(2),
+										Paths:        kong.StringSlice("~/a/b$"),
 										Protocols: []*string{
 											kong.String("http"),
 											kong.String("https"),

@@ -25,6 +25,11 @@ func (p *Parser) ingressRulesFromTCPRoutes() ingressRules {
 
 	var errs []error
 	for _, tcproute := range tcpRouteList {
+		if p.featureFlags.ExpressionRoutes {
+			p.registerResourceFailureNotSupportedForExpressionRoutes(tcproute)
+			continue
+		}
+
 		if err := p.ingressRulesFromTCPRoute(&result, tcproute); err != nil {
 			err = fmt.Errorf("TCPRoute %s/%s can't be routed: %w", tcproute.Namespace, tcproute.Name, err)
 			errs = append(errs, err)

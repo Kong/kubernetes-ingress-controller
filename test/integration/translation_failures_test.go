@@ -12,13 +12,16 @@ import (
 
 	"github.com/kong/go-kong/kong"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
+	ktfkong "github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/kong"
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
+	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	netv1 "k8s.io/api/networking/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
 
@@ -27,10 +30,12 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 	testutils "github.com/kong/kubernetes-ingress-controller/v2/internal/util/test"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
+	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1beta1"
 	"github.com/kong/kubernetes-ingress-controller/v2/pkg/clientset"
 	"github.com/kong/kubernetes-ingress-controller/v2/test"
 	"github.com/kong/kubernetes-ingress-controller/v2/test/consts"
 	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/helpers"
+	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/testenv"
 )
 
 const testTranslationFailuresObjectsPrefix = "translation-failures-"
@@ -458,5 +463,116 @@ func validService() *corev1.Service {
 				},
 			},
 		},
+	}
+}
+
+func TestTranslationFailuresUnsupportedObjectsWithExpressionRoutes(t *testing.T) {
+	if testenv.KongRouterFlavor() != kongRouterFlavorExpressions {
+		t.Skip("only run with expression route enabled")
+	}
+
+	ctx := context.Background()
+	gatewayName := testutils.RandomName(testTranslationFailuresObjectsPrefix)
+	testCases := []struct {
+		name   string
+		object client.Object
+	}{
+		{
+			name: "1-TCPIngresses are not supported",
+			object: &kongv1beta1.TCPIngress{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "tcpingress-1",
+					Annotations: map[string]string{
+						annotations.IngressClassKey: consts.IngressClass,
+					},
+				},
+				Spec: kongv1beta1.TCPIngressSpec{},
+			},
+		},
+		{
+			name: "2-TCPRoutes are not supported",
+			object: &gatewayv1alpha2.TCPRoute{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "tcproute-1",
+				},
+				Spec: gatewayv1alpha2.TCPRouteSpec{
+					CommonRouteSpec: gatewayv1alpha2.CommonRouteSpec{
+						ParentRefs: []gatewayv1alpha2.ParentReference{{
+							Name: gatewayv1alpha2.ObjectName(gatewayName),
+						}},
+					},
+					Rules: []gatewayv1alpha2.TCPRouteRule{{
+						BackendRefs: []gatewayv1alpha2.BackendRef{{
+							BackendObjectReference: gatewayv1alpha2.BackendObjectReference{
+								Name: gatewayv1alpha2.ObjectName("service1"),
+								Port: lo.ToPtr(gatewayv1alpha2.PortNumber(8899)),
+							},
+						}},
+					}},
+				},
+			},
+		},
+	}
+
+	c, err := client.New(env.Cluster().Config(), client.Options{})
+	require.NoError(t, err)
+	gatewayv1alpha2.AddToScheme(c.Scheme())
+	kongv1beta1.AddToScheme(c.Scheme())
+
+	for _, tc := range testCases {
+		tc := tc
+
+		t.Run(tc.name, func(t *testing.T) {
+			ns, cleaner := helpers.Setup(ctx, t, env)
+			nsClient := client.NewNamespacedClient(c, ns.Name)
+
+			gatewayClient, err := gatewayclient.NewForConfig(env.Cluster().Config())
+			require.NoError(t, err)
+
+			gatewayClassName := testutils.RandomName(testTranslationFailuresObjectsPrefix)
+			gwc, err := DeployGatewayClass(ctx, gatewayClient, gatewayClassName)
+			require.NoError(t, err)
+			cleaner.Add(gwc)
+
+			gateway, err := DeployGateway(ctx, gatewayClient, ns.Name, gatewayClassName, func(gw *gatewayv1beta1.Gateway) {
+				gw.Name = gatewayName
+				gw.Spec.Listeners = []gatewayv1beta1.Listener{{
+					Name:     "tcp",
+					Protocol: gatewayv1beta1.TCPProtocolType,
+					Port:     gatewayv1beta1.PortNumber(ktfkong.DefaultTCPServicePort),
+				}}
+			})
+			require.NoError(t, err)
+			cleaner.Add(gateway)
+
+			err = nsClient.Create(ctx, tc.object)
+			require.NoError(t, err)
+			cleaner.Add(tc.object)
+
+			require.Eventually(t, func() bool {
+				events, err := env.Cluster().Client().CoreV1().Events(ns.GetName()).List(ctx, metav1.ListOptions{
+					FieldSelector: fmt.Sprintf(
+						"reason=%s,type=%s,involvedObject.name=%s",
+						dataplane.KongConfigurationTranslationFailedEventReason,
+						corev1.EventTypeWarning,
+						tc.object.GetName(),
+					),
+				})
+				require.NoError(t, err)
+
+				if len(events.Items) == 0 {
+					return false
+				}
+
+				for _, event := range events.Items {
+					if strings.Contains(event.Message, "not supported when expression routes enabled") {
+						return true
+					}
+				}
+
+				return false
+			}, time.Minute, time.Second)
+
+		})
 	}
 }

@@ -26,6 +26,11 @@ func (p *Parser) ingressRulesFromTCPIngressV1beta1() ingressRules {
 	})
 
 	for _, ingress := range ingressList {
+		if p.featureFlags.ExpressionRoutes {
+			p.registerResourceFailureNotSupportedForExpressionRoutes(ingress)
+			continue
+		}
+
 		ingressSpec := ingress.Spec
 
 		result.SecretNameToSNIs.addFromIngressV1TLS(tcpIngressToNetworkingTLS(ingressSpec.TLS), ingress)
@@ -101,6 +106,11 @@ func (p *Parser) ingressRulesFromUDPIngressV1beta1() ingressRules {
 	})
 
 	for _, ingress := range ingressList {
+		if p.featureFlags.ExpressionRoutes {
+			p.registerResourceFailureNotSupportedForExpressionRoutes(ingress)
+			continue
+		}
+
 		ingressSpec := ingress.Spec
 
 		var objectSuccessfullyParsed bool

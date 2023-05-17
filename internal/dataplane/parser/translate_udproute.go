@@ -25,6 +25,11 @@ func (p *Parser) ingressRulesFromUDPRoutes() ingressRules {
 
 	var errs []error
 	for _, udproute := range udpRouteList {
+		if p.featureFlags.ExpressionRoutes {
+			p.registerResourceFailureNotSupportedForExpressionRoutes(udproute)
+			continue
+		}
+
 		if err := p.ingressRulesFromUDPRoute(&result, udproute); err != nil {
 			err = fmt.Errorf("UDPRoute %s/%s can't be routed: %w", udproute.Namespace, udproute.Name, err)
 			errs = append(errs, err)

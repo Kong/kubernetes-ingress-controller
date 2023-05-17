@@ -44,6 +44,11 @@ func (p *Parser) ingressRulesFromKnativeIngress() ingressRules {
 	secretToSNIs := newSecretNameToSNIs()
 
 	for _, ingress := range ingressList {
+		if p.featureFlags.ExpressionRoutes {
+			p.registerResourceFailureNotSupportedForExpressionRoutes(ingress)
+			continue
+		}
+
 		regexPrefix := translators.ControllerPathRegexPrefix
 		if prefix, ok := ingress.ObjectMeta.Annotations[annotations.AnnotationPrefix+annotations.RegexPrefixKey]; ok {
 			regexPrefix = prefix

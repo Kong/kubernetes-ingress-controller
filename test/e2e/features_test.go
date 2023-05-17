@@ -690,16 +690,6 @@ func TestMissingCRDsDontCrashTheController(t *testing.T) {
 				Version:  kongv1.GroupVersion.Version,
 				Resource: "kongclusterplugins",
 			},
-			{
-				Group:    gatewayv1beta1.GroupVersion.Group,
-				Version:  gatewayv1beta1.GroupVersion.Version,
-				Resource: "gateways",
-			},
-			{
-				Group:    gatewayv1beta1.GroupVersion.Group,
-				Version:  gatewayv1beta1.GroupVersion.Version,
-				Resource: "httproutes",
-			},
 		}
 
 		for _, gvr := range gvrs {

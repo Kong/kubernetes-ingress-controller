@@ -37,3 +37,20 @@ jobs:
     secrets: inherit
     with:
       coverage: false # E2E tests do not generate coverage reports
+
+  notify-on-slack:
+    runs-on: ubuntu-latest
+    needs:
+      - e2e-tests
+      - e2e-tests-unreleased-kong
+      - test-reports
+    steps:
+      - name: Notify on Slack for failures of e2e tests run automatically at night
+        if: failure() && github.event_name == 'schedule'
+        uses: 8398a7/action-slack@v3
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        with:
+          status: ${{ job.status }}
+          fields: repo,message,commit,author,action,eventName,ref,workflow
+          text: 'E2E tests failed for nightly run, please check why.'

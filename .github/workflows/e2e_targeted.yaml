@@ -37,7 +37,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       GH_TOKEN: ${{ secrets.K8S_TEAM_BOT_GH_PAT }}
-      # URL is the current's workflow run URL.
+      # URL is the current workflow's run URL.
       # Sadly this is not readily available in github's context.
       URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
       PR_NUMBER: ${{ github.event.inputs.pr-number }}

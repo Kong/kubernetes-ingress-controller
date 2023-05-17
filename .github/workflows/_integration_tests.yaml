@@ -1,14 +1,35 @@
 name: integration tests
 
 on:
-  workflow_call: {}
+  workflow_call:
+    inputs:
+      kong-container-repo:
+        type: string
+        default: "kong/kong"
+        required: false
+      kong-container-tag:
+        type: string
+        # TODO: Consider changing to "kong:latest"
+        # See https://github.com/Kong/kubernetes-testing-framework/issues/542
+        default: "3.2"
+        required: false
+      kong-enteprise-container-repo:
+        type: string
+        default: "kong/kong-gateway"
+        required: false
+      kong-enterprise-container-tag:
+        type: string
+        # TODO: Consider changing to "kong/kong-gateway:latest"
+        # See https://github.com/Kong/kubernetes-testing-framework/issues/542
+        default: "3.2"
+        required: false
 
 jobs:
   integration-tests:
     name: ${{ matrix.name }}
     runs-on: ubuntu-latest
     env:
-      KONG_CLUSTER_VERSION: 'v1.26.0'
+      KONG_CLUSTER_VERSION: 'v1.27.1'
       TEST_KONG_ROUTER_FLAVOR: 'traditional'
     strategy:
       fail-fast: false
@@ -43,19 +64,13 @@ jobs:
 
       - name: Set image of Kong
         id: set_kong_image
-        # TODO: We need a systematic approach to this. Either:
-        # - leave this here and bump every GW release
-        # - remove this and rely on bumping GW image in ktf
-        # - rely on a mechanism in ktf that will always, by default return the newest
-        #   Gateway tag.
-        # Related issue: https://github.com/Kong/kubernetes-testing-framework/issues/542
         run: |
           if [ "${{ matrix.enterprise }}" == "true" ]; then
-            echo "TEST_KONG_IMAGE=kong/kong-gateway" >> $GITHUB_ENV
-            echo "TEST_KONG_TAG=3.2.1.0" >> $GITHUB_ENV
+            echo "TEST_KONG_IMAGE=${{ github.event.inputs.kong-container-repo }}" >> $GITHUB_ENV
+            echo "TEST_KONG_TAG=${{ github.event.inputs.kong-container-tag }}" >> $GITHUB_ENV
           else
-            echo "TEST_KONG_IMAGE=kong/kong" >> $GITHUB_ENV
-            echo "TEST_KONG_TAG=3.2.1" >> $GITHUB_ENV
+            echo "TEST_KONG_IMAGE=${{ github.event.inputs.kong-enterprise-container-repo }}" >> $GITHUB_ENV
+            echo "TEST_KONG_TAG=${{ github.event.inputs.kong-enterprise-container-tag }}" >> $GITHUB_ENV
           fi
 
       - name: checkout repository

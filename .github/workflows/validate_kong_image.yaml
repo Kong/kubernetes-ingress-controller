@@ -1,4 +1,4 @@
-name: "validate a Kong version (targeted)"
+name: "validate Kong image (targeted)"
 run-name: "validate Kong ${{ format('{0}:{1}', github.event.inputs.kong-image-repo, github.event.inputs.kong-image-tag) }}"
 
 on:

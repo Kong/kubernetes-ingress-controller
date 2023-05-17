@@ -4,6 +4,7 @@ import (
 	"fmt"
 	pathlib "path"
 	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/kong/go-kong/kong"
@@ -596,6 +597,8 @@ func httpBackendRefsToBackendRefs(httpBackendRef []gatewayv1beta1.HTTPBackendRef
 // POC methods
 // ---------------------
 
+const intraHTTPRouteMatchIndexAnnotationKey = "match-index"
+
 func splitHTTPRouteRules(httpRoutes []*gatewayv1beta1.HTTPRoute) []gatewayv1beta1.HTTPRoute {
 	newHTTPRoutes := []gatewayv1beta1.HTTPRoute{}
 	hostnamedRoutes := []gatewayv1beta1.HTTPRoute{}
@@ -611,9 +614,14 @@ func splitHTTPRouteRules(httpRoutes []*gatewayv1beta1.HTTPRoute) []gatewayv1beta
 		}
 	}
 	for _, route := range hostnamedRoutes {
-		for _, rule := range route.Spec.Rules {
-			for _, match := range rule.Matches {
+		for i, rule := range route.Spec.Rules {
+			for j, match := range rule.Matches {
+				matchIndex := i*10 + j
 				newRoute := route.DeepCopy()
+				if newRoute.Annotations == nil {
+					newRoute.Annotations = make(map[string]string)
+				}
+				newRoute.Annotations[intraHTTPRouteMatchIndexAnnotationKey] = fmt.Sprintf("%d", matchIndex)
 				newRoute.Spec.Rules = []gatewayv1beta1.HTTPRouteRule{
 					{
 						Matches: []gatewayv1beta1.HTTPRouteMatch{
@@ -699,7 +707,8 @@ func sortHTTPRoutes(routes []gatewayv1beta1.HTTPRoute) {
 			return true
 		}
 
-		return false
+		// intra-HTTPRoute order
+		return getMatchIndex(routes[i]) < getMatchIndex(routes[j])
 	})
 }
 
@@ -733,4 +742,9 @@ func hasWildcardHostname(httpRoute gatewayv1beta1.HTTPRoute) bool {
 
 func httpRouteNamespacedName(route gatewayv1beta1.HTTPRoute) string {
 	return fmt.Sprintf("%s/%s", route.Namespace, route.Name)
+}
+
+func getMatchIndex(route gatewayv1beta1.HTTPRoute) int {
+	index, _ := strconv.Atoi(route.Annotations[intraHTTPRouteMatchIndexAnnotationKey])
+	return index
 }

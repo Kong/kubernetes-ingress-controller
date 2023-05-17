@@ -516,8 +516,10 @@ func TestTranslationFailuresUnsupportedObjectsWithExpressionRoutes(t *testing.T)
 
 	c, err := client.New(env.Cluster().Config(), client.Options{})
 	require.NoError(t, err)
-	gatewayv1alpha2.AddToScheme(c.Scheme())
-	kongv1beta1.AddToScheme(c.Scheme())
+	err = gatewayv1alpha2.AddToScheme(c.Scheme())
+	require.NoError(t, err)
+	err = kongv1beta1.AddToScheme(c.Scheme())
+	require.NoError(t, err)
 
 	for _, tc := range testCases {
 		tc := tc
@@ -572,7 +574,6 @@ func TestTranslationFailuresUnsupportedObjectsWithExpressionRoutes(t *testing.T)
 
 				return false
 			}, time.Minute, time.Second)
-
 		})
 	}
 }

@@ -114,6 +114,11 @@ Adding a new version? You'll need three changes:
   during the start-up phase. From now on, they will be dynamically started in runtime
   once their installation is detected, making restarting the process unnecessary.
   [#3996](https://github.com/Kong/kubernetes-ingress-controller/pull/3996)
+- Disable translation of unspported kubernetes objects when translating to
+  expression based routes is enabled (`ExpressionRoutes` feature enabled AND 
+  kong using router flavor `expressions`), and generate a translation failure
+  event attached to each of the unsupported objects.
+  [#4022](https://github.com/Kong/kubernetes-ingress-controller/pull/4022)
 
 ### Changed
 

@@ -50,11 +50,14 @@ type CompatibilityStatus struct {
 type IngressControllerState string
 
 const (
-	IngressControllerStateUnspecified       IngressControllerState = "INGRESS_CONTROLLER_STATE_UNSPECIFIED"
-	IngressControllerStateOperational       IngressControllerState = "INGRESS_CONTROLLER_STATE_OPERATIONAL"
-	IngressControllerStatePartialConfigFail IngressControllerState = "INGRESS_CONTROLLER_STATE_PARTIAL_CONFIG_FAIL"
-	IngressControllerStateInoperable        IngressControllerState = "INGRESS_CONTROLLER_STATE_INOPERABLE"
-	IngressControllerStateUnknown           IngressControllerState = "INGRESS_CONTROLLER_STATE_UNKNOWN"
+	IngressControllerStateUnspecified                       IngressControllerState = "INGRESS_CONTROLLER_STATE_UNSPECIFIED"
+	IngressControllerStateOperational                       IngressControllerState = "INGRESS_CONTROLLER_STATE_OPERATIONAL"
+	IngressControllerStatePartialConfigFail                 IngressControllerState = "INGRESS_CONTROLLER_STATE_PARTIAL_CONFIG_FAIL"
+	IngressControllerStateInoperable                        IngressControllerState = "INGRESS_CONTROLLER_STATE_INOPERABLE"
+	IngressControllerStateOperationalKonnectOutOfSync       IngressControllerState = "INGRESS_CONTROLLER_STATE_OPERATIONAL_KONNECT_OUT_OF_SYNC"
+	IngressControllerStatePartialConfigFailKonnectOutOfSync IngressControllerState = "INGRESS_CONTROLLER_STATE_PARTIAL_CONFIG_FAIL_KONNECT_OUT_OF_SYNC"
+	IngressControllerStateInoperableKonnectOutOfSync        IngressControllerState = "INGRESS_CONTROLLER_STATE_INOPERABLE_KONNECT_OUT_OF_SYNC"
+	IngressControllerStateUnknown                           IngressControllerState = "INGRESS_CONTROLLER_STATE_UNKNOWN"
 )
 
 type CreateNodeRequest struct {

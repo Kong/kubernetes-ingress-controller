@@ -737,7 +737,7 @@ func hasHostnames(httpRoute gatewayv1beta1.HTTPRoute) bool {
 }
 
 func hasWildcardHostname(httpRoute gatewayv1beta1.HTTPRoute) bool {
-	return len(httpRoute.Spec.Hostnames) > 0 && strings.HasSuffix(string(httpRoute.Spec.Hostnames[0]), ".*")
+	return len(httpRoute.Spec.Hostnames) > 0 && strings.HasPrefix(string(httpRoute.Spec.Hostnames[0]), "*.")
 }
 
 func httpRouteNamespacedName(route gatewayv1beta1.HTTPRoute) string {

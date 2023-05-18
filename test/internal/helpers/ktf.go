@@ -29,11 +29,10 @@ func GenerateKongBuilder(_ context.Context) (*kong.Builder, []string, error) {
 			WithProxyAdminServiceTypeLoadBalancer()
 	}
 
-	if image, tag := testenv.KongImage(), testenv.KongTag(); image != "" {
-		if tag == "" {
-			return nil, nil, fmt.Errorf("TEST_KONG_IMAGE requires TEST_KONG_TAG")
-		}
+	if image, tag := testenv.KongImage(), testenv.KongTag(); image != "" && tag != "" {
 		kongbuilder = kongbuilder.WithProxyImage(image, tag)
+	} else if tag != "" || image != "" {
+		return nil, nil, fmt.Errorf("when specifying TEST_KONG_IMAGE or TEST_KONG_TAG, both need to be provided")
 	}
 
 	if user, pass := testenv.KongPullUsername(), testenv.KongPullPassword(); user != "" || pass != "" {

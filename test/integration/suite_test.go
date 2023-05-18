@@ -10,6 +10,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/avast/retry-go/v4"
 	"github.com/blang/semver/v4"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/kong"
@@ -59,6 +60,10 @@ func TestMain(m *testing.M) {
 	fmt.Println("INFO: setting up test environment")
 	kongbuilder, extraControllerArgs, err := helpers.GenerateKongBuilder(ctx)
 	exitOnErrWithCode(ctx, err, consts.ExitCodeEnvSetupFailed)
+	if testenv.KongImage() != "" && testenv.KongTag() != "" {
+		fmt.Printf("INFO: custom kong image specified via env: %s:%s\n", testenv.KongImage(), testenv.KongTag())
+	}
+
 	kongAddon := kongbuilder.Build()
 	builder := environments.NewBuilder().WithAddons(kongAddon)
 
@@ -135,6 +140,15 @@ func TestMain(m *testing.M) {
 	exitOnErr(ctx, err)
 	proxyUDPURL, err = kongAddon.ProxyUDPURL(ctx, env.Cluster())
 	exitOnErr(ctx, err)
+
+	exitOnErr(ctx, retry.Do(func() error {
+		version, err := helpers.GetKongVersion(proxyAdminURL, consts.KongTestPassword)
+		if err != nil {
+			return err
+		}
+		fmt.Printf("INFO: using Kong instance (version: %s) reachable at %s\n", version, proxyAdminURL)
+		return nil
+	}))
 
 	if v := os.Getenv("KONG_BRING_MY_OWN_KIC"); v == "true" {
 		fmt.Println("WARNING: caller indicated that they will manage their own controller")

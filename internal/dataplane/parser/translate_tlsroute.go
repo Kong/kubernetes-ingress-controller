@@ -29,6 +29,11 @@ func (p *Parser) ingressRulesFromTLSRoutes() ingressRules {
 
 	var errs []error
 	for _, tlsroute := range tlsRouteList {
+		if p.featureFlags.ExpressionRoutes {
+			p.registerResourceFailureNotSupportedForExpressionRoutes(tlsroute)
+			continue
+		}
+
 		if err := p.ingressRulesFromTLSRoute(&result, tlsroute); err != nil {
 			err = fmt.Errorf("TLSRoute %s/%s can't be routed: %w", tlsroute.Namespace, tlsroute.Name, err)
 			errs = append(errs, err)

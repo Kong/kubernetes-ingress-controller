@@ -7,18 +7,53 @@ import (
 	"github.com/go-logr/logr"
 )
 
-type ConfigStatus int
+// ConfigStatus is an enumerated type that represents the status of the configuration synchronisation.
+// Look at CalculateConfigStatus for more details.
+type ConfigStatus string
 
 const (
-	// ConfigStatusOK: no error happens in translation from k8s objects to kong configuration
-	// and succeeded to apply kong configuration to kong gateway.
-	ConfigStatusOK ConfigStatus = iota
-	// ConfigStatusTranslationErrorHappened: error happened in translation of k8s objects
-	// but succeeded to apply kong configuration for remaining objects.
-	ConfigStatusTranslationErrorHappened
-	// ConfigStatusApplyFailed: failed to apply kong configurations.
-	ConfigStatusApplyFailed
+	ConfigStatusOK                                         ConfigStatus = "OK"
+	ConfigStatusTranslationErrorHappened                   ConfigStatus = "TranslationErrorHappened"
+	ConfigStatusApplyFailed                                ConfigStatus = "ApplyFailed"
+	ConfigStatusOKKonnectApplyFailed                       ConfigStatus = "OKKonnectApplyFailed"
+	ConfigStatusTranslationErrorHappenedKonnectApplyFailed ConfigStatus = "TranslationErrorHappenedKonnectApplyFailed"
+	ConfigStatusApplyFailedKonnectApplyFailed              ConfigStatus = "ApplyFailedKonnectApplyFailed"
+	ConfigStatusUnknown                                    ConfigStatus = "Unknown"
 )
+
+// CalculateConfigStatusInput aggregates the input to CalculateConfigStatus.
+type CalculateConfigStatusInput struct {
+	// Any error occurred when syncing with Gateways.
+	GatewaysFailed bool
+
+	// Any error occurred when syncing with Konnect,
+	KonnectFailed bool
+
+	// Translation of some of Kubernetes objects failed.
+	TranslationFailuresOccurred bool
+}
+
+// CalculateConfigStatus calculates a clients.ConfigStatus that sums up the configuration synchronisation result as
+// a single enumerated value.
+func CalculateConfigStatus(i CalculateConfigStatusInput) ConfigStatus {
+	switch {
+	case !i.GatewaysFailed && !i.KonnectFailed && !i.TranslationFailuresOccurred:
+		return ConfigStatusOK
+	case !i.GatewaysFailed && !i.KonnectFailed && i.TranslationFailuresOccurred:
+		return ConfigStatusTranslationErrorHappened
+	case i.GatewaysFailed && !i.KonnectFailed: // We don't care about translation failures if we can't apply to gateways.
+		return ConfigStatusApplyFailed
+	case !i.GatewaysFailed && i.KonnectFailed && !i.TranslationFailuresOccurred:
+		return ConfigStatusOKKonnectApplyFailed
+	case !i.GatewaysFailed && i.KonnectFailed && i.TranslationFailuresOccurred:
+		return ConfigStatusTranslationErrorHappenedKonnectApplyFailed
+	case i.GatewaysFailed && i.KonnectFailed: // We don't care about translation failures if we can't apply to gateways.
+		return ConfigStatusApplyFailedKonnectApplyFailed
+	}
+
+	// Shouldn't happen.
+	return ConfigStatusUnknown
+}
 
 type ConfigStatusNotifier interface {
 	NotifyConfigStatus(context.Context, ConfigStatus)

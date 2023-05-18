@@ -368,21 +368,22 @@ func (c *KongClient) Update(ctx context.Context) error {
 		c.logger.Debug("successfully built data-plane configuration")
 	}
 
-	shas, err := c.sendOutToGatewayClients(ctx, parsingResult.KongState, c.kongConfig)
-	if err != nil {
-		c.configStatusNotifier.NotifyConfigStatus(ctx, clients.ConfigStatusApplyFailed)
-		return err
-	}
+	shas, gatewaysSyncErr := c.sendOutToGatewayClients(ctx, parsingResult.KongState, c.kongConfig)
+	konnectSyncErr := c.maybeSendOutToKonnectClient(ctx, parsingResult.KongState, c.kongConfig)
 
-	c.trySendOutToKonnectClient(ctx, parsingResult.KongState, c.kongConfig)
+	// Taking into account the results of syncing configuration with Gateways and Konnect, and potential translation
+	// failures, calculate the config status and report it.
+	c.configStatusNotifier.NotifyConfigStatus(ctx, clients.CalculateConfigStatus(
+		clients.CalculateConfigStatusInput{
+			GatewaysFailed:              gatewaysSyncErr != nil,
+			KonnectFailed:               konnectSyncErr != nil,
+			TranslationFailuresOccurred: len(parsingResult.TranslationFailures) > 0,
+		},
+	))
 
-	// succeeded to apply configuration to Kong gateway.
-	// notify the receiver of config status that translation error happened when there are translation errors,
-	// otherwise notify that config status is OK.
-	if len(parsingResult.TranslationFailures) > 0 {
-		c.configStatusNotifier.NotifyConfigStatus(ctx, clients.ConfigStatusTranslationErrorHappened)
-	} else {
-		c.configStatusNotifier.NotifyConfigStatus(ctx, clients.ConfigStatusOK)
+	// In case of a failure in syncing configuration with Gateways, propagate the error.
+	if gatewaysSyncErr != nil {
+		return gatewaysSyncErr
 	}
 
 	// report on configured Kubernetes objects if enabled
@@ -420,12 +421,13 @@ func (c *KongClient) sendOutToGatewayClients(
 	return previousSHAs, nil
 }
 
-// It will try to send ignore errors that are returned from Konnect client.
-func (c *KongClient) trySendOutToKonnectClient(ctx context.Context, s *kongstate.KongState, config sendconfig.Config) {
+// maybeSendOutToKonnectClient sends out the configuration to Konnect when KonnectClient is provided.
+// It's a noop when Konnect integration is not enabled.
+func (c *KongClient) maybeSendOutToKonnectClient(ctx context.Context, s *kongstate.KongState, config sendconfig.Config) error {
 	konnectClient := c.clientsProvider.KonnectClient()
 	// There's no KonnectClient configured, that's totally fine.
 	if konnectClient == nil {
-		return
+		return nil
 	}
 
 	if _, err := c.sendToClient(ctx, konnectClient, s, config); err != nil {
@@ -434,11 +436,13 @@ func (c *KongClient) trySendOutToKonnectClient(ctx context.Context, s *kongstate
 
 		if errors.Is(err, sendconfig.ErrUpdateSkippedDueToBackoffStrategy{}) {
 			c.logger.WithError(err).Warn("Skipped pushing configuration to Konnect")
-			return
 		}
 
 		c.logger.WithError(err).Warn("Failed pushing configuration to Konnect")
+		return err
 	}
+
+	return nil
 }
 
 func (c *KongClient) sendToClient(

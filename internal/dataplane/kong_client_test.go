@@ -23,6 +23,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/adminapi"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/clients"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/failures"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
@@ -164,11 +165,15 @@ func (f *mockUpdateStrategyResolver) ResolveUpdateStrategy(c sendconfig.UpdateCl
 }
 
 // returnErrorOnUpdate will cause the mockUpdateStrategy with a given Admin API URL to return an error on Update().
-func (f *mockUpdateStrategyResolver) returnErrorOnUpdate(url string) {
+func (f *mockUpdateStrategyResolver) returnErrorOnUpdate(url string, shouldReturnErr bool) {
 	f.lock.Lock()
 	defer f.lock.Unlock()
 
-	f.shouldReturnErrorOnUpdate[url] = struct{}{}
+	if shouldReturnErr {
+		f.shouldReturnErrorOnUpdate[url] = struct{}{}
+	} else {
+		delete(f.shouldReturnErrorOnUpdate, url)
+	}
 }
 
 // updateCalledForURLCallback returns a function that will be called when the mockUpdateStrategy is called.
@@ -234,17 +239,7 @@ func (m mockConfigurationChangeDetector) HasConfigurationChanged(
 	return m.hasConfigurationChanged, nil
 }
 
-type noopKongConfigBuilder struct{}
-
-func (p noopKongConfigBuilder) BuildKongConfig() parser.KongConfigBuildingResult {
-	return parser.KongConfigBuildingResult{
-		KongState: &kongstate.KongState{},
-	}
-}
-
-func TestKongClientUpdate_AllExpectedClientsAreCalled(t *testing.T) {
-	t.Parallel()
-
+func TestKongClientUpdate_AllExpectedClientsAreCalledAndErrorIsPropagated(t *testing.T) {
 	var (
 		ctx                = context.Background()
 		testKonnectClient  = mustSampleKonnectClient(t)
@@ -315,12 +310,13 @@ func TestKongClientUpdate_AllExpectedClientsAreCalled(t *testing.T) {
 			}
 			updateStrategyResolver := newMockUpdateStrategyResolver(t)
 			for _, url := range tc.errorOnUpdateForURLs {
-				updateStrategyResolver.returnErrorOnUpdate(url)
+				updateStrategyResolver.returnErrorOnUpdate(url, true)
 			}
 			// always return true for HasConfigurationChanged to trigger an update
 			configChangeDetector := mockConfigurationChangeDetector{hasConfigurationChanged: true}
+			configBuilder := newMockKongConfigBuilder()
 
-			kongClient := setupTestKongClient(t, updateStrategyResolver, clientsProvider, configChangeDetector)
+			kongClient := setupTestKongClient(t, updateStrategyResolver, clientsProvider, configChangeDetector, configBuilder)
 
 			err := kongClient.Update(ctx)
 			if tc.expectError {
@@ -347,8 +343,9 @@ func TestKongClientUpdate_WhenNoChangeInConfigNoClientGetsCalled(t *testing.T) {
 
 	// no change in config, we'll expect no update to be called
 	configChangeDetector := mockConfigurationChangeDetector{hasConfigurationChanged: false}
+	configBuilder := newMockKongConfigBuilder()
 
-	kongClient := setupTestKongClient(t, updateStrategyResolver, clientsProvider, configChangeDetector)
+	kongClient := setupTestKongClient(t, updateStrategyResolver, clientsProvider, configChangeDetector, configBuilder)
 
 	ctx := context.Background()
 	err := kongClient.Update(ctx)
@@ -357,19 +354,148 @@ func TestKongClientUpdate_WhenNoChangeInConfigNoClientGetsCalled(t *testing.T) {
 	updateStrategyResolver.assertNoUpdateCalled()
 }
 
+type mockConfigStatusQueue struct {
+	wasNotified bool
+}
+
+func newMockConfigStatusQueue() *mockConfigStatusQueue {
+	return &mockConfigStatusQueue{}
+}
+
+func (m *mockConfigStatusQueue) NotifyConfigStatus(context.Context, clients.ConfigStatus) {
+	m.wasNotified = true
+}
+
+func (m *mockConfigStatusQueue) WasNotified() bool {
+	return m.wasNotified
+}
+
+type mockKongConfigBuilder struct {
+	translationFailuresToReturn []failures.ResourceFailure
+}
+
+func newMockKongConfigBuilder() *mockKongConfigBuilder {
+	return &mockKongConfigBuilder{}
+}
+
+func (p *mockKongConfigBuilder) BuildKongConfig() parser.KongConfigBuildingResult {
+	return parser.KongConfigBuildingResult{
+		KongState:           &kongstate.KongState{},
+		TranslationFailures: p.translationFailuresToReturn,
+	}
+}
+
+func (p *mockKongConfigBuilder) returnTranslationFailures(enabled bool) {
+	if enabled {
+		// Return some mocked translation failures.
+		p.translationFailuresToReturn = []failures.ResourceFailure{
+			lo.Must(failures.NewResourceFailure("some reason", &corev1.Pod{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "name",
+					Namespace: "namespace",
+				},
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "Pod",
+					APIVersion: "v1",
+				},
+			},
+			)),
+		}
+	} else {
+		p.translationFailuresToReturn = nil
+	}
+}
+
+func TestKongClientUpdate_ConfigStatusIsAlwaysNotified(t *testing.T) {
+	var (
+		ctx               = context.Background()
+		testKonnectClient = mustSampleKonnectClient(t)
+		testGatewayClient = mustSampleGatewayClient(t)
+
+		clientsProvider = mockGatewayClientsProvider{
+			gatewayClients: []*adminapi.Client{testGatewayClient},
+			konnectClient:  testKonnectClient,
+		}
+
+		updateStrategyResolver = newMockUpdateStrategyResolver(t)
+		configChangeDetector   = mockConfigurationChangeDetector{hasConfigurationChanged: true}
+		configBuilder          = newMockKongConfigBuilder()
+		kongClient             = setupTestKongClient(t, updateStrategyResolver, clientsProvider, configChangeDetector, configBuilder)
+	)
+
+	testCases := []struct {
+		name                string
+		gatewayFailure      bool
+		konnectFailure      bool
+		translationFailures bool
+	}{
+		{
+			name:                "success",
+			gatewayFailure:      false,
+			konnectFailure:      false,
+			translationFailures: false,
+		},
+		{
+			name:                "gateway failure",
+			gatewayFailure:      true,
+			konnectFailure:      false,
+			translationFailures: false,
+		},
+		{
+			name:                "translation failures",
+			gatewayFailure:      false,
+			konnectFailure:      false,
+			translationFailures: true,
+		},
+		{
+			name:                "konnect failure",
+			gatewayFailure:      false,
+			konnectFailure:      true,
+			translationFailures: false,
+		},
+		{
+			name:                "both gateway and konnect failure",
+			gatewayFailure:      true,
+			konnectFailure:      true,
+			translationFailures: false,
+		},
+		{
+			name:                "translation failures and konnect failure",
+			gatewayFailure:      false,
+			konnectFailure:      true,
+			translationFailures: true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			// Reset the status queue. We want to make sure that the status is always notified.
+			statusQueue := newMockConfigStatusQueue()
+			kongClient.SetConfigStatusNotifier(statusQueue)
+
+			updateStrategyResolver.returnErrorOnUpdate(testGatewayClient.BaseRootURL(), tc.gatewayFailure)
+			updateStrategyResolver.returnErrorOnUpdate(testKonnectClient.BaseRootURL(), tc.konnectFailure)
+			configBuilder.returnTranslationFailures(tc.translationFailures)
+
+			_ = kongClient.Update(ctx)
+			require.True(t, statusQueue.WasNotified())
+		})
+	}
+}
+
 // setupTestKongClient creates a KongClient with mocked dependencies.
 func setupTestKongClient(
 	t *testing.T,
 	updateStrategyResolver *mockUpdateStrategyResolver,
 	clientsProvider mockGatewayClientsProvider,
 	configChangeDetector sendconfig.ConfigurationChangeDetector,
+	configBuilder *mockKongConfigBuilder,
 ) *dataplane.KongClient {
 	logger := logrus.New()
 	timeout := time.Second
 	ingressClass := "kong"
 	diagnostic := util.ConfigDumpDiagnostic{}
 	config := sendconfig.Config{}
-	eventRecorder := record.NewFakeRecorder(0)
 	dbMode := "off"
 
 	kongClient, err := dataplane.NewKongClient(
@@ -378,16 +504,29 @@ func setupTestKongClient(
 		ingressClass,
 		diagnostic,
 		config,
-		eventRecorder,
+		newFakeEventsRecorder(),
 		dbMode,
 		clientsProvider,
 		updateStrategyResolver,
 		configChangeDetector,
-		noopKongConfigBuilder{},
+		configBuilder,
 		store.NewCacheStores(),
 	)
 	require.NoError(t, err)
 	return kongClient
+}
+
+func newFakeEventsRecorder() *record.FakeRecorder {
+	eventRecorder := record.NewFakeRecorder(0)
+
+	// Ingest events to unblock writing side.
+	go func() {
+		for {
+			<-eventRecorder.Events
+		}
+	}()
+
+	return eventRecorder
 }
 
 func mustSampleGatewayClient(t *testing.T) *adminapi.Client {

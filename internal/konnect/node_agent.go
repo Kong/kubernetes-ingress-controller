@@ -61,7 +61,7 @@ type NodeAgent struct {
 	nodeClient    NodeClient
 	refreshPeriod time.Duration
 
-	configStatus           atomic.Uint32
+	configStatus           atomic.Value
 	configStatusSubscriber clients.ConfigStatusSubscriber
 
 	gatewayInstanceGetter         GatewayInstanceGetter
@@ -96,7 +96,7 @@ func NewNodeAgent(
 		gatewayClientsChangesNotifier: gatewayClientsChangesNotifier,
 		managerInstanceIDProvider:     managerInstanceIDProvider,
 	}
-	a.configStatus.Store(uint32(clients.ConfigStatusOK))
+	a.configStatus.Store(clients.ConfigStatusOK)
 	return a
 }
 
@@ -145,7 +145,10 @@ func (a *NodeAgent) subscribeConfigStatus(ctx context.Context) {
 			a.logger.Info("subscribe loop stopped", "message", ctx.Err().Error())
 			return
 		case configStatus := <-ch:
-			a.configStatus.Store(uint32(configStatus))
+			a.configStatus.Store(configStatus)
+			if err := a.updateNodes(ctx); err != nil {
+				a.logger.Error(err, "failed to update nodes after config status changed")
+			}
 		}
 	}
 }
@@ -195,14 +198,21 @@ func (a *NodeAgent) updateKICNode(ctx context.Context, existingNodes []*nodes.No
 	sortNodesByLastPing(nodesWithSameName)
 
 	var ingressControllerStatus nodes.IngressControllerState
-	configStatus := int(a.configStatus.Load())
-	switch clients.ConfigStatus(configStatus) {
+	configStatus := a.configStatus.Load().(clients.ConfigStatus)
+	switch configStatus {
 	case clients.ConfigStatusOK:
 		ingressControllerStatus = nodes.IngressControllerStateOperational
 	case clients.ConfigStatusTranslationErrorHappened:
 		ingressControllerStatus = nodes.IngressControllerStatePartialConfigFail
 	case clients.ConfigStatusApplyFailed:
 		ingressControllerStatus = nodes.IngressControllerStateInoperable
+	case clients.ConfigStatusOKKonnectApplyFailed:
+		ingressControllerStatus = nodes.IngressControllerStateOperationalKonnectOutOfSync
+	case clients.ConfigStatusTranslationErrorHappenedKonnectApplyFailed:
+		ingressControllerStatus = nodes.IngressControllerStatePartialConfigFailKonnectOutOfSync
+	case clients.ConfigStatusApplyFailedKonnectApplyFailed:
+		ingressControllerStatus = nodes.IngressControllerStateInoperableKonnectOutOfSync
+	case clients.ConfigStatusUnknown:
 	default:
 		ingressControllerStatus = nodes.IngressControllerStateUnknown
 	}

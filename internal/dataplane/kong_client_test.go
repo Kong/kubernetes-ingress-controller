@@ -240,8 +240,6 @@ func (m mockConfigurationChangeDetector) HasConfigurationChanged(
 }
 
 func TestKongClientUpdate_AllExpectedClientsAreCalledAndErrorIsPropagated(t *testing.T) {
-	t.Parallel()
-
 	var (
 		ctx                = context.Background()
 		testKonnectClient  = mustSampleKonnectClient(t)
@@ -409,8 +407,6 @@ func (p *mockKongConfigBuilder) returnTranslationFailures(enabled bool) {
 }
 
 func TestKongClientUpdate_ConfigStatusIsAlwaysNotified(t *testing.T) {
-	t.Parallel()
-
 	var (
 		ctx               = context.Background()
 		testKonnectClient = mustSampleKonnectClient(t)
@@ -525,7 +521,8 @@ func newFakeEventsRecorder() *record.FakeRecorder {
 
 	// Ingest events to unblock writing side.
 	go func() {
-		for range eventRecorder.Events {
+		for {
+			<-eventRecorder.Events
 		}
 	}()
 

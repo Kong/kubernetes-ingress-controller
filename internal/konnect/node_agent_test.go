@@ -79,7 +79,7 @@ func (m mockConfigStatusQueue) SubscribeConfigStatus() chan clients.ConfigStatus
 	return m.ch
 }
 
-func (m mockConfigStatusQueue) NotifyConfigStatus(_ context.Context, status clients.ConfigStatus) {
+func (m mockConfigStatusQueue) Notify(status clients.ConfigStatus) {
 	m.ch <- status
 }
 
@@ -272,15 +272,10 @@ func TestNodeAgentUpdateNodes(t *testing.T) {
 				newMockManagerInstanceIDProvider(testManagerID),
 			)
 
-			ctx, cancel := context.WithCancel(context.Background())
-			agentReturned := make(chan struct{})
-			go func() {
-				require.NoError(t, nodeAgent.Start(ctx))
-				close(agentReturned)
-			}()
+			runAgent(t, nodeAgent)
 
 			if tc.configStatus != nil {
-				configStatusQueue.NotifyConfigStatus(ctx, *tc.configStatus)
+				configStatusQueue.Notify(*tc.configStatus)
 			}
 
 			require.Eventually(t, func() bool {
@@ -323,21 +318,11 @@ func TestNodeAgentUpdateNodes(t *testing.T) {
 
 				return true
 			}, timeout, tick)
-
-			// Cancel the context and wait for the nodeAgent.Start() to return.
-			cancel()
-			select {
-			case <-time.After(timeout):
-				t.Fatal("expected the agent to return after the context was cancelled")
-			case <-agentReturned:
-			}
 		})
 	}
 }
 
 func TestNodeAgent_StartDoesntReturnUntilContextGetsCancelled(t *testing.T) {
-	t.Parallel()
-
 	nodeClient := newMockNodeClient(nil)
 	// Always return errors from ListNodes to ensure that the agent doesn't propagate it to the Start() caller.
 	// ListNodes is the first call made by the agent in Start(), so we care only about this one.
@@ -400,13 +385,7 @@ func TestNodeAgent_ControllerNodeStatusGetsUpdatedOnStatusNotification(t *testin
 		newMockManagerInstanceIDProvider(uuid.New()),
 	)
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	agentReturned := make(chan struct{})
-	go func() {
-		require.NoError(t, nodeAgent.Start(ctx))
-		close(agentReturned)
-	}()
+	runAgent(t, nodeAgent)
 
 	testCases := []struct {
 		notifiedConfigStatus    clients.ConfigStatus
@@ -440,7 +419,7 @@ func TestNodeAgent_ControllerNodeStatusGetsUpdatedOnStatusNotification(t *testin
 
 	for _, tc := range testCases {
 		t.Run(fmt.Sprint(tc.notifiedConfigStatus), func(t *testing.T) {
-			configStatusQueue.NotifyConfigStatus(ctx, tc.notifiedConfigStatus)
+			configStatusQueue.Notify(tc.notifiedConfigStatus)
 
 			require.Eventually(t, func() bool {
 				controllerNode, ok := lo.Find(nodeClient.MustAllNodes(), func(n *nodes.NodeItem) bool {
@@ -457,7 +436,30 @@ func TestNodeAgent_ControllerNodeStatusGetsUpdatedOnStatusNotification(t *testin
 				}
 
 				return true
-			}, time.Second, time.Millisecond*10)
+			}, time.Second, time.Millisecond)
 		})
 	}
+}
+
+// runAgent runs the agent in a goroutine and cancels the context after the test is done, ensuring that the agent
+// doesn't return prematurely.
+func runAgent(t *testing.T, nodeAgent *konnect.NodeAgent) {
+	ctx, cancel := context.WithCancel(context.Background())
+
+	// To be used as a barrier to ensure that the agent returned after the context was cancelled.
+	agentReturned := make(chan struct{})
+	go func() {
+		err := nodeAgent.Start(ctx)
+		require.NoError(t, err, "expected no error even when the context is cancelled")
+		close(agentReturned)
+	}()
+
+	t.Cleanup(func() {
+		cancel()
+		select {
+		case <-time.After(time.Second):
+			t.Fatal("expected the agent to return after the context was cancelled")
+		case <-agentReturned:
+		}
+	})
 }

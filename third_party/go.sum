@@ -3064,8 +3064,8 @@ k8s.io/code-generator v0.17.2/go.mod h1:DVmfPQgxQENqDIzVR2ddLXMH34qeszkKSdH/N+s+
 k8s.io/code-generator v0.18.2/go.mod h1:+UHX5rSbxmR8kzS+FAv7um6dtYrZokQvjHpDSYRVkTc=
 k8s.io/code-generator v0.18.10/go.mod h1:TgNEVx9hCyPGpdtCWA34olQYLkh3ok9ar7XfSsr8b6c=
 k8s.io/code-generator v0.21.6/go.mod h1:1rjClMZOJxt64EX39Cxs1M60KWy6l9D716HBuy5eWfg=
-k8s.io/code-generator v0.27.1 h1:GrfUeUrJ/RtPskIsnChcXOW6h0EGNqty0VxxQ9qYKlM=
-k8s.io/code-generator v0.27.1/go.mod h1:iWtpm0ZMG6Gc4daWfITDSIu+WFhFJArYDhj242zcbnY=
+k8s.io/code-generator v0.27.2 h1:RmK0CnU5qRaK6WRtSyWNODmfTZNoJbrizpVcsgbtrvI=
+k8s.io/code-generator v0.27.2/go.mod h1:DPung1sI5vBgn4AGKtlPRQAyagj/ir/4jI55ipZHVww=
 k8s.io/component-base v0.17.4/go.mod h1:5BRqHMbbQPm2kKu35v3G+CpVq4K0RJKC7TRioF0I9lE=
 k8s.io/component-base v0.18.2/go.mod h1:kqLlMuhJNHQ9lz8Z7V5bxUUtjFZnrypArGl58gmDfUM=
 k8s.io/component-base v0.18.10/go.mod h1:ZzFXjzUBHKOcF0mnWkxBI1wDu5t+CV3GxXKKvHZBLf0=
@@ -3102,8 +3102,8 @@ k8s.io/kube-openapi v0.0.0-20200410145947-61e04a5be9a6/go.mod h1:GRQhZsXIAJ1xR0C
 k8s.io/kube-openapi v0.0.0-20200805222855-6aeccd4b50c6/go.mod h1:UuqjUnNftUyPE5H64/qeyjQoUZhGpeFDVdxjTeEVN2o=
 k8s.io/kube-openapi v0.0.0-20201113171705-d219536bb9fd/go.mod h1:WOJ3KddDSol4tAGcJo0Tvi+dK12EcqSLqcWsryKMpfM=
 k8s.io/kube-openapi v0.0.0-20210305001622-591a79e4bda7/go.mod h1:wXW5VT87nVfh/iLV8FpR2uDvrFyomxbtb1KivDbvPTE=
-k8s.io/kube-openapi v0.0.0-20230308215209-15aac26d736a h1:gmovKNur38vgoWfGtP5QOGNOA7ki4n6qNYoFAgMlNvg=
-k8s.io/kube-openapi v0.0.0-20230308215209-15aac26d736a/go.mod h1:y5VtZWM9sHHc2ZodIH/6SHzXj+TPU5USoA8lcIeKEKY=
+k8s.io/kube-openapi v0.0.0-20230501164219-8b0f38b5fd1f h1:2kWPakN3i/k81b0gvD5C5FJ2kxm1WrQFanWchyKuqGg=
+k8s.io/kube-openapi v0.0.0-20230501164219-8b0f38b5fd1f/go.mod h1:byini6yhqGC14c3ebc/QwanvYwhuMWF6yz2F8uwW8eg=
 k8s.io/kubectl v0.18.10/go.mod h1:VVVSZir1jxZ2t8q6UGp6c+j5Uo3/bce9gL/Qcf67g08=
 k8s.io/kubectl v0.21.6 h1:QdMf7BbZMLUSgKvjrCX0iPVbF/H3iThm53iXVCBdJYo=
 k8s.io/kubectl v0.21.6/go.mod h1:Pnwlx/nKwu6PFgSMqoh097h2rU0sniI1m9LAZ9OsphY=

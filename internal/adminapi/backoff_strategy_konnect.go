@@ -2,6 +2,7 @@ package adminapi
 
 import (
 	"bytes"
+	"encoding/hex"
 	"fmt"
 	"net/http"
 	"strings"
@@ -158,7 +159,7 @@ func (s *KonnectBackoffStrategy) whyCannotUpdate(
 	if isTheSameFaultyConfig {
 		reasons = append(reasons, fmt.Sprintf(
 			"config has to be changed: %q hash has already failed to be pushed with a client error",
-			string(s.lastFailedConfigHash),
+			hex.EncodeToString(s.lastFailedConfigHash),
 		))
 	}
 

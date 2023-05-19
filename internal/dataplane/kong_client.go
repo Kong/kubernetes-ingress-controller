@@ -436,9 +436,9 @@ func (c *KongClient) maybeSendOutToKonnectClient(ctx context.Context, s *kongsta
 
 		if errors.Is(err, sendconfig.ErrUpdateSkippedDueToBackoffStrategy{}) {
 			c.logger.WithError(err).Warn("Skipped pushing configuration to Konnect")
+		} else {
+			c.logger.WithError(err).Warn("Failed pushing configuration to Konnect")
 		}
-
-		c.logger.WithError(err).Warn("Failed pushing configuration to Konnect")
 		return err
 	}
 

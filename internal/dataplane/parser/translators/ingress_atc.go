@@ -26,12 +26,18 @@ var (
 	validHosts = regexp.MustCompile(`^(\*\.)?([a-zA-Z0-9]+(-[a-zA-Z0-9]+)*)+(\.([a-zA-Z0-9]+(-[a-zA-Z0-9]+)*))*?(\.\*)?$`)
 )
 
-var (
+const (
+	// Priorities for exact path match, prefix path match, and implementation specific path match.
+	// The numbers are chosen arbitrarily to keep exact > prefix > implementation specific
+	// and have intervals between them.
 	ExactPathMatchPriority                  = 256 * 3
 	PrefixPathMatchPriority                 = 256 * 2
 	ImplementationSpecificPathMatchPriority = 256
-	NormalIngressExpressionPriority         = 1
-	IngressDefaultBackendPriority           = 0
+	// NormalIngressExpressionPriority is for default priority of route translated from ingress rules.
+	NormalIngressExpressionPriority = 1
+	// IngressDefaultBackendPriority is the priority of route translated from default backends of ingresses
+	// should be less than NormalIngressExpressionPriority.
+	IngressDefaultBackendPriority = 0
 )
 
 func (m *ingressTranslationMeta) translateIntoKongExpressionRoute() *kongstate.Route {

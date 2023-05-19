@@ -27,8 +27,11 @@ var (
 )
 
 var (
-	NormalIngressExpressionPriority = 1
-	IngressDefaultBackendPriority   = 0
+	ExactPathMatchPriority                  = 256 * 3
+	PrefixPathMatchPriority                 = 256 * 2
+	ImplementationSpecificPathMatchPriority = 256
+	NormalIngressExpressionPriority         = 1
+	IngressDefaultBackendPriority           = 0
 )
 
 func (m *ingressTranslationMeta) translateIntoKongExpressionRoute() *kongstate.Route {
@@ -112,7 +115,27 @@ func (m *ingressTranslationMeta) translateIntoKongExpressionRoute() *kongstate.R
 		routeMatcher.And(sniMatcher)
 	}
 
-	atc.ApplyExpression(&route.Route, routeMatcher, NormalIngressExpressionPriority)
+	priority := NormalIngressExpressionPriority
+	// decide priority of the route.
+	// REVIEW: this uses the path with highest priority as the priority of the whole route.
+	// If we need to assign different priorities for different types of path match,
+	// we should split paths with different types into different routes.
+	// REVIEW 2: do we consider "whether hostname specified" in assigning priorities, like `HTTPRoute`? I prefer not.
+	for _, path := range m.paths {
+		switch *path.PathType {
+		case netv1.PathTypeExact:
+			priority = ExactPathMatchPriority
+		case netv1.PathTypePrefix:
+			if priority < PrefixPathMatchPriority {
+				priority = PrefixPathMatchPriority
+			}
+		case netv1.PathTypeImplementationSpecific:
+			if priority < ImplementationSpecificPathMatchPriority {
+				priority = ImplementationSpecificPathMatchPriority
+			}
+		}
+	}
+	atc.ApplyExpression(&route.Route, routeMatcher, priority)
 	return route
 }
 

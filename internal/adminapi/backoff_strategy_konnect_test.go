@@ -1,6 +1,7 @@
 package adminapi_test
 
 import (
+	"crypto/sha256"
 	"errors"
 	"net/http"
 	"testing"
@@ -29,10 +30,15 @@ func (m *mockClock) MoveBy(d time.Duration) {
 }
 
 func TestKonnectBackoffStrategy(t *testing.T) {
+	someTestHash := func(s string) []byte {
+		h := sha256.Sum256([]byte(s))
+		return h[:]
+	}
+
 	var (
 		clock   = newMockClock()
-		hashOne = []byte("1")
-		hashTwo = []byte("2")
+		hashOne = someTestHash("1")
+		hashTwo = someTestHash("2")
 	)
 
 	t.Run("on init allows any updates", func(t *testing.T) {
@@ -75,7 +81,7 @@ func TestKonnectBackoffStrategy(t *testing.T) {
 
 		canUpdate, whyNot := strategy.CanUpdate(hashOne)
 		assert.False(t, canUpdate, "should not allow update for the same faulty hash")
-		assert.Equal(t, "config has to be changed: \"1\" hash has already failed to be pushed with a client error", whyNot)
+		assert.Equal(t, "config has to be changed: \"6b86b273ff34fce19d6b804eff5a3f5747ada4eaa22f1d49c01e52ddb7875b4b\" hash has already failed to be pushed with a client error", whyNot)
 
 		canUpdate, whyNot = strategy.CanUpdate(hashTwo)
 		assert.True(t, canUpdate, "should allow update for another hash")
@@ -89,7 +95,7 @@ func TestKonnectBackoffStrategy(t *testing.T) {
 
 		canUpdate, whyNot := strategy.CanUpdate(hashOne)
 		assert.False(t, canUpdate, "should not allow next update when last failed and backoff time wasn't satisfied")
-		assert.Equal(t, "config has to be changed: \"1\" hash has already failed to be pushed with a client error, next attempt allowed in 3s", whyNot)
+		assert.Equal(t, "config has to be changed: \"6b86b273ff34fce19d6b804eff5a3f5747ada4eaa22f1d49c01e52ddb7875b4b\" hash has already failed to be pushed with a client error, next attempt allowed in 3s", whyNot)
 
 		canUpdate, whyNot = strategy.CanUpdate(hashTwo)
 		assert.False(t, canUpdate, "should not allow next update when last failed and backoff time wasn't satisfied")

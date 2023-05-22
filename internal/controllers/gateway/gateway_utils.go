@@ -158,10 +158,9 @@ func extractListenerSpecFromGateway(gateway *gatewayv1beta1.Gateway, listenerNam
 }
 
 type (
-	protocolPortMap     map[ProtocolType]map[PortNumber]bool
-	portProtocolMap     map[PortNumber]ProtocolType
-	portHostnameMap     map[PortNumber]map[Hostname]bool
-	listenerAttachedMap map[SectionName]int32
+	protocolPortMap map[ProtocolType]map[PortNumber]bool
+	portProtocolMap map[PortNumber]ProtocolType
+	portHostnameMap map[PortNumber]map[Hostname]bool
 )
 
 func buildKongPortMap(listens []Listener) protocolPortMap {
@@ -182,11 +181,9 @@ func buildKongPortMap(listens []Listener) protocolPortMap {
 func initializeListenerMaps(gateway *Gateway) (
 	portProtocolMap,
 	portHostnameMap,
-	listenerAttachedMap,
 ) {
 	portToProtocol := make(portProtocolMap, len(gateway.Status.Listeners))
 	portToHostname := make(portHostnameMap, len(gateway.Status.Listeners))
-	listenerToAttached := make(listenerAttachedMap, len(gateway.Status.Listeners))
 
 	existingStatuses := make(map[SectionName]ListenerStatus,
 		len(gateway.Status.Listeners))
@@ -196,13 +193,8 @@ func initializeListenerMaps(gateway *Gateway) (
 
 	for _, listener := range gateway.Spec.Listeners {
 		portToHostname[listener.Port] = make(map[Hostname]bool)
-		if existingStatus, ok := existingStatuses[listener.Name]; ok {
-			listenerToAttached[listener.Name] = existingStatus.AttachedRoutes
-		} else {
-			listenerToAttached[listener.Name] = 0
-		}
 	}
-	return portToProtocol, portToHostname, listenerToAttached
+	return portToProtocol, portToHostname
 }
 
 func canSharePort(requested, existing ProtocolType) bool {
@@ -244,7 +236,7 @@ func getListenerStatus(
 	client client.Client,
 ) ([]ListenerStatus, error) {
 	statuses := make(map[SectionName]ListenerStatus, len(gateway.Spec.Listeners))
-	portToProtocol, portToHostname, listenerToAttached := initializeListenerMaps(gateway)
+	portToProtocol, portToHostname := initializeListenerMaps(gateway)
 	kongProtocolsToPort := buildKongPortMap(kongListens)
 	conflictedPorts := make(map[PortNumber]bool, len(gateway.Spec.Listeners))
 	conflictedHostnames := make(map[PortNumber]map[Hostname]bool, len(gateway.Spec.Listeners))
@@ -300,12 +292,42 @@ func getListenerStatus(
 			}
 		}
 
+		// gets all the HTTPRoutes and update the listeners' attachedRoutes field.
+		// At this point we take into account HTTPRoutes only, as they are the
+		// only routes in beta.
+		httpRouteList := gatewayv1beta1.HTTPRouteList{}
+		if err := client.List(ctx, &httpRouteList); err != nil {
+			return nil, err
+		}
+		var attachedRoutes int32
+		for _, route := range httpRouteList.Items {
+			route := route
+			if !isRouteAcceptedByGateway(route.Namespace, route.Status.Parents, *gateway) {
+				continue
+			}
+			for _, parentRef := range route.Spec.ParentRefs {
+				accepted, err := isRouteAcceptedByListener(
+					ctx,
+					client,
+					&route,
+					listener,
+					*gateway,
+					parentRef,
+				)
+				if err != nil {
+					return nil, err
+				}
+				if accepted {
+					attachedRoutes++
+				}
+			}
+		}
+
 		status := ListenerStatus{
 			Name:           listener.Name,
 			Conditions:     []metav1.Condition{},
 			SupportedKinds: supportedkinds,
-			// this has been populated by initializeListenerMaps()
-			AttachedRoutes: listenerToAttached[listener.Name],
+			AttachedRoutes: attachedRoutes,
 		}
 
 		// if the resolvedRefs condition is not successful, append the resolvedRefs condition failed with the proper reason
@@ -669,4 +691,25 @@ func isTLSSecretValid(secret *corev1.Secret) bool {
 		return false
 	}
 	return true
+}
+
+func isRouteAcceptedByGateway(routeNamespace string, parentStatuses []RouteParentStatus, gateway gatewayv1beta1.Gateway) bool {
+	for _, routeParentStatus := range parentStatuses {
+		parentRef := routeParentStatus.ParentRef
+		if (parentRef.Group != nil && *parentRef.Group != gatewayV1beta1Group) ||
+			(parentRef.Kind != nil && *parentRef.Kind != "Gateway") {
+			continue
+		}
+		if parentRef.Namespace != nil {
+			routeNamespace = string(*parentRef.Namespace)
+		}
+		if gateway.Namespace == routeNamespace && gateway.Name == string(parentRef.Name) &&
+			lo.ContainsBy(routeParentStatus.Conditions, func(condition metav1.Condition) bool {
+				return condition.Type == string(gatewayv1beta1.RouteConditionAccepted) &&
+					condition.Status == metav1.ConditionTrue
+			}) {
+			return true
+		}
+	}
+	return false
 }

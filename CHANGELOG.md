@@ -157,6 +157,9 @@ Adding a new version? You'll need three changes:
   - `service`: will make KIC build addresses using the following template:
     `pod-ip-address.service-name.my-namespace.svc`.
     This is known to not work on GKE becuase it uses `kube-dns` instead of coredns.
+- Gateway's `AttachedRoutes` fields get updated with the number of routes referencing
+  and using each listener.
+  [#4052](https://github.com/Kong/kubernetes-ingress-controller/pull/4052)
 
 ### Changed
 

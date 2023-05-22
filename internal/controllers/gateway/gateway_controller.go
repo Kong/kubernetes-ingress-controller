@@ -10,6 +10,7 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/kong/go-kong/kong"
+	"github.com/samber/lo"
 	"github.com/samber/mo"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -126,6 +127,15 @@ func (r *GatewayReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		source.Kind(mgr.GetCache(), &corev1.Service{}),
 		handler.EnqueueRequestsFromMapFunc(r.listGatewaysForService),
 		predicate.NewPredicateFuncs(r.isGatewayService),
+	); err != nil {
+		return err
+	}
+
+	// if a HTTPRoute gets accepted by a Gateway, we need to make sure to trigger
+	// reconciliation on the gateway, as we need to update the number of attachedRoutes.
+	if err := c.Watch(
+		&source.Kind{Type: &gatewayv1beta1.HTTPRoute{}},
+		handler.EnqueueRequestsFromMapFunc(r.listGatewaysForHTTPRoute),
 	); err != nil {
 		return err
 	}
@@ -264,6 +274,43 @@ func (r *GatewayReconciler) listGatewaysForService(ctx context.Context, svc clie
 		}
 	}
 	return
+}
+
+// listGatewaysForHTTPRoute retrieves all the gateways referenced as parents by the HTTPRoute.
+func (r *GatewayReconciler) listGatewaysForHTTPRoute(obj client.Object) []reconcile.Request {
+	httpRoute, ok := obj.(*gatewayv1beta1.HTTPRoute)
+	if !ok {
+		r.Log.Error(
+			fmt.Errorf("unexpected object type"),
+			"httproute watch predicate received unexpected object type",
+			"expected", "*gatewayv1beta1.HTTPRoute", "found", reflect.TypeOf(obj),
+		)
+		return nil
+	}
+	recs := []reconcile.Request{}
+	for _, routeParentStatus := range httpRoute.Status.Parents {
+		gatewayNamespace := httpRoute.Namespace
+		parentRef := routeParentStatus.ParentRef
+		if (parentRef.Group != nil && *parentRef.Group != gatewayV1beta1Group) ||
+			(parentRef.Kind != nil && *parentRef.Kind != "Gateway") {
+			continue
+		}
+		if parentRef.Namespace != nil {
+			gatewayNamespace = string(*parentRef.Namespace)
+		}
+		if lo.ContainsBy(routeParentStatus.Conditions, func(condition metav1.Condition) bool {
+			return condition.Type == string(gatewayv1beta1.RouteConditionAccepted) &&
+				condition.Status == metav1.ConditionTrue
+		}) {
+			recs = append(recs, reconcile.Request{
+				NamespacedName: k8stypes.NamespacedName{
+					Namespace: gatewayNamespace,
+					Name:      string(parentRef.Name),
+				},
+			})
+		}
+	}
+	return recs
 }
 
 // isGatewayService is a watch predicate that filters out events for objects that aren't

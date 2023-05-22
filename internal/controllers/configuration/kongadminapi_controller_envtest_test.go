@@ -5,6 +5,7 @@ package configuration_test
 
 import (
 	"context"
+	"fmt"
 	"sync"
 	"testing"
 	"time"
@@ -177,14 +178,14 @@ func TestKongAdminAPIController(t *testing.T) {
 		assert.ElementsMatch(t,
 			[]adminapi.DiscoveredAdminAPI{
 				{
-					Address: "https://10.0.0.1:8080",
+					Address: fmt.Sprintf("https://10-0-0-1.%s.%s.svc:8080", adminService.Name, adminService.Namespace),
 					PodRef: k8stypes.NamespacedName{
 						Namespace: adminPod.Namespace,
 						Name:      adminPod.Name,
 					},
 				},
 				{
-					Address: "https://10.0.0.2:8080",
+					Address: fmt.Sprintf("https://10-0-0-2.%s.%s.svc:8080", adminService.Name, adminService.Namespace),
 					PodRef: k8stypes.NamespacedName{
 						Namespace: adminPod.Namespace,
 						Name:      adminPod.Name,
@@ -254,7 +255,7 @@ func TestKongAdminAPIController(t *testing.T) {
 		assert.ElementsMatch(t,
 			[]adminapi.DiscoveredAdminAPI{
 				{
-					Address: "https://10.0.0.2:8080",
+					Address: fmt.Sprintf("https://10-0-0-2.%s.%s.svc:8080", adminService.Name, adminService.Namespace),
 					PodRef: k8stypes.NamespacedName{
 						Namespace: adminPod.Namespace,
 						Name:      adminPod.Name,
@@ -374,28 +375,28 @@ func TestKongAdminAPIController(t *testing.T) {
 		assert.ElementsMatch(t,
 			[]adminapi.DiscoveredAdminAPI{
 				{
-					Address: "https://10.0.0.1:8080",
+					Address: fmt.Sprintf("https://10-0-0-1.%s.%s.svc:8080", adminService.Name, adminService.Namespace),
 					PodRef: k8stypes.NamespacedName{
 						Namespace: adminPod.Namespace,
 						Name:      adminPod.Name,
 					},
 				},
 				{
-					Address: "https://10.0.0.2:8080",
+					Address: fmt.Sprintf("https://10-0-0-2.%s.%s.svc:8080", adminService.Name, adminService.Namespace),
 					PodRef: k8stypes.NamespacedName{
 						Namespace: adminPod.Namespace,
 						Name:      adminPod.Name,
 					},
 				},
 				{
-					Address: "https://10.0.0.10:8080",
+					Address: fmt.Sprintf("https://10-0-0-10.%s.%s.svc:8080", adminService.Name, adminService.Namespace),
 					PodRef: k8stypes.NamespacedName{
 						Namespace: adminPod.Namespace,
 						Name:      adminPod.Name,
 					},
 				},
 				{
-					Address: "https://10.0.0.20:8080",
+					Address: fmt.Sprintf("https://10-0-0-20.%s.%s.svc:8080", adminService.Name, adminService.Namespace),
 					PodRef: k8stypes.NamespacedName{
 						Namespace: adminPod.Namespace,
 						Name:      adminPod.Name,
@@ -465,14 +466,14 @@ func TestKongAdminAPIController(t *testing.T) {
 		assert.ElementsMatch(t,
 			[]adminapi.DiscoveredAdminAPI{
 				{
-					Address: "https://10.0.0.1:8080",
+					Address: fmt.Sprintf("https://10-0-0-1.%s.%s.svc:8080", adminService.Name, adminService.Namespace),
 					PodRef: k8stypes.NamespacedName{
 						Namespace: adminPod.Namespace,
 						Name:      adminPod.Name,
 					},
 				},
 				{
-					Address: "https://10.0.0.2:8080",
+					Address: fmt.Sprintf("https://10-0-0-2.%s.%s.svc:8080", adminService.Name, adminService.Namespace),
 					PodRef: k8stypes.NamespacedName{
 						Namespace: adminPod.Namespace,
 						Name:      adminPod.Name,
@@ -500,7 +501,7 @@ func TestKongAdminAPIController(t *testing.T) {
 		assert.ElementsMatch(t,
 			[]adminapi.DiscoveredAdminAPI{
 				{
-					Address: "https://10.0.0.1:8080",
+					Address: fmt.Sprintf("https://10-0-0-1.%s.%s.svc:8080", adminService.Name, adminService.Namespace),
 					PodRef: k8stypes.NamespacedName{
 						Namespace: adminPod.Namespace,
 						Name:      adminPod.Name,
@@ -570,14 +571,14 @@ func TestKongAdminAPIController(t *testing.T) {
 		assert.ElementsMatch(t,
 			[]adminapi.DiscoveredAdminAPI{
 				{
-					Address: "https://10.0.0.1:8080",
+					Address: fmt.Sprintf("https://10-0-0-1.%s.%s.svc:8080", adminService.Name, adminService.Namespace),
 					PodRef: k8stypes.NamespacedName{
 						Namespace: adminPod.Namespace,
 						Name:      adminPod.Name,
 					},
 				},
 				{
-					Address: "https://10.0.0.2:8080",
+					Address: fmt.Sprintf("https://10-0-0-2.%s.%s.svc:8080", adminService.Name, adminService.Namespace),
 					PodRef: k8stypes.NamespacedName{
 						Namespace: adminPod.Namespace,
 						Name:      adminPod.Name,

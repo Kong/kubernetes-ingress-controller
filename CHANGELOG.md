@@ -133,7 +133,9 @@ Adding a new version? You'll need three changes:
   [#3998](https://github.com/Kong/kubernetes-ingress-controller/pull/3998)
   [#3980](https://github.com/Kong/kubernetes-ingress-controller/pull/3980)
   [#3977](https://github.com/Kong/kubernetes-ingress-controller/pull/3977)
-  
+- Gateway Discovery now produces DNS names instead of IP addresses
+  [#4044](https://github.com/Kong/kubernetes-ingress-controller/pull/4044)
+
 ### Fixed
 
 - Fix paging in `GetAdminAPIsForService` which might have caused the controller

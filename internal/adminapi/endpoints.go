@@ -3,6 +3,7 @@ package adminapi
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	discoveryv1 "k8s.io/api/discovery/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -78,6 +79,14 @@ func AdminAPIsFromEndpointSlice(endpoints discoveryv1.EndpointSlice, portNames s
 			continue
 		}
 
+		var serviceName string
+		for _, or := range endpoints.OwnerReferences {
+			if or.Kind == "Service" && or.APIVersion == "v1" {
+				serviceName = or.Name
+				break
+			}
+		}
+
 		for _, e := range endpoints.Endpoints {
 			if e.Conditions.Ready == nil || !*e.Conditions.Ready {
 				continue
@@ -95,18 +104,33 @@ func AdminAPIsFromEndpointSlice(endpoints discoveryv1.EndpointSlice, portNames s
 			if len(e.Addresses) < 1 {
 				continue
 			}
+
 			// Endpoint's addresses are assumed to be fungible, therefore we pick only the first one.
 			// For the context please see the `Endpoint.Addresses` godoc.
-			addr := e.Addresses[0]
+			addr := strings.ReplaceAll(e.Addresses[0], ".", "-")
 
+			var adminAPI DiscoveredAdminAPI
 			// NOTE: We assume https here because the referenced Admin API
 			// server will live in another Pod/elsewhere so allowing http would
 			// not be considered best practice.
-			adminAPI := DiscoveredAdminAPI{
-				Address: fmt.Sprintf("https://%s:%d", addr, *p.Port),
-				PodRef:  podNN,
+			if serviceName == "" {
+				// If we couldn't find a service that's the owner of provided EndpointSlice
+				// then fallback to providing a DNS name for the Pod only.
+				adminAPI = DiscoveredAdminAPI{
+					Address: fmt.Sprintf("https://%s.%s.pod:%d",
+						addr, endpoints.Namespace, *p.Port,
+					),
+					PodRef: podNN,
+				}
+			} else {
+				adminAPI = DiscoveredAdminAPI{
+					Address: fmt.Sprintf("https://%s.%s.%s.svc:%d",
+						addr, serviceName, endpoints.Namespace, *p.Port,
+					),
+					PodRef: podNN,
+				}
 			}
-			discoveredAdminAPIs.Insert(adminAPI)
+			discoveredAdminAPIs = discoveredAdminAPIs.Insert(adminAPI)
 		}
 	}
 	return discoveredAdminAPIs

@@ -46,7 +46,7 @@ jobs:
       - test-reports
     steps:
       - name: Notify on Slack for failures of e2e tests run automatically at night
-        if: failure() && github.event_name == 'schedule'
+        if: always() && contains(needs.*.result, 'failure') && github.event_name == 'schedule'
         uses: 8398a7/action-slack@v3
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}

@@ -17,6 +17,7 @@ import (
 	"golang.org/x/exp/slices"
 	"golang.org/x/sync/errgroup"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -484,6 +485,7 @@ func (c *KongClient) sendToClient(
 	)
 
 	c.recordResourceFailureEvents(entityErrors, KongConfigurationApplyFailedEventReason)
+	c.recordApplyConfigurationEvents(err)
 	sendDiagnostic(err != nil)
 
 	if err != nil {
@@ -616,4 +618,30 @@ func (c *KongClient) recordResourceFailureEvents(resourceFailures []failures.Res
 			c.eventRecorder.Event(obj, corev1.EventTypeWarning, reason, failure.Message())
 		}
 	}
+}
+
+func (c *KongClient) recordApplyConfigurationEvents(err error) {
+	eventType := corev1.EventTypeNormal
+	reason := "successfully applied configuration to Kong"
+	message := ""
+
+	if err != nil {
+		eventType = corev1.EventTypeWarning
+		reason = "failed to apply configuration to Kong"
+		message = err.Error()
+	}
+
+	podNN, getPodErr := util.GetPodNN()
+	if getPodErr != nil {
+		c.logger.Error(getPodErr)
+		return
+	}
+
+	pod := &corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      podNN.Name,
+			Namespace: podNN.Namespace,
+		},
+	}
+	c.eventRecorder.Event(pod, eventType, reason, message)
 }

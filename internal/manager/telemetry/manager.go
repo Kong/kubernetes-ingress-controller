@@ -1,6 +1,7 @@
 package telemetry
 
 import (
+	"crypto/tls"
 	"fmt"
 	"strings"
 	"time"
@@ -22,10 +23,13 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 )
 
-const (
-	splunkEndpoint  = "kong-hf.konghq.com:61833"
-	telemetryPeriod = time.Hour
+var (
+	SplunkEndpoint                   = "kong-hf.konghq.com:61833"
+	SplunkEndpointInsecureSkipVerify = false
+	TelemetryPeriod                  = time.Hour
+)
 
+const (
 	prefix      = "kic"
 	SignalStart = prefix + "-start"
 	SignalPing  = prefix + "-ping"
@@ -56,14 +60,16 @@ func CreateManager(restConfig *rest.Config, gatewaysCounter workflows.Discovered
 	dyn := dynamic.New(k.Discovery().RESTClient())
 
 	m, err := createManager(k, dyn, cl, gatewaysCounter, fixedPayload, rv,
-		telemetry.OptManagerPeriod(telemetryPeriod),
+		telemetry.OptManagerPeriod(TelemetryPeriod),
 		telemetry.OptManagerLogger(logger),
 	)
 	if err != nil {
 		return nil, err
 	}
 
-	tf, err := forwarders.NewTLSForwarder(splunkEndpoint, logger)
+	tf, err := forwarders.NewTLSForwarder(SplunkEndpoint, logger, func(c *tls.Config) {
+		c.InsecureSkipVerify = SplunkEndpointInsecureSkipVerify
+	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to create telemetry TLSForwarder: %w", err)
 	}

@@ -109,10 +109,10 @@ func shouldEnableParserExpressionRoutes(
 		return false
 	}
 	if routerFlavor != kongRouterFlavorExpressions {
-		logger.Infof("ExpressionRoutes feature gate enabled, but Gateway run with %q router flavor, using this instead", routerFlavor)
+		logger.Infof("ExpressionRoutes feature gate enabled but Gateway is running with %q router flavor, using that instead", routerFlavor)
 		return false
 	}
-	logger.Info("expression routes mode has been enabled")
+	logger.Info("expression routes mode enabled")
 	return true
 }
 

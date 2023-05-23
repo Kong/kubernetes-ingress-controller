@@ -5259,7 +5259,7 @@ func TestNewFeatureFlags(t *testing.T) {
 				CombinedServiceRoutes: true,
 				ExpressionRoutes:      true,
 			},
-			expectInfoLog: "expression routes mode has been enabled",
+			expectInfoLog: "expression routes mode enabled",
 		},
 		{
 			name: "expression routes feature gate enabled and router flavor does not match",
@@ -5271,7 +5271,7 @@ func TestNewFeatureFlags(t *testing.T) {
 			expectedFeatureFlags: FeatureFlags{
 				CombinedServiceRoutes: true,
 			},
-			expectInfoLog: "ExpressionRoutes feature gate enabled, but Gateway run with \"any_other_router_mode\" router flavor, using this instead",
+			expectInfoLog: "ExpressionRoutes feature gate enabled but Gateway is running with \"any_other_router_mode\" router flavor, using that instead",
 		},
 		{
 			name: "expression routes feature gate enabled and combined routes disabled",

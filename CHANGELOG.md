@@ -123,6 +123,9 @@ Adding a new version? You'll need three changes:
   now accounts for potential failures in synchronizing configuration with Konnect's
   Runtime Group Admin API.
   [#4029](https://github.com/Kong/kubernetes-ingress-controller/pull/4029)
+- Disable translation to expression routes when feature gate `ExpressionRoutes`
+  is enabled but feature gate `CombinedRoutes` is not enabled.
+  [#4057](https://github.com/Kong/kubernetes-ingress-controller/pull/4057)
 
 ### Changed
 

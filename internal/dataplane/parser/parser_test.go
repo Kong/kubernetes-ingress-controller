@@ -5251,22 +5251,36 @@ func TestNewFeatureFlags(t *testing.T) {
 		{
 			name: "expression routes feature gate enabled and router flavor matches",
 			featureGates: map[string]bool{
+				featuregates.CombinedRoutesFeature:   true,
 				featuregates.ExpressionRoutesFeature: true,
 			},
 			routerFlavor: kongRouterFlavorExpressions,
 			expectedFeatureFlags: FeatureFlags{
-				ExpressionRoutes: true,
+				CombinedServiceRoutes: true,
+				ExpressionRoutes:      true,
 			},
 			expectInfoLog: "expression routes mode has been enabled",
 		},
 		{
 			name: "expression routes feature gate enabled and router flavor does not match",
 			featureGates: map[string]bool{
+				featuregates.CombinedRoutesFeature:   true,
 				featuregates.ExpressionRoutesFeature: true,
 			},
-			routerFlavor:         "any_other_router_mode",
+			routerFlavor: "any_other_router_mode",
+			expectedFeatureFlags: FeatureFlags{
+				CombinedServiceRoutes: true,
+			},
+			expectInfoLog: "ExpressionRoutes feature gate enabled, but Gateway run with \"any_other_router_mode\" router flavor, using this instead",
+		},
+		{
+			name: "expression routes feature gate enabled and combined routes disabled",
+			featureGates: map[string]bool{
+				featuregates.ExpressionRoutesFeature: true,
+			},
+			routerFlavor:         kongRouterFlavorExpressions,
 			expectedFeatureFlags: FeatureFlags{},
-			expectInfoLog:        "ExpressionRoutes feature gate enabled, but Gateway run with \"any_other_router_mode\" router flavor, using this instead",
+			expectInfoLog:        "ExpressionRoutes feature gate is enabled but CombinedRoutes feature gate is disabled, do not enable expression routes",
 		},
 		{
 			name: "combined routes feature gate enabled",

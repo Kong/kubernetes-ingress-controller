@@ -485,7 +485,10 @@ func (c *KongClient) sendToClient(
 	)
 
 	c.recordResourceFailureEvents(entityErrors, KongConfigurationApplyFailedEventReason)
-	c.recordApplyConfigurationEvents(err)
+	// REVIEW: do we record the event for uploading config to Konnect?
+	if !client.IsKonnect() {
+		c.recordApplyConfigurationEvents(err, client.BaseRootURL())
+	}
 	sendDiagnostic(err != nil)
 
 	if err != nil {
@@ -620,20 +623,21 @@ func (c *KongClient) recordResourceFailureEvents(resourceFailures []failures.Res
 	}
 }
 
-func (c *KongClient) recordApplyConfigurationEvents(err error) {
+// recordApplyConfigurationEvents records event attached to KIC pod after KIC applied Kong configuration.
+func (c *KongClient) recordApplyConfigurationEvents(err error, rootURL string) {
 	eventType := corev1.EventTypeNormal
-	reason := "successfully applied configuration to Kong"
-	message := ""
+	reason := "KongConfigApplySucceeded"
+	message := fmt.Sprintf("successfully applied Kong configuration to %s", rootURL)
 
 	if err != nil {
 		eventType = corev1.EventTypeWarning
-		reason = "failed to apply configuration to Kong"
-		message = err.Error()
+		reason = "KongConfigApplyFailed"
+		message = fmt.Sprintf("failed to apply Kong configuration to %s: %v", rootURL, err)
 	}
 
 	podNN, getPodErr := util.GetPodNN()
 	if getPodErr != nil {
-		c.logger.Error(getPodErr)
+		c.logger.WithError(getPodErr).Error("failed to resolve controller's pod to attach the apply configuration event to")
 		return
 	}
 

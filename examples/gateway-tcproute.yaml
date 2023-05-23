@@ -19,7 +19,7 @@ spec:
     spec:
       containers:
       - name: tcpecho
-        image: kong/go-echo:0.1.0
+        image: kong/go-echo:0.3.0
         ports:
         - containerPort: 1025
         env:

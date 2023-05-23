@@ -83,17 +83,10 @@ func NewFeatureFlags(
 		logger.Info("combined routes mode has been enabled")
 	}
 
-	expressionRoutesEnabled := false
-	if featureGates.Enabled(featuregates.ExpressionRoutesFeature) {
-		if routerFlavor == kongRouterFlavorExpressions {
-			expressionRoutesEnabled = true
-			logger.Info("expression routes mode has been enabled")
-		} else {
-			logger.Infof("ExpressionRoutes feature gate enabled, but Gateway run with %q router flavor, using this instead", routerFlavor)
-		}
-	}
-
 	combinedRoutesEnabled := featureGates.Enabled(featuregates.CombinedRoutesFeature)
+
+	expressionRoutesEnabled := shouldEnableParserExpressionRoutes(logger, featureGates, routerFlavor)
+
 	return FeatureFlags{
 		ReportConfiguredKubernetesObjects: updateStatusFlag,
 		CombinedServiceRoutes:             combinedRoutesEnabled,
@@ -101,6 +94,26 @@ func NewFeatureFlags(
 		ExpressionRoutes:                  expressionRoutesEnabled,
 		CombinedServices:                  combinedRoutesEnabled && featureGates.Enabled(featuregates.CombinedServicesFeature),
 	}
+}
+
+func shouldEnableParserExpressionRoutes(
+	logger logrus.FieldLogger,
+	featureGates featuregates.FeatureGates,
+	routerFlavor string,
+) bool {
+	if !featureGates.Enabled(featuregates.ExpressionRoutesFeature) {
+		return false
+	}
+	if !featureGates.Enabled(featuregates.CombinedRoutesFeature) {
+		logger.Info("ExpressionRoutes feature gate is enabled but CombinedRoutes feature gate is disabled, do not enable expression routes")
+		return false
+	}
+	if routerFlavor != kongRouterFlavorExpressions {
+		logger.Infof("ExpressionRoutes feature gate enabled but Gateway is running with %q router flavor, using that instead", routerFlavor)
+		return false
+	}
+	logger.Info("expression routes mode enabled")
+	return true
 }
 
 // LicenseGetter is an interface for getting the Kong Enterprise license.

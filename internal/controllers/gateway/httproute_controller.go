@@ -78,7 +78,7 @@ func (r *HTTPRouteReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	// removed from data-plane configurations, and any routes that are now supported
 	// due to that change get added to data-plane configurations.
 	if err := c.Watch(
-		&source.Kind{Type: &gatewayv1beta1.GatewayClass{}},
+		source.Kind(mgr.GetCache(), &gatewayv1beta1.GatewayClass{}),
 		handler.EnqueueRequestsFromMapFunc(r.listHTTPRoutesForGatewayClass),
 		predicate.Funcs{
 			GenericFunc: func(e event.GenericEvent) bool { return false }, // we don't need to enqueue from generic
@@ -95,7 +95,7 @@ func (r *HTTPRouteReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	// removed from data-plane configurations, and any routes that are now supported
 	// due to that change get added to data-plane configurations.
 	if err := c.Watch(
-		&source.Kind{Type: &gatewayv1beta1.Gateway{}},
+		source.Kind(mgr.GetCache(), &gatewayv1beta1.Gateway{}),
 		handler.EnqueueRequestsFromMapFunc(r.listHTTPRoutesForGateway),
 	); err != nil {
 		return err
@@ -103,7 +103,7 @@ func (r *HTTPRouteReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 	if r.enableReferenceGrant {
 		if err := c.Watch(
-			&source.Kind{Type: &gatewayv1beta1.ReferenceGrant{}},
+			source.Kind(mgr.GetCache(), &gatewayv1beta1.ReferenceGrant{}),
 			handler.EnqueueRequestsFromMapFunc(r.listReferenceGrantsForHTTPRoute),
 			predicate.NewPredicateFuncs(referenceGrantHasHTTPRouteFrom),
 		); err != nil {
@@ -117,7 +117,7 @@ func (r *HTTPRouteReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	// data-plane config for an HTTPRoute if it somehow becomes disconnected from
 	// a supported Gateway and GatewayClass.
 	return c.Watch(
-		&source.Kind{Type: &gatewayv1beta1.HTTPRoute{}},
+		source.Kind(mgr.GetCache(), &gatewayv1beta1.HTTPRoute{}),
 		&handler.EnqueueRequestForObject{},
 	)
 }
@@ -128,7 +128,7 @@ func (r *HTTPRouteReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 // listReferenceGrantsForHTTPRoute is a watch predicate which finds all HTTPRoutes
 // mentioned in a From clause for a ReferenceGrant.
-func (r *HTTPRouteReconciler) listReferenceGrantsForHTTPRoute(obj client.Object) []reconcile.Request {
+func (r *HTTPRouteReconciler) listReferenceGrantsForHTTPRoute(ctx context.Context, obj client.Object) []reconcile.Request {
 	grant, ok := obj.(*gatewayv1beta1.ReferenceGrant)
 	if !ok {
 		r.Log.Error(
@@ -139,7 +139,7 @@ func (r *HTTPRouteReconciler) listReferenceGrantsForHTTPRoute(obj client.Object)
 		return nil
 	}
 	httproutes := &gatewayv1beta1.HTTPRouteList{}
-	if err := r.Client.List(context.Background(), httproutes); err != nil {
+	if err := r.Client.List(ctx, httproutes); err != nil {
 		r.Log.Error(err, "failed to list httproutes in watch", "referencegrant", grant.Name)
 		return nil
 	}
@@ -180,7 +180,7 @@ func referenceGrantHasHTTPRouteFrom(obj client.Object) bool {
 // to determine the HTTProutes as the relationship has to be discovered entirely
 // by object reference. This relies heavily on the inherent performance benefits of
 // the cached manager client to avoid API overhead.
-func (r *HTTPRouteReconciler) listHTTPRoutesForGatewayClass(obj client.Object) []reconcile.Request {
+func (r *HTTPRouteReconciler) listHTTPRoutesForGatewayClass(ctx context.Context, obj client.Object) []reconcile.Request {
 	// verify that the object is a GatewayClass
 	gwc, ok := obj.(*gatewayv1beta1.GatewayClass)
 	if !ok {
@@ -190,7 +190,7 @@ func (r *HTTPRouteReconciler) listHTTPRoutesForGatewayClass(obj client.Object) [
 
 	// map all Gateway objects
 	gatewayList := gatewayv1beta1.GatewayList{}
-	if err := r.Client.List(context.Background(), &gatewayList); err != nil {
+	if err := r.Client.List(ctx, &gatewayList); err != nil {
 		r.Log.Error(err, "failed to list gateway objects from the cached client")
 		return nil
 	}
@@ -214,7 +214,7 @@ func (r *HTTPRouteReconciler) listHTTPRoutesForGatewayClass(obj client.Object) [
 
 	// map all HTTPRoute objects
 	httprouteList := gatewayv1beta1.HTTPRouteList{}
-	if err := r.Client.List(context.Background(), &httprouteList); err != nil {
+	if err := r.Client.List(ctx, &httprouteList); err != nil {
 		r.Log.Error(err, "failed to list httproute objects from the cached client")
 		return nil
 	}
@@ -265,7 +265,7 @@ func (r *HTTPRouteReconciler) listHTTPRoutesForGatewayClass(obj client.Object) [
 // the moment for v1alpha2. As future releases of Gateway come out we'll need to
 // continue iterating on this and perhaps advocating for upstream changes to help avoid
 // this kind of problem without having to enqueue extra objects.
-func (r *HTTPRouteReconciler) listHTTPRoutesForGateway(obj client.Object) []reconcile.Request {
+func (r *HTTPRouteReconciler) listHTTPRoutesForGateway(ctx context.Context, obj client.Object) []reconcile.Request {
 	// verify that the object is a Gateway
 	gw, ok := obj.(*gatewayv1beta1.Gateway)
 	if !ok {
@@ -275,7 +275,7 @@ func (r *HTTPRouteReconciler) listHTTPRoutesForGateway(obj client.Object) []reco
 
 	// map all HTTPRoute objects
 	httprouteList := gatewayv1beta1.HTTPRouteList{}
-	if err := r.Client.List(context.Background(), &httprouteList); err != nil {
+	if err := r.Client.List(ctx, &httprouteList); err != nil {
 		r.Log.Error(err, "failed to list httproute objects from the cached client")
 		return nil
 	}

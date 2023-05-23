@@ -70,15 +70,16 @@ func setupControllerOptions(logger logr.Logger, c *Config, dbmode string, featur
 		Port:               9443,
 		LeaderElection:     leaderElectionEnabled(logger, c, dbmode),
 		LeaderElectionID:   c.LeaderElectionID,
-		SyncPeriod:         &c.SyncPeriod,
+		Cache: cache.Options{
+			SyncPeriod: &c.SyncPeriod,
+		},
 	}
 
-	// configure the controller caching options
-	if len(c.WatchNamespaces) == 0 {
-		// if there are no configured watch namespaces, then we're watching ALL namespaces
-		// and we don't have to bother individually caching any particular namespaces
-		controllerOpts.Namespace = corev1.NamespaceAll
-	} else {
+	// If there are no configured watch namespaces, then we're watching ALL namespaces,
+	// and we don't have to bother individually caching any particular namespaces.
+	// This is the default behavior of the controller-runtime manager.
+	// If there are configured watch namespaces, then we're watching only those namespaces.
+	if len(c.WatchNamespaces) > 0 {
 		watchNamespaces := c.WatchNamespaces
 
 		// in all other cases we are a multi-namespace setup and must watch all the
@@ -93,7 +94,7 @@ func setupControllerOptions(logger logr.Logger, c *Config, dbmode string, featur
 		if s, ok := c.PublishService.Get(); ok {
 			watchNamespaces = append(c.WatchNamespaces, s.Namespace)
 		}
-		controllerOpts.NewCache = cache.MultiNamespacedCacheBuilder(watchNamespaces)
+		controllerOpts.Cache.Namespaces = sets.NewString(watchNamespaces...).List()
 	}
 
 	if len(c.LeaderElectionNamespace) > 0 {

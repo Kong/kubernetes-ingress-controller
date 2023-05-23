@@ -11,11 +11,9 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
-	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
-	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/test/consts"
 )
@@ -28,17 +26,8 @@ import (
 func Setup(t *testing.T, scheme *runtime.Scheme) *rest.Config {
 	t.Helper()
 
-	gatewayCRDPath := filepath.Join(build.Default.GOPATH, "pkg", "mod", "sigs.k8s.io", "gateway-api@"+consts.GatewayAPIVersion, "config", "crd", "experimental")
 	testEnv := &envtest.Environment{
 		ControlPlaneStopTimeout: time.Second * 60,
-		CRDDirectoryPaths: []string{
-			gatewayCRDPath,
-		},
-		CRDInstallOptions: envtest.CRDInstallOptions{
-			CleanUpAfterUse: false,
-			Scheme:          scheme,
-		},
-		Scheme: scheme,
 	}
 
 	t.Logf("starting envtest environment...")
@@ -46,50 +35,13 @@ func Setup(t *testing.T, scheme *runtime.Scheme) *rest.Config {
 	require.NoError(t, err)
 
 	t.Logf("waiting for Gateway API CRDs to be available...")
-	require.NoError(t, envtest.WaitForCRDs(cfg, []*apiextensionsv1.CustomResourceDefinition{
-		{
-			Spec: apiextensionsv1.CustomResourceDefinitionSpec{
-				Group: gatewayv1beta1.GroupVersion.Group,
-				Versions: []apiextensionsv1.CustomResourceDefinitionVersion{
-					{
-						Name:   gatewayv1beta1.GroupVersion.Version,
-						Served: true,
-					},
-				},
-				Names: apiextensionsv1.CustomResourceDefinitionNames{
-					Plural: "gateways",
-				},
-			},
-		},
-		{
-			Spec: apiextensionsv1.CustomResourceDefinitionSpec{
-				Group: gatewayv1beta1.GroupVersion.Group,
-				Versions: []apiextensionsv1.CustomResourceDefinitionVersion{
-					{
-						Name:   gatewayv1beta1.GroupVersion.Version,
-						Served: true,
-					},
-				},
-				Names: apiextensionsv1.CustomResourceDefinitionNames{
-					Plural: "httproutes",
-				},
-			},
-		},
-		{
-			Spec: apiextensionsv1.CustomResourceDefinitionSpec{
-				Group: gatewayv1beta1.GroupVersion.Group,
-				Versions: []apiextensionsv1.CustomResourceDefinitionVersion{
-					{
-						Name:   gatewayv1beta1.GroupVersion.Version,
-						Served: true,
-					},
-				},
-				Names: apiextensionsv1.CustomResourceDefinitionNames{
-					Plural: "referencegrants",
-				},
-			},
-		},
-	}, envtest.CRDInstallOptions{}))
+	gatewayCRDPath := filepath.Join(build.Default.GOPATH, "pkg", "mod", "sigs.k8s.io", "gateway-api@"+consts.GatewayAPIVersion, "config", "crd", "experimental")
+	_, err = envtest.InstallCRDs(cfg, envtest.CRDInstallOptions{
+		Scheme:             scheme,
+		Paths:              []string{gatewayCRDPath},
+		ErrorIfPathMissing: true,
+	})
+	require.NoError(t, err)
 
 	wg := sync.WaitGroup{}
 	wg.Add(1)

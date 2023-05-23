@@ -102,7 +102,7 @@ func (r *GatewayReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	// watch Gateway objects, filtering out any Gateways which are not configured with
 	// a supported GatewayClass controller name.
 	if err := c.Watch(
-		&source.Kind{Type: &gatewayv1beta1.Gateway{}},
+		source.Kind(mgr.GetCache(), &gatewayv1beta1.Gateway{}),
 		&handler.EnqueueRequestForObject{},
 		predicate.NewPredicateFuncs(r.gatewayHasMatchingGatewayClass),
 	); err != nil {
@@ -112,7 +112,7 @@ func (r *GatewayReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	// watch for updates to gatewayclasses, if any gateway classes change, enqueue
 	// reconciliation for all supported gateway objects which reference it.
 	if err := c.Watch(
-		&source.Kind{Type: &gatewayv1beta1.GatewayClass{}},
+		source.Kind(mgr.GetCache(), &gatewayv1beta1.GatewayClass{}),
 		handler.EnqueueRequestsFromMapFunc(r.listGatewaysForGatewayClass),
 		predicate.NewPredicateFuncs(r.gatewayClassMatchesController),
 	); err != nil {
@@ -123,7 +123,7 @@ func (r *GatewayReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	// reconciliation on all Gateway objects referenced by it (in the most common
 	// deployments this will be a single Gateway).
 	if err := c.Watch(
-		&source.Kind{Type: &corev1.Service{}},
+		source.Kind(mgr.GetCache(), &corev1.Service{}),
 		handler.EnqueueRequestsFromMapFunc(r.listGatewaysForService),
 		predicate.NewPredicateFuncs(r.isGatewayService),
 	); err != nil {
@@ -133,7 +133,7 @@ func (r *GatewayReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	// watch ReferenceGrants, which may invalidate or allow cross-namespace TLSConfigs
 	if r.enableReferenceGrant {
 		if err := c.Watch(
-			&source.Kind{Type: &gatewayv1beta1.ReferenceGrant{}},
+			source.Kind(mgr.GetCache(), &gatewayv1beta1.ReferenceGrant{}),
 			handler.EnqueueRequestsFromMapFunc(r.listReferenceGrantsForGateway),
 			predicate.NewPredicateFuncs(referenceGrantHasGatewayFrom),
 		); err != nil {
@@ -194,9 +194,9 @@ func (r *GatewayReconciler) gatewayClassMatchesController(obj client.Object) boo
 // listGatewaysForGatewayClass is a watch predicate which finds all the gateway objects reference
 // by a gatewayclass to enqueue them for reconciliation. This is generally used when a GatewayClass
 // is updated to ensure that idle gateways are initialized when their gatewayclass becomes available.
-func (r *GatewayReconciler) listGatewaysForGatewayClass(gatewayClass client.Object) []reconcile.Request {
+func (r *GatewayReconciler) listGatewaysForGatewayClass(ctx context.Context, gatewayClass client.Object) []reconcile.Request {
 	gateways := &gatewayv1beta1.GatewayList{}
-	if err := r.Client.List(context.Background(), gateways); err != nil {
+	if err := r.Client.List(ctx, gateways); err != nil {
 		r.Log.Error(err, "failed to list gateways for gatewayclass in watch", "gatewayclass", gatewayClass.GetName())
 		return nil
 	}
@@ -205,7 +205,7 @@ func (r *GatewayReconciler) listGatewaysForGatewayClass(gatewayClass client.Obje
 
 // listReferenceGrantsForGateway is a watch predicate which finds all Gateways mentioned in a From clause for a
 // ReferenceGrant.
-func (r *GatewayReconciler) listReferenceGrantsForGateway(obj client.Object) []reconcile.Request {
+func (r *GatewayReconciler) listReferenceGrantsForGateway(ctx context.Context, obj client.Object) []reconcile.Request {
 	grant, ok := obj.(*gatewayv1beta1.ReferenceGrant)
 	if !ok {
 		r.Log.Error(
@@ -216,7 +216,7 @@ func (r *GatewayReconciler) listReferenceGrantsForGateway(obj client.Object) []r
 		return nil
 	}
 	gateways := &gatewayv1beta1.GatewayList{}
-	if err := r.Client.List(context.Background(), gateways); err != nil {
+	if err := r.Client.List(ctx, gateways); err != nil {
 		r.Log.Error(err, "failed to list gateways in watch", "referencegrant", grant.Name)
 		return nil
 	}
@@ -242,15 +242,15 @@ func (r *GatewayReconciler) listReferenceGrantsForGateway(obj client.Object) []r
 // GatewayClasses supported by this controller and are configured for the same service via
 // unmanaged mode and enqueues them for reconciliation. This is generally used to ensure
 // all gateways are updated when the service gets updated with new listeners.
-func (r *GatewayReconciler) listGatewaysForService(svc client.Object) (recs []reconcile.Request) {
+func (r *GatewayReconciler) listGatewaysForService(ctx context.Context, svc client.Object) (recs []reconcile.Request) {
 	gateways := &gatewayv1beta1.GatewayList{}
-	if err := r.Client.List(context.Background(), gateways); err != nil {
+	if err := r.Client.List(ctx, gateways); err != nil {
 		r.Log.Error(err, "failed to list gateways for service in watch predicates", "service", svc)
 		return
 	}
 	for _, gateway := range gateways.Items {
 		gatewayClass := &gatewayv1beta1.GatewayClass{}
-		if err := r.Client.Get(context.Background(), k8stypes.NamespacedName{Name: string(gateway.Spec.GatewayClassName)}, gatewayClass); err != nil {
+		if err := r.Client.Get(ctx, k8stypes.NamespacedName{Name: string(gateway.Spec.GatewayClassName)}, gatewayClass); err != nil {
 			r.Log.Error(err, "failed to retrieve gateway class in watch predicates", "gatewayclass", gateway.Spec.GatewayClassName)
 			return
 		}

@@ -1805,6 +1805,7 @@ func Test_ensureParentsProgrammedCondition(t *testing.T) {
 					NewClientBuilder().
 					WithScheme(scheme.Scheme).
 					WithObjects(httproute).
+					WithStatusSubresource(httproute).
 					Build()
 
 				updated, err := ensureParentsProgrammedCondition(ctx, fakeClient.Status(), httproute, httproute.Status.Parents, gateways,

@@ -58,13 +58,13 @@ func (r *ReferenceGrantReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	}
 
 	return c.Watch(
-		&source.Kind{Type: &gatewayv1beta1.ReferenceGrant{}},
+		source.Kind(mgr.GetCache(), &gatewayv1beta1.ReferenceGrant{}),
 		&handler.EnqueueRequestForObject{},
 	)
 }
 
-//+kubebuilder:rbac:groups=gateway.networking.k8s.io,resources=referencegrants,verbs=get;list;watch
-//+kubebuilder:rbac:groups=gateway.networking.k8s.io,resources=referencegrants/status,verbs=get
+// +kubebuilder:rbac:groups=gateway.networking.k8s.io,resources=referencegrants,verbs=get;list;watch
+// +kubebuilder:rbac:groups=gateway.networking.k8s.io,resources=referencegrants/status,verbs=get
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.

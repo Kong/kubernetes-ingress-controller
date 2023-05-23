@@ -62,7 +62,7 @@ func (r *DynamicCRDController) SetupWithManager(mgr ctrl.Manager) error {
 	}
 
 	return c.Watch(
-		&source.Kind{Type: &apiextensionsv1.CustomResourceDefinition{}},
+		source.Kind(mgr.GetCache(), &apiextensionsv1.CustomResourceDefinition{}),
 		&handler.EnqueueRequestForObject{},
 		predicate.NewPredicateFuncs(r.isOneOfRequiredCRDs),
 	)

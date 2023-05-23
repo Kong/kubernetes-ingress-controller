@@ -88,6 +88,6 @@ func IsIngressClassEmpty(obj client.Object) bool {
 
 // CRDExists returns false if CRD does not exist.
 func CRDExists(restMapper meta.RESTMapper, gvr schema.GroupVersionResource) bool {
-	_, err := restMapper.KindFor(gvr)
-	return !meta.IsNoMatchError(err)
+	_, err := restMapper.KindsFor(gvr)
+	return err == nil
 }

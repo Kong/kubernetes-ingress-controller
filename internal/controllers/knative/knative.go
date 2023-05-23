@@ -78,7 +78,7 @@ func (r *Knativev1alpha1IngressReconciler) SetupWithManager(mgr ctrl.Manager) er
 	}
 	if !r.DisableIngressClassLookups {
 		err = c.Watch(
-			&source.Kind{Type: &netv1.IngressClass{}},
+			source.Kind(mgr.GetCache(), &netv1.IngressClass{}),
 			handler.EnqueueRequestsFromMapFunc(r.listClassless),
 			predicate.NewPredicateFuncs(ctrlutils.IsDefaultIngressClass),
 		)
@@ -88,16 +88,16 @@ func (r *Knativev1alpha1IngressReconciler) SetupWithManager(mgr ctrl.Manager) er
 	}
 	preds := ctrlutils.GeneratePredicateFuncsForIngressClassFilter(r.IngressClassName)
 	return c.Watch(
-		&source.Kind{Type: &knativev1alpha1.Ingress{}},
+		source.Kind(mgr.GetCache(), &knativev1alpha1.Ingress{}),
 		&handler.EnqueueRequestForObject{},
 		preds,
 	)
 }
 
 // listClassless finds and reconciles all objects without ingress class information.
-func (r *Knativev1alpha1IngressReconciler) listClassless(_ client.Object) []reconcile.Request {
+func (r *Knativev1alpha1IngressReconciler) listClassless(ctx context.Context, _ client.Object) []reconcile.Request {
 	resourceList := &knativev1alpha1.IngressList{}
-	if err := r.Client.List(context.Background(), resourceList); err != nil {
+	if err := r.Client.List(ctx, resourceList); err != nil {
 		r.Log.Error(err, "failed to list classless ingresses")
 		return nil
 	}
@@ -115,8 +115,8 @@ func (r *Knativev1alpha1IngressReconciler) listClassless(_ client.Object) []reco
 	return recs
 }
 
-//+kubebuilder:rbac:groups=networking.internal.knative.dev,resources=ingresses,verbs=get;list;watch
-//+kubebuilder:rbac:groups=networking.internal.knative.dev,resources=ingresses/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=networking.internal.knative.dev,resources=ingresses,verbs=get;list;watch
+// +kubebuilder:rbac:groups=networking.internal.knative.dev,resources=ingresses/status,verbs=get;update;patch
 
 // Reconcile processes the watched objects.
 func (r *Knativev1alpha1IngressReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {

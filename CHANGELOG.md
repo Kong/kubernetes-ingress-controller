@@ -123,6 +123,11 @@ Adding a new version? You'll need three changes:
   now accounts for potential failures in synchronizing configuration with Konnect's
   Runtime Group Admin API.
   [#4029](https://github.com/Kong/kubernetes-ingress-controller/pull/4029)
+- Record an event attached to KIC pod after applying configuration to Kong. If
+  the applying succeeded, a `Normal` event with `KongConfigurationSucceeded` 
+  reason is recorded. If the applying failed, a `Warning` event with 
+  `KongConfigurationApplyFailed` reason is recorded.
+  [#4054](https://github.com/Kong/kubernetes-ingress-controller/pull/4054)
 - Disable translation to expression routes when feature gate `ExpressionRoutes`
   is enabled but feature gate `CombinedRoutes` is not enabled.
   [#4057](https://github.com/Kong/kubernetes-ingress-controller/pull/4057)

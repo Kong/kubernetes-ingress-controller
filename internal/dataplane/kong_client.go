@@ -17,6 +17,7 @@ import (
 	"golang.org/x/exp/slices"
 	"golang.org/x/sync/errgroup"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -35,6 +36,8 @@ import (
 )
 
 const (
+	// KongConfugurationApplySucceededEvnetReason defines an event reason to tell the updating of Kong configuration succeeded.
+	KongConfigurationApplySucceededEventReason = "KongConfigurationSucceeded"
 	// KongConfigurationTranslationFailedEventReason defines an event reason used for creating all translation resource failure events.
 	KongConfigurationTranslationFailedEventReason = "KongConfigurationTranslationFailed"
 	// KongConfigurationApplyFailedEventReason defines an event reason used for creating all config apply resource failure events.
@@ -484,6 +487,10 @@ func (c *KongClient) sendToClient(
 	)
 
 	c.recordResourceFailureEvents(entityErrors, KongConfigurationApplyFailedEventReason)
+	// Only record events on applying configuration to Kong gateway here.
+	if !client.IsKonnect() {
+		c.recordApplyConfigurationEvents(err, client.BaseRootURL())
+	}
 	sendDiagnostic(err != nil)
 
 	if err != nil {
@@ -616,4 +623,31 @@ func (c *KongClient) recordResourceFailureEvents(resourceFailures []failures.Res
 			c.eventRecorder.Event(obj, corev1.EventTypeWarning, reason, failure.Message())
 		}
 	}
+}
+
+// recordApplyConfigurationEvents records event attached to KIC pod after KIC applied Kong configuration.
+func (c *KongClient) recordApplyConfigurationEvents(err error, rootURL string) {
+	eventType := corev1.EventTypeNormal
+	reason := KongConfigurationApplySucceededEventReason
+	message := fmt.Sprintf("successfully applied Kong configuration to %s", rootURL)
+
+	if err != nil {
+		eventType = corev1.EventTypeWarning
+		reason = KongConfigurationApplyFailedEventReason
+		message = fmt.Sprintf("failed to apply Kong configuration to %s: %v", rootURL, err)
+	}
+
+	podNN, getPodErr := util.GetPodNN()
+	if getPodErr != nil {
+		c.logger.WithError(getPodErr).Error("failed to resolve controller's pod to attach the apply configuration event to")
+		return
+	}
+
+	pod := &corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      podNN.Name,
+			Namespace: podNN.Namespace,
+		},
+	}
+	c.eventRecorder.Event(pod, eventType, reason, message)
 }

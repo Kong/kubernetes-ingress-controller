@@ -36,7 +36,7 @@ func TestDeployAllInOneDBLESSKuma(t *testing.T) {
 	scaleDeployment(ctx, t, env, deployments.ControllerNN, 2)
 
 	t.Log("running ingress tests to verify all-in-one deployed ingress controller and proxy are functional")
-	deployIngress(ctx, t, env)
+	deployIngressWithEchoBackends(ctx, t, env)
 
 	// use retry.RetryOnConflict to update service, to avoid conflicts from different source.
 	err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
@@ -62,7 +62,7 @@ func TestDeployAllInOneDBLESSKuma(t *testing.T) {
 			return fmt.Sprintf("current status of service: %#v", service)
 		}(),
 	)
-	verifyIngress(ctx, t, env)
+	verifyIngressWithEchoBackends(ctx, t, env)
 }
 
 func TestDeployAllInOnePostgresKuma(t *testing.T) {
@@ -89,7 +89,7 @@ func TestDeployAllInOnePostgresKuma(t *testing.T) {
 	scaleDeployment(ctx, t, env, deployments.ControllerNN, 2)
 
 	t.Log("running ingress tests to verify all-in-one deployed ingress controller and proxy are functional")
-	deployIngress(ctx, t, env)
+	deployIngressWithEchoBackends(ctx, t, env)
 	// use retry.RetryOnConflict to update service, to avoid conflicts from different source.
 	err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
 		service, err := env.Cluster().Client().CoreV1().Services("default").Get(ctx, "httpbin", metav1.GetOptions{})
@@ -115,5 +115,5 @@ func TestDeployAllInOnePostgresKuma(t *testing.T) {
 		}(),
 	)
 
-	verifyIngress(ctx, t, env)
+	verifyIngressWithEchoBackends(ctx, t, env)
 }

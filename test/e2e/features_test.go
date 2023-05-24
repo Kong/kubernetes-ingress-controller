@@ -444,8 +444,8 @@ func TestDeployAllInOneDBLESSNoLoadBalancer(t *testing.T) {
 	deployKong(ctx, t, env, manifest)
 
 	t.Log("running ingress tests to verify all-in-one deployed ingress controller and proxy are functional")
-	deployIngress(ctx, t, env)
-	verifyIngress(ctx, t, env)
+	deployIngressWithEchoBackends(ctx, t, env)
+	verifyIngressWithEchoBackends(ctx, t, env)
 
 	// ensure that Gateways with no addresses come online and start ingesting routes
 	t.Logf("deploying Gateway APIs CRDs from %s", consts.GatewayExperimentalCRDsKustomizeURL)

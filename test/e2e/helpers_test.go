@@ -71,7 +71,6 @@ const (
 	namespace        = "kong"
 	adminServiceName = "kong-admin-lb"
 
-	tcpEchoPort    = 1025
 	tcpListnerPort = 8888
 
 	// controllerDeploymentName is the name of the controller deployment in all manifests variants.
@@ -142,15 +141,28 @@ func getEnvironmentBuilder(ctx context.Context, t *testing.T) (*environments.Bui
 	}
 }
 
+// Since main purpose of KIC is set up Kong Gateway to properly route traffic to backends,
+// ensure that discovering IP addresses of Pods works as expected, even in case of having
+// multiple EndpointSlices per Service (by default it allows up to 100 endpoints per
+// EndpointSlice). Hence adjust config to force it.
+const kindConfig = `
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+kubeadmConfigPatches:
+- |
+  apiVersion: kubeadm.k8s.io/v1beta3
+  kind: ClusterConfiguration
+  controllerManager:
+    extraArgs:
+      max-endpoints-per-slice: "2"`
+
 func createKINDBuilder(t *testing.T) *environments.Builder {
-	builder := environments.NewBuilder()
-	clusterBuilder := kind.NewBuilder()
+	clusterBuilder := kind.NewBuilder().WithConfigReader(strings.NewReader(kindConfig))
 	if clusterVersionStr != "" {
 		clusterVersion := semver.MustParse(strings.TrimPrefix(clusterVersionStr, "v"))
 		clusterBuilder = clusterBuilder.WithClusterVersion(clusterVersion)
 	}
-	builder = builder.WithClusterBuilder(clusterBuilder)
-	builder = builder.WithAddons(metallb.New())
+	builder := environments.NewBuilder().WithClusterBuilder(clusterBuilder).WithAddons(metallb.New())
 	if shouldLoadImages() {
 		builder = builder.WithAddons(buildImageLoadAddon(t, controllerImageOverride, kongImageOverride))
 	}
@@ -320,14 +332,25 @@ func getProxyDeploymentName(manifestPath string) string {
 	return singlePodDeploymentName
 }
 
-func deployIngress(ctx context.Context, t *testing.T, env environments.Environment) {
+// For Kind clusters that have option --max-endpoints-per-slice=2, 3 gives
+// one fully filled EndpointSlice and one filled in half.
+const numberOfEchoBackends = 3
+
+func deployIngressWithEchoBackends(ctx context.Context, t *testing.T, env environments.Environment) {
 	t.Helper()
 
 	c, err := clientset.NewForConfig(env.Cluster().Config())
 	assert.NoError(t, err)
 	t.Log("deploying an HTTP service to test the ingress controller and proxy")
-	container := generators.NewContainer("httpbin", test.HTTPBinImage, 80)
+	container := generators.NewContainer("echo", test.EchoImage, test.EchoHTTPPort)
+	container.Env = append(container.Env, corev1.EnvVar{
+		Name: "POD_IP",
+		ValueFrom: &corev1.EnvVarSource{
+			FieldRef: &corev1.ObjectFieldSelector{FieldPath: "status.podIP"},
+		},
+	})
 	deployment := generators.NewDeploymentForContainer(container)
+	deployment.Spec.Replicas = lo.ToPtr[int32](numberOfEchoBackends)
 	deployment, err = env.Cluster().Client().AppsV1().Deployments(corev1.NamespaceDefault).Create(ctx, deployment, metav1.CreateOptions{})
 	require.NoError(t, err)
 
@@ -346,13 +369,13 @@ func deployIngress(ctx context.Context, t *testing.T, env environments.Environme
 			},
 		},
 		Route: &kongv1.KongIngressRoute{
-			Methods: []*string{lo.ToPtr("GET")},
+			Methods: []*string{lo.ToPtr(http.MethodGet)},
 		},
 	}
 	_, err = c.ConfigurationV1().KongIngresses(corev1.NamespaceDefault).Create(ctx, king, metav1.CreateOptions{})
 	require.NoError(t, err)
 	t.Logf("creating an ingress for service %s with ingress.class %s", service.Name, ingressClass)
-	ingress := generators.NewIngressForService("/httpbin", map[string]string{
+	ingress := generators.NewIngressForService("/echo", map[string]string{
 		annotations.IngressClassKey: ingressClass,
 		"konghq.com/strip-path":     "true",
 		"konghq.com/override":       kongIngressName,
@@ -360,41 +383,55 @@ func deployIngress(ctx context.Context, t *testing.T, env environments.Environme
 	require.NoError(t, clusters.DeployIngress(ctx, env.Cluster(), corev1.NamespaceDefault, ingress))
 }
 
-func verifyIngress(ctx context.Context, t *testing.T, env environments.Environment) {
+func verifyIngressWithEchoBackends(ctx context.Context, t *testing.T, env environments.Environment) {
 	t.Helper()
 
-	t.Log("finding the kong proxy service ip")
-	proxyIP := getKongProxyIP(ctx, t, env)
+	t.Log("finding the service URL (through Kong proxy service ip)")
+	echoURL := fmt.Sprintf("http://%s/echo", getKongProxyIP(ctx, t, env))
 
-	t.Logf("waiting for route from Ingress to be operational at http://%s/httpbin", proxyIP)
-	require.Eventually(t, func() bool {
-		resp, err := helpers.DefaultHTTPClient().Get(fmt.Sprintf("http://%s/httpbin", proxyIP))
-		if err != nil {
-			return false
+	t.Logf(
+		"waiting for route from Ingress to be operational at %s and forward traffic to all %d backends",
+		echoURL, numberOfEchoBackends,
+	)
+	uniqueResponses := make(map[string]struct{})
+	require.EventuallyWithT(t, func(c *assert.CollectT) {
+		resp, err := helpers.DefaultHTTPClient().Get(echoURL)
+		if !assert.NoError(c, err) {
+			return
 		}
 		defer resp.Body.Close()
-		if resp.StatusCode == http.StatusOK {
-			b := new(bytes.Buffer)
-			_, err := b.ReadFrom(resp.Body)
-			if err != nil {
-				return false
-			}
-			if !strings.Contains(b.String(), "<title>httpbin.org</title>") {
-				return false
-			}
-		} else {
-			return false
+
+		if !assert.Equal(c, http.StatusOK, resp.StatusCode) {
+			return
 		}
-		// verify the KongIngress method restriction
+		b := new(bytes.Buffer)
+		_, err = b.ReadFrom(resp.Body)
+		if !assert.NoError(c, err) {
+			return
+		}
+		// Every backend responds with its own (different) IP address.
+		if msg := b.String(); strings.Contains(msg, "With IP address") {
+			uniqueResponses[msg] = struct{}{}
+		}
+		assert.Len(c, uniqueResponses, numberOfEchoBackends)
+	},
+		ingressWait, 100*time.Millisecond,
+		"expected responses from all %d backends, got from %d", numberOfEchoBackends, len(uniqueResponses),
+	)
+
+	t.Log("verifying the KongIngress method restriction")
+	require.EventuallyWithT(t, func(c *assert.CollectT) {
 		fakeData := url.Values{}
 		fakeData.Set("foo", "bar")
-		resp, err = helpers.DefaultHTTPClient().PostForm(fmt.Sprintf("http://%s/httpbin", proxyIP), fakeData)
-		if err != nil {
-			return false
+		resp, err := helpers.DefaultHTTPClient().PostForm(echoURL, fakeData)
+		if !assert.NoError(c, err) {
+			return
 		}
 		defer resp.Body.Close()
-		return resp.StatusCode == http.StatusNotFound
-	}, ingressWait, 100*time.Millisecond)
+		assert.Equal(c, http.StatusNotFound, resp.StatusCode)
+	},
+		ingressWait, 100*time.Millisecond,
+	)
 }
 
 // requireIngressConfiguredInAdminAPIEventually ensures all expected Kong Admin API resources are created for the Ingress

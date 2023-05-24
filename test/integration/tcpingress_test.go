@@ -167,7 +167,7 @@ func TestTCPIngressTLS(t *testing.T) {
 	for _, i := range testServiceSuffixes {
 		localTestName := fmt.Sprintf(testName, i)
 		t.Log("deploying a minimal TCP container deployment to test Ingress routes")
-		container := generators.NewContainer(localTestName, test.TCPEchoImage, tcpEchoPort)
+		container := generators.NewContainer(localTestName, test.EchoImage, test.EchoTCPPort)
 		// go-echo sends a "Running on Pod POD_NAME." immediately on connecting
 		container.Env = []corev1.EnvVar{
 			{
@@ -204,7 +204,7 @@ func TestTCPIngressTLS(t *testing.T) {
 					Port: 8899,
 					Backend: kongv1beta1.IngressBackend{
 						ServiceName: testServices[testServiceSuffixes[0]].Name,
-						ServicePort: tcpEchoPort,
+						ServicePort: test.EchoTCPPort,
 					},
 				},
 				{
@@ -212,7 +212,7 @@ func TestTCPIngressTLS(t *testing.T) {
 					Port: 8899,
 					Backend: kongv1beta1.IngressBackend{
 						ServiceName: testServices[testServiceSuffixes[1]].Name,
-						ServicePort: tcpEchoPort,
+						ServicePort: test.EchoTCPPort,
 					},
 				},
 			},
@@ -237,7 +237,7 @@ func TestTCPIngressTLS(t *testing.T) {
 					Port: 8899,
 					Backend: kongv1beta1.IngressBackend{
 						ServiceName: testServices[testServiceSuffixes[2]].Name,
-						ServicePort: tcpEchoPort,
+						ServicePort: test.EchoTCPPort,
 					},
 				},
 			},

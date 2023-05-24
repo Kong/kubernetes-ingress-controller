@@ -240,7 +240,7 @@ func deployTCPRoute(ctx context.Context, t *testing.T, env environments.Environm
 	gc, err := gatewayclient.NewForConfig(env.Cluster().Config())
 	require.NoError(t, err)
 	t.Log("deploying a TCP service to test the ingress controller and proxy")
-	container := generators.NewContainer("tcpecho-tcproute", test.TCPEchoImage, tcpEchoPort)
+	container := generators.NewContainer("tcpecho-tcproute", test.EchoImage, test.EchoTCPPort)
 	container.Env = []corev1.EnvVar{
 		{
 			Name:  "POD_NAME",
@@ -258,7 +258,7 @@ func deployTCPRoute(ctx context.Context, t *testing.T, env environments.Environm
 			Name:       "echo",
 			Protocol:   corev1.ProtocolTCP,
 			Port:       tcpListnerPort,
-			TargetPort: intstr.FromInt(tcpEchoPort),
+			TargetPort: intstr.FromInt(test.EchoTCPPort),
 		},
 	}
 	_, err = env.Cluster().Client().CoreV1().Services(corev1.NamespaceDefault).Create(ctx, service, metav1.CreateOptions{})

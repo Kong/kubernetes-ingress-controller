@@ -166,7 +166,7 @@ func TestTLSRouteEssentials(t *testing.T) {
 
 	t.Log("creating a tcpecho pod to test TLSRoute traffic routing")
 
-	container := generators.NewContainer("tcpecho-1", test.TCPEchoImage, tcpEchoPort)
+	container := generators.NewContainer("tcpecho-1", test.EchoImage, test.EchoTCPPort)
 	// go-echo sends a "Running on Pod <UUID>." immediately on connecting
 	testUUID := uuid.NewString()
 	container.Env = []corev1.EnvVar{
@@ -181,7 +181,7 @@ func TestTLSRouteEssentials(t *testing.T) {
 	cleaner.Add(deployment)
 
 	t.Log("creating an additional tcpecho pod to test TLSRoute multiple backendRef loadbalancing")
-	container2 := generators.NewContainer("tcpecho-2", test.TCPEchoImage, tcpEchoPort)
+	container2 := generators.NewContainer("tcpecho-2", test.EchoImage, test.EchoTCPPort)
 	// go-echo sends a "Running on Pod <UUID>." immediately on connecting
 	testUUID2 := uuid.NewString()
 	container2.Env = []corev1.EnvVar{
@@ -207,7 +207,7 @@ func TestTLSRouteEssentials(t *testing.T) {
 	require.NoError(t, err)
 	cleaner.Add(service2)
 
-	backendPort := gatewayv1alpha2.PortNumber(tcpEchoPort)
+	backendPort := gatewayv1alpha2.PortNumber(test.EchoTCPPort)
 	t.Logf("creating a tlsroute to access deployment %s via kong", deployment.Name)
 	tlsRoute := &gatewayv1alpha2.TLSRoute{
 		ObjectMeta: metav1.ObjectMeta{
@@ -587,7 +587,7 @@ func TestTLSRouteReferenceGrant(t *testing.T) {
 	cleaner.Add(grant)
 
 	t.Log("creating a tcpecho pod to test TLSRoute traffic routing")
-	container := generators.NewContainer("tcpecho", test.TCPEchoImage, tcpEchoPort)
+	container := generators.NewContainer("tcpecho", test.EchoImage, test.EchoTCPPort)
 	// go-echo sends a "Running on Pod <UUID>." immediately on connecting
 	testUUID := uuid.NewString()
 	container.Env = []corev1.EnvVar{
@@ -607,7 +607,7 @@ func TestTLSRouteReferenceGrant(t *testing.T) {
 	require.NoError(t, err)
 	cleaner.Add(service)
 
-	backendPort := gatewayv1alpha2.PortNumber(tcpEchoPort)
+	backendPort := gatewayv1alpha2.PortNumber(test.EchoTCPPort)
 	t.Logf("creating a tlsroute to access deployment %s via kong", deployment.Name)
 	tlsroute := &gatewayv1alpha2.TLSRoute{
 		ObjectMeta: metav1.ObjectMeta{
@@ -762,7 +762,7 @@ func TestTLSRoutePassthrough(t *testing.T) {
 	cleaner.Add(gateway)
 
 	t.Log("creating a tcpecho pod to test TLSRoute traffic routing")
-	container := generators.NewContainer("tcpecho", test.TCPEchoImage, tlsEchoPort)
+	container := generators.NewContainer("tcpecho", test.EchoImage, tlsEchoPort)
 	// go-echo sends a "Running on Pod <UUID>." immediately on connecting
 	testUUID := uuid.NewString()
 	container.Env = []corev1.EnvVar{

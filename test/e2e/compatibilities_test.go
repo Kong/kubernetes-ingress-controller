@@ -30,8 +30,8 @@ func TestKongRouterFlavorCompatibility(t *testing.T) {
 	ensureGatewayDeployedWithRouterFlavor(ctx, t, env, proxyDeploymentNN, "traditional")
 
 	t.Log("running ingress tests to verify that KIC with traditonal Kong router works")
-	deployIngress(ctx, t, env)
-	verifyIngress(ctx, t, env)
+	deployIngressWithEchoBackends(ctx, t, env)
+	verifyIngressWithEchoBackends(ctx, t, env)
 
 	setGatewayRouterFlavor(ctx, t, cluster, proxyDeploymentNN, "traditional_compatible")
 
@@ -39,7 +39,7 @@ func TestKongRouterFlavorCompatibility(t *testing.T) {
 	ensureGatewayDeployedWithRouterFlavor(ctx, t, env, proxyDeploymentNN, "traditional_compatible")
 
 	t.Log("running ingress tests to verify that KIC with traditonal_compatible Kong router works")
-	verifyIngress(ctx, t, env)
+	verifyIngressWithEchoBackends(ctx, t, env)
 }
 
 func setGatewayRouterFlavor(

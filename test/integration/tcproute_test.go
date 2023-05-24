@@ -29,10 +29,6 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/helpers"
 )
 
-const (
-	tcpEchoPort = 1025
-)
-
 func TestTCPRouteEssentials(t *testing.T) {
 	skipTestForExpressionRouter(t)
 	ctx := context.Background()
@@ -70,7 +66,7 @@ func TestTCPRouteEssentials(t *testing.T) {
 	cleaner.Add(gateway)
 
 	t.Log("creating a tcpecho pod to test TCPRoute traffic routing")
-	container1 := generators.NewContainer("tcpecho-1", test.TCPEchoImage, tcpEchoPort)
+	container1 := generators.NewContainer("tcpecho-1", test.EchoImage, test.EchoTCPPort)
 	// go-echo sends a "Running on Pod <UUID>." immediately on connecting
 	testUUID1 := uuid.NewString()
 	container1.Env = []corev1.EnvVar{
@@ -85,7 +81,7 @@ func TestTCPRouteEssentials(t *testing.T) {
 	cleaner.Add(deployment1)
 
 	t.Log("creating an additional tcpecho pod to test TCPRoute multiple backendRef loadbalancing")
-	container2 := generators.NewContainer("tcpecho-2", test.TCPEchoImage, tcpEchoPort)
+	container2 := generators.NewContainer("tcpecho-2", test.EchoImage, test.EchoTCPPort)
 	// go-echo sends a "Running on Pod <UUID>." immediately on connecting
 	testUUID2 := uuid.NewString()
 	container2.Env = []corev1.EnvVar{
@@ -110,7 +106,7 @@ func TestTCPRouteEssentials(t *testing.T) {
 		Name:       "tcp",
 		Protocol:   corev1.ProtocolTCP,
 		Port:       ktfkong.DefaultTCPServicePort,
-		TargetPort: intstr.FromInt(tcpEchoPort),
+		TargetPort: intstr.FromInt(test.EchoTCPPort),
 	}}
 	service1, err = env.Cluster().Client().CoreV1().Services(ns.Name).Create(ctx, service1, metav1.CreateOptions{})
 	assert.NoError(t, err)
@@ -127,7 +123,7 @@ func TestTCPRouteEssentials(t *testing.T) {
 		Name:       "tcp",
 		Protocol:   corev1.ProtocolTCP,
 		Port:       ktfkong.DefaultTCPServicePort,
-		TargetPort: intstr.FromInt(tcpEchoPort),
+		TargetPort: intstr.FromInt(test.EchoTCPPort),
 	}}
 	service2, err = env.Cluster().Client().CoreV1().Services(ns.Name).Create(ctx, service2, metav1.CreateOptions{})
 	assert.NoError(t, err)
@@ -456,7 +452,7 @@ func TestTCPRouteReferenceGrant(t *testing.T) {
 	cleaner.Add(gateway)
 
 	t.Log("creating a tcpecho pod to test TCPRoute traffic routing")
-	container1 := generators.NewContainer("tcpecho-1", test.TCPEchoImage, tcpEchoPort)
+	container1 := generators.NewContainer("tcpecho-1", test.EchoImage, test.EchoTCPPort)
 	// go-echo sends a "Running on Pod <UUID>." immediately on connecting
 	testUUID1 := uuid.NewString()
 	container1.Env = []corev1.EnvVar{
@@ -471,7 +467,7 @@ func TestTCPRouteReferenceGrant(t *testing.T) {
 	cleaner.Add(deployment1)
 
 	t.Log("creating an additional tcpecho pod to test TCPRoute multiple backendRef loadbalancing")
-	container2 := generators.NewContainer("tcpecho-2", test.TCPEchoImage, tcpEchoPort)
+	container2 := generators.NewContainer("tcpecho-2", test.EchoImage, test.EchoTCPPort)
 	// go-echo sends a "Running on Pod <UUID>." immediately on connecting
 	testUUID2 := uuid.NewString()
 	container2.Env = []corev1.EnvVar{
@@ -496,7 +492,7 @@ func TestTCPRouteReferenceGrant(t *testing.T) {
 		Name:       "tcp",
 		Protocol:   corev1.ProtocolTCP,
 		Port:       ktfkong.DefaultTCPServicePort,
-		TargetPort: intstr.FromInt(tcpEchoPort),
+		TargetPort: intstr.FromInt(test.EchoTCPPort),
 	}}
 	service1, err = env.Cluster().Client().CoreV1().Services(ns.Name).Create(ctx, service1, metav1.CreateOptions{})
 	assert.NoError(t, err)
@@ -508,7 +504,7 @@ func TestTCPRouteReferenceGrant(t *testing.T) {
 		Name:       "tcp",
 		Protocol:   corev1.ProtocolTCP,
 		Port:       ktfkong.DefaultTCPServicePort,
-		TargetPort: intstr.FromInt(tcpEchoPort),
+		TargetPort: intstr.FromInt(test.EchoTCPPort),
 	}}
 	service2, err = env.Cluster().Client().CoreV1().Services(otherNs.Name).Create(ctx, service2, metav1.CreateOptions{})
 	assert.NoError(t, err)

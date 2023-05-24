@@ -64,8 +64,8 @@ func TestKonnectConfigPush(t *testing.T) {
 	deployments := deployAllInOneKonnectManifest(ctx, t, env)
 
 	t.Log("running ingress tests to verify all-in-one deployed ingress controller and proxy are functional")
-	deployIngress(ctx, t, env)
-	verifyIngress(ctx, t, env)
+	deployIngressWithEchoBackends(ctx, t, env)
+	verifyIngressWithEchoBackends(ctx, t, env)
 
 	t.Log("ensuring ingress resources are correctly populated in Konnect Runtime Group's Admin API")
 	konnectAdminAPIClient := createKonnectAdminAPIClient(t, rgID, cert, key)
@@ -145,8 +145,8 @@ func TestKonnectWhenMisconfiguredBasicIngressNotAffected(t *testing.T) {
 	deployAllInOneKonnectManifest(ctx, t, env)
 
 	t.Log("running ingress tests to verify misconfiguration doesn't affect basic ingress functionality")
-	deployIngress(ctx, t, env)
-	verifyIngress(ctx, t, env)
+	deployIngressWithEchoBackends(ctx, t, env)
+	verifyIngressWithEchoBackends(ctx, t, env)
 }
 
 func skipIfMissingRequiredKonnectEnvVariables(t *testing.T) {

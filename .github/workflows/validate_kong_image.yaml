@@ -25,7 +25,7 @@ on:
         required: true
         default: "latest"
       issue-number:
-        description: Issue number to post a comment in. If empty, no comment is posted.
+        description: Issue number to comment in, and close in case of success. Can be none.
         type: string
         required: false
 

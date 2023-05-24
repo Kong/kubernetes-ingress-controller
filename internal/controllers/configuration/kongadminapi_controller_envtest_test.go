@@ -28,6 +28,8 @@ import (
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/adminapi"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/configuration"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/manager/config/types"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/util/builder"
 	"github.com/kong/kubernetes-ingress-controller/v2/test/envtest"
 )
 
@@ -86,6 +88,7 @@ func startKongAdminAPIServiceReconciler(ctx context.Context, t *testing.T, clien
 			PortNames:         sets.New("admin"),
 			EndpointsNotifier: n,
 			Log:               mgr.GetLogger(),
+			DNSStrategy:       types.ServiceScopedPodDNSStrategy,
 		}).SetupWithManager(mgr),
 	)
 	// This wait group makes it so that we wait for manager to exit.
@@ -158,18 +161,9 @@ func TestKongAdminAPIController(t *testing.T) {
 				},
 			},
 			Ports: []discoveryv1.EndpointPort{
-				{
-					Name: lo.ToPtr("admin"),
-					Port: lo.ToPtr(int32(8080)),
-				},
-				{
-					Name: lo.ToPtr("admin-tls"),
-					Port: lo.ToPtr(int32(8444)),
-				},
-				{
-					Name: lo.ToPtr("kong-admin-tls"),
-					Port: lo.ToPtr(int32(8445)),
-				},
+				builder.NewEndpointPort(8080).WithName("admin").Build(),
+				builder.NewEndpointPort(8444).WithName("admin-tls").Build(),
+				builder.NewEndpointPort(8445).WithName("kong-admin-tls").Build(),
 			},
 		}
 		require.NoError(t, client.Create(ctx, &endpoints, &ctrlclient.CreateOptions{}))
@@ -242,12 +236,7 @@ func TestKongAdminAPIController(t *testing.T) {
 					},
 				},
 			},
-			Ports: []discoveryv1.EndpointPort{
-				{
-					Name: lo.ToPtr("admin"),
-					Port: lo.ToPtr(int32(8080)),
-				},
-			},
+			Ports: builder.NewEndpointPort(8080).WithName("admin").IntoSlice(),
 		}
 		require.NoError(t, client.Create(ctx, &endpoints, &ctrlclient.CreateOptions{}))
 
@@ -312,12 +301,7 @@ func TestKongAdminAPIController(t *testing.T) {
 					},
 				},
 			},
-			Ports: []discoveryv1.EndpointPort{
-				{
-					Name: lo.ToPtr("admin"),
-					Port: lo.ToPtr(int32(8080)),
-				},
-			},
+			Ports: builder.NewEndpointPort(8080).WithName("admin").IntoSlice(),
 		}
 		require.NoError(t, client.Create(ctx, &endpoints, &ctrlclient.CreateOptions{}))
 
@@ -362,12 +346,7 @@ func TestKongAdminAPIController(t *testing.T) {
 					},
 				},
 			},
-			Ports: []discoveryv1.EndpointPort{
-				{
-					Name: lo.ToPtr("admin"),
-					Port: lo.ToPtr(int32(8080)),
-				},
-			},
+			Ports: builder.NewEndpointPort(8080).WithName("admin").IntoSlice(),
 		}
 		require.NoError(t, client.Create(ctx, &endpoints2, &ctrlclient.CreateOptions{}))
 
@@ -453,12 +432,7 @@ func TestKongAdminAPIController(t *testing.T) {
 					},
 				},
 			},
-			Ports: []discoveryv1.EndpointPort{
-				{
-					Name: lo.ToPtr("admin"),
-					Port: lo.ToPtr(int32(8080)),
-				},
-			},
+			Ports: builder.NewEndpointPort(8080).WithName("admin").IntoSlice(),
 		}
 		require.NoError(t, client.Create(ctx, &endpoints, &ctrlclient.CreateOptions{}))
 
@@ -558,12 +532,7 @@ func TestKongAdminAPIController(t *testing.T) {
 					},
 				},
 			},
-			Ports: []discoveryv1.EndpointPort{
-				{
-					Name: lo.ToPtr("admin"),
-					Port: lo.ToPtr(int32(8080)),
-				},
-			},
+			Ports: builder.NewEndpointPort(8080).WithName("admin").IntoSlice(),
 		}
 		require.NoError(t, client.Create(ctx, &endpoints, &ctrlclient.CreateOptions{}))
 

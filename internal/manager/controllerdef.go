@@ -91,6 +91,7 @@ func setupControllers(
 				Log:               ctrl.Log.WithName("controllers").WithName("KongAdminAPIService"),
 				CacheSyncTimeout:  c.CacheSyncTimeout,
 				EndpointsNotifier: kongAdminAPIEndpointsNotifier,
+				DNSStrategy:       c.GatewayDiscoveryDNSStrategy,
 			},
 		},
 		// ---------------------------------------------------------------------------

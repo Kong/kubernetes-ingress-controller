@@ -18,6 +18,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/gateway"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/konnect"
+	cfgtypes "github.com/kong/kubernetes-ingress-controller/v2/internal/manager/config/types"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/manager/featuregates"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/manager/flags"
 )
@@ -53,16 +54,17 @@ type Config struct {
 	CacheSyncTimeout                  time.Duration
 
 	// Kong Proxy configurations
-	APIServerHost         string
-	APIServerQPS          int
-	APIServerBurst        int
-	MetricsAddr           string
-	ProbeAddr             string
-	KongAdminURLs         []string
-	KongAdminSvc          OptionalNamespacedName
-	KondAdminSvcPortNames []string
-	ProxySyncSeconds      float32
-	ProxyTimeoutSeconds   float32
+	APIServerHost               string
+	APIServerQPS                int
+	APIServerBurst              int
+	MetricsAddr                 string
+	ProbeAddr                   string
+	KongAdminURLs               []string
+	KongAdminSvc                OptionalNamespacedName
+	GatewayDiscoveryDNSStrategy cfgtypes.DNSStrategy
+	KondAdminSvcPortNames       []string
+	ProxySyncSeconds            float32
+	ProxyTimeoutSeconds         float32
 
 	// Kubernetes configurations
 	KubeconfigPath           string
@@ -159,6 +161,8 @@ func (c *Config) FlagSet() *pflag.FlagSet {
 		`Kong Admin API Service namespaced name in "namespace/name" format, to use for Kong Gateway service discovery.`)
 	flagSet.StringSliceVar(&c.KondAdminSvcPortNames, "kong-admin-svc-port-names", []string{"admin", "admin-tls", "kong-admin", "kong-admin-tls"},
 		"Names of ports on Kong Admin API service to take into account when doing gateway discovery.")
+	flagSet.Var(flags.NewValidatedValue(&c.GatewayDiscoveryDNSStrategy, dnsStrategyFromFlagValue, flags.WithDefault(cfgtypes.IPDNSStrategy), flags.WithTypeNameOverride[cfgtypes.DNSStrategy]("dns-strategy")),
+		"gateway-discovery-dns-strategy", "DNS strategy to use when creating Gateway's Admin API addresses. One of: ip, service, pod.")
 
 	// Kong Proxy and Proxy Cache configurations
 	flagSet.StringVar(&c.APIServerHost, "apiserver-host", "", `The Kubernetes API server URL. If not set, the controller will use cluster config discovery.`)

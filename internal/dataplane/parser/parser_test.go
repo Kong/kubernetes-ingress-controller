@@ -27,6 +27,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/manager/featuregates"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/util/builder"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/versions"
 	configurationv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
 )
@@ -4307,11 +4308,7 @@ func TestGetEndpoints(t *testing.T) {
 								NodeName:  lo.ToPtr("dummy"),
 							},
 						},
-						Ports: []discoveryv1.EndpointPort{
-							{
-								Protocol: lo.ToPtr(corev1.ProtocolUDP),
-							},
-						},
+						Ports: builder.NewEndpointPort(80).WithProtocol(corev1.ProtocolUDP).IntoSlice(),
 					},
 				}, nil
 			},
@@ -4386,13 +4383,7 @@ func TestGetEndpoints(t *testing.T) {
 								NodeName:  lo.ToPtr("dummy"),
 							},
 						},
-						Ports: []discoveryv1.EndpointPort{
-							{
-								Protocol: lo.ToPtr(corev1.ProtocolTCP),
-								Port:     lo.ToPtr(int32(80)),
-								Name:     lo.ToPtr("another-name"),
-							},
-						},
+						Ports: builder.NewEndpointPort(80).WithName("another-name").WithProtocol(corev1.ProtocolTCP).IntoSlice(),
 					},
 				}, nil
 			},
@@ -4471,17 +4462,10 @@ func TestGetEndpoints(t *testing.T) {
 								NodeName:  lo.ToPtr("dummy"),
 							},
 						},
+
 						Ports: []discoveryv1.EndpointPort{
-							{
-								Name:     lo.ToPtr("port-1"),
-								Protocol: lo.ToPtr(corev1.ProtocolTCP),
-								Port:     lo.ToPtr(int32(80)),
-							},
-							{
-								Name:     lo.ToPtr("port-1"),
-								Protocol: lo.ToPtr(corev1.ProtocolTCP),
-								Port:     lo.ToPtr(int32(80)),
-							},
+							builder.NewEndpointPort(80).WithName("port-1").WithProtocol(corev1.ProtocolTCP).Build(),
+							builder.NewEndpointPort(80).WithName("port-1").WithProtocol(corev1.ProtocolTCP).Build(),
 						},
 					},
 				}, nil
@@ -4641,7 +4625,6 @@ func TestKnativeSelectSplit(t *testing.T) {
 }
 
 func TestPickPort(t *testing.T) {
-	assert := assert.New(t)
 	svc0 := corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "service-0",
@@ -4704,21 +4687,9 @@ func TestPickPort(t *testing.T) {
 				},
 			},
 			Ports: []discoveryv1.EndpointPort{
-				{
-					Name:     lo.ToPtr("port1"),
-					Port:     lo.ToPtr(int32(111)),
-					Protocol: lo.ToPtr(corev1.ProtocolTCP),
-				},
-				{
-					Name:     lo.ToPtr("port2"),
-					Port:     lo.ToPtr(int32(222)),
-					Protocol: lo.ToPtr(corev1.ProtocolTCP),
-				},
-				{
-					Name:     lo.ToPtr("port3"),
-					Port:     lo.ToPtr(int32(333)),
-					Protocol: lo.ToPtr(corev1.ProtocolTCP),
-				},
+				builder.NewEndpointPort(111).WithName("port1").WithProtocol(corev1.ProtocolTCP).Build(),
+				builder.NewEndpointPort(222).WithName("port2").WithProtocol(corev1.ProtocolTCP).Build(),
+				builder.NewEndpointPort(333).WithName("port3").WithProtocol(corev1.ProtocolTCP).Build(),
 			},
 		},
 		{
@@ -4734,13 +4705,7 @@ func TestPickPort(t *testing.T) {
 					Addresses: []string{"2.2.2.2"},
 				},
 			},
-			Ports: []discoveryv1.EndpointPort{
-				{
-					Name:     lo.ToPtr("port1"),
-					Port:     lo.ToPtr(int32(9999)),
-					Protocol: lo.ToPtr(corev1.ProtocolTCP),
-				},
-			},
+			Ports: builder.NewEndpointPort(9999).WithName("port1").WithProtocol(corev1.ProtocolTCP).IntoSlice(),
 		},
 	}
 
@@ -4913,13 +4878,13 @@ func TestPickPort(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			store, err := store.NewFakeStore(tt.objs)
-			assert.NoError(err)
+			require.NoError(t, err)
 
 			p := mustNewParser(t, store)
 			result := p.BuildKongConfig()
 			require.Empty(t, result.TranslationFailures)
 
-			assert.Equal(tt.wantTarget, *result.KongState.Upstreams[0].Targets[0].Target.Target)
+			require.Equal(t, tt.wantTarget, *result.KongState.Upstreams[0].Targets[0].Target.Target)
 		})
 	}
 }

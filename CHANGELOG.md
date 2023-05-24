@@ -103,7 +103,7 @@ Adding a new version? You'll need three changes:
   [#3963](https://github.com/Kong/kubernetes-ingress-controller/pull/3963)
 - Added translator to translate `HTTPRoute` and `GRPCRoute` in gateway APIs to
   expression based kong routes. Similar to ingresses, this translator is only
-  enabled when feature gate `ExpressionRoutes` is turned on and the managed 
+  enabled when feature gate `ExpressionRoutes` is turned on and the managed
   Kong gateway runs in router flavor `expressions`.
   [#3956](https://github.com/Kong/kubernetes-ingress-controller/pull/3956)
   [#3988](https://github.com/Kong/kubernetes-ingress-controller/pull/3988)
@@ -125,13 +125,25 @@ Adding a new version? You'll need three changes:
   Runtime Group Admin API.
   [#4029](https://github.com/Kong/kubernetes-ingress-controller/pull/4029)
 - Record an event attached to KIC pod after applying configuration to Kong. If
-  the applying succeeded, a `Normal` event with `KongConfigurationSucceeded` 
-  reason is recorded. If the applying failed, a `Warning` event with 
+  the applying succeeded, a `Normal` event with `KongConfigurationSucceeded`
+  reason is recorded. If the applying failed, a `Warning` event with
   `KongConfigurationApplyFailed` reason is recorded.
   [#4054](https://github.com/Kong/kubernetes-ingress-controller/pull/4054)
 - Disable translation to expression routes when feature gate `ExpressionRoutes`
   is enabled but feature gate `CombinedRoutes` is not enabled.
   [#4057](https://github.com/Kong/kubernetes-ingress-controller/pull/4057)
+- Added `--gateway-discovery-dns-strategy` flag which allows specifying which
+  DNS strategy to use when generating Gateway's Admin API addresses.
+  [#4071](https://github.com/Kong/kubernetes-ingress-controller/pull/4071)
+
+  There are 3 options available
+  - `ip` (default): which will make KIC create Admin API addresses built out of
+    IP addresses.
+  - `pod`: will make KIC build addresses using the following template:
+    `pod-ip-address.my-namespace.pod`.
+  - `service`: will make KIC build addresses using the following template:
+    `pod-ip-address.service-name.my-namespace.svc`.
+    This is known to not work on GKE becuase it uses `kube-dns` instead of coredns.
 
 ### Changed
 

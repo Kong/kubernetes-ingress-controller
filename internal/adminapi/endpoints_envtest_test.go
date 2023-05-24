@@ -20,6 +20,8 @@ import (
 	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/adminapi"
+	cfgtypes "github.com/kong/kubernetes-ingress-controller/v2/internal/manager/config/types"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/util/builder"
 	"github.com/kong/kubernetes-ingress-controller/v2/test/envtest"
 )
 
@@ -88,18 +90,13 @@ func TestGetAdminAPIsForServiceReturnsAllAddressesCorrectlyPagingThroughResults(
 								TargetRef: testPodReference("pod-1", ns.Name),
 							},
 						},
-						Ports: []discoveryv1.EndpointPort{
-							{
-								Name: lo.ToPtr("admin"),
-								Port: lo.ToPtr(int32(8444)),
-							},
-						},
+						Ports: builder.NewEndpointPort(8444).WithName("admin").IntoSlice(),
 					}
 					require.NoError(t, client.Create(ctx, &es))
 				}
 			}
 
-			got, err := adminapi.GetAdminAPIsForService(ctx, client, service, sets.New("admin"))
+			got, err := adminapi.GetAdminAPIsForService(ctx, client, service, sets.New("admin"), cfgtypes.IPDNSStrategy)
 			require.NoError(t, err)
 			require.Len(t, got, tc.subnetD*tc.subnetC, "GetAdminAPIsForService should return all valid addresses")
 		})

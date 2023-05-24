@@ -10,6 +10,7 @@ import (
 	k8stypes "k8s.io/apimachinery/pkg/types"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/adminapi"
+	cfgtypes "github.com/kong/kubernetes-ingress-controller/v2/internal/manager/config/types"
 )
 
 // *FromFlagValue functions are used to validate single flag values and set those in Config.
@@ -40,6 +41,14 @@ func gatewayAPIControllerNameFromFlagValue(flagValue string) (string, error) {
 		return "", errors.New("the expected format is example.com/controller-name")
 	}
 	return flagValue, nil
+}
+
+func dnsStrategyFromFlagValue(flagValue string) (cfgtypes.DNSStrategy, error) {
+	strategy := cfgtypes.DNSStrategy(flagValue)
+	if err := strategy.Validate(); err != nil {
+		return cfgtypes.DNSStrategy(""), err
+	}
+	return strategy, nil
 }
 
 // Validate validates the config. It should be used to validate the config variables' interdependencies.

@@ -197,11 +197,11 @@ func setupDataplaneAddressFinder(mgrc client.Client, c *Config, log logr.Logger)
 		return nil, nil, nil
 	}
 
-	defaultAddressFinder, err := buildDataplaneAddressFinder(mgrc, c.PublishStatusAddress, c.PublishService)
+	defaultAddressFinder, err := buildDataplaneAddressFinder(mgrc, c.PublishStatusAddress, c.PublishService, log)
 	if err != nil {
 		return nil, nil, fmt.Errorf("status updates enabled but no method to determine data-plane addresses: %w", err)
 	}
-	udpAddressFinder, err := buildDataplaneAddressFinder(mgrc, c.PublishStatusAddressUDP, c.PublishServiceUDP)
+	udpAddressFinder, err := buildDataplaneAddressFinder(mgrc, c.PublishStatusAddressUDP, c.PublishServiceUDP, log)
 	if err != nil {
 		log.Info("falling back to a default address finder for UDP", "reason", err.Error())
 		udpAddressFinder = defaultAddressFinder
@@ -210,7 +210,7 @@ func setupDataplaneAddressFinder(mgrc client.Client, c *Config, log logr.Logger)
 	return defaultAddressFinder, udpAddressFinder, nil
 }
 
-func buildDataplaneAddressFinder(mgrc client.Client, publishStatusAddress []string, publishServiceNN OptionalNamespacedName) (*dataplane.AddressFinder, error) {
+func buildDataplaneAddressFinder(mgrc client.Client, publishStatusAddress []string, publishServiceNN OptionalNamespacedName, logger logr.Logger) (*dataplane.AddressFinder, error) {
 	addressFinder := dataplane.NewAddressFinder()
 
 	if len(publishStatusAddress) > 0 {
@@ -218,14 +218,14 @@ func buildDataplaneAddressFinder(mgrc client.Client, publishStatusAddress []stri
 		return addressFinder, nil
 	}
 	if serviceNN, ok := publishServiceNN.Get(); ok {
-		addressFinder.SetGetter(generateAddressFinderGetter(mgrc, serviceNN))
+		addressFinder.SetGetter(generateAddressFinderGetter(mgrc, serviceNN, logger))
 		return addressFinder, nil
 	}
 
 	return nil, errors.New("no publish status address or publish service were provided")
 }
 
-func generateAddressFinderGetter(mgrc client.Client, publishServiceNn k8stypes.NamespacedName) func(context.Context) ([]string, error) {
+func generateAddressFinderGetter(mgrc client.Client, publishServiceNn k8stypes.NamespacedName, logger logr.Logger) func(context.Context) ([]string, error) {
 	return func(ctx context.Context) ([]string, error) {
 		svc := new(corev1.Service)
 		if err := mgrc.Get(ctx, publishServiceNn, svc); err != nil {
@@ -243,12 +243,12 @@ func generateAddressFinderGetter(mgrc client.Client, publishServiceNn k8stypes.N
 					addrs = append(addrs, lbaddr.Hostname)
 				}
 			}
+
+			if len(svc.Status.LoadBalancer.Ingress) == 0 {
+				logger.Info("LoadBalancer service has no external address", "service", publishServiceNn)
+			}
 		default:
 			addrs = append(addrs, svc.Spec.ClusterIPs...)
-		}
-
-		if len(addrs) == 0 {
-			return nil, fmt.Errorf("waiting for addresses to be provisioned for publish service %s", publishServiceNn)
 		}
 
 		return addrs, nil

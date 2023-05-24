@@ -41,7 +41,7 @@ require (
 	github.com/spf13/cobra v1.7.0
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.8.3
-	google.golang.org/api v0.123.0
+	google.golang.org/api v0.124.0
 	k8s.io/api v0.26.3
 	k8s.io/apiextensions-apiserver v0.26.3
 	k8s.io/apimachinery v0.27.2
@@ -63,7 +63,7 @@ require (
 	github.com/gammazero/deque v0.2.0 // indirect
 	github.com/gammazero/workerpool v1.1.3 // indirect
 	github.com/google/go-containerregistry v0.13.0 // indirect
-	github.com/google/s2a-go v0.1.3 // indirect
+	github.com/google/s2a-go v0.1.4 // indirect
 	github.com/puzpuzpuz/xsync/v2 v2.4.0 // indirect
 	github.com/shoenig/go-m1cpu v0.1.4 // indirect
 	go.uber.org/atomic v1.10.0 // indirect

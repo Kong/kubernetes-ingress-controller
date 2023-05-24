@@ -36,6 +36,8 @@ import (
 )
 
 const (
+	// KongConfugurationApplySucceededEvnetReason defines an event reason to tell the updating of Kong configuration succeeded.
+	KongConfigurationApplySucceededEventReason = "KongConfigurationSucceeded"
 	// KongConfigurationTranslationFailedEventReason defines an event reason used for creating all translation resource failure events.
 	KongConfigurationTranslationFailedEventReason = "KongConfigurationTranslationFailed"
 	// KongConfigurationApplyFailedEventReason defines an event reason used for creating all config apply resource failure events.
@@ -485,7 +487,7 @@ func (c *KongClient) sendToClient(
 	)
 
 	c.recordResourceFailureEvents(entityErrors, KongConfigurationApplyFailedEventReason)
-	// REVIEW: do we record the event for uploading config to Konnect?
+	// Only record events on applying configuration to Kong gateway here.
 	if !client.IsKonnect() {
 		c.recordApplyConfigurationEvents(err, client.BaseRootURL())
 	}
@@ -626,12 +628,12 @@ func (c *KongClient) recordResourceFailureEvents(resourceFailures []failures.Res
 // recordApplyConfigurationEvents records event attached to KIC pod after KIC applied Kong configuration.
 func (c *KongClient) recordApplyConfigurationEvents(err error, rootURL string) {
 	eventType := corev1.EventTypeNormal
-	reason := "KongConfigApplySucceeded"
+	reason := KongConfigurationApplySucceededEventReason
 	message := fmt.Sprintf("successfully applied Kong configuration to %s", rootURL)
 
 	if err != nil {
 		eventType = corev1.EventTypeWarning
-		reason = "KongConfigApplyFailed"
+		reason = KongConfigurationApplyFailedEventReason
 		message = fmt.Sprintf("failed to apply Kong configuration to %s: %v", rootURL, err)
 	}
 

@@ -87,7 +87,7 @@ Adding a new version? You'll need three changes:
   flavor `expressions`. If `router_flavor` is not given in Kong root 
   configurations, we assume kong is running with the default router mode 
   according to its version: `traditional` for versions below 3.0 (2.8 and older);
-  `traditional_compatible` for versions 3.0 and above (3.0 and newer).
+  abort with an error for versions over 3.0 (3.0 and newer).
   Note: this feature is experimental, and not available to translate other
   kubernetes objects that was originally supported.
   [#3935](https://github.com/Kong/kubernetes-ingress-controller/pull/3935)

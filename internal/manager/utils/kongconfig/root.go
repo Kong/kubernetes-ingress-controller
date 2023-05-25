@@ -113,7 +113,7 @@ func RouterFlavorFromRoot(r Root, kongVersion kong.Version) (string, error) {
 		if kongVersion.Major() < expressionRouterMinimalMajorVersion {
 			return kongRouterFlavorTraditional, nil
 		}
-		return kongRouterFlavorTraditionalCompatible, nil
+		return "", fmt.Errorf("%q field missing from Gateway's configuration root for version: %s", routerFlavorKey, kongVersion.String())
 	}
 	routerFlavorStr, ok := routerFlavor.(string)
 	if !ok {

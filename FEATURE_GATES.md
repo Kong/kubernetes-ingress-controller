@@ -62,7 +62,7 @@ Features that reach GA and over time become stable will be removed from this tab
 | GatewayAlpha     | `false` | Alpha | 2.6.0   | TBD   |
 | ExpressionRoutes | `false` | Alpha | 2.10.0  | TBD   |
 | CombinedServices | `false` | Alpha | 2.10.0  | TBD   |
-| FillIDs          | `true`  | Beta  | 2.10.0  | 3.0.0 |
+| FillIDs          | `false` | Alpha | 2.10.0  | 3.0.0 |
 
 **NOTE**: The `Gateway` feature gate refers to [Gateway
  API](https://github.com/kubernetes-sigs/gateway-api) APIs which are in

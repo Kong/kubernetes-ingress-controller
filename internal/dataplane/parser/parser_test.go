@@ -5351,7 +5351,7 @@ func TestNewFeatureFlags(t *testing.T) {
 
 func mustNewParser(t *testing.T, storer store.Storer) *Parser {
 	p, err := NewParser(logrus.New(), storer, FeatureFlags{
-		FillIDs: featuregates.GetFeatureGatesDefaults()[featuregates.FillIDsFeature],
+		FillIDs: true, // We'll assume this is true for all tests.
 	})
 	require.NoError(t, err)
 	return p

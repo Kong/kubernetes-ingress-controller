@@ -82,6 +82,6 @@ func GetFeatureGatesDefaults() map[string]bool {
 		CombinedRoutesFeature:   true,
 		ExpressionRoutesFeature: false,
 		CombinedServicesFeature: false,
-		FillIDsFeature:          true,
+		FillIDsFeature:          false,
 	}
 }

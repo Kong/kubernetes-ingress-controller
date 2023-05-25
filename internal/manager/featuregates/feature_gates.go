@@ -37,6 +37,10 @@ const (
 	// a Kubernetes Service is referenced by multiple netv1.Ingresses. It's effective only when CombinedRoutesFeature is enabled.
 	CombinedServicesFeature = "CombinedServices"
 
+	// FillIDsFeature is the name of the feature-gate that makes KIC fill in the ID fields of Kong entities (Services,
+	// Routes, and Consumers). It ensures that IDs remain stable across restarts of the controller.
+	FillIDsFeature = "FillIDs"
+
 	// DocsURL provides a link to the documentation for feature gates in the KIC repository.
 	DocsURL = "https://github.com/Kong/kubernetes-ingress-controller/blob/main/FEATURE_GATES.md"
 )
@@ -78,5 +82,6 @@ func GetFeatureGatesDefaults() map[string]bool {
 		CombinedRoutesFeature:   true,
 		ExpressionRoutesFeature: false,
 		CombinedServicesFeature: false,
+		FillIDsFeature:          false,
 	}
 }

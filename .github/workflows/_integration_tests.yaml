@@ -64,6 +64,12 @@ jobs:
           - name: dbless-combined-services
             test: dbless
             feature_gates: "GatewayAlpha=true,CombinedServices=true"
+          - name: dbless-fill-ids
+            test: dbless
+            feature_gates: "GatewayAlpha=true,FillIDs=true"
+          - name: postgres-fill-ids
+            test: postgres
+            feature_gates: "GatewayAlpha=true,FillIDs=true"
 
     steps:
       - uses: Kong/kong-license@master

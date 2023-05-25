@@ -70,6 +70,10 @@ type FeatureFlags struct {
 	// CombinedServices enables parser to create a single Kong Service when a Kubernetes Service is referenced
 	// by multiple Ingresses. This is effective only when EnableCombinedServiceRoutes is enabled.
 	CombinedServices bool
+
+	// FillIDs enables the parser to fill in the IDs fields of Kong entities - Services, Routes, and Consumers - based
+	// on their names. It ensures that IDs remain stable across restarts of the controller.
+	FillIDs bool
 }
 
 func NewFeatureFlags(
@@ -93,6 +97,7 @@ func NewFeatureFlags(
 		RegexPathPrefix:                   kongVersion.MajorMinorOnly().GTE(versions.ExplicitRegexPathVersionCutoff),
 		ExpressionRoutes:                  expressionRoutesEnabled,
 		CombinedServices:                  combinedRoutesEnabled && featureGates.Enabled(featuregates.CombinedServicesFeature),
+		FillIDs:                           featureGates.Enabled(featuregates.FillIDsFeature),
 	}
 }
 
@@ -233,8 +238,10 @@ func (p *Parser) BuildKongConfig() KongConfigBuildingResult {
 		result.Licenses = append(result.Licenses, p.licenseGetter.GetLicense())
 	}
 
-	// generate IDs for Kong entities
-	result.FillIDs(p.logger)
+	if p.featureFlags.FillIDs {
+		// generate IDs for Kong entities
+		result.FillIDs(p.logger)
+	}
 
 	return KongConfigBuildingResult{
 		KongState:                   &result,

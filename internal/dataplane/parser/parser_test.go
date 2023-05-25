@@ -5321,6 +5321,15 @@ func TestNewFeatureFlags(t *testing.T) {
 				CombinedServices:      false,
 			},
 		},
+		{
+			name: "fill ids enabled",
+			featureGates: map[string]bool{
+				featuregates.FillIDsFeature: true,
+			},
+			expectedFeatureFlags: FeatureFlags{
+				FillIDs: true,
+			},
+		},
 	}
 
 	for _, tc := range testCases {
@@ -5341,7 +5350,9 @@ func TestNewFeatureFlags(t *testing.T) {
 }
 
 func mustNewParser(t *testing.T, storer store.Storer) *Parser {
-	p, err := NewParser(logrus.New(), storer, FeatureFlags{})
+	p, err := NewParser(logrus.New(), storer, FeatureFlags{
+		FillIDs: true, // We'll assume this is true for all tests.
+	})
 	require.NoError(t, err)
 	return p
 }

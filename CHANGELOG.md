@@ -77,10 +77,23 @@ Adding a new version? You'll need three changes:
   [#3832](https://github.com/Kong/kubernetes-ingress-controller/pull/3832)
 - Added license agent for Konnect-managed instances.
   [#3883](https://github.com/Kong/kubernetes-ingress-controller/pull/3883)
-- `Service`, `Route` and `Consumer` Kong entities now get assigned deterministic
-  IDs based on their unique properties (name, username, etc.) instead of random
-  UUIDs.
+- `Service`, `Route`, and `Consumer` Kong entities now can get assigned
+  deterministic IDs based on their unique properties (name, username, etc.)
+  instead of random UUIDs. To enable this feature, set `FillIDs` feature gate
+  to `true`.
+  It's going to be useful in cases where stable IDs are needed across multiple
+  Kong Gateways managed by KIC (e.g. for the integration with Konnect and
+  reporting metrics that later can be aggregated across multiple instances based
+  on the entity's ID).
+  When `FillIDs` will be enabled, the controller will re-create all the existing
+  entities (Services, Routes, and Consumers) with the new IDs assigned. That can
+  potentially lead to temporary downtime between the deletion of the old entities
+  and the creation of the new ones.
+  Users should be cautious about enabling the feature if their existing DB-backed
+  setup consists of a huge amount of entities for which the recreation can take
+  significant time.
   [#3933](https://github.com/Kong/kubernetes-ingress-controller/pull/3933)
+  [#4075](https://github.com/Kong/kubernetes-ingress-controller/pull/4075)
 - Added translator to translate ingresses under `networking.k8s.io/v1` to
   expression based Kong routes. The translator is enabled when feature gate
   `ExpressionRoutes` is turned on and the managed Kong gateway runs in router

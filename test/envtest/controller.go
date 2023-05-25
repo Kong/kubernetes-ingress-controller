@@ -12,7 +12,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/config/v1alpha1"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/controllers"
@@ -22,16 +21,11 @@ import (
 // as its runnable.
 // It also adds a t.Cleanup which waits for the maanger to exit so that the test
 // can be self contained and logs from different tests' managers don't mix up.
-func StartReconciler(ctx context.Context, t *testing.T, scheme *runtime.Scheme, cfg *rest.Config, reconciler controllers.Reconciler, opts *v1alpha1.ControllerManagerConfiguration) {
+func StartReconciler(ctx context.Context, t *testing.T, scheme *runtime.Scheme, cfg *rest.Config, reconciler controllers.Reconciler) {
 	o := manager.Options{
 		Logger:             logrusr.New(logrus.New()),
 		Scheme:             scheme,
 		MetricsBindAddress: "0",
-	}
-	if opts != nil {
-		var err error
-		o, err = o.AndFrom(opts)
-		require.NoError(t, err)
 	}
 
 	mgr, err := ctrl.NewManager(cfg, o)

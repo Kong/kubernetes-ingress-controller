@@ -59,7 +59,7 @@ func (r *CoreV1SecretReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	// we should always try to delete secrets in caches when they are deleted in cluster.
 	predicateFuncs.DeleteFunc = func(event event.DeleteEvent) bool { return true }
 	return c.Watch(
-		&source.Kind{Type: &corev1.Secret{}},
+		source.Kind(mgr.GetCache(), &corev1.Secret{}),
 		&handler.EnqueueRequestForObject{},
 		predicateFuncs,
 	)
@@ -90,7 +90,7 @@ func (r *CoreV1SecretReconciler) shouldReconcileSecret(obj client.Object) bool {
 	return referred
 }
 
-//+kubebuilder:rbac:groups="",resources=secrets,verbs=list;watch
+// +kubebuilder:rbac:groups="",resources=secrets,verbs=list;watch
 
 // Reconcile processes the watched objects.
 func (r *CoreV1SecretReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {

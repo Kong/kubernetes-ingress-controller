@@ -77,7 +77,7 @@ func (r *CoreV1ServiceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		return err
 	}
 	return c.Watch(
-		&source.Kind{Type: &corev1.Service{}},
+		source.Kind(mgr.GetCache(), &corev1.Service{}),
 		&handler.EnqueueRequestForObject{},
 	)
 }
@@ -174,7 +174,7 @@ func (r *DiscoveryV1EndpointSliceReconciler) SetupWithManager(mgr ctrl.Manager) 
 		return err
 	}
 	return c.Watch(
-		&source.Kind{Type: &discoveryv1.EndpointSlice{}},
+		source.Kind(mgr.GetCache(), &discoveryv1.EndpointSlice{}),
 		&handler.EnqueueRequestForObject{},
 	)
 }
@@ -271,7 +271,7 @@ func (r *NetV1IngressReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	}
 	if !r.DisableIngressClassLookups {
 		err = c.Watch(
-			&source.Kind{Type: &netv1.IngressClass{}},
+			source.Kind(mgr.GetCache(), &netv1.IngressClass{}),
 			handler.EnqueueRequestsFromMapFunc(r.listClassless),
 			predicate.NewPredicateFuncs(ctrlutils.IsDefaultIngressClass),
 		)
@@ -281,16 +281,16 @@ func (r *NetV1IngressReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	}
 	preds := ctrlutils.GeneratePredicateFuncsForIngressClassFilter(r.IngressClassName)
 	return c.Watch(
-		&source.Kind{Type: &netv1.Ingress{}},
+		source.Kind(mgr.GetCache(), &netv1.Ingress{}),
 		&handler.EnqueueRequestForObject{},
 		preds,
 	)
 }
 
 // listClassless finds and reconciles all objects without ingress class information
-func (r *NetV1IngressReconciler) listClassless(obj client.Object) []reconcile.Request {
+func (r *NetV1IngressReconciler) listClassless(ctx context.Context, obj client.Object) []reconcile.Request {
 	resourceList := &netv1.IngressList{}
-	if err := r.Client.List(context.Background(), resourceList); err != nil {
+	if err := r.Client.List(ctx, resourceList); err != nil {
 		r.Log.Error(err, "failed to list classless ingresses")
 		return nil
 	}
@@ -445,7 +445,7 @@ func (r *NetV1IngressClassReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		return err
 	}
 	return c.Watch(
-		&source.Kind{Type: &netv1.IngressClass{}},
+		source.Kind(mgr.GetCache(), &netv1.IngressClass{}),
 		&handler.EnqueueRequestForObject{},
 	)
 }
@@ -521,7 +521,7 @@ func (r *KongV1KongIngressReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		return err
 	}
 	return c.Watch(
-		&source.Kind{Type: &kongv1.KongIngress{}},
+		source.Kind(mgr.GetCache(), &kongv1.KongIngress{}),
 		&handler.EnqueueRequestForObject{},
 	)
 }
@@ -599,7 +599,7 @@ func (r *KongV1KongPluginReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		return err
 	}
 	return c.Watch(
-		&source.Kind{Type: &kongv1.KongPlugin{}},
+		source.Kind(mgr.GetCache(), &kongv1.KongPlugin{}),
 		&handler.EnqueueRequestForObject{},
 	)
 }
@@ -701,7 +701,7 @@ func (r *KongV1KongClusterPluginReconciler) SetupWithManager(mgr ctrl.Manager) e
 	}
 	if !r.DisableIngressClassLookups {
 		err = c.Watch(
-			&source.Kind{Type: &netv1.IngressClass{}},
+			source.Kind(mgr.GetCache(), &netv1.IngressClass{}),
 			handler.EnqueueRequestsFromMapFunc(r.listClassless),
 			predicate.NewPredicateFuncs(ctrlutils.IsDefaultIngressClass),
 		)
@@ -711,16 +711,16 @@ func (r *KongV1KongClusterPluginReconciler) SetupWithManager(mgr ctrl.Manager) e
 	}
 	preds := ctrlutils.GeneratePredicateFuncsForIngressClassFilter(r.IngressClassName)
 	return c.Watch(
-		&source.Kind{Type: &kongv1.KongClusterPlugin{}},
+		source.Kind(mgr.GetCache(), &kongv1.KongClusterPlugin{}),
 		&handler.EnqueueRequestForObject{},
 		preds,
 	)
 }
 
 // listClassless finds and reconciles all objects without ingress class information
-func (r *KongV1KongClusterPluginReconciler) listClassless(obj client.Object) []reconcile.Request {
+func (r *KongV1KongClusterPluginReconciler) listClassless(ctx context.Context, obj client.Object) []reconcile.Request {
 	resourceList := &kongv1.KongClusterPluginList{}
-	if err := r.Client.List(context.Background(), resourceList); err != nil {
+	if err := r.Client.List(ctx, resourceList); err != nil {
 		r.Log.Error(err, "failed to list classless kongclusterplugins")
 		return nil
 	}
@@ -855,7 +855,7 @@ func (r *KongV1KongConsumerReconciler) SetupWithManager(mgr ctrl.Manager) error 
 	}
 	if !r.DisableIngressClassLookups {
 		err = c.Watch(
-			&source.Kind{Type: &netv1.IngressClass{}},
+			source.Kind(mgr.GetCache(), &netv1.IngressClass{}),
 			handler.EnqueueRequestsFromMapFunc(r.listClassless),
 			predicate.NewPredicateFuncs(ctrlutils.IsDefaultIngressClass),
 		)
@@ -865,16 +865,16 @@ func (r *KongV1KongConsumerReconciler) SetupWithManager(mgr ctrl.Manager) error 
 	}
 	preds := ctrlutils.GeneratePredicateFuncsForIngressClassFilter(r.IngressClassName)
 	return c.Watch(
-		&source.Kind{Type: &kongv1.KongConsumer{}},
+		source.Kind(mgr.GetCache(), &kongv1.KongConsumer{}),
 		&handler.EnqueueRequestForObject{},
 		preds,
 	)
 }
 
 // listClassless finds and reconciles all objects without ingress class information
-func (r *KongV1KongConsumerReconciler) listClassless(obj client.Object) []reconcile.Request {
+func (r *KongV1KongConsumerReconciler) listClassless(ctx context.Context, obj client.Object) []reconcile.Request {
 	resourceList := &kongv1.KongConsumerList{}
-	if err := r.Client.List(context.Background(), resourceList); err != nil {
+	if err := r.Client.List(ctx, resourceList); err != nil {
 		r.Log.Error(err, "failed to list classless kongconsumers")
 		return nil
 	}
@@ -1025,7 +1025,7 @@ func (r *KongV1Beta1TCPIngressReconciler) SetupWithManager(mgr ctrl.Manager) err
 	}
 	if !r.DisableIngressClassLookups {
 		err = c.Watch(
-			&source.Kind{Type: &netv1.IngressClass{}},
+			source.Kind(mgr.GetCache(), &netv1.IngressClass{}),
 			handler.EnqueueRequestsFromMapFunc(r.listClassless),
 			predicate.NewPredicateFuncs(ctrlutils.IsDefaultIngressClass),
 		)
@@ -1035,16 +1035,16 @@ func (r *KongV1Beta1TCPIngressReconciler) SetupWithManager(mgr ctrl.Manager) err
 	}
 	preds := ctrlutils.GeneratePredicateFuncsForIngressClassFilter(r.IngressClassName)
 	return c.Watch(
-		&source.Kind{Type: &kongv1beta1.TCPIngress{}},
+		source.Kind(mgr.GetCache(), &kongv1beta1.TCPIngress{}),
 		&handler.EnqueueRequestForObject{},
 		preds,
 	)
 }
 
 // listClassless finds and reconciles all objects without ingress class information
-func (r *KongV1Beta1TCPIngressReconciler) listClassless(obj client.Object) []reconcile.Request {
+func (r *KongV1Beta1TCPIngressReconciler) listClassless(ctx context.Context, obj client.Object) []reconcile.Request {
 	resourceList := &kongv1beta1.TCPIngressList{}
-	if err := r.Client.List(context.Background(), resourceList); err != nil {
+	if err := r.Client.List(ctx, resourceList); err != nil {
 		r.Log.Error(err, "failed to list classless tcpingresses")
 		return nil
 	}
@@ -1219,7 +1219,7 @@ func (r *KongV1Beta1UDPIngressReconciler) SetupWithManager(mgr ctrl.Manager) err
 	}
 	if !r.DisableIngressClassLookups {
 		err = c.Watch(
-			&source.Kind{Type: &netv1.IngressClass{}},
+			source.Kind(mgr.GetCache(), &netv1.IngressClass{}),
 			handler.EnqueueRequestsFromMapFunc(r.listClassless),
 			predicate.NewPredicateFuncs(ctrlutils.IsDefaultIngressClass),
 		)
@@ -1229,16 +1229,16 @@ func (r *KongV1Beta1UDPIngressReconciler) SetupWithManager(mgr ctrl.Manager) err
 	}
 	preds := ctrlutils.GeneratePredicateFuncsForIngressClassFilter(r.IngressClassName)
 	return c.Watch(
-		&source.Kind{Type: &kongv1beta1.UDPIngress{}},
+		source.Kind(mgr.GetCache(), &kongv1beta1.UDPIngress{}),
 		&handler.EnqueueRequestForObject{},
 		preds,
 	)
 }
 
 // listClassless finds and reconciles all objects without ingress class information
-func (r *KongV1Beta1UDPIngressReconciler) listClassless(obj client.Object) []reconcile.Request {
+func (r *KongV1Beta1UDPIngressReconciler) listClassless(ctx context.Context, obj client.Object) []reconcile.Request {
 	resourceList := &kongv1beta1.UDPIngressList{}
-	if err := r.Client.List(context.Background(), resourceList); err != nil {
+	if err := r.Client.List(ctx, resourceList); err != nil {
 		r.Log.Error(err, "failed to list classless udpingresses")
 		return nil
 	}
@@ -1373,7 +1373,7 @@ func (r *KongV1Alpha1IngressClassParametersReconciler) SetupWithManager(mgr ctrl
 		return err
 	}
 	return c.Watch(
-		&source.Kind{Type: &kongv1alpha1.IngressClassParameters{}},
+		source.Kind(mgr.GetCache(), &kongv1alpha1.IngressClassParameters{}),
 		&handler.EnqueueRequestForObject{},
 	)
 }

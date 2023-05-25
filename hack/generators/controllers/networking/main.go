@@ -453,7 +453,7 @@ func (r *{{.PackageAlias}}{{.Kind}}Reconciler) SetupWithManager(mgr ctrl.Manager
 {{- if .AcceptsIngressClassNameAnnotation}}
 	if !r.DisableIngressClassLookups {
 		err = c.Watch(
-			&source.Kind{Type: &netv1.IngressClass{}},
+			source.Kind(mgr.GetCache(), &netv1.IngressClass{}),
 			handler.EnqueueRequestsFromMapFunc(r.listClassless),
 			predicate.NewPredicateFuncs(ctrlutils.IsDefaultIngressClass),
 		)
@@ -464,7 +464,7 @@ func (r *{{.PackageAlias}}{{.Kind}}Reconciler) SetupWithManager(mgr ctrl.Manager
 	preds := ctrlutils.GeneratePredicateFuncsForIngressClassFilter(r.IngressClassName)
 {{- end}}
 	return c.Watch(
-		&source.Kind{Type: &{{.PackageImportAlias}}.{{.Kind}}{}},
+		source.Kind(mgr.GetCache(), &{{.PackageImportAlias}}.{{.Kind}}{}),
 		&handler.EnqueueRequestForObject{},
 {{- if .AcceptsIngressClassNameAnnotation}}
 		preds,
@@ -474,9 +474,9 @@ func (r *{{.PackageAlias}}{{.Kind}}Reconciler) SetupWithManager(mgr ctrl.Manager
 
 {{- if .AcceptsIngressClassNameAnnotation}}
 // listClassless finds and reconciles all objects without ingress class information
-func (r *{{.PackageAlias}}{{.Kind}}Reconciler) listClassless(obj client.Object) []reconcile.Request {
+func (r *{{.PackageAlias}}{{.Kind}}Reconciler) listClassless(ctx context.Context, obj client.Object) []reconcile.Request {
 	resourceList := &{{.PackageImportAlias}}.{{.Kind}}List{}
-	if err := r.Client.List(context.Background(), resourceList); err != nil {
+	if err := r.Client.List(ctx, resourceList); err != nil {
 		r.Log.Error(err, "failed to list classless {{.Plural}}")
 		return nil
 	}

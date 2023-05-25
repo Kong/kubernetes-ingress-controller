@@ -64,7 +64,7 @@ func (r *GRPCRouteReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	// removed from data-plane configurations, and any routes that are now supported
 	// due to that change get added to data-plane configurations.
 	if err := c.Watch(
-		&source.Kind{Type: &gatewayv1beta1.GatewayClass{}},
+		source.Kind(mgr.GetCache(), &gatewayv1beta1.GatewayClass{}),
 		handler.EnqueueRequestsFromMapFunc(r.listGRPCRoutesForGatewayClass),
 		predicate.Funcs{
 			GenericFunc: func(e event.GenericEvent) bool { return false }, // we don't need to enqueue from generic
@@ -81,7 +81,7 @@ func (r *GRPCRouteReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	// removed from data-plane configurations, and any routes that are now supported
 	// due to that change get added to data-plane configurations.
 	if err := c.Watch(
-		&source.Kind{Type: &gatewayv1beta1.Gateway{}},
+		source.Kind(mgr.GetCache(), &gatewayv1beta1.Gateway{}),
 		handler.EnqueueRequestsFromMapFunc(r.listGRPCRoutesForGateway),
 	); err != nil {
 		return err
@@ -93,7 +93,7 @@ func (r *GRPCRouteReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	// data-plane config for an GRPCRoute if it somehow becomes disconnected from
 	// a supported Gateway and GatewayClass.
 	return c.Watch(
-		&source.Kind{Type: &gatewayv1alpha2.GRPCRoute{}},
+		source.Kind(mgr.GetCache(), &gatewayv1alpha2.GRPCRoute{}),
 		&handler.EnqueueRequestForObject{},
 	)
 }
@@ -108,7 +108,7 @@ func (r *GRPCRouteReconciler) SetupWithManager(mgr ctrl.Manager) error {
 // to determine the GRPCRoutes as the relationship has to be discovered entirely
 // by object reference. This relies heavily on the inherent performance benefits of
 // the cached manager client to avoid API overhead.
-func (r *GRPCRouteReconciler) listGRPCRoutesForGatewayClass(obj client.Object) []reconcile.Request {
+func (r *GRPCRouteReconciler) listGRPCRoutesForGatewayClass(ctx context.Context, obj client.Object) []reconcile.Request {
 	// verify that the object is a GatewayClass
 	gwc, ok := obj.(*gatewayv1beta1.GatewayClass)
 	if !ok {
@@ -118,7 +118,7 @@ func (r *GRPCRouteReconciler) listGRPCRoutesForGatewayClass(obj client.Object) [
 
 	// map all Gateway objects
 	gatewayList := gatewayv1beta1.GatewayList{}
-	if err := r.Client.List(context.Background(), &gatewayList); err != nil {
+	if err := r.Client.List(ctx, &gatewayList); err != nil {
 		r.Log.Error(err, "failed to list gateway objects from the cached client")
 		return nil
 	}
@@ -142,7 +142,7 @@ func (r *GRPCRouteReconciler) listGRPCRoutesForGatewayClass(obj client.Object) [
 
 	// map all GRPCRoute objects
 	grpcrouteList := gatewayv1alpha2.GRPCRouteList{}
-	if err := r.Client.List(context.Background(), &grpcrouteList); err != nil {
+	if err := r.Client.List(ctx, &grpcrouteList); err != nil {
 		r.Log.Error(err, "failed to list grpcroute objects from the cached client")
 		return nil
 	}
@@ -193,7 +193,7 @@ func (r *GRPCRouteReconciler) listGRPCRoutesForGatewayClass(obj client.Object) [
 // the moment for v1alpha2. As future releases of Gateway come out we'll need to
 // continue iterating on this and perhaps advocating for upstream changes to help avoid
 // this kind of problem without having to enqueue extra objects.
-func (r *GRPCRouteReconciler) listGRPCRoutesForGateway(obj client.Object) []reconcile.Request {
+func (r *GRPCRouteReconciler) listGRPCRoutesForGateway(ctx context.Context, obj client.Object) []reconcile.Request {
 	// verify that the object is a Gateway
 	gw, ok := obj.(*gatewayv1beta1.Gateway)
 	if !ok {
@@ -203,7 +203,7 @@ func (r *GRPCRouteReconciler) listGRPCRoutesForGateway(obj client.Object) []reco
 
 	// map all GRPCRoute objects
 	grpcrouteList := gatewayv1alpha2.GRPCRouteList{}
-	if err := r.Client.List(context.Background(), &grpcrouteList); err != nil {
+	if err := r.Client.List(ctx, &grpcrouteList); err != nil {
 		r.Log.Error(err, "failed to list grpcroute objects from the cached client")
 		return nil
 	}

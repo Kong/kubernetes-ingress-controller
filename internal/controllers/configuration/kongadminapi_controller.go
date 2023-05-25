@@ -66,7 +66,7 @@ func (r *KongAdminAPIServiceReconciler) SetupWithManager(mgr ctrl.Manager) error
 	}
 
 	return c.Watch(
-		&source.Kind{Type: &discoveryv1.EndpointSlice{}},
+		source.Kind(mgr.GetCache(), &discoveryv1.EndpointSlice{}),
 		&handler.EnqueueRequestForObject{},
 		predicate.NewPredicateFuncs(r.shouldReconcileEndpointSlice),
 	)

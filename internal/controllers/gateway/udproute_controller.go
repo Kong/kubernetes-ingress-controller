@@ -60,7 +60,7 @@ func (r *UDPRouteReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	// removed from data-plane configurations, and any routes that are now supported
 	// due to that change get added to data-plane configurations.
 	if err := c.Watch(
-		&source.Kind{Type: &gatewayv1beta1.GatewayClass{}},
+		source.Kind(mgr.GetCache(), &gatewayv1beta1.GatewayClass{}),
 		handler.EnqueueRequestsFromMapFunc(r.listUDPRoutesForGatewayClass),
 		predicate.Funcs{
 			GenericFunc: func(e event.GenericEvent) bool { return false }, // we don't need to enqueue from generic
@@ -77,7 +77,7 @@ func (r *UDPRouteReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	// removed from data-plane configurations, and any routes that are now supported
 	// due to that change get added to data-plane configurations.
 	if err := c.Watch(
-		&source.Kind{Type: &gatewayv1beta1.Gateway{}},
+		source.Kind(mgr.GetCache(), &gatewayv1beta1.Gateway{}),
 		handler.EnqueueRequestsFromMapFunc(r.listUDPRoutesForGateway),
 	); err != nil {
 		return err
@@ -89,7 +89,7 @@ func (r *UDPRouteReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	// data-plane config for an UDPRoute if it somehow becomes disconnected from
 	// a supported Gateway and GatewayClass.
 	return c.Watch(
-		&source.Kind{Type: &gatewayv1alpha2.UDPRoute{}},
+		source.Kind(mgr.GetCache(), &gatewayv1alpha2.UDPRoute{}),
 		&handler.EnqueueRequestForObject{},
 	)
 }
@@ -104,7 +104,7 @@ func (r *UDPRouteReconciler) SetupWithManager(mgr ctrl.Manager) error {
 // to determine the UDPRoutes as the relationship has to be discovered entirely
 // by object reference. This relies heavily on the inherent performance benefits of
 // the cached manager client to avoid API overhead.
-func (r *UDPRouteReconciler) listUDPRoutesForGatewayClass(obj client.Object) []reconcile.Request {
+func (r *UDPRouteReconciler) listUDPRoutesForGatewayClass(ctx context.Context, obj client.Object) []reconcile.Request {
 	// verify that the object is a GatewayClass
 	gwc, ok := obj.(*gatewayv1beta1.GatewayClass)
 	if !ok {
@@ -114,7 +114,7 @@ func (r *UDPRouteReconciler) listUDPRoutesForGatewayClass(obj client.Object) []r
 
 	// map all Gateway objects
 	gatewayList := gatewayv1beta1.GatewayList{}
-	if err := r.Client.List(context.Background(), &gatewayList); err != nil {
+	if err := r.Client.List(ctx, &gatewayList); err != nil {
 		r.Log.Error(err, "failed to list gateway objects from the cached client")
 		return nil
 	}
@@ -138,7 +138,7 @@ func (r *UDPRouteReconciler) listUDPRoutesForGatewayClass(obj client.Object) []r
 
 	// map all UDPRoute objects
 	udprouteList := gatewayv1alpha2.UDPRouteList{}
-	if err := r.Client.List(context.Background(), &udprouteList); err != nil {
+	if err := r.Client.List(ctx, &udprouteList); err != nil {
 		r.Log.Error(err, "failed to list udproute objects from the cached client")
 		return nil
 	}
@@ -189,7 +189,7 @@ func (r *UDPRouteReconciler) listUDPRoutesForGatewayClass(obj client.Object) []r
 // the moment for v1alpha2. As future releases of Gateway come out we'll need to
 // continue iterating on this and perhaps advocating for upstream changes to help avoid
 // this kind of problem without having to enqueue extra objects.
-func (r *UDPRouteReconciler) listUDPRoutesForGateway(obj client.Object) []reconcile.Request {
+func (r *UDPRouteReconciler) listUDPRoutesForGateway(ctx context.Context, obj client.Object) []reconcile.Request {
 	// verify that the object is a Gateway
 	gw, ok := obj.(*gatewayv1beta1.Gateway)
 	if !ok {
@@ -199,7 +199,7 @@ func (r *UDPRouteReconciler) listUDPRoutesForGateway(obj client.Object) []reconc
 
 	// map all UDPRoute objects
 	udprouteList := gatewayv1alpha2.UDPRouteList{}
-	if err := r.Client.List(context.Background(), &udprouteList); err != nil {
+	if err := r.Client.List(ctx, &udprouteList); err != nil {
 		r.Log.Error(err, "failed to list udproute objects from the cached client")
 		return nil
 	}

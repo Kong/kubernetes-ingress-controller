@@ -81,7 +81,7 @@ func TestHTTPRouteReconcilerProperlyReactsToReferenceGrant(t *testing.T) {
 		},
 	}
 	require.NoError(t, client.Create(ctx, &svc))
-	envtest.StartReconciler(ctx, t, client.Scheme(), cfg, reconciler, nil)
+	envtest.StartReconciler(ctx, t, client.Scheme(), cfg, reconciler)
 
 	gwc := gatewayv1beta1.GatewayClass{
 		Spec: gatewayv1beta1.GatewayClassSpec{

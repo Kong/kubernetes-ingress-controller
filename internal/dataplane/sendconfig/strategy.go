@@ -113,5 +113,9 @@ func (r DefaultUpdateStrategyResolver) resolveUpdateStrategy(client UpdateClient
 		)
 	}
 
-	return NewUpdateStrategyInMemory(adminAPIClient, r.log)
+	return NewUpdateStrategyInMemory(
+		adminAPIClient,
+		r.log,
+		r.config.Version,
+	)
 }

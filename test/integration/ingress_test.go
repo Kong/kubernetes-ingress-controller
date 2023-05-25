@@ -483,13 +483,7 @@ func TestIngressStatusUpdatesExtended(t *testing.T) {
 // parallel: parts of the test may add this route _without_ the prefix, and the 3.x router really hates this and will
 // stop working altogether.
 func TestIngressClassRegexToggle(t *testing.T) {
-	// the manager runs in a goroutine and may not have pulled the version before this test starts
-	require.Eventually(t, func() bool {
-		return !versions.GetKongVersion().Full().EQ(semver.MustParse("0.0.0"))
-	}, time.Minute, time.Second)
-	if v := versions.GetKongVersion(); !v.MajorOnly().GTE(versions.ExplicitRegexPathVersionCutoff) {
-		t.Skipf("regex prefixes are only relevant for Kong 3.0+, detected: %s", v.Full())
-	}
+	RunWhenKongVersion(t, fmt.Sprintf(">=%s", versions.ExplicitRegexPathVersionCutoff), "regex prefixes are only relevant for Kong 3.0+")
 
 	// skip the test if the cluster does not support namespaced ingress class parameter (<=1.21).
 	// since 1.21 is End of Life now.
@@ -620,9 +614,7 @@ func TestIngressClassRegexToggle(t *testing.T) {
 }
 
 func TestIngressRegexPrefix(t *testing.T) {
-	if v := versions.GetKongVersion(); !v.MajorOnly().GTE(versions.ExplicitRegexPathVersionCutoff) {
-		t.Skipf("regex prefixes are only relevant for Kong 3.0+, detected: %s", v.Full())
-	}
+	RunWhenKongVersion(t, fmt.Sprintf(">=%s", versions.ExplicitRegexPathVersionCutoff), "regex prefixes are only relevant for Kong 3.0+")
 
 	ctx := context.Background()
 	ns, cleaner := helpers.Setup(ctx, t, env)

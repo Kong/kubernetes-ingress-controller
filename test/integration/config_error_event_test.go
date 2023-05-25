@@ -5,6 +5,7 @@ package integration
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
@@ -20,20 +21,17 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/test"
 	"github.com/kong/kubernetes-ingress-controller/v2/test/consts"
 	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/helpers"
-	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/testenv"
 )
 
 func TestConfigErrorEventGeneration(t *testing.T) {
+	// This test is NOT parallel.
+	// The broken configuration prevents all updates and will break unrelated tests
+
 	skipTestForExpressionRouter(t)
-	// this test is NOT parallel. the broken configuration prevents all updates and will break unrelated tests
-	if testenv.DBMode() != "off" {
-		t.Skip("config errors are only supported on DB-less mode")
-	}
-	if versions.GetKongVersion().MajorMinorOnly().LTE(versions.FlattenedErrorCutoff) {
-		t.Skipf("kong version is %s < 3.2, skipping testing config error parsing", versions.GetKongVersion().MajorMinorOnly().String())
-	} else {
-		t.Logf("kong version is %s >= 3.2, testing config error parsing", versions.GetKongVersion().MajorMinorOnly().String())
-	}
+
+	RunWhenKongDBMode(t, "off", "config errors are only supported on DB-less mode")
+	RunWhenKongVersion(t, fmt.Sprintf(">=%s", versions.FlattenedErrorCutoff))
+
 	ctx := context.Background()
 	ns, cleaner := helpers.Setup(ctx, t, env)
 

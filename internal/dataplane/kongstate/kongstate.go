@@ -130,7 +130,7 @@ func (ks *KongState) FillConsumersAndCredentials(log logrus.FieldLogger, s store
 				continue
 			}
 			credTags := util.GenerateTagsForObject(secret)
-			err = c.SetCredential(credType, credConfig, credTags)
+			err = c.SetCredential(credType, credConfig, credTags, ks.Version)
 			if err != nil {
 				log.WithError(err).Errorf("failed to provision credential")
 				continue

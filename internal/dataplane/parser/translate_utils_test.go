@@ -7,7 +7,9 @@ import (
 	"github.com/blang/semver/v4"
 	"github.com/google/uuid"
 	"github.com/kong/go-kong/kong"
+	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
@@ -15,30 +17,32 @@ import (
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/store"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/versions"
 )
 
 func TestConvertGatewayMatchHeadersToKongRouteMatchHeadersVersionBehavior(t *testing.T) {
-	regexType := gatewayv1beta1.HeaderMatchRegularExpression
-
 	type Case struct {
-		msg    string
-		input  []gatewayv1beta1.HTTPHeaderMatch
-		output map[string][]string
-		err    error
+		msg         string
+		input       []gatewayv1beta1.HTTPHeaderMatch
+		kongVersion func(t *testing.T) semver.Version
+		output      map[string][]string
+		err         error
 	}
 
-	// util reports Kong version 0.0.0 when not initialized
-	belowThresholdTests := []Case{
+	testcases := []Case{
 		{
 			msg: "regex header matches fail on unsupported versions",
 			input: []gatewayv1beta1.HTTPHeaderMatch{{
-				Type:  &regexType,
+				Type:  lo.ToPtr(gatewayv1beta1.HeaderMatchRegularExpression),
 				Name:  "Content-Type",
 				Value: "^audio/*",
 			}},
+			kongVersion: func(t *testing.T) semver.Version {
+				kongVersion, err := semver.Parse("2.5.0")
+				require.NoError(t, err)
+				return kongVersion
+			},
 			output: nil,
-			err:    fmt.Errorf("Kong version %s does not support HeaderMatchRegularExpression", semver.MustParse("0.0.0")),
+			err:    fmt.Errorf("Kong version %s does not support HeaderMatchRegularExpression", semver.MustParse("2.5.0")),
 		},
 		{
 			msg: "a single exact header match succeeds on any version",
@@ -46,39 +50,36 @@ func TestConvertGatewayMatchHeadersToKongRouteMatchHeadersVersionBehavior(t *tes
 				Name:  "Content-Type",
 				Value: "audio/vorbis",
 			}},
+			kongVersion: func(t *testing.T) semver.Version {
+				kongVersion, err := semver.Parse("2.5.0")
+				require.NoError(t, err)
+				return kongVersion
+			},
 			output: map[string][]string{
 				"Content-Type": {"audio/vorbis"},
 			},
 		},
-	}
-
-	for _, tt := range belowThresholdTests {
-		t.Run(tt.msg, func(t *testing.T) {
-			output, err := convertGatewayMatchHeadersToKongRouteMatchHeaders(tt.input)
-			assert.Equal(t, tt.err, err)
-			assert.Equal(t, tt.output, output)
-		})
-	}
-
-	versions.SetKongVersion(semver.MustParse("2.8.0"))
-
-	aboveThresholdTests := []Case{
 		{
 			msg: "regex header matches succeed on supported versions",
 			input: []gatewayv1beta1.HTTPHeaderMatch{{
-				Type:  &regexType,
+				Type:  lo.ToPtr(gatewayv1beta1.HeaderMatchRegularExpression),
 				Name:  "Content-Type",
 				Value: "^audio/*",
 			}},
+			kongVersion: func(t *testing.T) semver.Version {
+				kongVersion, err := semver.Parse("2.8.0")
+				require.NoError(t, err)
+				return kongVersion
+			},
 			output: map[string][]string{
 				"Content-Type": {kongHeaderRegexPrefix + "^audio/*"},
 			},
 		},
 	}
 
-	for _, tt := range aboveThresholdTests {
+	for _, tt := range testcases {
 		t.Run(tt.msg, func(t *testing.T) {
-			output, err := convertGatewayMatchHeadersToKongRouteMatchHeaders(tt.input)
+			output, err := convertGatewayMatchHeadersToKongRouteMatchHeaders(tt.input, tt.kongVersion(t))
 			assert.Equal(t, tt.err, err)
 			assert.Equal(t, tt.output, output)
 		})
@@ -86,9 +87,8 @@ func TestConvertGatewayMatchHeadersToKongRouteMatchHeadersVersionBehavior(t *tes
 }
 
 func TestConvertGatewayMatchHeadersToKongRouteMatchHeaders(t *testing.T) {
-	regexType := gatewayv1beta1.HeaderMatchRegularExpression
-	exactType := gatewayv1beta1.HeaderMatchExact
-	versions.SetKongVersion(semver.MustParse("2.8.0"))
+	kongVersion, err := semver.Parse("2.8.0")
+	require.NoError(t, err)
 
 	t.Log("generating several gateway header matches")
 	tests := []struct {
@@ -100,7 +100,7 @@ func TestConvertGatewayMatchHeadersToKongRouteMatchHeaders(t *testing.T) {
 		{
 			msg: "regex header matches convert correctly",
 			input: []gatewayv1beta1.HTTPHeaderMatch{{
-				Type:  &regexType,
+				Type:  lo.ToPtr(gatewayv1beta1.HeaderMatchRegularExpression),
 				Name:  "Content-Type",
 				Value: "^audio/*",
 			}},
@@ -121,7 +121,7 @@ func TestConvertGatewayMatchHeadersToKongRouteMatchHeaders(t *testing.T) {
 		{
 			msg: "a single exact header match with a single value converts properly",
 			input: []gatewayv1beta1.HTTPHeaderMatch{{
-				Type:  &exactType,
+				Type:  lo.ToPtr(gatewayv1beta1.HeaderMatchExact),
 				Name:  "Content-Type",
 				Value: "audio/vorbis",
 			}},
@@ -148,7 +148,7 @@ func TestConvertGatewayMatchHeadersToKongRouteMatchHeaders(t *testing.T) {
 			msg: "multiple header matches convert properly",
 			input: []gatewayv1beta1.HTTPHeaderMatch{
 				{
-					Type:  &exactType,
+					Type:  lo.ToPtr(gatewayv1beta1.HeaderMatchExact),
 					Name:  "Content-Type",
 					Value: "audio/vorbis",
 				},
@@ -171,7 +171,7 @@ func TestConvertGatewayMatchHeadersToKongRouteMatchHeaders(t *testing.T) {
 	t.Log("verifying header match conversions")
 	for _, tt := range tests {
 		t.Run(tt.msg, func(t *testing.T) {
-			output, err := convertGatewayMatchHeadersToKongRouteMatchHeaders(tt.input)
+			output, err := convertGatewayMatchHeadersToKongRouteMatchHeaders(tt.input, kongVersion)
 			assert.Equal(t, tt.err, err)
 			assert.Equal(t, tt.output, output)
 		})

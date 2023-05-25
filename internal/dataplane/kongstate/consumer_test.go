@@ -6,6 +6,7 @@ import (
 	"github.com/blang/semver/v4"
 	"github.com/kong/go-kong/kong"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/versions"
 	configurationv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
@@ -85,6 +86,10 @@ func TestConsumer_SetCredential(t *testing.T) {
 		result  *Consumer
 		wantErr bool
 	}
+
+	v, err := semver.Parse("2.2.0") // version prior to MTLSCredentialVersionCutoff
+	require.NoError(t, err)
+
 	tests := []Case{
 		{
 			name: "invalid cred type errors",
@@ -453,8 +458,8 @@ func TestConsumer_SetCredential(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := tt.args.consumer.SetCredential(tt.args.credType,
-				tt.args.credConfig, []*string{}); (err != nil) != tt.wantErr {
+			err := tt.args.consumer.SetCredential(tt.args.credType, tt.args.credConfig, []*string{}, v)
+			if (err != nil) != tt.wantErr {
 				t.Errorf("processCredential() error = %v, wantErr %v",
 					err, tt.wantErr)
 			}
@@ -462,7 +467,6 @@ func TestConsumer_SetCredential(t *testing.T) {
 		})
 	}
 
-	versions.SetKongVersion(semver.MustParse("2.3.2")) // minimum version for mtls-auths with tags
 	mtlsSupportedTests := []Case{
 		{
 			name: "mtls-auth",
@@ -506,8 +510,9 @@ func TestConsumer_SetCredential(t *testing.T) {
 
 	for _, tt := range mtlsSupportedTests {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := tt.args.consumer.SetCredential(tt.args.credType,
-				tt.args.credConfig, []*string{}); (err != nil) != tt.wantErr {
+			v := versions.MTLSCredentialVersionCutoff // minimum version for mtls-auths with tags
+			err := tt.args.consumer.SetCredential(tt.args.credType, tt.args.credConfig, []*string{}, v)
+			if (err != nil) != tt.wantErr {
 				t.Errorf("processCredential() error = %v, wantErr %v",
 					err, tt.wantErr)
 			}

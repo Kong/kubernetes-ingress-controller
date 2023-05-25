@@ -5,6 +5,7 @@ import (
 	"reflect"
 	"strings"
 
+	"github.com/blang/semver/v4"
 	"github.com/kong/go-kong/kong"
 	"github.com/sirupsen/logrus"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -23,7 +24,7 @@ import (
 
 // convertGatewayMatchHeadersToKongRouteMatchHeaders takes an input list of Gateway APIs HTTPHeaderMatch
 // and converts these header matching rules to the format expected by go-kong.
-func convertGatewayMatchHeadersToKongRouteMatchHeaders(headers []gatewayv1beta1.HTTPHeaderMatch) (map[string][]string, error) {
+func convertGatewayMatchHeadersToKongRouteMatchHeaders(headers []gatewayv1beta1.HTTPHeaderMatch, kongVersion semver.Version) (map[string][]string, error) {
 	// iterate through each provided header match checking for invalid
 	// options and otherwise converting to kong type format.
 	convertedHeaders := make(map[string][]string)
@@ -33,8 +34,8 @@ func convertGatewayMatchHeadersToKongRouteMatchHeaders(headers []gatewayv1beta1.
 				string(header.Name))
 		}
 		if header.Type != nil && *header.Type == gatewayv1beta1.HeaderMatchRegularExpression {
-			if v := versions.GetKongVersion(); !v.MajorMinorOnly().GTE(versions.RegexHeaderVersionCutoff) {
-				return nil, fmt.Errorf("Kong version %s does not support HeaderMatchRegularExpression", v.Full())
+			if kongVersion.LT(versions.RegexHeaderVersionCutoff) {
+				return nil, fmt.Errorf("Kong version %s does not support HeaderMatchRegularExpression", kongVersion)
 			}
 			convertedHeaders[string(header.Name)] = []string{kongHeaderRegexPrefix + header.Value}
 		} else if header.Type == nil || *header.Type == gatewayv1beta1.HeaderMatchExact {

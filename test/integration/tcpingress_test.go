@@ -15,7 +15,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/blang/semver/v4"
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -23,6 +22,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/versions"
 	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1beta1"
 	"github.com/kong/kubernetes-ingress-controller/v2/pkg/clientset"
 	"github.com/kong/kubernetes-ingress-controller/v2/test"
@@ -303,15 +303,10 @@ func TestTCPIngressTLS(t *testing.T) {
 }
 
 func TestTCPIngressTLSPassthrough(t *testing.T) {
-	skipTestForExpressionRouter(t)
-	version, err := helpers.GetKongVersion(proxyAdminURL, consts.KongTestPassword)
-	if err != nil {
-		t.Logf("attempting TLS passthrough test despite unknown kong version: %v", err)
-	} else if version.LT(semver.MustParse("2.7.0")) {
-		t.Skipf("kong version %s below minimum TLS passthrough version", version)
-	}
-
 	t.Parallel()
+	skipTestForExpressionRouter(t)
+
+	RunWhenKongVersion(t, fmt.Sprintf(">=%s", versions.TLSPassthroughCutoff))
 
 	t.Log("locking Gateway TLS ports")
 	tlsMutex.Lock()

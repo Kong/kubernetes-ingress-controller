@@ -7,6 +7,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/blang/semver/v4"
 	"github.com/kong/go-kong/kong"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
@@ -79,7 +80,7 @@ type FeatureFlags struct {
 func NewFeatureFlags(
 	logger logrus.FieldLogger,
 	featureGates featuregates.FeatureGates,
-	kongVersion versions.KongVersion,
+	kongVersion semver.Version,
 	routerFlavor string,
 	updateStatusFlag bool,
 ) FeatureFlags {
@@ -94,7 +95,7 @@ func NewFeatureFlags(
 	return FeatureFlags{
 		ReportConfiguredKubernetesObjects: updateStatusFlag,
 		CombinedServiceRoutes:             combinedRoutesEnabled,
-		RegexPathPrefix:                   kongVersion.MajorMinorOnly().GTE(versions.ExplicitRegexPathVersionCutoff),
+		RegexPathPrefix:                   kongVersion.GTE(versions.ExplicitRegexPathVersionCutoff),
 		ExpressionRoutes:                  expressionRoutesEnabled,
 		CombinedServices:                  combinedRoutesEnabled && featureGates.Enabled(featuregates.CombinedServicesFeature),
 		FillIDs:                           featureGates.Enabled(featuregates.FillIDsFeature),
@@ -134,6 +135,7 @@ type Parser struct {
 	storer        store.Storer
 	licenseGetter LicenseGetter
 	featureFlags  FeatureFlags
+	kongVersion   semver.Version
 
 	failuresCollector      *failures.ResourceFailuresCollector
 	parsedObjectsCollector *ObjectsCollector
@@ -145,6 +147,7 @@ func NewParser(
 	logger logrus.FieldLogger,
 	storer store.Storer,
 	featureFlags FeatureFlags,
+	kongVersion semver.Version,
 ) (*Parser, error) {
 	failuresCollector, err := failures.NewResourceFailuresCollector(logger)
 	if err != nil {
@@ -163,6 +166,7 @@ func NewParser(
 		featureFlags:           featureFlags,
 		failuresCollector:      failuresCollector,
 		parsedObjectsCollector: parsedObjectsCollector,
+		kongVersion:            kongVersion,
 	}, nil
 }
 

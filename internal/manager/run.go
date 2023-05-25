@@ -92,7 +92,6 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 	}
 
 	kongSemVersion := semver.Version{Major: v.Major(), Minor: v.Minor(), Patch: v.Patch()}
-	versions.SetKongVersion(kongSemVersion)
 
 	kongConfig := sendconfig.Config{
 		Version:               kongSemVersion,
@@ -102,7 +101,7 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 		SkipCACertificates:    c.SkipCACertificates,
 		EnableReverseSync:     c.EnableReverseSync,
 		ExpressionRoutes:      featureGates.Enabled(featuregates.ExpressionRoutesFeature),
-		DeckFileFormatVersion: versions.DeckFileFormat(versions.GetKongVersion()),
+		DeckFileFormatVersion: versions.DeckFileFormat(kongSemVersion),
 	}
 	kongConfig.Init(ctx, setupLog, initialKongClients)
 
@@ -142,7 +141,7 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 	parserFeatureFlags := parser.NewFeatureFlags(
 		deprecatedLogger,
 		featureGates,
-		versions.GetKongVersion(),
+		kongSemVersion,
 		routerFlavor,
 		c.UpdateStatus,
 	)
@@ -151,6 +150,7 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 		deprecatedLogger,
 		store.New(cache, c.IngressClassName, deprecatedLogger),
 		parserFeatureFlags,
+		kongSemVersion,
 	)
 	if err != nil {
 		return fmt.Errorf("failed to create parser: %w", err)

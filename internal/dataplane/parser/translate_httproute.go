@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/blang/semver/v4"
 	"github.com/kong/go-kong/kong"
 	"github.com/samber/lo"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
@@ -84,7 +85,7 @@ func (p *Parser) ingressRulesFromHTTPRouteWithCombinedServiceRoutes(httproute *g
 
 		// generate the routes for the service and attach them to the service
 		for _, kongRouteTranslation := range kongServiceTranslation.KongRoutes {
-			routes, err := generateKongRouteFromTranslation(httproute, kongRouteTranslation, p.featureFlags.RegexPathPrefix, p.featureFlags.ExpressionRoutes)
+			routes, err := generateKongRouteFromTranslation(httproute, kongRouteTranslation, p.featureFlags.RegexPathPrefix, p.featureFlags.ExpressionRoutes, p.kongVersion)
 			if err != nil {
 				return err
 			}
@@ -107,7 +108,7 @@ func (p *Parser) ingressRulesFromHTTPRouteLegacyFallback(httproute *gatewayv1bet
 	// traffic, so we make separate routes and Kong services for every present rule.
 	for ruleNumber, rule := range httproute.Spec.Rules {
 		// determine the routes needed to route traffic to services for this rule
-		routes, err := generateKongRoutesFromHTTPRouteRule(httproute, ruleNumber, rule, p.featureFlags.RegexPathPrefix)
+		routes, err := generateKongRoutesFromHTTPRouteRule(httproute, ruleNumber, rule, p.featureFlags.RegexPathPrefix, p.kongVersion)
 		if err != nil {
 			return err
 		}
@@ -163,6 +164,7 @@ func generateKongRoutesFromHTTPRouteRule(
 	ruleNumber int,
 	rule gatewayv1beta1.HTTPRouteRule,
 	addRegexPrefix bool,
+	kongVersion semver.Version,
 ) ([]kongstate.Route, error) {
 	// gather the k8s object information and hostnames from the httproute
 	objectInfo := util.FromK8sObject(httproute)
@@ -195,6 +197,7 @@ func generateKongRoutesFromHTTPRouteRule(
 				hostnames,
 				addRegexPrefix,
 				tags,
+				kongVersion,
 			)
 			if err != nil {
 				return nil, err
@@ -211,7 +214,9 @@ func generateKongRoutesFromHTTPRouteRule(
 			objectInfo,
 			hostnames,
 			addRegexPrefix,
-			tags)
+			tags,
+			kongVersion,
+		)
 		if err != nil {
 			return nil, err
 		}
@@ -228,6 +233,7 @@ func generateKongRouteFromTranslation(
 	translation translators.KongRouteTranslation,
 	addRegexPrefix bool,
 	expressionRoutes bool,
+	kongVersion semver.Version,
 ) ([]kongstate.Route, error) {
 	// gather the k8s object information and hostnames from the httproute
 	objectInfo := util.FromK8sObject(httproute)
@@ -256,6 +262,7 @@ func generateKongRouteFromTranslation(
 		hostnames,
 		addRegexPrefix,
 		tags,
+		kongVersion,
 	)
 }
 
@@ -269,6 +276,7 @@ func generateKongRoutesFromHTTPRouteMatches(
 	hostnames []*string,
 	addRegexPrefix bool,
 	tags []*string,
+	kongVersion semver.Version,
 ) ([]kongstate.Route, error) {
 	if len(matches) == 0 {
 		// it's acceptable for an HTTPRoute to have no matches in the rulesets,
@@ -306,7 +314,7 @@ func generateKongRoutesFromHTTPRouteMatches(
 	r.Tags = tags
 
 	// convert header matching from HTTPRoute to Route format
-	headers, err := convertGatewayMatchHeadersToKongRouteMatchHeaders(matches[0].Headers)
+	headers, err := convertGatewayMatchHeadersToKongRouteMatchHeaders(matches[0].Headers, kongVersion)
 	if err != nil {
 		return []kongstate.Route{}, err
 	}

@@ -84,10 +84,11 @@ Adding a new version? You'll need three changes:
 - Added translator to translate ingresses under `networking.k8s.io/v1` to
   expression based Kong routes. The translator is enabled when feature gate
   `ExpressionRoutes` is turned on and the managed Kong gateway runs in router
-  flavor `expressions`.
-  Note: this feature is experimental, and not available to translate other
-  kubernetes objects that was originally supported.
+  flavor `expressions`. We assume `router_flavor` to be `traditional`
+  for versions below 3.0. If it is not available in Kong's configuration,
+  for versions 3.0 and above, abort with an error.
   [#3935](https://github.com/Kong/kubernetes-ingress-controller/pull/3935)
+  [#4076](https://github.com/Kong/kubernetes-ingress-controller/pull/4076)
 - Added `CombinedServices` feature gate that prevents the controller from
   creating a separate Kong `Service` for each `netv1.Ingress` that uses
   the same Kubernetes `Service` as its backend when `CombinedRoutes` feature

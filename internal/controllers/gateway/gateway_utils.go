@@ -292,35 +292,9 @@ func getListenerStatus(
 			}
 		}
 
-		// gets all the HTTPRoutes and update the listeners' attachedRoutes field.
-		// At this point we take into account HTTPRoutes only, as they are the
-		// only routes in beta.
-		httpRouteList := gatewayv1beta1.HTTPRouteList{}
-		if err := client.List(ctx, &httpRouteList); err != nil {
+		attachedRoutes, err := getAttachedRoutesForListener(ctx, client, listener, *gateway)
+		if err != nil {
 			return nil, err
-		}
-		var attachedRoutes int32
-		for _, route := range httpRouteList.Items {
-			route := route
-			if !isRouteAcceptedByGateway(route.Namespace, route.Status.Parents, *gateway) {
-				continue
-			}
-			for _, parentRef := range route.Spec.ParentRefs {
-				accepted, err := isRouteAcceptedByListener(
-					ctx,
-					client,
-					&route,
-					listener,
-					*gateway,
-					parentRef,
-				)
-				if err != nil {
-					return nil, err
-				}
-				if accepted {
-					attachedRoutes++
-				}
-			}
 		}
 
 		status := ListenerStatus{
@@ -712,4 +686,38 @@ func isRouteAcceptedByGateway(routeNamespace string, parentStatuses []RouteParen
 		}
 	}
 	return false
+}
+
+// Get all the HTTPRoutes and update the listeners' attachedRoutes field.
+// At this point we take into account HTTPRoutes only, as they are the
+// only routes in beta.
+func getAttachedRoutesForListener(ctx context.Context, client client.Client, listener gatewayv1beta1.Listener, gateway gatewayv1beta1.Gateway) (int32, error) {
+	httpRouteList := gatewayv1beta1.HTTPRouteList{}
+	if err := client.List(ctx, &httpRouteList); err != nil {
+		return 0, err
+	}
+	var attachedRoutes int32
+	for _, route := range httpRouteList.Items {
+		route := route
+		if !isRouteAcceptedByGateway(route.Namespace, route.Status.Parents, gateway) {
+			continue
+		}
+		for _, parentRef := range route.Spec.ParentRefs {
+			accepted, err := isRouteAcceptedByListener(
+				ctx,
+				client,
+				&route,
+				listener,
+				gateway,
+				parentRef,
+			)
+			if err != nil {
+				return 0, err
+			}
+			if accepted {
+				attachedRoutes++
+			}
+		}
+	}
+	return attachedRoutes, nil
 }

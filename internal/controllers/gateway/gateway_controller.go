@@ -133,7 +133,7 @@ func (r *GatewayReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	// if a HTTPRoute gets accepted by a Gateway, we need to make sure to trigger
 	// reconciliation on the gateway, as we need to update the number of attachedRoutes.
 	if err := c.Watch(
-		&source.Kind{Type: &gatewayv1beta1.HTTPRoute{}},
+		source.Kind(mgr.GetCache(), &gatewayv1beta1.HTTPRoute{}),
 		handler.EnqueueRequestsFromMapFunc(r.listGatewaysForHTTPRoute),
 	); err != nil {
 		return err
@@ -276,7 +276,7 @@ func (r *GatewayReconciler) listGatewaysForService(ctx context.Context, svc clie
 }
 
 // listGatewaysForHTTPRoute retrieves all the gateways referenced as parents by the HTTPRoute.
-func (r *GatewayReconciler) listGatewaysForHTTPRoute(obj client.Object) []reconcile.Request {
+func (r *GatewayReconciler) listGatewaysForHTTPRoute(_ context.Context, obj client.Object) []reconcile.Request {
 	httpRoute, ok := obj.(*gatewayv1beta1.HTTPRoute)
 	if !ok {
 		r.Log.Error(

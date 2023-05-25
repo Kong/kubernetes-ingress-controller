@@ -19,12 +19,13 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/konnect"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/manager/featuregates"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/manager/flags"
 )
 
 type OptionalNamespacedName = mo.Option[k8stypes.NamespacedName]
 
 // Type override to be used with OptionalNamespacedName variables to override their type name printed in the help text.
-var nnTypeNameOverride = WithTypeNameOverride[OptionalNamespacedName]("namespacedName")
+var nnTypeNameOverride = flags.WithTypeNameOverride[OptionalNamespacedName]("namespacedName")
 
 // -----------------------------------------------------------------------------
 // Controller Manager - Config
@@ -154,7 +155,7 @@ func (c *Config) FlagSet() *pflag.FlagSet {
 	flagSet.StringSliceVar(&c.KongAdminURLs, "kong-admin-url", []string{"http://localhost:8001"},
 		`Kong Admin URL(s) to connect to in the format "protocol://address:port". `+
 			`More than 1 URL can be provided, in such case the flag should be used multiple times or a corresponding env variable should use comma delimited addresses.`)
-	flagSet.Var(NewValidatedValue(&c.KongAdminSvc, namespacedNameFromFlagValue, nnTypeNameOverride), "kong-admin-svc",
+	flagSet.Var(flags.NewValidatedValue(&c.KongAdminSvc, namespacedNameFromFlagValue, nnTypeNameOverride), "kong-admin-svc",
 		`Kong Admin API Service namespaced name in "namespace/name" format, to use for Kong Gateway service discovery.`)
 	flagSet.StringSliceVar(&c.KondAdminSvcPortNames, "kong-admin-svc-port-names", []string{"admin", "admin-tls", "kong-admin", "kong-admin-tls"},
 		"Names of ports on Kong Admin API service to take into account when doing gateway discovery.")
@@ -173,7 +174,7 @@ func (c *Config) FlagSet() *pflag.FlagSet {
 	)
 
 	// Kubernetes configurations
-	flagSet.Var(NewValidatedValue(&c.GatewayAPIControllerName, gatewayAPIControllerNameFromFlagValue, WithDefault(string(gateway.GetControllerName()))), "gateway-api-controller-name", "The controller name to match on Gateway API resources.")
+	flagSet.Var(flags.NewValidatedValue(&c.GatewayAPIControllerName, gatewayAPIControllerNameFromFlagValue, flags.WithDefault(string(gateway.GetControllerName()))), "gateway-api-controller-name", "The controller name to match on Gateway API resources.")
 	flagSet.StringVar(&c.KubeconfigPath, "kubeconfig", "", "Path to the kubeconfig file.")
 	flagSet.StringVar(&c.IngressClassName, "ingress-class", annotations.DefaultIngressClass, `Name of the ingress class to route through this controller.`)
 	flagSet.StringVar(&c.LeaderElectionID, "election-id", "5b374a9e.konghq.com", `Election id to use for status update.`)
@@ -184,12 +185,12 @@ func (c *Config) FlagSet() *pflag.FlagSet {
 		`Namespace(s) to watch for Kubernetes resources. Defaults to all namespaces. To watch multiple namespaces, use a comma-separated list of namespaces.`)
 
 	// Ingress status
-	flagSet.Var(NewValidatedValue(&c.PublishService, namespacedNameFromFlagValue, nnTypeNameOverride), "publish-service",
+	flagSet.Var(flags.NewValidatedValue(&c.PublishService, namespacedNameFromFlagValue, nnTypeNameOverride), "publish-service",
 		`Service fronting Ingress resources in "namespace/name" format. The controller will update Ingress status information with this Service's endpoints.`)
 	flagSet.StringSliceVar(&c.PublishStatusAddress, "publish-status-address", []string{},
 		`User-provided addresses in comma-separated string format, for use in lieu of "publish-service" `+
 			`when that Service lacks useful address information (for example, in bare-metal environments).`)
-	flagSet.Var(NewValidatedValue(&c.PublishServiceUDP, namespacedNameFromFlagValue, nnTypeNameOverride), "publish-service-udp", `Service fronting UDP routing resources in `+
+	flagSet.Var(flags.NewValidatedValue(&c.PublishServiceUDP, namespacedNameFromFlagValue, nnTypeNameOverride), "publish-service-udp", `Service fronting UDP routing resources in `+
 		`"namespace/name" format. The controller will update UDP route status information with this Service's `+
 		`endpoints. If omitted, the same Service will be used for both TCP and UDP routes.`)
 	flagSet.StringSliceVar(&c.PublishStatusAddressUDP, "publish-status-address-udp", []string{},

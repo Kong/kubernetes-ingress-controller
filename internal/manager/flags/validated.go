@@ -1,4 +1,4 @@
-package manager
+package flags
 
 import "fmt"
 
@@ -8,7 +8,23 @@ type ValidatedValueOpt[T any] func(*ValidatedValue[T])
 func WithDefault[T any](defaultValue T) ValidatedValueOpt[T] {
 	return func(v *ValidatedValue[T]) {
 		*v.variable = defaultValue
+
+		// Assign origin which is used in ValidatedValue[T]'s String() string
+		// func so that we get a pretty printed default.
+		v.origin = stringFromAny(defaultValue)
 	}
+}
+
+func stringFromAny(s any) string {
+	if stringer, ok := s.(fmt.Stringer); ok {
+		return fmt.Sprintf("%q", stringer.String())
+	}
+
+	if str, ok := s.(string); ok {
+		return str
+	}
+
+	panic(fmt.Errorf("unknown type %T", s))
 }
 
 // WithTypeNameOverride overrides the type name that's printed in the help message.

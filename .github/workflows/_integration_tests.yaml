@@ -11,7 +11,7 @@ on:
         type: string
         # TODO: Consider changing to "kong:latest"
         # See https://github.com/Kong/kubernetes-testing-framework/issues/542
-        default: "3.2"
+        default: "3.3"
         required: false
       kong-enterprise-container-repo:
         type: string
@@ -21,7 +21,7 @@ on:
         type: string
         # TODO: Consider changing to "kong/kong-gateway:latest"
         # See https://github.com/Kong/kubernetes-testing-framework/issues/542
-        default: "3.2"
+        default: "3.3"
         required: false
 
 jobs:

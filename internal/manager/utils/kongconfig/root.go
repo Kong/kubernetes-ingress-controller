@@ -17,10 +17,9 @@ import (
 )
 
 const (
-	kongRouterFlavorTraditional           = "traditional"
-	kongRouterFlavorTraditionalCompatible = "traditional_compatible"
-	kongRouterFlavorExpressions           = "expressions"
-	expressionRouterMinimalMajorVersion   = 3
+	kongRouterFlavorTraditional         = "traditional"
+	kongRouterFlavorExpressions         = "expressions"
+	expressionRouterMinimalMajorVersion = 3
 )
 
 // KongStartUpOptions includes start up configurations of Kong that could change behavior of Kong Ingress Controller.

@@ -667,25 +667,30 @@ func isTLSSecretValid(secret *corev1.Secret) bool {
 	return true
 }
 
-func isRouteAcceptedByGateway(routeNamespace string, parentStatuses []RouteParentStatus, gateway gatewayv1beta1.Gateway) bool {
+func routeAcceptedByGateways(routeNamespace string, parentStatuses []RouteParentStatus) []k8stypes.NamespacedName {
+	gateways := []k8stypes.NamespacedName{}
 	for _, routeParentStatus := range parentStatuses {
+		gatewayNamespace := routeNamespace
 		parentRef := routeParentStatus.ParentRef
 		if (parentRef.Group != nil && *parentRef.Group != gatewayV1beta1Group) ||
 			(parentRef.Kind != nil && *parentRef.Kind != "Gateway") {
 			continue
 		}
 		if parentRef.Namespace != nil {
-			routeNamespace = string(*parentRef.Namespace)
+			gatewayNamespace = string(*parentRef.Namespace)
 		}
-		if gateway.Namespace == routeNamespace && gateway.Name == string(parentRef.Name) &&
-			lo.ContainsBy(routeParentStatus.Conditions, func(condition metav1.Condition) bool {
-				return condition.Type == string(gatewayv1beta1.RouteConditionAccepted) &&
-					condition.Status == metav1.ConditionTrue
-			}) {
-			return true
+		if lo.ContainsBy(routeParentStatus.Conditions, func(condition metav1.Condition) bool {
+			return condition.Type == string(gatewayv1beta1.RouteConditionAccepted) &&
+				condition.Status == metav1.ConditionTrue
+		}) {
+			gateways = append(gateways,
+				k8stypes.NamespacedName{
+					Namespace: gatewayNamespace,
+					Name:      string(parentRef.Name),
+				})
 		}
 	}
-	return false
+	return gateways
 }
 
 // Get all the HTTPRoutes and update the listeners' attachedRoutes field.
@@ -699,9 +704,17 @@ func getAttachedRoutesForListener(ctx context.Context, client client.Client, lis
 	var attachedRoutes int32
 	for _, route := range httpRouteList.Items {
 		route := route
-		if !isRouteAcceptedByGateway(route.Namespace, route.Status.Parents, gateway) {
+		if acceptedByGateway := func() bool {
+			for _, g := range routeAcceptedByGateways(route.Namespace, route.Status.Parents) {
+				if gateway.Namespace == g.Namespace && gateway.Name == g.Name {
+					return true
+				}
+			}
+			return false
+		}(); !acceptedByGateway {
 			continue
 		}
+
 		for _, parentRef := range route.Spec.ParentRefs {
 			accepted, err := isRouteAcceptedByListener(
 				ctx,

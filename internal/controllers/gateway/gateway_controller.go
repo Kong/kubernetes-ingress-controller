@@ -10,7 +10,6 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/kong/go-kong/kong"
-	"github.com/samber/lo"
 	"github.com/samber/mo"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -288,28 +287,12 @@ func (r *GatewayReconciler) listGatewaysForHTTPRoute(obj client.Object) []reconc
 		return nil
 	}
 	recs := []reconcile.Request{}
-	for _, routeParentStatus := range httpRoute.Status.Parents {
-		gatewayNamespace := httpRoute.Namespace
-		parentRef := routeParentStatus.ParentRef
-		if (parentRef.Group != nil && *parentRef.Group != gatewayV1beta1Group) ||
-			(parentRef.Kind != nil && *parentRef.Kind != "Gateway") {
-			continue
-		}
-		if parentRef.Namespace != nil {
-			gatewayNamespace = string(*parentRef.Namespace)
-		}
-		if lo.ContainsBy(routeParentStatus.Conditions, func(condition metav1.Condition) bool {
-			return condition.Type == string(gatewayv1beta1.RouteConditionAccepted) &&
-				condition.Status == metav1.ConditionTrue
-		}) {
-			recs = append(recs, reconcile.Request{
-				NamespacedName: k8stypes.NamespacedName{
-					Namespace: gatewayNamespace,
-					Name:      string(parentRef.Name),
-				},
-			})
-		}
+	for _, gateway := range routeAcceptedByGateways(httpRoute.Namespace, httpRoute.Status.Parents) {
+		recs = append(recs, reconcile.Request{
+			NamespacedName: gateway,
+		})
 	}
+
 	return recs
 }
 

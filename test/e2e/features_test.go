@@ -9,7 +9,6 @@ import (
 	"crypto/tls"
 	"fmt"
 	"net/http"
-	"os"
 	"strings"
 	"testing"
 	"time"
@@ -143,16 +142,8 @@ func TestWebhookUpdate(t *testing.T) {
 	defer cancel()
 
 	t.Log("building test cluster and environment")
-	configFile, err := os.CreateTemp(os.TempDir(), "webhook-kind-config-")
-	require.NoError(t, err)
-	defer os.Remove(configFile.Name())
-	defer configFile.Close()
-	written, err := configFile.Write([]byte(webhookKINDConfig))
-	require.NoError(t, err)
-	require.Equal(t, len(webhookKINDConfig), written)
-
 	clusterBuilder := kind.NewBuilder()
-	clusterBuilder.WithConfig(configFile.Name())
+	clusterBuilder.WithConfigReader(strings.NewReader(webhookKINDConfig))
 	if clusterVersionStr != "" {
 		clusterVersion, err := semver.ParseTolerant(clusterVersionStr)
 		require.NoError(t, err)

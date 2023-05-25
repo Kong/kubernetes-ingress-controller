@@ -16,6 +16,13 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/adminapi"
 )
 
+const (
+	kongRouterFlavorTraditional           = "traditional"
+	kongRouterFlavorTraditionalCompatible = "traditional_compatible"
+	kongRouterFlavorExpressions           = "expressions"
+	expressionRouterMinimalMajorVersion   = 3
+)
+
 // KongStartUpOptions includes start up configurations of Kong that could change behavior of Kong Ingress Controller.
 // The fields are extracted from results of Kong gateway configuration root.
 type KongStartUpOptions struct {
@@ -46,12 +53,12 @@ func ValidateRoots(roots []Root, skipCACerts bool) (*KongStartUpOptions, error) 
 		return nil, err
 	}
 
-	routerFlavor, err := RouterFlavorFromRoot(uniqs[0])
+	kongVersion, err := KongVersionFromRoot(uniqs[0])
 	if err != nil {
 		return nil, err
 	}
 
-	kongVersion, err := KongVersionFromRoot(uniqs[0])
+	routerFlavor, err := RouterFlavorFromRoot(uniqs[0], kongVersion)
 	if err != nil {
 		return nil, err
 	}
@@ -94,7 +101,7 @@ func DBModeFromRoot(r Root) (string, error) {
 	return dbModeStr, nil
 }
 
-func RouterFlavorFromRoot(r Root) (string, error) {
+func RouterFlavorFromRoot(r Root, kongVersion kong.Version) (string, error) {
 	rootConfig, err := extractConfigurationFromRoot(r)
 	if err != nil {
 		return "", err
@@ -103,13 +110,16 @@ func RouterFlavorFromRoot(r Root) (string, error) {
 	const routerFlavorKey = "router_flavor"
 	routerFlavor, exist := rootConfig[routerFlavorKey]
 	if !exist {
-		return "", fmt.Errorf("no value in root configuration for key %q", routerFlavorKey)
+		if kongVersion.Major() < expressionRouterMinimalMajorVersion {
+			return kongRouterFlavorTraditional, nil
+		}
+		return kongRouterFlavorTraditionalCompatible, nil
 	}
-	routerFlvorStr, ok := routerFlavor.(string)
+	routerFlavorStr, ok := routerFlavor.(string)
 	if !ok {
 		return "", fmt.Errorf("invalid %q type, expected a string, got %T", routerFlavorKey, routerFlavor)
 	}
-	return routerFlvorStr, nil
+	return routerFlavorStr, nil
 }
 
 func KongVersionFromRoot(r Root) (kong.Version, error) {

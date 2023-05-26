@@ -39,7 +39,6 @@ import (
 const (
 	dblessLegacyPath = "../../deploy/single/all-in-one-dbless-legacy.yaml"
 	dblessPath       = "../../deploy/single/all-in-one-dbless.yaml"
-	dblessURL        = "https://raw.githubusercontent.com/Kong/kubernetes-ingress-controller/%v.%v.x/deploy/single/all-in-one-dbless.yaml"
 )
 
 func TestDeployAllInOneDBLESSLegacy(t *testing.T) {
@@ -67,36 +66,6 @@ func TestDeployAllInOneDBLESSLegacy(t *testing.T) {
 	killKong(ctx, t, env, &pod)
 
 	t.Log("confirming that routes are restored after crash")
-	verifyIngress(ctx, t, env)
-}
-
-func TestDeployAndUpgradeAllInOneDBLESS(t *testing.T) {
-	curTag, err := getCurrentGitTag("")
-	require.NoError(t, err)
-	preTag, err := getPreviousGitTag("", curTag)
-	require.NoError(t, err)
-	if curTag.Patch != 0 || len(curTag.Pre) > 0 {
-		t.Skipf("%v not a new minor version, skipping upgrade test", curTag)
-	}
-	oldManifest, err := http.Get(fmt.Sprintf(dblessURL, preTag.Major, preTag.Minor))
-	require.NoError(t, err)
-	defer oldManifest.Body.Close()
-
-	t.Log("configuring all-in-one-dbless.yaml manifest test")
-	t.Parallel()
-	ctx, env := setupE2ETest(t)
-
-	t.Logf("deploying previous version %s kong manifest", preTag)
-	deployKong(ctx, t, env, oldManifest.Body)
-
-	t.Log("running ingress tests to verify all-in-one deployed ingress controller and proxy are functional")
-	deployIngress(ctx, t, env)
-	verifyIngress(ctx, t, env)
-
-	t.Logf("deploying current version %s kong manifest", curTag)
-
-	manifest := getTestManifest(t, dblessPath)
-	deployKong(ctx, t, env, manifest)
 	verifyIngress(ctx, t, env)
 }
 

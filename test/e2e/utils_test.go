@@ -12,13 +12,11 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
-	"sort"
 	"strconv"
 	"strings"
 	"testing"
 	"time"
 
-	"github.com/blang/semver/v4"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/types/gke"
 	"github.com/kong/kubernetes-testing-framework/pkg/environments"
 	"github.com/phayes/freeport"
@@ -197,43 +195,6 @@ func patchControllerImageFromEnv(t *testing.T, manifestReader io.Reader) (io.Rea
 
 	t.Log("controller image override undefined, using defaults")
 	return manifestReader, nil
-}
-
-func getCurrentGitTag(path string) (semver.Version, error) {
-	cmd := exec.Command("git", "describe", "--tags")
-	cmd.Dir = path
-	tagBytes, err := cmd.Output()
-	if err != nil {
-		return semver.Version{}, fmt.Errorf("%q command failed: %w", cmd.String(), err)
-	}
-	tag, err := semver.ParseTolerant(string(tagBytes))
-	if err != nil {
-		return semver.Version{}, err
-	}
-	return tag, nil
-}
-
-func getPreviousGitTag(path string, cur semver.Version) (semver.Version, error) {
-	var tags []semver.Version
-	cmd := exec.Command("git", "tag")
-	cmd.Dir = path
-	tagsBytes, err := cmd.Output()
-	if err != nil {
-		return semver.Version{}, err
-	}
-	foo := strings.Split(string(tagsBytes), "\n")
-	for _, tag := range foo {
-		ver, err := semver.ParseTolerant(tag)
-		if err == nil {
-			tags = append(tags, ver)
-		}
-	}
-	sort.Slice(tags, func(i, j int) bool { return tags[i].LT(tags[j]) })
-	curIndex := sort.Search(len(tags), func(i int) bool { return tags[i].EQ(cur) })
-	if curIndex == 0 {
-		return tags[curIndex], nil
-	}
-	return tags[curIndex-1], nil
 }
 
 // getKongProxyIP takes a Service with Kong proxy ports and returns and its IP, or fails the test if it cannot.

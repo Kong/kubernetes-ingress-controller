@@ -898,6 +898,8 @@ func isParentRefEqualToParent[
 	return true
 }
 
+// isRouteAcceptedByListener checks the given route is accepted by the
+// gateway's listener specified by a proper parentReference.
 func isRouteAcceptedByListener[T types.RouteT](ctx context.Context,
 	mgrc client.Client,
 	route T,

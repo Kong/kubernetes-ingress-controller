@@ -185,6 +185,9 @@ func httpRouteAcceptedConditionMatches(t *testing.T, c *gatewayclient.Clientset,
 	return false
 }
 
+// ListenersHaveNAttachedRoutesCallback checks that every listener has a given number of attachedRoutes.
+// The attachedRoutesByListener parameter contains the number of expected acceptedRoutes for
+// each listener's name.
 func ListenersHaveNAttachedRoutesCallback(t *testing.T, c *gatewayclient.Clientset, namespace, gatewayName string, attachedRoutesByListener map[string]int32) func() bool {
 	return func() bool {
 		gateway, err := c.GatewayV1beta1().Gateways(namespace).Get(context.Background(), gatewayName, metav1.GetOptions{})

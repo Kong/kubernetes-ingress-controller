@@ -2236,7 +2236,6 @@ func TestIsRouteAcceptedByListener(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-
 			var (
 				ctx       = context.Background()
 				namespace = &corev1.Namespace{

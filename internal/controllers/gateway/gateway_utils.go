@@ -667,6 +667,8 @@ func isTLSSecretValid(secret *corev1.Secret) bool {
 	return true
 }
 
+// routeAcceptedByGateways finds all the Gateways the route has been accepted by
+// and returns them in the form of a NamespacedName slice.
 func routeAcceptedByGateways(routeNamespace string, parentStatuses []RouteParentStatus) []k8stypes.NamespacedName {
 	gateways := []k8stypes.NamespacedName{}
 	for _, routeParentStatus := range parentStatuses {
@@ -698,29 +700,48 @@ func routeAcceptedByGateways(routeNamespace string, parentStatuses []RouteParent
 //
 // NOTE: At this point we take into account HTTPRoutes only, as they are the
 // only routes in beta.
-func getAttachedRoutesForListener(ctx context.Context, client client.Client, gateway gatewayv1beta1.Gateway, listenerIndex int) (int32, error) {
-	httpRouteList := gatewayv1beta1.HTTPRouteList{}
-	if err := client.List(ctx, &httpRouteList); err != nil {
-		return 0, err
+func getAttachedRoutesForListener(ctx context.Context, mgrc client.Client, gateway gatewayv1beta1.Gateway, listenerIndex int) (int32, error) {
+	const (
+		defaultEndpointSliceListPagingLimit = 100
+	)
+	var (
+		httpRoutes    = []gatewayv1beta1.HTTPRoute{}
+		continueToken string
+	)
+	for {
+		httpRouteList := gatewayv1beta1.HTTPRouteList{}
+		if err := mgrc.List(ctx, &httpRouteList, &client.ListOptions{
+			Continue: continueToken,
+			Limit:    defaultEndpointSliceListPagingLimit,
+		}); err != nil {
+			return 0, err
+		}
+		httpRoutes = append(httpRoutes, httpRouteList.Items...)
+		if httpRouteList.Continue == "" {
+			break
+		}
+		continueToken = httpRouteList.Continue
 	}
+
 	var attachedRoutes int32
-	for _, route := range httpRouteList.Items {
+	for _, route := range httpRoutes {
 		route := route
-		if acceptedByGateway := func() bool {
+		acceptedByGateway := func() bool {
 			for _, g := range routeAcceptedByGateways(route.Namespace, route.Status.Parents) {
 				if gateway.Namespace == g.Namespace && gateway.Name == g.Name {
 					return true
 				}
 			}
 			return false
-		}(); !acceptedByGateway {
+		}()
+		if !acceptedByGateway {
 			continue
 		}
 
 		for _, parentRef := range route.Spec.ParentRefs {
 			accepted, err := isRouteAcceptedByListener(
 				ctx,
-				client,
+				mgrc,
 				&route,
 				gateway,
 				listenerIndex,

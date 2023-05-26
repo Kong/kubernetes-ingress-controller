@@ -4,6 +4,7 @@
 
 # Some sensible Make defaults: https://tech.davis-hansson.com/p/make/
 SHELL := bash
+.SHELLFLAGS := -eu -o pipefail -c
 
 # ------------------------------------------------------------------------------
 # Configuration - Repository
@@ -305,8 +306,8 @@ test.conformance: go-junit-report
 		-race $(GOTESTFLAGS) \
 		-timeout $(INTEGRATION_TEST_TIMEOUT) \
 		-parallel $(NCPU) \
-		./test/conformance |
-	$(GOJUNIT) -iocopy -out $(JUNIT_REPORT) -set-exit-code --parser gotest
+		./test/conformance | \
+	$(GOJUNIT) -iocopy -out $(JUNIT_REPORT) -parser gotest
 
 .PHONY: test.integration
 test.integration: test.integration.dbless test.integration.postgres test.integration.cp
@@ -363,7 +364,7 @@ _test.integration: _check.container.environment go-junit-report
 		-coverpkg=$(PKG_LIST) \
 		-coverprofile=$(COVERAGE_OUT) \
 		./test/integration | \
-	$(GOJUNIT) -iocopy -out $(JUNIT_REPORT) -set-exit-code --parser gotest
+	$(GOJUNIT) -iocopy -out $(JUNIT_REPORT) -parser gotest
 
 .PHONY: test.integration.dbless.knative
 test.integration.dbless.knative:

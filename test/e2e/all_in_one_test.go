@@ -59,14 +59,14 @@ func TestDeployAllInOneDBLESSLegacy(t *testing.T) {
 	pod := podList.Items[0]
 
 	t.Log("running ingress tests to verify all-in-one deployed ingress controller and proxy are functional")
-	deployIngress(ctx, t, env)
-	verifyIngress(ctx, t, env)
+	deployIngressWithEchoBackends(ctx, t, env, numberOfEchoBackends)
+	verifyIngressWithEchoBackends(ctx, t, env, numberOfEchoBackends)
 
 	t.Log("killing Kong process to simulate a crash and container restart")
 	killKong(ctx, t, env, &pod)
 
 	t.Log("confirming that routes are restored after crash")
-	verifyIngress(ctx, t, env)
+	verifyIngressWithEchoBackends(ctx, t, env, numberOfEchoBackends)
 }
 
 const entDBLESSPath = "../../deploy/single/all-in-one-dbless-k4k8s-enterprise.yaml"
@@ -98,8 +98,8 @@ func TestDeployAllInOneEnterpriseDBLESS(t *testing.T) {
 	exposeAdminAPI(ctx, t, env, deployments.ProxyNN)
 
 	t.Log("running ingress tests to verify all-in-one deployed ingress controller and proxy are functional")
-	deployIngress(ctx, t, env)
-	verifyIngress(ctx, t, env)
+	deployIngressWithEchoBackends(ctx, t, env, numberOfEchoBackends)
+	verifyIngressWithEchoBackends(ctx, t, env, numberOfEchoBackends)
 
 	t.Log("verifying enterprise mode was enabled properly")
 	verifyEnterprise(ctx, t, env, adminPassword)
@@ -120,8 +120,8 @@ func TestDeployAllInOnePostgres(t *testing.T) {
 	verifyPostgres(ctx, t, env)
 
 	t.Log("running ingress tests to verify all-in-one deployed ingress controller and proxy are functional")
-	deployIngress(ctx, t, env)
-	verifyIngress(ctx, t, env)
+	deployIngressWithEchoBackends(ctx, t, env, numberOfEchoBackends)
+	verifyIngressWithEchoBackends(ctx, t, env, numberOfEchoBackends)
 }
 
 func TestDeployAllInOnePostgresWithMultipleReplicas(t *testing.T) {
@@ -138,8 +138,8 @@ func TestDeployAllInOnePostgresWithMultipleReplicas(t *testing.T) {
 	verifyPostgres(ctx, t, env)
 
 	t.Log("running ingress tests to verify all-in-one deployed ingress controller and proxy are functional")
-	deployIngress(ctx, t, env)
-	verifyIngress(ctx, t, env)
+	deployIngressWithEchoBackends(ctx, t, env, numberOfEchoBackends)
+	verifyIngressWithEchoBackends(ctx, t, env, numberOfEchoBackends)
 
 	t.Log("verifying that kong pods deployed properly and gathering a sample pod")
 	forDeployment := metav1.ListOptions{
@@ -278,8 +278,8 @@ func TestDeployAllInOneEnterprisePostgres(t *testing.T) {
 	verifyPostgres(ctx, t, env)
 
 	t.Log("running ingress tests to verify ingress controller and proxy are functional")
-	deployIngress(ctx, t, env)
-	verifyIngress(ctx, t, env)
+	deployIngressWithEchoBackends(ctx, t, env, numberOfEchoBackends)
+	verifyIngressWithEchoBackends(ctx, t, env, numberOfEchoBackends)
 
 	t.Log("exposing the admin api so that enterprise features can be verified")
 	exposeAdminAPI(ctx, t, env, deployments.ProxyNN)
@@ -306,8 +306,8 @@ func TestDeployAllInOneDBLESS(t *testing.T) {
 	deployments := getManifestDeployments(manifestFilePath)
 
 	t.Log("running ingress tests to verify all-in-one deployed ingress controller and proxy are functional")
-	deployIngress(ctx, t, env)
-	verifyIngress(ctx, t, env)
+	deployIngressWithEchoBackends(ctx, t, env, numberOfEchoBackends)
+	verifyIngressWithEchoBackends(ctx, t, env, numberOfEchoBackends)
 	ensureAllProxyReplicasAreConfigured(ctx, t, env, deployments.ProxyNN)
 
 	t.Log("scale proxy to 0 replicas")
@@ -356,7 +356,7 @@ func ensureAllProxyReplicasAreConfigured(ctx context.Context, t *testing.T, env 
 			kongClient, err := gokong.NewClient(lo.ToPtr(address), client)
 			require.NoError(t, err)
 
-			requireIngressConfiguredInAdminAPIEventually(ctx, t, kongClient)
+			verifyIngressWithEchoBackendsInAdminAPI(ctx, t, kongClient, numberOfEchoBackends)
 			t.Logf("proxy pod %s/%s: got the config", pod.Namespace, pod.Name)
 		}()
 	}

@@ -49,11 +49,11 @@ func testManifestsUpgrade(t *testing.T, fromManifestURL string, toManifestPath s
 	deployKong(ctx, t, env, oldManifest.Body)
 
 	t.Log("running ingress tests to verify all-in-one deployed ingress controller and proxy are functional")
-	deployIngress(ctx, t, env)
-	verifyIngress(ctx, t, env)
+	deployIngressWithEchoBackends(ctx, t, env, numberOfEchoBackends)
+	verifyIngressWithEchoBackends(ctx, t, env, numberOfEchoBackends)
 
 	t.Logf("deploying target version of kong manifests: %s", toManifestPath)
 	manifest := getTestManifest(t, toManifestPath)
 	deployKong(ctx, t, env, manifest)
-	verifyIngress(ctx, t, env)
+	verifyIngressWithEchoBackends(ctx, t, env, numberOfEchoBackends)
 }

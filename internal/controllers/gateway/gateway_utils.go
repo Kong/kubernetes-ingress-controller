@@ -693,8 +693,10 @@ func routeAcceptedByGateways(routeNamespace string, parentStatuses []RouteParent
 	return gateways
 }
 
-// Get all the HTTPRoutes and update the listeners' attachedRoutes field.
-// At this point we take into account HTTPRoutes only, as they are the
+// getAttachedRoutesForListener returns the number of all the routes that are attached
+// to the provided Gateway.
+//
+// NOTE: At this point we take into account HTTPRoutes only, as they are the
 // only routes in beta.
 func getAttachedRoutesForListener(ctx context.Context, client client.Client, listener gatewayv1beta1.Listener, gateway gatewayv1beta1.Gateway) (int32, error) {
 	httpRouteList := gatewayv1beta1.HTTPRouteList{}

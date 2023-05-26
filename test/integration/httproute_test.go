@@ -137,17 +137,6 @@ func TestHTTPRouteEssentials(t *testing.T) {
 			}},
 		},
 	}
-	if versions.GetKongVersion().MajorMinorOnly().GTE(versions.RegexHeaderVersionCutoff) {
-		httpRoute.Spec.Rules[0].Matches = append(httpRoute.Spec.Rules[0].Matches, gatewayv1beta1.HTTPRouteMatch{
-			Headers: []gatewayv1beta1.HTTPHeaderMatch{
-				{
-					Type:  &headerMatchRegex,
-					Value: `^audio/.*`,
-					Name:  "Content-Type",
-				},
-			},
-		})
-	}
 	httpRoute, err = gatewayClient.GatewayV1beta1().HTTPRoutes(ns.Name).Create(ctx, httpRoute, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(httpRoute)
@@ -187,10 +176,27 @@ func TestHTTPRouteEssentials(t *testing.T) {
 		return false
 	}, ingressWait, waitTick)
 
-	if versions.GetKongVersion().MajorMinorOnly().GTE(versions.RegexHeaderVersionCutoff) {
+	t.Run("", func(t *testing.T) {
+		RunWhenKongVersion(t, fmt.Sprintf(">=%s", versions.RegexHeaderVersionCutoff))
+
+		httpRoute, err = gatewayClient.GatewayV1beta1().HTTPRoutes(ns.Name).Get(ctx, httpRoute.Name, metav1.GetOptions{})
+		require.NoError(t, err)
+
+		httpRoute.Spec.Rules[0].Matches = append(httpRoute.Spec.Rules[0].Matches, gatewayv1beta1.HTTPRouteMatch{
+			Headers: []gatewayv1beta1.HTTPHeaderMatch{
+				{
+					Type:  &headerMatchRegex,
+					Value: `^audio/.*`,
+					Name:  "Content-Type",
+				},
+			},
+		})
+		httpRoute, err = gatewayClient.GatewayV1beta1().HTTPRoutes(ns.Name).Update(ctx, httpRoute, metav1.UpdateOptions{})
+		require.NoError(t, err)
+
 		t.Log("verifying HTTPRoute header match")
 		helpers.EventuallyGETPath(t, proxyURL, "", http.StatusOK, "<title>httpbin.org</title>", map[string]string{"Content-Type": "audio/mp3"}, ingressWait, waitTick)
-	}
+	})
 
 	t.Log("removing the parentrefs from the HTTPRoute")
 	oldParentRefs := httpRoute.Spec.ParentRefs

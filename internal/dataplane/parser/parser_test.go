@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/blang/semver/v4"
 	"github.com/kong/go-kong/kong"
 	"github.com/samber/lo"
 	"github.com/sirupsen/logrus"
@@ -28,7 +29,6 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util/builder"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/versions"
 	configurationv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
 )
 
@@ -5197,7 +5197,7 @@ func TestNewFeatureFlags(t *testing.T) {
 		name string
 
 		featureGates     map[string]bool
-		kongVersion      versions.KongVersion
+		kongVersion      semver.Version
 		routerFlavor     string
 		updateStatusFlag bool
 
@@ -5259,7 +5259,7 @@ func TestNewFeatureFlags(t *testing.T) {
 		},
 		{
 			name:        "kong version >= 3.0 enables regex path prefix",
-			kongVersion: versions.KongVersion{Major: 3, Minor: 0},
+			kongVersion: semver.Version{Major: 3, Minor: 0},
 			expectedFeatureFlags: FeatureFlags{
 				RegexPathPrefix: true,
 			},
@@ -5315,9 +5315,17 @@ func TestNewFeatureFlags(t *testing.T) {
 }
 
 func mustNewParser(t *testing.T, storer store.Storer) *Parser {
-	p, err := NewParser(logrus.New(), storer, FeatureFlags{
-		FillIDs: true, // We'll assume this is true for all tests.
-	})
+	const testKongVersion = "3.2.0"
+
+	v, err := semver.Parse(testKongVersion)
+	require.NoError(t, err)
+
+	p, err := NewParser(logrus.New(), storer,
+		FeatureFlags{
+			FillIDs: true, // We'll assume this is true for all tests.
+		},
+		v,
+	)
 	require.NoError(t, err)
 	return p
 }

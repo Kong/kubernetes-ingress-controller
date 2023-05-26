@@ -10,9 +10,7 @@ import (
 	"net/http"
 	"strings"
 	"testing"
-	"time"
 
-	"github.com/blang/semver/v4"
 	"github.com/kong/go-kong/kong"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
@@ -29,7 +27,6 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/test"
 	"github.com/kong/kubernetes-ingress-controller/v2/test/consts"
 	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/helpers"
-	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/testenv"
 )
 
 func TestPluginEssentials(t *testing.T) {
@@ -162,18 +159,8 @@ func TestPluginEssentials(t *testing.T) {
 func TestPluginOrdering(t *testing.T) {
 	t.Parallel()
 
-	// the manager runs in a goroutine and may not have pulled the version before this test starts
-	require.Eventually(t, func() bool {
-		return !versions.GetKongVersion().Full().EQ(semver.MustParse("0.0.0"))
-	}, time.Minute, time.Second)
-
-	{
-		v := versions.GetKongVersion()
-		enterprise := testenv.KongEnterpriseEnabled()
-		if !v.MajorOnly().GTE(versions.PluginOrderingVersionCutoff) || !enterprise {
-			t.Skipf("plugin ordering requires Kong Enterprise 3.0+, detected: %s (enterprise: %v)", v.Full(), enterprise)
-		}
-	}
+	RunWhenKongVersion(t, fmt.Sprintf(">=%s", versions.PluginOrderingVersionCutoff))
+	RunWhenKongEnterprise(t)
 
 	ctx := context.Background()
 	ns, cleaner := helpers.Setup(ctx, t, env)

@@ -25,9 +25,7 @@ import (
 )
 
 func TestIngressRegexMatchPath(t *testing.T) {
-	if v := versions.GetKongVersion(); !v.MajorOnly().GTE(versions.ExplicitRegexPathVersionCutoff) {
-		t.Skipf("regex prefixes are only relevant for Kong 3.0+, detected: %s", v.Full())
-	}
+	RunWhenKongVersion(t, fmt.Sprintf(">=%s", versions.ExplicitRegexPathVersionCutoff), "regex prefixes are only relevant for Kong 3.0+")
 
 	ctx := context.Background()
 	ns, cleaner := helpers.Setup(ctx, t, env)
@@ -148,9 +146,7 @@ func TestIngressRegexMatchPath(t *testing.T) {
 }
 
 func TestIngressRegexMatchHeader(t *testing.T) {
-	if v := versions.GetKongVersion(); !v.MajorOnly().GTE(versions.ExplicitRegexPathVersionCutoff) {
-		t.Skipf("regex prefixes are only relevant for Kong 3.0+, detected: %s", v.Full())
-	}
+	RunWhenKongVersion(t, fmt.Sprintf(">=%s", versions.ExplicitRegexPathVersionCutoff), "regex prefixes are only relevant for Kong 3.0+")
 
 	ctx := context.Background()
 	ns, cleaner := helpers.Setup(ctx, t, env)

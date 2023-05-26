@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 
+	"github.com/blang/semver/v4"
 	"github.com/sirupsen/logrus"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/deckgen"
@@ -28,15 +29,18 @@ type ConfigService interface {
 type UpdateStrategyInMemory struct {
 	configService ConfigService
 	log           logrus.FieldLogger
+	version       semver.Version
 }
 
 func NewUpdateStrategyInMemory(
 	configService ConfigService,
 	log logrus.FieldLogger,
+	version semver.Version,
 ) UpdateStrategyInMemory {
 	return UpdateStrategyInMemory{
 		configService: configService,
 		log:           log,
+		version:       version,
 	}
 }
 
@@ -56,7 +60,7 @@ func (s UpdateStrategyInMemory) Update(ctx context.Context, targetState ContentW
 		return fmt.Errorf("constructing kong configuration: %w", err), nil, nil
 	}
 
-	flattenErrors := shouldUseFlattenedErrors()
+	flattenErrors := shouldUseFlattenedErrors(s.version)
 	if errBody, err := s.configService.ReloadDeclarativeRawConfig(ctx, bytes.NewReader(config), true, flattenErrors); err != nil {
 		resourceErrors, parseErr := parseFlatEntityErrors(errBody, s.log)
 		return err, resourceErrors, parseErr
@@ -78,9 +82,10 @@ func (s UpdateStrategyInMemory) Type() string {
 // into a single set of parameters: https://github.com/Kong/go-kong/pull/271#issuecomment-1416212852
 // KIC therefore must _not_ request flattened errors on versions that do not support it, as otherwise Kong
 // will interpret the query string toggle as part of the config, and will reject it, as "flattened_errors" is
-// not a valid config key. KIC only sends this query parameter if Kong is 3.2 or higher.
-func shouldUseFlattenedErrors() bool {
-	return !versions.GetKongVersion().MajorMinorOnly().LTE(versions.FlattenedErrorCutoff)
+// not a valid config key.
+// KIC only sends this query parameter if Kong is 3.2 or higher.
+func shouldUseFlattenedErrors(version semver.Version) bool {
+	return version.GTE(versions.FlattenedErrorCutoff)
 }
 
 type InMemoryClient interface {

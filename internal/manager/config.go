@@ -57,6 +57,9 @@ type Config struct {
 	APIServerHost               string
 	APIServerQPS                int
 	APIServerBurst              int
+	APIServerCAData             []byte
+	APIServerCertData           []byte
+	APIServerKeyData            []byte
 	MetricsAddr                 string
 	ProbeAddr                   string
 	KongAdminURLs               []string
@@ -287,6 +290,16 @@ func (c *Config) GetKubeconfig() (*rest.Config, error) {
 	// Configure k8s client rate-limiting
 	config.QPS = float32(c.APIServerQPS)
 	config.Burst = c.APIServerBurst
+
+	if c.APIServerCertData != nil {
+		config.CertData = c.APIServerCertData
+	}
+	if c.APIServerCAData != nil {
+		config.CAData = c.APIServerCAData
+	}
+	if c.APIServerKeyData != nil {
+		config.KeyData = c.APIServerKeyData
+	}
 
 	return config, err
 }

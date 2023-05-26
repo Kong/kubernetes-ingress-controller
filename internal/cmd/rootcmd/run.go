@@ -3,7 +3,7 @@ package rootcmd
 import (
 	"context"
 	"fmt"
-	"os"
+	"io"
 
 	"github.com/go-logr/logr"
 	"github.com/sirupsen/logrus"
@@ -12,8 +12,8 @@ import (
 )
 
 // Run sets up a default stderr logger and starts the controller manager.
-func Run(ctx context.Context, c *manager.Config) error {
-	deprecatedLogger, logger, err := manager.SetupLoggers(c, os.Stderr)
+func Run(ctx context.Context, c *manager.Config, output io.Writer) error {
+	deprecatedLogger, logger, err := manager.SetupLoggers(c, output)
 	if err != nil {
 		return fmt.Errorf("failed to initialize logger: %w", err)
 	}

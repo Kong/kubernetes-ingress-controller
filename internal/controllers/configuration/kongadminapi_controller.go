@@ -2,6 +2,7 @@ package configuration
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -20,6 +21,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/adminapi"
+	cfgtypes "github.com/kong/kubernetes-ingress-controller/v2/internal/manager/config/types"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 )
 
@@ -38,6 +40,7 @@ type KongAdminAPIServiceReconciler struct {
 	// EndpointsNotifier is used to notify about Admin API endpoints changes.
 	// We're going to call this only with endpoints when they change.
 	EndpointsNotifier EndpointsNotifier
+	DNSStrategy       cfgtypes.DNSStrategy
 
 	Cache DiscoveredAdminAPIsCache
 }
@@ -127,7 +130,13 @@ func (r *KongAdminAPIServiceReconciler) Reconcile(ctx context.Context, req ctrl.
 	if !ok {
 		// If we don't have an entry for this EndpointSlice then save it and notify
 		// about the change.
-		r.Cache[req.NamespacedName] = adminapi.AdminAPIsFromEndpointSlice(endpoints, r.PortNames)
+		var err error
+		r.Cache[req.NamespacedName], err = adminapi.AdminAPIsFromEndpointSlice(endpoints, r.PortNames, r.DNSStrategy)
+		if err != nil {
+			return reconcile.Result{}, fmt.Errorf(
+				"failed getting Admin API from endpoints: %s/%s: %w", endpoints.Namespace, endpoints.Name, err,
+			)
+		}
 		r.notify()
 		return ctrl.Result{}, nil
 	}
@@ -135,7 +144,12 @@ func (r *KongAdminAPIServiceReconciler) Reconcile(ctx context.Context, req ctrl.
 	// We do have an entry for this EndpointSlice.
 	// If the address set is the same, do nothing.
 	// If the address set has changed, update the cache and send a notification.
-	addresses := adminapi.AdminAPIsFromEndpointSlice(endpoints, r.PortNames)
+	addresses, err := adminapi.AdminAPIsFromEndpointSlice(endpoints, r.PortNames, r.DNSStrategy)
+	if err != nil {
+		return reconcile.Result{}, fmt.Errorf(
+			"failed getting Admin API from endpoints: %s/%s: %w", endpoints.Namespace, endpoints.Name, err,
+		)
+	}
 	if cached.Equal(addresses) {
 		// No change, don't notify
 		return ctrl.Result{}, nil

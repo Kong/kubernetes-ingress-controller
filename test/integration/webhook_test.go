@@ -14,7 +14,6 @@ import (
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/types/kind"
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/networking"
-	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	admregv1 "k8s.io/api/admissionregistration/v1"
@@ -25,6 +24,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/util/builder"
 	testutils "github.com/kong/kubernetes-ingress-controller/v2/internal/util/test"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
 	"github.com/kong/kubernetes-ingress-controller/v2/pkg/clientset"
@@ -654,13 +654,7 @@ func ensureWebhookService(ctx context.Context, name string) (func() error, error
 				NodeName:  &nodeName,
 			},
 		},
-		Ports: []discoveryv1.EndpointPort{
-			{
-				Name:     lo.ToPtr("default"),
-				Port:     lo.ToPtr(int32(testutils.AdmissionWebhookListenPort)),
-				Protocol: lo.ToPtr(corev1.ProtocolTCP),
-			},
-		},
+		Ports: builder.NewEndpointPort(testutils.AdmissionWebhookListenPort).WithName("default").WithProtocol(corev1.ProtocolTCP).IntoSlice(),
 	}, metav1.CreateOptions{})
 	if err != nil {
 		return nil, fmt.Errorf("creating webhook endpoints: %w", err)

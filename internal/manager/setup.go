@@ -316,7 +316,7 @@ func (c *Config) adminAPIClientFromServiceDiscovery(ctx context.Context, logger 
 	// configuration validation and sending code.
 	var adminAPIs []adminapi.DiscoveredAdminAPI
 	err = retry.Do(func() error {
-		s, err := adminapi.GetAdminAPIsForService(ctx, kubeClient, kongAdminSvcNN, sets.New(c.KondAdminSvcPortNames...))
+		s, err := adminapi.GetAdminAPIsForService(ctx, kubeClient, kongAdminSvcNN, sets.New(c.KondAdminSvcPortNames...), c.GatewayDiscoveryDNSStrategy)
 		if err != nil {
 			return retry.Unrecoverable(err)
 		}

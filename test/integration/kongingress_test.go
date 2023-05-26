@@ -36,7 +36,7 @@ func TestKongIngressEssentials(t *testing.T) {
 
 	t.Log("deploying a minimal HTTP container deployment to test Ingress routes")
 	testName := "minking"
-	deployment := generators.NewDeploymentForContainer(generators.NewContainer(testName, test.HTTPBinImage, 80))
+	deployment := generators.NewDeploymentForContainer(generators.NewContainer(testName, test.HTTPBinImage, test.HTTPBinPort))
 	_, err := env.Cluster().Client().AppsV1().Deployments(ns.Name).Create(ctx, deployment, metav1.CreateOptions{})
 	assert.NoError(t, err)
 

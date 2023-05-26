@@ -71,8 +71,7 @@ const (
 	namespace        = "kong"
 	adminServiceName = "kong-admin-lb"
 
-	tcpEchoPort    = 1025
-	tcpListnerPort = 8888
+	tcpListenerPort = 8888
 
 	// controllerDeploymentName is the name of the controller deployment in all manifests variants.
 	controllerDeploymentName = "ingress-kong"
@@ -326,7 +325,7 @@ func deployIngress(ctx context.Context, t *testing.T, env environments.Environme
 	c, err := clientset.NewForConfig(env.Cluster().Config())
 	assert.NoError(t, err)
 	t.Log("deploying an HTTP service to test the ingress controller and proxy")
-	container := generators.NewContainer("httpbin", test.HTTPBinImage, 80)
+	container := generators.NewContainer("httpbin", test.HTTPBinImage, test.HTTPBinPort)
 	deployment := generators.NewDeploymentForContainer(container)
 	deployment, err = env.Cluster().Client().AppsV1().Deployments(corev1.NamespaceDefault).Create(ctx, deployment, metav1.CreateOptions{})
 	require.NoError(t, err)

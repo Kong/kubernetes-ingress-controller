@@ -92,7 +92,7 @@ func TestExpressionRouterGenerateRoutes(t *testing.T) {
 
 	t.Log("deploying HTTP container deployment to test generating expression routes")
 	// TODO: use another HTTP server image that can return 200 on any path
-	container := generators.NewContainer("httpbin", test.HTTPBinImage, 80)
+	container := generators.NewContainer("httpbin", test.HTTPBinImage, test.HTTPBinPort)
 	deployment := generators.NewDeploymentForContainer(container)
 	deployment, err = env.Cluster().Client().AppsV1().Deployments(ns.Name).Create(ctx, deployment, metav1.CreateOptions{})
 	require.NoError(t, err)

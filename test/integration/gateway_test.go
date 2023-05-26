@@ -524,7 +524,7 @@ func TestGatewayFilters(t *testing.T) {
 	client := env.Cluster().Client()
 
 	t.Log("deploying a minimal HTTP container deployment to test Ingress routes")
-	container := generators.NewContainer("httpbin", test.HTTPBinImage, 80)
+	container := generators.NewContainer("httpbin", test.HTTPBinImage, test.HTTPBinPort)
 	deploymentTemplate := generators.NewDeploymentForContainer(container)
 	deployment, err := client.AppsV1().Deployments(ns.Name).Create(ctx, deploymentTemplate, metav1.CreateOptions{})
 	require.NoError(t, err)

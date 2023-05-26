@@ -24,6 +24,7 @@ import (
 	kservingv1 "knative.dev/serving/pkg/apis/serving/v1"
 	kservingclientsetv "knative.dev/serving/pkg/client/clientset/versioned"
 
+	"github.com/kong/kubernetes-ingress-controller/v2/test"
 	"github.com/kong/kubernetes-ingress-controller/v2/test/consts"
 	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/helpers"
 )
@@ -71,10 +72,10 @@ func TestKnativeIngress(t *testing.T) {
 						PodSpec: corev1.PodSpec{
 							Containers: []corev1.Container{
 								{
-									Image: "kong/httpbin:0.1.0",
+									Image: test.HTTPBinImage,
 									Ports: []corev1.ContainerPort{
 										{
-											ContainerPort: 80,
+											ContainerPort: test.HTTPBinPort,
 										},
 									},
 								},

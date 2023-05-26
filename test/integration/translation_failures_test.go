@@ -103,7 +103,7 @@ func TestTranslationFailures(t *testing.T) {
 				require.NoError(t, err)
 				cleaner.Add(gateway)
 
-				container := generators.NewContainer("httpbin", test.HTTPBinImage, 80)
+				container := generators.NewContainer("httpbin", test.HTTPBinImage, test.HTTPBinPort)
 				deployment := generators.NewDeploymentForContainer(container)
 				deployment, err = env.Cluster().Client().AppsV1().Deployments(ns).Create(ctx, deployment, metav1.CreateOptions{})
 				require.NoError(t, err)

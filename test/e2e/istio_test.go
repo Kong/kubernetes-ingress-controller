@@ -125,7 +125,7 @@ func TestIstioWithKongIngressGateway(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Log("creating a mesh enabled http deployment")
-	container := generators.NewContainer("httpbin", test.HTTPBinImage, 80)
+	container := generators.NewContainer("httpbin", test.HTTPBinImage, test.HTTPBinPort)
 	deployment := generators.NewDeploymentForContainer(container)
 	deployment, err = env.Cluster().Client().AppsV1().Deployments(namespace.Name).Create(ctx, deployment, metav1.CreateOptions{})
 	require.NoError(t, err)

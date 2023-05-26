@@ -142,7 +142,7 @@ func TestHTTPSRedirect(t *testing.T) {
 	ns, cleaner := helpers.Setup(ctx, t, env)
 
 	t.Log("creating an HTTP container via deployment to test redirect functionality")
-	container := generators.NewContainer("alsohttpbin", test.HTTPBinImage, 80)
+	container := generators.NewContainer("alsohttpbin", test.HTTPBinImage, test.HTTPBinPort)
 	deployment := generators.NewDeploymentForContainer(container)
 	opts := metav1.CreateOptions{}
 	_, err := env.Cluster().Client().AppsV1().Deployments(ns.Name).Create(ctx, deployment, opts)
@@ -212,7 +212,7 @@ func TestHTTPSIngress(t *testing.T) {
 	}
 
 	t.Log("deploying a minimal HTTP container deployment to test Ingress routes")
-	container := generators.NewContainer("httpbin", test.HTTPBinImage, 80)
+	container := generators.NewContainer("httpbin", test.HTTPBinImage, test.HTTPBinPort)
 	deployment := generators.NewDeploymentForContainer(container)
 	deployment, err := env.Cluster().Client().AppsV1().Deployments(ns.Name).Create(ctx, deployment, metav1.CreateOptions{})
 	assert.NoError(t, err)

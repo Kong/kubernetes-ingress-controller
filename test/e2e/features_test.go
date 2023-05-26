@@ -407,7 +407,7 @@ func TestDeployAllInOneDBLESSGateway(t *testing.T) {
 	for i, container := range proxyDeployment.Spec.Template.Spec.Containers {
 		if container.Name == proxyContainerName {
 			proxyDeployment.Spec.Template.Spec.Containers[i].Env = append(proxyDeployment.Spec.Template.Spec.Containers[i].Env,
-				corev1.EnvVar{Name: "KONG_STREAM_LISTEN", Value: fmt.Sprintf("0.0.0.0:%d", tcpListnerPort)})
+				corev1.EnvVar{Name: "KONG_STREAM_LISTEN", Value: fmt.Sprintf("0.0.0.0:%d", tcpListenerPort)})
 		}
 	}
 	_, err = env.Cluster().Client().AppsV1().Deployments(namespace).Update(ctx, proxyDeployment, metav1.UpdateOptions{})
@@ -419,8 +419,8 @@ func TestDeployAllInOneDBLESSGateway(t *testing.T) {
 	proxyService.Spec.Ports = append(proxyService.Spec.Ports, corev1.ServicePort{
 		Name:       "stream-tcp",
 		Protocol:   corev1.ProtocolTCP,
-		Port:       tcpListnerPort,
-		TargetPort: intstr.FromInt(tcpListnerPort),
+		Port:       tcpListenerPort,
+		TargetPort: intstr.FromInt(tcpListenerPort),
 	})
 	_, err = env.Cluster().Client().CoreV1().Services(namespace).Update(ctx, proxyService, metav1.UpdateOptions{})
 	require.NoError(t, err)
@@ -492,7 +492,7 @@ func TestDefaultIngressClass(t *testing.T) {
 	kongDeployment := getManifestDeployments(dblessPath).ControllerNN
 
 	t.Log("deploying a minimal HTTP container deployment to test Ingress routes")
-	container := generators.NewContainer("httpbin", test.HTTPBinImage, 80)
+	container := generators.NewContainer("httpbin", test.HTTPBinImage, test.HTTPBinPort)
 	deployment := generators.NewDeploymentForContainer(container)
 	deployment, err := env.Cluster().Client().AppsV1().Deployments(kongDeployment.Namespace).Create(ctx, deployment, metav1.CreateOptions{})
 	require.NoError(t, err)

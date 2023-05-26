@@ -58,7 +58,7 @@ func TestHTTPRouteEssentials(t *testing.T) {
 	cleaner.Add(gateway)
 
 	t.Log("deploying a minimal HTTP container deployment to test Ingress routes")
-	container := generators.NewContainer("httpbin", test.HTTPBinImage, 80)
+	container := generators.NewContainer("httpbin", test.HTTPBinImage, test.HTTPBinPort)
 	deployment := generators.NewDeploymentForContainer(container)
 	deployment, err = env.Cluster().Client().AppsV1().Deployments(ns.Name).Create(ctx, deployment, metav1.CreateOptions{})
 	require.NoError(t, err)
@@ -331,7 +331,7 @@ func TestHTTPRouteMultipleServices(t *testing.T) {
 	cleaner.Add(gateway)
 
 	t.Log("deploying a minimal HTTP container deployment to test Ingress routes")
-	container1 := generators.NewContainer("httpbin", test.HTTPBinImage, 80)
+	container1 := generators.NewContainer("httpbin", test.HTTPBinImage, test.HTTPBinPort)
 	deployment1 := generators.NewDeploymentForContainer(container1)
 	deployment1, err = env.Cluster().Client().AppsV1().Deployments(ns.Name).Create(ctx, deployment1, metav1.CreateOptions{})
 	require.NoError(t, err)
@@ -523,7 +523,7 @@ func TestHTTPRouteFilterHosts(t *testing.T) {
 	cleaner.Add(gateway)
 
 	t.Log("deploying a minimal HTTP container deployment to test Ingress routes")
-	container := generators.NewContainer("httpbin", test.HTTPBinImage, 80)
+	container := generators.NewContainer("httpbin", test.HTTPBinImage, test.HTTPBinPort)
 	deployment := generators.NewDeploymentForContainer(container)
 	deployment, err = env.Cluster().Client().AppsV1().Deployments(ns.Name).Create(ctx, deployment, metav1.CreateOptions{})
 	require.NoError(t, err)

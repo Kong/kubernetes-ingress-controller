@@ -134,7 +134,7 @@ func deployGatewayWithTCPListener(ctx context.Context, t *testing.T, env environ
 				{
 					Name:     "tcp",
 					Protocol: gatewayv1beta1.TCPProtocolType,
-					Port:     gatewayv1beta1.PortNumber(tcpListnerPort),
+					Port:     gatewayv1beta1.PortNumber(tcpListenerPort),
 				},
 			},
 		},
@@ -160,7 +160,7 @@ func deployHTTPRoute(ctx context.Context, t *testing.T, env environments.Environ
 	gc, err := gatewayclient.NewForConfig(env.Cluster().Config())
 	require.NoError(t, err)
 	t.Log("deploying an HTTP service to test the ingress controller and proxy")
-	container := generators.NewContainer("httpbin-httproute", test.HTTPBinImage, 80)
+	container := generators.NewContainer("httpbin-httproute", test.HTTPBinImage, test.HTTPBinPort)
 	deployment := generators.NewDeploymentForContainer(container)
 	deployment, err = env.Cluster().Client().AppsV1().Deployments(corev1.NamespaceDefault).Create(ctx, deployment, metav1.CreateOptions{})
 	require.NoError(t, err)
@@ -240,7 +240,7 @@ func deployTCPRoute(ctx context.Context, t *testing.T, env environments.Environm
 	gc, err := gatewayclient.NewForConfig(env.Cluster().Config())
 	require.NoError(t, err)
 	t.Log("deploying a TCP service to test the ingress controller and proxy")
-	container := generators.NewContainer("tcpecho-tcproute", test.TCPEchoImage, tcpEchoPort)
+	container := generators.NewContainer("tcpecho-tcproute", test.EchoImage, test.EchoTCPPort)
 	container.Env = []corev1.EnvVar{
 		{
 			Name:  "POD_NAME",
@@ -257,15 +257,15 @@ func deployTCPRoute(ctx context.Context, t *testing.T, env environments.Environm
 		{
 			Name:       "echo",
 			Protocol:   corev1.ProtocolTCP,
-			Port:       tcpListnerPort,
-			TargetPort: intstr.FromInt(tcpEchoPort),
+			Port:       tcpListenerPort,
+			TargetPort: intstr.FromInt(test.EchoTCPPort),
 		},
 	}
 	_, err = env.Cluster().Client().CoreV1().Services(corev1.NamespaceDefault).Create(ctx, service, metav1.CreateOptions{})
 	require.NoError(t, err)
 
 	t.Logf("creating a TCPRoute for service %s with Gateway %s", service.Name, gw.Name)
-	portNumber := gatewayv1alpha2.PortNumber(tcpListnerPort)
+	portNumber := gatewayv1alpha2.PortNumber(tcpListenerPort)
 	tcpRoute := &gatewayv1alpha2.TCPRoute{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: uuid.NewString(),
@@ -300,11 +300,11 @@ func verifyTCPRoute(ctx context.Context, t *testing.T, env environments.Environm
 	t.Log("finding the kong proxy service ip")
 	proxyIP := getKongProxyIP(ctx, t, env)
 
-	t.Logf("waiting for route from TCPRoute to be operational at %s:%d", proxyIP, tcpListnerPort)
+	t.Logf("waiting for route from TCPRoute to be operational at %s:%d", proxyIP, tcpListenerPort)
 	require.Eventually(t, func() bool {
-		ok, err := test.TCPEchoResponds(fmt.Sprintf("%s:%d", proxyIP, tcpListnerPort), "tcpecho-tcproute")
+		ok, err := test.TCPEchoResponds(fmt.Sprintf("%s:%d", proxyIP, tcpListenerPort), "tcpecho-tcproute")
 		if err != nil {
-			t.Logf("failed to connect to %s:%d, error %v", proxyIP, tcpListnerPort, err)
+			t.Logf("failed to connect to %s:%d, error %v", proxyIP, tcpListenerPort, err)
 			return false
 		}
 		return ok

@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	k8stypes "k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
@@ -139,5 +140,131 @@ func assertOnlyOneConditionForType(t *testing.T, conditions []metav1.Condition) 
 	})
 	for c, n := range conditionsNum {
 		assert.Equalf(t, 1, n, "condition %s occurred %d times - expected 1 occurrence", c, n)
+	}
+}
+
+func TestRouteAcceptedByGateways(t *testing.T) {
+	testCases := []struct {
+		name           string
+		routeNamespace string
+		parentStatuses []gatewayv1beta1.RouteParentStatus
+		gateways       []k8stypes.NamespacedName
+	}{
+		{
+			name:           "no parentStatus with accepted condition",
+			routeNamespace: "default",
+			parentStatuses: []gatewayv1beta1.RouteParentStatus{
+				{
+					ParentRef: gatewayv1beta1.ParentReference{
+						Name: "gateway-1",
+					},
+				},
+			},
+			gateways: []k8stypes.NamespacedName{},
+		},
+		{
+			name:           "a subset of parentStatus with correct params",
+			routeNamespace: "default",
+			parentStatuses: []gatewayv1beta1.RouteParentStatus{
+				{
+					ParentRef: gatewayv1beta1.ParentReference{
+						Name:  "gateway-1",
+						Group: lo.ToPtr(gatewayv1beta1.Group("wrong-group")),
+					},
+					Conditions: []metav1.Condition{
+						{
+							Status: metav1.ConditionTrue,
+							Type:   string(gatewayv1beta1.RouteConditionAccepted),
+						},
+					},
+				},
+				{
+					ParentRef: gatewayv1beta1.ParentReference{
+						Name: "gateway-2",
+						Kind: lo.ToPtr(gatewayv1beta1.Kind("wrong-kind")),
+					},
+					Conditions: []metav1.Condition{
+						{
+							Status: metav1.ConditionTrue,
+							Type:   string(gatewayv1beta1.RouteConditionAccepted),
+						},
+					},
+				},
+				{
+					ParentRef: gatewayv1beta1.ParentReference{
+						Name: "gateway-3",
+					},
+					Conditions: []metav1.Condition{
+						{
+							Status: metav1.ConditionTrue,
+							Type:   string(gatewayv1beta1.RouteConditionAccepted),
+						},
+					},
+				},
+				{
+					ParentRef: gatewayv1beta1.ParentReference{
+						Name: "gateway-4",
+					},
+					Conditions: []metav1.Condition{
+						{
+							Status: metav1.ConditionFalse,
+							Type:   string(gatewayv1beta1.RouteConditionAccepted),
+						},
+					},
+				},
+			},
+			gateways: []k8stypes.NamespacedName{
+				{
+					Namespace: "default",
+					Name:      "gateway-3",
+				},
+			},
+		},
+		{
+			name:           "all parentStatuses",
+			routeNamespace: "default",
+			parentStatuses: []gatewayv1beta1.RouteParentStatus{
+				{
+					ParentRef: gatewayv1beta1.ParentReference{
+						Name: "gateway-1",
+					},
+					Conditions: []metav1.Condition{
+						{
+							Status: metav1.ConditionTrue,
+							Type:   string(gatewayv1beta1.RouteConditionAccepted),
+						},
+					},
+				},
+				{
+					ParentRef: gatewayv1beta1.ParentReference{
+						Name:      "gateway-2",
+						Namespace: lo.ToPtr(gatewayv1beta1.Namespace("namespace-2")),
+					},
+					Conditions: []metav1.Condition{
+						{
+							Status: metav1.ConditionTrue,
+							Type:   string(gatewayv1beta1.RouteConditionAccepted),
+						},
+					},
+				},
+			},
+			gateways: []k8stypes.NamespacedName{
+				{
+					Namespace: "default",
+					Name:      "gateway-1",
+				},
+				{
+					Namespace: "namespace-2",
+					Name:      "gateway-2",
+				},
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			gateways := routeAcceptedByGateways(tc.routeNamespace, tc.parentStatuses)
+			assert.Equal(t, tc.gateways, gateways)
+		})
 	}
 }

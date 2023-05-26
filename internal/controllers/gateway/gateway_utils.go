@@ -158,10 +158,9 @@ func extractListenerSpecFromGateway(gateway *gatewayv1beta1.Gateway, listenerNam
 }
 
 type (
-	protocolPortMap     map[ProtocolType]map[PortNumber]bool
-	portProtocolMap     map[PortNumber]ProtocolType
-	portHostnameMap     map[PortNumber]map[Hostname]bool
-	listenerAttachedMap map[SectionName]int32
+	protocolPortMap map[ProtocolType]map[PortNumber]bool
+	portProtocolMap map[PortNumber]ProtocolType
+	portHostnameMap map[PortNumber]map[Hostname]bool
 )
 
 func buildKongPortMap(listens []Listener) protocolPortMap {
@@ -182,11 +181,9 @@ func buildKongPortMap(listens []Listener) protocolPortMap {
 func initializeListenerMaps(gateway *Gateway) (
 	portProtocolMap,
 	portHostnameMap,
-	listenerAttachedMap,
 ) {
 	portToProtocol := make(portProtocolMap, len(gateway.Status.Listeners))
 	portToHostname := make(portHostnameMap, len(gateway.Status.Listeners))
-	listenerToAttached := make(listenerAttachedMap, len(gateway.Status.Listeners))
 
 	existingStatuses := make(map[SectionName]ListenerStatus,
 		len(gateway.Status.Listeners))
@@ -196,13 +193,8 @@ func initializeListenerMaps(gateway *Gateway) (
 
 	for _, listener := range gateway.Spec.Listeners {
 		portToHostname[listener.Port] = make(map[Hostname]bool)
-		if existingStatus, ok := existingStatuses[listener.Name]; ok {
-			listenerToAttached[listener.Name] = existingStatus.AttachedRoutes
-		} else {
-			listenerToAttached[listener.Name] = 0
-		}
 	}
-	return portToProtocol, portToHostname, listenerToAttached
+	return portToProtocol, portToHostname
 }
 
 func canSharePort(requested, existing ProtocolType) bool {
@@ -244,14 +236,14 @@ func getListenerStatus(
 	client client.Client,
 ) ([]ListenerStatus, error) {
 	statuses := make(map[SectionName]ListenerStatus, len(gateway.Spec.Listeners))
-	portToProtocol, portToHostname, listenerToAttached := initializeListenerMaps(gateway)
+	portToProtocol, portToHostname := initializeListenerMaps(gateway)
 	kongProtocolsToPort := buildKongPortMap(kongListens)
 	conflictedPorts := make(map[PortNumber]bool, len(gateway.Spec.Listeners))
 	conflictedHostnames := make(map[PortNumber]map[Hostname]bool, len(gateway.Spec.Listeners))
 
 	// TODO we should check transition time rather than always nowing, which we do throughout the below
 	// https://github.com/Kong/kubernetes-ingress-controller/issues/2556
-	for _, listener := range gateway.Spec.Listeners {
+	for listenerIndex, listener := range gateway.Spec.Listeners {
 		var hostname Hostname
 		if listener.Hostname != nil {
 			hostname = *listener.Hostname
@@ -300,12 +292,16 @@ func getListenerStatus(
 			}
 		}
 
+		attachedRoutes, err := getAttachedRoutesForListener(ctx, client, *gateway, listenerIndex)
+		if err != nil {
+			return nil, err
+		}
+
 		status := ListenerStatus{
 			Name:           listener.Name,
 			Conditions:     []metav1.Condition{},
 			SupportedKinds: supportedkinds,
-			// this has been populated by initializeListenerMaps()
-			AttachedRoutes: listenerToAttached[listener.Name],
+			AttachedRoutes: attachedRoutes,
 		}
 
 		// if the resolvedRefs condition is not successful, append the resolvedRefs condition failed with the proper reason
@@ -669,4 +665,95 @@ func isTLSSecretValid(secret *corev1.Secret) bool {
 		return false
 	}
 	return true
+}
+
+// routeAcceptedByGateways finds all the Gateways the route has been accepted by
+// and returns them in the form of a NamespacedName slice.
+func routeAcceptedByGateways(routeNamespace string, parentStatuses []RouteParentStatus) []k8stypes.NamespacedName {
+	gateways := []k8stypes.NamespacedName{}
+	for _, routeParentStatus := range parentStatuses {
+		gatewayNamespace := routeNamespace
+		parentRef := routeParentStatus.ParentRef
+		if (parentRef.Group != nil && *parentRef.Group != gatewayV1beta1Group) ||
+			(parentRef.Kind != nil && *parentRef.Kind != "Gateway") {
+			continue
+		}
+		if parentRef.Namespace != nil {
+			gatewayNamespace = string(*parentRef.Namespace)
+		}
+		if lo.ContainsBy(routeParentStatus.Conditions, func(condition metav1.Condition) bool {
+			return condition.Type == string(gatewayv1beta1.RouteConditionAccepted) &&
+				condition.Status == metav1.ConditionTrue
+		}) {
+			gateways = append(gateways,
+				k8stypes.NamespacedName{
+					Namespace: gatewayNamespace,
+					Name:      string(parentRef.Name),
+				})
+		}
+	}
+	return gateways
+}
+
+// getAttachedRoutesForListener returns the number of all the routes that are attached
+// to the provided Gateway.
+//
+// NOTE: At this point we take into account HTTPRoutes only, as they are the
+// only routes in beta.
+func getAttachedRoutesForListener(ctx context.Context, mgrc client.Client, gateway gatewayv1beta1.Gateway, listenerIndex int) (int32, error) {
+	const (
+		defaultEndpointSliceListPagingLimit = 100
+	)
+	var (
+		httpRoutes    = []gatewayv1beta1.HTTPRoute{}
+		continueToken string
+	)
+	for {
+		httpRouteList := gatewayv1beta1.HTTPRouteList{}
+		if err := mgrc.List(ctx, &httpRouteList, &client.ListOptions{
+			Continue: continueToken,
+			Limit:    defaultEndpointSliceListPagingLimit,
+		}); err != nil {
+			return 0, err
+		}
+		httpRoutes = append(httpRoutes, httpRouteList.Items...)
+		if httpRouteList.Continue == "" {
+			break
+		}
+		continueToken = httpRouteList.Continue
+	}
+
+	var attachedRoutes int32
+	for _, route := range httpRoutes {
+		route := route
+		acceptedByGateway := func() bool {
+			for _, g := range routeAcceptedByGateways(route.Namespace, route.Status.Parents) {
+				if gateway.Namespace == g.Namespace && gateway.Name == g.Name {
+					return true
+				}
+			}
+			return false
+		}()
+		if !acceptedByGateway {
+			continue
+		}
+
+		for _, parentRef := range route.Spec.ParentRefs {
+			accepted, err := isRouteAcceptedByListener(
+				ctx,
+				mgrc,
+				&route,
+				gateway,
+				listenerIndex,
+				parentRef,
+			)
+			if err != nil {
+				return 0, err
+			}
+			if accepted {
+				attachedRoutes++
+			}
+		}
+	}
+	return attachedRoutes, nil
 }

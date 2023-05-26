@@ -130,6 +130,15 @@ func (r *GatewayReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		return err
 	}
 
+	// if a HTTPRoute gets accepted by a Gateway, we need to make sure to trigger
+	// reconciliation on the gateway, as we need to update the number of attachedRoutes.
+	if err := c.Watch(
+		source.Kind(mgr.GetCache(), &gatewayv1beta1.HTTPRoute{}),
+		handler.EnqueueRequestsFromMapFunc(r.listGatewaysForHTTPRoute),
+	); err != nil {
+		return err
+	}
+
 	// watch ReferenceGrants, which may invalidate or allow cross-namespace TLSConfigs
 	if r.enableReferenceGrant {
 		if err := c.Watch(
@@ -264,6 +273,27 @@ func (r *GatewayReconciler) listGatewaysForService(ctx context.Context, svc clie
 		}
 	}
 	return
+}
+
+// listGatewaysForHTTPRoute retrieves all the gateways referenced as parents by the HTTPRoute.
+func (r *GatewayReconciler) listGatewaysForHTTPRoute(_ context.Context, obj client.Object) []reconcile.Request {
+	httpRoute, ok := obj.(*gatewayv1beta1.HTTPRoute)
+	if !ok {
+		r.Log.Error(
+			fmt.Errorf("unexpected object type"),
+			"httproute watch predicate received unexpected object type",
+			"expected", "*gatewayv1beta1.HTTPRoute", "found", reflect.TypeOf(obj),
+		)
+		return nil
+	}
+	recs := []reconcile.Request{}
+	for _, gateway := range routeAcceptedByGateways(httpRoute.Namespace, httpRoute.Status.Parents) {
+		recs = append(recs, reconcile.Request{
+			NamespacedName: gateway,
+		})
+	}
+
+	return recs
 }
 
 // isGatewayService is a watch predicate that filters out events for objects that aren't

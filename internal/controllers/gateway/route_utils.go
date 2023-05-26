@@ -897,3 +897,54 @@ func isParentRefEqualToParent[
 
 	return true
 }
+
+// isRouteAcceptedByListener checks the given route is accepted by the
+// gateway's listener specified by a proper parentReference.
+func isRouteAcceptedByListener[T types.RouteT](ctx context.Context,
+	mgrc client.Client,
+	route T,
+	gateway gatewayv1beta1.Gateway,
+	listenerIndex int,
+	parentRef gatewayv1beta1.ParentReference,
+) (bool, error) {
+	// Check if the route matches listener's AllowedRoutes.
+	listener := gateway.Spec.Listeners[listenerIndex]
+	if ok, err := routeMatchesListenerAllowedRoutes(ctx, mgrc, route, listener, gateway.Namespace, parentRef.Namespace); err != nil {
+		return false, fmt.Errorf("failed matching listener %s to a route %s for gateway %s: %w",
+			listener.Name, route.GetName(), gateway.Name, err,
+		)
+	} else if !ok {
+		return false, nil
+	}
+
+	// Check the listeners statuses:
+	// - Check if a listener status exists with a matching type (via SupportedKinds).
+	// - Check if it matches the requested listener by name (if specified).
+	// - And finally check if that listeners is marked as Ready.
+	if err := existsMatchingReadyListenerInStatus(route, listener, gateway.Status.Listeners); err != nil {
+		// return no error here, as we don't care of the reason why this check failed.
+		return false, nil //nolint:nilerr
+	}
+
+	// Check if listener name matches.
+	if parentRef.SectionName != nil && *parentRef.SectionName != "" && *parentRef.SectionName != listener.Name {
+		return false, nil
+	}
+
+	// Perform the port matching as described in GEP-957.
+	if parentRef.Port != nil && *parentRef.Port != listener.Port {
+		// This ParentRef has a port specified and it's different
+		// than current listener's port.
+		return false, nil
+	}
+
+	if !routeTypeMatchesListenerType(route, listener) {
+		return false, nil
+	}
+
+	if !routeHostnamesIntersectsWithListenerHostname(route, listener) {
+		return false, nil
+	}
+
+	return true, nil
+}

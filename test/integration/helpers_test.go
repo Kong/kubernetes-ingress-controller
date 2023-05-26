@@ -11,6 +11,7 @@ import (
 
 	ktfkong "github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/kong"
 	"github.com/samber/lo"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	netv1 "k8s.io/api/networking/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -182,6 +183,23 @@ func httpRouteAcceptedConditionMatches(t *testing.T, c *gatewayclient.Clientset,
 	}
 
 	return false
+}
+
+// ListenersHaveNAttachedRoutesCallback checks that every listener has a given number of attachedRoutes.
+// The attachedRoutesByListener parameter contains the number of expected acceptedRoutes for
+// each listener's name.
+func ListenersHaveNAttachedRoutesCallback(t *testing.T, c *gatewayclient.Clientset, namespace, gatewayName string, attachedRoutesByListener map[string]int32) func() bool {
+	return func() bool {
+		gateway, err := c.GatewayV1beta1().Gateways(namespace).Get(context.Background(), gatewayName, metav1.GetOptions{})
+		assert.NoError(t, err)
+
+		for _, listenerStatus := range gateway.Status.Listeners {
+			if attachedRoutesByListener[string(listenerStatus.Name)] != listenerStatus.AttachedRoutes {
+				return false
+			}
+		}
+		return true
+	}
 }
 
 // GetGatewayIsLinkedCallback returns a callback that checks if the specific Route (HTTP, TCP, TLS, or UDP)

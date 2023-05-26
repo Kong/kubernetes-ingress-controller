@@ -12,6 +12,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/kong/go-kong/kong"
+	ktfkong "github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/kong"
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -53,6 +54,12 @@ func TestHTTPRouteEssentials(t *testing.T) {
 	gatewayName := uuid.NewString()
 	gateway, err := DeployGateway(ctx, gatewayClient, ns.Name, gatewayClassName, func(gw *gatewayv1beta1.Gateway) {
 		gw.Name = gatewayName
+		// add a UDP listener to check the HTTPRoute does not get attached to it.
+		gw.Spec.Listeners = append(gw.Spec.Listeners, gatewayv1beta1.Listener{
+			Name:     "udp",
+			Protocol: gatewayv1beta1.UDPProtocolType,
+			Port:     gatewayv1beta1.PortNumber(ktfkong.DefaultUDPServicePort),
+		})
 	})
 	require.NoError(t, err)
 	cleaner.Add(gateway)
@@ -198,6 +205,16 @@ func TestHTTPRouteEssentials(t *testing.T) {
 		helpers.EventuallyGETPath(t, proxyURL, "", http.StatusOK, "<title>httpbin.org</title>", map[string]string{"Content-Type": "audio/mp3"}, ingressWait, waitTick)
 	})
 
+	t.Log("verifying that the HTTPRoute has the Condition 'Accepted' set to 'True'")
+	require.Eventually(t, HTTPRouteMatchesAcceptedCallback(t, gatewayClient, httpRoute, true, gatewayv1beta1.RouteReasonAccepted), statusWait, waitTick)
+
+	t.Log("verifying that the Gateway listener have the proper attachedRoutes")
+	require.Eventually(t, ListenersHaveNAttachedRoutesCallback(t, gatewayClient, ns.Name, gatewayName, map[string]int32{
+		"http":  1,
+		"https": 1,
+		"udp":   0,
+	}), statusWait, waitTick)
+
 	t.Log("removing the parentrefs from the HTTPRoute")
 	oldParentRefs := httpRoute.Spec.ParentRefs
 	require.Eventually(t, func() bool {
@@ -295,9 +312,6 @@ func TestHTTPRouteEssentials(t *testing.T) {
 	t.Log("putting the GatewayClass back")
 	_, err = DeployGatewayClass(ctx, gatewayClient, gatewayClassName)
 	require.NoError(t, err)
-
-	t.Log("verifying that the HTTPRoute has the Condition 'Accepted' set to 'True' before specifying a port not existent in Gateway")
-	require.Eventually(t, HTTPRouteMatchesAcceptedCallback(t, gatewayClient, httpRoute, true, gatewayv1beta1.RouteReasonAccepted), statusWait, waitTick)
 
 	// Set the Port in ParentRef which does not have a matching listener in Gateway.
 	require.Eventually(t, func() bool {

@@ -7,7 +7,7 @@ const (
 	HTTPBinImage = "kong/httpbin:0.1.0"
 	HTTPBinPort  = 80
 
-	// EchoImage works with TCP, UDP, HTTP and responds with basic information about its environment and echo
+	// EchoImage works with TCP, UDP, HTTP, TLS and responds with basic information about its environment and echo
 	// Sample response:
 	// Welcome, you are connected to node kind-control-plane.
 	// Running on Pod tcp-echo-58ccd6b78d-hn9t8.

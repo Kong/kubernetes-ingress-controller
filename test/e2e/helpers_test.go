@@ -141,15 +141,29 @@ func getEnvironmentBuilder(ctx context.Context, t *testing.T) (*environments.Bui
 	}
 }
 
+// Since the main purpose of KIC is to set up Kong Gateway to properly route traffic to
+// backends, ensure that discovering IP addresses of Pods works as expected, even in case
+// of having multiple EndpointSlices per Service (by default it allows up to 100 endpoints
+// per EndpointSlice, hence the below config decreases limit significantly).
+const kindConfig = `
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+kubeadmConfigPatches:
+- |
+  apiVersion: kubeadm.k8s.io/v1beta3
+  kind: ClusterConfiguration
+  controllerManager:
+    extraArgs:
+      max-endpoints-per-slice: "2"
+`
+
 func createKINDBuilder(t *testing.T) *environments.Builder {
-	builder := environments.NewBuilder()
-	clusterBuilder := kind.NewBuilder()
+	clusterBuilder := kind.NewBuilder().WithConfigReader(strings.NewReader(kindConfig))
 	if clusterVersionStr != "" {
 		clusterVersion := semver.MustParse(strings.TrimPrefix(clusterVersionStr, "v"))
 		clusterBuilder = clusterBuilder.WithClusterVersion(clusterVersion)
 	}
-	builder = builder.WithClusterBuilder(clusterBuilder)
-	builder = builder.WithAddons(metallb.New())
+	builder := environments.NewBuilder().WithClusterBuilder(clusterBuilder).WithAddons(metallb.New())
 	if shouldLoadImages() {
 		builder = builder.WithAddons(buildImageLoadAddon(t, controllerImageOverride, kongImageOverride))
 	}

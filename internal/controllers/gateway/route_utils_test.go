@@ -223,7 +223,7 @@ func TestFilterHostnames(t *testing.T) {
 	}
 }
 
-func Test_getSupportedGatewayForRoute(t *testing.T) {
+func TestGetSupportedGatewayForRoute(t *testing.T) {
 	gatewayClass := &GatewayClass{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "test-gatewayclass",
@@ -1205,7 +1205,7 @@ func Test_getSupportedGatewayForRoute(t *testing.T) {
 	})
 }
 
-func Test_ensureParentsProgrammedCondition(t *testing.T) {
+func TestEnsureParentsProgrammedCondition(t *testing.T) {
 	createGateway := func(nn k8stypes.NamespacedName) *Gateway {
 		return &Gateway{
 			TypeMeta: metav1.TypeMeta{
@@ -1835,4 +1835,428 @@ func Test_ensureParentsProgrammedCondition(t *testing.T) {
 			})
 		}
 	})
+}
+
+func TestIsRouteAcceptedByListener(t *testing.T) {
+	testCases := []struct {
+		name          string
+		gateway       gatewayv1beta1.Gateway
+		httpRoute     *gatewayv1beta1.HTTPRoute
+		expectedValue bool
+	}{
+		{
+			name: "accepted, allowedRoutes from the same namespace",
+			httpRoute: &gatewayv1beta1.HTTPRoute{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "route",
+					Namespace: "default",
+				},
+				Spec: gatewayv1beta1.HTTPRouteSpec{
+					CommonRouteSpec: gatewayv1beta1.CommonRouteSpec{
+						ParentRefs: []gatewayv1beta1.ParentReference{
+							{
+								Name:        "gateway",
+								SectionName: lo.ToPtr(gatewayv1beta1.SectionName("listener-1")),
+							},
+						},
+					},
+				},
+			},
+			gateway: gatewayv1beta1.Gateway{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "gateway",
+					Namespace: "default",
+				},
+				Spec: gatewayv1beta1.GatewaySpec{
+					Listeners: []gatewayv1alpha2.Listener{
+						{
+							Name:          "listener-1",
+							AllowedRoutes: builder.NewAllowedRoutesFromSameNamespaces(),
+							Protocol:      gatewayv1beta1.HTTPProtocolType,
+						},
+					},
+				},
+				Status: gatewayv1beta1.GatewayStatus{
+					Listeners: []gatewayv1beta1.ListenerStatus{
+						{
+							Name: gatewayv1beta1.SectionName("listener-1"),
+							SupportedKinds: []gatewayv1beta1.RouteGroupKind{
+								{
+									Group: lo.ToPtr(gatewayv1beta1.Group("gateway.networking.k8s.io")),
+									Kind:  "HTTPRoute",
+								},
+							},
+							Conditions: []metav1.Condition{
+								{
+									Type:   string(gatewayv1beta1.ListenerConditionReady),
+									Status: metav1.ConditionTrue,
+								},
+							},
+						},
+					},
+				},
+			},
+			expectedValue: true,
+		},
+		{
+			name: "accepted, allowedRoutes from selected namespace",
+			httpRoute: &gatewayv1beta1.HTTPRoute{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "route",
+					Namespace: "other-namespace",
+				},
+				Spec: gatewayv1beta1.HTTPRouteSpec{
+					CommonRouteSpec: gatewayv1beta1.CommonRouteSpec{
+						ParentRefs: []gatewayv1beta1.ParentReference{
+							{
+								Name:        "gateway",
+								SectionName: lo.ToPtr(gatewayv1beta1.SectionName("listener-1")),
+							},
+						},
+					},
+				},
+			},
+			gateway: gatewayv1beta1.Gateway{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "gateway",
+					Namespace: "default",
+				},
+				Spec: gatewayv1beta1.GatewaySpec{
+					Listeners: []gatewayv1alpha2.Listener{
+						{
+							Name: "listener-1",
+							AllowedRoutes: builder.NewAllowedRoutesFromSelectorNamespace(&metav1.LabelSelector{
+								MatchLabels: map[string]string{
+									"konghq.com/allowed-namespace": "true",
+								},
+							}),
+							Protocol: gatewayv1beta1.HTTPProtocolType,
+						},
+					},
+				},
+				Status: gatewayv1beta1.GatewayStatus{
+					Listeners: []gatewayv1beta1.ListenerStatus{
+						{
+							Name: gatewayv1beta1.SectionName("listener-1"),
+							SupportedKinds: []gatewayv1beta1.RouteGroupKind{
+								{
+									Group: lo.ToPtr(gatewayv1beta1.Group("gateway.networking.k8s.io")),
+									Kind:  "HTTPRoute",
+								},
+							},
+							Conditions: []metav1.Condition{
+								{
+									Type:   string(gatewayv1beta1.ListenerConditionReady),
+									Status: metav1.ConditionTrue,
+								},
+							},
+						},
+					},
+				},
+			},
+			expectedValue: true,
+		},
+		{
+			name: "not accepted, listener not ready",
+			httpRoute: &gatewayv1beta1.HTTPRoute{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "route",
+					Namespace: "default",
+				},
+				Spec: gatewayv1beta1.HTTPRouteSpec{
+					CommonRouteSpec: gatewayv1beta1.CommonRouteSpec{
+						ParentRefs: []gatewayv1beta1.ParentReference{
+							{
+								Name:        "gateway",
+								SectionName: lo.ToPtr(gatewayv1beta1.SectionName("listener-1")),
+							},
+						},
+					},
+				},
+			},
+			gateway: gatewayv1beta1.Gateway{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "gateway",
+					Namespace: "default",
+				},
+				Spec: gatewayv1beta1.GatewaySpec{
+					Listeners: []gatewayv1alpha2.Listener{
+						{
+							Name:          "listener-1",
+							AllowedRoutes: builder.NewAllowedRoutesFromSameNamespaces(),
+							Protocol:      gatewayv1beta1.HTTPProtocolType,
+						},
+					},
+				},
+				Status: gatewayv1beta1.GatewayStatus{
+					Listeners: []gatewayv1beta1.ListenerStatus{
+						{
+							Name: gatewayv1beta1.SectionName("listener-1"),
+							SupportedKinds: []gatewayv1beta1.RouteGroupKind{
+								{
+									Group: lo.ToPtr(gatewayv1beta1.Group("gateway.networking.k8s.io")),
+									Kind:  "HTTPRoute",
+								},
+							},
+							Conditions: []metav1.Condition{
+								{
+									Type:   string(gatewayv1beta1.ListenerConditionReady),
+									Status: metav1.ConditionFalse,
+								},
+							},
+						},
+					},
+				},
+			},
+			expectedValue: false,
+		},
+		{
+			name: "not accepted, wrong sectionName",
+			httpRoute: &gatewayv1beta1.HTTPRoute{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "route",
+					Namespace: "default",
+				},
+				Spec: gatewayv1beta1.HTTPRouteSpec{
+					CommonRouteSpec: gatewayv1beta1.CommonRouteSpec{
+						ParentRefs: []gatewayv1beta1.ParentReference{
+							{
+								Name:        "gateway",
+								SectionName: lo.ToPtr(gatewayv1beta1.SectionName("wrong-listener")),
+							},
+						},
+					},
+				},
+			},
+			gateway: gatewayv1beta1.Gateway{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "gateway",
+					Namespace: "default",
+				},
+				Spec: gatewayv1beta1.GatewaySpec{
+					Listeners: []gatewayv1alpha2.Listener{
+						{
+							Name:          "listener-1",
+							AllowedRoutes: builder.NewAllowedRoutesFromSameNamespaces(),
+							Protocol:      gatewayv1beta1.HTTPProtocolType,
+						},
+					},
+				},
+				Status: gatewayv1beta1.GatewayStatus{
+					Listeners: []gatewayv1beta1.ListenerStatus{
+						{
+							Name: gatewayv1beta1.SectionName("listener-1"),
+							SupportedKinds: []gatewayv1beta1.RouteGroupKind{
+								{
+									Group: lo.ToPtr(gatewayv1beta1.Group("gateway.networking.k8s.io")),
+									Kind:  "HTTPRoute",
+								},
+							},
+							Conditions: []metav1.Condition{
+								{
+									Type:   string(gatewayv1beta1.ListenerConditionReady),
+									Status: metav1.ConditionTrue,
+								},
+							},
+						},
+					},
+				},
+			},
+			expectedValue: false,
+		},
+		{
+			name: "not accepted, wrong port",
+			httpRoute: &gatewayv1beta1.HTTPRoute{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "route",
+					Namespace: "default",
+				},
+				Spec: gatewayv1beta1.HTTPRouteSpec{
+					CommonRouteSpec: gatewayv1beta1.CommonRouteSpec{
+						ParentRefs: []gatewayv1beta1.ParentReference{
+							{
+								Name:        "gateway",
+								SectionName: lo.ToPtr(gatewayv1beta1.SectionName("listener-1")),
+								Port:        lo.ToPtr(gatewayv1beta1.PortNumber(8080)),
+							},
+						},
+					},
+				},
+			},
+			gateway: gatewayv1beta1.Gateway{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "gateway",
+					Namespace: "default",
+				},
+				Spec: gatewayv1beta1.GatewaySpec{
+					Listeners: []gatewayv1alpha2.Listener{
+						{
+							Name:          "listener-1",
+							AllowedRoutes: builder.NewAllowedRoutesFromSameNamespaces(),
+							Protocol:      gatewayv1beta1.HTTPProtocolType,
+							Port:          9090,
+						},
+					},
+				},
+				Status: gatewayv1beta1.GatewayStatus{
+					Listeners: []gatewayv1beta1.ListenerStatus{
+						{
+							Name: gatewayv1beta1.SectionName("listener-1"),
+							SupportedKinds: []gatewayv1beta1.RouteGroupKind{
+								{
+									Group: lo.ToPtr(gatewayv1beta1.Group("gateway.networking.k8s.io")),
+									Kind:  "HTTPRoute",
+								},
+							},
+							Conditions: []metav1.Condition{
+								{
+									Type:   string(gatewayv1beta1.ListenerConditionReady),
+									Status: metav1.ConditionTrue,
+								},
+							},
+						},
+					},
+				},
+			},
+			expectedValue: false,
+		},
+		{
+			name: "not accepted, wrong protocol",
+			httpRoute: &gatewayv1beta1.HTTPRoute{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "route",
+					Namespace: "default",
+				},
+				Spec: gatewayv1beta1.HTTPRouteSpec{
+					CommonRouteSpec: gatewayv1beta1.CommonRouteSpec{
+						ParentRefs: []gatewayv1beta1.ParentReference{
+							{
+								Name:        "gateway",
+								SectionName: lo.ToPtr(gatewayv1beta1.SectionName("listener-1")),
+							},
+						},
+					},
+				},
+			},
+			gateway: gatewayv1beta1.Gateway{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "gateway",
+					Namespace: "default",
+				},
+				Spec: gatewayv1beta1.GatewaySpec{
+					Listeners: []gatewayv1alpha2.Listener{
+						{
+							Name:          "listener-1",
+							AllowedRoutes: builder.NewAllowedRoutesFromSameNamespaces(),
+							Protocol:      gatewayv1beta1.UDPProtocolType,
+						},
+					},
+				},
+				Status: gatewayv1beta1.GatewayStatus{
+					Listeners: []gatewayv1beta1.ListenerStatus{
+						{
+							Name: gatewayv1beta1.SectionName("listener-1"),
+							SupportedKinds: []gatewayv1beta1.RouteGroupKind{
+								{
+									Group: lo.ToPtr(gatewayv1beta1.Group("gateway.networking.k8s.io")),
+									Kind:  "HTTPRoute",
+								},
+							},
+							Conditions: []metav1.Condition{
+								{
+									Type:   string(gatewayv1beta1.ListenerConditionReady),
+									Status: metav1.ConditionTrue,
+								},
+							},
+						},
+					},
+				},
+			},
+			expectedValue: false,
+		},
+		{
+			name: "not accepted, wrong hostnames",
+			httpRoute: &gatewayv1beta1.HTTPRoute{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "route",
+					Namespace: "default",
+				},
+				Spec: gatewayv1beta1.HTTPRouteSpec{
+					CommonRouteSpec: gatewayv1beta1.CommonRouteSpec{
+						ParentRefs: []gatewayv1beta1.ParentReference{
+							{
+								Name:        "gateway",
+								SectionName: lo.ToPtr(gatewayv1beta1.SectionName("listener-1")),
+							},
+						},
+					},
+					Hostnames: []gatewayv1beta1.Hostname{
+						"wrong.hostname.com",
+					},
+				},
+			},
+			gateway: gatewayv1beta1.Gateway{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "gateway",
+					Namespace: "default",
+				},
+				Spec: gatewayv1beta1.GatewaySpec{
+					Listeners: []gatewayv1alpha2.Listener{
+						{
+							Name:          "listener-1",
+							AllowedRoutes: builder.NewAllowedRoutesFromSameNamespaces(),
+							Protocol:      gatewayv1beta1.HTTPProtocolType,
+							Hostname:      lo.ToPtr(gatewayv1beta1.Hostname("foo.bar.com")),
+						},
+					},
+				},
+				Status: gatewayv1beta1.GatewayStatus{
+					Listeners: []gatewayv1beta1.ListenerStatus{
+						{
+							Name: gatewayv1beta1.SectionName("listener-1"),
+							SupportedKinds: []gatewayv1beta1.RouteGroupKind{
+								{
+									Group: lo.ToPtr(gatewayv1beta1.Group("gateway.networking.k8s.io")),
+									Kind:  "HTTPRoute",
+								},
+							},
+							Conditions: []metav1.Condition{
+								{
+									Type:   string(gatewayv1beta1.ListenerConditionReady),
+									Status: metav1.ConditionTrue,
+								},
+							},
+						},
+					},
+				},
+			},
+			expectedValue: false,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+
+			var (
+				ctx       = context.Background()
+				namespace = &corev1.Namespace{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "other-namespace",
+						Labels: map[string]string{
+							"konghq.com/allowed-namespace": "true",
+						},
+					},
+				}
+				fakeClient = fakeclient.
+						NewClientBuilder().
+						WithScheme(scheme.Scheme).
+						WithObjects(namespace).
+						Build()
+			)
+
+			ok, err := isRouteAcceptedByListener(ctx, fakeClient, tc.httpRoute, tc.gateway, 0, tc.httpRoute.Spec.ParentRefs[0])
+			assert.NoError(t, err)
+			assert.Equal(t, tc.expectedValue, ok)
+		})
+	}
 }

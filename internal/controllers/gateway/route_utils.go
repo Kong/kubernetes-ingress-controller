@@ -901,11 +901,12 @@ func isParentRefEqualToParent[
 func isRouteAcceptedByListener[T types.RouteT](ctx context.Context,
 	mgrc client.Client,
 	route T,
-	listener gatewayv1beta1.Listener,
 	gateway gatewayv1beta1.Gateway,
+	listenerIndex int,
 	parentRef gatewayv1beta1.ParentReference,
 ) (bool, error) {
 	// Check if the route matches listener's AllowedRoutes.
+	listener := gateway.Spec.Listeners[listenerIndex]
 	if ok, err := routeMatchesListenerAllowedRoutes(ctx, mgrc, route, listener, gateway.Namespace, parentRef.Namespace); err != nil {
 		return false, fmt.Errorf("failed matching listener %s to a route %s for gateway %s: %w",
 			listener.Name, route.GetName(), gateway.Name, err,

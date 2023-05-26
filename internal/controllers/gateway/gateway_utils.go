@@ -243,7 +243,7 @@ func getListenerStatus(
 
 	// TODO we should check transition time rather than always nowing, which we do throughout the below
 	// https://github.com/Kong/kubernetes-ingress-controller/issues/2556
-	for _, listener := range gateway.Spec.Listeners {
+	for listenerIndex, listener := range gateway.Spec.Listeners {
 		var hostname Hostname
 		if listener.Hostname != nil {
 			hostname = *listener.Hostname
@@ -292,7 +292,7 @@ func getListenerStatus(
 			}
 		}
 
-		attachedRoutes, err := getAttachedRoutesForListener(ctx, client, listener, *gateway)
+		attachedRoutes, err := getAttachedRoutesForListener(ctx, client, *gateway, listenerIndex)
 		if err != nil {
 			return nil, err
 		}
@@ -698,7 +698,7 @@ func routeAcceptedByGateways(routeNamespace string, parentStatuses []RouteParent
 //
 // NOTE: At this point we take into account HTTPRoutes only, as they are the
 // only routes in beta.
-func getAttachedRoutesForListener(ctx context.Context, client client.Client, listener gatewayv1beta1.Listener, gateway gatewayv1beta1.Gateway) (int32, error) {
+func getAttachedRoutesForListener(ctx context.Context, client client.Client, gateway gatewayv1beta1.Gateway, listenerIndex int) (int32, error) {
 	httpRouteList := gatewayv1beta1.HTTPRouteList{}
 	if err := client.List(ctx, &httpRouteList); err != nil {
 		return 0, err
@@ -722,8 +722,8 @@ func getAttachedRoutesForListener(ctx context.Context, client client.Client, lis
 				ctx,
 				client,
 				&route,
-				listener,
 				gateway,
+				listenerIndex,
 				parentRef,
 			)
 			if err != nil {

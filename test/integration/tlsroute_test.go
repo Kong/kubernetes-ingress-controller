@@ -96,7 +96,7 @@ CvptdmuXmsmGJ69ZIsvUL5tIwrmwg6INN+d+K6zKoyhU4pjEpP+FOAM=
 }
 
 const (
-	tlsEchoPort = 1026
+	tlsEchoPort = 1030
 )
 
 func TestTLSRouteEssentials(t *testing.T) {
@@ -761,19 +761,9 @@ func TestTLSRoutePassthrough(t *testing.T) {
 	require.NoError(t, err)
 	cleaner.Add(gateway)
 
-	t.Log("creating a tcpecho pod to test TLSRoute traffic routing")
-	container := generators.NewContainer("tcpecho", test.EchoImage, tlsEchoPort)
-	// go-echo sends a "Running on Pod <UUID>." immediately on connecting
-	testUUID := uuid.NewString()
-	container.Env = []corev1.EnvVar{
-		{
-			Name:  "POD_NAME",
-			Value: testUUID,
-		},
-	}
-	configureTLSForEchoContainer(&container)
-
-	deployment := generators.NewDeploymentForContainer(container)
+	t.Log("creating a tcpecho deployment to test TLSRoute traffic routing")
+	testUUID := uuid.NewString() // go-echo sends a "Running on Pod <UUID>." immediately on connecting
+	deployment := generators.NewDeploymentForContainer(createTLSEchoContainer(tlsEchoPort, testUUID))
 	deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, corev1.Volume{
 		Name: tlsSecretName,
 		VolumeSource: corev1.VolumeSource{
@@ -793,7 +783,7 @@ func TestTLSRoutePassthrough(t *testing.T) {
 	cleaner.Add(service)
 
 	backendTLSPort := gatewayv1alpha2.PortNumber(tlsEchoPort)
-	t.Logf("create a TLSRoute using passthrough listner")
+	t.Logf("create a TLSRoute using passthrough listener")
 	sectionName := gatewayv1alpha2.SectionName("tls-passthrough")
 	tlsroute := &gatewayv1alpha2.TLSRoute{
 		ObjectMeta: metav1.ObjectMeta{
@@ -911,26 +901,31 @@ func tlsEchoResponds(
 	return true, nil
 }
 
-func configureTLSForEchoContainer(container *corev1.Container) {
-	tlsCertDir := "/var/run/certs"
+func createTLSEchoContainer(tlsEchoPort int32, sendMsg string) corev1.Container {
+	container := generators.NewContainer("tcpecho", test.EchoImage, tlsEchoPort)
+	const tlsCertDir = "/var/run/certs"
+	container.Env = append(container.Env,
+		corev1.EnvVar{
+			Name:  "POD_NAME",
+			Value: sendMsg,
+		},
+		corev1.EnvVar{
+			Name:  "TLS_PORT",
+			Value: fmt.Sprint(tlsEchoPort),
+		},
+		corev1.EnvVar{
+			Name:  "TLS_CERT_FILE",
+			Value: tlsCertDir + "/tls.crt",
+		},
+		corev1.EnvVar{
+			Name:  "TLS_KEY_FILE",
+			Value: tlsCertDir + "/tls.key",
+		},
+	)
 	container.VolumeMounts = append(container.VolumeMounts, corev1.VolumeMount{
 		Name:      tlsSecretName,
 		ReadOnly:  true,
 		MountPath: tlsCertDir,
 	})
-	tlsEnvs := []corev1.EnvVar{
-		{
-			Name:  "TLS_PORT",
-			Value: fmt.Sprint(tlsEchoPort),
-		},
-		{
-			Name:  "TLS_CERT_FILE",
-			Value: tlsCertDir + "/tls.crt",
-		},
-		{
-			Name:  "TLS_KEY_FILE",
-			Value: tlsCertDir + "/tls.key",
-		},
-	}
-	container.Env = append(container.Env, tlsEnvs...)
+	return container
 }

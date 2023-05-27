@@ -67,6 +67,7 @@ type Config struct {
 	GatewayDiscoveryDNSStrategy cfgtypes.DNSStrategy
 	KondAdminSvcPortNames       []string
 	ProxySyncSeconds            float32
+	InitCacheSyncDuration       time.Duration
 	ProxyTimeoutSeconds         float32
 
 	// Kubernetes configurations
@@ -174,11 +175,9 @@ func (c *Config) FlagSet() *pflag.FlagSet {
 	flagSet.StringVar(&c.MetricsAddr, "metrics-bind-address", fmt.Sprintf(":%v", MetricsPort), "The address the metric endpoint binds to.")
 	flagSet.StringVar(&c.ProbeAddr, "health-probe-bind-address", fmt.Sprintf(":%v", HealthzPort), "The address the probe endpoint binds to.")
 	flagSet.Float32Var(&c.ProxySyncSeconds, "proxy-sync-seconds", dataplane.DefaultSyncSeconds,
-		"Define the rate (in seconds) in which configuration updates will be applied to the Kong Admin API.",
-	)
+		"Define the rate (in seconds) in which configuration updates will be applied to the Kong Admin API.")
 	flagSet.Float32Var(&c.ProxyTimeoutSeconds, "proxy-timeout-seconds", dataplane.DefaultTimeoutSeconds,
-		"Sets the timeout (in seconds) for all requests to Kong's Admin API.",
-	)
+		"Sets the timeout (in seconds) for all requests to Kong's Admin API.")
 
 	// Kubernetes configurations
 	flagSet.Var(flags.NewValidatedValue(&c.GatewayAPIControllerName, gatewayAPIControllerNameFromFlagValue, flags.WithDefault(string(gateway.GetControllerName()))), "gateway-api-controller-name", "The controller name to match on Gateway API resources.")

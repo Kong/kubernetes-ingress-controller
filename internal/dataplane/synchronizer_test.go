@@ -26,7 +26,7 @@ func TestSynchronizer(t *testing.T) {
 	defer cancel()
 
 	t.Log("initializing the dataplane synchronizer")
-	sync, err := NewSynchronizer(logrus.New(), c, WithStagger(tick), WithInitWaitPeriod(tick))
+	sync, err := NewSynchronizer(logrus.New(), c, WithStagger(tick), WithInitCacheSyncDuration(tick))
 	require.NoError(t, err)
 	assert.NotNil(t, sync)
 

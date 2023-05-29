@@ -24,7 +24,7 @@ func TestKongRouterFlavorCompatibility(t *testing.T) {
 	cluster := env.Cluster()
 
 	t.Log("deploying kong components with traditional Kong router")
-	manifest := getTestManifest(t, dblessPath)
+	manifest := getDBLessTestManifestByControllerImageEnv(t)
 	deployKong(ctx, t, env, manifest)
 	proxyDeploymentNN := getManifestDeployments(dblessPath).ProxyNN
 	ensureGatewayDeployedWithRouterFlavor(ctx, t, env, proxyDeploymentNN, "traditional")

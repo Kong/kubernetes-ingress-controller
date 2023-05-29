@@ -171,7 +171,7 @@ func TestWebhookUpdate(t *testing.T) {
 	}()
 
 	t.Log("deploying kong components")
-	manifest := getTestManifest(t, dblessPath)
+	manifest := getDBLessTestManifestByControllerImageEnv(t)
 	deployKong(ctx, t, env, manifest)
 
 	firstCertificate := &corev1.Secret{
@@ -288,7 +288,7 @@ func TestDeployAllInOneDBLESSGateway(t *testing.T) {
 	ctx, env := setupE2ETest(t)
 
 	t.Log("deploying kong components")
-	manifest := getTestManifest(t, dblessPath)
+	manifest := getDBLessTestManifestByControllerImageEnv(t)
 	deployKong(ctx, t, env, manifest)
 	deployments := getManifestDeployments(dblessPath)
 	controllerDeploymentNN := deployments.ControllerNN
@@ -440,7 +440,7 @@ func TestDeployAllInOneDBLESSNoLoadBalancer(t *testing.T) {
 	ctx, env := setupE2ETest(t)
 
 	t.Log("deploying kong components")
-	manifest := getTestManifest(t, dblessPath)
+	manifest := getDBLessTestManifestByControllerImageEnv(t)
 	deployKong(ctx, t, env, manifest)
 
 	t.Log("running ingress tests to verify all-in-one deployed ingress controller and proxy are functional")
@@ -487,7 +487,7 @@ func TestDefaultIngressClass(t *testing.T) {
 	ctx, env := setupE2ETest(t)
 
 	t.Log("deploying kong components")
-	manifest := getTestManifest(t, dblessPath)
+	manifest := getDBLessTestManifestByControllerImageEnv(t)
 	deployKong(ctx, t, env, manifest)
 	kongDeployment := getManifestDeployments(dblessPath).ControllerNN
 
@@ -594,7 +594,7 @@ func TestMissingCRDsDontCrashTheController(t *testing.T) {
 	ctx, env := setupE2ETest(t)
 
 	t.Log("deploying kong components")
-	manifest := getTestManifest(t, dblessPath)
+	manifest := getDBLessTestManifestByControllerImageEnv(t)
 
 	manifest = stripCRDs(t, manifest)
 

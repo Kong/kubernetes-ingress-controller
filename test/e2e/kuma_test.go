@@ -19,7 +19,7 @@ func TestDeployAllInOneDBLESSKuma(t *testing.T) {
 	ctx, env := setupE2ETest(t, kuma.New())
 
 	t.Log("deploying kong components")
-	manifest := getTestManifest(t, dblessPath)
+	manifest := getDBLessTestManifestByControllerImageEnv(t)
 	deployKong(ctx, t, env, manifest)
 	deployments := getManifestDeployments(dblessPath)
 

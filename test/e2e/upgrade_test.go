@@ -3,10 +3,14 @@
 package e2e
 
 import (
+	"context"
 	"fmt"
 	"testing"
 
+	"github.com/kong/kubernetes-testing-framework/pkg/environments"
+	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/helpers"
 )
@@ -25,16 +29,33 @@ const (
 func TestDeployAndUpgradeAllInOneDBLESS(t *testing.T) {
 	fromManifestURL := fmt.Sprintf(dblessURLTemplate, upgradeTestFromTag)
 	toManifestPath := dblessPath
-	testManifestsUpgrade(t, fromManifestURL, toManifestPath)
+	testManifestsUpgrade(t, fromManifestURL, toManifestPath, nil)
 }
 
 func TestDeployAndUpgradeAllInOnePostgres(t *testing.T) {
 	fromManifestURL := fmt.Sprintf(postgresURLTemplate, upgradeTestFromTag)
 	toManifestPath := postgresPath
-	testManifestsUpgrade(t, fromManifestURL, toManifestPath)
+
+	// Injecting a beforeUpgradeHook to delete the old migrations job before the upgrade. This is necessary because it's
+	// not allowed to modify the existing job's spec.
+	beforeUpgradeHook := func(ctx context.Context, t *testing.T, env environments.Environment) {
+		err := env.Cluster().Client().BatchV1().Jobs(namespace).Delete(ctx, migrationsJobName, metav1.DeleteOptions{
+			PropagationPolicy: lo.ToPtr(metav1.DeletePropagationBackground),
+		})
+		require.NoError(t, err, "failed to delete old migrations job before upgrade")
+	}
+	testManifestsUpgrade(t, fromManifestURL, toManifestPath, beforeUpgradeHook)
 }
 
-func testManifestsUpgrade(t *testing.T, fromManifestURL string, toManifestPath string) {
+// beforeUpgradeFn is a function that is run before the upgrade to clean up any resources that may interfere with the upgrade.
+type beforeUpgradeFn func(ctx context.Context, t *testing.T, env environments.Environment)
+
+func testManifestsUpgrade(
+	t *testing.T,
+	fromManifestURL string,
+	toManifestPath string,
+	beforeUpgradeHook beforeUpgradeFn,
+) {
 	t.Parallel()
 
 	httpClient := helpers.RetryableHTTPClient(helpers.DefaultHTTPClient())
@@ -51,6 +72,11 @@ func testManifestsUpgrade(t *testing.T, fromManifestURL string, toManifestPath s
 	t.Log("running ingress tests to verify all-in-one deployed ingress controller and proxy are functional")
 	deployIngress(ctx, t, env)
 	verifyIngress(ctx, t, env)
+
+	if beforeUpgradeHook != nil {
+		t.Log("running before upgrade hook")
+		beforeUpgradeHook(ctx, t, env)
+	}
 
 	t.Logf("deploying target version of kong manifests: %s", toManifestPath)
 	manifest := getTestManifest(t, toManifestPath)

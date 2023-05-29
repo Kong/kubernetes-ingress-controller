@@ -12,7 +12,9 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/clientcmd"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/test/consts"
@@ -30,18 +32,17 @@ func Setup(t *testing.T, scheme *runtime.Scheme) *rest.Config {
 		ControlPlaneStopTimeout: time.Second * 60,
 	}
 
-	t.Logf("starting envtest environment...")
+	t.Logf("starting envtest environment for test %s...", t.Name())
 	cfg, err := testEnv.Start()
 	require.NoError(t, err)
 
-	t.Logf("waiting for Gateway API CRDs to be available...")
 	gatewayCRDPath := filepath.Join(build.Default.GOPATH, "pkg", "mod", "sigs.k8s.io", "gateway-api@"+consts.GatewayAPIVersion, "config", "crd", "experimental")
 	_, err = envtest.InstallCRDs(cfg, envtest.CRDInstallOptions{
 		Scheme:             scheme,
 		Paths:              []string{gatewayCRDPath},
 		ErrorIfPathMissing: true,
 	})
-	require.NoError(t, err)
+	require.NoError(t, err, "failed installing Gateway API CRDs")
 
 	wg := sync.WaitGroup{}
 	wg.Add(1)
@@ -58,7 +59,22 @@ func Setup(t *testing.T, scheme *runtime.Scheme) *rest.Config {
 		}
 	}()
 
+	config, err := clientcmd.BuildConfigFromFlags(cfg.Host, "")
+	require.NoError(t, err)
+	config.CertData = cfg.CertData
+	config.CAData = cfg.CAData
+	config.KeyData = cfg.KeyData
+
+	discoveryClient, err := discovery.NewDiscoveryClientForConfig(config)
+	require.NoError(t, err)
+
+	i, err := discoveryClient.ServerVersion()
+	require.NoError(t, err)
+
+	t.Logf("envtest environment (%s) started at %s", i, cfg.Host)
+
 	t.Cleanup(func() {
+		t.Helper()
 		t.Logf("stopping envtest environment for test %s", t.Name())
 		close(done)
 		wg.Wait()

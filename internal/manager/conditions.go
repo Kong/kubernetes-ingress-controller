@@ -14,7 +14,7 @@ import (
 type IngressAPI int
 
 const (
-	OtherAPI IngressAPI = iota
+	NoIngressAPI IngressAPI = iota
 	NetworkingV1
 )
 
@@ -45,7 +45,7 @@ func (s *IngressControllerConditions) IngressClassNetV1Enabled() bool {
 	return s.chosenVersion == NetworkingV1 && s.cfg.IngressClassNetV1Enabled
 }
 
-func negotiateIngressAPI(config *Config, mapper meta.RESTMapper) (IngressAPI, error) {
+func negotiateIngressAPI(config *Config, mapper meta.RESTMapper) (IngressAPI, error) { //nolint:unparam
 	var allowedAPIs []IngressAPI
 	candidateAPIs := map[IngressAPI]schema.GroupVersionResource{
 		NetworkingV1: {
@@ -65,7 +65,7 @@ func negotiateIngressAPI(config *Config, mapper meta.RESTMapper) (IngressAPI, er
 			return candidate, nil
 		}
 	}
-	return OtherAPI, fmt.Errorf("no suitable Ingress API found")
+	return NoIngressAPI, nil
 }
 
 func ShouldEnableCRDController(gvr schema.GroupVersionResource, restMapper meta.RESTMapper) bool {

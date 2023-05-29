@@ -4,6 +4,7 @@ package rootcmd
 import (
 	"encoding/json"
 	"fmt"
+	"os"
 
 	"github.com/spf13/cobra"
 
@@ -26,7 +27,7 @@ func GetRootCmd(cfg *manager.Config) *cobra.Command {
 	cmd := &cobra.Command{
 		PersistentPreRunE: bindEnvVars,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return Run(cmd.Context(), cfg)
+			return Run(cmd.Context(), cfg, os.Stderr)
 		},
 		SilenceUsage: true,
 		// We can silence the errors because cobra.CheckErr below will print

@@ -46,7 +46,7 @@ func TestIngressControllerConditions(t *testing.T) {
 			name:              "no_crds_installed",
 			ingressNetV1:      ingressTestOpts{enabled: true},
 			ingressClassNetV1: ingressTestOpts{enabled: true},
-			expectError:       true,
+			expectError:       false,
 		},
 	}
 

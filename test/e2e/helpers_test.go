@@ -333,14 +333,26 @@ func getProxyDeploymentName(manifestPath string) string {
 	return singlePodDeploymentName
 }
 
-func deployIngress(ctx context.Context, t *testing.T, env environments.Environment) {
+// For Kind clusters that have option --max-endpoints-per-slice=2, 3 gives
+// one fully filled EndpointSlice and one filled in half.
+const numberOfEchoBackends = 3
+
+//nolint:unparam
+func deployIngressWithEchoBackends(ctx context.Context, t *testing.T, env environments.Environment, noReplicas int) {
 	t.Helper()
 
 	c, err := clientset.NewForConfig(env.Cluster().Config())
 	assert.NoError(t, err)
 	t.Log("deploying an HTTP service to test the ingress controller and proxy")
-	container := generators.NewContainer("httpbin", test.HTTPBinImage, test.HTTPBinPort)
+	container := generators.NewContainer("echo", test.EchoImage, test.EchoHTTPPort)
+	container.Env = append(container.Env, corev1.EnvVar{
+		Name: "POD_IP",
+		ValueFrom: &corev1.EnvVarSource{
+			FieldRef: &corev1.ObjectFieldSelector{FieldPath: "status.podIP"},
+		},
+	})
 	deployment := generators.NewDeploymentForContainer(container)
+	deployment.Spec.Replicas = lo.ToPtr(int32(noReplicas))
 	deployment, err = env.Cluster().Client().AppsV1().Deployments(corev1.NamespaceDefault).Create(ctx, deployment, metav1.CreateOptions{})
 	require.NoError(t, err)
 
@@ -359,13 +371,13 @@ func deployIngress(ctx context.Context, t *testing.T, env environments.Environme
 			},
 		},
 		Route: &kongv1.KongIngressRoute{
-			Methods: []*string{lo.ToPtr("GET")},
+			Methods: []*string{lo.ToPtr(http.MethodGet)},
 		},
 	}
 	_, err = c.ConfigurationV1().KongIngresses(corev1.NamespaceDefault).Create(ctx, king, metav1.CreateOptions{})
 	require.NoError(t, err)
 	t.Logf("creating an ingress for service %s with ingress.class %s", service.Name, ingressClass)
-	ingress := generators.NewIngressForService("/httpbin", map[string]string{
+	ingress := generators.NewIngressForService("/echo", map[string]string{
 		annotations.IngressClassKey: ingressClass,
 		"konghq.com/strip-path":     "true",
 		"konghq.com/override":       kongIngressName,
@@ -373,49 +385,64 @@ func deployIngress(ctx context.Context, t *testing.T, env environments.Environme
 	require.NoError(t, clusters.DeployIngress(ctx, env.Cluster(), corev1.NamespaceDefault, ingress))
 }
 
-func verifyIngress(ctx context.Context, t *testing.T, env environments.Environment) {
+//nolint:unparam
+func verifyIngressWithEchoBackends(ctx context.Context, t *testing.T, env environments.Environment, noReplicas int) {
 	t.Helper()
 
-	t.Log("finding the kong proxy service ip")
-	proxyIP := getKongProxyIP(ctx, t, env)
+	t.Log("finding the service URL (through Kong proxy service ip)")
+	echoURL := fmt.Sprintf("http://%s/echo", getKongProxyIP(ctx, t, env))
 
-	t.Logf("waiting for route from Ingress to be operational at http://%s/httpbin", proxyIP)
-	require.Eventually(t, func() bool {
-		resp, err := helpers.DefaultHTTPClient().Get(fmt.Sprintf("http://%s/httpbin", proxyIP))
-		if err != nil {
-			return false
+	t.Logf(
+		"waiting for route from Ingress to be operational at %s and forward traffic to all %d backends",
+		echoURL, numberOfEchoBackends,
+	)
+	uniqueResponses := make(map[string]struct{})
+	require.EventuallyWithT(t, func(c *assert.CollectT) {
+		resp, err := helpers.DefaultHTTPClient().Get(echoURL)
+		if !assert.NoError(c, err) {
+			return
 		}
 		defer resp.Body.Close()
-		if resp.StatusCode == http.StatusOK {
-			b := new(bytes.Buffer)
-			_, err := b.ReadFrom(resp.Body)
-			if err != nil {
-				return false
-			}
-			if !strings.Contains(b.String(), "<title>httpbin.org</title>") {
-				return false
-			}
-		} else {
-			return false
+
+		if !assert.Equal(c, http.StatusOK, resp.StatusCode) {
+			return
 		}
-		// verify the KongIngress method restriction
+		b := new(bytes.Buffer)
+		_, err = b.ReadFrom(resp.Body)
+		if !assert.NoError(c, err) {
+			return
+		}
+		// Every backend responds with its own (different) IP address.
+		if msg := b.String(); strings.Contains(msg, "With IP address") {
+			uniqueResponses[msg] = struct{}{}
+		}
+		assert.Len(c, uniqueResponses, noReplicas)
+	},
+		ingressWait, 10*time.Millisecond,
+	)
+
+	t.Log("verifying the KongIngress method restriction")
+	require.EventuallyWithT(t, func(c *assert.CollectT) {
 		fakeData := url.Values{}
 		fakeData.Set("foo", "bar")
-		resp, err = helpers.DefaultHTTPClient().PostForm(fmt.Sprintf("http://%s/httpbin", proxyIP), fakeData)
-		if err != nil {
-			return false
+		resp, err := helpers.DefaultHTTPClient().PostForm(echoURL, fakeData)
+		if !assert.NoError(c, err) {
+			return
 		}
 		defer resp.Body.Close()
-		return resp.StatusCode == http.StatusNotFound
-	}, ingressWait, 100*time.Millisecond)
+		assert.Equal(c, http.StatusNotFound, resp.StatusCode)
+	},
+		ingressWait, 10*time.Millisecond,
+	)
 }
 
-// requireIngressConfiguredInAdminAPIEventually ensures all expected Kong Admin API resources are created for the Ingress
-// deployed with deployIngress helper function.
-func requireIngressConfiguredInAdminAPIEventually(
+// verifyIngressWithEchoBackendsInAdminAPI ensures all expected Kong Admin API resources
+// are created for the Ingress deployed with deployIngressWithEchoBackends helper function.
+func verifyIngressWithEchoBackendsInAdminAPI(
 	ctx context.Context,
 	t *testing.T,
 	kongClient *gokong.Client,
+	noReplicas int,
 ) {
 	t.Helper()
 
@@ -439,7 +466,7 @@ func requireIngressConfiguredInAdminAPIEventually(
 			t.Log("still no matching service found...")
 			return false
 		}
-		if len(d.Targets) != 1 {
+		if len(d.Targets) != noReplicas {
 			t.Log("still no target found...")
 			return false
 		}

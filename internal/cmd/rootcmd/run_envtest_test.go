@@ -87,7 +87,7 @@ func eventuallHTTPGet(t *testing.T, h *http.Client, url string, waitTime, tickTi
 	assert.EventuallyWithT(t, func(t *assert.CollectT) {
 		resp, err := h.Get(url)
 		if !assert.NoError(t, err) {
-				return 
+			return
 		}
 		defer resp.Body.Close()
 		assert.Equal(t, http.StatusOK, resp.StatusCode)

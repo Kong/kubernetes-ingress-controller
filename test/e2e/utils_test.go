@@ -35,6 +35,9 @@ const (
 	// adminPasswordSecretName is the name of the secret which will house the admin
 	// API admin password.
 	adminPasswordSecretName = "kong-enterprise-superuser-password"
+
+	dblessLegacyPath = "../../deploy/single/all-in-one-dbless-legacy.yaml"
+	dblessPath       = "../../deploy/single/all-in-one-dbless.yaml"
 )
 
 // gatewayDiscoveryMinimalVersion is the minimal version of KIC that enables gateway discovery.

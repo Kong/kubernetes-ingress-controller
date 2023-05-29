@@ -36,11 +36,6 @@ import (
 // ensure that things are up and running.
 // -----------------------------------------------------------------------------
 
-const (
-	dblessLegacyPath = "../../deploy/single/all-in-one-dbless-legacy.yaml"
-	dblessPath       = "../../deploy/single/all-in-one-dbless.yaml"
-)
-
 func TestDeployAllInOneDBLESSLegacy(t *testing.T) {
 	t.Log("configuring all-in-one-dbless-legacy.yaml manifest test")
 	t.Parallel()

@@ -81,6 +81,9 @@ const (
 
 	// proxyContainerName is the name of the proxy container in all manifests variants.
 	proxyContainerName = "proxy"
+
+	// migrationsJobName is the name of the migrations job in postgres manifests variant.
+	migrationsJobName = "kong-migrations"
 )
 
 // setupE2ETest builds a testing environment for the E2E test. It also sets up the environment's teardown and test

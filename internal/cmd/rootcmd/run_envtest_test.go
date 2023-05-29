@@ -23,7 +23,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/test/envtest"
 )
 
-func TestRun(t *testing.T) {
+func TestDebugEndpoints(t *testing.T) {
 	t.Parallel()
 
 	const (

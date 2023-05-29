@@ -178,7 +178,11 @@ func skipTestIfControllerVersionBelow(t *testing.T, minVersion semver.Version) {
 		return
 	}
 	v, err := extractVersionFromImage(controllerImageOverride)
-	require.NoError(t, err)
+	// assume using latest version if failed to extract version from image tag.
+	if err != nil {
+		t.Logf("could not extract version from controller image: %v, assume using the latest version", err)
+		return
+	}
 	if v.LE(minVersion) {
 		t.Skipf("skipped the test because version of KIC %s is below the minimum version %s",
 			v.String(), minVersion.String())
@@ -197,7 +201,11 @@ func getDBLessTestManifestByControllerImageEnv(t *testing.T) io.Reader {
 	}
 
 	v, err := extractVersionFromImage(controllerImageOverride)
-	require.NoError(t, err)
+	// assume using latest version if failed to extract version from image tag.
+	if err != nil {
+		t.Logf("could not extract version from controller image: %v, assume using the latest version", err)
+		return getTestManifest(t, dblessPath)
+	}
 	// If KIC version is lower than the minimum version that enables gateway discovery, use the legacy manifest.
 	if v.LE(gatewayDiscoveryMinimalVersion) {
 		return getTestManifest(t, dblessLegacyPath)

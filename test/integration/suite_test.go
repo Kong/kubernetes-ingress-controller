@@ -13,7 +13,6 @@ import (
 	"github.com/avast/retry-go/v4"
 	"github.com/blang/semver/v4"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
-	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/kong"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/metallb"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/types/gke"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/types/kind"
@@ -118,12 +117,6 @@ func TestMain(m *testing.M) {
 		}
 	}()
 
-	fmt.Printf("INFO: reconfiguring the kong admin service as LoadBalancer type\n")
-	svc, err := env.Cluster().Client().CoreV1().Services(kongAddon.Namespace()).Get(ctx, kong.DefaultAdminServiceName, metav1.GetOptions{})
-	exitOnErr(ctx, err)
-	svc.Spec.Type = corev1.ServiceTypeLoadBalancer
-	_, err = env.Cluster().Client().CoreV1().Services(kongAddon.Namespace()).Update(ctx, svc, metav1.UpdateOptions{})
-	exitOnErr(ctx, err)
 	clusterVersion, err = env.Cluster().Version()
 	exitOnErr(ctx, err)
 

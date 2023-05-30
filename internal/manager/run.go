@@ -177,7 +177,7 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 	}
 
 	setupLog.Info("Initializing Dataplane Synchronizer")
-	synchronizer, err := setupDataplaneSynchronizer(setupLog, deprecatedLogger, mgr, dataplaneClient, c.ProxySyncSeconds)
+	synchronizer, err := setupDataplaneSynchronizer(setupLog, deprecatedLogger, mgr, dataplaneClient, c.ProxySyncSeconds, c.InitCacheSyncDuration)
 	if err != nil {
 		return fmt.Errorf("unable to initialize dataplane synchronizer: %w", err)
 	}

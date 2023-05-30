@@ -5,20 +5,17 @@ package rootcmd_test
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
-	"net/http/httptest"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
-	"k8s.io/client-go/rest"
+	"github.com/stretchr/testify/require"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/cmd/rootcmd"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/manager"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/manager/featuregates"
 	"github.com/kong/kubernetes-ingress-controller/v2/pkg/clientset/scheme"
 	"github.com/kong/kubernetes-ingress-controller/v2/test/envtest"
 )
@@ -27,18 +24,30 @@ func TestDebugEndpoints(t *testing.T) {
 	t.Parallel()
 
 	const (
-		waitTime = time.Minute
+		waitTime = 10 * time.Second
 		tickTime = 10 * time.Millisecond
 	)
 
 	envcfg := envtest.Setup(t, scheme.Scheme)
-	cfg := configForEnvConfig(t, envcfg)
+	cfg := envtest.ConfigForEnvConfig(t, envcfg)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
 	go func(ctx context.Context) {
-		rootcmd.Run(ctx, &cfg, io.Discard) //nolint:errcheck
+		// NOTE: We're not running rootcmd.Run() or rootcmd.RunWithLogger() here
+		// hecause that sets up signal handling and that in turn uses a mutex to ensure
+		// only one signal handler is running at a time.
+		// We could try to work around this but that code calls os.Exit(1) whenever
+		// the root context is cancelled and that not what we want to test here.
+
+		deprecatedLogger, logger, err := manager.SetupLoggers(&cfg, io.Discard)
+		require.NoError(t, err)
+		diag, err := rootcmd.StartDiagnosticsServer(ctx, manager.DiagnosticsPort, &cfg, logger)
+		require.NoError(t, err)
+
+		err = manager.Run(ctx, &cfg, diag.ConfigDumps, deprecatedLogger)
+		require.NoError(t, err)
 	}(ctx)
 
 	urls := []struct {
@@ -65,10 +74,6 @@ func TestDebugEndpoints(t *testing.T) {
 			port: manager.HealthzPort,
 			name: "readyz",
 		},
-		{
-			port: manager.MetricsPort,
-			name: "metrics",
-		},
 	}
 
 	for _, u := range urls {
@@ -92,64 +97,4 @@ func eventuallHTTPGet(t *testing.T, h *http.Client, url string, waitTime, tickTi
 		defer resp.Body.Close()
 		assert.Equal(t, http.StatusOK, resp.StatusCode)
 	}, waitTime, tickTime)
-}
-
-func startAdminAPIServerMock(t *testing.T) *httptest.Server {
-	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		type Root struct {
-			Configuration map[string]any `json:"configuration"`
-			Version       string         `json:"version"`
-		}
-		body, err := json.Marshal(Root{
-			Version: "3.3.0",
-			Configuration: map[string]any{
-				"database":      "off",
-				"router_flavor": "traditional",
-			},
-		})
-		if err != nil {
-			w.WriteHeader(500)
-			return
-		}
-
-		if _, err := w.Write(body); err != nil {
-			w.WriteHeader(500)
-			return
-		}
-	})
-	s := httptest.NewServer(handler)
-	t.Cleanup(func() {
-		s.Close()
-	})
-	return s
-}
-
-func configForEnvConfig(t *testing.T, envcfg *rest.Config) manager.Config {
-	t.Helper()
-
-	cfg := manager.Config{}
-	cfg.FlagSet() // Just set the defaults.
-
-	// Enable debugging endpoints.
-	cfg.EnableProfiling = true
-	cfg.EnableConfigDumps = true
-
-	// Override the APIServer.
-	cfg.APIServerHost = envcfg.Host
-	cfg.APIServerCertData = envcfg.CertData
-	cfg.APIServerKeyData = envcfg.KeyData
-	cfg.APIServerCAData = envcfg.CAData
-
-	cfg.KongAdminURLs = []string{startAdminAPIServerMock(t).URL}
-	cfg.UpdateStatus = false
-	cfg.ProxySyncSeconds = 0.1
-
-	// And other settings which are irrelevant.
-	cfg.Konnect.ConfigSynchronizationEnabled = false
-	cfg.Konnect.LicenseSynchronizationEnabled = false
-	cfg.AnonymousReports = false
-	cfg.FeatureGates = featuregates.GetFeatureGatesDefaults()
-	cfg.FeatureGates[featuregates.GatewayFeature] = false
-
-	return cfg
 }

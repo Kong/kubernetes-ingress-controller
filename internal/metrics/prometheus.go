@@ -71,9 +71,12 @@ const (
 	MetricNameConfigPushDuration = "ingress_controller_configuration_push_duration_milliseconds"
 )
 
-var _once sync.Once
+var _lock sync.Mutex
 
 func NewCtrlFuncMetrics() *CtrlFuncMetrics {
+	_lock.Lock()
+	defer _lock.Unlock()
+
 	controllerMetrics := &CtrlFuncMetrics{}
 
 	controllerMetrics.ConfigPushCount = prometheus.NewCounterVec(
@@ -126,9 +129,21 @@ func NewCtrlFuncMetrics() *CtrlFuncMetrics {
 		[]string{SuccessKey, ProtocolKey, DataplaneKey},
 	)
 
-	_once.Do(func() {
-		metrics.Registry.MustRegister(controllerMetrics.ConfigPushCount, controllerMetrics.TranslationCount, controllerMetrics.ConfigPushDuration)
-	})
+	if ok := metrics.Registry.Unregister(controllerMetrics.ConfigPushCount); ok {
+		fmt.Printf("Unregistered %s\n", MetricNameConfigPushCount)
+	}
+	if ok := metrics.Registry.Unregister(controllerMetrics.TranslationCount); ok {
+		fmt.Printf("Unregistered %s\n", MetricNameTranslationCount)
+	}
+	if ok := metrics.Registry.Unregister(controllerMetrics.ConfigPushDuration); ok {
+		fmt.Printf("Unregistered %s\n", MetricNameConfigPushDuration)
+	}
+
+	metrics.Registry.MustRegister(
+		controllerMetrics.ConfigPushCount,
+		controllerMetrics.TranslationCount,
+		controllerMetrics.ConfigPushDuration,
+	)
 
 	return controllerMetrics
 }

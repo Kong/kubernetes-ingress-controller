@@ -28,7 +28,7 @@ const (
 	// See Also: https://github.com/Kong/kubernetes-ingress-controller/issues/1398
 	DefaultSyncSeconds float32 = 3.0
 
-	DefaultInitWaitPeriod = 5 * time.Second
+	DefaultCacheSyncWaitDuration = 5 * time.Second
 )
 
 // -----------------------------------------------------------------------------
@@ -63,8 +63,8 @@ func WithStagger(period time.Duration) SynchronizerOption {
 	}
 }
 
-// WithInitWaitPeriod returns a SynchronizerOption which sets the initial wait period.
-func WithInitWaitPeriod(period time.Duration) SynchronizerOption {
+// WithInitCacheSyncDuration returns a SynchronizerOption which sets the initial wait period.
+func WithInitCacheSyncDuration(period time.Duration) SynchronizerOption {
 	return func(s *Synchronizer) {
 		s.initWaitPeriod = period
 	}
@@ -78,7 +78,7 @@ func NewSynchronizer(logger logrus.FieldLogger, client Client, opts ...Synchroni
 	synchronizer := &Synchronizer{
 		logger:          logrusr.New(logger),
 		stagger:         time.Duration(DefaultSyncSeconds),
-		initWaitPeriod:  DefaultInitWaitPeriod,
+		initWaitPeriod:  DefaultCacheSyncWaitDuration,
 		dataplaneClient: client,
 		configApplied:   false,
 		dbMode:          client.DBMode(),

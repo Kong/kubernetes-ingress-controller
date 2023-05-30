@@ -129,6 +129,7 @@ func setupDataplaneSynchronizer(
 	mgr manager.Manager,
 	dataplaneClient dataplane.Client,
 	proxySyncSeconds float32,
+	initCacheSyncWait time.Duration,
 ) (*dataplane.Synchronizer, error) {
 	if proxySyncSeconds < dataplane.DefaultSyncSeconds {
 		logger.Info(fmt.Sprintf(
@@ -142,6 +143,7 @@ func setupDataplaneSynchronizer(
 		fieldLogger.WithField("subsystem", "dataplane-synchronizer"),
 		dataplaneClient,
 		dataplane.WithStagger(time.Duration(proxySyncSeconds*float32(time.Second))),
+		dataplane.WithInitCacheSyncDuration(initCacheSyncWait),
 	)
 	if err != nil {
 		return nil, err

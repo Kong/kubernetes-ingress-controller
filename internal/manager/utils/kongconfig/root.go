@@ -160,13 +160,7 @@ func (kr Root) Key(skipCACerts bool) string {
 		return ""
 	}
 
-	v := kong.VersionFromInfo(kr)
-	_, err = kong.ParseSemanticVersion(v)
-	if err != nil {
-		return ""
-	}
-
-	return fmt.Sprintf("%s:%s", dbMode, v)
+	return dbMode
 }
 
 func validateRootFunc(skipCACerts bool) func(Root, int) error {

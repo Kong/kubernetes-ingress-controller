@@ -73,7 +73,7 @@ func TestTranslateIngressATC(t *testing.T) {
 						Route: kong.Route{
 							Name:              kong.String("default.test-ingress.test-service.konghq.com.80"),
 							Expression:        kong.String(`(http.host == "konghq.com") && ((http.path == "/api") || (http.path ^= "/api/")) && ((net.protocol == "http") || (net.protocol == "https"))`),
-							Priority:          kong.Int(NormalIngressExpressionPriority),
+							Priority:          kong.Int((2 << 41) + (1 << 32) + (1 << 16) + 5),
 							PreserveHost:      kong.Bool(true),
 							StripPath:         kong.Bool(false),
 							ResponseBuffering: kong.Bool(true),
@@ -145,7 +145,7 @@ func TestTranslateIngressATC(t *testing.T) {
 						Route: kong.Route{
 							Name:              kong.String("default.test-ingress.test-service.konghq.com.80"),
 							Expression:        kong.String(`(http.host == "konghq.com") && (http.path ^= "/api/") && ((net.protocol == "http") || (net.protocol == "https"))`),
-							Priority:          kong.Int(NormalIngressExpressionPriority),
+							Priority:          kong.Int((2 << 41) + (1 << 32) + (5)),
 							PreserveHost:      kong.Bool(true),
 							StripPath:         kong.Bool(false),
 							ResponseBuffering: kong.Bool(true),

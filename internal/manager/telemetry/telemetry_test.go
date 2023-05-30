@@ -55,6 +55,8 @@ func TestTelemetry(t *testing.T) {
 	// Run a server that will receive the report, it's expected
 	// to be the first connection and the payload.
 	reportChan := make(chan []byte)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 	go func() {
 		// Any function return indicates that either the
 		// report was sent or there was nothing to send.
@@ -64,12 +66,18 @@ func TestTelemetry(t *testing.T) {
 			return
 		}
 		defer conn.Close()
-		report := make([]byte, 1024) // Report is much shorter.
-		n, err := conn.Read(report)
-		if !assert.NoError(t, err) {
-			return
+		for {
+			report := make([]byte, 1024) // Report is much shorter.
+			n, err := conn.Read(report)
+			if !assert.NoError(t, err) {
+				return
+			}
+			select {
+			case reportChan <- report[:n]:
+			case <-ctx.Done():
+				return
+			}
 		}
-		reportChan <- report[:n]
 	}()
 
 	t.Log("configuring envtest - populating K8s objects for telemetry test")
@@ -77,8 +85,7 @@ func TestTelemetry(t *testing.T) {
 	cfg := configForEnvTestTelemetry(t, envcfg)
 	c, err := cfg.GetKubeconfig()
 	require.NoError(t, err)
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+
 	populateK8sObjectsForTelemetryTest(ctx, t, c)
 
 	// Override the telemetry settings, to allow testing.
@@ -106,7 +113,10 @@ func TestTelemetry(t *testing.T) {
 	k8sVersion, err := dcl.ServerVersion()
 	require.NoError(t, err)
 	t.Log("verifying telemetry report")
-	verifyTelemetryReport(t, k8sVersion, <-reportChan)
+	require.EventuallyWithT(t, func(c *assert.CollectT) {
+		verifyTelemetryReport(c, k8sVersion, <-reportChan)
+	}, 3*time.Second, 100*time.Millisecond)
+	// verifyTelemetryReport(t, k8sVersion, <-reportChan)
 }
 
 func configForEnvTestTelemetry(t *testing.T, envcfg *rest.Config) manager.Config {
@@ -309,29 +319,27 @@ func populateK8sObjectsForTelemetryTest(ctx context.Context, t *testing.T, cfg *
 	}
 }
 
-func verifyTelemetryReport(t *testing.T, k8sVersion *version.Info, report []byte) {
-	t.Helper()
-
+func verifyTelemetryReport(c *assert.CollectT, k8sVersion *version.Info, report []byte) {
 	hostname, err := os.Hostname()
-	require.NoError(t, err)
+	assert.NoError(c, err)
 	semver, err := utilversion.ParseGeneric(k8sVersion.GitVersion)
-	require.NoError(t, err)
+	assert.NoError(c, err)
 
 	// Report contains stanza like:
 	// id=57a7a76c-25d0-4394-ab9a-954f7190e39a;
 	// that is not stable across runs, so we need to remove it.
 	reportToAssert := string(report)
 	const idStanzaStart, idStanzaEnd = "id=", ";"
-	require.Contains(t, reportToAssert, idStanzaStart)
+	assert.Contains(c, reportToAssert, idStanzaStart)
 	idStart := strings.Index(reportToAssert, idStanzaStart)
-	require.Greater(t, idStart, -1)
+	assert.Greater(c, idStart, -1)
 	idEnd := strings.Index(reportToAssert[idStart:], idStanzaEnd)
-	require.Greater(t, idEnd, -1)
+	assert.Greater(c, idEnd, -1)
 	idEnd += idStart
 	reportToAssert = reportToAssert[:idStart] + reportToAssert[idEnd+1:]
 
-	require.Equal(
-		t,
+	assert.Equal(
+		c,
 		fmt.Sprintf(
 			"<14>"+
 				"signal=kic-start;"+

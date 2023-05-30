@@ -25,8 +25,7 @@ func GenerateKongBuilder(_ context.Context) (*kong.Builder, []string, error) {
 			"--kong-workspace=notdefault",
 		)
 		kongbuilder = kongbuilder.WithProxyEnterpriseEnabled(licenseJSON).
-			WithProxyEnterpriseSuperAdminPassword(consts.KongTestPassword).
-			WithProxyAdminServiceTypeLoadBalancer()
+			WithProxyEnterpriseSuperAdminPassword(consts.KongTestPassword)
 	}
 
 	if image, tag := testenv.KongImage(), testenv.KongTag(); image != "" && tag != "" {
@@ -53,6 +52,7 @@ func GenerateKongBuilder(_ context.Context) (*kong.Builder, []string, error) {
 	kongbuilder = kongbuilder.WithProxyEnvVar("router_flavor", flavor)
 
 	kongbuilder.WithControllerDisabled()
+	kongbuilder.WithProxyAdminServiceTypeLoadBalancer()
 
 	return kongbuilder, extraControllerArgs, nil
 }

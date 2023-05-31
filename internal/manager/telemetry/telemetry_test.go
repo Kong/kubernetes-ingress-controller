@@ -103,9 +103,7 @@ func TestTelemetry(t *testing.T) {
 			return
 		}
 		err = manager.Run(ctx, &cfg, util.ConfigDumpDiagnostic{}, deprecatedLogger)
-		if !assert.NoError(t, err) {
-			return
-		}
+		assert.NoError(t, err)
 	}()
 
 	dcl, err := discoveryclient.NewDiscoveryClientForConfig(envcfg)
@@ -113,10 +111,8 @@ func TestTelemetry(t *testing.T) {
 	k8sVersion, err := dcl.ServerVersion()
 	require.NoError(t, err)
 	t.Log("verifying telemetry report")
-	require.EventuallyWithT(t, func(c *assert.CollectT) {
-		// The first report on the channel will be signal=kic-start;
-		// next ones will be signal=kic-ping; and on this we assert.
-		verifyTelemetryReport(t, c, k8sVersion, <-reportChan)
+	require.Eventually(t, func() bool {
+		return verifyTelemetryReport(t, k8sVersion, <-reportChan)
 	},
 		10*time.Second,
 		// Tick duration doesn't really matter, because reading from channel is blocking.
@@ -324,65 +320,77 @@ func createK8sObjectsForTelemetryTest(ctx context.Context, t *testing.T, cfg *re
 	}
 }
 
-func verifyTelemetryReport(t *testing.T, c *assert.CollectT, k8sVersion *version.Info, report []byte) {
+func verifyTelemetryReport(t *testing.T, k8sVersion *version.Info, report []byte) bool {
 	t.Helper()
 	hostname, err := os.Hostname()
-	assert.NoError(c, err)
+	if err != nil {
+		t.Logf("failed to get hostname: %s", err)
+		return false
+	}
 	semver, err := utilversion.ParseGeneric(k8sVersion.GitVersion)
-	assert.NoError(c, err)
+	if err != nil {
+		t.Logf("failed to parse k8s version: %s", err)
+		return false
+	}
 
 	// Report contains stanza like:
 	// id=57a7a76c-25d0-4394-ab9a-954f7190e39a;
 	// uptime=9;
 	// that is not stable across runs, so we need to remove it.
-	reportToAssert, err := removeStanzaFromReport(string(report), "id")
-	assert.NoError(c, err)
-	reportToAssert, err = removeStanzaFromReport(reportToAssert, "uptime")
-	assert.NoError(c, err)
+	actualReport, err := removeStanzaFromReport(string(report), "id")
+	if err != nil {
+		t.Logf("failed to remove stanza id from report: %s", err)
+		return false
+	}
+	actualReport, err = removeStanzaFromReport(actualReport, "uptime")
+	if err != nil {
+		t.Logf("failed to remove stanza uptime from report: %s", err)
+		return false
+	}
 
-	assert.Equal(
-		c,
-		fmt.Sprintf(
-			"<14>"+
-				"signal=kic-ping;"+
-				"db=off;"+
-				"feature-combinedroutes=true;"+
-				"feature-combinedservices=false;"+
-				"feature-expressionroutes=false;"+
-				"feature-fillids=false;"+
-				"feature-gateway-service-discovery=false;"+
-				"feature-gateway=false;"+
-				"feature-gatewayalpha=false;"+
-				"feature-knative=false;"+
-				"feature-konnect-sync=false;"+
-				"hn=%s;"+
-				"kv=3.3.0;"+
-				"v=NOT_SET;"+
-				"k8s_arch=%s;"+
-				"k8s_provider=UNKNOWN;"+
-				"k8sv=%s;"+
-				"k8sv_semver=%s;"+
-				"k8s_gatewayclasses_count=2;"+
-				"k8s_gateways_count=4;"+
-				"k8s_grpcroutes_count=4;"+
-				"k8s_httproutes_count=4;"+
-				"k8s_nodes_count=2;"+
-				"k8s_pods_count=4;"+
-				"k8s_referencegrants_count=4;"+
-				"k8s_services_count=5;"+
-				"k8s_tcproutes_count=4;"+
-				"k8s_tlsroutes_count=4;"+
-				"k8s_udproutes_count=4;"+
-				"\n",
-			hostname,
-			k8sVersion.Platform,
-			k8sVersion.GitVersion,
-			"v"+semver.String(),
-		),
-		reportToAssert,
+	expectedReport := fmt.Sprintf(
+		"<14>"+
+			"signal=kic-ping;"+
+			"db=off;"+
+			"feature-combinedroutes=true;"+
+			"feature-combinedservices=false;"+
+			"feature-expressionroutes=false;"+
+			"feature-fillids=false;"+
+			"feature-gateway-service-discovery=false;"+
+			"feature-gateway=false;"+
+			"feature-gatewayalpha=false;"+
+			"feature-knative=false;"+
+			"feature-konnect-sync=false;"+
+			"hn=%s;"+
+			"kv=3.3.0;"+
+			"v=NOT_SET;"+
+			"k8s_arch=%s;"+
+			"k8s_provider=UNKNOWN;"+
+			"k8sv=%s;"+
+			"k8sv_semver=%s;"+
+			"k8s_gatewayclasses_count=2;"+
+			"k8s_gateways_count=4;"+
+			"k8s_grpcroutes_count=4;"+
+			"k8s_httproutes_count=4;"+
+			"k8s_nodes_count=2;"+
+			"k8s_pods_count=4;"+
+			"k8s_referencegrants_count=4;"+
+			"k8s_services_count=5;"+
+			"k8s_tcproutes_count=4;"+
+			"k8s_tlsroutes_count=4;"+
+			"k8s_udproutes_count=4;"+
+			"\n",
+		hostname,
+		k8sVersion.Platform,
+		k8sVersion.GitVersion,
+		"v"+semver.String(),
 	)
+	return actualReport == expectedReport
 }
 
+// removeStanzaFromReport removes stanza from report. Report contains stanzas like:
+// id=57a7a76c-25d0-4394-ab9a-954f7190e39a;uptime=9;k8s_services_count=5; etc.
+// Pass e.g. "uptime" to remove the whole uptime=9; from the report.
 func removeStanzaFromReport(report string, stanza string) (string, error) {
 	const idStanzaEnd = ";"
 	stanza = stanza + "="
@@ -402,14 +410,19 @@ func generateSelfSignedCert() (tls.Certificate, error) {
 	// Generate a new RSA private key.
 	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
-		return tls.Certificate{}, fmt.Errorf("failed to generate private key: %s", err.Error())
+		return tls.Certificate{}, fmt.Errorf("failed to generate private key: %w", err)
 	}
 
 	// Create a self-signed X.509 certificate.
 	template := &x509.Certificate{
 		SerialNumber: big.NewInt(1),
 		Subject: pkix.Name{
-			CommonName: "localhost",
+			Organization:  []string{"Kong HQ"},
+			Country:       []string{"US"},
+			Province:      []string{"California"},
+			Locality:      []string{"San Francisco"},
+			StreetAddress: []string{"150 Spear Street, Suite 1600"},
+			PostalCode:    []string{"94105"},
 		},
 		NotBefore:             time.Now(),
 		NotAfter:              time.Now().AddDate(1, 0, 0),

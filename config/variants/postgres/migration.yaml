@@ -28,5 +28,5 @@ spec:
           value: postgres
         - name: KONG_PG_PORT
           value: "5432"
-        command: [ "/bin/bash", "-c", "kong migrations bootstrap" ]
+        command: [ "/bin/bash", "-c", "kong migrations bootstrap && kong migrations up && kong migrations finish" ]
       restartPolicy: OnFailure

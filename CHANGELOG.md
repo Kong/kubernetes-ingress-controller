@@ -160,6 +160,11 @@ Adding a new version? You'll need three changes:
 - Gateway's `AttachedRoutes` fields get updated with the number of routes referencing
   and using each listener.
   [#4052](https://github.com/Kong/kubernetes-ingress-controller/pull/4052)
+- `all-in-one-postgres.yaml` and `all-in-one-postgres-enterprise.yaml` manifests'
+  migrations job now works properly when running against an already bootstrapped
+  database, allowing upgrades from one version of Kong Gateway to another without
+  tearing down the database.
+  [#4116](https://github.com/Kong/kubernetes-ingress-controller/pull/4116)
 
 ### Changed
 

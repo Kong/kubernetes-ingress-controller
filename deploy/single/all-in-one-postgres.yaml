@@ -1860,7 +1860,7 @@ spec:
       - command:
         - /bin/bash
         - -c
-        - kong migrations bootstrap
+        - kong migrations bootstrap && kong migrations up && kong migrations finish
         env:
         - name: KONG_PG_PASSWORD
           value: kong

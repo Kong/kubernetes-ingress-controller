@@ -11,7 +11,6 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"fmt"
-	"io"
 	"math/big"
 	"os"
 	"strings"
@@ -98,7 +97,7 @@ func TestTelemetry(t *testing.T) {
 	defer set(telemetry.SplunkEndpoint, telemetry.SplunkEndpointInsecureSkipVerify, telemetry.TelemetryPeriod)
 	set(listener.Addr().String(), true, 100*time.Millisecond)
 	go func(ctx context.Context) {
-		deprecatedLogger, _, err := manager.SetupLoggers(&cfg, io.Discard)
+		deprecatedLogger, _, err := manager.SetupLoggers(&cfg, os.Stderr)
 		if !assert.NoError(t, err) {
 			return
 		}

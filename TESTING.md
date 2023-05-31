@@ -1,6 +1,6 @@
 # Testing guidelines
 
-Following guide will help you decide what to test and how to do go about it
+Following guide will help you decide what to test and how to go about it
 when changing code in this repository.
 
 ## Testing levels
@@ -13,18 +13,18 @@ In KIC, we use several levels of testing:
 
 ### Unit tests
 
-Unit tests, verify the functionality of one or more `func` or `struct`s
+Unit tests verify the functionality of one or more `func` or `struct`s
 in an isolated environment.
 
 These tests are independent of the environment they are run in and require no
-setup of teardown code.
+setup or teardown code.
 
 > **NOTE**: Some of these tests do require [`envtest`][envtest] setup to be present e.g.
 > [this one][test_GetAdminAPIsForService] or [this one][test_HTTPRouteReconcilerProperlyReactsToReferenceGrant].
-> This setup is handled automatically via `setup-envtest` target which is a dependency
+> This setup is handled automatically via `setup-envtest` Makefile target which is a dependency
 > of mentioned above unit test targets.
 >
-> As part of [#4099][issue4099] this organization might change and test that do
+> As part of [#4099][issue4099] this organization might change and tests that do
 > require this setup might end up in a separate place.
 
 These tests can either be written in a way that do not require any mocks or fakes,
@@ -42,7 +42,7 @@ the provided Makefile targets:
 Unit tests are typically located in the same package as the code they test
 and they do not use any [build tags][go_build_tag].
 
-> **NOTE**: Some of these tests that do require [`envtest`][envtest] setup do
+> **NOTE**: Some of these tests that do require [`envtest`][envtest] setup and
 > use a special [build tags][go_build_tag]: `envtest`. This is in place so that
 > simply running `go test ...` without any special build tags would pass without
 > requiring any manual setup from the developer.
@@ -67,8 +67,8 @@ tests against.
 Most of the setup - and cleanup after the tests have run - is being done using
 [ktf][ktf].
 
-Currently the cluster is being shared across all the tests that are being as part
-of the test suite so special care needs be taken in order to cleanup after the tests
+Currently, the cluster is being shared across all the tests that are a part
+of the test suite so special care needs to be taken in order to clean up after the tests
 that run.
 
 #### How to run

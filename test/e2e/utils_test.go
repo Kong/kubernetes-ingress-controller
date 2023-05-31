@@ -192,9 +192,10 @@ func skipTestIfControllerVersionBelow(t *testing.T, minVersion semver.Version) {
 	}
 }
 
-// getDBLessTestManifestByControllerImageEnv gets the proper manifest of dbless deployment by
-// specified image for Kong ingress controller. Since KIC does not support gateway discovery in
-// versions below 2.9, we neet to use the legacy manifest for the versions.
+// getDBLessTestManifestByControllerImageEnv gets the proper manifest for dbless deployment.
+// It takes into account the TEST_KONG_CONTROLLER_IMAGE_OVERRIDE environment variable.
+// This is needed because KIC does not support Gateway Discovery in versions below 2.9,
+// and hence we need to use the legacy manifest for those versions.
 func getDBLessTestManifestByControllerImageEnv(t *testing.T) io.Reader {
 	t.Helper()
 

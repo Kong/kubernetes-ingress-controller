@@ -67,7 +67,7 @@ func TestTelemetry(t *testing.T) {
 		}
 		defer conn.Close()
 		for {
-			report := make([]byte, 1024) // Report is much shorter.
+			report := make([]byte, 2048) // Report is much shorter.
 			n, err := conn.Read(report)
 			if !assert.NoError(t, err) {
 				return
@@ -114,6 +114,8 @@ func TestTelemetry(t *testing.T) {
 	require.NoError(t, err)
 	t.Log("verifying telemetry report")
 	require.EventuallyWithT(t, func(c *assert.CollectT) {
+		// The first report on the channel will be signal=kic-start;
+		// next ones will be signal=kic-ping; and on this we assert.
 		verifyTelemetryReport(t, c, k8sVersion, <-reportChan)
 	}, 10*time.Second, 100*time.Millisecond)
 }
@@ -343,7 +345,7 @@ func verifyTelemetryReport(t *testing.T, c *assert.CollectT, k8sVersion *version
 		c,
 		fmt.Sprintf(
 			"<14>"+
-				"signal=kic-start;"+
+				"signal=kic-ping;"+
 				"db=off;"+
 				"feature-combinedroutes=true;"+
 				"feature-combinedservices=false;"+

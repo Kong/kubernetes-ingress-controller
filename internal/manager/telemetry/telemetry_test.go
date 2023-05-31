@@ -39,7 +39,7 @@ import (
 )
 
 func TestTelemetry(t *testing.T) {
-	t.Parallel()
+	// t.Parallel()
 	t.Log("configuring TLS listener - server for telemetry data")
 	cert, err := generateSelfSignedCert()
 	require.NoError(t, err)

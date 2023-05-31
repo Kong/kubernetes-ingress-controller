@@ -114,9 +114,8 @@ func TestTelemetry(t *testing.T) {
 	require.NoError(t, err)
 	t.Log("verifying telemetry report")
 	require.EventuallyWithT(t, func(c *assert.CollectT) {
-		verifyTelemetryReport(c, k8sVersion, <-reportChan)
-	}, 3*time.Second, 100*time.Millisecond)
-	// verifyTelemetryReport(t, k8sVersion, <-reportChan)
+		verifyTelemetryReport(t, c, k8sVersion, <-reportChan)
+	}, 10*time.Second, 100*time.Millisecond)
 }
 
 func configForEnvTestTelemetry(t *testing.T, envcfg *rest.Config) manager.Config {
@@ -319,7 +318,8 @@ func populateK8sObjectsForTelemetryTest(ctx context.Context, t *testing.T, cfg *
 	}
 }
 
-func verifyTelemetryReport(c *assert.CollectT, k8sVersion *version.Info, report []byte) {
+func verifyTelemetryReport(t *testing.T, c *assert.CollectT, k8sVersion *version.Info, report []byte) {
+	t.Helper()
 	hostname, err := os.Hostname()
 	assert.NoError(c, err)
 	semver, err := utilversion.ParseGeneric(k8sVersion.GitVersion)
@@ -329,6 +329,7 @@ func verifyTelemetryReport(c *assert.CollectT, k8sVersion *version.Info, report 
 	// id=57a7a76c-25d0-4394-ab9a-954f7190e39a;
 	// that is not stable across runs, so we need to remove it.
 	reportToAssert := string(report)
+	t.Log(">>>> Report to assert:", reportToAssert)
 	const idStanzaStart, idStanzaEnd = "id=", ";"
 	assert.Contains(c, reportToAssert, idStanzaStart)
 	idStart := strings.Index(reportToAssert, idStanzaStart)

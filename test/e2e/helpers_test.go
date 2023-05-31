@@ -265,7 +265,14 @@ func deployKong(ctx context.Context, t *testing.T, env environments.Environment,
 		if err != nil {
 			return false
 		}
-		return deployment.Status.ReadyReplicas == *deployment.Spec.Replicas
+
+		whyNot, ready := allUpdatedReplicasRolledOutAndReady(deployment)
+		if !ready {
+			t.Logf("controller deployment not ready: %s", whyNot)
+			return false
+		}
+
+		return true
 	}, kongComponentWait, time.Second) {
 		if err != nil {
 			t.Fatalf("controller didn't get ready: %s", err)
@@ -277,6 +284,37 @@ func deployKong(ctx context.Context, t *testing.T, env environments.Environment,
 			)
 		}
 	}
+}
+
+// allUpdatedReplicasRolledOutAndReady ensures that all updated replicas are rolled out and ready. It is to make sure
+// that the deployment rollout is finished and all the new replicas are ready to serve traffic before we proceed with
+// the test.
+// It returns a string explaining why the deployment is not ready when it is not ready.
+func allUpdatedReplicasRolledOutAndReady(deployment *appsv1.Deployment) (whyNot string, satisfied bool) {
+	if newReplicasRolledOut := deployment.Spec.Replicas != nil && deployment.Status.UpdatedReplicas < *deployment.Spec.Replicas; newReplicasRolledOut {
+		return fmt.Sprintf(
+			"%d out of %d new replicas have been updated...",
+			deployment.Status.UpdatedReplicas,
+			*deployment.Spec.Replicas,
+		), false
+	}
+
+	if oldReplicasPendingTermination := deployment.Status.Replicas > deployment.Status.UpdatedReplicas; oldReplicasPendingTermination {
+		return fmt.Sprintf(
+			"%d old replicas pending termination...",
+			deployment.Status.Replicas-deployment.Status.UpdatedReplicas,
+		), false
+	}
+
+	if rolloutFinished := deployment.Status.AvailableReplicas == deployment.Status.UpdatedReplicas; !rolloutFinished {
+		return fmt.Sprintf(
+			"%d of %d updated replicas are available...",
+			deployment.Status.AvailableReplicas,
+			deployment.Status.UpdatedReplicas,
+		), false
+	}
+
+	return "", true
 }
 
 // Deployments represent the deployments that are deployed by the all-in-one manifests.
@@ -386,14 +424,26 @@ func deployIngressWithEchoBackends(ctx context.Context, t *testing.T, env enviro
 		"konghq.com/override":       kongIngressName,
 	}, service)
 	require.NoError(t, clusters.DeployIngress(ctx, env.Cluster(), corev1.NamespaceDefault, ingress))
+	return ingress
 }
 
 //nolint:unparam
 func verifyIngressWithEchoBackends(ctx context.Context, t *testing.T, env environments.Environment, noReplicas int) {
 	t.Helper()
+	verifyIngressWithEchoBackendsPath(ctx, t, env, noReplicas, "/echo")
+}
+
+func verifyIngressWithEchoBackendsPath(
+	ctx context.Context,
+	t *testing.T,
+	env environments.Environment,
+	noReplicas int,
+	path string,
+) {
+	t.Helper()
 
 	t.Log("finding the service URL (through Kong proxy service ip)")
-	echoURL := fmt.Sprintf("http://%s/echo", getKongProxyIP(ctx, t, env))
+	echoURL := fmt.Sprintf("http://%s%s", getKongProxyIP(ctx, t, env), path)
 
 	t.Logf(
 		"waiting for route from Ingress to be operational at %s and forward traffic to all %d backends",

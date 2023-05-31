@@ -106,22 +106,22 @@ func testManifestsUpgrade(
 
 	t.Logf("deploying target version of kong manifests: %s", testParams.toManifestPath)
 	manifest := getTestManifest(t, testParams.toManifestPath)
+	deployKong(ctx, t, env, manifest)
 
 	if featureGates := testParams.controllerFeatureGates; featureGates != "" {
 		t.Logf("setting environment variables for controller feature gates: %s", featureGates)
-		manifest, err = addControllerEnv(manifest, "KONG_CONTROLLER_FEATURE_GATES", featureGates)
+		kubeconfig := getTemporaryKubeconfig(t, env)
+		err = setEnv(kubeconfig, namespace, fmt.Sprintf("deployment/%s", controllerDeploymentName), "KONG_CONTROLLER_FEATURE_GATES", featureGates)
 		require.NoError(t, err)
+		waitForDeploymentRollout(ctx, t, env, namespace, controllerDeploymentName)
 	}
 
-	deployKong(ctx, t, env, manifest)
-
-	// Add a new rule to the ingress to verify that the ingress controller is still functional after the upgrade
-	// and is able to configure new Kong routes.
-	newRule := ingress.Spec.Rules[0].DeepCopy()
+	t.Log("creating new ingress with new path /echo-new")
+	newIngress := ingress.DeepCopy()
+	newIngress.Name = "echo-new"
 	const newPath = "/echo-new"
-	newRule.HTTP.Paths[0].Path = newPath
-	ingress.Spec.Rules = append(ingress.Spec.Rules, *newRule)
-	_, err = env.Cluster().Client().NetworkingV1().Ingresses(corev1.NamespaceDefault).Update(ctx, ingress, metav1.UpdateOptions{})
+	newIngress.Spec.Rules[0].HTTP.Paths[0].Path = newPath
+	_, err = env.Cluster().Client().NetworkingV1().Ingresses(corev1.NamespaceDefault).Create(ctx, newIngress, metav1.CreateOptions{})
 	require.NoError(t, err)
 
 	verifyIngressWithEchoBackendsPath(ctx, t, env, numberOfEchoBackends, newPath)

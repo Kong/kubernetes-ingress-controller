@@ -34,6 +34,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
+	netv1 "k8s.io/api/networking/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -259,9 +260,12 @@ func deployKong(ctx context.Context, t *testing.T, env environments.Environment,
 	require.NoError(t, err, string(out))
 
 	t.Log("waiting for controller to be ready")
-	var deployment *appsv1.Deployment
-	if !assert.Eventually(t, func() bool {
-		deployment, err = env.Cluster().Client().AppsV1().Deployments(namespace).Get(ctx, controllerDeploymentName, metav1.GetOptions{})
+	waitForDeploymentRollout(ctx, t, env, namespace, controllerDeploymentName)
+}
+
+func waitForDeploymentRollout(ctx context.Context, t *testing.T, env environments.Environment, namespace, name string) {
+	require.Eventuallyf(t, func() bool {
+		deployment, err := env.Cluster().Client().AppsV1().Deployments(namespace).Get(ctx, name, metav1.GetOptions{})
 		if err != nil {
 			return false
 		}
@@ -273,17 +277,7 @@ func deployKong(ctx context.Context, t *testing.T, env environments.Environment,
 		}
 
 		return true
-	}, kongComponentWait, time.Second) {
-		if err != nil {
-			t.Fatalf("controller didn't get ready: %s", err)
-		}
-		if deployment != nil {
-			t.Fatalf(
-				"controller didn't get ready: deployment %q: ready replicas %d, spec replicas: %d",
-				deployment.Name, deployment.Status.ReadyReplicas, *deployment.Spec.Replicas,
-			)
-		}
-	}
+	}, kongComponentWait, time.Second, "deployment %s/%s didn't roll out in time", namespace, name)
 }
 
 // allUpdatedReplicasRolledOutAndReady ensures that all updated replicas are rolled out and ready. It is to make sure
@@ -379,7 +373,7 @@ func getProxyDeploymentName(manifestPath string) string {
 const numberOfEchoBackends = 3
 
 //nolint:unparam
-func deployIngressWithEchoBackends(ctx context.Context, t *testing.T, env environments.Environment, noReplicas int) {
+func deployIngressWithEchoBackends(ctx context.Context, t *testing.T, env environments.Environment, noReplicas int) *netv1.Ingress {
 	t.Helper()
 
 	c, err := clientset.NewForConfig(env.Cluster().Config())
@@ -428,7 +422,12 @@ func deployIngressWithEchoBackends(ctx context.Context, t *testing.T, env enviro
 }
 
 //nolint:unparam
-func verifyIngressWithEchoBackends(ctx context.Context, t *testing.T, env environments.Environment, noReplicas int) {
+func verifyIngressWithEchoBackends(
+	ctx context.Context,
+	t *testing.T,
+	env environments.Environment,
+	noReplicas int,
+) {
 	t.Helper()
 	verifyIngressWithEchoBackendsPath(ctx, t, env, noReplicas, "/echo")
 }

@@ -36,6 +36,10 @@ type AdminAPIHandler struct {
 	// config holds the previously received config via `POST /config`.
 	// It is returned when `GET /config` requests are received.
 	config []byte
+
+	// configPostErrorBody contains the error body which will be returned when
+	// responding to a `POST /config` request.
+	configPostErrorBody []byte
 }
 
 type AdminAPIHandlerOpt func(h *AdminAPIHandler)
@@ -66,6 +70,12 @@ func WithVersion(version string) AdminAPIHandlerOpt {
 	}
 	return func(h *AdminAPIHandler) {
 		h.version = version
+	}
+}
+
+func WithConfigPostError(errorbody []byte) AdminAPIHandlerOpt {
+	return func(h *AdminAPIHandler) {
+		h.configPostErrorBody = errorbody
 	}
 }
 
@@ -133,23 +143,27 @@ func NewAdminAPIHandler(t *testing.T, opts ...AdminAPIHandlerOpt) *AdminAPIHandl
 		t.Errorf("unexpected request: %s %s", r.Method, r.URL)
 	})
 	mux.HandleFunc("/config", func(w http.ResponseWriter, r *http.Request) {
-		if r.Method == http.MethodGet {
+		switch r.Method {
+		case http.MethodGet:
 			if h.config != nil {
 				_, _ = w.Write(h.config)
 			} else {
 				_, _ = w.Write([]byte(fmt.Sprintf(`{"version": "%s"}`, h.version)))
 			}
-			return
-		}
-		if r.Method == http.MethodPost {
-			b, _ := io.ReadAll(r.Body)
-			h.t.Logf("got config: %v", string(b))
-			h.config = b
-			w.WriteHeader(http.StatusNoContent)
-			return
-		}
 
-		t.Errorf("unexpected request: %s %s", r.Method, r.URL)
+		case http.MethodPost:
+			if h.configPostErrorBody != nil {
+				w.WriteHeader(http.StatusBadRequest)
+				_, _ = w.Write(h.configPostErrorBody)
+			} else {
+				w.WriteHeader(http.StatusNoContent)
+				b, _ := io.ReadAll(r.Body)
+				h.t.Logf("got config: %v", string(b))
+				h.config = b
+			}
+		default:
+			t.Errorf("unexpected request: %s %s", r.Method, r.URL)
+		}
 	})
 	h.mux = mux
 	return h

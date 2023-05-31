@@ -21,7 +21,7 @@ require (
 	github.com/jpillora/backoff v1.0.0
 	github.com/kong/deck v1.20.0
 	github.com/kong/go-kong v0.42.0
-	github.com/kong/kubernetes-telemetry v0.0.5
+	github.com/kong/kubernetes-telemetry v0.0.6-0.20230531104600-37230a7b0b63
 	github.com/kong/kubernetes-testing-framework v0.31.0
 	github.com/lithammer/dedent v1.1.0
 	github.com/miekg/dns v1.1.54
@@ -36,7 +36,7 @@ require (
 	github.com/sirupsen/logrus v1.9.2
 	github.com/spf13/cobra v1.7.0
 	github.com/spf13/pflag v1.0.5
-	github.com/stretchr/testify v1.8.3
+	github.com/stretchr/testify v1.8.4
 	google.golang.org/api v0.124.0
 	k8s.io/api v0.27.2
 	k8s.io/apiextensions-apiserver v0.27.2

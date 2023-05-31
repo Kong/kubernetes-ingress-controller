@@ -29,6 +29,22 @@ func (p *Parser) ingressRulesFromHTTPRoutes() ingressRules {
 		return result
 	}
 
+	if p.featureFlags.ExpressionRoutes {
+		splittedHTTPRoutes := []*gatewayv1beta1.HTTPRoute{}
+		for _, httproute := range httpRouteList {
+			splittedHTTPRoutes = append(splittedHTTPRoutes, translators.SplitHTTPRoute(httproute)...)
+		}
+		splittedHTTPRoutesWithPriorities := translators.AssignPrioritiesToHTTPRoutes(splittedHTTPRoutes)
+		for _, httpRouteWithPriority := range splittedHTTPRoutesWithPriorities {
+			p.ingressRulesFromHTTPRouteWithPriority(&result, httpRouteWithPriority)
+		}
+		for _, httproute := range httpRouteList {
+			// TODO: register translation failures when error happens in translation.
+			p.registerSuccessfullyParsedObject(httproute)
+		}
+		return result
+	}
+
 	for _, httproute := range httpRouteList {
 		if err := p.ingressRulesFromHTTPRoute(&result, httproute); err != nil {
 			p.registerTranslationFailure(fmt.Sprintf("HTTPRoute can't be routed: %s", err), httproute)
@@ -469,4 +485,35 @@ func httpBackendRefsToBackendRefs(httpBackendRef []gatewayv1beta1.HTTPBackendRef
 		backendRefs = append(backendRefs, hRef.BackendRef)
 	}
 	return backendRefs
+}
+
+func (p *Parser) ingressRulesFromHTTPRouteWithPriority(
+	rules *ingressRules,
+	httpRouteWithPriority translators.SplittedHTTPRouteToKongRoutePriority,
+) {
+	httpRoute := httpRouteWithPriority.HTTPRoute
+	if len(httpRoute.Spec.Rules) != 1 {
+		return
+	}
+	httpRouteRule := httpRoute.Spec.Rules[0]
+	backendRefs := httpBackendRefsToBackendRefs(httpRouteRule.BackendRefs)
+
+	serviceName := translators.KongServiceNameFromHTTPRouteWithPriority(httpRouteWithPriority)
+
+	kongService, _ := generateKongServiceFromBackendRefWithName(
+		p.logger,
+		p.storer,
+		rules,
+		serviceName,
+		httpRoute,
+		"http",
+		backendRefs...,
+	)
+	kongService.Routes = append(
+		kongService.Routes,
+		translators.KongExpressionRouteFromHTTPRouteWithPriority(httpRouteWithPriority),
+	)
+	// cache the service to avoid duplicates in further loop iterations
+	rules.ServiceNameToServices[serviceName] = kongService
+	rules.ServiceNameToParent[serviceName] = httpRoute
 }

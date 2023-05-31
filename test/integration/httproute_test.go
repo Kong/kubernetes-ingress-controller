@@ -589,7 +589,7 @@ func TestHTTPRouteFilterHosts(t *testing.T) {
 	// testGetByHost tries to get the test path with specified host in request,
 	// and returns true if 200 returned.
 	testGetByHost := func(t *testing.T, host string) bool {
-		req := helpers.MustHTTPRequest(t, "GET", proxyURL, "/test-http-route-filter-hosts", nil)
+		req := helpers.MustHTTPRequest(t, "GET", proxyURL, "test-http-route-filter-hosts", nil)
 		req.Host = host
 		resp, err := helpers.DefaultHTTPClient().Do(req)
 		if err != nil {

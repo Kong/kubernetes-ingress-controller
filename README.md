@@ -96,6 +96,7 @@ Please browse through the [guides][docs-konghq-kic-guides] to get started and to
 We ❤️ pull requests and we’re continually working hard to make it as easy as possible for developers to contribute.
 Before beginning development with the Kong Ingress Controller, please familiarize yourself with the following developer resources:
 
+- [TESTING](TESTING.md)
 - [CONTRIBUTING](CONTRIBUTING.md)
 - [CODE_OF_CONDUCT](CODE_OF_CONDUCT.md)
 - [COPYRIGHT](https://github.com/Kong/kong/blob/master/COPYRIGHT)

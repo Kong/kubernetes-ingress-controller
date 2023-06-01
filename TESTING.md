@@ -61,7 +61,7 @@ process as the tests via [`manager.Run()`][manager_run].
 These tests rely on a [test suite setup][integration_test_suite]
 using [`TestMain()`][pkggodev_testmain].
 
-Said setup will either create a new [Kind](https://kind.sigs.k8s.io) cluster or use an existing one to run the
+Said setup will either create a new [kind](https://kind.sigs.k8s.io) cluster or use an existing one to run the
 tests against.
 
 Most of the setup - and cleanup after the tests have run - is being done using

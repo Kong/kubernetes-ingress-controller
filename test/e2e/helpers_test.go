@@ -34,6 +34,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
+	netv1 "k8s.io/api/networking/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -259,24 +260,53 @@ func deployKong(ctx context.Context, t *testing.T, env environments.Environment,
 	require.NoError(t, err, string(out))
 
 	t.Log("waiting for controller to be ready")
-	var deployment *appsv1.Deployment
-	if !assert.Eventually(t, func() bool {
-		deployment, err = env.Cluster().Client().AppsV1().Deployments(namespace).Get(ctx, controllerDeploymentName, metav1.GetOptions{})
+	waitForDeploymentRollout(ctx, t, env, namespace, controllerDeploymentName)
+}
+
+func waitForDeploymentRollout(ctx context.Context, t *testing.T, env environments.Environment, namespace, name string) {
+	require.Eventuallyf(t, func() bool {
+		deployment, err := env.Cluster().Client().AppsV1().Deployments(namespace).Get(ctx, name, metav1.GetOptions{})
 		if err != nil {
 			return false
 		}
-		return deployment.Status.ReadyReplicas == *deployment.Spec.Replicas
-	}, kongComponentWait, time.Second) {
-		if err != nil {
-			t.Fatalf("controller didn't get ready: %s", err)
+
+		if err := allUpdatedReplicasRolledOutAndReady(deployment); err != nil {
+			t.Logf("controller deployment not ready: %s", err)
+			return false
 		}
-		if deployment != nil {
-			t.Fatalf(
-				"controller didn't get ready: deployment %q: ready replicas %d, spec replicas: %d",
-				deployment.Name, deployment.Status.ReadyReplicas, *deployment.Spec.Replicas,
-			)
-		}
+
+		return true
+	}, kongComponentWait, time.Second, "deployment %s/%s didn't roll out in time", namespace, name)
+}
+
+// allUpdatedReplicasRolledOutAndReady ensures that all updated replicas are rolled out and ready. It is to make sure
+// that the deployment rollout is finished and all the new replicas are ready to serve traffic before we proceed with
+// the test. It returns an error with a reason if the deployment is not ready yet.
+func allUpdatedReplicasRolledOutAndReady(d *appsv1.Deployment) error {
+	if newReplicasRolledOut := d.Spec.Replicas != nil && d.Status.UpdatedReplicas < *d.Spec.Replicas; newReplicasRolledOut {
+		return fmt.Errorf(
+			"%d out of %d new replicas have been updated",
+			d.Status.UpdatedReplicas,
+			*d.Spec.Replicas,
+		)
 	}
+
+	if oldReplicasPendingTermination := d.Status.Replicas > d.Status.UpdatedReplicas; oldReplicasPendingTermination {
+		return fmt.Errorf(
+			"%d old replicas pending termination",
+			d.Status.Replicas-d.Status.UpdatedReplicas,
+		)
+	}
+
+	if rolloutFinished := d.Status.AvailableReplicas == d.Status.UpdatedReplicas; !rolloutFinished {
+		return fmt.Errorf(
+			"%d of %d updated replicas are available",
+			d.Status.AvailableReplicas,
+			d.Status.UpdatedReplicas,
+		)
+	}
+
+	return nil
 }
 
 // Deployments represent the deployments that are deployed by the all-in-one manifests.
@@ -341,7 +371,7 @@ func getProxyDeploymentName(manifestPath string) string {
 const numberOfEchoBackends = 3
 
 //nolint:unparam
-func deployIngressWithEchoBackends(ctx context.Context, t *testing.T, env environments.Environment, noReplicas int) {
+func deployIngressWithEchoBackends(ctx context.Context, t *testing.T, env environments.Environment, noReplicas int) *netv1.Ingress {
 	t.Helper()
 
 	c, err := clientset.NewForConfig(env.Cluster().Config())
@@ -386,14 +416,31 @@ func deployIngressWithEchoBackends(ctx context.Context, t *testing.T, env enviro
 		"konghq.com/override":       kongIngressName,
 	}, service)
 	require.NoError(t, clusters.DeployIngress(ctx, env.Cluster(), corev1.NamespaceDefault, ingress))
+	return ingress
 }
 
 //nolint:unparam
-func verifyIngressWithEchoBackends(ctx context.Context, t *testing.T, env environments.Environment, noReplicas int) {
+func verifyIngressWithEchoBackends(
+	ctx context.Context,
+	t *testing.T,
+	env environments.Environment,
+	noReplicas int,
+) {
+	t.Helper()
+	verifyIngressWithEchoBackendsPath(ctx, t, env, noReplicas, "/echo")
+}
+
+func verifyIngressWithEchoBackendsPath(
+	ctx context.Context,
+	t *testing.T,
+	env environments.Environment,
+	noReplicas int,
+	path string,
+) {
 	t.Helper()
 
 	t.Log("finding the service URL (through Kong proxy service ip)")
-	echoURL := fmt.Sprintf("http://%s/echo", getKongProxyIP(ctx, t, env))
+	echoURL := fmt.Sprintf("http://%s%s", getKongProxyIP(ctx, t, env), path)
 
 	t.Logf(
 		"waiting for route from Ingress to be operational at %s and forward traffic to all %d backends",

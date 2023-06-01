@@ -430,7 +430,7 @@ func generateSelfSignedCert() (tls.Certificate, error) {
 	}
 	derBytes, err := x509.CreateCertificate(rand.Reader, template, template, &privateKey.PublicKey, privateKey)
 	if err != nil {
-		return tls.Certificate{}, fmt.Errorf("failed to create certificate: %s", err.Error())
+		return tls.Certificate{}, fmt.Errorf("failed to create certificate: %w", err)
 	}
 
 	// Create a tls.Certificate from the generated private key and certificate.

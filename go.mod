@@ -9,7 +9,7 @@ exclude (
 )
 
 require (
-	cloud.google.com/go/container v1.19.0
+	cloud.google.com/go/container v1.20.0
 	github.com/Masterminds/sprig/v3 v3.2.3
 	github.com/avast/retry-go/v4 v4.3.4
 	github.com/blang/semver/v4 v4.0.0

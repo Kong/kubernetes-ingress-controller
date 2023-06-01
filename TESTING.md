@@ -28,7 +28,7 @@ setup or teardown code.
 > require this setup might end up in a separate place.
 
 These tests can either be written in a way that do not require any mocks or fakes,
-or using e.g. kubernetes related fakes like for instance
+or using e.g. Kubernetes related fakes like for instance
 [`TestAddressesFromEndpointSlice`][test_AddressesFromEndpointSlice] does.
 
 #### How to run
@@ -61,7 +61,7 @@ process as the tests via [`manager.Run()`][manager_run].
 These tests rely on a [test suite setup][integration_test_suite]
 using [`TestMain()`][pkggodev_testmain].
 
-Said setup will either create a new cluster or use an existing one to run the
+Said setup will either create a new [Kind](https://kind.sigs.k8s.io) cluster or use an existing one to run the
 tests against.
 
 Most of the setup - and cleanup after the tests have run - is being done using
@@ -70,6 +70,7 @@ Most of the setup - and cleanup after the tests have run - is being done using
 Currently, the cluster is being shared across all the tests that are a part
 of the test suite so special care needs to be taken in order to clean up after the tests
 that run.
+The typical approach is to run them in a dedicated, disposable Kubernetes namespace created just for the purposes of that test.
 
 #### How to run
 
@@ -95,14 +96,14 @@ You can run them using one of the dedicated Makefile targets:
 ### End-to-End (E2E) tests
 
 End to end tests in KIC are used to test features or use cases which rely on KIC
-being deployed in cluster.
+being deployed in-cluster.
 
 For instance:
 
 - deploying all in one manifests tested in [all in one tests][test_e2e_all_in_one]
 - upgrade scenarios tested in [upgrade tests][test_e2e_upgrade]
 
-These tests deploy KIC and Kong Gateway in cluster using the requested image(s)
+These tests deploy KIC and Kong Gateway in a cluster using the requested image(s)
 which could be customized via dedicated environment variables like
 
 - [`TEST_KONG_CONTROLLER_IMAGE_OVERRIDE`][env_var_controller_image_override]

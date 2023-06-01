@@ -165,8 +165,7 @@ Adding a new version? You'll need three changes:
   database, allowing upgrades from one version of Kong Gateway to another without
   tearing down the database.
   [#4116](https://github.com/Kong/kubernetes-ingress-controller/pull/4116)
-- Telemetry reports now include a number of every Kind of Kubernetes object
-  that is provided by `gateway.networking.k8s.io` CRDs.
+- Telemetry reports now include a count for every `gateway.networking.k8s.io` CRD.
   [#4058](https://github.com/Kong/kubernetes-ingress-controller/pull/4058)
 
 ### Changed

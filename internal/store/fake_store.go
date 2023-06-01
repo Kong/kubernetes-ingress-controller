@@ -1,16 +1,23 @@
 package store
 
 import (
+	"bytes"
+	"fmt"
 	"reflect"
 
+	"github.com/samber/lo"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
 	netv1 "k8s.io/api/networking/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/cli-runtime/pkg/printers"
 	"k8s.io/client-go/tools/cache"
 	knative "knative.dev/networking/pkg/apis/networking/v1alpha1"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
+	"sigs.k8s.io/yaml"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
 	configurationv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
@@ -196,28 +203,26 @@ func NewFakeStore(
 	}
 	s = Store{
 		stores: CacheStores{
-			IngressV1:      ingressV1Store,
-			IngressClassV1: ingressClassV1Store,
-			HTTPRoute:      httprouteStore,
-			UDPRoute:       udprouteStore,
-			TCPRoute:       tcprouteStore,
-			TLSRoute:       tlsrouteStore,
-			GRPCRoute:      grpcrouteStore,
-			ReferenceGrant: referencegrantStore,
-			Gateway:        gatewayStore,
-			TCPIngress:     tcpIngressStore,
-			UDPIngress:     udpIngressStore,
-			Service:        serviceStore,
-			EndpointSlice:  endpointSliceStore,
-			Secret:         secretsStore,
-
+			IngressV1:                      ingressV1Store,
+			IngressClassV1:                 ingressClassV1Store,
+			HTTPRoute:                      httprouteStore,
+			UDPRoute:                       udprouteStore,
+			TCPRoute:                       tcprouteStore,
+			TLSRoute:                       tlsrouteStore,
+			GRPCRoute:                      grpcrouteStore,
+			ReferenceGrant:                 referencegrantStore,
+			Gateway:                        gatewayStore,
+			TCPIngress:                     tcpIngressStore,
+			UDPIngress:                     udpIngressStore,
+			Service:                        serviceStore,
+			EndpointSlice:                  endpointSliceStore,
+			Secret:                         secretsStore,
 			Plugin:                         kongPluginsStore,
 			ClusterPlugin:                  kongClusterPluginsStore,
 			Consumer:                       consumerStore,
 			KongIngress:                    kongIngressStore,
 			IngressClassParametersV1alpha1: IngressClassParametersV1alpha1Store,
-
-			KnativeIngress: knativeIngressStore,
+			KnativeIngress:                 knativeIngressStore,
 		},
 		ingressClass:          annotations.DefaultIngressClass,
 		isValidIngressClass:   annotations.IngressClassValidatorFuncFromObjectMeta(annotations.DefaultIngressClass),
@@ -226,4 +231,94 @@ func NewFakeStore(
 		logger:                logrus.New(),
 	}
 	return s, nil
+}
+
+// DumpAsYAML dumps the contents of every object in the store as YAML, separated by "---".
+// This is useful for debugging.
+func (objects FakeObjects) DumpAsYAML() ([]byte, error) {
+	// In many cases objects we'd like to dump do not have their GVK set, so we need to set it manually based on
+	// their known type - otherwise the YAML dump will not work.
+	typeToGVK := map[reflect.Type]schema.GroupVersionKind{
+		reflect.TypeOf(&netv1.Ingress{}):                                netv1.SchemeGroupVersion.WithKind("Ingress"),
+		reflect.TypeOf(&netv1.IngressClass{}):                           netv1.SchemeGroupVersion.WithKind("IngressClass"),
+		reflect.TypeOf(&gatewayv1beta1.HTTPRoute{}):                     gatewayv1beta1.SchemeGroupVersion.WithKind("HTTPRoute"),
+		reflect.TypeOf(&gatewayv1alpha2.UDPRoute{}):                     gatewayv1alpha2.SchemeGroupVersion.WithKind("UDPRoute"),
+		reflect.TypeOf(&gatewayv1alpha2.TCPRoute{}):                     gatewayv1alpha2.SchemeGroupVersion.WithKind("TCPRoute"),
+		reflect.TypeOf(&gatewayv1alpha2.TLSRoute{}):                     gatewayv1alpha2.SchemeGroupVersion.WithKind("TLSRoute"),
+		reflect.TypeOf(&gatewayv1alpha2.GRPCRoute{}):                    gatewayv1alpha2.SchemeGroupVersion.WithKind("GRPCRoute"),
+		reflect.TypeOf(&gatewayv1beta1.ReferenceGrant{}):                gatewayv1beta1.SchemeGroupVersion.WithKind("ReferenceGrant"),
+		reflect.TypeOf(&gatewayv1beta1.Gateway{}):                       gatewayv1beta1.SchemeGroupVersion.WithKind("Gateway"),
+		reflect.TypeOf(&configurationv1beta1.TCPIngress{}):              configurationv1beta1.SchemeGroupVersion.WithKind("TCPIngress"),
+		reflect.TypeOf(&configurationv1beta1.UDPIngress{}):              configurationv1beta1.SchemeGroupVersion.WithKind("UDPIngress"),
+		reflect.TypeOf(&configurationv1alpha1.IngressClassParameters{}): configurationv1alpha1.SchemeGroupVersion.WithKind("IngressClassParameters"),
+		reflect.TypeOf(&corev1.Service{}):                               corev1.SchemeGroupVersion.WithKind("Service"),
+		reflect.TypeOf(&discoveryv1.EndpointSlice{}):                    discoveryv1.SchemeGroupVersion.WithKind("EndpointSlice"),
+		reflect.TypeOf(&corev1.Secret{}):                                corev1.SchemeGroupVersion.WithKind("Secret"),
+		reflect.TypeOf(&configurationv1.KongPlugin{}):                   configurationv1.SchemeGroupVersion.WithKind("KongPlugin"),
+		reflect.TypeOf(&configurationv1.KongClusterPlugin{}):            configurationv1.SchemeGroupVersion.WithKind("KongClusterPlugin"),
+		reflect.TypeOf(&configurationv1.KongIngress{}):                  configurationv1.SchemeGroupVersion.WithKind("KongIngress"),
+		reflect.TypeOf(&configurationv1.KongConsumer{}):                 configurationv1.SchemeGroupVersion.WithKind("KongConsumer"),
+	}
+
+	out := &bytes.Buffer{}
+
+	// fillGVKAndAppendToBuffer is a helper function that sets the GVK of the given object and appends it to the output.
+	fillGVKAndAppendToBuffer := func(obj runtime.Object) error {
+		gvk, ok := typeToGVK[reflect.TypeOf(obj)]
+		if !ok {
+			return fmt.Errorf("unknown type: %T", obj)
+		}
+		obj.GetObjectKind().SetGroupVersionKind(gvk)
+		b, err := dumpObjAsYAML(obj)
+		if err != nil {
+			return err
+		}
+		out.WriteString("---\n")
+		out.Write(b)
+		return nil
+	}
+
+	// Let's gather all objects in a single generic slice.
+	var allObjects []any
+	allObjects = append(allObjects, lo.ToAnySlice(objects.IngressesV1)...)
+	allObjects = append(allObjects, lo.ToAnySlice(objects.IngressClassesV1)...)
+	allObjects = append(allObjects, lo.ToAnySlice(objects.HTTPRoutes)...)
+	allObjects = append(allObjects, lo.ToAnySlice(objects.UDPRoutes)...)
+	allObjects = append(allObjects, lo.ToAnySlice(objects.TCPRoutes)...)
+	allObjects = append(allObjects, lo.ToAnySlice(objects.TLSRoutes)...)
+	allObjects = append(allObjects, lo.ToAnySlice(objects.GRPCRoutes)...)
+	allObjects = append(allObjects, lo.ToAnySlice(objects.ReferenceGrants)...)
+	allObjects = append(allObjects, lo.ToAnySlice(objects.Gateways)...)
+	allObjects = append(allObjects, lo.ToAnySlice(objects.TCPIngresses)...)
+	allObjects = append(allObjects, lo.ToAnySlice(objects.UDPIngresses)...)
+	allObjects = append(allObjects, lo.ToAnySlice(objects.IngressClassParametersV1alpha1)...)
+	allObjects = append(allObjects, lo.ToAnySlice(objects.Services)...)
+	allObjects = append(allObjects, lo.ToAnySlice(objects.EndpointSlices)...)
+	allObjects = append(allObjects, lo.ToAnySlice(objects.Secrets)...)
+	allObjects = append(allObjects, lo.ToAnySlice(objects.KongPlugins)...)
+	allObjects = append(allObjects, lo.ToAnySlice(objects.KongClusterPlugins)...)
+	allObjects = append(allObjects, lo.ToAnySlice(objects.KongIngresses)...)
+	allObjects = append(allObjects, lo.ToAnySlice(objects.KongConsumers)...)
+
+	for _, obj := range allObjects {
+		if err := fillGVKAndAppendToBuffer(obj.(runtime.Object)); err != nil {
+			return nil, err
+		}
+	}
+
+	return out.Bytes(), nil
+}
+
+// dumpObjAsYAML dumps the given object as YAML.
+// It uses the JSON printer to dump the object as JSON, and then converts the JSON to YAML because some of the objects
+// we want to dump do not have YAML tags.
+func dumpObjAsYAML(obj runtime.Object) ([]byte, error) {
+	buff := bytes.Buffer{}
+	printer := printers.JSONPrinter{}
+	err := printer.PrintObj(obj, &buff)
+	if err != nil {
+		return nil, err
+	}
+
+	return yaml.JSONToYAML(buff.Bytes())
 }

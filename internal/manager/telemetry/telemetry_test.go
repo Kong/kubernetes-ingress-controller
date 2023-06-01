@@ -14,6 +14,7 @@ import (
 	"fmt"
 	"io"
 	"math/big"
+	"net"
 	"os"
 	"strings"
 	"testing"
@@ -57,28 +58,7 @@ func TestTelemetry(t *testing.T) {
 	reportChan := make(chan []byte)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	go func() {
-		// Any function return indicates that either the
-		// report was sent or there was nothing to send.
-		defer close(reportChan)
-		conn, err := listener.Accept()
-		if !assert.NoError(t, err) {
-			return
-		}
-		defer conn.Close()
-		for {
-			report := make([]byte, 2048) // Report is much shorter.
-			n, err := conn.Read(report)
-			if !assert.NoError(t, err) {
-				return
-			}
-			select {
-			case reportChan <- report[:n]:
-			case <-ctx.Done():
-				return
-			}
-		}
-	}()
+	go handleConnectionToTelemetryServer(ctx, t, listener, reportChan)
 
 	t.Log("configuring envtest and creating K8s objects for telemetry test")
 	envcfg := envtest.Setup(t, scheme.Scheme)
@@ -90,13 +70,13 @@ func TestTelemetry(t *testing.T) {
 	t.Log("starting the controller manager")
 	// Override the telemetry settings, to allow testing.
 	// Set them back to the original values at the end of the test.
-	set := func(ep string, skipVerify bool, dur time.Duration) {
+	setPkgGlobals := func(ep string, skipVerify bool, dur time.Duration) {
 		telemetry.SplunkEndpoint = ep
 		telemetry.SplunkEndpointInsecureSkipVerify = skipVerify
 		telemetry.TelemetryPeriod = dur
 	}
-	defer set(telemetry.SplunkEndpoint, telemetry.SplunkEndpointInsecureSkipVerify, telemetry.TelemetryPeriod)
-	set(listener.Addr().String(), true, time.Second) // Let's have long duration due too rate limiter in K8s client.
+	defer setPkgGlobals(telemetry.SplunkEndpoint, telemetry.SplunkEndpointInsecureSkipVerify, telemetry.TelemetryPeriod)
+	setPkgGlobals(listener.Addr().String(), true, time.Second) // Let's have long duration due too rate limiter in K8s client.
 	go func() {
 		deprecatedLogger, _, err := manager.SetupLoggers(&cfg, io.Discard)
 		if !assert.NoError(t, err) {
@@ -316,6 +296,29 @@ func createK8sObjectsForTelemetryTest(ctx context.Context, t *testing.T, cfg *re
 				metav1.CreateOptions{},
 			)
 			require.NoError(t, err)
+		}
+	}
+}
+
+func handleConnectionToTelemetryServer(ctx context.Context, t *testing.T, listener net.Listener, reportChan chan<- []byte) {
+	// Any function return indicates that either the
+	// report was sent or there was nothing to send.
+	defer close(reportChan)
+	conn, err := listener.Accept()
+	if !assert.NoError(t, err) {
+		return
+	}
+	defer conn.Close()
+	for {
+		report := make([]byte, 2048) // Report is much shorter.
+		n, err := conn.Read(report)
+		if !assert.NoError(t, err) {
+			return
+		}
+		select {
+		case reportChan <- report[:n]:
+		case <-ctx.Done():
+			return
 		}
 	}
 }

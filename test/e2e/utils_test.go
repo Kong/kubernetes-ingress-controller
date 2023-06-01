@@ -423,14 +423,32 @@ func ensureNoneOfDeploymentPodsHasCrashed(ctx context.Context, t *testing.T, env
 	}
 }
 
-func setEnv(kubecfg, namespace, target, containerName, variable, value string) error {
+type setEnvParams struct {
+	kubeCfgPath   string
+	namespace     string
+	target        string // e.g. deployment/name or pod/name
+	containerName string
+	variableName  string
+	value         string
+}
+
+func setEnv(p setEnvParams) error {
 	var envvar string
-	if value == "" {
-		envvar = fmt.Sprintf("%s-", variable)
+	if p.value == "" {
+		envvar = fmt.Sprintf("%s-", p.variableName)
 	} else {
-		envvar = fmt.Sprintf("%s=%s", variable, value)
+		envvar = fmt.Sprintf("%s=%s", p.variableName, p.value)
 	}
-	cmd := exec.Command("kubectl", "--kubeconfig", kubecfg, "set", "env", "-n", namespace, "-c", containerName, target, envvar)
+	//nolint:gosec
+	cmd := exec.Command(
+		"kubectl",
+		"--kubeconfig", p.kubeCfgPath,
+		"set", "env",
+		"-n", p.namespace,
+		"-c", p.containerName,
+		p.target,
+		envvar,
+	)
 	stdout, stderr := new(bytes.Buffer), new(bytes.Buffer)
 	cmd.Stdout = stdout
 	cmd.Stderr = stderr

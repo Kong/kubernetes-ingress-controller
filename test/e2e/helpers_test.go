@@ -270,9 +270,8 @@ func waitForDeploymentRollout(ctx context.Context, t *testing.T, env environment
 			return false
 		}
 
-		whyNot, ready := allUpdatedReplicasRolledOutAndReady(deployment)
-		if !ready {
-			t.Logf("controller deployment not ready: %s", whyNot)
+		if err := allUpdatedReplicasRolledOutAndReady(deployment); err != nil {
+			t.Logf("controller deployment not ready: %s", err)
 			return false
 		}
 
@@ -282,33 +281,32 @@ func waitForDeploymentRollout(ctx context.Context, t *testing.T, env environment
 
 // allUpdatedReplicasRolledOutAndReady ensures that all updated replicas are rolled out and ready. It is to make sure
 // that the deployment rollout is finished and all the new replicas are ready to serve traffic before we proceed with
-// the test.
-// It returns a string explaining why the deployment is not ready when it is not ready.
-func allUpdatedReplicasRolledOutAndReady(deployment *appsv1.Deployment) (whyNot string, satisfied bool) {
-	if newReplicasRolledOut := deployment.Spec.Replicas != nil && deployment.Status.UpdatedReplicas < *deployment.Spec.Replicas; newReplicasRolledOut {
-		return fmt.Sprintf(
-			"%d out of %d new replicas have been updated...",
-			deployment.Status.UpdatedReplicas,
-			*deployment.Spec.Replicas,
-		), false
+// the test. It returns an error with a reason if the deployment is not ready yet.
+func allUpdatedReplicasRolledOutAndReady(d *appsv1.Deployment) error {
+	if newReplicasRolledOut := d.Spec.Replicas != nil && d.Status.UpdatedReplicas < *d.Spec.Replicas; newReplicasRolledOut {
+		return fmt.Errorf(
+			"%d out of %d new replicas have been updated",
+			d.Status.UpdatedReplicas,
+			*d.Spec.Replicas,
+		)
 	}
 
-	if oldReplicasPendingTermination := deployment.Status.Replicas > deployment.Status.UpdatedReplicas; oldReplicasPendingTermination {
-		return fmt.Sprintf(
-			"%d old replicas pending termination...",
-			deployment.Status.Replicas-deployment.Status.UpdatedReplicas,
-		), false
+	if oldReplicasPendingTermination := d.Status.Replicas > d.Status.UpdatedReplicas; oldReplicasPendingTermination {
+		return fmt.Errorf(
+			"%d old replicas pending termination",
+			d.Status.Replicas-d.Status.UpdatedReplicas,
+		)
 	}
 
-	if rolloutFinished := deployment.Status.AvailableReplicas == deployment.Status.UpdatedReplicas; !rolloutFinished {
-		return fmt.Sprintf(
-			"%d of %d updated replicas are available...",
-			deployment.Status.AvailableReplicas,
-			deployment.Status.UpdatedReplicas,
-		), false
+	if rolloutFinished := d.Status.AvailableReplicas == d.Status.UpdatedReplicas; !rolloutFinished {
+		return fmt.Errorf(
+			"%d of %d updated replicas are available",
+			d.Status.AvailableReplicas,
+			d.Status.UpdatedReplicas,
+		)
 	}
 
-	return "", true
+	return nil
 }
 
 // Deployments represent the deployments that are deployed by the all-in-one manifests.

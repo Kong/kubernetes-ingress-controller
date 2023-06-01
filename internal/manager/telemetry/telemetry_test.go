@@ -92,7 +92,7 @@ func TestTelemetry(t *testing.T) {
 	require.NoError(t, err)
 	t.Log("verifying telemetry report")
 	require.Eventually(t, func() bool {
-		return verifyTelemetryReport(t, k8sVersion, <-reportChan)
+		return verifyTelemetryReport(t, k8sVersion, string(<-reportChan))
 	},
 		10*time.Second,
 		// Tick duration doesn't really matter, because reading from channel is blocking.
@@ -323,7 +323,7 @@ func handleConnectionToTelemetryServer(ctx context.Context, t *testing.T, listen
 	}
 }
 
-func verifyTelemetryReport(t *testing.T, k8sVersion *version.Info, report []byte) bool {
+func verifyTelemetryReport(t *testing.T, k8sVersion *version.Info, report string) bool {
 	t.Helper()
 	hostname, err := os.Hostname()
 	if err != nil {
@@ -339,16 +339,13 @@ func verifyTelemetryReport(t *testing.T, k8sVersion *version.Info, report []byte
 	// Report contains stanza like:
 	// id=57a7a76c-25d0-4394-ab9a-954f7190e39a;
 	// uptime=9;
-	// that is not stable across runs, so we need to remove it.
-	actualReport, err := removeStanzaFromReport(string(report), "id")
-	if err != nil {
-		t.Logf("failed to remove stanza id from report: %s", err)
-		return false
-	}
-	actualReport, err = removeStanzaFromReport(actualReport, "uptime")
-	if err != nil {
-		t.Logf("failed to remove stanza uptime from report: %s", err)
-		return false
+	// that are not stable across runs, so we need to remove them.
+	for _, s := range []string{"id", "uptime"} {
+		report, err = removeStanzaFromReport(report, s)
+		if err != nil {
+			t.Logf("failed to remove stanza %q from report: %s", s, err)
+			return false
+		}
 	}
 
 	expectedReport := fmt.Sprintf(
@@ -388,7 +385,7 @@ func verifyTelemetryReport(t *testing.T, k8sVersion *version.Info, report []byte
 		k8sVersion.GitVersion,
 		"v"+semver.String(),
 	)
-	return actualReport == expectedReport
+	return report == expectedReport
 }
 
 // removeStanzaFromReport removes stanza from report. Report contains stanzas like:

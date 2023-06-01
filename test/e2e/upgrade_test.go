@@ -111,7 +111,14 @@ func testManifestsUpgrade(
 	if featureGates := testParams.controllerFeatureGates; featureGates != "" {
 		t.Logf("setting environment variables for controller feature gates: %s", featureGates)
 		kubeconfig := getTemporaryKubeconfig(t, env)
-		err = setEnv(kubeconfig, namespace, fmt.Sprintf("deployment/%s", controllerDeploymentName), "KONG_CONTROLLER_FEATURE_GATES", featureGates)
+		err = setEnv(
+			kubeconfig,
+			namespace,
+			fmt.Sprintf("deployment/%s", controllerDeploymentName),
+			controllerContainerName,
+			"KONG_CONTROLLER_FEATURE_GATES",
+			featureGates,
+		)
 		require.NoError(t, err)
 		waitForDeploymentRollout(ctx, t, env, namespace, controllerDeploymentName)
 	}

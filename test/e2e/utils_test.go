@@ -423,14 +423,14 @@ func ensureNoneOfDeploymentPodsHasCrashed(ctx context.Context, t *testing.T, env
 	}
 }
 
-func setEnv(kubecfg, namespace, target, variable, value string) error {
+func setEnv(kubecfg, namespace, target, containerName, variable, value string) error {
 	var envvar string
 	if value == "" {
 		envvar = fmt.Sprintf("%s-", variable)
 	} else {
 		envvar = fmt.Sprintf("%s=%s", variable, value)
 	}
-	cmd := exec.Command("kubectl", "--kubeconfig", kubecfg, "set", "env", "-n", namespace, target, envvar)
+	cmd := exec.Command("kubectl", "--kubeconfig", kubecfg, "set", "env", "-n", namespace, "-c", containerName, target, envvar)
 	stdout, stderr := new(bytes.Buffer), new(bytes.Buffer)
 	cmd.Stdout = stdout
 	cmd.Stderr = stderr

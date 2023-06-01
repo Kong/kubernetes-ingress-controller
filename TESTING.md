@@ -88,6 +88,13 @@ You can run them using one of the dedicated Makefile targets:
 - `test.integration.postgres` run all postgres integration tests with standard
   verbose output on stderr. The output will also include controllers' logs.
 
+Through `GOTESTFLAGS` you can specify custom flags that will be passed to `go test`.
+This can allow you to run a subset of all the tests for faster feedback times, e.g.:
+
+```
+make test.integration.dbless GOTESTFLAGS="-count 1 -run TestUDPRouteEssentials"
+```
+
 [ktf]: https://github.com/Kong/kubernetes-testing-framework
 [pkggodev_testmain]: https://pkg.go.dev/testing#hdr-Main
 [integration_test_suite]: https://github.com/Kong/kubernetes-ingress-controller/blob/61e06ee64ff913aa9952816121125fca7ed59ba5/test/integration/suite_test.go#L36
@@ -104,10 +111,12 @@ For instance:
 - upgrade scenarios tested in [upgrade tests][test_e2e_upgrade]
 
 These tests deploy KIC and Kong Gateway in a cluster using the requested image(s)
-which could be customized via dedicated environment variables like
+which could be customized via dedicated environment variables like:
 
 - [`TEST_KONG_CONTROLLER_IMAGE_OVERRIDE`][env_var_controller_image_override]
 - [`TEST_KONG_IMAGE_OVERRIDE`][env_var_kong_image_override]
+
+On CI, those are being run both in kind and GKE environments.
 
 #### How to run
 
@@ -116,6 +125,18 @@ E2E tests are located under `tests/e2e/` and use `e2e_tests` [build tag][go_buil
 You can run them using one of the dedicated Makefile targets:
 
 - `test.e2e` run all e2e tests.
+
+Through `GOTESTFLAGS` you can specify custom flags that will be passed to `go test`.
+
+`E2E_TEST_RUN` is also available to specify the name of the test to run.
+This is being used in CI where Github Actions' matrix specifies tests to run
+in each workflow.
+
+Exemplar local invocation can look like this:
+
+```
+make test.e2e GOTESTFLAGS="-count 1" E2E_TEST_RUN=TestDeployAllInOneDBLESS
+```
 
 [test_e2e_all_in_one]: https://github.com/Kong/kubernetes-ingress-controller/blob/3d45c822bdb907caba568f86062af83406785fc5/test/e2e/all_in_one_test.go
 [test_e2e_upgrade]: https://github.com/Kong/kubernetes-ingress-controller/blob/43e797f7394c5f0a9394c6f158f5efff5e2321ec/test/e2e/upgrade_test.go

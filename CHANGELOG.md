@@ -156,7 +156,7 @@ Adding a new version? You'll need three changes:
     `pod-ip-address.my-namespace.pod`.
   - `service`: will make KIC build addresses using the following template:
     `pod-ip-address.service-name.my-namespace.svc`.
-    This is known to not work on GKE becuase it uses `kube-dns` instead of coredns.
+    This is known to not work on GKE because it uses `kube-dns` instead of `coredns`.
 - Gateway's `AttachedRoutes` fields get updated with the number of routes referencing
   and using each listener.
   [#4052](https://github.com/Kong/kubernetes-ingress-controller/pull/4052)
@@ -165,6 +165,8 @@ Adding a new version? You'll need three changes:
   database, allowing upgrades from one version of Kong Gateway to another without
   tearing down the database.
   [#4116](https://github.com/Kong/kubernetes-ingress-controller/pull/4116)
+- Telemetry reports now include a count for every `gateway.networking.k8s.io` CRD.
+  [#4058](https://github.com/Kong/kubernetes-ingress-controller/pull/4058)
 
 ### Changed
 

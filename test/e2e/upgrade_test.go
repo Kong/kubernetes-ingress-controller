@@ -116,7 +116,7 @@ func testManifestsUpgrade(
 			namespace,
 			fmt.Sprintf("deployment/%s", controllerDeploymentName),
 			controllerContainerName,
-			"KONG_CONTROLLER_FEATURE_GATES",
+			"CONTROLLER_FEATURE_GATES",
 			featureGates,
 		)
 		require.NoError(t, err)

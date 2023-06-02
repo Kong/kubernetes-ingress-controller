@@ -3,6 +3,8 @@ package translators
 import (
 	"fmt"
 	"sort"
+	"strconv"
+	"strings"
 
 	"github.com/kong/go-kong/kong"
 	"github.com/samber/lo"
@@ -168,4 +170,198 @@ func getGRPCRouteHostnamesAsSliceOfStrings(grpcroute *gatewayv1alpha2.GRPCRoute)
 	return lo.Map(grpcroute.Spec.Hostnames, func(h gatewayv1alpha2.Hostname, _ int) string {
 		return string(h)
 	})
+}
+
+const (
+	InternalRuleIndexAnnotationKey  = "internal-rule-index"
+	InternalMatchIndexAnnotationKey = "internal-match-index"
+)
+
+func SplitGRPCRoute(grpcroute *gatewayv1alpha2.GRPCRoute) []*gatewayv1alpha2.GRPCRoute {
+	hostnamedGRPCRoutes := make([]*gatewayv1alpha2.GRPCRoute, 0, len(grpcroute.Spec.Hostnames))
+	if len(grpcroute.Spec.Hostnames) == 0 {
+		hostnamedGRPCRoute := grpcroute.DeepCopy()
+		hostnamedGRPCRoutes = append(hostnamedGRPCRoutes, hostnamedGRPCRoute)
+	} else {
+		for _, hostname := range grpcroute.Spec.Hostnames {
+			hostnamedGRPCRoute := grpcroute.DeepCopy()
+			hostnamedGRPCRoute.Spec.Hostnames = []gatewayv1beta1.Hostname{hostname}
+			hostnamedGRPCRoutes = append(hostnamedGRPCRoutes, hostnamedGRPCRoute)
+		}
+	}
+
+	splittedGRPCRoutes := []*gatewayv1alpha2.GRPCRoute{}
+	for _, hostnamedGRPCRoute := range hostnamedGRPCRoutes {
+		for i, rule := range hostnamedGRPCRoute.Spec.Rules {
+			for j, match := range rule.Matches {
+				splittedRoute := hostnamedGRPCRoute.DeepCopy()
+				splittedRoute.Spec.Rules = []gatewayv1alpha2.GRPCRouteRule{
+					{
+						Matches:     []gatewayv1alpha2.GRPCRouteMatch{match},
+						Filters:     rule.Filters,
+						BackendRefs: rule.BackendRefs,
+					},
+				}
+				if splittedRoute.Annotations == nil {
+					splittedRoute.Annotations = map[string]string{}
+				}
+				splittedRoute.Annotations[InternalRuleIndexAnnotationKey] = strconv.Itoa(i)
+				splittedRoute.Annotations[InternalMatchIndexAnnotationKey] = strconv.Itoa(j)
+				splittedGRPCRoutes = append(splittedGRPCRoutes, splittedRoute)
+			}
+		}
+	}
+	return splittedGRPCRoutes
+}
+
+type GRPCRouteWithPriority struct {
+	GRPCRoute *gatewayv1alpha2.GRPCRoute
+	Priority  int
+}
+
+func AssignPrioritiesToSplittedGRPCRoutes(grpcRoutes []*gatewayv1alpha2.GRPCRoute) []GRPCRouteWithPriority {
+	const (
+		/*
+			From gateway API specification on type GRPCRouteRule:
+
+			Precedence MUST be given to the rule with the largest number of:
+
+			- Characters in a matching non-wildcard hostname.
+			- Characters in a matching hostname.
+			- Characters in a matching service.
+			- Characters in a matching method.
+			- Header matches.
+		*/
+		// PreciseHostnameShiftBits assigns bit 51 for marking if the hostname is non-wildcard.
+		PreciseHostnameShiftBits = 51
+		// HostnameLengthShiftBits assigns bits 43-50 for the length of hostname.
+		HostnameLengthShiftBits = 43
+		// ServiceLengthShiftBits assigns bits 42-32 for the length of service field of GRPC method match.
+		ServiceLengthShiftBits = 32
+		// MethodLengthShiftBits assigns bits 31-21 for length of method field of GRPC method match.
+		MethodLengthShiftBits = 21
+		// HeaderNumberShiftBits assigns bits 20-16 for number of header matches.
+		HeaderNumberShiftBits = 16
+		// remaining bits 15-0 are used for relative order of creation timestamp, namespace/name, and internal order of rules and matches.
+	)
+
+	priorityToGRPCRoutes := map[int][]*gatewayv1alpha2.GRPCRoute{}
+	for _, grpcRoute := range grpcRoutes {
+
+		anns := grpcRoute.Annotations
+		if anns == nil || anns[InternalRuleIndexAnnotationKey] == "" || anns[InternalMatchIndexAnnotationKey] == "" {
+			continue
+		}
+
+		var priority int
+		// assign priority bits for hostname.
+		if len(grpcRoute.Spec.Hostnames) > 0 {
+			hostname := grpcRoute.Spec.Hostnames[0]
+			priority += len(hostname) << HostnameLengthShiftBits
+			if !strings.HasPrefix(string(hostname), "*") {
+				priority += (1 << PreciseHostnameShiftBits)
+			}
+		}
+
+		if len(grpcRoute.Spec.Rules) > 0 && len(grpcRoute.Spec.Rules[0].Matches) > 0 {
+			match := grpcRoute.Spec.Rules[0].Matches[0]
+			// assign priority bits for GRPC method match.
+			if match.Method != nil {
+				if match.Method.Service != nil {
+					priority += len(*match.Method.Service) << ServiceLengthShiftBits
+				}
+				if match.Method.Method != nil {
+					priority += len(*match.Method.Method) << MethodLengthShiftBits
+				}
+			}
+			priority += len(match.Headers) << HeaderNumberShiftBits
+		}
+		priorityToGRPCRoutes[priority] = append(priorityToGRPCRoutes[priority], grpcRoute)
+	}
+
+	grpcRoutesWithPriorities := make([]GRPCRouteWithPriority, 0, len(grpcRoutes))
+	for priority, routes := range priorityToGRPCRoutes {
+		if len(routes) == 1 {
+			grpcRoutesWithPriorities = append(grpcRoutesWithPriorities, GRPCRouteWithPriority{
+				GRPCRoute: routes[0],
+				Priority:  priority + ((1 << 16) - 1),
+			})
+			continue
+		}
+
+		sort.Slice(routes, func(i, j int) bool {
+			// compare by creation timestamp.
+			if !routes[i].CreationTimestamp.Equal(&routes[j].CreationTimestamp) {
+				return routes[i].CreationTimestamp.Before(&routes[j].CreationTimestamp)
+			}
+			// compare by namespace.
+			if routes[i].Namespace != routes[j].Namespace {
+				return routes[i].Namespace < routes[j].Namespace
+			}
+			// compare by name.
+			if routes[i].Name != routes[j].Name {
+				return routes[i].Name < routes[j].Name
+			}
+			// compare by internal rule order.
+			ruleIndexi, _ := strconv.Atoi(routes[i].Annotations[InternalRuleIndexAnnotationKey])
+			ruleIndexj, _ := strconv.Atoi(routes[j].Annotations[InternalRuleIndexAnnotationKey])
+			if ruleIndexi != ruleIndexj {
+				return ruleIndexi < ruleIndexj
+			}
+			// compare by match order.
+			matchIndexi, _ := strconv.Atoi(routes[i].Annotations[InternalMatchIndexAnnotationKey])
+			matchIndexj, _ := strconv.Atoi(routes[j].Annotations[InternalMatchIndexAnnotationKey])
+			if matchIndexi != matchIndexj {
+				return matchIndexi < matchIndexj
+			}
+			return i < j
+		})
+
+		relativeOrderPriority := ((1 << 16) - 1)
+		for i, route := range routes {
+			grpcRoutesWithPriorities = append(grpcRoutesWithPriorities, GRPCRouteWithPriority{
+				GRPCRoute: route,
+				Priority:  priority + relativeOrderPriority - i,
+			})
+		}
+	}
+	return grpcRoutesWithPriorities
+}
+
+func KongServiceNameFromGRPCRouteWithPriority(grpcRouteWithPriority GRPCRouteWithPriority) string {
+	grpcRoute := grpcRouteWithPriority.GRPCRoute
+	return fmt.Sprintf("grpcroute.%s.%s.%s",
+		grpcRoute.Namespace,
+		grpcRoute.Name,
+		grpcRoute.Annotations[InternalRuleIndexAnnotationKey],
+	)
+}
+
+func KongExpressionRouteFromGRPCRouteWithPriority(
+	grpcRouteWithPriority GRPCRouteWithPriority,
+) kongstate.Route {
+	grpcRoute := grpcRouteWithPriority.GRPCRoute
+	tags := util.GenerateTagsForObject(grpcRoute)
+	routeName := fmt.Sprintf("grpcroute.%s.%s.%s.%s",
+		grpcRoute.Namespace,
+		grpcRoute.Name,
+		grpcRoute.Annotations[InternalRuleIndexAnnotationKey],
+		grpcRoute.Annotations[InternalMatchIndexAnnotationKey],
+	)
+
+	r := kongstate.Route{
+		Route: kong.Route{
+			Name:         kong.String(routeName),
+			PreserveHost: kong.Bool(true),
+			Tags:         tags,
+		},
+		Ingress:          util.FromK8sObject(grpcRoute),
+		ExpressionRoutes: true,
+	}
+
+	hostnames := getGRPCRouteHostnamesAsSliceOfStrings(grpcRoute)
+	matcher := generateMathcherFromGRPCMatch(grpcRoute.Spec.Rules[0].Matches[0], hostnames, grpcRoute.Annotations)
+	atc.ApplyExpression(&r.Route, matcher, grpcRouteWithPriority.Priority)
+
+	return r
 }

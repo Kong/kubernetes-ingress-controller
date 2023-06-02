@@ -25,6 +25,23 @@ func (p *Parser) ingressRulesFromGRPCRoutes() ingressRules {
 		return result
 	}
 
+	if p.featureFlags.ExpressionRoutes {
+		splittedGRPCRoutes := []*gatewayv1alpha2.GRPCRoute{}
+		for _, grpcRoute := range grpcRouteList {
+			splittedGRPCRoutes = append(splittedGRPCRoutes, translators.SplitGRPCRoute(grpcRoute)...)
+		}
+		splittedGRPCRoutesWithPriorities := translators.AssignPrioritiesToSplittedGRPCRoutes(splittedGRPCRoutes)
+		for _, grpcRouteWihtPriority := range splittedGRPCRoutesWithPriorities {
+			p.ingressRulesFromGRPCRouteWithPriority(&result, grpcRouteWihtPriority)
+		}
+
+		for _, grpcRoute := range grpcRouteList {
+			// TODO: generete translate failure events
+			p.registerSuccessfullyParsedObject(grpcRoute)
+		}
+		return result
+	}
+
 	var errs []error
 	for _, grpcroute := range grpcRouteList {
 		if err := p.ingressRulesFromGRPCRoute(&result, grpcroute); err != nil {
@@ -86,4 +103,35 @@ func grpcBackendRefsToBackendRefs(grpcBackendRef []gatewayv1alpha2.GRPCBackendRe
 		backendRefs = append(backendRefs, hRef.BackendRef)
 	}
 	return backendRefs
+}
+
+func (p *Parser) ingressRulesFromGRPCRouteWithPriority(
+	rules *ingressRules,
+	grpcRouteWithPriority translators.GRPCRouteWithPriority,
+) {
+	grpcRoute := grpcRouteWithPriority.GRPCRoute
+	if len(grpcRoute.Spec.Rules) != 1 {
+		return
+	}
+	grpcRouteRule := grpcRoute.Spec.Rules[0]
+	backendRefs := grpcBackendRefsToBackendRefs(grpcRouteRule.BackendRefs)
+
+	serviceName := translators.KongServiceNameFromGRPCRouteWithPriority(grpcRouteWithPriority)
+
+	kongService, _ := generateKongServiceFromBackendRefWithName(
+		p.logger,
+		p.storer,
+		rules,
+		serviceName,
+		grpcRoute,
+		"grpcs",
+		backendRefs...,
+	)
+	kongService.Routes = append(
+		kongService.Routes,
+		translators.KongExpressionRouteFromGRPCRouteWithPriority(grpcRouteWithPriority),
+	)
+	// cache the service to avoid duplicates in further loop iterations
+	rules.ServiceNameToServices[serviceName] = kongService
+	rules.ServiceNameToParent[serviceName] = grpcRoute
 }

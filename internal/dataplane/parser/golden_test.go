@@ -3,6 +3,7 @@ package parser_test
 import (
 	"bytes"
 	"context"
+	"flag"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -19,12 +20,13 @@ import (
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/deckgen"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/parser"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/manager/featuregates"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/store"
 )
 
 var (
 	// updateGolden tells whether to update golden files using the current output of the parser.
-	updateGolden = os.Getenv("UPDATE_GOLDEN") == "true"
+	updateGolden = flag.Bool("update", false, "update golden files")
 
 	// defaultKongVersion is the default Kong version to use in tests. Can be overridden in a test case.
 	defaultKongVersion = semver.MustParse("3.3.0")
@@ -32,8 +34,17 @@ var (
 	// defaultFeatureFlags is the default set of feature flags to use in tests. Can be overridden in a test case.
 	defaultFeatureFlags = func() parser.FeatureFlags {
 		return parser.FeatureFlags{
-			CombinedServiceRoutes: true,
-			RegexPathPrefix:       true,
+			// We do not verify configuration reports in golden tests.
+			ReportConfiguredKubernetesObjects: false,
+
+			// Feature flags that are directly propagated from the feature gates get their defaults.
+			CombinedServiceRoutes: featuregates.GetFeatureGatesDefaults()[featuregates.CombinedRoutesFeature],
+			CombinedServices:      featuregates.GetFeatureGatesDefaults()[featuregates.CombinedServicesFeature],
+			ExpressionRoutes:      featuregates.GetFeatureGatesDefaults()[featuregates.ExpressionRoutesFeature],
+			FillIDs:               featuregates.GetFeatureGatesDefaults()[featuregates.FillIDsFeature],
+
+			// RegexPathPrefix depends on the Kong version and is enabled by default for Kong >= 3.0.0.
+			RegexPathPrefix: true,
 		}
 	}
 )
@@ -80,7 +91,7 @@ func TestParser_GoldenTests(t *testing.T) {
 		require.True(t, testCaseDir.IsDir(),
 			"%s is not a directory, while we expect testdata/golden/* to include only directories", testCaseDirPath)
 
-		if updateGolden {
+		if *updateGolden {
 			// If we're updating the golden files, let's first prune test case directories.
 			pruneTestCaseDirectory(t, testCaseDirPath)
 		}
@@ -187,12 +198,13 @@ func unmarshalSettingsFile(t *testing.T, path string) parserSettings {
 
 	featureFlags := defaultFeatureFlags()
 	// Override the feature flags if specified in the settings file.
-	for flag, value := range settings.FeatureFlags {
-		field := reflect.ValueOf(&featureFlags).Elem().FieldByName(flag)
-		require.True(t, field.IsValid(), "invalid feature flag %s from %s", flag, path)
+	for featureFlagName, featureFlagValue := range settings.FeatureFlags {
+		field := reflect.ValueOf(&featureFlags).Elem().FieldByName(featureFlagName)
+		require.Truef(t, field.IsValid(),
+			"invalid feature flag %s from %s, its name has to match one of parser.FeatureFlag's fields", featureFlagName, path)
 
-		t.Logf("%s: Setting feature flag %s to %v", path, flag, value)
-		field.SetBool(value)
+		t.Logf("%s: Setting feature flag %s to %v", path, featureFlagName, featureFlagValue)
+		field.SetBool(featureFlagValue)
 	}
 
 	kongVersion := defaultKongVersion
@@ -251,7 +263,7 @@ func runParserGoldenTest(t *testing.T, tc parserGoldenTestCase) {
 	require.NoError(t, err, "failed marshalling result")
 
 	// If the update flag is set, update the golden file with the result...
-	if updateGolden {
+	if *updateGolden {
 		err = os.WriteFile(tc.goldenFile, resultB, 0o600)
 		require.NoError(t, err, "failed writing to golden file")
 		t.Logf("Updated golden file %s", tc.goldenFile)

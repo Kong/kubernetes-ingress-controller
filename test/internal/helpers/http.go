@@ -37,7 +37,10 @@ func RetryableHTTPClient(base *http.Client) *http.Client {
 // MustHTTPRequest creates a request with provided parameters and it fails the
 // test that it was called in when request creation fails.
 func MustHTTPRequest(t *testing.T, method string, proxyURL *url.URL, path string, headers map[string]string) *http.Request {
-	req, err := http.NewRequest(method, fmt.Sprintf("%s/%s", proxyURL, path), nil)
+	// trim suffix '/'s of proxy URL and prefix '/'s of path to avoid duplicate /s
+	host := strings.TrimRight(proxyURL.String(), "/")
+	path = strings.TrimLeft(path, "/")
+	req, err := http.NewRequest(method, fmt.Sprintf("%s/%s", host, path), nil)
 	require.NoError(t, err)
 	for header, value := range headers {
 		req.Header.Set(header, value)

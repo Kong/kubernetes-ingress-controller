@@ -72,11 +72,10 @@ jobs:
         name: Set Kind versions
         run: |
           if [ "${{ inputs.all-supported-k8s-versions }}" == "true" ]; then
-            echo "kind-versions=[\"1.22.15\", \"1.23.13\", \"1.24.7\", \"1.25.8\", \"1.26.3\", \"1.27.1\"]" >> $GITHUB_OUTPUT
+            echo "kind-versions=[\"1.22.15\", \"1.23.13\", \"1.24.13\", \"1.25.9\", \"1.26.4\", \"1.27.2\"]" >> $GITHUB_OUTPUT
           else
-            echo "kind-versions=[\"1.27.1\"]" >> $GITHUB_OUTPUT
-          fi 
-
+            echo "kind-versions=[\"1.27.2\"]" >> $GITHUB_OUTPUT
+          fi
   kind:
     runs-on: ubuntu-latest
     if: ${{ !cancelled() }}
@@ -223,14 +222,15 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - kubernetes-version: 'v1.26.0'
-            istio-version: 'v1.17.1'
-          - kubernetes-version: 'v1.25.3'
-            istio-version: 'v1.17.1'
-          - kubernetes-version: 'v1.25.3'
-            istio-version: 'v1.16.3'
-          - kubernetes-version: 'v1.25.3'
-            istio-version: 'v1.15.6'
+          # K8s v1.27.2 is not officially supported by Istio v1.17.2, but we want to test it anyway.
+          - kubernetes-version: 'v1.27.2'
+            istio-version: 'v1.17.2'
+          - kubernetes-version: 'v1.26.4'
+            istio-version: 'v1.17.2'
+          - kubernetes-version: 'v1.25.9'
+            istio-version: 'v1.16.5'
+          - kubernetes-version: 'v1.25.9'
+            istio-version: 'v1.15.7'
     steps:
       - name: Download built image artifact
         if: ${{ inputs.load-local-image }}

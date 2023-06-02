@@ -7,7 +7,7 @@ Adding a new version? You'll need three changes:
 * Add the diff link, like "[2.7.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v1.2.2...v1.2.3".
   This is all the way at the bottom. It's the thing we always forget.
 --->
- - [2.10.0](#294)
+ - [2.10.0](#2100)
  - [2.9.3](#293)
  - [2.9.2](#292)
  - [2.9.1](#291)
@@ -179,10 +179,6 @@ Adding a new version? You'll need three changes:
   and instead uses `discovery.k8s.io/v1` `EndpointSlice` to discover endpoints
   for Kubernetes `Service`s.
   [#3997](https://github.com/Kong/kubernetes-ingress-controller/pull/3997)
-  [#3998](https://github.com/Kong/kubernetes-ingress-controller/pull/3998)
-  [#3980](https://github.com/Kong/kubernetes-ingress-controller/pull/3980)
-  [#3977](https://github.com/Kong/kubernetes-ingress-controller/pull/3977)
-  [#4079](https://github.com/Kong/kubernetes-ingress-controller/pull/4079)
 - Gateway Discovery now produces DNS names instead of IP addresses
   [#4044](https://github.com/Kong/kubernetes-ingress-controller/pull/4044)
 

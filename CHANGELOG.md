@@ -7,6 +7,7 @@ Adding a new version? You'll need three changes:
 * Add the diff link, like "[2.7.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v1.2.2...v1.2.3".
   This is all the way at the bottom. It's the thing we always forget.
 --->
+ - [2.10.0](#294)
  - [2.9.3](#293)
  - [2.9.2](#292)
  - [2.9.1](#291)
@@ -68,10 +69,14 @@ Adding a new version? You'll need three changes:
 
 ## Unreleased
 
+## [2.10.0]
+
+> Release date: 2023-06-02
+
 ### Added
 
 - Gateways now track UDP Listener status when `--publish-service-udp` is set.
-  UDPRoutes that do not match a valid UDP Listener are excluded from
+  `UDPRoute`s that do not match a valid UDP Listener are excluded from
   configuration. Previously KIC added any UDPRoute that indicated an associated
   Gateway as its parent regardless of Listener configuration or status.
   [#3832](https://github.com/Kong/kubernetes-ingress-controller/pull/3832)
@@ -172,23 +177,24 @@ Adding a new version? You'll need three changes:
 
 - Kong Ingress Controller no longer relies on `k8s.io.api.core.v1` `Endpoints`,
   and instead uses `discovery.k8s.io/v1` `EndpointSlice` to discover endpoints
-  for Kubernetes Services.
+  for Kubernetes `Service`s.
   [#3997](https://github.com/Kong/kubernetes-ingress-controller/pull/3997)
   [#3998](https://github.com/Kong/kubernetes-ingress-controller/pull/3998)
   [#3980](https://github.com/Kong/kubernetes-ingress-controller/pull/3980)
   [#3977](https://github.com/Kong/kubernetes-ingress-controller/pull/3977)
+  [#4079](https://github.com/Kong/kubernetes-ingress-controller/pull/4079)
 - Gateway Discovery now produces DNS names instead of IP addresses
   [#4044](https://github.com/Kong/kubernetes-ingress-controller/pull/4044)
 
 ### Fixed
 
-- Fix paging in `GetAdminAPIsForService` which might have caused the controller
+- Fixed paging in `GetAdminAPIsForService` which might have caused the controller
   to only return the head of the list of Endpoints for Admin API service.
   [#3846](https://github.com/Kong/kubernetes-ingress-controller/pull/3846)
 - Fixed a race condition in the version-specific feature system.
   [#3852](https://github.com/Kong/kubernetes-ingress-controller/pull/3852)
-- Fixed a missing reconciliation behavior for Admin API EndpointSlice reconciler
-  when the EndpointSlice that we receive a reconciliation request for is already
+- Fixed a missing reconciliation behavior for Admin API `EndpointSlice` reconciler
+  when the `EndpointSlice` that we receive a reconciliation request for is already
   missing
   [#3889](https://github.com/Kong/kubernetes-ingress-controller/pull/3889)
 - Fixed leader election role manifest where `""` and `"coordination"` API groups
@@ -2499,7 +2505,7 @@ Please read the changelog and test in your environment.
  - The initial versions  were rapildy iterated to deliver
    a working ingress controller.
 
-
+[2.10.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.9.3...v2.10.0
 [2.9.3]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.9.2...v2.9.3
 [2.9.2]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.9.1...v2.9.2
 [2.9.1]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.9.0...v2.9.1

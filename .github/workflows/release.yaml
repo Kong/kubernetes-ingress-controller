@@ -9,7 +9,7 @@ on:
           Depending on the value, a production release will be published to GitHub or not.
             - In case of prerelease tags (e.g. v1.2.3-alpha.1) it will build-push the images (only standard tags,
               i.e., v1.2.3-alpha.1), test them and publish a GitHub prerelease (labeled as non-production ready).
-            - In other cases (e.g. v1.2.3) it will build-push the images (standard and supplemental tags, 
+            - In other cases (e.g. v1.2.3) it will build-push the images (standard and supplemental tags,
               i.e., v1.2.3 and v1.2), test them and publish a production Github release.
         required: true
       latest:
@@ -135,9 +135,10 @@ jobs:
         kubernetes-version:
           - 'v1.22.15'
           - 'v1.23.13'
-          - 'v1.24.7'
-          - 'v1.25.3'
-          - 'v1.26.0'
+          - 'v1.24.14'
+          - 'v1.25.10'
+          - 'v1.26.5'
+          - 'v1.27.2'
     steps:
       - name: checkout repository
         uses: actions/checkout@v3
@@ -183,9 +184,9 @@ jobs:
 
           - [Docker Image](https://hub.docker.com/repository/docker/kong/kubernetes-ingress-controller)
           - [Get started](https://github.com/Kong/kubernetes-ingress-controller#get-started)
-          
+
           #### Links:
-          
+
           - [Changelog](https://github.com/Kong/kubernetes-ingress-controller/blob/main/CHANGELOG.md#${{ steps.semver_parser.outputs.major }}${{ steps.semver_parser.outputs.minor }}${{ steps.semver_parser.outputs.patch }})
 
         token: ${{ secrets.GITHUB_TOKEN }}

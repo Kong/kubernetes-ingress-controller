@@ -233,9 +233,9 @@ func NewFakeStore(
 	return s, nil
 }
 
-// DumpAsYAML dumps the contents of every object in the store as YAML, separated by "---".
+// MarshalToYAML marshals the contents of every object in the store as YAML, separated by "---".
 // This is useful for debugging.
-func (objects FakeObjects) DumpAsYAML() ([]byte, error) {
+func (objects FakeObjects) MarshalToYAML() ([]byte, error) {
 	// In many cases objects we'd like to dump do not have their GVK set, so we need to set it manually based on
 	// their known type - otherwise the YAML dump will not work.
 	typeToGVK := map[reflect.Type]schema.GroupVersionKind{
@@ -269,7 +269,7 @@ func (objects FakeObjects) DumpAsYAML() ([]byte, error) {
 			return fmt.Errorf("unknown type: %T", obj)
 		}
 		obj.GetObjectKind().SetGroupVersionKind(gvk)
-		b, err := dumpObjAsYAML(obj)
+		b, err := marshalObjToYAML(obj)
 		if err != nil {
 			return err
 		}
@@ -309,10 +309,10 @@ func (objects FakeObjects) DumpAsYAML() ([]byte, error) {
 	return out.Bytes(), nil
 }
 
-// dumpObjAsYAML dumps the given object as YAML.
+// marshalObjToYAML marshals the given object as YAML.
 // It uses the JSON printer to dump the object as JSON, and then converts the JSON to YAML because some of the objects
 // we want to dump do not have YAML tags.
-func dumpObjAsYAML(obj runtime.Object) ([]byte, error) {
+func marshalObjToYAML(obj runtime.Object) ([]byte, error) {
 	buff := bytes.Buffer{}
 	printer := printers.JSONPrinter{}
 	err := printer.PrintObj(obj, &buff)

@@ -1,8 +1,8 @@
 _format_version: "3.0"
 services:
 - connect_timeout: 60000
-  host: foo-svc.foo-namespace.80.svc
-  name: foo-namespace.foo.foo-svc.80
+  host: cert-manager-solver-pod.foo-namespace.80.svc
+  name: foo-namespace.cert-manager-solver-pod.80
   path: /
   port: 80
   protocol: http
@@ -12,10 +12,10 @@ services:
   - hosts:
     - example.com
     https_redirect_status_code: 426
-    name: foo-namespace.foo.foo-svc.example.com.80
+    name: foo-namespace.foo.cert-manager-solver-pod.example.com.80
     path_handling: v0
     paths:
-    - ~/whatever$
+    - /.well-known/acme-challenge/yolo
     preserve_host: true
     protocols:
     - http
@@ -31,16 +31,16 @@ services:
     - k8s-group:networking.k8s.io
     - k8s-version:v1
   tags:
-  - k8s-name:foo-svc
+  - k8s-name:cert-manager-solver-pod
   - k8s-namespace:foo-namespace
   - k8s-kind:Service
   - k8s-version:v1
   write_timeout: 60000
 upstreams:
 - algorithm: round-robin
-  name: foo-svc.foo-namespace.80.svc
+  name: cert-manager-solver-pod.foo-namespace.80.svc
   tags:
-  - k8s-name:foo-svc
+  - k8s-name:cert-manager-solver-pod
   - k8s-namespace:foo-namespace
   - k8s-kind:Service
   - k8s-version:v1

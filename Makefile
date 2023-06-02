@@ -340,7 +340,7 @@ test.unit.pretty:
 
 .PHONY: test.golden.update
 test.golden.update:
-	@UPDATE_GOLDEN=true go test -run TestParser_GoldenTests ./internal/dataplane/parser
+	@UPDATE_GOLDEN=true go test -v -run TestParser_GoldenTests ./internal/dataplane/parser
 
 .PHONY: _check.container.environment
 _check.container.environment:

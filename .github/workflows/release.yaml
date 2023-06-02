@@ -135,9 +135,9 @@ jobs:
         kubernetes-version:
           - 'v1.22.15'
           - 'v1.23.13'
-          - 'v1.24.14'
-          - 'v1.25.10'
-          - 'v1.26.5'
+          - 'v1.24.13'
+          - 'v1.25.9'
+          - 'v1.26.4'
           - 'v1.27.2'
     steps:
       - name: checkout repository

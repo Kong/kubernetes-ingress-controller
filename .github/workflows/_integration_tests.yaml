@@ -41,7 +41,7 @@ jobs:
             test: postgres
           - name: feature-gates
             test: dbless
-            feature_gates: "GatewayAlpha=true,CombinedRoutes=false"
+            feature_gates: "GatewayAlpha=true,CombinedRoutes=false,CombinedServices=false"
           - name: dbless-knative
             test: dbless.knative
           - name: postgres-knative
@@ -59,11 +59,6 @@ jobs:
             test: dbless
             feature_gates: "ExpressionRoutes=true,GatewayAlpha=true"
             router-flavor: "expressions"
-          # TODO: remove this once CombinedServices is enabled by default.
-          # https://github.com/Kong/kubernetes-ingress-controller/issues/3979
-          - name: dbless-combined-services
-            test: dbless
-            feature_gates: "GatewayAlpha=true,CombinedServices=true"
           - name: dbless-fill-ids
             test: dbless
             feature_gates: "GatewayAlpha=true,FillIDs=true"

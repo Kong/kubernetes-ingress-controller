@@ -246,6 +246,7 @@ func SplitHTTPRoute(httproute *gatewayv1beta1.HTTPRoute) []*gatewayv1beta1.HTTPR
 		for _, hostname := range httproute.Spec.Hostnames {
 			hostNamedRoute := httproute.DeepCopy()
 			hostNamedRoute.Spec.Hostnames = []gatewayv1beta1.Hostname{hostname}
+			hostnamedRoutes = append(hostnamedRoutes, hostNamedRoute)
 		}
 	}
 
@@ -432,6 +433,7 @@ func KongExpressionRouteFromHTTPRouteWithPriority(
 			PreserveHost: kong.Bool(true),
 			Tags:         tags,
 		},
+		Ingress:          util.FromK8sObject(httproute),
 		ExpressionRoutes: true,
 	}
 

@@ -165,6 +165,7 @@ func TestHTTPRouteEssentials(t *testing.T) {
 	helpers.EventuallyGETPath(t, proxyURL, "3/exact-test-http-route-essentials", http.StatusOK, "<title>httpbin.org</title>", emptyHeaderSet, ingressWait, waitTick)
 	helpers.EventuallyGETPath(t, proxyURL, "3/exact-test-http-route-essentialsNO", http.StatusNotFound, "no Route matched", emptyHeaderSet, ingressWait, waitTick)
 
+	t.Log("verifying for configuration of plugins")
 	require.Eventually(t, func() bool {
 		req, err := http.NewRequest("GET", fmt.Sprintf("%s/%s", proxyURL, "test-http-route-essentials"), nil)
 		if err != nil {

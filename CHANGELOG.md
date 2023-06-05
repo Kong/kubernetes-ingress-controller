@@ -69,6 +69,11 @@ Adding a new version? You'll need three changes:
 
 ## Unreleased
 
+### Added
+
+- The `CombinedServices` feature gate is now enabled by default.
+  [#4138](https://github.com/Kong/kubernetes-ingress-controller/pull/4138)
+
 ## [2.10.0]
 
 > Release date: 2023-06-02

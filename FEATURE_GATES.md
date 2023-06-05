@@ -61,7 +61,7 @@ Features that reach GA and over time become stable will be removed from this tab
 | CombinedRoutes   | `true`  | Beta  | 2.8.0   | TBD   |
 | GatewayAlpha     | `false` | Alpha | 2.6.0   | TBD   |
 | ExpressionRoutes | `false` | Alpha | 2.10.0  | TBD   |
-| CombinedServices | `false` | Alpha | 2.10.0  | TBD   |
+| CombinedServices | `true`  | Beta  | 2.10.0  | TBD   |
 | FillIDs          | `false` | Alpha | 2.10.0  | 3.0.0 |
 
 **NOTE**: The `Gateway` feature gate refers to [Gateway

@@ -37,7 +37,7 @@ func namespacedNameFromFlagValue(flagValue string) (OptionalNamespacedName, erro
 func gatewayAPIControllerNameFromFlagValue(flagValue string) (string, error) {
 	// https://github.com/kubernetes-sigs/gateway-api/blob/547122f7f55ac0464685552898c560658fb40073/apis/v1beta1/shared_types.go#L448-L463
 	re := regexp.MustCompile(`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*\/[A-Za-z0-9\/\-._~%!$&'()*+,;=:]+$`)
-	if !re.Match([]byte(flagValue)) {
+	if !re.MatchString(flagValue) {
 		return "", errors.New("the expected format is example.com/controller-name")
 	}
 	return flagValue, nil

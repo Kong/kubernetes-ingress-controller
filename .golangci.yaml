@@ -16,7 +16,6 @@ linters:
   - asciicheck
   - bodyclose
   - contextcheck
-  - depguard
   - dogsled
   - durationcheck
   - errcheck
@@ -75,7 +74,7 @@ linters-settings:
     - pkg: k8s.io/apimachinery/pkg/types
       alias: k8stypes
     - pkg: k8s.io/apimachinery/pkg/util/validation
-      alias: utilvalidation      
+      alias: utilvalidation
     - pkg: k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1
       alias: apiextensionsv1
     - pkg: k8s.io/apimachinery/pkg/api/errors

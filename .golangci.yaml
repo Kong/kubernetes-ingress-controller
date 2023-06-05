@@ -104,12 +104,12 @@ linters-settings:
           recommendations:
           - fmt
           - errors
-  depguard:
-    list-type: denylist
-    include-go-root: false
-    packages-with-error-message:
-      - k8s.io/utils/pointer: "Use github.com/samber/lo ToPtr instead"
-      - golang.org/x/net/context: "use regular context instead"
+      - golang.org/x/net/context:
+          recommendations:
+          - context
+      - k8s.io/utils/pointer:
+          recommendations:
+          - github.com/samber/lo
   tenv:
     all: true
   loggercheck:

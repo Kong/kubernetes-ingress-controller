@@ -12,7 +12,9 @@ import (
 	"github.com/blang/semver/v4"
 	"github.com/go-logr/logr"
 	"github.com/sirupsen/logrus"
+	"k8s.io/apimachinery/pkg/util/sets"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
@@ -66,8 +68,27 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 	healthServer.setHealthzCheck(healthz.Ping)
 	healthServer.Start(ctx, c.ProbeAddr, setupLog.WithName("health-check"))
 
+	// REVIEW: We're creating a kube client here to be used by a long-living adminapi.Discoverer instance. We cannot pass
+	// the kube client that created by the manager because it is created after the initial admin api discovery happens.
+	// Reconsider this approach.
+	kubeClient, err := client.New(kubeconfig, client.Options{})
+	if err != nil {
+		return fmt.Errorf("failed to create kubernetes client: %w", err)
+	}
+
+	adminAPIsDiscoverer, err := adminapi.NewDiscoverer(
+		kubeClient,
+		adminapi.NewStatusClient(),
+		sets.New(c.KondAdminSvcPortNames...),
+		c.GatewayDiscoveryDNSStrategy,
+		setupLog.WithName("admin-api-discoverer"),
+	)
+	if err != nil {
+		return fmt.Errorf("failed to create admin apis discoverer: %w", err)
+	}
+
 	setupLog.Info("getting the kong admin api client configuration")
-	initialKongClients, err := c.adminAPIClients(ctx, setupLog.WithName("initialize-kong-clients"))
+	initialKongClients, err := c.adminAPIClients(ctx, setupLog.WithName("initialize-kong-clients"), adminAPIsDiscoverer)
 	if err != nil {
 		return fmt.Errorf("unable to build kong api client(s): %w", err)
 	}
@@ -113,7 +134,7 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 
 	mgr, err := ctrl.NewManager(kubeconfig, controllerOpts)
 	if err != nil {
-		return fmt.Errorf("unable to start controller manager: %w", err)
+		return fmt.Errorf("unable to create controller manager: %w", err)
 	}
 
 	setupLog.Info("Initializing Dataplane Client")
@@ -200,7 +221,9 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 
 	setupLog.Info("Starting Enabled Controllers")
 	controllers, err := setupControllers(mgr, dataplaneClient,
-		dataplaneAddressFinder, udpDataplaneAddressFinder, kubernetesStatusQueue, c, featureGates, clientsManager)
+		dataplaneAddressFinder, udpDataplaneAddressFinder, kubernetesStatusQueue, c, featureGates, clientsManager,
+		adminAPIsDiscoverer,
+	)
 	if err != nil {
 		return fmt.Errorf("unable to setup controller as expected %w", err)
 	}

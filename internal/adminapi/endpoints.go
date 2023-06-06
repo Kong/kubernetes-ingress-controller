@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/go-logr/logr"
 	discoveryv1 "k8s.io/api/discovery/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
@@ -15,21 +16,63 @@ import (
 	cfgtypes "github.com/kong/kubernetes-ingress-controller/v2/internal/manager/config/types"
 )
 
+type ReadinessChecker interface {
+	AdminAPIReady(ctx context.Context, address string) error
+}
+
 // DiscoveredAdminAPI represents an Admin API discovered from a Kubernetes Service.
 type DiscoveredAdminAPI struct {
 	Address string
 	PodRef  k8stypes.NamespacedName
 }
 
+type Discoverer struct {
+	// kubeClient is used to list Admin API Service EndpointSlices.
+	kubeClient client.Client
+
+	// readinessChecker is used to ensure that the discovered Admin API is reachable and ready to accept requests.
+	readinessChecker ReadinessChecker
+
+	// portNames is the set of port names that Admin API Service ports will be
+	// matched against.
+	portNames sets.Set[string]
+
+	// dnsStrategy is the DNS strategy to use when resolving Admin API Service
+	// addresses.
+	dnsStrategy cfgtypes.DNSStrategy
+
+	logger logr.Logger
+}
+
+func NewDiscoverer(
+	kubeClient client.Client,
+	statusClient ReadinessChecker,
+	portNames sets.Set[string],
+	dnsStrategy cfgtypes.DNSStrategy,
+	logger logr.Logger,
+) (*Discoverer, error) {
+	if portNames.Len() == 0 {
+		return nil, fmt.Errorf("no admin API port names provided")
+	}
+	if err := dnsStrategy.Validate(); err != nil {
+		return nil, fmt.Errorf("invalid dns strategy: %w", err)
+	}
+
+	return &Discoverer{
+		kubeClient:       kubeClient,
+		readinessChecker: statusClient,
+		portNames:        portNames,
+		dnsStrategy:      dnsStrategy,
+		logger:           logger,
+	}, nil
+}
+
 // GetAdminAPIsForService performs an endpoint lookup, using provided kubeClient
 // to list provided Admin API Service EndpointSlices.
 // The retrieved EndpointSlices' ports are compared with the provided portNames set.
-func GetAdminAPIsForService(
+func (d *Discoverer) GetAdminAPIsForService(
 	ctx context.Context,
-	kubeClient client.Client,
 	service k8stypes.NamespacedName,
-	portNames sets.Set[string],
-	dnsStrategy cfgtypes.DNSStrategy,
 ) (sets.Set[DiscoveredAdminAPI], error) {
 	const (
 		defaultEndpointSliceListPagingLimit = 100
@@ -48,7 +91,7 @@ func GetAdminAPIsForService(
 	)
 	for {
 		var endpointsList discoveryv1.EndpointSliceList
-		if err := kubeClient.List(ctx, &endpointsList, &client.ListOptions{
+		if err := d.kubeClient.List(ctx, &endpointsList, &client.ListOptions{
 			LabelSelector: labelSelector,
 			Namespace:     service.Namespace,
 			Continue:      continueToken,
@@ -58,7 +101,7 @@ func GetAdminAPIsForService(
 		}
 
 		for _, es := range endpointsList.Items {
-			adminAPI, err := AdminAPIsFromEndpointSlice(es, portNames, dnsStrategy)
+			adminAPI, err := d.AdminAPIsFromEndpointSlice(ctx, es)
 			if err != nil {
 				return nil, err
 			}
@@ -75,18 +118,17 @@ func GetAdminAPIsForService(
 
 // AdminAPIsFromEndpointSlice returns a list of Admin APIs when given
 // an EndpointSlice.
-func AdminAPIsFromEndpointSlice(
-	endpoints discoveryv1.EndpointSlice,
-	portNames sets.Set[string],
-	dnsStrategy cfgtypes.DNSStrategy,
-) (sets.Set[DiscoveredAdminAPI], error) {
+func (d *Discoverer) AdminAPIsFromEndpointSlice(ctx context.Context, endpoints discoveryv1.EndpointSlice) (
+	sets.Set[DiscoveredAdminAPI],
+	error,
+) {
 	discoveredAdminAPIs := sets.New[DiscoveredAdminAPI]()
 	for _, p := range endpoints.Ports {
 		if p.Name == nil {
 			continue
 		}
 
-		if !portNames.Has(*p.Name) {
+		if !d.portNames.Has(*p.Name) {
 			continue
 		}
 
@@ -99,10 +141,6 @@ func AdminAPIsFromEndpointSlice(
 		}
 
 		for _, e := range endpoints.Endpoints {
-			if e.Conditions.Ready == nil || !*e.Conditions.Ready {
-				continue
-			}
-
 			// We do not take into account endpoints that are not backed by a Pod.
 			if e.TargetRef == nil || e.TargetRef.Kind != "Pod" {
 				continue
@@ -117,10 +155,17 @@ func AdminAPIsFromEndpointSlice(
 				Namespace: endpoints.Namespace,
 			}
 
-			adminAPI, err := adminAPIFromEndpoint(e, p, svc, dnsStrategy)
+			adminAPI, err := adminAPIFromEndpoint(e, p, svc, d.dnsStrategy)
 			if err != nil {
 				return nil, err
 			}
+
+			if err := d.readinessChecker.AdminAPIReady(ctx, adminAPI.Address); err != nil {
+				// todo: make it a debug log
+				d.logger.Info("Admin API is not ready", "address", adminAPI.Address, "error", err)
+				continue
+			}
+
 			discoveredAdminAPIs = discoveredAdminAPIs.Insert(adminAPI)
 		}
 	}

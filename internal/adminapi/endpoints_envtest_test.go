@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/go-logr/logr"
 	"github.com/google/uuid"
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
@@ -95,7 +96,16 @@ func TestGetAdminAPIsForServiceReturnsAllAddressesCorrectlyPagingThroughResults(
 				}
 			}
 
-			got, err := adminapi.GetAdminAPIsForService(ctx, client, service, sets.New("admin"), cfgtypes.IPDNSStrategy)
+			discoverer, err := adminapi.NewDiscoverer(
+				client,
+				&alwaysReadyStatusClient{},
+				sets.New("admin"),
+				cfgtypes.IPDNSStrategy,
+				logr.Discard(),
+			)
+			require.NoError(t, err)
+
+			got, err := discoverer.GetAdminAPIsForService(ctx, service)
 			require.NoError(t, err)
 			require.Len(t, got, tc.subnetD*tc.subnetC, "GetAdminAPIsForService should return all valid addresses")
 		})
@@ -108,4 +118,11 @@ func testPodReference(name, ns string) *corev1.ObjectReference {
 		Namespace: ns,
 		Name:      name,
 	}
+}
+
+type alwaysReadyStatusClient struct {
+}
+
+func (c *alwaysReadyStatusClient) AdminAPIReady(ctx context.Context, address string) error {
+	return nil
 }

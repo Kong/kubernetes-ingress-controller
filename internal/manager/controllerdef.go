@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"reflect"
 
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/adminapi"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apimachinery/pkg/util/sets"
 	knativev1alpha1 "knative.dev/networking/pkg/apis/networking/v1alpha1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -67,6 +67,7 @@ func setupControllers(
 	c *Config,
 	featureGates map[string]bool,
 	kongAdminAPIEndpointsNotifier configuration.EndpointsNotifier,
+	adminAPIsDiscoverer *adminapi.Discoverer,
 ) ([]ControllerDef, error) {
 	restMapper := mgr.GetClient().RESTMapper()
 
@@ -85,13 +86,12 @@ func setupControllers(
 		{
 			Enabled: c.KongAdminSvc.IsPresent(),
 			Controller: &configuration.KongAdminAPIServiceReconciler{
-				Client:            mgr.GetClient(),
-				ServiceNN:         c.KongAdminSvc.OrEmpty(),
-				PortNames:         sets.New(c.KondAdminSvcPortNames...),
-				Log:               ctrl.Log.WithName("controllers").WithName("KongAdminAPIService"),
-				CacheSyncTimeout:  c.CacheSyncTimeout,
-				EndpointsNotifier: kongAdminAPIEndpointsNotifier,
-				DNSStrategy:       c.GatewayDiscoveryDNSStrategy,
+				Client:              mgr.GetClient(),
+				ServiceNN:           c.KongAdminSvc.OrEmpty(),
+				Log:                 ctrl.Log.WithName("controllers").WithName("KongAdminAPIService"),
+				CacheSyncTimeout:    c.CacheSyncTimeout,
+				EndpointsNotifier:   kongAdminAPIEndpointsNotifier,
+				AdminAPIsDiscoverer: adminAPIsDiscoverer,
 			},
 		},
 		// ---------------------------------------------------------------------------

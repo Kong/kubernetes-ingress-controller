@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/go-logr/logr"
 	"github.com/google/uuid"
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
@@ -48,6 +49,7 @@ func TestAddressesFromEndpointSlice(t *testing.T) {
 	tests := []struct {
 		name        string
 		endpoints   discoveryv1.EndpointSlice
+		readiness   map[string]bool // address -> ready
 		want        sets.Set[DiscoveredAdminAPI]
 		portNames   sets.Set[string]
 		dnsStrategy cfgtypes.DNSStrategy
@@ -69,6 +71,9 @@ func TestAddressesFromEndpointSlice(t *testing.T) {
 					},
 				},
 				Ports: builder.NewEndpointPort(8444).WithName("admin").IntoSlice(),
+			},
+			readiness: map[string]bool{
+				"https://10-0-0-1.ns.pod:8444": true,
 			},
 			portNames: sets.New("admin"),
 			want: sets.New(
@@ -98,6 +103,9 @@ func TestAddressesFromEndpointSlice(t *testing.T) {
 				},
 				Ports: builder.NewEndpointPort(8444).WithName("admin").IntoSlice(),
 			},
+			readiness: map[string]bool{
+				"https://10-0-0-1.ns.pod:8444": true,
+			},
 			portNames: sets.New("admin"),
 			want: sets.New(
 				DiscoveredAdminAPI{
@@ -125,6 +133,10 @@ func TestAddressesFromEndpointSlice(t *testing.T) {
 					},
 				},
 				Ports: builder.NewEndpointPort(8444).WithName("admin").IntoSlice(),
+			},
+			readiness: map[string]bool{
+				"10.0.0.1": true,
+				"10.0.0.2": true,
 			},
 			portNames: sets.New("admin"),
 			want: sets.New(
@@ -155,6 +167,10 @@ func TestAddressesFromEndpointSlice(t *testing.T) {
 				},
 				Ports: builder.NewEndpointPort(8444).WithName("admin").IntoSlice(),
 			},
+			readiness: map[string]bool{
+				"10.0.0.1": true,
+				"10.0.0.2": true,
+			},
 			portNames: sets.New("admin"),
 			want: sets.New(
 				DiscoveredAdminAPI{
@@ -183,6 +199,11 @@ func TestAddressesFromEndpointSlice(t *testing.T) {
 				},
 				Ports: builder.NewEndpointPort(8444).WithName("admin").IntoSlice(),
 			},
+			readiness: map[string]bool{
+				"10.0.0.1": false,
+				"10.0.0.2": false,
+				"10.0.0.3": false,
+			},
 			portNames:   sets.New("admin"),
 			want:        sets.New[DiscoveredAdminAPI](),
 			dnsStrategy: cfgtypes.IPDNSStrategy,
@@ -206,6 +227,11 @@ func TestAddressesFromEndpointSlice(t *testing.T) {
 					},
 				},
 				Ports: builder.NewEndpointPort(8444).WithName("admin").IntoSlice(),
+			},
+			readiness: map[string]bool{
+				"10.0.0.1": false,
+				"10.0.0.2": false,
+				"10.0.0.3": false,
 			},
 			portNames:   sets.New("admin"),
 			want:        sets.New[DiscoveredAdminAPI](),
@@ -243,6 +269,14 @@ func TestAddressesFromEndpointSlice(t *testing.T) {
 					},
 				},
 				Ports: builder.NewEndpointPort(8444).WithName("admin").IntoSlice(),
+			},
+			readiness: map[string]bool{
+				"10.0.0.1": true,
+				"10.0.0.2": true,
+				"10.0.0.3": true,
+				"10.0.1.1": true,
+				"10.0.1.2": true,
+				"10.0.2.1": false,
 			},
 			portNames: sets.New("admin"),
 			want: sets.New(
@@ -296,6 +330,14 @@ func TestAddressesFromEndpointSlice(t *testing.T) {
 				},
 				Ports: builder.NewEndpointPort(8444).WithName("admin").IntoSlice(),
 			},
+			readiness: map[string]bool{
+				"10.0.0.1": true,
+				"10.0.0.2": true,
+				"10.0.0.3": true,
+				"10.0.1.1": true,
+				"10.0.1.2": true,
+				"10.0.2.1": false,
+			},
 			portNames: sets.New("admin"),
 			want: sets.New(
 				DiscoveredAdminAPI{
@@ -348,6 +390,14 @@ func TestAddressesFromEndpointSlice(t *testing.T) {
 				},
 				Ports: builder.NewEndpointPort(8444).WithName("non-admin-port-name").IntoSlice(),
 			},
+			readiness: map[string]bool{
+				"10.0.0.1": true,
+				"10.0.0.2": true,
+				"10.0.0.3": true,
+				"10.0.1.1": true,
+				"10.0.1.2": true,
+				"10.0.2.1": false,
+			},
 			want:        sets.New[DiscoveredAdminAPI](),
 			dnsStrategy: cfgtypes.IPDNSStrategy,
 		},
@@ -367,6 +417,11 @@ func TestAddressesFromEndpointSlice(t *testing.T) {
 					},
 				},
 				Ports: builder.NewEndpointPort(8444).IntoSlice(),
+			},
+			readiness: map[string]bool{
+				"10.0.0.1": true,
+				"10.0.0.2": true,
+				"10.0.0.3": true,
 			},
 			portNames:   sets.New("admin"),
 			want:        sets.New[DiscoveredAdminAPI](),
@@ -392,6 +447,11 @@ func TestAddressesFromEndpointSlice(t *testing.T) {
 					builder.NewEndpointPort(8444).WithName("admin").Build(),
 				},
 			},
+			readiness: map[string]bool{
+				"10.0.0.1": true,
+				"10.0.0.2": true,
+				"10.0.0.3": true,
+			},
 			portNames: sets.New("admin", "admin-tls"),
 			want: sets.New(
 				DiscoveredAdminAPI{
@@ -412,7 +472,7 @@ func TestAddressesFromEndpointSlice(t *testing.T) {
 			dnsStrategy: cfgtypes.NamespaceScopedPodDNSStrategy,
 		},
 		{
-			name: "endpoints with no target ref return error for service scopec dns strategy",
+			name: "endpoints with no target ref return error for service scoped dns strategy",
 			endpoints: discoveryv1.EndpointSlice{
 				ObjectMeta:  endpointsSliceObjectMeta,
 				AddressType: discoveryv1.AddressTypeIPv4,
@@ -427,6 +487,9 @@ func TestAddressesFromEndpointSlice(t *testing.T) {
 					},
 				},
 				Ports: builder.NewEndpointPort(8444).WithName("admin").IntoSlice(),
+			},
+			readiness: map[string]bool{
+				"10.0.0.1": true,
 			},
 			portNames:   sets.New("admin"),
 			want:        sets.New[DiscoveredAdminAPI](),
@@ -449,6 +512,9 @@ func TestAddressesFromEndpointSlice(t *testing.T) {
 				},
 				Ports: builder.NewEndpointPort(8444).WithName("admin").IntoSlice(),
 			},
+			readiness: map[string]bool{
+				"10.0.0.1": true,
+			},
 			portNames:   sets.New("admin"),
 			want:        sets.New[DiscoveredAdminAPI](),
 			dnsStrategy: cfgtypes.IPDNSStrategy,
@@ -460,7 +526,10 @@ func TestAddressesFromEndpointSlice(t *testing.T) {
 		t.Run(fmt.Sprintf("dnsstrategy_%s/%s", tt.dnsStrategy, tt.name), func(t *testing.T) {
 			require.NoError(t, tt.dnsStrategy.Validate())
 
-			adminAPI, err := AdminAPIsFromEndpointSlice(tt.endpoints, tt.portNames, tt.dnsStrategy)
+			discoverer, err := NewDiscoverer(nil, newFakeReadinessChecker(tt.readiness), tt.portNames, tt.dnsStrategy, logr.Discard())
+			require.NoError(t, err)
+
+			adminAPI, err := discoverer.AdminAPIsFromEndpointSlice(context.Background(), tt.endpoints)
 			if tt.expectedErr != nil {
 				require.EqualError(t, err, tt.expectedErr.Error())
 			} else {
@@ -468,6 +537,24 @@ func TestAddressesFromEndpointSlice(t *testing.T) {
 			}
 		})
 	}
+}
+
+type fakeReadinessChecker struct {
+	// address -> ready
+	readiness map[string]bool
+}
+
+func newFakeReadinessChecker(readiness map[string]bool) *fakeReadinessChecker {
+	return &fakeReadinessChecker{
+		readiness: readiness,
+	}
+}
+
+func (f *fakeReadinessChecker) AdminAPIReady(_ context.Context, address string) error {
+	if f.readiness[address] {
+		return nil
+	}
+	return fmt.Errorf("not ready")
 }
 
 func TestGetAdminAPIsForService(t *testing.T) {
@@ -674,7 +761,16 @@ func TestGetAdminAPIsForService(t *testing.T) {
 				Build()
 
 			portNames := sets.New("admin")
-			got, err := GetAdminAPIsForService(context.Background(), fakeClient, tt.service, portNames, tt.dnsStrategy)
+			discoverer, err := NewDiscoverer(
+				fakeClient,
+				newFakeReadinessChecker(map[string]bool{}),
+				portNames,
+				tt.dnsStrategy,
+				logr.Discard(),
+			)
+			require.NoError(t, err)
+
+			got, err := discoverer.GetAdminAPIsForService(context.Background(), tt.service)
 			if tt.wantErr {
 				require.Error(t, err)
 				return

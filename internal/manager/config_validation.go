@@ -13,6 +13,9 @@ import (
 	cfgtypes "github.com/kong/kubernetes-ingress-controller/v2/internal/manager/config/types"
 )
 
+// https://github.com/kubernetes-sigs/gateway-api/blob/547122f7f55ac0464685552898c560658fb40073/apis/v1beta1/shared_types.go#L448-L463
+var gatewayAPIControllerNameRegex = regexp.MustCompile(`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*\/[A-Za-z0-9\/\-._~%!$&'()*+,;=:]+$`)
+
 // *FromFlagValue functions are used to validate single flag values and set those in Config.
 // They're meant to be used together with ValidatedValue[T] type.
 
@@ -35,9 +38,7 @@ func namespacedNameFromFlagValue(flagValue string) (OptionalNamespacedName, erro
 }
 
 func gatewayAPIControllerNameFromFlagValue(flagValue string) (string, error) {
-	// https://github.com/kubernetes-sigs/gateway-api/blob/547122f7f55ac0464685552898c560658fb40073/apis/v1beta1/shared_types.go#L448-L463
-	re := regexp.MustCompile(`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*\/[A-Za-z0-9\/\-._~%!$&'()*+,;=:]+$`)
-	if !re.Match([]byte(flagValue)) {
+	if !gatewayAPIControllerNameRegex.MatchString(flagValue) {
 		return "", errors.New("the expected format is example.com/controller-name")
 	}
 	return flagValue, nil

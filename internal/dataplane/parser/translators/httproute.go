@@ -294,10 +294,10 @@ func (m httpRouteMatchMeta) getKey() string {
 	seenQueryParams := make(map[string]struct{})
 	queryParams := make([]gatewayv1beta1.HTTPQueryParamMatch, 0, len(m.Match.QueryParams))
 	for _, queryParam := range m.Match.QueryParams {
-		if _, ok := seenQueryParams[queryParam.Name]; ok {
+		if _, ok := seenQueryParams[string(queryParam.Name)]; ok {
 			continue
 		}
-		seenQueryParams[queryParam.Name] = struct{}{}
+		seenQueryParams[string(queryParam.Name)] = struct{}{}
 		queryParams = append(queryParams, queryParam)
 	}
 

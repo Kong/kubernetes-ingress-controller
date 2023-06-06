@@ -45,7 +45,7 @@ func (b *HTTPRouteMatchBuilder) WithPathType(pathValuePtr *string, pathTypePtr *
 
 func (b *HTTPRouteMatchBuilder) WithQueryParam(name, value string) *HTTPRouteMatchBuilder {
 	b.httpRouteMatch.QueryParams = append(b.httpRouteMatch.QueryParams, gatewayv1beta1.HTTPQueryParamMatch{
-		Name:  name,
+		Name:  gatewayv1beta1.HTTPHeaderName(name),
 		Value: value,
 	})
 	return b

@@ -15,7 +15,8 @@ on:
       latest:
         description: 'Whether to tag this release latest'
         required: true
-        default: 'false'
+        type: boolean
+        default: false
 
 jobs:
   verify-manifest-tag:

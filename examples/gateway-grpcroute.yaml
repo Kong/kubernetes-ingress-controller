@@ -81,3 +81,7 @@ spec:
   - backendRefs:
     - name: grpcbin
       port: 443
+    matches:
+    - method:
+        service: "grpcbin.GRPCBin"
+        method: "DummyUnary"

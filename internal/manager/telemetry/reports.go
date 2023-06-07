@@ -3,6 +3,7 @@ package telemetry
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/google/uuid"
 	"k8s.io/client-go/rest"
@@ -21,6 +22,19 @@ type InstanceIDProvider interface {
 	GetID() uuid.UUID
 }
 
+const (
+	splunkEndpoint                   = "kong-hf.konghq.com:61833"
+	splunkEndpointInsecureSkipVerify = false
+	telemetryPeriod                  = time.Hour
+)
+
+type ReportConfig struct {
+	SplunkEndpoint                   string
+	SplunkEndpointInsecureSkipVerify bool
+	TelemetryPeriod                  time.Duration
+	ReportValues                     ReportValues
+}
+
 // SetupAnonymousReports sets up and starts the anonymous reporting and returns
 // a cleanup function and an error.
 // The caller is responsible to call the returned function - when the returned
@@ -29,7 +43,7 @@ func SetupAnonymousReports(
 	ctx context.Context,
 	kubeCfg *rest.Config,
 	clientsProvider GatewayClientsProvider,
-	rv ReportValues,
+	reportCfg ReportConfig,
 	instanceIDProvider InstanceIDProvider,
 ) (func(), error) {
 	// if anonymous reports are enabled this helps provide Kong with insights about usage of the ingress controller
@@ -72,7 +86,18 @@ func SetupAnonymousReports(
 		"id": instanceIDProvider.GetID(), // universal unique identifier for this system
 	}
 
-	tMgr, err := CreateManager(kubeCfg, clientsProvider, fixedPayload, rv)
+	// Use defaults when not specified.
+	if reportCfg.SplunkEndpoint == "" {
+		reportCfg.SplunkEndpoint = splunkEndpoint
+	}
+	if !reportCfg.SplunkEndpointInsecureSkipVerify {
+		reportCfg.SplunkEndpointInsecureSkipVerify = splunkEndpointInsecureSkipVerify
+	}
+	if reportCfg.TelemetryPeriod == 0 {
+		reportCfg.TelemetryPeriod = telemetryPeriod
+	}
+
+	tMgr, err := CreateManager(kubeCfg, clientsProvider, fixedPayload, reportCfg)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create anonymous reports manager: %w", err)
 	}

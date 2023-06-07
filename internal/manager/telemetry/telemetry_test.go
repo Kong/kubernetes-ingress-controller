@@ -35,7 +35,6 @@ import (
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/manager"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/manager/featuregates"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/manager/telemetry"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 	"github.com/kong/kubernetes-ingress-controller/v2/pkg/clientset/scheme"
 	"github.com/kong/kubernetes-ingress-controller/v2/test/envtest"
@@ -45,38 +44,30 @@ func TestTelemetry(t *testing.T) {
 	t.Log("configuring TLS listener - server for telemetry data")
 	cert, err := generateSelfSignedCert()
 	require.NoError(t, err)
-	listener, err := tls.Listen("tcp", "localhost:0", &tls.Config{
+	telemetryServer, err := tls.Listen("tcp", "localhost:0", &tls.Config{
 		Certificates: []tls.Certificate{cert},
 		// The same version as the one used by TLS forwarder in the pkg telemetry.
 		MinVersion: tls.VersionTLS13,
 		MaxVersion: tls.VersionTLS13,
 	})
 	require.NoError(t, err)
-	defer listener.Close()
+	defer telemetryServer.Close()
 	// Run a server that will receive the report, it's expected
 	// to be the first connection and the payload.
 	reportChan := make(chan []byte)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	go handleConnectionToTelemetryServer(ctx, t, listener, reportChan)
+	go handleConnectionToTelemetryServer(ctx, t, telemetryServer, reportChan)
 
 	t.Log("configuring envtest and creating K8s objects for telemetry test")
 	envcfg := envtest.Setup(t, scheme.Scheme)
-	cfg := configForEnvTestTelemetry(t, envcfg)
+	// Let's have long duration due too rate limiter in K8s client.
+	cfg := configForEnvTestTelemetry(t, envcfg, telemetryServer.Addr().String(), time.Second)
 	c, err := cfg.GetKubeconfig()
 	require.NoError(t, err)
 	createK8sObjectsForTelemetryTest(ctx, t, c)
 
 	t.Log("starting the controller manager")
-	// Override the telemetry settings, to allow testing.
-	// Set them back to the original values at the end of the test.
-	setPkgGlobals := func(ep string, skipVerify bool, dur time.Duration) {
-		telemetry.SplunkEndpoint = ep
-		telemetry.SplunkEndpointInsecureSkipVerify = skipVerify
-		telemetry.TelemetryPeriod = dur
-	}
-	defer setPkgGlobals(telemetry.SplunkEndpoint, telemetry.SplunkEndpointInsecureSkipVerify, telemetry.TelemetryPeriod)
-	setPkgGlobals(listener.Addr().String(), true, time.Second) // Let's have long duration due too rate limiter in K8s client.
 	go func() {
 		deprecatedLogger, _, err := manager.SetupLoggers(&cfg, io.Discard)
 		if !assert.NoError(t, err) {
@@ -100,7 +91,7 @@ func TestTelemetry(t *testing.T) {
 	)
 }
 
-func configForEnvTestTelemetry(t *testing.T, envcfg *rest.Config) manager.Config {
+func configForEnvTestTelemetry(t *testing.T, envcfg *rest.Config, splunkEndpoint string, telemetryPeriod time.Duration) manager.Config {
 	t.Helper()
 
 	cfg := manager.Config{}
@@ -125,6 +116,10 @@ func configForEnvTestTelemetry(t *testing.T, envcfg *rest.Config) manager.Config
 
 	cfg.FeatureGates = featuregates.GetFeatureGatesDefaults()
 	cfg.FeatureGates[featuregates.GatewayFeature] = false
+
+	cfg.SplunkEndpoint = splunkEndpoint
+	cfg.SplunkEndpointInsecureSkipVerify = true
+	cfg.TelemetryPeriod = telemetryPeriod
 
 	return cfg
 }

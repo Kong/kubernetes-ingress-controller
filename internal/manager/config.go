@@ -120,6 +120,11 @@ type Config struct {
 	Konnect adminapi.KonnectConfig
 
 	flagSet *pflag.FlagSet
+
+	// Override default telemetry settings (e.g. for testing). They aren't exposed in the CLI.
+	SplunkEndpoint                   string
+	SplunkEndpointInsecureSkipVerify bool
+	TelemetryPeriod                  time.Duration
 }
 
 // -----------------------------------------------------------------------------

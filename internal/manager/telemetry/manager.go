@@ -4,7 +4,6 @@ import (
 	"crypto/tls"
 	"fmt"
 	"strings"
-	"time"
 
 	"github.com/bombsimon/logrusr/v2"
 	"github.com/kong/kubernetes-telemetry/pkg/forwarders"
@@ -21,12 +20,6 @@ import (
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/manager/telemetry/workflows"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
-)
-
-var (
-	SplunkEndpoint                   = "kong-hf.konghq.com:61833"
-	SplunkEndpointInsecureSkipVerify = false
-	TelemetryPeriod                  = time.Hour
 )
 
 const (
@@ -46,7 +39,7 @@ type ReportValues struct {
 }
 
 // CreateManager creates telemetry manager using the provided rest.Config.
-func CreateManager(restConfig *rest.Config, gatewaysCounter workflows.DiscoveredGatewaysCounter, fixedPayload Payload, rv ReportValues) (telemetry.Manager, error) {
+func CreateManager(restConfig *rest.Config, gatewaysCounter workflows.DiscoveredGatewaysCounter, fixedPayload Payload, reportCfg ReportConfig) (telemetry.Manager, error) {
 	logger := logrusr.New(logrus.New())
 
 	k, err := kubernetes.NewForConfig(restConfig)
@@ -59,16 +52,16 @@ func CreateManager(restConfig *rest.Config, gatewaysCounter workflows.Discovered
 	}
 	dyn := dynamic.New(k.Discovery().RESTClient())
 
-	m, err := createManager(k, dyn, cl, gatewaysCounter, fixedPayload, rv,
-		telemetry.OptManagerPeriod(TelemetryPeriod),
+	m, err := createManager(k, dyn, cl, gatewaysCounter, fixedPayload, reportCfg.ReportValues,
+		telemetry.OptManagerPeriod(reportCfg.TelemetryPeriod),
 		telemetry.OptManagerLogger(logger),
 	)
 	if err != nil {
 		return nil, err
 	}
 
-	tf, err := forwarders.NewTLSForwarder(SplunkEndpoint, logger, func(c *tls.Config) {
-		c.InsecureSkipVerify = SplunkEndpointInsecureSkipVerify
+	tf, err := forwarders.NewTLSForwarder(reportCfg.SplunkEndpoint, logger, func(c *tls.Config) {
+		c.InsecureSkipVerify = reportCfg.SplunkEndpointInsecureSkipVerify
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to create telemetry TLSForwarder: %w", err)

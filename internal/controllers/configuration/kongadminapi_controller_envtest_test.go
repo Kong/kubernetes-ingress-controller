@@ -78,11 +78,7 @@ func startKongAdminAPIServiceReconciler(ctx context.Context, t *testing.T, clien
 
 	n = &notifier{t: t}
 
-	adminAPIsDiscoverer, err := adminapi.NewDiscoverer(
-		mgr.GetClient(),
-		sets.New("admin"),
-		types.ServiceScopedPodDNSStrategy,
-	)
+	adminAPIsDiscoverer, err := adminapi.NewDiscoverer(sets.New("admin"), types.ServiceScopedPodDNSStrategy)
 	require.NoError(t, err)
 
 	require.NoError(t,
@@ -246,9 +242,16 @@ func TestKongAdminAPIController(t *testing.T) {
 		}
 		require.NoError(t, client.Create(ctx, &endpoints, &ctrlclient.CreateOptions{}))
 
-		assert.Eventually(t, func() bool { return len(n.LastNotified()) == 1 }, 3*time.Second, time.Millisecond)
+		assert.Eventually(t, func() bool { return len(n.LastNotified()) == 2 }, 3*time.Second, time.Millisecond)
 		assert.ElementsMatch(t,
 			[]adminapi.DiscoveredAdminAPI{
+				{
+					Address: fmt.Sprintf("https://10-0-0-1.%s.%s.svc:8080", adminService.Name, adminService.Namespace),
+					PodRef: k8stypes.NamespacedName{
+						Namespace: adminPod.Namespace,
+						Name:      adminPod.Name,
+					},
+				},
 				{
 					Address: fmt.Sprintf("https://10-0-0-2.%s.%s.svc:8080", adminService.Name, adminService.Namespace),
 					PodRef: k8stypes.NamespacedName{
@@ -463,16 +466,8 @@ func TestKongAdminAPIController(t *testing.T) {
 			n.LastNotified(),
 		)
 
-		// Update all endpoints so that they are not Ready.
-		for i := range endpoints.Endpoints {
-			endpoints.Endpoints[i].Conditions.Ready = lo.ToPtr(false)
-		}
-		require.NoError(t, client.Update(ctx, &endpoints, &ctrlclient.UpdateOptions{}))
-		require.NoError(t, client.Get(ctx, k8stypes.NamespacedName{Name: endpoints.Name, Namespace: endpoints.Namespace}, &endpoints, &ctrlclient.GetOptions{}))
-		assert.Eventually(t, func() bool { return len(n.LastNotified()) == 0 }, 3*time.Second, time.Millisecond)
-
-		// Update 1 endpoint so that that it's Ready.
-		endpoints.Endpoints[0].Conditions.Ready = lo.ToPtr(true)
+		// Delete one endpoint.
+		endpoints.Endpoints = endpoints.Endpoints[:1]
 
 		require.NoError(t, client.Update(ctx, &endpoints, &ctrlclient.UpdateOptions{}))
 		require.NoError(t, client.Get(ctx, k8stypes.NamespacedName{Name: endpoints.Name, Namespace: endpoints.Namespace}, &endpoints, &ctrlclient.GetOptions{}))

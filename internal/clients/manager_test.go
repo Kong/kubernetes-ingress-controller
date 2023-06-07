@@ -27,19 +27,24 @@ type clientFactoryWithExpected struct {
 	t        *testing.T
 }
 
-func (cf clientFactoryWithExpected) CreateAdminAPIClient(_ context.Context, address string) (*adminapi.Client, error) {
-	stillExpecting, ok := cf.expected[address]
+func (cf clientFactoryWithExpected) CreateAdminAPIClient(_ context.Context, discoveredAdminAPI adminapi.DiscoveredAdminAPI) (*adminapi.Client, error) {
+	stillExpecting, ok := cf.expected[discoveredAdminAPI.Address]
 	if !ok {
-		cf.t.Errorf("got %s which was unexpected", address)
-		return nil, fmt.Errorf("got %s which was unexpected", address)
+		cf.t.Errorf("got %s which was unexpected", discoveredAdminAPI)
+		return nil, fmt.Errorf("got %s which was unexpected", discoveredAdminAPI)
 	}
 	if !stillExpecting {
-		cf.t.Errorf("got %s more than once", address)
-		return nil, fmt.Errorf("got %s more than once", address)
+		cf.t.Errorf("got %s more than once", discoveredAdminAPI)
+		return nil, fmt.Errorf("got %s more than once", discoveredAdminAPI)
 	}
-	cf.expected[address] = false
+	cf.expected[discoveredAdminAPI.Address] = false
 
-	return adminapi.NewTestClient(address)
+	c, err := adminapi.NewTestClient(discoveredAdminAPI.Address)
+	if err != nil {
+		return nil, err
+	}
+	c.AttachPodReference(discoveredAdminAPI.PodRef)
+	return c, nil
 }
 
 func (cf clientFactoryWithExpected) AssertExpectedCalls() {

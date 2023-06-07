@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"net/http"
 	"time"
 
 	"github.com/avast/retry-go/v4"
@@ -263,7 +262,12 @@ func generateAddressFinderGetter(mgrc client.Client, publishServiceNn k8stypes.N
 // to create the list of clients.
 // When a headless service name is provided via --kong-admin-svc then that is used
 // to obtain a list of endpoints via EndpointSlice lookup in kubernetes API.
-func (c *Config) adminAPIClients(ctx context.Context, logger logr.Logger, discoverer *adminapi.Discoverer) ([]*adminapi.Client, error) {
+func (c *Config) adminAPIClients(
+	ctx context.Context,
+	logger logr.Logger,
+	discoverer *adminapi.Discoverer,
+	factory adminapi.ClientFactory,
+) ([]*adminapi.Client, error) {
 	httpclient, err := adminapi.MakeHTTPClient(&c.KongAdminAPIConfig, c.KongAdminToken)
 	if err != nil {
 		return nil, err
@@ -272,7 +276,7 @@ func (c *Config) adminAPIClients(ctx context.Context, logger logr.Logger, discov
 	// If kong-admin-svc flag has been specified then use it to get the list
 	// of Kong Admin API endpoints.
 	if c.KongAdminSvc.IsPresent() {
-		return c.adminAPIClientFromServiceDiscovery(ctx, logger, httpclient, discoverer)
+		return c.adminAPIClientFromServiceDiscovery(ctx, logger, discoverer, factory)
 	}
 
 	// Otherwise fallback to the list of kong admin URLs.
@@ -301,9 +305,14 @@ func (e NoAvailableEndpointsError) Error() string {
 func (c *Config) adminAPIClientFromServiceDiscovery(
 	ctx context.Context,
 	logger logr.Logger,
-	httpclient *http.Client,
 	discoverer *adminapi.Discoverer,
+	factory adminapi.ClientFactory,
 ) ([]*adminapi.Client, error) {
+	kubeClient, err := c.GetKubeClient()
+	if err != nil {
+		return nil, err
+	}
+
 	kongAdminSvcNN, ok := c.KongAdminSvc.Get()
 	if !ok {
 		return nil, errors.New("kong admin service namespaced name not provided")
@@ -317,8 +326,8 @@ func (c *Config) adminAPIClientFromServiceDiscovery(
 	// instance and without an address and there's no way to initialize the
 	// configuration validation and sending code.
 	var clients []*adminapi.Client
-	err := retry.Do(func() error {
-		s, err := discoverer.GetAdminAPIsForService(ctx, kongAdminSvcNN)
+	err = retry.Do(func() error {
+		s, err := discoverer.GetAdminAPIsForService(ctx, kubeClient, kongAdminSvcNN)
 		if err != nil {
 			return retry.Unrecoverable(err)
 		}
@@ -326,25 +335,23 @@ func (c *Config) adminAPIClientFromServiceDiscovery(
 			return NoAvailableEndpointsError{serviceNN: kongAdminSvcNN}
 		}
 
-		var readyClients []*adminapi.Client
+		var (
+			readyClients      []*adminapi.Client
+			createClientsErrs []error
+		)
 		for _, adminAPI := range s.UnsortedList() {
-			cl, err := adminapi.NewKongClientForWorkspace(ctx, adminAPI.Address, c.KongWorkspace, httpclient)
+			cl, err := factory.CreateAdminAPIClient(ctx, adminAPI)
 			if err != nil {
-				continue
-			}
-			cl.AttachPodReference(adminAPI.PodRef)
-
-			// Check if the client is ready by making a request to the status endpoint.
-			_, err = cl.AdminAPIClient().Status(ctx)
-			if err != nil {
+				createClientsErrs = append(createClientsErrs, err)
 				continue
 			}
 
 			readyClients = append(readyClients, cl)
 		}
 
+		// If we have no ready clients that means we failed to create AdminAPI clients for all discovered endpoints.
 		if len(readyClients) == 0 {
-			return NoAvailableEndpointsError{serviceNN: kongAdminSvcNN}
+			return errors.Join(createClientsErrs...)
 		}
 
 		clients = readyClients

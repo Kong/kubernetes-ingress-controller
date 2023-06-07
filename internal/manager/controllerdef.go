@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"reflect"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/adminapi"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	knativev1alpha1 "knative.dev/networking/pkg/apis/networking/v1alpha1"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -12,6 +11,7 @@ import (
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/adminapi"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/configuration"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/crds"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/gateway"

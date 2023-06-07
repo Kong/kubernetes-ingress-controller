@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/go-logr/logr"
 	discoveryv1 "k8s.io/api/discovery/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
@@ -27,12 +26,6 @@ type DiscoveredAdminAPI struct {
 }
 
 type Discoverer struct {
-	// kubeClient is used to list Admin API Service EndpointSlices.
-	kubeClient client.Client
-
-	// readinessChecker is used to ensure that the discovered Admin API is reachable and ready to accept requests.
-	readinessChecker ReadinessChecker
-
 	// portNames is the set of port names that Admin API Service ports will be
 	// matched against.
 	portNames sets.Set[string]
@@ -40,16 +33,11 @@ type Discoverer struct {
 	// dnsStrategy is the DNS strategy to use when resolving Admin API Service
 	// addresses.
 	dnsStrategy cfgtypes.DNSStrategy
-
-	logger logr.Logger
 }
 
 func NewDiscoverer(
-	kubeClient client.Client,
-	statusClient ReadinessChecker,
 	adminAPIPortNames sets.Set[string],
 	dnsStrategy cfgtypes.DNSStrategy,
-	logger logr.Logger,
 ) (*Discoverer, error) {
 	if adminAPIPortNames.Len() == 0 {
 		return nil, fmt.Errorf("no admin API port names provided")
@@ -59,11 +47,8 @@ func NewDiscoverer(
 	}
 
 	return &Discoverer{
-		kubeClient:       kubeClient,
-		readinessChecker: statusClient,
-		portNames:        adminAPIPortNames,
-		dnsStrategy:      dnsStrategy,
-		logger:           logger,
+		portNames:   adminAPIPortNames,
+		dnsStrategy: dnsStrategy,
 	}, nil
 }
 
@@ -72,6 +57,7 @@ func NewDiscoverer(
 // The retrieved EndpointSlices' ports are compared with the provided portNames set.
 func (d *Discoverer) GetAdminAPIsForService(
 	ctx context.Context,
+	kubeClient client.Client,
 	service k8stypes.NamespacedName,
 ) (sets.Set[DiscoveredAdminAPI], error) {
 	const (
@@ -91,7 +77,7 @@ func (d *Discoverer) GetAdminAPIsForService(
 	)
 	for {
 		var endpointsList discoveryv1.EndpointSliceList
-		if err := d.kubeClient.List(ctx, &endpointsList, &client.ListOptions{
+		if err := kubeClient.List(ctx, &endpointsList, &client.ListOptions{
 			LabelSelector: labelSelector,
 			Namespace:     service.Namespace,
 			Continue:      continueToken,

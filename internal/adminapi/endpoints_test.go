@@ -529,7 +529,7 @@ func TestAddressesFromEndpointSlice(t *testing.T) {
 			discoverer, err := NewDiscoverer(nil, newFakeReadinessChecker(tt.readiness), tt.portNames, tt.dnsStrategy, logr.Discard())
 			require.NoError(t, err)
 
-			adminAPI, err := discoverer.AdminAPIsFromEndpointSlice(context.Background(), tt.endpoints)
+			adminAPI, err := discoverer.AdminAPIsFromEndpointSlice(tt.endpoints)
 			if tt.expectedErr != nil {
 				require.EqualError(t, err, tt.expectedErr.Error())
 			} else {

@@ -236,6 +236,10 @@ func (c *AdminAPIClientsManager) adjustGatewayClients(discoveredAdminAPIs []admi
 			c.logger.WithError(err).Errorf("failed to create a client for %s", adminAPI)
 			continue
 		}
+		_, err = client.AdminAPIClient().Status(c.ctx)
+		if err != nil {
+			c.logger.Debug("discovered admin API is not ready yet, skipping")
+		}
 		client.AttachPodReference(adminAPI.PodRef)
 
 		c.gatewayClients = append(c.gatewayClients, client)

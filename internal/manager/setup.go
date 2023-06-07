@@ -316,7 +316,7 @@ func (c *Config) adminAPIClientFromServiceDiscovery(
 	// because we have more code that relies on the configuration of Kong
 	// instance and without an address and there's no way to initialize the
 	// configuration validation and sending code.
-	var adminAPIs []adminapi.DiscoveredAdminAPI
+	var clients []*adminapi.Client
 	err := retry.Do(func() error {
 		s, err := discoverer.GetAdminAPIsForService(ctx, kongAdminSvcNN)
 		if err != nil {
@@ -325,7 +325,29 @@ func (c *Config) adminAPIClientFromServiceDiscovery(
 		if s.Len() == 0 {
 			return NoAvailableEndpointsError{serviceNN: kongAdminSvcNN}
 		}
-		adminAPIs = s.UnsortedList()
+
+		var readyClients []*adminapi.Client
+		for _, adminAPI := range s.UnsortedList() {
+			cl, err := adminapi.NewKongClientForWorkspace(ctx, adminAPI.Address, c.KongWorkspace, httpclient)
+			if err != nil {
+				continue
+			}
+			cl.AttachPodReference(adminAPI.PodRef)
+
+			// Check if the client is ready by making a request to the status endpoint.
+			_, err = cl.AdminAPIClient().Status(ctx)
+			if err != nil {
+				continue
+			}
+
+			readyClients = append(readyClients, cl)
+		}
+
+		if len(readyClients) == 0 {
+			return NoAvailableEndpointsError{serviceNN: kongAdminSvcNN}
+		}
+
+		clients = readyClients
 		return nil
 	},
 		retry.Context(ctx),
@@ -341,16 +363,6 @@ func (c *Config) adminAPIClientFromServiceDiscovery(
 	)
 	if err != nil {
 		return nil, err
-	}
-
-	clients := make([]*adminapi.Client, 0, len(adminAPIs))
-	for _, adminAPI := range adminAPIs {
-		cl, err := adminapi.NewKongClientForWorkspace(ctx, adminAPI.Address, c.KongWorkspace, httpclient)
-		if err != nil {
-			return nil, err
-		}
-		cl.AttachPodReference(adminAPI.PodRef)
-		clients = append(clients, cl)
 	}
 
 	return clients, nil

@@ -47,11 +47,11 @@ type Discoverer struct {
 func NewDiscoverer(
 	kubeClient client.Client,
 	statusClient ReadinessChecker,
-	portNames sets.Set[string],
+	adminAPIPortNames sets.Set[string],
 	dnsStrategy cfgtypes.DNSStrategy,
 	logger logr.Logger,
 ) (*Discoverer, error) {
-	if portNames.Len() == 0 {
+	if adminAPIPortNames.Len() == 0 {
 		return nil, fmt.Errorf("no admin API port names provided")
 	}
 	if err := dnsStrategy.Validate(); err != nil {
@@ -61,7 +61,7 @@ func NewDiscoverer(
 	return &Discoverer{
 		kubeClient:       kubeClient,
 		readinessChecker: statusClient,
-		portNames:        portNames,
+		portNames:        adminAPIPortNames,
 		dnsStrategy:      dnsStrategy,
 		logger:           logger,
 	}, nil
@@ -101,7 +101,7 @@ func (d *Discoverer) GetAdminAPIsForService(
 		}
 
 		for _, es := range endpointsList.Items {
-			adminAPI, err := d.AdminAPIsFromEndpointSlice(ctx, es)
+			adminAPI, err := d.AdminAPIsFromEndpointSlice(es)
 			if err != nil {
 				return nil, err
 			}
@@ -118,7 +118,7 @@ func (d *Discoverer) GetAdminAPIsForService(
 
 // AdminAPIsFromEndpointSlice returns a list of Admin APIs when given
 // an EndpointSlice.
-func (d *Discoverer) AdminAPIsFromEndpointSlice(ctx context.Context, endpoints discoveryv1.EndpointSlice) (
+func (d *Discoverer) AdminAPIsFromEndpointSlice(endpoints discoveryv1.EndpointSlice) (
 	sets.Set[DiscoveredAdminAPI],
 	error,
 ) {
@@ -158,12 +158,6 @@ func (d *Discoverer) AdminAPIsFromEndpointSlice(ctx context.Context, endpoints d
 			adminAPI, err := adminAPIFromEndpoint(e, p, svc, d.dnsStrategy)
 			if err != nil {
 				return nil, err
-			}
-
-			if err := d.readinessChecker.AdminAPIReady(ctx, adminAPI.Address); err != nil {
-				// todo: make it a debug log
-				d.logger.Info("Admin API is not ready", "address", adminAPI.Address, "error", err)
-				continue
 			}
 
 			discoveredAdminAPIs = discoveredAdminAPIs.Insert(adminAPI)

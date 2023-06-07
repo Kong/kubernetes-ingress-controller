@@ -128,7 +128,7 @@ func (r *KongAdminAPIServiceReconciler) Reconcile(ctx context.Context, req ctrl.
 		// If we don't have an entry for this EndpointSlice then save it and notify
 		// about the change.
 		var err error
-		r.Cache[req.NamespacedName], err = r.AdminAPIsDiscoverer.AdminAPIsFromEndpointSlice(ctx, endpoints)
+		r.Cache[req.NamespacedName], err = r.AdminAPIsDiscoverer.AdminAPIsFromEndpointSlice(endpoints)
 		if err != nil {
 			return reconcile.Result{}, fmt.Errorf(
 				"failed getting Admin API from endpoints: %s/%s: %w", endpoints.Namespace, endpoints.Name, err,
@@ -141,7 +141,7 @@ func (r *KongAdminAPIServiceReconciler) Reconcile(ctx context.Context, req ctrl.
 	// We do have an entry for this EndpointSlice.
 	// If the address set is the same, do nothing.
 	// If the address set has changed, update the cache and send a notification.
-	addresses, err := r.AdminAPIsDiscoverer.AdminAPIsFromEndpointSlice(ctx, endpoints)
+	addresses, err := r.AdminAPIsDiscoverer.AdminAPIsFromEndpointSlice(endpoints)
 	if err != nil {
 		return reconcile.Result{}, fmt.Errorf(
 			"failed getting Admin API from endpoints: %s/%s: %w", endpoints.Namespace, endpoints.Name, err,

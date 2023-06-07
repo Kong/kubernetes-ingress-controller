@@ -8,6 +8,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/kong/deck/file"
 	"github.com/kong/go-kong/kong"
+	"github.com/samber/lo"
 	"github.com/sirupsen/logrus"
 )
 
@@ -78,8 +79,7 @@ func (d *DefaultConfigurationChangeDetector) HasConfigurationChanged(
 		if cmp.Equal(targetConfig, &file.Content{},
 			cmp.FilterPath(
 				func(p cmp.Path) bool {
-					path := p.String()
-					return path == "FormatVersion" || path == "Info"
+					return lo.Contains([]string{"FormatVersion", "Info", "Transform"}, p.String())
 				},
 				cmp.Ignore(),
 			),

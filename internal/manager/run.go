@@ -79,7 +79,7 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 	adminAPIsDiscoverer, err := adminapi.NewDiscoverer(
 		kubeClient,
 		adminapi.NewStatusClient(),
-		sets.New(c.KondAdminSvcPortNames...),
+		sets.New(c.KongAdminSvcPortNames...),
 		c.GatewayDiscoveryDNSStrategy,
 		setupLog.WithName("admin-api-discoverer"),
 	)

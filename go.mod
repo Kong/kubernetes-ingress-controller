@@ -20,7 +20,7 @@ require (
 	github.com/google/uuid v1.3.0
 	github.com/jpillora/backoff v1.0.0
 	github.com/kong/deck v1.21.0
-	github.com/kong/go-kong v0.42.0
+	github.com/kong/go-kong v0.43.0
 	github.com/kong/kubernetes-telemetry v0.0.5
 	github.com/kong/kubernetes-testing-framework v0.31.0
 	github.com/lithammer/dedent v1.1.0

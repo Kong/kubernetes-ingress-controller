@@ -267,12 +267,17 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 			ctx,
 			kubeconfig,
 			clientsManager,
-			telemetry.ReportValues{
-				PublishServiceNN:               c.PublishService.OrEmpty(),
-				FeatureGates:                   featureGates,
-				MeshDetection:                  len(c.WatchNamespaces) == 0,
-				KonnectSyncEnabled:             c.Konnect.ConfigSynchronizationEnabled,
-				GatewayServiceDiscoveryEnabled: c.KongAdminSvc.IsPresent(),
+			telemetry.ReportConfig{
+				SplunkEndpoint:                   c.SplunkEndpoint,
+				SplunkEndpointInsecureSkipVerify: c.SplunkEndpointInsecureSkipVerify,
+				TelemetryPeriod:                  c.TelemetryPeriod,
+				ReportValues: telemetry.ReportValues{
+					PublishServiceNN:               c.PublishService.OrEmpty(),
+					FeatureGates:                   featureGates,
+					MeshDetection:                  len(c.WatchNamespaces) == 0,
+					KonnectSyncEnabled:             c.Konnect.ConfigSynchronizationEnabled,
+					GatewayServiceDiscoveryEnabled: c.KongAdminSvc.IsPresent(),
+				},
 			},
 			instanceIDProvider,
 		)

@@ -338,6 +338,10 @@ test.unit:
 test.unit.pretty:
 	@$(MAKE) GOTESTSUM_FORMAT=pkgname _test.unit
 
+.PHONY: test.golden.update
+test.golden.update:
+	@go test -v -run TestParser_GoldenTests ./internal/dataplane/parser -update
+
 .PHONY: _check.container.environment
 _check.container.environment:
 	@./scripts/check-container-environment.sh

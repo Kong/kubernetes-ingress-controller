@@ -1027,8 +1027,6 @@ func mkObjFromGVK(gvk schema.GroupVersionKind) (runtime.Object, error) {
 	// ----------------------------------------------------------------------------
 	case netv1.SchemeGroupVersion.WithKind("Ingress"):
 		return &netv1.Ingress{}, nil
-	case kongv1beta1.SchemeGroupVersion.WithKind("TCPIngress"):
-		return &kongv1beta1.TCPIngress{}, nil
 	case corev1.SchemeGroupVersion.WithKind("Service"):
 		return &corev1.Service{}, nil
 	case corev1.SchemeGroupVersion.WithKind("Secret"):
@@ -1041,8 +1039,18 @@ func mkObjFromGVK(gvk schema.GroupVersionKind) (runtime.Object, error) {
 	// ----------------------------------------------------------------------------
 	// Kubernetes Gateway APIs
 	// ----------------------------------------------------------------------------
-	case gatewayv1beta1.SchemeGroupVersion.WithKind("HTTPRoutes"):
+	case gatewayv1beta1.SchemeGroupVersion.WithKind("HTTPRoute"):
 		return &gatewayv1beta1.HTTPRoute{}, nil
+	case gatewayv1alpha2.SchemeGroupVersion.WithKind("GRPCRoute"):
+		return &gatewayv1alpha2.GRPCRoute{}, nil
+	case gatewayv1alpha2.SchemeGroupVersion.WithKind("TCPRoute"):
+		return &gatewayv1alpha2.TCPRoute{}, nil
+	case gatewayv1alpha2.SchemeGroupVersion.WithKind("UDPRoute"):
+		return &gatewayv1alpha2.UDPRoute{}, nil
+	case gatewayv1alpha2.SchemeGroupVersion.WithKind("TLSRoute"):
+		return &gatewayv1alpha2.TLSRoute{}, nil
+	case gatewayv1beta1.SchemeGroupVersion.WithKind("ReferenceGrant"):
+		return &gatewayv1beta1.ReferenceGrant{}, nil
 	// ----------------------------------------------------------------------------
 	// Kong APIs
 	// ----------------------------------------------------------------------------
@@ -1050,6 +1058,8 @@ func mkObjFromGVK(gvk schema.GroupVersionKind) (runtime.Object, error) {
 		return &kongv1.KongIngress{}, nil
 	case kongv1beta1.SchemeGroupVersion.WithKind("UDPIngress"):
 		return &kongv1beta1.UDPIngress{}, nil
+	case kongv1beta1.SchemeGroupVersion.WithKind("TCPIngress"):
+		return &kongv1beta1.TCPIngress{}, nil
 	case kongv1.SchemeGroupVersion.WithKind("KongPlugin"):
 		return &kongv1.KongPlugin{}, nil
 	case kongv1.SchemeGroupVersion.WithKind("KongClusterPlugin"):

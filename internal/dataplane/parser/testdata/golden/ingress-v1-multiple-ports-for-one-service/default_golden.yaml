@@ -2,7 +2,7 @@ _format_version: "3.0"
 services:
 - connect_timeout: 60000
   host: foo-svc.foo-namespace.8000.svc
-  name: foo-namespace.foo.foo-svc.8000
+  name: foo-namespace.foo-svc.8000
   path: /
   port: 80
   protocol: http
@@ -38,7 +38,7 @@ services:
   write_timeout: 60000
 - connect_timeout: 60000
   host: foo-svc.foo-namespace.80.svc
-  name: foo-namespace.foo.foo-svc.80
+  name: foo-namespace.foo-svc.80
   path: /
   port: 80
   protocol: http

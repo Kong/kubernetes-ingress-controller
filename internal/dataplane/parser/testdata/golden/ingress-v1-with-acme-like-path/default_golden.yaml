@@ -2,7 +2,7 @@ _format_version: "3.0"
 services:
 - connect_timeout: 60000
   host: cert-manager-solver-pod.foo-namespace.80.svc
-  name: foo-namespace.foo.cert-manager-solver-pod.80
+  name: foo-namespace.cert-manager-solver-pod.80
   path: /
   port: 80
   protocol: http

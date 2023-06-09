@@ -69,7 +69,7 @@ certificates:
 services:
 - connect_timeout: 60000
   host: foo-svc.bar-namespace.80.svc
-  name: bar-namespace.ing-with-tls.foo-svc.80
+  name: bar-namespace.foo-svc.80
   path: /
   port: 80
   protocol: http

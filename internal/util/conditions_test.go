@@ -11,7 +11,7 @@ import (
 )
 
 func TestCheckCondition(t *testing.T) {
-	expectedType := util.ConditionType(gatewayv1beta1.ListenerConditionReady)
+	expectedType := util.ConditionType(gatewayv1beta1.ListenerConditionProgrammed)
 	expectedReason := util.ConditionReason(gatewayv1beta1.GatewayReasonAccepted)
 	expectedStatus := metav1.ConditionTrue
 	generation := int64(1)
@@ -102,7 +102,7 @@ func TestCheckCondition(t *testing.T) {
 }
 
 func TestCheckCondition_observed_generations_lower_than_actual_are_ignored(t *testing.T) {
-	expectedType := util.ConditionType(gatewayv1beta1.ListenerConditionReady)
+	expectedType := util.ConditionType(gatewayv1beta1.ListenerConditionProgrammed)
 	expectedReason := util.ConditionReason(gatewayv1beta1.GatewayReasonAccepted)
 	expectedStatus := metav1.ConditionTrue
 	givenConditions := []metav1.Condition{

@@ -409,12 +409,11 @@ func getListenerStatus(
 					Reason:             string(gatewayv1beta1.ListenerReasonResolvedRefs),
 				},
 				metav1.Condition{
-					Type:               string(gatewayv1beta1.ListenerConditionReady),
+					Type:               string(gatewayv1beta1.ListenerConditionAccepted),
 					Status:             metav1.ConditionTrue,
 					ObservedGeneration: gateway.Generation,
 					LastTransitionTime: metav1.Now(),
-					Reason:             string(gatewayv1beta1.ListenerReasonReady),
-					Message:            "the listener is ready and available for routing",
+					Reason:             string(gatewayv1beta1.ListenerReasonAccepted),
 				},
 				metav1.Condition{
 					Type:               string(gatewayv1beta1.ListenerConditionProgrammed),
@@ -425,18 +424,8 @@ func getListenerStatus(
 				},
 			)
 		} else {
-			// any conditions we added above will prevent the Listener from becoming ready
-			// unsure if we want to add the ready=false condition on a per-failure basis or use this else to just mark
-			// it generic unready if we hit anything bad. do any failure conditions block readiness? do we care about
-			// having distinct ready false messages, assuming we have more descriptive messages in the other conditions?
-			status.Conditions = append(status.Conditions, metav1.Condition{
-				Type:               string(gatewayv1beta1.ListenerConditionReady),
-				Status:             metav1.ConditionFalse,
-				ObservedGeneration: gateway.Generation,
-				LastTransitionTime: metav1.Now(),
-				Reason:             string(gatewayv1beta1.ListenerReasonInvalid),
-				Message:            "the listener is not ready and cannot route requests",
-			},
+			// any conditions we added above will prevent the Listener from becoming programmed
+			status.Conditions = append(status.Conditions,
 				metav1.Condition{
 					Type:               string(gatewayv1beta1.ListenerConditionProgrammed),
 					Status:             metav1.ConditionFalse,
@@ -481,7 +470,7 @@ func getListenerStatus(
 			for _, cond := range statuses[listener.Name].Conditions {
 				// shut up linter, there's a default
 				switch gatewayv1alpha2.ListenerConditionType(cond.Type) { //nolint:exhaustive
-				case gatewayv1beta1.ListenerConditionReady, gatewayv1beta1.ListenerConditionConflicted:
+				case gatewayv1beta1.ListenerConditionProgrammed, gatewayv1beta1.ListenerConditionConflicted:
 					continue
 				default:
 					newConditions = append(newConditions, cond)
@@ -496,12 +485,11 @@ func getListenerStatus(
 					Reason:             conflictReason,
 				},
 				metav1.Condition{
-					Type:               string(gatewayv1beta1.ListenerConditionReady),
+					Type:               string(gatewayv1beta1.ListenerConditionProgrammed),
 					Status:             metav1.ConditionFalse,
 					ObservedGeneration: gateway.Generation,
 					LastTransitionTime: metav1.Now(),
-					Reason:             string(gatewayv1beta1.ListenerReasonReady),
-					Message:            "the listener is not ready and cannot route requests",
+					Reason:             string(gatewayv1beta1.ListenerReasonInvalid),
 				},
 			)
 		}

@@ -120,8 +120,8 @@ func TestUnmanagedGatewayBasics(t *testing.T) {
 		for _, lstatus := range gw.Status.Listeners {
 			if listenerReady := util.CheckCondition(
 				lstatus.Conditions,
-				util.ConditionType(gatewayv1beta1.ListenerConditionReady),
-				util.ConditionReason(gatewayv1beta1.ListenerReasonReady),
+				util.ConditionType(gatewayv1beta1.ListenerConditionProgrammed),
+				util.ConditionReason(gatewayv1beta1.ListenerReasonProgrammed),
 				metav1.ConditionTrue,
 				gw.Generation,
 			); !listenerReady {
@@ -200,7 +200,7 @@ func TestGatewayListenerConflicts(t *testing.T) {
 					if condition.Type == string(gatewayv1beta1.ListenerConditionConflicted) && condition.Status == metav1.ConditionTrue {
 						badudpConflicted = (condition.Reason == string(gatewayv1beta1.ListenerReasonProtocolConflict))
 					}
-					if condition.Type == string(gatewayv1beta1.ListenerConditionReady) {
+					if condition.Type == string(gatewayv1beta1.ListenerConditionProgrammed) {
 						badudpReady = (condition.Status == metav1.ConditionTrue)
 					}
 				}
@@ -213,7 +213,7 @@ func TestGatewayListenerConflicts(t *testing.T) {
 						// precedence
 						badhttpConflicted = (condition.Reason == string(gatewayv1beta1.ListenerReasonProtocolConflict))
 					}
-					if condition.Type == string(gatewayv1beta1.ListenerConditionReady) {
+					if condition.Type == string(gatewayv1beta1.ListenerConditionProgrammed) {
 						badhttpReady = (condition.Status == metav1.ConditionTrue)
 					}
 				}
@@ -223,7 +223,7 @@ func TestGatewayListenerConflicts(t *testing.T) {
 					if condition.Type == string(gatewayv1beta1.ListenerConditionConflicted) {
 						httpConflicted = (condition.Status == metav1.ConditionTrue)
 					}
-					if condition.Type == string(gatewayv1beta1.ListenerConditionReady) {
+					if condition.Type == string(gatewayv1beta1.ListenerConditionProgrammed) {
 						httpReady = (condition.Status == metav1.ConditionTrue)
 					}
 				}
@@ -261,7 +261,7 @@ func TestGatewayListenerConflicts(t *testing.T) {
 					if condition.Type == string(gatewayv1beta1.ListenerConditionConflicted) && condition.Status == metav1.ConditionTrue {
 						httpAlphaConflicted = (condition.Reason == string(gatewayv1beta1.ListenerReasonHostnameConflict))
 					}
-					if condition.Type == string(gatewayv1beta1.ListenerConditionReady) {
+					if condition.Type == string(gatewayv1beta1.ListenerConditionProgrammed) {
 						httpAlphaReady = (condition.Status == metav1.ConditionTrue)
 					}
 				}
@@ -271,7 +271,7 @@ func TestGatewayListenerConflicts(t *testing.T) {
 					if condition.Type == string(gatewayv1beta1.ListenerConditionConflicted) && condition.Status == metav1.ConditionTrue {
 						httpBravoConflicted = (condition.Reason == string(gatewayv1beta1.ListenerReasonHostnameConflict))
 					}
-					if condition.Type == string(gatewayv1beta1.ListenerConditionReady) {
+					if condition.Type == string(gatewayv1beta1.ListenerConditionProgrammed) {
 						httpBravoReady = (condition.Status == metav1.ConditionTrue)
 					}
 				}
@@ -328,28 +328,28 @@ func TestGatewayListenerConflicts(t *testing.T) {
 		for _, lstatus := range gw.Status.Listeners {
 			if lstatus.Name == "http" {
 				for _, condition := range lstatus.Conditions {
-					if condition.Type == string(gatewayv1beta1.ListenerConditionReady) {
+					if condition.Type == string(gatewayv1beta1.ListenerConditionProgrammed) {
 						httpReady = (condition.Status == metav1.ConditionTrue)
 					}
 				}
 			}
 			if lstatus.Name == "tls" {
 				for _, condition := range lstatus.Conditions {
-					if condition.Type == string(gatewayv1beta1.ListenerConditionReady) {
+					if condition.Type == string(gatewayv1beta1.ListenerConditionProgrammed) {
 						tlsReady = (condition.Status == metav1.ConditionTrue)
 					}
 				}
 			}
 			if lstatus.Name == "https" {
 				for _, condition := range lstatus.Conditions {
-					if condition.Type == string(gatewayv1beta1.ListenerConditionReady) {
+					if condition.Type == string(gatewayv1beta1.ListenerConditionProgrammed) {
 						httpsReady = (condition.Status == metav1.ConditionTrue)
 					}
 				}
 			}
 			if lstatus.Name == "httphost" {
 				for _, condition := range lstatus.Conditions {
-					if condition.Type == string(gatewayv1beta1.ListenerConditionReady) {
+					if condition.Type == string(gatewayv1beta1.ListenerConditionProgrammed) {
 						httphostReady = (condition.Status == metav1.ConditionTrue)
 					}
 				}

@@ -306,7 +306,7 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 							Name: "http",
 							Conditions: []metav1.Condition{
 								{
-									Type:   "Ready",
+									Type:   string(gatewayv1beta1.ListenerConditionProgrammed),
 									Status: metav1.ConditionTrue,
 								},
 							},
@@ -606,7 +606,7 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 							Name: "tcp",
 							Conditions: []metav1.Condition{
 								{
-									Type:   "Ready",
+									Type:   string(gatewayv1beta1.ListenerConditionProgrammed),
 									Status: metav1.ConditionTrue,
 								},
 							},
@@ -813,7 +813,7 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 							Name: "udp",
 							Conditions: []metav1.Condition{
 								{
-									Type:   "Ready",
+									Type:   string(gatewayv1beta1.ListenerConditionProgrammed),
 									Status: metav1.ConditionTrue,
 								},
 							},
@@ -1005,7 +1005,7 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 							Name: "tls",
 							Conditions: []metav1.Condition{
 								{
-									Type:   "Ready",
+									Type:   string(gatewayv1beta1.ListenerConditionProgrammed),
 									Status: metav1.ConditionTrue,
 								},
 							},
@@ -1227,7 +1227,7 @@ func TestEnsureParentsProgrammedCondition(t *testing.T) {
 						Name: "http-1",
 						Conditions: []metav1.Condition{
 							{
-								Type:   "Ready",
+								Type:   string(gatewayv1beta1.ListenerConditionProgrammed),
 								Status: metav1.ConditionTrue,
 							},
 						},
@@ -1237,7 +1237,7 @@ func TestEnsureParentsProgrammedCondition(t *testing.T) {
 						Name: "http-2",
 						Conditions: []metav1.Condition{
 							{
-								Type:   "Ready",
+								Type:   string(gatewayv1beta1.ListenerConditionProgrammed),
 								Status: metav1.ConditionTrue,
 							},
 						},
@@ -1888,7 +1888,7 @@ func TestIsRouteAcceptedByListener(t *testing.T) {
 							},
 							Conditions: []metav1.Condition{
 								{
-									Type:   string(gatewayv1beta1.ListenerConditionReady),
+									Type:   string(gatewayv1beta1.ListenerConditionProgrammed),
 									Status: metav1.ConditionTrue,
 								},
 							},
@@ -1946,7 +1946,7 @@ func TestIsRouteAcceptedByListener(t *testing.T) {
 							},
 							Conditions: []metav1.Condition{
 								{
-									Type:   string(gatewayv1beta1.ListenerConditionReady),
+									Type:   string(gatewayv1beta1.ListenerConditionProgrammed),
 									Status: metav1.ConditionTrue,
 								},
 							},
@@ -2000,7 +2000,7 @@ func TestIsRouteAcceptedByListener(t *testing.T) {
 							},
 							Conditions: []metav1.Condition{
 								{
-									Type:   string(gatewayv1beta1.ListenerConditionReady),
+									Type:   string(gatewayv1beta1.ListenerConditionProgrammed),
 									Status: metav1.ConditionFalse,
 								},
 							},
@@ -2054,7 +2054,7 @@ func TestIsRouteAcceptedByListener(t *testing.T) {
 							},
 							Conditions: []metav1.Condition{
 								{
-									Type:   string(gatewayv1beta1.ListenerConditionReady),
+									Type:   string(gatewayv1beta1.ListenerConditionProgrammed),
 									Status: metav1.ConditionTrue,
 								},
 							},
@@ -2110,7 +2110,7 @@ func TestIsRouteAcceptedByListener(t *testing.T) {
 							},
 							Conditions: []metav1.Condition{
 								{
-									Type:   string(gatewayv1beta1.ListenerConditionReady),
+									Type:   string(gatewayv1beta1.ListenerConditionProgrammed),
 									Status: metav1.ConditionTrue,
 								},
 							},
@@ -2164,7 +2164,7 @@ func TestIsRouteAcceptedByListener(t *testing.T) {
 							},
 							Conditions: []metav1.Condition{
 								{
-									Type:   string(gatewayv1beta1.ListenerConditionReady),
+									Type:   string(gatewayv1beta1.ListenerConditionProgrammed),
 									Status: metav1.ConditionTrue,
 								},
 							},
@@ -2222,7 +2222,7 @@ func TestIsRouteAcceptedByListener(t *testing.T) {
 							},
 							Conditions: []metav1.Condition{
 								{
-									Type:   string(gatewayv1beta1.ListenerConditionReady),
+									Type:   string(gatewayv1beta1.ListenerConditionProgrammed),
 									Status: metav1.ConditionTrue,
 								},
 							},

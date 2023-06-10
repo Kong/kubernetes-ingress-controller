@@ -16,48 +16,48 @@ import (
 )
 
 func TestReadyConditionExistsForObservedGeneration(t *testing.T) {
-	t.Log("checking ready condition for currently ready gateway")
-	currentlyReadyGateway := &gatewayv1beta1.Gateway{
+	t.Log("checking programmed condition for currently ready gateway")
+	currentlyProgrammedGateway := &gatewayv1beta1.Gateway{
 		ObjectMeta: metav1.ObjectMeta{
 			Generation: 1,
 		},
 		Status: gatewayv1beta1.GatewayStatus{
 			Conditions: []metav1.Condition{{
-				Type:               string(gatewayv1beta1.GatewayConditionReady),
+				Type:               string(gatewayv1beta1.GatewayConditionProgrammed),
 				Status:             metav1.ConditionTrue,
 				ObservedGeneration: 1,
 				LastTransitionTime: metav1.Now(),
-				Reason:             string(gatewayv1beta1.GatewayReasonReady),
+				Reason:             string(gatewayv1beta1.GatewayReasonProgrammed),
 			}},
 		},
 	}
-	assert.True(t, isGatewayReady(currentlyReadyGateway))
+	assert.True(t, isGatewayProgrammed(currentlyProgrammedGateway))
 
-	t.Log("checking ready condition for previously ready gateway that has since been updated")
-	previouslyReadyGateway := &gatewayv1beta1.Gateway{
+	t.Log("checking programmed condition for previously programmed gateway that has since been updated")
+	previouslyProgrammedGateway := &gatewayv1beta1.Gateway{
 		ObjectMeta: metav1.ObjectMeta{
 			Generation: 2,
 		},
 		Status: gatewayv1beta1.GatewayStatus{
 			Conditions: []metav1.Condition{{
-				Type:               string(gatewayv1beta1.GatewayConditionReady),
+				Type:               string(gatewayv1beta1.GatewayConditionProgrammed),
 				Status:             metav1.ConditionTrue,
 				ObservedGeneration: 1,
 				LastTransitionTime: metav1.Now(),
-				Reason:             string(gatewayv1beta1.GatewayReasonReady),
+				Reason:             string(gatewayv1beta1.GatewayReasonProgrammed),
 			}},
 		},
 	}
-	assert.False(t, isGatewayReady(previouslyReadyGateway))
+	assert.False(t, isGatewayProgrammed(previouslyProgrammedGateway))
 
-	t.Log("checking ready condition for a gateway which has never been ready")
-	neverBeenReadyGateway := &gatewayv1beta1.Gateway{
+	t.Log("checking programmed condition for a gateway which has never been ready")
+	neverBeenProgrammedGateway := &gatewayv1beta1.Gateway{
 		ObjectMeta: metav1.ObjectMeta{
 			Generation: 10,
 		},
 		Status: gatewayv1beta1.GatewayStatus{},
 	}
-	assert.False(t, isGatewayReady(neverBeenReadyGateway))
+	assert.False(t, isGatewayProgrammed(neverBeenProgrammedGateway))
 }
 
 func TestSetGatewayCondtion(t *testing.T) {

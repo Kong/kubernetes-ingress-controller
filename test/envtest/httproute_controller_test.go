@@ -130,9 +130,9 @@ func TestHTTPRouteReconcilerProperlyReactsToReferenceGrant(t *testing.T) {
 		},
 		Conditions: []metav1.Condition{
 			{
-				Type:               "Ready",
+				Type:               "Programmed",
 				Status:             metav1.ConditionTrue,
-				Reason:             "Ready",
+				Reason:             "Programmed",
 				LastTransitionTime: metav1.Now(),
 				ObservedGeneration: gw.Generation,
 			},
@@ -140,13 +140,6 @@ func TestHTTPRouteReconcilerProperlyReactsToReferenceGrant(t *testing.T) {
 				Type:               "Accepted",
 				Status:             metav1.ConditionTrue,
 				Reason:             "Accepted",
-				LastTransitionTime: metav1.Now(),
-				ObservedGeneration: gw.Generation,
-			},
-			{
-				Type:               "Programmed",
-				Status:             metav1.ConditionTrue,
-				Reason:             "Programmed",
 				LastTransitionTime: metav1.Now(),
 				ObservedGeneration: gw.Generation,
 			},
@@ -162,9 +155,9 @@ func TestHTTPRouteReconcilerProperlyReactsToReferenceGrant(t *testing.T) {
 						LastTransitionTime: metav1.Now(),
 					},
 					{
-						Type:               "Ready",
+						Type:               "Programmed",
 						Status:             metav1.ConditionTrue,
-						Reason:             "Ready",
+						Reason:             "Programmed",
 						LastTransitionTime: metav1.Now(),
 					},
 				},

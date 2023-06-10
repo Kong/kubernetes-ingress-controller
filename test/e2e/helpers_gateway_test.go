@@ -78,14 +78,14 @@ func verifyGateway(ctx context.Context, t *testing.T, env environments.Environme
 	gc, err := gatewayclient.NewForConfig(env.Cluster().Config())
 	require.NoError(t, err)
 
-	t.Log("verifying that the gateway receives a final ready condition once reconciliation completes")
+	t.Log("verifying that the gateway receives a final programmed condition once reconciliation completes")
 	require.Eventually(t, func() bool {
 		gw, err = gc.GatewayV1beta1().Gateways(corev1.NamespaceDefault).Get(ctx, gw.Name, metav1.GetOptions{})
 		require.NoError(t, err)
 		if ready := util.CheckCondition(
 			gw.Status.Conditions,
-			util.ConditionType(gatewayv1beta1.GatewayConditionReady),
-			util.ConditionReason(gatewayv1beta1.GatewayReasonReady),
+			util.ConditionType(gatewayv1beta1.GatewayConditionProgrammed),
+			util.ConditionReason(gatewayv1beta1.GatewayReasonProgrammed),
 			metav1.ConditionTrue,
 			gw.Generation,
 		); ready {

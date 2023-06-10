@@ -99,21 +99,21 @@ func TestUnmanagedGatewayBasics(t *testing.T) {
 		return len(gw.Status.Listeners) == len(gw.Spec.Listeners) && len(gw.Status.Addresses) == len(gw.Spec.Addresses)
 	}, gatewayUpdateWaitTime, time.Second)
 
-	t.Log("verifying that the gateway receives a final ready condition once reconciliation completes")
+	t.Log("verifying that the gateway receives a final programmed condition once reconciliation completes")
 	require.Eventually(t, func() bool {
 		gw, err = gatewayClient.GatewayV1beta1().Gateways(ns.Name).Get(ctx, gw.Name, metav1.GetOptions{})
 		require.NoError(t, err)
 		ready := util.CheckCondition(
 			gw.Status.Conditions,
-			util.ConditionType(gatewayv1beta1.GatewayConditionReady),
-			util.ConditionReason(gatewayv1beta1.GatewayReasonReady),
+			util.ConditionType(gatewayv1beta1.GatewayConditionProgrammed),
+			util.ConditionReason(gatewayv1beta1.GatewayReasonProgrammed),
 			metav1.ConditionTrue,
 			gw.Generation,
 		)
 		return ready
 	}, gatewayUpdateWaitTime, time.Second)
 
-	t.Log("verifying that the gateway listeners reach the ready condition")
+	t.Log("verifying that the gateway listeners reach the programmed condition")
 	require.Eventually(t, func() bool {
 		gw, err = gatewayClient.GatewayV1beta1().Gateways(ns.Name).Get(ctx, gw.Name, metav1.GetOptions{})
 		require.NoError(t, err)
@@ -151,15 +151,15 @@ func TestGatewayListenerConflicts(t *testing.T) {
 	err = gatewayHealthCheck(ctx, gatewayClient, gateway.Name, ns.Name)
 	require.NoError(t, err)
 
-	t.Log("verifying that the gateway listeners reach the ready condition")
+	t.Log("verifying that the gateway listeners reach the programmed condition")
 	require.Eventually(t, func() bool {
 		gw, err = gatewayClient.GatewayV1beta1().Gateways(ns.Name).Get(ctx, defaultGatewayName, metav1.GetOptions{})
 		require.NoError(t, err)
 		for _, lstatus := range gw.Status.Listeners {
 			ready := util.CheckCondition(
 				lstatus.Conditions,
-				util.ConditionType(gatewayv1beta1.GatewayConditionReady),
-				util.ConditionReason(gatewayv1beta1.GatewayReasonReady),
+				util.ConditionType(gatewayv1beta1.GatewayConditionProgrammed),
+				util.ConditionReason(gatewayv1beta1.GatewayReasonProgrammed),
 				metav1.ConditionTrue,
 				gw.Generation,
 			)
@@ -427,7 +427,7 @@ func TestUnmanagedGatewayClass(t *testing.T) {
 		gateway, err = gatewayClient.GatewayV1beta1().Gateways(ns.Name).Get(ctx, gateway.Name, metav1.GetOptions{})
 		require.NoError(t, err)
 		for _, cond := range gateway.Status.Conditions {
-			if cond.Reason == string(gatewayv1beta1.GatewayReasonReady) {
+			if cond.Reason == string(gatewayv1beta1.GatewayReasonProgrammed) {
 				return true
 			}
 		}
@@ -478,8 +478,8 @@ func TestManagedGatewayClass(t *testing.T) {
 		gateway, err = gatewayClient.GatewayV1beta1().Gateways(ns.Name).Get(ctx, gateway.Name, metav1.GetOptions{})
 		require.NoError(t, err)
 		for _, cond := range gateway.Status.Conditions {
-			if cond.Type == string(gatewayv1beta1.GatewayConditionReady) {
-				require.Equal(t, cond.Status, metav1.ConditionFalse)
+			if cond.Type == string(gatewayv1beta1.GatewayConditionProgrammed) {
+				require.Equal(t, cond.Status, metav1.ConditionUnknown)
 			}
 		}
 	})

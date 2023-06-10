@@ -306,7 +306,7 @@ func (r *UDPRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	// requeue the object and wait until all supported gateways are ready.
 	debug(log, udproute, "checking if the udproute's gateways are ready")
 	for _, gateway := range gateways {
-		if !isGatewayReady(gateway.gateway) {
+		if !isGatewayProgrammed(gateway.gateway) {
 			debug(log, udproute, "gateway for route was not ready, waiting")
 			return ctrl.Result{Requeue: true}, nil
 		}

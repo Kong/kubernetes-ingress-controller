@@ -60,13 +60,13 @@ func isGatewayScheduled(gateway *Gateway) bool {
 	)
 }
 
-// isGatewayReady returns boolean whether the ready condition exists
+// isGatewayProgrammed returns boolean whether the ready condition exists
 // for the given gateway object if it matches the currently known generation of that object.
-func isGatewayReady(gateway *Gateway) bool {
+func isGatewayProgrammed(gateway *Gateway) bool {
 	return util.CheckCondition(
 		gateway.Status.Conditions,
-		util.ConditionType(gatewayv1beta1.GatewayConditionReady),
-		util.ConditionReason(gatewayv1beta1.GatewayReasonReady),
+		util.ConditionType(gatewayv1beta1.GatewayConditionProgrammed),
+		util.ConditionReason(gatewayv1beta1.GatewayReasonProgrammed),
 		metav1.ConditionTrue,
 		gateway.Generation,
 	)

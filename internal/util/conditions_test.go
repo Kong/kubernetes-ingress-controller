@@ -25,7 +25,7 @@ func TestCheckCondition(t *testing.T) {
 	}
 
 	otherType := util.ConditionType(gatewayv1beta1.ListenerConditionConflicted)
-	otherReason := util.ConditionReason(gatewayv1beta1.GatewayReasonReady)
+	otherReason := util.ConditionReason(gatewayv1beta1.GatewayReasonProgrammed)
 	otherStatus := metav1.ConditionFalse
 
 	testCases := []struct {

@@ -74,6 +74,12 @@ Adding a new version? You'll need three changes:
 - The `CombinedServices` feature gate is now enabled by default.
   [#4138](https://github.com/Kong/kubernetes-ingress-controller/pull/4138)
 
+### Changed
+
+- Log message `no active endpoints` is now logged at debug instead of
+  warning level.
+  [#4161](https://github.com/Kong/kubernetes-ingress-controller/pull/4161)
+
 ## [2.10.0]
 
 > Release date: 2023-06-02

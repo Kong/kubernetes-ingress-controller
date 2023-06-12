@@ -3,7 +3,7 @@ module github.com/kong/kubernetes-ingress-controller/tools
 go 1.19
 
 require (
-	github.com/GoogleContainerTools/skaffold/v2 v2.5.0
+	github.com/GoogleContainerTools/skaffold/v2 v2.5.1
 	github.com/elastic/crd-ref-docs v0.0.8
 	github.com/go-delve/delve v1.20.2
 	github.com/golangci/golangci-lint v1.53.2

@@ -1817,7 +1817,7 @@ spec:
         readinessProbe:
           failureThreshold: 3
           httpGet:
-            path: /status
+            path: /status/ready
             port: 8100
             scheme: HTTP
           initialDelaySeconds: 5

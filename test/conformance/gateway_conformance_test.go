@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
@@ -69,6 +70,8 @@ func TestGatewayConformance(t *testing.T) {
 	require.NoError(t, client.Create(ctx, gatewayClass))
 	t.Cleanup(func() { assert.NoError(t, client.Delete(ctx, gatewayClass)) })
 
+	exemptFeatures := sets.New(suite.SupportMesh)
+
 	t.Log("starting the gateway conformance test suite")
 	cSuite := suite.New(suite.Options{
 		Client:                     client,
@@ -76,6 +79,7 @@ func TestGatewayConformance(t *testing.T) {
 		Debug:                      showDebug,
 		CleanupBaseResources:       shouldCleanup,
 		EnableAllSupportedFeatures: enableAllSupportedFeatures,
+		ExemptFeatures:             exemptFeatures,
 		BaseManifests:              conformanceTestsBaseManifests,
 		SkipTests: []string{
 			// this test is currently fixed but cannot be re-enabled yet due to an upstream issue
@@ -84,6 +88,14 @@ func TestGatewayConformance(t *testing.T) {
 
 			// standard conformance
 			tests.HTTPRouteHeaderMatching.ShortName,
+
+			// https://github.com/Kong/kubernetes-ingress-controller/issues/4166
+			// requires an 8080 listener, which our manually-built test gateway does not have
+			tests.HTTPRouteRedirectPortAndScheme.ShortName,
+
+			// https://github.com/Kong/kubernetes-ingress-controller/issues/4164
+			// only 10 and 11 broken, but no way to omit individual cases
+			tests.HTTPRouteMethodMatching.ShortName,
 
 			// extended conformance
 			// https://github.com/Kong/kubernetes-ingress-controller/issues/3680
@@ -98,6 +110,8 @@ func TestGatewayConformance(t *testing.T) {
 			tests.HTTPRouteRedirectScheme.ShortName,
 			// https://github.com/Kong/kubernetes-ingress-controller/issues/3683
 			tests.HTTPRouteResponseHeaderModifier.ShortName,
+			// https://github.com/Kong/kubernetes-ingress-controller/issues/4165
+			tests.HTTPRouteRequestMirror.ShortName,
 
 			// experimental conformance
 			// https://github.com/Kong/kubernetes-ingress-controller/issues/3684
@@ -109,5 +123,9 @@ func TestGatewayConformance(t *testing.T) {
 		},
 	})
 	cSuite.Setup(t)
+	// To work with individual tests only, you can disable the normal Run call and construct a slice containing a
+	// single test only, e.g.:
+	//
+	//cSuite.Run(t, []suite.ConformanceTest{tests.HTTPRouteRedirectPortAndScheme})
 	cSuite.Run(t, tests.ConformanceTests)
 }

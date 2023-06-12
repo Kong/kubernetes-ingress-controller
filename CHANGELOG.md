@@ -112,6 +112,11 @@ Adding a new version? You'll need three changes:
   sending stage (we've observed around 35% reduced time in config marshalling
   time but be aware that your mileage may vary).
   [#4222](https://github.com/Kong/kubernetes-ingress-controller/pull/4222)
+- Changed the Gateway's readiness probe in all-in-one manifests from `/status`
+  to `/status/ready`. Gateways will be considered ready only after an initial
+  configuration is applied by the controller.
+  [#3884](https://github.com/Kong/kubernetes-ingress-controller/pull/4143)
+
 
 ### Fixed
 

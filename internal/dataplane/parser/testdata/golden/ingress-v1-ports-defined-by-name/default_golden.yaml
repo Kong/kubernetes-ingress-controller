@@ -2,7 +2,7 @@ _format_version: "3.0"
 services:
 - connect_timeout: 60000
   host: foo-svc.foo-namespace.http.svc
-  name: foo-namespace.regex-prefix.foo-svc.http
+  name: foo-namespace.foo-svc.http
   path: /
   port: 80
   protocol: http

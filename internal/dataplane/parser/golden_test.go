@@ -280,8 +280,7 @@ func runParserGoldenTest(t *testing.T, tc parserGoldenTestCase) {
 
 		require.Equalf(t, string(goldenB), string(resultB),
 			"Golden file %s does not match the result. \n"+
-				"If you are sure the result is correct, run the test "+
-				"with the -update-golden flag to update the golden file: \n"+
+				"If you are sure the result is correct, update the golden file: \n"+
 				"$ %s", tc.goldenFile, commandToRegenerateGoldenFile)
 		t.Logf("Successfully compared result to golden file %s", tc.goldenFile)
 	}

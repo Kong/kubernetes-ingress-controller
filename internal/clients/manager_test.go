@@ -2,6 +2,7 @@ package clients
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -23,8 +24,9 @@ import (
 // - client for an unexpected address gets created
 // - client which already got created was tried to be created second time.
 type clientFactoryWithExpected struct {
-	expected map[string]bool
-	t        *testing.T
+	returnErrors map[string]error
+	expected     map[string]bool
+	t            *testing.T
 }
 
 func (cf clientFactoryWithExpected) CreateAdminAPIClient(_ context.Context, discoveredAdminAPI adminapi.DiscoveredAdminAPI) (*adminapi.Client, error) {
@@ -38,6 +40,9 @@ func (cf clientFactoryWithExpected) CreateAdminAPIClient(_ context.Context, disc
 		return nil, fmt.Errorf("got %s more than once", discoveredAdminAPI)
 	}
 	cf.expected[discoveredAdminAPI.Address] = false
+	if errToReturn, ok := cf.returnErrors[discoveredAdminAPI.Address]; ok {
+		return nil, errToReturn
+	}
 
 	c, err := adminapi.NewTestClient(discoveredAdminAPI.Address)
 	if err != nil {
@@ -99,7 +104,14 @@ func TestClientAddressesNotifications(t *testing.T) {
 	defer srv2.Close()
 	expected[srv2.URL] = true
 
+	notReadySrv := createTestServer()
+	defer notReadySrv.Close()
+	expected[notReadySrv.URL] = true
+
 	testClientFactoryWithExpected := clientFactoryWithExpected{
+		returnErrors: map[string]error{
+			notReadySrv.URL: adminapi.KongClientNotReadyError{Err: errors.New("admin api not ready")},
+		},
 		expected: expected,
 		t:        t,
 	}
@@ -153,6 +165,10 @@ func TestClientAddressesNotifications(t *testing.T) {
 	manager.Notify([]adminapi.DiscoveredAdminAPI{testDiscoveredAdminAPI(srv.URL)})
 	requireClientsCountEventually(t, manager, []string{srv.URL},
 		"notifying again with just one URL should decrease the set of URLs to just this one")
+
+	manager.Notify([]adminapi.DiscoveredAdminAPI{testDiscoveredAdminAPI(srv.URL), testDiscoveredAdminAPI(notReadySrv.URL)})
+	requireClientsCountEventually(t, manager, []string{srv.URL},
+		"notifying again with twos URL where one of them is not ready should not change the set of URLs")
 
 	manager.Notify([]adminapi.DiscoveredAdminAPI{})
 	requireClientsCountEventually(t, manager, []string{})

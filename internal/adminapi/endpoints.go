@@ -15,10 +15,6 @@ import (
 	cfgtypes "github.com/kong/kubernetes-ingress-controller/v2/internal/manager/config/types"
 )
 
-type ReadinessChecker interface {
-	AdminAPIReady(ctx context.Context, address string) error
-}
-
 // DiscoveredAdminAPI represents an Admin API discovered from a Kubernetes Service.
 type DiscoveredAdminAPI struct {
 	Address string

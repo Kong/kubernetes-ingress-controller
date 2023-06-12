@@ -61,7 +61,7 @@ const (
 
 	// adminAPIWait is the maximum amount of time to wait for the Admin API to become
 	// responsive after updating the KONG_ADMIN_LISTEN and adding a service for it.
-	adminAPIWait = time.Minute * 2
+	adminAPIWait = time.Minute * 3
 
 	// gatewayUpdateWaitTime is the amount of time to wait for updates to the Gateway, or to its
 	// parent Service to fully resolve into ready state.

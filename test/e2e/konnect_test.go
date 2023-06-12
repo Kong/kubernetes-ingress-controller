@@ -121,9 +121,15 @@ func TestKonnectLicenseActivation(t *testing.T) {
 	require.Eventually(t, func() bool {
 		license, err := getLicenseFromAdminAPI(ctx, env, "")
 		if err != nil {
+			t.Logf("error getting license: %v", err)
 			return false
 		}
-		return license.License.Expiration == ""
+		if license.License.Expiration != "" {
+			t.Logf("license expiration is not empty: %s", license.License.Expiration)
+			return false
+		}
+
+		return true
 	}, adminAPIWait, time.Second)
 
 	t.Log("re-enabling license management")
@@ -140,11 +146,16 @@ func TestKonnectLicenseActivation(t *testing.T) {
 	assert.Eventually(t, func() bool {
 		license, err := getLicenseFromAdminAPI(ctx, env, "")
 		if err != nil {
+			t.Logf("error getting license: %v", err)
 			return false
 		}
-		return license.License.Expiration != ""
+		if license.License.Expiration == "" {
+			t.Logf("license expiration is empty")
+			return false
+		}
+
+		return true
 	}, adminAPIWait, time.Second)
-	t.Log("done")
 }
 
 func TestKonnectWhenMisconfiguredBasicIngressNotAffected(t *testing.T) {

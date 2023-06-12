@@ -172,14 +172,6 @@ func (c *Client) PodReference() (k8stypes.NamespacedName, bool) {
 	return k8stypes.NamespacedName{}, false
 }
 
-type ClientNotReadyError struct {
-	Err error
-}
-
-func (e ClientNotReadyError) Error() string {
-	return fmt.Errorf("client not ready: %w", e.Err).Error()
-}
-
 type ClientFactory struct {
 	workspace      string
 	httpClientOpts HTTPClientOpts
@@ -203,12 +195,6 @@ func (cf ClientFactory) CreateAdminAPIClient(ctx context.Context, discoveredAdmi
 	if err != nil {
 		return nil, err
 	}
-
-	_, err = cl.AdminAPIClient().Status(ctx)
-	if err != nil {
-		return nil, ClientNotReadyError{Err: err}
-	}
-
 	cl.AttachPodReference(discoveredAdminAPI.PodRef)
 	return cl, nil
 }

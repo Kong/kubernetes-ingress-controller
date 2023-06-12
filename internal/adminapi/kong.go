@@ -16,7 +16,16 @@ import (
 	tlsutil "github.com/kong/kubernetes-ingress-controller/v2/internal/util/tls"
 )
 
+type KongClientNotReadyError struct {
+	Err error
+}
+
+func (e KongClientNotReadyError) Error() string {
+	return fmt.Errorf("client not ready: %w", e.Err).Error()
+}
+
 // NewKongClientForWorkspace returns a Kong API client for a given root API URL and workspace.
+// It ensures that the client is ready to be used by performing a status check, returns KongClientNotReadyError if not.
 // If the workspace does not already exist, NewKongClientForWorkspace will create it.
 func NewKongClientForWorkspace(ctx context.Context, adminURL string, wsName string,
 	httpclient *http.Client,
@@ -28,6 +37,11 @@ func NewKongClientForWorkspace(ctx context.Context, adminURL string, wsName stri
 	}
 	if wsName == "" {
 		return NewClient(client), nil
+	}
+
+	_, err = client.Status(ctx)
+	if err != nil {
+		return nil, KongClientNotReadyError{Err: err}
 	}
 
 	// if a workspace was provided, verify whether or not it exists.

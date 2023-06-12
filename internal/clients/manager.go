@@ -233,7 +233,12 @@ func (c *AdminAPIClientsManager) adjustGatewayClients(discoveredAdminAPIs []admi
 	for _, adminAPI := range toAdd {
 		client, err := c.adminAPIClientFactory.CreateAdminAPIClient(c.ctx, adminAPI)
 		if err != nil {
-			c.logger.WithError(err).Errorf("failed to create a client for %s", adminAPI)
+			if errors.As(err, &adminapi.KongClientNotReadyError{}) {
+				c.logger.WithError(err).Debugf("client for %q is not ready yet", adminAPI.Address)
+				continue
+			}
+
+			c.logger.WithError(err).Errorf("failed to create a client for %q", adminAPI.Address)
 			continue
 		}
 

@@ -342,6 +342,20 @@ test.unit.pretty:
 test.golden.update:
 	@go test -v -run TestParser_GoldenTests ./internal/dataplane/parser -update
 
+.PHONY: test.envtest
+.ONESHELL: test.envtest
+test.envtest: gotestsum setup-envtest
+	$(SETUP_ENVTEST) use
+	KUBEBUILDER_ASSETS="$(shell $(SETUP_ENVTEST) use -p path)" \
+		GOTESTSUM_FORMAT=$(GOTESTSUM_FORMAT) \
+		$(GOTESTSUM) -- \
+		-race $(GOTESTFLAGS) \
+		-tags envtest \
+		-covermode=atomic \
+		-coverpkg=$(PKG_LIST) \
+		-coverprofile=coverage.envtest.out \
+		./test/envtest/...
+
 .PHONY: _check.container.environment
 _check.container.environment:
 	@./scripts/check-container-environment.sh

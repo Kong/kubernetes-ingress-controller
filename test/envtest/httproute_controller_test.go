@@ -1,7 +1,7 @@
 //go:build envtest
 // +build envtest
 
-package gateway_test
+package envtest
 
 import (
 	"context"
@@ -24,8 +24,8 @@ import (
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/gateway"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util/builder"
-	"github.com/kong/kubernetes-ingress-controller/v2/test/envtest"
 	"github.com/kong/kubernetes-ingress-controller/v2/test/helpers"
+	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/mocks"
 )
 
 func init() {
@@ -42,7 +42,7 @@ func TestHTTPRouteReconcilerProperlyReactsToReferenceGrant(t *testing.T) {
 		tickDuration = 100 * time.Millisecond
 	)
 
-	cfg := envtest.Setup(t, scheme.Scheme)
+	cfg := Setup(t, scheme.Scheme)
 	var client ctrlclient.Client
 	{
 		var err error
@@ -54,15 +54,15 @@ func TestHTTPRouteReconcilerProperlyReactsToReferenceGrant(t *testing.T) {
 
 	reconciler := &gateway.HTTPRouteReconciler{
 		Client:          client,
-		DataplaneClient: gateway.DataplaneMock{},
+		DataplaneClient: mocks.Dataplane{},
 	}
 
 	// We use a deferred cancel to stop the manager and not wait for its timeout.
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	ns := envtest.CreateNamespace(ctx, t, client)
-	nsRoute := envtest.CreateNamespace(ctx, t, client)
+	ns := CreateNamespace(ctx, t, client)
+	nsRoute := CreateNamespace(ctx, t, client)
 
 	svc := corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
@@ -81,7 +81,7 @@ func TestHTTPRouteReconcilerProperlyReactsToReferenceGrant(t *testing.T) {
 		},
 	}
 	require.NoError(t, client.Create(ctx, &svc))
-	envtest.StartReconciler(ctx, t, client.Scheme(), cfg, reconciler)
+	StartReconciler(ctx, t, client.Scheme(), cfg, reconciler)
 
 	gwc := gatewayv1beta1.GatewayClass{
 		Spec: gatewayv1beta1.GatewayClassSpec{

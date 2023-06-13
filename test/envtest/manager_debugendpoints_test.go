@@ -1,7 +1,7 @@
 //go:build envtest
 // +build envtest
 
-package rootcmd_test
+package envtest
 
 import (
 	"context"
@@ -17,7 +17,6 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/cmd/rootcmd"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/manager"
 	"github.com/kong/kubernetes-ingress-controller/v2/pkg/clientset/scheme"
-	"github.com/kong/kubernetes-ingress-controller/v2/test/envtest"
 )
 
 func TestDebugEndpoints(t *testing.T) {
@@ -28,8 +27,8 @@ func TestDebugEndpoints(t *testing.T) {
 		tickTime = 10 * time.Millisecond
 	)
 
-	envcfg := envtest.Setup(t, scheme.Scheme)
-	cfg := envtest.ConfigForEnvConfig(t, envcfg)
+	envcfg := Setup(t, scheme.Scheme)
+	cfg := ConfigForEnvConfig(t, envcfg)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()

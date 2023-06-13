@@ -42,16 +42,64 @@ the provided Makefile targets:
 Unit tests are typically located in the same package as the code they test
 and they do not use any [build tags][go_build_tag].
 
-> **NOTE**: Some of these tests that do require [`envtest`][envtest] setup and
-> use a special [build tags][go_build_tag]: `envtest`. This is in place so that
-> simply running `go test ...` without any special build tags would pass without
-> requiring any manual setup from the developer.
-
 [test_GetAdminAPIsForService]: https://github.com/Kong/kubernetes-ingress-controller/blob/753e91f73dea5e51a3610d50c8a5928da79baa0f/internal/adminapi/endpoints_envtest_test.go#L28
 [test_HTTPRouteReconcilerProperlyReactsToReferenceGrant]: https://github.com/Kong/kubernetes-ingress-controller/blob/ccafa7ca9da7fb52ba959c2ebbc0974e22497b5b/internal/controllers/gateway/httproute_controller_envtest_test.go#L37
 [test_AddressesFromEndpointSlice]: https://github.com/Kong/kubernetes-ingress-controller/blob/753e91f73dea5e51a3610d50c8a5928da79baa0f/internal/adminapi/endpoints_test.go#L23-L24
 [issue4099]: https://github.com/Kong/kubernetes-ingress-controller/issues/4099
+
+### `envtest` based tests
+
+[`envtest`][envtest] based tests use a middle ground approach, somewhere between
+unit and integration tests.
+They run tests within an isolated, limited environment which allows some basic
+Kubernetes cluster actions like CRUD operations on Kubernetes entities and running
+controllers against this environment.
+
+Ensuring that the environment is ready for tests is done by:
+
+- [`setup-envtest`][setup_envtest] which ensures that api-server and etcd binaries
+  are present on the local system
+- `Makefile` invocation of `setup-envtest use` which does what's described above
+
+There already exist several helpers for working with `envtest` environment which
+can be found at [`test/envtest/`][envtest_helpers].
+
+> **NOTE**: Currently, these tests that do require [`envtest`][envtest] setup and
+> use a special [build tags][go_build_tag]: `envtest`. This is in place so that
+> simply running `go test ...` without any special build tags would pass without
+> requiring any manual setup from the developer (no failure due to missing `envtest`
+> related binaries or environment variables).
+
+Test definitions can be found both in dedicated directory - `test/envtest` - and
+throughout the codebase next to code that they are testing.
+This approach however may change over time.
+Suggestion for new `envtest` based tests is to be placed in `test/envtest` and to
+test code as a black box, i.e. using only exported methods (which will be enforced
+via running them from this dedicated package).
+
 [envtest]: https://pkg.go.dev/sigs.k8s.io/controller-runtime/pkg/envtest
+[setup_envtest]: https://github.com/kubernetes-sigs/controller-runtime/tree/main/tools/setup-envtest
+[envtest_helpers]: https://github.com/Kong/kubernetes-ingress-controller/tree/611f3c6334424a700f9a00f2801c3cfa2b352d81/test/envtest
+
+#### How to run
+
+[`envtest`][envtest] based tests can be run via `test.envtest` `Makefile` target.
+
+One can also use `./bin/setup-envtest use -p env` to obtain the asset dir environment
+variable:
+
+```
+./bin/setup-envtest use -p env
+export KUBEBUILDER_ASSETS='/Users/username/Library/Application Support/io.kubebuilder.envtest/k8s/1.27.1-darwin-arm64'
+```
+
+and use that to manually run the tests:
+
+```
+$ eval `./bin/setup-envtest use -p env`
+$ go test -v -count 1 -tags envtest ./pkg/to/test
+...
+```
 
 ### Integration tests
 

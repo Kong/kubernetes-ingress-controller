@@ -1,4 +1,4 @@
-package gateway
+package mocks
 
 import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -6,7 +6,7 @@ import (
 	k8sobj "github.com/kong/kubernetes-ingress-controller/v2/internal/util/kubernetes/object"
 )
 
-type DataplaneMock struct {
+type Dataplane struct {
 	KubernetesObjectReportsEnabled bool
 	// Mapping namespace to name to status
 	// Note: this will come in useful when implementing
@@ -15,18 +15,18 @@ type DataplaneMock struct {
 	ObjectsStatuses map[string]map[string]k8sobj.ConfigurationStatus
 }
 
-func (d DataplaneMock) UpdateObject(_ client.Object) error {
+func (d Dataplane) UpdateObject(_ client.Object) error {
 	return nil
 }
 
-func (d DataplaneMock) DeleteObject(_ client.Object) error {
+func (d Dataplane) DeleteObject(_ client.Object) error {
 	return nil
 }
 
-func (d DataplaneMock) AreKubernetesObjectReportsEnabled() bool {
+func (d Dataplane) AreKubernetesObjectReportsEnabled() bool {
 	return d.KubernetesObjectReportsEnabled
 }
 
-func (d DataplaneMock) KubernetesObjectConfigurationStatus(obj client.Object) k8sobj.ConfigurationStatus {
+func (d Dataplane) KubernetesObjectConfigurationStatus(obj client.Object) k8sobj.ConfigurationStatus {
 	return d.ObjectsStatuses[obj.GetNamespace()][obj.GetName()]
 }

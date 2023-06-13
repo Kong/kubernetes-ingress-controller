@@ -55,6 +55,10 @@ jobs:
     uses: ./.github/workflows/_unit_tests.yaml
     secrets: inherit
 
+  envtest-tests:
+    uses: ./.github/workflows/_envtest_tests.yaml
+    secrets: inherit
+
   integration-tests:
     needs: should-run-with-secrets
     if: ${{ needs.should-run-with-secrets.outputs.result == 'true' }}
@@ -78,6 +82,7 @@ jobs:
       - tools
       - linters
       - unit-tests
+      - envtest-tests
       - integration-tests
       - conformance-tests
       - build-docker-image
@@ -92,6 +97,7 @@ jobs:
     needs:
       - should-run-with-secrets
       - unit-tests
+      - envtest-tests
       - integration-tests
       - conformance-tests
     if: ${{ always() && needs.should-run-with-secrets.outputs.result == 'true' }}

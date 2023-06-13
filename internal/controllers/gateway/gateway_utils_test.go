@@ -9,11 +9,18 @@ import (
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8stypes "k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util/builder"
 )
+
+func init() {
+	if err := gatewayv1beta1.Install(scheme.Scheme); err != nil {
+		panic(err)
+	}
+}
 
 func TestGetListenerSupportedRouteKinds(t *testing.T) {
 	testCases := []struct {

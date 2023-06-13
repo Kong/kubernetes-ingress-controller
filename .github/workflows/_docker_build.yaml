@@ -98,7 +98,7 @@ jobs:
 
       - name: Docker meta
         id: meta
-        uses: docker/metadata-action@v4.5.0
+        uses: docker/metadata-action@v4.6.0
         with:
           images: kong/kubernetes-ingress-controller
           flavor: |

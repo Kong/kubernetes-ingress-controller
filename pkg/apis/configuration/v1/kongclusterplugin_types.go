@@ -80,6 +80,10 @@ type KongClusterPlugin struct {
 	// For example, a KongPlugin with `plugin: rate-limiting` and `before.access: ["key-auth"]`
 	// will create a rate limiting plugin that limits requests _before_ they are authenticated.
 	Ordering *kong.PluginOrdering `json:"ordering,omitempty"`
+
+	// InstanceName is an optional custom name to identify an instance of the plugin. This is useful when running the
+	// same plugin in multiple contexts, for example, on multiple services.
+	InstanceName string `json:"instance_name,omitempty"`
 }
 
 // +kubebuilder:object:root=true

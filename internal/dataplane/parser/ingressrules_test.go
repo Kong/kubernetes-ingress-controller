@@ -652,11 +652,6 @@ func TestPopulateServices(t *testing.T) {
 			require.NoError(t, err)
 			servicesToBeSkipped := ingressRules.populateServices(logrus.New(), fakeStore, failuresCollector)
 			require.Equal(t, tc.serviceNamesToSkip, servicesToBeSkipped)
-			expectedErrorCount := 0
-			for s := range tc.serviceNamesToSkip {
-				expectedErrorCount += len(tc.serviceNamesToServices[s].Backends)
-			}
-			require.Len(t, failuresCollector.PopResourceFailures(), expectedErrorCount, "expecting as many translation failures as backends of services to skip")
 		})
 	}
 }

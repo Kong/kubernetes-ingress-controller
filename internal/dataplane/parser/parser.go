@@ -708,7 +708,7 @@ func getServiceEndpoints(
 		endpoints = append(endpoints, newEndpoints...)
 	}
 	if len(endpoints) == 0 {
-		log.Warningf("no active endpoints")
+		log.Debugf("no active endpoints")
 	}
 
 	return targetsForEndpoints(endpoints)

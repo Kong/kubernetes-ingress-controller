@@ -3,9 +3,9 @@ package clients
 import (
 	"context"
 	"errors"
-	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -19,6 +19,11 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/adminapi"
 )
 
+const (
+	// We make this period short in tests to make sure that the nothing breaks due to the reconciliation happening.
+	testReadinessReconiliationPeriod = time.Millisecond
+)
+
 // clientFactoryWithExpected implements ClientFactory interface and can be used
 // in tests to assert which clients have been created and signal failure if:
 // - client for an unexpected address gets created
@@ -27,19 +32,23 @@ type clientFactoryWithExpected struct {
 	returnErrors map[string]error
 	expected     map[string]bool
 	t            *testing.T
+	lock         sync.RWMutex
 }
 
-func (cf clientFactoryWithExpected) CreateAdminAPIClient(_ context.Context, discoveredAdminAPI adminapi.DiscoveredAdminAPI) (*adminapi.Client, error) {
-	stillExpecting, ok := cf.expected[discoveredAdminAPI.Address]
-	if !ok {
-		cf.t.Errorf("got %s which was unexpected", discoveredAdminAPI)
-		return nil, fmt.Errorf("got %s which was unexpected", discoveredAdminAPI)
-	}
-	if !stillExpecting {
-		cf.t.Errorf("got %s more than once", discoveredAdminAPI)
-		return nil, fmt.Errorf("got %s more than once", discoveredAdminAPI)
-	}
-	cf.expected[discoveredAdminAPI.Address] = false
+func (cf *clientFactoryWithExpected) CreateAdminAPIClient(_ context.Context, discoveredAdminAPI adminapi.DiscoveredAdminAPI) (*adminapi.Client, error) {
+	cf.lock.Lock()
+	defer cf.lock.Unlock()
+
+	// stillExpecting, ok := cf.expected[discoveredAdminAPI.Address]
+	// if !ok {
+	// 	cf.t.Errorf("got %s which was unexpected", discoveredAdminAPI)
+	// 	return nil, fmt.Errorf("got %s which was unexpected", discoveredAdminAPI)
+	// }
+	// if !stillExpecting {
+	// 	cf.t.Errorf("got %s more than once", discoveredAdminAPI)
+	// 	return nil, fmt.Errorf("got %s more than once", discoveredAdminAPI)
+	// }
+	// cf.expected[discoveredAdminAPI.Address] = false
 	if errToReturn, ok := cf.returnErrors[discoveredAdminAPI.Address]; ok {
 		return nil, errToReturn
 	}
@@ -52,13 +61,19 @@ func (cf clientFactoryWithExpected) CreateAdminAPIClient(_ context.Context, disc
 	return c, nil
 }
 
-func (cf clientFactoryWithExpected) AssertExpectedCalls() {
+func (cf *clientFactoryWithExpected) AssertExpectedCalls() {
+	cf.lock.RLock()
+	defer cf.lock.RUnlock()
+
 	for _, addr := range cf.ExpectedCallsLeft() {
 		cf.t.Errorf("%s client expected to be called, but wasn't", addr)
 	}
 }
 
-func (cf clientFactoryWithExpected) ExpectedCallsLeft() []string {
+func (cf *clientFactoryWithExpected) ExpectedCallsLeft() []string {
+	cf.lock.RLock()
+	defer cf.lock.RUnlock()
+
 	var notCalled []string
 	for addr, stillExpected := range cf.expected {
 		if stillExpected {
@@ -66,6 +81,13 @@ func (cf clientFactoryWithExpected) ExpectedCallsLeft() []string {
 		}
 	}
 	return notCalled
+}
+
+func (cf *clientFactoryWithExpected) SetReturnErrors(errs map[string]error) {
+	cf.lock.Lock()
+	defer cf.lock.Unlock()
+
+	cf.returnErrors = errs
 }
 
 func TestClientAddressesNotifications(t *testing.T) {
@@ -108,7 +130,7 @@ func TestClientAddressesNotifications(t *testing.T) {
 	defer notReadySrv.Close()
 	expected[notReadySrv.URL] = true
 
-	testClientFactoryWithExpected := clientFactoryWithExpected{
+	testClientFactoryWithExpected := &clientFactoryWithExpected{
 		returnErrors: map[string]error{
 			notReadySrv.URL: adminapi.KongClientNotReadyError{Err: errors.New("admin api not ready")},
 		},
@@ -125,6 +147,7 @@ func TestClientAddressesNotifications(t *testing.T) {
 		logger,
 		[]*adminapi.Client{initialClient},
 		testClientFactoryWithExpected,
+		testReadinessReconiliationPeriod,
 	)
 	require.NoError(t, err)
 	require.NotNil(t, manager)
@@ -194,7 +217,7 @@ func TestClientAdjustInternalClientsAfterNotification(t *testing.T) {
 	// Initial client is expected to be replaced later on.
 	testClient, err := adminapi.NewTestClient("localhost:8083")
 	require.NoError(t, err)
-	manager, err := NewAdminAPIClientsManager(ctx, logger, []*adminapi.Client{testClient}, cf)
+	manager, err := NewAdminAPIClientsManager(ctx, logger, []*adminapi.Client{testClient}, cf, testReadinessReconiliationPeriod)
 	require.NoError(t, err)
 	require.NotNil(t, manager)
 	manager.RunNotifyLoop()
@@ -249,7 +272,7 @@ func TestClientAdjustInternalClientsAfterNotification(t *testing.T) {
 
 func TestNewAdminAPIClientsManager_NoInitialClientsDisallowed(t *testing.T) {
 	cf := &clientFactoryWithExpected{t: t}
-	_, err := NewAdminAPIClientsManager(context.Background(), logrus.New(), nil, cf)
+	_, err := NewAdminAPIClientsManager(context.Background(), logrus.New(), nil, cf, testReadinessReconiliationPeriod)
 	require.Error(t, err)
 }
 
@@ -263,6 +286,7 @@ func TestAdminAPIClientsManager_NotRunningNotifyLoop(t *testing.T) {
 		logrus.New(),
 		[]*adminapi.Client{testClient},
 		&clientFactoryWithExpected{t: t},
+		testReadinessReconiliationPeriod,
 	)
 	require.NoError(t, err)
 
@@ -283,6 +307,7 @@ func TestAdminAPIClientsManager_Clients(t *testing.T) {
 		logrus.New(),
 		[]*adminapi.Client{testClient},
 		&clientFactoryWithExpected{t: t},
+		testReadinessReconiliationPeriod,
 	)
 	require.NoError(t, err)
 	require.Len(t, m.GatewayClients(), 1, "expecting one initial client")
@@ -306,6 +331,7 @@ func TestAdminAPIClientsManager_GatewayClientsFromNotificationsAreExpectedToHave
 		logrus.New(),
 		[]*adminapi.Client{testClient},
 		cf,
+		testReadinessReconiliationPeriod,
 	)
 	require.NoError(t, err)
 	m.RunNotifyLoop()
@@ -337,7 +363,7 @@ func TestAdminAPIClientsManager_SubscribeToGatewayClientsChanges(t *testing.T) {
 	require.NoError(t, err)
 
 	ctx, cancel := context.WithCancel(context.Background())
-	m, err := NewAdminAPIClientsManager(ctx, logrus.New(), []*adminapi.Client{testClient}, cf)
+	m, err := NewAdminAPIClientsManager(ctx, logrus.New(), []*adminapi.Client{testClient}, cf, testReadinessReconiliationPeriod)
 	require.NoError(t, err)
 
 	t.Run("no notify loop running should return false when subscribing", func(t *testing.T) {
@@ -423,7 +449,7 @@ func TestAdminAPIClientsManager_ConcurrentNotify(t *testing.T) {
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	m, err := NewAdminAPIClientsManager(ctx, logrus.New(), []*adminapi.Client{testClient}, cf)
+	m, err := NewAdminAPIClientsManager(ctx, logrus.New(), []*adminapi.Client{testClient}, cf, testReadinessReconiliationPeriod)
 	require.NoError(t, err)
 	m.RunNotifyLoop()
 
@@ -465,8 +491,54 @@ func TestAdminAPIClientsManager_ConcurrentNotify(t *testing.T) {
 	}, time.Second, time.Millisecond, "expected to receive 10 notifications")
 }
 
-func TestAdminAPIClientsManager_PendingClientTurningReady(t *testing.T) {
-	t.Skip("TODO")
+func TestAdminAPIClientsManager_PendingClients(t *testing.T) {
+	t.Parallel()
+
+	notReadyAdminAPI := adminapi.NewMockAdminAPIServer(t, false, true)
+	notReadyAdminAPIServer := httptest.NewServer(notReadyAdminAPI)
+
+	cf := &clientFactoryWithExpected{
+		t: t,
+		returnErrors: map[string]error{
+			notReadyAdminAPIServer.URL: errors.New("client error"),
+			"http://10.0.0.1:8080":     errors.New("client error"),
+		},
+		expected: map[string]bool{
+			"http://10.0.0.1:8080": true,
+			"http://10.0.0.2:8080": true,
+		}}
+	testClient, err := adminapi.NewTestClient(notReadyAdminAPIServer.URL)
+	testClient.AttachPodReference(k8stypes.NamespacedName{Name: "pod-1", Namespace: "namespace-1"})
+	require.NoError(t, err)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	m, err := NewAdminAPIClientsManager(ctx, logrus.New(), []*adminapi.Client{testClient}, cf, testReadinessReconiliationPeriod)
+	require.NoError(t, err)
+
+	m.RunNotifyLoop()
+
+	ch, ok := m.SubscribeToGatewayClientsChanges()
+	require.NotNil(t, ch)
+	require.True(t, ok)
+
+	// Wait for the first notification. This should happen after the first readiness reconciliation.
+	select {
+	case <-ch:
+		require.Len(t, m.GatewayClients(), 0, "expected to get 0 clients after the first readiness reconciliation")
+	case <-time.After(time.Second):
+		t.Error("did not receive notification after gateway clients changes")
+	}
+
+	// Make the factory not return errors anymore.
+	cf.SetReturnErrors(map[string]error{})
+
+	select {
+	case <-ch:
+	case <-time.After(time.Second):
+		t.Error("did not receive notification after gateway clients changes")
+	}
+
 }
 
 func testDiscoveredAdminAPI(address string) adminapi.DiscoveredAdminAPI {

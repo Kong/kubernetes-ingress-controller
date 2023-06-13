@@ -137,6 +137,7 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 		deprecatedLogger,
 		initialKongClients,
 		adminAPIClientsFactory,
+		clients.DefaultReadinessReconciliationInterval,
 	)
 	if err != nil {
 		return fmt.Errorf("failed to create AdminAPIClientsManager: %w", err)

@@ -12,8 +12,9 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/adminapi"
 )
 
-// ReadinessReconciliationInterval is the interval at which the manager will run readiness reconciliation loop.
-const ReadinessReconciliationInterval = 5 * time.Second
+// DefaultReadinessReconciliationInterval is the interval at which the manager will run readiness reconciliation loop.
+// It's the same as the default interval of the readiness probe.
+const DefaultReadinessReconciliationInterval = 10 * time.Second
 
 type ClientFactory interface {
 	CreateAdminAPIClient(ctx context.Context, discoveredAdminAPI adminapi.DiscoveredAdminAPI) (*adminapi.Client, error)
@@ -43,6 +44,9 @@ type AdminAPIClientsManager struct {
 	// configured.
 	pendingGatewayClients []adminapi.DiscoveredAdminAPI
 
+	// readinessReconciliationInterval is the interval at which the manager will run clients' readiness reconciliation.
+	readinessReconciliationInterval time.Duration
+
 	// konnectClient represents a special-case of the data-plane which is Konnect cloud.
 	// This client is used to synchronise configuration with Konnect's Runtime Group Admin API.
 	konnectClient *adminapi.KonnectClient
@@ -58,18 +62,20 @@ func NewAdminAPIClientsManager(
 	logger logrus.FieldLogger,
 	initialClients []*adminapi.Client,
 	kongClientFactory ClientFactory,
+	readinessReconciliationInterval time.Duration,
 ) (*AdminAPIClientsManager, error) {
 	if len(initialClients) == 0 {
 		return nil, errors.New("at least one initial client must be provided")
 	}
 
 	return &AdminAPIClientsManager{
-		activeGatewayClients:          initialClients,
-		adminAPIClientFactory:         kongClientFactory,
-		discoveredAdminAPIsNotifyChan: make(chan []adminapi.DiscoveredAdminAPI),
-		ctx:                           ctx,
-		notifyLoopRunningCh:           make(chan struct{}),
-		logger:                        logger,
+		activeGatewayClients:            initialClients,
+		adminAPIClientFactory:           kongClientFactory,
+		discoveredAdminAPIsNotifyChan:   make(chan []adminapi.DiscoveredAdminAPI),
+		ctx:                             ctx,
+		notifyLoopRunningCh:             make(chan struct{}),
+		logger:                          logger,
+		readinessReconciliationInterval: readinessReconciliationInterval,
 	}, nil
 }
 
@@ -176,7 +182,7 @@ func (c *AdminAPIClientsManager) SubscribeToGatewayClientsChanges() (<-chan stru
 func (c *AdminAPIClientsManager) adminAPIAddressNotifyLoop() {
 	close(c.notifyLoopRunningCh)
 
-	readinessReconciliationTicker := time.NewTicker(ReadinessReconciliationInterval)
+	readinessReconciliationTicker := time.NewTicker(c.readinessReconciliationInterval)
 	defer readinessReconciliationTicker.Stop()
 
 	for {
@@ -195,11 +201,17 @@ func (c *AdminAPIClientsManager) adminAPIAddressNotifyLoop() {
 			// Notify subscribers that the clients list has been updated.
 			c.notifyGatewayClientsSubscribers()
 
-		case <-readinessReconciliationTicker.C:
-			c.checkReadiness()
+			// Log the current state of clients.
+			c.logClientsLists("notify")
 
-			// Notify subscribers that the clients list has been updated.
-			c.notifyGatewayClientsSubscribers()
+		case <-readinessReconciliationTicker.C:
+			if clientsChanged := c.reconcileReadiness(); clientsChanged {
+				// Notify subscribers that the clients list has been updated.
+				c.notifyGatewayClientsSubscribers()
+
+				// Log the current state of clients.
+				c.logClientsLists("readiness reconciliation")
+			}
 		}
 	}
 }
@@ -271,6 +283,7 @@ func (c *AdminAPIClientsManager) adjustGatewayClients(discoveredAdminAPIs []admi
 
 // notifyGatewayClientsSubscribers sends notifications to all subscribers that have called SubscribeToGatewayClientsChanges.
 func (c *AdminAPIClientsManager) notifyGatewayClientsSubscribers() {
+	c.logger.Info("notifying subscribers about the changes in the gateway clients list")
 	for _, sub := range c.gatewayClientsChangesSubscribers {
 		select {
 		case <-c.ctx.Done():
@@ -287,16 +300,14 @@ func (c *AdminAPIClientsManager) closeGatewayClientsSubscribers() {
 	}
 }
 
-// checkReadiness checks the readiness of all active and pending clients and moves them to the appropriate list.
-func (c *AdminAPIClientsManager) checkReadiness() {
+// reconcileReadiness checks the readiness of all active and pending clients and moves them to the appropriate list.
+func (c *AdminAPIClientsManager) reconcileReadiness() (clientsChanged bool) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
-
-	c.checkActiveGatewayClients()
-	c.checkPendingGatewayClients()
+	return c.checkActiveGatewayClients() || c.checkPendingGatewayClients()
 }
 
-func (c *AdminAPIClientsManager) checkPendingGatewayClients() {
+func (c *AdminAPIClientsManager) checkPendingGatewayClients() (clientsChanged bool) {
 	var idxToRemove []int
 	for i, adminAPI := range c.pendingGatewayClients {
 		client, err := c.adminAPIClientFactory.CreateAdminAPIClient(c.ctx, adminAPI)
@@ -313,12 +324,15 @@ func (c *AdminAPIClientsManager) checkPendingGatewayClients() {
 	}
 
 	// Remove all clients that are now active.
-	for _, i := range idxToRemove {
-		c.pendingGatewayClients = append(c.pendingGatewayClients[:i], c.pendingGatewayClients[i+1:]...)
+	for i := len(idxToRemove) - 1; i >= 0; i-- {
+		idx := idxToRemove[i]
+		c.pendingGatewayClients = append(c.pendingGatewayClients[:idx], c.pendingGatewayClients[idx+1:]...)
 	}
+
+	return len(idxToRemove) > 0
 }
 
-func (c *AdminAPIClientsManager) checkActiveGatewayClients() {
+func (c *AdminAPIClientsManager) checkActiveGatewayClients() (clientsChanged bool) {
 	var idxToMoveToPending []int
 	for i, client := range c.activeGatewayClients {
 		_, err := client.AdminAPIClient().Status(c.ctx)
@@ -329,23 +343,36 @@ func (c *AdminAPIClientsManager) checkActiveGatewayClients() {
 		}
 	}
 
-	for _, i := range idxToMoveToPending {
-		client := c.activeGatewayClients[i]
+	for i := len(idxToMoveToPending) - 1; i >= 0; i-- {
+		idx := idxToMoveToPending[i]
+		client := c.activeGatewayClients[idx]
+
 		podRef, ok := client.PodReference()
 		if !ok {
 			// This should never happen, but if it does, we want to log it.
 			c.logger.Errorf("failed to get PodReference for client %q", client.BaseRootURL())
 		}
 
-		// Move the client to the pending list.
+		// Add the client to the pending list.
 		c.pendingGatewayClients = append(c.pendingGatewayClients, adminapi.DiscoveredAdminAPI{
 			Address: client.BaseRootURL(),
 			PodRef:  podRef,
 		})
 
 		// Remove the client from the active list.
-		c.activeGatewayClients = append(c.activeGatewayClients[:i], c.activeGatewayClients[i+1:]...)
+		c.activeGatewayClients = append(c.activeGatewayClients[:idx], c.activeGatewayClients[idx+1:]...)
 	}
+
+	return len(idxToMoveToPending) > 0
+}
+
+// logClientsLists logs the current state of the active and pending clients, for debugging purposes.
+func (c *AdminAPIClientsManager) logClientsLists(afterFunctionName string) {
+	c.lock.RLock()
+	defer c.lock.RUnlock()
+	active := lo.Map(c.activeGatewayClients, func(c *adminapi.Client, _ int) string { return c.BaseRootURL() })
+	pending := lo.Map(c.pendingGatewayClients, func(c adminapi.DiscoveredAdminAPI, _ int) string { return c.Address })
+	c.logger.Debugf("after %s, gateway clients: active: %v, pending: %v", afterFunctionName, active, pending)
 }
 
 // AdminAPIClientsProvider allows fetching the most recent list of Admin API clients of Gateways that

@@ -123,6 +123,11 @@ func (d *Discoverer) AdminAPIsFromEndpointSlice(endpoints discoveryv1.EndpointSl
 		}
 
 		for _, e := range endpoints.Endpoints {
+			// We do not take into account terminating endpoints.
+			if e.Conditions.Terminating != nil && *e.Conditions.Terminating {
+				continue
+			}
+
 			// We do not take into account endpoints that are not backed by a Pod.
 			if e.TargetRef == nil || e.TargetRef.Kind != "Pod" {
 				continue

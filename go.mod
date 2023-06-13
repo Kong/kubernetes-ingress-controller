@@ -2,13 +2,6 @@ module github.com/kong/kubernetes-ingress-controller/v2
 
 go 1.20
 
-// TODO: https://github.com/Kong/kubernetes-ingress-controller/issues/2953
-exclude (
-	sigs.k8s.io/gateway-api v0.6.2
-	sigs.k8s.io/gateway-api v0.7.0
-	sigs.k8s.io/gateway-api v0.7.1
-)
-
 require (
 	cloud.google.com/go/container v1.21.0
 	github.com/Masterminds/sprig/v3 v3.2.3

@@ -148,6 +148,11 @@ func (r *GatewayClassReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	return ctrl.Result{}, nil
 }
 
+// SetLogger sets the logger.
+func (r *GatewayClassReconciler) SetLogger(l logr.Logger) {
+	r.Log = l
+}
+
 // -----------------------------------------------------------------------------
 // GatewayClass Controller - Private
 // -----------------------------------------------------------------------------

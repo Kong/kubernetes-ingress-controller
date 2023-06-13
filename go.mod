@@ -6,6 +6,7 @@ go 1.20
 exclude (
 	sigs.k8s.io/gateway-api v0.6.2
 	sigs.k8s.io/gateway-api v0.7.0
+	sigs.k8s.io/gateway-api v0.7.1
 )
 
 require (
@@ -22,7 +23,7 @@ require (
 	github.com/kong/deck v1.22.0
 	github.com/kong/go-kong v0.43.0
 	github.com/kong/kubernetes-telemetry v0.0.5
-	github.com/kong/kubernetes-testing-framework v0.31.0
+	github.com/kong/kubernetes-testing-framework v0.31.1
 	github.com/lithammer/dedent v1.1.0
 	github.com/miekg/dns v1.1.54
 	github.com/mitchellh/mapstructure v1.5.0
@@ -209,9 +210,9 @@ require (
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	k8s.io/cli-runtime v0.27.2
-	k8s.io/kube-openapi v0.0.0-20230501164219-8b0f38b5fd1f // indirect
+	k8s.io/kube-openapi v0.0.0-20230515203736-54b630e78af5 // indirect
 	k8s.io/kubectl v0.27.2
-	k8s.io/utils v0.0.0-20230406110748-d93618cff8a2 // indirect
+	k8s.io/utils v0.0.0-20230505201702-9f6742963106 // indirect
 	knative.dev/serving v0.37.2
 	sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd // indirect
 	sigs.k8s.io/kind v0.19.0 // indirect

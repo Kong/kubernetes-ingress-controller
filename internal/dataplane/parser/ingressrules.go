@@ -290,6 +290,7 @@ func servicesAllUseTheSameKongAnnotations(
 	kongServiceName string,
 ) bool {
 	match := true
+	badAnnotations := map[string]interface{}{}
 	for _, service := range services {
 		// all services grouped together via backends must have identical annotations
 		// to avoid unexpected routing behaviors.
@@ -299,31 +300,31 @@ func servicesAllUseTheSameKongAnnotations(
 		// validation can work. We should be able to move this validation there
 		// once https://github.com/Kong/kubernetes-ingress-controller/issues/2195
 		// is resolved.
+
 		for k, v := range annotations {
 			valueForThisObject, ok := service.Annotations[k]
 			if !ok {
-				failuresCollector.PushResourceFailure(
-					fmt.Sprintf("Service has inconsistent %s annotation and is used in multi-Service backend %s. "+
-						"All Services in a multi-Service backend must have matching Kong annotations. Review the "+
-						"associated route resource and align annotations in its multi-Service backends.",
-						k, kongServiceName),
-					service.DeepCopy(),
-				)
+				badAnnotations[k] = nil
 				match = false
 				// continue as it doesn't make sense to verify value of not existing annotation
 				continue
 			}
 
 			if valueForThisObject != v {
-				failuresCollector.PushResourceFailure(
-					fmt.Sprintf("Service has inconsistent %s annotation and is used in multi-Service backend %s. "+
-						"All Services in a multi-Service backend must have matching Kong annotations. Review the "+
-						"associated route resource and align annotations in its multi-Service backends.",
-						k, kongServiceName),
-					service.DeepCopy(),
-				)
+				badAnnotations[k] = nil
 				match = false
 			}
+		}
+	}
+
+	for _, service := range services {
+		for annotation := range badAnnotations {
+			failuresCollector.PushResourceFailure(
+				fmt.Sprintf("Service has inconsistent %s annotation and is used in multi-Service backend %s. "+
+					"All Services in a multi-Service backend must have matching Kong annotations.",
+					annotation, kongServiceName),
+				service.DeepCopy(),
+			)
 		}
 	}
 

@@ -465,6 +465,10 @@ func TestAdminAPIClientsManager_ConcurrentNotify(t *testing.T) {
 	}, time.Second, time.Millisecond, "expected to receive 10 notifications")
 }
 
+func TestAdminAPIClientsManager_PendingClientTurningReady(t *testing.T) {
+	t.Skip("TODO")
+}
+
 func testDiscoveredAdminAPI(address string) adminapi.DiscoveredAdminAPI {
 	return adminapi.DiscoveredAdminAPI{
 		Address: address,

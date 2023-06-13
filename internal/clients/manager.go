@@ -4,12 +4,16 @@ import (
 	"context"
 	"errors"
 	"sync"
+	"time"
 
 	"github.com/samber/lo"
 	"github.com/sirupsen/logrus"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/adminapi"
 )
+
+// ReadinessReconciliationInterval is the interval at which the manager will run readiness reconciliation loop.
+const ReadinessReconciliationInterval = 5 * time.Second
 
 type ClientFactory interface {
 	CreateAdminAPIClient(ctx context.Context, discoveredAdminAPI adminapi.DiscoveredAdminAPI) (*adminapi.Client, error)
@@ -32,9 +36,12 @@ type AdminAPIClientsManager struct {
 	notifyLoopRunningCh   chan struct{}
 	isNotifyLoopRunning   bool
 
-	// gatewayClients represent all Kong Gateway data-planes that are configured by this KIC instance with use of
-	// their Admin API.
-	gatewayClients []*adminapi.Client
+	// activeGatewayClients represent all Kong Gateway data-planes that are ready to be configured.
+	activeGatewayClients []*adminapi.Client
+
+	// pendingGatewayClients represent all Kong Gateway data-planes that were discovered but are not ready to be
+	// configured.
+	pendingGatewayClients []adminapi.DiscoveredAdminAPI
 
 	// konnectClient represents a special-case of the data-plane which is Konnect cloud.
 	// This client is used to synchronise configuration with Konnect's Runtime Group Admin API.
@@ -57,7 +64,7 @@ func NewAdminAPIClientsManager(
 	}
 
 	return &AdminAPIClientsManager{
-		gatewayClients:                initialClients,
+		activeGatewayClients:          initialClients,
 		adminAPIClientFactory:         kongClientFactory,
 		discoveredAdminAPIsNotifyChan: make(chan []adminapi.DiscoveredAdminAPI),
 		ctx:                           ctx,
@@ -119,15 +126,15 @@ func (c *AdminAPIClientsManager) GatewayClients() []*adminapi.Client {
 	c.lock.RLock()
 	defer c.lock.RUnlock()
 
-	copied := make([]*adminapi.Client, len(c.gatewayClients))
-	copy(copied, c.gatewayClients)
+	copied := make([]*adminapi.Client, len(c.activeGatewayClients))
+	copy(copied, c.activeGatewayClients)
 	return copied
 }
 
 func (c *AdminAPIClientsManager) GatewayClientsCount() int {
 	c.lock.RLock()
 	defer c.lock.RUnlock()
-	return len(c.gatewayClients)
+	return len(c.activeGatewayClients)
 }
 
 // SubscribeToGatewayClientsChanges returns a channel that will receive a notification on every Gateway clients update.
@@ -168,6 +175,10 @@ func (c *AdminAPIClientsManager) SubscribeToGatewayClientsChanges() (<-chan stru
 // internal clients list.
 func (c *AdminAPIClientsManager) adminAPIAddressNotifyLoop() {
 	close(c.notifyLoopRunningCh)
+
+	readinessReconciliationTicker := time.NewTicker(ReadinessReconciliationInterval)
+	defer readinessReconciliationTicker.Stop()
+
 	for {
 		select {
 		case <-c.ctx.Done():
@@ -183,6 +194,12 @@ func (c *AdminAPIClientsManager) adminAPIAddressNotifyLoop() {
 
 			// Notify subscribers that the clients list has been updated.
 			c.notifyGatewayClientsSubscribers()
+
+		case <-readinessReconciliationTicker.C:
+			c.checkReadiness()
+
+			// Notify subscribers that the clients list has been updated.
+			c.notifyGatewayClientsSubscribers()
 		}
 	}
 }
@@ -194,9 +211,12 @@ func (c *AdminAPIClientsManager) adjustGatewayClients(discoveredAdminAPIs []admi
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
+	// Cleanup the pending clients list.
+	c.pendingGatewayClients = c.pendingGatewayClients[:0]
+
 	// Short circuit
 	if len(discoveredAdminAPIs) == 0 {
-		c.gatewayClients = c.gatewayClients[:0]
+		c.activeGatewayClients = c.activeGatewayClients[:0]
 		return
 	}
 
@@ -206,13 +226,13 @@ func (c *AdminAPIClientsManager) adjustGatewayClients(discoveredAdminAPIs []admi
 
 		// If we don't have a client with new address then filter it and add
 		// a client for this address.
-		return !lo.ContainsBy(c.gatewayClients, func(cl *adminapi.Client) bool {
+		return !lo.ContainsBy(c.activeGatewayClients, func(cl *adminapi.Client) bool {
 			return api.Address == cl.BaseRootURL()
 		})
 	})
 
 	var idxToRemove []int
-	for i, cl := range c.gatewayClients {
+	for i, cl := range c.activeGatewayClients {
 		// If the new address set contains a client that we already have then
 		// good, no need to do anything for it.
 		if lo.ContainsBy(discoveredAdminAPIs, func(api adminapi.DiscoveredAdminAPI) bool {
@@ -227,7 +247,7 @@ func (c *AdminAPIClientsManager) adjustGatewayClients(discoveredAdminAPIs []admi
 
 	for i := len(idxToRemove) - 1; i >= 0; i-- {
 		idx := idxToRemove[i]
-		c.gatewayClients = append(c.gatewayClients[:idx], c.gatewayClients[idx+1:]...)
+		c.activeGatewayClients = append(c.activeGatewayClients[:idx], c.activeGatewayClients[idx+1:]...)
 	}
 
 	for _, adminAPI := range toAdd {
@@ -235,14 +255,17 @@ func (c *AdminAPIClientsManager) adjustGatewayClients(discoveredAdminAPIs []admi
 		if err != nil {
 			if errors.As(err, &adminapi.KongClientNotReadyError{}) {
 				c.logger.WithError(err).Debugf("client for %q is not ready yet", adminAPI.Address)
-				continue
+			} else {
+				c.logger.WithError(err).Errorf("failed to create a client for %q", adminAPI.Address)
 			}
 
-			c.logger.WithError(err).Errorf("failed to create a client for %q", adminAPI.Address)
+			// Despite the error because we still want to keep the client in the pending list to retry later.
+			c.pendingGatewayClients = append(c.pendingGatewayClients, adminAPI)
 			continue
 		}
 
-		c.gatewayClients = append(c.gatewayClients, client)
+		// Client is ready, add it to the active list.
+		c.activeGatewayClients = append(c.activeGatewayClients, client)
 	}
 }
 
@@ -261,6 +284,67 @@ func (c *AdminAPIClientsManager) notifyGatewayClientsSubscribers() {
 func (c *AdminAPIClientsManager) closeGatewayClientsSubscribers() {
 	for _, sub := range c.gatewayClientsChangesSubscribers {
 		close(sub)
+	}
+}
+
+// checkReadiness checks the readiness of all active and pending clients and moves them to the appropriate list.
+func (c *AdminAPIClientsManager) checkReadiness() {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+
+	c.checkActiveGatewayClients()
+	c.checkPendingGatewayClients()
+}
+
+func (c *AdminAPIClientsManager) checkPendingGatewayClients() {
+	var idxToRemove []int
+	for i, adminAPI := range c.pendingGatewayClients {
+		client, err := c.adminAPIClientFactory.CreateAdminAPIClient(c.ctx, adminAPI)
+		if err != nil {
+			// Despite the error reason we still want to keep the client in the pending list to retry later.
+			c.logger.WithError(err).Debugf("pending client for %q is not ready yet", adminAPI.Address)
+			continue
+		}
+
+		// Client is ready, move it to the active list...
+		c.activeGatewayClients = append(c.activeGatewayClients, client)
+		// ... and keep the index to remove it from the pending list.
+		idxToRemove = append(idxToRemove, i)
+	}
+
+	// Remove all clients that are now active.
+	for _, i := range idxToRemove {
+		c.pendingGatewayClients = append(c.pendingGatewayClients[:i], c.pendingGatewayClients[i+1:]...)
+	}
+}
+
+func (c *AdminAPIClientsManager) checkActiveGatewayClients() {
+	var idxToMoveToPending []int
+	for i, client := range c.activeGatewayClients {
+		_, err := client.AdminAPIClient().Status(c.ctx)
+		if err != nil {
+			// Despite the error reason we still want to keep the client in the pending list to retry later.
+			c.logger.WithError(err).Debugf("active client for %q is not ready, moving to pending", client.BaseRootURL())
+			idxToMoveToPending = append(idxToMoveToPending, i)
+		}
+	}
+
+	for _, i := range idxToMoveToPending {
+		client := c.activeGatewayClients[i]
+		podRef, ok := client.PodReference()
+		if !ok {
+			// This should never happen, but if it does, we want to log it.
+			c.logger.Errorf("failed to get PodReference for client %q", client.BaseRootURL())
+		}
+
+		// Move the client to the pending list.
+		c.pendingGatewayClients = append(c.pendingGatewayClients, adminapi.DiscoveredAdminAPI{
+			Address: client.BaseRootURL(),
+			PodRef:  podRef,
+		})
+
+		// Remove the client from the active list.
+		c.activeGatewayClients = append(c.activeGatewayClients[:i], c.activeGatewayClients[i+1:]...)
 	}
 }
 

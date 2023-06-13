@@ -31,14 +31,20 @@ func TestDeployAllInOneDBLESSKuma(t *testing.T) {
 
 	// scale to force a restart of pods and trigger mesh injection (we can't annotate the Kong namespace in advance,
 	// it gets clobbered by deployKong()). is there a "rollout restart" in client-go? who knows!
-	scaleDeployment(ctx, t, env, deployments.ProxyNN, 0)
-	scaleDeployment(ctx, t, env, deployments.ControllerNN, 0)
+	scaleDeploymentAndWaitForReadiness(ctx, t, env, deployments.ControllerNN, 0)
+	scaleDeploymentAndWaitForReadiness(ctx, t, env, deployments.ProxyNN, 0)
 
-	scaleDeployment(ctx, t, env, deployments.ProxyNN, 2)
-	scaleDeployment(ctx, t, env, deployments.ControllerNN, 2)
+	// Deploy the Ingress before scaling up the controller and proxy deployments. This is because proxies would not
+	// become ready until the controller has configured them with non-empty configuration.
+	t.Log("deploying ingress with echo backends")
+	deployIngressWithEchoBackends(ctx, t, env, numberOfEchoBackends)
+
+	// Intentionally scale controller first, so it can configure proxies when they come up. Otherwise, they would be
+	// stuck in the not ready state due to missing configuration.
+	scaleDeploymentAndWaitForReadiness(ctx, t, env, deployments.ControllerNN, 2)
+	scaleDeploymentAndWaitForReadiness(ctx, t, env, deployments.ProxyNN, 2)
 
 	t.Log("running ingress tests to verify all-in-one deployed ingress controller and proxy are functional")
-	deployIngressWithEchoBackends(ctx, t, env, numberOfEchoBackends)
 	verifyKuma(ctx, t, env)
 	verifyIngressWithEchoBackends(ctx, t, env, numberOfEchoBackends)
 }
@@ -63,8 +69,8 @@ func TestDeployAllInOnePostgresKuma(t *testing.T) {
 
 	// scale to force a restart of pods and trigger mesh injection (we can't annotate the Kong namespace in advance,
 	// it gets clobbered by deployKong()). is there a "rollout restart" in client-go? who knows!
-	scaleDeployment(ctx, t, env, deployments.ControllerNN, 0)
-	scaleDeployment(ctx, t, env, deployments.ControllerNN, 2)
+	scaleDeploymentAndWaitForReadiness(ctx, t, env, deployments.ControllerNN, 0)
+	scaleDeploymentAndWaitForReadiness(ctx, t, env, deployments.ControllerNN, 2)
 
 	t.Log("running ingress tests to verify all-in-one deployed ingress controller and proxy are functional")
 	deployIngressWithEchoBackends(ctx, t, env, numberOfEchoBackends)

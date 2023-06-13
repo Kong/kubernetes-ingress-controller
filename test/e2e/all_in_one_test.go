@@ -311,7 +311,7 @@ func TestDeployAllInOneDBLESS(t *testing.T) {
 	ensureAllProxyReplicasAreConfigured(ctx, t, env, deployments.ProxyNN)
 
 	t.Log("scale proxy to 0 replicas")
-	scaleDeployment(ctx, t, env, deployments.ProxyNN, 0)
+	scaleDeploymentAndWaitForReadiness(ctx, t, env, deployments.ProxyNN, 0)
 
 	t.Log("wait for 10 seconds to let controller reconcile")
 	<-time.After(10 * time.Second)
@@ -324,7 +324,7 @@ func TestDeployAllInOneDBLESS(t *testing.T) {
 	ensureNoneOfDeploymentPodsHasCrashed(ctx, t, env, deployments.ControllerNN)
 
 	t.Log("scale proxy to 3 replicas and wait for all instances to be ready")
-	scaleDeployment(ctx, t, env, deployments.ProxyNN, 3)
+	scaleDeploymentAndWaitForReadiness(ctx, t, env, deployments.ProxyNN, 3)
 	ensureAllProxyReplicasAreConfigured(ctx, t, env, deployments.ProxyNN)
 
 	t.Log("scale proxy to 1 replica")

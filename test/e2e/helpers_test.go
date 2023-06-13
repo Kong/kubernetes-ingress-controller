@@ -836,8 +836,8 @@ func listPodsByLabels(
 	return podList.Items, nil
 }
 
-// scaleDeployment scales the deployment to the given number of replicas and waits for the replicas to be ready.
-func scaleDeployment(ctx context.Context, t *testing.T, env environments.Environment, deployment k8stypes.NamespacedName, replicas int32) {
+// scaleDeploymentAndWaitForReadiness scales the deployment to the given number of replicas and waits for the replicas to be ready.
+func scaleDeploymentAndWaitForReadiness(ctx context.Context, t *testing.T, env environments.Environment, deployment k8stypes.NamespacedName, replicas int32) {
 	t.Helper()
 
 	scale := &autoscalingv1.Scale{

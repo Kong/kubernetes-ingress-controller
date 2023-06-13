@@ -96,8 +96,6 @@ func TestKonnectLicenseActivation(t *testing.T) {
 	manifest := getTestManifest(t, manifestFile)
 	deployKong(ctx, t, env, manifest)
 
-	exposeAdminAPI(ctx, t, env, k8stypes.NamespacedName{Namespace: "kong", Name: "proxy-kong"})
-
 	t.Log("disabling license management")
 	kubeconfig := getTemporaryKubeconfig(t, env)
 	require.NoError(t, setEnv(setEnvParams{
@@ -117,18 +115,17 @@ func TestKonnectLicenseActivation(t *testing.T) {
 	err := cmd.Run()
 	require.NoErrorf(t, err, "restarting proxy failed: STDOUT(%s) STDERR(%s)", stdout.String(), stderr.String())
 
-	t.Log("confirming that the license is empty")
+	t.Log("confirming that there's no license configured")
 	require.Eventually(t, func() bool {
-		license, err := getLicenseFromAdminAPI(ctx, env, "")
+		licenses, err := getLicensesFromAdminAPI(ctx, t, env, getProxyDeploymentName(manifestFile))
 		if err != nil {
-			t.Logf("error getting license: %v", err)
+			t.Logf("error getting licenses: %v", err)
 			return false
 		}
-		if license.License.Expiration != "" {
-			t.Logf("license expiration is not empty: %s", license.License.Expiration)
+		if len(licenses) != 0 {
+			t.Logf("there is some license configured: %v", licenses)
 			return false
 		}
-
 		return true
 	}, adminAPIWait, time.Second)
 
@@ -142,18 +139,23 @@ func TestKonnectLicenseActivation(t *testing.T) {
 		value:         "true",
 	}))
 
-	t.Log("confirming that the license is set")
+	t.Log("confirming that the license is configured")
 	assert.Eventually(t, func() bool {
-		license, err := getLicenseFromAdminAPI(ctx, env, "")
+		licenses, err := getLicensesFromAdminAPI(ctx, t, env, getProxyDeploymentName(manifestFile))
 		if err != nil {
 			t.Logf("error getting license: %v", err)
 			return false
 		}
-		if license.License.Expiration == "" {
-			t.Logf("license expiration is empty")
+		if len(licenses) != 1 {
+			t.Logf("expected 1 license, got %v", licenses)
+			return false
+		}
+		if licenses[0].Payload == nil {
+			t.Logf("license payload is nil: %v", licenses[0])
 			return false
 		}
 
+		t.Logf("license is configured: %v", *licenses[0].Payload)
 		return true
 	}, adminAPIWait, time.Second)
 }

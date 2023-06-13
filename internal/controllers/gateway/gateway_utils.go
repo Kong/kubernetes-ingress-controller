@@ -60,8 +60,8 @@ func isGatewayScheduled(gateway *Gateway) bool {
 	)
 }
 
-// isGatewayProgrammed returns boolean whether the ready condition exists
-// for the given gateway object if it matches the currently known generation of that object.
+// isGatewayProgrammed returns boolean whether the Programmed condition exists
+// for the given Gateway object and if it matches the currently known generation of that object.
 func isGatewayProgrammed(gateway *Gateway) bool {
 	return util.CheckCondition(
 		gateway.Status.Conditions,

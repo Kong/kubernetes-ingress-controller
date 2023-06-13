@@ -73,6 +73,9 @@ Adding a new version? You'll need three changes:
 
 - The `CombinedServices` feature gate is now enabled by default.
   [#4138](https://github.com/Kong/kubernetes-ingress-controller/pull/4138)
+- Gateway resources no longer use the _Ready_ condition following changes to
+  the upstream Gateway API specification in version 0.7.
+  [#4142](https://github.com/Kong/kubernetes-ingress-controller/pull/4142)
 
 ### Changed
 

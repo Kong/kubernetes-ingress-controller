@@ -96,7 +96,7 @@ export KUBEBUILDER_ASSETS='/Users/username/Library/Application Support/io.kubebu
 and use that to manually run the tests:
 
 ```
-$ eval `./bin/setup-envtest use -p env`
+$ eval $(./bin/setup-envtest use -p env)
 $ go test -v -count 1 -tags envtest ./pkg/to/test
 ...
 ```

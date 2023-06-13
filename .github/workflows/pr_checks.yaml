@@ -97,6 +97,7 @@ jobs:
     needs:
       - should-run-with-secrets
       - unit-tests
+      - envtest-tests
       - integration-tests
       - conformance-tests
     if: ${{ always() && needs.should-run-with-secrets.outputs.result == 'true' }}

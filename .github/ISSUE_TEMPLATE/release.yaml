@@ -20,9 +20,9 @@ body:
   attributes:
     label: "**For all releases** Github Workflow Test Matrix Checkup"
     options:
-      - label: Check the testing workflow ([.github/workflows/test.yaml](/Kong/kubernetes-ingress-controller/blob/main/.github/workflows/test.yaml)) and ensure that all matrix versions ([.github/workflows/e2e.yaml](/Kong/kubernetes-ingress-controller/blob/main/.github/workflows/e2e.yaml) and [.github/workflows/release.yaml](/Kong/kubernetes-ingress-controller/blob/main/.github/workflows/release.yaml))  are up to date for various component releases. If there have been any new releases (major, minor or patch) of those components since the latest version seen in that configuration make sure the new versions get added before proceeding with the release. Remove any versions that are no longer supported by the environment provider.
+      - label: Check the testing workflow ([.github/workflows/_integration_tests.yaml](/Kong/kubernetes-ingress-controller/blob/main/.github/workflows/_integration_tests.yaml)) and ensure that all matrix versions ([.github/workflows/_e2e_tests.yaml](/Kong/kubernetes-ingress-controller/blob/main/.github/workflows/_e2e_tests.yaml) (for both K8s and Istio with K8s matrix) and [.github/workflows/release.yaml](/Kong/kubernetes-ingress-controller/blob/main/.github/workflows/release.yaml))  are up to date for various component releases. If there have been any new releases (major, minor or patch) of those components since the latest version seen in that configuration make sure the new versions get added before proceeding with the release. Remove any versions that are no longer supported by the environment provider.
       - label: Kubernetes (via [KIND](https://hub.docker.com/r/kindest/node/tags) and the latest image available when creating a new rapid channel cluster from the GKE new cluster wizard)
-      - label: Istio (via [Istio's releases page](https://github.com/istio/istio/releases))
+      - label: Istio (via [Istio's releases page](https://istio.io/latest/news/releases))
 - type: checkboxes
   id: gateway_version
   attributes:
@@ -30,7 +30,7 @@ body:
     options:
       - label: "Note: it might be possible that the latest Gateway version is not compatible with KIC and code changes are required. In such case, a decision whether to release with no compliance with the latest Gateway version should be made on a team level."
       - label: Check the latest minor Kong Gateway release in [Kong releases](https://github.com/Kong/kong/releases).
-      - label: Make sure the image tag in `config/image/enterprise/kustomization.yaml`, `config/image/oss/kustomization.yaml`, and `config/variants/enterprise/kustomization.yaml` is updated accordingly.
+      - label: Make sure the image tag in [config/image/enterprise/kustomization.yaml](/Kong/kubernetes-ingress-controller/blob/main/config/image/enterprise/kustomization.yaml) and [config/image/oss/kustomization.yaml](/Kong/kubernetes-ingress-controller/blob/main/config/image/oss/kustomization.yaml) is updated accordingly.
       - label: Run `make manifests` to regenerate manifests using the modified kustomizations and open a PR with the changes (similarly to [this PR](https://github.com/Kong/kubernetes-ingress-controller/pull/3288)).
 - type: checkboxes
   id: release_branch
@@ -82,18 +82,3 @@ body:
   attributes:
     label: Release Troubleshooting
     value: The [Release Troubleshooting guide](https://github.com/Kong/kubernetes-ingress-controller/blob/main/RELEASE.md#release-troubleshooting) covers strategies for dealing with a release that has failed.
-- type: textarea
-  id: release_trouble_shooting
-  attributes:
-    label: Manual Docker image build
-    value: If the "Build and push development images" Github action is not appropriate for your release, or is not operating properly, you can build and push Docker images manually
-- type: checkboxes
-  id: release_manual_docker_build
-  attributes:
-    label: Steps
-    options:
-      - label: Check out your release tag.
-      - label: Run `make container`. Note that you can set the `TAG` environment variable if you need to override the current tag in Makefile.
-      - label: Add additional tags for your container (e.g. `docker tag kong/kubernetes-ingress-controller:1.2.0-alpine kong/kubernetes-ingress-controller:1.2.0; docker tag kong/kubernetes-ingress-controller:1.2.0-alpine kong/kubernetes-ingress-controller:1.2`)
-      - label: Create a temporary token for the `kongbot` user (see 1Password) and log in using it.
-      - label: Push each of your tags (e.g. `docker push kong/kubernetes-ingress-controller:1.2.0-alpine`)

@@ -9,6 +9,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	netv1 "k8s.io/api/networking/v1"
 	k8stypes "k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
@@ -59,12 +60,12 @@ func (ir *ingressRules) populateServices(log logrus.FieldLogger, s store.Storer,
 		}
 
 		// collect all the Kubernetes services configured for the service backends,
-		// and all the annotations in use across all services (when applicable).
-		k8sServices, seenAnnotations := getK8sServicesForBackends(log, s, service.Namespace, service.Backends)
+		// and all annotations with our prefix in use across all services (when applicable).
+		k8sServices, seenKongAnnotations := getK8sServicesForBackends(log, s, service.Namespace, service.Backends)
 
 		// if the Kubernetes services have been deemed invalid, log an error message
 		// and skip the current service.
-		if !servicesAllUseTheSameKongAnnotations(k8sServices, seenAnnotations, failuresCollector, key) {
+		if !collectInconsistentAnnotations(k8sServices, seenKongAnnotations, failuresCollector, key) {
 			// The Kong services not having all the k8s services correctly annotated must be marked
 			// as to be skipped.
 			serviceNamesToSkip[key] = nil
@@ -283,14 +284,17 @@ func getK8sServicesForBackends(
 	return k8sServices, seenAnnotationsForK8sServices
 }
 
-func servicesAllUseTheSameKongAnnotations(
+// collectInconsistentAnnotations takes a list of services and annotation+value pairs and confirms that all services
+// have those annotations with those values. If any service does not have one of the annotation+value pairs, push
+// a resource failure to the provided collector for all services indicating the problem annotation.
+func collectInconsistentAnnotations(
 	services []*corev1.Service,
 	annotations map[string]string,
 	failuresCollector *failures.ResourceFailuresCollector,
 	kongServiceName string,
 ) bool {
 	match := true
-	badAnnotations := map[string]interface{}{}
+	badAnnotations := sets.Set[string]{}
 	for _, service := range services {
 		// all services grouped together via backends must have identical annotations
 		// to avoid unexpected routing behaviors.
@@ -304,24 +308,24 @@ func servicesAllUseTheSameKongAnnotations(
 		for k, v := range annotations {
 			valueForThisObject, ok := service.Annotations[k]
 			if !ok {
-				badAnnotations[k] = nil
+				badAnnotations.Insert(k)
 				match = false
 				// continue as it doesn't make sense to verify value of not existing annotation
 				continue
 			}
 
 			if valueForThisObject != v {
-				badAnnotations[k] = nil
+				badAnnotations.Insert(k)
 				match = false
 			}
 		}
 	}
 
 	for _, service := range services {
-		for annotation := range badAnnotations {
+		for _, annotation := range badAnnotations.UnsortedList() {
 			failuresCollector.PushResourceFailure(
 				fmt.Sprintf("Service has inconsistent %s annotation and is used in multi-Service backend %s. "+
-					"All Services in a multi-Service backend must have matching Kong annotations.",
+					"This annotation must have the same value across all Services in the backend.",
 					annotation, kongServiceName),
 				service.DeepCopy(),
 			)

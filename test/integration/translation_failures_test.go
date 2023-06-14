@@ -128,11 +128,10 @@ func TestTranslationFailures(t *testing.T) {
 				require.NoError(t, err)
 				cleaner.Add(httpRoute)
 
-				// TODO broken
 				return expectedTranslationFailure{
 					// expect event for service2 as it doesn't have annotations that service1 has
 					causingObjects: []client.Object{service2},
-					reasonContains: "All Services in a multi-Service backend must have matching Kong annotations.",
+					reasonContains: "This annotation must have the same value across all Services in the backend.",
 				}
 			},
 		},

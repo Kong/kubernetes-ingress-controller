@@ -99,29 +99,29 @@ func TestUnmanagedGatewayBasics(t *testing.T) {
 		return len(gw.Status.Listeners) == len(gw.Spec.Listeners) && len(gw.Status.Addresses) == len(gw.Spec.Addresses)
 	}, gatewayUpdateWaitTime, time.Second)
 
-	t.Log("verifying that the gateway receives a final ready condition once reconciliation completes")
+	t.Log("verifying that the gateway receives a final programmed condition once reconciliation completes")
 	require.Eventually(t, func() bool {
 		gw, err = gatewayClient.GatewayV1beta1().Gateways(ns.Name).Get(ctx, gw.Name, metav1.GetOptions{})
 		require.NoError(t, err)
 		ready := util.CheckCondition(
 			gw.Status.Conditions,
-			util.ConditionType(gatewayv1beta1.GatewayConditionReady),
-			util.ConditionReason(gatewayv1beta1.GatewayReasonReady),
+			util.ConditionType(gatewayv1beta1.GatewayConditionProgrammed),
+			util.ConditionReason(gatewayv1beta1.GatewayReasonProgrammed),
 			metav1.ConditionTrue,
 			gw.Generation,
 		)
 		return ready
 	}, gatewayUpdateWaitTime, time.Second)
 
-	t.Log("verifying that the gateway listeners reach the ready condition")
+	t.Log("verifying that the gateway listeners reach the programmed condition")
 	require.Eventually(t, func() bool {
 		gw, err = gatewayClient.GatewayV1beta1().Gateways(ns.Name).Get(ctx, gw.Name, metav1.GetOptions{})
 		require.NoError(t, err)
 		for _, lstatus := range gw.Status.Listeners {
 			if listenerReady := util.CheckCondition(
 				lstatus.Conditions,
-				util.ConditionType(gatewayv1beta1.ListenerConditionReady),
-				util.ConditionReason(gatewayv1beta1.ListenerReasonReady),
+				util.ConditionType(gatewayv1beta1.ListenerConditionProgrammed),
+				util.ConditionReason(gatewayv1beta1.ListenerReasonProgrammed),
 				metav1.ConditionTrue,
 				gw.Generation,
 			); !listenerReady {
@@ -151,15 +151,15 @@ func TestGatewayListenerConflicts(t *testing.T) {
 	err = gatewayHealthCheck(ctx, gatewayClient, gateway.Name, ns.Name)
 	require.NoError(t, err)
 
-	t.Log("verifying that the gateway listeners reach the ready condition")
+	t.Log("verifying that the gateway listeners reach the programmed condition")
 	require.Eventually(t, func() bool {
 		gw, err = gatewayClient.GatewayV1beta1().Gateways(ns.Name).Get(ctx, defaultGatewayName, metav1.GetOptions{})
 		require.NoError(t, err)
 		for _, lstatus := range gw.Status.Listeners {
 			ready := util.CheckCondition(
 				lstatus.Conditions,
-				util.ConditionType(gatewayv1beta1.GatewayConditionReady),
-				util.ConditionReason(gatewayv1beta1.GatewayReasonReady),
+				util.ConditionType(gatewayv1beta1.GatewayConditionProgrammed),
+				util.ConditionReason(gatewayv1beta1.GatewayReasonProgrammed),
 				metav1.ConditionTrue,
 				gw.Generation,
 			)
@@ -200,7 +200,7 @@ func TestGatewayListenerConflicts(t *testing.T) {
 					if condition.Type == string(gatewayv1beta1.ListenerConditionConflicted) && condition.Status == metav1.ConditionTrue {
 						badudpConflicted = (condition.Reason == string(gatewayv1beta1.ListenerReasonProtocolConflict))
 					}
-					if condition.Type == string(gatewayv1beta1.ListenerConditionReady) {
+					if condition.Type == string(gatewayv1beta1.ListenerConditionProgrammed) {
 						badudpReady = (condition.Status == metav1.ConditionTrue)
 					}
 				}
@@ -213,7 +213,7 @@ func TestGatewayListenerConflicts(t *testing.T) {
 						// precedence
 						badhttpConflicted = (condition.Reason == string(gatewayv1beta1.ListenerReasonProtocolConflict))
 					}
-					if condition.Type == string(gatewayv1beta1.ListenerConditionReady) {
+					if condition.Type == string(gatewayv1beta1.ListenerConditionProgrammed) {
 						badhttpReady = (condition.Status == metav1.ConditionTrue)
 					}
 				}
@@ -223,7 +223,7 @@ func TestGatewayListenerConflicts(t *testing.T) {
 					if condition.Type == string(gatewayv1beta1.ListenerConditionConflicted) {
 						httpConflicted = (condition.Status == metav1.ConditionTrue)
 					}
-					if condition.Type == string(gatewayv1beta1.ListenerConditionReady) {
+					if condition.Type == string(gatewayv1beta1.ListenerConditionProgrammed) {
 						httpReady = (condition.Status == metav1.ConditionTrue)
 					}
 				}
@@ -261,7 +261,7 @@ func TestGatewayListenerConflicts(t *testing.T) {
 					if condition.Type == string(gatewayv1beta1.ListenerConditionConflicted) && condition.Status == metav1.ConditionTrue {
 						httpAlphaConflicted = (condition.Reason == string(gatewayv1beta1.ListenerReasonHostnameConflict))
 					}
-					if condition.Type == string(gatewayv1beta1.ListenerConditionReady) {
+					if condition.Type == string(gatewayv1beta1.ListenerConditionProgrammed) {
 						httpAlphaReady = (condition.Status == metav1.ConditionTrue)
 					}
 				}
@@ -271,7 +271,7 @@ func TestGatewayListenerConflicts(t *testing.T) {
 					if condition.Type == string(gatewayv1beta1.ListenerConditionConflicted) && condition.Status == metav1.ConditionTrue {
 						httpBravoConflicted = (condition.Reason == string(gatewayv1beta1.ListenerReasonHostnameConflict))
 					}
-					if condition.Type == string(gatewayv1beta1.ListenerConditionReady) {
+					if condition.Type == string(gatewayv1beta1.ListenerConditionProgrammed) {
 						httpBravoReady = (condition.Status == metav1.ConditionTrue)
 					}
 				}
@@ -328,28 +328,28 @@ func TestGatewayListenerConflicts(t *testing.T) {
 		for _, lstatus := range gw.Status.Listeners {
 			if lstatus.Name == "http" {
 				for _, condition := range lstatus.Conditions {
-					if condition.Type == string(gatewayv1beta1.ListenerConditionReady) {
+					if condition.Type == string(gatewayv1beta1.ListenerConditionProgrammed) {
 						httpReady = (condition.Status == metav1.ConditionTrue)
 					}
 				}
 			}
 			if lstatus.Name == "tls" {
 				for _, condition := range lstatus.Conditions {
-					if condition.Type == string(gatewayv1beta1.ListenerConditionReady) {
+					if condition.Type == string(gatewayv1beta1.ListenerConditionProgrammed) {
 						tlsReady = (condition.Status == metav1.ConditionTrue)
 					}
 				}
 			}
 			if lstatus.Name == "https" {
 				for _, condition := range lstatus.Conditions {
-					if condition.Type == string(gatewayv1beta1.ListenerConditionReady) {
+					if condition.Type == string(gatewayv1beta1.ListenerConditionProgrammed) {
 						httpsReady = (condition.Status == metav1.ConditionTrue)
 					}
 				}
 			}
 			if lstatus.Name == "httphost" {
 				for _, condition := range lstatus.Conditions {
-					if condition.Type == string(gatewayv1beta1.ListenerConditionReady) {
+					if condition.Type == string(gatewayv1beta1.ListenerConditionProgrammed) {
 						httphostReady = (condition.Status == metav1.ConditionTrue)
 					}
 				}
@@ -385,10 +385,8 @@ func TestUnmanagedGatewayControllerSupport(t *testing.T) {
 	for timeout.After(time.Now()) {
 		unsupportedGateway, err = gatewayClient.GatewayV1beta1().Gateways(ns.Name).Get(ctx, unsupportedGateway.Name, metav1.GetOptions{})
 		require.NoError(t, err)
-		require.Len(t, unsupportedGateway.Status.Conditions, 1)
-		//lint:ignore SA1019 the default upstream reason is still NotReconciled https://github.com/kubernetes-sigs/gateway-api/pull/1701
-		//nolint:staticcheck
-		require.Equal(t, string(gatewayv1beta1.GatewayReasonNotReconciled), unsupportedGateway.Status.Conditions[0].Reason)
+		require.Len(t, unsupportedGateway.Status.Conditions, 2)
+		require.Equal(t, string(gatewayv1beta1.GatewayReasonPending), unsupportedGateway.Status.Conditions[0].Reason)
 	}
 }
 
@@ -415,10 +413,8 @@ func TestUnmanagedGatewayClass(t *testing.T) {
 	for timeout.After(time.Now()) {
 		gateway, err = gatewayClient.GatewayV1beta1().Gateways(ns.Name).Get(ctx, gateway.Name, metav1.GetOptions{})
 		require.NoError(t, err)
-		require.Len(t, gateway.Status.Conditions, 1)
-		//lint:ignore SA1019 the default upstream reason is still NotReconciled https://github.com/kubernetes-sigs/gateway-api/pull/1701
-		//nolint:staticcheck
-		require.Equal(t, string(gatewayv1beta1.GatewayReasonNotReconciled), gateway.Status.Conditions[0].Reason)
+		require.Len(t, gateway.Status.Conditions, 2)
+		require.Equal(t, string(gatewayv1beta1.GatewayReasonPending), gateway.Status.Conditions[0].Reason)
 	}
 
 	t.Log("deploying the missing gatewayclass to the test cluster")
@@ -431,7 +427,7 @@ func TestUnmanagedGatewayClass(t *testing.T) {
 		gateway, err = gatewayClient.GatewayV1beta1().Gateways(ns.Name).Get(ctx, gateway.Name, metav1.GetOptions{})
 		require.NoError(t, err)
 		for _, cond := range gateway.Status.Conditions {
-			if cond.Reason == string(gatewayv1beta1.GatewayReasonReady) {
+			if cond.Reason == string(gatewayv1beta1.GatewayReasonProgrammed) {
 				return true
 			}
 		}
@@ -462,10 +458,8 @@ func TestManagedGatewayClass(t *testing.T) {
 	for timeout.After(time.Now()) {
 		gateway, err = gatewayClient.GatewayV1beta1().Gateways(ns.Name).Get(ctx, gateway.Name, metav1.GetOptions{})
 		require.NoError(t, err)
-		require.Len(t, gateway.Status.Conditions, 1)
-		//lint:ignore SA1019 the default upstream reason is still NotReconciled https://github.com/kubernetes-sigs/gateway-api/pull/1701
-		//nolint:staticcheck
-		require.Equal(t, string(gatewayv1beta1.GatewayReasonNotReconciled), gateway.Status.Conditions[0].Reason)
+		require.Len(t, gateway.Status.Conditions, 2)
+		require.Equal(t, string(gatewayv1beta1.GatewayReasonPending), gateway.Status.Conditions[0].Reason)
 	}
 
 	t.Log("deploying a missing managed gatewayclass to the test cluster")
@@ -484,8 +478,8 @@ func TestManagedGatewayClass(t *testing.T) {
 		gateway, err = gatewayClient.GatewayV1beta1().Gateways(ns.Name).Get(ctx, gateway.Name, metav1.GetOptions{})
 		require.NoError(t, err)
 		for _, cond := range gateway.Status.Conditions {
-			if cond.Type == string(gatewayv1beta1.GatewayConditionReady) {
-				require.Equal(t, cond.Status, metav1.ConditionFalse)
+			if cond.Type == string(gatewayv1beta1.GatewayConditionProgrammed) {
+				require.Equal(t, cond.Status, metav1.ConditionUnknown)
 			}
 		}
 	})

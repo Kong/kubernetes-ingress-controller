@@ -782,24 +782,15 @@ func (r *GatewayReconciler) determineListenersFromDataPlane(
 // -----------------------------------------------------------------------------
 
 // updateAddressesAndListenersStatus updates a unmanaged gateway's status with new addresses and listeners.
-// If the addresses and listeners provided are the same as what exists, it is assumed that reconciliation is complete and a Ready condition is posted.
+// If the addresses and listeners provided are the same as what exists, it is assumed that reconciliation is complete and a Programmed condition is posted.
 func (r *GatewayReconciler) updateAddressesAndListenersStatus(
 	ctx context.Context,
 	gateway *gatewayv1beta1.Gateway,
 	listenerStatuses []gatewayv1beta1.ListenerStatus,
 ) (bool, error) {
-	if !isGatewayReady(gateway) {
+	if !isGatewayProgrammed(gateway) {
 		gateway.Status.Listeners = listenerStatuses
 		gateway.Status.Addresses = gateway.Spec.Addresses
-		readyCondition := metav1.Condition{
-			Type:               string(gatewayv1beta1.GatewayConditionReady),
-			Status:             metav1.ConditionTrue,
-			ObservedGeneration: gateway.Generation,
-			LastTransitionTime: metav1.Now(),
-			Reason:             string(gatewayv1beta1.GatewayReasonReady),
-			Message:            "addresses and listeners for the Gateway resource were successfully updated",
-		}
-		setGatewayCondition(gateway, readyCondition)
 		programmedCondition := metav1.Condition{
 			Type:               string(gatewayv1beta1.GatewayConditionProgrammed),
 			Status:             metav1.ConditionTrue,

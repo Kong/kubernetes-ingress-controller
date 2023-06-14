@@ -306,7 +306,7 @@ func (r *TLSRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	// requeue the object and wait until all supported gateways are ready.
 	debug(log, tlsroute, "checking if the tlsroute's gateways are ready")
 	for _, gateway := range gateways {
-		if !isGatewayReady(gateway.gateway) {
+		if !isGatewayProgrammed(gateway.gateway) {
 			debug(log, tlsroute, "gateway for route was not ready, waiting")
 			return ctrl.Result{Requeue: true}, nil
 		}

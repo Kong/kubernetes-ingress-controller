@@ -465,10 +465,10 @@ func routeMatchesListenerAllowedRoutes[T types.RouteT](
 }
 
 var (
-	errUnsupportedRouteKind             = errors.New("unsupported route kind")
-	errUnmatchedListenerName            = errors.New("unmatched listener name")
-	errNoReadyConditionFoundForListener = errors.New("no Ready condition found for listener")
-	errListenerNotReadyYet              = errors.New("listener not ready yet")
+	errUnsupportedRouteKind  = errors.New("unsupported route kind")
+	errUnmatchedListenerName = errors.New("unmatched listener name")
+	errListenerNotProgrammed = errors.New("no Programmed condition found for listener")
+	errListenerNotReadyYet   = errors.New("listener not ready yet")
 )
 
 // existsMatchingReadyListenerInStatus checks if:
@@ -515,12 +515,12 @@ func existsMatchingReadyListenerInStatus[T types.RouteT](route T, listener Liste
 		return errUnsupportedRouteKind // Listener(s) found but none with matching supported kinds.
 	}
 
-	// ... and verify if it's ready.
+	// ... and verify if it's programmed.
 	lReadyCond, ok := lo.Find(listenerStatus.Conditions, func(c metav1.Condition) bool {
-		return c.Type == string(gatewayv1beta1.ListenerConditionReady)
+		return c.Type == string(gatewayv1beta1.ListenerConditionProgrammed)
 	})
 	if !ok {
-		return errNoReadyConditionFoundForListener
+		return errListenerNotProgrammed
 	}
 	if lReadyCond.Status != "True" {
 		return errListenerNotReadyYet // Listener is not ready yet.

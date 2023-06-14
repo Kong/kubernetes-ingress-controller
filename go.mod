@@ -2,15 +2,8 @@ module github.com/kong/kubernetes-ingress-controller/v2
 
 go 1.20
 
-// TODO: https://github.com/Kong/kubernetes-ingress-controller/issues/2953
-exclude (
-	sigs.k8s.io/gateway-api v0.6.2
-	sigs.k8s.io/gateway-api v0.7.0
-	sigs.k8s.io/gateway-api v0.7.1
-)
-
 require (
-	cloud.google.com/go/container v1.21.0
+	cloud.google.com/go/container v1.22.0
 	github.com/Masterminds/sprig/v3 v3.2.3
 	github.com/avast/retry-go/v4 v4.3.4
 	github.com/blang/semver/v4 v4.0.0
@@ -47,7 +40,7 @@ require (
 	knative.dev/networking v0.0.0-20230504184058-77975a12b2ee
 	knative.dev/pkg v0.0.0-20230502134655-db8a35330281
 	sigs.k8s.io/controller-runtime v0.15.0
-	sigs.k8s.io/gateway-api v0.6.1
+	sigs.k8s.io/gateway-api v0.7.1
 	sigs.k8s.io/kustomize/api v0.13.4
 	sigs.k8s.io/kustomize/kyaml v0.14.2
 	sigs.k8s.io/yaml v1.3.0

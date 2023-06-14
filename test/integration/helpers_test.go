@@ -134,8 +134,8 @@ func gatewayHealthCheck(ctx context.Context, client *gatewayclient.Clientset, ga
 				exitOnErr(ctx, err)
 				ok := util.CheckCondition(
 					gw.Status.Conditions,
-					util.ConditionType(gatewayv1beta1.GatewayConditionReady),
-					util.ConditionReason(gatewayv1beta1.GatewayReasonReady),
+					util.ConditionType(gatewayv1beta1.GatewayConditionProgrammed),
+					util.ConditionReason(gatewayv1beta1.GatewayReasonProgrammed),
 					metav1.ConditionTrue,
 					gw.Generation,
 				)

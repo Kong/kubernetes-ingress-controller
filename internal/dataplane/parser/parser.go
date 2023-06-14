@@ -507,11 +507,11 @@ func (p *Parser) getGatewayCerts() []certWrapper {
 				continue
 			}
 
-			// Check if listener is marked as ready
+			// Check if listener is marked as programmed
 			if !util.CheckCondition(
 				status.Conditions,
-				util.ConditionType(gatewayv1beta1.ListenerConditionReady),
-				util.ConditionReason(gatewayv1beta1.ListenerReasonReady),
+				util.ConditionType(gatewayv1beta1.ListenerConditionProgrammed),
+				util.ConditionReason(gatewayv1beta1.ListenerReasonProgrammed),
 				metav1.ConditionTrue,
 				gateway.Generation,
 			) {

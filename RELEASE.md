@@ -6,23 +6,13 @@ Fill out the issue title and release type, create the issue, and proceed through
 
 # Release Troubleshooting
 
-## Manual Docker image build
-
-If the "Build and push development images" Github action is not appropriate for your release, or is not operating properly, you can build and push Docker images manually:
-
-- Check out your release tag.
-- Run `make container`. Note that you can set the `TAG` environment variable if you need to override the current tag in Makefile.
-- Add additional tags for your container (e.g. `docker tag kong/kubernetes-ingress-controller:1.2.0-alpine kong/kubernetes-ingress-controller:1.2.0; docker tag kong/kubernetes-ingress-controller:1.2.0-alpine kong/kubernetes-ingress-controller:1.2`)
-- Create a temporary token for the `kongbot` user (see 1Password) and log in using it.
-- Push each of your tags (e.g. `docker push kong/kubernetes-ingress-controller:1.2.0-alpine`)
-
 ## GKE test failures
 
-If GKE test clusters are not successfully starting, you can review their Pod logs from the Kubernetes Engine section of https://console.cloud.google.com/
+If GKE test clusters are not successfully starting, you can review their Pod logs from the Kubernetes Engine section of <https://console.cloud.google.com/>
 
 You can run GKE tests locally by [creating a service account and token](https://cloud.google.com/docs/authentication/getting-started) and running, for example:
 
-```
+```sh
 KUBERNETES_MAJOR_VERSION=1 KUBERNETES_MINOR_VERSION=21 GOOGLE_APPLICATION_CREDENTIALS=`cat /tmp/credentials.json` GOOGLE_PROJECT='<project name>' GOOGLE_LOCATION=us-central1 hack/e2e/dlv-tests.sh
 ```
 

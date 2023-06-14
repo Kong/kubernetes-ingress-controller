@@ -17,11 +17,20 @@ type CtrlFuncMetrics struct {
 	// ConfigPushCount is a Prometheus metric with semantics defined by its help string in NewCtrlFuncMetrics().
 	ConfigPushCount *prometheus.CounterVec
 
+	// ConfigPushBrokenResources is a Prometheus metric with semantics defined by its help string in NewCtrlFuncMetrics().
+	ConfigPushBrokenResources *prometheus.GaugeVec
+
 	// TranslationCount is a Prometheus metric with semantics defined by its help string in NewCtrlFuncMetrics().
 	TranslationCount *prometheus.CounterVec
 
+	// TranslationBrokenResources is a Prometheus metric with semantics defined by its help string in NewCtrlFuncMetrics().
+	TranslationBrokenResources prometheus.Gauge
+
 	// ConfigPushDuration is a Prometheus metric with semantics defined by its help string in NewCtrlFuncMetrics().
 	ConfigPushDuration *prometheus.HistogramVec
+
+	// ConfigPushSuccessTime is a Prometheus metric with semantics defined by its help string in NewCtrlFuncMetrics().
+	ConfigPushSuccessTime *prometheus.GaugeVec
 }
 
 const (
@@ -66,9 +75,12 @@ const (
 )
 
 const (
-	MetricNameConfigPushCount    = "ingress_controller_configuration_push_count"
-	MetricNameTranslationCount   = "ingress_controller_translation_count"
-	MetricNameConfigPushDuration = "ingress_controller_configuration_push_duration_milliseconds"
+	MetricNameConfigPushCount            = "ingress_controller_configuration_push_count"
+	MetricNameConfigPushBrokenResources  = "ingress_controller_configuration_push_broken_resource_count"
+	MetricNameConfigPushSuccessTime      = "ingress_controller_configuration_push_last_successful"
+	MetricNameTranslationCount           = "ingress_controller_translation_count"
+	MetricNameTranslationBrokenResources = "ingress_controller_translation_broken_resource_count"
+	MetricNameConfigPushDuration         = "ingress_controller_configuration_push_duration_milliseconds"
 )
 
 var _lock sync.Mutex
@@ -99,6 +111,17 @@ func NewCtrlFuncMetrics() *CtrlFuncMetrics {
 		[]string{SuccessKey, ProtocolKey, FailureReasonKey, DataplaneKey},
 	)
 
+	controllerMetrics.ConfigPushBrokenResources = prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: MetricNameConfigPushBrokenResources,
+			Help: fmt.Sprintf("The number of resources not accepted by Kong when attempting to push "+
+				"configuration. `%s` describes the dataplane that was the target of the configuration push.",
+				DataplaneKey,
+			),
+		},
+		[]string{DataplaneKey},
+	)
+
 	controllerMetrics.TranslationCount = prometheus.NewCounterVec(
 		prometheus.CounterOpts{
 			Name: MetricNameTranslationCount,
@@ -110,6 +133,15 @@ func NewCtrlFuncMetrics() *CtrlFuncMetrics {
 			),
 		},
 		[]string{SuccessKey},
+	)
+
+	controllerMetrics.TranslationBrokenResources = prometheus.NewGauge(
+		prometheus.GaugeOpts{
+			Name: MetricNameTranslationBrokenResources,
+			Help: fmt.Sprintf("The number of resources that the controller cannot successfully translate to Kong " +
+				"configuration",
+			),
+		},
 	)
 
 	controllerMetrics.ConfigPushDuration = prometheus.NewHistogramVec(
@@ -129,20 +161,43 @@ func NewCtrlFuncMetrics() *CtrlFuncMetrics {
 		[]string{SuccessKey, ProtocolKey, DataplaneKey},
 	)
 
+	controllerMetrics.ConfigPushSuccessTime = prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: MetricNameConfigPushSuccessTime,
+			Help: fmt.Sprintf("The time of the last successful configuration push. "+
+				"`%s` describes the dataplane that was the target of the configuration push.",
+				DataplaneKey,
+			),
+		},
+		[]string{DataplaneKey},
+	)
+
 	if ok := metrics.Registry.Unregister(controllerMetrics.ConfigPushCount); ok {
+		fmt.Printf("Unregistered %s\n", MetricNameConfigPushCount)
+	}
+	if ok := metrics.Registry.Unregister(controllerMetrics.ConfigPushBrokenResources); ok {
 		fmt.Printf("Unregistered %s\n", MetricNameConfigPushCount)
 	}
 	if ok := metrics.Registry.Unregister(controllerMetrics.TranslationCount); ok {
 		fmt.Printf("Unregistered %s\n", MetricNameTranslationCount)
 	}
+	if ok := metrics.Registry.Unregister(controllerMetrics.TranslationBrokenResources); ok {
+		fmt.Printf("Unregistered %s\n", MetricNameTranslationCount)
+	}
 	if ok := metrics.Registry.Unregister(controllerMetrics.ConfigPushDuration); ok {
+		fmt.Printf("Unregistered %s\n", MetricNameConfigPushDuration)
+	}
+	if ok := metrics.Registry.Unregister(controllerMetrics.ConfigPushSuccessTime); ok {
 		fmt.Printf("Unregistered %s\n", MetricNameConfigPushDuration)
 	}
 
 	metrics.Registry.MustRegister(
 		controllerMetrics.ConfigPushCount,
+		controllerMetrics.ConfigPushBrokenResources,
 		controllerMetrics.TranslationCount,
+		controllerMetrics.TranslationBrokenResources,
 		controllerMetrics.ConfigPushDuration,
+		controllerMetrics.ConfigPushSuccessTime,
 	)
 
 	return controllerMetrics
@@ -153,13 +208,20 @@ func (c *CtrlFuncMetrics) RecordPushSuccess(p Protocol, d time.Duration, datapla
 	dpOpt := withDataplane(dataplane)
 	c.recordPushCount(p, dpOpt)
 	c.recordPushDuration(p, d, dpOpt)
+	c.recordPushSuccessTime(p, dpOpt)
 }
 
 // RecordPushFailure records a failed configuration push.
-func (c *CtrlFuncMetrics) RecordPushFailure(p Protocol, d time.Duration, dataplane string, err error) {
+func (c *CtrlFuncMetrics) RecordPushFailure(p Protocol, d time.Duration, dataplane string, count float64, err error) {
 	dpOpt := withDataplane(dataplane)
 	c.recordPushCount(p, dpOpt, withError(err))
 	c.recordPushDuration(p, d, dpOpt, withFailure())
+	c.recordPushBrokenResources(p, count, dpOpt)
+}
+
+// RecordPushBrokenResources records the number of resources rejected during a push.
+func (c *CtrlFuncMetrics) RecordPushBrokenResources(count float64, dataplane string) {
+	c.ConfigPushBrokenResources.With(prometheus.Labels{DataplaneKey: dataplane}).Set(count)
 }
 
 // RecordTranslationSuccess records a successful configuration translation.
@@ -174,6 +236,11 @@ func (c *CtrlFuncMetrics) RecordTranslationFailure() {
 	c.TranslationCount.With(prometheus.Labels{
 		SuccessKey: SuccessFalse,
 	}).Inc()
+}
+
+// RecordTranslationBrokenResources records the number of resources failing translation.
+func (c *CtrlFuncMetrics) RecordTranslationBrokenResources(count float64) {
+	c.TranslationBrokenResources.Set(count)
 }
 
 type recordOption func(prometheus.Labels) prometheus.Labels
@@ -227,6 +294,30 @@ func (c *CtrlFuncMetrics) recordPushDuration(p Protocol, d time.Duration, opts .
 	}
 
 	c.ConfigPushDuration.With(labels).Observe(float64(d.Milliseconds()))
+}
+
+func (c *CtrlFuncMetrics) recordPushBrokenResources(p Protocol, count float64, opts ...recordOption) {
+	labels := prometheus.Labels{
+		ProtocolKey: string(p),
+	}
+
+	for _, opt := range opts {
+		labels = opt(labels)
+	}
+
+	c.ConfigPushBrokenResources.With(labels).Set(count)
+}
+
+func (c *CtrlFuncMetrics) recordPushSuccessTime(p Protocol, opts ...recordOption) {
+	labels := prometheus.Labels{
+		ProtocolKey: string(p),
+	}
+
+	for _, opt := range opts {
+		labels = opt(labels)
+	}
+
+	c.ConfigPushBrokenResources.With(labels).SetToCurrentTime()
 }
 
 // pushFailureReason extracts config push failure reason from an error returned

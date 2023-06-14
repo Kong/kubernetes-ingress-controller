@@ -124,7 +124,7 @@ func shouldEnableParserExpressionRoutes(
 
 // LicenseGetter is an interface for getting the Kong Enterprise license.
 type LicenseGetter interface {
-	GetLicense() kong.License
+	GetLicense() (kong.License, bool)
 }
 
 // Parser parses Kubernetes objects and configurations into their
@@ -239,7 +239,9 @@ func (p *Parser) BuildKongConfig() KongConfigBuildingResult {
 	result.CACertificates = p.getCACerts()
 
 	if p.licenseGetter != nil {
-		result.Licenses = append(result.Licenses, p.licenseGetter.GetLicense())
+		if l, ok := p.licenseGetter.GetLicense(); ok {
+			result.Licenses = append(result.Licenses, l)
+		}
 	}
 
 	if p.featureFlags.FillIDs {

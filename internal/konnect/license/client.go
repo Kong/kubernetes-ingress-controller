@@ -14,6 +14,9 @@ import (
 	tlsutil "github.com/kong/kubernetes-ingress-controller/v2/internal/util/tls"
 )
 
+// ErrNotFound is returned when backend returns 404.
+var ErrNotFound = fmt.Errorf("license not found")
+
 // Client interacts with the Konnect license API.
 type Client struct {
 	address        string
@@ -77,6 +80,10 @@ func (c *Client) List(ctx context.Context, pageNumber int) (*ListLicenseResponse
 	respBuf, err := io.ReadAll(httpResp.Body)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read response body: %w", err)
+	}
+
+	if httpResp.StatusCode == http.StatusNotFound {
+		return nil, ErrNotFound
 	}
 
 	if !isOKStatusCode(httpResp.StatusCode) {

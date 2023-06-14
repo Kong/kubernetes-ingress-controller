@@ -202,6 +202,7 @@ func withDataplane(dataplane string) recordOption {
 
 func (c *CtrlFuncMetrics) recordPushCount(p Protocol, opts ...recordOption) {
 	labels := prometheus.Labels{
+		// although this is hardcoded to true here, the withError or withFailure opt function will flip it to false
 		SuccessKey:       SuccessTrue,
 		ProtocolKey:      string(p),
 		FailureReasonKey: "",
@@ -216,6 +217,7 @@ func (c *CtrlFuncMetrics) recordPushCount(p Protocol, opts ...recordOption) {
 
 func (c *CtrlFuncMetrics) recordPushDuration(p Protocol, d time.Duration, opts ...recordOption) {
 	labels := prometheus.Labels{
+		// although this is hardcoded to true here, the withError or withFailure opt function will flip it to false
 		SuccessKey:  SuccessTrue,
 		ProtocolKey: string(p),
 	}

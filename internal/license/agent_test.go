@@ -8,33 +8,33 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
+	"github.com/samber/mo"
 	"github.com/stretchr/testify/require"
 
-	konnectLicense "github.com/kong/kubernetes-ingress-controller/v2/internal/konnect/license"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/license"
 )
 
 type mockKonnectClientClient struct {
-	listResponse *konnectLicense.ListLicenseResponse
-	err          error
-	listCalls    []time.Time
-	lock         sync.RWMutex
+	konnectLicense mo.Option[license.KonnectLicense]
+	err            error
+	getCalls       []time.Time
+	lock           sync.RWMutex
 }
 
-func newMockKonnectLicenseClient(listResponse *konnectLicense.ListLicenseResponse) *mockKonnectClientClient {
-	return &mockKonnectClientClient{listResponse: listResponse}
+func newMockKonnectLicenseClient(license mo.Option[license.KonnectLicense]) *mockKonnectClientClient {
+	return &mockKonnectClientClient{konnectLicense: license}
 }
 
-func (m *mockKonnectClientClient) List(context.Context, int) (*konnectLicense.ListLicenseResponse, error) {
+func (m *mockKonnectClientClient) Get(context.Context) (mo.Option[license.KonnectLicense], error) {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 
-	m.listCalls = append(m.listCalls, time.Now())
+	m.getCalls = append(m.getCalls, time.Now())
 
 	if m.err != nil {
-		return nil, m.err
+		return mo.None[license.KonnectLicense](), m.err
 	}
-	return m.listResponse, nil
+	return m.konnectLicense, nil
 }
 
 func (m *mockKonnectClientClient) ReturnError(err error) {
@@ -43,19 +43,19 @@ func (m *mockKonnectClientClient) ReturnError(err error) {
 	m.err = err
 }
 
-func (m *mockKonnectClientClient) ReturnSuccess(listResponse *konnectLicense.ListLicenseResponse) {
+func (m *mockKonnectClientClient) ReturnSuccess(license mo.Option[license.KonnectLicense]) {
 	m.lock.Lock()
 	defer m.lock.Unlock()
-	m.listResponse = listResponse
+	m.konnectLicense = license
 	m.err = nil
 }
 
-func (m *mockKonnectClientClient) ListCalls() []time.Time {
+func (m *mockKonnectClientClient) GetCalls() []time.Time {
 	m.lock.RLock()
 	defer m.lock.RUnlock()
 
-	copied := make([]time.Time, len(m.listCalls))
-	copy(copied, m.listCalls)
+	copied := make([]time.Time, len(m.getCalls))
+	copy(copied, m.getCalls)
 	return copied
 }
 
@@ -63,20 +63,16 @@ func TestAgent(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
-	expectedLicense := &konnectLicense.Item{
-		License:   "test-license",
-		UpdatedAt: 1234567890,
-	}
-	expectedListResponse := &konnectLicense.ListLicenseResponse{
-		Items: []*konnectLicense.Item{
-			expectedLicense,
-		},
+
+	expectedLicense := license.KonnectLicense{
+		Payload:   "test-license",
+		UpdatedAt: time.Now(),
 	}
 
 	expectLicenseToMatchEventually := func(t *testing.T, a *license.Agent, expectedPayload string) time.Time {
 		var matchTime time.Time
 		require.Eventually(t, func() bool {
-			actualLicense, ok := a.GetLicense()
+			actualLicense, ok := a.GetLicense().Get()
 			if !ok {
 				t.Log("license not yet available")
 				return false
@@ -92,17 +88,17 @@ func TestAgent(t *testing.T) {
 	}
 
 	t.Run("initial license is retrieved", func(t *testing.T) {
-		upstreamClient := newMockKonnectLicenseClient(expectedListResponse)
+		upstreamClient := newMockKonnectLicenseClient(mo.Some(expectedLicense))
 		a := license.NewAgent(upstreamClient, logr.Discard())
 		go func() {
 			err := a.Start(ctx)
 			require.NoError(t, err)
 		}()
-		expectLicenseToMatchEventually(t, a, expectedLicense.License)
+		expectLicenseToMatchEventually(t, a, expectedLicense.Payload)
 	})
 
 	t.Run("initial license retrieval fails and recovers", func(t *testing.T) {
-		upstreamClient := newMockKonnectLicenseClient(nil)
+		upstreamClient := newMockKonnectLicenseClient(mo.None[license.KonnectLicense]())
 
 		// Return an error on the first call to List() to verify that the agent handles this correctly.
 		upstreamClient.ReturnError(errors.New("something went wrong on a backend"))
@@ -128,36 +124,35 @@ func TestAgent(t *testing.T) {
 
 		t.Run("initial polling period is used when no license is retrieved", func(t *testing.T) {
 			require.Eventually(t, func() bool {
-				return len(upstreamClient.ListCalls()) >= 1
+				return len(upstreamClient.GetCalls()) >= 1
 			}, time.Second, time.Nanosecond, "expected upstream client to be called at least once")
 
-			firstListCallTime := upstreamClient.ListCalls()[0]
+			firstListCallTime := upstreamClient.GetCalls()[0]
 			require.WithinDuration(t, startTime.Add(initialPollingPeriod), firstListCallTime, allowedDelta,
 				"expected first call to List() to happen after the initial polling period")
 
 			require.Eventually(t, func() bool {
-				return len(upstreamClient.ListCalls()) >= 2
+				return len(upstreamClient.GetCalls()) >= 2
 			}, time.Second, time.Nanosecond, "expected upstream client to be called at least twice")
 
-			secondListCallTime := upstreamClient.ListCalls()[1]
+			secondListCallTime := upstreamClient.GetCalls()[1]
 			require.WithinDuration(t, firstListCallTime.Add(initialPollingPeriod), secondListCallTime, allowedDelta,
 				"expected second call to List() to happen after the initial polling period as no license is retrieved yet")
 
-			_, ok := a.GetLicense()
-			require.False(t, ok, "no license should be available due to an error in the upstream client")
+			require.False(t, a.GetLicense().IsPresent(), "no license should be available due to an error in the upstream client")
 		})
 
 		t.Run("regular polling period is used after the initial license is retrieved", func(t *testing.T) {
 			// Now return a valid response to ensure that the agent recovers.
-			upstreamClient.ReturnSuccess(expectedListResponse)
-			expectLicenseToMatchEventually(t, a, expectedLicense.License)
+			upstreamClient.ReturnSuccess(mo.Some(expectedLicense))
+			expectLicenseToMatchEventually(t, a, expectedLicense.Payload)
 
-			listCallsAfterMatchCount := len(upstreamClient.ListCalls())
+			listCallsAfterMatchCount := len(upstreamClient.GetCalls())
 			require.Eventually(t, func() bool {
-				return len(upstreamClient.ListCalls()) > listCallsAfterMatchCount
+				return len(upstreamClient.GetCalls()) > listCallsAfterMatchCount
 			}, time.Second, time.Nanosecond, "expected upstream client to be called at least once after the license is retrieved")
 
-			listCalls := upstreamClient.ListCalls()
+			listCalls := upstreamClient.GetCalls()
 			lastListCall := listCalls[len(listCalls)-1]
 			lastButOneCall := listCalls[len(listCalls)-2]
 			require.WithinDuration(t, lastButOneCall.Add(regularPollingPeriod), lastListCall, allowedDelta)
@@ -167,45 +162,36 @@ func TestAgent(t *testing.T) {
 			upstreamClient.ReturnError(errors.New("something went wrong on a backend"))
 
 			// Wait for the call to happen.
-			initialListCalls := len(upstreamClient.ListCalls())
+			initialListCalls := len(upstreamClient.GetCalls())
 			require.Eventually(t, func() bool {
-				return len(upstreamClient.ListCalls()) > initialListCalls
+				return len(upstreamClient.GetCalls()) > initialListCalls
 			}, time.Second, time.Nanosecond)
 
 			// The license should still be available.
-			_, ok := a.GetLicense()
-			require.True(t, ok, "license should be available even if the upstream client returns an error")
+			require.True(t, a.GetLicense().IsPresent(), "license should be available even if the upstream client returns an error")
 		})
 
 		t.Run("license is not updated when the upstream returns a license updated before the cached one", func(t *testing.T) {
-			upstreamClient.ReturnSuccess(&konnectLicense.ListLicenseResponse{
-				Items: []*konnectLicense.Item{
-					{
-						License:   "new-license",
-						UpdatedAt: expectedLicense.UpdatedAt - 1,
-					},
-				},
-			})
+			upstreamClient.ReturnSuccess(mo.Some(license.KonnectLicense{
+				Payload:   "new-license",
+				UpdatedAt: expectedLicense.UpdatedAt.Add(-time.Second),
+			}))
 
 			// Wait for the call to happen.
-			initialListCalls := len(upstreamClient.ListCalls())
+			initialListCalls := len(upstreamClient.GetCalls())
 			require.Eventually(t, func() bool {
-				return len(upstreamClient.ListCalls()) > initialListCalls
+				return len(upstreamClient.GetCalls()) > initialListCalls
 			}, time.Second, time.Nanosecond)
 
 			// The cached license should still be available.
-			expectLicenseToMatchEventually(t, a, expectedLicense.License)
+			expectLicenseToMatchEventually(t, a, expectedLicense.Payload)
 		})
 
 		t.Run("license is updated when the upstream returns a license updated after the cached one", func(t *testing.T) {
-			upstreamClient.ReturnSuccess(&konnectLicense.ListLicenseResponse{
-				Items: []*konnectLicense.Item{
-					{
-						License:   "new-license",
-						UpdatedAt: expectedLicense.UpdatedAt + 1,
-					},
-				},
-			})
+			upstreamClient.ReturnSuccess(mo.Some(license.KonnectLicense{
+				Payload:   "new-license",
+				UpdatedAt: expectedLicense.UpdatedAt.Add(time.Second),
+			}))
 			expectLicenseToMatchEventually(t, a, "new-license")
 		})
 	})

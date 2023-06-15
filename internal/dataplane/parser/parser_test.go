@@ -5319,11 +5319,8 @@ type mockLicenseGetter struct {
 	license mo.Option[kong.License]
 }
 
-func (m *mockLicenseGetter) GetLicense() (kong.License, bool) {
-	if l, ok := m.license.Get(); ok {
-		return l, true
-	}
-	return kong.License{}, false
+func (m *mockLicenseGetter) GetLicense() mo.Option[kong.License] {
+	return m.license
 }
 
 func TestParser_License(t *testing.T) {

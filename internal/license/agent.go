@@ -2,16 +2,14 @@ package license
 
 import (
 	"context"
-	"errors"
-	"fmt"
 	"sync"
 	"time"
 
 	"github.com/go-logr/logr"
 	"github.com/kong/go-kong/kong"
+	"github.com/samber/lo"
 	"github.com/samber/mo"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/konnect/license"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 )
 
@@ -27,8 +25,15 @@ const (
 	PollingTimeout = time.Minute * 5
 )
 
+// KonnectLicense is a license retrieved from Konnect.
+type KonnectLicense struct {
+	ID        string
+	Payload   string
+	UpdatedAt time.Time
+}
+
 type KonnectLicenseClient interface {
-	List(ctx context.Context, pageNumber int) (*license.ListLicenseResponse, error)
+	Get(ctx context.Context) (mo.Option[KonnectLicense], error)
 }
 
 type AgentOpt func(*Agent)
@@ -74,8 +79,9 @@ type Agent struct {
 	initialPollingPeriod time.Duration
 	regularPollingPeriod time.Duration
 
-	// cachedLicense is the current license retrieved from upstream.
-	cachedLicense mo.Option[license.Item]
+	// cachedLicense is the current license retrieved from upstream. It's optional because we may not have retrieved a
+	// license yet.
+	cachedLicense mo.Option[KonnectLicense]
 	mutex         sync.RWMutex
 }
 
@@ -100,20 +106,20 @@ func (a *Agent) Start(ctx context.Context) error {
 
 // GetLicense returns the agent's current license as a go-kong License struct. It omits the origin timestamps,
 // as Kong will auto-populate these when adding the license to its config database.
-// If the agent has not yet retrieved a license, it returns an empty struct and false.
-func (a *Agent) GetLicense() (kong.License, bool) {
+// It's optional because we may not have retrieved a license yet.
+func (a *Agent) GetLicense() mo.Option[kong.License] {
 	a.logger.V(util.DebugLevel).Info("retrieving license from cache")
 	a.mutex.RLock()
 	defer a.mutex.RUnlock()
 
-	if licenseItem, ok := a.cachedLicense.Get(); ok {
-		return kong.License{
-			ID:      kong.String(licenseItem.ID),
-			Payload: kong.String(licenseItem.License),
-		}, true
+	if cachedLicense, ok := a.cachedLicense.Get(); ok {
+		return mo.Some(kong.License{
+			ID:      lo.ToPtr(cachedLicense.ID),
+			Payload: lo.ToPtr(cachedLicense.Payload),
+		})
 	}
 
-	return kong.License{}, false
+	return mo.None[kong.License]()
 }
 
 // runPollingLoop updates the license on a regular period until the context is cancelled.
@@ -150,29 +156,27 @@ func (a *Agent) resolvePollingPeriod() time.Duration {
 
 // reconcileLicenseWithKonnect retrieves a license from upstream and caches it if it is newer than the cached license or there is no cached license.
 func (a *Agent) reconcileLicenseWithKonnect(ctx context.Context) error {
-	updatedAtAsString := func(updatedAt uint64) string {
-		return time.Unix(int64(updatedAt), 0).String()
+	retrievedLicenseOpt, err := a.retrieveLicenseFromUpstream(ctx)
+	if err != nil {
+		return err
 	}
 
-	retrievedLicense, err := a.retrieveLicenseFromUpstream(ctx)
-	if err != nil {
-		// If the license is not found, we do not return an error as it's expected when a customer is on the Free tier.
-		if errors.Is(err, license.ErrNotFound) {
-			a.logger.V(util.DebugLevel).Info("no license found in Konnect")
-			return nil
-		}
-		return err
+	retrievedLicense, retrievedLicenseOk := retrievedLicenseOpt.Get()
+	if !retrievedLicenseOk {
+		// If we get no license from Konnect, we cannot do anything.
+		a.logger.V(util.DebugLevel).Info("no license found in Konnect")
+		return nil
 	}
 
 	if a.cachedLicense.IsAbsent() {
 		a.logger.V(util.InfoLevel).Info("caching initial license retrieved from the upstream",
-			"updated_at", updatedAtAsString(retrievedLicense.UpdatedAt),
+			"updated_at", retrievedLicense.UpdatedAt.String(),
 		)
 		a.updateCache(retrievedLicense)
-	} else if cachedLicense, ok := a.cachedLicense.Get(); ok && retrievedLicense.UpdatedAt > cachedLicense.UpdatedAt {
+	} else if cachedLicense, ok := a.cachedLicense.Get(); ok && retrievedLicense.UpdatedAt.After(cachedLicense.UpdatedAt) {
 		a.logger.V(util.InfoLevel).Info("caching license retrieved from the upstream as it is newer than the cached one",
-			"cached_updated_at", updatedAtAsString(cachedLicense.UpdatedAt),
-			"retrieved_updated_at", updatedAtAsString(retrievedLicense.UpdatedAt),
+			"cached_updated_at", cachedLicense.UpdatedAt.String(),
+			"retrieved_updated_at", retrievedLicense.UpdatedAt.String(),
 		)
 		a.updateCache(retrievedLicense)
 	} else {
@@ -182,23 +186,14 @@ func (a *Agent) reconcileLicenseWithKonnect(ctx context.Context) error {
 	return nil
 }
 
-func (a *Agent) retrieveLicenseFromUpstream(ctx context.Context) (*license.Item, error) {
+func (a *Agent) retrieveLicenseFromUpstream(ctx context.Context) (mo.Option[KonnectLicense], error) {
 	ctx, cancel := context.WithTimeout(ctx, PollingTimeout)
 	defer cancel()
-
-	// This is an array because it's a Kong entity collection, even though we only expect to have exactly one license.
-	licenses, err := a.konnectLicenseClient.List(ctx, 0)
-	if err != nil {
-		return nil, fmt.Errorf("could not retrieve license: %w", err)
-	}
-	if len(licenses.Items) == 0 {
-		return nil, fmt.Errorf("received empty license response")
-	}
-	return licenses.Items[0], nil
+	return a.konnectLicenseClient.Get(ctx)
 }
 
-func (a *Agent) updateCache(license *license.Item) {
+func (a *Agent) updateCache(license KonnectLicense) {
 	a.mutex.Lock()
 	defer a.mutex.Unlock()
-	a.cachedLicense = mo.Some(*license)
+	a.cachedLicense = mo.Some(license)
 }

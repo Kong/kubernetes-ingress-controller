@@ -15,7 +15,7 @@ require (
 	github.com/jpillora/backoff v1.0.0
 	github.com/kong/deck v1.22.0
 	github.com/kong/go-kong v0.43.0
-	github.com/kong/kubernetes-telemetry v0.0.5
+	github.com/kong/kubernetes-telemetry v0.0.6
 	github.com/kong/kubernetes-testing-framework v0.31.1
 	github.com/lithammer/dedent v1.1.0
 	github.com/miekg/dns v1.1.54
@@ -68,7 +68,7 @@ require (
 	github.com/labstack/gommon v0.4.0 // indirect
 	github.com/leodido/go-urn v1.2.4 // indirect
 	github.com/pelletier/go-toml/v2 v2.0.8 // indirect
-	github.com/puzpuzpuz/xsync/v2 v2.4.0 // indirect
+	github.com/puzpuzpuz/xsync/v2 v2.4.1 // indirect
 	github.com/shoenig/go-m1cpu v0.1.6 // indirect
 	github.com/twitchyliquid64/golang-asm v0.15.1 // indirect
 	github.com/ugorji/go/codec v1.2.11 // indirect

@@ -1,7 +1,4 @@
-//go:build envtest
-// +build envtest
-
-package telemetry_test
+package envtest
 
 import (
 	"context"
@@ -38,7 +35,6 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/manager/telemetry"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 	"github.com/kong/kubernetes-ingress-controller/v2/pkg/clientset/scheme"
-	"github.com/kong/kubernetes-ingress-controller/v2/test/envtest"
 )
 
 func TestTelemetry(t *testing.T) {
@@ -61,7 +57,7 @@ func TestTelemetry(t *testing.T) {
 	go handleConnectionToTelemetryServer(ctx, t, listener, reportChan)
 
 	t.Log("configuring envtest and creating K8s objects for telemetry test")
-	envcfg := envtest.Setup(t, scheme.Scheme)
+	envcfg := Setup(t, scheme.Scheme)
 	cfg := configForEnvTestTelemetry(t, envcfg)
 	c, err := cfg.GetKubeconfig()
 	require.NoError(t, err)
@@ -113,7 +109,7 @@ func configForEnvTestTelemetry(t *testing.T, envcfg *rest.Config) manager.Config
 	cfg.APIServerCertData = envcfg.CertData
 	cfg.APIServerKeyData = envcfg.KeyData
 	cfg.APIServerCAData = envcfg.CAData
-	cfg.KongAdminURLs = []string{envtest.StartAdminAPIServerMock(t).URL}
+	cfg.KongAdminURLs = []string{StartAdminAPIServerMock(t).URL}
 	cfg.UpdateStatus = false
 	cfg.ProxySyncSeconds = 0.1
 

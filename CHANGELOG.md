@@ -82,6 +82,10 @@ Adding a new version? You'll need three changes:
 - Log message `no active endpoints` is now logged at debug instead of
   warning level.
   [#4161](https://github.com/Kong/kubernetes-ingress-controller/pull/4161)
+- Events and logs for inconsistent multi-Service backend annotations now list
+  all involved Services, not just Services whose annotation does not match the
+  first observed value, as that value is not necessarily the desired value.
+  [#4171](https://github.com/Kong/kubernetes-ingress-controller/pull/4171)
 
 ## [2.10.0]
 

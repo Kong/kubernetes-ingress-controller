@@ -131,8 +131,7 @@ func TestTranslationFailures(t *testing.T) {
 				return expectedTranslationFailure{
 					// expect event for service2 as it doesn't have annotations that service1 has
 					causingObjects: []client.Object{service2},
-					reasonContains: "All Services in a multi-Service backend must have matching Kong annotations. " +
-						"Review the associated route resource and align annotations in its multi-Service backends.",
+					reasonContains: "This annotation must have the same value across all Services in the backend.",
 				}
 			},
 		},

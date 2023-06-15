@@ -79,13 +79,13 @@ type Agent struct {
 	mutex         sync.RWMutex
 }
 
-// NeedLeaderElection indicates if the Agent requires leadership to runPollingLoop. It always returns true.
+// NeedLeaderElection indicates if the Agent requires leadership to run. It always returns true.
 func (a *Agent) NeedLeaderElection() bool {
 	return true
 }
 
 // Start starts the Agent. It attempts to pull an initial license from upstream, and then polls for updates on a
-// regular period defined by DefaultRegularPollingInternval.
+// regular period, either the agent's initialPollingPeriod if it has not yet obtained a license or regularPollingPeriod if it has.
 func (a *Agent) Start(ctx context.Context) error {
 	a.logger.V(util.DebugLevel).Info("starting license agent")
 
@@ -148,8 +148,7 @@ func (a *Agent) resolvePollingPeriod() time.Duration {
 	return a.initialPollingPeriod
 }
 
-// reconcileLicenseWithKonnect retrieves a license from upstream and caches it if it is newer than the cached license.
-// When it's the first time retrieving a license, it will always cache it.
+// reconcileLicenseWithKonnect retrieves a license from upstream and caches it if it is newer than the cached license or there is no cached license.
 func (a *Agent) reconcileLicenseWithKonnect(ctx context.Context) error {
 	updatedAtAsString := func(updatedAt uint64) string {
 		return time.Unix(int64(updatedAt), 0).String()
@@ -166,7 +165,7 @@ func (a *Agent) reconcileLicenseWithKonnect(ctx context.Context) error {
 	}
 
 	if a.cachedLicense.IsAbsent() {
-		a.logger.V(util.InfoLevel).Info("caching license retrieved from the upstream",
+		a.logger.V(util.InfoLevel).Info("caching initial license retrieved from the upstream",
 			"updated_at", updatedAtAsString(retrievedLicense.UpdatedAt),
 		)
 		a.updateCache(retrievedLicense)

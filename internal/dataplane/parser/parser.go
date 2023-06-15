@@ -124,6 +124,7 @@ func shouldEnableParserExpressionRoutes(
 
 // LicenseGetter is an interface for getting the Kong Enterprise license.
 type LicenseGetter interface {
+	// GetLicense() returns a license (if one is available) and a boolean indicating if a license is available.
 	GetLicense() (kong.License, bool)
 }
 

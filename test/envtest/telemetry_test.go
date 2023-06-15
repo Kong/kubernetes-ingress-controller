@@ -1,7 +1,7 @@
 //go:build envtest
 // +build envtest
 
-package telemetry_test
+package envtest
 
 import (
 	"context"
@@ -17,6 +17,7 @@ import (
 	"net"
 	"os"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -37,32 +38,31 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/manager/featuregates"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 	"github.com/kong/kubernetes-ingress-controller/v2/pkg/clientset/scheme"
-	"github.com/kong/kubernetes-ingress-controller/v2/test/envtest"
 )
 
 func TestTelemetry(t *testing.T) {
 	t.Log("configuring TLS listener - server for telemetry data")
 	cert, err := generateSelfSignedCert()
 	require.NoError(t, err)
-	telemetryServer, err := tls.Listen("tcp", "localhost:0", &tls.Config{
+	telemetryServerListener, err := tls.Listen("tcp", "localhost:0", &tls.Config{
 		Certificates: []tls.Certificate{cert},
 		// The same version as the one used by TLS forwarder in the pkg telemetry.
 		MinVersion: tls.VersionTLS13,
 		MaxVersion: tls.VersionTLS13,
 	})
 	require.NoError(t, err)
-	defer telemetryServer.Close()
+	defer telemetryServerListener.Close()
 	// Run a server that will receive the report, it's expected
 	// to be the first connection and the payload.
 	reportChan := make(chan []byte)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	go handleConnectionToTelemetryServer(ctx, t, telemetryServer, reportChan)
+	go runTelemetryServer(ctx, t, telemetryServerListener, reportChan)
 
 	t.Log("configuring envtest and creating K8s objects for telemetry test")
-	envcfg := envtest.Setup(t, scheme.Scheme)
+	envcfg := Setup(t, scheme.Scheme)
 	// Let's have long duration due too rate limiter in K8s client.
-	cfg := configForEnvTestTelemetry(t, envcfg, telemetryServer.Addr().String(), time.Second)
+	cfg := configForEnvTestTelemetry(t, envcfg, telemetryServerListener.Addr().String(), 100*time.Millisecond)
 	c, err := cfg.GetKubeconfig()
 	require.NoError(t, err)
 	createK8sObjectsForTelemetryTest(ctx, t, c)
@@ -81,14 +81,20 @@ func TestTelemetry(t *testing.T) {
 	require.NoError(t, err)
 	k8sVersion, err := dcl.ServerVersion()
 	require.NoError(t, err)
-	t.Log("verifying telemetry report")
-	require.Eventually(t, func() bool {
-		return verifyTelemetryReport(t, k8sVersion, string(<-reportChan))
-	},
-		10*time.Second,
-		// Tick duration doesn't really matter, because reading from channel is blocking.
-		100*time.Millisecond,
+
+	t.Log("verifying that eventually we get an expected telemetry report")
+	const (
+		waitTime = 3 * time.Second
+		tickTime = 10 * time.Millisecond
 	)
+	require.Eventually(t, func() bool {
+		select {
+		case report := <-reportChan:
+			return verifyTelemetryReport(t, k8sVersion, string(report))
+		case <-time.After(tickTime):
+			return false
+		}
+	}, waitTime, tickTime)
 }
 
 func configForEnvTestTelemetry(t *testing.T, envcfg *rest.Config, splunkEndpoint string, telemetryPeriod time.Duration) manager.Config {
@@ -104,7 +110,7 @@ func configForEnvTestTelemetry(t *testing.T, envcfg *rest.Config, splunkEndpoint
 	cfg.APIServerCertData = envcfg.CertData
 	cfg.APIServerKeyData = envcfg.KeyData
 	cfg.APIServerCAData = envcfg.CAData
-	cfg.KongAdminURLs = []string{envtest.StartAdminAPIServerMock(t).URL}
+	cfg.KongAdminURLs = []string{StartAdminAPIServerMock(t).URL}
 	cfg.UpdateStatus = false
 	cfg.ProxySyncSeconds = 0.1
 
@@ -295,27 +301,50 @@ func createK8sObjectsForTelemetryTest(ctx context.Context, t *testing.T, cfg *re
 	}
 }
 
-func handleConnectionToTelemetryServer(ctx context.Context, t *testing.T, listener net.Listener, reportChan chan<- []byte) {
+func runTelemetryServer(ctx context.Context, t *testing.T, listener net.Listener, reportChan chan<- []byte) {
+	handleConnection := func(ctx context.Context, t *testing.T, conn net.Conn, wg *sync.WaitGroup) {
+		defer func() {
+			if err := conn.Close(); err != nil {
+				t.Logf("error closing connection: %v", err)
+			}
+			wg.Done()
+		}()
+
+		for {
+			report := make([]byte, 2048) // Report is much shorter.
+			n, err := conn.Read(report)
+			if errors.Is(err, io.EOF) {
+				break
+			}
+			if !assert.NoError(t, err) {
+				return
+			}
+			t.Logf("received %d bytes of telemetry report", n)
+			select {
+			case reportChan <- report[:n]:
+			case <-ctx.Done():
+				return
+			}
+		}
+	}
+
 	// Any function return indicates that either the
 	// report was sent or there was nothing to send.
-	defer close(reportChan)
-	conn, err := listener.Accept()
-	if !assert.NoError(t, err) {
-		return
-	}
-	defer conn.Close()
+	var wg sync.WaitGroup
 	for {
-		report := make([]byte, 2048) // Report is much shorter.
-		n, err := conn.Read(report)
+		conn, err := listener.Accept()
+		if err != nil && errors.Is(err, net.ErrClosed) {
+			break
+		}
 		if !assert.NoError(t, err) {
-			return
+			break
 		}
-		select {
-		case reportChan <- report[:n]:
-		case <-ctx.Done():
-			return
-		}
+		wg.Add(1)
+		go handleConnection(ctx, t, conn, &wg)
 	}
+
+	wg.Wait()
+	close(reportChan)
 }
 
 func verifyTelemetryReport(t *testing.T, k8sVersion *version.Info, report string) bool {
@@ -391,7 +420,7 @@ func removeStanzaFromReport(report string, stanza string) (string, error) {
 	stanza = stanza + "="
 	start := strings.Index(report, stanza)
 	if start == -1 {
-		return "", errors.New("stanza not found in report")
+		return "", fmt.Errorf("stanza %q not found in report: %s", stanza, report)
 	}
 	end := strings.Index(report[start:], idStanzaEnd)
 	if end == -1 {

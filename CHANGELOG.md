@@ -78,6 +78,11 @@ Adding a new version? You'll need three changes:
 - Gateway resources no longer use the _Ready_ condition following changes to
   the upstream Gateway API specification in version 0.7.
   [#4142](https://github.com/Kong/kubernetes-ingress-controller/pull/4142)
+- `--konnect-initial-license-polling-period` and `--konnect-license-polling-period`
+  CLI flags were added to allow configuring periods at which KIC polls license
+  from Konnect. The initial period will be used until a valid license is retrieved.
+  The default values are 1m and 12h respectively.
+  [#4178](https://github.com/Kong/kubernetes-ingress-controller/pull/4178)
 
 ### Changed
 

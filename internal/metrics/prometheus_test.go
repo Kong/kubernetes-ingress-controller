@@ -33,7 +33,7 @@ func TestRecordPush(t *testing.T) {
 	})
 	t.Run("recording push failure works", func(t *testing.T) {
 		require.NotPanics(t, func() {
-			m.RecordPushFailure(ProtocolDBLess, time.Millisecond, "https://10.0.0.1:8080", float64(5),
+			m.RecordPushFailure(ProtocolDBLess, time.Millisecond, "https://10.0.0.1:8080", 5,
 				fmt.Errorf("custom error"))
 		})
 	})
@@ -44,13 +44,13 @@ func TestRecordTranslation(t *testing.T) {
 	t.Run("recording translation success works", func(t *testing.T) {
 		require.NotPanics(t, func() {
 			m.RecordTranslationSuccess()
-			m.RecordTranslationBrokenResources(float64(0))
+			m.RecordTranslationBrokenResources(0)
 		})
 	})
 	t.Run("recording translation failure works", func(t *testing.T) {
 		require.NotPanics(t, func() {
 			m.RecordTranslationFailure()
-			m.RecordTranslationBrokenResources(float64(9))
+			m.RecordTranslationBrokenResources(9)
 		})
 	})
 }

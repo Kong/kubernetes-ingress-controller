@@ -13,23 +13,19 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/deckerrors"
 )
 
+// descriptions of these metrics are found below, where their help text is set in NewCtrlFuncMetrics()
+
 type CtrlFuncMetrics struct {
-	// ConfigPushCount is a Prometheus metric with semantics defined by its help string in NewCtrlFuncMetrics().
 	ConfigPushCount *prometheus.CounterVec
 
-	// ConfigPushBrokenResources is a Prometheus metric with semantics defined by its help string in NewCtrlFuncMetrics().
 	ConfigPushBrokenResources *prometheus.GaugeVec
 
-	// TranslationCount is a Prometheus metric with semantics defined by its help string in NewCtrlFuncMetrics().
 	TranslationCount *prometheus.CounterVec
 
-	// TranslationBrokenResources is a Prometheus metric with semantics defined by its help string in NewCtrlFuncMetrics().
 	TranslationBrokenResources prometheus.Gauge
 
-	// ConfigPushDuration is a Prometheus metric with semantics defined by its help string in NewCtrlFuncMetrics().
 	ConfigPushDuration *prometheus.HistogramVec
 
-	// ConfigPushSuccessTime is a Prometheus metric with semantics defined by its help string in NewCtrlFuncMetrics().
 	ConfigPushSuccessTime *prometheus.GaugeVec
 }
 
@@ -172,24 +168,12 @@ func NewCtrlFuncMetrics() *CtrlFuncMetrics {
 		[]string{DataplaneKey},
 	)
 
-	if ok := metrics.Registry.Unregister(controllerMetrics.ConfigPushCount); ok {
-		fmt.Printf("Unregistered %s\n", MetricNameConfigPushCount)
-	}
-	if ok := metrics.Registry.Unregister(controllerMetrics.ConfigPushBrokenResources); ok {
-		fmt.Printf("Unregistered %s\n", MetricNameConfigPushCount)
-	}
-	if ok := metrics.Registry.Unregister(controllerMetrics.TranslationCount); ok {
-		fmt.Printf("Unregistered %s\n", MetricNameTranslationCount)
-	}
-	if ok := metrics.Registry.Unregister(controllerMetrics.TranslationBrokenResources); ok {
-		fmt.Printf("Unregistered %s\n", MetricNameTranslationCount)
-	}
-	if ok := metrics.Registry.Unregister(controllerMetrics.ConfigPushDuration); ok {
-		fmt.Printf("Unregistered %s\n", MetricNameConfigPushDuration)
-	}
-	if ok := metrics.Registry.Unregister(controllerMetrics.ConfigPushSuccessTime); ok {
-		fmt.Printf("Unregistered %s\n", MetricNameConfigPushDuration)
-	}
+	metrics.Registry.Unregister(controllerMetrics.ConfigPushCount)
+	metrics.Registry.Unregister(controllerMetrics.ConfigPushBrokenResources)
+	metrics.Registry.Unregister(controllerMetrics.TranslationCount)
+	metrics.Registry.Unregister(controllerMetrics.TranslationBrokenResources)
+	metrics.Registry.Unregister(controllerMetrics.ConfigPushDuration)
+	metrics.Registry.Unregister(controllerMetrics.ConfigPushSuccessTime)
 
 	metrics.Registry.MustRegister(
 		controllerMetrics.ConfigPushCount,
@@ -208,20 +192,15 @@ func (c *CtrlFuncMetrics) RecordPushSuccess(p Protocol, d time.Duration, datapla
 	dpOpt := withDataplane(dataplane)
 	c.recordPushCount(p, dpOpt)
 	c.recordPushDuration(p, d, dpOpt)
-	c.recordPushSuccessTime(p, dpOpt)
+	c.recordPushSuccessTime(dpOpt)
 }
 
 // RecordPushFailure records a failed configuration push.
-func (c *CtrlFuncMetrics) RecordPushFailure(p Protocol, d time.Duration, dataplane string, count float64, err error) {
+func (c *CtrlFuncMetrics) RecordPushFailure(p Protocol, d time.Duration, dataplane string, count int, err error) {
 	dpOpt := withDataplane(dataplane)
 	c.recordPushCount(p, dpOpt, withError(err))
 	c.recordPushDuration(p, d, dpOpt, withFailure())
-	c.recordPushBrokenResources(p, count, dpOpt)
-}
-
-// RecordPushBrokenResources records the number of resources rejected during a push.
-func (c *CtrlFuncMetrics) RecordPushBrokenResources(count float64, dataplane string) {
-	c.ConfigPushBrokenResources.With(prometheus.Labels{DataplaneKey: dataplane}).Set(count)
+	c.recordPushBrokenResources(count, dpOpt)
 }
 
 // RecordTranslationSuccess records a successful configuration translation.
@@ -239,8 +218,8 @@ func (c *CtrlFuncMetrics) RecordTranslationFailure() {
 }
 
 // RecordTranslationBrokenResources records the number of resources failing translation.
-func (c *CtrlFuncMetrics) RecordTranslationBrokenResources(count float64) {
-	c.TranslationBrokenResources.Set(count)
+func (c *CtrlFuncMetrics) RecordTranslationBrokenResources(count int) {
+	c.TranslationBrokenResources.Set(float64(count))
 }
 
 type recordOption func(prometheus.Labels) prometheus.Labels
@@ -296,22 +275,18 @@ func (c *CtrlFuncMetrics) recordPushDuration(p Protocol, d time.Duration, opts .
 	c.ConfigPushDuration.With(labels).Observe(float64(d.Milliseconds()))
 }
 
-func (c *CtrlFuncMetrics) recordPushBrokenResources(p Protocol, count float64, opts ...recordOption) {
-	labels := prometheus.Labels{
-		ProtocolKey: string(p),
-	}
+func (c *CtrlFuncMetrics) recordPushBrokenResources(count int, opts ...recordOption) {
+	labels := prometheus.Labels{}
 
 	for _, opt := range opts {
 		labels = opt(labels)
 	}
 
-	c.ConfigPushBrokenResources.With(labels).Set(count)
+	c.ConfigPushBrokenResources.With(labels).Set(float64(count))
 }
 
-func (c *CtrlFuncMetrics) recordPushSuccessTime(p Protocol, opts ...recordOption) {
-	labels := prometheus.Labels{
-		ProtocolKey: string(p),
-	}
+func (c *CtrlFuncMetrics) recordPushSuccessTime(opts ...recordOption) {
+	labels := prometheus.Labels{}
 
 	for _, opt := range opts {
 		labels = opt(labels)

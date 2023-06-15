@@ -87,7 +87,7 @@ func PerformUpdate(
 		}
 
 		resourceFailures := resourceErrorsToResourceFailures(resourceErrors, resourceErrorsParseErr, log)
-		promMetrics.RecordPushFailure(metricsProtocol, duration, client.BaseRootURL(), float64(len(resourceFailures)), err)
+		promMetrics.RecordPushFailure(metricsProtocol, duration, client.BaseRootURL(), len(resourceFailures), err)
 		return nil, resourceFailures, err
 	}
 

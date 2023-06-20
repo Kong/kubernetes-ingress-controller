@@ -462,33 +462,26 @@ func TestGatewayFilters(t *testing.T) {
 	helpers.EventuallyGETPath(t, proxyURL, "other_test_gateway_filters", http.StatusOK, "<title>httpbin.org</title>", emptyHeaderSet, ingressWait, waitTick)
 
 	t.Log("changing to the same namespace filter")
-	gateway, err = gatewayClient.Gateways(ns.Name).Get(ctx, gateway.Name, metav1.GetOptions{})
-	require.NoError(t, err)
-	fromSame := gatewayv1beta1.NamespacesFromSame
-	gateway.Spec.Listeners = []gatewayv1beta1.Listener{
-		{
-			Name:     "http",
-			Protocol: gatewayv1beta1.HTTPProtocolType,
-			Port:     gatewayv1beta1.PortNumber(80),
-			AllowedRoutes: &gatewayv1beta1.AllowedRoutes{
-				Namespaces: &gatewayv1beta1.RouteNamespaces{
-					From: &fromSame,
-				},
-			},
-		},
-		{
-			Name:     "https",
-			Protocol: gatewayv1beta1.HTTPSProtocolType,
-			Port:     gatewayv1beta1.PortNumber(443),
-			AllowedRoutes: &gatewayv1beta1.AllowedRoutes{
-				Namespaces: &gatewayv1beta1.RouteNamespaces{
-					From: &fromSame,
-				},
-			},
-		},
-	}
-	_, err = gatewayClient.Gateways(ns.Name).Update(ctx, gateway, metav1.UpdateOptions{})
-	require.NoError(t, err)
+	require.Eventually(t, func() bool {
+		gateway, err = gatewayClient.Gateways(ns.Name).Get(ctx, gateway.Name, metav1.GetOptions{})
+		if err != nil {
+			t.Logf("error getting gateway %s: %v", gateway.Name, err)
+			return false
+		}
+
+		gateway.Spec.Listeners = []gatewayv1beta1.Listener{
+			builder.NewListener("http").HTTP().WithPort(80).
+				WithAllowedRoutes(builder.NewAllowedRoutesFromSameNamespaces()).Build(),
+			builder.NewListener("https").HTTPS().WithPort(443).
+				WithAllowedRoutes(builder.NewAllowedRoutesFromSameNamespaces()).Build(),
+		}
+		_, err = gatewayClient.Gateways(ns.Name).Update(ctx, gateway, metav1.UpdateOptions{})
+		if err != nil {
+			t.Logf("error updating gateway %s: %v", gateway.Name, err)
+			return false
+		}
+		return true
+	}, ingressWait, waitTick)
 
 	t.Log("confirming other namespace route becomes inaccessible")
 	helpers.EventuallyGETPath(t, proxyURL, "other_test_gateway_filters", http.StatusNotFound, "no Route matched", emptyHeaderSet, ingressWait, waitTick)
@@ -496,44 +489,31 @@ func TestGatewayFilters(t *testing.T) {
 	helpers.EventuallyGETPath(t, proxyURL, "test_gateway_filters", http.StatusOK, "<title>httpbin.org</title>", emptyHeaderSet, ingressWait, waitTick)
 
 	t.Log("changing to a selector filter")
-	gateway, err = gatewayClient.Gateways(ns.Name).Get(ctx, gateway.Name, metav1.GetOptions{})
-	require.NoError(t, err)
-	fromSelector := gatewayv1beta1.NamespacesFromSelector
-	gateway.Spec.Listeners = []gatewayv1beta1.Listener{
-		{
-			Name:     "http",
-			Protocol: gatewayv1beta1.HTTPProtocolType,
-			Port:     gatewayv1beta1.PortNumber(80),
-			AllowedRoutes: &gatewayv1beta1.AllowedRoutes{
-				Namespaces: &gatewayv1beta1.RouteNamespaces{
-					From: &fromSelector,
-					Selector: &metav1.LabelSelector{
-						MatchLabels: map[string]string{
-							clusters.TestResourceLabel: t.Name() + "other",
-						},
-					},
-				},
-			},
-		},
-		{
-			Name:     "https",
-			Protocol: gatewayv1beta1.HTTPSProtocolType,
-			Port:     gatewayv1beta1.PortNumber(443),
-			AllowedRoutes: &gatewayv1beta1.AllowedRoutes{
-				Namespaces: &gatewayv1beta1.RouteNamespaces{
-					From: &fromSelector,
-					Selector: &metav1.LabelSelector{
-						MatchLabels: map[string]string{
-							clusters.TestResourceLabel: t.Name() + "other",
-						},
-					},
-				},
-			},
-		},
-	}
+	require.Eventually(t, func() bool {
+		gateway, err = gatewayClient.Gateways(ns.Name).Get(ctx, gateway.Name, metav1.GetOptions{})
+		if err != nil {
+			t.Logf("error getting gateway %s: %v", gateway.Name, err)
+			return false
+		}
 
-	_, err = gatewayClient.Gateways(ns.Name).Update(ctx, gateway, metav1.UpdateOptions{})
-	require.NoError(t, err)
+		fromSelector := builder.NewAllowedRoutesFromSelectorNamespace(
+			&metav1.LabelSelector{
+				MatchLabels: map[string]string{
+					clusters.TestResourceLabel: t.Name() + "other",
+				},
+			},
+		)
+		gateway.Spec.Listeners = []gatewayv1beta1.Listener{
+			builder.NewListener("http").HTTP().WithPort(80).WithAllowedRoutes(fromSelector).Build(),
+			builder.NewListener("https").HTTPS().WithPort(443).WithAllowedRoutes(fromSelector).Build(),
+		}
+		_, err = gatewayClient.Gateways(ns.Name).Update(ctx, gateway, metav1.UpdateOptions{})
+		if err != nil {
+			t.Logf("error updating gateway %s: %v", gateway.Name, err)
+			return false
+		}
+		return true
+	}, ingressWait, waitTick)
 
 	t.Log("confirming wrong selector namespace route becomes inaccessible")
 	helpers.EventuallyGETPath(t, proxyURL, "test_gateway_filters", http.StatusNotFound, "no Route matched", emptyHeaderSet, ingressWait, waitTick)

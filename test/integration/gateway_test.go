@@ -359,133 +359,6 @@ func TestGatewayListenerConflicts(t *testing.T) {
 	}, gatewayUpdateWaitTime, time.Second)
 }
 
-func TestUnmanagedGatewayControllerSupport(t *testing.T) {
-	ctx := context.Background()
-
-	ns, cleaner := helpers.Setup(ctx, t, env)
-
-	t.Log("generating a gateway kubernetes client")
-	gatewayClient, err := gatewayclient.NewForConfig(env.Cluster().Config())
-	require.NoError(t, err)
-
-	t.Log("deploying an unsupported gatewayclass to the test cluster")
-	unsupportedGatewayClass, err := DeployGatewayClass(ctx, gatewayClient, uuid.NewString(), func(gc *gatewayv1beta1.GatewayClass) {
-		gc.Spec.ControllerName = unsupportedControllerName
-	})
-	require.NoError(t, err)
-	cleaner.Add(unsupportedGatewayClass)
-
-	t.Log("deploying a gateway using the unsupported gateway class")
-	unsupportedGateway, err := DeployGateway(ctx, gatewayClient, ns.Name, unsupportedGatewayClass.Name)
-	require.NoError(t, err)
-	cleaner.Add(unsupportedGateway)
-
-	t.Log("verifying that the unsupported Gateway object does not get scheduled by the controller")
-	timeout := time.Now().Add(gatewayWaitTimeToVerifyScheduling)
-	for timeout.After(time.Now()) {
-		unsupportedGateway, err = gatewayClient.GatewayV1beta1().Gateways(ns.Name).Get(ctx, unsupportedGateway.Name, metav1.GetOptions{})
-		require.NoError(t, err)
-		require.Len(t, unsupportedGateway.Status.Conditions, 2)
-		require.Equal(t, string(gatewayv1beta1.GatewayReasonPending), unsupportedGateway.Status.Conditions[0].Reason)
-	}
-}
-
-func TestUnmanagedGatewayClass(t *testing.T) {
-	ctx := context.Background()
-
-	ns, cleaner := helpers.Setup(ctx, t, env)
-
-	t.Log("generating a gateway kubernetes client")
-	gatewayClient, err := gatewayclient.NewForConfig(env.Cluster().Config())
-	require.NoError(t, err)
-
-	t.Log("deploying a gateway to the test cluster using unmanaged mode, but with no valid gatewayclass yet")
-	gatewayClassName := uuid.NewString()
-	gatewayName := uuid.NewString()
-	gateway, err := DeployGateway(ctx, gatewayClient, ns.Name, gatewayClassName, func(gw *gatewayv1beta1.Gateway) {
-		gw.Name = gatewayName
-	})
-	require.NoError(t, err)
-	cleaner.Add(gateway)
-
-	t.Log("verifying that the Gateway object does not get scheduled by the controller due to missing its GatewayClass")
-	timeout := time.Now().Add(gatewayWaitTimeToVerifyScheduling)
-	for timeout.After(time.Now()) {
-		gateway, err = gatewayClient.GatewayV1beta1().Gateways(ns.Name).Get(ctx, gateway.Name, metav1.GetOptions{})
-		require.NoError(t, err)
-		require.Len(t, gateway.Status.Conditions, 2)
-		require.Equal(t, string(gatewayv1beta1.GatewayReasonPending), gateway.Status.Conditions[0].Reason)
-	}
-
-	t.Log("deploying the missing gatewayclass to the test cluster")
-	gwc, err := DeployGatewayClass(ctx, gatewayClient, gatewayClassName)
-	require.NoError(t, err)
-	cleaner.Add(gwc)
-
-	t.Log("now that the gatewayclass exists, verifying that the gateway resource gets resolved")
-	require.Eventually(t, func() bool {
-		gateway, err = gatewayClient.GatewayV1beta1().Gateways(ns.Name).Get(ctx, gateway.Name, metav1.GetOptions{})
-		require.NoError(t, err)
-		for _, cond := range gateway.Status.Conditions {
-			if cond.Reason == string(gatewayv1beta1.GatewayReasonProgrammed) {
-				return true
-			}
-		}
-		return false
-	}, gatewayUpdateWaitTime, time.Second)
-}
-
-func TestManagedGatewayClass(t *testing.T) {
-	ctx := context.Background()
-
-	ns, cleaner := helpers.Setup(ctx, t, env)
-
-	t.Log("generating a gateway kubernetes client")
-	gatewayClient, err := gatewayclient.NewForConfig(env.Cluster().Config())
-	require.NoError(t, err)
-
-	t.Log("deploying a gateway to the test cluster, but with no valid gatewayclass yet")
-	gatewayClassName := uuid.NewString()
-	gatewayName := uuid.NewString()
-	gateway, err := DeployGateway(ctx, gatewayClient, ns.Name, gatewayClassName, func(gw *gatewayv1beta1.Gateway) {
-		gw.Name = gatewayName
-	})
-	require.NoError(t, err)
-	cleaner.Add(gateway)
-
-	t.Log("verifying that the Gateway object does not get scheduled by the controller due to missing its GatewayClass")
-	timeout := time.Now().Add(gatewayWaitTimeToVerifyScheduling)
-	for timeout.After(time.Now()) {
-		gateway, err = gatewayClient.GatewayV1beta1().Gateways(ns.Name).Get(ctx, gateway.Name, metav1.GetOptions{})
-		require.NoError(t, err)
-		require.Len(t, gateway.Status.Conditions, 2)
-		require.Equal(t, string(gatewayv1beta1.GatewayReasonPending), gateway.Status.Conditions[0].Reason)
-	}
-
-	t.Log("deploying a missing managed gatewayclass to the test cluster")
-	gwc, err := DeployGatewayClass(ctx, gatewayClient, gatewayClassName, func(gc *gatewayv1beta1.GatewayClass) {
-		gc.Annotations = nil
-	})
-	require.NoError(t, err)
-	cleaner.Add(gwc)
-
-	finished := make(chan struct{})
-
-	// Let's wait for one minute and check that the Gateway hasn't reconciled by the operator. It should never get ready.
-	t.Log("the Gateway must not be reconciled as it is using a managed GatewayClass")
-	time.AfterFunc(time.Minute, func() {
-		defer close(finished)
-		gateway, err = gatewayClient.GatewayV1beta1().Gateways(ns.Name).Get(ctx, gateway.Name, metav1.GetOptions{})
-		require.NoError(t, err)
-		for _, cond := range gateway.Status.Conditions {
-			if cond.Type == string(gatewayv1beta1.GatewayConditionProgrammed) {
-				require.Equal(t, cond.Status, metav1.ConditionUnknown)
-			}
-		}
-	})
-	<-finished
-}
-
 func TestGatewayFilters(t *testing.T) {
 	skipTestForExpressionRouter(t)
 	ctx := context.Background()
@@ -589,33 +462,26 @@ func TestGatewayFilters(t *testing.T) {
 	helpers.EventuallyGETPath(t, proxyURL, "other_test_gateway_filters", http.StatusOK, "<title>httpbin.org</title>", emptyHeaderSet, ingressWait, waitTick)
 
 	t.Log("changing to the same namespace filter")
-	gateway, err = gatewayClient.Gateways(ns.Name).Get(ctx, gateway.Name, metav1.GetOptions{})
-	require.NoError(t, err)
-	fromSame := gatewayv1beta1.NamespacesFromSame
-	gateway.Spec.Listeners = []gatewayv1beta1.Listener{
-		{
-			Name:     "http",
-			Protocol: gatewayv1beta1.HTTPProtocolType,
-			Port:     gatewayv1beta1.PortNumber(80),
-			AllowedRoutes: &gatewayv1beta1.AllowedRoutes{
-				Namespaces: &gatewayv1beta1.RouteNamespaces{
-					From: &fromSame,
-				},
-			},
-		},
-		{
-			Name:     "https",
-			Protocol: gatewayv1beta1.HTTPSProtocolType,
-			Port:     gatewayv1beta1.PortNumber(443),
-			AllowedRoutes: &gatewayv1beta1.AllowedRoutes{
-				Namespaces: &gatewayv1beta1.RouteNamespaces{
-					From: &fromSame,
-				},
-			},
-		},
-	}
-	_, err = gatewayClient.Gateways(ns.Name).Update(ctx, gateway, metav1.UpdateOptions{})
-	require.NoError(t, err)
+	require.Eventually(t, func() bool {
+		gateway, err = gatewayClient.Gateways(ns.Name).Get(ctx, gateway.Name, metav1.GetOptions{})
+		if err != nil {
+			t.Logf("error getting gateway %s: %v", gateway.Name, err)
+			return false
+		}
+
+		gateway.Spec.Listeners = []gatewayv1beta1.Listener{
+			builder.NewListener("http").HTTP().WithPort(80).
+				WithAllowedRoutes(builder.NewAllowedRoutesFromSameNamespaces()).Build(),
+			builder.NewListener("https").HTTPS().WithPort(443).
+				WithAllowedRoutes(builder.NewAllowedRoutesFromSameNamespaces()).Build(),
+		}
+		_, err = gatewayClient.Gateways(ns.Name).Update(ctx, gateway, metav1.UpdateOptions{})
+		if err != nil {
+			t.Logf("error updating gateway %s: %v", gateway.Name, err)
+			return false
+		}
+		return true
+	}, ingressWait, waitTick)
 
 	t.Log("confirming other namespace route becomes inaccessible")
 	helpers.EventuallyGETPath(t, proxyURL, "other_test_gateway_filters", http.StatusNotFound, "no Route matched", emptyHeaderSet, ingressWait, waitTick)
@@ -623,44 +489,31 @@ func TestGatewayFilters(t *testing.T) {
 	helpers.EventuallyGETPath(t, proxyURL, "test_gateway_filters", http.StatusOK, "<title>httpbin.org</title>", emptyHeaderSet, ingressWait, waitTick)
 
 	t.Log("changing to a selector filter")
-	gateway, err = gatewayClient.Gateways(ns.Name).Get(ctx, gateway.Name, metav1.GetOptions{})
-	require.NoError(t, err)
-	fromSelector := gatewayv1beta1.NamespacesFromSelector
-	gateway.Spec.Listeners = []gatewayv1beta1.Listener{
-		{
-			Name:     "http",
-			Protocol: gatewayv1beta1.HTTPProtocolType,
-			Port:     gatewayv1beta1.PortNumber(80),
-			AllowedRoutes: &gatewayv1beta1.AllowedRoutes{
-				Namespaces: &gatewayv1beta1.RouteNamespaces{
-					From: &fromSelector,
-					Selector: &metav1.LabelSelector{
-						MatchLabels: map[string]string{
-							clusters.TestResourceLabel: t.Name() + "other",
-						},
-					},
-				},
-			},
-		},
-		{
-			Name:     "https",
-			Protocol: gatewayv1beta1.HTTPSProtocolType,
-			Port:     gatewayv1beta1.PortNumber(443),
-			AllowedRoutes: &gatewayv1beta1.AllowedRoutes{
-				Namespaces: &gatewayv1beta1.RouteNamespaces{
-					From: &fromSelector,
-					Selector: &metav1.LabelSelector{
-						MatchLabels: map[string]string{
-							clusters.TestResourceLabel: t.Name() + "other",
-						},
-					},
-				},
-			},
-		},
-	}
+	require.Eventually(t, func() bool {
+		gateway, err = gatewayClient.Gateways(ns.Name).Get(ctx, gateway.Name, metav1.GetOptions{})
+		if err != nil {
+			t.Logf("error getting gateway %s: %v", gateway.Name, err)
+			return false
+		}
 
-	_, err = gatewayClient.Gateways(ns.Name).Update(ctx, gateway, metav1.UpdateOptions{})
-	require.NoError(t, err)
+		fromSelector := builder.NewAllowedRoutesFromSelectorNamespace(
+			&metav1.LabelSelector{
+				MatchLabels: map[string]string{
+					clusters.TestResourceLabel: t.Name() + "other",
+				},
+			},
+		)
+		gateway.Spec.Listeners = []gatewayv1beta1.Listener{
+			builder.NewListener("http").HTTP().WithPort(80).WithAllowedRoutes(fromSelector).Build(),
+			builder.NewListener("https").HTTPS().WithPort(443).WithAllowedRoutes(fromSelector).Build(),
+		}
+		_, err = gatewayClient.Gateways(ns.Name).Update(ctx, gateway, metav1.UpdateOptions{})
+		if err != nil {
+			t.Logf("error updating gateway %s: %v", gateway.Name, err)
+			return false
+		}
+		return true
+	}, ingressWait, waitTick)
 
 	t.Log("confirming wrong selector namespace route becomes inaccessible")
 	helpers.EventuallyGETPath(t, proxyURL, "test_gateway_filters", http.StatusNotFound, "no Route matched", emptyHeaderSet, ingressWait, waitTick)

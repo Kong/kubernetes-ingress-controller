@@ -193,6 +193,7 @@ func (c *CtrlFuncMetrics) RecordPushSuccess(p Protocol, d time.Duration, datapla
 	c.recordPushCount(p, dpOpt)
 	c.recordPushDuration(p, d, dpOpt)
 	c.recordPushSuccessTime(dpOpt)
+	c.recordPushBrokenResources(0, dpOpt)
 }
 
 // RecordPushFailure records a failed configuration push.
@@ -292,7 +293,7 @@ func (c *CtrlFuncMetrics) recordPushSuccessTime(opts ...recordOption) {
 		labels = opt(labels)
 	}
 
-	c.ConfigPushBrokenResources.With(labels).SetToCurrentTime()
+	c.ConfigPushSuccessTime.With(labels).SetToCurrentTime()
 }
 
 // pushFailureReason extracts config push failure reason from an error returned

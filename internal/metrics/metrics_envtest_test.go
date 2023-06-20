@@ -56,9 +56,7 @@ func TestMetricsAreServed(t *testing.T) {
 		metrics.MetricNameTranslationCount,
 		metrics.MetricNameTranslationBrokenResources,
 		metrics.MetricNameConfigPushDuration,
-		// this metric is _not_ present in the test because the fake manager cannot actually successfully push, and we only
-		// record it on successful pushes
-		// metrics.MetricNameConfigPushSuccessTime,
+		metrics.MetricNameConfigPushSuccessTime,
 	}
 
 	metricsURL := fmt.Sprintf("http://%s/metrics", cfg.MetricsAddr)

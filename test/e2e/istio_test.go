@@ -1,5 +1,4 @@
 //go:build istio_tests
-// +build istio_tests
 
 package e2e
 

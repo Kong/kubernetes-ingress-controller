@@ -1,5 +1,4 @@
 //go:build expression_router_tests
-// +build expression_router_tests
 
 package expressionrouter
 

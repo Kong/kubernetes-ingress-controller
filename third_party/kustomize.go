@@ -1,5 +1,4 @@
 //go:build third_party
-// +build third_party
 
 package third_party
 

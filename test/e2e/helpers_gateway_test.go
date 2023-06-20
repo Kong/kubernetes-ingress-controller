@@ -1,5 +1,4 @@
 //go:build e2e_tests
-// +build e2e_tests
 
 // The file is used for putting functions related to gateway APIs.
 

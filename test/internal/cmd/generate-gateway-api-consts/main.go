@@ -1,5 +1,4 @@
 //go:build generate_gateway_api_consts
-// +build generate_gateway_api_consts
 
 package main
 

@@ -1,5 +1,4 @@
 //go:build conformance_tests
-// +build conformance_tests
 
 package conformance
 

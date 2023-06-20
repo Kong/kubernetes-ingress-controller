@@ -1,6 +1,9 @@
 package mocks
 
 import (
+	"context"
+
+	"github.com/kong/go-kong/kong"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	k8sobj "github.com/kong/kubernetes-ingress-controller/v2/internal/util/kubernetes/object"
@@ -29,4 +32,8 @@ func (d Dataplane) AreKubernetesObjectReportsEnabled() bool {
 
 func (d Dataplane) KubernetesObjectConfigurationStatus(obj client.Object) k8sobj.ConfigurationStatus {
 	return d.ObjectsStatuses[obj.GetNamespace()][obj.GetName()]
+}
+
+func (d Dataplane) Listeners(context.Context) ([]kong.ProxyListener, []kong.StreamListener, error) {
+	return nil, nil, nil
 }

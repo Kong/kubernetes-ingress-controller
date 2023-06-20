@@ -487,6 +487,8 @@ func TestDoK8sServicesMatchAnnotations(t *testing.T) {
 			expected: false,
 			expectedLogEntries: []string{
 				"Service has inconsistent konghq.com/foo annotation and is used in multi-Service backend",
+				"Service has inconsistent konghq.com/foo annotation and is used in multi-Service backend",
+				"Service has inconsistent konghq.com/foo annotation and is used in multi-Service backend",
 			},
 		},
 		{
@@ -530,6 +532,7 @@ func TestDoK8sServicesMatchAnnotations(t *testing.T) {
 			expectedLogEntries: []string{
 				"Service has inconsistent konghq.com/foo annotation and is used in multi-Service backend",
 				"Service has inconsistent konghq.com/foo annotation and is used in multi-Service backend",
+				"Service has inconsistent konghq.com/foo annotation and is used in multi-Service backend",
 			},
 		},
 	} {
@@ -537,7 +540,7 @@ func TestDoK8sServicesMatchAnnotations(t *testing.T) {
 			logger, loggerHook := test.NewNullLogger()
 			failuresCollector, err := failures.NewResourceFailuresCollector(logger)
 			require.NoError(t, err)
-			assert.Equal(t, tt.expected, servicesAllUseTheSameKongAnnotations(tt.services, tt.annotations, failuresCollector, ""))
+			assert.Equal(t, tt.expected, collectInconsistentAnnotations(tt.services, tt.annotations, failuresCollector, ""))
 			assert.Len(t, failuresCollector.PopResourceFailures(), len(tt.expectedLogEntries), "expecting as many translation failures as log entries")
 			for i := range tt.expectedLogEntries {
 				assert.Contains(t, loggerHook.AllEntries()[i].Message, tt.expectedLogEntries[i])
@@ -649,7 +652,6 @@ func TestPopulateServices(t *testing.T) {
 			require.NoError(t, err)
 			servicesToBeSkipped := ingressRules.populateServices(logrus.New(), fakeStore, failuresCollector)
 			require.Equal(t, tc.serviceNamesToSkip, servicesToBeSkipped)
-			require.Len(t, failuresCollector.PopResourceFailures(), len(servicesToBeSkipped), "expecting as many translation failures as services to skip")
 		})
 	}
 }

@@ -1,5 +1,4 @@
 //go:build envtest
-// +build envtest
 
 package envtest
 
@@ -25,7 +24,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/gateway"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util/builder"
 	"github.com/kong/kubernetes-ingress-controller/v2/test/helpers"
-	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/mocks"
+	"github.com/kong/kubernetes-ingress-controller/v2/test/mocks"
 )
 
 func init() {
@@ -81,7 +80,7 @@ func TestHTTPRouteReconcilerProperlyReactsToReferenceGrant(t *testing.T) {
 		},
 	}
 	require.NoError(t, client.Create(ctx, &svc))
-	StartReconciler(ctx, t, client.Scheme(), cfg, reconciler)
+	StartReconcilers(ctx, t, client.Scheme(), cfg, reconciler)
 
 	gwc := gatewayv1beta1.GatewayClass{
 		Spec: gatewayv1beta1.GatewayClassSpec{

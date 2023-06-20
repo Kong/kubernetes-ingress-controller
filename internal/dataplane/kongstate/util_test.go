@@ -48,8 +48,9 @@ func TestKongPluginFromK8SClusterPlugin(t *testing.T) {
 			name: "basic configuration",
 			args: args{
 				plugin: configurationv1.KongClusterPlugin{
-					Protocols:  []configurationv1.KongProtocol{"http"},
-					PluginName: "correlation-id",
+					Protocols:    []configurationv1.KongProtocol{"http"},
+					PluginName:   "correlation-id",
+					InstanceName: "example",
 					Config: apiextensionsv1.JSON{
 						Raw: []byte(`{"header_name": "foo"}`),
 					},
@@ -60,7 +61,8 @@ func TestKongPluginFromK8SClusterPlugin(t *testing.T) {
 				Config: kong.Configuration{
 					"header_name": "foo",
 				},
-				Protocols: kong.StringSlice("http"),
+				Protocols:    kong.StringSlice("http"),
+				InstanceName: kong.String("example"),
 			},
 			wantErr: false,
 		},
@@ -182,8 +184,9 @@ func TestKongPluginFromK8SPlugin(t *testing.T) {
 			name: "basic configuration",
 			args: args{
 				plugin: configurationv1.KongPlugin{
-					Protocols:  []configurationv1.KongProtocol{"http"},
-					PluginName: "correlation-id",
+					Protocols:    []configurationv1.KongProtocol{"http"},
+					PluginName:   "correlation-id",
+					InstanceName: "example",
 					Config: apiextensionsv1.JSON{
 						Raw: []byte(`{"header_name": "foo"}`),
 					},
@@ -194,7 +197,8 @@ func TestKongPluginFromK8SPlugin(t *testing.T) {
 				Config: kong.Configuration{
 					"header_name": "foo",
 				},
-				Protocols: kong.StringSlice("http"),
+				Protocols:    kong.StringSlice("http"),
+				InstanceName: kong.String("example"),
 			},
 			wantErr: false,
 		},

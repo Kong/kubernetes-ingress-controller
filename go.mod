@@ -15,14 +15,14 @@ require (
 	github.com/jpillora/backoff v1.0.0
 	github.com/kong/deck v1.22.0
 	github.com/kong/go-kong v0.43.0
-	github.com/kong/kubernetes-telemetry v0.0.5
+	github.com/kong/kubernetes-telemetry v0.0.6
 	github.com/kong/kubernetes-testing-framework v0.31.1
 	github.com/lithammer/dedent v1.1.0
-	github.com/miekg/dns v1.1.54
+	github.com/miekg/dns v1.1.55
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/moul/pb v0.0.0-20220425114252-bca18df4138c
 	github.com/phayes/freeport v0.0.0-20220201140144-74d24b5ae9f5
-	github.com/prometheus/client_golang v1.15.1
+	github.com/prometheus/client_golang v1.16.0
 	github.com/prometheus/common v0.44.0
 	github.com/samber/lo v1.38.1
 	github.com/samber/mo v1.8.0
@@ -31,12 +31,12 @@ require (
 	github.com/spf13/cobra v1.7.0
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.8.4
-	google.golang.org/api v0.127.0
-	k8s.io/api v0.27.2
-	k8s.io/apiextensions-apiserver v0.27.2
-	k8s.io/apimachinery v0.27.2
-	k8s.io/client-go v0.27.2
-	k8s.io/component-base v0.27.2
+	google.golang.org/api v0.128.0
+	k8s.io/api v0.27.3
+	k8s.io/apiextensions-apiserver v0.27.3
+	k8s.io/apimachinery v0.27.3
+	k8s.io/client-go v0.27.3
+	k8s.io/component-base v0.27.3
 	knative.dev/networking v0.0.0-20230504184058-77975a12b2ee
 	knative.dev/pkg v0.0.0-20230502134655-db8a35330281
 	sigs.k8s.io/controller-runtime v0.15.0
@@ -68,7 +68,7 @@ require (
 	github.com/labstack/gommon v0.4.0 // indirect
 	github.com/leodido/go-urn v1.2.4 // indirect
 	github.com/pelletier/go-toml/v2 v2.0.8 // indirect
-	github.com/puzpuzpuz/xsync/v2 v2.4.0 // indirect
+	github.com/puzpuzpuz/xsync/v2 v2.4.1 // indirect
 	github.com/shoenig/go-m1cpu v0.1.6 // indirect
 	github.com/twitchyliquid64/golang-asm v0.15.1 // indirect
 	github.com/ugorji/go/codec v1.2.11 // indirect
@@ -163,7 +163,7 @@ require (
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/power-devops/perfstat v0.0.0-20221212215047-62379fc7944b // indirect
 	github.com/prometheus/client_model v0.4.0 // indirect
-	github.com/prometheus/procfs v0.9.0 // indirect
+	github.com/prometheus/procfs v0.10.1 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/shirou/gopsutil/v3 v3.23.5 // indirect
 	github.com/shopspring/decimal v1.2.0 // indirect
@@ -202,9 +202,9 @@ require (
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
-	k8s.io/cli-runtime v0.27.2
+	k8s.io/cli-runtime v0.27.3
 	k8s.io/kube-openapi v0.0.0-20230515203736-54b630e78af5 // indirect
-	k8s.io/kubectl v0.27.2
+	k8s.io/kubectl v0.27.3
 	k8s.io/utils v0.0.0-20230505201702-9f6742963106 // indirect
 	knative.dev/serving v0.37.2
 	sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd // indirect

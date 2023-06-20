@@ -28,9 +28,9 @@ import (
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/controllers"
 	ctrlref "github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/reference"
 	ctrlutils "github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/utils"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 )
 
@@ -53,7 +53,7 @@ type GatewayReconciler struct { //nolint:revive
 
 	Log             logr.Logger
 	Scheme          *runtime.Scheme
-	DataplaneClient *dataplane.KongClient
+	DataplaneClient controllers.DataPlane
 
 	WatchNamespaces  []string
 	CacheSyncTimeout time.Duration
@@ -159,6 +159,11 @@ func (r *GatewayReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	}
 
 	return gwcCTRL.SetupWithManager(mgr)
+}
+
+// SetLogger sets the logger.
+func (r *GatewayReconciler) SetLogger(l logr.Logger) {
+	r.Log = l
 }
 
 // -----------------------------------------------------------------------------

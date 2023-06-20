@@ -73,18 +73,29 @@ Adding a new version? You'll need three changes:
 
 - The `CombinedServices` feature gate is now enabled by default.
   [#4138](https://github.com/Kong/kubernetes-ingress-controller/pull/4138)
+- Plugin CRDs now support the `instance_name` field introduced in Kong 3.2.
+  [#4174](https://github.com/Kong/kubernetes-ingress-controller/pull/4174)
 - Gateway resources no longer use the _Ready_ condition following changes to
   the upstream Gateway API specification in version 0.7.
   [#4142](https://github.com/Kong/kubernetes-ingress-controller/pull/4142)
 - Prometheus metrics now include counts of resources that the controller cannot
   send to the proxy instances and the last successful configuration push time.
   [#4181](https://github.com/Kong/kubernetes-ingress-controller/pull/4181)
+- `--konnect-initial-license-polling-period` and `--konnect-license-polling-period`
+  CLI flags were added to allow configuring periods at which KIC polls license
+  from Konnect. The initial period will be used until a valid license is retrieved.
+  The default values are 1m and 12h respectively.
+  [#4178](https://github.com/Kong/kubernetes-ingress-controller/pull/4178)
 
 ### Changed
 
 - Log message `no active endpoints` is now logged at debug instead of
   warning level.
   [#4161](https://github.com/Kong/kubernetes-ingress-controller/pull/4161)
+- Events and logs for inconsistent multi-Service backend annotations now list
+  all involved Services, not just Services whose annotation does not match the
+  first observed value, as that value is not necessarily the desired value.
+  [#4171](https://github.com/Kong/kubernetes-ingress-controller/pull/4171)
 
 ## [2.10.0]
 

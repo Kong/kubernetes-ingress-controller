@@ -9,6 +9,7 @@ import (
 
 	"github.com/blang/semver/v4"
 	"github.com/kong/go-kong/kong"
+	"github.com/samber/mo"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
@@ -124,7 +125,8 @@ func shouldEnableParserExpressionRoutes(
 
 // LicenseGetter is an interface for getting the Kong Enterprise license.
 type LicenseGetter interface {
-	GetLicense() kong.License
+	// GetLicense returns an optional license.
+	GetLicense() mo.Option[kong.License]
 }
 
 // Parser parses Kubernetes objects and configurations into their
@@ -239,7 +241,10 @@ func (p *Parser) BuildKongConfig() KongConfigBuildingResult {
 	result.CACertificates = p.getCACerts()
 
 	if p.licenseGetter != nil {
-		result.Licenses = append(result.Licenses, p.licenseGetter.GetLicense())
+		optionalLicense := p.licenseGetter.GetLicense()
+		if l, ok := optionalLicense.Get(); ok {
+			result.Licenses = append(result.Licenses, l)
+		}
 	}
 
 	if p.featureFlags.FillIDs {

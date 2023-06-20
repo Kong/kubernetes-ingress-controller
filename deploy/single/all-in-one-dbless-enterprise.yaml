@@ -144,6 +144,11 @@ spec:
           disabled:
             description: Disabled set if the plugin is disabled or not.
             type: boolean
+          instance_name:
+            description: InstanceName is an optional custom name to identify an instance
+              of the plugin. This is useful when running the same plugin in multiple
+              contexts, for example, on multiple services.
+            type: string
           kind:
             description: 'Kind is a string value representing the REST resource this
               object represents. Servers may infer this from the endpoint the client
@@ -716,6 +721,11 @@ spec:
           disabled:
             description: Disabled set if the plugin is disabled or not.
             type: boolean
+          instance_name:
+            description: InstanceName is an optional custom name to identify an instance
+              of the plugin. This is useful when running the same plugin in multiple
+              contexts, for example, on multiple services.
+            type: string
           kind:
             description: 'Kind is a string value representing the REST resource this
               object represents. Servers may infer this from the endpoint the client

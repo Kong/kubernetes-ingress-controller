@@ -1,5 +1,4 @@
 //go:build integration_tests && knative
-// +build integration_tests,knative
 
 package integration
 

@@ -141,11 +141,12 @@ func kongPluginFromK8SClusterPlugin(
 		Name:   k8sPlugin.PluginName,
 		Config: config,
 
-		RunOn:     k8sPlugin.RunOn,
-		Ordering:  k8sPlugin.Ordering,
-		Disabled:  k8sPlugin.Disabled,
-		Protocols: protocolsToStrings(k8sPlugin.Protocols),
-		Tags:      util.GenerateTagsForObject(&k8sPlugin),
+		RunOn:        k8sPlugin.RunOn,
+		Ordering:     k8sPlugin.Ordering,
+		InstanceName: k8sPlugin.InstanceName,
+		Disabled:     k8sPlugin.Disabled,
+		Protocols:    protocolsToStrings(k8sPlugin.Protocols),
+		Tags:         util.GenerateTagsForObject(&k8sPlugin),
 	}.toKongPlugin()
 	return kongPlugin, nil
 }
@@ -194,11 +195,12 @@ func kongPluginFromK8SPlugin(
 		Name:   k8sPlugin.PluginName,
 		Config: config,
 
-		RunOn:     k8sPlugin.RunOn,
-		Ordering:  k8sPlugin.Ordering,
-		Disabled:  k8sPlugin.Disabled,
-		Protocols: protocolsToStrings(k8sPlugin.Protocols),
-		Tags:      util.GenerateTagsForObject(&k8sPlugin),
+		RunOn:        k8sPlugin.RunOn,
+		Ordering:     k8sPlugin.Ordering,
+		InstanceName: k8sPlugin.InstanceName,
+		Disabled:     k8sPlugin.Disabled,
+		Protocols:    protocolsToStrings(k8sPlugin.Protocols),
+		Tags:         util.GenerateTagsForObject(&k8sPlugin),
 	}.toKongPlugin()
 	return kongPlugin, nil
 }
@@ -282,11 +284,12 @@ type plugin struct {
 	Name   string
 	Config kong.Configuration
 
-	RunOn     string
-	Ordering  *kong.PluginOrdering
-	Disabled  bool
-	Protocols []string
-	Tags      []*string
+	RunOn        string
+	Ordering     *kong.PluginOrdering
+	InstanceName string
+	Disabled     bool
+	Protocols    []string
+	Tags         []*string
 }
 
 func (p plugin) toKongPlugin() kong.Plugin {
@@ -304,6 +307,9 @@ func (p plugin) toKongPlugin() kong.Plugin {
 	result.Ordering = p.Ordering
 	if len(p.Protocols) > 0 {
 		result.Protocols = kong.StringSlice(p.Protocols...)
+	}
+	if p.InstanceName != "" {
+		result.InstanceName = kong.String(p.InstanceName)
 	}
 	return result
 }

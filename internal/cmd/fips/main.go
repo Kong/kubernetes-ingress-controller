@@ -1,5 +1,4 @@
 //go:build fips
-// +build fips
 
 package main
 

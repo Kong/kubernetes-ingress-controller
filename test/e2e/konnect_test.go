@@ -12,6 +12,7 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/pem"
+	"errors"
 	"fmt"
 	"math/big"
 	"net/http"
@@ -21,6 +22,7 @@ import (
 	"testing"
 	"time"
 
+	retry "github.com/avast/retry-go/v4"
 	"github.com/google/uuid"
 	gokong "github.com/kong/go-kong/kong"
 	environment "github.com/kong/kubernetes-testing-framework/pkg/environments"
@@ -190,28 +192,65 @@ func createTestRuntimeGroup(ctx context.Context, t *testing.T) string {
 			req.Header.Set("Authorization", "Bearer "+konnectAccessToken)
 			return nil
 		}),
-		rg.WithHTTPClient(helpers.RetryableHTTPClient(helpers.DefaultHTTPClient())),
 	)
 	require.NoError(t, err)
 
-	createRgResp, err := rgClient.CreateRuntimeGroupWithResponse(ctx, rg.CreateRuntimeGroupRequest{
-		Description: lo.ToPtr("This is a description"),
-		Labels:      &rg.Labels{"created_in_tests": "true"},
-		Name:        uuid.NewString(),
-		ClusterType: rg.ClusterTypeKubernetesIngressController,
-	})
-	require.NoError(t, err, "failed to create runtime group")
-	require.Equalf(t, http.StatusCreated, createRgResp.StatusCode(), "failed creating RG: %s", string(createRgResp.Body))
-	require.NotNil(t, createRgResp.JSON201)
-	require.NotNil(t, createRgResp.JSON201.Id)
-	id := *createRgResp.JSON201.Id
+	rgName := uuid.NewString()
+	var rgID uuid.UUID
+
+	createRgErr := retry.Do(func() error {
+		listRgResp, err := rgClient.ListRuntimeGroupsWithResponse(ctx, &rg.ListRuntimeGroupsParams{
+			FilterNameEq: lo.ToPtr(rgName),
+		})
+		if err != nil {
+			return fmt.Errorf("failed to list runtime groups with name %s: %w", rgName, err)
+		}
+		if listRgResp.StatusCode() != http.StatusOK {
+			return fmt.Errorf("failed to list RGs: code %d, message %s", listRgResp.StatusCode(), string(listRgResp.Body))
+		}
+
+		if listRgResp.JSON200 != nil && listRgResp.JSON200.Data != nil {
+			// REVIEW: what to do if the runtime group already exists?
+			// considering we are using a random UUID as runtime group name,
+			// the probability of conflict with other existing RGs is very small,
+			// so we use the RG here.
+			for _, rg := range *listRgResp.JSON200.Data {
+				if rg.Id != nil {
+					rgID = *rg.Id
+					return nil
+				}
+			}
+		}
+
+		createRgResp, err := rgClient.CreateRuntimeGroupWithResponse(ctx, rg.CreateRuntimeGroupRequest{
+			Description: lo.ToPtr("This is a description"),
+			Labels:      &rg.Labels{"created_in_tests": "true"},
+			Name:        rgName,
+			ClusterType: rg.ClusterTypeKubernetesIngressController,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to create runtime group: %w", err)
+		}
+		if createRgResp.StatusCode() != http.StatusCreated {
+			return fmt.Errorf("failed to create RG: code %d, message %s", createRgResp.StatusCode(), string(createRgResp.Body))
+		}
+		if createRgResp.JSON201 == nil || createRgResp.JSON201.Id == nil {
+			return errors.New("No runtime group ID in response")
+		}
+
+		rgID = *createRgResp.JSON201.Id
+		return nil
+	}, retry.Attempts(5), retry.Delay(time.Second))
+
+	require.NoError(t, createRgErr)
+
 	t.Cleanup(func() {
-		_, err := rgClient.DeleteRuntimeGroupWithResponse(ctx, id)
-		assert.NoErrorf(t, err, "failed to cleanup a runtime group: %q", id)
+		_, err := rgClient.DeleteRuntimeGroupWithResponse(ctx, rgID)
+		assert.NoErrorf(t, err, "failed to cleanup a runtime group: %q", rgID)
 	})
 
-	t.Logf("created test Konnect Runtime Group: %q", id.String())
-	return id.String()
+	t.Logf("created test Konnect Runtime Group: %q", rgID.String())
+	return rgID.String()
 }
 
 // createClientCertificate creates a TLS client certificate and POSTs it to Konnect Runtime Group configuration API

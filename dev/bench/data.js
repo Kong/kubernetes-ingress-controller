@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1687267574226,
+  "lastUpdate": 1687353925981,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -239,6 +239,36 @@ window.BENCHMARK_DATA = {
             "name": "BenchmarkDeckgenGenerateSHA",
             "value": 122039,
             "unit": "ns/op\t   11117 B/op\t      12 allocs/op",
+            "extra": "10000 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "patryk.malek@konghq.com",
+            "name": "Patryk Małek",
+            "username": "pmalek"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "31b1ba2fe4cb5f37119e0ab299743b07e04e1098",
+          "message": "feat(ci): add benchmarking code (#4182)",
+          "timestamp": "2023-06-21T15:21:44+02:00",
+          "tree_id": "4a6568724ae0e639ffbc54310025eb5a1bd81816",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/31b1ba2fe4cb5f37119e0ab299743b07e04e1098"
+        },
+        "date": 1687353920343,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA",
+            "value": 113692,
+            "unit": "ns/op\t   11112 B/op\t      12 allocs/op",
             "extra": "10000 times\n2 procs"
           }
         ]

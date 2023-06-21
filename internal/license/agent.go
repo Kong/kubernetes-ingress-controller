@@ -78,7 +78,7 @@ func NewAgent(
 		konnectLicenseClient: konnectLicenseClient,
 		initialPollingPeriod: DefaultInitialPollingPeriod,
 		regularPollingPeriod: DefaultPollingPeriod,
-		// Note: the ticker defined the implementation of ticking, not the period.
+		// Note: the ticker defines the implementation of ticking, not the period.
 		ticker:    clock.NewTicker(),
 		startedCh: make(chan struct{}),
 	}

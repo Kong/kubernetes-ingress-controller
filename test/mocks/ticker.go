@@ -49,8 +49,8 @@ func (t *Ticker) Channel() <-chan time.Time {
 }
 
 func (t *Ticker) Now() time.Time {
-	t.lock.Lock()
-	defer t.lock.Unlock()
+	t.lock.RLock()
+	defer t.lock.RUnlock()
 	return t.time
 }
 

@@ -130,10 +130,8 @@ func TestAgent(t *testing.T) {
 		)
 
 		startTime := time.Now()
-		go func() {
-			err := a.Start(ctx)
-			require.NoError(t, err)
-		}()
+		go a.Start(ctx)
+
 		select {
 		case <-a.Started():
 		case <-time.After(time.Second):

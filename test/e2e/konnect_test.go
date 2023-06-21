@@ -194,37 +194,20 @@ func createTestRuntimeGroup(ctx context.Context, t *testing.T) string {
 		}),
 	)
 	require.NoError(t, err)
+	createTimeStampStr := fmt.Sprintf("%d", time.Now().Unix())
+	createTestUUID := uuid.NewString()
 
-	rgName := uuid.NewString()
 	var rgID uuid.UUID
 
 	createRgErr := retry.Do(func() error {
-		listRgResp, err := rgClient.ListRuntimeGroupsWithResponse(ctx, &rg.ListRuntimeGroupsParams{
-			FilterNameEq: lo.ToPtr(rgName),
-		})
-		if err != nil {
-			return fmt.Errorf("failed to list runtime groups with name %s: %w", rgName, err)
-		}
-		if listRgResp.StatusCode() != http.StatusOK {
-			return fmt.Errorf("failed to list RGs: code %d, message %s", listRgResp.StatusCode(), string(listRgResp.Body))
-		}
-
-		if listRgResp.JSON200 != nil && listRgResp.JSON200.Data != nil {
-			// REVIEW: what to do if the runtime group already exists?
-			// considering we are using a random UUID as runtime group name,
-			// the probability of conflict with other existing RGs is very small,
-			// so we use the RG here.
-			for _, rg := range *listRgResp.JSON200.Data {
-				if rg.Id != nil {
-					rgID = *rg.Id
-					return nil
-				}
-			}
-		}
-
+		rgName := uuid.NewString()
 		createRgResp, err := rgClient.CreateRuntimeGroupWithResponse(ctx, rg.CreateRuntimeGroupRequest{
 			Description: lo.ToPtr("This is a description"),
-			Labels:      &rg.Labels{"created_in_tests": "true"},
+			Labels: &rg.Labels{
+				"created_in_tests":      "true",
+				"create_test_timestamp": createTimeStampStr,
+				"create_test_uuid":      createTestUUID,
+			},
 			Name:        rgName,
 			ClusterType: rg.ClusterTypeKubernetesIngressController,
 		})
@@ -247,6 +230,37 @@ func createTestRuntimeGroup(ctx context.Context, t *testing.T) string {
 	t.Cleanup(func() {
 		_, err := rgClient.DeleteRuntimeGroupWithResponse(ctx, rgID)
 		assert.NoErrorf(t, err, "failed to cleanup a runtime group: %q", rgID)
+
+		// list other RGs also created in the previous code for situations
+		// that RG created, but we timed out on getting the response.
+		// This prevents RG leaks.
+		listRgResp, err := rgClient.ListRuntimeGroupsWithResponse(ctx, nil)
+		assert.NoError(t, err, "failed to list runtime groups")
+		assert.Equalf(t, http.StatusOK, listRgResp.StatusCode(), "failed to list runtime groups: code %d, body %s",
+			listRgResp.StatusCode(), string(listRgResp.Body))
+		assert.NotNil(t, listRgResp.JSON200, "no body in list RG response")
+		if listRgResp.JSON200.Data == nil {
+			return
+		}
+		rgs := *listRgResp.JSON200.Data
+
+		for _, rg := range rgs {
+			if rg.Labels == nil || *rg.Labels == nil {
+				continue
+			}
+			labels := *rg.Labels
+			// find the RGs created in the test.
+			if labels["created_in_tests"] == "true" &&
+				labels["create_test_timestamp"] == createTimeStampStr &&
+				labels["create_test_uuid"] == createTestUUID &&
+				rg.Id != nil {
+				deleteRgID := *rg.Id
+
+				t.Logf("deleting runtime group %s created in test %s", deleteRgID, t.Name())
+				_, err := rgClient.DeleteRuntimeGroupWithResponse(ctx, deleteRgID)
+				assert.NoErrorf(t, err, "failed to cleanup a runtime group: %q", deleteRgID)
+			}
+		}
 	})
 
 	t.Logf("created test Konnect Runtime Group: %q", rgID.String())

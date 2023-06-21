@@ -51,8 +51,11 @@ func TestMetricsAreServed(t *testing.T) {
 
 	wantMetrics := []string{
 		metrics.MetricNameConfigPushCount,
+		metrics.MetricNameConfigPushBrokenResources,
 		metrics.MetricNameTranslationCount,
+		metrics.MetricNameTranslationBrokenResources,
 		metrics.MetricNameConfigPushDuration,
+		metrics.MetricNameConfigPushSuccessTime,
 	}
 
 	metricsURL := fmt.Sprintf("http://%s/metrics", cfg.MetricsAddr)

@@ -78,6 +78,9 @@ Adding a new version? You'll need three changes:
 - Gateway resources no longer use the _Ready_ condition following changes to
   the upstream Gateway API specification in version 0.7.
   [#4142](https://github.com/Kong/kubernetes-ingress-controller/pull/4142)
+- Prometheus metrics now include counts of resources that the controller cannot
+  send to the proxy instances and the last successful configuration push time.
+  [#4181](https://github.com/Kong/kubernetes-ingress-controller/pull/4181)
 - `--konnect-initial-license-polling-period` and `--konnect-license-polling-period`
   CLI flags were added to allow configuring periods at which KIC polls license
   from Konnect. The initial period will be used until a valid license is retrieved.

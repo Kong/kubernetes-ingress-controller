@@ -364,10 +364,12 @@ func (c *KongClient) Update(ctx context.Context) error {
 	parsingResult := c.kongConfigBuilder.BuildKongConfig()
 	if failuresCount := len(parsingResult.TranslationFailures); failuresCount > 0 {
 		c.prometheusMetrics.RecordTranslationFailure()
+		c.prometheusMetrics.RecordTranslationBrokenResources(failuresCount)
 		c.recordResourceFailureEvents(parsingResult.TranslationFailures, KongConfigurationTranslationFailedEventReason)
 		c.logger.Debugf("%d translation failures have occurred when building data-plane configuration", failuresCount)
 	} else {
 		c.prometheusMetrics.RecordTranslationSuccess()
+		c.prometheusMetrics.RecordTranslationBrokenResources(0)
 		c.logger.Debug("successfully built data-plane configuration")
 	}
 

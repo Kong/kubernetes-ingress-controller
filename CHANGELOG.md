@@ -82,6 +82,17 @@ Adding a new version? You'll need three changes:
 - Prometheus metrics now include counts of resources that the controller cannot
   send to the proxy instances and the last successful configuration push time.
   [#4181](https://github.com/Kong/kubernetes-ingress-controller/pull/4181)
+- `--konnect-initial-license-polling-period` and `--konnect-license-polling-period`
+  CLI flags were added to allow configuring periods at which KIC polls license
+  from Konnect. The initial period will be used until a valid license is retrieved.
+  The default values are 1m and 12h respectively.
+  [#4178](https://github.com/Kong/kubernetes-ingress-controller/pull/4178)
+- Store the last known good configuration. If Kong rejects the latest
+  configuration, send the last good configuration to Kong instances with no
+  configuration. This allows newly-started Kong instances to serve traffic even
+  if a configuration error prevents the controller from sending the latest
+  configuration.
+  [#4205](https://github.com/Kong/kubernetes-ingress-controller/pull/4205)
 
 ### Changed
 

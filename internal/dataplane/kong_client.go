@@ -117,6 +117,11 @@ type KongClient struct {
 	// SHAs is a slice is configuration hashes send in last batch send.
 	SHAs []string
 
+	// lastValidKongState contains the last valid configuration pushed
+	// to the gateways. It is used as a fallback in case a newer config version is
+	// somehow broken.
+	lastValidKongState *kongstate.KongState
+
 	// clientsProvider allows retrieving the most recent set of clients.
 	clientsProvider clients.AdminAPIClientsProvider
 
@@ -388,6 +393,13 @@ func (c *KongClient) Update(ctx context.Context) error {
 
 	// In case of a failure in syncing configuration with Gateways, propagate the error.
 	if gatewaysSyncErr != nil {
+		if c.lastValidKongState != nil {
+			_, fallbackSyncErr := c.sendOutToGatewayClients(ctx, c.lastValidKongState, c.kongConfig)
+			if fallbackSyncErr != nil {
+				return errors.Join(gatewaysSyncErr, fallbackSyncErr)
+			}
+			c.logger.Debug("due to errors in the current config, the last valid config has been pushed to Gateways")
+		}
 		return gatewaysSyncErr
 	}
 
@@ -422,6 +434,8 @@ func (c *KongClient) sendOutToGatewayClients(
 
 	sort.Strings(shas)
 	c.SHAs = shas
+
+	c.lastValidKongState = s
 
 	return previousSHAs, nil
 }

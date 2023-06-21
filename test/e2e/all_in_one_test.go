@@ -19,6 +19,7 @@ import (
 	"github.com/stretchr/testify/require"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
+	netv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 
@@ -305,7 +306,7 @@ func TestDeployAllInOneDBLESS(t *testing.T) {
 	deployments := getManifestDeployments(manifestFilePath)
 
 	t.Log("running ingress tests to verify all-in-one deployed ingress controller and proxy are functional")
-	deployIngressWithEchoBackends(ctx, t, env, numberOfEchoBackends)
+	ingress := deployIngressWithEchoBackends(ctx, t, env, numberOfEchoBackends)
 	verifyIngressWithEchoBackends(ctx, t, env, numberOfEchoBackends)
 	ensureAllProxyReplicasAreConfigured(ctx, t, env, deployments.ProxyNN)
 
@@ -324,6 +325,19 @@ func TestDeployAllInOneDBLESS(t *testing.T) {
 
 	t.Log("scale proxy to 3 replicas and wait for all instances to be ready")
 	scaleDeployment(ctx, t, env, deployments.ProxyNN, 3)
+	ensureAllProxyReplicasAreConfigured(ctx, t, env, deployments.ProxyNN)
+
+	t.Log("scale proxy to 1 replica")
+	scaleDeployment(ctx, t, env, deployments.ProxyNN, 1)
+
+	t.Log("misconfigure the ingress")
+	reconfigureExistingIngress(ctx, t, env, ingress, func(i *netv1.Ingress) {
+		ingress.Spec.Rules[0].HTTP.Paths[0].Path = badEchoPath
+	})
+
+	t.Log("scale proxy to 3 replicas and verify that the new replicas get the old good configuration")
+	scaleDeployment(ctx, t, env, deployments.ProxyNN, 3)
+	// verify all the proxy replicas have the last good configuration
 	ensureAllProxyReplicasAreConfigured(ctx, t, env, deployments.ProxyNN)
 }
 

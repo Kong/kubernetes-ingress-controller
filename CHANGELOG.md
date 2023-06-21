@@ -111,6 +111,10 @@ Adding a new version? You'll need three changes:
   Gateways using `/status/ready` as their health check ready after receiving the
   initial configuration (even if it's empty).
   [#4316](https://github.com/Kong/kubernetes-ingress-controller/pull/4316)
+- Fetch the last known good configuration from existing proxy instances. If
+  KIC restarts, it is now able to fetch the last good configuration from a running
+  proxy instance and store it in its internal cache.
+  [#4265](https://github.com/Kong/kubernetes-ingress-controller/pull/4265)
 
 ### Changed
 

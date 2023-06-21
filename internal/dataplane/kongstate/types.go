@@ -43,10 +43,10 @@ func (p *PortDef) CanonicalString() string {
 }
 
 type ServiceBackend struct {
-	Name      string
-	Namespace string
-	PortDef   PortDef
-	Weight    *int32
+	Name      string  `json:"name"`
+	Namespace string  `json:"namespace"`
+	PortDef   PortDef `json:"port_def"`
+	Weight    *int32  `json:"weight"`
 }
 
 type ServiceBackends []ServiceBackend
@@ -75,7 +75,7 @@ func (c *Certificate) SanitizedCopy() *Certificate {
 	}
 }
 
-// Plugin represetns a plugin Object in Kong.
+// Plugin represents a plugin Object in Kong.
 type Plugin struct {
 	kong.Plugin
 }

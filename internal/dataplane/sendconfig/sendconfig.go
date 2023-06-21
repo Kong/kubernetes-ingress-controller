@@ -46,7 +46,7 @@ func PerformUpdate(
 	targetContent *file.Content,
 	promMetrics *metrics.CtrlFuncMetrics,
 	updateStrategyResolver UpdateStrategyResolver,
-	configChangeDetector ConfigurationChangeDetector,
+	configChangeDetector ConfigurationGetter,
 ) ([]byte, []failures.ResourceFailure, error) {
 	oldSHA := client.LastConfigSHA()
 	newSHA, err := deckgen.GenerateSHA(targetContent)

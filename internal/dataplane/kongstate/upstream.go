@@ -13,7 +13,7 @@ import (
 type Upstream struct {
 	kong.Upstream
 	Targets []Target
-	// Service this upstream is asosciated with.
+	// Service this upstream is associated with.
 	Service Service
 }
 

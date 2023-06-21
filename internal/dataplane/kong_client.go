@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/kong/deck/dump"
 	"github.com/kong/deck/file"
 	"github.com/kong/go-kong/kong"
 	"github.com/samber/lo"
@@ -133,8 +134,8 @@ type KongClient struct {
 	// updateStrategyResolver resolves the update strategy for a given Kong Gateway.
 	updateStrategyResolver sendconfig.UpdateStrategyResolver
 
-	// configChangeDetector detects changes in the configuration.
-	configChangeDetector sendconfig.ConfigurationChangeDetector
+	// configGetter gets configuration info.
+	configGetter sendconfig.ConfigurationGetter
 
 	// kongConfigBuilder is used to translate Kubernetes objects into Kong configuration.
 	kongConfigBuilder KongConfigBuilder
@@ -159,10 +160,9 @@ func NewKongClient(
 	dbMode string,
 	clientsProvider clients.AdminAPIClientsProvider,
 	updateStrategyResolver sendconfig.UpdateStrategyResolver,
-	configChangeDetector sendconfig.ConfigurationChangeDetector,
+	configChangeDetector sendconfig.ConfigurationGetter,
 	parser KongConfigBuilder,
 	cacheStores store.CacheStores,
-	lastValidKongState *kongstate.KongState,
 ) (*KongClient, error) {
 	c := &KongClient{
 		logger:                 logger,
@@ -177,9 +177,8 @@ func NewKongClient(
 		clientsProvider:        clientsProvider,
 		configStatusNotifier:   clients.NoOpConfigStatusNotifier{},
 		updateStrategyResolver: updateStrategyResolver,
-		configChangeDetector:   configChangeDetector,
+		configGetter:           configChangeDetector,
 		kongConfigBuilder:      parser,
-		lastValidKongState:     lastValidKongState,
 	}
 	c.initializeControllerPodReference()
 
@@ -387,6 +386,20 @@ func (c *KongClient) Update(ctx context.Context) error {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
+	// if Kong is running in dbless mode, we can fetch and store the last good configuration.
+	if c.dbmode == "" || c.dbmode == "off" {
+		// fetch the last valid configuration from the proxy only in case there is no valid
+		// configuration already stored in memory. This can happen when KIC restarts and there
+		// already is a Kong Proxy with a valid configuration loaded.
+		if c.lastValidKongState == nil {
+			if err := c.FetchLastGoodConfiguration(ctx); err != nil {
+				// if the client fails to fetch the last good configuration, we log it
+				// and carry on, as this is a condition that can be recovered with the following steps.
+				c.logger.Error(err)
+			}
+		}
+	}
+
 	c.logger.Debug("parsing kubernetes objects into data-plane configuration")
 	parsingResult := c.kongConfigBuilder.BuildKongConfig()
 	if failuresCount := len(parsingResult.TranslationFailures); failuresCount > 0 {
@@ -434,6 +447,50 @@ func (c *KongClient) Update(ctx context.Context) error {
 			c.triggerKubernetesObjectReport(parsingResult.ConfiguredKubernetesObjects, parsingResult.TranslationFailures)
 		} else {
 			c.logger.Debug("no configuration change; resource status update not necessary, skipping")
+		}
+	}
+	return nil
+}
+
+func (c *KongClient) FetchLastGoodConfiguration(ctx context.Context) error {
+	if c.lastValidKongState == nil {
+		gatewayClients := c.clientsProvider.GatewayClients()
+		c.logger.Debugf("sending configuration to %d gateway clients", len(gatewayClients))
+
+		type kongStateWithHash struct {
+			kongState *kongstate.KongState
+			hash      string
+		}
+
+		var goodKongState *kongStateWithHash
+		_, err := iter.MapErr(gatewayClients, func(client **adminapi.Client) (*kongStateWithHash, error) {
+			rs, err := dump.Get(ctx, (*client).AdminAPIClient(), dump.Config{})
+			if err != nil {
+				return nil, err
+			}
+			ks := kongstate.KongRawStateToKongState(rs)
+			status, err := c.configGetter.GetCurrentStatus(ctx, (*client).AdminAPIClient())
+			if err != nil {
+				return nil, err
+			}
+			(*client).SetLastConfigSHA([]byte(status.ConfigurationHash))
+			kongStateWithHash := &kongStateWithHash{
+				kongState: ks,
+				hash:      status.ConfigurationHash,
+			}
+			if status.ConfigurationHash != sendconfig.WellKnownInitialHash {
+				// get the first good one as the one to be used
+				goodKongState = kongStateWithHash
+			}
+
+			return kongStateWithHash, nil
+		})
+		if err != nil {
+			return err
+		}
+
+		if goodKongState != nil {
+			c.lastValidKongState = goodKongState.kongState
 		}
 	}
 	return nil
@@ -515,7 +572,7 @@ func (c *KongClient) sendToClient(
 		targetContent,
 		c.prometheusMetrics,
 		c.updateStrategyResolver,
-		c.configChangeDetector,
+		c.configGetter,
 	)
 
 	c.recordResourceFailureEvents(entityErrors, KongConfigurationApplyFailedEventReason)

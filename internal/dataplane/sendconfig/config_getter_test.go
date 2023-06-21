@@ -131,7 +131,7 @@ func TestDefaultConfigurationChangeDetector_HasConfigurationChanged(t *testing.T
 				},
 				expectedError: tc.statusError,
 			}
-			detector := sendconfig.NewDefaultClientConfigurationChangeDetector(logrus.New())
+			detector := sendconfig.NewDefaultClientConfigurationGetter(logrus.New())
 
 			result, err := detector.HasConfigurationChanged(ctx, tc.oldSHA, tc.newSHA, tc.targetConfig, konnectAwareClient, statusClient)
 			if tc.expectError {

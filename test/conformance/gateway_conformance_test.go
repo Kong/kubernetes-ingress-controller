@@ -81,10 +81,6 @@ func TestGatewayConformance(t *testing.T) {
 		ExemptFeatures:             exemptFeatures,
 		BaseManifests:              conformanceTestsBaseManifests,
 		SkipTests: []string{
-			// this test is currently fixed but cannot be re-enabled yet due to an upstream issue
-			// https://github.com/kubernetes-sigs/gateway-api/pull/1745
-			tests.GatewaySecretReferenceGrantSpecific.ShortName,
-
 			// standard conformance
 			tests.HTTPRouteHeaderMatching.ShortName,
 

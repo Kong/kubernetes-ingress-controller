@@ -234,7 +234,7 @@ func createTestRuntimeGroup(ctx context.Context, t *testing.T) string {
 		// list other RGs also created in the previous code for situations
 		// that RG created, but we timed out on getting the response.
 		// This prevents RG leaks.
-		listRgResp, err := rgClient.ListRuntimeGroupsWithResponse(ctx, nil)
+		listRgResp, err := rgClient.ListRuntimeGroupsWithResponse(ctx, &rg.ListRuntimeGroupsParams{})
 		assert.NoError(t, err, "failed to list runtime groups")
 		assert.Equalf(t, http.StatusOK, listRgResp.StatusCode(), "failed to list runtime groups: code %d, body %s",
 			listRgResp.StatusCode(), string(listRgResp.Body))

@@ -5,15 +5,21 @@ import (
 	"time"
 )
 
+const (
+	// This is irrelevant for the ticker, but we need to pass something to NewTicker.
+	// The reason for this is that the ticker is used in the license agent, which
+	// uses a non trivial logic to determine the polling period based on the state
+	// of license retrieval.
+	// This might be changed in the future if it doesn't fit the future needs.
+	initialTickerDuration = 1000 * time.Hour
+)
+
 func NewTicker() *Ticker {
 	now := time.Now()
 
 	ticker := &Ticker{
-		sigTime:  make(chan time.Time),
-		sigClose: make(chan struct{}, 1),
-		sigAdd:   make(chan time.Duration),
-		sigReset: make(chan time.Duration),
-		d:        1000 * time.Hour,
+		sigClose: make(chan struct{}),
+		d:        initialTickerDuration,
 		ch:       make(chan time.Time, 1),
 		time:     now,
 		lastTick: now,
@@ -24,10 +30,7 @@ func NewTicker() *Ticker {
 
 type Ticker struct {
 	lock     sync.RWMutex
-	sigTime  chan time.Time
 	sigClose chan struct{}
-	sigReset chan time.Duration
-	sigAdd   chan time.Duration
 	d        time.Duration
 	ch       chan time.Time
 	time     time.Time
@@ -35,12 +38,6 @@ type Ticker struct {
 }
 
 func (t *Ticker) Stop() {
-	t.lock.Lock()
-	defer t.lock.Unlock()
-
-	close(t.sigTime)
-	close(t.sigAdd)
-	close(t.sigReset)
 	close(t.sigClose)
 }
 
@@ -55,6 +52,12 @@ func (t *Ticker) Now() time.Time {
 }
 
 func (t *Ticker) Reset(d time.Duration) {
+	select {
+	case <-t.sigClose:
+		return
+	default:
+	}
+
 	now := time.Now()
 
 	t.lock.Lock()
@@ -66,13 +69,22 @@ func (t *Ticker) Reset(d time.Duration) {
 }
 
 func (t *Ticker) Add(d time.Duration) {
+	select {
+	case <-t.sigClose:
+		return
+	default:
+	}
+
 	t.lock.Lock()
 	defer t.lock.Unlock()
 
 	t.time = t.time.Add(d)
 
 	if t.time.Compare(t.lastTick.Add(t.d)) >= 0 {
-		t.ch <- t.time
+		select {
+		case <-t.sigClose:
+		case t.ch <- t.time:
+		}
 		t.lastTick = t.time
 	}
 }

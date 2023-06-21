@@ -2,9 +2,18 @@ package clock
 
 import "time"
 
+const (
+	// This is irrelevant for the ticker, but we need to pass something to NewTicker.
+	// The reason for this is that the ticker is used in the license agent, which
+	// uses a non trivial logic to determine the polling period based on the state
+	// of license retrieval.
+	// This might be changed in the future if it doesn't fit the future needs.
+	initialTickerDuration = 1000 * time.Hour
+)
+
 func NewTicker() *TimeTicker {
 	return &TimeTicker{
-		ticker: time.NewTicker(1000 * time.Hour),
+		ticker: time.NewTicker(initialTickerDuration),
 	}
 }
 

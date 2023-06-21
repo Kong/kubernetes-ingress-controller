@@ -116,7 +116,6 @@ func TestAgent(t *testing.T) {
 		upstreamClient.ReturnError(errors.New("something went wrong on a backend"))
 
 		const (
-			// Set the initial polling period to a very short duration to ensure that the agent retries quickly.
 			initialPollingPeriod = time.Minute * 3
 			regularPollingPeriod = time.Minute * 20
 			allowedDelta         = time.Second

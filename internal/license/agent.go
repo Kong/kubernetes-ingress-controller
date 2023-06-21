@@ -11,6 +11,7 @@ import (
 	"github.com/samber/mo"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/util/clock"
 )
 
 const (
@@ -52,6 +53,20 @@ func WithPollingPeriod(regularPollingPeriod time.Duration) AgentOpt {
 	}
 }
 
+type Ticker interface {
+	Stop()
+	Channel() <-chan time.Time
+	Reset(d time.Duration)
+}
+
+// WithTicker sets the ticker in Agent. This is useful for testing.
+// Ticker doesn't define the period, it defines the implementation of ticking.
+func WithTicker(t Ticker) AgentOpt {
+	return func(a *Agent) {
+		a.ticker = t
+	}
+}
+
 // NewAgent creates a new license agent that retrieves a license from the given url once every given period.
 func NewAgent(
 	konnectLicenseClient KonnectLicenseClient,
@@ -63,6 +78,9 @@ func NewAgent(
 		konnectLicenseClient: konnectLicenseClient,
 		initialPollingPeriod: DefaultInitialPollingPeriod,
 		regularPollingPeriod: DefaultPollingPeriod,
+		// Note: the ticker defines the implementation of ticking, not the period.
+		ticker:    clock.NewTicker(),
+		startedCh: make(chan struct{}),
 	}
 
 	for _, opt := range opts {
@@ -78,6 +96,8 @@ type Agent struct {
 	konnectLicenseClient KonnectLicenseClient
 	initialPollingPeriod time.Duration
 	regularPollingPeriod time.Duration
+	ticker               Ticker
+	startedCh            chan struct{}
 
 	// cachedLicense is the current license retrieved from upstream. It's optional because we may not have retrieved a
 	// license yet.
@@ -122,21 +142,28 @@ func (a *Agent) GetLicense() mo.Option[kong.License] {
 	return mo.None[kong.License]()
 }
 
+// Started returns a channel which will be closed when the Agent has started.
+func (a *Agent) Started() <-chan struct{} {
+	return a.startedCh
+}
+
 // runPollingLoop updates the license on a regular period until the context is cancelled.
 // It will run at a faster period initially, and then switch to the regular period once a license is retrieved.
 func (a *Agent) runPollingLoop(ctx context.Context) error {
-	ticker := time.NewTicker(a.resolvePollingPeriod())
-	defer ticker.Stop()
+	a.ticker.Reset(a.initialPollingPeriod)
+	defer a.ticker.Stop()
 
+	ch := a.ticker.Channel()
+	close(a.startedCh)
 	for {
 		select {
-		case <-ticker.C:
+		case <-ch:
 			a.logger.V(util.DebugLevel).Info("retrieving license from external service")
 			if err := a.reconcileLicenseWithKonnect(ctx); err != nil {
 				a.logger.Error(err, "could not reconcile license with Konnect")
 			}
 			// Reset the ticker to run with the expected period which may change after we receive the license.
-			ticker.Reset(a.resolvePollingPeriod())
+			a.ticker.Reset(a.resolvePollingPeriod())
 		case <-ctx.Done():
 			a.logger.Info("context done, shutting down license agent")
 			return ctx.Err()

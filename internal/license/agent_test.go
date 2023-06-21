@@ -100,10 +100,7 @@ func TestAgent(t *testing.T) {
 	t.Run("initial license is retrieved", func(t *testing.T) {
 		upstreamClient := newMockKonnectLicenseClient(mo.Some(expectedLicense), clock.System{})
 		a := license.NewAgent(upstreamClient, logr.Discard())
-		go func() {
-			err := a.Start(ctx)
-			require.NoError(t, err)
-		}()
+		go a.Start(ctx) //nolint:errcheck
 		expectLicenseToMatchEventually(t, a, expectedLicense.Payload)
 	})
 
@@ -130,7 +127,7 @@ func TestAgent(t *testing.T) {
 		)
 
 		startTime := time.Now()
-		go a.Start(ctx)
+		go a.Start(ctx) //nolint:errcheck
 
 		select {
 		case <-a.Started():

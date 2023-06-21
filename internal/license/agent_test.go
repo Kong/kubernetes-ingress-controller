@@ -12,6 +12,8 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/license"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/util/clock"
+	"github.com/kong/kubernetes-ingress-controller/v2/test/mocks"
 )
 
 type mockKonnectClientClient struct {
@@ -19,17 +21,25 @@ type mockKonnectClientClient struct {
 	err            error
 	getCalls       []time.Time
 	lock           sync.RWMutex
+	clock          Clock
 }
 
-func newMockKonnectLicenseClient(license mo.Option[license.KonnectLicense]) *mockKonnectClientClient {
-	return &mockKonnectClientClient{konnectLicense: license}
+type Clock interface {
+	Now() time.Time
+}
+
+func newMockKonnectLicenseClient(license mo.Option[license.KonnectLicense], clock Clock) *mockKonnectClientClient {
+	return &mockKonnectClientClient{
+		konnectLicense: license,
+		clock:          clock,
+	}
 }
 
 func (m *mockKonnectClientClient) Get(context.Context) (mo.Option[license.KonnectLicense], error) {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 
-	m.getCalls = append(m.getCalls, time.Now())
+	m.getCalls = append(m.getCalls, m.clock.Now())
 
 	if m.err != nil {
 		return mo.None[license.KonnectLicense](), m.err
@@ -83,12 +93,12 @@ func TestAgent(t *testing.T) {
 			}
 			matchTime = time.Now()
 			return true
-		}, time.Second, time.Nanosecond)
+		}, time.Second, time.Millisecond)
 		return matchTime
 	}
 
 	t.Run("initial license is retrieved", func(t *testing.T) {
-		upstreamClient := newMockKonnectLicenseClient(mo.Some(expectedLicense))
+		upstreamClient := newMockKonnectLicenseClient(mo.Some(expectedLicense), clock.System{})
 		a := license.NewAgent(upstreamClient, logr.Discard())
 		go func() {
 			err := a.Start(ctx)
@@ -98,22 +108,26 @@ func TestAgent(t *testing.T) {
 	})
 
 	t.Run("initial license retrieval fails and recovers", func(t *testing.T) {
-		upstreamClient := newMockKonnectLicenseClient(mo.None[license.KonnectLicense]())
+		ticker := mocks.NewTicker()
+
+		upstreamClient := newMockKonnectLicenseClient(mo.None[license.KonnectLicense](), ticker)
 
 		// Return an error on the first call to List() to verify that the agent handles this correctly.
 		upstreamClient.ReturnError(errors.New("something went wrong on a backend"))
 
 		const (
 			// Set the initial polling period to a very short duration to ensure that the agent retries quickly.
-			initialPollingPeriod = time.Millisecond
-			regularPollingPeriod = time.Millisecond * 5
-			allowedDelta         = time.Millisecond
+			initialPollingPeriod = time.Minute * 3
+			regularPollingPeriod = time.Minute * 20
+			allowedDelta         = time.Second
 		)
+
 		a := license.NewAgent(
 			upstreamClient,
 			logr.Discard(),
 			license.WithInitialPollingPeriod(initialPollingPeriod),
 			license.WithPollingPeriod(regularPollingPeriod),
+			license.WithTicker(ticker),
 		)
 
 		startTime := time.Now()
@@ -121,6 +135,11 @@ func TestAgent(t *testing.T) {
 			err := a.Start(ctx)
 			require.NoError(t, err)
 		}()
+		select {
+		case <-a.Started():
+		case <-time.After(time.Second):
+			require.FailNow(t, "timed out waiting for agent to start")
+		}
 
 		t.Run("initial polling period is used when no license is retrieved", func(t *testing.T) {
 			require.Eventually(t, func() bool {
@@ -128,8 +147,12 @@ func TestAgent(t *testing.T) {
 			}, time.Second, time.Nanosecond, "expected upstream client to be called at least once")
 
 			firstListCallTime := upstreamClient.GetCalls()[0]
-			require.WithinDuration(t, startTime.Add(initialPollingPeriod), firstListCallTime, allowedDelta,
-				"expected first call to List() to happen after the initial polling period")
+
+			require.WithinDuration(t, startTime, firstListCallTime, allowedDelta,
+				"expected first call to List() to happen immediately after starting the agent")
+
+			// Initial polling period has passed...
+			ticker.Add(initialPollingPeriod)
 
 			require.Eventually(t, func() bool {
 				return len(upstreamClient.GetCalls()) >= 2
@@ -145,17 +168,27 @@ func TestAgent(t *testing.T) {
 		t.Run("regular polling period is used after the initial license is retrieved", func(t *testing.T) {
 			// Now return a valid response to ensure that the agent recovers.
 			upstreamClient.ReturnSuccess(mo.Some(expectedLicense))
+
+			// Regular polling period has passed...
+			ticker.Add(regularPollingPeriod)
+
 			expectLicenseToMatchEventually(t, a, expectedLicense.Payload)
 
 			listCallsAfterMatchCount := len(upstreamClient.GetCalls())
+
+			// Regular polling period has passed...
+			ticker.Add(regularPollingPeriod)
+
 			require.Eventually(t, func() bool {
 				return len(upstreamClient.GetCalls()) > listCallsAfterMatchCount
-			}, time.Second, time.Nanosecond, "expected upstream client to be called at least once after the license is retrieved")
+			}, time.Second, time.Millisecond, "expected upstream client to be called at least once after the license is retrieved")
 
-			listCalls := upstreamClient.GetCalls()
-			lastListCall := listCalls[len(listCalls)-1]
-			lastButOneCall := listCalls[len(listCalls)-2]
-			require.WithinDuration(t, lastButOneCall.Add(regularPollingPeriod), lastListCall, allowedDelta)
+			require.Eventually(t, func() bool {
+				listCalls := upstreamClient.GetCalls()
+				lastListCall := listCalls[len(listCalls)-1]
+				lastButOneCall := listCalls[len(listCalls)-2]
+				return lastListCall.Sub(lastButOneCall).Abs() <= allowedDelta
+			}, time.Second, time.Millisecond)
 		})
 
 		t.Run("after the license is retrieved, errors returned from upstream do not override the license", func(t *testing.T) {
@@ -163,6 +196,10 @@ func TestAgent(t *testing.T) {
 
 			// Wait for the call to happen.
 			initialListCalls := len(upstreamClient.GetCalls())
+
+			// Regular polling period has passed...
+			ticker.Add(regularPollingPeriod)
+
 			require.Eventually(t, func() bool {
 				return len(upstreamClient.GetCalls()) > initialListCalls
 			}, time.Second, time.Nanosecond)
@@ -179,6 +216,9 @@ func TestAgent(t *testing.T) {
 
 			// Wait for the call to happen.
 			initialListCalls := len(upstreamClient.GetCalls())
+			// Regular polling period has passed...
+			ticker.Add(regularPollingPeriod)
+
 			require.Eventually(t, func() bool {
 				return len(upstreamClient.GetCalls()) > initialListCalls
 			}, time.Second, time.Nanosecond)
@@ -192,6 +232,10 @@ func TestAgent(t *testing.T) {
 				Payload:   "new-license",
 				UpdatedAt: expectedLicense.UpdatedAt.Add(time.Second),
 			}))
+
+			// Regular polling period has passed...
+			ticker.Add(regularPollingPeriod)
+
 			expectLicenseToMatchEventually(t, a, "new-license")
 		})
 	})

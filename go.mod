@@ -16,7 +16,7 @@ require (
 	github.com/jpillora/backoff v1.0.0
 	github.com/kong/deck v1.22.1
 	github.com/kong/go-kong v0.44.0
-	github.com/kong/kubernetes-telemetry v0.0.6
+	github.com/kong/kubernetes-telemetry v0.1.0
 	github.com/kong/kubernetes-testing-framework v0.31.1
 	github.com/lithammer/dedent v1.1.0
 	github.com/miekg/dns v1.1.55

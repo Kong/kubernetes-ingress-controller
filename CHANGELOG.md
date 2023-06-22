@@ -88,6 +88,8 @@ Adding a new version? You'll need three changes:
   if a configuration error prevents the controller from sending the latest
   configuration.
   [#4205](https://github.com/Kong/kubernetes-ingress-controller/pull/4205)
+- Telemetry reports now include the OpenShift version, if any.
+  [#4211](https://github.com/Kong/kubernetes-ingress-controller/pull/4211)
 
 ### Changed
 

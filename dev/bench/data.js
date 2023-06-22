@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1687361976227,
+  "lastUpdate": 1687448226533,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -420,6 +420,36 @@ window.BENCHMARK_DATA = {
             "value": 109182,
             "unit": "ns/op\t   11120 B/op\t      12 allocs/op",
             "extra": "11274 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "49699333+dependabot[bot]@users.noreply.github.com",
+            "name": "dependabot[bot]",
+            "username": "dependabot[bot]"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "f3bc16f8db6225ca46817aac97da21db1587abf3",
+          "message": "chore(deps): bump google.golang.org/grpc from 1.56.0 to 1.56.1 (#4208)\n\nBumps [google.golang.org/grpc](https://github.com/grpc/grpc-go) from 1.56.0 to 1.56.1.\r\n- [Release notes](https://github.com/grpc/grpc-go/releases)\r\n- [Commits](https://github.com/grpc/grpc-go/compare/v1.56.0...v1.56.1)\r\n\r\n---\r\nupdated-dependencies:\r\n- dependency-name: google.golang.org/grpc\r\n  dependency-type: direct:production\r\n  update-type: version-update:semver-patch\r\n...\r\n\r\nSigned-off-by: dependabot[bot] <support@github.com>\r\nCo-authored-by: dependabot[bot] <49699333+dependabot[bot]@users.noreply.github.com>",
+          "timestamp": "2023-06-22T15:33:19Z",
+          "tree_id": "3c8b14ecb0c556e5e3a08e5ce27a4045e83d8c7d",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/f3bc16f8db6225ca46817aac97da21db1587abf3"
+        },
+        "date": 1687448221727,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA",
+            "value": 101866,
+            "unit": "ns/op\t   11120 B/op\t      12 allocs/op",
+            "extra": "10000 times\n2 procs"
           }
         ]
       }

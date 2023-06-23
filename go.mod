@@ -13,7 +13,7 @@ require (
 	github.com/google/go-cmp v0.5.9
 	github.com/google/uuid v1.3.0
 	github.com/jpillora/backoff v1.0.0
-	github.com/kong/deck v1.22.0
+	github.com/kong/deck v1.22.1
 	github.com/kong/go-kong v0.44.0
 	github.com/kong/kubernetes-telemetry v0.0.6
 	github.com/kong/kubernetes-testing-framework v0.31.1

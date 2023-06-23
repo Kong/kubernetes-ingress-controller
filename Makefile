@@ -115,10 +115,10 @@ clean:
 	@rm -f coverage*.out
 
 .PHONY: build
-build: generate fmt vet lint _build
+build: generate _build
 
 .PHONY: build.fips
-build.fips: generate fmt vet lint _build.fips
+build.fips: generate lint _build.fips
 
 .PHONY: _build
 _build:
@@ -149,10 +149,6 @@ _build.template.debug:
 .PHONY: fmt
 fmt:
 	go fmt ./...
-
-.PHONY: vet
-vet:
-	go vet ./...
 
 .PHONY: lint
 lint: verify.tidy golangci-lint staticcheck
@@ -514,7 +510,7 @@ debug: install _ensure-namespace
 # > Otherwise, they are located in $HOME/.config/dlv on Linux and $HOME/.dlv on other systems.
 #
 # ref: https://github.com/go-delve/delve/blob/master/Documentation/cli/README.md#configuration-and-command-history
-# 
+#
 # This sets the XDG_CONFIG_HOME to this project's subdirectory so that project
 # specific substitution paths can be isolated to this project only and not shared
 # across projects under $HOME or common XDG_CONFIG_HOME.

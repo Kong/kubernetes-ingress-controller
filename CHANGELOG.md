@@ -97,6 +97,11 @@ Adding a new version? You'll need three changes:
   first observed value, as that value is not necessarily the desired value.
   [#4171](https://github.com/Kong/kubernetes-ingress-controller/pull/4171)
 
+### Fixed
+
+- Fix KIC crash which occurred when invalid config was applied in DB mode.
+  [#4213](https://github.com/Kong/kubernetes-ingress-controller/pull/4213)
+
 ## [2.10.0]
 
 > Release date: 2023-06-02

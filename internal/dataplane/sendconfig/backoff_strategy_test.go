@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/deckerrors"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/sendconfig"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/metrics"
 )
@@ -107,7 +108,7 @@ func TestUpdateStrategyWithBackoff(t *testing.T) {
 			updateShouldBeAllowed: false,
 
 			expectUpdateCalled: false,
-			expectError:        sendconfig.NewErrUpdateSkippedDueToBackoffStrategy("some reason"),
+			expectError:        sendconfig.NewUpdateSkippedDueToBackoffStrategyError("some reason"),
 		},
 	}
 
@@ -129,4 +130,38 @@ func TestUpdateStrategyWithBackoff(t *testing.T) {
 			assert.Equal(t, tc.expectFailureRegistered, backoffStrategy.wasFailureRegistered)
 		})
 	}
+}
+
+func TestUpdateSkippedDueToBackoffStrategyError(t *testing.T) {
+	skippedErr := sendconfig.NewUpdateSkippedDueToBackoffStrategyError("reason")
+
+	t.Run("errors.Is()", func(t *testing.T) {
+		assert.False(t,
+			errors.Is(skippedErr, deckerrors.ConfigConflictError{
+				Err: sendconfig.NewUpdateSkippedDueToBackoffStrategyError("different reason"),
+			}),
+			"shouldn't panic when using errors.Is() with NewUpdateSkippedDueToBackoffStrategyError",
+		)
+
+		assert.False(t, errors.Is(skippedErr, errors.New("")),
+			"empty error doesn't match",
+		)
+		assert.False(t, errors.Is(skippedErr, sendconfig.NewUpdateSkippedDueToBackoffStrategyError("different reason")),
+			"error with different reason shouldn't match",
+		)
+		assert.True(t, errors.Is(skippedErr, skippedErr),
+			"error with the same reason should match",
+		)
+	})
+
+	t.Run("errors.As()", func(t *testing.T) {
+		err := sendconfig.NewUpdateSkippedDueToBackoffStrategyError("reason")
+		assert.True(t, errors.As(skippedErr, &err),
+			"error with the same reason but wrapped should match",
+		)
+		err2 := sendconfig.NewUpdateSkippedDueToBackoffStrategyError("reason 2")
+		assert.True(t, errors.As(skippedErr, &err2),
+			"error with different reason should match",
+		)
+	})
 }

@@ -82,7 +82,7 @@ func PerformUpdate(
 	metricsProtocol := updateStrategy.MetricsProtocol()
 	if err != nil {
 		// Not pushing metrics in case it's an update skip due to a backoff.
-		if errors.Is(err, ErrUpdateSkippedDueToBackoffStrategy{}) {
+		if errors.As(err, &UpdateSkippedDueToBackoffStrategyError{}) {
 			return nil, []failures.ResourceFailure{}, err
 		}
 

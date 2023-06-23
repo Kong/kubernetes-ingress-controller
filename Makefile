@@ -115,7 +115,7 @@ clean:
 	@rm -f coverage*.out
 
 .PHONY: build
-build: generate lint _build
+build: generate _build
 
 .PHONY: build.fips
 build.fips: generate lint _build.fips

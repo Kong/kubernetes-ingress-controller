@@ -61,6 +61,7 @@ For a GitHub issue describing a problem/feature request:
 
 For a closed issue, one can verify which released versions contain the fix/enhancement by navigating into the merge commit of each attached PR, where GitHub lists tags/branches that contain the merge commit.
 Thus:
+
 - if the list includes a release tag: the fix/enhancement is included in that release tag.
 - if the list includes `next` but no release tags: the fix/enhancement will come in the nearest minor release.
 - if the list includes `main` but no release tags: the fix/enhancement will come in the nearest patch release.
@@ -121,7 +122,6 @@ Make sure you're [generally familiar with Kubernetes Controllers as a concept, a
 
 [ctrl]:https://kubernetes.io/docs/concepts/architecture/controller/
 [kapi]:https://kubernetes.io/docs/concepts/overview/kubernetes-api/
-[kubebuilder]:https://kubebuilder.io/
 [kbquick]:https://kubebuilder.io/quick-start.html
 [kbctrl]:https://kubebuilder.io/cronjob-tutorial/controller-overview.html
 
@@ -155,6 +155,7 @@ go run -tags gcp ./internal/cmd/main.go \
 ```
 
 If you are using Kind we can leverage [extraPortMapping config](https://kind.sigs.k8s.io/docs/user/ingress/)
+
 ```shell
 cat <<EOF | kind create cluster --config=-
 kind: Cluster
@@ -189,13 +190,13 @@ or push an image to a remote repository.
 ### Build a raw server binary
 
 ```console
-$ make build
+make build
 ```
 
 ### Build a local container image
 
 ```console
-$ TAG=DEV REGISTRY=docker.example.com/registry make container
+TAG=DEV REGISTRY=docker.example.com/registry make container
 ```
 
 Note: this will use the Docker daemon
@@ -215,7 +216,7 @@ in your Deployment specs.
 ### Push the container image to a remote repository
 
 ```console
-$ docker push docker.example.com/registry/kong-ingress-controller:DEV
+docker push docker.example.com/registry/kong-ingress-controller:DEV
 ```
 
 Note: replace `docker.example.com/registry` with your registry URL.
@@ -225,24 +226,34 @@ Note: replace `docker.example.com/registry` with your registry URL.
 There are several ways to deploy Kong Ingress Controller onto a cluster.
 Please check the [deployment guide](https://docs.konghq.com/kubernetes-ingress-controller/latest/deployment/overview/).
 
+## Linting
+
+You can lint the codebase by running:
+
+```console
+make lint
+```
+
+passing the above is required by CI.
+
 ## Testing
 
 You can run the unit tests by running:
 
 ```console
-$ make test
+make test
 ```
 
 For integration tests run:
 
 ```console
-$ make test.integration
+make test.integration
 ```
 
 And for E2E tests run:
 
 ```console
-$ make test.e2e
+make test.e2e
 ```
 
 Note that the `integration` and `e2e` tests require a local container runtime
@@ -259,8 +270,8 @@ Our images are hosted on
 An example release might look like:
 
 ```shell
-$ export TAG=42
-$ make release
+export TAG=42
+make release
 ```
 
 Please follow these guidelines to cut a release:

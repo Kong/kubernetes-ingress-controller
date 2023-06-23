@@ -2,7 +2,6 @@ package sendconfig
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"github.com/sirupsen/logrus"
@@ -11,20 +10,16 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/metrics"
 )
 
-type ErrUpdateSkippedDueToBackoffStrategy struct {
+type UpdateSkippedDueToBackoffStrategyError struct {
 	explanation string
 }
 
-func NewErrUpdateSkippedDueToBackoffStrategy(explanation string) ErrUpdateSkippedDueToBackoffStrategy {
-	return ErrUpdateSkippedDueToBackoffStrategy{explanation: explanation}
+func NewUpdateSkippedDueToBackoffStrategyError(explanation string) UpdateSkippedDueToBackoffStrategyError {
+	return UpdateSkippedDueToBackoffStrategyError{explanation: explanation}
 }
 
-func (e ErrUpdateSkippedDueToBackoffStrategy) Error() string {
+func (e UpdateSkippedDueToBackoffStrategyError) Error() string {
 	return fmt.Sprintf("update skipped due to a backoff strategy not being satisfied: %s", e.explanation)
-}
-
-func (e ErrUpdateSkippedDueToBackoffStrategy) Is(err error) bool {
-	return errors.Is(err, ErrUpdateSkippedDueToBackoffStrategy{})
 }
 
 // UpdateStrategyWithBackoff decorates any UpdateStrategy to respect a passed adminapi.UpdateBackoffStrategy.
@@ -57,7 +52,7 @@ func (s UpdateStrategyWithBackoff) Update(ctx context.Context, targetContent Con
 	resourceErrorsParseErr error,
 ) {
 	if canUpdate, whyNot := s.backoffStrategy.CanUpdate(targetContent.Hash); !canUpdate {
-		return NewErrUpdateSkippedDueToBackoffStrategy(whyNot), nil, nil
+		return NewUpdateSkippedDueToBackoffStrategyError(whyNot), nil, nil
 	}
 
 	err, resourceErrors, resourceErrorsParseErr = s.decorated.Update(ctx, targetContent)

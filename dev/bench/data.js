@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1687521693290,
+  "lastUpdate": 1687521694733,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -719,6 +719,36 @@ window.BENCHMARK_DATA = {
             "name": "BenchmarkDeckgenGenerateSHA",
             "value": 100328,
             "unit": "ns/op\t   11115 B/op\t      12 allocs/op",
+            "extra": "10000 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "patryk.malek@konghq.com",
+            "name": "Patryk Małek",
+            "username": "pmalek"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "96333d80d052dfba75f519b00ca3161265612158",
+          "message": "fix: fix incorrect .Is() method on update skipped due to backoff error (#4213)",
+          "timestamp": "2023-06-23T14:00:15+02:00",
+          "tree_id": "aa7e98ac40312447638ff5f186f48031a18ec2b5",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/96333d80d052dfba75f519b00ca3161265612158"
+        },
+        "date": 1687521688155,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA",
+            "value": 133683,
+            "unit": "ns/op\t   11117 B/op\t      12 allocs/op",
             "extra": "10000 times\n2 procs"
           }
         ]

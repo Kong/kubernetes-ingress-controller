@@ -269,8 +269,8 @@ github.com/kisielk/gotool v1.0.0/go.mod h1:XhKaO+MFFWcvkIS/tQcRk01m1F5IRFswLeQ+o
 github.com/klauspost/cpuid/v2 v2.0.9/go.mod h1:FInQzS24/EEf25PyTYn52gqo7WaD8xa0213Md/qVLRg=
 github.com/klauspost/cpuid/v2 v2.2.4 h1:acbojRNwl3o09bUq+yDCtZFc1aiwaAAxtcn8YkZXnvk=
 github.com/klauspost/cpuid/v2 v2.2.4/go.mod h1:RVVoqg1df56z8g3pUjL/3lE5UfnlrJX8tyFgg4nqhuY=
-github.com/kong/deck v1.22.0 h1:oTNS5DCAb3uw1D8rKyqyxKvpwmUo8uTW8G13FJuirTY=
-github.com/kong/deck v1.22.0/go.mod h1:yRIuXWxu4ZsKqpBq1XFrzgc6cjPkwjLG3Np5kPsyyB0=
+github.com/kong/deck v1.22.1 h1:zoNsewts2TxUOfj86EqlA5GuRxKcwWEhd8/vV71eFYw=
+github.com/kong/deck v1.22.1/go.mod h1:PMcNms9X5MrFe3uM22tVpFQaKiHxsXEsLgwVLVKK20Y=
 github.com/kong/go-kong v0.44.0 h1:1x3w/TYdJjIZ6c1j9HiYP8755c923XN2O6j3kEaUkTA=
 github.com/kong/go-kong v0.44.0/go.mod h1:41Sot1N/n8UHBp+gE/6nOw3vuzoHbhMSyU/zOS7VzPE=
 github.com/kong/kubernetes-telemetry v0.0.6 h1:JR1Ry69Dkzzn6x6w3Ep2Uxyd8JrLSItEICfilA7WsP0=

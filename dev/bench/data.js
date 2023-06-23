@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1687516642734,
+  "lastUpdate": 1687516644763,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -659,6 +659,36 @@ window.BENCHMARK_DATA = {
             "name": "BenchmarkDeckgenGenerateSHA",
             "value": 102771,
             "unit": "ns/op\t   11110 B/op\t      12 allocs/op",
+            "extra": "10000 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jakub.warczarek@konghq.com",
+            "name": "Jakub Warczarek",
+            "username": "programmer04"
+          },
+          "committer": {
+            "email": "jakub.warczarek@konghq.com",
+            "name": "Jakub Warczarek",
+            "username": "programmer04"
+          },
+          "distinct": true,
+          "id": "b63b9ca05fe1f58b058a189638c664f3b003a6aa",
+          "message": "chore(ci): remove redundant vet and fmt commands",
+          "timestamp": "2023-06-23T12:35:28+02:00",
+          "tree_id": "db2d035bdc3d069199e3c9c9c4460b9cfe523f18",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/b63b9ca05fe1f58b058a189638c664f3b003a6aa"
+        },
+        "date": 1687516637842,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA",
+            "value": 100328,
+            "unit": "ns/op\t   11115 B/op\t      12 allocs/op",
             "extra": "10000 times\n2 procs"
           }
         ]

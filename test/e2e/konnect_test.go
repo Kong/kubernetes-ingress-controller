@@ -228,39 +228,73 @@ func createTestRuntimeGroup(ctx context.Context, t *testing.T) string {
 	require.NoError(t, createRgErr)
 
 	t.Cleanup(func() {
-		_, err := rgClient.DeleteRuntimeGroupWithResponse(ctx, rgID)
-		assert.NoErrorf(t, err, "failed to cleanup a runtime group: %q", rgID)
+		// delete the RG used in the test.
+		t.Logf("deleting runtime group %s", rgID)
+		err := retry.Do(
+			func() error {
+				_, err := rgClient.DeleteRuntimeGroupWithResponse(ctx, rgID)
+				if err != nil {
+					t.Logf("failed to delete runtime group %s: %v", rgID.String(), err)
+					return err
+				}
+				return nil
+			},
+			retry.Attempts(5), retry.Delay(time.Second),
+		)
+		assert.NoErrorf(t, err, "failed to delete runtime group %s used in the test", rgID.String())
 
 		// list other RGs also created in the previous code for situations
 		// that RG created, but we timed out on getting the response.
 		// This prevents RG leaks.
-		listRgResp, err := rgClient.ListRuntimeGroupsWithResponse(ctx, &rg.ListRuntimeGroupsParams{})
-		assert.NoError(t, err, "failed to list runtime groups")
-		assert.Equalf(t, http.StatusOK, listRgResp.StatusCode(), "failed to list runtime groups: code %d, body %s",
-			listRgResp.StatusCode(), string(listRgResp.Body))
-		assert.NotNil(t, listRgResp.JSON200, "no body in list RG response")
-		if listRgResp.JSON200.Data == nil {
-			return
-		}
-		rgs := *listRgResp.JSON200.Data
+		t.Logf("deleting other runtime groups created in the test")
+		rgNumberLimit := 50
+		err = retry.Do(
+			func() error {
+				listRgResp, err := rgClient.ListRuntimeGroupsWithResponse(ctx, &rg.ListRuntimeGroupsParams{
+					PageSize: lo.ToPtr(rgNumberLimit),
+				})
+				if err != nil {
+					t.Logf("failed to list runtime groups: %v", err)
+					return err
+				}
+				if listRgResp.StatusCode() != http.StatusOK {
+					t.Logf("failed to list runtime groups: code %d, body %s",
+						listRgResp.StatusCode(), string(listRgResp.Body))
+					return fmt.Errorf("non-OK status code: %d", listRgResp.StatusCode())
+				}
+				if listRgResp.JSON200.Data == nil {
+					t.Logf("failed to list runtime groups: no data in body")
+					return errors.New("no data in response body")
+				}
 
-		for _, rg := range rgs {
-			if rg.Labels == nil || *rg.Labels == nil {
-				continue
-			}
-			labels := *rg.Labels
-			// find the RGs created in the test.
-			if labels["created_in_tests"] == "true" &&
-				labels["create_test_timestamp"] == createTimeStampStr &&
-				labels["create_test_uuid"] == createTestUUID &&
-				rg.Id != nil {
-				deleteRgID := *rg.Id
+				rgs := *listRgResp.JSON200.Data
 
-				t.Logf("deleting runtime group %s created in test %s", deleteRgID, t.Name())
-				_, err := rgClient.DeleteRuntimeGroupWithResponse(ctx, deleteRgID)
-				assert.NoErrorf(t, err, "failed to cleanup a runtime group: %q", deleteRgID)
-			}
-		}
+				var deleteRgErrors []error
+				for _, rg := range rgs {
+					if rg.Labels == nil || *rg.Labels == nil {
+						continue
+					}
+					labels := *rg.Labels
+					// find the RGs created in the test.
+					if labels["created_in_tests"] == "true" &&
+						labels["create_test_timestamp"] == createTimeStampStr &&
+						labels["create_test_uuid"] == createTestUUID &&
+						rg.Id != nil {
+						deleteRgID := *rg.Id
+
+						t.Logf("deleting runtime group %s created in test %s", deleteRgID, t.Name())
+						_, deleteErr := rgClient.DeleteRuntimeGroupWithResponse(ctx, deleteRgID)
+						if deleteErr != nil {
+							t.Logf("failed to delete runtime group %s: %v", deleteRgID, err)
+							deleteRgErrors = append(deleteRgErrors, deleteErr)
+						}
+					}
+				}
+				return errors.Join(deleteRgErrors...)
+			},
+			retry.Attempts(5), retry.Delay(time.Second),
+		)
+		assert.NoError(t, err, "failed to list and delete other runtime groups created in the test")
 	})
 
 	t.Logf("created test Konnect Runtime Group: %q", rgID.String())

@@ -96,6 +96,13 @@ Adding a new version? You'll need three changes:
   all involved Services, not just Services whose annotation does not match the
   first observed value, as that value is not necessarily the desired value.
   [#4171](https://github.com/Kong/kubernetes-ingress-controller/pull/4171)
+- Use [`gojson`][gojson] for marshalling JSON when generating SHA for config.
+  This should yield some performance benefits during config preparation and
+  sending stage (we've observed around 35% reduced time in config marshalling
+  time but be aware that your mileage may vary).
+  [#4222](https://github.com/Kong/kubernetes-ingress-controller/pull/4222)
+
+[gojson]: https://github.com/goccy/go-json
 
 ### Fixed
 

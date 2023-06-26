@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1687781454982,
+  "lastUpdate": 1687785897473,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -1229,6 +1229,36 @@ window.BENCHMARK_DATA = {
             "name": "BenchmarkDeckgenGenerateSHA",
             "value": 121326,
             "unit": "ns/op\t   11117 B/op\t      12 allocs/op",
+            "extra": "10000 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "czeslavo@gmail.com",
+            "name": "Grzegorz Burzyński",
+            "username": "czeslavo"
+          },
+          "committer": {
+            "email": "czeslavo@gmail.com",
+            "name": "Grzegorz Burzyński",
+            "username": "czeslavo"
+          },
+          "distinct": true,
+          "id": "e2994c0a3699bdd9383e6495fd379578b128acd8",
+          "message": "chore(ci): cleanup konnect RGs in cleanup job",
+          "timestamp": "2023-06-26T15:23:53+02:00",
+          "tree_id": "75fa7715614527a0ba6b2a3a0adf719ed16f2654",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/e2994c0a3699bdd9383e6495fd379578b128acd8"
+        },
+        "date": 1687785893304,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA",
+            "value": 100880,
+            "unit": "ns/op\t   11116 B/op\t      12 allocs/op",
             "extra": "10000 times\n2 procs"
           }
         ]

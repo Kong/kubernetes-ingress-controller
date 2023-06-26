@@ -10,12 +10,13 @@ concurrency:
 on:
   pull_request:
     branches:
-      - '*'
+      - '**'
   push:
     branches:
       - 'main'
+      - 'release/[0-9]+.[0-9]+.x'
     tags:
-      - '*'
+      - '**'
   workflow_dispatch: {}
 
 jobs:

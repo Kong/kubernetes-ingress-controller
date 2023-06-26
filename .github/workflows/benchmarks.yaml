@@ -2,7 +2,7 @@ name: Go Benchmarks
 on:
   push:
     branches:
-    - '*'
+    - '**'
 
 permissions:
   contents: write

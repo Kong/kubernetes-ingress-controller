@@ -10,6 +10,7 @@ import (
 	"github.com/blang/semver/v4"
 	"github.com/kong/go-kong/kong"
 	"github.com/samber/lo"
+	"github.com/samber/mo"
 	"github.com/sirupsen/logrus"
 	"github.com/sirupsen/logrus/hooks/test"
 	"github.com/stretchr/testify/assert"
@@ -5312,6 +5313,45 @@ func TestNewFeatureFlags(t *testing.T) {
 			}
 		})
 	}
+}
+
+type mockLicenseGetter struct {
+	license mo.Option[kong.License]
+}
+
+func (m *mockLicenseGetter) GetLicense() mo.Option[kong.License] {
+	return m.license
+}
+
+func TestParser_License(t *testing.T) {
+	s, _ := store.NewFakeStore(store.FakeObjects{})
+	p := mustNewParser(t, s)
+
+	t.Run("no license is populated by default", func(t *testing.T) {
+		result := p.BuildKongConfig()
+		require.Empty(t, result.KongState.Licenses)
+	})
+
+	t.Run("no license is populated when license getter returns no license", func(t *testing.T) {
+		p.InjectLicenseGetter(&mockLicenseGetter{})
+		result := p.BuildKongConfig()
+		require.Empty(t, result.KongState.Licenses)
+	})
+
+	t.Run("license is populated when license getter returns a license", func(t *testing.T) {
+		licenseGetterWithLicense := &mockLicenseGetter{
+			license: mo.Some(kong.License{
+				ID:      lo.ToPtr("license-id"),
+				Payload: lo.ToPtr("license-payload"),
+			}),
+		}
+		p.InjectLicenseGetter(licenseGetterWithLicense)
+		result := p.BuildKongConfig()
+		require.Len(t, result.KongState.Licenses, 1)
+		license := result.KongState.Licenses[0]
+		require.Equal(t, "license-id", *license.ID)
+		require.Equal(t, "license-payload", *license.Payload)
+	})
 }
 
 func mustNewParser(t *testing.T, storer store.Storer) *Parser {

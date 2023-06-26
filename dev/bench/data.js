@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1687801819751,
+  "lastUpdate": 1687801822178,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -1470,6 +1470,36 @@ window.BENCHMARK_DATA = {
             "value": 133777,
             "unit": "ns/op\t   11117 B/op\t      12 allocs/op",
             "extra": "9919 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "patryk.malek@konghq.com",
+            "name": "Patryk Małek",
+            "username": "pmalek"
+          },
+          "committer": {
+            "email": "patryk.malek@konghq.com",
+            "name": "Patryk Małek",
+            "username": "pmalek"
+          },
+          "distinct": true,
+          "id": "6d0ea66d033d6711dd63b46d19485e2426d306b9",
+          "message": "refactor: use gojson to marshal config for SHA",
+          "timestamp": "2023-06-26T19:48:36+02:00",
+          "tree_id": "599d7940a8dd6dabb4f375ccda3c935bcf624b32",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/6d0ea66d033d6711dd63b46d19485e2426d306b9"
+        },
+        "date": 1687801812442,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA",
+            "value": 80553,
+            "unit": "ns/op\t   11094 B/op\t      12 allocs/op",
+            "extra": "14313 times\n2 procs"
           }
         ]
       },

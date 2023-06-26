@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1687799851295,
+  "lastUpdate": 1687799853294,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -1410,6 +1410,36 @@ window.BENCHMARK_DATA = {
             "value": 121141,
             "unit": "ns/op\t   11116 B/op\t      12 allocs/op",
             "extra": "9380 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "czeslavo@gmail.com",
+            "name": "Grzegorz Burzyński",
+            "username": "czeslavo"
+          },
+          "committer": {
+            "email": "czeslavo@gmail.com",
+            "name": "Grzegorz Burzyński",
+            "username": "czeslavo"
+          },
+          "distinct": true,
+          "id": "b8e099e2239908148cb3a96e5a714865167c07c4",
+          "message": "chore(ci): cleanup orphaned Konnect RGs and roles in cleanup job",
+          "timestamp": "2023-06-26T19:16:18+02:00",
+          "tree_id": "e7f5766de024f600e712041817e774efb8c0cee3",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/b8e099e2239908148cb3a96e5a714865167c07c4"
+        },
+        "date": 1687799845822,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA",
+            "value": 133777,
+            "unit": "ns/op\t   11117 B/op\t      12 allocs/op",
+            "extra": "9919 times\n2 procs"
           }
         ]
       },

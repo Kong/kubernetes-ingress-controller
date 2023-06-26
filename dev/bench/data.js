@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1687785898702,
+  "lastUpdate": 1687790117877,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -1289,6 +1289,36 @@ window.BENCHMARK_DATA = {
             "name": "BenchmarkDeckgenGenerateSHA",
             "value": 100880,
             "unit": "ns/op\t   11116 B/op\t      12 allocs/op",
+            "extra": "10000 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "patryk.malek@konghq.com",
+            "name": "Patryk Małek",
+            "username": "pmalek"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "9ec5633ad7c4eed1d32e1a294962e1347a0538f8",
+          "message": "ci: run PR checks on PRs against all branches (#4223)",
+          "timestamp": "2023-06-26T16:34:23+02:00",
+          "tree_id": "5c9165795c41824e9fbf5ec77477e48d8b085452",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/9ec5633ad7c4eed1d32e1a294962e1347a0538f8"
+        },
+        "date": 1687790113819,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA",
+            "value": 100959,
+            "unit": "ns/op\t   11118 B/op\t      12 allocs/op",
             "extra": "10000 times\n2 procs"
           }
         ]

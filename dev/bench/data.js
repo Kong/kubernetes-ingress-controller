@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1687781452857,
+  "lastUpdate": 1687781454982,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -1169,6 +1169,36 @@ window.BENCHMARK_DATA = {
             "name": "BenchmarkDeckgenGenerateSHA",
             "value": 100009,
             "unit": "ns/op\t   11116 B/op\t      12 allocs/op",
+            "extra": "10000 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jakub.warczarek@konghq.com",
+            "name": "Jakub Warczarek",
+            "username": "programmer04"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "0fabd742b0bb3998e4bfe8937fbf0c9c963299cb",
+          "message": "chore(ci): replace deprecated buildpulse GH Action (#4224)",
+          "timestamp": "2023-06-26T12:09:43Z",
+          "tree_id": "642aa97bd8cec55ac40d9169dd59efbf3cb296ce",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/0fabd742b0bb3998e4bfe8937fbf0c9c963299cb"
+        },
+        "date": 1687781446277,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA",
+            "value": 121326,
+            "unit": "ns/op\t   11117 B/op\t      12 allocs/op",
             "extra": "10000 times\n2 procs"
           }
         ]

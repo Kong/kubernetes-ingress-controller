@@ -153,6 +153,7 @@ func NewKongClient(
 	configChangeDetector sendconfig.ConfigurationChangeDetector,
 	parser KongConfigBuilder,
 	cacheStores store.CacheStores,
+	lastValidKongState *kongstate.KongState,
 ) (*KongClient, error) {
 	c := &KongClient{
 		logger:                 logger,
@@ -169,6 +170,7 @@ func NewKongClient(
 		updateStrategyResolver: updateStrategyResolver,
 		configChangeDetector:   configChangeDetector,
 		kongConfigBuilder:      parser,
+		lastValidKongState:     lastValidKongState,
 	}
 
 	return c, nil

@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1687859375950,
+  "lastUpdate": 1687860963091,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -2550,6 +2550,36 @@ window.BENCHMARK_DATA = {
             "value": 76964,
             "unit": "ns/op\t   11099 B/op\t      12 allocs/op",
             "extra": "14546 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "tao.yi@konghq.com",
+            "name": "Tao Yi",
+            "username": "randmonkey"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "a1f712d9e70b51ace2f70a5b148b3ee2cf0b08bc",
+          "message": "test(e2e): fix retry on create konnect RG (#4194)\n\n* fix retry on create konnect RG\r\n\r\n* create RG with new name on failure\r\n\r\n* fix nil param\r\n\r\n* add retry on deleting RGs\r\n\r\n* add description to created RGs\r\n\r\n* do not delete other RGs",
+          "timestamp": "2023-06-27T12:14:44+02:00",
+          "tree_id": "bf3d5a0eb60b58f2cf8df19fe60da487731d0a26",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/a1f712d9e70b51ace2f70a5b148b3ee2cf0b08bc"
+        },
+        "date": 1687860956849,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA",
+            "value": 77596,
+            "unit": "ns/op\t   11094 B/op\t      12 allocs/op",
+            "extra": "15860 times\n2 procs"
           }
         ]
       }

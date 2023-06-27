@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1687854074885,
+  "lastUpdate": 1687854076455,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -2370,6 +2370,36 @@ window.BENCHMARK_DATA = {
             "value": 68056,
             "unit": "ns/op\t   11094 B/op\t      12 allocs/op",
             "extra": "16645 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "tao.yi@konghq.com",
+            "name": "Yi Tao",
+            "username": "randmonkey"
+          },
+          "committer": {
+            "email": "tao.yi@konghq.com",
+            "name": "Yi Tao",
+            "username": "randmonkey"
+          },
+          "distinct": true,
+          "id": "d0fc8e68686658f58645d27447c7d47f3addef9c",
+          "message": "Merge remote-tracking branch 'kong/main' into test/e2e_fix_retry_create_konnect_rg",
+          "timestamp": "2023-06-27T16:13:21+08:00",
+          "tree_id": "4c0849453c2169b216c131379093f8e7522dd0de",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/d0fc8e68686658f58645d27447c7d47f3addef9c"
+        },
+        "date": 1687854070155,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA",
+            "value": 71281,
+            "unit": "ns/op\t   11094 B/op\t      12 allocs/op",
+            "extra": "16021 times\n2 procs"
           }
         ]
       },

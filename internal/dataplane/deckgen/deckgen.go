@@ -2,9 +2,9 @@ package deckgen
 
 import (
 	"crypto/sha256"
-	"encoding/json"
 	"fmt"
 
+	gojson "github.com/goccy/go-json"
 	"github.com/kong/deck/file"
 	"github.com/kong/go-kong/kong"
 )
@@ -12,7 +12,7 @@ import (
 // GenerateSHA generates a SHA256 checksum of targetContent, with the purpose
 // of change detection.
 func GenerateSHA(targetContent *file.Content) ([]byte, error) {
-	jsonConfig, err := json.Marshal(targetContent)
+	jsonConfig, err := gojson.Marshal(targetContent)
 	if err != nil {
 		return nil, fmt.Errorf("marshaling Kong declarative configuration to JSON: %w", err)
 	}

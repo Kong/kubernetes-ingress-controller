@@ -37,6 +37,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/adminapi"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/konnect"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/konnect/nodes"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/konnect/roles"
 	rg "github.com/kong/kubernetes-ingress-controller/v2/internal/konnect/runtimegroups"
 	rgc "github.com/kong/kubernetes-ingress-controller/v2/internal/konnect/runtimegroupsconfig"
 	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/helpers"
@@ -46,6 +47,7 @@ const (
 	konnectRuntimeGroupsBaseURL          = "https://us.kic.api.konghq.tech/v2"
 	konnectRuntimeGroupsConfigBaseURLFmt = "https://us.api.konghq.tech/konnect-api/api/runtime_groups/%s/v1"
 	konnectRuntimeGroupAdminAPIBaseURL   = "https://us.kic.api.konghq.tech"
+	konnectRolesBaseURL                  = "https://global.api.konghq.tech/v2"
 
 	konnectNodeRegistrationTimeout = 5 * time.Minute
 	konnectNodeRegistrationCheck   = 30 * time.Second
@@ -199,7 +201,6 @@ func generateTestKonnectRuntimeGroupDescription(t *testing.T) string {
 // It also sets up a cleanup function for it to be deleted.
 func createTestRuntimeGroup(ctx context.Context, t *testing.T) string {
 	t.Helper()
-
 	rgClient, err := rg.NewClientWithResponses(konnectRuntimeGroupsBaseURL, rg.WithRequestEditorFn(
 		func(ctx context.Context, req *http.Request) error {
 			req.Header.Set("Authorization", "Bearer "+konnectAccessToken)
@@ -207,6 +208,11 @@ func createTestRuntimeGroup(ctx context.Context, t *testing.T) string {
 		}),
 	)
 	require.NoError(t, err)
+	rolesClient := roles.NewClient(
+		helpers.RetryableHTTPClient(helpers.DefaultHTTPClient()),
+		konnectRolesBaseURL,
+		konnectAccessToken,
+	)
 
 	var rgID uuid.UUID
 	createRgErr := retry.Do(func() error {
@@ -235,20 +241,32 @@ func createTestRuntimeGroup(ctx context.Context, t *testing.T) string {
 	require.NoError(t, createRgErr)
 
 	t.Cleanup(func() {
-		// delete the RG used in the test.
-		t.Logf("deleting runtime group %s", rgID)
+		t.Logf("deleting test Konnect Runtime Group: %q", rgID)
 		err := retry.Do(
 			func() error {
 				_, err := rgClient.DeleteRuntimeGroupWithResponse(ctx, rgID)
-				if err != nil {
-					t.Logf("failed to delete runtime group %s: %v", rgID.String(), err)
-					return err
-				}
-				return nil
+				return err
 			},
 			retry.Attempts(5), retry.Delay(time.Second),
 		)
-		assert.NoErrorf(t, err, "failed to delete runtime group %s used in the test", rgID.String())
+		assert.NoErrorf(t, err, "failed to cleanup a runtime group: %q", rgID)
+
+		// We have to manually delete roles created for the runtime group because Konnect doesn't do it automatically.
+		// If we don't do it, we will eventually hit a problem with Konnect APIs answering our requests with 504s
+		// because of a performance issue when there's too many roles for the account
+		// (see https://konghq.atlassian.net/browse/TPS-1319).
+		//
+		// We can drop this once the automated cleanup is implemented on Konnect side:
+		// https://konghq.atlassian.net/browse/TPS-1453.
+		rgRoles, err := rolesClient.ListRuntimeGroupsRoles(ctx)
+		require.NoErrorf(t, err, "failed to list runtime group roles for cleanup: %q", rgID)
+		for _, role := range rgRoles {
+			if role.EntityID == rgID.String() { // Delete only roles created for the runtime group.
+				t.Logf("deleting test Konnect Runtime Group role: %q", role.ID)
+				err := rolesClient.DeleteRole(ctx, role.ID)
+				assert.NoErrorf(t, err, "failed to cleanup a runtime group role: %q", role.ID)
+			}
+		}
 	})
 
 	t.Logf("created test Konnect Runtime Group: %q", rgID.String())

@@ -10,6 +10,7 @@ require (
 	github.com/bombsimon/logrusr/v2 v2.0.1
 	github.com/deepmap/oapi-codegen v1.13.0
 	github.com/go-logr/logr v1.2.4
+	github.com/goccy/go-json v0.10.2
 	github.com/google/go-cmp v0.5.9
 	github.com/google/uuid v1.3.0
 	github.com/jpillora/backoff v1.0.0
@@ -60,7 +61,6 @@ require (
 	github.com/go-playground/locales v0.14.1 // indirect
 	github.com/go-playground/universal-translator v0.18.1 // indirect
 	github.com/go-playground/validator/v10 v10.14.0 // indirect
-	github.com/goccy/go-json v0.10.2 // indirect
 	github.com/google/go-containerregistry v0.13.0 // indirect
 	github.com/google/s2a-go v0.1.4 // indirect
 	github.com/klauspost/cpuid/v2 v2.2.4 // indirect

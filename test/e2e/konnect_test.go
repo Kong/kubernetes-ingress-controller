@@ -12,6 +12,7 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/pem"
+	"errors"
 	"fmt"
 	"math/big"
 	"net/http"
@@ -21,6 +22,7 @@ import (
 	"testing"
 	"time"
 
+	retry "github.com/avast/retry-go/v4"
 	"github.com/google/uuid"
 	gokong "github.com/kong/go-kong/kong"
 	environment "github.com/kong/kubernetes-testing-framework/pkg/environments"
@@ -182,41 +184,72 @@ func deployAllInOneKonnectManifest(ctx context.Context, t *testing.T, env enviro
 	return getManifestDeployments(manifestFile)
 }
 
+func generateTestKonnectRuntimeGroupDescription(t *testing.T) string {
+	t.Helper()
+
+	desc := fmt.Sprintf("runtime group for test %s", t.Name())
+	if githubServerURL != "" && githubRepo != "" && githubRunID != "" {
+		githubRunURL := fmt.Sprintf("%s/%s/actions/runs/%s",
+			githubServerURL, githubRepo, githubRunID)
+		desc += ", github workflow run " + githubRunURL
+	}
+
+	return desc
+}
+
 // createTestRuntimeGroup creates a runtime group to be used in tests. It returns the created runtime group's ID.
 // It also sets up a cleanup function for it to be deleted.
 func createTestRuntimeGroup(ctx context.Context, t *testing.T) string {
 	t.Helper()
-
 	rgClient, err := rg.NewClientWithResponses(konnectRuntimeGroupsBaseURL, rg.WithRequestEditorFn(
 		func(ctx context.Context, req *http.Request) error {
 			req.Header.Set("Authorization", "Bearer "+konnectAccessToken)
 			return nil
 		}),
-		rg.WithHTTPClient(helpers.RetryableHTTPClient(helpers.DefaultHTTPClient())),
 	)
 	require.NoError(t, err)
-
 	rolesClient := roles.NewClient(
 		helpers.RetryableHTTPClient(helpers.DefaultHTTPClient()),
 		konnectRolesBaseURL,
 		konnectAccessToken,
 	)
 
-	createRgResp, err := rgClient.CreateRuntimeGroupWithResponse(ctx, rg.CreateRuntimeGroupRequest{
-		Description: lo.ToPtr("This is a description"),
-		Labels:      &rg.Labels{"created_in_tests": "true"},
-		Name:        uuid.NewString(),
-		ClusterType: rg.ClusterTypeKubernetesIngressController,
-	})
-	require.NoError(t, err, "failed to create runtime group")
-	require.Equalf(t, http.StatusCreated, createRgResp.StatusCode(), "failed creating RG: %s", string(createRgResp.Body))
-	require.NotNil(t, createRgResp.JSON201)
-	require.NotNil(t, createRgResp.JSON201.Id)
-	id := *createRgResp.JSON201.Id
+	var rgID uuid.UUID
+	createRgErr := retry.Do(func() error {
+		rgName := uuid.NewString()
+		createRgResp, err := rgClient.CreateRuntimeGroupWithResponse(ctx, rg.CreateRuntimeGroupRequest{
+			Description: lo.ToPtr(generateTestKonnectRuntimeGroupDescription(t)),
+			Labels: &rg.Labels{
+				"created_in_tests": "true",
+			},
+			Name:        rgName,
+			ClusterType: rg.ClusterTypeKubernetesIngressController,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to create runtime group: %w", err)
+		}
+		if createRgResp.StatusCode() != http.StatusCreated {
+			return fmt.Errorf("failed to create RG: code %d, message %s", createRgResp.StatusCode(), string(createRgResp.Body))
+		}
+		if createRgResp.JSON201 == nil || createRgResp.JSON201.Id == nil {
+			return errors.New("No runtime group ID in response")
+		}
+
+		rgID = *createRgResp.JSON201.Id
+		return nil
+	}, retry.Attempts(5), retry.Delay(time.Second))
+	require.NoError(t, createRgErr)
+
 	t.Cleanup(func() {
-		t.Logf("deleting test Konnect Runtime Group: %q", id)
-		_, err := rgClient.DeleteRuntimeGroupWithResponse(ctx, id)
-		assert.NoErrorf(t, err, "failed to cleanup a runtime group: %q", id)
+		t.Logf("deleting test Konnect Runtime Group: %q", rgID)
+		err := retry.Do(
+			func() error {
+				_, err := rgClient.DeleteRuntimeGroupWithResponse(ctx, rgID)
+				return err
+			},
+			retry.Attempts(5), retry.Delay(time.Second),
+		)
+		assert.NoErrorf(t, err, "failed to cleanup a runtime group: %q", rgID)
 
 		// We have to manually delete roles created for the runtime group because Konnect doesn't do it automatically.
 		// If we don't do it, we will eventually hit a problem with Konnect APIs answering our requests with 504s
@@ -226,9 +259,9 @@ func createTestRuntimeGroup(ctx context.Context, t *testing.T) string {
 		// We can drop this once the automated cleanup is implemented on Konnect side:
 		// https://konghq.atlassian.net/browse/TPS-1453.
 		rgRoles, err := rolesClient.ListRuntimeGroupsRoles(ctx)
-		require.NoErrorf(t, err, "failed to list runtime group roles for cleanup: %q", id)
+		require.NoErrorf(t, err, "failed to list runtime group roles for cleanup: %q", rgID)
 		for _, role := range rgRoles {
-			if role.EntityID == id.String() { // Delete only roles created for the runtime group.
+			if role.EntityID == rgID.String() { // Delete only roles created for the runtime group.
 				t.Logf("deleting test Konnect Runtime Group role: %q", role.ID)
 				err := rolesClient.DeleteRole(ctx, role.ID)
 				assert.NoErrorf(t, err, "failed to cleanup a runtime group role: %q", role.ID)
@@ -236,8 +269,8 @@ func createTestRuntimeGroup(ctx context.Context, t *testing.T) string {
 		}
 	})
 
-	t.Logf("created test Konnect Runtime Group: %q", id.String())
-	return id.String()
+	t.Logf("created test Konnect Runtime Group: %q", rgID.String())
+	return rgID.String()
 }
 
 // createClientCertificate creates a TLS client certificate and POSTs it to Konnect Runtime Group configuration API

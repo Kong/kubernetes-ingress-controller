@@ -29,6 +29,12 @@ var (
 	// be created in tests. It can be either `gke` or `kind`.
 	// It's not used when KONG_TEST_CLUSTER is set.
 	clusterProvider = os.Getenv("KONG_TEST_CLUSTER_PROVIDER")
+
+	// githubServerURL, githubRepo, githubRunID are used to locate the run of github wokflow.
+	// See: https://docs.github.com/en/actions/learn-github-actions/variables#default-environment-variables
+	githubServerURL = os.Getenv("GITHUB_SERVER_URL")
+	githubRepo      = os.Getenv("GITHUB_REPOSITORY")
+	githubRunID     = os.Getenv("GITHUB_RUN_ID")
 )
 
 // shouldLoadImages tells whether the controller and kong images should be loaded into the cluster.

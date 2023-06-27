@@ -29,7 +29,7 @@ jobs:
     name: ${{ matrix.name }}
     runs-on: ubuntu-latest
     env:
-      KONG_CLUSTER_VERSION: 'v1.27.1'
+      KONG_CLUSTER_VERSION: 'v1.27.3'
       TEST_KONG_ROUTER_FLAVOR: 'traditional'
     strategy:
       fail-fast: false

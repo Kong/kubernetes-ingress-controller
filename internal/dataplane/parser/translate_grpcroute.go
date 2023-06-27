@@ -8,6 +8,7 @@ import (
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/parser/translators"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/versions"
 )
 
 // -----------------------------------------------------------------------------
@@ -62,7 +63,8 @@ func (p *Parser) ingressRulesFromGRPCRoute(result *ingressRules, grpcroute *gate
 		if p.featureFlags.ExpressionRoutes {
 			routes = translators.GenerateKongExpressionRoutesFromGRPCRouteRule(grpcroute, ruleNumber)
 		} else {
-			routes = translators.GenerateKongRoutesFromGRPCRouteRule(grpcroute, ruleNumber)
+			prependRegexPrefix := p.kongVersion.GTE(versions.ExplicitRegexPathVersionCutoff)
+			routes = translators.GenerateKongRoutesFromGRPCRouteRule(grpcroute, ruleNumber, prependRegexPrefix)
 		}
 
 		// create a service and attach the routes to it

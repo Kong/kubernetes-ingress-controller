@@ -196,7 +196,7 @@ func TestGenerateKongRoutesFromGRPCRouteRule(t *testing.T) {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			grpcroute := makeTestGRPCRoute(tc.objectName, "default", tc.annotations, tc.hostnames, []gatewayv1alpha2.GRPCRouteRule{tc.rule})
-			routes := GenerateKongRoutesFromGRPCRouteRule(grpcroute, 0)
+			routes := GenerateKongRoutesFromGRPCRouteRule(grpcroute, 0, true)
 			require.Equal(t, tc.expectedRoutes, routes)
 		})
 	}

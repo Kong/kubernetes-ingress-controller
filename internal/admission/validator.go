@@ -18,11 +18,13 @@ import (
 	credsvalidation "github.com/kong/kubernetes-ingress-controller/v2/internal/validation/consumers/credentials"
 	gatewayvalidators "github.com/kong/kubernetes-ingress-controller/v2/internal/validation/gateway"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
+	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1beta1"
 )
 
 // KongValidator validates Kong entities.
 type KongValidator interface {
 	ValidateConsumer(ctx context.Context, consumer kongv1.KongConsumer) (bool, string, error)
+	ValidateConsumerGroup(ctx context.Context, consumerGroup kongv1beta1.KongConsumerGroup) (bool, string, error)
 	ValidatePlugin(ctx context.Context, plugin kongv1.KongPlugin) (bool, string, error)
 	ValidateClusterPlugin(ctx context.Context, plugin kongv1.KongClusterPlugin) (bool, string, error)
 	ValidateCredential(ctx context.Context, secret corev1.Secret) (bool, string, error)
@@ -35,6 +37,7 @@ type KongValidator interface {
 type AdminAPIServicesProvider interface {
 	GetConsumersService() (kong.AbstractConsumerService, bool)
 	GetPluginsService() (kong.AbstractPluginService, bool)
+	GetConsumerGroupsService() (kong.AbstractConsumerGroupService, bool)
 }
 
 // KongHTTPValidator implements KongValidator interface to validate Kong
@@ -157,10 +160,40 @@ func (validator KongHTTPValidator) ValidateConsumer(
 	return true, "", nil
 }
 
+func (validator KongHTTPValidator) ValidateConsumerGroup(
+	ctx context.Context,
+	consumerGroup kongv1beta1.KongConsumerGroup,
+) (bool, string, error) {
+	// Ignore ConsumerGroups that are being managed by another controller.
+	if !validator.ingressClassMatcher(&consumerGroup.ObjectMeta, annotations.IngressClassKey, annotations.ExactClassMatch) {
+		return true, "", nil
+	}
+
+	cgs, ok := validator.AdminAPIServicesProvider.GetConsumerGroupsService()
+	// If there's no client, do not verify with data-plane as there's none available.
+	if !ok {
+		return true, "", nil
+	}
+	fmt.Println(">>>>>>>>>> WEBHOOK")
+	// check version too
+	if _, _, err := cgs.List(ctx, &kong.ListOpt{Size: 1}); err != nil {
+		fmt.Printf(">>>>>>>>>> err: %v\n", err)
+		switch {
+		case kong.IsNotFoundErr(err):
+			return false, ErrTextConsumerGroupUnsupportedByOSS, nil
+		case kong.IsForbiddenErr(err):
+			return false, ErrTextConsumerGroupUnsupportedWithoutLicense, nil
+		default:
+			return false, "unexpected", nil
+		}
+	}
+	return true, "", nil
+}
+
 // ValidateCredential checks if the secret contains a credential meant to
 // be installed in Kong. If so, then it verifies if all the required fields
 // are present in it or not. If valid, it returns true with an empty string,
-// else it returns false with the error messsage. If an error happens during
+// else it returns false with the error message. If an error happens during
 // validation, error is returned.
 func (validator KongHTTPValidator) ValidateCredential(
 	ctx context.Context,

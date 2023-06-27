@@ -42,13 +42,21 @@ func (f fakeConsumersSvc) Get(context.Context, *string) (*kong.Consumer, error) 
 }
 
 type fakeServicesProvider struct {
-	pluginSvc   kong.AbstractPluginService
-	consumerSvc kong.AbstractConsumerService
+	pluginSvc        kong.AbstractPluginService
+	consumerSvc      kong.AbstractConsumerService
+	consumerGroupSvc kong.AbstractConsumerGroupService
 }
 
 func (f fakeServicesProvider) GetConsumersService() (kong.AbstractConsumerService, bool) {
 	if f.consumerSvc != nil {
 		return f.consumerSvc, true
+	}
+	return nil, false
+}
+
+func (f fakeServicesProvider) GetConsumerGroupsService() (kong.AbstractConsumerGroupService, bool) {
+	if f.consumerGroupSvc != nil {
+		return f.consumerGroupSvc, true
 	}
 	return nil, false
 }

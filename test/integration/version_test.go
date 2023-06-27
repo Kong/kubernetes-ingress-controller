@@ -59,6 +59,16 @@ func RunWhenKongEnterprise(t *testing.T) {
 	}
 }
 
+func RunWhenKongOSS(t *testing.T) {
+	t.Helper()
+
+	version := eventuallyGetKongVersion(t, proxyAdminURL)
+
+	if version.IsKongGatewayEnterprise() {
+		t.Skipf("skipping because Kong is not running as OSS, detected version %q", version)
+	}
+}
+
 func eventuallyGetKongVersion(t *testing.T, adminURL *url.URL) kong.Version {
 	t.Helper()
 

@@ -49,6 +49,7 @@ webhooks:
     - UPDATE
     resources:
     - kongconsumers
+    - kongconsumergroups
     - kongplugins
     - kongclusterplugins
     - kongingresses
@@ -74,6 +75,6 @@ webhooks:
     service:
       namespace: kong
       name: kong-validation-webhook
-    caBundle: $(base64 ${BASE64_OPTIONS:+${BASE64_OPTIONS}} "${TMPDIR}/tls.crt") 
+    caBundle: $(base64 ${BASE64_OPTIONS:+${BASE64_OPTIONS}} "${TMPDIR}/tls.crt")
 EOF
 ) | kubectl apply -f -

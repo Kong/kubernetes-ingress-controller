@@ -195,64 +195,6 @@ func generateTestKonnectRuntimeGroupDescription(t *testing.T) string {
 	return desc
 }
 
-// deleteRuntimeGroupsCreatedInTest returns a function that deletes RGs created in test
-// to be used in the retry procedure.
-func deleteRuntimeGroupsCreatedInTest(
-	ctx context.Context,
-	rgClient rg.ClientWithResponses,
-	t *testing.T, createTimeStamp time.Time, testUUID string,
-) func() error {
-	t.Helper()
-	// rgNumberLimit is the maximum runtime groups in the test account
-	rgNumberLimit := 100
-	createTimeStampStr := fmt.Sprintf("%d", createTimeStamp.Unix())
-
-	return func() error {
-		// list all RGs before we can list RGs by labels.
-		listRgResp, err := rgClient.ListRuntimeGroupsWithResponse(ctx, &rg.ListRuntimeGroupsParams{
-			PageSize: lo.ToPtr(rgNumberLimit),
-		})
-		if err != nil {
-			t.Logf("failed to list runtime groups: %v", err)
-			return err
-		}
-		if listRgResp.StatusCode() != http.StatusOK {
-			t.Logf("failed to list runtime groups: code %d, body %s",
-				listRgResp.StatusCode(), string(listRgResp.Body))
-			return fmt.Errorf("non-OK status code: %d", listRgResp.StatusCode())
-		}
-		if listRgResp.JSON200.Data == nil {
-			t.Logf("failed to list runtime groups: no data in body")
-			return errors.New("no data in response body")
-		}
-
-		rgs := *listRgResp.JSON200.Data
-
-		var deleteRgErrors []error
-		for _, rg := range rgs {
-			if rg.Labels == nil || *rg.Labels == nil {
-				continue
-			}
-			labels := *rg.Labels
-			// find the RGs created in the test by labels, and delete them.
-			if labels["created_in_tests"] == "true" &&
-				labels["create_test_timestamp"] == createTimeStampStr &&
-				labels["create_test_uuid"] == testUUID &&
-				rg.Id != nil {
-				deleteRgID := *rg.Id
-
-				t.Logf("deleting runtime group %s created in test %s", deleteRgID, t.Name())
-				_, deleteErr := rgClient.DeleteRuntimeGroupWithResponse(ctx, deleteRgID)
-				if deleteErr != nil {
-					t.Logf("failed to delete runtime group %s: %v", deleteRgID, err)
-					deleteRgErrors = append(deleteRgErrors, deleteErr)
-				}
-			}
-		}
-		return errors.Join(deleteRgErrors...)
-	}
-}
-
 // createTestRuntimeGroup creates a runtime group to be used in tests. It returns the created runtime group's ID.
 // It also sets up a cleanup function for it to be deleted.
 func createTestRuntimeGroup(ctx context.Context, t *testing.T) string {
@@ -265,19 +207,14 @@ func createTestRuntimeGroup(ctx context.Context, t *testing.T) string {
 		}),
 	)
 	require.NoError(t, err)
-	createTimeStamp := time.Now()
-	createTestUUID := uuid.NewString()
 
 	var rgID uuid.UUID
-
 	createRgErr := retry.Do(func() error {
 		rgName := uuid.NewString()
 		createRgResp, err := rgClient.CreateRuntimeGroupWithResponse(ctx, rg.CreateRuntimeGroupRequest{
 			Description: lo.ToPtr(generateTestKonnectRuntimeGroupDescription(t)),
 			Labels: &rg.Labels{
-				"created_in_tests":      "true",
-				"create_test_timestamp": fmt.Sprintf("%d", createTimeStamp.Unix()),
-				"create_test_uuid":      createTestUUID,
+				"created_in_tests": "true",
 			},
 			Name:        rgName,
 			ClusterType: rg.ClusterTypeKubernetesIngressController,
@@ -295,7 +232,6 @@ func createTestRuntimeGroup(ctx context.Context, t *testing.T) string {
 		rgID = *createRgResp.JSON201.Id
 		return nil
 	}, retry.Attempts(5), retry.Delay(time.Second))
-
 	require.NoError(t, createRgErr)
 
 	t.Cleanup(func() {
@@ -313,19 +249,6 @@ func createTestRuntimeGroup(ctx context.Context, t *testing.T) string {
 			retry.Attempts(5), retry.Delay(time.Second),
 		)
 		assert.NoErrorf(t, err, "failed to delete runtime group %s used in the test", rgID.String())
-
-		// list other RGs also created in the previous code for situations
-		// that RG created, but we timed out on getting the response.
-		// This prevents RG leaks.
-		t.Logf("deleting other runtime groups created in the test")
-		err = retry.Do(
-			deleteRuntimeGroupsCreatedInTest(
-				ctx, *rgClient,
-				t, createTimeStamp, createTestUUID,
-			),
-			retry.Attempts(5), retry.Delay(time.Second),
-		)
-		assert.NoError(t, err, "failed to list and delete other runtime groups created in the test")
 	})
 
 	t.Logf("created test Konnect Runtime Group: %q", rgID.String())

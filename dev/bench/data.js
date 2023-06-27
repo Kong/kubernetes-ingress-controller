@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1687844361786,
+  "lastUpdate": 1687846408722,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -1830,6 +1830,36 @@ window.BENCHMARK_DATA = {
             "value": 98635,
             "unit": "ns/op\t   11119 B/op\t      12 allocs/op",
             "extra": "12615 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "czeslavo@gmail.com",
+            "name": "Grzegorz Burzyński",
+            "username": "czeslavo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "49e08c98ef2bfb3916ca34776240471a5ef7a422",
+          "message": "chore(ci): cleanup orphaned Konnect RGs and roles in cleanup job (#4226)\n\nExtends the cleanup workflow by adding a step in the script removing orphaned \r\nKonnect runtime groups and roles created for them (to ensure we do not hit the\r\nissue with degraded performance and unreliable APIs when we have too many\r\norphaned roles). Also adds the roles removal step to the cleanup function in\r\nE2E tests.",
+          "timestamp": "2023-06-27T07:59:39+02:00",
+          "tree_id": "be9cfd2ddb0dbe96cb5f75c3650612f2c0b27b0e",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/49e08c98ef2bfb3916ca34776240471a5ef7a422"
+        },
+        "date": 1687846403558,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA",
+            "value": 141740,
+            "unit": "ns/op\t   11123 B/op\t      12 allocs/op",
+            "extra": "10000 times\n2 procs"
           }
         ]
       }

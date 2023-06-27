@@ -134,12 +134,12 @@ jobs:
       fail-fast: true
       matrix:
         kubernetes-version:
-          - 'v1.22.15'
-          - 'v1.23.13'
-          - 'v1.24.13'
-          - 'v1.25.9'
-          - 'v1.26.4'
-          - 'v1.27.2'
+          - 'v1.22.17'
+          - 'v1.23.17'
+          - 'v1.24.15'
+          - 'v1.25.11'
+          - 'v1.26.6'
+          - 'v1.27.3'
     steps:
       - name: checkout repository
         uses: actions/checkout@v3

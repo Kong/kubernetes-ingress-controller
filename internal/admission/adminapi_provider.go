@@ -37,6 +37,22 @@ func (p DefaultAdminAPIServicesProvider) GetPluginsService() (kong.AbstractPlugi
 	return c.Plugins, true
 }
 
+func (p DefaultAdminAPIServicesProvider) GetConsumerGroupsService() (kong.AbstractConsumerGroupService, bool) {
+	c, ok := p.designatedAdminAPIClient()
+	if !ok {
+		return nil, ok
+	}
+	return c.ConsumerGroups, true
+}
+
+func (p DefaultAdminAPIServicesProvider) GetInfoService() (kong.AbstractInfoService, bool) {
+	c, ok := p.designatedAdminAPIClient()
+	if !ok {
+		return nil, ok
+	}
+	return c.Info, true
+}
+
 func (p DefaultAdminAPIServicesProvider) designatedAdminAPIClient() (*kong.Client, bool) {
 	gwClients := p.gatewayClientsProvider.GatewayClients()
 	if len(gwClients) == 0 {

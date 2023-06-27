@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1687851722480,
+  "lastUpdate": 1687851723916,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -2190,6 +2190,36 @@ window.BENCHMARK_DATA = {
             "value": 68595,
             "unit": "ns/op\t   11092 B/op\t      12 allocs/op",
             "extra": "17781 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "czeslavo@gmail.com",
+            "name": "Grzegorz Burzyński",
+            "username": "czeslavo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "90a43c53875906142b8c086e6e80efce81b2a50e",
+          "message": "chore: bump test dependencies (#4233)",
+          "timestamp": "2023-06-27T09:40:25+02:00",
+          "tree_id": "1a3927bc6dbe1026b38005771ca5248e3130cbc2",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/90a43c53875906142b8c086e6e80efce81b2a50e"
+        },
+        "date": 1687851717435,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA",
+            "value": 88460,
+            "unit": "ns/op\t   11095 B/op\t      12 allocs/op",
+            "extra": "13554 times\n2 procs"
           }
         ]
       },

@@ -35,6 +35,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/adminapi"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/konnect"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/konnect/nodes"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/konnect/roles"
 	rg "github.com/kong/kubernetes-ingress-controller/v2/internal/konnect/runtimegroups"
 	rgc "github.com/kong/kubernetes-ingress-controller/v2/internal/konnect/runtimegroupsconfig"
 	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/helpers"
@@ -44,6 +45,7 @@ const (
 	konnectRuntimeGroupsBaseURL          = "https://us.kic.api.konghq.tech/v2"
 	konnectRuntimeGroupsConfigBaseURLFmt = "https://us.api.konghq.tech/konnect-api/api/runtime_groups/%s/v1"
 	konnectRuntimeGroupAdminAPIBaseURL   = "https://us.kic.api.konghq.tech"
+	konnectRolesBaseURL                  = "https://global.api.konghq.tech/v2"
 
 	konnectNodeRegistrationTimeout = 5 * time.Minute
 	konnectNodeRegistrationCheck   = 30 * time.Second
@@ -194,6 +196,12 @@ func createTestRuntimeGroup(ctx context.Context, t *testing.T) string {
 	)
 	require.NoError(t, err)
 
+	rolesClient := roles.NewClient(
+		helpers.RetryableHTTPClient(helpers.DefaultHTTPClient()),
+		konnectRolesBaseURL,
+		konnectAccessToken,
+	)
+
 	createRgResp, err := rgClient.CreateRuntimeGroupWithResponse(ctx, rg.CreateRuntimeGroupRequest{
 		Description: lo.ToPtr("This is a description"),
 		Labels:      &rg.Labels{"created_in_tests": "true"},
@@ -206,8 +214,26 @@ func createTestRuntimeGroup(ctx context.Context, t *testing.T) string {
 	require.NotNil(t, createRgResp.JSON201.Id)
 	id := *createRgResp.JSON201.Id
 	t.Cleanup(func() {
+		t.Logf("deleting test Konnect Runtime Group: %q", id)
 		_, err := rgClient.DeleteRuntimeGroupWithResponse(ctx, id)
 		assert.NoErrorf(t, err, "failed to cleanup a runtime group: %q", id)
+
+		// We have to manually delete roles created for the runtime group because Konnect doesn't do it automatically.
+		// If we don't do it, we will eventually hit a problem with Konnect APIs answering our requests with 504s
+		// because of a performance issue when there's too many roles for the account
+		// (see https://konghq.atlassian.net/browse/TPS-1319).
+		//
+		// We can drop this once the automated cleanup is implemented on Konnect side:
+		// https://konghq.atlassian.net/browse/TPS-1453.
+		rgRoles, err := rolesClient.ListRuntimeGroupsRoles(ctx)
+		require.NoErrorf(t, err, "failed to list runtime group roles for cleanup: %q", id)
+		for _, role := range rgRoles {
+			if role.EntityID == id.String() { // Delete only roles created for the runtime group.
+				t.Logf("deleting test Konnect Runtime Group role: %q", role.ID)
+				err := rolesClient.DeleteRole(ctx, role.ID)
+				assert.NoErrorf(t, err, "failed to cleanup a runtime group role: %q", role.ID)
+			}
+		}
 	})
 
 	t.Logf("created test Konnect Runtime Group: %q", id.String())

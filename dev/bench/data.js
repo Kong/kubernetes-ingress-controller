@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1687852417481,
+  "lastUpdate": 1687852418703,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -2310,6 +2310,36 @@ window.BENCHMARK_DATA = {
             "value": 70009,
             "unit": "ns/op\t   11094 B/op\t      12 allocs/op",
             "extra": "17895 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jakub.warczarek@konghq.com",
+            "name": "Jakub Warczarek",
+            "username": "programmer04"
+          },
+          "committer": {
+            "email": "jakub.warczarek@konghq.com",
+            "name": "Jakub Warczarek",
+            "username": "programmer04"
+          },
+          "distinct": true,
+          "id": "f6b4cedeb843eb2fb373fd22dcba4a5326f19811",
+          "message": "chore(ci): do not run e2e tests triggered by label on GKE clusters",
+          "timestamp": "2023-06-27T09:52:16+02:00",
+          "tree_id": "4817a99a0a173438f7532d42a7d4fab18b4222a4",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/f6b4cedeb843eb2fb373fd22dcba4a5326f19811"
+        },
+        "date": 1687852413324,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA",
+            "value": 68056,
+            "unit": "ns/op\t   11094 B/op\t      12 allocs/op",
+            "extra": "16645 times\n2 procs"
           }
         ]
       },

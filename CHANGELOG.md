@@ -7,6 +7,7 @@ Adding a new version? You'll need three changes:
 * Add the diff link, like "[2.7.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v1.2.2...v1.2.3".
   This is all the way at the bottom. It's the thing we always forget.
 --->
+ - [2.10.1](#2101)
  - [2.10.0](#2100)
  - [2.9.3](#293)
  - [2.9.2](#292)
@@ -81,11 +82,6 @@ Adding a new version? You'll need three changes:
 - Prometheus metrics now include counts of resources that the controller cannot
   send to the proxy instances and the last successful configuration push time.
   [#4181](https://github.com/Kong/kubernetes-ingress-controller/pull/4181)
-- `--konnect-initial-license-polling-period` and `--konnect-license-polling-period`
-  CLI flags were added to allow configuring periods at which KIC polls license
-  from Konnect. The initial period will be used until a valid license is retrieved.
-  The default values are 1m and 12h respectively.
-  [#4178](https://github.com/Kong/kubernetes-ingress-controller/pull/4178)
 
 ### Changed
 
@@ -96,6 +92,18 @@ Adding a new version? You'll need three changes:
   all involved Services, not just Services whose annotation does not match the
   first observed value, as that value is not necessarily the desired value.
   [#4171](https://github.com/Kong/kubernetes-ingress-controller/pull/4171)
+
+## [2.10.1]
+
+> Release date: 2023-06-27
+
+### Added
+
+- `--konnect-initial-license-polling-period` and `--konnect-license-polling-period`
+  CLI flags were added to allow configuring periods at which KIC polls license
+  from Konnect. The initial period will be used until a valid license is retrieved.
+  The default values are 1m and 12h respectively.
+  [#4178](https://github.com/Kong/kubernetes-ingress-controller/pull/4178)
 
 ### Fixed
 
@@ -2534,6 +2542,7 @@ Please read the changelog and test in your environment.
  - The initial versions  were rapildy iterated to deliver
    a working ingress controller.
 
+[2.10.1]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.10.0...v2.10.1
 [2.10.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.9.3...v2.10.0
 [2.9.3]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.9.2...v2.9.3
 [2.9.2]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.9.1...v2.9.2

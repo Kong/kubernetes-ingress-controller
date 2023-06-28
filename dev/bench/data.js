@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1687946408781,
+  "lastUpdate": 1687947516928,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -3030,6 +3030,36 @@ window.BENCHMARK_DATA = {
             "value": 68468,
             "unit": "ns/op\t   11097 B/op\t      12 allocs/op",
             "extra": "17662 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "lavacca.mattia@gmail.com",
+            "name": "Mattia Lavacca",
+            "username": "mlavacca"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "d73df775330eb6323e0971e8f592e660da67c8ad",
+          "message": "feat: store and push last valid config (#4205)\n\n* feat: store and push last valid config\r\n\r\nSigned-off-by: Mattia Lavacca <lavacca.mattia@gmail.com>\r\n\r\n* test(unit): last valid config unit test added\r\n\r\nSigned-off-by: Mattia Lavacca <lavacca.mattia@gmail.com>\r\n\r\n---------\r\n\r\nSigned-off-by: Mattia Lavacca <lavacca.mattia@gmail.com>",
+          "timestamp": "2023-06-28T12:17:35+02:00",
+          "tree_id": "3906e705c965bbc46e413f020a14e2ea5c5dcf4a",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/d73df775330eb6323e0971e8f592e660da67c8ad"
+        },
+        "date": 1687947512659,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA",
+            "value": 69485,
+            "unit": "ns/op\t   11098 B/op\t      12 allocs/op",
+            "extra": "16286 times\n2 procs"
           }
         ]
       }

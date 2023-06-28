@@ -171,6 +171,7 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 		configurationChangeDetector,
 		configParser,
 		cache,
+		nil,
 	)
 	if err != nil {
 		return fmt.Errorf("failed to initialize kong data-plane client: %w", err)

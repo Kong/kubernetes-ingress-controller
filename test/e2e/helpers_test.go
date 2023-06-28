@@ -84,6 +84,12 @@ const (
 
 	// migrationsJobName is the name of the migrations job in postgres manifests variant.
 	migrationsJobName = "kong-migrations"
+
+	// echoPath is the legit echo path to use for the echo service.
+	echoPath = "/echo"
+
+	// badEchoPath is a wrong path to use for testing ingress misconfiguration.
+	badEchoPath = "/~/echo/**"
 )
 
 // setupE2ETest builds a testing environment for the E2E test. It also sets up the environment's teardown and test
@@ -409,13 +415,21 @@ func deployIngressWithEchoBackends(ctx context.Context, t *testing.T, env enviro
 	_, err = c.ConfigurationV1().KongIngresses(corev1.NamespaceDefault).Create(ctx, king, metav1.CreateOptions{})
 	require.NoError(t, err)
 	t.Logf("creating an ingress for service %s with ingress.class %s", service.Name, ingressClass)
-	ingress := generators.NewIngressForService("/echo", map[string]string{
+	ingress := generators.NewIngressForService(echoPath, map[string]string{
 		annotations.IngressClassKey: ingressClass,
 		"konghq.com/strip-path":     "true",
 		"konghq.com/override":       kongIngressName,
 	}, service)
 	require.NoError(t, clusters.DeployIngress(ctx, env.Cluster(), corev1.NamespaceDefault, ingress))
 	return ingress
+}
+
+func reconfigureExistingIngress(ctx context.Context, t *testing.T, env environments.Environment, ingress *netv1.Ingress, options ...func(*netv1.Ingress)) {
+	for _, opt := range options {
+		opt(ingress)
+	}
+	_, err := env.Cluster().Client().NetworkingV1().Ingresses(corev1.NamespaceDefault).Update(ctx, ingress, metav1.UpdateOptions{})
+	require.NoError(t, err)
 }
 
 //nolint:unparam
@@ -426,7 +440,7 @@ func verifyIngressWithEchoBackends(
 	noReplicas int,
 ) {
 	t.Helper()
-	verifyIngressWithEchoBackendsPath(ctx, t, env, noReplicas, "/echo")
+	verifyIngressWithEchoBackendsPath(ctx, t, env, noReplicas, echoPath)
 }
 
 func verifyIngressWithEchoBackendsPath(

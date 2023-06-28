@@ -1,10 +1,11 @@
-package dataplane_test
+package dataplane
 
 import (
 	"context"
 	"errors"
 	"fmt"
 	"net/http"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -14,6 +15,7 @@ import (
 	gokong "github.com/kong/go-kong/kong"
 	"github.com/samber/lo"
 	"github.com/sirupsen/logrus"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	netv1 "k8s.io/api/networking/v1"
@@ -24,7 +26,6 @@ import (
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/adminapi"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/clients"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/failures"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/parser"
@@ -111,7 +112,7 @@ func TestUniqueObjects(t *testing.T) {
 				require.NoError(t, err)
 				translationFailures = append(translationFailures, translationFailure)
 			}
-			uniqueObjs := dataplane.UniqueObjects(tc.reportedObjs, translationFailures)
+			uniqueObjs := UniqueObjects(tc.reportedObjs, translationFailures)
 			require.Len(t, uniqueObjs, len(tc.uniqueObjs))
 			require.ElementsMatch(t, tc.uniqueObjs, uniqueObjs)
 		})
@@ -147,6 +148,7 @@ type mockUpdateStrategyResolver struct {
 	shouldReturnErrorOnUpdate map[string]struct{}
 	t                         *testing.T
 	lock                      sync.RWMutex
+	singleError               bool
 }
 
 func newMockUpdateStrategyResolver(t *testing.T) *mockUpdateStrategyResolver {
@@ -161,7 +163,7 @@ func (f *mockUpdateStrategyResolver) ResolveUpdateStrategy(c sendconfig.UpdateCl
 	defer f.lock.Unlock()
 
 	url := c.AdminAPIClient().BaseRootURL()
-	return &mockUpdateStrategy{onUpdate: f.updateCalledForURLCallback(url)}
+	return &mockUpdateStrategy{onUpdate: f.updateCalledForURLCallback(url, f.singleError)}
 }
 
 // returnErrorOnUpdate will cause the mockUpdateStrategy with a given Admin API URL to return an error on Update().
@@ -178,13 +180,16 @@ func (f *mockUpdateStrategyResolver) returnErrorOnUpdate(url string, shouldRetur
 
 // updateCalledForURLCallback returns a function that will be called when the mockUpdateStrategy is called.
 // That enables us to track which URLs were called.
-func (f *mockUpdateStrategyResolver) updateCalledForURLCallback(url string) func() error {
+func (f *mockUpdateStrategyResolver) updateCalledForURLCallback(url string, singleError bool) func() error {
 	return func() error {
 		f.lock.Lock()
 		defer f.lock.Unlock()
 
 		f.updateCalledForURLs = append(f.updateCalledForURLs, url)
 		if _, ok := f.shouldReturnErrorOnUpdate[url]; ok {
+			if singleError {
+				delete(f.shouldReturnErrorOnUpdate, url)
+			}
 			return errors.New("error on update")
 		}
 		return nil
@@ -316,7 +321,7 @@ func TestKongClientUpdate_AllExpectedClientsAreCalledAndErrorIsPropagated(t *tes
 			configChangeDetector := mockConfigurationChangeDetector{hasConfigurationChanged: true}
 			configBuilder := newMockKongConfigBuilder()
 
-			kongClient := setupTestKongClient(t, updateStrategyResolver, clientsProvider, configChangeDetector, configBuilder)
+			kongClient := setupTestKongClient(t, updateStrategyResolver, clientsProvider, configChangeDetector, configBuilder, nil)
 
 			err := kongClient.Update(ctx)
 			if tc.expectError {
@@ -345,7 +350,7 @@ func TestKongClientUpdate_WhenNoChangeInConfigNoClientGetsCalled(t *testing.T) {
 	configChangeDetector := mockConfigurationChangeDetector{hasConfigurationChanged: false}
 	configBuilder := newMockKongConfigBuilder()
 
-	kongClient := setupTestKongClient(t, updateStrategyResolver, clientsProvider, configChangeDetector, configBuilder)
+	kongClient := setupTestKongClient(t, updateStrategyResolver, clientsProvider, configChangeDetector, configBuilder, nil)
 
 	ctx := context.Background()
 	err := kongClient.Update(ctx)
@@ -372,15 +377,18 @@ func (m *mockConfigStatusQueue) WasNotified() bool {
 
 type mockKongConfigBuilder struct {
 	translationFailuresToReturn []failures.ResourceFailure
+	kongState                   *kongstate.KongState
 }
 
 func newMockKongConfigBuilder() *mockKongConfigBuilder {
-	return &mockKongConfigBuilder{}
+	return &mockKongConfigBuilder{
+		kongState: &kongstate.KongState{},
+	}
 }
 
 func (p *mockKongConfigBuilder) BuildKongConfig() parser.KongConfigBuildingResult {
 	return parser.KongConfigBuildingResult{
-		KongState:           &kongstate.KongState{},
+		KongState:           p.kongState,
 		TranslationFailures: p.translationFailuresToReturn,
 	}
 }
@@ -420,7 +428,7 @@ func TestKongClientUpdate_ConfigStatusIsAlwaysNotified(t *testing.T) {
 		updateStrategyResolver = newMockUpdateStrategyResolver(t)
 		configChangeDetector   = mockConfigurationChangeDetector{hasConfigurationChanged: true}
 		configBuilder          = newMockKongConfigBuilder()
-		kongClient             = setupTestKongClient(t, updateStrategyResolver, clientsProvider, configChangeDetector, configBuilder)
+		kongClient             = setupTestKongClient(t, updateStrategyResolver, clientsProvider, configChangeDetector, configBuilder, nil)
 	)
 
 	testCases := []struct {
@@ -483,6 +491,114 @@ func TestKongClientUpdate_ConfigStatusIsAlwaysNotified(t *testing.T) {
 	}
 }
 
+func TestKongClientUpdate_PushLastValidConfig(t *testing.T) {
+	var (
+		ctx               = context.Background()
+		testGatewayClient = mustSampleGatewayClient(t)
+
+		clientsProvider = mockGatewayClientsProvider{
+			gatewayClients: []*adminapi.Client{testGatewayClient},
+		}
+
+		updateStrategyResolver = newMockUpdateStrategyResolver(t)
+		configChangeDetector   = mockConfigurationChangeDetector{hasConfigurationChanged: true}
+		lastKongState          = &kongstate.KongState{
+			Services: []kongstate.Service{
+				{
+					Service: gokong.Service{
+						Name: gokong.String("last_service"),
+					},
+					Namespace: "last_namespace",
+					Routes: []kongstate.Route{
+						{
+							Route: gokong.Route{
+								Name: gokong.String("last_route"),
+							},
+						},
+					},
+				},
+			},
+		}
+		newKongState = &kongstate.KongState{
+			Services: []kongstate.Service{
+				{
+					Service: gokong.Service{
+						Name: gokong.String("new_service"),
+					},
+					Namespace: "new_namespace",
+					Routes: []kongstate.Route{
+						{
+							Route: gokong.Route{
+								Name: gokong.String("new_route"),
+							},
+						},
+					},
+				},
+			},
+		}
+		configBuilder = newMockKongConfigBuilder()
+	)
+	configBuilder.kongState = newKongState
+
+	testCases := []struct {
+		name                  string
+		gatewayFailure        bool
+		translationFailures   bool
+		singleError           bool
+		lastValidKongState    *kongstate.KongState
+		expectedLastKongState *kongstate.KongState
+		errorsSize            int
+	}{
+		{
+			name:                  "success, new fallback set",
+			lastValidKongState:    lastKongState,
+			expectedLastKongState: newKongState,
+		},
+		{
+			name:                  "failure, no fallback",
+			gatewayFailure:        true,
+			singleError:           true,
+			lastValidKongState:    nil,
+			expectedLastKongState: nil,
+			errorsSize:            1,
+		},
+		{
+			name:                  "failure, fallback pushed with success",
+			gatewayFailure:        true,
+			singleError:           true,
+			lastValidKongState:    lastKongState,
+			expectedLastKongState: lastKongState,
+			errorsSize:            1,
+		},
+		{
+			name:                  "failure, fallback pushed with failure",
+			gatewayFailure:        true,
+			singleError:           false,
+			lastValidKongState:    lastKongState,
+			expectedLastKongState: lastKongState,
+			errorsSize:            2,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			updateStrategyResolver.returnErrorOnUpdate(testGatewayClient.BaseRootURL(), tc.gatewayFailure)
+			updateStrategyResolver.singleError = tc.singleError
+			kongClient := setupTestKongClient(t, updateStrategyResolver, clientsProvider, configChangeDetector, configBuilder, tc.lastValidKongState)
+
+			err := kongClient.Update(ctx)
+			if tc.errorsSize > 0 {
+				// check if the error is joined with other errors. When there are multiple errors,
+				// they are separated by \n, hence we count the number of \n.
+				assert.Equal(t, strings.Count(err.Error(), "\n"), tc.errorsSize-1)
+			} else {
+				assert.NoError(t, err)
+			}
+			assert.Equal(t, tc.expectedLastKongState, kongClient.lastValidKongState)
+		})
+	}
+}
+
 // setupTestKongClient creates a KongClient with mocked dependencies.
 func setupTestKongClient(
 	t *testing.T,
@@ -490,7 +606,8 @@ func setupTestKongClient(
 	clientsProvider mockGatewayClientsProvider,
 	configChangeDetector sendconfig.ConfigurationChangeDetector,
 	configBuilder *mockKongConfigBuilder,
-) *dataplane.KongClient {
+	lastKongState *kongstate.KongState,
+) *KongClient {
 	logger := logrus.New()
 	timeout := time.Second
 	ingressClass := "kong"
@@ -498,7 +615,7 @@ func setupTestKongClient(
 	config := sendconfig.Config{}
 	dbMode := "off"
 
-	kongClient, err := dataplane.NewKongClient(
+	kongClient, err := NewKongClient(
 		logger,
 		timeout,
 		ingressClass,
@@ -511,6 +628,7 @@ func setupTestKongClient(
 		configChangeDetector,
 		configBuilder,
 		store.NewCacheStores(),
+		lastKongState,
 	)
 	require.NoError(t, err)
 	return kongClient

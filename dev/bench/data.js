@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1687948907508,
+  "lastUpdate": 1687953333984,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -3270,6 +3270,36 @@ window.BENCHMARK_DATA = {
             "value": 65530,
             "unit": "ns/op\t   11094 B/op\t      12 allocs/op",
             "extra": "16882 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "tao.yi@konghq.com",
+            "name": "Tao Yi",
+            "username": "randmonkey"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "1b59a9bbeedeace8a1d3f800ec26681493b2fa6d",
+          "message": "fix: do not prepend ~ before regex paths for Kong < 3.0 (#4238)\n\n* fix: do not prepend ~ before regex paths for Kong < 3.0\r\n\r\n* add tests for translating grpcroute\r\n\r\n* add CHANGELOG",
+          "timestamp": "2023-06-28T19:54:21+08:00",
+          "tree_id": "a52f8b1b75bf45eba5f0c7cb901bc04256e1eed7",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/1b59a9bbeedeace8a1d3f800ec26681493b2fa6d"
+        },
+        "date": 1687953329176,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA",
+            "value": 80261,
+            "unit": "ns/op\t   11104 B/op\t      12 allocs/op",
+            "extra": "14682 times\n2 procs"
           }
         ]
       }

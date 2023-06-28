@@ -380,6 +380,7 @@ func calculateExpressionRoutePriority(
 	}
 	priority += (headerCount << headerNumberShiftBits)
 	priority += (matchFields << matchFieldsShiftBits)
+	priority += (ResourceKindBitsIngress << FromResourceKindPriorityShiftBits)
 
 	return priority
 }

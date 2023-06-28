@@ -6,6 +6,19 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/parser/atc"
 )
 
+const (
+	// FromResourceKindPriorityShiftBits is the highest 2 bits 51-50 used in priority field of Kong route
+	// to note the kind of the resource from which the route is translated.
+	// 11 - routes from Ingress
+	// 10 - routes from HTTPRoute
+	// 01 - routes from GRPCRoute
+	FromResourceKindPriorityShiftBits = 50
+
+	ResourceKindBitsIngress   = 3
+	ResourceKindBitsHTTPRoute = 2
+	ResourceKindBitsGRPCRoute = 1
+)
+
 // -----------------------------------------------------------------------------
 // Translator - common functions in translating expression(ATC) routes from multiple kinds of k8s objects.
 // -----------------------------------------------------------------------------

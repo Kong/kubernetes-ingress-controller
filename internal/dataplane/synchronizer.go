@@ -88,8 +88,6 @@ func NewSynchronizer(logger logrus.FieldLogger, client Client, opts ...Synchroni
 		opt(synchronizer)
 	}
 
-	synchronizer.dbMode = client.DBMode()
-
 	return synchronizer, nil
 }
 

@@ -193,7 +193,7 @@ environment variable is set. You can create the access token using the [Konnect 
 The tests run against a `.tech` Konnect environment therefore the token you obtain must be created for an account
 in that environment.
 
-Examplar local invocation for running a Konnect test can look like this:
+Exemplary local invocation for running a Konnect test can look like this:
 
 ```
 make test.e2e GOTESTFLAGS="-count 1" E2E_TEST_RUN=TestKonnectConfigPush TEST_KONG_KONNECT_ACCESS_TOKEN=<token>

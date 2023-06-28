@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1687963702550,
+  "lastUpdate": 1687963704462,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -3570,6 +3570,36 @@ window.BENCHMARK_DATA = {
             "value": 69197,
             "unit": "ns/op\t   11099 B/op\t      12 allocs/op",
             "extra": "17683 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "49699333+dependabot[bot]@users.noreply.github.com",
+            "name": "dependabot[bot]",
+            "username": "dependabot[bot]"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "4aedd072b4398ebd1a16abb506c9c92ee054b035",
+          "message": "chore(deps): bump github.com/go-delve/delve in /third_party\n\nBumps [github.com/go-delve/delve](https://github.com/go-delve/delve) from 1.20.2 to 1.21.0.\n- [Release notes](https://github.com/go-delve/delve/releases)\n- [Changelog](https://github.com/go-delve/delve/blob/master/CHANGELOG.md)\n- [Commits](https://github.com/go-delve/delve/compare/v1.20.2...v1.21.0)\n\n---\nupdated-dependencies:\n- dependency-name: github.com/go-delve/delve\n  dependency-type: direct:production\n  update-type: version-update:semver-minor\n...\n\nSigned-off-by: dependabot[bot] <support@github.com>",
+          "timestamp": "2023-06-28T14:47:19Z",
+          "tree_id": "1fb9d25743e96a26e208eba81a46eaff4610e181",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/4aedd072b4398ebd1a16abb506c9c92ee054b035"
+        },
+        "date": 1687963697392,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA",
+            "value": 71133,
+            "unit": "ns/op\t   11097 B/op\t      12 allocs/op",
+            "extra": "18210 times\n2 procs"
           }
         ]
       },

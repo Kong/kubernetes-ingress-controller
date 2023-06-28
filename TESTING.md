@@ -186,8 +186,22 @@ Exemplar local invocation can look like this:
 make test.e2e GOTESTFLAGS="-count 1" E2E_TEST_RUN=TestDeployAllInOneDBLESS
 ```
 
+##### Konnect tests
+
+Some of the E2E tests are Konnect-specific and are being run only when the `TEST_KONG_KONNECT_ACCESS_TOKEN`
+environment variable is set. You can create the access token using the [Konnect UI][konnect_tokens].
+The tests run against a `.tech` Konnect environment therefore the token you obtain must be created for an account
+in that environment.
+
+Examplar local invocation for running a Konnect test can look like this:
+
+```
+make test.e2e GOTESTFLAGS="-count 1" E2E_TEST_RUN=TestKonnectConfigPush TEST_KONG_KONNECT_ACCESS_TOKEN=<token>
+```
+
 [test_e2e_all_in_one]: https://github.com/Kong/kubernetes-ingress-controller/blob/3d45c822bdb907caba568f86062af83406785fc5/test/e2e/all_in_one_test.go
 [test_e2e_upgrade]: https://github.com/Kong/kubernetes-ingress-controller/blob/43e797f7394c5f0a9394c6f158f5efff5e2321ec/test/e2e/upgrade_test.go
 [env_var_controller_image_override]: https://github.com/Kong/kubernetes-ingress-controller/blob/50a4c3f1e57c56950808b90bcb0b57fefc2f3d7c/test/e2e/environment.go#L12-L13
 [env_var_kong_image_override]: https://github.com/Kong/kubernetes-ingress-controller/blob/50a4c3f1e57c56950808b90bcb0b57fefc2f3d7c/test/e2e/environment.go#L19-L20
 [go_build_tag]: https://pkg.go.dev/go/build#hdr-Build_Constraints
+[konnect_tokens]: https://cloud.konghq.tech/global/account/tokens

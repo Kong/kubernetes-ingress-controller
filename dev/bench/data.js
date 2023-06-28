@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1687967134197,
+  "lastUpdate": 1687967778400,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -3810,6 +3810,36 @@ window.BENCHMARK_DATA = {
             "value": 70464,
             "unit": "ns/op\t   11099 B/op\t      12 allocs/op",
             "extra": "17058 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "czeslavo@gmail.com",
+            "name": "Grzegorz Burzyński",
+            "username": "czeslavo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "1cba34431efa0f100d5152d4add27d14d6f3fd1a",
+          "message": "tests: add UT ensuring readiness is not blocked (#4243)\n\nAdds a unit test ensuring that Synchronizer.IsReady call is not blocking when \r\ndataplaneClient's calls are blocked.",
+          "timestamp": "2023-06-28T17:54:33+02:00",
+          "tree_id": "175df2443a05e0b11479433617cc25f112e7e11b",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/1cba34431efa0f100d5152d4add27d14d6f3fd1a"
+        },
+        "date": 1687967774200,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA",
+            "value": 67623,
+            "unit": "ns/op\t   11091 B/op\t      12 allocs/op",
+            "extra": "17943 times\n2 procs"
           }
         ]
       }

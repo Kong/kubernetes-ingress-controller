@@ -772,8 +772,8 @@ github.com/go-critic/go-critic v0.4.1/go.mod h1:7/14rZGnZbY6E38VEGk2kVhoq6itzc1E
 github.com/go-critic/go-critic v0.4.3/go.mod h1:j4O3D4RoIwRqlZw5jJpx0BNfXWWbpcJoKu5cYSe4YmQ=
 github.com/go-critic/go-critic v0.8.1 h1:16omCF1gN3gTzt4j4J6fKI/HnRojhEp+Eks6EuKw3vw=
 github.com/go-critic/go-critic v0.8.1/go.mod h1:kpzXl09SIJX1cr9TB/g/sAG+eFEl7ZS9f9cqvZtyNl0=
-github.com/go-delve/delve v1.20.2 h1:rgPK7Iqb1oQk+i2Ilg0fpH6p5LqyixYiAt4N3Lhx4/Y=
-github.com/go-delve/delve v1.20.2/go.mod h1:KQtnLRy2M+cNHCRnDzURxljVNbRTdvVDD5Mb10KGP18=
+github.com/go-delve/delve v1.21.0 h1:npcc8TZhdVxaMSJon+zqcE3bXM/ck8SSOOWw/id13jI=
+github.com/go-delve/delve v1.21.0/go.mod h1:U+OAdfhewudkHsVs/AwhfpSBu7t/NgIXH3+my4T5q78=
 github.com/go-delve/liner v1.2.3-0.20220127212407-d32d89dd2a5d h1:pxjSLshkZJGLVm0wv20f/H0oTWiq/egkoJQ2ja6LEvo=
 github.com/go-delve/liner v1.2.3-0.20220127212407-d32d89dd2a5d/go.mod h1:biJCRbqp51wS+I92HMqn5H8/A0PAhxn2vyOT+JqhiGI=
 github.com/go-errors/errors v1.0.1/go.mod h1:f4zRHt4oKfwPJE5k8C9vpYG+aDHdBFUsgrm6/TyX73Q=
@@ -1099,8 +1099,8 @@ github.com/google/go-containerregistry v0.7.0/go.mod h1:2zaoelrL0d08gGbpdP3LqyUu
 github.com/google/go-containerregistry v0.8.0/go.mod h1:wW5v71NHGnQyb4k+gSshjxidrC7lN33MdWEn+Mz9TsI=
 github.com/google/go-containerregistry v0.14.0 h1:z58vMqHxuwvAsVwvKEkmVBz2TlgBgH5k6koEXBtlYkw=
 github.com/google/go-containerregistry v0.14.0/go.mod h1:aiJ2fp/SXvkWgmYHioXnbMdlgB8eXiiYOY55gfN91Wk=
-github.com/google/go-dap v0.7.0 h1:088PdKBUkxAxrXrnY8FREUJXpS6Y6jhAyZIuJv3OGOM=
-github.com/google/go-dap v0.7.0/go.mod h1:5q8aYQFnHOAZEMP+6vmq25HKYAEwE+LF5yh7JKrrhSQ=
+github.com/google/go-dap v0.9.1 h1:d8dETjgHMR9/xs+Xza+NrZmB7jxIS5OtM2uRsyJVA/c=
+github.com/google/go-dap v0.9.1/go.mod h1:HAeyoSd2WIfTfg+0GRXcFrb+RnojAtGNh+k+XTIxJDE=
 github.com/google/go-github v17.0.0+incompatible/go.mod h1:zLgOLi98H3fifZn+44m+umXrS52loVEgC2AApnigrVQ=
 github.com/google/go-github/v28 v28.1.1/go.mod h1:bsqJWQX05omyWVmc00nEUql9mhQyv38lDZ8kPZcQVoM=
 github.com/google/go-querystring v1.0.0/go.mod h1:odCYkC5MyYFN7vkCjXpyrEuKhc/BUO6wN/zVPAxq5ck=

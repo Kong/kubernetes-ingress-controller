@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1687963704462,
+  "lastUpdate": 1687963757434,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -3630,6 +3630,36 @@ window.BENCHMARK_DATA = {
             "value": 71133,
             "unit": "ns/op\t   11097 B/op\t      12 allocs/op",
             "extra": "18210 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "49699333+dependabot[bot]@users.noreply.github.com",
+            "name": "dependabot[bot]",
+            "username": "dependabot[bot]"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "ffaff15bcf219ac9c36c19d74cee22abbb12f49f",
+          "message": "chore(deps): bump github.com/GoogleContainerTools/skaffold/v2\n\nBumps [github.com/GoogleContainerTools/skaffold/v2](https://github.com/GoogleContainerTools/skaffold) from 2.5.1 to 2.6.0.\n- [Release notes](https://github.com/GoogleContainerTools/skaffold/releases)\n- [Changelog](https://github.com/GoogleContainerTools/skaffold/blob/main/CHANGELOG.md)\n- [Commits](https://github.com/GoogleContainerTools/skaffold/compare/v2.5.1...v2.6.0)\n\n---\nupdated-dependencies:\n- dependency-name: github.com/GoogleContainerTools/skaffold/v2\n  dependency-type: direct:production\n  update-type: version-update:semver-minor\n...\n\nSigned-off-by: dependabot[bot] <support@github.com>",
+          "timestamp": "2023-06-28T14:48:01Z",
+          "tree_id": "43563c68460d9b038fa2e5b8b61d742c19a1d975",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/ffaff15bcf219ac9c36c19d74cee22abbb12f49f"
+        },
+        "date": 1687963751298,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA",
+            "value": 103223,
+            "unit": "ns/op\t   11095 B/op\t      12 allocs/op",
+            "extra": "12748 times\n2 procs"
           }
         ]
       }

@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1687953335326,
+  "lastUpdate": 1687954002220,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -3330,6 +3330,36 @@ window.BENCHMARK_DATA = {
             "value": 80261,
             "unit": "ns/op\t   11104 B/op\t      12 allocs/op",
             "extra": "14682 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "czeslavo@gmail.com",
+            "name": "Grzegorz Burzyński",
+            "username": "czeslavo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "fbe0757a96f403189b0744117ca0a6ac1c95b6e8",
+          "message": "Update TESTING.md\n\nCo-authored-by: Jakub Warczarek <jakub.warczarek@konghq.com>",
+          "timestamp": "2023-06-28T14:05:38+02:00",
+          "tree_id": "3c418263e44cc67454d9e4d8669146492745719c",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/fbe0757a96f403189b0744117ca0a6ac1c95b6e8"
+        },
+        "date": 1687953997861,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA",
+            "value": 71707,
+            "unit": "ns/op\t   11095 B/op\t      12 allocs/op",
+            "extra": "17464 times\n2 procs"
           }
         ]
       }

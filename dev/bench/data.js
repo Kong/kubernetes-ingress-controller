@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1687935212661,
+  "lastUpdate": 1687938078274,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -2910,6 +2910,36 @@ window.BENCHMARK_DATA = {
             "value": 71039,
             "unit": "ns/op\t   11094 B/op\t      12 allocs/op",
             "extra": "17920 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "49699333+dependabot[bot]@users.noreply.github.com",
+            "name": "dependabot[bot]",
+            "username": "dependabot[bot]"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "024284ec8665d73008efd85bb5db037b30a3492e",
+          "message": "chore(deps): bump google.golang.org/api from 0.128.0 to 0.129.0 (#4239)\n\nBumps [google.golang.org/api](https://github.com/googleapis/google-api-go-client) from 0.128.0 to 0.129.0.\r\n- [Release notes](https://github.com/googleapis/google-api-go-client/releases)\r\n- [Changelog](https://github.com/googleapis/google-api-go-client/blob/main/CHANGES.md)\r\n- [Commits](https://github.com/googleapis/google-api-go-client/compare/v0.128.0...v0.129.0)\r\n\r\n---\r\nupdated-dependencies:\r\n- dependency-name: google.golang.org/api\r\n  dependency-type: direct:production\r\n  update-type: version-update:semver-minor\r\n...\r\n\r\nSigned-off-by: dependabot[bot] <support@github.com>\r\nCo-authored-by: dependabot[bot] <49699333+dependabot[bot]@users.noreply.github.com>",
+          "timestamp": "2023-06-28T09:37:19+02:00",
+          "tree_id": "beb61c4fecf14387d140b9573470d88711428d5b",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/024284ec8665d73008efd85bb5db037b30a3492e"
+        },
+        "date": 1687938072350,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA",
+            "value": 80446,
+            "unit": "ns/op\t   11096 B/op\t      12 allocs/op",
+            "extra": "15405 times\n2 procs"
           }
         ]
       }

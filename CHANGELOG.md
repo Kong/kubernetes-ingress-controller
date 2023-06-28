@@ -104,6 +104,12 @@ Adding a new version? You'll need three changes:
   time but be aware that your mileage may vary).
   [#4222](https://github.com/Kong/kubernetes-ingress-controller/pull/4222)
 
+### Fixed
+
+- Translator of `GRPCRoute` generates paths without leading `~` when running
+  with Kong gateway with version below 3.0.
+  [#4238](https://github.com/Kong/kubernetes-ingress-controller/pull/4238)
+
 [gojson]: https://github.com/goccy/go-json
 
 ## [2.10.1]

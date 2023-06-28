@@ -62,7 +62,7 @@ func (p *Parser) ingressRulesFromGRPCRoute(result *ingressRules, grpcroute *gate
 		if p.featureFlags.ExpressionRoutes {
 			routes = translators.GenerateKongExpressionRoutesFromGRPCRouteRule(grpcroute, ruleNumber)
 		} else {
-			routes = translators.GenerateKongRoutesFromGRPCRouteRule(grpcroute, ruleNumber)
+			routes = translators.GenerateKongRoutesFromGRPCRouteRule(grpcroute, ruleNumber, p.featureFlags.RegexPathPrefix)
 		}
 
 		// create a service and attach the routes to it

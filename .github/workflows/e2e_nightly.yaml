@@ -51,6 +51,7 @@ jobs:
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
         with:
-          status: ${{ job.status }}
+          # Since notify-on-slack is triggered on failure (if statement), we can hardcode this.
+          status: failure
           fields: repo,message,commit,author,action,eventName,ref,workflow
           text: 'E2E tests failed for nightly run, please check why.'

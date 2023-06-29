@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1688033353918,
+  "lastUpdate": 1688048524927,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -4170,6 +4170,36 @@ window.BENCHMARK_DATA = {
             "value": 65860,
             "unit": "ns/op\t   11095 B/op\t      12 allocs/op",
             "extra": "18501 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "czeslavo@gmail.com",
+            "name": "Grzegorz Burzyński",
+            "username": "czeslavo"
+          },
+          "committer": {
+            "email": "czeslavo@gmail.com",
+            "name": "Grzegorz Burzyński",
+            "username": "czeslavo"
+          },
+          "distinct": true,
+          "id": "9869fd4e711a58e5610806a77f8a86caa080685c",
+          "message": "chore(ci): make running gke/konnect cleanup separately possible",
+          "timestamp": "2023-06-29T15:40:45+02:00",
+          "tree_id": "45ef81327a2a04381d945c4ff6a815196b17bc6d",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/9869fd4e711a58e5610806a77f8a86caa080685c"
+        },
+        "date": 1688048516594,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA",
+            "value": 79419,
+            "unit": "ns/op\t   11101 B/op\t      12 allocs/op",
+            "extra": "14452 times\n2 procs"
           }
         ]
       }

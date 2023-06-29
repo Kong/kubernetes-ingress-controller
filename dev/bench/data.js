@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1688050891882,
+  "lastUpdate": 1688050893888,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -4290,6 +4290,36 @@ window.BENCHMARK_DATA = {
             "value": 69962,
             "unit": "ns/op\t   11095 B/op\t      12 allocs/op",
             "extra": "18738 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "czeslavo@gmail.com",
+            "name": "Grzegorz Burzyński",
+            "username": "czeslavo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "3f02a6394b9fc29894e33b262952275fd6eb301c",
+          "message": "chore(ci): ensure nightly image is built in nightly e2e (#4253)",
+          "timestamp": "2023-06-29T15:00:12Z",
+          "tree_id": "1c25b00fbe56a14a23a7f04da2f9571ba3edf8f8",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/3f02a6394b9fc29894e33b262952275fd6eb301c"
+        },
+        "date": 1688050886964,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA",
+            "value": 66711,
+            "unit": "ns/op\t   11098 B/op\t      12 allocs/op",
+            "extra": "17337 times\n2 procs"
           }
         ]
       },

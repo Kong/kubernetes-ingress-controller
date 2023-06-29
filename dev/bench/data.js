@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1688050926977,
+  "lastUpdate": 1688059965355,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -4410,6 +4410,36 @@ window.BENCHMARK_DATA = {
             "value": 83996,
             "unit": "ns/op\t   11099 B/op\t      12 allocs/op",
             "extra": "14054 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "czeslavo@gmail.com",
+            "name": "Grzegorz Burzyński",
+            "username": "czeslavo"
+          },
+          "committer": {
+            "email": "czeslavo@gmail.com",
+            "name": "Grzegorz Burzyński",
+            "username": "czeslavo"
+          },
+          "distinct": true,
+          "id": "f33893418d5341df9eda7c4d16bd389483fc030c",
+          "message": "chore(ci): fix gke cleanup",
+          "timestamp": "2023-06-29T19:31:40+02:00",
+          "tree_id": "22b22a94b4df28d98b3b4bf3dafe813da8db91fd",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/f33893418d5341df9eda7c4d16bd389483fc030c"
+        },
+        "date": 1688059961147,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA",
+            "value": 66180,
+            "unit": "ns/op\t   11097 B/op\t      12 allocs/op",
+            "extra": "17344 times\n2 procs"
           }
         ]
       }

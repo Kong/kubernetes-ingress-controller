@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1688050924777,
+  "lastUpdate": 1688050926977,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -4350,6 +4350,36 @@ window.BENCHMARK_DATA = {
             "value": 66711,
             "unit": "ns/op\t   11098 B/op\t      12 allocs/op",
             "extra": "17337 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "czeslavo@gmail.com",
+            "name": "Grzegorz Burzyński",
+            "username": "czeslavo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "f381c9890b7a4763002498a29b9bae45e5bcbe63",
+          "message": "chore(ci): make running gke/konnect cleanup separately possible (#4252)\n\nMakes it possible to run the cleanup script in gke, konnect, or all mode. Also \r\nsplits the cleanup job into two separate jobs for gke and konnect.",
+          "timestamp": "2023-06-29T15:00:26Z",
+          "tree_id": "0bcaa742e1d0f3acf92544ecc599f8ddf7c86e10",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/f381c9890b7a4763002498a29b9bae45e5bcbe63"
+        },
+        "date": 1688050906042,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA",
+            "value": 83996,
+            "unit": "ns/op\t   11099 B/op\t      12 allocs/op",
+            "extra": "14054 times\n2 procs"
           }
         ]
       },

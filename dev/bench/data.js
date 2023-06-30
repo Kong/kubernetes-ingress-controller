@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1688142424393,
+  "lastUpdate": 1688144353220,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -4830,6 +4830,36 @@ window.BENCHMARK_DATA = {
             "value": 73883,
             "unit": "ns/op\t   11098 B/op\t      12 allocs/op",
             "extra": "17392 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "571832+rainest@users.noreply.github.com",
+            "name": "Travis Raines",
+            "username": "rainest"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "4f933abb421ce739782915a23c1f586efd1a5cef",
+          "message": "feat(telemetry) collect OpenShift version (#4211)",
+          "timestamp": "2023-06-30T16:58:22Z",
+          "tree_id": "a0234ea82fbde3e3b93d3f9dacbb1a9d97cb71d2",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/4f933abb421ce739782915a23c1f586efd1a5cef"
+        },
+        "date": 1688144349112,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA",
+            "value": 67346,
+            "unit": "ns/op\t   11097 B/op\t      12 allocs/op",
+            "extra": "16954 times\n2 procs"
           }
         ]
       }

@@ -371,6 +371,9 @@ func verifyTelemetryReport(t *testing.T, k8sVersion *version.Info, report string
 		}
 	}
 
+	// this expected report OMITS openshift_version, whereas manager/telemetry.TestCreateManager includes it.
+	// the resources created for this test do not include the OpenShift namespace+pod combo, as expected for
+	// non-OpenShift clusters. output for non-OpenShift clusters should not include an OpenShift version.
 	expectedReport := fmt.Sprintf(
 		"<14>"+
 			"signal=kic-ping;"+

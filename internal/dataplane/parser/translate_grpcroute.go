@@ -60,7 +60,7 @@ func (p *Parser) ingressRulesFromGRPCRoute(result *ingressRules, grpcroute *gate
 	// traffic, so we make separate routes and Kong services for every present rule.
 	for ruleNumber, rule := range spec.Rules {
 		// determine the routes needed to route traffic to services for this rule
-		routes := generateKongRoutesFromGRPCRouteRule(grpcroute, ruleNumber, rule)
+		routes := generateKongRoutesFromGRPCRouteRule(grpcroute, ruleNumber, rule, p.flagEnabledRegexPathPrefix)
 
 		// create a service and attach the routes to it
 		service, err := generateKongServiceFromBackendRefWithRuleNumber(p.logger, p.storer, result, grpcroute, ruleNumber, "grpcs", grpcBackendRefsToBackendRefs(rule.BackendRefs)...)
@@ -98,7 +98,7 @@ func getGRPCMatchDefaults() (
 		}
 }
 
-func generateKongRoutesFromGRPCRouteRule(grpcroute *gatewayv1alpha2.GRPCRoute, ruleNumber int, rule gatewayv1alpha2.GRPCRouteRule) []kongstate.Route {
+func generateKongRoutesFromGRPCRouteRule(grpcroute *gatewayv1alpha2.GRPCRoute, ruleNumber int, rule gatewayv1alpha2.GRPCRouteRule, prependRegexPrefix bool) []kongstate.Route {
 	routes := make([]kongstate.Route, 0, len(rule.Matches))
 
 	// gather the k8s object information and hostnames from the grpcroute
@@ -142,7 +142,11 @@ func generateKongRoutesFromGRPCRouteRule(grpcroute *gatewayv1alpha2.GRPCRoute, r
 			} else {
 				service = *matchService
 			}
-			r.Paths = append(r.Paths, kong.String(fmt.Sprintf("~/%s/%s", service, method)))
+			path := fmt.Sprintf("/%s/%s", service, method)
+			if prependRegexPrefix {
+				path = "~" + path
+			}
+			r.Paths = append(r.Paths, kong.String(path))
 		}
 
 		if len(grpcroute.Spec.Hostnames) > 0 {

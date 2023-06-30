@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1688082518653,
+  "lastUpdate": 1688134745051,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -4650,6 +4650,36 @@ window.BENCHMARK_DATA = {
             "value": 77001,
             "unit": "ns/op\t   11096 B/op\t      12 allocs/op",
             "extra": "15486 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "49699333+dependabot[bot]@users.noreply.github.com",
+            "name": "dependabot[bot]",
+            "username": "dependabot[bot]"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "8580d38749a43cc5ec293b7be12ace868cf94391",
+          "message": "chore(deps): bump github.com/kong/kubernetes-telemetry\n\nBumps [github.com/kong/kubernetes-telemetry](https://github.com/kong/kubernetes-telemetry) from 0.0.6 to 0.1.0.\n- [Release notes](https://github.com/kong/kubernetes-telemetry/releases)\n- [Commits](https://github.com/kong/kubernetes-telemetry/compare/v0.0.6...v0.1.0)\n\n---\nupdated-dependencies:\n- dependency-name: github.com/kong/kubernetes-telemetry\n  dependency-type: direct:production\n  update-type: version-update:semver-minor\n...\n\nSigned-off-by: dependabot[bot] <support@github.com>",
+          "timestamp": "2023-06-30T14:15:14Z",
+          "tree_id": "782e196c10654c861820e9e7c55713d4ea70fdf7",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/8580d38749a43cc5ec293b7be12ace868cf94391"
+        },
+        "date": 1688134738815,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA",
+            "value": 83478,
+            "unit": "ns/op\t   11095 B/op\t      12 allocs/op",
+            "extra": "14912 times\n2 procs"
           }
         ]
       }

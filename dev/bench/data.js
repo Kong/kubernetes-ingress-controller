@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1688137683760,
+  "lastUpdate": 1688137685512,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -4710,6 +4710,36 @@ window.BENCHMARK_DATA = {
             "value": 83478,
             "unit": "ns/op\t   11095 B/op\t      12 allocs/op",
             "extra": "14912 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "49699333+dependabot[bot]@users.noreply.github.com",
+            "name": "dependabot[bot]",
+            "username": "dependabot[bot]"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "263b35b78523ffb53e217937bfb23219c92aed4a",
+          "message": "chore(deps): bump github.com/kong/kubernetes-telemetry (#4259)\n\nBumps [github.com/kong/kubernetes-telemetry](https://github.com/kong/kubernetes-telemetry) from 0.0.6 to 0.1.0.\r\n- [Release notes](https://github.com/kong/kubernetes-telemetry/releases)\r\n- [Commits](https://github.com/kong/kubernetes-telemetry/compare/v0.0.6...v0.1.0)\r\n\r\n---\r\nupdated-dependencies:\r\n- dependency-name: github.com/kong/kubernetes-telemetry\r\n  dependency-type: direct:production\r\n  update-type: version-update:semver-minor\r\n...\r\n\r\nSigned-off-by: dependabot[bot] <support@github.com>\r\nCo-authored-by: dependabot[bot] <49699333+dependabot[bot]@users.noreply.github.com>",
+          "timestamp": "2023-06-30T17:04:44+02:00",
+          "tree_id": "782e196c10654c861820e9e7c55713d4ea70fdf7",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/263b35b78523ffb53e217937bfb23219c92aed4a"
+        },
+        "date": 1688137679078,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA",
+            "value": 71391,
+            "unit": "ns/op\t   11094 B/op\t      12 allocs/op",
+            "extra": "18159 times\n2 procs"
           }
         ]
       },

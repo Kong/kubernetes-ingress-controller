@@ -8,18 +8,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/event"
 )
 
-// ----------------------------------------------------------------------------
-// Queue - Vars & Consts
-// ----------------------------------------------------------------------------
-
 // defaultBufferSize indicates the buffer size of the underlying channels that
 // will be created for object kinds by default. This literally equates to the
 // number of Kubernetes objects which can be in the queue at a single time.
 const defaultBufferSize = 8192
-
-// ----------------------------------------------------------------------------
-// Queue - Public Types
-// ----------------------------------------------------------------------------
 
 // Queue provides a pub/sub queue with channels for individual Kubernetes
 // objects, the purpose of which is to submit GenericEvents for those objects
@@ -27,26 +19,50 @@ const defaultBufferSize = 8192
 // the dataplane so that its status can be updated (for instance, with IP
 // address information in the case of Ingress resources).
 type Queue struct {
-	lock     sync.RWMutex
-	channels map[string]chan event.GenericEvent
+	// subscriptionBufferSize indicates the buffer size of the underlying channels
+	// that will be created for object kinds' subscriptions.
+	subscriptionBufferSize int
+
+	// subscriptions indexed by the string representation of the object GVK.
+	subscriptions map[string]chan event.GenericEvent
+
+	// lock protects the subscriptions map.
+	lock sync.RWMutex
+}
+
+// QueueOption provides a functional option for configuring a Queue object.
+type QueueOption func(*Queue)
+
+// WithBufferSize sets the buffer size of the underlying channels that will be
+// created for object kinds.
+func WithBufferSize(size int) QueueOption {
+	return func(q *Queue) {
+		q.subscriptionBufferSize = size
+	}
 }
 
 // NewQueue provides a new Queue object which can be used to
 // publish status update events or subscribe to those events.
-func NewQueue() *Queue {
-	return &Queue{
-		channels: make(map[string]chan event.GenericEvent),
+func NewQueue(opts ...QueueOption) *Queue {
+	q := &Queue{
+		subscriptionBufferSize: defaultBufferSize,
+		subscriptions:          make(map[string]chan event.GenericEvent),
 	}
+	for _, opt := range opts {
+		opt(q)
+	}
+	return q
 }
-
-// ----------------------------------------------------------------------------
-// Queue - Public Methods
-// ----------------------------------------------------------------------------
 
 // Publish emits a GenericEvent for the provided objects that indicates to
 // subscribers that the status of that object needs to be updated.
+// It's a no-op if there are no subscriptions for the object kind.
 func (q *Queue) Publish(obj client.Object) {
-	ch := q.getChanForKind(obj.GetObjectKind().GroupVersionKind())
+	ch, ok := q.getSubscriptionForKind(obj.GetObjectKind().GroupVersionKind())
+	if !ok {
+		// There's no subscribers for this object kind, so nothing to do.
+		return
+	}
 	ch <- event.GenericEvent{Object: obj}
 }
 
@@ -59,20 +75,27 @@ func (q *Queue) Publish(obj client.Object) {
 // be duplicated and each subscriber will receive events on a first come first
 // serve basis.
 func (q *Queue) Subscribe(gvk schema.GroupVersionKind) chan event.GenericEvent {
-	return q.getChanForKind(gvk)
+	return q.getOrCreateSubscriptionForKind(gvk)
 }
 
-// ----------------------------------------------------------------------------
-// Queue - Private Methods
-// ----------------------------------------------------------------------------
-
-func (q *Queue) getChanForKind(gvk schema.GroupVersionKind) chan event.GenericEvent {
+// getOrCreateSubscriptionForKind returns the subscription channel for the provided object GVK.
+// If the channel does not exist, it will be created.
+func (q *Queue) getOrCreateSubscriptionForKind(gvk schema.GroupVersionKind) chan event.GenericEvent {
 	q.lock.Lock()
 	defer q.lock.Unlock()
-	ch, ok := q.channels[gvk.String()]
+	ch, ok := q.subscriptions[gvk.String()]
 	if !ok { // if there's no channel built for this kind yet, make it
-		ch = make(chan event.GenericEvent, defaultBufferSize)
-		q.channels[gvk.String()] = ch
+		ch = make(chan event.GenericEvent, q.subscriptionBufferSize)
+		q.subscriptions[gvk.String()] = ch
 	}
 	return ch
+}
+
+// getSubscriptionForKind returns the subscription channel for the provided object GVK.
+// The second return value indicates whether the channel exists.
+func (q *Queue) getSubscriptionForKind(gvk schema.GroupVersionKind) (chan event.GenericEvent, bool) {
+	q.lock.RLock()
+	defer q.lock.RUnlock()
+	ch, ok := q.subscriptions[gvk.String()]
+	return ch, ok
 }

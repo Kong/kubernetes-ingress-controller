@@ -7,10 +7,12 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/util/kubernetes/object/status"
 	"github.com/samber/lo"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -40,6 +42,7 @@ type UDPRouteReconciler struct {
 	Scheme           *runtime.Scheme
 	DataplaneClient  *dataplane.KongClient
 	CacheSyncTimeout time.Duration
+	StatusQueue      *status.Queue
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -81,6 +84,19 @@ func (r *UDPRouteReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		handler.EnqueueRequestsFromMapFunc(r.listUDPRoutesForGateway),
 	); err != nil {
 		return err
+	}
+
+	if r.StatusQueue != nil {
+		if err := c.Watch(
+			&source.Channel{Source: r.StatusQueue.Subscribe(schema.GroupVersionKind{
+				Group:   gatewayv1alpha2.GroupVersion.Group,
+				Version: gatewayv1alpha2.GroupVersion.Version,
+				Kind:    "TCPRoute",
+			})},
+			&handler.EnqueueRequestForObject{},
+		); err != nil {
+			return err
+		}
 	}
 
 	// because of the additional burden of having to manage reference data-plane

@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1688393083989,
+  "lastUpdate": 1688394092858,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -5340,6 +5340,36 @@ window.BENCHMARK_DATA = {
             "value": 82136,
             "unit": "ns/op\t   11096 B/op\t      12 allocs/op",
             "extra": "15710 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "czeslavo@gmail.com",
+            "name": "Grzegorz Burzyński",
+            "username": "czeslavo"
+          },
+          "committer": {
+            "email": "czeslavo@gmail.com",
+            "name": "Grzegorz Burzyński",
+            "username": "czeslavo"
+          },
+          "distinct": true,
+          "id": "cdd9fbb0d8577ce38d31dd8146b1ff7ed94eebea",
+          "message": "add subscriptions for gateway api routes",
+          "timestamp": "2023-07-03T16:20:21+02:00",
+          "tree_id": "786a326cd256906161f9eb76d4bd8575b70e9388",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/cdd9fbb0d8577ce38d31dd8146b1ff7ed94eebea"
+        },
+        "date": 1688394088165,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA",
+            "value": 82196,
+            "unit": "ns/op\t   11090 B/op\t      12 allocs/op",
+            "extra": "15780 times\n2 procs"
           }
         ]
       }

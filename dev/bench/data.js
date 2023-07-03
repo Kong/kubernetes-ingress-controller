@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1688395520210,
+  "lastUpdate": 1688395522247,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -5460,6 +5460,36 @@ window.BENCHMARK_DATA = {
             "value": 70459,
             "unit": "ns/op\t   11096 B/op\t      12 allocs/op",
             "extra": "17864 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "49699333+dependabot[bot]@users.noreply.github.com",
+            "name": "dependabot[bot]",
+            "username": "dependabot[bot]"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "4b69dc7c3d26586da447873be3de6f9958ea268f",
+          "message": "chore(deps): bump github.com/kong/go-kong from 0.44.0 to 0.45.0\n\nBumps [github.com/kong/go-kong](https://github.com/kong/go-kong) from 0.44.0 to 0.45.0.\n- [Release notes](https://github.com/kong/go-kong/releases)\n- [Changelog](https://github.com/Kong/go-kong/blob/main/CHANGELOG.md)\n- [Commits](https://github.com/kong/go-kong/compare/v0.44.0...v0.45.0)\n\n---\nupdated-dependencies:\n- dependency-name: github.com/kong/go-kong\n  dependency-type: direct:production\n  update-type: version-update:semver-minor\n...\n\nSigned-off-by: dependabot[bot] <support@github.com>",
+          "timestamp": "2023-07-03T14:41:02Z",
+          "tree_id": "63e2a781aa7e8b913d1df4ee2d963198028aaaeb",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/4b69dc7c3d26586da447873be3de6f9958ea268f"
+        },
+        "date": 1688395514797,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA",
+            "value": 91041,
+            "unit": "ns/op\t   11102 B/op\t      12 allocs/op",
+            "extra": "13954 times\n2 procs"
           }
         ]
       },

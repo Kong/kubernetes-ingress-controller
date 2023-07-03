@@ -2,8 +2,10 @@ package envtest
 
 import (
 	"encoding/json"
+	"io"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 )
 
@@ -13,6 +15,11 @@ func StartAdminAPIServerMock(t *testing.T) *httptest.Server {
 	t.Helper()
 
 	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if strings.HasPrefix(r.URL.Path, "/config") {
+			body, _ := io.ReadAll(r.Body)
+			t.Logf("Admin API mock: %s %s %s", r.Method, r.URL, string(body))
+		}
+
 		type Root struct {
 			Configuration map[string]any `json:"configuration"`
 			Version       string         `json:"version"`

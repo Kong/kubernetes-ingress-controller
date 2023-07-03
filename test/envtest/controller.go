@@ -20,7 +20,7 @@ import (
 
 // StartReconcilers creates a controller manager and starts the provided reconciler
 // as its runnable.
-// It also adds a t.Cleanup which waits for the maanger to exit so that the test
+// It also adds a t.Cleanup which waits for the manager to exit so that the test
 // can be self contained and logs from different tests' managers don't mix up.
 func StartReconcilers(ctx context.Context, t *testing.T, scheme *runtime.Scheme, cfg *rest.Config, reconcilers ...controllers.Reconciler) {
 	t.Helper()

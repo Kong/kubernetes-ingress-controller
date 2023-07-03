@@ -8,10 +8,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/event"
 )
 
-// defaultBufferSize indicates the buffer size of the underlying channels that
+// DefaultBufferSize indicates the buffer size of the underlying channels that
 // will be created for object kinds by default. This literally equates to the
 // number of Kubernetes objects which can be in the queue at a single time.
-const defaultBufferSize = 8192
+const DefaultBufferSize = 8192
 
 // Queue provides a pub/sub queue with channels for individual Kubernetes
 // objects, the purpose of which is to submit GenericEvents for those objects
@@ -45,7 +45,7 @@ func WithBufferSize(size int) QueueOption {
 // publish status update events or subscribe to those events.
 func NewQueue(opts ...QueueOption) *Queue {
 	q := &Queue{
-		subscriptionBufferSize: defaultBufferSize,
+		subscriptionBufferSize: DefaultBufferSize,
 		subscriptions:          make(map[string]chan event.GenericEvent),
 	}
 	for _, opt := range opts {
@@ -84,7 +84,8 @@ func (q *Queue) getOrCreateSubscriptionForKind(gvk schema.GroupVersionKind) chan
 	q.lock.Lock()
 	defer q.lock.Unlock()
 	ch, ok := q.subscriptions[gvk.String()]
-	if !ok { // if there's no channel built for this kind yet, make it
+	if !ok {
+		// If there's no channel built for this kind yet, make it.
 		ch = make(chan event.GenericEvent, q.subscriptionBufferSize)
 		q.subscriptions[gvk.String()] = ch
 	}

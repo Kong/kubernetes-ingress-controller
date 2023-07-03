@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1688377686311,
+  "lastUpdate": 1688377688375,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -5220,6 +5220,36 @@ window.BENCHMARK_DATA = {
             "value": 96561,
             "unit": "ns/op\t   11093 B/op\t      12 allocs/op",
             "extra": "15700 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "lavacca.mattia@gmail.com",
+            "name": "Mattia Lavacca",
+            "username": "mlavacca"
+          },
+          "committer": {
+            "email": "lavacca.mattia@gmail.com",
+            "name": "Mattia Lavacca",
+            "username": "mlavacca"
+          },
+          "distinct": true,
+          "id": "61802ebaa25b17662c98a9b1d123de8129a971a7",
+          "message": "feat: fetch and store last good config\n\nKIC is now able to fetch and cache the last good configuration in case\nit has no LastGoodConfig set, and there is at least one proxy pod with a\ngood configuration loaded.\n\nSigned-off-by: Mattia Lavacca <lavacca.mattia@gmail.com>",
+          "timestamp": "2023-07-03T11:43:30+02:00",
+          "tree_id": "a9c4adfc75403070a733b5df637331ca666ca9e5",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/61802ebaa25b17662c98a9b1d123de8129a971a7"
+        },
+        "date": 1688377680677,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA",
+            "value": 89106,
+            "unit": "ns/op\t   11098 B/op\t      12 allocs/op",
+            "extra": "13066 times\n2 procs"
           }
         ]
       },

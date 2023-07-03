@@ -240,112 +240,21 @@ func sniMatcherFromSNIs(snis []string) atc.Matcher {
 	return atc.Or(matchers...)
 }
 
-// calculateExpressionRoutePriority calculates the priority of the generated route.
-// It basically follows the calculating method used in Kong's traditional compatible router:
-//   - First, sort by number of fields specified (methods, hosts, headers, paths, snis)
-//   - Then, if both routes have hosts, the routes having only plain(non-wildcard) hosts has
-//     higher priority than routes having at least one wildcard host
-//   - Then, sort by numer of different headers (maximum header count = 255).
-//   - Then, paths with regex match has higher priority than prefix match.
-//   - Then, sort by regex_priority field (not supported in KIC with expression routes).
-//   - At last, sort by maximum length of paths in the route.
-func calculateExpressionRoutePriority(
-	paths []netv1.HTTPIngressPath,
-	regexPathPrefix string,
-	ingressHost string,
-	ingressAnnotations map[string]string,
-) int {
-	matchFields := 0
-	plainHost := false
-	headerCount := 0
-	maxPathLength := 0
-	hasRegexPath := false
+type IngressRoutePriorityTraits struct {
+	MatchFields   int
+	PlainHostOnly bool
+	HeaderCount   int
+	MaxPathLength int
+	HasRegexPath  bool
+}
 
-	// add 1 to matchFields if path is non-empty.
-	if len(paths) > 0 {
-		matchFields++
-	}
-	for _, path := range paths {
-		// TODO: in non-combined translator, we assigned different regex priorities to different type of path:
-		// exact = 300, prefix = 200, implementationSpecific = 100.
-		// We may add additional weights on path types.
-		if path.PathType == nil {
-			continue
-		}
-		// since we will generate regex path for exact and prefix matches in traditional routes,
-		// we should consider them as using regex path.
-		var pathLength int
-		switch *path.PathType {
-		case netv1.PathTypeExact:
-			hasRegexPath = true
-			// trim all leading '/'s and calculate the length by '/'+ trimmed path.
-			// for example: len("/foo") = 4; len("/foo/") = 5; len("//foo") = 4.
-			relative := strings.TrimLeft(path.Path, "/")
-			pathLength = 1 + len(relative)
-		case netv1.PathTypePrefix:
-			hasRegexPath = true
-			// trim all leading and trailing '/' s and calculate the length by '/' + trimmed path + '/' (except that len("/")=1)
-			// for example: len("/foo") = 5; len("/foo/") = 5; len("//foo/bar") = len("/foo/bar//") = 9.
-			base := strings.Trim(path.Path, "/")
-			if base == "" {
-				pathLength = 1
-			} else {
-				pathLength = 2 + len(base)
-			}
-		case netv1.PathTypeImplementationSpecific:
-			if regexPathPrefix != "" && strings.HasPrefix(path.Path, regexPathPrefix) {
-				// regex path match, calculate the length by length of regex part.
-				hasRegexPath = true
-				regex := strings.TrimPrefix(path.Path, path.Path)
-				pathLength = len(regex)
-			} else {
-				// non-regex path.
-				pathLength = len(path.Path)
-			}
-		}
-		if pathLength > maxPathLength {
-			maxPathLength = pathLength
-		}
-	}
-
-	hosts := []string{}
-	if ingressHost != "" {
-		hosts = append(hosts, ingressHost)
-	}
-	hostAliases, _ := annotations.ExtractHostAliases(ingressAnnotations)
-	hosts = append(hosts, hostAliases...)
-	if len(hosts) > 0 {
-		matchFields++
-		plainHost = true
-	}
-
-	for _, host := range hosts {
-		if strings.HasPrefix(host, "*") {
-			plainHost = false
-			break
-		}
-	}
-
-	headers, exist := annotations.ExtractHeaders(ingressAnnotations)
-	if exist {
-		matchFields++
-		headerCount = len(headers)
-	}
-
-	methods := annotations.ExtractMethods(ingressAnnotations)
-	if len(methods) > 0 {
-		matchFields++
-	}
-
-	snis, exist := annotations.ExtractSNIs(ingressAnnotations)
-	if exist && len(snis) > 0 {
-		matchFields++
-	}
-
-	// combine priority into numbers. route.priority in admin API could only use the lowest 52 bits
-	// because the numbers in JSON is parsed into double precision floating number by Kong.
+// EncodeToPriority encodes the traits to `priority` field used in Kong expression based routes.
+func (t IngressRoutePriorityTraits) EncodeToPriority() int {
+	// route.priority in admin API could only use the lowest 52 bits
+	// because the numbers in JSON are parsed into double precision floating numbers.
 	const (
-		// lowest 16 bits (0~15) for max path length
+		// lowest 16 bits (0~15) are used for max path length.
+
 		// regexPathShiftBits uses the 16th bit for marking if regex match on path exists.
 		regexPathShiftBits = 16
 		// bits 17~31 are preserved.
@@ -363,24 +272,145 @@ func calculateExpressionRoutePriority(
 
 	var priority int
 	// add max path length.
-	if maxPathLength > pathLengthLimit {
-		maxPathLength = pathLengthLimit
+	if t.MaxPathLength > pathLengthLimit {
+		t.MaxPathLength = pathLengthLimit
 	}
-	priority += maxPathLength
+	priority += t.MaxPathLength
 	// add regex path mark.
-	if hasRegexPath {
+	if t.HasRegexPath {
 		priority += (1 << regexPathShiftBits)
 	}
 	// add plain host mark.
-	if plainHost {
+	if t.PlainHostOnly {
 		priority += (1 << plainHostShiftBits)
 	}
-	if headerCount > headerNumberLimit {
-		headerCount = headerNumberLimit
+	if t.HeaderCount > headerNumberLimit {
+		t.HeaderCount = headerNumberLimit
 	}
-	priority += (headerCount << headerNumberShiftBits)
-	priority += (matchFields << matchFieldsShiftBits)
+	priority += (t.HeaderCount << headerNumberShiftBits)
+	priority += (t.MatchFields << matchFieldsShiftBits)
 	priority += (ResourceKindBitsIngress << FromResourceKindPriorityShiftBits)
 
 	return priority
+}
+
+// calculateIngressRoutePriorityTraits calculate the attributes to decide the priority
+// of the Kong expression based route generated from ingress.
+func calculateIngressRoutePriorityTraits(
+	paths []netv1.HTTPIngressPath,
+	regexPathPrefix string,
+	ingressHost string,
+	ingressAnnotations map[string]string,
+) IngressRoutePriorityTraits {
+	traits := IngressRoutePriorityTraits{
+		MatchFields:   0,
+		PlainHostOnly: false,
+		HeaderCount:   0,
+		MaxPathLength: 0,
+		HasRegexPath:  false,
+	}
+
+	// add 1 to matchFields if path is non-empty.
+	if len(paths) > 0 {
+		traits.MatchFields++
+	}
+	for _, path := range paths {
+		// TODO: in non-combined translator, we assigned different regex priorities to different type of path:
+		// exact = 300, prefix = 200, implementationSpecific = 100.
+		// We may add additional weights on path types.
+		if path.PathType == nil {
+			continue
+		}
+		// since we will generate regex path for exact and prefix matches in traditional routes,
+		// we should consider them as using regex path.
+		var pathLength int
+		switch *path.PathType {
+		case netv1.PathTypeExact:
+			traits.HasRegexPath = true
+			// trim all leading '/'s and calculate the length by '/'+ trimmed path.
+			// for example: len("/foo") = 4; len("/foo/") = 5; len("//foo") = 4.
+			relative := strings.TrimLeft(path.Path, "/")
+			pathLength = 1 + len(relative)
+		case netv1.PathTypePrefix:
+			traits.HasRegexPath = true
+			// trim all leading and trailing '/' s and calculate the length by '/' + trimmed path + '/' (except that len("/")=1)
+			// for example: len("/foo") = 5; len("/foo/") = 5; len("//foo/bar") = len("/foo/bar//") = 9.
+			base := strings.Trim(path.Path, "/")
+			if base == "" {
+				pathLength = 1
+			} else {
+				pathLength = 2 + len(base)
+			}
+		case netv1.PathTypeImplementationSpecific:
+			if regexPathPrefix != "" && strings.HasPrefix(path.Path, regexPathPrefix) {
+				// regex path match, calculate the length by length of regex part.
+				traits.HasRegexPath = true
+				regex := strings.TrimPrefix(path.Path, path.Path)
+				pathLength = len(regex)
+			} else {
+				// non-regex path.
+				pathLength = len(path.Path)
+			}
+		}
+		if pathLength > traits.MaxPathLength {
+			traits.MaxPathLength = pathLength
+		}
+	}
+	// find out all hosts from ingressHosts and annotations.
+	hosts := []string{}
+	if ingressHost != "" {
+		hosts = append(hosts, ingressHost)
+	}
+	hostAliases, _ := annotations.ExtractHostAliases(ingressAnnotations)
+	hosts = append(hosts, hostAliases...)
+	// if the route have at least one host match, match field number is increased.
+	if len(hosts) > 0 {
+		traits.MatchFields++
+		traits.PlainHostOnly = true
+	}
+	// look through all hosts to see if they are all non-wildcard hosts.
+	for _, host := range hosts {
+		if strings.HasPrefix(host, "*") {
+			traits.PlainHostOnly = false
+			break
+		}
+	}
+	// extract headers from annotations to calculate header count.
+	headers, exist := annotations.ExtractHeaders(ingressAnnotations)
+	if exist {
+		traits.MatchFields++
+		traits.HeaderCount = len(headers)
+	}
+	// add match fields by 1 if methods, snis exists in annotations.
+	methods := annotations.ExtractMethods(ingressAnnotations)
+	if len(methods) > 0 {
+		traits.MatchFields++
+	}
+
+	snis, exist := annotations.ExtractSNIs(ingressAnnotations)
+	if exist && len(snis) > 0 {
+		traits.MatchFields++
+	}
+	return traits
+}
+
+// calculateExpressionRoutePriority calculates the priority of the generated route.
+// It basically follows the calculating method used in Kong's traditional compatible router.
+//   - First, sort by number of fields specified (methods, hosts, headers, paths, snis)
+//   - Then, if both routes have hosts, the routes having only plain(non-wildcard) hosts has
+//     higher priority than routes having at least one wildcard host
+//   - Then, sort by numer of different headers (maximum header count = 255).
+//   - Then, paths with regex match has higher priority than prefix match.
+//   - Then, sort by regex_priority field (not supported in KIC with expression routes).
+//   - At last, sort by maximum length of paths in the route.
+func calculateExpressionRoutePriority(
+	paths []netv1.HTTPIngressPath,
+	regexPathPrefix string,
+	ingressHost string,
+	ingressAnnotations map[string]string,
+) int {
+	traits := calculateIngressRoutePriorityTraits(
+		paths, regexPathPrefix, ingressHost, ingressAnnotations,
+	)
+	return traits.EncodeToPriority()
 }

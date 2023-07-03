@@ -5,6 +5,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/kong/go-kong/kong"
+	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	netv1 "k8s.io/api/networking/v1"
@@ -71,9 +72,14 @@ func TestTranslateIngressATC(t *testing.T) {
 							Namespace: corev1.NamespaceDefault,
 						},
 						Route: kong.Route{
-							Name:              kong.String("default.test-ingress.test-service.konghq.com.80"),
-							Expression:        kong.String(`(http.host == "konghq.com") && ((http.path == "/api") || (http.path ^= "/api/")) && ((net.protocol == "http") || (net.protocol == "https"))`),
-							Priority:          kong.Int((3 << 50) + (2 << 41) + (1 << 32) + (1 << 16) + 5),
+							Name:       kong.String("default.test-ingress.test-service.konghq.com.80"),
+							Expression: kong.String(`(http.host == "konghq.com") && ((http.path == "/api") || (http.path ^= "/api/")) && ((net.protocol == "http") || (net.protocol == "https"))`),
+							Priority: kong.Int(IngressRoutePriorityTraits{
+								MatchFields:   2,
+								PlainHostOnly: true,
+								MaxPathLength: 5,
+								HasRegexPath:  true,
+							}.EncodeToPriority()),
 							PreserveHost:      kong.Bool(true),
 							StripPath:         kong.Bool(false),
 							ResponseBuffering: kong.Bool(true),
@@ -143,9 +149,14 @@ func TestTranslateIngressATC(t *testing.T) {
 							Namespace: corev1.NamespaceDefault,
 						},
 						Route: kong.Route{
-							Name:              kong.String("default.test-ingress.test-service.konghq.com.80"),
-							Expression:        kong.String(`(http.host == "konghq.com") && (http.path ^= "/api/") && ((net.protocol == "http") || (net.protocol == "https"))`),
-							Priority:          kong.Int((3 << 50) + (2 << 41) + (1 << 32) + (5)),
+							Name:       kong.String("default.test-ingress.test-service.konghq.com.80"),
+							Expression: kong.String(`(http.host == "konghq.com") && (http.path ^= "/api/") && ((net.protocol == "http") || (net.protocol == "https"))`),
+							Priority: kong.Int(IngressRoutePriorityTraits{
+								MatchFields:   2,
+								PlainHostOnly: true,
+								MaxPathLength: 5,
+								HasRegexPath:  false,
+							}.EncodeToPriority()),
 							PreserveHost:      kong.Bool(true),
 							StripPath:         kong.Bool(false),
 							ResponseBuffering: kong.Bool(true),
@@ -190,6 +201,88 @@ func TestTranslateIngressATC(t *testing.T) {
 			})
 			diff := cmp.Diff(tc.expectedServices, services, checkOnlyObjectMeta)
 			require.Empty(t, diff, "expected no difference between expected and translated ingress")
+		})
+	}
+}
+
+func TestCalculateIngressRoutePriorityTraits(t *testing.T) {
+	testCases := []struct {
+		name               string
+		paths              []netv1.HTTPIngressPath
+		regexPathPrefix    string
+		ingressHost        string
+		ingressAnnotations map[string]string
+		expectedTraits     IngressRoutePriorityTraits
+	}{
+		{
+			name: "single prefix path with no hosts",
+			paths: []netv1.HTTPIngressPath{
+				{
+					Path:     "/foo/",
+					PathType: lo.ToPtr(netv1.PathTypePrefix),
+				},
+			},
+			expectedTraits: IngressRoutePriorityTraits{
+				MatchFields:   1,
+				MaxPathLength: 5,
+				HasRegexPath:  true,
+			},
+		},
+		{
+			name: "multiple paths with one host",
+			paths: []netv1.HTTPIngressPath{
+				{
+					Path:     "/foo/",
+					PathType: lo.ToPtr(netv1.PathTypePrefix),
+				},
+				{
+					Path:     "/foobar/",
+					PathType: lo.ToPtr(netv1.PathTypeExact),
+				},
+			},
+			ingressHost: "example.com",
+			expectedTraits: IngressRoutePriorityTraits{
+				MatchFields:   2,
+				PlainHostOnly: true,
+				MaxPathLength: 8,
+				HasRegexPath:  true,
+			},
+		},
+		{
+			name: "multiple paths with headers and hosts",
+			paths: []netv1.HTTPIngressPath{
+				{
+					Path:     "/foo/",
+					PathType: lo.ToPtr(netv1.PathTypePrefix),
+				},
+				{
+					Path:     "/foobar/",
+					PathType: lo.ToPtr(netv1.PathTypeExact),
+				},
+			},
+			ingressHost: "example.com",
+			ingressAnnotations: map[string]string{
+				"konghq.com/host-aliases": "*.example.com",
+				"konghq.com/headers.key1": "value1",
+				"konghq.com/headers.key2": "value2",
+			},
+			expectedTraits: IngressRoutePriorityTraits{
+				MatchFields:   3,
+				PlainHostOnly: false,
+				HeaderCount:   2,
+				MaxPathLength: 8,
+				HasRegexPath:  true,
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			traits := calculateIngressRoutePriorityTraits(
+				tc.paths, tc.regexPathPrefix, tc.ingressHost, tc.ingressAnnotations,
+			)
+			require.Equal(t, tc.expectedTraits, traits)
 		})
 	}
 }

@@ -335,8 +335,9 @@ func TestTCPIngressTLSPassthrough(t *testing.T) {
 			Namespace: ns.Name,
 		},
 		Data: map[string][]byte{
-			"tls.crt": []byte(tlsPairs[0].Cert),
-			"tls.key": []byte(tlsPairs[0].Key),
+			// TODO: create a new TLS cert pair for the test and do not share certs used in TestHTTPSIngress?
+			"tls.crt": []byte(tlsPairFooExample.Cert),
+			"tls.key": []byte(tlsPairFooExample.Key),
 		},
 	}
 
@@ -473,6 +474,6 @@ func TestTCPIngressTLSPassthrough(t *testing.T) {
 			return false
 		}
 		cert := conn.ConnectionState().PeerCertificates[0]
-		return cert.Subject.CommonName == "secure-foo-bar"
+		return cert.Subject.CommonName == "foo.example"
 	}, ingressWait, waitTick)
 }

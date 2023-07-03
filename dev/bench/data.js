@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1688394094256,
+  "lastUpdate": 1688395470569,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -5400,6 +5400,36 @@ window.BENCHMARK_DATA = {
             "value": 82196,
             "unit": "ns/op\t   11090 B/op\t      12 allocs/op",
             "extra": "15780 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "49699333+dependabot[bot]@users.noreply.github.com",
+            "name": "dependabot[bot]",
+            "username": "dependabot[bot]"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "c06eb687e9fe81b9c1feec574f84ddc80a88ec51",
+          "message": "chore(deps): bump github.com/kong/deck from 1.22.1 to 1.23.0\n\nBumps [github.com/kong/deck](https://github.com/kong/deck) from 1.22.1 to 1.23.0.\n- [Release notes](https://github.com/kong/deck/releases)\n- [Changelog](https://github.com/Kong/deck/blob/main/CHANGELOG.md)\n- [Commits](https://github.com/kong/deck/compare/v1.22.1...v1.23.0)\n\n---\nupdated-dependencies:\n- dependency-name: github.com/kong/deck\n  dependency-type: direct:production\n  update-type: version-update:semver-minor\n...\n\nSigned-off-by: dependabot[bot] <support@github.com>",
+          "timestamp": "2023-07-03T14:41:16Z",
+          "tree_id": "31c38bef008afe916930f561188f2d4d6b84701c",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/c06eb687e9fe81b9c1feec574f84ddc80a88ec51"
+        },
+        "date": 1688395466165,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA",
+            "value": 70459,
+            "unit": "ns/op\t   11096 B/op\t      12 allocs/op",
+            "extra": "17864 times\n2 procs"
           }
         ]
       }

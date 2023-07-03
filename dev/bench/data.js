@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1688377688375,
+  "lastUpdate": 1688393081896,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -5280,6 +5280,36 @@ window.BENCHMARK_DATA = {
             "value": 89106,
             "unit": "ns/op\t   11098 B/op\t      12 allocs/op",
             "extra": "13066 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "czeslavo@gmail.com",
+            "name": "Grzegorz Burzyński",
+            "username": "czeslavo"
+          },
+          "committer": {
+            "email": "czeslavo@gmail.com",
+            "name": "Grzegorz Burzyński",
+            "username": "czeslavo"
+          },
+          "distinct": true,
+          "id": "63430b6364b25e3e964275224534bf80fb80fa6f",
+          "message": "fix: make status queue not block when no sub exists",
+          "timestamp": "2023-07-03T16:03:18+02:00",
+          "tree_id": "dd3b7f48ba21bcfd98aa669d5560c6a67a9be4ef",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/63430b6364b25e3e964275224534bf80fb80fa6f"
+        },
+        "date": 1688393074981,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA",
+            "value": 82136,
+            "unit": "ns/op\t   11096 B/op\t      12 allocs/op",
+            "extra": "15710 times\n2 procs"
           }
         ]
       }

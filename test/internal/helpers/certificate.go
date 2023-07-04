@@ -54,7 +54,6 @@ func GenerateSelfSignedCert(commonName string, dnsNames []string) (tls.Certifica
 // GenerateSelfSignedCertPEMFormat generates self-signed certificate
 // and returns certificate and key in PEM format.
 func GenerateSelfSignedCertPEMFormat(commonName string, dnsNames []string) (cert []byte, key []byte, err error) {
-
 	tlsCert, err := GenerateSelfSignedCert(commonName, dnsNames)
 	if err != nil {
 		return nil, nil, err

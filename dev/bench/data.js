@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1688485490669,
+  "lastUpdate": 1688485980564,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -6780,6 +6780,36 @@ window.BENCHMARK_DATA = {
             "value": 88815,
             "unit": "ns/op\t   11099 B/op\t      12 allocs/op",
             "extra": "14257 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "49699333+dependabot[bot]@users.noreply.github.com",
+            "name": "dependabot[bot]",
+            "username": "dependabot[bot]"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "2338e85f1622483c82e8d537718fcf31da815ad1",
+          "message": "chore(deps): bump github.com/kong/deck from 1.22.1 to 1.23.0 (#4269)\n\nBumps [github.com/kong/deck](https://github.com/kong/deck) from 1.22.1 to 1.23.0.\r\n- [Release notes](https://github.com/kong/deck/releases)\r\n- [Changelog](https://github.com/Kong/deck/blob/main/CHANGELOG.md)\r\n- [Commits](https://github.com/kong/deck/compare/v1.22.1...v1.23.0)\r\n\r\n---\r\nupdated-dependencies:\r\n- dependency-name: github.com/kong/deck\r\n  dependency-type: direct:production\r\n  update-type: version-update:semver-minor\r\n...\r\n\r\nSigned-off-by: dependabot[bot] <support@github.com>\r\nCo-authored-by: dependabot[bot] <49699333+dependabot[bot]@users.noreply.github.com>",
+          "timestamp": "2023-07-04T15:49:46Z",
+          "tree_id": "9052bc7044192696177676a2fc47ffe3cd47841b",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/2338e85f1622483c82e8d537718fcf31da815ad1"
+        },
+        "date": 1688485976376,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA",
+            "value": 67049,
+            "unit": "ns/op\t   11098 B/op\t      12 allocs/op",
+            "extra": "18122 times\n2 procs"
           }
         ]
       }

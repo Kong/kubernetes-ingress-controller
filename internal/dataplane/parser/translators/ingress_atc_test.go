@@ -291,7 +291,7 @@ func TestCalculateIngressRoutePriorityTraits(t *testing.T) {
 			},
 		},
 		{
-			name: "ImplementationSpecific path with regex",
+			name: "ImplementationSpecific path without regex",
 			paths: []netv1.HTTPIngressPath{
 				{
 					Path:     "/abc/def",

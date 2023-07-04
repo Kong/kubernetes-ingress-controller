@@ -4,15 +4,10 @@ package envtest
 
 import (
 	"context"
-	"crypto/rand"
-	"crypto/rsa"
 	"crypto/tls"
-	"crypto/x509"
-	"crypto/x509/pkix"
 	"errors"
 	"fmt"
 	"io"
-	"math/big"
 	"net"
 	"os"
 	"strings"
@@ -37,12 +32,12 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/manager/featuregates"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 	"github.com/kong/kubernetes-ingress-controller/v2/pkg/clientset/scheme"
+	"github.com/kong/kubernetes-ingress-controller/v2/test/helpers/certificate"
 )
 
 func TestTelemetry(t *testing.T) {
 	t.Log("configuring TLS listener - server for telemetry data")
-	cert, err := generateSelfSignedCert()
-	require.NoError(t, err)
+	cert := certificate.GenerateSelfSignedCert(t)
 	telemetryServerListener, err := tls.Listen("tcp", "localhost:0", &tls.Config{
 		Certificates: []tls.Certificate{cert},
 		// The same version as the one used by TLS forwarder in the pkg telemetry.
@@ -430,40 +425,4 @@ func removeStanzaFromReport(report string, stanza string) (string, error) {
 	}
 	end += start
 	return report[:start] + report[end+1:], nil
-}
-
-func generateSelfSignedCert() (tls.Certificate, error) {
-	// Generate a new RSA private key.
-	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
-	if err != nil {
-		return tls.Certificate{}, fmt.Errorf("failed to generate private key: %w", err)
-	}
-
-	// Create a self-signed X.509 certificate.
-	template := &x509.Certificate{
-		SerialNumber: big.NewInt(1),
-		Subject: pkix.Name{
-			Organization:  []string{"Kong HQ"},
-			Country:       []string{"US"},
-			Province:      []string{"California"},
-			Locality:      []string{"San Francisco"},
-			StreetAddress: []string{"150 Spear Street, Suite 1600"},
-			PostalCode:    []string{"94105"},
-		},
-		NotBefore:             time.Now(),
-		NotAfter:              time.Now().AddDate(1, 0, 0),
-		BasicConstraintsValid: true,
-	}
-	derBytes, err := x509.CreateCertificate(rand.Reader, template, template, &privateKey.PublicKey, privateKey)
-	if err != nil {
-		return tls.Certificate{}, fmt.Errorf("failed to create certificate: %w", err)
-	}
-
-	// Create a tls.Certificate from the generated private key and certificate.
-	certificate := tls.Certificate{
-		Certificate: [][]byte{derBytes},
-		PrivateKey:  privateKey,
-	}
-
-	return certificate, nil
 }

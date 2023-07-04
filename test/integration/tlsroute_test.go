@@ -28,6 +28,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util/builder"
 	"github.com/kong/kubernetes-ingress-controller/v2/test"
+	"github.com/kong/kubernetes-ingress-controller/v2/test/helpers/certificate"
 	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/helpers"
 )
 
@@ -58,7 +59,7 @@ func TestTLSRouteEssentials(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Log("configuring secrets")
-	tlsRouteExampleTLSCert, tlsRouteExampleTLSKey := helpers.GenerateSelfSignedCertPEMFormat(t, helpers.WithCommonName(tlsRouteHostname))
+	tlsRouteExampleTLSCert, tlsRouteExampleTLSKey := certificate.GenerateSelfSignedCertPEMFormat(t, certificate.WithCommonName(tlsRouteHostname))
 	secrets := []*corev1.Secret{
 		{
 			ObjectMeta: metav1.ObjectMeta{
@@ -432,8 +433,8 @@ func TestTLSRouteReferenceGrant(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Log("configuring secrets")
-	tlsRouteExampleTLSCert, tlsRouteExampleTLSKey := helpers.GenerateSelfSignedCertPEMFormat(t, helpers.WithCommonName(tlsRouteHostname))
-	extraTLSRouteTLSCert, extraTLSRouteTLSKey := helpers.GenerateSelfSignedCertPEMFormat(t, helpers.WithCommonName(tlsRouteExtraHostname))
+	tlsRouteExampleTLSCert, tlsRouteExampleTLSKey := certificate.GenerateSelfSignedCertPEMFormat(t, certificate.WithCommonName(tlsRouteHostname))
+	extraTLSRouteTLSCert, extraTLSRouteTLSKey := certificate.GenerateSelfSignedCertPEMFormat(t, certificate.WithCommonName(tlsRouteExtraHostname))
 
 	secrets := []*corev1.Secret{
 		{
@@ -662,7 +663,7 @@ func TestTLSRoutePassthrough(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Log("configuring secrets")
-	tlsRouteExampleTLSCert, tlsRouteExampleTLSKey := helpers.GenerateSelfSignedCertPEMFormat(t, helpers.WithCommonName(tlsRouteHostname))
+	tlsRouteExampleTLSCert, tlsRouteExampleTLSKey := certificate.GenerateSelfSignedCertPEMFormat(t, certificate.WithCommonName(tlsRouteHostname))
 	secrets := []*corev1.Secret{
 		{
 			ObjectMeta: metav1.ObjectMeta{

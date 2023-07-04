@@ -26,6 +26,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/pkg/clientset"
 	"github.com/kong/kubernetes-ingress-controller/v2/test"
 	"github.com/kong/kubernetes-ingress-controller/v2/test/consts"
+	"github.com/kong/kubernetes-ingress-controller/v2/test/helpers/certificate"
 	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/helpers"
 )
 
@@ -329,8 +330,8 @@ func TestTCPIngressTLSPassthrough(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Log("configuring secrets")
-	redisExampleTLSCert, redisExampleTLSKey := helpers.GenerateSelfSignedCertPEMFormat(t,
-		helpers.WithCommonName("secure-foo-bar"), helpers.WithDNSNames("redis.example"),
+	redisExampleTLSCert, redisExampleTLSKey := certificate.GenerateSelfSignedCertPEMFormat(t,
+		certificate.WithCommonName("secure-foo-bar"), certificate.WithDNSNames("redis.example"),
 	)
 	require.NoError(t, err)
 	secret := &corev1.Secret{

@@ -25,6 +25,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v2/test"
 	"github.com/kong/kubernetes-ingress-controller/v2/test/consts"
+	"github.com/kong/kubernetes-ingress-controller/v2/test/helpers/certificate"
 	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/helpers"
 )
 
@@ -136,12 +137,12 @@ func TestHTTPSIngress(t *testing.T) {
 	ingress2.ObjectMeta.Name = "ingress2"
 
 	t.Log("configuring secrets")
-	fooExampleTLSCert, fooExampleTLSKey := helpers.GenerateSelfSignedCertPEMFormat(t,
-		helpers.WithCommonName("secure-foo-bar"), helpers.WithDNSNames("foo.example"),
+	fooExampleTLSCert, fooExampleTLSKey := certificate.GenerateSelfSignedCertPEMFormat(t,
+		certificate.WithCommonName("secure-foo-bar"), certificate.WithDNSNames("foo.example"),
 	)
 	require.NoError(t, err)
-	barExampleTLSCert, barExampleTLSKey := helpers.GenerateSelfSignedCertPEMFormat(t,
-		helpers.WithCommonName("foo.com"), helpers.WithDNSNames("bar.example"),
+	barExampleTLSCert, barExampleTLSKey := certificate.GenerateSelfSignedCertPEMFormat(t,
+		certificate.WithCommonName("foo.com"), certificate.WithDNSNames("bar.example"),
 	)
 	require.NoError(t, err)
 

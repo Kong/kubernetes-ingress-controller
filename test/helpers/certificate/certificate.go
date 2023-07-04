@@ -1,4 +1,4 @@
-package helpers
+package certificate
 
 import (
 	"crypto/rand"

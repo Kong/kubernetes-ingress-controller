@@ -32,12 +32,12 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/manager/featuregates"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 	"github.com/kong/kubernetes-ingress-controller/v2/pkg/clientset/scheme"
-	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/helpers"
+	"github.com/kong/kubernetes-ingress-controller/v2/test/helpers/certificate"
 )
 
 func TestTelemetry(t *testing.T) {
 	t.Log("configuring TLS listener - server for telemetry data")
-	cert := helpers.GenerateSelfSignedCert(t)
+	cert := certificate.GenerateSelfSignedCert(t)
 	telemetryServerListener, err := tls.Listen("tcp", "localhost:0", &tls.Config{
 		Certificates: []tls.Certificate{cert},
 		// The same version as the one used by TLS forwarder in the pkg telemetry.

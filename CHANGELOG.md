@@ -90,6 +90,13 @@ Adding a new version? You'll need three changes:
   [#4205](https://github.com/Kong/kubernetes-ingress-controller/pull/4205)
 - Telemetry reports now include the OpenShift version, if any.
   [#4211](https://github.com/Kong/kubernetes-ingress-controller/pull/4211)
+- Assign priorities to routes translated from Ingresses when parser translate
+  them to expression based Kong routes. The assigning method is basically the
+  same as in Kong gateway's `traditional_compatible` router, except that 
+  `regex_priority` field in Kong traditional route is not supported. This
+  method is adopted to keep the compatibility with traditional router on
+  maximum effort.
+  [#4240](https://github.com/Kong/kubernetes-ingress-controller/pull/4240)
 
 ### Changed
 

@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1688466043575,
+  "lastUpdate": 1688472022933,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -6120,6 +6120,36 @@ window.BENCHMARK_DATA = {
             "value": 77915,
             "unit": "ns/op\t   11093 B/op\t      12 allocs/op",
             "extra": "16231 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "tao.yi@konghq.com",
+            "name": "Tao Yi",
+            "username": "randmonkey"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "d0fb1a02729bb5fa3396467a0e8d446c905b0ec5",
+          "message": "feat(expression router) assign route priority ingress (#4240)\n\n* poc: assign priorities of routes trasnalated from ingresses\r\n\r\n* add bits for kind of resources translated from\r\n\r\n* add comments and CHANGELOG\r\n\r\n* calculate ingress route priority traits\r\n\r\n* add more unit tests\r\n\r\n* fix priority for regex ingress path\r\n\r\n* Update internal/dataplane/parser/translators/ingress_atc_test.go\r\n\r\nCo-authored-by: Grzegorz Burzyński <czeslavo@gmail.com>\r\n\r\n---------\r\n\r\nCo-authored-by: Grzegorz Burzyński <czeslavo@gmail.com>",
+          "timestamp": "2023-07-04T19:59:03+08:00",
+          "tree_id": "2cc46822400565b707acbacf01623cb2de3574c3",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/d0fb1a02729bb5fa3396467a0e8d446c905b0ec5"
+        },
+        "date": 1688472017364,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA",
+            "value": 86360,
+            "unit": "ns/op\t   11098 B/op\t      12 allocs/op",
+            "extra": "13734 times\n2 procs"
           }
         ]
       }

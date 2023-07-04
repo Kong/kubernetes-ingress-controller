@@ -287,6 +287,64 @@ func TestCalculateIngressRoutePriorityTraits(t *testing.T) {
 	}
 }
 
+func TestEncodeIngressRoutePriorityFromTraits(t *testing.T) {
+	testCases := []struct {
+		name             string
+		traits           IngressRoutePriorityTraits
+		expectedPriority int
+	}{
+		{
+			name: "plain host true regex path false",
+			traits: IngressRoutePriorityTraits{
+				MatchFields:   2,
+				PlainHostOnly: true,
+				MaxPathLength: 5,
+				HasRegexPath:  false,
+			},
+			expectedPriority: (3 << 50) | (2 << 41) | (1 << 32) | 5,
+		},
+		{
+			name: "plain host false regex path true",
+			traits: IngressRoutePriorityTraits{
+				MatchFields:   2,
+				PlainHostOnly: false,
+				HeaderCount:   2,
+				MaxPathLength: 5,
+				HasRegexPath:  true,
+			},
+			expectedPriority: (3 << 50) | (2 << 41) | (2 << 33) | (1 << 16) | 5,
+		},
+		{
+			name: "header number exceed limit",
+			traits: IngressRoutePriorityTraits{
+				MatchFields:   2,
+				PlainHostOnly: false,
+				HeaderCount:   256,
+				MaxPathLength: 5,
+				HasRegexPath:  true,
+			},
+			expectedPriority: (3 << 50) | (2 << 41) | (255 << 33) | (1 << 16) | 5,
+		},
+		{
+			name: "path length exceed limit",
+			traits: IngressRoutePriorityTraits{
+				MatchFields:   2,
+				PlainHostOnly: true,
+				MaxPathLength: 100000,
+			},
+			expectedPriority: (3 << 50) | (2 << 41) | (1 << 32) | 65535,
+		},
+	}
+
+	for _, tc := range testCases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			priority := tc.traits.EncodeToPriority()
+			require.Equal(t, tc.expectedPriority, priority)
+		})
+	}
+}
+
 func TestPathMatcherFromIngressPath(t *testing.T) {
 	testCases := []struct {
 		name        string

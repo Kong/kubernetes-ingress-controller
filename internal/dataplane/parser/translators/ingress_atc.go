@@ -249,6 +249,22 @@ type IngressRoutePriorityTraits struct {
 }
 
 // EncodeToPriority encodes the traits to `priority` field used in Kong expression based routes.
+// The bits are assigned in the following way:
+//
+//	      4                   3                   2                   1
+//	3 2 1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0
+//
+// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+// | MF  | Header Number |P|         PRESERVED           |R|          Path Length          |
+// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+//
+// Where:
+//   - MF (Match Fields): how many fields there are to match on (path, host, headers, methods, SNIs).
+//   - Header Number: number of headers to match.
+//   - PRESERVED: reserved for future use if we want add other fields into consideration.
+//   - P (Plain Host): set if ALL hosts are non-wildcard.
+//   - R (Regex): if set, regex match is used.
+//   - Path Length: maximum length of the path to match.
 func (t IngressRoutePriorityTraits) EncodeToPriority() int {
 	// route.priority in admin API could only use the lowest 52 bits
 	// because the numbers in JSON are parsed into double precision floating numbers.

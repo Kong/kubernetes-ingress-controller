@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1688465946989,
+  "lastUpdate": 1688465948599,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -6000,6 +6000,36 @@ window.BENCHMARK_DATA = {
             "value": 80015,
             "unit": "ns/op\t   11092 B/op\t      12 allocs/op",
             "extra": "15787 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "tao.yi@konghq.com",
+            "name": "Tao Yi",
+            "username": "randmonkey"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "b2625e5fdd6bc245a9054bbe3b7bb23005902c92",
+          "message": "Update internal/dataplane/parser/translators/ingress_atc_test.go\n\nCo-authored-by: Grzegorz Burzyński <czeslavo@gmail.com>",
+          "timestamp": "2023-07-04T18:18:05+08:00",
+          "tree_id": "aaf873250409093455cbfe813084b17542ab7f2b",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/b2625e5fdd6bc245a9054bbe3b7bb23005902c92"
+        },
+        "date": 1688465942386,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA",
+            "value": 66480,
+            "unit": "ns/op\t   11091 B/op\t      12 allocs/op",
+            "extra": "17127 times\n2 procs"
           }
         ]
       },

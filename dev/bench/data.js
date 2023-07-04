@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1688465948599,
+  "lastUpdate": 1688466041587,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -6060,6 +6060,36 @@ window.BENCHMARK_DATA = {
             "value": 66480,
             "unit": "ns/op\t   11091 B/op\t      12 allocs/op",
             "extra": "17127 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "tao.yi@konghq.com",
+            "name": "Tao Yi",
+            "username": "randmonkey"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "74f5d8fe526d11c6f02e3b7eec62799ec9aee992",
+          "message": "test: generate certs in each run in integration tests using TLS (#4271)\n\n* generate certs in each run in integration tests using TLS\r\n\r\n* fix lint\r\n\r\n* add options for generating certs\r\n\r\n* move generate certificate to single package",
+          "timestamp": "2023-07-04T10:19:36Z",
+          "tree_id": "8b048b1ac3d55a1c92ad58b5d5b6c2d4f1a63328",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/74f5d8fe526d11c6f02e3b7eec62799ec9aee992"
+        },
+        "date": 1688466036167,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA",
+            "value": 77915,
+            "unit": "ns/op\t   11093 B/op\t      12 allocs/op",
+            "extra": "16231 times\n2 procs"
           }
         ]
       }

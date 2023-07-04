@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/util/kubernetes/object/status"
 	"github.com/samber/mo"
 	"github.com/spf13/pflag"
 	k8stypes "k8s.io/apimachinery/pkg/types"
@@ -23,6 +22,7 @@ import (
 	cfgtypes "github.com/kong/kubernetes-ingress-controller/v2/internal/manager/config/types"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/manager/featuregates"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/manager/flags"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/util/kubernetes/object/status"
 )
 
 type OptionalNamespacedName = mo.Option[k8stypes.NamespacedName]

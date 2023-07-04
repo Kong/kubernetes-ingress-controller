@@ -136,7 +136,7 @@ var (
 
 func TestQueuePublish(t *testing.T) {
 	const testBufferSize = 1
-	var testObj = &netv1.Ingress{
+	testObj := &netv1.Ingress{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "Ingress",
 			APIVersion: "networking.k8s.io/v1",
@@ -207,5 +207,4 @@ func TestQueuePublish(t *testing.T) {
 		assert.Truef(t, consumedEventAt.Before(publishedAt),
 			"event expected to be consumed before publish completes, consumed: %s, published: %s", consumedEventAt.String(), publishedAt.String())
 	})
-
 }

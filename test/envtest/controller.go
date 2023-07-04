@@ -11,8 +11,10 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
+	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/controllers"
@@ -57,4 +59,12 @@ func StartReconcilers(ctx context.Context, t *testing.T, scheme *runtime.Scheme,
 			t.Logf("Test %s failed: dumping controller logs\n%s", t.Name(), b.String())
 		}
 	})
+}
+
+func NewControllerClient(t *testing.T, cfg *rest.Config) ctrlclient.Client {
+	client, err := ctrlclient.New(cfg, ctrlclient.Options{
+		Scheme: scheme.Scheme,
+	})
+	require.NoError(t, err)
+	return client
 }

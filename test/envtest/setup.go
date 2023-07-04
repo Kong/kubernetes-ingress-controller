@@ -81,8 +81,8 @@ func Setup(t *testing.T, scheme *runtime.Scheme) *rest.Config {
 	})
 
 	// Set the env vars that the controller expects (not using t.Setenv because envtests are run in parallel).
-	_ = os.Setenv("POD_NAMESPACE", "default")
-	_ = os.Setenv("POD_NAME", "kong-ingress-controller")
+	_ = os.Setenv("POD_NAMESPACE", "default")            //nolint:tenv
+	_ = os.Setenv("POD_NAME", "kong-ingress-controller") //nolint:tenv
 
 	return cfg
 }

@@ -60,7 +60,7 @@ func NewQueue(opts ...QueueOption) *Queue {
 func (q *Queue) Publish(obj client.Object) {
 	ch, ok := q.getSubscriptionForKind(obj.GetObjectKind().GroupVersionKind())
 	if !ok {
-		// There's no subscribers for this object kind, so nothing to do.
+		// There's no subscriber for this object kind - nothing to do.
 		return
 	}
 	ch <- event.GenericEvent{Object: obj}

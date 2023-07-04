@@ -37,8 +37,7 @@ import (
 
 func TestTelemetry(t *testing.T) {
 	t.Log("configuring TLS listener - server for telemetry data")
-	cert, err := helpers.GenerateSelfSignedCert("", []string{})
-	require.NoError(t, err)
+	cert := helpers.GenerateSelfSignedCert(t)
 	telemetryServerListener, err := tls.Listen("tcp", "localhost:0", &tls.Config{
 		Certificates: []tls.Certificate{cert},
 		// The same version as the one used by TLS forwarder in the pkg telemetry.

@@ -7,17 +7,48 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/pem"
-	"fmt"
 	"math/big"
+	"testing"
 	"time"
+
+	"github.com/stretchr/testify/require"
 )
 
+type SelfSignedCeritificateOptions struct {
+	CommonName string
+	DNSNames   []string
+}
+
+type SelfSignedCeritificateOptionsDecorator func(SelfSignedCeritificateOptions) SelfSignedCeritificateOptions
+
+func WithCommonName(commonName string) SelfSignedCeritificateOptionsDecorator {
+	return func(opts SelfSignedCeritificateOptions) SelfSignedCeritificateOptions {
+		opts.CommonName = commonName
+		return opts
+	}
+}
+
+func WithDNSNames(dnsNames ...string) SelfSignedCeritificateOptionsDecorator {
+	return func(opts SelfSignedCeritificateOptions) SelfSignedCeritificateOptions {
+		opts.DNSNames = append(opts.DNSNames, dnsNames...)
+		return opts
+	}
+}
+
 // GenerateSelfSignedCert generates a tls.Certificate struct to be used in TLS client/listener configurations.
-func GenerateSelfSignedCert(commonName string, dnsNames []string) (tls.Certificate, error) {
+func GenerateSelfSignedCert(t *testing.T, decorators ...SelfSignedCeritificateOptionsDecorator) tls.Certificate {
+	t.Helper()
 	// Generate a new RSA private key.
 	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
-	if err != nil {
-		return tls.Certificate{}, fmt.Errorf("failed to generate private key: %w", err)
+	require.NoError(t, err, "failed to generate RSA key")
+
+	options := SelfSignedCeritificateOptions{
+		CommonName: "",
+		DNSNames:   []string{},
+	}
+
+	for _, decorator := range decorators {
+		options = decorator(options)
 	}
 
 	// Create a self-signed X.509 certificate.
@@ -30,17 +61,15 @@ func GenerateSelfSignedCert(commonName string, dnsNames []string) (tls.Certifica
 			Locality:      []string{"San Francisco"},
 			StreetAddress: []string{"150 Spear Street, Suite 1600"},
 			PostalCode:    []string{"94105"},
-			CommonName:    commonName,
+			CommonName:    options.CommonName,
 		},
 		NotBefore:             time.Now(),
 		NotAfter:              time.Now().AddDate(1, 0, 0),
-		DNSNames:              dnsNames,
+		DNSNames:              options.DNSNames,
 		BasicConstraintsValid: true,
 	}
 	derBytes, err := x509.CreateCertificate(rand.Reader, template, template, &privateKey.PublicKey, privateKey)
-	if err != nil {
-		return tls.Certificate{}, fmt.Errorf("failed to create certificate: %w", err)
-	}
+	require.NoError(t, err, "failed to create x509 certificate")
 
 	// Create a tls.Certificate from the generated private key and certificate.
 	certificate := tls.Certificate{
@@ -48,29 +77,26 @@ func GenerateSelfSignedCert(commonName string, dnsNames []string) (tls.Certifica
 		PrivateKey:  privateKey,
 	}
 
-	return certificate, nil
+	return certificate
 }
 
 // GenerateSelfSignedCertPEMFormat generates self-signed certificate
 // and returns certificate and key in PEM format.
-func GenerateSelfSignedCertPEMFormat(commonName string, dnsNames []string) (cert []byte, key []byte, err error) {
-	tlsCert, err := GenerateSelfSignedCert(commonName, dnsNames)
-	if err != nil {
-		return nil, nil, err
-	}
+func GenerateSelfSignedCertPEMFormat(t *testing.T, decorators ...SelfSignedCeritificateOptionsDecorator) (cert []byte, key []byte) {
+	t.Helper()
+	tlsCert := GenerateSelfSignedCert(t, decorators...)
+
 	certBlock := &pem.Block{
 		Type:  "CERTIFICATE",
 		Bytes: tlsCert.Certificate[0],
 	}
 
 	privateKey, ok := tlsCert.PrivateKey.(*rsa.PrivateKey)
-	if !ok {
-		return nil, nil, fmt.Errorf("failed to get private key from generated certificate")
-	}
+	require.True(t, ok, "Private Key should be convertible to *rsa.PrivateKey")
 	keyBlock := &pem.Block{
 		Type:  "RSA PRIVATE KEY",
 		Bytes: x509.MarshalPKCS1PrivateKey(privateKey),
 	}
 
-	return pem.EncodeToMemory(certBlock), pem.EncodeToMemory(keyBlock), nil
+	return pem.EncodeToMemory(certBlock), pem.EncodeToMemory(keyBlock)
 }

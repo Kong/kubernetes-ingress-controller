@@ -58,8 +58,7 @@ func TestTLSRouteEssentials(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Log("configuring secrets")
-	tlsRouteExampleTLSCert, tlsRouteExampleTLSKey, err := helpers.GenerateSelfSignedCertPEMFormat(tlsRouteHostname, []string{})
-	require.NoError(t, err)
+	tlsRouteExampleTLSCert, tlsRouteExampleTLSKey := helpers.GenerateSelfSignedCertPEMFormat(t, helpers.WithCommonName(tlsRouteHostname))
 	secrets := []*corev1.Secret{
 		{
 			ObjectMeta: metav1.ObjectMeta{
@@ -433,10 +432,8 @@ func TestTLSRouteReferenceGrant(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Log("configuring secrets")
-	tlsRouteExampleTLSCert, tlsRouteExampleTLSKey, err := helpers.GenerateSelfSignedCertPEMFormat(tlsRouteHostname, []string{})
-	require.NoError(t, err)
-	extraTLSRouteTLSCert, extraTLSRouteTLSKey, err := helpers.GenerateSelfSignedCertPEMFormat(tlsRouteExtraHostname, []string{})
-	require.NoError(t, err)
+	tlsRouteExampleTLSCert, tlsRouteExampleTLSKey := helpers.GenerateSelfSignedCertPEMFormat(t, helpers.WithCommonName(tlsRouteHostname))
+	extraTLSRouteTLSCert, extraTLSRouteTLSKey := helpers.GenerateSelfSignedCertPEMFormat(t, helpers.WithCommonName(tlsRouteExtraHostname))
 
 	secrets := []*corev1.Secret{
 		{
@@ -665,8 +662,7 @@ func TestTLSRoutePassthrough(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Log("configuring secrets")
-	tlsRouteExampleTLSCert, tlsRouteExampleTLSKey, err := helpers.GenerateSelfSignedCertPEMFormat(tlsRouteHostname, []string{})
-	require.NoError(t, err)
+	tlsRouteExampleTLSCert, tlsRouteExampleTLSKey := helpers.GenerateSelfSignedCertPEMFormat(t, helpers.WithCommonName(tlsRouteHostname))
 	secrets := []*corev1.Secret{
 		{
 			ObjectMeta: metav1.ObjectMeta{

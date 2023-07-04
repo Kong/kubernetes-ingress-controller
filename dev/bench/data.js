@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1688483462807,
+  "lastUpdate": 1688483464522,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -6600,6 +6600,36 @@ window.BENCHMARK_DATA = {
             "value": 67495,
             "unit": "ns/op\t   11099 B/op\t      12 allocs/op",
             "extra": "17476 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "49699333+dependabot[bot]@users.noreply.github.com",
+            "name": "dependabot[bot]",
+            "username": "dependabot[bot]"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "eb406a831533dfe74a7427a67db9dec5a950fbfa",
+          "message": "chore(deps): bump github.com/kong/go-kong from 0.44.0 to 0.45.0 (#4268)\n\nBumps [github.com/kong/go-kong](https://github.com/kong/go-kong) from 0.44.0 to 0.45.0.\r\n- [Release notes](https://github.com/kong/go-kong/releases)\r\n- [Changelog](https://github.com/Kong/go-kong/blob/main/CHANGELOG.md)\r\n- [Commits](https://github.com/kong/go-kong/compare/v0.44.0...v0.45.0)\r\n\r\n---\r\nupdated-dependencies:\r\n- dependency-name: github.com/kong/go-kong\r\n  dependency-type: direct:production\r\n  update-type: version-update:semver-minor\r\n...\r\n\r\nSigned-off-by: dependabot[bot] <support@github.com>\r\nCo-authored-by: dependabot[bot] <49699333+dependabot[bot]@users.noreply.github.com>",
+          "timestamp": "2023-07-04T17:07:05+02:00",
+          "tree_id": "9a1b88bf5333d99afe4fe778ff52e3ebb5b8cf09",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/eb406a831533dfe74a7427a67db9dec5a950fbfa"
+        },
+        "date": 1688483458307,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA",
+            "value": 70849,
+            "unit": "ns/op\t   11098 B/op\t      12 allocs/op",
+            "extra": "16609 times\n2 procs"
           }
         ]
       },

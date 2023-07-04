@@ -329,14 +329,15 @@ func TestTCPIngressTLSPassthrough(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Log("configuring secrets")
+	redisExampleTLSCert, redisExampleTLSKey, err := helpers.GenerateSelfSignedCertPEMFormat("secure-foo-bar", []string{"redis.example"})
 	secret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "certs",
 			Namespace: ns.Name,
 		},
 		Data: map[string][]byte{
-			"tls.crt": []byte(tlsPairs[0].Cert),
-			"tls.key": []byte(tlsPairs[0].Key),
+			"tls.crt": redisExampleTLSCert,
+			"tls.key": redisExampleTLSKey,
 		},
 	}
 

@@ -37,63 +37,6 @@ const (
 	tlsSecretName         = "secret-test"
 )
 
-var tlsRouteTLSPairs = []TLSPair{
-	{
-		Cert: `-----BEGIN CERTIFICATE-----
-MIIC/jCCAoSgAwIBAgIUVL6UYVDdH6peVNSOnOkCuYyhmrswCgYIKoZIzj0EAwIw
-gbQxCzAJBgNVBAYTAlVTMRMwEQYDVQQIDApDYWxpZm9ybmlhMRYwFAYDVQQHDA1T
-YW4gRnJhbmNpc2NvMRMwEQYDVQQKDApLb25nLCBJbmMuMRgwFgYDVQQLDA9UZWFt
-IEt1YmVybmV0ZXMxHjAcBgNVBAMMFXRsc3JvdXRlLmtvbmcuZXhhbXBsZTEpMCcG
-CSqGSIb3DQEJARYadGVzdEB0bHNyb3V0ZS5rb25nLmV4YW1wbGUwIBcNMjIwNjE2
-MjExMjI4WhgPMjEyMjA1MjMyMTEyMjhaMIG0MQswCQYDVQQGEwJVUzETMBEGA1UE
-CAwKQ2FsaWZvcm5pYTEWMBQGA1UEBwwNU2FuIEZyYW5jaXNjbzETMBEGA1UECgwK
-S29uZywgSW5jLjEYMBYGA1UECwwPVGVhbSBLdWJlcm5ldGVzMR4wHAYDVQQDDBV0
-bHNyb3V0ZS5rb25nLmV4YW1wbGUxKTAnBgkqhkiG9w0BCQEWGnRlc3RAdGxzcm91
-dGUua29uZy5leGFtcGxlMHYwEAYHKoZIzj0CAQYFK4EEACIDYgAEQecfzsxmPwC0
-6uNs3kyiLDb6brngM4ZtGXgwcGD393cbYmaunfBPRtxqh76RKdS9wzq4q+oB8dPs
-QKgBNhlJTr+iFH9Di7bBZFcYqx+SnNUXZ0dDNBbW4rPVTJHQvdono1MwUTAdBgNV
-HQ4EFgQU+OOVbqMcu+yXomZfnZ54LgIRNo4wHwYDVR0jBBgwFoAU+OOVbqMcu+yX
-omZfnZ54LgIRNo4wDwYDVR0TAQH/BAUwAwEB/zAKBggqhkjOPQQDAgNoADBlAjBu
-PMq+T+iTJ0yNvldYpB3BfdIhrv0EJQ9ALbB16nJwF91YV6YE7mdNP5rNVnoZ0nAC
-MQDmnIpipMawjJWpfSPSZS1/iArz8YuBroWrGFXP62lwhCUp8RZweNnrLmmb/Aek
-y3o=
------END CERTIFICATE-----`,
-		Key: `-----BEGIN PRIVATE KEY-----
-MIG2AgEAMBAGByqGSM49AgEGBSuBBAAiBIGeMIGbAgEBBDDDRndgPYZaonVuqHiu
-5uuYWI+A16BYLoUBnY0/9BL9U0s47G7LC/b05wE/7UPJEBKhZANiAARB5x/OzGY/
-ALTq42zeTKIsNvpuueAzhm0ZeDBwYPf3dxtiZq6d8E9G3GqHvpEp1L3DOrir6gHx
-0+xAqAE2GUlOv6IUf0OLtsFkVxirH5Kc1RdnR0M0Ftbis9VMkdC92ic=
------END PRIVATE KEY-----`,
-	},
-	{
-		Cert: `-----BEGIN CERTIFICATE-----
-MIIDCDCCAo6gAwIBAgIUJB+Fq4hrxgiwhWLtqeAKp+NXigwwCgYIKoZIzj0EAwIw
-gbkxCzAJBgNVBAYTAlVTMRMwEQYDVQQIDApDYWxpZm9ybmlhMRYwFAYDVQQHDA1T
-YW4gRnJhbmNpc2NvMRMwEQYDVQQKDApLb25nLCBJbmMuMRgwFgYDVQQLDA9UZWFt
-IEt1YmVybmV0ZXMxIzAhBgNVBAMMGmV4dHJhdGxzcm91dGUua29uZy5leGFtcGxl
-MSkwJwYJKoZIhvcNAQkBFhp0ZXN0QHRsc3JvdXRlLmtvbmcuZXhhbXBsZTAgFw0y
-MjA2MjIyMDIwNDlaGA8yMTIyMDUyOTIwMjA0OVowgbkxCzAJBgNVBAYTAlVTMRMw
-EQYDVQQIDApDYWxpZm9ybmlhMRYwFAYDVQQHDA1TYW4gRnJhbmNpc2NvMRMwEQYD
-VQQKDApLb25nLCBJbmMuMRgwFgYDVQQLDA9UZWFtIEt1YmVybmV0ZXMxIzAhBgNV
-BAMMGmV4dHJhdGxzcm91dGUua29uZy5leGFtcGxlMSkwJwYJKoZIhvcNAQkBFhp0
-ZXN0QHRsc3JvdXRlLmtvbmcuZXhhbXBsZTB2MBAGByqGSM49AgEGBSuBBAAiA2IA
-BACgptITKMoxBz67FTxi9eP0CcnIabUu4AlkP7IOSkgprzsPGUfgn6sSv88IxHbn
-0qSIxMi1OjoK+m12a5eayYYnr1kiy9Qvm0jCubCDog03534rrMqjKFTimMSk/4U4
-A6NTMFEwHQYDVR0OBBYEFN3kitZnxny13r7TajZ74IkwCq4uMB8GA1UdIwQYMBaA
-FN3kitZnxny13r7TajZ74IkwCq4uMA8GA1UdEwEB/wQFMAMBAf8wCgYIKoZIzj0E
-AwIDaAAwZQIwGYtGE0xOKdiObmVUIxlc5Iif9cVwzfvaMF0wiuuth9Hxd3n40XPv
-aof6F4WdQihFAjEA/heIDoQActLLXrhFvxS6JP/XPT3C086lK1mq3inRGIvYX/1r
-/gHROKq7BRLjo6FS
------END CERTIFICATE-----`,
-		Key: `-----BEGIN PRIVATE KEY-----
-MIG2AgEAMBAGByqGSM49AgEGBSuBBAAiBIGeMIGbAgEBBDBHOv6UxSf7MbyPOllv
-0Sb/hnXf+UfTblLA8TeoKa4Hr9RjoB0QYLFHLDFPMg5eplGhZANiAAQAoKbSEyjK
-MQc+uxU8YvXj9AnJyGm1LuAJZD+yDkpIKa87DxlH4J+rEr/PCMR259KkiMTItTo6
-CvptdmuXmsmGJ69ZIsvUL5tIwrmwg6INN+d+K6zKoyhU4pjEpP+FOAM=
------END PRIVATE KEY-----`,
-	},
-}
-
 const (
 	tlsEchoPort = 1030
 )
@@ -115,6 +58,9 @@ func TestTLSRouteEssentials(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Log("configuring secrets")
+	tlsRouteExampleTLSCert, tlsRouteExampleTLSKey, err :=
+		helpers.GenerateSelfSignedCertPEMFormat(tlsRouteHostname, []string{})
+	require.NoError(t, err)
 	secrets := []*corev1.Secret{
 		{
 			ObjectMeta: metav1.ObjectMeta{
@@ -123,8 +69,8 @@ func TestTLSRouteEssentials(t *testing.T) {
 				Namespace: ns.Name,
 			},
 			Data: map[string][]byte{
-				"tls.crt": []byte(tlsRouteTLSPairs[0].Cert),
-				"tls.key": []byte(tlsRouteTLSPairs[0].Key),
+				"tls.crt": tlsRouteExampleTLSCert,
+				"tls.key": tlsRouteExampleTLSKey,
 			},
 		},
 	}
@@ -488,6 +434,13 @@ func TestTLSRouteReferenceGrant(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Log("configuring secrets")
+	tlsRouteExampleTLSCert, tlsRouteExampleTLSKey, err :=
+		helpers.GenerateSelfSignedCertPEMFormat(tlsRouteHostname, []string{})
+	require.NoError(t, err)
+	extraTLSRouteTLSCert, extraTLSRouteTLSKey, err :=
+		helpers.GenerateSelfSignedCertPEMFormat(tlsRouteExtraHostname, []string{})
+	require.NoError(t, err)
+
 	secrets := []*corev1.Secret{
 		{
 			ObjectMeta: metav1.ObjectMeta{
@@ -496,8 +449,8 @@ func TestTLSRouteReferenceGrant(t *testing.T) {
 				Namespace: ns.Name,
 			},
 			Data: map[string][]byte{
-				"tls.crt": []byte(tlsRouteTLSPairs[0].Cert),
-				"tls.key": []byte(tlsRouteTLSPairs[0].Key),
+				"tls.crt": tlsRouteExampleTLSCert,
+				"tls.key": tlsRouteExampleTLSKey,
 			},
 		},
 		{
@@ -506,8 +459,8 @@ func TestTLSRouteReferenceGrant(t *testing.T) {
 				Name: "secret2",
 			},
 			Data: map[string][]byte{
-				"tls.crt": []byte(tlsRouteTLSPairs[1].Cert),
-				"tls.key": []byte(tlsRouteTLSPairs[1].Key),
+				"tls.crt": extraTLSRouteTLSCert,
+				"tls.key": extraTLSRouteTLSKey,
 			},
 		},
 	}
@@ -715,6 +668,8 @@ func TestTLSRoutePassthrough(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Log("configuring secrets")
+	tlsRouteExampleTLSCert, tlsRouteExampleTLSKey, err :=
+		helpers.GenerateSelfSignedCertPEMFormat(tlsRouteHostname, []string{})
 	secrets := []*corev1.Secret{
 		{
 			ObjectMeta: metav1.ObjectMeta{
@@ -722,8 +677,8 @@ func TestTLSRoutePassthrough(t *testing.T) {
 				Namespace: ns.Name,
 			},
 			Data: map[string][]byte{
-				"tls.crt": []byte(tlsRouteTLSPairs[0].Cert),
-				"tls.key": []byte(tlsRouteTLSPairs[0].Key),
+				"tls.crt": tlsRouteExampleTLSCert,
+				"tls.key": tlsRouteExampleTLSKey,
 			},
 		},
 	}

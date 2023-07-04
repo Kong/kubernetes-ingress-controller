@@ -331,9 +331,6 @@ func calculateIngressRoutePriorityTraits(
 		traits.MatchFields++
 	}
 	for _, path := range paths {
-		// TODO: in non-combined translator, we assigned different regex priorities to different type of path:
-		// exact = 300, prefix = 200, implementationSpecific = 100.
-		// We may add additional weights on path types.
 		if path.PathType == nil {
 			continue
 		}
@@ -361,7 +358,7 @@ func calculateIngressRoutePriorityTraits(
 			if regexPathPrefix != "" && strings.HasPrefix(path.Path, regexPathPrefix) {
 				// regex path match, calculate the length by length of regex part.
 				traits.HasRegexPath = true
-				regex := strings.TrimPrefix(path.Path, path.Path)
+				regex := strings.TrimPrefix(path.Path, regexPathPrefix)
 				pathLength = len(regex)
 			} else {
 				// non-regex path.

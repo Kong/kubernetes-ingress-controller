@@ -224,7 +224,7 @@ func TestCalculateIngressRoutePriorityTraits(t *testing.T) {
 			},
 			expectedTraits: IngressRoutePriorityTraits{
 				MatchFields:   1,
-				MaxPathLength: 5,
+				MaxPathLength: len("/foo/"),
 				HasRegexPath:  true,
 			},
 		},
@@ -244,7 +244,7 @@ func TestCalculateIngressRoutePriorityTraits(t *testing.T) {
 			expectedTraits: IngressRoutePriorityTraits{
 				MatchFields:   2,
 				PlainHostOnly: true,
-				MaxPathLength: 8,
+				MaxPathLength: len("/foobar/"),
 				HasRegexPath:  true,
 			},
 		},
@@ -270,8 +270,40 @@ func TestCalculateIngressRoutePriorityTraits(t *testing.T) {
 				MatchFields:   3,
 				PlainHostOnly: false,
 				HeaderCount:   2,
-				MaxPathLength: 8,
+				MaxPathLength: len("/foobar/"),
 				HasRegexPath:  true,
+			},
+		},
+		{
+			name: "ImplementationSpecific path with regex",
+			paths: []netv1.HTTPIngressPath{
+				{
+					Path:     "/~/[a-z0-9]{3}/",
+					PathType: lo.ToPtr(netv1.PathTypeImplementationSpecific),
+				},
+			},
+			regexPathPrefix: "/~",
+			expectedTraits: IngressRoutePriorityTraits{
+				MatchFields:   1,
+				PlainHostOnly: false,
+				MaxPathLength: len("/[a-z0-9]{3}/"),
+				HasRegexPath:  true,
+			},
+		},
+		{
+			name: "ImplementationSpecific path with regex",
+			paths: []netv1.HTTPIngressPath{
+				{
+					Path:     "/abc/def",
+					PathType: lo.ToPtr(netv1.PathTypeImplementationSpecific),
+				},
+			},
+			regexPathPrefix: "/~",
+			expectedTraits: IngressRoutePriorityTraits{
+				MatchFields:   1,
+				PlainHostOnly: false,
+				MaxPathLength: len("/abc/def"),
+				HasRegexPath:  false,
 			},
 		},
 	}

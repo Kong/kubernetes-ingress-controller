@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1688485488452,
+  "lastUpdate": 1688485490669,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -6720,6 +6720,36 @@ window.BENCHMARK_DATA = {
             "value": 67207,
             "unit": "ns/op\t   11094 B/op\t      12 allocs/op",
             "extra": "18032 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "lavacca.mattia@gmail.com",
+            "name": "Mattia Lavacca",
+            "username": "mlavacca"
+          },
+          "committer": {
+            "email": "lavacca.mattia@gmail.com",
+            "name": "Mattia Lavacca",
+            "username": "mlavacca"
+          },
+          "distinct": true,
+          "id": "cf167d5418235e8b2fd7267a46a68514877427e2",
+          "message": "fix: empty config is not incoherent",
+          "timestamp": "2023-07-04T17:42:18+02:00",
+          "tree_id": "08edf2ed8007cfc68560c30439d8eb4059b70535",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/cf167d5418235e8b2fd7267a46a68514877427e2"
+        },
+        "date": 1688485482841,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA",
+            "value": 88815,
+            "unit": "ns/op\t   11099 B/op\t      12 allocs/op",
+            "extra": "14257 times\n2 procs"
           }
         ]
       },

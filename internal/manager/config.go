@@ -22,6 +22,7 @@ import (
 	cfgtypes "github.com/kong/kubernetes-ingress-controller/v2/internal/manager/config/types"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/manager/featuregates"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/manager/flags"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/util/kubernetes/object/status"
 )
 
 type OptionalNamespacedName = mo.Option[k8stypes.NamespacedName]
@@ -86,7 +87,9 @@ type Config struct {
 	PublishService          OptionalNamespacedName
 	PublishStatusAddress    []string
 	PublishStatusAddressUDP []string
-	UpdateStatus            bool
+
+	UpdateStatus                bool
+	UpdateStatusQueueBufferSize int
 
 	// Kubernetes API toggling
 	IngressNetV1Enabled           bool
@@ -202,8 +205,10 @@ func (c *Config) FlagSet() *pflag.FlagSet {
 		`endpoints. If omitted, the same Service will be used for both TCP and UDP routes.`)
 	flagSet.StringSliceVar(&c.PublishStatusAddressUDP, "publish-status-address-udp", []string{},
 		`User-provided address CSV, for use in lieu of "publish-service-udp" when that Service lacks useful address information.`)
+
 	flagSet.BoolVar(&c.UpdateStatus, "update-status", true,
 		`Indicates if the ingress controller should update the status of resources (e.g. IP/Hostname for v1.Ingress, e.t.c.)`)
+	flagSet.IntVar(&c.UpdateStatusQueueBufferSize, "update-status-queue-buffer-size", status.DefaultBufferSize, "Buffer size of the underlying channels used to update the status of resources.")
 
 	// Kubernetes API toggling
 	flagSet.BoolVar(&c.IngressNetV1Enabled, "enable-controller-ingress-networkingv1", true, "Enable the networking.k8s.io/v1 Ingress controller.")

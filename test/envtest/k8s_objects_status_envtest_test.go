@@ -115,6 +115,8 @@ func TestHTTPRouteReconciliation_DoesNotBlockSyncLoopWhenStatusQueueBufferIsExce
 	t.Cleanup(func() { _ = ctrlClient.Delete(ctx, &httpRoute) })
 }
 
+const publishSvcName = "publish-svc"
+
 // runManagerWithConfig runs the manager in a goroutine using configuration modified by modifyCfgFn.
 // It also sets up configuration parameters that are required for the Gateway API to work as expected.
 func runManagerWithConfig(ctx context.Context, t *testing.T, envcfg *rest.Config, gw gatewayv1beta1.Gateway, modifyCfgFn func(cfg *manager.Config)) {
@@ -136,8 +138,6 @@ func runManagerWithConfig(ctx context.Context, t *testing.T, envcfg *rest.Config
 	}()
 }
 
-const publishSvcName = "publish-svc"
-
 // deployGateway deploys a Gateway, GatewayClass, and publish Service for use in tests.
 func deployGateway(ctx context.Context, t *testing.T, client client.Client) gatewayv1beta1.Gateway {
 	ns := CreateNamespace(ctx, t, client)
@@ -145,7 +145,7 @@ func deployGateway(ctx context.Context, t *testing.T, client client.Client) gate
 	publishSvc := corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: ns.Name,
-			Name:      "publish-svc",
+			Name:      publishSvcName,
 		},
 		Spec: corev1.ServiceSpec{
 			Ports: []corev1.ServicePort{

@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1688557532992,
+  "lastUpdate": 1688561032948,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -7830,6 +7830,36 @@ window.BENCHMARK_DATA = {
             "value": 68860,
             "unit": "ns/op\t   11091 B/op\t      12 allocs/op",
             "extra": "17871 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "czeslavo@gmail.com",
+            "name": "Grzegorz Burzyński",
+            "username": "czeslavo"
+          },
+          "committer": {
+            "email": "czeslavo@gmail.com",
+            "name": "Grzegorz Burzyński",
+            "username": "czeslavo"
+          },
+          "distinct": true,
+          "id": "63270edce6e5d797a75196ed31649bf420f5f746",
+          "message": "refactor: don't log missing pod reference in every update",
+          "timestamp": "2023-07-05T14:42:39+02:00",
+          "tree_id": "74745bde71d451e8ba1598134acb5c00330ae743",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/63270edce6e5d797a75196ed31649bf420f5f746"
+        },
+        "date": 1688561027970,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA",
+            "value": 70697,
+            "unit": "ns/op\t   11095 B/op\t      12 allocs/op",
+            "extra": "17647 times\n2 procs"
           }
         ]
       }

@@ -74,12 +74,9 @@ func TestHTTPRouteReconciliation_DoesNotBlockSyncLoopWhenStatusQueueBufferIsExce
 				}},
 			},
 			Rules: []gatewayv1beta1.HTTPRouteRule{{
-				Matches: []gatewayv1beta1.HTTPRouteMatch{{
-					Path: &gatewayv1beta1.HTTPPathMatch{
-						Type:  lo.ToPtr(gatewayv1beta1.PathMatchPathPrefix),
-						Value: lo.ToPtr("/path"),
-					},
-				}},
+				Matches: builder.NewHTTPRouteMatch().
+					WithPathPrefix("/path").
+					ToSlice(),
 				BackendRefs: builder.NewHTTPBackendRef(backendService.Name).
 					WithPort(80).
 					ToSlice(),

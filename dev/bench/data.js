@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1688564997748,
+  "lastUpdate": 1688565281997,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -8490,6 +8490,36 @@ window.BENCHMARK_DATA = {
             "value": 86053,
             "unit": "ns/op\t   11094 B/op\t      12 allocs/op",
             "extra": "14656 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "czeslavo@gmail.com",
+            "name": "Grzegorz Burzyński",
+            "username": "czeslavo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "1a023880af92bee16cc75eb38975936184004063",
+          "message": "fix: make status queue not block when no sub exists (#4267)\n\nFixes the status.Queue so that it does not block on Publish when no Subscribe \r\nwas called before, adds missing subscriptions for Gateway API *Routes and\r\ncovers the regression with tests. Also adds --update-status-queue-buffer-size\r\nto allow reproduction.",
+          "timestamp": "2023-07-05T13:52:45Z",
+          "tree_id": "3feab170e6922716687f897e2403e214ce722ede",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/1a023880af92bee16cc75eb38975936184004063"
+        },
+        "date": 1688565276780,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA",
+            "value": 95833,
+            "unit": "ns/op\t   11100 B/op\t      12 allocs/op",
+            "extra": "13489 times\n2 procs"
           }
         ]
       }

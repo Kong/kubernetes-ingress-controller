@@ -89,7 +89,7 @@ func (c *fakeDataplaneClient) DBMode() string {
 	return c.dbmode
 }
 
-func (c *fakeDataplaneClient) Update(ctx context.Context) error {
+func (c *fakeDataplaneClient) Update(_ context.Context) error {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 	c.updateCount++

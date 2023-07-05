@@ -29,32 +29,32 @@ type KongFakeValidator struct {
 }
 
 func (v KongFakeValidator) ValidateConsumer(_ context.Context,
-	consumer configuration.KongConsumer,
+	_ configuration.KongConsumer,
 ) (bool, string, error) {
 	return v.Result, v.Message, v.Error
 }
 
 func (v KongFakeValidator) ValidatePlugin(_ context.Context,
-	k8sPlugin configuration.KongPlugin,
+	_ configuration.KongPlugin,
 ) (bool, string, error) {
 	return v.Result, v.Message, v.Error
 }
 
 func (v KongFakeValidator) ValidateClusterPlugin(_ context.Context,
-	k8sPlugin configuration.KongClusterPlugin,
+	_ configuration.KongClusterPlugin,
 ) (bool, string, error) {
 	return v.Result, v.Message, v.Error
 }
 
-func (v KongFakeValidator) ValidateCredential(ctx context.Context, secret corev1.Secret) (bool, string, error) {
+func (v KongFakeValidator) ValidateCredential(_ context.Context, _ corev1.Secret) (bool, string, error) {
 	return v.Result, v.Message, v.Error
 }
 
-func (v KongFakeValidator) ValidateGateway(ctx context.Context, gateway gatewayv1alpha2.Gateway) (bool, string, error) {
+func (v KongFakeValidator) ValidateGateway(_ context.Context, _ gatewayv1alpha2.Gateway) (bool, string, error) {
 	return v.Result, v.Message, v.Error
 }
 
-func (v KongFakeValidator) ValidateHTTPRoute(ctx context.Context, gateway gatewayv1alpha2.HTTPRoute) (bool, string, error) {
+func (v KongFakeValidator) ValidateHTTPRoute(_ context.Context, _ gatewayv1alpha2.HTTPRoute) (bool, string, error) {
 	return v.Result, v.Message, v.Error
 }
 

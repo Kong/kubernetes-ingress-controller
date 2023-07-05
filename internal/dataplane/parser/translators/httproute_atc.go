@@ -2,6 +2,7 @@ package translators
 
 import (
 	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/kong/go-kong/kong"
@@ -226,4 +227,148 @@ func matchersFromParentHTTPRoute(hostnames []string, metaAnnotations map[string]
 		ret = append(ret, sniMatcher)
 	}
 	return ret
+}
+
+const (
+	InternalRuleIndexAnnotationKey  = "internal-rule-index"
+	InternalMatchIndexAnnotationKey = "internal-match-index"
+)
+
+// SplitHTTPRoute split HTTPRoutes into HTTPRoutes with at most one hostname, and at most one rule
+// with exactly one match. It will split one rule with multiple hostnames and multiple matches
+// to one hostname and one match per each HTTPRoute.
+func SplitHTTPRoute(httproute *gatewayv1beta1.HTTPRoute) []*gatewayv1beta1.HTTPRoute {
+	hostnamedRoutes := []*gatewayv1beta1.HTTPRoute{}
+	if len(httproute.Spec.Hostnames) == 0 {
+		hostnamedRoutes = append(hostnamedRoutes, httproute.DeepCopy())
+	} else {
+		for _, hostname := range httproute.Spec.Hostnames {
+			hostNamedRoute := httproute.DeepCopy()
+			hostNamedRoute.Spec.Hostnames = []gatewayv1beta1.Hostname{hostname}
+			hostnamedRoutes = append(hostnamedRoutes, hostNamedRoute)
+		}
+	}
+
+	newHTTPRoutes := []*gatewayv1beta1.HTTPRoute{}
+	for _, route := range hostnamedRoutes {
+		for i, rule := range route.Spec.Rules {
+			for j, match := range rule.Matches {
+				splittedRoute := route.DeepCopy()
+				splittedRoute.Spec.Rules = []gatewayv1beta1.HTTPRouteRule{
+					{
+						Matches:     []gatewayv1beta1.HTTPRouteMatch{match},
+						Filters:     rule.Filters,
+						BackendRefs: rule.BackendRefs,
+					},
+				}
+				if splittedRoute.Annotations == nil {
+					splittedRoute.Annotations = map[string]string{}
+				}
+				splittedRoute.Annotations[InternalRuleIndexAnnotationKey] = strconv.Itoa(i)
+				splittedRoute.Annotations[InternalMatchIndexAnnotationKey] = strconv.Itoa(j)
+				newHTTPRoutes = append(newHTTPRoutes, splittedRoute)
+			}
+		}
+	}
+
+	return newHTTPRoutes
+}
+
+type SplittedHTTPRouteToKongRoutePriority struct {
+	HTTPRoute *gatewayv1beta1.HTTPRoute
+	Priority  int
+}
+
+type HTTPRoutePriorityTraits struct {
+	PreciseHostname bool
+	HostnameLength  int
+	PathType        gatewayv1beta1.PathMatchType
+	PathLength      int
+	HeaderCount     int
+	HasMethodMatch  bool
+	QueryParamCount int
+}
+
+func CalculateHTTPRoutePriorityTraits(httpRoute *gatewayv1beta1.HTTPRoute) HTTPRoutePriorityTraits {
+	traits := HTTPRoutePriorityTraits{}
+	if len(httpRoute.Spec.Hostnames) != 0 {
+		hostname := httpRoute.Spec.Hostnames[0]
+		traits.HostnameLength = len(hostname)
+		if !strings.HasPrefix(string(hostname), "*") {
+			traits.PreciseHostname = true
+		}
+	}
+
+	if len(httpRoute.Spec.Rules) > 0 && len(httpRoute.Spec.Rules[0].Matches) > 0 {
+		match := httpRoute.Spec.Rules[0].Matches[0]
+		if match.Path != nil {
+			// fill path type.
+			if match.Path.Type != nil {
+				traits.PathType = *match.Path.Type
+			}
+			// fill path length.
+			if match.Path.Value != nil {
+				traits.PathLength = len(*match.Path.Value)
+			}
+		}
+
+		// fill number of header matches.
+		traits.HeaderCount = len(match.Headers)
+		// fill method match.
+		if match.Method != nil {
+			traits.HasMethodMatch = true
+		}
+		// fill number of query parameters.
+		traits.QueryParamCount = len(match.QueryParams)
+	}
+	return traits
+}
+
+func (t HTTPRoutePriorityTraits) EncodeToPriority() int {
+	const (
+		// PreciseHostnameShiftBits assigns bit 49 for marking if the hostname is non-wildcard.
+		PreciseHostnameShiftBits = 49
+		// HostnameLengthShiftBits assigns bits 41-48 for the length of hostname.
+		HostnameLengthShiftBits = 41
+		// ExactPathShiftBits assigns bit 40 to mark if the match is exact path match.
+		ExactPathShiftBits = 40
+		// RegularExpressionPathShiftBits assigns bit 39 to mark if the match is regex path match.
+		RegularExpressionPathShiftBits = 39
+		// PathLengthShiftBits assigns bits 29-38 to path length. (max length = 1024, but must start with /)
+		PathLengthShiftBits = 29
+		// HeaderNumberShiftBits assign bits 24-28 to number of headers. (max number of headers = 16)
+		HeaderNumberShiftBits = 24
+		// MethodMatchShiftBits assigns bit 23 to mark if method is specified.
+		MethodMatchShiftBits = 23
+		// QueryParamNumberShiftBits makes bits 18-22 used for number of query params (max number of query params = 16)
+		QueryParamNumberShiftBits = 18
+		// bits 0-17 are used for relative order of creation timestamp, namespace/name, and internal order of rules and matches.
+	)
+
+	var priority int
+	if t.PreciseHostname {
+		priority += (1 << PreciseHostnameShiftBits)
+	}
+	priority += t.HostnameLength << HostnameLengthShiftBits
+
+	if t.PathType == gatewayv1beta1.PathMatchExact {
+		priority += (1 << ExactPathShiftBits)
+	}
+	if t.PathType == gatewayv1beta1.PathMatchRegularExpression {
+		priority += (1 << RegularExpressionPathShiftBits)
+	}
+
+	// max length of path is 1024, but path must start with /, so we use PathLength-1 to fill the bits.
+	if t.PathLength > 0 {
+		priority += ((t.PathLength - 1) << PathLengthShiftBits)
+	}
+
+	priority += (t.HeaderCount << HeaderNumberShiftBits)
+	if t.HasMethodMatch {
+		priority += (1 << MethodMatchShiftBits)
+	}
+	priority += (t.QueryParamCount << QueryParamNumberShiftBits)
+	priority += (ResourceKindBitsHTTPRoute << FromResourceKindPriorityShiftBits)
+
+	return priority
 }

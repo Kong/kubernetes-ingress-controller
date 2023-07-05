@@ -46,7 +46,11 @@ func NewQueue() *Queue {
 // Publish emits a GenericEvent for the provided objects that indicates to
 // subscribers that the status of that object needs to be updated.
 func (q *Queue) Publish(obj client.Object) {
-	ch := q.getChanForKind(obj.GetObjectKind().GroupVersionKind())
+	ch, ok := q.getChanForKind(obj.GetObjectKind().GroupVersionKind())
+	if !ok {
+		// There's no subscriber for this object kind - nothing to do.
+		return
+	}
 	ch <- event.GenericEvent{Object: obj}
 }
 
@@ -59,20 +63,32 @@ func (q *Queue) Publish(obj client.Object) {
 // be duplicated and each subscriber will receive events on a first come first
 // serve basis.
 func (q *Queue) Subscribe(gvk schema.GroupVersionKind) chan event.GenericEvent {
-	return q.getChanForKind(gvk)
+	return q.getOrCreateChanForKind(gvk)
 }
 
 // ----------------------------------------------------------------------------
 // Queue - Private Methods
 // ----------------------------------------------------------------------------
 
-func (q *Queue) getChanForKind(gvk schema.GroupVersionKind) chan event.GenericEvent {
+// getOrCreateChanForKind returns the subscription channel for the provided object GVK.
+// If the channel does not exist, it will be created.
+func (q *Queue) getOrCreateChanForKind(gvk schema.GroupVersionKind) chan event.GenericEvent {
 	q.lock.Lock()
 	defer q.lock.Unlock()
 	ch, ok := q.channels[gvk.String()]
-	if !ok { // if there's no channel built for this kind yet, make it
+	if !ok {
+		// If there's no channel built for this kind yet, make it.
 		ch = make(chan event.GenericEvent, defaultBufferSize)
 		q.channels[gvk.String()] = ch
 	}
 	return ch
+}
+
+// getChanForKind returns the subscription channel for the provided object GVK.
+// The second return value indicates whether the channel exists.
+func (q *Queue) getChanForKind(gvk schema.GroupVersionKind) (chan event.GenericEvent, bool) {
+	q.lock.RLock()
+	defer q.lock.RUnlock()
+	ch, ok := q.channels[gvk.String()]
+	return ch, ok
 }

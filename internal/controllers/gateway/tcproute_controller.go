@@ -6,9 +6,11 @@ import (
 	"reflect"
 
 	"github.com/go-logr/logr"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/util/kubernetes/object/status"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -34,6 +36,7 @@ type TCPRouteReconciler struct {
 	Log             logr.Logger
 	Scheme          *runtime.Scheme
 	DataplaneClient *dataplane.KongClient
+	StatusQueue     *status.Queue
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -74,6 +77,19 @@ func (r *TCPRouteReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		handler.EnqueueRequestsFromMapFunc(r.listTCPRoutesForGateway),
 	); err != nil {
 		return err
+	}
+
+	if r.StatusQueue != nil {
+		if err := c.Watch(
+			&source.Channel{Source: r.StatusQueue.Subscribe(schema.GroupVersionKind{
+				Group:   gatewayv1alpha2.GroupVersion.Group,
+				Version: gatewayv1alpha2.GroupVersion.Version,
+				Kind:    "TCPRoute",
+			})},
+			&handler.EnqueueRequestForObject{},
+		); err != nil {
+			return err
+		}
 	}
 
 	// because of the additional burden of having to manage reference data-plane
@@ -171,16 +187,17 @@ func (r *TCPRouteReconciler) listTCPRoutesForGatewayClass(obj client.Object) []r
 // on the inherent performance benefits of the cached manager client to avoid API overhead.
 //
 // NOTE: due to a race condition where a Gateway and a GatewayClass may be updated at the
-//       same time and could cause a changed Gateway object to look like it wasn't in-class
-//       while in reality it may still have active data-plane configurations because it was
-//       recently in-class, we can't reliably filter Gateway objects based on class as we
-//       can't verify that didn't change since we received the object. As such the current
-//       implementation enqueues ALL TCPRoute objects for reconciliation every time a Gateway
-//       changes. This is not ideal, but after communicating with other members of the
-//       community this appears to be a standard approach across multiple implementations at
-//       the moment for v1alpha2. As future releases of Gateway come out we'll need to
-//       continue iterating on this and perhaps advocating for upstream changes to help avoid
-//       this kind of problem without having to enqueue extra objects.
+//
+//	same time and could cause a changed Gateway object to look like it wasn't in-class
+//	while in reality it may still have active data-plane configurations because it was
+//	recently in-class, we can't reliably filter Gateway objects based on class as we
+//	can't verify that didn't change since we received the object. As such the current
+//	implementation enqueues ALL TCPRoute objects for reconciliation every time a Gateway
+//	changes. This is not ideal, but after communicating with other members of the
+//	community this appears to be a standard approach across multiple implementations at
+//	the moment for v1alpha2. As future releases of Gateway come out we'll need to
+//	continue iterating on this and perhaps advocating for upstream changes to help avoid
+//	this kind of problem without having to enqueue extra objects.
 func (r *TCPRouteReconciler) listTCPRoutesForGateway(obj client.Object) []reconcile.Request {
 	// verify that the object is a Gateway
 	gw, ok := obj.(*gatewayv1alpha2.Gateway)
@@ -222,8 +239,8 @@ func (r *TCPRouteReconciler) listTCPRoutesForGateway(obj client.Object) []reconc
 // TCPRoute Controller - Reconciliation
 // -----------------------------------------------------------------------------
 
-//+kubebuilder:rbac:groups=gateway.networking.k8s.io,resources=tcproutes,verbs=get;list;watch
-//+kubebuilder:rbac:groups=gateway.networking.k8s.io,resources=tcproutes/status,verbs=get;update
+// +kubebuilder:rbac:groups=gateway.networking.k8s.io,resources=tcproutes,verbs=get;list;watch
+// +kubebuilder:rbac:groups=gateway.networking.k8s.io,resources=tcproutes/status,verbs=get;update
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.

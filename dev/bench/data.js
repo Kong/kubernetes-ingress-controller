@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1688563377374,
+  "lastUpdate": 1688563379458,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -8310,6 +8310,36 @@ window.BENCHMARK_DATA = {
             "value": 67564,
             "unit": "ns/op\t   11099 B/op\t      12 allocs/op",
             "extra": "17334 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "lavacca.mattia@gmail.com",
+            "name": "Mattia Lavacca",
+            "username": "mlavacca"
+          },
+          "committer": {
+            "email": "lavacca.mattia@gmail.com",
+            "name": "Mattia Lavacca",
+            "username": "mlavacca"
+          },
+          "distinct": true,
+          "id": "981cdd9fb96657bbdd10a526a9c6d5b369fc819e",
+          "message": "chore: debug message\n\nSigned-off-by: Mattia Lavacca <lavacca.mattia@gmail.com>",
+          "timestamp": "2023-07-05T15:21:23+02:00",
+          "tree_id": "006ed3cd5e200f9853804ae3aec58be7f287d929",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/981cdd9fb96657bbdd10a526a9c6d5b369fc819e"
+        },
+        "date": 1688563371201,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA",
+            "value": 79653,
+            "unit": "ns/op\t   11097 B/op\t      12 allocs/op",
+            "extra": "15042 times\n2 procs"
           }
         ]
       },

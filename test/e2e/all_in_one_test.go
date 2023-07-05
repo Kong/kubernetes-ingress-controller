@@ -305,6 +305,8 @@ func TestDeployAllInOneDBLESS(t *testing.T) {
 	deployKong(ctx, t, env, manifest)
 	deployments := getManifestDeployments(manifestFilePath)
 
+	waitForDeploymentRollout(ctx, t, env, deployments.ProxyNN.Namespace, deployments.ProxyNN.Name)
+
 	t.Log("running ingress tests to verify all-in-one deployed ingress controller and proxy are functional")
 	ingress := deployIngressWithEchoBackends(ctx, t, env, numberOfEchoBackends)
 	verifyIngressWithEchoBackends(ctx, t, env, numberOfEchoBackends)

@@ -162,7 +162,7 @@ func (r *GatewayReconciler) listGatewaysForGatewayClass(gatewayClass client.Obje
 // GatewayClasses supported by this controller and are configured for the same service via
 // unmanaged mode and enqueues them for reconciliation. This is generally used to ensure
 // all gateways are updated when the service gets updated with new listeners.
-func (r *GatewayReconciler) listGatewaysForService(svc client.Object) (recs []reconcile.Request) {
+func (r *GatewayReconciler) listGatewaysForService(_ client.Object) (recs []reconcile.Request) {
 	gateways := &gatewayv1alpha2.GatewayList{}
 	if err := r.Client.List(context.Background(), gateways); err != nil {
 		r.Log.Error(err, "failed to list gateways for service in watch predicates", "service")

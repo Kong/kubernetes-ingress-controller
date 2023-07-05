@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1688572843775,
+  "lastUpdate": 1688572845215,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -8850,6 +8850,36 @@ window.BENCHMARK_DATA = {
             "value": 70883,
             "unit": "ns/op\t   11093 B/op\t      12 allocs/op",
             "extra": "16665 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "czeslavo@gmail.com",
+            "name": "Grzegorz Burzyński",
+            "username": "czeslavo"
+          },
+          "committer": {
+            "email": "czeslavo@gmail.com",
+            "name": "Grzegorz Burzyński",
+            "username": "czeslavo"
+          },
+          "distinct": true,
+          "id": "148273b64658f85b58ec471d394e5aaa1956e252",
+          "message": "chore: add grpcroute to changelog entry",
+          "timestamp": "2023-07-05T17:59:37+02:00",
+          "tree_id": "83bbc40a56d836b5489aca67bd0d38f5ad407917",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/148273b64658f85b58ec471d394e5aaa1956e252"
+        },
+        "date": 1688572839544,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA",
+            "value": 69790,
+            "unit": "ns/op\t   11095 B/op\t      12 allocs/op",
+            "extra": "18217 times\n2 procs"
           }
         ]
       },

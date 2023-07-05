@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	netv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -186,25 +187,22 @@ func TestQueuePublish(t *testing.T) {
 			}
 		})
 
-		var publishedAt time.Time
-		publishDone := make(chan struct{})
+		require.Len(t, sub, testBufferSize, "the channel should be full")
+
+		published := make(chan struct{})
 		go func() {
 			q.Publish(testObj)
-			publishedAt = time.Now()
-			close(publishDone)
+			close(published)
 		}()
 
-		// Give some time for Publish to block.
-		time.Sleep(10 * time.Millisecond)
+		select {
+		case <-published:
+			t.Fatal("the Publish goroutine should be blocked")
+		case <-sub:
+			// Consume one event from the channel to unblock the Publish goroutine.
+		}
 
-		// Consume one event to unblock Publish.
-		consumedEventAt := time.Now()
-		<-sub
-
-		// Wait until Publish is done.
-		<-publishDone
-
-		assert.Truef(t, consumedEventAt.Before(publishedAt),
-			"event expected to be consumed before publish completes, consumed: %s, published: %s", consumedEventAt.String(), publishedAt.String())
+		<-published
+		require.Len(t, sub, testBufferSize, "the channel should be full again")
 	})
 }

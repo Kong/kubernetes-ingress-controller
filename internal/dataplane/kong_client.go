@@ -12,12 +12,14 @@ import (
 	"github.com/kong/deck/file"
 	"github.com/kong/go-kong/kong"
 	"github.com/samber/lo"
+	"github.com/samber/mo"
 	"github.com/sirupsen/logrus"
 	"github.com/sourcegraph/conc/iter"
 	"golang.org/x/exp/slices"
 	"golang.org/x/sync/errgroup"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	k8stypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -136,6 +138,10 @@ type KongClient struct {
 
 	// kongConfigBuilder is used to translate Kubernetes objects into Kong configuration.
 	kongConfigBuilder KongConfigBuilder
+
+	// controllerPodReference is a reference to the controller pod this client is running in.
+	// It may be empty if the client is not running in a pod (e.g. in a unit test).
+	controllerPodReference mo.Option[k8stypes.NamespacedName]
 }
 
 // NewKongClient provides a new KongClient object after connecting to the
@@ -172,8 +178,19 @@ func NewKongClient(
 		kongConfigBuilder:      parser,
 		lastValidKongState:     lastValidKongState,
 	}
+	c.initializeControllerPodReference()
 
 	return c, nil
+}
+
+func (c *KongClient) initializeControllerPodReference() {
+	podNN, err := util.GetPodNN()
+	if err != nil {
+		c.logger.WithError(err).Error(
+			"failed to resolve controller's pod to attach the apply configuration events to")
+		return
+	}
+	c.controllerPodReference = mo.Some(podNN)
 }
 
 // -----------------------------------------------------------------------------
@@ -645,6 +662,12 @@ func (c *KongClient) recordResourceFailureEvents(resourceFailures []failures.Res
 
 // recordApplyConfigurationEvents records event attached to KIC pod after KIC applied Kong configuration.
 func (c *KongClient) recordApplyConfigurationEvents(err error, rootURL string) {
+	podNN, ok := c.controllerPodReference.Get()
+	if !ok {
+		// Can't record an event without a controller pod reference to attach to.
+		return
+	}
+
 	eventType := corev1.EventTypeNormal
 	reason := KongConfigurationApplySucceededEventReason
 	message := fmt.Sprintf("successfully applied Kong configuration to %s", rootURL)
@@ -653,12 +676,6 @@ func (c *KongClient) recordApplyConfigurationEvents(err error, rootURL string) {
 		eventType = corev1.EventTypeWarning
 		reason = KongConfigurationApplyFailedEventReason
 		message = fmt.Sprintf("failed to apply Kong configuration to %s: %v", rootURL, err)
-	}
-
-	podNN, getPodErr := util.GetPodNN()
-	if getPodErr != nil {
-		c.logger.WithError(getPodErr).Error("failed to resolve controller's pod to attach the apply configuration event to")
-		return
 	}
 
 	pod := &corev1.Pod{

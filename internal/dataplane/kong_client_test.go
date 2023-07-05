@@ -33,6 +33,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/metrics"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
+	"github.com/kong/kubernetes-ingress-controller/v2/test/mocks"
 )
 
 func TestUniqueObjects(t *testing.T) {
@@ -321,7 +322,7 @@ func TestKongClientUpdate_AllExpectedClientsAreCalledAndErrorIsPropagated(t *tes
 			configChangeDetector := mockConfigurationChangeDetector{hasConfigurationChanged: true}
 			configBuilder := newMockKongConfigBuilder()
 
-			kongClient := setupTestKongClient(t, updateStrategyResolver, clientsProvider, configChangeDetector, configBuilder, nil)
+			kongClient := setupTestKongClient(t, updateStrategyResolver, clientsProvider, configChangeDetector, configBuilder, nil, nil)
 
 			err := kongClient.Update(ctx)
 			if tc.expectError {
@@ -350,7 +351,7 @@ func TestKongClientUpdate_WhenNoChangeInConfigNoClientGetsCalled(t *testing.T) {
 	configChangeDetector := mockConfigurationChangeDetector{hasConfigurationChanged: false}
 	configBuilder := newMockKongConfigBuilder()
 
-	kongClient := setupTestKongClient(t, updateStrategyResolver, clientsProvider, configChangeDetector, configBuilder, nil)
+	kongClient := setupTestKongClient(t, updateStrategyResolver, clientsProvider, configChangeDetector, configBuilder, nil, nil)
 
 	ctx := context.Background()
 	err := kongClient.Update(ctx)
@@ -428,7 +429,7 @@ func TestKongClientUpdate_ConfigStatusIsAlwaysNotified(t *testing.T) {
 		updateStrategyResolver = newMockUpdateStrategyResolver(t)
 		configChangeDetector   = mockConfigurationChangeDetector{hasConfigurationChanged: true}
 		configBuilder          = newMockKongConfigBuilder()
-		kongClient             = setupTestKongClient(t, updateStrategyResolver, clientsProvider, configChangeDetector, configBuilder, nil)
+		kongClient             = setupTestKongClient(t, updateStrategyResolver, clientsProvider, configChangeDetector, configBuilder, nil, nil)
 	)
 
 	testCases := []struct {
@@ -584,7 +585,15 @@ func TestKongClientUpdate_PushLastValidConfig(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			updateStrategyResolver.returnErrorOnUpdate(testGatewayClient.BaseRootURL(), tc.gatewayFailure)
 			updateStrategyResolver.singleError = tc.singleError
-			kongClient := setupTestKongClient(t, updateStrategyResolver, clientsProvider, configChangeDetector, configBuilder, tc.lastValidKongState)
+			kongClient := setupTestKongClient(
+				t,
+				updateStrategyResolver,
+				clientsProvider,
+				configChangeDetector,
+				configBuilder,
+				tc.lastValidKongState,
+				nil,
+			)
 
 			err := kongClient.Update(ctx)
 			if tc.errorsSize > 0 {
@@ -599,6 +608,63 @@ func TestKongClientUpdate_PushLastValidConfig(t *testing.T) {
 	}
 }
 
+func TestKongClient_ApplyConfigurationEvents(t *testing.T) {
+	testGatewayClient := mustSampleGatewayClient(t)
+	clientsProvider := mockGatewayClientsProvider{
+		gatewayClients: []*adminapi.Client{testGatewayClient},
+	}
+	updateStrategyResolver := newMockUpdateStrategyResolver(t)
+	configChangeDetector := mockConfigurationChangeDetector{hasConfigurationChanged: true}
+	configBuilder := newMockKongConfigBuilder()
+
+	testCases := []struct {
+		name         string
+		podNamespace string
+		podName      string
+		expectEvents bool
+	}{
+		{
+			name:         "events recorded when POD_NAMESPACE and POD_NAME are set",
+			podNamespace: "test-namespace",
+			podName:      "test-pod",
+			expectEvents: true,
+		},
+		{
+			name:         "no events when POD_NAMESPACE and POD_NAME are not set",
+			expectEvents: false,
+		},
+		{
+			name:         "no events when POD_NAMESPACE is not set",
+			podName:      "test-pod",
+			expectEvents: false,
+		},
+		{
+			name:         "no events when POD_NAME is not set",
+			podNamespace: "test-namespace",
+			expectEvents: false,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Setenv("POD_NAMESPACE", tc.podNamespace)
+			t.Setenv("POD_NAME", tc.podName)
+
+			eventRecorder := mocks.NewEventRecorder()
+			kongClient := setupTestKongClient(t, updateStrategyResolver, clientsProvider, configChangeDetector, configBuilder, nil, eventRecorder)
+
+			err := kongClient.Update(context.Background())
+			require.NoError(t, err)
+
+			if tc.expectEvents {
+				require.NotEmpty(t, eventRecorder.Events())
+			} else {
+				require.Empty(t, eventRecorder.Events())
+			}
+		})
+	}
+}
+
 // setupTestKongClient creates a KongClient with mocked dependencies.
 func setupTestKongClient(
 	t *testing.T,
@@ -607,6 +673,7 @@ func setupTestKongClient(
 	configChangeDetector sendconfig.ConfigurationChangeDetector,
 	configBuilder *mockKongConfigBuilder,
 	lastKongState *kongstate.KongState,
+	eventRecorder record.EventRecorder,
 ) *KongClient {
 	logger := logrus.New()
 	timeout := time.Second
@@ -615,13 +682,17 @@ func setupTestKongClient(
 	config := sendconfig.Config{}
 	dbMode := "off"
 
+	if eventRecorder == nil {
+		eventRecorder = mocks.NewEventRecorder()
+	}
+
 	kongClient, err := NewKongClient(
 		logger,
 		timeout,
 		ingressClass,
 		diagnostic,
 		config,
-		newFakeEventsRecorder(),
+		eventRecorder,
 		dbMode,
 		clientsProvider,
 		updateStrategyResolver,
@@ -632,19 +703,6 @@ func setupTestKongClient(
 	)
 	require.NoError(t, err)
 	return kongClient
-}
-
-func newFakeEventsRecorder() *record.FakeRecorder {
-	eventRecorder := record.NewFakeRecorder(0)
-
-	// Ingest events to unblock writing side.
-	go func() {
-		for {
-			<-eventRecorder.Events
-		}
-	}()
-
-	return eventRecorder
 }
 
 func mustSampleGatewayClient(t *testing.T) *adminapi.Client {

@@ -138,11 +138,11 @@ func TestHTTPSIngress(t *testing.T) {
 
 	t.Log("configuring secrets")
 	fooExampleTLSCert, fooExampleTLSKey := certificate.GenerateSelfSignedCertPEMFormat(t,
-		certificate.WithCommonName("secure-foo-bar"), certificate.WithDNSNames("foo.example"),
+		certificate.WithCommonName("secure-foo-bar"), certificate.WithDNSNames("secure-foo-bar", "foo.example"),
 	)
 	require.NoError(t, err)
 	barExampleTLSCert, barExampleTLSKey := certificate.GenerateSelfSignedCertPEMFormat(t,
-		certificate.WithCommonName("foo.com"), certificate.WithDNSNames("bar.example"),
+		certificate.WithCommonName("foo.com"), certificate.WithDNSNames("foo.com", "bar.example"),
 	)
 	require.NoError(t, err)
 

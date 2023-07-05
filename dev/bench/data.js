@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1688542540607,
+  "lastUpdate": 1688542542153,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -7380,6 +7380,36 @@ window.BENCHMARK_DATA = {
             "value": 67595,
             "unit": "ns/op\t   11099 B/op\t      12 allocs/op",
             "extra": "17814 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jakub.warczarek@konghq.com",
+            "name": "Jakub Warczarek",
+            "username": "programmer04"
+          },
+          "committer": {
+            "email": "jakub.warczarek@konghq.com",
+            "name": "Jakub Warczarek",
+            "username": "programmer04"
+          },
+          "distinct": true,
+          "id": "ac488abf9e59bf6f1de9dff54df125bcea9d4daa",
+          "message": "chore: remove redundant // +optional for CRDs' fields",
+          "timestamp": "2023-07-05T09:34:18+02:00",
+          "tree_id": "b39299a6c5b9a87236b75baa9cb452d749014821",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/ac488abf9e59bf6f1de9dff54df125bcea9d4daa"
+        },
+        "date": 1688542536314,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA",
+            "value": 69492,
+            "unit": "ns/op\t   11092 B/op\t      12 allocs/op",
+            "extra": "17563 times\n2 procs"
           }
         ]
       },

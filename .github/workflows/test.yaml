@@ -124,6 +124,11 @@ jobs:
     if: "needs.runnable.outputs.runnable == 'true'"
     steps:
 
+    - uses: Kong/kong-license@master
+      id: license
+      with:
+        password: ${{ secrets.PULP_PASSWORD }}
+
     - name: setup golang
       uses: actions/setup-go@v3
       with:
@@ -145,7 +150,7 @@ jobs:
     - name: run integration tests
       run: make test.integration.enterprise.postgres
       env:
-        KONG_LICENSE_DATA: ${{ secrets.KONG_LICENSE_DATA }}
+        KONG_LICENSE_DATA: ${{ steps.license.outputs.license }}
 
     - name: collect test coverage
       uses: actions/upload-artifact@v3

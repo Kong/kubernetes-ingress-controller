@@ -44,7 +44,7 @@ func MakeHTTPClient(opts *HTTPClientOpts) (*http.Client, error) {
 	var tlsConfig tls.Config
 
 	if opts.TLSSkipVerify {
-		tlsConfig.InsecureSkipVerify = true
+		tlsConfig.InsecureSkipVerify = true //nolint:gosec
 	}
 
 	if opts.TLSServerName != "" {

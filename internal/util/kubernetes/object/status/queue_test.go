@@ -202,7 +202,11 @@ func TestQueuePublish(t *testing.T) {
 			// Consume one event from the channel to unblock the Publish goroutine.
 		}
 
-		<-published
+		select {
+		case <-time.After(1 * time.Second):
+			t.Fatal("the Publish goroutine should have completed, timeout")
+		case <-published:
+		}
 		require.Len(t, sub, testBufferSize, "the channel should be full again")
 	})
 }

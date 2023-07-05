@@ -61,6 +61,7 @@ func StartReconcilers(ctx context.Context, t *testing.T, scheme *runtime.Scheme,
 	})
 }
 
+// NewControllerClient returns a new controller-runtime Client for provided rest.Config.
 func NewControllerClient(t *testing.T, cfg *rest.Config) ctrlclient.Client {
 	client, err := ctrlclient.New(cfg, ctrlclient.Options{
 		Scheme: scheme.Scheme,

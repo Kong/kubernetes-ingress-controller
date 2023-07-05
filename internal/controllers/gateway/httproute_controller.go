@@ -12,6 +12,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -25,6 +26,7 @@ import (
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 	k8sobj "github.com/kong/kubernetes-ingress-controller/v2/internal/util/kubernetes/object"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/util/kubernetes/object/status"
 )
 
 // -----------------------------------------------------------------------------
@@ -38,6 +40,7 @@ type HTTPRouteReconciler struct {
 	Log             logr.Logger
 	Scheme          *runtime.Scheme
 	DataplaneClient DataPlane
+	StatusQueue     *status.Queue
 	// If EnableReferenceGrant is true, we will check for ReferenceGrant if backend in another
 	// namespace is in backendRefs.
 	// If it is false, referencing backend in different namespace will be rejected.
@@ -91,6 +94,19 @@ func (r *HTTPRouteReconciler) SetupWithManager(mgr ctrl.Manager) error {
 			&source.Kind{Type: &gatewayv1beta1.ReferenceGrant{}},
 			handler.EnqueueRequestsFromMapFunc(r.listReferenceGrantsForHTTPRoute),
 			predicate.NewPredicateFuncs(referenceGrantHasHTTPRouteFrom),
+		); err != nil {
+			return err
+		}
+	}
+
+	if r.StatusQueue != nil {
+		if err := c.Watch(
+			&source.Channel{Source: r.StatusQueue.Subscribe(schema.GroupVersionKind{
+				Group:   gatewayv1beta1.GroupVersion.Group,
+				Version: gatewayv1beta1.GroupVersion.Version,
+				Kind:    "HTTPRoute",
+			})},
+			&handler.EnqueueRequestForObject{},
 		); err != nil {
 			return err
 		}

@@ -73,6 +73,13 @@ Adding a new version? You'll need three changes:
   together with the related manifest resources (`configmaps` and `leases`) might
   become mixed up when the manifest is unmarshalled.
   [#3932](https://github.com/Kong/kubernetes-ingress-controller/pull/3932)
+- Fixed a bug where the controller sync loop would get stuck when a number of
+  updates for one of Gateway API resources kinds (`HTTPRoute`, `TCPRoute`,
+  `UDPRoute`, `TLSRoute`) exceeded 8192. This was caused by the fact that
+  the controller was using a fixed-size buffer to store updates for each
+  resource kind and there were no consumers for the updates. The sending side
+  was blocked after a buffer got full, resulting in a deadlock.
+  [#4267](https://github.com/Kong/kubernetes-ingress-controller/pull/4267)
 
 ## [2.9.3]
 

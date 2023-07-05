@@ -63,6 +63,5 @@ type UDPIngressSpec struct {
 // UDPIngressStatus defines the observed state of UDPIngress.
 type UDPIngressStatus struct {
 	// LoadBalancer contains the current status of the load-balancer.
-	// +optional
 	LoadBalancer corev1.LoadBalancerStatus `json:"loadBalancer,omitempty"`
 }

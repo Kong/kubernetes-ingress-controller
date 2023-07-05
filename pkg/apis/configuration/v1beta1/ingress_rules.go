@@ -32,7 +32,6 @@ type IngressRule struct {
 	// If a Host is specified, the protocol must be TLS over TCP.
 	// A plain-text TCP request cannot be routed based on Host. It can only
 	// be routed based on Port.
-	// +optional
 	Host string `json:"host,omitempty"`
 
 	// Port is the port on which to accept TCP or TLS over TCP sessions and

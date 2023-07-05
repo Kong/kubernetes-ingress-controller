@@ -185,7 +185,7 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 	var kubernetesStatusQueue *status.Queue
 	if c.UpdateStatus {
 		setupLog.Info("Starting Status Updater")
-		kubernetesStatusQueue = status.NewQueue()
+		kubernetesStatusQueue = status.NewQueue(status.WithBufferSize(c.UpdateStatusQueueBufferSize))
 		dataplaneClient.EnableKubernetesObjectReports(kubernetesStatusQueue)
 	} else {
 		setupLog.Info("status updates disabled, skipping status updater")

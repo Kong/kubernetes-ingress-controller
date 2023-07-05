@@ -27,6 +27,7 @@ import (
 	ctrlutils "github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/utils"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 	k8sobj "github.com/kong/kubernetes-ingress-controller/v2/internal/util/kubernetes/object"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/util/kubernetes/object/status"
 )
 
 // -----------------------------------------------------------------------------
@@ -41,6 +42,7 @@ type HTTPRouteReconciler struct {
 	Scheme           *runtime.Scheme
 	DataplaneClient  DataPlane
 	CacheSyncTimeout time.Duration
+	StatusQueue      *status.Queue
 
 	// If enableReferenceGrant is true, we will check for ReferenceGrant if backend in another
 	// namespace is in backendRefs.
@@ -106,6 +108,19 @@ func (r *HTTPRouteReconciler) SetupWithManager(mgr ctrl.Manager) error {
 			source.Kind(mgr.GetCache(), &gatewayv1beta1.ReferenceGrant{}),
 			handler.EnqueueRequestsFromMapFunc(r.listReferenceGrantsForHTTPRoute),
 			predicate.NewPredicateFuncs(referenceGrantHasHTTPRouteFrom),
+		); err != nil {
+			return err
+		}
+	}
+
+	if r.StatusQueue != nil {
+		if err := c.Watch(
+			&source.Channel{Source: r.StatusQueue.Subscribe(schema.GroupVersionKind{
+				Group:   gatewayv1beta1.GroupVersion.Group,
+				Version: gatewayv1beta1.GroupVersion.Version,
+				Kind:    "HTTPRoute",
+			})},
+			&handler.EnqueueRequestForObject{},
 		); err != nil {
 			return err
 		}

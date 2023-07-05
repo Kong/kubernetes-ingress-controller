@@ -23,6 +23,10 @@ func (b *HTTPRouteMatchBuilder) Build() gatewayv1beta1.HTTPRouteMatch {
 	return b.httpRouteMatch
 }
 
+func (b *HTTPRouteMatchBuilder) ToSlice() []gatewayv1beta1.HTTPRouteMatch {
+	return []gatewayv1beta1.HTTPRouteMatch{b.Build()}
+}
+
 func (b *HTTPRouteMatchBuilder) WithPathPrefix(pathPrefix string) *HTTPRouteMatchBuilder {
 	return b.WithPathType(&pathPrefix, lo.ToPtr(gatewayv1beta1.PathMatchPathPrefix))
 }

@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1688552617869,
+  "lastUpdate": 1688552771749,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -7650,6 +7650,36 @@ window.BENCHMARK_DATA = {
             "value": 113057,
             "unit": "ns/op\t   11100 B/op\t      12 allocs/op",
             "extra": "13531 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "tao.yi@konghq.com",
+            "name": "Yi Tao",
+            "username": "randmonkey"
+          },
+          "committer": {
+            "email": "tao.yi@konghq.com",
+            "name": "Yi Tao",
+            "username": "randmonkey"
+          },
+          "distinct": true,
+          "id": "a7994306302a78e94c6a6ea143e1d00747d761e2",
+          "message": "add Cert CN to SANs",
+          "timestamp": "2023-07-05T18:19:38+08:00",
+          "tree_id": "eae8468f1e575e538794d690bdcfafbc1096acf0",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/a7994306302a78e94c6a6ea143e1d00747d761e2"
+        },
+        "date": 1688552766272,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA",
+            "value": 86171,
+            "unit": "ns/op\t   11098 B/op\t      12 allocs/op",
+            "extra": "13146 times\n2 procs"
           }
         ]
       }

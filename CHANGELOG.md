@@ -97,6 +97,10 @@ Adding a new version? You'll need three changes:
   method is adopted to keep the compatibility with traditional router on
   maximum effort.
   [#4240](https://github.com/Kong/kubernetes-ingress-controller/pull/4240)
+- Added `--update-status-queue-buffer-size` allowing configuring the size of
+  the status update queue's underlying channels used to buffer updates to the
+  status of Kubernetes resources.
+  [#4267](https://github.com/Kong/kubernetes-ingress-controller/pull/4267)
 
 ### Changed
 
@@ -118,6 +122,13 @@ Adding a new version? You'll need three changes:
 - Translator of `GRPCRoute` generates paths without leading `~` when running
   with Kong gateway with version below 3.0.
   [#4238](https://github.com/Kong/kubernetes-ingress-controller/pull/4238)
+- Fixed a bug where the controller sync loop would get stuck when a number of
+  updates for one of Gateway API resources kinds (`HTTPRoute`, `TCPRoute`,
+  `UDPRoute`, `TLSRoute`) exceeded 8192. This was caused by the fact that
+  the controller was using a fixed-size buffer to store updates for each
+  resource kind and there were no consumers for the updates. The sending side
+  was blocked after a buffer got full, resulting in a deadlock.
+  [#4267](https://github.com/Kong/kubernetes-ingress-controller/pull/4267)
 
 [gojson]: https://github.com/goccy/go-json
 

@@ -11,8 +11,10 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
+	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/controllers"
@@ -20,7 +22,7 @@ import (
 
 // StartReconcilers creates a controller manager and starts the provided reconciler
 // as its runnable.
-// It also adds a t.Cleanup which waits for the maanger to exit so that the test
+// It also adds a t.Cleanup which waits for the manager to exit so that the test
 // can be self contained and logs from different tests' managers don't mix up.
 func StartReconcilers(ctx context.Context, t *testing.T, scheme *runtime.Scheme, cfg *rest.Config, reconcilers ...controllers.Reconciler) {
 	t.Helper()
@@ -57,4 +59,13 @@ func StartReconcilers(ctx context.Context, t *testing.T, scheme *runtime.Scheme,
 			t.Logf("Test %s failed: dumping controller logs\n%s", t.Name(), b.String())
 		}
 	})
+}
+
+// NewControllerClient returns a new controller-runtime Client for provided rest.Config.
+func NewControllerClient(t *testing.T, cfg *rest.Config) ctrlclient.Client {
+	client, err := ctrlclient.New(cfg, ctrlclient.Options{
+		Scheme: scheme.Scheme,
+	})
+	require.NoError(t, err)
+	return client
 }

@@ -42,14 +42,7 @@ func TestHTTPRouteReconcilerProperlyReactsToReferenceGrant(t *testing.T) {
 	)
 
 	cfg := Setup(t, scheme.Scheme)
-	var client ctrlclient.Client
-	{
-		var err error
-		client, err = ctrlclient.New(cfg, ctrlclient.Options{
-			Scheme: scheme.Scheme,
-		})
-		require.NoError(t, err)
-	}
+	client := NewControllerClient(t, cfg)
 
 	reconciler := &gateway.HTTPRouteReconciler{
 		Client:          client,

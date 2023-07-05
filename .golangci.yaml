@@ -8,7 +8,6 @@ linters:
   - asciicheck
   - bodyclose
   - deadcode
-  - depguard
   - dogsled
   - durationcheck
   - errcheck
@@ -19,6 +18,7 @@ linters:
   - gofmt
   - gofumpt
   - goimports
+  - gomodguard
   - gosec
   - gosimple
   - govet
@@ -44,6 +44,28 @@ linters-settings:
       - standard
       - default
       - prefix(github.com/kong/kubernetes-ingress-controller/v2)
+  gomodguard:
+    blocked:
+      modules:
+      - github.com/ghodss/yaml:
+          recommendations:
+          - sigs.k8s.io/yaml
+      - gopkg.in/yaml.v2:
+          recommendations:
+          - sigs.k8s.io/yaml
+      - gopkg.in/yaml.v3:
+          recommendations:
+          - sigs.k8s.io/yaml
+      - github.com/pkg/errors:
+          recommendations:
+          - fmt
+          - errors
+      - golang.org/x/net/context:
+          recommendations:
+          - context
+      - k8s.io/utils/pointer:
+          recommendations:
+          - github.com/samber/lo
 issues:
   fix: true
   exclude-rules:

@@ -704,7 +704,7 @@ func ensureAdmissionRegistration(ctx context.Context, configResourceName string,
 					Rules:                   rules,
 					ClientConfig: admregv1.WebhookClientConfig{
 						Service:  &admregv1.ServiceReference{Namespace: consts.ControllerNamespace, Name: svcName},
-						CABundle: []byte(testutils.KongSystemServiceCert),
+						CABundle: testutils.KongSystemServiceCert,
 					},
 				},
 			},

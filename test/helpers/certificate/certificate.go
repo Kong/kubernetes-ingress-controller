@@ -102,3 +102,13 @@ func MustGenerateSelfSignedCertPEMFormat(decorators ...SelfSignedCeritificateOpt
 
 	return pem.EncodeToMemory(certBlock), pem.EncodeToMemory(keyBlock)
 }
+
+var kongSystemServiceCert, kongSystemServiceKey = MustGenerateSelfSignedCertPEMFormat(
+	WithCommonName("*.kong-system.svc"), WithDNSNames("*.kong-system.svc"),
+)
+
+// GetKongSystemSelfSignedCerts returns the self-signed certificate and key
+// with CN=*.kong-system.svc and subjectAltName=DNS:*.kong-system.svc.
+func GetKongSystemSelfSignedCerts() (cert []byte, key []byte) {
+	return kongSystemServiceCert, kongSystemServiceKey
+}

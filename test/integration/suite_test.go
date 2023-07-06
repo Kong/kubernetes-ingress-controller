@@ -25,6 +25,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/store"
 	testutils "github.com/kong/kubernetes-ingress-controller/v2/internal/util/test"
 	"github.com/kong/kubernetes-ingress-controller/v2/test/consts"
+	"github.com/kong/kubernetes-ingress-controller/v2/test/helpers/certificate"
 	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/helpers"
 	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/testenv"
 )
@@ -156,10 +157,11 @@ func TestMain(m *testing.M) {
 		featureGates := testenv.ControllerFeatureGates()
 		fmt.Printf("INFO: feature gates enabled: %s\n", featureGates)
 		fmt.Println("INFO: starting the controller manager")
+		cert, key := certificate.GetKongSystemSelfSignedCerts()
 		standardControllerArgs := []string{
 			fmt.Sprintf("--ingress-class=%s", consts.IngressClass),
-			fmt.Sprintf("--admission-webhook-cert=%s", testutils.KongSystemServiceCert),
-			fmt.Sprintf("--admission-webhook-key=%s", testutils.KongSystemServiceKey),
+			fmt.Sprintf("--admission-webhook-cert=%s", cert),
+			fmt.Sprintf("--admission-webhook-key=%s", key),
 			fmt.Sprintf("--admission-webhook-listen=0.0.0.0:%d", testutils.AdmissionWebhookListenPort),
 			"--profiling",
 			"--dump-config",

@@ -4,13 +4,6 @@ import (
 	"fmt"
 	"os/exec"
 	"strings"
-
-	"github.com/kong/kubernetes-ingress-controller/v2/test/helpers/certificate"
-)
-
-//nolint:revive
-var KongSystemServiceCert, KongSystemServiceKey = certificate.MustGenerateSelfSignedCertPEMFormat(
-	certificate.WithCommonName("*.kong-system.svc"), certificate.WithDNSNames("*.kong-system.svc"),
 )
 
 // This hack is tracked in https://github.com/Kong/kubernetes-ingress-controller/issues/1613:

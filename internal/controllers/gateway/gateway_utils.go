@@ -299,8 +299,7 @@ func getListenerStatus(
 				Reason:             string(gatewayv1alpha2.ListenerReasonUnsupportedProtocol),
 				Message:            "no Kong listen with the requested protocol is configured",
 			})
-		}
-		if _, ok := kongProtocolsToPort[listener.Protocol][listener.Port]; !ok {
+		} else if _, ok := kongProtocolsToPort[listener.Protocol][listener.Port]; !ok {
 			status.Conditions = append(status.Conditions, metav1.Condition{
 				Type:               string(gatewayv1alpha2.ListenerConditionDetached),
 				Status:             metav1.ConditionTrue,

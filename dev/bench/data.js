@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1688640254972,
+  "lastUpdate": 1688640256278,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -9000,6 +9000,36 @@ window.BENCHMARK_DATA = {
             "value": 108063,
             "unit": "ns/op\t   11097 B/op\t      12 allocs/op",
             "extra": "17498 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "tao.yi@konghq.com",
+            "name": "Tao Yi",
+            "username": "randmonkey"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "3ffabd8f802aa72d7aad6493b018b4dc4ad72d18",
+          "message": "test(e2e): use legacy manifest and skip tests for KIC version < 2.9 (#4096)\n\n* test: use legacy manifest and skip tests for KIC version < 2.9\r\n\r\n* assume latest version if parsing version fails\r\n\r\n* move dblessPath consts\r\n\r\n* Update test/e2e/utils_test.go\r\n\r\nCo-authored-by: Patryk Małek <patryk.malek@konghq.com>\r\n\r\n---------\r\n\r\nCo-authored-by: Patryk Małek <patryk.malek@konghq.com>",
+          "timestamp": "2023-07-06T12:43:07+02:00",
+          "tree_id": "5619d3fee43689d4bc9284e7534a0dc701d08ca0",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/3ffabd8f802aa72d7aad6493b018b4dc4ad72d18"
+        },
+        "date": 1688640250429,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA",
+            "value": 73690,
+            "unit": "ns/op\t   11098 B/op\t      12 allocs/op",
+            "extra": "16374 times\n2 procs"
           }
         ]
       },

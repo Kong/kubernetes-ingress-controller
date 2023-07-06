@@ -16,6 +16,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/blang/semver/v4"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/types/gke"
 	"github.com/kong/kubernetes-testing-framework/pkg/environments"
 	"github.com/phayes/freeport"
@@ -33,7 +34,13 @@ const (
 	// adminPasswordSecretName is the name of the secret which will house the admin
 	// API admin password.
 	adminPasswordSecretName = "kong-enterprise-superuser-password"
+
+	dblessLegacyPath = "../../deploy/single/all-in-one-dbless-legacy.yaml"
+	dblessPath       = "../../deploy/single/all-in-one-dbless.yaml"
 )
+
+// gatewayDiscoveryMinimalVersion is the minimal version of KIC that enables gateway discovery.
+var gatewayDiscoveryMinimalVersion = semver.Version{Major: 2, Minor: 9} // 2.9.0
 
 func generateAdminPasswordSecret() (string, *corev1.Secret, error) {
 	adminPassword, err := password.Generate(64, 10, 10, false, false)
@@ -145,6 +152,68 @@ func getTestManifest(t *testing.T, baseManifestPath string) io.Reader {
 
 	t.Logf("generated modified manifest at %v", baseManifestPath)
 	return manifestsReader
+}
+
+// extractVersionFromImage extracts semver of image from image tag. If tag is not given,
+// or is not in a semver format, it returns an error.
+// for example: kong/kubernetes-ingress-controller:2.9.3 => semver.Version{Major:2,Minor:9,Patch:3}.
+func extractVersionFromImage(imageName string) (semver.Version, error) {
+	split := strings.Split(imageName, ":")
+	if len(split) < 2 {
+		return semver.Version{}, fmt.Errorf("could not parse override image '%s', expected <repo>:<tag> format", imageName)
+	}
+	// parse version from image tag, like kong/kubernetes-ingress-controller:2.9.3 => 2.9.3
+	tag := split[len(split)-1]
+	v, err := semver.ParseTolerant(tag)
+	if err != nil {
+		return semver.Version{}, fmt.Errorf("failed to parse version from image tag %s: %w", tag, err)
+	}
+	return v, nil
+}
+
+// skipTestIfControllerVersionBelow skips the test case if version of override KIC image is
+// below the minVersion.
+// if the override KIC image is not set, it assumes that the latest image is used, so it never skips
+// the test if override image is not given.
+func skipTestIfControllerVersionBelow(t *testing.T, minVersion semver.Version) {
+	if controllerImageOverride == "" {
+		return
+	}
+	v, err := extractVersionFromImage(controllerImageOverride)
+	// assume using latest version if failed to extract version from image tag.
+	if err != nil {
+		t.Logf("could not extract version from controller image: %v, assume using the latest version", err)
+		return
+	}
+	if v.LE(minVersion) {
+		t.Skipf("skipped the test because version of KIC %s is below the minimum version %s",
+			v.String(), minVersion.String())
+	}
+}
+
+// getDBLessTestManifestByControllerImageEnv gets the proper manifest for dbless deployment.
+// It takes into account the TEST_KONG_CONTROLLER_IMAGE_OVERRIDE environment variable.
+// This is needed because KIC does not support Gateway Discovery in versions below 2.9,
+// and hence we need to use the legacy manifest for those versions.
+func getDBLessTestManifestByControllerImageEnv(t *testing.T) io.Reader {
+	t.Helper()
+
+	// if no version specified, we assume that we are using the latest version of KIC.
+	if controllerImageOverride == "" {
+		return getTestManifest(t, dblessPath)
+	}
+
+	v, err := extractVersionFromImage(controllerImageOverride)
+	// assume using latest version if failed to extract version from image tag.
+	if err != nil {
+		t.Logf("could not extract version from controller image: %v, assume using the latest version", err)
+		return getTestManifest(t, dblessPath)
+	}
+	// If KIC version is lower than the minimum version that enables gateway discovery, use the legacy manifest.
+	if v.LE(gatewayDiscoveryMinimalVersion) {
+		return getTestManifest(t, dblessLegacyPath)
+	}
+	return getTestManifest(t, dblessPath)
 }
 
 // patchGatewayImageFromEnv will optionally replace a default controller image in manifests with `kongImageOverride`

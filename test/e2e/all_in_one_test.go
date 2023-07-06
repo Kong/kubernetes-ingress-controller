@@ -36,11 +36,6 @@ import (
 // ensure that things are up and running.
 // -----------------------------------------------------------------------------
 
-const (
-	dblessLegacyPath = "../../deploy/single/all-in-one-dbless-legacy.yaml"
-	dblessPath       = "../../deploy/single/all-in-one-dbless.yaml"
-)
-
 func TestDeployAllInOneDBLESSLegacy(t *testing.T) {
 	t.Log("configuring all-in-one-dbless-legacy.yaml manifest test")
 	t.Parallel()
@@ -72,6 +67,7 @@ func TestDeployAllInOneDBLESSLegacy(t *testing.T) {
 const entDBLESSPath = "../../deploy/single/all-in-one-dbless-k4k8s-enterprise.yaml"
 
 func TestDeployAllInOneEnterpriseDBLESS(t *testing.T) {
+	skipTestIfControllerVersionBelow(t, gatewayDiscoveryMinimalVersion)
 	t.Log("configuring all-in-one-dbless-k4k8s-enterprise.yaml manifest test")
 	if os.Getenv(kong.LicenseDataEnvVar) == "" {
 		t.Skipf("no license available to test enterprise: %s was not provided", kong.LicenseDataEnvVar)
@@ -290,6 +286,7 @@ func TestDeployAllInOneEnterprisePostgres(t *testing.T) {
 }
 
 func TestDeployAllInOneDBLESS(t *testing.T) {
+	skipTestIfControllerVersionBelow(t, gatewayDiscoveryMinimalVersion)
 	t.Parallel()
 
 	const (

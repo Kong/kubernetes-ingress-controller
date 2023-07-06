@@ -6,6 +6,7 @@ go 1.20
 exclude (
 	sigs.k8s.io/gateway-api v0.6.2
 	sigs.k8s.io/gateway-api v0.7.0
+	sigs.k8s.io/gateway-api v0.7.1
 )
 
 require (
@@ -21,7 +22,7 @@ require (
 	github.com/jpillora/backoff v1.0.0
 	github.com/kong/deck v1.21.0
 	github.com/kong/go-kong v0.42.0
-	github.com/kong/kubernetes-telemetry v0.0.5
+	github.com/kong/kubernetes-telemetry v0.1.0
 	github.com/kong/kubernetes-testing-framework v0.31.0
 	github.com/lithammer/dedent v1.1.0
 	github.com/miekg/dns v1.1.54
@@ -33,15 +34,15 @@ require (
 	github.com/samber/lo v1.38.1
 	github.com/samber/mo v1.8.0
 	github.com/sethvargo/go-password v0.2.0
-	github.com/sirupsen/logrus v1.9.2
+	github.com/sirupsen/logrus v1.9.3
 	github.com/spf13/cobra v1.7.0
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.8.4
 	google.golang.org/api v0.125.0
-	k8s.io/api v0.27.2
+	k8s.io/api v0.27.3
 	k8s.io/apiextensions-apiserver v0.27.2
-	k8s.io/apimachinery v0.27.2
-	k8s.io/client-go v0.27.2
+	k8s.io/apimachinery v0.27.3
+	k8s.io/client-go v0.27.3
 	k8s.io/component-base v0.27.2
 	knative.dev/networking v0.0.0-20230504184058-77975a12b2ee
 	knative.dev/pkg v0.0.0-20230502134655-db8a35330281
@@ -60,7 +61,7 @@ require (
 	github.com/gammazero/workerpool v1.1.3 // indirect
 	github.com/google/go-containerregistry v0.13.0 // indirect
 	github.com/google/s2a-go v0.1.4 // indirect
-	github.com/puzpuzpuz/xsync/v2 v2.4.0 // indirect
+	github.com/puzpuzpuz/xsync/v2 v2.4.1 // indirect
 	github.com/shoenig/go-m1cpu v0.1.6 // indirect
 	go.uber.org/atomic v1.10.0 // indirect
 	go.uber.org/zap v1.24.0 // indirect

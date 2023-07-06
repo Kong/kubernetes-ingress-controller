@@ -13,6 +13,7 @@ import (
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/types/kind"
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/networking"
+	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	admregv1 "k8s.io/api/admissionregistration/v1"
@@ -28,6 +29,7 @@ import (
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
 	"github.com/kong/kubernetes-ingress-controller/v2/pkg/clientset"
 	"github.com/kong/kubernetes-ingress-controller/v2/test/consts"
+	"github.com/kong/kubernetes-ingress-controller/v2/test/helpers/certificate"
 	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/helpers"
 )
 
@@ -689,8 +691,7 @@ func ensureAdmissionRegistration(ctx context.Context, configResourceName string,
 		return nil, err
 	}
 
-	fail := admregv1.Fail
-	none := admregv1.SideEffectClassNone
+	cert, _ := certificate.GetKongSystemSelfSignedCerts()
 	webhook, err := env.Cluster().Client().AdmissionregistrationV1().ValidatingWebhookConfigurations().Create(ctx,
 		&admregv1.ValidatingWebhookConfiguration{
 			TypeMeta:   metav1.TypeMeta{APIVersion: "admissionregistration.k8s.io/v1", Kind: "ValidatingWebhookConfiguration"},
@@ -698,13 +699,13 @@ func ensureAdmissionRegistration(ctx context.Context, configResourceName string,
 			Webhooks: []admregv1.ValidatingWebhook{
 				{
 					Name:                    "validations.kong.konghq.com",
-					FailurePolicy:           &fail,
-					SideEffects:             &none,
+					FailurePolicy:           lo.ToPtr(admregv1.Fail),
+					SideEffects:             lo.ToPtr(admregv1.SideEffectClassNone),
 					AdmissionReviewVersions: []string{"v1beta1", "v1"},
 					Rules:                   rules,
 					ClientConfig: admregv1.WebhookClientConfig{
 						Service:  &admregv1.ServiceReference{Namespace: consts.ControllerNamespace, Name: svcName},
-						CABundle: []byte(testutils.KongSystemServiceCert),
+						CABundle: cert,
 					},
 				},
 			},

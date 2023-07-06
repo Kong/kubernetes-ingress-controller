@@ -330,7 +330,7 @@ func TestTCPIngressTLSPassthrough(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Log("configuring secrets")
-	redisExampleTLSCert, redisExampleTLSKey := certificate.GenerateSelfSignedCertPEMFormat(t,
+	redisExampleTLSCert, redisExampleTLSKey := certificate.MustGenerateSelfSignedCertPEMFormat(
 		certificate.WithCommonName("secure-foo-bar"), certificate.WithDNSNames("redis.example"),
 	)
 	require.NoError(t, err)

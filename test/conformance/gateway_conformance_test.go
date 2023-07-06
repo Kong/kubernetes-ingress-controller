@@ -21,6 +21,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/gateway"
 	testutils "github.com/kong/kubernetes-ingress-controller/v2/internal/util/test"
 	"github.com/kong/kubernetes-ingress-controller/v2/test/consts"
+	"github.com/kong/kubernetes-ingress-controller/v2/test/helpers/certificate"
 )
 
 const (
@@ -39,10 +40,11 @@ func TestGatewayConformance(t *testing.T) {
 	require.NoError(t, gatewayv1beta1.AddToScheme(client.Scheme()))
 
 	t.Log("starting the controller manager")
+	cert, key := certificate.GetKongSystemSelfSignedCerts()
 	args := []string{
 		fmt.Sprintf("--ingress-class=%s", ingressClass),
-		fmt.Sprintf("--admission-webhook-cert=%s", testutils.KongSystemServiceCert),
-		fmt.Sprintf("--admission-webhook-key=%s", testutils.KongSystemServiceKey),
+		fmt.Sprintf("--admission-webhook-cert=%s", cert),
+		fmt.Sprintf("--admission-webhook-key=%s", key),
 		fmt.Sprintf("--admission-webhook-listen=%s:%d", testutils.AdmissionWebhookListenHost, testutils.AdmissionWebhookListenPort),
 		"--profiling",
 		"--dump-config",

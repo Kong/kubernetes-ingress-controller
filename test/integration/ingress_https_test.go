@@ -137,14 +137,12 @@ func TestHTTPSIngress(t *testing.T) {
 	ingress2.ObjectMeta.Name = "ingress2"
 
 	t.Log("configuring secrets")
-	fooExampleTLSCert, fooExampleTLSKey := certificate.GenerateSelfSignedCertPEMFormat(t,
+	fooExampleTLSCert, fooExampleTLSKey := certificate.MustGenerateSelfSignedCertPEMFormat(
 		certificate.WithCommonName("secure-foo-bar"), certificate.WithDNSNames("secure-foo-bar", "foo.example"),
 	)
-	require.NoError(t, err)
-	barExampleTLSCert, barExampleTLSKey := certificate.GenerateSelfSignedCertPEMFormat(t,
+	barExampleTLSCert, barExampleTLSKey := certificate.MustGenerateSelfSignedCertPEMFormat(
 		certificate.WithCommonName("foo.com"), certificate.WithDNSNames("foo.com", "bar.example"),
 	)
-	require.NoError(t, err)
 
 	secrets := []*corev1.Secret{
 		{

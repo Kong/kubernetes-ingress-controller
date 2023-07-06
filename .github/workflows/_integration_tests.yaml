@@ -52,7 +52,7 @@ jobs:
         run: |
           if [ "${{ matrix.enterprise }}" == "true" ]; then
             echo "TEST_KONG_IMAGE=kong/kong-gateway" >> $GITHUB_ENV
-            echo "TEST_KONG_TAG=3.2.1.0" >> $GITHUB_ENV
+            echo "TEST_KONG_TAG=3.2.2.3" >> $GITHUB_ENV
           else
             echo "TEST_KONG_IMAGE=kong/kong" >> $GITHUB_ENV
             echo "TEST_KONG_TAG=3.2.1" >> $GITHUB_ENV

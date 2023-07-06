@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1688649585419,
+  "lastUpdate": 1688652928973,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -9240,6 +9240,36 @@ window.BENCHMARK_DATA = {
             "value": 70128,
             "unit": "ns/op\t   11095 B/op\t      12 allocs/op",
             "extra": "18201 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "49699333+dependabot[bot]@users.noreply.github.com",
+            "name": "dependabot[bot]",
+            "username": "dependabot[bot]"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "fb311160fc9744f86a6ea3871ed27d9b5c05aa2e",
+          "message": "chore(deps): bump google.golang.org/api from 0.129.0 to 0.130.0\n\nBumps [google.golang.org/api](https://github.com/googleapis/google-api-go-client) from 0.129.0 to 0.130.0.\n- [Release notes](https://github.com/googleapis/google-api-go-client/releases)\n- [Changelog](https://github.com/googleapis/google-api-go-client/blob/main/CHANGES.md)\n- [Commits](https://github.com/googleapis/google-api-go-client/compare/v0.129.0...v0.130.0)\n\n---\nupdated-dependencies:\n- dependency-name: google.golang.org/api\n  dependency-type: direct:production\n  update-type: version-update:semver-minor\n...\n\nSigned-off-by: dependabot[bot] <support@github.com>",
+          "timestamp": "2023-07-06T14:11:44Z",
+          "tree_id": "a4539b1e1c301b8418db6808039af78bf19533a9",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/fb311160fc9744f86a6ea3871ed27d9b5c05aa2e"
+        },
+        "date": 1688652922211,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA",
+            "value": 79709,
+            "unit": "ns/op\t   11096 B/op\t      12 allocs/op",
+            "extra": "15430 times\n2 procs"
           }
         ]
       }

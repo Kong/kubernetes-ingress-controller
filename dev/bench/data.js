@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1688641416012,
+  "lastUpdate": 1688647946847,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -9120,6 +9120,36 @@ window.BENCHMARK_DATA = {
             "value": 70023,
             "unit": "ns/op\t   11095 B/op\t      12 allocs/op",
             "extra": "16971 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jakub.warczarek@konghq.com",
+            "name": "Jakub Warczarek",
+            "username": "programmer04"
+          },
+          "committer": {
+            "email": "jakub.warczarek@konghq.com",
+            "name": "Jakub Warczarek",
+            "username": "programmer04"
+          },
+          "distinct": true,
+          "id": "a4b28e94d605ca9f4caec7780bcd1c4e3d8d72bc",
+          "message": "refactor: get rid of hardcoded certificate for *.kong-system.svc",
+          "timestamp": "2023-07-06T14:50:52+02:00",
+          "tree_id": "4a2d476d8a1a3b5fad6da45a4ce5b9ef2f05d589",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/a4b28e94d605ca9f4caec7780bcd1c4e3d8d72bc"
+        },
+        "date": 1688647942050,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA",
+            "value": 68241,
+            "unit": "ns/op\t   11094 B/op\t      12 allocs/op",
+            "extra": "16056 times\n2 procs"
           }
         ]
       }

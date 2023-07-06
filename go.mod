@@ -18,7 +18,7 @@ require (
 	github.com/kong/deck v1.19.0
 	github.com/kong/go-kong v0.39.0
 	github.com/kong/kubernetes-telemetry v0.0.1
-	github.com/kong/kubernetes-testing-framework v0.30.0
+	github.com/kong/kubernetes-testing-framework v0.30.1-0.20230706171320-4439248e3ed1
 	github.com/lithammer/dedent v1.1.0
 	github.com/miekg/dns v1.1.52
 	github.com/mitchellh/mapstructure v1.5.0

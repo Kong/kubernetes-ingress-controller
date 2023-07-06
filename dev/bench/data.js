@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1688574846795,
+  "lastUpdate": 1688639334798,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -8970,6 +8970,36 @@ window.BENCHMARK_DATA = {
             "value": 67637,
             "unit": "ns/op\t   11094 B/op\t      12 allocs/op",
             "extra": "18781 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "tao.yi@konghq.com",
+            "name": "Yi Tao",
+            "username": "randmonkey"
+          },
+          "committer": {
+            "email": "tao.yi@konghq.com",
+            "name": "Yi Tao",
+            "username": "randmonkey"
+          },
+          "distinct": true,
+          "id": "3f44abe7828be72ec547b8d7ec804abf53be996c",
+          "message": "update KIC image version to 2.10.2 in manifests",
+          "timestamp": "2023-07-06T18:14:04+08:00",
+          "tree_id": "68fe421173746f56fdee679206b5454eadef77a0",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/3f44abe7828be72ec547b8d7ec804abf53be996c"
+        },
+        "date": 1688639329582,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA",
+            "value": 108063,
+            "unit": "ns/op\t   11097 B/op\t      12 allocs/op",
+            "extra": "17498 times\n2 procs"
           }
         ]
       }

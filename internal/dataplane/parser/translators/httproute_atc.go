@@ -1,6 +1,7 @@
 package translators
 
 import (
+	"fmt"
 	"sort"
 	"strconv"
 	"strings"
@@ -371,4 +372,151 @@ func (t HTTPRoutePriorityTraits) EncodeToPriority() int {
 	priority += (ResourceKindBitsHTTPRoute << FromResourceKindPriorityShiftBits)
 
 	return priority
+}
+
+func AssignRoutePriorityToSplittedHTTPRoutes(
+	splittedHTTPRoutes []*gatewayv1beta1.HTTPRoute,
+) []SplittedHTTPRouteToKongRoutePriority {
+	priorityToHTTPRoutes := map[int][]*gatewayv1beta1.HTTPRoute{}
+
+	for _, httpRoute := range splittedHTTPRoutes {
+		anns := httpRoute.Annotations
+		// skip if HTTPRoute does not contain the annotation, because this means the HTTPRoute is not a splitted one.
+		if anns == nil || anns[InternalRuleIndexAnnotationKey] == "" || anns[InternalMatchIndexAnnotationKey] == "" {
+			continue
+		}
+
+		priority := CalculateHTTPRoutePriorityTraits(httpRoute).EncodeToPriority()
+		priorityToHTTPRoutes[priority] = append(priorityToHTTPRoutes[priority], httpRoute)
+	}
+
+	httpRoutesToPriorities := make([]SplittedHTTPRouteToKongRoutePriority, 0, len(splittedHTTPRoutes))
+
+	const defaultRelativeOrderPriorityBits = (1 << 18) - 1
+	for priority, routes := range priorityToHTTPRoutes {
+		if len(routes) == 1 {
+			httpRoutesToPriorities = append(httpRoutesToPriorities, SplittedHTTPRouteToKongRoutePriority{
+				HTTPRoute: routes[0],
+				Priority:  priority + defaultRelativeOrderPriorityBits,
+			})
+			continue
+		}
+
+		sort.Slice(routes, func(i, j int) bool {
+			return compareSplittedHTTPRoutesRelativePriority(routes[i], routes[j])
+		})
+
+		relativeOrderBits := defaultRelativeOrderPriorityBits
+		for i, route := range routes {
+			relativeOrderBits = defaultRelativeOrderPriorityBits - i
+			httpRoutesToPriorities = append(httpRoutesToPriorities, SplittedHTTPRouteToKongRoutePriority{
+				HTTPRoute: route,
+				Priority:  priority + relativeOrderBits,
+			})
+		}
+	}
+
+	return httpRoutesToPriorities
+}
+
+func compareSplittedHTTPRoutesRelativePriority(route1, route2 *gatewayv1beta1.HTTPRoute) bool {
+	// compare by creation timestamp.
+	if !route1.CreationTimestamp.Equal(&route2.CreationTimestamp) {
+		return route1.CreationTimestamp.Before(&route2.CreationTimestamp)
+	}
+	// compare by namespace.
+	if route1.Namespace != route2.Namespace {
+		return route1.Namespace < route2.Namespace
+	}
+	// compare by name.
+	if route1.Name != route2.Name {
+		return route1.Name < route2.Name
+	}
+	// if ties still exist, compare by internal rule order and match order.
+	ruleIndex1, _ := strconv.Atoi(route1.Annotations[InternalRuleIndexAnnotationKey])
+	ruleIndex2, _ := strconv.Atoi(route2.Annotations[InternalRuleIndexAnnotationKey])
+	if ruleIndex1 != ruleIndex2 {
+		return ruleIndex1 < ruleIndex2
+	}
+
+	matchIndex1, _ := strconv.Atoi(route1.Annotations[InternalMatchIndexAnnotationKey])
+	matchIndex2, _ := strconv.Atoi(route2.Annotations[InternalMatchIndexAnnotationKey])
+	if matchIndex1 != matchIndex2 {
+		return matchIndex1 < matchIndex2
+	}
+
+	// should be unreachable.
+	return true
+}
+
+// getHTTPRouteHostnamesAsSliceOfStrings translates the hostnames defined in an
+// HTTPRoute specification into a []*string slice, which is the type required by translating to matchers
+// in expression based routes.
+func getHTTPRouteHostnamesAsSliceOfStrings(httproute *gatewayv1beta1.HTTPRoute) []string {
+	return lo.Map(httproute.Spec.Hostnames, func(h gatewayv1beta1.Hostname, _ int) string {
+		return string(h)
+	})
+}
+
+// KongExpressionRouteFromHTTPRouteWithPriority translates splitted HTTPRoute into expression
+// based kong route with assigned priority.
+// the HTTPRoute should have at most one hostname, and at most one rule having exactly one match.
+func KongExpressionRouteFromHTTPRouteWithPriority(
+	httpRouteWithPriority SplittedHTTPRouteToKongRoutePriority,
+) kongstate.Route {
+	httproute := httpRouteWithPriority.HTTPRoute
+	tags := util.GenerateTagsForObject(httproute)
+	routeName := fmt.Sprintf("httproute.%s.%s.%s.%s",
+		httproute.Namespace,
+		httproute.Name,
+		httproute.Annotations[InternalRuleIndexAnnotationKey],
+		httproute.Annotations[InternalMatchIndexAnnotationKey],
+	)
+
+	r := kongstate.Route{
+		Route: kong.Route{
+			Name:         kong.String(routeName),
+			PreserveHost: kong.Bool(true),
+			Tags:         tags,
+		},
+		Ingress:          util.FromK8sObject(httproute),
+		ExpressionRoutes: true,
+	}
+
+	hostnames := getHTTPRouteHostnamesAsSliceOfStrings(httproute)
+	matchers := matchersFromParentHTTPRoute(hostnames, httproute.Annotations)
+
+	if len(httproute.Spec.Rules) > 0 && len(httproute.Spec.Rules[0].Matches) > 0 {
+		matchers = append(matchers, generateMatcherFromHTTPRouteMatch(httproute.Spec.Rules[0].Matches[0]))
+	}
+	atc.ApplyExpression(&r.Route, atc.And(matchers...), httpRouteWithPriority.Priority)
+
+	// translate filters in the rule.
+	if len(httproute.Spec.Rules) > 0 {
+		rule := httproute.Spec.Rules[0]
+		path := ""
+		// since we have at most one match per rule, we do not need to generate request redirect for each match.
+		if len(rule.Matches) > 0 {
+			match := rule.Matches[0]
+			if match.Path != nil && match.Path.Value != nil {
+				path = *match.Path.Value
+			}
+		}
+
+		plugins := GeneratePluginsFromHTTPRouteFilters(rule.Filters, path, tags)
+		r.Plugins = plugins
+	}
+
+	return r
+}
+
+func KongServiceNameFromHTTPRouteWithPriority(
+	httpRouteWithPriority SplittedHTTPRouteToKongRoutePriority,
+) string {
+	httproute := httpRouteWithPriority.HTTPRoute
+	return fmt.Sprintf("httproute.%s.%s.%s",
+		httproute.Namespace,
+		httproute.Name,
+		httproute.Annotations[InternalRuleIndexAnnotationKey],
+	)
 }

@@ -21,7 +21,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/adminapi"
-	cfgtypes "github.com/kong/kubernetes-ingress-controller/v2/internal/manager/config/types"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 )
 
@@ -31,18 +30,15 @@ type KongAdminAPIServiceReconciler struct {
 	client.Client
 
 	// ServiceNN is the service NamespacedName to watch EndpointSlices for.
-	ServiceNN k8stypes.NamespacedName
-	// PortNames is the set of port names that Admin API Service ports will be
-	// matched against.
-	PortNames        sets.Set[string]
+	ServiceNN        k8stypes.NamespacedName
 	Log              logr.Logger
 	CacheSyncTimeout time.Duration
 	// EndpointsNotifier is used to notify about Admin API endpoints changes.
 	// We're going to call this only with endpoints when they change.
 	EndpointsNotifier EndpointsNotifier
-	DNSStrategy       cfgtypes.DNSStrategy
 
-	Cache DiscoveredAdminAPIsCache
+	Cache               DiscoveredAdminAPIsCache
+	AdminAPIsDiscoverer *adminapi.Discoverer
 }
 
 type DiscoveredAdminAPIsCache map[k8stypes.NamespacedName]sets.Set[adminapi.DiscoveredAdminAPI]
@@ -131,7 +127,7 @@ func (r *KongAdminAPIServiceReconciler) Reconcile(ctx context.Context, req ctrl.
 		// If we don't have an entry for this EndpointSlice then save it and notify
 		// about the change.
 		var err error
-		r.Cache[req.NamespacedName], err = adminapi.AdminAPIsFromEndpointSlice(endpoints, r.PortNames, r.DNSStrategy)
+		r.Cache[req.NamespacedName], err = r.AdminAPIsDiscoverer.AdminAPIsFromEndpointSlice(endpoints)
 		if err != nil {
 			return reconcile.Result{}, fmt.Errorf(
 				"failed getting Admin API from endpoints: %s/%s: %w", endpoints.Namespace, endpoints.Name, err,
@@ -144,7 +140,7 @@ func (r *KongAdminAPIServiceReconciler) Reconcile(ctx context.Context, req ctrl.
 	// We do have an entry for this EndpointSlice.
 	// If the address set is the same, do nothing.
 	// If the address set has changed, update the cache and send a notification.
-	addresses, err := adminapi.AdminAPIsFromEndpointSlice(endpoints, r.PortNames, r.DNSStrategy)
+	addresses, err := r.AdminAPIsDiscoverer.AdminAPIsFromEndpointSlice(endpoints)
 	if err != nil {
 		return reconcile.Result{}, fmt.Errorf(
 			"failed getting Admin API from endpoints: %s/%s: %w", endpoints.Namespace, endpoints.Name, err,

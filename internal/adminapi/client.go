@@ -186,10 +186,15 @@ func NewClientFactoryForWorkspace(workspace string, httpClientOpts HTTPClientOpt
 	}
 }
 
-func (cf ClientFactory) CreateAdminAPIClient(ctx context.Context, address string) (*Client, error) {
+func (cf ClientFactory) CreateAdminAPIClient(ctx context.Context, discoveredAdminAPI DiscoveredAdminAPI) (*Client, error) {
 	httpclient, err := MakeHTTPClient(&cf.httpClientOpts, cf.adminToken)
 	if err != nil {
 		return nil, err
 	}
-	return NewKongClientForWorkspace(ctx, address, cf.workspace, httpclient)
+	cl, err := NewKongClientForWorkspace(ctx, discoveredAdminAPI.Address, cf.workspace, httpclient)
+	if err != nil {
+		return nil, err
+	}
+	cl.AttachPodReference(discoveredAdminAPI.PodRef)
+	return cl, nil
 }

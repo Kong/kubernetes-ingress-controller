@@ -62,6 +62,7 @@ body:
       - label: If this is a patch release, ensure that the release branch (e.g. `release/2.9.x`) compared against the latest patch for this minor release (e.g. `v2.9.0`) includes the expected changes that the release should include (e.g. by checking [https://github.com/kong/kubernetes-ingress-controller/compare/v2.9.0..release/2.9.x](https://github.com/kong/kubernetes-ingress-controller/compare/v2.9.0..release/2.9.x)).
       - label: Once the PR is merged (the `prepare-release/x.y.z` branch will get automatically removed), approve and merge the automatic backport PR and [initiate a release job](https://github.com/Kong/kubernetes-ingress-controller/actions/workflows/release.yaml) on the release branch. Your tag must use `vX.Y.Z` format. Set `latest` to true if this will be the latest release.
       - label: CI will validate the requested version, build and push an image, and run tests against the image before finally creating a tag and publishing a release. If tests fail, CI will push the image but not the tag or release. Investigate the failure, correct it as needed, and start a new release job.
+      - label: The release workflow ([.github/workflows/release.yaml](/Kong/kubernetes-ingress-controller/blob/main/.github/workflows/release.yaml)) will update the `latest` branch - if the released version was set to be `latest` - to the just released tag.
 - type: checkboxes
   id: release_documents
   attributes:
@@ -76,7 +77,7 @@ body:
       - label: Add a section to `app/_data/kong_versions.yml` for your version.
       - label: "Add entries in support policy documents: `app/_includes/md/support-policy.md` and `app/_src/kubernetes-ingress-controller/support-policy.md`."
       - label: Mark the PR ready for review.
-      - label: Inform and ping the @team-k8s via slack of impending release with a link to the release PR.
+      - label: Inform and ping the @Kong/team-k8s via slack of impending release with a link to the release PR.
 - type: textarea
   id: release_trouble_shooting_link
   attributes:

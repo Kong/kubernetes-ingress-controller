@@ -7,6 +7,7 @@ Adding a new version? You'll need three changes:
 * Add the diff link, like "[2.7.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v1.2.2...v1.2.3".
   This is all the way at the bottom. It's the thing we always forget.
 --->
+ - [2.10.2](#2102)
  - [2.10.1](#2101)
  - [2.10.0](#2100)
  - [2.9.3](#293)
@@ -97,10 +98,6 @@ Adding a new version? You'll need three changes:
   method is adopted to keep the compatibility with traditional router on
   maximum effort.
   [#4240](https://github.com/Kong/kubernetes-ingress-controller/pull/4240)
-- Added `--update-status-queue-buffer-size` allowing configuring the size of
-  the status update queue's underlying channels used to buffer updates to the
-  status of Kubernetes resources.
-  [#4267](https://github.com/Kong/kubernetes-ingress-controller/pull/4267)
 
 ### Changed
 
@@ -117,6 +114,19 @@ Adding a new version? You'll need three changes:
   time but be aware that your mileage may vary).
   [#4222](https://github.com/Kong/kubernetes-ingress-controller/pull/4222)
 
+[gojson]: https://github.com/goccy/go-json
+
+## [2.10.2]
+
+> Release date: 2023-07-07
+
+### Added
+
+- Added `--update-status-queue-buffer-size` allowing configuring the size of
+  the status update queue's underlying channels used to buffer updates to the
+  status of Kubernetes resources.
+  [#4267](https://github.com/Kong/kubernetes-ingress-controller/pull/4267)
+
 ### Fixed
 
 - Translator of `GRPCRoute` generates paths without leading `~` when running
@@ -129,8 +139,6 @@ Adding a new version? You'll need three changes:
   each resource kind and there were no consumers for the updates. The sending
   was blocked after a buffer got full, resulting in a deadlock.
   [#4267](https://github.com/Kong/kubernetes-ingress-controller/pull/4267)
-
-[gojson]: https://github.com/goccy/go-json
 
 ## [2.10.1]
 
@@ -2581,6 +2589,7 @@ Please read the changelog and test in your environment.
  - The initial versions  were rapildy iterated to deliver
    a working ingress controller.
 
+[2.10.2]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.10.1...v2.10.2
 [2.10.1]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.10.0...v2.10.1
 [2.10.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.9.3...v2.10.0
 [2.9.3]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.9.2...v2.9.3

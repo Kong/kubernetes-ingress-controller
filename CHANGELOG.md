@@ -65,6 +65,15 @@ Adding a new version? You'll need three changes:
  - [0.0.5](#005)
  - [0.0.4 and prior](#004-and-prior)
 
+## [2.9.4]
+
+> Release date: TBD
+
+- Fixed leader election role manifest where `""` and `"coordination"` API groups
+  together with the related manifest resources (`configmaps` and `leases`) might
+  become mixed up when the manifest is unmarshalled.
+  [#3932](https://github.com/Kong/kubernetes-ingress-controller/pull/3932)
+
 ## [2.9.3]
 
 > Release date: 2023-04-17

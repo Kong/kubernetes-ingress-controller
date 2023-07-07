@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1688735786956,
+  "lastUpdate": 1688735973284,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -10056,6 +10056,48 @@ window.BENCHMARK_DATA = {
             "value": 12,
             "unit": "allocs/op",
             "extra": "17388 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "lavacca.mattia@gmail.com",
+            "name": "Mattia Lavacca",
+            "username": "mlavacca"
+          },
+          "committer": {
+            "email": "lavacca.mattia@gmail.com",
+            "name": "Mattia Lavacca",
+            "username": "mlavacca"
+          },
+          "distinct": true,
+          "id": "e276c41895e7cac896bf1ba45e6bb5f9c93a784c",
+          "message": "chore: namespace RBACs added\n\nThe RBACs have been updated with grants to watch, list, and get\nnamespaces.\n\nSigned-off-by: Mattia Lavacca <lavacca.mattia@gmail.com>",
+          "timestamp": "2023-07-07T15:16:02+02:00",
+          "tree_id": "915f56cda897a4f419c18e8b53e7646a609eadbb",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/e276c41895e7cac896bf1ba45e6bb5f9c93a784c"
+        },
+        "date": 1688735968707,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - ns/op",
+            "value": 72525,
+            "unit": "ns/op",
+            "extra": "17938 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - B/op",
+            "value": 11097,
+            "unit": "B/op",
+            "extra": "17938 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - allocs/op",
+            "value": 12,
+            "unit": "allocs/op",
+            "extra": "17938 times\n2 procs"
           }
         ]
       }

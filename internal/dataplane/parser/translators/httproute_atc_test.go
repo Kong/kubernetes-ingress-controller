@@ -1,10 +1,15 @@
 package translators
 
 import (
+	"reflect"
+	"strconv"
 	"testing"
+	"time"
 
 	"github.com/kong/go-kong/kong"
+	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
@@ -303,6 +308,809 @@ func TestGenerateMatcherFromHTTPRouteMatch(t *testing.T) {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			require.Equal(t, tc.expression, generateMatcherFromHTTPRouteMatch(tc.match).Expression())
+		})
+	}
+}
+
+func TestCalculateHTTPRoutePriorityTraits(t *testing.T) {
+	testCases := []struct {
+		name           string
+		httpRoute      *gatewayv1beta1.HTTPRoute
+		expectedTraits HTTPRoutePriorityTraits
+	}{
+		{
+			name: "precise hostname and exact path",
+			httpRoute: &gatewayv1beta1.HTTPRoute{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "default",
+					Name:      "precise-hostname-exact-path",
+				},
+				Spec: gatewayv1beta1.HTTPRouteSpec{
+					Hostnames: []gatewayv1beta1.Hostname{"foo.com"},
+					Rules: []gatewayv1beta1.HTTPRouteRule{
+						{
+							Matches: []gatewayv1beta1.HTTPRouteMatch{
+								builder.NewHTTPRouteMatch().WithPathExact("/foo").Build(),
+							},
+						},
+					},
+				},
+			},
+			expectedTraits: HTTPRoutePriorityTraits{
+				PreciseHostname: true,
+				HostnameLength:  len("foo.com"),
+				PathType:        gatewayv1beta1.PathMatchExact,
+				PathLength:      len("/foo"),
+			},
+		},
+		{
+			name: "wildcard hostname and prefix path",
+			httpRoute: &gatewayv1beta1.HTTPRoute{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "default",
+					Name:      "wildcard-hostname-prefix-path",
+				},
+				Spec: gatewayv1beta1.HTTPRouteSpec{
+					Hostnames: []gatewayv1beta1.Hostname{"*.foo.com"},
+					Rules: []gatewayv1beta1.HTTPRouteRule{
+						{
+							Matches: []gatewayv1beta1.HTTPRouteMatch{
+								builder.NewHTTPRouteMatch().WithPathPrefix("/foo/").Build(),
+							},
+						},
+					},
+				},
+			},
+			expectedTraits: HTTPRoutePriorityTraits{
+				PreciseHostname: false,
+				HostnameLength:  len("*.foo.com"),
+				PathType:        gatewayv1beta1.PathMatchPathPrefix,
+				PathLength:      len("/foo/"),
+			},
+		},
+		{
+			name: "no hostname and regex path, with header matches",
+			httpRoute: &gatewayv1beta1.HTTPRoute{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "default",
+					Name:      "no-hostname-regex-path",
+				},
+				Spec: gatewayv1beta1.HTTPRouteSpec{
+					Rules: []gatewayv1beta1.HTTPRouteRule{
+						{
+							Matches: []gatewayv1beta1.HTTPRouteMatch{
+								builder.NewHTTPRouteMatch().WithPathRegex("/[a-z0-9]+").
+									WithHeader("foo", "bar").Build(),
+							},
+						},
+					},
+				},
+			},
+			expectedTraits: HTTPRoutePriorityTraits{
+				PathType:    gatewayv1beta1.PathMatchRegularExpression,
+				PathLength:  len("/[a-z0-9]+"),
+				HeaderCount: 1,
+			},
+		},
+		{
+			name: "precise hostname and method, query param match",
+			httpRoute: &gatewayv1beta1.HTTPRoute{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "default",
+					Name:      "precise-hostname-method-query",
+				},
+				Spec: gatewayv1beta1.HTTPRouteSpec{
+					Hostnames: []gatewayv1beta1.Hostname{
+						"foo.com",
+					},
+					Rules: []gatewayv1beta1.HTTPRouteRule{
+						{
+							Matches: []gatewayv1beta1.HTTPRouteMatch{
+								builder.NewHTTPRouteMatch().WithMethod("GET").
+									WithQueryParam("foo", "bar").Build(),
+							},
+						},
+					},
+				},
+			},
+			expectedTraits: HTTPRoutePriorityTraits{
+				PreciseHostname: true,
+				HostnameLength:  len("foo.com"),
+				HasMethodMatch:  true,
+				QueryParamCount: 1,
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			traits := CalculateHTTPRoutePriorityTraits(tc.httpRoute)
+			require.Equal(t, tc.expectedTraits, traits)
+		})
+	}
+}
+
+func TestEncodeHTTPRoutePriorityFromTraits(t *testing.T) {
+	testCases := []struct {
+		name             string
+		traits           HTTPRoutePriorityTraits
+		expectedPriority int
+	}{
+		{
+			name: "precise hostname and exact path",
+			traits: HTTPRoutePriorityTraits{
+				PreciseHostname: true,
+				HostnameLength:  7,
+				PathType:        gatewayv1beta1.PathMatchExact,
+				PathLength:      4,
+			},
+			expectedPriority: (2 << 50) | (1 << 49) | (7 << 41) | (1 << 40) | (3 << 29),
+		},
+		{
+			name: "wildcard hostname and prefix path",
+			traits: HTTPRoutePriorityTraits{
+				PreciseHostname: false,
+				HostnameLength:  7,
+				PathType:        gatewayv1beta1.PathMatchPathPrefix,
+				PathLength:      5,
+			},
+			expectedPriority: (2 << 50) | (7 << 41) | (4 << 29),
+		},
+		{
+			name: "no hostname and regex path, with header matches",
+			traits: HTTPRoutePriorityTraits{
+				PathType:    gatewayv1beta1.PathMatchRegularExpression,
+				PathLength:  5,
+				HeaderCount: 2,
+			},
+			expectedPriority: (2 << 50) | (1 << 39) | (4 << 29) | (2 << 23),
+		},
+		{
+			name: "no hostname and exact path, with method match and query parameter matches",
+			traits: HTTPRoutePriorityTraits{
+				PathType:        gatewayv1beta1.PathMatchExact,
+				PathLength:      5,
+				HasMethodMatch:  true,
+				QueryParamCount: 1,
+			},
+			expectedPriority: (2 << 50) | (1 << 40) | (4 << 29) | (1 << 28) | (1 << 18),
+		},
+	}
+
+	for _, tc := range testCases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			require.Equal(t, tc.expectedPriority, tc.traits.EncodeToPriority())
+		})
+	}
+}
+
+func TestSplitHTTPRoutes(t *testing.T) {
+	namesToBackendRefs := func(names []string) []gatewayv1beta1.HTTPBackendRef {
+		backendRefs := []gatewayv1beta1.HTTPBackendRef{}
+		for _, name := range names {
+			backendRefs = append(backendRefs,
+				gatewayv1beta1.HTTPBackendRef{
+					BackendRef: gatewayv1beta1.BackendRef{
+						BackendObjectReference: gatewayv1beta1.BackendObjectReference{
+							Name: gatewayv1beta1.ObjectName(name),
+						},
+					},
+				},
+			)
+		}
+		return backendRefs
+	}
+
+	testCases := []struct {
+		name               string
+		httpRoute          *gatewayv1beta1.HTTPRoute
+		splittedHTTPRoutes []*gatewayv1beta1.HTTPRoute
+	}{
+		{
+			name: "no hostname and only one match",
+			httpRoute: &gatewayv1beta1.HTTPRoute{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "ns1",
+					Name:      "httproute-1",
+				},
+				Spec: gatewayv1beta1.HTTPRouteSpec{
+					Rules: []gatewayv1beta1.HTTPRouteRule{
+						{
+							Matches: []gatewayv1beta1.HTTPRouteMatch{
+								{
+									Path: &gatewayv1beta1.HTTPPathMatch{
+										Type:  lo.ToPtr(gatewayv1beta1.PathMatchExact),
+										Value: lo.ToPtr("/"),
+									},
+								},
+							},
+							BackendRefs: namesToBackendRefs([]string{"svc1"}),
+						},
+					},
+				},
+			},
+			splittedHTTPRoutes: []*gatewayv1beta1.HTTPRoute{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "ns1",
+						Name:      "httproute-1",
+						Annotations: map[string]string{
+							InternalRuleIndexAnnotationKey:  "0",
+							InternalMatchIndexAnnotationKey: "0",
+						},
+					},
+					Spec: gatewayv1beta1.HTTPRouteSpec{
+						Rules: []gatewayv1beta1.HTTPRouteRule{
+							{
+								Matches: []gatewayv1beta1.HTTPRouteMatch{
+									{
+										Path: &gatewayv1beta1.HTTPPathMatch{
+											Type:  lo.ToPtr(gatewayv1beta1.PathMatchExact),
+											Value: lo.ToPtr("/"),
+										},
+									},
+								},
+								BackendRefs: namesToBackendRefs([]string{"svc1"}),
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "multiple hostnames with one match",
+			httpRoute: &gatewayv1beta1.HTTPRoute{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "ns1",
+					Name:      "httproute-2",
+				},
+				Spec: gatewayv1beta1.HTTPRouteSpec{
+					Hostnames: []gatewayv1beta1.Hostname{
+						"a.foo.com",
+						"b.foo.com",
+					},
+					Rules: []gatewayv1beta1.HTTPRouteRule{
+						{
+							Matches: []gatewayv1beta1.HTTPRouteMatch{
+								{
+									Path: &gatewayv1beta1.HTTPPathMatch{
+										Type:  lo.ToPtr(gatewayv1beta1.PathMatchExact),
+										Value: lo.ToPtr("/"),
+									},
+								},
+							},
+							BackendRefs: namesToBackendRefs([]string{"svc1", "svc2"}),
+						},
+					},
+				},
+			},
+			splittedHTTPRoutes: []*gatewayv1beta1.HTTPRoute{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "ns1",
+						Name:      "httproute-2",
+						Annotations: map[string]string{
+							InternalRuleIndexAnnotationKey:  "0",
+							InternalMatchIndexAnnotationKey: "0",
+						},
+					},
+					Spec: gatewayv1beta1.HTTPRouteSpec{
+						Hostnames: []gatewayv1beta1.Hostname{
+							"a.foo.com",
+						},
+						Rules: []gatewayv1beta1.HTTPRouteRule{
+							{
+								Matches: []gatewayv1beta1.HTTPRouteMatch{
+									{
+										Path: &gatewayv1beta1.HTTPPathMatch{
+											Type:  lo.ToPtr(gatewayv1beta1.PathMatchExact),
+											Value: lo.ToPtr("/"),
+										},
+									},
+								},
+								BackendRefs: namesToBackendRefs([]string{"svc1", "svc2"}),
+							},
+						},
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "ns1",
+						Name:      "httproute-2",
+						Annotations: map[string]string{
+							InternalRuleIndexAnnotationKey:  "0",
+							InternalMatchIndexAnnotationKey: "0",
+						},
+					},
+					Spec: gatewayv1beta1.HTTPRouteSpec{
+						Hostnames: []gatewayv1beta1.Hostname{
+							"b.foo.com",
+						},
+						Rules: []gatewayv1beta1.HTTPRouteRule{
+							{
+								Matches: []gatewayv1beta1.HTTPRouteMatch{
+									{
+										Path: &gatewayv1beta1.HTTPPathMatch{
+											Type:  lo.ToPtr(gatewayv1beta1.PathMatchExact),
+											Value: lo.ToPtr("/"),
+										},
+									},
+								},
+								BackendRefs: namesToBackendRefs([]string{"svc1", "svc2"}),
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "single hostname with multiple rules and matches",
+			httpRoute: &gatewayv1beta1.HTTPRoute{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "ns1",
+					Name:      "httproute-3",
+				},
+				Spec: gatewayv1beta1.HTTPRouteSpec{
+					Hostnames: []gatewayv1beta1.Hostname{
+						"a.foo.com",
+					},
+					Rules: []gatewayv1beta1.HTTPRouteRule{
+						{
+							Matches: []gatewayv1beta1.HTTPRouteMatch{
+								{
+									Path: &gatewayv1beta1.HTTPPathMatch{
+										Type:  lo.ToPtr(gatewayv1beta1.PathMatchExact),
+										Value: lo.ToPtr("/foo"),
+									},
+								},
+								{
+									Path: &gatewayv1beta1.HTTPPathMatch{
+										Type:  lo.ToPtr(gatewayv1beta1.PathMatchExact),
+										Value: lo.ToPtr("/bar"),
+									},
+								},
+							},
+							BackendRefs: namesToBackendRefs([]string{"svc1"}),
+						},
+						{
+							Matches: []gatewayv1beta1.HTTPRouteMatch{
+								{
+									Path: &gatewayv1beta1.HTTPPathMatch{
+										Type:  lo.ToPtr(gatewayv1beta1.PathMatchExact),
+										Value: lo.ToPtr("/v2/foo"),
+									},
+								},
+								{
+									Path: &gatewayv1beta1.HTTPPathMatch{
+										Type:  lo.ToPtr(gatewayv1beta1.PathMatchExact),
+										Value: lo.ToPtr("/v2/bar"),
+									},
+								},
+							},
+							BackendRefs: namesToBackendRefs([]string{"svc2"}),
+						},
+					},
+				},
+			},
+			splittedHTTPRoutes: []*gatewayv1beta1.HTTPRoute{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "ns1",
+						Name:      "httproute-3",
+						Annotations: map[string]string{
+							InternalRuleIndexAnnotationKey:  "0",
+							InternalMatchIndexAnnotationKey: "0",
+						},
+					},
+					Spec: gatewayv1beta1.HTTPRouteSpec{
+						Hostnames: []gatewayv1beta1.Hostname{
+							"a.foo.com",
+						},
+						Rules: []gatewayv1beta1.HTTPRouteRule{
+							{
+								Matches: []gatewayv1beta1.HTTPRouteMatch{
+									{
+										Path: &gatewayv1beta1.HTTPPathMatch{
+											Type:  lo.ToPtr(gatewayv1beta1.PathMatchExact),
+											Value: lo.ToPtr("/foo"),
+										},
+									},
+								},
+								BackendRefs: namesToBackendRefs([]string{"svc1"}),
+							},
+						},
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "ns1",
+						Name:      "httproute-3",
+						Annotations: map[string]string{
+							InternalRuleIndexAnnotationKey:  "0",
+							InternalMatchIndexAnnotationKey: "1",
+						},
+					},
+					Spec: gatewayv1beta1.HTTPRouteSpec{
+						Hostnames: []gatewayv1beta1.Hostname{
+							"a.foo.com",
+						},
+						Rules: []gatewayv1beta1.HTTPRouteRule{
+							{
+								Matches: []gatewayv1beta1.HTTPRouteMatch{
+									{
+										Path: &gatewayv1beta1.HTTPPathMatch{
+											Type:  lo.ToPtr(gatewayv1beta1.PathMatchExact),
+											Value: lo.ToPtr("/bar"),
+										},
+									},
+								},
+								BackendRefs: namesToBackendRefs([]string{"svc1"}),
+							},
+						},
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "ns1",
+						Name:      "httproute-3",
+						Annotations: map[string]string{
+							InternalRuleIndexAnnotationKey:  "1",
+							InternalMatchIndexAnnotationKey: "0",
+						},
+					},
+					Spec: gatewayv1beta1.HTTPRouteSpec{
+						Hostnames: []gatewayv1beta1.Hostname{
+							"a.foo.com",
+						},
+						Rules: []gatewayv1beta1.HTTPRouteRule{
+							{
+								Matches: []gatewayv1beta1.HTTPRouteMatch{
+									{
+										Path: &gatewayv1beta1.HTTPPathMatch{
+											Type:  lo.ToPtr(gatewayv1beta1.PathMatchExact),
+											Value: lo.ToPtr("/v2/foo"),
+										},
+									},
+								},
+								BackendRefs: namesToBackendRefs([]string{"svc2"}),
+							},
+						},
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "ns1",
+						Name:      "httproute-3",
+						Annotations: map[string]string{
+							InternalRuleIndexAnnotationKey:  "1",
+							InternalMatchIndexAnnotationKey: "1",
+						},
+					},
+					Spec: gatewayv1beta1.HTTPRouteSpec{
+						Hostnames: []gatewayv1beta1.Hostname{
+							"a.foo.com",
+						},
+						Rules: []gatewayv1beta1.HTTPRouteRule{
+							{
+								Matches: []gatewayv1beta1.HTTPRouteMatch{
+									{
+										Path: &gatewayv1beta1.HTTPPathMatch{
+											Type:  lo.ToPtr(gatewayv1beta1.PathMatchExact),
+											Value: lo.ToPtr("/v2/bar"),
+										},
+									},
+								},
+								BackendRefs: namesToBackendRefs([]string{"svc2"}),
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		tc := tc
+		splittedHTTPRoutes := SplitHTTPRoute(tc.httpRoute)
+		require.Len(t, splittedHTTPRoutes, len(splittedHTTPRoutes), "should have same number of splitted HTTPRoutes with expected")
+		for i, splittedHTTPRoute := range tc.splittedHTTPRoutes {
+			require.True(t, reflect.DeepEqual(splittedHTTPRoute, splittedHTTPRoutes[i]))
+		}
+	}
+}
+
+func TestAssignRoutePriorityToSplittedHTTPRoutes(t *testing.T) {
+	type splittedHTTPRouteIndex struct {
+		namespace  string
+		name       string
+		hostname   string
+		ruleIndex  int
+		matchIndex int
+	}
+	now := time.Now()
+	testCases := []struct {
+		name               string
+		splittedHTTPRoutes []*gatewayv1beta1.HTTPRoute
+		// HTTPRoute index -> priority
+		priorities map[splittedHTTPRouteIndex]int
+	}{
+		{
+			name: "no dupelicated fixed priority",
+			splittedHTTPRoutes: []*gatewayv1beta1.HTTPRoute{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "default",
+						Name:      "httproute-1",
+						Annotations: map[string]string{
+							InternalRuleIndexAnnotationKey:  "0",
+							InternalMatchIndexAnnotationKey: "0",
+						},
+						CreationTimestamp: metav1.NewTime(now.Add(-5 * time.Second)),
+					},
+					Spec: gatewayv1beta1.HTTPRouteSpec{
+						Hostnames: []gatewayv1beta1.Hostname{"foo.com"},
+						Rules: []gatewayv1beta1.HTTPRouteRule{
+							{
+								Matches: []gatewayv1beta1.HTTPRouteMatch{
+									builder.NewHTTPRouteMatch().WithPathExact("/foo").Build(),
+								},
+							},
+						},
+					},
+				},
+				{
+
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "default",
+						Name:      "httproute-2",
+						Annotations: map[string]string{
+							InternalRuleIndexAnnotationKey:  "0",
+							InternalMatchIndexAnnotationKey: "0",
+						},
+						CreationTimestamp: metav1.NewTime(now.Add(-10 * time.Second)),
+					},
+					Spec: gatewayv1beta1.HTTPRouteSpec{
+						Hostnames: []gatewayv1beta1.Hostname{"*.bar.com"},
+						Rules: []gatewayv1beta1.HTTPRouteRule{
+							{
+								Matches: []gatewayv1beta1.HTTPRouteMatch{
+									builder.NewHTTPRouteMatch().WithPathExact("/bar").Build(),
+								},
+							},
+						},
+					},
+				},
+			},
+			priorities: map[splittedHTTPRouteIndex]int{
+				{
+					namespace:  "default",
+					name:       "httproute-1",
+					hostname:   "foo.com",
+					ruleIndex:  0,
+					matchIndex: 0,
+				}: (2 << 50) | (1 << 49) | (7 << 41) | (1 << 40) | (3 << 29) | ((1 << 18) - 1),
+				{
+					namespace:  "default",
+					name:       "httproute-2",
+					hostname:   "*.bar.com",
+					ruleIndex:  0,
+					matchIndex: 0,
+				}: (2 << 50) | (9 << 41) | (1 << 40) | (3 << 29) | ((1 << 18) - 1),
+			},
+		},
+		{
+			name: "break tie by creation timestamp",
+			splittedHTTPRoutes: []*gatewayv1beta1.HTTPRoute{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "default",
+						Name:      "httproute-1",
+						Annotations: map[string]string{
+							InternalRuleIndexAnnotationKey:  "0",
+							InternalMatchIndexAnnotationKey: "0",
+						},
+						CreationTimestamp: metav1.NewTime(now.Add(-5 * time.Second)),
+					},
+					Spec: gatewayv1beta1.HTTPRouteSpec{
+						Hostnames: []gatewayv1beta1.Hostname{"foo.com"},
+						Rules: []gatewayv1beta1.HTTPRouteRule{
+							{
+								Matches: []gatewayv1beta1.HTTPRouteMatch{
+									builder.NewHTTPRouteMatch().WithPathExact("/foo").Build(),
+								},
+							},
+						},
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "default",
+						Name:      "httproute-2",
+						Annotations: map[string]string{
+							InternalRuleIndexAnnotationKey:  "0",
+							InternalMatchIndexAnnotationKey: "0",
+						},
+						CreationTimestamp: metav1.NewTime(now.Add(-1 * time.Second)),
+					},
+					Spec: gatewayv1beta1.HTTPRouteSpec{
+						Hostnames: []gatewayv1beta1.Hostname{"bar.com"},
+						Rules: []gatewayv1beta1.HTTPRouteRule{
+							{
+								Matches: []gatewayv1beta1.HTTPRouteMatch{
+									builder.NewHTTPRouteMatch().WithPathExact("/foo").Build(),
+								},
+							},
+						},
+					},
+				},
+			},
+			priorities: map[splittedHTTPRouteIndex]int{
+				{
+					namespace:  "default",
+					name:       "httproute-1",
+					hostname:   "foo.com",
+					ruleIndex:  0,
+					matchIndex: 0,
+				}: (2 << 50) | (1 << 49) | (7 << 41) | (1 << 40) | (3 << 29) | ((1 << 18) - 1),
+				{
+					namespace:  "default",
+					name:       "httproute-2",
+					hostname:   "bar.com",
+					ruleIndex:  0,
+					matchIndex: 0,
+				}: (2 << 50) | (1 << 49) | (7 << 41) | (1 << 40) | (3 << 29) | ((1 << 18) - 1) - 1,
+			},
+		},
+		{
+			name: "break tie namespace and name",
+			splittedHTTPRoutes: []*gatewayv1beta1.HTTPRoute{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "default",
+						Name:      "httproute-1",
+						Annotations: map[string]string{
+							InternalRuleIndexAnnotationKey:  "0",
+							InternalMatchIndexAnnotationKey: "0",
+						},
+						CreationTimestamp: metav1.NewTime(now.Add(-5 * time.Second)),
+					},
+					Spec: gatewayv1beta1.HTTPRouteSpec{
+						Hostnames: []gatewayv1beta1.Hostname{"foo.com"},
+						Rules: []gatewayv1beta1.HTTPRouteRule{
+							{
+								Matches: []gatewayv1beta1.HTTPRouteMatch{
+									builder.NewHTTPRouteMatch().WithPathExact("/foo").Build(),
+								},
+							},
+						},
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "default",
+						Name:      "httproute-2",
+						Annotations: map[string]string{
+							InternalRuleIndexAnnotationKey:  "0",
+							InternalMatchIndexAnnotationKey: "0",
+						},
+						CreationTimestamp: metav1.NewTime(now.Add(-5 * time.Second)),
+					},
+					Spec: gatewayv1beta1.HTTPRouteSpec{
+						Hostnames: []gatewayv1beta1.Hostname{"bar.com"},
+						Rules: []gatewayv1beta1.HTTPRouteRule{
+							{
+								Matches: []gatewayv1beta1.HTTPRouteMatch{
+									builder.NewHTTPRouteMatch().WithPathExact("/foo").Build(),
+								},
+							},
+						},
+					},
+				},
+			},
+			priorities: map[splittedHTTPRouteIndex]int{
+				{
+					namespace:  "default",
+					name:       "httproute-1",
+					hostname:   "foo.com",
+					ruleIndex:  0,
+					matchIndex: 0,
+				}: (2 << 50) | (1 << 49) | (7 << 41) | (1 << 40) | (3 << 29) | ((1 << 18) - 1),
+				{
+					namespace:  "default",
+					name:       "httproute-2",
+					hostname:   "bar.com",
+					ruleIndex:  0,
+					matchIndex: 0,
+				}: (2 << 50) | (1 << 49) | (7 << 41) | (1 << 40) | (3 << 29) | ((1 << 18) - 1) - 1,
+			},
+		},
+		{
+			name: "break tie by internal match index",
+			splittedHTTPRoutes: []*gatewayv1beta1.HTTPRoute{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "default",
+						Name:      "httproute-1",
+						Annotations: map[string]string{
+							InternalRuleIndexAnnotationKey:  "0",
+							InternalMatchIndexAnnotationKey: "0",
+						},
+						CreationTimestamp: metav1.NewTime(now.Add(-5 * time.Second)),
+					},
+					Spec: gatewayv1beta1.HTTPRouteSpec{
+						Hostnames: []gatewayv1beta1.Hostname{"foo.com"},
+						Rules: []gatewayv1beta1.HTTPRouteRule{
+							{
+								Matches: []gatewayv1beta1.HTTPRouteMatch{
+									builder.NewHTTPRouteMatch().WithPathExact("/foo").Build(),
+								},
+							},
+						},
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "default",
+						Name:      "httproute-1",
+						Annotations: map[string]string{
+							InternalRuleIndexAnnotationKey:  "0",
+							InternalMatchIndexAnnotationKey: "1",
+						},
+						CreationTimestamp: metav1.NewTime(now.Add(-5 * time.Second)),
+					},
+					Spec: gatewayv1beta1.HTTPRouteSpec{
+						Hostnames: []gatewayv1beta1.Hostname{"foo.com"},
+						Rules: []gatewayv1beta1.HTTPRouteRule{
+							{
+								Matches: []gatewayv1beta1.HTTPRouteMatch{
+									builder.NewHTTPRouteMatch().WithPathExact("/bar").Build(),
+								},
+							},
+						},
+					},
+				},
+			},
+			priorities: map[splittedHTTPRouteIndex]int{
+				{
+					namespace:  "default",
+					name:       "httproute-1",
+					hostname:   "foo.com",
+					ruleIndex:  0,
+					matchIndex: 0,
+				}: (2 << 50) | (1 << 49) | (7 << 41) | (1 << 40) | (3 << 29) | ((1 << 18) - 1),
+				{
+					namespace:  "default",
+					name:       "httproute-1",
+					hostname:   "foo.com",
+					ruleIndex:  0,
+					matchIndex: 1,
+				}: (2 << 50) | (1 << 49) | (7 << 41) | (1 << 40) | (3 << 29) | ((1 << 18) - 1) - 1,
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			splittedHTTPRoutesWithPriorities := AssignRoutePriorityToSplittedHTTPRoutes(tc.splittedHTTPRoutes)
+			for _, r := range splittedHTTPRoutesWithPriorities {
+				httpRoute := r.HTTPRoute
+				ruleIndex, err := strconv.Atoi(httpRoute.Annotations[InternalRuleIndexAnnotationKey])
+				require.NoError(t, err)
+				matchIndex, err := strconv.Atoi(httpRoute.Annotations[InternalMatchIndexAnnotationKey])
+				require.NoError(t, err)
+
+				require.Equalf(t, tc.priorities[splittedHTTPRouteIndex{
+					namespace:  httpRoute.Namespace,
+					name:       httpRoute.Name,
+					hostname:   string(httpRoute.Spec.Hostnames[0]),
+					ruleIndex:  ruleIndex,
+					matchIndex: matchIndex,
+				}], r.Priority, "httproute %s/%s: hostname %s, rule %d match %d",
+					httpRoute.Namespace, httpRoute.Name, httpRoute.Spec.Hostnames[0], ruleIndex, matchIndex)
+			}
 		})
 	}
 }

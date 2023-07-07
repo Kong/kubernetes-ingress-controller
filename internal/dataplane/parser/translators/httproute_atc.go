@@ -239,6 +239,7 @@ const (
 // with exactly one match. It will split one rule with multiple hostnames and multiple matches
 // to one hostname and one match per each HTTPRoute.
 func SplitHTTPRoute(httproute *gatewayv1beta1.HTTPRoute) []*gatewayv1beta1.HTTPRoute {
+	// split HTTPRoutes by hostname.
 	hostnamedRoutes := []*gatewayv1beta1.HTTPRoute{}
 	if len(httproute.Spec.Hostnames) == 0 {
 		hostnamedRoutes = append(hostnamedRoutes, httproute.DeepCopy())
@@ -249,7 +250,7 @@ func SplitHTTPRoute(httproute *gatewayv1beta1.HTTPRoute) []*gatewayv1beta1.HTTPR
 			hostnamedRoutes = append(hostnamedRoutes, hostNamedRoute)
 		}
 	}
-
+	// split HTTPRoutes (already splitted once by hostname) by match.
 	newHTTPRoutes := []*gatewayv1beta1.HTTPRoute{}
 	for _, route := range hostnamedRoutes {
 		for i, rule := range route.Spec.Rules {
@@ -290,6 +291,22 @@ type HTTPRoutePriorityTraits struct {
 	QueryParamCount int
 }
 
+// CalculateHTTPRoutePriorityTraits calculates the parts of priority that can be decided by the
+// fields in spec of the HTTPRoute. Specification of priority goes as follow:
+
+// In the event that multiple HTTPRoutes specify intersecting hostnames,
+// precedence must be given to rules from the HTTPRoute with the largest number of:
+//     Characters in a matching non-wildcard hostname.
+//     Characters in a matching hostname.
+// If ties exist across multiple Routes, the matching precedence rules for HTTPRouteMatches takes over.
+// Proxy or Load Balancer routing configuration generated from HTTPRoutes MUST prioritize matches based on the following criteria, continuing on ties.
+// Across all rules specified on applicable Routes, precedence must be given to the match having:
+//     "Exact” path match.
+//     "Prefix" path match with largest number of characters.
+//     Method match.
+//     Largest number of header matches.
+//     Largest number of query param matches.
+
 func CalculateHTTPRoutePriorityTraits(httpRoute *gatewayv1beta1.HTTPRoute) HTTPRoutePriorityTraits {
 	traits := HTTPRoutePriorityTraits{}
 	if len(httpRoute.Spec.Hostnames) != 0 {
@@ -325,6 +342,24 @@ func CalculateHTTPRoutePriorityTraits(httpRoute *gatewayv1beta1.HTTPRoute) HTTPR
 	return traits
 }
 
+//	                  4                   3                   2                   1
+//	9 8 7 6 5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0
+// +-+------+--------+-+-+------+------------+-+---+---+-+----+----+------------------+----------------+
+// |P| host len      |E|R|  Path length      |M|Header No|Query No.| relative order                    |
+// +-+------+--------+-+-+------+------------+-+----+--+-+----+--- +----------------+------------------+
+// Where:
+// P: set to 1 if the hostname is non-wildcard
+// host len: host length of hostname.
+// E: set to 1 if the path type is `Exact`.
+// R: set to 1 if the path type in `RegularExpression`.
+// Path length: length of `path.Value`.
+// M: set to 1 if Method match is specified.
+// Header No.: number of header matches.
+// Query No.: number of query parameter matches.
+// relative order: relative order of creation timestamp, namespace and name,
+//                 and internal rule/match order between different (splitted) HTTPRoutes.
+// EncodeToPriority turns HTTPRoute priority traits into the integer expressed priority.
+
 func (t HTTPRoutePriorityTraits) EncodeToPriority() int {
 	const (
 		// PreciseHostnameShiftBits assigns bit 49 for marking if the hostname is non-wildcard.
@@ -337,13 +372,14 @@ func (t HTTPRoutePriorityTraits) EncodeToPriority() int {
 		RegularExpressionPathShiftBits = 39
 		// PathLengthShiftBits assigns bits 29-38 to path length. (max length = 1024, but must start with /)
 		PathLengthShiftBits = 29
-		// HeaderNumberShiftBits assign bits 24-28 to number of headers. (max number of headers = 16)
-		HeaderNumberShiftBits = 24
-		// MethodMatchShiftBits assigns bit 23 to mark if method is specified.
-		MethodMatchShiftBits = 23
+		// MethodMatchShiftBits assigns bit 28 to mark if method is specified.
+		MethodMatchShiftBits = 28
+		// HeaderNumberShiftBits assign bits 23-27 to number of headers. (max number of headers = 16)
+		HeaderNumberShiftBits = 23
 		// QueryParamNumberShiftBits makes bits 18-22 used for number of query params (max number of query params = 16)
 		QueryParamNumberShiftBits = 18
 		// bits 0-17 are used for relative order of creation timestamp, namespace/name, and internal order of rules and matches.
+		// the bits are calculated by
 	)
 
 	var priority int
@@ -466,9 +502,17 @@ func KongExpressionRouteFromHTTPRouteWithPriority(
 ) kongstate.Route {
 	httproute := httpRouteWithPriority.HTTPRoute
 	tags := util.GenerateTagsForObject(httproute)
-	routeName := fmt.Sprintf("httproute.%s.%s.%s.%s",
+	// since we split HTTPRoutes by hostname, rule and match, we generate the route name in
+	// httproute.<namespace>.<name>.<hostname>.<rule index>.<match index> format.
+	hostname := "_"
+	if len(httproute.Spec.Hostnames) > 0 {
+		hostname = string(httproute.Spec.Hostnames[0])
+		hostname = strings.ReplaceAll(hostname, "*", "_")
+	}
+	routeName := fmt.Sprintf("httproute.%s.%s.%s.%s.%s",
 		httproute.Namespace,
 		httproute.Name,
+		hostname,
 		httproute.Annotations[InternalRuleIndexAnnotationKey],
 		httproute.Annotations[InternalMatchIndexAnnotationKey],
 	)
@@ -510,13 +554,23 @@ func KongExpressionRouteFromHTTPRouteWithPriority(
 	return r
 }
 
+// KongServiceNameFromHTTPRouteWithPriority generates service name from splitted HTTPRoutes.
+// since one HTTPRoute may be splitted by hostname and rule, the service name will generated
+// in the format httproute.<namespace>.<name>.<hostname>.<rule index>.
+// For example: `httproute.default.example.foo.com.0`
 func KongServiceNameFromHTTPRouteWithPriority(
 	httpRouteWithPriority SplittedHTTPRouteToKongRoutePriority,
 ) string {
 	httproute := httpRouteWithPriority.HTTPRoute
-	return fmt.Sprintf("httproute.%s.%s.%s",
+	hostname := "_"
+	if len(httproute.Spec.Hostnames) > 0 {
+		hostname = string(httproute.Spec.Hostnames[0])
+		hostname = strings.ReplaceAll(hostname, "*", "_")
+	}
+	return fmt.Sprintf("httproute.%s.%s.%s.%s",
 		httproute.Namespace,
 		httproute.Name,
+		hostname,
 		httproute.Annotations[InternalRuleIndexAnnotationKey],
 	)
 }

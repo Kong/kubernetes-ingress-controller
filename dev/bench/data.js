@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1688660931078,
+  "lastUpdate": 1688716408539,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -9660,6 +9660,36 @@ window.BENCHMARK_DATA = {
             "value": 87640,
             "unit": "ns/op\t   11098 B/op\t      12 allocs/op",
             "extra": "12212 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "tao.yi@konghq.com",
+            "name": "Yi Tao",
+            "username": "randmonkey"
+          },
+          "committer": {
+            "email": "tao.yi@konghq.com",
+            "name": "Yi Tao",
+            "username": "randmonkey"
+          },
+          "distinct": true,
+          "id": "01e55333cb1d6b565b7f05cf88a0a3df205924a9",
+          "message": "add unit tests",
+          "timestamp": "2023-07-07T15:50:02+08:00",
+          "tree_id": "6a1e497a5741d2de7cf27ea570e639d7a6d096b8",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/01e55333cb1d6b565b7f05cf88a0a3df205924a9"
+        },
+        "date": 1688716403375,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA",
+            "value": 91706,
+            "unit": "ns/op\t   11097 B/op\t      12 allocs/op",
+            "extra": "14265 times\n2 procs"
           }
         ]
       }

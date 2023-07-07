@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1688732786890,
+  "lastUpdate": 1688732789042,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -9888,6 +9888,48 @@ window.BENCHMARK_DATA = {
             "value": 12,
             "unit": "allocs/op",
             "extra": "16814 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "czeslavo@gmail.com",
+            "name": "Grzegorz Burzyński",
+            "username": "czeslavo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "c0d7a0869ab33494203a8a75e4a9ebca27672151",
+          "message": "chore: add v2.10.2 changelog entry (#4299)\n\n\r\n\r\nCo-authored-by: Patryk Małek <patryk.malek@konghq.com>",
+          "timestamp": "2023-07-07T12:25:16Z",
+          "tree_id": "6b83b79349c5b43983fcff1f5ed1e647c19745f6",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/c0d7a0869ab33494203a8a75e4a9ebca27672151"
+        },
+        "date": 1688732781034,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - ns/op",
+            "value": 95269,
+            "unit": "ns/op",
+            "extra": "13108 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - B/op",
+            "value": 11100,
+            "unit": "B/op",
+            "extra": "13108 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - allocs/op",
+            "value": 12,
+            "unit": "allocs/op",
+            "extra": "13108 times\n2 procs"
           }
         ]
       },

@@ -365,9 +365,11 @@ func GeneratePluginsFromHTTPRouteFilters(filters []gatewayv1beta1.HTTPRouteFilte
 		case gatewayv1beta1.HTTPRouteFilterRequestRedirect:
 			kongPlugins = append(kongPlugins, generateRequestRedirectKongPlugin(filter.RequestRedirect, path)...)
 
+		case gatewayv1beta1.HTTPRouteFilterResponseHeaderModifier:
+			kongPlugins = append(kongPlugins, generateResponseHeaderModifierKongPlugin(filter.ResponseHeaderModifier))
+
 		case gatewayv1beta1.HTTPRouteFilterExtensionRef,
 			gatewayv1beta1.HTTPRouteFilterRequestMirror,
-			gatewayv1beta1.HTTPRouteFilterResponseHeaderModifier,
 			gatewayv1beta1.HTTPRouteFilterURLRewrite:
 			// not supported
 		}
@@ -429,8 +431,18 @@ func generateRequestRedirectKongPlugin(modifier *gatewayv1beta1.HTTPRequestRedir
 // generateRequestHeaderModifierKongPlugin converts a gatewayv1beta1.HTTPRequestHeaderFilter into a
 // kong.Plugin of type request-transformer.
 func generateRequestHeaderModifierKongPlugin(modifier *gatewayv1beta1.HTTPHeaderFilter) kong.Plugin {
+	return generateHeaderModifierKongPlugin(modifier, "request-transformer")
+}
+
+// generateResponseHeaderModifierKongPlugin converts a gatewayv1beta1.HTTPResponseHeaderFilter into a
+// kong.Plugin of type response-transformer.
+func generateResponseHeaderModifierKongPlugin(modifier *gatewayv1beta1.HTTPHeaderFilter) kong.Plugin {
+	return generateHeaderModifierKongPlugin(modifier, "response-transformer")
+}
+
+func generateHeaderModifierKongPlugin(modifier *gatewayv1beta1.HTTPHeaderFilter, pluginName string) kong.Plugin {
 	plugin := kong.Plugin{
-		Name:   kong.String("request-transformer"),
+		Name:   kong.String(pluginName),
 		Config: make(kong.Configuration),
 	}
 

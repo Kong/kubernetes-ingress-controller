@@ -102,8 +102,6 @@ func TestGatewayConformance(t *testing.T) {
 			tests.HTTPRouteRedirectPort.ShortName,
 			// https://github.com/Kong/kubernetes-ingress-controller/issues/3682
 			tests.HTTPRouteRedirectScheme.ShortName,
-			// https://github.com/Kong/kubernetes-ingress-controller/issues/3683
-			tests.HTTPRouteResponseHeaderModifier.ShortName,
 			// https://github.com/Kong/kubernetes-ingress-controller/issues/4165
 			tests.HTTPRouteRequestMirror.ShortName,
 

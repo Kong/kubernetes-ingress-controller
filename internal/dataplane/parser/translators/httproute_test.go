@@ -33,6 +33,12 @@ func TestGeneratePluginsFromHTTPRouteFilters(t *testing.T) {
 								Value: "bar",
 							},
 						},
+						Add: []gatewayv1beta1.HTTPHeader{
+							{
+								Name:  "header-to-add",
+								Value: "foo",
+							},
+						},
 						Remove: []string{"header-to-remove"},
 					},
 				},
@@ -44,6 +50,11 @@ func TestGeneratePluginsFromHTTPRouteFilters(t *testing.T) {
 						"add": map[string][]string{
 							"headers": {
 								"header-to-set:bar",
+							},
+						},
+						"append": map[string][]string{
+							"headers": {
+								"header-to-add:foo",
 							},
 						},
 						"remove": map[string][]string{
@@ -85,6 +96,56 @@ func TestGeneratePluginsFromHTTPRouteFilters(t *testing.T) {
 						"add": map[string][]string{
 							"headers": {
 								"Location: http://example.org:80/test",
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "response header modifier",
+			filters: []gatewayv1beta1.HTTPRouteFilter{
+				{
+					Type: gatewayv1beta1.HTTPRouteFilterResponseHeaderModifier,
+					ResponseHeaderModifier: &gatewayv1beta1.HTTPHeaderFilter{
+						Set: []gatewayv1beta1.HTTPHeader{
+							{
+								Name:  "header-to-set",
+								Value: "bar",
+							},
+						},
+						Add: []gatewayv1beta1.HTTPHeader{
+							{
+								Name:  "header-to-add",
+								Value: "foo",
+							},
+						},
+						Remove: []string{"header-to-remove"},
+					},
+				},
+			},
+			expectedPlugins: []kong.Plugin{
+				{
+					Name: kong.String("response-transformer"),
+					Config: kong.Configuration{
+						"add": map[string][]string{
+							"headers": {
+								"header-to-set:bar",
+							},
+						},
+						"append": map[string][]string{
+							"headers": {
+								"header-to-add:foo",
+							},
+						},
+						"remove": map[string][]string{
+							"headers": {
+								"header-to-remove",
+							},
+						},
+						"replace": map[string][]string{
+							"headers": {
+								"header-to-set:bar",
 							},
 						},
 					},

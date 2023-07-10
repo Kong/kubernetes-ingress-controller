@@ -8,7 +8,7 @@ require (
 	github.com/go-delve/delve v1.21.0
 	github.com/golangci/golangci-lint v1.53.3
 	github.com/jstemmer/go-junit-report/v2 v2.0.0
-	gotest.tools/gotestsum v1.10.0
+	gotest.tools/gotestsum v1.10.1
 	honnef.co/go/tools v0.4.3
 	k8s.io/code-generator v0.27.3
 	sigs.k8s.io/controller-runtime/tools/setup-envtest v0.0.0-20230221102149-f6f37e6cc1ec

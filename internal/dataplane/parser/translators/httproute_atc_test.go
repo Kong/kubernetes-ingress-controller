@@ -861,7 +861,6 @@ func TestAssignRoutePriorityToSplittedHTTPRoutes(t *testing.T) {
 					},
 				},
 				{
-
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: "default",
 						Name:      "httproute-2",

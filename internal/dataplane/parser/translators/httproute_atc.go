@@ -442,9 +442,8 @@ func AssignRoutePriorityToSplittedHTTPRoutes(
 			return compareSplittedHTTPRoutesRelativePriority(routes[i], routes[j])
 		})
 
-		relativeOrderBits := defaultRelativeOrderPriorityBits
 		for i, route := range routes {
-			relativeOrderBits = defaultRelativeOrderPriorityBits - i
+			relativeOrderBits := defaultRelativeOrderPriorityBits - i
 			httpRoutesToPriorities = append(httpRoutesToPriorities, SplittedHTTPRouteToKongRoutePriority{
 				HTTPRoute: route,
 				Priority:  priority + relativeOrderBits,
@@ -557,7 +556,7 @@ func KongExpressionRouteFromHTTPRouteWithPriority(
 // KongServiceNameFromHTTPRouteWithPriority generates service name from splitted HTTPRoutes.
 // since one HTTPRoute may be splitted by hostname and rule, the service name will generated
 // in the format httproute.<namespace>.<name>.<hostname>.<rule index>.
-// For example: `httproute.default.example.foo.com.0`
+// For example: `httproute.default.example.foo.com.0`.
 func KongServiceNameFromHTTPRouteWithPriority(
 	httpRouteWithPriority SplittedHTTPRouteToKongRoutePriority,
 ) string {

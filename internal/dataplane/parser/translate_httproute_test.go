@@ -1673,7 +1673,6 @@ func TestIngressRulesWithPriority(t *testing.T) {
 	for _, tc := range testCases {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
-
 			tc.expectedKongRoute.Tags = util.GenerateTagsForObject(tc.httpRouteWithPriority.HTTPRoute)
 			tc.expectedKongRoute.Ingress = util.FromK8sObject(tc.httpRouteWithPriority.HTTPRoute)
 

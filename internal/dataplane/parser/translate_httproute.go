@@ -8,7 +8,7 @@ import (
 	"github.com/blang/semver/v4"
 	"github.com/kong/go-kong/kong"
 	"github.com/samber/lo"
-	"k8s.io/apimachinery/pkg/types"
+	k8stypes "k8s.io/apimachinery/pkg/types"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
@@ -42,12 +42,12 @@ func (p *Parser) ingressRulesFromHTTPRoutes() ingressRules {
 		}
 
 		splittedHTTPRoutesWithPriorities := translators.AssignRoutePriorityToSplittedHTTPRoutes(splittedHTTPRoutes)
-		httpRouteNameToTranslationFailure := map[types.NamespacedName][]error{}
+		httpRouteNameToTranslationFailure := map[k8stypes.NamespacedName][]error{}
 
 		for _, httpRouteWithPriority := range splittedHTTPRoutesWithPriorities {
 			err := p.ingressRulesFromSplittedHTTPRouteWithPriority(&result, httpRouteWithPriority)
 			if err != nil {
-				nsName := types.NamespacedName{
+				nsName := k8stypes.NamespacedName{
 					Namespace: httpRouteWithPriority.HTTPRoute.Namespace,
 					Name:      httpRouteWithPriority.HTTPRoute.Name,
 				}
@@ -55,7 +55,7 @@ func (p *Parser) ingressRulesFromHTTPRoutes() ingressRules {
 			}
 		}
 		for _, httproute := range httpRouteList {
-			nsName := types.NamespacedName{
+			nsName := k8stypes.NamespacedName{
 				Namespace: httproute.Namespace,
 				Name:      httproute.Name,
 			}

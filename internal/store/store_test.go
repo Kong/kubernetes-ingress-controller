@@ -39,10 +39,8 @@ kind: Ingress
 metadata:
   name: httpbin-ingress
   namespace: default
-  annotations:
-    httpbin.ingress.kubernetes.io/rewrite-target: /
-    kubernetes.io/ingress.class: "kong"
 spec:
+  ingressClassName: kong
   rules:
   - http:
       paths:

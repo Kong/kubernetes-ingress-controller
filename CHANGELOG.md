@@ -98,6 +98,11 @@ Adding a new version? You'll need three changes:
   method is adopted to keep the compatibility with traditional router on
   maximum effort.
   [#4240](https://github.com/Kong/kubernetes-ingress-controller/pull/4240)
+- Assign priorities to routes translated from HTTPRoutes when parser translate
+  them to expression based Kong routes. The assigning method follows the
+  specification on priorities of matches in `HTTPRoute`.
+  [httproute-specification][httproute-specification]
+  [#4296](https://github.com/Kong/kubernetes-ingress-controller/pull/4296)
 
 ### Changed
 
@@ -115,6 +120,7 @@ Adding a new version? You'll need three changes:
   [#4222](https://github.com/Kong/kubernetes-ingress-controller/pull/4222)
 
 [gojson]: https://github.com/goccy/go-json
+[httproute-specification]: https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1beta1.HTTPRoute
 
 ## [2.10.2]
 

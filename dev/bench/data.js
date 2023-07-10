@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1689000809807,
+  "lastUpdate": 1689001583698,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -11358,6 +11358,48 @@ window.BENCHMARK_DATA = {
             "value": 12,
             "unit": "allocs/op",
             "extra": "17846 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "patryk.malek@konghq.com",
+            "name": "Patryk Małek",
+            "username": "pmalek"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "bb31d0fdf163f980f43c742deaa77f9706a2fcae",
+          "message": "chore: update ingress examples and test code using deprecated kubernetes.io/ingress.class annotation to use spec.ingressClassName instead (#4309)",
+          "timestamp": "2023-07-10T17:05:23+02:00",
+          "tree_id": "08353a5aceeebf3465f58a6b3e5f8c30274e23d9",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/bb31d0fdf163f980f43c742deaa77f9706a2fcae"
+        },
+        "date": 1689001578648,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - ns/op",
+            "value": 84836,
+            "unit": "ns/op",
+            "extra": "15542 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - B/op",
+            "value": 11096,
+            "unit": "B/op",
+            "extra": "15542 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - allocs/op",
+            "value": 12,
+            "unit": "allocs/op",
+            "extra": "15542 times\n2 procs"
           }
         ]
       }

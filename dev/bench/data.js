@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1689084713350,
+  "lastUpdate": 1689084714873,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -12240,6 +12240,48 @@ window.BENCHMARK_DATA = {
             "value": 12,
             "unit": "allocs/op",
             "extra": "18484 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "czeslavo@gmail.com",
+            "name": "Grzegorz Burzyński",
+            "username": "czeslavo"
+          },
+          "committer": {
+            "email": "czeslavo@gmail.com",
+            "name": "Grzegorz Burzyński",
+            "username": "czeslavo"
+          },
+          "distinct": true,
+          "id": "3c4529fb647f9de2a70f5b30ca37c21e3bb30e28",
+          "message": "feat: append stub upstream when config empty in dbless mode",
+          "timestamp": "2023-07-11T16:10:37+02:00",
+          "tree_id": "813f0d12f17aa7bc0f19797ba2863b8f06c91b35",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/3c4529fb647f9de2a70f5b30ca37c21e3bb30e28"
+        },
+        "date": 1689084708988,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - ns/op",
+            "value": 70356,
+            "unit": "ns/op",
+            "extra": "18098 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - B/op",
+            "value": 11093,
+            "unit": "B/op",
+            "extra": "18098 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - allocs/op",
+            "value": 12,
+            "unit": "allocs/op",
+            "extra": "18098 times\n2 procs"
           }
         ]
       },

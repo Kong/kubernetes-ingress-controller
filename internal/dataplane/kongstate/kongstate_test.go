@@ -380,14 +380,11 @@ func TestFillConsumersAndCredentials(t *testing.T) {
 				},
 			},
 		}},
-		Version: semver.MustParse("2.3.2"),
 	}
 
 	t.Run("parses consumer and credential from store into state", func(t *testing.T) {
-		state := KongState{
-			Version: semver.MustParse("2.3.2"),
-		}
-		state.FillConsumersAndCredentials(logrus.New(), store)
+		state := KongState{}
+		state.FillConsumersAndCredentials(logrus.New(), store, semver.MustParse("2.3.2"))
 		assert.Equal(t, want.Consumers[0].Consumer.Username, state.Consumers[0].Consumer.Username)
 		assert.Equal(t, want.Consumers[0].Consumer.CustomID, state.Consumers[0].Consumer.CustomID)
 		assert.Equal(t, want.Consumers[0].KeyAuths[0].Key, state.Consumers[0].KeyAuths[0].Key)

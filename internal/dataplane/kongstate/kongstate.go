@@ -24,7 +24,6 @@ type KongState struct {
 	Licenses       []kong.License
 	Plugins        []Plugin
 	Consumers      []Consumer
-	Version        semver.Version
 }
 
 // SanitizedCopy returns a shallow copy with sensitive values redacted best-effort.
@@ -49,7 +48,7 @@ func (ks *KongState) SanitizedCopy() *KongState {
 	}
 }
 
-func (ks *KongState) FillConsumersAndCredentials(log logrus.FieldLogger, s store.Storer) {
+func (ks *KongState) FillConsumersAndCredentials(log logrus.FieldLogger, s store.Storer, kongVersion semver.Version) {
 	consumerIndex := make(map[string]Consumer)
 
 	// build consumer index
@@ -130,7 +129,7 @@ func (ks *KongState) FillConsumersAndCredentials(log logrus.FieldLogger, s store
 				continue
 			}
 			credTags := util.GenerateTagsForObject(secret)
-			err = c.SetCredential(credType, credConfig, credTags, ks.Version)
+			err = c.SetCredential(credType, credConfig, credTags, kongVersion)
 			if err != nil {
 				log.WithError(err).Errorf("failed to provision credential")
 				continue

@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1689069018173,
+  "lastUpdate": 1689069020015,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -11988,6 +11988,48 @@ window.BENCHMARK_DATA = {
             "value": 12,
             "unit": "allocs/op",
             "extra": "16341 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "tao.yi@konghq.com",
+            "name": "Tao Yi",
+            "username": "randmonkey"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "aa16260d380d2171503cb2a5f6dc07e7929e4047",
+          "message": "Update .github/ISSUE_TEMPLATE/release.yaml\n\nCo-authored-by: Patryk Małek <patryk.malek@konghq.com>",
+          "timestamp": "2023-07-11T17:49:09+08:00",
+          "tree_id": "998bcc936c91414e842017a21ec5859bc4e75d49",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/aa16260d380d2171503cb2a5f6dc07e7929e4047"
+        },
+        "date": 1689069012874,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - ns/op",
+            "value": 78162,
+            "unit": "ns/op",
+            "extra": "17383 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - B/op",
+            "value": 11093,
+            "unit": "B/op",
+            "extra": "17383 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - allocs/op",
+            "value": 12,
+            "unit": "allocs/op",
+            "extra": "17383 times\n2 procs"
           }
         ]
       },

@@ -108,7 +108,7 @@ func exposeAdminAPI(ctx context.Context, t *testing.T, env environments.Environm
 
 // getTestManifest gets a manifest io.Reader, applying optional patches to the base manifest provided.
 // In case of any failure while patching, the base manifest is returned.
-func getTestManifest(t *testing.T, baseManifestPath string) io.Reader {
+func getTestManifest(t *testing.T, baseManifestPath string, skipTestPatches bool) io.Reader {
 	t.Helper()
 
 	var (
@@ -118,38 +118,41 @@ func getTestManifest(t *testing.T, baseManifestPath string) io.Reader {
 	manifestsReader, err = os.Open(baseManifestPath)
 	require.NoError(t, err)
 
-	manifestsReader, err = patchControllerImageFromEnv(t, manifestsReader)
-	if err != nil {
-		t.Logf("failed patching controller image (%v), using default manifest %v", err, baseManifestPath)
-		return manifestsReader
+	if !skipTestPatches {
+		t.Logf("applying test patches to manifest %v", baseManifestPath)
+
+		manifestsReader, err = patchControllerImageFromEnv(t, manifestsReader)
+		if err != nil {
+			t.Logf("failed patching controller image (%v), using default manifest %v", err, baseManifestPath)
+			return manifestsReader
+		}
+
+		manifestsReader, err = patchGatewayImageFromEnv(t, manifestsReader)
+		if err != nil {
+			t.Logf("failed patching gateway image (%v), using default manifest %v", err, baseManifestPath)
+			return manifestsReader
+		}
+
+		manifestsReader, err = patchControllerStartTimeout(manifestsReader, 120, time.Second*3)
+		if err != nil {
+			t.Logf("failed patching controller timeouts (%v), using default manifest %v", err, baseManifestPath)
+			return manifestsReader
+		}
+
+		deployments := getManifestDeployments(baseManifestPath)
+		manifestsReader, err = patchLivenessProbes(manifestsReader, deployments.ProxyNN, 10, time.Second*15, time.Second*3)
+		if err != nil {
+			t.Logf("failed patching kong liveness (%v), using default manifest %v", err, baseManifestPath)
+			return manifestsReader
+		}
+
+		manifestsReader, err = patchLivenessProbes(manifestsReader, deployments.ControllerNN, 15, time.Second*3, time.Second*10)
+		if err != nil {
+			t.Logf("failed patching controller liveness (%v), using default manifest %v", err, baseManifestPath)
+			return manifestsReader
+		}
 	}
 
-	manifestsReader, err = patchGatewayImageFromEnv(t, manifestsReader)
-	if err != nil {
-		t.Logf("failed patching gateway image (%v), using default manifest %v", err, baseManifestPath)
-		return manifestsReader
-	}
-
-	manifestsReader, err = patchControllerStartTimeout(manifestsReader, 120, time.Second*3)
-	if err != nil {
-		t.Logf("failed patching controller timeouts (%v), using default manifest %v", err, baseManifestPath)
-		return manifestsReader
-	}
-
-	deployments := getManifestDeployments(baseManifestPath)
-	manifestsReader, err = patchLivenessProbes(manifestsReader, deployments.ProxyNN, 10, time.Second*15, time.Second*3)
-	if err != nil {
-		t.Logf("failed patching kong liveness (%v), using default manifest %v", err, baseManifestPath)
-		return manifestsReader
-	}
-
-	manifestsReader, err = patchLivenessProbes(manifestsReader, deployments.ControllerNN, 15, time.Second*3, time.Second*10)
-	if err != nil {
-		t.Logf("failed patching controller liveness (%v), using default manifest %v", err, baseManifestPath)
-		return manifestsReader
-	}
-
-	t.Logf("generated modified manifest at %v", baseManifestPath)
 	return manifestsReader
 }
 
@@ -194,25 +197,25 @@ func skipTestIfControllerVersionBelow(t *testing.T, minVersion semver.Version) {
 // It takes into account the TEST_KONG_CONTROLLER_IMAGE_OVERRIDE environment variable.
 // This is needed because KIC does not support Gateway Discovery in versions below 2.9,
 // and hence we need to use the legacy manifest for those versions.
-func getDBLessTestManifestByControllerImageEnv(t *testing.T) io.Reader {
+func getDBLessTestManifestByControllerImageEnv(t *testing.T) string {
 	t.Helper()
 
 	// if no version specified, we assume that we are using the latest version of KIC.
 	if controllerImageOverride == "" {
-		return getTestManifest(t, dblessPath)
+		return dblessPath
 	}
 
 	v, err := extractVersionFromImage(controllerImageOverride)
 	// assume using latest version if failed to extract version from image tag.
 	if err != nil {
 		t.Logf("could not extract version from controller image: %v, assume using the latest version", err)
-		return getTestManifest(t, dblessPath)
+		return dblessPath
 	}
 	// If KIC version is lower than the minimum version that enables gateway discovery, use the legacy manifest.
 	if v.LE(gatewayDiscoveryMinimalVersion) {
-		return getTestManifest(t, dblessLegacyPath)
+		return dblessLegacyPath
 	}
-	return getTestManifest(t, dblessPath)
+	return dblessPath
 }
 
 // patchGatewayImageFromEnv will optionally replace a default controller image in manifests with `kongImageOverride`
@@ -488,4 +491,15 @@ func setEnv(p setEnvParams) error {
 		return fmt.Errorf("updating envvar failed: STDOUT(%s) STDERR(%s): %w", stdout, stderr, err)
 	}
 	return nil
+}
+
+// dumpToTempFile dumps the contents of the reader to a temporary file and returns the path to the file.
+func dumpToTempFile(t *testing.T, reader io.Reader) string {
+	t.Helper()
+	file, err := os.CreateTemp("", "")
+	require.NoError(t, err)
+	defer file.Close()
+	_, err = io.Copy(file, reader)
+	require.NoError(t, err)
+	return file.Name()
 }

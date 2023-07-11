@@ -234,7 +234,19 @@ func createGKEBuilder(t *testing.T) (*environments.Builder, error) {
 	return environments.NewBuilder().WithClusterBuilder(clusterBuilder), nil
 }
 
-func deployKong(ctx context.Context, t *testing.T, env environments.Environment, manifest io.Reader, additionalSecrets ...*corev1.Secret) {
+type ManifestDeploy struct {
+	// Path is the path to the manifest to deploy.
+	Path string
+
+	// SkipTestPatches is a flag that controls whether to apply standard test patches (e.g. replace controller
+	// image when TEST_KONG_CONTROLLER_IMAGE_OVERRIDE set, etc.) to the manifests before deploying them.
+	SkipTestPatches bool
+
+	// AdditionalSecrets is a list of additional secrets to create before deploying the manifest.
+	AdditionalSecrets []*corev1.Secret
+}
+
+func (d ManifestDeploy) Run(ctx context.Context, t *testing.T, env environments.Environment) Deployments {
 	t.Helper()
 
 	t.Log("waiting for testing environment to be ready")
@@ -249,15 +261,16 @@ func deployKong(ctx context.Context, t *testing.T, env environments.Environment,
 		require.NoError(t, err)
 	}
 
-	t.Logf("deploying any supplemental secrets (found: %d)", len(additionalSecrets))
-	for _, secret := range additionalSecrets {
+	t.Logf("deploying any supplemental secrets (found: %d)", len(d.AdditionalSecrets))
+	for _, secret := range d.AdditionalSecrets {
 		_, err := env.Cluster().Client().CoreV1().Secrets(namespace).Create(ctx, secret, metav1.CreateOptions{})
 		if !apierrors.IsAlreadyExists(err) {
 			require.NoError(t, err)
 		}
 	}
 
-	t.Log("deploying the manifest to the cluster")
+	t.Logf("deploying %s manifest to the cluster", d.Path)
+	manifest := getTestManifest(t, d.Path, d.SkipTestPatches)
 	kubeconfigFilename := getTemporaryKubeconfig(t, env)
 	cmd := exec.CommandContext(ctx, "kubectl", "--kubeconfig", kubeconfigFilename, "apply", "-f", "-")
 	cmd.Stdin = manifest
@@ -265,7 +278,12 @@ func deployKong(ctx context.Context, t *testing.T, env environments.Environment,
 	require.NoError(t, err, string(out))
 
 	t.Log("waiting for controller to be ready")
-	waitForDeploymentRollout(ctx, t, env, namespace, controllerDeploymentName)
+	deployments := getManifestDeployments(d.Path)
+
+	waitForDeploymentRollout(ctx, t, env, deployments.ControllerNN.Namespace, deployments.ControllerNN.Name)
+	waitForDeploymentRollout(ctx, t, env, deployments.ProxyNN.Namespace, deployments.ProxyNN.Name)
+
+	return deployments
 }
 
 func waitForDeploymentRollout(ctx context.Context, t *testing.T, env environments.Environment, namespace, name string) {

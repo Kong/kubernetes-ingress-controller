@@ -98,6 +98,11 @@ Adding a new version? You'll need three changes:
   method is adopted to keep the compatibility with traditional router on
   maximum effort.
   [#4240](https://github.com/Kong/kubernetes-ingress-controller/pull/4240)
+- When a translated Kong configuration is empty in DB-less mode, the controller
+  will now send the configuration with a single empty `Upstream`. This is to make
+  Gateways using `/status/ready` as their health check ready after receiving the
+  initial configuration (even if it's empty).
+  [#4316](https://github.com/Kong/kubernetes-ingress-controller/pull/4316)
 
 ### Changed
 

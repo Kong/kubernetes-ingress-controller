@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1689089389315,
+  "lastUpdate": 1689090285852,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -12912,6 +12912,48 @@ window.BENCHMARK_DATA = {
             "value": 12,
             "unit": "allocs/op",
             "extra": "14197 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "czeslavo@gmail.com",
+            "name": "Grzegorz Burzyński",
+            "username": "czeslavo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "ed0bdc60ddd02543e42e46ce75f92b43d029ffab",
+          "message": "refactor: remove version from KongState (#4318)\n\nAs KongState represents all entities translated from Kubernetes resources, \r\nVersion field doesn't match to be there. It appears it's quite easily removable.",
+          "timestamp": "2023-07-11T17:43:26+02:00",
+          "tree_id": "050e68e47648e6255e5b3a77854ce194798ff861",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/ed0bdc60ddd02543e42e46ce75f92b43d029ffab"
+        },
+        "date": 1689090279775,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - ns/op",
+            "value": 81598,
+            "unit": "ns/op",
+            "extra": "14286 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - B/op",
+            "value": 11092,
+            "unit": "B/op",
+            "extra": "14286 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - allocs/op",
+            "value": 12,
+            "unit": "allocs/op",
+            "extra": "14286 times\n2 procs"
           }
         ]
       }

@@ -38,13 +38,20 @@ type KongAdminAPIServiceReconciler struct {
 	EndpointsNotifier EndpointsNotifier
 
 	Cache               DiscoveredAdminAPIsCache
-	AdminAPIsDiscoverer *adminapi.Discoverer
+	AdminAPIsDiscoverer AdminAPIsDiscoverer
 }
 
 type DiscoveredAdminAPIsCache map[k8stypes.NamespacedName]sets.Set[adminapi.DiscoveredAdminAPI]
 
 type EndpointsNotifier interface {
 	Notify(adminAPIs []adminapi.DiscoveredAdminAPI)
+}
+
+type AdminAPIsDiscoverer interface {
+	AdminAPIsFromEndpointSlice(discoveryv1.EndpointSlice) (
+		sets.Set[adminapi.DiscoveredAdminAPI],
+		error,
+	)
 }
 
 // SetupWithManager sets up the controller with the Manager.

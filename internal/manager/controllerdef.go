@@ -11,7 +11,6 @@ import (
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/adminapi"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/configuration"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/crds"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/gateway"
@@ -67,7 +66,7 @@ func setupControllers(
 	c *Config,
 	featureGates map[string]bool,
 	kongAdminAPIEndpointsNotifier configuration.EndpointsNotifier,
-	adminAPIsDiscoverer *adminapi.Discoverer,
+	adminAPIsDiscoverer configuration.AdminAPIsDiscoverer,
 ) ([]ControllerDef, error) {
 	restMapper := mgr.GetClient().RESTMapper()
 

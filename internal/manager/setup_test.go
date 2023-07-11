@@ -2,8 +2,7 @@ package manager_test
 
 import (
 	"context"
-	errors "errors"
-	"sync/atomic"
+	"errors"
 	"testing"
 	"time"
 
@@ -13,51 +12,12 @@ import (
 	"github.com/stretchr/testify/require"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/adminapi"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/manager"
+	"github.com/kong/kubernetes-ingress-controller/v2/test/mocks"
 )
-
-type mockAdminAPIDiscoverer struct {
-	apis                              sets.Set[adminapi.DiscoveredAdminAPI]
-	err                               error
-	getAdminAPIsForServiceCalledTimes atomic.Int32
-}
-
-func (m *mockAdminAPIDiscoverer) GetAdminAPIsForService(_ context.Context, _ client.Client, _ k8stypes.NamespacedName) (sets.Set[adminapi.DiscoveredAdminAPI], error) {
-	m.getAdminAPIsForServiceCalledTimes.Add(1)
-	if m.err != nil {
-		return nil, m.err
-	}
-	return m.apis, nil
-}
-
-func (m *mockAdminAPIDiscoverer) GetAdminAPIsForServiceCalledTimes() int {
-	return int(m.getAdminAPIsForServiceCalledTimes.Load())
-}
-
-type mockAdminAPIClientFactory struct {
-	errs map[string]error // map from address to error
-}
-
-func newMockAdminAPIClientFactory(errs map[string]error) *mockAdminAPIClientFactory {
-	if errs == nil {
-		errs = make(map[string]error)
-	}
-	return &mockAdminAPIClientFactory{
-		errs: errs,
-	}
-}
-
-func (m *mockAdminAPIClientFactory) CreateAdminAPIClient(_ context.Context, api adminapi.DiscoveredAdminAPI) (*adminapi.Client, error) {
-	err, ok := m.errs[api.Address]
-	if !ok {
-		return adminapi.NewTestClient(api.Address)
-	}
-	return nil, err
-}
 
 func TestAdminAPIClientFromServiceDiscovery(t *testing.T) {
 	log := logr.Discard()
@@ -124,8 +84,8 @@ func TestAdminAPIClientFromServiceDiscovery(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			ctx, cancel := context.WithCancel(context.Background())
-			discoverer := &mockAdminAPIDiscoverer{apis: tc.discoveredAPIs, err: tc.discovererErr}
-			factory := newMockAdminAPIClientFactory(tc.factoryErrs)
+			discoverer := mocks.NewAdminAPIDiscoverer(tc.discoveredAPIs, tc.discovererErr)
+			factory := mocks.NewAdminAPIClientFactory(tc.factoryErrs)
 
 			// If cancelContext is true, we will cancel the context after GetAdminAPIsForService is called >= 2 times.
 			// This will mean that the retry loop is running. By cancelling the context we can ensure it will exit and

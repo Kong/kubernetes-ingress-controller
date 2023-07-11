@@ -61,6 +61,8 @@ func TestMain(m *testing.M) {
 		kongbuilder = kongbuilder.WithProxyEnterpriseEnabled(licenseJSON).
 			WithProxyEnterpriseSuperAdminPassword(kongTestPassword).
 			WithProxyAdminServiceTypeLoadBalancer()
+	} else {
+		kongbuilder = kongbuilder.WithProxyImage("kong", "2.8.3")
 	}
 
 	if dbmode == "postgres" {

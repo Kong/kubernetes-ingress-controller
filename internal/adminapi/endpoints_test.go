@@ -21,7 +21,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util/builder"
 )
 
-func TestAddressesFromEndpointSlice(t *testing.T) {
+func TestDiscoverer_AddressesFromEndpointSlice(t *testing.T) {
 	const (
 		namespaceName = "ns"
 		serviceName   = "kong-admin"
@@ -349,6 +349,7 @@ func TestAddressesFromEndpointSlice(t *testing.T) {
 				Ports: builder.NewEndpointPort(8444).WithName("non-admin-port-name").IntoSlice(),
 			},
 			want:        sets.New[DiscoveredAdminAPI](),
+			portNames:   sets.New("admin"),
 			dnsStrategy: cfgtypes.IPDNSStrategy,
 		},
 		{
@@ -458,19 +459,20 @@ func TestAddressesFromEndpointSlice(t *testing.T) {
 		tt := tt
 
 		t.Run(fmt.Sprintf("dnsstrategy_%s/%s", tt.dnsStrategy, tt.name), func(t *testing.T) {
-			require.NoError(t, tt.dnsStrategy.Validate())
+			discoverer, err := NewDiscoverer(tt.portNames, tt.dnsStrategy)
+			require.NoError(t, err)
 
-			adminAPI, err := AdminAPIsFromEndpointSlice(tt.endpoints, tt.portNames, tt.dnsStrategy)
+			got, err := discoverer.AdminAPIsFromEndpointSlice(tt.endpoints)
 			if tt.expectedErr != nil {
 				require.EqualError(t, err, tt.expectedErr.Error())
 			} else {
-				require.Equal(t, tt.want, adminAPI)
+				require.Equal(t, tt.want, got)
 			}
 		})
 	}
 }
 
-func TestGetAdminAPIsForService(t *testing.T) {
+func TestDiscoverer_GetAdminAPIsForService(t *testing.T) {
 	const namespaceName = "ns"
 
 	var (
@@ -674,7 +676,10 @@ func TestGetAdminAPIsForService(t *testing.T) {
 				Build()
 
 			portNames := sets.New("admin")
-			got, err := GetAdminAPIsForService(context.Background(), fakeClient, tt.service, portNames, tt.dnsStrategy)
+			discoverer, err := NewDiscoverer(portNames, tt.dnsStrategy)
+			require.NoError(t, err)
+
+			got, err := discoverer.GetAdminAPIsForService(context.Background(), fakeClient, tt.service)
 			if tt.wantErr {
 				require.Error(t, err)
 				return

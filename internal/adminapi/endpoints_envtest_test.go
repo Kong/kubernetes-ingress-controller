@@ -23,7 +23,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/test/envtest"
 )
 
-func TestGetAdminAPIsForServiceReturnsAllAddressesCorrectlyPagingThroughResults(t *testing.T) {
+func TestDiscoverer_GetAdminAPIsForServiceReturnsAllAddressesCorrectlyPagingThroughResults(t *testing.T) {
 	t.Parallel()
 
 	cfg := envtest.Setup(t, scheme.Scheme)
@@ -87,7 +87,10 @@ func TestGetAdminAPIsForServiceReturnsAllAddressesCorrectlyPagingThroughResults(
 				}
 			}
 
-			got, err := adminapi.GetAdminAPIsForService(ctx, client, service, sets.New("admin"), cfgtypes.IPDNSStrategy)
+			discoverer, err := adminapi.NewDiscoverer(sets.New("admin"), cfgtypes.IPDNSStrategy)
+			require.NoError(t, err)
+
+			got, err := discoverer.GetAdminAPIsForService(ctx, client, service)
 			require.NoError(t, err)
 			require.Len(t, got, tc.subnetD*tc.subnetC, "GetAdminAPIsForService should return all valid addresses")
 		})

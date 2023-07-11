@@ -27,7 +27,8 @@ type clientFactoryWithExpected struct {
 	t        *testing.T
 }
 
-func (cf clientFactoryWithExpected) CreateAdminAPIClient(_ context.Context, address string) (*adminapi.Client, error) {
+func (cf clientFactoryWithExpected) CreateAdminAPIClient(_ context.Context, adminAPI adminapi.DiscoveredAdminAPI) (*adminapi.Client, error) {
+	address := adminAPI.Address
 	stillExpecting, ok := cf.expected[address]
 	if !ok {
 		cf.t.Errorf("got %s which was unexpected", address)

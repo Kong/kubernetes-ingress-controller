@@ -67,7 +67,7 @@ type Config struct {
 	KongAdminURLs               []string
 	KongAdminSvc                OptionalNamespacedName
 	GatewayDiscoveryDNSStrategy cfgtypes.DNSStrategy
-	KondAdminSvcPortNames       []string
+	KongAdminSvcPortNames       []string
 	ProxySyncSeconds            float32
 	InitCacheSyncDuration       time.Duration
 	ProxyTimeoutSeconds         float32
@@ -172,7 +172,7 @@ func (c *Config) FlagSet() *pflag.FlagSet {
 			`More than 1 URL can be provided, in such case the flag should be used multiple times or a corresponding env variable should use comma delimited addresses.`)
 	flagSet.Var(flags.NewValidatedValue(&c.KongAdminSvc, namespacedNameFromFlagValue, nnTypeNameOverride), "kong-admin-svc",
 		`Kong Admin API Service namespaced name in "namespace/name" format, to use for Kong Gateway service discovery.`)
-	flagSet.StringSliceVar(&c.KondAdminSvcPortNames, "kong-admin-svc-port-names", []string{"admin", "admin-tls", "kong-admin", "kong-admin-tls"},
+	flagSet.StringSliceVar(&c.KongAdminSvcPortNames, "kong-admin-svc-port-names", []string{"admin", "admin-tls", "kong-admin", "kong-admin-tls"},
 		"Names of ports on Kong Admin API service to take into account when doing gateway discovery.")
 	flagSet.Var(flags.NewValidatedValue(&c.GatewayDiscoveryDNSStrategy, dnsStrategyFromFlagValue, flags.WithDefault(cfgtypes.IPDNSStrategy), flags.WithTypeNameOverride[cfgtypes.DNSStrategy]("dns-strategy")),
 		"gateway-discovery-dns-strategy", "DNS strategy to use when creating Gateway's Admin API addresses. One of: ip, service, pod.")

@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1689065716087,
+  "lastUpdate": 1689066971586,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -11946,6 +11946,48 @@ window.BENCHMARK_DATA = {
             "value": 12,
             "unit": "allocs/op",
             "extra": "17546 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "czeslavo@gmail.com",
+            "name": "Grzegorz Burzyński",
+            "username": "czeslavo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "5c4d7d552678acf282f63a69e932c8f1c3a894a4",
+          "message": "refactor: extract adminapi.Discoverer and add tests (#4306)\n\nExtracts adminapi.Discoverer and thanks to that, covers AdminAPIClientFromServiceDiscovery \r\nwith unit tests.",
+          "timestamp": "2023-07-11T11:15:04+02:00",
+          "tree_id": "859f02985f15c6ccb7ab546232416cf4ac4bbfe4",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/5c4d7d552678acf282f63a69e932c8f1c3a894a4"
+        },
+        "date": 1689066966631,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - ns/op",
+            "value": 101922,
+            "unit": "ns/op",
+            "extra": "16341 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - B/op",
+            "value": 11094,
+            "unit": "B/op",
+            "extra": "16341 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - allocs/op",
+            "value": 12,
+            "unit": "allocs/op",
+            "extra": "16341 times\n2 procs"
           }
         ]
       }

@@ -1479,14 +1479,14 @@ func TestIngressRulesWithPriority(t *testing.T) {
 
 	testCases := []struct {
 		name                  string
-		httpRouteWithPriority translators.SplittedHTTPRouteToKongRoutePriority
+		httpRouteWithPriority translators.SplitHTTPRouteToKongRoutePriority
 		expectedKongService   kongstate.Service
 		expectedKongRoute     kongstate.Route
 		expectedError         error
 	}{
 		{
 			name: "no hostname",
-			httpRouteWithPriority: translators.SplittedHTTPRouteToKongRoutePriority{
+			httpRouteWithPriority: translators.SplitHTTPRouteToKongRoutePriority{
 				HTTPRoute: &gatewayv1beta1.HTTPRoute{
 					TypeMeta: httpRouteTypeMeta,
 					ObjectMeta: metav1.ObjectMeta{
@@ -1536,7 +1536,7 @@ func TestIngressRulesWithPriority(t *testing.T) {
 		},
 		{
 			name: "precise hostname and filter",
-			httpRouteWithPriority: translators.SplittedHTTPRouteToKongRoutePriority{
+			httpRouteWithPriority: translators.SplitHTTPRouteToKongRoutePriority{
 				HTTPRoute: &gatewayv1beta1.HTTPRoute{
 					TypeMeta: httpRouteTypeMeta,
 					ObjectMeta: metav1.ObjectMeta{
@@ -1610,7 +1610,7 @@ func TestIngressRulesWithPriority(t *testing.T) {
 		},
 		{
 			name: "wildcard hostname with multiple backends",
-			httpRouteWithPriority: translators.SplittedHTTPRouteToKongRoutePriority{
+			httpRouteWithPriority: translators.SplitHTTPRouteToKongRoutePriority{
 				HTTPRoute: &gatewayv1beta1.HTTPRoute{
 					TypeMeta: httpRouteTypeMeta,
 					ObjectMeta: metav1.ObjectMeta{
@@ -1677,7 +1677,7 @@ func TestIngressRulesWithPriority(t *testing.T) {
 			tc.expectedKongRoute.Ingress = util.FromK8sObject(tc.httpRouteWithPriority.HTTPRoute)
 
 			res := newIngressRules()
-			err := parser.ingressRulesFromSplittedHTTPRouteWithPriority(&res, tc.httpRouteWithPriority)
+			err := parser.ingressRulesFromSplitHTTPRouteWithPriority(&res, tc.httpRouteWithPriority)
 			if tc.expectedError != nil {
 				require.ErrorAs(t, err, tc.expectedError)
 				return

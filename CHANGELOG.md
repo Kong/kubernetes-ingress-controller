@@ -98,10 +98,9 @@ Adding a new version? You'll need three changes:
   method is adopted to keep the compatibility with traditional router on
   maximum effort.
   [#4240](https://github.com/Kong/kubernetes-ingress-controller/pull/4240)
-- Assign priorities to routes translated from HTTPRoutes when parser translate
+- Assign priorities to routes translated from HTTPRoutes when parser translates
   them to expression based Kong routes. The assigning method follows the
-  specification on priorities of matches in `HTTPRoute`.
-  [httproute-specification][httproute-specification]
+  [specification on priorities of matches in `HTTPRoute`][httproute-specification].
   [#4296](https://github.com/Kong/kubernetes-ingress-controller/pull/4296)
 
 ### Changed

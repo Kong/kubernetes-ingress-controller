@@ -32,20 +32,20 @@ func (p *Parser) ingressRulesFromHTTPRoutes() ingressRules {
 	}
 
 	if p.featureFlags.ExpressionRoutes {
-		splittedHTTPRoutes := []*gatewayv1beta1.HTTPRoute{}
+		splitHTTPRoutes := []*gatewayv1beta1.HTTPRoute{}
 		for _, httproute := range httpRouteList {
 			if err := validateHTTPRoute(httproute); err != nil {
 				p.registerTranslationFailure(fmt.Sprintf("HTTPRoute can't be routed: %s", err), httproute)
 				continue
 			}
-			splittedHTTPRoutes = append(splittedHTTPRoutes, translators.SplitHTTPRoute(httproute)...)
+			splitHTTPRoutes = append(splitHTTPRoutes, translators.SplitHTTPRoute(httproute)...)
 		}
 
-		splittedHTTPRoutesWithPriorities := translators.AssignRoutePriorityToSplittedHTTPRoutes(splittedHTTPRoutes)
+		splitHTTPRoutesWithPriorities := translators.AssignRoutePriorityToSplitHTTPRoutes(splitHTTPRoutes)
 		httpRouteNameToTranslationFailure := map[k8stypes.NamespacedName][]error{}
 
-		for _, httpRouteWithPriority := range splittedHTTPRoutesWithPriorities {
-			err := p.ingressRulesFromSplittedHTTPRouteWithPriority(&result, httpRouteWithPriority)
+		for _, httpRouteWithPriority := range splitHTTPRoutesWithPriorities {
+			err := p.ingressRulesFromSplitHTTPRouteWithPriority(&result, httpRouteWithPriority)
 			if err != nil {
 				nsName := k8stypes.NamespacedName{
 					Namespace: httpRouteWithPriority.HTTPRoute.Namespace,
@@ -513,9 +513,9 @@ func httpBackendRefsToBackendRefs(httpBackendRef []gatewayv1beta1.HTTPBackendRef
 	return backendRefs
 }
 
-func (p *Parser) ingressRulesFromSplittedHTTPRouteWithPriority(
+func (p *Parser) ingressRulesFromSplitHTTPRouteWithPriority(
 	rules *ingressRules,
-	httpRouteWithPriority translators.SplittedHTTPRouteToKongRoutePriority,
+	httpRouteWithPriority translators.SplitHTTPRouteToKongRoutePriority,
 ) error {
 	httpRoute := httpRouteWithPriority.HTTPRoute
 	if len(httpRoute.Spec.Rules) == 0 {

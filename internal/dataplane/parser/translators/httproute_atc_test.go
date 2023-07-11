@@ -504,9 +504,9 @@ func TestSplitHTTPRoutes(t *testing.T) {
 	}
 
 	testCases := []struct {
-		name               string
-		httpRoute          *gatewayv1beta1.HTTPRoute
-		splittedHTTPRoutes []*gatewayv1beta1.HTTPRoute
+		name            string
+		httpRoute       *gatewayv1beta1.HTTPRoute
+		splitHTTPRoutes []*gatewayv1beta1.HTTPRoute
 	}{
 		{
 			name: "no hostname and only one match",
@@ -531,7 +531,7 @@ func TestSplitHTTPRoutes(t *testing.T) {
 					},
 				},
 			},
-			splittedHTTPRoutes: []*gatewayv1beta1.HTTPRoute{
+			splitHTTPRoutes: []*gatewayv1beta1.HTTPRoute{
 				{
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: "ns1",
@@ -586,7 +586,7 @@ func TestSplitHTTPRoutes(t *testing.T) {
 					},
 				},
 			},
-			splittedHTTPRoutes: []*gatewayv1beta1.HTTPRoute{
+			splitHTTPRoutes: []*gatewayv1beta1.HTTPRoute{
 				{
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: "ns1",
@@ -694,7 +694,7 @@ func TestSplitHTTPRoutes(t *testing.T) {
 					},
 				},
 			},
-			splittedHTTPRoutes: []*gatewayv1beta1.HTTPRoute{
+			splitHTTPRoutes: []*gatewayv1beta1.HTTPRoute{
 				{
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: "ns1",
@@ -813,16 +813,16 @@ func TestSplitHTTPRoutes(t *testing.T) {
 
 	for _, tc := range testCases {
 		tc := tc
-		splittedHTTPRoutes := SplitHTTPRoute(tc.httpRoute)
-		require.Len(t, splittedHTTPRoutes, len(splittedHTTPRoutes), "should have same number of splitted HTTPRoutes with expected")
-		for i, splittedHTTPRoute := range tc.splittedHTTPRoutes {
-			require.True(t, reflect.DeepEqual(splittedHTTPRoute, splittedHTTPRoutes[i]))
+		splitHTTPRoutes := SplitHTTPRoute(tc.httpRoute)
+		require.Len(t, splitHTTPRoutes, len(splitHTTPRoutes), "should have same number of split HTTPRoutes with expected")
+		for i, splitHTTPRoute := range tc.splitHTTPRoutes {
+			require.True(t, reflect.DeepEqual(splitHTTPRoute, splitHTTPRoutes[i]))
 		}
 	}
 }
 
-func TestAssignRoutePriorityToSplittedHTTPRoutes(t *testing.T) {
-	type splittedHTTPRouteIndex struct {
+func TestAssignRoutePriorityToSplitHTTPRoutes(t *testing.T) {
+	type splitHTTPRouteIndex struct {
 		namespace  string
 		name       string
 		hostname   string
@@ -831,14 +831,14 @@ func TestAssignRoutePriorityToSplittedHTTPRoutes(t *testing.T) {
 	}
 	now := time.Now()
 	testCases := []struct {
-		name               string
-		splittedHTTPRoutes []*gatewayv1beta1.HTTPRoute
+		name            string
+		splitHTTPRoutes []*gatewayv1beta1.HTTPRoute
 		// HTTPRoute index -> priority
-		priorities map[splittedHTTPRouteIndex]int
+		priorities map[splitHTTPRouteIndex]int
 	}{
 		{
 			name: "no dupelicated fixed priority",
-			splittedHTTPRoutes: []*gatewayv1beta1.HTTPRoute{
+			splitHTTPRoutes: []*gatewayv1beta1.HTTPRoute{
 				{
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: "default",
@@ -882,7 +882,7 @@ func TestAssignRoutePriorityToSplittedHTTPRoutes(t *testing.T) {
 					},
 				},
 			},
-			priorities: map[splittedHTTPRouteIndex]int{
+			priorities: map[splitHTTPRouteIndex]int{
 				{
 					namespace:  "default",
 					name:       "httproute-1",
@@ -901,7 +901,7 @@ func TestAssignRoutePriorityToSplittedHTTPRoutes(t *testing.T) {
 		},
 		{
 			name: "break tie by creation timestamp",
-			splittedHTTPRoutes: []*gatewayv1beta1.HTTPRoute{
+			splitHTTPRoutes: []*gatewayv1beta1.HTTPRoute{
 				{
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: "default",
@@ -945,7 +945,7 @@ func TestAssignRoutePriorityToSplittedHTTPRoutes(t *testing.T) {
 					},
 				},
 			},
-			priorities: map[splittedHTTPRouteIndex]int{
+			priorities: map[splitHTTPRouteIndex]int{
 				{
 					namespace:  "default",
 					name:       "httproute-1",
@@ -964,7 +964,7 @@ func TestAssignRoutePriorityToSplittedHTTPRoutes(t *testing.T) {
 		},
 		{
 			name: "break tie namespace and name",
-			splittedHTTPRoutes: []*gatewayv1beta1.HTTPRoute{
+			splitHTTPRoutes: []*gatewayv1beta1.HTTPRoute{
 				{
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: "default",
@@ -1008,7 +1008,7 @@ func TestAssignRoutePriorityToSplittedHTTPRoutes(t *testing.T) {
 					},
 				},
 			},
-			priorities: map[splittedHTTPRouteIndex]int{
+			priorities: map[splitHTTPRouteIndex]int{
 				{
 					namespace:  "default",
 					name:       "httproute-1",
@@ -1027,7 +1027,7 @@ func TestAssignRoutePriorityToSplittedHTTPRoutes(t *testing.T) {
 		},
 		{
 			name: "break tie by internal match index",
-			splittedHTTPRoutes: []*gatewayv1beta1.HTTPRoute{
+			splitHTTPRoutes: []*gatewayv1beta1.HTTPRoute{
 				{
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: "default",
@@ -1071,7 +1071,7 @@ func TestAssignRoutePriorityToSplittedHTTPRoutes(t *testing.T) {
 					},
 				},
 			},
-			priorities: map[splittedHTTPRouteIndex]int{
+			priorities: map[splitHTTPRouteIndex]int{
 				{
 					namespace:  "default",
 					name:       "httproute-1",
@@ -1093,15 +1093,15 @@ func TestAssignRoutePriorityToSplittedHTTPRoutes(t *testing.T) {
 	for _, tc := range testCases {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
-			splittedHTTPRoutesWithPriorities := AssignRoutePriorityToSplittedHTTPRoutes(tc.splittedHTTPRoutes)
-			for _, r := range splittedHTTPRoutesWithPriorities {
+			splitHTTPRoutesWithPriorities := AssignRoutePriorityToSplitHTTPRoutes(tc.splitHTTPRoutes)
+			for _, r := range splitHTTPRoutesWithPriorities {
 				httpRoute := r.HTTPRoute
 				ruleIndex, err := strconv.Atoi(httpRoute.Annotations[InternalRuleIndexAnnotationKey])
 				require.NoError(t, err)
 				matchIndex, err := strconv.Atoi(httpRoute.Annotations[InternalMatchIndexAnnotationKey])
 				require.NoError(t, err)
 
-				require.Equalf(t, tc.priorities[splittedHTTPRouteIndex{
+				require.Equalf(t, tc.priorities[splitHTTPRouteIndex{
 					namespace:  httpRoute.Namespace,
 					name:       httpRoute.Name,
 					hostname:   string(httpRoute.Spec.Hostnames[0]),

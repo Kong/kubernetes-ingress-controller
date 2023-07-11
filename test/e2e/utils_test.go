@@ -27,7 +27,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"sigs.k8s.io/yaml"
 )
 
 const (
@@ -432,48 +431,12 @@ func getPodLogs(
 	return string(out), nil
 }
 
-// stripCRDs removes every CustomResourceDefinition from the manifest.
-func stripCRDs(t *testing.T, manifest io.Reader) io.Reader {
-	const sep = "---\n"
-
-	in, err := io.ReadAll(manifest)
-	require.NoError(t, err)
-
-	var filteredObjs [][]byte
-	for _, objYaml := range bytes.Split(in, []byte(sep)) {
-		var obj struct {
-			Kind string `yaml:"kind"`
-		}
-		err = yaml.Unmarshal(objYaml, &obj)
-		require.NoError(t, err)
-
-		if obj.Kind == "CustomResourceDefinition" {
-			continue
-		}
-
-		filteredObjs = append(filteredObjs, objYaml)
-	}
-
-	outBytes := bytes.Join(filteredObjs, []byte(sep))
-	return bytes.NewReader(outBytes)
-}
-
 // containerDidntCrash evaluates whether a container with a given containerName did not restart.
 // In case name=containerName is not found in pod's containers, returns false.
 func containerDidntCrash(pod corev1.Pod, containerName string) bool {
 	for _, containerStatus := range pod.Status.ContainerStatuses {
 		if containerStatus.Name == containerName {
 			return containerStatus.RestartCount == 0
-		}
-	}
-	return false
-}
-
-// isPodReady evaluates whether a pod is in Ready state.
-func isPodReady(pod corev1.Pod) bool {
-	for _, condition := range pod.Status.Conditions {
-		if condition.Type == corev1.PodReady {
-			return condition.Status == corev1.ConditionTrue
 		}
 	}
 	return false

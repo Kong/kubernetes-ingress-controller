@@ -23,15 +23,12 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
-	kongv1alpha1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1alpha1"
-	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1beta1"
 	"github.com/kong/kubernetes-ingress-controller/v2/pkg/clientset"
 	"github.com/kong/kubernetes-ingress-controller/v2/test"
 	"github.com/kong/kubernetes-ingress-controller/v2/test/consts"
@@ -583,110 +580,4 @@ func TestDefaultIngressClass(t *testing.T) {
 		}
 		return false
 	}, ingressWait, time.Second)
-}
-
-// TestMissingCRDsDontCrashTheController ensures that in case of missing CRDs installation in the cluster, specific
-// controllers are disabled, this fact is properly logged, and the controller doesn't crash.
-func TestMissingCRDsDontCrashTheController(t *testing.T) {
-	t.Parallel()
-	ctx, env := setupE2ETest(t)
-
-	t.Log("deploying kong components")
-	manifest := getDBLessTestManifestByControllerImageEnv(t)
-
-	manifest = stripCRDs(t, manifest)
-
-	// reducing controllers' cache synchronisation timeout in order to trigger the possible process crash quicker
-	cacheSyncTimeout := time.Second
-	var err error
-	manifest, err = addControllerEnv(manifest, "CONTROLLER_CACHE_SYNC_TIMEOUT", cacheSyncTimeout.String())
-	require.NoError(t, err)
-
-	deployKong(ctx, t, env, manifest)
-	deployment := getManifestDeployments(dblessPath).ControllerNN
-
-	t.Log("ensuring pod's ready and controller didn't crash")
-	require.Never(t, func() bool {
-		pods, err := env.Cluster().Client().CoreV1().Pods(deployment.Namespace).List(ctx, metav1.ListOptions{
-			LabelSelector: fmt.Sprintf("app=%s", deployment.Name),
-		})
-		if err != nil || len(pods.Items) == 0 {
-			return true
-		}
-
-		pod := pods.Items[0]
-		if !containerDidntCrash(pod, controllerContainerName) {
-			t.Log("controller crashed")
-			return true
-		}
-
-		if !isPodReady(pod) {
-			t.Log("pod is not ready")
-			return true
-		}
-
-		return false
-	}, cacheSyncTimeout+time.Second*5, time.Second)
-
-	t.Log("waiting for pod to output required logs")
-	require.Eventually(t, func() bool {
-		pods, err := env.Cluster().Client().CoreV1().Pods(deployment.Namespace).List(ctx, metav1.ListOptions{
-			LabelSelector: fmt.Sprintf("app=%s", deployment.Name),
-		})
-		if err != nil || len(pods.Items) == 0 {
-			return false
-		}
-
-		podName := pods.Items[0].Name
-		logs, err := getPodLogs(ctx, t, env, deployment.Namespace, podName)
-		if err != nil {
-			return false
-		}
-
-		gvrs := []schema.GroupVersionResource{
-			{
-				Group:    kongv1beta1.GroupVersion.Group,
-				Version:  kongv1beta1.GroupVersion.Version,
-				Resource: "udpingresses",
-			},
-			{
-				Group:    kongv1beta1.GroupVersion.Group,
-				Version:  kongv1beta1.GroupVersion.Version,
-				Resource: "tcpingresses",
-			},
-			{
-				Group:    kongv1.GroupVersion.Group,
-				Version:  kongv1.GroupVersion.Version,
-				Resource: "kongingresses",
-			},
-			{
-				Group:    kongv1alpha1.GroupVersion.Group,
-				Version:  kongv1alpha1.GroupVersion.Version,
-				Resource: "ingressclassparameterses",
-			},
-			{
-				Group:    kongv1.GroupVersion.Group,
-				Version:  kongv1.GroupVersion.Version,
-				Resource: "kongplugins",
-			},
-			{
-				Group:    kongv1.GroupVersion.Group,
-				Version:  kongv1.GroupVersion.Version,
-				Resource: "kongconsumers",
-			},
-			{
-				Group:    kongv1.GroupVersion.Group,
-				Version:  kongv1.GroupVersion.Version,
-				Resource: "kongclusterplugins",
-			},
-		}
-
-		for _, gvr := range gvrs {
-			if !strings.Contains(logs, fmt.Sprintf("Disabling controller for Group=%s, Resource=%s due to missing CRD", gvr.GroupVersion(), gvr.Resource)) {
-				return false
-			}
-		}
-
-		return true
-	}, time.Minute, time.Second)
 }

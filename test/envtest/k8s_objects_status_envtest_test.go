@@ -7,16 +7,18 @@ import (
 	"testing"
 	"time"
 
+	"github.com/bombsimon/logrusr/v2"
 	"github.com/google/uuid"
 	"github.com/samber/lo"
 	"github.com/samber/mo"
-	"github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus/hooks/test"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
@@ -116,7 +118,13 @@ const publishSvcName = "publish-svc"
 
 // runManagerWithConfig runs the manager in a goroutine using configuration modified by modifyCfgFn.
 // It also sets up configuration parameters that are required for the Gateway API to work as expected.
-func runManagerWithConfig(ctx context.Context, t *testing.T, envcfg *rest.Config, gw gatewayv1beta1.Gateway, modifyCfgFn func(cfg *manager.Config)) {
+func runManagerWithConfig(
+	ctx context.Context,
+	t *testing.T,
+	envcfg *rest.Config,
+	gw gatewayv1beta1.Gateway,
+	modifyCfgFn func(cfg *manager.Config),
+) (loggerHook *test.Hook) {
 	cfg := ConfigForEnvConfig(t, envcfg)
 
 	cfg.PublishStatusAddress = []string{"127.0.0.1"}
@@ -127,12 +135,20 @@ func runManagerWithConfig(ctx context.Context, t *testing.T, envcfg *rest.Config
 	cfg.FeatureGates[featuregates.GatewayFeature] = true
 	cfg.FeatureGates[featuregates.GatewayAlphaFeature] = true
 
-	modifyCfgFn(&cfg)
+	if modifyCfgFn != nil {
+		modifyCfgFn(&cfg)
+	}
+
+	logrusLogger, loggerHook := test.NewNullLogger()
+	logger := logrusr.New(logrusLogger)
+	ctrl.SetLogger(logger)
 
 	go func() {
-		err := manager.Run(ctx, &cfg, util.ConfigDumpDiagnostic{}, logrus.New())
+		err := manager.Run(ctx, &cfg, util.ConfigDumpDiagnostic{}, logrusLogger)
 		require.NoError(t, err)
 	}()
+
+	return loggerHook
 }
 
 // deployGateway deploys a Gateway, GatewayClass, and publish Service for use in tests.

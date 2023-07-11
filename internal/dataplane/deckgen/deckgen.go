@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	gojson "github.com/goccy/go-json"
+	"github.com/google/go-cmp/cmp"
 	"github.com/kong/deck/file"
 	"github.com/kong/go-kong/kong"
 )
@@ -105,4 +106,18 @@ func PluginString(plugin file.FPlugin) string {
 		result += *plugin.Service.ID
 	}
 	return result
+}
+
+// IsContentEmpty returns true if the content is considered empty.
+// This ignores meta fields like FormatVersion and Info.
+func IsContentEmpty(content *file.Content) bool {
+	return cmp.Equal(content, &file.Content{},
+		cmp.FilterPath(
+			func(p cmp.Path) bool {
+				path := p.String()
+				return path == "FormatVersion" || path == "Info"
+			},
+			cmp.Ignore(),
+		),
+	)
 }

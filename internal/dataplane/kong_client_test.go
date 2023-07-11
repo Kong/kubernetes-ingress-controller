@@ -26,6 +26,7 @@ import (
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/adminapi"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/clients"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/deckgen"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/failures"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/parser"
@@ -146,6 +147,7 @@ func (f mockGatewayClientsProvider) GatewayClients() []*adminapi.Client {
 // mockUpdateStrategy is a mock implementation of sendconfig.UpdateStrategyResolver.
 type mockUpdateStrategyResolver struct {
 	updateCalledForURLs       []string
+	lastUpdatedContentForURLs map[string]sendconfig.ContentWithHash
 	shouldReturnErrorOnUpdate map[string]struct{}
 	t                         *testing.T
 	lock                      sync.RWMutex
@@ -156,6 +158,7 @@ func newMockUpdateStrategyResolver(t *testing.T) *mockUpdateStrategyResolver {
 	return &mockUpdateStrategyResolver{
 		t:                         t,
 		shouldReturnErrorOnUpdate: map[string]struct{}{},
+		lastUpdatedContentForURLs: map[string]sendconfig.ContentWithHash{},
 	}
 }
 
@@ -181,8 +184,8 @@ func (f *mockUpdateStrategyResolver) returnErrorOnUpdate(url string, shouldRetur
 
 // updateCalledForURLCallback returns a function that will be called when the mockUpdateStrategy is called.
 // That enables us to track which URLs were called.
-func (f *mockUpdateStrategyResolver) updateCalledForURLCallback(url string, singleError bool) func() error {
-	return func() error {
+func (f *mockUpdateStrategyResolver) updateCalledForURLCallback(url string, singleError bool) func(sendconfig.ContentWithHash) error {
+	return func(content sendconfig.ContentWithHash) error {
 		f.lock.Lock()
 		defer f.lock.Unlock()
 
@@ -193,6 +196,8 @@ func (f *mockUpdateStrategyResolver) updateCalledForURLCallback(url string, sing
 			}
 			return errors.New("error on update")
 		}
+		f.lastUpdatedContentForURLs[url] = content
+
 		return nil
 	}
 }
@@ -212,17 +217,24 @@ func (f *mockUpdateStrategyResolver) assertNoUpdateCalled() {
 	require.Empty(f.t, f.updateCalledForURLs, "update was called")
 }
 
-// mockUpdateStrategy is a mock implementation of sendconfig.UpdateStrategy.
-type mockUpdateStrategy struct {
-	onUpdate func() error
+func (f *mockUpdateStrategyResolver) lastUpdatedContentForURL(url string) (sendconfig.ContentWithHash, bool) {
+	f.lock.RLock()
+	defer f.lock.RUnlock()
+	c, ok := f.lastUpdatedContentForURLs[url]
+	return c, ok
 }
 
-func (m *mockUpdateStrategy) Update(context.Context, sendconfig.ContentWithHash) (
+// mockUpdateStrategy is a mock implementation of sendconfig.UpdateStrategy.
+type mockUpdateStrategy struct {
+	onUpdate func(content sendconfig.ContentWithHash) error
+}
+
+func (m *mockUpdateStrategy) Update(_ context.Context, content sendconfig.ContentWithHash) (
 	err error,
 	resourceErrors []sendconfig.ResourceError,
 	resourceErrorsParseErr error,
 ) {
-	err = m.onUpdate()
+	err = m.onUpdate(content)
 	return err, nil, nil
 }
 
@@ -663,6 +675,60 @@ func TestKongClient_ApplyConfigurationEvents(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestKongClient_EmptyConfigUpdate(t *testing.T) {
+	var (
+		ctx               = context.Background()
+		testKonnectClient = mustSampleKonnectClient(t)
+		testGatewayClient = mustSampleGatewayClient(t)
+
+		clientsProvider = mockGatewayClientsProvider{
+			gatewayClients: []*adminapi.Client{testGatewayClient},
+			konnectClient:  testKonnectClient,
+		}
+
+		updateStrategyResolver = newMockUpdateStrategyResolver(t)
+		configChangeDetector   = mockConfigurationChangeDetector{hasConfigurationChanged: true}
+		configBuilder          = newMockKongConfigBuilder()
+		kongClient             = setupTestKongClient(t, updateStrategyResolver, clientsProvider, configChangeDetector, configBuilder, nil, nil)
+	)
+
+	t.Run("dbless", func(t *testing.T) {
+		kongClient.kongConfig.InMemory = true
+		err := kongClient.Update(ctx)
+		require.NoError(t, err)
+
+		gwContent, ok := updateStrategyResolver.lastUpdatedContentForURL(testGatewayClient.BaseRootURL())
+		require.True(t, ok)
+		assert.Equal(t, gwContent.Content, &file.Content{
+			Upstreams: []file.FUpstream{
+				{
+					Upstream: gokong.Upstream{
+						Name: lo.ToPtr(deckgen.StubUpstreamName),
+					},
+				},
+			},
+		}, "gateway content should have appended stub upstream")
+
+		konnectContent, ok := updateStrategyResolver.lastUpdatedContentForURL(testKonnectClient.BaseRootURL())
+		require.True(t, ok)
+		assert.Equal(t, konnectContent.Content, &file.Content{}, "konnect content should be empty")
+	})
+
+	t.Run("db", func(t *testing.T) {
+		kongClient.kongConfig.InMemory = false
+		err := kongClient.Update(ctx)
+		require.NoError(t, err)
+
+		gwContent, ok := updateStrategyResolver.lastUpdatedContentForURL(testGatewayClient.BaseRootURL())
+		require.True(t, ok)
+		assert.Equal(t, gwContent.Content, &file.Content{}, "gateway content should be empty")
+
+		konnectContent, ok := updateStrategyResolver.lastUpdatedContentForURL(testKonnectClient.BaseRootURL())
+		require.True(t, ok)
+		assert.Equal(t, konnectContent.Content, &file.Content{}, "konnect content should be empty")
+	})
 }
 
 // setupTestKongClient creates a KongClient with mocked dependencies.

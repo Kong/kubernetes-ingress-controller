@@ -1,11 +1,14 @@
-package deckgen
+package deckgen_test
 
 import (
 	"encoding/json"
 	"testing"
 
 	"github.com/kong/deck/file"
+	"github.com/kong/go-kong/kong"
 	"github.com/stretchr/testify/require"
+
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/deckgen"
 )
 
 func BenchmarkDeckgenGenerateSHA(b *testing.B) {
@@ -14,7 +17,7 @@ func BenchmarkDeckgenGenerateSHA(b *testing.B) {
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		bb, err := GenerateSHA(&targetContent)
+		bb, err := deckgen.GenerateSHA(&targetContent)
 		require.NoError(b, err)
 		_ = bb
 	}
@@ -292,3 +295,47 @@ const configJSON = `{
 		}
 	]
 }`
+
+func TestIsContentEmpty(t *testing.T) {
+	testCases := []struct {
+		name    string
+		content *file.Content
+		want    bool
+	}{
+		{
+			name: "non-empty content",
+			content: &file.Content{
+				Upstreams: []file.FUpstream{
+					{
+						Upstream: kong.Upstream{
+							Name: kong.String("test"),
+						},
+					},
+				},
+			},
+			want: false,
+		},
+		{
+			name:    "empty content",
+			content: &file.Content{},
+			want:    true,
+		},
+		{
+			name: "empty with version and info",
+			content: &file.Content{
+				FormatVersion: "1.1",
+				Info: &file.Info{
+					SelectorTags: []string{"tag1", "tag2"},
+				},
+			},
+			want: true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			got := deckgen.IsContentEmpty(tc.content)
+			require.Equal(t, tc.want, got)
+		})
+	}
+}

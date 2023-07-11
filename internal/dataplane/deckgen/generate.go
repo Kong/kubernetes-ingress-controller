@@ -8,10 +8,14 @@ import (
 
 	"github.com/kong/deck/file"
 	"github.com/kong/go-kong/kong"
+	"github.com/samber/lo"
 	"github.com/sirupsen/logrus"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
 )
+
+// StubUpstreamName is a name of a stub upstream that is created when the configuration is empty.
+const StubUpstreamName = "kong"
 
 type PluginSchemaStore interface {
 	Schema(ctx context.Context, pluginName string) (map[string]interface{}, error)
@@ -23,6 +27,11 @@ type GenerateDeckContentParams struct {
 	SelectorTags     []string
 	ExpressionRoutes bool
 	PluginSchemas    PluginSchemaStore
+
+	// AppendStubEntityWhenConfigEmpty indicates whether to append a stub entity to the configuration when
+	// the configuration is empty. It is used to workaround behavior in Kong where sending an empty configuration
+	// does not make its `GET /status/ready` endpoint return 200s.
+	AppendStubEntityWhenConfigEmpty bool
 }
 
 // ToDeckContent generates a decK configuration from `k8sState` and auxiliary parameters.
@@ -181,6 +190,14 @@ func ToDeckContent(
 		content.Info = &file.Info{
 			SelectorTags: params.SelectorTags,
 		}
+	}
+
+	if params.AppendStubEntityWhenConfigEmpty && IsContentEmpty(&content) {
+		content.Upstreams = append(content.Upstreams, file.FUpstream{
+			Upstream: kong.Upstream{
+				Name: lo.ToPtr(StubUpstreamName),
+			},
+		})
 	}
 
 	return &content

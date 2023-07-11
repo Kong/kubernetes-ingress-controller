@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1689104762001,
+  "lastUpdate": 1689104764293,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -13332,6 +13332,48 @@ window.BENCHMARK_DATA = {
             "value": 12,
             "unit": "allocs/op",
             "extra": "13090 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "patryk.malek@konghq.com",
+            "name": "Patryk Małek",
+            "username": "pmalek"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "637539b7c2138ed8132b124b193a9db65e4495cb",
+          "message": "chore(docs): remove bit.ly link from README.md (#4320)",
+          "timestamp": "2023-07-11T19:44:48Z",
+          "tree_id": "be51f7de33fa9f544ef5818b915a62e8a6f06233",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/637539b7c2138ed8132b124b193a9db65e4495cb"
+        },
+        "date": 1689104755701,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - ns/op",
+            "value": 75004,
+            "unit": "ns/op",
+            "extra": "15445 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - B/op",
+            "value": 11094,
+            "unit": "B/op",
+            "extra": "15445 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - allocs/op",
+            "value": 12,
+            "unit": "allocs/op",
+            "extra": "15445 times\n2 procs"
           }
         ]
       },

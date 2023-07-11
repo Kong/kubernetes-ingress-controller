@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1689073071365,
+  "lastUpdate": 1689073072878,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -12072,6 +12072,48 @@ window.BENCHMARK_DATA = {
             "value": 12,
             "unit": "allocs/op",
             "extra": "17383 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "tao.yi@konghq.com",
+            "name": "Tao Yi",
+            "username": "randmonkey"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "83af617d8af8907e7d3d507dcca769853a2b764a",
+          "message": "chore(release): clarify what is a latest release (#4314)\n\n* clarify what is a latest release\r\n\r\n* Update .github/ISSUE_TEMPLATE/release.yaml\r\n\r\nCo-authored-by: Patryk Małek <patryk.malek@konghq.com>\r\n\r\n---------\r\n\r\nCo-authored-by: Patryk Małek <patryk.malek@konghq.com>",
+          "timestamp": "2023-07-11T12:56:36+02:00",
+          "tree_id": "e6ab37a46b3cb240d3f27d3e062ca43d057bf498",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/83af617d8af8907e7d3d507dcca769853a2b764a"
+        },
+        "date": 1689073066404,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - ns/op",
+            "value": 88585,
+            "unit": "ns/op",
+            "extra": "13258 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - B/op",
+            "value": 11095,
+            "unit": "B/op",
+            "extra": "13258 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - allocs/op",
+            "value": 12,
+            "unit": "allocs/op",
+            "extra": "13258 times\n2 procs"
           }
         ]
       },

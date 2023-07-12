@@ -3,6 +3,7 @@ package konnect_test
 import (
 	"context"
 	"sync"
+	"sync/atomic"
 
 	"github.com/google/uuid"
 	"github.com/samber/lo"
@@ -15,6 +16,7 @@ type mockNodeClient struct {
 	nodes                    map[string]*nodes.NodeItem
 	returnErrorFromListNodes bool
 	wasListAllNodesCalled    bool
+	nodeUpdatesCount         atomic.Int32
 	lock                     sync.RWMutex
 }
 
@@ -69,6 +71,7 @@ func (m *mockNodeClient) ListAllNodes(_ context.Context) ([]*nodes.NodeItem, err
 func (m *mockNodeClient) upsertNode(node *nodes.NodeItem) *nodes.NodeItem {
 	m.lock.Lock()
 	defer m.lock.Unlock()
+	m.nodeUpdatesCount.Add(1)
 
 	if node.ID == "" {
 		node.ID = uuid.New().String()
@@ -95,4 +98,8 @@ func (m *mockNodeClient) ReturnErrorFromListAllNodes(v bool) {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 	m.returnErrorFromListNodes = v
+}
+
+func (m *mockNodeClient) NodesUpdatesCount() int {
+	return int(m.nodeUpdatesCount.Load())
 }

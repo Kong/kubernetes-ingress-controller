@@ -119,6 +119,13 @@ Adding a new version? You'll need three changes:
   time but be aware that your mileage may vary).
   [#4222](https://github.com/Kong/kubernetes-ingress-controller/pull/4222)
 
+### Fixed
+
+- Nodes in Konnect Runtime Groups API are not updated every 3s anymore.
+  This was caused by a bug in `NodeAgent` that was sending the updates
+  despite the fact that the configuration status was not changed.
+  [#4324](https://github.com/Kong/kubernetes-ingress-controller/pull/4324)
+
 [gojson]: https://github.com/goccy/go-json
 
 ## [2.10.2]

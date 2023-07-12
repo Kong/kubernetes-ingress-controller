@@ -355,19 +355,26 @@ func TestKongClientUpdate_WhenNoChangeInConfigNoClientGetsCalled(t *testing.T) {
 }
 
 type mockConfigStatusQueue struct {
-	wasNotified bool
+	notifications []clients.ConfigStatus
+	lock          sync.RWMutex
 }
 
 func newMockConfigStatusQueue() *mockConfigStatusQueue {
 	return &mockConfigStatusQueue{}
 }
 
-func (m *mockConfigStatusQueue) NotifyConfigStatus(context.Context, clients.ConfigStatus) {
-	m.wasNotified = true
+func (m *mockConfigStatusQueue) NotifyConfigStatus(_ context.Context, status clients.ConfigStatus) {
+	m.lock.Lock()
+	defer m.lock.Unlock()
+	m.notifications = append(m.notifications, status)
 }
 
-func (m *mockConfigStatusQueue) WasNotified() bool {
-	return m.wasNotified
+func (m *mockConfigStatusQueue) Notifications() []clients.ConfigStatus {
+	m.lock.RLock()
+	defer m.lock.RUnlock()
+	copied := make([]clients.ConfigStatus, len(m.notifications))
+	copy(copied, m.notifications)
+	return copied
 }
 
 type mockKongConfigBuilder struct {
@@ -406,7 +413,7 @@ func (p *mockKongConfigBuilder) returnTranslationFailures(enabled bool) {
 	}
 }
 
-func TestKongClientUpdate_ConfigStatusIsAlwaysNotified(t *testing.T) {
+func TestKongClientUpdate_ConfigStatusIsNotified(t *testing.T) {
 	var (
 		ctx               = context.Background()
 		testKonnectClient = mustSampleKonnectClient(t)
@@ -428,42 +435,49 @@ func TestKongClientUpdate_ConfigStatusIsAlwaysNotified(t *testing.T) {
 		gatewayFailure      bool
 		konnectFailure      bool
 		translationFailures bool
+		expectedStatus      clients.ConfigStatus
 	}{
 		{
 			name:                "success",
 			gatewayFailure:      false,
 			konnectFailure:      false,
 			translationFailures: false,
+			expectedStatus:      clients.ConfigStatusOK,
 		},
 		{
 			name:                "gateway failure",
 			gatewayFailure:      true,
 			konnectFailure:      false,
 			translationFailures: false,
+			expectedStatus:      clients.ConfigStatusApplyFailed,
 		},
 		{
 			name:                "translation failures",
 			gatewayFailure:      false,
 			konnectFailure:      false,
 			translationFailures: true,
+			expectedStatus:      clients.ConfigStatusTranslationErrorHappened,
 		},
 		{
 			name:                "konnect failure",
 			gatewayFailure:      false,
 			konnectFailure:      true,
 			translationFailures: false,
+			expectedStatus:      clients.ConfigStatusOKKonnectApplyFailed,
 		},
 		{
 			name:                "both gateway and konnect failure",
 			gatewayFailure:      true,
 			konnectFailure:      true,
 			translationFailures: false,
+			expectedStatus:      clients.ConfigStatusApplyFailedKonnectApplyFailed,
 		},
 		{
 			name:                "translation failures and konnect failure",
 			gatewayFailure:      false,
 			konnectFailure:      true,
 			translationFailures: true,
+			expectedStatus:      clients.ConfigStatusTranslationErrorHappenedKonnectApplyFailed,
 		},
 	}
 
@@ -478,7 +492,13 @@ func TestKongClientUpdate_ConfigStatusIsAlwaysNotified(t *testing.T) {
 			configBuilder.returnTranslationFailures(tc.translationFailures)
 
 			_ = kongClient.Update(ctx)
-			require.True(t, statusQueue.WasNotified())
+			notifications := statusQueue.Notifications()
+			require.Len(t, notifications, 1)
+			require.Equal(t, tc.expectedStatus, notifications[0])
+
+			_ = kongClient.Update(ctx)
+			notifications = statusQueue.Notifications()
+			require.Len(t, notifications, 1, "no new notification should be sent if the status hasn't changed")
 		})
 	}
 }

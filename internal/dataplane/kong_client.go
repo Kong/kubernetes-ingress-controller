@@ -131,6 +131,9 @@ type KongClient struct {
 
 	// kongConfigBuilder is used to translate Kubernetes objects into Kong configuration.
 	kongConfigBuilder KongConfigBuilder
+
+	// currentConfigStatus is the current status of the configuration synchronisation.
+	currentConfigStatus clients.ConfigStatus
 }
 
 // NewKongClient provides a new KongClient object after connecting to the
@@ -375,8 +378,8 @@ func (c *KongClient) Update(ctx context.Context) error {
 	konnectSyncErr := c.maybeSendOutToKonnectClient(ctx, parsingResult.KongState, c.kongConfig)
 
 	// Taking into account the results of syncing configuration with Gateways and Konnect, and potential translation
-	// failures, calculate the config status and report it.
-	c.configStatusNotifier.NotifyConfigStatus(ctx, clients.CalculateConfigStatus(
+	// failures, calculate the config status and update it.
+	c.updateConfigStatus(ctx, clients.CalculateConfigStatus(
 		clients.CalculateConfigStatusInput{
 			GatewaysFailed:              gatewaysSyncErr != nil,
 			KonnectFailed:               konnectSyncErr != nil,
@@ -456,21 +459,14 @@ func (c *KongClient) sendToClient(
 ) (string, error) {
 	logger := c.logger.WithField("url", client.AdminAPIClient().BaseRootURL())
 
-	// generate the deck configuration to be applied to the admin API
 	deckGenParams := deckgen.GenerateDeckContentParams{
 		FormatVersion:    config.DeckFileFormatVersion,
 		SelectorTags:     config.FilterTags,
 		ExpressionRoutes: config.ExpressionRoutes,
 		PluginSchemas:    client.PluginSchemaStore(),
 	}
-	logger.Debug("converting configuration to deck config")
-	targetConfig := deckgen.ToDeckContent(ctx,
-		logger,
-		s,
-		deckGenParams,
-	)
-
-	sendDiagnostic := prepareSendDiagnosticFn(ctx, logger, c.diagnostic, s, targetConfig, deckGenParams)
+	targetContent := deckgen.ToDeckContent(ctx, logger, s, deckGenParams)
+	sendDiagnostic := prepareSendDiagnosticFn(ctx, logger, c.diagnostic, s, targetContent, deckGenParams)
 
 	// apply the configuration update in Kong
 	timedCtx, cancel := context.WithTimeout(ctx, c.requestTimeout)
@@ -480,7 +476,7 @@ func (c *KongClient) sendToClient(
 		logger,
 		client,
 		config,
-		targetConfig,
+		targetContent,
 		c.prometheusMetrics,
 		c.updateStrategyResolver,
 		c.configChangeDetector,
@@ -650,4 +646,18 @@ func (c *KongClient) recordApplyConfigurationEvents(err error, rootURL string) {
 		},
 	}
 	c.eventRecorder.Event(pod, eventType, reason, message)
+}
+
+// updateConfigStatus updates the current config status and notifies about the change. It is a no-op if the status
+// hasn't changed.
+func (c *KongClient) updateConfigStatus(ctx context.Context, configStatus clients.ConfigStatus) {
+	if c.currentConfigStatus == configStatus {
+		// No change in config status, nothing to do.
+		c.logger.Debug("no change in config status, not notifying")
+		return
+	}
+
+	c.logger.WithField("configStatus", configStatus).Debug("config status changed, notifying")
+	c.currentConfigStatus = configStatus
+	c.configStatusNotifier.NotifyConfigStatus(ctx, configStatus)
 }

@@ -15,6 +15,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/clients"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/konnect"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/konnect/nodes"
+	"github.com/kong/kubernetes-ingress-controller/v2/test/mocks"
 )
 
 const (
@@ -417,6 +418,7 @@ func TestNodeAgent_ControllerNodeStatusGetsUpdatedOnStatusNotification(t *testin
 		},
 	}
 
+	expectedNodesUpdatesCount := 0
 	for _, tc := range testCases {
 		t.Run(fmt.Sprint(tc.notifiedConfigStatus), func(t *testing.T) {
 			configStatusQueue.Notify(tc.notifiedConfigStatus)
@@ -437,8 +439,114 @@ func TestNodeAgent_ControllerNodeStatusGetsUpdatedOnStatusNotification(t *testin
 
 				return true
 			}, time.Second, time.Millisecond)
+
+			expectedNodesUpdatesCount++
+			require.Equal(t, expectedNodesUpdatesCount, nodeClient.NodesUpdatesCount(), "expected only one more node update")
 		})
 	}
+}
+
+func TestNodeAgent_ControllerNodeStatusGetsUpdatedOnlyWhenItChanges(t *testing.T) {
+	nodeClient := newMockNodeClient(nil)
+	configStatusQueue := newMockConfigStatusNotifier()
+	gatewayClientsChangesNotifier := newMockGatewayClientsNotifier()
+
+	nodeAgent := konnect.NewNodeAgent(
+		testHostname,
+		testKicVersion,
+		konnect.DefaultRefreshNodePeriod,
+		logr.Discard(),
+		nodeClient,
+		configStatusQueue,
+		newMockGatewayInstanceGetter(nil),
+		gatewayClientsChangesNotifier,
+		newMockManagerInstanceIDProvider(uuid.New()),
+	)
+
+	runAgent(t, nodeAgent)
+
+	// We'll use these two to toggle between when we want to trigger an update.
+	statusOne := clients.ConfigStatusOK
+	statusTwo := clients.ConfigStatusTranslationErrorHappened
+
+	nodesUpdatesCountEventuallyEquals := func(count int) {
+		require.Eventually(t, func() bool {
+			return nodeClient.NodesUpdatesCount() == count
+		}, time.Second, time.Millisecond)
+	}
+
+	// Notify the first status and wait for the node to be updated.
+	configStatusQueue.Notify(statusOne)
+	nodesUpdatesCountEventuallyEquals(1)
+
+	// Notify the same status again and ensure that the node wasn't updated.
+	configStatusQueue.Notify(statusOne)
+	nodesUpdatesCountEventuallyEquals(1)
+
+	// Notify the second status and ensure that the node was updated.
+	configStatusQueue.Notify(statusTwo)
+	nodesUpdatesCountEventuallyEquals(2)
+
+	// Notify the same status again and ensure that the node wasn't updated.
+	configStatusQueue.Notify(statusTwo)
+	nodesUpdatesCountEventuallyEquals(2)
+}
+
+func TestNodeAgent_TickerResetsOnEveryNodesUpdate(t *testing.T) {
+	nodeClient := newMockNodeClient(nil)
+	configStatusQueue := newMockConfigStatusNotifier()
+	gatewayClientsChangesNotifier := newMockGatewayClientsNotifier()
+
+	ticker := mocks.NewTicker()
+	const halfOfRefreshPeriod = konnect.DefaultRefreshNodePeriod / 2
+	nodeAgent := konnect.NewNodeAgent(
+		testHostname,
+		testKicVersion,
+		konnect.DefaultRefreshNodePeriod,
+		logr.Discard(),
+		nodeClient,
+		configStatusQueue,
+		newMockGatewayInstanceGetter(nil),
+		gatewayClientsChangesNotifier,
+		newMockManagerInstanceIDProvider(uuid.New()),
+		konnect.WithRefreshTicker(ticker),
+	)
+
+	runAgent(t, nodeAgent)
+
+	t.Run("config status notification", func(t *testing.T) {
+		// Let half of the period pass.
+		ticker.Add(halfOfRefreshPeriod)
+
+		// Trigger update with config status notification.
+		configStatusQueue.Notify(clients.ConfigStatusApplyFailed)
+		require.Eventually(t, func() bool { return nodeClient.NodesUpdatesCount() != 1 }, time.Second, time.Microsecond)
+
+		// Let another half of the period pass - no update should be triggered yet because of the notification.
+		ticker.Add(halfOfRefreshPeriod)
+		require.Eventually(t, func() bool { return nodeClient.NodesUpdatesCount() != 1 }, time.Second, time.Microsecond)
+
+		// Trigger update with ticker.
+		ticker.Add(halfOfRefreshPeriod)
+		require.Eventually(t, func() bool { return nodeClient.NodesUpdatesCount() != 2 }, time.Second, time.Microsecond)
+	})
+
+	t.Run("gateway clients changes notification", func(t *testing.T) {
+		// Let half of the period pass.
+		ticker.Add(halfOfRefreshPeriod)
+
+		// Trigger update with gateway clients change notification.
+		gatewayClientsChangesNotifier.Notify()
+		require.Eventually(t, func() bool { return nodeClient.NodesUpdatesCount() != 3 }, time.Second, time.Microsecond)
+
+		// Let another half of the period pass - no update should be triggered yet because of the notification.
+		ticker.Add(halfOfRefreshPeriod)
+		require.Eventually(t, func() bool { return nodeClient.NodesUpdatesCount() != 3 }, time.Second, time.Microsecond)
+
+		// Trigger update with ticker.
+		ticker.Add(halfOfRefreshPeriod)
+		require.Eventually(t, func() bool { return nodeClient.NodesUpdatesCount() != 4 }, time.Second, time.Microsecond)
+	})
 }
 
 // runAgent runs the agent in a goroutine and cancels the context after the test is done, ensuring that the agent

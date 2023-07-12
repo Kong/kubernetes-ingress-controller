@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1689152679433,
+  "lastUpdate": 1689152680936,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -13584,6 +13584,48 @@ window.BENCHMARK_DATA = {
             "value": 12,
             "unit": "allocs/op",
             "extra": "17752 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "patryk.malek@konghq.com",
+            "name": "Patryk Małek",
+            "username": "pmalek"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "c8843ded42fb8129ee6bda912c5a3ecdc037ba5f",
+          "message": "tests: watch instead of busy loop in gatewayclass envtest (#4323)",
+          "timestamp": "2023-07-12T09:03:36Z",
+          "tree_id": "9982f79ad0aa79f30c10743d8d6e2d7f1e88819b",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/c8843ded42fb8129ee6bda912c5a3ecdc037ba5f"
+        },
+        "date": 1689152675176,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - ns/op",
+            "value": 58263,
+            "unit": "ns/op",
+            "extra": "17638 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - B/op",
+            "value": 11101,
+            "unit": "B/op",
+            "extra": "17638 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - allocs/op",
+            "value": 12,
+            "unit": "allocs/op",
+            "extra": "17638 times\n2 procs"
           }
         ]
       },

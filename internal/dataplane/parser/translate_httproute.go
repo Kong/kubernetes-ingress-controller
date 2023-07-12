@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/blang/semver/v4"
+	"github.com/bombsimon/logrusr/v2"
 	"github.com/kong/go-kong/kong"
 	"github.com/samber/lo"
 	k8stypes "k8s.io/apimachinery/pkg/types"
@@ -32,42 +33,7 @@ func (p *Parser) ingressRulesFromHTTPRoutes() ingressRules {
 	}
 
 	if p.featureFlags.ExpressionRoutes {
-		splitHTTPRoutes := []*gatewayv1beta1.HTTPRoute{}
-		for _, httproute := range httpRouteList {
-			if err := validateHTTPRoute(httproute); err != nil {
-				p.registerTranslationFailure(fmt.Sprintf("HTTPRoute can't be routed: %s", err), httproute)
-				continue
-			}
-			splitHTTPRoutes = append(splitHTTPRoutes, translators.SplitHTTPRoute(httproute)...)
-		}
-
-		splitHTTPRoutesWithPriorities := translators.AssignRoutePriorityToSplitHTTPRoutes(splitHTTPRoutes)
-		httpRouteNameToTranslationFailure := map[k8stypes.NamespacedName][]error{}
-
-		for _, httpRouteWithPriority := range splitHTTPRoutesWithPriorities {
-			err := p.ingressRulesFromSplitHTTPRouteWithPriority(&result, httpRouteWithPriority)
-			if err != nil {
-				nsName := k8stypes.NamespacedName{
-					Namespace: httpRouteWithPriority.HTTPRoute.Namespace,
-					Name:      httpRouteWithPriority.HTTPRoute.Name,
-				}
-				httpRouteNameToTranslationFailure[nsName] = append(httpRouteNameToTranslationFailure[nsName], err)
-			}
-		}
-		for _, httproute := range httpRouteList {
-			nsName := k8stypes.NamespacedName{
-				Namespace: httproute.Namespace,
-				Name:      httproute.Name,
-			}
-			if translationFailures, ok := httpRouteNameToTranslationFailure[nsName]; ok {
-				p.registerTranslationFailure(
-					fmt.Sprintf("HTTPRoute can't be routed: %v", errors.Join(translationFailures...)),
-					httproute,
-				)
-				continue
-			}
-			p.registerSuccessfullyParsedObject(httproute)
-		}
+		p.ingressRulesFromHTTPRoutesUsingExpressionRoutes(httpRouteList, &result)
 		return result
 	}
 
@@ -108,6 +74,54 @@ func validateHTTPRoute(httproute *gatewayv1beta1.HTTPRoute) error {
 	}
 
 	return nil
+}
+
+// ingressRulesFromHTTPRoutesUsingExpressionRoutes translates HTTPRoutes to expression based routes
+// when ExpressionRoutes feature flag is enabled.
+// Because we need to assign different priorities based on the hostname and match in the specification of HTTPRoutes,
+// We need to split the HTTPRoutes into ones with only one hostname and one match, then assign priority to them
+// and finally translate the split HTTPRoutes into Kong services and routes with assigned priorities.
+func (p *Parser) ingressRulesFromHTTPRoutesUsingExpressionRoutes(httpRoutes []*gatewayv1beta1.HTTPRoute, result *ingressRules) {
+	// first, split HTTPRoutes by hostnames and matches.
+	splitHTTPRoutes := []*gatewayv1beta1.HTTPRoute{}
+	for _, httproute := range httpRoutes {
+		if err := validateHTTPRoute(httproute); err != nil {
+			p.registerTranslationFailure(fmt.Sprintf("HTTPRoute can't be routed: %s", err), httproute)
+			continue
+		}
+		splitHTTPRoutes = append(splitHTTPRoutes, translators.SplitHTTPRoute(httproute)...)
+	}
+	// assign priorities to split HTTPRoutes.
+	splitHTTPRoutesWithPriorities := translators.AssignRoutePriorityToSplitHTTPRoutes(logrusr.New(p.logger), splitHTTPRoutes)
+	httpRouteNameToTranslationFailure := map[k8stypes.NamespacedName][]error{}
+
+	// translate split HTTPRoutes to ingress rules, including services, routes, upstreams.
+	for _, httpRouteWithPriority := range splitHTTPRoutesWithPriorities {
+		err := p.ingressRulesFromSplitHTTPRouteWithPriority(result, httpRouteWithPriority)
+		if err != nil {
+			nsName := k8stypes.NamespacedName{
+				Namespace: httpRouteWithPriority.HTTPRoute.Namespace,
+				Name:      httpRouteWithPriority.HTTPRoute.Name,
+			}
+			httpRouteNameToTranslationFailure[nsName] = append(httpRouteNameToTranslationFailure[nsName], err)
+		}
+	}
+	// Register successful parsed objects and  translation failures.
+	// Because one HTTPRoute may be split into multiple HTTPRoutes, we need to de-duplicate by namespace and name.
+	for _, httproute := range httpRoutes {
+		nsName := k8stypes.NamespacedName{
+			Namespace: httproute.Namespace,
+			Name:      httproute.Name,
+		}
+		if translationFailures, ok := httpRouteNameToTranslationFailure[nsName]; ok {
+			p.registerTranslationFailure(
+				fmt.Sprintf("HTTPRoute can't be routed: %v", errors.Join(translationFailures...)),
+				httproute,
+			)
+			continue
+		}
+		p.registerSuccessfullyParsedObject(httproute)
+	}
 }
 
 // ingressRulesFromHTTPRouteWithCombinedServiceRoutes generates a set of proto-Kong routes (ingress rules) from an HTTPRoute.

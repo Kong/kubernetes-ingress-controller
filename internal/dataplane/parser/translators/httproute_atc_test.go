@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/go-logr/logr"
 	"github.com/kong/go-kong/kong"
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
@@ -425,7 +426,7 @@ func TestCalculateHTTPRoutePriorityTraits(t *testing.T) {
 	for _, tc := range testCases {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
-			traits := CalculateHTTPRoutePriorityTraits(tc.httpRoute)
+			traits := CalculateSplitHTTPRoutePriorityTraits(tc.httpRoute)
 			require.Equal(t, tc.expectedTraits, traits)
 		})
 	}
@@ -1088,12 +1089,85 @@ func TestAssignRoutePriorityToSplitHTTPRoutes(t *testing.T) {
 				}: (2 << 50) | (1 << 49) | (7 << 41) | (1 << 40) | (3 << 29) | ((1 << 18) - 1) - 1,
 			},
 		},
+		{
+			name: "httproutes without rule index and internal match index annotations are omitted",
+			splitHTTPRoutes: []*gatewayv1beta1.HTTPRoute{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "default",
+						Name:      "httproute-1",
+						Annotations: map[string]string{
+							InternalRuleIndexAnnotationKey:  "0",
+							InternalMatchIndexAnnotationKey: "0",
+						},
+						CreationTimestamp: metav1.NewTime(now.Add(-5 * time.Second)),
+					},
+					Spec: gatewayv1beta1.HTTPRouteSpec{
+						Hostnames: []gatewayv1beta1.Hostname{"foo.com"},
+						Rules: []gatewayv1beta1.HTTPRouteRule{
+							{
+								Matches: []gatewayv1beta1.HTTPRouteMatch{
+									builder.NewHTTPRouteMatch().WithPathExact("/foo").Build(),
+								},
+							},
+						},
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "default",
+						Name:      "httproute-2",
+						Annotations: map[string]string{
+							InternalRuleIndexAnnotationKey: "0",
+						},
+						CreationTimestamp: metav1.NewTime(now.Add(-10 * time.Second)),
+					},
+					Spec: gatewayv1beta1.HTTPRouteSpec{
+						Hostnames: []gatewayv1beta1.Hostname{"*.bar.com"},
+						Rules: []gatewayv1beta1.HTTPRouteRule{
+							{
+								Matches: []gatewayv1beta1.HTTPRouteMatch{
+									builder.NewHTTPRouteMatch().WithPathExact("/bar").Build(),
+								},
+							},
+						},
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace:         "default",
+						Name:              "httproute-3",
+						CreationTimestamp: metav1.NewTime(now.Add(-10 * time.Second)),
+					},
+					Spec: gatewayv1beta1.HTTPRouteSpec{
+						Hostnames: []gatewayv1beta1.Hostname{"a.bar.com"},
+						Rules: []gatewayv1beta1.HTTPRouteRule{
+							{
+								Matches: []gatewayv1beta1.HTTPRouteMatch{
+									builder.NewHTTPRouteMatch().WithPathExact("/bar").Build(),
+								},
+							},
+						},
+					},
+				},
+			},
+			priorities: map[splitHTTPRouteIndex]int{
+				{
+					namespace:  "default",
+					name:       "httproute-1",
+					hostname:   "foo.com",
+					ruleIndex:  0,
+					matchIndex: 0,
+				}: (2 << 50) | (1 << 49) | (7 << 41) | (1 << 40) | (3 << 29) | ((1 << 18) - 1),
+			},
+		},
 	}
 
 	for _, tc := range testCases {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
-			splitHTTPRoutesWithPriorities := AssignRoutePriorityToSplitHTTPRoutes(tc.splitHTTPRoutes)
+			splitHTTPRoutesWithPriorities := AssignRoutePriorityToSplitHTTPRoutes(logr.Discard(), tc.splitHTTPRoutes)
+			require.Equal(t, len(tc.priorities), len(splitHTTPRoutesWithPriorities), "should have required number of results")
 			for _, r := range splitHTTPRoutesWithPriorities {
 				httpRoute := r.HTTPRoute
 				ruleIndex, err := strconv.Atoi(httpRoute.Annotations[InternalRuleIndexAnnotationKey])

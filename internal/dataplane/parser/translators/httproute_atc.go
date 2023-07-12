@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/go-logr/logr"
 	"github.com/kong/go-kong/kong"
 	"github.com/samber/lo"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
@@ -291,8 +292,8 @@ type HTTPRoutePriorityTraits struct {
 	QueryParamCount int
 }
 
-// CalculateHTTPRoutePriorityTraits calculates the parts of priority that can be decided by the
-// fields in spec of the HTTPRoute. Specification of priority goes as follow:
+// CalculateSplitHTTPRoutePriorityTraits calculates the parts of priority that can be decided by the
+// fields in spec of the already split HTTPRoute. Specification of priority goes as follow:
 // (The following comments are extracted from gateway API specification about HTTPRoute)
 //
 // In the event that multiple HTTPRoutes specify intersecting hostnames,
@@ -311,16 +312,20 @@ type HTTPRoutePriorityTraits struct {
 //   - Method match.
 //   - Largest number of header matches.
 //   - Largest number of query param matches.
-func CalculateHTTPRoutePriorityTraits(httpRoute *gatewayv1beta1.HTTPRoute) HTTPRoutePriorityTraits {
+func CalculateSplitHTTPRoutePriorityTraits(httpRoute *gatewayv1beta1.HTTPRoute) HTTPRoutePriorityTraits {
 	traits := HTTPRoutePriorityTraits{}
+	// the HTTPRoute here have been already split by hostnames and matches,
+	// so one HTTPRoute have at most one hostname.
 	if len(httpRoute.Spec.Hostnames) != 0 {
 		hostname := httpRoute.Spec.Hostnames[0]
 		traits.HostnameLength = len(hostname)
+		// if the hostname does not start with *, the split HTTPRoute should have precise hostname.
 		if !strings.HasPrefix(string(hostname), "*") {
 			traits.PreciseHostname = true
 		}
 	}
 
+	// also, the HTTPRoute have been split so it have at most one match.
 	if len(httpRoute.Spec.Rules) > 0 && len(httpRoute.Spec.Rules[0].Matches) > 0 {
 		match := httpRoute.Spec.Rules[0].Matches[0]
 		if match.Path != nil {
@@ -348,15 +353,14 @@ func CalculateHTTPRoutePriorityTraits(httpRoute *gatewayv1beta1.HTTPRoute) HTTPR
 
 // EncodeToPriority turns HTTPRoute priority traits into the integer expressed priority.
 //
-//	                  4                   3                   2                   1
-//	9 8 7 6 5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0
-//
-// +-+------+--------+-+-+------+------------+-+---+---+-+----+----+------------------+----------------+
-// |P| host len      |E|R|  Path length      |M|Header No|Query No.| relative order                    |
-// +-+------+--------+-+-+------+------------+-+----+--+-+----+--- +----------------+------------------+
+//					   4                   3                   2                   1
+//	 9 8 7 6 5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0
+//	+-+---------------+-+-+-------------------+-+---------+---------+-----------------------------------+
+//	|P| host len      |E|R|  Path length      |M|Header No|Query No.| relative order                    |
+//	+-+---------------+-+-+-------------------+-+---------+-------- +-----------------------------------+
 //
 // Where:
-// P: set to 1 if the hostname is non-wildcard
+// P: set to 1 if the hostname is non-wildcard.
 // host len: host length of hostname.
 // E: set to 1 if the path type is `Exact`.
 // R: set to 1 if the path type in `RegularExpression`.
@@ -384,7 +388,8 @@ func (t HTTPRoutePriorityTraits) EncodeToPriority() int {
 		// QueryParamNumberShiftBits makes bits 18-22 used for number of query params (max number of query params = 16)
 		QueryParamNumberShiftBits = 18
 		// bits 0-17 are used for relative order of creation timestamp, namespace/name, and internal order of rules and matches.
-		// the bits are calculated by
+		// the bits are calculated by sorting HTTPRoutes with the same priority calculated from the fields above
+		// and start from all 1s, then decrease by one for each HTTPRoute.
 	)
 
 	var priority int
@@ -423,9 +428,10 @@ func (t HTTPRoutePriorityTraits) EncodeToPriority() int {
 // calculated from the fields, we run a sort for the HTTPRoutes in the tie
 // and assign the bits for "relative order" according to the sorting result of these HTTPRoutes.
 func AssignRoutePriorityToSplitHTTPRoutes(
+	logger logr.Logger,
 	splitHTTPRoutes []*gatewayv1beta1.HTTPRoute,
 ) []SplitHTTPRouteToKongRoutePriority {
-	priorityToHTTPRoutes := map[int][]*gatewayv1beta1.HTTPRoute{}
+	priorityToSplitHTTPRoutes := map[int][]*gatewayv1beta1.HTTPRoute{}
 
 	for _, httpRoute := range splitHTTPRoutes {
 		anns := httpRoute.Annotations
@@ -434,8 +440,8 @@ func AssignRoutePriorityToSplitHTTPRoutes(
 			continue
 		}
 
-		priority := CalculateHTTPRoutePriorityTraits(httpRoute).EncodeToPriority()
-		priorityToHTTPRoutes[priority] = append(priorityToHTTPRoutes[priority], httpRoute)
+		priority := CalculateSplitHTTPRoutePriorityTraits(httpRoute).EncodeToPriority()
+		priorityToSplitHTTPRoutes[priority] = append(priorityToSplitHTTPRoutes[priority], httpRoute)
 	}
 
 	httpRoutesToPriorities := make([]SplitHTTPRouteToKongRoutePriority, 0, len(splitHTTPRoutes))
@@ -446,7 +452,7 @@ func AssignRoutePriorityToSplitHTTPRoutes(
 	// If only one HTTPRoute occupies the priority, fill the relative order bits with all 1s.
 	const RelativeOrderAssignedBits = 18
 	const defaultRelativeOrderPriorityBits = (1 << RelativeOrderAssignedBits) - 1
-	for priority, routes := range priorityToHTTPRoutes {
+	for priority, routes := range priorityToSplitHTTPRoutes {
 		if len(routes) == 1 {
 			httpRoutesToPriorities = append(httpRoutesToPriorities, SplitHTTPRouteToKongRoutePriority{
 				HTTPRoute: routes[0],
@@ -471,6 +477,10 @@ func AssignRoutePriorityToSplitHTTPRoutes(
 				HTTPRoute: route,
 				Priority:  priority + relativeOrderBits,
 			})
+		}
+		// log the
+		if len(routes) > (1 << 18) {
+			logger.Info("Too many HTTPRoutes are distinguished by relative orders", "httproute_number", len(routes))
 		}
 	}
 

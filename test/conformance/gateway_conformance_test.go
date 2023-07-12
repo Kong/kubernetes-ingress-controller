@@ -83,9 +83,6 @@ func TestGatewayConformance(t *testing.T) {
 		ExemptFeatures:             exemptFeatures,
 		BaseManifests:              conformanceTestsBaseManifests,
 		SkipTests: []string{
-			// standard conformance
-			tests.HTTPRouteHeaderMatching.ShortName,
-
 			// https://github.com/Kong/kubernetes-ingress-controller/issues/4166
 			// requires an 8080 listener, which our manually-built test gateway does not have
 			tests.HTTPRouteRedirectPortAndScheme.ShortName,

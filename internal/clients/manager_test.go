@@ -451,7 +451,7 @@ func TestAdminAPIClientsManager_ConcurrentNotify(t *testing.T) {
 			case <-ch:
 				// Call GatewayClients() here to make sure that we can access the clients safely
 				// from the subscriber goroutine without causing a deadlock in the notify loop.
-				_ = m.GatewayClients()
+				require.Len(t, m.GatewayClients(), 1, "expected to get 1 client")
 				receivedNotificationsCount.Add(1)
 			case <-ctx.Done():
 				return
@@ -460,17 +460,17 @@ func TestAdminAPIClientsManager_ConcurrentNotify(t *testing.T) {
 	}()
 
 	// Run multiple notifiers in parallel to make sure that Notify is safe for concurrent use.
-	clients := []adminapi.DiscoveredAdminAPI{
-		testDiscoveredAdminAPI("http://10.0.0.1:8080"),
-	}
+	// We'll use two sets of clients interchangeably to cause an actual change that results in a notification.
+	oddClients := []adminapi.DiscoveredAdminAPI{testDiscoveredAdminAPI("http://10.0.0.1:8080")}
+	evenClients := []adminapi.DiscoveredAdminAPI{testDiscoveredAdminAPI("http://10.0.0.2:8080")}
 	for i := 0; i < 10; i++ {
 		i := i
 		go func() {
-			// Notify with different clients' sets to trigger notifications as changes are required for them to happen.
-			if i%2 == 0 {
-				m.Notify(clients)
+			// Notify with even or odd clients interchangeably depending on the iteration to trigger a change.
+			if pickEven := i%2 == 0; pickEven {
+				m.Notify(evenClients)
 			} else {
-				m.Notify(nil)
+				m.Notify(oddClients)
 			}
 		}()
 	}

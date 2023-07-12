@@ -520,15 +520,15 @@ func TestNodeAgent_TickerResetsOnEveryNodesUpdate(t *testing.T) {
 
 		// Trigger update with config status notification.
 		configStatusQueue.Notify(clients.ConfigStatusApplyFailed)
-		require.Eventually(t, func() bool { return nodeClient.NodesUpdatesCount() != 1 }, time.Second, time.Nanosecond)
+		require.Eventually(t, func() bool { return nodeClient.NodesUpdatesCount() != 1 }, time.Second, time.Microsecond)
 
 		// Let another half of the period pass - no update should be triggered yet because of the notification.
 		ticker.Add(halfOfRefreshPeriod)
-		require.Eventually(t, func() bool { return nodeClient.NodesUpdatesCount() != 1 }, time.Second, time.Nanosecond)
+		require.Eventually(t, func() bool { return nodeClient.NodesUpdatesCount() != 1 }, time.Second, time.Microsecond)
 
 		// Trigger update with ticker.
 		ticker.Add(halfOfRefreshPeriod)
-		require.Eventually(t, func() bool { return nodeClient.NodesUpdatesCount() != 2 }, time.Second, time.Nanosecond)
+		require.Eventually(t, func() bool { return nodeClient.NodesUpdatesCount() != 2 }, time.Second, time.Microsecond)
 	})
 
 	t.Run("gateway clients changes notification", func(t *testing.T) {
@@ -537,15 +537,15 @@ func TestNodeAgent_TickerResetsOnEveryNodesUpdate(t *testing.T) {
 
 		// Trigger update with gateway clients change notification.
 		gatewayClientsChangesNotifier.Notify()
-		require.Eventually(t, func() bool { return nodeClient.NodesUpdatesCount() != 3 }, time.Second, time.Nanosecond)
+		require.Eventually(t, func() bool { return nodeClient.NodesUpdatesCount() != 3 }, time.Second, time.Microsecond)
 
 		// Let another half of the period pass - no update should be triggered yet because of the notification.
 		ticker.Add(halfOfRefreshPeriod)
-		require.Eventually(t, func() bool { return nodeClient.NodesUpdatesCount() != 3 }, time.Second, time.Nanosecond)
+		require.Eventually(t, func() bool { return nodeClient.NodesUpdatesCount() != 3 }, time.Second, time.Microsecond)
 
 		// Trigger update with ticker.
 		ticker.Add(halfOfRefreshPeriod)
-		require.Eventually(t, func() bool { return nodeClient.NodesUpdatesCount() != 4 }, time.Second, time.Nanosecond)
+		require.Eventually(t, func() bool { return nodeClient.NodesUpdatesCount() != 4 }, time.Second, time.Microsecond)
 	})
 }
 

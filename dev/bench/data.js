@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1689155656979,
+  "lastUpdate": 1689157912629,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -13752,6 +13752,48 @@ window.BENCHMARK_DATA = {
             "value": 12,
             "unit": "allocs/op",
             "extra": "18570 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "tao.yi@konghq.com",
+            "name": "Yi Tao",
+            "username": "randmonkey"
+          },
+          "committer": {
+            "email": "tao.yi@konghq.com",
+            "name": "Yi Tao",
+            "username": "randmonkey"
+          },
+          "distinct": true,
+          "id": "3024155f1b51ef67efd229061dc831853ea54880",
+          "message": "Merge remote-tracking branch 'kong/main' into feat/assign_priority_routes_httproute",
+          "timestamp": "2023-07-12T18:30:21+08:00",
+          "tree_id": "a1892ff21305470d23363db08250736163126901",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/3024155f1b51ef67efd229061dc831853ea54880"
+        },
+        "date": 1689157907482,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - ns/op",
+            "value": 72477,
+            "unit": "ns/op",
+            "extra": "17708 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - B/op",
+            "value": 11097,
+            "unit": "B/op",
+            "extra": "17708 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - allocs/op",
+            "value": 12,
+            "unit": "allocs/op",
+            "extra": "17708 times\n2 procs"
           }
         ]
       }

@@ -978,6 +978,160 @@ func (r *KongV1KongConsumerReconciler) Reconcile(ctx context.Context, req ctrl.R
 }
 
 // -----------------------------------------------------------------------------
+// KongV1Beta1 KongConsumerGroup - Reconciler
+// -----------------------------------------------------------------------------
+
+// KongV1Beta1KongConsumerGroupReconciler reconciles KongConsumerGroup resources
+type KongV1Beta1KongConsumerGroupReconciler struct {
+	client.Client
+
+	Log              logr.Logger
+	Scheme           *runtime.Scheme
+	DataplaneClient  *dataplane.KongClient
+	CacheSyncTimeout time.Duration
+
+	IngressClassName           string
+	DisableIngressClassLookups bool
+	ReferenceIndexers          ctrlref.CacheIndexers
+}
+
+// SetupWithManager sets up the controller with the Manager.
+func (r *KongV1Beta1KongConsumerGroupReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	c, err := controller.New("KongV1Beta1KongConsumerGroup", mgr, controller.Options{
+		Reconciler: r,
+		LogConstructor: func(_ *reconcile.Request) logr.Logger {
+			return r.Log
+		},
+		CacheSyncTimeout: r.CacheSyncTimeout,
+	})
+	if err != nil {
+		return err
+	}
+	if !r.DisableIngressClassLookups {
+		err = c.Watch(
+			source.Kind(mgr.GetCache(), &netv1.IngressClass{}),
+			handler.EnqueueRequestsFromMapFunc(r.listClassless),
+			predicate.NewPredicateFuncs(ctrlutils.IsDefaultIngressClass),
+		)
+		if err != nil {
+			return err
+		}
+	}
+	preds := ctrlutils.GeneratePredicateFuncsForIngressClassFilter(r.IngressClassName)
+	return c.Watch(
+		source.Kind(mgr.GetCache(), &kongv1beta1.KongConsumerGroup{}),
+		&handler.EnqueueRequestForObject{},
+		preds,
+	)
+}
+
+// listClassless finds and reconciles all objects without ingress class information
+func (r *KongV1Beta1KongConsumerGroupReconciler) listClassless(ctx context.Context, obj client.Object) []reconcile.Request {
+	resourceList := &kongv1beta1.KongConsumerGroupList{}
+	if err := r.Client.List(ctx, resourceList); err != nil {
+		r.Log.Error(err, "failed to list classless kongconsumergroups")
+		return nil
+	}
+	var recs []reconcile.Request
+	for i, resource := range resourceList.Items {
+		if ctrlutils.IsIngressClassEmpty(&resourceList.Items[i]) {
+			recs = append(recs, reconcile.Request{
+				NamespacedName: k8stypes.NamespacedName{
+					Namespace: resource.Namespace,
+					Name:      resource.Name,
+				},
+			})
+		}
+	}
+	return recs
+}
+
+//+kubebuilder:rbac:groups=configuration.konghq.com,resources=kongconsumergroups,verbs=get;list;watch
+//+kubebuilder:rbac:groups=configuration.konghq.com,resources=kongconsumergroups/status,verbs=get;update;patch
+
+// Reconcile processes the watched objects
+func (r *KongV1Beta1KongConsumerGroupReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+	log := r.Log.WithValues("KongV1Beta1KongConsumerGroup", req.NamespacedName)
+
+	// get the relevant object
+	obj := new(kongv1beta1.KongConsumerGroup)
+	if err := r.Get(ctx, req.NamespacedName, obj); err != nil {
+		if apierrors.IsNotFound(err) {
+			obj.Namespace = req.Namespace
+			obj.Name = req.Name
+
+			// remove reference record where the KongConsumerGroup is the referrer
+			if err := ctrlref.DeleteReferencesByReferrer(r.ReferenceIndexers, r.DataplaneClient, obj); err != nil {
+				return ctrl.Result{}, err
+			}
+
+			return ctrl.Result{}, r.DataplaneClient.DeleteObject(obj)
+		}
+		return ctrl.Result{}, err
+	}
+	log.V(util.DebugLevel).Info("reconciling resource", "namespace", req.Namespace, "name", req.Name)
+
+	// clean the object up if it's being deleted
+	if !obj.DeletionTimestamp.IsZero() && time.Now().After(obj.DeletionTimestamp.Time) {
+		log.V(util.DebugLevel).Info("resource is being deleted, its configuration will be removed", "type", "KongConsumerGroup", "namespace", req.Namespace, "name", req.Name)
+
+		// remove reference record where the KongConsumerGroup is the referrer
+		if err := ctrlref.DeleteReferencesByReferrer(r.ReferenceIndexers, r.DataplaneClient, obj); err != nil {
+			return ctrl.Result{}, err
+		}
+
+		objectExistsInCache, err := r.DataplaneClient.ObjectExists(obj)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+		if objectExistsInCache {
+			if err := r.DataplaneClient.DeleteObject(obj); err != nil {
+				return ctrl.Result{}, err
+			}
+			return ctrl.Result{Requeue: true}, nil // wait until the object is no longer present in the cache
+		}
+		return ctrl.Result{}, nil
+	}
+
+	class := new(netv1.IngressClass)
+	if !r.DisableIngressClassLookups {
+		if err := r.Get(ctx, k8stypes.NamespacedName{Name: r.IngressClassName}, class); err != nil {
+			// we log this without taking action to support legacy configurations that only set ingressClassName or
+			// used the class annotation and did not create a corresponding IngressClass. We only need this to determine
+			// if the IngressClass is default or to configure default settings, and can assume no/no additional defaults
+			// if none exists.
+			log.V(util.DebugLevel).Info("could not retrieve IngressClass", "ingressclass", r.IngressClassName)
+		}
+	}
+	// if the object is not configured with our ingress.class, then we need to ensure it's removed from the cache
+	if !ctrlutils.MatchesIngressClass(obj, r.IngressClassName, ctrlutils.IsDefaultIngressClass(class)) {
+		log.V(util.DebugLevel).Info("object missing ingress class, ensuring it's removed from configuration",
+			"namespace", req.Namespace, "name", req.Name, "class", r.IngressClassName)
+		return ctrl.Result{}, r.DataplaneClient.DeleteObject(obj)
+	} else {
+		log.V(util.DebugLevel).Info("object has matching ingress class", "namespace", req.Namespace, "name", req.Name,
+			"class", r.IngressClassName)
+	}
+
+	// update the kong Admin API with the changes
+	if err := r.DataplaneClient.UpdateObject(obj); err != nil {
+		return ctrl.Result{}, err
+	}
+	// update reference relationship from the KongConsumerGroup to other objects.
+	if err := updateReferredObjects(ctx, r.Client, r.ReferenceIndexers, r.DataplaneClient, obj); err != nil {
+		if apierrors.IsNotFound(err) {
+			// reconcile again if the secret does not exist yet
+			return ctrl.Result{
+				Requeue: true,
+			}, nil
+		}
+		return ctrl.Result{}, err
+	}
+
+	return ctrl.Result{}, nil
+}
+
+// -----------------------------------------------------------------------------
 // KongV1Beta1 TCPIngress - Reconciler
 // -----------------------------------------------------------------------------
 

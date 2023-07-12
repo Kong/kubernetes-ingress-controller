@@ -312,8 +312,26 @@ _Appears in:_
 
 Package v1beta1 contains API Schema definitions for the configuration.konghq.com v1beta1 API group.
 
+- [KongConsumerGroup](#kongconsumergroup)
 - [TCPIngress](#tcpingress)
 - [UDPIngress](#udpingress)
+
+### KongConsumerGroup
+
+
+
+KongConsumerGroup is the Schema for the kongconsumergroups API.
+
+<!-- kong_consumer_group description placeholder -->
+
+| Field | Description |
+| --- | --- |
+| `apiVersion` _string_ | `configuration.konghq.com/v1beta1`
+| `kind` _string_ | `KongConsumerGroup`
+| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+
+
+
 
 ### TCPIngress
 

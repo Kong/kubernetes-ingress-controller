@@ -177,12 +177,12 @@ func (c *AdminAPIClientsManager) adminAPIAddressNotifyLoop() {
 			return
 
 		case discoveredAdminAPIs := <-c.discoveredAdminAPIsNotifyChan:
-			// This call will only log errors e.g. during creation of new clients.
-			// If need be we might consider propagating those errors up the stack.
-			c.adjustGatewayClients(discoveredAdminAPIs)
-
-			// Notify subscribers that the clients list has been updated.
-			c.notifyGatewayClientsSubscribers()
+			c.logger.Debug("received notification about Admin API addresses change")
+			if clientsChanged := c.adjustGatewayClients(discoveredAdminAPIs); clientsChanged {
+				// Notify subscribers that the clients list has been updated.
+				c.logger.Debug("notifying subscribers about gateway clients change")
+				c.notifyGatewayClientsSubscribers()
+			}
 		}
 	}
 }
@@ -190,14 +190,18 @@ func (c *AdminAPIClientsManager) adminAPIAddressNotifyLoop() {
 // adjustGatewayClients adjusts internally stored clients slice based on the provided
 // discovered Admin APIs slice. It consults BaseRootURLs of already stored clients with each
 // of the discovered Admin APIs and creates only those clients that we don't have.
-func (c *AdminAPIClientsManager) adjustGatewayClients(discoveredAdminAPIs []adminapi.DiscoveredAdminAPI) {
+// It returns true if the gatewayClients slice has been changed, false otherwise.
+func (c *AdminAPIClientsManager) adjustGatewayClients(discoveredAdminAPIs []adminapi.DiscoveredAdminAPI) (changed bool) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
 	// Short circuit
 	if len(discoveredAdminAPIs) == 0 {
+		if len(c.gatewayClients) == 0 {
+			return false
+		}
 		c.gatewayClients = c.gatewayClients[:0]
-		return
+		return true
 	}
 
 	toAdd := lo.Filter(discoveredAdminAPIs, func(api adminapi.DiscoveredAdminAPI, _ int) bool {
@@ -240,6 +244,8 @@ func (c *AdminAPIClientsManager) adjustGatewayClients(discoveredAdminAPIs []admi
 
 		c.gatewayClients = append(c.gatewayClients, client)
 	}
+
+	return len(toAdd) > 0 || len(idxToRemove) > 0
 }
 
 // notifyGatewayClientsSubscribers sends notifications to all subscribers that have called SubscribeToGatewayClientsChanges.

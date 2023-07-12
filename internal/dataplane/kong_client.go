@@ -142,6 +142,9 @@ type KongClient struct {
 	// controllerPodReference is a reference to the controller pod this client is running in.
 	// It may be empty if the client is not running in a pod (e.g. in a unit test).
 	controllerPodReference mo.Option[k8stypes.NamespacedName]
+
+	// currentConfigStatus is the current status of the configuration synchronisation.
+	currentConfigStatus clients.ConfigStatus
 }
 
 // NewKongClient provides a new KongClient object after connecting to the
@@ -401,8 +404,8 @@ func (c *KongClient) Update(ctx context.Context) error {
 	konnectSyncErr := c.maybeSendOutToKonnectClient(ctx, parsingResult.KongState, c.kongConfig)
 
 	// Taking into account the results of syncing configuration with Gateways and Konnect, and potential translation
-	// failures, calculate the config status and report it.
-	c.configStatusNotifier.NotifyConfigStatus(ctx, clients.CalculateConfigStatus(
+	// failures, calculate the config status and update it.
+	c.updateConfigStatus(ctx, clients.CalculateConfigStatus(
 		clients.CalculateConfigStatusInput{
 			GatewaysFailed:              gatewaysSyncErr != nil,
 			KonnectFailed:               konnectSyncErr != nil,
@@ -679,4 +682,18 @@ func (c *KongClient) recordApplyConfigurationEvents(err error, rootURL string) {
 		},
 	}
 	c.eventRecorder.Event(pod, eventType, reason, message)
+}
+
+// updateConfigStatus updates the current config status and notifies about the change. It is a no-op if the status
+// hasn't changed.
+func (c *KongClient) updateConfigStatus(ctx context.Context, configStatus clients.ConfigStatus) {
+	if c.currentConfigStatus == configStatus {
+		// No change in config status, nothing to do.
+		c.logger.Debug("no change in config status, not notifying")
+		return
+	}
+
+	c.logger.WithField("configStatus", configStatus).Debug("config status changed, notifying")
+	c.currentConfigStatus = configStatus
+	c.configStatusNotifier.NotifyConfigStatus(ctx, configStatus)
 }

@@ -59,6 +59,15 @@ func (cf clientFactoryWithExpected) ExpectedCallsLeft() []string {
 	return notCalled
 }
 
+type alwaysSuccessClientFactory struct{}
+
+func (a alwaysSuccessClientFactory) CreateAdminAPIClient(
+	_ context.Context,
+	adminAPI adminapi.DiscoveredAdminAPI,
+) (*adminapi.Client, error) {
+	return adminapi.NewTestClient(adminAPI.Address)
+}
+
 func TestClientAddressesNotifications(t *testing.T) {
 	var (
 		logger      = logrus.New()
@@ -195,8 +204,16 @@ func TestClientAdjustInternalClientsAfterNotification(t *testing.T) {
 		cf.expected = map[string]bool{"localhost:8080": true, "localhost:8081": true}
 		// there are 2 addresses contained in the notification of which 2 are new
 		// and client creator should be called exactly 2 times
-		manager.adjustGatewayClients([]adminapi.DiscoveredAdminAPI{testDiscoveredAdminAPI("localhost:8080"), testDiscoveredAdminAPI("localhost:8081")})
+		clients := []adminapi.DiscoveredAdminAPI{
+			testDiscoveredAdminAPI("localhost:8080"),
+			testDiscoveredAdminAPI("localhost:8081"),
+		}
+		changed := manager.adjustGatewayClients(clients)
+		require.True(t, changed)
 		requireNoExpectedCallsLeftEventually(t)
+
+		changed = manager.adjustGatewayClients(clients)
+		require.False(t, changed, "adjusting clients with the same set of addresses should not change anything")
 	})
 
 	t.Run("1 addresses, no new client", func(t *testing.T) {
@@ -204,8 +221,13 @@ func TestClientAdjustInternalClientsAfterNotification(t *testing.T) {
 		cf.expected = map[string]bool{}
 		// there is address contained in the notification but a client for that
 		// address already exists, client creator should not be called
-		manager.adjustGatewayClients([]adminapi.DiscoveredAdminAPI{testDiscoveredAdminAPI("localhost:8080")})
+		clients := []adminapi.DiscoveredAdminAPI{testDiscoveredAdminAPI("localhost:8080")}
+		changed := manager.adjustGatewayClients(clients)
+		require.True(t, changed)
 		requireNoExpectedCallsLeftEventually(t)
+
+		changed = manager.adjustGatewayClients(clients)
+		require.False(t, changed, "adjusting clients with the same set of addresses should not change anything")
 	})
 
 	t.Run("2 addresses, 1 new client", func(t *testing.T) {
@@ -213,8 +235,16 @@ func TestClientAdjustInternalClientsAfterNotification(t *testing.T) {
 		cf.expected = map[string]bool{"localhost:8081": true}
 		// there are 2 addresses contained in the notification but only 1 is new
 		// hence the client creator should be called only once
-		manager.adjustGatewayClients([]adminapi.DiscoveredAdminAPI{testDiscoveredAdminAPI("localhost:8080"), testDiscoveredAdminAPI("localhost:8081")})
+		clients := []adminapi.DiscoveredAdminAPI{
+			testDiscoveredAdminAPI("localhost:8080"),
+			testDiscoveredAdminAPI("localhost:8081"),
+		}
+		changed := manager.adjustGatewayClients(clients)
+		require.True(t, changed)
 		requireNoExpectedCallsLeftEventually(t)
+
+		changed = manager.adjustGatewayClients(clients)
+		require.False(t, changed, "adjusting clients with the same set of addresses should not change anything")
 	})
 
 	t.Run("0 addresses", func(t *testing.T) {
@@ -222,8 +252,12 @@ func TestClientAdjustInternalClientsAfterNotification(t *testing.T) {
 		cf.expected = map[string]bool{}
 		// there are 0 addresses contained in the notification hence the client
 		// creator should not be called
-		manager.adjustGatewayClients([]adminapi.DiscoveredAdminAPI(nil))
+		changed := manager.adjustGatewayClients([]adminapi.DiscoveredAdminAPI(nil))
+		require.True(t, changed)
 		requireNoExpectedCallsLeftEventually(t)
+
+		changed = manager.adjustGatewayClients(nil)
+		require.False(t, changed, "adjusting clients with the same set of addresses should not change anything")
 	})
 }
 
@@ -395,9 +429,7 @@ func TestAdminAPIClientsManager_SubscribeToGatewayClientsChanges(t *testing.T) {
 func TestAdminAPIClientsManager_ConcurrentNotify(t *testing.T) {
 	t.Parallel()
 
-	cf := &clientFactoryWithExpected{t: t, expected: map[string]bool{
-		"http://10.0.0.1:8080": true,
-	}}
+	cf := alwaysSuccessClientFactory{}
 	testClient, err := adminapi.NewTestClient("http://10.0.0.1:8080")
 	require.NoError(t, err)
 
@@ -428,21 +460,89 @@ func TestAdminAPIClientsManager_ConcurrentNotify(t *testing.T) {
 	}()
 
 	// Run multiple notifiers in parallel to make sure that Notify is safe for concurrent use.
+	// We'll use two sets of clients interchangeably to cause an actual change that results in a notification.
+	oddClients := []adminapi.DiscoveredAdminAPI{testDiscoveredAdminAPI("http://10.0.0.1:8080")}
+	evenClients := []adminapi.DiscoveredAdminAPI{testDiscoveredAdminAPI("http://10.0.0.2:8080")}
 	for i := 0; i < 10; i++ {
+		i := i
 		go func() {
-			m.Notify([]adminapi.DiscoveredAdminAPI{
-				testDiscoveredAdminAPI("http://10.0.0.1:8080"),
-			})
+			// Notify with even or odd clients interchangeably depending on the iteration to trigger a change.
+			if pickEven := i%2 == 0; pickEven {
+				m.Notify(evenClients)
+			} else {
+				m.Notify(oddClients)
+			}
 		}()
 	}
 
 	require.Eventually(t, func() bool {
-		if count := receivedNotificationsCount.Load(); count != 10 {
-			t.Logf("Received %d notifications, expected 10, waiting...", count)
+		if count := receivedNotificationsCount.Load(); count < 2 {
+			t.Logf("Received %d notifications, expected at least 2, waiting...", count)
 			return false
 		}
 		return true
-	}, time.Second, time.Millisecond, "expected to receive 10 notifications")
+	}, time.Second, time.Millisecond, "expected to receive at least 2 notifications")
+}
+
+func TestAdminAPIClientsManager_NotifiesSubscribersOnlyWhenGatewayClientsChange(t *testing.T) {
+	cf := alwaysSuccessClientFactory{}
+	testClient, err := adminapi.NewTestClient("http://10.0.0.1:8080")
+	require.NoError(t, err)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	m, err := NewAdminAPIClientsManager(ctx, logrus.New(), []*adminapi.Client{testClient}, cf)
+	require.NoError(t, err)
+	m.RunNotifyLoop()
+
+	var receivedNotificationsCount atomic.Uint32
+	ch, ok := m.SubscribeToGatewayClientsChanges()
+	require.NotNil(t, ch)
+	require.True(t, ok)
+
+	// Run subscriber worker in a separate goroutine to consume notifications.
+	go func() {
+		for {
+			select {
+			case <-ch:
+				receivedNotificationsCount.Add(1)
+			case <-ctx.Done():
+				return
+			}
+		}
+	}()
+
+	firstClientsSet := []adminapi.DiscoveredAdminAPI{
+		testDiscoveredAdminAPI("http://10.0.0.1:8080"),
+	}
+	secondClientsSet := []adminapi.DiscoveredAdminAPI{
+		testDiscoveredAdminAPI("http://10.0.0.2:8080"),
+	}
+	notificationsCountEventuallyEquals := func(expectedCount int) {
+		require.Eventually(t, func() bool {
+			if count := receivedNotificationsCount.Load(); count != uint32(expectedCount) {
+				t.Logf("Received %d notifications, expected %d, waiting...", count, expectedCount)
+				return false
+			}
+			return true
+		}, time.Second, time.Millisecond, "expected to receive %d notifications", expectedCount)
+	}
+
+	// Notify the first set of clients and make sure that the subscriber doesn't get notified as it was initial state.
+	m.Notify(firstClientsSet)
+	notificationsCountEventuallyEquals(0)
+
+	// Notify an empty set of clients and make sure that the subscriber get notified.
+	m.Notify(nil)
+	notificationsCountEventuallyEquals(1)
+
+	// Notify an empty set again and make sure that the subscriber doesn't get notified as the state didn't change.
+	m.Notify(nil)
+	notificationsCountEventuallyEquals(1)
+
+	// Notify the second set of clients and make sure that the subscriber gets notified.
+	m.Notify(secondClientsSet)
+	notificationsCountEventuallyEquals(2)
 }
 
 func testDiscoveredAdminAPI(address string) adminapi.DiscoveredAdminAPI {

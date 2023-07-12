@@ -9,21 +9,16 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/samber/lo"
-	"github.com/samber/mo"
-	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
-	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/gateway"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/manager"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/manager/featuregates"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util/builder"
 )
 
@@ -34,7 +29,7 @@ func TestHTTPRouteReconciliation_DoesNotBlockSyncLoopWhenStatusQueueBufferIsExce
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	gw := deployGateway(ctx, t, ctrlClient)
-	runManagerWithConfig(ctx, t, envcfg, gw, func(cfg *manager.Config) {
+	RunManager(ctx, t, envcfg, WithPublishService(gw.Namespace), WithGatewayFeatureEnabled, func(cfg *manager.Config) {
 		// Enable status updates and change the queue's buffer size to 0 to
 		// ensure that the status update notifications do not block the
 		// sync loop despite the fact that the status update queue is full.
@@ -112,29 +107,6 @@ func TestHTTPRouteReconciliation_DoesNotBlockSyncLoopWhenStatusQueueBufferIsExce
 	t.Cleanup(func() { _ = ctrlClient.Delete(ctx, &httpRoute) })
 }
 
-const publishSvcName = "publish-svc"
-
-// runManagerWithConfig runs the manager in a goroutine using configuration modified by modifyCfgFn.
-// It also sets up configuration parameters that are required for the Gateway API to work as expected.
-func runManagerWithConfig(ctx context.Context, t *testing.T, envcfg *rest.Config, gw gatewayv1beta1.Gateway, modifyCfgFn func(cfg *manager.Config)) {
-	cfg := ConfigForEnvConfig(t, envcfg)
-
-	cfg.PublishStatusAddress = []string{"127.0.0.1"}
-	cfg.PublishService = mo.Some(k8stypes.NamespacedName{
-		Name:      publishSvcName,
-		Namespace: gw.Namespace,
-	})
-	cfg.FeatureGates[featuregates.GatewayFeature] = true
-	cfg.FeatureGates[featuregates.GatewayAlphaFeature] = true
-
-	modifyCfgFn(&cfg)
-
-	go func() {
-		err := manager.Run(ctx, &cfg, util.ConfigDumpDiagnostic{}, logrus.New())
-		require.NoError(t, err)
-	}()
-}
-
 // deployGateway deploys a Gateway, GatewayClass, and publish Service for use in tests.
 func deployGateway(ctx context.Context, t *testing.T, client client.Client) gatewayv1beta1.Gateway {
 	ns := CreateNamespace(ctx, t, client)
@@ -142,7 +114,7 @@ func deployGateway(ctx context.Context, t *testing.T, client client.Client) gate
 	publishSvc := corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: ns.Name,
-			Name:      publishSvcName,
+			Name:      PublishServiceName,
 		},
 		Spec: corev1.ServiceSpec{
 			Ports: []corev1.ServicePort{

@@ -1,15 +1,27 @@
 package envtest
 
 import (
+	"context"
 	"fmt"
 	"testing"
 
+	"github.com/bombsimon/logrusr/v2"
 	"github.com/phayes/freeport"
+	"github.com/samber/mo"
+	"github.com/sirupsen/logrus/hooks/test"
 	"github.com/stretchr/testify/require"
+	k8stypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/rest"
+	ctrl "sigs.k8s.io/controller-runtime"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/manager"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/manager/featuregates"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
+)
+
+const (
+	// PublishServiceName is the name of the publish service used in Gateway API tests.
+	PublishServiceName = "publish-svc"
 )
 
 // ConfigForEnvConfig prepares a manager.Config for use in tests
@@ -49,4 +61,47 @@ func ConfigForEnvConfig(t *testing.T, envcfg *rest.Config) manager.Config {
 	cfg.FeatureGates[featuregates.GatewayFeature] = false
 
 	return cfg
+}
+
+type ModifyManagerConfigFn func(cfg *manager.Config)
+
+func WithGatewayFeatureEnabled(cfg *manager.Config) {
+	cfg.FeatureGates[featuregates.GatewayFeature] = true
+	cfg.FeatureGates[featuregates.GatewayAlphaFeature] = true
+}
+
+func WithPublishService(namespace string) func(cfg *manager.Config) {
+	return func(cfg *manager.Config) {
+		cfg.PublishStatusAddress = []string{"127.0.0.1"}
+		cfg.PublishService = mo.Some(k8stypes.NamespacedName{
+			Name:      PublishServiceName,
+			Namespace: namespace,
+		})
+	}
+}
+
+// RunManager runs the manager in a goroutine. It's possible to modify the manager's configuration
+// by passing in modifyCfgFns. The manager is stopped when the context is canceled.
+func RunManager(
+	ctx context.Context,
+	t *testing.T,
+	envcfg *rest.Config,
+	modifyCfgFns ...func(cfg *manager.Config),
+) (loggerHook *test.Hook) {
+	cfg := ConfigForEnvConfig(t, envcfg)
+
+	for _, modifyCfgFn := range modifyCfgFns {
+		modifyCfgFn(&cfg)
+	}
+
+	logrusLogger, loggerHook := test.NewNullLogger()
+	logger := logrusr.New(logrusLogger)
+	ctrl.SetLogger(logger)
+
+	go func() {
+		err := manager.Run(ctx, &cfg, util.ConfigDumpDiagnostic{}, logrusLogger)
+		require.NoError(t, err)
+	}()
+
+	return loggerHook
 }

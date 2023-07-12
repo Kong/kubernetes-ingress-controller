@@ -34,12 +34,6 @@ const (
 - op: replace
   path: /spec/template/spec/containers/0/livenessProbe/failureThreshold
   value: %[3]d`
-
-	addControllerEnvPatch = `- op: add
-  path: "/spec/template/spec/containers/0/env/-"
-  value:
-    name: %s
-    value: "%s"`
 )
 
 // patchControllerImage replaces the kong/kubernetes-ingress-controller image with the provided image and tag,
@@ -118,29 +112,6 @@ func patchLivenessProbes(baseManifestReader io.Reader, deployment k8stypes.Names
 						},
 						Name:      deployment.Name,
 						Namespace: deployment.Namespace,
-					},
-				},
-			},
-		},
-	}
-	return kubectl.GetKustomizedManifest(kustomization, baseManifestReader)
-}
-
-// addControllerEnv adds an environment variable to ingress-controller container.
-func addControllerEnv(baseManifestReader io.Reader, envName, value string) (io.Reader, error) {
-	kustomization := types.Kustomization{
-		Patches: []types.Patch{
-			{
-				Patch: fmt.Sprintf(addControllerEnvPatch, envName, value),
-				Target: &types.Selector{
-					ResId: resid.ResId{
-						Gvk: resid.Gvk{
-							Group:   "apps",
-							Version: "v1",
-							Kind:    "Deployment",
-						},
-						Name:      controllerDeploymentName,
-						Namespace: "kong",
 					},
 				},
 			},

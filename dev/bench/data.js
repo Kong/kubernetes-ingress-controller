@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1689179221188,
+  "lastUpdate": 1689182160737,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -15642,6 +15642,48 @@ window.BENCHMARK_DATA = {
             "value": 12,
             "unit": "allocs/op",
             "extra": "16114 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "49699333+dependabot[bot]@users.noreply.github.com",
+            "name": "dependabot[bot]",
+            "username": "dependabot[bot]"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "10f42e4b776ac37e03318c6de03fcc87cebacba0",
+          "message": "chore(deps): bump github.com/kong/kubernetes-testing-framework (#4327)\n\nBumps [github.com/kong/kubernetes-testing-framework](https://github.com/kong/kubernetes-testing-framework) from 0.31.2 to 0.32.0.\r\n- [Release notes](https://github.com/kong/kubernetes-testing-framework/releases)\r\n- [Changelog](https://github.com/Kong/kubernetes-testing-framework/blob/main/CHANGELOG.md)\r\n- [Commits](https://github.com/kong/kubernetes-testing-framework/compare/v0.31.2...v0.32.0)\r\n\r\n---\r\nupdated-dependencies:\r\n- dependency-name: github.com/kong/kubernetes-testing-framework\r\n  dependency-type: direct:production\r\n  update-type: version-update:semver-minor\r\n...\r\n\r\nSigned-off-by: dependabot[bot] <support@github.com>\r\nCo-authored-by: dependabot[bot] <49699333+dependabot[bot]@users.noreply.github.com>",
+          "timestamp": "2023-07-12T17:11:25Z",
+          "tree_id": "350f6627d71d570ca214a2fbf698fd87a5454057",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/10f42e4b776ac37e03318c6de03fcc87cebacba0"
+        },
+        "date": 1689182154511,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - ns/op",
+            "value": 92938,
+            "unit": "ns/op",
+            "extra": "12960 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - B/op",
+            "value": 11104,
+            "unit": "B/op",
+            "extra": "12960 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - allocs/op",
+            "value": 12,
+            "unit": "allocs/op",
+            "extra": "12960 times\n2 procs"
           }
         ]
       }

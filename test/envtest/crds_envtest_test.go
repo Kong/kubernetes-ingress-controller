@@ -26,12 +26,10 @@ import (
 func TestMissingCRDsDontCrashTheManager(t *testing.T) {
 	emptyScheme := runtime.NewScheme()
 	envcfg := Setup(t, emptyScheme)
-	ctrlClient := NewControllerClient(t, envcfg)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	gw := deployGateway(ctx, t, ctrlClient)
-	loggerHook := runManagerWithConfig(ctx, t, envcfg, gw, func(cfg *manager.Config) {
+	loggerHook := RunManager(ctx, t, envcfg, func(cfg *manager.Config) {
 		// Reducing controllers' cache synchronisation timeout in order to trigger the possible sync timeout quicker.
 		// It's a regression test for https://github.com/Kong/gateway-operator/issues/326.
 		cfg.CacheSyncTimeout = time.Millisecond * 500
@@ -86,5 +84,5 @@ func TestMissingCRDsDontCrashTheManager(t *testing.T) {
 			}
 		}
 		return true
-	}, time.Minute, time.Millisecond)
+	}, time.Minute, time.Millisecond*500)
 }

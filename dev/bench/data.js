@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1689175126523,
+  "lastUpdate": 1689175128574,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -15054,6 +15054,48 @@ window.BENCHMARK_DATA = {
             "value": 12,
             "unit": "allocs/op",
             "extra": "15452 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jakub.warczarek@konghq.com",
+            "name": "Jakub Warczarek",
+            "username": "programmer04"
+          },
+          "committer": {
+            "email": "jakub.warczarek@konghq.com",
+            "name": "Jakub Warczarek",
+            "username": "programmer04"
+          },
+          "distinct": true,
+          "id": "a59ad5afc346254e2ea3a570bc5043d07cd69e81",
+          "message": "Update scripts/build-single-manifests.sh\n\nCo-authored-by: Patryk Małek <patryk.malek@konghq.com>",
+          "timestamp": "2023-07-12T17:05:38+02:00",
+          "tree_id": "3c8ff9a16d58d7b740d30af2961d7d4777fc85b9",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/a59ad5afc346254e2ea3a570bc5043d07cd69e81"
+        },
+        "date": 1689175120365,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - ns/op",
+            "value": 67373,
+            "unit": "ns/op",
+            "extra": "17912 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - B/op",
+            "value": 11094,
+            "unit": "B/op",
+            "extra": "17912 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - allocs/op",
+            "value": 12,
+            "unit": "allocs/op",
+            "extra": "17912 times\n2 procs"
           }
         ]
       },

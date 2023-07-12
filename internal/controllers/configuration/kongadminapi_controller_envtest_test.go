@@ -77,6 +77,10 @@ func startKongAdminAPIServiceReconciler(ctx context.Context, t *testing.T, clien
 	}
 
 	n = &notifier{t: t}
+
+	adminAPIsDiscoverer, err := adminapi.NewDiscoverer(sets.New("admin"), types.ServiceScopedPodDNSStrategy)
+	require.NoError(t, err)
+
 	require.NoError(t,
 		(&configuration.KongAdminAPIServiceReconciler{
 			Client: mgr.GetClient(),
@@ -84,10 +88,9 @@ func startKongAdminAPIServiceReconciler(ctx context.Context, t *testing.T, clien
 				Name:      adminService.Name,
 				Namespace: adminService.Namespace,
 			},
-			PortNames:         sets.New("admin"),
-			EndpointsNotifier: n,
-			Log:               mgr.GetLogger(),
-			DNSStrategy:       types.ServiceScopedPodDNSStrategy,
+			EndpointsNotifier:   n,
+			Log:                 mgr.GetLogger(),
+			AdminAPIsDiscoverer: adminAPIsDiscoverer,
 		}).SetupWithManager(mgr),
 	)
 	// This wait group makes it so that we wait for manager to exit.

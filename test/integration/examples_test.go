@@ -240,7 +240,7 @@ func TestIngressExample(t *testing.T) {
 	t.Logf("applying yaml manifest %s", ingressExampleManifests)
 	b, err := os.ReadFile(ingressExampleManifests)
 	require.NoError(t, err)
-	manifests := replaceIngressClassInManifests(string(b))
+	manifests := replaceIngressClassSpecFieldInManifests(string(b))
 	require.NoError(t, clusters.ApplyManifestByYAML(ctx, env.Cluster(), manifests))
 	cleaner.AddManifest(string(b))
 
@@ -298,7 +298,7 @@ func TestUDPIngressExample(t *testing.T) {
 	t.Logf("applying yaml manifest %s", udpingressExampleManifests)
 	b, err := os.ReadFile(udpingressExampleManifests)
 	require.NoError(t, err)
-	manifests := replaceIngressClassInManifests(string(b))
+	manifests := replaceIngressClassAnnotationInManifests(string(b))
 	require.NoError(t, clusters.ApplyManifestByYAML(ctx, env.Cluster(), manifests))
 	cleaner.AddManifest(string(b))
 
@@ -316,6 +316,10 @@ func TestUDPIngressExample(t *testing.T) {
 	}, ingressWait, waitTick)
 }
 
-func replaceIngressClassInManifests(manifests string) string {
+func replaceIngressClassAnnotationInManifests(manifests string) string {
 	return strings.ReplaceAll(manifests, `kubernetes.io/ingress.class: "kong"`, fmt.Sprintf(`kubernetes.io/ingress.class: "%s"`, consts.IngressClass))
+}
+
+func replaceIngressClassSpecFieldInManifests(manifests string) string {
+	return strings.ReplaceAll(manifests, `ingressClassName: kong`, fmt.Sprintf(`ingressClassName: %s`, consts.IngressClass))
 }

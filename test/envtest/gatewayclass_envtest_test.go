@@ -5,10 +5,8 @@ package envtest
 import (
 	"context"
 	"testing"
-	"time"
 
 	"github.com/google/uuid"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -95,8 +93,6 @@ func TestGatewayWithGatewayClassReconciliation(t *testing.T) {
 				gwc gatewayv1beta1.GatewayClass,
 				gw gatewayv1beta1.Gateway,
 			) {
-				t.Helper()
-
 				t.Logf("deploying gateway class %s", gwc.Name)
 				require.NoError(t, client.Create(ctx, &gwc))
 				t.Cleanup(func() { _ = client.Delete(ctx, &gwc) })
@@ -153,8 +149,6 @@ func TestGatewayWithGatewayClassReconciliation(t *testing.T) {
 				gwc gatewayv1beta1.GatewayClass,
 				gw gatewayv1beta1.Gateway,
 			) {
-				t.Helper()
-
 				t.Logf("verifying that the Gateway %s does not get scheduled by the controller due to missing its GatewayClass", gw.Name)
 				// NOTE: Ideally we wouldn't like to perform a busy wait loop here,
 				// but rely on actual data like number of Reconciler calls.
@@ -229,8 +223,6 @@ func TestGatewayWithGatewayClassReconciliation(t *testing.T) {
 				gwc gatewayv1beta1.GatewayClass,
 				gw gatewayv1beta1.Gateway,
 			) {
-				t.Helper()
-
 				t.Logf("verifying that the Gateway %s does not get scheduled by the controller due to missing its GatewayClass", gw.Name)
 				// NOTE: Ideally we wouldn't like to perform a busy wait loop here,
 				// but rely on actual data like number of Reconciler calls.
@@ -257,21 +249,37 @@ func TestGatewayWithGatewayClassReconciliation(t *testing.T) {
 				t.Cleanup(func() { _ = client.Delete(ctx, &gwc) })
 
 				t.Logf("now that the GatewayClass exists, verifying that the Gateway %s gets Accepted and Programmed", gw.Name)
-				if !assert.Eventually(t, func() bool {
-					gateway, err := gwClient.Get(ctx, gw.Name, metav1.GetOptions{})
-					require.NoError(t, err)
 
-					if !conditions.Contain(gateway.Status.Conditions, conditions.WithType("Programmed"), conditions.WithStatus(metav1.ConditionTrue)) {
-						return false
+				w, err := gwClient.Watch(ctx, metav1.ListOptions{
+					FieldSelector: "metadata.name=" + gw.Name,
+					TypeMeta: metav1.TypeMeta{
+						APIVersion: gatewayv1beta1.GroupVersion.String(),
+						Kind:       "Gateway",
+					},
+				})
+				require.NoError(t, err)
+				defer w.Stop()
+
+			forLoop:
+				for {
+					select {
+					case <-ctx.Done():
+						gateway, err := gwClient.Get(ctx, gw.Name, metav1.GetOptions{})
+						require.NoError(t, err)
+						t.Logf("expected to find an Accepted and Programmed conditions with Status True, got %#v", gateway.Status.Conditions)
+						t.Fatalf("context got cancelled: %v", ctx.Err())
+					case event := <-w.ResultChan():
+						gateway, ok := event.Object.(*gatewayv1beta1.Gateway)
+						require.True(t, ok)
+
+						if !conditions.Contain(gateway.Status.Conditions, conditions.WithType("Programmed"), conditions.WithStatus(metav1.ConditionTrue)) {
+							continue
+						}
+						if !conditions.Contain(gateway.Status.Conditions, conditions.WithType("Accepted"), conditions.WithStatus(metav1.ConditionTrue)) {
+							continue
+						}
+						break forLoop
 					}
-
-					if !conditions.Contain(gateway.Status.Conditions, conditions.WithType("Accepted"), conditions.WithStatus(metav1.ConditionTrue)) {
-						return false
-					}
-
-					return true
-				}, 10*time.Second, 10*time.Millisecond) {
-					t.Logf("expected to find an Accepted and Programmed conditions with Status True, got %#v", gw.Status.Conditions)
 				}
 			},
 		},
@@ -282,8 +290,17 @@ func TestGatewayWithGatewayClassReconciliation(t *testing.T) {
 		t.Run(tc.Name, func(t *testing.T) {
 			t.Parallel()
 
+			var (
+				ctx    context.Context
+				cancel func()
+			)
+
 			// We use a deferred cancel to stop the manager and not wait for its timeout.
-			ctx, cancel := context.WithCancel(context.Background())
+			if deadline, ok := t.Deadline(); ok {
+				ctx, cancel = context.WithDeadline(context.Background(), deadline)
+			} else {
+				ctx, cancel = context.WithCancel(context.Background())
+			}
 			defer cancel()
 
 			ns := CreateNamespace(ctx, t, client)

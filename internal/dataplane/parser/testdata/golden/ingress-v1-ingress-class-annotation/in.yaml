@@ -4,8 +4,9 @@ kind: Ingress
 metadata:
   name: foo
   namespace: foo-namespace
+  annotations:
+    kubernetes.io/ingress.class: kong
 spec:
-  ingressClassName: kong
   rules:
   - host: example.com
     http:
@@ -20,8 +21,6 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  annotations:
-    kubernetes.io/ingress.class: kong
   name: foo-svc
   namespace: foo-namespace
 spec:

@@ -5,9 +5,9 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/google/go-cmp/cmp"
 	"github.com/kong/deck/file"
 	"github.com/kong/go-kong/kong"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/deckgen"
 	"github.com/sirupsen/logrus"
 )
 
@@ -75,15 +75,7 @@ func (d *DefaultConfigurationChangeDetector) HasConfigurationChanged(
 	// Kong instance has no configuration, we should push despite the oldSHA and newSHA being equal...
 	if hasNoConfiguration {
 		// ... unless we're trying to push an empty config in such case skip.
-		if cmp.Equal(targetConfig, &file.Content{},
-			cmp.FilterPath(
-				func(p cmp.Path) bool {
-					path := p.String()
-					return path == "FormatVersion" || path == "Info"
-				},
-				cmp.Ignore(),
-			),
-		) {
+		if deckgen.IsContentEmpty(targetConfig) {
 			return false, nil
 		}
 

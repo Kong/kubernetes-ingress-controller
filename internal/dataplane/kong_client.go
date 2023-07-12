@@ -491,21 +491,15 @@ func (c *KongClient) sendToClient(
 ) (string, error) {
 	logger := c.logger.WithField("url", client.AdminAPIClient().BaseRootURL())
 
-	// generate the deck configuration to be applied to the admin API
 	deckGenParams := deckgen.GenerateDeckContentParams{
-		FormatVersion:    config.DeckFileFormatVersion,
-		SelectorTags:     config.FilterTags,
-		ExpressionRoutes: config.ExpressionRoutes,
-		PluginSchemas:    client.PluginSchemaStore(),
+		FormatVersion:                   config.DeckFileFormatVersion,
+		SelectorTags:                    config.FilterTags,
+		ExpressionRoutes:                config.ExpressionRoutes,
+		PluginSchemas:                   client.PluginSchemaStore(),
+		AppendStubEntityWhenConfigEmpty: !client.IsKonnect() && config.InMemory,
 	}
-	logger.Debug("converting configuration to deck config")
-	targetConfig := deckgen.ToDeckContent(ctx,
-		logger,
-		s,
-		deckGenParams,
-	)
-
-	sendDiagnostic := prepareSendDiagnosticFn(ctx, logger, c.diagnostic, s, targetConfig, deckGenParams)
+	targetContent := deckgen.ToDeckContent(ctx, logger, s, deckGenParams)
+	sendDiagnostic := prepareSendDiagnosticFn(ctx, logger, c.diagnostic, s, targetContent, deckGenParams)
 
 	// apply the configuration update in Kong
 	timedCtx, cancel := context.WithTimeout(ctx, c.requestTimeout)
@@ -515,7 +509,7 @@ func (c *KongClient) sendToClient(
 		logger,
 		client,
 		config,
-		targetConfig,
+		targetContent,
 		c.prometheusMetrics,
 		c.updateStrategyResolver,
 		c.configChangeDetector,

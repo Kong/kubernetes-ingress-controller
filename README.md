@@ -44,7 +44,7 @@ Setting up Kong for Kubernetes is as simple as:
 
 ```shell
 # using YAMLs
-$ kubectl apply -f https://bit.ly/k4k8s
+$ kubectl apply -f https://raw.githubusercontent.com/Kong/kubernetes-ingress-controller/latest/deploy/single/all-in-one-dbless.yaml
 
 # or using Helm
 $ helm repo add kong https://charts.konghq.com

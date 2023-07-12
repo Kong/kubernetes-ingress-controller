@@ -12,7 +12,7 @@ import (
 )
 
 type ClientFactory interface {
-	CreateAdminAPIClient(ctx context.Context, address string) (*adminapi.Client, error)
+	CreateAdminAPIClient(ctx context.Context, address adminapi.DiscoveredAdminAPI) (*adminapi.Client, error)
 }
 
 // AdminAPIClientsManager keeps track of current Admin API clients of Gateways that we should configure.
@@ -231,7 +231,7 @@ func (c *AdminAPIClientsManager) adjustGatewayClients(discoveredAdminAPIs []admi
 	}
 
 	for _, adminAPI := range toAdd {
-		client, err := c.adminAPIClientFactory.CreateAdminAPIClient(c.ctx, adminAPI.Address)
+		client, err := c.adminAPIClientFactory.CreateAdminAPIClient(c.ctx, adminAPI)
 		if err != nil {
 			c.logger.WithError(err).Errorf("failed to create a client for %s", adminAPI)
 			continue

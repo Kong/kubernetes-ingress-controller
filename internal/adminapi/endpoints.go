@@ -21,15 +21,40 @@ type DiscoveredAdminAPI struct {
 	PodRef  k8stypes.NamespacedName
 }
 
+type Discoverer struct {
+	// portNames is the set of port names that Admin API Service ports will be
+	// matched against.
+	portNames sets.Set[string]
+
+	// dnsStrategy is the DNS strategy to use when resolving Admin API Service
+	// addresses.
+	dnsStrategy cfgtypes.DNSStrategy
+}
+
+func NewDiscoverer(
+	adminAPIPortNames sets.Set[string],
+	dnsStrategy cfgtypes.DNSStrategy,
+) (*Discoverer, error) {
+	if adminAPIPortNames.Len() == 0 {
+		return nil, fmt.Errorf("no admin API port names provided")
+	}
+	if err := dnsStrategy.Validate(); err != nil {
+		return nil, fmt.Errorf("invalid dns strategy: %w", err)
+	}
+
+	return &Discoverer{
+		portNames:   adminAPIPortNames,
+		dnsStrategy: dnsStrategy,
+	}, nil
+}
+
 // GetAdminAPIsForService performs an endpoint lookup, using provided kubeClient
 // to list provided Admin API Service EndpointSlices.
 // The retrieved EndpointSlices' ports are compared with the provided portNames set.
-func GetAdminAPIsForService(
+func (d *Discoverer) GetAdminAPIsForService(
 	ctx context.Context,
 	kubeClient client.Client,
 	service k8stypes.NamespacedName,
-	portNames sets.Set[string],
-	dnsStrategy cfgtypes.DNSStrategy,
 ) (sets.Set[DiscoveredAdminAPI], error) {
 	const (
 		defaultEndpointSliceListPagingLimit = 100
@@ -58,7 +83,7 @@ func GetAdminAPIsForService(
 		}
 
 		for _, es := range endpointsList.Items {
-			adminAPI, err := AdminAPIsFromEndpointSlice(es, portNames, dnsStrategy)
+			adminAPI, err := d.AdminAPIsFromEndpointSlice(es)
 			if err != nil {
 				return nil, err
 			}
@@ -75,10 +100,8 @@ func GetAdminAPIsForService(
 
 // AdminAPIsFromEndpointSlice returns a list of Admin APIs when given
 // an EndpointSlice.
-func AdminAPIsFromEndpointSlice(
+func (d *Discoverer) AdminAPIsFromEndpointSlice(
 	endpoints discoveryv1.EndpointSlice,
-	portNames sets.Set[string],
-	dnsStrategy cfgtypes.DNSStrategy,
 ) (sets.Set[DiscoveredAdminAPI], error) {
 	discoveredAdminAPIs := sets.New[DiscoveredAdminAPI]()
 	for _, p := range endpoints.Ports {
@@ -86,7 +109,7 @@ func AdminAPIsFromEndpointSlice(
 			continue
 		}
 
-		if !portNames.Has(*p.Name) {
+		if !d.portNames.Has(*p.Name) {
 			continue
 		}
 
@@ -117,7 +140,7 @@ func AdminAPIsFromEndpointSlice(
 				Namespace: endpoints.Namespace,
 			}
 
-			adminAPI, err := adminAPIFromEndpoint(e, p, svc, dnsStrategy)
+			adminAPI, err := adminAPIFromEndpoint(e, p, svc, d.dnsStrategy)
 			if err != nil {
 				return nil, err
 			}

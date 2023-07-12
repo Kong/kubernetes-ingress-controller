@@ -5,6 +5,14 @@ metadata:
   name: kong-ingress-gateway
 rules:
 - apiGroups:
+  - ""
+  resources:
+  - namespaces
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
   - gateway.networking.k8s.io
   resources:
   - gatewayclasses

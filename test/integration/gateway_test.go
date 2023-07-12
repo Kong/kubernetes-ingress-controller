@@ -96,9 +96,10 @@ func TestUnmanagedGatewayBasics(t *testing.T) {
 	require.Eventually(t, func() bool {
 		gw, err = gatewayClient.GatewayV1alpha2().Gateways(ns.Name).Get(ctx, gw.Name, metav1.GetOptions{})
 		require.NoError(t, err)
+		// The conditions should be snapshots, so we judge by the observed status of condition with type Ready.
 		for _, cond := range gw.Status.Conditions {
-			if cond.Reason == string(gatewayv1alpha2.GatewayReasonReady) {
-				return true
+			if cond.Type == string(gatewayv1alpha2.GatewayConditionReady) {
+				return cond.Reason == string(gatewayv1alpha2.GatewayReasonReady)
 			}
 		}
 		return false

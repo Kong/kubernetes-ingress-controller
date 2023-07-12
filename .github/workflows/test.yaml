@@ -3,12 +3,13 @@ name: tests
 on:
   pull_request:
     branches:
-      - '*'
+      - '**'
   push:
     branches:
       - 'main'
+      - 'release/[0-9]+.[0-9]+.x'
     tags:
-      - '*'
+      - '**'
   workflow_dispatch: {}
 
 jobs:
@@ -123,6 +124,11 @@ jobs:
     if: "needs.runnable.outputs.runnable == 'true'"
     steps:
 
+    - uses: Kong/kong-license@master
+      id: license
+      with:
+        password: ${{ secrets.PULP_PASSWORD }}
+
     - name: setup golang
       uses: actions/setup-go@v3
       with:
@@ -144,7 +150,7 @@ jobs:
     - name: run integration tests
       run: make test.integration.enterprise.postgres
       env:
-        KONG_LICENSE_DATA: ${{ secrets.KONG_LICENSE_DATA }}
+        KONG_LICENSE_DATA: ${{ steps.license.outputs.license }}
 
     - name: collect test coverage
       uses: actions/upload-artifact@v3
@@ -271,6 +277,25 @@ jobs:
 
     - name: run conformance tests
       run: make test.conformance
+
+  # We need this step to fail the workflow if any of the previous steps failed or were cancelled.
+  # It allows to use this particular job as a required check for PRs.
+  # Ref: https://github.com/orgs/community/discussions/26822#discussioncomment-3305794
+  passed:
+    runs-on: ubuntu-latest
+    needs:
+      - "lint"
+      - "unit-tests"
+      - "integration-tests-dbless"
+      - "integration-tests-postgres"
+      - "integration-tests-enterprise-postgres"
+      - "integration-tests-feature-gates"
+    if: always()
+    steps:
+      - if: ${{ contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') }}
+        run: |
+          echo "Some jobs failed or were cancelled."
+          exit 1
 
   coverage:
     environment: "Configure ci"

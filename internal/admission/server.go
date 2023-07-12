@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"time"
 
 	"github.com/sirupsen/logrus"
 	admission "k8s.io/api/admission/v1"
@@ -51,7 +52,7 @@ func (sc *ServerConfig) toTLSConfig(ctx context.Context, log logrus.FieldLogger)
 		if err != nil {
 			return nil, fmt.Errorf("X509KeyPair error: %w", err)
 		}
-		return &tls.Config{ // nolint:gosec
+		return &tls.Config{ //nolint:gosec
 			MaxVersion:   tls.VersionTLS12,
 			MinVersion:   tls.VersionTLS12,
 			Certificates: []tls.Certificate{keyPair},
@@ -82,7 +83,7 @@ func (sc *ServerConfig) toTLSConfig(ctx context.Context, log logrus.FieldLogger)
 			log.WithError(err).Error("certificate watcher error")
 		}
 	}()
-	return &tls.Config{ // nolint:gosec
+	return &tls.Config{ //nolint:gosec
 		MaxVersion:     tls.VersionTLS12,
 		MinVersion:     tls.VersionTLS12,
 		GetCertificate: watcher.GetCertificate,
@@ -97,9 +98,10 @@ func MakeTLSServer(ctx context.Context, config *ServerConfig, handler http.Handl
 		return nil, err
 	}
 	return &http.Server{
-		Addr:      config.ListenAddr,
-		TLSConfig: tlsConfig,
-		Handler:   handler,
+		Addr:              config.ListenAddr,
+		TLSConfig:         tlsConfig,
+		Handler:           handler,
+		ReadHeaderTimeout: 10 * time.Second,
 	}, nil
 }
 

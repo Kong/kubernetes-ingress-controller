@@ -84,7 +84,7 @@ func (u *Upstream) overrideByKongIngress(kongIngress *configurationv1.KongIngres
 
 // override sets Upstream fields by KongIngress first, then by k8s Service's annotations
 func (u *Upstream) override(
-	log logrus.FieldLogger,
+	_ logrus.FieldLogger,
 	kongIngress *configurationv1.KongIngress,
 	svc *corev1.Service,
 ) {

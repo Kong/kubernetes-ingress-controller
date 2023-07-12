@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/http/pprof"
 	"sync"
+	"time"
 
 	"github.com/go-logr/logr"
 	"github.com/kong/deck/file"
@@ -38,7 +39,7 @@ func (s *Server) Listen(ctx context.Context, port int) error {
 		installProfilingHandlers(mux)
 	}
 
-	httpServer := &http.Server{Addr: fmt.Sprintf(":%d", port), Handler: mux}
+	httpServer := &http.Server{Addr: fmt.Sprintf(":%d", port), Handler: mux, ReadHeaderTimeout: 10 * time.Second}
 	errChan := make(chan error)
 
 	go s.receiveConfig(ctx)

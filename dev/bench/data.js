@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1689177281423,
+  "lastUpdate": 1689177630867,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -15222,6 +15222,48 @@ window.BENCHMARK_DATA = {
             "value": 12,
             "unit": "allocs/op",
             "extra": "14811 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "czeslavo@gmail.com",
+            "name": "Grzegorz Burzyński",
+            "username": "czeslavo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "f861118a88b9e67aa37cd42edda0162d184026e4",
+          "message": "fix(konnect): update nodes status only when it actually changes (#4324)\n\nMakes sure that:\r\n\r\n- `NodeAgent` calls Konnect APIs only when the config status actually changes \r\n  (enforce that on both ends of the notification channel - in `NodeAgent` and\r\nin `KongClient`). **This was an actual reason for KIC updating nodes every\r\n3s**.\r\n- `NodeAgent` calls Konnect APIs only when a set of Gateway clients actually\r\n  changes (enforce that on `ClientsManager` side)\r\n\r\nAlso improves debug logging to make it visible when the calls are made.\r\n\r\nAfter this change, `NodeAgent` will call Konnect APIs in the following cases:\r\n- configuration status has changed,\r\n- gateways' clients have changed (Gateway deployment scaling, Pod eviction,\r\n  etc.),\r\n- every 30s.",
+          "timestamp": "2023-07-12T15:58:45Z",
+          "tree_id": "2d0c885519371c902ec52f797f95cc74ab5de123",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/f861118a88b9e67aa37cd42edda0162d184026e4"
+        },
+        "date": 1689177625032,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - ns/op",
+            "value": 94351,
+            "unit": "ns/op",
+            "extra": "13122 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - B/op",
+            "value": 11095,
+            "unit": "B/op",
+            "extra": "13122 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - allocs/op",
+            "value": 12,
+            "unit": "allocs/op",
+            "extra": "13122 times\n2 procs"
           }
         ]
       }

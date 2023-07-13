@@ -44,6 +44,17 @@ func KongRawStateToKongState(rawstate *utils.KongRawState) *KongState {
 		}
 	}
 
+	pluginsByService := make(map[string][]*kong.Plugin)
+	pluginsByRoute := make(map[string][]*kong.Plugin)
+	for _, p := range rawstate.Plugins {
+		if p.Service != nil && p.Service.ID != nil {
+			pluginsByService[*p.Service.ID] = append(pluginsByService[*p.Service.ID], p)
+		}
+		if p.Route != nil && p.Route.ID != nil {
+			pluginsByRoute[*p.Route.ID] = append(pluginsByRoute[*p.Route.ID], p)
+		}
+	}
+
 	targets := make(map[string][]*kong.Target)
 	for _, u := range rawstate.Targets {
 		if u.Upstream != nil && u.Upstream.ID != nil {
@@ -55,12 +66,16 @@ func KongRawStateToKongState(rawstate *utils.KongRawState) *KongState {
 		kongState.Services = append(kongState.Services, Service{
 			Service: sanitizeKongService(*s),
 			Routes:  []Route{},
+			Plugins: []kong.Plugin{},
 		})
-		for _, r := range routes[*s.ID] {
+		for j, r := range routes[*s.ID] {
 			kongState.Services[i].Routes = append(kongState.Services[i].Routes, Route{
-				Route: sanitizeKongRoute(*r),
+				Route:   sanitizeKongRoute(*r),
+				Plugins: []kong.Plugin{},
 			})
+			kongState.Services[i].Routes[j].Plugins = rawPluginsToPlugins(pluginsByRoute[*r.ID])
 		}
+		kongState.Services[i].Plugins = rawPluginsToPlugins(pluginsByService[*s.ID])
 	}
 
 	for _, u := range rawstate.Upstreams {
@@ -77,6 +92,18 @@ func KongRawStateToKongState(rawstate *utils.KongRawState) *KongState {
 	kongState.Certificates = rawCertificatesToCertificates(rawstate.Certificates)
 
 	return kongState
+}
+
+func rawPluginsToPlugins(plugins []*kong.Plugin) []kong.Plugin {
+	if len(plugins) == 0 {
+		return nil
+	}
+	ps := []kong.Plugin{}
+
+	for _, p := range plugins {
+		ps = append(ps, sanitizePlugin(*p))
+	}
+	return ps
 }
 
 func rawTargetsToTargets(targets []*kong.Target) []Target {
@@ -141,4 +168,12 @@ func sanitizeUpstream(upstream Upstream) Upstream {
 		upstream.Targets[i].Upstream = nil
 	}
 	return upstream
+}
+
+func sanitizePlugin(plugin kong.Plugin) kong.Plugin {
+	plugin.ID = nil
+	plugin.CreatedAt = nil
+	plugin.Service = nil
+	plugin.Route = nil
+	return plugin
 }

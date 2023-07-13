@@ -831,6 +831,8 @@ func TestAssignRoutePriorityToSplitHTTPRoutes(t *testing.T) {
 		matchIndex int
 	}
 	now := time.Now()
+	const maxRelativeOrderPriorityBits = (1 << 18) - 1
+
 	testCases := []struct {
 		name            string
 		splitHTTPRoutes []*gatewayv1beta1.HTTPRoute
@@ -890,14 +892,24 @@ func TestAssignRoutePriorityToSplitHTTPRoutes(t *testing.T) {
 					hostname:   "foo.com",
 					ruleIndex:  0,
 					matchIndex: 0,
-				}: (2 << 50) | (1 << 49) | (7 << 41) | (1 << 40) | (3 << 29) | ((1 << 18) - 1),
+				}: HTTPRoutePriorityTraits{
+					PreciseHostname: true,
+					HostnameLength:  len("foo.com"),
+					PathType:        gatewayv1beta1.PathMatchExact,
+					PathLength:      len("/foo"),
+				}.EncodeToPriority() + maxRelativeOrderPriorityBits,
 				{
 					namespace:  "default",
 					name:       "httproute-2",
 					hostname:   "*.bar.com",
 					ruleIndex:  0,
 					matchIndex: 0,
-				}: (2 << 50) | (9 << 41) | (1 << 40) | (3 << 29) | ((1 << 18) - 1),
+				}: HTTPRoutePriorityTraits{
+					PreciseHostname: false,
+					HostnameLength:  len("*.bar.com"),
+					PathType:        gatewayv1beta1.PathMatchExact,
+					PathLength:      len("/bar"),
+				}.EncodeToPriority() + maxRelativeOrderPriorityBits,
 			},
 		},
 		{
@@ -953,14 +965,24 @@ func TestAssignRoutePriorityToSplitHTTPRoutes(t *testing.T) {
 					hostname:   "foo.com",
 					ruleIndex:  0,
 					matchIndex: 0,
-				}: (2 << 50) | (1 << 49) | (7 << 41) | (1 << 40) | (3 << 29) | ((1 << 18) - 1),
+				}: HTTPRoutePriorityTraits{
+					PreciseHostname: true,
+					HostnameLength:  len("foo.com"),
+					PathType:        gatewayv1beta1.PathMatchExact,
+					PathLength:      len("/foo"),
+				}.EncodeToPriority() + maxRelativeOrderPriorityBits,
 				{
 					namespace:  "default",
 					name:       "httproute-2",
 					hostname:   "bar.com",
 					ruleIndex:  0,
 					matchIndex: 0,
-				}: (2 << 50) | (1 << 49) | (7 << 41) | (1 << 40) | (3 << 29) | ((1 << 18) - 1) - 1,
+				}: HTTPRoutePriorityTraits{
+					PreciseHostname: true,
+					HostnameLength:  len("bar.com"),
+					PathType:        gatewayv1beta1.PathMatchExact,
+					PathLength:      len("/foo"),
+				}.EncodeToPriority() + maxRelativeOrderPriorityBits - 1,
 			},
 		},
 		{
@@ -1016,14 +1038,24 @@ func TestAssignRoutePriorityToSplitHTTPRoutes(t *testing.T) {
 					hostname:   "foo.com",
 					ruleIndex:  0,
 					matchIndex: 0,
-				}: (2 << 50) | (1 << 49) | (7 << 41) | (1 << 40) | (3 << 29) | ((1 << 18) - 1),
+				}: HTTPRoutePriorityTraits{
+					PreciseHostname: true,
+					HostnameLength:  len("foo.com"),
+					PathType:        gatewayv1beta1.PathMatchExact,
+					PathLength:      len("/foo"),
+				}.EncodeToPriority() + maxRelativeOrderPriorityBits,
 				{
 					namespace:  "default",
 					name:       "httproute-2",
 					hostname:   "bar.com",
 					ruleIndex:  0,
 					matchIndex: 0,
-				}: (2 << 50) | (1 << 49) | (7 << 41) | (1 << 40) | (3 << 29) | ((1 << 18) - 1) - 1,
+				}: HTTPRoutePriorityTraits{
+					PreciseHostname: true,
+					HostnameLength:  len("bar.com"),
+					PathType:        gatewayv1beta1.PathMatchExact,
+					PathLength:      len("/foo"),
+				}.EncodeToPriority() + maxRelativeOrderPriorityBits - 1,
 			},
 		},
 		{
@@ -1079,14 +1111,24 @@ func TestAssignRoutePriorityToSplitHTTPRoutes(t *testing.T) {
 					hostname:   "foo.com",
 					ruleIndex:  0,
 					matchIndex: 0,
-				}: (2 << 50) | (1 << 49) | (7 << 41) | (1 << 40) | (3 << 29) | ((1 << 18) - 1),
+				}: HTTPRoutePriorityTraits{
+					PreciseHostname: true,
+					HostnameLength:  len("foo.com"),
+					PathType:        gatewayv1beta1.PathMatchExact,
+					PathLength:      len("/foo"),
+				}.EncodeToPriority() + maxRelativeOrderPriorityBits,
 				{
 					namespace:  "default",
 					name:       "httproute-1",
 					hostname:   "foo.com",
 					ruleIndex:  0,
 					matchIndex: 1,
-				}: (2 << 50) | (1 << 49) | (7 << 41) | (1 << 40) | (3 << 29) | ((1 << 18) - 1) - 1,
+				}: HTTPRoutePriorityTraits{
+					PreciseHostname: true,
+					HostnameLength:  len("bar.com"),
+					PathType:        gatewayv1beta1.PathMatchExact,
+					PathLength:      len("/foo"),
+				}.EncodeToPriority() + maxRelativeOrderPriorityBits - 1,
 			},
 		},
 		{
@@ -1158,7 +1200,12 @@ func TestAssignRoutePriorityToSplitHTTPRoutes(t *testing.T) {
 					hostname:   "foo.com",
 					ruleIndex:  0,
 					matchIndex: 0,
-				}: (2 << 50) | (1 << 49) | (7 << 41) | (1 << 40) | (3 << 29) | ((1 << 18) - 1),
+				}: HTTPRoutePriorityTraits{
+					PreciseHostname: true,
+					HostnameLength:  len("foo.com"),
+					PathType:        gatewayv1beta1.PathMatchExact,
+					PathLength:      len("/foo"),
+				}.EncodeToPriority() + maxRelativeOrderPriorityBits,
 			},
 		},
 	}

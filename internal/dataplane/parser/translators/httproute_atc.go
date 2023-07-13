@@ -478,9 +478,10 @@ func AssignRoutePriorityToSplitHTTPRoutes(
 				Priority:  priority + relativeOrderBits,
 			})
 		}
-		// log the
+		// Just in case, log a very unlikely scenario where we have more than 2^18 routes with the same base
+		// priority and we have no bit space for them to be deterministically ordered.
 		if len(routes) > (1 << 18) {
-			logger.Info("Too many HTTPRoutes are distinguished by relative orders", "httproute_number", len(routes))
+			logger.V(util.WarnLevel).Info("Too many HTTPRoutes to be deterministically ordered", "httproute_number", len(routes))
 		}
 	}
 

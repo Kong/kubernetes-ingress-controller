@@ -73,10 +73,10 @@ func TestQueue(t *testing.T) {
 	assert.Len(t, ingCH, 1, "the underlying channel should now contain one event")
 
 	t.Log("verifying that objects of new kinds can be published into the queue")
-	q.Publish(tcp)
-	q.Publish(udp)
 	tcpCH := q.Subscribe(tcp.GroupVersionKind())
 	udpCH := q.Subscribe(udp.GroupVersionKind())
+	q.Publish(tcp)
+	q.Publish(udp)
 	assert.Len(t, q.channels, 3, "2 new channels should have been created for the two new object kinds")
 	assert.Len(t, ingCH, 1, "the underlying channel should contain 1 event")
 	assert.Len(t, tcpCH, 1, "the underlying channel should contain 1 event")

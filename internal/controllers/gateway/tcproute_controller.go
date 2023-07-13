@@ -6,7 +6,6 @@ import (
 	"reflect"
 
 	"github.com/go-logr/logr"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/util/kubernetes/object/status"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -23,6 +22,7 @@ import (
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/util/kubernetes/object/status"
 )
 
 // -----------------------------------------------------------------------------

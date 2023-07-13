@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1689238094160,
+  "lastUpdate": 1689238204120,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -16482,6 +16482,48 @@ window.BENCHMARK_DATA = {
             "value": 12,
             "unit": "allocs/op",
             "extra": "17299 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "lavacca.mattia@gmail.com",
+            "name": "Mattia Lavacca",
+            "username": "mlavacca"
+          },
+          "committer": {
+            "email": "lavacca.mattia@gmail.com",
+            "name": "Mattia Lavacca",
+            "username": "mlavacca"
+          },
+          "distinct": true,
+          "id": "c982b4beab0e72736f174099350a7520c7341bec",
+          "message": "feat: fetch and store last good config\n\nKIC is now able to fetch and cache the last good configuration in case\nit has no LastGoodConfig set, and there is at least one proxy pod with a\ngood configuration loaded.\n\nSigned-off-by: Mattia Lavacca <lavacca.mattia@gmail.com>",
+          "timestamp": "2023-07-13T10:46:15+02:00",
+          "tree_id": "2c7f6c54b44b9b1b18170787221cbe8654b0a202",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/c982b4beab0e72736f174099350a7520c7341bec"
+        },
+        "date": 1689238198290,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - ns/op",
+            "value": 75332,
+            "unit": "ns/op",
+            "extra": "13837 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - B/op",
+            "value": 11092,
+            "unit": "B/op",
+            "extra": "13837 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - allocs/op",
+            "value": 12,
+            "unit": "allocs/op",
+            "extra": "13837 times\n2 procs"
           }
         ]
       }

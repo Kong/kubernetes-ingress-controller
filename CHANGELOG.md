@@ -72,7 +72,7 @@ Adding a new version? You'll need three changes:
 
 ## [2.10.3]
 
-> Release date: TBD
+> Release date: 2023-07-13
 
 ### Fixed
 

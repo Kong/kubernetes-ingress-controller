@@ -45,7 +45,9 @@ jobs:
       - name: Verify manifests have requested KIC tag
         if: ${{ steps.semver_parser.outputs.prerelease == '' }}
         env:
-          TAG: ${{ steps.semver_parser.outputs.fullversion }}
+          # We expect the tag used in manifests to be {major}.{minor} part of the version, e.g.
+          # for v2.10.3 we expect manifests to use 2.10 tag.
+          TAG: ${{ steps.semver_parser.outputs.major }}.${{ steps.semver_parser.outputs.minor }}
         run: make verify.versions
 
   build-push-images:

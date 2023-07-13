@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1689250372986,
+  "lastUpdate": 1689250374595,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -17406,6 +17406,48 @@ window.BENCHMARK_DATA = {
             "value": 12,
             "unit": "allocs/op",
             "extra": "17840 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "czeslavo@gmail.com",
+            "name": "Grzegorz Burzyński",
+            "username": "czeslavo"
+          },
+          "committer": {
+            "email": "czeslavo@gmail.com",
+            "name": "Grzegorz Burzyński",
+            "username": "czeslavo"
+          },
+          "distinct": true,
+          "id": "2983105295321bfe6b5b4a8f0deaec00a2d6f1a6",
+          "message": "chore(ci): require major.minor in manifests",
+          "timestamp": "2023-07-13T14:09:01+02:00",
+          "tree_id": "7e9b78bbd94af0f56f67b31c7a908c857297e8f7",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/2983105295321bfe6b5b4a8f0deaec00a2d6f1a6"
+        },
+        "date": 1689250367414,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - ns/op",
+            "value": 89390,
+            "unit": "ns/op",
+            "extra": "14511 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - B/op",
+            "value": 11097,
+            "unit": "B/op",
+            "extra": "14511 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - allocs/op",
+            "value": 12,
+            "unit": "allocs/op",
+            "extra": "14511 times\n2 procs"
           }
         ]
       },

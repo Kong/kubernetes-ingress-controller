@@ -58,6 +58,7 @@ type FakeObjects struct {
 	KongClusterPlugins             []*configurationv1.KongClusterPlugin
 	KongIngresses                  []*configurationv1.KongIngress
 	KongConsumers                  []*configurationv1.KongConsumer
+	KongConsumerGroups             []*configurationv1beta1.KongConsumerGroup
 
 	KnativeIngresses []*knative.Ingress
 }
@@ -179,6 +180,13 @@ func NewFakeStore(
 			return nil, err
 		}
 	}
+	consumerGroupStore := cache.NewStore(keyFunc)
+	for _, c := range objects.KongConsumerGroups {
+		err := consumerGroupStore.Add(c)
+		if err != nil {
+			return nil, err
+		}
+	}
 	kongPluginsStore := cache.NewStore(keyFunc)
 	for _, p := range objects.KongPlugins {
 		err := kongPluginsStore.Add(p)
@@ -220,6 +228,7 @@ func NewFakeStore(
 			Plugin:                         kongPluginsStore,
 			ClusterPlugin:                  kongClusterPluginsStore,
 			Consumer:                       consumerStore,
+			ConsumerGroup:                  consumerGroupStore,
 			KongIngress:                    kongIngressStore,
 			IngressClassParametersV1alpha1: IngressClassParametersV1alpha1Store,
 			KnativeIngress:                 knativeIngressStore,
@@ -258,6 +267,7 @@ func (objects FakeObjects) MarshalToYAML() ([]byte, error) {
 		reflect.TypeOf(&configurationv1.KongClusterPlugin{}):            configurationv1.SchemeGroupVersion.WithKind("KongClusterPlugin"),
 		reflect.TypeOf(&configurationv1.KongIngress{}):                  configurationv1.SchemeGroupVersion.WithKind("KongIngress"),
 		reflect.TypeOf(&configurationv1.KongConsumer{}):                 configurationv1.SchemeGroupVersion.WithKind("KongConsumer"),
+		reflect.TypeOf(&configurationv1beta1.KongConsumerGroup{}):       configurationv1beta1.SchemeGroupVersion.WithKind("KongConsumerGroup"),
 	}
 
 	out := &bytes.Buffer{}
@@ -299,6 +309,7 @@ func (objects FakeObjects) MarshalToYAML() ([]byte, error) {
 	allObjects = append(allObjects, lo.ToAnySlice(objects.KongClusterPlugins)...)
 	allObjects = append(allObjects, lo.ToAnySlice(objects.KongIngresses)...)
 	allObjects = append(allObjects, lo.ToAnySlice(objects.KongConsumers)...)
+	allObjects = append(allObjects, lo.ToAnySlice(objects.KongConsumerGroups)...)
 
 	for _, obj := range allObjects {
 		if err := fillGVKAndAppendToBuffer(obj.(runtime.Object)); err != nil {

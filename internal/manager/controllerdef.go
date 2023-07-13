@@ -401,6 +401,7 @@ func setupControllers(
 				DataplaneClient:      dataplaneClient,
 				EnableReferenceGrant: referenceGrantsEnabled,
 				CacheSyncTimeout:     c.CacheSyncTimeout,
+				StatusQueue:          kubernetesStatusQueue,
 			},
 		},
 		// ---------------------------------------------------------------------------
@@ -431,6 +432,7 @@ func setupControllers(
 				Scheme:           mgr.GetScheme(),
 				DataplaneClient:  dataplaneClient,
 				CacheSyncTimeout: c.CacheSyncTimeout,
+				StatusQueue:      kubernetesStatusQueue,
 			},
 		},
 		{
@@ -448,6 +450,7 @@ func setupControllers(
 				Scheme:           mgr.GetScheme(),
 				DataplaneClient:  dataplaneClient,
 				CacheSyncTimeout: c.CacheSyncTimeout,
+				StatusQueue:      kubernetesStatusQueue,
 			},
 		},
 		{
@@ -465,6 +468,7 @@ func setupControllers(
 				Scheme:           mgr.GetScheme(),
 				DataplaneClient:  dataplaneClient,
 				CacheSyncTimeout: c.CacheSyncTimeout,
+				StatusQueue:      kubernetesStatusQueue,
 			},
 		},
 		{
@@ -482,6 +486,7 @@ func setupControllers(
 				Scheme:           mgr.GetScheme(),
 				DataplaneClient:  dataplaneClient,
 				CacheSyncTimeout: c.CacheSyncTimeout,
+				StatusQueue:      kubernetesStatusQueue,
 			},
 		},
 	}

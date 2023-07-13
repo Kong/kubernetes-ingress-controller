@@ -43,10 +43,10 @@ func (p *PortDef) CanonicalString() string {
 }
 
 type ServiceBackend struct {
-	Name      string  `json:"name"`
-	Namespace string  `json:"namespace"`
-	PortDef   PortDef `json:"port_def"`
-	Weight    *int32  `json:"weight"`
+	Name      string
+	Namespace string
+	PortDef   PortDef
+	Weight    *int32
 }
 
 type ServiceBackends []ServiceBackend

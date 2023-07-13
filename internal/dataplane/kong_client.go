@@ -134,8 +134,8 @@ type KongClient struct {
 	// updateStrategyResolver resolves the update strategy for a given Kong Gateway.
 	updateStrategyResolver sendconfig.UpdateStrategyResolver
 
-	// configGetter gets configuration info.
-	configGetter sendconfig.ConfigurationGetter
+	// configChangeDetector detects changes in the configuration.
+	configChangeDetector sendconfig.ConfigurationChangeDetector
 
 	// kongConfigBuilder is used to translate Kubernetes objects into Kong configuration.
 	kongConfigBuilder KongConfigBuilder
@@ -160,7 +160,7 @@ func NewKongClient(
 	dbMode string,
 	clientsProvider clients.AdminAPIClientsProvider,
 	updateStrategyResolver sendconfig.UpdateStrategyResolver,
-	configChangeDetector sendconfig.ConfigurationGetter,
+	configChangeDetector sendconfig.ConfigurationChangeDetector,
 	parser KongConfigBuilder,
 	cacheStores store.CacheStores,
 ) (*KongClient, error) {
@@ -177,7 +177,7 @@ func NewKongClient(
 		clientsProvider:        clientsProvider,
 		configStatusNotifier:   clients.NoOpConfigStatusNotifier{},
 		updateStrategyResolver: updateStrategyResolver,
-		configGetter:           configChangeDetector,
+		configChangeDetector:   configChangeDetector,
 		kongConfigBuilder:      parser,
 	}
 	c.initializeControllerPodReference()
@@ -386,14 +386,14 @@ func (c *KongClient) Update(ctx context.Context) error {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
-	// if Kong is running in dbless mode, we can fetch and store the last good configuration.
+	// If Kong is running in dbless mode, we can fetch and store the last good configuration.
 	if c.dbmode == "" || c.dbmode == "off" {
-		// fetch the last valid configuration from the proxy only in case there is no valid
+		// Fetch the last valid configuration from the proxy only in case there is no valid
 		// configuration already stored in memory. This can happen when KIC restarts and there
 		// already is a Kong Proxy with a valid configuration loaded.
 		if c.lastValidKongState == nil {
 			if err := c.FetchLastGoodConfiguration(ctx); err != nil {
-				// if the client fails to fetch the last good configuration, we log it
+				// If the client fails to fetch the last good configuration, we log it
 				// and carry on, as this is a condition that can be recovered with the following steps.
 				c.logger.Error(err)
 			}
@@ -453,45 +453,27 @@ func (c *KongClient) Update(ctx context.Context) error {
 }
 
 func (c *KongClient) FetchLastGoodConfiguration(ctx context.Context) error {
-	if c.lastValidKongState == nil {
-		gatewayClients := c.clientsProvider.GatewayClients()
-		c.logger.Debugf("sending configuration to %d gateway clients", len(gatewayClients))
+	gatewayClients := c.clientsProvider.GatewayClients()
+	c.logger.Debugf("sending configuration to %d gateway clients", len(gatewayClients))
 
-		type kongStateWithHash struct {
-			kongState *kongstate.KongState
-			hash      string
-		}
-
-		var goodKongState *kongStateWithHash
-		_, err := iter.MapErr(gatewayClients, func(client **adminapi.Client) (*kongStateWithHash, error) {
-			rs, err := dump.Get(ctx, (*client).AdminAPIClient(), dump.Config{})
-			if err != nil {
-				return nil, err
-			}
-			ks := kongstate.KongRawStateToKongState(rs)
-			status, err := c.configGetter.GetCurrentStatus(ctx, (*client).AdminAPIClient())
-			if err != nil {
-				return nil, err
-			}
-			(*client).SetLastConfigSHA([]byte(status.ConfigurationHash))
-			kongStateWithHash := &kongStateWithHash{
-				kongState: ks,
-				hash:      status.ConfigurationHash,
-			}
-			if status.ConfigurationHash != sendconfig.WellKnownInitialHash {
-				// get the first good one as the one to be used
-				goodKongState = kongStateWithHash
-			}
-
-			return kongStateWithHash, nil
-		})
+	var goodKongState *kongstate.KongState
+	for _, client := range gatewayClients {
+		rs, err := dump.Get(ctx, client.AdminAPIClient(), dump.Config{})
 		if err != nil {
 			return err
 		}
-
-		if goodKongState != nil {
-			c.lastValidKongState = goodKongState.kongState
+		ks := kongstate.KongRawStateToKongState(rs)
+		status, err := client.AdminAPIClient().Status(ctx)
+		if err != nil {
+			return err
 		}
+		if status.ConfigurationHash != sendconfig.WellKnownInitialHash {
+			// Get the first good one as the one to be used.
+			goodKongState = ks
+		}
+	}
+	if goodKongState != nil {
+		c.lastValidKongState = goodKongState
 	}
 	return nil
 }
@@ -572,7 +554,7 @@ func (c *KongClient) sendToClient(
 		targetContent,
 		c.prometheusMetrics,
 		c.updateStrategyResolver,
-		c.configGetter,
+		c.configChangeDetector,
 	)
 
 	c.recordResourceFailureEvents(entityErrors, KongConfigurationApplyFailedEventReason)

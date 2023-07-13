@@ -16,13 +16,7 @@ const (
 	WellKnownInitialHash = "00000000000000000000000000000000"
 )
 
-type ConfigurationGetter interface {
-	// GetCurrentStatus retrieves the currently loaded Kong status by using
-	// the proxy's /status path.
-	GetCurrentStatus(ctx context.Context,
-		statusClient StatusClient,
-	) (*kong.Status, error)
-
+type ConfigurationChangeDetector interface {
 	// HasConfigurationChanged verifies whether configuration has changed by comparing
 	// old and new config's SHAs.
 	// In case the SHAs are equal, it still can return true if a client is considered
@@ -46,15 +40,15 @@ type StatusClient interface {
 	Status(context.Context) (*kong.Status, error)
 }
 
-type DefaultConfigurationGetter struct {
+type DefaultConfigurationChangeDetector struct {
 	log logrus.FieldLogger
 }
 
-func NewDefaultClientConfigurationGetter(log logrus.FieldLogger) *DefaultConfigurationGetter {
-	return &DefaultConfigurationGetter{log: log}
+func NewDefaultConfigurationChangeDetector(log logrus.FieldLogger) *DefaultConfigurationChangeDetector {
+	return &DefaultConfigurationChangeDetector{log: log}
 }
 
-func (d *DefaultConfigurationGetter) HasConfigurationChanged(
+func (d *DefaultConfigurationChangeDetector) HasConfigurationChanged(
 	ctx context.Context,
 	oldSHA, newSHA []byte,
 	targetConfig *file.Content,
@@ -89,14 +83,6 @@ func (d *DefaultConfigurationGetter) HasConfigurationChanged(
 	}
 
 	return false, nil
-}
-
-func (d *DefaultConfigurationGetter) GetCurrentStatus(ctx context.Context, statusClient StatusClient) (*kong.Status, error) {
-	status, err := statusClient.Status(ctx)
-	if err != nil {
-		return nil, err
-	}
-	return status, nil
 }
 
 // kongHasNoConfiguration checks Kong's status endpoint and read its config hash.

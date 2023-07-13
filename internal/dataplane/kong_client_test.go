@@ -249,20 +249,16 @@ func (m *mockUpdateStrategy) Type() string {
 	return "Mock"
 }
 
-// mockConfigurationGetter is a mock implementation of sendconfig.ConfigurationGetter.
-type mockConfigurationGetter struct {
+// mockConfigurationChangeDetector is a mock implementation of sendconfig.ConfigurationGetter.
+type mockConfigurationChangeDetector struct {
 	hasConfigurationChanged bool
 	status                  *gokong.Status
 }
 
-func (m mockConfigurationGetter) HasConfigurationChanged(
+func (m mockConfigurationChangeDetector) HasConfigurationChanged(
 	context.Context, []byte, []byte, *file.Content, sendconfig.KonnectAwareClient, sendconfig.StatusClient,
 ) (bool, error) {
 	return m.hasConfigurationChanged, nil
-}
-
-func (m mockConfigurationGetter) GetCurrentStatus(context.Context, sendconfig.StatusClient) (*gokong.Status, error) {
-	return m.status, nil
 }
 
 func TestKongClientUpdate_AllExpectedClientsAreCalledAndErrorIsPropagated(t *testing.T) {
@@ -339,13 +335,13 @@ func TestKongClientUpdate_AllExpectedClientsAreCalledAndErrorIsPropagated(t *tes
 				updateStrategyResolver.returnErrorOnUpdate(url, true)
 			}
 			// always return true for HasConfigurationChanged to trigger an update
-			configGetter := mockConfigurationGetter{
+			configChangeDetector := mockConfigurationChangeDetector{
 				hasConfigurationChanged: true,
 				status:                  defaultKongStatus,
 			}
 			configBuilder := newMockKongConfigBuilder()
 
-			kongClient := setupTestKongClient(t, updateStrategyResolver, clientsProvider, configGetter, configBuilder, nil)
+			kongClient := setupTestKongClient(t, updateStrategyResolver, clientsProvider, configChangeDetector, configBuilder, nil)
 
 			err := kongClient.Update(ctx)
 			if tc.expectError {
@@ -371,13 +367,13 @@ func TestKongClientUpdate_WhenNoChangeInConfigNoClientGetsCalled(t *testing.T) {
 	updateStrategyResolver := newMockUpdateStrategyResolver(t)
 
 	// no change in config, we'll expect no update to be called
-	configGetter := mockConfigurationGetter{
+	configChangeDetector := mockConfigurationChangeDetector{
 		hasConfigurationChanged: false,
 		status:                  defaultKongStatus,
 	}
 	configBuilder := newMockKongConfigBuilder()
 
-	kongClient := setupTestKongClient(t, updateStrategyResolver, clientsProvider, configGetter, configBuilder, nil)
+	kongClient := setupTestKongClient(t, updateStrategyResolver, clientsProvider, configChangeDetector, configBuilder, nil)
 
 	ctx := context.Background()
 	err := kongClient.Update(ctx)
@@ -460,9 +456,9 @@ func TestKongClientUpdate_ConfigStatusIsNotified(t *testing.T) {
 		}
 
 		updateStrategyResolver = newMockUpdateStrategyResolver(t)
-		configGetter           = mockConfigurationGetter{hasConfigurationChanged: true}
+		configChangeDetector   = mockConfigurationChangeDetector{hasConfigurationChanged: true}
 		configBuilder          = newMockKongConfigBuilder()
-		kongClient             = setupTestKongClient(t, updateStrategyResolver, clientsProvider, configGetter, configBuilder, nil)
+		kongClient             = setupTestKongClient(t, updateStrategyResolver, clientsProvider, configChangeDetector, configBuilder, nil)
 	)
 
 	testCases := []struct {
@@ -544,7 +540,7 @@ func TestKongClient_ApplyConfigurationEvents(t *testing.T) {
 		gatewayClients: []*adminapi.Client{testGatewayClient},
 	}
 	updateStrategyResolver := newMockUpdateStrategyResolver(t)
-	configGetter := mockConfigurationGetter{hasConfigurationChanged: true}
+	configChangeDetector := mockConfigurationChangeDetector{hasConfigurationChanged: true}
 	configBuilder := newMockKongConfigBuilder()
 
 	testCases := []struct {
@@ -581,7 +577,7 @@ func TestKongClient_ApplyConfigurationEvents(t *testing.T) {
 			t.Setenv("POD_NAME", tc.podName)
 
 			eventRecorder := mocks.NewEventRecorder()
-			kongClient := setupTestKongClient(t, updateStrategyResolver, clientsProvider, configGetter, configBuilder, eventRecorder)
+			kongClient := setupTestKongClient(t, updateStrategyResolver, clientsProvider, configChangeDetector, configBuilder, eventRecorder)
 
 			err := kongClient.Update(context.Background())
 			require.NoError(t, err)
@@ -607,9 +603,9 @@ func TestKongClient_EmptyConfigUpdate(t *testing.T) {
 		}
 
 		updateStrategyResolver = newMockUpdateStrategyResolver(t)
-		configGetter           = mockConfigurationGetter{hasConfigurationChanged: true}
+		configChangeDetector   = mockConfigurationChangeDetector{hasConfigurationChanged: true}
 		configBuilder          = newMockKongConfigBuilder()
-		kongClient             = setupTestKongClient(t, updateStrategyResolver, clientsProvider, configGetter, configBuilder, nil)
+		kongClient             = setupTestKongClient(t, updateStrategyResolver, clientsProvider, configChangeDetector, configBuilder, nil)
 	)
 
 	t.Run("dbless", func(t *testing.T) {
@@ -654,7 +650,7 @@ func setupTestKongClient(
 	t *testing.T,
 	updateStrategyResolver *mockUpdateStrategyResolver,
 	clientsProvider mockGatewayClientsProvider,
-	configGetter sendconfig.ConfigurationGetter,
+	configChangeDetector sendconfig.ConfigurationChangeDetector,
 	configBuilder *mockKongConfigBuilder,
 	eventRecorder record.EventRecorder,
 ) *KongClient {
@@ -679,7 +675,7 @@ func setupTestKongClient(
 		dbMode,
 		clientsProvider,
 		updateStrategyResolver,
-		configGetter,
+		configChangeDetector,
 		configBuilder,
 		store.NewCacheStores(),
 	)

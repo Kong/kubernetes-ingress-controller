@@ -170,7 +170,7 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 	}
 
 	updateStrategyResolver := sendconfig.NewDefaultUpdateStrategyResolver(kongConfig, deprecatedLogger)
-	configurationGetter := sendconfig.NewDefaultClientConfigurationGetter(deprecatedLogger)
+	configurationChangeDetector := sendconfig.NewDefaultConfigurationChangeDetector(deprecatedLogger)
 	dataplaneClient, err := dataplane.NewKongClient(
 		deprecatedLogger,
 		time.Duration(c.ProxyTimeoutSeconds*float32(time.Second)),
@@ -181,7 +181,7 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 		dbMode,
 		clientsManager,
 		updateStrategyResolver,
-		configurationGetter,
+		configurationChangeDetector,
 		configParser,
 		cache,
 	)

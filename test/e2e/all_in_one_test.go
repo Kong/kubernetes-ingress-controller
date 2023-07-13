@@ -331,7 +331,7 @@ func TestDeployAllInOneDBLESS(t *testing.T) {
 
 	t.Log("scale proxy to 2 replicas and verify that the new replica gets the old good configuration")
 	scaleDeployment(ctx, t, env, deployments.ProxyNN, 2)
-	// verify all the proxy replicas have the last good configuration
+	// Verify all the proxy replicas have the last good configuration.
 	ensureAllProxyReplicasAreConfigured(ctx, t, env, deployments.ProxyNN)
 
 	t.Log("restart the controller")
@@ -340,7 +340,7 @@ func TestDeployAllInOneDBLESS(t *testing.T) {
 
 	t.Log("scale proxy to 3 replicas and verify that the new replica gets the old good configuration")
 	scaleDeployment(ctx, t, env, deployments.ProxyNN, 3)
-	// verify all the proxy replicas have the last good configuration
+	// Verify all the proxy replicas have the last good configuration.
 	ensureAllProxyReplicasAreConfigured(ctx, t, env, deployments.ProxyNN)
 }
 

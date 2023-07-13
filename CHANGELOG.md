@@ -67,7 +67,7 @@ Adding a new version? You'll need three changes:
 
 ## [2.9.4]
 
-> Release date: TBD
+> Release date: 2023-07-13
 
 - Fixed leader election role manifest where `""` and `"coordination"` API groups
   together with the related manifest resources (`configmaps` and `leases`) might

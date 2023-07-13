@@ -7,6 +7,7 @@ Adding a new version? You'll need three changes:
 * Add the diff link, like "[2.7.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v1.2.2...v1.2.3".
   This is all the way at the bottom. It's the thing we always forget.
 --->
+ - [2.10.3](#2103)
  - [2.10.2](#2102)
  - [2.10.1](#2101)
  - [2.10.0](#2100)
@@ -68,6 +69,17 @@ Adding a new version? You'll need three changes:
  - [0.1.0](#010)
  - [0.0.5](#005)
  - [0.0.4 and prior](#004-and-prior)
+
+## [2.10.3]
+
+> Release date: TBD
+
+### Fixed
+
+- Nodes in Konnect Runtime Groups API are not updated every 3s anymore.
+  This was caused by a bug in `NodeAgent` that was sending the updates
+  despite the fact that the configuration status was not changed.
+  [#4324](https://github.com/Kong/kubernetes-ingress-controller/pull/4324)
 
 ## [2.10.2]
 
@@ -2542,6 +2554,7 @@ Please read the changelog and test in your environment.
  - The initial versions  were rapildy iterated to deliver
    a working ingress controller.
 
+[2.10.3]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.10.2...v2.10.3
 [2.10.2]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.10.1...v2.10.2
 [2.10.1]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.10.0...v2.10.1
 [2.10.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.9.3...v2.10.0

@@ -14,6 +14,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/clients"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/konnect/nodes"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/util/clock"
 )
 
 const (
@@ -50,6 +51,12 @@ type NodeClient interface {
 	ListAllNodes(ctx context.Context) ([]*nodes.NodeItem, error)
 }
 
+type Ticker interface {
+	Stop()
+	Channel() <-chan time.Time
+	Reset(time.Duration)
+}
+
 // NodeAgent gets the running status of KIC node and controlled kong gateway nodes,
 // and update their statuses to konnect.
 type NodeAgent struct {
@@ -60,6 +67,7 @@ type NodeAgent struct {
 
 	nodeClient    NodeClient
 	refreshPeriod time.Duration
+	refreshTicker Ticker
 
 	configStatus           atomic.Value
 	configStatusSubscriber clients.ConfigStatusSubscriber
@@ -67,6 +75,15 @@ type NodeAgent struct {
 	gatewayInstanceGetter         GatewayInstanceGetter
 	gatewayClientsChangesNotifier GatewayClientsChangesNotifier
 	managerInstanceIDProvider     ManagerInstanceIDProvider
+}
+
+type NodeAgentOpt func(*NodeAgent)
+
+// WithRefreshTicker sets the refresh ticker of node agent.
+func WithRefreshTicker(ticker Ticker) NodeAgentOpt {
+	return func(a *NodeAgent) {
+		a.refreshTicker = ticker
+	}
 }
 
 // NewNodeAgent creates a new node agent.
@@ -81,6 +98,7 @@ func NewNodeAgent(
 	gatewayGetter GatewayInstanceGetter,
 	gatewayClientsChangesNotifier GatewayClientsChangesNotifier,
 	managerInstanceIDProvider ManagerInstanceIDProvider,
+	opts ...NodeAgentOpt,
 ) *NodeAgent {
 	if refreshPeriod < MinRefreshNodePeriod {
 		refreshPeriod = MinRefreshNodePeriod
@@ -91,12 +109,18 @@ func NewNodeAgent(
 		logger:                        logger.WithName("konnect-node-agent"),
 		nodeClient:                    client,
 		refreshPeriod:                 refreshPeriod,
+		refreshTicker:                 clock.NewTicker(),
 		configStatusSubscriber:        configStatusSubscriber,
 		gatewayInstanceGetter:         gatewayGetter,
 		gatewayClientsChangesNotifier: gatewayClientsChangesNotifier,
 		managerInstanceIDProvider:     managerInstanceIDProvider,
 	}
 	a.configStatus.Store(clients.ConfigStatusOK)
+
+	for _, opt := range opts {
+		opt(a)
+	}
+
 	return a
 }
 
@@ -126,6 +150,27 @@ func (a *NodeAgent) NeedLeaderElection() bool {
 	return true
 }
 
+// updateNodeLoop runs the loop to update status of KIC and kong gateway nods periodically.
+func (a *NodeAgent) updateNodeLoop(ctx context.Context) {
+	a.refreshTicker.Reset(a.refreshPeriod)
+	defer a.refreshTicker.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			err := ctx.Err()
+			a.logger.Info("update node loop stopped", "message", err.Error())
+			return
+		case <-a.refreshTicker.Channel():
+			a.logger.V(util.DebugLevel).Info("updating nodes on tick")
+			err := a.updateNodes(ctx)
+			if err != nil {
+				a.logger.Error(err, "failed to update nodes")
+			}
+		}
+	}
+}
+
 // sortNodesByLastPing sort nodes by descending order of last ping time
 // so that nodes are sorted by the newest order.
 func sortNodesByLastPing(nodes []*nodes.NodeItem) {
@@ -145,6 +190,12 @@ func (a *NodeAgent) subscribeConfigStatus(ctx context.Context) {
 			a.logger.Info("subscribe loop stopped", "message", ctx.Err().Error())
 			return
 		case configStatus := <-ch:
+			if configStatus == a.configStatus.Load() {
+				a.logger.V(util.DebugLevel).Info("config status not changed, skipping update")
+				continue
+			}
+
+			a.logger.V(util.DebugLevel).Info("config status changed, updating nodes")
 			a.configStatus.Store(configStatus)
 			if err := a.updateNodes(ctx); err != nil {
 				a.logger.Error(err, "failed to update nodes after config status changed")
@@ -166,6 +217,7 @@ func (a *NodeAgent) subscribeToGatewayClientsChanges(ctx context.Context) {
 			a.logger.Info("subscribe gateway clients changes loop stopped", "message", ctx.Err().Error())
 			return
 		case <-gatewayClientsChangedCh:
+			a.logger.V(util.DebugLevel).Info("gateway clients changed, updating nodes")
 			if err := a.updateNodes(ctx); err != nil {
 				a.logger.Error(err, "failed to update nodes after gateway clients changed")
 			}
@@ -352,6 +404,11 @@ func (a *NodeAgent) updateGatewayNodes(ctx context.Context, existingNodes []*nod
 
 // updateNodes updates current status of KIC and controlled kong gateway nodes.
 func (a *NodeAgent) updateNodes(ctx context.Context) error {
+	// Reset the ticker after updating nodes to make sure the next ticker-triggered update happens after refreshPeriod.
+	defer func() {
+		a.refreshTicker.Reset(a.refreshPeriod)
+	}()
+
 	existingNodes, err := a.nodeClient.ListAllNodes(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to list existing nodes: %w", err)
@@ -366,26 +423,8 @@ func (a *NodeAgent) updateNodes(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("failed to update controlled kong gateway nodes: %w", err)
 	}
-	return nil
-}
 
-// updateNodeLoop runs the loop to update status of KIC and kong gateway nods periodically.
-func (a *NodeAgent) updateNodeLoop(ctx context.Context) {
-	ticker := time.NewTicker(a.refreshPeriod)
-	defer ticker.Stop()
-	for {
-		select {
-		case <-ctx.Done():
-			err := ctx.Err()
-			a.logger.Info("update node loop stopped", "message", err.Error())
-			return
-		case <-ticker.C:
-			err := a.updateNodes(ctx)
-			if err != nil {
-				a.logger.Error(err, "failed to update nodes")
-			}
-		}
-	}
+	return nil
 }
 
 // GatewayClientGetter gets gateway instances from admin API clients.

@@ -11,6 +11,7 @@ import (
 	k8stypes "k8s.io/apimachinery/pkg/types"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/util/clock"
 )
 
 // Client is a wrapper around raw *kong.Client. It's advised to pass this wrapper across the codebase, and
@@ -61,7 +62,7 @@ func NewKonnectClient(c *kong.Client, runtimeGroup string) *KonnectClient {
 			konnectRuntimeGroup: runtimeGroup,
 			pluginSchemaStore:   util.NewPluginSchemaStore(c),
 		},
-		backoffStrategy: NewKonnectBackoffStrategy(SystemClock{}),
+		backoffStrategy: NewKonnectBackoffStrategy(clock.System{}),
 	}
 }
 

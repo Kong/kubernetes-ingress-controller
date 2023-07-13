@@ -9,7 +9,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/kong/deck/dump"
 	"github.com/kong/deck/file"
 	"github.com/kong/go-kong/kong"
 	"github.com/samber/lo"
@@ -140,6 +139,9 @@ type KongClient struct {
 	// kongConfigBuilder is used to translate Kubernetes objects into Kong configuration.
 	kongConfigBuilder KongConfigBuilder
 
+	// kongConfigFetcher fetches the loaded configuration and status from a Kong node.
+	kongConfigFetcher kongstate.KongLastGoodConfigFetcher
+
 	// controllerPodReference is a reference to the controller pod this client is running in.
 	// It may be empty if the client is not running in a pod (e.g. in a unit test).
 	controllerPodReference mo.Option[k8stypes.NamespacedName]
@@ -161,6 +163,7 @@ func NewKongClient(
 	clientsProvider clients.AdminAPIClientsProvider,
 	updateStrategyResolver sendconfig.UpdateStrategyResolver,
 	configChangeDetector sendconfig.ConfigurationChangeDetector,
+	kongConfigFetcher kongstate.KongLastGoodConfigFetcher,
 	parser KongConfigBuilder,
 	cacheStores store.CacheStores,
 ) (*KongClient, error) {
@@ -179,6 +182,7 @@ func NewKongClient(
 		updateStrategyResolver: updateStrategyResolver,
 		configChangeDetector:   configChangeDetector,
 		kongConfigBuilder:      parser,
+		kongConfigFetcher:      kongConfigFetcher,
 	}
 	c.initializeControllerPodReference()
 
@@ -395,7 +399,7 @@ func (c *KongClient) Update(ctx context.Context) error {
 			if err := c.FetchLastGoodConfiguration(ctx); err != nil {
 				// If the client fails to fetch the last good configuration, we log it
 				// and carry on, as this is a condition that can be recovered with the following steps.
-				c.logger.Error(err)
+				c.logger.WithError(err).Error("failed to fetch last good configuration from gateways")
 			}
 		}
 	}
@@ -454,28 +458,31 @@ func (c *KongClient) Update(ctx context.Context) error {
 
 func (c *KongClient) FetchLastGoodConfiguration(ctx context.Context) error {
 	gatewayClients := c.clientsProvider.GatewayClients()
-	c.logger.Debugf("sending configuration to %d gateway clients", len(gatewayClients))
+	c.logger.Debugf("fetching last good configuration from %d gateway clients", len(gatewayClients))
 
 	var goodKongState *kongstate.KongState
+	var errs error
 	for _, client := range gatewayClients {
-		rs, err := dump.Get(ctx, client.AdminAPIClient(), dump.Config{})
+		rs, err := c.kongConfigFetcher.GetKongRawState(ctx, client.AdminAPIClient())
 		if err != nil {
-			return err
+			errs = errors.Join(errs, err)
 		}
 		ks := kongstate.KongRawStateToKongState(rs)
-		status, err := client.AdminAPIClient().Status(ctx)
+		status, err := c.kongConfigFetcher.GetKongStatus(ctx, client.AdminAPIClient())
 		if err != nil {
-			return err
+			errs = errors.Join(errs, err)
 		}
 		if status.ConfigurationHash != sendconfig.WellKnownInitialHash {
 			// Get the first good one as the one to be used.
 			goodKongState = ks
+			break
 		}
 	}
 	if goodKongState != nil {
 		c.lastValidKongState = goodKongState
+		c.logger.Debug("last good configuration fetched from a Kong node")
 	}
-	return nil
+	return errs
 }
 
 // sendOutToGatewayClients will generate deck content (config) from the provided kong state

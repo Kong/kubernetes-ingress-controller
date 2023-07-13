@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1689254433380,
+  "lastUpdate": 1689254435966,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -18120,6 +18120,48 @@ window.BENCHMARK_DATA = {
             "value": 12,
             "unit": "allocs/op",
             "extra": "17599 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "tao.yi@konghq.com",
+            "name": "Tao Yi",
+            "username": "randmonkey"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "ed498545f8e02ea62cd65276329802fd03405260",
+          "message": "implement assigning priorities to Kong routes translated from `HTTPRoute` (#4296)\n\n* add traits\r\n\r\n* split HTTPRoutes and assign priorities to the splitted\r\n\r\n* add unit tests\r\n\r\n* add CHANGELOG\r\n\r\n* fix lint\r\n\r\n* address comments: splitted->split\r\n\r\n* address comments again\r\n\r\n* use traits.encode for expected priorities in tests\r\n\r\n* Update internal/dataplane/parser/translators/httproute_atc.go\r\n\r\nCo-authored-by: Mattia Lavacca <lavacca.mattia@gmail.com>\r\n\r\n---------\r\n\r\nCo-authored-by: Mattia Lavacca <lavacca.mattia@gmail.com>",
+          "timestamp": "2023-07-13T13:15:44Z",
+          "tree_id": "4560d95fc223cd610c5a9d8315b0a97f2f238db5",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/ed498545f8e02ea62cd65276329802fd03405260"
+        },
+        "date": 1689254426884,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - ns/op",
+            "value": 94699,
+            "unit": "ns/op",
+            "extra": "14019 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - B/op",
+            "value": 11092,
+            "unit": "B/op",
+            "extra": "14019 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - allocs/op",
+            "value": 12,
+            "unit": "allocs/op",
+            "extra": "14019 times\n2 procs"
           }
         ]
       },

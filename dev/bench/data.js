@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1689264737976,
+  "lastUpdate": 1689264740088,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -18876,6 +18876,48 @@ window.BENCHMARK_DATA = {
             "value": 12,
             "unit": "allocs/op",
             "extra": "14466 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "czeslavo@gmail.com",
+            "name": "Grzegorz Burzyński",
+            "username": "czeslavo"
+          },
+          "committer": {
+            "email": "czeslavo@gmail.com",
+            "name": "Grzegorz Burzyński",
+            "username": "czeslavo"
+          },
+          "distinct": true,
+          "id": "bba35e4d9b6c93c77732e4f5670caf8c2d266df5",
+          "message": "chore(ci): make release e2e tests run in parallel jobs",
+          "timestamp": "2023-07-13T18:09:45+02:00",
+          "tree_id": "9d979ec7f9a66974b367faf022ede0b5aa72c91f",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/bba35e4d9b6c93c77732e4f5670caf8c2d266df5"
+        },
+        "date": 1689264731064,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - ns/op",
+            "value": 70326,
+            "unit": "ns/op",
+            "extra": "17254 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - B/op",
+            "value": 11103,
+            "unit": "B/op",
+            "extra": "17254 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - allocs/op",
+            "value": 12,
+            "unit": "allocs/op",
+            "extra": "17254 times\n2 procs"
           }
         ]
       },

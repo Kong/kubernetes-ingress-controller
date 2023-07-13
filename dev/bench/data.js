@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1689243826124,
+  "lastUpdate": 1689246789544,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -17154,6 +17154,48 @@ window.BENCHMARK_DATA = {
             "value": 12,
             "unit": "allocs/op",
             "extra": "17032 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "czeslavo@gmail.com",
+            "name": "Grzegorz Burzyński",
+            "username": "czeslavo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "2e0326d5b4b986c043e59c26b28fb317332c6748",
+          "message": "chore: changelog and manifests for 2.10.3 release (#4335)",
+          "timestamp": "2023-07-13T13:09:46+02:00",
+          "tree_id": "491ae859db4578a2a505795a96a996fc8c434a0b",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/2e0326d5b4b986c043e59c26b28fb317332c6748"
+        },
+        "date": 1689246784252,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - ns/op",
+            "value": 71575,
+            "unit": "ns/op",
+            "extra": "17602 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - B/op",
+            "value": 11093,
+            "unit": "B/op",
+            "extra": "17602 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - allocs/op",
+            "value": 12,
+            "unit": "allocs/op",
+            "extra": "17602 times\n2 procs"
           }
         ]
       }

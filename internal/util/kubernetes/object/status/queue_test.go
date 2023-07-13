@@ -2,8 +2,10 @@ package status
 
 import (
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	netv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -71,10 +73,10 @@ func TestQueue(t *testing.T) {
 	assert.Len(t, ingCH, 1, "the underlying channel should now contain one event")
 
 	t.Log("verifying that objects of new kinds can be published into the queue")
-	q.Publish(tcp)
-	q.Publish(udp)
 	tcpCH := q.Subscribe(tcp.GroupVersionKind())
 	udpCH := q.Subscribe(udp.GroupVersionKind())
+	q.Publish(tcp)
+	q.Publish(udp)
 	assert.Len(t, q.channels, 3, "2 new channels should have been created for the two new object kinds")
 	assert.Len(t, ingCH, 1, "the underlying channel should contain 1 event")
 	assert.Len(t, tcpCH, 1, "the underlying channel should contain 1 event")
@@ -133,3 +135,78 @@ var (
 		Kind:    "UDPIngress",
 	}
 )
+
+func TestQueuePublish(t *testing.T) {
+	testObj := &netv1.Ingress{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "Ingress",
+			APIVersion: "networking.k8s.io/v1",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: corev1.NamespaceDefault,
+			Name:      "ingress-test-1",
+		},
+	}
+
+	// shouldCompleteAlmostImmediately is a helper function that runs a given action
+	// in a goroutine and verifies that it completes within a second.
+	shouldCompleteAlmostImmediately := func(t *testing.T, action func()) {
+		done := make(chan struct{})
+		go func() {
+			action()
+			close(done)
+		}()
+		select {
+		case <-done:
+			return
+		case <-time.After(1 * time.Second):
+			t.Fatal("action did not complete in time")
+		}
+	}
+
+	t.Run("does not block when no subscription exists", func(t *testing.T) {
+		q := NewQueue()
+
+		shouldCompleteAlmostImmediately(t, func() {
+			// Publish more events than the buffer size and expect no block.
+			for i := 0; i < defaultBufferSize+1; i++ {
+				q.Publish(testObj)
+			}
+		})
+	})
+
+	t.Run("blocks when subscription exists and buffer is full", func(t *testing.T) {
+		q := NewQueue()
+		sub := q.Subscribe(testObj.GroupVersionKind())
+
+		shouldCompleteAlmostImmediately(t, func() {
+			// Publish exactly the number of events that fit in the buffer. Expect no block.
+			// This is to ensure that the buffer is full.
+			for i := 0; i < defaultBufferSize; i++ {
+				q.Publish(testObj)
+			}
+		})
+
+		require.Len(t, sub, defaultBufferSize, "the channel should be full")
+
+		published := make(chan struct{})
+		go func() {
+			q.Publish(testObj)
+			close(published)
+		}()
+
+		select {
+		case <-published:
+			t.Fatal("the Publish goroutine should be blocked")
+		case <-sub:
+			// Consume one event from the channel to unblock the Publish goroutine.
+		}
+
+		select {
+		case <-time.After(1 * time.Second):
+			t.Fatal("the Publish goroutine should have completed, timeout")
+		case <-published:
+		}
+		require.Len(t, sub, defaultBufferSize, "the channel should be full again")
+	})
+}

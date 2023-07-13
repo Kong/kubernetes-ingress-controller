@@ -50,6 +50,20 @@
  - [0.0.5](#005)
  - [0.0.4 and prior](#004-and-prior)
 
+## [2.5.1]
+
+> Release date: TBD
+
+#### Fixed
+
+- Fixed a bug where the controller sync loop would get stuck when a number of
+  updates for one of Gateway API resources kinds (`HTTPRoute`, `TCPRoute`,
+  `UDPRoute`, `TLSRoute`) exceeded 8192. This was caused by the fact that the
+  controller was using a fixed-size buffer to store updates for each resource
+  kind and there were no consumers for the updates. The sending was blocked
+  after a buffer got full, resulting in a deadlock.
+  [#4267](https://github.com/Kong/kubernetes-ingress-controller/pull/4267)
+
 ## [2.5.0]
 
 > Release date: 2022-07-11

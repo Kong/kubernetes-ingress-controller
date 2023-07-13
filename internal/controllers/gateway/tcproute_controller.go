@@ -9,6 +9,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -21,6 +22,7 @@ import (
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/util/kubernetes/object/status"
 )
 
 // -----------------------------------------------------------------------------
@@ -34,6 +36,7 @@ type TCPRouteReconciler struct {
 	Log             logr.Logger
 	Scheme          *runtime.Scheme
 	DataplaneClient *dataplane.KongClient
+	StatusQueue     *status.Queue
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -74,6 +77,19 @@ func (r *TCPRouteReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		handler.EnqueueRequestsFromMapFunc(r.listTCPRoutesForGateway),
 	); err != nil {
 		return err
+	}
+
+	if r.StatusQueue != nil {
+		if err := c.Watch(
+			&source.Channel{Source: r.StatusQueue.Subscribe(schema.GroupVersionKind{
+				Group:   gatewayv1alpha2.GroupVersion.Group,
+				Version: gatewayv1alpha2.GroupVersion.Version,
+				Kind:    "TCPRoute",
+			})},
+			&handler.EnqueueRequestForObject{},
+		); err != nil {
+			return err
+		}
 	}
 
 	// because of the additional burden of having to manage reference data-plane
@@ -223,8 +239,8 @@ func (r *TCPRouteReconciler) listTCPRoutesForGateway(obj client.Object) []reconc
 // TCPRoute Controller - Reconciliation
 // -----------------------------------------------------------------------------
 
-//+kubebuilder:rbac:groups=gateway.networking.k8s.io,resources=tcproutes,verbs=get;list;watch
-//+kubebuilder:rbac:groups=gateway.networking.k8s.io,resources=tcproutes/status,verbs=get;update
+// +kubebuilder:rbac:groups=gateway.networking.k8s.io,resources=tcproutes,verbs=get;list;watch
+// +kubebuilder:rbac:groups=gateway.networking.k8s.io,resources=tcproutes/status,verbs=get;update
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.

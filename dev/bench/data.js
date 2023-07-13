@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1689250526875,
+  "lastUpdate": 1689251976649,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -17574,6 +17574,48 @@ window.BENCHMARK_DATA = {
             "value": 12,
             "unit": "allocs/op",
             "extra": "16914 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "tao.yi@konghq.com",
+            "name": "Tao Yi",
+            "username": "randmonkey"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "9ac8af7b027ebe1dbf8542065106f95c52d1c0cd",
+          "message": "Update internal/dataplane/parser/translators/httproute_atc.go\n\nCo-authored-by: Mattia Lavacca <lavacca.mattia@gmail.com>",
+          "timestamp": "2023-07-13T20:38:05+08:00",
+          "tree_id": "65097fc9ad9cc476cbc019c81f03f0416430e7ae",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/9ac8af7b027ebe1dbf8542065106f95c52d1c0cd"
+        },
+        "date": 1689251971590,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - ns/op",
+            "value": 85069,
+            "unit": "ns/op",
+            "extra": "15223 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - B/op",
+            "value": 11094,
+            "unit": "B/op",
+            "extra": "15223 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - allocs/op",
+            "value": 12,
+            "unit": "allocs/op",
+            "extra": "15223 times\n2 procs"
           }
         ]
       }

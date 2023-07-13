@@ -588,7 +588,7 @@ func KongExpressionRouteFromHTTPRouteWithPriority(
 }
 
 // KongServiceNameFromHTTPRouteWithPriority generates service name from split HTTPRoutes.
-// since one HTTPRoute may be split by hostname and rule, the service name will generated
+// since one HTTPRoute may be split by hostname and rule, the service name will be generated
 // in the format httproute.<namespace>.<name>.<hostname>.<rule index>.
 // For example: `httproute.default.example.foo.com.0`.
 func KongServiceNameFromHTTPRouteWithPriority(

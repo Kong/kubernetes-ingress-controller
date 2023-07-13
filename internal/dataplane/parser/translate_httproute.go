@@ -1,12 +1,15 @@
 package parser
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 
 	"github.com/blang/semver/v4"
+	"github.com/bombsimon/logrusr/v2"
 	"github.com/kong/go-kong/kong"
 	"github.com/samber/lo"
+	k8stypes "k8s.io/apimachinery/pkg/types"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
@@ -26,6 +29,11 @@ func (p *Parser) ingressRulesFromHTTPRoutes() ingressRules {
 	httpRouteList, err := p.storer.ListHTTPRoutes()
 	if err != nil {
 		p.logger.WithError(err).Error("failed to list HTTPRoutes")
+		return result
+	}
+
+	if p.featureFlags.ExpressionRoutes {
+		p.ingressRulesFromHTTPRoutesUsingExpressionRoutes(httpRouteList, &result)
 		return result
 	}
 
@@ -66,6 +74,54 @@ func validateHTTPRoute(httproute *gatewayv1beta1.HTTPRoute) error {
 	}
 
 	return nil
+}
+
+// ingressRulesFromHTTPRoutesUsingExpressionRoutes translates HTTPRoutes to expression based routes
+// when ExpressionRoutes feature flag is enabled.
+// Because we need to assign different priorities based on the hostname and match in the specification of HTTPRoutes,
+// We need to split the HTTPRoutes into ones with only one hostname and one match, then assign priority to them
+// and finally translate the split HTTPRoutes into Kong services and routes with assigned priorities.
+func (p *Parser) ingressRulesFromHTTPRoutesUsingExpressionRoutes(httpRoutes []*gatewayv1beta1.HTTPRoute, result *ingressRules) {
+	// first, split HTTPRoutes by hostnames and matches.
+	splitHTTPRoutes := []*gatewayv1beta1.HTTPRoute{}
+	for _, httproute := range httpRoutes {
+		if err := validateHTTPRoute(httproute); err != nil {
+			p.registerTranslationFailure(fmt.Sprintf("HTTPRoute can't be routed: %s", err), httproute)
+			continue
+		}
+		splitHTTPRoutes = append(splitHTTPRoutes, translators.SplitHTTPRoute(httproute)...)
+	}
+	// assign priorities to split HTTPRoutes.
+	splitHTTPRoutesWithPriorities := translators.AssignRoutePriorityToSplitHTTPRoutes(logrusr.New(p.logger), splitHTTPRoutes)
+	httpRouteNameToTranslationFailure := map[k8stypes.NamespacedName][]error{}
+
+	// translate split HTTPRoutes to ingress rules, including services, routes, upstreams.
+	for _, httpRouteWithPriority := range splitHTTPRoutesWithPriorities {
+		err := p.ingressRulesFromSplitHTTPRouteWithPriority(result, httpRouteWithPriority)
+		if err != nil {
+			nsName := k8stypes.NamespacedName{
+				Namespace: httpRouteWithPriority.HTTPRoute.Namespace,
+				Name:      httpRouteWithPriority.HTTPRoute.Name,
+			}
+			httpRouteNameToTranslationFailure[nsName] = append(httpRouteNameToTranslationFailure[nsName], err)
+		}
+	}
+	// Register successful parsed objects and  translation failures.
+	// Because one HTTPRoute may be split into multiple HTTPRoutes, we need to de-duplicate by namespace and name.
+	for _, httproute := range httpRoutes {
+		nsName := k8stypes.NamespacedName{
+			Namespace: httproute.Namespace,
+			Name:      httproute.Name,
+		}
+		if translationFailures, ok := httpRouteNameToTranslationFailure[nsName]; ok {
+			p.registerTranslationFailure(
+				fmt.Sprintf("HTTPRoute can't be routed: %v", errors.Join(translationFailures...)),
+				httproute,
+			)
+			continue
+		}
+		p.registerSuccessfullyParsedObject(httproute)
+	}
 }
 
 // ingressRulesFromHTTPRouteWithCombinedServiceRoutes generates a set of proto-Kong routes (ingress rules) from an HTTPRoute.
@@ -469,4 +525,45 @@ func httpBackendRefsToBackendRefs(httpBackendRef []gatewayv1beta1.HTTPBackendRef
 		backendRefs = append(backendRefs, hRef.BackendRef)
 	}
 	return backendRefs
+}
+
+func (p *Parser) ingressRulesFromSplitHTTPRouteWithPriority(
+	rules *ingressRules,
+	httpRouteWithPriority translators.SplitHTTPRouteToKongRoutePriority,
+) error {
+	httpRoute := httpRouteWithPriority.HTTPRoute
+	if len(httpRoute.Spec.Rules) == 0 {
+		return translators.ErrRouteValidationNoRules
+	}
+
+	httpRouteRule := httpRoute.Spec.Rules[0]
+	if len(httpRoute.Spec.Hostnames) == 0 && len(httpRouteRule.Matches) == 0 {
+		return translators.ErrRouteValidationNoMatchRulesOrHostnamesSpecified
+	}
+
+	backendRefs := httpBackendRefsToBackendRefs(httpRouteRule.BackendRefs)
+
+	serviceName := translators.KongServiceNameFromHTTPRouteWithPriority(httpRouteWithPriority)
+
+	kongService, err := generateKongServiceFromBackendRefWithName(
+		p.logger,
+		p.storer,
+		rules,
+		serviceName,
+		httpRoute,
+		"http",
+		backendRefs...,
+	)
+	if err != nil {
+		return err
+	}
+
+	kongService.Routes = append(
+		kongService.Routes,
+		translators.KongExpressionRouteFromHTTPRouteWithPriority(httpRouteWithPriority),
+	)
+	// cache the service to avoid duplicates in further loop iterations
+	rules.ServiceNameToServices[serviceName] = kongService
+	rules.ServiceNameToParent[serviceName] = httpRoute
+	return nil
 }

@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1689263936345,
+  "lastUpdate": 1689263938249,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -18624,6 +18624,48 @@ window.BENCHMARK_DATA = {
             "value": 12,
             "unit": "allocs/op",
             "extra": "15037 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "lavacca.mattia@gmail.com",
+            "name": "Mattia Lavacca",
+            "username": "mlavacca"
+          },
+          "committer": {
+            "email": "lavacca.mattia@gmail.com",
+            "name": "Mattia Lavacca",
+            "username": "mlavacca"
+          },
+          "distinct": true,
+          "id": "12f889bc5b58829e5065cd866810eb8641085619",
+          "message": "test(conformance): disable HTTPRouteHeaderMatching\n\nSigned-off-by: Mattia Lavacca <lavacca.mattia@gmail.com>",
+          "timestamp": "2023-07-13T17:54:19+02:00",
+          "tree_id": "6b267423b68796df7241f29a0ddc0deea761c7f3",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/12f889bc5b58829e5065cd866810eb8641085619"
+        },
+        "date": 1689263930611,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - ns/op",
+            "value": 80904,
+            "unit": "ns/op",
+            "extra": "14436 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - B/op",
+            "value": 11097,
+            "unit": "B/op",
+            "extra": "14436 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - allocs/op",
+            "value": 12,
+            "unit": "allocs/op",
+            "extra": "14436 times\n2 procs"
           }
         ]
       },

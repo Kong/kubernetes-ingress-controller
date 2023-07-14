@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1689335336066,
+  "lastUpdate": 1689335337680,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -19632,6 +19632,48 @@ window.BENCHMARK_DATA = {
             "value": 12,
             "unit": "allocs/op",
             "extra": "14978 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "czeslavo@gmail.com",
+            "name": "Grzegorz Burzyński",
+            "username": "czeslavo"
+          },
+          "committer": {
+            "email": "czeslavo@gmail.com",
+            "name": "Grzegorz Burzyński",
+            "username": "czeslavo"
+          },
+          "distinct": true,
+          "id": "3197203fc5c2ca3e4f350207495728dea697375c",
+          "message": "feat: make NewKongClientForWorkspace first verify status + tests",
+          "timestamp": "2023-07-14T13:45:28+02:00",
+          "tree_id": "8c4e86f1ed704a1164a2b43d2e9bbb39360ba885",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/3197203fc5c2ca3e4f350207495728dea697375c"
+        },
+        "date": 1689335330943,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - ns/op",
+            "value": 73177,
+            "unit": "ns/op",
+            "extra": "17623 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - B/op",
+            "value": 11094,
+            "unit": "B/op",
+            "extra": "17623 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - allocs/op",
+            "value": 12,
+            "unit": "allocs/op",
+            "extra": "17623 times\n2 procs"
           }
         ]
       },

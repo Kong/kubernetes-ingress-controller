@@ -13,7 +13,9 @@ import (
 // Consumer holds a Kong consumer and its plugins and credentials.
 type Consumer struct {
 	kong.Consumer
-	Plugins    []kong.Plugin
+	Plugins        []kong.Plugin
+	ConsumerGroups []kong.ConsumerGroup
+
 	KeyAuths   []*KeyAuth
 	HMACAuths  []*HMACAuth
 	JWTAuths   []*JWTAuth

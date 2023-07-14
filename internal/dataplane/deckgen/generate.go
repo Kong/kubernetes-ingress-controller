@@ -164,6 +164,11 @@ func ToDeckContent(
 			continue
 		}
 
+		for _, cg := range c.ConsumerGroups {
+			cg := cg
+			consumer.Groups = append(consumer.Groups, &cg)
+		}
+
 		for _, p := range c.Plugins {
 			consumer.Plugins = append(consumer.Plugins, &file.FPlugin{Plugin: p})
 		}

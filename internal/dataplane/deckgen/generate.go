@@ -104,6 +104,14 @@ func ToDeckContent(
 			PluginString(content.Plugins[j])) > 0
 	})
 
+	for _, cg := range k8sState.ConsumerGroups {
+		consumerGroup := file.FConsumerGroupObject{ConsumerGroup: cg.ConsumerGroup}
+		content.ConsumerGroups = append(content.ConsumerGroups, consumerGroup)
+	}
+	sort.SliceStable(content.ConsumerGroups, func(i, j int) bool {
+		return strings.Compare(*content.ConsumerGroups[i].Name, *content.ConsumerGroups[j].Name) > 0
+	})
+
 	for _, u := range k8sState.Upstreams {
 		fillUpstream(&u.Upstream)
 		upstream := file.FUpstream{Upstream: u.Upstream}

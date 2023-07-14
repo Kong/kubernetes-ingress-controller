@@ -7,12 +7,20 @@ import (
 
 	"github.com/samber/lo"
 	"github.com/sirupsen/logrus"
+	"golang.org/x/exp/maps"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/adminapi"
 )
 
 type ClientFactory interface {
 	CreateAdminAPIClient(ctx context.Context, address adminapi.DiscoveredAdminAPI) (*adminapi.Client, error)
+}
+
+// AdminAPIClientsProvider allows fetching the most recent list of Admin API clients of Gateways that
+// we should configure.
+type AdminAPIClientsProvider interface {
+	KonnectClient() *adminapi.KonnectClient
+	GatewayClients() []*adminapi.Client
 }
 
 // AdminAPIClientsManager keeps track of current Admin API clients of Gateways that we should configure.
@@ -32,9 +40,15 @@ type AdminAPIClientsManager struct {
 	notifyLoopRunningCh   chan struct{}
 	isNotifyLoopRunning   bool
 
-	// gatewayClients represent all Kong Gateway data-planes that are configured by this KIC instance with use of
-	// their Admin API.
-	gatewayClients []*adminapi.Client
+	// readyGatewayClients represent all Kong Gateway data-planes that are ready to be configured.
+	readyGatewayClients map[string]*adminapi.Client
+
+	// pendingGatewayClients represent all Kong Gateway data-planes that were discovered but are not ready to be
+	// configured.
+	pendingGatewayClients map[string]adminapi.DiscoveredAdminAPI
+
+	// readinessChecker is used to check readiness of the clients.
+	readinessChecker ReadinessChecker
 
 	// konnectClient represents a special-case of the data-plane which is Konnect cloud.
 	// This client is used to synchronise configuration with Konnect's Runtime Group Admin API.
@@ -56,8 +70,12 @@ func NewAdminAPIClientsManager(
 		return nil, errors.New("at least one initial client must be provided")
 	}
 
+	readyClients := lo.SliceToMap(initialClients, func(c *adminapi.Client) (string, *adminapi.Client) {
+		return c.BaseRootURL(), c
+	})
 	return &AdminAPIClientsManager{
-		gatewayClients:                initialClients,
+		readyGatewayClients:           readyClients,
+		pendingGatewayClients:         make(map[string]adminapi.DiscoveredAdminAPI),
 		adminAPIClientFactory:         kongClientFactory,
 		discoveredAdminAPIsNotifyChan: make(chan []adminapi.DiscoveredAdminAPI),
 		ctx:                           ctx,
@@ -118,16 +136,13 @@ func (c *AdminAPIClientsManager) KonnectClient() *adminapi.KonnectClient {
 func (c *AdminAPIClientsManager) GatewayClients() []*adminapi.Client {
 	c.lock.RLock()
 	defer c.lock.RUnlock()
-
-	copied := make([]*adminapi.Client, len(c.gatewayClients))
-	copy(copied, c.gatewayClients)
-	return copied
+	return lo.Values(c.readyGatewayClients)
 }
 
 func (c *AdminAPIClientsManager) GatewayClientsCount() int {
 	c.lock.RLock()
 	defer c.lock.RUnlock()
-	return len(c.gatewayClients)
+	return len(c.readyGatewayClients)
 }
 
 // SubscribeToGatewayClientsChanges returns a channel that will receive a notification on every Gateway clients update.
@@ -172,7 +187,7 @@ func (c *AdminAPIClientsManager) adminAPIAddressNotifyLoop() {
 		select {
 		case <-c.ctx.Done():
 			c.logger.Infof("closing AdminAPIClientsManager: %s", c.ctx.Err())
-			c.discoveredAdminAPIsNotifyChan = nil
+			close(c.discoveredAdminAPIsNotifyChan)
 			c.closeGatewayClientsSubscribers()
 			return
 
@@ -197,26 +212,32 @@ func (c *AdminAPIClientsManager) adjustGatewayClients(discoveredAdminAPIs []admi
 
 	// Short circuit
 	if len(discoveredAdminAPIs) == 0 {
-		if len(c.gatewayClients) == 0 {
+		if len(c.readyGatewayClients) == 0 {
 			return false
 		}
-		c.gatewayClients = c.gatewayClients[:0]
+		maps.Clear(c.readyGatewayClients)
 		return true
 	}
 
-	toAdd := lo.Filter(discoveredAdminAPIs, func(api adminapi.DiscoveredAdminAPI, _ int) bool {
+	for _, api := range discoveredAdminAPIs {
 		// If we already have a client with a provided address then great, no need
 		// to do anything.
+		if _, ok := c.readyGatewayClients[api.Address]; ok {
+			continue
+		}
 
-		// If we don't have a client with new address then filter it and add
+		// If we don't have a client with new address then create it and add
 		// a client for this address.
-		return !lo.ContainsBy(c.gatewayClients, func(cl *adminapi.Client) bool {
-			return api.Address == cl.BaseRootURL()
-		})
-	})
+		client, err := c.adminAPIClientFactory.CreateAdminAPIClient(c.ctx, api)
+		if err != nil {
+			c.logger.WithError(err).Errorf("failed to create a client for %s", api.Address)
+			continue
+		}
+		c.readyGatewayClients[api.Address] = client
+		changed = true
+	}
 
-	var idxToRemove []int
-	for i, cl := range c.gatewayClients {
+	for _, cl := range c.readyGatewayClients {
 		// If the new address set contains a client that we already have then
 		// good, no need to do anything for it.
 		if lo.ContainsBy(discoveredAdminAPIs, func(api adminapi.DiscoveredAdminAPI) bool {
@@ -226,26 +247,11 @@ func (c *AdminAPIClientsManager) adjustGatewayClients(discoveredAdminAPIs []admi
 		}
 		// If the new address set does not contain an address that we already
 		// have then remove it.
-		idxToRemove = append(idxToRemove, i)
+		delete(c.readyGatewayClients, cl.BaseRootURL())
+		changed = true
 	}
 
-	for i := len(idxToRemove) - 1; i >= 0; i-- {
-		idx := idxToRemove[i]
-		c.gatewayClients = append(c.gatewayClients[:idx], c.gatewayClients[idx+1:]...)
-	}
-
-	for _, adminAPI := range toAdd {
-		client, err := c.adminAPIClientFactory.CreateAdminAPIClient(c.ctx, adminAPI)
-		if err != nil {
-			c.logger.WithError(err).Errorf("failed to create a client for %s", adminAPI)
-			continue
-		}
-		client.AttachPodReference(adminAPI.PodRef)
-
-		c.gatewayClients = append(c.gatewayClients, client)
-	}
-
-	return len(toAdd) > 0 || len(idxToRemove) > 0
+	return changed
 }
 
 // notifyGatewayClientsSubscribers sends notifications to all subscribers that have called SubscribeToGatewayClientsChanges.
@@ -264,11 +270,4 @@ func (c *AdminAPIClientsManager) closeGatewayClientsSubscribers() {
 	for _, sub := range c.gatewayClientsChangesSubscribers {
 		close(sub)
 	}
-}
-
-// AdminAPIClientsProvider allows fetching the most recent list of Admin API clients of Gateways that
-// we should configure.
-type AdminAPIClientsProvider interface {
-	KonnectClient() *adminapi.KonnectClient
-	GatewayClients() []*adminapi.Client
 }

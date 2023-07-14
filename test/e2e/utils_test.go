@@ -108,6 +108,7 @@ func exposeAdminAPI(ctx context.Context, t *testing.T, env environments.Environm
 
 // getTestManifest gets a manifest io.Reader, applying optional patches to the base manifest provided.
 // In case of any failure while patching, the base manifest is returned.
+// If skipTestPatches is true, no patches are applied (useful when untouched manifest is needed, e.g. in upgrade tests).
 func getTestManifest(t *testing.T, baseManifestPath string, skipTestPatches bool) io.Reader {
 	t.Helper()
 
@@ -496,7 +497,7 @@ func setEnv(p setEnvParams) error {
 // dumpToTempFile dumps the contents of the reader to a temporary file and returns the path to the file.
 func dumpToTempFile(t *testing.T, reader io.Reader) string {
 	t.Helper()
-	file, err := os.CreateTemp("", "")
+	file, err := os.CreateTemp(t.TempDir(), "")
 	require.NoError(t, err)
 	defer file.Close()
 	_, err = io.Copy(file, reader)

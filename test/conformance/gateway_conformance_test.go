@@ -50,7 +50,7 @@ func TestGatewayConformance(t *testing.T) {
 		"--dump-config",
 		"--log-level=trace",
 		"--debug-log-reduce-redundancy",
-		fmt.Sprintf("--feature-gates=%s", consts.DefaultFeatureGates),
+		fmt.Sprintf("--feature-gates=%s", consts.ConformanceTestsFeatureGates),
 		"--anonymous-reports=false",
 	}
 
@@ -83,10 +83,6 @@ func TestGatewayConformance(t *testing.T) {
 		ExemptFeatures:             exemptFeatures,
 		BaseManifests:              conformanceTestsBaseManifests,
 		SkipTests: []string{
-			// disabling after being re-enabled by https://github.com/Kong/kubernetes-ingress-controller/pull/4296
-			// it is consistently failing and needs to be investigated.
-			tests.HTTPRouteHeaderMatching.ShortName,
-
 			// extended conformance
 			// https://github.com/Kong/kubernetes-ingress-controller/issues/4166
 			// requires an 8080 listener, which our manually-built test gateway does not have

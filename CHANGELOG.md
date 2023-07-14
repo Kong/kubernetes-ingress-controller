@@ -74,6 +74,9 @@ Adding a new version? You'll need three changes:
 
 ### Added
 
+- The ResponseHeaderModifier Gateway API filter is now supported and translated
+  to the proper set of Kong plugins.
+  [#4350](https://github.com/Kong/kubernetes-ingress-controller/pull/4350)
 - The `CombinedServices` feature gate is now enabled by default.
   [#4138](https://github.com/Kong/kubernetes-ingress-controller/pull/4138)
 - Plugin CRDs now support the `instance_name` field introduced in Kong 3.2.

@@ -64,11 +64,11 @@ func TestDeployAllInOneDBLESSLegacy(t *testing.T) {
 	verifyIngressWithEchoBackends(ctx, t, env, numberOfEchoBackends)
 }
 
-const entDBLESSPath = "../../deploy/single/all-in-one-dbless-k4k8s-enterprise.yaml"
+const entDBLESSPath = "../../deploy/single/all-in-one-dbless-enterprise.yaml"
 
 func TestDeployAllInOneEnterpriseDBLESS(t *testing.T) {
 	skipTestIfControllerVersionBelow(t, gatewayDiscoveryMinimalVersion)
-	t.Log("configuring all-in-one-dbless-k4k8s-enterprise.yaml manifest test")
+	t.Log("configuring all-in-one-dbless-enterprise.yaml manifest test")
 	if os.Getenv(kong.LicenseDataEnvVar) == "" {
 		t.Skipf("no license available to test enterprise: %s was not provided", kong.LicenseDataEnvVar)
 	}

@@ -21,7 +21,6 @@ function generate_all_in_one_manifest()
 
 generate_all_in_one_manifest 'config/base' 'deploy/single/all-in-one-dbless-legacy.yaml'
 generate_all_in_one_manifest 'config/variants/postgres' 'deploy/single/all-in-one-postgres.yaml'
-generate_all_in_one_manifest 'config/variants/enterprise' 'deploy/single/all-in-one-dbless-k4k8s-enterprise.yaml'
 generate_all_in_one_manifest 'config/variants/enterprise-postgres' 'deploy/single/all-in-one-postgres-enterprise.yaml'
 generate_all_in_one_manifest 'config/variants/multi-gw/oss' 'deploy/single/all-in-one-dbless.yaml'
 generate_all_in_one_manifest 'config/variants/multi-gw/enterprise' 'deploy/single/all-in-one-dbless-enterprise.yaml'

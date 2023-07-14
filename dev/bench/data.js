@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1689332436989,
+  "lastUpdate": 1689332438408,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -19464,6 +19464,48 @@ window.BENCHMARK_DATA = {
             "value": 12,
             "unit": "allocs/op",
             "extra": "18354 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "czeslavo@gmail.com",
+            "name": "Grzegorz Burzyński",
+            "username": "czeslavo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "923d9ed1a9281827b10d022cdbfe65f6d97acc46",
+          "message": "chore(ci): make github release latest only when asked for (#4353)\n\nFor some reason when releasing 2.5.1, \r\nhttps://github.com/ncipollo/release-action marked it as latest in GH releases.\r\nI had to manually assign the label to 2.10.3 again. This PR makes this setting\r\nexplicit using the input we already have in place.",
+          "timestamp": "2023-07-14T10:56:51Z",
+          "tree_id": "be38d9d991e00fc6de01b31f896a65c66a0ed477",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/923d9ed1a9281827b10d022cdbfe65f6d97acc46"
+        },
+        "date": 1689332432349,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - ns/op",
+            "value": 69166,
+            "unit": "ns/op",
+            "extra": "17829 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - B/op",
+            "value": 11092,
+            "unit": "B/op",
+            "extra": "17829 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - allocs/op",
+            "value": 12,
+            "unit": "allocs/op",
+            "extra": "17829 times\n2 procs"
           }
         ]
       },

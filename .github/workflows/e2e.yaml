@@ -12,15 +12,17 @@ jobs:
     strategy:
       matrix:
         kubernetes-version:
-          - 'v1.21.12'
           - 'v1.22.9'
           - 'v1.23.6'
           - 'v1.24.2'
+          - 'v1.25.11'
+          - 'v1.26.6'
+          - 'v1.27.2'
         istio-version:
-          - 'v1.14.1'
-          - 'v1.13.2'
-          - 'v1.12.5'
-          - 'v1.11.8'
+          - 'v1.15'
+          - 'v1.16'
+          - 'v1.17'
+          - 'v1.18'
     steps:
     - name: setup golang
       uses: actions/setup-go@v3

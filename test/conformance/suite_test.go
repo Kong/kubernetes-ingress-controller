@@ -57,7 +57,8 @@ func TestMain(m *testing.M) {
 	globalDeprecatedLogger = deprecatedLogger
 	globalLogger = logger
 
-	kongAddon := kong.NewBuilder().WithControllerDisabled().WithProxyAdminServiceTypeLoadBalancer().Build()
+	// In order to pass conformance tests, the expression router is required.
+	kongAddon := kong.NewBuilder().WithControllerDisabled().WithProxyEnvVar("router_flavor", "expressions").WithProxyAdminServiceTypeLoadBalancer().Build()
 	builder := environments.NewBuilder().WithAddons(metallb.New(), kongAddon)
 	useExistingClusterIfPresent(builder)
 

@@ -16,12 +16,27 @@ import (
 	tlsutil "github.com/kong/kubernetes-ingress-controller/v2/internal/util/tls"
 )
 
+// KongClientNotReadyError is returned when the Kong client is not ready to be used yet.
+// This can happen if the Kong Admin API is not reachable, or if it's reachable but `GET /status` does not return 200.
+type KongClientNotReadyError struct {
+	Err error
+}
+
+func (e KongClientNotReadyError) Error() string {
+	return fmt.Sprintf("client not ready: %s", e.Err)
+}
+
+func (e KongClientNotReadyError) Unwrap() error {
+	return e.Err
+}
+
 // NewKongClientForWorkspace returns a Kong API client for a given root API URL and workspace.
+// It ensures that the client is ready to be used by performing a status check, returns KongClientNotReadyError if not.
 // If the workspace does not already exist, NewKongClientForWorkspace will create it.
 func NewKongClientForWorkspace(ctx context.Context, adminURL string, wsName string,
 	httpclient *http.Client,
 ) (*Client, error) {
-	// create the base client, and if no workspace was provided then return that.
+	// Create the base client, and if no workspace was provided then return that.
 	client, err := kong.NewClient(kong.String(adminURL), httpclient)
 	if err != nil {
 		return nil, fmt.Errorf("creating Kong client: %w", err)
@@ -30,13 +45,18 @@ func NewKongClientForWorkspace(ctx context.Context, adminURL string, wsName stri
 		return NewClient(client), nil
 	}
 
-	// if a workspace was provided, verify whether or not it exists.
+	// Ensure that the client is ready to be used by performing a status check.
+	if _, err = client.Status(ctx); err != nil {
+		return nil, KongClientNotReadyError{Err: err}
+	}
+
+	// If a workspace was provided, verify whether or not it exists.
 	exists, err := client.Workspaces.ExistsByName(ctx, kong.String(wsName))
 	if err != nil {
 		return nil, fmt.Errorf("looking up workspace: %w", err)
 	}
 
-	// if the provided workspace does not exist, for convenience we create it.
+	// If the provided workspace does not exist, for convenience we create it.
 	if !exists {
 		workspace := kong.Workspace{
 			Name: kong.String(wsName),
@@ -47,7 +67,7 @@ func NewKongClientForWorkspace(ctx context.Context, adminURL string, wsName stri
 		}
 	}
 
-	// ensure that we set the workspace appropriately
+	// Ensure that we set the workspace appropriately.
 	client.SetWorkspace(wsName)
 
 	return NewClient(client), nil
@@ -70,7 +90,7 @@ type HTTPClientOpts struct {
 }
 
 const (
-	headerNameAdminToken = "Kong-Admin-Token"
+	HeaderNameAdminToken = "Kong-Admin-Token"
 )
 
 // MakeHTTPClient returns an HTTP client with the specified mTLS/headers configuration.
@@ -133,11 +153,11 @@ func MakeHTTPClient(opts *HTTPClientOpts, kongAdminToken string) (*http.Client, 
 func prepareHeaders(headers []string, kongAdminToken string) []string {
 	if kongAdminToken != "" {
 		contains := lo.ContainsBy(headers, func(header string) bool {
-			return strings.HasPrefix(header, headerNameAdminToken+":")
+			return strings.HasPrefix(header, HeaderNameAdminToken+":")
 		})
 
 		if !contains {
-			headers = append(headers, headerNameAdminToken+":"+kongAdminToken)
+			headers = append(headers, HeaderNameAdminToken+":"+kongAdminToken)
 		}
 	}
 	return headers

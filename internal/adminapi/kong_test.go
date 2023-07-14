@@ -1,7 +1,8 @@
-package adminapi
+package adminapi_test
 
 import (
 	"bytes"
+	"context"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/tls"
@@ -20,6 +21,9 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
+
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/adminapi"
+	"github.com/kong/kubernetes-ingress-controller/v2/test/mocks"
 )
 
 func TestMakeHTTPClientWithTLSOpts(t *testing.T) {
@@ -31,27 +35,27 @@ func TestMakeHTTPClientWithTLSOpts(t *testing.T) {
 	caPEM, certPEM, certPrivateKeyPEM, err = buildTLS(t)
 	require.NoError(t, err, "Fail to build TLS certificates")
 
-	opts := HTTPClientOpts{
+	opts := adminapi.HTTPClientOpts{
 		TLSSkipVerify: true,
 		TLSServerName: "",
 		CACertPath:    "",
 		CACert:        caPEM.String(),
 		Headers:       nil,
-		TLSClient: TLSClientConfig{
+		TLSClient: adminapi.TLSClientConfig{
 			Cert: certPEM.String(),
 			Key:  certPrivateKeyPEM.String(),
 		},
 	}
 
 	t.Run("without kong admin token", func(t *testing.T) {
-		httpclient, err := MakeHTTPClient(&opts, "")
+		httpclient, err := adminapi.MakeHTTPClient(&opts, "")
 		require.NoError(t, err)
 		require.NotNil(t, httpclient)
 		require.NoError(t, validate(t, httpclient, caPEM, certPEM, certPrivateKeyPEM, ""))
 	})
 
 	t.Run("with kong admin token", func(t *testing.T) {
-		httpclient, err := MakeHTTPClient(&opts, "my-token")
+		httpclient, err := adminapi.MakeHTTPClient(&opts, "my-token")
 		require.NoError(t, err)
 		require.NotNil(t, httpclient)
 		require.NoError(t, validate(t, httpclient, caPEM, certPEM, certPrivateKeyPEM, "my-token"))
@@ -88,31 +92,92 @@ func TestMakeHTTPClientWithTLSOptsAndFilePaths(t *testing.T) {
 	require.Equal(t, certPrivateKeyPEM.Len(), writtenBytes)
 	defer os.Remove(caFile.Name())
 
-	opts := HTTPClientOpts{
+	opts := adminapi.HTTPClientOpts{
 		TLSSkipVerify: true,
 		TLSServerName: "",
 		CACertPath:    caFile.Name(),
 		CACert:        "",
 		Headers:       nil,
-		TLSClient: TLSClientConfig{
+		TLSClient: adminapi.TLSClientConfig{
 			CertFile: certFile.Name(),
 			KeyFile:  certPrivateKeyFile.Name(),
 		},
 	}
 
 	t.Run("without kong admin token", func(t *testing.T) {
-		httpclient, err := MakeHTTPClient(&opts, "")
+		httpclient, err := adminapi.MakeHTTPClient(&opts, "")
 		require.NoError(t, err)
 		require.NotNil(t, httpclient)
 		require.NoError(t, validate(t, httpclient, caPEM, certPEM, certPrivateKeyPEM, ""))
 	})
 
 	t.Run("with kong admin token", func(t *testing.T) {
-		httpclient, err := MakeHTTPClient(&opts, "my-token")
+		httpclient, err := adminapi.MakeHTTPClient(&opts, "my-token")
 		require.NoError(t, err)
 		require.NotNil(t, httpclient)
 		require.NoError(t, validate(t, httpclient, caPEM, certPEM, certPrivateKeyPEM, "my-token"))
 	})
+}
+
+func TestNewKongClientForWorkspace(t *testing.T) {
+	const testWorkspace = "workspace"
+
+	testCases := []struct {
+		name            string
+		adminAPIReady   bool
+		workspaceExists bool
+		expectError     error
+	}{
+		{
+			name:            "admin api is ready and workspace exists",
+			adminAPIReady:   true,
+			workspaceExists: true,
+		},
+		{
+			name:            "admin api is ready and workspace doesn't exist",
+			adminAPIReady:   true,
+			workspaceExists: false,
+		},
+		{
+			name:          "admin api is not ready",
+			adminAPIReady: false,
+			expectError:   adminapi.KongClientNotReadyError{},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			adminAPIHandler := mocks.NewAdminAPIHandler(
+				t,
+				mocks.WithWorkspaceExists(tc.workspaceExists),
+				mocks.WithReady(tc.adminAPIReady),
+			)
+			adminAPIServer := httptest.NewServer(adminAPIHandler)
+			t.Cleanup(func() { adminAPIServer.Close() })
+
+			client, err := adminapi.NewKongClientForWorkspace(
+				context.Background(),
+				adminAPIServer.URL,
+				testWorkspace,
+				adminAPIServer.Client(),
+			)
+
+			if tc.expectError != nil {
+				require.IsType(t, err, tc.expectError)
+				return
+			}
+			require.NoError(t, err)
+			require.NotNil(t, client)
+
+			if !tc.workspaceExists {
+				require.True(t, adminAPIHandler.WasWorkspaceCreated(), "expected workspace to be created")
+			}
+
+			require.Equal(t, client.AdminAPIClient().Workspace(), testWorkspace)
+			_, ok := client.PodReference()
+			require.False(t, ok, "expected no pod reference to be attached to the client")
+		})
+	}
 }
 
 func buildTLS(t *testing.T) (caPEM *bytes.Buffer, certPEM *bytes.Buffer, certPrivateKeyPEM *bytes.Buffer, err error) {
@@ -251,19 +316,19 @@ func validate(t *testing.T,
 	successMessage := "connection successful"
 	server := httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if kongAdminToken != "" {
-			v, ok := r.Header[http.CanonicalHeaderKey(headerNameAdminToken)]
+			v, ok := r.Header[http.CanonicalHeaderKey(adminapi.HeaderNameAdminToken)]
 			if !ok {
-				fmt.Fprintf(w, "%s header not found", headerNameAdminToken)
+				fmt.Fprintf(w, "%s header not found", adminapi.HeaderNameAdminToken)
 				return
 			}
 			if len(v) != 1 {
 				fmt.Fprintf(w, "%s header expected to contain %s but found %v",
-					headerNameAdminToken, kongAdminToken, v)
+					adminapi.HeaderNameAdminToken, kongAdminToken, v)
 				return
 			}
 			if v[0] != kongAdminToken {
 				fmt.Fprintf(w, "%s header expected to contain %s but found %s",
-					headerNameAdminToken, kongAdminToken, v[0])
+					adminapi.HeaderNameAdminToken, kongAdminToken, v[0])
 				return
 			}
 		}

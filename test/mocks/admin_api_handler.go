@@ -51,17 +51,17 @@ type AdminAPIHandler struct {
 	workspaceWasCreated atomic.Bool
 }
 
-type AdminAPIHandlerOpt func(srv *AdminAPIHandler)
+type AdminAPIHandlerOpt func(h *AdminAPIHandler)
 
 func WithWorkspaceExists(exists bool) AdminAPIHandlerOpt {
-	return func(srv *AdminAPIHandler) {
-		srv.workspaceExists = exists
+	return func(h *AdminAPIHandler) {
+		h.workspaceExists = exists
 	}
 }
 
 func WithReady(ready bool) AdminAPIHandlerOpt {
-	return func(srv *AdminAPIHandler) {
-		srv.ready = ready
+	return func(h *AdminAPIHandler) {
+		h.ready = ready
 	}
 }
 

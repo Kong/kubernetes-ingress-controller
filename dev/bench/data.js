@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1689330093025,
+  "lastUpdate": 1689330095140,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -19296,6 +19296,48 @@ window.BENCHMARK_DATA = {
             "value": 12,
             "unit": "allocs/op",
             "extra": "15996 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "1181591811hzr@gmail.com",
+            "name": "ZongRun",
+            "username": "rodman10"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "5c321631879cf44df1cf537773c9e1a30d4d6f23",
+          "message": "feat: support ResponseHeaderModifier filter (#4350)\n\n* feat: support response header modifier.\r\n\r\n* tests: add tests for response header modifier.\r\n\r\n* docs: update CHANGELOG.",
+          "timestamp": "2023-07-14T12:18:05+02:00",
+          "tree_id": "dce07238c20d6824459b4c2d124a87786a4c25a6",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/5c321631879cf44df1cf537773c9e1a30d4d6f23"
+        },
+        "date": 1689330087237,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - ns/op",
+            "value": 71734,
+            "unit": "ns/op",
+            "extra": "16903 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - B/op",
+            "value": 11098,
+            "unit": "B/op",
+            "extra": "16903 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - allocs/op",
+            "value": 12,
+            "unit": "allocs/op",
+            "extra": "16903 times\n2 procs"
           }
         ]
       },

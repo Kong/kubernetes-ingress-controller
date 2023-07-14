@@ -543,7 +543,7 @@ func verifyIngressWithEchoBackendsInAdminAPI(
 
 // verifyEnterprise performs some basic tests of the Kong Admin API in the provided
 // environment to ensure that the Admin API that responds is in fact the enterprise
-// version of Kong.
+// version of Kong with a valid license.
 func verifyEnterprise(ctx context.Context, t *testing.T, env environments.Environment, adminPassword string) {
 	t.Helper()
 
@@ -553,48 +553,31 @@ func verifyEnterprise(ctx context.Context, t *testing.T, env environments.Enviro
 	require.Equal(t, 1, len(service.Status.LoadBalancer.Ingress))
 	adminIP := service.Status.LoadBalancer.Ingress[0].IP
 
-	t.Log("building a GET request to gather admin api information")
-	req, err := http.NewRequestWithContext(ctx, "GET", fmt.Sprintf("http://%s/", adminIP), nil)
+	t.Log("building a GET request to /consumer_groups - this is enterprise feature of the Admin API")
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, fmt.Sprintf("http://%s/consumer_groups", adminIP), nil)
 	require.NoError(t, err)
 	req.Header.Set("Kong-Admin-Token", adminPassword)
 
-	t.Log("pulling the admin api information")
-	adminOutput := struct {
-		Version string `json:"version"`
-	}{}
-
-	require.Eventually(t, func() bool {
-		// at the time of writing it was seen that the admin API had
-		// brief timing windows where it could respond 200 OK but
-		// the API version data would not be populated and the JSON
-		// decode would fail. Thus this check actually waits until
-		// the response body is fully decoded with a non-empty value
-		// before considering this complete.
-		resp, err := helpers.DefaultHTTPClient().Do(req)
-		if err != nil {
-			return false
-		}
-		defer resp.Body.Close()
-		body, err := io.ReadAll(resp.Body)
-		if err != nil {
-			return false
-		}
-		if resp.StatusCode != http.StatusOK {
-			return false
-		}
-		if err := json.Unmarshal(body, &adminOutput); err != nil {
-			return false
-		}
-		return adminOutput.Version != ""
-	}, adminAPIWait, time.Second)
-	if string(adminOutput.Version[0]) == "3" {
-		// 3.x removed the "-enterprise-edition" string but provided no other indication that something is enterprise
-		require.Len(t, strings.Split(adminOutput.Version, "."), 4,
-			fmt.Sprintf("actual kong version: %s", adminOutput.Version))
-	} else {
-		require.Contains(t, adminOutput.Version, "enterprise-edition",
-			fmt.Sprintf("actual kong version: %s", adminOutput.Version))
-	}
+	t.Log("executing the request and waiting for a 200 OK response")
+	require.Eventuallyf(
+		t,
+		func() bool {
+			resp, err := helpers.DefaultHTTPClient().Do(req)
+			if err != nil {
+				return false
+			}
+			defer resp.Body.Close()
+			if _, err := io.Copy(io.Discard, resp.Body); err != nil {
+				t.Logf("unexpected error during discarding the response body: %s", err)
+				return false
+			}
+			// For OSS version 404 is returned for /consumer_groups.
+			// For Enterprise version with invalid license 403 is returned for /consumer_groups.
+			// For Enterprise version with valid license 200 is returned for /consumer_groups.
+			return resp.StatusCode == http.StatusOK
+		},
+		adminAPIWait, time.Second, "admin API didn't respond with 200 OK",
+	)
 }
 
 func verifyEnterpriseWithPostgres(ctx context.Context, t *testing.T, env environments.Environment, adminPassword string) {

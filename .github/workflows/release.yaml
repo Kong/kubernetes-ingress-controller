@@ -198,6 +198,7 @@ jobs:
         # When prerelease part of the input tag is not empty, make it a prerelease.
         # The release will be labeled as non-production ready in GitHub.
         prerelease: ${{ steps.semver_parser.outputs.prerelease != '' }}
+        makeLatest: ${{ github.event.inputs.latest == 'true' }}
 
   update-latest-branch:
     runs-on: ubuntu-latest

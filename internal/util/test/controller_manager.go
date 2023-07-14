@@ -5,8 +5,10 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/go-logr/logr"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/kong"
+	"github.com/sirupsen/logrus"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/cmd/rootcmd"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/manager"
@@ -23,7 +25,7 @@ import (
 // Controller managers started this way will run in the background in a goroutine:
 // The caller must use the provided context.Context to stop the controller manager
 // from running when they're done with it.
-func DeployControllerManagerForCluster(ctx context.Context, cluster clusters.Cluster, additionalFlags ...string) error {
+func DeployControllerManagerForCluster(ctx context.Context, l logrus.FieldLogger, cluster clusters.Cluster, additionalFlags ...string) error {
 	// ensure that the provided test cluster has a kongAddon deployed to it
 	var kongAddon *kong.Addon
 	for _, addon := range cluster.ListAddons() {
@@ -79,10 +81,27 @@ func DeployControllerManagerForCluster(ctx context.Context, cluster clusters.Clu
 	go func() {
 		defer os.Remove(kubeconfig.Name())
 		fmt.Fprintf(os.Stderr, "INFO: Starting Controller Manager for Cluster %s with Configuration: %+v\n", cluster.Name(), config)
-		if err := rootcmd.Run(&config); err != nil {
+		if err := rootcmd.RunWithLogger(&config, l); err != nil {
 			panic(err)
 		}
 	}()
 
 	return nil
+}
+
+// SetupLoggers sets up the loggers for the controller manager.
+// The controller manager logs needs to be setup before the 30s timeout passes.
+// Given the cluster deployment takes time, there is a chance that the timeout
+// will pass before the controller manager logs are setup.
+// This function can be used to sets up the loggers for the controller manager
+// before the cluster deployment.
+func SetupLoggers(logLevel string, logFormat string, logReduceRedundancy bool) (logrus.FieldLogger, logr.Logger, error) {
+	// construct the config for the logger
+	config := manager.Config{
+		LogLevel:            logLevel,
+		LogFormat:           logFormat,
+		LogReduceRedundancy: logReduceRedundancy,
+	}
+
+	return manager.SetupLoggers(&config)
 }

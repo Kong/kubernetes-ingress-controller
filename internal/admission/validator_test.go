@@ -22,7 +22,7 @@ type fakePluginSvc struct {
 	valid bool
 }
 
-func (f *fakePluginSvc) Validate(ctx context.Context, plugin *kong.Plugin) (bool, string, error) {
+func (f *fakePluginSvc) Validate(_ context.Context, _ *kong.Plugin) (bool, string, error) {
 	return f.valid, f.msg, f.err
 }
 

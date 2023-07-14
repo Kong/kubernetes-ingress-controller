@@ -15,6 +15,7 @@ import (
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/metallb"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/types/kind"
 	"github.com/kong/kubernetes-testing-framework/pkg/environments"
+	"github.com/sirupsen/logrus"
 
 	testutils "github.com/kong/kubernetes-ingress-controller/v2/internal/util/test"
 )
@@ -23,9 +24,10 @@ var (
 	existingCluster = os.Getenv("KONG_TEST_CLUSTER")
 	ingressClass    = "kong-conformance-tests"
 
-	env   environments.Environment
-	ctx   context.Context
-	admin *url.URL
+	env          environments.Environment
+	ctx          context.Context
+	admin        *url.URL
+	globalLogger logrus.FieldLogger
 )
 
 func TestMain(m *testing.M) {
@@ -33,11 +35,22 @@ func TestMain(m *testing.M) {
 	ctx, cancel = context.WithCancel(context.Background())
 	defer cancel()
 
+	// Logger needs to be configured before anything else happens.
+	// This is because the controller manager has a timeout for
+	// logger initialization, and if the logger isn't configured
+	// after 30s from the start of controller manager package init function,
+	// the controller manager will set up a no op logger and continue.
+	// The logger cannot be configured after that point.
+	logger, _, err := testutils.SetupLoggers("trace", "text", false)
+	if err != nil {
+		exitOnErr(fmt.Errorf("failed to setup loggers: %w", err))
+	}
+	globalLogger = logger
+
 	kongAddon := kong.NewBuilder().WithControllerDisabled().WithProxyAdminServiceTypeLoadBalancer().Build()
 	builder := environments.NewBuilder().WithAddons(metallb.New(), kongAddon)
 	useExistingClusterIfPresent(builder)
 
-	var err error
 	env, err = builder.Build(ctx)
 	exitOnErr(err)
 	defer func() {
@@ -69,7 +82,7 @@ func TestMain(m *testing.M) {
 		"--feature-gates=Gateway=true",
 		fmt.Sprintf("--kong-admin-url=%s", admin.String()),
 	}
-	exitOnErr(testutils.DeployControllerManagerForCluster(ctx, env.Cluster(), args...))
+	exitOnErr(testutils.DeployControllerManagerForCluster(ctx, globalLogger, env.Cluster(), args...))
 
 	code := m.Run()
 

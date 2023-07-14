@@ -30,7 +30,7 @@ import (
 // Controller Manager - Setup Utility Functions
 // -----------------------------------------------------------------------------
 
-func setupLoggers(c *Config) (logrus.FieldLogger, logr.Logger, error) {
+func SetupLoggers(c *Config) (logrus.FieldLogger, logr.Logger, error) {
 	deprecatedLogger, err := util.MakeLogger(c.LogLevel, c.LogFormat)
 	if err != nil {
 		return nil, logr.Logger{}, fmt.Errorf("failed to make logger: %w", err)

@@ -50,6 +50,20 @@
  - [0.0.5](#005)
  - [0.0.4 and prior](#004-and-prior)
 
+## [2.5.1]
+
+> Release date: 2023-07-13
+
+#### Fixed
+
+- Fixed a bug where the controller sync loop would get stuck when a number of
+  updates for one of Gateway API resources kinds (`HTTPRoute`, `TCPRoute`,
+  `UDPRoute`, `TLSRoute`) exceeded 8192. This was caused by the fact that the
+  controller was using a fixed-size buffer to store updates for each resource
+  kind and there were no consumers for the updates. The sending was blocked
+  after a buffer got full, resulting in a deadlock.
+  [#4267](https://github.com/Kong/kubernetes-ingress-controller/pull/4267)
+
 ## [2.5.0]
 
 > Release date: 2022-07-11
@@ -1818,6 +1832,7 @@ Please read the changelog and test in your environment.
  - The initial versions  were rapildy iterated to deliver
    a working ingress controller.
 
+[2.5.1]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.5.0...v2.5.1
 [2.5.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.4.2...v2.5.0
 [2.4.2]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.4.1...v2.4.2
 [2.4.1]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.4.0...v2.4.1

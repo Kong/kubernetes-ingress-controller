@@ -33,11 +33,12 @@ import (
 // to zero will result in no redundancy reduction.
 //
 // NOTE: Please consider this logger a "debug" only logging implementation.
-//       This logger was originally created to help reduce the noise coming from the controller
-//       during integration tests for better human readability, so keep in mind it was built for
-//       testing environments if you're currently reading this and you're considering using it
-//       somewhere that would produce production environment logs: there's significant
-//       performance overhead triggered by the logging hooks this adds.
+//
+//	This logger was originally created to help reduce the noise coming from the controller
+//	during integration tests for better human readability, so keep in mind it was built for
+//	testing environments if you're currently reading this and you're considering using it
+//	somewhere that would produce production environment logs: there's significant
+//	performance overhead triggered by the logging hooks this adds.
 func MakeDebugLoggerWithReducedRedudancy(writer io.Writer, formatter logrus.Formatter,
 	redudantLogEntryAllowedConsecutively int, redundantLogEntryBackoff time.Duration,
 ) *logrus.Logger {

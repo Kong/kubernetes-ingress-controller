@@ -312,6 +312,7 @@ func setupControllers(
 				Log:             ctrl.Log.WithName("controllers").WithName("HTTPRoute"),
 				Scheme:          mgr.GetScheme(),
 				DataplaneClient: dataplaneClient,
+				StatusQueue:     kubernetesStatusQueue,
 			},
 		},
 		{
@@ -328,6 +329,7 @@ func setupControllers(
 				Log:             ctrl.Log.WithName("controllers").WithName("UDPRoute"),
 				Scheme:          mgr.GetScheme(),
 				DataplaneClient: dataplaneClient,
+				StatusQueue:     kubernetesStatusQueue,
 			},
 		},
 		{
@@ -344,6 +346,7 @@ func setupControllers(
 				Log:             ctrl.Log.WithName("controllers").WithName("TCPRoute"),
 				Scheme:          mgr.GetScheme(),
 				DataplaneClient: dataplaneClient,
+				StatusQueue:     kubernetesStatusQueue,
 			},
 		},
 		{
@@ -360,6 +363,7 @@ func setupControllers(
 				Log:             ctrl.Log.WithName("controllers").WithName("TLSRoute"),
 				Scheme:          mgr.GetScheme(),
 				DataplaneClient: dataplaneClient,
+				StatusQueue:     kubernetesStatusQueue,
 			},
 		},
 	}

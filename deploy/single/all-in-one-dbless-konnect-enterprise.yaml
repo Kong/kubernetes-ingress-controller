@@ -1787,6 +1787,11 @@ spec:
       automountServiceAccountToken: false
       containers:
       - env:
+        - name: KONG_LICENSE_DATA
+          valueFrom:
+            secretKeyRef:
+              key: license
+              name: kong-enterprise-license
         - name: KONG_PROXY_LISTEN
           value: 0.0.0.0:8000 reuseport backlog=16384, 0.0.0.0:8443 http2 ssl reuseport
             backlog=16384
@@ -1849,6 +1854,8 @@ spec:
           periodSeconds: 10
           successThreshold: 1
           timeoutSeconds: 1
+      imagePullSecrets:
+      - name: kong-enterprise-edition-docker
       serviceAccountName: kong-serviceaccount
       volumes:
       - name: kong-serviceaccount-token

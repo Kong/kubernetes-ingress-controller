@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1689337502898,
+  "lastUpdate": 1689339692827,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -19800,6 +19800,48 @@ window.BENCHMARK_DATA = {
             "value": 12,
             "unit": "allocs/op",
             "extra": "17130 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jakub.warczarek@konghq.com",
+            "name": "Jakub Warczarek",
+            "username": "programmer04"
+          },
+          "committer": {
+            "email": "jakub.warczarek@konghq.com",
+            "name": "Jakub Warczarek",
+            "username": "programmer04"
+          },
+          "distinct": true,
+          "id": "50b191d865f33d8409f4a4375c4029354f822724",
+          "message": "fix(manifests): all-in-one-dbless-*-enterprise.yaml contains KONG_LICENSE_DATA",
+          "timestamp": "2023-07-14T14:52:23+02:00",
+          "tree_id": "8e361c59176717f1216a9d20d362aa3da1b58c5e",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/50b191d865f33d8409f4a4375c4029354f822724"
+        },
+        "date": 1689339688311,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - ns/op",
+            "value": 75828,
+            "unit": "ns/op",
+            "extra": "18300 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - B/op",
+            "value": 11098,
+            "unit": "B/op",
+            "extra": "18300 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - allocs/op",
+            "value": 12,
+            "unit": "allocs/op",
+            "extra": "18300 times\n2 procs"
           }
         ]
       }

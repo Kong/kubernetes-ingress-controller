@@ -5,6 +5,7 @@ import (
 	"regexp"
 	"strings"
 	"time"
+	"unicode"
 
 	"github.com/kong/go-kong/kong"
 	"github.com/samber/lo"
@@ -387,4 +388,61 @@ func MaybePrependRegexPrefixForIngressV1Fn(ingress *netv1.Ingress, applyLegacyHe
 	return func(path string) *string {
 		return lo.ToPtr(MaybePrependRegexPrefix(path, regexPrefix, applyLegacyHeuristic))
 	}
+}
+
+func generateRewriteURIConfig(path string) (string, error) {
+	uriCapturesPrefix := []rune("$(uri_captures[")
+	uriCapturesSuffix := []rune("])")
+
+	var out []rune
+	in := []rune(path)
+	for i := 0; i < len(in); i++ {
+		if in[i] != '$' {
+			out = append(out, in[i])
+			continue
+		}
+
+		i++
+		if i == len(in) || !unicode.IsDigit(in[i]) {
+			return "", fmt.Errorf("unexpected $ at pos %d", i-1)
+		}
+
+		out = append(out, uriCapturesPrefix...)
+		for ; i < len(in) && unicode.IsDigit(in[i]); i++ {
+			out = append(out, in[i])
+		}
+		out = append(out, uriCapturesSuffix...)
+
+		i--
+	}
+
+	return string(out), nil
+}
+
+// MaybeRewriteURI appends a request-transformer plugin if the value of konghq.com/rewrite annotation is valid.
+func MaybeRewriteURI(service *kongstate.Service) error {
+	rewriteURI, exists := annotations.ExtractRewriteURI(service.Parent.GetAnnotations())
+	if !exists {
+		return nil
+	}
+
+	if rewriteURI == "" {
+		rewriteURI = "/"
+	}
+
+	config, err := generateRewriteURIConfig(rewriteURI)
+	if err != nil {
+		return err
+	}
+
+	service.Plugins = append(service.Plugins, kong.Plugin{
+		Name: kong.String("request-transformer"),
+		Config: kong.Configuration{
+			"replace": map[string]string{
+				"uri": config,
+			},
+		},
+	})
+
+	return nil
 }

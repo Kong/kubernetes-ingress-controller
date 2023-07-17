@@ -1,6 +1,7 @@
 package translators
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -1591,4 +1592,130 @@ func TestMaybePrependRegexPrefixForIngressV1Fn(t *testing.T) {
 		result := generatedMaybePrependRegexPrefixFn("/~/v1/api/packages")
 		require.Equal(t, "~/v1/api/packages", *result)
 	})
+}
+
+func TestGenerateRewriteURIConfig(t *testing.T) {
+	testCases := []struct {
+		name          string
+		uri           string
+		expectedError error
+		expectedURI   string
+	}{
+		{
+			name:        "valid single digit capture group",
+			uri:         "/bar/$1xx/yy",
+			expectedURI: "/bar/$(uri_captures[1])xx/yy",
+		},
+		{
+			name:        "valid multiple digits capture group",
+			uri:         "/bar/$12xx/yy",
+			expectedURI: "/bar/$(uri_captures[12])xx/yy",
+		},
+		{
+			name:        "valid multiple capture groups",
+			uri:         "/bar/$1xx/$12yy",
+			expectedURI: "/bar/$(uri_captures[1])xx/$(uri_captures[12])yy",
+		},
+		{
+			name:        "valid multiple capture groups",
+			uri:         "/bar/$1xx/$12yy",
+			expectedURI: "/bar/$(uri_captures[1])xx/$(uri_captures[12])yy",
+		},
+		{
+			name:          "no digit following $",
+			uri:           "/bar/$xxy",
+			expectedError: errors.New("unexpected $ at pos 5"),
+			expectedURI:   "",
+		},
+		{
+			name:          "$ at end",
+			uri:           "/bar/xxxx$",
+			expectedError: errors.New("unexpected $ at pos 9"),
+			expectedURI:   "",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			uri, err := generateRewriteURIConfig(tc.uri)
+			require.Equal(t, tc.expectedError, err)
+			require.Equal(t, tc.expectedURI, uri)
+		})
+	}
+}
+
+func TestMaybeRewriteURI(t *testing.T) {
+	testCases := []struct {
+		name            string
+		service         kongstate.Service
+		expectedError   error
+		expectedPlugins []kong.Plugin
+	}{
+		{
+			name: "konghq.com/rewrite annotation is not exist",
+			service: kongstate.Service{
+				Parent: &netv1.Ingress{
+					ObjectMeta: metav1.ObjectMeta{
+						Annotations: map[string]string{},
+					},
+				},
+			},
+			expectedError:   nil,
+			expectedPlugins: nil,
+		},
+		{
+			name: "konghq.com/rewrite annotation is empty",
+			service: kongstate.Service{
+				Parent: &netv1.Ingress{
+					ObjectMeta: metav1.ObjectMeta{
+						Annotations: map[string]string{
+							annotations.AnnotationPrefix + annotations.RewriteURIKey: "",
+						},
+					},
+				},
+			},
+			expectedError: nil,
+			expectedPlugins: []kong.Plugin{
+				{
+					Name: kong.String("request-transformer"),
+					Config: kong.Configuration{
+						"replace": map[string]string{
+							"uri": "/",
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "valid rewrite uri",
+			service: kongstate.Service{
+				Parent: &netv1.Ingress{
+					ObjectMeta: metav1.ObjectMeta{
+						Annotations: map[string]string{
+							annotations.AnnotationPrefix + annotations.RewriteURIKey: "/xxx$11yy/",
+						},
+					},
+				},
+			},
+			expectedError: nil,
+			expectedPlugins: []kong.Plugin{
+				{
+					Name: kong.String("request-transformer"),
+					Config: kong.Configuration{
+						"replace": map[string]string{
+							"uri": "/xxx$(uri_captures[11])yy/",
+						},
+					},
+				},
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			err := MaybeRewriteURI(&tc.service)
+			require.Equal(t, tc.expectedError, err)
+			require.Equal(t, tc.expectedPlugins, tc.service.Plugins)
+		})
+	}
 }

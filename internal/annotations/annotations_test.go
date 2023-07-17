@@ -927,3 +927,37 @@ func TestExtractPathHandling(t *testing.T) {
 		})
 	}
 }
+
+func TestExtractRewriteURI(t *testing.T) {
+	type args struct {
+		anns map[string]string
+	}
+	tests := []struct {
+		name  string
+		args  args
+		want  string
+		exist bool
+	}{
+		{
+			name: "empty",
+			want: "",
+		},
+		{
+			name: "non-empty",
+			args: args{
+				anns: map[string]string{
+					"konghq.com/rewrite": "/foo/$1",
+				},
+			},
+			want:  "/foo/$1",
+			exist: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, exist := ExtractRewriteURI(tt.args.anns)
+			require.Equal(t, tt.want, got)
+			require.Equal(t, tt.exist, exist)
+		})
+	}
+}

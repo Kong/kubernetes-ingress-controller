@@ -10,6 +10,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/kong/go-kong/kong"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/parser/translators"
@@ -163,4 +164,79 @@ func TestGetDefaultBackendService(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestRewriteURIAnnotation(t *testing.T) {
+	pathTypePrefix := netv1.PathTypePrefix
+
+	someIngress := func(name, rewriteURI string) netv1.Ingress {
+		return netv1.Ingress{
+			TypeMeta: metav1.TypeMeta{Kind: "Ingress"},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      name,
+				Namespace: "foo-namespace",
+				Annotations: map[string]string{
+					annotations.IngressClassKey:                              annotations.DefaultIngressClass,
+					annotations.AnnotationPrefix + annotations.RewriteURIKey: rewriteURI,
+				},
+			},
+			Spec: netv1.IngressSpec{
+				Rules: []netv1.IngressRule{
+					{
+						Host: "example.com",
+						IngressRuleValue: netv1.IngressRuleValue{
+							HTTP: &netv1.HTTPIngressRuleValue{
+								Paths: []netv1.HTTPIngressPath{
+									{
+										Path:     "/~/api/(.*)",
+										PathType: &pathTypePrefix,
+										Backend: netv1.IngressBackend{
+											Service: &netv1.IngressServiceBackend{
+												Name: name,
+												Port: netv1.ServiceBackendPort{Number: 80},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		}
+	}
+
+	validRewriteURIIngress := someIngress("valid_svc", "/rewrite/$1/xx")
+	invalidRewriteURIIngress := someIngress("invalid_svc", "/rewrite/$/xx")
+	t.Run("Ingress rule with rewrite annotation", func(t *testing.T) {
+		s, err := store.NewFakeStore(store.FakeObjects{
+			IngressesV1: []*netv1.Ingress{
+				&invalidRewriteURIIngress,
+				&validRewriteURIIngress,
+			},
+		})
+		require.NoError(t, err)
+
+		p := mustNewParser(t, s)
+
+		rules := p.ingressRulesFromIngressV1().ServiceNameToServices
+		require.Equal(t, 1, len(rules))
+
+		for _, svc := range rules {
+			require.Equal(t, []kong.Plugin{
+				{
+					Name: kong.String("request-transformer"),
+					Config: kong.Configuration{
+						"replace": map[string]string{
+							"uri": "/rewrite/$(uri_captures[1])/xx",
+						},
+					},
+				},
+			}, svc.Plugins)
+		}
+
+		errs := p.failuresCollector.PopResourceFailures()
+		require.Equal(t, 1, len(errs))
+		require.Equal(t, "unexpected $ at pos 9", errs[0].Message())
+	})
 }

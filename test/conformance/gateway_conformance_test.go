@@ -88,9 +88,6 @@ func TestGatewayConformance(t *testing.T) {
 			// requires an 8080 listener, which our manually-built test gateway does not have
 			tests.HTTPRouteRedirectPortAndScheme.ShortName,
 
-			// https://github.com/Kong/kubernetes-ingress-controller/issues/4164
-			// only 10 and 11 broken, but no way to omit individual cases
-			tests.HTTPRouteMethodMatching.ShortName,
 			// https://github.com/Kong/kubernetes-ingress-controller/issues/3680
 			tests.GatewayClassObservedGenerationBump.ShortName,
 			// https://github.com/Kong/kubernetes-ingress-controller/issues/3678

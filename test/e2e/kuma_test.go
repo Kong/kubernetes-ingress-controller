@@ -22,8 +22,7 @@ func TestDeployAllInOneDBLESSKuma(t *testing.T) {
 
 	t.Log("deploying kong components")
 	manifest := getDBLessTestManifestByControllerImageEnv(t)
-	deployKong(ctx, t, env, manifest)
-	deployments := getManifestDeployments(dblessPath)
+	deployments := ManifestDeploy{Path: manifest}.Run(ctx, t, env)
 
 	t.Log("adding Kuma mesh")
 	require.NoError(t, kuma.EnableMeshForNamespace(ctx, env.Cluster(), "kong"))
@@ -50,9 +49,7 @@ func TestDeployAllInOnePostgresKuma(t *testing.T) {
 	ctx, env := setupE2ETest(t, kuma.New())
 
 	t.Log("deploying kong components")
-	manifest := getTestManifest(t, postgresPath)
-	deployKong(ctx, t, env, manifest)
-	deployments := getManifestDeployments(postgresPath)
+	deployments := ManifestDeploy{Path: postgresPath}.Run(ctx, t, env)
 
 	t.Log("this deployment used a postgres backend, verifying that postgres migrations ran properly")
 	verifyPostgres(ctx, t, env)

@@ -42,9 +42,8 @@ func TestDeployAllInOneDBLESSLegacy(t *testing.T) {
 	ctx, env := setupE2ETest(t)
 
 	t.Log("deploying kong components")
-	manifest := getTestManifest(t, dblessLegacyPath)
-	deployKong(ctx, t, env, manifest)
-	deployment := getManifestDeployments(dblessLegacyPath).ControllerNN
+	deployments := ManifestDeploy{Path: dblessLegacyPath}.Run(ctx, t, env)
+	deployment := deployments.ControllerNN
 	forDeployment := metav1.ListOptions{
 		LabelSelector: fmt.Sprintf("app=%s", deployment.Name),
 	}
@@ -86,9 +85,10 @@ func TestDeployAllInOneEnterpriseDBLESS(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Log("deploying kong components")
-	manifest := getTestManifest(t, entDBLESSPath)
-	deployKong(ctx, t, env, manifest, licenseSecret, adminPasswordSecretYAML)
-	deployments := getManifestDeployments(entDBLESSPath)
+	deployments := ManifestDeploy{
+		Path:              entDBLESSPath,
+		AdditionalSecrets: []*corev1.Secret{licenseSecret, adminPasswordSecretYAML},
+	}.Run(ctx, t, env)
 
 	t.Log("exposing the admin api so that enterprise features can be verified")
 	exposeAdminAPI(ctx, t, env, deployments.ProxyNN)
@@ -109,8 +109,7 @@ func TestDeployAllInOnePostgres(t *testing.T) {
 	ctx, env := setupE2ETest(t)
 
 	t.Log("deploying kong components")
-	manifest := getTestManifest(t, postgresPath)
-	deployKong(ctx, t, env, manifest)
+	ManifestDeploy{Path: postgresPath}.Run(ctx, t, env)
 
 	t.Log("this deployment used a postgres backend, verifying that postgres migrations ran properly")
 	verifyPostgres(ctx, t, env)
@@ -126,9 +125,8 @@ func TestDeployAllInOnePostgresWithMultipleReplicas(t *testing.T) {
 	ctx, env := setupE2ETest(t)
 
 	t.Log("deploying kong components")
-	manifest := getTestManifest(t, postgresPath)
-	deployKong(ctx, t, env, manifest)
-	deployment := getManifestDeployments(postgresPath).ControllerNN
+	deployments := ManifestDeploy{Path: postgresPath}.Run(ctx, t, env)
+	deployment := deployments.ControllerNN
 
 	t.Log("this deployment used a postgres backend, verifying that postgres migrations ran properly")
 	verifyPostgres(ctx, t, env)
@@ -266,9 +264,10 @@ func TestDeployAllInOneEnterprisePostgres(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Log("deploying kong components")
-	manifest := getTestManifest(t, entPostgresPath)
-	deployKong(ctx, t, env, manifest, licenseSecret, adminPasswordSecret)
-	deployments := getManifestDeployments(entPostgresPath)
+	deployments := ManifestDeploy{
+		Path:              entPostgresPath,
+		AdditionalSecrets: []*corev1.Secret{licenseSecret, adminPasswordSecret},
+	}.Run(ctx, t, env)
 
 	t.Log("this deployment used a postgres backend, verifying that postgres migrations ran properly")
 	verifyPostgres(ctx, t, env)
@@ -298,9 +297,7 @@ func TestDeployAllInOneDBLESS(t *testing.T) {
 	ctx, env := setupE2ETest(t)
 
 	t.Log("deploying kong components")
-	manifest := getTestManifest(t, manifestFilePath)
-	deployKong(ctx, t, env, manifest)
-	deployments := getManifestDeployments(manifestFilePath)
+	deployments := ManifestDeploy{Path: manifestFilePath}.Run(ctx, t, env)
 
 	t.Log("running ingress tests to verify all-in-one deployed ingress controller and proxy are functional")
 	ingress := deployIngressWithEchoBackends(ctx, t, env, numberOfEchoBackends)

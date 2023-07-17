@@ -18,7 +18,7 @@ import (
 
 const (
 	// upgradeTestFromTag is the tag of the previous version of the controller to upgrade from.
-	upgradeTestFromTag = "v2.9.3"
+	upgradeTestFromTag = "v2.9.4"
 
 	// dblessURLTemplate is the template of the URL to the all-in-one-dbless.yaml manifest with a placeholder for the tag.
 	dblessURLTemplate = "https://raw.githubusercontent.com/Kong/kubernetes-ingress-controller/%s/deploy/single/all-in-one-dbless.yaml"
@@ -93,7 +93,11 @@ func testManifestsUpgrade(
 	ctx, env := setupE2ETest(t)
 
 	t.Logf("deploying previous kong manifests: %s", testParams.fromManifestURL)
-	deployKong(ctx, t, env, oldManifest.Body)
+	oldManifestPath := dumpToTempFile(t, oldManifest.Body)
+	ManifestDeploy{
+		Path:            oldManifestPath,
+		SkipTestPatches: true,
+	}.Run(ctx, t, env)
 
 	t.Log("running ingress tests to verify all-in-one deployed ingress controller and proxy are functional")
 	ingress := deployIngressWithEchoBackends(ctx, t, env, numberOfEchoBackends)
@@ -105,8 +109,10 @@ func testManifestsUpgrade(
 	}
 
 	t.Logf("deploying target version of kong manifests: %s", testParams.toManifestPath)
-	manifest := getTestManifest(t, testParams.toManifestPath)
-	deployKong(ctx, t, env, manifest)
+	deployments := ManifestDeploy{
+		Path:            testParams.toManifestPath,
+		SkipTestPatches: true,
+	}.Run(ctx, t, env)
 
 	if featureGates := testParams.controllerFeatureGates; featureGates != "" {
 		t.Logf("setting environment variables for controller feature gates: %s", featureGates)
@@ -119,7 +125,7 @@ func testManifestsUpgrade(
 			variableName:  "CONTROLLER_FEATURE_GATES",
 			value:         featureGates,
 		}))
-		waitForDeploymentRollout(ctx, t, env, namespace, controllerDeploymentName)
+		waitForDeploymentRollout(ctx, t, env, deployments.ControllerNN.Namespace, deployments.ControllerNN.Name)
 	}
 
 	t.Log("creating new ingress with new path /echo-new")

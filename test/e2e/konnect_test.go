@@ -22,7 +22,7 @@ import (
 	"testing"
 	"time"
 
-	retry "github.com/avast/retry-go/v4"
+	"github.com/avast/retry-go/v4"
 	"github.com/google/uuid"
 	gokong "github.com/kong/go-kong/kong"
 	environment "github.com/kong/kubernetes-testing-framework/pkg/environments"
@@ -93,10 +93,7 @@ func TestKonnectLicenseActivation(t *testing.T) {
 	createKonnectClientSecretAndConfigMap(ctx, t, env, cert, key, rgID)
 
 	manifestFile := "../../deploy/single/all-in-one-dbless-konnect-enterprise.yaml"
-	t.Logf("deploying %s manifest file", manifestFile)
-
-	manifest := getTestManifest(t, manifestFile)
-	deployKong(ctx, t, env, manifest)
+	ManifestDeploy{Path: manifestFile}.Run(ctx, t, env)
 
 	exposeAdminAPI(ctx, t, env, k8stypes.NamespacedName{Namespace: "kong", Name: "proxy-kong"})
 
@@ -181,9 +178,7 @@ func deployAllInOneKonnectManifest(ctx context.Context, t *testing.T, env enviro
 	const manifestFile = "../../deploy/single/all-in-one-dbless-konnect.yaml"
 	t.Logf("deploying %s manifest file", manifestFile)
 
-	manifest := getTestManifest(t, manifestFile)
-	deployKong(ctx, t, env, manifest)
-	return getManifestDeployments(manifestFile)
+	return ManifestDeploy{Path: manifestFile}.Run(ctx, t, env)
 }
 
 func generateTestKonnectRuntimeGroupDescription(t *testing.T) string {

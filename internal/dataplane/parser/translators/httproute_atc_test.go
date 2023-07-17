@@ -47,6 +47,7 @@ func TestGenerateKongExpressionRoutesFromHTTPRouteMatches(t *testing.T) {
 					Route: kong.Route{
 						Name:         kong.String("host_only.default.0.0"),
 						PreserveHost: kong.Bool(true),
+						StripPath:    kong.Bool(false),
 						Expression:   kong.String(`(http.host == "foo.com") || (http.host =^ ".bar.com")`),
 						Priority:     kong.Int(1),
 					},
@@ -66,6 +67,7 @@ func TestGenerateKongExpressionRoutesFromHTTPRouteMatches(t *testing.T) {
 					Route: kong.Route{
 						Name:         kong.String("prefix_path_match.defualt.0.0"),
 						PreserveHost: kong.Bool(true),
+						StripPath:    kong.Bool(false),
 						Expression:   kong.String(`((http.path == "/prefix") || (http.path ^= "/prefix/")) && ((net.protocol == "http") || (net.protocol == "https"))`),
 						Priority:     kong.Int(1),
 					},
@@ -87,6 +89,7 @@ func TestGenerateKongExpressionRoutesFromHTTPRouteMatches(t *testing.T) {
 					Route: kong.Route{
 						Name:         kong.String("multiple_matches.default.0.0"),
 						PreserveHost: kong.Bool(true),
+						StripPath:    kong.Bool(false),
 						Expression:   kong.String(`(((http.path == "/prefix") || (http.path ^= "/prefix/")) || ((http.path == "/exact") && (http.method == "GET"))) && ((net.protocol == "http") || (net.protocol == "https"))`),
 						Priority:     kong.Int(1),
 					},
@@ -115,6 +118,7 @@ func TestGenerateKongExpressionRoutesFromHTTPRouteMatches(t *testing.T) {
 					Route: kong.Route{
 						Name:         kong.String("request_redirect.default.0.0"),
 						PreserveHost: kong.Bool(true),
+						StripPath:    kong.Bool(false),
 						Expression:   kong.String(`(http.path == "/exact/0") && ((net.protocol == "http") || (net.protocol == "https"))`),
 						Priority:     kong.Int(1),
 					},
@@ -140,6 +144,7 @@ func TestGenerateKongExpressionRoutesFromHTTPRouteMatches(t *testing.T) {
 					Route: kong.Route{
 						Name:         kong.String("request_redirect.default.0.0"),
 						PreserveHost: kong.Bool(true),
+						StripPath:    kong.Bool(false),
 						Expression:   kong.String(`(http.path == "/exact/1") && ((net.protocol == "http") || (net.protocol == "https"))`),
 						Priority:     kong.Int(1),
 					},
@@ -181,6 +186,7 @@ func TestGenerateKongExpressionRoutesFromHTTPRouteMatches(t *testing.T) {
 					Route: kong.Route{
 						Name:         kong.String("request_header_mod.default.0.0"),
 						PreserveHost: kong.Bool(true),
+						StripPath:    kong.Bool(false),
 						Expression:   kong.String(`((http.path == "/exact/0") || (http.path ~ "^/regex/[a-z]+")) && ((net.protocol == "http") || (net.protocol == "https"))`),
 						Priority:     kong.Int(1),
 					},
@@ -226,6 +232,7 @@ func TestGenerateKongExpressionRoutesFromHTTPRouteMatches(t *testing.T) {
 					Route: kong.Route{
 						Name:         kong.String("annotations_protocol_sni.default.0.0"),
 						PreserveHost: kong.Bool(true),
+						StripPath:    kong.Bool(false),
 						Expression:   kong.String(`((http.path == "/prefix/0") || (http.path ^= "/prefix/0/")) && (http.host == "a.foo.com") && (net.protocol == "https") && (tls.sni == "a.foo.com")`),
 						Priority:     kong.Int(1),
 					},

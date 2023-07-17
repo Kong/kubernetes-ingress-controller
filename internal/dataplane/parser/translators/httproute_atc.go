@@ -31,7 +31,9 @@ func GenerateKongExpressionRoutesFromHTTPRouteMatches(
 		Route: kong.Route{
 			Name:         kong.String(translation.Name),
 			PreserveHost: kong.Bool(true),
-			Tags:         tags,
+			// stripPath needs to be disabled by default to be conformant with the Gateway API
+			StripPath: kong.Bool(false),
+			Tags:      tags,
 		},
 		ExpressionRoutes: true,
 	}
@@ -83,6 +85,7 @@ func generateKongExpressionRoutesWithRequestRedirectFilter(
 			Route: kong.Route{
 				Name:         kong.String(translation.Name),
 				PreserveHost: kong.Bool(true),
+				StripPath:    kong.Bool(false),
 				Tags:         tags,
 			},
 			ExpressionRoutes: true,
@@ -554,7 +557,9 @@ func KongExpressionRouteFromHTTPRouteWithPriority(
 		Route: kong.Route{
 			Name:         kong.String(routeName),
 			PreserveHost: kong.Bool(true),
-			Tags:         tags,
+			// stripPath needs to be disabled by default to be conformant with the Gateway API
+			StripPath: kong.Bool(false),
+			Tags:      tags,
 		},
 		Ingress:          util.FromK8sObject(httproute),
 		ExpressionRoutes: true,

@@ -8,15 +8,19 @@ import (
 )
 
 type ReadinessCheckResult struct {
-	TurnedReady   []*adminapi.Client
-	TurnedPending []adminapi.DiscoveredAdminAPI
+	ClientsTurnedReady   []*adminapi.Client
+	ClientsTurnedPending []adminapi.DiscoveredAdminAPI
+}
+
+func (r ReadinessCheckResult) HasChanges() bool {
+	return len(r.ClientsTurnedReady) > 0 || len(r.ClientsTurnedPending) > 0
 }
 
 type ReadinessChecker interface {
 	CheckReadiness(
 		ctx context.Context,
-		lastReadyClients []*adminapi.Client,
-		lastPendingClients []adminapi.DiscoveredAdminAPI,
+		readyClients []*adminapi.Client,
+		pendingClients []adminapi.DiscoveredAdminAPI,
 	) ReadinessCheckResult
 }
 
@@ -27,17 +31,19 @@ type DefaultReadinessChecker struct {
 
 func (c DefaultReadinessChecker) CheckReadiness(
 	ctx context.Context,
-	lastReadyClients []*adminapi.Client,
-	lastPendingClients []adminapi.DiscoveredAdminAPI,
+	readyClients []*adminapi.Client,
+	pendingClients []adminapi.DiscoveredAdminAPI,
 ) ReadinessCheckResult {
 	return ReadinessCheckResult{
-		TurnedReady:   c.checkPendingGatewayClients(ctx, lastPendingClients),
-		TurnedPending: c.checkActiveGatewayClients(ctx, lastReadyClients),
+		ClientsTurnedReady:   c.checkPendingGatewayClients(ctx, pendingClients),
+		ClientsTurnedPending: c.checkActiveGatewayClients(ctx, readyClients),
 	}
 }
 
 func (c DefaultReadinessChecker) checkPendingGatewayClients(ctx context.Context, lastPending []adminapi.DiscoveredAdminAPI) (turnedReady []*adminapi.Client) {
 	for _, adminAPI := range lastPending {
+		// We indirectly check readiness of the client by trying to create it. If it succeeds then it means that
+		// the client is ready to be used.
 		client, err := c.factory.CreateAdminAPIClient(ctx, adminAPI)
 		if err != nil {
 			// Despite the error reason we still want to keep the client in the pending list to retry later.
@@ -52,6 +58,7 @@ func (c DefaultReadinessChecker) checkPendingGatewayClients(ctx context.Context,
 
 func (c DefaultReadinessChecker) checkActiveGatewayClients(ctx context.Context, lastActive []*adminapi.Client) (turnedPending []adminapi.DiscoveredAdminAPI) {
 	for _, client := range lastActive {
+		// For active clients we check readiness by calling the Status endpoint.
 		_, err := client.AdminAPIClient().Status(ctx)
 		if err != nil {
 			// Despite the error reason we still want to keep the client in the pending list to retry later.

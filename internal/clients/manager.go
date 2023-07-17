@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"sync"
+	"time"
 
 	"github.com/samber/lo"
 	"github.com/sirupsen/logrus"
@@ -183,6 +184,9 @@ func (c *AdminAPIClientsManager) SubscribeToGatewayClientsChanges() (<-chan stru
 // internal clients list.
 func (c *AdminAPIClientsManager) adminAPIAddressNotifyLoop() {
 	close(c.notifyLoopRunningCh)
+	readinessCheckTicker := time.NewTicker(5 * time.Second)
+	defer readinessCheckTicker.Stop()
+
 	for {
 		select {
 		case <-c.ctx.Done():
@@ -198,6 +202,8 @@ func (c *AdminAPIClientsManager) adminAPIAddressNotifyLoop() {
 				c.logger.Debug("notifying subscribers about gateway clients change")
 				c.notifyGatewayClientsSubscribers()
 			}
+		case <-readinessCheckTicker.C:
+			c.logger.Debug("checking readiness of gateway clients")
 		}
 	}
 }
@@ -210,48 +216,41 @@ func (c *AdminAPIClientsManager) adjustGatewayClients(discoveredAdminAPIs []admi
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
-	// Short circuit
+	// Short circuit,
 	if len(discoveredAdminAPIs) == 0 {
-		if len(c.readyGatewayClients) == 0 {
+		// If we have no clients and the provided list is empty, it means we're in sync. No change was made.
+		if len(c.readyGatewayClients) == 0 && len(c.pendingGatewayClients) == 0 {
 			return false
 		}
+		// Otherwise, we have to clear the clients and return true to indicate that the change was made.
 		maps.Clear(c.readyGatewayClients)
+		maps.Clear(c.pendingGatewayClients)
 		return true
 	}
 
-	for _, api := range discoveredAdminAPIs {
-		// If we already have a client with a provided address then great, no need
-		// to do anything.
-		if _, ok := c.readyGatewayClients[api.Address]; ok {
-			continue
-		}
+	// TODO: make sure that makes sense
 
-		// If we don't have a client with new address then create it and add
-		// a client for this address.
-		client, err := c.adminAPIClientFactory.CreateAdminAPIClient(c.ctx, api)
-		if err != nil {
-			c.logger.WithError(err).Errorf("failed to create a client for %s", api.Address)
-			continue
-		}
-		c.readyGatewayClients[api.Address] = client
-		changed = true
+	// Perform a readiness check to see which clients are ready and which are not. We'll use the result
+	// to update the clients lists.
+	readinessCheckResult := c.readinessChecker.CheckReadiness(
+		c.ctx,
+		lo.Values(c.readyGatewayClients),
+		discoveredAdminAPIs,
+	)
+
+	// Add clients that turned ready to readyGatewayClients and remove them from pendingGatewayClients.
+	for _, cl := range readinessCheckResult.ClientsTurnedReady {
+		delete(c.pendingGatewayClients, cl.BaseRootURL())
+		c.readyGatewayClients[cl.BaseRootURL()] = cl
 	}
 
-	for _, cl := range c.readyGatewayClients {
-		// If the new address set contains a client that we already have then
-		// good, no need to do anything for it.
-		if lo.ContainsBy(discoveredAdminAPIs, func(api adminapi.DiscoveredAdminAPI) bool {
-			return api.Address == cl.BaseRootURL()
-		}) {
-			continue
-		}
-		// If the new address set does not contain an address that we already
-		// have then remove it.
-		delete(c.readyGatewayClients, cl.BaseRootURL())
-		changed = true
+	// Add clients that turned pending to pendingGatewayClients and remove them from readyGatewayClients.
+	for _, cl := range readinessCheckResult.ClientsTurnedPending {
+		delete(c.readyGatewayClients, cl.Address)
+		c.pendingGatewayClients[cl.Address] = cl
 	}
 
-	return changed
+	return readinessCheckResult.HasChanges()
 }
 
 // notifyGatewayClientsSubscribers sends notifications to all subscribers that have called SubscribeToGatewayClientsChanges.

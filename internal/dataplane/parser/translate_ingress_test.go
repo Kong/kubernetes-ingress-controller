@@ -168,6 +168,7 @@ func TestGetDefaultBackendService(t *testing.T) {
 
 func TestRewriteURIAnnotation(t *testing.T) {
 	pathTypePrefix := netv1.PathTypePrefix
+	var nilKongPlugins []kong.Plugin
 
 	someIngress := func(name, rewriteURI string) netv1.Ingress {
 		return netv1.Ingress{
@@ -208,7 +209,7 @@ func TestRewriteURIAnnotation(t *testing.T) {
 
 	validRewriteURIIngress := someIngress("valid_svc", "/rewrite/$1/xx")
 	invalidRewriteURIIngress := someIngress("invalid_svc", "/rewrite/$/xx")
-	t.Run("Ingress rule with rewrite annotation", func(t *testing.T) {
+	t.Run("Ingress rule with rewrite annotation enabled", func(t *testing.T) {
 		s, err := store.NewFakeStore(store.FakeObjects{
 			IngressesV1: []*netv1.Ingress{
 				&invalidRewriteURIIngress,
@@ -218,6 +219,7 @@ func TestRewriteURIAnnotation(t *testing.T) {
 		require.NoError(t, err)
 
 		p := mustNewParser(t, s)
+		p.featureFlags.RewriteURIs = true
 
 		rules := p.ingressRulesFromIngressV1().ServiceNameToServices
 		require.Equal(t, 1, len(rules))
@@ -238,5 +240,27 @@ func TestRewriteURIAnnotation(t *testing.T) {
 		errs := p.failuresCollector.PopResourceFailures()
 		require.Equal(t, 1, len(errs))
 		require.Equal(t, "unexpected $ at pos 9", errs[0].Message())
+	})
+
+	t.Run("Ingress rule with rewrite annotation disabled", func(t *testing.T) {
+		s, err := store.NewFakeStore(store.FakeObjects{
+			IngressesV1: []*netv1.Ingress{
+				&invalidRewriteURIIngress,
+				&validRewriteURIIngress,
+			},
+		})
+		require.NoError(t, err)
+
+		p := mustNewParser(t, s)
+
+		rules := p.ingressRulesFromIngressV1().ServiceNameToServices
+		require.Equal(t, 2, len(rules))
+
+		for _, svc := range rules {
+			require.Equal(t, nilKongPlugins, svc.Plugins)
+		}
+
+		errs := p.failuresCollector.PopResourceFailures()
+		require.Equal(t, 0, len(errs))
 	})
 }

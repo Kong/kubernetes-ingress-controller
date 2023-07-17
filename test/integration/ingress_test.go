@@ -30,6 +30,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/test"
 	"github.com/kong/kubernetes-ingress-controller/v2/test/consts"
 	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/helpers"
+	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/testenv"
 )
 
 var ingressClassMutex = sync.Mutex{}
@@ -1194,6 +1195,19 @@ func TestIngressRewriteURI(t *testing.T) {
 	ingress, err = env.Cluster().Client().NetworkingV1().Ingresses(ns.Name).Create(ctx, ingress, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(ingress)
+
+	featureGates := testenv.ControllerFeatureGates()
+	if !strings.Contains(featureGates, "RewriteURIsFeature=true") {
+		t.Log("try to access the ingress with rewrite uri disabled")
+		req := helpers.MustHTTPRequest(t, "GET", proxyURL, "/foo/jpeg", nil)
+		req.Host = "test.example"
+		resp, err := helpers.DefaultHTTPClient().Do(req)
+		require.NoError(t, err)
+		defer resp.Body.Close()
+		require.Equal(t, resp.StatusCode, http.StatusNotFound)
+
+		return
+	}
 
 	t.Log("try to access the ingress with valid capture group")
 	req := helpers.MustHTTPRequest(t, "GET", proxyURL, "/foo/jpeg", nil)

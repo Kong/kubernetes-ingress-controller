@@ -58,13 +58,14 @@ func (p *Parser) ingressRulesFromIngressV1() ingressRules {
 
 	// Translate Ingress objects into Kong Services.
 	for _, service := range p.ingressesV1ToKongServices(ingressList, icp) {
-		if err := translators.MaybeRewriteURI(&service); err != nil {
-			p.registerTranslationFailure(err.Error(), service.Parent)
+		serviceCopy := service
+		if err := translators.MaybeRewriteURI(&serviceCopy); err != nil {
+			p.registerTranslationFailure(err.Error(), serviceCopy.Parent)
 			continue
 		}
 
-		result.ServiceNameToServices[*service.Name] = service
-		result.ServiceNameToParent[*service.Name] = service.Parent
+		result.ServiceNameToServices[*serviceCopy.Name] = serviceCopy
+		result.ServiceNameToParent[*serviceCopy.Name] = serviceCopy.Parent
 	}
 
 	// Add a default backend if it exists.

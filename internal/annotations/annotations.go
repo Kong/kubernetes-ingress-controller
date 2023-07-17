@@ -63,7 +63,7 @@ const (
 	HeadersKey           = "/headers"
 	PathHandlingKey      = "/path-handling"
 	UserTagKey           = "/tags"
-	RewriteURIKey       = "/rewrite"
+	RewriteURIKey        = "/rewrite"
 
 	// GatewayClassUnmanagedAnnotationSuffix is an annotation used on a Gateway resource to
 	// indicate that the GatewayClass should be reconciled according to unmanaged

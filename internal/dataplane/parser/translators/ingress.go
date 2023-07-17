@@ -63,7 +63,12 @@ func TranslateIngresses(
 // Ingress Translation - Private Consts & Vars
 // -----------------------------------------------------------------------------
 
-var defaultHTTPIngressPathType = netv1.PathTypeImplementationSpecific
+var (
+	defaultHTTPIngressPathType = netv1.PathTypeImplementationSpecific
+
+	uriCapturesPrefix = []rune("$(uri_captures[")
+	uriCapturesSuffix = []rune("])")
+)
 
 const (
 	defaultHTTPPort = 80
@@ -391,9 +396,6 @@ func MaybePrependRegexPrefixForIngressV1Fn(ingress *netv1.Ingress, applyLegacyHe
 }
 
 func generateRewriteURIConfig(path string) (string, error) {
-	uriCapturesPrefix := []rune("$(uri_captures[")
-	uriCapturesSuffix := []rune("])")
-
 	var out []rune
 	in := []rune(path)
 	for i := 0; i < len(in); i++ {

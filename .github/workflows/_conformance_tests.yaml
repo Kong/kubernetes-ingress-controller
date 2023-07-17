@@ -6,6 +6,12 @@ on:
 jobs:
   conformance-tests:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        expression_routes:
+        - "true"
+        - "false"
     steps:
       - name: checkout repository
         uses: actions/checkout@v3
@@ -21,6 +27,7 @@ jobs:
         run: make test.conformance
         env:
           JUNIT_REPORT: "conformance-tests.xml"
+          KONG_TEST_EXPRESSION_ROUTES: ${{ matrix.expression_routes }}
 
       - name: collect test report
         if: ${{ always() }}

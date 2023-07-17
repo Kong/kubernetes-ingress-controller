@@ -7,7 +7,7 @@ const (
 	// user takes further action.
 	DefaultFeatureGates = "GatewayAlpha=true"
 
-	// ConformanceTestsFeatureGates is the set of feature gates to be used when running
-	// conformance tests.
-	ConformanceTestsFeatureGates = "GatewayAlpha=true,ExpressionRoutes=true"
+	// ConformanceExpressionRoutesTestsFeatureGates is the set of feature gates to be used
+	// when running conformance tests with expression routes enabled.
+	ConformanceExpressionRoutesTestsFeatureGates = "GatewayAlpha=true,ExpressionRoutes=true"
 )

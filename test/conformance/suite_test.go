@@ -27,14 +27,19 @@ import (
 )
 
 var (
-	existingCluster = os.Getenv("KONG_TEST_CLUSTER")
-	ingressClass    = "kong-conformance-tests"
+	existingCluster      = os.Getenv("KONG_TEST_CLUSTER")
+	expressionRoutesMode = os.Getenv("KONG_TEST_EXPRESSION_ROUTES")
+	ingressClass         = "kong-conformance-tests"
 
 	env                    environments.Environment
 	ctx                    context.Context
 	globalDeprecatedLogger logrus.FieldLogger
 	globalLogger           logr.Logger
 )
+
+func expressionRoutesEnabled() bool {
+	return strings.ToLower(expressionRoutesMode) == "true"
+}
 
 func TestMain(m *testing.M) {
 	var cancel context.CancelFunc
@@ -58,7 +63,11 @@ func TestMain(m *testing.M) {
 	globalLogger = logger
 
 	// In order to pass conformance tests, the expression router is required.
-	kongAddon := kong.NewBuilder().WithControllerDisabled().WithProxyEnvVar("router_flavor", "expressions").WithProxyAdminServiceTypeLoadBalancer().Build()
+	kongBuilder := kong.NewBuilder().WithControllerDisabled().WithProxyAdminServiceTypeLoadBalancer()
+	if expressionRoutesEnabled() {
+		kongBuilder = kongBuilder.WithProxyEnvVar("router_flavor", "expressions")
+	}
+	kongAddon := kongBuilder.Build()
 	builder := environments.NewBuilder().WithAddons(metallb.New(), kongAddon)
 	useExistingClusterIfPresent(builder)
 

@@ -78,6 +78,9 @@ type FeatureFlags struct {
 	// FillIDs enables the parser to fill in the IDs fields of Kong entities - Services, Routes, and Consumers - based
 	// on their names. It ensures that IDs remain stable across restarts of the controller.
 	FillIDs bool
+
+	// RewriteURIs enables the parser to translate the konghq.com/rewrite annotation to the proper set of Kong plugins.
+	RewriteURIs bool
 }
 
 func NewFeatureFlags(
@@ -102,6 +105,7 @@ func NewFeatureFlags(
 		ExpressionRoutes:                  expressionRoutesEnabled,
 		CombinedServices:                  combinedRoutesEnabled && featureGates.Enabled(featuregates.CombinedServicesFeature),
 		FillIDs:                           featureGates.Enabled(featuregates.FillIDsFeature),
+		RewriteURIs:                       featureGates.Enabled(featuregates.RewriteURIsFeature),
 	}
 }
 

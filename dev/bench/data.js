@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1689586019876,
+  "lastUpdate": 1689586022251,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -20808,6 +20808,48 @@ window.BENCHMARK_DATA = {
             "value": 12,
             "unit": "allocs/op",
             "extra": "13846 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "czeslavo@gmail.com",
+            "name": "Grzegorz Burzyński",
+            "username": "czeslavo"
+          },
+          "committer": {
+            "email": "czeslavo@gmail.com",
+            "name": "Grzegorz Burzyński",
+            "username": "czeslavo"
+          },
+          "distinct": true,
+          "id": "5ca951a4c63ab862f9daeb61d603050f0ae8fa80",
+          "message": "tests: use official manifests to install GW API CRDs",
+          "timestamp": "2023-07-17T11:22:49+02:00",
+          "tree_id": "cc55ed73caa2e3b58560c9150416690348c1aeeb",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/5ca951a4c63ab862f9daeb61d603050f0ae8fa80"
+        },
+        "date": 1689586013982,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - ns/op",
+            "value": 82163,
+            "unit": "ns/op",
+            "extra": "14707 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - B/op",
+            "value": 11097,
+            "unit": "B/op",
+            "extra": "14707 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - allocs/op",
+            "value": 12,
+            "unit": "allocs/op",
+            "extra": "14707 times\n2 procs"
           }
         ]
       },

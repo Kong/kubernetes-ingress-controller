@@ -518,7 +518,7 @@ debug: install _ensure-namespace
 debug.connect:
 	XDG_CONFIG_HOME="$(PROJECT_DIR)/.config" $(DLV) connect localhost:40000
 
-SKAFFOLD_DEBUG_PROFILE ?= debug
+SKAFFOLD_DEBUG_PROFILE ?= debug_multi_gw
 
 # This will port-forward 40000 from KIC's debugger to localhost. Connect to that
 # port with debugger/IDE of your choice

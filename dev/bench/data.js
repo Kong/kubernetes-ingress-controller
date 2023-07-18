@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1689694525055,
+  "lastUpdate": 1689695840157,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -22992,6 +22992,48 @@ window.BENCHMARK_DATA = {
             "value": 12,
             "unit": "allocs/op",
             "extra": "13722 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "czeslavo@gmail.com",
+            "name": "Grzegorz Burzyński",
+            "username": "czeslavo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "d99ec3727717a35b3587cad06976cf80cfc01aac",
+          "message": "chore: remove outdated debug skaffold profile (#4367)\n\nRemove outdated debug skaffold profile and make debug_multi_gw a default one for make debug.skaffold.",
+          "timestamp": "2023-07-18T15:53:10Z",
+          "tree_id": "7b48ea3d761ef016a32461e35f69b58866e777fe",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/d99ec3727717a35b3587cad06976cf80cfc01aac"
+        },
+        "date": 1689695833477,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - ns/op",
+            "value": 73816,
+            "unit": "ns/op",
+            "extra": "17349 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - B/op",
+            "value": 11098,
+            "unit": "B/op",
+            "extra": "17349 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - allocs/op",
+            "value": 12,
+            "unit": "allocs/op",
+            "extra": "17349 times\n2 procs"
           }
         ]
       }

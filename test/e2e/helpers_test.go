@@ -294,7 +294,7 @@ func waitForDeploymentRollout(ctx context.Context, t *testing.T, env environment
 		}
 
 		if err := allUpdatedReplicasRolledOutAndReady(deployment); err != nil {
-			t.Logf("controller deployment not ready: %s", err)
+			t.Logf("%s/%s deployment not ready: %s", namespace, name, err)
 			return false
 		}
 
@@ -912,4 +912,29 @@ func scaleDeployment(ctx context.Context, t *testing.T, env environments.Environ
 		}
 		return deployment.Status.ReadyReplicas == replicas
 	}, time.Minute*3, time.Second, "deployment %s did not scale to %d replicas", deployment.Name, replicas)
+}
+
+func (d Deployments) Restart(ctx context.Context, t *testing.T, env environments.Environment) {
+	t.Helper()
+
+	err := env.Cluster().Client().CoreV1().Pods(d.ControllerNN.Namespace).DeleteCollection(ctx, metav1.DeleteOptions{}, metav1.ListOptions{
+		LabelSelector: metav1.FormatLabelSelector(&metav1.LabelSelector{
+			MatchLabels: map[string]string{
+				"app": d.ControllerNN.Name,
+			},
+		}),
+	})
+	require.NoError(t, err, "failed to delete controller pods")
+
+	err = env.Cluster().Client().CoreV1().Pods(d.ControllerNN.Namespace).DeleteCollection(ctx, metav1.DeleteOptions{}, metav1.ListOptions{
+		LabelSelector: metav1.FormatLabelSelector(&metav1.LabelSelector{
+			MatchLabels: map[string]string{
+				"app": d.ProxyNN.Name,
+			},
+		}),
+	})
+	require.NoError(t, err, "failed to delete proxy pods")
+
+	waitForDeploymentRollout(ctx, t, env, d.ControllerNN.Namespace, d.ControllerNN.Name)
+	waitForDeploymentRollout(ctx, t, env, d.ProxyNN.Namespace, d.ProxyNN.Name)
 }

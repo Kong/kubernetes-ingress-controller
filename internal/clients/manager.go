@@ -228,13 +228,17 @@ func (c *AdminAPIClientsManager) gatewayClientsReconciliationLoop() {
 // It will adjust lists of gateway clients and notify subscribers about the change if readyGatewayClients list has
 // changed.
 func (c *AdminAPIClientsManager) onDiscoveredAdminAPIsNotification(discoveredAdminAPIs []adminapi.DiscoveredAdminAPI) {
-	c.lock.Lock()
-	defer c.lock.Unlock()
-
 	c.logger.Debug("received notification about Admin API addresses change")
-	if clientsChanged := c.adjustGatewayClients(discoveredAdminAPIs); clientsChanged {
-		// Notify subscribers that the clients list has been updated.
-		c.logger.Debug("notifying subscribers about gateway clients change")
+
+	changed := func() bool {
+		c.lock.Lock()
+		defer c.lock.Unlock()
+		clientsChanged := c.adjustGatewayClients(discoveredAdminAPIs)
+		readinessChanged := c.reconcileGatewayClientsReadiness()
+		return clientsChanged || readinessChanged
+	}()
+
+	if changed {
 		c.notifyGatewayClientsSubscribers()
 	}
 }
@@ -242,13 +246,15 @@ func (c *AdminAPIClientsManager) onDiscoveredAdminAPIsNotification(discoveredAdm
 // onReadinessReconciliationTick is called on every readinessReconciliationTicker tick. It will reconcile readiness
 // of all gateway clients and notify subscribers about the change if readyGatewayClients list has changed.
 func (c *AdminAPIClientsManager) onReadinessReconciliationTick() {
-	c.lock.Lock()
-	defer c.lock.Unlock()
-
 	c.logger.Debug("reconciling readiness of gateway clients")
-	if clientsChanged := c.reconcileGatewayClientsReadiness(); clientsChanged {
-		// Notify subscribers that the clients list has been updated.
-		c.logger.Debug("notifying subscribers about gateway clients change")
+
+	changed := func() bool {
+		c.lock.Lock()
+		defer c.lock.Unlock()
+		return c.reconcileGatewayClientsReadiness()
+	}()
+
+	if changed {
 		c.notifyGatewayClientsSubscribers()
 	}
 }
@@ -258,7 +264,7 @@ func (c *AdminAPIClientsManager) onReadinessReconciliationTick() {
 // of the discovered Admin APIs and creates only those clients that we don't have.
 // It returns true if the gatewayClients slice has been changed, false otherwise.
 func (c *AdminAPIClientsManager) adjustGatewayClients(discoveredAdminAPIs []adminapi.DiscoveredAdminAPI) (changed bool) {
-	// Short circuit,
+	// Short circuit.
 	if len(discoveredAdminAPIs) == 0 {
 		// If we have no clients and the provided list is empty, it means we're in sync. No change was made.
 		if len(c.readyGatewayClients) == 0 && len(c.pendingGatewayClients) == 0 {
@@ -299,8 +305,7 @@ func (c *AdminAPIClientsManager) adjustGatewayClients(discoveredAdminAPIs []admi
 		}
 	}
 
-	readinessChanged := c.reconcileGatewayClientsReadiness()
-	return changed || readinessChanged
+	return changed
 }
 
 // reconcileGatewayClientsReadiness reconciles the readiness of the gateway clients. It ensures that the clients on the
@@ -312,6 +317,11 @@ func (c *AdminAPIClientsManager) reconcileGatewayClientsReadiness() bool {
 	// Reset the ticker after each readiness reconciliation despite the trigger (whether it was a tick or a notification).
 	// It's to ensure that the readiness is not reconciled too often when we receive a lot of notifications.
 	defer c.readinessReconciliationTicker.Reset(DefaultReadinessReconciliationInterval)
+
+	// Short circuit.
+	if len(c.readyGatewayClients) == 0 && len(c.pendingGatewayClients) == 0 {
+		return false
+	}
 
 	readinessCheckResult := c.readinessChecker.CheckReadiness(
 		c.ctx,
@@ -333,6 +343,7 @@ func (c *AdminAPIClientsManager) reconcileGatewayClientsReadiness() bool {
 
 // notifyGatewayClientsSubscribers sends notifications to all subscribers that have called SubscribeToGatewayClientsChanges.
 func (c *AdminAPIClientsManager) notifyGatewayClientsSubscribers() {
+	c.logger.Debug("notifying subscribers about gateway clients change")
 	for _, sub := range c.gatewayClientsChangesSubscribers {
 		select {
 		case <-c.ctx.Done():

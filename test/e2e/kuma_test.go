@@ -28,13 +28,8 @@ func TestDeployAllInOneDBLESSKuma(t *testing.T) {
 	require.NoError(t, kuma.EnableMeshForNamespace(ctx, env.Cluster(), "kong"))
 	require.NoError(t, kuma.EnableMeshForNamespace(ctx, env.Cluster(), "default"))
 
-	// scale to force a restart of pods and trigger mesh injection (we can't annotate the Kong namespace in advance,
-	// it gets clobbered by deployKong()). is there a "rollout restart" in client-go? who knows!
-	scaleDeployment(ctx, t, env, deployments.ProxyNN, 0)
-	scaleDeployment(ctx, t, env, deployments.ControllerNN, 0)
-
-	scaleDeployment(ctx, t, env, deployments.ProxyNN, 2)
-	scaleDeployment(ctx, t, env, deployments.ControllerNN, 2)
+	// Restart Kong pods to trigger mesh injection.
+	deployments.Restart(ctx, t, env)
 
 	t.Log("running ingress tests to verify all-in-one deployed ingress controller and proxy are functional")
 	deployIngressWithEchoBackends(ctx, t, env, numberOfEchoBackends)

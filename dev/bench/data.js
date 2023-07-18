@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1689674464934,
+  "lastUpdate": 1689675420213,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -21900,6 +21900,48 @@ window.BENCHMARK_DATA = {
             "value": 12,
             "unit": "allocs/op",
             "extra": "14541 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "czeslavo@gmail.com",
+            "name": "Grzegorz Burzyński",
+            "username": "czeslavo"
+          },
+          "committer": {
+            "email": "czeslavo@gmail.com",
+            "name": "Grzegorz Burzyński",
+            "username": "czeslavo"
+          },
+          "distinct": true,
+          "id": "ff8b5fce1c2c01d3563b3e99b75d00622d5e793b",
+          "message": "implement readiness reconciliation and cover readiness checker with tests",
+          "timestamp": "2023-07-18T12:13:41+02:00",
+          "tree_id": "389dc81dbb3c875ba53fbc47294d48a9071af505",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/ff8b5fce1c2c01d3563b3e99b75d00622d5e793b"
+        },
+        "date": 1689675413839,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - ns/op",
+            "value": 68657,
+            "unit": "ns/op",
+            "extra": "18182 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - B/op",
+            "value": 11093,
+            "unit": "B/op",
+            "extra": "18182 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - allocs/op",
+            "value": 12,
+            "unit": "allocs/op",
+            "extra": "18182 times\n2 procs"
           }
         ]
       }

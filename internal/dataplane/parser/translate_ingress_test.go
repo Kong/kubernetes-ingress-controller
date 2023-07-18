@@ -222,7 +222,7 @@ func TestRewriteURIAnnotation(t *testing.T) {
 		p.featureFlags.RewriteURIs = true
 
 		rules := p.ingressRulesFromIngressV1().ServiceNameToServices
-		require.Equal(t, 1, len(rules))
+		require.Len(t, rules, 1)
 
 		for _, svc := range rules {
 			require.Equal(t, []kong.Plugin{
@@ -238,7 +238,7 @@ func TestRewriteURIAnnotation(t *testing.T) {
 		}
 
 		errs := p.failuresCollector.PopResourceFailures()
-		require.Equal(t, 1, len(errs))
+		require.Len(t, errs, 1)
 		require.Equal(t, "unexpected $ at pos 9", errs[0].Message())
 	})
 
@@ -254,13 +254,13 @@ func TestRewriteURIAnnotation(t *testing.T) {
 		p := mustNewParser(t, s)
 
 		rules := p.ingressRulesFromIngressV1().ServiceNameToServices
-		require.Equal(t, 2, len(rules))
+		require.Len(t, rules, 2)
 
 		for _, svc := range rules {
 			require.Equal(t, nilKongPlugins, svc.Plugins)
 		}
 
 		errs := p.failuresCollector.PopResourceFailures()
-		require.Equal(t, 0, len(errs))
+		require.Empty(t, errs)
 	})
 }

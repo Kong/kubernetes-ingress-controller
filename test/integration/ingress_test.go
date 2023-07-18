@@ -1199,7 +1199,7 @@ func TestIngressRewriteURI(t *testing.T) {
 	featureGates := testenv.ControllerFeatureGates()
 	if !strings.Contains(featureGates, "RewriteURIsFeature=true") {
 		t.Log("try to access the ingress with rewrite uri disabled")
-		req := helpers.MustHTTPRequest(t, "GET", proxyURL, "/foo/jpeg", nil)
+		req := helpers.MustHTTPRequest(t, http.MethodGet, proxyURL, "/foo/jpeg", nil)
 		req.Host = "test.example"
 		resp, err := helpers.DefaultHTTPClient().Do(req)
 		require.NoError(t, err)
@@ -1210,7 +1210,7 @@ func TestIngressRewriteURI(t *testing.T) {
 	}
 
 	t.Log("try to access the ingress with valid capture group")
-	req := helpers.MustHTTPRequest(t, "GET", proxyURL, "/foo/jpeg", nil)
+	req := helpers.MustHTTPRequest(t, http.MethodGet, proxyURL, "/foo/jpeg", nil)
 	req.Host = "test.example"
 	require.Eventually(t, func() bool {
 		resp, err := helpers.DefaultHTTPClient().Do(req)
@@ -1218,16 +1218,15 @@ func TestIngressRewriteURI(t *testing.T) {
 			t.Logf("WARNING: error while waiting for %s: %v", proxyURL, err)
 			return false
 		}
-
 		defer resp.Body.Close()
 		if resp.StatusCode == http.StatusOK {
-			return resp.Header["Content-Type"][0] == "image/jpeg"
+			return resp.Header.Get("Content-Type") == "image/jpeg"
 		}
 		return false
 	}, ingressWait, waitTick)
 
 	t.Log("try to access the ingress with invalid capture group, should return 404")
-	req = helpers.MustHTTPRequest(t, "GET", proxyURL, "/", nil)
+	req = helpers.MustHTTPRequest(t, http.MethodGet, proxyURL, "/", nil)
 	req.Host = "test.example"
 	resp, err := helpers.DefaultHTTPClient().Do(req)
 	require.NoError(t, err)
@@ -1245,7 +1244,7 @@ func TestIngressRewriteURI(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Log("try to access the ingress with new valid capture group")
-	req = helpers.MustHTTPRequest(t, "GET", proxyURL, "/foo/jpeg/png", nil)
+	req = helpers.MustHTTPRequest(t, http.MethodGet, proxyURL, "/foo/jpeg/png", nil)
 	req.Host = "test.example"
 	require.Eventually(t, func() bool {
 		resp, err := helpers.DefaultHTTPClient().Do(req)
@@ -1253,10 +1252,9 @@ func TestIngressRewriteURI(t *testing.T) {
 			t.Logf("WARNING: error while waiting for %s: %v", proxyURL, err)
 			return false
 		}
-
 		defer resp.Body.Close()
 		if resp.StatusCode == http.StatusOK {
-			return resp.Header["Content-Type"][0] == "image/jpeg"
+			return resp.Header.Get("Content-Type") == "image/jpeg"
 		}
 		return false
 	}, ingressWait, waitTick)
@@ -1276,10 +1274,9 @@ func TestIngressRewriteURI(t *testing.T) {
 			t.Logf("WARNING: error while waiting for %s: %v", proxyURL, err)
 			return false
 		}
-
 		defer resp.Body.Close()
 		if resp.StatusCode == http.StatusOK {
-			return resp.Header["Content-Type"][0] == "image/png"
+			return resp.Header.Get("Content-Type") == "image/png"
 		}
 		return false
 	}, ingressWait, waitTick)

@@ -271,8 +271,8 @@ github.com/klauspost/cpuid/v2 v2.2.4 h1:acbojRNwl3o09bUq+yDCtZFc1aiwaAAxtcn8YkZX
 github.com/klauspost/cpuid/v2 v2.2.4/go.mod h1:RVVoqg1df56z8g3pUjL/3lE5UfnlrJX8tyFgg4nqhuY=
 github.com/kong/deck v1.23.0 h1:/1Ga23PboCW1nftoDSH/hjkF76Kl5MyvT/Cl4X2SRV8=
 github.com/kong/deck v1.23.0/go.mod h1:PMcNms9X5MrFe3uM22tVpFQaKiHxsXEsLgwVLVKK20Y=
-github.com/kong/go-kong v0.45.0 h1:66gNAzgCl4vYnqZZ8DxeLq6Usk2fVOJHzWZEKcFwtSw=
-github.com/kong/go-kong v0.45.0/go.mod h1:41Sot1N/n8UHBp+gE/6nOw3vuzoHbhMSyU/zOS7VzPE=
+github.com/kong/go-kong v0.46.0 h1:9I6nlX63WymU5Sg+d13iZDVwpW5vXh8/v0zarU27dzI=
+github.com/kong/go-kong v0.46.0/go.mod h1:41Sot1N/n8UHBp+gE/6nOw3vuzoHbhMSyU/zOS7VzPE=
 github.com/kong/kubernetes-telemetry v0.1.0 h1:dyDhB2SUvxVaDAxaZtLWL7JGAbkgwlCUM1P8gR/rCl0=
 github.com/kong/kubernetes-telemetry v0.1.0/go.mod h1:YYG7TkKnWlHov0+pSgK0XFsg85q0EzsYWXBl6Kehnjo=
 github.com/kong/kubernetes-testing-framework v0.32.0 h1:pJ4XzKKPtuFKTCaYCAmIGNMBEL+JDUMQhTeBqeth1OQ=

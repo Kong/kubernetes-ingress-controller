@@ -12,7 +12,7 @@ require (
 	honnef.co/go/tools v0.4.3
 	k8s.io/code-generator v0.27.3
 	sigs.k8s.io/controller-runtime/tools/setup-envtest v0.0.0-20230221102149-f6f37e6cc1ec
-	sigs.k8s.io/controller-tools v0.12.0
+	sigs.k8s.io/controller-tools v0.12.1
 	sigs.k8s.io/kustomize/kustomize/v4 v4.5.7
 )
 

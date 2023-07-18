@@ -32,12 +32,80 @@ const (
 
 var conformanceTestsBaseManifests = fmt.Sprintf("%s/conformance/base/manifests.yaml", consts.GatewayRawRepoURL)
 
+var skippedTestsForExpressionRoutes = []string{
+	// extended conformance
+	// https://github.com/Kong/kubernetes-ingress-controller/issues/4166
+	// requires an 8080 listener, which our manually-built test gateway does not have
+	tests.HTTPRouteRedirectPortAndScheme.ShortName,
+	// https://github.com/Kong/kubernetes-ingress-controller/issues/3680
+	tests.GatewayClassObservedGenerationBump.ShortName,
+	// https://github.com/Kong/kubernetes-ingress-controller/issues/3678
+	tests.TLSRouteSimpleSameNamespace.ShortName,
+	// https://github.com/Kong/kubernetes-ingress-controller/issues/3679
+	tests.HTTPRouteQueryParamMatching.ShortName,
+	// https://github.com/Kong/kubernetes-ingress-controller/issues/3681
+	tests.HTTPRouteRedirectPort.ShortName,
+	// https://github.com/Kong/kubernetes-ingress-controller/issues/3682
+	tests.HTTPRouteRedirectScheme.ShortName,
+	// https://github.com/Kong/kubernetes-ingress-controller/issues/4165
+	tests.HTTPRouteRequestMirror.ShortName,
+
+	// experimental conformance
+	// https://github.com/Kong/kubernetes-ingress-controller/issues/3684
+	tests.HTTPRouteRedirectPath.ShortName,
+	// https://github.com/Kong/kubernetes-ingress-controller/issues/3685
+	tests.HTTPRouteRewriteHost.ShortName,
+	// https://github.com/Kong/kubernetes-ingress-controller/issues/3686
+	tests.HTTPRouteRewritePath.ShortName,
+}
+
+var skippedTestsForTraditionalRoutes = []string{
+	// core conformance
+	tests.HTTPRouteHeaderMatching.ShortName,
+
+	// extended conformance
+	// https://github.com/Kong/kubernetes-ingress-controller/issues/4164
+	// only 10 and 11 broken because traditional/traditional_compatible router
+	// cannot support the path > method > header precedence,
+	// but no way to omit individual cases.
+	tests.HTTPRouteMethodMatching.ShortName,
+	// https://github.com/Kong/kubernetes-ingress-controller/issues/4166
+	// requires an 8080 listener, which our manually-built test gateway does not have
+	tests.HTTPRouteRedirectPortAndScheme.ShortName,
+	// https://github.com/Kong/kubernetes-ingress-controller/issues/3680
+	tests.GatewayClassObservedGenerationBump.ShortName,
+	// https://github.com/Kong/kubernetes-ingress-controller/issues/3678
+	tests.TLSRouteSimpleSameNamespace.ShortName,
+	// https://github.com/Kong/kubernetes-ingress-controller/issues/3679
+	tests.HTTPRouteQueryParamMatching.ShortName,
+	// https://github.com/Kong/kubernetes-ingress-controller/issues/3681
+	tests.HTTPRouteRedirectPort.ShortName,
+	// https://github.com/Kong/kubernetes-ingress-controller/issues/3682
+	tests.HTTPRouteRedirectScheme.ShortName,
+	// https://github.com/Kong/kubernetes-ingress-controller/issues/4165
+	tests.HTTPRouteRequestMirror.ShortName,
+
+	// experimental conformance
+	// https://github.com/Kong/kubernetes-ingress-controller/issues/3684
+	tests.HTTPRouteRedirectPath.ShortName,
+	// https://github.com/Kong/kubernetes-ingress-controller/issues/3685
+	tests.HTTPRouteRewriteHost.ShortName,
+	// https://github.com/Kong/kubernetes-ingress-controller/issues/3686
+	tests.HTTPRouteRewritePath.ShortName,
+}
+
 func TestGatewayConformance(t *testing.T) {
 	t.Log("configuring environment for gateway conformance tests")
 	client, err := client.New(env.Cluster().Config(), client.Options{})
 	require.NoError(t, err)
 	require.NoError(t, gatewayv1alpha2.AddToScheme(client.Scheme()))
 	require.NoError(t, gatewayv1beta1.AddToScheme(client.Scheme()))
+
+	featureGateFlag := fmt.Sprintf("--feature-gates=%s", consts.DefaultFeatureGates)
+	if expressionRoutesEnabled() {
+		t.Log("expression routes enabled")
+		featureGateFlag = fmt.Sprintf("--feature-gates=%s", consts.ConformanceExpressionRoutesTestsFeatureGates)
+	}
 
 	t.Log("starting the controller manager")
 	cert, key := certificate.GetKongSystemSelfSignedCerts()
@@ -50,7 +118,7 @@ func TestGatewayConformance(t *testing.T) {
 		"--dump-config",
 		"--log-level=trace",
 		"--debug-log-reduce-redundancy",
-		fmt.Sprintf("--feature-gates=%s", consts.DefaultFeatureGates),
+		featureGateFlag,
 		"--anonymous-reports=false",
 	}
 
@@ -74,6 +142,10 @@ func TestGatewayConformance(t *testing.T) {
 	exemptFeatures := sets.New(suite.SupportMesh)
 
 	t.Log("starting the gateway conformance test suite")
+	skippedTests := skippedTestsForTraditionalRoutes
+	if expressionRoutesEnabled() {
+		skippedTests = skippedTestsForExpressionRoutes
+	}
 	cSuite := suite.New(suite.Options{
 		Client:                     client,
 		GatewayClassName:           gatewayClass.Name,
@@ -82,40 +154,7 @@ func TestGatewayConformance(t *testing.T) {
 		EnableAllSupportedFeatures: enableAllSupportedFeatures,
 		ExemptFeatures:             exemptFeatures,
 		BaseManifests:              conformanceTestsBaseManifests,
-		SkipTests: []string{
-			// disabling after being re-enabled by https://github.com/Kong/kubernetes-ingress-controller/pull/4296
-			// it is consistently failing and needs to be investigated.
-			tests.HTTPRouteHeaderMatching.ShortName,
-
-			// extended conformance
-			// https://github.com/Kong/kubernetes-ingress-controller/issues/4166
-			// requires an 8080 listener, which our manually-built test gateway does not have
-			tests.HTTPRouteRedirectPortAndScheme.ShortName,
-
-			// https://github.com/Kong/kubernetes-ingress-controller/issues/4164
-			// only 10 and 11 broken, but no way to omit individual cases
-			tests.HTTPRouteMethodMatching.ShortName,
-			// https://github.com/Kong/kubernetes-ingress-controller/issues/3680
-			tests.GatewayClassObservedGenerationBump.ShortName,
-			// https://github.com/Kong/kubernetes-ingress-controller/issues/3678
-			tests.TLSRouteSimpleSameNamespace.ShortName,
-			// https://github.com/Kong/kubernetes-ingress-controller/issues/3679
-			tests.HTTPRouteQueryParamMatching.ShortName,
-			// https://github.com/Kong/kubernetes-ingress-controller/issues/3681
-			tests.HTTPRouteRedirectPort.ShortName,
-			// https://github.com/Kong/kubernetes-ingress-controller/issues/3682
-			tests.HTTPRouteRedirectScheme.ShortName,
-			// https://github.com/Kong/kubernetes-ingress-controller/issues/4165
-			tests.HTTPRouteRequestMirror.ShortName,
-
-			// experimental conformance
-			// https://github.com/Kong/kubernetes-ingress-controller/issues/3684
-			tests.HTTPRouteRedirectPath.ShortName,
-			// https://github.com/Kong/kubernetes-ingress-controller/issues/3685
-			tests.HTTPRouteRewriteHost.ShortName,
-			// https://github.com/Kong/kubernetes-ingress-controller/issues/3686
-			tests.HTTPRouteRewritePath.ShortName,
-		},
+		SkipTests:                  skippedTests,
 	})
 	cSuite.Setup(t)
 	// To work with individual tests only, you can disable the normal Run call and construct a slice containing a

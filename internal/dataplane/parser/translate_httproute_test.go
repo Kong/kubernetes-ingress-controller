@@ -1856,6 +1856,7 @@ func TestIngressRulesWithPriority(t *testing.T) {
 					Name:         kong.String("httproute.default.httproute-1._.0.0"),
 					Expression:   kong.String(`((net.protocol == "http") || (net.protocol == "https")) && (http.path == "/v1/foo")`),
 					PreserveHost: kong.Bool(true),
+					StripPath:    kong.Bool(false),
 					Priority:     kong.Int(1024),
 				},
 				Plugins:          []kong.Plugin{},
@@ -1915,6 +1916,7 @@ func TestIngressRulesWithPriority(t *testing.T) {
 					Name:         kong.String("httproute.default.httproute-1.foo.com.0.1"),
 					Expression:   kong.String(`(http.host == "foo.com") && ((net.protocol == "http") || (net.protocol == "https")) && (http.path == "/v1/foo")`),
 					PreserveHost: kong.Bool(true),
+					StripPath:    kong.Bool(false),
 					Priority:     kong.Int(1024),
 				},
 				Plugins: []kong.Plugin{
@@ -1990,6 +1992,7 @@ func TestIngressRulesWithPriority(t *testing.T) {
 					Name:         kong.String("httproute.default.httproute-1._.foo.com.0.0"),
 					Expression:   kong.String(`(http.host =^ ".foo.com") && ((net.protocol == "http") || (net.protocol == "https")) && (http.path == "/v1/foo")`),
 					PreserveHost: kong.Bool(true),
+					StripPath:    kong.Bool(false),
 					Priority:     kong.Int(1024),
 				},
 				Plugins:          []kong.Plugin{},

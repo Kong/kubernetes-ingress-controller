@@ -6,12 +6,13 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/adminapi"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/clients"
 	"github.com/samber/lo"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 	k8stypes "k8s.io/apimachinery/pkg/types"
+
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/adminapi"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/clients"
 )
 
 const (
@@ -19,12 +20,10 @@ const (
 	testURL2 = "http://localhost:8002"
 )
 
-var (
-	testPodRef = k8stypes.NamespacedName{
-		Namespace: "default",
-		Name:      "mock",
-	}
-)
+var testPodRef = k8stypes.NamespacedName{
+	Namespace: "default",
+	Name:      "mock",
+}
 
 type mockClientFactory struct {
 	ready      map[string]bool // Maps address to readiness.

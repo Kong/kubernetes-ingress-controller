@@ -99,7 +99,7 @@ spec:
           failureThreshold: 3
         readinessProbe:
           httpGet:
-            path: /status
+            path: /status/ready
             port: 8100
             scheme: HTTP
           initialDelaySeconds: 5

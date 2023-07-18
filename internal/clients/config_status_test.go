@@ -5,15 +5,14 @@ import (
 	"testing"
 	"time"
 
-	"github.com/go-logr/logr/testr"
+	"github.com/go-logr/logr"
 	"github.com/stretchr/testify/require"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/clients"
 )
 
 func TestChannelConfigNotifier(t *testing.T) {
-	logger := testr.New(t)
-	n := clients.NewChannelConfigNotifier(logger)
+	n := clients.NewChannelConfigNotifier(logr.Discard())
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 

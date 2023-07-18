@@ -134,18 +134,19 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 	setupLog.Info("Initializing Dataplane Client")
 	eventRecorder := mgr.GetEventRecorderFor(KongClientEventRecorderComponentName)
 
+	readinessChecker := clients.NewDefaultReadinessChecker(adminAPIClientsFactory, deprecatedLogger)
 	clientsManager, err := clients.NewAdminAPIClientsManager(
 		ctx,
 		deprecatedLogger,
 		initialKongClients,
-		adminAPIClientsFactory,
+		readinessChecker,
 	)
 	if err != nil {
 		return fmt.Errorf("failed to create AdminAPIClientsManager: %w", err)
 	}
 	if c.KongAdminSvc.IsPresent() {
-		setupLog.Info("Running AdminAPIClientsManager notify loop")
-		clientsManager.RunNotifyLoop()
+		setupLog.Info("Running AdminAPIClientsManager loop")
+		clientsManager.Run()
 	}
 
 	setupLog.Info("Starting Admission Server")

@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1689692400450,
+  "lastUpdate": 1689693509734,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -22740,6 +22740,48 @@ window.BENCHMARK_DATA = {
             "value": 12,
             "unit": "allocs/op",
             "extra": "17540 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "49699333+dependabot[bot]@users.noreply.github.com",
+            "name": "dependabot[bot]",
+            "username": "dependabot[bot]"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "92688b4af75e6b2aa97085344dcd5539d0c08aa8",
+          "message": "chore(deps): bump google.golang.org/api from 0.130.0 to 0.131.0 (#4342)\n\nBumps [google.golang.org/api](https://github.com/googleapis/google-api-go-client) from 0.130.0 to 0.131.0.\r\n- [Release notes](https://github.com/googleapis/google-api-go-client/releases)\r\n- [Changelog](https://github.com/googleapis/google-api-go-client/blob/main/CHANGES.md)\r\n- [Commits](https://github.com/googleapis/google-api-go-client/compare/v0.130.0...v0.131.0)\r\n\r\n---\r\nupdated-dependencies:\r\n- dependency-name: google.golang.org/api\r\n  dependency-type: direct:production\r\n  update-type: version-update:semver-minor\r\n...\r\n\r\nSigned-off-by: dependabot[bot] <support@github.com>\r\nCo-authored-by: dependabot[bot] <49699333+dependabot[bot]@users.noreply.github.com>",
+          "timestamp": "2023-07-18T17:14:00+02:00",
+          "tree_id": "0f13addf0414284b742c7ad07b5190b601b22054",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/92688b4af75e6b2aa97085344dcd5539d0c08aa8"
+        },
+        "date": 1689693503596,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - ns/op",
+            "value": 94049,
+            "unit": "ns/op",
+            "extra": "12238 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - B/op",
+            "value": 11098,
+            "unit": "B/op",
+            "extra": "12238 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - allocs/op",
+            "value": 12,
+            "unit": "allocs/op",
+            "extra": "12238 times\n2 procs"
           }
         ]
       }

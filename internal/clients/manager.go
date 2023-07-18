@@ -88,7 +88,7 @@ func NewAdminAPIClientsManager(
 	ctx context.Context,
 	logger logrus.FieldLogger,
 	initialClients []*adminapi.Client,
-	kongClientFactory ClientFactory,
+	readinessChecker ReadinessChecker,
 	opts ...AdminAPIClientsManagerOption,
 ) (*AdminAPIClientsManager, error) {
 	if len(initialClients) == 0 {
@@ -99,10 +99,9 @@ func NewAdminAPIClientsManager(
 		return c.BaseRootURL(), c
 	})
 	c := &AdminAPIClientsManager{
-		readyGatewayClients:   readyClients,
-		pendingGatewayClients: make(map[string]adminapi.DiscoveredAdminAPI),
-		// inject
-		readinessChecker:                NewDefaultReadinessChecker(kongClientFactory, logger),
+		readyGatewayClients:             readyClients,
+		pendingGatewayClients:           make(map[string]adminapi.DiscoveredAdminAPI),
+		readinessChecker:                readinessChecker,
 		readinessReconciliationTicker:   clock.NewTicker(),
 		readinessReconciliationInterval: DefaultReadinessReconciliationInterval,
 		discoveredAdminAPIsNotifyChan:   make(chan []adminapi.DiscoveredAdminAPI),
@@ -276,9 +275,11 @@ func (c *AdminAPIClientsManager) adjustGatewayClients(discoveredAdminAPIs []admi
 		return true
 	}
 
-	// Make sure all discovered clients are in the pending list.
+	// Make sure all discovered clients that are not on ready list are in the pending list.
 	for _, d := range discoveredAdminAPIs {
-		c.pendingGatewayClients[d.Address] = d
+		if _, ok := c.readyGatewayClients[d.Address]; !ok {
+			c.pendingGatewayClients[d.Address] = d
+		}
 	}
 
 	// Remove ready clients that are not present in the discovered list.

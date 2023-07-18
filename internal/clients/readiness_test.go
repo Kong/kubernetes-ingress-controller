@@ -150,6 +150,48 @@ func TestDefaultReadinessChecker(t *testing.T) {
 			expectedTurnedReady:   nil,
 			expectedTurnedPending: nil,
 		},
+		{
+			name:                  "no clients at all",
+			expectedTurnedReady:   nil,
+			expectedTurnedPending: nil,
+		},
+		{
+			name: "multiple ready, one turning pending",
+			alreadyCreatedClients: []clients.AlreadyCreatedClient{
+				mockAlreadyCreatedClient{
+					url:     testURL1,
+					isReady: true,
+				},
+				mockAlreadyCreatedClient{
+					url:     testURL2,
+					isReady: false, // This one will turn pending.
+				},
+			},
+			expectedTurnedReady: nil,
+			expectedTurnedPending: []string{
+				testURL2,
+			},
+		},
+		{
+			name: "multiple pending, one turning ready",
+			pendingClients: []adminapi.DiscoveredAdminAPI{
+				{
+					Address: testURL1,
+					PodRef:  testPodRef,
+				},
+				{
+					Address: testURL2,
+					PodRef:  testPodRef,
+				},
+			},
+			pendingClientsReadiness: map[string]bool{
+				testURL1: false,
+				testURL2: true, // This one will turn ready.
+			},
+			expectedTurnedReady: []string{
+				testURL2,
+			},
+		},
 	}
 
 	for _, tc := range testCases {
@@ -169,7 +211,7 @@ func TestDefaultReadinessChecker(t *testing.T) {
 				require.Equal(t, 1, factory.callsCount[url.Address])
 			}
 
-			// For every already created client we expect no calls to CreateAdminAPIClient.
+			// For every already created client we expect NO calls to CreateAdminAPIClient.
 			for _, url := range tc.alreadyCreatedClients {
 				require.Zero(t, factory.callsCount[url.BaseRootURL()])
 			}

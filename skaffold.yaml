@@ -42,21 +42,6 @@ profiles:
           TAG: ${{ .TAG }}
           COMMIT: ${{ .COMMIT }}
           REPO_INFO: ${{ .REPO_INFO }}
-- name: debug
-  manifests:
-    kustomize:
-      paths:
-      - config/debug/base
-  build:
-    artifacts:
-    - image: kic-placeholder
-      docker:
-        dockerfile: Dockerfile.debug
-        target: debug
-        buildArgs:
-          TAG: ${{ .TAG }}
-          COMMIT: ${{ .COMMIT }}
-          REPO_INFO: ${{ .REPO_INFO }}
 - name: multi_gw
   manifests:
     kustomize:

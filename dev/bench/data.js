@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1689668216692,
+  "lastUpdate": 1689668217967,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -21648,6 +21648,48 @@ window.BENCHMARK_DATA = {
             "value": 12,
             "unit": "allocs/op",
             "extra": "17720 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "tao.yi@konghq.com",
+            "name": "Tao Yi",
+            "username": "randmonkey"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "7d0b0961796cc1f7e49aa2123bc13f98628b052a",
+          "message": "fix: Set StripPath to false in routes translated from HTTPRoute when ExpressionRoutes enabled (#4359)\n\n* test(conformance): enable expression router\r\n\r\nSigned-off-by: Mattia Lavacca <lavacca.mattia@gmail.com>\r\n\r\n* add StripPath:false to routes translated from HTTPRoutes\r\n\r\n* re-enable method match for expression routes\r\n\r\n* run conformance tests for both expression and traditional routes\r\n\r\n* rename conformance test names\r\n\r\n---------\r\n\r\nSigned-off-by: Mattia Lavacca <lavacca.mattia@gmail.com>\r\nCo-authored-by: Mattia Lavacca <lavacca.mattia@gmail.com>",
+          "timestamp": "2023-07-18T16:13:26+08:00",
+          "tree_id": "07a1e74ac2702993fd29326d67400219445499d0",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/7d0b0961796cc1f7e49aa2123bc13f98628b052a"
+        },
+        "date": 1689668212078,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - ns/op",
+            "value": 88260,
+            "unit": "ns/op",
+            "extra": "18412 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - B/op",
+            "value": 11092,
+            "unit": "B/op",
+            "extra": "18412 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - allocs/op",
+            "value": 12,
+            "unit": "allocs/op",
+            "extra": "18412 times\n2 procs"
           }
         ]
       },

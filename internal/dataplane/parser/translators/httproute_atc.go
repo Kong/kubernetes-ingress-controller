@@ -464,7 +464,7 @@ func AssignRoutePriorityToSplitHTTPRoutes(
 			continue
 		}
 
-		sort.Slice(routes, func(i, j int) bool {
+		sort.SliceStable(routes, func(i, j int) bool {
 			return compareSplitHTTPRoutesRelativePriority(routes[i], routes[j])
 		})
 

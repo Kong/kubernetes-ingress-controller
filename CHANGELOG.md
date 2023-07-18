@@ -76,6 +76,9 @@ Adding a new version? You'll need three changes:
 
 ### Added
 
+- Add new feature gate `RewriteURIs` to enable/disable the `konghq.com/rewrite`
+  annotation (default disabled).
+  [#4360](https://github.com/Kong/kubernetes-ingress-controller/pull/4360)
 - `konghq.com/rewrite` annotation has been introduced to manage URI rewriting.
   [#4360](https://github.com/Kong/kubernetes-ingress-controller/pull/4360)
 - Added translator to translate `TCPRoute` in gateway APIs to

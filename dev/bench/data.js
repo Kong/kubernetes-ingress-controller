@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1689668217967,
+  "lastUpdate": 1689670571050,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -21732,6 +21732,48 @@ window.BENCHMARK_DATA = {
             "value": 12,
             "unit": "allocs/op",
             "extra": "18412 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "tao.yi@konghq.com",
+            "name": "Yi Tao",
+            "username": "randmonkey"
+          },
+          "committer": {
+            "email": "tao.yi@konghq.com",
+            "name": "Yi Tao",
+            "username": "randmonkey"
+          },
+          "distinct": true,
+          "id": "1292fb163b7bf44854302110e6b93c84808b6877",
+          "message": "feat: implement assignment of priorities to Kong routes from GRPCRoutes",
+          "timestamp": "2023-07-18T16:52:41+08:00",
+          "tree_id": "6ed9af99ee9e847bace454cc36fc6819818112d2",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/1292fb163b7bf44854302110e6b93c84808b6877"
+        },
+        "date": 1689670566029,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - ns/op",
+            "value": 71096,
+            "unit": "ns/op",
+            "extra": "16930 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - B/op",
+            "value": 11092,
+            "unit": "B/op",
+            "extra": "16930 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - allocs/op",
+            "value": 12,
+            "unit": "allocs/op",
+            "extra": "16930 times\n2 procs"
           }
         ]
       }

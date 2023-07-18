@@ -5,6 +5,7 @@ import (
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/adminapi"
 	"github.com/sirupsen/logrus"
+	k8stypes "k8s.io/apimachinery/pkg/types"
 )
 
 type ReadinessCheckResult struct {
@@ -19,9 +20,15 @@ func (r ReadinessCheckResult) HasChanges() bool {
 type ReadinessChecker interface {
 	CheckReadiness(
 		ctx context.Context,
-		readyClients []*adminapi.Client,
+		alreadyCreatedClients []AlreadyCreatedClient,
 		pendingClients []adminapi.DiscoveredAdminAPI,
 	) ReadinessCheckResult
+}
+
+type AlreadyCreatedClient interface {
+	IsReady(context.Context) error
+	PodReference() (k8stypes.NamespacedName, bool)
+	BaseRootURL() string
 }
 
 type DefaultReadinessChecker struct {
@@ -29,9 +36,16 @@ type DefaultReadinessChecker struct {
 	logger  logrus.FieldLogger
 }
 
+func NewDefaultReadinessChecker(factory ClientFactory, logger logrus.FieldLogger) DefaultReadinessChecker {
+	return DefaultReadinessChecker{
+		factory: factory,
+		logger:  logger,
+	}
+}
+
 func (c DefaultReadinessChecker) CheckReadiness(
 	ctx context.Context,
-	readyClients []*adminapi.Client,
+	readyClients []AlreadyCreatedClient,
 	pendingClients []adminapi.DiscoveredAdminAPI,
 ) ReadinessCheckResult {
 	return ReadinessCheckResult{
@@ -56,11 +70,10 @@ func (c DefaultReadinessChecker) checkPendingGatewayClients(ctx context.Context,
 	return turnedReady
 }
 
-func (c DefaultReadinessChecker) checkActiveGatewayClients(ctx context.Context, lastActive []*adminapi.Client) (turnedPending []adminapi.DiscoveredAdminAPI) {
+func (c DefaultReadinessChecker) checkActiveGatewayClients(ctx context.Context, lastActive []AlreadyCreatedClient) (turnedPending []adminapi.DiscoveredAdminAPI) {
 	for _, client := range lastActive {
 		// For active clients we check readiness by calling the Status endpoint.
-		_, err := client.AdminAPIClient().Status(ctx)
-		if err != nil {
+		if err := client.IsReady(ctx); err != nil {
 			// Despite the error reason we still want to keep the client in the pending list to retry later.
 			c.logger.WithError(err).Debugf("active client for %q is not ready, moving to pending", client.BaseRootURL())
 
@@ -68,6 +81,7 @@ func (c DefaultReadinessChecker) checkActiveGatewayClients(ctx context.Context, 
 			if !ok {
 				// This should never happen, but if it does, we want to log it.
 				c.logger.Errorf("failed to get PodReference for client %q", client.BaseRootURL())
+				continue
 			}
 			turnedPending = append(turnedPending, adminapi.DiscoveredAdminAPI{
 				Address: client.BaseRootURL(),

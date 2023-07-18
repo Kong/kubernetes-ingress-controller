@@ -121,7 +121,7 @@ func TestClientAddressesNotifications(t *testing.T) {
 	)
 	require.NoError(t, err)
 	require.NotNil(t, manager)
-	manager.RunNotifyLoop()
+	manager.Run()
 	<-manager.Running()
 
 	defer testClientFactoryWithExpected.AssertExpectedCalls()
@@ -186,7 +186,7 @@ func TestClientAdjustInternalClientsAfterNotification(t *testing.T) {
 	manager, err := NewAdminAPIClientsManager(ctx, logger, []*adminapi.Client{testClient}, cf)
 	require.NoError(t, err)
 	require.NotNil(t, manager)
-	manager.RunNotifyLoop()
+	manager.Run()
 	<-manager.Running()
 
 	clients := manager.GatewayClients()
@@ -282,7 +282,7 @@ func TestAdminAPIClientsManager_NotRunningNotifyLoop(t *testing.T) {
 
 	select {
 	case <-m.Running():
-		t.Error("expected manager to not run without explicitly running it with RunNotifyLoop method")
+		t.Error("expected manager to not run without explicitly running it with Run method")
 	case <-time.After(time.Millisecond * 100):
 	}
 }
@@ -322,7 +322,7 @@ func TestAdminAPIClientsManager_GatewayClientsFromNotificationsAreExpectedToHave
 		cf,
 	)
 	require.NoError(t, err)
-	m.RunNotifyLoop()
+	m.Run()
 
 	m.Notify([]adminapi.DiscoveredAdminAPI{testDiscoveredAdminAPI("http://10.0.0.1:8080")})
 
@@ -360,7 +360,7 @@ func TestAdminAPIClientsManager_SubscribeToGatewayClientsChanges(t *testing.T) {
 		require.Falsef(t, ok, "expected no subscription to be created because no notification loop is running")
 	})
 
-	m.RunNotifyLoop()
+	m.Run()
 
 	t.Run("when notification loop is running subscription should be created", func(t *testing.T) {
 		ch, ok := m.SubscribeToGatewayClientsChanges()
@@ -437,7 +437,7 @@ func TestAdminAPIClientsManager_ConcurrentNotify(t *testing.T) {
 	defer cancel()
 	m, err := NewAdminAPIClientsManager(ctx, logrus.New(), []*adminapi.Client{testClient}, cf)
 	require.NoError(t, err)
-	m.RunNotifyLoop()
+	m.Run()
 
 	var receivedNotificationsCount atomic.Uint32
 	ch, ok := m.SubscribeToGatewayClientsChanges()
@@ -493,7 +493,7 @@ func TestAdminAPIClientsManager_NotifiesSubscribersOnlyWhenGatewayClientsChange(
 	defer cancel()
 	m, err := NewAdminAPIClientsManager(ctx, logrus.New(), []*adminapi.Client{testClient}, cf)
 	require.NoError(t, err)
-	m.RunNotifyLoop()
+	m.Run()
 
 	var receivedNotificationsCount atomic.Uint32
 	ch, ok := m.SubscribeToGatewayClientsChanges()

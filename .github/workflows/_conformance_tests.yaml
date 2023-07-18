@@ -5,13 +5,16 @@ on:
 
 jobs:
   conformance-tests:
+    name: ${{ matrix.name }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        expression_routes:
-        - "true"
-        - "false"
+        include:
+        - name: conformance-tests-traditional-compatible-router
+          expression_routes: "false"
+        - name: "conformance-tests-expressions-router"
+          expression_routes: "true"
     steps:
       - name: checkout repository
         uses: actions/checkout@v3

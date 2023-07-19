@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1689778799705,
+  "lastUpdate": 1689778801368,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -24840,6 +24840,48 @@ window.BENCHMARK_DATA = {
             "value": 12,
             "unit": "allocs/op",
             "extra": "18003 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "49699333+dependabot[bot]@users.noreply.github.com",
+            "name": "dependabot[bot]",
+            "username": "dependabot[bot]"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "d1da1f757fac4c481d03dd516338771cdbdd3937",
+          "message": "chore(deps): bump github.com/GoogleContainerTools/skaffold/v2\n\nBumps [github.com/GoogleContainerTools/skaffold/v2](https://github.com/GoogleContainerTools/skaffold) from 2.6.1 to 2.6.2.\n- [Release notes](https://github.com/GoogleContainerTools/skaffold/releases)\n- [Changelog](https://github.com/GoogleContainerTools/skaffold/blob/main/CHANGELOG.md)\n- [Commits](https://github.com/GoogleContainerTools/skaffold/compare/v2.6.1...v2.6.2)\n\n---\nupdated-dependencies:\n- dependency-name: github.com/GoogleContainerTools/skaffold/v2\n  dependency-type: direct:production\n  update-type: version-update:semver-patch\n...\n\nSigned-off-by: dependabot[bot] <support@github.com>",
+          "timestamp": "2023-07-19T14:56:43Z",
+          "tree_id": "7d77578515a131e582b75f20f05db74a5ca2e39c",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/d1da1f757fac4c481d03dd516338771cdbdd3937"
+        },
+        "date": 1689778794831,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - ns/op",
+            "value": 75723,
+            "unit": "ns/op",
+            "extra": "18714 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - B/op",
+            "value": 11098,
+            "unit": "B/op",
+            "extra": "18714 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - allocs/op",
+            "value": 12,
+            "unit": "allocs/op",
+            "extra": "18714 times\n2 procs"
           }
         ]
       },

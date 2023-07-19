@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1689772880775,
+  "lastUpdate": 1689773149031,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -24252,6 +24252,48 @@ window.BENCHMARK_DATA = {
             "value": 12,
             "unit": "allocs/op",
             "extra": "16675 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "lavacca.mattia@gmail.com",
+            "name": "Mattia Lavacca",
+            "username": "mlavacca"
+          },
+          "committer": {
+            "email": "lavacca.mattia@gmail.com",
+            "name": "Mattia Lavacca",
+            "username": "mlavacca"
+          },
+          "distinct": true,
+          "id": "ba25db208a40dec52bcfe481d9b10136abc3e951",
+          "message": "chore: configfetcher interface added\n\nSigned-off-by: Mattia Lavacca <lavacca.mattia@gmail.com>",
+          "timestamp": "2023-07-19T15:22:13+02:00",
+          "tree_id": "55ade70617e0574fc396661b21f458f2e7ed9900",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/ba25db208a40dec52bcfe481d9b10136abc3e951"
+        },
+        "date": 1689773143864,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - ns/op",
+            "value": 72379,
+            "unit": "ns/op",
+            "extra": "16653 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - B/op",
+            "value": 11095,
+            "unit": "B/op",
+            "extra": "16653 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - allocs/op",
+            "value": 12,
+            "unit": "allocs/op",
+            "extra": "16653 times\n2 procs"
           }
         ]
       }

@@ -1,4 +1,4 @@
-package kongstate_test
+package configfetcher_test
 
 import (
 	"reflect"
@@ -10,6 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/configfetcher"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
 )
 
@@ -265,7 +266,7 @@ func TestKongRawStateToKongState(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			tt := tt
-			state := kongstate.KongRawStateToKongState(&tt.kongRawState)
+			state := configfetcher.KongRawStateToKongState(&tt.kongRawState)
 			require.Equal(t, tt.expectedKongState, state)
 		})
 	}

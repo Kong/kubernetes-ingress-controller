@@ -1,41 +1,19 @@
-package kongstate
+package configfetcher
 
 import (
-	"context"
-
-	"github.com/kong/deck/dump"
 	"github.com/kong/deck/utils"
 	"github.com/kong/go-kong/kong"
+
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
 )
 
-type KongLastGoodConfigFetcher interface {
-	// GetKongRawState fetches the configuration loaded in a Kong node.
-	GetKongRawState(ctx context.Context, client *kong.Client) (*utils.KongRawState, error)
-	// GetKongStatus fetches the status of a Kong node.
-	GetKongStatus(ctx context.Context, client *kong.Client) (*kong.Status, error)
-}
-
-type DefaultKongLastGoodConfigFetcher struct {
-	config dump.Config
-}
-
-func (g *DefaultKongLastGoodConfigFetcher) GetKongRawState(ctx context.Context, client *kong.Client) (*utils.KongRawState, error) {
-	return dump.Get(ctx, client, g.config)
-}
-
-func (g *DefaultKongLastGoodConfigFetcher) GetKongStatus(ctx context.Context, client *kong.Client) (*kong.Status, error) {
-	return client.Status(ctx)
-}
-
-func NewDefaultKongLastGoodConfigFetcher() *DefaultKongLastGoodConfigFetcher {
-	return &DefaultKongLastGoodConfigFetcher{
-		config: dump.Config{},
-	}
-}
+// -----------------------------------------------------------------------------
+// KongRawState to KongState conversion functions
+// -----------------------------------------------------------------------------
 
 // KongRawStateToKongState converts a Deck kongRawState to a KIC KongState.
-func KongRawStateToKongState(rawstate *utils.KongRawState) *KongState {
-	kongState := &KongState{}
+func KongRawStateToKongState(rawstate *utils.KongRawState) *kongstate.KongState {
+	kongState := &kongstate.KongState{}
 
 	routes := make(map[string][]*kong.Route)
 	for _, r := range rawstate.Routes {
@@ -63,13 +41,13 @@ func KongRawStateToKongState(rawstate *utils.KongRawState) *KongState {
 	}
 
 	for i, s := range rawstate.Services {
-		kongState.Services = append(kongState.Services, Service{
+		kongState.Services = append(kongState.Services, kongstate.Service{
 			Service: sanitizeKongService(*s),
-			Routes:  []Route{},
+			Routes:  []kongstate.Route{},
 			Plugins: []kong.Plugin{},
 		})
 		for j, r := range routes[*s.ID] {
-			kongState.Services[i].Routes = append(kongState.Services[i].Routes, Route{
+			kongState.Services[i].Routes = append(kongState.Services[i].Routes, kongstate.Route{
 				Route:   sanitizeKongRoute(*r),
 				Plugins: []kong.Plugin{},
 			})
@@ -81,7 +59,7 @@ func KongRawStateToKongState(rawstate *utils.KongRawState) *KongState {
 	}
 
 	for _, u := range rawstate.Upstreams {
-		newUpstream := Upstream{
+		newUpstream := kongstate.Upstream{
 			Upstream: *u,
 		}
 		if u.ID != nil {
@@ -94,7 +72,7 @@ func KongRawStateToKongState(rawstate *utils.KongRawState) *KongState {
 	kongState.Certificates = rawCertificatesToCertificates(rawstate.Certificates)
 
 	for i, consumer := range rawstate.Consumers {
-		kongState.Consumers = append(kongState.Consumers, Consumer{
+		kongState.Consumers = append(kongState.Consumers, kongstate.Consumer{
 			Consumer: sanitizeConsumer(*consumer),
 		})
 		for _, keyAuth := range rawstate.KeyAuths {
@@ -102,7 +80,7 @@ func KongRawStateToKongState(rawstate *utils.KongRawState) *KongState {
 				if *keyAuth.Consumer.ID == *consumer.ID {
 					sanitizeAuth(keyAuth)
 					kongState.Consumers[i].KeyAuths = append(kongState.Consumers[i].KeyAuths,
-						&KeyAuth{
+						&kongstate.KeyAuth{
 							KeyAuth: *keyAuth,
 						},
 					)
@@ -114,7 +92,7 @@ func KongRawStateToKongState(rawstate *utils.KongRawState) *KongState {
 				if *hmacAuth.Consumer.ID == *consumer.ID {
 					sanitizeAuth(hmacAuth)
 					kongState.Consumers[i].HMACAuths = append(kongState.Consumers[i].HMACAuths,
-						&HMACAuth{
+						&kongstate.HMACAuth{
 							HMACAuth: *hmacAuth,
 						},
 					)
@@ -126,7 +104,7 @@ func KongRawStateToKongState(rawstate *utils.KongRawState) *KongState {
 				if *jwtAuth.Consumer.ID == *consumer.ID {
 					sanitizeAuth(jwtAuth)
 					kongState.Consumers[i].JWTAuths = append(kongState.Consumers[i].JWTAuths,
-						&JWTAuth{
+						&kongstate.JWTAuth{
 							JWTAuth: *jwtAuth,
 						},
 					)
@@ -138,7 +116,7 @@ func KongRawStateToKongState(rawstate *utils.KongRawState) *KongState {
 				if *basicAuth.Consumer.ID == *consumer.ID {
 					sanitizeAuth(basicAuth)
 					kongState.Consumers[i].BasicAuths = append(kongState.Consumers[i].BasicAuths,
-						&BasicAuth{
+						&kongstate.BasicAuth{
 							BasicAuth: *basicAuth,
 						},
 					)
@@ -150,7 +128,7 @@ func KongRawStateToKongState(rawstate *utils.KongRawState) *KongState {
 				if *aclGroup.Consumer.ID == *consumer.ID {
 					sanitizeAuth(aclGroup)
 					kongState.Consumers[i].ACLGroups = append(kongState.Consumers[i].ACLGroups,
-						&ACLGroup{
+						&kongstate.ACLGroup{
 							ACLGroup: *aclGroup,
 						},
 					)
@@ -162,7 +140,7 @@ func KongRawStateToKongState(rawstate *utils.KongRawState) *KongState {
 				if *oauth2Cred.Consumer.ID == *consumer.ID {
 					sanitizeAuth(oauth2Cred)
 					kongState.Consumers[i].Oauth2Creds = append(kongState.Consumers[i].Oauth2Creds,
-						&Oauth2Credential{
+						&kongstate.Oauth2Credential{
 							Oauth2Credential: *oauth2Cred,
 						},
 					)
@@ -174,7 +152,7 @@ func KongRawStateToKongState(rawstate *utils.KongRawState) *KongState {
 				if *mTLSAuth.Consumer.ID == *consumer.ID {
 					sanitizeAuth(mTLSAuth)
 					kongState.Consumers[i].MTLSAuths = append(kongState.Consumers[i].MTLSAuths,
-						&MTLSAuth{
+						&kongstate.MTLSAuth{
 							MTLSAuth: *mTLSAuth,
 						},
 					)
@@ -185,10 +163,6 @@ func KongRawStateToKongState(rawstate *utils.KongRawState) *KongState {
 
 	return kongState
 }
-
-// -----------------------------------------------------------------------------
-// KongRawState to KongState conversion functions
-// -----------------------------------------------------------------------------
 
 func rawPluginsToPlugins(plugins []*kong.Plugin) []kong.Plugin {
 	if len(plugins) == 0 {
@@ -202,26 +176,26 @@ func rawPluginsToPlugins(plugins []*kong.Plugin) []kong.Plugin {
 	return ps
 }
 
-func rawTargetsToTargets(targets []*kong.Target) []Target {
+func rawTargetsToTargets(targets []*kong.Target) []kongstate.Target {
 	if len(targets) == 0 {
 		return nil
 	}
-	ts := []Target{}
+	ts := []kongstate.Target{}
 
 	for _, t := range targets {
-		ts = append(ts, Target{Target: *t})
+		ts = append(ts, kongstate.Target{Target: *t})
 	}
 	return ts
 }
 
-func rawCertificatesToCertificates(certificates []*kong.Certificate) []Certificate {
+func rawCertificatesToCertificates(certificates []*kong.Certificate) []kongstate.Certificate {
 	if len(certificates) == 0 {
 		return nil
 	}
-	certs := []Certificate{}
+	certs := []kongstate.Certificate{}
 
 	for _, c := range certificates {
-		certs = append(certs, Certificate{
+		certs = append(certs, kongstate.Certificate{
 			Certificate: sanitizeCertificate(*c),
 		})
 	}
@@ -259,7 +233,7 @@ func sanitizeKongRoute(route kong.Route) kong.Route {
 	return route
 }
 
-func sanitizeUpstream(upstream Upstream) Upstream {
+func sanitizeUpstream(upstream kongstate.Upstream) kongstate.Upstream {
 	upstream.Upstream.CreatedAt = nil
 	upstream.Upstream.ID = nil
 	for i := range upstream.Targets {

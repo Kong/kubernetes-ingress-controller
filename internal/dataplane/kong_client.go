@@ -25,6 +25,7 @@ import (
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/adminapi"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/clients"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/configfetcher"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/deckgen"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/failures"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
@@ -120,11 +121,6 @@ type KongClient struct {
 	// SHAs is a slice is configuration hashes send in last batch send.
 	SHAs []string
 
-	// lastValidKongState contains the last valid configuration pushed
-	// to the gateways. It is used as a fallback in case a newer config version is
-	// somehow broken.
-	lastValidKongState *kongstate.KongState
-
 	// clientsProvider allows retrieving the most recent set of clients.
 	clientsProvider clients.AdminAPIClientsProvider
 
@@ -141,7 +137,7 @@ type KongClient struct {
 	kongConfigBuilder KongConfigBuilder
 
 	// kongConfigFetcher fetches the loaded configuration and status from a Kong node.
-	kongConfigFetcher kongstate.KongLastGoodConfigFetcher
+	kongConfigFetcher configfetcher.LastValidConfigFetcher
 
 	// controllerPodReference is a reference to the controller pod this client is running in.
 	// It may be empty if the client is not running in a pod (e.g. in a unit test).
@@ -164,7 +160,7 @@ func NewKongClient(
 	clientsProvider clients.AdminAPIClientsProvider,
 	updateStrategyResolver sendconfig.UpdateStrategyResolver,
 	configChangeDetector sendconfig.ConfigurationChangeDetector,
-	kongConfigFetcher kongstate.KongLastGoodConfigFetcher,
+	kongConfigFetcher configfetcher.LastValidConfigFetcher,
 	parser KongConfigBuilder,
 	cacheStores store.CacheStores,
 ) (*KongClient, error) {
@@ -396,8 +392,8 @@ func (c *KongClient) Update(ctx context.Context) error {
 		// Fetch the last valid configuration from the proxy only in case there is no valid
 		// configuration already stored in memory. This can happen when KIC restarts and there
 		// already is a Kong Proxy with a valid configuration loaded.
-		if c.lastValidKongState == nil {
-			if err := c.FetchLastGoodConfiguration(ctx); err != nil {
+		if _, found := c.kongConfigFetcher.LastValidConfig(); !found {
+			if err := c.kongConfigFetcher.TryFetchingValidConfigFromGateways(ctx, c.logger, c.clientsProvider.GatewayClients()); err != nil {
 				// If the client fails to fetch the last good configuration, we log it
 				// and carry on, as this is a condition that can be recovered with the following steps.
 				c.logger.WithError(err).Error("failed to fetch last good configuration from gateways")
@@ -433,8 +429,8 @@ func (c *KongClient) Update(ctx context.Context) error {
 
 	// In case of a failure in syncing configuration with Gateways, propagate the error.
 	if gatewaysSyncErr != nil {
-		if c.lastValidKongState != nil {
-			_, fallbackSyncErr := c.sendOutToGatewayClients(ctx, c.lastValidKongState, c.kongConfig)
+		if state, found := c.kongConfigFetcher.LastValidConfig(); found {
+			_, fallbackSyncErr := c.sendOutToGatewayClients(ctx, state, c.kongConfig)
 			if fallbackSyncErr != nil {
 				return errors.Join(gatewaysSyncErr, fallbackSyncErr)
 			}
@@ -457,35 +453,6 @@ func (c *KongClient) Update(ctx context.Context) error {
 	return nil
 }
 
-func (c *KongClient) FetchLastGoodConfiguration(ctx context.Context) error {
-	gatewayClients := c.clientsProvider.GatewayClients()
-	c.logger.Debugf("fetching last good configuration from %d gateway clients", len(gatewayClients))
-
-	var goodKongState *kongstate.KongState
-	var errs error
-	for _, client := range gatewayClients {
-		rs, err := c.kongConfigFetcher.GetKongRawState(ctx, client.AdminAPIClient())
-		if err != nil {
-			errs = errors.Join(errs, err)
-		}
-		ks := kongstate.KongRawStateToKongState(rs)
-		status, err := c.kongConfigFetcher.GetKongStatus(ctx, client.AdminAPIClient())
-		if err != nil {
-			errs = errors.Join(errs, err)
-		}
-		if status.ConfigurationHash != sendconfig.WellKnownInitialHash {
-			// Get the first good one as the one to be used.
-			goodKongState = ks
-			break
-		}
-	}
-	if goodKongState != nil {
-		c.lastValidKongState = goodKongState
-		c.logger.Debug("last good configuration fetched from a Kong node")
-	}
-	return errs
-}
-
 // sendOutToGatewayClients will generate deck content (config) from the provided kong state
 // and send it out to each of the configured gateway clients.
 func (c *KongClient) sendOutToGatewayClients(
@@ -504,7 +471,7 @@ func (c *KongClient) sendOutToGatewayClients(
 	sort.Strings(shas)
 	c.SHAs = shas
 
-	c.lastValidKongState = s
+	c.kongConfigFetcher.StoreLastValidConfig(s)
 
 	return previousSHAs, nil
 }

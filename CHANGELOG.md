@@ -119,7 +119,7 @@ Adding a new version? You'll need three changes:
   [#4265](https://github.com/Kong/kubernetes-ingress-controller/pull/4265)
 - Gateway Discovery feature was adapted to handle Gateways that are not ready yet
   in terms of accepting data-plane traffic, but are ready to accept configuration
-  updates. The controller will now send configuration to such Gateways and will 
+  updates. The controller will now send configuration to such Gateways and will
   actively monitor their readiness for accepting configuration updates.
   [#4368](https://github.com/Kong/kubernetes-ingress-controller/pull/4368
 

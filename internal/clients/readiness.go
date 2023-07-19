@@ -11,7 +11,7 @@ import (
 )
 
 const (
-	ReadinessCheckTimeout = time.Second
+	readinessCheckTimeout = time.Second
 )
 
 // ReadinessCheckResult represents the result of a readiness check.
@@ -95,7 +95,7 @@ func (c DefaultReadinessChecker) checkPendingClient(
 			Debugf("checking readiness of pending client for %q", pendingClient.Address)
 	}()
 
-	ctx, cancel := context.WithTimeout(ctx, ReadinessCheckTimeout)
+	ctx, cancel := context.WithTimeout(ctx, readinessCheckTimeout)
 	defer cancel()
 	client, err := c.factory.CreateAdminAPIClient(ctx, pendingClient)
 	if err != nil {
@@ -134,7 +134,7 @@ func (c DefaultReadinessChecker) checkAlreadyCreatedClient(ctx context.Context, 
 			Debugf("checking readiness of already created client for %q", client.BaseRootURL())
 	}()
 
-	ctx, cancel := context.WithTimeout(ctx, ReadinessCheckTimeout)
+	ctx, cancel := context.WithTimeout(ctx, readinessCheckTimeout)
 	defer cancel()
 	if err := client.IsReady(ctx); err != nil {
 		// Despite the error reason we still want to keep the client in the pending list to retry later.

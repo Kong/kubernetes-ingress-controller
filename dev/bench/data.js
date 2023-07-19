@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1689773150527,
+  "lastUpdate": 1689776043267,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -24336,6 +24336,48 @@ window.BENCHMARK_DATA = {
             "value": 12,
             "unit": "allocs/op",
             "extra": "16653 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "49699333+dependabot[bot]@users.noreply.github.com",
+            "name": "dependabot[bot]",
+            "username": "dependabot[bot]"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "bb17b6f0bf8b8187ccaa80fb475f9be75a2da7c6",
+          "message": "chore(deps): bump cloud.google.com/go/container from 1.23.0 to 1.24.0\n\nBumps [cloud.google.com/go/container](https://github.com/googleapis/google-cloud-go) from 1.23.0 to 1.24.0.\n- [Release notes](https://github.com/googleapis/google-cloud-go/releases)\n- [Changelog](https://github.com/googleapis/google-cloud-go/blob/main/CHANGES.md)\n- [Commits](https://github.com/googleapis/google-cloud-go/compare/pubsub/v1.23.0...pubsub/v1.24.0)\n\n---\nupdated-dependencies:\n- dependency-name: cloud.google.com/go/container\n  dependency-type: direct:production\n  update-type: version-update:semver-minor\n...\n\nSigned-off-by: dependabot[bot] <support@github.com>",
+          "timestamp": "2023-07-19T14:10:50Z",
+          "tree_id": "275bd97ff9d894ca1c927bc72ef1c92d51349899",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/bb17b6f0bf8b8187ccaa80fb475f9be75a2da7c6"
+        },
+        "date": 1689776038237,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - ns/op",
+            "value": 69646,
+            "unit": "ns/op",
+            "extra": "18909 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - B/op",
+            "value": 11095,
+            "unit": "B/op",
+            "extra": "18909 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - allocs/op",
+            "value": 12,
+            "unit": "allocs/op",
+            "extra": "18909 times\n2 procs"
           }
         ]
       }

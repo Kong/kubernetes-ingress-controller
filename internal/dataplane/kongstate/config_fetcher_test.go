@@ -71,6 +71,87 @@ func TestKongRawStateToKongState(t *testing.T) {
 						},
 					},
 				},
+				Certificates: []*kong.Certificate{
+					{
+						ID:   kong.String("certificate"),
+						Cert: kong.String("cert"),
+					},
+				},
+				CACertificates: []*kong.CACertificate{
+					{
+						ID:   kong.String("CACertificate"),
+						Cert: kong.String("cert"),
+					},
+				},
+				Consumers: []*kong.Consumer{
+					{
+						ID:       kong.String("consumer"),
+						CustomID: kong.String("customID"),
+					},
+				},
+				KeyAuths: []*kong.KeyAuth{
+					{
+						ID:  kong.String("keyAuth"),
+						Key: kong.String("key"),
+						Consumer: &kong.Consumer{
+							ID: kong.String("consumer"),
+						},
+					},
+				},
+				HMACAuths: []*kong.HMACAuth{
+					{
+						ID: kong.String("hmacAuth"),
+						Consumer: &kong.Consumer{
+							ID: kong.String("consumer"),
+						},
+						Username: kong.String("username"),
+					},
+				},
+				JWTAuths: []*kong.JWTAuth{
+					{
+						ID: kong.String("jwtAuth"),
+						Consumer: &kong.Consumer{
+							ID: kong.String("consumer"),
+						},
+						Key: kong.String("key"),
+					},
+				},
+				BasicAuths: []*kong.BasicAuth{
+					{
+						ID: kong.String("basicAuth"),
+						Consumer: &kong.Consumer{
+							ID: kong.String("consumer"),
+						},
+						Username: kong.String("username"),
+					},
+				},
+				ACLGroups: []*kong.ACLGroup{
+					{
+						ID: kong.String("basicAuth"),
+						Consumer: &kong.Consumer{
+							ID: kong.String("consumer"),
+						},
+						Group: kong.String("group"),
+					},
+				},
+				Oauth2Creds: []*kong.Oauth2Credential{
+					{
+						ID: kong.String("basicAuth"),
+						Consumer: &kong.Consumer{
+							ID: kong.String("consumer"),
+						},
+						Name: kong.String("name"),
+					},
+				},
+				MTLSAuths: []*kong.MTLSAuth{
+					{
+						ID: kong.String("basicAuth"),
+						Consumer: &kong.Consumer{
+							ID: kong.String("consumer"),
+						},
+						SubjectName: kong.String("subjectName"),
+					},
+				},
 			},
 			expectedKongState: &kongstate.KongState{
 				Services: []kongstate.Service{
@@ -111,10 +192,79 @@ func TestKongRawStateToKongState(t *testing.T) {
 						},
 					},
 				},
+				Certificates: []kongstate.Certificate{
+					{
+						Certificate: kong.Certificate{
+							Cert: kong.String("cert"),
+						},
+					},
+				},
+				CACertificates: []kong.CACertificate{
+					{
+						Cert: kong.String("cert"),
+					},
+				},
+				Consumers: []kongstate.Consumer{
+					{
+						Consumer: kong.Consumer{
+							CustomID: kong.String("customID"),
+						},
+						KeyAuths: []*kongstate.KeyAuth{
+							{
+								KeyAuth: kong.KeyAuth{
+									Key: kong.String("key"),
+								},
+							},
+						},
+						HMACAuths: []*kongstate.HMACAuth{
+							{
+								HMACAuth: kong.HMACAuth{
+									Username: kong.String("username"),
+								},
+							},
+						},
+						JWTAuths: []*kongstate.JWTAuth{
+							{
+								JWTAuth: kong.JWTAuth{
+									Key: kong.String("key"),
+								},
+							},
+						},
+						BasicAuths: []*kongstate.BasicAuth{
+							{
+								BasicAuth: kong.BasicAuth{
+									Username: kong.String("username"),
+								},
+							},
+						},
+						ACLGroups: []*kongstate.ACLGroup{
+							{
+								ACLGroup: kong.ACLGroup{
+									Group: kong.String("group"),
+								},
+							},
+						},
+						Oauth2Creds: []*kongstate.Oauth2Credential{
+							{
+								Oauth2Credential: kong.Oauth2Credential{
+									Name: kong.String("name"),
+								},
+							},
+						},
+						MTLSAuths: []*kongstate.MTLSAuth{
+							{
+								MTLSAuth: kong.MTLSAuth{
+									SubjectName: kong.String("subjectName"),
+								},
+							},
+						},
+					},
+				},
 			},
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
+			tt := tt
 			state := kongstate.KongRawStateToKongState(&tt.kongRawState)
 			require.Equal(t, tt.expectedKongState, state)
 		})
@@ -124,7 +274,12 @@ func TestKongRawStateToKongState(t *testing.T) {
 func TestKongStateToKongRawState_Ensure(t *testing.T) {
 	kongRawStateFieldsKICDoesntSupport := []string{
 		// These are fields that KIC explicitly doesn't support.
-		"Vault",
+		"SNIs",
+		"ConsumerGroups",
+		"CustomEntities",
+		"Vaults",
+		"RBACRoles",
+		"RBACEndpointPermissions",
 	}
 	allKongRawStateFields := func() []string {
 		var fields []string
@@ -135,37 +290,30 @@ func TestKongStateToKongRawState_Ensure(t *testing.T) {
 		return fields
 	}()
 
-	testCases := []struct {
-		testedFields []string
-	}{
-		{
-			testedFields: []string{
-				"Services",
-				"Routes",
-				"Upstreams",
-				"Targets",
-				"Plugins",
-				"Certificates",
-				"CACertificates",
-			},
-		},
+	testedFields := []string{
+		"Services",
+		"Routes",
+		"Upstreams",
+		"Targets",
+		"Plugins",
+		"Certificates",
+		"CACertificates",
+		"Consumers",
+		"KeyAuths",
+		"HMACAuths",
+		"JWTAuths",
+		"BasicAuths",
+		"ACLGroups",
+		"Oauth2Creds",
+		"MTLSAuths",
 	}
 
-	// Kinda meta test - ensure we have testcases covering all fields in KongRawState.
+	// Meta test - ensure we have testcases covering all fields in KongRawState.
 	for _, field := range allKongRawStateFields {
 		if lo.Contains(kongRawStateFieldsKICDoesntSupport, field) {
-			t.Logf("skipping field %s - unsupported explicitly", field)
+			t.Logf("skipping field %s - explicitly unsupported", field)
 			continue
 		}
-		testCoveringFieldExists := lo.ContainsBy(testCases, func(tc struct{ testedFields []string }) bool {
-			return lo.Contains(tc.testedFields, field)
-		})
-		assert.True(t, testCoveringFieldExists, "no test covering field %s", field)
-	}
-
-	// Run the tests.
-	for _, tc := range testCases {
-		// ...
-		_ = tc
+		assert.True(t, lo.Contains(testedFields, field), "field %s unsupported", field)
 	}
 }

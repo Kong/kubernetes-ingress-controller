@@ -73,7 +73,9 @@ func KongRawStateToKongState(rawstate *utils.KongRawState) *KongState {
 				Route:   sanitizeKongRoute(*r),
 				Plugins: []kong.Plugin{},
 			})
-			kongState.Services[i].Routes[j].Plugins = rawPluginsToPlugins(pluginsByRoute[*r.ID])
+			if r.ID != nil {
+				kongState.Services[i].Routes[j].Plugins = rawPluginsToPlugins(pluginsByRoute[*r.ID])
+			}
 		}
 		kongState.Services[i].Plugins = rawPluginsToPlugins(pluginsByService[*s.ID])
 	}
@@ -91,8 +93,102 @@ func KongRawStateToKongState(rawstate *utils.KongRawState) *KongState {
 	kongState.CACertificates = rawCACertificatesToCACertificates(rawstate.CACertificates)
 	kongState.Certificates = rawCertificatesToCertificates(rawstate.Certificates)
 
+	for i, consumer := range rawstate.Consumers {
+		kongState.Consumers = append(kongState.Consumers, Consumer{
+			Consumer: sanitizeConsumer(*consumer),
+		})
+		for _, keyAuth := range rawstate.KeyAuths {
+			if keyAuth.Consumer != nil {
+				if *keyAuth.Consumer.ID == *consumer.ID {
+					sanitizeAuth(keyAuth)
+					kongState.Consumers[i].KeyAuths = append(kongState.Consumers[i].KeyAuths,
+						&KeyAuth{
+							KeyAuth: *keyAuth,
+						},
+					)
+				}
+			}
+		}
+		for _, hmacAuth := range rawstate.HMACAuths {
+			if hmacAuth.Consumer != nil {
+				if *hmacAuth.Consumer.ID == *consumer.ID {
+					sanitizeAuth(hmacAuth)
+					kongState.Consumers[i].HMACAuths = append(kongState.Consumers[i].HMACAuths,
+						&HMACAuth{
+							HMACAuth: *hmacAuth,
+						},
+					)
+				}
+			}
+		}
+		for _, jwtAuth := range rawstate.JWTAuths {
+			if jwtAuth.Consumer != nil {
+				if *jwtAuth.Consumer.ID == *consumer.ID {
+					sanitizeAuth(jwtAuth)
+					kongState.Consumers[i].JWTAuths = append(kongState.Consumers[i].JWTAuths,
+						&JWTAuth{
+							JWTAuth: *jwtAuth,
+						},
+					)
+				}
+			}
+		}
+		for _, basicAuth := range rawstate.BasicAuths {
+			if basicAuth.Consumer != nil {
+				if *basicAuth.Consumer.ID == *consumer.ID {
+					sanitizeAuth(basicAuth)
+					kongState.Consumers[i].BasicAuths = append(kongState.Consumers[i].BasicAuths,
+						&BasicAuth{
+							BasicAuth: *basicAuth,
+						},
+					)
+				}
+			}
+		}
+		for _, aclGroup := range rawstate.ACLGroups {
+			if aclGroup.Consumer != nil {
+				if *aclGroup.Consumer.ID == *consumer.ID {
+					sanitizeAuth(aclGroup)
+					kongState.Consumers[i].ACLGroups = append(kongState.Consumers[i].ACLGroups,
+						&ACLGroup{
+							ACLGroup: *aclGroup,
+						},
+					)
+				}
+			}
+		}
+		for _, oauth2Cred := range rawstate.Oauth2Creds {
+			if oauth2Cred.Consumer != nil {
+				if *oauth2Cred.Consumer.ID == *consumer.ID {
+					sanitizeAuth(oauth2Cred)
+					kongState.Consumers[i].Oauth2Creds = append(kongState.Consumers[i].Oauth2Creds,
+						&Oauth2Credential{
+							Oauth2Credential: *oauth2Cred,
+						},
+					)
+				}
+			}
+		}
+		for _, mTLSAuth := range rawstate.MTLSAuths {
+			if mTLSAuth.Consumer != nil {
+				if *mTLSAuth.Consumer.ID == *consumer.ID {
+					sanitizeAuth(mTLSAuth)
+					kongState.Consumers[i].MTLSAuths = append(kongState.Consumers[i].MTLSAuths,
+						&MTLSAuth{
+							MTLSAuth: *mTLSAuth,
+						},
+					)
+				}
+			}
+		}
+	}
+
 	return kongState
 }
+
+// -----------------------------------------------------------------------------
+// KongRawState to KongState conversion functions
+// -----------------------------------------------------------------------------
 
 func rawPluginsToPlugins(plugins []*kong.Plugin) []kong.Plugin {
 	if len(plugins) == 0 {
@@ -126,7 +222,7 @@ func rawCertificatesToCertificates(certificates []*kong.Certificate) []Certifica
 
 	for _, c := range certificates {
 		certs = append(certs, Certificate{
-			Certificate: *c,
+			Certificate: sanitizeCertificate(*c),
 		})
 	}
 	return certs
@@ -139,14 +235,18 @@ func rawCACertificatesToCACertificates(caCertificates []*kong.CACertificate) []k
 	certs := []kong.CACertificate{}
 
 	for _, c := range caCertificates {
-		certs = append(certs, *c)
+		certs = append(certs, sanitizeCACertificate(*c))
 	}
 	return certs
 }
 
+// -----------------------------------------------------------------------------
+// Sanitization functions
+// -----------------------------------------------------------------------------
+
 func sanitizeKongService(service kong.Service) kong.Service {
-	service.CreatedAt = nil
 	service.ID = nil
+	service.CreatedAt = nil
 	service.UpdatedAt = nil
 	return service
 }
@@ -176,4 +276,69 @@ func sanitizePlugin(plugin kong.Plugin) kong.Plugin {
 	plugin.Service = nil
 	plugin.Route = nil
 	return plugin
+}
+
+func sanitizeCertificate(certificate kong.Certificate) kong.Certificate {
+	certificate.ID = nil
+	certificate.CreatedAt = nil
+	return certificate
+}
+
+func sanitizeCACertificate(caCertificate kong.CACertificate) kong.CACertificate {
+	caCertificate.ID = nil
+	caCertificate.CreatedAt = nil
+	return caCertificate
+}
+
+func sanitizeConsumer(consumer kong.Consumer) kong.Consumer {
+	consumer.ID = nil
+	consumer.CreatedAt = nil
+	return consumer
+}
+
+type authT interface {
+	*kong.KeyAuth |
+		*kong.HMACAuth |
+		*kong.JWTAuth |
+		*kong.BasicAuth |
+		*kong.ACLGroup |
+		*kong.Oauth2Credential |
+		*kong.MTLSAuth
+}
+
+func sanitizeAuth[t authT](auth t) {
+	switch a := (interface{})(auth).(type) {
+	case *kong.KeyAuth:
+		a.ID = nil
+		a.CreatedAt = nil
+		a.Consumer = nil
+	case *kong.HMACAuth:
+		a.ID = nil
+		a.CreatedAt = nil
+		a.Consumer = nil
+	case *kong.JWTAuth:
+		a.ID = nil
+		a.CreatedAt = nil
+		a.Consumer = nil
+	case *kong.BasicAuth:
+		a.ID = nil
+		a.CreatedAt = nil
+		a.Consumer = nil
+	case *kong.ACLGroup:
+		a.ID = nil
+		a.CreatedAt = nil
+		a.Consumer = nil
+	case *kong.Oauth2Credential:
+		a.ID = nil
+		a.CreatedAt = nil
+		a.Consumer = nil
+	case *kong.MTLSAuth:
+		a.ID = nil
+		a.CreatedAt = nil
+		a.Consumer = nil
+		if a.CACertificate != nil {
+			a.CACertificate.ID = nil
+			a.CACertificate.CreatedAt = nil
+		}
+	}
 }

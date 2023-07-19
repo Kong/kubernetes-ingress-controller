@@ -251,7 +251,7 @@ func (m *mockUpdateStrategy) Type() string {
 	return "Mock"
 }
 
-// mockConfigurationChangeDetector is a mock implementation of sendconfig.ConfigurationGetter.
+// mockConfigurationChangeDetector is a mock implementation of sendconfig.ConfigurationChangeDetector.
 type mockConfigurationChangeDetector struct {
 	hasConfigurationChanged bool
 	status                  kong.Status

@@ -9,12 +9,16 @@ import (
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"k8s.io/apimachinery/pkg/util/sets"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/configfetcher"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
 )
 
 func TestKongRawStateToKongState(t *testing.T) {
+	// This is to gather all the fields in KongRawState that are tested in this suite.
+	testedKongRawStateFields := sets.New[string]()
+
 	for _, tt := range []struct {
 		name              string
 		kongRawState      utils.KongRawState
@@ -266,13 +270,37 @@ func TestKongRawStateToKongState(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			tt := tt
+
+			// Collect all fields that are tested in this test case.
+			testedKongRawStateFields.Insert(extractNotEmptyFieldNames(tt.kongRawState)...)
+
 			state := configfetcher.KongRawStateToKongState(&tt.kongRawState)
 			require.Equal(t, tt.expectedKongState, state)
 		})
 	}
+
+	ensureAllKongRawStateFieldsAreTested(t, testedKongRawStateFields.UnsortedList())
 }
 
-func TestKongStateToKongRawState_Ensure(t *testing.T) {
+// extractNotEmptyFieldNames returns the names of all non-empty fields in the given KongRawState.
+// This is to programmatically find out what fields are used in a test case.
+func extractNotEmptyFieldNames(s utils.KongRawState) []string {
+	var fields []string
+	typ := reflect.ValueOf(s).Type()
+	for i := 0; i < typ.NumField(); i++ {
+		f := typ.Field(i)
+		v := reflect.ValueOf(s).Field(i)
+		if !f.Anonymous && f.IsExported() && !v.IsZero() {
+			fields = append(fields, f.Name)
+		}
+	}
+	return fields
+}
+
+// ensureAllKongRawStateFieldsAreTested verifies that all fields in KongRawState are tested.
+// It uses the testedFields slice to determine what fields were actually tested and compares
+// it to the list of all fields in KongRawState, excluding fields that KIC doesn't support.
+func ensureAllKongRawStateFieldsAreTested(t *testing.T, testedFields []string) {
 	kongRawStateFieldsKICDoesntSupport := []string{
 		// These are fields that KIC explicitly doesn't support.
 		"SNIs",
@@ -291,30 +319,12 @@ func TestKongStateToKongRawState_Ensure(t *testing.T) {
 		return fields
 	}()
 
-	testedFields := []string{
-		"Services",
-		"Routes",
-		"Upstreams",
-		"Targets",
-		"Plugins",
-		"Certificates",
-		"CACertificates",
-		"Consumers",
-		"KeyAuths",
-		"HMACAuths",
-		"JWTAuths",
-		"BasicAuths",
-		"ACLGroups",
-		"Oauth2Creds",
-		"MTLSAuths",
-	}
-
 	// Meta test - ensure we have testcases covering all fields in KongRawState.
 	for _, field := range allKongRawStateFields {
 		if lo.Contains(kongRawStateFieldsKICDoesntSupport, field) {
 			t.Logf("skipping field %s - explicitly unsupported", field)
 			continue
 		}
-		assert.True(t, lo.Contains(testedFields, field), "field %s unsupported", field)
+		assert.True(t, lo.Contains(testedFields, field), "field %s not tested", field)
 	}
 }

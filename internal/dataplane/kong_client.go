@@ -33,6 +33,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/metrics"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
+	dataplaneutil "github.com/kong/kubernetes-ingress-controller/v2/internal/util/dataplane"
 	k8sobj "github.com/kong/kubernetes-ingress-controller/v2/internal/util/kubernetes/object"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util/kubernetes/object/status"
 )
@@ -391,7 +392,7 @@ func (c *KongClient) Update(ctx context.Context) error {
 	defer c.lock.Unlock()
 
 	// If Kong is running in dbless mode, we can fetch and store the last good configuration.
-	if c.dbmode == "" || c.dbmode == "off" {
+	if dataplaneutil.IsDBLessMode(c.dbmode) {
 		// Fetch the last valid configuration from the proxy only in case there is no valid
 		// configuration already stored in memory. This can happen when KIC restarts and there
 		// already is a Kong Proxy with a valid configuration loaded.

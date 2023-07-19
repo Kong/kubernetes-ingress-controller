@@ -10,6 +10,8 @@ import (
 	"github.com/bombsimon/logrusr/v2"
 	"github.com/go-logr/logr"
 	"github.com/sirupsen/logrus"
+
+	dataplaneutil "github.com/kong/kubernetes-ingress-controller/v2/internal/util/dataplane"
 )
 
 // -----------------------------------------------------------------------------
@@ -140,7 +142,7 @@ func (p *Synchronizer) IsReady() bool {
 	defer p.lock.RUnlock()
 	// If the proxy is has no database, it is only ready after a successful sync
 	// Otherwise, it has no configuration loaded
-	if p.dbMode == "off" {
+	if dataplaneutil.IsDBLessMode(p.dbMode) {
 		return p.configApplied
 	}
 	// If the proxy has a database, it is ready immediately

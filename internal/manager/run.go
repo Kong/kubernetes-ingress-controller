@@ -35,6 +35,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/manager/utils/kongconfig"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
+	dataplaneutil "github.com/kong/kubernetes-ingress-controller/v2/internal/util/dataplane"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util/kubernetes/object/status"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/versions"
 )
@@ -109,7 +110,7 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 
 	kongConfig := sendconfig.Config{
 		Version:               kongSemVersion,
-		InMemory:              (dbMode == "off") || (dbMode == ""),
+		InMemory:              dataplaneutil.IsDBLessMode(dbMode),
 		Concurrency:           c.Concurrency,
 		FilterTags:            c.FilterTags,
 		SkipCACertificates:    c.SkipCACertificates,

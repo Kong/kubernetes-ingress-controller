@@ -2,11 +2,16 @@ package clients
 
 import (
 	"context"
+	"time"
 
 	"github.com/sirupsen/logrus"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/adminapi"
+)
+
+const (
+	ReadinessCheckTimeout = time.Second
 )
 
 // ReadinessCheckResult represents the result of a readiness check.
@@ -71,29 +76,43 @@ func (c DefaultReadinessChecker) CheckReadiness(
 // checkPendingGatewayClients checks if the pending clients are ready to be used and returns the ones that are.
 func (c DefaultReadinessChecker) checkPendingGatewayClients(ctx context.Context, lastPending []adminapi.DiscoveredAdminAPI) (turnedReady []*adminapi.Client) {
 	for _, adminAPI := range lastPending {
-		// We indirectly check readiness of the client by trying to create it. If it succeeds then it means that
-		// the client is ready to be used.
-		client, err := c.factory.CreateAdminAPIClient(ctx, adminAPI)
-		if err != nil {
-			// Despite the error reason we still want to keep the client in the pending list to retry later.
-			c.logger.WithError(err).Debugf("pending client for %q is not ready yet", adminAPI.Address)
-			continue
+		if client := c.checkPendingClient(ctx, adminAPI); client != nil {
+			turnedReady = append(turnedReady, client)
 		}
-
-		turnedReady = append(turnedReady, client)
 	}
 	return turnedReady
 }
 
+// checkPendingClient indirectly check readiness of the client by trying to create it. If it succeeds then it
+// means that the client is ready to be used. It returns a non-nil client if the client is ready to be used, otherwise
+// nil is returned.
+func (c DefaultReadinessChecker) checkPendingClient(
+	ctx context.Context,
+	pendingClient adminapi.DiscoveredAdminAPI,
+) (client *adminapi.Client) {
+	defer func() {
+		c.logger.WithField("ok", client != nil).
+			Debugf("checking readiness of pending client for %q", pendingClient.Address)
+	}()
+
+	ctx, cancel := context.WithTimeout(ctx, ReadinessCheckTimeout)
+	defer cancel()
+	client, err := c.factory.CreateAdminAPIClient(ctx, pendingClient)
+	if err != nil {
+		// Despite the error reason we still want to keep the client in the pending list to retry later.
+		c.logger.WithError(err).Debugf("pending client for %q is not ready yet", pendingClient.Address)
+		return nil
+	}
+
+	return client
+}
+
 // checkAlreadyExistingClients checks if the already existing clients are still ready to be used and returns the ones
 // that are not.
-func (c DefaultReadinessChecker) checkAlreadyExistingClients(ctx context.Context, lastActive []AlreadyCreatedClient) (turnedPending []adminapi.DiscoveredAdminAPI) {
-	for _, client := range lastActive {
+func (c DefaultReadinessChecker) checkAlreadyExistingClients(ctx context.Context, alreadyCreatedClients []AlreadyCreatedClient) (turnedPending []adminapi.DiscoveredAdminAPI) {
+	for _, client := range alreadyCreatedClients {
 		// For ready clients we check readiness by calling the Status endpoint.
-		if err := client.IsReady(ctx); err != nil {
-			// Despite the error reason we still want to keep the client in the pending list to retry later.
-			c.logger.WithError(err).Debugf("active client for %q is not ready, moving to pending", client.BaseRootURL())
-
+		if ready := c.checkAlreadyCreatedClient(ctx, client); !ready {
 			podRef, ok := client.PodReference()
 			if !ok {
 				// This should never happen, but if it does, we want to log it.
@@ -107,4 +126,21 @@ func (c DefaultReadinessChecker) checkAlreadyExistingClients(ctx context.Context
 		}
 	}
 	return turnedPending
+}
+
+func (c DefaultReadinessChecker) checkAlreadyCreatedClient(ctx context.Context, client AlreadyCreatedClient) (ready bool) {
+	defer func() {
+		c.logger.WithField("ok", ready).
+			Debugf("checking readiness of already created client for %q", client.BaseRootURL())
+	}()
+
+	ctx, cancel := context.WithTimeout(ctx, ReadinessCheckTimeout)
+	defer cancel()
+	if err := client.IsReady(ctx); err != nil {
+		// Despite the error reason we still want to keep the client in the pending list to retry later.
+		c.logger.WithError(err).Debugf("already created client for %q is not ready, moving to pending", client.BaseRootURL())
+		return false
+	}
+
+	return true
 }

@@ -3,10 +3,10 @@ package parser
 import (
 	"fmt"
 
+	"github.com/bombsimon/logrusr/v2"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
-	"github.com/bombsimon/logrusr/v2"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/parser/translators"
 )
@@ -93,6 +93,9 @@ func (p *Parser) ingressRulesFromGRPCRoute(result *ingressRules, grpcroute *gate
 func (p *Parser) ingressRulesFromGRPCRoutesUsingExpressionRoutes(grpcRoutes []*gatewayv1alpha2.GRPCRoute, result *ingressRules) {
 	// first, split GRPCRoutes by hostname and match.
 	splitGRPCRoutes := []*gatewayv1alpha2.GRPCRoute{}
+	// record GRPCRoutes passing the validation and get translated.
+	// after they are translated, register the success event in the parser.
+	translatedGRPCRoutes := []*gatewayv1alpha2.GRPCRoute{}
 	for _, grpcRoute := range grpcRoutes {
 		if len(grpcRoute.Spec.Rules) == 0 {
 			p.registerTranslationFailure(
@@ -102,6 +105,7 @@ func (p *Parser) ingressRulesFromGRPCRoutesUsingExpressionRoutes(grpcRoutes []*g
 			continue
 		}
 		splitGRPCRoutes = append(splitGRPCRoutes, translators.SplitGRPCRoute(grpcRoute)...)
+		translatedGRPCRoutes = append(translatedGRPCRoutes, grpcRoute)
 	}
 
 	// assign priorities to split GRPCRoutes.
@@ -109,6 +113,11 @@ func (p *Parser) ingressRulesFromGRPCRoutesUsingExpressionRoutes(grpcRoutes []*g
 	// generate Kong service and route from each split GRPC route with its assigned priority of Kong route.
 	for _, splitGRPCRouteWithPriority := range splitGRPCRoutesWithPriorities {
 		p.ingressRulesFromGRPCRouteWithPriority(result, splitGRPCRouteWithPriority)
+	}
+
+	// register successful parses of GRPCRoutes.
+	for _, grpcRoute := range translatedGRPCRoutes {
+		p.registerSuccessfullyParsedObject(grpcRoute)
 	}
 }
 

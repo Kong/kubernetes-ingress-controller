@@ -308,6 +308,7 @@ func (t GRPCRoutePriorityTraits) EncodeToPriority() int {
 	)
 
 	var priority int
+	priority += ResourceKindBitsGRPCRoute << FromResourceKindPriorityShiftBits
 	if t.PreciseHostname {
 		priority += (1 << PreciseHostnameShiftBits)
 	}
@@ -448,7 +449,7 @@ func GenerateKongExpressionRouteFromSplitGRPCRouteWithPriority(
 		hostnameInRouteName = string(grpcRoute.Spec.Hostnames[0])
 		hostnameInRouteName = strings.ReplaceAll(hostnameInRouteName, "*", "_")
 	}
-	routeName := fmt.Sprintf("httproute.%s.%s.%s.%s.%s",
+	routeName := fmt.Sprintf("grpcroute.%s.%s.%s.%s.%s",
 		grpcRoute.Namespace,
 		grpcRoute.Name,
 		hostnameInRouteName,

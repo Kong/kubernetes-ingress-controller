@@ -28,6 +28,10 @@ type FakeConfigurationV1beta1 struct {
 	*testing.Fake
 }
 
+func (c *FakeConfigurationV1beta1) KongConsumerGroups(namespace string) v1beta1.KongConsumerGroupInterface {
+	return &FakeKongConsumerGroups{c, namespace}
+}
+
 func (c *FakeConfigurationV1beta1) TCPIngresses(namespace string) v1beta1.TCPIngressInterface {
 	return &FakeTCPIngresses{c, namespace}
 }

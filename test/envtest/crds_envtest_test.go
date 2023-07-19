@@ -68,6 +68,11 @@ func TestMissingCRDsDontCrashTheManager(t *testing.T) {
 				Resource: "kongconsumers",
 			},
 			{
+				Group:    kongv1beta1.GroupVersion.Group,
+				Version:  kongv1beta1.GroupVersion.Version,
+				Resource: "kongconsumergroups",
+			},
+			{
 				Group:    kongv1.GroupVersion.Group,
 				Version:  kongv1.GroupVersion.Version,
 				Resource: "kongclusterplugins",

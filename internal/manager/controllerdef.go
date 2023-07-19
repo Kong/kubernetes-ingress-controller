@@ -272,6 +272,26 @@ func setupControllers(
 			},
 		},
 		{
+			Enabled: c.KongConsumerEnabled && ShouldEnableCRDController(
+				schema.GroupVersionResource{
+					Group:    konghqcomv1beta1.GroupVersion.Group,
+					Version:  konghqcomv1beta1.GroupVersion.Version,
+					Resource: "kongconsumergroups",
+				},
+				restMapper,
+			),
+			Controller: &configuration.KongV1Beta1KongConsumerGroupReconciler{
+				Client:                     mgr.GetClient(),
+				Log:                        ctrl.Log.WithName("controllers").WithName("KongConsumerGroup"),
+				Scheme:                     mgr.GetScheme(),
+				DataplaneClient:            dataplaneClient,
+				IngressClassName:           c.IngressClassName,
+				DisableIngressClassLookups: !c.IngressClassNetV1Enabled,
+				CacheSyncTimeout:           c.CacheSyncTimeout,
+				ReferenceIndexers:          referenceIndexers,
+			},
+		},
+		{
 			Enabled: c.KongClusterPluginEnabled && ShouldEnableCRDController(
 				schema.GroupVersionResource{
 					Group:    konghqcomv1.GroupVersion.Group,

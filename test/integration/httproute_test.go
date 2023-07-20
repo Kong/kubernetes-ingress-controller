@@ -11,8 +11,10 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/kong/go-kong/kong"
+	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	ktfkong "github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/kong"
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
+	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
@@ -511,6 +513,201 @@ func TestHTTPRouteMultipleServices(t *testing.T) {
 
 	t.Log("verifying that misconfigured service rules are _not_ routed")
 	helpers.EventuallyGETPath(t, proxyURL, "test-http-route-multiple-services-broken", http.StatusNotFound, "", emptyHeaderSet, ingressWait, waitTick)
+}
+
+func TestHTTPRouteMultipleServicesBroken(t *testing.T) {
+	ctx := context.Background()
+
+	ns, cleaner := helpers.Setup(ctx, t, env)
+
+	otherNs, err := clusters.GenerateNamespace(ctx, env.Cluster(), t.Name())
+	require.NoError(t, err)
+	cleaner.AddNamespace(otherNs)
+
+	t.Log("getting a gateway client")
+	gatewayClient, err := gatewayclient.NewForConfig(env.Cluster().Config())
+	require.NoError(t, err)
+
+	t.Log("deploying a new gatewayClass")
+	gatewayClassName := uuid.NewString()
+	gwc, err := DeployGatewayClass(ctx, gatewayClient, gatewayClassName)
+	require.NoError(t, err)
+	cleaner.Add(gwc)
+
+	t.Log("deploying a new gateway")
+	gatewayName := uuid.NewString()
+	gateway, err := DeployGateway(ctx, gatewayClient, ns.Name, gatewayClassName, func(gw *gatewayv1beta1.Gateway) {
+		gw.Name = gatewayName
+	})
+	require.NoError(t, err)
+	cleaner.Add(gateway)
+
+	t.Log("creating a go-echo pod")
+	container1 := generators.NewContainer("echo-1", test.EchoImage, 1027)
+	testUUID1 := uuid.NewString()
+	container1.Env = []corev1.EnvVar{
+		{
+			Name:  "POD_NAME",
+			Value: testUUID1,
+		},
+	}
+	deployment1 := generators.NewDeploymentForContainer(container1)
+	deployment1, err = env.Cluster().Client().AppsV1().Deployments(ns.Name).Create(ctx, deployment1, metav1.CreateOptions{})
+	require.NoError(t, err)
+	cleaner.Add(deployment1)
+
+	t.Log("creating an additional go-echo pod")
+	container2 := generators.NewContainer("echo-2", test.EchoImage, 1027)
+	testUUID2 := uuid.NewString()
+	container2.Env = []corev1.EnvVar{
+		{
+			Name:  "POD_NAME",
+			Value: testUUID2,
+		},
+	}
+	deployment2 := generators.NewDeploymentForContainer(container2)
+	deployment2, err = env.Cluster().Client().AppsV1().Deployments(otherNs.Name).Create(ctx, deployment2, metav1.CreateOptions{})
+	require.NoError(t, err)
+	cleaner.Add(deployment2)
+
+	t.Logf("exposing deployment %s/%s via service", deployment1.Namespace, deployment1.Name)
+	service1 := generators.NewServiceForDeployment(deployment1, corev1.ServiceTypeLoadBalancer)
+	service1, err = env.Cluster().Client().CoreV1().Services(ns.Name).Create(ctx, service1, metav1.CreateOptions{})
+	assert.NoError(t, err)
+	cleaner.Add(service1)
+
+	t.Logf("exposing deployment %s/%s via service", deployment2.Namespace, deployment2.Name)
+	service2 := generators.NewServiceForDeployment(deployment2, corev1.ServiceTypeLoadBalancer)
+	// we want identical names to test https://github.com/Kong/kubernetes-ingress-controller/issues/3860
+	service2.Name = service1.Name
+	service2, err = env.Cluster().Client().CoreV1().Services(otherNs.Name).Create(ctx, service2, metav1.CreateOptions{})
+	assert.NoError(t, err)
+	cleaner.Add(service2)
+
+	t.Log("adding an HTTPRoute with multi-backend rules")
+	var weight1 int32 = 75
+	var weight2 int32 = 25
+	httpPort := gatewayv1beta1.PortNumber(1027)
+	pathMatchPrefix := gatewayv1beta1.PathMatchPathPrefix
+	httpRoute := &gatewayv1beta1.HTTPRoute{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: uuid.NewString(),
+			Annotations: map[string]string{
+				annotations.AnnotationPrefix + annotations.StripPathKey: "true",
+			},
+		},
+		Spec: gatewayv1beta1.HTTPRouteSpec{
+			CommonRouteSpec: gatewayv1beta1.CommonRouteSpec{
+				ParentRefs: []gatewayv1beta1.ParentReference{{
+					Name: gatewayv1beta1.ObjectName(gateway.Name),
+				}},
+			},
+			Rules: []gatewayv1beta1.HTTPRouteRule{
+				{
+					Matches: []gatewayv1beta1.HTTPRouteMatch{
+						{
+							Path: &gatewayv1beta1.HTTPPathMatch{
+								Type: &pathMatchPrefix,
+								// TODO make this a better name
+								Value: kong.String("/test-1"),
+							},
+						},
+					},
+					BackendRefs: []gatewayv1beta1.HTTPBackendRef{
+						{
+							BackendRef: gatewayv1beta1.BackendRef{
+								BackendObjectReference: gatewayv1beta1.BackendObjectReference{
+									Name: gatewayv1beta1.ObjectName(service1.Name),
+									Port: &httpPort,
+									Kind: util.StringToGatewayAPIKindPtr("Service"),
+								},
+								Weight: &weight1,
+							},
+						},
+						{
+							BackendRef: gatewayv1beta1.BackendRef{
+								BackendObjectReference: gatewayv1beta1.BackendObjectReference{
+									Name:      gatewayv1beta1.ObjectName(service2.Name),
+									Port:      &httpPort,
+									Namespace: lo.ToPtr(gatewayv1beta1.Namespace(otherNs.Name)),
+									Kind:      util.StringToGatewayAPIKindPtr("Service"),
+								},
+								Weight: &weight2,
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	t.Logf("creating a ReferenceGrant that permits access from %s to services in %s", ns.Name, otherNs.Name)
+	grant := &gatewayv1beta1.ReferenceGrant{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:        uuid.NewString(),
+			Annotations: map[string]string{},
+			Namespace:   otherNs.Name,
+		},
+		Spec: gatewayv1beta1.ReferenceGrantSpec{
+			From: []gatewayv1beta1.ReferenceGrantFrom{
+				{
+					Group:     gatewayv1beta1.Group("gateway.networking.k8s.io"),
+					Kind:      gatewayv1beta1.Kind("HTTPRoute"),
+					Namespace: gatewayv1beta1.Namespace(ns.Name),
+				},
+			},
+			To: []gatewayv1beta1.ReferenceGrantTo{
+				{
+					Group: gatewayv1beta1.Group(""),
+					Kind:  gatewayv1beta1.Kind("Service"),
+				},
+			},
+		},
+	}
+
+	grant, err = gatewayClient.GatewayV1beta1().ReferenceGrants(otherNs.Name).Create(ctx, grant, metav1.CreateOptions{})
+	require.NoError(t, err)
+	cleaner.Add(grant)
+
+	httpRoute, err = gatewayClient.GatewayV1beta1().HTTPRoutes(ns.Name).Create(ctx, httpRoute, metav1.CreateOptions{})
+	require.NoError(t, err)
+	cleaner.Add(httpRoute)
+
+	t.Log("verifying that both backends are ready to receive traffic")
+	// TODO improve path names
+	helpers.EventuallyGETPath(t, proxyURL, "test-1", http.StatusOK, testUUID1, emptyHeaderSet, ingressWait, waitTick)
+	helpers.EventuallyGETPath(t, proxyURL, "test-1", http.StatusOK, testUUID2, emptyHeaderSet, ingressWait, waitTick)
+
+	t.Log("verifying that both backends receive requests according to weighted distribution")
+	firstRespName := "1"
+	secondRespName := "2"
+	toleranceDelta := 0.2
+	expectedRespRatio := map[string]int{
+		firstRespName:  int(weight1),
+		secondRespName: int(weight2),
+	}
+	weightedLoadBalancingTestConfig := helpers.CountHTTPResponsesConfig{
+		Method: http.MethodGet,
+		// TODO names names names
+		Path:        "test-1",
+		Headers:     emptyHeaderSet,
+		Duration:    5 * time.Second,
+		RequestTick: 50 * time.Millisecond,
+	}
+	respCounter := helpers.CountHTTPGetResponses(t,
+		proxyURL,
+		weightedLoadBalancingTestConfig,
+		helpers.MatchRespByStatusAndContent(firstRespName, http.StatusOK, testUUID1),
+		helpers.MatchRespByStatusAndContent(secondRespName, http.StatusOK, testUUID2),
+	)
+	assert.InDeltaMapValues(t,
+		helpers.DistributionOfMapValues(respCounter),
+		helpers.DistributionOfMapValues(expectedRespRatio),
+		toleranceDelta,
+		"Response distribution does not match expected distribution within %f%% delta,"+
+			" request-count=%v, expected-ratio=%v",
+		toleranceDelta*100, respCounter, expectedRespRatio,
+	)
 }
 
 func TestHTTPRouteFilterHosts(t *testing.T) {

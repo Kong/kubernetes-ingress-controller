@@ -147,6 +147,12 @@ Adding a new version? You'll need three changes:
   configuration is applied by the controller.
   [#4368](https://github.com/Kong/kubernetes-ingress-controller/pull/4368
 
+### Fixed
+
+- Correctly support multi-Service backends that have multiple Services sharing
+  the same name in different namespaces.
+  [#4375](https://github.com/Kong/kubernetes-ingress-controller/pull/4375)
+
 [gojson]: https://github.com/goccy/go-json
 [httproute-specification]: https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1beta1.HTTPRoute
 [grpcroute-specification]:  https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1alpha2.GRPCRouteRule

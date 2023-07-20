@@ -81,6 +81,7 @@ type Config struct {
 	FilterTags               []string
 	WatchNamespaces          []string
 	GatewayAPIControllerName string
+	Impersonate              string
 
 	// Ingress status
 	PublishServiceUDP       OptionalNamespacedName
@@ -311,6 +312,9 @@ func (c *Config) GetKubeconfig() (*rest.Config, error) {
 	}
 	if c.APIServerKeyData != nil {
 		config.KeyData = c.APIServerKeyData
+	}
+	if c.Impersonate != "" {
+		config.Impersonate.UserName = c.Impersonate
 	}
 
 	return config, err

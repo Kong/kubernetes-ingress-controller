@@ -57,6 +57,11 @@ func DeployControllerManagerForCluster(
 		return fmt.Errorf("couldn't determine Kong Gateway Admin URL on cluster %s: %w", cluster.Name(), err)
 	}
 
+	// deploy all RBACs required for testing to the cluster
+	if err := DeployRBACsForCluster(ctx, cluster); err != nil {
+		return fmt.Errorf("failed to deploy RBACs: %w", err)
+	}
+
 	// deploy all CRDs required for testing to the cluster
 	if err := DeployCRDsForCluster(ctx, cluster); err != nil {
 		return fmt.Errorf("failed to deploy CRDs: %w", err)
@@ -80,8 +85,10 @@ func DeployControllerManagerForCluster(
 	}
 	controllerManagerFlags = append(controllerManagerFlags, additionalFlags...)
 
+	config := manager.Config{
+		Impersonate: "system:serviceaccount:kong:kong-serviceaccount",
+	}
 	// parsing the controller configuration flags
-	config := manager.Config{}
 	flags := config.FlagSet()
 	if err := flags.Parse(controllerManagerFlags); err != nil {
 		os.Remove(kubeconfig.Name())

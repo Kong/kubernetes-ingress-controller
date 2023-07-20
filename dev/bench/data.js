@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1689864306956,
+  "lastUpdate": 1689864308547,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -25512,6 +25512,48 @@ window.BENCHMARK_DATA = {
             "value": 12,
             "unit": "allocs/op",
             "extra": "17260 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "49699333+dependabot[bot]@users.noreply.github.com",
+            "name": "dependabot[bot]",
+            "username": "dependabot[bot]"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "ecb33b5fa87e783db286f7814515936429703da5",
+          "message": "chore(deps): bump k8s.io/apiextensions-apiserver from 0.27.3 to 0.27.4\n\nBumps [k8s.io/apiextensions-apiserver](https://github.com/kubernetes/apiextensions-apiserver) from 0.27.3 to 0.27.4.\n- [Release notes](https://github.com/kubernetes/apiextensions-apiserver/releases)\n- [Commits](https://github.com/kubernetes/apiextensions-apiserver/compare/v0.27.3...v0.27.4)\n\n---\nupdated-dependencies:\n- dependency-name: k8s.io/apiextensions-apiserver\n  dependency-type: direct:production\n  update-type: version-update:semver-patch\n...\n\nSigned-off-by: dependabot[bot] <support@github.com>",
+          "timestamp": "2023-07-20T14:41:43Z",
+          "tree_id": "55d0aacc9eaa37ffd3e9b830a420f66b1cce5700",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/ecb33b5fa87e783db286f7814515936429703da5"
+        },
+        "date": 1689864301958,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - ns/op",
+            "value": 70994,
+            "unit": "ns/op",
+            "extra": "17505 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - B/op",
+            "value": 11101,
+            "unit": "B/op",
+            "extra": "17505 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - allocs/op",
+            "value": 12,
+            "unit": "allocs/op",
+            "extra": "17505 times\n2 procs"
           }
         ]
       },

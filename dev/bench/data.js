@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1689949528602,
+  "lastUpdate": 1689950513596,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -28200,6 +28200,48 @@ window.BENCHMARK_DATA = {
             "value": 12,
             "unit": "allocs/op",
             "extra": "16788 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "czeslavo@gmail.com",
+            "name": "Grzegorz Burzyński",
+            "username": "czeslavo"
+          },
+          "committer": {
+            "email": "czeslavo@gmail.com",
+            "name": "Grzegorz Burzyński",
+            "username": "czeslavo"
+          },
+          "distinct": true,
+          "id": "f2c0e3658f060573da988ff47e584442ba885e09",
+          "message": "tests: pass kubeconfig when installing CRDs",
+          "timestamp": "2023-07-21T16:40:18+02:00",
+          "tree_id": "7e2bf7613235cb3b694cfbaef4f188f73115517a",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/f2c0e3658f060573da988ff47e584442ba885e09"
+        },
+        "date": 1689950507851,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - ns/op",
+            "value": 82346,
+            "unit": "ns/op",
+            "extra": "16038 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - B/op",
+            "value": 11094,
+            "unit": "B/op",
+            "extra": "16038 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - allocs/op",
+            "value": 12,
+            "unit": "allocs/op",
+            "extra": "16038 times\n2 procs"
           }
         ]
       }

@@ -134,14 +134,24 @@ func TestMain(m *testing.M) {
 	proxyUDPURL, err = kongAddon.ProxyUDPURL(ctx, env.Cluster())
 	exitOnErr(ctx, err)
 
-	exitOnErr(ctx, retry.Do(func() error {
-		version, err := helpers.GetKongVersion(proxyAdminURL, consts.KongTestPassword)
-		if err != nil {
-			return err
-		}
-		fmt.Printf("INFO: using Kong instance (version: %s) reachable at %s\n", version, proxyAdminURL)
-		return nil
-	}))
+	exitOnErr(
+		ctx,
+		retry.Do(
+			func() error {
+				version, err := helpers.GetKongVersion(proxyAdminURL, consts.KongTestPassword)
+				if err != nil {
+					return err
+				}
+				fmt.Printf("INFO: using Kong instance (version: %s) reachable at %s\n", version, proxyAdminURL)
+				return nil
+			},
+			retry.OnRetry(
+				func(n uint, err error) {
+					fmt.Printf("WARNING: try to get Kong Gateway version attempt %d/10 - error: %s\n", n+1, err)
+				},
+			),
+			retry.LastErrorOnly(true),
+		))
 
 	if v := os.Getenv("KONG_BRING_MY_OWN_KIC"); v == "true" {
 		fmt.Println("WARNING: caller indicated that they will manage their own controller")

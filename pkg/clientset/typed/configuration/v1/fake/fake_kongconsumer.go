@@ -101,6 +101,18 @@ func (c *FakeKongConsumers) Update(ctx context.Context, kongConsumer *v1.KongCon
 	return obj.(*v1.KongConsumer), err
 }
 
+// UpdateStatus was generated because the type contains a Status member.
+// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
+func (c *FakeKongConsumers) UpdateStatus(ctx context.Context, kongConsumer *v1.KongConsumer, opts metav1.UpdateOptions) (*v1.KongConsumer, error) {
+	obj, err := c.Fake.
+		Invokes(testing.NewUpdateSubresourceAction(kongconsumersResource, "status", c.ns, kongConsumer), &v1.KongConsumer{})
+
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*v1.KongConsumer), err
+}
+
 // Delete takes name of the kongConsumer and deletes it. Returns an error if one occurs.
 func (c *FakeKongConsumers) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
 	_, err := c.Fake.

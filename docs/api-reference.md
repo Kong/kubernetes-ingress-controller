@@ -123,6 +123,10 @@ ConfigSource is a wrapper around SecretValueFromSource.
 _Appears in:_
 - [KongPlugin](#kongplugin)
 
+
+
+
+
 ### KongIngressRoute
 
 
@@ -198,6 +202,8 @@ KongIngressUpstream contains KongIngress upstream configuration. It contains the
 
 _Appears in:_
 - [KongIngress](#kongingress)
+
+
 
 ### KongProtocol
 

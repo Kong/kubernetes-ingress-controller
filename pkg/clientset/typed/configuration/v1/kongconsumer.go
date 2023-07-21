@@ -40,6 +40,7 @@ type KongConsumersGetter interface {
 type KongConsumerInterface interface {
 	Create(ctx context.Context, kongConsumer *v1.KongConsumer, opts metav1.CreateOptions) (*v1.KongConsumer, error)
 	Update(ctx context.Context, kongConsumer *v1.KongConsumer, opts metav1.UpdateOptions) (*v1.KongConsumer, error)
+	UpdateStatus(ctx context.Context, kongConsumer *v1.KongConsumer, opts metav1.UpdateOptions) (*v1.KongConsumer, error)
 	Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error
 	DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error
 	Get(ctx context.Context, name string, opts metav1.GetOptions) (*v1.KongConsumer, error)
@@ -128,6 +129,22 @@ func (c *kongConsumers) Update(ctx context.Context, kongConsumer *v1.KongConsume
 		Namespace(c.ns).
 		Resource("kongconsumers").
 		Name(kongConsumer.Name).
+		VersionedParams(&opts, scheme.ParameterCodec).
+		Body(kongConsumer).
+		Do(ctx).
+		Into(result)
+	return
+}
+
+// UpdateStatus was generated because the type contains a Status member.
+// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
+func (c *kongConsumers) UpdateStatus(ctx context.Context, kongConsumer *v1.KongConsumer, opts metav1.UpdateOptions) (result *v1.KongConsumer, err error) {
+	result = &v1.KongConsumer{}
+	err = c.client.Put().
+		Namespace(c.ns).
+		Resource("kongconsumers").
+		Name(kongConsumer.Name).
+		SubResource("status").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Body(kongConsumer).
 		Do(ctx).

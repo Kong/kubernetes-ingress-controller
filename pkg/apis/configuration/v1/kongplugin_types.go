@@ -84,6 +84,9 @@ type KongPlugin struct {
 	// InstanceName is an optional custom name to identify an instance of the plugin. This is useful when running the
 	// same plugin in multiple contexts, for example, on multiple services.
 	InstanceName string `json:"instance_name,omitempty"`
+
+	// Status represents the current status of the KongPlugin resource.
+	Status KongPluginStatus `json:"status,omitempty"`
 }
 
 // +kubebuilder:object:root=true
@@ -93,6 +96,11 @@ type KongPluginList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []KongPlugin `json:"items"`
+}
+
+// KongPluginStatus represents the current status of the KongPlugin resource.
+type KongPluginStatus struct {
+	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
 
 func init() {

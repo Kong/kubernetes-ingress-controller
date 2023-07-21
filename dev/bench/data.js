@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1689935150912,
+  "lastUpdate": 1689935152752,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -27528,6 +27528,48 @@ window.BENCHMARK_DATA = {
             "value": 12,
             "unit": "allocs/op",
             "extra": "17829 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "czeslavo@gmail.com",
+            "name": "Grzegorz Burzyński",
+            "username": "czeslavo"
+          },
+          "committer": {
+            "email": "czeslavo@gmail.com",
+            "name": "Grzegorz Burzyński",
+            "username": "czeslavo"
+          },
+          "distinct": true,
+          "id": "edb15c4e96c583b7e04c32ec9a24e53bdd4e3461",
+          "message": "feat: extend KongPlugin, KongClusterPlugin and Consumer with status",
+          "timestamp": "2023-07-21T12:24:40+02:00",
+          "tree_id": "0f3b4fb6580d3085ffaaf4cd104d154c53195cec",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/edb15c4e96c583b7e04c32ec9a24e53bdd4e3461"
+        },
+        "date": 1689935145715,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - ns/op",
+            "value": 70605,
+            "unit": "ns/op",
+            "extra": "17680 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - B/op",
+            "value": 11095,
+            "unit": "B/op",
+            "extra": "17680 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - allocs/op",
+            "value": 12,
+            "unit": "allocs/op",
+            "extra": "17680 times\n2 procs"
           }
         ]
       },

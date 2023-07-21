@@ -45,6 +45,9 @@ type KongConsumer struct {
 	// Credentials are references to secrets containing a credential to be
 	// provisioned in Kong.
 	Credentials []string `json:"credentials,omitempty"`
+
+	// Status represents the current status of the KongConsumer resource.
+	Status KongConsumerStatus `json:"status,omitempty"`
 }
 
 // +kubebuilder:object:root=true
@@ -54,6 +57,11 @@ type KongConsumerList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []KongConsumer `json:"items"`
+}
+
+// KongConsumerStatus represents the current status of the KongConsumer resource.
+type KongConsumerStatus struct {
+	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
 
 func init() {

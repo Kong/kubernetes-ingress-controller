@@ -95,6 +95,17 @@ func (c *FakeKongClusterPlugins) Update(ctx context.Context, kongClusterPlugin *
 	return obj.(*v1.KongClusterPlugin), err
 }
 
+// UpdateStatus was generated because the type contains a Status member.
+// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
+func (c *FakeKongClusterPlugins) UpdateStatus(ctx context.Context, kongClusterPlugin *v1.KongClusterPlugin, opts metav1.UpdateOptions) (*v1.KongClusterPlugin, error) {
+	obj, err := c.Fake.
+		Invokes(testing.NewRootUpdateSubresourceAction(kongclusterpluginsResource, "status", kongClusterPlugin), &v1.KongClusterPlugin{})
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*v1.KongClusterPlugin), err
+}
+
 // Delete takes name of the kongClusterPlugin and deletes it. Returns an error if one occurs.
 func (c *FakeKongClusterPlugins) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
 	_, err := c.Fake.

@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/go-logr/logr"
 	"github.com/samber/lo"
-	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 
@@ -196,7 +196,7 @@ func TestDefaultReadinessChecker(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			factory := newMockClientFactory(t, tc.pendingClientsReadiness)
-			checker := clients.NewDefaultReadinessChecker(factory, logrus.New())
+			checker := clients.NewDefaultReadinessChecker(factory, logr.Discard())
 			result := checker.CheckReadiness(context.Background(), tc.alreadyCreatedClients, tc.pendingClients)
 
 			turnedPending := lo.Map(result.ClientsTurnedPending, func(c adminapi.DiscoveredAdminAPI, _ int) string { return c.Address })

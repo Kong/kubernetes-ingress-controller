@@ -134,7 +134,7 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 	setupLog.Info("Initializing Dataplane Client")
 	eventRecorder := mgr.GetEventRecorderFor(KongClientEventRecorderComponentName)
 
-	readinessChecker := clients.NewDefaultReadinessChecker(adminAPIClientsFactory, deprecatedLogger)
+	readinessChecker := clients.NewDefaultReadinessChecker(adminAPIClientsFactory, setupLog.WithName("readiness-checker"))
 	clientsManager, err := clients.NewAdminAPIClientsManager(
 		ctx,
 		deprecatedLogger,

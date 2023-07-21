@@ -2,12 +2,15 @@ package clients
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"time"
 
-	"github.com/sirupsen/logrus"
+	"github.com/go-logr/logr"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/adminapi"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 )
 
 const (
@@ -52,10 +55,10 @@ type AlreadyCreatedClient interface {
 
 type DefaultReadinessChecker struct {
 	factory ClientFactory
-	logger  logrus.FieldLogger
+	logger  logr.Logger
 }
 
-func NewDefaultReadinessChecker(factory ClientFactory, logger logrus.FieldLogger) DefaultReadinessChecker {
+func NewDefaultReadinessChecker(factory ClientFactory, logger logr.Logger) DefaultReadinessChecker {
 	return DefaultReadinessChecker{
 		factory: factory,
 		logger:  logger,
@@ -91,8 +94,10 @@ func (c DefaultReadinessChecker) checkPendingClient(
 	pendingClient adminapi.DiscoveredAdminAPI,
 ) (client *adminapi.Client) {
 	defer func() {
-		c.logger.WithField("ok", client != nil).
-			Debugf("checking readiness of pending client for %q", pendingClient.Address)
+		c.logger.V(util.DebugLevel).
+			Info(fmt.Sprintf("checking readiness of pending client for %q", pendingClient.Address),
+				"ok", client != nil,
+			)
 	}()
 
 	ctx, cancel := context.WithTimeout(ctx, readinessCheckTimeout)
@@ -100,7 +105,7 @@ func (c DefaultReadinessChecker) checkPendingClient(
 	client, err := c.factory.CreateAdminAPIClient(ctx, pendingClient)
 	if err != nil {
 		// Despite the error reason we still want to keep the client in the pending list to retry later.
-		c.logger.WithError(err).Debugf("pending client for %q is not ready yet", pendingClient.Address)
+		c.logger.V(util.DebugLevel).Error(err, fmt.Sprintf("pending client for %q is not ready yet", pendingClient.Address))
 		return nil
 	}
 
@@ -116,7 +121,10 @@ func (c DefaultReadinessChecker) checkAlreadyExistingClients(ctx context.Context
 			podRef, ok := client.PodReference()
 			if !ok {
 				// This should never happen, but if it does, we want to log it.
-				c.logger.Errorf("failed to get PodReference for client %q", client.BaseRootURL())
+				c.logger.Error(
+					errors.New("missing pod reference"),
+					fmt.Sprintf("failed to get PodReference for client %q", client.BaseRootURL()),
+				)
 				continue
 			}
 			turnedPending = append(turnedPending, adminapi.DiscoveredAdminAPI{
@@ -130,15 +138,20 @@ func (c DefaultReadinessChecker) checkAlreadyExistingClients(ctx context.Context
 
 func (c DefaultReadinessChecker) checkAlreadyCreatedClient(ctx context.Context, client AlreadyCreatedClient) (ready bool) {
 	defer func() {
-		c.logger.WithField("ok", ready).
-			Debugf("checking readiness of already created client for %q", client.BaseRootURL())
+		c.logger.V(util.DebugLevel).Info(
+			fmt.Sprintf("checking readiness of already created client for %q", client.BaseRootURL()),
+			"ok", ready,
+		)
 	}()
 
 	ctx, cancel := context.WithTimeout(ctx, readinessCheckTimeout)
 	defer cancel()
 	if err := client.IsReady(ctx); err != nil {
 		// Despite the error reason we still want to keep the client in the pending list to retry later.
-		c.logger.WithError(err).Debugf("already created client for %q is not ready, moving to pending", client.BaseRootURL())
+		c.logger.V(util.DebugLevel).Error(
+			err,
+			fmt.Sprintf("already created client for %q is not ready, moving to pending", client.BaseRootURL()),
+		)
 		return false
 	}
 

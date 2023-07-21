@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1689926340638,
+  "lastUpdate": 1689926976925,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -26940,6 +26940,48 @@ window.BENCHMARK_DATA = {
             "value": 12,
             "unit": "allocs/op",
             "extra": "18380 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jakub.warczarek@konghq.com",
+            "name": "Jakub Warczarek",
+            "username": "programmer04"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "5f4dee3daa604cf6d990028c7c854972e13be993",
+          "message": "refactor: use controllers.DataPlane interface instead of concrete *dataplane.KongClient (#4383)",
+          "timestamp": "2023-07-21T10:08:21+02:00",
+          "tree_id": "f7ec4bf9eb3e149e8caea5c218e7e72107365d12",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/5f4dee3daa604cf6d990028c7c854972e13be993"
+        },
+        "date": 1689926971114,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - ns/op",
+            "value": 77406,
+            "unit": "ns/op",
+            "extra": "15186 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - B/op",
+            "value": 11096,
+            "unit": "B/op",
+            "extra": "15186 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - allocs/op",
+            "value": 12,
+            "unit": "allocs/op",
+            "extra": "15186 times\n2 procs"
           }
         ]
       }

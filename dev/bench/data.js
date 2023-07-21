@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1689980339056,
+  "lastUpdate": 1689980912201,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -29040,6 +29040,48 @@ window.BENCHMARK_DATA = {
             "value": 12,
             "unit": "allocs/op",
             "extra": "17342 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "571832+rainest@users.noreply.github.com",
+            "name": "Travis Raines",
+            "username": "rainest"
+          },
+          "committer": {
+            "email": "571832+rainest@users.noreply.github.com",
+            "name": "Travis Raines",
+            "username": "rainest"
+          },
+          "distinct": true,
+          "id": "b94154ece8af787ce392c3615712c9d6bd50f824",
+          "message": "fix(parser) bound v6 targets properly\n\nSurround IPv6 Endpoint addresses with brackets when generating a target.\nWithout these, the target port suffix parses as part of the address and\nassigns an incorrect address and (default) port.",
+          "timestamp": "2023-07-21T16:07:20-07:00",
+          "tree_id": "f1188b4459cf738ecc297555ea5ee8234abcdb60",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/b94154ece8af787ce392c3615712c9d6bd50f824"
+        },
+        "date": 1689980907179,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - ns/op",
+            "value": 69415,
+            "unit": "ns/op",
+            "extra": "18866 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - B/op",
+            "value": 11093,
+            "unit": "B/op",
+            "extra": "18866 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - allocs/op",
+            "value": 12,
+            "unit": "allocs/op",
+            "extra": "18866 times\n2 procs"
           }
         ]
       }

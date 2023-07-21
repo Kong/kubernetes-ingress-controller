@@ -22,6 +22,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/controllers"
 	ctrlref "github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/reference"
 	ctrlutils "github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/utils"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane"
@@ -39,7 +40,7 @@ type Knativev1alpha1IngressReconciler struct {
 
 	Log             logr.Logger
 	Scheme          *runtime.Scheme
-	DataplaneClient *dataplane.KongClient
+	DataplaneClient controllers.DataPlane
 
 	DataplaneAddressFinder *dataplane.AddressFinder
 	StatusQueue            *status.Queue

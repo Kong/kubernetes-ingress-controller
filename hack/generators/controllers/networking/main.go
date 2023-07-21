@@ -390,6 +390,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/controllers"
 	ctrlref "github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/reference"
 	ctrlutils "github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/utils"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane"
@@ -420,7 +421,7 @@ type {{.PackageAlias}}{{.Kind}}Reconciler struct {
 
 	Log             logr.Logger
 	Scheme          *runtime.Scheme
-	DataplaneClient *dataplane.KongClient
+	DataplaneClient controllers.DataPlane
 	CacheSyncTimeout time.Duration
 {{- if .CapableOfStatusUpdates }}
 

@@ -39,6 +39,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/controllers"
 	ctrlref "github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/reference"
 	ctrlutils "github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/utils"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane"
@@ -59,7 +60,7 @@ type CoreV1ServiceReconciler struct {
 
 	Log               logr.Logger
 	Scheme            *runtime.Scheme
-	DataplaneClient   *dataplane.KongClient
+	DataplaneClient   controllers.DataPlane
 	CacheSyncTimeout  time.Duration
 	ReferenceIndexers ctrlref.CacheIndexers
 }
@@ -157,7 +158,7 @@ type DiscoveryV1EndpointSliceReconciler struct {
 
 	Log              logr.Logger
 	Scheme           *runtime.Scheme
-	DataplaneClient  *dataplane.KongClient
+	DataplaneClient  controllers.DataPlane
 	CacheSyncTimeout time.Duration
 }
 
@@ -233,7 +234,7 @@ type NetV1IngressReconciler struct {
 
 	Log              logr.Logger
 	Scheme           *runtime.Scheme
-	DataplaneClient  *dataplane.KongClient
+	DataplaneClient  controllers.DataPlane
 	CacheSyncTimeout time.Duration
 
 	DataplaneAddressFinder *dataplane.AddressFinder
@@ -428,7 +429,7 @@ type NetV1IngressClassReconciler struct {
 
 	Log              logr.Logger
 	Scheme           *runtime.Scheme
-	DataplaneClient  *dataplane.KongClient
+	DataplaneClient  controllers.DataPlane
 	CacheSyncTimeout time.Duration
 }
 
@@ -504,7 +505,7 @@ type KongV1KongIngressReconciler struct {
 
 	Log              logr.Logger
 	Scheme           *runtime.Scheme
-	DataplaneClient  *dataplane.KongClient
+	DataplaneClient  controllers.DataPlane
 	CacheSyncTimeout time.Duration
 }
 
@@ -581,7 +582,7 @@ type KongV1KongPluginReconciler struct {
 
 	Log               logr.Logger
 	Scheme            *runtime.Scheme
-	DataplaneClient   *dataplane.KongClient
+	DataplaneClient   controllers.DataPlane
 	CacheSyncTimeout  time.Duration
 	ReferenceIndexers ctrlref.CacheIndexers
 }
@@ -679,7 +680,7 @@ type KongV1KongClusterPluginReconciler struct {
 
 	Log              logr.Logger
 	Scheme           *runtime.Scheme
-	DataplaneClient  *dataplane.KongClient
+	DataplaneClient  controllers.DataPlane
 	CacheSyncTimeout time.Duration
 
 	IngressClassName           string
@@ -833,7 +834,7 @@ type KongV1KongConsumerReconciler struct {
 
 	Log              logr.Logger
 	Scheme           *runtime.Scheme
-	DataplaneClient  *dataplane.KongClient
+	DataplaneClient  controllers.DataPlane
 	CacheSyncTimeout time.Duration
 
 	IngressClassName           string
@@ -987,7 +988,7 @@ type KongV1Beta1KongConsumerGroupReconciler struct {
 
 	Log              logr.Logger
 	Scheme           *runtime.Scheme
-	DataplaneClient  *dataplane.KongClient
+	DataplaneClient  controllers.DataPlane
 	CacheSyncTimeout time.Duration
 
 	IngressClassName           string
@@ -1141,7 +1142,7 @@ type KongV1Beta1TCPIngressReconciler struct {
 
 	Log              logr.Logger
 	Scheme           *runtime.Scheme
-	DataplaneClient  *dataplane.KongClient
+	DataplaneClient  controllers.DataPlane
 	CacheSyncTimeout time.Duration
 
 	DataplaneAddressFinder *dataplane.AddressFinder
@@ -1336,7 +1337,7 @@ type KongV1Beta1UDPIngressReconciler struct {
 
 	Log              logr.Logger
 	Scheme           *runtime.Scheme
-	DataplaneClient  *dataplane.KongClient
+	DataplaneClient  controllers.DataPlane
 	CacheSyncTimeout time.Duration
 
 	DataplaneAddressFinder *dataplane.AddressFinder
@@ -1510,7 +1511,7 @@ type KongV1Alpha1IngressClassParametersReconciler struct {
 
 	Log              logr.Logger
 	Scheme           *runtime.Scheme
-	DataplaneClient  *dataplane.KongClient
+	DataplaneClient  controllers.DataPlane
 	CacheSyncTimeout time.Duration
 }
 

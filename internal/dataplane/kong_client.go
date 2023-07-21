@@ -363,6 +363,8 @@ func (c *KongClient) KubernetesObjectIsConfigured(obj client.Object) bool {
 	return c.kubernetesObjectReportsFilter.Get(obj) == k8sobj.ConfigurationStatusSucceeded
 }
 
+// KubernetesObjectConfigurationStatus reports the status of applying provided object's
+// configuration to the data-plane.
 func (c *KongClient) KubernetesObjectConfigurationStatus(obj client.Object) k8sobj.ConfigurationStatus {
 	c.kubernetesObjectReportLock.RLock()
 	defer c.kubernetesObjectReportLock.RUnlock()

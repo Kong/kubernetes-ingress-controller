@@ -26,6 +26,15 @@ func (d Dataplane) DeleteObject(_ client.Object) error {
 	return nil
 }
 
+func (d Dataplane) ObjectExists(obj client.Object) (bool, error) {
+	_, exists := d.ObjectsStatuses[obj.GetNamespace()][obj.GetName()]
+	return exists, nil
+}
+
+func (d Dataplane) Listeners(context.Context) ([]kong.ProxyListener, []kong.StreamListener, error) {
+	return nil, nil, nil
+}
+
 func (d Dataplane) AreKubernetesObjectReportsEnabled() bool {
 	return d.KubernetesObjectReportsEnabled
 }
@@ -34,6 +43,6 @@ func (d Dataplane) KubernetesObjectConfigurationStatus(obj client.Object) k8sobj
 	return d.ObjectsStatuses[obj.GetNamespace()][obj.GetName()]
 }
 
-func (d Dataplane) Listeners(context.Context) ([]kong.ProxyListener, []kong.StreamListener, error) {
-	return nil, nil, nil
+func (d Dataplane) KubernetesObjectIsConfigured(obj client.Object) bool {
+	return d.ObjectsStatuses[obj.GetNamespace()][obj.GetName()] == k8sobj.ConfigurationStatusSucceeded
 }

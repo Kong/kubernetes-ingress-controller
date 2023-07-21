@@ -75,7 +75,7 @@ func (c *Certificate) SanitizedCopy() *Certificate {
 	}
 }
 
-// Plugin represetns a plugin Object in Kong.
+// Plugin represents a plugin Object in Kong.
 type Plugin struct {
 	kong.Plugin
 }

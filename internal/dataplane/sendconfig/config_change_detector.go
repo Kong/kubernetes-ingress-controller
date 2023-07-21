@@ -44,7 +44,7 @@ type DefaultConfigurationChangeDetector struct {
 	log logrus.FieldLogger
 }
 
-func NewDefaultClientConfigurationChangeDetector(log logrus.FieldLogger) *DefaultConfigurationChangeDetector {
+func NewDefaultConfigurationChangeDetector(log logrus.FieldLogger) *DefaultConfigurationChangeDetector {
 	return &DefaultConfigurationChangeDetector{log: log}
 }
 

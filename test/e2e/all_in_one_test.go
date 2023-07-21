@@ -329,9 +329,18 @@ func TestDeployAllInOneDBLESS(t *testing.T) {
 		ingress.Spec.Rules[0].HTTP.Paths[0].Path = badEchoPath
 	})
 
-	t.Log("scale proxy to 3 replicas and verify that the new replicas get the old good configuration")
+	t.Log("scale proxy to 2 replicas and verify that the new replica gets the old good configuration")
+	scaleDeployment(ctx, t, env, deployments.ProxyNN, 2)
+	// Verify all the proxy replicas have the last good configuration.
+	ensureAllProxyReplicasAreConfigured(ctx, t, env, deployments.ProxyNN)
+
+	t.Log("restart the controller")
+	deployments.RestartController(ctx, t, env)
+	waitForDeploymentRollout(ctx, t, env, namespace, controllerDeploymentName)
+
+	t.Log("scale proxy to 3 replicas and verify that the new replica gets the old good configuration")
 	scaleDeployment(ctx, t, env, deployments.ProxyNN, 3)
-	// verify all the proxy replicas have the last good configuration
+	// Verify all the proxy replicas have the last good configuration.
 	ensureAllProxyReplicasAreConfigured(ctx, t, env, deployments.ProxyNN)
 }
 

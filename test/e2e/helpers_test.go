@@ -354,6 +354,19 @@ func (d Deployments) GetController(ctx context.Context, t *testing.T, env enviro
 	return deployment
 }
 
+// RestartController triggers the KIC pods' recreation by deleting them.
+func (d Deployments) RestartController(ctx context.Context, t *testing.T, env environments.Environment) {
+	t.Helper()
+	err := env.Cluster().Client().CoreV1().Pods(d.ControllerNN.Namespace).DeleteCollection(ctx, metav1.DeleteOptions{}, metav1.ListOptions{
+		LabelSelector: metav1.FormatLabelSelector(&metav1.LabelSelector{
+			MatchLabels: map[string]string{
+				"app": "ingress-kong",
+			},
+		}),
+	})
+	require.NoError(t, err)
+}
+
 // getManifestDeployments returns the deployments for the proxy and controller that are expected to be deployed for a given
 // manifest.
 func getManifestDeployments(manifestPath string) Deployments {

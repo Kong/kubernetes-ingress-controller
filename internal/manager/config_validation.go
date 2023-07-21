@@ -11,6 +11,7 @@ import (
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/adminapi"
 	cfgtypes "github.com/kong/kubernetes-ingress-controller/v2/internal/manager/config/types"
+	dataplaneutil "github.com/kong/kubernetes-ingress-controller/v2/internal/util/dataplane"
 )
 
 // https://github.com/kubernetes-sigs/gateway-api/blob/547122f7f55ac0464685552898c560658fb40073/apis/v1beta1/shared_types.go#L448-L463
@@ -131,7 +132,7 @@ func (c *Config) ValidateGatewayDiscovery(dbMode string) error {
 	if c.KongAdminSvc.IsAbsent() {
 		return nil
 	}
-	if dbMode != "off" && dbMode != "" {
+	if !dataplaneutil.IsDBLessMode(dbMode) {
 		return fmt.Errorf("gateway discovery is only supported in dbless mode, not db %s", dbMode)
 	}
 	return nil

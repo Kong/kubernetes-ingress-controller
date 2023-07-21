@@ -26,6 +26,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/manager/scheme"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
+	dataplaneutil "github.com/kong/kubernetes-ingress-controller/v2/internal/util/dataplane"
 )
 
 // -----------------------------------------------------------------------------
@@ -109,7 +110,7 @@ func leaderElectionEnabled(logger logr.Logger, c *Config, dbmode string) bool {
 		return true
 	}
 
-	if dbmode == "off" {
+	if dataplaneutil.IsDBLessMode(dbmode) {
 		if c.KongAdminSvc.IsPresent() {
 			logger.Info("DB-less mode detected with service detection, enabling leader election")
 			return true

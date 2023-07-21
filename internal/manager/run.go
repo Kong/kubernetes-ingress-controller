@@ -22,6 +22,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/clients"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/gateway"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/configfetcher"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/parser"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/sendconfig"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/konnect"
@@ -34,6 +35,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/manager/utils/kongconfig"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
+	dataplaneutil "github.com/kong/kubernetes-ingress-controller/v2/internal/util/dataplane"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util/kubernetes/object/status"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/versions"
 )
@@ -108,7 +110,7 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 
 	kongConfig := sendconfig.Config{
 		Version:               kongSemVersion,
-		InMemory:              (dbMode == "off") || (dbMode == ""),
+		InMemory:              dataplaneutil.IsDBLessMode(dbMode),
 		Concurrency:           c.Concurrency,
 		FilterTags:            c.FilterTags,
 		SkipCACertificates:    c.SkipCACertificates,
@@ -170,7 +172,8 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 	}
 
 	updateStrategyResolver := sendconfig.NewDefaultUpdateStrategyResolver(kongConfig, deprecatedLogger)
-	configurationChangeDetector := sendconfig.NewDefaultClientConfigurationChangeDetector(deprecatedLogger)
+	configurationChangeDetector := sendconfig.NewDefaultConfigurationChangeDetector(deprecatedLogger)
+	kongConfigFetcher := configfetcher.NewDefaultKongLastGoodConfigFetcher(parserFeatureFlags.FillIDs)
 	dataplaneClient, err := dataplane.NewKongClient(
 		deprecatedLogger,
 		time.Duration(c.ProxyTimeoutSeconds*float32(time.Second)),
@@ -182,9 +185,9 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 		clientsManager,
 		updateStrategyResolver,
 		configurationChangeDetector,
+		kongConfigFetcher,
 		configParser,
 		cache,
-		nil,
 	)
 	if err != nil {
 		return fmt.Errorf("failed to initialize kong data-plane client: %w", err)

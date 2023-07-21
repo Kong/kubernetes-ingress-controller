@@ -44,7 +44,6 @@ import (
 	ctrlutils "github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/utils"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
 	kongv1alpha1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1alpha1"
-	configurationv1beta1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1beta1"
 	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1beta1"
 )
 
@@ -816,7 +815,7 @@ func (s Store) GetKongConsumer(namespace, name string) (*kongv1.KongConsumer, er
 }
 
 // GetKongConsumerGroup returns the 'name' KongConsumerGroup resource in namespace.
-func (s Store) GetKongConsumerGroup(namespace, name string) (*configurationv1beta1.KongConsumerGroup, error) {
+func (s Store) GetKongConsumerGroup(namespace, name string) (*kongv1beta1.KongConsumerGroup, error) {
 	key := fmt.Sprintf("%v/%v", namespace, name)
 	p, exists, err := s.stores.ConsumerGroup.GetByKey(key)
 	if err != nil {
@@ -825,7 +824,7 @@ func (s Store) GetKongConsumerGroup(namespace, name string) (*configurationv1bet
 	if !exists {
 		return nil, ErrNotFound{fmt.Sprintf("KongConsumerGroup %v not found", key)}
 	}
-	return p.(*configurationv1beta1.KongConsumerGroup), nil
+	return p.(*kongv1beta1.KongConsumerGroup), nil
 }
 
 func (s Store) GetIngressClassName() string {

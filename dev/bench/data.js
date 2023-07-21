@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1689926978690,
+  "lastUpdate": 1689927530327,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -27024,6 +27024,48 @@ window.BENCHMARK_DATA = {
             "value": 12,
             "unit": "allocs/op",
             "extra": "15186 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jakub.warczarek@konghq.com",
+            "name": "Jakub Warczarek",
+            "username": "programmer04"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "e9a8417b07af5d6da21e54377a6f95d02376779b",
+          "message": "chore(tests): add proper error for unexpected status code in GetKongVersion (#4374)",
+          "timestamp": "2023-07-21T16:17:27+08:00",
+          "tree_id": "1d3e5fe8ecf21e1117bcf8238182782ceb4e07ac",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/e9a8417b07af5d6da21e54377a6f95d02376779b"
+        },
+        "date": 1689927524428,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - ns/op",
+            "value": 103262,
+            "unit": "ns/op",
+            "extra": "14287 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - B/op",
+            "value": 11099,
+            "unit": "B/op",
+            "extra": "14287 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - allocs/op",
+            "value": 12,
+            "unit": "allocs/op",
+            "extra": "14287 times\n2 procs"
           }
         ]
       }

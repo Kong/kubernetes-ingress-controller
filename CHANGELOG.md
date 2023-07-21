@@ -155,6 +155,8 @@ Adding a new version? You'll need three changes:
   This was caused by a bug in `NodeAgent` that was sending the updates
   despite the fact that the configuration status was not changed.
   [#4324](https://github.com/Kong/kubernetes-ingress-controller/pull/4324)
+- Properly construct targets for IPv6-only clusters.
+  [#4391](https://github.com/Kong/kubernetes-ingress-controller/pull/4391)
 
 ## [2.10.2]
 

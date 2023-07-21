@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1689965308888,
+  "lastUpdate": 1689965310915,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -28872,6 +28872,48 @@ window.BENCHMARK_DATA = {
             "value": 12,
             "unit": "allocs/op",
             "extra": "16497 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "czeslavo@gmail.com",
+            "name": "Grzegorz Burzyński",
+            "username": "czeslavo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "08c67a9ba99559c3bec9ebcac8a95eb0204887d1",
+          "message": "feat: use /status/ready as readiness probe of gateway for gateway discovery (#4368)\n\nChanges the Gateway's Pod readiness probe from `/status` to `/status/ready`.\r\n`/status/ready` returns 200 after receiving the first non-empty configuration.\r\nThat allows to make Gateway pods to serve proxy traffic only after they're\r\ninitially configured by KIC.\r\n\r\nIn KIC's Gateway discovery, instead of relying on `EndpointSlices` `Endpoints`'\r\nbeing ready, we use the discovered endpoints despite their readiness (we only\r\ndiscard terminating ones) and verify their readiness on our own with the use of\r\nthe Admin API's `/status` in the `ReadinessChecker`. It requires running a\r\nperiodic readiness reconciliation loop to check whether the endpoints that were\r\nready should be moved to the pending list and vice versa.\r\n\r\nFundamental changes that were made in this PR:\r\n\r\n- `KongAdminAPIServiceReconciler` watches Admin API service endpoints and\r\n  pushes all but terminating ones to the `AdminAPIClientsManager` (via `Notify`\r\nmethod)\r\n- `AdminAPIClientsManager` accepts the discovered endpoints and verifies their\r\n  readiness with use of a new `ReadinessChecker` first:\r\n  - if they're not ready - they're kept on a pending list\r\n  - if they're ready - they're kept on an active list (that is used to return\r\n    `GatewayClients()` to the upper layers)\r\n- `AdminAPIClientsManager` is responsible for running a readiness\r\n  reconciliation loop in which it uses `ReadinessChecker` to verify if:\r\n  - the clients kept on the active list became not ready; if yes, move them to\r\n    the pending list\r\n  - the clients kept on the pending list became ready; if yes, move them to the\r\n    active list",
+          "timestamp": "2023-07-21T20:47:14+02:00",
+          "tree_id": "147ee9b13dcaf9d232784bd06516d68a691bad1f",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/08c67a9ba99559c3bec9ebcac8a95eb0204887d1"
+        },
+        "date": 1689965301662,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - ns/op",
+            "value": 69526,
+            "unit": "ns/op",
+            "extra": "17612 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - B/op",
+            "value": 11092,
+            "unit": "B/op",
+            "extra": "17612 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - allocs/op",
+            "value": 12,
+            "unit": "allocs/op",
+            "extra": "17612 times\n2 procs"
           }
         ]
       },

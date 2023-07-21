@@ -108,6 +108,10 @@ Adding a new version? You'll need three changes:
   them to expression based Kong routes. The assigning method follows the
   [specification on priorities of matches in `HTTPRoute`][httproute-specification].
   [#4296](https://github.com/Kong/kubernetes-ingress-controller/pull/4296)
+- Assign priorities to routes translated from GRPCRoutes when parser translates 
+  them expression based Kong routes. The assigning method follows the
+  [specification on priorities of matches in `GRPCRoute`][grpcroute-specification].
+  [#4364](https://github.com/Kong/kubernetes-ingress-controller/pull/4364)
 - When a translated Kong configuration is empty in DB-less mode, the controller
   will now send the configuration with a single empty `Upstream`. This is to make
   Gateways using `/status/ready` as their health check ready after receiving the
@@ -131,6 +135,7 @@ Adding a new version? You'll need three changes:
 
 [gojson]: https://github.com/goccy/go-json
 [httproute-specification]: https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1beta1.HTTPRoute
+[grpcroute-specification]: https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1alpha2.GRPCRoute
 
 ## [2.10.3]
 

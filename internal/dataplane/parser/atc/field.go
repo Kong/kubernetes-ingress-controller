@@ -47,6 +47,7 @@ const (
 	FieldHTTPMethod  StringField = "http.method"
 	FieldHTTPHost    StringField = "http.host"
 	FieldHTTPPath    StringField = "http.path"
+	FieldNetDstIP    StringField = "net.dst.ip"
 )
 
 // IntField is defined for fields with constant name and having integer type.
@@ -64,7 +65,8 @@ func (f IntField) String() string {
 // https://docs.konghq.com/gateway/latest/reference/router-expressions-language/#available-fields
 
 const (
-	FieldNetPort IntField = "net.port"
+	FieldNetPort    IntField = "net.port"
+	FieldNetDstPort IntField = "net.dst.port"
 )
 
 // HTTPHeaderField extracts the value of an HTTP header from the request.

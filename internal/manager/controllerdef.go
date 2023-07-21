@@ -11,6 +11,7 @@ import (
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/controllers"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/configuration"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/crds"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/gateway"
@@ -59,7 +60,7 @@ func (c *ControllerDef) MaybeSetupWithManager(mgr ctrl.Manager) error {
 
 func setupControllers(
 	mgr manager.Manager,
-	dataplaneClient *dataplane.KongClient,
+	dataplaneClient controllers.DataPlane,
 	dataplaneAddressFinder *dataplane.AddressFinder,
 	udpDataplaneAddressFinder *dataplane.AddressFinder,
 	kubernetesStatusQueue *status.Queue,

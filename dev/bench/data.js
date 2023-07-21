@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1689923306811,
+  "lastUpdate": 1689923308224,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -26100,6 +26100,48 @@ window.BENCHMARK_DATA = {
             "value": 12,
             "unit": "allocs/op",
             "extra": "14641 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "49699333+dependabot[bot]@users.noreply.github.com",
+            "name": "dependabot[bot]",
+            "username": "dependabot[bot]"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "9d631488573720e29a582f36dd7f3e6f4b66e741",
+          "message": "chore(deps): bump k8s.io/cli-runtime from 0.27.3 to 0.27.4 (#4382)\n\nBumps [k8s.io/cli-runtime](https://github.com/kubernetes/cli-runtime) from 0.27.3 to 0.27.4.\r\n- [Commits](https://github.com/kubernetes/cli-runtime/compare/v0.27.3...v0.27.4)\r\n\r\n---\r\nupdated-dependencies:\r\n- dependency-name: k8s.io/cli-runtime\r\n  dependency-type: direct:production\r\n  update-type: version-update:semver-patch\r\n...\r\n\r\nSigned-off-by: dependabot[bot] <support@github.com>\r\nCo-authored-by: dependabot[bot] <49699333+dependabot[bot]@users.noreply.github.com>",
+          "timestamp": "2023-07-21T09:05:15+02:00",
+          "tree_id": "e65aa700f7f62e1bf7c884933aca278861f5f074",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/9d631488573720e29a582f36dd7f3e6f4b66e741"
+        },
+        "date": 1689923301701,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - ns/op",
+            "value": 69901,
+            "unit": "ns/op",
+            "extra": "16232 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - B/op",
+            "value": 11096,
+            "unit": "B/op",
+            "extra": "16232 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - allocs/op",
+            "value": 12,
+            "unit": "allocs/op",
+            "extra": "16232 times\n2 procs"
           }
         ]
       },

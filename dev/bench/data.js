@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1689936352370,
+  "lastUpdate": 1689941482433,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -27780,6 +27780,48 @@ window.BENCHMARK_DATA = {
             "value": 12,
             "unit": "allocs/op",
             "extra": "17940 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "czeslavo@gmail.com",
+            "name": "Grzegorz Burzyński",
+            "username": "czeslavo"
+          },
+          "committer": {
+            "email": "czeslavo@gmail.com",
+            "name": "Grzegorz Burzyński",
+            "username": "czeslavo"
+          },
+          "distinct": true,
+          "id": "7e1a4b190eb64df68a7567ea704706226e4f2be2",
+          "message": "try with setting up gcloud in the workflow",
+          "timestamp": "2023-07-21T14:08:06+02:00",
+          "tree_id": "80c94869e0755c24fb898d4fc2a315ac39a734cf",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/7e1a4b190eb64df68a7567ea704706226e4f2be2"
+        },
+        "date": 1689941477275,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - ns/op",
+            "value": 68455,
+            "unit": "ns/op",
+            "extra": "16984 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - B/op",
+            "value": 11092,
+            "unit": "B/op",
+            "extra": "16984 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - allocs/op",
+            "value": 12,
+            "unit": "allocs/op",
+            "extra": "16984 times\n2 procs"
           }
         ]
       }

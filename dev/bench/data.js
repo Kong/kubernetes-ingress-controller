@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1689962696431,
+  "lastUpdate": 1689962697835,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -28788,6 +28788,48 @@ window.BENCHMARK_DATA = {
             "value": 12,
             "unit": "allocs/op",
             "extra": "15697 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jakub.warczarek@konghq.com",
+            "name": "Jakub Warczarek",
+            "username": "programmer04"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "fc6774cbbb2ea73d09d6062b8bbd50c61ba749c4",
+          "message": "chore(tests): better logging for retries of GetKongVersion (#4388)",
+          "timestamp": "2023-07-21T11:03:52-07:00",
+          "tree_id": "6c7dab0e7c01c3f65836170f37d0b06b2c469913",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/fc6774cbbb2ea73d09d6062b8bbd50c61ba749c4"
+        },
+        "date": 1689962691582,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - ns/op",
+            "value": 75612,
+            "unit": "ns/op",
+            "extra": "16497 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - B/op",
+            "value": 11098,
+            "unit": "B/op",
+            "extra": "16497 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - allocs/op",
+            "value": 12,
+            "unit": "allocs/op",
+            "extra": "16497 times\n2 procs"
           }
         ]
       },

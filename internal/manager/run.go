@@ -173,7 +173,7 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 
 	updateStrategyResolver := sendconfig.NewDefaultUpdateStrategyResolver(kongConfig, deprecatedLogger)
 	configurationChangeDetector := sendconfig.NewDefaultConfigurationChangeDetector(deprecatedLogger)
-	kongConfigFetcher := configfetcher.NewDefaultKongLastGoodConfigFetcher()
+	kongConfigFetcher := configfetcher.NewDefaultKongLastGoodConfigFetcher(parserFeatureFlags.FillIDs)
 	dataplaneClient, err := dataplane.NewKongClient(
 		deprecatedLogger,
 		time.Duration(c.ProxyTimeoutSeconds*float32(time.Second)),

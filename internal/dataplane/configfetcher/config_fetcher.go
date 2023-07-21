@@ -27,11 +27,16 @@ type LastValidConfigFetcher interface {
 type DefaultKongLastGoodConfigFetcher struct {
 	config         dump.Config
 	lastValidState *kongstate.KongState
+	// fillIDs enables the last valid kongState to be filled in the IDs fields of Kong entities
+	// - Services, Routes, and Consumers - based on their names. It ensures that IDs remain
+	// stable across restarts of the controller.
+	fillIDs bool
 }
 
-func NewDefaultKongLastGoodConfigFetcher() *DefaultKongLastGoodConfigFetcher {
+func NewDefaultKongLastGoodConfigFetcher(fillIDs bool) *DefaultKongLastGoodConfigFetcher {
 	return &DefaultKongLastGoodConfigFetcher{
-		config: dump.Config{},
+		config:  dump.Config{},
+		fillIDs: fillIDs,
 	}
 }
 
@@ -60,11 +65,11 @@ func (cf *DefaultKongLastGoodConfigFetcher) TryFetchingValidConfigFromGateways(
 		if err != nil {
 			errs = errors.Join(errs, err)
 		}
-		ks := KongRawStateToKongState(rs)
 		status, err := cf.getKongStatus(ctx, client.AdminAPIClient())
 		if err != nil {
 			errs = errors.Join(errs, err)
 		}
+		ks := KongRawStateToKongState(rs)
 		if status.ConfigurationHash != sendconfig.WellKnownInitialHash {
 			// Get the first good one as the one to be used.
 			goodKongState = ks
@@ -72,6 +77,9 @@ func (cf *DefaultKongLastGoodConfigFetcher) TryFetchingValidConfigFromGateways(
 		}
 	}
 	if goodKongState != nil {
+		if cf.fillIDs {
+			goodKongState.FillIDs(logger)
+		}
 		cf.lastValidState = goodKongState
 		logger.Debug("last good configuration fetched from a Kong node")
 	}

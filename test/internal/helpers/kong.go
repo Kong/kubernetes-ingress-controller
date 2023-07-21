@@ -14,14 +14,13 @@ import (
 // GetKongVersion returns kong version using the provided Admin API URL.
 func GetKongVersion(proxyAdminURL *url.URL, kongTestPassword string) (kong.Version, error) {
 	if override := os.Getenv("TEST_KONG_VERSION_OVERRIDE"); len(override) > 0 {
-		_, err := kong.ParseSemanticVersion(override)
-		if err != nil {
+		if _, err := kong.ParseSemanticVersion(override); err != nil {
 			return kong.Version{}, err
 		}
 		return kong.NewVersion(override)
 	}
 
-	req, err := http.NewRequest("GET", proxyAdminURL.String(), nil)
+	req, err := http.NewRequest(http.MethodGet, proxyAdminURL.String(), nil)
 	if err != nil {
 		return kong.Version{}, fmt.Errorf("failed creating request for %s: %w", proxyAdminURL, err)
 	}
@@ -35,9 +34,12 @@ func GetKongVersion(proxyAdminURL *url.URL, kongTestPassword string) (kong.Versi
 	if err != nil {
 		return kong.Version{}, fmt.Errorf("failed reading response body from %s: %w", proxyAdminURL, err)
 	}
+	if resp.StatusCode != http.StatusOK {
+		return kong.Version{}, fmt.Errorf("failed getting kong version from %s: %s: %s", proxyAdminURL, resp.Status, body)
+	}
+
 	var jsonResp map[string]interface{}
-	err = json.Unmarshal(body, &jsonResp)
-	if err != nil {
+	if err := json.Unmarshal(body, &jsonResp); err != nil {
 		return kong.Version{}, fmt.Errorf("failed parsing response body from %s: %w", proxyAdminURL, err)
 	}
 

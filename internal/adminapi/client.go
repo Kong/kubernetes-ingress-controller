@@ -95,6 +95,12 @@ func (c *Client) NodeID(ctx context.Context) (string, error) {
 	return nodeID, nil
 }
 
+// IsReady returns nil if the Admin API is ready to serve requests.
+func (c *Client) IsReady(ctx context.Context) error {
+	_, err := c.adminAPIClient.Status(ctx)
+	return err
+}
+
 // GetKongVersion returns version of the kong gateway.
 func (c *Client) GetKongVersion(ctx context.Context) (string, error) {
 	if c.isKonnect {

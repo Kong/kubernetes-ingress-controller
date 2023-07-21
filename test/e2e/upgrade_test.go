@@ -110,8 +110,9 @@ func testManifestsUpgrade(
 
 	t.Logf("deploying target version of kong manifests: %s", testParams.toManifestPath)
 	deployments := ManifestDeploy{
-		Path:            testParams.toManifestPath,
-		SkipTestPatches: true,
+		Path: testParams.toManifestPath,
+		// Do not skip test patches - we want to verify that upgrade works with an image override in target manifest.
+		SkipTestPatches: false,
 	}.Run(ctx, t, env)
 
 	if featureGates := testParams.controllerFeatureGates; featureGates != "" {

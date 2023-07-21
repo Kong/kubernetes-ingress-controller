@@ -117,6 +117,11 @@ Adding a new version? You'll need three changes:
   KIC restarts, it is now able to fetch the last good configuration from a running
   proxy instance and store it in its internal cache.
   [#4265](https://github.com/Kong/kubernetes-ingress-controller/pull/4265)
+- Gateway Discovery feature was adapted to handle Gateways that are not ready yet
+  in terms of accepting data-plane traffic, but are ready to accept configuration
+  updates. The controller will now send configuration to such Gateways and will
+  actively monitor their readiness for accepting configuration updates.
+  [#4368](https://github.com/Kong/kubernetes-ingress-controller/pull/4368
 
 ### Changed
 
@@ -132,6 +137,10 @@ Adding a new version? You'll need three changes:
   sending stage (we've observed around 35% reduced time in config marshalling
   time but be aware that your mileage may vary).
   [#4222](https://github.com/Kong/kubernetes-ingress-controller/pull/4222)
+- Changed the Gateway's readiness probe in all-in-one manifests from `/status`
+  to `/status/ready`. Gateways will be considered ready only after an initial
+  configuration is applied by the controller.
+  [#4368](https://github.com/Kong/kubernetes-ingress-controller/pull/4368
 
 [gojson]: https://github.com/goccy/go-json
 [httproute-specification]: https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1beta1.HTTPRoute

@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1689923388250,
+  "lastUpdate": 1689923390196,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -26184,6 +26184,48 @@ window.BENCHMARK_DATA = {
             "value": 12,
             "unit": "allocs/op",
             "extra": "16232 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "49699333+dependabot[bot]@users.noreply.github.com",
+            "name": "dependabot[bot]",
+            "username": "dependabot[bot]"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "0d1f354939d3b42372c5f96c0db91cd69371392b",
+          "message": "chore(deps): bump k8s.io/code-generator in /third_party (#4377)\n\nBumps [k8s.io/code-generator](https://github.com/kubernetes/code-generator) from 0.27.3 to 0.27.4.\r\n- [Commits](https://github.com/kubernetes/code-generator/compare/v0.27.3...v0.27.4)\r\n\r\n---\r\nupdated-dependencies:\r\n- dependency-name: k8s.io/code-generator\r\n  dependency-type: direct:production\r\n  update-type: version-update:semver-patch\r\n...\r\n\r\nSigned-off-by: dependabot[bot] <support@github.com>\r\nCo-authored-by: dependabot[bot] <49699333+dependabot[bot]@users.noreply.github.com>",
+          "timestamp": "2023-07-21T09:05:49+02:00",
+          "tree_id": "725e01a1ea17d6d260e8ccccad0f9cf3987ed193",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/0d1f354939d3b42372c5f96c0db91cd69371392b"
+        },
+        "date": 1689923382414,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - ns/op",
+            "value": 83405,
+            "unit": "ns/op",
+            "extra": "14653 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - B/op",
+            "value": 11099,
+            "unit": "B/op",
+            "extra": "14653 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - allocs/op",
+            "value": 12,
+            "unit": "allocs/op",
+            "extra": "14653 times\n2 procs"
           }
         ]
       },

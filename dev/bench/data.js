@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1689932308699,
+  "lastUpdate": 1689932310660,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -27276,6 +27276,48 @@ window.BENCHMARK_DATA = {
             "value": 12,
             "unit": "allocs/op",
             "extra": "15328 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "lavacca.mattia@gmail.com",
+            "name": "Mattia Lavacca",
+            "username": "mlavacca"
+          },
+          "committer": {
+            "email": "lavacca.mattia@gmail.com",
+            "name": "Mattia Lavacca",
+            "username": "mlavacca"
+          },
+          "distinct": true,
+          "id": "2d5f0b76b544e50aff3380373ff2bce22b2632c6",
+          "message": "chore: fillIDs introduced in config fetcher\n\nSigned-off-by: Mattia Lavacca <lavacca.mattia@gmail.com>",
+          "timestamp": "2023-07-21T11:36:53+02:00",
+          "tree_id": "f406814f2e360008790aaa880536051f1dc1f371",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/2d5f0b76b544e50aff3380373ff2bce22b2632c6"
+        },
+        "date": 1689932302533,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - ns/op",
+            "value": 82095,
+            "unit": "ns/op",
+            "extra": "15004 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - B/op",
+            "value": 11105,
+            "unit": "B/op",
+            "extra": "15004 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - allocs/op",
+            "value": 12,
+            "unit": "allocs/op",
+            "extra": "15004 times\n2 procs"
           }
         ]
       },

@@ -1617,20 +1617,57 @@ func TestGenerateRewriteURIConfig(t *testing.T) {
 			expectedURI: "/bar/$(uri_captures[1])xx/$(uri_captures[12])yy",
 		},
 		{
-			name:        "valid multiple capture groups",
-			uri:         "/bar/$1xx/$12yy",
-			expectedURI: "/bar/$(uri_captures[1])xx/$(uri_captures[12])yy",
+			name:        "valid multiple capture groups (end with capture group)",
+			uri:         "/bar/$1xx/$12",
+			expectedURI: "/bar/$(uri_captures[1])xx/$(uri_captures[12])",
+		},
+		{
+			name:        "valid multiple capture groups (adjacent capture groups)",
+			uri:         "/bar/$11$12",
+			expectedURI: "/bar/$(uri_captures[11])$(uri_captures[12])",
 		},
 		{
 			name:          "no digit following $",
 			uri:           "/bar/$xxy",
-			expectedError: errors.New("unexpected $ at pos 5"),
+			expectedError: errors.New("unexpected x at pos 6"),
 			expectedURI:   "",
 		},
 		{
 			name:          "$ at end",
 			uri:           "/bar/xxxx$",
-			expectedError: errors.New("unexpected $ at pos 9"),
+			expectedError: errors.New("unexpected end of string"),
+			expectedURI:   "",
+		},
+		{
+			name:        "escaped $",
+			uri:         "/bar/xxxx\\$12",
+			expectedURI: "/bar/xxxx$12",
+		},
+		{
+			name:        "escaped $ at end",
+			uri:         "/bar/xxxx\\$",
+			expectedURI: "/bar/xxxx$",
+		},
+		{
+			name:        "escaped $ after capture group",
+			uri:         "/bar/xxxx$13\\$x",
+			expectedURI: "/bar/xxxx$(uri_captures[13])$x",
+		},
+		{
+			name:        "mixed with escaped and unescaped $",
+			uri:         "/bar/xxxx\\$12/fd$33",
+			expectedURI: "/bar/xxxx$12/fd$(uri_captures[33])",
+		},
+		{
+			name:          "non $ after \\",
+			uri:           "/bar/xxxx\\n",
+			expectedError: errors.New("unexpected n at pos 10"),
+			expectedURI:   "",
+		},
+		{
+			name:          "\\ at end",
+			uri:           "/bar/xxxx\\",
+			expectedError: errors.New("unexpected end of string"),
 			expectedURI:   "",
 		},
 	}
@@ -1713,7 +1750,7 @@ func TestMaybeRewriteURI(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			err := MaybeRewriteURI(&tc.service)
+			err := MaybeRewriteURI(&tc.service, true)
 			require.Equal(t, tc.expectedError, err)
 			require.Equal(t, tc.expectedPlugins, tc.service.Plugins)
 		})

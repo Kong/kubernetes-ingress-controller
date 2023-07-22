@@ -395,37 +395,77 @@ func MaybePrependRegexPrefixForIngressV1Fn(ingress *netv1.Ingress, applyLegacyHe
 	}
 }
 
+type runeType int
+
+const (
+	runeTypeEscape runeType = iota
+	runeTypeMark
+	runeTypeDigit
+	runeTypePlain
+)
+
 func generateRewriteURIConfig(path string) (string, error) {
 	var out []rune
 	in := []rune(path)
+	lastRuneType := runeTypePlain
 	for i := 0; i < len(in); i++ {
-		if in[i] != '$' {
-			out = append(out, in[i])
-			continue
-		}
+		switch lastRuneType {
+		case runeTypeEscape:
+			if in[i] != '$' {
+				return "", fmt.Errorf("unexpected %c at pos %d", in[i], i)
+			}
 
-		i++
-		if i == len(in) || !unicode.IsDigit(in[i]) {
-			return "", fmt.Errorf("unexpected $ at pos %d", i-1)
-		}
-
-		out = append(out, uriCapturesPrefix...)
-		for ; i < len(in) && unicode.IsDigit(in[i]); i++ {
 			out = append(out, in[i])
+			lastRuneType = runeTypePlain
+
+		case runeTypeMark:
+			if !unicode.IsDigit(in[i]) {
+				return "", fmt.Errorf("unexpected %c at pos %d", in[i], i)
+			}
+
+			out = append(out, uriCapturesPrefix...)
+			out = append(out, in[i])
+			lastRuneType = runeTypeDigit
+
+		case runeTypeDigit:
+			if unicode.IsDigit(in[i]) {
+				out = append(out, in[i])
+				break
+			}
+
+			out = append(out, uriCapturesSuffix...)
+			fallthrough
+
+		case runeTypePlain:
+			if in[i] == '$' {
+				lastRuneType = runeTypeMark
+			} else if in[i] == '\\' {
+				lastRuneType = runeTypeEscape
+			} else {
+				out = append(out, in[i])
+				lastRuneType = runeTypePlain
+			}
 		}
+	}
+
+	if lastRuneType == runeTypeEscape || lastRuneType == runeTypeMark {
+		return "", fmt.Errorf("unexpected end of string")
+	} else if lastRuneType == runeTypeDigit {
 		out = append(out, uriCapturesSuffix...)
-
-		i--
 	}
 
 	return string(out), nil
 }
 
 // MaybeRewriteURI appends a request-transformer plugin if the value of konghq.com/rewrite annotation is valid.
-func MaybeRewriteURI(service *kongstate.Service) error {
+func MaybeRewriteURI(service *kongstate.Service, rewriteURIEnable bool) error {
 	rewriteURI, exists := annotations.ExtractRewriteURI(service.Parent.GetAnnotations())
 	if !exists {
 		return nil
+	}
+
+	if !rewriteURIEnable {
+		return fmt.Errorf("konghq.com/rewrite annotation not supported when rewrite uris disabled")
 	}
 
 	if rewriteURI == "" {

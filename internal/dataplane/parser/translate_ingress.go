@@ -60,11 +60,9 @@ func (p *Parser) ingressRulesFromIngressV1() ingressRules {
 	servicesCache := p.ingressesV1ToKongServices(ingressList, icp)
 	for i := range servicesCache {
 		service := servicesCache[i]
-		if p.featureFlags.RewriteURIs {
-			if err := translators.MaybeRewriteURI(&service); err != nil {
-				p.registerTranslationFailure(err.Error(), service.Parent)
-				continue
-			}
+		if err := translators.MaybeRewriteURI(&service, p.featureFlags.RewriteURIs); err != nil {
+			p.registerTranslationFailure(err.Error(), service.Parent)
+			continue
 		}
 
 		result.ServiceNameToServices[*service.Name] = service

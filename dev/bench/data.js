@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1690192798374,
+  "lastUpdate": 1690192799783,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -29292,6 +29292,48 @@ window.BENCHMARK_DATA = {
             "value": 12,
             "unit": "allocs/op",
             "extra": "17682 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "tao.yi@konghq.com",
+            "name": "Yi Tao",
+            "username": "randmonkey"
+          },
+          "committer": {
+            "email": "tao.yi@konghq.com",
+            "name": "Yi Tao",
+            "username": "randmonkey"
+          },
+          "distinct": true,
+          "id": "4d6ab2fb083573ec922b10cca503e003760cb30b",
+          "message": "refactor: do not use GRPCRoute itself to store split matches",
+          "timestamp": "2023-07-24T17:53:46+08:00",
+          "tree_id": "125944f1454e36f3da24af648578ce023513b376",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/4d6ab2fb083573ec922b10cca503e003760cb30b"
+        },
+        "date": 1690192792996,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - ns/op",
+            "value": 69419,
+            "unit": "ns/op",
+            "extra": "16876 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - B/op",
+            "value": 11096,
+            "unit": "B/op",
+            "extra": "16876 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - allocs/op",
+            "value": 12,
+            "unit": "allocs/op",
+            "extra": "16876 times\n2 procs"
           }
         ]
       },

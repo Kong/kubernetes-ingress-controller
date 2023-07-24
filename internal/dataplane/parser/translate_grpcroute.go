@@ -87,12 +87,12 @@ func (p *Parser) ingressRulesFromGRPCRoute(result *ingressRules, grpcroute *gate
 
 // ingressRulesFromGRPCRoutesUsingExpressionRoutes translates GRPCRoutes to expression based routes
 // when ExpressionRoutes feature flag is enabled.
-// Because we need to assign different priorities based on the hostname and match in the specification of HTTPRoutes,
+// Because we need to assign different priorities based on the hostname and match in the specification of GRPCRoutes,
 // We need to split the GRPCRoutes into ones with only one hostname and one match, then assign priority to them
 // and finally translate the split GRPCRoutes into Kong services and routes with assigned priorities.
 func (p *Parser) ingressRulesFromGRPCRoutesUsingExpressionRoutes(grpcRoutes []*gatewayv1alpha2.GRPCRoute, result *ingressRules) {
 	// first, split GRPCRoutes by hostname and match.
-	splitGRPCRoutes := []*gatewayv1alpha2.GRPCRoute{}
+	splitGRPCRouteMatches := []translators.SplitGRPCRouteMatch{}
 	// record GRPCRoutes passing the validation and get translated.
 	// after they are translated, register the success event in the parser.
 	translatedGRPCRoutes := []*gatewayv1alpha2.GRPCRoute{}
@@ -104,15 +104,15 @@ func (p *Parser) ingressRulesFromGRPCRoutesUsingExpressionRoutes(grpcRoutes []*g
 			)
 			continue
 		}
-		splitGRPCRoutes = append(splitGRPCRoutes, translators.SplitGRPCRoute(grpcRoute)...)
+		splitGRPCRouteMatches = append(splitGRPCRouteMatches, translators.SplitGRPCRoute(grpcRoute)...)
 		translatedGRPCRoutes = append(translatedGRPCRoutes, grpcRoute)
 	}
 
 	// assign priorities to split GRPCRoutes.
-	splitGRPCRoutesWithPriorities := translators.AssignRoutePriorityToSplitGRPCRoutes(logrusr.New(p.logger), splitGRPCRoutes)
+	splitGRPCRouteMatchesWithPriorities := translators.AssignRoutePriorityToSplitGRPCRouteMatches(logrusr.New(p.logger), splitGRPCRouteMatches)
 	// generate Kong service and route from each split GRPC route with its assigned priority of Kong route.
-	for _, splitGRPCRouteWithPriority := range splitGRPCRoutesWithPriorities {
-		p.ingressRulesFromGRPCRouteWithPriority(result, splitGRPCRouteWithPriority)
+	for _, splitGRPCRouteMatchWithPriority := range splitGRPCRouteMatchesWithPriorities {
+		p.ingressRulesFromGRPCRouteWithPriority(result, splitGRPCRouteMatchWithPriority)
 	}
 
 	// register successful parses of GRPCRoutes.
@@ -123,16 +123,20 @@ func (p *Parser) ingressRulesFromGRPCRoutesUsingExpressionRoutes(grpcRoutes []*g
 
 func (p *Parser) ingressRulesFromGRPCRouteWithPriority(
 	rules *ingressRules,
-	grpcRouteWithPriority translators.SplitGRPCRouteToKongRoutePriority,
+	splitGRPCRouteMatchWithPriority translators.SplitGRPCRouteMatchToPriority,
 ) {
-	grpcRoute := grpcRouteWithPriority.GRPCRoute
-	if len(grpcRoute.Spec.Rules) != 1 {
+	match := splitGRPCRouteMatchWithPriority.Match
+	grpcRoute := splitGRPCRouteMatchWithPriority.Match.Source
+	// (very unlikely that) the rule index split from the source GRPCRoute is larger then length of original rules.
+	if len(grpcRoute.Spec.Rules) <= match.RuleIndex {
+		p.logger.Infof("WARN: split rule index %d is larger then the length of rules in source GRPCRoute %d",
+			match.RuleIndex, len(grpcRoute.Spec.Rules))
 		return
 	}
-	grpcRouteRule := grpcRoute.Spec.Rules[0]
+	grpcRouteRule := grpcRoute.Spec.Rules[match.RuleIndex]
 	backendRefs := grpcBackendRefsToBackendRefs(grpcRouteRule.BackendRefs)
 
-	serviceName := translators.KongServiceNameFromSplitGRPCRoute(grpcRoute)
+	serviceName := translators.KongServiceNameFromSplitGRPCRouteMatch(match)
 
 	kongService, _ := generateKongServiceFromBackendRefWithName(
 		p.logger,
@@ -145,7 +149,7 @@ func (p *Parser) ingressRulesFromGRPCRouteWithPriority(
 	)
 	kongService.Routes = append(
 		kongService.Routes,
-		translators.GenerateKongExpressionRouteFromSplitGRPCRouteWithPriority(grpcRouteWithPriority),
+		translators.KongExpressionRouteFromSplitGRPCRouteMatchWithPriority(splitGRPCRouteMatchWithPriority),
 	)
 	// cache the service to avoid duplicates in further loop iterations
 	rules.ServiceNameToServices[serviceName] = kongService

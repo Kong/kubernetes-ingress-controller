@@ -3,7 +3,6 @@ package translators
 import (
 	"fmt"
 	"sort"
-	"strconv"
 	"strings"
 
 	"github.com/go-logr/logr"
@@ -173,46 +172,34 @@ func getGRPCRouteHostnamesAsSliceOfStrings(grpcroute *gatewayv1alpha2.GRPCRoute)
 	})
 }
 
-// SplitGRPCRoute splits a GRPCRoute by hostname and match into multiple GRPCRoutes.
+// SplitGRPCRoute splits a GRPCRoute by hostname and match into multiple .
 // Each split GRPCRoute contains at most 1 hostname, and 1 rule with 1 match.
-func SplitGRPCRoute(grpcroute *gatewayv1alpha2.GRPCRoute) []*gatewayv1alpha2.GRPCRoute {
-	// split GRPCRoute by hostname.
-	hostnamedGRPCRoutes := make([]*gatewayv1alpha2.GRPCRoute, 0, len(grpcroute.Spec.Hostnames))
-	if len(grpcroute.Spec.Hostnames) == 0 {
-		hostnamedGRPCRoute := grpcroute.DeepCopy()
-		hostnamedGRPCRoutes = append(hostnamedGRPCRoutes, hostnamedGRPCRoute)
-	} else {
-		for _, hostname := range grpcroute.Spec.Hostnames {
-			hostnamedGRPCRoute := grpcroute.DeepCopy()
-			hostnamedGRPCRoute.Spec.Hostnames = []gatewayv1beta1.Hostname{hostname}
-			hostnamedGRPCRoutes = append(hostnamedGRPCRoutes, hostnamedGRPCRoute)
-		}
-	}
-
-	splitGRPCRoutes := []*gatewayv1alpha2.GRPCRoute{}
-	for _, hostnamedGRPCRoute := range hostnamedGRPCRoutes {
-		// split the GRPCRoutes already split once by hostnames
-		// into GRPCRoutes with one match for each.
-		for i, rule := range hostnamedGRPCRoute.Spec.Rules {
-			for j, match := range rule.Matches {
-				splitRoute := hostnamedGRPCRoute.DeepCopy()
-				splitRoute.Spec.Rules = []gatewayv1alpha2.GRPCRouteRule{
-					{
-						Matches:     []gatewayv1alpha2.GRPCRouteMatch{match},
-						Filters:     rule.Filters,
-						BackendRefs: rule.BackendRefs,
-					},
-				}
-				if splitRoute.Annotations == nil {
-					splitRoute.Annotations = map[string]string{}
-				}
-				splitRoute.Annotations[InternalRuleIndexAnnotationKey] = strconv.Itoa(i)
-				splitRoute.Annotations[InternalMatchIndexAnnotationKey] = strconv.Itoa(j)
-				splitGRPCRoutes = append(splitGRPCRoutes, splitRoute)
+func SplitGRPCRoute(grpcroute *gatewayv1alpha2.GRPCRoute) []SplitGRPCRouteMatch {
+	splitMatches := []SplitGRPCRouteMatch{}
+	splitGRPCRouteByMatch := func(hostname string) {
+		for ruleIndex, rule := range grpcroute.Spec.Rules {
+			for matchIndex, match := range rule.Matches {
+				splitMatches = append(splitMatches, SplitGRPCRouteMatch{
+					Source:     grpcroute,
+					Hostname:   hostname,
+					Match:      *match.DeepCopy(),
+					RuleIndex:  ruleIndex,
+					MatchIndex: matchIndex,
+				})
 			}
 		}
 	}
-	return splitGRPCRoutes
+
+	// split GRPCRoute by matches if no hostname specified in spec.
+	if len(grpcroute.Spec.Hostnames) == 0 {
+		splitGRPCRouteByMatch("")
+		return splitMatches
+	}
+	// split by hostname, then split further by rule and match.
+	for _, hostname := range grpcroute.Spec.Hostnames {
+		splitGRPCRouteByMatch(string(hostname))
+	}
+	return splitMatches
 }
 
 type GRPCRoutePriorityTraits struct {
@@ -220,6 +207,11 @@ type GRPCRoutePriorityTraits struct {
 	PreciseHostname bool
 	// HostnameLength is the length of hostname. Max 253.
 	HostnameLength int
+	// MethodMatchType is the type of method match (if exists).
+	// preserve this field since the API specification has not provided priority of type of method match yet.
+	// (In normal situation should be higher than length of service/method value).
+	// related issue: https://github.com/kubernetes-sigs/gateway-api/issues/2216
+	MethodMatchType gatewayv1alpha2.GRPCMethodMatchType
 	// ServiceLength is the length of GRPC service name. Max 1024.
 	ServiceLength int
 	// MethodLength is the length of GRPC method name. Max 1024.
@@ -228,7 +220,7 @@ type GRPCRoutePriorityTraits struct {
 	HeaderCount int
 }
 
-// CalculateSplitGRCPRoutePriorityTraits calculates the traits to decide
+// CalculateGRCPRouteMatchPriorityTraits calculates the traits to decide
 // priority based on the spec of the GRPCRoute that is already split by hostname and match.
 // Specification of priority goes as follow:
 // (The following comments are extracted from gateway API specification about GRPCRoute)
@@ -240,35 +232,35 @@ type GRPCRoutePriorityTraits struct {
 //   - Characters in a matching method.
 //   - Header matches.
 //
-// REVIEW: do we need to include GRPC method match type (`Exact`,`RegularExpression` or others) into traits?
-func CalculateSplitGRCPRoutePriorityTraits(grpcRoute *gatewayv1alpha2.GRPCRoute) GRPCRoutePriorityTraits {
+// Method match type is preserved since the specification of GRPCRoute has not provided its priority yet.
+func CalculateGRCPRouteMatchPriorityTraits(match SplitGRPCRouteMatch) GRPCRoutePriorityTraits {
 	traits := GRPCRoutePriorityTraits{}
 
 	// calculate traits from hostname.
-	// The split GRPCRoute has at most one hostname in its spec.
-	if len(grpcRoute.Spec.Hostnames) > 0 {
-		hostname := grpcRoute.Spec.Hostnames[0]
-		if !strings.HasPrefix(string(hostname), "*") {
+	if len(match.Hostname) > 0 {
+		traits.HostnameLength = len(match.Hostname)
+		if !strings.HasPrefix(match.Hostname, "*") {
 			traits.PreciseHostname = true
 		}
-		traits.HostnameLength = len(hostname)
 	}
 	// calculate traits from match.
 	// The split GRPCRoute has only 1 rule including 1 match.
-	if len(grpcRoute.Spec.Rules) > 0 && len(grpcRoute.Spec.Rules[0].Matches) > 0 {
-		match := grpcRoute.Spec.Rules[0].Matches[0]
-		// extract length of GRPC service and method.
-		if match.Method != nil {
-			if match.Method.Service != nil {
-				traits.ServiceLength = len(*match.Method.Service)
-			}
-			if match.Method.Method != nil {
-				traits.MethodLength = len(*match.Method.Method)
-			}
+
+	if match.Match.Method != nil {
+		methodMatch := match.Match.Method
+		if methodMatch.Type != nil {
+			traits.MethodMatchType = *methodMatch.Type
 		}
-		// extract header count.
-		traits.HeaderCount = len(match.Headers)
+		if methodMatch.Service != nil {
+			traits.ServiceLength = len(*methodMatch.Service)
+		}
+		if methodMatch.Method != nil {
+			traits.MethodLength = len(*methodMatch.Method)
+		}
 	}
+	// extract header count.
+	traits.HeaderCount = len(match.Match.Headers)
+
 	return traits
 }
 
@@ -325,30 +317,39 @@ type SplitGRPCRouteToKongRoutePriority struct {
 	Priority  int
 }
 
-// AssignRoutePriorityToSplitGRPCRoutes assigns priority to ALL split GRPCRoutes
-// that are split by hostnames and matches from GRPCRoutes listed from the cache.
-// Firstly assign "fixed" bits by the following fields of the GRPCRoute:
-// hostname, GRPC method match, number of header matches.
-// If ties exists in the first step, where multiple GRPCRoutes has the same priority
-// calculated from the fields, we run a sort for the GRPCRoutes in the tie
-// and assign the bits for "relative order" according to the sorting result of these GRPCRoutes.
-func AssignRoutePriorityToSplitGRPCRoutes(
-	logger logr.Logger,
-	splitGRPCoutes []*gatewayv1alpha2.GRPCRoute,
-) []SplitGRPCRouteToKongRoutePriority {
-	priorityToSplitGRPCRoutes := map[int][]*gatewayv1alpha2.GRPCRoute{}
-	for _, grpcRoute := range splitGRPCoutes {
-		// skip if GRPCRoute does not contain the annotation, because this means the GRPCRoute is not a split one.
-		anns := grpcRoute.Annotations
-		if anns == nil || anns[InternalRuleIndexAnnotationKey] == "" || anns[InternalMatchIndexAnnotationKey] == "" {
-			continue
-		}
+// SplitGRPCRouteMatch is the GRPCRouteMatch split by rule and match from the source GRPCRoute.
+// RuleIndex and MatchIndex annotates the place of the match in the source GRPCRoute.
+type SplitGRPCRouteMatch struct {
+	Source     *gatewayv1alpha2.GRPCRoute
+	Hostname   string
+	Match      gatewayv1alpha2.GRPCRouteMatch
+	RuleIndex  int
+	MatchIndex int
+}
 
-		priority := CalculateSplitGRCPRoutePriorityTraits(grpcRoute).EncodeToPriority()
-		priorityToSplitGRPCRoutes[priority] = append(priorityToSplitGRPCRoutes[priority], grpcRoute)
+type SplitGRPCRouteMatchToPriority struct {
+	Match    SplitGRPCRouteMatch
+	Priority int
+}
+
+// AssignRoutePriorityToSplitGRPCRouteMatches assigns priority to ALL split GRPCRoute matches
+// that are split by hostnames and matches from GRPCRoutes listed from the cache.
+// Firstly assign "fixed" bits by the following fields of the matches:
+// hostname, GRPC method match, number of header matches.
+// If ties exists in the first step, where multiple matches has the same priority
+// calculated from the fields, we run a sort for the matches in the tie
+// and assign the bits for "relative order" according to the sorting result of these matches.
+func AssignRoutePriorityToSplitGRPCRouteMatches(
+	logger logr.Logger,
+	splitGRPCouteMatches []SplitGRPCRouteMatch,
+) []SplitGRPCRouteMatchToPriority {
+	priorityToSplitGRPCRouteMatches := map[int][]SplitGRPCRouteMatch{}
+	for _, match := range splitGRPCouteMatches {
+		priority := CalculateGRCPRouteMatchPriorityTraits(match).EncodeToPriority()
+		priorityToSplitGRPCRouteMatches[priority] = append(priorityToSplitGRPCRouteMatches[priority], match)
 	}
 
-	splitGRPCRoutesToPriority := make([]SplitGRPCRouteToKongRoutePriority, 0, len(splitGRPCoutes))
+	splitGRPCRoutesToPriority := make([]SplitGRPCRouteMatchToPriority, 0, len(splitGRPCouteMatches))
 
 	// Bits 0-13 (14 bits) are assigned for relative order of GRPCRoutes.
 	// If multiple GRPCRoutes are assigned to the same priority in the previous step,
@@ -357,21 +358,21 @@ func AssignRoutePriorityToSplitGRPCRoutes(
 	const relativeOrderAssignedBits = 14
 	const defaultRelativeOrderPriorityBits = (1 << relativeOrderAssignedBits) - 1
 
-	for priority, routes := range priorityToSplitGRPCRoutes {
-		if len(routes) == 1 {
+	for priority, matches := range priorityToSplitGRPCRouteMatches {
+		if len(matches) == 1 {
 			splitGRPCRoutesToPriority = append(
-				splitGRPCRoutesToPriority, SplitGRPCRouteToKongRoutePriority{
-					GRPCRoute: routes[0],
-					Priority:  priority + defaultRelativeOrderPriorityBits,
+				splitGRPCRoutesToPriority, SplitGRPCRouteMatchToPriority{
+					Match:    matches[0],
+					Priority: priority + defaultRelativeOrderPriorityBits,
 				})
 			continue
 		}
 
-		sort.SliceStable(routes, func(i, j int) bool {
-			return compareSplitGRPCRoutesRelativePriority(routes[i], routes[j])
+		sort.SliceStable(matches, func(i, j int) bool {
+			return compareSplitGRPCRouteMatchesRelativePriority(matches[i], matches[j])
 		})
 
-		for i, route := range routes {
+		for i, match := range matches {
 			relativeOrderBits := defaultRelativeOrderPriorityBits - i
 			// Although it is very unlikely that there are 2^14 = 16384 GRPCRoutes
 			// should be given priority by their relative order, here we limit the
@@ -379,23 +380,23 @@ func AssignRoutePriorityToSplitGRPCRoutes(
 			if relativeOrderBits <= 0 {
 				relativeOrderBits = 0
 			}
-			splitGRPCRoutesToPriority = append(splitGRPCRoutesToPriority, SplitGRPCRouteToKongRoutePriority{
-				GRPCRoute: route,
-				Priority:  priority + relativeOrderBits,
+			splitGRPCRoutesToPriority = append(splitGRPCRoutesToPriority, SplitGRPCRouteMatchToPriority{
+				Match:    match,
+				Priority: priority + relativeOrderBits,
 			})
 		}
 
 		// Just in case, log a very unlikely scenario where we have more than 2^14 routes with the same base
 		// priority and we have no bit space for them to be deterministically ordered.
-		if len(routes) > (1 << 14) {
-			logger.V(util.WarnLevel).Info("Too many GRPCRoutes to be deterministically ordered", "grpcroute_number", len(routes))
+		if len(matches) > (1 << 14) {
+			logger.V(util.WarnLevel).Info("Too many GRPCRoute matches to be deterministically ordered", "grpcroute_number", len(matches))
 		}
 	}
 
 	return splitGRPCRoutesToPriority
 }
 
-// compareSplitGRPCRoutesRelativePriority compares the "relative order" of two split GRPCRoutes.
+// compareSplitGRPCRouteMatchesRelativePriority compares the "relative order" of two split GRPCRoutes.
 // When it returns true, route1 will take precedence over route2 if all fields in spec ties.
 // The order should be decided by: (extracted from API specification in gateway API documents):
 //
@@ -404,7 +405,9 @@ func AssignRoutePriorityToSplitGRPCRoutes(
 // - The Route appearing first in alphabetical order by “{namespace}/{name}”.
 // If ties still exist within the Route that has been given precedence,
 // matching precedence MUST be granted to the first matching rule meeting the above criteria.
-func compareSplitGRPCRoutesRelativePriority(route1, route2 *gatewayv1alpha2.GRPCRoute) bool {
+func compareSplitGRPCRouteMatchesRelativePriority(match1, match2 SplitGRPCRouteMatch) bool {
+	route1 := match1.Source
+	route2 := match2.Source
 	// compare by creation timestamp.
 	if !route1.CreationTimestamp.Equal(&route2.CreationTimestamp) {
 		return route1.CreationTimestamp.Before(&route2.CreationTimestamp)
@@ -418,43 +421,37 @@ func compareSplitGRPCRoutesRelativePriority(route1, route2 *gatewayv1alpha2.GRPC
 		return route1.Name < route2.Name
 	}
 	// if ties still exist, compare by internal rule order and match order.
-	ruleIndex1, _ := strconv.Atoi(route1.Annotations[InternalRuleIndexAnnotationKey])
-	ruleIndex2, _ := strconv.Atoi(route2.Annotations[InternalRuleIndexAnnotationKey])
-	if ruleIndex1 != ruleIndex2 {
-		return ruleIndex1 < ruleIndex2
+	if match1.RuleIndex != match2.RuleIndex {
+		return match1.RuleIndex < match2.RuleIndex
 	}
-
-	matchIndex1, _ := strconv.Atoi(route1.Annotations[InternalMatchIndexAnnotationKey])
-	matchIndex2, _ := strconv.Atoi(route2.Annotations[InternalMatchIndexAnnotationKey])
-	if matchIndex1 != matchIndex2 {
-		return matchIndex1 < matchIndex2
+	if match1.MatchIndex != match2.MatchIndex {
+		return match1.MatchIndex < match2.MatchIndex
 	}
-
 	// should be unreachable.
 	return true
 }
 
-// GenerateKongExpressionRouteFromSplitGRPCRouteWithPriority generates expression based
+// KongExpressionRouteFromSplitGRPCRouteMatchWithPriority generates expression based
 // Kong route from split GRPCRoute which contains at most one hostname and one rule with one match,
 // and its priority is calculated beforehand.
-func GenerateKongExpressionRouteFromSplitGRPCRouteWithPriority(
-	grpcRouteWithPriority SplitGRPCRouteToKongRoutePriority,
+func KongExpressionRouteFromSplitGRPCRouteMatchWithPriority(
+	matchWithPriority SplitGRPCRouteMatchToPriority,
 ) kongstate.Route {
-	grpcRoute := grpcRouteWithPriority.GRPCRoute
+	grpcRoute := matchWithPriority.Match.Source
 	tags := util.GenerateTagsForObject(grpcRoute)
 	// since we split HTTPRoutes by hostname, rule and match, we generate the route name in
 	// grpcroute.<namespace>.<name>.<hostname>.<rule index>.<match index> format.
+	hostname := matchWithPriority.Match.Hostname
 	hostnameInRouteName := "_"
-	if len(grpcRoute.Spec.Hostnames) > 0 {
-		hostnameInRouteName = string(grpcRoute.Spec.Hostnames[0])
-		hostnameInRouteName = strings.ReplaceAll(hostnameInRouteName, "*", "_")
+	if len(hostname) > 0 {
+		hostnameInRouteName = strings.ReplaceAll(hostname, "*", "_")
 	}
-	routeName := fmt.Sprintf("grpcroute.%s.%s.%s.%s.%s",
+	routeName := fmt.Sprintf("grpcroute.%s.%s.%s.%d.%d",
 		grpcRoute.Namespace,
 		grpcRoute.Name,
 		hostnameInRouteName,
-		grpcRoute.Annotations[InternalRuleIndexAnnotationKey],
-		grpcRoute.Annotations[InternalMatchIndexAnnotationKey],
+		matchWithPriority.Match.RuleIndex,
+		matchWithPriority.Match.MatchIndex,
 	)
 
 	r := kongstate.Route{
@@ -468,31 +465,31 @@ func GenerateKongExpressionRouteFromSplitGRPCRouteWithPriority(
 		ExpressionRoutes: true,
 	}
 
-	if len(grpcRoute.Spec.Rules) > 0 && len(grpcRoute.Spec.Rules[0].Matches) > 0 {
-		match := grpcRoute.Spec.Rules[0].Matches[0]
-		matcher := generateMathcherFromGRPCMatch(
-			match,
-			getGRPCRouteHostnamesAsSliceOfStrings(grpcRoute),
-			grpcRoute.Annotations,
-		)
-		atc.ApplyExpression(&r.Route, matcher, grpcRouteWithPriority.Priority)
-	}
+	grpcMatch := matchWithPriority.Match.Match
+	matcher := generateMathcherFromGRPCMatch(
+		grpcMatch,
+		[]string{hostname},
+		grpcRoute.Annotations,
+	)
+	atc.ApplyExpression(&r.Route, matcher, matchWithPriority.Priority)
+
 	return r
 }
 
-// KongServiceNameFromSplitGRPCRoute generates the name of translated Kong service
-// from split GRPCRoute that contains at most 1 hostname and 1 rule.
-func KongServiceNameFromSplitGRPCRoute(splitGRPCRoute *gatewayv1alpha2.GRPCRoute) string {
+// KongServiceNameFromSplitGRPCRouteMatch generates the name of translated Kong service
+// from split GRPCRoute match with the source GRPCRoute and rule index.
+func KongServiceNameFromSplitGRPCRouteMatch(match SplitGRPCRouteMatch) string {
+	// fill hostname.
 	hostname := "_"
-	if len(splitGRPCRoute.Spec.Hostnames) > 0 {
-		hostname = string(splitGRPCRoute.Spec.Hostnames[0])
-		hostname = strings.ReplaceAll(hostname, "*", "_")
+	if len(match.Hostname) > 0 {
+		hostname = strings.ReplaceAll(match.Hostname, "*", "_")
 	}
 	// pattern grpcroute.<namespace>.<name>.<hostname>.<rule index>.
-	return fmt.Sprintf("grpcroute.%s.%s.%s.%s",
-		splitGRPCRoute.Namespace,
-		splitGRPCRoute.Name,
+	grpcRoute := match.Source
+	return fmt.Sprintf("grpcroute.%s.%s.%s.%d",
+		grpcRoute.Namespace,
+		grpcRoute.Name,
 		hostname,
-		splitGRPCRoute.Annotations[InternalRuleIndexAnnotationKey],
+		match.RuleIndex,
 	)
 }

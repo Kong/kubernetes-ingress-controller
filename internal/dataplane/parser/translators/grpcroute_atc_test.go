@@ -273,319 +273,174 @@ func TestSplitGRPCRoute(t *testing.T) {
 		return backendRefs
 	}
 
+	testGRPCRoutes := []*gatewayv1alpha2.GRPCRoute{
+		{
+			TypeMeta: grpcRouteTypeMeta,
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: "default",
+				Name:      "grpcroute-no-hostname-one-match",
+			},
+			Spec: gatewayv1alpha2.GRPCRouteSpec{
+				Rules: []gatewayv1alpha2.GRPCRouteRule{
+					{
+						Matches: []gatewayv1alpha2.GRPCRouteMatch{
+							{
+								Method: &gatewayv1alpha2.GRPCMethodMatch{
+									Service: lo.ToPtr("pets"),
+									Method:  lo.ToPtr("list"),
+								},
+							},
+						},
+						BackendRefs: namesToBackendRefs([]string{"listpets"}),
+					},
+				},
+			},
+		},
+		{
+			TypeMeta: grpcRouteTypeMeta,
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: "default",
+				Name:      "grpcroute-one-hostname-multiple-matches",
+			},
+			Spec: gatewayv1alpha2.GRPCRouteSpec{
+				Hostnames: []gatewayv1alpha2.Hostname{
+					gatewayv1alpha2.Hostname("petstore.com"),
+				},
+				Rules: []gatewayv1alpha2.GRPCRouteRule{
+					{
+						Matches: []gatewayv1alpha2.GRPCRouteMatch{
+							{
+								Method: &gatewayv1alpha2.GRPCMethodMatch{
+									Service: lo.ToPtr("cats"),
+									Method:  lo.ToPtr("list"),
+								},
+							},
+							{
+								Method: &gatewayv1alpha2.GRPCMethodMatch{
+									Service: lo.ToPtr("dogs"),
+									Method:  lo.ToPtr("list"),
+								},
+							},
+						},
+						BackendRefs: namesToBackendRefs([]string{"listpets"}),
+					},
+					{
+						Matches: []gatewayv1alpha2.GRPCRouteMatch{
+							{
+								Method: &gatewayv1alpha2.GRPCMethodMatch{
+									Service: lo.ToPtr("cats"),
+									Method:  lo.ToPtr("create"),
+								},
+							},
+							{
+								Method: &gatewayv1alpha2.GRPCMethodMatch{
+									Service: lo.ToPtr("dogs"),
+									Method:  lo.ToPtr("create"),
+								},
+							},
+						},
+						BackendRefs: namesToBackendRefs([]string{"createpets"}),
+					},
+				},
+			},
+		},
+		{
+			TypeMeta: grpcRouteTypeMeta,
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: "default",
+				Name:      "grpcroute-multiple-hostnames",
+			},
+			Spec: gatewayv1alpha2.GRPCRouteSpec{
+				Hostnames: []gatewayv1alpha2.Hostname{
+					gatewayv1alpha2.Hostname("petstore.com"),
+					gatewayv1alpha2.Hostname("petstore.net"),
+				},
+				Rules: []gatewayv1alpha2.GRPCRouteRule{
+					{
+						Matches: []gatewayv1alpha2.GRPCRouteMatch{
+							{
+								Method: &gatewayv1alpha2.GRPCMethodMatch{
+									Service: lo.ToPtr("pets"),
+									Method:  lo.ToPtr("list"),
+								},
+							},
+						},
+						BackendRefs: namesToBackendRefs([]string{"listpets"}),
+					},
+				},
+			},
+		},
+	}
+
 	testCases := []struct {
-		name                    string
-		grpcRoute               *gatewayv1alpha2.GRPCRoute
-		expectedSplitGRPCRoutes []*gatewayv1alpha2.GRPCRoute
+		name                 string
+		grpcRoute            *gatewayv1alpha2.GRPCRoute
+		expectedSplitMatches []SplitGRPCRouteMatch
 	}{
 		{
-			name: "no hostname and one match",
-			grpcRoute: &gatewayv1alpha2.GRPCRoute{
-				TypeMeta: grpcRouteTypeMeta,
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "default",
-					Name:      "grpcroute-no-hostname-one-match",
-				},
-				Spec: gatewayv1alpha2.GRPCRouteSpec{
-					Rules: []gatewayv1alpha2.GRPCRouteRule{
-						{
-							Matches: []gatewayv1alpha2.GRPCRouteMatch{
-								{
-									Method: &gatewayv1alpha2.GRPCMethodMatch{
-										Service: lo.ToPtr("pets"),
-										Method:  lo.ToPtr("list"),
-									},
-								},
-							},
-							BackendRefs: namesToBackendRefs([]string{"listpets"}),
-						},
-					},
-				},
-			},
-			expectedSplitGRPCRoutes: []*gatewayv1alpha2.GRPCRoute{
+			name:      "no hostname and one match",
+			grpcRoute: testGRPCRoutes[0],
+			expectedSplitMatches: []SplitGRPCRouteMatch{
 				{
-					TypeMeta: grpcRouteTypeMeta,
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "default",
-						Name:      "grpcroute-no-hostname-one-match",
-						Annotations: map[string]string{
-							InternalRuleIndexAnnotationKey:  "0",
-							InternalMatchIndexAnnotationKey: "0",
-						},
-					},
-					Spec: gatewayv1alpha2.GRPCRouteSpec{
-						Rules: []gatewayv1alpha2.GRPCRouteRule{
-							{
-								Matches: []gatewayv1alpha2.GRPCRouteMatch{
-									{
-										Method: &gatewayv1alpha2.GRPCMethodMatch{
-											Service: lo.ToPtr("pets"),
-											Method:  lo.ToPtr("list"),
-										},
-									},
-								},
-								BackendRefs: namesToBackendRefs([]string{"listpets"}),
-							},
-						},
-					},
+					Source:     testGRPCRoutes[0],
+					Hostname:   "",
+					Match:      testGRPCRoutes[0].Spec.Rules[0].Matches[0],
+					RuleIndex:  0,
+					MatchIndex: 0,
 				},
 			},
 		},
 		{
-			name: "single hostname and multiple rules",
-			grpcRoute: &gatewayv1alpha2.GRPCRoute{
-				TypeMeta: grpcRouteTypeMeta,
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "default",
-					Name:      "grpcroute-one-hostname-multiple-matches",
-				},
-				Spec: gatewayv1alpha2.GRPCRouteSpec{
-					Hostnames: []gatewayv1alpha2.Hostname{
-						gatewayv1alpha2.Hostname("petstore.com"),
-					},
-					Rules: []gatewayv1alpha2.GRPCRouteRule{
-						{
-							Matches: []gatewayv1alpha2.GRPCRouteMatch{
-								{
-									Method: &gatewayv1alpha2.GRPCMethodMatch{
-										Service: lo.ToPtr("cats"),
-										Method:  lo.ToPtr("list"),
-									},
-								},
-								{
-									Method: &gatewayv1alpha2.GRPCMethodMatch{
-										Service: lo.ToPtr("dogs"),
-										Method:  lo.ToPtr("list"),
-									},
-								},
-							},
-							BackendRefs: namesToBackendRefs([]string{"listpets"}),
-						},
-						{
-							Matches: []gatewayv1alpha2.GRPCRouteMatch{
-								{
-									Method: &gatewayv1alpha2.GRPCMethodMatch{
-										Service: lo.ToPtr("cats"),
-										Method:  lo.ToPtr("create"),
-									},
-								},
-								{
-									Method: &gatewayv1alpha2.GRPCMethodMatch{
-										Service: lo.ToPtr("dogs"),
-										Method:  lo.ToPtr("create"),
-									},
-								},
-							},
-							BackendRefs: namesToBackendRefs([]string{"createpets"}),
-						},
-					},
-				},
-			},
-			expectedSplitGRPCRoutes: []*gatewayv1alpha2.GRPCRoute{
+			name:      "single hostname and multiple rules",
+			grpcRoute: testGRPCRoutes[1],
+			expectedSplitMatches: []SplitGRPCRouteMatch{
 				{
-					TypeMeta: grpcRouteTypeMeta,
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "default",
-						Name:      "grpcroute-one-hostname-multiple-matches",
-						Annotations: map[string]string{
-							InternalRuleIndexAnnotationKey:  "0",
-							InternalMatchIndexAnnotationKey: "0",
-						},
-					},
-					Spec: gatewayv1alpha2.GRPCRouteSpec{
-						Hostnames: []gatewayv1alpha2.Hostname{
-							gatewayv1alpha2.Hostname("petstore.com"),
-						},
-						Rules: []gatewayv1alpha2.GRPCRouteRule{
-							{
-								Matches: []gatewayv1alpha2.GRPCRouteMatch{
-									{
-										Method: &gatewayv1alpha2.GRPCMethodMatch{
-											Service: lo.ToPtr("cats"),
-											Method:  lo.ToPtr("list"),
-										},
-									},
-								},
-								BackendRefs: namesToBackendRefs([]string{"listpets"}),
-							},
-						},
-					},
+					Source:     testGRPCRoutes[1],
+					Hostname:   string(testGRPCRoutes[1].Spec.Hostnames[0]),
+					Match:      testGRPCRoutes[1].Spec.Rules[0].Matches[0],
+					RuleIndex:  0,
+					MatchIndex: 0,
 				},
 				{
-					TypeMeta: grpcRouteTypeMeta,
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "default",
-						Name:      "grpcroute-one-hostname-multiple-matches",
-						Annotations: map[string]string{
-							InternalRuleIndexAnnotationKey:  "0",
-							InternalMatchIndexAnnotationKey: "1",
-						},
-					},
-					Spec: gatewayv1alpha2.GRPCRouteSpec{
-						Hostnames: []gatewayv1alpha2.Hostname{
-							gatewayv1alpha2.Hostname("petstore.com"),
-						},
-						Rules: []gatewayv1alpha2.GRPCRouteRule{
-							{
-								Matches: []gatewayv1alpha2.GRPCRouteMatch{
-									{
-										Method: &gatewayv1alpha2.GRPCMethodMatch{
-											Service: lo.ToPtr("dogs"),
-											Method:  lo.ToPtr("list"),
-										},
-									},
-								},
-								BackendRefs: namesToBackendRefs([]string{"listpets"}),
-							},
-						},
-					},
+					Source:     testGRPCRoutes[1],
+					Hostname:   string(testGRPCRoutes[1].Spec.Hostnames[0]),
+					Match:      testGRPCRoutes[1].Spec.Rules[0].Matches[1],
+					RuleIndex:  0,
+					MatchIndex: 1,
 				},
 				{
-					TypeMeta: grpcRouteTypeMeta,
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "default",
-						Name:      "grpcroute-one-hostname-multiple-matches",
-						Annotations: map[string]string{
-							InternalRuleIndexAnnotationKey:  "1",
-							InternalMatchIndexAnnotationKey: "0",
-						},
-					},
-					Spec: gatewayv1alpha2.GRPCRouteSpec{
-						Hostnames: []gatewayv1alpha2.Hostname{
-							gatewayv1alpha2.Hostname("petstore.com"),
-						},
-						Rules: []gatewayv1alpha2.GRPCRouteRule{
-							{
-								Matches: []gatewayv1alpha2.GRPCRouteMatch{
-									{
-										Method: &gatewayv1alpha2.GRPCMethodMatch{
-											Service: lo.ToPtr("cats"),
-											Method:  lo.ToPtr("create"),
-										},
-									},
-								},
-								BackendRefs: namesToBackendRefs([]string{"createpets"}),
-							},
-						},
-					},
+					Source:     testGRPCRoutes[1],
+					Hostname:   string(testGRPCRoutes[1].Spec.Hostnames[0]),
+					Match:      testGRPCRoutes[1].Spec.Rules[1].Matches[0],
+					RuleIndex:  1,
+					MatchIndex: 0,
 				},
 				{
-					TypeMeta: grpcRouteTypeMeta,
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "default",
-						Name:      "grpcroute-one-hostname-multiple-matches",
-						Annotations: map[string]string{
-							InternalRuleIndexAnnotationKey:  "1",
-							InternalMatchIndexAnnotationKey: "1",
-						},
-					},
-					Spec: gatewayv1alpha2.GRPCRouteSpec{
-						Hostnames: []gatewayv1alpha2.Hostname{
-							gatewayv1alpha2.Hostname("petstore.com"),
-						},
-						Rules: []gatewayv1alpha2.GRPCRouteRule{
-							{
-								Matches: []gatewayv1alpha2.GRPCRouteMatch{
-									{
-										Method: &gatewayv1alpha2.GRPCMethodMatch{
-											Service: lo.ToPtr("dogs"),
-											Method:  lo.ToPtr("create"),
-										},
-									},
-								},
-								BackendRefs: namesToBackendRefs([]string{"createpets"}),
-							},
-						},
-					},
+					Source:     testGRPCRoutes[1],
+					Hostname:   string(testGRPCRoutes[1].Spec.Hostnames[0]),
+					Match:      testGRPCRoutes[1].Spec.Rules[1].Matches[1],
+					RuleIndex:  1,
+					MatchIndex: 1,
 				},
 			},
 		},
 		{
-			name: "multiple hostnames",
-			grpcRoute: &gatewayv1alpha2.GRPCRoute{
-				TypeMeta: grpcRouteTypeMeta,
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "default",
-					Name:      "grpcroute-multiple-hostnames",
-				},
-				Spec: gatewayv1alpha2.GRPCRouteSpec{
-					Hostnames: []gatewayv1alpha2.Hostname{
-						gatewayv1alpha2.Hostname("petstore.com"),
-						gatewayv1alpha2.Hostname("petstore.net"),
-					},
-					Rules: []gatewayv1alpha2.GRPCRouteRule{
-						{
-							Matches: []gatewayv1alpha2.GRPCRouteMatch{
-								{
-									Method: &gatewayv1alpha2.GRPCMethodMatch{
-										Service: lo.ToPtr("pets"),
-										Method:  lo.ToPtr("list"),
-									},
-								},
-							},
-							BackendRefs: namesToBackendRefs([]string{"listpets"}),
-						},
-					},
-				},
-			},
-			expectedSplitGRPCRoutes: []*gatewayv1alpha2.GRPCRoute{
+			name:      "multiple hostnames",
+			grpcRoute: testGRPCRoutes[2],
+			expectedSplitMatches: []SplitGRPCRouteMatch{
 				{
-					TypeMeta: grpcRouteTypeMeta,
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "default",
-						Name:      "grpcroute-multiple-hostnames",
-						Annotations: map[string]string{
-							InternalRuleIndexAnnotationKey:  "0",
-							InternalMatchIndexAnnotationKey: "0",
-						},
-					},
-					Spec: gatewayv1alpha2.GRPCRouteSpec{
-						Hostnames: []gatewayv1alpha2.Hostname{
-							gatewayv1alpha2.Hostname("petstore.com"),
-						},
-						Rules: []gatewayv1alpha2.GRPCRouteRule{
-							{
-								Matches: []gatewayv1alpha2.GRPCRouteMatch{
-									{
-										Method: &gatewayv1alpha2.GRPCMethodMatch{
-											Service: lo.ToPtr("pets"),
-											Method:  lo.ToPtr("list"),
-										},
-									},
-								},
-								BackendRefs: namesToBackendRefs([]string{"listpets"}),
-							},
-						},
-					},
+					Source:     testGRPCRoutes[2],
+					Hostname:   string(testGRPCRoutes[2].Spec.Hostnames[0]),
+					Match:      testGRPCRoutes[2].Spec.Rules[0].Matches[0],
+					RuleIndex:  0,
+					MatchIndex: 0,
 				},
 				{
-					TypeMeta: grpcRouteTypeMeta,
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "default",
-						Name:      "grpcroute-multiple-hostnames",
-						Annotations: map[string]string{
-							InternalRuleIndexAnnotationKey:  "0",
-							InternalMatchIndexAnnotationKey: "0",
-						},
-					},
-					Spec: gatewayv1alpha2.GRPCRouteSpec{
-						Hostnames: []gatewayv1alpha2.Hostname{
-							gatewayv1alpha2.Hostname("petstore.net"),
-						},
-						Rules: []gatewayv1alpha2.GRPCRouteRule{
-							{
-								Matches: []gatewayv1alpha2.GRPCRouteMatch{
-									{
-										Method: &gatewayv1alpha2.GRPCMethodMatch{
-											Service: lo.ToPtr("pets"),
-											Method:  lo.ToPtr("list"),
-										},
-									},
-								},
-								BackendRefs: namesToBackendRefs([]string{"listpets"}),
-							},
-						},
-					},
+					Source:     testGRPCRoutes[2],
+					Hostname:   string(testGRPCRoutes[2].Spec.Hostnames[1]),
+					Match:      testGRPCRoutes[2].Spec.Rules[0].Matches[0],
+					RuleIndex:  0,
+					MatchIndex: 0,
 				},
 			},
 		},
@@ -595,11 +450,11 @@ func TestSplitGRPCRoute(t *testing.T) {
 		tc := tc
 		indexStr := strconv.Itoa(i)
 		t.Run(indexStr+"-"+tc.name, func(t *testing.T) {
-			splitGRPCRoutes := SplitGRPCRoute(tc.grpcRoute)
-			require.Len(t, splitGRPCRoutes, len(tc.expectedSplitGRPCRoutes), "should have same number of split GRPCRoutes with expected")
-			for i, splitGRPCRoute := range tc.expectedSplitGRPCRoutes {
-				require.Truef(t, reflect.DeepEqual(splitGRPCRoute, splitGRPCRoutes[i]),
-					"should have the same GRPCRoute as expected on index %d", i)
+			splitMatches := SplitGRPCRoute(tc.grpcRoute)
+			require.Len(t, splitMatches, len(tc.expectedSplitMatches), "should have same number of split matches with expected")
+			for i, splitGRPCRoute := range tc.expectedSplitMatches {
+				require.Truef(t, reflect.DeepEqual(splitGRPCRoute, splitMatches[i]),
+					"should have the same GRPCRoute match as expected on index %d", i)
 			}
 		})
 	}
@@ -608,98 +463,62 @@ func TestSplitGRPCRoute(t *testing.T) {
 func TestCalculateSplitGRCPRoutePriorityTraits(t *testing.T) {
 	testCases := []struct {
 		name           string
-		grpcRoute      *gatewayv1alpha2.GRPCRoute
+		match          SplitGRPCRouteMatch
 		expectedTraits GRPCRoutePriorityTraits
 	}{
 		{
 			name: "precise hostname with exact method match",
-			grpcRoute: &gatewayv1alpha2.GRPCRoute{
-				TypeMeta: grpcRouteTypeMeta,
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "precise-hostname-exact-method",
-				},
-				Spec: gatewayv1alpha2.GRPCRouteSpec{
-					Hostnames: []gatewayv1alpha2.Hostname{
-						"petstore.com",
-					},
-					Rules: []gatewayv1alpha2.GRPCRouteRule{
-						{
-							Matches: []gatewayv1alpha2.GRPCRouteMatch{
-								{
-									Method: &gatewayv1alpha2.GRPCMethodMatch{
-										Service: lo.ToPtr("pets"),
-										Method:  lo.ToPtr("list"),
-									},
-								},
-							},
-						},
+			match: SplitGRPCRouteMatch{
+				Hostname: "petstore.com",
+				Match: gatewayv1alpha2.GRPCRouteMatch{
+					Method: &gatewayv1alpha2.GRPCMethodMatch{
+						Type:    lo.ToPtr(gatewayv1alpha2.GRPCMethodMatchExact),
+						Service: lo.ToPtr("pets"),
+						Method:  lo.ToPtr("list"),
 					},
 				},
 			},
 			expectedTraits: GRPCRoutePriorityTraits{
 				PreciseHostname: true,
 				HostnameLength:  len("petstore.com"),
+				MethodMatchType: gatewayv1alpha2.GRPCMethodMatchExact,
 				ServiceLength:   len("pets"),
 				MethodLength:    len("list"),
 			},
 		},
 		{
 			name: "wildcard hostname and partial method match",
-			grpcRoute: &gatewayv1alpha2.GRPCRoute{
-				TypeMeta: grpcRouteTypeMeta,
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "wildcart-hostname-partial-method",
-				},
-				Spec: gatewayv1alpha2.GRPCRouteSpec{
-					Hostnames: []gatewayv1alpha2.Hostname{
-						"*.petstore.com",
-					},
-					Rules: []gatewayv1alpha2.GRPCRouteRule{
-						{
-							Matches: []gatewayv1alpha2.GRPCRouteMatch{
-								{
-									Method: &gatewayv1alpha2.GRPCMethodMatch{
-										Service: lo.ToPtr("pets"),
-									},
-								},
-							},
-						},
+			match: SplitGRPCRouteMatch{
+				Hostname: "*.petstore.com",
+				Match: gatewayv1alpha2.GRPCRouteMatch{
+					Method: &gatewayv1alpha2.GRPCMethodMatch{
+						Type:    lo.ToPtr(gatewayv1alpha2.GRPCMethodMatchExact),
+						Service: lo.ToPtr("pets"),
 					},
 				},
 			},
 			expectedTraits: GRPCRoutePriorityTraits{
 				PreciseHostname: false,
 				HostnameLength:  len("*.petstore.com"),
+				MethodMatchType: gatewayv1alpha2.GRPCMethodMatchExact,
 				ServiceLength:   len("pets"),
 				MethodLength:    0,
 			},
 		},
 		{
 			name: "no hostname with only header matches",
-			grpcRoute: &gatewayv1alpha2.GRPCRoute{
-				TypeMeta: grpcRouteTypeMeta,
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "no-hostname-no-method",
-				},
-				Spec: gatewayv1alpha2.GRPCRouteSpec{
-					Rules: []gatewayv1alpha2.GRPCRouteRule{
+			match: SplitGRPCRouteMatch{
+				Match: gatewayv1alpha2.GRPCRouteMatch{
+					Headers: []gatewayv1alpha2.GRPCHeaderMatch{
 						{
-							Matches: []gatewayv1alpha2.GRPCRouteMatch{
-								{
-									Headers: []gatewayv1alpha2.GRPCHeaderMatch{
-										{
-											Type:  lo.ToPtr(gatewayv1beta1.HeaderMatchExact),
-											Name:  gatewayv1alpha2.GRPCHeaderName("header1"),
-											Value: "foo",
-										},
-										{
-											Type:  lo.ToPtr(gatewayv1beta1.HeaderMatchExact),
-											Name:  gatewayv1alpha2.GRPCHeaderName("header2"),
-											Value: "bar",
-										},
-									},
-								},
-							},
+							Type:  lo.ToPtr(gatewayv1beta1.HeaderMatchExact),
+							Name:  gatewayv1alpha2.GRPCHeaderName("key1"),
+							Value: "value1",
+						},
+						{
+							Type:  lo.ToPtr(gatewayv1beta1.HeaderMatchExact),
+							Name:  gatewayv1alpha2.GRPCHeaderName("key2"),
+							Value: "value2",
 						},
 					},
 				},
@@ -717,7 +536,7 @@ func TestCalculateSplitGRCPRoutePriorityTraits(t *testing.T) {
 		tc := tc
 		indexStr := strconv.Itoa(i)
 		t.Run(indexStr+"-"+tc.name, func(t *testing.T) {
-			traits := CalculateSplitGRCPRoutePriorityTraits(tc.grpcRoute)
+			traits := CalculateGRCPRouteMatchPriorityTraits(tc.match)
 			require.Equal(t, tc.expectedTraits, traits)
 		})
 	}
@@ -761,8 +580,8 @@ func TestGRPCRouteTraitsEncodeToPriority(t *testing.T) {
 	}
 }
 
-func TestAssignRoutePriorityToSplitGRPCRoutes(t *testing.T) {
-	type splitGRPCRouteIndex struct {
+func TestAssignRoutePriorityToSplitGRPCRouteMatches(t *testing.T) {
+	type splitGRPCRouteMatchIndex struct {
 		namespace  string
 		name       string
 		hostname   string
@@ -773,68 +592,80 @@ func TestAssignRoutePriorityToSplitGRPCRoutes(t *testing.T) {
 	const maxRelativeOrderPriorityBits = (1 << 14) - 1
 
 	testCases := []struct {
-		name            string
-		splitGRPCRoutes []*gatewayv1alpha2.GRPCRoute
+		name                  string
+		splitGRPCRouteMatches []SplitGRPCRouteMatch
 		// GRPCRoute index -> priority
-		priorities map[splitGRPCRouteIndex]int
+		priorities map[splitGRPCRouteMatchIndex]int
 	}{
 		{
 			name: "no dupelicated fixed priority",
-			splitGRPCRoutes: []*gatewayv1alpha2.GRPCRoute{
+			splitGRPCRouteMatches: []SplitGRPCRouteMatch{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "default",
-						Name:      "grpcroute-1",
-						Annotations: map[string]string{
-							InternalRuleIndexAnnotationKey:  "0",
-							InternalMatchIndexAnnotationKey: "0",
+					Source: &gatewayv1alpha2.GRPCRoute{
+						ObjectMeta: metav1.ObjectMeta{
+							Namespace:         "default",
+							Name:              "grpcroute-1",
+							CreationTimestamp: metav1.NewTime(now.Add(-5 * time.Second)),
 						},
-						CreationTimestamp: metav1.NewTime(now.Add(-5 * time.Second)),
-					},
-					Spec: gatewayv1alpha2.GRPCRouteSpec{
-						Hostnames: []gatewayv1beta1.Hostname{"foo.com"},
-						Rules: []gatewayv1alpha2.GRPCRouteRule{
-							{
-								Matches: []gatewayv1alpha2.GRPCRouteMatch{
-									{
-										Method: &gatewayv1alpha2.GRPCMethodMatch{
-											Service: lo.ToPtr("pets"),
-											Method:  lo.ToPtr("list"),
+						Spec: gatewayv1alpha2.GRPCRouteSpec{
+							Hostnames: []gatewayv1beta1.Hostname{"foo.com"},
+							Rules: []gatewayv1alpha2.GRPCRouteRule{
+								{
+									Matches: []gatewayv1alpha2.GRPCRouteMatch{
+										{
+											Method: &gatewayv1alpha2.GRPCMethodMatch{
+												Service: lo.ToPtr("pets"),
+												Method:  lo.ToPtr("list"),
+											},
 										},
 									},
 								},
 							},
 						},
 					},
+					Hostname: "foo.com",
+					Match: gatewayv1alpha2.GRPCRouteMatch{
+						Method: &gatewayv1alpha2.GRPCMethodMatch{
+							Service: lo.ToPtr("pets"),
+							Method:  lo.ToPtr("list"),
+						},
+					},
+					RuleIndex:  0,
+					MatchIndex: 0,
 				},
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "default",
-						Name:      "grpcroute-2",
-						Annotations: map[string]string{
-							InternalRuleIndexAnnotationKey:  "0",
-							InternalMatchIndexAnnotationKey: "0",
+					Source: &gatewayv1alpha2.GRPCRoute{
+						ObjectMeta: metav1.ObjectMeta{
+							Namespace:         "default",
+							Name:              "grpcroute-2",
+							CreationTimestamp: metav1.NewTime(now.Add(-5 * time.Second)),
 						},
-						CreationTimestamp: metav1.NewTime(now.Add(-5 * time.Second)),
-					},
-					Spec: gatewayv1alpha2.GRPCRouteSpec{
-						Hostnames: []gatewayv1beta1.Hostname{"*.bar.com"},
-						Rules: []gatewayv1alpha2.GRPCRouteRule{
-							{
-								Matches: []gatewayv1alpha2.GRPCRouteMatch{
-									{
-										Method: &gatewayv1alpha2.GRPCMethodMatch{
-											Service: lo.ToPtr("pets"),
-											Method:  lo.ToPtr("list"),
+						Spec: gatewayv1alpha2.GRPCRouteSpec{
+							Hostnames: []gatewayv1beta1.Hostname{"*.bar.com"},
+							Rules: []gatewayv1alpha2.GRPCRouteRule{
+								{
+									Matches: []gatewayv1alpha2.GRPCRouteMatch{
+										{
+											Method: &gatewayv1alpha2.GRPCMethodMatch{
+												Service: lo.ToPtr("pets"),
+												Method:  lo.ToPtr("list"),
+											},
 										},
 									},
 								},
 							},
+						},
+					},
+					Hostname: "*.bar.com",
+					Match: gatewayv1alpha2.GRPCRouteMatch{
+						Method: &gatewayv1alpha2.GRPCMethodMatch{
+							Service: lo.ToPtr("pets"),
+							Method:  lo.ToPtr("list"),
 						},
 					},
 				},
 			},
-			priorities: map[splitGRPCRouteIndex]int{
+			priorities: map[splitGRPCRouteMatchIndex]int{
 				{
 					namespace:  "default",
 					name:       "grpcroute-1",
@@ -863,61 +694,76 @@ func TestAssignRoutePriorityToSplitGRPCRoutes(t *testing.T) {
 		},
 		{
 			name: "break tie by creation timestamp",
-			splitGRPCRoutes: []*gatewayv1alpha2.GRPCRoute{
+			splitGRPCRouteMatches: []SplitGRPCRouteMatch{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "default",
-						Name:      "grpcroute-1",
-						Annotations: map[string]string{
-							InternalRuleIndexAnnotationKey:  "0",
-							InternalMatchIndexAnnotationKey: "0",
+					Source: &gatewayv1alpha2.GRPCRoute{
+						ObjectMeta: metav1.ObjectMeta{
+							Namespace:         "default",
+							Name:              "grpcroute-1",
+							CreationTimestamp: metav1.NewTime(now.Add(-5 * time.Second)),
 						},
-						CreationTimestamp: metav1.NewTime(now.Add(-5 * time.Second)),
-					},
-					Spec: gatewayv1alpha2.GRPCRouteSpec{
-						Hostnames: []gatewayv1beta1.Hostname{"foo.com"},
-						Rules: []gatewayv1alpha2.GRPCRouteRule{
-							{
-								Matches: []gatewayv1alpha2.GRPCRouteMatch{
-									{
-										Method: &gatewayv1alpha2.GRPCMethodMatch{
-											Service: lo.ToPtr("pets"),
-											Method:  lo.ToPtr("list"),
+						Spec: gatewayv1alpha2.GRPCRouteSpec{
+							Hostnames: []gatewayv1beta1.Hostname{"foo.com"},
+							Rules: []gatewayv1alpha2.GRPCRouteRule{
+								{
+									Matches: []gatewayv1alpha2.GRPCRouteMatch{
+										{
+											Method: &gatewayv1alpha2.GRPCMethodMatch{
+												Service: lo.ToPtr("pets"),
+												Method:  lo.ToPtr("list"),
+											},
 										},
 									},
 								},
 							},
 						},
 					},
+					Hostname: "foo.com",
+					Match: gatewayv1alpha2.GRPCRouteMatch{
+						Method: &gatewayv1alpha2.GRPCMethodMatch{
+							Service: lo.ToPtr("pets"),
+							Method:  lo.ToPtr("list"),
+						},
+					},
+					RuleIndex:  0,
+					MatchIndex: 0,
 				},
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "default",
-						Name:      "grpcroute-2",
-						Annotations: map[string]string{
-							InternalRuleIndexAnnotationKey:  "0",
-							InternalMatchIndexAnnotationKey: "0",
+					Source: &gatewayv1alpha2.GRPCRoute{
+						ObjectMeta: metav1.ObjectMeta{
+							Namespace: "default",
+							Name:      "grpcroute-2",
+							// created earlier
+							CreationTimestamp: metav1.NewTime(now.Add(-10 * time.Second)),
 						},
-						CreationTimestamp: metav1.NewTime(now.Add(-10 * time.Second)),
-					},
-					Spec: gatewayv1alpha2.GRPCRouteSpec{
-						Hostnames: []gatewayv1beta1.Hostname{"bar.com"},
-						Rules: []gatewayv1alpha2.GRPCRouteRule{
-							{
-								Matches: []gatewayv1alpha2.GRPCRouteMatch{
-									{
-										Method: &gatewayv1alpha2.GRPCMethodMatch{
-											Service: lo.ToPtr("pets"),
-											Method:  lo.ToPtr("list"),
+						Spec: gatewayv1alpha2.GRPCRouteSpec{
+							Hostnames: []gatewayv1beta1.Hostname{"bar.com"},
+							Rules: []gatewayv1alpha2.GRPCRouteRule{
+								{
+									Matches: []gatewayv1alpha2.GRPCRouteMatch{
+										{
+											Method: &gatewayv1alpha2.GRPCMethodMatch{
+												Service: lo.ToPtr("pets"),
+												Method:  lo.ToPtr("list"),
+											},
 										},
 									},
 								},
 							},
 						},
 					},
+					Hostname: "bar.com",
+					Match: gatewayv1alpha2.GRPCRouteMatch{
+						Method: &gatewayv1alpha2.GRPCMethodMatch{
+							Service: lo.ToPtr("pets"),
+							Method:  lo.ToPtr("list"),
+						},
+					},
+					RuleIndex:  0,
+					MatchIndex: 0,
 				},
 			},
-			priorities: map[splitGRPCRouteIndex]int{
+			priorities: map[splitGRPCRouteMatchIndex]int{
 				{
 					namespace:  "default",
 					name:       "grpcroute-1",
@@ -946,61 +792,79 @@ func TestAssignRoutePriorityToSplitGRPCRoutes(t *testing.T) {
 		},
 		{
 			name: "break tie by name",
-			splitGRPCRoutes: []*gatewayv1alpha2.GRPCRoute{
+			splitGRPCRouteMatches: []SplitGRPCRouteMatch{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "default",
-						Name:      "grpcroute-1",
-						Annotations: map[string]string{
-							InternalRuleIndexAnnotationKey:  "0",
-							InternalMatchIndexAnnotationKey: "0",
+					Source: &gatewayv1alpha2.GRPCRoute{
+						ObjectMeta: metav1.ObjectMeta{
+							Namespace:         "default",
+							Name:              "grpcroute-1",
+							CreationTimestamp: metav1.NewTime(now.Add(-5 * time.Second)),
 						},
-						CreationTimestamp: metav1.NewTime(now.Add(-5 * time.Second)),
-					},
-					Spec: gatewayv1alpha2.GRPCRouteSpec{
-						Hostnames: []gatewayv1beta1.Hostname{"foo.com"},
-						Rules: []gatewayv1alpha2.GRPCRouteRule{
-							{
-								Matches: []gatewayv1alpha2.GRPCRouteMatch{
-									{
-										Method: &gatewayv1alpha2.GRPCMethodMatch{
-											Service: lo.ToPtr("pets"),
-											Method:  lo.ToPtr("list"),
+						Spec: gatewayv1alpha2.GRPCRouteSpec{
+							Hostnames: []gatewayv1beta1.Hostname{"foo.com"},
+							Rules: []gatewayv1alpha2.GRPCRouteRule{
+								{
+									Matches: []gatewayv1alpha2.GRPCRouteMatch{
+										{
+											Method: &gatewayv1alpha2.GRPCMethodMatch{
+												Service: lo.ToPtr("pets"),
+												Method:  lo.ToPtr("list"),
+											},
 										},
 									},
 								},
 							},
 						},
 					},
+					Hostname: "foo.com",
+					Match: gatewayv1alpha2.GRPCRouteMatch{
+						Method: &gatewayv1alpha2.GRPCMethodMatch{
+							Service: lo.ToPtr("pets"),
+							Method:  lo.ToPtr("list"),
+						},
+					},
+					RuleIndex:  0,
+					MatchIndex: 0,
 				},
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "default",
-						Name:      "grpcroute-2",
-						Annotations: map[string]string{
-							InternalRuleIndexAnnotationKey:  "0",
-							InternalMatchIndexAnnotationKey: "0",
+					Source: &gatewayv1alpha2.GRPCRoute{
+						ObjectMeta: metav1.ObjectMeta{
+							Namespace: "default",
+							Name:      "grpcroute-2",
+							Annotations: map[string]string{
+								InternalRuleIndexAnnotationKey:  "0",
+								InternalMatchIndexAnnotationKey: "0",
+							},
+							CreationTimestamp: metav1.NewTime(now.Add(-5 * time.Second)),
 						},
-						CreationTimestamp: metav1.NewTime(now.Add(-5 * time.Second)),
-					},
-					Spec: gatewayv1alpha2.GRPCRouteSpec{
-						Hostnames: []gatewayv1beta1.Hostname{"bar.com"},
-						Rules: []gatewayv1alpha2.GRPCRouteRule{
-							{
-								Matches: []gatewayv1alpha2.GRPCRouteMatch{
-									{
-										Method: &gatewayv1alpha2.GRPCMethodMatch{
-											Service: lo.ToPtr("pets"),
-											Method:  lo.ToPtr("list"),
+						Spec: gatewayv1alpha2.GRPCRouteSpec{
+							Hostnames: []gatewayv1beta1.Hostname{"bar.com"},
+							Rules: []gatewayv1alpha2.GRPCRouteRule{
+								{
+									Matches: []gatewayv1alpha2.GRPCRouteMatch{
+										{
+											Method: &gatewayv1alpha2.GRPCMethodMatch{
+												Service: lo.ToPtr("pets"),
+												Method:  lo.ToPtr("list"),
+											},
 										},
 									},
 								},
 							},
 						},
 					},
+					Hostname: "bar.com",
+					Match: gatewayv1alpha2.GRPCRouteMatch{
+						Method: &gatewayv1alpha2.GRPCMethodMatch{
+							Service: lo.ToPtr("pets"),
+							Method:  lo.ToPtr("list"),
+						},
+					},
+					RuleIndex:  0,
+					MatchIndex: 0,
 				},
 			},
-			priorities: map[splitGRPCRouteIndex]int{
+			priorities: map[splitGRPCRouteMatchIndex]int{
 				{
 					namespace:  "default",
 					name:       "grpcroute-1",
@@ -1029,61 +893,88 @@ func TestAssignRoutePriorityToSplitGRPCRoutes(t *testing.T) {
 		},
 		{
 			name: "break tie by internal match order",
-			splitGRPCRoutes: []*gatewayv1alpha2.GRPCRoute{
+			splitGRPCRouteMatches: []SplitGRPCRouteMatch{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "default",
-						Name:      "grpcroute-1",
-						Annotations: map[string]string{
-							InternalRuleIndexAnnotationKey:  "0",
-							InternalMatchIndexAnnotationKey: "0",
+					Source: &gatewayv1alpha2.GRPCRoute{
+						ObjectMeta: metav1.ObjectMeta{
+							Namespace:         "default",
+							Name:              "grpcroute-1",
+							CreationTimestamp: metav1.NewTime(now.Add(-5 * time.Second)),
 						},
-						CreationTimestamp: metav1.NewTime(now.Add(-5 * time.Second)),
-					},
-					Spec: gatewayv1alpha2.GRPCRouteSpec{
-						Hostnames: []gatewayv1beta1.Hostname{"foo.com"},
-						Rules: []gatewayv1alpha2.GRPCRouteRule{
-							{
-								Matches: []gatewayv1alpha2.GRPCRouteMatch{
-									{
-										Method: &gatewayv1alpha2.GRPCMethodMatch{
-											Service: lo.ToPtr("cats"),
-											Method:  lo.ToPtr("list"),
+						Spec: gatewayv1alpha2.GRPCRouteSpec{
+							Hostnames: []gatewayv1beta1.Hostname{"foo.com"},
+							Rules: []gatewayv1alpha2.GRPCRouteRule{
+								{
+									Matches: []gatewayv1alpha2.GRPCRouteMatch{
+										{
+											Method: &gatewayv1alpha2.GRPCMethodMatch{
+												Service: lo.ToPtr("cats"),
+												Method:  lo.ToPtr("list"),
+											},
+										},
+										{
+											Method: &gatewayv1alpha2.GRPCMethodMatch{
+												Service: lo.ToPtr("dogs"),
+												Method:  lo.ToPtr("list"),
+											},
 										},
 									},
 								},
 							},
 						},
 					},
+					Hostname: "foo.com",
+					Match: gatewayv1alpha2.GRPCRouteMatch{
+						Method: &gatewayv1alpha2.GRPCMethodMatch{
+							Service: lo.ToPtr("cats"),
+							Method:  lo.ToPtr("list"),
+						},
+					},
+					RuleIndex:  0,
+					MatchIndex: 0,
 				},
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "default",
-						Name:      "grpcroute-1",
-						Annotations: map[string]string{
-							InternalRuleIndexAnnotationKey:  "0",
-							InternalMatchIndexAnnotationKey: "1",
+					// The same as the one above
+					Source: &gatewayv1alpha2.GRPCRoute{
+						ObjectMeta: metav1.ObjectMeta{
+							Namespace:         "default",
+							Name:              "grpcroute-1",
+							CreationTimestamp: metav1.NewTime(now.Add(-5 * time.Second)),
 						},
-						CreationTimestamp: metav1.NewTime(now.Add(-5 * time.Second)),
-					},
-					Spec: gatewayv1alpha2.GRPCRouteSpec{
-						Hostnames: []gatewayv1beta1.Hostname{"foo.com"},
-						Rules: []gatewayv1alpha2.GRPCRouteRule{
-							{
-								Matches: []gatewayv1alpha2.GRPCRouteMatch{
-									{
-										Method: &gatewayv1alpha2.GRPCMethodMatch{
-											Service: lo.ToPtr("dogs"),
-											Method:  lo.ToPtr("list"),
+						Spec: gatewayv1alpha2.GRPCRouteSpec{
+							Hostnames: []gatewayv1beta1.Hostname{"foo.com"},
+							Rules: []gatewayv1alpha2.GRPCRouteRule{
+								{
+									Matches: []gatewayv1alpha2.GRPCRouteMatch{
+										{
+											Method: &gatewayv1alpha2.GRPCMethodMatch{
+												Service: lo.ToPtr("cats"),
+												Method:  lo.ToPtr("list"),
+											},
+										},
+										{
+											Method: &gatewayv1alpha2.GRPCMethodMatch{
+												Service: lo.ToPtr("dogs"),
+												Method:  lo.ToPtr("list"),
+											},
 										},
 									},
 								},
 							},
 						},
 					},
+					Hostname: "foo.com",
+					Match: gatewayv1alpha2.GRPCRouteMatch{
+						Method: &gatewayv1alpha2.GRPCMethodMatch{
+							Service: lo.ToPtr("dogs"),
+							Method:  lo.ToPtr("list"),
+						},
+					},
+					RuleIndex:  0,
+					MatchIndex: 1,
 				},
 			},
-			priorities: map[splitGRPCRouteIndex]int{
+			priorities: map[splitGRPCRouteMatchIndex]int{
 				{
 					namespace:  "default",
 					name:       "grpcroute-1",
@@ -1116,25 +1007,21 @@ func TestAssignRoutePriorityToSplitGRPCRoutes(t *testing.T) {
 		indexStr := strconv.Itoa(i)
 		tc := tc
 		t.Run(indexStr+"-"+tc.name, func(t *testing.T) {
-			splitGrpcRoutesWithPriorities := AssignRoutePriorityToSplitGRPCRoutes(logr.Discard(), tc.splitGRPCRoutes)
-			require.Lenf(t, splitGrpcRoutesWithPriorities, len(tc.priorities),
+			splitMatchesWithPriorities := AssignRoutePriorityToSplitGRPCRouteMatches(logr.Discard(), tc.splitGRPCRouteMatches)
+			require.Lenf(t, splitMatchesWithPriorities, len(tc.priorities),
 				"should have expeceted number of results")
-			for _, r := range splitGrpcRoutesWithPriorities {
-				grpcRoute := r.GRPCRoute
-				ruleIndex, err := strconv.Atoi(grpcRoute.Annotations[InternalRuleIndexAnnotationKey])
-				require.NoError(t, err)
-				matchIndex, err := strconv.Atoi(grpcRoute.Annotations[InternalMatchIndexAnnotationKey])
-				require.NoError(t, err)
+			for _, m := range splitMatchesWithPriorities {
+				grpcRoute := m.Match.Source
 
-				require.Equalf(t, tc.priorities[splitGRPCRouteIndex{
+				require.Equalf(t, tc.priorities[splitGRPCRouteMatchIndex{
 					namespace:  grpcRoute.Namespace,
 					name:       grpcRoute.Name,
 					hostname:   string(grpcRoute.Spec.Hostnames[0]),
-					ruleIndex:  ruleIndex,
-					matchIndex: matchIndex,
-				}], r.Priority,
+					ruleIndex:  m.Match.RuleIndex,
+					matchIndex: m.Match.MatchIndex,
+				}], m.Priority,
 					"grpcroute %s/%s: hostname %s, rule %d match %d does not have expected priority",
-					grpcRoute.Namespace, grpcRoute.Name, grpcRoute.Spec.Hostnames[0], ruleIndex, matchIndex)
+					grpcRoute.Namespace, grpcRoute.Name, grpcRoute.Spec.Hostnames[0], m.Match.RuleIndex, m.Match.MatchIndex)
 			}
 		})
 	}
@@ -1143,37 +1030,44 @@ func TestAssignRoutePriorityToSplitGRPCRoutes(t *testing.T) {
 func TestKongExpressionRouteFromSplitGRPCRouteWithPriority(t *testing.T) {
 	testCases := []struct {
 		name                       string
-		splitGrpcRouteWithPriority SplitGRPCRouteToKongRoutePriority
+		splitGRPCMatchWithPriority SplitGRPCRouteMatchToPriority
 		expectedRoute              kongstate.Route
 	}{
 		{
 			name: "no host and exact method match",
-			splitGrpcRouteWithPriority: SplitGRPCRouteToKongRoutePriority{
-				GRPCRoute: &gatewayv1alpha2.GRPCRoute{
-					TypeMeta: grpcRouteTypeMeta,
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "default",
-						Name:      "no-hostname-exact-method",
-						Annotations: map[string]string{
-							InternalRuleIndexAnnotationKey:  "0",
-							InternalMatchIndexAnnotationKey: "0",
+			splitGRPCMatchWithPriority: SplitGRPCRouteMatchToPriority{
+				Match: SplitGRPCRouteMatch{
+					Source: &gatewayv1alpha2.GRPCRoute{
+						TypeMeta: grpcRouteTypeMeta,
+						ObjectMeta: metav1.ObjectMeta{
+							Namespace: "default",
+							Name:      "no-hostname-exact-method",
 						},
-					},
-					Spec: gatewayv1alpha2.GRPCRouteSpec{
-						Rules: []gatewayv1alpha2.GRPCRouteRule{
-							{
-								Matches: []gatewayv1alpha2.GRPCRouteMatch{
-									{
-										Method: &gatewayv1alpha2.GRPCMethodMatch{
-											Type:    lo.ToPtr(gatewayv1alpha2.GRPCMethodMatchExact),
-											Service: lo.ToPtr("pets"),
-											Method:  lo.ToPtr("list"),
+						Spec: gatewayv1alpha2.GRPCRouteSpec{
+							Rules: []gatewayv1alpha2.GRPCRouteRule{
+								{
+									Matches: []gatewayv1alpha2.GRPCRouteMatch{
+										{
+											Method: &gatewayv1alpha2.GRPCMethodMatch{
+												Type:    lo.ToPtr(gatewayv1alpha2.GRPCMethodMatchExact),
+												Service: lo.ToPtr("pets"),
+												Method:  lo.ToPtr("list"),
+											},
 										},
 									},
 								},
 							},
 						},
 					},
+					Match: gatewayv1alpha2.GRPCRouteMatch{
+						Method: &gatewayv1alpha2.GRPCMethodMatch{
+							Type:    lo.ToPtr(gatewayv1alpha2.GRPCMethodMatchExact),
+							Service: lo.ToPtr("pets"),
+							Method:  lo.ToPtr("list"),
+						},
+					},
+					RuleIndex:  0,
+					MatchIndex: 0,
 				},
 				Priority: 1024,
 			},
@@ -1189,35 +1083,47 @@ func TestKongExpressionRouteFromSplitGRPCRouteWithPriority(t *testing.T) {
 		},
 		{
 			name: "precise hostname and regex method match",
-			splitGrpcRouteWithPriority: SplitGRPCRouteToKongRoutePriority{
-				GRPCRoute: &gatewayv1alpha2.GRPCRoute{
-					TypeMeta: grpcRouteTypeMeta,
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "default",
-						Name:      "precise-hostname-regex-method",
-						Annotations: map[string]string{
-							InternalRuleIndexAnnotationKey:  "0",
-							InternalMatchIndexAnnotationKey: "0",
+			splitGRPCMatchWithPriority: SplitGRPCRouteMatchToPriority{
+				Match: SplitGRPCRouteMatch{
+					Source: &gatewayv1alpha2.GRPCRoute{
+						TypeMeta: grpcRouteTypeMeta,
+						ObjectMeta: metav1.ObjectMeta{
+							Namespace: "default",
+							Name:      "precise-hostname-regex-method",
+							Annotations: map[string]string{
+								InternalRuleIndexAnnotationKey:  "0",
+								InternalMatchIndexAnnotationKey: "0",
+							},
 						},
-					},
-					Spec: gatewayv1alpha2.GRPCRouteSpec{
-						Hostnames: []gatewayv1alpha2.Hostname{
-							"foo.com",
-						},
-						Rules: []gatewayv1alpha2.GRPCRouteRule{
-							{
-								Matches: []gatewayv1alpha2.GRPCRouteMatch{
-									{
-										Method: &gatewayv1alpha2.GRPCMethodMatch{
-											Type:    lo.ToPtr(gatewayv1alpha2.GRPCMethodMatchRegularExpression),
-											Service: lo.ToPtr("name"),
-											Method:  lo.ToPtr("[a-z0-9]+"),
+						Spec: gatewayv1alpha2.GRPCRouteSpec{
+							Hostnames: []gatewayv1alpha2.Hostname{
+								"foo.com",
+							},
+							Rules: []gatewayv1alpha2.GRPCRouteRule{
+								{
+									Matches: []gatewayv1alpha2.GRPCRouteMatch{
+										{
+											Method: &gatewayv1alpha2.GRPCMethodMatch{
+												Type:    lo.ToPtr(gatewayv1alpha2.GRPCMethodMatchRegularExpression),
+												Service: lo.ToPtr("name"),
+												Method:  lo.ToPtr("[a-z0-9]+"),
+											},
 										},
 									},
 								},
 							},
 						},
 					},
+					Hostname: "foo.com",
+					Match: gatewayv1alpha2.GRPCRouteMatch{
+						Method: &gatewayv1alpha2.GRPCMethodMatch{
+							Type:    lo.ToPtr(gatewayv1alpha2.GRPCMethodMatchRegularExpression),
+							Service: lo.ToPtr("name"),
+							Method:  lo.ToPtr("[a-z0-9]+"),
+						},
+					},
+					RuleIndex:  0,
+					MatchIndex: 0,
 				},
 				Priority: 1024,
 			},
@@ -1233,33 +1139,38 @@ func TestKongExpressionRouteFromSplitGRPCRouteWithPriority(t *testing.T) {
 		},
 		{
 			name: "wildcard hostname and header match",
-			splitGrpcRouteWithPriority: SplitGRPCRouteToKongRoutePriority{
-				GRPCRoute: &gatewayv1alpha2.GRPCRoute{
-					TypeMeta: grpcRouteTypeMeta,
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "default",
-						Name:      "wildcard-hostname-header-match",
-						Annotations: map[string]string{
-							InternalRuleIndexAnnotationKey:  "0",
-							InternalMatchIndexAnnotationKey: "1",
+			splitGRPCMatchWithPriority: SplitGRPCRouteMatchToPriority{
+				Match: SplitGRPCRouteMatch{
+					Source: &gatewayv1alpha2.GRPCRoute{
+						TypeMeta: grpcRouteTypeMeta,
+						ObjectMeta: metav1.ObjectMeta{
+							Namespace: "default",
+							Name:      "wildcard-hostname-header-match",
 						},
-					},
-					Spec: gatewayv1alpha2.GRPCRouteSpec{
-						Hostnames: []gatewayv1alpha2.Hostname{
-							"*.foo.com",
-						},
-						Rules: []gatewayv1alpha2.GRPCRouteRule{
-							{
-								Matches: []gatewayv1alpha2.GRPCRouteMatch{
-									{
-										Method: &gatewayv1alpha2.GRPCMethodMatch{
-											Type:    lo.ToPtr(gatewayv1alpha2.GRPCMethodMatchExact),
-											Service: lo.ToPtr("name"),
+						Spec: gatewayv1alpha2.GRPCRouteSpec{
+							Hostnames: []gatewayv1alpha2.Hostname{
+								"*.foo.com",
+							},
+							Rules: []gatewayv1alpha2.GRPCRouteRule{
+								{
+									Matches: []gatewayv1alpha2.GRPCRouteMatch{
+										{
+											Method: &gatewayv1alpha2.GRPCMethodMatch{
+												Type:    lo.ToPtr(gatewayv1alpha2.GRPCMethodMatchExact),
+												Service: lo.ToPtr("names"),
+												Method:  lo.ToPtr("create"),
+											},
 										},
-										Headers: []gatewayv1alpha2.GRPCHeaderMatch{
-											{
-												Name:  gatewayv1alpha2.GRPCHeaderName("foo"),
-												Value: "bar",
+										{
+											Method: &gatewayv1alpha2.GRPCMethodMatch{
+												Type:    lo.ToPtr(gatewayv1alpha2.GRPCMethodMatchExact),
+												Service: lo.ToPtr("name"),
+											},
+											Headers: []gatewayv1alpha2.GRPCHeaderMatch{
+												{
+													Name:  gatewayv1alpha2.GRPCHeaderName("foo"),
+													Value: "bar",
+												},
 											},
 										},
 									},
@@ -1267,6 +1178,21 @@ func TestKongExpressionRouteFromSplitGRPCRouteWithPriority(t *testing.T) {
 							},
 						},
 					},
+					Hostname: "*.foo.com",
+					Match: gatewayv1alpha2.GRPCRouteMatch{
+						Method: &gatewayv1alpha2.GRPCMethodMatch{
+							Type:    lo.ToPtr(gatewayv1alpha2.GRPCMethodMatchExact),
+							Service: lo.ToPtr("name"),
+						},
+						Headers: []gatewayv1alpha2.GRPCHeaderMatch{
+							{
+								Name:  gatewayv1alpha2.GRPCHeaderName("foo"),
+								Value: "bar",
+							},
+						},
+					},
+					RuleIndex:  0,
+					MatchIndex: 1,
 				},
 				Priority: 1024,
 			},
@@ -1286,12 +1212,13 @@ func TestKongExpressionRouteFromSplitGRPCRouteWithPriority(t *testing.T) {
 		indexStr := strconv.Itoa(i)
 		tc := tc
 		t.Run(indexStr+"-"+tc.name, func(t *testing.T) {
-			r := GenerateKongExpressionRouteFromSplitGRPCRouteWithPriority(tc.splitGrpcRouteWithPriority)
-			tc.expectedRoute.Route.Tags = util.GenerateTagsForObject(tc.splitGrpcRouteWithPriority.GRPCRoute)
+			r := KongExpressionRouteFromSplitGRPCRouteMatchWithPriority(tc.splitGRPCMatchWithPriority)
+			grpcRoute := tc.splitGRPCMatchWithPriority.Match.Source
+			tc.expectedRoute.Route.Tags = util.GenerateTagsForObject(grpcRoute)
 			require.Equal(t, tc.expectedRoute.Route, r.Route)
 			require.True(t, r.ExpressionRoutes)
-			require.Equal(t, tc.splitGrpcRouteWithPriority.GRPCRoute.Namespace, r.Ingress.Namespace)
-			require.Equal(t, tc.splitGrpcRouteWithPriority.GRPCRoute.Name, r.Ingress.Name)
+			require.Equal(t, grpcRoute.Namespace, r.Ingress.Namespace)
+			require.Equal(t, grpcRoute.Name, r.Ingress.Name)
 		})
 	}
 }

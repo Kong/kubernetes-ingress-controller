@@ -21,6 +21,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/adminapi"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/controllers"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 )
 
@@ -54,6 +55,8 @@ type AdminAPIsDiscoverer interface {
 	)
 }
 
+var _ controllers.Reconciler = &KongAdminAPIServiceReconciler{}
+
 // SetupWithManager sets up the controller with the Manager.
 func (r *KongAdminAPIServiceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	c, err := controller.New("KongAdminAPIEndpoints", mgr, controller.Options{
@@ -76,6 +79,11 @@ func (r *KongAdminAPIServiceReconciler) SetupWithManager(mgr ctrl.Manager) error
 		&handler.EnqueueRequestForObject{},
 		predicate.NewPredicateFuncs(r.shouldReconcileEndpointSlice),
 	)
+}
+
+// SetLogger sets the logger.
+func (r *KongAdminAPIServiceReconciler) SetLogger(l logr.Logger) {
+	r.Log = l
 }
 
 func (r *KongAdminAPIServiceReconciler) shouldReconcileEndpointSlice(obj client.Object) bool {

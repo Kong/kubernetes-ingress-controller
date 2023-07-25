@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1690314761704,
+  "lastUpdate": 1690314837291,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -32484,6 +32484,48 @@ window.BENCHMARK_DATA = {
             "value": 12,
             "unit": "allocs/op",
             "extra": "18459 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "571832+rainest@users.noreply.github.com",
+            "name": "Travis Raines",
+            "username": "rainest"
+          },
+          "committer": {
+            "email": "571832+rainest@users.noreply.github.com",
+            "name": "Travis Raines",
+            "username": "rainest"
+          },
+          "distinct": true,
+          "id": "1a217faca5a43f51063a12bc57960907f3c40704",
+          "message": "pr: remove integration test",
+          "timestamp": "2023-07-25T12:52:47-07:00",
+          "tree_id": "34951701ebe9694415e88443ff4b486791173672",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/1a217faca5a43f51063a12bc57960907f3c40704"
+        },
+        "date": 1690314831596,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - ns/op",
+            "value": 77564,
+            "unit": "ns/op",
+            "extra": "14144 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - B/op",
+            "value": 11099,
+            "unit": "B/op",
+            "extra": "14144 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - allocs/op",
+            "value": 12,
+            "unit": "allocs/op",
+            "extra": "14144 times\n2 procs"
           }
         ]
       }

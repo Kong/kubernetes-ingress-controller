@@ -140,8 +140,12 @@ Adding a new version? You'll need three changes:
 - Changed the Gateway's readiness probe in all-in-one manifests from `/status`
   to `/status/ready`. Gateways will be considered ready only after an initial
   configuration is applied by the controller.
-  [#4368](https://github.com/Kong/kubernetes-ingress-controller/pull/4368
-
+  [#4368](https://github.com/Kong/kubernetes-ingress-controller/pull/4368)
+- Attach kubernetes events to `KongConsumer`s when the parser fails to
+  translate its credentials to Kong configuration, instead of logging thet
+  error to reduce the redundant logs.
+  [#4398](https://github.com/Kong/kubernetes-ingress-controller/pull/4398)
+ 
 [gojson]: https://github.com/goccy/go-json
 [httproute-specification]: https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1beta1.HTTPRoute
 

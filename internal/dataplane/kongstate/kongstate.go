@@ -60,6 +60,7 @@ func (ks *KongState) FillConsumersAndCredentials(
 	for _, consumer := range s.ListKongConsumers() {
 		var c Consumer
 		if consumer.Username == "" && consumer.CustomID == "" {
+			failureCollector.PushResourceFailure("no username or custom_id specified", consumer)
 			continue
 		}
 		if consumer.Username != "" {

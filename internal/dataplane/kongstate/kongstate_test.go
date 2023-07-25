@@ -2,15 +2,20 @@ package kongstate
 
 import (
 	"reflect"
+	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/blang/semver/v4"
 	"github.com/kong/go-kong/kong"
+	"github.com/samber/lo"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	k8stypes "k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/failures"
@@ -18,6 +23,11 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 	configurationv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
 )
+
+var kongConsumerTypeMeta = metav1.TypeMeta{
+	APIVersion: configurationv1.GroupVersion.String(),
+	Kind:       "KongConsumer",
+}
 
 func TestKongState_SanitizedCopy(t *testing.T) {
 	for _, tt := range []struct {
@@ -336,67 +346,226 @@ func TestFillConsumersAndCredentials(t *testing.T) {
 				"hash_secret":   []byte("true"),
 			},
 		},
-	}
-	consumers := []*configurationv1.KongConsumer{
 		{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "foo",
+				Name:      "emptyCredSecret",
 				Namespace: "default",
-				Annotations: map[string]string{
-					"kubernetes.io/ingress.class": annotations.DefaultIngressClass,
-				},
 			},
-			Username: "foo",
-			CustomID: "foo",
-			Credentials: []string{
-				"fooCredSecret",
-				"barCredSecret",
+			Data: map[string][]byte{
+				"kongCredType": []byte("key-auth"),
+			},
+		},
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "unsupportedCredSecret",
+				Namespace: "default",
+			},
+			Data: map[string][]byte{
+				"kongCredType": []byte("unsupported"),
+				"foo":          []byte("bar"),
 			},
 		},
 	}
-	store, _ := store.NewFakeStore(store.FakeObjects{
-		Secrets:       secrets,
-		KongConsumers: consumers,
-	})
 
-	want := KongState{
-		Consumers: []Consumer{{
-			Consumer: kong.Consumer{
-				Username: kong.String("foo"),
-				CustomID: kong.String("foo"),
-			},
-			KeyAuths: []*KeyAuth{{kong.KeyAuth{
-				Key: kong.String("whatever"),
-				TTL: kong.Int(1024),
-			}}},
-			Oauth2Creds: []*Oauth2Credential{
+	testCases := []struct {
+		name                        string
+		k8sConsumers                []*configurationv1.KongConsumer
+		expectedKongStateConsumers  []Consumer
+		expectedTranslationFailures map[k8stypes.NamespacedName]failures.ResourceFailure
+	}{
+		{
+			name: "KongConsumer with key-auth and oauth2",
+			k8sConsumers: []*configurationv1.KongConsumer{
 				{
-					kong.Oauth2Credential{
-						Name:         kong.String("whatever"),
-						ClientID:     kong.String("whatever"),
-						ClientSecret: kong.String("whatever"),
-						HashSecret:   kong.Bool(true),
-						RedirectURIs: []*string{kong.String("http://example.com")},
+					TypeMeta: kongConsumerTypeMeta,
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "foo",
+						Namespace: "default",
+						Annotations: map[string]string{
+							"kubernetes.io/ingress.class": annotations.DefaultIngressClass,
+						},
+					},
+					Username: "foo",
+					CustomID: "foo",
+					Credentials: []string{
+						"fooCredSecret",
+						"barCredSecret",
 					},
 				},
 			},
-		}},
+			expectedKongStateConsumers: []Consumer{
+				{
+					Consumer: kong.Consumer{
+						Username: kong.String("foo"),
+						CustomID: kong.String("foo"),
+					},
+					KeyAuths: []*KeyAuth{{kong.KeyAuth{
+						Key: kong.String("whatever"),
+						TTL: kong.Int(1024),
+						Tags: util.GenerateTagsForObject(&corev1.Secret{
+							ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "fooCredSecret"},
+						}),
+					}}},
+					Oauth2Creds: []*Oauth2Credential{
+						{
+							kong.Oauth2Credential{
+								Name:         kong.String("whatever"),
+								ClientID:     kong.String("whatever"),
+								ClientSecret: kong.String("whatever"),
+								HashSecret:   kong.Bool(true),
+								RedirectURIs: []*string{kong.String("http://example.com")},
+								Tags: util.GenerateTagsForObject(&corev1.Secret{
+									ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "barCredSecret"},
+								}),
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "missing username and custom_id",
+			k8sConsumers: []*configurationv1.KongConsumer{
+				{
+					TypeMeta: kongConsumerTypeMeta,
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "foo",
+						Namespace: "default",
+						Annotations: map[string]string{
+							"kubernetes.io/ingress.class": annotations.DefaultIngressClass,
+						},
+					},
+					Credentials: []string{
+						"fooCredSecret",
+						"barCredSecret",
+					},
+				},
+			},
+			expectedTranslationFailures: map[k8stypes.NamespacedName]failures.ResourceFailure{
+				{Namespace: "default", Name: "foo"}: mustNewResourceFailure(t,
+					"no username or custom_id specified",
+					&configurationv1.KongConsumer{
+						TypeMeta:   kongConsumerTypeMeta,
+						ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "foo"},
+					}),
+			},
+		},
+		{
+			name: "referring to non-exist secret",
+			k8sConsumers: []*configurationv1.KongConsumer{
+				{
+					TypeMeta: kongConsumerTypeMeta,
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "foo",
+						Namespace: "default",
+						Annotations: map[string]string{
+							"kubernetes.io/ingress.class": annotations.DefaultIngressClass,
+						},
+					},
+					Username: "foo",
+					Credentials: []string{
+						"nonExistCredSecret",
+					},
+				},
+			},
+			expectedKongStateConsumers: []Consumer{
+				{
+					Consumer: kong.Consumer{
+						Username: kong.String("foo"),
+					},
+				},
+			},
+			expectedTranslationFailures: map[k8stypes.NamespacedName]failures.ResourceFailure{
+				{Namespace: "default", Name: "foo"}: mustNewResourceFailure(t,
+					"failed to fetch secret",
+					&configurationv1.KongConsumer{
+						TypeMeta:   kongConsumerTypeMeta,
+						ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "foo"},
+					}),
+			},
+		},
+		{
+			name: "referring to secret with unsupported credType",
+			k8sConsumers: []*configurationv1.KongConsumer{
+				{
+					TypeMeta: kongConsumerTypeMeta,
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "foo",
+						Namespace: "default",
+						Annotations: map[string]string{
+							"kubernetes.io/ingress.class": annotations.DefaultIngressClass,
+						},
+					},
+					Username: "foo",
+					Credentials: []string{
+						"unsupportedCredSecret",
+					},
+				},
+			},
+			expectedKongStateConsumers: []Consumer{
+				{
+					Consumer: kong.Consumer{
+						Username: kong.String("foo"),
+					},
+				},
+			},
+			expectedTranslationFailures: map[k8stypes.NamespacedName]failures.ResourceFailure{
+				{Namespace: "default", Name: "foo"}: mustNewResourceFailure(t,
+					"failed to provision credential: invalid credType: unsupported",
+					&configurationv1.KongConsumer{
+						TypeMeta:   kongConsumerTypeMeta,
+						ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "foo"},
+					}),
+			},
+		},
 	}
 
-	failureCollector, err := failures.NewResourceFailuresCollector(logrus.New())
-	require.NoError(t, err)
+	for i, tc := range testCases {
+		indexStr := strconv.Itoa(i)
+		tc := tc
+		t.Run(indexStr+"-"+tc.name, func(t *testing.T) {
+			store, _ := store.NewFakeStore(store.FakeObjects{
+				Secrets:       secrets,
+				KongConsumers: tc.k8sConsumers,
+			})
+			logger := logrus.New()
+			failureCollector, err := failures.NewResourceFailuresCollector(logger)
+			require.NoError(t, err)
 
-	t.Run("parses consumer and credential from store into state", func(t *testing.T) {
-		state := KongState{}
-		state.FillConsumersAndCredentials(logrus.New(), store, failureCollector, semver.MustParse("2.3.2"))
-		assert.Equal(t, want.Consumers[0].Consumer.Username, state.Consumers[0].Consumer.Username)
-		assert.Equal(t, want.Consumers[0].Consumer.CustomID, state.Consumers[0].Consumer.CustomID)
-		assert.Equal(t, want.Consumers[0].KeyAuths[0].Key, state.Consumers[0].KeyAuths[0].Key)
-		assert.Equal(t, want.Consumers[0].Oauth2Creds[0].ClientID, state.Consumers[0].Oauth2Creds[0].ClientID)
-		assert.Equal(t, want.Consumers[0].Oauth2Creds[0].ClientSecret, state.Consumers[0].Oauth2Creds[0].ClientSecret)
-		assert.Equal(t, want.Consumers[0].Oauth2Creds[0].HashSecret, state.Consumers[0].Oauth2Creds[0].HashSecret)
-		assert.Equal(t, want.Consumers[0].Oauth2Creds[0].RedirectURIs, state.Consumers[0].Oauth2Creds[0].RedirectURIs)
-	})
+			state := KongState{}
+			state.FillConsumersAndCredentials(logger, store, failureCollector, semver.MustParse("2.3.2"))
+			// compare translated consumers.
+			require.Len(t, state.Consumers, len(tc.expectedKongStateConsumers))
+			// compare fields. Since we only test for translating a single consumer, we only compare the first one if exists.
+			if len(state.Consumers) > 0 && len(tc.expectedKongStateConsumers) > 0 {
+				expectedConsumer := tc.expectedKongStateConsumers[0]
+				kongStateConsumer := state.Consumers[0]
+				assert.Equal(t, expectedConsumer.Consumer.Username, kongStateConsumer.Consumer.Username, "should have expected username")
+				// compare credentials.
+				assert.Equal(t, expectedConsumer.KeyAuths, kongStateConsumer.KeyAuths)
+				assert.Equal(t, expectedConsumer.Oauth2Creds, kongStateConsumer.Oauth2Creds)
+			}
+			// check for expected translation failures.
+			if len(tc.expectedTranslationFailures) > 0 {
+				translationFailures := failureCollector.PopResourceFailures()
+				for nsName, expectedFailure := range tc.expectedTranslationFailures {
+					relatedFailures := lo.Filter(translationFailures, func(f failures.ResourceFailure, _ int) bool {
+						for _, obj := range f.CausingObjects() {
+							if obj.GetNamespace() == nsName.Namespace && obj.GetName() == nsName.Name {
+								return true
+							}
+						}
+						return false
+					})
+
+					assert.Truef(t, lo.ContainsBy(relatedFailures, func(f failures.ResourceFailure) bool {
+						return strings.Contains(f.Message(), expectedFailure.Message())
+					}), "should find expected translation failure caused by KongConsumer %s: should contain '%s'",
+						nsName.String(), expectedFailure.Message())
+				}
+			}
+		})
+	}
 }
 
 func TestKongState_FillIDs(t *testing.T) {
@@ -515,4 +684,11 @@ func TestKongState_FillIDs(t *testing.T) {
 			tc.expect(t, tc.state)
 		})
 	}
+}
+
+func mustNewResourceFailure(t *testing.T, reason string, causingObjects ...client.Object) failures.ResourceFailure {
+	t.Helper()
+	f, err := failures.NewResourceFailure(reason, causingObjects...)
+	require.NoError(t, err)
+	return f
 }

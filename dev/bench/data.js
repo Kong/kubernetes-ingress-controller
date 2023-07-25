@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1690279798813,
+  "lastUpdate": 1690280515858,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -29964,6 +29964,48 @@ window.BENCHMARK_DATA = {
             "value": 12,
             "unit": "allocs/op",
             "extra": "18819 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "czeslavo@gmail.com",
+            "name": "Grzegorz Burzyński",
+            "username": "czeslavo"
+          },
+          "committer": {
+            "email": "czeslavo@gmail.com",
+            "name": "Grzegorz Burzyński",
+            "username": "czeslavo"
+          },
+          "distinct": true,
+          "id": "77ce5ac62a498c41bb54e8ace119fdb001cedc59",
+          "message": "chore(deps): bump deck to fix #4384",
+          "timestamp": "2023-07-25T12:16:57+02:00",
+          "tree_id": "40adfdcda01dd2bd38446279484dd34464d3a026",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/77ce5ac62a498c41bb54e8ace119fdb001cedc59"
+        },
+        "date": 1690280510435,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - ns/op",
+            "value": 70618,
+            "unit": "ns/op",
+            "extra": "16347 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - B/op",
+            "value": 11093,
+            "unit": "B/op",
+            "extra": "16347 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - allocs/op",
+            "value": 12,
+            "unit": "allocs/op",
+            "extra": "16347 times\n2 procs"
           }
         ]
       }

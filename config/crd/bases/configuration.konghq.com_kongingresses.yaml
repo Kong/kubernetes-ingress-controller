@@ -237,6 +237,12 @@ spec:
                       concurrency:
                         minimum: 1
                         type: integer
+                      headers:
+                        additionalProperties:
+                          items:
+                            type: string
+                          type: array
+                        type: object
                       healthy:
                         description: Healthy configures thresholds and HTTP status
                           codes to mark targets healthy for an upstream.

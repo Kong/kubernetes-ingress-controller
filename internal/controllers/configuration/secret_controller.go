@@ -42,6 +42,8 @@ type CoreV1SecretReconciler struct {
 	ReferenceIndexers ctrlref.CacheIndexers
 }
 
+var _ controllers.Reconciler = &CoreV1SecretReconciler{}
+
 // SetupWithManager sets up the controller with the Manager.
 func (r *CoreV1SecretReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	c, err := controller.New("CoreV1Secret", mgr, controller.Options{
@@ -63,6 +65,11 @@ func (r *CoreV1SecretReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		&handler.EnqueueRequestForObject{},
 		predicateFuncs,
 	)
+}
+
+// SetLogger sets the logger.
+func (r *CoreV1SecretReconciler) SetLogger(l logr.Logger) {
+	r.Log = l
 }
 
 // shouldReconcileSecret is the filter function to judge whether the secret should be reconciled

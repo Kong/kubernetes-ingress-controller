@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1690284520599,
+  "lastUpdate": 1690284521997,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -30216,6 +30216,48 @@ window.BENCHMARK_DATA = {
             "value": 12,
             "unit": "allocs/op",
             "extra": "16152 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "czeslavo@gmail.com",
+            "name": "Grzegorz Burzyński",
+            "username": "czeslavo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "4b8dc3edee9996c6dd33cdd4aaf80fe9a4539cb9",
+          "message": "chore(deps): bump deck to fix #4384 (#4400)\n\nBumps deck to a version that fixes #4384 (in this particular commit). Propagates IsKonnect flag when creating diff.Syncer.",
+          "timestamp": "2023-07-25T13:25:26+02:00",
+          "tree_id": "25e54fea26895813a582e8d51da6e97cdbf41eaf",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/4b8dc3edee9996c6dd33cdd4aaf80fe9a4539cb9"
+        },
+        "date": 1690284515263,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - ns/op",
+            "value": 87652,
+            "unit": "ns/op",
+            "extra": "18762 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - B/op",
+            "value": 11093,
+            "unit": "B/op",
+            "extra": "18762 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - allocs/op",
+            "value": 12,
+            "unit": "allocs/op",
+            "extra": "18762 times\n2 procs"
           }
         ]
       },

@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1690278133421,
+  "lastUpdate": 1690279413897,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -29796,6 +29796,48 @@ window.BENCHMARK_DATA = {
             "value": 12,
             "unit": "allocs/op",
             "extra": "17044 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "tao.yi@konghq.com",
+            "name": "Yi Tao",
+            "username": "randmonkey"
+          },
+          "committer": {
+            "email": "tao.yi@konghq.com",
+            "name": "Yi Tao",
+            "username": "randmonkey"
+          },
+          "distinct": true,
+          "id": "1199fa5f9f43a946b641dcf04be24e79035ca363",
+          "message": "chore: add SetLogger to all reconcilers to use them in envtest",
+          "timestamp": "2023-07-25T18:02:23+08:00",
+          "tree_id": "a92fbd1a8d5f19b0a325f55b5c38694e8f00d6c4",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/1199fa5f9f43a946b641dcf04be24e79035ca363"
+        },
+        "date": 1690279408300,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - ns/op",
+            "value": 69710,
+            "unit": "ns/op",
+            "extra": "17829 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - B/op",
+            "value": 11093,
+            "unit": "B/op",
+            "extra": "17829 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - allocs/op",
+            "value": 12,
+            "unit": "allocs/op",
+            "extra": "17829 times\n2 procs"
           }
         ]
       }

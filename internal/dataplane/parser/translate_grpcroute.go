@@ -3,6 +3,7 @@ package parser
 import (
 	"fmt"
 
+	"github.com/bombsimon/logrusr/v2"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
@@ -22,6 +23,11 @@ func (p *Parser) ingressRulesFromGRPCRoutes() ingressRules {
 	grpcRouteList, err := p.storer.ListGRPCRoutes()
 	if err != nil {
 		p.logger.WithError(err).Error("failed to list GRPCRoutes")
+		return result
+	}
+
+	if p.featureFlags.ExpressionRoutes {
+		p.ingressRulesFromGRPCRoutesUsingExpressionRoutes(grpcRouteList, &result)
 		return result
 	}
 
@@ -77,6 +83,77 @@ func (p *Parser) ingressRulesFromGRPCRoute(result *ingressRules, grpcroute *gate
 	}
 
 	return nil
+}
+
+// ingressRulesFromGRPCRoutesUsingExpressionRoutes translates GRPCRoutes to expression based routes
+// when ExpressionRoutes feature flag is enabled.
+// Because we need to assign different priorities based on the hostname and match in the specification of GRPCRoutes,
+// We need to split the GRPCRoutes into ones with only one hostname and one match, then assign priority to them
+// and finally translate the split GRPCRoutes into Kong services and routes with assigned priorities.
+func (p *Parser) ingressRulesFromGRPCRoutesUsingExpressionRoutes(grpcRoutes []*gatewayv1alpha2.GRPCRoute, result *ingressRules) {
+	// first, split GRPCRoutes by hostname and match.
+	splitGRPCRouteMatches := []translators.SplitGRPCRouteMatch{}
+	// record GRPCRoutes passing the validation and get translated.
+	// after they are translated, register the success event in the parser.
+	translatedGRPCRoutes := []*gatewayv1alpha2.GRPCRoute{}
+	for _, grpcRoute := range grpcRoutes {
+		if len(grpcRoute.Spec.Rules) == 0 {
+			p.registerTranslationFailure(
+				translators.ErrRouteValidationNoRules.Error(),
+				grpcRoute,
+			)
+			continue
+		}
+		splitGRPCRouteMatches = append(splitGRPCRouteMatches, translators.SplitGRPCRoute(grpcRoute)...)
+		translatedGRPCRoutes = append(translatedGRPCRoutes, grpcRoute)
+	}
+
+	// assign priorities to split GRPCRoutes.
+	splitGRPCRouteMatchesWithPriorities := translators.AssignRoutePriorityToSplitGRPCRouteMatches(logrusr.New(p.logger), splitGRPCRouteMatches)
+	// generate Kong service and route from each split GRPC route with its assigned priority of Kong route.
+	for _, splitGRPCRouteMatchWithPriority := range splitGRPCRouteMatchesWithPriorities {
+		p.ingressRulesFromGRPCRouteWithPriority(result, splitGRPCRouteMatchWithPriority)
+	}
+
+	// register successful parses of GRPCRoutes.
+	for _, grpcRoute := range translatedGRPCRoutes {
+		p.registerSuccessfullyParsedObject(grpcRoute)
+	}
+}
+
+func (p *Parser) ingressRulesFromGRPCRouteWithPriority(
+	rules *ingressRules,
+	splitGRPCRouteMatchWithPriority translators.SplitGRPCRouteMatchToPriority,
+) {
+	match := splitGRPCRouteMatchWithPriority.Match
+	grpcRoute := splitGRPCRouteMatchWithPriority.Match.Source
+	// (very unlikely that) the rule index split from the source GRPCRoute is larger then length of original rules.
+	if len(grpcRoute.Spec.Rules) <= match.RuleIndex {
+		p.logger.Infof("WARN: split rule index %d is larger then the length of rules in source GRPCRoute %d",
+			match.RuleIndex, len(grpcRoute.Spec.Rules))
+		return
+	}
+	grpcRouteRule := grpcRoute.Spec.Rules[match.RuleIndex]
+	backendRefs := grpcBackendRefsToBackendRefs(grpcRouteRule.BackendRefs)
+
+	serviceName := translators.KongServiceNameFromSplitGRPCRouteMatch(match)
+
+	kongService, _ := generateKongServiceFromBackendRefWithName(
+		p.logger,
+		p.storer,
+		rules,
+		serviceName,
+		grpcRoute,
+		"grpcs",
+		backendRefs...,
+	)
+	kongService.Routes = append(
+		kongService.Routes,
+		translators.KongExpressionRouteFromSplitGRPCRouteMatchWithPriority(splitGRPCRouteMatchWithPriority),
+	)
+	// cache the service to avoid duplicates in further loop iterations
+	rules.ServiceNameToServices[serviceName] = kongService
+	rules.ServiceNameToParent[serviceName] = grpcRoute
 }
 
 func grpcBackendRefsToBackendRefs(grpcBackendRef []gatewayv1alpha2.GRPCBackendRef) []gatewayv1beta1.BackendRef {

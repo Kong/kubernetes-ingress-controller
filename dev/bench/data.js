@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1690312168890,
+  "lastUpdate": 1690312170843,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -32064,6 +32064,48 @@ window.BENCHMARK_DATA = {
             "value": 12,
             "unit": "allocs/op",
             "extra": "13843 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "czeslavo@gmail.com",
+            "name": "Grzegorz Burzyński",
+            "username": "czeslavo"
+          },
+          "committer": {
+            "email": "czeslavo@gmail.com",
+            "name": "Grzegorz Burzyński",
+            "username": "czeslavo"
+          },
+          "distinct": true,
+          "id": "8b98fb9b95eb2de6dc1879ea1cc30e280ac6e60f",
+          "message": "feat: add Programmed condition to KongConsumer",
+          "timestamp": "2023-07-25T21:07:54+02:00",
+          "tree_id": "11df2f5e7af62fc9a1ec580a3782bd3beef02c10",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/8b98fb9b95eb2de6dc1879ea1cc30e280ac6e60f"
+        },
+        "date": 1690312162433,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - ns/op",
+            "value": 78895,
+            "unit": "ns/op",
+            "extra": "16288 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - B/op",
+            "value": 11092,
+            "unit": "B/op",
+            "extra": "16288 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - allocs/op",
+            "value": 12,
+            "unit": "allocs/op",
+            "extra": "16288 times\n2 procs"
           }
         ]
       },

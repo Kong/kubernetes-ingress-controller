@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1690310019881,
+  "lastUpdate": 1690310021939,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -31728,6 +31728,48 @@ window.BENCHMARK_DATA = {
             "value": 12,
             "unit": "allocs/op",
             "extra": "18126 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "571832+rainest@users.noreply.github.com",
+            "name": "Travis Raines",
+            "username": "rainest"
+          },
+          "committer": {
+            "email": "571832+rainest@users.noreply.github.com",
+            "name": "Travis Raines",
+            "username": "rainest"
+          },
+          "distinct": true,
+          "id": "5cb40659fb2166ae8b36e1d812b8ba3fbaf7009b",
+          "message": "feat(parser) add tests for targetsForEndpoints",
+          "timestamp": "2023-07-25T11:32:14-07:00",
+          "tree_id": "935399d4d48032a79d26fadae885ca02175b7ee0",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/5cb40659fb2166ae8b36e1d812b8ba3fbaf7009b"
+        },
+        "date": 1690310013324,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - ns/op",
+            "value": 79169,
+            "unit": "ns/op",
+            "extra": "14972 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - B/op",
+            "value": 11096,
+            "unit": "B/op",
+            "extra": "14972 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - allocs/op",
+            "value": 12,
+            "unit": "allocs/op",
+            "extra": "14972 times\n2 procs"
           }
         ]
       },

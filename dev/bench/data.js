@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1690299410119,
+  "lastUpdate": 1690299412204,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -31140,6 +31140,48 @@ window.BENCHMARK_DATA = {
             "value": 12,
             "unit": "allocs/op",
             "extra": "18266 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "49699333+dependabot[bot]@users.noreply.github.com",
+            "name": "dependabot[bot]",
+            "username": "dependabot[bot]"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "b4148e6fffc7be8fcd124b79b07b581cbab53907",
+          "message": "chore(deps): bump knative.dev/serving from 0.37.2 to 0.38.0 (#4406)\n\nBumps [knative.dev/serving](https://github.com/knative/serving) from 0.37.2 to 0.38.0.\r\n- [Release notes](https://github.com/knative/serving/releases)\r\n- [Commits](https://github.com/knative/serving/compare/v0.37.2...v0.38.0)\r\n\r\n---\r\nupdated-dependencies:\r\n- dependency-name: knative.dev/serving\r\n  dependency-type: direct:production\r\n  update-type: version-update:semver-minor\r\n...\r\n\r\nSigned-off-by: dependabot[bot] <support@github.com>\r\nCo-authored-by: dependabot[bot] <49699333+dependabot[bot]@users.noreply.github.com>",
+          "timestamp": "2023-07-25T15:31:15Z",
+          "tree_id": "6ad6699b67ec7ba1599f0e81a71f971c2c79e3ec",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/b4148e6fffc7be8fcd124b79b07b581cbab53907"
+        },
+        "date": 1690299402605,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - ns/op",
+            "value": 106438,
+            "unit": "ns/op",
+            "extra": "12164 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - B/op",
+            "value": 11101,
+            "unit": "B/op",
+            "extra": "12164 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - allocs/op",
+            "value": 12,
+            "unit": "allocs/op",
+            "extra": "12164 times\n2 procs"
           }
         ]
       },

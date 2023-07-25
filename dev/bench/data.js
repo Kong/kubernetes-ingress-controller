@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1690307851607,
+  "lastUpdate": 1690307853512,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -31560,6 +31560,48 @@ window.BENCHMARK_DATA = {
             "value": 12,
             "unit": "allocs/op",
             "extra": "16654 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "tao.yi@konghq.com",
+            "name": "Tao Yi",
+            "username": "randmonkey"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "7528e7b0f1b303462116b87bb4dcce32068a7bb7",
+          "message": "feat(parser) generate prioritized routes from GRPCRoutes (#4364)",
+          "timestamp": "2023-07-25T10:56:21-07:00",
+          "tree_id": "3c619768def1d8ea7d1c935a2f806d0dffe256e2",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/7528e7b0f1b303462116b87bb4dcce32068a7bb7"
+        },
+        "date": 1690307845329,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - ns/op",
+            "value": 80501,
+            "unit": "ns/op",
+            "extra": "14826 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - B/op",
+            "value": 11094,
+            "unit": "B/op",
+            "extra": "14826 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - allocs/op",
+            "value": 12,
+            "unit": "allocs/op",
+            "extra": "14826 times\n2 procs"
           }
         ]
       },

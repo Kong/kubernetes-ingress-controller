@@ -90,7 +90,7 @@ func (r DefaultUpdateStrategyResolver) resolveUpdateStrategy(client UpdateClient
 	// In case the client communicates with Konnect Admin API, we know it has to use DB-mode. There's no need to check
 	// config.InMemory that is meant for regular Kong Gateway clients.
 	if client.IsKonnect() {
-		return NewUpdateStrategyDBMode(
+		return NewUpdateStrategyDBModeKonnect(
 			adminAPIClient,
 			dump.Config{
 				SkipCACerts:         true,

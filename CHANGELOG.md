@@ -7,6 +7,7 @@ Adding a new version? You'll need three changes:
 * Add the diff link, like "[2.7.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v1.2.2...v1.2.3".
   This is all the way at the bottom. It's the thing we always forget.
 --->
+ - [2.10.4](#2104)
  - [2.10.3](#2103)
  - [2.10.2](#2102)
  - [2.10.1](#2101)
@@ -144,6 +145,16 @@ Adding a new version? You'll need three changes:
 
 [gojson]: https://github.com/goccy/go-json
 [httproute-specification]: https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1beta1.HTTPRoute
+
+## [2.10.4]
+
+> Release date: 2023-07-25
+
+### Fixed
+
+- Fixed a bug that prevented the controller from updating configuration in
+  Konnect Runtime Groups API when an existing Certificate was updated.
+  [#4384](https://github.com/Kong/kubernetes-ingress-controller/issues/4384)
 
 ## [2.10.3]
 
@@ -2629,6 +2640,7 @@ Please read the changelog and test in your environment.
  - The initial versions  were rapildy iterated to deliver
    a working ingress controller.
 
+[2.10.4]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.10.3...v2.10.4
 [2.10.3]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.10.2...v2.10.3
 [2.10.2]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.10.1...v2.10.2
 [2.10.1]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.10.0...v2.10.1

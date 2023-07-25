@@ -851,8 +851,8 @@ func targetsForEndpoints(endpoints []util.Endpoint) []kongstate.Target {
 		parsed := net.ParseIP(endpoint.Address)
 		if parsed != nil {
 			if parsed.To4() == nil {
-				// if we have an IPv6 endpoint, we need to surround it with brackets, else the port concat after this will
-				// treat the port as part of the address
+				// If we have an IPv6 endpoint, we need to surround it with brackets, else the port concat after this will
+				// treat the port as part of the address.
 				addr = fmt.Sprintf("[%s]", endpoint.Address)
 			}
 		}

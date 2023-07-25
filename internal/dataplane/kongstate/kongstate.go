@@ -10,6 +10,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/failures"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/validation/consumers/credentials"
@@ -48,7 +49,11 @@ func (ks *KongState) SanitizedCopy() *KongState {
 	}
 }
 
-func (ks *KongState) FillConsumersAndCredentials(log logrus.FieldLogger, s store.Storer, kongVersion semver.Version) {
+func (ks *KongState) FillConsumersAndCredentials(
+	log logrus.FieldLogger, s store.Storer,
+	failureCollector *failures.ResourceFailuresCollector,
+	kongVersion semver.Version,
+) {
 	consumerIndex := make(map[string]Consumer)
 
 	// build consumer index
@@ -77,7 +82,10 @@ func (ks *KongState) FillConsumersAndCredentials(log logrus.FieldLogger, s store
 			})
 			secret, err := s.GetSecret(consumer.Namespace, cred)
 			if err != nil {
-				log.WithError(err).Error("failed to fetch secret")
+				failureCollector.PushResourceFailure(
+					fmt.Sprintf("failed to fetch secret: %v", err),
+					consumer,
+				)
 				continue
 			}
 			credConfig := map[string]interface{}{}
@@ -94,6 +102,7 @@ func (ks *KongState) FillConsumersAndCredentials(log logrus.FieldLogger, s store
 				if k == "hash_secret" {
 					boolVal, err := strconv.ParseBool(string(v))
 					if err != nil {
+						// REVIEW: this is not an error blocking translate the consumer to Kong's consumer, do we add a translation error here?
 						log.WithError(err).Errorf("failed to parse hash_secret to bool. defaulting to false")
 						credConfig[k] = false
 					} else {
@@ -106,6 +115,7 @@ func (ks *KongState) FillConsumersAndCredentials(log logrus.FieldLogger, s store
 				if k == "ttl" {
 					intVal, err := strconv.Atoi(string(v))
 					if err != nil {
+						// REVIEW: this is not an error blocking translate the consumer to Kong's consumer, do we add a translation error here?
 						log.WithError(err).Errorf("failed to parse ttl to int, skip filling the field")
 					} else {
 						credConfig[k] = intVal
@@ -116,22 +126,33 @@ func (ks *KongState) FillConsumersAndCredentials(log logrus.FieldLogger, s store
 			}
 			credType, ok := credConfig["kongCredType"].(string)
 			if !ok {
-				err := fmt.Errorf("invalid credType: %v", credType)
-				log.WithError(err).Errorf("failed to provision credential")
+				failureCollector.PushResourceFailure(
+					fmt.Sprintf("failed to provision credential: invalid credType: type '%T' not string", credType),
+					consumer,
+				)
+				continue
 			}
 			if !credentials.SupportedTypes.Has(credType) {
-				err := fmt.Errorf("invalid credType: %v", credType)
-				log.WithError(err).Error("failed to provision credential")
+				failureCollector.PushResourceFailure(
+					fmt.Sprintf("failed to provision credential: invalid credType: %v", credType),
+					consumer,
+				)
 				continue
 			}
 			if len(credConfig) <= 1 { // 1 key of credType itself
-				log.Error("failed to provision credential: empty secret")
+				failureCollector.PushResourceFailure(
+					"failed to provision credential: empty secret",
+					consumer,
+				)
 				continue
 			}
 			credTags := util.GenerateTagsForObject(secret)
 			err = c.SetCredential(credType, credConfig, credTags, kongVersion)
 			if err != nil {
-				log.WithError(err).Errorf("failed to provision credential")
+				failureCollector.PushResourceFailure(
+					fmt.Sprintf("failed to provision credential: %v", err),
+					consumer,
+				)
 				continue
 			}
 		}

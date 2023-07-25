@@ -13,6 +13,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/failures"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 	configurationv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
@@ -382,9 +383,12 @@ func TestFillConsumersAndCredentials(t *testing.T) {
 		}},
 	}
 
+	failureCollector, err := failures.NewResourceFailuresCollector(logrus.New())
+	require.NoError(t, err)
+
 	t.Run("parses consumer and credential from store into state", func(t *testing.T) {
 		state := KongState{}
-		state.FillConsumersAndCredentials(logrus.New(), store, semver.MustParse("2.3.2"))
+		state.FillConsumersAndCredentials(logrus.New(), store, failureCollector, semver.MustParse("2.3.2"))
 		assert.Equal(t, want.Consumers[0].Consumer.Username, state.Consumers[0].Consumer.Username)
 		assert.Equal(t, want.Consumers[0].Consumer.CustomID, state.Consumers[0].Consumer.CustomID)
 		assert.Equal(t, want.Consumers[0].KeyAuths[0].Key, state.Consumers[0].KeyAuths[0].Key)

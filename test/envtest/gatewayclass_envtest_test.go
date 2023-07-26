@@ -12,8 +12,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"k8s.io/client-go/kubernetes/scheme"
-	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
 	gatewayclientv1beta1 "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned/typed/apis/v1beta1"
@@ -26,12 +24,6 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/test/mocks"
 )
 
-func init() {
-	if err := gatewayv1beta1.Install(scheme.Scheme); err != nil {
-		panic(err)
-	}
-}
-
 func TestGatewayWithGatewayClassReconciliation(t *testing.T) {
 	t.Parallel()
 
@@ -41,15 +33,13 @@ func TestGatewayWithGatewayClassReconciliation(t *testing.T) {
 		unsupportedControllerName gatewayv1beta1.GatewayController = "example.com/unsupported-gateway-controller"
 	)
 
-	cfg := Setup(t, scheme.Scheme)
+	scheme := Scheme(t, WithGatewayAPI)
+	cfg := Setup(t, scheme)
 
 	gatewayClient, err := gatewayclient.NewForConfig(cfg)
 	require.NoError(t, err)
 
-	client, err := ctrlclient.New(cfg, ctrlclient.Options{
-		Scheme: scheme.Scheme,
-	})
-	require.NoError(t, err)
+	client := NewControllerClient(t, scheme, cfg)
 
 	testcases := []struct {
 		Name         string

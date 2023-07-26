@@ -13,7 +13,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8stypes "k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
@@ -23,8 +22,9 @@ import (
 )
 
 func TestHTTPRouteReconciliation_DoesNotBlockSyncLoopWhenStatusQueueBufferIsExceeded(t *testing.T) {
-	envcfg := Setup(t, scheme.Scheme)
-	ctrlClient := NewControllerClient(t, envcfg)
+	scheme := Scheme(t, WithGatewayAPI)
+	envcfg := Setup(t, scheme)
+	ctrlClient := NewControllerClient(t, scheme, envcfg)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()

@@ -15,7 +15,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
-	"k8s.io/client-go/kubernetes/scheme"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/adminapi"
 	cfgtypes "github.com/kong/kubernetes-ingress-controller/v2/internal/manager/config/types"
@@ -26,8 +25,9 @@ import (
 func TestDiscoverer_GetAdminAPIsForServiceReturnsAllAddressesCorrectlyPagingThroughResults(t *testing.T) {
 	t.Parallel()
 
-	cfg := envtest.Setup(t, scheme.Scheme)
-	client := envtest.NewControllerClient(t, cfg)
+	scheme := envtest.Scheme(t)
+	cfg := envtest.Setup(t, scheme)
+	client := envtest.NewControllerClient(t, scheme, cfg)
 
 	// In tests below we use a deferred cancel to stop the manager and not wait
 	// for its timeout.

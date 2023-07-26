@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1690398319919,
+  "lastUpdate": 1690399135737,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -35676,6 +35676,48 @@ window.BENCHMARK_DATA = {
             "value": 12,
             "unit": "allocs/op",
             "extra": "17131 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "czeslavo@gmail.com",
+            "name": "Grzegorz Burzyński",
+            "username": "czeslavo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "74e7f71c609448f16909e7a6554205a59f3fb2cd",
+          "message": "tests: do not use global scheme in envtests (#4413)\n\nTo prevent race conditions adds envtest.Scheme function to get a scheme \r\nfor every test separately. It also allows customizing the scheme with \r\nWithGatewayAPI and WithKong options.",
+          "timestamp": "2023-07-26T19:17:36Z",
+          "tree_id": "9af0a33777522bf3771526be99c6731116b47485",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/74e7f71c609448f16909e7a6554205a59f3fb2cd"
+        },
+        "date": 1690399130049,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - ns/op",
+            "value": 71235,
+            "unit": "ns/op",
+            "extra": "16682 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - B/op",
+            "value": 11100,
+            "unit": "B/op",
+            "extra": "16682 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - allocs/op",
+            "value": 12,
+            "unit": "allocs/op",
+            "extra": "16682 times\n2 procs"
           }
         ]
       }

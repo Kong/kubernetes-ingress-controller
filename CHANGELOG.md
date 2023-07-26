@@ -145,7 +145,12 @@ Adding a new version? You'll need three changes:
 - Changed the Gateway's readiness probe in all-in-one manifests from `/status`
   to `/status/ready`. Gateways will be considered ready only after an initial
   configuration is applied by the controller.
-  [#4368](https://github.com/Kong/kubernetes-ingress-controller/pull/4368)
+  [#4368](https://github.com/Kong/kubernetes-ingress-controller/pull/4368
+
+### Fixed
+
+- Properly construct targets for IPv6-only clusters.
+  [#4391](https://github.com/Kong/kubernetes-ingress-controller/pull/4391)
 - Attach kubernetes events to `KongConsumer`s when the parser fails to
   translate its credentials to Kong configuration, instead of logging thet
   error to reduce the redundant logs.
@@ -175,7 +180,6 @@ Adding a new version? You'll need three changes:
   This was caused by a bug in `NodeAgent` that was sending the updates
   despite the fact that the configuration status was not changed.
   [#4324](https://github.com/Kong/kubernetes-ingress-controller/pull/4324)
-
 ## [2.10.2]
 
 > Release date: 2023-07-07

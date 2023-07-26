@@ -12,7 +12,6 @@ import (
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes/scheme"
 	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
@@ -22,10 +21,9 @@ import (
 func TestKongStateFillConsumersAndCredentialsFailure(t *testing.T) {
 	t.Parallel()
 
-	err := kongv1.AddToScheme(scheme.Scheme)
-	require.NoError(t, err)
-	cfg := Setup(t, scheme.Scheme, WithInstallKongCRDs(true))
-	client := NewControllerClient(t, cfg)
+	scheme := Scheme(t, WithKong)
+	cfg := Setup(t, scheme, WithInstallKongCRDs(true))
+	client := NewControllerClient(t, scheme, cfg)
 
 	// We use a deferred cancel to stop the manager and not wait for its timeout.
 	ctx, cancel := context.WithCancel(context.Background())

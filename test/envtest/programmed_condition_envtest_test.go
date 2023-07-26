@@ -8,7 +8,6 @@ import (
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8stypes "k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
@@ -20,10 +19,9 @@ import (
 func TestKongConsumer_ProgrammedCondition(t *testing.T) {
 	t.Parallel()
 
-	err := kongv1.AddToScheme(scheme.Scheme)
-	require.NoError(t, err)
-	envcfg := Setup(t, scheme.Scheme, WithInstallKongCRDs(true))
-	ctrlClient := NewControllerClient(t, envcfg)
+	scheme := Scheme(t, WithKong)
+	envcfg := Setup(t, scheme, WithInstallKongCRDs(true))
+	ctrlClient := NewControllerClient(t, scheme, envcfg)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()

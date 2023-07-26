@@ -11,7 +11,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
 	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
@@ -61,10 +60,10 @@ func StartReconcilers(ctx context.Context, t *testing.T, scheme *runtime.Scheme,
 	})
 }
 
-// NewControllerClient returns a new controller-runtime Client for provided rest.Config.
-func NewControllerClient(t *testing.T, cfg *rest.Config) ctrlclient.Client {
+// NewControllerClient returns a new controller-runtime Client for provided runtime.Scheme and rest.Config.
+func NewControllerClient(t *testing.T, scheme *runtime.Scheme, cfg *rest.Config) ctrlclient.Client {
 	client, err := ctrlclient.New(cfg, ctrlclient.Options{
-		Scheme: scheme.Scheme,
+		Scheme: scheme,
 	})
 	require.NoError(t, err)
 	return client

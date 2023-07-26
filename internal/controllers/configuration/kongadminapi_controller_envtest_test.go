@@ -20,7 +20,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
-	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
 	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
@@ -112,7 +111,7 @@ func TestKongAdminAPIController(t *testing.T) {
 	// In tests below we use a deferred cancel to stop the manager and not wait
 	// for its timeout.
 
-	cfg := envtest.Setup(t, scheme.Scheme)
+	cfg := envtest.Setup(t, envtest.Scheme(t))
 	client, err := ctrlclient.New(cfg, ctrlclient.Options{})
 	require.NoError(t, err)
 

@@ -17,7 +17,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"k8s.io/client-go/kubernetes/scheme"
 	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
@@ -27,12 +26,6 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/test/mocks"
 )
 
-func init() {
-	if err := gatewayv1beta1.Install(scheme.Scheme); err != nil {
-		panic(err)
-	}
-}
-
 func TestHTTPRouteReconcilerProperlyReactsToReferenceGrant(t *testing.T) {
 	t.Parallel()
 
@@ -41,8 +34,9 @@ func TestHTTPRouteReconcilerProperlyReactsToReferenceGrant(t *testing.T) {
 		tickDuration = 100 * time.Millisecond
 	)
 
-	cfg := Setup(t, scheme.Scheme)
-	client := NewControllerClient(t, cfg)
+	scheme := Scheme(t, WithGatewayAPI)
+	cfg := Setup(t, scheme)
+	client := NewControllerClient(t, scheme, cfg)
 
 	reconciler := &gateway.HTTPRouteReconciler{
 		Client:          client,

@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1690375442133,
+  "lastUpdate": 1690375444579,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -33744,6 +33744,48 @@ window.BENCHMARK_DATA = {
             "value": 12,
             "unit": "allocs/op",
             "extra": "14214 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jakub.warczarek@konghq.com",
+            "name": "Jakub Warczarek",
+            "username": "programmer04"
+          },
+          "committer": {
+            "email": "jakub.warczarek@konghq.com",
+            "name": "Jakub Warczarek",
+            "username": "programmer04"
+          },
+          "distinct": true,
+          "id": "2d1ea31a9376cced8860e0da3cc5eaaea1f96de8",
+          "message": "refactor: introduce KongTestWorkspace constant",
+          "timestamp": "2023-07-26T14:42:37+02:00",
+          "tree_id": "91daecb61701e98f9fc3a758d5845e8de1e8859a",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/2d1ea31a9376cced8860e0da3cc5eaaea1f96de8"
+        },
+        "date": 1690375436028,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - ns/op",
+            "value": 68205,
+            "unit": "ns/op",
+            "extra": "18105 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - B/op",
+            "value": 11099,
+            "unit": "B/op",
+            "extra": "18105 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - allocs/op",
+            "value": 12,
+            "unit": "allocs/op",
+            "extra": "18105 times\n2 procs"
           }
         ]
       },

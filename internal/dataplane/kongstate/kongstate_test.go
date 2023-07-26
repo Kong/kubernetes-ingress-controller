@@ -1,6 +1,7 @@
 package kongstate
 
 import (
+	"fmt"
 	"reflect"
 	"strconv"
 	"strings"
@@ -499,7 +500,7 @@ func TestFillConsumersAndCredentials(t *testing.T) {
 				},
 			},
 			expectedTranslationFailureMessages: map[k8stypes.NamespacedName]string{
-				{Namespace: "default", Name: "foo"}: "failed to provision credential: unsupported kongCredType: unsupported",
+				{Namespace: "default", Name: "foo"}: fmt.Sprintf("failed to provision credential: unsupported kongCredType: %q", "unsupported"),
 			},
 		},
 	}

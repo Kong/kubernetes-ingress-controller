@@ -23,6 +23,7 @@ import (
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	knative "knative.dev/networking/pkg/apis/networking/v1alpha1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
@@ -5354,6 +5355,54 @@ func TestParser_License(t *testing.T) {
 	})
 }
 
+func TestParser_ConfiguredKubernetesObjects(t *testing.T) {
+	testCases := []struct {
+		name                          string
+		objectsInStore                store.FakeObjects
+		expectedObjectsToBeConfigured []k8stypes.NamespacedName
+	}{
+		{
+			name:                          "no objects in cache",
+			objectsInStore:                store.FakeObjects{},
+			expectedObjectsToBeConfigured: []k8stypes.NamespacedName{},
+		},
+		{
+			name: "KongConsumer",
+			objectsInStore: store.FakeObjects{
+				KongConsumers: []*configurationv1.KongConsumer{
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:        "consumer",
+							Namespace:   "bar",
+							Annotations: map[string]string{annotations.IngressClassKey: annotations.DefaultIngressClass},
+						},
+						Username: "foo",
+					},
+				},
+			},
+			expectedObjectsToBeConfigured: []k8stypes.NamespacedName{
+				{Name: "consumer", Namespace: "bar"},
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			s, _ := store.NewFakeStore(tc.objectsInStore)
+			p := mustNewParser(t, s)
+
+			result := p.BuildKongConfig()
+			require.Len(t, result.ConfiguredKubernetesObjects, len(tc.expectedObjectsToBeConfigured))
+
+			for _, expectedObj := range tc.expectedObjectsToBeConfigured {
+				assert.True(t, lo.ContainsBy(result.ConfiguredKubernetesObjects, func(obj client.Object) bool {
+					return expectedObj.Name == obj.GetName() && expectedObj.Namespace == obj.GetNamespace()
+				}), "configured objects do not contain the expected %s, actual: %v", expectedObj, result.ConfiguredKubernetesObjects)
+			}
+		})
+	}
+}
+
 func mustNewParser(t *testing.T, storer store.Storer) *Parser {
 	const testKongVersion = "3.2.0"
 
@@ -5362,7 +5411,9 @@ func mustNewParser(t *testing.T, storer store.Storer) *Parser {
 
 	p, err := NewParser(logrus.New(), storer,
 		FeatureFlags{
-			FillIDs: true, // We'll assume this is true for all tests.
+			// We'll assume these is true for all tests.
+			FillIDs:                           true,
+			ReportConfiguredKubernetesObjects: true,
 		},
 		v,
 	)

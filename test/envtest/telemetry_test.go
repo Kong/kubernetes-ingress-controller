@@ -23,6 +23,7 @@ import (
 	"k8s.io/apimachinery/pkg/version"
 	discoveryclient "k8s.io/client-go/discovery"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
@@ -31,7 +32,6 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/manager"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/manager/featuregates"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
-	"github.com/kong/kubernetes-ingress-controller/v2/pkg/clientset/scheme"
 	"github.com/kong/kubernetes-ingress-controller/v2/test/helpers/certificate"
 )
 

@@ -12,11 +12,11 @@ import (
 
 	"github.com/prometheus/common/expfmt"
 	"github.com/stretchr/testify/require"
+	"k8s.io/client-go/kubernetes/scheme"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/manager"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/metrics"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
-	"github.com/kong/kubernetes-ingress-controller/v2/pkg/clientset/scheme"
 	"github.com/kong/kubernetes-ingress-controller/v2/test/envtest"
 )
 

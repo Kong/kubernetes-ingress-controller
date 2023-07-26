@@ -58,10 +58,11 @@ import (
 type CoreV1ServiceReconciler struct {
 	client.Client
 
-	Log               logr.Logger
-	Scheme            *runtime.Scheme
-	DataplaneClient   controllers.DataPlane
-	CacheSyncTimeout  time.Duration
+	Log              logr.Logger
+	Scheme           *runtime.Scheme
+	DataplaneClient  controllers.DataPlane
+	CacheSyncTimeout time.Duration
+
 	ReferenceIndexers ctrlref.CacheIndexers
 }
 
@@ -401,20 +402,9 @@ func (r *NetV1IngressReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	if err := r.DataplaneClient.UpdateObject(obj); err != nil {
 		return ctrl.Result{}, err
 	}
-	// update reference relationship from the Ingress to other objects.
-	if err := updateReferredObjects(ctx, r.Client, r.ReferenceIndexers, r.DataplaneClient, obj); err != nil {
-		if apierrors.IsNotFound(err) {
-			// reconcile again if the secret does not exist yet
-			return ctrl.Result{
-				Requeue: true,
-			}, nil
-		}
-		return ctrl.Result{}, err
-	}
 	// if status updates are enabled report the status for the object
 	if r.DataplaneClient.AreKubernetesObjectReportsEnabled() {
 		log.V(util.DebugLevel).Info("determining whether data-plane configuration has succeeded", "namespace", req.Namespace, "name", req.Name)
-
 		if !r.DataplaneClient.KubernetesObjectIsConfigured(obj) {
 			log.V(util.DebugLevel).Info("resource not yet configured in the data-plane", "namespace", req.Namespace, "name", req.Name)
 			return ctrl.Result{Requeue: true}, nil // requeue until the object has been properly configured
@@ -431,10 +421,21 @@ func (r *NetV1IngressReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		if err != nil {
 			return ctrl.Result{}, fmt.Errorf("failed to update load balancer address: %w", err)
 		}
+
 		if updateNeeded {
 			return ctrl.Result{}, r.Status().Update(ctx, obj)
 		}
 		log.V(util.DebugLevel).Info("status update not needed", "namespace", req.Namespace, "name", req.Name)
+	}
+	// update reference relationship from the Ingress to other objects.
+	if err := updateReferredObjects(ctx, r.Client, r.ReferenceIndexers, r.DataplaneClient, obj); err != nil {
+		if apierrors.IsNotFound(err) {
+			// reconcile again if the secret does not exist yet
+			return ctrl.Result{
+				Requeue: true,
+			}, nil
+		}
+		return ctrl.Result{}, err
 	}
 
 	return ctrl.Result{}, nil
@@ -615,10 +616,11 @@ func (r *KongV1KongIngressReconciler) Reconcile(ctx context.Context, req ctrl.Re
 type KongV1KongPluginReconciler struct {
 	client.Client
 
-	Log               logr.Logger
-	Scheme            *runtime.Scheme
-	DataplaneClient   controllers.DataPlane
-	CacheSyncTimeout  time.Duration
+	Log              logr.Logger
+	Scheme           *runtime.Scheme
+	DataplaneClient  controllers.DataPlane
+	CacheSyncTimeout time.Duration
+
 	ReferenceIndexers ctrlref.CacheIndexers
 }
 
@@ -1358,20 +1360,9 @@ func (r *KongV1Beta1TCPIngressReconciler) Reconcile(ctx context.Context, req ctr
 	if err := r.DataplaneClient.UpdateObject(obj); err != nil {
 		return ctrl.Result{}, err
 	}
-	// update reference relationship from the TCPIngress to other objects.
-	if err := updateReferredObjects(ctx, r.Client, r.ReferenceIndexers, r.DataplaneClient, obj); err != nil {
-		if apierrors.IsNotFound(err) {
-			// reconcile again if the secret does not exist yet
-			return ctrl.Result{
-				Requeue: true,
-			}, nil
-		}
-		return ctrl.Result{}, err
-	}
 	// if status updates are enabled report the status for the object
 	if r.DataplaneClient.AreKubernetesObjectReportsEnabled() {
 		log.V(util.DebugLevel).Info("determining whether data-plane configuration has succeeded", "namespace", req.Namespace, "name", req.Name)
-
 		if !r.DataplaneClient.KubernetesObjectIsConfigured(obj) {
 			log.V(util.DebugLevel).Info("resource not yet configured in the data-plane", "namespace", req.Namespace, "name", req.Name)
 			return ctrl.Result{Requeue: true}, nil // requeue until the object has been properly configured
@@ -1388,10 +1379,21 @@ func (r *KongV1Beta1TCPIngressReconciler) Reconcile(ctx context.Context, req ctr
 		if err != nil {
 			return ctrl.Result{}, fmt.Errorf("failed to update load balancer address: %w", err)
 		}
+
 		if updateNeeded {
 			return ctrl.Result{}, r.Status().Update(ctx, obj)
 		}
 		log.V(util.DebugLevel).Info("status update not needed", "namespace", req.Namespace, "name", req.Name)
+	}
+	// update reference relationship from the TCPIngress to other objects.
+	if err := updateReferredObjects(ctx, r.Client, r.ReferenceIndexers, r.DataplaneClient, obj); err != nil {
+		if apierrors.IsNotFound(err) {
+			// reconcile again if the secret does not exist yet
+			return ctrl.Result{
+				Requeue: true,
+			}, nil
+		}
+		return ctrl.Result{}, err
 	}
 
 	return ctrl.Result{}, nil
@@ -1552,7 +1554,6 @@ func (r *KongV1Beta1UDPIngressReconciler) Reconcile(ctx context.Context, req ctr
 	// if status updates are enabled report the status for the object
 	if r.DataplaneClient.AreKubernetesObjectReportsEnabled() {
 		log.V(util.DebugLevel).Info("determining whether data-plane configuration has succeeded", "namespace", req.Namespace, "name", req.Name)
-
 		if !r.DataplaneClient.KubernetesObjectIsConfigured(obj) {
 			log.V(util.DebugLevel).Info("resource not yet configured in the data-plane", "namespace", req.Namespace, "name", req.Name)
 			return ctrl.Result{Requeue: true}, nil // requeue until the object has been properly configured
@@ -1569,6 +1570,7 @@ func (r *KongV1Beta1UDPIngressReconciler) Reconcile(ctx context.Context, req ctr
 		if err != nil {
 			return ctrl.Result{}, fmt.Errorf("failed to update load balancer address: %w", err)
 		}
+
 		if updateNeeded {
 			return ctrl.Result{}, r.Status().Update(ctx, obj)
 		}
@@ -1590,6 +1592,9 @@ type KongV1Alpha1IngressClassParametersReconciler struct {
 	Scheme           *runtime.Scheme
 	DataplaneClient  controllers.DataPlane
 	CacheSyncTimeout time.Duration
+
+	DataplaneAddressFinder *dataplane.AddressFinder
+	StatusQueue            *status.Queue
 }
 
 var _ controllers.Reconciler = &KongV1Alpha1IngressClassParametersReconciler{}
@@ -1605,6 +1610,19 @@ func (r *KongV1Alpha1IngressClassParametersReconciler) SetupWithManager(mgr ctrl
 	})
 	if err != nil {
 		return err
+	}
+	// if configured, start the status updater controller
+	if r.StatusQueue != nil {
+		if err := c.Watch(
+			&source.Channel{Source: r.StatusQueue.Subscribe(schema.GroupVersionKind{
+				Group:   "configuration.konghq.com",
+				Version: "v1alpha1",
+				Kind:    "IngressClassParameters",
+			})},
+			&handler.EnqueueRequestForObject{},
+		); err != nil {
+			return err
+		}
 	}
 	return c.Watch(
 		source.Kind(mgr.GetCache(), &kongv1alpha1.IngressClassParameters{}),
@@ -1656,6 +1674,31 @@ func (r *KongV1Alpha1IngressClassParametersReconciler) Reconcile(ctx context.Con
 	// update the kong Admin API with the changes
 	if err := r.DataplaneClient.UpdateObject(obj); err != nil {
 		return ctrl.Result{}, err
+	}
+	// if status updates are enabled report the status for the object
+	if r.DataplaneClient.AreKubernetesObjectReportsEnabled() {
+		log.V(util.DebugLevel).Info("determining whether data-plane configuration has succeeded", "namespace", req.Namespace, "name", req.Name)
+		if !r.DataplaneClient.KubernetesObjectIsConfigured(obj) {
+			log.V(util.DebugLevel).Info("resource not yet configured in the data-plane", "namespace", req.Namespace, "name", req.Name)
+			return ctrl.Result{Requeue: true}, nil // requeue until the object has been properly configured
+		}
+
+		log.V(util.DebugLevel).Info("determining gateway addresses for object status updates", "namespace", req.Namespace, "name", req.Name)
+		addrs, err := r.DataplaneAddressFinder.GetLoadBalancerAddresses(ctx)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+
+		log.V(util.DebugLevel).Info("found addresses for data-plane updating object status", "namespace", req.Namespace, "name", req.Name)
+		updateNeeded, err := ctrlutils.UpdateLoadBalancerIngress(obj, addrs)
+		if err != nil {
+			return ctrl.Result{}, fmt.Errorf("failed to update load balancer address: %w", err)
+		}
+
+		if updateNeeded {
+			return ctrl.Result{}, r.Status().Update(ctx, obj)
+		}
+		log.V(util.DebugLevel).Info("status update not needed", "namespace", req.Namespace, "name", req.Name)
 	}
 
 	return ctrl.Result{}, nil

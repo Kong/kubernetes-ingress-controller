@@ -270,6 +270,7 @@ func setupControllers(
 				DisableIngressClassLookups: !c.IngressClassNetV1Enabled,
 				CacheSyncTimeout:           c.CacheSyncTimeout,
 				ReferenceIndexers:          referenceIndexers,
+				StatusQueue:                kubernetesStatusQueue,
 			},
 		},
 		{

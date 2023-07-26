@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1690387916797,
+  "lastUpdate": 1690387918957,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -34500,6 +34500,48 @@ window.BENCHMARK_DATA = {
             "value": 12,
             "unit": "allocs/op",
             "extra": "18146 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jakub.warczarek@konghq.com",
+            "name": "Jakub Warczarek",
+            "username": "programmer04"
+          },
+          "committer": {
+            "email": "jakub.warczarek@konghq.com",
+            "name": "Jakub Warczarek",
+            "username": "programmer04"
+          },
+          "distinct": true,
+          "id": "d01d2aea468e8eb521e63893cc853af323b30954",
+          "message": "add integration test for Consumer Group",
+          "timestamp": "2023-07-26T18:08:29+02:00",
+          "tree_id": "84c6817601cd2fddfbeb8a0bf01478518658a0dd",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/d01d2aea468e8eb521e63893cc853af323b30954"
+        },
+        "date": 1690387906713,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - ns/op",
+            "value": 83657,
+            "unit": "ns/op",
+            "extra": "14349 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - B/op",
+            "value": 11090,
+            "unit": "B/op",
+            "extra": "14349 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - allocs/op",
+            "value": 12,
+            "unit": "allocs/op",
+            "extra": "14349 times\n2 procs"
           }
         ]
       },

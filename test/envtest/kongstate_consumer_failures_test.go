@@ -15,7 +15,7 @@ import (
 	"k8s.io/client-go/kubernetes/scheme"
 	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/manager"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
 )
 
@@ -24,10 +24,8 @@ func TestKongStateFillConsumersAndCredentialsFailure(t *testing.T) {
 
 	err := kongv1.AddToScheme(scheme.Scheme)
 	require.NoError(t, err)
-	cfg := Setup(t, scheme.Scheme)
-	InstallKongCRDs(t, cfg)
+	cfg := Setup(t, scheme.Scheme, WithInstallKongCRDs(true))
 	client := NewControllerClient(t, cfg)
-	testIngressClassName := "kong-test"
 
 	// We use a deferred cancel to stop the manager and not wait for its timeout.
 	ctx, cancel := context.WithCancel(context.Background())
@@ -61,11 +59,9 @@ func TestKongStateFillConsumersAndCredentialsFailure(t *testing.T) {
 	kongConsumers := []*kongv1.KongConsumer{
 		{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "consumer-key-auth-cred",
-				Namespace: ns.Name,
-				Annotations: map[string]string{
-					"kubernetes.io/ingress.class": testIngressClassName,
-				},
+				Name:        "consumer-key-auth-cred",
+				Namespace:   ns.Name,
+				Annotations: map[string]string{annotations.IngressClassKey: annotations.DefaultIngressClass},
 			},
 			Username: "foo",
 			Credentials: []string{
@@ -74,11 +70,9 @@ func TestKongStateFillConsumersAndCredentialsFailure(t *testing.T) {
 		},
 		{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "consumer-empty-cred",
-				Namespace: ns.Name,
-				Annotations: map[string]string{
-					"kubernetes.io/ingress.class": testIngressClassName,
-				},
+				Name:        "consumer-empty-cred",
+				Namespace:   ns.Name,
+				Annotations: map[string]string{annotations.IngressClassKey: annotations.DefaultIngressClass},
 			},
 			CustomID: "bar",
 			Credentials: []string{
@@ -87,11 +81,9 @@ func TestKongStateFillConsumersAndCredentialsFailure(t *testing.T) {
 		},
 		{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "consumer-no-username",
-				Namespace: ns.Name,
-				Annotations: map[string]string{
-					"kubernetes.io/ingress.class": testIngressClassName,
-				},
+				Name:        "consumer-no-username",
+				Namespace:   ns.Name,
+				Annotations: map[string]string{annotations.IngressClassKey: annotations.DefaultIngressClass},
 			},
 			Credentials: []string{
 				"key-auth-cred",
@@ -112,12 +104,7 @@ func TestKongStateFillConsumersAndCredentialsFailure(t *testing.T) {
 		"consumer-no-username": `no username or custom_id specified`,
 	}
 
-	RunManager(ctx, t, cfg, func(cfg *manager.Config) {
-		// Reducing controllers' cache synchronisation timeout in order to trigger the possible sync timeout quicker.
-		// It's a regression test for https://github.com/Kong/gateway-operator/issues/326.
-		cfg.CacheSyncTimeout = time.Millisecond * 500
-		cfg.IngressClassName = testIngressClassName
-	})
+	RunManager(ctx, t, cfg)
 
 	require.Eventually(t, func() bool {
 		events := &corev1.EventList{}

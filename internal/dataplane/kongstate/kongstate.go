@@ -78,10 +78,7 @@ func (ks *KongState) FillConsumersAndCredentials(
 			}
 			secret, err := s.GetSecret(consumer.Namespace, cred)
 			if err != nil {
-				failuresCollector.PushResourceFailure(
-					fmt.Sprintf("failed to fetch secret: %v", err),
-					consumer,
-				)
+				pushCredentialResourceFailures(fmt.Sprintf("failed to fetch secret: %v", err))
 				continue
 			}
 			credConfig := map[string]interface{}{}
@@ -133,7 +130,7 @@ func (ks *KongState) FillConsumersAndCredentials(
 			}
 			if !credentials.SupportedTypes.Has(credType) {
 				pushCredentialResourceFailures(
-					fmt.Sprintf("failed to provision credential: unsupported kongCredType: %v", credType),
+					fmt.Sprintf("failed to provision credential: unsupported kongCredType: %q", credType),
 				)
 				continue
 			}

@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1690390668363,
+  "lastUpdate": 1690390669706,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -34668,6 +34668,48 @@ window.BENCHMARK_DATA = {
             "value": 12,
             "unit": "allocs/op",
             "extra": "15026 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "571832+rainest@users.noreply.github.com",
+            "name": "Travis Raines",
+            "username": "rainest"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "fb2afa993fd71483dc94db9185379a540c460e24",
+          "message": "Merge branch 'main' into fix/v6-targets",
+          "timestamp": "2023-07-26T09:56:45-07:00",
+          "tree_id": "72fbe64547ecf4a4324bfa5eec03c4bab58136e5",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/fb2afa993fd71483dc94db9185379a540c460e24"
+        },
+        "date": 1690390663128,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - ns/op",
+            "value": 64138,
+            "unit": "ns/op",
+            "extra": "16437 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - B/op",
+            "value": 11104,
+            "unit": "B/op",
+            "extra": "16437 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - allocs/op",
+            "value": 12,
+            "unit": "allocs/op",
+            "extra": "16437 times\n2 procs"
           }
         ]
       },

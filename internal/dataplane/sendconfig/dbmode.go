@@ -23,6 +23,7 @@ type UpdateStrategyDBMode struct {
 	dumpConfig  dump.Config
 	version     semver.Version
 	concurrency int
+	isKonnect   bool
 }
 
 func NewUpdateStrategyDBMode(
@@ -37,6 +38,17 @@ func NewUpdateStrategyDBMode(
 		version:     version,
 		concurrency: concurrency,
 	}
+}
+
+func NewUpdateStrategyDBModeKonnect(
+	client *kong.Client,
+	dumpConfig dump.Config,
+	version semver.Version,
+	concurrency int,
+) UpdateStrategyDBMode {
+	s := NewUpdateStrategyDBMode(client, dumpConfig, version, concurrency)
+	s.isKonnect = true
+	return s
 }
 
 func (s UpdateStrategyDBMode) Update(ctx context.Context, targetContent ContentWithHash) (
@@ -59,12 +71,13 @@ func (s UpdateStrategyDBMode) Update(ctx context.Context, targetContent ContentW
 		TargetState:     ts,
 		KongClient:      s.client,
 		SilenceWarnings: true,
+		IsKonnect:       s.isKonnect,
 	})
 	if err != nil {
 		return fmt.Errorf("creating a new syncer for %s: %w", s.client.BaseRootURL(), err), nil, nil
 	}
 
-	_, errs := syncer.Solve(ctx, s.concurrency, false)
+	_, errs, _ := syncer.Solve(ctx, s.concurrency, false, false)
 	if errs != nil {
 		return deckutils.ErrArray{Errors: errs}, nil, nil
 	}

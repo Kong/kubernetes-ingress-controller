@@ -438,6 +438,8 @@ type {{.PackageAlias}}{{.Kind}}Reconciler struct {
 {{- end}}
 }
 
+var _ controllers.Reconciler = &{{.PackageAlias}}{{.Kind}}Reconciler{}
+
 // SetupWithManager sets up the controller with the Manager.
 func (r *{{.PackageAlias}}{{.Kind}}Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 	c, err := controller.New("{{.PackageAlias}}{{.Kind}}", mgr, controller.Options{
@@ -510,6 +512,11 @@ func (r *{{.PackageAlias}}{{.Kind}}Reconciler) listClassless(ctx context.Context
 	return recs
 }
 {{- end}}
+
+// SetLogger sets the logger.
+func (r *{{.PackageAlias}}{{.Kind}}Reconciler) SetLogger(l logr.Logger) {
+	r.Log = l
+}
 
 //+kubebuilder:rbac:groups={{.Group}},resources={{.Plural}},verbs={{ .RBACVerbs | join ";" }}
 {{- if .NeedsStatusPermissions}}

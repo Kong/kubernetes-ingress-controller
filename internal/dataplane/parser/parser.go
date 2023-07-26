@@ -227,7 +227,7 @@ func (p *Parser) BuildKongConfig() KongConfigBuildingResult {
 	result.FillOverrides(p.logger, p.storer)
 
 	// generate consumers and credentials
-	result.FillConsumersAndCredentials(p.logger, p.storer, p.kongVersion)
+	result.FillConsumersAndCredentials(p.storer, p.failuresCollector, p.kongVersion)
 
 	// process annotation plugins
 	result.FillPlugins(p.logger, p.storer)

@@ -65,6 +65,8 @@ type CoreV1ServiceReconciler struct {
 	ReferenceIndexers ctrlref.CacheIndexers
 }
 
+var _ controllers.Reconciler = &CoreV1ServiceReconciler{}
+
 // SetupWithManager sets up the controller with the Manager.
 func (r *CoreV1ServiceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	c, err := controller.New("CoreV1Service", mgr, controller.Options{
@@ -81,6 +83,11 @@ func (r *CoreV1ServiceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		source.Kind(mgr.GetCache(), &corev1.Service{}),
 		&handler.EnqueueRequestForObject{},
 	)
+}
+
+// SetLogger sets the logger.
+func (r *CoreV1ServiceReconciler) SetLogger(l logr.Logger) {
+	r.Log = l
 }
 
 //+kubebuilder:rbac:groups="",resources=services,verbs=get;list;watch
@@ -162,6 +169,8 @@ type DiscoveryV1EndpointSliceReconciler struct {
 	CacheSyncTimeout time.Duration
 }
 
+var _ controllers.Reconciler = &DiscoveryV1EndpointSliceReconciler{}
+
 // SetupWithManager sets up the controller with the Manager.
 func (r *DiscoveryV1EndpointSliceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	c, err := controller.New("DiscoveryV1EndpointSlice", mgr, controller.Options{
@@ -178,6 +187,11 @@ func (r *DiscoveryV1EndpointSliceReconciler) SetupWithManager(mgr ctrl.Manager) 
 		source.Kind(mgr.GetCache(), &discoveryv1.EndpointSlice{}),
 		&handler.EnqueueRequestForObject{},
 	)
+}
+
+// SetLogger sets the logger.
+func (r *DiscoveryV1EndpointSliceReconciler) SetLogger(l logr.Logger) {
+	r.Log = l
 }
 
 //+kubebuilder:rbac:groups=discovery.k8s.io,resources=endpointslices,verbs=list;watch
@@ -245,6 +259,8 @@ type NetV1IngressReconciler struct {
 	ReferenceIndexers          ctrlref.CacheIndexers
 }
 
+var _ controllers.Reconciler = &NetV1IngressReconciler{}
+
 // SetupWithManager sets up the controller with the Manager.
 func (r *NetV1IngressReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	c, err := controller.New("NetV1Ingress", mgr, controller.Options{
@@ -307,6 +323,11 @@ func (r *NetV1IngressReconciler) listClassless(ctx context.Context, obj client.O
 		}
 	}
 	return recs
+}
+
+// SetLogger sets the logger.
+func (r *NetV1IngressReconciler) SetLogger(l logr.Logger) {
+	r.Log = l
 }
 
 //+kubebuilder:rbac:groups=networking.k8s.io,resources=ingresses,verbs=get;list;watch
@@ -433,6 +454,8 @@ type NetV1IngressClassReconciler struct {
 	CacheSyncTimeout time.Duration
 }
 
+var _ controllers.Reconciler = &NetV1IngressClassReconciler{}
+
 // SetupWithManager sets up the controller with the Manager.
 func (r *NetV1IngressClassReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	c, err := controller.New("NetV1IngressClass", mgr, controller.Options{
@@ -449,6 +472,11 @@ func (r *NetV1IngressClassReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		source.Kind(mgr.GetCache(), &netv1.IngressClass{}),
 		&handler.EnqueueRequestForObject{},
 	)
+}
+
+// SetLogger sets the logger.
+func (r *NetV1IngressClassReconciler) SetLogger(l logr.Logger) {
+	r.Log = l
 }
 
 //+kubebuilder:rbac:groups=networking.k8s.io,resources=ingressclasses,verbs=get;list;watch
@@ -509,6 +537,8 @@ type KongV1KongIngressReconciler struct {
 	CacheSyncTimeout time.Duration
 }
 
+var _ controllers.Reconciler = &KongV1KongIngressReconciler{}
+
 // SetupWithManager sets up the controller with the Manager.
 func (r *KongV1KongIngressReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	c, err := controller.New("KongV1KongIngress", mgr, controller.Options{
@@ -525,6 +555,11 @@ func (r *KongV1KongIngressReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		source.Kind(mgr.GetCache(), &kongv1.KongIngress{}),
 		&handler.EnqueueRequestForObject{},
 	)
+}
+
+// SetLogger sets the logger.
+func (r *KongV1KongIngressReconciler) SetLogger(l logr.Logger) {
+	r.Log = l
 }
 
 //+kubebuilder:rbac:groups=configuration.konghq.com,resources=kongingresses,verbs=get;list;watch
@@ -587,6 +622,8 @@ type KongV1KongPluginReconciler struct {
 	ReferenceIndexers ctrlref.CacheIndexers
 }
 
+var _ controllers.Reconciler = &KongV1KongPluginReconciler{}
+
 // SetupWithManager sets up the controller with the Manager.
 func (r *KongV1KongPluginReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	c, err := controller.New("KongV1KongPlugin", mgr, controller.Options{
@@ -603,6 +640,11 @@ func (r *KongV1KongPluginReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		source.Kind(mgr.GetCache(), &kongv1.KongPlugin{}),
 		&handler.EnqueueRequestForObject{},
 	)
+}
+
+// SetLogger sets the logger.
+func (r *KongV1KongPluginReconciler) SetLogger(l logr.Logger) {
+	r.Log = l
 }
 
 //+kubebuilder:rbac:groups=configuration.konghq.com,resources=kongplugins,verbs=get;list;watch
@@ -688,6 +730,8 @@ type KongV1KongClusterPluginReconciler struct {
 	ReferenceIndexers          ctrlref.CacheIndexers
 }
 
+var _ controllers.Reconciler = &KongV1KongClusterPluginReconciler{}
+
 // SetupWithManager sets up the controller with the Manager.
 func (r *KongV1KongClusterPluginReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	c, err := controller.New("KongV1KongClusterPlugin", mgr, controller.Options{
@@ -737,6 +781,11 @@ func (r *KongV1KongClusterPluginReconciler) listClassless(ctx context.Context, o
 		}
 	}
 	return recs
+}
+
+// SetLogger sets the logger.
+func (r *KongV1KongClusterPluginReconciler) SetLogger(l logr.Logger) {
+	r.Log = l
 }
 
 //+kubebuilder:rbac:groups=configuration.konghq.com,resources=kongclusterplugins,verbs=get;list;watch
@@ -842,6 +891,8 @@ type KongV1KongConsumerReconciler struct {
 	ReferenceIndexers          ctrlref.CacheIndexers
 }
 
+var _ controllers.Reconciler = &KongV1KongConsumerReconciler{}
+
 // SetupWithManager sets up the controller with the Manager.
 func (r *KongV1KongConsumerReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	c, err := controller.New("KongV1KongConsumer", mgr, controller.Options{
@@ -891,6 +942,11 @@ func (r *KongV1KongConsumerReconciler) listClassless(ctx context.Context, obj cl
 		}
 	}
 	return recs
+}
+
+// SetLogger sets the logger.
+func (r *KongV1KongConsumerReconciler) SetLogger(l logr.Logger) {
+	r.Log = l
 }
 
 //+kubebuilder:rbac:groups=configuration.konghq.com,resources=kongconsumers,verbs=get;list;watch
@@ -996,6 +1052,8 @@ type KongV1Beta1KongConsumerGroupReconciler struct {
 	ReferenceIndexers          ctrlref.CacheIndexers
 }
 
+var _ controllers.Reconciler = &KongV1Beta1KongConsumerGroupReconciler{}
+
 // SetupWithManager sets up the controller with the Manager.
 func (r *KongV1Beta1KongConsumerGroupReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	c, err := controller.New("KongV1Beta1KongConsumerGroup", mgr, controller.Options{
@@ -1045,6 +1103,11 @@ func (r *KongV1Beta1KongConsumerGroupReconciler) listClassless(ctx context.Conte
 		}
 	}
 	return recs
+}
+
+// SetLogger sets the logger.
+func (r *KongV1Beta1KongConsumerGroupReconciler) SetLogger(l logr.Logger) {
+	r.Log = l
 }
 
 //+kubebuilder:rbac:groups=configuration.konghq.com,resources=kongconsumergroups,verbs=get;list;watch
@@ -1153,6 +1216,8 @@ type KongV1Beta1TCPIngressReconciler struct {
 	ReferenceIndexers          ctrlref.CacheIndexers
 }
 
+var _ controllers.Reconciler = &KongV1Beta1TCPIngressReconciler{}
+
 // SetupWithManager sets up the controller with the Manager.
 func (r *KongV1Beta1TCPIngressReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	c, err := controller.New("KongV1Beta1TCPIngress", mgr, controller.Options{
@@ -1215,6 +1280,11 @@ func (r *KongV1Beta1TCPIngressReconciler) listClassless(ctx context.Context, obj
 		}
 	}
 	return recs
+}
+
+// SetLogger sets the logger.
+func (r *KongV1Beta1TCPIngressReconciler) SetLogger(l logr.Logger) {
+	r.Log = l
 }
 
 //+kubebuilder:rbac:groups=configuration.konghq.com,resources=tcpingresses,verbs=get;list;watch
@@ -1347,6 +1417,8 @@ type KongV1Beta1UDPIngressReconciler struct {
 	DisableIngressClassLookups bool
 }
 
+var _ controllers.Reconciler = &KongV1Beta1UDPIngressReconciler{}
+
 // SetupWithManager sets up the controller with the Manager.
 func (r *KongV1Beta1UDPIngressReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	c, err := controller.New("KongV1Beta1UDPIngress", mgr, controller.Options{
@@ -1409,6 +1481,11 @@ func (r *KongV1Beta1UDPIngressReconciler) listClassless(ctx context.Context, obj
 		}
 	}
 	return recs
+}
+
+// SetLogger sets the logger.
+func (r *KongV1Beta1UDPIngressReconciler) SetLogger(l logr.Logger) {
+	r.Log = l
 }
 
 //+kubebuilder:rbac:groups=configuration.konghq.com,resources=udpingresses,verbs=get;list;watch
@@ -1515,6 +1592,8 @@ type KongV1Alpha1IngressClassParametersReconciler struct {
 	CacheSyncTimeout time.Duration
 }
 
+var _ controllers.Reconciler = &KongV1Alpha1IngressClassParametersReconciler{}
+
 // SetupWithManager sets up the controller with the Manager.
 func (r *KongV1Alpha1IngressClassParametersReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	c, err := controller.New("KongV1Alpha1IngressClassParameters", mgr, controller.Options{
@@ -1531,6 +1610,11 @@ func (r *KongV1Alpha1IngressClassParametersReconciler) SetupWithManager(mgr ctrl
 		source.Kind(mgr.GetCache(), &kongv1alpha1.IngressClassParameters{}),
 		&handler.EnqueueRequestForObject{},
 	)
+}
+
+// SetLogger sets the logger.
+func (r *KongV1Alpha1IngressClassParametersReconciler) SetLogger(l logr.Logger) {
+	r.Log = l
 }
 
 //+kubebuilder:rbac:groups=configuration.konghq.com,resources=ingressclassparameterses,verbs=get;list;watch

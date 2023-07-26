@@ -49,6 +49,9 @@ jobs:
           - name: enterprise-postgres
             test: enterprise.postgres
             enterprise: true
+          - name: enterprise-dbless
+            test: enterprise.dbless
+            enterprise: true
           - name: dbless-traditional-compatible
             test: dbless
             router-flavor: 'traditional_compatible'

@@ -7,6 +7,7 @@ Adding a new version? You'll need three changes:
 * Add the diff link, like "[2.7.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v1.2.2...v1.2.3".
   This is all the way at the bottom. It's the thing we always forget.
 --->
+ - [2.10.4](#2104)
  - [2.10.3](#2103)
  - [2.10.2](#2102)
  - [2.10.1](#2101)
@@ -108,6 +109,10 @@ Adding a new version? You'll need three changes:
   them to expression based Kong routes. The assigning method follows the
   [specification on priorities of matches in `HTTPRoute`][httproute-specification].
   [#4296](https://github.com/Kong/kubernetes-ingress-controller/pull/4296)
+- Assign priorities to routes translated from GRPCRoutes when the parser translates 
+  them to expression based Kong routes. The priority order follows the
+  [specification on match priorities in GRPCRoute][grpcroute-specification].
+  [#4364](https://github.com/Kong/kubernetes-ingress-controller/pull/4364)
 - When a translated Kong configuration is empty in DB-less mode, the controller
   will now send the configuration with a single empty `Upstream`. This is to make
   Gateways using `/status/ready` as their health check ready after receiving the
@@ -146,10 +151,24 @@ Adding a new version? You'll need three changes:
 
 - Properly construct targets for IPv6-only clusters.
   [#4391](https://github.com/Kong/kubernetes-ingress-controller/pull/4391)
-
-
+- Attach kubernetes events to `KongConsumer`s when the parser fails to
+  translate its credentials to Kong configuration, instead of logging thet
+  error to reduce the redundant logs.
+  [#4398](https://github.com/Kong/kubernetes-ingress-controller/pull/4398)
+ 
 [gojson]: https://github.com/goccy/go-json
 [httproute-specification]: https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1beta1.HTTPRoute
+[grpcroute-specification]:  https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1alpha2.GRPCRouteRule
+
+## [2.10.4]
+
+> Release date: 2023-07-25
+
+### Fixed
+
+- Fixed a bug that prevented the controller from updating configuration in
+  Konnect Runtime Groups API when an existing Certificate was updated.
+  [#4384](https://github.com/Kong/kubernetes-ingress-controller/issues/4384)
 
 ## [2.10.3]
 
@@ -2634,6 +2653,7 @@ Please read the changelog and test in your environment.
  - The initial versions  were rapildy iterated to deliver
    a working ingress controller.
 
+[2.10.4]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.10.3...v2.10.4
 [2.10.3]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.10.2...v2.10.3
 [2.10.2]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.10.1...v2.10.2
 [2.10.1]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.10.0...v2.10.1

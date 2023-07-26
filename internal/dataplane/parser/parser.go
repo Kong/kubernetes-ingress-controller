@@ -228,6 +228,9 @@ func (p *Parser) BuildKongConfig() KongConfigBuildingResult {
 
 	// generate consumers and credentials
 	result.FillConsumersAndCredentials(p.storer, p.failuresCollector, p.kongVersion)
+	for _, c := range result.Consumers {
+		p.registerSuccessfullyParsedObject(&c.K8sKongConsumer)
+	}
 
 	// process annotation plugins
 	result.FillPlugins(p.logger, p.storer)

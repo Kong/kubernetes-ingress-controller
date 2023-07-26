@@ -69,7 +69,8 @@ var inputControllersNeeded = &typesNeeded{
 		Plural:                            "ingresses",
 		CacheType:                         "IngressV1",
 		NeedsStatusPermissions:            true,
-		CapableOfStatusUpdates:            true,
+		ConfigStatusNotificationsEnabled:  true,
+		IngressAddressUpdatesEnabled:      true,
 		AcceptsIngressClassNameAnnotation: true,
 		AcceptsIngressClassNameSpec:       true,
 		NeedsUpdateReferences:             true,
@@ -147,6 +148,8 @@ var inputControllersNeeded = &typesNeeded{
 		AcceptsIngressClassNameSpec:       false,
 		NeedsUpdateReferences:             true,
 		RBACVerbs:                         []string{"get", "list", "watch"},
+		ConfigStatusNotificationsEnabled:  true,
+		ProgrammedConditionUpdatesEnabled: true,
 	},
 	typeNeeded{
 		Group:                             "configuration.konghq.com",
@@ -173,7 +176,8 @@ var inputControllersNeeded = &typesNeeded{
 		Plural:                            "tcpingresses",
 		CacheType:                         "TCPIngress",
 		NeedsStatusPermissions:            true,
-		CapableOfStatusUpdates:            true,
+		ConfigStatusNotificationsEnabled:  true,
+		IngressAddressUpdatesEnabled:      true,
 		AcceptsIngressClassNameAnnotation: true,
 		AcceptsIngressClassNameSpec:       false,
 		NeedsUpdateReferences:             true,
@@ -189,7 +193,8 @@ var inputControllersNeeded = &typesNeeded{
 		Plural:                            "udpingresses",
 		CacheType:                         "UDPIngress",
 		NeedsStatusPermissions:            true,
-		CapableOfStatusUpdates:            true,
+		ConfigStatusNotificationsEnabled:  true,
+		IngressAddressUpdatesEnabled:      true,
 		AcceptsIngressClassNameAnnotation: true,
 		AcceptsIngressClassNameSpec:       false,
 		RBACVerbs:                         []string{"get", "list", "watch"},
@@ -204,7 +209,6 @@ var inputControllersNeeded = &typesNeeded{
 		Plural:                            "ingressclassparameterses",
 		CacheType:                         "IngressClassParameters",
 		NeedsStatusPermissions:            false,
-		CapableOfStatusUpdates:            false,
 		AcceptsIngressClassNameAnnotation: false,
 		AcceptsIngressClassNameSpec:       false,
 		RBACVerbs:                         []string{"get", "list", "watch"},
@@ -328,9 +332,17 @@ type typeNeeded struct {
 	// its status
 	NeedsStatusPermissions bool
 
-	// CapableOfStatusUpdates indicates that the controllers should manage status
-	// updates for the resource.
-	CapableOfStatusUpdates bool
+	// ConfigStatusNotificationsEnabled indicates that the controller should receive updates via the StatusQueue when the
+	// configuration status of the resource changes.
+	ConfigStatusNotificationsEnabled bool
+
+	// IngressAddressUpdatesEnabled indicates that the controllers should update the address of the ingress for the
+	// resource.
+	IngressAddressUpdatesEnabled bool
+
+	// ProgrammedConditionUpdatesEnabled indicates that the controllers should manage the programmed condition for the
+	// resource.
+	ProgrammedConditionUpdatesEnabled bool
 
 	// NeedUpdateReferences is true if we need to update the reference relationships
 	// between reconciled object and other objects.
@@ -423,9 +435,11 @@ type {{.PackageAlias}}{{.Kind}}Reconciler struct {
 	Scheme          *runtime.Scheme
 	DataplaneClient controllers.DataPlane
 	CacheSyncTimeout time.Duration
-{{- if .CapableOfStatusUpdates }}
+{{- if .IngressAddressUpdatesEnabled }}
 
 	DataplaneAddressFinder *dataplane.AddressFinder
+{{- end}}
+{{- if .ConfigStatusNotificationsEnabled }}
 	StatusQueue            *status.Queue
 {{- end}}
 {{- if or .AcceptsIngressClassNameSpec .AcceptsIngressClassNameAnnotation}}
@@ -453,7 +467,7 @@ func (r *{{.PackageAlias}}{{.Kind}}Reconciler) SetupWithManager(mgr ctrl.Manager
 		return err
 	}
 
-{{- if .CapableOfStatusUpdates}}
+{{- if .ConfigStatusNotificationsEnabled }}
 	// if configured, start the status updater controller
 	if r.StatusQueue != nil {
 		if err := c.Watch(
@@ -592,7 +606,7 @@ func (r *{{.PackageAlias}}{{.Kind}}Reconciler) Reconcile(ctx context.Context, re
 		return ctrl.Result{}, err
 	}
 
-{{- if .NeedsUpdateReferences }}
+{{- define "updateReferences" }}
 	// update reference relationship from the {{.Kind}} to other objects.
 	if err := updateReferredObjects(ctx, r.Client, r.ReferenceIndexers, r.DataplaneClient, obj); err != nil {
 		if apierrors.IsNotFound(err) {
@@ -605,9 +619,16 @@ func (r *{{.PackageAlias}}{{.Kind}}Reconciler) Reconcile(ctx context.Context, re
 	}
 {{- end }}
 
-{{- if .CapableOfStatusUpdates}}
+{{- /* For ProgrammedConditionUpdatesEnabled we do not update references before status is updated because in case of
+       a reference to non-existing object, the status update would never happen. */ -}}
+{{- if and .NeedsUpdateReferences (not .ProgrammedConditionUpdatesEnabled) }}
+	{{- template "updateReferences" . }}
+{{- end }}
+
+{{- if .ConfigStatusNotificationsEnabled }}
 	// if status updates are enabled report the status for the object
 	if r.DataplaneClient.AreKubernetesObjectReportsEnabled() {
+		{{- if .IngressAddressUpdatesEnabled }}
 		log.V(util.DebugLevel).Info("determining whether data-plane configuration has succeeded", "namespace", req.Namespace, "name", req.Name)
 
 		if  !r.DataplaneClient.KubernetesObjectIsConfigured(obj) {
@@ -626,12 +647,26 @@ func (r *{{.PackageAlias}}{{.Kind}}Reconciler) Reconcile(ctx context.Context, re
 		if err != nil {
 			return ctrl.Result{}, fmt.Errorf("failed to update load balancer address: %w", err)
 		}
+		{{- end }}
+
+		{{- if .ProgrammedConditionUpdatesEnabled }}
+		log.V(util.DebugLevel).Info("updating programmed condition status", "namespace", req.Namespace, "name", req.Name)
+		configurationStatus := r.DataplaneClient.KubernetesObjectConfigurationStatus(obj)
+		conditions, updateNeeded := ctrlutils.EnsureProgrammedCondition(configurationStatus, obj.Generation, obj.Status.Conditions)
+		obj.Status.Conditions = conditions
+		{{- end }}
 		if updateNeeded {
 			return ctrl.Result{}, r.Status().Update(ctx, obj)
 		}
 		log.V(util.DebugLevel).Info("status update not needed", "namespace", req.Namespace, "name", req.Name)
 	}
 {{- end}}
+
+{{- /* For ProgrammedConditionUpdatesEnabled we update references after status is updated because otherwise in case of
+       a reference to non-existing object, the status update would never happen. */ -}}
+{{- if and .NeedsUpdateReferences .ProgrammedConditionUpdatesEnabled }}
+	{{- template "updateReferences" . }}
+{{- end }}
 
 	return ctrl.Result{}, nil
 }

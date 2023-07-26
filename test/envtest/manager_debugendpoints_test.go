@@ -12,10 +12,10 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"k8s.io/client-go/kubernetes/scheme"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/cmd/rootcmd"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/manager"
-	"github.com/kong/kubernetes-ingress-controller/v2/pkg/clientset/scheme"
 )
 
 func TestDebugEndpoints(t *testing.T) {

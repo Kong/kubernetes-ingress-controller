@@ -361,6 +361,7 @@ func setupControllers(
 					DataplaneClient:      dataplaneClient,
 					PublishServiceRef:    c.PublishService.OrEmpty(),
 					PublishServiceUDPRef: c.PublishServiceUDP,
+					PublishServiceTLSRef: c.PublishServiceTLS,
 					WatchNamespaces:      c.WatchNamespaces,
 					CacheSyncTimeout:     c.CacheSyncTimeout,
 					ReferenceIndexers:    referenceIndexers,

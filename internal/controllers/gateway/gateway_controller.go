@@ -62,6 +62,7 @@ type GatewayReconciler struct { //nolint:revive
 
 	PublishServiceRef    k8stypes.NamespacedName
 	PublishServiceUDPRef mo.Option[k8stypes.NamespacedName]
+	PublishServiceTLSRef mo.Option[k8stypes.NamespacedName]
 
 	// If enableReferenceGrant is true, controller will watch ReferenceGrants
 	// to invalidate or allow cross-namespace TLSConfigs in gateways.
@@ -451,6 +452,11 @@ func (r *GatewayReconciler) reconcileUnmanagedGateway(ctx context.Context, log l
 			services = append(services, udpRef.String())
 		}
 
+		// TLS service is optional.
+		if tlsRef, ok := r.PublishServiceTLSRef.Get(); ok {
+			services = append(services, tlsRef.String())
+		}
+
 		servicesAnnotation := strings.Join(services, ",")
 		debug(log, gateway, fmt.Sprintf("no unmanaged annotation, setting it to proxy services %s", services))
 		if gateway.Annotations == nil {
@@ -461,13 +467,16 @@ func (r *GatewayReconciler) reconcileUnmanagedGateway(ctx context.Context, log l
 	}
 
 	serviceRefs := strings.Split(annotations.ExtractUnmanagedGatewayClassMode(gateway.Annotations), ",")
+
 	// validation check of the Gateway to ensure that the publish service is actually available
 	// in the cluster. If it is not the object will be requeued until it exists (or is otherwise retrievable).
 	debug(log, gateway, "gathering the gateway publish service") // this will also be done by the validating webhook, this is a fallback
+
 	var gatewayServices []*corev1.Service
 	for _, ref := range serviceRefs {
 		r.Log.V(util.DebugLevel).Info("determining service for ref", "ref", ref)
-		svc, err := r.determineServiceForGateway(ctx, ref)
+
+		svc, err := r.determineServiceForGateway(ctx, ref, gateway.Spec.Listeners)
 		if err != nil {
 			log.Error(err, "could not determine service for gateway", "namespace", gateway.Namespace, "name", gateway.Name)
 			return ctrl.Result{Requeue: true}, err
@@ -609,20 +618,39 @@ func init() {
 
 // determineServiceForGateway provides the "publish service" (aka the proxy Service) object which
 // will be used to populate unmanaged gateways.
-func (r *GatewayReconciler) determineServiceForGateway(ctx context.Context, ref string) (*corev1.Service, error) {
+func (r *GatewayReconciler) determineServiceForGateway(ctx context.Context, ref string, listeners []gatewayv1beta1.Listener) (*corev1.Service, error) {
 	// currently the gateway controller ONLY supports service references that correspond with the --publish-service
 	// provided to the controller manager via flags when operating on unmanaged gateways. This constraint may
 	// be loosened in later iterations if there is need.
 
+	protocols := map[gatewayv1beta1.ProtocolType]interface{}{}
+	for _, l := range listeners {
+		protocols[l.Protocol] = nil
+	}
+
 	var name k8stypes.NamespacedName
 	switch {
 	case ref == r.PublishServiceRef.String():
-		name = r.PublishServiceRef
+		if _, ok := protocols[gatewayv1beta1.HTTPProtocolType]; ok {
+			name = r.PublishServiceRef
+		}
+		if _, ok := protocols[gatewayv1beta1.HTTPSProtocolType]; ok {
+			name = r.PublishServiceRef
+		}
+		if _, ok := protocols[gatewayv1beta1.TCPProtocolType]; ok {
+			name = r.PublishServiceRef
+		}
 	case r.PublishServiceUDPRef.IsPresent() && ref == r.PublishServiceUDPRef.MustGet().String():
-		name = r.PublishServiceUDPRef.MustGet()
+		if _, ok := protocols[gatewayv1beta1.UDPProtocolType]; ok {
+			name = r.PublishServiceUDPRef.MustGet()
+		}
+	case r.PublishServiceTLSRef.IsPresent() && ref == r.PublishServiceTLSRef.MustGet().String():
+		if _, ok := protocols[gatewayv1beta1.TLSProtocolType]; ok {
+			name = r.PublishServiceTLSRef.MustGet()
+		}
 	default:
-		return nil, fmt.Errorf("service ref %s did not match controller manager ref %s or %s",
-			ref, r.PublishServiceRef.String(), r.PublishServiceUDPRef.OrEmpty())
+		return nil, fmt.Errorf("service ref %s did not match controller manager ref %s, %s or %s",
+			ref, r.PublishServiceRef.String(), r.PublishServiceUDPRef.OrEmpty(), r.PublishServiceTLSRef.OrEmpty())
 	}
 
 	// retrieve the service for the kong gateway

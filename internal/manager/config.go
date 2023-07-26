@@ -85,6 +85,7 @@ type Config struct {
 
 	// Ingress status
 	PublishServiceUDP       OptionalNamespacedName
+	PublishServiceTLS       OptionalNamespacedName
 	PublishService          OptionalNamespacedName
 	PublishStatusAddress    []string
 	PublishStatusAddressUDP []string
@@ -208,6 +209,9 @@ func (c *Config) FlagSet() *pflag.FlagSet {
 			`when that Service lacks useful address information (for example, in bare-metal environments).`)
 	flagSet.Var(flags.NewValidatedValue(&c.PublishServiceUDP, namespacedNameFromFlagValue, nnTypeNameOverride), "publish-service-udp", `Service fronting UDP routing resources in `+
 		`"namespace/name" format. The controller will update UDP route status information with this Service's `+
+		`endpoints. If omitted, the same Service will be used for both TCP and UDP routes.`)
+	flagSet.Var(flags.NewValidatedValue(&c.PublishServiceTLS, namespacedNameFromFlagValue, nnTypeNameOverride), "publish-service-tls", `Service fronting TLS routing resources in `+
+		`"namespace/name" format. The controller will update TLS route status information with this Service's `+
 		`endpoints. If omitted, the same Service will be used for both TCP and UDP routes.`)
 	flagSet.StringSliceVar(&c.PublishStatusAddressUDP, "publish-status-address-udp", []string{},
 		`User-provided address CSV, for use in lieu of "publish-service-udp" when that Service lacks useful address information.`)

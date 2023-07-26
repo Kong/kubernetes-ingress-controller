@@ -75,7 +75,7 @@ var skippedTestsForTraditionalRoutes = []string{
 	// https://github.com/Kong/kubernetes-ingress-controller/issues/3680
 	tests.GatewayClassObservedGenerationBump.ShortName,
 	// https://github.com/Kong/kubernetes-ingress-controller/issues/3678
-	tests.TLSRouteSimpleSameNamespace.ShortName,
+	//tests.TLSRouteSimpleSameNamespace.ShortName,
 	// https://github.com/Kong/kubernetes-ingress-controller/issues/3679
 	tests.HTTPRouteQueryParamMatching.ShortName,
 	// https://github.com/Kong/kubernetes-ingress-controller/issues/3681
@@ -120,6 +120,7 @@ func TestGatewayConformance(t *testing.T) {
 		"--debug-log-reduce-redundancy",
 		featureGateFlag,
 		"--anonymous-reports=false",
+		"--publish-service-tls=kong-system/ingress-controller-kong-tls-proxy",
 	}
 
 	require.NoError(t, testutils.DeployControllerManagerForCluster(ctx, globalDeprecatedLogger, globalLogger, env.Cluster(), args...))
@@ -147,14 +148,14 @@ func TestGatewayConformance(t *testing.T) {
 		skippedTests = skippedTestsForExpressionRoutes
 	}
 	cSuite := suite.New(suite.Options{
-		Client:                     client,
-		GatewayClassName:           gatewayClass.Name,
-		Debug:                      showDebug,
-		CleanupBaseResources:       shouldCleanup,
-		EnableAllSupportedFeatures: enableAllSupportedFeatures,
-		ExemptFeatures:             exemptFeatures,
-		BaseManifests:              conformanceTestsBaseManifests,
-		SkipTests:                  skippedTests,
+		Client:               client,
+		GatewayClassName:     gatewayClass.Name,
+		Debug:                showDebug,
+		CleanupBaseResources: shouldCleanup,
+		ExemptFeatures:       exemptFeatures,
+		BaseManifests:        conformanceTestsBaseManifests,
+		SkipTests:            skippedTests,
+		SupportedFeatures:    suite.TLSCoreFeatures,
 	})
 	cSuite.Setup(t)
 	// To work with individual tests only, you can disable the normal Run call and construct a slice containing a

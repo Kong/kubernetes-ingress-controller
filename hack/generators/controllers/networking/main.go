@@ -148,6 +148,7 @@ var inputControllersNeeded = &typesNeeded{
 		AcceptsIngressClassNameSpec:       false,
 		NeedsUpdateReferences:             true,
 		RBACVerbs:                         []string{"get", "list", "watch"},
+		ConfigStatusNotificationsEnabled:  true,
 		ProgrammedConditionUpdatesEnabled: true,
 	},
 	typeNeeded{
@@ -208,8 +209,6 @@ var inputControllersNeeded = &typesNeeded{
 		Plural:                            "ingressclassparameterses",
 		CacheType:                         "IngressClassParameters",
 		NeedsStatusPermissions:            false,
-		ConfigStatusNotificationsEnabled:  true,
-		IngressAddressUpdatesEnabled:      true,
 		AcceptsIngressClassNameAnnotation: false,
 		AcceptsIngressClassNameSpec:       false,
 		RBACVerbs:                         []string{"get", "list", "watch"},
@@ -436,8 +435,8 @@ type {{.PackageAlias}}{{.Kind}}Reconciler struct {
 	Scheme          *runtime.Scheme
 	DataplaneClient controllers.DataPlane
 	CacheSyncTimeout time.Duration
+{{- if .IngressAddressUpdatesEnabled }}
 
-{{ if .IngressAddressUpdatesEnabled }}
 	DataplaneAddressFinder *dataplane.AddressFinder
 {{- end}}
 {{- if .ConfigStatusNotificationsEnabled }}
@@ -607,11 +606,31 @@ func (r *{{.PackageAlias}}{{.Kind}}Reconciler) Reconcile(ctx context.Context, re
 		return ctrl.Result{}, err
 	}
 
+{{- define "updateReferences" }}
+	// update reference relationship from the {{.Kind}} to other objects.
+	if err := updateReferredObjects(ctx, r.Client, r.ReferenceIndexers, r.DataplaneClient, obj); err != nil {
+		if apierrors.IsNotFound(err) {
+			// reconcile again if the secret does not exist yet
+			return ctrl.Result{
+				Requeue: true,
+			}, nil
+		}
+		return ctrl.Result{}, err
+	}
+{{- end }}
+
+{{- /* For ProgrammedConditionUpdatesEnabled we do not update references before status is updated because in case of
+       a reference to non-existing object, the status update would never happen. */ -}}
+{{- if and .NeedsUpdateReferences (not .ProgrammedConditionUpdatesEnabled) }}
+	{{- template "updateReferences" . }}
+{{- end }}
+
 {{- if .ConfigStatusNotificationsEnabled }}
 	// if status updates are enabled report the status for the object
 	if r.DataplaneClient.AreKubernetesObjectReportsEnabled() {
 		{{- if .IngressAddressUpdatesEnabled }}
 		log.V(util.DebugLevel).Info("determining whether data-plane configuration has succeeded", "namespace", req.Namespace, "name", req.Name)
+
 		if  !r.DataplaneClient.KubernetesObjectIsConfigured(obj) {
 			log.V(util.DebugLevel).Info("resource not yet configured in the data-plane", "namespace", req.Namespace, "name", req.Name)
 			return ctrl.Result{Requeue: true}, nil // requeue until the object has been properly configured
@@ -636,7 +655,6 @@ func (r *{{.PackageAlias}}{{.Kind}}Reconciler) Reconcile(ctx context.Context, re
 		conditions, updateNeeded := ctrlutils.EnsureProgrammedCondition(configurationStatus, obj.Generation, obj.Status.Conditions)
 		obj.Status.Conditions = conditions
 		{{- end }}
-
 		if updateNeeded {
 			return ctrl.Result{}, r.Status().Update(ctx, obj)
 		}
@@ -644,17 +662,10 @@ func (r *{{.PackageAlias}}{{.Kind}}Reconciler) Reconcile(ctx context.Context, re
 	}
 {{- end}}
 
-{{- if .NeedsUpdateReferences }}
-	// update reference relationship from the {{.Kind}} to other objects.
-	if err := updateReferredObjects(ctx, r.Client, r.ReferenceIndexers, r.DataplaneClient, obj); err != nil {
-		if apierrors.IsNotFound(err) {
-			// reconcile again if the secret does not exist yet
-			return ctrl.Result{
-				Requeue: true,
-			}, nil
-		}
-		return ctrl.Result{}, err
-	}
+{{- /* For ProgrammedConditionUpdatesEnabled we update references after status is updated because otherwise in case of
+       a reference to non-existing object, the status update would never happen. */ -}}
+{{- if and .NeedsUpdateReferences .ProgrammedConditionUpdatesEnabled }}
+	{{- template "updateReferences" . }}
 {{- end }}
 
 	return ctrl.Result{}, nil

@@ -128,9 +128,9 @@ Adding a new version? You'll need three changes:
   actively monitor their readiness for accepting configuration updates.
   [#4368](https://github.com/Kong/kubernetes-ingress-controller/pull/4368
 - `KongConsumer` CRD was extended with `Status.Conditions` field. It will now
-  contain the `Programmed` condition describing whether an object was successfully 
+  contain the `Programmed` condition describing whether an object was successfully
   translated into Kong entities and sent to Kong.
-  [#4409](https://github.com/Kong/kubernetes-ingress-controller/pull/4409 
+  [#4409](https://github.com/Kong/kubernetes-ingress-controller/pull/4409
 
 ### Changed
 

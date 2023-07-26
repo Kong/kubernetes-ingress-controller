@@ -5411,7 +5411,7 @@ func mustNewParser(t *testing.T, storer store.Storer) *Parser {
 
 	p, err := NewParser(logrus.New(), storer,
 		FeatureFlags{
-			// We'll assume these is true for all tests.
+			// We'll assume these are true for all tests.
 			FillIDs:                           true,
 			ReportConfiguredKubernetesObjects: true,
 		},

@@ -79,8 +79,8 @@ func getKongIngressFromObjAnnotations(
 }
 
 // getPlugin constructs a plugins from a KongPlugin resource.
-func getPlugin(s store.Storer, namespace, name string) (kong.Plugin, error) {
-	var plugin kong.Plugin
+func getPlugin(s store.Storer, namespace, name string) (Plugin, error) {
+	var plugin Plugin
 	k8sPlugin, err := s.GetKongPlugin(namespace, name)
 	if err != nil {
 		// if no namespaced plugin definition, then
@@ -114,15 +114,15 @@ func getPlugin(s store.Storer, namespace, name string) (kong.Plugin, error) {
 func kongPluginFromK8SClusterPlugin(
 	s store.Storer,
 	k8sPlugin configurationv1.KongClusterPlugin,
-) (kong.Plugin, error) {
+) (Plugin, error) {
 	var config kong.Configuration
 	config, err := RawConfigToConfiguration(k8sPlugin.Config)
 	if err != nil {
-		return kong.Plugin{}, fmt.Errorf("could not parse KongPlugin %v/%v config: %w",
+		return Plugin{}, fmt.Errorf("could not parse KongPlugin %s/%s config: %w",
 			k8sPlugin.Namespace, k8sPlugin.Name, err)
 	}
 	if k8sPlugin.ConfigFrom != nil && len(config) > 0 {
-		return kong.Plugin{},
+		return Plugin{},
 			fmt.Errorf("KongClusterPlugin '/%v' has both "+
 				"Config and ConfigFrom set", k8sPlugin.Name)
 	}
@@ -132,23 +132,26 @@ func kongPluginFromK8SClusterPlugin(
 			s,
 			(*k8sPlugin.ConfigFrom).SecretValue)
 		if err != nil {
-			return kong.Plugin{},
-				fmt.Errorf("error parsing config for KongClusterPlugin %v: %w",
+			return Plugin{},
+				fmt.Errorf("error parsing config for KongClusterPlugin %s: %w",
 					k8sPlugin.Name, err)
 		}
 	}
-	kongPlugin := plugin{
-		Name:   k8sPlugin.PluginName,
-		Config: config,
 
-		RunOn:        k8sPlugin.RunOn,
-		Ordering:     k8sPlugin.Ordering,
-		InstanceName: k8sPlugin.InstanceName,
-		Disabled:     k8sPlugin.Disabled,
-		Protocols:    protocolsToStrings(k8sPlugin.Protocols),
-		Tags:         util.GenerateTagsForObject(&k8sPlugin),
-	}.toKongPlugin()
-	return kongPlugin, nil
+	return Plugin{
+		Plugin: plugin{
+			Name:   k8sPlugin.PluginName,
+			Config: config,
+
+			RunOn:        k8sPlugin.RunOn,
+			Ordering:     k8sPlugin.Ordering,
+			InstanceName: k8sPlugin.InstanceName,
+			Disabled:     k8sPlugin.Disabled,
+			Protocols:    protocolsToStrings(k8sPlugin.Protocols),
+			Tags:         util.GenerateTagsForObject(&k8sPlugin),
+		}.toKongPlugin(),
+		K8sParent: &k8sPlugin,
+	}, nil
 }
 
 func protocolPointersToStringPointers(protocols []*configurationv1.KongProtocol) (res []*string) {
@@ -168,17 +171,16 @@ func protocolsToStrings(protocols []configurationv1.KongProtocol) (res []string)
 func kongPluginFromK8SPlugin(
 	s store.Storer,
 	k8sPlugin configurationv1.KongPlugin,
-) (kong.Plugin, error) {
+) (Plugin, error) {
 	var config kong.Configuration
 	config, err := RawConfigToConfiguration(k8sPlugin.Config)
 	if err != nil {
-		return kong.Plugin{}, fmt.Errorf("could not parse KongPlugin %v/%v config: %w",
+		return Plugin{}, fmt.Errorf("could not parse KongPlugin %s/%s config: %w",
 			k8sPlugin.Namespace, k8sPlugin.Name, err)
 	}
 	if k8sPlugin.ConfigFrom != nil && len(config) > 0 {
-		return kong.Plugin{},
-			fmt.Errorf("KongPlugin '%v/%v' has both "+
-				"Config and ConfigFrom set",
+		return Plugin{},
+			fmt.Errorf("KongPlugin '%s/%s' has both Config and ConfigFrom set",
 				k8sPlugin.Namespace, k8sPlugin.Name)
 	}
 	if k8sPlugin.ConfigFrom != nil {
@@ -186,23 +188,26 @@ func kongPluginFromK8SPlugin(
 		config, err = SecretToConfiguration(s,
 			(*k8sPlugin.ConfigFrom).SecretValue, k8sPlugin.Namespace)
 		if err != nil {
-			return kong.Plugin{},
-				fmt.Errorf("error parsing config for KongPlugin '%v/%v': %w",
+			return Plugin{},
+				fmt.Errorf("error parsing config for KongPlugin '%s/%s': %w",
 					k8sPlugin.Name, k8sPlugin.Namespace, err)
 		}
 	}
-	kongPlugin := plugin{
-		Name:   k8sPlugin.PluginName,
-		Config: config,
 
-		RunOn:        k8sPlugin.RunOn,
-		Ordering:     k8sPlugin.Ordering,
-		InstanceName: k8sPlugin.InstanceName,
-		Disabled:     k8sPlugin.Disabled,
-		Protocols:    protocolsToStrings(k8sPlugin.Protocols),
-		Tags:         util.GenerateTagsForObject(&k8sPlugin),
-	}.toKongPlugin()
-	return kongPlugin, nil
+	return Plugin{
+		Plugin: plugin{
+			Name:   k8sPlugin.PluginName,
+			Config: config,
+
+			RunOn:        k8sPlugin.RunOn,
+			Ordering:     k8sPlugin.Ordering,
+			InstanceName: k8sPlugin.InstanceName,
+			Disabled:     k8sPlugin.Disabled,
+			Protocols:    protocolsToStrings(k8sPlugin.Protocols),
+			Tags:         util.GenerateTagsForObject(&k8sPlugin),
+		}.toKongPlugin(),
+		K8sParent: &k8sPlugin,
+	}, nil
 }
 
 func RawConfigToConfiguration(config apiextensionsv1.JSON) (kong.Configuration, error) {

@@ -31,6 +31,12 @@ var DefaultEnvTestOpts = Options{
 	InstanllKongCRDs:   false,
 }
 
+// runtimeMutex guards certain controller-runtime library calls that have triggered race conditions within controller-runtime
+// and api-machinery code. It is unclear if this is a bug in controller-runtime or an invalid use of their functions
+// in our tests, though we suspect controller-runtime should manage its own internal lock.
+// https://github.com/Kong/kubernetes-ingress-controller/issues/4414 tracks maybe finding a better solution to this issue.
+var runtimeMutex sync.Mutex
+
 type OptionModifier func(Options) Options
 
 func WithInstallKongCRDs(install bool) OptionModifier {
@@ -124,10 +130,12 @@ func installKongCRDs(t *testing.T, scheme *k8sruntime.Scheme, cfg *rest.Config) 
 	// install Kong CRDs from config/crd/bases.
 	kongCRDPath := filepath.Join(projectRoot, "config", "crd", "bases")
 	t.Logf("install Kong CRDs from manifests in %s", kongCRDPath)
+	runtimeMutex.Lock()
 	_, err := envtest.InstallCRDs(cfg, envtest.CRDInstallOptions{
 		Scheme:             scheme,
 		Paths:              []string{kongCRDPath},
 		ErrorIfPathMissing: true,
 	})
+	runtimeMutex.Unlock()
 	require.NoError(t, err)
 }

@@ -22,7 +22,9 @@ import (
 func TestKongStateFillConsumersAndCredentialsFailure(t *testing.T) {
 	t.Parallel()
 
+	runtimeMutex.Lock()
 	err := kongv1.AddToScheme(scheme.Scheme)
+	runtimeMutex.Unlock()
 	require.NoError(t, err)
 	cfg := Setup(t, scheme.Scheme, WithInstallKongCRDs(true))
 	client := NewControllerClient(t, cfg)

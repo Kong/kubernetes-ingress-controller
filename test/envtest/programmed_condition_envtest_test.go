@@ -20,7 +20,9 @@ import (
 func TestKongConsumer_ProgrammedCondition(t *testing.T) {
 	t.Parallel()
 
+	runtimeMutex.Lock()
 	err := kongv1.AddToScheme(scheme.Scheme)
+	runtimeMutex.Unlock()
 	require.NoError(t, err)
 	envcfg := Setup(t, scheme.Scheme, WithInstallKongCRDs(true))
 	ctrlClient := NewControllerClient(t, envcfg)

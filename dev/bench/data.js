@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1690395564783,
+  "lastUpdate": 1690396675859,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -35172,6 +35172,48 @@ window.BENCHMARK_DATA = {
             "value": 12,
             "unit": "allocs/op",
             "extra": "16927 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "571832+rainest@users.noreply.github.com",
+            "name": "Travis Raines",
+            "username": "rainest"
+          },
+          "committer": {
+            "email": "571832+rainest@users.noreply.github.com",
+            "name": "Travis Raines",
+            "username": "rainest"
+          },
+          "distinct": true,
+          "id": "9d74d64469135331313821e5e87861a224f2b252",
+          "message": "fix: lock problem controller-runtime calls in test\n\nAdd a lock guarding controller-runtime library calls observed to result\nin a data race internal to the library.",
+          "timestamp": "2023-07-26T11:36:29-07:00",
+          "tree_id": "63447b43fa7e39acdbe7d1fdc2e202107f81a266",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/9d74d64469135331313821e5e87861a224f2b252"
+        },
+        "date": 1690396669853,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - ns/op",
+            "value": 81648,
+            "unit": "ns/op",
+            "extra": "15868 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - B/op",
+            "value": 11099,
+            "unit": "B/op",
+            "extra": "15868 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - allocs/op",
+            "value": 12,
+            "unit": "allocs/op",
+            "extra": "15868 times\n2 procs"
           }
         ]
       }

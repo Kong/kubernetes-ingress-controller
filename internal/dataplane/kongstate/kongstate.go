@@ -280,7 +280,7 @@ func buildPlugins(log logrus.FieldLogger, s store.Storer, pluginRels map[string]
 		}
 
 		for _, rel := range relations.GetCombinations() {
-			plugin := *plugin.DeepCopy()
+			plugin := plugin.DeepCopy()
 			// ID is populated because that is read by decK and in_memory
 			// translator too
 			if rel.Service != "" {
@@ -292,7 +292,7 @@ func buildPlugins(log logrus.FieldLogger, s store.Storer, pluginRels map[string]
 			if rel.Consumer != "" {
 				plugin.Consumer = &kong.Consumer{ID: kong.String(rel.Consumer)}
 			}
-			plugins = append(plugins, Plugin{plugin})
+			plugins = append(plugins, plugin)
 		}
 	}
 
@@ -347,9 +347,7 @@ func globalPlugins(log logrus.FieldLogger, s store.Storer) ([]Plugin, error) {
 			continue
 		}
 		if plugin, err := kongPluginFromK8SClusterPlugin(s, k8sPlugin); err == nil {
-			res[pluginName] = Plugin{
-				Plugin: plugin,
-			}
+			res[pluginName] = plugin
 		} else {
 			log.WithFields(logrus.Fields{
 				"kongclusterplugin_name": k8sPlugin.Name,

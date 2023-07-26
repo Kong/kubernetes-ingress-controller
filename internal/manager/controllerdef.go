@@ -250,6 +250,7 @@ func setupControllers(
 				DataplaneClient:   dataplaneClient,
 				CacheSyncTimeout:  c.CacheSyncTimeout,
 				ReferenceIndexers: referenceIndexers,
+				StatusQueue:       kubernetesStatusQueue,
 			},
 		},
 		{
@@ -311,6 +312,7 @@ func setupControllers(
 				DisableIngressClassLookups: !c.IngressClassNetV1Enabled,
 				CacheSyncTimeout:           c.CacheSyncTimeout,
 				ReferenceIndexers:          referenceIndexers,
+				StatusQueue:                kubernetesStatusQueue,
 			},
 		},
 		// ---------------------------------------------------------------------------

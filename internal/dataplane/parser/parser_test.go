@@ -5384,6 +5384,69 @@ func TestParser_ConfiguredKubernetesObjects(t *testing.T) {
 				{Name: "consumer", Namespace: "bar"},
 			},
 		},
+		{
+			name: "KongPlugin with KongConsumer",
+			objectsInStore: store.FakeObjects{
+				KongPlugins: []*configurationv1.KongPlugin{
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:        "plugin",
+							Namespace:   "bar",
+							Annotations: map[string]string{annotations.IngressClassKey: annotations.DefaultIngressClass},
+						},
+						PluginName: "plugin",
+					},
+				},
+				KongConsumers: []*configurationv1.KongConsumer{
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "consumer",
+							Namespace: "bar",
+							Annotations: map[string]string{
+								annotations.IngressClassKey:                           annotations.DefaultIngressClass,
+								annotations.AnnotationPrefix + annotations.PluginsKey: "plugin",
+							},
+						},
+						Username: "foo",
+					},
+				},
+			},
+			expectedObjectsToBeConfigured: []k8stypes.NamespacedName{
+				{Name: "plugin", Namespace: "bar"},
+				{Name: "consumer", Namespace: "bar"},
+			},
+		},
+		{
+			name: "KongClusterPlugin with KongConsumer",
+			objectsInStore: store.FakeObjects{
+				KongClusterPlugins: []*configurationv1.KongClusterPlugin{
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:        "plugin",
+							Annotations: map[string]string{annotations.IngressClassKey: annotations.DefaultIngressClass},
+						},
+						PluginName: "plugin",
+					},
+				},
+				KongConsumers: []*configurationv1.KongConsumer{
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "consumer",
+							Namespace: "bar",
+							Annotations: map[string]string{
+								annotations.IngressClassKey:                           annotations.DefaultIngressClass,
+								annotations.AnnotationPrefix + annotations.PluginsKey: "plugin",
+							},
+						},
+						Username: "foo",
+					},
+				},
+			},
+			expectedObjectsToBeConfigured: []k8stypes.NamespacedName{
+				{Name: "plugin"},
+				{Name: "consumer", Namespace: "bar"},
+			},
+		},
 	}
 
 	for _, tc := range testCases {

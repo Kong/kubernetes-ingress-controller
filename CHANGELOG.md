@@ -127,10 +127,11 @@ Adding a new version? You'll need three changes:
   updates. The controller will now send configuration to such Gateways and will
   actively monitor their readiness for accepting configuration updates.
   [#4368](https://github.com/Kong/kubernetes-ingress-controller/pull/4368
-- `KongConsumer` CRD was extended with `Status.Conditions` field. It will now
-  contain the `Programmed` condition describing whether an object was successfully
-  translated into Kong entities and sent to Kong.
-  [#4409](https://github.com/Kong/kubernetes-ingress-controller/pull/4409
+- `KongConsumer`, `KongPlugin`, and `KongClusterPlugin` CRDs were extended with
+  `Status.Conditions` field. It will contain the `Programmed` condition describing
+  whether an object was successfully translated into Kong entities and sent to Kong.
+  [#4409](https://github.com/Kong/kubernetes-ingress-controller/pull/4409)
+  [#4412](https://github.com/Kong/kubernetes-ingress-controller/pull/4412)
 
 ### Changed
 
@@ -184,6 +185,7 @@ Adding a new version? You'll need three changes:
   This was caused by a bug in `NodeAgent` that was sending the updates
   despite the fact that the configuration status was not changed.
   [#4324](https://github.com/Kong/kubernetes-ingress-controller/pull/4324)
+
 ## [2.10.2]
 
 > Release date: 2023-07-07

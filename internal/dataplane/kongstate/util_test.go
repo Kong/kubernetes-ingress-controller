@@ -151,7 +151,8 @@ func TestKongPluginFromK8SClusterPlugin(t *testing.T) {
 				t.Errorf("kongPluginFromK8SClusterPlugin error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			assert.Equal(tt.want, got)
+			assert.Equal(tt.want, got.Plugin)
+			assert.NotEmpty(t, got.K8sParent)
 		})
 	}
 }
@@ -294,7 +295,8 @@ func TestKongPluginFromK8SPlugin(t *testing.T) {
 			}
 			// don't care about tags in this test
 			got.Tags = nil
-			assert.Equal(tt.want, got)
+			assert.Equal(tt.want, got.Plugin)
+			assert.NotEmpty(t, got.K8sParent)
 		})
 	}
 }

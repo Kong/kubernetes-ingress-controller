@@ -234,6 +234,9 @@ func (p *Parser) BuildKongConfig() KongConfigBuildingResult {
 
 	// process annotation plugins
 	result.FillPlugins(p.logger, p.storer)
+	for _, pl := range result.Plugins {
+		p.registerSuccessfullyParsedObject(pl.K8sParent)
+	}
 
 	// generate Certificates and SNIs
 	ingressCerts := p.getCerts(ingressRules.SecretNameToSNIs)

@@ -5369,3 +5369,45 @@ func mustNewParser(t *testing.T, storer store.Storer) *Parser {
 	require.NoError(t, err)
 	return p
 }
+
+func TestTargetsForEndpoints(t *testing.T) {
+	// targetsForEndpoints should generate expected output for each type of input Endpoint: hostname, IPv4, and IPv6.
+	// Addresses are joined to the Port with a : character, and IPv6 Addresses are additionally surrounded in brackets
+	// before joining.
+	input := []util.Endpoint{
+		{
+			Address: "hostname.example",
+			Port:    "1111",
+		},
+		{
+			Address: "127.0.0.1",
+			Port:    "2222",
+		},
+		{
+			Address: "fe80::cae2:65ff:fe7b:2852",
+			Port:    "3333",
+		},
+	}
+
+	wantTargets := []kongstate.Target{
+		{
+			Target: kong.Target{
+				Target: kong.String("hostname.example:1111"),
+			},
+		},
+		{
+			Target: kong.Target{
+				Target: kong.String("127.0.0.1:2222"),
+			},
+		},
+		{
+			Target: kong.Target{
+				Target: kong.String("[fe80::cae2:65ff:fe7b:2852]:3333"),
+			},
+		},
+	}
+
+	targets := targetsForEndpoints(input)
+
+	require.Equal(t, wantTargets, targets)
+}

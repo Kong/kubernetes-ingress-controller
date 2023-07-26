@@ -25,7 +25,7 @@ func GenerateKongBuilder(_ context.Context) (*kong.Builder, []string, error) {
 			kongbuilder.WithProxyEnterpriseSuperAdminPassword(consts.KongTestPassword)
 			extraControllerArgs = append(extraControllerArgs,
 				fmt.Sprintf("--kong-admin-token=%s", consts.KongTestPassword),
-				"--kong-workspace=notdefault",
+				fmt.Sprintf("--kong-workspace=%s", consts.KongTestWorkspace),
 			)
 		}
 	}

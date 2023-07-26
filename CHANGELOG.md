@@ -152,7 +152,13 @@ Adding a new version? You'll need three changes:
 - Correctly support multi-Service backends that have multiple Services sharing
   the same name in different namespaces.
   [#4375](https://github.com/Kong/kubernetes-ingress-controller/pull/4375)
-
+- Properly construct targets for IPv6-only clusters.
+  [#4391](https://github.com/Kong/kubernetes-ingress-controller/pull/4391)
+- Attach kubernetes events to `KongConsumer`s when the parser fails to
+  translate its credentials to Kong configuration, instead of logging thet
+  error to reduce the redundant logs.
+  [#4398](https://github.com/Kong/kubernetes-ingress-controller/pull/4398)
+ 
 [gojson]: https://github.com/goccy/go-json
 [httproute-specification]: https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1beta1.HTTPRoute
 [grpcroute-specification]:  https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1alpha2.GRPCRouteRule
@@ -177,7 +183,6 @@ Adding a new version? You'll need three changes:
   This was caused by a bug in `NodeAgent` that was sending the updates
   despite the fact that the configuration status was not changed.
   [#4324](https://github.com/Kong/kubernetes-ingress-controller/pull/4324)
-
 ## [2.10.2]
 
 > Release date: 2023-07-07

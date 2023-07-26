@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"crypto/tls"
 	"fmt"
+	"net"
 	"sort"
 	"strings"
 
@@ -226,7 +227,7 @@ func (p *Parser) BuildKongConfig() KongConfigBuildingResult {
 	result.FillOverrides(p.logger, p.storer)
 
 	// generate consumers and credentials
-	result.FillConsumersAndCredentials(p.logger, p.storer, p.kongVersion)
+	result.FillConsumersAndCredentials(p.storer, p.failuresCollector, p.kongVersion)
 
 	// process annotation plugins
 	result.FillPlugins(p.logger, p.storer)
@@ -854,9 +855,18 @@ func listProtocols(svc *corev1.Service) map[corev1.Protocol]bool {
 func targetsForEndpoints(endpoints []util.Endpoint) []kongstate.Target {
 	targets := []kongstate.Target{}
 	for _, endpoint := range endpoints {
+		addr := endpoint.Address
+		parsed := net.ParseIP(endpoint.Address)
+		if parsed != nil {
+			if parsed.To4() == nil {
+				// If we have an IPv6 endpoint, we need to surround it with brackets, else the port concat after this will
+				// treat the port as part of the address.
+				addr = fmt.Sprintf("[%s]", endpoint.Address)
+			}
+		}
 		target := kongstate.Target{
 			Target: kong.Target{
-				Target: kong.String(endpoint.Address + ":" + endpoint.Port),
+				Target: kong.String(addr + ":" + endpoint.Port),
 			},
 		}
 		targets = append(targets, target)

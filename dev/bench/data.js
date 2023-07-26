@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1690364008181,
+  "lastUpdate": 1690365982845,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -33492,6 +33492,48 @@ window.BENCHMARK_DATA = {
             "value": 12,
             "unit": "allocs/op",
             "extra": "18026 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "tao.yi@konghq.com",
+            "name": "Tao Yi",
+            "username": "randmonkey"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "86295c02d66a82a085bd1a3a6c17a1f1119bcb87",
+          "message": "fix: register translation failures on translating KongConsumers (#4398)\n\n* register translation failures on translating KongConsumers\r\n\r\n* add unit tests\r\n\r\n* address comments: remove logger and update unit tests\r\n\r\n* add envtest for translation failure events for KongConsumers\r\n\r\n* update setup of envtest\r\n\r\n* fix unit test",
+          "timestamp": "2023-07-26T10:04:53Z",
+          "tree_id": "60f9330de5ee44557d3bef8ff73e409d4a0b94e7",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/86295c02d66a82a085bd1a3a6c17a1f1119bcb87"
+        },
+        "date": 1690365976128,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - ns/op",
+            "value": 92742,
+            "unit": "ns/op",
+            "extra": "13683 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - B/op",
+            "value": 11095,
+            "unit": "B/op",
+            "extra": "13683 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - allocs/op",
+            "value": 12,
+            "unit": "allocs/op",
+            "extra": "13683 times\n2 procs"
           }
         ]
       }

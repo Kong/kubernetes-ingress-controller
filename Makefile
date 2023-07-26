@@ -313,7 +313,7 @@ test.conformance: go-junit-report
 test.integration: test.integration.dbless test.integration.postgres test.integration.cp
 
 .PHONY: test.integration.enterprise
-test.integration.enterprise: test.integration.enterprise.postgres
+test.integration.enterprise: test.integration.enterprise.postgres test.integration.enterprise.dbless
 
 .PHONY: _test.unit
 .ONESHELL: _test.unit
@@ -423,6 +423,14 @@ test.integration.enterprise.postgres:
 		$(MAKE) _test.integration \
 		DBMODE=postgres \
 		COVERAGE_OUT=coverage.enterprisepostgres.out
+
+.PHONY: test.integration.enterprise.dbless
+test.integration.enterprise.dbless:
+	@TEST_KONG_ENTERPRISE="true" \
+		GOTAGS="integration_tests" \
+		$(MAKE) _test.integration \
+		DBMODE=off \
+		COVERAGE_OUT=coverage.enterprisedbless.out
 
 .PHONY: test.e2e
 test.e2e: gotestsum

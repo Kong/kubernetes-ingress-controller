@@ -20,12 +20,14 @@ func GenerateKongBuilder(_ context.Context) (*kong.Builder, []string, error) {
 		if err != nil {
 			return nil, nil, err
 		}
-		extraControllerArgs = append(extraControllerArgs,
-			fmt.Sprintf("--kong-admin-token=%s", consts.KongTestPassword),
-			"--kong-workspace=notdefault",
-		)
-		kongbuilder = kongbuilder.WithProxyEnterpriseEnabled(licenseJSON).
-			WithProxyEnterpriseSuperAdminPassword(consts.KongTestPassword)
+		kongbuilder = kongbuilder.WithProxyEnterpriseEnabled(licenseJSON)
+		if testenv.DBMode() != testenv.DBModeOff {
+			kongbuilder.WithProxyEnterpriseSuperAdminPassword(consts.KongTestPassword)
+			extraControllerArgs = append(extraControllerArgs,
+				fmt.Sprintf("--kong-admin-token=%s", consts.KongTestPassword),
+				"--kong-workspace=notdefault",
+			)
+		}
 	}
 
 	if image, tag := testenv.KongImage(), testenv.KongTag(); image != "" && tag != "" {
@@ -41,7 +43,7 @@ func GenerateKongBuilder(_ context.Context) (*kong.Builder, []string, error) {
 		kongbuilder = kongbuilder.WithProxyImagePullSecret("", user, pass, "")
 	}
 
-	if testenv.DBMode() == "postgres" {
+	if testenv.DBMode() == testenv.DBModePostgres {
 		kongbuilder = kongbuilder.WithPostgreSQL()
 	}
 

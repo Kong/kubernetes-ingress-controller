@@ -21,6 +21,11 @@ var grpcRouteGVK = schema.GroupVersionKind{
 	Kind:    "GRPCRoute",
 }
 
+var grpcRouteTypeMeta = metav1.TypeMeta{
+	Kind:       "GRPCRoute",
+	APIVersion: "gateway.networking.k8s.io/v1alpha2",
+}
+
 func makeTestGRPCRoute(
 	name string, namespace string, annotations map[string]string,
 	hostnames []string,

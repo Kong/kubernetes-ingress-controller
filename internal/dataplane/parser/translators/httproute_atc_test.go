@@ -822,7 +822,7 @@ func TestSplitHTTPRoutes(t *testing.T) {
 	for _, tc := range testCases {
 		tc := tc
 		splitHTTPRoutes := SplitHTTPRoute(tc.httpRoute)
-		require.Len(t, splitHTTPRoutes, len(splitHTTPRoutes), "should have same number of split HTTPRoutes with expected")
+		require.Len(t, splitHTTPRoutes, len(tc.splitHTTPRoutes), "should have same number of split HTTPRoutes with expected")
 		for i, splitHTTPRoute := range tc.splitHTTPRoutes {
 			require.True(t, reflect.DeepEqual(splitHTTPRoute, splitHTTPRoutes[i]))
 		}

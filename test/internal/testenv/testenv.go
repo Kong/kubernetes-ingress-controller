@@ -9,20 +9,25 @@ import (
 // Testing Helpers for Environment Variables Overrides
 // -----------------------------------------------------------------------------
 
+type DBModeDatabase string
+
+const (
+	DBModeOff      DBModeDatabase = "off"
+	DBModePostgres DBModeDatabase = "postgres"
+)
+
 // DBMode indicates the database backend of the test cluster ("off" and "postgres" are supported).
-func DBMode() string {
-	dbmode := os.Getenv("TEST_DATABASE_MODE")
-	if dbmode != "" && dbmode != "off" && dbmode != "postgres" {
+func DBMode() DBModeDatabase {
+	switch dbmode := os.Getenv("TEST_DATABASE_MODE"); dbmode {
+	case "", "off":
+		return DBModeOff
+	case "postgres":
+		return DBModePostgres
+	default:
 		// TODO
 		os.Exit(1)
+		return ""
 	}
-
-	if dbmode == "" {
-		// if none explicitly set, the default is off
-		return "off"
-	}
-
-	return dbmode
 }
 
 // KongImage is the Kong image to use in lieu of the default.

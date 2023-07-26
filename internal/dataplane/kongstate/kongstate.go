@@ -10,6 +10,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/failures"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/validation/consumers/credentials"
@@ -48,13 +49,18 @@ func (ks *KongState) SanitizedCopy() *KongState {
 	}
 }
 
-func (ks *KongState) FillConsumersAndCredentials(log logrus.FieldLogger, s store.Storer, kongVersion semver.Version) {
+func (ks *KongState) FillConsumersAndCredentials(
+	s store.Storer,
+	failuresCollector *failures.ResourceFailuresCollector,
+	kongVersion semver.Version,
+) {
 	consumerIndex := make(map[string]Consumer)
 
 	// build consumer index
 	for _, consumer := range s.ListKongConsumers() {
 		var c Consumer
 		if consumer.Username == "" && consumer.CustomID == "" {
+			failuresCollector.PushResourceFailure("no username or custom_id specified", consumer)
 			continue
 		}
 		if consumer.Username != "" {
@@ -66,18 +72,13 @@ func (ks *KongState) FillConsumersAndCredentials(log logrus.FieldLogger, s store
 		c.K8sKongConsumer = *consumer
 		c.Tags = util.GenerateTagsForObject(consumer)
 
-		log = log.WithFields(logrus.Fields{
-			"kongconsumer_name":      consumer.Name,
-			"kongconsumer_namespace": consumer.Namespace,
-		})
 		for _, cred := range consumer.Credentials {
-			log = log.WithFields(logrus.Fields{
-				"secret_name":      cred,
-				"secret_namespace": consumer.Namespace,
-			})
+			pushCredentialResourceFailures := func(message string) {
+				failuresCollector.PushResourceFailure(fmt.Sprintf("credential %q failure: %s", cred, message), consumer)
+			}
 			secret, err := s.GetSecret(consumer.Namespace, cred)
 			if err != nil {
-				log.WithError(err).Error("failed to fetch secret")
+				pushCredentialResourceFailures(fmt.Sprintf("failed to fetch secret: %v", err))
 				continue
 			}
 			credConfig := map[string]interface{}{}
@@ -94,7 +95,10 @@ func (ks *KongState) FillConsumersAndCredentials(log logrus.FieldLogger, s store
 				if k == "hash_secret" {
 					boolVal, err := strconv.ParseBool(string(v))
 					if err != nil {
-						log.WithError(err).Errorf("failed to parse hash_secret to bool. defaulting to false")
+						// add a translation error here to tell that parsing hash_secret failed.
+						pushCredentialResourceFailures(
+							fmt.Sprintf("failed to parse hash_secret to bool: %v. defaulting to false", err),
+						)
 						credConfig[k] = false
 					} else {
 						credConfig[k] = boolVal
@@ -106,7 +110,10 @@ func (ks *KongState) FillConsumersAndCredentials(log logrus.FieldLogger, s store
 				if k == "ttl" {
 					intVal, err := strconv.Atoi(string(v))
 					if err != nil {
-						log.WithError(err).Errorf("failed to parse ttl to int, skip filling the field")
+						// add a translation error here to tell that parsing TTL failed.
+						pushCredentialResourceFailures(
+							fmt.Sprintf("faield to parse ttl to int: %v, skipfilling the fiedl", err),
+						)
 					} else {
 						credConfig[k] = intVal
 					}
@@ -116,22 +123,29 @@ func (ks *KongState) FillConsumersAndCredentials(log logrus.FieldLogger, s store
 			}
 			credType, ok := credConfig["kongCredType"].(string)
 			if !ok {
-				err := fmt.Errorf("invalid credType: %v", credType)
-				log.WithError(err).Errorf("failed to provision credential")
+				pushCredentialResourceFailures(
+					fmt.Sprintf("failed to provision credential: invalid kongCredType: type '%T' not string", credType),
+				)
+				continue
 			}
 			if !credentials.SupportedTypes.Has(credType) {
-				err := fmt.Errorf("invalid credType: %v", credType)
-				log.WithError(err).Error("failed to provision credential")
+				pushCredentialResourceFailures(
+					fmt.Sprintf("failed to provision credential: unsupported kongCredType: %q", credType),
+				)
 				continue
 			}
 			if len(credConfig) <= 1 { // 1 key of credType itself
-				log.Error("failed to provision credential: empty secret")
+				pushCredentialResourceFailures(
+					"failed to provision credential: empty secret",
+				)
 				continue
 			}
 			credTags := util.GenerateTagsForObject(secret)
 			err = c.SetCredential(credType, credConfig, credTags, kongVersion)
 			if err != nil {
-				log.WithError(err).Errorf("failed to provision credential")
+				pushCredentialResourceFailures(
+					fmt.Sprintf("failed to provision credential: %v", err),
+				)
 				continue
 			}
 		}

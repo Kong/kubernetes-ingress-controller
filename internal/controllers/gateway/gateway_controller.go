@@ -476,13 +476,15 @@ func (r *GatewayReconciler) reconcileUnmanagedGateway(ctx context.Context, log l
 	for _, ref := range serviceRefs {
 		r.Log.V(util.DebugLevel).Info("determining service for ref", "ref", ref)
 
-		svc, err := r.determineServiceForGateway(ctx, ref, gateway.Spec.Listeners)
-		if err != nil {
-			log.Error(err, "could not determine service for gateway", "namespace", gateway.Namespace, "name", gateway.Name)
-			return ctrl.Result{Requeue: true}, err
-		}
-		if svc != nil {
-			gatewayServices = append(gatewayServices, svc)
+		for _, l := range gateway.Spec.Listeners {
+			svc, err := r.determineServiceForGateway(ctx, ref, l.Protocol)
+			if err != nil {
+				log.Error(err, "could not determine service for gateway", "namespace", gateway.Namespace, "name", gateway.Name)
+				return ctrl.Result{Requeue: true}, err
+			}
+			if svc != nil {
+				gatewayServices = append(gatewayServices, svc)
+			}
 		}
 	}
 
@@ -618,34 +620,25 @@ func init() {
 
 // determineServiceForGateway provides the "publish service" (aka the proxy Service) object which
 // will be used to populate unmanaged gateways.
-func (r *GatewayReconciler) determineServiceForGateway(ctx context.Context, ref string, listeners []gatewayv1beta1.Listener) (*corev1.Service, error) {
+func (r *GatewayReconciler) determineServiceForGateway(ctx context.Context, ref string, protocol gatewayv1beta1.ProtocolType) (*corev1.Service, error) {
 	// currently the gateway controller ONLY supports service references that correspond with the --publish-service
 	// provided to the controller manager via flags when operating on unmanaged gateways. This constraint may
 	// be loosened in later iterations if there is need.
 
-	protocols := map[gatewayv1beta1.ProtocolType]interface{}{}
-	for _, l := range listeners {
-		protocols[l.Protocol] = nil
-	}
-
 	var name k8stypes.NamespacedName
 	switch {
 	case ref == r.PublishServiceRef.String():
-		if _, ok := protocols[gatewayv1beta1.HTTPProtocolType]; ok {
+		if protocol == gatewayv1beta1.HTTPProtocolType || protocol == gatewayv1beta1.HTTPSProtocolType || protocol == gatewayv1beta1.TCPProtocolType {
 			name = r.PublishServiceRef
 		}
-		if _, ok := protocols[gatewayv1beta1.HTTPSProtocolType]; ok {
-			name = r.PublishServiceRef
-		}
-		if _, ok := protocols[gatewayv1beta1.TCPProtocolType]; ok {
-			name = r.PublishServiceRef
-		}
-	case r.PublishServiceUDPRef.IsPresent() && ref == r.PublishServiceUDPRef.MustGet().String():
-		if _, ok := protocols[gatewayv1beta1.UDPProtocolType]; ok {
+		fallthrough
+	case r.PublishServiceUDPRef.IsPresent():
+		if protocol == gatewayv1beta1.UDPProtocolType {
 			name = r.PublishServiceUDPRef.MustGet()
 		}
-	case r.PublishServiceTLSRef.IsPresent() && ref == r.PublishServiceTLSRef.MustGet().String():
-		if _, ok := protocols[gatewayv1beta1.TLSProtocolType]; ok {
+		fallthrough
+	case r.PublishServiceTLSRef.IsPresent():
+		if protocol == gatewayv1beta1.TLSProtocolType {
 			name = r.PublishServiceTLSRef.MustGet()
 		}
 	default:

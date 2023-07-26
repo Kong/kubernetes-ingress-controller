@@ -50,8 +50,8 @@ func (ks *KongState) SanitizedCopy() *KongState {
 }
 
 func (ks *KongState) FillConsumersAndCredentials(
-	log logrus.FieldLogger, s store.Storer,
-	failureCollector *failures.ResourceFailuresCollector,
+	s store.Storer,
+	failuresCollector *failures.ResourceFailuresCollector,
 	kongVersion semver.Version,
 ) {
 	consumerIndex := make(map[string]Consumer)
@@ -60,7 +60,7 @@ func (ks *KongState) FillConsumersAndCredentials(
 	for _, consumer := range s.ListKongConsumers() {
 		var c Consumer
 		if consumer.Username == "" && consumer.CustomID == "" {
-			failureCollector.PushResourceFailure("no username or custom_id specified", consumer)
+			failuresCollector.PushResourceFailure("no username or custom_id specified", consumer)
 			continue
 		}
 		if consumer.Username != "" {
@@ -72,18 +72,13 @@ func (ks *KongState) FillConsumersAndCredentials(
 		c.K8sKongConsumer = *consumer
 		c.Tags = util.GenerateTagsForObject(consumer)
 
-		log = log.WithFields(logrus.Fields{
-			"kongconsumer_name":      consumer.Name,
-			"kongconsumer_namespace": consumer.Namespace,
-		})
 		for _, cred := range consumer.Credentials {
-			log = log.WithFields(logrus.Fields{
-				"secret_name":      cred,
-				"secret_namespace": consumer.Namespace,
-			})
+			pushCredentialResourceFailures := func(message string) {
+				failuresCollector.PushResourceFailure(fmt.Sprintf("credential %q failure: %s", cred, message), consumer)
+			}
 			secret, err := s.GetSecret(consumer.Namespace, cred)
 			if err != nil {
-				failureCollector.PushResourceFailure(
+				failuresCollector.PushResourceFailure(
 					fmt.Sprintf("failed to fetch secret: %v", err),
 					consumer,
 				)
@@ -103,8 +98,10 @@ func (ks *KongState) FillConsumersAndCredentials(
 				if k == "hash_secret" {
 					boolVal, err := strconv.ParseBool(string(v))
 					if err != nil {
-						// REVIEW: this is not an error blocking translate the consumer to Kong's consumer, do we add a translation error here?
-						log.WithError(err).Errorf("failed to parse hash_secret to bool. defaulting to false")
+						// add a translation error here to tell that parsing hash_secret failed.
+						pushCredentialResourceFailures(
+							fmt.Sprintf("failed to parse hash_secret to bool: %v. defaulting to false", err),
+						)
 						credConfig[k] = false
 					} else {
 						credConfig[k] = boolVal
@@ -116,8 +113,10 @@ func (ks *KongState) FillConsumersAndCredentials(
 				if k == "ttl" {
 					intVal, err := strconv.Atoi(string(v))
 					if err != nil {
-						// REVIEW: this is not an error blocking translate the consumer to Kong's consumer, do we add a translation error here?
-						log.WithError(err).Errorf("failed to parse ttl to int, skip filling the field")
+						// add a translation error here to tell that parsing TTL failed.
+						pushCredentialResourceFailures(
+							fmt.Sprintf("faield to parse ttl to int: %v, skipfilling the fiedl", err),
+						)
 					} else {
 						credConfig[k] = intVal
 					}
@@ -127,32 +126,28 @@ func (ks *KongState) FillConsumersAndCredentials(
 			}
 			credType, ok := credConfig["kongCredType"].(string)
 			if !ok {
-				failureCollector.PushResourceFailure(
+				pushCredentialResourceFailures(
 					fmt.Sprintf("failed to provision credential: invalid credType: type '%T' not string", credType),
-					consumer,
 				)
 				continue
 			}
 			if !credentials.SupportedTypes.Has(credType) {
-				failureCollector.PushResourceFailure(
+				pushCredentialResourceFailures(
 					fmt.Sprintf("failed to provision credential: invalid credType: %v", credType),
-					consumer,
 				)
 				continue
 			}
 			if len(credConfig) <= 1 { // 1 key of credType itself
-				failureCollector.PushResourceFailure(
+				pushCredentialResourceFailures(
 					"failed to provision credential: empty secret",
-					consumer,
 				)
 				continue
 			}
 			credTags := util.GenerateTagsForObject(secret)
 			err = c.SetCredential(credType, credConfig, credTags, kongVersion)
 			if err != nil {
-				failureCollector.PushResourceFailure(
+				pushCredentialResourceFailures(
 					fmt.Sprintf("failed to provision credential: %v", err),
-					consumer,
 				)
 				continue
 			}

@@ -368,10 +368,10 @@ func TestFillConsumersAndCredentials(t *testing.T) {
 	}
 
 	testCases := []struct {
-		name                        string
-		k8sConsumers                []*configurationv1.KongConsumer
-		expectedKongStateConsumers  []Consumer
-		expectedTranslationFailures map[k8stypes.NamespacedName]failures.ResourceFailure
+		name                               string
+		k8sConsumers                       []*configurationv1.KongConsumer
+		expectedKongStateConsumers         []Consumer
+		expectedTranslationFailureMessages map[k8stypes.NamespacedName]string
 	}{
 		{
 			name: "KongConsumer with key-auth and oauth2",
@@ -441,13 +441,8 @@ func TestFillConsumersAndCredentials(t *testing.T) {
 					},
 				},
 			},
-			expectedTranslationFailures: map[k8stypes.NamespacedName]failures.ResourceFailure{
-				{Namespace: "default", Name: "foo"}: mustNewResourceFailure(t,
-					"no username or custom_id specified",
-					&configurationv1.KongConsumer{
-						TypeMeta:   kongConsumerTypeMeta,
-						ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "foo"},
-					}),
+			expectedTranslationFailureMessages: map[k8stypes.NamespacedName]string{
+				{Namespace: "default", Name: "foo"}: "no username or custom_id specified",
 			},
 		},
 		{
@@ -475,13 +470,8 @@ func TestFillConsumersAndCredentials(t *testing.T) {
 					},
 				},
 			},
-			expectedTranslationFailures: map[k8stypes.NamespacedName]failures.ResourceFailure{
-				{Namespace: "default", Name: "foo"}: mustNewResourceFailure(t,
-					"failed to fetch secret",
-					&configurationv1.KongConsumer{
-						TypeMeta:   kongConsumerTypeMeta,
-						ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "foo"},
-					}),
+			expectedTranslationFailureMessages: map[k8stypes.NamespacedName]string{
+				{Namespace: "default", Name: "foo"}: "failed to fetch secret",
 			},
 		},
 		{
@@ -509,13 +499,8 @@ func TestFillConsumersAndCredentials(t *testing.T) {
 					},
 				},
 			},
-			expectedTranslationFailures: map[k8stypes.NamespacedName]failures.ResourceFailure{
-				{Namespace: "default", Name: "foo"}: mustNewResourceFailure(t,
-					"failed to provision credential: invalid credType: unsupported",
-					&configurationv1.KongConsumer{
-						TypeMeta:   kongConsumerTypeMeta,
-						ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "foo"},
-					}),
+			expectedTranslationFailureMessages: map[k8stypes.NamespacedName]string{
+				{Namespace: "default", Name: "foo"}: "failed to provision credential: invalid credType: unsupported",
 			},
 		},
 	}
@@ -533,7 +518,7 @@ func TestFillConsumersAndCredentials(t *testing.T) {
 			require.NoError(t, err)
 
 			state := KongState{}
-			state.FillConsumersAndCredentials(logger, store, failureCollector, semver.MustParse("2.3.2"))
+			state.FillConsumersAndCredentials(store, failureCollector, semver.MustParse("2.3.2"))
 			// compare translated consumers.
 			require.Len(t, state.Consumers, len(tc.expectedKongStateConsumers))
 			// compare fields. Since we only test for translating a single consumer, we only compare the first one if exists.
@@ -546,9 +531,9 @@ func TestFillConsumersAndCredentials(t *testing.T) {
 				assert.Equal(t, expectedConsumer.Oauth2Creds, kongStateConsumer.Oauth2Creds)
 			}
 			// check for expected translation failures.
-			if len(tc.expectedTranslationFailures) > 0 {
+			if len(tc.expectedTranslationFailureMessages) > 0 {
 				translationFailures := failureCollector.PopResourceFailures()
-				for nsName, expectedFailure := range tc.expectedTranslationFailures {
+				for nsName, expectedMessage := range tc.expectedTranslationFailureMessages {
 					relatedFailures := lo.Filter(translationFailures, func(f failures.ResourceFailure, _ int) bool {
 						for _, obj := range f.CausingObjects() {
 							if obj.GetNamespace() == nsName.Namespace && obj.GetName() == nsName.Name {
@@ -559,9 +544,9 @@ func TestFillConsumersAndCredentials(t *testing.T) {
 					})
 
 					assert.Truef(t, lo.ContainsBy(relatedFailures, func(f failures.ResourceFailure) bool {
-						return strings.Contains(f.Message(), expectedFailure.Message())
+						return strings.Contains(f.Message(), expectedMessage)
 					}), "should find expected translation failure caused by KongConsumer %s: should contain '%s'",
-						nsName.String(), expectedFailure.Message())
+						nsName.String(), expectedMessage)
 				}
 			}
 		})

@@ -15,7 +15,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8stypes "k8s.io/apimachinery/pkg/types"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/failures"
@@ -500,7 +499,7 @@ func TestFillConsumersAndCredentials(t *testing.T) {
 				},
 			},
 			expectedTranslationFailureMessages: map[k8stypes.NamespacedName]string{
-				{Namespace: "default", Name: "foo"}: "failed to provision credential: invalid credType: unsupported",
+				{Namespace: "default", Name: "foo"}: "failed to provision credential: unsupported kongCredType: unsupported",
 			},
 		},
 	}
@@ -669,11 +668,4 @@ func TestKongState_FillIDs(t *testing.T) {
 			tc.expect(t, tc.state)
 		})
 	}
-}
-
-func mustNewResourceFailure(t *testing.T, reason string, causingObjects ...client.Object) failures.ResourceFailure {
-	t.Helper()
-	f, err := failures.NewResourceFailure(reason, causingObjects...)
-	require.NoError(t, err)
-	return f
 }

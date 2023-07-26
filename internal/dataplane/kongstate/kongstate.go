@@ -127,13 +127,13 @@ func (ks *KongState) FillConsumersAndCredentials(
 			credType, ok := credConfig["kongCredType"].(string)
 			if !ok {
 				pushCredentialResourceFailures(
-					fmt.Sprintf("failed to provision credential: invalid credType: type '%T' not string", credType),
+					fmt.Sprintf("failed to provision credential: invalid kongCredType: type '%T' not string", credType),
 				)
 				continue
 			}
 			if !credentials.SupportedTypes.Has(credType) {
 				pushCredentialResourceFailures(
-					fmt.Sprintf("failed to provision credential: invalid credType: %v", credType),
+					fmt.Sprintf("failed to provision credential: unsupported kongCredType: %v", credType),
 				)
 				continue
 			}

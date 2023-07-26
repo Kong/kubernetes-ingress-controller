@@ -82,3 +82,18 @@ func Setup(t *testing.T, scheme *runtime.Scheme) *rest.Config {
 
 	return cfg
 }
+
+func InstallKongCRDs(t *testing.T, cfg *rest.Config) {
+	projectRoot := os.Getenv("KONG_TEST_ENVTEST_PROJECT_ROOT")
+	if projectRoot == "" {
+		projectRoot = "../.."
+	}
+	// install Kong CRDs from config/crd/bases.
+	kongCRDPath := filepath.Join(projectRoot, "config", "crd", "bases")
+	t.Logf("install Kong CRDs from manifests in %s", kongCRDPath)
+	_, err := envtest.InstallCRDs(cfg, envtest.CRDInstallOptions{
+		Paths:              []string{kongCRDPath},
+		ErrorIfPathMissing: true,
+	})
+	require.NoError(t, err)
+}

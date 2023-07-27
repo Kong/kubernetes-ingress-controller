@@ -76,6 +76,7 @@ type Storer interface {
 	GetKongPlugin(namespace, name string) (*kongv1.KongPlugin, error)
 	GetKongClusterPlugin(name string) (*kongv1.KongClusterPlugin, error)
 	GetKongConsumer(namespace, name string) (*kongv1.KongConsumer, error)
+	GetKongConsumerGroup(namespace, name string) (*kongv1beta1.KongConsumerGroup, error)
 	GetIngressClassName() string
 	GetIngressClassV1(name string) (*netv1.IngressClass, error)
 	GetIngressClassParametersV1Alpha1(ingressClass *netv1.IngressClass) (*kongv1alpha1.IngressClassParameters, error)
@@ -99,6 +100,7 @@ type Storer interface {
 	ListKongPlugins() []*kongv1.KongPlugin
 	ListKongClusterPlugins() []*kongv1.KongClusterPlugin
 	ListKongConsumers() []*kongv1.KongConsumer
+	ListKongConsumerGroups() []*kongv1beta1.KongConsumerGroup
 	ListCACerts() ([]*corev1.Secret, error)
 }
 
@@ -143,6 +145,7 @@ type CacheStores struct {
 	Plugin                         cache.Store
 	ClusterPlugin                  cache.Store
 	Consumer                       cache.Store
+	ConsumerGroup                  cache.Store
 	KongIngress                    cache.Store
 	TCPIngress                     cache.Store
 	UDPIngress                     cache.Store
@@ -175,6 +178,7 @@ func NewCacheStores() CacheStores {
 		Plugin:                         cache.NewStore(keyFunc),
 		ClusterPlugin:                  cache.NewStore(clusterResourceKeyFunc),
 		Consumer:                       cache.NewStore(keyFunc),
+		ConsumerGroup:                  cache.NewStore(keyFunc),
 		KongIngress:                    cache.NewStore(keyFunc),
 		TCPIngress:                     cache.NewStore(keyFunc),
 		UDPIngress:                     cache.NewStore(keyFunc),
@@ -273,6 +277,8 @@ func (c CacheStores) Get(obj runtime.Object) (item interface{}, exists bool, err
 		return c.ClusterPlugin.Get(obj)
 	case *kongv1.KongConsumer:
 		return c.Consumer.Get(obj)
+	case *kongv1beta1.KongConsumerGroup:
+		return c.ConsumerGroup.Get(obj)
 	case *kongv1.KongIngress:
 		return c.KongIngress.Get(obj)
 	case *kongv1beta1.TCPIngress:
@@ -336,6 +342,8 @@ func (c CacheStores) Add(obj runtime.Object) error {
 		return c.ClusterPlugin.Add(obj)
 	case *kongv1.KongConsumer:
 		return c.Consumer.Add(obj)
+	case *kongv1beta1.KongConsumerGroup:
+		return c.ConsumerGroup.Add(obj)
 	case *kongv1.KongIngress:
 		return c.KongIngress.Add(obj)
 	case *kongv1beta1.TCPIngress:
@@ -400,6 +408,8 @@ func (c CacheStores) Delete(obj runtime.Object) error {
 		return c.ClusterPlugin.Delete(obj)
 	case *kongv1.KongConsumer:
 		return c.Consumer.Delete(obj)
+	case *kongv1beta1.KongConsumerGroup:
+		return c.ConsumerGroup.Delete(obj)
 	case *kongv1.KongIngress:
 		return c.KongIngress.Delete(obj)
 	case *kongv1beta1.TCPIngress:
@@ -804,6 +814,19 @@ func (s Store) GetKongConsumer(namespace, name string) (*kongv1.KongConsumer, er
 	return p.(*kongv1.KongConsumer), nil
 }
 
+// GetKongConsumerGroup returns the 'name' KongConsumerGroup resource in namespace.
+func (s Store) GetKongConsumerGroup(namespace, name string) (*kongv1beta1.KongConsumerGroup, error) {
+	key := fmt.Sprintf("%v/%v", namespace, name)
+	p, exists, err := s.stores.ConsumerGroup.GetByKey(key)
+	if err != nil {
+		return nil, err
+	}
+	if !exists {
+		return nil, ErrNotFound{fmt.Sprintf("KongConsumerGroup %v not found", key)}
+	}
+	return p.(*kongv1beta1.KongConsumerGroup), nil
+}
+
 func (s Store) GetIngressClassName() string {
 	return s.ingressClass
 }
@@ -888,6 +911,20 @@ func (s Store) ListKongConsumers() []*kongv1.KongConsumer {
 	}
 
 	return consumers
+}
+
+// ListKongConsumerGroups returns all KongConsumerGroups filtered by the ingress.class
+// annotation.
+func (s Store) ListKongConsumerGroups() []*kongv1beta1.KongConsumerGroup {
+	var consumerGroups []*kongv1beta1.KongConsumerGroup
+	for _, item := range s.stores.ConsumerGroup.List() {
+		c, ok := item.(*kongv1beta1.KongConsumerGroup)
+		if ok && s.isValidIngressClass(&c.ObjectMeta, annotations.IngressClassKey, s.getIngressClassHandling()) {
+			consumerGroups = append(consumerGroups, c)
+		}
+	}
+
+	return consumerGroups
 }
 
 // ListGlobalKongPlugins returns all KongPlugin resources
@@ -1066,6 +1103,8 @@ func mkObjFromGVK(gvk schema.GroupVersionKind) (runtime.Object, error) {
 		return &kongv1.KongClusterPlugin{}, nil
 	case kongv1.SchemeGroupVersion.WithKind("KongConsumer"):
 		return &kongv1.KongConsumer{}, nil
+	case kongv1beta1.SchemeGroupVersion.WithKind("KongConsumerGroup"):
+		return &kongv1beta1.KongConsumerGroup{}, nil
 	case kongv1alpha1.SchemeGroupVersion.WithKind("IngressClassParameters"):
 		return &kongv1alpha1.IngressClassParameters{}, nil
 	// ----------------------------------------------------------------------------

@@ -485,6 +485,35 @@ func TestFakeStoreConsumer(t *testing.T) {
 	assert.True(errors.As(err, &ErrNotFound{}))
 }
 
+func TestFakeStoreConsumerGroup(t *testing.T) {
+	assert := assert.New(t)
+	require := require.New(t)
+
+	consumerGroups := []*configurationv1beta1.KongConsumerGroup{
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "foo",
+				Namespace: "default",
+				Annotations: map[string]string{
+					annotations.IngressClassKey: annotations.DefaultIngressClass,
+				},
+			},
+		},
+	}
+	store, err := NewFakeStore(FakeObjects{KongConsumerGroups: consumerGroups})
+	require.Nil(err)
+	require.NotNil(store)
+	assert.Len(store.ListKongConsumerGroups(), 1)
+	c, err := store.GetKongConsumerGroup("default", "foo")
+	assert.Nil(err)
+	assert.NotNil(c)
+
+	c, err = store.GetKongConsumerGroup("default", "does-not-exist")
+	assert.Nil(c)
+	assert.NotNil(err)
+	assert.True(errors.As(err, &ErrNotFound{}))
+}
+
 func TestFakeStorePlugins(t *testing.T) {
 	assert := assert.New(t)
 	require := require.New(t)

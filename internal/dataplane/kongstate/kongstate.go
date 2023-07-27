@@ -25,6 +25,7 @@ type KongState struct {
 	Licenses       []kong.License
 	Plugins        []Plugin
 	Consumers      []Consumer
+	ConsumerGroups []ConsumerGroup
 }
 
 // SanitizedCopy returns a shallow copy with sensitive values redacted best-effort.
@@ -156,6 +157,17 @@ func (ks *KongState) FillConsumersAndCredentials(
 	// populate the consumer in the state
 	for _, c := range consumerIndex {
 		ks.Consumers = append(ks.Consumers, c)
+	}
+}
+
+func (ks *KongState) FillConsumerGroups(_ logrus.FieldLogger, s store.Storer) {
+	for _, cg := range s.ListKongConsumerGroups() {
+		ks.ConsumerGroups = append(ks.ConsumerGroups, ConsumerGroup{
+			ConsumerGroup: kong.ConsumerGroup{
+				Name: kong.String(cg.Name),
+				Tags: util.GenerateTagsForObject(cg),
+			},
+		})
 	}
 }
 
@@ -394,6 +406,14 @@ func (ks *KongState) FillIDs(logger logrus.FieldLogger) {
 			logger.WithError(err).Errorf("failed to fill ID for consumer %s", *consumer.Username)
 		} else {
 			ks.Consumers[consumerIndex] = consumer
+		}
+	}
+
+	for consumerGroupIndex, consumerGroup := range ks.ConsumerGroups {
+		if err := consumerGroup.FillID(); err != nil {
+			logger.WithError(err).Errorf("failed to fill ID for consumer group %s", *consumerGroup.Name)
+		} else {
+			ks.ConsumerGroups[consumerGroupIndex] = consumerGroup
 		}
 	}
 }

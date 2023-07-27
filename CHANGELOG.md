@@ -76,7 +76,7 @@ Adding a new version? You'll need three changes:
 ### Added
 
 - **WIP** Introduce `KongConsumerGroup` CRD (supported by Kong Enterprise only)
-  [#4325](https://github.com/Kong/kubernetes-ingress-controller/pull/4325)
+  [#4325](https://github.com/Kong/kubernetes-ingress-controller/pull/4325), [#4387](https://github.com/Kong/kubernetes-ingress-controller/pull/4387)
 - The ResponseHeaderModifier Gateway API filter is now supported and translated
   to the proper set of Kong plugins.
   [#4350](https://github.com/Kong/kubernetes-ingress-controller/pull/4350)

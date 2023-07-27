@@ -1,11 +1,8 @@
 # Contributing Guidelines
 
-Thank you for showing interest in contributing to
-Kong Ingress Controller.
+Thank you for showing interest in contributing to Kong Ingress Controller.
 
-Following guide will help you navigate
-the repository and get your PRs
-merged in faster.
+Following guide will help you navigate the repository and get your PRs merged in faster.
 
 ## Finding work
 
@@ -183,7 +180,7 @@ kubectl patch -n kong deploy ingress-kong -p '{"spec": {"template": {"spec": {"c
 
 ## Building
 
-Build is performed via Makefile. Depending on your
+Build is performed via [`Makefile`](./Makefile). Depending on your
 requirements you can build a raw server binary, a local container image,
 or push an image to a remote repository.
 
@@ -238,49 +235,8 @@ passing the above is required by CI.
 
 ## Testing
 
-You can run the unit tests by running:
-
-```console
-make test
-```
-
-For integration tests run:
-
-```console
-make test.integration
-```
-
-And for E2E tests run:
-
-```console
-make test.e2e
-```
-
-Note that the `integration` and `e2e` tests require a local container runtime
-and will utilize a sizable amount of system resources as one or many local
-Kubernetes clusters will be spun up in containers and tested against.
+Please see [TESTING.md](./TESTING.md) for a detailed description of testing KIC.
 
 ## Releasing
 
-Makefile will produce a release binary, as shown above. To publish this
-to a wider Kubernetes user base, push the image to a container registry.
-Our images are hosted on
-[Bintray](https://bintray.com/kong/kubernetes-ingress-controller).
-
-An example release might look like:
-
-```shell
-export TAG=42
-make release
-```
-
-Please follow these guidelines to cut a release:
-
-- Update the [release](https://help.github.com/articles/creating-releases/)
-  page with a link to changelog.
-- Cut a release branch, if appropriate.
-  All major feature work is done in HEAD. Specific bug fixes are
-  cherry-picked into a release branch.
-- If you're not confident about the stability of the code,
-  [tag](https://help.github.com/articles/working-with-tags/) it as alpha or beta.
-  Typically, a release branch should have stable code.
+See [RELEASE.md](./RELEASE.md).

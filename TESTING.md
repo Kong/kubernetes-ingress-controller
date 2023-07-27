@@ -8,6 +8,7 @@ when changing code in this repository.
 In KIC, we use several levels of testing:
 
 - [unit tests](#unit-tests)
+- [`envtest` based tests](#envtest-based-tests)
 - [integration tests](#integration-tests)
 - [end to end (E2E) tests](#end-to-end-e2e-tests)
 

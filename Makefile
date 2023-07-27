@@ -290,11 +290,8 @@ JUNIT_REPORT ?= /dev/null
 bench:
 	@go test -count 1 -bench=. -benchmem -run=^$$ ./internal/...
 
-.PHONY: test
-test: test.unit
-
 .PHONY: test.all
-test.all: test.unit test.integration test.conformance
+test.all: test.unit test.envtest test.integration test.conformance
 
 .PHONY: test.conformance
 test.conformance: go-junit-report

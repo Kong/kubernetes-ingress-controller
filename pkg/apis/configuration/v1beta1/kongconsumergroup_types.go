@@ -28,11 +28,15 @@ import (
 // +kubebuilder:resource:shortName=kcg,categories=kong-ingress-controller
 // +kubebuilder:validation:Optional
 // +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`,description="Age"
+// +kubebuilder:printcolumn:name="Programmed",type=string,JSONPath=`.status.conditions[?(@.type=="Programmed")].status`
 
 // KongConsumerGroup is the Schema for the kongconsumergroups API.
 type KongConsumerGroup struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
+
+	// Status represents the current status of the KongConsumer resource.
+	Status KongConsumerGroupStatus `json:"status,omitempty"`
 }
 
 // +kubebuilder:object:root=true
@@ -42,6 +46,21 @@ type KongConsumerGroupList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []KongConsumerGroup `json:"items"`
+}
+
+// KongConsumerGroupStatus represents the current status of the KongConsumerGroup resource.
+type KongConsumerGroupStatus struct {
+	// Conditions describe the current conditions of the KongConsumerGroup.
+	//
+	// Known condition types are:
+	//
+	// * "Programmed"
+	//
+	// +listType=map
+	// +listMapKey=type
+	// +kubebuilder:validation:MaxItems=8
+	// +kubebuilder:default={{type: "Programmed", status: "Unknown", reason:"Pending", message:"Waiting for controller", lastTransitionTime: "1970-01-01T00:00:00Z"}}
+	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
 
 func init() {

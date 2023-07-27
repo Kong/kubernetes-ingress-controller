@@ -32,6 +32,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util/builder"
 	configurationv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
+	configurationv1beta1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1beta1"
 )
 
 type TLSPair struct {
@@ -5382,6 +5383,23 @@ func TestParser_ConfiguredKubernetesObjects(t *testing.T) {
 			},
 			expectedObjectsToBeConfigured: []k8stypes.NamespacedName{
 				{Name: "consumer", Namespace: "bar"},
+			},
+		},
+		{
+			name: "KongConsumerGroup",
+			objectsInStore: store.FakeObjects{
+				KongConsumerGroups: []*configurationv1beta1.KongConsumerGroup{
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:        "consumer-group",
+							Namespace:   "bar",
+							Annotations: map[string]string{annotations.IngressClassKey: annotations.DefaultIngressClass},
+						},
+					},
+				},
+			},
+			expectedObjectsToBeConfigured: []k8stypes.NamespacedName{
+				{Name: "consumer-group", Namespace: "bar"},
 			},
 		},
 		{

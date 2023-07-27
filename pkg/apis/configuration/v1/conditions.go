@@ -17,6 +17,7 @@ const (
 	// * KongPlugin
 	// * KongClusterPlugin
 	// * KongConsumer
+	// * KongConsumerGroup
 	//
 	// It is a positive-polarity summary condition, and so should always be
 	// present on the resource with ObservedGeneration set.

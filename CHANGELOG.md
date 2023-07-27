@@ -127,15 +127,17 @@ Adding a new version? You'll need three changes:
   updates. The controller will now send configuration to such Gateways and will
   actively monitor their readiness for accepting configuration updates.
   [#4368](https://github.com/Kong/kubernetes-ingress-controller/pull/4368
-- `KongConsumer`, `KongPlugin`, and `KongClusterPlugin` CRDs were extended with
+- `KongConsumer`, `KongConsumerGroup` `KongPlugin`, and `KongClusterPlugin` CRDs were extended with
   `Status.Conditions` field. It will contain the `Programmed` condition describing
   whether an object was successfully translated into Kong entities and sent to Kong.
   [#4409](https://github.com/Kong/kubernetes-ingress-controller/pull/4409)
   [#4412](https://github.com/Kong/kubernetes-ingress-controller/pull/4412)
-- `KongConsumer`, `KongPlugin`, and `KongClusterPlugin`'s `additionalPrinterColumns`
-  were extended with `Programmed` column. It will display the status of the 
+  [#4423](https://github.com/Kong/kubernetes-ingress-controller/pull/4423)
+- `KongConsumer`, `KongConsumerGroup`, `KongPlugin`, and `KongClusterPlugin`'s `additionalPrinterColumns`
+  were extended with `Programmed` column. It will display the status of the
   `Programmed` condition of an object when `kubectl get` is used.
   [#4425](https://github.com/Kong/kubernetes-ingress-controller/pull/4425)
+  [#4423](https://github.com/Kong/kubernetes-ingress-controller/pull/4423)
 
 ### Changed
 

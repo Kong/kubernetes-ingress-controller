@@ -167,6 +167,7 @@ func (ks *KongState) FillConsumerGroups(_ logrus.FieldLogger, s store.Storer) {
 				Name: kong.String(cg.Name),
 				Tags: util.GenerateTagsForObject(cg),
 			},
+			K8sKongConsumerGroup: *cg,
 		})
 	}
 }

@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1690468282052,
+  "lastUpdate": 1690468291620,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -36600,6 +36600,48 @@ window.BENCHMARK_DATA = {
             "value": 12,
             "unit": "allocs/op",
             "extra": "17386 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "49699333+dependabot[bot]@users.noreply.github.com",
+            "name": "dependabot[bot]",
+            "username": "dependabot[bot]"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "ad7b507e757c6bd4f45958bdeb2f51bf9af0e276",
+          "message": "chore(deps): bump google.golang.org/grpc from 1.56.2 to 1.57.0\n\nBumps [google.golang.org/grpc](https://github.com/grpc/grpc-go) from 1.56.2 to 1.57.0.\n- [Release notes](https://github.com/grpc/grpc-go/releases)\n- [Commits](https://github.com/grpc/grpc-go/compare/v1.56.2...v1.57.0)\n\n---\nupdated-dependencies:\n- dependency-name: google.golang.org/grpc\n  dependency-type: direct:production\n  update-type: version-update:semver-minor\n...\n\nSigned-off-by: dependabot[bot] <support@github.com>",
+          "timestamp": "2023-07-27T14:27:29Z",
+          "tree_id": "a85d453695efce46710fcca701e00f958dc71a8e",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/ad7b507e757c6bd4f45958bdeb2f51bf9af0e276"
+        },
+        "date": 1690468286234,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - ns/op",
+            "value": 69657,
+            "unit": "ns/op",
+            "extra": "17844 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - B/op",
+            "value": 11096,
+            "unit": "B/op",
+            "extra": "17844 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - allocs/op",
+            "value": 12,
+            "unit": "allocs/op",
+            "extra": "17844 times\n2 procs"
           }
         ]
       }

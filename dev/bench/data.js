@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1690558862684,
+  "lastUpdate": 1690558864703,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -39498,6 +39498,48 @@ window.BENCHMARK_DATA = {
             "value": 12,
             "unit": "allocs/op",
             "extra": "16518 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "czeslavo@gmail.com",
+            "name": "Grzegorz Burzyński",
+            "username": "czeslavo"
+          },
+          "committer": {
+            "email": "czeslavo@gmail.com",
+            "name": "Grzegorz Burzyński",
+            "username": "czeslavo"
+          },
+          "distinct": true,
+          "id": "edb58dc26c23101ef3a1f301246118eae74cd006",
+          "message": "fix: do not use address to a loop variable in parser",
+          "timestamp": "2023-07-28T17:39:46+02:00",
+          "tree_id": "51d6e0ed4fe71d3fa902b19f1e5947ad40072ccb",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/edb58dc26c23101ef3a1f301246118eae74cd006"
+        },
+        "date": 1690558857063,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - ns/op",
+            "value": 67284,
+            "unit": "ns/op",
+            "extra": "18828 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - B/op",
+            "value": 11097,
+            "unit": "B/op",
+            "extra": "18828 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - allocs/op",
+            "value": 12,
+            "unit": "allocs/op",
+            "extra": "18828 times\n2 procs"
           }
         ]
       },

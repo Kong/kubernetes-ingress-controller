@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1690572783168,
+  "lastUpdate": 1690572784621,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -39750,6 +39750,48 @@ window.BENCHMARK_DATA = {
             "value": 12,
             "unit": "allocs/op",
             "extra": "15013 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jakub.warczarek@konghq.com",
+            "name": "Jakub Warczarek",
+            "username": "programmer04"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "a6e5a0d2020bfd799a03f5732f06a84c0d819326",
+          "message": "feat: Consumer Groups can be configured in Consumer (#4419)",
+          "timestamp": "2023-07-28T12:31:45-07:00",
+          "tree_id": "4b7d1af09420a14f5e93cd1f6ca1415abcb1180a",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/a6e5a0d2020bfd799a03f5732f06a84c0d819326"
+        },
+        "date": 1690572776795,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - ns/op",
+            "value": 77151,
+            "unit": "ns/op",
+            "extra": "15840 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - B/op",
+            "value": 11101,
+            "unit": "B/op",
+            "extra": "15840 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - allocs/op",
+            "value": 12,
+            "unit": "allocs/op",
+            "extra": "15840 times\n2 procs"
           }
         ]
       },

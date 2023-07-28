@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1690558864703,
+  "lastUpdate": 1690566517391,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -39582,6 +39582,48 @@ window.BENCHMARK_DATA = {
             "value": 12,
             "unit": "allocs/op",
             "extra": "18828 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "czeslavo@gmail.com",
+            "name": "Grzegorz Burzyński",
+            "username": "czeslavo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "c768c7d236ffce40d317b95834700c5800d16667",
+          "message": "fix: do not use address to a loop variable in parser (#4427)\n\n@programmer04 has found that when creating two Consumers at once, only \r\none gets its Programmed condition properly set to True, and the other one stays \r\nFalse forever. This fixes the root cause of the bug.",
+          "timestamp": "2023-07-28T17:47:26Z",
+          "tree_id": "51d6e0ed4fe71d3fa902b19f1e5947ad40072ccb",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/c768c7d236ffce40d317b95834700c5800d16667"
+        },
+        "date": 1690566511407,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - ns/op",
+            "value": 71273,
+            "unit": "ns/op",
+            "extra": "18082 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - B/op",
+            "value": 11094,
+            "unit": "B/op",
+            "extra": "18082 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - allocs/op",
+            "value": 12,
+            "unit": "allocs/op",
+            "extra": "18082 times\n2 procs"
           }
         ]
       }

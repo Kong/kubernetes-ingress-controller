@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1690529262448,
+  "lastUpdate": 1690530336883,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -37104,6 +37104,48 @@ window.BENCHMARK_DATA = {
             "value": 12,
             "unit": "allocs/op",
             "extra": "18505 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jakub.warczarek@konghq.com",
+            "name": "Jakub Warczarek",
+            "username": "programmer04"
+          },
+          "committer": {
+            "email": "jakub.warczarek@konghq.com",
+            "name": "Jakub Warczarek",
+            "username": "programmer04"
+          },
+          "distinct": true,
+          "id": "631da10d43dc89103396328a0a808ff2ede76599",
+          "message": "Propose skipping test",
+          "timestamp": "2023-07-28T09:44:09+02:00",
+          "tree_id": "381c5327d64e5f041e4c7c3835b78025359eaf7d",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/631da10d43dc89103396328a0a808ff2ede76599"
+        },
+        "date": 1690530327866,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - ns/op",
+            "value": 101405,
+            "unit": "ns/op",
+            "extra": "15246 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - B/op",
+            "value": 11092,
+            "unit": "B/op",
+            "extra": "15246 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - allocs/op",
+            "value": 12,
+            "unit": "allocs/op",
+            "extra": "15246 times\n2 procs"
           }
         ]
       }

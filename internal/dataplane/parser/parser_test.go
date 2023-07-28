@@ -5368,21 +5368,30 @@ func TestParser_ConfiguredKubernetesObjects(t *testing.T) {
 			expectedObjectsToBeConfigured: []k8stypes.NamespacedName{},
 		},
 		{
-			name: "KongConsumer",
+			name: "KongConsumers",
 			objectsInStore: store.FakeObjects{
 				KongConsumers: []*configurationv1.KongConsumer{
 					{
 						ObjectMeta: metav1.ObjectMeta{
-							Name:        "consumer",
+							Name:        "consumer1",
 							Namespace:   "bar",
 							Annotations: map[string]string{annotations.IngressClassKey: annotations.DefaultIngressClass},
 						},
-						Username: "foo",
+						Username: "consumer1",
+					},
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:        "consumer2",
+							Namespace:   "bar",
+							Annotations: map[string]string{annotations.IngressClassKey: annotations.DefaultIngressClass},
+						},
+						Username: "consumer2",
 					},
 				},
 			},
 			expectedObjectsToBeConfigured: []k8stypes.NamespacedName{
-				{Name: "consumer", Namespace: "bar"},
+				{Name: "consumer1", Namespace: "bar"},
+				{Name: "consumer2", Namespace: "bar"},
 			},
 		},
 		{
@@ -5391,7 +5400,14 @@ func TestParser_ConfiguredKubernetesObjects(t *testing.T) {
 				KongConsumerGroups: []*configurationv1beta1.KongConsumerGroup{
 					{
 						ObjectMeta: metav1.ObjectMeta{
-							Name:        "consumer-group",
+							Name:        "consumer-group1",
+							Namespace:   "bar",
+							Annotations: map[string]string{annotations.IngressClassKey: annotations.DefaultIngressClass},
+						},
+					},
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:        "consumer-group2",
 							Namespace:   "bar",
 							Annotations: map[string]string{annotations.IngressClassKey: annotations.DefaultIngressClass},
 						},
@@ -5399,20 +5415,29 @@ func TestParser_ConfiguredKubernetesObjects(t *testing.T) {
 				},
 			},
 			expectedObjectsToBeConfigured: []k8stypes.NamespacedName{
-				{Name: "consumer-group", Namespace: "bar"},
+				{Name: "consumer-group1", Namespace: "bar"},
+				{Name: "consumer-group2", Namespace: "bar"},
 			},
 		},
 		{
-			name: "KongPlugin with KongConsumer",
+			name: "KongPlugins with KongConsumer",
 			objectsInStore: store.FakeObjects{
 				KongPlugins: []*configurationv1.KongPlugin{
 					{
 						ObjectMeta: metav1.ObjectMeta{
-							Name:        "plugin",
+							Name:        "plugin1",
 							Namespace:   "bar",
 							Annotations: map[string]string{annotations.IngressClassKey: annotations.DefaultIngressClass},
 						},
-						PluginName: "plugin",
+						PluginName: "plugin1",
+					},
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:        "plugin2",
+							Namespace:   "bar",
+							Annotations: map[string]string{annotations.IngressClassKey: annotations.DefaultIngressClass},
+						},
+						PluginName: "plugin2",
 					},
 				},
 				KongConsumers: []*configurationv1.KongConsumer{
@@ -5422,7 +5447,7 @@ func TestParser_ConfiguredKubernetesObjects(t *testing.T) {
 							Namespace: "bar",
 							Annotations: map[string]string{
 								annotations.IngressClassKey:                           annotations.DefaultIngressClass,
-								annotations.AnnotationPrefix + annotations.PluginsKey: "plugin",
+								annotations.AnnotationPrefix + annotations.PluginsKey: "plugin1,plugin2",
 							},
 						},
 						Username: "foo",
@@ -5430,20 +5455,28 @@ func TestParser_ConfiguredKubernetesObjects(t *testing.T) {
 				},
 			},
 			expectedObjectsToBeConfigured: []k8stypes.NamespacedName{
-				{Name: "plugin", Namespace: "bar"},
+				{Name: "plugin1", Namespace: "bar"},
+				{Name: "plugin2", Namespace: "bar"},
 				{Name: "consumer", Namespace: "bar"},
 			},
 		},
 		{
-			name: "KongClusterPlugin with KongConsumer",
+			name: "KongClusterPlugins with KongConsumer",
 			objectsInStore: store.FakeObjects{
 				KongClusterPlugins: []*configurationv1.KongClusterPlugin{
 					{
 						ObjectMeta: metav1.ObjectMeta{
-							Name:        "plugin",
+							Name:        "plugin1",
 							Annotations: map[string]string{annotations.IngressClassKey: annotations.DefaultIngressClass},
 						},
-						PluginName: "plugin",
+						PluginName: "plugin2",
+					},
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:        "plugin2",
+							Annotations: map[string]string{annotations.IngressClassKey: annotations.DefaultIngressClass},
+						},
+						PluginName: "plugin2",
 					},
 				},
 				KongConsumers: []*configurationv1.KongConsumer{
@@ -5453,7 +5486,7 @@ func TestParser_ConfiguredKubernetesObjects(t *testing.T) {
 							Namespace: "bar",
 							Annotations: map[string]string{
 								annotations.IngressClassKey:                           annotations.DefaultIngressClass,
-								annotations.AnnotationPrefix + annotations.PluginsKey: "plugin",
+								annotations.AnnotationPrefix + annotations.PluginsKey: "plugin1,plugin2",
 							},
 						},
 						Username: "foo",
@@ -5461,7 +5494,8 @@ func TestParser_ConfiguredKubernetesObjects(t *testing.T) {
 				},
 			},
 			expectedObjectsToBeConfigured: []k8stypes.NamespacedName{
-				{Name: "plugin"},
+				{Name: "plugin1"},
+				{Name: "plugin2"},
 				{Name: "consumer", Namespace: "bar"},
 			},
 		},

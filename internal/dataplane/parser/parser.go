@@ -389,7 +389,15 @@ func (p *Parser) getUpstreams(serviceMap map[string]kongstate.Service) []kongsta
 			var targets []kongstate.Target
 			for _, backend := range service.Backends {
 				// gather the Kubernetes service for the backend
-				k8sService, ok := service.K8sServices[backend.Name]
+				backendNamespace := backend.Namespace
+				if backendNamespace == "" {
+					// if the backend namespace isn't specified, it's in the same namespace as the referee route (which is,
+					// somewhat confusingly, the _service_ namespace in serviceMap services, as historically there was no option
+					// to reference services outside the route namespace, and we could always stuff the route namespace into the
+					// placeholder service.
+					backendNamespace = service.Namespace
+				}
+				k8sService, ok := service.K8sServices[fmt.Sprintf("%s/%s", backendNamespace, backend.Name)]
 				if !ok {
 					p.registerTranslationFailure(
 						fmt.Sprintf("can't add target for backend %s: no kubernetes service found", backend.Name),

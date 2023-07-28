@@ -154,6 +154,9 @@ Adding a new version? You'll need three changes:
 
 ### Fixed
 
+- Correctly support multi-Service backends that have multiple Services sharing
+  the same name in different namespaces.
+  [#4375](https://github.com/Kong/kubernetes-ingress-controller/pull/4375)
 - Properly construct targets for IPv6-only clusters.
   [#4391](https://github.com/Kong/kubernetes-ingress-controller/pull/4391)
 - Attach kubernetes events to `KongConsumer`s when the parser fails to

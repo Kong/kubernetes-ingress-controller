@@ -75,7 +75,7 @@ func (ir *ingressRules) populateServices(log logrus.FieldLogger, s store.Storer,
 		for _, k8sService := range k8sServices {
 			// at this point we know the Kubernetes service itself is valid and can be
 			// used for traffic, so cache it amongst the kong Services k8s services.
-			service.K8sServices[k8sService.Name] = k8sService
+			service.K8sServices[fmt.Sprintf("%s/%s", k8sService.Namespace, k8sService.Name)] = k8sService
 
 			// extract client certificates intended for use by the service
 			secretName := annotations.ExtractClientCertificate(k8sService.Annotations)

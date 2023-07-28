@@ -9,7 +9,9 @@ import (
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
@@ -101,6 +103,31 @@ func TestGatewayConformance(t *testing.T) {
 	require.NoError(t, gatewayv1alpha2.AddToScheme(client.Scheme()))
 	require.NoError(t, gatewayv1beta1.AddToScheme(client.Scheme()))
 
+	t.Log("creating tls service for gateway conformance tests")
+	tlsService := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "tls-proxy-" + uuid.NewString(),
+			Namespace: "kong-system",
+		},
+		Spec: corev1.ServiceSpec{
+			Selector: map[string]string{
+				"app.kubernetes.io/component": "app",
+				"app.kubernetes.io/instance":  "ingress-controller",
+				"app.kubernetes.io/name":      "kong",
+			},
+			Type: corev1.ServiceTypeLoadBalancer,
+			Ports: []corev1.ServicePort{
+				{
+					Port:       443,
+					TargetPort: intstr.FromInt(8899),
+					Protocol:   corev1.ProtocolTCP,
+				},
+			},
+		},
+	}
+	require.NoError(t, client.Create(ctx, tlsService))
+	t.Cleanup(func() { assert.NoError(t, client.Delete(ctx, tlsService)) })
+
 	featureGateFlag := fmt.Sprintf("--feature-gates=%s", consts.DefaultFeatureGates)
 	if expressionRoutesEnabled() {
 		t.Log("expression routes enabled")
@@ -120,7 +147,7 @@ func TestGatewayConformance(t *testing.T) {
 		"--debug-log-reduce-redundancy",
 		featureGateFlag,
 		"--anonymous-reports=false",
-		"--publish-service-tls=kong-system/ingress-controller-kong-tls-proxy",
+		fmt.Sprintf("--publish-service-tls=%s/%s", tlsService.Namespace, tlsService.Name),
 	}
 
 	require.NoError(t, testutils.DeployControllerManagerForCluster(ctx, globalDeprecatedLogger, globalLogger, env.Cluster(), args...))

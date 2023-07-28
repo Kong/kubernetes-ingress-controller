@@ -149,6 +149,11 @@ func (in *KongConsumer) DeepCopyInto(out *KongConsumer) {
 		*out = make([]string, len(*in))
 		copy(*out, *in)
 	}
+	if in.ConsumerGroups != nil {
+		in, out := &in.ConsumerGroups, &out.ConsumerGroups
+		*out = make([]string, len(*in))
+		copy(*out, *in)
+	}
 	in.Status.DeepCopyInto(&out.Status)
 }
 

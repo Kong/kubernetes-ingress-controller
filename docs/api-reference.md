@@ -57,6 +57,7 @@ KongConsumer is the Schema for the kongconsumers API.
 | `username` _string_ | Username is a Kong cluster-unique username of the consumer. |
 | `custom_id` _string_ | CustomID is a Kong cluster-unique existing ID for the consumer - useful for mapping Kong with users in your existing database. |
 | `credentials` _string array_ | Credentials are references to secrets containing a credential to be provisioned in Kong. |
+| `consumerGroups` _string array_ | ConsumerGroups are references to consumer groups (that consumer wants to be part of) provisioned in Kong. |
 
 
 

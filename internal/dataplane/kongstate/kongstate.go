@@ -73,6 +73,18 @@ func (ks *KongState) FillConsumersAndCredentials(
 		c.K8sKongConsumer = *consumer
 		c.Tags = util.GenerateTagsForObject(consumer)
 
+		// Get consumer groups
+		for _, cgName := range consumer.ConsumerGroups {
+			cg, err := s.GetKongConsumerGroup(consumer.Namespace, cgName)
+			if err != nil {
+				failuresCollector.PushResourceFailure(fmt.Sprintf("nonexistent consumer group: %q", err), consumer)
+				continue
+			}
+			c.ConsumerGroups = append(c.ConsumerGroups, kong.ConsumerGroup{
+				Name: &cg.Name,
+			})
+		}
+
 		for _, cred := range consumer.Credentials {
 			pushCredentialResourceFailures := func(message string) {
 				failuresCollector.PushResourceFailure(fmt.Sprintf("credential %q failure: %s", cred, message), consumer)

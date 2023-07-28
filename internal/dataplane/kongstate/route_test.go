@@ -214,6 +214,7 @@ func TestOverrideRoute(t *testing.T) {
 	}
 
 	for _, testcase := range testTable {
+		testcase := testcase
 		testcase.inRoute.override(logrus.New(), &testcase.inKongIngresss)
 		assert.Equal(testcase.inRoute, testcase.outRoute)
 	}
@@ -496,6 +497,7 @@ func TestOverrideRouteStripPath(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
+		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			tt.args.route.overrideStripPath(tt.args.anns)
 			if !reflect.DeepEqual(tt.args.route.Route, tt.want) {
@@ -899,6 +901,7 @@ func TestOverrideRequestBuffering(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
+		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			tt.args.route.overrideRequestBuffering(logrus.New(), tt.args.anns)
 			if !reflect.DeepEqual(tt.args.route.Route, tt.want) {
@@ -972,6 +975,7 @@ func TestOverrideResponseBuffering(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
+		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			tt.args.route.overrideResponseBuffering(logrus.New(), tt.args.anns)
 			if !reflect.DeepEqual(tt.args.route.Route, tt.want) {

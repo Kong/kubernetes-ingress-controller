@@ -343,6 +343,7 @@ func findPort(svc *corev1.Service, wantPort kongstate.PortDef) (*corev1.ServiceP
 			}, nil
 		}
 		for _, port := range svc.Spec.Ports {
+			port := port
 			if port.Port == wantPort.Number {
 				return &port, nil
 			}
@@ -353,6 +354,7 @@ func findPort(svc *corev1.Service, wantPort kongstate.PortDef) (*corev1.ServiceP
 			return nil, fmt.Errorf("rules with an ExternalName service must specify numeric ports")
 		}
 		for _, port := range svc.Spec.Ports {
+			port := port
 			if port.Name == wantPort.Name {
 				return &port, nil
 			}

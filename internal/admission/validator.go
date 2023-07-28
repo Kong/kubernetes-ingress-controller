@@ -378,6 +378,7 @@ func (validator KongHTTPValidator) listManagedConsumers(ctx context.Context) ([]
 	// reduce the consumer set to consumers managed by this controller
 	managedConsumers := make([]*kongv1.KongConsumer, 0)
 	for _, consumer := range consumers.Items {
+		consumer := consumer
 		if !validator.ingressClassMatcher(&consumer.ObjectMeta, annotations.IngressClassKey,
 			annotations.ExactClassMatch) {
 			// ignore consumers (and subsequently secrets) that are managed by other controllers

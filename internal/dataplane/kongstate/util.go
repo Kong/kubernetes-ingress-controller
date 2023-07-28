@@ -78,37 +78,34 @@ func getKongIngressFromObjAnnotations(
 	return nil, nil
 }
 
-// getPlugin constructs a plugins from a KongPlugin resource.
-func getPlugin(s store.Storer, namespace, name string) (Plugin, error) {
-	var plugin Plugin
-	k8sPlugin, err := s.GetKongPlugin(namespace, name)
-	if err != nil {
-		// if no namespaced plugin definition, then
-		// search for cluster level-plugin definition
-		if errors.As(err, &store.ErrNotFound{}) {
-			clusterPlugin, err := s.GetKongClusterPlugin(name)
-			// not found
-			if errors.As(err, &store.ErrNotFound{}) {
-				return plugin, errors.New(
-					"no KongPlugin or KongClusterPlugin was found")
-			}
-			if err != nil {
-				return plugin, err
-			}
-			if clusterPlugin.PluginName == "" {
-				return plugin, fmt.Errorf("invalid empty 'plugin' property")
-			}
-			plugin, err = kongPluginFromK8SClusterPlugin(s, *clusterPlugin)
-			return plugin, err
+// getKongPluginOrKongClusterPlugin fetches a KongPlugin or KongClusterPlugin (as fallback) from the store.
+// If both are not found, an error is returned.
+func getKongPluginOrKongClusterPlugin(s store.Storer, namespace, name string) (
+	*configurationv1.KongPlugin,
+	*configurationv1.KongClusterPlugin,
+	error,
+) {
+	plugin, pluginErr := s.GetKongPlugin(namespace, name)
+	if pluginErr != nil {
+		if !errors.As(pluginErr, &store.ErrNotFound{}) {
+			return nil, nil, fmt.Errorf("failed fetching KongPlugin: %w", pluginErr)
 		}
-	}
-	// ignore plugins with no name
-	if k8sPlugin.PluginName == "" {
-		return plugin, fmt.Errorf("invalid empty 'plugin' property")
+
+		// If KongPlugin is not found, try to fetch KongClusterPlugin.
+		clusterPlugin, err := s.GetKongClusterPlugin(name)
+		if err != nil {
+			if !errors.As(err, &store.ErrNotFound{}) {
+				return nil, nil, fmt.Errorf("failed fetching KongClusterPlugin: %w", err)
+			}
+
+			// Both KongPlugin and KongClusterPlugin are not found.
+			return nil, nil, fmt.Errorf("no KongPlugin or KongClusterPlugin was found for %s/%s", namespace, name)
+		}
+
+		return nil, clusterPlugin, nil
 	}
 
-	plugin, err = kongPluginFromK8SPlugin(s, *k8sPlugin)
-	return plugin, err
+	return plugin, nil, nil
 }
 
 func kongPluginFromK8SClusterPlugin(

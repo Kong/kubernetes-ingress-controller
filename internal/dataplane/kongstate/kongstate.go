@@ -277,19 +277,40 @@ func (ks *KongState) getPluginRelations() map[string]util.ForeignRelations {
 	return pluginRels
 }
 
-func buildPlugins(log logrus.FieldLogger, s store.Storer, pluginRels map[string]util.ForeignRelations) []Plugin {
+func buildPlugins(
+	log logrus.FieldLogger,
+	s store.Storer,
+	failuresCollector *failures.ResourceFailuresCollector,
+	pluginRels map[string]util.ForeignRelations,
+) []Plugin {
 	var plugins []Plugin
 
 	for pluginIdentifier, relations := range pluginRels {
 		identifier := strings.Split(pluginIdentifier, ":")
 		namespace, kongPluginName := identifier[0], identifier[1]
-		plugin, err := getPlugin(s, namespace, kongPluginName)
+		k8sPlugin, k8sClusterPlugin, err := getKongPluginOrKongClusterPlugin(s, namespace, kongPluginName)
 		if err != nil {
 			log.WithFields(logrus.Fields{
 				"kongplugin_name":      kongPluginName,
 				"kongplugin_namespace": namespace,
-			}).WithError(err).Errorf("failed to fetch KongPlugin")
+			}).WithError(err).Errorf("failed to fetch KongPlugin resource")
 			continue
+		}
+
+		var plugin Plugin
+		if k8sPlugin != nil {
+			plugin, err = kongPluginFromK8SPlugin(s, *k8sPlugin)
+			if err != nil {
+				failuresCollector.PushResourceFailure(err.Error(), k8sPlugin)
+				continue
+			}
+		}
+		if k8sClusterPlugin != nil {
+			plugin, err = kongPluginFromK8SClusterPlugin(s, *k8sClusterPlugin)
+			if err != nil {
+				failuresCollector.PushResourceFailure(err.Error(), k8sClusterPlugin)
+				continue
+			}
 		}
 
 		for _, rel := range relations.GetCombinations() {
@@ -377,8 +398,12 @@ func globalPlugins(log logrus.FieldLogger, s store.Storer) ([]Plugin, error) {
 	return plugins, nil
 }
 
-func (ks *KongState) FillPlugins(log logrus.FieldLogger, s store.Storer) {
-	ks.Plugins = buildPlugins(log, s, ks.getPluginRelations())
+func (ks *KongState) FillPlugins(
+	log logrus.FieldLogger,
+	s store.Storer,
+	failuresCollector *failures.ResourceFailuresCollector,
+) {
+	ks.Plugins = buildPlugins(log, s, failuresCollector, ks.getPluginRelations())
 }
 
 // FillIDs iterates over the KongState and fills in the ID field for each entity

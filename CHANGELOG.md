@@ -138,6 +138,11 @@ Adding a new version? You'll need three changes:
   `Programmed` condition of an object when `kubectl get` is used.
   [#4425](https://github.com/Kong/kubernetes-ingress-controller/pull/4425)
   [#4423](https://github.com/Kong/kubernetes-ingress-controller/pull/4423)
+- Parser instead of logging errors for invalid `KongPlugin` or `KongClusterPlugin`
+  configuration, will now propagate a translation failure that will result
+  in the `Programmed` condition of the object being set to `False` and an
+  event being emitted.
+  [#4428](https://github.com/Kong/kubernetes-ingress-controller/pull/4428)
 
 ### Changed
 

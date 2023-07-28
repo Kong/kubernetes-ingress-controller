@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1690583714847,
+  "lastUpdate": 1690583716201,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -39834,6 +39834,48 @@ window.BENCHMARK_DATA = {
             "value": 12,
             "unit": "allocs/op",
             "extra": "15840 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "czeslavo@gmail.com",
+            "name": "Grzegorz Burzyński",
+            "username": "czeslavo"
+          },
+          "committer": {
+            "email": "czeslavo@gmail.com",
+            "name": "Grzegorz Burzyński",
+            "username": "czeslavo"
+          },
+          "distinct": true,
+          "id": "b12728fb1ca984e670419da29a768a0d66dbe816",
+          "message": "feat: propagate translation errors for KongPlugin and KongClusterPlugin",
+          "timestamp": "2023-07-29T00:34:08+02:00",
+          "tree_id": "e6de1b5bfbf8f32ed794a6ff75441973ee4bdd95",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/b12728fb1ca984e670419da29a768a0d66dbe816"
+        },
+        "date": 1690583708929,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - ns/op",
+            "value": 68993,
+            "unit": "ns/op",
+            "extra": "17271 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - B/op",
+            "value": 11101,
+            "unit": "B/op",
+            "extra": "17271 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - allocs/op",
+            "value": 12,
+            "unit": "allocs/op",
+            "extra": "17271 times\n2 procs"
           }
         ]
       },

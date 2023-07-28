@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1690537392317,
+  "lastUpdate": 1690538543853,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -37776,6 +37776,48 @@ window.BENCHMARK_DATA = {
             "value": 12,
             "unit": "allocs/op",
             "extra": "16876 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "czeslavo@gmail.com",
+            "name": "Grzegorz Burzyński",
+            "username": "czeslavo"
+          },
+          "committer": {
+            "email": "czeslavo@gmail.com",
+            "name": "Grzegorz Burzyński",
+            "username": "czeslavo"
+          },
+          "distinct": true,
+          "id": "8b37e1ddedfa5a241f84e129d207a7388befd970",
+          "message": "feat: add printer columns for programmed condition",
+          "timestamp": "2023-07-28T12:00:50+02:00",
+          "tree_id": "fec11365d050bc9ffd7cf401711555b9f51be039",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/8b37e1ddedfa5a241f84e129d207a7388befd970"
+        },
+        "date": 1690538536505,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - ns/op",
+            "value": 121085,
+            "unit": "ns/op",
+            "extra": "14736 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - B/op",
+            "value": 11097,
+            "unit": "B/op",
+            "extra": "14736 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - allocs/op",
+            "value": 12,
+            "unit": "allocs/op",
+            "extra": "14736 times\n2 procs"
           }
         ]
       }

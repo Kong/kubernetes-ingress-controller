@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1690538923581,
+  "lastUpdate": 1690539163043,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -37986,6 +37986,48 @@ window.BENCHMARK_DATA = {
             "value": 12,
             "unit": "allocs/op",
             "extra": "17623 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "lavacca.mattia@gmail.com",
+            "name": "Mattia Lavacca",
+            "username": "mlavacca"
+          },
+          "committer": {
+            "email": "lavacca.mattia@gmail.com",
+            "name": "Mattia Lavacca",
+            "username": "mlavacca"
+          },
+          "distinct": true,
+          "id": "34569317ec0f8ad88c54e0e820f185287a5d4f69",
+          "message": "tls service creation\n\nSigned-off-by: Mattia Lavacca <lavacca.mattia@gmail.com>",
+          "timestamp": "2023-07-28T12:08:24+02:00",
+          "tree_id": "308b1e9d1186a8fd6477916de7fedb3db6111faa",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/34569317ec0f8ad88c54e0e820f185287a5d4f69"
+        },
+        "date": 1690539156716,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - ns/op",
+            "value": 87717,
+            "unit": "ns/op",
+            "extra": "14212 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - B/op",
+            "value": 11106,
+            "unit": "B/op",
+            "extra": "14212 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - allocs/op",
+            "value": 12,
+            "unit": "allocs/op",
+            "extra": "14212 times\n2 procs"
           }
         ]
       }

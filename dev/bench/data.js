@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1690537390860,
+  "lastUpdate": 1690537392317,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -37692,6 +37692,48 @@ window.BENCHMARK_DATA = {
             "value": 12,
             "unit": "allocs/op",
             "extra": "17349 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "czeslavo@gmail.com",
+            "name": "Grzegorz Burzyński",
+            "username": "czeslavo"
+          },
+          "committer": {
+            "email": "czeslavo@gmail.com",
+            "name": "Grzegorz Burzyński",
+            "username": "czeslavo"
+          },
+          "distinct": true,
+          "id": "e4c27419aa75a389240bc54bc70f16c1c41a66ef",
+          "message": "feat: add kubebuilder annotations to programmed conditions",
+          "timestamp": "2023-07-28T11:42:05+02:00",
+          "tree_id": "f7f0edfe555d11dda7e14238aeef27b93fd4356b",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/e4c27419aa75a389240bc54bc70f16c1c41a66ef"
+        },
+        "date": 1690537385514,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - ns/op",
+            "value": 75601,
+            "unit": "ns/op",
+            "extra": "16876 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - B/op",
+            "value": 11097,
+            "unit": "B/op",
+            "extra": "16876 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - allocs/op",
+            "value": 12,
+            "unit": "allocs/op",
+            "extra": "16876 times\n2 procs"
           }
         ]
       },

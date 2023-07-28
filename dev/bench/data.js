@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1690541074213,
+  "lastUpdate": 1690541075815,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -38322,6 +38322,48 @@ window.BENCHMARK_DATA = {
             "value": 12,
             "unit": "allocs/op",
             "extra": "16761 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "czeslavo@gmail.com",
+            "name": "Grzegorz Burzyński",
+            "username": "czeslavo"
+          },
+          "committer": {
+            "email": "czeslavo@gmail.com",
+            "name": "Grzegorz Burzyński",
+            "username": "czeslavo"
+          },
+          "distinct": true,
+          "id": "1963023aef9cb0303fc8cebce5a4ee8d7af04fbc",
+          "message": "tests: add parser golden tests covering expression routes",
+          "timestamp": "2023-07-28T12:43:09+02:00",
+          "tree_id": "daf655ea0312bde2a66b97e0956f02c97f56d92e",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/1963023aef9cb0303fc8cebce5a4ee8d7af04fbc"
+        },
+        "date": 1690541068485,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - ns/op",
+            "value": 72675,
+            "unit": "ns/op",
+            "extra": "17505 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - B/op",
+            "value": 11093,
+            "unit": "B/op",
+            "extra": "17505 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - allocs/op",
+            "value": 12,
+            "unit": "allocs/op",
+            "extra": "17505 times\n2 procs"
           }
         ]
       },

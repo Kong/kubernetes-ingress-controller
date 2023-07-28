@@ -189,7 +189,7 @@ func TestGenerateKongExpressionRoutesFromGRPCRouteRule(t *testing.T) {
 					ExpressionRoutes: true,
 					Route: kong.Route{
 						Name:       kong.String("grpcroute.default.single-match-with-annotations.0.0"),
-						Expression: kong.String(`(http.path == "/service0/method0") && (net.protocol == "https") && (tls.sni == "kong.foo.com")`),
+						Expression: kong.String(`(http.path == "/service0/method0") && (tls.sni == "kong.foo.com")`),
 						Priority:   kong.Int(1),
 					},
 				},

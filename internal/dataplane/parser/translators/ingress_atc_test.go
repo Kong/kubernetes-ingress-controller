@@ -73,7 +73,7 @@ func TestTranslateIngressATC(t *testing.T) {
 						},
 						Route: kong.Route{
 							Name:       kong.String("default.test-ingress.test-service.konghq.com.80"),
-							Expression: kong.String(`(http.host == "konghq.com") && ((http.path == "/api") || (http.path ^= "/api/")) && ((net.protocol == "http") || (net.protocol == "https"))`),
+							Expression: kong.String(`(http.host == "konghq.com") && ((http.path == "/api") || (http.path ^= "/api/"))`),
 							Priority: kong.Int(IngressRoutePriorityTraits{
 								MatchFields:   2,
 								PlainHostOnly: true,
@@ -150,7 +150,7 @@ func TestTranslateIngressATC(t *testing.T) {
 						},
 						Route: kong.Route{
 							Name:       kong.String("default.test-ingress.test-service.konghq.com.80"),
-							Expression: kong.String(`(http.host == "konghq.com") && (http.path ^= "/api/") && ((net.protocol == "http") || (net.protocol == "https"))`),
+							Expression: kong.String(`(http.host == "konghq.com") && (http.path ^= "/api/")`),
 							Priority: kong.Int(IngressRoutePriorityTraits{
 								MatchFields:   2,
 								PlainHostOnly: true,
@@ -517,37 +517,6 @@ func TestHeaderMatcherFromHeaders(t *testing.T) {
 		})
 	}
 }
-
-func TestProtocolMatcherFromProtocols(t *testing.T) {
-	testCases := []struct {
-		name       string
-		protocols  []string
-		expression string
-	}{
-		{
-			name:       "single protocol",
-			protocols:  []string{"https"},
-			expression: `net.protocol == "https"`,
-		},
-		{
-			name:       "multiple protocols",
-			protocols:  []string{"http", "https"},
-			expression: `(net.protocol == "http") || (net.protocol == "https")`,
-		},
-		{
-			name:       "multiple protocols including invalid protocol",
-			protocols:  []string{"http", "ppp"},
-			expression: `net.protocol == "http"`,
-		},
-	}
-
-	for _, tc := range testCases {
-		tc := tc
-		matcher := protocolMatcherFromProtocols(tc.protocols)
-		require.Equal(t, tc.expression, matcher.Expression())
-	}
-}
-
 func TestMethodMatcherFromMethods(t *testing.T) {
 	testCases := []struct {
 		name       string

@@ -82,15 +82,6 @@ func (m *ingressTranslationMeta) translateIntoKongExpressionRoute() *kongstate.R
 	}
 	routeMatcher.And(atc.Or(pathMatchers...))
 
-	// translate protocols.
-	protocols := []string{"http", "https"}
-	annonationProtocols := annotations.ExtractProtocolNames(ingressAnnotations)
-	if len(annonationProtocols) > 0 {
-		protocols = annonationProtocols
-	}
-	protocolMatcher := protocolMatcherFromProtocols(protocols)
-	routeMatcher.And(protocolMatcher)
-
 	// translate headers.
 	headers, exist := annotations.ExtractHeaders(ingressAnnotations)
 	if len(headers) > 0 && exist {
@@ -159,18 +150,6 @@ func pathMatcherFromIngressPath(httpIngressPath netv1.HTTPIngressPath, regexPath
 	}
 
 	return nil
-}
-
-// protocolMatcherFromProtocols gernerates matchers from protocols.
-func protocolMatcherFromProtocols(protocols []string) atc.Matcher {
-	matchers := []atc.Matcher{}
-	for _, protocol := range protocols {
-		if !util.ValidateProtocol(protocol) {
-			continue
-		}
-		matchers = append(matchers, atc.NewPredicateNetProtocol(atc.OpEqual, protocol))
-	}
-	return atc.Or(matchers...)
 }
 
 // headerMatcherFromHeaders generates matcher to match headers in HTTP requests.

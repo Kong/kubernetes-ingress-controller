@@ -59,7 +59,7 @@ func GenerateKongExpressionRoutesFromHTTPRouteMatches(
 
 	// if we do not need to generate a kong route for each match, we OR matchers from all matches together.
 	routeMatcher := atc.And(atc.Or(generateMatchersFromHTTPRouteMatches(translation.Matches)...))
-	// add matcher from parent httproute (hostnames, protocols, SNIs) to be ANDed with the matcher from match.
+	// add matcher from parent httproute (hostnames, SNIs) to be ANDed with the matcher from match.
 	matchersFromParent := matchersFromParentHTTPRoute(hostnames, ingressObjectInfo.Annotations)
 	for _, matcher := range matchersFromParent {
 		routeMatcher.And(matcher)
@@ -214,16 +214,6 @@ func matchersFromParentHTTPRoute(hostnames []string, metaAnnotations map[string]
 		hostMatcher := hostMatcherFromHosts(hostnames)
 		ret = append(ret, hostMatcher)
 	}
-
-	// translate protocols.
-	protocols := []string{"http", "https"}
-	// override from "protocols" key in annotations.
-	annonationProtocols := annotations.ExtractProtocolNames(metaAnnotations)
-	if len(annonationProtocols) > 0 {
-		protocols = annonationProtocols
-	}
-	protocolMatcher := protocolMatcherFromProtocols(protocols)
-	ret = append(ret, protocolMatcher)
 
 	// translate SNIs.
 	snis, exist := annotations.ExtractSNIs(metaAnnotations)

@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1690510138094,
+  "lastUpdate": 1690510140234,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -36852,6 +36852,48 @@ window.BENCHMARK_DATA = {
             "value": 12,
             "unit": "allocs/op",
             "extra": "15549 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "571832+rainest@users.noreply.github.com",
+            "name": "Travis Raines",
+            "username": "rainest"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "7a32afbc016f89566aff4ab07620d246c2651aac",
+          "message": "fix(parser) support same-name services across NSes (#4375)\n\nCorrectly build upstreams for multiple backends where multiple services\r\nin the backends share the same name in different namespaces. Previously\r\nservices were indexed by name alone in the rule builder, resulting in\r\none clobbering the other(s).",
+          "timestamp": "2023-07-28T10:07:37+08:00",
+          "tree_id": "a142fcec386f3653f00978629cadfa347e309cb3",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/7a32afbc016f89566aff4ab07620d246c2651aac"
+        },
+        "date": 1690510131067,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - ns/op",
+            "value": 84727,
+            "unit": "ns/op",
+            "extra": "14928 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - B/op",
+            "value": 11101,
+            "unit": "B/op",
+            "extra": "14928 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - allocs/op",
+            "value": 12,
+            "unit": "allocs/op",
+            "extra": "14928 times\n2 procs"
           }
         ]
       },

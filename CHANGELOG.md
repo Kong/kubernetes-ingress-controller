@@ -109,6 +109,7 @@ Adding a new version? You'll need three changes:
   them to expression based Kong routes. The assigning method follows the
   [specification on priorities of matches in `HTTPRoute`][httproute-specification].
   [#4296](https://github.com/Kong/kubernetes-ingress-controller/pull/4296)
+  [#4430](https://github.com/Kong/kubernetes-ingress-controller/pull/4430)
 - Assign priorities to routes translated from GRPCRoutes when the parser translates 
   them to expression based Kong routes. The priority order follows the
   [specification on match priorities in GRPCRoute][grpcroute-specification].

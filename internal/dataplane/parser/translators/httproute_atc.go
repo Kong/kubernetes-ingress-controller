@@ -3,7 +3,6 @@ package translators
 import (
 	"fmt"
 	"sort"
-	"strconv"
 	"strings"
 
 	"github.com/go-logr/logr"
@@ -239,50 +238,47 @@ const (
 	InternalMatchIndexAnnotationKey = "internal-match-index"
 )
 
-// SplitHTTPRoute splits HTTPRoutes into HTTPRoutes with at most one hostname, and at most one rule
+type SplitHTTPRouteMatch struct {
+	Source     *gatewayv1beta1.HTTPRoute
+	Hostname   string
+	Match      gatewayv1beta1.HTTPRouteMatch
+	RuleIndex  int
+	MatchIndex int
+}
+
+// SplitHTTPRoute splits HTTPRoutes into matches with at most one hostname, and one rule
 // with exactly one match. It will split one rule with multiple hostnames and multiple matches
 // to one hostname and one match per each HTTPRoute.
-func SplitHTTPRoute(httproute *gatewayv1beta1.HTTPRoute) []*gatewayv1beta1.HTTPRoute {
-	// split HTTPRoutes by hostname.
-	hostnamedRoutes := []*gatewayv1beta1.HTTPRoute{}
-	if len(httproute.Spec.Hostnames) == 0 {
-		hostnamedRoutes = append(hostnamedRoutes, httproute.DeepCopy())
-	} else {
-		for _, hostname := range httproute.Spec.Hostnames {
-			hostNamedRoute := httproute.DeepCopy()
-			hostNamedRoute.Spec.Hostnames = []gatewayv1beta1.Hostname{hostname}
-			hostnamedRoutes = append(hostnamedRoutes, hostNamedRoute)
-		}
-	}
-	// split HTTPRoutes (already split once by hostname) by match.
-	newHTTPRoutes := []*gatewayv1beta1.HTTPRoute{}
-	for _, route := range hostnamedRoutes {
-		for i, rule := range route.Spec.Rules {
-			for j, match := range rule.Matches {
-				splitRoute := route.DeepCopy()
-				splitRoute.Spec.Rules = []gatewayv1beta1.HTTPRouteRule{
-					{
-						Matches:     []gatewayv1beta1.HTTPRouteMatch{match},
-						Filters:     rule.Filters,
-						BackendRefs: rule.BackendRefs,
-					},
-				}
-				if splitRoute.Annotations == nil {
-					splitRoute.Annotations = map[string]string{}
-				}
-				splitRoute.Annotations[InternalRuleIndexAnnotationKey] = strconv.Itoa(i)
-				splitRoute.Annotations[InternalMatchIndexAnnotationKey] = strconv.Itoa(j)
-				newHTTPRoutes = append(newHTTPRoutes, splitRoute)
+func SplitHTTPRoute(httproute *gatewayv1beta1.HTTPRoute) []SplitHTTPRouteMatch {
+	splitMatches := []SplitHTTPRouteMatch{}
+	splitHTTPRouteByMatch := func(hostname string) {
+		for ruleIndex, rule := range httproute.Spec.Rules {
+			for matchIndex, match := range rule.Matches {
+				splitMatches = append(splitMatches, SplitHTTPRouteMatch{
+					Source:     httproute,
+					Hostname:   hostname,
+					Match:      *match.DeepCopy(),
+					RuleIndex:  ruleIndex,
+					MatchIndex: matchIndex,
+				})
 			}
 		}
 	}
 
-	return newHTTPRoutes
+	if len(httproute.Spec.Hostnames) == 0 {
+		splitHTTPRouteByMatch("")
+		return splitMatches
+	}
+
+	for _, hostname := range httproute.Spec.Hostnames {
+		splitHTTPRouteByMatch(string(hostname))
+	}
+	return splitMatches
 }
 
-type SplitHTTPRouteToKongRoutePriority struct {
-	HTTPRoute *gatewayv1beta1.HTTPRoute
-	Priority  int
+type SplitHTTPRouteMatchToKongRoutePriority struct {
+	Match    SplitHTTPRouteMatch
+	Priority int
 }
 
 type HTTPRoutePriorityTraits struct {
@@ -295,8 +291,9 @@ type HTTPRoutePriorityTraits struct {
 	QueryParamCount int
 }
 
-// CalculateSplitHTTPRoutePriorityTraits calculates the parts of priority that can be decided by the
-// fields in spec of the already split HTTPRoute. Specification of priority goes as follow:
+// CalculateHTTPRouteMatchPriorityTraits calculates the parts of priority
+// that can be decided by the fields in spec of the match split from HTTPRoute.
+// Specification of priority goes as follow:
 // (The following comments are extracted from gateway API specification about HTTPRoute)
 //
 // In the event that multiple HTTPRoutes specify intersecting hostnames,
@@ -315,42 +312,41 @@ type HTTPRoutePriorityTraits struct {
 //   - Method match.
 //   - Largest number of header matches.
 //   - Largest number of query param matches.
-func CalculateSplitHTTPRoutePriorityTraits(httpRoute *gatewayv1beta1.HTTPRoute) HTTPRoutePriorityTraits {
+func CalculateHTTPRouteMatchPriorityTraits(match SplitHTTPRouteMatch) HTTPRoutePriorityTraits {
 	traits := HTTPRoutePriorityTraits{}
-	// the HTTPRoute here have been already split by hostnames and matches,
-	// so one HTTPRoute have at most one hostname.
-	if len(httpRoute.Spec.Hostnames) != 0 {
-		hostname := httpRoute.Spec.Hostnames[0]
-		traits.HostnameLength = len(hostname)
+	// fill traits from hostname.
+	if len(match.Hostname) != 0 {
+		traits.HostnameLength = len(match.Hostname)
 		// if the hostname does not start with *, the split HTTPRoute should have precise hostname.
-		if !strings.HasPrefix(string(hostname), "*") {
+		if !strings.HasPrefix(match.Hostname, "*") {
 			traits.PreciseHostname = true
 		}
 	}
 
-	// also, the HTTPRoute have been split so it have at most one match.
-	if len(httpRoute.Spec.Rules) > 0 && len(httpRoute.Spec.Rules[0].Matches) > 0 {
-		match := httpRoute.Spec.Rules[0].Matches[0]
-		if match.Path != nil {
-			// fill path type.
-			if match.Path.Type != nil {
-				traits.PathType = *match.Path.Type
-			}
-			// fill path length.
-			if match.Path.Value != nil {
-				traits.PathLength = len(*match.Path.Value)
-			}
+	// fill traits from path match.
+	if match.Match.Path != nil {
+		pathMatch := match.Match.Path
+		// fill path type.
+		if pathMatch.Type != nil {
+			traits.PathType = *pathMatch.Type
 		}
-
-		// fill number of header matches.
-		traits.HeaderCount = len(match.Headers)
-		// fill method match.
-		if match.Method != nil {
-			traits.HasMethodMatch = true
+		// fill path length.
+		if pathMatch.Value != nil {
+			traits.PathLength = len(*pathMatch.Value)
 		}
-		// fill number of query parameters.
-		traits.QueryParamCount = len(match.QueryParams)
 	}
+
+	// fill method match.
+	if match.Match.Method != nil {
+		traits.HasMethodMatch = true
+	}
+
+	// fill number of header matches.
+	traits.HeaderCount = len(match.Match.Headers)
+
+	// fill number of query parameters.
+	traits.QueryParamCount = len(match.Match.QueryParams)
+
 	return traits
 }
 
@@ -423,52 +419,46 @@ func (t HTTPRoutePriorityTraits) EncodeToPriority() int {
 	return priority
 }
 
-// AssignRoutePriorityToSplitHTTPRoutes assigns priority to ALL split HTTPRoutes
-// that are split by hostnames and matches from HTTPRoutes listed from the cache.
-// Firstly assign "fixed" bits by the following fields of the HTTPRoute:
+// AssignRoutePriorityToSplitHTTPRouteMatches assigns priority to
+// ALL split matches from ALL HTTPRoutes in the cache.
+// Firstly assign "fixed" bits by the following fields of the match:
 // hostname, path type, path length, method match, number of header matches, number of query param matches.
-// If ties exists in the first step, where multiple HTTPRoute has the same priority
-// calculated from the fields, we run a sort for the HTTPRoutes in the tie
-// and assign the bits for "relative order" according to the sorting result of these HTTPRoutes.
-func AssignRoutePriorityToSplitHTTPRoutes(
+// If ties exists in the first step, where multiple matches has the same priority
+// calculated from the fields, we run a sort for the matches in the tie
+// and assign the bits for "relative order" according to the sorting result of these matches.
+func AssignRoutePriorityToSplitHTTPRouteMatches(
 	logger logr.Logger,
-	splitHTTPRoutes []*gatewayv1beta1.HTTPRoute,
-) []SplitHTTPRouteToKongRoutePriority {
-	priorityToSplitHTTPRoutes := map[int][]*gatewayv1beta1.HTTPRoute{}
+	splitHTTPRouteMatches []SplitHTTPRouteMatch,
+) []SplitHTTPRouteMatchToKongRoutePriority {
+	priorityToSplitHTTPRouteMatches := map[int][]SplitHTTPRouteMatch{}
 
-	for _, httpRoute := range splitHTTPRoutes {
-		anns := httpRoute.Annotations
-		// skip if HTTPRoute does not contain the annotation, because this means the HTTPRoute is not a split one.
-		if anns == nil || anns[InternalRuleIndexAnnotationKey] == "" || anns[InternalMatchIndexAnnotationKey] == "" {
-			continue
-		}
-
-		priority := CalculateSplitHTTPRoutePriorityTraits(httpRoute).EncodeToPriority()
-		priorityToSplitHTTPRoutes[priority] = append(priorityToSplitHTTPRoutes[priority], httpRoute)
+	for _, match := range splitHTTPRouteMatches {
+		priority := CalculateHTTPRouteMatchPriorityTraits(match).EncodeToPriority()
+		priorityToSplitHTTPRouteMatches[priority] = append(priorityToSplitHTTPRouteMatches[priority], match)
 	}
 
-	httpRoutesToPriorities := make([]SplitHTTPRouteToKongRoutePriority, 0, len(splitHTTPRoutes))
+	httpRouteMatchesToPriorities := make([]SplitHTTPRouteMatchToKongRoutePriority, 0, len(splitHTTPRouteMatches))
 
-	// Bits 0-17 (18 bits) are assigned for relative order of HTTPRoutes.
-	// If multiple HTTPRoutes are assigned to the same priority in the previous step,
+	// Bits 0-17 (18 bits) are assigned for relative order of matches.
+	// If multiple matches are assigned to the same priority in the previous step,
 	// sort them then starts with 2^18 -1 and decrease by one for each HTTPRoute;
-	// If only one HTTPRoute occupies the priority, fill the relative order bits with all 1s.
+	// If only one match occupies the priority, fill the relative order bits with all 1s.
 	const RelativeOrderAssignedBits = 18
 	const defaultRelativeOrderPriorityBits = (1 << RelativeOrderAssignedBits) - 1
-	for priority, routes := range priorityToSplitHTTPRoutes {
-		if len(routes) == 1 {
-			httpRoutesToPriorities = append(httpRoutesToPriorities, SplitHTTPRouteToKongRoutePriority{
-				HTTPRoute: routes[0],
-				Priority:  priority + defaultRelativeOrderPriorityBits,
+	for priority, matches := range priorityToSplitHTTPRouteMatches {
+		if len(matches) == 1 {
+			httpRouteMatchesToPriorities = append(httpRouteMatchesToPriorities, SplitHTTPRouteMatchToKongRoutePriority{
+				Match:    matches[0],
+				Priority: priority + defaultRelativeOrderPriorityBits,
 			})
 			continue
 		}
 
-		sort.SliceStable(routes, func(i, j int) bool {
-			return compareSplitHTTPRoutesRelativePriority(routes[i], routes[j])
+		sort.SliceStable(matches, func(i, j int) bool {
+			return compareSplitHTTPRouteMatchesRelativePriority(matches[i], matches[j])
 		})
 
-		for i, route := range routes {
+		for i, match := range matches {
 			relativeOrderBits := defaultRelativeOrderPriorityBits - i
 			// Although it is very unlikely that there are 2^18 = 262144 HTTPRoutes
 			// should be given priority by their relative order, here we limit the
@@ -476,22 +466,24 @@ func AssignRoutePriorityToSplitHTTPRoutes(
 			if relativeOrderBits <= 0 {
 				relativeOrderBits = 0
 			}
-			httpRoutesToPriorities = append(httpRoutesToPriorities, SplitHTTPRouteToKongRoutePriority{
-				HTTPRoute: route,
-				Priority:  priority + relativeOrderBits,
+			httpRouteMatchesToPriorities = append(httpRouteMatchesToPriorities, SplitHTTPRouteMatchToKongRoutePriority{
+				Match:    match,
+				Priority: priority + relativeOrderBits,
 			})
 		}
-		// Just in case, log a very unlikely scenario where we have more than 2^18 routes with the same base
+		// Just in case, log a very unlikely scenario where we have more than 2^18 matches with the same base
 		// priority and we have no bit space for them to be deterministically ordered.
-		if len(routes) > (1 << 18) {
-			logger.V(util.WarnLevel).Info("Too many HTTPRoutes to be deterministically ordered", "httproute_number", len(routes))
+		if len(matches) > (1 << 18) {
+			logger.V(util.WarnLevel).Info("Too many HTTPRoute matches to be deterministically ordered", "match_number", len(matches))
 		}
 	}
 
-	return httpRoutesToPriorities
+	return httpRouteMatchesToPriorities
 }
 
-func compareSplitHTTPRoutesRelativePriority(route1, route2 *gatewayv1beta1.HTTPRoute) bool {
+func compareSplitHTTPRouteMatchesRelativePriority(match1, match2 SplitHTTPRouteMatch) bool {
+	route1 := match1.Source
+	route2 := match2.Source
 	// compare by creation timestamp.
 	if !route1.CreationTimestamp.Equal(&route2.CreationTimestamp) {
 		return route1.CreationTimestamp.Before(&route2.CreationTimestamp)
@@ -505,16 +497,12 @@ func compareSplitHTTPRoutesRelativePriority(route1, route2 *gatewayv1beta1.HTTPR
 		return route1.Name < route2.Name
 	}
 	// if ties still exist, compare by internal rule order and match order.
-	ruleIndex1, _ := strconv.Atoi(route1.Annotations[InternalRuleIndexAnnotationKey])
-	ruleIndex2, _ := strconv.Atoi(route2.Annotations[InternalRuleIndexAnnotationKey])
-	if ruleIndex1 != ruleIndex2 {
-		return ruleIndex1 < ruleIndex2
+	if match1.RuleIndex != match2.RuleIndex {
+		return match1.RuleIndex < match2.RuleIndex
 	}
 
-	matchIndex1, _ := strconv.Atoi(route1.Annotations[InternalMatchIndexAnnotationKey])
-	matchIndex2, _ := strconv.Atoi(route2.Annotations[InternalMatchIndexAnnotationKey])
-	if matchIndex1 != matchIndex2 {
-		return matchIndex1 < matchIndex2
+	if match1.MatchIndex != match2.MatchIndex {
+		return match1.MatchIndex < match2.MatchIndex
 	}
 
 	// should be unreachable.
@@ -530,27 +518,27 @@ func getHTTPRouteHostnamesAsSliceOfStrings(httproute *gatewayv1beta1.HTTPRoute) 
 	})
 }
 
-// KongExpressionRouteFromHTTPRouteWithPriority translates split HTTPRoute into expression
+// KongExpressionRouteFromHTTPRouteMatchWithPriority translates a split HTTPRoute match into expression
 // based kong route with assigned priority.
-// the HTTPRoute should have at most one hostname, and at most one rule having exactly one match.
-func KongExpressionRouteFromHTTPRouteWithPriority(
-	httpRouteWithPriority SplitHTTPRouteToKongRoutePriority,
+func KongExpressionRouteFromHTTPRouteMatchWithPriority(
+	httpRouteMatchWithPriority SplitHTTPRouteMatchToKongRoutePriority,
 ) kongstate.Route {
-	httproute := httpRouteWithPriority.HTTPRoute
+	match := httpRouteMatchWithPriority.Match
+	httproute := httpRouteMatchWithPriority.Match.Source
 	tags := util.GenerateTagsForObject(httproute)
 	// since we split HTTPRoutes by hostname, rule and match, we generate the route name in
 	// httproute.<namespace>.<name>.<hostname>.<rule index>.<match index> format.
-	hostname := "_"
-	if len(httproute.Spec.Hostnames) > 0 {
-		hostname = string(httproute.Spec.Hostnames[0])
-		hostname = strings.ReplaceAll(hostname, "*", "_")
+	hostnameInRouteName := "_"
+	if len(match.Hostname) > 0 {
+		hostnameInRouteName = strings.ReplaceAll(match.Hostname, "*", "_")
 	}
-	routeName := fmt.Sprintf("httproute.%s.%s.%s.%s.%s",
+
+	routeName := fmt.Sprintf("httproute.%s.%s.%s.%d.%d",
 		httproute.Namespace,
 		httproute.Name,
-		hostname,
-		httproute.Annotations[InternalRuleIndexAnnotationKey],
-		httproute.Annotations[InternalMatchIndexAnnotationKey],
+		hostnameInRouteName,
+		match.RuleIndex,
+		match.MatchIndex,
 	)
 
 	r := kongstate.Route{
@@ -571,18 +559,15 @@ func KongExpressionRouteFromHTTPRouteWithPriority(
 	if len(httproute.Spec.Rules) > 0 && len(httproute.Spec.Rules[0].Matches) > 0 {
 		matchers = append(matchers, generateMatcherFromHTTPRouteMatch(httproute.Spec.Rules[0].Matches[0]))
 	}
-	atc.ApplyExpression(&r.Route, atc.And(matchers...), httpRouteWithPriority.Priority)
+	atc.ApplyExpression(&r.Route, atc.And(matchers...), httpRouteMatchWithPriority.Priority)
 
 	// translate filters in the rule.
-	if len(httproute.Spec.Rules) > 0 {
-		rule := httproute.Spec.Rules[0]
+	if match.RuleIndex < len(httproute.Spec.Rules) {
+		rule := httproute.Spec.Rules[match.RuleIndex]
 		path := ""
-		// since we have at most one match per rule, we do not need to generate request redirect for each match.
-		if len(rule.Matches) > 0 {
-			match := rule.Matches[0]
-			if match.Path != nil && match.Path.Value != nil {
-				path = *match.Path.Value
-			}
+		// since we have one match to translate, we do not need to generate request redirect for each match.
+		if match.Match.Path != nil && match.Match.Path.Value != nil {
+			path = *match.Match.Path.Value
 		}
 
 		plugins := GeneratePluginsFromHTTPRouteFilters(rule.Filters, path, tags)
@@ -597,18 +582,18 @@ func KongExpressionRouteFromHTTPRouteWithPriority(
 // in the format httproute.<namespace>.<name>.<hostname>.<rule index>.
 // For example: `httproute.default.example.foo.com.0`.
 func KongServiceNameFromHTTPRouteWithPriority(
-	httpRouteWithPriority SplitHTTPRouteToKongRoutePriority,
+	httpRouteMatchWithPriority SplitHTTPRouteMatchToKongRoutePriority,
 ) string {
-	httproute := httpRouteWithPriority.HTTPRoute
+	match := httpRouteMatchWithPriority.Match
+	httproute := match.Source
 	hostname := "_"
-	if len(httproute.Spec.Hostnames) > 0 {
-		hostname = string(httproute.Spec.Hostnames[0])
+	if len(match.Hostname) > 0 {
 		hostname = strings.ReplaceAll(hostname, "*", "_")
 	}
-	return fmt.Sprintf("httproute.%s.%s.%s.%s",
+	return fmt.Sprintf("httproute.%s.%s.%s.%d",
 		httproute.Namespace,
 		httproute.Name,
 		hostname,
-		httproute.Annotations[InternalRuleIndexAnnotationKey],
+		match.RuleIndex,
 	)
 }

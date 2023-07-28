@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1690531583629,
+  "lastUpdate": 1690531585874,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -37356,6 +37356,48 @@ window.BENCHMARK_DATA = {
             "value": 12,
             "unit": "allocs/op",
             "extra": "13080 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jakub.warczarek@konghq.com",
+            "name": "Jakub Warczarek",
+            "username": "programmer04"
+          },
+          "committer": {
+            "email": "jakub.warczarek@konghq.com",
+            "name": "Jakub Warczarek",
+            "username": "programmer04"
+          },
+          "distinct": true,
+          "id": "9a712bd806b69eddbb4928229b107d90533427a3",
+          "message": "CR fixes and proposing of test skipping",
+          "timestamp": "2023-07-28T10:04:35+02:00",
+          "tree_id": "500db601ba7745d194aa3fae29f91183293f53ee",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/9a712bd806b69eddbb4928229b107d90533427a3"
+        },
+        "date": 1690531576220,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - ns/op",
+            "value": 87680,
+            "unit": "ns/op",
+            "extra": "14497 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - B/op",
+            "value": 11102,
+            "unit": "B/op",
+            "extra": "14497 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - allocs/op",
+            "value": 12,
+            "unit": "allocs/op",
+            "extra": "14497 times\n2 procs"
           }
         ]
       },

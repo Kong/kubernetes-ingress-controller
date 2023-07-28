@@ -6,7 +6,7 @@ package v1
 // +kubebuilder:object:generate=true
 type KongProtocol string
 
-// KongProtocolsToStrings converts a slice of KongProtocol to plain strings
+// KongProtocolsToStrings converts a slice of KongProtocol to plain strings.
 func KongProtocolsToStrings(protocols []KongProtocol) (res []string) {
 	for _, protocol := range protocols {
 		res = append(res, string(protocol))
@@ -14,7 +14,7 @@ func KongProtocolsToStrings(protocols []KongProtocol) (res []string) {
 	return
 }
 
-// StringsToKongProtocols converts a slice of strings to KongProtocols
+// StringsToKongProtocols converts a slice of strings to KongProtocols.
 func StringsToKongProtocols(strings []string) (res []KongProtocol) {
 	for _, protocol := range strings {
 		res = append(res, KongProtocol(protocol))
@@ -22,7 +22,7 @@ func StringsToKongProtocols(strings []string) (res []KongProtocol) {
 	return
 }
 
-// ProtocolSlice converts a slice of string to a slice of *KongProtocol
+// ProtocolSlice converts a slice of string to a slice of *KongProtocol.
 func ProtocolSlice(elements ...string) []*KongProtocol {
 	var res []*KongProtocol
 	for _, element := range elements {

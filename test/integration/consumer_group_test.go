@@ -34,7 +34,7 @@ func TestConsumerGroup(t *testing.T) {
 	require.NoError(t, err)
 
 	const consumerGroupName = "test-consumer-group"
-	t.Logf("configuring Consumer Group: %q", consumerGroupName)
+	t.Logf("configuring consumer group: %q", consumerGroupName)
 	cg, err := c.ConfigurationV1beta1().KongConsumerGroups(ns.Name).Create(
 		ctx,
 		&kongv1beta1.KongConsumerGroup{
@@ -51,7 +51,7 @@ func TestConsumerGroup(t *testing.T) {
 	require.NoError(t, err)
 	cleaner.Add(cg)
 
-	t.Logf("validating that Consumer Group: %q was successfully configured", consumerGroupName)
+	t.Logf("validating that consumer group: %q was successfully configured", consumerGroupName)
 	require.Eventually(t, func() bool {
 		cgPath := fmt.Sprintf("/consumer_groups/%s", consumerGroupName)
 		var headers map[string]string

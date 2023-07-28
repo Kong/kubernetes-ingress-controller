@@ -428,6 +428,8 @@ IngressTLS describes the transport layer security.
 _Appears in:_
 - [TCPIngressSpec](#tcpingressspec)
 
+
+
 ### TCPIngressSpec
 
 

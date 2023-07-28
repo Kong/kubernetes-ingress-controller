@@ -240,6 +240,9 @@ func (p *Parser) BuildKongConfig() KongConfigBuildingResult {
 
 	// process consumer groups
 	result.FillConsumerGroups(p.logger, p.storer)
+	for _, cg := range result.ConsumerGroups {
+		p.registerSuccessfullyParsedObject(&cg.K8sKongConsumerGroup)
+	}
 
 	// generate Certificates and SNIs
 	ingressCerts := p.getCerts(ingressRules.SecretNameToSNIs)

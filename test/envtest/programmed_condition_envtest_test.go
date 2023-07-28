@@ -13,6 +13,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/manager"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
+	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1beta1"
 	"github.com/kong/kubernetes-ingress-controller/v2/test/helpers/conditions"
 )
 
@@ -92,6 +93,32 @@ func TestKongCRDs_ProgrammedCondition(t *testing.T) {
 				return consumer.Status.Conditions, nil
 			},
 			expectedProgrammedStatus: metav1.ConditionFalse,
+		},
+		{
+			name: "valid KongConsumerGroup",
+			objects: []client.Object{
+				&kongv1beta1.KongConsumerGroup{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "consumer-group",
+						Namespace: ns.Name,
+						Annotations: map[string]string{
+							annotations.IngressClassKey: annotations.DefaultIngressClass,
+						},
+					},
+				},
+			},
+			getExpectedObjectConditions: func(ctrlClient client.Client) ([]metav1.Condition, error) {
+				var consumerGroup kongv1beta1.KongConsumerGroup
+				err := ctrlClient.Get(ctx, k8stypes.NamespacedName{
+					Name:      "consumer-group",
+					Namespace: ns.Name,
+				}, &consumerGroup)
+				if err != nil {
+					return nil, err
+				}
+				return consumerGroup.Status.Conditions, nil
+			},
+			expectedProgrammedStatus: metav1.ConditionTrue,
 		},
 		{
 			name: "valid KongPlugin",

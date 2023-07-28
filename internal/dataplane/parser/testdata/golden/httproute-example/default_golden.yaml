@@ -1,0 +1,39 @@
+_format_version: "3.0"
+services:
+- connect_timeout: 60000
+  host: httproute..httproute-testing.0
+  name: httproute..httproute-testing.0
+  protocol: http
+  read_timeout: 60000
+  retries: 5
+  routes:
+  - https_redirect_status_code: 426
+    name: httproute..httproute-testing.0.0
+    path_handling: v0
+    paths:
+    - ~/httproute-testing$
+    - /httproute-testing/
+    preserve_host: true
+    protocols:
+    - http
+    - https
+    strip_path: true
+    tags:
+    - k8s-name:httproute-testing
+    - k8s-kind:HTTPRoute
+    - k8s-group:gateway.networking.k8s.io
+    - k8s-version:v1beta1
+  tags:
+  - k8s-name:httproute-testing
+  - k8s-kind:HTTPRoute
+  - k8s-group:gateway.networking.k8s.io
+  - k8s-version:v1beta1
+  write_timeout: 60000
+upstreams:
+- algorithm: round-robin
+  name: httproute..httproute-testing.0
+  tags:
+  - k8s-name:httproute-testing
+  - k8s-kind:HTTPRoute
+  - k8s-group:gateway.networking.k8s.io
+  - k8s-version:v1beta1

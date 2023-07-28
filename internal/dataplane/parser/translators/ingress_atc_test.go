@@ -517,6 +517,7 @@ func TestHeaderMatcherFromHeaders(t *testing.T) {
 		})
 	}
 }
+
 func TestMethodMatcherFromMethods(t *testing.T) {
 	testCases := []struct {
 		name       string

@@ -157,6 +157,9 @@ Adding a new version? You'll need three changes:
   to `/status/ready`. Gateways will be considered ready only after an initial
   configuration is applied by the controller.
   [#4368](https://github.com/Kong/kubernetes-ingress-controller/pull/4368
+- Moved protocol overriding to `kongstate.Override` step for expression based
+  routes, instead of adding expressions to match protocols.
+  [#4422](https://github.com/Kong/kubernetes-ingress-controller/pull/4422) 
 
 ### Fixed
 

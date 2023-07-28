@@ -28,8 +28,8 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/versions"
-	configurationv1alpha1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1alpha1"
-	configurationv1beta1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1beta1"
+	kongv1alpha1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1alpha1"
+	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1beta1"
 )
 
 // -----------------------------------------------------------------------------
@@ -318,7 +318,7 @@ func knativeIngressToNetworkingTLS(tls []knative.IngressTLS) []netv1.IngressTLS 
 	return result
 }
 
-func tcpIngressToNetworkingTLS(tls []configurationv1beta1.IngressTLS) []netv1.IngressTLS {
+func tcpIngressToNetworkingTLS(tls []kongv1beta1.IngressTLS) []netv1.IngressTLS {
 	var result []netv1.IngressTLS
 
 	for _, t := range tls {
@@ -745,16 +745,16 @@ func getServiceEndpoints(
 // getIngressClassParametersOrDefault returns the parameters for the current ingress class.
 // If the cluster operators have specified a set of parameters explicitly, it returns those.
 // Otherwise, it returns a default set of parameters.
-func getIngressClassParametersOrDefault(s store.Storer) (configurationv1alpha1.IngressClassParametersSpec, error) {
+func getIngressClassParametersOrDefault(s store.Storer) (kongv1alpha1.IngressClassParametersSpec, error) {
 	ingressClassName := s.GetIngressClassName()
 	ingressClass, err := s.GetIngressClassV1(ingressClassName)
 	if err != nil {
-		return configurationv1alpha1.IngressClassParametersSpec{}, err
+		return kongv1alpha1.IngressClassParametersSpec{}, err
 	}
 
 	params, err := s.GetIngressClassParametersV1Alpha1(ingressClass)
 	if err != nil {
-		return configurationv1alpha1.IngressClassParametersSpec{}, err
+		return kongv1alpha1.IngressClassParametersSpec{}, err
 	}
 
 	return params.Spec, nil

@@ -11,7 +11,7 @@ import (
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
-	configurationv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
+	kongv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
 )
 
 // Route represents a Kong Route and holds a reference to the Ingress
@@ -250,7 +250,7 @@ func (r *Route) overrideByAnnotation(log logrus.FieldLogger) {
 }
 
 // override sets Route fields by KongIngress first, then by annotation.
-func (r *Route) override(log logrus.FieldLogger, kongIngress *configurationv1.KongIngress) {
+func (r *Route) override(log logrus.FieldLogger, kongIngress *kongv1.KongIngress) {
 	if r == nil {
 		return
 	}
@@ -275,7 +275,7 @@ func (r *Route) override(log logrus.FieldLogger, kongIngress *configurationv1.Ko
 }
 
 // overrideByKongIngress sets Route fields by KongIngress.
-func (r *Route) overrideByKongIngress(log logrus.FieldLogger, kongIngress *configurationv1.KongIngress) {
+func (r *Route) overrideByKongIngress(log logrus.FieldLogger, kongIngress *kongv1.KongIngress) {
 	// disable overriding routes by KongIngress if expression routes is enabled.
 	if r.ExpressionRoutes {
 		return

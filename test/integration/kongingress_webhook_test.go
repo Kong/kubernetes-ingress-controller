@@ -14,7 +14,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/net"
 
-	configurationv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
+	kongv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
 	"github.com/kong/kubernetes-ingress-controller/v2/pkg/clientset"
 	"github.com/kong/kubernetes-ingress-controller/v2/pkg/clientset/scheme"
 	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/helpers"
@@ -56,16 +56,16 @@ func TestKongIngressValidationWebhook(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("when deprecated fields are populated warnings are returned", func(t *testing.T) {
-		kongIngress := &configurationv1.KongIngress{
+		kongIngress := &kongv1.KongIngress{
 			ObjectMeta: metav1.ObjectMeta{
 				GenerateName: "kong-ingress-validation-",
 			},
 			// Proxy field is deprecated, expecting warning for it.
-			Proxy: &configurationv1.KongIngressService{
+			Proxy: &kongv1.KongIngressService{
 				Protocol: lo.ToPtr("tcp"),
 			},
 			// Route field is deprecated, expecting warning for it.
-			Route: &configurationv1.KongIngressRoute{
+			Route: &kongv1.KongIngressRoute{
 				Methods: []*string{lo.ToPtr("POST")},
 			},
 		}

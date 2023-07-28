@@ -9,9 +9,9 @@ import (
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/manager/featuregates"
-	konghqcomv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
-	konghqcomv1alpha1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1alpha1"
-	configurationv1beta1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1beta1"
+	kongv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
+	kongv1alpha1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1alpha1"
+	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1beta1"
 )
 
 // Get returns the scheme for the manager, enabling all the default schemes and
@@ -27,13 +27,13 @@ func Get(fg map[string]bool) (*runtime.Scheme, error) {
 		return nil, err
 	}
 
-	if err := konghqcomv1.AddToScheme(scheme); err != nil {
+	if err := kongv1.AddToScheme(scheme); err != nil {
 		return nil, err
 	}
-	if err := konghqcomv1alpha1.AddToScheme(scheme); err != nil {
+	if err := kongv1alpha1.AddToScheme(scheme); err != nil {
 		return nil, err
 	}
-	if err := configurationv1beta1.AddToScheme(scheme); err != nil {
+	if err := kongv1beta1.AddToScheme(scheme); err != nil {
 		return nil, err
 	}
 

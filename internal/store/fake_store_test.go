@@ -16,8 +16,8 @@ import (
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
-	configurationv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
-	configurationv1beta1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1beta1"
+	kongv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
+	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1beta1"
 )
 
 func TestKeyFunc(t *testing.T) {
@@ -235,7 +235,7 @@ func TestFakeStoreListTCPIngress(t *testing.T) {
 	assert := assert.New(t)
 	require := require.New(t)
 
-	ingresses := []*configurationv1beta1.TCPIngress{
+	ingresses := []*kongv1beta1.TCPIngress{
 		{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "foo",
@@ -244,11 +244,11 @@ func TestFakeStoreListTCPIngress(t *testing.T) {
 					annotations.IngressClassKey: annotations.DefaultIngressClass,
 				},
 			},
-			Spec: configurationv1beta1.TCPIngressSpec{
-				Rules: []configurationv1beta1.IngressRule{
+			Spec: kongv1beta1.TCPIngressSpec{
+				Rules: []kongv1beta1.IngressRule{
 					{
 						Port: 9000,
-						Backend: configurationv1beta1.IngressBackend{
+						Backend: kongv1beta1.IngressBackend{
 							ServiceName: "foo-svc",
 							ServicePort: 80,
 						},
@@ -262,11 +262,11 @@ func TestFakeStoreListTCPIngress(t *testing.T) {
 				Name:      "baz",
 				Namespace: "default",
 			},
-			Spec: configurationv1beta1.TCPIngressSpec{
-				Rules: []configurationv1beta1.IngressRule{
+			Spec: kongv1beta1.TCPIngressSpec{
+				Rules: []kongv1beta1.IngressRule{
 					{
 						Port: 9000,
-						Backend: configurationv1beta1.IngressBackend{
+						Backend: kongv1beta1.IngressBackend{
 							ServiceName: "foo-svc",
 							ServicePort: 80,
 						},
@@ -282,11 +282,11 @@ func TestFakeStoreListTCPIngress(t *testing.T) {
 					annotations.IngressClassKey: "not-kong",
 				},
 			},
-			Spec: configurationv1beta1.TCPIngressSpec{
-				Rules: []configurationv1beta1.IngressRule{
+			Spec: kongv1beta1.TCPIngressSpec{
+				Rules: []kongv1beta1.IngressRule{
 					{
 						Port: 8000,
-						Backend: configurationv1beta1.IngressBackend{
+						Backend: kongv1beta1.IngressBackend{
 							ServiceName: "bar-svc",
 							ServicePort: 80,
 						},
@@ -460,7 +460,7 @@ func TestFakeStoreConsumer(t *testing.T) {
 	assert := assert.New(t)
 	require := require.New(t)
 
-	consumers := []*configurationv1.KongConsumer{
+	consumers := []*kongv1.KongConsumer{
 		{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "foo",
@@ -489,7 +489,7 @@ func TestFakeStoreConsumerGroup(t *testing.T) {
 	assert := assert.New(t)
 	require := require.New(t)
 
-	consumerGroups := []*configurationv1beta1.KongConsumerGroup{
+	consumerGroups := []*kongv1beta1.KongConsumerGroup{
 		{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "foo",
@@ -518,7 +518,7 @@ func TestFakeStorePlugins(t *testing.T) {
 	assert := assert.New(t)
 	require := require.New(t)
 
-	plugins := []*configurationv1.KongPlugin{
+	plugins := []*kongv1.KongPlugin{
 		{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "foo",
@@ -530,7 +530,7 @@ func TestFakeStorePlugins(t *testing.T) {
 	assert.Nil(err)
 	assert.NotNil(store)
 
-	plugins = []*configurationv1.KongPlugin{
+	plugins = []*kongv1.KongPlugin{
 		{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "baz",
@@ -555,7 +555,7 @@ func TestFakeStoreClusterPlugins(t *testing.T) {
 	assert := assert.New(t)
 	require := require.New(t)
 
-	plugins := []*configurationv1.KongClusterPlugin{
+	plugins := []*kongv1.KongClusterPlugin{
 		{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "foo",
@@ -569,7 +569,7 @@ func TestFakeStoreClusterPlugins(t *testing.T) {
 	assert.NoError(err)
 	assert.Len(plugins, 0)
 
-	plugins = []*configurationv1.KongClusterPlugin{
+	plugins = []*kongv1.KongClusterPlugin{
 		{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "foo",
@@ -642,7 +642,7 @@ func TestFakeKongIngress(t *testing.T) {
 	assert := assert.New(t)
 	require := require.New(t)
 
-	kongIngresses := []*configurationv1.KongIngress{
+	kongIngresses := []*kongv1.KongIngress{
 		{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "foo",

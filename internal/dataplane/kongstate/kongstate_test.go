@@ -21,11 +21,11 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/failures"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
-	configurationv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
+	kongv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
 )
 
 var kongConsumerTypeMeta = metav1.TypeMeta{
-	APIVersion: configurationv1.GroupVersion.String(),
+	APIVersion: kongv1.GroupVersion.String(),
 	Kind:       "KongConsumer",
 }
 
@@ -88,7 +88,7 @@ func TestGetPluginRelations(t *testing.T) {
 							Consumer: kong.Consumer{
 								Username: kong.String("foo-consumer"),
 							},
-							K8sKongConsumer: configurationv1.KongConsumer{
+							K8sKongConsumer: kongv1.KongConsumer{
 								ObjectMeta: metav1.ObjectMeta{
 									Namespace: "ns1",
 									Annotations: map[string]string{
@@ -219,7 +219,7 @@ func TestGetPluginRelations(t *testing.T) {
 							Consumer: kong.Consumer{
 								Username: kong.String("foo-consumer"),
 							},
-							K8sKongConsumer: configurationv1.KongConsumer{
+							K8sKongConsumer: kongv1.KongConsumer{
 								ObjectMeta: metav1.ObjectMeta{
 									Namespace: "ns1",
 									Annotations: map[string]string{
@@ -232,7 +232,7 @@ func TestGetPluginRelations(t *testing.T) {
 							Consumer: kong.Consumer{
 								Username: kong.String("foo-consumer"),
 							},
-							K8sKongConsumer: configurationv1.KongConsumer{
+							K8sKongConsumer: kongv1.KongConsumer{
 								ObjectMeta: metav1.ObjectMeta{
 									Namespace: "ns2",
 									Annotations: map[string]string{
@@ -245,7 +245,7 @@ func TestGetPluginRelations(t *testing.T) {
 							Consumer: kong.Consumer{
 								Username: kong.String("bar-consumer"),
 							},
-							K8sKongConsumer: configurationv1.KongConsumer{
+							K8sKongConsumer: kongv1.KongConsumer{
 								ObjectMeta: metav1.ObjectMeta{
 									Namespace: "ns1",
 									Annotations: map[string]string{
@@ -369,13 +369,13 @@ func TestFillConsumersAndCredentials(t *testing.T) {
 
 	testCases := []struct {
 		name                               string
-		k8sConsumers                       []*configurationv1.KongConsumer
+		k8sConsumers                       []*kongv1.KongConsumer
 		expectedKongStateConsumers         []Consumer
 		expectedTranslationFailureMessages map[k8stypes.NamespacedName]string
 	}{
 		{
 			name: "KongConsumer with key-auth and oauth2",
-			k8sConsumers: []*configurationv1.KongConsumer{
+			k8sConsumers: []*kongv1.KongConsumer{
 				{
 					TypeMeta: kongConsumerTypeMeta,
 					ObjectMeta: metav1.ObjectMeta{
@@ -425,7 +425,7 @@ func TestFillConsumersAndCredentials(t *testing.T) {
 		},
 		{
 			name: "missing username and custom_id",
-			k8sConsumers: []*configurationv1.KongConsumer{
+			k8sConsumers: []*kongv1.KongConsumer{
 				{
 					TypeMeta: kongConsumerTypeMeta,
 					ObjectMeta: metav1.ObjectMeta{
@@ -447,7 +447,7 @@ func TestFillConsumersAndCredentials(t *testing.T) {
 		},
 		{
 			name: "referring to non-exist secret",
-			k8sConsumers: []*configurationv1.KongConsumer{
+			k8sConsumers: []*kongv1.KongConsumer{
 				{
 					TypeMeta: kongConsumerTypeMeta,
 					ObjectMeta: metav1.ObjectMeta{
@@ -476,7 +476,7 @@ func TestFillConsumersAndCredentials(t *testing.T) {
 		},
 		{
 			name: "referring to secret with unsupported credType",
-			k8sConsumers: []*configurationv1.KongConsumer{
+			k8sConsumers: []*kongv1.KongConsumer{
 				{
 					TypeMeta: kongConsumerTypeMeta,
 					ObjectMeta: metav1.ObjectMeta{

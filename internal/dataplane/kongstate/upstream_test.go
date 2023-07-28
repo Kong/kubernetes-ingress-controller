@@ -8,7 +8,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	configurationv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
+	kongv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
 )
 
 func TestOverrideUpstream(t *testing.T) {
@@ -16,7 +16,7 @@ func TestOverrideUpstream(t *testing.T) {
 
 	testTable := []struct {
 		inUpstream     Upstream
-		inKongIngresss *configurationv1.KongIngress
+		inKongIngresss *kongv1.KongIngress
 		outUpstream    Upstream
 		svc            *corev1.Service
 	}{
@@ -39,8 +39,8 @@ func TestOverrideUpstream(t *testing.T) {
 					Name: kong.String("foo.com"),
 				},
 			},
-			inKongIngresss: &configurationv1.KongIngress{
-				Upstream: &configurationv1.KongIngressUpstream{
+			inKongIngresss: &kongv1.KongIngress{
+				Upstream: &kongv1.KongIngressUpstream{
 					HashOn:                 kong.String("HashOn"),
 					HashOnCookie:           kong.String("HashOnCookie"),
 					HashOnCookiePath:       kong.String("HashOnCookiePath"),

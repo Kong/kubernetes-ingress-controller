@@ -6,7 +6,7 @@ import (
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
-	configurationv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
+	kongv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
 )
 
 // Upstream is a wrapper around Upstream object in Kong.
@@ -39,7 +39,7 @@ func (u *Upstream) overrideByAnnotation(anns map[string]string) {
 
 // overrideByKongIngress modifies the Kong upstream based on KongIngresses
 // associated with the Kubernetes service.
-func (u *Upstream) overrideByKongIngress(kongIngress *configurationv1.KongIngress) {
+func (u *Upstream) overrideByKongIngress(kongIngress *kongv1.KongIngress) {
 	if u == nil {
 		return
 	}
@@ -95,7 +95,7 @@ func (u *Upstream) overrideByKongIngress(kongIngress *configurationv1.KongIngres
 
 // override sets Upstream fields by KongIngress first, then by k8s Service's annotations.
 func (u *Upstream) override(
-	kongIngress *configurationv1.KongIngress,
+	kongIngress *kongv1.KongIngress,
 	svc *corev1.Service,
 ) {
 	if u == nil {

@@ -13,7 +13,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/store"
-	configurationv1alpha1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1alpha1"
+	kongv1alpha1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1alpha1"
 )
 
 func TestGetIngressClassParameters(t *testing.T) {
@@ -23,13 +23,13 @@ func TestGetIngressClassParameters(t *testing.T) {
 		testIcpName       = "test-icp"
 	)
 
-	defaultIcpSpec := &configurationv1alpha1.IngressClassParametersSpec{}
-	icp := &configurationv1alpha1.IngressClassParameters{
+	defaultIcpSpec := &kongv1alpha1.IngressClassParametersSpec{}
+	icp := &kongv1alpha1.IngressClassParameters{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: testNamespaceName,
 			Name:      testIcpName,
 		},
-		Spec: configurationv1alpha1.IngressClassParametersSpec{
+		Spec: kongv1alpha1.IngressClassParametersSpec{
 			EnableLegacyRegexDetection: true,
 		},
 	}
@@ -37,7 +37,7 @@ func TestGetIngressClassParameters(t *testing.T) {
 	testCases := []struct {
 		name          string
 		paramRef      *netv1.IngressClassParametersReference
-		parameterSpec *configurationv1alpha1.IngressClassParametersSpec
+		parameterSpec *kongv1alpha1.IngressClassParametersSpec
 		err           error
 	}{
 		{
@@ -57,8 +57,8 @@ func TestGetIngressClassParameters(t *testing.T) {
 		{
 			name: "nil-scope",
 			paramRef: &netv1.IngressClassParametersReference{
-				APIGroup:  &configurationv1alpha1.GroupVersion.Group,
-				Kind:      configurationv1alpha1.IngressClassParametersKind,
+				APIGroup:  &kongv1alpha1.GroupVersion.Group,
+				Kind:      kongv1alpha1.IngressClassParametersKind,
 				Namespace: &testNamespaceName,
 				Name:      testIcpName,
 			},
@@ -68,8 +68,8 @@ func TestGetIngressClassParameters(t *testing.T) {
 		{
 			name: "nil-namespace",
 			paramRef: &netv1.IngressClassParametersReference{
-				APIGroup: &configurationv1alpha1.GroupVersion.Group,
-				Kind:     configurationv1alpha1.IngressClassParametersKind,
+				APIGroup: &kongv1alpha1.GroupVersion.Group,
+				Kind:     kongv1alpha1.IngressClassParametersKind,
 				Scope:    &scopeNamespace,
 				Name:     testIcpName,
 			},
@@ -79,8 +79,8 @@ func TestGetIngressClassParameters(t *testing.T) {
 		{
 			name: "matched-parameters",
 			paramRef: &netv1.IngressClassParametersReference{
-				APIGroup:  &configurationv1alpha1.GroupVersion.Group,
-				Kind:      configurationv1alpha1.IngressClassParametersKind,
+				APIGroup:  &kongv1alpha1.GroupVersion.Group,
+				Kind:      kongv1alpha1.IngressClassParametersKind,
 				Scope:     &scopeNamespace,
 				Namespace: &testNamespaceName,
 				Name:      testIcpName,
@@ -90,7 +90,7 @@ func TestGetIngressClassParameters(t *testing.T) {
 		{
 			name: "unmatched-kind",
 			paramRef: &netv1.IngressClassParametersReference{
-				APIGroup:  &configurationv1alpha1.GroupVersion.Group,
+				APIGroup:  &kongv1alpha1.GroupVersion.Group,
 				Kind:      "SomeKind",
 				Scope:     &scopeNamespace,
 				Namespace: &testNamespaceName,
@@ -102,8 +102,8 @@ func TestGetIngressClassParameters(t *testing.T) {
 		{
 			name: "unmatched-namespace",
 			paramRef: &netv1.IngressClassParametersReference{
-				APIGroup:  &configurationv1alpha1.GroupVersion.Group,
-				Kind:      configurationv1alpha1.IngressClassParametersKind,
+				APIGroup:  &kongv1alpha1.GroupVersion.Group,
+				Kind:      kongv1alpha1.IngressClassParametersKind,
 				Scope:     &scopeNamespace,
 				Namespace: new(string),
 				Name:      testIcpName,
@@ -114,8 +114,8 @@ func TestGetIngressClassParameters(t *testing.T) {
 		{
 			name: "unmatched-name",
 			paramRef: &netv1.IngressClassParametersReference{
-				APIGroup:  &configurationv1alpha1.GroupVersion.Group,
-				Kind:      configurationv1alpha1.IngressClassParametersKind,
+				APIGroup:  &kongv1alpha1.GroupVersion.Group,
+				Kind:      kongv1alpha1.IngressClassParametersKind,
 				Scope:     &scopeNamespace,
 				Namespace: &testNamespaceName,
 				Name:      "another-icp",

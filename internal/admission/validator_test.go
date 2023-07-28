@@ -15,8 +15,8 @@ import (
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/store"
-	configurationv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
-	configurationv1beta1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1beta1"
+	kongv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
+	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1beta1"
 )
 
 type fakePluginSvc struct {
@@ -81,7 +81,7 @@ func (f fakeServicesProvider) GetPluginsService() (kong.AbstractPluginService, b
 func TestKongHTTPValidator_ValidatePlugin(t *testing.T) {
 	store, _ := store.NewFakeStore(store.FakeObjects{})
 	type args struct {
-		plugin configurationv1.KongPlugin
+		plugin kongv1.KongPlugin
 	}
 	tests := []struct {
 		name        string
@@ -95,7 +95,7 @@ func TestKongHTTPValidator_ValidatePlugin(t *testing.T) {
 			name:      "plugin is valid",
 			PluginSvc: &fakePluginSvc{valid: true},
 			args: args{
-				plugin: configurationv1.KongPlugin{PluginName: "foo"},
+				plugin: kongv1.KongPlugin{PluginName: "foo"},
 			},
 			wantOK:      true,
 			wantMessage: "",
@@ -105,7 +105,7 @@ func TestKongHTTPValidator_ValidatePlugin(t *testing.T) {
 			name:      "plugin is not valid",
 			PluginSvc: &fakePluginSvc{valid: false, msg: "now where could my pipe be"},
 			args: args{
-				plugin: configurationv1.KongPlugin{PluginName: "foo"},
+				plugin: kongv1.KongPlugin{PluginName: "foo"},
 			},
 			wantOK:      false,
 			wantMessage: fmt.Sprintf(ErrTextPluginConfigViolatesSchema, "now where could my pipe be"),
@@ -115,7 +115,7 @@ func TestKongHTTPValidator_ValidatePlugin(t *testing.T) {
 			name:      "plugin lacks plugin name",
 			PluginSvc: &fakePluginSvc{},
 			args: args{
-				plugin: configurationv1.KongPlugin{},
+				plugin: kongv1.KongPlugin{},
 			},
 			wantOK:      false,
 			wantMessage: ErrTextPluginNameEmpty,
@@ -125,7 +125,7 @@ func TestKongHTTPValidator_ValidatePlugin(t *testing.T) {
 			name:      "plugin has invalid configuration",
 			PluginSvc: &fakePluginSvc{},
 			args: args{
-				plugin: configurationv1.KongPlugin{
+				plugin: kongv1.KongPlugin{
 					PluginName: "key-auth",
 					Config: apiextensionsv1.JSON{
 						Raw: []byte(`{{}`),
@@ -140,13 +140,13 @@ func TestKongHTTPValidator_ValidatePlugin(t *testing.T) {
 			name:      "plugin has both Config and ConfigFrom",
 			PluginSvc: &fakePluginSvc{},
 			args: args{
-				plugin: configurationv1.KongPlugin{
+				plugin: kongv1.KongPlugin{
 					PluginName: "key-auth",
 					Config: apiextensionsv1.JSON{
 						Raw: []byte(`{"key_names": "whatever"}`),
 					},
-					ConfigFrom: &configurationv1.ConfigSource{
-						SecretValue: configurationv1.SecretValueFromSource{
+					ConfigFrom: &kongv1.ConfigSource{
+						SecretValue: kongv1.SecretValueFromSource{
 							Key:    "key-auth-config",
 							Secret: "conf-secret",
 						},
@@ -161,10 +161,10 @@ func TestKongHTTPValidator_ValidatePlugin(t *testing.T) {
 			name:      "plugin ConfigFrom references non-existent Secret",
 			PluginSvc: &fakePluginSvc{},
 			args: args{
-				plugin: configurationv1.KongPlugin{
+				plugin: kongv1.KongPlugin{
 					PluginName: "key-auth",
-					ConfigFrom: &configurationv1.ConfigSource{
-						SecretValue: configurationv1.SecretValueFromSource{
+					ConfigFrom: &kongv1.ConfigSource{
+						SecretValue: kongv1.SecretValueFromSource{
 							Key:    "key-auth-config",
 							Secret: "conf-secret",
 						},
@@ -179,7 +179,7 @@ func TestKongHTTPValidator_ValidatePlugin(t *testing.T) {
 			name:      "failed to retrieve validation info",
 			PluginSvc: &fakePluginSvc{valid: false, err: fmt.Errorf("everything broke")},
 			args: args{
-				plugin: configurationv1.KongPlugin{PluginName: "foo"},
+				plugin: kongv1.KongPlugin{PluginName: "foo"},
 			},
 			wantOK:      false,
 			wantMessage: ErrTextPluginConfigValidationFailed,
@@ -213,7 +213,7 @@ func TestKongHTTPValidator_ValidatePlugin(t *testing.T) {
 func TestKongHTTPValidator_ValidateClusterPlugin(t *testing.T) {
 	store, _ := store.NewFakeStore(store.FakeObjects{})
 	type args struct {
-		plugin configurationv1.KongClusterPlugin
+		plugin kongv1.KongClusterPlugin
 	}
 	tests := []struct {
 		name        string
@@ -227,7 +227,7 @@ func TestKongHTTPValidator_ValidateClusterPlugin(t *testing.T) {
 			name:      "plugin is valid",
 			PluginSvc: &fakePluginSvc{valid: true},
 			args: args{
-				plugin: configurationv1.KongClusterPlugin{PluginName: "foo"},
+				plugin: kongv1.KongClusterPlugin{PluginName: "foo"},
 			},
 			wantOK:      true,
 			wantMessage: "",
@@ -237,7 +237,7 @@ func TestKongHTTPValidator_ValidateClusterPlugin(t *testing.T) {
 			name:      "plugin is not valid",
 			PluginSvc: &fakePluginSvc{valid: false, msg: "now where could my pipe be"},
 			args: args{
-				plugin: configurationv1.KongClusterPlugin{PluginName: "foo"},
+				plugin: kongv1.KongClusterPlugin{PluginName: "foo"},
 			},
 			wantOK:      false,
 			wantMessage: fmt.Sprintf(ErrTextPluginConfigViolatesSchema, "now where could my pipe be"),
@@ -247,7 +247,7 @@ func TestKongHTTPValidator_ValidateClusterPlugin(t *testing.T) {
 			name:      "plugin lacks plugin name",
 			PluginSvc: &fakePluginSvc{},
 			args: args{
-				plugin: configurationv1.KongClusterPlugin{},
+				plugin: kongv1.KongClusterPlugin{},
 			},
 			wantOK:      false,
 			wantMessage: ErrTextPluginNameEmpty,
@@ -257,7 +257,7 @@ func TestKongHTTPValidator_ValidateClusterPlugin(t *testing.T) {
 			name:      "plugin has invalid configuration",
 			PluginSvc: &fakePluginSvc{},
 			args: args{
-				plugin: configurationv1.KongClusterPlugin{
+				plugin: kongv1.KongClusterPlugin{
 					PluginName: "key-auth",
 					Config: apiextensionsv1.JSON{
 						Raw: []byte(`{{}`),
@@ -272,13 +272,13 @@ func TestKongHTTPValidator_ValidateClusterPlugin(t *testing.T) {
 			name:      "plugin has both Config and ConfigFrom",
 			PluginSvc: &fakePluginSvc{},
 			args: args{
-				plugin: configurationv1.KongClusterPlugin{
+				plugin: kongv1.KongClusterPlugin{
 					PluginName: "key-auth",
 					Config: apiextensionsv1.JSON{
 						Raw: []byte(`{"key_names": "whatever"}`),
 					},
-					ConfigFrom: &configurationv1.NamespacedConfigSource{
-						SecretValue: configurationv1.NamespacedSecretValueFromSource{
+					ConfigFrom: &kongv1.NamespacedConfigSource{
+						SecretValue: kongv1.NamespacedSecretValueFromSource{
 							Key:       "key-auth-config",
 							Secret:    "conf-secret",
 							Namespace: "default",
@@ -294,10 +294,10 @@ func TestKongHTTPValidator_ValidateClusterPlugin(t *testing.T) {
 			name:      "plugin ConfigFrom references non-existent Secret",
 			PluginSvc: &fakePluginSvc{},
 			args: args{
-				plugin: configurationv1.KongClusterPlugin{
+				plugin: kongv1.KongClusterPlugin{
 					PluginName: "key-auth",
-					ConfigFrom: &configurationv1.NamespacedConfigSource{
-						SecretValue: configurationv1.NamespacedSecretValueFromSource{
+					ConfigFrom: &kongv1.NamespacedConfigSource{
+						SecretValue: kongv1.NamespacedSecretValueFromSource{
 							Key:       "key-auth-config",
 							Secret:    "conf-secret",
 							Namespace: "default",
@@ -313,7 +313,7 @@ func TestKongHTTPValidator_ValidateClusterPlugin(t *testing.T) {
 			name:      "failed to retrieve validation info",
 			PluginSvc: &fakePluginSvc{valid: false, err: fmt.Errorf("everything broke")},
 			args: args{
-				plugin: configurationv1.KongClusterPlugin{PluginName: "foo"},
+				plugin: kongv1.KongClusterPlugin{PluginName: "foo"},
 			},
 			wantOK:      false,
 			wantMessage: ErrTextPluginConfigValidationFailed,
@@ -323,7 +323,7 @@ func TestKongHTTPValidator_ValidateClusterPlugin(t *testing.T) {
 			name:      "no gateway was available at the time of validation",
 			PluginSvc: nil, // no plugin service is available as there's no gateways
 			args: args{
-				plugin: configurationv1.KongClusterPlugin{PluginName: "foo"},
+				plugin: kongv1.KongClusterPlugin{PluginName: "foo"},
 			},
 			wantOK:      true,
 			wantMessage: "",
@@ -365,7 +365,7 @@ func TestKongHTTPValidator_ValidateConsumer(t *testing.T) {
 			ingressClassMatcher: fakeClassMatcher,
 		}
 
-		valid, errText, err := validator.ValidateConsumer(context.Background(), configurationv1.KongConsumer{
+		valid, errText, err := validator.ValidateConsumer(context.Background(), kongv1.KongConsumer{
 			Username: "username",
 		})
 		require.NoError(t, err)
@@ -375,7 +375,7 @@ func TestKongHTTPValidator_ValidateConsumer(t *testing.T) {
 		// make services unavailable
 		validator.AdminAPIServicesProvider = fakeServicesProvider{}
 
-		valid, errText, err = validator.ValidateConsumer(context.Background(), configurationv1.KongConsumer{
+		valid, errText, err = validator.ValidateConsumer(context.Background(), kongv1.KongConsumer{
 			Username: "username",
 		})
 		require.NoError(t, err)
@@ -393,7 +393,7 @@ func TestKongHTTPValidator_ValidateConsumer(t *testing.T) {
 			ingressClassMatcher: fakeClassMatcher,
 		}
 
-		valid, errText, err := validator.ValidateConsumer(context.Background(), configurationv1.KongConsumer{
+		valid, errText, err := validator.ValidateConsumer(context.Background(), kongv1.KongConsumer{
 			Username: "username",
 		})
 		require.NoError(t, err)
@@ -430,7 +430,7 @@ func TestKongHTTPValidator_ValidateConsumerGroup(t *testing.T) {
 	store, err := store.NewFakeStore(store.FakeObjects{})
 	require.NoError(t, err)
 	type args struct {
-		cg configurationv1beta1.KongConsumerGroup
+		cg kongv1beta1.KongConsumerGroup
 	}
 	tests := []struct {
 		name             string
@@ -446,7 +446,7 @@ func TestKongHTTPValidator_ValidateConsumerGroup(t *testing.T) {
 			ConsumerGroupSvc: &fakeConsumerGroupSvc{err: nil},
 			InfoSvc:          &fakeInfoSvc{version: "3.4.0.0"},
 			args: args{
-				cg: configurationv1beta1.KongConsumerGroup{},
+				cg: kongv1beta1.KongConsumerGroup{},
 			},
 			wantOK:      true,
 			wantMessage: "",
@@ -457,7 +457,7 @@ func TestKongHTTPValidator_ValidateConsumerGroup(t *testing.T) {
 			ConsumerGroupSvc: &fakeConsumerGroupSvc{err: nil},
 			InfoSvc:          &fakeInfoSvc{version: "3.2.0.0"},
 			args: args{
-				cg: configurationv1beta1.KongConsumerGroup{},
+				cg: kongv1beta1.KongConsumerGroup{},
 			},
 			wantOK:      false,
 			wantMessage: ErrTextConsumerGroupUnsupported,
@@ -468,7 +468,7 @@ func TestKongHTTPValidator_ValidateConsumerGroup(t *testing.T) {
 			ConsumerGroupSvc: &fakeConsumerGroupSvc{err: nil},
 			InfoSvc:          &fakeInfoSvc{version: "3.4.0"},
 			args: args{
-				cg: configurationv1beta1.KongConsumerGroup{},
+				cg: kongv1beta1.KongConsumerGroup{},
 			},
 			wantOK:      false,
 			wantMessage: ErrTextConsumerGroupUnsupported,
@@ -479,7 +479,7 @@ func TestKongHTTPValidator_ValidateConsumerGroup(t *testing.T) {
 			ConsumerGroupSvc: &fakeConsumerGroupSvc{err: kong.NewAPIError(http.StatusForbidden, "no license")},
 			InfoSvc:          &fakeInfoSvc{version: "3.4.0.0"},
 			args: args{
-				cg: configurationv1beta1.KongConsumerGroup{},
+				cg: kongv1beta1.KongConsumerGroup{},
 			},
 			wantOK:      false,
 			wantMessage: ErrTextConsumerGroupUnlicensed,
@@ -490,7 +490,7 @@ func TestKongHTTPValidator_ValidateConsumerGroup(t *testing.T) {
 			ConsumerGroupSvc: &fakeConsumerGroupSvc{err: kong.NewAPIError(http.StatusNotFound, "well, this is awkward")},
 			InfoSvc:          &fakeInfoSvc{version: "3.4.0.0"},
 			args: args{
-				cg: configurationv1beta1.KongConsumerGroup{},
+				cg: kongv1beta1.KongConsumerGroup{},
 			},
 			wantOK:      false,
 			wantMessage: ErrTextConsumerGroupUnsupported,
@@ -501,7 +501,7 @@ func TestKongHTTPValidator_ValidateConsumerGroup(t *testing.T) {
 			ConsumerGroupSvc: &fakeConsumerGroupSvc{err: nil},
 			InfoSvc:          &fakeInfoSvc{version: "a.4.0.0"},
 			args: args{
-				cg: configurationv1beta1.KongConsumerGroup{},
+				cg: kongv1beta1.KongConsumerGroup{},
 			},
 			wantOK:      true,
 			wantMessage: "",
@@ -512,7 +512,7 @@ func TestKongHTTPValidator_ValidateConsumerGroup(t *testing.T) {
 			ConsumerGroupSvc: &fakeConsumerGroupSvc{err: kong.NewAPIError(http.StatusNotFound, "ConsumerGroups API not found")},
 			InfoSvc:          &fakeInfoSvc{version: "a.4.0.0"},
 			args: args{
-				cg: configurationv1beta1.KongConsumerGroup{},
+				cg: kongv1beta1.KongConsumerGroup{},
 			},
 			wantOK:      false,
 			wantMessage: ErrTextConsumerGroupUnsupported,
@@ -523,7 +523,7 @@ func TestKongHTTPValidator_ValidateConsumerGroup(t *testing.T) {
 			ConsumerGroupSvc: &fakeConsumerGroupSvc{err: kong.NewAPIError(http.StatusTeapot, "I'm a teapot")},
 			InfoSvc:          &fakeInfoSvc{version: "3.4.0.0"},
 			args: args{
-				cg: configurationv1beta1.KongConsumerGroup{},
+				cg: kongv1beta1.KongConsumerGroup{},
 			},
 			wantOK:      false,
 			wantMessage: fmt.Sprintf("%s: %s", ErrTextConsumerGroupUnexpected, `HTTP status 418 (message: "I'm a teapot")`),

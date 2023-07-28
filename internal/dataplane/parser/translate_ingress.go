@@ -13,7 +13,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/parser/translators"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
-	"github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1alpha1"
+	kongv1alpha1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1alpha1"
 )
 
 func serviceBackendPortToStr(port netv1.ServiceBackendPort) string {
@@ -79,7 +79,7 @@ type kongServicesCache map[string]kongstate.Service
 // Returns true if the passed servicesCache was updated.
 func (p *Parser) ingressesV1ToKongServices(
 	ingresses []*netv1.Ingress,
-	icp v1alpha1.IngressClassParametersSpec,
+	icp kongv1alpha1.IngressClassParametersSpec,
 ) kongServicesCache {
 	if p.featureFlags.CombinedServiceRoutes {
 		return p.ingressV1ToKongServiceCombinedRoutes(ingresses, icp)
@@ -90,7 +90,7 @@ func (p *Parser) ingressesV1ToKongServices(
 // ingressV1ToKongServiceLegacy translates a slice of IngressV1 object into Kong Services.
 func (p *Parser) ingressV1ToKongServiceCombinedRoutes(
 	ingresses []*netv1.Ingress,
-	icp v1alpha1.IngressClassParametersSpec,
+	icp kongv1alpha1.IngressClassParametersSpec,
 ) kongServicesCache {
 	return translators.TranslateIngresses(ingresses, icp, translators.TranslateIngressFeatureFlags{
 		RegexPathPrefix:  p.featureFlags.RegexPathPrefix,
@@ -100,7 +100,7 @@ func (p *Parser) ingressV1ToKongServiceCombinedRoutes(
 }
 
 // ingressV1ToKongServiceLegacy translates a slice IngressV1 object into Kong Services.
-func (p *Parser) ingressV1ToKongServiceLegacy(ingresses []*netv1.Ingress, icp v1alpha1.IngressClassParametersSpec) kongServicesCache {
+func (p *Parser) ingressV1ToKongServiceLegacy(ingresses []*netv1.Ingress, icp kongv1alpha1.IngressClassParametersSpec) kongServicesCache {
 	servicesCache := make(kongServicesCache)
 
 	for _, ingress := range ingresses {

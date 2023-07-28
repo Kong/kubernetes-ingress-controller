@@ -14,7 +14,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
-	"github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1alpha1"
+	kongv1alpha1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1alpha1"
 )
 
 // -----------------------------------------------------------------------------
@@ -44,7 +44,7 @@ type TranslateIngressFeatureFlags struct {
 // and kong.Routes which will come wrapped in a kongstate.Service object.
 func TranslateIngresses(
 	ingresses []*netv1.Ingress,
-	icp v1alpha1.IngressClassParametersSpec,
+	icp kongv1alpha1.IngressClassParametersSpec,
 	flags TranslateIngressFeatureFlags,
 	translatedObjectsCollector TranslatedKubernetesObjectsCollector,
 ) map[string]kongstate.Service {

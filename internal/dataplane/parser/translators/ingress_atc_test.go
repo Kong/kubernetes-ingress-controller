@@ -13,7 +13,7 @@ import (
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
-	"github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1alpha1"
+	kongv1alpha1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1alpha1"
 )
 
 func TestTranslateIngressATC(t *testing.T) {
@@ -283,7 +283,7 @@ func TestTranslateIngressATC(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			services := TranslateIngresses(
 				[]*netv1.Ingress{tc.ingress},
-				v1alpha1.IngressClassParametersSpec{},
+				kongv1alpha1.IngressClassParametersSpec{},
 				TranslateIngressFeatureFlags{
 					ExpressionRoutes: true,
 					RegexPathPrefix:  false,

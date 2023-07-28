@@ -20,9 +20,9 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/manager/featuregates"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util/kubernetes/object/status"
-	konghqcomv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
-	konghqcomv1alpha1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1alpha1"
-	konghqcomv1beta1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1beta1"
+	kongv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
+	kongv1alpha1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1alpha1"
+	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1beta1"
 )
 
 // -----------------------------------------------------------------------------
@@ -160,8 +160,8 @@ func setupControllers(
 		{
 			Enabled: c.UDPIngressEnabled && ShouldEnableCRDController(
 				schema.GroupVersionResource{
-					Group:    konghqcomv1beta1.GroupVersion.Group,
-					Version:  konghqcomv1beta1.GroupVersion.Version,
+					Group:    kongv1beta1.GroupVersion.Group,
+					Version:  kongv1beta1.GroupVersion.Version,
 					Resource: "udpingresses",
 				},
 				restMapper,
@@ -181,8 +181,8 @@ func setupControllers(
 		{
 			Enabled: c.TCPIngressEnabled && ShouldEnableCRDController(
 				schema.GroupVersionResource{
-					Group:    konghqcomv1beta1.GroupVersion.Group,
-					Version:  konghqcomv1beta1.GroupVersion.Version,
+					Group:    kongv1beta1.GroupVersion.Group,
+					Version:  kongv1beta1.GroupVersion.Version,
 					Resource: "tcpingresses",
 				},
 				restMapper,
@@ -203,8 +203,8 @@ func setupControllers(
 		{
 			Enabled: c.KongIngressEnabled && ShouldEnableCRDController(
 				schema.GroupVersionResource{
-					Group:    konghqcomv1.GroupVersion.Group,
-					Version:  konghqcomv1.GroupVersion.Version,
+					Group:    kongv1.GroupVersion.Group,
+					Version:  kongv1.GroupVersion.Version,
 					Resource: "kongingresses",
 				},
 				restMapper,
@@ -220,8 +220,8 @@ func setupControllers(
 		{
 			Enabled: c.IngressClassParametersEnabled && ShouldEnableCRDController(
 				schema.GroupVersionResource{
-					Group:    konghqcomv1alpha1.GroupVersion.Group,
-					Version:  konghqcomv1alpha1.GroupVersion.Version,
+					Group:    kongv1alpha1.GroupVersion.Group,
+					Version:  kongv1alpha1.GroupVersion.Version,
 					Resource: "ingressclassparameterses",
 				},
 				restMapper,
@@ -237,8 +237,8 @@ func setupControllers(
 		{
 			Enabled: c.KongPluginEnabled && ShouldEnableCRDController(
 				schema.GroupVersionResource{
-					Group:    konghqcomv1.GroupVersion.Group,
-					Version:  konghqcomv1.GroupVersion.Version,
+					Group:    kongv1.GroupVersion.Group,
+					Version:  kongv1.GroupVersion.Version,
 					Resource: "kongplugins",
 				},
 				restMapper,
@@ -256,8 +256,8 @@ func setupControllers(
 		{
 			Enabled: c.KongConsumerEnabled && ShouldEnableCRDController(
 				schema.GroupVersionResource{
-					Group:    konghqcomv1.GroupVersion.Group,
-					Version:  konghqcomv1.GroupVersion.Version,
+					Group:    kongv1.GroupVersion.Group,
+					Version:  kongv1.GroupVersion.Version,
 					Resource: "kongconsumers",
 				},
 				restMapper,
@@ -277,8 +277,8 @@ func setupControllers(
 		{
 			Enabled: c.KongConsumerEnabled && ShouldEnableCRDController(
 				schema.GroupVersionResource{
-					Group:    konghqcomv1beta1.GroupVersion.Group,
-					Version:  konghqcomv1beta1.GroupVersion.Version,
+					Group:    kongv1beta1.GroupVersion.Group,
+					Version:  kongv1beta1.GroupVersion.Version,
 					Resource: "kongconsumergroups",
 				},
 				restMapper,
@@ -298,8 +298,8 @@ func setupControllers(
 		{
 			Enabled: c.KongClusterPluginEnabled && ShouldEnableCRDController(
 				schema.GroupVersionResource{
-					Group:    konghqcomv1.GroupVersion.Group,
-					Version:  konghqcomv1.GroupVersion.Version,
+					Group:    kongv1.GroupVersion.Group,
+					Version:  kongv1.GroupVersion.Version,
 					Resource: "kongclusterplugins",
 				},
 				restMapper,

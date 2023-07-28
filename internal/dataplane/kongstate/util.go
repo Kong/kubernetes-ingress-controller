@@ -13,13 +13,13 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
-	configurationv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
+	kongv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
 )
 
 func getKongIngressForServices(
 	s store.Storer,
 	services map[string]*corev1.Service,
-) (*configurationv1.KongIngress, error) {
+) (*kongv1.KongIngress, error) {
 	// loop through each service and retrieve the attached KongIngress resources.
 	// there can only be one KongIngress for a group of services: either one of
 	// them is configured with a KongIngress and this configures the Kong Service
@@ -52,7 +52,7 @@ func getKongIngressFromObjectMeta(
 	s store.Storer,
 	obj util.K8sObjectInfo,
 ) (
-	*configurationv1.KongIngress, error,
+	*kongv1.KongIngress, error,
 ) {
 	return getKongIngressFromObjAnnotations(s, obj)
 }
@@ -61,7 +61,7 @@ func getKongIngressFromObjAnnotations(
 	s store.Storer,
 	obj util.K8sObjectInfo,
 ) (
-	*configurationv1.KongIngress, error,
+	*kongv1.KongIngress, error,
 ) {
 	confName := annotations.ExtractConfigurationName(obj.Annotations)
 	if confName != "" {
@@ -81,8 +81,8 @@ func getKongIngressFromObjAnnotations(
 // getKongPluginOrKongClusterPlugin fetches a KongPlugin or KongClusterPlugin (as fallback) from the store.
 // If both are not found, an error is returned.
 func getKongPluginOrKongClusterPlugin(s store.Storer, namespace, name string) (
-	*configurationv1.KongPlugin,
-	*configurationv1.KongClusterPlugin,
+	*kongv1.KongPlugin,
+	*kongv1.KongClusterPlugin,
 	error,
 ) {
 	plugin, pluginErr := s.GetKongPlugin(namespace, name)
@@ -110,7 +110,7 @@ func getKongPluginOrKongClusterPlugin(s store.Storer, namespace, name string) (
 
 func kongPluginFromK8SClusterPlugin(
 	s store.Storer,
-	k8sPlugin configurationv1.KongClusterPlugin,
+	k8sPlugin kongv1.KongClusterPlugin,
 ) (Plugin, error) {
 	var config kong.Configuration
 	config, err := RawConfigToConfiguration(k8sPlugin.Config)
@@ -151,14 +151,14 @@ func kongPluginFromK8SClusterPlugin(
 	}, nil
 }
 
-func protocolPointersToStringPointers(protocols []*configurationv1.KongProtocol) (res []*string) {
+func protocolPointersToStringPointers(protocols []*kongv1.KongProtocol) (res []*string) {
 	for _, protocol := range protocols {
 		res = append(res, kong.String(string(*protocol)))
 	}
 	return
 }
 
-func protocolsToStrings(protocols []configurationv1.KongProtocol) (res []string) {
+func protocolsToStrings(protocols []kongv1.KongProtocol) (res []string) {
 	for _, protocol := range protocols {
 		res = append(res, string(protocol))
 	}
@@ -167,7 +167,7 @@ func protocolsToStrings(protocols []configurationv1.KongProtocol) (res []string)
 
 func kongPluginFromK8SPlugin(
 	s store.Storer,
-	k8sPlugin configurationv1.KongPlugin,
+	k8sPlugin kongv1.KongPlugin,
 ) (Plugin, error) {
 	var config kong.Configuration
 	config, err := RawConfigToConfiguration(k8sPlugin.Config)
@@ -221,10 +221,10 @@ func RawConfigToConfiguration(config apiextensionsv1.JSON) (kong.Configuration, 
 
 func namespacedSecretToConfiguration(
 	s store.Storer,
-	reference configurationv1.NamespacedSecretValueFromSource) (
+	reference kongv1.NamespacedSecretValueFromSource) (
 	kong.Configuration, error,
 ) {
-	bareReference := configurationv1.SecretValueFromSource{
+	bareReference := kongv1.SecretValueFromSource{
 		Secret: reference.Secret,
 		Key:    reference.Key,
 	}
@@ -237,7 +237,7 @@ type SecretGetter interface {
 
 func SecretToConfiguration(
 	s SecretGetter,
-	reference configurationv1.SecretValueFromSource, namespace string) (
+	reference kongv1.SecretValueFromSource, namespace string) (
 	kong.Configuration, error,
 ) {
 	secret, err := s.GetSecret(namespace, reference.Secret)

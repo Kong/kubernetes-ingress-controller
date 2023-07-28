@@ -17,8 +17,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
-	configuration "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
-	configurationv1beta1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1beta1"
+	kongv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
+	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1beta1"
 )
 
 var decoder = codecs.UniversalDeserializer()
@@ -31,28 +31,28 @@ type KongFakeValidator struct {
 
 func (v KongFakeValidator) ValidateConsumer(
 	_ context.Context,
-	_ configuration.KongConsumer,
+	_ kongv1.KongConsumer,
 ) (bool, string, error) {
 	return v.Result, v.Message, v.Error
 }
 
 func (v KongFakeValidator) ValidateConsumerGroup(
 	_ context.Context,
-	_ configurationv1beta1.KongConsumerGroup,
+	_ kongv1beta1.KongConsumerGroup,
 ) (bool, string, error) {
 	return v.Result, v.Message, v.Error
 }
 
 func (v KongFakeValidator) ValidatePlugin(
 	_ context.Context,
-	_ configuration.KongPlugin,
+	_ kongv1.KongPlugin,
 ) (bool, string, error) {
 	return v.Result, v.Message, v.Error
 }
 
 func (v KongFakeValidator) ValidateClusterPlugin(
 	_ context.Context,
-	_ configuration.KongClusterPlugin,
+	_ kongv1.KongClusterPlugin,
 ) (bool, string, error) {
 	return v.Result, v.Message, v.Error
 }

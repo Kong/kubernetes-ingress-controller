@@ -15,7 +15,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
-	"github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1alpha1"
+	kongv1alpha1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1alpha1"
 )
 
 var (
@@ -1290,7 +1290,7 @@ func TestTranslateIngress(t *testing.T) {
 			})
 			diff := cmp.Diff(tt.expected, TranslateIngresses(
 				[]*netv1.Ingress{tt.ingress},
-				v1alpha1.IngressClassParametersSpec{},
+				kongv1alpha1.IngressClassParametersSpec{},
 				TranslateIngressFeatureFlags{
 					RegexPathPrefix:  tt.addRegexPrefix,
 					ExpressionRoutes: false,

@@ -132,6 +132,10 @@ Adding a new version? You'll need three changes:
   whether an object was successfully translated into Kong entities and sent to Kong.
   [#4409](https://github.com/Kong/kubernetes-ingress-controller/pull/4409)
   [#4412](https://github.com/Kong/kubernetes-ingress-controller/pull/4412)
+- `KongConsumer`, `KongPlugin`, and `KongClusterPlugin`'s `additionalPrinterColumns`
+  were extended with `Programmed` column. It will display the status of the 
+  `Programmed` condition of an object when `kubectl get` is used.
+  [#4425](https://github.com/Kong/kubernetes-ingress-controller/pull/4425)
 
 ### Changed
 

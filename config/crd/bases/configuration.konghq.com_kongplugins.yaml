@@ -37,6 +37,9 @@ spec:
       name: Config
       priority: 1
       type: string
+    - jsonPath: .status.conditions[?(@.type=="Programmed")].status
+      name: Programmed
+      type: string
     name: v1
     schema:
       openAPIV3Schema:

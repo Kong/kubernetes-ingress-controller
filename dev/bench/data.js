@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1690540966983,
+  "lastUpdate": 1690540969359,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -38238,6 +38238,48 @@ window.BENCHMARK_DATA = {
             "value": 12,
             "unit": "allocs/op",
             "extra": "15160 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "czeslavo@gmail.com",
+            "name": "Grzegorz Burzyński",
+            "username": "czeslavo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "964f9d264246955a11e4a8bbe778e84c66b09a3c",
+          "message": "feat: add printer columns for programmed condition (#4425)\n\nAdds `additionalPrinterColumns` entry for a `Programmed` condition to be displayed for \r\n`KongConsumer`, `KongPlugin`, and `KongClusterPlugin`.\r\n\r\n$ k get kongplugins\r\nNAME   PLUGIN-TYPE   AGE   PROGRAMMED\r\nauth   key-auth      9s    True",
+          "timestamp": "2023-07-28T10:41:26Z",
+          "tree_id": "55bf16dcd1b3bc13736ba9f59a02fd50effb37d4",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/964f9d264246955a11e4a8bbe778e84c66b09a3c"
+        },
+        "date": 1690540958818,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - ns/op",
+            "value": 70569,
+            "unit": "ns/op",
+            "extra": "16761 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - B/op",
+            "value": 11092,
+            "unit": "B/op",
+            "extra": "16761 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - allocs/op",
+            "value": 12,
+            "unit": "allocs/op",
+            "extra": "16761 times\n2 procs"
           }
         ]
       },

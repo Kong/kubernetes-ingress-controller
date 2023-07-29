@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1690624640975,
+  "lastUpdate": 1690624642641,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -40254,6 +40254,48 @@ window.BENCHMARK_DATA = {
             "value": 12,
             "unit": "allocs/op",
             "extra": "17970 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "czeslavo@gmail.com",
+            "name": "Grzegorz Burzyński",
+            "username": "czeslavo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "1e260dd66cc6d90293b6a03f2764259c7f0d589d",
+          "message": "chore: add looppointer linter and fix found issues (#4429)",
+          "timestamp": "2023-07-29T11:56:10+02:00",
+          "tree_id": "c0613ded50b049391eb0d77a443b843a657faf77",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/1e260dd66cc6d90293b6a03f2764259c7f0d589d"
+        },
+        "date": 1690624634714,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - ns/op",
+            "value": 69368,
+            "unit": "ns/op",
+            "extra": "16818 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - B/op",
+            "value": 11092,
+            "unit": "B/op",
+            "extra": "16818 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - allocs/op",
+            "value": 12,
+            "unit": "allocs/op",
+            "extra": "16818 times\n2 procs"
           }
         ]
       },

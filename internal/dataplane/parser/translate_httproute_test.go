@@ -1825,7 +1825,7 @@ func TestIngressRulesFromHTTPRoutesUsingExpressionRoutes(t *testing.T) {
 				"should have expected number of services")
 			for _, expectedKongService := range tc.expectedKongServices {
 				kongService, ok := result.ServiceNameToServices[*expectedKongService.Name]
-				require.Truef(t, ok, "should find service %s", expectedKongService.Name)
+				require.Truef(t, ok, "should find service %s", *expectedKongService.Name)
 				require.Equal(t, expectedKongService.Backends, kongService.Backends)
 				// check routes
 				expectedKongRoutes := tc.expectedKongRoutes[*kongService.Name]
@@ -1938,6 +1938,7 @@ func TestIngressRulesFromSplitHTTPRouteMatchWithPriority(t *testing.T) {
 							Rules: []gatewayv1beta1.HTTPRouteRule{
 								{
 									Matches: []gatewayv1beta1.HTTPRouteMatch{
+										builder.NewHTTPRouteMatch().WithPathExact("/foo").Build(),
 										builder.NewHTTPRouteMatch().WithPathExact("/v1/foo").Build(),
 									},
 									BackendRefs: []gatewayv1beta1.HTTPBackendRef{
@@ -1956,7 +1957,7 @@ func TestIngressRulesFromSplitHTTPRouteMatchWithPriority(t *testing.T) {
 					Hostname:   "foo.com",
 					Match:      builder.NewHTTPRouteMatch().WithPathExact("/v1/foo").Build(),
 					RuleIndex:  0,
-					MatchIndex: 0,
+					MatchIndex: 1,
 				},
 				Priority: 1024,
 			},

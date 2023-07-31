@@ -1825,7 +1825,7 @@ func TestIngressRulesFromHTTPRoutesUsingExpressionRoutes(t *testing.T) {
 				"should have expected number of services")
 			for _, expectedKongService := range tc.expectedKongServices {
 				kongService, ok := result.ServiceNameToServices[*expectedKongService.Name]
-				require.Truef(t, ok, "should find service %s", expectedKongService.Name)
+				require.Truef(t, ok, "should find service %s", *expectedKongService.Name)
 				require.Equal(t, expectedKongService.Backends, kongService.Backends)
 				// check routes
 				expectedKongRoutes := tc.expectedKongRoutes[*kongService.Name]
@@ -1854,7 +1854,7 @@ func TestIngressRulesFromHTTPRoutesUsingExpressionRoutes(t *testing.T) {
 	}
 }
 
-func TestIngressRulesWithPriority(t *testing.T) {
+func TestIngressRulesFromSplitHTTPRouteMatchWithPriority(t *testing.T) {
 	fakestore, err := store.NewFakeStore(store.FakeObjects{})
 	require.NoError(t, err)
 	parser := mustNewParser(t, fakestore)
@@ -1863,37 +1863,38 @@ func TestIngressRulesWithPriority(t *testing.T) {
 	httpRouteTypeMeta := metav1.TypeMeta{Kind: "HTTPRoute", APIVersion: gatewayv1beta1.SchemeGroupVersion.String()}
 
 	testCases := []struct {
-		name                  string
-		httpRouteWithPriority translators.SplitHTTPRouteToKongRoutePriority
-		expectedKongService   kongstate.Service
-		expectedKongRoute     kongstate.Route
-		expectedError         error
+		name                string
+		matchWithPriority   translators.SplitHTTPRouteMatchToKongRoutePriority
+		expectedKongService kongstate.Service
+		expectedKongRoute   kongstate.Route
+		expectedError       error
 	}{
 		{
 			name: "no hostname",
-			httpRouteWithPriority: translators.SplitHTTPRouteToKongRoutePriority{
-				HTTPRoute: &gatewayv1beta1.HTTPRoute{
-					TypeMeta: httpRouteTypeMeta,
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "default",
-						Name:      "httproute-1",
-						Annotations: map[string]string{
-							translators.InternalRuleIndexAnnotationKey:  "0",
-							translators.InternalMatchIndexAnnotationKey: "0",
+			matchWithPriority: translators.SplitHTTPRouteMatchToKongRoutePriority{
+				Match: translators.SplitHTTPRouteMatch{
+					Source: &gatewayv1beta1.HTTPRoute{
+						TypeMeta: httpRouteTypeMeta,
+						ObjectMeta: metav1.ObjectMeta{
+							Namespace: "default",
+							Name:      "httproute-1",
 						},
-					},
-					Spec: gatewayv1beta1.HTTPRouteSpec{
-						Rules: []gatewayv1beta1.HTTPRouteRule{
-							{
-								Matches: []gatewayv1beta1.HTTPRouteMatch{
-									builder.NewHTTPRouteMatch().WithPathExact("/v1/foo").Build(),
-								},
-								BackendRefs: []gatewayv1beta1.HTTPBackendRef{
-									builder.NewHTTPBackendRef("service1").WithPort(80).Build(),
+						Spec: gatewayv1beta1.HTTPRouteSpec{
+							Rules: []gatewayv1beta1.HTTPRouteRule{
+								{
+									Matches: []gatewayv1beta1.HTTPRouteMatch{
+										builder.NewHTTPRouteMatch().WithPathExact("/v1/foo").Build(),
+									},
+									BackendRefs: []gatewayv1beta1.HTTPBackendRef{
+										builder.NewHTTPBackendRef("service1").WithPort(80).Build(),
+									},
 								},
 							},
 						},
 					},
+					Match:      builder.NewHTTPRouteMatch().WithPathExact("/v1/foo").Build(),
+					RuleIndex:  0,
+					MatchIndex: 0,
 				},
 				Priority: 1024,
 			},
@@ -1922,38 +1923,41 @@ func TestIngressRulesWithPriority(t *testing.T) {
 		},
 		{
 			name: "precise hostname and filter",
-			httpRouteWithPriority: translators.SplitHTTPRouteToKongRoutePriority{
-				HTTPRoute: &gatewayv1beta1.HTTPRoute{
-					TypeMeta: httpRouteTypeMeta,
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "default",
-						Name:      "httproute-1",
-						Annotations: map[string]string{
-							translators.InternalRuleIndexAnnotationKey:  "0",
-							translators.InternalMatchIndexAnnotationKey: "1",
+			matchWithPriority: translators.SplitHTTPRouteMatchToKongRoutePriority{
+				Match: translators.SplitHTTPRouteMatch{
+					Source: &gatewayv1beta1.HTTPRoute{
+						TypeMeta: httpRouteTypeMeta,
+						ObjectMeta: metav1.ObjectMeta{
+							Namespace: "default",
+							Name:      "httproute-1",
 						},
-					},
-					Spec: gatewayv1beta1.HTTPRouteSpec{
-						Hostnames: []gatewayv1beta1.Hostname{
-							"foo.com",
-						},
-						Rules: []gatewayv1beta1.HTTPRouteRule{
-							{
-								Matches: []gatewayv1beta1.HTTPRouteMatch{
-									builder.NewHTTPRouteMatch().WithPathExact("/v1/foo").Build(),
-								},
-								BackendRefs: []gatewayv1beta1.HTTPBackendRef{
-									builder.NewHTTPBackendRef("service1").WithPort(80).Build(),
-								},
-								Filters: []gatewayv1beta1.HTTPRouteFilter{
-									builder.NewHTTPRouteRequestRedirectFilter().
-										WithRequestRedirectStatusCode(301).
-										WithRequestRedirectHost("bar.com").
-										Build(),
+						Spec: gatewayv1beta1.HTTPRouteSpec{
+							Hostnames: []gatewayv1beta1.Hostname{
+								"foo.com",
+							},
+							Rules: []gatewayv1beta1.HTTPRouteRule{
+								{
+									Matches: []gatewayv1beta1.HTTPRouteMatch{
+										builder.NewHTTPRouteMatch().WithPathExact("/foo").Build(),
+										builder.NewHTTPRouteMatch().WithPathExact("/v1/foo").Build(),
+									},
+									BackendRefs: []gatewayv1beta1.HTTPBackendRef{
+										builder.NewHTTPBackendRef("service1").WithPort(80).Build(),
+									},
+									Filters: []gatewayv1beta1.HTTPRouteFilter{
+										builder.NewHTTPRouteRequestRedirectFilter().
+											WithRequestRedirectStatusCode(301).
+											WithRequestRedirectHost("bar.com").
+											Build(),
+									},
 								},
 							},
 						},
 					},
+					Hostname:   "foo.com",
+					Match:      builder.NewHTTPRouteMatch().WithPathExact("/v1/foo").Build(),
+					RuleIndex:  0,
+					MatchIndex: 1,
 				},
 				Priority: 1024,
 			},
@@ -1997,33 +2001,35 @@ func TestIngressRulesWithPriority(t *testing.T) {
 		},
 		{
 			name: "wildcard hostname with multiple backends",
-			httpRouteWithPriority: translators.SplitHTTPRouteToKongRoutePriority{
-				HTTPRoute: &gatewayv1beta1.HTTPRoute{
-					TypeMeta: httpRouteTypeMeta,
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "default",
-						Name:      "httproute-1",
-						Annotations: map[string]string{
-							translators.InternalRuleIndexAnnotationKey:  "0",
-							translators.InternalMatchIndexAnnotationKey: "0",
+			matchWithPriority: translators.SplitHTTPRouteMatchToKongRoutePriority{
+				Match: translators.SplitHTTPRouteMatch{
+					Source: &gatewayv1beta1.HTTPRoute{
+						TypeMeta: httpRouteTypeMeta,
+						ObjectMeta: metav1.ObjectMeta{
+							Namespace: "default",
+							Name:      "httproute-1",
 						},
-					},
-					Spec: gatewayv1beta1.HTTPRouteSpec{
-						Hostnames: []gatewayv1beta1.Hostname{
-							"*.foo.com",
-						},
-						Rules: []gatewayv1beta1.HTTPRouteRule{
-							{
-								Matches: []gatewayv1beta1.HTTPRouteMatch{
-									builder.NewHTTPRouteMatch().WithPathExact("/v1/foo").Build(),
-								},
-								BackendRefs: []gatewayv1beta1.HTTPBackendRef{
-									builder.NewHTTPBackendRef("service1").WithPort(80).WithWeight(10).Build(),
-									builder.NewHTTPBackendRef("service2").WithPort(80).WithWeight(20).Build(),
+						Spec: gatewayv1beta1.HTTPRouteSpec{
+							Hostnames: []gatewayv1beta1.Hostname{
+								"*.foo.com",
+							},
+							Rules: []gatewayv1beta1.HTTPRouteRule{
+								{
+									Matches: []gatewayv1beta1.HTTPRouteMatch{
+										builder.NewHTTPRouteMatch().WithPathExact("/v1/foo").Build(),
+									},
+									BackendRefs: []gatewayv1beta1.HTTPBackendRef{
+										builder.NewHTTPBackendRef("service1").WithPort(80).WithWeight(10).Build(),
+										builder.NewHTTPBackendRef("service2").WithPort(80).WithWeight(20).Build(),
+									},
 								},
 							},
 						},
 					},
+					Hostname:   "*.foo.com",
+					Match:      builder.NewHTTPRouteMatch().WithPathExact("/v1/foo").Build(),
+					RuleIndex:  0,
+					MatchIndex: 0,
 				},
 				Priority: 1024,
 			},
@@ -2061,11 +2067,12 @@ func TestIngressRulesWithPriority(t *testing.T) {
 	for _, tc := range testCases {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
-			tc.expectedKongRoute.Tags = util.GenerateTagsForObject(tc.httpRouteWithPriority.HTTPRoute)
-			tc.expectedKongRoute.Ingress = util.FromK8sObject(tc.httpRouteWithPriority.HTTPRoute)
+			match := tc.matchWithPriority.Match
+			tc.expectedKongRoute.Tags = util.GenerateTagsForObject(match.Source)
+			tc.expectedKongRoute.Ingress = util.FromK8sObject(match.Source)
 
 			res := newIngressRules()
-			err := parser.ingressRulesFromSplitHTTPRouteWithPriority(&res, tc.httpRouteWithPriority)
+			err := parser.ingressRulesFromSplitHTTPRouteMatchWithPriority(&res, tc.matchWithPriority)
 			if tc.expectedError != nil {
 				require.ErrorAs(t, err, tc.expectedError)
 				return
@@ -2078,10 +2085,6 @@ func TestIngressRulesWithPriority(t *testing.T) {
 			require.Equal(t, tc.expectedKongRoute, kongService.Routes[0])
 		})
 	}
-}
-
-func HTTPMethodPointer(method gatewayv1beta1.HTTPMethod) *gatewayv1beta1.HTTPMethod {
-	return &method
 }
 
 func k8sObjectInfoOfHTTPRoute(route *gatewayv1beta1.HTTPRoute) util.K8sObjectInfo {

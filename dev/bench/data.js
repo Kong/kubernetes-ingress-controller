@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1690624642641,
+  "lastUpdate": 1690773491414,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -40338,6 +40338,48 @@ window.BENCHMARK_DATA = {
             "value": 12,
             "unit": "allocs/op",
             "extra": "16818 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "tao.yi@konghq.com",
+            "name": "Yi Tao",
+            "username": "randmonkey"
+          },
+          "committer": {
+            "email": "tao.yi@konghq.com",
+            "name": "Yi Tao",
+            "username": "randmonkey"
+          },
+          "distinct": true,
+          "id": "0aba741a2081868825cdd9489e358ece6bfda1a6",
+          "message": "r:wqefactor assigning priority to HTTPRoutes",
+          "timestamp": "2023-07-31T11:16:34+08:00",
+          "tree_id": "b7234178a22a8a25121d6cfbdfac506e492f8bd2",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/0aba741a2081868825cdd9489e358ece6bfda1a6"
+        },
+        "date": 1690773485353,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - ns/op",
+            "value": 69727,
+            "unit": "ns/op",
+            "extra": "17457 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - B/op",
+            "value": 11096,
+            "unit": "B/op",
+            "extra": "17457 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - allocs/op",
+            "value": 12,
+            "unit": "allocs/op",
+            "extra": "17457 times\n2 procs"
           }
         ]
       }

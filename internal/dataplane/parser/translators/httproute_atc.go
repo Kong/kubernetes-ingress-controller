@@ -233,11 +233,6 @@ func matchersFromParentHTTPRoute(hostnames []string, metaAnnotations map[string]
 	return ret
 }
 
-const (
-	InternalRuleIndexAnnotationKey  = "internal-rule-index"
-	InternalMatchIndexAnnotationKey = "internal-match-index"
-)
-
 type SplitHTTPRouteMatch struct {
 	Source     *gatewayv1beta1.HTTPRoute
 	Hostname   string

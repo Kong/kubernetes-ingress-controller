@@ -2019,7 +2019,7 @@ func TestIngressRulesFromSplitHTTPRouteMatchWithPriority(t *testing.T) {
 			tc.expectedKongRoute.Ingress = util.FromK8sObject(match.Source)
 
 			res := newIngressRules()
-			err := parser.ingressRulesFromSplitHTTPRouteWithPriority(&res, tc.matchWithPriority)
+			err := parser.ingressRulesFromSplitHTTPRouteMatchWithPriority(&res, tc.matchWithPriority)
 			if tc.expectedError != nil {
 				require.ErrorAs(t, err, tc.expectedError)
 				return

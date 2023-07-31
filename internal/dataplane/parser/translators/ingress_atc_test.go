@@ -177,6 +177,105 @@ func TestTranslateIngressATC(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "an ingress with method, protocol, and header annotations",
+			ingress: &netv1.Ingress{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-ingress-annotations",
+					Namespace: corev1.NamespaceDefault,
+					Annotations: map[string]string{
+						"konghq.com/methods":     "GET",
+						"konghq.com/protocols":   "http",
+						"konghq.com/headers.foo": "bar",
+					},
+				},
+				Spec: netv1.IngressSpec{
+					Rules: []netv1.IngressRule{{
+						Host: "konghq.com",
+						IngressRuleValue: netv1.IngressRuleValue{
+							HTTP: &netv1.HTTPIngressRuleValue{
+								Paths: []netv1.HTTPIngressPath{{
+									Path: "/api/",
+									Backend: netv1.IngressBackend{
+										Service: &netv1.IngressServiceBackend{
+											Name: "test-service",
+											Port: netv1.ServiceBackendPort{
+												Name:   "http",
+												Number: 80,
+											},
+										},
+									},
+								}},
+							},
+						},
+					}},
+				},
+			},
+			expectedServices: map[string]kongstate.Service{
+				"default.test-ingress-annotations.test-service.80": {
+					Namespace: corev1.NamespaceDefault,
+					Service: kong.Service{
+						Name:           kong.String("default.test-ingress-annotations.test-service.80"),
+						Host:           kong.String("test-service.default.80.svc"),
+						ConnectTimeout: kong.Int(int(defaultServiceTimeout.Milliseconds())),
+						Path:           kong.String("/"),
+						Port:           kong.Int(80),
+						Protocol:       kong.String("http"),
+						Retries:        kong.Int(defaultRetries),
+						ReadTimeout:    kong.Int(int(defaultServiceTimeout.Milliseconds())),
+						WriteTimeout:   kong.Int(int(defaultServiceTimeout.Milliseconds())),
+					},
+					Routes: []kongstate.Route{{
+						Ingress: util.K8sObjectInfo{
+							Name:      "test-ingress-annotations",
+							Namespace: corev1.NamespaceDefault,
+							Annotations: map[string]string{
+								"konghq.com/methods":     "GET",
+								"konghq.com/protocols":   "http",
+								"konghq.com/headers.foo": "bar",
+							},
+						},
+						Route: kong.Route{
+							Name:       kong.String("default.test-ingress-annotations.test-service.konghq.com.80"),
+							Expression: kong.String(`(http.host == "konghq.com") && (http.path ^= "/api/") && (http.headers.foo == "bar") && (http.method == "GET")`),
+							Priority: kong.Int(IngressRoutePriorityTraits{
+								MatchFields:   4,
+								PlainHostOnly: true,
+								MaxPathLength: 5,
+								HasRegexPath:  false,
+								HeaderCount:   1,
+							}.EncodeToPriority()),
+							PreserveHost:      kong.Bool(true),
+							StripPath:         kong.Bool(false),
+							ResponseBuffering: kong.Bool(true),
+							RequestBuffering:  kong.Bool(true),
+							Tags:              kong.StringSlice("k8s-name:test-ingress-annotations", "k8s-namespace:default"),
+						},
+						ExpressionRoutes: true,
+					}},
+					Backends: []kongstate.ServiceBackend{{
+						Name:      "test-service",
+						Namespace: corev1.NamespaceDefault,
+						PortDef: kongstate.PortDef{
+							Mode:   kongstate.PortModeByNumber,
+							Number: 80,
+						},
+					}},
+					Parent: &netv1.Ingress{
+						TypeMeta: metav1.TypeMeta{Kind: "Ingress", APIVersion: netv1.SchemeGroupVersion.String()},
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "test-ingress-annotations",
+							Namespace: corev1.NamespaceDefault,
+							Annotations: map[string]string{
+								"konghq.com/methods":     "GET",
+								"konghq.com/protocols":   "http",
+								"konghq.com/headers.foo": "bar",
+							},
+						},
+					},
+				},
+			},
+		},
 	}
 
 	for _, tc := range testCases {

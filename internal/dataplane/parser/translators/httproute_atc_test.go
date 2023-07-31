@@ -1,12 +1,12 @@
 package translators
 
 import (
+	"strconv"
 	"testing"
 	"time"
 
 	"github.com/go-logr/logr"
 	"github.com/kong/go-kong/kong"
-	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -543,12 +543,7 @@ func TestSplitHTTPRoutes(t *testing.T) {
 					Rules: []gatewayv1beta1.HTTPRouteRule{
 						{
 							Matches: []gatewayv1beta1.HTTPRouteMatch{
-								{
-									Path: &gatewayv1beta1.HTTPPathMatch{
-										Type:  lo.ToPtr(gatewayv1beta1.PathMatchExact),
-										Value: lo.ToPtr("/"),
-									},
-								},
+								builder.NewHTTPRouteMatch().WithPathExact("/").Build(),
 							},
 							BackendRefs: namesToBackendRefs([]string{"svc1"}),
 						},
@@ -563,12 +558,7 @@ func TestSplitHTTPRoutes(t *testing.T) {
 							Name:      "httproute-1",
 						},
 					},
-					Match: gatewayv1beta1.HTTPRouteMatch{
-						Path: &gatewayv1beta1.HTTPPathMatch{
-							Type:  lo.ToPtr(gatewayv1beta1.PathMatchExact),
-							Value: lo.ToPtr("/"),
-						},
-					},
+					Match:      builder.NewHTTPRouteMatch().WithPathExact("/").Build(),
 					RuleIndex:  0,
 					MatchIndex: 0,
 				},
@@ -589,12 +579,7 @@ func TestSplitHTTPRoutes(t *testing.T) {
 					Rules: []gatewayv1beta1.HTTPRouteRule{
 						{
 							Matches: []gatewayv1beta1.HTTPRouteMatch{
-								{
-									Path: &gatewayv1beta1.HTTPPathMatch{
-										Type:  lo.ToPtr(gatewayv1beta1.PathMatchExact),
-										Value: lo.ToPtr("/"),
-									},
-								},
+								builder.NewHTTPRouteMatch().WithPathExact("/").Build(),
 							},
 							BackendRefs: namesToBackendRefs([]string{"svc1", "svc2"}),
 						},
@@ -609,13 +594,8 @@ func TestSplitHTTPRoutes(t *testing.T) {
 							Name:      "httproute-2",
 						},
 					},
-					Hostname: "a.foo.com",
-					Match: gatewayv1beta1.HTTPRouteMatch{
-						Path: &gatewayv1beta1.HTTPPathMatch{
-							Type:  lo.ToPtr(gatewayv1beta1.PathMatchExact),
-							Value: lo.ToPtr("/"),
-						},
-					},
+					Hostname:   "a.foo.com",
+					Match:      builder.NewHTTPRouteMatch().WithPathExact("/").Build(),
 					RuleIndex:  0,
 					MatchIndex: 0,
 				},
@@ -626,13 +606,8 @@ func TestSplitHTTPRoutes(t *testing.T) {
 							Name:      "httproute-2",
 						},
 					},
-					Hostname: "b.foo.com",
-					Match: gatewayv1beta1.HTTPRouteMatch{
-						Path: &gatewayv1beta1.HTTPPathMatch{
-							Type:  lo.ToPtr(gatewayv1beta1.PathMatchExact),
-							Value: lo.ToPtr("/"),
-						},
-					},
+					Hostname:   "b.foo.com",
+					Match:      builder.NewHTTPRouteMatch().WithPathExact("/").Build(),
 					RuleIndex:  0,
 					MatchIndex: 0,
 				},
@@ -652,35 +627,15 @@ func TestSplitHTTPRoutes(t *testing.T) {
 					Rules: []gatewayv1beta1.HTTPRouteRule{
 						{
 							Matches: []gatewayv1beta1.HTTPRouteMatch{
-								{
-									Path: &gatewayv1beta1.HTTPPathMatch{
-										Type:  lo.ToPtr(gatewayv1beta1.PathMatchExact),
-										Value: lo.ToPtr("/foo"),
-									},
-								},
-								{
-									Path: &gatewayv1beta1.HTTPPathMatch{
-										Type:  lo.ToPtr(gatewayv1beta1.PathMatchExact),
-										Value: lo.ToPtr("/bar"),
-									},
-								},
+								builder.NewHTTPRouteMatch().WithPathExact("/foo").Build(),
+								builder.NewHTTPRouteMatch().WithPathExact("/bar").Build(),
 							},
 							BackendRefs: namesToBackendRefs([]string{"svc1"}),
 						},
 						{
 							Matches: []gatewayv1beta1.HTTPRouteMatch{
-								{
-									Path: &gatewayv1beta1.HTTPPathMatch{
-										Type:  lo.ToPtr(gatewayv1beta1.PathMatchExact),
-										Value: lo.ToPtr("/v2/foo"),
-									},
-								},
-								{
-									Path: &gatewayv1beta1.HTTPPathMatch{
-										Type:  lo.ToPtr(gatewayv1beta1.PathMatchExact),
-										Value: lo.ToPtr("/v2/bar"),
-									},
-								},
+								builder.NewHTTPRouteMatch().WithPathExact("/v2/foo").Build(),
+								builder.NewHTTPRouteMatch().WithPathExact("/v2/bar").Build(),
 							},
 							BackendRefs: namesToBackendRefs([]string{"svc2"}),
 						},
@@ -694,23 +649,68 @@ func TestSplitHTTPRoutes(t *testing.T) {
 							Namespace: "ns1",
 							Name:      "httproute-3",
 						},
+						// Spec omitted, we do not check for spec for this test
 					},
+					Hostname:   "a.foo.com",
+					Match:      builder.NewHTTPRouteMatch().WithPathExact("/foo").Build(),
+					RuleIndex:  0,
+					MatchIndex: 0,
+				},
+				{
+					Source: &gatewayv1beta1.HTTPRoute{
+						ObjectMeta: metav1.ObjectMeta{
+							Namespace: "ns1",
+							Name:      "httproute-3",
+						},
+					},
+					Hostname:   "a.foo.com",
+					Match:      builder.NewHTTPRouteMatch().WithPathExact("/bar").Build(),
+					RuleIndex:  0,
+					MatchIndex: 1,
+				},
+				{
+					Source: &gatewayv1beta1.HTTPRoute{
+						ObjectMeta: metav1.ObjectMeta{
+							Namespace: "ns1",
+							Name:      "httproute-3",
+						},
+					},
+					Hostname:   "a.foo.com",
+					Match:      builder.NewHTTPRouteMatch().WithPathExact("/v2/foo").Build(),
+					RuleIndex:  1,
+					MatchIndex: 0,
+				},
+				{
+					Source: &gatewayv1beta1.HTTPRoute{
+						ObjectMeta: metav1.ObjectMeta{
+							Namespace: "ns1",
+							Name:      "httproute-3",
+						},
+					},
+					Hostname:   "a.foo.com",
+					Match:      builder.NewHTTPRouteMatch().WithPathExact("/v2/bar").Build(),
+					RuleIndex:  1,
+					MatchIndex: 1,
 				},
 			},
 		},
 	}
 
-	for _, tc := range testCases {
+	for i, tc := range testCases {
+		indexStr := strconv.Itoa(i)
 		tc := tc
-		splitHTTPRouteMatches := SplitHTTPRoute(tc.httpRoute)
-		require.Len(t, splitHTTPRouteMatches, len(tc.expectedSplitMatches), "should have same number of split matched with expected")
-		for i, expectedMatch := range tc.expectedSplitMatches {
-			assert.Equal(t, expectedMatch.Source.Name, splitHTTPRouteMatches[i].Source.Name)
-			assert.Equal(t, expectedMatch.Match, splitHTTPRouteMatches[i].Match)
-			assert.Equal(t, expectedMatch.Hostname, splitHTTPRouteMatches[i].Hostname)
-			assert.Equal(t, expectedMatch.RuleIndex, splitHTTPRouteMatches[i].RuleIndex)
-			assert.Equal(t, expectedMatch.MatchIndex, splitHTTPRouteMatches[i].MatchIndex)
-		}
+		t.Run(indexStr+"-"+tc.name, func(t *testing.T) {
+			splitHTTPRouteMatches := SplitHTTPRoute(tc.httpRoute)
+			require.Len(t, splitHTTPRouteMatches, len(tc.expectedSplitMatches), "should have same number of split matched with expected")
+			for i, expectedMatch := range tc.expectedSplitMatches {
+				assert.Equal(t, expectedMatch.Source.Name, splitHTTPRouteMatches[i].Source.Name)
+				assert.Equal(t, expectedMatch.Match, splitHTTPRouteMatches[i].Match)
+				assert.Equal(t, expectedMatch.Hostname, splitHTTPRouteMatches[i].Hostname)
+				assert.Equal(t, expectedMatch.RuleIndex, splitHTTPRouteMatches[i].RuleIndex)
+				assert.Equal(t, expectedMatch.MatchIndex, splitHTTPRouteMatches[i].MatchIndex)
+			}
+		})
+
 	}
 }
 
@@ -775,6 +775,10 @@ func TestAssignRoutePriorityToSplitHTTPRouteMatches(t *testing.T) {
 							},
 						},
 					},
+					Hostname:   "*.bar.com",
+					Match:      builder.NewHTTPRouteMatch().WithPathExact("/bar").Build(),
+					RuleIndex:  0,
+					MatchIndex: 0,
 				},
 			},
 			priorities: map[splitHTTPRouteIndex]int{
@@ -1037,7 +1041,7 @@ func TestAssignRoutePriorityToSplitHTTPRouteMatches(t *testing.T) {
 					PreciseHostname: true,
 					HostnameLength:  len("bar.com"),
 					PathType:        gatewayv1beta1.PathMatchExact,
-					PathLength:      len("/foo"),
+					PathLength:      len("/bar"),
 				}.EncodeToPriority() + maxRelativeOrderPriorityBits - 1,
 			},
 		},

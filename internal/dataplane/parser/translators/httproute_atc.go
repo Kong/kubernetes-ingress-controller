@@ -509,15 +509,6 @@ func compareSplitHTTPRouteMatchesRelativePriority(match1, match2 SplitHTTPRouteM
 	return true
 }
 
-// getHTTPRouteHostnamesAsSliceOfStrings translates the hostnames defined in an
-// HTTPRoute specification into a string slice, which is the type required by translating to matchers
-// in expression based routes.
-func getHTTPRouteHostnamesAsSliceOfStrings(httproute *gatewayv1beta1.HTTPRoute) []string {
-	return lo.Map(httproute.Spec.Hostnames, func(h gatewayv1beta1.Hostname, _ int) string {
-		return string(h)
-	})
-}
-
 // KongExpressionRouteFromHTTPRouteMatchWithPriority translates a split HTTPRoute match into expression
 // based kong route with assigned priority.
 func KongExpressionRouteFromHTTPRouteMatchWithPriority(
@@ -552,13 +543,12 @@ func KongExpressionRouteFromHTTPRouteMatchWithPriority(
 		Ingress:          util.FromK8sObject(httproute),
 		ExpressionRoutes: true,
 	}
-
-	hostnames := getHTTPRouteHostnamesAsSliceOfStrings(httproute)
+	// generate ATC matcher from hostname in the match and annotations of parent HTTPRoute.
+	hostnames := []string{match.Hostname}
 	matchers := matchersFromParentHTTPRoute(hostnames, httproute.Annotations)
+	// generate ATC matcher from split HTTPRouteMatch itself.
+	matchers = append(matchers, generateMatcherFromHTTPRouteMatch(match.Match))
 
-	if len(httproute.Spec.Rules) > 0 && len(httproute.Spec.Rules[0].Matches) > 0 {
-		matchers = append(matchers, generateMatcherFromHTTPRouteMatch(httproute.Spec.Rules[0].Matches[0]))
-	}
 	atc.ApplyExpression(&r.Route, atc.And(matchers...), httpRouteMatchWithPriority.Priority)
 
 	// translate filters in the rule.
@@ -577,18 +567,15 @@ func KongExpressionRouteFromHTTPRouteMatchWithPriority(
 	return r
 }
 
-// KongServiceNameFromHTTPRouteWithPriority generates service name from split HTTPRoutes.
+// KongServiceNameFromSplitHTTPRouteMatch generates service name from split HTTPRoute match.
 // since one HTTPRoute may be split by hostname and rule, the service name will be generated
-// in the format httproute.<namespace>.<name>.<hostname>.<rule index>.
+// in the format "httproute.<namespace>.<name>.<hostname>.<rule index>".
 // For example: `httproute.default.example.foo.com.0`.
-func KongServiceNameFromHTTPRouteWithPriority(
-	httpRouteMatchWithPriority SplitHTTPRouteMatchToKongRoutePriority,
-) string {
-	match := httpRouteMatchWithPriority.Match
+func KongServiceNameFromSplitHTTPRouteMatch(match SplitHTTPRouteMatch) string {
 	httproute := match.Source
 	hostname := "_"
 	if len(match.Hostname) > 0 {
-		hostname = strings.ReplaceAll(hostname, "*", "_")
+		hostname = strings.ReplaceAll(match.Hostname, "*", "_")
 	}
 	return fmt.Sprintf("httproute.%s.%s.%s.%d",
 		httproute.Namespace,

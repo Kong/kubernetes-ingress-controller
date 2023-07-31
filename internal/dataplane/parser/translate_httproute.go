@@ -541,7 +541,7 @@ func (p *Parser) ingressRulesFromSplitHTTPRouteWithPriority(
 
 	rule := httpRoute.Spec.Rules[match.RuleIndex]
 	backendRefs := httpBackendRefsToBackendRefs(rule.BackendRefs)
-	serviceName := translators.KongServiceNameFromHTTPRouteWithPriority(httpRouteMatchWithPriority)
+	serviceName := translators.KongServiceNameFromSplitHTTPRouteMatch(httpRouteMatchWithPriority.Match)
 
 	kongService, err := generateKongServiceFromBackendRefWithName(
 		p.logger,

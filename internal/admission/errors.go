@@ -1,20 +1,21 @@
 package admission
 
 const (
-	ErrTextConsumerCredentialSecretNotFound       = "consumer referenced non-existent credentials secret"
-	ErrTextConsumerCredentialValidationFailed     = "consumer credential failed validation"
-	ErrTextConsumerExists                         = "consumer already exists"
-	ErrTextConsumerUnretrievable                  = "failed to fetch consumer from kong"
-	ErrTextConsumerGroupUnsupportedByOSS          = "consumer groups are not supported in Kong OSS (only in Enterprise)"
-	ErrTextConsumerGroupUnsupportedWithoutLicense = "consumer groups are not supported in Kong Enterprise runs without a license"
-	ErrTextConsumerUsernameEmpty                  = "username cannot be empty"
-	ErrTextFailedToRetrieveSecret                 = "could not retrieve secrets from the kubernetes API"
-	ErrTextPluginConfigInvalid                    = "could not parse plugin configuration"
-	ErrTextPluginConfigValidationFailed           = "unable to validate plugin schema"
-	ErrTextPluginConfigViolatesSchema             = "plugin failed schema validation: %s"
-	ErrTextPluginNameEmpty                        = "plugin name cannot be empty"
-	ErrTextPluginSecretConfigUnretrievable        = "could not load secret plugin configuration"
-	ErrTextPluginUsesBothConfigTypes              = "plugin cannot use both Config and ConfigFrom"
+	ErrTextAdminAPIUnavailable                = "could not talk to Kong admin API"
+	ErrTextConsumerCredentialSecretNotFound   = "consumer referenced non-existent credentials secret"
+	ErrTextConsumerCredentialValidationFailed = "consumer credential failed validation"
+	ErrTextConsumerExists                     = "consumer already exists"
+	ErrTextConsumerUnretrievable              = "failed to fetch consumer from kong"
+	ErrTextConsumerGroupUnsupported           = "consumer group support requires Kong Enterprise 3.4+"
+	ErrTextConsumerGroupUnlicensed            = "consumer group support requires a valid Kong Enterprise license"
+	ErrTextConsumerUsernameEmpty              = "username cannot be empty"
+	ErrTextFailedToRetrieveSecret             = "could not retrieve secrets from the kubernetes API"
+	ErrTextPluginConfigInvalid                = "could not parse plugin configuration"
+	ErrTextPluginConfigValidationFailed       = "unable to validate plugin schema"
+	ErrTextPluginConfigViolatesSchema         = "plugin failed schema validation: %s"
+	ErrTextPluginNameEmpty                    = "plugin name cannot be empty"
+	ErrTextPluginSecretConfigUnretrievable    = "could not load secret plugin configuration"
+	ErrTextPluginUsesBothConfigTypes          = "plugin cannot use both Config and ConfigFrom"
 )
 
 const (

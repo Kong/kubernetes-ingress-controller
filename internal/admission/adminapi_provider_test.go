@@ -28,7 +28,10 @@ func TestDefaultAdminAPIServicesProvider(t *testing.T) {
 		_, ok = p.GetPluginsService()
 		require.False(t, ok)
 
-		_, ok = p.GetConsumerGroupsService()
+		_, ok = p.GetConsumerGroupService()
+		require.False(t, ok)
+
+		_, ok = p.GetInfoService()
 		require.False(t, ok)
 	})
 
@@ -49,8 +52,12 @@ func TestDefaultAdminAPIServicesProvider(t *testing.T) {
 		require.True(t, ok)
 		require.Equal(t, firstClient.AdminAPIClient().Plugins, pluginsSvc)
 
-		consumerGroupsSvc, ok := p.GetConsumerGroupsService()
+		consumerGroupSvc, ok := p.GetConsumerGroupService()
 		require.True(t, ok)
-		require.Equal(t, firstClient.AdminAPIClient().ConsumerGroups, consumerGroupsSvc)
+		require.Equal(t, firstClient.AdminAPIClient().ConsumerGroups, consumerGroupSvc)
+
+		infoSvc, ok := p.GetInfoService()
+		require.True(t, ok)
+		require.Equal(t, firstClient.AdminAPIClient().Info, infoSvc)
 	})
 }

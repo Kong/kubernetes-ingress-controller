@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/blang/semver/v4"
 	"github.com/kong/go-kong/kong"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
@@ -17,6 +18,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
 	credsvalidation "github.com/kong/kubernetes-ingress-controller/v2/internal/validation/consumers/credentials"
 	gatewayvalidators "github.com/kong/kubernetes-ingress-controller/v2/internal/validation/gateway"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/versions"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
 	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1beta1"
 )
@@ -37,7 +39,8 @@ type KongValidator interface {
 type AdminAPIServicesProvider interface {
 	GetConsumersService() (kong.AbstractConsumerService, bool)
 	GetPluginsService() (kong.AbstractPluginService, bool)
-	GetConsumerGroupsService() (kong.AbstractConsumerGroupService, bool)
+	GetConsumerGroupService() (kong.AbstractConsumerGroupService, bool)
+	GetInfoService() (kong.AbstractInfoService, bool)
 }
 
 // KongHTTPValidator implements KongValidator interface to validate Kong
@@ -169,20 +172,40 @@ func (validator KongHTTPValidator) ValidateConsumerGroup(
 		return true, "", nil
 	}
 
-	cgs, ok := validator.AdminAPIServicesProvider.GetConsumerGroupsService()
+	cgs, ok := validator.AdminAPIServicesProvider.GetConsumerGroupService()
 	// If there's no client, do not verify with data-plane as there's none available.
 	if !ok {
 		return true, "", nil
 	}
-	fmt.Println(">>>>>>>>>> WEBHOOK")
-	// check version too
+	info, ok := validator.AdminAPIServicesProvider.GetInfoService()
+	if !ok {
+		return true, "", nil
+	}
+
+	infoResponse, err := info.Get(ctx)
+	if err != nil {
+		return false, ErrTextAdminAPIUnavailable, err
+	}
+	version, err := kong.NewVersion(infoResponse.Version)
+	if err != nil {
+		// if we can't parse the version, assume weird custom build try anyway
+		return true, "", nil
+	}
+	if !version.IsKongGatewayEnterprise() {
+		return false, ErrTextConsumerGroupUnsupported, nil
+	}
+	sem := semver.Version{Major: version.Major(), Minor: version.Minor()}
+	if !sem.GTE(versions.ConsumerGroupsVersionCutoff) {
+		return false, ErrTextConsumerGroupUnsupported, nil
+	}
+
 	if _, _, err := cgs.List(ctx, &kong.ListOpt{Size: 1}); err != nil {
-		fmt.Printf(">>>>>>>>>> err: %v\n", err)
 		switch {
 		case kong.IsNotFoundErr(err):
-			return false, ErrTextConsumerGroupUnsupportedByOSS, nil
+			// This shouldn't actually happen. The version checks earlier should preclude this.
+			return false, ErrTextConsumerGroupUnsupported, nil
 		case kong.IsForbiddenErr(err):
-			return false, ErrTextConsumerGroupUnsupportedWithoutLicense, nil
+			return false, ErrTextConsumerGroupUnlicensed, nil
 		default:
 			return false, "unexpected", nil
 		}

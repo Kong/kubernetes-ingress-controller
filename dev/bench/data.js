@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1690774135596,
+  "lastUpdate": 1690780353211,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -40506,6 +40506,48 @@ window.BENCHMARK_DATA = {
             "value": 12,
             "unit": "allocs/op",
             "extra": "14355 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "tao.yi@konghq.com",
+            "name": "Yi Tao",
+            "username": "randmonkey"
+          },
+          "committer": {
+            "email": "tao.yi@konghq.com",
+            "name": "Yi Tao",
+            "username": "randmonkey"
+          },
+          "distinct": true,
+          "id": "e7c927d2281ca176157a88e7955cfa52536b9bde",
+          "message": "fix split httproute match to Kong route",
+          "timestamp": "2023-07-31T13:09:01+08:00",
+          "tree_id": "10c210b26743800ab915e63ee4ba47a91e595c78",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/e7c927d2281ca176157a88e7955cfa52536b9bde"
+        },
+        "date": 1690780347507,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - ns/op",
+            "value": 62790,
+            "unit": "ns/op",
+            "extra": "17539 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - B/op",
+            "value": 11100,
+            "unit": "B/op",
+            "extra": "17539 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - allocs/op",
+            "value": 12,
+            "unit": "allocs/op",
+            "extra": "17539 times\n2 procs"
           }
         ]
       }

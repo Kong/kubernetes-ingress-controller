@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1690798675616,
+  "lastUpdate": 1690798677956,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -41430,6 +41430,48 @@ window.BENCHMARK_DATA = {
             "value": 12,
             "unit": "allocs/op",
             "extra": "17354 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "czeslavo@gmail.com",
+            "name": "Grzegorz Burzyński",
+            "username": "czeslavo"
+          },
+          "committer": {
+            "email": "czeslavo@gmail.com",
+            "name": "Grzegorz Burzyński",
+            "username": "czeslavo"
+          },
+          "distinct": true,
+          "id": "72b016380ea9a9dcc0395f9d525508cae099f6de",
+          "message": "chore: remove non-existent makefile test.integration dependency",
+          "timestamp": "2023-07-31T12:16:28+02:00",
+          "tree_id": "88ee4e8c2e1848d9ba910fc9d946597f9ebb9612",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/72b016380ea9a9dcc0395f9d525508cae099f6de"
+        },
+        "date": 1690798668605,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - ns/op",
+            "value": 81983,
+            "unit": "ns/op",
+            "extra": "16300 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - B/op",
+            "value": 11096,
+            "unit": "B/op",
+            "extra": "16300 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - allocs/op",
+            "value": 12,
+            "unit": "allocs/op",
+            "extra": "16300 times\n2 procs"
           }
         ]
       },

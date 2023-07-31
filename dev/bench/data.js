@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1690818943774,
+  "lastUpdate": 1690819142993,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -42270,6 +42270,48 @@ window.BENCHMARK_DATA = {
             "value": 12,
             "unit": "allocs/op",
             "extra": "14317 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "vita400@kakao.com",
+            "name": "Park Jeong Ryul",
+            "username": "parkjeongryul"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "0dfd102d904c8d218b5952036182c4dbe840dea9",
+          "message": "tests: add impersonation to integration test (#4376)",
+          "timestamp": "2023-07-31T17:54:25+02:00",
+          "tree_id": "2e5d8dc9c38100d9492aefebdcb153b1c30552e8",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/0dfd102d904c8d218b5952036182c4dbe840dea9"
+        },
+        "date": 1690819136272,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - ns/op",
+            "value": 66676,
+            "unit": "ns/op",
+            "extra": "17827 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - B/op",
+            "value": 11096,
+            "unit": "B/op",
+            "extra": "17827 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - allocs/op",
+            "value": 12,
+            "unit": "allocs/op",
+            "extra": "17827 times\n2 procs"
           }
         ]
       }

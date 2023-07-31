@@ -542,9 +542,7 @@ func TestSplitHTTPRoutes(t *testing.T) {
 				Spec: gatewayv1beta1.HTTPRouteSpec{
 					Rules: []gatewayv1beta1.HTTPRouteRule{
 						{
-							Matches: []gatewayv1beta1.HTTPRouteMatch{
-								builder.NewHTTPRouteMatch().WithPathExact("/").Build(),
-							},
+							Matches:     builder.NewHTTPRouteMatch().WithPathExact("/").ToSlice(),
 							BackendRefs: namesToBackendRefs([]string{"svc1"}),
 						},
 					},
@@ -578,9 +576,7 @@ func TestSplitHTTPRoutes(t *testing.T) {
 					},
 					Rules: []gatewayv1beta1.HTTPRouteRule{
 						{
-							Matches: []gatewayv1beta1.HTTPRouteMatch{
-								builder.NewHTTPRouteMatch().WithPathExact("/").Build(),
-							},
+							Matches:     builder.NewHTTPRouteMatch().WithPathExact("/").ToSlice(),
 							BackendRefs: namesToBackendRefs([]string{"svc1", "svc2"}),
 						},
 					},
@@ -745,9 +741,7 @@ func TestAssignRoutePriorityToSplitHTTPRouteMatches(t *testing.T) {
 							Hostnames: []gatewayv1beta1.Hostname{"foo.com"},
 							Rules: []gatewayv1beta1.HTTPRouteRule{
 								{
-									Matches: []gatewayv1beta1.HTTPRouteMatch{
-										builder.NewHTTPRouteMatch().WithPathExact("/foo").Build(),
-									},
+									Matches: builder.NewHTTPRouteMatch().WithPathExact("/foo").ToSlice(),
 								},
 							},
 						},
@@ -768,9 +762,7 @@ func TestAssignRoutePriorityToSplitHTTPRouteMatches(t *testing.T) {
 							Hostnames: []gatewayv1beta1.Hostname{"*.bar.com"},
 							Rules: []gatewayv1beta1.HTTPRouteRule{
 								{
-									Matches: []gatewayv1beta1.HTTPRouteMatch{
-										builder.NewHTTPRouteMatch().WithPathExact("/bar").Build(),
-									},
+									Matches: builder.NewHTTPRouteMatch().WithPathExact("/bar").ToSlice(),
 								},
 							},
 						},
@@ -899,9 +891,7 @@ func TestAssignRoutePriorityToSplitHTTPRouteMatches(t *testing.T) {
 							Hostnames: []gatewayv1beta1.Hostname{"foo.com"},
 							Rules: []gatewayv1beta1.HTTPRouteRule{
 								{
-									Matches: []gatewayv1beta1.HTTPRouteMatch{
-										builder.NewHTTPRouteMatch().WithPathExact("/foo").Build(),
-									},
+									Matches: builder.NewHTTPRouteMatch().WithPathExact("/foo").ToSlice(),
 								},
 							},
 						},
@@ -922,9 +912,7 @@ func TestAssignRoutePriorityToSplitHTTPRouteMatches(t *testing.T) {
 							Hostnames: []gatewayv1beta1.Hostname{"bar.com"},
 							Rules: []gatewayv1beta1.HTTPRouteRule{
 								{
-									Matches: []gatewayv1beta1.HTTPRouteMatch{
-										builder.NewHTTPRouteMatch().WithPathExact("/foo").Build(),
-									},
+									Matches: builder.NewHTTPRouteMatch().WithPathExact("/foo").ToSlice(),
 								},
 							},
 						},

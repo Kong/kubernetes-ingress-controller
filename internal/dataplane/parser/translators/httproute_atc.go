@@ -235,11 +235,11 @@ type SplitHTTPRouteMatch struct {
 // with exactly one match. It will split one rule with multiple hostnames and multiple matches
 // to one hostname and one match per each HTTPRoute.
 func SplitHTTPRoute(httproute *gatewayv1beta1.HTTPRoute) []SplitHTTPRouteMatch {
-	splitMatches := []SplitHTTPRouteMatch{}
-	splitHTTPRouteByMatch := func(hostname string) {
+	splitHTTPRouteByMatch := func(hostname string) []SplitHTTPRouteMatch {
+		ret := []SplitHTTPRouteMatch{}
 		for ruleIndex, rule := range httproute.Spec.Rules {
 			for matchIndex, match := range rule.Matches {
-				splitMatches = append(splitMatches, SplitHTTPRouteMatch{
+				ret = append(ret, SplitHTTPRouteMatch{
 					Source:     httproute,
 					Hostname:   hostname,
 					Match:      *match.DeepCopy(),
@@ -248,15 +248,16 @@ func SplitHTTPRoute(httproute *gatewayv1beta1.HTTPRoute) []SplitHTTPRouteMatch {
 				})
 			}
 		}
+		return ret
 	}
-
+	// HTTPRoute has no hostnames. Split by rule and match, with an empty hostname.
 	if len(httproute.Spec.Hostnames) == 0 {
-		splitHTTPRouteByMatch("")
-		return splitMatches
+		return splitHTTPRouteByMatch("")
 	}
-
+	// HTTPRoute has at least one hostname, split by hostname first.
+	splitMatches := []SplitHTTPRouteMatch{}
 	for _, hostname := range httproute.Spec.Hostnames {
-		splitHTTPRouteByMatch(string(hostname))
+		splitMatches = append(splitMatches, splitHTTPRouteByMatch(string(hostname))...)
 	}
 	return splitMatches
 }

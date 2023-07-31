@@ -9,8 +9,7 @@ services:
   read_timeout: 60000
   retries: 5
   routes:
-  - expression: (http.host == "example.net") && (http.path ^= "/") && ((net.protocol
-      == "http") || (net.protocol == "https"))
+  - expression: (http.host == "example.net") && (http.path ^= "/")
     https_redirect_status_code: 426
     name: foo-namespace.foo.foo-svc.example.net.8000
     preserve_host: true
@@ -39,8 +38,7 @@ services:
   read_timeout: 60000
   retries: 5
   routes:
-  - expression: (http.host == "example.com") && (http.path ^= "/") && ((net.protocol
-      == "http") || (net.protocol == "https"))
+  - expression: (http.host == "example.com") && (http.path ^= "/")
     https_redirect_status_code: 426
     name: foo-namespace.foo.foo-svc.example.com.80
     preserve_host: true

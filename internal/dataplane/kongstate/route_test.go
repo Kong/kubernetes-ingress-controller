@@ -233,7 +233,7 @@ func TestOverrideExpressionRoute(t *testing.T) {
 		outRoute Route
 	}{
 		{
-			name: "protoocls should be overriden, but hosts, method, headers, snis should not",
+			name: "protocols should be overridden, but hosts, method, headers, snis should not",
 			inRoute: Route{
 				Route: kong.Route{
 					Name:       kong.String("expression-route-1"),
@@ -269,7 +269,7 @@ func TestOverrideExpressionRoute(t *testing.T) {
 			},
 		},
 		{
-			name: "request_buffering, response_buffering should be overriden, but regex_priority, path_handling should not",
+			name: "request_buffering, response_buffering should be overridden, but regex_priority, path_handling should not",
 			inRoute: Route{
 				Route: kong.Route{
 					Name:       kong.String("expression-route-2"),

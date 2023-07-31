@@ -10,7 +10,6 @@ services:
   retries: 5
   routes:
   - expression: (http.host == "example.com") && (http.path ^= "/.well-known/acme-challenge/yolo")
-      && ((net.protocol == "http") || (net.protocol == "https"))
     https_redirect_status_code: 426
     name: foo-namespace.foo.cert-manager-solver-pod.example.com.80
     preserve_host: true

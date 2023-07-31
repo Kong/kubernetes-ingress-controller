@@ -74,16 +74,6 @@ func generateMathcherFromGRPCMatch(match gatewayv1alpha2.GRPCRouteMatch, hostnam
 		routeMatcher.And(hostMatcher)
 	}
 
-	// override protocols from annotations.
-	// Because Kong expression based router extracts net.protocol field from scheme of request,
-	// GRPC over HTTP/2 requests could not be matched if protocol is set to grpc/grpcs since protocol could only be http or https.
-	// So we do not AND a protocol matcher if no protocol is specified in annotations.
-	protocols := annotations.ExtractProtocolNames(metaAnnotations)
-	if len(protocols) > 0 {
-		protocolMatcher := protocolMatcherFromProtocols(protocols)
-		routeMatcher.And(protocolMatcher)
-	}
-
 	snis, exist := annotations.ExtractSNIs(metaAnnotations)
 	if exist && len(snis) > 0 {
 		sniMatcher := sniMatcherFromSNIs(snis)

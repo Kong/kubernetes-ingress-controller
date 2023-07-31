@@ -2,6 +2,7 @@ package kongstate
 
 import (
 	"reflect"
+	"strconv"
 	"testing"
 
 	"github.com/kong/go-kong/kong"
@@ -223,6 +224,95 @@ func TestOverrideRoute(t *testing.T) {
 		var nilRoute *Route
 		nilRoute.override(logrus.New(), nil)
 	})
+}
+
+func TestOverrideExpressionRoute(t *testing.T) {
+	testCases := []struct {
+		name     string
+		inRoute  Route
+		outRoute Route
+	}{
+		{
+			name: "protocols should be overridden, but hosts, method, headers, snis should not",
+			inRoute: Route{
+				Route: kong.Route{
+					Name:       kong.String("expression-route-1"),
+					Expression: kong.String(`(http.host == "foo.com") && (http.path ^= "/v1/api")`),
+				},
+				Ingress: util.K8sObjectInfo{
+					Annotations: map[string]string{
+						"konghq.com/protocols":    "https",
+						"konghq.com/method":       "GET",
+						"konghq.com/host-aliases": "bar.com",
+						"konghq.com/headers.foo":  "bar",
+						"kohghq.com/snis":         "foo.com,bar.com",
+					},
+				},
+				ExpressionRoutes: true,
+			},
+			outRoute: Route{
+				Route: kong.Route{
+					Name:       kong.String("expression-route-1"),
+					Expression: kong.String(`(http.host == "foo.com") && (http.path ^= "/v1/api")`),
+					Protocols:  kong.StringSlice("https"),
+				},
+				Ingress: util.K8sObjectInfo{
+					Annotations: map[string]string{
+						"konghq.com/protocols":    "https",
+						"konghq.com/method":       "GET",
+						"konghq.com/host-aliases": "bar.com",
+						"konghq.com/headers.foo":  "bar",
+						"kohghq.com/snis":         "foo.com,bar.com",
+					},
+				},
+				ExpressionRoutes: true,
+			},
+		},
+		{
+			name: "request_buffering, response_buffering should be overridden, but regex_priority, path_handling should not",
+			inRoute: Route{
+				Route: kong.Route{
+					Name:       kong.String("expression-route-2"),
+					Expression: kong.String(`(http.host == "foo.com") && (http.path ^= "/v1/api")`),
+				},
+				Ingress: util.K8sObjectInfo{
+					Annotations: map[string]string{
+						"konghq.com/request-buffering":  "true",
+						"konghq.com/response-buffering": "true",
+						"konghq.com/regex-priority":     "100",
+						"konghq.com/path-handling":      "v1",
+					},
+				},
+				ExpressionRoutes: true,
+			},
+			outRoute: Route{
+				Route: kong.Route{
+					Name:              kong.String("expression-route-2"),
+					Expression:        kong.String(`(http.host == "foo.com") && (http.path ^= "/v1/api")`),
+					RequestBuffering:  kong.Bool(true),
+					ResponseBuffering: kong.Bool(true),
+				},
+				Ingress: util.K8sObjectInfo{
+					Annotations: map[string]string{
+						"konghq.com/request-buffering":  "true",
+						"konghq.com/response-buffering": "true",
+						"konghq.com/regex-priority":     "100",
+						"konghq.com/path-handling":      "v1",
+					},
+				},
+				ExpressionRoutes: true,
+			},
+		},
+	}
+
+	for i, tc := range testCases {
+		indexStr := strconv.Itoa(i)
+		tc := tc
+		t.Run(indexStr+"-"+tc.name, func(t *testing.T) {
+			tc.inRoute.override(logrus.New(), nil)
+			assert.Equal(t, tc.outRoute, tc.inRoute, "should be the same as expected after overriding")
+		})
+	}
 }
 
 func TestOverrideRoutePriority(t *testing.T) {

@@ -162,6 +162,10 @@ Adding a new version? You'll need three changes:
   to `/status/ready`. Gateways will be considered ready only after an initial
   configuration is applied by the controller.
   [#4368](https://github.com/Kong/kubernetes-ingress-controller/pull/4368
+- When translating to expression based Kong routes, annotations to specify 
+  protocols are translated to `protocols` field of the result Kong route,
+  instead of putting the conditions to match protocols inside expressions. 
+  [#4422](https://github.com/Kong/kubernetes-ingress-controller/pull/4422) 
 
 ### Fixed
 

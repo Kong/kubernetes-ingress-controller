@@ -1534,7 +1534,7 @@ func TestIngressRulesFromHTTPRoutesUsingExpressionRoutes(t *testing.T) {
 					{
 						Route: kong.Route{
 							Name:         kong.String("httproute.default.httproute-1._.0.0"),
-							Expression:   kong.String(`((net.protocol == "http") || (net.protocol == "https")) && (http.path == "/v1/foo")`),
+							Expression:   kong.String(`http.path == "/v1/foo"`),
 							PreserveHost: kong.Bool(true),
 						},
 						Plugins:          []kong.Plugin{},
@@ -1543,7 +1543,7 @@ func TestIngressRulesFromHTTPRoutesUsingExpressionRoutes(t *testing.T) {
 					{
 						Route: kong.Route{
 							Name:         kong.String("httproute.default.httproute-1._.0.1"),
-							Expression:   kong.String(`((net.protocol == "http") || (net.protocol == "https")) && (http.path == "/v1/barr")`),
+							Expression:   kong.String(`http.path == "/v1/barr"`),
 							PreserveHost: kong.Bool(true),
 						},
 						Plugins:          []kong.Plugin{},
@@ -1638,7 +1638,7 @@ func TestIngressRulesFromHTTPRoutesUsingExpressionRoutes(t *testing.T) {
 					{
 						Route: kong.Route{
 							Name:         kong.String("httproute.default.httproute-1.foo.com.0.0"),
-							Expression:   kong.String(`(http.host == "foo.com") && ((net.protocol == "http") || (net.protocol == "https")) && (http.path == "/v1/foo")`),
+							Expression:   kong.String(`(http.host == "foo.com") && (http.path == "/v1/foo")`),
 							PreserveHost: kong.Bool(true),
 						},
 						Plugins:          []kong.Plugin{},
@@ -1649,7 +1649,7 @@ func TestIngressRulesFromHTTPRoutesUsingExpressionRoutes(t *testing.T) {
 					{
 						Route: kong.Route{
 							Name:         kong.String("httproute.default.httproute-1._.bar.com.0.0"),
-							Expression:   kong.String(`(http.host =^ ".bar.com") && ((net.protocol == "http") || (net.protocol == "https")) && (http.path == "/v1/foo")`),
+							Expression:   kong.String(`(http.host =^ ".bar.com") && (http.path == "/v1/foo")`),
 							PreserveHost: kong.Bool(true),
 						},
 						Plugins:          []kong.Plugin{},
@@ -1660,7 +1660,7 @@ func TestIngressRulesFromHTTPRoutesUsingExpressionRoutes(t *testing.T) {
 					{
 						Route: kong.Route{
 							Name:         kong.String("httproute.default.httproute-1.foo.com.1.0"),
-							Expression:   kong.String(`(http.host == "foo.com") && ((net.protocol == "http") || (net.protocol == "https")) && (http.path == "/v1/barr")`),
+							Expression:   kong.String(`(http.host == "foo.com") && (http.path == "/v1/barr")`),
 							PreserveHost: kong.Bool(true),
 						},
 						Plugins:          []kong.Plugin{},
@@ -1671,7 +1671,64 @@ func TestIngressRulesFromHTTPRoutesUsingExpressionRoutes(t *testing.T) {
 					{
 						Route: kong.Route{
 							Name:         kong.String("httproute.default.httproute-1._.bar.com.1.0"),
-							Expression:   kong.String(`(http.host =^ ".bar.com") && ((net.protocol == "http") || (net.protocol == "https")) && (http.path == "/v1/barr")`),
+							Expression:   kong.String(`(http.host =^ ".bar.com") && (http.path == "/v1/barr")`),
+							PreserveHost: kong.Bool(true),
+						},
+						Plugins:          []kong.Plugin{},
+						ExpressionRoutes: true,
+					},
+				},
+			},
+		},
+		{
+			name: "single HTTPRoute with protocol and SNI annotations",
+			httpRoutes: []*gatewayv1beta1.HTTPRoute{
+				{
+					TypeMeta: httpRouteTypeMeta,
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "default",
+						Name:      "httproute-1",
+						Annotations: map[string]string{
+							"konghq.com/protocols": "https",
+							"konghq.com/snis":      "foo.com",
+						},
+					},
+					Spec: gatewayv1beta1.HTTPRouteSpec{
+						Hostnames: []gatewayv1beta1.Hostname{
+							"foo.com",
+						},
+						Rules: []gatewayv1beta1.HTTPRouteRule{
+							{
+								Matches: []gatewayv1beta1.HTTPRouteMatch{
+									builder.NewHTTPRouteMatch().WithPathExact("/v1/foo").Build(),
+								},
+								BackendRefs: []gatewayv1beta1.HTTPBackendRef{
+									builder.NewHTTPBackendRef("service1").WithPort(80).Build(),
+								},
+							},
+						},
+					},
+				},
+			},
+			expectedKongServices: []kongstate.Service{
+				{
+					Service: kong.Service{
+						Name: kong.String("httproute.default.httproute-1.foo.com.0"),
+					},
+					Backends: []kongstate.ServiceBackend{
+						{
+							Name:    "service1",
+							PortDef: kongstate.PortDef{Mode: kongstate.PortModeByNumber, Number: int32(80)},
+						},
+					},
+				},
+			},
+			expectedKongRoutes: map[string][]kongstate.Route{
+				"httproute.default.httproute-1.foo.com.0": {
+					{
+						Route: kong.Route{
+							Name:         kong.String("httproute.default.httproute-1.foo.com.0.0"),
+							Expression:   kong.String(`(http.host == "foo.com") && (tls.sni == "foo.com") && (http.path == "/v1/foo")`),
 							PreserveHost: kong.Bool(true),
 						},
 						Plugins:          []kong.Plugin{},
@@ -1734,7 +1791,7 @@ func TestIngressRulesFromHTTPRoutesUsingExpressionRoutes(t *testing.T) {
 					{
 						Route: kong.Route{
 							Name:         kong.String("httproute.default.httproute-1.foo.com.0.0"),
-							Expression:   kong.String(`(http.host == "foo.com") && ((net.protocol == "http") || (net.protocol == "https")) && (http.path == "/v1/foo")`),
+							Expression:   kong.String(`(http.host == "foo.com") && (http.path == "/v1/foo")`),
 							PreserveHost: kong.Bool(true),
 						},
 						Plugins:          []kong.Plugin{},
@@ -1781,7 +1838,7 @@ func TestIngressRulesFromHTTPRoutesUsingExpressionRoutes(t *testing.T) {
 					routeName := expectedRoute.Name
 					r, ok := kongRouteNameToRoute[*routeName]
 					require.Truef(t, ok, "should find route %s", *routeName)
-					require.Equal(t, expectedRoute.Expression, r.Expression)
+					require.Equal(t, *expectedRoute.Expression, *r.Expression)
 				}
 			}
 			// check translation failures
@@ -1854,7 +1911,7 @@ func TestIngressRulesWithPriority(t *testing.T) {
 			expectedKongRoute: kongstate.Route{
 				Route: kong.Route{
 					Name:         kong.String("httproute.default.httproute-1._.0.0"),
-					Expression:   kong.String(`((net.protocol == "http") || (net.protocol == "https")) && (http.path == "/v1/foo")`),
+					Expression:   kong.String(`http.path == "/v1/foo"`),
 					PreserveHost: kong.Bool(true),
 					StripPath:    kong.Bool(false),
 					Priority:     kong.Int(1024),
@@ -1914,7 +1971,7 @@ func TestIngressRulesWithPriority(t *testing.T) {
 			expectedKongRoute: kongstate.Route{
 				Route: kong.Route{
 					Name:         kong.String("httproute.default.httproute-1.foo.com.0.1"),
-					Expression:   kong.String(`(http.host == "foo.com") && ((net.protocol == "http") || (net.protocol == "https")) && (http.path == "/v1/foo")`),
+					Expression:   kong.String(`(http.host == "foo.com") && (http.path == "/v1/foo")`),
 					PreserveHost: kong.Bool(true),
 					StripPath:    kong.Bool(false),
 					Priority:     kong.Int(1024),
@@ -1990,7 +2047,7 @@ func TestIngressRulesWithPriority(t *testing.T) {
 			expectedKongRoute: kongstate.Route{
 				Route: kong.Route{
 					Name:         kong.String("httproute.default.httproute-1._.foo.com.0.0"),
-					Expression:   kong.String(`(http.host =^ ".foo.com") && ((net.protocol == "http") || (net.protocol == "https")) && (http.path == "/v1/foo")`),
+					Expression:   kong.String(`(http.host =^ ".foo.com") && (http.path == "/v1/foo")`),
 					PreserveHost: kong.Bool(true),
 					StripPath:    kong.Bool(false),
 					Priority:     kong.Int(1024),

@@ -829,12 +829,8 @@ func TestAssignRoutePriorityToSplitGRPCRouteMatches(t *testing.T) {
 				{
 					Source: &gatewayv1alpha2.GRPCRoute{
 						ObjectMeta: metav1.ObjectMeta{
-							Namespace: "default",
-							Name:      "grpcroute-2",
-							Annotations: map[string]string{
-								InternalRuleIndexAnnotationKey:  "0",
-								InternalMatchIndexAnnotationKey: "0",
-							},
+							Namespace:         "default",
+							Name:              "grpcroute-2",
 							CreationTimestamp: metav1.NewTime(now.Add(-5 * time.Second)),
 						},
 						Spec: gatewayv1alpha2.GRPCRouteSpec{
@@ -1090,10 +1086,6 @@ func TestKongExpressionRouteFromSplitGRPCRouteWithPriority(t *testing.T) {
 						ObjectMeta: metav1.ObjectMeta{
 							Namespace: "default",
 							Name:      "precise-hostname-regex-method",
-							Annotations: map[string]string{
-								InternalRuleIndexAnnotationKey:  "0",
-								InternalMatchIndexAnnotationKey: "0",
-							},
 						},
 						Spec: gatewayv1alpha2.GRPCRouteSpec{
 							Hostnames: []gatewayv1alpha2.Hostname{

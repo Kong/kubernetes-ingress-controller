@@ -2008,10 +2008,6 @@ func TestIngressRulesFromSplitHTTPRouteMatchWithPriority(t *testing.T) {
 						ObjectMeta: metav1.ObjectMeta{
 							Namespace: "default",
 							Name:      "httproute-1",
-							Annotations: map[string]string{
-								translators.InternalRuleIndexAnnotationKey:  "0",
-								translators.InternalMatchIndexAnnotationKey: "0",
-							},
 						},
 						Spec: gatewayv1beta1.HTTPRouteSpec{
 							Hostnames: []gatewayv1beta1.Hostname{

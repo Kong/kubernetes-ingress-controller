@@ -914,12 +914,8 @@ func TestAssignRoutePriorityToSplitHTTPRouteMatches(t *testing.T) {
 				{
 					Source: &gatewayv1beta1.HTTPRoute{
 						ObjectMeta: metav1.ObjectMeta{
-							Namespace: "default",
-							Name:      "httproute-2",
-							Annotations: map[string]string{
-								InternalRuleIndexAnnotationKey:  "0",
-								InternalMatchIndexAnnotationKey: "0",
-							},
+							Namespace:         "default",
+							Name:              "httproute-2",
 							CreationTimestamp: metav1.NewTime(now.Add(-5 * time.Second)),
 						},
 						Spec: gatewayv1beta1.HTTPRouteSpec{

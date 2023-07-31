@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1690797797365,
+  "lastUpdate": 1690797798927,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -41346,6 +41346,48 @@ window.BENCHMARK_DATA = {
             "value": 12,
             "unit": "allocs/op",
             "extra": "14607 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "tao.yi@konghq.com",
+            "name": "Tao Yi",
+            "username": "randmonkey"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "b82308e31a59869c3afa390918f9177ad77a10ff",
+          "message": "feat(expression router) move setting protocols back to kongstate override for expression based routes (#4422)\n\n* move setting protocols back to kongstate override\r\n\r\n* update unit tests and CHANGELOG\r\n\r\n* address comments\r\n\r\n* update golden test & fix lint\r\n\r\n* update CHANGELOG",
+          "timestamp": "2023-07-31T10:02:13Z",
+          "tree_id": "344c77a13503007bbb731f04ce319c2e1fd791c7",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/b82308e31a59869c3afa390918f9177ad77a10ff"
+        },
+        "date": 1690797791275,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - ns/op",
+            "value": 71739,
+            "unit": "ns/op",
+            "extra": "17354 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - B/op",
+            "value": 11094,
+            "unit": "B/op",
+            "extra": "17354 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - allocs/op",
+            "value": 12,
+            "unit": "allocs/op",
+            "extra": "17354 times\n2 procs"
           }
         ]
       },

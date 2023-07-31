@@ -32,9 +32,5 @@ func DeployRBACsForCluster(ctx context.Context, cluster clusters.Cluster) error 
 	}
 
 	fmt.Printf("INFO: deploying Kong CRDs RBACs to cluster")
-	if err := clusters.KustomizeDeployForCluster(ctx, cluster, kongCRDsRBACsKustomize, "-n", consts.ControllerNamespace); err != nil {
-		return err
-	}
-
-	return nil
+	return clusters.KustomizeDeployForCluster(ctx, cluster, kongCRDsRBACsKustomize, "-n", consts.ControllerNamespace)
 }

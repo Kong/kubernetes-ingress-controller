@@ -8,7 +8,7 @@ require (
 	github.com/avast/retry-go/v4 v4.3.4
 	github.com/blang/semver/v4 v4.0.0
 	github.com/bombsimon/logrusr/v2 v2.0.1
-	github.com/deepmap/oapi-codegen v1.13.0
+	github.com/deepmap/oapi-codegen v1.13.1
 	github.com/go-logr/logr v1.2.4
 	github.com/goccy/go-json v0.10.2
 	github.com/google/go-cmp v0.5.9
@@ -187,14 +187,14 @@ require (
 	go.uber.org/multierr v1.11.0 // indirect
 	golang.org/x/crypto v0.11.0 // indirect
 	golang.org/x/exp v0.0.0-20220407100705-7b9b53b0aca4
-	golang.org/x/mod v0.10.0 // indirect
+	golang.org/x/mod v0.12.0 // indirect
 	golang.org/x/oauth2 v0.10.0 // indirect
 	golang.org/x/sync v0.3.0
 	golang.org/x/sys v0.10.0 // indirect
 	golang.org/x/term v0.10.0 // indirect
 	golang.org/x/text v0.11.0 // indirect
 	golang.org/x/time v0.3.0 // indirect
-	golang.org/x/tools v0.9.2 // indirect
+	golang.org/x/tools v0.11.0 // indirect
 	gomodules.xyz/jsonpatch/v2 v2.3.0 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
 	google.golang.org/genproto v0.0.0-20230706204954-ccb25ca9f130 // indirect

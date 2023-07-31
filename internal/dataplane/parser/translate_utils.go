@@ -185,7 +185,7 @@ func maybePrependRegexPrefix(path, controllerPrefix string, applyLegacyHeuristic
 func applyExpressionToIngressRules(result *ingressRules) {
 	for _, svc := range result.ServiceNameToServices {
 		for i := range svc.Routes {
-			translators.ApplyExpressionToKongRoute(&svc.Routes[i])
+			translators.ApplyExpressionToL4KongRoute(&svc.Routes[i])
 		}
 	}
 }

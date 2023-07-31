@@ -7,7 +7,9 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/parser/atc"
 )
 
-func ApplyExpressionToKongRoute(r *kongstate.Route) {
+// ApplyExpressionToL4KongRoute convert route flavor from traditional to expressions
+// against protocols, snis and dest ports.
+func ApplyExpressionToL4KongRoute(r *kongstate.Route) {
 	matchers := []atc.Matcher{}
 
 	sniMatcher := sniMatcherFromSNIs(lo.Map(r.Route.SNIs, func(item *string, _ int) string { return *item }))

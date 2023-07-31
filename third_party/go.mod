@@ -8,12 +8,14 @@ require (
 	github.com/go-delve/delve v1.21.0
 	github.com/golangci/golangci-lint v1.53.3
 	github.com/jstemmer/go-junit-report/v2 v2.0.0
+	github.com/kyoh86/looppointer v0.2.1
 	gotest.tools/gotestsum v1.10.1
 	honnef.co/go/tools v0.4.3
 	k8s.io/code-generator v0.27.4
 	sigs.k8s.io/controller-runtime/tools/setup-envtest v0.0.0-20230221102149-f6f37e6cc1ec
 	sigs.k8s.io/controller-tools v0.12.1
 	sigs.k8s.io/kustomize/kustomize/v4 v4.5.7
+
 )
 
 // Note: needed for skaffold
@@ -232,6 +234,7 @@ require (
 	github.com/kulti/thelper v0.6.3 // indirect
 	github.com/kunwardeep/paralleltest v1.0.7 // indirect
 	github.com/kyoh86/exportloopref v0.1.11 // indirect
+	github.com/kyoh86/nolint v0.0.1 // indirect
 	github.com/ldez/gomoddirectives v0.2.3 // indirect
 	github.com/ldez/tagliatelle v0.5.0 // indirect
 	github.com/leonklingele/grouper v1.1.1 // indirect

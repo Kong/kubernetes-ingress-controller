@@ -363,6 +363,7 @@ func TestOverrideService(t *testing.T) {
 	}
 
 	for _, testcase := range testTable {
+		testcase := testcase
 		log := logrus.New()
 		log.SetOutput(io.Discard)
 

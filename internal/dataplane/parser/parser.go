@@ -228,18 +228,21 @@ func (p *Parser) BuildKongConfig() KongConfigBuildingResult {
 
 	// generate consumers and credentials
 	result.FillConsumersAndCredentials(p.storer, p.failuresCollector, p.kongVersion)
-	for _, c := range result.Consumers {
-		p.registerSuccessfullyParsedObject(&c.K8sKongConsumer)
+	for i := range result.Consumers {
+		p.registerSuccessfullyParsedObject(&result.Consumers[i].K8sKongConsumer)
 	}
 
 	// process annotation plugins
-	result.FillPlugins(p.logger, p.storer)
-	for _, pl := range result.Plugins {
-		p.registerSuccessfullyParsedObject(pl.K8sParent)
+	result.FillPlugins(p.logger, p.storer, p.failuresCollector)
+	for i := range result.Plugins {
+		p.registerSuccessfullyParsedObject(result.Plugins[i].K8sParent)
 	}
 
 	// process consumer groups
 	result.FillConsumerGroups(p.logger, p.storer)
+	for i := range result.ConsumerGroups {
+		p.registerSuccessfullyParsedObject(&result.ConsumerGroups[i].K8sKongConsumerGroup)
+	}
 
 	// generate Certificates and SNIs
 	ingressCerts := p.getCerts(ingressRules.SecretNameToSNIs)
@@ -340,6 +343,7 @@ func findPort(svc *corev1.Service, wantPort kongstate.PortDef) (*corev1.ServiceP
 			}, nil
 		}
 		for _, port := range svc.Spec.Ports {
+			port := port
 			if port.Port == wantPort.Number {
 				return &port, nil
 			}
@@ -350,6 +354,7 @@ func findPort(svc *corev1.Service, wantPort kongstate.PortDef) (*corev1.ServiceP
 			return nil, fmt.Errorf("rules with an ExternalName service must specify numeric ports")
 		}
 		for _, port := range svc.Spec.Ports {
+			port := port
 			if port.Name == wantPort.Name {
 				return &port, nil
 			}

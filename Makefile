@@ -44,7 +44,7 @@ _download_tool:
 		GOBIN=$(PROJECT_DIR)/bin go generate -tags=third_party ./$(TOOL).go )
 
 .PHONY: tools
-tools: controller-gen kustomize client-gen golangci-lint gotestsum crd-ref-docs skaffold
+tools: controller-gen kustomize client-gen golangci-lint gotestsum crd-ref-docs skaffold looppointer
 
 CONTROLLER_GEN = $(PROJECT_DIR)/bin/controller-gen
 .PHONY: controller-gen
@@ -101,6 +101,11 @@ GOJUNIT= $(PROJECT_DIR)/bin/go-junit-report
 go-junit-report: ## Download go-junit-report locally if necessary.
 	@$(MAKE) _download_tool TOOL=go-junit-report
 
+LOOPPOINTER= $(PROJECT_DIR)/bin/looppointer
+.PHONY: looppointer.download
+looppointer.download: ## Download looppointer locally if necessary.
+	@$(MAKE) _download_tool TOOL=looppointer
+
 # ------------------------------------------------------------------------------
 # Build
 # ------------------------------------------------------------------------------
@@ -151,7 +156,7 @@ fmt:
 	go fmt ./...
 
 .PHONY: lint
-lint: verify.tidy golangci-lint staticcheck
+lint: verify.tidy golangci-lint staticcheck looppointer
 	$(GOLANGCI_LINT) run -v
 
 .PHONY: staticcheck
@@ -159,6 +164,9 @@ staticcheck: staticcheck.download
 	$(STATICCHECK) -tags envtest,e2e_tests,integration_tests,istio_tests,conformance_tests \
 		-f stylish \
 		./...
+
+looppointer: looppointer.download
+	$(LOOPPOINTER) -v ./internal/... ./test/...
 
 .PHONY: verify.tidy
 verify.tidy:

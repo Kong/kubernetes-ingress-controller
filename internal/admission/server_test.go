@@ -331,6 +331,7 @@ func TestValidationWebhook(t *testing.T) {
 				},
 			},
 		} {
+			tt := tt
 			t.Run(fmt.Sprintf("%s/%s", apiVersion, tt.name), func(t *testing.T) {
 				// arrange
 				assert := assert.New(t)

@@ -512,6 +512,7 @@ func (r *HTTPRouteReconciler) ensureGatewayReferenceStatusAdded(ctx context.Cont
 	// overlay the parent ref statuses for all new gateway references
 	statusChangesWereMade := false
 	for _, gateway := range gateways {
+		gateway := gateway
 		// build a new status for the parent Gateway
 		gatewayParentStatus := &gatewayv1beta1.RouteParentStatus{
 			ParentRef: ParentReference{

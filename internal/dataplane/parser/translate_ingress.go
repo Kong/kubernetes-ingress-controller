@@ -111,6 +111,7 @@ func (p *Parser) ingressV1ToKongServiceLegacy(ingresses []*netv1.Ingress, icp v1
 				continue
 			}
 			for j, rulePath := range rule.HTTP.Paths {
+				rulePath := rulePath
 				pathTypeImplementationSpecific := netv1.PathTypeImplementationSpecific
 				if rulePath.PathType == nil {
 					rulePath.PathType = &pathTypeImplementationSpecific

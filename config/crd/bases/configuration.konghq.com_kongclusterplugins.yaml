@@ -37,6 +37,9 @@ spec:
       name: Config
       priority: 1
       type: string
+    - jsonPath: .status.conditions[?(@.type=="Programmed")].status
+      name: Programmed
+      type: string
     name: v1
     schema:
       openAPIV3Schema:
@@ -159,6 +162,14 @@ spec:
               resource.
             properties:
               conditions:
+                default:
+                - lastTransitionTime: "1970-01-01T00:00:00Z"
+                  message: Waiting for controller
+                  reason: Pending
+                  status: Unknown
+                  type: Programmed
+                description: "Conditions describe the current conditions of the KongClusterPluginStatus.
+                  \n Known condition types are: \n * \"Programmed\""
                 items:
                   description: "Condition contains details for one aspect of the current
                     state of this API Resource. --- This struct is intended for direct
@@ -225,7 +236,11 @@ spec:
                   - status
                   - type
                   type: object
+                maxItems: 8
                 type: array
+                x-kubernetes-list-map-keys:
+                - type
+                x-kubernetes-list-type: map
             type: object
         required:
         - plugin

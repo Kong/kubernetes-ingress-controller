@@ -165,6 +165,8 @@ var inputControllersNeeded = &typesNeeded{
 		Plural:                            "kongconsumergroups",
 		CacheType:                         "ConsumerGroup",
 		NeedsStatusPermissions:            true,
+		ConfigStatusNotificationsEnabled:  true,
+		ProgrammedConditionUpdatesEnabled: true,
 		AcceptsIngressClassNameAnnotation: true,
 		AcceptsIngressClassNameSpec:       false,
 		NeedsUpdateReferences:             true,

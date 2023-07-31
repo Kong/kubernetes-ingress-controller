@@ -113,6 +113,7 @@ func ToDeckContent(
 	})
 
 	for _, u := range k8sState.Upstreams {
+		u := u
 		fillUpstream(&u.Upstream)
 		upstream := file.FUpstream{Upstream: u.Upstream}
 		for _, t := range u.Targets {
@@ -164,29 +165,41 @@ func ToDeckContent(
 			continue
 		}
 
+		for _, cg := range c.ConsumerGroups {
+			cg := cg
+			consumer.Groups = append(consumer.Groups, &cg)
+		}
+
 		for _, p := range c.Plugins {
 			consumer.Plugins = append(consumer.Plugins, &file.FPlugin{Plugin: p})
 		}
 
 		for _, v := range c.KeyAuths {
+			v := v
 			consumer.KeyAuths = append(consumer.KeyAuths, &v.KeyAuth)
 		}
 		for _, v := range c.HMACAuths {
+			v := v
 			consumer.HMACAuths = append(consumer.HMACAuths, &v.HMACAuth)
 		}
 		for _, v := range c.BasicAuths {
+			v := v
 			consumer.BasicAuths = append(consumer.BasicAuths, &v.BasicAuth)
 		}
 		for _, v := range c.JWTAuths {
+			v := v
 			consumer.JWTAuths = append(consumer.JWTAuths, &v.JWTAuth)
 		}
 		for _, v := range c.ACLGroups {
+			v := v
 			consumer.ACLGroups = append(consumer.ACLGroups, &v.ACLGroup)
 		}
 		for _, v := range c.Oauth2Creds {
+			v := v
 			consumer.Oauth2Creds = append(consumer.Oauth2Creds, &v.Oauth2Credential)
 		}
 		for _, v := range c.MTLSAuths {
+			v := v
 			consumer.MTLSAuths = append(consumer.MTLSAuths, &v.MTLSAuth)
 		}
 		content.Consumers = append(content.Consumers, consumer)

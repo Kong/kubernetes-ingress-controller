@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1690819144760,
+  "lastUpdate": 1690823616980,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -42354,6 +42354,48 @@ window.BENCHMARK_DATA = {
             "value": 12,
             "unit": "allocs/op",
             "extra": "17827 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "tao.yi@konghq.com",
+            "name": "Tao Yi",
+            "username": "randmonkey"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "e686d340db1bd18b71c7b05710a9825235d2e493",
+          "message": "refactor: split HTTPRoute into SplitHTTPRouteMatch struct (#4434)\n\nRefactor splitting of HTTPRoute: put each match of HTTPRoute\r\ninto SplitHTTPRouteMatch structure, instead of copying metadata\r\nand split match into another HTTPRoute.",
+          "timestamp": "2023-07-31T10:12:21-07:00",
+          "tree_id": "692161050bbd7dba923bb4e1041cabf7efc9cedb",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/e686d340db1bd18b71c7b05710a9825235d2e493"
+        },
+        "date": 1690823609895,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - ns/op",
+            "value": 83132,
+            "unit": "ns/op",
+            "extra": "15304 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - B/op",
+            "value": 11096,
+            "unit": "B/op",
+            "extra": "15304 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - allocs/op",
+            "value": 12,
+            "unit": "allocs/op",
+            "extra": "15304 times\n2 procs"
           }
         ]
       }

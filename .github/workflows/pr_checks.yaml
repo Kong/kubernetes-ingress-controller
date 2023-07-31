@@ -20,9 +20,28 @@ on:
   workflow_dispatch: {}
 
 jobs:
+  up-to-date:
+    runs-on: ubuntu-latest
+    outputs:
+      status: ${{ steps.up-to-date.outputs.status }}
+    steps:
+      - name: checkout repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - name: Check if PR is up to date, if it is skip workflows for this ref
+        id: 'up-to-date'
+        if: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/heads/') }}
+        uses: Kong/public-shared-actions/pr-previews/up-to-date@main
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+
   # This job is used to check if the secrets are available. If they are not, we'll skip jobs that require them.
   should-run-with-secrets:
     runs-on: ubuntu-latest
+    needs:
+    - up-to-date
+    if: ${{ needs.up-to-date.outputs.status == 'false' }}
     outputs:
       result: ${{ steps.check.outputs.result }}
     steps:
@@ -37,6 +56,9 @@ jobs:
 
   tools:
     runs-on: ubuntu-latest
+    needs:
+    - up-to-date
+    if: ${{ needs.up-to-date.outputs.status == 'false' }}
     steps:
       - name: checkout repository
         uses: actions/checkout@v3
@@ -49,24 +71,38 @@ jobs:
       - run: make tools
 
   linters:
+    needs:
+    - up-to-date
+    if: ${{ needs.up-to-date.outputs.status == 'false' }}
     uses: ./.github/workflows/_linters.yaml
     secrets: inherit
 
   unit-tests:
+    needs:
+    - up-to-date
+    if: ${{ needs.up-to-date.outputs.status == 'false' }}
     uses: ./.github/workflows/_unit_tests.yaml
     secrets: inherit
 
   envtest-tests:
+    needs:
+    - up-to-date
+    if: ${{ needs.up-to-date.outputs.status == 'false' }}
     uses: ./.github/workflows/_envtest_tests.yaml
     secrets: inherit
 
   integration-tests:
-    needs: should-run-with-secrets
-    if: ${{ needs.should-run-with-secrets.outputs.result == 'true' }}
+    needs:
+    - should-run-with-secrets
+    - up-to-date
+    if: ${{ needs.should-run-with-secrets.outputs.result == 'true' && needs.up-to-date.outputs.status == 'false' }}
     uses: ./.github/workflows/_integration_tests.yaml
     secrets: inherit
 
   conformance-tests:
+    needs:
+    - up-to-date
+    if: ${{ needs.up-to-date.outputs.status == 'false' }}
     uses: ./.github/workflows/_conformance_tests.yaml
     secrets: inherit
 
@@ -101,6 +137,7 @@ jobs:
       - envtest-tests
       - integration-tests
       - conformance-tests
-    if: ${{ always() && needs.should-run-with-secrets.outputs.result == 'true' }}
+      - up-to-date
+    if: ${{ always() && needs.should-run-with-secrets.outputs.result == 'true' && needs.up-to-date.outputs.status == 'false' }}
     uses: ./.github/workflows/_test_reports.yaml
     secrets: inherit

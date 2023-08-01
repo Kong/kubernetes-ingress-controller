@@ -41,7 +41,7 @@ var skippedTestsForExpressionRoutes = []string{
 	tests.HTTPRouteRedirectPortAndScheme.ShortName,
 	// https://github.com/Kong/kubernetes-ingress-controller/issues/3680
 	tests.GatewayClassObservedGenerationBump.ShortName,
-	// https://github.com/Kong/kubernetes-ingress-controller/issues/3678
+	// https://github.com/Kong/kubernetes-ingress-controller/issues/4312
 	tests.TLSRouteSimpleSameNamespace.ShortName,
 	// https://github.com/Kong/kubernetes-ingress-controller/issues/3679
 	tests.HTTPRouteQueryParamMatching.ShortName,
@@ -101,6 +101,8 @@ func TestGatewayConformance(t *testing.T) {
 	require.NoError(t, gatewayv1alpha2.AddToScheme(client.Scheme()))
 	require.NoError(t, gatewayv1beta1.AddToScheme(client.Scheme()))
 
+	// This service creation is a temporary solution, intended to be replaced by
+	// https://github.com/Kong/charts/issues/848
 	t.Log("creating tls service for gateway conformance tests")
 	tlsService := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{

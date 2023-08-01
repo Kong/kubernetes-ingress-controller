@@ -138,7 +138,7 @@ Adding a new version? You'll need three changes:
   [#4211](https://github.com/Kong/kubernetes-ingress-controller/pull/4211)
 - Assign priorities to routes translated from Ingresses when parser translate
   them to expression based Kong routes. The assigning method is basically the
-  same as in Kong gateway's `traditional_compatible` router, except that 
+  same as in Kong gateway's `traditional_compatible` router, except that
   `regex_priority` field in Kong traditional route is not supported. This
   method is adopted to keep the compatibility with traditional router on
   maximum effort.
@@ -148,7 +148,7 @@ Adding a new version? You'll need three changes:
   [specification on priorities of matches in `HTTPRoute`][httproute-specification].
   [#4296](https://github.com/Kong/kubernetes-ingress-controller/pull/4296)
   [#4434](https://github.com/Kong/kubernetes-ingress-controller/pull/4434)
-- Assign priorities to routes translated from GRPCRoutes when the parser translates 
+- Assign priorities to routes translated from GRPCRoutes when the parser translates
   them to expression based Kong routes. The priority order follows the
   [specification on match priorities in GRPCRoute][grpcroute-specification].
   [#4364](https://github.com/Kong/kubernetes-ingress-controller/pull/4364)
@@ -165,10 +165,11 @@ Adding a new version? You'll need three changes:
   in terms of accepting data-plane traffic, but are ready to accept configuration
   updates. The controller will now send configuration to such Gateways and will
   actively monitor their readiness for accepting configuration updates.
-  [#4368](https://github.com/Kong/kubernetes-ingress-controller/pull/4368
-- `KongConsumer`, `KongConsumerGroup` `KongPlugin`, and `KongClusterPlugin` CRDs were extended with
-  `Status.Conditions` field. It will contain the `Programmed` condition describing
-  whether an object was successfully translated into Kong entities and sent to Kong.
+  [#4368](https://github.com/Kong/kubernetes-ingress-controller/pull/4368)
+- `KongConsumer`, `KongConsumerGroup` `KongPlugin`, and `KongClusterPlugin` CRDs
+  were extended with `Status.Conditions` field. It will contain the `Programmed`
+  condition describing whether an object was successfully translated into Kong
+  entities and sent to Kong.
   [#4409](https://github.com/Kong/kubernetes-ingress-controller/pull/4409)
   [#4412](https://github.com/Kong/kubernetes-ingress-controller/pull/4412)
   [#4423](https://github.com/Kong/kubernetes-ingress-controller/pull/4423)
@@ -182,6 +183,9 @@ Adding a new version? You'll need three changes:
   in the `Programmed` condition of the object being set to `False` and an
   event being emitted.
   [#4428](https://github.com/Kong/kubernetes-ingress-controller/pull/4428)
+- A new `--publish-service-tls` flag has been added to expose Kong TLS stream port
+  (default value is 8899) through a service using a different port.
+  [#3797](https://github.com/Kong/kubernetes-ingress-controller/pull/3797)
 
 ### Changed
 
@@ -200,11 +204,11 @@ Adding a new version? You'll need three changes:
 - Changed the Gateway's readiness probe in all-in-one manifests from `/status`
   to `/status/ready`. Gateways will be considered ready only after an initial
   configuration is applied by the controller.
-  [#4368](https://github.com/Kong/kubernetes-ingress-controller/pull/4368
-- When translating to expression based Kong routes, annotations to specify 
+  [#4368](https://github.com/Kong/kubernetes-ingress-controller/pull/4368)
+- When translating to expression based Kong routes, annotations to specify
   protocols are translated to `protocols` field of the result Kong route,
-  instead of putting the conditions to match protocols inside expressions. 
-  [#4422](https://github.com/Kong/kubernetes-ingress-controller/pull/4422) 
+  instead of putting the conditions to match protocols inside expressions.
+  [#4422](https://github.com/Kong/kubernetes-ingress-controller/pull/4422)
 
 ### Fixed
 

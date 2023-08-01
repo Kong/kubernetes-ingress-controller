@@ -13,7 +13,7 @@ import (
 // GenerateKongBuilder returns a Kong KTF addon builder, a string slice
 // of controller arguments needed to interact with the addon and an error.
 func GenerateKongBuilder(_ context.Context) (*kong.Builder, []string, error) {
-	kongbuilder := kong.NewBuilder()
+	kongbuilder := kong.NewBuilder().WithNamespace(consts.ControllerNamespace)
 	extraControllerArgs := []string{}
 	if testenv.KongEnterpriseEnabled() {
 		licenseJSON, err := kong.GetLicenseJSONFromEnv()

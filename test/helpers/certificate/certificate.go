@@ -10,6 +10,8 @@ import (
 	"fmt"
 	"math/big"
 	"time"
+
+	"github.com/kong/kubernetes-ingress-controller/v2/test/consts"
 )
 
 type SelfSignedCeritificateOptions struct {
@@ -104,11 +106,12 @@ func MustGenerateSelfSignedCertPEMFormat(decorators ...SelfSignedCeritificateOpt
 }
 
 var kongSystemServiceCert, kongSystemServiceKey = MustGenerateSelfSignedCertPEMFormat(
-	WithCommonName("*.kong-system.svc"), WithDNSNames("*.kong-system.svc"),
+	WithCommonName(fmt.Sprintf("*.%s.svc", consts.ControllerNamespace)),
+	WithDNSNames(fmt.Sprintf("*.%s.svc", consts.ControllerNamespace)),
 )
 
 // GetKongSystemSelfSignedCerts returns the self-signed certificate and key
-// with CN=*.kong-system.svc and subjectAltName=DNS:*.kong-system.svc.
+// with CN=*.<controllerNamespace>.svc and subjectAltName=DNS:*.<controllerNamespace>.svc.
 func GetKongSystemSelfSignedCerts() (cert []byte, key []byte) {
 	return kongSystemServiceCert, kongSystemServiceKey
 }

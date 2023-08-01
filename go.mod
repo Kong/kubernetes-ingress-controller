@@ -8,7 +8,7 @@ require (
 	github.com/avast/retry-go/v4 v4.3.4
 	github.com/blang/semver/v4 v4.0.0
 	github.com/bombsimon/logrusr/v2 v2.0.1
-	github.com/deepmap/oapi-codegen v1.13.1
+	github.com/deepmap/oapi-codegen v1.13.2
 	github.com/go-logr/logr v1.2.4
 	github.com/goccy/go-json v0.10.2
 	github.com/google/go-cmp v0.5.9
@@ -64,7 +64,7 @@ require (
 	github.com/google/go-containerregistry v0.13.0 // indirect
 	github.com/google/s2a-go v0.1.4 // indirect
 	github.com/klauspost/cpuid/v2 v2.2.4 // indirect
-	github.com/labstack/echo/v4 v4.10.2 // indirect
+	github.com/labstack/echo/v4 v4.11.1 // indirect
 	github.com/labstack/gommon v0.4.0 // indirect
 	github.com/leodido/go-urn v1.2.4 // indirect
 	github.com/onsi/ginkgo v1.16.4 // indirect

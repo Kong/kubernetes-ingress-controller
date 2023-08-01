@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1690892202823,
+  "lastUpdate": 1690892285683,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -43782,6 +43782,48 @@ window.BENCHMARK_DATA = {
             "value": 12,
             "unit": "allocs/op",
             "extra": "15163 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jakub.warczarek@konghq.com",
+            "name": "Jakub Warczarek",
+            "username": "programmer04"
+          },
+          "committer": {
+            "email": "jakub.warczarek@konghq.com",
+            "name": "Jakub Warczarek",
+            "username": "programmer04"
+          },
+          "distinct": true,
+          "id": "83e38900478a0fb8dec09c4922fde59ad06e707c",
+          "message": "feat(consumer group): add validation admission webhook",
+          "timestamp": "2023-08-01T14:16:45+02:00",
+          "tree_id": "3e797815ea5e7543b855fd5b039b636d5ca0fecb",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/83e38900478a0fb8dec09c4922fde59ad06e707c"
+        },
+        "date": 1690892279756,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - ns/op",
+            "value": 72157,
+            "unit": "ns/op",
+            "extra": "16920 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - B/op",
+            "value": 11092,
+            "unit": "B/op",
+            "extra": "16920 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - allocs/op",
+            "value": 12,
+            "unit": "allocs/op",
+            "extra": "16920 times\n2 procs"
           }
         ]
       }

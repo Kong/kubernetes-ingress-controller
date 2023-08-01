@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1690907009788,
+  "lastUpdate": 1690924812119,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -44874,6 +44874,48 @@ window.BENCHMARK_DATA = {
             "value": 12,
             "unit": "allocs/op",
             "extra": "13964 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "571832+rainest@users.noreply.github.com",
+            "name": "Travis Raines",
+            "username": "rainest"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "0cfbc086603eb568d76287d20d1c76b7b7f54b85",
+          "message": "Update CHANGELOG.md\n\nCo-authored-by: Jakub Warczarek <jakub.warczarek@konghq.com>",
+          "timestamp": "2023-08-01T14:19:08-07:00",
+          "tree_id": "3ca64fb52fe3bf4a66a364a1ce17c9f4bcbb4ef6",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/0cfbc086603eb568d76287d20d1c76b7b7f54b85"
+        },
+        "date": 1690924805322,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - ns/op",
+            "value": 88812,
+            "unit": "ns/op",
+            "extra": "17734 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - B/op",
+            "value": 11094,
+            "unit": "B/op",
+            "extra": "17734 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - allocs/op",
+            "value": 12,
+            "unit": "allocs/op",
+            "extra": "17734 times\n2 procs"
           }
         ]
       }

@@ -182,7 +182,8 @@ func TestGatewayConformance(t *testing.T) {
 		ExemptFeatures:             exemptFeatures,
 		BaseManifests:              conformanceTestsBaseManifests,
 		SkipTests:                  skippedTests,
-		EnableAllSupportedFeatures: true,
+		EnableAllSupportedFeatures: false,
+		SupportedFeatures:          suite.TLSCoreFeatures,
 	})
 	cSuite.Setup(t)
 	// To work with individual tests only, you can disable the normal Run call and construct a slice containing a

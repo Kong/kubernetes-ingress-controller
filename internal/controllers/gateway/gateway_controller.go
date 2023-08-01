@@ -631,13 +631,11 @@ func (r *GatewayReconciler) determineServiceForGateway(ctx context.Context, ref 
 		if protocol == gatewayv1beta1.HTTPProtocolType || protocol == gatewayv1beta1.HTTPSProtocolType || protocol == gatewayv1beta1.TCPProtocolType {
 			name = r.PublishServiceRef
 		}
-		fallthrough
-	case r.PublishServiceUDPRef.IsPresent():
+	case r.PublishServiceUDPRef.IsPresent() && ref == r.PublishServiceUDPRef.MustGet().String():
 		if protocol == gatewayv1beta1.UDPProtocolType {
 			name = r.PublishServiceUDPRef.MustGet()
 		}
-		fallthrough
-	case r.PublishServiceTLSRef.IsPresent():
+	case r.PublishServiceTLSRef.IsPresent() && ref == r.PublishServiceTLSRef.MustGet().String():
 		if protocol == gatewayv1beta1.TLSProtocolType {
 			name = r.PublishServiceTLSRef.MustGet()
 		}
@@ -778,6 +776,8 @@ func (r *GatewayReconciler) determineListenersFromDataPlane(
 						{Group: &gatewayV1beta1Group, Kind: (Kind)("TLSRoute")},
 					},
 				}
+				upgradedListeners = append(upgradedListeners, listener)
+				continue
 			}
 		}
 		if proxyListener, ok := proxyListenersMap[portMapper[int(listener.Port)]]; ok {

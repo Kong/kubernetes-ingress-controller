@@ -187,16 +187,16 @@ func (validator KongHTTPValidator) ValidateConsumerGroup(
 		return false, ErrTextAdminAPIUnavailable, err
 	}
 	version, err := kong.NewVersion(infoResponse.Version)
-	if err != nil {
-		// if we can't parse the version, assume weird custom build try anyway
-		return true, "", nil
-	}
-	if !version.IsKongGatewayEnterprise() {
-		return false, ErrTextConsumerGroupUnsupported, nil
-	}
-	sem := semver.Version{Major: version.Major(), Minor: version.Minor()}
-	if !sem.GTE(versions.ConsumerGroupsVersionCutoff) {
-		return false, ErrTextConsumerGroupUnsupported, nil
+	if err == nil {
+		// If the version is a valid Kong version, we can validate its semantics. Otherwise, we proceed without
+		// validation, expecting errors to be returned later from `cgs.List` if Gateway doesn't support ConsumerGroups.
+		if !version.IsKongGatewayEnterprise() {
+			return false, ErrTextConsumerGroupUnsupported, nil
+		}
+		sem := semver.Version{Major: version.Major(), Minor: version.Minor()}
+		if !sem.GTE(versions.ConsumerGroupsVersionCutoff) {
+			return false, ErrTextConsumerGroupUnsupported, nil
+		}
 	}
 
 	if _, _, err := cgs.List(ctx, &kong.ListOpt{Size: 1}); err != nil {
@@ -207,7 +207,7 @@ func (validator KongHTTPValidator) ValidateConsumerGroup(
 		case kong.IsForbiddenErr(err):
 			return false, ErrTextConsumerGroupUnlicensed, nil
 		default:
-			return false, "unexpected", nil
+			return false, "", fmt.Errorf("failed checking ConsumerGroups support: %w", err)
 		}
 	}
 	return true, "", nil

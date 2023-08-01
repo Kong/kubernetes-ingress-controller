@@ -9,7 +9,7 @@ const (
 	ErrTextConsumerGroupUnsupported           = "consumer group support requires Kong Enterprise 3.4+"
 	ErrTextConsumerGroupUnlicensed            = "consumer group support requires a valid Kong Enterprise license"
 	ErrTextConsumerUsernameEmpty              = "username cannot be empty"
-	ErrTextFailedToRetrieveSecret             = "could not retrieve secrets from the kubernetes API"
+	ErrTextFailedToRetrieveSecret             = "could not retrieve secrets from the kubernetes API" //nolint:gosec
 	ErrTextPluginConfigInvalid                = "could not parse plugin configuration"
 	ErrTextPluginConfigValidationFailed       = "unable to validate plugin schema"
 	ErrTextPluginConfigViolatesSchema         = "plugin failed schema validation: %s"

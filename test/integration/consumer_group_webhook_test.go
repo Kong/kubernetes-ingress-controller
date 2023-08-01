@@ -15,7 +15,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	admregv1 "k8s.io/api/admissionregistration/v1"
-	k8sappsv1 "k8s.io/api/apps/v1"
+	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 
@@ -149,7 +149,7 @@ func createRandomConsumerGroup(ctx context.Context, namespace string, kongClient
 // deploymentComplete considers a deployment to be complete once all of its desired replicas
 // are updated and available, and no old pods are running.
 // src: https://github.com/kubernetes/kubernetes/blob/513da69f76f64e5292ee661e033fb9f33ec89161/pkg/controller/deployment/util/deployment_util.go#L706-L713
-func deploymentComplete(deployment *k8sappsv1.Deployment, newStatus *k8sappsv1.DeploymentStatus) bool {
+func deploymentComplete(deployment *appsv1.Deployment, newStatus *appsv1.DeploymentStatus) bool {
 	return newStatus.UpdatedReplicas == *(deployment.Spec.Replicas) &&
 		newStatus.Replicas == *(deployment.Spec.Replicas) &&
 		newStatus.AvailableReplicas == *(deployment.Spec.Replicas) &&

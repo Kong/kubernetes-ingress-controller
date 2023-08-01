@@ -406,7 +406,7 @@ type fakeConsumerGroupSvc struct {
 	err error
 }
 
-func (f fakeConsumerGroupSvc) List(ctx context.Context, opt *kong.ListOpt) ([]*kong.ConsumerGroup, *kong.ListOpt, error) {
+func (f fakeConsumerGroupSvc) List(context.Context, *kong.ListOpt) ([]*kong.ConsumerGroup, *kong.ListOpt, error) {
 	if f.err != nil {
 		return []*kong.ConsumerGroup{}, &kong.ListOpt{}, f.err
 	}
@@ -418,7 +418,7 @@ type fakeInfoSvc struct {
 	version string
 }
 
-func (f fakeInfoSvc) Get(ctx context.Context) (*kong.Info, error) {
+func (f fakeInfoSvc) Get(context.Context) (*kong.Info, error) {
 	if f.version != "" {
 		return &kong.Info{Version: f.version}, nil
 	}
@@ -493,6 +493,34 @@ func TestKongHTTPValidator_ValidateConsumerGroup(t *testing.T) {
 			wantOK:      false,
 			wantMessage: ErrTextConsumerGroupUnsupported,
 			wantErr:     false,
+		},
+		{
+			name:             "invalid semver with ConsumerGroups support",
+			ConsumerGroupSvc: &fakeConsumerGroupSvc{err: nil},
+			InfoSvc:          &fakeInfoSvc{version: "a.4.0.0"},
+			args: args{
+				cg: configurationv1beta1.KongConsumerGroup{},
+			},
+			wantOK: true,
+		},
+		{
+			name:             "invalid semver with no ConsumerGroups support",
+			ConsumerGroupSvc: &fakeConsumerGroupSvc{err: kong.NewAPIError(http.StatusNotFound, "ConsumerGroups API not found")},
+			InfoSvc:          &fakeInfoSvc{version: "a.4.0.0"},
+			args: args{
+				cg: configurationv1beta1.KongConsumerGroup{},
+			},
+			wantOK:      false,
+			wantMessage: ErrTextConsumerGroupUnsupported,
+		},
+		{
+			name:             "Enterprise version above threshold, API returning unexpected error",
+			ConsumerGroupSvc: &fakeConsumerGroupSvc{err: kong.NewAPIError(http.StatusTeapot, "I'm a teapot")},
+			InfoSvc:          &fakeInfoSvc{version: "3.4.0.0"},
+			args: args{
+				cg: configurationv1beta1.KongConsumerGroup{},
+			},
+			wantErr: true,
 		},
 	}
 	for _, tt := range tests {

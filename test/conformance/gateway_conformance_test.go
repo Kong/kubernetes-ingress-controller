@@ -4,6 +4,7 @@ package conformance
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/google/uuid"
@@ -104,9 +105,10 @@ func TestGatewayConformance(t *testing.T) {
 	// This service creation is a temporary solution, intended to be replaced by
 	// https://github.com/Kong/charts/issues/848
 	t.Log("creating tls service for gateway conformance tests")
+	svcNameSuffix, _, _ := strings.Cut(uuid.NewString(), "-")
 	tlsService := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "tls-proxy-" + uuid.NewString(),
+			Name:      "ingress-controller-kong-tls-proxy-" + svcNameSuffix,
 			Namespace: "kong-system",
 		},
 		Spec: corev1.ServiceSpec{
@@ -179,11 +181,10 @@ func TestGatewayConformance(t *testing.T) {
 		GatewayClassName:           gatewayClass.Name,
 		Debug:                      showDebug,
 		CleanupBaseResources:       shouldCleanup,
+		EnableAllSupportedFeatures: enableAllSupportedFeatures,
 		ExemptFeatures:             exemptFeatures,
 		BaseManifests:              conformanceTestsBaseManifests,
 		SkipTests:                  skippedTests,
-		EnableAllSupportedFeatures: false,
-		SupportedFeatures:          suite.TLSCoreFeatures,
 	})
 	cSuite.Setup(t)
 	// To work with individual tests only, you can disable the normal Run call and construct a slice containing a

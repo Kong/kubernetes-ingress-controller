@@ -628,7 +628,10 @@ func (r *GatewayReconciler) determineServiceForGateway(ctx context.Context, ref 
 	var name k8stypes.NamespacedName
 	switch {
 	case ref == r.PublishServiceRef.String():
-		if protocol == gatewayv1beta1.HTTPProtocolType || protocol == gatewayv1beta1.HTTPSProtocolType || protocol == gatewayv1beta1.TCPProtocolType {
+		if protocol == gatewayv1beta1.HTTPProtocolType ||
+			protocol == gatewayv1beta1.HTTPSProtocolType ||
+			protocol == gatewayv1beta1.TCPProtocolType ||
+			r.PublishServiceTLSRef.IsAbsent() && protocol == TLSProtocolType {
 			name = r.PublishServiceRef
 		}
 	case r.PublishServiceUDPRef.IsPresent() && ref == r.PublishServiceUDPRef.MustGet().String():

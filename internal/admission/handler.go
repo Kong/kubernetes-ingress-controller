@@ -13,6 +13,7 @@ import (
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	configuration "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
+	configurationv1beta1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1beta1"
 )
 
 // RequestHandler is an HTTP server that can validate Kong Ingress Controllers'
@@ -62,6 +63,11 @@ var (
 		Version:  configuration.SchemeGroupVersion.Version,
 		Resource: "kongconsumers",
 	}
+	consumerGroupGVResource = metav1.GroupVersionResource{
+		Group:    configurationv1beta1.SchemeGroupVersion.Group,
+		Version:  configurationv1beta1.SchemeGroupVersion.Version,
+		Resource: "kongconsumergroups",
+	}
 	pluginGVResource = metav1.GroupVersionResource{
 		Group:    configuration.SchemeGroupVersion.Group,
 		Version:  configuration.SchemeGroupVersion.Version,
@@ -102,6 +108,8 @@ func (h RequestHandler) handleValidation(ctx context.Context, request admissionv
 	switch request.Resource {
 	case consumerGVResource:
 		return h.handleKongConsumer(ctx, request, responseBuilder)
+	case consumerGroupGVResource:
+		return h.handleKongConsumerGroup(ctx, request, responseBuilder)
 	case pluginGVResource:
 		return h.handleKongPlugin(ctx, request, responseBuilder)
 	case clusterPluginGVResource:
@@ -158,6 +166,23 @@ func (h RequestHandler) handleKongConsumer(
 	default:
 		return nil, fmt.Errorf("unknown operation %q", string(request.Operation))
 	}
+}
+
+func (h RequestHandler) handleKongConsumerGroup(
+	ctx context.Context,
+	request admissionv1.AdmissionRequest,
+	responseBuilder *ResponseBuilder,
+) (*admissionv1.AdmissionResponse, error) {
+	var consumerGroup configurationv1beta1.KongConsumerGroup
+	if _, _, err := codecs.UniversalDeserializer().Decode(request.Object.Raw, nil, &consumerGroup); err != nil {
+		return nil, err
+	}
+	ok, message, err := h.Validator.ValidateConsumerGroup(ctx, consumerGroup)
+	if err != nil {
+		return nil, err
+	}
+
+	return responseBuilder.Allowed(ok).WithMessage(message).Build(), nil
 }
 
 func (h RequestHandler) handleKongPlugin(

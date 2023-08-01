@@ -8,6 +8,7 @@ import (
 
 	"github.com/kong/go-kong/kong"
 	"github.com/samber/lo"
+	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -15,6 +16,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/store"
 	configurationv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
+	configurationv1beta1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1beta1"
 )
 
 type fakePluginSvc struct {
@@ -42,13 +44,29 @@ func (f fakeConsumersSvc) Get(context.Context, *string) (*kong.Consumer, error) 
 }
 
 type fakeServicesProvider struct {
-	pluginSvc   kong.AbstractPluginService
-	consumerSvc kong.AbstractConsumerService
+	pluginSvc        kong.AbstractPluginService
+	consumerSvc      kong.AbstractConsumerService
+	consumerGroupSvc kong.AbstractConsumerGroupService
+	infoSvc          kong.AbstractInfoService
 }
 
 func (f fakeServicesProvider) GetConsumersService() (kong.AbstractConsumerService, bool) {
 	if f.consumerSvc != nil {
 		return f.consumerSvc, true
+	}
+	return nil, false
+}
+
+func (f fakeServicesProvider) GetInfoService() (kong.AbstractInfoService, bool) {
+	if f.infoSvc != nil {
+		return f.infoSvc, true
+	}
+	return nil, false
+}
+
+func (f fakeServicesProvider) GetConsumerGroupsService() (kong.AbstractConsumerGroupService, bool) {
+	if f.consumerGroupSvc != nil {
+		return f.consumerGroupSvc, true
 	}
 	return nil, false
 }
@@ -382,6 +400,160 @@ func TestKongHTTPValidator_ValidateConsumer(t *testing.T) {
 		require.False(t, valid)
 		require.Equal(t, ErrTextConsumerExists, errText)
 	})
+}
+
+type fakeConsumerGroupSvc struct {
+	kong.AbstractConsumerGroupService
+	err error
+}
+
+func (f fakeConsumerGroupSvc) List(context.Context, *kong.ListOpt) ([]*kong.ConsumerGroup, *kong.ListOpt, error) {
+	if f.err != nil {
+		return []*kong.ConsumerGroup{}, &kong.ListOpt{}, f.err
+	}
+	return []*kong.ConsumerGroup{}, &kong.ListOpt{}, nil
+}
+
+type fakeInfoSvc struct {
+	kong.AbstractInfoService
+	version string
+}
+
+func (f fakeInfoSvc) Get(context.Context) (*kong.Info, error) {
+	if f.version != "" {
+		return &kong.Info{Version: f.version}, nil
+	}
+	return nil, kong.NewAPIError(http.StatusInternalServerError, "bogus fake info")
+}
+
+func TestKongHTTPValidator_ValidateConsumerGroup(t *testing.T) {
+	store, err := store.NewFakeStore(store.FakeObjects{})
+	require.NoError(t, err)
+	type args struct {
+		cg configurationv1beta1.KongConsumerGroup
+	}
+	tests := []struct {
+		name             string
+		ConsumerGroupSvc kong.AbstractConsumerGroupService
+		InfoSvc          kong.AbstractInfoService
+		args             args
+		wantOK           bool
+		wantMessage      string
+		wantErr          bool
+	}{
+		{
+			name:             "Enterprise version past threshold",
+			ConsumerGroupSvc: &fakeConsumerGroupSvc{err: nil},
+			InfoSvc:          &fakeInfoSvc{version: "3.4.0.0"},
+			args: args{
+				cg: configurationv1beta1.KongConsumerGroup{},
+			},
+			wantOK:      true,
+			wantMessage: "",
+			wantErr:     false,
+		},
+		{
+			name:             "Enterprise version below threshold",
+			ConsumerGroupSvc: &fakeConsumerGroupSvc{err: nil},
+			InfoSvc:          &fakeInfoSvc{version: "3.2.0.0"},
+			args: args{
+				cg: configurationv1beta1.KongConsumerGroup{},
+			},
+			wantOK:      false,
+			wantMessage: ErrTextConsumerGroupUnsupported,
+			wantErr:     false,
+		},
+		{
+			name:             "OSS version",
+			ConsumerGroupSvc: &fakeConsumerGroupSvc{err: nil},
+			InfoSvc:          &fakeInfoSvc{version: "3.4.0"},
+			args: args{
+				cg: configurationv1beta1.KongConsumerGroup{},
+			},
+			wantOK:      false,
+			wantMessage: ErrTextConsumerGroupUnsupported,
+			wantErr:     false,
+		},
+		{
+			name:             "Enterprise version above threshold, unlicensed",
+			ConsumerGroupSvc: &fakeConsumerGroupSvc{err: kong.NewAPIError(http.StatusForbidden, "no license")},
+			InfoSvc:          &fakeInfoSvc{version: "3.4.0.0"},
+			args: args{
+				cg: configurationv1beta1.KongConsumerGroup{},
+			},
+			wantOK:      false,
+			wantMessage: ErrTextConsumerGroupUnlicensed,
+			wantErr:     false,
+		},
+		{
+			name:             "Enterprise version above threshold, API somehow missing",
+			ConsumerGroupSvc: &fakeConsumerGroupSvc{err: kong.NewAPIError(http.StatusNotFound, "well, this is awkward")},
+			InfoSvc:          &fakeInfoSvc{version: "3.4.0.0"},
+			args: args{
+				cg: configurationv1beta1.KongConsumerGroup{},
+			},
+			wantOK:      false,
+			wantMessage: ErrTextConsumerGroupUnsupported,
+			wantErr:     false,
+		},
+		{
+			name:             "invalid semver with consumer groups support",
+			ConsumerGroupSvc: &fakeConsumerGroupSvc{err: nil},
+			InfoSvc:          &fakeInfoSvc{version: "a.4.0.0"},
+			args: args{
+				cg: configurationv1beta1.KongConsumerGroup{},
+			},
+			wantOK:      true,
+			wantMessage: "",
+			wantErr:     false,
+		},
+		{
+			name:             "invalid semver with no consumer groups support",
+			ConsumerGroupSvc: &fakeConsumerGroupSvc{err: kong.NewAPIError(http.StatusNotFound, "ConsumerGroups API not found")},
+			InfoSvc:          &fakeInfoSvc{version: "a.4.0.0"},
+			args: args{
+				cg: configurationv1beta1.KongConsumerGroup{},
+			},
+			wantOK:      false,
+			wantMessage: ErrTextConsumerGroupUnsupported,
+			wantErr:     false,
+		},
+		{
+			name:             "Enterprise version above threshold, API returning unexpected error",
+			ConsumerGroupSvc: &fakeConsumerGroupSvc{err: kong.NewAPIError(http.StatusTeapot, "I'm a teapot")},
+			InfoSvc:          &fakeInfoSvc{version: "3.4.0.0"},
+			args: args{
+				cg: configurationv1beta1.KongConsumerGroup{},
+			},
+			wantOK:      false,
+			wantMessage: fmt.Sprintf("%s: %s", ErrTextConsumerGroupUnexpected, `HTTP status 418 (message: "I'm a teapot")`),
+			wantErr:     false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			validator := KongHTTPValidator{
+				SecretGetter: store,
+				AdminAPIServicesProvider: fakeServicesProvider{
+					infoSvc:          tt.InfoSvc,
+					consumerGroupSvc: tt.ConsumerGroupSvc,
+				},
+				ingressClassMatcher: fakeClassMatcher,
+				Logger:              logrus.New(),
+			}
+			got, gotMsg, err := validator.ValidateConsumerGroup(context.Background(), tt.args.cg)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("KongHTTPValidator.ValidateConsumerGroups() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if got != tt.wantOK {
+				t.Errorf("KongHTTPValidator.ValidateConsumerGroups() got = %v, want %v", got, tt.wantOK)
+			}
+			if gotMsg != tt.wantMessage {
+				t.Errorf("KongHTTPValidator.ValidateConsumerGroups() gotMsg = %v, want %v", gotMsg, tt.wantMessage)
+			}
+		})
+	}
 }
 
 func fakeClassMatcher(*metav1.ObjectMeta, string, annotations.ClassMatching) bool { return true }

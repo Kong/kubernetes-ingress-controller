@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/blang/semver/v4"
 	"github.com/kong/go-kong/kong"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
@@ -17,12 +18,15 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
 	credsvalidation "github.com/kong/kubernetes-ingress-controller/v2/internal/validation/consumers/credentials"
 	gatewayvalidators "github.com/kong/kubernetes-ingress-controller/v2/internal/validation/gateway"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/versions"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
+	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1beta1"
 )
 
 // KongValidator validates Kong entities.
 type KongValidator interface {
 	ValidateConsumer(ctx context.Context, consumer kongv1.KongConsumer) (bool, string, error)
+	ValidateConsumerGroup(ctx context.Context, consumerGroup kongv1beta1.KongConsumerGroup) (bool, string, error)
 	ValidatePlugin(ctx context.Context, plugin kongv1.KongPlugin) (bool, string, error)
 	ValidateClusterPlugin(ctx context.Context, plugin kongv1.KongClusterPlugin) (bool, string, error)
 	ValidateCredential(ctx context.Context, secret corev1.Secret) (bool, string, error)
@@ -35,6 +39,8 @@ type KongValidator interface {
 type AdminAPIServicesProvider interface {
 	GetConsumersService() (kong.AbstractConsumerService, bool)
 	GetPluginsService() (kong.AbstractPluginService, bool)
+	GetConsumerGroupsService() (kong.AbstractConsumerGroupService, bool)
+	GetInfoService() (kong.AbstractInfoService, bool)
 }
 
 // KongHTTPValidator implements KongValidator interface to validate Kong
@@ -157,10 +163,60 @@ func (validator KongHTTPValidator) ValidateConsumer(
 	return true, "", nil
 }
 
+func (validator KongHTTPValidator) ValidateConsumerGroup(
+	ctx context.Context,
+	consumerGroup kongv1beta1.KongConsumerGroup,
+) (bool, string, error) {
+	// Ignore ConsumerGroups that are being managed by another controller.
+	if !validator.ingressClassMatcher(&consumerGroup.ObjectMeta, annotations.IngressClassKey, annotations.ExactClassMatch) {
+		return true, "", nil
+	}
+
+	// Consumer groups work only for Kong Enterprise >=3.4.
+	infoSvc, ok := validator.AdminAPIServicesProvider.GetInfoService()
+	if !ok {
+		return true, "", nil
+	}
+	info, err := infoSvc.Get(ctx)
+	if err != nil {
+		validator.Logger.Debugf("failed to fetch Kong info: %v", err)
+		return false, ErrTextAdminAPIUnavailable, nil
+	}
+	version, err := kong.NewVersion(info.Version)
+	if err != nil {
+		validator.Logger.Debugf("failed to parse Kong version: %v", err)
+	} else {
+		kongVer := semver.Version{Major: version.Major(), Minor: version.Minor()}
+		if !version.IsKongGatewayEnterprise() || !kongVer.GTE(versions.ConsumerGroupsVersionCutoff) {
+			return false, ErrTextConsumerGroupUnsupported, nil
+		}
+	}
+
+	cgs, ok := validator.AdminAPIServicesProvider.GetConsumerGroupsService()
+	if !ok {
+		return true, "", nil
+	}
+	// This check forbids consumer group creation if the license is invalid or missing.
+	// There is no other way to robustly check the validity of a license than actually trying an enterprise feature.
+	if _, _, err := cgs.List(ctx, &kong.ListOpt{Size: 0}); err != nil {
+		switch {
+		case kong.IsNotFoundErr(err):
+			// This is the case when consumer group is not supported (Kong OSS) and previous version
+			// check (if !version.IsKongGatewayEnterprise()) has been omitted due to a parsing error.
+			return false, ErrTextConsumerGroupUnsupported, nil
+		case kong.IsForbiddenErr(err):
+			return false, ErrTextConsumerGroupUnlicensed, nil
+		default:
+			return false, fmt.Sprintf("%s: %s", ErrTextConsumerGroupUnexpected, err), nil
+		}
+	}
+	return true, "", nil
+}
+
 // ValidateCredential checks if the secret contains a credential meant to
 // be installed in Kong. If so, then it verifies if all the required fields
 // are present in it or not. If valid, it returns true with an empty string,
-// else it returns false with the error messsage. If an error happens during
+// else it returns false with the error message. If an error happens during
 // validation, error is returned.
 func (validator KongHTTPValidator) ValidateCredential(
 	ctx context.Context,

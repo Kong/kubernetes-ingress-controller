@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1690896280552,
+  "lastUpdate": 1690898674881,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -44202,6 +44202,48 @@ window.BENCHMARK_DATA = {
             "value": 12,
             "unit": "allocs/op",
             "extra": "18542 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "patryk.malek@konghq.com",
+            "name": "Patryk Małek",
+            "username": "pmalek"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "f6de833f3c95ca506bab528a8c23c45b8d6370d0",
+          "message": "feat(ci): use up-to-date shared action (#4433)\n\n* ci: use up-to-date shared action to save CI time\r\n\r\n* Update .github/workflows/pr_checks.yaml\r\n\r\nCo-authored-by: Grzegorz Burzyński <czeslavo@gmail.com>\r\n\r\n---------\r\n\r\nCo-authored-by: Grzegorz Burzyński <czeslavo@gmail.com>",
+          "timestamp": "2023-08-01T16:03:28+02:00",
+          "tree_id": "d3f229f0d9ba38e65589b1fc342a4ea2186d704d",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/f6de833f3c95ca506bab528a8c23c45b8d6370d0"
+        },
+        "date": 1690898668915,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - ns/op",
+            "value": 67213,
+            "unit": "ns/op",
+            "extra": "17263 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - B/op",
+            "value": 11094,
+            "unit": "B/op",
+            "extra": "17263 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - allocs/op",
+            "value": 12,
+            "unit": "allocs/op",
+            "extra": "17263 times\n2 procs"
           }
         ]
       }

@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1690953509142,
+  "lastUpdate": 1690953948542,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -45126,6 +45126,48 @@ window.BENCHMARK_DATA = {
             "value": 12,
             "unit": "allocs/op",
             "extra": "13432 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "lavacca.mattia@gmail.com",
+            "name": "Mattia Lavacca",
+            "username": "mlavacca"
+          },
+          "committer": {
+            "email": "lavacca.mattia@gmail.com",
+            "name": "Mattia Lavacca",
+            "username": "mlavacca"
+          },
+          "distinct": true,
+          "id": "991f4713950c62e107664248ffd42199f653c740",
+          "message": "Revert \"feat(ci): use up-to-date shared action (#4433)\"\n\nThis reverts commit f6de833f3c95ca506bab528a8c23c45b8d6370d0.",
+          "timestamp": "2023-08-02T07:24:14+02:00",
+          "tree_id": "f364b36eeb586d0547f1afb848f284a8d56c3c0c",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/991f4713950c62e107664248ffd42199f653c740"
+        },
+        "date": 1690953941697,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - ns/op",
+            "value": 79800,
+            "unit": "ns/op",
+            "extra": "15849 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - B/op",
+            "value": 11092,
+            "unit": "B/op",
+            "extra": "15849 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - allocs/op",
+            "value": 12,
+            "unit": "allocs/op",
+            "extra": "15849 times\n2 procs"
           }
         ]
       }

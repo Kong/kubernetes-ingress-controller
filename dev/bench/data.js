@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1690962670861,
+  "lastUpdate": 1690963015265,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -45546,6 +45546,48 @@ window.BENCHMARK_DATA = {
             "value": 12,
             "unit": "allocs/op",
             "extra": "16351 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "patryk.malek@konghq.com",
+            "name": "Patryk Małek",
+            "username": "pmalek"
+          },
+          "committer": {
+            "email": "patryk.malek@konghq.com",
+            "name": "Patryk Małek",
+            "username": "pmalek"
+          },
+          "distinct": true,
+          "id": "343b38d12f45e632c4a174b5b3c0017e95511c42",
+          "message": "ci: fix up-to-date job",
+          "timestamp": "2023-08-02T09:56:00+02:00",
+          "tree_id": "eafd0573fb04a29784c7bc280e50194b071d229b",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/343b38d12f45e632c4a174b5b3c0017e95511c42"
+        },
+        "date": 1690963009108,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - ns/op",
+            "value": 72077,
+            "unit": "ns/op",
+            "extra": "17739 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - B/op",
+            "value": 11093,
+            "unit": "B/op",
+            "extra": "17739 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - allocs/op",
+            "value": 12,
+            "unit": "allocs/op",
+            "extra": "17739 times\n2 procs"
           }
         ]
       }

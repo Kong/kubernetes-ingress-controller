@@ -80,18 +80,21 @@ func findOrphanedClusters(ctx context.Context, mgrc *container.ClusterManagerCli
 
 	var orphanedClusterNames []string
 	for _, cluster := range clusterListResp.Clusters {
-		if e2e.IsGKETestCluster(cluster) {
-			createdAt, err := time.Parse(time.RFC3339, cluster.CreateTime)
-			if err != nil {
-				return nil, err
-			}
+		if !e2e.IsGKETestCluster(cluster) {
+			log.Infof("non test cluster %s found and skipped (built at %s)\n", cluster.Name, cluster.GetCreateTime())
+			continue
+		}
 
-			orphanTime := createdAt.Add(timeUntilClusterOrphaned)
-			if time.Now().UTC().After(orphanTime) {
-				orphanedClusterNames = append(orphanedClusterNames, cluster.Name)
-			} else {
-				log.Infof("cluster %s skipped (built in the last %s)\n", cluster.Name, timeUntilClusterOrphaned)
-			}
+		createdAt, err := time.Parse(time.RFC3339, cluster.CreateTime)
+		if err != nil {
+			return nil, err
+		}
+
+		orphanTime := createdAt.Add(timeUntilClusterOrphaned)
+		if time.Now().UTC().After(orphanTime) {
+			orphanedClusterNames = append(orphanedClusterNames, cluster.Name)
+		} else {
+			log.Infof("cluster %s skipped (built in the last %s)\n", cluster.Name, timeUntilClusterOrphaned)
 		}
 	}
 

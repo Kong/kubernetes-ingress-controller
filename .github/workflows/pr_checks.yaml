@@ -41,7 +41,7 @@ jobs:
     runs-on: ubuntu-latest
     needs:
     - up-to-date
-    if: ${{ needs.up-to-date.outputs.status == 'false' }}
+    if: ${{ needs.up-to-date.outputs.status != 'true' }}
     outputs:
       result: ${{ steps.check.outputs.result }}
     steps:
@@ -58,7 +58,7 @@ jobs:
     runs-on: ubuntu-latest
     needs:
     - up-to-date
-    if: ${{ needs.up-to-date.outputs.status == 'false' }}
+    if: ${{ needs.up-to-date.outputs.status != 'true' }}
     steps:
       - name: checkout repository
         uses: actions/checkout@v3
@@ -73,21 +73,21 @@ jobs:
   linters:
     needs:
     - up-to-date
-    if: ${{ needs.up-to-date.outputs.status == 'false' }}
+    if: ${{ needs.up-to-date.outputs.status != 'true' }}
     uses: ./.github/workflows/_linters.yaml
     secrets: inherit
 
   unit-tests:
     needs:
     - up-to-date
-    if: ${{ needs.up-to-date.outputs.status == 'false' }}
+    if: ${{ needs.up-to-date.outputs.status != 'true' }}
     uses: ./.github/workflows/_unit_tests.yaml
     secrets: inherit
 
   envtest-tests:
     needs:
     - up-to-date
-    if: ${{ needs.up-to-date.outputs.status == 'false' }}
+    if: ${{ needs.up-to-date.outputs.status != 'true' }}
     uses: ./.github/workflows/_envtest_tests.yaml
     secrets: inherit
 
@@ -95,14 +95,14 @@ jobs:
     needs:
     - should-run-with-secrets
     - up-to-date
-    if: ${{ needs.should-run-with-secrets.outputs.result == 'true' && needs.up-to-date.outputs.status == 'false' }}
+    if: ${{ needs.should-run-with-secrets.outputs.result == 'true' && needs.up-to-date.outputs.status != 'true' }}
     uses: ./.github/workflows/_integration_tests.yaml
     secrets: inherit
 
   conformance-tests:
     needs:
     - up-to-date
-    if: ${{ needs.up-to-date.outputs.status == 'false' }}
+    if: ${{ needs.up-to-date.outputs.status != 'true' }}
     uses: ./.github/workflows/_conformance_tests.yaml
     secrets: inherit
 
@@ -138,6 +138,6 @@ jobs:
       - integration-tests
       - conformance-tests
       - up-to-date
-    if: ${{ always() && needs.should-run-with-secrets.outputs.result == 'true' && needs.up-to-date.outputs.status == 'false' }}
+    if: ${{ always() && needs.should-run-with-secrets.outputs.result == 'true' && needs.up-to-date.outputs.status != 'true' }}
     uses: ./.github/workflows/_test_reports.yaml
     secrets: inherit

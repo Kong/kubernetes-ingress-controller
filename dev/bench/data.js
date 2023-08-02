@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1690971352831,
+  "lastUpdate": 1690971354781,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -45798,6 +45798,48 @@ window.BENCHMARK_DATA = {
             "value": 12,
             "unit": "allocs/op",
             "extra": "17380 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "patryk.malek@konghq.com",
+            "name": "Patryk Małek",
+            "username": "pmalek"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "d9ff70c6b1519ee245fc6942e269f10e683e2764",
+          "message": "ci: don't build the image on main when PR branch was up to date (#4443)",
+          "timestamp": "2023-08-02T10:14:52Z",
+          "tree_id": "09a5969113ac655763fd03851234f9d9fc0a6c11",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/d9ff70c6b1519ee245fc6942e269f10e683e2764"
+        },
+        "date": 1690971345880,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - ns/op",
+            "value": 76915,
+            "unit": "ns/op",
+            "extra": "16350 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - B/op",
+            "value": 11093,
+            "unit": "B/op",
+            "extra": "16350 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - allocs/op",
+            "value": 12,
+            "unit": "allocs/op",
+            "extra": "16350 times\n2 procs"
           }
         ]
       },

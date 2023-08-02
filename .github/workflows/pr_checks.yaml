@@ -107,6 +107,8 @@ jobs:
     secrets: inherit
 
   build-docker-image:
+    needs:
+    - up-to-date
     if: needs.up-to-date.outputs.status != 'true'
     uses: ./.github/workflows/_docker_build.yaml
     secrets: inherit

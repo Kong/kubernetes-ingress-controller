@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1690973625514,
+  "lastUpdate": 1690973627324,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -45966,6 +45966,48 @@ window.BENCHMARK_DATA = {
             "value": 12,
             "unit": "allocs/op",
             "extra": "17454 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "patryk.malek@konghq.com",
+            "name": "Patryk Małek",
+            "username": "pmalek"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "cba22166d563da4efbf48f91aa8ada7a8ebe2679",
+          "message": "ci: add missing up-to-date needs for build job (#4444)",
+          "timestamp": "2023-08-02T10:52:51Z",
+          "tree_id": "9cab4e3a04828bfe16955757cd70ad2ea6a5349e",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/cba22166d563da4efbf48f91aa8ada7a8ebe2679"
+        },
+        "date": 1690973619528,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - ns/op",
+            "value": 70902,
+            "unit": "ns/op",
+            "extra": "17641 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - B/op",
+            "value": 11097,
+            "unit": "B/op",
+            "extra": "17641 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - allocs/op",
+            "value": 12,
+            "unit": "allocs/op",
+            "extra": "17641 times\n2 procs"
           }
         ]
       },

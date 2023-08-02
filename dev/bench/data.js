@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1690982336778,
+  "lastUpdate": 1690985637800,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -46218,6 +46218,48 @@ window.BENCHMARK_DATA = {
             "value": 12,
             "unit": "allocs/op",
             "extra": "14132 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "patryk.malek@konghq.com",
+            "name": "Patryk Małek",
+            "username": "pmalek"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "b9b4ebcc4a5c8b78a81e6d8e4f93c548421f6874",
+          "message": "chore(ci): log skipped gke clusters (#4445)",
+          "timestamp": "2023-08-02T16:12:43+02:00",
+          "tree_id": "233a27d9510b8bb00f6275aa3b0677afc82a4944",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/b9b4ebcc4a5c8b78a81e6d8e4f93c548421f6874"
+        },
+        "date": 1690985620102,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - ns/op",
+            "value": 70948,
+            "unit": "ns/op",
+            "extra": "17737 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - B/op",
+            "value": 11093,
+            "unit": "B/op",
+            "extra": "17737 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - allocs/op",
+            "value": 12,
+            "unit": "allocs/op",
+            "extra": "17737 times\n2 procs"
           }
         ]
       }

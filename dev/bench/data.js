@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1691074267156,
+  "lastUpdate": 1691075308877,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -47058,6 +47058,48 @@ window.BENCHMARK_DATA = {
             "value": 12,
             "unit": "allocs/op",
             "extra": "14754 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jakub.warczarek@konghq.com",
+            "name": "Jakub Warczarek",
+            "username": "programmer04"
+          },
+          "committer": {
+            "email": "jakub.warczarek@konghq.com",
+            "name": "Jakub Warczarek",
+            "username": "programmer04"
+          },
+          "distinct": true,
+          "id": "60f2639c3108fd1a49bf328be343d1f180d1356f",
+          "message": "chore(ci): adjust golangci-lint config, fix reported",
+          "timestamp": "2023-08-03T17:06:00+02:00",
+          "tree_id": "56cf0b55cc32b70fcb2dfd06dfaf7298715858ee",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/60f2639c3108fd1a49bf328be343d1f180d1356f"
+        },
+        "date": 1691075302257,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - ns/op",
+            "value": 78383,
+            "unit": "ns/op",
+            "extra": "16328 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - B/op",
+            "value": 11096,
+            "unit": "B/op",
+            "extra": "16328 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - allocs/op",
+            "value": 12,
+            "unit": "allocs/op",
+            "extra": "16328 times\n2 procs"
           }
         ]
       }

@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1691030390177,
+  "lastUpdate": 1691055799830,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -46722,6 +46722,48 @@ window.BENCHMARK_DATA = {
             "value": 12,
             "unit": "allocs/op",
             "extra": "17404 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "lavacca.mattia@gmail.com",
+            "name": "Mattia Lavacca",
+            "username": "mlavacca"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "284474905b75f70622afd0472246fe12314d1b86",
+          "message": "Update internal/manager/config.go\n\nCo-authored-by: Travis Raines <571832+rainest@users.noreply.github.com>",
+          "timestamp": "2023-08-03T11:42:17+02:00",
+          "tree_id": "0f1b7de3dac305ad413c0187d11287368303170a",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/284474905b75f70622afd0472246fe12314d1b86"
+        },
+        "date": 1691055793408,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - ns/op",
+            "value": 72377,
+            "unit": "ns/op",
+            "extra": "16908 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - B/op",
+            "value": 11091,
+            "unit": "B/op",
+            "extra": "16908 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - allocs/op",
+            "value": 12,
+            "unit": "allocs/op",
+            "extra": "16908 times\n2 procs"
           }
         ]
       }

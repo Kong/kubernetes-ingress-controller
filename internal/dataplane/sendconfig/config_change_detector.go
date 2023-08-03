@@ -7,8 +7,9 @@ import (
 
 	"github.com/kong/deck/file"
 	"github.com/kong/go-kong/kong"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/deckgen"
 	"github.com/sirupsen/logrus"
+
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/deckgen"
 )
 
 const (
@@ -67,7 +68,7 @@ func (d *DefaultConfigurationChangeDetector) HasConfigurationChanged(
 	}
 
 	// Check if a Kong instance has no configuration yet (could mean it crashed, was rebooted, etc.).
-	hasNoConfiguration, err := kongHasNoConfiguration(ctx, statusClient, d.log)
+	hasNoConfiguration, err := kongHasNoConfiguration(ctx, statusClient)
 	if err != nil {
 		return false, fmt.Errorf("failed to verify kong readiness: %w", err)
 	}
@@ -89,7 +90,7 @@ func (d *DefaultConfigurationChangeDetector) HasConfigurationChanged(
 // If the config hash reported by Kong is the known empty hash, it's considered crashed.
 // This allows providing configuration to Kong instances that have unexpectedly crashed and
 // lost their configuration.
-func kongHasNoConfiguration(ctx context.Context, client StatusClient, log logrus.FieldLogger) (bool, error) {
+func kongHasNoConfiguration(ctx context.Context, client StatusClient) (bool, error) {
 	status, err := client.Status(ctx)
 	if err != nil {
 		return false, err

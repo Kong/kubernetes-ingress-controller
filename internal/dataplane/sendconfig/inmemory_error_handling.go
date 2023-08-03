@@ -29,8 +29,7 @@ type ConfigError struct {
 }
 
 // ConfigErrorFields is the structure under the "fields" key in a /config error response.
-type ConfigErrorFields struct {
-}
+type ConfigErrorFields struct{}
 
 // FlatEntityError represents a single Kong entity with one or more invalid fields.
 type FlatEntityError struct {
@@ -70,7 +69,8 @@ func parseFlatEntityErrors(body []byte, log logrus.FieldLogger) ([]ResourceError
 			if len(p.Message) > 0 && len(p.Messages) > 0 {
 				log.WithFields(logrus.Fields{
 					"name":  ee.Name,
-					"field": p.Field}).Error("entity has both single and array errors for field")
+					"field": p.Field,
+				}).Error("entity has both single and array errors for field")
 
 				continue
 			}

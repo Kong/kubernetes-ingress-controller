@@ -10,7 +10,7 @@ import (
 	"github.com/kong/go-kong/kong"
 	"github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
+	k8stypes "k8s.io/apimachinery/pkg/types"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/deckgen"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/failures"
@@ -124,7 +124,7 @@ func resourceErrorsToResourceFailures(resourceErrors []ResourceError, parseErr e
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: ee.Namespace,
 				Name:      ee.Name,
-				UID:       types.UID(ee.UID),
+				UID:       k8stypes.UID(ee.UID),
 			},
 		}
 		for field, problem := range ee.Problems {

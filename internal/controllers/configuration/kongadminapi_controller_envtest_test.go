@@ -102,7 +102,7 @@ func startKongAdminAPIServiceReconciler(ctx context.Context, t *testing.T, clien
 	}()
 	t.Cleanup(func() { wg.Wait() })
 
-	return
+	return adminService, adminPod, n
 }
 
 func TestKongAdminAPIController(t *testing.T) {

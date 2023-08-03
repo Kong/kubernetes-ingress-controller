@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/versions"
-	configurationv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
+	kongv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
 )
 
 func int64Ptr(i int64) *int64 {
@@ -42,7 +42,7 @@ func TestConsumer_SanitizedCopy(t *testing.T) {
 					{kong.Oauth2Credential{ID: kong.String("1"), ClientSecret: kong.String("secret")}},
 				},
 				MTLSAuths:       []*MTLSAuth{{kong.MTLSAuth{ID: kong.String("1"), SubjectName: kong.String("foo@example.com")}}},
-				K8sKongConsumer: configurationv1.KongConsumer{Username: "foo"},
+				K8sKongConsumer: kongv1.KongConsumer{Username: "foo"},
 			},
 			want: Consumer{
 				Consumer: kong.Consumer{
@@ -62,7 +62,7 @@ func TestConsumer_SanitizedCopy(t *testing.T) {
 					{kong.Oauth2Credential{ID: kong.String("1"), ClientSecret: redactedString}},
 				},
 				MTLSAuths:       []*MTLSAuth{{kong.MTLSAuth{ID: kong.String("1"), SubjectName: kong.String("foo@example.com")}}},
-				K8sKongConsumer: configurationv1.KongConsumer{Username: "foo"},
+				K8sKongConsumer: kongv1.KongConsumer{Username: "foo"},
 			},
 		},
 	} {

@@ -11,12 +11,12 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/store"
-	configurationv1beta1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1beta1"
+	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1beta1"
 )
 
 func TestFromTCPIngressV1beta1(t *testing.T) {
 	assert := assert.New(t)
-	tcpIngressList := []*configurationv1beta1.TCPIngress{
+	tcpIngressList := []*kongv1beta1.TCPIngress{
 		// 0
 		{
 			ObjectMeta: metav1.ObjectMeta{
@@ -36,11 +36,11 @@ func TestFromTCPIngressV1beta1(t *testing.T) {
 					annotations.IngressClassKey: annotations.DefaultIngressClass,
 				},
 			},
-			Spec: configurationv1beta1.TCPIngressSpec{
-				Rules: []configurationv1beta1.IngressRule{
+			Spec: kongv1beta1.TCPIngressSpec{
+				Rules: []kongv1beta1.IngressRule{
 					{
 						Port: 9000,
-						Backend: configurationv1beta1.IngressBackend{
+						Backend: kongv1beta1.IngressBackend{
 							ServiceName: "foo-svc",
 							ServicePort: 80,
 						},
@@ -57,12 +57,12 @@ func TestFromTCPIngressV1beta1(t *testing.T) {
 					annotations.IngressClassKey: annotations.DefaultIngressClass,
 				},
 			},
-			Spec: configurationv1beta1.TCPIngressSpec{
-				Rules: []configurationv1beta1.IngressRule{
+			Spec: kongv1beta1.TCPIngressSpec{
+				Rules: []kongv1beta1.IngressRule{
 					{
 						Host: "example.com",
 						Port: 9000,
-						Backend: configurationv1beta1.IngressBackend{
+						Backend: kongv1beta1.IngressBackend{
 							ServiceName: "foo-svc",
 							ServicePort: 80,
 						},
@@ -79,8 +79,8 @@ func TestFromTCPIngressV1beta1(t *testing.T) {
 					annotations.IngressClassKey: annotations.DefaultIngressClass,
 				},
 			},
-			Spec: configurationv1beta1.TCPIngressSpec{
-				TLS: []configurationv1beta1.IngressTLS{
+			Spec: kongv1beta1.TCPIngressSpec{
+				TLS: []kongv1beta1.IngressTLS{
 					{
 						Hosts: []string{
 							"1.example.com",
@@ -101,7 +101,7 @@ func TestFromTCPIngressV1beta1(t *testing.T) {
 	}
 	t.Run("no TCPIngress returns empty info", func(t *testing.T) {
 		store, err := store.NewFakeStore(store.FakeObjects{
-			TCPIngresses: []*configurationv1beta1.TCPIngress{},
+			TCPIngresses: []*kongv1beta1.TCPIngress{},
 		})
 		assert.NoError(err)
 		p := mustNewParser(t, store)
@@ -115,7 +115,7 @@ func TestFromTCPIngressV1beta1(t *testing.T) {
 	})
 	t.Run("empty TCPIngress return empty info", func(t *testing.T) {
 		store, err := store.NewFakeStore(store.FakeObjects{
-			TCPIngresses: []*configurationv1beta1.TCPIngress{
+			TCPIngresses: []*kongv1beta1.TCPIngress{
 				tcpIngressList[0],
 			},
 		})
@@ -131,7 +131,7 @@ func TestFromTCPIngressV1beta1(t *testing.T) {
 	})
 	t.Run("simple TCPIngress rule is parsed", func(t *testing.T) {
 		store, err := store.NewFakeStore(store.FakeObjects{
-			TCPIngresses: []*configurationv1beta1.TCPIngress{
+			TCPIngresses: []*kongv1beta1.TCPIngress{
 				tcpIngressList[1],
 			},
 		})
@@ -163,7 +163,7 @@ func TestFromTCPIngressV1beta1(t *testing.T) {
 	})
 	t.Run("TCPIngress rule with host is parsed", func(t *testing.T) {
 		store, err := store.NewFakeStore(store.FakeObjects{
-			TCPIngresses: []*configurationv1beta1.TCPIngress{
+			TCPIngresses: []*kongv1beta1.TCPIngress{
 				tcpIngressList[2],
 			},
 		})
@@ -196,7 +196,7 @@ func TestFromTCPIngressV1beta1(t *testing.T) {
 	})
 	t.Run("TCPIngress with TLS", func(t *testing.T) {
 		store, err := store.NewFakeStore(store.FakeObjects{
-			TCPIngresses: []*configurationv1beta1.TCPIngress{
+			TCPIngresses: []*kongv1beta1.TCPIngress{
 				tcpIngressList[3],
 			},
 		})

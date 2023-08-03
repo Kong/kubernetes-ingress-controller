@@ -17,7 +17,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
-	configurationv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
+	kongv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
 )
 
 func TestKongPluginFromK8SClusterPlugin(t *testing.T) {
@@ -36,7 +36,7 @@ func TestKongPluginFromK8SClusterPlugin(t *testing.T) {
 		},
 	})
 	type args struct {
-		plugin configurationv1.KongClusterPlugin
+		plugin kongv1.KongClusterPlugin
 	}
 	tests := []struct {
 		name    string
@@ -47,8 +47,8 @@ func TestKongPluginFromK8SClusterPlugin(t *testing.T) {
 		{
 			name: "basic configuration",
 			args: args{
-				plugin: configurationv1.KongClusterPlugin{
-					Protocols:    []configurationv1.KongProtocol{"http"},
+				plugin: kongv1.KongClusterPlugin{
+					Protocols:    []kongv1.KongProtocol{"http"},
 					PluginName:   "correlation-id",
 					InstanceName: "example",
 					Config: apiextensionsv1.JSON{
@@ -69,11 +69,11 @@ func TestKongPluginFromK8SClusterPlugin(t *testing.T) {
 		{
 			name: "secret configuration",
 			args: args{
-				plugin: configurationv1.KongClusterPlugin{
-					Protocols:  []configurationv1.KongProtocol{"http"},
+				plugin: kongv1.KongClusterPlugin{
+					Protocols:  []kongv1.KongProtocol{"http"},
 					PluginName: "correlation-id",
-					ConfigFrom: &configurationv1.NamespacedConfigSource{
-						SecretValue: configurationv1.NamespacedSecretValueFromSource{
+					ConfigFrom: &kongv1.NamespacedConfigSource{
+						SecretValue: kongv1.NamespacedSecretValueFromSource{
 							Key:       "correlation-id-config",
 							Secret:    "conf-secret",
 							Namespace: "default",
@@ -93,11 +93,11 @@ func TestKongPluginFromK8SClusterPlugin(t *testing.T) {
 		{
 			name: "missing secret configuration",
 			args: args{
-				plugin: configurationv1.KongClusterPlugin{
-					Protocols:  []configurationv1.KongProtocol{"http"},
+				plugin: kongv1.KongClusterPlugin{
+					Protocols:  []kongv1.KongProtocol{"http"},
 					PluginName: "correlation-id",
-					ConfigFrom: &configurationv1.NamespacedConfigSource{
-						SecretValue: configurationv1.NamespacedSecretValueFromSource{
+					ConfigFrom: &kongv1.NamespacedConfigSource{
+						SecretValue: kongv1.NamespacedSecretValueFromSource{
 							Key:       "correlation-id-config",
 							Secret:    "missing",
 							Namespace: "default",
@@ -111,8 +111,8 @@ func TestKongPluginFromK8SClusterPlugin(t *testing.T) {
 		{
 			name: "non-JSON configuration",
 			args: args{
-				plugin: configurationv1.KongClusterPlugin{
-					Protocols:  []configurationv1.KongProtocol{"http"},
+				plugin: kongv1.KongClusterPlugin{
+					Protocols:  []kongv1.KongProtocol{"http"},
 					PluginName: "correlation-id",
 					Config: apiextensionsv1.JSON{
 						Raw: []byte(`{{}`),
@@ -125,14 +125,14 @@ func TestKongPluginFromK8SClusterPlugin(t *testing.T) {
 		{
 			name: "both Config and ConfigFrom set",
 			args: args{
-				plugin: configurationv1.KongClusterPlugin{
-					Protocols:  []configurationv1.KongProtocol{"http"},
+				plugin: kongv1.KongClusterPlugin{
+					Protocols:  []kongv1.KongProtocol{"http"},
 					PluginName: "correlation-id",
 					Config: apiextensionsv1.JSON{
 						Raw: []byte(`{"header_name": "foo"}`),
 					},
-					ConfigFrom: &configurationv1.NamespacedConfigSource{
-						SecretValue: configurationv1.NamespacedSecretValueFromSource{
+					ConfigFrom: &kongv1.NamespacedConfigSource{
+						SecretValue: kongv1.NamespacedSecretValueFromSource{
 							Key:       "correlation-id-config",
 							Secret:    "conf-secret",
 							Namespace: "default",
@@ -173,7 +173,7 @@ func TestKongPluginFromK8SPlugin(t *testing.T) {
 		},
 	})
 	type args struct {
-		plugin configurationv1.KongPlugin
+		plugin kongv1.KongPlugin
 	}
 	tests := []struct {
 		name    string
@@ -184,8 +184,8 @@ func TestKongPluginFromK8SPlugin(t *testing.T) {
 		{
 			name: "basic configuration",
 			args: args{
-				plugin: configurationv1.KongPlugin{
-					Protocols:    []configurationv1.KongProtocol{"http"},
+				plugin: kongv1.KongPlugin{
+					Protocols:    []kongv1.KongProtocol{"http"},
 					PluginName:   "correlation-id",
 					InstanceName: "example",
 					Config: apiextensionsv1.JSON{
@@ -206,15 +206,15 @@ func TestKongPluginFromK8SPlugin(t *testing.T) {
 		{
 			name: "secret configuration",
 			args: args{
-				plugin: configurationv1.KongPlugin{
+				plugin: kongv1.KongPlugin{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "foo",
 						Namespace: "default",
 					},
-					Protocols:  []configurationv1.KongProtocol{"http"},
+					Protocols:  []kongv1.KongProtocol{"http"},
 					PluginName: "correlation-id",
-					ConfigFrom: &configurationv1.ConfigSource{
-						SecretValue: configurationv1.SecretValueFromSource{
+					ConfigFrom: &kongv1.ConfigSource{
+						SecretValue: kongv1.SecretValueFromSource{
 							Key:    "correlation-id-config",
 							Secret: "conf-secret",
 						},
@@ -233,15 +233,15 @@ func TestKongPluginFromK8SPlugin(t *testing.T) {
 		{
 			name: "missing secret configuration",
 			args: args{
-				plugin: configurationv1.KongPlugin{
+				plugin: kongv1.KongPlugin{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "foo",
 						Namespace: "default",
 					},
-					Protocols:  []configurationv1.KongProtocol{"http"},
+					Protocols:  []kongv1.KongProtocol{"http"},
 					PluginName: "correlation-id",
-					ConfigFrom: &configurationv1.ConfigSource{
-						SecretValue: configurationv1.SecretValueFromSource{
+					ConfigFrom: &kongv1.ConfigSource{
+						SecretValue: kongv1.SecretValueFromSource{
 							Key:    "correlation-id-config",
 							Secret: "missing",
 						},
@@ -254,8 +254,8 @@ func TestKongPluginFromK8SPlugin(t *testing.T) {
 		{
 			name: "non-JSON configuration",
 			args: args{
-				plugin: configurationv1.KongPlugin{
-					Protocols:  []configurationv1.KongProtocol{"http"},
+				plugin: kongv1.KongPlugin{
+					Protocols:  []kongv1.KongProtocol{"http"},
 					PluginName: "correlation-id",
 					Config: apiextensionsv1.JSON{
 						Raw: []byte(`{{}`),
@@ -268,14 +268,14 @@ func TestKongPluginFromK8SPlugin(t *testing.T) {
 		{
 			name: "both Config and ConfigFrom set",
 			args: args{
-				plugin: configurationv1.KongPlugin{
-					Protocols:  []configurationv1.KongProtocol{"http"},
+				plugin: kongv1.KongPlugin{
+					Protocols:  []kongv1.KongProtocol{"http"},
 					PluginName: "correlation-id",
 					Config: apiextensionsv1.JSON{
 						Raw: []byte(`{"header_name": "foo"}`),
 					},
-					ConfigFrom: &configurationv1.ConfigSource{
-						SecretValue: configurationv1.SecretValueFromSource{
+					ConfigFrom: &kongv1.ConfigSource{
+						SecretValue: kongv1.SecretValueFromSource{
 							Key:    "correlation-id-config",
 							Secret: "conf-secret",
 						},
@@ -305,13 +305,13 @@ func TestGetKongIngressForServices(t *testing.T) {
 	for _, tt := range []struct {
 		name                string
 		services            map[string]*corev1.Service
-		kongIngresses       []*configurationv1.KongIngress
-		expectedKongIngress *configurationv1.KongIngress
+		kongIngresses       []*kongv1.KongIngress
+		expectedKongIngress *kongv1.KongIngress
 		expectedError       error
 	}{
 		{
 			name: "when no services are provided, no KongIngress will be provided",
-			kongIngresses: []*configurationv1.KongIngress{{
+			kongIngresses: []*kongv1.KongIngress{{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-kongingress1",
 					Namespace: corev1.NamespaceDefault,
@@ -334,7 +334,7 @@ func TestGetKongIngressForServices(t *testing.T) {
 					},
 				},
 			},
-			kongIngresses: []*configurationv1.KongIngress{{
+			kongIngresses: []*kongv1.KongIngress{{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-kongingress1",
 					Namespace: corev1.NamespaceDefault,
@@ -360,7 +360,7 @@ func TestGetKongIngressForServices(t *testing.T) {
 					},
 				},
 			},
-			kongIngresses: []*configurationv1.KongIngress{
+			kongIngresses: []*kongv1.KongIngress{
 				{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "test-kongingress1",
@@ -374,7 +374,7 @@ func TestGetKongIngressForServices(t *testing.T) {
 					},
 				},
 			},
-			expectedKongIngress: &configurationv1.KongIngress{
+			expectedKongIngress: &kongv1.KongIngress{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-kongingress2",
 					Namespace: corev1.NamespaceDefault,
@@ -412,7 +412,7 @@ func TestGetKongIngressForServices(t *testing.T) {
 					},
 				},
 			},
-			kongIngresses: []*configurationv1.KongIngress{
+			kongIngresses: []*kongv1.KongIngress{
 				{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "test-kongingress1",
@@ -432,7 +432,7 @@ func TestGetKongIngressForServices(t *testing.T) {
 					},
 				},
 			},
-			expectedKongIngress: &configurationv1.KongIngress{
+			expectedKongIngress: &kongv1.KongIngress{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-kongingress2",
 					Namespace: corev1.NamespaceDefault,
@@ -461,8 +461,8 @@ func TestGetKongIngressFromObjectMeta(t *testing.T) {
 	for _, tt := range []struct {
 		name                string
 		route               client.Object
-		kongIngresses       []*configurationv1.KongIngress
-		expectedKongIngress *configurationv1.KongIngress
+		kongIngresses       []*kongv1.KongIngress
+		expectedKongIngress *kongv1.KongIngress
 		expectedError       error
 	}{
 		{
@@ -480,7 +480,7 @@ func TestGetKongIngressFromObjectMeta(t *testing.T) {
 					},
 				},
 			},
-			kongIngresses: []*configurationv1.KongIngress{
+			kongIngresses: []*kongv1.KongIngress{
 				{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "test-kongingress1",
@@ -505,7 +505,7 @@ func TestGetKongIngressFromObjectMeta(t *testing.T) {
 					},
 				},
 			},
-			kongIngresses: []*configurationv1.KongIngress{
+			kongIngresses: []*kongv1.KongIngress{
 				{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "test-kongingress1",
@@ -530,7 +530,7 @@ func TestGetKongIngressFromObjectMeta(t *testing.T) {
 					},
 				},
 			},
-			kongIngresses: []*configurationv1.KongIngress{
+			kongIngresses: []*kongv1.KongIngress{
 				{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "test-kongingress1",
@@ -555,7 +555,7 @@ func TestGetKongIngressFromObjectMeta(t *testing.T) {
 					},
 				},
 			},
-			kongIngresses: []*configurationv1.KongIngress{
+			kongIngresses: []*kongv1.KongIngress{
 				{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "test-kongingress1",

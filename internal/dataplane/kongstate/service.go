@@ -12,7 +12,7 @@ import (
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
-	configurationv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
+	kongv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
 )
 
 // Services is a list of kongstate.Service objects with sorting enabled based
@@ -61,7 +61,7 @@ type Service struct {
 }
 
 // overrideByKongIngress sets Service fields by KongIngress.
-func (s *Service) overrideByKongIngress(kongIngress *configurationv1.KongIngress) {
+func (s *Service) overrideByKongIngress(kongIngress *kongv1.KongIngress) {
 	if kongIngress == nil || kongIngress.Proxy == nil {
 		return
 	}
@@ -189,7 +189,7 @@ func (s *Service) overrideByAnnotation(anns map[string]string) {
 // override sets Service fields by KongIngress first, then by k8s Service's annotations.
 func (s *Service) override(
 	log logrus.FieldLogger,
-	kongIngress *configurationv1.KongIngress,
+	kongIngress *kongv1.KongIngress,
 	svc *corev1.Service,
 ) {
 	if s == nil {

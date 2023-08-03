@@ -12,8 +12,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
-	configuration "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
-	configurationv1beta1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1beta1"
+	kongv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
+	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1beta1"
 )
 
 // RequestHandler is an HTTP server that can validate Kong Ingress Controllers'
@@ -59,28 +59,28 @@ func (h RequestHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 var (
 	consumerGVResource = metav1.GroupVersionResource{
-		Group:    configuration.SchemeGroupVersion.Group,
-		Version:  configuration.SchemeGroupVersion.Version,
+		Group:    kongv1.SchemeGroupVersion.Group,
+		Version:  kongv1.SchemeGroupVersion.Version,
 		Resource: "kongconsumers",
 	}
 	consumerGroupGVResource = metav1.GroupVersionResource{
-		Group:    configurationv1beta1.SchemeGroupVersion.Group,
-		Version:  configurationv1beta1.SchemeGroupVersion.Version,
+		Group:    kongv1beta1.SchemeGroupVersion.Group,
+		Version:  kongv1beta1.SchemeGroupVersion.Version,
 		Resource: "kongconsumergroups",
 	}
 	pluginGVResource = metav1.GroupVersionResource{
-		Group:    configuration.SchemeGroupVersion.Group,
-		Version:  configuration.SchemeGroupVersion.Version,
+		Group:    kongv1.SchemeGroupVersion.Group,
+		Version:  kongv1.SchemeGroupVersion.Version,
 		Resource: "kongplugins",
 	}
 	clusterPluginGVResource = metav1.GroupVersionResource{
-		Group:    configuration.SchemeGroupVersion.Group,
-		Version:  configuration.SchemeGroupVersion.Version,
+		Group:    kongv1.SchemeGroupVersion.Group,
+		Version:  kongv1.SchemeGroupVersion.Version,
 		Resource: "kongclusterplugins",
 	}
 	kongIngressGVResource = metav1.GroupVersionResource{
-		Group:    configuration.SchemeGroupVersion.Group,
-		Version:  configuration.SchemeGroupVersion.Version,
+		Group:    kongv1.SchemeGroupVersion.Group,
+		Version:  kongv1.SchemeGroupVersion.Version,
 		Resource: "kongingresses",
 	}
 	secretGVResource = metav1.GroupVersionResource{
@@ -134,7 +134,7 @@ func (h RequestHandler) handleKongConsumer(
 	request admissionv1.AdmissionRequest,
 	responseBuilder *ResponseBuilder,
 ) (*admissionv1.AdmissionResponse, error) {
-	consumer := configuration.KongConsumer{}
+	consumer := kongv1.KongConsumer{}
 	deserializer := codecs.UniversalDeserializer()
 	_, _, err := deserializer.Decode(request.Object.Raw, nil, &consumer)
 	if err != nil {
@@ -149,7 +149,7 @@ func (h RequestHandler) handleKongConsumer(
 		}
 		return responseBuilder.Allowed(ok).WithMessage(msg).Build(), nil
 	case admissionv1.Update:
-		var oldConsumer configuration.KongConsumer
+		var oldConsumer kongv1.KongConsumer
 		_, _, err = deserializer.Decode(request.OldObject.Raw, nil, &oldConsumer)
 		if err != nil {
 			return nil, err
@@ -173,7 +173,7 @@ func (h RequestHandler) handleKongConsumerGroup(
 	request admissionv1.AdmissionRequest,
 	responseBuilder *ResponseBuilder,
 ) (*admissionv1.AdmissionResponse, error) {
-	var consumerGroup configurationv1beta1.KongConsumerGroup
+	var consumerGroup kongv1beta1.KongConsumerGroup
 	if _, _, err := codecs.UniversalDeserializer().Decode(request.Object.Raw, nil, &consumerGroup); err != nil {
 		return nil, err
 	}
@@ -190,7 +190,7 @@ func (h RequestHandler) handleKongPlugin(
 	request admissionv1.AdmissionRequest,
 	responseBuilder *ResponseBuilder,
 ) (*admissionv1.AdmissionResponse, error) {
-	plugin := configuration.KongPlugin{}
+	plugin := kongv1.KongPlugin{}
 	_, _, err := codecs.UniversalDeserializer().Decode(request.Object.Raw, nil, &plugin)
 	if err != nil {
 		return nil, err
@@ -209,7 +209,7 @@ func (h RequestHandler) handleKongClusterPlugin(
 	request admissionv1.AdmissionRequest,
 	responseBuilder *ResponseBuilder,
 ) (*admissionv1.AdmissionResponse, error) {
-	plugin := configuration.KongClusterPlugin{}
+	plugin := kongv1.KongClusterPlugin{}
 	_, _, err := codecs.UniversalDeserializer().Decode(request.Object.Raw, nil, &plugin)
 	if err != nil {
 		return nil, err
@@ -292,7 +292,7 @@ func (h RequestHandler) handleHTTPRoute(
 }
 
 func (h RequestHandler) handleKongIngress(_ context.Context, request admissionv1.AdmissionRequest, responseBuilder *ResponseBuilder) (*admissionv1.AdmissionResponse, error) {
-	kongIngress := configuration.KongIngress{}
+	kongIngress := kongv1.KongIngress{}
 	_, _, err := codecs.UniversalDeserializer().Decode(request.Object.Raw, nil, &kongIngress)
 	if err != nil {
 		return nil, err

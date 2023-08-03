@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
-	configurationv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
+	kongv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
 )
 
 func TestOverrideRoute(t *testing.T) {
@@ -18,7 +18,7 @@ func TestOverrideRoute(t *testing.T) {
 
 	testTable := []struct {
 		inRoute        Route
-		inKongIngresss configurationv1.KongIngress
+		inKongIngresss kongv1.KongIngress
 		outRoute       Route
 	}{
 		{
@@ -27,7 +27,7 @@ func TestOverrideRoute(t *testing.T) {
 					Hosts: kong.StringSlice("foo.com", "bar.com"),
 				},
 			},
-			configurationv1.KongIngress{},
+			kongv1.KongIngress{},
 			Route{
 				Route: kong.Route{
 					Hosts: kong.StringSlice("foo.com", "bar.com"),
@@ -40,8 +40,8 @@ func TestOverrideRoute(t *testing.T) {
 					Hosts: kong.StringSlice("foo.com", "bar.com"),
 				},
 			},
-			configurationv1.KongIngress{
-				Route: &configurationv1.KongIngressRoute{
+			kongv1.KongIngress{
+				Route: &kongv1.KongIngressRoute{
 					Methods: kong.StringSlice("GET", "POST"),
 				},
 			},
@@ -58,8 +58,8 @@ func TestOverrideRoute(t *testing.T) {
 					Hosts: kong.StringSlice("foo.com", "bar.com"),
 				},
 			},
-			configurationv1.KongIngress{
-				Route: &configurationv1.KongIngressRoute{
+			kongv1.KongIngress{
+				Route: &kongv1.KongIngressRoute{
 					Methods: kong.StringSlice("GET   ", "post"),
 				},
 			},
@@ -76,8 +76,8 @@ func TestOverrideRoute(t *testing.T) {
 					Hosts: kong.StringSlice("foo.com", "bar.com"),
 				},
 			},
-			configurationv1.KongIngress{
-				Route: &configurationv1.KongIngressRoute{
+			kongv1.KongIngress{
+				Route: &kongv1.KongIngressRoute{
 					Methods: kong.StringSlice("GET", "-1"),
 				},
 			},
@@ -93,8 +93,8 @@ func TestOverrideRoute(t *testing.T) {
 					Hosts: kong.StringSlice("foo.com", "bar.com"),
 				},
 			},
-			configurationv1.KongIngress{
-				Route: &configurationv1.KongIngressRoute{
+			kongv1.KongIngress{
+				Route: &kongv1.KongIngressRoute{
 					HTTPSRedirectStatusCode: kong.Int(302),
 				},
 			},
@@ -113,9 +113,9 @@ func TestOverrideRoute(t *testing.T) {
 					StripPath:    kong.Bool(true),
 				},
 			},
-			configurationv1.KongIngress{
-				Route: &configurationv1.KongIngressRoute{
-					Protocols:     configurationv1.ProtocolSlice("http"),
+			kongv1.KongIngress{
+				Route: &kongv1.KongIngressRoute{
+					Protocols:     kongv1.ProtocolSlice("http"),
 					PreserveHost:  kong.Bool(false),
 					StripPath:     kong.Bool(false),
 					RegexPriority: kong.Int(10),
@@ -138,8 +138,8 @@ func TestOverrideRoute(t *testing.T) {
 					Protocols: kong.StringSlice("http", "https"),
 				},
 			},
-			configurationv1.KongIngress{
-				Route: &configurationv1.KongIngressRoute{
+			kongv1.KongIngress{
+				Route: &kongv1.KongIngressRoute{
 					Headers: map[string][]string{
 						"foo-header": {"bar-value"},
 					},
@@ -161,9 +161,9 @@ func TestOverrideRoute(t *testing.T) {
 					Hosts: kong.StringSlice("foo.com"),
 				},
 			},
-			configurationv1.KongIngress{
-				Route: &configurationv1.KongIngressRoute{
-					Protocols: configurationv1.ProtocolSlice("grpc", "grpcs"),
+			kongv1.KongIngress{
+				Route: &kongv1.KongIngressRoute{
+					Protocols: kongv1.ProtocolSlice("grpc", "grpcs"),
 				},
 			},
 			Route{
@@ -180,8 +180,8 @@ func TestOverrideRoute(t *testing.T) {
 					Hosts: kong.StringSlice("foo.com"),
 				},
 			},
-			configurationv1.KongIngress{
-				Route: &configurationv1.KongIngressRoute{
+			kongv1.KongIngress{
+				Route: &kongv1.KongIngressRoute{
 					PathHandling: kong.String("v1"),
 				},
 			},
@@ -198,8 +198,8 @@ func TestOverrideRoute(t *testing.T) {
 					Hosts: kong.StringSlice("foo.com", "bar.com"),
 				},
 			},
-			configurationv1.KongIngress{
-				Route: &configurationv1.KongIngressRoute{
+			kongv1.KongIngress{
+				Route: &kongv1.KongIngressRoute{
 					RequestBuffering:  kong.Bool(true),
 					ResponseBuffering: kong.Bool(true),
 				},
@@ -318,9 +318,9 @@ func TestOverrideExpressionRoute(t *testing.T) {
 func TestOverrideRoutePriority(t *testing.T) {
 	assert := assert.New(t)
 
-	kongIngress := configurationv1.KongIngress{
-		Route: &configurationv1.KongIngressRoute{
-			Protocols: configurationv1.ProtocolSlice("http"),
+	kongIngress := kongv1.KongIngress{
+		Route: &kongv1.KongIngressRoute{
+			Protocols: kongv1.ProtocolSlice("http"),
 		},
 	}
 
@@ -348,9 +348,9 @@ func TestOverrideRouteByKongIngress(t *testing.T) {
 			Hosts: kong.StringSlice("foo.com", "bar.com"),
 		},
 	}
-	kongIngress := configurationv1.KongIngress{
-		Route: &configurationv1.KongIngressRoute{
-			Protocols: configurationv1.ProtocolSlice("http"),
+	kongIngress := kongv1.KongIngress{
+		Route: &kongv1.KongIngressRoute{
+			Protocols: kongv1.ProtocolSlice("http"),
 		},
 	}
 

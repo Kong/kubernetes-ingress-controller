@@ -7,7 +7,7 @@ import (
 	"github.com/kong/go-kong/kong"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/versions"
-	configurationv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
+	kongv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
 )
 
 // Consumer holds a Kong consumer and its plugins and credentials.
@@ -25,7 +25,7 @@ type Consumer struct {
 	Oauth2Creds []*Oauth2Credential
 	MTLSAuths   []*MTLSAuth
 
-	K8sKongConsumer configurationv1.KongConsumer
+	K8sKongConsumer kongv1.KongConsumer
 }
 
 // SanitizedCopy returns a shallow copy with sensitive values redacted best-effort.

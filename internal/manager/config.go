@@ -210,9 +210,9 @@ func (c *Config) FlagSet() *pflag.FlagSet {
 	flagSet.Var(flags.NewValidatedValue(&c.PublishServiceUDP, namespacedNameFromFlagValue, nnTypeNameOverride), "publish-service-udp", `Service fronting UDP routing resources in `+
 		`"namespace/name" format. The controller will update UDP route status information with this Service's `+
 		`endpoints. If omitted, the same Service will be used for both TCP and UDP routes.`)
-	flagSet.Var(flags.NewValidatedValue(&c.PublishServiceTLS, namespacedNameFromFlagValue, nnTypeNameOverride), "publish-service-tls", `Service fronting TLS routing resources in `+
-		`"namespace/name" format. The controller will update TLS route status information with this Service's `+
-		`endpoints. If omitted, the same Service will be used for both HTTP and TLS routes.`)
+	flagSet.Var(flags.NewValidatedValue(&c.PublishServiceTLS, namespacedNameFromFlagValue, nnTypeNameOverride), "publish-service-tls", `Optional Service for TLS Gateway Listeners in `+
+		`"namespace/name" format. When omitted, TLS Listeners use the --publish-service Service.`+
+		`Only necessary if TLS and HTTPS Listeners share the same port.`)
 	flagSet.StringSliceVar(&c.PublishStatusAddressUDP, "publish-status-address-udp", []string{},
 		`User-provided address CSV, for use in lieu of "publish-service-udp" when that Service lacks useful address information.`)
 

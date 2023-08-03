@@ -109,7 +109,7 @@ func TestGatewayConformance(t *testing.T) {
 	tlsService := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "ingress-controller-kong-tls-proxy-" + svcNameSuffix,
-			Namespace: "kong-system",
+			Namespace: "kong",
 		},
 		Spec: corev1.ServiceSpec{
 			Selector: map[string]string{

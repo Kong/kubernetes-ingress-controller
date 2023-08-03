@@ -39,8 +39,20 @@ jobs:
       run-gke: false
       run-istio: false
 
+  integration-tests-unreleased-kong:
+    uses: ./.github/workflows/_integration_tests.yaml
+    secrets: inherit
+    with:
+      kong-container-repo: kong/kong
+      kong-container-tag: nightly
+      kong-enterprise-container-repo: kong/kong-gateway-dev
+      kong-enterprise-container-tag: nightly
+
   test-reports:
-    needs: e2e-tests
+    needs:
+      - e2e-tests
+      - e2e-tests-unreleased-kong
+      - integration-tests-unreleased-kong
     uses: ./.github/workflows/_test_reports.yaml
     secrets: inherit
     with:

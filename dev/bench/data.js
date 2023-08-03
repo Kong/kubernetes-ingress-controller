@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1691030388100,
+  "lastUpdate": 1691030390177,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -46638,6 +46638,48 @@ window.BENCHMARK_DATA = {
             "value": 12,
             "unit": "allocs/op",
             "extra": "13981 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "571832+rainest@users.noreply.github.com",
+            "name": "Travis Raines",
+            "username": "rainest"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "9a6d80aba4c6a2ad71ecfd77b91b6021c8ffb920",
+          "message": "chore(ci) run nightly integration against dev kong (#4447)",
+          "timestamp": "2023-08-03T10:38:50+08:00",
+          "tree_id": "6a3c6d51b1b62673ef3af91c5dedecdae87024c0",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/9a6d80aba4c6a2ad71ecfd77b91b6021c8ffb920"
+        },
+        "date": 1691030380668,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - ns/op",
+            "value": 72468,
+            "unit": "ns/op",
+            "extra": "17404 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - B/op",
+            "value": 11099,
+            "unit": "B/op",
+            "extra": "17404 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - allocs/op",
+            "value": 12,
+            "unit": "allocs/op",
+            "extra": "17404 times\n2 procs"
           }
         ]
       },

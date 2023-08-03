@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1691072542929,
+  "lastUpdate": 1691072544766,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -46890,6 +46890,48 @@ window.BENCHMARK_DATA = {
             "value": 12,
             "unit": "allocs/op",
             "extra": "17634 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jakub.warczarek@konghq.com",
+            "name": "Jakub Warczarek",
+            "username": "programmer04"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "0ea3d77b4ebf048682a946f7522ece431cdf6e78",
+          "message": "chore: unify import aliases for Kong CRDs (#4449)",
+          "timestamp": "2023-08-03T14:21:15Z",
+          "tree_id": "c7645936345e9e61a08026bf94b41f4a695a47a4",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/0ea3d77b4ebf048682a946f7522ece431cdf6e78"
+        },
+        "date": 1691072537061,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - ns/op",
+            "value": 68531,
+            "unit": "ns/op",
+            "extra": "18487 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - B/op",
+            "value": 11102,
+            "unit": "B/op",
+            "extra": "18487 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - allocs/op",
+            "value": 12,
+            "unit": "allocs/op",
+            "extra": "18487 times\n2 procs"
           }
         ]
       },

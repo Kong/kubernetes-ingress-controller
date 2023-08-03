@@ -51,7 +51,6 @@ func TestValidateRoots(t *testing.T) {
 			assert.Equal(t, tc.expectedKongVersion, kongOptions.Version.String())
 		})
 	}
-
 }
 
 const dblessConfigJSON3_1_1 = `{

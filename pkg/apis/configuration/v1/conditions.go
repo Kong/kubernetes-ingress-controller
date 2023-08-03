@@ -37,7 +37,7 @@ const (
 	//
 	// Possible reasons for this condition to be Unknown are:
 	//
-	// * "Pending"
+	// * "Pending".
 	//
 	ConditionProgrammed ConditionType = "Programmed"
 

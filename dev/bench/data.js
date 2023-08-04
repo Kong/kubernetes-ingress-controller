@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1691177969458,
+  "lastUpdate": 1691180054933,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -48930,6 +48930,66 @@ window.BENCHMARK_DATA = {
             "value": 0,
             "unit": "allocs/op",
             "extra": "8631697 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "czeslavo@gmail.com",
+            "name": "Grzegorz Burzyński",
+            "username": "czeslavo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "9dfe2123b277e8ba418152ff1536c9e696786a7f",
+          "message": "fix: introduce deck content to dbless config converter (#4453)\n\nIntroduces `ContentToDBLessConfigConverter` used by `UpdateStrategyInMemory` to adapt decK's `file.Content` to match DBLess schema constraints.\r\n\r\nIt extracts the already existing conversions from `UpdateStrategyInMemory` (dropping `Info` field, cleaning up nulls in plugins' configs), and also adds cleanups for `ConsumerGroups` related fields (dropping `Plugins[i].ConsumerGroup`, `Consumers[i].Group`, `ConsumerGroups[i].Plugins`, `ConsumerGroups[i].Consumers`, filling relationships).\r\n\r\nAlso adds an example config for `ConsumerGroup`.",
+          "timestamp": "2023-08-04T20:13:18Z",
+          "tree_id": "2bb3c46f0d757eddbcc0ddf290172eede19f749e",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/9dfe2123b277e8ba418152ff1536c9e696786a7f"
+        },
+        "date": 1691180049021,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - ns/op",
+            "value": 69130,
+            "unit": "ns/op",
+            "extra": "18614 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - B/op",
+            "value": 11095,
+            "unit": "B/op",
+            "extra": "18614 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - allocs/op",
+            "value": 12,
+            "unit": "allocs/op",
+            "extra": "18614 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDefaultContentToDBLessConfigConverter_Convert - ns/op",
+            "value": 128.3,
+            "unit": "ns/op",
+            "extra": "10180275 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDefaultContentToDBLessConfigConverter_Convert - B/op",
+            "value": 0,
+            "unit": "B/op",
+            "extra": "10180275 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDefaultContentToDBLessConfigConverter_Convert - allocs/op",
+            "value": 0,
+            "unit": "allocs/op",
+            "extra": "10180275 times\n2 procs"
           }
         ]
       }

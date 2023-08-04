@@ -4,7 +4,7 @@ go 1.19
 
 require (
 	github.com/GoogleContainerTools/skaffold/v2 v2.6.2
-	github.com/elastic/crd-ref-docs v0.0.8
+	github.com/elastic/crd-ref-docs v0.0.9
 	github.com/go-delve/delve v1.21.0
 	github.com/golangci/golangci-lint v1.53.3
 	github.com/jstemmer/go-junit-report/v2 v2.0.0
@@ -12,7 +12,7 @@ require (
 	gotest.tools/gotestsum v1.10.1
 	honnef.co/go/tools v0.4.3
 	k8s.io/code-generator v0.27.4
-	sigs.k8s.io/controller-runtime/tools/setup-envtest v0.0.0-20230221102149-f6f37e6cc1ec
+	sigs.k8s.io/controller-runtime/tools/setup-envtest v0.0.0-20230728161957-7f0c6dc440f3
 	sigs.k8s.io/controller-tools v0.12.1
 	sigs.k8s.io/kustomize/kustomize/v4 v4.5.7
 
@@ -168,7 +168,7 @@ require (
 	github.com/go-xmlfmt/xmlfmt v1.1.2 // indirect
 	github.com/gobuffalo/flect v1.0.2 // indirect
 	github.com/gobwas/glob v0.2.3 // indirect
-	github.com/goccy/go-yaml v1.9.8 // indirect
+	github.com/goccy/go-yaml v1.11.0 // indirect
 	github.com/gofrs/flock v0.8.1 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang-jwt/jwt/v4 v4.4.3 // indirect

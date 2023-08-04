@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1691138778095,
+  "lastUpdate": 1691140713250,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -47730,6 +47730,48 @@ window.BENCHMARK_DATA = {
             "value": 12,
             "unit": "allocs/op",
             "extra": "16538 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "czeslavo@gmail.com",
+            "name": "Grzegorz Burzyński",
+            "username": "czeslavo"
+          },
+          "committer": {
+            "email": "czeslavo@gmail.com",
+            "name": "Grzegorz Burzyński",
+            "username": "czeslavo"
+          },
+          "distinct": true,
+          "id": "fbcd9329bad9a5aae61c9b6d34c032e590774379",
+          "message": "fix: introduce content to dbless schema converter",
+          "timestamp": "2023-08-04T11:17:14+02:00",
+          "tree_id": "c005a8c2215db063691369a9888899ada051df38",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/fbcd9329bad9a5aae61c9b6d34c032e590774379"
+        },
+        "date": 1691140705528,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - ns/op",
+            "value": 79954,
+            "unit": "ns/op",
+            "extra": "15879 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - B/op",
+            "value": 11096,
+            "unit": "B/op",
+            "extra": "15879 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - allocs/op",
+            "value": 12,
+            "unit": "allocs/op",
+            "extra": "15879 times\n2 procs"
           }
         ]
       }

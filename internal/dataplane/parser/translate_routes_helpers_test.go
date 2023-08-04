@@ -41,9 +41,8 @@ func TestGenerateKongRoutesFromRouteRule_TCP(t *testing.T) {
 			expected: []kongstate.Route{
 				{
 					Ingress: util.K8sObjectInfo{
-						Name:        "mytcproute-name",
-						Namespace:   "mynamespace",
-						Annotations: map[string]string{},
+						Name:      "mytcproute-name",
+						Namespace: "mynamespace",
 					},
 					Route: kong.Route{
 						Name: lo.ToPtr("tcproute.mynamespace.mytcproute-name.0.0"),
@@ -106,9 +105,8 @@ func TestGenerateKongRoutesFromRouteRule_UDP(t *testing.T) {
 			expected: []kongstate.Route{
 				{
 					Ingress: util.K8sObjectInfo{
-						Name:        "myudproute-name",
-						Namespace:   "mynamespace",
-						Annotations: map[string]string{},
+						Name:      "myudproute-name",
+						Namespace: "mynamespace",
 					},
 					Route: kong.Route{
 						Name: lo.ToPtr("udproute.mynamespace.myudproute-name.0.0"),
@@ -169,9 +167,8 @@ func TestGenerateKongRoutesFromRouteRule_TLS(t *testing.T) {
 			expected: []kongstate.Route{
 				{
 					Ingress: util.K8sObjectInfo{
-						Name:        "mytlsroute-name",
-						Namespace:   "mynamespace",
-						Annotations: map[string]string{},
+						Name:      "mytlsroute-name",
+						Namespace: "mynamespace",
 					},
 					Route: kong.Route{
 						Name: lo.ToPtr("tlsroute.mynamespace.mytlsroute-name.0.0"),
@@ -203,9 +200,8 @@ func TestGenerateKongRoutesFromRouteRule_TLS(t *testing.T) {
 			expected: []kongstate.Route{
 				{
 					Ingress: util.K8sObjectInfo{
-						Name:        "mytlsroute-name",
-						Namespace:   "mynamespace",
-						Annotations: map[string]string{},
+						Name:      "mytlsroute-name",
+						Namespace: "mynamespace",
 					},
 					Route: kong.Route{
 						Name: lo.ToPtr("tlsroute.mynamespace.mytlsroute-name.0.0"),

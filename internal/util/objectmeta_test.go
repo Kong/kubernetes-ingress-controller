@@ -24,9 +24,8 @@ func TestFromK8sObject(t *testing.T) {
 				},
 			},
 			want: K8sObjectInfo{
-				Name:        "name",
-				Namespace:   "namespace",
-				Annotations: map[string]string{},
+				Name:      "name",
+				Namespace: "namespace",
 			},
 		},
 		{

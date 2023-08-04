@@ -133,8 +133,7 @@ func TestTCPRouteEssentials(t *testing.T) {
 	tcpPortDefault := gatewayv1alpha2.PortNumber(ktfkong.DefaultTCPServicePort)
 	tcpRoute := &gatewayv1alpha2.TCPRoute{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:        uuid.NewString(),
-			Annotations: map[string]string{},
+			Name: uuid.NewString(),
 		},
 		Spec: gatewayv1alpha2.TCPRouteSpec{
 			CommonRouteSpec: gatewayv1alpha2.CommonRouteSpec{
@@ -515,8 +514,7 @@ func TestTCPRouteReferenceGrant(t *testing.T) {
 	remoteNamespace := gatewayv1alpha2.Namespace(otherNs.Name)
 	tcproute := &gatewayv1alpha2.TCPRoute{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:        uuid.NewString(),
-			Annotations: map[string]string{},
+			Name: uuid.NewString(),
 		},
 		Spec: gatewayv1alpha2.TCPRouteSpec{
 			CommonRouteSpec: gatewayv1alpha2.CommonRouteSpec{
@@ -560,8 +558,7 @@ func TestTCPRouteReferenceGrant(t *testing.T) {
 	t.Logf("creating a ReferenceGrant that permits tcproute access from %s to services in %s", ns.Name, otherNs.Name)
 	grant := &gatewayv1beta1.ReferenceGrant{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:        uuid.NewString(),
-			Annotations: map[string]string{},
+			Name: uuid.NewString(),
 		},
 		Spec: gatewayv1beta1.ReferenceGrantSpec{
 			From: []gatewayv1beta1.ReferenceGrantFrom{

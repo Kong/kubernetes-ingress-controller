@@ -182,9 +182,8 @@ func TestGetPermittedForReferenceGrantFrom(t *testing.T) {
 	grants := []*gatewayv1beta1.ReferenceGrant{
 		{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:        uuid.NewString(),
-				Annotations: map[string]string{},
-				Namespace:   "fitrat",
+				Name:      uuid.NewString(),
+				Namespace: "fitrat",
 			},
 			Spec: gatewayv1beta1.ReferenceGrantSpec{
 				From: []gatewayv1beta1.ReferenceGrantFrom{
@@ -214,9 +213,8 @@ func TestGetPermittedForReferenceGrantFrom(t *testing.T) {
 		},
 		{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:        uuid.NewString(),
-				Annotations: map[string]string{},
-				Namespace:   "cholpon",
+				Name:      uuid.NewString(),
+				Namespace: "cholpon",
 			},
 			Spec: gatewayv1beta1.ReferenceGrantSpec{
 				From: []gatewayv1beta1.ReferenceGrantFrom{
@@ -332,9 +330,8 @@ func TestGenerateKongServiceFromBackendRef(t *testing.T) {
 	grants := []*gatewayv1beta1.ReferenceGrant{
 		{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:        uuid.NewString(),
-				Annotations: map[string]string{},
-				Namespace:   "fitrat",
+				Name:      uuid.NewString(),
+				Namespace: "fitrat",
 			},
 			Spec: gatewayv1beta1.ReferenceGrantSpec{
 				From: []gatewayv1beta1.ReferenceGrantFrom{
@@ -364,9 +361,8 @@ func TestGenerateKongServiceFromBackendRef(t *testing.T) {
 		},
 		{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:        uuid.NewString(),
-				Annotations: map[string]string{},
-				Namespace:   "cholpon",
+				Name:      uuid.NewString(),
+				Namespace: "cholpon",
 			},
 			Spec: gatewayv1beta1.ReferenceGrantSpec{
 				From: []gatewayv1beta1.ReferenceGrantFrom{

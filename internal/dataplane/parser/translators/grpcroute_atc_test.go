@@ -124,7 +124,6 @@ func TestGenerateKongExpressionRoutesFromGRPCRouteRule(t *testing.T) {
 					Ingress: util.K8sObjectInfo{
 						Name:             "multiple-matches",
 						Namespace:        "default",
-						Annotations:      map[string]string{},
 						GroupVersionKind: grpcRouteGVK,
 					},
 					ExpressionRoutes: true,
@@ -138,7 +137,6 @@ func TestGenerateKongExpressionRoutesFromGRPCRouteRule(t *testing.T) {
 					Ingress: util.K8sObjectInfo{
 						Name:             "multiple-matches",
 						Namespace:        "default",
-						Annotations:      map[string]string{},
 						GroupVersionKind: grpcRouteGVK,
 					},
 					ExpressionRoutes: true,

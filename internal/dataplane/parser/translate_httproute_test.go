@@ -1475,11 +1475,7 @@ func HTTPMethodPointer(method gatewayv1beta1.HTTPMethod) *gatewayv1beta1.HTTPMet
 }
 
 func k8sObjectInfoOfHTTPRoute(route *gatewayv1beta1.HTTPRoute) util.K8sObjectInfo {
-	// parsers always provide the annotations map, even if route didn't have any
 	anotations := route.Annotations
-	if anotations == nil {
-		anotations = make(map[string]string)
-	}
 
 	return util.K8sObjectInfo{
 		Name:        route.Name,

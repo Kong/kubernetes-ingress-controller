@@ -311,9 +311,8 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 		Services: []*corev1.Service{
 			{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:        "foo-svc",
-					Namespace:   "default",
-					Annotations: map[string]string{},
+					Name:      "foo-svc",
+					Namespace: "default",
 				},
 			},
 		},
@@ -3802,9 +3801,8 @@ func TestPluginAnnotations(t *testing.T) {
 		services := []*corev1.Service{
 			{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:        "foo-svc",
-					Namespace:   "default",
-					Annotations: map[string]string{},
+					Name:      "foo-svc",
+					Namespace: "default",
 				},
 			},
 		}
@@ -3901,9 +3899,8 @@ func TestPluginAnnotations(t *testing.T) {
 		services := []*corev1.Service{
 			{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:        "foo-svc",
-					Namespace:   "default",
-					Annotations: map[string]string{},
+					Name:      "foo-svc",
+					Namespace: "default",
 				},
 			},
 		}
@@ -3991,9 +3988,8 @@ func TestPluginAnnotations(t *testing.T) {
 		services := []*corev1.Service{
 			{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:        "foo-svc",
-					Namespace:   "default",
-					Annotations: map[string]string{},
+					Name:      "foo-svc",
+					Namespace: "default",
 				},
 			},
 		}

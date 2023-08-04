@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1691149245830,
+  "lastUpdate": 1691151644291,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -47982,6 +47982,48 @@ window.BENCHMARK_DATA = {
             "value": 12,
             "unit": "allocs/op",
             "extra": "13831 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "patryk.malek@konghq.com",
+            "name": "Patryk Małek",
+            "username": "pmalek"
+          },
+          "committer": {
+            "email": "patryk.malek@konghq.com",
+            "name": "Patryk Małek",
+            "username": "pmalek"
+          },
+          "distinct": true,
+          "id": "a037a5b961352aee3dc1bc3bb22cc19bd41494d1",
+          "message": "chore: fix unit tests after bumping dependencies",
+          "timestamp": "2023-08-04T14:19:30+02:00",
+          "tree_id": "c657ff5b01283e80c09a819918884d80ba21249a",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/a037a5b961352aee3dc1bc3bb22cc19bd41494d1"
+        },
+        "date": 1691151637228,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - ns/op",
+            "value": 78808,
+            "unit": "ns/op",
+            "extra": "16306 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - B/op",
+            "value": 11100,
+            "unit": "B/op",
+            "extra": "16306 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - allocs/op",
+            "value": 12,
+            "unit": "allocs/op",
+            "extra": "16306 times\n2 procs"
           }
         ]
       }

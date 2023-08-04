@@ -98,6 +98,22 @@ func TestDefaultContentToDBLessConfigConverter(t *testing.T) {
 						Plugins:   []*kong.ConsumerGroupPlugin{{Name: kong.String("p1")}},
 					},
 				},
+				Consumers: []file.FConsumer{
+					{
+						Consumer: kong.Consumer{
+							Username: kong.String("c1"),
+						},
+						Groups: []*kong.ConsumerGroup{{Name: kong.String("cg1")}},
+					},
+				},
+				Plugins: []file.FPlugin{
+					{
+						Plugin: kong.Plugin{
+							Name:          kong.String("p1"),
+							ConsumerGroup: &kong.ConsumerGroup{Name: kong.String("cg1")},
+						},
+					},
+				},
 			},
 			expectedDBLessConfig: sendconfig.DBLessConfig{
 				Content: file.Content{
@@ -105,6 +121,20 @@ func TestDefaultContentToDBLessConfigConverter(t *testing.T) {
 						{
 							ConsumerGroup: kong.ConsumerGroup{
 								Name: kong.String("cg1"),
+							},
+						},
+					},
+					Consumers: []file.FConsumer{
+						{
+							Consumer: kong.Consumer{
+								Username: kong.String("c1"),
+							},
+						},
+					},
+					Plugins: []file.FPlugin{
+						{
+							Plugin: kong.Plugin{
+								Name: kong.String("p1"),
 							},
 						},
 					},

@@ -94,13 +94,6 @@ func cleanUpNullsInPluginConfigs(state *file.Content) {
 //   - ConsumerGroupConsumerRelationships
 //   - ConsumerGroupPluginRelationships
 func convertConsumerGroups(dblessConfig *DBLessConfig) {
-	// Before any modification to the Plugins slice, we need to make a copy of it to not modify the original slice.
-	if len(dblessConfig.Content.Consumers) > 0 {
-		copiedConsumers := make([]file.FConsumer, len(dblessConfig.Content.Consumers))
-		copy(copiedConsumers, dblessConfig.Content.Consumers)
-		dblessConfig.Content.Consumers = copiedConsumers
-	}
-
 	// DBLess schema does not support Consumer.Groups field...
 	for i, c := range dblessConfig.Content.Consumers {
 		// ... therefore we need to convert them to relationships...
@@ -112,13 +105,6 @@ func convertConsumerGroups(dblessConfig *DBLessConfig) {
 		}
 		// ... and remove them from the Consumer struct.
 		dblessConfig.Content.Consumers[i].Groups = nil
-	}
-
-	// Before any modification to the Plugins slice, we need to make a copy of it to not modify the original slice.
-	if len(dblessConfig.Content.Plugins) > 0 {
-		copiedPlugins := make([]file.FPlugin, len(dblessConfig.Content.Plugins))
-		copy(copiedPlugins, dblessConfig.Content.Plugins)
-		dblessConfig.Content.Plugins = copiedPlugins
 	}
 
 	// DBLess schema does not support Consumer.ConsumerGroup field...
@@ -135,12 +121,7 @@ func convertConsumerGroups(dblessConfig *DBLessConfig) {
 	}
 
 	// DBLess schema does not support ConsumerGroups.Consumers and ConsumerGroups.Plugins fields so we need to remove
-	// them. We also need to make a copy of the ConsumerGroups slice to not modify the original slice.
-	if len(dblessConfig.Content.ConsumerGroups) > 0 {
-		copiedConsumerGroups := make([]file.FConsumerGroupObject, len(dblessConfig.Content.ConsumerGroups))
-		copy(copiedConsumerGroups, dblessConfig.Content.ConsumerGroups)
-		dblessConfig.Content.ConsumerGroups = copiedConsumerGroups
-	}
+	// them.
 	for i := range dblessConfig.Content.ConsumerGroups {
 		dblessConfig.Content.ConsumerGroups[i].Consumers = nil
 		dblessConfig.Content.ConsumerGroups[i].Plugins = nil

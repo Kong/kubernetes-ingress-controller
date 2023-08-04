@@ -1,13 +1,9 @@
 package sendconfig_test
 
 import (
-	"bytes"
-	"encoding/gob"
 	"encoding/json"
 	"testing"
 
-	"github.com/google/go-cmp/cmp"
-	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/kong/deck/file"
 	"github.com/kong/go-kong/kong"
 	"github.com/stretchr/testify/require"
@@ -294,34 +290,10 @@ func TestDefaultContentToDBLessConfigConverter(t *testing.T) {
 		},
 	}
 
-	// deepCopyContent makes a deep copy of the given file.Content. We use gob to do this, instead of e.g. json, because
-	// various types inside *file.Content implement custom json marshalling/unmarshalling, which would break the test
-	// because of some fields being dropped in this process (e.g. FPlugin.MarshalJSON drops all its fields but ID).
-	deepCopyContent := func(t *testing.T, content *file.Content) *file.Content {
-		var originalContentBlob bytes.Buffer
-		enc := gob.NewEncoder(&originalContentBlob)
-		err := enc.Encode(content)
-		require.NoError(t, err)
-
-		copiedContent := &file.Content{}
-		err = gob.NewDecoder(&originalContentBlob).Decode(copiedContent)
-		require.NoError(t, err)
-		return copiedContent
-	}
-
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			// Preserve original content to make sure it's not modified after conversion.
-			originalContent := deepCopyContent(t, tc.content)
-
 			dblessConfig := converter.Convert(tc.content)
 			require.Equal(t, tc.expectedDBLessConfig, dblessConfig)
-
-			// We're fine with Config being modified in the original *file.Content - we're just dropping null values.
-			ignorePluginConfig := cmpopts.IgnoreFields(kong.Plugin{}, "Config")
-			require.Empty(t, cmp.Diff(originalContent, tc.content, ignorePluginConfig),
-				"passed *file.Content should not be modified",
-			)
 		})
 	}
 }

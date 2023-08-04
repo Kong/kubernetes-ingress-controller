@@ -4,20 +4,25 @@ import (
 	"github.com/kong/deck/file"
 )
 
+// DBLessConfig is the configuration that is sent to Kong's data-plane via its `POST /config` endpoint after being
+// marshalled to JSON.
+// It uses file.Content as its base schema, but it also includes additional fields that are not part of decK's schema.
+type DBLessConfig struct {
+	file.Content
+	ConsumerGroupConsumerRelationships []ConsumerGroupConsumerRelationship `json:"consumer_group_consumers,omitempty"`
+	ConsumerGroupPluginRelationships   []ConsumerGroupPluginRelationship   `json:"consumer_group_plugins,omitempty"`
+}
+
+// ConsumerGroupConsumerRelationship is a relationship between a ConsumerGroup and a Consumer.
 type ConsumerGroupConsumerRelationship struct {
 	ConsumerGroup string `json:"consumer_group"`
 	Consumer      string `json:"consumer"`
 }
 
+// ConsumerGroupPluginRelationship is a relationship between a ConsumerGroup and a Plugin.
 type ConsumerGroupPluginRelationship struct {
 	ConsumerGroup string `json:"consumer_group"`
 	Plugin        string `json:"plugin"`
-}
-
-type DBLessConfig struct {
-	file.Content                       `json:",inline"`
-	ConsumerGroupConsumerRelationships []ConsumerGroupConsumerRelationship `json:"consumer_group_consumers,omitempty"`
-	ConsumerGroupPluginRelationships   []ConsumerGroupPluginRelationship   `json:"consumer_group_plugins,omitempty"`
 }
 
 type DefaultContentToDBLessConfigConverter struct{}
@@ -34,7 +39,7 @@ func (DefaultContentToDBLessConfigConverter) Convert(content *file.Content) DBLe
 	cleanUpNullsInPluginConfigs(&dblessConfig.Content)
 
 	// DBLess schema does not 1-1 match decK's schema for ConsumerGroups.
-	cleanupConsumerGroups(&dblessConfig)
+	convertConsumerGroups(&dblessConfig)
 
 	return dblessConfig
 }
@@ -79,16 +84,23 @@ func cleanUpNullsInPluginConfigs(state *file.Content) {
 	}
 }
 
-// cleanupConsumerGroups drops consumer groups related fields that are not supported in DBLess schema:
+// convertConsumerGroups drops consumer groups related fields that are not supported in DBLess schema:
 //   - Content.Plugins[].ConsumerGroup
 //   - Content.Consumers[].Group,
 //   - Content.ConsumerGroups[].Plugins
 //   - Content.ConsumerGroups[].Consumers
 //
-// In place of them, it creates relationships slices:
+// In their place it creates relationships slices:
 //   - ConsumerGroupConsumerRelationships
 //   - ConsumerGroupPluginRelationships
-func cleanupConsumerGroups(dblessConfig *DBLessConfig) {
+func convertConsumerGroups(dblessConfig *DBLessConfig) {
+	// Before any modification to the Plugins slice, we need to make a copy of it to not modify the original slice.
+	if len(dblessConfig.Content.Consumers) > 0 {
+		copiedConsumers := make([]file.FConsumer, len(dblessConfig.Content.Consumers))
+		copy(copiedConsumers, dblessConfig.Content.Consumers)
+		dblessConfig.Content.Consumers = copiedConsumers
+	}
+
 	// DBLess schema does not support Consumer.Groups field...
 	for i, c := range dblessConfig.Content.Consumers {
 		// ... therefore we need to convert them to relationships...
@@ -100,6 +112,13 @@ func cleanupConsumerGroups(dblessConfig *DBLessConfig) {
 		}
 		// ... and remove them from the Consumer struct.
 		dblessConfig.Content.Consumers[i].Groups = nil
+	}
+
+	// Before any modification to the Plugins slice, we need to make a copy of it to not modify the original slice.
+	if len(dblessConfig.Content.Plugins) > 0 {
+		copiedPlugins := make([]file.FPlugin, len(dblessConfig.Content.Plugins))
+		copy(copiedPlugins, dblessConfig.Content.Plugins)
+		dblessConfig.Content.Plugins = copiedPlugins
 	}
 
 	// DBLess schema does not support Consumer.ConsumerGroup field...
@@ -116,7 +135,12 @@ func cleanupConsumerGroups(dblessConfig *DBLessConfig) {
 	}
 
 	// DBLess schema does not support ConsumerGroups.Consumers and ConsumerGroups.Plugins fields so we need to remove
-	// them.
+	// them. We also need to make a copy of the ConsumerGroups slice to not modify the original slice.
+	if len(dblessConfig.Content.ConsumerGroups) > 0 {
+		copiedConsumerGroups := make([]file.FConsumerGroupObject, len(dblessConfig.Content.ConsumerGroups))
+		copy(copiedConsumerGroups, dblessConfig.Content.ConsumerGroups)
+		dblessConfig.Content.ConsumerGroups = copiedConsumerGroups
+	}
 	for i := range dblessConfig.Content.ConsumerGroups {
 		dblessConfig.Content.ConsumerGroups[i].Consumers = nil
 		dblessConfig.Content.ConsumerGroups[i].Plugins = nil

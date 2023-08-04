@@ -24,6 +24,7 @@ type ConfigService interface {
 	) ([]byte, error)
 }
 
+// ContentToDBLessConfigConverter converts a decK's file.Content to a DBLessConfig.
 type ContentToDBLessConfigConverter interface {
 	Convert(content *file.Content) DBLessConfig
 }

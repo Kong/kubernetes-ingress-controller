@@ -28,12 +28,6 @@ func TestConsumerGroup(t *testing.T) {
 	RunWhenKongVersion(t, fmt.Sprintf(">=%s", versions.ConsumerGroupsVersionCutoff))
 	RunWhenKongEnterprise(t)
 
-	// Get rid of skip when Gateway 3.4 will be released.
-	// Issue https://konghq.atlassian.net/browse/FTI-5264 will be resolved.
-	if testenv.DBMode() == testenv.DBModeOff {
-		t.Skip("due to a bug in Kong Gateway for DB-less mode and consumer groups, this test has to be skipped")
-	}
-
 	ctx := context.Background()
 	ns, cleaner := helpers.Setup(ctx, t, env)
 

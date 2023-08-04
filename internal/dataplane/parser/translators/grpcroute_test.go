@@ -170,7 +170,6 @@ func TestGenerateKongRoutesFromGRPCRouteRule(t *testing.T) {
 					Ingress: util.K8sObjectInfo{
 						Name:             "multiple-matches",
 						Namespace:        "default",
-						Annotations:      map[string]string{},
 						GroupVersionKind: grpcRouteGVK,
 					},
 					Route: kong.Route{
@@ -187,7 +186,6 @@ func TestGenerateKongRoutesFromGRPCRouteRule(t *testing.T) {
 					Ingress: util.K8sObjectInfo{
 						Name:             "multiple-matches",
 						Namespace:        "default",
-						Annotations:      map[string]string{},
 						GroupVersionKind: grpcRouteGVK,
 					},
 					Route: kong.Route{

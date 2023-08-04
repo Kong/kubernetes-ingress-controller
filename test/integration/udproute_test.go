@@ -150,8 +150,7 @@ func TestUDPRouteEssentials(t *testing.T) {
 	udpPortDefault := gatewayv1alpha2.PortNumber(ktfkong.DefaultUDPServicePort)
 	udpRoute := &gatewayv1alpha2.UDPRoute{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:        uuid.NewString(),
-			Annotations: map[string]string{},
+			Name: uuid.NewString(),
 		},
 		Spec: gatewayv1alpha2.UDPRouteSpec{
 			CommonRouteSpec: gatewayv1alpha2.CommonRouteSpec{

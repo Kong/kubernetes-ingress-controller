@@ -155,8 +155,7 @@ func TestTLSRouteEssentials(t *testing.T) {
 	t.Logf("creating a tlsroute to access deployment %s via kong", deployment.Name)
 	tlsRoute := &gatewayv1alpha2.TLSRoute{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:        uuid.NewString(),
-			Annotations: map[string]string{},
+			Name: uuid.NewString(),
 		},
 		Spec: gatewayv1alpha2.TLSRouteSpec{
 			CommonRouteSpec: gatewayv1alpha2.CommonRouteSpec{
@@ -508,8 +507,7 @@ func TestTLSRouteReferenceGrant(t *testing.T) {
 	t.Logf("creating a ReferenceGrant that permits tcproute access from %s to services in %s", ns.Name, otherNs.Name)
 	grant := &gatewayv1beta1.ReferenceGrant{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:        uuid.NewString(),
-			Annotations: map[string]string{},
+			Name: uuid.NewString(),
 		},
 		Spec: gatewayv1beta1.ReferenceGrantSpec{
 			From: []gatewayv1beta1.ReferenceGrantFrom{
@@ -558,8 +556,7 @@ func TestTLSRouteReferenceGrant(t *testing.T) {
 	t.Logf("creating a tlsroute to access deployment %s via kong", deployment.Name)
 	tlsroute := &gatewayv1alpha2.TLSRoute{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:        uuid.NewString(),
-			Annotations: map[string]string{},
+			Name: uuid.NewString(),
 		},
 		Spec: gatewayv1alpha2.TLSRouteSpec{
 			CommonRouteSpec: gatewayv1alpha2.CommonRouteSpec{
@@ -735,8 +732,7 @@ func TestTLSRoutePassthrough(t *testing.T) {
 	sectionName := gatewayv1alpha2.SectionName("tls-passthrough")
 	tlsroute := &gatewayv1alpha2.TLSRoute{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:        uuid.NewString(),
-			Annotations: map[string]string{},
+			Name: uuid.NewString(),
 		},
 		Spec: gatewayv1alpha2.TLSRouteSpec{
 			CommonRouteSpec: gatewayv1alpha2.CommonRouteSpec{

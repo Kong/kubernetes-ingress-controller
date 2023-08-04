@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1691159414449,
+  "lastUpdate": 1691159417120,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -48150,6 +48150,48 @@ window.BENCHMARK_DATA = {
             "value": 12,
             "unit": "allocs/op",
             "extra": "17596 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jakub.warczarek@konghq.com",
+            "name": "Jakub Warczarek",
+            "username": "programmer04"
+          },
+          "committer": {
+            "email": "jakub.warczarek@konghq.com",
+            "name": "Jakub Warczarek",
+            "username": "programmer04"
+          },
+          "distinct": true,
+          "id": "e05c8a4b12d4adf2afce56ef3802c723e40d7588",
+          "message": "feat(consumer group): allow assigning plugins to consumer groups",
+          "timestamp": "2023-08-04T16:25:11+02:00",
+          "tree_id": "bf77401f42572a701f2973983732ff390625d1a1",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/e05c8a4b12d4adf2afce56ef3802c723e40d7588"
+        },
+        "date": 1691159408367,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - ns/op",
+            "value": 66976,
+            "unit": "ns/op",
+            "extra": "17852 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - B/op",
+            "value": 11096,
+            "unit": "B/op",
+            "extra": "17852 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - allocs/op",
+            "value": 12,
+            "unit": "allocs/op",
+            "extra": "17852 times\n2 procs"
           }
         ]
       },

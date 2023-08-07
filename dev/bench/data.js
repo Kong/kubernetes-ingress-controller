@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1691429959136,
+  "lastUpdate": 1691430173580,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -50694,6 +50694,66 @@ window.BENCHMARK_DATA = {
             "value": 0,
             "unit": "allocs/op",
             "extra": "8767510 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "49699333+dependabot[bot]@users.noreply.github.com",
+            "name": "dependabot[bot]",
+            "username": "dependabot[bot]"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "c96420ad7349513f9d8e01d64305944393928c9a",
+          "message": "chore(deps): bump github.com/deepmap/oapi-codegen from 1.13.3 to 1.13.4\n\nBumps [github.com/deepmap/oapi-codegen](https://github.com/deepmap/oapi-codegen) from 1.13.3 to 1.13.4.\n- [Release notes](https://github.com/deepmap/oapi-codegen/releases)\n- [Commits](https://github.com/deepmap/oapi-codegen/compare/v1.13.3...v1.13.4)\n\n---\nupdated-dependencies:\n- dependency-name: github.com/deepmap/oapi-codegen\n  dependency-type: direct:production\n  update-type: version-update:semver-patch\n...\n\nSigned-off-by: dependabot[bot] <support@github.com>",
+          "timestamp": "2023-08-07T17:39:35Z",
+          "tree_id": "2e840714a21c5bba333fd35c10a340c523ab525b",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/c96420ad7349513f9d8e01d64305944393928c9a"
+        },
+        "date": 1691430166207,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - ns/op",
+            "value": 69875,
+            "unit": "ns/op",
+            "extra": "17823 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - B/op",
+            "value": 11096,
+            "unit": "B/op",
+            "extra": "17823 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - allocs/op",
+            "value": 12,
+            "unit": "allocs/op",
+            "extra": "17823 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDefaultContentToDBLessConfigConverter_Convert - ns/op",
+            "value": 124,
+            "unit": "ns/op",
+            "extra": "9982994 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDefaultContentToDBLessConfigConverter_Convert - B/op",
+            "value": 0,
+            "unit": "B/op",
+            "extra": "9982994 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDefaultContentToDBLessConfigConverter_Convert - allocs/op",
+            "value": 0,
+            "unit": "allocs/op",
+            "extra": "9982994 times\n2 procs"
           }
         ]
       }

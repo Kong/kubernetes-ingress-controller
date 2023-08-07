@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1691411441198,
+  "lastUpdate": 1691411443194,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -49530,6 +49530,48 @@ window.BENCHMARK_DATA = {
             "value": 0,
             "unit": "allocs/op",
             "extra": "9283908 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jakub.warczarek@konghq.com",
+            "name": "Jakub Warczarek",
+            "username": "programmer04"
+          },
+          "committer": {
+            "email": "jakub.warczarek@konghq.com",
+            "name": "Jakub Warczarek",
+            "username": "programmer04"
+          },
+          "distinct": true,
+          "id": "b9628daeaa44ee08132bf6eb0ee92dc836fd88c7",
+          "message": "fix: deck content to dbless converter",
+          "timestamp": "2023-08-07T14:28:46+02:00",
+          "tree_id": "f582bf3403947d33b6c0d3505ee1bb2f77e7e5af",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/b9628daeaa44ee08132bf6eb0ee92dc836fd88c7"
+        },
+        "date": 1691411434635,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - ns/op",
+            "value": 68011,
+            "unit": "ns/op",
+            "extra": "18814 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - B/op",
+            "value": 11097,
+            "unit": "B/op",
+            "extra": "18814 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - allocs/op",
+            "value": 12,
+            "unit": "allocs/op",
+            "extra": "18814 times\n2 procs"
           }
         ]
       },

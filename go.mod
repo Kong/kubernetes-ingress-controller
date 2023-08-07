@@ -5,7 +5,7 @@ go 1.20
 require (
 	cloud.google.com/go/container v1.24.0
 	github.com/Masterminds/sprig/v3 v3.2.3
-	github.com/avast/retry-go/v4 v4.3.4
+	github.com/avast/retry-go/v4 v4.5.0
 	github.com/blang/semver/v4 v4.0.0
 	github.com/bombsimon/logrusr/v2 v2.0.1
 	github.com/deepmap/oapi-codegen v1.13.3

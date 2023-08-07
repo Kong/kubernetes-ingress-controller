@@ -6,19 +6,6 @@ updates:
     interval: daily
   labels:
   - dependencies
-  groups:
-    github.com/kong:
-        patterns:
-          - "github.com/kong/*"
-    k8s.io:
-        patterns:
-          - "k8s.io/*"
-    knative.dev:
-        patterns:
-          - "knative.dev/*"
-    sigs.k8s.io:
-        patterns:
-          - "sigs.k8s.io/*"
 - package-ecosystem: gomod
   directory: /third_party/
   schedule:

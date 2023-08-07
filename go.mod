@@ -40,7 +40,7 @@ require (
 	k8s.io/component-base v0.27.4
 	knative.dev/networking v0.0.0-20230718160410-75dcd54d9510
 	knative.dev/pkg v0.0.0-20230718152110-aef227e72ead
-	sigs.k8s.io/controller-runtime v0.15.0
+	sigs.k8s.io/controller-runtime v0.15.1
 	sigs.k8s.io/gateway-api v0.7.1
 	sigs.k8s.io/kustomize/api v0.13.4
 	sigs.k8s.io/kustomize/kyaml v0.14.2

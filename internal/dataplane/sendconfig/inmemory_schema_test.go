@@ -28,12 +28,6 @@ func TestDBLessConfigMarshalToJSON(t *testing.T) {
 				Consumer:      "c1",
 			},
 		},
-		ConsumerGroupPluginRelationships: []sendconfig.ConsumerGroupPluginRelationship{
-			{
-				ConsumerGroup: "cg1",
-				Plugin:        "p1",
-			},
-		},
 	}
 
 	expected := `{
@@ -46,12 +40,6 @@ func TestDBLessConfigMarshalToJSON(t *testing.T) {
     {
       "consumer_group": "cg1",
       "consumer": "c1"
-    }
-  ],
-  "consumer_group_plugins": [
-    {
-      "consumer_group": "cg1",
-      "plugin": "p1"
     }
   ]
 }`
@@ -135,6 +123,10 @@ func TestDefaultContentToDBLessConfigConverter(t *testing.T) {
 						{
 							Plugin: kong.Plugin{
 								Name: kong.String("p1"),
+								ConsumerGroup: &kong.ConsumerGroup{
+									Name: kong.String("cg1"),
+									ID:   kong.String("cg1"),
+								},
 							},
 						},
 					},
@@ -145,10 +137,68 @@ func TestDefaultContentToDBLessConfigConverter(t *testing.T) {
 						Consumer:      "c1",
 					},
 				},
-				ConsumerGroupPluginRelationships: []sendconfig.ConsumerGroupPluginRelationship{
+			},
+		},
+		{
+			name: "content with consumer group consumers and plugins (only IDs filled)",
+			content: &file.Content{
+				ConsumerGroups: []file.FConsumerGroupObject{
+					{
+						ConsumerGroup: kong.ConsumerGroup{
+							Name: kong.String("cg1"),
+						},
+						Consumers: []*kong.Consumer{{ID: kong.String("c1")}},
+						Plugins:   []*kong.ConsumerGroupPlugin{{ID: kong.String("p1")}},
+					},
+				},
+				Consumers: []file.FConsumer{
+					{
+						Consumer: kong.Consumer{
+							ID: kong.String("c1"),
+						},
+						Groups: []*kong.ConsumerGroup{{ID: kong.String("cg1")}},
+					},
+				},
+				Plugins: []file.FPlugin{
+					{
+						Plugin: kong.Plugin{
+							Name:          kong.String("p1"),
+							ConsumerGroup: &kong.ConsumerGroup{ID: kong.String("cg1")},
+						},
+					},
+				},
+			},
+			expectedDBLessConfig: sendconfig.DBLessConfig{
+				Content: file.Content{
+					ConsumerGroups: []file.FConsumerGroupObject{
+						{
+							ConsumerGroup: kong.ConsumerGroup{
+								Name: kong.String("cg1"),
+							},
+						},
+					},
+					Consumers: []file.FConsumer{
+						{
+							Consumer: kong.Consumer{
+								ID: kong.String("c1"),
+							},
+						},
+					},
+					Plugins: []file.FPlugin{
+						{
+							Plugin: kong.Plugin{
+								Name: kong.String("p1"),
+								ConsumerGroup: &kong.ConsumerGroup{
+									ID: kong.String("cg1"),
+								},
+							},
+						},
+					},
+				},
+				ConsumerGroupConsumerRelationships: []sendconfig.ConsumerGroupConsumerRelationship{
 					{
 						ConsumerGroup: "cg1",
-						Plugin:        "p1",
+						Consumer:      "c1",
 					},
 				},
 			},

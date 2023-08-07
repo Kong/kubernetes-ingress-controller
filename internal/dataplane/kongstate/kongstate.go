@@ -419,9 +419,9 @@ func (ks *KongState) FillPlugins(
 }
 
 // FillIDs iterates over the KongState and fills in the ID field for each entity
-// that supports the FillID method (these are Service, Route and Consumer). It makes
-// their IDs deterministic, enabling their correct identification in external systems
-// (e.g. Konnect Analytics).
+// that supports the FillID method (these are Service, Route, Consumer and Consumer
+// Group). It makes their IDs deterministic, enabling their correct identification
+// in external systems (e.g. Konnect Analytics).
 func (ks *KongState) FillIDs(logger logrus.FieldLogger) {
 	for svcIndex, svc := range ks.Services {
 		if err := svc.FillID(); err != nil {

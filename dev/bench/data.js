@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1691419587880,
+  "lastUpdate": 1691419741282,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -50334,6 +50334,66 @@ window.BENCHMARK_DATA = {
             "value": 0,
             "unit": "allocs/op",
             "extra": "10023390 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "49699333+dependabot[bot]@users.noreply.github.com",
+            "name": "dependabot[bot]",
+            "username": "dependabot[bot]"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "d54afa24b08dc22fe4243ec23ad6a539c4b42aa0",
+          "message": "chore(deps): bump github.com/avast/retry-go/v4 from 4.3.4 to 4.5.0 (#4461)\n\nBumps [github.com/avast/retry-go/v4](https://github.com/avast/retry-go) from 4.3.4 to 4.5.0.\r\n- [Release notes](https://github.com/avast/retry-go/releases)\r\n- [Commits](https://github.com/avast/retry-go/compare/4.3.4...4.5.0)\r\n\r\n---\r\nupdated-dependencies:\r\n- dependency-name: github.com/avast/retry-go/v4\r\n  dependency-type: direct:production\r\n  update-type: version-update:semver-minor\r\n...\r\n\r\nSigned-off-by: dependabot[bot] <support@github.com>\r\nCo-authored-by: dependabot[bot] <49699333+dependabot[bot]@users.noreply.github.com>",
+          "timestamp": "2023-08-07T16:45:48+02:00",
+          "tree_id": "d74d42d6610d1357eda3f223bdb18228b7848f0c",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/d54afa24b08dc22fe4243ec23ad6a539c4b42aa0"
+        },
+        "date": 1691419734362,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - ns/op",
+            "value": 69992,
+            "unit": "ns/op",
+            "extra": "17960 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - B/op",
+            "value": 11096,
+            "unit": "B/op",
+            "extra": "17960 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - allocs/op",
+            "value": 12,
+            "unit": "allocs/op",
+            "extra": "17960 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDefaultContentToDBLessConfigConverter_Convert - ns/op",
+            "value": 109.6,
+            "unit": "ns/op",
+            "extra": "10484626 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDefaultContentToDBLessConfigConverter_Convert - B/op",
+            "value": 0,
+            "unit": "B/op",
+            "extra": "10484626 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDefaultContentToDBLessConfigConverter_Convert - allocs/op",
+            "value": 0,
+            "unit": "allocs/op",
+            "extra": "10484626 times\n2 procs"
           }
         ]
       }

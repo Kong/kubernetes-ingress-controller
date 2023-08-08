@@ -179,6 +179,9 @@ Adding a new version? You'll need three changes:
   translate its credentials to Kong configuration, instead of logging thet
   error to reduce the redundant logs.
   [#4398](https://github.com/Kong/kubernetes-ingress-controller/pull/4398)
+- `Gateway` can now correctly update `AttachedRoutes` even if there are more
+  than 100 `HttpRoute`s.
+  [#4458](https://github.com/Kong/kubernetes-ingress-controller/pull/4458)
  
 [gojson]: https://github.com/goccy/go-json
 [httproute-specification]: https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1beta1.HTTPRoute

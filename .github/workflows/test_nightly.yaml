@@ -1,9 +1,7 @@
 name: tests-nightly
 run-name: |
   e2e tests (targeted), branch:${{ github.ref_name }},
-  triggered by @${{ github.actor }} for images:
-  ${{ format('{0}:{1}', inputs.kong-gateway-enterprise-registry, inputs.kong-gateway-enterprise-tag) }},
-  ${{ format('{0}:{1}', inputs.kong-gateway-oss-registry, inputs.kong-gateway-oss-tag) }}
+  triggered by @${{ github.actor }}
 
 concurrency:
   # Limit the concurrency of tests in this workflow to run only 1 workflow for ref (branch).
@@ -15,20 +13,13 @@ on:
   pull_request:
     types:
       - labeled
-  workflow_dispatch:
-    inputs:
-      kong-gateway-enterprise-registry:
-        type: string
-        default: kong/kong-gateway-dev
-      kong-gateway-enterprise-tag:
-        type: string
-        default: latest
-      kong-gateway-oss-registry:
-          type: string
-          default: kong/kong
-      kong-gateway-oss-tag:
-          type: string
-          default: latest-ubuntu
+  workflow_dispatch: {}
+
+env:
+  kong-gateway-enterprise-registry: kong/kong-gateway-dev
+  kong-gateway-enterprise-tag: latest
+  kong-gateway-oss-registry: kong/kong
+  kong-gateway-oss-tag: latest-ubuntu
 
 jobs:
   post-comment-in-pr:
@@ -40,12 +31,10 @@ jobs:
       # Sadly this is not readily available in github's context.
       URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
       PR_NUMBER: ${{ github.event.pull_request.number }}
-      KONG_IMAGE_EE: ${{ format('{0}:{1}', inputs.kong-gateway-enterprise-registry, inputs.kong-gateway-enterprise-tag) }}
-      KONG_IMAGE_OSS: ${{ format('{0}:{1}', inputs.kong-gateway-oss-registry, inputs.kong-gateway-oss-tag) }}
     steps:
       - uses: actions/checkout@v3
       - run: |
-          MSG="Integration (targeted) tests with KIND-based cluster and images: \`${KONG_IMAGE_EE}\`, \`${KONG_IMAGE_OSS}\` were started at ${URL}"
+          MSG="Integration (targeted) tests with KIND-based cluster and latest images were started at ${URL}"
           gh pr comment ${PR_NUMBER} --body "${MSG}"
           # Remove the 'ci/run-nightly' label from the PR to prevent the `test_nightly.yaml`
           # workflow from running again.
@@ -76,8 +65,8 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         KONG_LICENSE_DATA: ${{ steps.license.outputs.license }}
-        TEST_KONG_IMAGE: ${{ github.event.inputs.kong-gateway-enterprise-registry }}
-        TEST_KONG_TAG: ${{ github.event.inputs.kong-gateway-enterprise-tag }}
+        TEST_KONG_IMAGE: ${{ env.kong-gateway-enterprise-registry }}
+        TEST_KONG_TAG: ${{ env.kong-gateway-enterprise-tag }}
         TEST_KONG_PULL_USERNAME: ${{ secrets.GHA_DOCKERHUB_PULL_USER }}
         TEST_KONG_PULL_PASSWORD: ${{ secrets.GHA_KONG_ORG_DOCKERHUB_PUBLIC_TOKEN }}
 
@@ -85,7 +74,7 @@ jobs:
       uses: actions/upload-artifact@v3
       with:
         name: coverage
-        path: coverage.nightlyenterprisepostgres.out
+        path: coverage.enterprisepostgres.out
 
     - name: upload diagnostics
       if: always()
@@ -120,8 +109,8 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         KONG_LICENSE_DATA: ${{ steps.license.outputs.license }}
-        TEST_KONG_IMAGE: ${{ github.event.inputs.kong-gateway-enterprise-registry }}
-        TEST_KONG_TAG: ${{ github.event.inputs.kong-gateway-enterprise-tag }}
+        TEST_KONG_IMAGE: ${{ env.kong-gateway-enterprise-registry }}
+        TEST_KONG_TAG: ${{ env.kong-gateway-enterprise-tag }}
         TEST_KONG_PULL_USERNAME: ${{ secrets.GHA_DOCKERHUB_PULL_USER }}
         TEST_KONG_PULL_PASSWORD: ${{ secrets.GHA_KONG_ORG_DOCKERHUB_PUBLIC_TOKEN }}
 
@@ -129,7 +118,7 @@ jobs:
       uses: actions/upload-artifact@v3
       with:
         name: coverage
-        path: coverage.nightlyenterprisedbless.out
+        path: coverage.enterprisedbless.out
 
     - name: upload diagnostics
       if: always()
@@ -157,14 +146,14 @@ jobs:
       run: make test.integration.postgres
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        TEST_KONG_IMAGE: ${{ github.event.inputs.kong-gateway-oss-registry }}
-        TEST_KONG_TAG: ${{ github.event.inputs.kong-gateway-oss-tag }}
+        TEST_KONG_IMAGE: ${{ env.kong-gateway-oss-registry }}
+        TEST_KONG_TAG: ${{ env.kong-gateway-oss-tag }}
 
     - name: collect test coverage
       uses: actions/upload-artifact@v3
       with:
         name: coverage
-        path: coverage.nightlypostgres.out
+        path: coverage.postgres.out
 
     - name: upload diagnostics
       if: always()
@@ -193,14 +182,14 @@ jobs:
       run: make test.integration.dbless
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        TEST_KONG_IMAGE: ${{ github.event.inputs.kong-gateway-oss-registry }}
-        TEST_KONG_TAG: ${{ github.event.inputs.kong-gateway-oss-tag }}
+        TEST_KONG_IMAGE: ${{ env.kong-gateway-oss-registry }}
+        TEST_KONG_TAG: ${{ env.kong-gateway-oss-tag }}
 
     - name: collect test coverage
       uses: actions/upload-artifact@v3
       with:
         name: coverage
-        path: coverage.nightlydbless.out
+        path: coverage.dbless.out
 
     - name: upload diagnostics
       if: always()

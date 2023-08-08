@@ -1,4 +1,7 @@
 name: tests-nightly
+run-name: |
+  e2e tests (targeted), branch:${{ github.ref_name }},
+  triggered by @${{ github.actor }}
 
 concurrency:
   # Limit the concurrency of tests in this workflow to run only 1 workflow for ref (branch).
@@ -10,7 +13,20 @@ on:
   pull_request:
     types:
       - labeled
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      kong-gateway-enterprise-registry:
+        type: string
+        default: kong/kong-gateway-dev
+      kong-gateway-enterprise-tag:
+        type: string
+        default: latest
+      kong-gateway-oss-registry:
+          type: string
+          default: kong/kong
+      kong-gateway-oss-tag:
+          type: string
+          default: latest-ubuntu
 
 jobs:
   post-comment-in-pr:
@@ -56,8 +72,8 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         KONG_LICENSE_DATA: ${{ steps.license.outputs.license }}
-        TEST_KONG_IMAGE: kong/kong-gateway-dev
-        TEST_KONG_TAG: latest
+        TEST_KONG_IMAGE: ${{ github.event.inputs.kong-gateway-enterprise-registry }}
+        TEST_KONG_TAG: ${{ github.event.inputs.kong-gateway-enterprise-tag }}
         TEST_KONG_PULL_USERNAME: ${{ secrets.GHA_DOCKERHUB_PULL_USER }}
         TEST_KONG_PULL_PASSWORD: ${{ secrets.GHA_KONG_ORG_DOCKERHUB_PUBLIC_TOKEN }}
 
@@ -100,8 +116,8 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         KONG_LICENSE_DATA: ${{ steps.license.outputs.license }}
-        TEST_KONG_IMAGE: kong/kong-gateway-dev
-        TEST_KONG_TAG: latest
+        TEST_KONG_IMAGE: ${{ github.event.inputs.kong-gateway-enterprise-registry }}
+        TEST_KONG_TAG: ${{ github.event.inputs.kong-gateway-enterprise-tag }}
         TEST_KONG_PULL_USERNAME: ${{ secrets.GHA_DOCKERHUB_PULL_USER }}
         TEST_KONG_PULL_PASSWORD: ${{ secrets.GHA_KONG_ORG_DOCKERHUB_PUBLIC_TOKEN }}
 
@@ -137,8 +153,8 @@ jobs:
       run: make test.integration.postgres
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        TEST_KONG_IMAGE: kong/kong
-        TEST_KONG_TAG: latest-ubuntu
+        TEST_KONG_IMAGE: ${{ github.event.inputs.kong-gateway-oss-registry }}
+        TEST_KONG_TAG: ${{ github.event.inputs.kong-gateway-oss-tag }}
 
     - name: collect test coverage
       uses: actions/upload-artifact@v3
@@ -173,8 +189,8 @@ jobs:
       run: make test.integration.dbless
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        TEST_KONG_IMAGE: kong/kong
-        TEST_KONG_TAG: latest-ubuntu
+        TEST_KONG_IMAGE: ${{ github.event.inputs.kong-gateway-oss-registry }}
+        TEST_KONG_TAG: ${{ github.event.inputs.kong-gateway-oss-tag }}
 
     - name: collect test coverage
       uses: actions/upload-artifact@v3

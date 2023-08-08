@@ -232,16 +232,16 @@ func (p *Parser) BuildKongConfig() KongConfigBuildingResult {
 		p.registerSuccessfullyParsedObject(&result.Consumers[i].K8sKongConsumer)
 	}
 
-	// process annotation plugins
-	result.FillPlugins(p.logger, p.storer, p.failuresCollector)
-	for i := range result.Plugins {
-		p.registerSuccessfullyParsedObject(result.Plugins[i].K8sParent)
-	}
-
 	// process consumer groups
 	result.FillConsumerGroups(p.logger, p.storer)
 	for i := range result.ConsumerGroups {
 		p.registerSuccessfullyParsedObject(&result.ConsumerGroups[i].K8sKongConsumerGroup)
+	}
+
+	// process annotation plugins
+	result.FillPlugins(p.logger, p.storer, p.failuresCollector)
+	for i := range result.Plugins {
+		p.registerSuccessfullyParsedObject(result.Plugins[i].K8sParent)
 	}
 
 	// generate Certificates and SNIs

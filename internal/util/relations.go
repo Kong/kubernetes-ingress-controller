@@ -1,11 +1,11 @@
 package util
 
 type ForeignRelations struct {
-	Consumer, Route, Service []string
+	Consumer, ConsumerGroup, Route, Service []string
 }
 
 type Rel struct {
-	Consumer, Route, Service string
+	Consumer, ConsumerGroup, Route, Service string
 }
 
 func (relations *ForeignRelations) GetCombinations() []Rel {
@@ -36,6 +36,9 @@ func (relations *ForeignRelations) GetCombinations() []Rel {
 			}
 		}
 	} else {
+		for _, consumerGroup := range relations.ConsumerGroup {
+			cartesianProduct = append(cartesianProduct, Rel{ConsumerGroup: consumerGroup})
+		}
 		for _, service := range relations.Service {
 			cartesianProduct = append(cartesianProduct, Rel{Service: service})
 		}

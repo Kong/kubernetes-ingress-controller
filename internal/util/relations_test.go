@@ -38,6 +38,22 @@ func TestGetCombinations(t *testing.T) {
 			},
 		},
 		{
+			name: "plugins on consumer group only",
+			args: args{
+				relations: ForeignRelations{
+					ConsumerGroup: []string{"foo", "bar"},
+				},
+			},
+			want: []Rel{
+				{
+					ConsumerGroup: "foo",
+				},
+				{
+					ConsumerGroup: "bar",
+				},
+			},
+		},
+		{
 			name: "plugins on service only",
 			args: args{
 				relations: ForeignRelations{

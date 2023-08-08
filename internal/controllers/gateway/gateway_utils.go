@@ -689,30 +689,13 @@ func routeAcceptedByGateways(routeNamespace string, parentStatuses []RouteParent
 // NOTE: At this point we take into account HTTPRoutes only, as they are the
 // only routes in beta.
 func getAttachedRoutesForListener(ctx context.Context, mgrc client.Client, gateway gatewayv1beta1.Gateway, listenerIndex int) (int32, error) {
-	const (
-		defaultEndpointSliceListPagingLimit = 100
-	)
-	var (
-		httpRoutes    = []gatewayv1beta1.HTTPRoute{}
-		continueToken string
-	)
-	for {
-		httpRouteList := gatewayv1beta1.HTTPRouteList{}
-		if err := mgrc.List(ctx, &httpRouteList, &client.ListOptions{
-			Continue: continueToken,
-			Limit:    defaultEndpointSliceListPagingLimit,
-		}); err != nil {
-			return 0, err
-		}
-		httpRoutes = append(httpRoutes, httpRouteList.Items...)
-		if httpRouteList.Continue == "" {
-			break
-		}
-		continueToken = httpRouteList.Continue
+	httpRouteList := gatewayv1beta1.HTTPRouteList{}
+	if err := mgrc.List(ctx, &httpRouteList); err != nil {
+		return 0, err
 	}
 
 	var attachedRoutes int32
-	for _, route := range httpRoutes {
+	for _, route := range httpRouteList.Items {
 		route := route
 		acceptedByGateway := func() bool {
 			for _, g := range routeAcceptedByGateways(route.Namespace, route.Status.Parents) {

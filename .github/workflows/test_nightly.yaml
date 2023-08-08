@@ -1,7 +1,9 @@
 name: tests-nightly
 run-name: |
   e2e tests (targeted), branch:${{ github.ref_name }},
-  triggered by @${{ github.actor }}
+  triggered by @${{ github.actor }} for images:
+  ${{ format('{0}:{1}', inputs.kong-gateway-enterprise-registry, inputs.kong-gateway-enterprise-tag) }},
+  ${{ format('{0}:{1}', inputs.kong-gateway-oss-registry, inputs.kong-gateway-oss-tag) }}
 
 concurrency:
   # Limit the concurrency of tests in this workflow to run only 1 workflow for ref (branch).
@@ -38,10 +40,12 @@ jobs:
       # Sadly this is not readily available in github's context.
       URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
       PR_NUMBER: ${{ github.event.pull_request.number }}
+      KONG_IMAGE_EE: ${{ format('{0}:{1}', inputs.kong-gateway-enterprise-registry, inputs.kong-gateway-enterprise-tag) }}
+      KONG_IMAGE_OSS: ${{ format('{0}:{1}', inputs.kong-gateway-oss-registry, inputs.kong-gateway-oss-tag) }}
     steps:
       - uses: actions/checkout@v3
       - run: |
-          MSG="Integration (targeted) tests with KIND-based cluster and \`kong/kong-gateway-dev:latest\` image were started at ${URL}"
+          MSG="Integration (targeted) tests with KIND-based cluster and images: \`${KONG_IMAGE_EE}\`, \`${KONG_IMAGE_OSS}\` were started at ${URL}"
           gh pr comment ${PR_NUMBER} --body "${MSG}"
           # Remove the 'ci/run-nightly' label from the PR to prevent the `test_nightly.yaml`
           # workflow from running again.

@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1691513236174,
+  "lastUpdate": 1691513237705,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -53094,6 +53094,66 @@ window.BENCHMARK_DATA = {
             "value": 0,
             "unit": "allocs/op",
             "extra": "8693566 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "49699333+dependabot[bot]@users.noreply.github.com",
+            "name": "dependabot[bot]",
+            "username": "dependabot[bot]"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "6e199b13fea17cfd38f4687184b5f0cdf41082cd",
+          "message": "chore(deps): bump github.com/kong/kubernetes-testing-framework (#4467)\n\nBumps [github.com/kong/kubernetes-testing-framework](https://github.com/kong/kubernetes-testing-framework) from 0.34.0 to 0.35.0.\r\n- [Release notes](https://github.com/kong/kubernetes-testing-framework/releases)\r\n- [Changelog](https://github.com/Kong/kubernetes-testing-framework/blob/main/CHANGELOG.md)\r\n- [Commits](https://github.com/kong/kubernetes-testing-framework/compare/v0.34.0...v0.35.0)\r\n\r\n---\r\nupdated-dependencies:\r\n- dependency-name: github.com/kong/kubernetes-testing-framework\r\n  dependency-type: direct:production\r\n  update-type: version-update:semver-minor\r\n...\r\n\r\nSigned-off-by: dependabot[bot] <support@github.com>\r\nCo-authored-by: dependabot[bot] <49699333+dependabot[bot]@users.noreply.github.com>",
+          "timestamp": "2023-08-08T18:43:57+02:00",
+          "tree_id": "bc036cfdb1290cfd6273406175d2d3a9e43d7452",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/6e199b13fea17cfd38f4687184b5f0cdf41082cd"
+        },
+        "date": 1691513229682,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - ns/op",
+            "value": 67166,
+            "unit": "ns/op",
+            "extra": "16435 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - B/op",
+            "value": 11100,
+            "unit": "B/op",
+            "extra": "16435 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - allocs/op",
+            "value": 12,
+            "unit": "allocs/op",
+            "extra": "16435 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDefaultContentToDBLessConfigConverter_Convert - ns/op",
+            "value": 107.1,
+            "unit": "ns/op",
+            "extra": "11739984 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDefaultContentToDBLessConfigConverter_Convert - B/op",
+            "value": 0,
+            "unit": "B/op",
+            "extra": "11739984 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDefaultContentToDBLessConfigConverter_Convert - allocs/op",
+            "value": 0,
+            "unit": "allocs/op",
+            "extra": "11739984 times\n2 procs"
           }
         ]
       },

@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1691506193095,
+  "lastUpdate": 1691506720262,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -52014,6 +52014,66 @@ window.BENCHMARK_DATA = {
             "value": 0,
             "unit": "allocs/op",
             "extra": "9059935 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "gjkim042@gmail.com",
+            "name": "Gunju Kim",
+            "username": "gjkim42"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "ef7936f308ae2217a707ff141e64892226dd93d0",
+          "message": "fix: don't use Continue option with cached client (#4458)",
+          "timestamp": "2023-08-08T14:56:16Z",
+          "tree_id": "63b172f34989990e952c9765079f94868124a924",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/ef7936f308ae2217a707ff141e64892226dd93d0"
+        },
+        "date": 1691506710840,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - ns/op",
+            "value": 68987,
+            "unit": "ns/op",
+            "extra": "17181 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - B/op",
+            "value": 11100,
+            "unit": "B/op",
+            "extra": "17181 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - allocs/op",
+            "value": 12,
+            "unit": "allocs/op",
+            "extra": "17181 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDefaultContentToDBLessConfigConverter_Convert - ns/op",
+            "value": 100.6,
+            "unit": "ns/op",
+            "extra": "12785239 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDefaultContentToDBLessConfigConverter_Convert - B/op",
+            "value": 0,
+            "unit": "B/op",
+            "extra": "12785239 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDefaultContentToDBLessConfigConverter_Convert - allocs/op",
+            "value": 0,
+            "unit": "allocs/op",
+            "extra": "12785239 times\n2 procs"
           }
         ]
       }

@@ -59,6 +59,9 @@ func PluginString(plugin file.FPlugin) string {
 	if plugin.Consumer != nil && plugin.Consumer.ID != nil {
 		result += *plugin.Consumer.ID
 	}
+	if plugin.ConsumerGroup != nil && plugin.ConsumerGroup.ID != nil {
+		result += *plugin.ConsumerGroup.ID
+	}
 	if plugin.Route != nil && plugin.Route.ID != nil {
 		result += *plugin.Route.ID
 	}

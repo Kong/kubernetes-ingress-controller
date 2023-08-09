@@ -243,6 +243,15 @@ func (ks *KongState) getPluginRelations() map[string]util.ForeignRelations {
 		relations.Consumer = append(relations.Consumer, identifier)
 		pluginRels[pluginKey] = relations
 	}
+	addConsumerGroupRelation := func(namespace, pluginName, identifier string) {
+		pluginKey := namespace + ":" + pluginName
+		relations, ok := pluginRels[pluginKey]
+		if !ok {
+			relations = util.ForeignRelations{}
+		}
+		relations.ConsumerGroup = append(relations.ConsumerGroup, identifier)
+		pluginRels[pluginKey] = relations
+	}
 	addRouteRelation := func(namespace, pluginName, identifier string) {
 		pluginKey := namespace + ":" + pluginName
 		relations, ok := pluginRels[pluginKey]
@@ -286,6 +295,14 @@ func (ks *KongState) getPluginRelations() map[string]util.ForeignRelations {
 			addConsumerRelation(c.K8sKongConsumer.Namespace, pluginName, *c.Username)
 		}
 	}
+	// consumer group
+	for _, cg := range ks.ConsumerGroups {
+		pluginList := annotations.ExtractKongPluginsFromAnnotations(cg.K8sKongConsumerGroup.GetAnnotations())
+		for _, pluginName := range pluginList {
+			addConsumerGroupRelation(cg.K8sKongConsumerGroup.Namespace, pluginName, *cg.Name)
+		}
+	}
+
 	return pluginRels
 }
 
@@ -337,6 +354,9 @@ func buildPlugins(
 			}
 			if rel.Consumer != "" {
 				plugin.Consumer = &kong.Consumer{ID: kong.String(rel.Consumer)}
+			}
+			if rel.ConsumerGroup != "" {
+				plugin.ConsumerGroup = &kong.ConsumerGroup{ID: kong.String(rel.ConsumerGroup)}
 			}
 			plugins = append(plugins, plugin)
 		}

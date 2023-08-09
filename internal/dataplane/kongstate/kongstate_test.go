@@ -22,6 +22,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
+	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1beta1"
 )
 
 var kongConsumerTypeMeta = metav1.TypeMeta{
@@ -103,6 +104,32 @@ func TestGetPluginRelations(t *testing.T) {
 			want: map[string]util.ForeignRelations{
 				"ns1:foo": {Consumer: []string{"foo-consumer"}},
 				"ns1:bar": {Consumer: []string{"foo-consumer"}},
+			},
+		},
+		{
+			name: "single consumer group annotation",
+			args: args{
+				state: KongState{
+					ConsumerGroups: []ConsumerGroup{
+						{
+							ConsumerGroup: kong.ConsumerGroup{
+								Name: kong.String("foo-consumer-group"),
+							},
+							K8sKongConsumerGroup: kongv1beta1.KongConsumerGroup{
+								ObjectMeta: metav1.ObjectMeta{
+									Namespace: "ns1",
+									Annotations: map[string]string{
+										annotations.AnnotationPrefix + annotations.PluginsKey: "foo,bar",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			want: map[string]util.ForeignRelations{
+				"ns1:foo": {ConsumerGroup: []string{"foo-consumer-group"}},
+				"ns1:bar": {ConsumerGroup: []string{"foo-consumer-group"}},
 			},
 		},
 		{
@@ -211,7 +238,7 @@ func TestGetPluginRelations(t *testing.T) {
 			},
 		},
 		{
-			name: "multiple consumers, routes and services",
+			name: "multiple consumers, consumer groups, routes and services",
 			args: args{
 				state: KongState{
 					Consumers: []Consumer{
@@ -250,6 +277,47 @@ func TestGetPluginRelations(t *testing.T) {
 									Namespace: "ns1",
 									Annotations: map[string]string{
 										annotations.AnnotationPrefix + annotations.PluginsKey: "foobar",
+									},
+								},
+							},
+						},
+					},
+					ConsumerGroups: []ConsumerGroup{
+						{
+							ConsumerGroup: kong.ConsumerGroup{
+								Name: kong.String("foo-consumer-group"),
+							},
+							K8sKongConsumerGroup: kongv1beta1.KongConsumerGroup{
+								ObjectMeta: metav1.ObjectMeta{
+									Namespace: "ns1",
+									Annotations: map[string]string{
+										annotations.AnnotationPrefix + annotations.PluginsKey: "foo,bar",
+									},
+								},
+							},
+						},
+						{
+							ConsumerGroup: kong.ConsumerGroup{
+								Name: kong.String("foo-consumer-group"),
+							},
+							K8sKongConsumerGroup: kongv1beta1.KongConsumerGroup{
+								ObjectMeta: metav1.ObjectMeta{
+									Namespace: "ns2",
+									Annotations: map[string]string{
+										annotations.AnnotationPrefix + annotations.PluginsKey: "foo,bar",
+									},
+								},
+							},
+						},
+						{
+							ConsumerGroup: kong.ConsumerGroup{
+								Name: kong.String("bar-consumer-group"),
+							},
+							K8sKongConsumerGroup: kongv1beta1.KongConsumerGroup{
+								ObjectMeta: metav1.ObjectMeta{
+									Namespace: "ns2",
+									Annotations: map[string]string{
+										annotations.AnnotationPrefix + annotations.PluginsKey: "bar,baz",
 									},
 								},
 							},
@@ -301,12 +369,12 @@ func TestGetPluginRelations(t *testing.T) {
 				},
 			},
 			want: map[string]util.ForeignRelations{
-				"ns1:foo":    {Consumer: []string{"foo-consumer"}, Service: []string{"foo-service"}},
-				"ns1:bar":    {Consumer: []string{"foo-consumer"}, Service: []string{"foo-service"}},
+				"ns1:foo":    {Consumer: []string{"foo-consumer"}, ConsumerGroup: []string{"foo-consumer-group"}, Service: []string{"foo-service"}},
+				"ns1:bar":    {Consumer: []string{"foo-consumer"}, ConsumerGroup: []string{"foo-consumer-group"}, Service: []string{"foo-service"}},
 				"ns1:foobar": {Consumer: []string{"bar-consumer"}},
-				"ns2:foo":    {Consumer: []string{"foo-consumer"}, Route: []string{"foo-route"}},
-				"ns2:bar":    {Consumer: []string{"foo-consumer"}, Route: []string{"foo-route", "bar-route"}},
-				"ns2:baz":    {Route: []string{"bar-route"}},
+				"ns2:foo":    {Consumer: []string{"foo-consumer"}, ConsumerGroup: []string{"foo-consumer-group"}, Route: []string{"foo-route"}},
+				"ns2:bar":    {Consumer: []string{"foo-consumer"}, ConsumerGroup: []string{"foo-consumer-group", "bar-consumer-group"}, Route: []string{"foo-route", "bar-route"}},
+				"ns2:baz":    {Route: []string{"bar-route"}, ConsumerGroup: []string{"bar-consumer-group"}},
 			},
 		},
 	}

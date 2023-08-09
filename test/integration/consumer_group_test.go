@@ -80,6 +80,8 @@ func TestConsumerGroup(t *testing.T) {
 	// Currently Gateway supports only one plugin per consumer group, read more
 	// https://konghq.atlassian.net/browse/FTI-5282, but it silently accepts many
 	// but it runs only one of them. So we have to be careful.
+	// https://github.com/Kong/kubernetes-ingress-controller/issues/4472 tracks extending
+	// this test once the limitation on Kong side is fixed.
 	addHeaderGroup := configureConsumerGroupWithPlugins(
 		ctx, t, ns.Name, "test-consumer-group-1", pluginRespTrans.Name,
 	)

@@ -4,7 +4,9 @@ package integration
 
 import (
 	"context"
+	"fmt"
 	"net/http"
+	"strings"
 	"testing"
 	"time"
 
@@ -64,7 +66,13 @@ func TestUnmanagedGatewayBasics(t *testing.T) {
 	require.Eventually(t, func() bool {
 		gw, err = gatewayClient.GatewayV1beta1().Gateways(ns.Name).Get(ctx, defaultGatewayName, metav1.GetOptions{})
 		require.NoError(t, err)
-		return gw.Annotations[annotations.GatewayClassUnmanagedAnnotation] == "kong-system/ingress-controller-kong-proxy,kong-system/ingress-controller-kong-udp-proxy"
+		return gw.Annotations[annotations.GatewayClassUnmanagedAnnotation] == strings.Join(
+			[]string{
+				fmt.Sprintf("%s/%s", pubsvc.Namespace, pubsvc.Name),
+				fmt.Sprintf("%s/%s", pubsvcUDP.Namespace, pubsvcUDP.Name),
+			},
+			",",
+		)
 	}, gatewayUpdateWaitTime, time.Second)
 
 	t.Log("verifying that the gateway address is populated from the publish service")

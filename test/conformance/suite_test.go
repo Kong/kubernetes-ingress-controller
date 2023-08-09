@@ -23,6 +23,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 
 	testutils "github.com/kong/kubernetes-ingress-controller/v2/internal/util/test"
+	"github.com/kong/kubernetes-ingress-controller/v2/test/consts"
 	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/testenv"
 )
 
@@ -63,7 +64,8 @@ func TestMain(m *testing.M) {
 	globalLogger = logger
 
 	// In order to pass conformance tests, the expression router is required.
-	kongBuilder := kong.NewBuilder().WithControllerDisabled().WithProxyAdminServiceTypeLoadBalancer()
+	kongBuilder := kong.NewBuilder().WithControllerDisabled().WithProxyAdminServiceTypeLoadBalancer().
+		WithNamespace(consts.ControllerNamespace)
 	if expressionRoutesEnabled() {
 		kongBuilder = kongBuilder.WithProxyEnvVar("router_flavor", "expressions")
 	}

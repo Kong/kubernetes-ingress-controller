@@ -23,7 +23,7 @@ env:
 
 jobs:
   post-comment-in-pr:
-    if: github.event.pull_request.number != ''
+    if: (contains(github.event.*.labels.*.name, 'ci/run-nightly') || github.event_name == 'workflow_dispatch') && github.event.pull_request.number != ''
     runs-on: ubuntu-latest
     env:
       GH_TOKEN: ${{ secrets.K8S_TEAM_BOT_GH_PAT }}

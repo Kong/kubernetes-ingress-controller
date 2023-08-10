@@ -190,4 +190,4 @@ jobs:
       run: |
         git checkout latest
         git reset --hard v${{ steps.semver_parser.outputs.major }}.${{ steps.semver_parser.outputs.minor }}.${{ steps.semver_parser.outputs.patch }}
-        git push latest
+        git push -f origin latest

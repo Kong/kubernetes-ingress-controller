@@ -4,7 +4,7 @@ services:
   host: foo-svc.foo-namespace.8000.svc
   name: foo-namespace.foo-svc.pnum-8000
   path: /
-  port: 80
+  port: 8000
   protocol: http
   read_timeout: 60000
   retries: 5

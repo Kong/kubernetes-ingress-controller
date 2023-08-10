@@ -74,7 +74,11 @@ Adding a new version? You'll need three changes:
 
 ## Unreleased
 
-Nothing yet.
+### Fixed
+
+- Display Service ports on generated Kong services, instead of a static default
+  value. This change is cosmetic only.
+  [#4503](https://github.com/Kong/kubernetes-ingress-controller/pull/4503)
 
 ## [2.11.0]
 

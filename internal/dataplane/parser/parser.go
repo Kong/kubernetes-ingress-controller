@@ -10,6 +10,7 @@ import (
 
 	"github.com/blang/semver/v4"
 	"github.com/kong/go-kong/kong"
+	"github.com/samber/lo"
 	"github.com/samber/mo"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
@@ -212,6 +213,12 @@ func (p *Parser) BuildKongConfig() KongConfigBuildingResult {
 
 	// add the routes and services to the state
 	var result kongstate.KongState
+
+	// generate Upstreams and Targets from service defs
+	// update ServiceNameToServices with resolved ports (translating any name references to their number, as Kong
+	// services require a number)
+	result.Upstreams, ingressRules.ServiceNameToServices = p.getUpstreams(ingressRules.ServiceNameToServices)
+
 	for key, service := range ingressRules.ServiceNameToServices {
 		// if the service doesn't need to be skipped, then add it to the
 		// list of services.
@@ -219,9 +226,6 @@ func (p *Parser) BuildKongConfig() KongConfigBuildingResult {
 			result.Services = append(result.Services, service)
 		}
 	}
-
-	// generate Upstreams and Targets from service defs
-	result.Upstreams = p.getUpstreams(ingressRules.ServiceNameToServices)
 
 	// merge KongIngress with Routes, Services and Upstream
 	result.FillOverrides(p.logger, p.storer)
@@ -379,11 +383,11 @@ func findPort(svc *corev1.Service, wantPort kongstate.PortDef) (*corev1.ServiceP
 	return nil, fmt.Errorf("no suitable port found")
 }
 
-func (p *Parser) getUpstreams(serviceMap map[string]kongstate.Service) []kongstate.Upstream {
+func (p *Parser) getUpstreams(serviceMap map[string]kongstate.Service) ([]kongstate.Upstream, map[string]kongstate.Service) {
 	upstreamDedup := make(map[string]struct{}, len(serviceMap))
 	var empty struct{}
 	upstreams := make([]kongstate.Upstream, 0, len(serviceMap))
-	for _, service := range serviceMap {
+	for serviceName, service := range serviceMap {
 		// the name of the Upstream for a service must match the service.Host
 		// as the Gateway's internal DNS resolve mechanisms will fail to properly
 		// resolve the host otherwise.
@@ -420,6 +424,8 @@ func (p *Parser) getUpstreams(serviceMap map[string]kongstate.Service) []kongsta
 					)
 					continue
 				}
+				service.Port = lo.ToPtr(int(port.Port))
+				serviceMap[serviceName] = service
 
 				// get the new targets for this backend service
 				newTargets := getServiceEndpoints(p.logger, p.storer, k8sService, port)
@@ -477,7 +483,7 @@ func (p *Parser) getUpstreams(serviceMap map[string]kongstate.Service) []kongsta
 			upstreamDedup[name] = empty
 		}
 	}
-	return upstreams
+	return upstreams, serviceMap
 }
 
 func getCertFromSecret(secret *corev1.Secret) (string, string, error) {

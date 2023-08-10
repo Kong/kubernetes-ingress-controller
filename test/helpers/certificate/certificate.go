@@ -14,36 +14,36 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/test/consts"
 )
 
-type SelfSignedCeritificateOptions struct {
+type SelfSignedCertificateOptions struct {
 	CommonName string
 	DNSNames   []string
 }
 
-type SelfSignedCeritificateOptionsDecorator func(SelfSignedCeritificateOptions) SelfSignedCeritificateOptions
+type SelfSignedCertificateOptionsDecorator func(SelfSignedCertificateOptions) SelfSignedCertificateOptions
 
-func WithCommonName(commonName string) SelfSignedCeritificateOptionsDecorator {
-	return func(opts SelfSignedCeritificateOptions) SelfSignedCeritificateOptions {
+func WithCommonName(commonName string) SelfSignedCertificateOptionsDecorator {
+	return func(opts SelfSignedCertificateOptions) SelfSignedCertificateOptions {
 		opts.CommonName = commonName
 		return opts
 	}
 }
 
-func WithDNSNames(dnsNames ...string) SelfSignedCeritificateOptionsDecorator {
-	return func(opts SelfSignedCeritificateOptions) SelfSignedCeritificateOptions {
+func WithDNSNames(dnsNames ...string) SelfSignedCertificateOptionsDecorator {
+	return func(opts SelfSignedCertificateOptions) SelfSignedCertificateOptions {
 		opts.DNSNames = append(opts.DNSNames, dnsNames...)
 		return opts
 	}
 }
 
 // MustGenerateSelfSignedCert generates a tls.Certificate struct to be used in TLS client/listener configurations.
-func MustGenerateSelfSignedCert(decorators ...SelfSignedCeritificateOptionsDecorator) tls.Certificate {
+func MustGenerateSelfSignedCert(decorators ...SelfSignedCertificateOptionsDecorator) tls.Certificate {
 	// Generate a new RSA private key.
 	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
 		panic(fmt.Sprintf("failed to generate RSA key: %s", err))
 	}
 
-	options := SelfSignedCeritificateOptions{
+	options := SelfSignedCertificateOptions{
 		CommonName: "",
 		DNSNames:   []string{},
 	}
@@ -85,7 +85,7 @@ func MustGenerateSelfSignedCert(decorators ...SelfSignedCeritificateOptionsDecor
 
 // MustGenerateSelfSignedCertPEMFormat generates self-signed certificate
 // and returns certificate and key in PEM format.
-func MustGenerateSelfSignedCertPEMFormat(decorators ...SelfSignedCeritificateOptionsDecorator) (cert []byte, key []byte) {
+func MustGenerateSelfSignedCertPEMFormat(decorators ...SelfSignedCertificateOptionsDecorator) (cert []byte, key []byte) {
 	tlsCert := MustGenerateSelfSignedCert(decorators...)
 
 	certBlock := &pem.Block{

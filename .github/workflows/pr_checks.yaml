@@ -19,6 +19,7 @@ on:
       - '**'
   workflow_dispatch: {}
 
+
 jobs:
   up-to-date:
     runs-on: ubuntu-latest

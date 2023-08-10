@@ -32,6 +32,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/pkg/clientset"
 	"github.com/kong/kubernetes-ingress-controller/v2/test"
 	"github.com/kong/kubernetes-ingress-controller/v2/test/consts"
+	"github.com/kong/kubernetes-ingress-controller/v2/test/helpers/certificate"
 	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/helpers"
 )
 
@@ -69,66 +70,15 @@ nodes:
 	kongNamespace         = "kong"
 )
 
-// openssl req -new -x509 -nodes -newkey ec:<(openssl ecparam -name secp384r1) -keyout cert.key -out cert.crt -days 3650 -subj '/CN=first.example/'
-// openssl req -new -x509 -nodes -newkey ec:<(openssl ecparam -name secp384r1) -keyout cert.key -out cert.crt -days 3650 -subj '/CN=first.example/'.
-var tlsPairs = []TLSPair{
-	{
-		Cert: `-----BEGIN CERTIFICATE-----
-MIICTDCCAdKgAwIBAgIUOe9HN8v1eedsZXur5uXAwJkOSG4wCgYIKoZIzj0EAwIw
-XTELMAkGA1UEBhMCQVUxEzARBgNVBAgMClNvbWUtU3RhdGUxITAfBgNVBAoMGElu
-dGVybmV0IFdpZGdpdHMgUHR5IEx0ZDEWMBQGA1UEAwwNZmlyc3QuZXhhbXBsZTAe
-Fw0yMjA2MTAxOTIzNDhaFw0zMjAyMDgxOTIzNDhaMF0xCzAJBgNVBAYTAkFVMRMw
-EQYDVQQIDApTb21lLVN0YXRlMSEwHwYDVQQKDBhJbnRlcm5ldCBXaWRnaXRzIFB0
-eSBMdGQxFjAUBgNVBAMMDWZpcnN0LmV4YW1wbGUwdjAQBgcqhkjOPQIBBgUrgQQA
-IgNiAAR2pbLcSQhX4gD6IyPJiRN7lxZ8aPbi6qyPyjvoTJc6DPjMuJuJgkdSC8wy
-e1XFsI295WGl5gbqJsXQyJOqU6pHg6mjTEeyRxN9HbfEpH+Zp7GZ2KuTTGzi3wnh
-CPqzic6jUzBRMB0GA1UdDgQWBBTPOtLEjQvk5/iy4/dhxIWWEoSJbTAfBgNVHSME
-GDAWgBTPOtLEjQvk5/iy4/dhxIWWEoSJbTAPBgNVHRMBAf8EBTADAQH/MAoGCCqG
-SM49BAMCA2gAMGUCMQC7rKXFcTAfoTSw5m2/ALseXru/xZC5t3Y7yQ+zSaneFMvQ
-KvXcO0/RGYeqLmS58C4CMGoJva3Ad5LaZ7qgMkahhLdopePb0U/GAQqIsWhHfjOT
-Il2dwxMvntBECtd0uXeKHQ==
------END CERTIFICATE-----`,
-		Key: `-----BEGIN PRIVATE KEY-----
-MIG2AgEAMBAGByqGSM49AgEGBSuBBAAiBIGeMIGbAgEBBDAA9OHUgH4O/xF0/qyQ
-t3ZSX0/6IDilnyM1ayoUSUOfNcELUd2UZVAuZgP10f6cMUWhZANiAAR2pbLcSQhX
-4gD6IyPJiRN7lxZ8aPbi6qyPyjvoTJc6DPjMuJuJgkdSC8wye1XFsI295WGl5gbq
-JsXQyJOqU6pHg6mjTEeyRxN9HbfEpH+Zp7GZ2KuTTGzi3wnhCPqzic4=
------END PRIVATE KEY-----`,
-	},
-	{
-		Cert: `-----BEGIN CERTIFICATE-----
-MIICTzCCAdSgAwIBAgIUOOTCdVckt76c9OSeGHyf+OrLU+YwCgYIKoZIzj0EAwIw
-XjELMAkGA1UEBhMCQVUxEzARBgNVBAgMClNvbWUtU3RhdGUxITAfBgNVBAoMGElu
-dGVybmV0IFdpZGdpdHMgUHR5IEx0ZDEXMBUGA1UEAwwOc2Vjb25kLmV4YW1wbGUw
-HhcNMjIwMjEwMTkyNTMwWhcNMzIwMjA4MTkyNTMwWjBeMQswCQYDVQQGEwJBVTET
-MBEGA1UECAwKU29tZS1TdGF0ZTEhMB8GA1UECgwYSW50ZXJuZXQgV2lkZ2l0cyBQ
-dHkgTHRkMRcwFQYDVQQDDA5zZWNvbmQuZXhhbXBsZTB2MBAGByqGSM49AgEGBSuB
-BAAiA2IABHCTYbqp3P2v5aDuhkO+1rVNAidb0UcnCdtyoZx0+Oqz35Auq/GNaLvZ
-RYsyW6SHVGaRWhPh3jQ8zFnc28TCGwmAMnzYPs5RHYbvBm2BSP9YWPXhc6h+lkma
-HNNCu1tu56NTMFEwHQYDVR0OBBYEFEG94gMq4SvGtTs48Nw5BzVnPK69MB8GA1Ud
-IwQYMBaAFEG94gMq4SvGtTs48Nw5BzVnPK69MA8GA1UdEwEB/wQFMAMBAf8wCgYI
-KoZIzj0EAwIDaQAwZgIxAPRJkWfSdIQMr2R77RgCicR+adD/mMxZra2SoL7qSMyq
-3iXLIXauNP9ar3tt1uZE8wIxAM4C6G4uoQ0dydhcgQVhlgB6GaqO18AEDYPzQjir
-dV2Bs8EBkYBx87PmZ+e/S7g9Ug==
------END CERTIFICATE-----`,
-		Key: `-----BEGIN PRIVATE KEY-----
-MIG2AgEAMBAGByqGSM49AgEGBSuBBAAiBIGeMIGbAgEBBDBVtvjDBFke/k2Skezl
-h63g1q5IHCQM7wr1T43m5ACKZQt0ZDE1jfm1BYKk1omNpeChZANiAARwk2G6qdz9
-r+Wg7oZDvta1TQInW9FHJwnbcqGcdPjqs9+QLqvxjWi72UWLMlukh1RmkVoT4d40
-PMxZ3NvEwhsJgDJ82D7OUR2G7wZtgUj/WFj14XOofpZJmhzTQrtbbuc=
------END PRIVATE KEY-----`,
-	},
-}
-
 // TestWebhookUpdate checks that the webhook updates the certificate indicated by --admission-webhook-cert-file when
 // the mounted Secret updates. This requires E2E because we can't mount Secrets with the locally-run integration
 // test controller instance.
 func TestWebhookUpdate(t *testing.T) {
-	// on KIND, this test requires webhookKINDConfig. the generic getEnvironmentBuilder we use for most tests doesn't
+	// On KIND, this test requires webhookKINDConfig. the generic getEnvironmentBuilder we use for most tests doesn't
 	// support this: the configuration is specific to KIND but should not be used by default, and the scaffolding isn't
 	// flexible enough to support tests building their own clusters or passing additional builder functions. this still
 	// uses the setup style from before getEnvironmentBuilder/GKE support as such, and just skips if it's attempting
-	// to run on GKE
+	// to run on GKE.
 	runOnlyOnKindClusters(t)
 
 	t.Log("configuring all-in-one-dbless.yaml manifest test")
@@ -169,25 +119,33 @@ func TestWebhookUpdate(t *testing.T) {
 	manifest := getDBLessTestManifestByControllerImageEnv(t)
 	ManifestDeploy{Path: manifest}.Run(ctx, t, env)
 
+	const firstCertificateCommonName = "first.example"
+	firstCertificateCrt, firstCertificateKey := certificate.MustGenerateSelfSignedCertPEMFormat(
+		certificate.WithCommonName(firstCertificateCommonName),
+	)
 	firstCertificate := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "admission-cert",
 		},
 		Type: corev1.SecretTypeTLS,
 		Data: map[string][]byte{
-			"tls.crt": []byte(tlsPairs[0].Cert),
-			"tls.key": []byte(tlsPairs[0].Key),
+			"tls.crt": firstCertificateCrt,
+			"tls.key": firstCertificateKey,
 		},
 	}
 
+	const secondCertificateCommonName = "second.example"
+	secondCertificateCrt, secondCertificateKey := certificate.MustGenerateSelfSignedCertPEMFormat(
+		certificate.WithCommonName(secondCertificateCommonName),
+	)
 	secondCertificate := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "admission-cert",
 		},
 		Type: corev1.SecretTypeTLS,
 		Data: map[string][]byte{
-			"tls.crt": []byte(tlsPairs[1].Cert),
-			"tls.key": []byte(tlsPairs[1].Key),
+			"tls.crt": secondCertificateCrt,
+			"tls.key": secondCertificateKey,
 		},
 	}
 
@@ -254,7 +212,7 @@ func TestWebhookUpdate(t *testing.T) {
 		}
 		certCommonName := conn.ConnectionState().PeerCertificates[0].Subject.CommonName
 		t.Logf("subject common name of certificate: %s", certCommonName)
-		return certCommonName == "first.example"
+		return certCommonName == firstCertificateCommonName
 	}, time.Minute*2, time.Second)
 
 	t.Log("changing certificate")
@@ -271,7 +229,7 @@ func TestWebhookUpdate(t *testing.T) {
 		}
 		certCommonName := conn.ConnectionState().PeerCertificates[0].Subject.CommonName
 		t.Logf("subject common name of certificate: %s", certCommonName)
-		return certCommonName == "second.example"
+		return certCommonName == secondCertificateCommonName
 	}, time.Minute*10, time.Second)
 }
 

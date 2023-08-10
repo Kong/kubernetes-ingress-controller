@@ -69,6 +69,10 @@ func TestMain(m *testing.M) {
 	if expressionRoutesEnabled() {
 		kongBuilder = kongBuilder.WithProxyEnvVar("router_flavor", "expressions")
 	}
+
+	// Pin the Helm chart version.
+	kongBuilder.WithHelmChartVersion(consts.KongHelmChartVersion)
+
 	kongAddon := kongBuilder.Build()
 	builder := environments.NewBuilder().WithAddons(metallb.New(), kongAddon)
 	useExistingClusterIfPresent(builder)

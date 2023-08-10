@@ -72,9 +72,9 @@ jobs:
         name: Set Kind versions
         run: |
           if [ "${{ inputs.all-supported-k8s-versions }}" == "true" ]; then
-            echo "kind-versions=[\"1.22.17\", \"1.23.17\", \"1.24.16\", \"1.25.12\", \"1.26.7\", \"1.27.4\"]" >> $GITHUB_OUTPUT
+            echo "kind-versions=[\"1.22.17\", \"1.23.17\", \"1.24.15\", \"1.25.11\", \"1.26.6\", \"1.27.3\"]" >> $GITHUB_OUTPUT
           else
-            echo "kind-versions=[\"1.27.4\"]" >> $GITHUB_OUTPUT
+            echo "kind-versions=[\"1.27.3\"]" >> $GITHUB_OUTPUT
           fi
   kind:
     runs-on: ubuntu-latest
@@ -222,13 +222,13 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - kubernetes-version: 'v1.27.4'
+          - kubernetes-version: 'v1.27.3'
             istio-version: 'v1.18'
-          - kubernetes-version: 'v1.26.7'
+          - kubernetes-version: 'v1.26.6'
             istio-version: 'v1.17'
-          - kubernetes-version: 'v1.25.12'
+          - kubernetes-version: 'v1.25.11'
             istio-version: 'v1.16'
-          - kubernetes-version: 'v1.25.12'
+          - kubernetes-version: 'v1.25.11'
             istio-version: 'v1.15'
     steps:
       - name: Download built image artifact

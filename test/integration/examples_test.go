@@ -201,7 +201,7 @@ func TestTLSRouteExample(t *testing.T) {
 	t.Log("verifying that TLSRoute becomes routable")
 	require.Eventually(t, func() bool {
 		responded, err := tlsEchoResponds(fmt.Sprintf("%s:%d", proxyURL.Hostname(), ktfkong.DefaultTLSServicePort),
-			"tlsroute-example-manifest", "tlsroute.kong.example", "tlsroute.kong.example", false)
+			"tlsroute-example-manifest", "tlsroute.kong.example", "tlsroute.kong.example", true)
 		return err == nil && responded
 	}, ingressWait, waitTick)
 }

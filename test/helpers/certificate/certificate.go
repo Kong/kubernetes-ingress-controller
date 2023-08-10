@@ -36,6 +36,7 @@ func WithDNSNames(dnsNames ...string) SelfSignedCertificateOptionsDecorator {
 }
 
 // MustGenerateSelfSignedCert generates a tls.Certificate struct to be used in TLS client/listener configurations.
+// Certificate is self-signed thus returned cert can be used as CA for it.
 func MustGenerateSelfSignedCert(decorators ...SelfSignedCertificateOptionsDecorator) tls.Certificate {
 	// Generate a new RSA private key.
 	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
@@ -84,7 +85,8 @@ func MustGenerateSelfSignedCert(decorators ...SelfSignedCertificateOptionsDecora
 }
 
 // MustGenerateSelfSignedCertPEMFormat generates self-signed certificate
-// and returns certificate and key in PEM format.
+// and returns certificate and key in PEM format. Certificate is self-signed
+// thus returned cert can be used as CA for it.
 func MustGenerateSelfSignedCertPEMFormat(decorators ...SelfSignedCertificateOptionsDecorator) (cert []byte, key []byte) {
 	tlsCert := MustGenerateSelfSignedCert(decorators...)
 

@@ -493,59 +493,79 @@ func TestNodeAgent_ControllerNodeStatusGetsUpdatedOnlyWhenItChanges(t *testing.T
 }
 
 func TestNodeAgent_TickerResetsOnEveryNodesUpdate(t *testing.T) {
-	nodeClient := newMockNodeClient(nil)
-	configStatusQueue := newMockConfigStatusNotifier()
-	gatewayClientsChangesNotifier := newMockGatewayClientsNotifier()
-
-	ticker := mocks.NewTicker()
 	const halfOfRefreshPeriod = konnect.DefaultRefreshNodePeriod / 2
-	nodeAgent := konnect.NewNodeAgent(
-		testHostname,
-		testKicVersion,
-		konnect.DefaultRefreshNodePeriod,
-		logr.Discard(),
-		nodeClient,
-		configStatusQueue,
-		newMockGatewayInstanceGetter(nil),
-		gatewayClientsChangesNotifier,
-		newMockManagerInstanceIDProvider(uuid.New()),
-		konnect.WithRefreshTicker(ticker),
-	)
-
-	runAgent(t, nodeAgent)
 
 	t.Run("config status notification", func(t *testing.T) {
-		// Let half of the period pass.
-		ticker.Add(halfOfRefreshPeriod)
+		nodeClient := newMockNodeClient(nil)
+		configStatusQueue := newMockConfigStatusNotifier()
+		gatewayClientsChangesNotifier := newMockGatewayClientsNotifier()
 
-		// Trigger update with config status notification.
+		ticker := mocks.NewTicker()
+		nodeAgent := konnect.NewNodeAgent(
+			testHostname,
+			testKicVersion,
+			konnect.DefaultRefreshNodePeriod,
+			logr.Discard(),
+			nodeClient,
+			configStatusQueue,
+			newMockGatewayInstanceGetter(nil),
+			gatewayClientsChangesNotifier,
+			newMockManagerInstanceIDProvider(uuid.New()),
+			konnect.WithRefreshTicker(ticker),
+		)
+
+		runAgent(t, nodeAgent)
+
+		t.Log("wait for initial nodes update")
+		require.Eventually(t, func() bool { return nodeClient.NodesUpdatesCount() == 1 }, time.Second, time.Microsecond)
+
+		t.Log("trigger update with config status notification")
 		configStatusQueue.Notify(clients.ConfigStatusApplyFailed)
-		require.Eventually(t, func() bool { return nodeClient.NodesUpdatesCount() != 1 }, time.Second, time.Microsecond)
+		require.Eventually(t, func() bool { return nodeClient.NodesUpdatesCount() == 2 }, time.Second, time.Microsecond)
 
-		// Let another half of the period pass - no update should be triggered yet because of the notification.
+		t.Log("let another half of the period pass - no update should be triggered yet because of the notification")
 		ticker.Add(halfOfRefreshPeriod)
-		require.Eventually(t, func() bool { return nodeClient.NodesUpdatesCount() != 1 }, time.Second, time.Microsecond)
+		require.Eventually(t, func() bool { return nodeClient.NodesUpdatesCount() == 2 }, time.Second, time.Microsecond)
 
-		// Trigger update with ticker.
-		ticker.Add(halfOfRefreshPeriod)
-		require.Eventually(t, func() bool { return nodeClient.NodesUpdatesCount() != 2 }, time.Second, time.Microsecond)
+		t.Log("trigger update with ticker")
+		ticker.Add(konnect.DefaultRefreshNodePeriod)
+		require.Eventually(t, func() bool { return nodeClient.NodesUpdatesCount() > 2 }, time.Second, time.Microsecond)
 	})
 
 	t.Run("gateway clients changes notification", func(t *testing.T) {
-		// Let half of the period pass.
-		ticker.Add(halfOfRefreshPeriod)
+		nodeClient := newMockNodeClient(nil)
+		configStatusQueue := newMockConfigStatusNotifier()
+		gatewayClientsChangesNotifier := newMockGatewayClientsNotifier()
 
-		// Trigger update with gateway clients change notification.
+		ticker := mocks.NewTicker()
+		nodeAgent := konnect.NewNodeAgent(
+			testHostname,
+			testKicVersion,
+			konnect.DefaultRefreshNodePeriod,
+			logr.Discard(),
+			nodeClient,
+			configStatusQueue,
+			newMockGatewayInstanceGetter(nil),
+			gatewayClientsChangesNotifier,
+			newMockManagerInstanceIDProvider(uuid.New()),
+			konnect.WithRefreshTicker(ticker),
+		)
+
+		runAgent(t, nodeAgent)
+
+		t.Log("wait for initial nodes update")
+		require.Eventually(t, func() bool { return nodeClient.NodesUpdatesCount() == 1 }, time.Second, time.Microsecond)
+		t.Log("trigger update with gateway clients change notification")
 		gatewayClientsChangesNotifier.Notify()
-		require.Eventually(t, func() bool { return nodeClient.NodesUpdatesCount() != 3 }, time.Second, time.Microsecond)
+		require.Eventually(t, func() bool { return nodeClient.NodesUpdatesCount() == 2 }, time.Second, time.Microsecond)
 
-		// Let another half of the period pass - no update should be triggered yet because of the notification.
+		t.Log("let another half of the period pass - no update should be triggered yet because of the notification")
 		ticker.Add(halfOfRefreshPeriod)
-		require.Eventually(t, func() bool { return nodeClient.NodesUpdatesCount() != 3 }, time.Second, time.Microsecond)
+		require.Eventually(t, func() bool { return nodeClient.NodesUpdatesCount() == 2 }, time.Second, time.Microsecond)
 
-		// Trigger update with ticker.
-		ticker.Add(halfOfRefreshPeriod)
-		require.Eventually(t, func() bool { return nodeClient.NodesUpdatesCount() != 4 }, time.Second, time.Microsecond)
+		t.Log("trigger update with ticker")
+		ticker.Add(konnect.DefaultRefreshNodePeriod)
+		require.Eventually(t, func() bool { return nodeClient.NodesUpdatesCount() == 3 }, time.Second, time.Microsecond)
 	})
 }
 

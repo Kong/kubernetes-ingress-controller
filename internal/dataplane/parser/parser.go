@@ -489,16 +489,15 @@ func getCertFromSecret(secret *corev1.Secret) (string, string, error) {
 			" secret '%v/%v'", secret.Namespace, secret.Name)
 	}
 
-	cert := strings.TrimSpace(bytes.NewBuffer(certData).String())
-	key := strings.TrimSpace(bytes.NewBuffer(keyData).String())
+	cert := bytes.TrimSpace(certData)
+	key := bytes.TrimSpace(keyData)
 
-	_, err := tls.X509KeyPair([]byte(cert), []byte(key))
-	if err != nil {
+	if _, err := tls.X509KeyPair(cert, key); err != nil {
 		return "", "", fmt.Errorf("parsing TLS key-pair in secret '%v/%v': %w",
 			secret.Namespace, secret.Name, err)
 	}
 
-	return cert, key, nil
+	return string(cert), string(key), nil
 }
 
 type certWrapper struct {

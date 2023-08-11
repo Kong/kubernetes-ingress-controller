@@ -17,6 +17,8 @@ import (
 type SelfSignedCertificateOptions struct {
 	CommonName string
 	DNSNames   []string
+	CATrue     bool
+	Expired    bool
 }
 
 type SelfSignedCertificateOptionsDecorator func(SelfSignedCertificateOptions) SelfSignedCertificateOptions
@@ -31,6 +33,21 @@ func WithCommonName(commonName string) SelfSignedCertificateOptionsDecorator {
 func WithDNSNames(dnsNames ...string) SelfSignedCertificateOptionsDecorator {
 	return func(opts SelfSignedCertificateOptions) SelfSignedCertificateOptions {
 		opts.DNSNames = append(opts.DNSNames, dnsNames...)
+		return opts
+	}
+}
+
+// WithCATrue allows to use returned certificate to sign other certificates (uses BasicConstraints extension).
+func WithCATrue() SelfSignedCertificateOptionsDecorator {
+	return func(opts SelfSignedCertificateOptions) SelfSignedCertificateOptions {
+		opts.CATrue = true
+		return opts
+	}
+}
+
+func WithAlreadyExpired() SelfSignedCertificateOptionsDecorator {
+	return func(opts SelfSignedCertificateOptions) SelfSignedCertificateOptions {
+		opts.Expired = true
 		return opts
 	}
 }
@@ -53,6 +70,13 @@ func MustGenerateSelfSignedCert(decorators ...SelfSignedCertificateOptionsDecora
 		options = decorator(options)
 	}
 
+	notBefore := time.Now()
+	notAfter := notBefore.AddDate(1, 0, 0)
+	if options.Expired {
+		notBefore = notBefore.AddDate(-1, 0, 0)
+		notAfter = notAfter.AddDate(-1, 0, 0)
+	}
+
 	// Create a self-signed X.509 certificate.
 	template := &x509.Certificate{
 		SerialNumber: big.NewInt(1),
@@ -65,10 +89,11 @@ func MustGenerateSelfSignedCert(decorators ...SelfSignedCertificateOptionsDecora
 			PostalCode:    []string{"94105"},
 			CommonName:    options.CommonName,
 		},
-		NotBefore:             time.Now(),
-		NotAfter:              time.Now().AddDate(1, 0, 0),
+		NotBefore:             notBefore,
+		NotAfter:              notAfter,
 		DNSNames:              options.DNSNames,
 		BasicConstraintsValid: true,
+		IsCA:                  options.CATrue,
 	}
 	derBytes, err := x509.CreateCertificate(rand.Reader, template, template, &privateKey.PublicKey, privateKey)
 	if err != nil {

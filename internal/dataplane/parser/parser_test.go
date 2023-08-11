@@ -33,235 +33,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util/builder"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
 	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1beta1"
-)
-
-type TLSPair struct {
-	Key, Cert string
-}
-
-var (
-	tlsPairs = []TLSPair{
-		{
-			Cert: `-----BEGIN CERTIFICATE-----
-MIIC2DCCAcACCQC32eFOsWpKojANBgkqhkiG9w0BAQsFADAuMRcwFQYDVQQDDA5z
-ZWN1cmUtZm9vLWJhcjETMBEGA1UECgwKa29uZ2hxLm9yZzAeFw0xODEyMTgyMTI4
-MDBaFw0xOTEyMTgyMTI4MDBaMC4xFzAVBgNVBAMMDnNlY3VyZS1mb28tYmFyMRMw
-EQYDVQQKDAprb25naHEub3JnMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKC
-AQEAqhl/HSwV6PbMv+cMFU9X+HuM7QbNNPh39GKa4pkxzFgiAnuuJ4jw9V/bzsEy
-S+ZIyjzo+QKB1LzmgdcX4vkdI22BjxUd9HPHdZxtv3XilbNmSk9UOl2Hh1fORJoS
-7YH+VbvVwiz5lo7qKRepbg/jcKkbs6AUE0YWFygtDLTvhP2qkphQkxZ0m8qroW91
-CWgI73Ar6U2W/YQBRI3+LwtsKo0p2ASDijvqxElQBgBIiyGIr0RZc5pkCJ1eQdDB
-2F6XaMfpeEyBj0MxypNL4S9HHfchOt55J1KOzYnUPkQnSoxp6oEjef4Q/ZCj5BRL
-EGZnTb3tbwzHZCxGtgl9KqO9pQIDAQABMA0GCSqGSIb3DQEBCwUAA4IBAQAKQ5BX
-kkBL+alERL31hsOgWgRiUMw+sPDtRS96ozUlPtVvAg9XFdpY4ldtWkxFcmBnhKzp
-UewjrHkf9rR16NISwUTjlGIwaJu/ACQrY15v+r301Crq2DV+GjiUJFVuT495dp/l
-0LZbt2Sh/uD+r3UNTcJpJ7jb1V0UP7FWXFj8oafsoFSgmxAPjpKQySTC54JK4AYb
-QSnWu1nQLyohnrB9qLZhe2+jOQZnkKuCcWJQ5njvU6SxT3SOKE5XaOZCezEQ6IVL
-U47YCCXsq+7wKWXBhKl4H2Ztk6x3HOC56l0noXWezsMfrou/kjwGuuViGnrjqelS
-WQ7uVeNCUBY+l+qY
------END CERTIFICATE-----`,
-			Key: `-----BEGIN PRIVATE KEY-----
-MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQCqGX8dLBXo9sy/
-5wwVT1f4e4ztBs00+Hf0YprimTHMWCICe64niPD1X9vOwTJL5kjKPOj5AoHUvOaB
-1xfi+R0jbYGPFR30c8d1nG2/deKVs2ZKT1Q6XYeHV85EmhLtgf5Vu9XCLPmWjuop
-F6luD+NwqRuzoBQTRhYXKC0MtO+E/aqSmFCTFnSbyquhb3UJaAjvcCvpTZb9hAFE
-jf4vC2wqjSnYBIOKO+rESVAGAEiLIYivRFlzmmQInV5B0MHYXpdox+l4TIGPQzHK
-k0vhL0cd9yE63nknUo7NidQ+RCdKjGnqgSN5/hD9kKPkFEsQZmdNve1vDMdkLEa2
-CX0qo72lAgMBAAECggEADxMTYNJ3Xp4Ap0EioQDXGv5YDul7ZiZe+xmCAHLzJtjo
-qq+rT3WjZRuJr1kPzAosiT+8pdTDDMdw5jDZvRO2sV0TDksgzHk2RAYI897OpdWw
-SwWcwU9oo2X0sb+1zbang5GR8BNsSxt/RQUDzu05itJx0gltvgeIDaVR2L5wO6ja
-USa8OVuj/92XtIIve9OtyK9jAzgR6LQOTFrCCEv89/vmy5Bykv4Uz8s8swZmTs3v
-XJmAmruHGuSLMfXk8lBRp/gVyNTi3uMsdph5AJbVKnra5TZLguEozZKbLdNUYk0p
-+aAc7rxDcH2sPqa/7DwRvei9dvd5oB3VJlxGVgC8AQKBgQDfznRSSKAD15hoSDzt
-cKNyhLgWAL+MD0jhHKUy3x+Z9OCvf0DVnmru5HfQKq5UfT0t8VTRPGKmOtAMD4cf
-LYjIurvMvpVzQGSJfhtHQuULZTh3dfsM7xivMqSV+9txklMAakM7vGQlOQxhrScM
-21Mp5LWDU6+e2pFCrQPop0IPkQKBgQDCkVE+dou2yFuJx3uytCH1yKPSy9tkdhQH
-dGF12B5dq8MZZozAz5P9YN/COa9WjsNKDqWbEgLEksEQUq4t8SBjHnSV/D3x7rEF
-qgwii0GETYxax6gms8nueIqWZQf+0NbX7Gc5mTqeVb7v3TrhsKr0VNMFRXXQwP2E
-M/pxJq8q1QKBgQC3rH7oXLP+Ez0AMHDYSL3LKULOw/RvpMeh/9lQA6+ysTaIsP3r
-kuSdhCEUVULXEiVYhBug0FcBp3jAvSmem8cLPb0Mjkim2mzoLfeDJ1JEZODPoaLU
-fZEbj4tlj9oLvhOiXpMo/jaOGeCgdPN8aK86zXlt+wtBao0WVFnF4SalEQKBgQC1
-uLfi2SGgs/0a8B/ORoO5ZY3s4c2lRMtsMvyb7iBeaIAuByPLKZUVABe89deXxnsL
-fiaacPX41wBO2IoqCp2vNdC6DP9mKQNZQPtYgCvPAAbo+rVIgH9HpXn7AZ24FyGy
-RfAbUcv3+in9KelGxZTF4zu8HqXtNXMSuOFeMT1FiQKBgF0R+IFDGHhD4nudAQvo
-hncXsgyzK6QUzak6HmFji/CMZ6EU9q6A67JkiEWrYoKqIAKZ2Og8+Eucr/rDdGWc
-kqlmLPBJAJeUsP/9KidBjTE5mIbn/2n089VPMBvnlt2xIcuB6+zrf2NjvlcZEyKS
-Gn+T2uCyOP4a1DTUoPyoNJXo
------END PRIVATE KEY-----`,
-		},
-		{
-			Cert: `-----BEGIN CERTIFICATE-----
-MIIDEzCCAfugAwIBAgIUOwYJvXJ+s0qX9uAKFjW0zExV51IwDQYJKoZIhvcNAQEF
-BQAwJTEKMAgGA1UEAwwBIzEKMAgGA1UECgwBIzELMAkGA1UEBhMCQ04wHhcNMjEw
-NDMwMDAwMDAwWhcNMjEwNDMwMDAwMDAwWjBDMQswCQYDVQQGEwJDTjEKMAgGA1UE
-CAwBIzEKMAgGA1UEBwwBIzEKMAgGA1UECgwBIzEQMA4GA1UEAwwHZm9vLmNvbTCC
-ASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBAPRFV285ScP1ntF3zlj60GC0
-DJyCEX6Ji38gBf+6An6Zk7D+3Aif9C/3e7V0811x0VoO4o9ZdQUSdxmE9fj/ADOU
-OM/AYf62L51d/zdqXVaF89vpqPk8em4179wo6jg2IiCewGVLTtuMa/5Mud8XZOly
-tcOXS7ZnCbfm/XklwGL1rAmWhOTSDHlIH5bbC46tmi3E9Cjp+VTiwzVCgVtrLkzY
-0cjs72m2wb5uZ9TlT7n1TKYjdX74FvYp4X70YEcFYEUmFMxMV7otkJ7wTWWVNah/
-ZsojaiJ48ueJFQR1S9utYA/h6LcA4T6UQJxw7+6SjJElLCHGht5UHFvQkjQvxZkC
-AwEAAaMdMBswCwYDVR0RBAQwAoIAMAwGA1UdEwEB/wQCMAAwDQYJKoZIhvcNAQEF
-BQADggEBAHE4U9SlCIVNjpfOyfH0NPhxLTAqH83GQKJc7TgQFmhby1dfQE7MOTaN
-ayA1RJ0qKcNGlHP70M/Xc8TIF+E7pOASqa+zNztiv14zHIgJC9oGJcwt1sh8GADz
-4EJSQ1mIRxbgs39BA9FDY91HBa3RfLxkmyTbQK1rhKdh8aBYr0/6R1oAdKEQF/vQ
-HxD4NCpJruxp7g+RSet1PB12GOao1Ntfb7kOLAHzYW3yvTsCaQ7EdeueOs8dv+G/
-Ncy+4n/l3audbi+WQFfEvb1bwyADPpp90C9OczHzpR4+dtuR4oUXB6ZXimB3MljC
-BhoOkUOMjrKl/QDkB5pxa/IxURffFDs=
------END CERTIFICATE-----`,
-			Key: `-----BEGIN PRIVATE KEY-----
-MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQD0RVdvOUnD9Z7R
-d85Y+tBgtAycghF+iYt/IAX/ugJ+mZOw/twIn/Qv93u1dPNdcdFaDuKPWXUFEncZ
-hPX4/wAzlDjPwGH+ti+dXf83al1WhfPb6aj5PHpuNe/cKOo4NiIgnsBlS07bjGv+
-TLnfF2TpcrXDl0u2Zwm35v15JcBi9awJloTk0gx5SB+W2wuOrZotxPQo6flU4sM1
-QoFbay5M2NHI7O9ptsG+bmfU5U+59UymI3V++Bb2KeF+9GBHBWBFJhTMTFe6LZCe
-8E1llTWof2bKI2oiePLniRUEdUvbrWAP4ei3AOE+lECccO/ukoyRJSwhxobeVBxb
-0JI0L8WZAgMBAAECggEAS3gBA4QXnkuMvfrd7e/P4ZC/NLua3BVy29vw/olhq+uX
-DeAv6xpAP3Ge7vkrF3vKyqA+rztcRCzoTyIdPMjMLyNkSguOOzveiig4ac6a99h6
-9z7Bzf85dEOFz+d0NdnDwYBKwQD7ZCmGVBMwehSoQNgIAF4GLly3S/I57ewT/H6A
-GjknY/jCmk+L9388hjcL0jrEJR/br2O/o6f1zdRYWqqb9A1wDW4zkiu4Wrq5in9s
-cxQ/7667eGkciD3HkJvwcbi7xg9ZJHxCWScVYGRBX9ek6fMKxML5hUsITZjt5zxF
-p+HmOKJcii6hlR1RWaUsbrpQOHVui3US7CAJNR/gAQKBgQD7zE0z2XGv81XjIvMk
-sS+IvtsSGpvoUI2QRbdnelC8ahCdKj5PmVQyfhPxrgNCTu6k7VzQUDL+wZDGKoRL
-NEaRkoHz7tVzBE7DY7Y2SD0yfjT477w98iaF/nwortmhpXms0KyzPhZOF5d5166q
-PDR31NIFvmy2H+Hh9bVM5BYaGQKBgQD4WOIgocc+pXn+3fehNT3qedrvGuXGYX7I
-PAO/4zM/oP/0TtxKTz5wGAFR9heBKfogW2jYUBBOofraLMJq3X+T9jEOXuQ9+UQq
-HaybHdQycxpTIWhtiAs9khvSbuEBs2SXyKussPGW8Do5uVfi4/KWWu/wcTzMlfEv
-w207iaN3gQKBgQDAh7u0XJx4PCi871lZAf5logGiOyRhI07LNPOCtN0M5FDly4ov
-lP7zSMH5NuQZDH+fLjucsOX9M4Z+b74OPt+CqbKiEUm2k2GiNxj5Mo1QkX3xpmWa
-PBDGvgqzlNalqgB6amjS+TNW7OUO7iMI2dYIlnsslylKrOArxZOmQnS/6QKBgQCs
-ZVcj++nKDSjwybk6yTDf8hMO5IcY/Vj7Ot4HeHp88xB60buOQhA/1AomkUSjvzYI
-/Ct97aZET6FJjsSvVm9XkRFgvnKGquCss8i8LSq+krR1fL13O3dCGIkDvUCo45Uy
-4HR7/qDWfJCOvaDKuh4OTbY+HP1tr7CrzWeoatV1AQKBgFFmlMWrIThfjtjVWDTg
-+QPLQTofB1A3lrCmB52iBdUMi0qGnExLn8aiy54wPz/I7rEplsLzg2hmDNuBPM7q
-QLAtVaZd9SSi4Z/RX6B4L3Rj0Mwfn+tbrtYO5Pyhi40hiXf4aMgbVDFYMR0MMmH0
-4uiYeQPmK6USKjntOFQ0eNOe
------END PRIVATE KEY-----`,
-		},
-		{
-			Cert: `-----BEGIN CERTIFICATE-----
-MIIDEzCCAfugAwIBAgIUBXt+uyE/nkPDO+LmBHyau3e7QpIwDQYJKoZIhvcNAQEF
-BQAwJTEKMAgGA1UEAwwBIzEKMAgGA1UECgwBIzELMAkGA1UEBhMCQ04wHhcNMjEw
-NDMwMDAwMDAwWhcNMjEwNDMwMDAwMDAwWjBDMQswCQYDVQQGEwJDTjEKMAgGA1UE
-CAwBIzEKMAgGA1UEBwwBIzEKMAgGA1UECgwBIzEQMA4GA1UEAwwHZm9vLmNvbTCC
-ASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBANWQF6xf6EAYSdSUnsOQlojg
-6zjI+U26JpfJqkqsZJ4aOQdUnlDUY+nYEKb7VSH10rszmHltJfKXUBWlXAK/qzZs
-8fnnSa7mI1BejVDQpZ+QYPmxgSfmKlxwgYbHxCB5dklzZv8OGUIeKWau+pnc8Bsr
-gofM+MDdHV4Njcfdf9+g23gNGNQN1MxRdbKRUmmTV3Yiq2YAYO62HkYemd7KrdO3
-QLsKMdodOxN8of6E6654ecctfiae3xkdSYDcBr8ig0T1KVhremFNAAw9mEOzmpR+
-tRKB0Z7hwsR5wYviKmkMa3MyakYAb1EE8R/dt7WedqXDC+JYOjLWh1vVDcrib3cC
-AwEAAaMdMBswCwYDVR0RBAQwAoIAMAwGA1UdEwEB/wQCMAAwDQYJKoZIhvcNAQEF
-BQADggEBAGkM8IFbeonb8hguAccoIM3sZgvUnFq3jbdfi4xD4AgjqqLnGRSZxobh
-jDQIX+4wEbGillWspZvg4W8Eb20LOwWpg9J19ORTFLzz09+rkRieawINbs6diirh
-smkEPTI18kKZb1virUoSipviiXFRLra9YOG16YTCoZyeToSe1UKfvBJJPro451tU
-RjIaqFeHIC9t1SoMIHJS1H4jjpdLNunEgNDUdYOMXfFqX2HgYU9626cjxt0otrlw
-6AN08UAvnh72gjaMa7YG0/SQJIJvKFPrC/C4A6vcLd+RMf3y4uNBsMPLUX/ksNs+
-IqaxjG7sWj87o/uWzTCujD7PjdQ2P/o=
------END CERTIFICATE-----`,
-			Key: `-----BEGIN PRIVATE KEY-----
-MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDVkBesX+hAGEnU
-lJ7DkJaI4Os4yPlNuiaXyapKrGSeGjkHVJ5Q1GPp2BCm+1Uh9dK7M5h5bSXyl1AV
-pVwCv6s2bPH550mu5iNQXo1Q0KWfkGD5sYEn5ipccIGGx8QgeXZJc2b/DhlCHilm
-rvqZ3PAbK4KHzPjA3R1eDY3H3X/foNt4DRjUDdTMUXWykVJpk1d2IqtmAGDuth5G
-Hpneyq3Tt0C7CjHaHTsTfKH+hOuueHnHLX4mnt8ZHUmA3Aa/IoNE9SlYa3phTQAM
-PZhDs5qUfrUSgdGe4cLEecGL4ippDGtzMmpGAG9RBPEf3be1nnalwwviWDoy1odb
-1Q3K4m93AgMBAAECggEAWqZBBi/ne11T6WH0SfqTiyI9desIt09uljtJh0zJoLps
-vonScWjVyCqoVtiT+EhJ3KA39kK4OtKzcZyxA5Gr8PwpcfQUuKKDFtgrj8QgqSw1
-nYcU1YTDMl2m/TjKLSahaOgNLfIkEoaO+EEJqkm3uTCsxUvhwquYjZWfOtjwMFFm
-Oa5m1kb+QvIRTle3wumzN6yIUXdQRFsK0D8UQUQw5UWGZ8xhwa1TJRGdGwxFT+Kk
-hH+/+PQO62+bWJ27EQFZ9mTMuleG2YGa20u05tXlj3qUmws53yuzwALCBGQYmolh
-2I+pfQ4vAPuXWSL33QIAAkOwPHExbKNyD/w6r79wsQKBgQD4cSejoNFcEzIqlONj
-RNMh2UhpwhMlboU7Xs7x5BAggImk6/wPzOdCL1ytfBJoaNs8MD6tYWU8sa38Vsdh
-DwcbRRTSFzCdZGZw7E1g8/hOqY6dcirJYmOOTAVM0UBy5M2nL/W385B8+9IpzSTN
-ylsJTMZNBh1U9da36D2lqdSbAwKBgQDcD01CW7rDnXS6jnn03KAN2DGXAR3JxvKO
-GSdhcmojORgKYD9tN/AnNriWzUVTB7L0hzsLzuyqFW8g6nY8PKV+IAYBmq12XlpO
-llppwWoDz7JXcO3pKhdwfjYLDag92fWChO4pFctwZhIRurD0FDdvlzM9Ou5LKyzE
-px+sfJ6VfQKBgQDmxNyoDfpKR35itTfd/pELMPQlYGM+csGI21DouQoN1reEHLte
-xdrNzIaOkt/aYgO6jam6jOxnizdsXAMI8deNCgcD+wxqNlc9bxGVDClKkA7ryp9Z
-vm1xQMXvi7MMxeEM+eyJONGudo7Jy0bzbJJROiI8a4CVaWFQJIYWuoDElwKBgQC9
-BTPCrRImVoheemVNK3kbizlFUMMqf4X3Aqot7N44NSFuQDAa+3J/7GPvvJAweqt/
-mOzh/rKQgeq7pkk7AojQZmdiV19qDi+Z01IEBwuuDGhO7YSdw/bwPKjlI60Au8hD
-fTUo+zyM5k/dBLRcY0UeyAxOKuFmlcZVgIwXV8/L7QKBgF/uzlzkW7kujr9QLuas
-b8mVWKEUxmwD4ppmNDrszztQRel0ujl/15bMmXav2UaAzIvnuo0JqVnTc+e2/xu+
-5/cjaN4hxgSSdxsYgDjk727A5L0jb85rVF559qeZck5PatMDt/Lbaz7BeMLw0c3y
-t/0TgcCP3Nl7JDtqRP6PrnZp
------END PRIVATE KEY-----`,
-		},
-	}
-
-	caCert1 = `-----BEGIN CERTIFICATE-----
-MIIEvjCCAqagAwIBAgIJALabx/Nup200MA0GCSqGSIb3DQEBCwUAMBMxETAPBgNV
-BAMMCFlvbG80Mi4xMCAXDTE5MDkxNTE2Mjc1M1oYDzIxMTkwODIyMTYyNzUzWjAT
-MREwDwYDVQQDDAhZb2xvNDIuMTCCAiIwDQYJKoZIhvcNAQEBBQADggIPADCCAgoC
-ggIBANIW67Ay0AtTeBY2mORaGet/VPL5jnBRz0zkZ4Jt7fEq3lbxYaJBnFI8wtz3
-bHLtLsxkvOFujEMY7HVd+iTqbJ7hLBtK0AdgXDjf+HMmoWM7x0PkZO+3XSqyRBbI
-YNoEaQvYBNIXrKKJbXIU6higQaXYszeN8r3+RIbcTIlZxy28msivEGfGTrNujQFc
-r/eyf+TLHbRqh0yg4Dy/U/T6fqamGhFrjupRmOMugwF/BHMH2JHhBYkkzuZLgV2u
-7Yh1S5FRlh11am5vWuRSbarnx72hkJ99rUb6szOWnJKKew8RSn3CyhXbS5cb0QRc
-ugRc33p/fMucJ4mtCJ2Om1QQe83G1iV2IBn6XJuCvYlyWH8XU0gkRxWD7ZQsl0bB
-8AFTkVsdzb94OM8Y6tWI5ybS8rwl8b3r3fjyToIWrwK4WDJQuIUx4nUHObDyw+KK
-+MmqwpAXQWbNeuAc27FjuJm90yr/163aGuInNY5Wiz6CM8WhFNAi/nkEY2vcxKKx
-irSdSTkbnrmLFAYrThaq0BWTbW2mwkOatzv4R2kZzBUOiSjRLPnbyiPhI8dHLeGs
-wMxiTXwyPi8iQvaIGyN4DPaSEiZ1GbexyYFdP7sJJD8tG8iccbtJYquq3cDaPTf+
-qv5M6R/JuMqtUDheLSpBNK+8vIe5e3MtGFyrKqFXdynJtfHVAgMBAAGjEzARMA8G
-A1UdEwQIMAYBAf8CAQAwDQYJKoZIhvcNAQELBQADggIBAK0BmL5B1fPSMbFy8Hbc
-/ESEunt4HGaRWmZZSa/aOtTjhKyDXLLJZz3C4McugfOf9BvvmAOZU4uYjfHTnNH2
-Z3neBkdTpQuJDvrBPNoCtJns01X/nuqFaTK/Tt9ZjAcVeQmp51RwhyiD7nqOJ/7E
-Hp2rC6gH2ABXeexws4BDoZPoJktS8fzGWdFBCHzf4mCJcb4XkI+7GTYpglR818L3
-dMNJwXeuUsmxxKScBVH6rgbgcEC/6YwepLMTHB9VcH3X5VCfkDIyPYLWmvE0gKV7
-6OU91E2Rs8PzbJ3EuyQpJLxFUQp8ohv5zaNBlnMb76UJOPR6hXfst5V+e7l5Dgwv
-Dh4CeO46exmkEsB+6R3pQR8uOFtubH2snA0S3JA1ji6baP5Y9Wh9bJ5McQUgbAPE
-sCRBFoDLXOj3EgzibohC5WrxN3KIMxlQnxPl3VdQvp4gF899mn0Z9V5dAsGPbxRd
-quE+DwfXkm0Sa6Ylwqrzu2OvSVgbMliF3UnWbNsDD5KcHGIaFxVC1qkwK4cT3pyS
-58i/HAB2+P+O+MltQUDiuw0OSUFDC0IIjkDfxLVffbF+27ef9C5NG81QlwTz7TuN
-zeigcsBKooMJTszxCl6dtxSyWTj7hJWXhy9pXsm1C1QulG6uT4RwCa3m0QZoO7G+
-6Wu6lP/kodPuoNubstIuPdi2
------END CERTIFICATE-----`
-	caCert2 = `-----BEGIN CERTIFICATE-----
-MIIEvjCCAqagAwIBAgIJAPf5iqimiR2BMA0GCSqGSIb3DQEBCwUAMBMxETAPBgNV
-BAMMCFlvbG80Mi4yMCAXDTE5MDkxNTE2Mjc1OVoYDzIxMTkwODIyMTYyNzU5WjAT
-MREwDwYDVQQDDAhZb2xvNDIuMjCCAiIwDQYJKoZIhvcNAQEBBQADggIPADCCAgoC
-ggIBANIW67Ay0AtTeBY2mORaGet/VPL5jnBRz0zkZ4Jt7fEq3lbxYaJBnFI8wtz3
-bHLtLsxkvOFujEMY7HVd+iTqbJ7hLBtK0AdgXDjf+HMmoWM7x0PkZO+3XSqyRBbI
-YNoEaQvYBNIXrKKJbXIU6higQaXYszeN8r3+RIbcTIlZxy28msivEGfGTrNujQFc
-r/eyf+TLHbRqh0yg4Dy/U/T6fqamGhFrjupRmOMugwF/BHMH2JHhBYkkzuZLgV2u
-7Yh1S5FRlh11am5vWuRSbarnx72hkJ99rUb6szOWnJKKew8RSn3CyhXbS5cb0QRc
-ugRc33p/fMucJ4mtCJ2Om1QQe83G1iV2IBn6XJuCvYlyWH8XU0gkRxWD7ZQsl0bB
-8AFTkVsdzb94OM8Y6tWI5ybS8rwl8b3r3fjyToIWrwK4WDJQuIUx4nUHObDyw+KK
-+MmqwpAXQWbNeuAc27FjuJm90yr/163aGuInNY5Wiz6CM8WhFNAi/nkEY2vcxKKx
-irSdSTkbnrmLFAYrThaq0BWTbW2mwkOatzv4R2kZzBUOiSjRLPnbyiPhI8dHLeGs
-wMxiTXwyPi8iQvaIGyN4DPaSEiZ1GbexyYFdP7sJJD8tG8iccbtJYquq3cDaPTf+
-qv5M6R/JuMqtUDheLSpBNK+8vIe5e3MtGFyrKqFXdynJtfHVAgMBAAGjEzARMA8G
-A1UdEwQIMAYBAf8CAQAwDQYJKoZIhvcNAQELBQADggIBALNx2xaS5nv1QjEqtiCO
-EA/ZTXbs+il6cf6ZyUwFXs7d3OKx6Kk2Nr7wGgM1M5WuTyIGKtZspz9ThzYmsuN/
-UBCSKLw3X7U2fLiHJDipXboU1txasTErUTPJs/Vq4v7PWh8sMLCQH/ha4FAOXR0M
-Uie+VgSJNKoQSj7G1hzU/LZv0KdvJ45mQBCnBXrUrGgeEcRqubbkDKgdBh7dJQzW
-Xgy6rPb6H1aXbsSuRuUVv/xFHJoCdZJmqPH4JTMYRbHNS2km9nHVJzmtL6pQFe32
-24wfpue9geFndOE9bDU9/cqoRYA4Pce4V5qDL0wL9W4uPmyPDkulKNQtAvZnDA9V
-6ccYYthlTBr62UEnw7zZOnSm0q4fB2o82/6bdPwrT7WhbHZQWN7SeqYNWAbYZ1EE
-40f5IpTwZ7E5LaG62qPhKLXame7SPAaqaQ9aCTYxaWR7XSYBsvCBRanjRq0r9Tql
-T1I8lwssIgbA3XubokI+IMkLDEpCQ27niWXOZL5y2M3xyutd6PPjmEEmoHMkOrZL
-etlxzx2CCoUDXKkYW2gZKEozwBZ+eBgUj8WB5g/8jGDAI0qzYnfAgiahjGwlEUtP
-hJiPG/YFADw0m5b/8OMCZ6AXNhxjdweHniDxY2HE734Nwm9mG/7UbkdvhR05tqFh
-G4KCViLH0cXt/TgW1sYB2o9Z
------END CERTIFICATE-----`
-	expiredCACert = `-----BEGIN CERTIFICATE-----
-MIICwTCCAamgAwIBAgIUHGUzUWvHJHrREvIZIcORiFUvze4wDQYJKoZIhvcNAQEL
-BQAwEDEOMAwGA1UEAwwFSGVsbG8wHhcNMjAwNTA4MjExODA1WhcNMjAwNjA3MjEx
-ODA1WjAQMQ4wDAYDVQQDDAVIZWxsbzCCASIwDQYJKoZIhvcNAQEBBQADggEPADCC
-AQoCggEBANCMMBngjuTvqts8ZXtZhqdr181QH/NmytW1KlyqZd6ppXUer+i0OWhP
-1nAyHsBPJljKAFLd8l1EioPFkN78/wJFDJrHOtfniIQPVLdS2cnNQ72dLyQH6smH
-JQDV8ePBQ2GdRP6s61+Da8eoaW6nSLtmEUhxvyteboqwmi2CtUtAfuiU1m5sOdpS
-z+L4D08CE+SFIT4MGD3gxNdg7lccWCHIfk54VRSdGDKEVwed8OQvxD0TdpHY+ym5
-nJ4JSkhiS9XIodnxR3AZ6rIPRqk+MQ4LGTjX2EbM0/Yg4qvnZ7m4fcpK2goDZIVL
-EF8F+ka1RaAYWTsXI1BAkJbb3kdo/yUCAwEAAaMTMBEwDwYDVR0TBAgwBgEB/wIB
-ADANBgkqhkiG9w0BAQsFAAOCAQEAVvB/PeVZpeQ7q2IQQQpADtTd8+22Ma3jNZQD
-EkWGZEQLkRws4EJNCCIvkApzpx1GqRcLLL9lbV+iCSiIdlR5W9HtK07VZ318gpsG
-aTMNrP9/2XWTBzdHWaeZKmRKB04H4z7V2Dl58D+wxjdqNWsMIHeqqPNKGamk/q8k
-YFNqNwisRxMhU6qPOpOj5Swl2jLTuVMAeGWBWmPGU2MUoaJb8sc2Vix9KXcyDZIr
-eidkzkqSrjNzI0yJ2gdCDRS4/Rw9iV3B3SRMs0mJMLBDrsowhNfLAd8I3NHzLwps
-dZFcvZcT/p717K3hlFVdjGnKIgKcG7aYji/XRR87HKnc+cJMCw==
------END CERTIFICATE-----`
+	"github.com/kong/kubernetes-ingress-controller/v2/test/helpers/certificate"
 )
 
 func TestGlobalPlugin(t *testing.T) {
@@ -854,7 +626,8 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 
 func TestCACertificate(t *testing.T) {
 	assert := assert.New(t)
-	t.Run("valid CACertificte is processed", func(t *testing.T) {
+	caCert1, _ := certificate.MustGenerateSelfSignedCertPEMFormat(certificate.WithCATrue())
+	t.Run("valid CACertificate is processed", func(t *testing.T) {
 		secrets := []*corev1.Secret{
 			{
 				TypeMeta: metav1.TypeMeta{Kind: "Secret", APIVersion: corev1.SchemeGroupVersion.String()},
@@ -870,7 +643,7 @@ func TestCACertificate(t *testing.T) {
 				},
 				Data: map[string][]byte{
 					"id":   []byte("8214a145-a328-4c56-ab72-2973a56d4eae"),
-					"cert": []byte(caCert1),
+					"cert": caCert1,
 				},
 			},
 		}
@@ -885,15 +658,17 @@ func TestCACertificate(t *testing.T) {
 		state := result.KongState
 		require.NotNil(t, state)
 
-		assert.Equal(1, len(state.CACertificates))
-		// parser tests do not check tags, these are tested independently
+		assert.Len(state.CACertificates, 1)
+		// Parser tests do not check tags, these are tested independently.
 		state.CACertificates[0].Tags = nil
 		assert.Equal(kong.CACertificate{
 			ID:   kong.String("8214a145-a328-4c56-ab72-2973a56d4eae"),
-			Cert: kong.String(caCert1),
+			Cert: kong.String(string(caCert1)),
 		}, state.CACertificates[0])
 	})
-	t.Run("multiple CACertifictes are processed", func(t *testing.T) {
+
+	caCert2, _ := certificate.MustGenerateSelfSignedCertPEMFormat(certificate.WithCATrue())
+	t.Run("multiple CACertificates are processed", func(t *testing.T) {
 		secrets := []*corev1.Secret{
 			{
 				TypeMeta: metav1.TypeMeta{Kind: "Secret", APIVersion: corev1.SchemeGroupVersion.String()},
@@ -909,7 +684,7 @@ func TestCACertificate(t *testing.T) {
 				},
 				Data: map[string][]byte{
 					"id":   []byte("8214a145-a328-4c56-ab72-2973a56d4eae"),
-					"cert": []byte(caCert1),
+					"cert": caCert1,
 				},
 			},
 			{
@@ -926,7 +701,7 @@ func TestCACertificate(t *testing.T) {
 				},
 				Data: map[string][]byte{
 					"id":   []byte("570c28aa-e784-43c1-8ec7-ae7f4ce40189"),
-					"cert": []byte(caCert2),
+					"cert": caCert2,
 				},
 			},
 		}
@@ -941,9 +716,11 @@ func TestCACertificate(t *testing.T) {
 		state := result.KongState
 		require.NotNil(t, state)
 
-		assert.Equal(2, len(state.CACertificates))
+		assert.Len(state.CACertificates, 2)
 	})
-	t.Run("invalid CACertifictes are ignored", func(t *testing.T) {
+
+	expiredCACert, _ := certificate.MustGenerateSelfSignedCertPEMFormat(certificate.WithCATrue(), certificate.WithAlreadyExpired())
+	t.Run("invalid CACertificates are ignored", func(t *testing.T) {
 		secrets := []*corev1.Secret{
 			{
 				TypeMeta: metav1.TypeMeta{Kind: "Secret", APIVersion: corev1.SchemeGroupVersion.String()},
@@ -959,7 +736,7 @@ func TestCACertificate(t *testing.T) {
 				},
 				Data: map[string][]byte{
 					"id":   []byte("8214a145-a328-4c56-ab72-2973a56d4eae"),
-					"cert": []byte(caCert1),
+					"cert": caCert1,
 				},
 			},
 			{
@@ -993,7 +770,7 @@ func TestCACertificate(t *testing.T) {
 				},
 				Data: map[string][]byte{
 					// id is missing
-					"cert": []byte(caCert2),
+					"cert": caCert2,
 				},
 			},
 			{
@@ -1010,7 +787,24 @@ func TestCACertificate(t *testing.T) {
 				},
 				Data: map[string][]byte{
 					"id":   []byte("670c28aa-e784-43c1-8ec7-ae7f4ce40189"),
-					"cert": []byte(expiredCACert),
+					"cert": expiredCACert,
+				},
+			},
+			{
+				TypeMeta: metav1.TypeMeta{Kind: "Secret", APIVersion: corev1.SchemeGroupVersion.String()},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "invalid-cert",
+					Namespace: "non-default",
+					Labels: map[string]string{
+						"konghq.com/ca-cert": "true",
+					},
+					Annotations: map[string]string{
+						annotations.IngressClassKey: annotations.DefaultIngressClass,
+					},
+				},
+				Data: map[string][]byte{
+					"id":   []byte("770c28aa-e784-43c1-8ec7-ae7f4ce40189"),
+					"cert": []byte("invalid-cert"),
 				},
 			},
 		}
@@ -1021,16 +815,16 @@ func TestCACertificate(t *testing.T) {
 		require.NoError(t, err)
 		p := mustNewParser(t, store)
 		result := p.BuildKongConfig()
-		assert.Len(result.TranslationFailures, 3)
+		assert.Len(result.TranslationFailures, 4)
 		state := result.KongState
 		require.NotNil(t, state)
 
-		assert.Equal(1, len(state.CACertificates))
+		assert.Len(state.CACertificates, 1)
 		// parser tests do not check tags, these are tested independently
 		state.CACertificates[0].Tags = nil
 		assert.Equal(kong.CACertificate{
 			ID:   kong.String("8214a145-a328-4c56-ab72-2973a56d4eae"),
-			Cert: kong.String(caCert1),
+			Cert: kong.String(string(caCert1)),
 		}, state.CACertificates[0])
 	})
 }
@@ -1079,7 +873,7 @@ func TestServiceClientCertificate(t *testing.T) {
 				},
 			},
 		}
-
+		crt, key := certificate.MustGenerateSelfSignedCertPEMFormat()
 		secrets := []*corev1.Secret{
 			{
 				ObjectMeta: metav1.ObjectMeta{
@@ -1088,8 +882,8 @@ func TestServiceClientCertificate(t *testing.T) {
 					Namespace: "default",
 				},
 				Data: map[string][]byte{
-					"tls.crt": []byte(tlsPairs[0].Cert),
-					"tls.key": []byte(tlsPairs[0].Key),
+					"tls.crt": crt,
+					"tls.key": key,
 				},
 			},
 		}
@@ -3129,6 +2923,8 @@ func TestParserSecret(t *testing.T) {
 		assert.Equal(0, len(state.Certificates),
 			"expected no certificates to be rendered with empty secret")
 	})
+
+	crt, key := certificate.MustGenerateSelfSignedCertPEMFormat()
 	t.Run("duplicate certificates order by time", func(t *testing.T) {
 		ingresses := []*netv1.Ingress{
 			{
@@ -3180,8 +2976,8 @@ func TestParserSecret(t *testing.T) {
 					},
 				},
 				Data: map[string][]byte{
-					"tls.crt": []byte(tlsPairs[0].Cert),
-					"tls.key": []byte(tlsPairs[0].Key),
+					"tls.crt": crt,
+					"tls.key": key,
 				},
 			},
 			{
@@ -3194,8 +2990,8 @@ func TestParserSecret(t *testing.T) {
 					},
 				},
 				Data: map[string][]byte{
-					"tls.crt": []byte(tlsPairs[0].Cert),
-					"tls.key": []byte(tlsPairs[0].Key),
+					"tls.crt": crt,
+					"tls.key": key,
 				},
 			},
 		}
@@ -3209,8 +3005,7 @@ func TestParserSecret(t *testing.T) {
 		require.Empty(t, result.TranslationFailures)
 		state := result.KongState
 		require.NotNil(t, state)
-		assert.Equal(1, len(state.Certificates),
-			"certificates are de-duplicated")
+		assert.Len(state.Certificates, 1, "certificates are de-duplicated")
 
 		sort.SliceStable(state.Certificates[0].SNIs, func(i, j int) bool {
 			return strings.Compare(*state.Certificates[0].SNIs[i],
@@ -3221,8 +3016,8 @@ func TestParserSecret(t *testing.T) {
 		assert.Equal(kongstate.Certificate{
 			Certificate: kong.Certificate{
 				ID:   kong.String("3e8edeca-7d23-4e02-84c9-437d11b746a6"),
-				Cert: kong.String(tlsPairs[0].Cert),
-				Key:  kong.String(tlsPairs[0].Key),
+				Cert: kong.String(strings.TrimSpace(string(crt))),
+				Key:  kong.String(strings.TrimSpace(string(key))),
 				SNIs: kong.StringSlice("foo.com", "bar.com"),
 			},
 		}, state.Certificates[0])
@@ -3296,8 +3091,8 @@ func TestParserSecret(t *testing.T) {
 					},
 				},
 				Data: map[string][]byte{
-					"tls.crt": []byte(tlsPairs[0].Cert),
-					"tls.key": []byte(tlsPairs[0].Key),
+					"tls.crt": crt,
+					"tls.key": key,
 				},
 			},
 			{
@@ -3310,8 +3105,8 @@ func TestParserSecret(t *testing.T) {
 					},
 				},
 				Data: map[string][]byte{
-					"tls.crt": []byte(tlsPairs[0].Cert),
-					"tls.key": []byte(tlsPairs[0].Key),
+					"tls.crt": crt,
+					"tls.key": key,
 				},
 			},
 			{
@@ -3324,8 +3119,8 @@ func TestParserSecret(t *testing.T) {
 					},
 				},
 				Data: map[string][]byte{
-					"tls.crt": []byte(tlsPairs[0].Cert),
-					"tls.key": []byte(tlsPairs[0].Key),
+					"tls.crt": crt,
+					"tls.key": key,
 				},
 			},
 		}
@@ -3351,8 +3146,8 @@ func TestParserSecret(t *testing.T) {
 		assert.Equal(kongstate.Certificate{
 			Certificate: kong.Certificate{
 				ID:   kong.String("2c28a22c-41e1-4cd6-9099-fd7756ffe58e"),
-				Cert: kong.String(tlsPairs[0].Cert),
-				Key:  kong.String(tlsPairs[0].Key),
+				Cert: kong.String(strings.TrimSpace(string(crt))),
+				Key:  kong.String(strings.TrimSpace(string(key))),
 				SNIs: kong.StringSlice("foo.com", "baz.com", "bar.com"),
 			},
 		}, state.Certificates[0])
@@ -3399,8 +3194,8 @@ func TestParserSecret(t *testing.T) {
 					Namespace: "default",
 				},
 				Data: map[string][]byte{
-					"tls.crt": []byte(tlsPairs[0].Cert),
-					"tls.key": []byte(tlsPairs[0].Key),
+					"tls.crt": crt,
+					"tls.key": key,
 				},
 			},
 			{
@@ -3409,8 +3204,8 @@ func TestParserSecret(t *testing.T) {
 					Namespace: "ns1",
 				},
 				Data: map[string][]byte{
-					"tls.crt": []byte(tlsPairs[0].Cert),
-					"tls.key": []byte(tlsPairs[0].Key),
+					"tls.crt": crt,
+					"tls.key": key,
 				},
 			},
 		}
@@ -3424,8 +3219,7 @@ func TestParserSecret(t *testing.T) {
 		require.Empty(t, result.TranslationFailures)
 		state := result.KongState
 		require.NotNil(t, state)
-		assert.Equal(1, len(state.Certificates),
-			"SNIs are de-duplicated")
+		assert.Len(state.Certificates, 1, "SNIs are de-duplicated")
 	})
 }
 
@@ -3492,7 +3286,7 @@ func TestParserSNI(t *testing.T) {
 				},
 			},
 		}
-
+		crt, key := certificate.MustGenerateSelfSignedCertPEMFormat()
 		secrets := []*corev1.Secret{
 			{
 				ObjectMeta: metav1.ObjectMeta{
@@ -3500,8 +3294,8 @@ func TestParserSNI(t *testing.T) {
 					Namespace: "default",
 				},
 				Data: map[string][]byte{
-					"tls.crt": []byte(tlsPairs[0].Cert),
-					"tls.key": []byte(tlsPairs[0].Key),
+					"tls.crt": crt,
+					"tls.key": key,
 				},
 			},
 		}
@@ -4890,6 +4684,10 @@ func TestPickPort(t *testing.T) {
 
 func TestCertificate(t *testing.T) {
 	assert := assert.New(t)
+
+	crt1, key1 := certificate.MustGenerateSelfSignedCertPEMFormat()
+	crt2, key2 := certificate.MustGenerateSelfSignedCertPEMFormat()
+	crt3, key3 := certificate.MustGenerateSelfSignedCertPEMFormat()
 	t.Run("same host with multiple namespace return the first namespace/secret by asc", func(t *testing.T) {
 		ingresses := []*netv1.Ingress{
 			{
@@ -4953,8 +4751,8 @@ func TestCertificate(t *testing.T) {
 					Namespace: "ns1",
 				},
 				Data: map[string][]byte{
-					"tls.crt": []byte(tlsPairs[0].Cert),
-					"tls.key": []byte(tlsPairs[0].Key),
+					"tls.crt": crt1,
+					"tls.key": key1,
 				},
 			},
 			{
@@ -4964,8 +4762,8 @@ func TestCertificate(t *testing.T) {
 					Namespace: "ns2",
 				},
 				Data: map[string][]byte{
-					"tls.crt": []byte(tlsPairs[1].Cert),
-					"tls.key": []byte(tlsPairs[1].Key),
+					"tls.crt": crt2,
+					"tls.key": key2,
 				},
 			},
 			{
@@ -4975,16 +4773,16 @@ func TestCertificate(t *testing.T) {
 					Namespace: "ns3",
 				},
 				Data: map[string][]byte{
-					"tls.crt": []byte(tlsPairs[2].Cert),
-					"tls.key": []byte(tlsPairs[2].Key),
+					"tls.crt": crt3,
+					"tls.key": key3,
 				},
 			},
 		}
 		fooCertificate := kongstate.Certificate{
 			Certificate: kong.Certificate{
 				ID:   kong.String("7428fb98-180b-4702-a91f-61351a33c6e4"),
-				Cert: kong.String(tlsPairs[0].Cert),
-				Key:  kong.String(tlsPairs[0].Key),
+				Cert: kong.String(strings.TrimSpace(string(crt1))),
+				Key:  kong.String(strings.TrimSpace(string(key1))),
 				SNIs: []*string{kong.String("foo.com")},
 				Tags: []*string{
 					kong.String("k8s-name:secret1"),
@@ -5003,7 +4801,7 @@ func TestCertificate(t *testing.T) {
 		require.Empty(t, result.TranslationFailures)
 		state := result.KongState
 		require.NotNil(t, state)
-		assert.Equal(3, len(state.Certificates))
+		assert.Len(state.Certificates, 3)
 		// foo.com with cert should be fixed
 		assert.Contains(state.Certificates, fooCertificate)
 	})
@@ -5070,16 +4868,16 @@ func TestCertificate(t *testing.T) {
 					Namespace: "ns1",
 				},
 				Data: map[string][]byte{
-					"tls.crt": []byte(tlsPairs[0].Cert),
-					"tls.key": []byte(tlsPairs[0].Key),
+					"tls.crt": crt1,
+					"tls.key": key1,
 				},
 			},
 		}
 		fooCertificate := kongstate.Certificate{
 			Certificate: kong.Certificate{
 				ID:   kong.String("7428fb98-180b-4702-a91f-61351a33c6e4"),
-				Cert: kong.String(tlsPairs[0].Cert),
-				Key:  kong.String(tlsPairs[0].Key),
+				Cert: kong.String(strings.TrimSpace(string(crt1))),
+				Key:  kong.String(strings.TrimSpace(string(key1))),
 				SNIs: []*string{
 					kong.String("foo1.xxx.com"),
 					kong.String("foo2.xxx.com"),
@@ -5097,7 +4895,7 @@ func TestCertificate(t *testing.T) {
 		require.Empty(t, result.TranslationFailures)
 		state := result.KongState
 		require.NotNil(t, state)
-		assert.Equal(1, len(state.Certificates))
+		assert.Len(state.Certificates, 1)
 		// parser tests do not check tags, these are tested independently
 		state.Certificates[0].Tags = nil
 		assert.Equal(state.Certificates[0], fooCertificate)

@@ -28,6 +28,7 @@ import (
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
 	"github.com/kong/kubernetes-ingress-controller/v2/pkg/clientset"
 	"github.com/kong/kubernetes-ingress-controller/v2/test"
+	"github.com/kong/kubernetes-ingress-controller/v2/test/consts"
 	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/helpers"
 	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/testenv"
 )
@@ -69,7 +70,8 @@ func TestIstioWithKongIngressGateway(t *testing.T) {
 	t.Log("configuring cluster addons for the testing environment")
 	kongBuilder := kong.NewBuilder().
 		WithControllerDisabled().
-		WithProxyAdminServiceTypeLoadBalancer()
+		WithProxyAdminServiceTypeLoadBalancer().
+		WithNamespace(consts.ControllerNamespace)
 	kongAddon := kongBuilder.Build()
 
 	t.Log("configuring istio cluster addon for the testing environment")

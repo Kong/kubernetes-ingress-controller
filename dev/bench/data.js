@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1691721085938,
+  "lastUpdate": 1691723108934,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -61014,6 +61014,66 @@ window.BENCHMARK_DATA = {
             "value": 0,
             "unit": "allocs/op",
             "extra": "12018006 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "patryk.malek@konghq.com",
+            "name": "Patryk Małek",
+            "username": "pmalek"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "3ad36ae7ff1bbcc5853b7cf66947fec72e9d0ab8",
+          "message": "fix: update kind k8s versions because tags of kindest/node removed (#4484) (#4492)\n\nCo-authored-by: Tao Yi <tao.yi@konghq.com>",
+          "timestamp": "2023-08-11T03:04:05Z",
+          "tree_id": "15155f369685e5998b02f768d1f4dd1364030e4d",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/3ad36ae7ff1bbcc5853b7cf66947fec72e9d0ab8"
+        },
+        "date": 1691723102030,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - ns/op",
+            "value": 70446,
+            "unit": "ns/op",
+            "extra": "18003 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - B/op",
+            "value": 11091,
+            "unit": "B/op",
+            "extra": "18003 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - allocs/op",
+            "value": 12,
+            "unit": "allocs/op",
+            "extra": "18003 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDefaultContentToDBLessConfigConverter_Convert - ns/op",
+            "value": 106.1,
+            "unit": "ns/op",
+            "extra": "11552107 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDefaultContentToDBLessConfigConverter_Convert - B/op",
+            "value": 0,
+            "unit": "B/op",
+            "extra": "11552107 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDefaultContentToDBLessConfigConverter_Convert - allocs/op",
+            "value": 0,
+            "unit": "allocs/op",
+            "extra": "11552107 times\n2 procs"
           }
         ]
       }

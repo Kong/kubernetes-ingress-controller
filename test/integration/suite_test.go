@@ -63,6 +63,9 @@ func TestMain(m *testing.M) {
 		fmt.Printf("INFO: custom kong image specified via env: %s:%s\n", testenv.KongImage(), testenv.KongTag())
 	}
 
+	// Pin the Helm chart version.
+	kongbuilder.WithHelmChartVersion(consts.KongHelmChartVersion)
+
 	kongAddon := kongbuilder.Build()
 	builder := environments.NewBuilder().WithAddons(kongAddon)
 

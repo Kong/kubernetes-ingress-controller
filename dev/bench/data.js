@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1691767900890,
+  "lastUpdate": 1691769792243,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -61914,6 +61914,66 @@ window.BENCHMARK_DATA = {
             "value": 0,
             "unit": "allocs/op",
             "extra": "12091444 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "49699333+dependabot[bot]@users.noreply.github.com",
+            "name": "dependabot[bot]",
+            "username": "dependabot[bot]"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "7a5ff6f60aaece8fad2644623ba8c87113dd87df",
+          "message": "chore(deps): bump github.com/golangci/golangci-lint in /third_party\n\nBumps [github.com/golangci/golangci-lint](https://github.com/golangci/golangci-lint) from 1.54.0 to 1.54.1.\n- [Release notes](https://github.com/golangci/golangci-lint/releases)\n- [Changelog](https://github.com/golangci/golangci-lint/blob/master/CHANGELOG.md)\n- [Commits](https://github.com/golangci/golangci-lint/compare/v1.54.0...v1.54.1)\n\n---\nupdated-dependencies:\n- dependency-name: github.com/golangci/golangci-lint\n  dependency-type: direct:production\n  update-type: version-update:semver-patch\n...\n\nSigned-off-by: dependabot[bot] <support@github.com>",
+          "timestamp": "2023-08-11T14:46:09Z",
+          "tree_id": "3e53faf56cb17511902542c4e418c3ab681ed455",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/7a5ff6f60aaece8fad2644623ba8c87113dd87df"
+        },
+        "date": 1691769785227,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - ns/op",
+            "value": 67546,
+            "unit": "ns/op",
+            "extra": "16663 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - B/op",
+            "value": 11095,
+            "unit": "B/op",
+            "extra": "16663 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - allocs/op",
+            "value": 12,
+            "unit": "allocs/op",
+            "extra": "16663 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDefaultContentToDBLessConfigConverter_Convert - ns/op",
+            "value": 102.4,
+            "unit": "ns/op",
+            "extra": "10296644 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDefaultContentToDBLessConfigConverter_Convert - B/op",
+            "value": 0,
+            "unit": "B/op",
+            "extra": "10296644 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDefaultContentToDBLessConfigConverter_Convert - allocs/op",
+            "value": 0,
+            "unit": "allocs/op",
+            "extra": "10296644 times\n2 procs"
           }
         ]
       }

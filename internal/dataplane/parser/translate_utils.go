@@ -186,6 +186,8 @@ func applyExpressionToIngressRules(result *ingressRules) {
 	for _, svc := range result.ServiceNameToServices {
 		for i := range svc.Routes {
 			translators.ApplyExpressionToL4KongRoute(&svc.Routes[i])
+			svc.Routes[i].Destinations = nil
+			svc.Routes[i].SNIs = nil
 		}
 	}
 }

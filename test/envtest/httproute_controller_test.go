@@ -108,7 +108,7 @@ func TestHTTPRouteReconcilerProperlyReactsToReferenceGrant(t *testing.T) {
 
 	gwOld := gw.DeepCopy()
 	gw.Status = gatewayv1beta1.GatewayStatus{
-		Addresses: []gatewayv1beta1.GatewayAddress{
+		Addresses: []gatewayv1beta1.GatewayStatusAddress{
 			{
 				Type:  lo.ToPtr(gatewayv1beta1.IPAddressType),
 				Value: "10.0.0.1",

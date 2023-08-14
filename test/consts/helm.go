@@ -1,4 +1,6 @@
 package consts
 
 // KongHelmChartVersion is the version of the Kong Helm chart to use in tests.
-const KongHelmChartVersion = "2.26.0"
+// TODO: use chart 2.25.0 as a workaround before charts deal with invalid semver in image tag properly
+// https://github.com/Kong/charts/issues/856
+const KongHelmChartVersion = "2.25.0"

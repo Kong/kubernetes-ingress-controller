@@ -1633,6 +1633,11 @@ func TestGenerateRewriteURIConfig(t *testing.T) {
 			expectedURI:   "",
 		},
 		{
+			name:          "digits without $",
+			uri:           "/bar/123$12",
+			expectedURI:   "/bar/123$(uri_captures[12])",
+		},
+		{
 			name:          "$ at end",
 			uri:           "/bar/xxxx$",
 			expectedError: errors.New("unexpected end of string"),

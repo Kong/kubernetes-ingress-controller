@@ -63,12 +63,7 @@ func TranslateIngresses(
 // Ingress Translation - Private Consts & Vars
 // -----------------------------------------------------------------------------
 
-var (
-	defaultHTTPIngressPathType = netv1.PathTypeImplementationSpecific
-
-	uriCapturesPrefix = []rune("$(uri_captures[")
-	uriCapturesSuffix = []rune("])")
-)
+var defaultHTTPIngressPathType = netv1.PathTypeImplementationSpecific
 
 const (
 	defaultHTTPPort = 80
@@ -405,44 +400,43 @@ const (
 )
 
 func generateRewriteURIConfig(path string) (string, error) {
-	var out []rune
-	in := []rune(path)
+	out := strings.Builder{}
 	lastRuneType := runeTypePlain
-	for i := 0; i < len(in); i++ {
+	for i, char := range path {
 		switch lastRuneType {
 		case runeTypeEscape:
-			if in[i] != '$' {
-				return "", fmt.Errorf("unexpected %c at pos %d", in[i], i)
+			if char != '$' {
+				return "", fmt.Errorf("unexpected %c at pos %d", char, i)
 			}
 
-			out = append(out, in[i])
+			out.WriteRune(char)
 			lastRuneType = runeTypePlain
 
 		case runeTypeMark:
-			if !unicode.IsDigit(in[i]) {
-				return "", fmt.Errorf("unexpected %c at pos %d", in[i], i)
+			if !unicode.IsDigit(char) {
+				return "", fmt.Errorf("unexpected %c at pos %d", char, i)
 			}
 
-			out = append(out, uriCapturesPrefix...)
-			out = append(out, in[i])
+			out.WriteString("$(uri_captures[")
+			out.WriteRune(char)
 			lastRuneType = runeTypeDigit
 
 		case runeTypeDigit:
-			if unicode.IsDigit(in[i]) {
-				out = append(out, in[i])
+			if unicode.IsDigit(char) {
+				out.WriteRune(char)
 				break
 			}
 
-			out = append(out, uriCapturesSuffix...)
+			out.WriteString("])")
 			fallthrough
 
 		case runeTypePlain:
-			if in[i] == '$' {
+			if char == '$' {
 				lastRuneType = runeTypeMark
-			} else if in[i] == '\\' {
+			} else if char == '\\' {
 				lastRuneType = runeTypeEscape
 			} else {
-				out = append(out, in[i])
+				out.WriteRune(char)
 				lastRuneType = runeTypePlain
 			}
 		}
@@ -450,11 +444,12 @@ func generateRewriteURIConfig(path string) (string, error) {
 
 	if lastRuneType == runeTypeEscape || lastRuneType == runeTypeMark {
 		return "", fmt.Errorf("unexpected end of string")
+
 	} else if lastRuneType == runeTypeDigit {
-		out = append(out, uriCapturesSuffix...)
+		out.WriteString("])")
 	}
 
-	return string(out), nil
+	return out.String(), nil
 }
 
 // MaybeRewriteURI appends a request-transformer plugin if the value of konghq.com/rewrite annotation is valid.

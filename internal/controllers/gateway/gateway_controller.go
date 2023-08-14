@@ -794,8 +794,15 @@ func (r *GatewayReconciler) updateAddressesAndListenersStatus(
 	listenerStatuses []gatewayv1beta1.ListenerStatus,
 ) (bool, error) {
 	if !isGatewayProgrammed(gateway) {
+		saddrs := []gatewayv1beta1.GatewayStatusAddress{}
+		for _, addr := range gateway.Spec.Addresses {
+			saddrs = append(saddrs, gatewayv1beta1.GatewayStatusAddress{
+				Type:  addr.Type,
+				Value: addr.Value,
+			})
+		}
 		gateway.Status.Listeners = listenerStatuses
-		gateway.Status.Addresses = gateway.Spec.Addresses
+		gateway.Status.Addresses = saddrs
 		programmedCondition := metav1.Condition{
 			Type:               string(gatewayv1beta1.GatewayConditionProgrammed),
 			Status:             metav1.ConditionTrue,

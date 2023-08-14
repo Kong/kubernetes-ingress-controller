@@ -444,8 +444,9 @@ func generateRewriteURIConfig(path string) (string, error) {
 
 	if lastRuneType == runeTypeEscape || lastRuneType == runeTypeMark {
 		return "", fmt.Errorf("unexpected end of string")
+	}
 
-	} else if lastRuneType == runeTypeDigit {
+	if lastRuneType == runeTypeDigit {
 		out.WriteString("])")
 	}
 

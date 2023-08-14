@@ -1633,9 +1633,9 @@ func TestGenerateRewriteURIConfig(t *testing.T) {
 			expectedURI:   "",
 		},
 		{
-			name:          "digits without $",
-			uri:           "/bar/123$12",
-			expectedURI:   "/bar/123$(uri_captures[12])",
+			name:        "digits without $",
+			uri:         "/bar/123$12",
+			expectedURI: "/bar/123$(uri_captures[12])",
 		},
 		{
 			name:          "$ at end",
@@ -1753,7 +1753,8 @@ func TestMaybeRewriteURI(t *testing.T) {
 		},
 	}
 
-	for _, tc := range testCases {
+	for i := range testCases {
+		tc := testCases[i]
 		t.Run(tc.name, func(t *testing.T) {
 			err := MaybeRewriteURI(&tc.service, true)
 			require.Equal(t, tc.expectedError, err)

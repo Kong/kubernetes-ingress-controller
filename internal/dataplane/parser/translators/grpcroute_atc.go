@@ -29,6 +29,32 @@ func GenerateKongExpressionRoutesFromGRPCRouteRule(grpcroute *gatewayv1alpha2.GR
 	// gather the k8s object information and hostnames from the grpcroute
 	ingressObjectInfo := util.FromK8sObject(grpcroute)
 
+	// generate a route to match hostnames only if there is no match in the rule.
+	if len(rule.Matches) == 0 {
+		// REVIEW: return an error here to tell parser register a translation error event?
+		if len(grpcroute.Spec.Hostnames) == 0 {
+			return nil
+		}
+		routeName := fmt.Sprintf(
+			"grpcroute.%s.%s.%d.0",
+			grpcroute.Namespace,
+			grpcroute.Name,
+			ruleNumber,
+		)
+		r := kongstate.Route{
+			Ingress: ingressObjectInfo,
+			Route: kong.Route{
+				Name: kong.String(routeName),
+			},
+			ExpressionRoutes: true,
+		}
+		hostnames := getGRPCRouteHostnamesAsSliceOfStrings(grpcroute)
+		// assign an empty match to generate matchers by only hostnames and annotations.
+		matcher := generateMathcherFromGRPCMatch(gatewayv1alpha2.GRPCRouteMatch{}, hostnames, ingressObjectInfo.Annotations)
+		atc.ApplyExpression(&r.Route, matcher, 1)
+		return []kongstate.Route{r}
+	}
+
 	for matchNumber, match := range rule.Matches {
 		routeName := fmt.Sprintf(
 			"grpcroute.%s.%s.%d.%d",
@@ -168,6 +194,16 @@ func SplitGRPCRoute(grpcroute *gatewayv1alpha2.GRPCRoute) []SplitGRPCRouteMatch 
 	splitMatches := []SplitGRPCRouteMatch{}
 	splitGRPCRouteByMatch := func(hostname string) {
 		for ruleIndex, rule := range grpcroute.Spec.Rules {
+			// split out a match with only the hostname (non-empty only) when there are no matches in rule.
+			if len(rule.Matches) == 0 && len(hostname) > 0 {
+				splitMatches = append(splitMatches, SplitGRPCRouteMatch{
+					Source:     grpcroute,
+					Hostname:   hostname,
+					Match:      gatewayv1alpha2.GRPCRouteMatch{}, // empty grpcRoute match with ALL nil fields
+					RuleIndex:  ruleIndex,
+					MatchIndex: 0,
+				})
+			}
 			for matchIndex, match := range rule.Matches {
 				splitMatches = append(splitMatches, SplitGRPCRouteMatch{
 					Source:     grpcroute,

@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1692085766217,
+  "lastUpdate": 1692091157991,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -62994,6 +62994,66 @@ window.BENCHMARK_DATA = {
             "value": 0,
             "unit": "allocs/op",
             "extra": "10379576 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "571832+rainest@users.noreply.github.com",
+            "name": "Travis Raines",
+            "username": "rainest"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "e02d8eeaaeb05055694f485113215b5ff6231cb0",
+          "message": "fix(parser) populate Service port in services (#4503)\n\n* fix(parser) populate Service port in services\r\n\r\nWhen generating Kong services, use the Service port from the Ingress\r\nbackend instead of the default HTTP port.\r\n\r\nThis is a cosmetic change. These ports are not actually used by the\r\nrouting engine, as all KIC-generated services use upstreams and the\r\nports associated with their targets (which are the target ports on the\r\nService's Endpoints).\r\n\r\n* chore(parser) update golden tests",
+          "timestamp": "2023-08-15T17:17:54+08:00",
+          "tree_id": "e5ea0b0f196159f8c80f327462e2e5fb1ede815f",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/e02d8eeaaeb05055694f485113215b5ff6231cb0"
+        },
+        "date": 1692091148542,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - ns/op",
+            "value": 91875,
+            "unit": "ns/op",
+            "extra": "13450 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - B/op",
+            "value": 11100,
+            "unit": "B/op",
+            "extra": "13450 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - allocs/op",
+            "value": 12,
+            "unit": "allocs/op",
+            "extra": "13450 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDefaultContentToDBLessConfigConverter_Convert - ns/op",
+            "value": 135.6,
+            "unit": "ns/op",
+            "extra": "8958864 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDefaultContentToDBLessConfigConverter_Convert - B/op",
+            "value": 0,
+            "unit": "B/op",
+            "extra": "8958864 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDefaultContentToDBLessConfigConverter_Convert - allocs/op",
+            "value": 0,
+            "unit": "allocs/op",
+            "extra": "8958864 times\n2 procs"
           }
         ]
       }

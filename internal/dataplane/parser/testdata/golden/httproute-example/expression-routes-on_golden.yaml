@@ -3,6 +3,7 @@ services:
 - connect_timeout: 60000
   host: httproute..httproute-testing._.0
   name: httproute..httproute-testing._.0
+  port: 8080
   protocol: http
   read_timeout: 60000
   retries: 5

@@ -190,7 +190,7 @@ func TestKongAdminAPIController(t *testing.T) {
 		)
 	})
 
-	t.Run("not Ready Endpoints are not matched", func(t *testing.T) {
+	t.Run("terminating Endpoints are not matched", func(t *testing.T) {
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 		adminService, adminPod, n := startKongAdminAPIServiceReconciler(ctx, t, client, cfg)
@@ -216,7 +216,7 @@ func TestKongAdminAPIController(t *testing.T) {
 				{
 					Addresses: []string{"10.0.0.1"},
 					Conditions: discoveryv1.EndpointConditions{
-						Ready: lo.ToPtr(false),
+						Terminating: lo.ToPtr(true),
 					},
 					TargetRef: &corev1.ObjectReference{
 						Kind:      "Pod",
@@ -457,16 +457,16 @@ func TestKongAdminAPIController(t *testing.T) {
 			n.LastNotified(),
 		)
 
-		// Update all endpoints so that they are not Ready.
+		// Update all endpoints so that they are Terminating.
 		for i := range endpoints.Endpoints {
-			endpoints.Endpoints[i].Conditions.Ready = lo.ToPtr(false)
+			endpoints.Endpoints[i].Conditions.Terminating = lo.ToPtr(true)
 		}
 		require.NoError(t, client.Update(ctx, &endpoints, &ctrlclient.UpdateOptions{}))
 		require.NoError(t, client.Get(ctx, k8stypes.NamespacedName{Name: endpoints.Name, Namespace: endpoints.Namespace}, &endpoints, &ctrlclient.GetOptions{}))
 		assert.Eventually(t, func() bool { return len(n.LastNotified()) == 0 }, 3*time.Second, time.Millisecond)
 
-		// Update 1 endpoint so that that it's Ready.
-		endpoints.Endpoints[0].Conditions.Ready = lo.ToPtr(true)
+		// Update 1 endpoint so that it's not Terminating.
+		endpoints.Endpoints[0].Conditions.Terminating = nil
 
 		require.NoError(t, client.Update(ctx, &endpoints, &ctrlclient.UpdateOptions{}))
 		require.NoError(t, client.Get(ctx, k8stypes.NamespacedName{Name: endpoints.Name, Namespace: endpoints.Namespace}, &endpoints, &ctrlclient.GetOptions{}))

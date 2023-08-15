@@ -99,7 +99,7 @@ func AdminAPIsFromEndpointSlice(
 		}
 
 		for _, e := range endpoints.Endpoints {
-			if e.Conditions.Ready == nil || !*e.Conditions.Ready {
+			if e.Conditions.Terminating != nil && *e.Conditions.Terminating {
 				continue
 			}
 

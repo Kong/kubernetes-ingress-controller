@@ -32,7 +32,7 @@ require (
 	github.com/spf13/cobra v1.7.0
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.8.4
-	google.golang.org/api v0.136.0
+	google.golang.org/api v0.137.0
 	k8s.io/api v0.27.4
 	k8s.io/apiextensions-apiserver v0.27.4
 	k8s.io/apimachinery v0.27.4
@@ -63,7 +63,7 @@ require (
 	github.com/go-playground/universal-translator v0.18.1 // indirect
 	github.com/go-playground/validator/v10 v10.14.1 // indirect
 	github.com/google/go-containerregistry v0.13.0 // indirect
-	github.com/google/s2a-go v0.1.4 // indirect
+	github.com/google/s2a-go v0.1.5 // indirect
 	github.com/klauspost/cpuid/v2 v2.2.5 // indirect
 	github.com/labstack/echo/v4 v4.11.1 // indirect
 	github.com/labstack/gommon v0.4.0 // indirect

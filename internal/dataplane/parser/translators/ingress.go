@@ -399,6 +399,17 @@ const (
 	runeTypePlain
 )
 
+// generateRewriteURIConfig parses uri with SM of four states.
+// `runeTypeEscape` indicates `\` encountered and `$` expected, the SM state
+// will transfer to `runeTypePlain`.
+// `runeTypeMark` indicates `$` encountered and one or more digits expected,
+// the SM state will transfer to `runeTypeDigit`.
+// `runeTypeDigit` indicates at least one digit encountered. If the type of following
+// character is still digit, the SM state will remain unchanged. Otherwise, a new
+// capture group will be created and the SM state will transfer to `runeTypePlain`.
+// `runeTypePlain` indicates the following character is plain text other than `$` and `\`.
+// The former will cause the SM state to transfer to `runeTypeMark` and the latter will
+// cause the SM state to transfer to `runeTypeEscape`.
 func generateRewriteURIConfig(path string) (string, error) {
 	out := strings.Builder{}
 	lastRuneType := runeTypePlain

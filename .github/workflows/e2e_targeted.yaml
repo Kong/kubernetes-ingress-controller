@@ -33,7 +33,7 @@ on:
 
 jobs:
   post-comment-in-pr:
-    if: ${{ github.event.inputs.pr-number != '' }}
+    if: github.event.inputs.pr-number != ''
     runs-on: ubuntu-latest
     env:
       GH_TOKEN: ${{ secrets.K8S_TEAM_BOT_GH_PAT }}
@@ -56,7 +56,7 @@ jobs:
       - run: gh pr edit ${PR_NUMBER} --remove-label ci/run-e2e
 
   build-image:
-    if: ${{ inputs.controller-image == '' }}
+    if: inputs.controller-image == ''
     uses: ./.github/workflows/_docker_build.yaml
     secrets: inherit
 

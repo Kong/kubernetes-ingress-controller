@@ -32,7 +32,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: fail if tag already exists
-        if: ${{ steps.check-tag.outputs.exists == 'true' }}
+        if: steps.check-tag.outputs.exists == 'true'
         run: exit 1
       - name: checkout repository
         uses: actions/checkout@v3
@@ -45,7 +45,7 @@ jobs:
           input_string: ${{ github.event.inputs.tag }}
           version_extractor_regex: 'v(.*)$'
       - name: Verify manifests have requested KIC tag
-        if: ${{ steps.semver_parser.outputs.prerelease == '' }}
+        if: steps.semver_parser.outputs.prerelease == ''
         env:
           # We expect the tag used in manifests to be {major}.{minor} part of the version, e.g.
           # for v2.10.3 we expect manifests to use 2.10 tag.
@@ -73,7 +73,7 @@ jobs:
           echo 'type=raw,value=${{ steps.semver_parser.outputs.fullversion }}' >> $GITHUB_ENV
           echo 'EOF' >> $GITHUB_ENV
       - name: Add major.minor tag
-        if: ${{ steps.semver_parser.outputs.prerelease == '' }}
+        if: steps.semver_parser.outputs.prerelease == ''
         run: |
           echo 'TAGS_SUPPLEMENTAL<<EOF' >> $GITHUB_ENV
           echo "" >> $GITHUB_ENV

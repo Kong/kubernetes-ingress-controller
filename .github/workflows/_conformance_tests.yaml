@@ -33,7 +33,7 @@ jobs:
           KONG_TEST_EXPRESSION_ROUTES: ${{ matrix.expression_routes }}
 
       - name: collect test report
-        if: ${{ always() }}
+        if: always()
         uses: actions/upload-artifact@v3
         with:
           name: tests-report

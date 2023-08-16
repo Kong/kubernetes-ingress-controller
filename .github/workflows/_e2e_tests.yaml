@@ -89,14 +89,14 @@ jobs:
         test: ${{ fromJSON(needs.setup-e2e-tests.outputs.test_names) }}
     steps:
       - name: Download built image artifact
-        if: ${{ inputs.load-local-image }}
+        if: inputs.load-local-image
         uses: actions/download-artifact@v3
         with:
           name: kic-image
           path: /tmp
 
       - name: Load built image
-        if: ${{ inputs.load-local-image }}
+        if: inputs.load-local-image
         run: |
           docker load --input /tmp/image.tar
           docker image ls -a
@@ -123,7 +123,7 @@ jobs:
       # image which is available in the external container image registry but not
       # locally and that fails.
       - name: Pull Gateway image for tests
-        if: ${{ inputs.kong-image != '' && inputs.load-local-image }}
+        if: inputs.kong-image != '' && inputs.load-local-image
         run: docker pull ${{ inputs.kong-image }}
 
       - name: run ${{ matrix.test }}
@@ -139,7 +139,7 @@ jobs:
           GOTESTSUM_JUNITFILE: "e2e-${{ matrix.test }}${{ matrix.kubernetes-version }}-tests.xml"
 
       - name: upload diagnostics
-        if: ${{ always() }}
+        if: always()
         uses: actions/upload-artifact@v3
         with:
           name: "diagnostics-e2e-tests-${{ matrix.test }}-${{ matrix.kubernetes-version }}"
@@ -153,7 +153,7 @@ jobs:
           path: "*-tests.xml"
 
   gke:
-    if: ${{ inputs.run-gke }}
+    if: inputs.run-gke
     environment: "gcloud"
     runs-on: ubuntu-latest
     needs:
@@ -202,7 +202,7 @@ jobs:
           GOOGLE_LOCATION: ${{ secrets.GOOGLE_LOCATION }}
 
       - name: upload diagnostics
-        if: ${{ always() }}
+        if: always()
         uses: actions/upload-artifact@v3
         with:
           name: "diagnostics-e2e-gke-tests-${{ matrix.test }}-${{ matrix.kubernetes-version }}"
@@ -216,7 +216,7 @@ jobs:
           path: "*-tests.xml"
 
   istio:
-    if: ${{ inputs.run-istio }}
+    if: inputs.run-istio
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -232,14 +232,14 @@ jobs:
             istio-version: 'v1.15'
     steps:
       - name: Download built image artifact
-        if: ${{ inputs.load-local-image }}
+        if: inputs.load-local-image
         uses: actions/download-artifact@v3
         with:
           name: kic-image
           path: /tmp
 
       - name: Load built image
-        if: ${{ inputs.load-local-image }}
+        if: inputs.load-local-image
         run: |
           docker load --input /tmp/image.tar
           docker image ls -a
@@ -273,7 +273,7 @@ jobs:
           GOTESTSUM_JUNITFILE: "istio-${{ matrix.kubernetes-version }}-${{ matrix.istio-version }}-tests.xml"
 
       - name: upload diagnostics
-        if: ${{ always() }}
+        if: always()
         uses: actions/upload-artifact@v3
         with:
           name: diagnostics-e2e-tests

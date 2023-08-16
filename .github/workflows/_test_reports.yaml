@@ -18,7 +18,7 @@ on:
 
 jobs:
   coverage:
-    if: ${{ inputs.coverage && !cancelled() }}
+    if: inputs.coverage && !cancelled()
     runs-on: ubuntu-latest
     steps:
       - name: checkout repository
@@ -43,7 +43,7 @@ jobs:
           verbose: true
 
   buildpulse-report:
-    if: ${{ inputs.buildpulse && !cancelled() }}
+    if: inputs.buildpulse && !cancelled()
     runs-on: ubuntu-latest
     steps:
       - name: checkout repository

@@ -31,7 +31,7 @@ on:
 
 jobs:
   startup-issue-comment:
-    if: ${{ github.event.inputs.issue-number != '' }}
+    if: github.event.inputs.issue-number != ''
     runs-on: ubuntu-latest
     env:
       GH_TOKEN: ${{ secrets.K8S_TEAM_BOT_GH_PAT }}
@@ -79,7 +79,7 @@ jobs:
     - startup-issue-comment
     - run-e2e-tests
     - run-integration-tests
-    if: ${{ github.event.inputs.issue-number != '' }}
+    if: github.event.inputs.issue-number != ''
     runs-on: ubuntu-latest
     env:
       GH_TOKEN: ${{ secrets.K8S_TEAM_BOT_GH_PAT }}

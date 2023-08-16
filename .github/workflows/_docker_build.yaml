@@ -32,7 +32,7 @@ jobs:
           fetch-depth: 0
 
       - name: Parse semver string
-        if: ${{ inputs.tag != '' }}
+        if: inputs.tag != ''
         id: parse-semver-tag
         uses: booxmedialtd/ws-action-parse-semver@v1.4.7
         with:
@@ -53,7 +53,7 @@ jobs:
 
       - name: Add major.minor tag
         id: add-major-minor-tag
-        if: ${{ steps.parse-semver-tag.outputs.prerelease == '' }}
+        if: steps.parse-semver-tag.outputs.prerelease == ''
         run: |
           echo "tag=type=raw,value=${{ steps.parse-semver-tag.outputs.major }}.${{ steps.parse-semver-tag.outputs.minor }}" >> $GITHUB_OUTPUT
 

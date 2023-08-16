@@ -280,8 +280,8 @@ github.com/klauspost/cpuid/v2 v2.0.9/go.mod h1:FInQzS24/EEf25PyTYn52gqo7WaD8xa02
 github.com/klauspost/cpuid/v2 v2.2.5 h1:0E5MSMDEoAulmXNFquVs//DdoomxaoTY1kUhbc/qbZg=
 github.com/klauspost/cpuid/v2 v2.2.5/go.mod h1:Lcz8mBdAVJIBVzewtcLocK12l3Y+JytZYpaMropDUws=
 github.com/knz/go-libedit v1.10.1/go.mod h1:MZTVkCWyz0oBc7JOWP3wNAzd002ZbM/5hgShxwh4x8M=
-github.com/kong/deck v1.25.1-0.20230807064622-328ae943624a h1:RWLUQo7offpoT4dWEVntAW1y6SLLxNIDHzaZYxSy0Nk=
-github.com/kong/deck v1.25.1-0.20230807064622-328ae943624a/go.mod h1:B6f2nPWzTld/aTvtxAC6lWFIcAr4FsG25fgycdzeZQY=
+github.com/kong/deck v1.26.0 h1:9zEnGcfdvyBO7uq/sERO6/I+b0FQVOTGRf7dt9/65P8=
+github.com/kong/deck v1.26.0/go.mod h1:B6f2nPWzTld/aTvtxAC6lWFIcAr4FsG25fgycdzeZQY=
 github.com/kong/go-kong v0.46.0 h1:9I6nlX63WymU5Sg+d13iZDVwpW5vXh8/v0zarU27dzI=
 github.com/kong/go-kong v0.46.0/go.mod h1:41Sot1N/n8UHBp+gE/6nOw3vuzoHbhMSyU/zOS7VzPE=
 github.com/kong/kubernetes-telemetry v0.1.0 h1:dyDhB2SUvxVaDAxaZtLWL7JGAbkgwlCUM1P8gR/rCl0=

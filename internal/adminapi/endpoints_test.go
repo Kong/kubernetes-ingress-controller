@@ -167,7 +167,7 @@ func TestAddressesFromEndpointSlice(t *testing.T) {
 			dnsStrategy: cfgtypes.ServiceScopedPodDNSStrategy,
 		},
 		{
-			name: "not ready endpoints are not returned",
+			name: "not ready endpoints are returned",
 			endpoints: discoveryv1.EndpointSlice{
 				ObjectMeta:  endpointsSliceObjectMeta,
 				AddressType: discoveryv1.AddressTypeIPv4,
@@ -183,12 +183,18 @@ func TestAddressesFromEndpointSlice(t *testing.T) {
 				},
 				Ports: builder.NewEndpointPort(8444).WithName("admin").IntoSlice(),
 			},
-			portNames:   sets.New("admin"),
-			want:        sets.New[DiscoveredAdminAPI](),
+			portNames: sets.New("admin"),
+			want: sets.New[DiscoveredAdminAPI](
+				DiscoveredAdminAPI{
+					Address: "https://10.0.0.1:8444",
+					PodRef: k8stypes.NamespacedName{
+						Name: "pod-1", Namespace: namespaceName,
+					},
+				}),
 			dnsStrategy: cfgtypes.IPDNSStrategy,
 		},
 		{
-			name: "not ready and terminating endpoints are not returned",
+			name: "ready and terminating endpoints are not returned",
 			endpoints: discoveryv1.EndpointSlice{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      uuid.NewString(),
@@ -199,7 +205,7 @@ func TestAddressesFromEndpointSlice(t *testing.T) {
 					{
 						Addresses: []string{"10.0.0.1", "10.0.0.2", "10.0.0.3"},
 						Conditions: discoveryv1.EndpointConditions{
-							Ready:       lo.ToPtr(false),
+							Ready:       lo.ToPtr(true),
 							Terminating: lo.ToPtr(true),
 						},
 						TargetRef: testPodReference(namespaceName, "pod-1"),
@@ -237,7 +243,7 @@ func TestAddressesFromEndpointSlice(t *testing.T) {
 						Addresses: []string{"10.0.2.1"},
 						Conditions: discoveryv1.EndpointConditions{
 							Ready:       lo.ToPtr(false),
-							Terminating: lo.ToPtr(false),
+							Terminating: lo.ToPtr(true),
 						},
 						TargetRef: testPodReference(namespaceName, "pod-3"),
 					},
@@ -289,7 +295,7 @@ func TestAddressesFromEndpointSlice(t *testing.T) {
 						Addresses: []string{"10.0.2.1"},
 						Conditions: discoveryv1.EndpointConditions{
 							Ready:       lo.ToPtr(false),
-							Terminating: lo.ToPtr(false),
+							Terminating: lo.ToPtr(true),
 						},
 						TargetRef: testPodReference(namespaceName, "pod-3"),
 					},
@@ -349,6 +355,7 @@ func TestAddressesFromEndpointSlice(t *testing.T) {
 				Ports: builder.NewEndpointPort(8444).WithName("non-admin-port-name").IntoSlice(),
 			},
 			want:        sets.New[DiscoveredAdminAPI](),
+			portNames:   sets.New("admin"),
 			dnsStrategy: cfgtypes.IPDNSStrategy,
 		},
 		{
@@ -470,7 +477,7 @@ func TestAddressesFromEndpointSlice(t *testing.T) {
 	}
 }
 
-func TestGetAdminAPIsForService(t *testing.T) {
+func TestDiscoverer_GetAdminAPIsForService(t *testing.T) {
 	const namespaceName = "ns"
 
 	var (
@@ -549,7 +556,7 @@ func TestGetAdminAPIsForService(t *testing.T) {
 									Addresses: []string{"8.0.0.1"},
 									Conditions: discoveryv1.EndpointConditions{
 										Ready:       lo.ToPtr(false),
-										Terminating: lo.ToPtr(false),
+										Terminating: lo.ToPtr(true),
 									},
 									TargetRef: testPodReference(namespaceName, "pod-3"),
 								},
@@ -635,7 +642,7 @@ func TestGetAdminAPIsForService(t *testing.T) {
 			dnsStrategy: cfgtypes.IPDNSStrategy,
 		},
 		{
-			name: "not Ready Endpoints are not matched",
+			name: "terminating Endpoints are not matched",
 			service: k8stypes.NamespacedName{
 				Namespace: namespaceName,
 				Name:      serviceName,
@@ -650,7 +657,8 @@ func TestGetAdminAPIsForService(t *testing.T) {
 								{
 									Addresses: []string{"7.0.0.1"},
 									Conditions: discoveryv1.EndpointConditions{
-										Ready: lo.ToPtr(false),
+										Ready:       lo.ToPtr(false),
+										Terminating: lo.ToPtr(true),
 									},
 									TargetRef: testPodReference(namespaceName, "pod-1"),
 								},

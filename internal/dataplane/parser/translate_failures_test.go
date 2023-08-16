@@ -106,18 +106,6 @@ func TestTranslationFailureUnsupportedObjectsExpressionRoutes(t *testing.T) {
 		{
 			name: "TCPRoutes, UDPRoutes and TLSRoutes in gateway APIs are not supported",
 			objects: store.FakeObjects{
-				TCPRoutes: []*gatewayv1alpha2.TCPRoute{
-					{
-						TypeMeta: metav1.TypeMeta{
-							Kind:       "TCPRoute",
-							APIVersion: gatewayv1alpha2.GroupVersion.String(),
-						},
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      "tcproute-1",
-							Namespace: "default",
-						},
-					},
-				},
 				UDPRoutes: []*gatewayv1alpha2.UDPRoute{
 					{
 						TypeMeta: metav1.TypeMeta{
@@ -144,12 +132,6 @@ func TestTranslationFailureUnsupportedObjectsExpressionRoutes(t *testing.T) {
 				},
 			},
 			causingObjects: []client.Object{
-				&gatewayv1alpha2.TCPRoute{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "tcproute-1",
-						Namespace: "default",
-					},
-				},
 				&gatewayv1alpha2.UDPRoute{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "udproute-1",

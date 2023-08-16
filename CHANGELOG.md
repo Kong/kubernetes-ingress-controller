@@ -79,6 +79,9 @@ Adding a new version? You'll need three changes:
 - Display Service ports on generated Kong services, instead of a static default
   value. This change is cosmetic only.
   [#4503](https://github.com/Kong/kubernetes-ingress-controller/pull/4503)
+- Create routes that match any service and method for `GRPCRoute` rules with no
+  matches.
+  [#4512](https://github.com/Kong/kubernetes-ingress-controller/issues/4512)
 
 ## [2.11.0]
 

@@ -50,10 +50,6 @@ func GenerateKongRoutesFromGRPCRouteRule(
 
 	// generate a route to match hostnames only if there is no match in the rule.
 	if len(rule.Matches) == 0 {
-		// REVIEW: return an error here to tell parser register a translation error event?
-		if len(grpcroute.Spec.Hostnames) == 0 {
-			return nil
-		}
 		routeName := fmt.Sprintf(
 			"grpcroute.%s.%s.%d.0",
 			grpcroute.Namespace,

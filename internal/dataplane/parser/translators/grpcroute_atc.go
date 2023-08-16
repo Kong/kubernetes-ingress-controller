@@ -31,10 +31,6 @@ func GenerateKongExpressionRoutesFromGRPCRouteRule(grpcroute *gatewayv1alpha2.GR
 
 	// generate a route to match hostnames only if there is no match in the rule.
 	if len(rule.Matches) == 0 {
-		// REVIEW: return an error here to tell parser register a translation error event?
-		if len(grpcroute.Spec.Hostnames) == 0 {
-			return nil
-		}
 		routeName := fmt.Sprintf(
 			"grpcroute.%s.%s.%d.0",
 			grpcroute.Namespace,
@@ -195,7 +191,7 @@ func SplitGRPCRoute(grpcroute *gatewayv1alpha2.GRPCRoute) []SplitGRPCRouteMatch 
 	splitGRPCRouteByMatch := func(hostname string) {
 		for ruleIndex, rule := range grpcroute.Spec.Rules {
 			// split out a match with only the hostname (non-empty only) when there are no matches in rule.
-			if len(rule.Matches) == 0 && len(hostname) > 0 {
+			if len(rule.Matches) == 0 {
 				splitMatches = append(splitMatches, SplitGRPCRouteMatch{
 					Source:     grpcroute,
 					Hostname:   hostname,

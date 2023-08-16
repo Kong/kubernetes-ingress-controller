@@ -410,10 +410,10 @@ const (
 // `runeTypePlain` indicates the following character is plain text other than `$` and `\`.
 // The former will cause the SM state to transfer to `runeTypeMark` and the latter will
 // cause the SM state to transfer to `runeTypeEscape`.
-func generateRewriteURIConfig(path string) (string, error) {
+func generateRewriteURIConfig(uri string) (string, error) {
 	out := strings.Builder{}
 	lastRuneType := runeTypePlain
-	for i, char := range path {
+	for i, char := range uri {
 		switch lastRuneType {
 		case runeTypeEscape:
 			if char != '$' {

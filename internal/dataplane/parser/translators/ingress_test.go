@@ -1696,11 +1696,7 @@ func TestMaybeRewriteURI(t *testing.T) {
 		{
 			name: "konghq.com/rewrite annotation is not exist",
 			service: kongstate.Service{
-				Parent: &netv1.Ingress{
-					ObjectMeta: metav1.ObjectMeta{
-						Annotations: map[string]string{},
-					},
-				},
+				Parent: &netv1.Ingress{},
 			},
 			expectedError:   nil,
 			expectedPlugins: nil,

@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/kong/go-kong/kong"
+	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	netv1 "k8s.io/api/networking/v1"
@@ -167,9 +168,6 @@ func TestGetDefaultBackendService(t *testing.T) {
 }
 
 func TestRewriteURIAnnotation(t *testing.T) {
-	pathTypePrefix := netv1.PathTypePrefix
-	var nilKongPlugins []kong.Plugin
-
 	someIngress := func(name, rewriteURI string) netv1.Ingress {
 		return netv1.Ingress{
 			TypeMeta: metav1.TypeMeta{Kind: "Ingress"},
@@ -190,7 +188,7 @@ func TestRewriteURIAnnotation(t *testing.T) {
 								Paths: []netv1.HTTPIngressPath{
 									{
 										Path:     "/~/api/(.*)",
-										PathType: &pathTypePrefix,
+										PathType: lo.ToPtr(netv1.PathTypePrefix),
 										Backend: netv1.IngressBackend{
 											Service: &netv1.IngressServiceBackend{
 												Name: name,
@@ -261,7 +259,7 @@ func TestRewriteURIAnnotation(t *testing.T) {
 		require.Len(t, rules, 1)
 
 		for _, svc := range rules {
-			require.Equal(t, nilKongPlugins, svc.Plugins)
+			require.Nil(t, svc.Plugins)
 		}
 
 		errs := p.failuresCollector.PopResourceFailures()

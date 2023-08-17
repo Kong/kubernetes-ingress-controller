@@ -16,10 +16,6 @@ const (
 	// httpcTimeout is the default client timeout for HTTP clients used in tests.
 	httpcTimeout = time.Second * 3
 
-	// environmentCleanupTimeout is the amount of time that will be given by the test suite to the
-	// testing environment to perform its cleanup when the test suite is shutting down.
-	environmentCleanupTimeout = time.Minute * 3
-
 	// statusWait is a const duration used in test assertions like .Eventually to
 	// wait for object statuses to fulfill a provided predicate.
 	statusWait = time.Minute * 3

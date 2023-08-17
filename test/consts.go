@@ -1,5 +1,7 @@
 package test
 
+import "time"
+
 const (
 	// HTTPBinImage is the container image name we use for deploying the "httpbin" HTTP testing tool.
 	// if you need a simple HTTP server for tests you're writing, use this and check the documentation.
@@ -18,4 +20,8 @@ const (
 	EchoTCPPort  = 1025
 	EchoUDPPort  = 1026
 	EchoHTTPPort = 1027
+
+	// EnvironmentCleanupTimeout is the amount of time that will be given by the test suite to the
+	// testing environment to perform its cleanup when the test suite is shutting down.
+	EnvironmentCleanupTimeout = time.Minute * 3
 )

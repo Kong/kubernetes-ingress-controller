@@ -119,3 +119,10 @@ func EnvironmentReadyTimeout() time.Duration {
 	}
 	return timeout
 }
+
+// IsCI indicates whether or not the tests are running in a CI environment.
+func IsCI() bool {
+	// It's a common convention that e.g. GitHub, GitLab, and other CI providers
+	// set the CI environment variable.
+	return os.Getenv("CI") == "true"
+}

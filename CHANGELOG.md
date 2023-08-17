@@ -74,6 +74,14 @@ Adding a new version? You'll need three changes:
 
 ## Unreleased
 
+
+### Changes
+
+- Generate a wildcard routes to match all `HTTP` or `GRPC` requests for rules
+  in `HTTPRoute` or `GRPCRoute` if there are no matches in the rule and no
+  hostnames in their parent objects.
+  [#4526](https://github.com/Kong/kubernetes-ingress-controller/pull/4528)
+
 ### Fixed
 
 - Display Service ports on generated Kong services, instead of a static default

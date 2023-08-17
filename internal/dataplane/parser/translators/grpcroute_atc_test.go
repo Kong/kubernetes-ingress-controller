@@ -193,6 +193,29 @@ func TestGenerateKongExpressionRoutesFromGRPCRouteRule(t *testing.T) {
 				},
 			},
 		},
+		{
+			name:       "single hostname with no match",
+			objectName: "hostname-only",
+			hostnames:  []string{"foo.com"},
+			rule: gatewayv1alpha2.GRPCRouteRule{
+				Matches: []gatewayv1alpha2.GRPCRouteMatch{},
+			},
+			expectedRoutes: []kongstate.Route{
+				{
+					Ingress: util.K8sObjectInfo{
+						Name:             "hostname-only",
+						Namespace:        "default",
+						GroupVersionKind: grpcRouteGVK,
+					},
+					ExpressionRoutes: true,
+					Route: kong.Route{
+						Name:       kong.String("grpcroute.default.hostname-only.0.0"),
+						Expression: kong.String(`http.host == "foo.com"`),
+						Priority:   kong.Int(1),
+					},
+				},
+			},
+		},
 	}
 
 	for _, tc := range testCases {
@@ -368,6 +391,24 @@ func TestSplitGRPCRoute(t *testing.T) {
 				},
 			},
 		},
+		{
+			TypeMeta: grpcRouteTypeMeta,
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: "default",
+				Name:      "grpcroute-multiple-hostnames-no-match",
+			},
+			Spec: gatewayv1alpha2.GRPCRouteSpec{
+				Hostnames: []gatewayv1alpha2.Hostname{
+					gatewayv1alpha2.Hostname("pets.com"),
+					gatewayv1alpha2.Hostname("pets.net"),
+				},
+				Rules: []gatewayv1alpha2.GRPCRouteRule{
+					{
+						BackendRefs: namesToBackendRefs([]string{"listpets"}),
+					},
+				},
+			},
+		},
 	}
 
 	testCases := []struct {
@@ -437,6 +478,26 @@ func TestSplitGRPCRoute(t *testing.T) {
 					Source:     testGRPCRoutes[2],
 					Hostname:   string(testGRPCRoutes[2].Spec.Hostnames[1]),
 					Match:      testGRPCRoutes[2].Spec.Rules[0].Matches[0],
+					RuleIndex:  0,
+					MatchIndex: 0,
+				},
+			},
+		},
+		{
+			name:      "multiple hostnames and no match",
+			grpcRoute: testGRPCRoutes[3],
+			expectedSplitMatches: []SplitGRPCRouteMatch{
+				{
+					Source:     testGRPCRoutes[3],
+					Hostname:   string(testGRPCRoutes[3].Spec.Hostnames[0]),
+					Match:      gatewayv1alpha2.GRPCRouteMatch{},
+					RuleIndex:  0,
+					MatchIndex: 0,
+				},
+				{
+					Source:     testGRPCRoutes[3],
+					Hostname:   string(testGRPCRoutes[3].Spec.Hostnames[1]),
+					Match:      gatewayv1alpha2.GRPCRouteMatch{},
 					RuleIndex:  0,
 					MatchIndex: 0,
 				},

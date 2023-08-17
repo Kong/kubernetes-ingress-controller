@@ -48,6 +48,25 @@ func GenerateKongRoutesFromGRPCRouteRule(
 	// gather the k8s object information and hostnames from the grpcroute
 	ingressObjectInfo := util.FromK8sObject(grpcroute)
 
+	// generate a route to match hostnames only if there is no match in the rule.
+	if len(rule.Matches) == 0 {
+		routeName := fmt.Sprintf(
+			"grpcroute.%s.%s.%d.0",
+			grpcroute.Namespace,
+			grpcroute.Name,
+			ruleNumber,
+		)
+		r := kongstate.Route{
+			Ingress: ingressObjectInfo,
+			Route: kong.Route{
+				Name:      kong.String(routeName),
+				Protocols: kong.StringSlice("grpc", "grpcs"),
+			},
+		}
+		r.Hosts = getGRPCRouteHostnamesAsSliceOfStringPointers(grpcroute)
+		return []kongstate.Route{r}
+	}
+
 	for matchNumber, match := range rule.Matches {
 		routeName := fmt.Sprintf(
 			"grpcroute.%s.%s.%d.%d",

@@ -265,6 +265,29 @@ func TestGenerateKongRoutesFromGRPCRouteRule(t *testing.T) {
 				},
 			},
 		},
+		{
+			name:               "single hostname, no matches",
+			objectName:         "hostname-only",
+			annotations:        map[string]string{},
+			hostnames:          []string{"foo.com"},
+			rule:               gatewayv1alpha2.GRPCRouteRule{},
+			prependRegexPrefix: true,
+			expectedRoutes: []kongstate.Route{
+				{
+					Ingress: util.K8sObjectInfo{
+						Name:             "hostname-only",
+						Namespace:        "default",
+						Annotations:      map[string]string{},
+						GroupVersionKind: grpcRouteGVK,
+					},
+					Route: kong.Route{
+						Name:      kong.String("grpcroute.default.hostname-only.0.0"),
+						Protocols: kong.StringSlice("grpc", "grpcs"),
+						Hosts:     kong.StringSlice("foo.com"),
+					},
+				},
+			},
+		},
 	}
 
 	for _, tc := range testCases {

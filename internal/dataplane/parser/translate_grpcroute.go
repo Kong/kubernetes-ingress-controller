@@ -53,12 +53,12 @@ func (p *Parser) ingressRulesFromGRPCRoutes() ingressRules {
 }
 
 func (p *Parser) ingressRulesFromGRPCRoute(result *ingressRules, grpcroute *gatewayv1alpha2.GRPCRoute) error {
+	// validate the grpcRoute before it gets translated
+	if err := validateGRPCRoute(grpcroute); err != nil {
+		return err
+	}
 	// first we grab the spec and gather some metdata about the object
 	spec := grpcroute.Spec
-
-	if len(spec.Rules) == 0 {
-		return translators.ErrRouteValidationNoRules
-	}
 
 	// each rule may represent a different set of backend services that will be accepting
 	// traffic, so we make separate routes and Kong services for every present rule.
@@ -97,11 +97,9 @@ func (p *Parser) ingressRulesFromGRPCRoutesUsingExpressionRoutes(grpcRoutes []*g
 	// after they are translated, register the success event in the parser.
 	translatedGRPCRoutes := []*gatewayv1alpha2.GRPCRoute{}
 	for _, grpcRoute := range grpcRoutes {
-		if len(grpcRoute.Spec.Rules) == 0 {
-			p.registerTranslationFailure(
-				translators.ErrRouteValidationNoRules.Error(),
-				grpcRoute,
-			)
+		// validate the GRPCRoute before it gets split by hostnames and matches.
+		if err := validateGRPCRoute(grpcRoute); err != nil {
+			p.registerTranslationFailure(err.Error(), grpcRoute)
 			continue
 		}
 		splitGRPCRouteMatches = append(splitGRPCRouteMatches, translators.SplitGRPCRoute(grpcRoute)...)
@@ -163,4 +161,20 @@ func grpcBackendRefsToBackendRefs(grpcBackendRef []gatewayv1alpha2.GRPCBackendRe
 		backendRefs = append(backendRefs, hRef.BackendRef)
 	}
 	return backendRefs
+}
+
+func validateGRPCRoute(grpcRoute *gatewayv1alpha2.GRPCRoute) error {
+	if len(grpcRoute.Spec.Hostnames) == 0 {
+		if len(grpcRoute.Spec.Rules) == 0 {
+			return translators.ErrRouteValidationNoRules
+		}
+		// REVIEW: remove this to generate a "catch-all" route from rule with no matches and no hostnames in its parent GRPCRoute.
+		for _, rule := range grpcRoute.Spec.Rules {
+			if len(rule.Matches) == 0 {
+				return translators.ErrRouteValidationNoMatchRulesOrHostnamesSpecified
+			}
+		}
+	}
+
+	return nil
 }

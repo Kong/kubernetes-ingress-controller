@@ -314,6 +314,22 @@ test.conformance: _check.container.environment go-junit-report
 		./test/conformance | \
 	$(GOJUNIT) -iocopy -out $(JUNIT_REPORT) -parser gotest
 
+.PHONY: test.conformance-experimental
+test.conformance-experimental: _check.container.environment go-junit-report
+	@TEST_DATABASE_MODE="off" \
+		GOFLAGS="-tags=conformance_tests,experimental" \
+		KONG_TEST_EXPRESSION_ROUTES="true" \
+		go test \
+		-ldflags " \
+		-X $(REPO_URL)/v2/internal/manager/metadata.ProjectURL=$(REPO_URL) \
+		-X $(REPO_URL)/v2/internal/manager/metadata.Release=$(TAG)" \
+		-v \
+		-race $(GOTESTFLAGS) \
+		-timeout $(INTEGRATION_TEST_TIMEOUT) \
+		-parallel $(NCPU) \
+		./test/conformance | \
+	$(GOJUNIT) -iocopy -out $(JUNIT_REPORT) -parser gotest
+
 .PHONY: test.integration
 test.integration: test.integration.dbless test.integration.postgres
 

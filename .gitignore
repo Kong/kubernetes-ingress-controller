@@ -35,6 +35,7 @@ e2e-tests
 
 # for this repo only
 kong-ingress-controller
+conformance-tests-report.yaml
 
 # ignore vendor tree
 vendor

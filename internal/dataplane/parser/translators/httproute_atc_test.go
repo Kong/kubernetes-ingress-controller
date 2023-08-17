@@ -33,8 +33,17 @@ func TestGenerateKongExpressionRoutesFromHTTPRouteMatches(t *testing.T) {
 			name:              "no hostnames and no matches",
 			routeName:         "empty_route.default.0.0",
 			ingressObjectInfo: util.K8sObjectInfo{},
-			expectedRoutes:    []kongstate.Route{},
-			expectedError:     ErrRouteValidationNoMatchRulesOrHostnamesSpecified,
+			expectedRoutes: []kongstate.Route{
+				{
+					Route: kong.Route{
+						Name:         kong.String("empty_route.default.0.0"),
+						PreserveHost: kong.Bool(true),
+						StripPath:    kong.Bool(false),
+						Expression:   kong.String(CatchAllHTTPExpression),
+					},
+					ExpressionRoutes: true,
+				},
+			},
 		},
 		{
 			name:              "no matches but have hostnames",

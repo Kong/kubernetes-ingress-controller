@@ -486,6 +486,10 @@ func KongExpressionRouteFromSplitGRPCRouteMatchWithPriority(
 		grpcRoute.Annotations,
 	)
 	atc.ApplyExpression(&r.Route, matcher, matchWithPriority.Priority)
+	if r.Expression == nil || len(*r.Expression) == 0 {
+		r.Expression = kong.String(CatchAllHTTPExpression)
+		r.Priority = &matchWithPriority.Priority
+	}
 
 	return r
 }

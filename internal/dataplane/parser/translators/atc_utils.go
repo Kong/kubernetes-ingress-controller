@@ -21,6 +21,16 @@ const (
 	ResourceKindBitsGRPCRoute = 1
 )
 
+const (
+	// CatchAllHTTPExpression is the expression to match all HTTP/HTTPS requests.
+	// For rules with no matches and no hostnames in its parent HTTPRoute or GRPCRoute,
+	// we need to generate a "catch-all" route for the rule:
+	// https://github.com/Kong/kubernetes-ingress-controller/issues/4526
+	// but Kong does not allow empty expression in expression router,
+	// so we define this is we need a route to match all HTTP/HTTPS requests.
+	CatchAllHTTPExpression = `(net.protocol == "http") || (net.protocol == "https")`
+)
+
 // -----------------------------------------------------------------------------
 // Translator - common functions in translating expression(ATC) routes from multiple kinds of k8s objects.
 // -----------------------------------------------------------------------------

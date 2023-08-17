@@ -359,6 +359,17 @@ func TestIngressRulesFromGRPCRoutesUsingExpressionRoutes(t *testing.T) {
 						},
 					},
 				},
+				{
+					Service: kong.Service{
+						Name: kong.String("grpcroute.default.grpcroute-no-hostnames-no-matches._.0"),
+					},
+					Backends: []kongstate.ServiceBackend{
+						{
+							Name:    "service0",
+							PortDef: kongstate.PortDef{Mode: kongstate.PortModeByNumber, Number: int32(80)},
+						},
+					},
+				},
 			},
 			expectedKongRoutes: map[string][]kongstate.Route{
 				"grpcroute.default.grpcroute-1._.0": {
@@ -366,6 +377,14 @@ func TestIngressRulesFromGRPCRoutesUsingExpressionRoutes(t *testing.T) {
 						Route: kong.Route{
 							Name:       kong.String("grpcroute.default.grpcroute-1._.0.0"),
 							Expression: kong.String(`http.path == "/v1/foo"`),
+						},
+					},
+				},
+				"grpcroute.default.grpcroute-no-hostnames-no-matches._.0": {
+					{
+						Route: kong.Route{
+							Name:       kong.String("grpcroute.default.grpcroute-no-hostnames-no-matches._.0.0"),
+							Expression: kong.String(translators.CatchAllHTTPExpression),
 						},
 					},
 				},
@@ -377,14 +396,6 @@ func TestIngressRulesFromGRPCRoutesUsingExpressionRoutes(t *testing.T) {
 						ObjectMeta: metav1.ObjectMeta{
 							Namespace: "default",
 							Name:      "grpcroute-no-rules",
-						},
-					}),
-				newResourceFailure(translators.ErrRouteValidationNoMatchRulesOrHostnamesSpecified.Error(),
-					&gatewayv1alpha2.GRPCRoute{
-						TypeMeta: grpcRouteTypeMeta,
-						ObjectMeta: metav1.ObjectMeta{
-							Namespace: "default",
-							Name:      "grpcroute-no-hostnames-no-matches",
 						},
 					}),
 			},

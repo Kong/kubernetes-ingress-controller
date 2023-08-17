@@ -168,13 +168,6 @@ func validateGRPCRoute(grpcRoute *gatewayv1alpha2.GRPCRoute) error {
 		if len(grpcRoute.Spec.Rules) == 0 {
 			return translators.ErrRouteValidationNoRules
 		}
-		// REVIEW: remove this to generate a "catch-all" route from rule with no matches and no hostnames in its parent GRPCRoute.
-		for _, rule := range grpcRoute.Spec.Rules {
-			if len(rule.Matches) == 0 {
-				return translators.ErrRouteValidationNoMatchRulesOrHostnamesSpecified
-			}
-		}
 	}
-
 	return nil
 }

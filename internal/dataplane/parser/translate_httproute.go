@@ -339,6 +339,7 @@ func generateKongRoutesFromHTTPRouteMatches(
 		// but only backends as long as there are hostnames. In this case, we
 		// match all traffic based on the hostname and leave all other routing
 		// options default.
+		// for rules with no hostnames, we generate a "catch-all" route for it.
 		r := kongstate.Route{
 			Ingress: ingressObjectInfo,
 			Route: kong.Route{
@@ -348,14 +349,6 @@ func generateKongRoutesFromHTTPRouteMatches(
 				Tags:         tags,
 			},
 		}
-
-		// however in this case there must actually be some present hostnames
-		// configured for the HTTPRoute or else it's not valid.
-		if len(hostnames) == 0 {
-			return []kongstate.Route{}, translators.ErrRouteValidationNoMatchRulesOrHostnamesSpecified
-		}
-
-		// otherwise apply the hostnames to the route
 		r.Hosts = append(r.Hosts, hostnames...)
 
 		return []kongstate.Route{r}, nil

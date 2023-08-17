@@ -39,9 +39,9 @@ func GenerateKongExpressionRoutesFromHTTPRouteMatches(
 
 	if len(translation.Matches) == 0 {
 		if len(hostnames) == 0 {
-			return []kongstate.Route{}, ErrRouteValidationNoMatchRulesOrHostnamesSpecified
+			r.Expression = kong.String(CatchAllHTTPExpression)
+			return []kongstate.Route{r}, nil
 		}
-
 		hostMatcher := hostMatcherFromHosts(hostnames)
 		atc.ApplyExpression(&r.Route, hostMatcher, 1)
 		return []kongstate.Route{r}, nil
@@ -238,6 +238,15 @@ func SplitHTTPRoute(httproute *gatewayv1beta1.HTTPRoute) []SplitHTTPRouteMatch {
 	splitHTTPRouteByMatch := func(hostname string) []SplitHTTPRouteMatch {
 		ret := []SplitHTTPRouteMatch{}
 		for ruleIndex, rule := range httproute.Spec.Rules {
+			if len(rule.Matches) == 0 {
+				ret = append(ret, SplitHTTPRouteMatch{
+					Source:     httproute,
+					Hostname:   hostname,
+					Match:      gatewayv1beta1.HTTPRouteMatch{},
+					RuleIndex:  ruleIndex,
+					MatchIndex: 0,
+				})
+			}
 			for matchIndex, match := range rule.Matches {
 				ret = append(ret, SplitHTTPRouteMatch{
 					Source:     httproute,
@@ -536,6 +545,12 @@ func KongExpressionRouteFromHTTPRouteMatchWithPriority(
 	matchers = append(matchers, generateMatcherFromHTTPRouteMatch(match.Match))
 
 	atc.ApplyExpression(&r.Route, atc.And(matchers...), httpRouteMatchWithPriority.Priority)
+
+	// generate a "catch-all" route if the generated expression is empty.
+	if r.Expression == nil || len(*r.Expression) == 0 {
+		r.Expression = kong.String(CatchAllHTTPExpression)
+		r.Priority = kong.Int(httpRouteMatchWithPriority.Priority)
+	}
 
 	// translate filters in the rule.
 	if match.RuleIndex < len(httproute.Spec.Rules) {

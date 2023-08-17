@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1692238752478,
+  "lastUpdate": 1692238754356,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -65214,6 +65214,66 @@ window.BENCHMARK_DATA = {
             "value": 0,
             "unit": "allocs/op",
             "extra": "9948532 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "tao.yi@konghq.com",
+            "name": "Tao Yi",
+            "username": "randmonkey"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "13c8d70c411d6d29802fda1a74c6c22ce951a3f0",
+          "message": "fix: generate routes with hostname match only when GRPCRoute rule does not have matches (#4512)\n\n* fix: generate routes with hostname match only when GRPCRoute rule does not have matches\r\n\r\n* add CHANGELOG and move validation of GRPCRoutes to a separate function",
+          "timestamp": "2023-08-17T10:17:56+08:00",
+          "tree_id": "aff41fe578d9bceca95c21dd98fd5746078d7dba",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/13c8d70c411d6d29802fda1a74c6c22ce951a3f0"
+        },
+        "date": 1692238744185,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - ns/op",
+            "value": 77642,
+            "unit": "ns/op",
+            "extra": "15248 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - B/op",
+            "value": 11094,
+            "unit": "B/op",
+            "extra": "15248 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - allocs/op",
+            "value": 12,
+            "unit": "allocs/op",
+            "extra": "15248 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDefaultContentToDBLessConfigConverter_Convert - ns/op",
+            "value": 120,
+            "unit": "ns/op",
+            "extra": "10737054 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDefaultContentToDBLessConfigConverter_Convert - B/op",
+            "value": 0,
+            "unit": "B/op",
+            "extra": "10737054 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDefaultContentToDBLessConfigConverter_Convert - allocs/op",
+            "value": 0,
+            "unit": "allocs/op",
+            "extra": "10737054 times\n2 procs"
           }
         ]
       },

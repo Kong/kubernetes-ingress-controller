@@ -29,7 +29,7 @@ var (
 	updateGolden = flag.Bool("update", false, "update golden files")
 
 	// defaultKongVersion is the default Kong version to use in tests. Can be overridden in a test case.
-	defaultKongVersion = semver.MustParse("3.3.0")
+	defaultKongVersion = semver.MustParse("3.4.0")
 
 	// defaultFeatureFlags is the default set of feature flags to use in tests. Can be overridden in a test case.
 	defaultFeatureFlags = func() parser.FeatureFlags {

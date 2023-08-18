@@ -18,8 +18,10 @@ on:
 env:
   kong-gateway-enterprise-registry: kong/kong-gateway-dev
   kong-gateway-enterprise-tag: latest
+  kong-gateway-enterprise-effective-version: "3.4"
   kong-gateway-oss-registry: kong/kong
   kong-gateway-oss-tag: latest-ubuntu
+  kong-gateway-oss-effective-version: "3.4"
 
 jobs:
   post-comment-in-pr:
@@ -67,8 +69,10 @@ jobs:
         KONG_LICENSE_DATA: ${{ steps.license.outputs.license }}
         TEST_KONG_IMAGE: ${{ env.kong-gateway-enterprise-registry }}
         TEST_KONG_TAG: ${{ env.kong-gateway-enterprise-tag }}
+        TEST_KONG_EFFECTIVE_VERSION: ${{ env.kong-gateway-enterprise-effective-version }}
         TEST_KONG_PULL_USERNAME: ${{ secrets.GHA_DOCKERHUB_PULL_USER }}
         TEST_KONG_PULL_PASSWORD: ${{ secrets.GHA_KONG_ORG_DOCKERHUB_PUBLIC_TOKEN }}
+
 
     - name: collect test coverage
       uses: actions/upload-artifact@v3
@@ -111,6 +115,7 @@ jobs:
         KONG_LICENSE_DATA: ${{ steps.license.outputs.license }}
         TEST_KONG_IMAGE: ${{ env.kong-gateway-enterprise-registry }}
         TEST_KONG_TAG: ${{ env.kong-gateway-enterprise-tag }}
+        TEST_KONG_EFFECTIVE_VERSION: ${{ env.kong-gateway-enterprise-effective-version }}
         TEST_KONG_PULL_USERNAME: ${{ secrets.GHA_DOCKERHUB_PULL_USER }}
         TEST_KONG_PULL_PASSWORD: ${{ secrets.GHA_KONG_ORG_DOCKERHUB_PUBLIC_TOKEN }}
 
@@ -148,6 +153,7 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         TEST_KONG_IMAGE: ${{ env.kong-gateway-oss-registry }}
         TEST_KONG_TAG: ${{ env.kong-gateway-oss-tag }}
+        TEST_KONG_EFFECTIVE_VERSION: ${{ env.kong-gateway-oss-effective-version }}
 
     - name: collect test coverage
       uses: actions/upload-artifact@v3
@@ -184,6 +190,7 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         TEST_KONG_IMAGE: ${{ env.kong-gateway-oss-registry }}
         TEST_KONG_TAG: ${{ env.kong-gateway-oss-tag }}
+        EST_KONG_EFFECTIVE_VERSION: ${{ env.kong-gateway-oss-effective-version }}
 
     - name: collect test coverage
       uses: actions/upload-artifact@v3

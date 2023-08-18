@@ -22,7 +22,6 @@ func TeardownCluster(ctx context.Context, t *testing.T, cluster clusters.Cluster
 	ctx, cancel := context.WithTimeout(ctx, environmentCleanupTimeout)
 	defer cancel()
 
-	t.Logf("INFO: cluster %s is being deleted\n", cluster.Name())
 	assert.NoError(t, RemoveCluster(ctx, cluster))
 }
 

@@ -190,7 +190,7 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         TEST_KONG_IMAGE: ${{ env.kong-gateway-oss-registry }}
         TEST_KONG_TAG: ${{ env.kong-gateway-oss-tag }}
-        EST_KONG_EFFECTIVE_VERSION: ${{ env.kong-gateway-oss-effective-version }}
+        TEST_KONG_EFFECTIVE_VERSION: ${{ env.kong-gateway-oss-effective-version }}
 
     - name: collect test coverage
       uses: actions/upload-artifact@v3

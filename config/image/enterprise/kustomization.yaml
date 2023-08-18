@@ -6,7 +6,7 @@ kind: Component
 images:
 - name: kong
   newName: kong/kong-gateway
-  newTag: '3.3'
+  newTag: '3.4'
 - name: kong-placeholder
   newName: kong/kong-gateway
-  newTag: '3.3'
+  newTag: '3.4'

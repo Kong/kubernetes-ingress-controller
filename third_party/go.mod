@@ -11,7 +11,7 @@ require (
 	github.com/kyoh86/looppointer v0.2.1
 	gotest.tools/gotestsum v1.10.1
 	honnef.co/go/tools v0.4.5
-	k8s.io/code-generator v0.27.4
+	k8s.io/code-generator v0.28.0
 	sigs.k8s.io/controller-runtime/tools/setup-envtest v0.0.0-20230728161957-7f0c6dc440f3
 	sigs.k8s.io/controller-tools v0.12.1
 	sigs.k8s.io/kustomize/kustomize/v5 v5.1.1

@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1692389168009,
+  "lastUpdate": 1692389169491,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -70734,6 +70734,66 @@ window.BENCHMARK_DATA = {
             "value": 0,
             "unit": "allocs/op",
             "extra": "10109750 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "49699333+dependabot[bot]@users.noreply.github.com",
+            "name": "dependabot[bot]",
+            "username": "dependabot[bot]"
+          },
+          "committer": {
+            "email": "jakub.warczarek@konghq.com",
+            "name": "Jakub Warczarek",
+            "username": "programmer04"
+          },
+          "distinct": true,
+          "id": "e915016b4e0d7efbe445563f3664732569b75cc2",
+          "message": "chore(deps): bump sigs.k8s.io/controller-tools in /third_party\n\nBumps [sigs.k8s.io/controller-tools](https://github.com/kubernetes-sigs/controller-tools) from 0.12.1 to 0.13.0.\n- [Release notes](https://github.com/kubernetes-sigs/controller-tools/releases)\n- [Changelog](https://github.com/kubernetes-sigs/controller-tools/blob/master/RELEASE.md)\n- [Commits](https://github.com/kubernetes-sigs/controller-tools/compare/v0.12.1...v0.13.0)\n\n---\nupdated-dependencies:\n- dependency-name: sigs.k8s.io/controller-tools\n  dependency-type: direct:production\n  update-type: version-update:semver-minor\n...\n\nSigned-off-by: dependabot[bot] <support@github.com>",
+          "timestamp": "2023-08-18T22:04:53+02:00",
+          "tree_id": "32076cb58f48b23912c2359aa957a8af2014cd35",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/e915016b4e0d7efbe445563f3664732569b75cc2"
+        },
+        "date": 1692389159820,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - ns/op",
+            "value": 96866,
+            "unit": "ns/op",
+            "extra": "16400 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - B/op",
+            "value": 11096,
+            "unit": "B/op",
+            "extra": "16400 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - allocs/op",
+            "value": 12,
+            "unit": "allocs/op",
+            "extra": "16400 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDefaultContentToDBLessConfigConverter_Convert - ns/op",
+            "value": 93.72,
+            "unit": "ns/op",
+            "extra": "12263347 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDefaultContentToDBLessConfigConverter_Convert - B/op",
+            "value": 0,
+            "unit": "B/op",
+            "extra": "12263347 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDefaultContentToDBLessConfigConverter_Convert - allocs/op",
+            "value": 0,
+            "unit": "allocs/op",
+            "extra": "12263347 times\n2 procs"
           }
         ]
       },

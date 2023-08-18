@@ -496,7 +496,7 @@ func TestDefaultIngressClass(t *testing.T) {
 	}, ingressWait, time.Second)
 
 	t.Log("getting kong proxy IP after LB provisioning")
-	proxyURL = "http://" + getKongProxyIP(ctx, t, env)
+	proxyURLForDefaultIngress := "http://" + getKongProxyIP(ctx, t, env)
 
 	t.Log("creating classless global KongClusterPlugin")
 	kongclusterplugin := &kongv1.KongClusterPlugin{
@@ -518,9 +518,9 @@ func TestDefaultIngressClass(t *testing.T) {
 
 	t.Log("waiting for routes from Ingress to be operational")
 	require.Eventually(t, func() bool {
-		resp, err := helpers.DefaultHTTPClient().Get(fmt.Sprintf("%s/abbosiysaltanati", proxyURL))
+		resp, err := helpers.DefaultHTTPClient().Get(fmt.Sprintf("%s/abbosiysaltanati", proxyURLForDefaultIngress))
 		if err != nil {
-			t.Logf("WARNING: error while waiting for %s: %v", proxyURL, err)
+			t.Logf("WARNING: error while waiting for %s: %v", proxyURLForDefaultIngress, err)
 			return false
 		}
 		defer resp.Body.Close()

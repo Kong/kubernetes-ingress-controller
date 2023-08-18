@@ -3,7 +3,7 @@
 package third_party
 
 import (
-	_ "sigs.k8s.io/kustomize/kustomize/v4"
+	_ "sigs.k8s.io/kustomize/kustomize/v5"
 )
 
-//go:generate go install -modfile go.mod sigs.k8s.io/kustomize/kustomize/v4
+//go:generate go install -modfile go.mod sigs.k8s.io/kustomize/kustomize/v5

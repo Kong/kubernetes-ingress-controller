@@ -205,7 +205,7 @@ func TestRewriteURIAnnotation(t *testing.T) {
 		}
 	}
 
-	validRewriteURIIngress := someIngress("valid_annotation_svc", "/rewrite/$1/xx")
+	validRewriteURIIngress := someIngress("valid_annotation_svc", "/rewrite/${1}/xx")
 	invalidRewriteURIIngress := someIngress("invalid_annotation_svc", "/rewrite/$/xx")
 	t.Run("Ingress rule with rewrite annotation enabled", func(t *testing.T) {
 		s, err := store.NewFakeStore(store.FakeObjects{

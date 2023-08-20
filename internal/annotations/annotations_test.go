@@ -946,10 +946,10 @@ func TestExtractRewriteURI(t *testing.T) {
 			name: "non-empty",
 			args: args{
 				anns: map[string]string{
-					"konghq.com/rewrite": "/foo/$1",
+					"konghq.com/rewrite": "/foo/${1}",
 				},
 			},
-			want:  "/foo/$1",
+			want:  "/foo/${1}",
 			exist: true,
 		},
 	}

@@ -47,7 +47,6 @@ const (
 	FieldHTTPMethod  StringField = "http.method"
 	FieldHTTPHost    StringField = "http.host"
 	FieldHTTPPath    StringField = "http.path"
-	FieldNetDstIP    StringField = "net.dst.ip"
 )
 
 // IntField is defined for fields with constant name and having integer type.

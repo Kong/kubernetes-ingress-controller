@@ -395,18 +395,21 @@ type runeType int
 const (
 	runeTypeEscape runeType = iota
 	runeTypeMark
+	runeTypeBrace
 	runeTypeDigit
 	runeTypePlain
 )
 
 // generateRewriteURIConfig parses uri with SM of four states.
-// `runeTypeEscape` indicates `\` encountered and `$` expected, the SM state
-// will transfer to `runeTypePlain`.
-// `runeTypeMark` indicates `$` encountered and one or more digits expected,
-// the SM state will transfer to `runeTypeDigit`.
-// `runeTypeDigit` indicates at least one digit encountered. If the type of following
-// character is still digit, the SM state will remain unchanged. Otherwise, a new
-// capture group will be created and the SM state will transfer to `runeTypePlain`.
+// `runeTypeEscape` indicates `\` encountered and `$` expected, the SM state will transfer
+// to `runeTypePlain`.
+// `runeTypeMark` indicates `$` encountered and `{` expected, the SM state will transfer
+// to `runeTypeBrace`.
+// `runeTypeBrace` indicates `{` encountered and digit expected, the SM state will transfer
+// to `runeTypeDigit`.
+// `runeTypeDigit` indicates digit encountered and digit or `{` expected. If the following
+// character is still digit, the SM state will remain unchanged. Otherwise, a new capture
+// group will be created and the SM state will transfer to `runeTypePlain`.
 // `runeTypePlain` indicates the following character is plain text other than `$` and `\`.
 // The former will cause the SM state to transfer to `runeTypeMark` and the latter will
 // cause the SM state to transfer to `runeTypeEscape`.
@@ -424,11 +427,18 @@ func generateRewriteURIConfig(uri string) (string, error) {
 			lastRuneType = runeTypePlain
 
 		case runeTypeMark:
-			if !unicode.IsDigit(char) {
+			if char != '{' {
 				return "", fmt.Errorf("unexpected %c at pos %d", char, i)
 			}
 
 			out.WriteString("$(uri_captures[")
+			lastRuneType = runeTypeBrace
+
+		case runeTypeBrace:
+			if !unicode.IsDigit(char) {
+				return "", fmt.Errorf("unexpected %c at pos %d", char, i)
+			}
+
 			out.WriteRune(char)
 			lastRuneType = runeTypeDigit
 
@@ -438,8 +448,12 @@ func generateRewriteURIConfig(uri string) (string, error) {
 				break
 			}
 
+			if char != '}' {
+				return "", fmt.Errorf("unexpected %c at pos %d", char, i)
+			}
+
 			out.WriteString("])")
-			fallthrough
+			lastRuneType = runeTypePlain
 
 		case runeTypePlain:
 			if char == '$' {
@@ -448,17 +462,12 @@ func generateRewriteURIConfig(uri string) (string, error) {
 				lastRuneType = runeTypeEscape
 			} else {
 				out.WriteRune(char)
-				lastRuneType = runeTypePlain
 			}
 		}
 	}
 
-	if lastRuneType == runeTypeEscape || lastRuneType == runeTypeMark {
+	if lastRuneType != runeTypePlain {
 		return "", fmt.Errorf("unexpected end of string")
-	}
-
-	if lastRuneType == runeTypeDigit {
-		out.WriteString("])")
 	}
 
 	return out.String(), nil

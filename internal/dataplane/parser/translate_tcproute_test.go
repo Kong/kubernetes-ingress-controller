@@ -226,7 +226,7 @@ func TestIngressRulesFromTCPRoutesUsingExpressionRoutes(t *testing.T) {
 
 			result := parser.ingressRulesFromTCPRoutes()
 			// check services
-			require.Equal(t, len(tc.expectedKongServices), len(result.ServiceNameToServices),
+			require.Len(t, result.ServiceNameToServices, len(tc.expectedKongServices),
 				"should have expected number of services")
 			for _, expectedKongService := range tc.expectedKongServices {
 				kongService, ok := result.ServiceNameToServices[*expectedKongService.Name]
@@ -234,7 +234,7 @@ func TestIngressRulesFromTCPRoutesUsingExpressionRoutes(t *testing.T) {
 				require.Equal(t, expectedKongService.Backends, kongService.Backends)
 				// check routes
 				expectedKongRoutes := tc.expectedKongRoutes[*kongService.Name]
-				require.Equal(t, len(expectedKongRoutes), len(kongService.Routes))
+				require.Len(t, kongService.Routes, len(expectedKongRoutes))
 
 				kongRouteNameToRoute := lo.SliceToMap(kongService.Routes, func(r kongstate.Route) (string, kongstate.Route) {
 					return *r.Name, r
@@ -249,7 +249,7 @@ func TestIngressRulesFromTCPRoutesUsingExpressionRoutes(t *testing.T) {
 			}
 			// check translation failures
 			translationFailures := failureCollector.PopResourceFailures()
-			require.Equal(t, len(tc.expectedFailures), len(translationFailures))
+			require.Len(t, translationFailures, len(tc.expectedFailures))
 			for _, expectedTranslationFailure := range tc.expectedFailures {
 				expectedFailureMessage := expectedTranslationFailure.Message()
 				require.True(t, lo.ContainsBy(translationFailures, func(failure failures.ResourceFailure) bool {

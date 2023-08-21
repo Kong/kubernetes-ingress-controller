@@ -302,8 +302,7 @@ bench:
 test.all: test.unit test.envtest test.integration test.conformance
 
 .PHONY: test.conformance
-test.conformance: go-junit-report
-	@./scripts/check-container-environment.sh
+test.conformance: _check.container.environment go-junit-report
 	@TEST_DATABASE_MODE="off" \
 		GOFLAGS="-tags=conformance_tests" \
 		go test \

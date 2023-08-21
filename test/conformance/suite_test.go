@@ -23,7 +23,9 @@ import (
 	"k8s.io/client-go/kubernetes"
 
 	testutils "github.com/kong/kubernetes-ingress-controller/v2/internal/util/test"
+	"github.com/kong/kubernetes-ingress-controller/v2/test"
 	"github.com/kong/kubernetes-ingress-controller/v2/test/consts"
+	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/helpers"
 	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/testenv"
 )
 
@@ -43,6 +45,10 @@ func expressionRoutesEnabled() bool {
 }
 
 func TestMain(m *testing.M) {
+	var code int
+	defer func() {
+		os.Exit(code)
+	}()
 	var cancel context.CancelFunc
 	ctx, cancel = context.WithCancel(context.Background())
 	defer cancel()
@@ -80,12 +86,6 @@ func TestMain(m *testing.M) {
 	env, err = builder.Build(ctx)
 	exitOnErr(err)
 
-	defer func() {
-		if existingCluster == "" {
-			exitOnErr(env.Cleanup(ctx))
-		}
-	}()
-
 	fmt.Println("INFO: waiting for cluster and addons to be ready")
 	envReadyCtx, envReadyCancel := context.WithTimeout(ctx, testenv.EnvironmentReadyTimeout())
 	defer envReadyCancel()
@@ -95,9 +95,14 @@ func TestMain(m *testing.M) {
 	// let's ensure that conformance related namespaced are deleted from the cluster.
 	exitOnErr(ensureConformanceTestsNamespacesAreNotPresent(ctx, env.Cluster().Client()))
 
-	code := m.Run()
-
-	os.Exit(code)
+	code = m.Run()
+	if testenv.IsCI() {
+		fmt.Printf("INFO: running in ephemeral CI environment, skipping cluster %s teardown\n", env.Cluster().Name())
+	} else {
+		ctx, cancel := context.WithTimeout(context.Background(), test.EnvironmentCleanupTimeout)
+		defer cancel()
+		exitOnErr(helpers.RemoveCluster(ctx, env.Cluster()))
+	}
 }
 
 func ensureConformanceTestsNamespacesAreNotPresent(ctx context.Context, client *kubernetes.Clientset) error {

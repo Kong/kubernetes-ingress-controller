@@ -24,6 +24,7 @@ import (
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/store"
 	testutils "github.com/kong/kubernetes-ingress-controller/v2/internal/util/test"
+	"github.com/kong/kubernetes-ingress-controller/v2/test"
 	"github.com/kong/kubernetes-ingress-controller/v2/test/consts"
 	"github.com/kong/kubernetes-ingress-controller/v2/test/helpers/certificate"
 	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/helpers"
@@ -233,10 +234,11 @@ func TestMain(m *testing.M) {
 	fmt.Printf("INFO: testing environment is ready KUBERNETES_VERSION=(%v): running tests\n", clusterVersion)
 	code = m.Run()
 
-	if testenv.KeepTestCluster() == "" && testenv.ExistingClusterName() == "" {
-		ctx, cancel := context.WithTimeout(context.Background(), environmentCleanupTimeout)
+	if testenv.IsCI() {
+		fmt.Printf("INFO: running in ephemeral CI environment, skipping cluster %s teardown\n", env.Cluster().Name())
+	} else {
+		ctx, cancel := context.WithTimeout(context.Background(), test.EnvironmentCleanupTimeout)
 		defer cancel()
-		fmt.Printf("INFO: cluster %s is being deleted\n", env.Cluster().Name())
-		exitOnErr(ctx, env.Cleanup(ctx))
+		exitOnErr(ctx, helpers.RemoveCluster(ctx, env.Cluster()))
 	}
 }

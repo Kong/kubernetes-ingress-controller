@@ -30,7 +30,7 @@ func Setup(ctx context.Context, t *testing.T, env environments.Environment) (*co
 		// a separate context.
 		ctx := context.Background()
 
-		DumpDiagnosticsIfFailed(ctx, t, cluster)
+		dumpDiagnosticsIfFailed(ctx, t, cluster)
 		assert.NoError(t, cleaner.Cleanup(ctx))
 	})
 

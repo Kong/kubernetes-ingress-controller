@@ -74,6 +74,13 @@ Adding a new version? You'll need three changes:
 
 ## Unreleased
 
+### Added
+
+- Added translator to translate `TCPRoute` in gateway APIs to
+  expression based kong routes. Similar to ingresses, this translator is only
+  enabled when feature gate `ExpressionRoutes` is turned on and the managed
+  Kong gateway runs in router flavor `expressions`.
+  [#4385](https://github.com/Kong/kubernetes-ingress-controller/pull/4385)
 
 ### Changes
 

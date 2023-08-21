@@ -63,6 +63,7 @@ const (
 	HeadersKey           = "/headers"
 	PathHandlingKey      = "/path-handling"
 	UserTagKey           = "/tags"
+	RewriteURIKey        = "/rewrite"
 
 	// GatewayClassUnmanagedAnnotationSuffix is an annotation used on a Gateway resource to
 	// indicate that the GatewayClass should be reconciled according to unmanaged
@@ -354,4 +355,10 @@ func ExtractUserTags(anns map[string]string) []string {
 		return []string{}
 	}
 	return strings.Split(val, ",")
+}
+
+// ExtractRewriteURI extracts the rewrite annotation value.
+func ExtractRewriteURI(anns map[string]string) (string, bool) {
+	s, ok := anns[AnnotationPrefix+RewriteURIKey]
+	return s, ok
 }

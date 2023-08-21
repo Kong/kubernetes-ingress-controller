@@ -5,6 +5,7 @@ import (
 	"regexp"
 	"strings"
 	"time"
+	"unicode"
 
 	"github.com/kong/go-kong/kong"
 	"github.com/samber/lo"
@@ -387,4 +388,119 @@ func MaybePrependRegexPrefixForIngressV1Fn(ingress *netv1.Ingress, applyLegacyHe
 	return func(path string) *string {
 		return lo.ToPtr(MaybePrependRegexPrefix(path, regexPrefix, applyLegacyHeuristic))
 	}
+}
+
+type runeType int
+
+const (
+	runeTypeEscape runeType = iota
+	runeTypeMark
+	runeTypeBrace
+	runeTypeDigit
+	runeTypePlain
+)
+
+// generateRewriteURIConfig parses uri with SM of four states.
+// `runeTypeEscape` indicates `\` encountered and `$` expected, the SM state will transfer
+// to `runeTypePlain`.
+// `runeTypeMark` indicates `$` encountered and `{` expected, the SM state will transfer
+// to `runeTypeBrace`.
+// `runeTypeBrace` indicates `{` encountered and digit expected, the SM state will transfer
+// to `runeTypeDigit`.
+// `runeTypeDigit` indicates digit encountered and digit or `{` expected. If the following
+// character is still digit, the SM state will remain unchanged. Otherwise, a new capture
+// group will be created and the SM state will transfer to `runeTypePlain`.
+// `runeTypePlain` indicates the following character is plain text other than `$` and `\`.
+// The former will cause the SM state to transfer to `runeTypeMark` and the latter will
+// cause the SM state to transfer to `runeTypeEscape`.
+func generateRewriteURIConfig(uri string) (string, error) {
+	out := strings.Builder{}
+	lastRuneType := runeTypePlain
+	for i, char := range uri {
+		switch lastRuneType {
+		case runeTypeEscape:
+			if char != '$' {
+				return "", fmt.Errorf("unexpected %c at pos %d", char, i)
+			}
+
+			out.WriteRune(char)
+			lastRuneType = runeTypePlain
+
+		case runeTypeMark:
+			if char != '{' {
+				return "", fmt.Errorf("unexpected %c at pos %d", char, i)
+			}
+
+			out.WriteString("$(uri_captures[")
+			lastRuneType = runeTypeBrace
+
+		case runeTypeBrace:
+			if !unicode.IsDigit(char) {
+				return "", fmt.Errorf("unexpected %c at pos %d", char, i)
+			}
+
+			out.WriteRune(char)
+			lastRuneType = runeTypeDigit
+
+		case runeTypeDigit:
+			if unicode.IsDigit(char) {
+				out.WriteRune(char)
+				break
+			}
+
+			if char != '}' {
+				return "", fmt.Errorf("unexpected %c at pos %d", char, i)
+			}
+
+			out.WriteString("])")
+			lastRuneType = runeTypePlain
+
+		case runeTypePlain:
+			if char == '$' {
+				lastRuneType = runeTypeMark
+			} else if char == '\\' {
+				lastRuneType = runeTypeEscape
+			} else {
+				out.WriteRune(char)
+			}
+		}
+	}
+
+	if lastRuneType != runeTypePlain {
+		return "", fmt.Errorf("unexpected end of string")
+	}
+
+	return out.String(), nil
+}
+
+// MaybeRewriteURI appends a request-transformer plugin if the value of konghq.com/rewrite annotation is valid.
+func MaybeRewriteURI(service *kongstate.Service, rewriteURIEnable bool) error {
+	rewriteURI, exists := annotations.ExtractRewriteURI(service.Parent.GetAnnotations())
+	if !exists {
+		return nil
+	}
+
+	if !rewriteURIEnable {
+		return fmt.Errorf("konghq.com/rewrite annotation not supported when rewrite uris disabled")
+	}
+
+	if rewriteURI == "" {
+		rewriteURI = "/"
+	}
+
+	config, err := generateRewriteURIConfig(rewriteURI)
+	if err != nil {
+		return err
+	}
+
+	service.Plugins = append(service.Plugins, kong.Plugin{
+		Name: kong.String("request-transformer"),
+		Config: kong.Configuration{
+			"replace": map[string]string{
+				"uri": config,
+			},
+		},
+	})
+
+	return nil
 }

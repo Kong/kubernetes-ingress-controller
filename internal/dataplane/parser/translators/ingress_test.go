@@ -1,6 +1,7 @@
 package translators
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -1591,4 +1592,203 @@ func TestMaybePrependRegexPrefixForIngressV1Fn(t *testing.T) {
 		result := generatedMaybePrependRegexPrefixFn("/~/v1/api/packages")
 		require.Equal(t, "~/v1/api/packages", *result)
 	})
+}
+
+func TestGenerateRewriteURIConfig(t *testing.T) {
+	testCases := []struct {
+		name          string
+		uri           string
+		expectedError error
+		expectedURI   string
+	}{
+		{
+			name:        "no capture group",
+			uri:         "/bar/xx/yy",
+			expectedURI: "/bar/xx/yy",
+		},
+		{
+			name:        "valid single digit capture group",
+			uri:         "/bar/${1}xx/yy",
+			expectedURI: "/bar/$(uri_captures[1])xx/yy",
+		},
+		{
+			name:        "valid multiple digits capture group",
+			uri:         "/bar/${12}xx/yy",
+			expectedURI: "/bar/$(uri_captures[12])xx/yy",
+		},
+		{
+			name:        "valid multiple capture groups",
+			uri:         "/bar/${1}xx/${12}yy",
+			expectedURI: "/bar/$(uri_captures[1])xx/$(uri_captures[12])yy",
+		},
+		{
+			name:        "valid multiple capture groups (end with capture group)",
+			uri:         "/bar/${1}xx/${12}",
+			expectedURI: "/bar/$(uri_captures[1])xx/$(uri_captures[12])",
+		},
+		{
+			name:        "valid multiple capture groups (adjacent capture groups)",
+			uri:         "/bar/${11}${12}",
+			expectedURI: "/bar/$(uri_captures[11])$(uri_captures[12])",
+		},
+		{
+			name:          "no left brace following $",
+			uri:           "/bar/$1xxy",
+			expectedError: errors.New("unexpected 1 at pos 6"),
+			expectedURI:   "",
+		},
+		{
+			name:          "right brace following left brace",
+			uri:           "/bar/${}11",
+			expectedError: errors.New("unexpected } at pos 7"),
+			expectedURI:   "",
+		},
+		{
+			name:          "no right brace following digit",
+			uri:           "/bar/${12xxy",
+			expectedError: errors.New("unexpected x at pos 9"),
+			expectedURI:   "",
+		},
+		{
+			name:        "digits without $",
+			uri:         "/bar/123${12}",
+			expectedURI: "/bar/123$(uri_captures[12])",
+		},
+		{
+			name:        "digits after capture group",
+			uri:         "/bar/123${12}233",
+			expectedURI: "/bar/123$(uri_captures[12])233",
+		},
+		{
+			name:          "$ at end",
+			uri:           "/bar/xxxx$",
+			expectedError: errors.New("unexpected end of string"),
+			expectedURI:   "",
+		},
+		{
+			name:          "left brace at end",
+			uri:           "/bar/xxxx${",
+			expectedError: errors.New("unexpected end of string"),
+			expectedURI:   "",
+		},
+		{
+			name:          "digit at end",
+			uri:           "/bar/xxxx${1",
+			expectedError: errors.New("unexpected end of string"),
+			expectedURI:   "",
+		},
+		{
+			name:        "escaped $",
+			uri:         "/bar/xxxx\\$12",
+			expectedURI: "/bar/xxxx$12",
+		},
+		{
+			name:        "escaped $ at end",
+			uri:         "/bar/xxxx\\$",
+			expectedURI: "/bar/xxxx$",
+		},
+		{
+			name:        "escaped $ after capture group",
+			uri:         "/bar/xxxx${13}\\$x",
+			expectedURI: "/bar/xxxx$(uri_captures[13])$x",
+		},
+		{
+			name:        "mixed with escaped and unescaped $",
+			uri:         "/bar/xxxx\\$12/fd${33}",
+			expectedURI: "/bar/xxxx$12/fd$(uri_captures[33])",
+		},
+		{
+			name:          "non $ after \\",
+			uri:           "/bar/xxxx\\n",
+			expectedError: errors.New("unexpected n at pos 10"),
+			expectedURI:   "",
+		},
+		{
+			name:          "\\ at end",
+			uri:           "/bar/xxxx\\",
+			expectedError: errors.New("unexpected end of string"),
+			expectedURI:   "",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			uri, err := generateRewriteURIConfig(tc.uri)
+			require.Equal(t, tc.expectedError, err)
+			require.Equal(t, tc.expectedURI, uri)
+		})
+	}
+}
+
+func TestMaybeRewriteURI(t *testing.T) {
+	testCases := []struct {
+		name            string
+		service         kongstate.Service
+		expectedError   error
+		expectedPlugins []kong.Plugin
+	}{
+		{
+			name: "konghq.com/rewrite annotation is not exist",
+			service: kongstate.Service{
+				Parent: &netv1.Ingress{},
+			},
+			expectedError:   nil,
+			expectedPlugins: nil,
+		},
+		{
+			name: "konghq.com/rewrite annotation is empty",
+			service: kongstate.Service{
+				Parent: &netv1.Ingress{
+					ObjectMeta: metav1.ObjectMeta{
+						Annotations: map[string]string{
+							annotations.AnnotationPrefix + annotations.RewriteURIKey: "",
+						},
+					},
+				},
+			},
+			expectedError: nil,
+			expectedPlugins: []kong.Plugin{
+				{
+					Name: kong.String("request-transformer"),
+					Config: kong.Configuration{
+						"replace": map[string]string{
+							"uri": "/",
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "valid rewrite uri",
+			service: kongstate.Service{
+				Parent: &netv1.Ingress{
+					ObjectMeta: metav1.ObjectMeta{
+						Annotations: map[string]string{
+							annotations.AnnotationPrefix + annotations.RewriteURIKey: "/xxx${11}yy/",
+						},
+					},
+				},
+			},
+			expectedError: nil,
+			expectedPlugins: []kong.Plugin{
+				{
+					Name: kong.String("request-transformer"),
+					Config: kong.Configuration{
+						"replace": map[string]string{
+							"uri": "/xxx$(uri_captures[11])yy/",
+						},
+					},
+				},
+			},
+		},
+	}
+
+	for i := range testCases {
+		tc := testCases[i]
+		t.Run(tc.name, func(t *testing.T) {
+			err := MaybeRewriteURI(&tc.service, true)
+			require.Equal(t, tc.expectedError, err)
+			require.Equal(t, tc.expectedPlugins, tc.service.Plugins)
+		})
+	}
 }

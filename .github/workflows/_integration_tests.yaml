@@ -68,6 +68,12 @@ jobs:
           - name: postgres-fill-ids
             test: postgres
             feature_gates: "GatewayAlpha=true,FillIDs=true"
+          - name: dbless-rewrite-uris
+            test: dbless
+            feature_gates: "RewriteURIs=true"
+          - name: postgres-rewrite-uris
+            test: postgres
+            feature_gates: "RewriteURIs=true"
 
     steps:
       - uses: Kong/kong-license@master

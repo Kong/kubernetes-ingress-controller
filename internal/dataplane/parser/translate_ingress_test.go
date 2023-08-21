@@ -4,6 +4,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/kong/go-kong/kong"
+	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	netv1 "k8s.io/api/networking/v1"
@@ -163,4 +165,108 @@ func TestGetDefaultBackendService(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestRewriteURIAnnotation(t *testing.T) {
+	someIngress := func(name, rewriteURI string) netv1.Ingress {
+		return netv1.Ingress{
+			TypeMeta: metav1.TypeMeta{Kind: "Ingress"},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      name,
+				Namespace: "foo-namespace",
+				Annotations: map[string]string{
+					annotations.IngressClassKey:                              annotations.DefaultIngressClass,
+					annotations.AnnotationPrefix + annotations.RewriteURIKey: rewriteURI,
+				},
+			},
+			Spec: netv1.IngressSpec{
+				Rules: []netv1.IngressRule{
+					{
+						Host: "example.com",
+						IngressRuleValue: netv1.IngressRuleValue{
+							HTTP: &netv1.HTTPIngressRuleValue{
+								Paths: []netv1.HTTPIngressPath{
+									{
+										Path:     "/~/api/(.*)",
+										PathType: lo.ToPtr(netv1.PathTypePrefix),
+										Backend: netv1.IngressBackend{
+											Service: &netv1.IngressServiceBackend{
+												Name: name,
+												Port: netv1.ServiceBackendPort{Number: 80},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		}
+	}
+
+	validRewriteURIIngress := someIngress("valid_annotation_svc", "/rewrite/${1}/xx")
+	invalidRewriteURIIngress := someIngress("invalid_annotation_svc", "/rewrite/$/xx")
+	t.Run("Ingress rule with rewrite annotation enabled", func(t *testing.T) {
+		s, err := store.NewFakeStore(store.FakeObjects{
+			IngressesV1: []*netv1.Ingress{
+				&invalidRewriteURIIngress,
+				&validRewriteURIIngress,
+			},
+		})
+		require.NoError(t, err)
+
+		p := mustNewParser(t, s)
+		p.featureFlags.RewriteURIs = true
+
+		rules := p.ingressRulesFromIngressV1().ServiceNameToServices
+		require.Len(t, rules, 1)
+
+		for _, svc := range rules {
+			require.Equal(t, []kong.Plugin{
+				{
+					Name: kong.String("request-transformer"),
+					Config: kong.Configuration{
+						"replace": map[string]string{
+							"uri": "/rewrite/$(uri_captures[1])/xx",
+						},
+					},
+				},
+			}, svc.Plugins)
+		}
+
+		errs := p.failuresCollector.PopResourceFailures()
+		require.Len(t, errs, 1)
+		require.Equal(t, "unexpected / at pos 10", errs[0].Message())
+	})
+
+	t.Run("Ingress rule with rewrite annotation disabled", func(t *testing.T) {
+		emptyRewriteURIIngress := someIngress("empty_annotation_svc", "")
+		delete(emptyRewriteURIIngress.ObjectMeta.Annotations, annotations.AnnotationPrefix+annotations.RewriteURIKey)
+
+		s, err := store.NewFakeStore(store.FakeObjects{
+			IngressesV1: []*netv1.Ingress{
+				&invalidRewriteURIIngress,
+				&validRewriteURIIngress,
+				&emptyRewriteURIIngress,
+			},
+		})
+		require.NoError(t, err)
+
+		p := mustNewParser(t, s)
+
+		rules := p.ingressRulesFromIngressV1().ServiceNameToServices
+		require.Len(t, rules, 1)
+
+		for _, svc := range rules {
+			require.Nil(t, svc.Plugins)
+		}
+
+		errs := p.failuresCollector.PopResourceFailures()
+		require.Len(t, errs, 2)
+
+		for _, err := range errs {
+			require.Equal(t, "konghq.com/rewrite annotation not supported when rewrite uris disabled", err.Message())
+		}
+	})
 }

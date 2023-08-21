@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1692607669264,
+  "lastUpdate": 1692607671165,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -71934,6 +71934,66 @@ window.BENCHMARK_DATA = {
             "value": 0,
             "unit": "allocs/op",
             "extra": "8946576 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "tao.yi@konghq.com",
+            "name": "Tao Yi",
+            "username": "randmonkey"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "79a75933bc35e6ed2c2820dcfdfee58287de130c",
+          "message": "test: update helm chart version to the latest (#4511)\n\n* test: update helm chart version to 2.26.3\r\n\r\n* set effective versions in github workflow files\r\n\r\n* update instructions of release issue to make sure effective version of kong updated",
+          "timestamp": "2023-08-21T10:46:34+02:00",
+          "tree_id": "476601e54c9d37c433fac01b672335641320c195",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/79a75933bc35e6ed2c2820dcfdfee58287de130c"
+        },
+        "date": 1692607661090,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - ns/op",
+            "value": 71788,
+            "unit": "ns/op",
+            "extra": "18676 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - B/op",
+            "value": 11098,
+            "unit": "B/op",
+            "extra": "18676 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - allocs/op",
+            "value": 12,
+            "unit": "allocs/op",
+            "extra": "18676 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDefaultContentToDBLessConfigConverter_Convert - ns/op",
+            "value": 98.67,
+            "unit": "ns/op",
+            "extra": "10742810 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDefaultContentToDBLessConfigConverter_Convert - B/op",
+            "value": 0,
+            "unit": "B/op",
+            "extra": "10742810 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDefaultContentToDBLessConfigConverter_Convert - allocs/op",
+            "value": 0,
+            "unit": "allocs/op",
+            "extra": "10742810 times\n2 procs"
           }
         ]
       },

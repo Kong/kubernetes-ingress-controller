@@ -66,6 +66,7 @@ Features that reach GA and over time become stable will be removed from this tab
 | CombinedServices | `false` | Alpha | 2.10.0  | TBD   |
 | CombinedServices | `true`  | Beta  | 2.11.0  | TBD   |
 | FillIDs          | `false` | Alpha | 2.10.0  | 3.0.0 |
+| RewriteURIs      | `false` | Alpha | 2.12.0  | TBD   |
 
 **NOTE**: The `Gateway` feature gate refers to [Gateway
  API](https://github.com/kubernetes-sigs/gateway-api) APIs which are in

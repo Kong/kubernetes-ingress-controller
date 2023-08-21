@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1692601390659,
+  "lastUpdate": 1692601615037,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -71214,6 +71214,66 @@ window.BENCHMARK_DATA = {
             "value": 0,
             "unit": "allocs/op",
             "extra": "12876889 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "1181591811hzr@gmail.com",
+            "name": "ZongRun",
+            "username": "rodman10"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "af6c2fd361d683789a79e1bd2999605acecfb9c4",
+          "message": "feat: support expression route for TCPRoute. (#4385)\n\n* feat: support expression route for tcproute.\r\n\r\n* tests: add unittest.\r\n\r\n* refactor: rename source file and function.\r\n\r\n* bugfix: clear destinations field.\r\n\r\n* tests: enable expression flavor of tcproute.\r\n\r\n* tests: fix tests.\r\n\r\n* style: change assert style.\r\n\r\n* style: remove unused const.\r\n\r\n* docs: update CHANGELOG.",
+          "timestamp": "2023-08-21T15:05:27+08:00",
+          "tree_id": "ea5bbe6b80e2a82683a25db370177626d34b087f",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/af6c2fd361d683789a79e1bd2999605acecfb9c4"
+        },
+        "date": 1692601605445,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - ns/op",
+            "value": 80854,
+            "unit": "ns/op",
+            "extra": "14936 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - B/op",
+            "value": 11096,
+            "unit": "B/op",
+            "extra": "14936 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - allocs/op",
+            "value": 12,
+            "unit": "allocs/op",
+            "extra": "14936 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDefaultContentToDBLessConfigConverter_Convert - ns/op",
+            "value": 128.9,
+            "unit": "ns/op",
+            "extra": "8824550 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDefaultContentToDBLessConfigConverter_Convert - B/op",
+            "value": 0,
+            "unit": "B/op",
+            "extra": "8824550 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDefaultContentToDBLessConfigConverter_Convert - allocs/op",
+            "value": 0,
+            "unit": "allocs/op",
+            "extra": "8824550 times\n2 procs"
           }
         ]
       }

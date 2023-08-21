@@ -5,16 +5,9 @@ package e2e
 import (
 	"bytes"
 	"context"
-	"crypto/ecdsa"
-	"crypto/elliptic"
-	"crypto/rand"
 	"crypto/tls"
-	"crypto/x509"
-	"crypto/x509/pkix"
-	"encoding/pem"
 	"errors"
 	"fmt"
-	"math/big"
 	"net/http"
 	"os"
 	"os/exec"
@@ -40,6 +33,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/konnect/roles"
 	rg "github.com/kong/kubernetes-ingress-controller/v2/internal/konnect/runtimegroups"
 	rgc "github.com/kong/kubernetes-ingress-controller/v2/internal/konnect/runtimegroupsconfig"
+	"github.com/kong/kubernetes-ingress-controller/v2/test/helpers/certificate"
 	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/helpers"
 )
 
@@ -284,47 +278,16 @@ func createClientCertificate(ctx context.Context, t *testing.T, rgID string) (ce
 	)
 	require.NoError(t, err)
 
-	priv, err := ecdsa.GenerateKey(elliptic.P521(), rand.Reader)
-	require.NoError(t, err)
-	template := x509.Certificate{
-		SerialNumber: big.NewInt(1),
-		Subject: pkix.Name{
-			Organization: []string{"Kong Inc."},
-		},
-		NotBefore:             time.Now(),
-		NotAfter:              time.Now().Add(time.Hour * 24 * 180),
-		KeyUsage:              x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,
-		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
-		BasicConstraintsValid: true,
-	}
-
-	derBytes, err := x509.CreateCertificate(rand.Reader, &template, &template, &priv.PublicKey, priv)
-	require.NoError(t, err)
-
-	out := &bytes.Buffer{}
-	err = pem.Encode(out, &pem.Block{Type: "CERTIFICATE", Bytes: derBytes})
-	require.NoError(t, err)
-	cert := out.String()
-
-	out.Reset()
-	err = pem.Encode(out, pemBlockForKey(t, priv))
-	require.NoError(t, err)
-	key := out.String()
+	cert, key := certificate.MustGenerateSelfSignedCertPEMFormat()
 
 	t.Log("creating client certificate in Konnect")
 	resp, err := rgConfigClient.PostDpClientCertificatesWithResponse(ctx, rgc.PostDpClientCertificatesJSONRequestBody{
-		Cert: cert,
+		Cert: string(cert),
 	})
 	require.NoError(t, err)
 	require.Equalf(t, http.StatusCreated, resp.StatusCode(), "failed creating client certificate: %s", string(resp.Body))
 
-	return cert, key
-}
-
-func pemBlockForKey(t *testing.T, k *ecdsa.PrivateKey) *pem.Block {
-	b, err := x509.MarshalECPrivateKey(k)
-	require.NoError(t, err)
-	return &pem.Block{Type: "EC PRIVATE KEY", Bytes: b}
+	return string(cert), string(key)
 }
 
 // createKonnectClientSecretAndConfigMap creates a Secret with client TLS certificate that is used by KIC to communicate

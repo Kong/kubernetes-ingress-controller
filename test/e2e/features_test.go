@@ -44,11 +44,6 @@ import (
 // conflicts with the integration configuration.
 // -----------------------------------------------------------------------------
 
-// TLSPair is a PEM certificate+key pair.
-type TLSPair struct {
-	Key, Cert string
-}
-
 const (
 	// webhookKINDConfig is a KIND configuration used for TestWebhookUpdate. KIND, when running in GitHub Actions, is
 	// a bit wonky with handling Secret updates, and they do not propagate to container filesystems in a reasonable

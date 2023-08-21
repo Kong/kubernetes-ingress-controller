@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1692609990583,
+  "lastUpdate": 1692612487172,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -72294,6 +72294,66 @@ window.BENCHMARK_DATA = {
             "value": 0,
             "unit": "allocs/op",
             "extra": "10113348 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "tao.yi@konghq.com",
+            "name": "Tao Yi",
+            "username": "randmonkey"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "3155151bf702b18d2acc5028731b065a4498190d",
+          "message": "docs: add RewriteURI to `FEATURE_GATES.md` (#4544)\n\n* add RewriteURI to feature gate docs\r\n\r\n* fix feature gates used in integration tests",
+          "timestamp": "2023-08-21T10:04:37Z",
+          "tree_id": "1fa6a43dda5208f3899ff2529f0e4ecbf09dd5f0",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/3155151bf702b18d2acc5028731b065a4498190d"
+        },
+        "date": 1692612478472,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - ns/op",
+            "value": 70607,
+            "unit": "ns/op",
+            "extra": "17250 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - B/op",
+            "value": 11097,
+            "unit": "B/op",
+            "extra": "17250 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - allocs/op",
+            "value": 12,
+            "unit": "allocs/op",
+            "extra": "17250 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDefaultContentToDBLessConfigConverter_Convert - ns/op",
+            "value": 98.02,
+            "unit": "ns/op",
+            "extra": "13255244 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDefaultContentToDBLessConfigConverter_Convert - B/op",
+            "value": 0,
+            "unit": "B/op",
+            "extra": "13255244 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDefaultContentToDBLessConfigConverter_Convert - allocs/op",
+            "value": 0,
+            "unit": "allocs/op",
+            "extra": "13255244 times\n2 procs"
           }
         ]
       }

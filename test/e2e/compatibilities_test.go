@@ -83,6 +83,7 @@ func ensureGatewayDeployedWithRouterFlavor(
 
 		allPodsMatch := true
 		for _, pod := range podList.Items {
+			pod := pod
 			proxyContainer := getContainerInPodSpec(&pod.Spec, proxyContainerName)
 			if proxyContainer == nil {
 				t.Logf("proxy container not found for Pod %s", pod.Name)

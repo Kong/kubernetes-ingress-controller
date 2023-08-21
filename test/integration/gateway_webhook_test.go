@@ -88,7 +88,8 @@ func TestGatewayValidationWebhook(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			_, gotCreateErr := gatewayClient.GatewayV1beta1().Gateways(ns.Name).Create(ctx, &tt.createdGW, metav1.CreateOptions{})
+			gw := tt.createdGW
+			_, gotCreateErr := gatewayClient.GatewayV1beta1().Gateways(ns.Name).Create(ctx, &gw, metav1.CreateOptions{})
 			if tt.wantCreateErr {
 				require.Error(t, gotCreateErr)
 				require.Contains(t, gotCreateErr.Error(), tt.wantCreateErrSubstring)

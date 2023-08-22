@@ -19,6 +19,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
+	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/adminapi"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/admission"
@@ -65,11 +67,13 @@ func setupControllerOptions(logger logr.Logger, c *Config, dbmode string, featur
 
 	// configure the general controller options
 	controllerOpts := ctrl.Options{
-		Scheme:             scheme,
-		MetricsBindAddress: c.MetricsAddr,
-		Port:               9443,
-		LeaderElection:     leaderElectionEnabled(logger, c, dbmode),
-		LeaderElectionID:   c.LeaderElectionID,
+		Scheme: scheme,
+		Metrics: metricsserver.Options{
+			BindAddress: c.MetricsAddr,
+		},
+		WebhookServer:    webhook.NewServer(webhook.Options{Port: 9443}),
+		LeaderElection:   leaderElectionEnabled(logger, c, dbmode),
+		LeaderElectionID: c.LeaderElectionID,
 		Cache: cache.Options{
 			SyncPeriod: &c.SyncPeriod,
 		},
@@ -94,7 +98,11 @@ func setupControllerOptions(logger logr.Logger, c *Config, dbmode string, featur
 		if s, ok := c.PublishService.Get(); ok {
 			watchNamespaces = append(c.WatchNamespaces, s.Namespace)
 		}
-		controllerOpts.Cache.Namespaces = sets.NewString(watchNamespaces...).List()
+		watched := make(map[string]cache.Config)
+		for _, n := range sets.NewString(watchNamespaces...).List() {
+			watched[n] = cache.Config{}
+		}
+		controllerOpts.Cache.DefaultNamespaces = watched
 	}
 
 	if len(c.LeaderElectionNamespace) > 0 {

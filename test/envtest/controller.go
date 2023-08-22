@@ -15,6 +15,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/controllers"
 )
@@ -30,9 +31,11 @@ func StartReconcilers(ctx context.Context, t *testing.T, scheme *runtime.Scheme,
 	log := logrus.New()
 	log.Out = &b
 	o := manager.Options{
-		Logger:             logrusr.New(log),
-		Scheme:             scheme,
-		MetricsBindAddress: "0",
+		Logger: logrusr.New(log),
+		Scheme: scheme,
+		Metrics: metricsserver.Options{
+			BindAddress: "0",
+		},
 	}
 
 	mgr, err := ctrl.NewManager(cfg, o)

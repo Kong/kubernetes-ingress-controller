@@ -140,7 +140,10 @@ func NewAdminAPIHandler(t *testing.T, opts ...AdminAPIHandlerOpt) *AdminAPIHandl
 }
 
 func (m *AdminAPIHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	m.t.Logf("AdminAPIHandler received request: %s %s", r.Method, r.URL)
+	// this path gets spammed by the readiness checker and shouldn't be of interest for logging
+	if r.URL.Path != "/status" {
+		m.t.Logf("AdminAPIHandler received request: %s %s", r.Method, r.URL)
+	}
 	m.mux.ServeHTTP(w, r)
 }
 

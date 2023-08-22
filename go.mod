@@ -40,7 +40,7 @@ require (
 	k8s.io/component-base v0.28.0
 	knative.dev/networking v0.0.0-20230718160410-75dcd54d9510
 	knative.dev/pkg v0.0.0-20230718152110-aef227e72ead
-	sigs.k8s.io/controller-runtime v0.15.1
+	sigs.k8s.io/controller-runtime v0.16.0
 	sigs.k8s.io/gateway-api v0.7.1
 	sigs.k8s.io/kustomize/api v0.14.0
 	sigs.k8s.io/kustomize/kyaml v0.14.3
@@ -78,7 +78,7 @@ require (
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
 	github.com/valyala/fasttemplate v1.2.2 // indirect
 	go.uber.org/atomic v1.10.0 // indirect
-	go.uber.org/zap v1.24.0 // indirect
+	go.uber.org/zap v1.25.0 // indirect
 	golang.org/x/arch v0.4.0 // indirect
 	golang.org/x/net v0.14.0 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20230803162519-f966b187b2e5 // indirect
@@ -196,7 +196,7 @@ require (
 	golang.org/x/text v0.12.0 // indirect
 	golang.org/x/time v0.3.0 // indirect
 	golang.org/x/tools v0.11.1 // indirect
-	gomodules.xyz/jsonpatch/v2 v2.3.0 // indirect
+	gomodules.xyz/jsonpatch/v2 v2.4.0 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
 	google.golang.org/genproto v0.0.0-20230803162519-f966b187b2e5 // indirect
 	google.golang.org/grpc v1.57.0

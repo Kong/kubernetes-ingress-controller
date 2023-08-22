@@ -13,6 +13,11 @@ on:
         # See https://github.com/Kong/kubernetes-testing-framework/issues/542
         default: "3.4"
         required: false
+      kong-oss-effective-version:
+        # specifies effective semver of Kong gateway OSS when tag is not a valid semver (like 'nightly').
+        type: string
+        default: ""
+        required: false
       kong-enterprise-container-repo:
         type: string
         default: "kong/kong-gateway"
@@ -22,6 +27,11 @@ on:
         # TODO: Consider changing to "kong/kong-gateway:latest"
         # See https://github.com/Kong/kubernetes-testing-framework/issues/542
         default: "3.4"
+        required: false
+      kong-enterprise-effective-version:
+        # specifies effective semver of Kong gateway enterprise when tag is not a valid semver (like 'nightly').
+        type: string
+        default: ""
         required: false
 
 jobs:

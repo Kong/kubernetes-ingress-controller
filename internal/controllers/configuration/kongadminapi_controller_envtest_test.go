@@ -22,7 +22,9 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
 	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
+	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/adminapi"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/configuration"
@@ -60,10 +62,14 @@ func startKongAdminAPIServiceReconciler(ctx context.Context, t *testing.T, clien
 	adminPod = envtest.CreatePod(ctx, t, client, ns.Name)
 
 	mgr, err := ctrl.NewManager(cfg, ctrl.Options{
-		Logger:             logrusr.New(logrus.New()),
-		Scheme:             client.Scheme(),
-		SyncPeriod:         lo.ToPtr(2 * time.Second),
-		MetricsBindAddress: "0",
+		Logger: logrusr.New(logrus.New()),
+		Scheme: client.Scheme(),
+		Metrics: metricsserver.Options{
+			BindAddress: "0",
+		},
+		Cache: cache.Options{
+			SyncPeriod: lo.ToPtr(2 * time.Second),
+		},
 	})
 	require.NoError(t, err)
 

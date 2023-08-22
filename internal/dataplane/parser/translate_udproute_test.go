@@ -21,9 +21,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/versions"
 )
 
-var (
-	udpRouteTypeMeta = metav1.TypeMeta{Kind: "UDPRoute", APIVersion: gatewayv1alpha2.SchemeGroupVersion.String()}
-)
+var udpRouteTypeMeta = metav1.TypeMeta{Kind: "UDPRoute", APIVersion: gatewayv1alpha2.SchemeGroupVersion.String()}
 
 func TestIngressRulesFromUDPRoutes(t *testing.T) {
 	testCases := []struct {

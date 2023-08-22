@@ -30,7 +30,7 @@ import (
 
 func TestTCPRouteEssentials(t *testing.T) {
 	ctx := context.Background()
-
+	RunWhenKongExpressionRouterWithVersion(t, ">=3.4,0")
 	t.Log("locking TCP port")
 	tcpMutex.Lock()
 	t.Cleanup(func() {
@@ -412,7 +412,7 @@ func TestTCPRouteEssentials(t *testing.T) {
 
 func TestTCPRouteReferenceGrant(t *testing.T) {
 	ctx := context.Background()
-
+	RunWhenKongExpressionRouterWithVersion(t, ">=3.4.0")
 	t.Log("locking TCP port")
 	tcpMutex.Lock()
 	t.Cleanup(func() {

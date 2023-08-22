@@ -14,10 +14,16 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/failures"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/store"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/versions"
 	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1beta1"
 )
 
 // This file contains unit test functions to test translation failures genreated by parser.
+
+func newResourceFailure(reason string, objects ...client.Object) failures.ResourceFailure {
+	failure, _ := failures.NewResourceFailure(reason, objects...)
+	return failure
+}
 
 func TestTranslationFailureUnsupportedObjectsExpressionRoutes(t *testing.T) {
 	testCases := []struct {
@@ -104,20 +110,8 @@ func TestTranslationFailureUnsupportedObjectsExpressionRoutes(t *testing.T) {
 			},
 		},
 		{
-			name: "TCPRoutes, UDPRoutes and TLSRoutes in gateway APIs are not supported",
+			name: "TLSRoutes in gateway APIs are not supported",
 			objects: store.FakeObjects{
-				UDPRoutes: []*gatewayv1alpha2.UDPRoute{
-					{
-						TypeMeta: metav1.TypeMeta{
-							Kind:       "UDPRoute",
-							APIVersion: gatewayv1alpha2.GroupVersion.String(),
-						},
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      "udproute-1",
-							Namespace: "default",
-						},
-					},
-				},
 				TLSRoutes: []*gatewayv1alpha2.TLSRoute{
 					{
 						TypeMeta: metav1.TypeMeta{
@@ -132,12 +126,6 @@ func TestTranslationFailureUnsupportedObjectsExpressionRoutes(t *testing.T) {
 				},
 			},
 			causingObjects: []client.Object{
-				&gatewayv1alpha2.UDPRoute{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "udproute-1",
-						Namespace: "default",
-					},
-				},
 				&gatewayv1alpha2.TLSRoute{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "tlsroute-1",
@@ -156,6 +144,7 @@ func TestTranslationFailureUnsupportedObjectsExpressionRoutes(t *testing.T) {
 
 			parser := mustNewParser(t, storer)
 			parser.featureFlags.ExpressionRoutes = true
+			parser.kongVersion = versions.ExpressionRouterL4Cutoff
 
 			result := parser.BuildKongConfig()
 			t.Log(result.TranslationFailures)

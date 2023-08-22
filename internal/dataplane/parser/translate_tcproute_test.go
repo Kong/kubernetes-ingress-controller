@@ -15,6 +15,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util/builder"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/versions"
 )
 
 func TestIngressRulesFromTCPRoutesUsingExpressionRoutes(t *testing.T) {
@@ -219,6 +220,7 @@ func TestIngressRulesFromTCPRoutesUsingExpressionRoutes(t *testing.T) {
 			require.NoError(t, err)
 			parser := mustNewParser(t, fakestore)
 			parser.featureFlags.ExpressionRoutes = true
+			parser.kongVersion = versions.ExpressionRouterL4Cutoff
 
 			failureCollector, err := failures.NewResourceFailuresCollector(logrus.New())
 			require.NoError(t, err)

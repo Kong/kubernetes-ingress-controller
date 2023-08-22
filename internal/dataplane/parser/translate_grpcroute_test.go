@@ -10,7 +10,6 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/failures"
@@ -27,11 +26,6 @@ func TestIngressRulesFromGRPCRoutesUsingExpressionRoutes(t *testing.T) {
 	parser.featureFlags.CombinedServiceRoutes = true
 	parser.featureFlags.ExpressionRoutes = true
 	grpcRouteTypeMeta := metav1.TypeMeta{Kind: "GRPCRoute", APIVersion: gatewayv1alpha2.SchemeGroupVersion.String()}
-
-	newResourceFailure := func(reason string, objects ...client.Object) failures.ResourceFailure {
-		failure, _ := failures.NewResourceFailure(reason, objects...)
-		return failure
-	}
 
 	testCases := []struct {
 		name                 string

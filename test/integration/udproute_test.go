@@ -28,9 +28,8 @@ import (
 const testdomain = "konghq.com"
 
 func TestUDPRouteEssentials(t *testing.T) {
-	skipTestForExpressionRouter(t)
 	ctx := context.Background()
-
+	RunWhenKongExpressionRouterWithVersion(t, ">=3.4.0")
 	ns, cleaner := helpers.Setup(ctx, t, env)
 
 	t.Log("locking UDP port")

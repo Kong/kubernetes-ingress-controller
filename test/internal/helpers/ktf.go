@@ -37,7 +37,7 @@ func GenerateKongBuilder(_ context.Context) (*kong.Builder, []string, error) {
 	}
 
 	if effectiveKongVersion := testenv.KongEffectiveVersion(); effectiveKongVersion != "" {
-		kongbuilder = kongbuilder.WithAdditonalValue("image.effectiveSemver", effectiveKongVersion)
+		kongbuilder = kongbuilder.WithAdditionalValue("image.effectiveSemver", effectiveKongVersion)
 	}
 
 	if user, pass := testenv.KongPullUsername(), testenv.KongPullPassword(); user != "" || pass != "" {

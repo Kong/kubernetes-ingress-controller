@@ -384,7 +384,7 @@ func TestIngressRulesFromGRPCRoutesUsingExpressionRoutes(t *testing.T) {
 				},
 			},
 			expectedFailures: []failures.ResourceFailure{
-				newResourceFailure(translators.ErrRouteValidationNoRules.Error(),
+				newResourceFailure(t, translators.ErrRouteValidationNoRules.Error(),
 					&gatewayv1alpha2.GRPCRoute{
 						TypeMeta: grpcRouteTypeMeta,
 						ObjectMeta: metav1.ObjectMeta{

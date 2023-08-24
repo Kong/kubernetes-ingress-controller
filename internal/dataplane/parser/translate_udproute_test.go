@@ -288,7 +288,7 @@ func TestIngressRulesFromUDPRoutes(t *testing.T) {
 			},
 			expectedFailures: []failures.ResourceFailure{
 				newResourceFailure(
-					translators.ErrRouteValidationNoRules.Error(),
+					t, translators.ErrRouteValidationNoRules.Error(),
 					&gatewayv1alpha2.UDPRoute{
 						TypeMeta:   udpRouteTypeMeta,
 						ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "no-rule"},
@@ -608,7 +608,7 @@ func TestIngressRulesFromUDPRoutesUsingExpressionRoutes(t *testing.T) {
 			},
 			expectedFailures: []failures.ResourceFailure{
 				newResourceFailure(
-					translators.ErrRouteValidationNoRules.Error(),
+					t, translators.ErrRouteValidationNoRules.Error(),
 					&gatewayv1alpha2.UDPRoute{
 						TypeMeta:   udpRouteTypeMeta,
 						ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "no-rule"},
@@ -636,7 +636,7 @@ func TestIngressRulesFromUDPRoutesUsingExpressionRoutes(t *testing.T) {
 			kongVersion: semver.MustParse("3.3.0"),
 			expectedFailures: []failures.ResourceFailure{
 				newResourceFailure(
-					fmt.Sprintf("resource kind %s.%s not supported when expression routes enabled",
+					t, fmt.Sprintf("resource kind %s.%s not supported when expression routes enabled",
 						udpRouteTypeMeta.APIVersion, udpRouteTypeMeta.Kind),
 					&gatewayv1alpha2.UDPRoute{
 						TypeMeta:   udpRouteTypeMeta,

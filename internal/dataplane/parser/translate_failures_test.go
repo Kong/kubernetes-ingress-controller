@@ -20,8 +20,9 @@ import (
 
 // This file contains unit test functions to test translation failures genreated by parser.
 
-func newResourceFailure(reason string, objects ...client.Object) failures.ResourceFailure {
-	failure, _ := failures.NewResourceFailure(reason, objects...)
+func newResourceFailure(t *testing.T, reason string, objects ...client.Object) failures.ResourceFailure {
+	failure, err := failures.NewResourceFailure(reason, objects...)
+	require.NoError(t, err)
 	return failure
 }
 

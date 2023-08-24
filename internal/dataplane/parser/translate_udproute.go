@@ -28,7 +28,7 @@ func (p *Parser) ingressRulesFromUDPRoutes() ingressRules {
 	for _, udproute := range udpRouteList {
 		// Disable the translation to expression routes and register translation errors
 		// when expression route is enabled and Kong version is less than 3.4.
-		if p.featureFlags.ExpressionRoutes && p.kongVersion.Compare(versions.ExpressionRouterL4Cutoff) < 0 {
+		if p.featureFlags.ExpressionRoutes && p.kongVersion.LT(versions.ExpressionRouterL4Cutoff) {
 			p.registerResourceFailureNotSupportedForExpressionRoutes(udproute)
 			continue
 		}
@@ -49,7 +49,7 @@ func (p *Parser) ingressRulesFromUDPRoutes() ingressRules {
 		}
 	}
 
-	// translate generated Kong Route to expression based route.
+	// Translate generated Kong Route to expression based route.
 	if p.featureFlags.ExpressionRoutes {
 		applyExpressionToIngressRules(&result)
 	}
@@ -92,7 +92,7 @@ func (p *Parser) ingressRulesFromUDPRoute(result *ingressRules, udproute *gatewa
 }
 
 // validateUDPRoute validates UDPRoute, and return a translation error if the spec is invalid.
-// validation for UDPRoutes will happen at a higher layer, but in spite of that we run
+// Validation for UDPRoutes will happen at a higher layer, but in spite of that we run
 // validation at this level as well as a fallback so that if routes are posted which
 // are invalid somehow make it past validation (e.g. the webhook is not enabled) we can
 // at least try to provide a helpful message about the situation in the manager logs.

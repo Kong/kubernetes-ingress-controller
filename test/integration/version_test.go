@@ -67,7 +67,7 @@ func RunWhenKongExpressionRouterWithVersion(t *testing.T, vRangeStr string) {
 
 	if routerFlavor == kongRouterFlavorExpressions {
 		if !vRange(version) {
-			t.Skipf("skip test when expression router enabled and versio is %s", version.String())
+			t.Skipf("skip test when expression router enabled and version is %s", version.String())
 		}
 	}
 }

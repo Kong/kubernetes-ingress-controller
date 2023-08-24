@@ -28,7 +28,7 @@ func (p *Parser) ingressRulesFromTCPRoutes() ingressRules {
 	for _, tcproute := range tcpRouteList {
 		// Disable the translation to expression routes and register translation errors
 		// when expression route is enabled and Kong version is less than 3.4.
-		if p.featureFlags.ExpressionRoutes && p.kongVersion.Compare(versions.ExpressionRouterL4Cutoff) < 0 {
+		if p.featureFlags.ExpressionRoutes && p.kongVersion.LT(versions.ExpressionRouterL4Cutoff) {
 			p.registerResourceFailureNotSupportedForExpressionRoutes(tcproute)
 			continue
 		}

@@ -17,7 +17,7 @@ require (
 	github.com/kong/deck v1.26.0
 	github.com/kong/go-kong v0.46.0
 	github.com/kong/kubernetes-telemetry v0.1.0
-	github.com/kong/kubernetes-testing-framework v0.37.0
+	github.com/kong/kubernetes-testing-framework v0.38.0
 	github.com/lithammer/dedent v1.1.0
 	github.com/miekg/dns v1.1.55
 	github.com/mitchellh/mapstructure v1.5.0
@@ -207,7 +207,7 @@ require (
 	k8s.io/cli-runtime v0.28.0
 	k8s.io/kube-openapi v0.0.0-20230811205723-7ac0aad8c58d // indirect
 	k8s.io/kubectl v0.28.0
-	k8s.io/utils v0.0.0-20230505201702-9f6742963106 // indirect
+	k8s.io/utils v0.0.0-20230726121419-3b25d923346b // indirect
 	knative.dev/serving v0.38.0
 	sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd // indirect
 	sigs.k8s.io/kind v0.20.0 // indirect

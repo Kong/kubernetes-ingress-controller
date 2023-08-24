@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1692899812131,
+  "lastUpdate": 1692899813676,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -76434,6 +76434,66 @@ window.BENCHMARK_DATA = {
             "value": 0,
             "unit": "allocs/op",
             "extra": "11652000 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "49699333+dependabot[bot]@users.noreply.github.com",
+            "name": "dependabot[bot]",
+            "username": "dependabot[bot]"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "ea0732e7c4d43ae7a64c3249a6acddbc131cd72a",
+          "message": "chore(deps): bump github.com/kong/kubernetes-testing-framework from 0.37.0 to 0.38.0 (#4565)\n\n* chore(deps): bump github.com/kong/kubernetes-testing-framework\r\n\r\nBumps [github.com/kong/kubernetes-testing-framework](https://github.com/kong/kubernetes-testing-framework) from 0.37.0 to 0.38.0.\r\n- [Release notes](https://github.com/kong/kubernetes-testing-framework/releases)\r\n- [Changelog](https://github.com/Kong/kubernetes-testing-framework/blob/main/CHANGELOG.md)\r\n- [Commits](https://github.com/kong/kubernetes-testing-framework/compare/v0.37.0...v0.38.0)\r\n\r\n---\r\nupdated-dependencies:\r\n- dependency-name: github.com/kong/kubernetes-testing-framework\r\n  dependency-type: direct:production\r\n  update-type: version-update:semver-minor\r\n...\r\n\r\nSigned-off-by: dependabot[bot] <support@github.com>\r\n\r\n\r\n---------\r\n\r\nSigned-off-by: dependabot[bot] <support@github.com>\r\nCo-authored-by: dependabot[bot] <49699333+dependabot[bot]@users.noreply.github.com>\r\nCo-authored-by: Jakub Warczarek <jakub.warczarek@konghq.com>",
+          "timestamp": "2023-08-24T17:53:09Z",
+          "tree_id": "9d93a08ce2e4b037e8906dbf1521f757c8767f31",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/ea0732e7c4d43ae7a64c3249a6acddbc131cd72a"
+        },
+        "date": 1692899803843,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - ns/op",
+            "value": 71694,
+            "unit": "ns/op",
+            "extra": "18561 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - B/op",
+            "value": 11095,
+            "unit": "B/op",
+            "extra": "18561 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - allocs/op",
+            "value": 12,
+            "unit": "allocs/op",
+            "extra": "18561 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDefaultContentToDBLessConfigConverter_Convert - ns/op",
+            "value": 103.6,
+            "unit": "ns/op",
+            "extra": "10403980 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDefaultContentToDBLessConfigConverter_Convert - B/op",
+            "value": 0,
+            "unit": "B/op",
+            "extra": "10403980 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDefaultContentToDBLessConfigConverter_Convert - allocs/op",
+            "value": 0,
+            "unit": "allocs/op",
+            "extra": "10403980 times\n2 procs"
           }
         ]
       },

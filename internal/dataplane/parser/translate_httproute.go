@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"github.com/blang/semver/v4"
-	"github.com/bombsimon/logrusr/v2"
+	"github.com/bombsimon/logrusr/v4"
 	"github.com/kong/go-kong/kong"
 	"github.com/samber/lo"
 	k8stypes "k8s.io/apimachinery/pkg/types"

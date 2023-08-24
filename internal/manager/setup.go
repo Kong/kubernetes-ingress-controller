@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/avast/retry-go/v4"
-	"github.com/bombsimon/logrusr/v2"
+	"github.com/bombsimon/logrusr/v4"
 	"github.com/go-logr/logr"
 	"github.com/kong/deck/cprint"
 	"github.com/sirupsen/logrus"

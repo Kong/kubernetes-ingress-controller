@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/bombsimon/logrusr/v2"
+	"github.com/bombsimon/logrusr/v4"
 	"github.com/kong/kubernetes-telemetry/pkg/forwarders"
 	"github.com/kong/kubernetes-telemetry/pkg/provider"
 	"github.com/kong/kubernetes-telemetry/pkg/serializers"

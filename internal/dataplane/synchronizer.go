@@ -7,7 +7,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/bombsimon/logrusr/v2"
+	"github.com/bombsimon/logrusr/v4"
 	"github.com/go-logr/logr"
 	"github.com/sirupsen/logrus"
 

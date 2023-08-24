@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/bombsimon/logrusr/v2"
+	"github.com/bombsimon/logrusr/v4"
 	"github.com/phayes/freeport"
 	"github.com/samber/mo"
 	"github.com/sirupsen/logrus/hooks/test"

@@ -35,7 +35,7 @@ require (
 	google.golang.org/api v0.138.0
 	k8s.io/api v0.28.0
 	k8s.io/apiextensions-apiserver v0.28.0
-	k8s.io/apimachinery v0.28.0
+	k8s.io/apimachinery v0.28.1
 	k8s.io/client-go v0.28.0
 	k8s.io/component-base v0.28.0
 	knative.dev/networking v0.0.0-20230718160410-75dcd54d9510

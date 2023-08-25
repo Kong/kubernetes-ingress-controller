@@ -59,6 +59,19 @@ func RunWhenKongEnterprise(t *testing.T) {
 	}
 }
 
+func RunWhenKongExpressionRouterWithVersion(t *testing.T, vRangeStr string) {
+	routerFlavor := eventuallyGetKongRouterFlavor(t, proxyAdminURL)
+	version := eventuallyGetKongVersion(t, proxyAdminURL)
+	vRange, err := kong.NewRange(vRangeStr)
+	require.NoError(t, err)
+
+	if routerFlavor == kongRouterFlavorExpressions {
+		if !vRange(version) {
+			t.Skipf("skip test when expression router enabled and version is %s", version.String())
+		}
+	}
+}
+
 func eventuallyGetKongVersion(t *testing.T, adminURL *url.URL) kong.Version {
 	t.Helper()
 
@@ -87,4 +100,19 @@ func eventuallyGetKongDBMode(t *testing.T, adminURL *url.URL) string {
 		assert.NoError(t, err)
 	}, time.Minute, time.Second)
 	return dbmode
+}
+
+func eventuallyGetKongRouterFlavor(t *testing.T, adminURL *url.URL) string {
+	t.Helper()
+
+	var (
+		err          error
+		routerFlavor string
+	)
+
+	require.EventuallyWithT(t, func(t *assert.CollectT) {
+		routerFlavor, err = helpers.GetKongRouterFlavor(adminURL, consts.KongTestPassword)
+		assert.NoError(t, err)
+	}, time.Minute, time.Second)
+	return routerFlavor
 }

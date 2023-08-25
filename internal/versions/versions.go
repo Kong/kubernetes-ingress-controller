@@ -27,4 +27,7 @@ var (
 
 	// TLSPassthroughCutoff is the lowest Kong version with support for TLS passthrough.
 	TLSPassthroughCutoff = semver.Version{Major: 2, Minor: 7}
+
+	// ExpressionRouterL4Cutoff is the lowest Kong version with support of L4 proxy in expression router.
+	ExpressionRouterL4Cutoff = semver.Version{Major: 3, Minor: 4}
 )

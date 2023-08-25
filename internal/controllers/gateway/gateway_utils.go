@@ -315,9 +315,6 @@ func getListenerStatus(
 			})
 		}
 
-		// TODO this only handles some Listener conditions and reasons as needed to check cross-listener compatibility
-		// and unattachability due to missing Kong configuration. There are others available and it may be appropriate
-		// for us to add them https://github.com/Kong/kubernetes-ingress-controller/issues/2558
 		if _, ok := portToProtocol[listener.Port]; !ok {
 			// unoccupied ports are free game
 			portToProtocol[listener.Port] = listener.Protocol

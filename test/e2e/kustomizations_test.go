@@ -34,6 +34,10 @@ const (
 - op: replace
   path: /spec/template/spec/containers/0/livenessProbe/failureThreshold
   value: %[3]d`
+
+	readinessProbePathPatch = `- op: replace
+  path: /spec/template/spec/containers/0/readinessProbe/httpGet/path
+  value: %s`
 )
 
 // patchControllerImage replaces the kong/kubernetes-ingress-controller image with the provided image and tag,
@@ -103,6 +107,31 @@ func patchLivenessProbes(baseManifestReader io.Reader, deployment k8stypes.Names
 		Patches: []types.Patch{
 			{
 				Patch: fmt.Sprintf(livenessProbePatch, int(initial.Seconds()), int(period.Seconds()), failure),
+				Target: &types.Selector{
+					ResId: resid.ResId{
+						Gvk: resid.Gvk{
+							Group:   "apps",
+							Version: "v1",
+							Kind:    "Deployment",
+						},
+						Name:      deployment.Name,
+						Namespace: deployment.Namespace,
+					},
+				},
+			},
+		},
+	}
+	return kubectl.GetKustomizedManifest(kustomization, baseManifestReader)
+}
+
+// patchReadinessProbePath patches the given deployment's path of readiness probe.
+// Kong gateway supports endpoint `/status/ready` since 3.4, and prior versions uses `/status`,
+// so we need to change the path of readiness probe of Kong gateway deployment when its version is < 3.4.
+func patchReadinessProbePath(baseManifestReader io.Reader, deployment k8stypes.NamespacedName, probePath string) (io.Reader, error) {
+	kustomization := types.Kustomization{
+		Patches: []types.Patch{
+			{
+				Patch: fmt.Sprintf(readinessProbePathPatch, probePath),
 				Target: &types.Selector{
 					ResId: resid.ResId{
 						Gvk: resid.Gvk{

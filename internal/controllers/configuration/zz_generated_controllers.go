@@ -619,7 +619,6 @@ type KongV1KongPluginReconciler struct {
 	Scheme            *runtime.Scheme
 	DataplaneClient   controllers.DataPlane
 	CacheSyncTimeout  time.Duration
-	StatusQueue       *status.Queue
 	ReferenceIndexers ctrlref.CacheIndexers
 }
 
@@ -636,19 +635,6 @@ func (r *KongV1KongPluginReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	})
 	if err != nil {
 		return err
-	}
-	// if configured, start the status updater controller
-	if r.StatusQueue != nil {
-		if err := c.Watch(
-			&source.Channel{Source: r.StatusQueue.Subscribe(schema.GroupVersionKind{
-				Group:   "configuration.konghq.com",
-				Version: "v1",
-				Kind:    "KongPlugin",
-			})},
-			&handler.EnqueueRequestForObject{},
-		); err != nil {
-			return err
-		}
 	}
 	return c.Watch(
 		source.Kind(mgr.GetCache(), &kongv1.KongPlugin{}),
@@ -712,17 +698,6 @@ func (r *KongV1KongPluginReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	if err := r.DataplaneClient.UpdateObject(obj); err != nil {
 		return ctrl.Result{}, err
 	}
-	// if status updates are enabled report the status for the object
-	if r.DataplaneClient.AreKubernetesObjectReportsEnabled() {
-		log.V(util.DebugLevel).Info("updating programmed condition status", "namespace", req.Namespace, "name", req.Name)
-		configurationStatus := r.DataplaneClient.KubernetesObjectConfigurationStatus(obj)
-		conditions, updateNeeded := ctrlutils.EnsureProgrammedCondition(configurationStatus, obj.Generation, obj.Status.Conditions)
-		obj.Status.Conditions = conditions
-		if updateNeeded {
-			return ctrl.Result{}, r.Status().Update(ctx, obj)
-		}
-		log.V(util.DebugLevel).Info("status update not needed", "namespace", req.Namespace, "name", req.Name)
-	}
 	// update reference relationship from the KongPlugin to other objects.
 	if err := updateReferredObjects(ctx, r.Client, r.ReferenceIndexers, r.DataplaneClient, obj); err != nil {
 		if apierrors.IsNotFound(err) {
@@ -749,7 +724,6 @@ type KongV1KongClusterPluginReconciler struct {
 	Scheme           *runtime.Scheme
 	DataplaneClient  controllers.DataPlane
 	CacheSyncTimeout time.Duration
-	StatusQueue      *status.Queue
 
 	IngressClassName           string
 	DisableIngressClassLookups bool
@@ -769,19 +743,6 @@ func (r *KongV1KongClusterPluginReconciler) SetupWithManager(mgr ctrl.Manager) e
 	})
 	if err != nil {
 		return err
-	}
-	// if configured, start the status updater controller
-	if r.StatusQueue != nil {
-		if err := c.Watch(
-			&source.Channel{Source: r.StatusQueue.Subscribe(schema.GroupVersionKind{
-				Group:   "configuration.konghq.com",
-				Version: "v1",
-				Kind:    "KongClusterPlugin",
-			})},
-			&handler.EnqueueRequestForObject{},
-		); err != nil {
-			return err
-		}
 	}
 	if !r.DisableIngressClassLookups {
 		err = c.Watch(
@@ -897,17 +858,6 @@ func (r *KongV1KongClusterPluginReconciler) Reconcile(ctx context.Context, req c
 	// update the kong Admin API with the changes
 	if err := r.DataplaneClient.UpdateObject(obj); err != nil {
 		return ctrl.Result{}, err
-	}
-	// if status updates are enabled report the status for the object
-	if r.DataplaneClient.AreKubernetesObjectReportsEnabled() {
-		log.V(util.DebugLevel).Info("updating programmed condition status", "namespace", req.Namespace, "name", req.Name)
-		configurationStatus := r.DataplaneClient.KubernetesObjectConfigurationStatus(obj)
-		conditions, updateNeeded := ctrlutils.EnsureProgrammedCondition(configurationStatus, obj.Generation, obj.Status.Conditions)
-		obj.Status.Conditions = conditions
-		if updateNeeded {
-			return ctrl.Result{}, r.Status().Update(ctx, obj)
-		}
-		log.V(util.DebugLevel).Info("status update not needed", "namespace", req.Namespace, "name", req.Name)
 	}
 	// update reference relationship from the KongClusterPlugin to other objects.
 	if err := updateReferredObjects(ctx, r.Client, r.ReferenceIndexers, r.DataplaneClient, obj); err != nil {

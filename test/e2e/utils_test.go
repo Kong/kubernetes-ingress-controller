@@ -5,6 +5,7 @@ package e2e
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -159,9 +160,11 @@ func getTestManifest(t *testing.T, baseManifestPath string, skipTestPatches bool
 		}
 
 		if kongImageOverride != "" {
-			kongVersion := getKongVersionFromImageTag(t)
 			patchReadinessProbeRange := kong.MustNewRange("<" + statusReadyProbeMinimalKongVersion.String())
-			if patchReadinessProbeRange(kongVersion) {
+			kongVersion, err := getKongVersionFromImageTag()
+			// If we could not get version from kong image, assume they are latest.
+			// So we do not patch the readiness probe path to the legacy path `/status`.
+			if err == nil && patchReadinessProbeRange(kongVersion) {
 				manifestsReader, err = patchReadinessProbePath(manifestsReader, deployments.ProxyNN, "/status")
 				if err != nil {
 					t.Logf("failed patching controller readiness (%v), using default manifest %v", err, baseManifestPath)
@@ -297,19 +300,16 @@ func patchControllerImageFromEnv(t *testing.T, manifestReader io.Reader) (io.Rea
 // TODO: what should it do when:
 // - no image provided
 // - image tag could not be parsed into a semver, like "latest", "nightly".
-func getKongVersionFromImageTag(t *testing.T) kong.Version {
-	t.Helper()
-
+func getKongVersionFromImageTag() (kong.Version, error) {
 	if kongImageOverride == "" {
-		return kong.Version{}
+		return kong.Version{}, errors.New("No Kong image provided")
 	}
 
-	t.Logf("get kong version from image %s", kongImageOverride)
 	_, tag, err := splitImageRepoTag(kongImageOverride)
-	require.NoError(t, err)
-	v, err := kong.ParseSemanticVersion(tag)
-	require.NoError(t, err)
-	return v
+	if err != nil {
+		return kong.Version{}, err
+	}
+	return kong.ParseSemanticVersion(tag)
 }
 
 // getKongProxyIP takes a Service with Kong proxy ports and returns and its IP, or fails the test if it cannot.
@@ -325,8 +325,7 @@ func getKongProxyIP(ctx context.Context, t *testing.T, env environments.Environm
 	svc := refreshService()
 	require.NotEqual(t, svc.Spec.Type, corev1.ServiceTypeClusterIP, "ClusterIP service is not supported")
 
-	//nolint: exhaustive
-	switch svc.Spec.Type {
+	switch svc.Spec.Type { //nolint: exhaustive
 	case corev1.ServiceTypeLoadBalancer:
 		return getKongProxyLoadBalancerIP(t, refreshService)
 	case corev1.ServiceTypeNodePort:

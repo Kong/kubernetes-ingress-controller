@@ -39,7 +39,7 @@ import (
 
 const (
 	konnectRuntimeGroupsBaseURL          = "https://us.kic.api.konghq.tech/v2"
-	konnectRuntimeGroupsConfigBaseURLFmt = "https://us.api.konghq.tech/konnect-api/api/control_planes/%s/v2"
+	konnectRuntimeGroupsConfigBaseURLFmt = "https://us.api.konghq.tech/v2/control-planes/%s/"
 	konnectRuntimeGroupAdminAPIBaseURL   = "https://us.kic.api.konghq.tech"
 	konnectRolesBaseURL                  = "https://global.api.konghq.tech/v2"
 

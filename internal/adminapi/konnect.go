@@ -52,7 +52,7 @@ func NewKongClientForKonnectRuntimeGroup(c KonnectConfig) (*KonnectClient, error
 	transport := http.DefaultTransport.(*http.Transport).Clone()
 	transport.TLSClientConfig = &tlsConfig
 	client, err := kong.NewClient(
-		lo.ToPtr(fmt.Sprintf("%s/%s/%s", c.Address, "kic/api/control_planes", c.RuntimeGroupID)),
+		lo.ToPtr(fmt.Sprintf("%s/%s/%s", c.Address, "kic/api/control-planes", c.RuntimeGroupID)),
 		&http.Client{
 			Transport: transport,
 		},

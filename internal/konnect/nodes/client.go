@@ -26,7 +26,7 @@ type Client struct {
 }
 
 // KicNodeAPIPathPattern is the path pattern for KIC node operations.
-var KicNodeAPIPathPattern = "%s/kic/api/control_planes/%s/v1/kic-nodes"
+var KicNodeAPIPathPattern = "%s/kic/api/control-planes/%s/v1/kic-nodes"
 
 // NewClient creates a Node API Konnect client.
 func NewClient(cfg adminapi.KonnectConfig) (*Client, error) {

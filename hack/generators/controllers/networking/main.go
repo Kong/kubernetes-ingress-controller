@@ -116,7 +116,7 @@ var inputControllersNeeded = &typesNeeded{
 		NeedsStatusPermissions:            true,
 		ConfigStatusNotificationsEnabled:  true,
 		ProgrammedConditionUpdatesEnabled: true,
-		AcceptsIngressClassNameAnnotation: false,
+		AcceptsIngressClassNameAnnotation: true,
 		AcceptsIngressClassNameSpec:       false,
 		NeedsUpdateReferences:             true,
 		RBACVerbs:                         []string{"get", "list", "watch"},

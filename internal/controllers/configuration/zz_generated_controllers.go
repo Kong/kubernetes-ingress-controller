@@ -615,12 +615,15 @@ func (r *KongV1KongIngressReconciler) Reconcile(ctx context.Context, req ctrl.Re
 type KongV1KongPluginReconciler struct {
 	client.Client
 
-	Log               logr.Logger
-	Scheme            *runtime.Scheme
-	DataplaneClient   controllers.DataPlane
-	CacheSyncTimeout  time.Duration
-	StatusQueue       *status.Queue
-	ReferenceIndexers ctrlref.CacheIndexers
+	Log              logr.Logger
+	Scheme           *runtime.Scheme
+	DataplaneClient  controllers.DataPlane
+	CacheSyncTimeout time.Duration
+	StatusQueue      *status.Queue
+
+	IngressClassName           string
+	DisableIngressClassLookups bool
+	ReferenceIndexers          ctrlref.CacheIndexers
 }
 
 var _ controllers.Reconciler = &KongV1KongPluginReconciler{}
@@ -650,10 +653,43 @@ func (r *KongV1KongPluginReconciler) SetupWithManager(mgr ctrl.Manager) error {
 			return err
 		}
 	}
+	if !r.DisableIngressClassLookups {
+		err = c.Watch(
+			source.Kind(mgr.GetCache(), &netv1.IngressClass{}),
+			handler.EnqueueRequestsFromMapFunc(r.listClassless),
+			predicate.NewPredicateFuncs(ctrlutils.IsDefaultIngressClass),
+		)
+		if err != nil {
+			return err
+		}
+	}
+	preds := ctrlutils.GeneratePredicateFuncsForIngressClassFilter(r.IngressClassName)
 	return c.Watch(
 		source.Kind(mgr.GetCache(), &kongv1.KongPlugin{}),
 		&handler.EnqueueRequestForObject{},
+		preds,
 	)
+}
+
+// listClassless finds and reconciles all objects without ingress class information
+func (r *KongV1KongPluginReconciler) listClassless(ctx context.Context, obj client.Object) []reconcile.Request {
+	resourceList := &kongv1.KongPluginList{}
+	if err := r.Client.List(ctx, resourceList); err != nil {
+		r.Log.Error(err, "failed to list classless kongplugins")
+		return nil
+	}
+	var recs []reconcile.Request
+	for i, resource := range resourceList.Items {
+		if ctrlutils.IsIngressClassEmpty(&resourceList.Items[i]) {
+			recs = append(recs, reconcile.Request{
+				NamespacedName: k8stypes.NamespacedName{
+					Namespace: resource.Namespace,
+					Name:      resource.Name,
+				},
+			})
+		}
+	}
+	return recs
 }
 
 // SetLogger sets the logger.
@@ -706,6 +742,26 @@ func (r *KongV1KongPluginReconciler) Reconcile(ctx context.Context, req ctrl.Req
 			return ctrl.Result{Requeue: true}, nil // wait until the object is no longer present in the cache
 		}
 		return ctrl.Result{}, nil
+	}
+
+	class := new(netv1.IngressClass)
+	if !r.DisableIngressClassLookups {
+		if err := r.Get(ctx, k8stypes.NamespacedName{Name: r.IngressClassName}, class); err != nil {
+			// we log this without taking action to support legacy configurations that only set ingressClassName or
+			// used the class annotation and did not create a corresponding IngressClass. We only need this to determine
+			// if the IngressClass is default or to configure default settings, and can assume no/no additional defaults
+			// if none exists.
+			log.V(util.DebugLevel).Info("could not retrieve IngressClass", "ingressclass", r.IngressClassName)
+		}
+	}
+	// if the object is not configured with our ingress.class, then we need to ensure it's removed from the cache
+	if !ctrlutils.MatchesIngressClass(obj, r.IngressClassName, ctrlutils.IsDefaultIngressClass(class)) {
+		log.V(util.DebugLevel).Info("object missing ingress class, ensuring it's removed from configuration",
+			"namespace", req.Namespace, "name", req.Name, "class", r.IngressClassName)
+		return ctrl.Result{}, r.DataplaneClient.DeleteObject(obj)
+	} else {
+		log.V(util.DebugLevel).Info("object has matching ingress class", "namespace", req.Namespace, "name", req.Name,
+			"class", r.IngressClassName)
 	}
 
 	// update the kong Admin API with the changes

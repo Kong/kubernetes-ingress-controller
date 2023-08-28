@@ -7,6 +7,7 @@ Adding a new version? You'll need three changes:
 * Add the diff link, like "[2.7.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v1.2.2...v1.2.3".
   This is all the way at the bottom. It's the thing we always forget.
 --->
+ - [2.11.1](#2111)
  - [2.11.0](#2110)
  - [2.10.4](#2104)
  - [2.10.3](#2103)
@@ -104,6 +105,22 @@ Adding a new version? You'll need three changes:
 - Create routes that match any service and method for `GRPCRoute` rules with no
   matches.
   [#4512](https://github.com/Kong/kubernetes-ingress-controller/issues/4512)
+
+## [2.11.1]
+
+> Release date: 2023-08-29
+
+### Changes
+
+- Bumped the default Kong version to 3.4 in example manifests.
+  [#4534](https://github.com/Kong/kubernetes-ingress-controller/pull/4534)
+
+### Fixed
+
+- Disable KongPlugin and KongClusterPlugin Programmed statuses. These were
+  introduced in 2.11.0 and caused excessively frequent status updates in
+  clusters with multiple KIC instances installed.
+  [#4581](https://github.com/Kong/kubernetes-ingress-controller/pull/4581)
 
 ## [2.11.0]
 
@@ -2721,6 +2738,7 @@ Please read the changelog and test in your environment.
  - The initial versions  were rapildy iterated to deliver
    a working ingress controller.
 
+[2.11.1]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.11.0...v2.11.1
 [2.11.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.10.4...v2.11.0
 [2.10.4]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.10.3...v2.10.4
 [2.10.3]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.10.2...v2.10.3

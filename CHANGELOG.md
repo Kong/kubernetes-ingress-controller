@@ -9,6 +9,7 @@ Adding a new version? You'll need three changes:
 --->
  - [2.11.1](#2111)
  - [2.11.0](#2110)
+ - [2.10.5](#2105)
  - [2.10.4](#2104)
  - [2.10.3](#2103)
  - [2.10.2](#2102)
@@ -243,6 +244,15 @@ Adding a new version? You'll need three changes:
 [gojson]: https://github.com/goccy/go-json
 [httproute-specification]: https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1beta1.HTTPRoute
 [grpcroute-specification]:  https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1alpha2.GRPCRouteRule
+
+## [2.10.5]
+
+> Release date: 2023-08-31
+
+### Fixed
+
+- Fixed compatibility with Kong 3.3+ when using chart versions 2.26+.
+  [#4515](https://github.com/Kong/kubernetes-ingress-controller/pull/4515)
 
 ## [2.10.4]
 
@@ -2740,6 +2750,7 @@ Please read the changelog and test in your environment.
 
 [2.11.1]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.11.0...v2.11.1
 [2.11.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.10.4...v2.11.0
+[2.10.5]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.10.4...v2.10.5
 [2.10.4]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.10.3...v2.10.4
 [2.10.3]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.10.2...v2.10.3
 [2.10.2]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.10.1...v2.10.2

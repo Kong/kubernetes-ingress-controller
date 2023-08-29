@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1693309281043,
+  "lastUpdate": 1693309282965,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -81534,6 +81534,66 @@ window.BENCHMARK_DATA = {
             "value": 0,
             "unit": "allocs/op",
             "extra": "11775340 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "patryk.malek@konghq.com",
+            "name": "Patryk Małek",
+            "username": "pmalek"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "e9a60d0d3047f5e5690a9075f12e2aee4185b42c",
+          "message": "backport effective version CI fixes to release/2.11.x (#4586)\n\n* test: update helm chart version to the latest (#4511)\r\n\r\n* test: update helm chart version to 2.26.3\r\n\r\n* set effective versions in github workflow files\r\n\r\n* update instructions of release issue to make sure effective version of kong updated\r\n\r\n* fix: define vars for effective semver in manifest of integration tests (#4549)\r\n\r\n* chore: bump ktf to v0.38.0\r\n\r\n---------\r\n\r\nCo-authored-by: Tao Yi <tao.yi@konghq.com>",
+          "timestamp": "2023-08-29T11:37:58Z",
+          "tree_id": "dfb851a48707883af94366e009df579807f47973",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/e9a60d0d3047f5e5690a9075f12e2aee4185b42c"
+        },
+        "date": 1693309271609,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - ns/op",
+            "value": 67075,
+            "unit": "ns/op",
+            "extra": "17834 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - B/op",
+            "value": 11103,
+            "unit": "B/op",
+            "extra": "17834 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - allocs/op",
+            "value": 12,
+            "unit": "allocs/op",
+            "extra": "17834 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDefaultContentToDBLessConfigConverter_Convert - ns/op",
+            "value": 105.2,
+            "unit": "ns/op",
+            "extra": "11767413 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDefaultContentToDBLessConfigConverter_Convert - B/op",
+            "value": 0,
+            "unit": "B/op",
+            "extra": "11767413 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDefaultContentToDBLessConfigConverter_Convert - allocs/op",
+            "value": 0,
+            "unit": "allocs/op",
+            "extra": "11767413 times\n2 procs"
           }
         ]
       },

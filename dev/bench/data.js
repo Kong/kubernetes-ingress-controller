@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1693299714957,
+  "lastUpdate": 1693299716857,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -80694,6 +80694,66 @@ window.BENCHMARK_DATA = {
             "value": 0,
             "unit": "allocs/op",
             "extra": "10789032 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "571832+rainest@users.noreply.github.com",
+            "name": "Travis Raines",
+            "username": "rainest"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "2bafc2d8793208f14f2d1ba5a6a4a5c9d4fb31ea",
+          "message": "fix: disable Kong(Cluster)Plugin Programmed status (#4584)\n\n* fix(crds) disable KongPlugin programmed condition\r\n\r\nDisable the Kong(Cluster)Plugin programmed condition. This caused a bug\r\nin multi-class environments.\r\n\r\nAdd a TODO explaining the issue.\r\n\r\n* chore(*) make generate\r\n\r\n* chore(doc): add changelog entry for 2.11.1\r\n\r\n---------\r\n\r\nCo-authored-by: Patryk Małek <patryk.malek@konghq.com>",
+          "timestamp": "2023-08-29T09:00:32Z",
+          "tree_id": "4fc55e5b9450bf1295164c7dc3cccf5b1d9b0b7d",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/2bafc2d8793208f14f2d1ba5a6a4a5c9d4fb31ea"
+        },
+        "date": 1693299705733,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - ns/op",
+            "value": 68529,
+            "unit": "ns/op",
+            "extra": "16732 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - B/op",
+            "value": 11094,
+            "unit": "B/op",
+            "extra": "16732 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - allocs/op",
+            "value": 12,
+            "unit": "allocs/op",
+            "extra": "16732 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDefaultContentToDBLessConfigConverter_Convert - ns/op",
+            "value": 97.31,
+            "unit": "ns/op",
+            "extra": "11913241 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDefaultContentToDBLessConfigConverter_Convert - B/op",
+            "value": 0,
+            "unit": "B/op",
+            "extra": "11913241 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDefaultContentToDBLessConfigConverter_Convert - allocs/op",
+            "value": 0,
+            "unit": "allocs/op",
+            "extra": "11913241 times\n2 procs"
           }
         ]
       },

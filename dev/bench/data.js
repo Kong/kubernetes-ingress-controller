@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1693303691971,
+  "lastUpdate": 1693304251181,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -81294,6 +81294,66 @@ window.BENCHMARK_DATA = {
             "value": 0,
             "unit": "allocs/op",
             "extra": "12040252 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "tao.yi@konghq.com",
+            "name": "Tao Yi",
+            "username": "randmonkey"
+          },
+          "committer": {
+            "email": "patryk.malek@konghq.com",
+            "name": "Patryk Małek",
+            "username": "pmalek"
+          },
+          "distinct": true,
+          "id": "433034af323189aa1f94e277cb52e62b1a7322a0",
+          "message": "fix: define vars for effective semver in manifest of integration tests (#4549)",
+          "timestamp": "2023-08-29T12:13:32+02:00",
+          "tree_id": "4073eff8afd07d70585170a51ce351432d17bfa4",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/433034af323189aa1f94e277cb52e62b1a7322a0"
+        },
+        "date": 1693304241422,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - ns/op",
+            "value": 68711,
+            "unit": "ns/op",
+            "extra": "16952 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - B/op",
+            "value": 11095,
+            "unit": "B/op",
+            "extra": "16952 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - allocs/op",
+            "value": 12,
+            "unit": "allocs/op",
+            "extra": "16952 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDefaultContentToDBLessConfigConverter_Convert - ns/op",
+            "value": 99.82,
+            "unit": "ns/op",
+            "extra": "12084499 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDefaultContentToDBLessConfigConverter_Convert - B/op",
+            "value": 0,
+            "unit": "B/op",
+            "extra": "12084499 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDefaultContentToDBLessConfigConverter_Convert - allocs/op",
+            "value": 0,
+            "unit": "allocs/op",
+            "extra": "12084499 times\n2 procs"
           }
         ]
       }

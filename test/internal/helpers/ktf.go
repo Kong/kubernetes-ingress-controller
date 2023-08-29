@@ -36,6 +36,10 @@ func GenerateKongBuilder(_ context.Context) (*kong.Builder, []string, error) {
 		return nil, nil, fmt.Errorf("when specifying TEST_KONG_IMAGE or TEST_KONG_TAG, both need to be provided")
 	}
 
+	if effectiveKongVersion := testenv.KongEffectiveVersion(); effectiveKongVersion != "" {
+		kongbuilder = kongbuilder.WithAdditionalValue("image.effectiveSemver", effectiveKongVersion)
+	}
+
 	if user, pass := testenv.KongPullUsername(), testenv.KongPullPassword(); user != "" || pass != "" {
 		if user == "" || pass == "" {
 			return nil, nil, fmt.Errorf("TEST_KONG_PULL_USERNAME requires TEST_KONG_PULL_PASSWORD")

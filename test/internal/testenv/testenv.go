@@ -40,6 +40,12 @@ func KongTag() string {
 	return os.Getenv("TEST_KONG_TAG")
 }
 
+// KongEffectiveVersion is the effective semver of kong gateway.
+// When testing against "nightly" image of kong gateway, we need to set the effective version for parsing semver in chart templates.
+func KongEffectiveVersion() string {
+	return os.Getenv("TEST_KONG_EFFECTIVE_VERSION")
+}
+
 // KongRouterFlavor returns router mode of Kong in tests. Currently supports:
 // - `traditional`
 // - `traditional_compatible`.

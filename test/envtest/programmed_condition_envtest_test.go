@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
-	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -125,168 +124,174 @@ func TestKongCRDs_ProgrammedCondition(t *testing.T) {
 			expectedProgrammedStatus: metav1.ConditionTrue,
 			expectedProgrammedReason: kongv1.ReasonProgrammed,
 		},
-		{
-			name: "valid KongPlugin",
-			objects: []client.Object{
-				&kongv1.KongPlugin{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:        "kong-plugin",
-						Namespace:   ns.Name,
-						Annotations: map[string]string{annotations.IngressClassKey: annotations.DefaultIngressClass},
-					},
-					PluginName: "plugin",
-				},
-				&kongv1.KongConsumer{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "consumer-for-plugin",
-						Namespace: ns.Name,
-						Annotations: map[string]string{
-							annotations.IngressClassKey:                           annotations.DefaultIngressClass,
-							annotations.AnnotationPrefix + annotations.PluginsKey: "kong-plugin",
-						},
-					},
-					Username: "foo",
-				},
-			},
-			getExpectedObjectConditions: func(ctrlClient client.Client) ([]metav1.Condition, error) {
-				var plugin kongv1.KongPlugin
-				err := ctrlClient.Get(ctx, k8stypes.NamespacedName{
-					Name:      "kong-plugin",
-					Namespace: ns.Name,
-				}, &plugin)
-				if err != nil {
-					return nil, err
-				}
-				return plugin.Status.Conditions, nil
-			},
-			expectedProgrammedStatus: metav1.ConditionTrue,
-			expectedProgrammedReason: kongv1.ReasonProgrammed,
-		},
-		{
-			name: "invalid KongPlugin",
-			objects: []client.Object{
-				&kongv1.KongPlugin{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:        "invalid-kong-plugin",
-						Namespace:   ns.Name,
-						Annotations: map[string]string{annotations.IngressClassKey: annotations.DefaultIngressClass},
-					},
-					PluginName: "plugin",
-					// Specifying both Config and ConfigFrom is invalid.
-					Config: apiextensionsv1.JSON{Raw: []byte(`{"key": "value"}`)},
-					ConfigFrom: &kongv1.ConfigSource{
-						SecretValue: kongv1.SecretValueFromSource{
-							Secret: "secret",
-							Key:    "key",
-						},
-					},
-				},
-				&kongv1.KongConsumer{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "consumer-for-invalid-plugin",
-						Namespace: ns.Name,
-						Annotations: map[string]string{
-							annotations.IngressClassKey:                           annotations.DefaultIngressClass,
-							annotations.AnnotationPrefix + annotations.PluginsKey: "invalid-kong-plugin",
-						},
-					},
-					Username: "foo",
-				},
-			},
-			getExpectedObjectConditions: func(ctrlClient client.Client) ([]metav1.Condition, error) {
-				var plugin kongv1.KongPlugin
-				err := ctrlClient.Get(ctx, k8stypes.NamespacedName{
-					Name:      "invalid-kong-plugin",
-					Namespace: ns.Name,
-				}, &plugin)
-				if err != nil {
-					return nil, err
-				}
-				return plugin.Status.Conditions, nil
-			},
-			expectedProgrammedStatus: metav1.ConditionFalse,
-			expectedProgrammedReason: kongv1.ReasonInvalid,
-		},
-		{
-			name: "valid KongClusterPlugin",
-			objects: []client.Object{
-				&kongv1.KongClusterPlugin{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:        "kong-cluster-plugin",
-						Annotations: map[string]string{annotations.IngressClassKey: annotations.DefaultIngressClass},
-					},
-					PluginName: "plugin",
-				},
-				&kongv1.KongConsumer{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "consumer-for-cluster-plugin",
-						Namespace: ns.Name,
-						Annotations: map[string]string{
-							annotations.IngressClassKey:                           annotations.DefaultIngressClass,
-							annotations.AnnotationPrefix + annotations.PluginsKey: "kong-cluster-plugin",
-						},
-					},
-					Username: "foo",
-				},
-			},
-			getExpectedObjectConditions: func(ctrlClient client.Client) ([]metav1.Condition, error) {
-				var clusterPlugin kongv1.KongClusterPlugin
-				err := ctrlClient.Get(ctx, k8stypes.NamespacedName{
-					Name: "kong-cluster-plugin",
-				}, &clusterPlugin)
-				if err != nil {
-					return nil, err
-				}
-				return clusterPlugin.Status.Conditions, nil
-			},
-			expectedProgrammedStatus: metav1.ConditionTrue,
-			expectedProgrammedReason: kongv1.ReasonProgrammed,
-		},
-		{
-			name: "invalid KongClusterPlugin",
-			objects: []client.Object{
-				&kongv1.KongPlugin{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:        "invalid-kong-cluster-plugin",
-						Namespace:   ns.Name,
-						Annotations: map[string]string{annotations.IngressClassKey: annotations.DefaultIngressClass},
-					},
-					PluginName: "plugin",
-					// Specifying both Config and ConfigFrom is invalid.
-					Config: apiextensionsv1.JSON{Raw: []byte(`{"key": "value"}`)},
-					ConfigFrom: &kongv1.ConfigSource{
-						SecretValue: kongv1.SecretValueFromSource{
-							Secret: "secret",
-							Key:    "key",
-						},
-					},
-				},
-				&kongv1.KongConsumer{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "consumer-for-invalid-cluster-plugin",
-						Namespace: ns.Name,
-						Annotations: map[string]string{
-							annotations.IngressClassKey:                           annotations.DefaultIngressClass,
-							annotations.AnnotationPrefix + annotations.PluginsKey: "invalid-kong-cluster-plugin",
-						},
-					},
-					Username: "foo",
-				},
-			},
-			getExpectedObjectConditions: func(ctrlClient client.Client) ([]metav1.Condition, error) {
-				var plugin kongv1.KongPlugin
-				err := ctrlClient.Get(ctx, k8stypes.NamespacedName{
-					Name:      "invalid-kong-cluster-plugin",
-					Namespace: ns.Name,
-				}, &plugin)
-				if err != nil {
-					return nil, err
-				}
-				return plugin.Status.Conditions, nil
-			},
-			expectedProgrammedStatus: metav1.ConditionFalse,
-			expectedProgrammedReason: kongv1.ReasonInvalid,
-		},
+		// TODO: https://github.com/Kong/kubernetes-ingress-controller/issues/4578
+		// If there are multiple KIC instances within a cluster, they will fight
+		// over setting this condition because the controllers do not filter on
+		// ingress class. we need to limit them to only resources referenced
+		// from others, similar to Secrets, to use this.
+		//
+		//{
+		//  name: "valid KongPlugin",
+		//  objects: []client.Object{
+		//      &kongv1.KongPlugin{
+		//          ObjectMeta: metav1.ObjectMeta{
+		//              Name:        "kong-plugin",
+		//              Namespace:   ns.Name,
+		//              Annotations: map[string]string{annotations.IngressClassKey: annotations.DefaultIngressClass},
+		//          },
+		//          PluginName: "plugin",
+		//      },
+		//      &kongv1.KongConsumer{
+		//          ObjectMeta: metav1.ObjectMeta{
+		//              Name:      "consumer-for-plugin",
+		//              Namespace: ns.Name,
+		//              Annotations: map[string]string{
+		//                  annotations.IngressClassKey:                           annotations.DefaultIngressClass,
+		//                  annotations.AnnotationPrefix + annotations.PluginsKey: "kong-plugin",
+		//              },
+		//          },
+		//          Username: "foo",
+		//      },
+		//  },
+		//  getExpectedObjectConditions: func(ctrlClient client.Client) ([]metav1.Condition, error) {
+		//      var plugin kongv1.KongPlugin
+		//      err := ctrlClient.Get(ctx, k8stypes.NamespacedName{
+		//          Name:      "kong-plugin",
+		//          Namespace: ns.Name,
+		//      }, &plugin)
+		//      if err != nil {
+		//          return nil, err
+		//      }
+		//      return plugin.Status.Conditions, nil
+		//  },
+		//  expectedProgrammedStatus: metav1.ConditionTrue,
+		//  expectedProgrammedReason: kongv1.ReasonProgrammed,
+		//},
+		//{
+		//  name: "invalid KongPlugin",
+		//  objects: []client.Object{
+		//      &kongv1.KongPlugin{
+		//          ObjectMeta: metav1.ObjectMeta{
+		//              Name:        "invalid-kong-plugin",
+		//              Namespace:   ns.Name,
+		//              Annotations: map[string]string{annotations.IngressClassKey: annotations.DefaultIngressClass},
+		//          },
+		//          PluginName: "plugin",
+		//          // Specifying both Config and ConfigFrom is invalid.
+		//          Config: apiextensionsv1.JSON{Raw: []byte(`{"key": "value"}`)},
+		//          ConfigFrom: &kongv1.ConfigSource{
+		//              SecretValue: kongv1.SecretValueFromSource{
+		//                  Secret: "secret",
+		//                  Key:    "key",
+		//              },
+		//          },
+		//      },
+		//      &kongv1.KongConsumer{
+		//          ObjectMeta: metav1.ObjectMeta{
+		//              Name:      "consumer-for-invalid-plugin",
+		//              Namespace: ns.Name,
+		//              Annotations: map[string]string{
+		//                  annotations.IngressClassKey:                           annotations.DefaultIngressClass,
+		//                  annotations.AnnotationPrefix + annotations.PluginsKey: "invalid-kong-plugin",
+		//              },
+		//          },
+		//          Username: "foo",
+		//      },
+		//  },
+		//  getExpectedObjectConditions: func(ctrlClient client.Client) ([]metav1.Condition, error) {
+		//      var plugin kongv1.KongPlugin
+		//      err := ctrlClient.Get(ctx, k8stypes.NamespacedName{
+		//          Name:      "invalid-kong-plugin",
+		//          Namespace: ns.Name,
+		//      }, &plugin)
+		//      if err != nil {
+		//          return nil, err
+		//      }
+		//      return plugin.Status.Conditions, nil
+		//  },
+		//  expectedProgrammedStatus: metav1.ConditionFalse,
+		//  expectedProgrammedReason: kongv1.ReasonInvalid,
+		//},
+		//{
+		//  name: "valid KongClusterPlugin",
+		//  objects: []client.Object{
+		//      &kongv1.KongClusterPlugin{
+		//          ObjectMeta: metav1.ObjectMeta{
+		//              Name:        "kong-cluster-plugin",
+		//              Annotations: map[string]string{annotations.IngressClassKey: annotations.DefaultIngressClass},
+		//          },
+		//          PluginName: "plugin",
+		//      },
+		//      &kongv1.KongConsumer{
+		//          ObjectMeta: metav1.ObjectMeta{
+		//              Name:      "consumer-for-cluster-plugin",
+		//              Namespace: ns.Name,
+		//              Annotations: map[string]string{
+		//                  annotations.IngressClassKey:                           annotations.DefaultIngressClass,
+		//                  annotations.AnnotationPrefix + annotations.PluginsKey: "kong-cluster-plugin",
+		//              },
+		//          },
+		//          Username: "foo",
+		//      },
+		//  },
+		//  getExpectedObjectConditions: func(ctrlClient client.Client) ([]metav1.Condition, error) {
+		//      var clusterPlugin kongv1.KongClusterPlugin
+		//      err := ctrlClient.Get(ctx, k8stypes.NamespacedName{
+		//          Name: "kong-cluster-plugin",
+		//      }, &clusterPlugin)
+		//      if err != nil {
+		//          return nil, err
+		//      }
+		//      return clusterPlugin.Status.Conditions, nil
+		//  },
+		//  expectedProgrammedStatus: metav1.ConditionTrue,
+		//  expectedProgrammedReason: kongv1.ReasonProgrammed,
+		//},
+		//{
+		//  name: "invalid KongClusterPlugin",
+		//  objects: []client.Object{
+		//      &kongv1.KongPlugin{
+		//          ObjectMeta: metav1.ObjectMeta{
+		//              Name:        "invalid-kong-cluster-plugin",
+		//              Namespace:   ns.Name,
+		//              Annotations: map[string]string{annotations.IngressClassKey: annotations.DefaultIngressClass},
+		//          },
+		//          PluginName: "plugin",
+		//          // Specifying both Config and ConfigFrom is invalid.
+		//          Config: apiextensionsv1.JSON{Raw: []byte(`{"key": "value"}`)},
+		//          ConfigFrom: &kongv1.ConfigSource{
+		//              SecretValue: kongv1.SecretValueFromSource{
+		//                  Secret: "secret",
+		//                  Key:    "key",
+		//              },
+		//          },
+		//      },
+		//      &kongv1.KongConsumer{
+		//          ObjectMeta: metav1.ObjectMeta{
+		//              Name:      "consumer-for-invalid-cluster-plugin",
+		//              Namespace: ns.Name,
+		//              Annotations: map[string]string{
+		//                  annotations.IngressClassKey:                           annotations.DefaultIngressClass,
+		//                  annotations.AnnotationPrefix + annotations.PluginsKey: "invalid-kong-cluster-plugin",
+		//              },
+		//          },
+		//          Username: "foo",
+		//      },
+		//  },
+		//  getExpectedObjectConditions: func(ctrlClient client.Client) ([]metav1.Condition, error) {
+		//      var plugin kongv1.KongPlugin
+		//      err := ctrlClient.Get(ctx, k8stypes.NamespacedName{
+		//          Name:      "invalid-kong-cluster-plugin",
+		//          Namespace: ns.Name,
+		//      }, &plugin)
+		//      if err != nil {
+		//          return nil, err
+		//      }
+		//      return plugin.Status.Conditions, nil
+		//  },
+		//  expectedProgrammedStatus: metav1.ConditionFalse,
+		//  expectedProgrammedReason: kongv1.ReasonInvalid,
+		//},
 	}
 
 	for _, tc := range testCases {

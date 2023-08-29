@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1693303605424,
+  "lastUpdate": 1693303690253,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -81174,6 +81174,66 @@ window.BENCHMARK_DATA = {
             "value": 0,
             "unit": "allocs/op",
             "extra": "11195794 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "41898282+github-actions[bot]@users.noreply.github.com",
+            "name": "github-actions[bot]",
+            "username": "github-actions[bot]"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "27b8343939698d9924ad9fe95020a8d2b2ba701f",
+          "message": "[Backport release/2.11.x] fix: disable Kong(Cluster)Plugin Programmed status (#4585)\n\n* fix: disable Kong(Cluster)Plugin Programmed status (#4584)\r\n\r\n* fix(crds) disable KongPlugin programmed condition\r\n\r\nDisable the Kong(Cluster)Plugin programmed condition. This caused a bug\r\nin multi-class environments.\r\n\r\nAdd a TODO explaining the issue.\r\n\r\n* chore(*) make generate\r\n\r\n* chore(doc): add changelog entry for 2.11.1\r\n\r\n---------\r\n\r\nCo-authored-by: Patryk Małek <patryk.malek@konghq.com>\r\n(cherry picked from commit 2bafc2d8793208f14f2d1ba5a6a4a5c9d4fb31ea)\r\n\r\n* chore: trigger CI\r\n\r\n---------\r\n\r\nCo-authored-by: Travis Raines <571832+rainest@users.noreply.github.com>\r\nCo-authored-by: Patryk Małek <patryk.malek@konghq.com>",
+          "timestamp": "2023-08-29T12:04:40+02:00",
+          "tree_id": "d430ffbe35a40e458ecdf373d129a17d7b9b6ee3",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/27b8343939698d9924ad9fe95020a8d2b2ba701f"
+        },
+        "date": 1693303681747,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - ns/op",
+            "value": 69615,
+            "unit": "ns/op",
+            "extra": "16005 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - B/op",
+            "value": 11092,
+            "unit": "B/op",
+            "extra": "16005 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - allocs/op",
+            "value": 12,
+            "unit": "allocs/op",
+            "extra": "16005 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDefaultContentToDBLessConfigConverter_Convert - ns/op",
+            "value": 115.1,
+            "unit": "ns/op",
+            "extra": "12040252 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDefaultContentToDBLessConfigConverter_Convert - B/op",
+            "value": 0,
+            "unit": "B/op",
+            "extra": "12040252 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDefaultContentToDBLessConfigConverter_Convert - allocs/op",
+            "value": 0,
+            "unit": "allocs/op",
+            "extra": "12040252 times\n2 procs"
           }
         ]
       }

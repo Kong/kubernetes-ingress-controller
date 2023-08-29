@@ -110,7 +110,7 @@ Adding a new version? You'll need three changes:
 
 > Release date: 2023-08-29
 
-### Changes
+### Changed
 
 - Bumped the default Kong version to 3.4 in example manifests.
   [#4534](https://github.com/Kong/kubernetes-ingress-controller/pull/4534)
@@ -120,7 +120,7 @@ Adding a new version? You'll need three changes:
 - Disable KongPlugin and KongClusterPlugin Programmed statuses. These were
   introduced in 2.11.0 and caused excessively frequent status updates in
   clusters with multiple KIC instances installed.
-  [#4581](https://github.com/Kong/kubernetes-ingress-controller/pull/4581)
+  [#4584](https://github.com/Kong/kubernetes-ingress-controller/pull/4584)
 
 ## [2.11.0]
 

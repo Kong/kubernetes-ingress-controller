@@ -63,8 +63,6 @@ func TestMain(m *testing.M) {
 		fmt.Printf("INFO: custom kong image specified via env: %s:%s\n", testenv.KongImage(), testenv.KongTag())
 	}
 
-	kongbuilder = kongbuilder.WithAdditionalValue("dblessConfig.configMap", "initconfig")
-
 	kongAddon := kongbuilder.Build()
 	builder := environments.NewBuilder().WithAddons(kongAddon)
 
@@ -121,25 +119,6 @@ func TestMain(m *testing.M) {
 
 	clusterVersion, err = env.Cluster().Version()
 	exitOnErr(ctx, err)
-
-	// TODO ARF
-	initconfig := corev1.ConfigMap{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "initconfig",
-		},
-		Data: map[string]string{
-			"kong.yml": `_format_version: '3.0'
-_transform: false
-upstreams:
-- name: stub
-`,
-		},
-	}
-	if _, err := env.Cluster().Client().CoreV1().ConfigMaps(kongAddon.Namespace()).Create(ctx, &initconfig, metav1.CreateOptions{}); err != nil {
-		if !apierrors.IsAlreadyExists(err) {
-			exitOnErr(ctx, err)
-		}
-	}
 
 	exitOnErr(ctx, DeployAddonsForCluster(ctx, env.Cluster()))
 	fmt.Printf("INFO: waiting for cluster %s and all addons to become ready\n", env.Cluster().Name())

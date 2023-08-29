@@ -114,8 +114,8 @@ var inputControllersNeeded = &typesNeeded{
 		Plural:                            "kongplugins",
 		CacheType:                         "Plugin",
 		NeedsStatusPermissions:            true,
-		ConfigStatusNotificationsEnabled:  true,
-		ProgrammedConditionUpdatesEnabled: true,
+		ConfigStatusNotificationsEnabled:  false, // TODO true after https://github.com/Kong/kubernetes-ingress-controller/issues/4578
+		ProgrammedConditionUpdatesEnabled: false, // TODO true after https://github.com/Kong/kubernetes-ingress-controller/issues/4578
 		AcceptsIngressClassNameAnnotation: false,
 		AcceptsIngressClassNameSpec:       false,
 		NeedsUpdateReferences:             true,
@@ -131,8 +131,8 @@ var inputControllersNeeded = &typesNeeded{
 		Plural:                            "kongclusterplugins",
 		CacheType:                         "ClusterPlugin",
 		NeedsStatusPermissions:            true,
-		ConfigStatusNotificationsEnabled:  true,
-		ProgrammedConditionUpdatesEnabled: true,
+		ConfigStatusNotificationsEnabled:  false, // TODO true after https://github.com/Kong/kubernetes-ingress-controller/issues/4578
+		ProgrammedConditionUpdatesEnabled: false, // TODO true after https://github.com/Kong/kubernetes-ingress-controller/issues/4578
 		AcceptsIngressClassNameAnnotation: true,
 		AcceptsIngressClassNameSpec:       false,
 		NeedsUpdateReferences:             true,

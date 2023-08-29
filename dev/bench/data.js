@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1693320877372,
+  "lastUpdate": 1693320879250,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -81654,6 +81654,66 @@ window.BENCHMARK_DATA = {
             "value": 0,
             "unit": "allocs/op",
             "extra": "11767413 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "49699333+dependabot[bot]@users.noreply.github.com",
+            "name": "dependabot[bot]",
+            "username": "dependabot[bot]"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "34e5651b413f1e88b10911e2af1c2ef1075c6c87",
+          "message": "chore(deps): bump github.com/kong/go-kong from 0.46.0 to 0.47.0\n\nBumps [github.com/kong/go-kong](https://github.com/kong/go-kong) from 0.46.0 to 0.47.0.\n- [Release notes](https://github.com/kong/go-kong/releases)\n- [Changelog](https://github.com/Kong/go-kong/blob/main/CHANGELOG.md)\n- [Commits](https://github.com/kong/go-kong/compare/v0.46.0...v0.47.0)\n\n---\nupdated-dependencies:\n- dependency-name: github.com/kong/go-kong\n  dependency-type: direct:production\n  update-type: version-update:semver-minor\n...\n\nSigned-off-by: dependabot[bot] <support@github.com>",
+          "timestamp": "2023-08-29T14:51:10Z",
+          "tree_id": "aadd8be3adc0d0141d55b8a5a29320019d987c09",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/34e5651b413f1e88b10911e2af1c2ef1075c6c87"
+        },
+        "date": 1693320867967,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - ns/op",
+            "value": 68719,
+            "unit": "ns/op",
+            "extra": "16876 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - B/op",
+            "value": 11102,
+            "unit": "B/op",
+            "extra": "16876 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - allocs/op",
+            "value": 12,
+            "unit": "allocs/op",
+            "extra": "16876 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDefaultContentToDBLessConfigConverter_Convert - ns/op",
+            "value": 97.43,
+            "unit": "ns/op",
+            "extra": "11561233 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDefaultContentToDBLessConfigConverter_Convert - B/op",
+            "value": 0,
+            "unit": "B/op",
+            "extra": "11561233 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDefaultContentToDBLessConfigConverter_Convert - allocs/op",
+            "value": 0,
+            "unit": "allocs/op",
+            "extra": "11561233 times\n2 procs"
           }
         ]
       },

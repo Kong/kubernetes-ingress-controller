@@ -1,6 +1,7 @@
 package kongstate
 
 import (
+	"crypto/sha256"
 	"fmt"
 	"strconv"
 	"strings"
@@ -8,6 +9,7 @@ import (
 	"github.com/blang/semver/v4"
 	"github.com/kong/go-kong/kong"
 	"github.com/sirupsen/logrus"
+	"k8s.io/apimachinery/pkg/util/sets"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/failures"
@@ -342,21 +344,40 @@ func buildPlugins(
 			}
 		}
 
+		usedInstanceNames := sets.New[string]()
 		for _, rel := range relations.GetCombinations() {
 			plugin := plugin.DeepCopy()
+			var sha [32]byte
 			// ID is populated because that is read by decK and in_memory
 			// translator too
 			if rel.Service != "" {
 				plugin.Service = &kong.Service{ID: kong.String(rel.Service)}
+				sha = sha256.Sum256([]byte(rel.Service))
 			}
 			if rel.Route != "" {
 				plugin.Route = &kong.Route{ID: kong.String(rel.Route)}
+				sha = sha256.Sum256([]byte(rel.Route))
 			}
 			if rel.Consumer != "" {
 				plugin.Consumer = &kong.Consumer{ID: kong.String(rel.Consumer)}
+				sha = sha256.Sum256([]byte(rel.Consumer))
 			}
 			if rel.ConsumerGroup != "" {
 				plugin.ConsumerGroup = &kong.ConsumerGroup{ID: kong.String(rel.ConsumerGroup)}
+				sha = sha256.Sum256([]byte(rel.ConsumerGroup))
+			}
+			// instance_name must be unique. Using the same KongPlugin on multiple resources will result in duplicates
+			// unless we add some sort of suffix.
+			if plugin.InstanceName != nil {
+				suffix := fmt.Sprintf("%x", sha)
+				short := suffix[:9]
+				suffixed := fmt.Sprintf("%s-%s", *plugin.InstanceName, short)
+				if usedInstanceNames.Has(suffixed) {
+					// in the unlikely event of a short hash collision, use the full one
+					suffixed = fmt.Sprintf("%s-%s", *plugin.InstanceName, suffix)
+				}
+				usedInstanceNames.Insert(suffixed)
+				plugin.InstanceName = &suffixed
 			}
 			plugins = append(plugins, plugin)
 		}
@@ -366,6 +387,7 @@ func buildPlugins(
 	if err != nil {
 		log.WithError(err).Error("failed to fetch global plugins")
 	}
+	// global plugins have no instance_name transform as they can only be applied once
 	plugins = append(plugins, globalPlugins...)
 
 	return plugins

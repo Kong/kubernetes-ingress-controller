@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1693434374786,
+  "lastUpdate": 1693438818970,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -83694,6 +83694,66 @@ window.BENCHMARK_DATA = {
             "value": 0,
             "unit": "allocs/op",
             "extra": "12314464 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "571832+rainest@users.noreply.github.com",
+            "name": "Travis Raines",
+            "username": "rainest"
+          },
+          "committer": {
+            "email": "571832+rainest@users.noreply.github.com",
+            "name": "Travis Raines",
+            "username": "rainest"
+          },
+          "distinct": true,
+          "id": "cf86460a950110c58c4f103ac04ce6ad1382eec9",
+          "message": "chore(tests) remove invalid Gateways\n\nGWAPI v0.8.0 introduced improved Gateway validation that rejects some\ncombinations of Listener at apply time.\n\nWe no longer need to check handling of such Listeners in tests, as\nthey're simply impossible to create.",
+          "timestamp": "2023-08-30T16:37:48-07:00",
+          "tree_id": "242b5771b3564bc819d8dbd7dc1d483d90ce3998",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/cf86460a950110c58c4f103ac04ce6ad1382eec9"
+        },
+        "date": 1693438807953,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - ns/op",
+            "value": 76680,
+            "unit": "ns/op",
+            "extra": "15648 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - B/op",
+            "value": 11100,
+            "unit": "B/op",
+            "extra": "15648 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - allocs/op",
+            "value": 12,
+            "unit": "allocs/op",
+            "extra": "15648 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDefaultContentToDBLessConfigConverter_Convert - ns/op",
+            "value": 117.1,
+            "unit": "ns/op",
+            "extra": "10419260 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDefaultContentToDBLessConfigConverter_Convert - B/op",
+            "value": 0,
+            "unit": "B/op",
+            "extra": "10419260 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDefaultContentToDBLessConfigConverter_Convert - allocs/op",
+            "value": 0,
+            "unit": "allocs/op",
+            "extra": "10419260 times\n2 procs"
           }
         ]
       }

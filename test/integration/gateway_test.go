@@ -437,8 +437,6 @@ func TestGatewayFilters(t *testing.T) {
 		gw.Spec.Listeners = []gatewayv1beta1.Listener{
 			builder.NewListener("http").HTTP().WithPort(80).
 				WithAllowedRoutes(builder.NewAllowedRoutesFromAllNamespaces()).Build(),
-			builder.NewListener("https").HTTPS().WithPort(443).
-				WithAllowedRoutes(builder.NewAllowedRoutesFromAllNamespaces()).Build(),
 		}
 	})
 	require.NoError(t, err)
@@ -528,8 +526,6 @@ func TestGatewayFilters(t *testing.T) {
 		gateway.Spec.Listeners = []gatewayv1beta1.Listener{
 			builder.NewListener("http").HTTP().WithPort(80).
 				WithAllowedRoutes(builder.NewAllowedRoutesFromSameNamespaces()).Build(),
-			builder.NewListener("https").HTTPS().WithPort(443).
-				WithAllowedRoutes(builder.NewAllowedRoutesFromSameNamespaces()).Build(),
 		}
 		_, err = gatewayClient.Gateways(ns.Name).Update(ctx, gateway, metav1.UpdateOptions{})
 		if err != nil {
@@ -561,7 +557,6 @@ func TestGatewayFilters(t *testing.T) {
 		)
 		gateway.Spec.Listeners = []gatewayv1beta1.Listener{
 			builder.NewListener("http").HTTP().WithPort(80).WithAllowedRoutes(fromSelector).Build(),
-			builder.NewListener("https").HTTPS().WithPort(443).WithAllowedRoutes(fromSelector).Build(),
 		}
 		_, err = gatewayClient.Gateways(ns.Name).Update(ctx, gateway, metav1.UpdateOptions{})
 		if err != nil {

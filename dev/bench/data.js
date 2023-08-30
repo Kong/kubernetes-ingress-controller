@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1693429827112,
+  "lastUpdate": 1693433052533,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -83334,6 +83334,66 @@ window.BENCHMARK_DATA = {
             "value": 0,
             "unit": "allocs/op",
             "extra": "9132037 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "571832+rainest@users.noreply.github.com",
+            "name": "Travis Raines",
+            "username": "rainest"
+          },
+          "committer": {
+            "email": "571832+rainest@users.noreply.github.com",
+            "name": "Travis Raines",
+            "username": "rainest"
+          },
+          "distinct": true,
+          "id": "8e00e1293a3871ac532acfd63148261159e5dc54",
+          "message": "chore(tests) remove default Gateway HTTPS listener\n\nAs of GWAPI v0.8.0, HTTPS Listeners require TLS configuration with at\nleast one certificate. The default Gateway from DeployGateway()\nincluded an HTTPS Listener that violated this rule.\n\nAdding a default certificate would be cumbersome given the current\nDefaultGateway() code structure. Tests that use TLS protocols should\nalready be defining their own TLS configuration, as they cannot specify\ncertificates otherwise, so it's unlikely there's an actual need for this\nListener.",
+          "timestamp": "2023-08-30T14:56:23-07:00",
+          "tree_id": "a2ce9b1d0dca9a54267e5e473eef84456f1f00ab",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/8e00e1293a3871ac532acfd63148261159e5dc54"
+        },
+        "date": 1693433041681,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - ns/op",
+            "value": 70774,
+            "unit": "ns/op",
+            "extra": "18261 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - B/op",
+            "value": 11101,
+            "unit": "B/op",
+            "extra": "18261 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - allocs/op",
+            "value": 12,
+            "unit": "allocs/op",
+            "extra": "18261 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDefaultContentToDBLessConfigConverter_Convert - ns/op",
+            "value": 118.3,
+            "unit": "ns/op",
+            "extra": "12899520 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDefaultContentToDBLessConfigConverter_Convert - B/op",
+            "value": 0,
+            "unit": "B/op",
+            "extra": "12899520 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDefaultContentToDBLessConfigConverter_Convert - allocs/op",
+            "value": 0,
+            "unit": "allocs/op",
+            "extra": "12899520 times\n2 procs"
           }
         ]
       }

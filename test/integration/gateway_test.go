@@ -27,6 +27,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util/builder"
 	"github.com/kong/kubernetes-ingress-controller/v2/test"
 	"github.com/kong/kubernetes-ingress-controller/v2/test/consts"
+	"github.com/kong/kubernetes-ingress-controller/v2/test/helpers/certificate"
 	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/helpers"
 )
 
@@ -240,17 +241,51 @@ func TestGatewayListenerConflicts(t *testing.T) {
 	}, gatewayUpdateWaitTime, time.Second)
 
 	t.Log("changing listeners to a set with conflicting hostnames")
+	// GWAPI v0.8.0 requires a TLS configuration for HTTPS and TLS Listeners. We only check Listener statuses in this
+	// test and don't perform any checks that care about the certificate contents, so we use the same garbage certificate
+	// for all Listeners.
+	cert, key := certificate.MustGenerateSelfSignedCertPEMFormat(certificate.WithCommonName(ns.Name + ".example.com"))
+	certName := gateway.Name + "cert"
+	secret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      certName,
+			Namespace: ns.Name,
+		},
+		Data: map[string][]byte{
+			"tls.crt": cert,
+			"tls.key": key,
+		},
+	}
+
+	secret, err = env.Cluster().Client().CoreV1().Secrets(ns.Name).Create(ctx, secret, metav1.CreateOptions{})
+	require.NoError(t, err)
+	cleaner.Add(secret)
+
 	// these both use the empty hostname
 	gw.Spec.Listeners = []gatewayv1beta1.Listener{
 		{
 			Name:     "httpsalpha",
 			Protocol: gatewayv1beta1.HTTPSProtocolType,
 			Port:     gatewayv1beta1.PortNumber(443),
+			TLS: &gatewayv1beta1.GatewayTLSConfig{
+				CertificateRefs: []gatewayv1beta1.SecretObjectReference{
+					{
+						Name: gatewayv1beta1.ObjectName(certName),
+					},
+				},
+			},
 		},
 		{
 			Name:     "httpsbravo",
 			Protocol: gatewayv1beta1.HTTPSProtocolType,
 			Port:     gatewayv1beta1.PortNumber(443),
+			TLS: &gatewayv1beta1.GatewayTLSConfig{
+				CertificateRefs: []gatewayv1beta1.SecretObjectReference{
+					{
+						Name: gatewayv1beta1.ObjectName(certName),
+					},
+				},
+			},
 		},
 	}
 
@@ -307,12 +342,26 @@ func TestGatewayListenerConflicts(t *testing.T) {
 			Protocol: gatewayv1beta1.TLSProtocolType,
 			Port:     gatewayv1beta1.PortNumber(8899),
 			Hostname: &tlsHost,
+			TLS: &gatewayv1beta1.GatewayTLSConfig{
+				CertificateRefs: []gatewayv1beta1.SecretObjectReference{
+					{
+						Name: gatewayv1beta1.ObjectName(certName),
+					},
+				},
+			},
 		},
 		{
 			Name:     "https",
 			Protocol: gatewayv1beta1.HTTPSProtocolType,
 			Port:     gatewayv1beta1.PortNumber(443),
 			Hostname: &httpsHost,
+			TLS: &gatewayv1beta1.GatewayTLSConfig{
+				CertificateRefs: []gatewayv1beta1.SecretObjectReference{
+					{
+						Name: gatewayv1beta1.ObjectName(certName),
+					},
+				},
+			},
 		},
 		{
 			Name:     "httphost",

@@ -2,7 +2,7 @@ _format_version: "3.0"
 plugins:
 - config:
     header_name: kong-id
-  instance_name: example-bdcb8b52a
+  instance_name: example-728157fcb
   name: correlation-id
   route: .httpbin.httpbin..80
   tags:
@@ -12,7 +12,7 @@ plugins:
   - k8s-version:v1
 - config:
     header_name: kong-id
-  instance_name: example-a3140f9c1
+  instance_name: example-c1ebced53
   name: correlation-id
   route: .httpbin-other.httpbin..80
   tags:
@@ -22,7 +22,7 @@ plugins:
   - k8s-version:v1
 - config:
     header_name: kong-id
-  instance_name: example-ada1f5f2a
+  instance_name: example-b8a0ddb44
   name: correlation-id
   route: .httpbin-other.httpbin-other..80
   tags:

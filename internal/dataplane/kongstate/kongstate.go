@@ -352,19 +352,19 @@ func buildPlugins(
 			// translator too
 			if rel.Service != "" {
 				plugin.Service = &kong.Service{ID: kong.String(rel.Service)}
-				sha = sha256.Sum256([]byte(rel.Service))
+				sha = sha256.Sum256([]byte("service-" + rel.Service))
 			}
 			if rel.Route != "" {
 				plugin.Route = &kong.Route{ID: kong.String(rel.Route)}
-				sha = sha256.Sum256([]byte(rel.Route))
+				sha = sha256.Sum256([]byte("route-" + rel.Route))
 			}
 			if rel.Consumer != "" {
 				plugin.Consumer = &kong.Consumer{ID: kong.String(rel.Consumer)}
-				sha = sha256.Sum256([]byte(rel.Consumer))
+				sha = sha256.Sum256([]byte("consumer-" + rel.Consumer))
 			}
 			if rel.ConsumerGroup != "" {
 				plugin.ConsumerGroup = &kong.ConsumerGroup{ID: kong.String(rel.ConsumerGroup)}
-				sha = sha256.Sum256([]byte(rel.ConsumerGroup))
+				sha = sha256.Sum256([]byte("group-" + rel.ConsumerGroup))
 			}
 			// instance_name must be unique. Using the same KongPlugin on multiple resources will result in duplicates
 			// unless we add some sort of suffix.

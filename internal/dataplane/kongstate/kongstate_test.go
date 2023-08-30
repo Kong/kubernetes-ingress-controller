@@ -765,7 +765,7 @@ func TestKongState_BuildPluginsCollisions(t *testing.T) {
 					Route: []string{"collision", "collision"},
 				},
 			},
-			want: []string{"test-9550e70a7", "test-9550e70a7c3619220570a6ed8b82684edbfc045b698027748b43afa2cadd6bae"},
+			want: []string{"test-bae3267aa", "test-bae3267aafead3adb6031bc1c732516336e7f7b324baf61bb68a39cc89112741"},
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {

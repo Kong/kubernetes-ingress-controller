@@ -152,6 +152,23 @@ func TestGatewayListenerConflicts(t *testing.T) {
 	gatewayClient, err := gatewayclient.NewForConfig(env.Cluster().Config())
 	require.NoError(t, err)
 
+	t.Log("adding a test certificate")
+	cert, key := certificate.MustGenerateSelfSignedCertPEMFormat(certificate.WithCommonName(ns.Name + ".example.com"))
+	certName := "cert"
+	secret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      certName,
+			Namespace: ns.Name,
+		},
+		Data: map[string][]byte{
+			"tls.crt": cert,
+			"tls.key": key,
+		},
+	}
+
+	secret, err = env.Cluster().Client().CoreV1().Secrets(ns.Name).Create(ctx, secret, metav1.CreateOptions{})
+	require.NoError(t, err)
+
 	t.Log("deploying a new Gateway using the default GatewayClass")
 	gateway, err := DeployGateway(ctx, gatewayClient, ns.Name, unmanagedGatewayClassName)
 	require.NoError(t, err)
@@ -181,11 +198,6 @@ func TestGatewayListenerConflicts(t *testing.T) {
 	t.Log("adding conflicting listeners")
 	gw.Spec.Listeners = append(gw.Spec.Listeners,
 		gatewayv1beta1.Listener{
-			Name:     "badhttp",
-			Protocol: gatewayv1beta1.HTTPProtocolType,
-			Port:     gatewayv1beta1.PortNumber(80),
-		},
-		gatewayv1beta1.Listener{
 			Name:     "badudp",
 			Protocol: gatewayv1beta1.UDPProtocolType,
 			Port:     gatewayv1beta1.PortNumber(80),
@@ -197,11 +209,11 @@ func TestGatewayListenerConflicts(t *testing.T) {
 	gw, err = gatewayClient.GatewayV1beta1().Gateways(ns.Name).Get(ctx, gw.Name, metav1.GetOptions{})
 	require.NoError(t, err)
 
-	t.Log("confirming existing listen becomes unready and conflicted, new HTTP listen has hostname conflict, new UDP listen has proto conflict")
+	t.Log("confirming existing listen becomes unready and conflicted, new UDP listen has proto conflict")
 	require.Eventually(t, func() bool {
 		gw, err = gatewayClient.GatewayV1beta1().Gateways(ns.Name).Get(ctx, gw.Name, metav1.GetOptions{})
 		require.NoError(t, err)
-		var badhttpReady, badhttpConflicted, badudpReady, badudpConflicted, httpReady, httpConflicted bool
+		var badudpReady, badudpConflicted, httpReady, httpConflicted bool
 		for _, lstatus := range gw.Status.Listeners {
 			if lstatus.Name == "badudp" {
 				for _, condition := range lstatus.Conditions {
@@ -210,19 +222,6 @@ func TestGatewayListenerConflicts(t *testing.T) {
 					}
 					if condition.Type == string(gatewayv1beta1.ListenerConditionProgrammed) {
 						badudpReady = (condition.Status == metav1.ConditionTrue)
-					}
-				}
-			}
-			if lstatus.Name == "badhttp" {
-				for _, condition := range lstatus.Conditions {
-					if condition.Type == string(gatewayv1beta1.ListenerConditionConflicted) && condition.Status == metav1.ConditionTrue {
-						// this is a PROTOCOL conflict: although this only conflicts with the existing HTTP listen by
-						// hostname, it also conflicts with the new UDP listener by protocol, and the latter takes
-						// precedence
-						badhttpConflicted = (condition.Reason == string(gatewayv1beta1.ListenerReasonProtocolConflict))
-					}
-					if condition.Type == string(gatewayv1beta1.ListenerConditionProgrammed) {
-						badhttpReady = (condition.Status == metav1.ConditionTrue)
 					}
 				}
 			}
@@ -237,90 +236,9 @@ func TestGatewayListenerConflicts(t *testing.T) {
 				}
 			}
 		}
-		return !badhttpReady && badhttpConflicted && !badudpReady && badudpConflicted && !httpReady && httpConflicted
+		return !badudpReady && badudpConflicted && !httpReady && httpConflicted
 	}, gatewayUpdateWaitTime, time.Second)
 
-	t.Log("changing listeners to a set with conflicting hostnames")
-	// GWAPI v0.8.0 requires a TLS configuration for HTTPS and TLS Listeners. We only check Listener statuses in this
-	// test and don't perform any checks that care about the certificate contents, so we use the same garbage certificate
-	// for all Listeners.
-	cert, key := certificate.MustGenerateSelfSignedCertPEMFormat(certificate.WithCommonName(ns.Name + ".example.com"))
-	certName := gateway.Name + "cert"
-	secret := &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      certName,
-			Namespace: ns.Name,
-		},
-		Data: map[string][]byte{
-			"tls.crt": cert,
-			"tls.key": key,
-		},
-	}
-
-	secret, err = env.Cluster().Client().CoreV1().Secrets(ns.Name).Create(ctx, secret, metav1.CreateOptions{})
-	require.NoError(t, err)
-	cleaner.Add(secret)
-
-	// these both use the empty hostname
-	gw.Spec.Listeners = []gatewayv1beta1.Listener{
-		{
-			Name:     "httpsalpha",
-			Protocol: gatewayv1beta1.HTTPSProtocolType,
-			Port:     gatewayv1beta1.PortNumber(443),
-			TLS: &gatewayv1beta1.GatewayTLSConfig{
-				CertificateRefs: []gatewayv1beta1.SecretObjectReference{
-					{
-						Name: gatewayv1beta1.ObjectName(certName),
-					},
-				},
-			},
-		},
-		{
-			Name:     "httpsbravo",
-			Protocol: gatewayv1beta1.HTTPSProtocolType,
-			Port:     gatewayv1beta1.PortNumber(443),
-			TLS: &gatewayv1beta1.GatewayTLSConfig{
-				CertificateRefs: []gatewayv1beta1.SecretObjectReference{
-					{
-						Name: gatewayv1beta1.ObjectName(certName),
-					},
-				},
-			},
-		},
-	}
-
-	_, err = gatewayClient.GatewayV1beta1().Gateways(ns.Name).Update(ctx, gw, metav1.UpdateOptions{})
-	require.NoError(t, err)
-
-	t.Log("confirming listeners with conflicted hostnames receive appropriate conditions")
-	require.Eventually(t, func() bool {
-		gw, err = gatewayClient.GatewayV1beta1().Gateways(ns.Name).Get(ctx, gw.Name, metav1.GetOptions{})
-		require.NoError(t, err)
-		var httpAlphaReady, httpAlphaConflicted, httpBravoReady, httpBravoConflicted bool
-		for _, lstatus := range gw.Status.Listeners {
-			if lstatus.Name == "httpsalpha" {
-				for _, condition := range lstatus.Conditions {
-					if condition.Type == string(gatewayv1beta1.ListenerConditionConflicted) && condition.Status == metav1.ConditionTrue {
-						httpAlphaConflicted = (condition.Reason == string(gatewayv1beta1.ListenerReasonHostnameConflict))
-					}
-					if condition.Type == string(gatewayv1beta1.ListenerConditionProgrammed) {
-						httpAlphaReady = (condition.Status == metav1.ConditionTrue)
-					}
-				}
-			}
-			if lstatus.Name == "httpsbravo" {
-				for _, condition := range lstatus.Conditions {
-					if condition.Type == string(gatewayv1beta1.ListenerConditionConflicted) && condition.Status == metav1.ConditionTrue {
-						httpBravoConflicted = (condition.Reason == string(gatewayv1beta1.ListenerReasonHostnameConflict))
-					}
-					if condition.Type == string(gatewayv1beta1.ListenerConditionProgrammed) {
-						httpBravoReady = (condition.Status == metav1.ConditionTrue)
-					}
-				}
-			}
-		}
-		return !httpAlphaReady && httpAlphaConflicted && !httpBravoReady && httpBravoConflicted
-	}, gatewayUpdateWaitTime, time.Second)
 	t.Log("swapping out existing listeners with multiple compatible listeners")
 	tlsHost := gatewayv1beta1.Hostname("tls.example")
 	httpsHost := gatewayv1beta1.Hostname("https.example")

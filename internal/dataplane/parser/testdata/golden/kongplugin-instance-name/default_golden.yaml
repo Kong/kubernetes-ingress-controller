@@ -1,0 +1,128 @@
+_format_version: "3.0"
+plugins:
+- config:
+    header_name: kong-id
+  instance_name: example-728157fcb
+  name: correlation-id
+  route: .httpbin.httpbin..80
+  tags:
+  - k8s-name:kong-id
+  - k8s-kind:KongPlugin
+  - k8s-group:configuration.konghq.com
+  - k8s-version:v1
+- config:
+    header_name: kong-id
+  instance_name: example-c1ebced53
+  name: correlation-id
+  route: .httpbin-other.httpbin..80
+  tags:
+  - k8s-name:kong-id
+  - k8s-kind:KongPlugin
+  - k8s-group:configuration.konghq.com
+  - k8s-version:v1
+- config:
+    header_name: kong-id
+  instance_name: example-b8a0ddb44
+  name: correlation-id
+  route: .httpbin-other.httpbin-other..80
+  tags:
+  - k8s-name:kong-id
+  - k8s-kind:KongPlugin
+  - k8s-group:configuration.konghq.com
+  - k8s-version:v1
+services:
+- connect_timeout: 60000
+  host: httpbin..80.svc
+  name: .httpbin.80
+  path: /
+  port: 80
+  protocol: http
+  read_timeout: 60000
+  retries: 5
+  routes:
+  - https_redirect_status_code: 426
+    name: .httpbin.httpbin..80
+    path_handling: v0
+    paths:
+    - /httpbin
+    preserve_host: true
+    protocols:
+    - http
+    - https
+    regex_priority: 0
+    request_buffering: true
+    response_buffering: true
+    strip_path: false
+    tags:
+    - k8s-name:httpbin
+    - k8s-kind:Ingress
+    - k8s-group:networking.k8s.io
+    - k8s-version:v1
+  - https_redirect_status_code: 426
+    name: .httpbin-other.httpbin..80
+    path_handling: v0
+    paths:
+    - /httpbin-diff
+    preserve_host: true
+    protocols:
+    - http
+    - https
+    regex_priority: 0
+    request_buffering: true
+    response_buffering: true
+    strip_path: false
+    tags:
+    - k8s-name:httpbin-other
+    - k8s-kind:Ingress
+    - k8s-group:networking.k8s.io
+    - k8s-version:v1
+  tags:
+  - k8s-name:httpbin
+  - k8s-kind:Service
+  - k8s-version:v1
+  write_timeout: 60000
+- connect_timeout: 60000
+  host: httpbin-other..80.svc
+  name: .httpbin-other.80
+  path: /
+  port: 80
+  protocol: http
+  read_timeout: 60000
+  retries: 5
+  routes:
+  - https_redirect_status_code: 426
+    name: .httpbin-other.httpbin-other..80
+    path_handling: v0
+    paths:
+    - /httpbin-other
+    preserve_host: true
+    protocols:
+    - http
+    - https
+    regex_priority: 0
+    request_buffering: true
+    response_buffering: true
+    strip_path: false
+    tags:
+    - k8s-name:httpbin-other
+    - k8s-kind:Ingress
+    - k8s-group:networking.k8s.io
+    - k8s-version:v1
+  tags:
+  - k8s-name:httpbin-other
+  - k8s-kind:Service
+  - k8s-version:v1
+  write_timeout: 60000
+upstreams:
+- algorithm: round-robin
+  name: httpbin..80.svc
+  tags:
+  - k8s-name:httpbin
+  - k8s-kind:Service
+  - k8s-version:v1
+- algorithm: round-robin
+  name: httpbin-other..80.svc
+  tags:
+  - k8s-name:httpbin-other
+  - k8s-kind:Service
+  - k8s-version:v1

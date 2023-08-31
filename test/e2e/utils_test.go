@@ -29,6 +29,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
+
+	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/testenv"
 )
 
 const (
@@ -161,7 +163,7 @@ func getTestManifest(t *testing.T, baseManifestPath string, skipTestPatches bool
 
 		if kongImageOverride != "" {
 			patchReadinessProbeRange := kong.MustNewRange("<" + statusReadyProbeMinimalKongVersion.String())
-			kongVersion, err := getKongVersionFromImageTag()
+			kongVersion, err := getKongVersionFromOverrideImageTag()
 			// If we could not get version from kong image, assume they are latest.
 			// So we do not patch the readiness probe path to the legacy path `/status`.
 			if err == nil && patchReadinessProbeRange(kongVersion) {
@@ -296,11 +298,13 @@ func patchControllerImageFromEnv(t *testing.T, manifestReader io.Reader) (io.Rea
 	return manifestReader, nil
 }
 
-// getKongVersionFromImageTag gets Kong version from tags of Kong image.
-// TODO: what should it do when:
-// - no image provided
-// - image tag could not be parsed into a semver, like "latest", "nightly".
-func getKongVersionFromImageTag() (kong.Version, error) {
+// getKongVersionFromImageTag parses Kong version from tags of Kong image.
+// If environment variable `TEST_KONG_EFFECTIVE_VERSION` is set, override with its value.
+func getKongVersionFromOverrideImageTag() (kong.Version, error) {
+	if kongEffectiveVersion := testenv.KongEffectiveVersion(); kongEffectiveVersion != "" {
+		return kong.ParseSemanticVersion(kongEffectiveVersion)
+	}
+
 	if kongImageOverride == "" {
 		return kong.Version{}, errors.New("No Kong image provided")
 	}

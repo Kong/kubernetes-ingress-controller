@@ -19,10 +19,13 @@ import (
 	"google.golang.org/grpc/metadata"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	k8stypes "k8s.io/apimachinery/pkg/types"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
 
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/util/builder"
+	"github.com/kong/kubernetes-ingress-controller/v2/test/helpers/certificate"
 	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/helpers"
 )
 
@@ -78,10 +81,42 @@ func TestGRPCRouteEssentials(t *testing.T) {
 	require.NoError(t, err)
 	cleaner.Add(gwc)
 
+	t.Log("configuring secret")
+	tlsRouteExampleTLSCert, tlsRouteExampleTLSKey := certificate.MustGenerateSelfSignedCertPEMFormat(certificate.WithCommonName(tlsRouteHostname))
+
+	secret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			UID:       k8stypes.UID("7428fb98-180b-4702-a91f-61351a33c6e8"),
+			Name:      tlsSecretName,
+			Namespace: ns.Name,
+		},
+		Data: map[string][]byte{
+			"tls.crt": tlsRouteExampleTLSCert,
+			"tls.key": tlsRouteExampleTLSKey,
+		},
+	}
+
+	t.Log("deploying secret")
+	secret, err = env.Cluster().Client().CoreV1().Secrets(ns.Name).Create(ctx, secret, metav1.CreateOptions{})
+	require.NoError(t, err)
+	cleaner.Add(secret)
+
 	t.Log("deploying a new gateway")
-	gatewayName := uuid.NewString()
-	gateway, err := DeployGateway(ctx, gatewayClient, ns.Name, gatewayClassName, func(gw *gatewayv1beta1.Gateway) {
-		gw.Name = gatewayName
+	testHostname := "cholpon.example"
+	gateway, err := DeployGateway(ctx, gatewayClient, ns.Name, unmanagedGatewayClassName, func(gw *gatewayv1beta1.Gateway) {
+		gw.Spec.Listeners = []gatewayv1beta1.Listener{
+			builder.NewListener("https").
+				HTTPS().
+				WithPort(ktfkong.DefaultProxyTLSServicePort).
+				WithHostname(testHostname).
+				WithTLSConfig(&gatewayv1beta1.GatewayTLSConfig{
+					CertificateRefs: []gatewayv1beta1.SecretObjectReference{
+						{
+							Name: gatewayv1beta1.ObjectName(secret.Name),
+						},
+					},
+				}).Build(),
+		}
 	})
 	require.NoError(t, err)
 	cleaner.Add(gateway)
@@ -112,7 +147,7 @@ func TestGRPCRouteEssentials(t *testing.T) {
 				}},
 			},
 			Hostnames: []gatewayv1alpha2.Hostname{
-				"cholpon.example",
+				gatewayv1alpha2.Hostname(testHostname),
 			},
 			Rules: []gatewayv1alpha2.GRPCRouteRule{{
 				Matches: []gatewayv1alpha2.GRPCRouteMatch{
@@ -159,17 +194,16 @@ func TestGRPCRouteEssentials(t *testing.T) {
 	)
 
 	grpcAddr := fmt.Sprintf("%s:%d", proxyURL.Hostname(), ktfkong.DefaultProxyTLSServicePort)
-	const grpcRouteHostname = "cholpon.example"
 	t.Log("waiting for routes from GRPCRoute to become operational")
 	require.Eventually(t, func() bool {
-		err := grpcEchoResponds(ctx, grpcAddr, grpcRouteHostname, "kong")
+		err := grpcEchoResponds(ctx, grpcAddr, testHostname, "kong")
 		if err != nil {
 			t.Log(err)
 		}
 		return err == nil
 	}, ingressWait, waitTick)
 
-	client, closeGrpcConn, err := grpcbinClient(ctx, grpcAddr, grpcRouteHostname)
+	client, closeGrpcConn, err := grpcbinClient(ctx, grpcAddr, testHostname)
 	require.NoError(t, err)
 	t.Cleanup(func() {
 		err := closeGrpcConn()

@@ -166,7 +166,7 @@ func TestGatewayListenerConflicts(t *testing.T) {
 		},
 	}
 
-	secret, err = env.Cluster().Client().CoreV1().Secrets(ns.Name).Create(ctx, secret, metav1.CreateOptions{})
+	_, err = env.Cluster().Client().CoreV1().Secrets(ns.Name).Create(ctx, secret, metav1.CreateOptions{})
 	require.NoError(t, err)
 
 	t.Log("deploying a new Gateway using the default GatewayClass")

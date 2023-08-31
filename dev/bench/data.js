@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1693502313832,
+  "lastUpdate": 1693502445337,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -85014,6 +85014,66 @@ window.BENCHMARK_DATA = {
             "value": 0,
             "unit": "allocs/op",
             "extra": "12230457 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "571832+rainest@users.noreply.github.com",
+            "name": "Travis Raines",
+            "username": "rainest"
+          },
+          "committer": {
+            "email": "571832+rainest@users.noreply.github.com",
+            "name": "Travis Raines",
+            "username": "rainest"
+          },
+          "distinct": true,
+          "id": "dbada4cf9a0c01c2f0b82a1cc7c708a76ed644bf",
+          "message": "fix(plugins) add suffix to instance_name (#4588)\n\nAppend a short hash derived from the attached Kong entity name to plugin\ninstance_name. If the short hash would collide, append the full hash\ninstead.\n\ninstance_name must be unique. Applying the same KongPlugin to multiple\nresources, or resources that generate multiple Kong entities, would\nviolate this rule otherwise.",
+          "timestamp": "2023-08-31T10:16:40-07:00",
+          "tree_id": "aa39d35ef17fd29b4d8be9c04f0b37571f57c332",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/dbada4cf9a0c01c2f0b82a1cc7c708a76ed644bf"
+        },
+        "date": 1693502434593,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - ns/op",
+            "value": 69500,
+            "unit": "ns/op",
+            "extra": "16428 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - B/op",
+            "value": 11104,
+            "unit": "B/op",
+            "extra": "16428 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - allocs/op",
+            "value": 12,
+            "unit": "allocs/op",
+            "extra": "16428 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDefaultContentToDBLessConfigConverter_Convert - ns/op",
+            "value": 118.1,
+            "unit": "ns/op",
+            "extra": "9744516 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDefaultContentToDBLessConfigConverter_Convert - B/op",
+            "value": 0,
+            "unit": "B/op",
+            "extra": "9744516 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDefaultContentToDBLessConfigConverter_Convert - allocs/op",
+            "value": 0,
+            "unit": "allocs/op",
+            "extra": "9744516 times\n2 procs"
           }
         ]
       }

@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1693448771361,
+  "lastUpdate": 1693448773000,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -83934,6 +83934,66 @@ window.BENCHMARK_DATA = {
             "value": 0,
             "unit": "allocs/op",
             "extra": "12084307 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "571832+rainest@users.noreply.github.com",
+            "name": "Travis Raines",
+            "username": "rainest"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "21bac1ec1a6061f4ac8014397b4915503c89e54e",
+          "message": "fix(plugins) add suffix to instance_name (#4588)\n\nAppend a short hash derived from the attached Kong entity name to plugin\r\ninstance_name. If the short hash would collide, append the full hash\r\ninstead.\r\n\r\ninstance_name must be unique. Applying the same KongPlugin to multiple\r\nresources, or resources that generate multiple Kong entities, would\r\nviolate this rule otherwise.",
+          "timestamp": "2023-08-31T10:24:51+08:00",
+          "tree_id": "a85695a64b5cf17112795e5cc24fc57d72de3a47",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/21bac1ec1a6061f4ac8014397b4915503c89e54e"
+        },
+        "date": 1693448761101,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - ns/op",
+            "value": 78627,
+            "unit": "ns/op",
+            "extra": "14420 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - B/op",
+            "value": 11099,
+            "unit": "B/op",
+            "extra": "14420 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - allocs/op",
+            "value": 12,
+            "unit": "allocs/op",
+            "extra": "14420 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDefaultContentToDBLessConfigConverter_Convert - ns/op",
+            "value": 125.7,
+            "unit": "ns/op",
+            "extra": "10276388 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDefaultContentToDBLessConfigConverter_Convert - B/op",
+            "value": 0,
+            "unit": "B/op",
+            "extra": "10276388 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDefaultContentToDBLessConfigConverter_Convert - allocs/op",
+            "value": 0,
+            "unit": "allocs/op",
+            "extra": "10276388 times\n2 procs"
           }
         ]
       },

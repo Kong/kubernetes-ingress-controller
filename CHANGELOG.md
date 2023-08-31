@@ -105,6 +105,9 @@ Adding a new version? You'll need three changes:
 - Create routes that match any service and method for `GRPCRoute` rules with no
   matches.
   [#4512](https://github.com/Kong/kubernetes-ingress-controller/issues/4512)
+- KongPlugins used on multiple resources will no longer result in
+  `instance_name` collisions.
+  [#4588](https://github.com/Kong/kubernetes-ingress-controller/issues/4588)
 
 ## [2.11.1]
 

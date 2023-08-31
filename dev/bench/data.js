@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1693472161764,
+  "lastUpdate": 1693474478900,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -84534,6 +84534,66 @@ window.BENCHMARK_DATA = {
             "value": 0,
             "unit": "allocs/op",
             "extra": "10163958 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "tao.yi@konghq.com",
+            "name": "Tao Yi",
+            "username": "randmonkey"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "0188c582a35e139ce57d0c19e146dbff9d4d6534",
+          "message": "test: support patch readiness probe of Kong gateway (#4575)\n\n* test: support patch readiness probe of Kong gateway\r\n\r\n* fix for image tag is not a semver\r\n\r\n* add TEST_EFFECTIVE_KONG_VERSION in e2e tests\r\n\r\n* add format patch function for updating probe path",
+          "timestamp": "2023-08-31T11:10:30+02:00",
+          "tree_id": "14f1e73856a0f36dd30e29cbf3ebd15ce1000de6",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/0188c582a35e139ce57d0c19e146dbff9d4d6534"
+        },
+        "date": 1693474467004,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - ns/op",
+            "value": 80382,
+            "unit": "ns/op",
+            "extra": "15387 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - B/op",
+            "value": 11096,
+            "unit": "B/op",
+            "extra": "15387 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - allocs/op",
+            "value": 12,
+            "unit": "allocs/op",
+            "extra": "15387 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDefaultContentToDBLessConfigConverter_Convert - ns/op",
+            "value": 128.6,
+            "unit": "ns/op",
+            "extra": "10047636 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDefaultContentToDBLessConfigConverter_Convert - B/op",
+            "value": 0,
+            "unit": "B/op",
+            "extra": "10047636 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDefaultContentToDBLessConfigConverter_Convert - allocs/op",
+            "value": 0,
+            "unit": "allocs/op",
+            "extra": "10047636 times\n2 procs"
           }
         ]
       }

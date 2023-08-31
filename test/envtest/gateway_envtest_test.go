@@ -11,6 +11,7 @@ import (
 	"github.com/kong/go-kong/kong"
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
@@ -65,6 +66,24 @@ func createHTTPRoutes(
 	gw gatewayv1beta1.Gateway,
 	numOfRoutes int,
 ) {
+	svc := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "backend-svc",
+			Namespace: gw.Namespace,
+		},
+		Spec: corev1.ServiceSpec{
+			Ports: []corev1.ServicePort{
+				{
+					Name:     "http",
+					Protocol: corev1.ProtocolTCP,
+					Port:     80,
+				},
+			},
+		},
+	}
+	require.NoError(t, ctrlClient.Create(ctx, svc))
+	t.Cleanup(func() { _ = ctrlClient.Delete(ctx, svc) })
+
 	for i := 0; i < numOfRoutes; i++ {
 		httpPort := gatewayv1beta1.PortNumber(80)
 		pathMatchPrefix := gatewayv1beta1.PathMatchPathPrefix

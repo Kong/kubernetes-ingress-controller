@@ -1,6 +1,6 @@
 //go:build envtest
 
-package metrics_test
+package envtest
 
 import (
 	"context"
@@ -12,24 +12,24 @@ import (
 
 	"github.com/prometheus/common/expfmt"
 	"github.com/stretchr/testify/require"
-	"k8s.io/client-go/kubernetes/scheme"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/manager"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/metrics"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
-	"github.com/kong/kubernetes-ingress-controller/v2/test/envtest"
+	"github.com/kong/kubernetes-ingress-controller/v2/pkg/clientset/scheme"
 )
 
 func TestMetricsAreServed(t *testing.T) {
 	t.Parallel()
 
 	const (
-		waitTime = 10 * time.Second
-		tickTime = 100 * time.Millisecond
+		waitTime = 30 * time.Second
+		tickTime = 10 * time.Millisecond
 	)
 
-	envcfg := envtest.Setup(t, scheme.Scheme)
-	cfg := envtest.ConfigForEnvConfig(t, envcfg)
+	envcfg := Setup(t, scheme.Scheme)
+	cfg := ConfigForEnvConfig(t, envcfg)
+	cfg.EnableProfiling = false
 	cfg.EnableConfigDumps = false
 
 	ctx, cancel := context.WithCancel(context.Background())

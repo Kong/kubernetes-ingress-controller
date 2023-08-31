@@ -119,3 +119,38 @@ func patchLivenessProbes(baseManifestReader io.Reader, deployment k8stypes.Names
 	}
 	return kubectl.GetKustomizedManifest(kustomization, baseManifestReader)
 }
+
+// formatKustomizePatchFirstContainerReadinessProbePath returns the patch
+// to update the readiness probe path of the first container in the deployment to the probePath.
+func formatKustomizePatchFirstContainerReadinessProbePath(probePath string) string {
+	const readinessProbePathPatchFormat = "- op: replace\n" +
+		"  path: /spec/template/spec/containers/0/readinessProbe/httpGet/path\n" +
+		`  value: "%s"`
+
+	return fmt.Sprintf(readinessProbePathPatchFormat, probePath)
+}
+
+// patchReadinessProbePath patches the given deployment's path of readiness probe.
+// Kong gateway supports endpoint `/status/ready` since 3.4, and prior versions uses `/status`,
+// so we need to change the path of readiness probe of Kong gateway deployment when its version is < 3.4.
+func patchReadinessProbePath(baseManifestReader io.Reader, deployment k8stypes.NamespacedName, probePath string) (io.Reader, error) {
+	kustomization := types.Kustomization{
+		Patches: []types.Patch{
+			{
+				Patch: formatKustomizePatchFirstContainerReadinessProbePath(probePath),
+				Target: &types.Selector{
+					ResId: resid.ResId{
+						Gvk: resid.Gvk{
+							Group:   "apps",
+							Version: "v1",
+							Kind:    "Deployment",
+						},
+						Name:      deployment.Name,
+						Namespace: deployment.Namespace,
+					},
+				},
+			},
+		},
+	}
+	return kubectl.GetKustomizedManifest(kustomization, baseManifestReader)
+}

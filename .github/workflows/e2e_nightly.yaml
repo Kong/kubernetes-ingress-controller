@@ -35,6 +35,7 @@ jobs:
       # it reports the next release to be released as semver in the version field.
       # ref: https://github.com/Kong/kubernetes-ingress-controller/issues/4014
       kong-image: kong/kong-gateway-dev:nightly
+      kong-effective-version: "3.4"
       all-supported-k8s-versions: false
       run-gke: false
       run-istio: false

@@ -11,6 +11,10 @@ on:
         description: Kong image to be tested (e.g. `kong:3.1.0`).
         type: string
         required: false
+      kong-effective-version:
+        description: Effective version of Kong (e.g. `3.4`). Used when testing against nightly Kong images.
+        type: string
+        required: false
       load-local-image:
         description: Whether to load the local built image into the Docker daemon (from artifact).
         type: boolean
@@ -191,6 +195,7 @@ jobs:
           # KTF issue that should enable it: https://github.com/Kong/kubernetes-testing-framework/issues/587
           TEST_KONG_CONTROLLER_IMAGE_OVERRIDE: "kong/nightly-ingress-controller:nightly"
           TEST_KONG_IMAGE_OVERRIDE: ${{ inputs.kong-image }}
+          TEST_KONG_EFFECTIVE_VERSION: ${{ inputs.kong-effective-version }}
           KONG_LICENSE_DATA: ${{ steps.license.outputs.license }}
           TEST_KONG_KONNECT_ACCESS_TOKEN: ${{ secrets.K8S_TEAM_KONNECT_ACCESS_TOKEN }}
           KONG_CLUSTER_VERSION: ${{ matrix.kubernetes-version }}

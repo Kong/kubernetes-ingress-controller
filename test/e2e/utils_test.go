@@ -5,6 +5,7 @@ package e2e
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -17,6 +18,7 @@ import (
 	"time"
 
 	"github.com/blang/semver/v4"
+	"github.com/kong/go-kong/kong"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/types/gke"
 	"github.com/kong/kubernetes-testing-framework/pkg/environments"
 	"github.com/phayes/freeport"
@@ -27,6 +29,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
+
+	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/testenv"
 )
 
 const (
@@ -38,8 +42,12 @@ const (
 	dblessPath       = "../../deploy/single/all-in-one-dbless.yaml"
 )
 
-// gatewayDiscoveryMinimalVersion is the minimal version of KIC that enables gateway discovery.
-var gatewayDiscoveryMinimalVersion = semver.Version{Major: 2, Minor: 9} // 2.9.0
+var (
+	// gatewayDiscoveryMinimalVersion is the minimal version of KIC that enables gateway discovery.
+	gatewayDiscoveryMinimalVersion = semver.Version{Major: 2, Minor: 9} // 2.9.0
+	// statusReadyProbeMinimalKongVersion is the minimal version of kong gateway version that enables /status/ready probe.
+	statusReadyProbeMinimalKongVersion = semver.Version{Major: 3, Minor: 3} // 3.3.0
+)
 
 func generateAdminPasswordSecret() (string, *corev1.Secret, error) {
 	adminPassword, err := password.Generate(64, 10, 10, false, false)
@@ -152,6 +160,21 @@ func getTestManifest(t *testing.T, baseManifestPath string, skipTestPatches bool
 			t.Logf("failed patching controller liveness (%v), using default manifest %v", err, baseManifestPath)
 			return manifestsReader
 		}
+
+		if kongImageOverride != "" {
+			patchReadinessProbeRange := kong.MustNewRange("<" + statusReadyProbeMinimalKongVersion.String())
+			kongVersion, err := getKongVersionFromOverrideImageTag()
+			// If we could not get version from kong image, assume they are latest.
+			// So we do not patch the readiness probe path to the legacy path `/status`.
+			if err == nil && patchReadinessProbeRange(kongVersion) {
+				manifestsReader, err = patchReadinessProbePath(manifestsReader, deployments.ProxyNN, "/status")
+				if err != nil {
+					t.Logf("failed patching controller readiness (%v), using default manifest %v", err, baseManifestPath)
+					return manifestsReader
+				}
+			}
+		}
+
 	}
 
 	return manifestsReader
@@ -243,20 +266,27 @@ func patchGatewayImageFromEnv(t *testing.T, manifestsReader io.Reader) (io.Reade
 	return manifestsReader, nil
 }
 
+// splitImageRepoTag splits repo and tag from given image name, like kong:3.4.0 => kong, 3.4.0.
+func splitImageRepoTag(image string) (string, string, error) {
+	split := strings.Split(image, ":")
+	if len(split) < 2 {
+		return "", "", fmt.Errorf("could not parse override image '%v', expected <repo>:<tag> format", image)
+	}
+	repo := strings.Join(split[0:len(split)-1], ":")
+	tag := split[len(split)-1]
+	return repo, tag, nil
+}
+
 // patchControllerImageFromEnv will optionally replace a default controller image in manifests with `controllerImageOverride`
 // if it's set.
 func patchControllerImageFromEnv(t *testing.T, manifestReader io.Reader) (io.Reader, error) {
 	t.Helper()
 
 	if controllerImageOverride != "" {
-		t.Logf("replace controller image with %s", controllerImageOverride)
-		split := strings.Split(controllerImageOverride, ":")
-		if len(split) < 2 {
-			return nil, fmt.Errorf("could not parse override image '%v', expected <repo>:<tag> format", controllerImageOverride)
+		repo, tag, err := splitImageRepoTag(controllerImageOverride)
+		if err != nil {
+			return nil, err
 		}
-		repo := strings.Join(split[0:len(split)-1], ":")
-		tag := split[len(split)-1]
-		var err error
 		manifestReader, err = patchControllerImage(manifestReader, repo, tag)
 		if err != nil {
 			return nil, fmt.Errorf("failed patching override image '%v': %w", controllerImageOverride, err)
@@ -266,6 +296,24 @@ func patchControllerImageFromEnv(t *testing.T, manifestReader io.Reader) (io.Rea
 
 	t.Log("controller image override undefined, using defaults")
 	return manifestReader, nil
+}
+
+// getKongVersionFromImageTag parses Kong version from tags of Kong image.
+// If environment variable `TEST_KONG_EFFECTIVE_VERSION` is set, override with its value.
+func getKongVersionFromOverrideImageTag() (kong.Version, error) {
+	if kongEffectiveVersion := testenv.KongEffectiveVersion(); kongEffectiveVersion != "" {
+		return kong.ParseSemanticVersion(kongEffectiveVersion)
+	}
+
+	if kongImageOverride == "" {
+		return kong.Version{}, errors.New("No Kong image provided")
+	}
+
+	_, tag, err := splitImageRepoTag(kongImageOverride)
+	if err != nil {
+		return kong.Version{}, err
+	}
+	return kong.ParseSemanticVersion(tag)
 }
 
 // getKongProxyIP takes a Service with Kong proxy ports and returns and its IP, or fails the test if it cannot.
@@ -281,8 +329,7 @@ func getKongProxyIP(ctx context.Context, t *testing.T, env environments.Environm
 	svc := refreshService()
 	require.NotEqual(t, svc.Spec.Type, corev1.ServiceTypeClusterIP, "ClusterIP service is not supported")
 
-	//nolint: exhaustive
-	switch svc.Spec.Type {
+	switch svc.Spec.Type { //nolint: exhaustive
 	case corev1.ServiceTypeLoadBalancer:
 		return getKongProxyLoadBalancerIP(t, refreshService)
 	case corev1.ServiceTypeNodePort:

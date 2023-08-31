@@ -303,7 +303,7 @@ func TestGatewayListenerConflicts(t *testing.T) {
 		gw, err = gatewayClient.GatewayV1beta1().Gateways(ns.Name).Get(ctx, gw.Name, metav1.GetOptions{})
 		require.NoError(t, err)
 		// TODO https://github.com/Kong/kubernetes-ingress-controller/issues/4597
-		//var httpReady, tlsReady, httpsReady, httphostReady bool
+		// var httpReady, tlsReady, httpsReady, httphostReady bool
 		var tlsReady, httpsReady, httphostReady bool
 		for _, lstatus := range gw.Status.Listeners {
 			// TODO https://github.com/Kong/kubernetes-ingress-controller/issues/4597
@@ -337,7 +337,7 @@ func TestGatewayListenerConflicts(t *testing.T) {
 			}
 		}
 		// TODO https://github.com/Kong/kubernetes-ingress-controller/issues/4597
-		//return httpReady && tlsReady && httpsReady && httphostReady
+		// return httpReady && tlsReady && httpsReady && httphostReady
 		return tlsReady && httpsReady && httphostReady
 	}, gatewayUpdateWaitTime, time.Second)
 }

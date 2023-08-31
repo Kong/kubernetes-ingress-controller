@@ -738,3 +738,45 @@ func TestKongState_FillIDs(t *testing.T) {
 		})
 	}
 }
+
+func TestKongState_BuildPluginsCollisions(t *testing.T) {
+	for _, tt := range []struct {
+		name       string
+		in         []*kongv1.KongPlugin
+		pluginRels map[string]util.ForeignRelations
+		want       []string
+	}{
+		{
+			name: "collision test",
+			in: []*kongv1.KongPlugin{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "foo-plugin",
+						Namespace: "default",
+					},
+					PluginName:   "jwt",
+					InstanceName: "test",
+				},
+			},
+			pluginRels: map[string]util.ForeignRelations{
+				"default:foo-plugin": {
+					// this shouldn't happen in practice, as all generated route names are unique
+					// however, it's hard to find a SHA256 collision with two different inputs
+					Route: []string{"collision", "collision"},
+				},
+			},
+			want: []string{"test-bae3267aa", "test-bae3267aafead3adb6031bc1c732516336e7f7b324baf61bb68a39cc89112741"},
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			log := logrus.New()
+			store, _ := store.NewFakeStore(store.FakeObjects{
+				KongPlugins: tt.in,
+			})
+			// this is not testing the kongPluginFromK8SPlugin failure cases, so there is no failures collector
+			got := buildPlugins(log, store, nil, tt.pluginRels)
+			require.Len(t, got, 2)
+			require.Equal(t, tt.want, []string{*got[0].InstanceName, *got[1].InstanceName})
+		})
+	}
+}

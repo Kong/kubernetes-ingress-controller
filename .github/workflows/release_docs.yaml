@@ -40,7 +40,7 @@ jobs:
         run: echo "HAS_CHANGES=$(cd docs.konghq.com && git status --porcelain)" >> $GITHUB_OUTPUT
 
       - name: GPG sign the commits
-        uses: crazy-max/ghaction-import-gpg@72b6676b71ab476b77e676928516f6982eef7a41
+        uses: crazy-max/ghaction-import-gpg@d6f3f49f3345e29369fe57596a3ca8f94c4d2ca7
         with:
           workdir: docs.konghq.com
           gpg_private_key: ${{ secrets.K8S_TEAM_BOT_GPG_PRIVATE_KEY }}

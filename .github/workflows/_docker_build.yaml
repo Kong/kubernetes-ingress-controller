@@ -27,7 +27,7 @@ jobs:
       tags: ${{ steps.merge-tags.outputs.tags }}
     steps:
       - name: checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
@@ -78,7 +78,7 @@ jobs:
       image: kong/kubernetes-ingress-controller:${{ steps.meta.outputs.version }}
     steps:
       - name: checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 

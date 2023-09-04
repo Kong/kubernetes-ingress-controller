@@ -43,7 +43,7 @@ jobs:
       PR_NUMBER: ${{ github.event.inputs.pr-number }}
       RUN_GKE: ${{ inputs.run-gke }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - run: |
           if [ "${RUN_GKE}" == "true" ]; then
             MSG="E2E (targeted) tests with KIND-based and GKE-based clusters were started at ${URL}"

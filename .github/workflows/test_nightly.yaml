@@ -34,7 +34,7 @@ jobs:
       URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
       PR_NUMBER: ${{ github.event.pull_request.number }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - run: |
           MSG="Integration (targeted) tests with KIND-based cluster and latest images were started at ${URL}"
           gh pr comment ${PR_NUMBER} --body "${MSG}"
@@ -53,7 +53,7 @@ jobs:
         password: ${{ secrets.PULP_PASSWORD }}
 
     - name: checkout repository
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
       with:
         fetch-depth: 0
 
@@ -99,7 +99,7 @@ jobs:
         password: ${{ secrets.PULP_PASSWORD }}
 
     - name: checkout repository
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
       with:
         fetch-depth: 0
 
@@ -138,7 +138,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: checkout repository
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
       with:
         fetch-depth: 0
 
@@ -175,7 +175,7 @@ jobs:
     steps:
 
     - name: checkout repository
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
       with:
         fetch-depth: 0
 

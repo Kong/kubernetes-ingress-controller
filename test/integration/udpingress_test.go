@@ -33,7 +33,6 @@ var udpMutex sync.Mutex
 const coreDNSImage = "registry.k8s.io/coredns/coredns:v1.8.6"
 
 func TestUDPIngressEssentials(t *testing.T) {
-	skipTestForExpressionRouter(t)
 	t.Parallel()
 
 	// Ensure no other UDP tests run concurrently to avoid fights over the port

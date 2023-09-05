@@ -83,13 +83,13 @@ Adding a new version? You'll need three changes:
   [#4360](https://github.com/Kong/kubernetes-ingress-controller/pull/4360)
 - `konghq.com/rewrite` annotation has been introduced to manage URI rewriting.
   [#4360](https://github.com/Kong/kubernetes-ingress-controller/pull/4360)
-- Added translator to translate `TCPRoute` and `UDPRoute` in gateway APIs to
-  expression based kong routes. Similar to ingresses, this translator is only
-  enabled when feature gate `ExpressionRoutes` is turned on and the managed
-  Kong gateway runs in router flavor `expressions`, and version is greater or
-  equal to `3.4`.
+- Added support for expression-based Kong routes for `TCPRoute`, `UDPRoute`,
+  `TCPIngress`, and `UDPIngress`. This requires the `ExpressionRoutes` feature
+  gate and a Kong 3.4+ install with `KONG_ROUTER_FLAVOR=expressions` set in the
+  environment.
   [#4385](https://github.com/Kong/kubernetes-ingress-controller/pull/4385)
   [#4550](https://github.com/Kong/kubernetes-ingress-controller/pull/4550)
+  [#4612](https://github.com/Kong/kubernetes-ingress-controller/pull/4612)
 
 ### Changes
 

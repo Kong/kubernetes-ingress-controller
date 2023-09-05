@@ -17,6 +17,15 @@ func ApplyExpressionToL4KongRoute(r *kongstate.Route) {
 
 	// TODO(rodman10): replace with helper function.
 	portMatchers := make([]atc.Matcher, 0, len(r.Destinations))
+	// (and (or sources) (or destinations))
+
+	// Kong route sources and destinations support IP criteria, but Gateway API routes do not (Listeners apply to all IPs
+	// assigned to a Gateway) and neither do our TCPIngress and UDPIngress CRs (we simply never added an IP field).
+	// If we multiplex multiple Gateways (with different assigned IPs) onto a single Kong instance, we would need to add
+	// IP criteria for full compliance. We already break this rule for HTTP Listeners, since Kong HTTP routes do not
+	// support sources and destinations.
+	//
+	// Neither GWAPI Routes nor TCP/UDPIngress support sources either, so this only adds destinations.
 	for _, dst := range r.Destinations {
 		portMatchers = append(portMatchers, atc.NewPredicate(atc.FieldNetDstPort, atc.OpEqual, atc.IntLiteral(*dst.Port)))
 	}

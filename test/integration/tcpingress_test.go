@@ -36,7 +36,6 @@ var (
 )
 
 func TestTCPIngressEssentials(t *testing.T) {
-	skipTestForExpressionRouter(t)
 	ctx := context.Background()
 
 	t.Parallel()

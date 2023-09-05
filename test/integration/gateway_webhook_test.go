@@ -8,7 +8,6 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/types/kind"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	admregv1 "k8s.io/api/admissionregistration/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -30,7 +29,9 @@ func TestGatewayValidationWebhook(t *testing.T) {
 		t.Skip("webhook tests are only available on KIND clusters currently")
 	}
 
-	closer, err := ensureAdmissionRegistration(ctx,
+	ensureAdmissionRegistration(
+		ctx,
+		t,
 		"kong-validations-gateway",
 		[]admregv1.RuleWithOperations{
 			{
@@ -43,14 +44,9 @@ func TestGatewayValidationWebhook(t *testing.T) {
 			},
 		},
 	)
-	assert.NoError(t, err, "creating webhook config")
-	defer func() {
-		assert.NoError(t, closer())
-	}()
 
 	t.Log("waiting for webhook service to be connective")
-	err = waitForWebhookServiceConnective(ctx, "kong-validations-gateway")
-	require.NoError(t, err)
+	require.NoError(t, waitForWebhookServiceConnective(ctx, "kong-validations-gateway"))
 
 	gatewayClient, err := gatewayclient.NewForConfig(env.Cluster().Config())
 	require.NoError(t, err)

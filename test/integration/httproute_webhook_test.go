@@ -7,7 +7,6 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	admregv1 "k8s.io/api/admissionregistration/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -216,8 +215,9 @@ func setUpEnvForTestingHTTPRouteValidationWebhook(ctx context.Context, t *testin
 	managedGateway *gatewayv1beta1.Gateway,
 	unmanagedGateway *gatewayv1beta1.Gateway,
 ) {
-	closer, err := ensureAdmissionRegistration(
+	ensureAdmissionRegistration(
 		ctx,
+		t,
 		"kong-validations-gateway",
 		[]admregv1.RuleWithOperations{
 			{
@@ -230,30 +230,30 @@ func setUpEnvForTestingHTTPRouteValidationWebhook(ctx context.Context, t *testin
 			},
 		},
 	)
-	require.NoError(t, err, "creating webhook config")
-	t.Cleanup(func() {
-		assert.NoError(t, closer())
-	})
 
 	t.Log("creating a gateway client")
-	gatewayClient, err = gatewayclient.NewForConfig(env.Cluster().Config())
+	gatewayClient, err := gatewayclient.NewForConfig(env.Cluster().Config())
 	require.NoError(t, err)
 
 	ns, cleaner := helpers.Setup(ctx, t, env)
 	namespace = ns.Name
+	t.Logf("created namespace: %q", namespace)
+
 	t.Log("creating a managed gateway")
 	managedGateway, err = DeployGateway(ctx, gatewayClient, ns.Name, unmanagedGatewayClassName, func(g *gatewayv1beta1.Gateway) {
 		g.Name = uuid.NewString()
 	})
 	require.NoError(t, err)
 	cleaner.Add(managedGateway)
+	t.Logf("created managed gateway: %q", managedGateway.Name)
 
-	t.Log("creating an unmanaged gatewayclass")
+	t.Logf("creating an unmanaged gatewayclass")
 	unmanagedGatewayClass, err := DeployGatewayClass(ctx, gatewayClient, uuid.NewString(), func(gc *gatewayv1beta1.GatewayClass) {
 		gc.Spec.ControllerName = unsupportedControllerName
 	})
 	require.NoError(t, err)
 	cleaner.Add(unmanagedGatewayClass)
+	t.Logf("created unmanaged gatewayclass: %q", unmanagedGatewayClass.Name)
 
 	t.Log("creating an unmanaged gateway")
 	unmanagedGateway, err = DeployGateway(ctx, gatewayClient, ns.Name, unmanagedGatewayClass.Name, func(g *gatewayv1beta1.Gateway) {
@@ -261,6 +261,7 @@ func setUpEnvForTestingHTTPRouteValidationWebhook(ctx context.Context, t *testin
 	})
 	require.NoError(t, err)
 	cleaner.Add(unmanagedGateway)
+	t.Logf("created unmanaged gateway: %q", unmanagedGateway.Name)
 
 	t.Log("waiting for webhook service to be connective")
 	require.NoError(t, waitForWebhookServiceConnective(ctx, "kong-validations-gateway"))

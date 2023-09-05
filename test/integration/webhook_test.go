@@ -63,7 +63,9 @@ func TestValidationWebhook(t *testing.T) {
 		}
 	}()
 
-	closer, err := ensureAdmissionRegistration(ctx,
+	ensureAdmissionRegistration(
+		ctx,
+		t,
 		"kong-validations-consumer",
 		[]admregv1.RuleWithOperations{
 			{
@@ -84,13 +86,7 @@ func TestValidationWebhook(t *testing.T) {
 			},
 		},
 	)
-	assert.NoError(t, err, "creating webhook config")
-	defer func() {
-		assert.NoError(t, closer())
-	}()
-
-	err = waitForWebhookServiceConnective(ctx, "kong-validations-consumer")
-	require.NoError(t, err)
+	require.NoError(t, waitForWebhookServiceConnective(ctx, "kong-validations-consumer"))
 
 	t.Log("creating a large number of consumers on the cluster to verify the performance of the cached client during validation")
 	kongClient, err := clientset.NewForConfig(env.Cluster().Config())
@@ -684,12 +680,10 @@ func waitForWebhookServiceConnective(ctx context.Context, configResourceName str
 	return networking.WaitForConnectionOnServicePort(waitCtx, env.Cluster().Client(), consts.ControllerNamespace, svcName, svcPort, 10*time.Second)
 }
 
-func ensureAdmissionRegistration(ctx context.Context, configResourceName string, rules []admregv1.RuleWithOperations) (func() error, error) {
+func ensureAdmissionRegistration(ctx context.Context, t *testing.T, configResourceName string, rules []admregv1.RuleWithOperations) {
 	svcName := fmt.Sprintf("webhook-%s", configResourceName)
 	svcCloser, err := ensureWebhookService(ctx, svcName)
-	if err != nil {
-		return nil, err
-	}
+	require.NoError(t, err)
 
 	cert, _ := certificate.GetKongSystemSelfSignedCerts()
 	webhook, err := env.Cluster().Client().AdmissionregistrationV1().ValidatingWebhookConfigurations().Create(ctx,
@@ -710,16 +704,13 @@ func ensureAdmissionRegistration(ctx context.Context, configResourceName string,
 				},
 			},
 		}, metav1.CreateOptions{})
-	if err != nil {
-		return nil, err
-	}
+	require.NoError(t, err)
 
-	closer := func() error {
+	t.Cleanup(func() {
 		if err := env.Cluster().Client().AdmissionregistrationV1().ValidatingWebhookConfigurations().Delete(ctx, webhook.Name, metav1.DeleteOptions{}); err != nil && !apierrors.IsNotFound(err) {
-			return err
+			t.Log("unable to delete webhook config during cleanup", err)
+			return
 		}
-		return svcCloser()
-	}
-
-	return closer, nil
+		require.NoError(t, svcCloser())
+	})
 }

@@ -30,7 +30,9 @@ func TestKongIngressValidationWebhook(t *testing.T) {
 
 	ns, _ := helpers.Setup(ctx, t, env)
 
-	closer, err := ensureAdmissionRegistration(ctx,
+	ensureAdmissionRegistration(
+		ctx,
+		t,
 		"kong-validations-kongingress",
 		[]admregv1.RuleWithOperations{
 			{
@@ -43,14 +45,9 @@ func TestKongIngressValidationWebhook(t *testing.T) {
 			},
 		},
 	)
-	assert.NoError(t, err, "creating webhook config")
-	defer func() {
-		assert.NoError(t, closer())
-	}()
 
 	t.Log("waiting for webhook service to be connective")
-	err = waitForWebhookServiceConnective(ctx, "kong-validations-kongingress")
-	require.NoError(t, err)
+	require.NoError(t, waitForWebhookServiceConnective(ctx, "kong-validations-kongingress"))
 
 	kongClient, err := clientset.NewForConfig(env.Cluster().Config())
 	require.NoError(t, err)

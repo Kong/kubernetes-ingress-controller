@@ -9,10 +9,13 @@ import (
 	"github.com/kong/go-kong/kong"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/parser"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/parser/translators"
 )
+
+type routeValidator interface {
+	Validate(context.Context, *kong.Route) (bool, string, error)
+}
 
 // -----------------------------------------------------------------------------
 // Validation - HTTPRoute - Public Functions
@@ -21,11 +24,11 @@ import (
 // ValidateHTTPRoute provides a suite of validation for a given HTTPRoute and
 // any number of Gateway resources it's attached to that the caller wants to
 // have it validated against. It checks supported features, linked objects,
-// and when non-nil routesSvc is provided, it also validates the route against
+// and when non-nil routesValidator is provided, it also validates the route against
 // Kong Gateway validation endpoint.
 func ValidateHTTPRoute(
 	ctx context.Context,
-	routesSvc kong.AbstractRouteService,
+	routesValidator routeValidator,
 	parserFeatures parser.FeatureFlags,
 	kongVersion semver.Version,
 	httproute *gatewayv1beta1.HTTPRoute,
@@ -62,8 +65,8 @@ func ValidateHTTPRoute(
 	}
 
 	// Validate by sending converted routes to validation endpoint of Kong Gateway.
-	if routesSvc != nil {
-		return validateWithKongGateway(ctx, routesSvc, parserFeatures, kongVersion, httproute)
+	if routesValidator != nil {
+		return validateWithKongGateway(ctx, routesValidator, parserFeatures, kongVersion, httproute)
 	}
 	return true, "", nil
 }
@@ -189,7 +192,7 @@ func getListenersForHTTPRouteValidation(sectionName *gatewayv1beta1.SectionName,
 }
 
 func validateWithKongGateway(
-	ctx context.Context, routesSvc kong.AbstractRouteService, parserFeatures parser.FeatureFlags, kongVersion semver.Version, httproute *gatewayv1beta1.HTTPRoute,
+	ctx context.Context, routesValidator routeValidator, parserFeatures parser.FeatureFlags, kongVersion semver.Version, httproute *gatewayv1beta1.HTTPRoute,
 ) (bool, string, error) {
 	// Translate HTTPRoute to Kong Route object(s) that can be sent directly to the Admin API for validation.
 	// Use KIC parser that works both for traditional and expressions based routes.
@@ -218,9 +221,9 @@ func validateWithKongGateway(
 	// Validate by using feature of Kong Gateway.
 	for _, kg := range kongRoutes {
 		kg := kg
-		ok, msg, err := routesSvc.Validate(ctx, &kg)
+		ok, msg, err := routesValidator.Validate(ctx, &kg)
 		if err != nil {
-			return false, "unable to validate HTTPRoute schema", nil //nolint:nilerr
+			return false, fmt.Sprintf("unable to validate HTTPRoute schema: %s", err.Error()), nil
 		}
 		if !ok {
 			errMsgs = append(errMsgs, msg)

@@ -26,7 +26,7 @@ jobs:
       status: ${{ steps.up-to-date.outputs.status }}
     steps:
       - name: checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
       - name: Check if PR is up to date, if it is skip workflows for this ref
@@ -61,7 +61,7 @@ jobs:
     if: needs.up-to-date.outputs.status != 'true'
     steps:
       - name: checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
       - name: setup golang

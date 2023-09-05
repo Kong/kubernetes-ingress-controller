@@ -35,7 +35,7 @@ jobs:
         if: ${{ steps.check-tag.outputs.exists == 'true' }}
         run: exit 1
       - name: checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
       - name: Parse semver string
@@ -58,7 +58,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
       - name: Parse semver string
@@ -177,7 +177,7 @@ jobs:
     - publish-release
     steps:
     - name: checkout repository
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
       with:
         fetch-depth: 0
     - name: Parse semver string

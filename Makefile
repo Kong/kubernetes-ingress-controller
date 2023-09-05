@@ -459,7 +459,6 @@ test.istio: gotestsum
 
 .PHONY: test.expression_router
 test.expression_router: gotestsum
-	GOTAGS="expression_router_tests"
 	GOTESTSUM_FORMAT=$(GOTESTSUM_FORMAT) \
 	GOFLAGS="-tags=expression_router_tests" $(GOTESTSUM) -- $(GOTESTFLAGS) \
 		-race \

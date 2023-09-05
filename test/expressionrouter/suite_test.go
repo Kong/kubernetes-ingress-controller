@@ -14,6 +14,7 @@ import (
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/metallb"
 	"github.com/kong/kubernetes-testing-framework/pkg/environments"
 
+	"github.com/kong/kubernetes-ingress-controller/v2/test"
 	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/helpers"
 	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/testenv"
 )
@@ -58,6 +59,11 @@ func TestMain(m *testing.M) {
 	exitOnErr(err)
 
 	cleaner := clusters.NewCleaner(env.Cluster())
+	defer func() {
+		if err := cleaner.Cleanup(ctx); err != nil {
+			fmt.Printf("ERROR: failed cleaning up the cluster: %v\n", err)
+		}
+	}()
 
 	fmt.Println("INFO: waiting for cluster and addons to be ready")
 	envReadyCtx, envReadyCancel := context.WithTimeout(ctx, testenv.EnvironmentReadyTimeout())
@@ -65,12 +71,12 @@ func TestMain(m *testing.M) {
 	exitOnErr(<-env.WaitForReady(envReadyCtx))
 
 	code = m.Run()
-
-	fmt.Printf("INFO: cleaning up cluster for env %s\n", env.Name())
-	if err := cleaner.Cleanup(ctx); err != nil {
-		// TODO:
-		fmt.Printf("ERROR: failed cleaning up the cluster: %v\n", err)
-		code = 1
+	if testenv.IsCI() {
+		fmt.Printf("INFO: running in ephemeral CI environment, skipping cluster %s teardown\n", env.Cluster().Name())
+	} else {
+		ctx, cancel := context.WithTimeout(context.Background(), test.EnvironmentCleanupTimeout)
+		defer cancel()
+		exitOnErr(helpers.RemoveCluster(ctx, env.Cluster()))
 	}
 
 }

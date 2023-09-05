@@ -196,16 +196,12 @@ func validateWithKongGateway(
 	var kongRoutes []kong.Route
 	var errMsgs []string
 	for _, rule := range httproute.Spec.Rules {
-		var (
-			routes []kongstate.Route
-			err    error
-		)
 		translation := translators.KongRouteTranslation{
 			Name:    "validation-attempt",
 			Matches: rule.Matches,
 			Filters: rule.Filters,
 		}
-		routes, err = parser.GenerateKongRouteFromTranslation(
+		routes, err := parser.GenerateKongRouteFromTranslation(
 			httproute, translation, parserFeatures.RegexPathPrefix, parserFeatures.ExpressionRoutes, kongVersion,
 		)
 		if err != nil {

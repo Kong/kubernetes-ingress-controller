@@ -230,7 +230,7 @@ func setUpEnvForTestingHTTPRouteValidationWebhook(ctx context.Context, t *testin
 			},
 		},
 	)
-	assert.NoError(t, err, "creating webhook config")
+	require.NoError(t, err, "creating webhook config")
 	t.Cleanup(func() {
 		assert.NoError(t, closer())
 	})

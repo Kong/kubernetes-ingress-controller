@@ -67,7 +67,7 @@ jobs:
       - name: setup golang
         uses: actions/setup-go@v4
         with:
-          go-version: '^1.20'
+          go-version-file: third_party/go.mod
       - run: make tools
 
   linters:

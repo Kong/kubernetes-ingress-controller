@@ -1,6 +1,8 @@
 module github.com/kong/kubernetes-ingress-controller/tools
 
-go 1.19
+go 1.21
+
+toolchain go1.21.0
 
 require (
 	github.com/GoogleContainerTools/skaffold/v2 v2.7.0

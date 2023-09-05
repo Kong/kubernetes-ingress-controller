@@ -1,9 +1,17 @@
 package gateway
 
 import (
+	"context"
 	"fmt"
+	"strings"
 
+	"github.com/blang/semver/v4"
+	"github.com/kong/go-kong/kong"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
+
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/parser"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/parser/translators"
 )
 
 // -----------------------------------------------------------------------------
@@ -12,8 +20,22 @@ import (
 
 // ValidateHTTPRoute provides a suite of validation for a given HTTPRoute and
 // any number of Gateway resources it's attached to that the caller wants to
-// have it validated against.
-func ValidateHTTPRoute(httproute *gatewayv1beta1.HTTPRoute, attachedGateways ...*gatewayv1beta1.Gateway) (bool, string, error) {
+// have it validated against. It checks supported features, linked objects,
+// and when non-nil routesSvc is provided, it also validates the route against
+// Kong Gateway validation endpoint.
+func ValidateHTTPRoute(
+	ctx context.Context,
+	routesSvc kong.AbstractRouteService,
+	parserFeatures parser.FeatureFlags,
+	kongVersion semver.Version,
+	httproute *gatewayv1beta1.HTTPRoute,
+	attachedGateways ...*gatewayv1beta1.Gateway,
+) (bool, string, error) {
+	// validate that no unsupported features are in use
+	if err := validateHTTPRouteFeatures(httproute); err != nil {
+		return false, "httproute spec did not pass validation", err
+	}
+
 	// perform Gateway validations for the HTTPRoute (e.g. listener validation, namespace validation, e.t.c.)
 	for _, gateway := range attachedGateways {
 		// TODO: validate that the namespace is supported by the linked Gateway objects
@@ -39,11 +61,10 @@ func ValidateHTTPRoute(httproute *gatewayv1beta1.HTTPRoute, attachedGateways ...
 		}
 	}
 
-	// validate that no unsupported features are in use
-	if err := validateHTTPRouteFeatures(httproute); err != nil {
-		return false, "httproute spec did not pass validation", err
+	// Validate by sending converted routes to validation endpoint of Kong Gateway.
+	if routesSvc != nil {
+		return validateWithKongGateway(ctx, routesSvc, parserFeatures, kongVersion, httproute)
 	}
-
 	return true, "", nil
 }
 
@@ -80,28 +101,13 @@ func validateHTTPRouteListener(listener *gatewayv1beta1.Listener) error {
 func validateHTTPRouteFeatures(httproute *gatewayv1beta1.HTTPRoute) error {
 	for _, rule := range httproute.Spec.Rules {
 		for _, match := range rule.Matches {
-			// we don't support queryparam matching rules
+			// We don't support query parameters matching rules
 			// See: https://github.com/Kong/kubernetes-ingress-controller/issues/2152
 			if len(match.QueryParams) != 0 {
 				return fmt.Errorf("queryparam matching is not yet supported for httproute")
 			}
-
-			// we don't support regex path matching rules
-			// See: https://github.com/Kong/kubernetes-ingress-controller/issues/2153
-			if match.Path != nil && match.Path.Type != nil && *match.Path.Type == gatewayv1beta1.PathMatchRegularExpression {
-				return fmt.Errorf("regex path matching is not yet supported for httproute")
-			}
-
-			// we don't support regex header matching rules
-			// See: https://github.com/Kong/kubernetes-ingress-controller/issues/2154
-			for _, hdr := range match.Headers {
-				if hdr.Type != nil && *hdr.Type == gatewayv1beta1.HeaderMatchRegularExpression {
-					return fmt.Errorf("regex header matching is not yet supported for httproute")
-				}
-			}
 		}
-
-		// we don't support any backendRef types except Kubernetes Services
+		// We don't support any backendRef types except Kubernetes Services.
 		for _, ref := range rule.BackendRefs {
 			if ref.BackendRef.Group != nil && *ref.BackendRef.Group != "core" && *ref.BackendRef.Group != "" {
 				return fmt.Errorf("%s is not a supported group for httproute backendRefs, only core is supported", *ref.BackendRef.Group)
@@ -180,4 +186,56 @@ func getListenersForHTTPRouteValidation(sectionName *gatewayv1beta1.SectionName,
 	}
 
 	return listenersForValidation, nil
+}
+
+func validateWithKongGateway(
+	ctx context.Context, routesSvc kong.AbstractRouteService, parserFeatures parser.FeatureFlags, kongVersion semver.Version, httproute *gatewayv1beta1.HTTPRoute,
+) (bool, string, error) {
+	// Translate HTTPRoute to Kong Route object(s) that can be sent directly to the Admin API for validation.
+	// Use KIC parser that works both for traditional and expressions based routes.
+	var kongRoutes []kong.Route
+	var errMsgs []string
+	for _, rule := range httproute.Spec.Rules {
+		var (
+			routes []kongstate.Route
+			err    error
+		)
+		translation := translators.KongRouteTranslation{
+			Name:    "validation-attempt",
+			Matches: rule.Matches,
+			Filters: rule.Filters,
+		}
+		routes, err = parser.GenerateKongRouteFromTranslation(
+			httproute, translation, parserFeatures.RegexPathPrefix, parserFeatures.ExpressionRoutes, kongVersion,
+		)
+		if err != nil {
+			errMsgs = append(errMsgs, err.Error())
+			continue
+		}
+		for _, r := range routes {
+			kongRoutes = append(kongRoutes, r.Route)
+		}
+	}
+	if len(errMsgs) > 0 {
+		return false, validationMsg(errMsgs), nil
+	}
+	// Validate by using feature of Kong Gateway.
+	for _, kg := range kongRoutes {
+		kg := kg
+		ok, msg, err := routesSvc.Validate(ctx, &kg)
+		if err != nil {
+			return false, "unable to validate HTTPRoute schema", nil //nolint:nilerr
+		}
+		if !ok {
+			errMsgs = append(errMsgs, msg)
+		}
+	}
+	if len(errMsgs) > 0 {
+		return false, validationMsg(errMsgs), nil
+	}
+	return true, "", nil
+}
+
+func validationMsg(errMsgs []string) string {
+	return fmt.Sprintf("HTTPRoute failed schema validation: %s", strings.Join(errMsgs, ", "))
 }

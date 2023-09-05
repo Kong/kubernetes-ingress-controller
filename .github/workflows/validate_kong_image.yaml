@@ -54,8 +54,10 @@ jobs:
     uses: ./.github/workflows/_e2e_tests.yaml
     secrets: inherit
     with:
-      kic-image: ${{ format('{0}:{1}', github.event.inputs.e2e-controller-image-repo, github.event.inputs.e2e-controller-image-tag) }}
-      kong-image: ${{ format('{0}:{1}', github.event.inputs.kong-image-repo, github.event.inputs.kong-image-tag) }}
+      kic-image-repo: github.event.inputs.e2e-controller-image-repo
+      kic-image-tag: github.event.inputs.e2e-controller-image-tag
+      kong-image-repo: github.event.inputs.kong-image-repo
+      kong-image-tag: github.event.inputs.kong-image-tag
       load-local-image: false
       run-gke: true
       run-istio: true

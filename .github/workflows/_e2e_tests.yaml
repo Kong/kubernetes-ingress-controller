@@ -4,17 +4,21 @@ on:
   workflow_call:
     inputs:
       kic-image-repo:
-        description: repo of KIC image to be tested (e.g. `kong/kubernetes-ingress-controller`).
+        description: Registry of KIC image to be tested (e.g. `kong/kubernetes-ingress-controller`).
         type: string
         required: true
       kic-image-tag:
-        description: tag of KIC image to be tested (e.g. `v2.9.0`).
+        description: Tag of KIC image to be tested (e.g. `v2.9.0`).
         type: string
         required: true
-      kong-image:
-        description: Kong image to be tested (e.g. `kong:3.1.0`).
+      kong-image-repo:
+        description: Registry of Kong image to be tested (e.g. `kong`).
         type: string
         required: false
+      kong-image-tag:
+        description: Tag of Kong image to be tested (e.g. `3.1.0`).
+        type: string
+        required: false 
       kong-effective-version:
         description: Effective version of Kong (e.g. `3.4`). Used when testing against nightly Kong images.
         type: string
@@ -156,7 +160,8 @@ jobs:
           TEST_KONG_CONTROLLER_IMAGE: ${{ inputs.kic-image-repo }}
           TEST_KONG_CONTROLLER_TAG: ${{ inputs.kic-image-tag }}
           TEST_KONG_LOAD_IMAGES: ${{ inputs.load-local-image }}
-          TEST_KONG_IMAGE_OVERRIDE: ${{ inputs.kong-image }}
+          TEST_KONG_IMAGE: ${{ inputs.kong-image-repo }}
+          TEST_KONG_TAG: ${{ inputs.kong-image-tag }}
           TEST_KONG_KONNECT_ACCESS_TOKEN: ${{ secrets.K8S_TEAM_KONNECT_ACCESS_TOKEN }}
           KONG_LICENSE_DATA: ${{ steps.license.outputs.license }}
           GOTESTSUM_JUNITFILE: "e2e-${{ matrix.test }}${{ matrix.kubernetes-version }}-tests.xml"
@@ -213,7 +218,8 @@ jobs:
           # KTF issue that should enable it: https://github.com/Kong/kubernetes-testing-framework/issues/587
           TEST_KONG_CONTROLLER_IMAGE: "kong/nightly-ingress-controller"
           TEST_KONG_CONTROLLER_TAG: "nightly"
-          TEST_KONG_IMAGE_OVERRIDE: ${{ inputs.kong-image }}
+          TEST_KONG_IMAGE: ${{ inputs.kong-image-repo }}
+          TEST_KONG_TAG: ${{ inputs.kong-iamge-tag }}
           TEST_KONG_EFFECTIVE_VERSION: ${{ inputs.kong-effective-version }}
           KONG_LICENSE_DATA: ${{ steps.license.outputs.license }}
           TEST_KONG_KONNECT_ACCESS_TOKEN: ${{ secrets.K8S_TEAM_KONNECT_ACCESS_TOKEN }}
@@ -282,7 +288,8 @@ jobs:
           TEST_KONG_CONTROLLER_IMAGE: ${{ inputs.kic-image-repo }}
           TEST_KONG_CONTROLLER_TAG: ${{ inputs.kic-image-tag }}
           TEST_KONG_LOAD_IMAGES: ${{ inputs.load-local-image }}
-          TEST_KONG_IMAGE_OVERRIDE: ${{ inputs.kong-image }}
+          TEST_KONG_IMAGE: ${{ inputs.kong-image-repo }}
+          TEST_KONG_TAG: ${{ inputs.kong-image-tag }}
           KONG_LICENSE_DATA: ${{ steps.license.outputs.license }}
           KONG_CLUSTER_VERSION: ${{ matrix.kind }}
           ISTIO_VERSION: ${{ matrix.istio }}

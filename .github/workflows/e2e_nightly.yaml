@@ -28,7 +28,7 @@ jobs:
     uses: ./.github/workflows/_e2e_tests.yaml
     secrets: inherit
     with:
-      kic-image: kong/nightly-ingress-controller
+      kic-image-repo: kong/nightly-ingress-controller
       kic-image-tag: nightly
       # TODO: Previously we've used kong/kong:amd64-latest but that image reports
       # its version (through AdminAPI / endpoint) as SHA instead of a semver.

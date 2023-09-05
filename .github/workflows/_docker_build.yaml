@@ -19,6 +19,9 @@ on:
       image:
         description: The image name and tag.
         value: ${{ jobs.build.outputs.image }}
+      tag:
+        description: The tag of built image
+        value: ${{ jobs.build.outputs.tag }}
 
 jobs:
   prepare-tags:
@@ -76,6 +79,7 @@ jobs:
     needs: prepare-tags
     outputs:
       image: kong/kubernetes-ingress-controller:${{ steps.meta.outputs.version }}
+      tag: ${{ steps.meta.outputs.version }}
     steps:
       - name: checkout repository
         uses: actions/checkout@v4

@@ -10,8 +10,12 @@ concurrency:
 on:
   workflow_dispatch:
     inputs:
-      controller-image:
-        description: KIC Docker image to test with. If empty, builds an image from the dispatch branch.
+      controller-image-repo:
+        description: Registry name of KIC Docker image to test with. If either repo or tag is empty, builds an image from the dispatch branch.
+        type: string
+        required: false
+      controller-image-tag:
+        description: Tag of KIC Docker image to test with. If either repo or tag is empty, builds an image from the dispatch branch.
         type: string
         required: false
       run-gke:
@@ -56,7 +60,7 @@ jobs:
       - run: gh pr edit ${PR_NUMBER} --remove-label ci/run-e2e
 
   build-image:
-    if: ${{ inputs.controller-image == '' }}
+    if: ${{ inputs.controller-image-repo == '' || inputs.controller.image-tag == '' }}
     uses: ./.github/workflows/_docker_build.yaml
     secrets: inherit
 
@@ -67,19 +71,22 @@ jobs:
     if: ${{ !cancelled() }}
     needs: build-image
     outputs:
-      image: ${{ steps.choose.outputs.image }}
+      image-repo: ${{ steps.choose.outputs.image-repo }}
+      image-tag: ${{ steps.choose.outputs.image-tag }}
     steps:
       - name: Choose image
         id: choose
         run: |
           if [ "${{ inputs.controller-image }}" == "" ]; then
-            echo "image=${{ needs.build-image.outputs.image }}" >> $GITHUB_OUTPUT
+            echo "image-repo=kong/kubernetes-ingress-controller" >> $GITHUB_OUTPUT
+            echo "image-tag=${{ needs.build-image.outputs.tag }}" >> $GITHUB_OUTPUT
           else
-            echo "image=${{ inputs.controller-image }}" >> $GITHUB_OUTPUT
+            echo "image-repo=${{ inputs.controller-image-repo }}" >> $GITHUB_OUTPUT
+            echo "image-tag=${{ inputs.controller-image-tag }}" >> $GITHUB_OUTPUT
           fi
 
       - name: Print image
-        run: echo "Using ${{ steps.choose.outputs.image }}"
+        run: echo "Using ${{ steps.choose.outputs.image-repo }}:${{ steps.choose.outputs.tag }}"
 
   run:
     needs: choose-image
@@ -87,7 +94,8 @@ jobs:
     uses: ./.github/workflows/_e2e_tests.yaml
     secrets: inherit
     with:
-      kic-image: ${{ needs.choose-image.outputs.image }}
+      kic-image-repo: ${{ needs.choose-image.outputs.image-repo }}
+      kic-image-tag: ${{ needs.choose-image.outputs.image-tag }}
       load-local-image: ${{ inputs.controller-image == '' }}
       run-gke: ${{ inputs.run-gke }}
       run-istio: ${{ inputs.run-istio }}
@@ -99,9 +107,11 @@ jobs:
     uses: ./.github/workflows/_e2e_tests.yaml
     secrets: inherit
     with:
-      kic-image: ${{ needs.choose-image.outputs.image }}
+      kic-image-repo: ${{ needs.choose-image.outputs.image-repo }}
+      kic-image-tag: ${{ needs.choose-image.outputs.image-tag }}
       load-local-image: ${{ inputs.controller-image == '' }}
-      kong-image: kong/kong-gateway-dev:nightly
+      kong-image-repo: kong/kong-gateway-dev
+      kong-image-tag: nightly
       # these do not honor the inputs, as this job is intended to be a minimal
       # test against unreleased kong images, with the main run covering the
       # other test conditions

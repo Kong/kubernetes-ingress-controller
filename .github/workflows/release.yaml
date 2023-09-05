@@ -137,7 +137,8 @@ jobs:
     uses: ./.github/workflows/_e2e_tests.yaml
     secrets: inherit
     with:
-      kic-image: kong/kubernetes-ingress-controller:${{ needs.verify-manifest-tag.outputs.fullversion_tag }}
+      kic-image-repo: kong/kubernetes-ingress-controller
+      kic-image-tag: ${{ needs.verify-manifest-tag.outputs.fullversion_tag }}
       all-supported-k8s-versions: true
 
   publish-release:

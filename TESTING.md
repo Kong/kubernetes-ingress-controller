@@ -162,8 +162,8 @@ For instance:
 These tests deploy KIC and Kong Gateway in a cluster using the requested image(s)
 which could be customized via dedicated environment variables like:
 
-- [`TEST_KONG_CONTROLLER_IMAGE_OVERRIDE`][env_var_controller_image_override]
-- [`TEST_KONG_IMAGE_OVERRIDE`][env_var_kong_image_override]
+- [`TEST_KONG_CONTROLLER_IMAGE` and `TEST_KONG_CONTROLLER_TAG`][env_var_controller_image_override]
+- [`TEST_KONG_IMAGE` and `TEST_KONG_TAG`][env_var_kong_image_override]
 
 On CI, those are being run both in kind and GKE environments.
 

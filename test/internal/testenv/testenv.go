@@ -41,7 +41,8 @@ func KongTag() string {
 	return os.Getenv("TEST_KONG_TAG")
 }
 
-// KongImageFullName returns the full name of Kong image.
+// KongImageFullName returns the full name of Kong image from TEST_KONG_IMAGE and TEST_KONG_TAG.
+// e.g. TEST_KONG_IMAGE=kong; TEST_KONG_TAG=3.4 => kong:3.4.
 func KongImageFullName() string {
 	imageName := KongImage()
 	if tag := KongTag(); tag != "" {
@@ -60,7 +61,8 @@ func ControllerTag() string {
 	return os.Getenv("TEST_KONG_CONTROLLER_TAG")
 }
 
-// ControllerImageFullName returns the full name of KIC image, like `kong/kubernetes-ingress-controller:v2.11.0`.
+// ControllerImageFullName returns the full name of KIC image from TEST_KONG_CONTROLLER_IMAGE and TEST_KONG_CONTROLLER_TAG.
+// e.g. TEST_KONG_CONTROLLER_IMAGE=kong/kubernetes-ingress-controller; TEST_KONG_CONTROLLER_TAG=v2.11.0 => kong/kubernetes-ingress-controller:v2.11.0.
 func ControllerImageFullName() string {
 	imageName := ControllerImage()
 	if tag := ControllerTag(); tag != "" {
@@ -179,7 +181,8 @@ func IsCI() bool {
 	return os.Getenv("CI") == "true"
 }
 
-// GitHubRunURL returns the URL of github workflow run if the test is run by GH actions.
+// GitHubRunURL returns the URL of github workflow run if the test is run by GH actions
+// from environment variables specified in GH action run.
 func GitHubRunURL() string {
 	if os.Getenv("GITHUB_SERVER_URL") != "" && os.Getenv("GITHUB_REPOSITORY") != "" && os.Getenv("GITHUB_RUN_ID") != "" {
 		return fmt.Sprintf("%s/%s/actions/runs/%s",

@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1693881486056,
+  "lastUpdate": 1693881487600,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -86454,6 +86454,66 @@ window.BENCHMARK_DATA = {
             "value": 0,
             "unit": "allocs/op",
             "extra": "9199064 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "49699333+dependabot[bot]@users.noreply.github.com",
+            "name": "dependabot[bot]",
+            "username": "dependabot[bot]"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "dd2a338749ae7a5acc895fc9795b8fa56c7d0967",
+          "message": "chore(deps): bump github.com/GoogleContainerTools/skaffold/v2 (#4599)\n\nBumps [github.com/GoogleContainerTools/skaffold/v2](https://github.com/GoogleContainerTools/skaffold) from 2.6.3 to 2.7.0.\r\n- [Release notes](https://github.com/GoogleContainerTools/skaffold/releases)\r\n- [Changelog](https://github.com/GoogleContainerTools/skaffold/blob/main/CHANGELOG.md)\r\n- [Commits](https://github.com/GoogleContainerTools/skaffold/compare/v2.6.3...v2.7.0)\r\n\r\n---\r\nupdated-dependencies:\r\n- dependency-name: github.com/GoogleContainerTools/skaffold/v2\r\n  dependency-type: direct:production\r\n  update-type: version-update:semver-minor\r\n...\r\n\r\nSigned-off-by: dependabot[bot] <support@github.com>\r\nCo-authored-by: dependabot[bot] <49699333+dependabot[bot]@users.noreply.github.com>",
+          "timestamp": "2023-09-05T10:37:08+08:00",
+          "tree_id": "225bd9d8f936c90270f6b767a1c38f3bb3bdee5c",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/dd2a338749ae7a5acc895fc9795b8fa56c7d0967"
+        },
+        "date": 1693881476340,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - ns/op",
+            "value": 68091,
+            "unit": "ns/op",
+            "extra": "16947 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - B/op",
+            "value": 11104,
+            "unit": "B/op",
+            "extra": "16947 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - allocs/op",
+            "value": 12,
+            "unit": "allocs/op",
+            "extra": "16947 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDefaultContentToDBLessConfigConverter_Convert - ns/op",
+            "value": 96.9,
+            "unit": "ns/op",
+            "extra": "13078968 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDefaultContentToDBLessConfigConverter_Convert - B/op",
+            "value": 0,
+            "unit": "B/op",
+            "extra": "13078968 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDefaultContentToDBLessConfigConverter_Convert - allocs/op",
+            "value": 0,
+            "unit": "allocs/op",
+            "extra": "13078968 times\n2 procs"
           }
         ]
       },

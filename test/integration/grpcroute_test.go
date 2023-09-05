@@ -104,19 +104,17 @@ func TestGRPCRouteEssentials(t *testing.T) {
 	t.Log("deploying a new gateway")
 	testHostname := "cholpon.example"
 	gateway, err := DeployGateway(ctx, gatewayClient, ns.Name, unmanagedGatewayClassName, func(gw *gatewayv1beta1.Gateway) {
-		gw.Spec.Listeners = []gatewayv1beta1.Listener{
-			builder.NewListener("https").
-				HTTPS().
-				WithPort(ktfkong.DefaultProxyTLSServicePort).
-				WithHostname(testHostname).
-				WithTLSConfig(&gatewayv1beta1.GatewayTLSConfig{
-					CertificateRefs: []gatewayv1beta1.SecretObjectReference{
-						{
-							Name: gatewayv1beta1.ObjectName(secret.Name),
-						},
+		gw.Spec.Listeners = builder.NewListener("https").
+			HTTPS().
+			WithPort(ktfkong.DefaultProxyTLSServicePort).
+			WithHostname(testHostname).
+			WithTLSConfig(&gatewayv1beta1.GatewayTLSConfig{
+				CertificateRefs: []gatewayv1beta1.SecretObjectReference{
+					{
+						Name: gatewayv1beta1.ObjectName(secret.Name),
 					},
-				}).Build(),
-		}
+				},
+			}).IntoSlice()
 	})
 	require.NoError(t, err)
 	cleaner.Add(gateway)

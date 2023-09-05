@@ -13,7 +13,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/parser/translators"
 )
 
-type routeValidator interface {
+type RouteValidator interface {
 	Validate(context.Context, *kong.Route) (bool, string, error)
 }
 
@@ -24,11 +24,11 @@ type routeValidator interface {
 // ValidateHTTPRoute provides a suite of validation for a given HTTPRoute and
 // any number of Gateway resources it's attached to that the caller wants to
 // have it validated against. It checks supported features, linked objects,
-// and when non-nil routesValidator is provided, it also validates the route against
-// Kong Gateway validation endpoint.
+// and uses provided routesValidator to validate the route against Kong Gateway
+// validation endpoint.
 func ValidateHTTPRoute(
 	ctx context.Context,
-	routesValidator routeValidator,
+	routesValidator RouteValidator,
 	parserFeatures parser.FeatureFlags,
 	kongVersion semver.Version,
 	httproute *gatewayv1beta1.HTTPRoute,
@@ -64,11 +64,7 @@ func ValidateHTTPRoute(
 		}
 	}
 
-	// Validate by sending converted routes to validation endpoint of Kong Gateway.
-	if routesValidator != nil {
-		return validateWithKongGateway(ctx, routesValidator, parserFeatures, kongVersion, httproute)
-	}
-	return true, "", nil
+	return validateWithKongGateway(ctx, routesValidator, parserFeatures, kongVersion, httproute)
 }
 
 // -----------------------------------------------------------------------------
@@ -104,8 +100,8 @@ func validateHTTPRouteListener(listener *gatewayv1beta1.Listener) error {
 func validateHTTPRouteFeatures(httproute *gatewayv1beta1.HTTPRoute) error {
 	for _, rule := range httproute.Spec.Rules {
 		for _, match := range rule.Matches {
-			// We don't support query parameters matching rules
-			// See: https://github.com/Kong/kubernetes-ingress-controller/issues/2152
+			// We don't support query parameters matching rules yet
+			// See: https://github.com/Kong/kubernetes-ingress-controller/issues/3679
 			if len(match.QueryParams) != 0 {
 				return fmt.Errorf("queryparam matching is not yet supported for httproute")
 			}
@@ -192,7 +188,7 @@ func getListenersForHTTPRouteValidation(sectionName *gatewayv1beta1.SectionName,
 }
 
 func validateWithKongGateway(
-	ctx context.Context, routesValidator routeValidator, parserFeatures parser.FeatureFlags, kongVersion semver.Version, httproute *gatewayv1beta1.HTTPRoute,
+	ctx context.Context, routesValidator RouteValidator, parserFeatures parser.FeatureFlags, kongVersion semver.Version, httproute *gatewayv1beta1.HTTPRoute,
 ) (bool, string, error) {
 	// Translate HTTPRoute to Kong Route object(s) that can be sent directly to the Admin API for validation.
 	// Use KIC parser that works both for traditional and expressions based routes.

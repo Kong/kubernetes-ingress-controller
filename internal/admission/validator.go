@@ -423,13 +423,19 @@ func (validator KongHTTPValidator) ValidateHTTPRoute(
 
 	// Now that we know whether or not the HTTPRoute is linked to a managed
 	// Gateway we can run it through full validation.
-	routesSvc, ok := validator.AdminAPIServicesProvider.GetRoutesService()
-	if !ok {
-		routesSvc = nil // For nil the below just skips calling Kong Gateway API.
+	var routeValidator gatewayvalidators.RouteValidator = noOpRoutesValidator{}
+	if routesSvc, ok := validator.AdminAPIServicesProvider.GetRoutesService(); ok {
+		routeValidator = routesSvc
 	}
 	return gatewayvalidators.ValidateHTTPRoute(
-		ctx, routesSvc, validator.ParserFeatures, validator.KongVersion, &httproute, managedGateways...,
+		ctx, routeValidator, validator.ParserFeatures, validator.KongVersion, &httproute, managedGateways...,
 	)
+}
+
+type noOpRoutesValidator struct{}
+
+func (noOpRoutesValidator) Validate(_ context.Context, _ *kong.Route) (bool, string, error) {
+	return true, "", nil
 }
 
 // -----------------------------------------------------------------------------

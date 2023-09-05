@@ -161,9 +161,10 @@ lint: verify.tidy golangci-lint staticcheck looppointer
 
 .PHONY: staticcheck
 staticcheck: staticcheck.download
-	$(STATICCHECK) -tags envtest,e2e_tests,integration_tests,istio_tests,conformance_tests \
-		-f stylish \
-		./...
+	# Workaround for staticcheck not supporting nolint directives, see: https://github.com/dominikh/go-tools/issues/822.
+	go list ./... | \
+		grep -F -e internal/konnect/runtimegroups -v | \
+		xargs $(STATICCHECK) -tags envtest,e2e_tests,integration_tests,istio_tests,conformance_tests -f stylish
 
 looppointer: looppointer.download
 	$(LOOPPOINTER) -v ./internal/... ./test/...

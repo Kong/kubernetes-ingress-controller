@@ -14,11 +14,13 @@ RUN printf "Building for TARGETPLATFORM=${TARGETPLATFORM}" \
 
 WORKDIR /workspace
 
-COPY go.mod go.mod
-COPY go.sum go.sum
-# cache deps before building and copying source so that we don't need to re-download as much
-# and so that source changes don't invalidate our downloaded layer
-RUN go mod download
+# Use cache mounts to cache Go dependencies and bind mounts to avoid unnecessary
+# layers when using COPY instructions for go.mod and go.sum.
+# https://docs.docker.com/build/guide/mounts/
+RUN --mount=type=cache,target=$GOPATH/pkg/mod \
+    --mount=type=bind,source=go.sum,target=go.sum \
+    --mount=type=bind,source=go.mod,target=go.mod \
+    go mod download -x
 
 COPY pkg/ pkg/
 COPY internal/ internal/
@@ -29,7 +31,14 @@ ARG TAG
 ARG COMMIT
 ARG REPO_INFO
 
-RUN CGO_ENABLED=0 GOOS=linux GOARCH="${TARGETARCH}" GO111MODULE=on make _build
+# Use cache mounts to cache Go dependencies and bind mounts to avoid unnecessary
+# layers when using COPY instructions for go.mod and go.sum.
+# https://docs.docker.com/build/guide/mounts/
+RUN --mount=type=cache,target=$GOPATH/pkg/mod \
+    --mount=type=bind,source=go.sum,target=go.sum \
+    --mount=type=bind,source=go.mod,target=go.mod \
+    CGO_ENABLED=0 GOOS=linux GOARCH="${TARGETARCH}" GO111MODULE=on \
+    make _build
 
 ### FIPS 140-2 binary
 # Build the manager binary

@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/deepmap/oapi-codegen/pkg/types"
+	"github.com/oapi-codegen/runtime/types"
 	"github.com/samber/lo"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/konnect/roles"

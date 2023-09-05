@@ -3,8 +3,12 @@ name: e2e tests
 on:
   workflow_call:
     inputs:
-      kic-image:
-        description: KIC image to be tested (e.g. `kong/kubernetes-ingress-controller:v2.9.0`).
+      kic-image-repo:
+        description: repo of KIC image to be tested (e.g. `kong/kubernetes-ingress-controller`).
+        type: string
+        required: true
+      kic-image-tag:
+        description: tag of KIC image to be tested (e.g. `v2.9.0`).
         type: string
         required: true
       kong-image:
@@ -149,7 +153,8 @@ jobs:
         env:
           E2E_TEST_RUN: ${{ matrix.test }}
           KONG_CLUSTER_VERSION: ${{ matrix.kubernetes-version }}
-          TEST_KONG_CONTROLLER_IMAGE_OVERRIDE: ${{ inputs.kic-image }}
+          TEST_KONG_CONTROLLER_IMAGE: ${{ inputs.kic-image-repo }}
+          TEST_KONG_CONTROLLER_TAG: ${{ inputs.kic-image-tag }}
           TEST_KONG_LOAD_IMAGES: ${{ inputs.load-local-image }}
           TEST_KONG_IMAGE_OVERRIDE: ${{ inputs.kong-image }}
           TEST_KONG_KONNECT_ACCESS_TOKEN: ${{ secrets.K8S_TEAM_KONNECT_ACCESS_TOKEN }}
@@ -206,7 +211,8 @@ jobs:
           # therefore we need to use the nightly one.
           # TODO: Once we have a way to load images into GKE, we can use the local image.
           # KTF issue that should enable it: https://github.com/Kong/kubernetes-testing-framework/issues/587
-          TEST_KONG_CONTROLLER_IMAGE_OVERRIDE: "kong/nightly-ingress-controller:nightly"
+          TEST_KONG_CONTROLLER_IMAGE: "kong/nightly-ingress-controller"
+          TEST_KONG_CONTROLLER_TAG: "nightly"
           TEST_KONG_IMAGE_OVERRIDE: ${{ inputs.kong-image }}
           TEST_KONG_EFFECTIVE_VERSION: ${{ inputs.kong-effective-version }}
           KONG_LICENSE_DATA: ${{ steps.license.outputs.license }}
@@ -273,7 +279,8 @@ jobs:
       - name: run Istio tests
         run: make test.istio
         env:
-          TEST_KONG_CONTROLLER_IMAGE_OVERRIDE: ${{ inputs.kic-image }}
+          TEST_KONG_CONTROLLER_IMAGE: ${{ inputs.kic-image-repo }}
+          TEST_KONG_CONTROLLER_TAG: ${{ inputs.kic-image-tag }}
           TEST_KONG_LOAD_IMAGES: ${{ inputs.load-local-image }}
           TEST_KONG_IMAGE_OVERRIDE: ${{ inputs.kong-image }}
           KONG_LICENSE_DATA: ${{ steps.license.outputs.license }}

@@ -16,6 +16,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/testenv"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/types/gke"
 	"github.com/kong/kubernetes-testing-framework/pkg/environments"
 	"github.com/phayes/freeport"
@@ -157,17 +158,11 @@ func getTestManifest(t *testing.T, baseManifestPath string, skipTestPatches bool
 func patchGatewayImageFromEnv(t *testing.T, manifestsReader io.Reader) (io.Reader, error) {
 	t.Helper()
 
-	if kongImageOverride != "" {
-		t.Logf("replace kong image with %s", kongImageOverride)
-		split := strings.Split(kongImageOverride, ":")
-		if len(split) < 2 {
-			return nil, fmt.Errorf("invalid image name '%s', expected <repo>:<tag> format", kongImageOverride)
-		}
-		repo := strings.Join(split[0:len(split)-1], ":")
-		tag := split[len(split)-1]
-		manifestsReader, err := patchKongImage(manifestsReader, repo, tag)
+	if testenv.KongImage() != "" && testenv.KongTag() != "" {
+		t.Logf("replace kong image with %s:%s", testenv.KongImage(), testenv.KongTag())
+		manifestsReader, err := patchKongImage(manifestsReader, testenv.KongImage(), testenv.KongTag())
 		if err != nil {
-			return nil, fmt.Errorf("failed patching override image '%v'", kongImageOverride)
+			return nil, fmt.Errorf("failed patching override image repo %q, tag %q, err %w", testenv.KongImage(), testenv.KongTag(), err)
 		}
 		return manifestsReader, nil
 	}
@@ -192,14 +187,11 @@ func splitImageRepoTag(image string) (string, string, error) {
 func patchControllerImageFromEnv(t *testing.T, manifestReader io.Reader) (io.Reader, error) {
 	t.Helper()
 
-	if controllerImageOverride != "" {
-		repo, tag, err := splitImageRepoTag(controllerImageOverride)
+	if testenv.ControllerImage() != "" && testenv.ControllerTag() != "" {
+
+		manifestReader, err := patchControllerImage(manifestReader, testenv.ControllerImage(), testenv.ControllerTag())
 		if err != nil {
-			return nil, err
-		}
-		manifestReader, err = patchControllerImage(manifestReader, repo, tag)
-		if err != nil {
-			return nil, fmt.Errorf("failed patching override image '%v': %w", controllerImageOverride, err)
+			return nil, fmt.Errorf("failed patching override image repo %q, tag %q: %w", testenv.ControllerImage(), testenv.ControllerTag(), err)
 		}
 		return manifestReader, nil
 	}

@@ -17,7 +17,8 @@ jobs:
     uses: ./.github/workflows/_e2e_tests.yaml
     secrets: inherit
     with:
-      kic-image: kong/nightly-ingress-controller:nightly
+      kic-image-repo: kong/nightly-ingress-controller
+      kic-image-tag: nightly
       all-supported-k8s-versions: true
       run-gke: true
       run-istio: true
@@ -27,7 +28,8 @@ jobs:
     uses: ./.github/workflows/_e2e_tests.yaml
     secrets: inherit
     with:
-      kic-image: kong/nightly-ingress-controller:nightly
+      kic-image: kong/nightly-ingress-controller
+      kic-image-tag: nightly
       # TODO: Previously we've used kong/kong:amd64-latest but that image reports
       # its version (through AdminAPI / endpoint) as SHA instead of a semver.
       # This breaks KIC's Admin root configuration verification on startup.

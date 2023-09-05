@@ -1,6 +1,7 @@
 package testenv
 
 import (
+	"fmt"
 	"os"
 	"time"
 )
@@ -38,6 +39,39 @@ func KongImage() string {
 // KongTag is the Kong image tag to use in tests.
 func KongTag() string {
 	return os.Getenv("TEST_KONG_TAG")
+}
+
+// KongImageFullName returns the full name of Kong image.
+func KongImageFullName() string {
+	imageName := KongImage()
+	if tag := KongTag(); tag != "" {
+		return imageName + ":" + tag
+	}
+	return imageName
+}
+
+// ControllerImage is the KIC image name used in tests instead of the default, like `kong/kubernetes-ingress-controller`.
+func ControllerImage() string {
+	return os.Getenv("TEST_KONG_CONTROLLER_IMAGE")
+}
+
+// ControllerTag is the KIC image tag used in tests.
+func ControllerTag() string {
+	return os.Getenv("TEST_KONG_CONTROLLER_TAG")
+}
+
+// ControllerImageFullName returns the full name of KIC image, like `kong/kubernetes-ingress-controller:v2.11.0`.
+func ControllerImageFullName() string {
+	imageName := ControllerImage()
+	if tag := ControllerTag(); tag != "" {
+		return imageName + ":" + tag
+	}
+	return imageName
+}
+
+// ShouldLoadImages returns a boolean value to decide whether we should load test kong and KIC images to the cluster.
+func ShouldLoadImages() bool {
+	return os.Getenv("TEST_KONG_LOAD_IMAGES") == "true"
 }
 
 // KongEffectiveVersion is the effective semver of kong gateway.
@@ -116,6 +150,11 @@ func ExistingClusterName() string {
 	return os.Getenv("KONG_TEST_CLUSTER")
 }
 
+// ClusterProvider returns the provider of test cluster if we need to create a new one in the test.
+func ClusterProvider() string {
+	return os.Getenv("KONG_TEST_CLUSTER_PROVIDER")
+}
+
 // WaitForClusterDelete indicates whether or not to wait for cluster deletion to complete.
 func WaitForClusterDelete() bool {
 	return os.Getenv("KONG_TEST_CLUSTER_WAIT_FOR_DELETE") == "true"
@@ -138,4 +177,13 @@ func IsCI() bool {
 	// It's a common convention that e.g. GitHub, GitLab, and other CI providers
 	// set the CI environment variable.
 	return os.Getenv("CI") == "true"
+}
+
+// GitHubRunURL returns the URL of github workflow run if the test is run by GH actions.
+func GitHubRunURL() string {
+	if os.Getenv("GITHUB_SERVER_URL") != "" && os.Getenv("GITHUB_REPOSITORY") != "" && os.Getenv("GITHUB_RUN_ID") != "" {
+		return fmt.Sprintf("%s/%s/actions/runs/%s",
+			os.Getenv("GITHUB_SERVER_URL"), os.Getenv("GITHUB_REPOSITORY"), os.Getenv("GITHUB_RUN_ID"))
+	}
+	return ""
 }

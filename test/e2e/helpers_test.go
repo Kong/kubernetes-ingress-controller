@@ -115,9 +115,10 @@ func setupE2ETest(t *testing.T, addons ...clusters.Addon) (context.Context, envi
 func getEnvironmentBuilder(ctx context.Context, t *testing.T) (*environments.Builder, error) {
 	t.Helper()
 
+	existingCluster := testenv.ExistingClusterName()
 	if existingCluster == "" {
-		t.Logf("no existing cluster provided, creating a new one for %q type", clusterProvider)
-		switch clusterProvider {
+		t.Logf("no existing cluster provided, creating a new one for %q type", testenv.ClusterProvider())
+		switch testenv.ClusterProvider() {
 		case string(gke.GKEClusterType):
 			t.Log("creating a GKE cluster builder")
 			return createGKEBuilder(t)
@@ -133,7 +134,7 @@ func getEnvironmentBuilder(ctx context.Context, t *testing.T) (*environments.Bui
 	}
 
 	clusterType, clusterName := clusterParts[0], clusterParts[1]
-	if clusterVersionStr != "" {
+	if testenv.ClusterVersion() != "" {
 		return nil, fmt.Errorf("cannot provide cluster version with existing cluster")
 	}
 
@@ -166,13 +167,13 @@ kubeadmConfigPatches:
 
 func createKINDBuilder(t *testing.T) *environments.Builder {
 	clusterBuilder := kind.NewBuilder().WithConfigReader(strings.NewReader(kindConfig))
-	if clusterVersionStr != "" {
-		clusterVersion := semver.MustParse(strings.TrimPrefix(clusterVersionStr, "v"))
+	if testenv.ClusterVersion() != "" {
+		clusterVersion := semver.MustParse(strings.TrimPrefix(testenv.ClusterVersion(), "v"))
 		clusterBuilder = clusterBuilder.WithClusterVersion(clusterVersion)
 	}
 	builder := environments.NewBuilder().WithClusterBuilder(clusterBuilder).WithAddons(metallb.New())
-	if shouldLoadImages() {
-		builder = builder.WithAddons(buildImageLoadAddon(t, controllerImageOverride, kongImageOverride))
+	if testenv.ShouldLoadImages() {
+		builder = builder.WithAddons(buildImageLoadAddon(t, testenv.ControllerImageFullName(), testenv.KongImageFullName()))
 	}
 	return builder
 }
@@ -184,8 +185,8 @@ func createExistingKINDBuilder(t *testing.T, name string) (*environments.Builder
 
 	builder = builder.WithExistingCluster(cluster)
 	builder = builder.WithAddons(metallb.New())
-	if shouldLoadImages() {
-		builder = builder.WithAddons(buildImageLoadAddon(t, controllerImageOverride, kongImageOverride))
+	if testenv.ShouldLoadImages() {
+		builder = builder.WithAddons(buildImageLoadAddon(t, testenv.ControllerImageFullName(), testenv.KongImageFullName()))
 	}
 	return builder, nil
 }
@@ -219,8 +220,8 @@ func createGKEBuilder(t *testing.T) (*environments.Builder, error) {
 		WithCreateSubnet(true).
 		WithLabels(gkeTestClusterLabels())
 
-	if clusterVersionStr != "" {
-		k8sVersion, err := semver.Parse(strings.TrimPrefix(clusterVersionStr, "v"))
+	if testenv.ClusterVersion() != "" {
+		k8sVersion, err := semver.Parse(strings.TrimPrefix(testenv.ClusterVersion(), "v"))
 		if err != nil {
 			return nil, err
 		}
@@ -723,7 +724,7 @@ func buildImageLoadAddon(t *testing.T, images ...string) clusters.Addon {
 func createKongImagePullSecret(ctx context.Context, t *testing.T, env environments.Environment) {
 	t.Helper()
 
-	if kongImagePullUsername == "" || kongImagePullPassword == "" {
+	if testenv.KongPullUsername() == "" || testenv.KongPullPassword() == "" {
 		return
 	}
 	kubeconfigFilename := getTemporaryKubeconfig(t, env)
@@ -733,8 +734,8 @@ func createKongImagePullSecret(ctx context.Context, t *testing.T, env environmen
 		ctx,
 		"kubectl", "--kubeconfig", kubeconfigFilename,
 		"create", "secret", "docker-registry", secretName,
-		"--docker-username="+kongImagePullUsername,
-		"--docker-password="+kongImagePullPassword,
+		"--docker-username="+testenv.KongPullUsername(),
+		"--docker-password="+testenv.KongPullPassword(),
 	)
 	out, err := cmd.CombinedOutput()
 	require.NoError(t, err, "command output: "+string(out))
@@ -791,18 +792,17 @@ func getTemporaryKubeconfig(t *testing.T, env environments.Environment) string {
 
 func runOnlyOnKindClusters(t *testing.T) {
 	t.Helper()
-
+	existingCluster := testenv.ExistingClusterName()
 	existingClusterIsKind := strings.Split(existingCluster, ":")[0] == string(kind.KindClusterType)
 	if existingClusterIsKind {
 		return
 	}
 
-	clusterProviderIsKind := clusterProvider == string(kind.KindClusterType)
-	if clusterProviderIsKind {
+	if testenv.ClusterProvider() == string(kind.KindClusterType) {
 		return
 	}
 
-	clusterProviderUnspecified := clusterProvider == ""
+	clusterProviderUnspecified := testenv.ClusterProvider() == ""
 	existingClusterUnspecified := existingCluster == ""
 	if clusterProviderUnspecified && existingClusterUnspecified {
 		return

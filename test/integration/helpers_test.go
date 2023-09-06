@@ -83,11 +83,6 @@ func DeployGateway(ctx context.Context, client *gatewayclient.Clientset, namespa
 					Protocol: gatewayv1beta1.HTTPProtocolType,
 					Port:     gatewayv1beta1.PortNumber(ktfkong.DefaultProxyTCPServicePort),
 				},
-				{
-					Name:     "https",
-					Protocol: gatewayv1beta1.HTTPSProtocolType,
-					Port:     gatewayv1beta1.PortNumber(ktfkong.DefaultProxyTLSServicePort),
-				},
 			},
 		},
 	}

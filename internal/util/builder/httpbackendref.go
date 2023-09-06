@@ -21,6 +21,7 @@ func NewHTTPBackendRef(name string) *HTTPBackendRefBuilder {
 				BackendObjectReference: gatewayv1beta1.BackendObjectReference{
 					Name: gatewayv1beta1.ObjectName(name),
 					Kind: util.StringToGatewayAPIKindPtr("Service"), // default value
+					Port: lo.ToPtr(gatewayv1beta1.PortNumber(80)),
 				},
 			},
 		},

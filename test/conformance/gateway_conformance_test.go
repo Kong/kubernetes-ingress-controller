@@ -1,5 +1,8 @@
 //go:build conformance_tests && !experimental
 
+// Due to having !experimental, this file is not checked by golangci-lint.
+// This is shortcoming of golangci-lint, see https://github.com/golangci/golangci-lint/issues/1646
+
 package conformance
 
 import (
@@ -66,15 +69,12 @@ func TestGatewayConformance(t *testing.T) {
 	if testenv.ExpressionRoutesEnabled() {
 		skipTests = skippedTestsForExpressionRoutes
 	}
-	cleanUpResources := true
-	if testenv.IsCI() {
-		cleanUpResources = false
-	}
+
 	cSuite := suite.New(suite.Options{
 		Client:                     client,
 		GatewayClassName:           gatewayClassName,
 		Debug:                      true,
-		CleanupBaseResources:       cleanUpResources,
+		CleanupBaseResources:       !testenv.IsCI(),
 		EnableAllSupportedFeatures: true,
 		ExemptFeatures:             suite.MeshCoreFeatures,
 		BaseManifests:              conformanceTestsBaseManifests,

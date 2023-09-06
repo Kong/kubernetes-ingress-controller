@@ -94,7 +94,7 @@ func ControllerFeatureGates() string {
 
 // ExpressionRoutesEnabled indicates whether or not to enable expression routes
 // for the Kong Gateway and the controller.
-// If none specified, we fall back to default values.
+// If none specified, we fall back to default value - traditional_compatible.
 func ExpressionRoutesEnabled() bool {
 	return os.Getenv("KONG_TEST_EXPRESSION_ROUTES") == "true"
 }

@@ -322,7 +322,8 @@ test.conformance-experimental: _check.container.environment go-junit-report
 		go test \
 		-ldflags " \
 		-X $(REPO_URL)/v2/internal/manager/metadata.ProjectURL=$(REPO_URL) \
-		-X $(REPO_URL)/v2/internal/manager/metadata.Release=$(TAG)" \
+		-X $(REPO_URL)/v2/internal/manager/metadata.Release=$(TAG) \
+		-X $(REPO_URL)/v2/internal/manager/metadata.Repo=$(REPO_INFO)" \
 		-v \
 		-race $(GOTESTFLAGS) \
 		-timeout $(INTEGRATION_TEST_TIMEOUT) \

@@ -29,17 +29,13 @@ func TestGatewayExperimentalConformance(t *testing.T) {
 	_, err := semver.Parse(strings.TrimPrefix(metadata.Release, "v"))
 	require.NoError(t, err)
 
-	cleanUpResources := true
-	if testenv.IsCI() {
-		cleanUpResources = false
-	}
 	cSuite, err := suite.NewExperimentalConformanceTestSuite(
 		suite.ExperimentalConformanceOptions{
 			Options: suite.Options{
 				Client:               client,
 				GatewayClassName:     gatewayClassName,
 				Debug:                true,
-				CleanupBaseResources: cleanUpResources,
+				CleanupBaseResources: !testenv.IsCI(),
 				BaseManifests:        conformanceTestsBaseManifests,
 				SupportedFeatures: sets.New(
 					suite.SupportHTTPRouteMethodMatching,

@@ -42,6 +42,12 @@ jobs:
         with:
           fetch-depth: 0
 
+      - id: setup_golang
+        name: setup golang
+        uses: actions/setup-go@v4
+        with:
+          go-version-file: go.mod
+
       - id: test_files
         name: Get test file names
         working-directory: test/e2e/
@@ -178,7 +184,7 @@ jobs:
       - name: setup golang
         uses: actions/setup-go@v4
         with:
-        go-version-file: go.mod
+          go-version-file: go.mod
 
       - uses: Kong/kong-license@master
         continue-on-error: true
@@ -257,7 +263,7 @@ jobs:
       - name: setup golang
         uses: actions/setup-go@v4
         with:
-        go-version-file: go.mod
+          go-version-file: go.mod
 
       - uses: Kong/kong-license@master
         id: license

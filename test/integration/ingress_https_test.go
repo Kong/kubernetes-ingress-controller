@@ -30,8 +30,8 @@ import (
 )
 
 func TestHTTPSRedirect(t *testing.T) {
-	// kong does not support HTTPS redirect yet.
-	skipTestForExpressionRouter(t)
+	// Kong starts to support HTTPS redirect in expression router from 3.4.0.
+	RunWhenKongExpressionRouterWithVersion(t, ">=3.4.0")
 	ctx := context.Background()
 
 	t.Parallel()

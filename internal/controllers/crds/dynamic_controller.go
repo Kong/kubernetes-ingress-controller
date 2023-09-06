@@ -39,7 +39,8 @@ type DynamicCRDController struct {
 	Controller       Controller
 	RequiredCRDs     []schema.GroupVersionResource
 
-	startControllersOnce sync.Once
+	// startControllerOnce ensures that the controller is started only once.
+	startControllerOnce sync.Once
 }
 
 func (r *DynamicCRDController) SetupWithManager(mgr ctrl.Manager) error {
@@ -87,7 +88,7 @@ func (r *DynamicCRDController) Reconcile(ctx context.Context, req ctrl.Request) 
 	}
 
 	var startControllerErr error
-	r.startControllersOnce.Do(func() {
+	r.startControllerOnce.Do(func() {
 		log.V(util.InfoLevel).Info("All required CustomResourceDefinitions are installed, setting up the controller")
 		startControllerErr = r.setupController(r.Manager)
 	})
@@ -96,6 +97,10 @@ func (r *DynamicCRDController) Reconcile(ctx context.Context, req ctrl.Request) 
 	}
 
 	return ctrl.Result{}, nil
+}
+
+func (r *DynamicCRDController) SetLogger(logger logr.Logger) {
+	r.Log = logger
 }
 
 func (r *DynamicCRDController) allRequiredCRDsInstalled() bool {

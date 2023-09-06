@@ -21,9 +21,6 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/manager/featuregates"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util/kubernetes/object/status"
-	kongv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
-	kongv1alpha1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1alpha1"
-	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1beta1"
 )
 
 // -----------------------------------------------------------------------------
@@ -160,14 +157,7 @@ func setupControllers(
 		// Kong API Controllers
 		// ---------------------------------------------------------------------------
 		{
-			Enabled: c.UDPIngressEnabled && ShouldEnableCRDController(ctx,
-				schema.GroupVersionResource{
-					Group:    kongv1beta1.GroupVersion.Group,
-					Version:  kongv1beta1.GroupVersion.Version,
-					Resource: "udpingresses",
-				},
-				restMapper,
-			),
+			Enabled: c.UDPIngressEnabled,
 			Controller: &configuration.KongV1Beta1UDPIngressReconciler{
 				Client:                     mgr.GetClient(),
 				Log:                        ctrl.LoggerFrom(ctx).WithName("controllers").WithName("UDPIngress"),
@@ -181,14 +171,7 @@ func setupControllers(
 			},
 		},
 		{
-			Enabled: c.TCPIngressEnabled && ShouldEnableCRDController(ctx,
-				schema.GroupVersionResource{
-					Group:    kongv1beta1.GroupVersion.Group,
-					Version:  kongv1beta1.GroupVersion.Version,
-					Resource: "tcpingresses",
-				},
-				restMapper,
-			),
+			Enabled: c.TCPIngressEnabled,
 			Controller: &configuration.KongV1Beta1TCPIngressReconciler{
 				Client:                     mgr.GetClient(),
 				Log:                        ctrl.LoggerFrom(ctx).WithName("controllers").WithName("TCPIngress"),
@@ -203,14 +186,7 @@ func setupControllers(
 			},
 		},
 		{
-			Enabled: c.KongIngressEnabled && ShouldEnableCRDController(ctx,
-				schema.GroupVersionResource{
-					Group:    kongv1.GroupVersion.Group,
-					Version:  kongv1.GroupVersion.Version,
-					Resource: "kongingresses",
-				},
-				restMapper,
-			),
+			Enabled: c.KongIngressEnabled,
 			Controller: &configuration.KongV1KongIngressReconciler{
 				Client:           mgr.GetClient(),
 				Log:              ctrl.LoggerFrom(ctx).WithName("controllers").WithName("KongIngress"),
@@ -220,14 +196,7 @@ func setupControllers(
 			},
 		},
 		{
-			Enabled: c.IngressClassParametersEnabled && ShouldEnableCRDController(ctx,
-				schema.GroupVersionResource{
-					Group:    kongv1alpha1.GroupVersion.Group,
-					Version:  kongv1alpha1.GroupVersion.Version,
-					Resource: "ingressclassparameterses",
-				},
-				restMapper,
-			),
+			Enabled: c.IngressClassParametersEnabled,
 			Controller: &configuration.KongV1Alpha1IngressClassParametersReconciler{
 				Client:           mgr.GetClient(),
 				Log:              ctrl.LoggerFrom(ctx).WithName("controllers").WithName("IngressClassParameters"),
@@ -237,14 +206,7 @@ func setupControllers(
 			},
 		},
 		{
-			Enabled: c.KongPluginEnabled && ShouldEnableCRDController(ctx,
-				schema.GroupVersionResource{
-					Group:    kongv1.GroupVersion.Group,
-					Version:  kongv1.GroupVersion.Version,
-					Resource: "kongplugins",
-				},
-				restMapper,
-			),
+			Enabled: c.KongPluginEnabled,
 			Controller: &configuration.KongV1KongPluginReconciler{
 				Client:            mgr.GetClient(),
 				Log:               ctrl.LoggerFrom(ctx).WithName("controllers").WithName("KongPlugin"),
@@ -257,14 +219,7 @@ func setupControllers(
 			},
 		},
 		{
-			Enabled: c.KongConsumerEnabled && ShouldEnableCRDController(ctx,
-				schema.GroupVersionResource{
-					Group:    kongv1.GroupVersion.Group,
-					Version:  kongv1.GroupVersion.Version,
-					Resource: "kongconsumers",
-				},
-				restMapper,
-			),
+			Enabled: c.KongConsumerEnabled,
 			Controller: &configuration.KongV1KongConsumerReconciler{
 				Client:                     mgr.GetClient(),
 				Log:                        ctrl.LoggerFrom(ctx).WithName("controllers").WithName("KongConsumer"),
@@ -278,14 +233,7 @@ func setupControllers(
 			},
 		},
 		{
-			Enabled: c.KongConsumerEnabled && ShouldEnableCRDController(ctx,
-				schema.GroupVersionResource{
-					Group:    kongv1beta1.GroupVersion.Group,
-					Version:  kongv1beta1.GroupVersion.Version,
-					Resource: "kongconsumergroups",
-				},
-				restMapper,
-			),
+			Enabled: c.KongConsumerEnabled,
 			Controller: &configuration.KongV1Beta1KongConsumerGroupReconciler{
 				Client:                     mgr.GetClient(),
 				Log:                        ctrl.LoggerFrom(ctx).WithName("controllers").WithName("KongConsumerGroup"),
@@ -299,14 +247,7 @@ func setupControllers(
 			},
 		},
 		{
-			Enabled: c.KongClusterPluginEnabled && ShouldEnableCRDController(ctx,
-				schema.GroupVersionResource{
-					Group:    kongv1.GroupVersion.Group,
-					Version:  kongv1.GroupVersion.Version,
-					Resource: "kongclusterplugins",
-				},
-				restMapper,
-			),
+			Enabled: c.KongClusterPluginEnabled,
 			Controller: &configuration.KongV1KongClusterPluginReconciler{
 				Client:                     mgr.GetClient(),
 				Log:                        ctrl.LoggerFrom(ctx).WithName("controllers").WithName("KongClusterPlugin"),
@@ -327,25 +268,28 @@ func setupControllers(
 			// knative is a special case because it existed before we added feature gates functionality
 			// for this controller (only) the existing --enable-controller-knativeingress flag overrides
 			// any feature gate configuration. See FEATURE_GATES.md for more information.
-			Enabled: (featureGates[featuregates.KnativeFeature] || c.KnativeIngressEnabled) && ShouldEnableCRDController(ctx,
-				schema.GroupVersionResource{
+			Enabled: featureGates[featuregates.KnativeFeature] || c.KnativeIngressEnabled,
+			Controller: &crds.DynamicCRDController{
+				Manager:          mgr,
+				Log:              ctrl.LoggerFrom(ctx).WithName("controllers").WithName("Dynamic/KnativeV1Alpha1/Ingress"),
+				CacheSyncTimeout: c.CacheSyncTimeout,
+				RequiredCRDs: []schema.GroupVersionResource{{
 					Group:    knativev1alpha1.SchemeGroupVersion.Group,
 					Version:  knativev1alpha1.SchemeGroupVersion.Version,
 					Resource: "ingresses",
+				}},
+				Controller: &knative.Knativev1alpha1IngressReconciler{
+					Client:                     mgr.GetClient(),
+					Log:                        ctrl.LoggerFrom(ctx).WithName("controllers").WithName("Ingress").WithName("KnativeV1Alpha1"),
+					Scheme:                     mgr.GetScheme(),
+					DataplaneClient:            dataplaneClient,
+					IngressClassName:           c.IngressClassName,
+					DisableIngressClassLookups: !c.IngressClassNetV1Enabled,
+					StatusQueue:                kubernetesStatusQueue,
+					DataplaneAddressFinder:     dataplaneAddressFinder,
+					CacheSyncTimeout:           c.CacheSyncTimeout,
+					ReferenceIndexers:          referenceIndexers,
 				},
-				restMapper,
-			),
-			Controller: &knative.Knativev1alpha1IngressReconciler{
-				Client:                     mgr.GetClient(),
-				Log:                        ctrl.Log.WithName("controllers").WithName("Ingress").WithName("KnativeV1Alpha1"),
-				Scheme:                     mgr.GetScheme(),
-				DataplaneClient:            dataplaneClient,
-				IngressClassName:           c.IngressClassName,
-				DisableIngressClassLookups: !c.IngressClassNetV1Enabled,
-				StatusQueue:                kubernetesStatusQueue,
-				DataplaneAddressFinder:     dataplaneAddressFinder,
-				CacheSyncTimeout:           c.CacheSyncTimeout,
-				ReferenceIndexers:          referenceIndexers,
 			},
 		},
 		// ---------------------------------------------------------------------------

@@ -1,6 +1,7 @@
 package envtest
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"testing"
@@ -95,6 +96,8 @@ func RunManager(
 	}
 
 	logrusLogger, loggerHook := test.NewNullLogger()
+	var b bytes.Buffer
+	logrusLogger.Out = &b
 	logger := logrusr.New(logrusLogger)
 	ctx = ctrl.LoggerInto(ctx, logger)
 
@@ -102,6 +105,11 @@ func RunManager(
 		err := manager.Run(ctx, &cfg, util.ConfigDumpDiagnostic{}, logrusLogger)
 		require.NoError(t, err)
 	}()
+	t.Cleanup(func() {
+		if t.Failed() {
+			t.Logf("Test %s failed: dumping controller logs\n%s", t.Name(), b.String())
+		}
+	})
 
 	return loggerHook
 }

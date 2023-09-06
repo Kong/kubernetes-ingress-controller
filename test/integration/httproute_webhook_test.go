@@ -90,7 +90,7 @@ func commonHTTPRouteValidationTestCases(
 			WantCreateErr: false,
 		},
 		{
-			Name: "a httproute with valid regex and header pass validation",
+			Name: "a httproute with valid regex expressions for a path and a header pass validation",
 			Route: &gatewayv1beta1.HTTPRoute{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: uuid.NewString(),
@@ -156,7 +156,7 @@ func invalidRegexInPathTestCase(
 
 func TestHTTPRouteValidationWebhookTraditionalRouter(t *testing.T) {
 	skipTestForNonKindCluster(t)
-	skipTestForRouterFlavor(t, expressions)
+	skipTestForRouterFlavors(t, expressions)
 
 	ctx := context.Background()
 	namespace, gatewayClient, managedGateway, unmanagedGateway := setUpEnvForTestingHTTPRouteValidationWebhook(ctx, t)
@@ -170,7 +170,7 @@ func TestHTTPRouteValidationWebhookTraditionalRouter(t *testing.T) {
 
 func TestHTTPRouteValidationWebhookExpressionsRouter(t *testing.T) {
 	skipTestForNonKindCluster(t)
-	skipTestForRouterFlavor(t, traditional, traditionalCompatible)
+	skipTestForRouterFlavors(t, traditional, traditionalCompatible)
 
 	ctx := context.Background()
 	namespace, gatewayClient, managedGateway, unmanagedGateway := setUpEnvForTestingHTTPRouteValidationWebhook(ctx, t)

@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1693969539143,
+  "lastUpdate": 1693969540769,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -90774,6 +90774,66 @@ window.BENCHMARK_DATA = {
             "value": 0,
             "unit": "allocs/op",
             "extra": "9671278 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "571832+rainest@users.noreply.github.com",
+            "name": "Travis Raines",
+            "username": "rainest"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "8a040ebcc8700f5d642cd796d08d9674893db791",
+          "message": "chore(*) update GWAPI to v0.8.0 (#4591)\n\n* chore(generators) improve instructions\r\n\r\n* chore(deps) update GWAPI to 0.8\r\n\r\n* chore(controllers) handle new GWAPI type\r\n\r\n* chore(gwapi) disable broken conformance tests\r\n\r\n* chore(tests) remove default Gateway HTTPS listener\r\n\r\nAs of GWAPI v0.8.0, HTTPS Listeners require TLS configuration with at\r\nleast one certificate. The default Gateway from DeployGateway()\r\nincluded an HTTPS Listener that violated this rule.\r\n\r\nAdding a default certificate would be cumbersome given the current\r\nDefaultGateway() code structure. Tests that use TLS protocols should\r\nalready be defining their own TLS configuration, as they cannot specify\r\ncertificates otherwise, so it's unlikely there's an actual need for this\r\nListener.\r\n\r\n* chore(controllers) fix linter complaint\r\n\r\n* chore: remove more HTTPS listeners\r\n\r\n* chore(tests) remove invalid Gateways\r\n\r\nGWAPI v0.8.0 introduced improved Gateway validation that rejects some\r\ncombinations of Listener at apply time.\r\n\r\nWe no longer need to check handling of such Listeners in tests, as\r\nthey're simply impossible to create.\r\n\r\n* fix(tests) temporarily disable problem case\r\n\r\n* fix: add grpcroute listener\r\n\r\n* chore(tests) appease linter\r\n\r\n* Apply suggestions from code review\r\n\r\nCo-authored-by: Patryk Małek <patryk.malek@konghq.com>\r\n\r\n* pr: use IntoSlice()\r\n\r\n---------\r\n\r\nCo-authored-by: Patryk Małek <patryk.malek@konghq.com>",
+          "timestamp": "2023-09-06T11:02:22+08:00",
+          "tree_id": "695dd6334476b3e16cd7fdcd2e09d4cd2e68546f",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/8a040ebcc8700f5d642cd796d08d9674893db791"
+        },
+        "date": 1693969529627,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - ns/op",
+            "value": 66578,
+            "unit": "ns/op",
+            "extra": "17185 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - B/op",
+            "value": 11097,
+            "unit": "B/op",
+            "extra": "17185 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - allocs/op",
+            "value": 12,
+            "unit": "allocs/op",
+            "extra": "17185 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDefaultContentToDBLessConfigConverter_Convert - ns/op",
+            "value": 109.3,
+            "unit": "ns/op",
+            "extra": "12534682 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDefaultContentToDBLessConfigConverter_Convert - B/op",
+            "value": 0,
+            "unit": "B/op",
+            "extra": "12534682 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDefaultContentToDBLessConfigConverter_Convert - allocs/op",
+            "value": 0,
+            "unit": "allocs/op",
+            "extra": "12534682 times\n2 procs"
           }
         ]
       },

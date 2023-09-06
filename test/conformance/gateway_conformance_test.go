@@ -7,6 +7,8 @@ import (
 
 	"sigs.k8s.io/gateway-api/conformance/tests"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
+
+	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/testenv"
 )
 
 var skippedTestsForTraditionalAndExpressionRoutes = []string{
@@ -61,14 +63,18 @@ func TestGatewayConformance(t *testing.T) {
 	// Conformance tests are run for both configs with and without
 	// KONG_TEST_EXPRESSION_ROUTES='true'.
 	skipTests := skippedTestsForTraditionalRoutes
-	if expressionRoutesEnabled() {
+	if testenv.ExpressionRoutesEnabled() {
 		skipTests = skippedTestsForExpressionRoutes
+	}
+	cleanUpResources := true
+	if testenv.IsCI() {
+		cleanUpResources = false
 	}
 	cSuite := suite.New(suite.Options{
 		Client:                     client,
 		GatewayClassName:           gatewayClassName,
 		Debug:                      true,
-		CleanupBaseResources:       true,
+		CleanupBaseResources:       cleanUpResources,
 		EnableAllSupportedFeatures: true,
 		ExemptFeatures:             suite.MeshCoreFeatures,
 		BaseManifests:              conformanceTestsBaseManifests,

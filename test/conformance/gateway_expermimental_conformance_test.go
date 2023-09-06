@@ -9,13 +9,15 @@ import (
 	"testing"
 
 	"github.com/blang/semver/v4"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/manager/metadata"
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/gateway-api/conformance/apis/v1alpha1"
 	"sigs.k8s.io/gateway-api/conformance/tests"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
 	"sigs.k8s.io/yaml"
+
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/manager/metadata"
+	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/testenv"
 )
 
 func TestGatewayExperimentalConformance(t *testing.T) {
@@ -27,13 +29,17 @@ func TestGatewayExperimentalConformance(t *testing.T) {
 	_, err := semver.Parse(strings.TrimPrefix(metadata.Release, "v"))
 	require.NoError(t, err)
 
+	cleanUpResources := true
+	if testenv.IsCI() {
+		cleanUpResources = false
+	}
 	cSuite, err := suite.NewExperimentalConformanceTestSuite(
 		suite.ExperimentalConformanceOptions{
 			Options: suite.Options{
 				Client:               client,
 				GatewayClassName:     gatewayClassName,
 				Debug:                true,
-				CleanupBaseResources: true,
+				CleanupBaseResources: cleanUpResources,
 				BaseManifests:        conformanceTestsBaseManifests,
 				SupportedFeatures: sets.New(
 					suite.SupportHTTPRouteMethodMatching,
@@ -74,5 +80,5 @@ func TestGatewayExperimentalConformance(t *testing.T) {
 	rawReport, err := yaml.Marshal(report)
 	require.NoError(t, err)
 	// Save report in root of the repository, file name is in .gitignore.
-	require.NoError(t, os.WriteFile("../../"+reportFileName, rawReport, 0644))
+	require.NoError(t, os.WriteFile("../../"+reportFileName, rawReport, 0o600))
 }

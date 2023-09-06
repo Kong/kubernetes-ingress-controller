@@ -39,8 +39,6 @@ import (
 
 var (
 	conformanceTestsBaseManifests = fmt.Sprintf("%s/conformance/base/manifests.yaml", consts.GatewayRawRepoURL)
-	existingCluster               = os.Getenv("KONG_TEST_CLUSTER")
-	expressionRoutesMode          = os.Getenv("KONG_TEST_EXPRESSION_ROUTES")
 	ingressClass                  = "kong-conformance-tests"
 
 	env                    environments.Environment
@@ -77,7 +75,7 @@ func TestMain(m *testing.M) {
 	// In order to pass conformance tests, the expression router is required.
 	kongBuilder := kong.NewBuilder().WithControllerDisabled().WithProxyAdminServiceTypeLoadBalancer().
 		WithNamespace(consts.ControllerNamespace)
-	if expressionRoutesEnabled() {
+	if testenv.ExpressionRoutesEnabled() {
 		fmt.Println("INFO: expression routes enabled")
 		kongBuilder = kongBuilder.WithProxyEnvVar("router_flavor", "expressions")
 	}
@@ -121,7 +119,7 @@ func prepareEnvForGatewayConformanceTests(t *testing.T) (c client.Client, gatewa
 	require.NoError(t, gatewayv1beta1.AddToScheme(client.Scheme()))
 
 	featureGateFlag := fmt.Sprintf("--feature-gates=%s", consts.DefaultFeatureGates)
-	if expressionRoutesEnabled() {
+	if testenv.ExpressionRoutesEnabled() {
 		featureGateFlag = fmt.Sprintf("--feature-gates=%s", consts.ConformanceExpressionRoutesTestsFeatureGates)
 	}
 
@@ -214,7 +212,7 @@ func ensureNamespaceDeleted(ctx context.Context, ns string, client *kubernetes.C
 }
 
 func useExistingClusterIfPresent(builder *environments.Builder) {
-	if existingCluster != "" {
+	if existingCluster := testenv.ExistingClusterName(); existingCluster != "" {
 		parts := strings.Split(existingCluster, ":")
 		if len(parts) != 2 {
 			exitOnErr(fmt.Errorf("%s is not a valid value for KONG_TEST_CLUSTER", existingCluster))
@@ -236,8 +234,4 @@ func exitOnErr(err error) {
 		fmt.Println(err.Error())
 		os.Exit(1)
 	}
-}
-
-func expressionRoutesEnabled() bool {
-	return strings.ToLower(expressionRoutesMode) == "true"
 }

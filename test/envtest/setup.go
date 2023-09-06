@@ -23,19 +23,26 @@ import (
 
 type Options struct {
 	InstallGatewayCRDs bool
-	InstanllKongCRDs   bool
+	InstallKongCRDs    bool
 }
 
 var DefaultEnvTestOpts = Options{
 	InstallGatewayCRDs: true,
-	InstanllKongCRDs:   false,
+	InstallKongCRDs:    true,
 }
 
 type OptionModifier func(Options) Options
 
 func WithInstallKongCRDs(install bool) OptionModifier {
 	return func(opts Options) Options {
-		opts.InstanllKongCRDs = install
+		opts.InstallKongCRDs = install
+		return opts
+	}
+}
+
+func WithInstallGatewayCRDs(install bool) OptionModifier {
+	return func(opts Options) Options {
+		opts.InstallGatewayCRDs = install
 		return opts
 	}
 }
@@ -64,7 +71,7 @@ func Setup(t *testing.T, scheme *k8sruntime.Scheme, optModifiers ...OptionModifi
 	if opts.InstallGatewayCRDs {
 		installGatewayCRDs(t, scheme, cfg)
 	}
-	if opts.InstanllKongCRDs {
+	if opts.InstallKongCRDs {
 		installKongCRDs(t, scheme, cfg)
 	}
 

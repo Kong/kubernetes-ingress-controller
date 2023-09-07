@@ -118,7 +118,9 @@ func GetKongRouterFlavor(proxyAdminURL *url.URL, kongTestPassword string) (strin
 	}
 	routerFlavor, ok := rootConfig["router_flavor"]
 	if !ok {
-		return "", fmt.Errorf("missing 'router_flavor' key in kong's (URL: %s) configuration", proxyAdminURL)
+		return "", fmt.Errorf("missing 'router_flavor' key in kong's (version: %s, URL: %s) configuration: %s",
+			kongVersion, proxyAdminURL, rootConfig,
+		)
 	}
 
 	routerFlavorStr, ok := routerFlavor.(string)

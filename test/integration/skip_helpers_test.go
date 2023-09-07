@@ -21,7 +21,7 @@ func skipTestForRouterFlavors(t *testing.T, flavor ...routerFlavor) {
 	routerFlavor := routerFlavor(eventuallyGetKongRouterFlavor(t, proxyAdminURL))
 	for _, f := range flavor {
 		if routerFlavor == f {
-			t.Skipf("router flavor:%q skipping", f)
+			t.Skipf("router flavor: %q for ingress: %q skipping", f, proxyAdminURL)
 		}
 	}
 }

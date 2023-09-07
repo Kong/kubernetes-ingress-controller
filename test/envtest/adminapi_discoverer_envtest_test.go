@@ -1,6 +1,6 @@
 //go:build envtest
 
-package adminapi_test
+package envtest
 
 import (
 	"context"
@@ -19,15 +19,14 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/adminapi"
 	cfgtypes "github.com/kong/kubernetes-ingress-controller/v2/internal/manager/config/types"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util/builder"
-	"github.com/kong/kubernetes-ingress-controller/v2/test/envtest"
 )
 
 func TestDiscoverer_GetAdminAPIsForServiceReturnsAllAddressesCorrectlyPagingThroughResults(t *testing.T) {
 	t.Parallel()
 
-	scheme := envtest.Scheme(t)
-	cfg := envtest.Setup(t, scheme)
-	client := envtest.NewControllerClient(t, scheme, cfg)
+	scheme := Scheme(t)
+	cfg := Setup(t, scheme)
+	client := NewControllerClient(t, scheme, cfg)
 
 	// In tests below we use a deferred cancel to stop the manager and not wait
 	// for its timeout.
@@ -52,7 +51,7 @@ func TestDiscoverer_GetAdminAPIsForServiceReturnsAllAddressesCorrectlyPagingThro
 			defer cancel()
 
 			var (
-				ns          = envtest.CreateNamespace(ctx, t, client)
+				ns          = CreateNamespace(ctx, t, client)
 				serviceName = uuid.NewString()
 				service     = k8stypes.NamespacedName{
 					Namespace: ns.Name,

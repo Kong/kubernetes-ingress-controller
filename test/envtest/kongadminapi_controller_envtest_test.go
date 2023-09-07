@@ -1,6 +1,6 @@
 //go:build envtest
 
-package configuration_test
+package envtest
 
 import (
 	"context"
@@ -30,7 +30,6 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/configuration"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/manager/config/types"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util/builder"
-	"github.com/kong/kubernetes-ingress-controller/v2/test/envtest"
 )
 
 type notifier struct {
@@ -58,8 +57,8 @@ func startKongAdminAPIServiceReconciler(ctx context.Context, t *testing.T, clien
 	adminPod corev1.Pod,
 	n *notifier,
 ) {
-	ns := envtest.CreateNamespace(ctx, t, client)
-	adminPod = envtest.CreatePod(ctx, t, client, ns.Name)
+	ns := CreateNamespace(ctx, t, client)
+	adminPod = CreatePod(ctx, t, client, ns.Name)
 
 	mgr, err := ctrl.NewManager(cfg, ctrl.Options{
 		Logger: logrusr.New(logrus.New()),
@@ -117,7 +116,7 @@ func TestKongAdminAPIController(t *testing.T) {
 	// In tests below we use a deferred cancel to stop the manager and not wait
 	// for its timeout.
 
-	cfg := envtest.Setup(t, envtest.Scheme(t))
+	cfg := Setup(t, Scheme(t))
 	client, err := ctrlclient.New(cfg, ctrlclient.Options{})
 	require.NoError(t, err)
 

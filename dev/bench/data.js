@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1694087757415,
+  "lastUpdate": 1694087759664,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -94014,6 +94014,66 @@ window.BENCHMARK_DATA = {
             "value": 0,
             "unit": "allocs/op",
             "extra": "12463399 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jakub.warczarek@konghq.com",
+            "name": "Jakub Warczarek",
+            "username": "programmer04"
+          },
+          "committer": {
+            "email": "jakub.warczarek@konghq.com",
+            "name": "Jakub Warczarek",
+            "username": "programmer04"
+          },
+          "distinct": true,
+          "id": "b1cf2e69aaea8fddf092a3d43e012792064d38c3",
+          "message": "cr round",
+          "timestamp": "2023-09-07T13:53:59+02:00",
+          "tree_id": "63fff706d5def139d4a1468ed698a118c63e63b4",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/b1cf2e69aaea8fddf092a3d43e012792064d38c3"
+        },
+        "date": 1694087745167,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - ns/op",
+            "value": 78234,
+            "unit": "ns/op",
+            "extra": "15175 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - B/op",
+            "value": 11094,
+            "unit": "B/op",
+            "extra": "15175 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - allocs/op",
+            "value": 12,
+            "unit": "allocs/op",
+            "extra": "15175 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDefaultContentToDBLessConfigConverter_Convert - ns/op",
+            "value": 131.6,
+            "unit": "ns/op",
+            "extra": "9658540 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDefaultContentToDBLessConfigConverter_Convert - B/op",
+            "value": 0,
+            "unit": "B/op",
+            "extra": "9658540 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDefaultContentToDBLessConfigConverter_Convert - allocs/op",
+            "value": 0,
+            "unit": "allocs/op",
+            "extra": "9658540 times\n2 procs"
           }
         ]
       },

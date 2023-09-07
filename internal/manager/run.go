@@ -12,8 +12,11 @@ import (
 	"github.com/blang/semver/v4"
 	"github.com/go-logr/logr"
 	"github.com/sirupsen/logrus"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
+	"k8s.io/client-go/util/retry"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
@@ -68,6 +71,31 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 	healthServer := &healthCheckServer{}
 	healthServer.setHealthzCheck(healthz.Ping)
 	healthServer.Start(ctx, c.ProbeAddr, setupLog.WithName("health-check"))
+
+	// Confirm access to the Kubernetes API. The controller cannot generate valid configuration without access to
+	// API server resources, and should exit immediately if they are not available.
+	kubeClient, err := c.GetKubeClient()
+	if err != nil {
+		return fmt.Errorf("failed to get kubernetes client: %w", err)
+	}
+	if namespace := os.Getenv("POD_NAMESPACE"); namespace != "" {
+		testList := &corev1.ServiceList{}
+		if err := retry.OnError(
+			retry.DefaultRetry,
+			func(_ error) bool {
+				return true
+			},
+			func() error {
+				return kubeClient.List(ctx, testList, &client.ListOptions{
+					Namespace: os.Getenv("POD_NAMESPACE"),
+					Limit:     1,
+				})
+			}); err != nil {
+			return fmt.Errorf("could not contact the API server: %w", err)
+		}
+	} else {
+		return fmt.Errorf("could not determine resident namespace, check that POD_NAMESPACE is set in container environment")
+	}
 
 	adminAPIsDiscoverer, err := adminapi.NewDiscoverer(sets.New(c.KongAdminSvcPortNames...), c.GatewayDiscoveryDNSStrategy)
 	if err != nil {

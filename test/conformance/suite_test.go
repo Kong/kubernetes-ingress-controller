@@ -235,3 +235,7 @@ func exitOnErr(err error) {
 		os.Exit(1)
 	}
 }
+
+func shouldRunExperimentalConformance() bool {
+	return os.Getenv("TEST_EXPERIMENTAL_CONFORMANCE") == "true"
+}

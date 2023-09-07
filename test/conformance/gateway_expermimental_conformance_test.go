@@ -1,4 +1,4 @@
-//go:build conformance_tests && experimental
+//go:build conformance_tests
 
 package conformance
 
@@ -21,6 +21,9 @@ import (
 )
 
 func TestGatewayExperimentalConformance(t *testing.T) {
+	if !shouldRunExperimentalConformance() {
+		t.Skip("skipping experimental conformance tests")
+	}
 	// Experimental conformance tests passes only when expression routes are enabled
 	// (KONG_TEST_EXPRESSION_ROUTES='true' set automatically in make test.conformance-experimental)
 	// because it supports more features and it's the desired way to use Kong in the future.

@@ -3,7 +3,6 @@ run:
   build-tags:
   - integration_tests
   - e2e_tests
-  - experimental
   - conformance_tests
   - istio_tests
   - envtest

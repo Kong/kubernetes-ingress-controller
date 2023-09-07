@@ -1,7 +1,4 @@
-//go:build conformance_tests && !experimental
-
-// Due to having !experimental, this file is not checked by golangci-lint.
-// This is shortcoming of golangci-lint, see https://github.com/golangci/golangci-lint/issues/1646
+//go:build conformance_tests
 
 package conformance
 
@@ -61,8 +58,11 @@ var skippedTestsForTraditionalRoutes = append(
 )
 
 func TestGatewayConformance(t *testing.T) {
-	client, gatewayClassName := prepareEnvForGatewayConformanceTests(t)
+	if shouldRunExperimentalConformance() {
+		t.Skip("skipping standard conformance tests")
+	}
 
+	client, gatewayClassName := prepareEnvForGatewayConformanceTests(t)
 	// Conformance tests are run for both configs with and without
 	// KONG_TEST_EXPRESSION_ROUTES='true'.
 	skipTests := skippedTestsForTraditionalRoutes
@@ -82,6 +82,7 @@ func TestGatewayConformance(t *testing.T) {
 	})
 	t.Log("starting the gateway conformance test suite")
 	cSuite.Setup(t)
+
 	// To work with individual tests only, you can disable the normal Run call and construct a slice containing a
 	// single test only, e.g.:
 	//

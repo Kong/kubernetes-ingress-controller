@@ -414,15 +414,3 @@ func setIngressClassNameWithRetry(ctx context.Context, namespace string, ingress
 		return err
 	})
 }
-
-// Expression router is not supported for some objects and features.
-// For example, KongIngress is not supported by intention;
-// TCPRoute is not supported because Kong (< 3.4) does not support expression router on stream proxy.
-// When the test case depends on the object or feature not supported, we skip it if expression router is used.
-func skipTestForExpressionRouter(t *testing.T) {
-	t.Helper()
-	routerFlavor := eventuallyGetKongRouterFlavor(t, proxyAdminURL)
-	if routerFlavor == kongRouterFlavorExpressions {
-		t.Skipf("skip test case %s when expression router enabled", t.Name())
-	}
-}

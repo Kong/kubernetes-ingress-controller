@@ -16,6 +16,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
 	gatewaycontroller "github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/gateway"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/parser"
 	credsvalidation "github.com/kong/kubernetes-ingress-controller/v2/internal/validation/consumers/credentials"
 	gatewayvalidators "github.com/kong/kubernetes-ingress-controller/v2/internal/validation/gateway"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/versions"
@@ -41,6 +42,7 @@ type AdminAPIServicesProvider interface {
 	GetPluginsService() (kong.AbstractPluginService, bool)
 	GetConsumerGroupsService() (kong.AbstractConsumerGroupService, bool)
 	GetInfoService() (kong.AbstractInfoService, bool)
+	GetRoutesService() (kong.AbstractRouteService, bool)
 }
 
 // KongHTTPValidator implements KongValidator interface to validate Kong
@@ -50,6 +52,8 @@ type KongHTTPValidator struct {
 	SecretGetter             kongstate.SecretGetter
 	ManagerClient            client.Client
 	AdminAPIServicesProvider AdminAPIServicesProvider
+	ParserFeatures           parser.FeatureFlags
+	KongVersion              semver.Version
 
 	ingressClassMatcher func(*metav1.ObjectMeta, string, annotations.ClassMatching) bool
 }
@@ -63,6 +67,8 @@ func NewKongHTTPValidator(
 	managerClient client.Client,
 	ingressClass string,
 	servicesProvider AdminAPIServicesProvider,
+	parserFeatures parser.FeatureFlags,
+	kongVersion semver.Version,
 ) KongHTTPValidator {
 	matcher := annotations.IngressClassValidatorFuncFromObjectMeta(ingressClass)
 	return KongHTTPValidator{
@@ -70,6 +76,8 @@ func NewKongHTTPValidator(
 		SecretGetter:             &managerClientSecretGetter{managerClient: managerClient},
 		ManagerClient:            managerClient,
 		AdminAPIServicesProvider: servicesProvider,
+		ParserFeatures:           parserFeatures,
+		KongVersion:              kongVersion,
 
 		ingressClassMatcher: matcher,
 	}
@@ -413,9 +421,21 @@ func (validator KongHTTPValidator) ValidateHTTPRoute(
 		return true, "", nil
 	}
 
-	// now that we know whether or not the HTTPRoute is linked to a managed
+	// Now that we know whether or not the HTTPRoute is linked to a managed
 	// Gateway we can run it through full validation.
-	return gatewayvalidators.ValidateHTTPRoute(&httproute, managedGateways...)
+	var routeValidator gatewayvalidators.RouteValidator = noOpRoutesValidator{}
+	if routesSvc, ok := validator.AdminAPIServicesProvider.GetRoutesService(); ok {
+		routeValidator = routesSvc
+	}
+	return gatewayvalidators.ValidateHTTPRoute(
+		ctx, routeValidator, validator.ParserFeatures, validator.KongVersion, &httproute, managedGateways...,
+	)
+}
+
+type noOpRoutesValidator struct{}
+
+func (noOpRoutesValidator) Validate(_ context.Context, _ *kong.Route) (bool, string, error) {
+	return true, "", nil
 }
 
 // -----------------------------------------------------------------------------

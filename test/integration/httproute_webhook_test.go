@@ -7,84 +7,34 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
-	"github.com/kong/kubernetes-testing-framework/pkg/clusters/types/kind"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	admregv1 "k8s.io/api/admissionregistration/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
 
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/util/builder"
 	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/helpers"
 )
 
-func TestHTTPRouteValidationWebhook(t *testing.T) {
-	ctx := context.Background()
+const invalidRegexPath = "/foo[[[["
 
-	ns, cleaner := helpers.Setup(ctx, t, env)
+type testCaseHTTPRouteValidation struct {
+	Name                   string
+	Route                  *gatewayv1beta1.HTTPRoute
+	WantCreateErr          bool
+	WantCreateErrSubstring string
+}
 
-	if env.Cluster().Type() != kind.KindClusterType {
-		t.Skip("webhook tests are only available on KIND clusters currently")
-	}
-
-	pathMatchRegex := gatewayv1beta1.PathMatchRegularExpression
-
-	closer, err := ensureAdmissionRegistration(ctx,
-		"kong-validations-gateway",
-		[]admregv1.RuleWithOperations{
-			{
-				Rule: admregv1.Rule{
-					APIGroups:   []string{"gateway.networking.k8s.io"},
-					APIVersions: []string{"v1beta1"},
-					Resources:   []string{"httproutes"},
-				},
-				Operations: []admregv1.OperationType{admregv1.Create, admregv1.Update},
-			},
-		},
-	)
-	assert.NoError(t, err, "creating webhook config")
-	defer func() {
-		assert.NoError(t, closer())
-	}()
-
-	t.Log("creating a gateway client ")
-	gatewayClient, err := gatewayclient.NewForConfig(env.Cluster().Config())
-	require.NoError(t, err)
-
-	t.Log("creating a managed gateway")
-	managedGateway, err := DeployGateway(ctx, gatewayClient, ns.Name, unmanagedGatewayClassName, func(g *gatewayv1beta1.Gateway) {
-		g.Name = uuid.NewString()
-	})
-	require.NoError(t, err)
-	cleaner.Add(managedGateway)
-
-	t.Log("creating an unmanaged gatewayclass")
-	unmanagedGatewayClass, err := DeployGatewayClass(ctx, gatewayClient, uuid.NewString(), func(gc *gatewayv1beta1.GatewayClass) {
-		gc.Spec.ControllerName = unsupportedControllerName
-	})
-	require.NoError(t, err)
-	cleaner.Add(unmanagedGatewayClass)
-
-	t.Log("creating an unmanaged gateway")
-	unmanagedGateway, err := DeployGateway(ctx, gatewayClient, ns.Name, unmanagedGatewayClass.Name, func(g *gatewayv1beta1.Gateway) {
-		g.Name = uuid.NewString()
-	})
-	require.NoError(t, err)
-	cleaner.Add(unmanagedGateway)
-
-	t.Log("waiting for webhook service to be connective")
-	err = waitForWebhookServiceConnective(ctx, "kong-validations-gateway")
-	require.NoError(t, err)
-
-	for _, tt := range []struct {
-		name                   string
-		route                  *gatewayv1beta1.HTTPRoute
-		wantCreateErr          bool
-		wantCreateErrSubstring string
-	}{
+// commonHTTPRouteValidationTestCases returns a list of test cases for validating HTTPRoutes
+// that are common to both traditional and expressions routers (the same error message is returned).
+func commonHTTPRouteValidationTestCases(
+	managedGateway *gatewayv1beta1.Gateway, unmanagedGateway *gatewayv1beta1.Gateway,
+) []testCaseHTTPRouteValidation {
+	return []testCaseHTTPRouteValidation{
 		{
-			name: "a valid httproute linked to a managed gateway passes validation",
-			route: &gatewayv1beta1.HTTPRoute{
+			Name: "a valid httproute linked to a managed gateway passes validation",
+			Route: &gatewayv1beta1.HTTPRoute{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: uuid.NewString(),
 				},
@@ -97,11 +47,11 @@ func TestHTTPRouteValidationWebhook(t *testing.T) {
 					},
 				},
 			},
-			wantCreateErr: false,
+			WantCreateErr: false,
 		},
 		{
-			name: "an httproute linked to a non-existent gateway fails validation",
-			route: &gatewayv1beta1.HTTPRoute{
+			Name: "a httproute linked to a non-existent gateway fails validation",
+			Route: &gatewayv1beta1.HTTPRoute{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: uuid.NewString(),
 				},
@@ -114,22 +64,20 @@ func TestHTTPRouteValidationWebhook(t *testing.T) {
 					},
 				},
 			},
-			wantCreateErr:          true,
-			wantCreateErrSubstring: `Gateway.gateway.networking.k8s.io \"fake-gateway\" not found`,
+			WantCreateErr:          true,
+			WantCreateErrSubstring: `Gateway.gateway.networking.k8s.io \"fake-gateway\" not found`,
 		},
 		{
-			name: "an invalid httproute will pass validation if it's not linked to a managed controller (it's not ours)",
-			route: &gatewayv1beta1.HTTPRoute{
+			Name: "an invalid httproute will pass validation if it's not linked to a managed controller (it's not ours)",
+			Route: &gatewayv1beta1.HTTPRoute{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: uuid.NewString(),
 				},
 				Spec: gatewayv1beta1.HTTPRouteSpec{
 					Rules: []gatewayv1beta1.HTTPRouteRule{{
-						Matches: []gatewayv1beta1.HTTPRouteMatch{{
-							Path: &gatewayv1beta1.HTTPPathMatch{
-								Type: &pathMatchRegex, // this route is invalid because we don't support regex path matches (yet)
-							},
-						}},
+						Matches: []gatewayv1beta1.HTTPRouteMatch{
+							builder.NewHTTPRouteMatch().WithPathRegex(invalidRegexPath).Build(),
+						},
 					}},
 					CommonRouteSpec: gatewayv1beta1.CommonRouteSpec{
 						ParentRefs: []gatewayv1beta1.ParentReference{{
@@ -139,13 +87,200 @@ func TestHTTPRouteValidationWebhook(t *testing.T) {
 					},
 				},
 			},
-			wantCreateErr: false, // shouldn't fail because it's considered unmanaged
+			WantCreateErr: false,
 		},
-	} {
-		t.Run(tt.name, func(t *testing.T) {
-			_, err := gatewayClient.GatewayV1beta1().HTTPRoutes(ns.Name).Create(ctx, tt.route, metav1.CreateOptions{})
-			if tt.wantCreateErr {
-				require.Contains(t, err.Error(), tt.wantCreateErrSubstring)
+		{
+			Name: "a httproute with valid regex expressions for a path and a header pass validation",
+			Route: &gatewayv1beta1.HTTPRoute{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: uuid.NewString(),
+				},
+				Spec: gatewayv1beta1.HTTPRouteSpec{
+					Hostnames: []gatewayv1beta1.Hostname{"foo.com"},
+					Rules: []gatewayv1beta1.HTTPRouteRule{
+						{
+							Matches: []gatewayv1beta1.HTTPRouteMatch{
+								builder.NewHTTPRouteMatch().WithPathRegex("/path[1-8]").Build(),
+								builder.NewHTTPRouteMatch().WithHeaderRegex("foo", "bar[1-8]").Build(),
+							},
+						},
+					},
+					CommonRouteSpec: gatewayv1beta1.CommonRouteSpec{
+						ParentRefs: []gatewayv1beta1.ParentReference{{
+							Namespace: (*gatewayv1beta1.Namespace)(&managedGateway.Namespace),
+							Name:      gatewayv1beta1.ObjectName(managedGateway.Name),
+						}},
+					},
+				},
+			},
+			WantCreateErr: false,
+		},
+	}
+}
+
+// invalidRegexInPathTestCase returns a test case for a HTTPRoute with an invalid regex in the path.
+// The expected error substring is different for traditional and expressions routers, thus it has
+// passed by caller.
+func invalidRegexInPathTestCase(
+	managedGateway *gatewayv1beta1.Gateway, wantCreateErrSubstring string,
+) testCaseHTTPRouteValidation {
+	return testCaseHTTPRouteValidation{
+		Name: "a httproute with invalid regex for path does not pass validation",
+		Route: &gatewayv1beta1.HTTPRoute{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: uuid.NewString(),
+			},
+			Spec: gatewayv1beta1.HTTPRouteSpec{
+				Hostnames: []gatewayv1beta1.Hostname{"foo.com"},
+				Rules: []gatewayv1beta1.HTTPRouteRule{
+					{
+						Matches: []gatewayv1beta1.HTTPRouteMatch{
+							builder.NewHTTPRouteMatch().WithPathPrefix("/path-6").Build(),
+							builder.NewHTTPRouteMatch().WithPathRegex(invalidRegexPath).Build(),
+							builder.NewHTTPRouteMatch().WithPathPrefix("/path-7").Build(),
+						},
+					},
+				},
+				CommonRouteSpec: gatewayv1beta1.CommonRouteSpec{
+					ParentRefs: []gatewayv1beta1.ParentReference{{
+						Namespace: (*gatewayv1beta1.Namespace)(&managedGateway.Namespace),
+						Name:      gatewayv1beta1.ObjectName(managedGateway.Name),
+					}},
+				},
+			},
+		},
+		WantCreateErr:          true,
+		WantCreateErrSubstring: wantCreateErrSubstring,
+	}
+}
+
+func TestHTTPRouteValidationWebhookTraditionalRouter(t *testing.T) {
+	skipTestForNonKindCluster(t)
+	skipTestForRouterFlavors(t, expressions)
+
+	ctx := context.Background()
+	namespace, gatewayClient, managedGateway, unmanagedGateway := setUpEnvForTestingHTTPRouteValidationWebhook(ctx, t)
+	testCases := append(
+		commonHTTPRouteValidationTestCases(managedGateway, unmanagedGateway),
+		invalidRegexInPathTestCase(managedGateway, `HTTPRoute failed schema validation: schema violation (paths.3: invalid regex: '/foo[[[['`),
+		// No test case for invalid regex in header, because Kong Gateway doesn't return any error in such case (it works only for expressions router).
+	)
+	testHTTPRouteValidationWebhook(ctx, t, namespace, gatewayClient, testCases)
+}
+
+func TestHTTPRouteValidationWebhookExpressionsRouter(t *testing.T) {
+	skipTestForNonKindCluster(t)
+	skipTestForRouterFlavors(t, traditional, traditionalCompatible)
+
+	ctx := context.Background()
+	namespace, gatewayClient, managedGateway, unmanagedGateway := setUpEnvForTestingHTTPRouteValidationWebhook(ctx, t)
+	testCases := append(
+		commonHTTPRouteValidationTestCases(managedGateway, unmanagedGateway),
+		invalidRegexInPathTestCase(managedGateway, "regex parse error:\n    ^/foo[[[[\n            ^\nerror: unclosed character class)"),
+		testCaseHTTPRouteValidation{
+			Name: "a httproute with invalid regex for header does not pass validation",
+			Route: &gatewayv1beta1.HTTPRoute{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: uuid.NewString(),
+				},
+				Spec: gatewayv1beta1.HTTPRouteSpec{
+					Hostnames: []gatewayv1beta1.Hostname{"foo.com"},
+					Rules: []gatewayv1beta1.HTTPRouteRule{
+						{
+							Matches: []gatewayv1beta1.HTTPRouteMatch{
+								builder.NewHTTPRouteMatch().WithPathPrefix("/path-6").Build(),
+								builder.NewHTTPRouteMatch().WithHeaderRegex("foo", "bar[[").Build(),
+								builder.NewHTTPRouteMatch().WithPathPrefix("/path-7").Build(),
+							},
+						},
+					},
+					CommonRouteSpec: gatewayv1beta1.CommonRouteSpec{
+						ParentRefs: []gatewayv1beta1.ParentReference{{
+							Namespace: (*gatewayv1beta1.Namespace)(&managedGateway.Namespace),
+							Name:      gatewayv1beta1.ObjectName(managedGateway.Name),
+						}},
+					},
+				},
+			},
+			WantCreateErr:          true,
+			WantCreateErrSubstring: "regex parse error:\n    bar[[\n        ^\nerror: unclosed character class)",
+		},
+	)
+	testHTTPRouteValidationWebhook(ctx, t, namespace, gatewayClient, testCases)
+}
+
+// setUpEnvForTestingHTTPRouteValidationWebhook sets up the environment for testing HTTPRoute validation webhook,
+// it sets it globally. See https://github.com/Kong/kubernetes-ingress-controller/issues/4621 for more details.
+func setUpEnvForTestingHTTPRouteValidationWebhook(ctx context.Context, t *testing.T) (
+	namespace string,
+	gatewayClient *gatewayclient.Clientset,
+	managedGateway *gatewayv1beta1.Gateway,
+	unmanagedGateway *gatewayv1beta1.Gateway,
+) {
+	ensureAdmissionRegistration(
+		ctx,
+		t,
+		"kong-validations-gateway",
+		[]admregv1.RuleWithOperations{
+			{
+				Rule: admregv1.Rule{
+					APIGroups:   []string{"gateway.networking.k8s.io"},
+					APIVersions: []string{"v1beta1"},
+					Resources:   []string{"httproutes"},
+				},
+				Operations: []admregv1.OperationType{admregv1.Create, admregv1.Update},
+			},
+		},
+	)
+
+	t.Log("creating a gateway client")
+	gatewayClient, err := gatewayclient.NewForConfig(env.Cluster().Config())
+	require.NoError(t, err)
+
+	ns, cleaner := helpers.Setup(ctx, t, env)
+	namespace = ns.Name
+
+	t.Log("creating a managed gateway")
+	managedGateway, err = DeployGateway(ctx, gatewayClient, ns.Name, unmanagedGatewayClassName, func(g *gatewayv1beta1.Gateway) {
+		g.Name = uuid.NewString()
+	})
+	require.NoError(t, err)
+	cleaner.Add(managedGateway)
+	t.Logf("created managed gateway: %q", managedGateway.Name)
+
+	t.Logf("creating an unmanaged gatewayclass")
+	unmanagedGatewayClass, err := DeployGatewayClass(ctx, gatewayClient, uuid.NewString(), func(gc *gatewayv1beta1.GatewayClass) {
+		gc.Spec.ControllerName = unsupportedControllerName
+	})
+	require.NoError(t, err)
+	cleaner.Add(unmanagedGatewayClass)
+	t.Logf("created unmanaged gatewayclass: %q", unmanagedGatewayClass.Name)
+
+	t.Log("creating an unmanaged gateway")
+	unmanagedGateway, err = DeployGateway(ctx, gatewayClient, ns.Name, unmanagedGatewayClass.Name, func(g *gatewayv1beta1.Gateway) {
+		g.Name = uuid.NewString()
+	})
+	require.NoError(t, err)
+	cleaner.Add(unmanagedGateway)
+	t.Logf("created unmanaged gateway: %q", unmanagedGateway.Name)
+
+	t.Log("waiting for webhook service to be connective")
+	require.NoError(t, waitForWebhookServiceConnective(ctx, "kong-validations-gateway"))
+
+	return namespace, gatewayClient, managedGateway, unmanagedGateway
+}
+
+// testHTTPRouteValidationWebhook tries to create the given HTTPRoutes (passed in testCaseHTTPRouteValidation) and asserts expected results.
+func testHTTPRouteValidationWebhook(
+	ctx context.Context, t *testing.T, namespace string, gatewayClient *gatewayclient.Clientset, testCases []testCaseHTTPRouteValidation,
+) {
+	for _, tC := range testCases {
+		t.Run(tC.Name, func(t *testing.T) {
+			_, err := gatewayClient.GatewayV1beta1().HTTPRoutes(namespace).Create(ctx, tC.Route, metav1.CreateOptions{})
+			if tC.WantCreateErr {
+				require.NotEmpty(t, tC.WantCreateErrSubstring)
+				require.Error(t, err)
+				require.Contains(t, err.Error(), tC.WantCreateErrSubstring)
 			} else {
 				require.NoError(t, err)
 			}

@@ -53,6 +53,14 @@ func (p DefaultAdminAPIServicesProvider) GetInfoService() (kong.AbstractInfoServ
 	return c.Info, true
 }
 
+func (p DefaultAdminAPIServicesProvider) GetRoutesService() (kong.AbstractRouteService, bool) {
+	c, ok := p.designatedAdminAPIClient()
+	if !ok {
+		return nil, ok
+	}
+	return c.Routes, true
+}
+
 func (p DefaultAdminAPIServicesProvider) designatedAdminAPIClient() (*kong.Client, bool) {
 	gwClients := p.gatewayClientsProvider.GatewayClients()
 	if len(gwClients) == 0 {

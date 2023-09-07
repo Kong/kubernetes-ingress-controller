@@ -48,6 +48,7 @@ type fakeServicesProvider struct {
 	consumerSvc      kong.AbstractConsumerService
 	consumerGroupSvc kong.AbstractConsumerGroupService
 	infoSvc          kong.AbstractInfoService
+	routeSvc         kong.AbstractRouteService
 }
 
 func (f fakeServicesProvider) GetConsumersService() (kong.AbstractConsumerService, bool) {
@@ -74,6 +75,13 @@ func (f fakeServicesProvider) GetConsumerGroupsService() (kong.AbstractConsumerG
 func (f fakeServicesProvider) GetPluginsService() (kong.AbstractPluginService, bool) {
 	if f.pluginSvc != nil {
 		return f.pluginSvc, true
+	}
+	return nil, false
+}
+
+func (f fakeServicesProvider) GetRoutesService() (kong.AbstractRouteService, bool) {
+	if f.routeSvc != nil {
+		return f.routeSvc, true
 	}
 	return nil, false
 }

@@ -78,6 +78,9 @@ Adding a new version? You'll need three changes:
 
 ### Added
 
+- Allow regex expressions in `HTTPRoute` configuration and provide validation in admission webhook.
+  Before this change admission webhook used to reject entirely such configurations incorrectly as not supported yet.
+  [#4608](https://github.com/Kong/kubernetes-ingress-controller/pull/4608)
 - Add new feature gate `RewriteURIs` to enable/disable the `konghq.com/rewrite`
   annotation (default disabled).
   [#4360](https://github.com/Kong/kubernetes-ingress-controller/pull/4360)

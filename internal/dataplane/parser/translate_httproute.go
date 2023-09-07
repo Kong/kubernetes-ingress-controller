@@ -141,7 +141,7 @@ func (p *Parser) ingressRulesFromHTTPRouteWithCombinedServiceRoutes(httproute *g
 
 		// generate the routes for the service and attach them to the service
 		for _, kongRouteTranslation := range kongServiceTranslation.KongRoutes {
-			routes, err := generateKongRouteFromTranslation(httproute, kongRouteTranslation, p.featureFlags.RegexPathPrefix, p.featureFlags.ExpressionRoutes, p.kongVersion)
+			routes, err := GenerateKongRouteFromTranslation(httproute, kongRouteTranslation, p.featureFlags.RegexPathPrefix, p.featureFlags.ExpressionRoutes, p.kongVersion)
 			if err != nil {
 				return err
 			}
@@ -284,7 +284,9 @@ func generateKongRoutesFromHTTPRouteRule(
 	return routes, nil
 }
 
-func generateKongRouteFromTranslation(
+// GenerateKongRouteFromTranslation generates Kong routes from HTTPRoute
+// pointing to a specific backend. It is used for both traditional and expression based routes.
+func GenerateKongRouteFromTranslation(
 	httproute *gatewayv1beta1.HTTPRoute,
 	translation translators.KongRouteTranslation,
 	addRegexPrefix bool,

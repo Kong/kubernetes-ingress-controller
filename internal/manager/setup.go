@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/avast/retry-go/v4"
+	"github.com/blang/semver/v4"
 	"github.com/bombsimon/logrusr/v4"
 	"github.com/go-logr/logr"
 	"github.com/kong/deck/cprint"
@@ -26,6 +27,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/admission"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/clients"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/parser"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/manager/scheme"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 	dataplaneutil "github.com/kong/kubernetes-ingress-controller/v2/internal/util/dataplane"
@@ -171,6 +173,8 @@ func setupAdmissionServer(
 	clientsManager *clients.AdminAPIClientsManager,
 	managerClient client.Client,
 	deprecatedLogger logrus.FieldLogger,
+	parserFeatures parser.FeatureFlags,
+	kongVersion semver.Version,
 ) error {
 	logger := deprecatedLogger.WithField("component", "admission-server")
 
@@ -186,6 +190,8 @@ func setupAdmissionServer(
 			managerClient,
 			managerConfig.IngressClassName,
 			adminAPIServicesProvider,
+			parserFeatures,
+			kongVersion,
 		),
 		Logger: logger,
 	}, logger)

@@ -149,11 +149,6 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 		clientsManager.Run()
 	}
 
-	setupLog.Info("Starting Admission Server")
-	if err := setupAdmissionServer(ctx, c, clientsManager, mgr.GetClient(), deprecatedLogger); err != nil {
-		return err
-	}
-
 	parserFeatureFlags := parser.NewFeatureFlags(
 		deprecatedLogger,
 		featureGates,
@@ -161,6 +156,12 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 		routerFlavor,
 		c.UpdateStatus,
 	)
+
+	setupLog.Info("Starting Admission Server")
+	if err := setupAdmissionServer(ctx, c, clientsManager, mgr.GetClient(), deprecatedLogger, parserFeatureFlags, kongSemVersion); err != nil {
+		return err
+	}
+
 	cache := store.NewCacheStores()
 	configParser, err := parser.NewParser(
 		deprecatedLogger,

@@ -210,7 +210,7 @@ func TestHTTPRouteValidationWebhookExpressionsRouter(t *testing.T) {
 }
 
 // setUpEnvForTestingHTTPRouteValidationWebhook sets up the environment for testing HTTPRoute validation webhook,
-// it sets it only for object applied to namespace specified as argument.
+// it sets it only for objects applied to namespace specified as argument.
 func setUpEnvForTestingHTTPRouteValidationWebhook(ctx context.Context, t *testing.T) (
 	namespace string,
 	gatewayClient *gatewayclient.Clientset,

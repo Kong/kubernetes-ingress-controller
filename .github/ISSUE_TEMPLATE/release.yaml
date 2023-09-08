@@ -81,6 +81,11 @@ body:
       - label: Mark the PR ready for review.
       - label: Inform and ping the @Kong/team-k8s via slack of impending release with a link to the release PR.
 - type: textarea
+  id: conformance_tests_report
+  attributes:
+    label: Conformance tests report
+    value: Trigger for released version CI workflow `conformance_tests_report.yaml`, verify artifact and submit it to https://github.com/kubernetes-sigs/gateway-api/tree/main/conformance/reports. It's still in experimental phase.
+- type: textarea
   id: release_trouble_shooting_link
   attributes:
     label: Release Troubleshooting

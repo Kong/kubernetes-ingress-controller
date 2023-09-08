@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"net/url"
 	"os"
 	"time"
 
@@ -346,16 +347,21 @@ func waitForKubernetesAPIReadiness(ctx context.Context, logger logr.Logger, mgr 
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 
+	readinessEndpointURL, err := url.JoinPath(mgr.GetConfig().Host, "readyz")
+	if err != nil {
+		return fmt.Errorf("failed to build readiness check URL: %w", err)
+	}
+
 	return retry.Do(func() error {
 		// Call the readiness check of the Kubernetes API server: https://kubernetes.io/docs/reference/using-api/health-checks/.
-		resp, err := mgr.GetHTTPClient().Get(mgr.GetConfig().Host + "/readyz")
+		resp, err := mgr.GetHTTPClient().Get(readinessEndpointURL)
 		if err != nil {
-			return fmt.Errorf("failed to connect: %w", err)
+			return fmt.Errorf("failed to connect to %q: %w", readinessEndpointURL, err)
 		}
 		defer resp.Body.Close()
 		// We're waiting for the readiness check to return status 200.
 		if resp.StatusCode != http.StatusOK {
-			return fmt.Errorf("readiness check returned status %d", resp.StatusCode)
+			return fmt.Errorf("readiness check %q returned status %d", readinessEndpointURL, resp.StatusCode)
 		}
 		return nil
 	},

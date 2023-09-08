@@ -1,12 +1,14 @@
 package mocks
 
 import (
+	"fmt"
 	"net/http"
 	"sync/atomic"
 	"testing"
 )
 
-const defaultDBLessStatusResponse = `{
+const (
+	defaultDBLessRootResponse = `{
 	"version": "3.3.0",
 	"configuration": {
 		"database": "off",
@@ -33,6 +35,76 @@ const defaultDBLessStatusResponse = `{
 		]
 	}
 }`
+	defaultDBLessStatusResponseWithoutConfigurationHash = `{
+	"memory": {
+	  "workers_lua_vms": [
+		{
+		  "http_allocated_gc": "43.99 MiB",
+		  "pid": 1260
+		},
+		{
+		  "http_allocated_gc": "43.98 MiB",
+		  "pid": 1261
+		}
+	  ],
+	  "lua_shared_dicts": {
+		"kong_secrets": {
+		  "allocated_slabs": "0.04 MiB",
+		  "capacity": "5.00 MiB"
+		},
+		"prometheus_metrics": {
+		  "allocated_slabs": "0.04 MiB",
+		  "capacity": "5.00 MiB"
+		},
+		"kong": {
+		  "allocated_slabs": "0.04 MiB",
+		  "capacity": "5.00 MiB"
+		},
+		"kong_locks": {
+		  "allocated_slabs": "0.06 MiB",
+		  "capacity": "8.00 MiB"
+		},
+		"kong_healthchecks": {
+		  "allocated_slabs": "0.04 MiB",
+		  "capacity": "5.00 MiB"
+		},
+		"kong_cluster_events": {
+		  "allocated_slabs": "0.04 MiB",
+		  "capacity": "5.00 MiB"
+		},
+		"kong_rate_limiting_counters": {
+		  "allocated_slabs": "0.08 MiB",
+		  "capacity": "12.00 MiB"
+		},
+		"kong_core_db_cache": {
+		  "allocated_slabs": "0.76 MiB",
+		  "capacity": "128.00 MiB"
+		},
+		"kong_core_db_cache_miss": {
+		  "allocated_slabs": "0.08 MiB",
+		  "capacity": "12.00 MiB"
+		},
+		"kong_db_cache": {
+		  "allocated_slabs": "0.76 MiB",
+		  "capacity": "128.00 MiB"
+		},
+		"kong_db_cache_miss": {
+		  "allocated_slabs": "0.08 MiB",
+		  "capacity": "12.00 MiB"
+		}
+	  }
+	},
+	"server": {
+	  "connections_reading": 0,
+	  "total_requests": 615,
+	  "connections_writing": 3,
+	  "connections_handled": 615,
+	  "connections_waiting": 0,
+	  "connections_accepted": 615,
+	  "connections_active": 3
+	}
+}`
+)
 
 // AdminAPIHandler is a mock implementation of the Admin API. It only implements the endpoints that are
 // required for the tests.
@@ -49,9 +121,19 @@ type AdminAPIHandler struct {
 
 	// workspaceWasCreated is set to true when a workspace `POST /workspaces` was called.
 	workspaceWasCreated atomic.Bool
+
+	// configurationHash specifies the configuration hash of mocked Kong instance
+	// return in /status response.
+	configurationHash string
 }
 
 type AdminAPIHandlerOpt func(h *AdminAPIHandler)
+
+func WithConfigurationHash(hash string) AdminAPIHandlerOpt {
+	return func(h *AdminAPIHandler) {
+		h.configurationHash = hash
+	}
+}
 
 func WithWorkspaceExists(exists bool) AdminAPIHandlerOpt {
 	return func(h *AdminAPIHandler) {
@@ -79,7 +161,7 @@ func NewAdminAPIHandler(t *testing.T, opts ...AdminAPIHandlerOpt) *AdminAPIHandl
 
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodGet {
-			_, _ = w.Write([]byte(defaultDBLessStatusResponse))
+			_, _ = w.Write([]byte(defaultDBLessRootResponse))
 			return
 		}
 
@@ -90,7 +172,11 @@ func NewAdminAPIHandler(t *testing.T, opts ...AdminAPIHandlerOpt) *AdminAPIHandl
 			if !h.ready {
 				w.WriteHeader(http.StatusServiceUnavailable)
 			} else {
-				_, _ = w.Write([]byte(defaultDBLessStatusResponse))
+				if h.configurationHash != "" {
+					_, _ = w.Write([]byte(formatDBLessStatusResponseWithConfigurationHash(h.configurationHash)))
+				} else {
+					_, _ = w.Write([]byte(defaultDBLessStatusResponseWithoutConfigurationHash))
+				}
 			}
 			return
 		}
@@ -149,4 +235,79 @@ func (m *AdminAPIHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 func (m *AdminAPIHandler) WasWorkspaceCreated() bool {
 	return m.workspaceWasCreated.Load()
+}
+
+func formatDBLessStatusResponseWithConfigurationHash(hash string) string {
+	const defaultDBLessStatusResponseWithConfigurationHash = `{
+	"configuration_hash": "%s",
+	"memory": {
+	  "workers_lua_vms": [
+		{
+		  "http_allocated_gc": "43.99 MiB",
+		  "pid": 1260
+		},
+		{
+		  "http_allocated_gc": "43.98 MiB",
+		  "pid": 1261
+		}
+	  ],
+	  "lua_shared_dicts": {
+		"kong_secrets": {
+		  "allocated_slabs": "0.04 MiB",
+		  "capacity": "5.00 MiB"
+		},
+		"prometheus_metrics": {
+		  "allocated_slabs": "0.04 MiB",
+		  "capacity": "5.00 MiB"
+		},
+		"kong": {
+		  "allocated_slabs": "0.04 MiB",
+		  "capacity": "5.00 MiB"
+		},
+		"kong_locks": {
+		  "allocated_slabs": "0.06 MiB",
+		  "capacity": "8.00 MiB"
+		},
+		"kong_healthchecks": {
+		  "allocated_slabs": "0.04 MiB",
+		  "capacity": "5.00 MiB"
+		},
+		"kong_cluster_events": {
+		  "allocated_slabs": "0.04 MiB",
+		  "capacity": "5.00 MiB"
+		},
+		"kong_rate_limiting_counters": {
+		  "allocated_slabs": "0.08 MiB",
+		  "capacity": "12.00 MiB"
+		},
+		"kong_core_db_cache": {
+		  "allocated_slabs": "0.76 MiB",
+		  "capacity": "128.00 MiB"
+		},
+		"kong_core_db_cache_miss": {
+		  "allocated_slabs": "0.08 MiB",
+		  "capacity": "12.00 MiB"
+		},
+		"kong_db_cache": {
+		  "allocated_slabs": "0.76 MiB",
+		  "capacity": "128.00 MiB"
+		},
+		"kong_db_cache_miss": {
+		  "allocated_slabs": "0.08 MiB",
+		  "capacity": "12.00 MiB"
+		}
+	  }
+	},
+	"server": {
+	  "connections_reading": 0,
+	  "total_requests": 615,
+	  "connections_writing": 3,
+	  "connections_handled": 615,
+	  "connections_waiting": 0,
+	  "connections_accepted": 615,
+	  "connections_active": 3
+	}
+}`
+
+	return fmt.Sprintf(defaultDBLessStatusResponseWithConfigurationHash, hash)
 }

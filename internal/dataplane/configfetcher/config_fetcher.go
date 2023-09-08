@@ -59,9 +59,13 @@ func (cf *DefaultKongLastGoodConfigFetcher) TryFetchingValidConfigFromGateways(
 ) error {
 	logger.Debugf("fetching last good configuration from %d gateway clients", len(gatewayClients))
 
-	var goodKongState *kongstate.KongState
-	var errs error
+	var (
+		goodKongState *kongstate.KongState
+		errs          error
+		clientUsed    *adminapi.Client
+	)
 	for _, client := range gatewayClients {
+		logger.Debugf("fetching configuration from %s", client.BaseRootURL())
 		rs, err := cf.getKongRawState(ctx, client.AdminAPIClient())
 		if err != nil {
 			errs = errors.Join(errs, err)
@@ -70,9 +74,14 @@ func (cf *DefaultKongLastGoodConfigFetcher) TryFetchingValidConfigFromGateways(
 		if err != nil {
 			errs = errors.Join(errs, err)
 		}
-		ks := KongRawStateToKongState(rs)
+		if status == nil {
+			continue
+		}
+
 		if status.ConfigurationHash != sendconfig.WellKnownInitialHash {
 			// Get the first good one as the one to be used.
+			clientUsed = client
+			ks := KongRawStateToKongState(rs)
 			goodKongState = ks
 			break
 		}
@@ -82,7 +91,7 @@ func (cf *DefaultKongLastGoodConfigFetcher) TryFetchingValidConfigFromGateways(
 			goodKongState.FillIDs(logger)
 		}
 		cf.lastValidState = goodKongState
-		logger.Debug("last good configuration fetched from a Kong node")
+		logger.Debugf("last good configuration fetched from Kong node %s", clientUsed.BaseRootURL())
 	}
 	return errs
 }

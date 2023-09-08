@@ -1,0 +1,38 @@
+name: Generate Kubernetes Gateway API conformance tests report
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: The version of code (e.g. v1.2.3 or commit hash)
+        required: false
+        default: main
+
+jobs:
+  generate-report:
+    name:
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+          ref: ${{ github.event.inputs.tag }}
+
+      - name: setup golang
+        uses: actions/setup-go@v4
+        with:
+          go-version-file: go.mod
+
+      - name: Run conformance experimental tests
+        run: make test.conformance-experimental
+
+      # Generated report should be submitted to
+      # https://github.com/kubernetes-sigs/gateway-api/tree/main/conformance/reports
+      # in future when experimental becomes stable autamate creating PR (add to release workflow).
+      - name: Collect conformance tests report
+        uses: actions/upload-artifact@v3
+        with:
+          name: kong-kubernetes-ingress-controller.yaml
+          path: conformance-tests-report.yaml

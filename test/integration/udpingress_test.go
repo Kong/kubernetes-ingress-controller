@@ -33,6 +33,7 @@ var udpMutex sync.Mutex
 const coreDNSImage = "registry.k8s.io/coredns/coredns:v1.8.6"
 
 func TestUDPIngressEssentials(t *testing.T) {
+	RunWhenKongExpressionRouterWithVersion(t, ">=3.4.0")
 	t.Parallel()
 
 	// Ensure no other UDP tests run concurrently to avoid fights over the port
@@ -155,7 +156,7 @@ func TestUDPIngressEssentials(t *testing.T) {
 }
 
 func TestUDPIngressTCPIngressCollision(t *testing.T) {
-	skipTestForExpressionRouter(t)
+	RunWhenKongExpressionRouterWithVersion(t, ">=3.4.0")
 	t.Parallel()
 
 	t.Log("locking TCP and UDP ports")

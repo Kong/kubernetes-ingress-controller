@@ -66,6 +66,7 @@ func TestValidationWebhook(t *testing.T) {
 	ensureAdmissionRegistration(
 		ctx,
 		t,
+		ns.Name,
 		"kong-validations-consumer",
 		[]admregv1.RuleWithOperations{
 			{
@@ -672,7 +673,8 @@ func ensureWebhookServiceIsConnective(ctx context.Context, t *testing.T, configR
 	)
 }
 
-func ensureAdmissionRegistration(ctx context.Context, t *testing.T, configResourceName string, rules []admregv1.RuleWithOperations) {
+// ensureAdmissionRegistration registers a validating webhook for the given configuration, it validates objects only when applied to the given namespace.
+func ensureAdmissionRegistration(ctx context.Context, t *testing.T, namespace, configResourceName string, rules []admregv1.RuleWithOperations) {
 	svcName := fmt.Sprintf("webhook-%s", configResourceName)
 	ensureWebhookService(ctx, t, svcName)
 
@@ -691,10 +693,21 @@ func ensureAdmissionRegistration(ctx context.Context, t *testing.T, configResour
 						Service:  &admregv1.ServiceReference{Namespace: consts.ControllerNamespace, Name: svcName},
 						CABundle: cert,
 					},
+					NamespaceSelector: &metav1.LabelSelector{
+						MatchLabels: map[string]string{
+							"kubernetes.io/metadata.name": namespace,
+						},
+					},
 				},
 			},
 		}, metav1.CreateOptions{})
 	require.NoError(t, err)
+	for _, r := range rules {
+		t.Logf(
+			"configured admission webhook for: %q that validates in namespace: %q",
+			fmt.Sprintf("%s %s %s", r.Rule.APIGroups, r.Rule.APIVersions, r.Rule.Resources), namespace,
+		)
+	}
 
 	t.Cleanup(func() {
 		if err := env.Cluster().Client().AdmissionregistrationV1().ValidatingWebhookConfigurations().Delete(ctx, webhook.Name, metav1.DeleteOptions{}); err != nil && !apierrors.IsNotFound(err) {

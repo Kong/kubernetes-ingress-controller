@@ -10,39 +10,42 @@ import (
 	"testing"
 
 	"github.com/go-logr/logr"
+	"github.com/google/uuid"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/kong"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/metallb"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/types/kind"
 	"github.com/kong/kubernetes-testing-framework/pkg/environments"
 	"github.com/sirupsen/logrus"
+	"github.com/stretchr/testify/require"
 	"golang.org/x/sync/errgroup"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/kubernetes"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/gateway"
 	testutils "github.com/kong/kubernetes-ingress-controller/v2/internal/util/test"
 	"github.com/kong/kubernetes-ingress-controller/v2/test"
 	"github.com/kong/kubernetes-ingress-controller/v2/test/consts"
+	"github.com/kong/kubernetes-ingress-controller/v2/test/helpers/certificate"
 	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/helpers"
 	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/testenv"
 )
 
 var (
-	existingCluster      = os.Getenv("KONG_TEST_CLUSTER")
-	expressionRoutesMode = os.Getenv("KONG_TEST_EXPRESSION_ROUTES")
-	ingressClass         = "kong-conformance-tests"
+	conformanceTestsBaseManifests = fmt.Sprintf("%s/conformance/base/manifests.yaml", consts.GatewayRawRepoURL)
+	ingressClass                  = "kong-conformance-tests"
 
 	env                    environments.Environment
 	ctx                    context.Context
 	globalDeprecatedLogger logrus.FieldLogger
 	globalLogger           logr.Logger
 )
-
-func expressionRoutesEnabled() bool {
-	return strings.ToLower(expressionRoutesMode) == "true"
-}
 
 func TestMain(m *testing.M) {
 	var code int
@@ -72,7 +75,8 @@ func TestMain(m *testing.M) {
 	// In order to pass conformance tests, the expression router is required.
 	kongBuilder := kong.NewBuilder().WithControllerDisabled().WithProxyAdminServiceTypeLoadBalancer().
 		WithNamespace(consts.ControllerNamespace)
-	if expressionRoutesEnabled() {
+	if testenv.ExpressionRoutesEnabled() {
+		fmt.Println("INFO: expression routes enabled")
 		kongBuilder = kongBuilder.WithProxyEnvVar("router_flavor", "expressions")
 	}
 
@@ -103,6 +107,56 @@ func TestMain(m *testing.M) {
 		defer cancel()
 		exitOnErr(helpers.RemoveCluster(ctx, env.Cluster()))
 	}
+}
+
+// prepareEnvForGatewayConformanceTests prepares the environment for running the gateway conformance test suite
+// from the gateway-api project. Used as a helper function for both the stable and experimental conformance tests.
+func prepareEnvForGatewayConformanceTests(t *testing.T) (c client.Client, gatewayClassName string) {
+	t.Log("configuring environment for gateway conformance tests")
+	client, err := client.New(env.Cluster().Config(), client.Options{})
+	require.NoError(t, err)
+	require.NoError(t, gatewayv1alpha2.AddToScheme(client.Scheme()))
+	require.NoError(t, gatewayv1beta1.AddToScheme(client.Scheme()))
+
+	featureGateFlag := fmt.Sprintf("--feature-gates=%s", consts.DefaultFeatureGates)
+	if testenv.ExpressionRoutesEnabled() {
+		featureGateFlag = fmt.Sprintf("--feature-gates=%s", consts.ConformanceExpressionRoutesTestsFeatureGates)
+	}
+
+	t.Log("starting the controller manager")
+	cert, key := certificate.GetKongSystemSelfSignedCerts()
+	args := []string{
+		fmt.Sprintf("--ingress-class=%s", ingressClass),
+		fmt.Sprintf("--admission-webhook-cert=%s", cert),
+		fmt.Sprintf("--admission-webhook-key=%s", key),
+		fmt.Sprintf("--admission-webhook-listen=%s:%d", testutils.AdmissionWebhookListenHost, testutils.AdmissionWebhookListenPort),
+		"--profiling",
+		"--dump-config",
+		"--log-level=trace",
+		"--debug-log-reduce-redundancy",
+		featureGateFlag,
+		"--anonymous-reports=false",
+	}
+
+	require.NoError(t, testutils.DeployControllerManagerForCluster(ctx, globalDeprecatedLogger, globalLogger, env.Cluster(), args...))
+
+	t.Log("creating GatewayClass for gateway conformance tests")
+	gatewayClass := &gatewayv1beta1.GatewayClass{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: uuid.NewString(),
+			Annotations: map[string]string{
+				annotations.GatewayClassUnmanagedAnnotation: annotations.GatewayClassUnmanagedAnnotationValuePlaceholder,
+			},
+		},
+		Spec: gatewayv1beta1.GatewayClassSpec{
+			ControllerName: gateway.GetControllerName(),
+		},
+	}
+	require.NoError(t, client.Create(ctx, gatewayClass))
+	t.Cleanup(func() { require.NoError(t, client.Delete(ctx, gatewayClass)) })
+	t.Logf("created GatewayClass %q", gatewayClass.Name)
+
+	return client, gatewayClass.Name
 }
 
 func ensureConformanceTestsNamespacesAreNotPresent(ctx context.Context, client *kubernetes.Clientset) error {
@@ -158,7 +212,7 @@ func ensureNamespaceDeleted(ctx context.Context, ns string, client *kubernetes.C
 }
 
 func useExistingClusterIfPresent(builder *environments.Builder) {
-	if existingCluster != "" {
+	if existingCluster := testenv.ExistingClusterName(); existingCluster != "" {
 		parts := strings.Split(existingCluster, ":")
 		if len(parts) != 2 {
 			exitOnErr(fmt.Errorf("%s is not a valid value for KONG_TEST_CLUSTER", existingCluster))
@@ -180,4 +234,8 @@ func exitOnErr(err error) {
 		fmt.Println(err.Error())
 		os.Exit(1)
 	}
+}
+
+func shouldRunExperimentalConformance() bool {
+	return os.Getenv("TEST_EXPERIMENTAL_CONFORMANCE") == "true"
 }

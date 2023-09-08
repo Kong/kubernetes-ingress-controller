@@ -108,9 +108,10 @@ type Config struct {
 	AdmissionServer admission.ServerConfig
 
 	// Diagnostics and performance
-	EnableProfiling     bool
-	EnableConfigDumps   bool
-	DumpSensitiveConfig bool
+	EnableProfiling      bool
+	EnableConfigDumps    bool
+	DumpSensitiveConfig  bool
+	DiagnosticServerPort int
 
 	// Feature Gates
 	FeatureGates map[string]bool

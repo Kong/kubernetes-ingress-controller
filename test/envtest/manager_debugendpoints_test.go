@@ -5,17 +5,14 @@ package envtest
 import (
 	"context"
 	"fmt"
-	"io"
 	"net/http"
 	"testing"
 	"time"
 
+	"github.com/phayes/freeport"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"k8s.io/client-go/kubernetes/scheme"
-
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/cmd/rootcmd"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/manager"
 )
 
 func TestDebugEndpoints(t *testing.T) {
@@ -26,50 +23,41 @@ func TestDebugEndpoints(t *testing.T) {
 		tickTime = 10 * time.Millisecond
 	)
 
-	envcfg := Setup(t, scheme.Scheme)
-	cfg := ConfigForEnvConfig(t, envcfg)
-
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	go func(ctx context.Context) {
-		// NOTE: We're not running rootcmd.Run() or rootcmd.RunWithLogger() here
-		// hecause that sets up signal handling and that in turn uses a mutex to ensure
-		// only one signal handler is running at a time.
-		// We could try to work around this but that code calls os.Exit(1) whenever
-		// the root context is cancelled and that not what we want to test here.
-
-		deprecatedLogger, logger, err := manager.SetupLoggers(&cfg, io.Discard)
-		require.NoError(t, err)
-		diag, err := rootcmd.StartDiagnosticsServer(ctx, manager.DiagnosticsPort, &cfg, logger)
-		require.NoError(t, err)
-
-		err = manager.Run(ctx, &cfg, diag.ConfigDumps, deprecatedLogger)
-		require.NoError(t, err)
-	}(ctx)
+	ports, err := freeport.GetFreePorts(2)
+	require.NoError(t, err)
+	diagPort, healthPort := ports[0], ports[1]
+	envcfg := Setup(t, scheme.Scheme)
+	RunManager(ctx, t, envcfg,
+		WithDiagnosticsServer(diagPort),
+		WithHealthProbePort(healthPort),
+		WithProfiling(),
+	)
 
 	urls := []struct {
 		name string
 		port int
 	}{
 		{
-			port: manager.DiagnosticsPort,
+			port: diagPort,
 			name: "debug/pprof/",
 		},
 		{
-			port: manager.DiagnosticsPort,
+			port: diagPort,
 			name: "debug/config/successful",
 		},
 		{
-			port: manager.DiagnosticsPort,
+			port: diagPort,
 			name: "debug/config/failed",
 		},
 		{
-			port: manager.HealthzPort,
+			port: healthPort,
 			name: "healthz",
 		},
 		{
-			port: manager.HealthzPort,
+			port: healthPort,
 			name: "readyz",
 		},
 	}

@@ -1,6 +1,7 @@
 package envtest
 
 import (
+	"context"
 	"go/build"
 	"os"
 	"os/signal"
@@ -12,12 +13,16 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
+	netv1 "k8s.io/api/networking/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8sruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
+	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v2/test/consts"
 )
 
@@ -137,4 +142,16 @@ func installKongCRDs(t *testing.T, scheme *k8sruntime.Scheme, cfg *rest.Config) 
 		ErrorIfPathMissing: true,
 	})
 	require.NoError(t, err)
+}
+
+func deployIngressClass(ctx context.Context, t *testing.T, name string, client ctrlclient.Client) {
+	ingress := &netv1.IngressClass{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: name,
+		},
+		Spec: netv1.IngressClassSpec{
+			Controller: store.IngressClassKongController,
+		},
+	}
+	require.NoError(t, client.Create(ctx, ingress))
 }

@@ -11,12 +11,12 @@ import (
 	"github.com/phayes/freeport"
 	"github.com/samber/mo"
 	"github.com/sirupsen/logrus/hooks/test"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
 
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/cmd/rootcmd"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/manager"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/manager/featuregates"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
@@ -36,9 +36,10 @@ func ConfigForEnvConfig(t *testing.T, envcfg *rest.Config) manager.Config {
 	cfg := manager.Config{}
 	cfg.FlagSet() // Just set the defaults.
 
-	// Enable debugging endpoints.
-	cfg.EnableProfiling = true
-	cfg.EnableConfigDumps = true
+	// Disable debugging endpoints.
+	// If need be those can be enabled by manipulating the returned config.
+	cfg.EnableProfiling = false
+	cfg.EnableConfigDumps = false
 
 	// Override the APIServer.
 	cfg.APIServerHost = envcfg.Host
@@ -83,6 +84,37 @@ func WithIngressService(namespace string) func(cfg *manager.Config) {
 	}
 }
 
+func WithIngressClass(name string) func(cfg *manager.Config) {
+	return func(cfg *manager.Config) {
+		cfg.IngressClassName = name
+	}
+}
+
+func WithProxySyncSeconds(period float32) func(cfg *manager.Config) {
+	return func(cfg *manager.Config) {
+		cfg.ProxySyncSeconds = period
+	}
+}
+
+func WithDiagnosticsServer(port int) func(cfg *manager.Config) {
+	return func(cfg *manager.Config) {
+		cfg.DiagnosticServerPort = port
+		cfg.EnableConfigDumps = true
+	}
+}
+
+func WithHealthProbePort(port int) func(cfg *manager.Config) {
+	return func(cfg *manager.Config) {
+		cfg.ProbeAddr = fmt.Sprintf("localhost:%d", port)
+	}
+}
+
+func WithProfiling() func(cfg *manager.Config) {
+	return func(cfg *manager.Config) {
+		cfg.EnableProfiling = true
+	}
+}
+
 // buffer is a goroutine safe bytes.Buffer.
 type buffer struct {
 	buffer bytes.Buffer
@@ -124,6 +156,7 @@ func RunManager(
 	logrusLogger.Out = b
 	logger := logrusr.New(logrusLogger)
 	ctx = ctrl.LoggerInto(ctx, logger)
+	ctrl.SetLogger(logger)
 
 	// This wait group makes it so that we wait for manager to exit.
 	// This way we get clean test logs not mixing between tests.
@@ -131,8 +164,15 @@ func RunManager(
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		err := manager.Run(ctx, &cfg, util.ConfigDumpDiagnostic{}, logrusLogger)
-		assert.NoError(t, err)
+
+		var configDumps util.ConfigDumpDiagnostic
+		if cfg.EnableConfigDumps {
+			diag, err := rootcmd.StartDiagnosticsServer(ctx, cfg.DiagnosticServerPort, &cfg, logger)
+			require.NoError(t, err)
+			configDumps = diag.ConfigDumps
+		}
+
+		require.NoError(t, manager.Run(ctx, &cfg, configDumps, logrusLogger))
 	}()
 	t.Cleanup(func() {
 		wg.Wait()

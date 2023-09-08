@@ -82,7 +82,7 @@ linters-settings:
     - pkg: github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/(v[\w\d]+)
       alias: kong${1}
   forbidigo:
-    exclude_godoc_examples: false
+    exclude-godoc-examples: false
     forbid:
       - 'CoreV1\(\)\.Endpoints(# use DiscoveryV1 EndpointSlices API instead)?'
       - 'corev1\.Endpoint(# use DiscoveryV1 EndpointSlices API instead)?'

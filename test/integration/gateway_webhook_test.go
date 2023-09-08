@@ -28,11 +28,11 @@ func TestGatewayValidationWebhook(t *testing.T) {
 	if env.Cluster().Type() != kind.KindClusterType {
 		t.Skip("webhook tests are only available on KIND clusters currently")
 	}
-
+	const configResourceName = "kong-validations-gateway"
 	ensureAdmissionRegistration(
 		ctx,
 		t,
-		"kong-validations-gateway",
+		configResourceName,
 		[]admregv1.RuleWithOperations{
 			{
 				Rule: admregv1.Rule{
@@ -46,7 +46,7 @@ func TestGatewayValidationWebhook(t *testing.T) {
 	)
 
 	t.Log("waiting for webhook service to be connective")
-	require.NoError(t, waitForWebhookServiceConnective(ctx, "kong-validations-gateway"))
+	ensureWebhookServiceIsConnective(ctx, t, configResourceName)
 
 	gatewayClient, err := gatewayclient.NewForConfig(env.Cluster().Config())
 	require.NoError(t, err)

@@ -210,16 +210,20 @@ func TestHTTPRouteValidationWebhookExpressionsRouter(t *testing.T) {
 }
 
 // setUpEnvForTestingHTTPRouteValidationWebhook sets up the environment for testing HTTPRoute validation webhook,
-// it sets it globally. See https://github.com/Kong/kubernetes-ingress-controller/issues/4621 for more details.
+// it sets it only for objects applied to namespace specified as argument.
 func setUpEnvForTestingHTTPRouteValidationWebhook(ctx context.Context, t *testing.T) (
 	namespace string,
 	gatewayClient *gatewayclient.Clientset,
 	managedGateway *gatewayv1beta1.Gateway,
 	unmanagedGateway *gatewayv1beta1.Gateway,
 ) {
+	ns, cleaner := helpers.Setup(ctx, t, env)
+	namespace = ns.Name
+	t.Logf("created namespace: %q", namespace)
 	ensureAdmissionRegistration(
 		ctx,
 		t,
+		namespace,
 		"kong-validations-gateway",
 		[]admregv1.RuleWithOperations{
 			{
@@ -236,9 +240,6 @@ func setUpEnvForTestingHTTPRouteValidationWebhook(ctx context.Context, t *testin
 	t.Log("creating a gateway client")
 	gatewayClient, err := gatewayclient.NewForConfig(env.Cluster().Config())
 	require.NoError(t, err)
-
-	ns, cleaner := helpers.Setup(ctx, t, env)
-	namespace = ns.Name
 
 	t.Log("creating a managed gateway")
 	managedGateway, err = DeployGateway(ctx, gatewayClient, ns.Name, unmanagedGatewayClassName, func(g *gatewayv1beta1.Gateway) {

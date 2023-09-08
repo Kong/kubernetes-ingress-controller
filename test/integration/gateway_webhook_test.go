@@ -32,6 +32,7 @@ func TestGatewayValidationWebhook(t *testing.T) {
 	ensureAdmissionRegistration(
 		ctx,
 		t,
+		ns.Name,
 		configResourceName,
 		[]admregv1.RuleWithOperations{
 			{

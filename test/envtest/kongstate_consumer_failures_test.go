@@ -22,7 +22,7 @@ func TestKongStateFillConsumersAndCredentialsFailure(t *testing.T) {
 	t.Parallel()
 
 	scheme := Scheme(t, WithKong)
-	cfg := Setup(t, scheme, WithInstallKongCRDs(true))
+	cfg := Setup(t, scheme)
 	client := NewControllerClient(t, scheme, cfg)
 
 	// We use a deferred cancel to stop the manager and not wait for its timeout.

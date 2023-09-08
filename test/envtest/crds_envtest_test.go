@@ -10,16 +10,20 @@ import (
 	"testing"
 	"time"
 
+	"github.com/bombsimon/logrusr/v4"
 	"github.com/google/uuid"
 	"github.com/samber/lo"
 	"github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus/hooks/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/rest"
+	ctrl "sigs.k8s.io/controller-runtime"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/manager"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1beta1"
 	"github.com/kong/kubernetes-ingress-controller/v2/pkg/clientset"
 	"github.com/kong/kubernetes-ingress-controller/v2/test/consts"
@@ -28,7 +32,7 @@ import (
 
 func TestManagerDoesntStartUntilKubernetesAPIReachable(t *testing.T) {
 	scheme := Scheme(t, WithKong)
-	envcfg := Setup(t, scheme, WithInstallKongCRDs(true))
+	envcfg := Setup(t, scheme)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -77,26 +81,14 @@ func TestManagerDoesntStartUntilKubernetesAPIReachable(t *testing.T) {
 // TestDynamicCRDController_StartsControllersWhenCRDsInstalled ensures that in case of missing CRDs installation in the
 // cluster, specific controllers are not started until the CRDs are installed.
 func TestDynamicCRDController_StartsControllersWhenCRDsInstalled(t *testing.T) {
-	emptyScheme := runtime.NewScheme()
-	envcfg := Setup(t, emptyScheme, WithInstallGatewayCRDs(false), WithInstallKongCRDs(false))
+	scheme := Scheme(t, WithKong)
+	envcfg := Setup(t, scheme, WithInstallGatewayCRDs(false))
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	loggerHook := RunManager(ctx, t, envcfg, WithGatewayFeatureEnabled)
 
 	controllers := []string{
-		// Kong
-		"UDPIngress",
-		"TCPIngress",
-		"KongIngress",
-		"IngressClassParameters",
-		"KongPlugin",
-		"KongConsumer",
-		"KongConsumerGroup",
-		"KongClusterPlugin",
-		"Ingress",
-
-		// Gateway API
 		"Gateway",
 		"HTTPRoute",
 		"ReferenceGrant",
@@ -133,17 +125,32 @@ func TestDynamicCRDController_StartsControllersWhenCRDsInstalled(t *testing.T) {
 	requireLogForAllControllers(expectedLogOnStartup)
 
 	t.Log("installing missing CRDs")
-	installKongCRDs(t, emptyScheme, envcfg)
-	installGatewayCRDs(t, emptyScheme, envcfg)
+	installGatewayCRDs(t, scheme, envcfg)
 
 	t.Log("waiting for all controllers to start after CRDs installation")
 	requireLogForAllControllers(expectedLogOnCRDInstalled)
 }
 
+func TestNoKongCRDsIsFatal(t *testing.T) {
+	scheme := Scheme(t)
+	envcfg := Setup(t, scheme, WithInstallKongCRDs(false))
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	cfg := ConfigForEnvConfig(t, envcfg)
+
+	logrusLogger, _ := test.NewNullLogger()
+	logger := logrusr.New(logrusLogger)
+	ctrl.SetLogger(logger)
+
+	err := manager.Run(ctx, &cfg, util.ConfigDumpDiagnostic{}, logrusLogger)
+	require.ErrorContains(t, err, "requirements not satisfied")
+}
+
 func TestCRDValidations(t *testing.T) {
 	ctx := context.Background()
 	scheme := Scheme(t, WithKong)
-	envcfg := Setup(t, scheme, WithInstallKongCRDs(true))
+	envcfg := Setup(t, scheme)
 	client := NewControllerClient(t, scheme, envcfg)
 
 	testCases := []struct {

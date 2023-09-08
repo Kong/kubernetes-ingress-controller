@@ -21,7 +21,7 @@ func TestKongCRDs_ProgrammedCondition(t *testing.T) {
 	t.Parallel()
 
 	scheme := Scheme(t, WithKong)
-	envcfg := Setup(t, scheme, WithInstallKongCRDs(true))
+	envcfg := Setup(t, scheme)
 	ctrlClient := NewControllerClient(t, scheme, envcfg)
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -128,7 +128,7 @@ func TestKongCRDs_ProgrammedCondition(t *testing.T) {
 		// if there are multiple KIC instances within a cluster, they will fight over setting this condition because the
 		// controllers do not filter on ingress class. we need to limit them to only resources referenced from others,
 		// similar to Secrets, to use this
-		//{
+		// {
 		//	name: "valid KongPlugin",
 		//	objects: []client.Object{
 		//		&kongv1.KongPlugin{
@@ -164,8 +164,8 @@ func TestKongCRDs_ProgrammedCondition(t *testing.T) {
 		//	},
 		//	expectedProgrammedStatus: metav1.ConditionTrue,
 		//	expectedProgrammedReason: kongv1.ReasonProgrammed,
-		//},
-		//{
+		// },
+		// {
 		//	name: "invalid KongPlugin",
 		//	objects: []client.Object{
 		//		&kongv1.KongPlugin{
@@ -209,8 +209,8 @@ func TestKongCRDs_ProgrammedCondition(t *testing.T) {
 		//	},
 		//	expectedProgrammedStatus: metav1.ConditionFalse,
 		//	expectedProgrammedReason: kongv1.ReasonInvalid,
-		//},
-		//{
+		// },
+		// {
 		//	name: "valid KongClusterPlugin",
 		//	objects: []client.Object{
 		//		&kongv1.KongClusterPlugin{
@@ -244,8 +244,8 @@ func TestKongCRDs_ProgrammedCondition(t *testing.T) {
 		//	},
 		//	expectedProgrammedStatus: metav1.ConditionTrue,
 		//	expectedProgrammedReason: kongv1.ReasonProgrammed,
-		//},
-		//{
+		// },
+		// {
 		//	name: "invalid KongClusterPlugin",
 		//	objects: []client.Object{
 		//		&kongv1.KongPlugin{
@@ -289,7 +289,7 @@ func TestKongCRDs_ProgrammedCondition(t *testing.T) {
 		//	},
 		//	expectedProgrammedStatus: metav1.ConditionFalse,
 		//	expectedProgrammedReason: kongv1.ReasonInvalid,
-		//},
+		// },
 	}
 
 	for _, tc := range testCases {

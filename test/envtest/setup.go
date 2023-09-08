@@ -28,7 +28,7 @@ type Options struct {
 
 var DefaultEnvTestOpts = Options{
 	InstallGatewayCRDs: true,
-	InstallKongCRDs:    false,
+	InstallKongCRDs:    true,
 }
 
 type OptionModifier func(Options) Options

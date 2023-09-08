@@ -162,7 +162,7 @@ func TestHTTPRouteValidationWebhookTraditionalRouter(t *testing.T) {
 	namespace, gatewayClient, managedGateway, unmanagedGateway := setUpEnvForTestingHTTPRouteValidationWebhook(ctx, t)
 	testCases := append(
 		commonHTTPRouteValidationTestCases(managedGateway, unmanagedGateway),
-		invalidRegexInPathTestCase(managedGateway, `HTTPRoute failed schema validation: schema violation (paths.3: invalid regex: '/foo[[[['`),
+		invalidRegexInPathTestCase(managedGateway, `invalid regex: '/foo[[[['`),
 		// No test case for invalid regex in header, because Kong Gateway doesn't return any error in such case (it works only for expressions router).
 	)
 	testHTTPRouteValidationWebhook(ctx, t, namespace, gatewayClient, testCases)

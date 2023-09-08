@@ -265,7 +265,7 @@ func setUpEnvForTestingHTTPRouteValidationWebhook(ctx context.Context, t *testin
 	t.Logf("created unmanaged gateway: %q", unmanagedGateway.Name)
 
 	t.Log("waiting for webhook service to be connective")
-	require.NoError(t, waitForWebhookServiceConnective(ctx, "kong-validations-gateway"))
+	ensureWebhookServiceIsConnective(ctx, t, "kong-validations-gateway")
 
 	return namespace, gatewayClient, managedGateway, unmanagedGateway
 }

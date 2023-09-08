@@ -86,7 +86,8 @@ func TestValidationWebhook(t *testing.T) {
 			},
 		},
 	)
-	require.NoError(t, waitForWebhookServiceConnective(ctx, "kong-validations-consumer"))
+	t.Log("waiting for webhook service to be connective")
+	ensureWebhookServiceIsConnective(ctx, t, "kong-validations-consumer")
 
 	t.Log("creating a large number of consumers on the cluster to verify the performance of the cached client during validation")
 	kongClient, err := clientset.NewForConfig(env.Cluster().Config())
@@ -613,10 +614,12 @@ func TestValidationWebhook(t *testing.T) {
 	require.Contains(t, err.Error(), "some fields were invalid due to missing data: rsa_public_key, key, secret")
 }
 
-func ensureWebhookService(ctx context.Context, name string) (func() error, error) {
+func ensureWebhookService(ctx context.Context, t *testing.T, name string) {
+	t.Logf("creating webhook service: %q in namespace: %q", name, consts.ControllerNamespace)
 	validationsService, err := env.Cluster().Client().CoreV1().Services(consts.ControllerNamespace).Create(ctx, &corev1.Service{
-		TypeMeta:   metav1.TypeMeta{APIVersion: "v1", Kind: "Service"},
-		ObjectMeta: metav1.ObjectMeta{Name: name},
+		ObjectMeta: metav1.ObjectMeta{
+			Name: name,
+		},
 		Spec: corev1.ServiceSpec{
 			Type: corev1.ServiceTypeClusterIP,
 			Ports: []corev1.ServicePort{
@@ -628,16 +631,10 @@ func ensureWebhookService(ctx context.Context, name string) (func() error, error
 			},
 		},
 	}, metav1.CreateOptions{})
-	if err != nil {
-		return nil, fmt.Errorf("creating webhook service: %w", err)
-	}
+	require.NoError(t, err)
 
-	nodeName := "aaaa"
+	t.Log("creating webhook endpoints")
 	endpoints, err := env.Cluster().Client().DiscoveryV1().EndpointSlices(consts.ControllerNamespace).Create(ctx, &discoveryv1.EndpointSlice{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "discovery.k8s.io/v1",
-			Kind:       "EndpointSlice",
-		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name: fmt.Sprintf("%s-1", name),
 			Labels: map[string]string{
@@ -648,47 +645,40 @@ func ensureWebhookService(ctx context.Context, name string) (func() error, error
 		Endpoints: []discoveryv1.Endpoint{
 			{
 				Addresses: []string{testutils.AdmissionWebhookListenHost},
-				NodeName:  &nodeName,
 			},
 		},
 		Ports: builder.NewEndpointPort(testutils.AdmissionWebhookListenPort).WithName("default").WithProtocol(corev1.ProtocolTCP).IntoSlice(),
 	}, metav1.CreateOptions{})
-	if err != nil {
-		return nil, fmt.Errorf("creating webhook endpoints: %w", err)
-	}
+	require.NoError(t, err)
 
-	closer := func() error {
+	t.Cleanup(func() {
 		if err := env.Cluster().Client().CoreV1().Services(consts.ControllerNamespace).Delete(ctx, validationsService.Name, metav1.DeleteOptions{}); err != nil && !apierrors.IsNotFound(err) {
-			return err
+			require.NoError(t, err)
 		}
-
 		if err := env.Cluster().Client().DiscoveryV1().EndpointSlices(consts.ControllerNamespace).Delete(ctx, endpoints.Name, metav1.DeleteOptions{}); err != nil && !apierrors.IsNotFound(err) {
-			return err
+			require.NoError(t, err)
 		}
-		return nil
-	}
-
-	return closer, nil
+	})
 }
 
-func waitForWebhookServiceConnective(ctx context.Context, configResourceName string) error {
+func ensureWebhookServiceIsConnective(ctx context.Context, t *testing.T, configResourceName string) {
 	svcName := fmt.Sprintf("webhook-%s", configResourceName)
-	svcPort := 443
+	const svcPort = 443
 	waitCtx, cancel := context.WithTimeout(ctx, ingressWait)
 	defer cancel()
-
-	return networking.WaitForConnectionOnServicePort(waitCtx, env.Cluster().Client(), consts.ControllerNamespace, svcName, svcPort, 10*time.Second)
+	require.NoError(
+		t,
+		networking.WaitForConnectionOnServicePort(waitCtx, env.Cluster().Client(), consts.ControllerNamespace, svcName, svcPort, 10*time.Second),
+	)
 }
 
 func ensureAdmissionRegistration(ctx context.Context, t *testing.T, configResourceName string, rules []admregv1.RuleWithOperations) {
 	svcName := fmt.Sprintf("webhook-%s", configResourceName)
-	svcCloser, err := ensureWebhookService(ctx, svcName)
-	require.NoError(t, err)
+	ensureWebhookService(ctx, t, svcName)
 
 	cert, _ := certificate.GetKongSystemSelfSignedCerts()
 	webhook, err := env.Cluster().Client().AdmissionregistrationV1().ValidatingWebhookConfigurations().Create(ctx,
 		&admregv1.ValidatingWebhookConfiguration{
-			TypeMeta:   metav1.TypeMeta{APIVersion: "admissionregistration.k8s.io/v1", Kind: "ValidatingWebhookConfiguration"},
 			ObjectMeta: metav1.ObjectMeta{Name: configResourceName},
 			Webhooks: []admregv1.ValidatingWebhook{
 				{
@@ -708,9 +698,7 @@ func ensureAdmissionRegistration(ctx context.Context, t *testing.T, configResour
 
 	t.Cleanup(func() {
 		if err := env.Cluster().Client().AdmissionregistrationV1().ValidatingWebhookConfigurations().Delete(ctx, webhook.Name, metav1.DeleteOptions{}); err != nil && !apierrors.IsNotFound(err) {
-			t.Log("unable to delete webhook config during cleanup", err)
-			return
+			require.NoError(t, err)
 		}
-		require.NoError(t, svcCloser())
 	})
 }

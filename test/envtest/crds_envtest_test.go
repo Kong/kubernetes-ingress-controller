@@ -174,7 +174,6 @@ func TestCRDValidations(t *testing.T) {
 	for _, tc := range testCases {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
 			ns := CreateNamespace(ctx, t, client)
 			tc.scenario(ctx, t, ns.Name)
 		})

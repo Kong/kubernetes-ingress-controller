@@ -12,7 +12,6 @@ import (
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	k8stypes "k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
@@ -45,13 +44,11 @@ func TestHTTPRouteReconciliation_DoesNotBlockSyncLoopWhenStatusQueueBufferIsExce
 			Name:      "backend-svc",
 		},
 		Spec: corev1.ServiceSpec{
-			Ports: []corev1.ServicePort{
-				{
-					Name:     "http",
-					Protocol: corev1.ProtocolTCP,
-					Port:     80,
-				},
-			},
+			Ports: builder.NewServicePort().
+				WithName("http").
+				WithProtocol(corev1.ProtocolTCP).
+				WithPort(80).
+				IntoSlice(),
 		},
 	}
 	require.NoError(t, ctrlClient.Create(ctx, &backendService))
@@ -81,9 +78,13 @@ func TestHTTPRouteReconciliation_DoesNotBlockSyncLoopWhenStatusQueueBufferIsExce
 	require.NoError(t, ctrlClient.Create(ctx, &httpRoute))
 	t.Cleanup(func() { _ = ctrlClient.Delete(ctx, &httpRoute) })
 
-	require.Eventually(t, func() bool {
-		nn := k8stypes.NamespacedName{Name: httpRoute.Name, Namespace: httpRoute.Namespace}
-		if err := ctrlClient.Get(ctx, nn, &httpRoute); err != nil {
+	require.Eventually(t, httpRouteGetsProgrammed(ctx, t, ctrlClient, httpRoute),
+		time.Second*10, time.Millisecond*50)
+}
+
+func httpRouteGetsProgrammed(ctx context.Context, t *testing.T, cl client.Client, httpRoute gatewayv1beta1.HTTPRoute) func() bool {
+	return func() bool {
+		if err := cl.Get(ctx, client.ObjectKeyFromObject(&httpRoute), &httpRoute); err != nil {
 			t.Logf("failed to get httpRoute: %v", err)
 			return false
 		}
@@ -103,8 +104,7 @@ func TestHTTPRouteReconciliation_DoesNotBlockSyncLoopWhenStatusQueueBufferIsExce
 			return false
 		}
 		return true
-	}, time.Second*10, time.Millisecond*50)
-	t.Cleanup(func() { _ = ctrlClient.Delete(ctx, &httpRoute) })
+	}
 }
 
 func Test_WatchNamespaces(t *testing.T) {
@@ -134,13 +134,11 @@ func Test_WatchNamespaces(t *testing.T) {
 			Name:      "backend-svc",
 		},
 		Spec: corev1.ServiceSpec{
-			Ports: []corev1.ServicePort{
-				{
-					Name:     "http",
-					Protocol: corev1.ProtocolTCP,
-					Port:     80,
-				},
-			},
+			Ports: builder.NewServicePort().
+				WithName("http").
+				WithProtocol(corev1.ProtocolTCP).
+				WithPort(80).
+				IntoSlice(),
 		},
 	}
 
@@ -184,33 +182,11 @@ func Test_WatchNamespaces(t *testing.T) {
 	require.NoError(t, ctrlClient.Create(ctx, &hiddenRoute))
 	t.Cleanup(func() { _ = ctrlClient.Delete(ctx, &hiddenRoute) })
 
-	require.Eventually(t, func() bool {
-		nn := k8stypes.NamespacedName{Name: httpRoute.Name, Namespace: httpRoute.Namespace}
-		if err := ctrlClient.Get(ctx, nn, &httpRoute); err != nil {
-			t.Logf("failed to get httpRoute: %v", err)
-			return false
-		}
-		if len(httpRoute.Status.Parents) == 0 {
-			t.Logf("no gateway parent in httpRoute status")
-			return false
-		}
-		programmed, ok := lo.Find(httpRoute.Status.Parents[0].Conditions, func(c metav1.Condition) bool {
-			return c.Type == string(gatewayv1beta1.GatewayConditionProgrammed)
-		})
-		if !ok {
-			t.Logf("no programmed condition in httpRoute status")
-			return false
-		}
-		if programmed.Status != metav1.ConditionTrue {
-			t.Logf("programmed condition is not true")
-			return false
-		}
-		return true
-	}, time.Second*10, time.Millisecond*50)
+	require.Eventually(t, httpRouteGetsProgrammed(ctx, t, ctrlClient, httpRoute),
+		time.Second*10, time.Millisecond*50)
 
 	require.Never(t, func() bool {
-		nn := k8stypes.NamespacedName{Name: hiddenRoute.Name, Namespace: hiddenRoute.Namespace}
-		if err := ctrlClient.Get(ctx, nn, &hiddenRoute); err != nil {
+		if err := ctrlClient.Get(ctx, client.ObjectKeyFromObject(&hiddenRoute), &hiddenRoute); err != nil {
 			return false
 		}
 		if len(hiddenRoute.Status.Parents) != 0 {
@@ -231,13 +207,11 @@ func deployGateway(ctx context.Context, t *testing.T, client client.Client) gate
 			Name:      PublishServiceName,
 		},
 		Spec: corev1.ServiceSpec{
-			Ports: []corev1.ServicePort{
-				{
-					Name:     "http",
-					Port:     8000,
-					Protocol: corev1.ProtocolTCP,
-				},
-			},
+			Ports: builder.NewServicePort().
+				WithName("http").
+				WithProtocol(corev1.ProtocolTCP).
+				WithPort(8000).
+				IntoSlice(),
 		},
 	}
 	require.NoError(t, client.Create(ctx, &publishSvc))

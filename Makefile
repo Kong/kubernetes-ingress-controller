@@ -322,10 +322,8 @@ test.integration.enterprise: test.integration.enterprise.postgres test.integrati
 
 .PHONY: _test.unit
 .ONESHELL: _test.unit
-_test.unit: gotestsum setup-envtest
-	$(SETUP_ENVTEST) use
-	KUBEBUILDER_ASSETS="$(shell $(SETUP_ENVTEST) use -p path)" \
-		GOTESTSUM_FORMAT=$(GOTESTSUM_FORMAT) \
+_test.unit: gotestsum
+	GOTESTSUM_FORMAT=$(GOTESTSUM_FORMAT) \
 		$(GOTESTSUM) -- \
 		-race $(GOTESTFLAGS) \
 		-tags envtest \

@@ -30,7 +30,6 @@ import (
 	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/manager"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/manager/featuregates"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 	"github.com/kong/kubernetes-ingress-controller/v2/test/helpers/certificate"
 )
@@ -94,32 +93,13 @@ func TestTelemetry(t *testing.T) {
 func configForEnvTestTelemetry(t *testing.T, envcfg *rest.Config, splunkEndpoint string, telemetryPeriod time.Duration) manager.Config {
 	t.Helper()
 
-	cfg := manager.Config{}
-	cfg.FlagSet() // Just set the defaults.
-
-	// Telemetry is enabled by default so nothing to configure here.
-
-	// Override the APIServer.
-	cfg.APIServerHost = envcfg.Host
-	cfg.APIServerCertData = envcfg.CertData
-	cfg.APIServerKeyData = envcfg.KeyData
-	cfg.APIServerCAData = envcfg.CAData
-	cfg.KongAdminURLs = []string{StartAdminAPIServerMock(t).URL}
-	cfg.UpdateStatus = false
-	cfg.ProxySyncSeconds = 0.1
-
-	// And other settings which are irrelevant.
-	cfg.Konnect.ConfigSynchronizationEnabled = false
-	cfg.Konnect.LicenseSynchronizationEnabled = false
-	cfg.EnableProfiling = false
-	cfg.EnableConfigDumps = false
-
-	cfg.FeatureGates = featuregates.GetFeatureGatesDefaults()
-	cfg.FeatureGates[featuregates.GatewayFeature] = false
-
+	cfg := ConfigForEnvConfig(t, envcfg)
+	cfg.AnonymousReports = true
 	cfg.SplunkEndpoint = splunkEndpoint
 	cfg.SplunkEndpointInsecureSkipVerify = true
 	cfg.TelemetryPeriod = telemetryPeriod
+	cfg.EnableProfiling = false
+	cfg.EnableConfigDumps = false
 
 	return cfg
 }

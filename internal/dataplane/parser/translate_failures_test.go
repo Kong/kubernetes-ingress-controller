@@ -15,7 +15,6 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/failures"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/versions"
-	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1beta1"
 )
 
 // This file contains unit test functions to test translation failures genreated by parser.
@@ -56,55 +55,6 @@ func TestTranslationFailureUnsupportedObjectsExpressionRoutes(t *testing.T) {
 				&knative.Ingress{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "knative-ing-1",
-						Namespace: "default",
-					},
-				},
-			},
-		},
-		{
-			name: "TCPIngresses and UDPIngresses are not supported",
-			objects: store.FakeObjects{
-				TCPIngresses: []*kongv1beta1.TCPIngress{
-					{
-						TypeMeta: metav1.TypeMeta{
-							Kind:       "TCPIngress",
-							APIVersion: kongv1beta1.GroupVersion.String(),
-						},
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      "tcpingress-1",
-							Namespace: "default",
-							Annotations: map[string]string{
-								annotations.IngressClassKey: annotations.DefaultIngressClass,
-							},
-						},
-					},
-				},
-				UDPIngresses: []*kongv1beta1.UDPIngress{
-					{
-						TypeMeta: metav1.TypeMeta{
-							Kind:       "UDPIngress",
-							APIVersion: kongv1beta1.GroupVersion.String(),
-						},
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      "udpingress-1",
-							Namespace: "default",
-							Annotations: map[string]string{
-								annotations.IngressClassKey: annotations.DefaultIngressClass,
-							},
-						},
-					},
-				},
-			},
-			causingObjects: []client.Object{
-				&kongv1beta1.TCPIngress{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "tcpingress-1",
-						Namespace: "default",
-					},
-				},
-				&kongv1beta1.UDPIngress{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "udpingress-1",
 						Namespace: "default",
 					},
 				},

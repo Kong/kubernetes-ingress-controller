@@ -9,6 +9,7 @@ import (
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/versions"
 )
 
 func (p *Parser) ingressRulesFromTCPIngressV1beta1() ingressRules {
@@ -26,7 +27,7 @@ func (p *Parser) ingressRulesFromTCPIngressV1beta1() ingressRules {
 	})
 
 	for _, ingress := range ingressList {
-		if p.featureFlags.ExpressionRoutes {
+		if p.featureFlags.ExpressionRoutes && p.kongVersion.LT(versions.ExpressionRouterL4Cutoff) {
 			p.registerResourceFailureNotSupportedForExpressionRoutes(ingress)
 			continue
 		}
@@ -89,6 +90,10 @@ func (p *Parser) ingressRulesFromTCPIngressV1beta1() ingressRules {
 		}
 	}
 
+	if p.featureFlags.ExpressionRoutes {
+		applyExpressionToIngressRules(&result)
+	}
+
 	return result
 }
 
@@ -106,7 +111,7 @@ func (p *Parser) ingressRulesFromUDPIngressV1beta1() ingressRules {
 	})
 
 	for _, ingress := range ingressList {
-		if p.featureFlags.ExpressionRoutes {
+		if p.featureFlags.ExpressionRoutes && p.kongVersion.LT(versions.ExpressionRouterL4Cutoff) {
 			p.registerResourceFailureNotSupportedForExpressionRoutes(ingress)
 			continue
 		}
@@ -155,6 +160,10 @@ func (p *Parser) ingressRulesFromUDPIngressV1beta1() ingressRules {
 		if objectSuccessfullyParsed {
 			p.registerSuccessfullyParsedObject(ingress)
 		}
+	}
+
+	if p.featureFlags.ExpressionRoutes {
+		applyExpressionToIngressRules(&result)
 	}
 
 	return result

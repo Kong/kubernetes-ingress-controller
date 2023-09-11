@@ -13,7 +13,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/parser/translators"
 )
 
-type RouteValidator interface {
+type routeValidator interface {
 	Validate(context.Context, *kong.Route) (bool, string, error)
 }
 
@@ -28,7 +28,7 @@ type RouteValidator interface {
 // validation endpoint.
 func ValidateHTTPRoute(
 	ctx context.Context,
-	routesValidator RouteValidator,
+	routesValidator routeValidator,
 	parserFeatures parser.FeatureFlags,
 	kongVersion semver.Version,
 	httproute *gatewayv1beta1.HTTPRoute,
@@ -188,7 +188,7 @@ func getListenersForHTTPRouteValidation(sectionName *gatewayv1beta1.SectionName,
 }
 
 func validateWithKongGateway(
-	ctx context.Context, routesValidator RouteValidator, parserFeatures parser.FeatureFlags, kongVersion semver.Version, httproute *gatewayv1beta1.HTTPRoute,
+	ctx context.Context, routesValidator routeValidator, parserFeatures parser.FeatureFlags, kongVersion semver.Version, httproute *gatewayv1beta1.HTTPRoute,
 ) (bool, string, error) {
 	// Translate HTTPRoute to Kong Route object(s) that can be sent directly to the Admin API for validation.
 	// Use KIC parser that works both for traditional and expressions based routes.

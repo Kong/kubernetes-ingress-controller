@@ -9,6 +9,7 @@ import (
 	"github.com/sirupsen/logrus"
 	admissionv1 "k8s.io/api/admission/v1"
 	corev1 "k8s.io/api/core/v1"
+	netv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
@@ -98,6 +99,11 @@ var (
 		Version:  gatewayv1beta1.SchemeGroupVersion.Version,
 		Resource: "httproutes",
 	}
+	ingressGVResource = metav1.GroupVersionResource{
+		Group:    netv1.SchemeGroupVersion.Group,
+		Version:  netv1.SchemeGroupVersion.Version,
+		Resource: "ingresses",
+	}
 )
 
 func (h RequestHandler) handleValidation(ctx context.Context, request admissionv1.AdmissionRequest) (
@@ -122,6 +128,8 @@ func (h RequestHandler) handleValidation(ctx context.Context, request admissionv
 		return h.handleHTTPRoute(ctx, request, responseBuilder)
 	case kongIngressGVResource:
 		return h.handleKongIngress(ctx, request, responseBuilder)
+	case ingressGVResource:
+		return h.handleIngress(ctx, request, responseBuilder)
 	default:
 		return nil, fmt.Errorf("unknown resource type to validate: %s/%s %s",
 			request.Resource.Group, request.Resource.Version,
@@ -312,4 +320,18 @@ func (h RequestHandler) handleKongIngress(_ context.Context, request admissionv1
 	}
 
 	return responseBuilder.Build(), nil
+}
+
+func (h RequestHandler) handleIngress(ctx context.Context, request admissionv1.AdmissionRequest, responseBuilder *ResponseBuilder) (*admissionv1.AdmissionResponse, error) {
+	ingress := netv1.Ingress{}
+	_, _, err := codecs.UniversalDeserializer().Decode(request.Object.Raw, nil, &ingress)
+	if err != nil {
+		return nil, err
+	}
+	ok, message, err := h.Validator.ValidateIngress(ctx, ingress)
+	if err != nil {
+		return nil, err
+	}
+
+	return responseBuilder.Allowed(ok).WithMessage(message).Build(), nil
 }

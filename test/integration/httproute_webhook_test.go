@@ -219,12 +219,12 @@ func setUpEnvForTestingHTTPRouteValidationWebhook(ctx context.Context, t *testin
 ) {
 	ns, cleaner := helpers.Setup(ctx, t, env)
 	namespace = ns.Name
-	t.Logf("created namespace: %q", namespace)
+	const webhookName = "kong-validations-gateway"
 	ensureAdmissionRegistration(
 		ctx,
 		t,
 		namespace,
-		"kong-validations-gateway",
+		webhookName,
 		[]admregv1.RuleWithOperations{
 			{
 				Rule: admregv1.Rule{
@@ -266,7 +266,7 @@ func setUpEnvForTestingHTTPRouteValidationWebhook(ctx context.Context, t *testin
 	t.Logf("created unmanaged gateway: %q", unmanagedGateway.Name)
 
 	t.Log("waiting for webhook service to be connective")
-	ensureWebhookServiceIsConnective(ctx, t, "kong-validations-gateway")
+	ensureWebhookServiceIsConnective(ctx, t, webhookName)
 
 	return namespace, gatewayClient, managedGateway, unmanagedGateway
 }

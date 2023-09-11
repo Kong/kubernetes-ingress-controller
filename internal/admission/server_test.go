@@ -14,6 +14,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	admissionv1 "k8s.io/api/admission/v1"
 	corev1 "k8s.io/api/core/v1"
+	netv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
@@ -66,6 +67,10 @@ func (v KongFakeValidator) ValidateGateway(_ context.Context, _ gatewayv1beta1.G
 }
 
 func (v KongFakeValidator) ValidateHTTPRoute(_ context.Context, _ gatewayv1beta1.HTTPRoute) (bool, string, error) {
+	return v.Result, v.Message, v.Error
+}
+
+func (v KongFakeValidator) ValidateIngress(_ context.Context, _ netv1.Ingress) (bool, string, error) {
 	return v.Result, v.Message, v.Error
 }
 

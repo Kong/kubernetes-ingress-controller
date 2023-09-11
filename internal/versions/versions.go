@@ -5,11 +5,10 @@ import (
 )
 
 var (
-	// RegexHeaderVersionCutoff is the Kong version prior to the addition of support for regular expression heade
-	// matches.
+	// RegexHeaderVersionCutoff is the Kong version prior to the addition of support for regular expression for matching headers.
 	RegexHeaderVersionCutoff = semver.Version{Major: 2, Minor: 8}
 
-	// ExplicitRegexPathVersionCutoff is the lowest Kong version adding the explicit "~" prefixes in regular expression paths.
+	// ExplicitRegexPathVersionCutoff is the lowest Kong version requiring the explicit "~" prefixes in regular expression paths.
 	ExplicitRegexPathVersionCutoff = semver.Version{Major: 3, Minor: 0}
 
 	// PluginOrderingVersionCutoff is the Kong version prior to the addition of plugin ordering.

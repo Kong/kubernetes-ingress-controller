@@ -9,6 +9,7 @@ import (
 	"github.com/kong/go-kong/kong"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
+	netv1 "k8s.io/api/networking/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -19,6 +20,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/parser"
 	credsvalidation "github.com/kong/kubernetes-ingress-controller/v2/internal/validation/consumers/credentials"
 	gatewayvalidators "github.com/kong/kubernetes-ingress-controller/v2/internal/validation/gateway"
+	ingressvalidator "github.com/kong/kubernetes-ingress-controller/v2/internal/validation/ingress"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/versions"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
 	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1beta1"
@@ -33,6 +35,7 @@ type KongValidator interface {
 	ValidateCredential(ctx context.Context, secret corev1.Secret) (bool, string, error)
 	ValidateGateway(ctx context.Context, gateway gatewaycontroller.Gateway) (bool, string, error)
 	ValidateHTTPRoute(ctx context.Context, httproute gatewaycontroller.HTTPRoute) (bool, string, error)
+	ValidateIngress(ctx context.Context, ingress netv1.Ingress) (bool, string, error)
 }
 
 // AdminAPIServicesProvider provides KongHTTPValidator with Kong Admin API services that are needed to perform
@@ -55,7 +58,8 @@ type KongHTTPValidator struct {
 	ParserFeatures           parser.FeatureFlags
 	KongVersion              semver.Version
 
-	ingressClassMatcher func(*metav1.ObjectMeta, string, annotations.ClassMatching) bool
+	ingressClassMatcher   func(*metav1.ObjectMeta, string, annotations.ClassMatching) bool
+	ingressV1ClassMatcher func(*netv1.Ingress, annotations.ClassMatching) bool
 }
 
 // NewKongHTTPValidator provides a new KongHTTPValidator object provided a
@@ -70,7 +74,6 @@ func NewKongHTTPValidator(
 	parserFeatures parser.FeatureFlags,
 	kongVersion semver.Version,
 ) KongHTTPValidator {
-	matcher := annotations.IngressClassValidatorFuncFromObjectMeta(ingressClass)
 	return KongHTTPValidator{
 		Logger:                   logger,
 		SecretGetter:             &managerClientSecretGetter{managerClient: managerClient},
@@ -79,7 +82,8 @@ func NewKongHTTPValidator(
 		ParserFeatures:           parserFeatures,
 		KongVersion:              kongVersion,
 
-		ingressClassMatcher: matcher,
+		ingressClassMatcher:   annotations.IngressClassValidatorFuncFromObjectMeta(ingressClass),
+		ingressV1ClassMatcher: annotations.IngressClassValidatorFuncFromV1Ingress(ingressClass),
 	}
 }
 
@@ -423,13 +427,33 @@ func (validator KongHTTPValidator) ValidateHTTPRoute(
 
 	// Now that we know whether or not the HTTPRoute is linked to a managed
 	// Gateway we can run it through full validation.
-	var routeValidator gatewayvalidators.RouteValidator = noOpRoutesValidator{}
+	var routeValidator routeValidator = noOpRoutesValidator{}
 	if routesSvc, ok := validator.AdminAPIServicesProvider.GetRoutesService(); ok {
 		routeValidator = routesSvc
 	}
 	return gatewayvalidators.ValidateHTTPRoute(
 		ctx, routeValidator, validator.ParserFeatures, validator.KongVersion, &httproute, managedGateways...,
 	)
+}
+
+func (validator KongHTTPValidator) ValidateIngress(
+	ctx context.Context, ingress netv1.Ingress,
+) (bool, string, error) {
+	// Ignore Ingresses that are being managed by another controller.
+	if !validator.ingressClassMatcher(&ingress.ObjectMeta, annotations.IngressClassKey, annotations.ExactClassMatch) &&
+		!validator.ingressV1ClassMatcher(&ingress, annotations.ExactClassMatch) {
+		return true, "", nil
+	}
+
+	var routeValidator routeValidator = noOpRoutesValidator{}
+	if routesSvc, ok := validator.AdminAPIServicesProvider.GetRoutesService(); ok {
+		routeValidator = routesSvc
+	}
+	return ingressvalidator.ValidateIngress(ctx, routeValidator, validator.ParserFeatures, validator.KongVersion, &ingress)
+}
+
+type routeValidator interface {
+	Validate(context.Context, *kong.Route) (bool, string, error)
 }
 
 type noOpRoutesValidator struct{}

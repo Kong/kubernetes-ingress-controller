@@ -1,14 +1,17 @@
 package envtest
 
 import (
+	"bytes"
 	"context"
 	"fmt"
+	"sync"
 	"testing"
 
 	"github.com/bombsimon/logrusr/v4"
 	"github.com/phayes/freeport"
 	"github.com/samber/mo"
 	"github.com/sirupsen/logrus/hooks/test"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/rest"
@@ -95,13 +98,26 @@ func RunManager(
 	}
 
 	logrusLogger, loggerHook := test.NewNullLogger()
+	b := &bytes.Buffer{}
+	logrusLogger.Out = b
 	logger := logrusr.New(logrusLogger)
 	ctx = ctrl.LoggerInto(ctx, logger)
 
+	// This wait group makes it so that we wait for manager to exit.
+	// This way we get clean test logs not mixing between tests.
+	wg := sync.WaitGroup{}
+	wg.Add(1)
 	go func() {
+		defer wg.Done()
 		err := manager.Run(ctx, &cfg, util.ConfigDumpDiagnostic{}, logrusLogger)
-		require.NoError(t, err)
+		assert.NoError(t, err)
 	}()
+	t.Cleanup(func() {
+		wg.Wait()
+		if t.Failed() {
+			t.Logf("manager logs:\n%s", b.String())
+		}
+	})
 
 	return loggerHook
 }

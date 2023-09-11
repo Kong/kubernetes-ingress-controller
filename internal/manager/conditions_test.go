@@ -1,7 +1,6 @@
 package manager_test
 
 import (
-	"context"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -77,53 +76,6 @@ func TestIngressControllerConditions(t *testing.T) {
 			require.NoError(t, err)
 			assert.Equal(t, tc.expectIngressNetV1, conditions.IngressNetV1Enabled())
 			assert.Equal(t, tc.expectIngressClassNetV1, conditions.IngressClassNetV1Enabled())
-		})
-	}
-}
-
-func TestShouldEnableCRDController(t *testing.T) {
-	knownGvr := schema.GroupVersionResource{
-		Group:    "group",
-		Version:  "v1",
-		Resource: "resources",
-	}
-	unknownGVR := schema.GroupVersionResource{
-		Group:    "otherGroup",
-		Version:  "v1",
-		Resource: "resources",
-	}
-
-	restMapper := meta.NewDefaultRESTMapper(nil)
-	restMapper.Add(schema.GroupVersionKind{
-		Group:   knownGvr.Group,
-		Version: knownGvr.Version,
-		Kind:    "Resource",
-	}, meta.RESTScopeRoot)
-
-	testCases := []struct {
-		name           string
-		gvr            schema.GroupVersionResource
-		expectedResult bool
-	}{
-		{
-			name:           "registered_resource",
-			gvr:            knownGvr,
-			expectedResult: true,
-		},
-		{
-			name:           "not_registered_resource",
-			gvr:            unknownGVR,
-			expectedResult: false,
-		},
-	}
-
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			require.Equal(
-				t,
-				tc.expectedResult,
-				manager.ShouldEnableCRDController(context.Background(), tc.gvr, restMapper),
-			)
 		})
 	}
 }

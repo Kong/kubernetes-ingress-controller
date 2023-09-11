@@ -6,9 +6,11 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"net/url"
 	"os"
 	"time"
 
+	"github.com/avast/retry-go/v4"
 	"github.com/blang/semver/v4"
 	"github.com/go-logr/logr"
 	"github.com/sirupsen/logrus"
@@ -128,7 +130,11 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 
 	mgr, err := ctrl.NewManager(kubeconfig, controllerOpts)
 	if err != nil {
-		return fmt.Errorf("unable to start controller manager: %w", err)
+		return fmt.Errorf("unable to create controller manager: %w", err)
+	}
+
+	if err := waitForKubernetesAPIReadiness(ctx, setupLog, mgr); err != nil {
+		return fmt.Errorf("unable to connect to Kubernetes API: %w", err)
 	}
 
 	setupLog.Info("Initializing Dataplane Client")
@@ -327,6 +333,47 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 
 	setupLog.Info("Starting manager")
 	return mgr.Start(ctx)
+}
+
+// waitForKubernetesAPIReadiness waits for the Kubernetes API to be ready. It's used as a prerequisite to run any
+// controller components (i.e. Manager along with its Runnables).
+// It retries with a timeout of 1m and a fixed delay of 1s.
+func waitForKubernetesAPIReadiness(ctx context.Context, logger logr.Logger, mgr manager.Manager) error {
+	const (
+		timeout = time.Minute
+		delay   = time.Second
+	)
+
+	ctx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
+
+	readinessEndpointURL, err := url.JoinPath(mgr.GetConfig().Host, "readyz")
+	if err != nil {
+		return fmt.Errorf("failed to build readiness check URL: %w", err)
+	}
+
+	return retry.Do(func() error {
+		// Call the readiness check of the Kubernetes API server: https://kubernetes.io/docs/reference/using-api/health-checks/.
+		resp, err := mgr.GetHTTPClient().Get(readinessEndpointURL)
+		if err != nil {
+			return fmt.Errorf("failed to connect to %q: %w", readinessEndpointURL, err)
+		}
+		defer resp.Body.Close()
+		// We're waiting for the readiness check to return status 200.
+		if resp.StatusCode != http.StatusOK {
+			return fmt.Errorf("readiness check %q returned status %d", readinessEndpointURL, resp.StatusCode)
+		}
+		return nil
+	},
+		retry.Context(ctx),
+		retry.Delay(delay),
+		retry.DelayType(retry.FixedDelay),
+		retry.Attempts(0), // We're using a context with timeout, so we don't need to limit the number of attempts.
+		retry.LastErrorOnly(true),
+		retry.OnRetry(func(n uint, err error) {
+			logger.Info("Retrying Kubernetes API readiness check after error", "error", err.Error())
+		}),
+	)
 }
 
 // setupKonnectNodeAgentWithMgr creates and adds Konnect NodeAgent as the manager's Runnable.

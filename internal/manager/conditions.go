@@ -1,13 +1,9 @@
 package manager
 
 import (
-	"context"
-	"fmt"
-
 	netv1 "k8s.io/api/networking/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	ctrl "sigs.k8s.io/controller-runtime"
 
 	ctrlutils "github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/utils"
 )
@@ -67,13 +63,4 @@ func negotiateIngressAPI(config *Config, mapper meta.RESTMapper) (IngressAPI, er
 		}
 	}
 	return NoIngressAPI, nil
-}
-
-func ShouldEnableCRDController(ctx context.Context, gvr schema.GroupVersionResource, restMapper meta.RESTMapper) bool {
-	if !ctrlutils.CRDExists(restMapper, gvr) {
-		ctrl.LoggerFrom(ctx).WithName("controllers").WithName("crdCondition").
-			Info(fmt.Sprintf("Disabling controller for Group=%s, Resource=%s due to missing CRD", gvr.GroupVersion(), gvr.Resource))
-		return false
-	}
-	return true
 }

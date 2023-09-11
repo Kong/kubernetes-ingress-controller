@@ -116,6 +116,10 @@ Adding a new version? You'll need three changes:
   `/status` from Kong Gateway.
   This happens when Gateway is responding with a 50x HTTP status code.
   [#4627](https://github.com/Kong/kubernetes-ingress-controller/issues/4627)
+- Ensure the API server is available at startup and do not disable CRD
+  controllers if Kong CRDs are unavailable. This avoids incorrectly deleting
+  existing configuration during an API server restart.
+  [#4641](https://github.com/Kong/kubernetes-ingress-controller/issues/4641)
 
 ## [2.11.1]
 

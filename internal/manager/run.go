@@ -223,7 +223,7 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 	}
 
 	setupLog.Info("Starting Enabled Controllers")
-	controllers, err := setupControllers(
+	controllers := setupControllers(
 		ctx,
 		mgr,
 		dataplaneClient,
@@ -235,9 +235,6 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 		clientsManager,
 		adminAPIsDiscoverer,
 	)
-	if err != nil {
-		return fmt.Errorf("unable to setup controller as expected %w", err)
-	}
 	for _, c := range controllers {
 		if err := c.MaybeSetupWithManager(mgr); err != nil {
 			return fmt.Errorf("unable to create controller %q: %w", c.Name(), err)

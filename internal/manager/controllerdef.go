@@ -2,7 +2,6 @@ package manager
 
 import (
 	"context"
-	"fmt"
 	"reflect"
 
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -67,15 +66,7 @@ func setupControllers(
 	featureGates map[string]bool,
 	kongAdminAPIEndpointsNotifier configuration.EndpointsNotifier,
 	adminAPIsDiscoverer configuration.AdminAPIsDiscoverer,
-) ([]ControllerDef, error) {
-	restMapper := mgr.GetClient().RESTMapper()
-
-	// Choose the best API version of Ingress to inform which ingress controller to enable.
-	ingressConditions, err := NewIngressControllersConditions(c, restMapper)
-	if err != nil {
-		return nil, fmt.Errorf("ingress version picker failed: %w", err)
-	}
-
+) []ControllerDef {
 	referenceIndexers := ctrlref.NewCacheIndexers()
 
 	controllers := []ControllerDef{
@@ -97,7 +88,7 @@ func setupControllers(
 		// Core API Controllers
 		// ---------------------------------------------------------------------------
 		{
-			Enabled: ingressConditions.IngressClassNetV1Enabled(),
+			Enabled: c.IngressClassNetV1Enabled,
 			Controller: &configuration.NetV1IngressClassReconciler{
 				Client:           mgr.GetClient(),
 				Log:              ctrl.LoggerFrom(ctx).WithName("controllers").WithName("IngressClass").WithName("netv1"),
@@ -107,7 +98,7 @@ func setupControllers(
 			},
 		},
 		{
-			Enabled: ingressConditions.IngressNetV1Enabled(),
+			Enabled: c.IngressNetV1Enabled,
 			Controller: &configuration.NetV1IngressReconciler{
 				Client:                     mgr.GetClient(),
 				Log:                        ctrl.LoggerFrom(ctx).WithName("controllers").WithName("Ingress").WithName("netv1"),
@@ -445,7 +436,7 @@ func setupControllers(
 		},
 	}
 
-	return controllers, nil
+	return controllers
 }
 
 // baseGatewayCRDs returns a slice of base CRDs required for running all the Gateway API controllers.

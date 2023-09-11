@@ -11,15 +11,14 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/testenv"
 )
 
-var skippedTestsForTraditionalAndExpressionRoutes = []string{
+var commonSkippedTests = []string{
+	// HTTP
 	// extended conformance
-	// https://github.com/Kong/kubernetes-ingress-controller/issues/4166
-	// requires an 8080 listener, which our manually-built test gateway does not have
+	// https://github.com/Kong/kubernetes-ingress-controller/issues/4563
+	tests.GatewayWithAttachedRoutesWithPort8080.ShortName,
 	tests.HTTPRouteRedirectPortAndScheme.ShortName,
 	// https://github.com/Kong/kubernetes-ingress-controller/issues/3680
 	tests.GatewayClassObservedGenerationBump.ShortName,
-	// https://github.com/Kong/kubernetes-ingress-controller/issues/3678
-	tests.TLSRouteSimpleSameNamespace.ShortName,
 	// https://github.com/Kong/kubernetes-ingress-controller/issues/3679
 	tests.HTTPRouteQueryParamMatching.ShortName,
 	// https://github.com/Kong/kubernetes-ingress-controller/issues/3681
@@ -28,11 +27,6 @@ var skippedTestsForTraditionalAndExpressionRoutes = []string{
 	tests.HTTPRouteRedirectScheme.ShortName,
 	// https://github.com/Kong/kubernetes-ingress-controller/issues/4165
 	tests.HTTPRouteRequestMirror.ShortName,
-	// https://github.com/Kong/kubernetes-ingress-controller/issues/4546
-	tests.GatewayWithAttachedRoutes.ShortName,
-	tests.GatewayWithAttachedRoutesWithPort8080.ShortName,
-	// https://github.com/Kong/kubernetes-ingress-controller/issues/4562
-	tests.TLSRouteInvalidReferenceGrant.ShortName,
 
 	// experimental conformance
 	// https://github.com/Kong/kubernetes-ingress-controller/issues/3684
@@ -41,20 +35,26 @@ var skippedTestsForTraditionalAndExpressionRoutes = []string{
 	tests.HTTPRouteRewriteHost.ShortName,
 	// https://github.com/Kong/kubernetes-ingress-controller/issues/3686
 	tests.HTTPRouteRewritePath.ShortName,
+
+	// TLS
+	// https://github.com/Kong/kubernetes-ingress-controller/issues/4562
+	tests.TLSRouteInvalidReferenceGrant.ShortName,
+	// https://github.com/Kong/kubernetes-ingress-controller/issues/3678
+	tests.TLSRouteSimpleSameNamespace.ShortName,
 }
 
-var skippedTestsForExpressionRoutes = skippedTestsForTraditionalAndExpressionRoutes
-
-var skippedTestsForTraditionalRoutes = append(
-	skippedTestsForTraditionalAndExpressionRoutes,
-	// core conformance
-	tests.HTTPRouteHeaderMatching.ShortName,
-	// extended conformance
-	// https://github.com/Kong/kubernetes-ingress-controller/issues/4164
-	// only 10 and 11 broken because traditional/traditional_compatible router
-	// cannot support the path > method > header precedence,
-	// but no way to omit individual cases.
-	tests.HTTPRouteMethodMatching.ShortName,
+var (
+	skippedTestsForExpressionRoutes  = commonSkippedTests
+	skippedTestsForTraditionalRoutes = append(
+		commonSkippedTests,
+		// core conformance
+		tests.HTTPRouteHeaderMatching.ShortName,
+		// extended conformance
+		// only 10 and 11 broken because traditional/traditional_compatible router
+		// cannot support the path > method > header precedence,
+		// but no way to omit individual cases.
+		tests.HTTPRouteMethodMatching.ShortName,
+	)
 )
 
 func TestGatewayConformance(t *testing.T) {

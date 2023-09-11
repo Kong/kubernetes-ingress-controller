@@ -2,7 +2,21 @@ module github.com/kong/kubernetes-ingress-controller/v2
 
 go 1.21
 
-toolchain go1.21.0
+// TODO: this is disabled by FOSSA action doesn't support go 1.21's toolchain clause:
+//
+//  Error parsing file: /home/runner/work/kubernetes-ingress-controller/kubernetes-ingress-controller/go.mod.
+//
+//      /home/runner/work/kubernetes-ingress-controller/kubernetes-ingress-controller/go.mod:5:1:
+//        |
+//      5 | toolchain go1.21.0
+//        | ^
+//      unexpected 't'
+//      expecting "exclude", "go", "replace", "require", "retract", or end of input
+//
+//
+// Related issue: https://github.com/Kong/kubernetes-ingress-controller/issues/4635
+//
+// toolchain go1.21.0
 
 require (
 	cloud.google.com/go/container v1.25.0

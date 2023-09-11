@@ -29,6 +29,8 @@ import (
 type ConfigurationV1alpha1Interface interface {
 	RESTClient() rest.Interface
 	IngressClassParametersesGetter
+	KongCustomEntitiesGetter
+	KongCustomEntityDefinitionsGetter
 }
 
 // ConfigurationV1alpha1Client is used to interact with features provided by the configuration.konghq.com group.
@@ -38,6 +40,14 @@ type ConfigurationV1alpha1Client struct {
 
 func (c *ConfigurationV1alpha1Client) IngressClassParameterses(namespace string) IngressClassParametersInterface {
 	return newIngressClassParameterses(c, namespace)
+}
+
+func (c *ConfigurationV1alpha1Client) KongCustomEntities(namespace string) KongCustomEntityInterface {
+	return newKongCustomEntities(c, namespace)
+}
+
+func (c *ConfigurationV1alpha1Client) KongCustomEntityDefinitions(namespace string) KongCustomEntityDefinitionInterface {
+	return newKongCustomEntityDefinitions(c, namespace)
 }
 
 // NewForConfig creates a new ConfigurationV1alpha1Client for the given config.

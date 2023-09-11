@@ -130,7 +130,7 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 
 	mgr, err := ctrl.NewManager(kubeconfig, controllerOpts)
 	if err != nil {
-		return fmt.Errorf("unable to start controller manager: %w", err)
+		return fmt.Errorf("unable to create controller manager: %w", err)
 	}
 
 	if err := waitForKubernetesAPIReadiness(ctx, setupLog, mgr); err != nil {

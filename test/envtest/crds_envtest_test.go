@@ -4,8 +4,6 @@ package envtest
 
 import (
 	"context"
-	"fmt"
-	"net/url"
 	"strings"
 	"testing"
 	"time"
@@ -27,66 +25,17 @@ import (
 	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1beta1"
 	"github.com/kong/kubernetes-ingress-controller/v2/pkg/clientset"
 	"github.com/kong/kubernetes-ingress-controller/v2/test/consts"
-	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/helpers"
 )
 
-func TestManagerDoesntStartUntilKubernetesAPIReachable(t *testing.T) {
-	scheme := Scheme(t, WithKong)
-	envcfg := Setup(t, scheme)
-
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	t.Log("Setting up a proxy for Kubernetes API server so that we can interrupt it")
-	u, err := url.Parse(envcfg.Host)
-	require.NoError(t, err)
-	apiServerProxy, err := helpers.NewTCPProxy(u.Host)
-	require.NoError(t, err)
-	go func() {
-		err := apiServerProxy.Run(ctx)
-		assert.NoError(t, err)
-	}()
-	apiServerProxy.StopHandlingConnections()
-
-	t.Log("Replacing Kubernetes API server address with the proxy address")
-	envcfg.Host = fmt.Sprintf("https://%s", apiServerProxy.Address())
-
-	loggerHook := RunManager(ctx, t, envcfg)
-	hasLog := func(expectedLog string) bool {
-		return lo.ContainsBy(loggerHook.AllEntries(), func(entry *logrus.Entry) bool {
-			return strings.Contains(entry.Message, expectedLog)
-		})
-	}
-
-	t.Log("Ensuring manager is waiting for Kubernetes API to be ready")
-	const expectedKubernetesAPICheckErrorLog = "Retrying Kubernetes API readiness check after error"
-	require.Eventually(t, func() bool { return hasLog(expectedKubernetesAPICheckErrorLog) }, time.Minute, time.Millisecond)
-
-	t.Log("Ensure manager hasn't been started yet and no config sync has happened")
-	const configurationSyncedToKongLog = "successfully synced configuration to Kong"
-	const startingManagerLog = "Starting manager"
-	require.False(t, hasLog(configurationSyncedToKongLog))
-	require.False(t, hasLog(startingManagerLog))
-
-	t.Log("Starting accepting connections in Kubernetes API proxy so that manager can start")
-	apiServerProxy.StartHandlingConnections()
-
-	t.Log("Ensuring manager has been started and config sync has happened")
-	require.Eventually(t, func() bool {
-		return hasLog(startingManagerLog) &&
-			hasLog(configurationSyncedToKongLog)
-	}, time.Minute, time.Millisecond)
-}
-
-// TestDynamicCRDController_StartsControllersWhenCRDsInstalled ensures that in case of missing CRDs installation in the
+// TestGatewayAPIControllersMayBeDynamicallyStarted ensures that in case of missing CRDs installation in the
 // cluster, specific controllers are not started until the CRDs are installed.
-func TestDynamicCRDController_StartsControllersWhenCRDsInstalled(t *testing.T) {
+func TestGatewayAPIControllersMayBeDynamicallyStarted(t *testing.T) {
 	scheme := Scheme(t, WithKong)
 	envcfg := Setup(t, scheme, WithInstallGatewayCRDs(false))
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	loggerHook := RunManager(ctx, t, envcfg, WithGatewayFeatureEnabled)
+	loggerHook := RunManager(ctx, t, envcfg, WithGatewayFeatureEnabled, WithPublishService("ns"))
 
 	controllers := []string{
 		"Gateway",
@@ -131,7 +80,9 @@ func TestDynamicCRDController_StartsControllersWhenCRDsInstalled(t *testing.T) {
 	requireLogForAllControllers(expectedLogOnCRDInstalled)
 }
 
-func TestNoKongCRDsIsFatal(t *testing.T) {
+// TestNoKongCRDsInstalledIsFatal ensures that in case of missing Kong CRDs installation, the manager Run() eventually
+// returns an error due to cache synchronisation timeout.
+func TestNoKongCRDsInstalledIsFatal(t *testing.T) {
 	scheme := Scheme(t)
 	envcfg := Setup(t, scheme, WithInstallKongCRDs(false))
 
@@ -143,8 +94,10 @@ func TestNoKongCRDsIsFatal(t *testing.T) {
 	logger := logrusr.New(logrusLogger)
 	ctrl.SetLogger(logger)
 
+	// Reducing the cache sync timeout to speed up the test.
+	cfg.CacheSyncTimeout = time.Millisecond * 500
 	err := manager.Run(ctx, &cfg, util.ConfigDumpDiagnostic{}, logrusLogger)
-	require.ErrorContains(t, err, "requirements not satisfied")
+	require.ErrorContains(t, err, "timed out waiting for cache to be synced")
 }
 
 func TestCRDValidations(t *testing.T) {

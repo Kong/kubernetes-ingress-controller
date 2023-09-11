@@ -27,7 +27,7 @@ type TCPProxy struct {
 func NewTCPProxy(destination string) (*TCPProxy, error) {
 	listener, err := net.Listen("tcp", "localhost:0")
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to listen: %w", err)
 	}
 	return &TCPProxy{
 		destination:                destination,

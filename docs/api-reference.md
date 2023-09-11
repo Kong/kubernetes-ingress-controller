@@ -278,6 +278,8 @@ _Appears in:_
 Package v1alpha1 contains API Schema definitions for the configuration.konghq.com v1alpha1 API group.
 
 - [IngressClassParameters](#ingressclassparameters)
+- [KongCustomEntity](#kongcustomentity)
+- [KongCustomEntityDefinition](#kongcustomentitydefinition)
 
 ### IngressClassParameters
 
@@ -293,6 +295,45 @@ IngressClassParameters is the Schema for the IngressClassParameters API.
 | `kind` _string_ | `IngressClassParameters`
 | `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` _[IngressClassParametersSpec](#ingressclassparametersspec)_ | Spec is the IngressClassParameters specification. |
+
+
+
+
+### KongCustomEntity
+
+
+
+KongCustomEntity represents a custom entity in Kong.
+
+<!-- kong_custom_entity description placeholder -->
+
+| Field | Description |
+| --- | --- |
+| `apiVersion` _string_ | `configuration.konghq.com/v1alpha1`
+| `kind` _string_ | `KongCustomEntity`
+| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `type` _string_ | Type is the type of this custom entity. Should be same as the `Name` of a KongCustomEntityDefinition. |
+| `fields` _[JSON](#json)_ | Fields is the list of fields in the entity. |
+
+
+
+
+### KongCustomEntityDefinition
+
+
+
+KongCustomEntityDefinition represents definition of a custom entity type in Kong.
+
+<!-- kong_custom_entity_definition description placeholder -->
+
+| Field | Description |
+| --- | --- |
+| `apiVersion` _string_ | `configuration.konghq.com/v1alpha1`
+| `kind` _string_ | `KongCustomEntityDefinition`
+| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `name` _string_ | Name is the type name of the entity. |
+| `adminAPIName` _string_ | AdminAPIName is the name used in admin API paths to CRUD this type of entity. If AdminAPIName is empty, it is seen as same as `Name`. For example: Name = "jwt_credentials" and AdminAPIName = "jwts", then we call `/jwts` or `/jwts/<id>` for CRUD. |
+| `dependencies` _[KongEntityForeignKey](#kongentityforeignkey) array_ | Dependecies are the entity types which are required by this type. If it is empty, the entity type is a "top level" object that does not dependent on other entities. |
 
 
 
@@ -313,6 +354,24 @@ IngressClassParameters is the Schema for the IngressClassParameters API.
 
 _Appears in:_
 - [IngressClassParameters](#ingressclassparameters)
+
+### KongEntityForeignKey
+
+
+
+KongEntityForeignKey represents a foreign key constraint of Kong entity.
+
+
+
+| Field | Description |
+| --- | --- |
+| `type` _string_ | Type is the type of the dependent entity in the foreign key constraint. |
+| `primaryKey` _string_ | PrimaryKey is the primary key to identify the foreign dependency, like "id" in service. |
+| `alternativeKeys` _string array_ | AlternativeKeys are other fields that could identify the foreign dependency, like "name" in service. |
+
+
+_Appears in:_
+- [KongCustomEntityDefinition](#kongcustomentitydefinition)
 
 
 ## configuration.konghq.com/v1beta1

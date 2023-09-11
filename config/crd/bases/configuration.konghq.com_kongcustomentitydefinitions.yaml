@@ -1,0 +1,79 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.13.0
+  name: kongcustomentitydefinitions.configuration.konghq.com
+spec:
+  group: configuration.konghq.com
+  names:
+    categories:
+    - kong-ingress-controller
+    kind: KongCustomEntityDefinition
+    listKind: KongCustomEntityDefinitionList
+    plural: kongcustomentitydefinitions
+    shortNames:
+    - kced
+    singular: kongcustomentitydefinition
+  scope: Cluster
+  versions:
+  - name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: KongCustomEntityDefinition represents definition of a custom
+          entity type in Kong.
+        properties:
+          adminAPIName:
+            description: 'AdminAPIName is the name used in admin API paths to CRUD
+              this type of entity. If AdminAPIName is empty, it is seen as same as
+              `Name`. For example: Name = "jwt_credentials" and AdminAPIName = "jwts",
+              then we call `/jwts` or `/jwts/<id>` for CRUD.'
+            type: string
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          dependencies:
+            description: Dependecies are the entity types which are required by this
+              type. If it is empty, the entity type is a "top level" object that does
+              not dependent on other entities.
+            items:
+              description: KongEntityForeignKey represents a foreign key constraint
+                of Kong entity.
+              properties:
+                alternativeKeys:
+                  description: AlternativeKeys are other fields that could identify
+                    the foreign dependency, like "name" in service.
+                  items:
+                    type: string
+                  type: array
+                primaryKey:
+                  description: PrimaryKey is the primary key to identify the foreign
+                    dependency, like "id" in service.
+                  type: string
+                type:
+                  description: Type is the type of the dependent entity in the foreign
+                    key constraint.
+                  type: string
+              required:
+              - primaryKey
+              - type
+              type: object
+            type: array
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          name:
+            description: Name is the type name of the entity.
+            type: string
+        required:
+        - name
+        type: object
+    served: true
+    storage: true

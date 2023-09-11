@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1694214944884,
+  "lastUpdate": 1694401324978,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -99054,6 +99054,66 @@ window.BENCHMARK_DATA = {
             "value": 0,
             "unit": "allocs/op",
             "extra": "11654131 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "571832+rainest@users.noreply.github.com",
+            "name": "Travis Raines",
+            "username": "rainest"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "0e04e18f9127631c684848d88d1260c6cbcaad09",
+          "message": "Support TCPIngress and UDPIngress expression routes (#4612)\n\n* feat(parser) support expressions for L4 CRDs\r\n\r\nAdd support for the expression router to TCPIngress and UDPIngress.\r\n\r\n* pr: update additional tests",
+          "timestamp": "2023-09-11T11:00:57+08:00",
+          "tree_id": "958c6e7aa94a4d06533e7ef8dbd526a56f2b819d",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/0e04e18f9127631c684848d88d1260c6cbcaad09"
+        },
+        "date": 1694401314591,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - ns/op",
+            "value": 68293,
+            "unit": "ns/op",
+            "extra": "18933 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - B/op",
+            "value": 11093,
+            "unit": "B/op",
+            "extra": "18933 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - allocs/op",
+            "value": 12,
+            "unit": "allocs/op",
+            "extra": "18933 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDefaultContentToDBLessConfigConverter_Convert - ns/op",
+            "value": 106.8,
+            "unit": "ns/op",
+            "extra": "12422283 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDefaultContentToDBLessConfigConverter_Convert - B/op",
+            "value": 0,
+            "unit": "B/op",
+            "extra": "12422283 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDefaultContentToDBLessConfigConverter_Convert - allocs/op",
+            "value": 0,
+            "unit": "allocs/op",
+            "extra": "12422283 times\n2 procs"
           }
         ]
       }

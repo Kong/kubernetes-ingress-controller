@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1694455669308,
+  "lastUpdate": 1694456011556,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -101814,6 +101814,66 @@ window.BENCHMARK_DATA = {
             "value": 0,
             "unit": "allocs/op",
             "extra": "10102896 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "571832+rainest@users.noreply.github.com",
+            "name": "Travis Raines",
+            "username": "rainest"
+          },
+          "committer": {
+            "email": "571832+rainest@users.noreply.github.com",
+            "name": "Travis Raines",
+            "username": "rainest"
+          },
+          "distinct": true,
+          "id": "7d18f8467c83ab5fffe78cf99feafe53518b811e",
+          "message": "chore(controllers) remove Ingress API selection\n\nRemove Ingress API selection in favor of simply honoring the CLI disable\nflag.\n\nSupport for Ingress versions other than networking/v1 was removed in\nhttps://github.com/Kong/kubernetes-ingress-controller/pull/3867. The API\nselection code was only selecting between networking/v1 and nothing.\nFuture Kubernetes versions are not expected to abruptly remove the older\nAPI versions if they introduce new Ingress versions, so this selection\ncode should not be necessary in the future.",
+          "timestamp": "2023-09-11T11:12:12-07:00",
+          "tree_id": "2d69a8d5fb78a18e36357b5cafc7a2ceab49b607",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/7d18f8467c83ab5fffe78cf99feafe53518b811e"
+        },
+        "date": 1694456000687,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - ns/op",
+            "value": 68578,
+            "unit": "ns/op",
+            "extra": "18488 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - B/op",
+            "value": 11099,
+            "unit": "B/op",
+            "extra": "18488 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - allocs/op",
+            "value": 12,
+            "unit": "allocs/op",
+            "extra": "18488 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDefaultContentToDBLessConfigConverter_Convert - ns/op",
+            "value": 101.5,
+            "unit": "ns/op",
+            "extra": "11560128 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDefaultContentToDBLessConfigConverter_Convert - B/op",
+            "value": 0,
+            "unit": "B/op",
+            "extra": "11560128 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDefaultContentToDBLessConfigConverter_Convert - allocs/op",
+            "value": 0,
+            "unit": "allocs/op",
+            "extra": "11560128 times\n2 procs"
           }
         ]
       }

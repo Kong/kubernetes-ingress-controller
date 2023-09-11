@@ -96,7 +96,7 @@ func RunManager(
 
 	logrusLogger, loggerHook := test.NewNullLogger()
 	logger := logrusr.New(logrusLogger)
-	ctrl.SetLogger(logger)
+	ctx = ctrl.LoggerInto(ctx, logger)
 
 	go func() {
 		err := manager.Run(ctx, &cfg, util.ConfigDumpDiagnostic{}, logrusLogger)

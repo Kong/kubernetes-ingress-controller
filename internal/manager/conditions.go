@@ -1,6 +1,7 @@
 package manager
 
 import (
+	"context"
 	"fmt"
 
 	netv1 "k8s.io/api/networking/v1"
@@ -68,9 +69,9 @@ func negotiateIngressAPI(config *Config, mapper meta.RESTMapper) (IngressAPI, er
 	return NoIngressAPI, nil
 }
 
-func ShouldEnableCRDController(gvr schema.GroupVersionResource, restMapper meta.RESTMapper) bool {
+func ShouldEnableCRDController(ctx context.Context, gvr schema.GroupVersionResource, restMapper meta.RESTMapper) bool {
 	if !ctrlutils.CRDExists(restMapper, gvr) {
-		ctrl.Log.WithName("controllers").WithName("crdCondition").
+		ctrl.LoggerFrom(ctx).WithName("controllers").WithName("crdCondition").
 			Info(fmt.Sprintf("Disabling controller for Group=%s, Resource=%s due to missing CRD", gvr.GroupVersion(), gvr.Resource))
 		return false
 	}

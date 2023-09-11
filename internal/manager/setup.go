@@ -50,7 +50,6 @@ func SetupLoggers(c *Config, output io.Writer) (logrus.FieldLogger, logr.Logger,
 	}
 
 	logger := logrusr.New(deprecatedLogger)
-	ctrl.SetLogger(logger)
 
 	if c.LogLevel != "trace" && c.LogLevel != "debug" {
 		// disable deck's per-change diff output
@@ -60,7 +59,7 @@ func SetupLoggers(c *Config, output io.Writer) (logrus.FieldLogger, logr.Logger,
 	return deprecatedLogger, logger, nil
 }
 
-func setupControllerOptions(logger logr.Logger, c *Config, dbmode string, featureGates map[string]bool) (ctrl.Options, error) {
+func setupControllerOptions(ctx context.Context, logger logr.Logger, c *Config, dbmode string, featureGates map[string]bool) (ctrl.Options, error) {
 	logger.Info("building the manager runtime scheme and loading apis into the scheme")
 	scheme, err := scheme.Get(featureGates)
 	if err != nil {
@@ -79,6 +78,7 @@ func setupControllerOptions(logger logr.Logger, c *Config, dbmode string, featur
 		Cache: cache.Options{
 			SyncPeriod: &c.SyncPeriod,
 		},
+		Logger: ctrl.LoggerFrom(ctx),
 	}
 
 	// If there are no configured watch namespaces, then we're watching ALL namespaces,

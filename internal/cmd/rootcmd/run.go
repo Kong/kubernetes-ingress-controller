@@ -7,6 +7,7 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/sirupsen/logrus"
+	ctrl "sigs.k8s.io/controller-runtime"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/manager"
 )
@@ -17,6 +18,7 @@ func Run(ctx context.Context, c *manager.Config, output io.Writer) error {
 	if err != nil {
 		return fmt.Errorf("failed to initialize logger: %w", err)
 	}
+	ctx = ctrl.LoggerInto(ctx, logger)
 
 	return RunWithLogger(ctx, c, deprecatedLogger, logger)
 }

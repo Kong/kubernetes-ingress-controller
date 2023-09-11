@@ -46,7 +46,7 @@ import (
 
 // Run starts the controller manager and blocks until it exits.
 func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, deprecatedLogger logrus.FieldLogger) error {
-	setupLog := ctrl.Log.WithName("setup")
+	setupLog := ctrl.LoggerFrom(ctx).WithName("setup")
 	setupLog.Info("starting controller manager", "release", metadata.Release, "repo", metadata.Repo, "commit", metadata.Commit)
 	setupLog.Info("the ingress class name has been set", "value", c.IngressClassName)
 
@@ -121,7 +121,7 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 	kongConfig.Init(ctx, setupLog, initialKongClients)
 
 	setupLog.Info("configuring and building the controller manager")
-	controllerOpts, err := setupControllerOptions(setupLog, c, dbMode, featureGates)
+	controllerOpts, err := setupControllerOptions(ctx, setupLog, c, dbMode, featureGates)
 	if err != nil {
 		return fmt.Errorf("unable to setup controller options: %w", err)
 	}
@@ -218,6 +218,7 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 
 	setupLog.Info("Starting Enabled Controllers")
 	controllers, err := setupControllers(
+		ctx,
 		mgr,
 		dataplaneClient,
 		dataplaneAddressFinder,
@@ -284,7 +285,7 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 		setupLog.Info("starting license agent")
 		agent := license.NewAgent(
 			konnectLicenseAPIClient,
-			ctrl.Log.WithName("license-agent"),
+			ctrl.LoggerFrom(ctx).WithName("license-agent"),
 			license.WithInitialPollingPeriod(c.Konnect.InitialLicensePollingPeriod),
 			license.WithPollingPeriod(c.Konnect.LicensePollingPeriod),
 		)

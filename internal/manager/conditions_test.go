@@ -1,6 +1,7 @@
 package manager_test
 
 import (
+	"context"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -121,7 +122,7 @@ func TestShouldEnableCRDController(t *testing.T) {
 			require.Equal(
 				t,
 				tc.expectedResult,
-				manager.ShouldEnableCRDController(tc.gvr, restMapper),
+				manager.ShouldEnableCRDController(context.Background(), tc.gvr, restMapper),
 			)
 		})
 	}

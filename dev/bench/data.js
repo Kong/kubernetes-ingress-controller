@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1694522369780,
+  "lastUpdate": 1694522371521,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -103374,6 +103374,66 @@ window.BENCHMARK_DATA = {
             "value": 0,
             "unit": "allocs/op",
             "extra": "12442260 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "49699333+dependabot[bot]@users.noreply.github.com",
+            "name": "dependabot[bot]",
+            "username": "dependabot[bot]"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "5ef7a3273f27d559bb954bce0c51892fa167f449",
+          "message": "chore(deps): bump crazy-max/ghaction-import-gpg from 5.4.0 to 6.0.0 (#4642)\n\nBumps [crazy-max/ghaction-import-gpg](https://github.com/crazy-max/ghaction-import-gpg) from 5.4.0 to 6.0.0.\r\n- [Release notes](https://github.com/crazy-max/ghaction-import-gpg/releases)\r\n- [Commits](https://github.com/crazy-max/ghaction-import-gpg/compare/d6f3f49f3345e29369fe57596a3ca8f94c4d2ca7...82a020f1f7f605c65dd2449b392a52c3fcfef7ef)\r\n\r\n---\r\nupdated-dependencies:\r\n- dependency-name: crazy-max/ghaction-import-gpg\r\n  dependency-type: direct:production\r\n  update-type: version-update:semver-major\r\n...\r\n\r\nSigned-off-by: dependabot[bot] <support@github.com>\r\nCo-authored-by: dependabot[bot] <49699333+dependabot[bot]@users.noreply.github.com>",
+          "timestamp": "2023-09-12T14:38:16+02:00",
+          "tree_id": "83484c648ecd688ade2d36c6ab91579b2ce8875b",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/5ef7a3273f27d559bb954bce0c51892fa167f449"
+        },
+        "date": 1694522358348,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - ns/op",
+            "value": 69205,
+            "unit": "ns/op",
+            "extra": "18128 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - B/op",
+            "value": 11098,
+            "unit": "B/op",
+            "extra": "18128 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - allocs/op",
+            "value": 12,
+            "unit": "allocs/op",
+            "extra": "18128 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDefaultContentToDBLessConfigConverter_Convert - ns/op",
+            "value": 106,
+            "unit": "ns/op",
+            "extra": "9807591 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDefaultContentToDBLessConfigConverter_Convert - B/op",
+            "value": 0,
+            "unit": "B/op",
+            "extra": "9807591 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDefaultContentToDBLessConfigConverter_Convert - allocs/op",
+            "value": 0,
+            "unit": "allocs/op",
+            "extra": "9807591 times\n2 procs"
           }
         ]
       },

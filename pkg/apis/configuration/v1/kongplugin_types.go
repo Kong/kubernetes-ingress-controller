@@ -63,7 +63,7 @@ type KongPlugin struct {
 	ConfigFrom *ConfigSource `json:"configFrom,omitempty"`
 
 	// +kubebuilder:validation:Type=object
-	ConfigJana apiextensionsv1.JSON `json:"configJana,omitempty"`
+	ConfigJana []apiextensionsv1.JSON `json:"configJana,omitempty"`
 
 	// PluginName is the name of the plugin to which to apply the config.
 	// +kubebuilder:validation:Required

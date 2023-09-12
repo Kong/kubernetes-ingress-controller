@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1694527495668,
+  "lastUpdate": 1694527497512,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -103974,6 +103974,66 @@ window.BENCHMARK_DATA = {
             "value": 0,
             "unit": "allocs/op",
             "extra": "10182156 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "49699333+dependabot[bot]@users.noreply.github.com",
+            "name": "dependabot[bot]",
+            "username": "dependabot[bot]"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "5c4715a7cbb31eb84aff5ed8b9d2c0224a040537",
+          "message": "chore(deps): bump docker/metadata-action from 4.6.0 to 5.0.0\n\nBumps [docker/metadata-action](https://github.com/docker/metadata-action) from 4.6.0 to 5.0.0.\n- [Release notes](https://github.com/docker/metadata-action/releases)\n- [Upgrade guide](https://github.com/docker/metadata-action/blob/master/UPGRADE.md)\n- [Commits](https://github.com/docker/metadata-action/compare/v4.6.0...v5.0.0)\n\n---\nupdated-dependencies:\n- dependency-name: docker/metadata-action\n  dependency-type: direct:production\n  update-type: version-update:semver-major\n...\n\nSigned-off-by: dependabot[bot] <support@github.com>",
+          "timestamp": "2023-09-12T14:03:34Z",
+          "tree_id": "10c1eb9d750432eb2d73918b6d8387452ff1a81d",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/5c4715a7cbb31eb84aff5ed8b9d2c0224a040537"
+        },
+        "date": 1694527483044,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - ns/op",
+            "value": 69039,
+            "unit": "ns/op",
+            "extra": "18612 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - B/op",
+            "value": 11095,
+            "unit": "B/op",
+            "extra": "18612 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - allocs/op",
+            "value": 12,
+            "unit": "allocs/op",
+            "extra": "18612 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDefaultContentToDBLessConfigConverter_Convert - ns/op",
+            "value": 106,
+            "unit": "ns/op",
+            "extra": "10009086 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDefaultContentToDBLessConfigConverter_Convert - B/op",
+            "value": 0,
+            "unit": "B/op",
+            "extra": "10009086 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDefaultContentToDBLessConfigConverter_Convert - allocs/op",
+            "value": 0,
+            "unit": "allocs/op",
+            "extra": "10009086 times\n2 procs"
           }
         ]
       }

@@ -165,6 +165,17 @@ func protocolsToStrings(protocols []kongv1.KongProtocol) (res []string) {
 	return
 }
 
+type ConfigObj struct {
+	Name        string           `json:"name"`
+	Value       string           `json:"value,omitempty"`
+	ValueFrom   *ConfigObjSource `json:"valueFrom,omitempty"`
+	ValueNested *ConfigObj       `json:"valueNested,omitempty"`
+}
+
+type ConfigObjSource struct {
+	SecretKeyRef *corev1.SecretKeySelector `json:"secretKeyRef,omitempty"`
+}
+
 func kongPluginFromK8SPlugin(
 	s store.Storer,
 	k8sPlugin kongv1.KongPlugin,
@@ -189,6 +200,15 @@ func kongPluginFromK8SPlugin(
 				fmt.Errorf("error parsing config for KongPlugin '%s/%s': %w",
 					k8sPlugin.Name, k8sPlugin.Namespace, err)
 		}
+	}
+	if len(k8sPlugin.ConfigJana.Raw) != 0 {
+		var obj ConfigObj
+		err := json.Unmarshal(k8sPlugin.ConfigJana.Raw, &obj)
+		if err != nil {
+			return Plugin{}, fmt.Errorf("could not parse ConfigJana: %w", err)
+		}
+		// TODO transform the structured config into a kong.Configuration JSON blob by dereferencing secrets and walking
+		// the object tree
 	}
 
 	return Plugin{

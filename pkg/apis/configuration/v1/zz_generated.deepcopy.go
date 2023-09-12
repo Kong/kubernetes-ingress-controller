@@ -540,6 +540,7 @@ func (in *KongPlugin) DeepCopyInto(out *KongPlugin) {
 		*out = new(ConfigSource)
 		**out = **in
 	}
+	in.ConfigJana.DeepCopyInto(&out.ConfigJana)
 	if in.Protocols != nil {
 		in, out := &in.Protocols, &out.Protocols
 		*out = make([]KongProtocol, len(*in))

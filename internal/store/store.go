@@ -77,6 +77,8 @@ type Storer interface {
 	GetKongClusterPlugin(name string) (*kongv1.KongClusterPlugin, error)
 	GetKongConsumer(namespace, name string) (*kongv1.KongConsumer, error)
 	GetKongConsumerGroup(namespace, name string) (*kongv1beta1.KongConsumerGroup, error)
+	GetKongCustomEntity(namespace, name string) (*kongv1alpha1.KongCustomEntity, error)
+	GetKongCustomEntityDefinition(name string) (*kongv1alpha1.KongCustomEntityDefinition, error)
 	GetIngressClassName() string
 	GetIngressClassV1(name string) (*netv1.IngressClass, error)
 	GetIngressClassParametersV1Alpha1(ingressClass *netv1.IngressClass) (*kongv1alpha1.IngressClassParameters, error)
@@ -101,6 +103,8 @@ type Storer interface {
 	ListKongClusterPlugins() []*kongv1.KongClusterPlugin
 	ListKongConsumers() []*kongv1.KongConsumer
 	ListKongConsumerGroups() []*kongv1beta1.KongConsumerGroup
+	ListKongCustomEntities() []*kongv1alpha1.KongCustomEntity
+	ListKongCustomEntityDefinitions() []*kongv1alpha1.KongCustomEntityDefinition
 	ListCACerts() ([]*corev1.Secret, error)
 }
 
@@ -150,6 +154,8 @@ type CacheStores struct {
 	TCPIngress                     cache.Store
 	UDPIngress                     cache.Store
 	IngressClassParametersV1alpha1 cache.Store
+	CustomEntity                   cache.Store
+	CustomEntityDefinition         cache.Store
 
 	// Knative Stores
 	KnativeIngress cache.Store
@@ -183,6 +189,8 @@ func NewCacheStores() CacheStores {
 		TCPIngress:                     cache.NewStore(keyFunc),
 		UDPIngress:                     cache.NewStore(keyFunc),
 		IngressClassParametersV1alpha1: cache.NewStore(keyFunc),
+		CustomEntity:                   cache.NewStore(keyFunc),
+		CustomEntityDefinition:         cache.NewStore(clusterResourceKeyFunc),
 		// Knative Stores
 		KnativeIngress: cache.NewStore(keyFunc),
 
@@ -287,6 +295,10 @@ func (c CacheStores) Get(obj runtime.Object) (item interface{}, exists bool, err
 		return c.UDPIngress.Get(obj)
 	case *kongv1alpha1.IngressClassParameters:
 		return c.IngressClassParametersV1alpha1.Get(obj)
+	case *kongv1alpha1.KongCustomEntity:
+		return c.CustomEntity.Get(obj)
+	case *kongv1alpha1.KongCustomEntityDefinition:
+		return c.CustomEntityDefinition.Get(obj)
 	// ----------------------------------------------------------------------------
 	// 3rd Party API Support
 	// ----------------------------------------------------------------------------
@@ -352,6 +364,10 @@ func (c CacheStores) Add(obj runtime.Object) error {
 		return c.UDPIngress.Add(obj)
 	case *kongv1alpha1.IngressClassParameters:
 		return c.IngressClassParametersV1alpha1.Add(obj)
+	case *kongv1alpha1.KongCustomEntity:
+		return c.CustomEntity.Add(obj)
+	case *kongv1alpha1.KongCustomEntityDefinition:
+		return c.CustomEntityDefinition.Add(obj)
 	// ----------------------------------------------------------------------------
 	// 3rd Party API Support
 	// ----------------------------------------------------------------------------
@@ -418,6 +434,10 @@ func (c CacheStores) Delete(obj runtime.Object) error {
 		return c.UDPIngress.Delete(obj)
 	case *kongv1alpha1.IngressClassParameters:
 		return c.IngressClassParametersV1alpha1.Delete(obj)
+	case *kongv1alpha1.KongCustomEntity:
+		return c.CustomEntity.Delete(obj)
+	case *kongv1alpha1.KongCustomEntityDefinition:
+		return c.CustomEntityDefinition.Delete(obj)
 	// ----------------------------------------------------------------------------
 	// 3rd Party API Support
 	// ----------------------------------------------------------------------------
@@ -899,6 +919,30 @@ func (s Store) GetGateway(namespace string, name string) (*gatewayv1beta1.Gatewa
 	return obj.(*gatewayv1beta1.Gateway), nil
 }
 
+// GetKongCustomEntity returns KongCustomEntity resource having specified namespace and name.
+func (s Store) GetKongCustomEntity(namespace, name string) (*kongv1alpha1.KongCustomEntity, error) {
+	key := fmt.Sprintf("%v/%v", namespace, name)
+	obj, exists, err := s.stores.CustomEntity.GetByKey(key)
+	if err != nil {
+		return nil, err
+	}
+	if !exists {
+		return nil, ErrNotFound{fmt.Sprintf("KongCustomEntity %v not found", key)}
+	}
+	return obj.(*kongv1alpha1.KongCustomEntity), nil
+}
+
+func (s Store) GetKongCustomEntityDefinition(name string) (*kongv1alpha1.KongCustomEntityDefinition, error) {
+	obj, exists, err := s.stores.CustomEntityDefinition.GetByKey(name)
+	if err != nil {
+		return nil, err
+	}
+	if !exists {
+		return nil, ErrNotFound{fmt.Sprintf("KongCustomEntityDefinition %v not found", name)}
+	}
+	return obj.(*kongv1alpha1.KongCustomEntityDefinition), nil
+}
+
 // ListKongConsumers returns all KongConsumers filtered by the ingress.class
 // annotation.
 func (s Store) ListKongConsumers() []*kongv1.KongConsumer {
@@ -998,6 +1042,32 @@ func (s Store) ListKongPlugins() []*kongv1.KongPlugin {
 		}
 	}
 	return plugins
+}
+
+// ListKongCustomEntities lists all KongCustomEntities with the matching ingress class.
+func (s Store) ListKongCustomEntities() []*kongv1alpha1.KongCustomEntity {
+	cacheItems := s.stores.CustomEntity.List()
+	customEntities := make([]*kongv1alpha1.KongCustomEntity, 0, len(cacheItems))
+	for _, item := range cacheItems {
+		e, ok := item.(*kongv1alpha1.KongCustomEntity)
+		if ok {
+			customEntities = append(customEntities, e)
+		}
+	}
+	return customEntities
+}
+
+// ListKongCustomEntityDefinitions lists all KongCustomEntityDefinitions.
+func (s Store) ListKongCustomEntityDefinitions() []*kongv1alpha1.KongCustomEntityDefinition {
+	cacheItems := s.stores.CustomEntityDefinition.List()
+	customEntityDefinitions := make([]*kongv1alpha1.KongCustomEntityDefinition, 0, len(cacheItems))
+	for _, item := range cacheItems {
+		d, ok := item.(*kongv1alpha1.KongCustomEntityDefinition)
+		if ok {
+			customEntityDefinitions = append(customEntityDefinitions, d)
+		}
+	}
+	return customEntityDefinitions
 }
 
 // ListCACerts returns all Secrets containing the label
@@ -1141,6 +1211,14 @@ func mkObjFromGVK(gvk schema.GroupVersionKind) (runtime.Object, error) {
 		}, nil
 	case kongv1alpha1.SchemeGroupVersion.WithKind("IngressClassParameters"):
 		return &kongv1alpha1.IngressClassParameters{
+			TypeMeta: typeMetaFromGVK(gvk),
+		}, nil
+	case kongv1alpha1.SchemeGroupVersion.WithKind("KongCustomEntity"):
+		return &kongv1alpha1.KongCustomEntity{
+			TypeMeta: typeMetaFromGVK(gvk),
+		}, nil
+	case kongv1alpha1.SchemeGroupVersion.WithKind("KongCustomEntityDefinition"):
+		return &kongv1alpha1.KongCustomEntityDefinition{
 			TypeMeta: typeMetaFromGVK(gvk),
 		}, nil
 	// ----------------------------------------------------------------------------

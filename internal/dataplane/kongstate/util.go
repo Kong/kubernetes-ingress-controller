@@ -165,11 +165,41 @@ func protocolsToStrings(protocols []kongv1.KongProtocol) (res []string) {
 	return
 }
 
+// the need to support both array and single value fields makes this much more awkward than I'd hoped.
+// I don't think there's a good way to design the type around supporting that and having ValueNested support either.
+// we need to be able to distinguish between arrays of simple values and arrays of objects:
+//
+// {
+//     "foo": [
+//         {
+//             "fooSubA": "valueA1",
+//             "fooSubB": "valueB1",
+//         },
+//         {
+//             "fooSubA": "valueA2",
+//             "fooSubB": "valueB2",
+//         }
+//     ],
+//     "bar": [
+//         "stringA",
+//         "stringB"
+//     ]
+// }
+//
+// we could maybe use a single []*ConfigObj field with the implicit rule that objects with no names convert to
+// arrays of simple values, but that's probably more confusing than it's worth. references don't play nice with
+// arrays either, since you can't selectively make only some items in an array secret. however, since they're all
+// the same type, I wouldn't expect that to be an actual use case--if one item in an array of same-type values is
+// worth protecting, the rest should be as well.
+
 type ConfigObj struct {
-	Name        string           `json:"name"`
-	Value       string           `json:"value,omitempty"`
-	ValueFrom   *ConfigObjSource `json:"valueFrom,omitempty"`
-	ValueNested *ConfigObj       `json:"valueNested,omitempty"`
+	Name             string             `json:"name"`
+	Value            interface{}        `json:"value,omitempty"`
+	ValueArray       []interface{}      `json:"valueArray,omitempty"`
+	ValueFrom        *ConfigObjSource   `json:"valueFrom,omitempty"`
+	ValueFromArray   []*ConfigObjSource `json:"valueFromArray,omitempty"`
+	ValueNested      *ConfigObj         `json:"valueNested,omitempty"`
+	ValueNestedArray []*ConfigObj       `json:"valueNestedArray,omitempty"`
 }
 
 type ConfigObjSource struct {

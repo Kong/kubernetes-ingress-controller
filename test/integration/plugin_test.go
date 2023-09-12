@@ -82,8 +82,47 @@ func TestPluginEssentials(t *testing.T) {
 		},
 		InstanceName: "example",
 		PluginName:   "request-termination",
-		Config: apiextensionsv1.JSON{
-			Raw: []byte(`{"status_code": 418}`),
+		ConfigJana: apiextensionsv1.JSON{
+			Raw: []byte(`[
+    {
+        "name": "http_method",
+        "value": "GET"
+    },
+    {
+        "name": "fake_field",
+        "valueFrom": {
+            "secretKeyRef": {
+                "name": "somesecret",
+                "key": "somekey"
+            }
+        }
+    },
+    {
+        "name": "add",
+        "valueNested": {
+            "name": "headers",
+            "valueArray": [
+                "x-foo:foo",
+                "x-bar:bar"
+            ]
+        }
+    },
+    {
+        "name": "replace",
+        "valueNested": {
+            "name": "querystring",
+            "valueArray": [
+                "foo:foo",
+                "bar:bar"
+            ],
+            "name": "headers",
+            "valueArray": [
+                "x-footoo:foo",
+                "x-bartoo:bar"
+            ]
+        }
+    }
+]`),
 		},
 	}
 	kongclusterplugin := &kongv1.KongClusterPlugin{

@@ -62,7 +62,6 @@ type KongPlugin struct {
 	// Only one of `config` or `configFrom` may be used in a KongPlugin, not both at once.
 	ConfigFrom *ConfigSource `json:"configFrom,omitempty"`
 
-	// +kubebuilder:validation:Type=object
 	ConfigJana []apiextensionsv1.JSON `json:"configJana,omitempty"`
 
 	// PluginName is the name of the plugin to which to apply the config.

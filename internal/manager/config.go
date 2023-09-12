@@ -102,6 +102,7 @@ type Config struct {
 	KnativeIngressEnabled         bool
 	KongClusterPluginEnabled      bool
 	KongPluginEnabled             bool
+	KongCustomEntityEnabled       bool
 	KongConsumerEnabled           bool
 	ServiceEnabled                bool
 
@@ -227,6 +228,7 @@ func (c *Config) FlagSet() *pflag.FlagSet {
 	flagSet.BoolVar(&c.KongClusterPluginEnabled, "enable-controller-kongclusterplugin", true, "Enable the KongClusterPlugin controller.")
 	flagSet.BoolVar(&c.KongPluginEnabled, "enable-controller-kongplugin", true, "Enable the KongPlugin controller.")
 	flagSet.BoolVar(&c.KongConsumerEnabled, "enable-controller-kongconsumer", true, "Enable the KongConsumer controller. ")
+	flagSet.BoolVar(&c.KongCustomEntityEnabled, "enable-controller-kongcustomentity", true, "Enable the KongCustomEntity controller.")
 	flagSet.BoolVar(&c.ServiceEnabled, "enable-controller-service", true, "Enable the Service controller.")
 
 	// Admission Webhook server config

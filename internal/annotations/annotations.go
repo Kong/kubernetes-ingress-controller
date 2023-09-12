@@ -64,6 +64,7 @@ const (
 	PathHandlingKey      = "/path-handling"
 	UserTagKey           = "/tags"
 	RewriteURIKey        = "/rewrite"
+	CustomEntitiesKey    = "/custom-entities"
 
 	// GatewayClassUnmanagedAnnotationSuffix is an annotation used on a Gateway resource to
 	// indicate that the GatewayClass should be reconciled according to unmanaged
@@ -361,4 +362,13 @@ func ExtractUserTags(anns map[string]string) []string {
 func ExtractRewriteURI(anns map[string]string) (string, bool) {
 	s, ok := anns[AnnotationPrefix+RewriteURIKey]
 	return s, ok
+}
+
+// ExtractCustomEntities extracts the names of custom entities in annotations.
+func ExtractCustomEntities(anns map[string]string) ([]string, bool) {
+	val, exist := anns[AnnotationPrefix+CustomEntitiesKey]
+	if !exist {
+		return nil, false
+	}
+	return strings.Split(val, ","), true
 }

@@ -1,10 +1,14 @@
 package v1alpha1
 
 import (
+	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+)
 
-	kongv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
+const (
+	KindKongCustomEntity           = "KongCustomEntity"
+	KindKongCustomEntityDefinition = "KongCustomEntityDefinition"
 )
 
 // +kubebuilder:object:root=true
@@ -19,8 +23,8 @@ type KongCustomEntityList struct {
 // +genclient
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 // +kubebuilder:object:root=true
-// +kubebuilder:resource:path=kongcustomentities,shortName=kce,categories=kong-ingress-controller
 // +kubebuilder:subresource:status
+// +kubebuilder:resource:path=kongcustomentities,shortName=kce,categories=kong-ingress-controller
 
 // KongCustomEntity represents a custom entity in Kong.
 type KongCustomEntity struct {
@@ -29,7 +33,7 @@ type KongCustomEntity struct {
 	// Spec is the specification of the entity.
 	Spec KongCustomEntitySpec `json:"spec"`
 	// Status is the status of the entity.
-	Status KongCustomEntityStatus `json:"status"`
+	Status KongCustomEntityStatus `json:"status,omitempty"`
 }
 
 // +k8s:deepcopy-gen:
@@ -69,16 +73,35 @@ type KongCustomEntityField struct {
 	// +kubebuilder:validation:Enum:=nil;bool;int;number;string;array;object
 	// Type is the type of the value in the field.
 	Type KongEntityFieldType `json:"type"`
-	// +kubebuilder:validation:Type=object
 	// Value defines the value of this field in JSON format.
 	Value     apiextensionsv1.JSON `json:"value,omitempty"`
-	ValueFrom *kongv1.ConfigSource `json:"valueFrom,omitempty"`
+	ValueFrom *ValueSource         `json:"valueFrom,omitempty"`
+}
+
+// +k8s:deepcopy-gen:
+
+// ValueSource defines values came from a key in a secret.
+type ValueSource struct {
+	// Namespace is the namespace of referred secret. empty for same as the containing KongCustomEnitty.
+	Namespace string `json:"namespace,omitempty"`
+	// SecretKeyRef is the reference of key and name of the secret where the value comes from.
+	SecretKeyRef *corev1.SecretKeySelector `json:"secretKeyRef,omitempty"`
 }
 
 // +k8s:deepcopy-gen:
 
 // KongCustomEntityStatus defines the status of a Kong custom entity.
 type KongCustomEntityStatus struct {
+	// Conditions describe the current conditions of the KongCustomEntityStatus.
+	//
+	// Known condition types are:
+	//
+	// * "Programmed"
+	//
+	// +listType=map
+	// +listMapKey=type
+	// +kubebuilder:validation:MaxItems=8
+	// +kubebuilder:default={{type: "Programmed", status: "Unknown", reason:"Pending", message:"Waiting for controller", lastTransitionTime: "1970-01-01T00:00:00Z"}}
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
 
@@ -139,4 +162,9 @@ type KongCustomEntityDefinitionList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []KongCustomEntityDefinition `json:"items"`
+}
+
+func init() {
+	SchemeBuilder.Register(&KongCustomEntity{}, &KongCustomEntityList{})
+	SchemeBuilder.Register(&KongCustomEntityDefinition{}, &KongCustomEntityDefinitionList{})
 }

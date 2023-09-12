@@ -273,6 +273,8 @@ func (p *Parser) BuildKongConfig() KongConfigBuildingResult {
 		result.FillIDs(p.logger)
 	}
 
+	p.renderCustomEntities()
+
 	return KongConfigBuildingResult{
 		KongState:                   &result,
 		TranslationFailures:         p.popTranslationFailures(),

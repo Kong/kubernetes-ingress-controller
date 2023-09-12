@@ -122,7 +122,6 @@ ConfigSource is a wrapper around SecretValueFromSource.
 
 
 _Appears in:_
-- [KongCustomEntityField](#kongcustomentityfield)
 - [KongPlugin](#kongplugin)
 
 
@@ -385,7 +384,7 @@ KongCustomEntityField defines one field of Kong custom entity.
 | `key` _string_ | Key is the key of the entity field. |
 | `type` _[KongEntityFieldType](#kongentityfieldtype)_ | Type is the type of the value in the field. |
 | `value` _[JSON](#json)_ | Value defines the value of this field in JSON format. |
-| `valueFrom` _[ConfigSource](#configsource)_ |  |
+| `valueFrom` _[ValueSource](#valuesource)_ |  |
 
 
 _Appears in:_
@@ -441,6 +440,23 @@ KongEntityForeignKey represents a foreign key constraint of Kong entity.
 
 _Appears in:_
 - [KongCustomEntityDefinitionSpec](#kongcustomentitydefinitionspec)
+
+### ValueSource
+
+
+
+ValueSource defines values came from a key in a secret.
+
+
+
+| Field | Description |
+| --- | --- |
+| `namespace` _string_ | Namespace is the namespace of referred secret. empty for same as the containing KongCustomEnitty. |
+| `secretKeyRef` _[SecretKeySelector](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#secretkeyselector-v1-core)_ | SecretKeyRef is the reference of key and name of the secret where the value comes from. |
+
+
+_Appears in:_
+- [KongCustomEntityField](#kongcustomentityfield)
 
 
 ## configuration.konghq.com/v1beta1

@@ -231,11 +231,16 @@ func kongPluginFromK8SPlugin(
 					k8sPlugin.Name, k8sPlugin.Namespace, err)
 		}
 	}
-	if len(k8sPlugin.ConfigJana.Raw) != 0 {
-		var obj ConfigObj
-		err := json.Unmarshal(k8sPlugin.ConfigJana.Raw, &obj)
-		if err != nil {
-			return Plugin{}, fmt.Errorf("could not parse ConfigJana: %w", err)
+	if len(k8sPlugin.ConfigJana) != 0 {
+		objects := make([]ConfigObj, len(k8sPlugin.ConfigJana))
+
+		for i, src := range k8sPlugin.ConfigJana {
+			var obj ConfigObj
+			err := json.Unmarshal(src.Raw, &obj)
+			if err != nil {
+				return Plugin{}, fmt.Errorf("could not parse ConfigJana: %w", err)
+			}
+			objects[i] = obj
 		}
 		// TODO transform the structured config into a kong.Configuration JSON blob by dereferencing secrets and walking
 		// the object tree

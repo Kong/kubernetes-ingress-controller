@@ -82,49 +82,60 @@ func TestPluginEssentials(t *testing.T) {
 		},
 		InstanceName: "example",
 		PluginName:   "request-termination",
-		ConfigJana: apiextensionsv1.JSON{
-			Raw: []byte(`[
-    {
-        "name": "http_method",
-        "value": "GET"
-    },
-    {
-        "name": "fake_field",
-        "valueFrom": {
-            "secretKeyRef": {
-                "name": "somesecret",
-                "key": "somekey"
-            }
-        }
-    },
-    {
-        "name": "add",
-        "valueNested": {
-            "name": "headers",
-            "valueArray": [
-                "x-foo:foo",
-                "x-bar:bar"
-            ]
-        }
-    },
-    {
-        "name": "replace",
-        "valueNested": {
-            "name": "querystring",
-            "valueArray": [
-                "foo:foo",
-                "bar:bar"
-            ],
-            "name": "headers",
-            "valueArray": [
-                "x-footoo:foo",
-                "x-bartoo:bar"
-            ]
-        }
-    }
-]`),
+		ConfigJana: []apiextensionsv1.JSON{
+			{
+				Raw: []byte(`
+					{
+						"name": "http_method",
+      	  	"value": "GET"
+					}`),
+			},
+			{
+				Raw: []byte(`
+					{
+    			    "name": "fake_field",
+    			    "valueFrom": {
+    			        "secretKeyRef": {
+    			            "name": "somesecret",
+    			            "key": "somekey"
+    			        }
+    			    }
+    			}`),
+			},
+			{
+				Raw: []byte(`
+				{
+    		    "name": "add",
+    		    "valueNested": {
+    		        "name": "headers",
+    		        "valueArray": [
+    		            "x-foo:foo",
+    		            "x-bar:bar"
+    		        ]
+    		    }
+    		}`),
+			},
+			{
+				Raw: []byte(`
+				{
+    		    "name": "replace",
+    		    "valueNested": {
+    		        "name": "querystring",
+    		        "valueArray": [
+    		            "foo:foo",
+    		            "bar:bar"
+    		        ],
+    		        "name": "headers",
+    		        "valueArray": [
+    		            "x-footoo:foo",
+    		            "x-bartoo:bar"
+    		        ]
+    		    }
+    		}`),
+			},
 		},
 	}
+
 	kongclusterplugin := &kongv1.KongClusterPlugin{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "legal",

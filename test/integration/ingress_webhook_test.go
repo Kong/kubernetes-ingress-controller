@@ -13,7 +13,7 @@ import (
 	netv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/util/builder"
 	"github.com/kong/kubernetes-ingress-controller/v2/test/consts"
 	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/helpers"
 )
@@ -30,117 +30,35 @@ func commonIngressValidationTestCases() []testCaseIngressValidation {
 	return []testCaseIngressValidation{
 		{
 			Name: "a valid ingress passes validation",
-			Ingress: &netv1.Ingress{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: uuid.NewString(),
-				},
-				Spec: netv1.IngressSpec{
-					IngressClassName: lo.ToPtr(consts.IngressClass),
-					Rules: []netv1.IngressRule{
-						{
-							IngressRuleValue: netv1.IngressRuleValue{
-								HTTP: &netv1.HTTPIngressRuleValue{
-									Paths: []netv1.HTTPIngressPath{
-										constructIngressPathImplSpecific("/foo"),
-									},
-								},
-							},
-						},
-					},
-				},
-			},
+			Ingress: builder.NewIngress(uuid.NewString(), consts.IngressClass).WithRules(
+				constructIngressRuleWithPathsImplSpecific("", "/foo"),
+			).Build(),
 		},
 		{
 			Name: "an invalid ingress passes validation when Ingress class is not set to KIC's (it's not ours)",
-			Ingress: &netv1.Ingress{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: uuid.NewString(),
-				},
-				Spec: netv1.IngressSpec{
-					IngressClassName: lo.ToPtr("third-party-ingress-class"),
-					Rules: []netv1.IngressRule{
-						{
-							IngressRuleValue: netv1.IngressRuleValue{
-								HTTP: &netv1.HTTPIngressRuleValue{
-									Paths: []netv1.HTTPIngressPath{
-										constructIngressPathImplSpecific("/foo"),
-										constructIngressPathImplSpecific("/~/foo[[["),
-									},
-								},
-							},
-						},
-					},
-				},
-			},
+			Ingress: builder.NewIngress(uuid.NewString(), "third-party-ingress-class").WithRules(
+				constructIngressRuleWithPathsImplSpecific("", "/foo", "/~/foo[[["),
+			).Build(),
+		},
+		{
+			Name: "an invalid ingress passes validation when Ingress class is not set to KIC's (it's not ours), usage of legacy annotation",
+			Ingress: builder.NewIngress(uuid.NewString(), "").WithLegacyClassAnnotation("third-party-ingress-class").WithRules(
+				constructIngressRuleWithPathsImplSpecific("", "/foo", "/~/foo[[["),
+			).Build(),
 		},
 		{
 			Name: "valid Ingress with multiple hosts, paths (with valid regex expressions) passes validation",
-			Ingress: &netv1.Ingress{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: uuid.NewString(),
-					Annotations: map[string]string{
-						annotations.IngressClassKey: consts.IngressClass,
-					},
-				},
-				Spec: netv1.IngressSpec{
-					Rules: []netv1.IngressRule{
-						{
-							Host: "foo.com",
-							IngressRuleValue: netv1.IngressRuleValue{
-								HTTP: &netv1.HTTPIngressRuleValue{
-									Paths: []netv1.HTTPIngressPath{
-										constructIngressPathImplSpecific("/foo"),
-										constructIngressPathImplSpecific("/bar[1-9]"),
-									},
-								},
-							},
-						},
-						{
-							Host: "bar.com",
-							IngressRuleValue: netv1.IngressRuleValue{
-								HTTP: &netv1.HTTPIngressRuleValue{
-									Paths: []netv1.HTTPIngressPath{
-										constructIngressPathImplSpecific("/baz"),
-									},
-								},
-							},
-						},
-						{
-							IngressRuleValue: netv1.IngressRuleValue{
-								HTTP: &netv1.HTTPIngressRuleValue{
-									Paths: []netv1.HTTPIngressPath{
-										constructIngressPathImplSpecific("/test"),
-										constructIngressPathImplSpecific("/~/foo[1-9]"),
-									},
-								},
-							},
-						},
-					},
-				},
-			},
+			Ingress: builder.NewIngress(uuid.NewString(), "").WithLegacyClassAnnotation("third-party-ingress-class").WithRules(
+				constructIngressRuleWithPathsImplSpecific("foo.com", "/foo", "/bar[1-9]"),
+				constructIngressRuleWithPathsImplSpecific("bar.com", "/baz"),
+				constructIngressRuleWithPathsImplSpecific("", "/test", "/~/foo[1-9]"),
+			).Build(),
 		},
 		{
 			Name: "fail when path in Ingress does not start with '/' (K8s builtin Ingress validation)",
-			Ingress: &netv1.Ingress{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: uuid.NewString(),
-				},
-				Spec: netv1.IngressSpec{
-					IngressClassName: lo.ToPtr(consts.IngressClass),
-					Rules: []netv1.IngressRule{
-						{
-							IngressRuleValue: netv1.IngressRuleValue{
-								HTTP: &netv1.HTTPIngressRuleValue{
-									Paths: []netv1.HTTPIngressPath{
-										constructIngressPathImplSpecific("~/foo[1-9]"),
-										constructIngressPathImplSpecific("/bar"),
-									},
-								},
-							},
-						},
-					},
-				},
-			},
+			Ingress: builder.NewIngress(uuid.NewString(), consts.IngressClass).WithRules(
+				constructIngressRuleWithPathsImplSpecific("", "~/foo[1-9]", "/bar"),
+			).Build(),
 			WantCreateErrSubstring: "Invalid value: \"~/foo[1-9]\": must be an absolute path",
 		},
 	}
@@ -152,35 +70,10 @@ func commonIngressValidationTestCases() []testCaseIngressValidation {
 func invalidRegexInIngressPathTestCase(wantCreateErrSubstring string) testCaseIngressValidation {
 	return testCaseIngressValidation{
 		Name: "valid path format with invalid regex expression fails validation",
-		Ingress: &netv1.Ingress{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: uuid.NewString(),
-			},
-			Spec: netv1.IngressSpec{
-				IngressClassName: lo.ToPtr(consts.IngressClass),
-				Rules: []netv1.IngressRule{
-					{
-						IngressRuleValue: netv1.IngressRuleValue{
-							HTTP: &netv1.HTTPIngressRuleValue{
-								Paths: []netv1.HTTPIngressPath{
-									constructIngressPathImplSpecific("/bar"),
-									constructIngressPathImplSpecific("/~/baz[1-9]"),
-								},
-							},
-						},
-					},
-					{
-						IngressRuleValue: netv1.IngressRuleValue{
-							HTTP: &netv1.HTTPIngressRuleValue{
-								Paths: []netv1.HTTPIngressPath{
-									constructIngressPathImplSpecific(`/~/foo[[[`),
-								},
-							},
-						},
-					},
-				},
-			},
-		},
+		Ingress: builder.NewIngress(uuid.NewString(), consts.IngressClass).WithRules(
+			constructIngressRuleWithPathsImplSpecific("", "/bar", "/~/baz[1-9]"),
+			constructIngressRuleWithPathsImplSpecific("", "/~/foo[[["),
+		).Build(),
 		WantCreateErrSubstring: wantCreateErrSubstring,
 	}
 }
@@ -196,28 +89,9 @@ func TestIngressValidationWebhookTraditionalRouter(t *testing.T) {
 		invalidRegexInIngressPathTestCase(`invalid regex: '/foo[[['`),
 		testCaseIngressValidation{
 			Name: "path should start with '/' or '~/' (regex path) (Kong Gateway requirement for non-expressions router)",
-			Ingress: &netv1.Ingress{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: uuid.NewString(),
-					Annotations: map[string]string{
-						annotations.IngressClassKey: consts.IngressClass,
-					},
-				},
-				Spec: netv1.IngressSpec{
-					Rules: []netv1.IngressRule{
-						{
-							IngressRuleValue: netv1.IngressRuleValue{
-								HTTP: &netv1.HTTPIngressRuleValue{
-									Paths: []netv1.HTTPIngressPath{
-										constructIngressPathImplSpecific("/bar"),
-										constructIngressPathImplSpecific("/~foo[1-9]"),
-									},
-								},
-							},
-						},
-					},
-				},
-			},
+			Ingress: builder.NewIngress(uuid.NewString(), "").WithLegacyClassAnnotation(consts.IngressClass).WithRules(
+				constructIngressRuleWithPathsImplSpecific("", "/bar", "/~foo[1-9]"),
+			).Build(),
 			WantCreateErrSubstring: `should start with: / (fixed path) or ~/ (regex path)`,
 		},
 	)
@@ -235,58 +109,16 @@ func TestIngressValidationWebhookExpressionsRouter(t *testing.T) {
 		invalidRegexInIngressPathTestCase("regex parse error:\n    ^/foo[[[\n           ^\nerror: unclosed character class"),
 		testCaseIngressValidation{
 			Name: "valid regex path passes validation",
-			Ingress: &netv1.Ingress{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: uuid.NewString(),
-				},
-				Spec: netv1.IngressSpec{
-					IngressClassName: lo.ToPtr(consts.IngressClass),
-					Rules: []netv1.IngressRule{
-						{
-							IngressRuleValue: netv1.IngressRuleValue{
-								HTTP: &netv1.HTTPIngressRuleValue{
-									Paths: []netv1.HTTPIngressPath{
-										constructIngressPathImplSpecific("/bar"),
-										constructIngressPathImplSpecific("/~baz[1-9]"),
-									},
-								},
-							},
-						},
-					},
-				},
-			},
+			Ingress: builder.NewIngress(uuid.NewString(), consts.IngressClass).WithRules(
+				constructIngressRuleWithPathsImplSpecific("", "/bar", "/~baz[1-9]"),
+			).Build(),
 		},
 		testCaseIngressValidation{
 			Name: "invalid regex path fails validation",
-			Ingress: &netv1.Ingress{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: uuid.NewString(),
-				},
-				Spec: netv1.IngressSpec{
-					IngressClassName: lo.ToPtr(consts.IngressClass),
-					Rules: []netv1.IngressRule{
-						{
-							IngressRuleValue: netv1.IngressRuleValue{
-								HTTP: &netv1.HTTPIngressRuleValue{
-									Paths: []netv1.HTTPIngressPath{
-										constructIngressPathImplSpecific("/bar"),
-										constructIngressPathImplSpecific("/~baz[1-9]"),
-									},
-								},
-							},
-						},
-						{
-							IngressRuleValue: netv1.IngressRuleValue{
-								HTTP: &netv1.HTTPIngressRuleValue{
-									Paths: []netv1.HTTPIngressPath{
-										constructIngressPathImplSpecific("/~foo[[["),
-									},
-								},
-							},
-						},
-					},
-				},
-			},
+			Ingress: builder.NewIngress(uuid.NewString(), consts.IngressClass).WithRules(
+				constructIngressRuleWithPathsImplSpecific("", "/bar", "/~baz[1-9]"),
+				constructIngressRuleWithPathsImplSpecific("", "/~foo[[["),
+			).Build(),
 			WantCreateErrSubstring: "regex parse error:\n    ^foo[[[\n          ^\nerror: unclosed character class",
 		},
 	)
@@ -336,16 +168,30 @@ func testIngressValidationWebhook(
 	}
 }
 
-func constructIngressPathImplSpecific(path string) netv1.HTTPIngressPath {
-	return netv1.HTTPIngressPath{
-		Path:     path,
-		PathType: lo.ToPtr(netv1.PathTypeImplementationSpecific),
-		Backend: netv1.IngressBackend{
-			Service: &netv1.IngressServiceBackend{
-				Name: "foo",
-				Port: netv1.ServiceBackendPort{
-					Number: 80,
+func constructIngressRuleWithPathsImplSpecific(host string, paths ...string) netv1.IngressRule {
+	var pathsToSet []netv1.HTTPIngressPath
+	for _, path := range paths {
+		pathsToSet = append(
+			pathsToSet,
+			netv1.HTTPIngressPath{
+				Path:     path,
+				PathType: lo.ToPtr(netv1.PathTypeImplementationSpecific),
+				Backend: netv1.IngressBackend{
+					Service: &netv1.IngressServiceBackend{
+						Name: "foo",
+						Port: netv1.ServiceBackendPort{
+							Number: 80,
+						},
+					},
 				},
+			},
+		)
+	}
+	return netv1.IngressRule{
+		Host: host,
+		IngressRuleValue: netv1.IngressRuleValue{
+			HTTP: &netv1.HTTPIngressRuleValue{
+				Paths: pathsToSet,
 			},
 		},
 	}

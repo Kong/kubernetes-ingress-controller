@@ -121,7 +121,11 @@ func ingressV1ToKongServiceCombinedRoutes(
 
 // ingressV1ToKongServiceLegacy translates a slice IngressV1 object into Kong Services.
 func ingressV1ToKongServiceLegacy(
-	featureFlags FeatureFlags, ingresses []*netv1.Ingress, icp kongv1alpha1.IngressClassParametersSpec, parsedObjectsCollector *ObjectsCollector, failuresCollector *failures.ResourceFailuresCollector,
+	featureFlags FeatureFlags,
+	ingresses []*netv1.Ingress,
+	icp kongv1alpha1.IngressClassParametersSpec,
+	parsedObjectsCollector *ObjectsCollector,
+	failuresCollector *failures.ResourceFailuresCollector,
 ) KongServicesCache {
 	servicesCache := make(KongServicesCache)
 

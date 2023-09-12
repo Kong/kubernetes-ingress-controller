@@ -2,6 +2,7 @@ package ingress
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"strings"
@@ -28,38 +29,13 @@ func ValidateIngress(
 	kongVersion semver.Version,
 	ingress *netv1.Ingress,
 ) (bool, string, error) {
-	discardLogger := logrus.New()
-	discardLogger.Out = io.Discard
-	failuresCollector, err := failures.NewResourceFailuresCollector(discardLogger)
+	kongRoutes, err := ingressToKongRoutesForValidation(parserFeatures, kongVersion, ingress)
 	if err != nil {
-		return false, "", err
+		return false, err.Error(), nil //nolint: nilerr
 	}
-	var icp kongv1alpha1.IngressClassParametersSpec
-	if kongVersion.LT(versions.ExplicitRegexPathVersionCutoff) {
-		icp.EnableLegacyRegexDetection = true
-	}
-	result := parser.IngressesV1ToKongServices(
-		parserFeatures,
-		[]*netv1.Ingress{ingress},
-		icp,
-		&parser.ObjectsCollector{}, // It's irrelevant for validation.
-		failuresCollector,
-	)
 
-	var errMsgs []string
-	for _, f := range failuresCollector.PopResourceFailures() {
-		errMsgs = append(errMsgs, f.Message())
-	}
-	if len(errMsgs) > 0 {
-		return false, validationMsg(errMsgs), nil
-	}
-	var kongRoutes []kong.Route
-	for _, r := range result {
-		for _, route := range r.Routes {
-			kongRoutes = append(kongRoutes, route.Route)
-		}
-	}
 	// Validate by using feature of Kong Gateway.
+	var errMsgs []string
 	for _, kg := range kongRoutes {
 		kg := kg
 		ok, msg, err := routesValidator.Validate(ctx, &kg)
@@ -74,6 +50,43 @@ func ValidateIngress(
 		return false, validationMsg(errMsgs), nil
 	}
 	return true, "", nil
+}
+
+// ingressToKongRoutesForValidation converts Ingress to Kong Routes that can be validated by Kong Gateway,
+// discards everything else that is not needed for validation.
+func ingressToKongRoutesForValidation(
+	parserFeatures parser.FeatureFlags, kongVersion semver.Version, ingress *netv1.Ingress,
+) ([]kong.Route, error) {
+	discardLogger := logrus.New()
+	discardLogger.Out = io.Discard
+	failuresCollector, _ := failures.NewResourceFailuresCollector(discardLogger) // It fails only for nil logger.
+	var icp kongv1alpha1.IngressClassParametersSpec
+	if kongVersion.LT(versions.ExplicitRegexPathVersionCutoff) {
+		icp.EnableLegacyRegexDetection = true
+	}
+	kongServices := parser.IngressesV1ToKongServices(
+		parserFeatures,
+		[]*netv1.Ingress{ingress},
+		icp,
+		&parser.ObjectsCollector{}, // It's irrelevant for validation.
+		failuresCollector,
+	)
+
+	var errMsgs []string
+	for _, f := range failuresCollector.PopResourceFailures() {
+		errMsgs = append(errMsgs, f.Message())
+	}
+	if len(errMsgs) > 0 {
+		return nil, errors.New(validationMsg(errMsgs))
+	}
+
+	var kongRoutes []kong.Route
+	for _, svc := range kongServices {
+		for _, route := range svc.Routes {
+			kongRoutes = append(kongRoutes, route.Route)
+		}
+	}
+	return kongRoutes, nil
 }
 
 func validationMsg(errMsgs []string) string {

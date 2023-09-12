@@ -21,7 +21,6 @@ import (
 type testCaseIngressValidation struct {
 	Name                   string
 	Ingress                *netv1.Ingress
-	WantCreateErr          bool
 	WantCreateErrSubstring string
 }
 
@@ -50,7 +49,6 @@ func commonIngressValidationTestCases() []testCaseIngressValidation {
 					},
 				},
 			},
-			WantCreateErr: false,
 		},
 		{
 			Name: "an invalid ingress passes validation when Ingress class is not set to KIC's (it's not ours)",
@@ -74,7 +72,6 @@ func commonIngressValidationTestCases() []testCaseIngressValidation {
 					},
 				},
 			},
-			WantCreateErr: false,
 		},
 		{
 			Name: "valid Ingress with multiple hosts, paths (with valid regex expressions) passes validation",
@@ -121,7 +118,6 @@ func commonIngressValidationTestCases() []testCaseIngressValidation {
 					},
 				},
 			},
-			WantCreateErr: false,
 		},
 		{
 			Name: "fail when path in Ingress does not start with '/' (K8s builtin Ingress validation)",
@@ -145,7 +141,6 @@ func commonIngressValidationTestCases() []testCaseIngressValidation {
 					},
 				},
 			},
-			WantCreateErr:          true,
 			WantCreateErrSubstring: "Invalid value: \"~/foo[1-9]\": must be an absolute path",
 		},
 	}
@@ -186,7 +181,6 @@ func invalidRegexInIngressPathTestCase(wantCreateErrSubstring string) testCaseIn
 				},
 			},
 		},
-		WantCreateErr:          true,
 		WantCreateErrSubstring: wantCreateErrSubstring,
 	}
 }
@@ -224,7 +218,6 @@ func TestIngressValidationWebhookTraditionalRouter(t *testing.T) {
 					},
 				},
 			},
-			WantCreateErr:          true,
 			WantCreateErrSubstring: `should start with: / (fixed path) or ~/ (regex path)`,
 		},
 	)
@@ -262,7 +255,6 @@ func TestIngressValidationWebhookExpressionsRouter(t *testing.T) {
 					},
 				},
 			},
-			WantCreateErr: false,
 		},
 		testCaseIngressValidation{
 			Name: "invalid regex path fails validation",
@@ -295,7 +287,6 @@ func TestIngressValidationWebhookExpressionsRouter(t *testing.T) {
 					},
 				},
 			},
-			WantCreateErr:          true,
 			WantCreateErrSubstring: "regex parse error:\n    ^foo[[[\n          ^\nerror: unclosed character class",
 		},
 	)
@@ -335,8 +326,7 @@ func testIngressValidationWebhook(
 	for _, tC := range testCases {
 		t.Run(tC.Name, func(t *testing.T) {
 			_, err := env.Cluster().Client().NetworkingV1().Ingresses(namespace).Create(ctx, tC.Ingress, metav1.CreateOptions{})
-			if tC.WantCreateErr {
-				require.NotEmpty(t, tC.WantCreateErrSubstring)
+			if tC.WantCreateErrSubstring != "" {
 				require.Error(t, err)
 				require.Contains(t, err.Error(), tC.WantCreateErrSubstring)
 			} else {

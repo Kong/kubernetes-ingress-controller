@@ -122,6 +122,7 @@ ConfigSource is a wrapper around SecretValueFromSource.
 
 
 _Appears in:_
+- [KongCustomEntityField](#kongcustomentityfield)
 - [KongPlugin](#kongplugin)
 
 
@@ -312,8 +313,7 @@ KongCustomEntity represents a custom entity in Kong.
 | `apiVersion` _string_ | `configuration.konghq.com/v1alpha1`
 | `kind` _string_ | `KongCustomEntity`
 | `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
-| `type` _string_ | Type is the type of this custom entity. Should be same as the `Name` of a KongCustomEntityDefinition. |
-| `fields` _[JSON](#json)_ | Fields is the list of fields in the entity. |
+| `spec` _[KongCustomEntitySpec](#kongcustomentityspec)_ | Spec is the specification of the entity. |
 
 
 
@@ -331,9 +331,7 @@ KongCustomEntityDefinition represents definition of a custom entity type in Kong
 | `apiVersion` _string_ | `configuration.konghq.com/v1alpha1`
 | `kind` _string_ | `KongCustomEntityDefinition`
 | `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
-| `name` _string_ | Name is the type name of the entity. |
-| `adminAPIName` _string_ | AdminAPIName is the name used in admin API paths to CRUD this type of entity. If AdminAPIName is empty, it is seen as same as `Name`. For example: Name = "jwt_credentials" and AdminAPIName = "jwts", then we call `/jwts` or `/jwts/<id>` for CRUD. |
-| `dependencies` _[KongEntityForeignKey](#kongentityforeignkey) array_ | Dependecies are the entity types which are required by this type. If it is empty, the entity type is a "top level" object that does not dependent on other entities. |
+| `spec` _[KongCustomEntityDefinitionSpec](#kongcustomentitydefinitionspec)_ |  |
 
 
 
@@ -355,6 +353,77 @@ KongCustomEntityDefinition represents definition of a custom entity type in Kong
 _Appears in:_
 - [IngressClassParameters](#ingressclassparameters)
 
+### KongCustomEntityDefinitionSpec
+
+
+
+KongCustomEntityDefinitionSpec is the specification of KongCustomEntityDefinition to define a type of Kong custom entity.
+
+
+
+| Field | Description |
+| --- | --- |
+| `name` _string_ | Name is the type name of the entity. |
+| `adminAPIName` _string_ | AdminAPIName is the name used in admin API paths to CRUD this type of entity. If AdminAPIName is empty, it uses the value of `Name`. For example: Name = "jwt_credentials" and AdminAPIName = "jwts", then we call `/jwts` or `/jwts/<id>` for CRUD. |
+| `adminAPINestedName` _string_ | AdminAPINestedName is the name used in the admin API paths to CRUD the entity attached to other entities. If AdminAPINestedName is empty, it is the same as `AdminAPIName`; if they are both empty, it uses the value of `Name`. like Name = "hmacauth_credentials", AdminAPIName = "hmac-auths" and AdminAPINestedName = "hmac-auth" We call `/consumers/*/hmac-auth` or  `/consumers/*/hmac-auth/*` for CRUD. |
+| `dependencies` _[KongEntityForeignKey](#kongentityforeignkey) array_ | Dependecies are the entity types which are required by this type. If it is empty, the entity type is a "top level" object that does not dependent on other entities. |
+
+
+_Appears in:_
+- [KongCustomEntityDefinition](#kongcustomentitydefinition)
+
+### KongCustomEntityField
+
+
+
+KongCustomEntityField defines one field of Kong custom entity.
+
+
+
+| Field | Description |
+| --- | --- |
+| `key` _string_ | Key is the key of the entity field. |
+| `type` _[KongEntityFieldType](#kongentityfieldtype)_ | Type is the type of the value in the field. |
+| `value` _[JSON](#json)_ | Value defines the value of this field in JSON format. |
+| `valueFrom` _[ConfigSource](#configsource)_ |  |
+
+
+_Appears in:_
+- [KongCustomEntitySpec](#kongcustomentityspec)
+
+### KongCustomEntitySpec
+
+
+
+KongCustomEntitySpec defines the specification of a Kong custom entity.
+
+
+
+| Field | Description |
+| --- | --- |
+| `ingressClass` _string_ |  |
+| `type` _string_ | Type is the type of this custom entity. Should be same as the `Name` of a KongCustomEntityDefinition. |
+| `fields` _[KongCustomEntityField](#kongcustomentityfield) array_ | Fields is the list of fields in the entity. |
+
+
+_Appears in:_
+- [KongCustomEntity](#kongcustomentity)
+
+
+
+### KongEntityFieldType
+
+_Underlying type:_ `string`
+
+KongEntityFieldType defines possible type of field in Kong custom entity.
+
+
+
+
+
+_Appears in:_
+- [KongCustomEntityField](#kongcustomentityfield)
+
 ### KongEntityForeignKey
 
 
@@ -371,7 +440,7 @@ KongEntityForeignKey represents a foreign key constraint of Kong entity.
 
 
 _Appears in:_
-- [KongCustomEntityDefinition](#kongcustomentitydefinition)
+- [KongCustomEntityDefinitionSpec](#kongcustomentitydefinitionspec)
 
 
 ## configuration.konghq.com/v1beta1

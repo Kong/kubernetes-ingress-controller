@@ -24,44 +24,11 @@ spec:
         description: KongCustomEntityDefinition represents definition of a custom
           entity type in Kong.
         properties:
-          adminAPIName:
-            description: 'AdminAPIName is the name used in admin API paths to CRUD
-              this type of entity. If AdminAPIName is empty, it is seen as same as
-              `Name`. For example: Name = "jwt_credentials" and AdminAPIName = "jwts",
-              then we call `/jwts` or `/jwts/<id>` for CRUD.'
-            type: string
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation
               of an object. Servers should convert recognized schemas to the latest
               internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
             type: string
-          dependencies:
-            description: Dependecies are the entity types which are required by this
-              type. If it is empty, the entity type is a "top level" object that does
-              not dependent on other entities.
-            items:
-              description: KongEntityForeignKey represents a foreign key constraint
-                of Kong entity.
-              properties:
-                alternativeKeys:
-                  description: AlternativeKeys are other fields that could identify
-                    the foreign dependency, like "name" in service.
-                  items:
-                    type: string
-                  type: array
-                primaryKey:
-                  description: PrimaryKey is the primary key to identify the foreign
-                    dependency, like "id" in service.
-                  type: string
-                type:
-                  description: Type is the type of the dependent entity in the foreign
-                    key constraint.
-                  type: string
-              required:
-              - primaryKey
-              - type
-              type: object
-            type: array
           kind:
             description: 'Kind is a string value representing the REST resource this
               object represents. Servers may infer this from the endpoint the client
@@ -69,11 +36,60 @@ spec:
             type: string
           metadata:
             type: object
-          name:
-            description: Name is the type name of the entity.
-            type: string
+          spec:
+            description: KongCustomEntityDefinitionSpec is the specification of KongCustomEntityDefinition
+              to define a type of Kong custom entity.
+            properties:
+              adminAPIName:
+                description: 'AdminAPIName is the name used in admin API paths to
+                  CRUD this type of entity. If AdminAPIName is empty, it uses the
+                  value of `Name`. For example: Name = "jwt_credentials" and AdminAPIName
+                  = "jwts", then we call `/jwts` or `/jwts/<id>` for CRUD.'
+                type: string
+              adminAPINestedName:
+                description: AdminAPINestedName is the name used in the admin API
+                  paths to CRUD the entity attached to other entities. If AdminAPINestedName
+                  is empty, it is the same as `AdminAPIName`; if they are both empty,
+                  it uses the value of `Name`. like Name = "hmacauth_credentials",
+                  AdminAPIName = "hmac-auths" and AdminAPINestedName = "hmac-auth"
+                  We call `/consumers/*/hmac-auth` or  `/consumers/*/hmac-auth/*`
+                  for CRUD.
+                type: string
+              dependencies:
+                description: Dependecies are the entity types which are required by
+                  this type. If it is empty, the entity type is a "top level" object
+                  that does not dependent on other entities.
+                items:
+                  description: KongEntityForeignKey represents a foreign key constraint
+                    of Kong entity.
+                  properties:
+                    alternativeKeys:
+                      description: AlternativeKeys are other fields that could identify
+                        the foreign dependency, like "name" in service.
+                      items:
+                        type: string
+                      type: array
+                    primaryKey:
+                      description: PrimaryKey is the primary key to identify the foreign
+                        dependency, like "id" in service.
+                      type: string
+                    type:
+                      description: Type is the type of the dependent entity in the
+                        foreign key constraint.
+                      type: string
+                  required:
+                  - primaryKey
+                  - type
+                  type: object
+                type: array
+              name:
+                description: Name is the type name of the entity.
+                type: string
+            required:
+            - name
+            type: object
         required:
-        - name
+        - spec
         type: object
     served: true
     storage: true

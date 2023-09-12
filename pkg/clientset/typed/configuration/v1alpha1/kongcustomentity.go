@@ -40,6 +40,7 @@ type KongCustomEntitiesGetter interface {
 type KongCustomEntityInterface interface {
 	Create(ctx context.Context, kongCustomEntity *v1alpha1.KongCustomEntity, opts v1.CreateOptions) (*v1alpha1.KongCustomEntity, error)
 	Update(ctx context.Context, kongCustomEntity *v1alpha1.KongCustomEntity, opts v1.UpdateOptions) (*v1alpha1.KongCustomEntity, error)
+	UpdateStatus(ctx context.Context, kongCustomEntity *v1alpha1.KongCustomEntity, opts v1.UpdateOptions) (*v1alpha1.KongCustomEntity, error)
 	Delete(ctx context.Context, name string, opts v1.DeleteOptions) error
 	DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error
 	Get(ctx context.Context, name string, opts v1.GetOptions) (*v1alpha1.KongCustomEntity, error)
@@ -128,6 +129,22 @@ func (c *kongCustomEntities) Update(ctx context.Context, kongCustomEntity *v1alp
 		Namespace(c.ns).
 		Resource("kongcustomentities").
 		Name(kongCustomEntity.Name).
+		VersionedParams(&opts, scheme.ParameterCodec).
+		Body(kongCustomEntity).
+		Do(ctx).
+		Into(result)
+	return
+}
+
+// UpdateStatus was generated because the type contains a Status member.
+// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
+func (c *kongCustomEntities) UpdateStatus(ctx context.Context, kongCustomEntity *v1alpha1.KongCustomEntity, opts v1.UpdateOptions) (result *v1alpha1.KongCustomEntity, err error) {
+	result = &v1alpha1.KongCustomEntity{}
+	err = c.client.Put().
+		Namespace(c.ns).
+		Resource("kongcustomentities").
+		Name(kongCustomEntity.Name).
+		SubResource("status").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Body(kongCustomEntity).
 		Do(ctx).

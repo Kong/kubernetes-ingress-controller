@@ -45,7 +45,6 @@ func TestGatewayExperimentalConformance(t *testing.T) {
 					suite.SupportHTTPResponseHeaderModification,
 				),
 				SkipTests: []string{
-					tests.GatewayWithAttachedRoutes.ShortName,
 					tests.GatewayClassObservedGenerationBump.ShortName,
 				},
 			},

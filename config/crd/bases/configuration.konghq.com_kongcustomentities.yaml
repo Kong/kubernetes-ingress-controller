@@ -28,9 +28,6 @@ spec:
               of an object. Servers should convert recognized schemas to the latest
               internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
             type: string
-          fields:
-            description: Fields is the list of fields in the entity.
-            x-kubernetes-preserve-unknown-fields: true
           kind:
             description: 'Kind is a string value representing the REST resource this
               object represents. Servers may infer this from the endpoint the client
@@ -38,13 +35,145 @@ spec:
             type: string
           metadata:
             type: object
-          type:
-            description: Type is the type of this custom entity. Should be same as
-              the `Name` of a KongCustomEntityDefinition.
-            type: string
+          spec:
+            description: Spec is the specification of the entity.
+            properties:
+              fields:
+                description: Fields is the list of fields in the entity.
+                items:
+                  description: KongCustomEntityField defines one field of Kong custom
+                    entity.
+                  properties:
+                    key:
+                      description: Key is the key of the entity field.
+                      type: string
+                    type:
+                      description: Type is the type of the value in the field.
+                      enum:
+                      - nil
+                      - bool
+                      - int
+                      - number
+                      - string
+                      - array
+                      - object
+                      type: string
+                    value:
+                      description: Value defines the value of this field in JSON format.
+                      type: object
+                      x-kubernetes-preserve-unknown-fields: true
+                    valueFrom:
+                      description: ConfigSource is a wrapper around SecretValueFromSource.
+                      properties:
+                        secretKeyRef:
+                          description: Specifies a name and a key of a secret to refer
+                            to. The namespace is implicitly set to the one of referring
+                            object.
+                          properties:
+                            key:
+                              description: The key containing the value.
+                              type: string
+                            name:
+                              description: The secret containing the key.
+                              type: string
+                          required:
+                          - key
+                          - name
+                          type: object
+                      type: object
+                  required:
+                  - key
+                  - type
+                  type: object
+                type: array
+              ingressClass:
+                type: string
+              type:
+                description: Type is the type of this custom entity. Should be same
+                  as the `Name` of a KongCustomEntityDefinition.
+                type: string
+            required:
+            - fields
+            - ingressClass
+            - type
+            type: object
+          status:
+            description: Status is the status of the entity.
+            properties:
+              conditions:
+                items:
+                  description: "Condition contains details for one aspect of the current
+                    state of this API Resource. --- This struct is intended for direct
+                    use as an array at the field path .status.conditions.  For example,
+                    \n type FooStatus struct{ // Represents the observations of a
+                    foo's current state. // Known .status.conditions.type are: \"Available\",
+                    \"Progressing\", and \"Degraded\" // +patchMergeKey=type // +patchStrategy=merge
+                    // +listType=map // +listMapKey=type Conditions []metav1.Condition
+                    `json:\"conditions,omitempty\" patchStrategy:\"merge\" patchMergeKey:\"type\"
+                    protobuf:\"bytes,1,rep,name=conditions\"` \n // other fields }"
+                  properties:
+                    lastTransitionTime:
+                      description: lastTransitionTime is the last time the condition
+                        transitioned from one status to another. This should be when
+                        the underlying condition changed.  If that is not known, then
+                        using the time when the API field changed is acceptable.
+                      format: date-time
+                      type: string
+                    message:
+                      description: message is a human readable message indicating
+                        details about the transition. This may be an empty string.
+                      maxLength: 32768
+                      type: string
+                    observedGeneration:
+                      description: observedGeneration represents the .metadata.generation
+                        that the condition was set based upon. For instance, if .metadata.generation
+                        is currently 12, but the .status.conditions[x].observedGeneration
+                        is 9, the condition is out of date with respect to the current
+                        state of the instance.
+                      format: int64
+                      minimum: 0
+                      type: integer
+                    reason:
+                      description: reason contains a programmatic identifier indicating
+                        the reason for the condition's last transition. Producers
+                        of specific condition types may define expected values and
+                        meanings for this field, and whether the values are considered
+                        a guaranteed API. The value should be a CamelCase string.
+                        This field may not be empty.
+                      maxLength: 1024
+                      minLength: 1
+                      pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
+                      type: string
+                    status:
+                      description: status of the condition, one of True, False, Unknown.
+                      enum:
+                      - "True"
+                      - "False"
+                      - Unknown
+                      type: string
+                    type:
+                      description: type of condition in CamelCase or in foo.example.com/CamelCase.
+                        --- Many .condition.type values are consistent across resources
+                        like Available, but because arbitrary conditions can be useful
+                        (see .node.status.conditions), the ability to deconflict is
+                        important. The regex it matches is (dns1123SubdomainFmt/)?(qualifiedNameFmt)
+                      maxLength: 316
+                      pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                      type: string
+                  required:
+                  - lastTransitionTime
+                  - message
+                  - reason
+                  - status
+                  - type
+                  type: object
+                type: array
+            type: object
         required:
-        - fields
-        - type
+        - spec
+        - status
         type: object
     served: true
     storage: true
+    subresources:
+      status: {}

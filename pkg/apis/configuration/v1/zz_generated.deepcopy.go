@@ -22,6 +22,7 @@ package v1
 
 import (
 	"github.com/kong/go-kong/kong"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 )
@@ -540,7 +541,13 @@ func (in *KongPlugin) DeepCopyInto(out *KongPlugin) {
 		*out = new(ConfigSource)
 		**out = **in
 	}
-	in.ConfigJana.DeepCopyInto(&out.ConfigJana)
+	if in.ConfigJana != nil {
+		in, out := &in.ConfigJana, &out.ConfigJana
+		*out = make([]apiextensionsv1.JSON, len(*in))
+		for i := range *in {
+			(*in)[i].DeepCopyInto(&(*out)[i])
+		}
+	}
 	if in.Protocols != nil {
 		in, out := &in.Protocols, &out.Protocols
 		*out = make([]KongProtocol, len(*in))

@@ -82,8 +82,9 @@ spec:
                 type: object
             type: object
           configJana:
+            items:
+              x-kubernetes-preserve-unknown-fields: true
             type: object
-            x-kubernetes-preserve-unknown-fields: true
           consumerRef:
             description: ConsumerRef is a reference to a particular consumer.
             type: string

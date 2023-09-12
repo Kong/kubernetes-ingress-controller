@@ -395,7 +395,6 @@ type runeType int
 const (
 	runeTypeEscape runeType = iota
 	runeTypeMark
-	runeTypeBrace
 	runeTypeDigit
 	runeTypePlain
 )
@@ -403,11 +402,9 @@ const (
 // generateRewriteURIConfig parses uri with SM of four states.
 // `runeTypeEscape` indicates `\` encountered and `$` expected, the SM state will transfer
 // to `runeTypePlain`.
-// `runeTypeMark` indicates `$` encountered and `{` expected, the SM state will transfer
-// to `runeTypeBrace`.
-// `runeTypeBrace` indicates `{` encountered and digit expected, the SM state will transfer
+// `runeTypeMark` indicates `$` encountered and digit expected, the SM state will transfer
 // to `runeTypeDigit`.
-// `runeTypeDigit` indicates digit encountered and digit or `{` expected. If the following
+// `runeTypeDigit` indicates digit encountered and digit expected. If the following
 // character is still digit, the SM state will remain unchanged. Otherwise, a new capture
 // group will be created and the SM state will transfer to `runeTypePlain`.
 // `runeTypePlain` indicates the following character is plain text other than `$` and `\`.
@@ -427,33 +424,28 @@ func generateRewriteURIConfig(uri string) (string, error) {
 			lastRuneType = runeTypePlain
 
 		case runeTypeMark:
-			if char != '{' {
-				return "", fmt.Errorf("unexpected %c at pos %d", char, i)
-			}
-
-			out.WriteString("$(uri_captures[")
-			lastRuneType = runeTypeBrace
-
-		case runeTypeBrace:
 			if !unicode.IsDigit(char) {
 				return "", fmt.Errorf("unexpected %c at pos %d", char, i)
 			}
 
+			out.WriteString("$(uri_captures[")
 			out.WriteRune(char)
 			lastRuneType = runeTypeDigit
 
 		case runeTypeDigit:
 			if unicode.IsDigit(char) {
 				out.WriteRune(char)
-				break
+			} else {
+				out.WriteString("])")
+				if char == '$' {
+					lastRuneType = runeTypeMark
+				} else if char == '\\' {
+					lastRuneType = runeTypeEscape
+				} else {
+					out.WriteRune(char)
+					lastRuneType = runeTypePlain
+				}
 			}
-
-			if char != '}' {
-				return "", fmt.Errorf("unexpected %c at pos %d", char, i)
-			}
-
-			out.WriteString("])")
-			lastRuneType = runeTypePlain
 
 		case runeTypePlain:
 			if char == '$' {
@@ -464,6 +456,11 @@ func generateRewriteURIConfig(uri string) (string, error) {
 				out.WriteRune(char)
 			}
 		}
+	}
+
+	if lastRuneType == runeTypeDigit {
+		out.WriteString("])")
+		lastRuneType = runeTypePlain
 	}
 
 	if lastRuneType != runeTypePlain {

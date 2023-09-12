@@ -1608,72 +1608,44 @@ func TestGenerateRewriteURIConfig(t *testing.T) {
 		},
 		{
 			name:        "valid single digit capture group",
-			uri:         "/bar/${1}xx/yy",
+			uri:         "/bar/$1xx/yy",
 			expectedURI: "/bar/$(uri_captures[1])xx/yy",
 		},
 		{
 			name:        "valid multiple digits capture group",
-			uri:         "/bar/${12}xx/yy",
+			uri:         "/bar/$12xx/yy",
 			expectedURI: "/bar/$(uri_captures[12])xx/yy",
 		},
 		{
 			name:        "valid multiple capture groups",
-			uri:         "/bar/${1}xx/${12}yy",
+			uri:         "/bar/$1xx/$12yy",
 			expectedURI: "/bar/$(uri_captures[1])xx/$(uri_captures[12])yy",
 		},
 		{
 			name:        "valid multiple capture groups (end with capture group)",
-			uri:         "/bar/${1}xx/${12}",
+			uri:         "/bar/$1xx/$12",
 			expectedURI: "/bar/$(uri_captures[1])xx/$(uri_captures[12])",
 		},
 		{
 			name:        "valid multiple capture groups (adjacent capture groups)",
-			uri:         "/bar/${11}${12}",
+			uri:         "/bar/$11$12",
 			expectedURI: "/bar/$(uri_captures[11])$(uri_captures[12])",
 		},
 		{
-			name:          "no left brace following $",
-			uri:           "/bar/$1xxy",
-			expectedError: errors.New("unexpected 1 at pos 6"),
-			expectedURI:   "",
-		},
-		{
-			name:          "right brace following left brace",
+			name:          "left brace following $",
 			uri:           "/bar/${}11",
-			expectedError: errors.New("unexpected } at pos 7"),
+			expectedError: errors.New("unexpected { at pos 6"),
 			expectedURI:   "",
 		},
-		{
-			name:          "no right brace following digit",
-			uri:           "/bar/${12xxy",
-			expectedError: errors.New("unexpected x at pos 9"),
-			expectedURI:   "",
-		},
+
 		{
 			name:        "digits without $",
-			uri:         "/bar/123${12}",
+			uri:         "/bar/123$12",
 			expectedURI: "/bar/123$(uri_captures[12])",
-		},
-		{
-			name:        "digits after capture group",
-			uri:         "/bar/123${12}233",
-			expectedURI: "/bar/123$(uri_captures[12])233",
 		},
 		{
 			name:          "$ at end",
 			uri:           "/bar/xxxx$",
-			expectedError: errors.New("unexpected end of string"),
-			expectedURI:   "",
-		},
-		{
-			name:          "left brace at end",
-			uri:           "/bar/xxxx${",
-			expectedError: errors.New("unexpected end of string"),
-			expectedURI:   "",
-		},
-		{
-			name:          "digit at end",
-			uri:           "/bar/xxxx${1",
 			expectedError: errors.New("unexpected end of string"),
 			expectedURI:   "",
 		},
@@ -1689,12 +1661,12 @@ func TestGenerateRewriteURIConfig(t *testing.T) {
 		},
 		{
 			name:        "escaped $ after capture group",
-			uri:         "/bar/xxxx${13}\\$x",
+			uri:         "/bar/xxxx$13\\$x",
 			expectedURI: "/bar/xxxx$(uri_captures[13])$x",
 		},
 		{
 			name:        "mixed with escaped and unescaped $",
-			uri:         "/bar/xxxx\\$12/fd${33}",
+			uri:         "/bar/xxxx\\$12/fd$33",
 			expectedURI: "/bar/xxxx$12/fd$(uri_captures[33])",
 		},
 		{
@@ -1764,7 +1736,7 @@ func TestMaybeRewriteURI(t *testing.T) {
 				Parent: &netv1.Ingress{
 					ObjectMeta: metav1.ObjectMeta{
 						Annotations: map[string]string{
-							annotations.AnnotationPrefix + annotations.RewriteURIKey: "/xxx${11}yy/",
+							annotations.AnnotationPrefix + annotations.RewriteURIKey: "/xxx$11yy/",
 						},
 					},
 				},

@@ -1185,7 +1185,7 @@ func TestIngressRewriteURI(t *testing.T) {
 	t.Logf("creating an ingress for service %s with rewrite annotation", service.Name)
 	ingress := generators.NewIngressForService("/~/foo/(.*)", map[string]string{
 		"konghq.com/strip-path": "true",
-		"konghq.com/rewrite":    "/image/${1}",
+		"konghq.com/rewrite":    "/image/$1",
 	}, service)
 	ingress.Spec.IngressClassName = kong.String(consts.IngressClass)
 	for i := range ingress.Spec.Rules {
@@ -1262,7 +1262,7 @@ func TestIngressRewriteURI(t *testing.T) {
 	ingress, err = env.Cluster().Client().NetworkingV1().Ingresses(ns.Name).Get(ctx, ingress.Name, metav1.GetOptions{})
 	require.NoError(t, err)
 	t.Log("update the ingress rewrite annotation")
-	ingress.Annotations["konghq.com/rewrite"] = "/image/${2}"
+	ingress.Annotations["konghq.com/rewrite"] = "/image/$2"
 
 	_, err = env.Cluster().Client().NetworkingV1().Ingresses(ns.Name).Update(ctx, ingress, metav1.UpdateOptions{})
 	require.NoError(t, err)

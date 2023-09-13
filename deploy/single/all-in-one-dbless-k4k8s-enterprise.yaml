@@ -1039,7 +1039,79 @@ spec:
             type: object
           configJana:
             items:
-              x-kubernetes-preserve-unknown-fields: true
+              description: ArbitraryObj represents a JSON blob whose fields are represented
+                with literal values, references to external store, nested ArbitraryObj,
+                or arrays of any of the above.
+              properties:
+                name:
+                  type: string
+                value:
+                  type: string
+                valueArray:
+                  items:
+                    type: string
+                  type: array
+                valueFrom:
+                  description: ArbitraryObjSource is a Secret key reference with an
+                    optional namespace.
+                  properties:
+                    namespace:
+                      type: string
+                    secretKeyRef:
+                      description: SecretKeySelector selects a key of a Secret.
+                      properties:
+                        key:
+                          description: The key of the secret to select from.  Must
+                            be a valid secret key.
+                          type: string
+                        name:
+                          description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                            TODO: Add other useful fields. apiVersion, kind, uid?'
+                          type: string
+                        optional:
+                          description: Specify whether the Secret or its key must
+                            be defined
+                          type: boolean
+                      required:
+                      - key
+                      type: object
+                      x-kubernetes-map-type: atomic
+                  type: object
+                valueFromArray:
+                  items:
+                    description: ArbitraryObjSource is a Secret key reference with
+                      an optional namespace.
+                    properties:
+                      namespace:
+                        type: string
+                      secretKeyRef:
+                        description: SecretKeySelector selects a key of a Secret.
+                        properties:
+                          key:
+                            description: The key of the secret to select from.  Must
+                              be a valid secret key.
+                            type: string
+                          name:
+                            description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                              TODO: Add other useful fields. apiVersion, kind, uid?'
+                            type: string
+                          optional:
+                            description: Specify whether the Secret or its key must
+                              be defined
+                            type: boolean
+                        required:
+                        - key
+                        type: object
+                        x-kubernetes-map-type: atomic
+                    type: object
+                  type: array
+                valueNested:
+                  x-kubernetes-preserve-unknown-fields: true
+                valueNestedArray:
+                  items:
+                    x-kubernetes-preserve-unknown-fields: true
+                  type: array
+              type: object
             type: array
           consumerRef:
             description: ConsumerRef is a reference to a particular consumer.

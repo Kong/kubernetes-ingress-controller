@@ -99,7 +99,7 @@ KongPlugin is the Schema for the kongplugins API.
 | `disabled` _boolean_ | Disabled set if the plugin is disabled or not. |
 | `config` _[JSON](#json)_ | Config contains the plugin configuration. It's a list of keys and values required to configure the plugin. Please read the documentation of the plugin being configured to set values in here. For any plugin in Kong, anything that goes in the `config` JSON key in the Admin API request, goes into this property. Only one of `config` or `configFrom` may be used in a KongPlugin, not both at once. |
 | `configFrom` _[ConfigSource](#configsource)_ | ConfigFrom references a secret containing the plugin configuration. This should be used when the plugin configuration contains sensitive information, such as AWS credentials in the Lambda plugin or the client secret in the OIDC plugin. Only one of `config` or `configFrom` may be used in a KongPlugin, not both at once. |
-| `configJana` _[JSON](#json) array_ |  |
+| `configJana` _[ArbitraryObj](#arbitraryobj) array_ |  |
 | `plugin` _string_ | PluginName is the name of the plugin to which to apply the config. |
 | `run_on` _string_ | RunOn configures the plugin to run on the first or the second or both nodes in case of a service mesh deployment. |
 | `protocols` _[KongProtocol](#kongprotocol) array_ | Protocols configures plugin to run on requests received on specific protocols. |
@@ -108,6 +108,45 @@ KongPlugin is the Schema for the kongplugins API.
 
 
 
+
+### ArbitraryObj
+
+
+
+ArbitraryObj represents a JSON blob whose fields are represented with literal values, references to external store, nested ArbitraryObj, or arrays of any of the above.
+
+
+
+| Field | Description |
+| --- | --- |
+| `name` _string_ |  |
+| `value` _string_ |  |
+| `valueArray` _string array_ |  |
+| `valueFrom` _[ArbitraryObjSource](#arbitraryobjsource)_ |  |
+| `valueFromArray` _[ArbitraryObjSource](#arbitraryobjsource) array_ |  |
+| `valueNested` _JSON_ |  |
+| `valueNestedArray` _[JSON](#json) array_ |  |
+
+
+_Appears in:_
+- [KongPlugin](#kongplugin)
+
+### ArbitraryObjSource
+
+
+
+ArbitraryObjSource is a Secret key reference with an optional namespace.
+
+
+
+| Field | Description |
+| --- | --- |
+| `namespace` _string_ |  |
+| `secretKeyRef` _[SecretKeySelector](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#secretkeyselector-v1-core)_ |  |
+
+
+_Appears in:_
+- [ArbitraryObj](#arbitraryobj)
 
 ### ConfigSource
 

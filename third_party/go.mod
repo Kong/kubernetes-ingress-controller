@@ -12,7 +12,7 @@ require (
 	github.com/jstemmer/go-junit-report/v2 v2.0.0
 	github.com/kyoh86/looppointer v0.2.1
 	gotest.tools/gotestsum v1.10.1
-	honnef.co/go/tools v0.4.5
+	honnef.co/go/tools v0.4.6
 	k8s.io/code-generator v0.28.1
 	sigs.k8s.io/controller-runtime/tools/setup-envtest v0.0.0-20230728161957-7f0c6dc440f3
 	sigs.k8s.io/controller-tools v0.13.0
@@ -388,7 +388,7 @@ require (
 	golang.org/x/term v0.11.0 // indirect
 	golang.org/x/text v0.12.0 // indirect
 	golang.org/x/time v0.3.0 // indirect
-	golang.org/x/tools v0.12.0 // indirect
+	golang.org/x/tools v0.12.1-0.20230825192346-2191a27a6dc5 // indirect
 	golang.org/x/xerrors v0.0.0-20220907171357-04be3eba64a2 // indirect
 	google.golang.org/api v0.121.0 // indirect
 	google.golang.org/appengine v1.6.7 // indirect

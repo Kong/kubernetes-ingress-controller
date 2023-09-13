@@ -8,6 +8,7 @@ import (
 	"github.com/kong/go-kong/kong"
 	netv1 "k8s.io/api/networking/v1"
 
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/failures"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/parser/atc"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/parser/translators"
@@ -57,7 +58,13 @@ func (p *Parser) ingressRulesFromIngressV1() ingressRules {
 	}
 
 	// Translate Ingress objects into Kong Services.
-	servicesCache := p.ingressesV1ToKongServices(ingressList, icp)
+	servicesCache := IngressesV1ToKongServices(
+		p.featureFlags,
+		ingressList,
+		icp,
+		p.parsedObjectsCollector,
+		p.failuresCollector,
+	)
 	for i := range servicesCache {
 		service := servicesCache[i]
 		if err := translators.MaybeRewriteURI(&service, p.featureFlags.RewriteURIs); err != nil {
@@ -79,40 +86,52 @@ func (p *Parser) ingressRulesFromIngressV1() ingressRules {
 	return result
 }
 
-// ingressV1ToKongServicesCache is a cache of Kong Services indexed by their name.
-type kongServicesCache map[string]kongstate.Service
+// KongServicesCache is a cache of Kong Services indexed by their name.
+type KongServicesCache map[string]kongstate.Service
 
-// ingressesV1ToKongServices translates IngressV1 object into Kong Service. It inserts the Kong Service into the passed servicesCache.
-// Returns true if the passed servicesCache was updated.
-func (p *Parser) ingressesV1ToKongServices(
+// IngressesV1ToKongServices translates IngressV1 object into Kong Service, returns them indexed by name.
+// Argument parsedObjectsCollector is used to register all successfully parsed objects. In case of a failure,
+// the object is registered in failuresCollector.
+func IngressesV1ToKongServices(
+	featureFlags FeatureFlags,
 	ingresses []*netv1.Ingress,
 	icp kongv1alpha1.IngressClassParametersSpec,
-) kongServicesCache {
-	if p.featureFlags.CombinedServiceRoutes {
-		return p.ingressV1ToKongServiceCombinedRoutes(ingresses, icp)
+	parsedObjectsCollector *ObjectsCollector,
+	failuresCollector *failures.ResourceFailuresCollector,
+) KongServicesCache {
+	if featureFlags.CombinedServiceRoutes {
+		return ingressV1ToKongServiceCombinedRoutes(featureFlags, ingresses, icp, parsedObjectsCollector)
 	}
-	return p.ingressV1ToKongServiceLegacy(ingresses, icp)
+	return ingressV1ToKongServiceLegacy(featureFlags, ingresses, icp, parsedObjectsCollector, failuresCollector)
 }
 
 // ingressV1ToKongServiceLegacy translates a slice of IngressV1 object into Kong Services.
-func (p *Parser) ingressV1ToKongServiceCombinedRoutes(
+func ingressV1ToKongServiceCombinedRoutes(
+	featureFlags FeatureFlags,
 	ingresses []*netv1.Ingress,
 	icp kongv1alpha1.IngressClassParametersSpec,
-) kongServicesCache {
+	parsedObjectsCollector *ObjectsCollector,
+) KongServicesCache {
 	return translators.TranslateIngresses(ingresses, icp, translators.TranslateIngressFeatureFlags{
-		RegexPathPrefix:  p.featureFlags.RegexPathPrefix,
-		ExpressionRoutes: p.featureFlags.ExpressionRoutes,
-		CombinedServices: p.featureFlags.CombinedServices,
-	}, p.parsedObjectsCollector)
+		RegexPathPrefix:  featureFlags.RegexPathPrefix,
+		ExpressionRoutes: featureFlags.ExpressionRoutes,
+		CombinedServices: featureFlags.CombinedServices,
+	}, parsedObjectsCollector)
 }
 
 // ingressV1ToKongServiceLegacy translates a slice IngressV1 object into Kong Services.
-func (p *Parser) ingressV1ToKongServiceLegacy(ingresses []*netv1.Ingress, icp kongv1alpha1.IngressClassParametersSpec) kongServicesCache {
-	servicesCache := make(kongServicesCache)
+func ingressV1ToKongServiceLegacy(
+	featureFlags FeatureFlags,
+	ingresses []*netv1.Ingress,
+	icp kongv1alpha1.IngressClassParametersSpec,
+	parsedObjectsCollector *ObjectsCollector,
+	failuresCollector *failures.ResourceFailuresCollector,
+) KongServicesCache {
+	servicesCache := make(KongServicesCache)
 
 	for _, ingress := range ingresses {
 		ingressSpec := ingress.Spec
-		maybePrependRegexPrefixFn := translators.MaybePrependRegexPrefixForIngressV1Fn(ingress, icp.EnableLegacyRegexDetection && p.featureFlags.RegexPathPrefix)
+		maybePrependRegexPrefixFn := translators.MaybePrependRegexPrefixForIngressV1Fn(ingress, icp.EnableLegacyRegexDetection && featureFlags.RegexPathPrefix)
 		for i, rule := range ingressSpec.Rules {
 			if rule.HTTP == nil {
 				continue
@@ -124,12 +143,10 @@ func (p *Parser) ingressV1ToKongServiceLegacy(ingresses []*netv1.Ingress, icp ko
 					rulePath.PathType = &pathTypeImplementationSpecific
 				}
 
-				paths := translators.PathsFromIngressPaths(rulePath, p.featureFlags.RegexPathPrefix)
+				paths := translators.PathsFromIngressPaths(rulePath, featureFlags.RegexPathPrefix)
 				if paths == nil {
-					// registering a failure, but technically it should never happen thanks to Kubernetes API validations
-					p.registerTranslationFailure(
-						fmt.Sprintf("could not translate Ingress Path %s to Kong paths", rulePath.Path), ingress,
-					)
+					// Registering a failure, but technically it should never happen thanks to Kubernetes API validations.
+					failuresCollector.PushResourceFailure(fmt.Sprintf("could not translate Ingress Path %s to Kong paths", rulePath.Path), ingress)
 					continue
 				}
 
@@ -192,7 +209,7 @@ func (p *Parser) ingressV1ToKongServiceLegacy(ingresses []*netv1.Ingress, icp ko
 
 				service.Routes = append(service.Routes, r)
 				servicesCache[serviceName] = service
-				p.registerSuccessfullyParsedObject(ingress)
+				parsedObjectsCollector.Add(ingress) // Register successfully parsed object.
 			}
 		}
 	}

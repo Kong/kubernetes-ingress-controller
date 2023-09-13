@@ -22,7 +22,6 @@ const invalidRegexPath = "/foo[[[["
 type testCaseHTTPRouteValidation struct {
 	Name                   string
 	Route                  *gatewayv1beta1.HTTPRoute
-	WantCreateErr          bool
 	WantCreateErrSubstring string
 }
 
@@ -47,7 +46,6 @@ func commonHTTPRouteValidationTestCases(
 					},
 				},
 			},
-			WantCreateErr: false,
 		},
 		{
 			Name: "a httproute linked to a non-existent gateway fails validation",
@@ -64,7 +62,6 @@ func commonHTTPRouteValidationTestCases(
 					},
 				},
 			},
-			WantCreateErr:          true,
 			WantCreateErrSubstring: `Gateway.gateway.networking.k8s.io \"fake-gateway\" not found`,
 		},
 		{
@@ -87,7 +84,6 @@ func commonHTTPRouteValidationTestCases(
 					},
 				},
 			},
-			WantCreateErr: false,
 		},
 		{
 			Name: "a httproute with valid regex expressions for a path and a header pass validation",
@@ -113,7 +109,6 @@ func commonHTTPRouteValidationTestCases(
 					},
 				},
 			},
-			WantCreateErr: false,
 		},
 	}
 }
@@ -149,7 +144,6 @@ func invalidRegexInPathTestCase(
 				},
 			},
 		},
-		WantCreateErr:          true,
 		WantCreateErrSubstring: wantCreateErrSubstring,
 	}
 }
@@ -202,7 +196,6 @@ func TestHTTPRouteValidationWebhookExpressionsRouter(t *testing.T) {
 					},
 				},
 			},
-			WantCreateErr:          true,
 			WantCreateErrSubstring: "regex parse error:\n    bar[[\n        ^\nerror: unclosed character class)",
 		},
 	)
@@ -219,12 +212,12 @@ func setUpEnvForTestingHTTPRouteValidationWebhook(ctx context.Context, t *testin
 ) {
 	ns, cleaner := helpers.Setup(ctx, t, env)
 	namespace = ns.Name
-	t.Logf("created namespace: %q", namespace)
+	const webhookName = "kong-validations-gateway"
 	ensureAdmissionRegistration(
 		ctx,
 		t,
 		namespace,
-		"kong-validations-gateway",
+		webhookName,
 		[]admregv1.RuleWithOperations{
 			{
 				Rule: admregv1.Rule{
@@ -266,7 +259,7 @@ func setUpEnvForTestingHTTPRouteValidationWebhook(ctx context.Context, t *testin
 	t.Logf("created unmanaged gateway: %q", unmanagedGateway.Name)
 
 	t.Log("waiting for webhook service to be connective")
-	ensureWebhookServiceIsConnective(ctx, t, "kong-validations-gateway")
+	ensureWebhookServiceIsConnective(ctx, t, webhookName)
 
 	return namespace, gatewayClient, managedGateway, unmanagedGateway
 }
@@ -278,8 +271,7 @@ func testHTTPRouteValidationWebhook(
 	for _, tC := range testCases {
 		t.Run(tC.Name, func(t *testing.T) {
 			_, err := gatewayClient.GatewayV1beta1().HTTPRoutes(namespace).Create(ctx, tC.Route, metav1.CreateOptions{})
-			if tC.WantCreateErr {
-				require.NotEmpty(t, tC.WantCreateErrSubstring)
+			if tC.WantCreateErrSubstring != "" {
 				require.Error(t, err)
 				require.Contains(t, err.Error(), tC.WantCreateErrSubstring)
 			} else {

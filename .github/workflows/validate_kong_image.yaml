@@ -74,12 +74,12 @@ jobs:
       kong-enterprise-container-repo: ${{ github.event.inputs.kong-image-repo }}
       kong-enterprise-container-tag: ${{ github.event.inputs.kong-image-tag }}
 
-  on-success-close-issue:
+  on-finish-comment-or-close-issue:
     needs:
     - startup-issue-comment
     - run-e2e-tests
     - run-integration-tests
-    if: ${{ github.event.inputs.issue-number != '' }}
+    if: ${{ always() && github.event.inputs.issue-number != '' }}
     runs-on: ubuntu-latest
     env:
       GH_TOKEN: ${{ secrets.K8S_TEAM_BOT_GH_PAT }}
@@ -87,9 +87,18 @@ jobs:
       ISSUE_NUMBER: ${{ github.event.inputs.issue-number }}
     steps:
       - uses: actions/checkout@v4
-      - run: |
+      - if: ${{ !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled') }}
+        run: |
           gh issue close ${ISSUE_NUMBER} --comment \
-            'Kong Gateway validation tests **PASSED** at ${{ env.URL }} with the following parameters:
+            'Kong Gateway validation tests **PASSED** ✅ at ${{ env.URL }} with the following parameters:
+            ```json
+            ${{ toJSON(github.event.inputs) }}
+            ```
+            '
+      - if: ${{ contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') }}
+        run: |
+          gh issue comment ${ISSUE_NUMBER} --body \
+            'Kong Gateway validation tests **FAILED** ❌ at ${{ env.URL }} with the following parameters:
             ```json
             ${{ toJSON(github.event.inputs) }}
             ```

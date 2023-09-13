@@ -87,7 +87,7 @@ Adding a new version? You'll need three changes:
   annotation (default disabled).
   [#4360](https://github.com/Kong/kubernetes-ingress-controller/pull/4360)
 - `konghq.com/rewrite` annotation has been introduced to manage URI rewriting.
-  [#4360](https://github.com/Kong/kubernetes-ingress-controller/pull/4360)
+  [#4360](https://github.com/Kong/kubernetes-ingress-controller/pull/4360), [#4646](https://github.com/Kong/kubernetes-ingress-controller/pull/4646)
 - Added support for expression-based Kong routes for `TCPRoute`, `UDPRoute`,
   `TCPIngress`, and `UDPIngress`. This requires the `ExpressionRoutes` feature
   gate and a Kong 3.4+ install with `KONG_ROUTER_FLAVOR=expressions` set in the

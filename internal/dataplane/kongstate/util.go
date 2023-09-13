@@ -165,47 +165,6 @@ func protocolsToStrings(protocols []kongv1.KongProtocol) (res []string) {
 	return
 }
 
-// the need to support both array and single value fields makes this much more awkward than I'd hoped.
-// I don't think there's a good way to design the type around supporting that and having ValueNested support either.
-// we need to be able to distinguish between arrays of simple values and arrays of objects:
-//
-// {
-//     "foo": [
-//         {
-//             "fooSubA": "valueA1",
-//             "fooSubB": "valueB1",
-//         },
-//         {
-//             "fooSubA": "valueA2",
-//             "fooSubB": "valueB2",
-//         }
-//     ],
-//     "bar": [
-//         "stringA",
-//         "stringB"
-//     ]
-// }
-//
-// we could maybe use a single []*ConfigObj field with the implicit rule that objects with no names convert to
-// arrays of simple values, but that's probably more confusing than it's worth. references don't play nice with
-// arrays either, since you can't selectively make only some items in an array secret. however, since they're all
-// the same type, I wouldn't expect that to be an actual use case--if one item in an array of same-type values is
-// worth protecting, the rest should be as well.
-
-type ConfigObj struct {
-	Name             string             `json:"name"`
-	Value            interface{}        `json:"value,omitempty"`
-	ValueArray       []interface{}      `json:"valueArray,omitempty"`
-	ValueFrom        *ConfigObjSource   `json:"valueFrom,omitempty"`
-	ValueFromArray   []*ConfigObjSource `json:"valueFromArray,omitempty"`
-	ValueNested      *ConfigObj         `json:"valueNested,omitempty"`
-	ValueNestedArray []*ConfigObj       `json:"valueNestedArray,omitempty"`
-}
-
-type ConfigObjSource struct {
-	SecretKeyRef *corev1.SecretKeySelector `json:"secretKeyRef,omitempty"`
-}
-
 func kongPluginFromK8SPlugin(
 	s store.Storer,
 	k8sPlugin kongv1.KongPlugin,
@@ -232,18 +191,11 @@ func kongPluginFromK8SPlugin(
 		}
 	}
 	if len(k8sPlugin.ConfigJana) != 0 {
-		objects := make([]ConfigObj, len(k8sPlugin.ConfigJana))
-
-		for i, src := range k8sPlugin.ConfigJana {
-			var obj ConfigObj
-			err := json.Unmarshal(src.Raw, &obj)
-			if err != nil {
-				return Plugin{}, fmt.Errorf("could not parse ConfigJana: %w", err)
-			}
-			objects[i] = obj
+		newConfig, err := kongv1.ArbitraryObjsToJSONMap(k8sPlugin.ConfigJana)
+		if err != nil {
+			return Plugin{}, fmt.Errorf("could not parse ConfigJana: %w", err)
 		}
-		// TODO transform the structured config into a kong.Configuration JSON blob by dereferencing secrets and walking
-		// the object tree
+		config = kong.Configuration(newConfig)
 	}
 
 	return Plugin{

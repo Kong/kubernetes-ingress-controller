@@ -81,29 +81,27 @@ func TestPluginEssentials(t *testing.T) {
 			Name:      "teapot",
 		},
 		InstanceName: "example",
-		PluginName:   "request-termination",
-		ConfigJana: []apiextensionsv1.JSON{
+		PluginName:   "request-transformer",
+		ConfigJana: []kongv1.ArbitraryObj{
 			{
-				Raw: []byte(`
-					{
-						"name": "http_method",
-      	  	"value": "GET"
-					}`),
+				Name:  "http_method",
+				Value: "GET",
 			},
 			{
-				Raw: []byte(`
-					{
-    			    "name": "fake_field",
-    			    "valueFrom": {
-    			        "secretKeyRef": {
-    			            "name": "somesecret",
-    			            "key": "somekey"
-    			        }
-    			    }
-    			}`),
+				Name: "fake_field",
+				ValueFrom: &kongv1.ArbitraryObjSource{
+					SecretKeyRef: &corev1.SecretKeySelector{
+						LocalObjectReference: corev1.LocalObjectReference{
+							Name: "somesecret",
+						},
+						Key: "somekey",
+					},
+				},
 			},
 			{
-				Raw: []byte(`
+				Name: "add",
+				ValueNested: &apiextensionsv1.JSON{
+					Raw: []byte(`
 				{
     		    "name": "add",
     		    "valueNested": {
@@ -114,9 +112,12 @@ func TestPluginEssentials(t *testing.T) {
     		        ]
     		    }
     		}`),
+				},
 			},
 			{
-				Raw: []byte(`
+				Name: "replace",
+				ValueNested: &apiextensionsv1.JSON{
+					Raw: []byte(`
 				{
     		    "name": "replace",
     		    "valueNested": {
@@ -132,6 +133,7 @@ func TestPluginEssentials(t *testing.T) {
     		        ]
     		    }
     		}`),
+				},
 			},
 		},
 	}

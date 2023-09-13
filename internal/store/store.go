@@ -1063,56 +1063,101 @@ func mkObjFromGVK(gvk schema.GroupVersionKind) (runtime.Object, error) {
 	// Kubernetes Core APIs
 	// ----------------------------------------------------------------------------
 	case netv1.SchemeGroupVersion.WithKind("Ingress"):
-		return &netv1.Ingress{}, nil
+		return &netv1.Ingress{
+			TypeMeta: typeMetaFromGVK(gvk),
+		}, nil
 	case corev1.SchemeGroupVersion.WithKind("Service"):
-		return &corev1.Service{}, nil
+		return &corev1.Service{
+			TypeMeta: typeMetaFromGVK(gvk),
+		}, nil
 	case corev1.SchemeGroupVersion.WithKind("Secret"):
-		return &corev1.Secret{}, nil
+		return &corev1.Secret{
+			TypeMeta: typeMetaFromGVK(gvk),
+		}, nil
 	// ----------------------------------------------------------------------------
 	// Kubernetes Discovery APIs
 	// ----------------------------------------------------------------------------
 	case discoveryv1.SchemeGroupVersion.WithKind("EndpointSlice"):
-		return &discoveryv1.EndpointSlice{}, nil
+		return &discoveryv1.EndpointSlice{
+			TypeMeta: typeMetaFromGVK(gvk),
+		}, nil
 	// ----------------------------------------------------------------------------
 	// Kubernetes Gateway APIs
 	// ----------------------------------------------------------------------------
 	case gatewayv1beta1.SchemeGroupVersion.WithKind("HTTPRoute"):
-		return &gatewayv1beta1.HTTPRoute{}, nil
+		return &gatewayv1beta1.HTTPRoute{
+			TypeMeta: typeMetaFromGVK(gvk),
+		}, nil
 	case gatewayv1alpha2.SchemeGroupVersion.WithKind("GRPCRoute"):
-		return &gatewayv1alpha2.GRPCRoute{}, nil
+		return &gatewayv1alpha2.GRPCRoute{
+			TypeMeta: typeMetaFromGVK(gvk),
+		}, nil
 	case gatewayv1alpha2.SchemeGroupVersion.WithKind("TCPRoute"):
-		return &gatewayv1alpha2.TCPRoute{}, nil
+		return &gatewayv1alpha2.TCPRoute{
+			TypeMeta: typeMetaFromGVK(gvk),
+		}, nil
 	case gatewayv1alpha2.SchemeGroupVersion.WithKind("UDPRoute"):
-		return &gatewayv1alpha2.UDPRoute{}, nil
+		return &gatewayv1alpha2.UDPRoute{
+			TypeMeta: typeMetaFromGVK(gvk),
+		}, nil
 	case gatewayv1alpha2.SchemeGroupVersion.WithKind("TLSRoute"):
-		return &gatewayv1alpha2.TLSRoute{}, nil
+		return &gatewayv1alpha2.TLSRoute{
+			TypeMeta: typeMetaFromGVK(gvk),
+		}, nil
 	case gatewayv1beta1.SchemeGroupVersion.WithKind("ReferenceGrant"):
-		return &gatewayv1beta1.ReferenceGrant{}, nil
+		return &gatewayv1beta1.ReferenceGrant{
+			TypeMeta: typeMetaFromGVK(gvk),
+		}, nil
 	// ----------------------------------------------------------------------------
 	// Kong APIs
 	// ----------------------------------------------------------------------------
 	case kongv1.SchemeGroupVersion.WithKind("KongIngress"):
-		return &kongv1.KongIngress{}, nil
+		return &kongv1.KongIngress{
+			TypeMeta: typeMetaFromGVK(gvk),
+		}, nil
 	case kongv1beta1.SchemeGroupVersion.WithKind("UDPIngress"):
-		return &kongv1beta1.UDPIngress{}, nil
+		return &kongv1beta1.UDPIngress{
+			TypeMeta: typeMetaFromGVK(gvk),
+		}, nil
 	case kongv1beta1.SchemeGroupVersion.WithKind("TCPIngress"):
-		return &kongv1beta1.TCPIngress{}, nil
+		return &kongv1beta1.TCPIngress{
+			TypeMeta: typeMetaFromGVK(gvk),
+		}, nil
 	case kongv1.SchemeGroupVersion.WithKind("KongPlugin"):
-		return &kongv1.KongPlugin{}, nil
+		return &kongv1.KongPlugin{
+			TypeMeta: typeMetaFromGVK(gvk),
+		}, nil
 	case kongv1.SchemeGroupVersion.WithKind("KongClusterPlugin"):
-		return &kongv1.KongClusterPlugin{}, nil
+		return &kongv1.KongClusterPlugin{
+			TypeMeta: typeMetaFromGVK(gvk),
+		}, nil
 	case kongv1.SchemeGroupVersion.WithKind("KongConsumer"):
-		return &kongv1.KongConsumer{}, nil
+		return &kongv1.KongConsumer{
+			TypeMeta: typeMetaFromGVK(gvk),
+		}, nil
 	case kongv1beta1.SchemeGroupVersion.WithKind("KongConsumerGroup"):
-		return &kongv1beta1.KongConsumerGroup{}, nil
+		return &kongv1beta1.KongConsumerGroup{
+			TypeMeta: typeMetaFromGVK(gvk),
+		}, nil
 	case kongv1alpha1.SchemeGroupVersion.WithKind("IngressClassParameters"):
-		return &kongv1alpha1.IngressClassParameters{}, nil
+		return &kongv1alpha1.IngressClassParameters{
+			TypeMeta: typeMetaFromGVK(gvk),
+		}, nil
 	// ----------------------------------------------------------------------------
 	// Knative APIs
 	// ----------------------------------------------------------------------------
 	case knative.SchemeGroupVersion.WithKind("Ingress"):
-		return &knative.Ingress{}, nil
+		return &knative.Ingress{
+			TypeMeta: typeMetaFromGVK(gvk),
+		}, nil
 	default:
 		return nil, fmt.Errorf("%s is not a supported runtime.Object", gvk)
+	}
+}
+
+func typeMetaFromGVK(gvk schema.GroupVersionKind) metav1.TypeMeta {
+	return metav1.TypeMeta{
+		APIVersion: gvk.GroupVersion().String(),
+		Kind:       gvk.Kind,
 	}
 }

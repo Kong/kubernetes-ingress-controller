@@ -67,7 +67,7 @@ func setupControllers(
 	kongAdminAPIEndpointsNotifier configuration.EndpointsNotifier,
 	adminAPIsDiscoverer configuration.AdminAPIsDiscoverer,
 ) []ControllerDef {
-	referenceIndexers := ctrlref.NewCacheIndexers()
+	referenceIndexers := ctrlref.NewCacheIndexers(ctrl.LoggerFrom(ctx).WithName("controllers").WithName("reference-indexers"))
 
 	controllers := []ControllerDef{
 		// ---------------------------------------------------------------------------

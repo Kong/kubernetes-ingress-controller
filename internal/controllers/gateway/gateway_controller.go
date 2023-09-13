@@ -41,6 +41,10 @@ import (
 var (
 	ErrUnmanagedAnnotation = errors.New("invalid unmanaged annotation value")
 	gatewayV1beta1Group    = gatewayv1beta1.Group(gatewayv1beta1.GroupName)
+	gatewayTypeMeta        = metav1.TypeMeta{
+		APIVersion: gatewayv1beta1.GroupVersion.String(),
+		Kind:       "Gateway",
+	}
 )
 
 // -----------------------------------------------------------------------------
@@ -339,6 +343,7 @@ func (r *GatewayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	// gather the gateway object based on the reconciliation trigger. It's possible for the object
 	// to be gone at this point in which case it will be ignored.
 	gateway := new(gatewayv1beta1.Gateway)
+	gateway.TypeMeta = gatewayTypeMeta
 	if err := r.Get(ctx, req.NamespacedName, gateway); err != nil {
 		if apierrors.IsNotFound(err) {
 			gateway.Namespace = req.Namespace

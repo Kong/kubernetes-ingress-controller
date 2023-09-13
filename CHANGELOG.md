@@ -98,13 +98,18 @@ Adding a new version? You'll need three changes:
 
 ### Changes
 
-- Generate a wildcard routes to match all `HTTP` or `GRPC` requests for rules
+- Generate wildcard routes to match all `HTTP` or `GRPC` requests for rules
   in `HTTPRoute` or `GRPCRoute` if there are no matches in the rule and no
   hostnames in their parent objects.
   [#4526](https://github.com/Kong/kubernetes-ingress-controller/pull/4528)
 
 ### Fixed
 
+- Set type meta of objects when adding them to caches and reference indexers
+  to ensure that indexes of objects in reference indexers have correct object
+  kind. This ensures referece relations of objects are stored and indexed 
+  correctly.
+  [#4663](https://github.com/Kong/kubernetes-ingress-controller/pull/4663) 
 - Display Service ports on generated Kong services, instead of a static default
   value. This change is cosmetic only.
   [#4503](https://github.com/Kong/kubernetes-ingress-controller/pull/4503)

@@ -6,6 +6,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/go-logr/logr"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
@@ -320,7 +321,7 @@ func TestGatewayWithGatewayClassReconciliation(t *testing.T) {
 					Name:      svc.Name,
 				},
 				DataplaneClient:   mocks.Dataplane{},
-				ReferenceIndexers: ctrlref.NewCacheIndexers(),
+				ReferenceIndexers: ctrlref.NewCacheIndexers(logr.Discard()),
 			}
 			StartReconcilers(ctx, t, client.Scheme(), cfg, gwReconciler)
 

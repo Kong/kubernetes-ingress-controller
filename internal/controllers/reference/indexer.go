@@ -3,10 +3,12 @@ package reference
 import (
 	"fmt"
 
+	"github.com/go-logr/logr"
 	"k8s.io/client-go/tools/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/controllers"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 )
 
 const (
@@ -36,11 +38,13 @@ func objectKeyFunc(obj client.Object) string {
 // provided by cache.Indexer. It could do CRUD on reference records when referrer and referent are
 // both provided. It can also list reference records by referrer or by referent.
 type CacheIndexers struct {
+	logger  logr.Logger
 	indexer cache.Indexer
 }
 
-func NewCacheIndexers() CacheIndexers {
+func NewCacheIndexers(logger logr.Logger) CacheIndexers {
 	return CacheIndexers{
+		logger: logger,
 		indexer: cache.NewIndexer(ObjectReferenceKeyFunc,
 			cache.Indexers{
 				IndexNameReferrer: ObjectReferenceIndexerReferrer,
@@ -88,6 +92,14 @@ func ObjectReferenceIndexerReferent(obj interface{}) ([]string, error) {
 
 // SetObjectReference adds or updates a reference record between referrer and referent in reference cache.
 func (c CacheIndexers) SetObjectReference(referrer client.Object, referent client.Object) error {
+	c.logger.V(util.DebugLevel).Info("Set reference relation",
+		"referrer_kind", referrer.GetObjectKind().GroupVersionKind().String(),
+		"referrer_namespace", referrer.GetNamespace(),
+		"referrer_name", referrer.GetName(),
+		"referent_kind", referent.GetObjectKind().GroupVersionKind().String(),
+		"referent_namespace", referent.GetNamespace(),
+		"referent_name", referent.GetName(),
+	)
 	ref := &ObjectReference{
 		Referrer: referrer,
 		Referent: referent,
@@ -97,6 +109,14 @@ func (c CacheIndexers) SetObjectReference(referrer client.Object, referent clien
 
 // DeleteObjectReference deletes the reference record between referrer and referent from reference cache.
 func (c CacheIndexers) DeleteObjectReference(referrer client.Object, referent client.Object) error {
+	c.logger.V(util.DebugLevel).Info("Delete reference relation",
+		"referrer_kind", referrer.GetObjectKind().GroupVersionKind().String(),
+		"referrer_namespace", referrer.GetNamespace(),
+		"referrer_name", referrer.GetName(),
+		"referent_kind", referent.GetObjectKind().GroupVersionKind().String(),
+		"referent_namespace", referent.GetNamespace(),
+		"referent_name", referent.GetName(),
+	)
 	ref := &ObjectReference{
 		Referrer: referrer,
 		Referent: referent,
@@ -161,6 +181,11 @@ func (c CacheIndexers) DeleteObjectIfNotReferred(obj client.Object, dataplaneCli
 		return err
 	}
 	if !referred {
+		c.logger.V(util.DebugLevel).Info("Delete object from cache because it is no longer referred",
+			"kind", obj.GetObjectKind(),
+			"namespace", obj.GetNamespace(),
+			"name", obj.GetName(),
+		)
 		return dataplaneClient.DeleteObject(obj)
 	}
 	return nil

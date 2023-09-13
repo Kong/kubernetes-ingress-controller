@@ -9,6 +9,7 @@ import (
 	"github.com/go-logr/logr"
 	netv1 "k8s.io/api/networking/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	k8stypes "k8s.io/apimachinery/pkg/types"
@@ -50,6 +51,11 @@ type Knativev1alpha1IngressReconciler struct {
 	CacheSyncTimeout           time.Duration
 
 	ReferenceIndexers ctrlref.CacheIndexers
+}
+
+var knativeIngressTypeMeta = metav1.TypeMeta{
+	APIVersion: knativev1alpha1.SchemeGroupVersion.String(),
+	Kind:       "Ingress",
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -125,6 +131,7 @@ func (r *Knativev1alpha1IngressReconciler) Reconcile(ctx context.Context, req ct
 
 	// get the relevant object
 	obj := new(knativev1alpha1.Ingress)
+	obj.TypeMeta = knativeIngressTypeMeta
 	if err := r.Get(ctx, req.NamespacedName, obj); err != nil {
 		if apierrors.IsNotFound(err) {
 			obj.Namespace = req.Namespace

@@ -27,6 +27,10 @@ func UpdateReferencesToSecret(
 ) error {
 	for nsName := range referencedSecretNameMap {
 		secret := &corev1.Secret{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: VersionV1,
+				Kind:       KindSecret,
+			},
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: nsName.Namespace,
 				Name:      nsName.Name,
@@ -117,6 +121,11 @@ func removeOutdatedReferencesToSecret(
 func DeleteReferencesByReferrer(indexers CacheIndexers, dataplaneClient controllers.DataPlaneClient, referrer client.Object) error {
 	referents, err := indexers.ListReferredObjects(referrer)
 	if err != nil {
+		indexers.logger.Error(err, "failed to list referred objects",
+			"referrer_kind", referrer.GetObjectKind().GroupVersionKind().String(),
+			"referrer_namespace", referrer.GetNamespace(),
+			"referrer_name", referrer.GetName(),
+		)
 		return err
 	}
 

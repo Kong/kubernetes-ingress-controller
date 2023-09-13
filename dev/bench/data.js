@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1694635420093,
+  "lastUpdate": 1694635422272,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -107754,6 +107754,66 @@ window.BENCHMARK_DATA = {
             "value": 0,
             "unit": "allocs/op",
             "extra": "12153770 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "tao.yi@konghq.com",
+            "name": "Tao Yi",
+            "username": "randmonkey"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "663ed219c48c1e02b07d624e3439ab20332510a9",
+          "message": "fix: add type meta to cache and references (#4663)\n\nSet type meta when saving objects to the store cache and references     \r\nindex. This information is otherwise stripped by client-go due to\r\nhttps://github.com/kubernetes/kubernetes/issues/3030.",
+          "timestamp": "2023-09-13T13:00:05-07:00",
+          "tree_id": "ac30b527ee2f0c1c8c8c44fe26e850bbb886903f",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/663ed219c48c1e02b07d624e3439ab20332510a9"
+        },
+        "date": 1694635406631,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - ns/op",
+            "value": 62898,
+            "unit": "ns/op",
+            "extra": "17298 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - B/op",
+            "value": 11107,
+            "unit": "B/op",
+            "extra": "17298 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - allocs/op",
+            "value": 12,
+            "unit": "allocs/op",
+            "extra": "17298 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDefaultContentToDBLessConfigConverter_Convert - ns/op",
+            "value": 98.67,
+            "unit": "ns/op",
+            "extra": "13227432 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDefaultContentToDBLessConfigConverter_Convert - B/op",
+            "value": 0,
+            "unit": "B/op",
+            "extra": "13227432 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDefaultContentToDBLessConfigConverter_Convert - allocs/op",
+            "value": 0,
+            "unit": "allocs/op",
+            "extra": "13227432 times\n2 procs"
           }
         ]
       },

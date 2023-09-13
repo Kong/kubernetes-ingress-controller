@@ -9,6 +9,7 @@ import (
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	ktfkong "github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/kong"
 	"github.com/sirupsen/logrus"
+	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/cmd/rootcmd"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/manager"
@@ -130,5 +131,8 @@ func SetupLoggers(logLevel string, logFormat string, logReduceRedundancy bool) (
 	}
 
 	deprecated, logger, err := manager.SetupLoggers(&config, output)
+	// Prevents controller-runtime from logging
+	// [controller-runtime] log.SetLogger(...) was never called; logs will not be displayed.
+	ctrllog.SetLogger(logger)
 	return deprecated, logger, "", err
 }

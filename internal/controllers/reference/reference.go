@@ -129,12 +129,6 @@ func DeleteReferencesByReferrer(indexers CacheIndexers, dataplaneClient controll
 		return err
 	}
 
-	indexers.logger.Info("found referents of object",
-		"referrer_kind", referrer.GetObjectKind().GroupVersionKind().String(),
-		"referrer_namespace", referrer.GetNamespace(),
-		"referrer_name", referrer.GetName(),
-		"referent_count", len(referents),
-	)
 	// delete(gc) the reference record between referrer and referent.
 	for _, referent := range referents {
 		err := indexers.DeleteObjectReference(referrer, referent)

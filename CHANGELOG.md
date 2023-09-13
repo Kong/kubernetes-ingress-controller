@@ -108,7 +108,8 @@ Adding a new version? You'll need three changes:
 - Set type meta of objects when adding them to caches and reference indexers
   to ensure that indexes of objects in reference indexers have correct object
   kind. This ensures referece relations of objects are stored and indexed 
-  correctly. 
+  correctly.
+  [#4663](https://github.com/Kong/kubernetes-ingress-controller/pull/4663) 
 - Display Service ports on generated Kong services, instead of a static default
   value. This change is cosmetic only.
   [#4503](https://github.com/Kong/kubernetes-ingress-controller/pull/4503)

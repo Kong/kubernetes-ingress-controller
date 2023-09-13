@@ -14,13 +14,13 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	credsvalidation "github.com/kong/kubernetes-ingress-controller/v2/internal/admission/validation/consumers/credentials"
+	gatewayvalidation "github.com/kong/kubernetes-ingress-controller/v2/internal/admission/validation/gateway"
+	ingressvalidation "github.com/kong/kubernetes-ingress-controller/v2/internal/admission/validation/ingress"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
 	gatewaycontroller "github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/gateway"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/parser"
-	credsvalidation "github.com/kong/kubernetes-ingress-controller/v2/internal/validation/consumers/credentials"
-	gatewayvalidators "github.com/kong/kubernetes-ingress-controller/v2/internal/validation/gateway"
-	ingressvalidator "github.com/kong/kubernetes-ingress-controller/v2/internal/validation/ingress"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/versions"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
 	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1beta1"
@@ -431,7 +431,7 @@ func (validator KongHTTPValidator) ValidateHTTPRoute(
 	if routesSvc, ok := validator.AdminAPIServicesProvider.GetRoutesService(); ok {
 		routeValidator = routesSvc
 	}
-	return gatewayvalidators.ValidateHTTPRoute(
+	return gatewayvalidation.ValidateHTTPRoute(
 		ctx, routeValidator, validator.ParserFeatures, validator.KongVersion, &httproute, managedGateways...,
 	)
 }
@@ -449,7 +449,7 @@ func (validator KongHTTPValidator) ValidateIngress(
 	if routesSvc, ok := validator.AdminAPIServicesProvider.GetRoutesService(); ok {
 		routeValidator = routesSvc
 	}
-	return ingressvalidator.ValidateIngress(ctx, routeValidator, validator.ParserFeatures, validator.KongVersion, &ingress)
+	return ingressvalidation.ValidateIngress(ctx, routeValidator, validator.ParserFeatures, validator.KongVersion, &ingress)
 }
 
 type routeValidator interface {

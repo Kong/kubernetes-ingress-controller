@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1694702816927,
+  "lastUpdate": 1694712723120,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -109074,6 +109074,66 @@ window.BENCHMARK_DATA = {
             "value": 0,
             "unit": "allocs/op",
             "extra": "12919770 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "49699333+dependabot[bot]@users.noreply.github.com",
+            "name": "dependabot[bot]",
+            "username": "dependabot[bot]"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "1932364721127713af252c33552ffcfcfd8396bc",
+          "message": "chore(deps): bump k8s.io/code-generator in /third_party (#4667)\n\nBumps [k8s.io/code-generator](https://github.com/kubernetes/code-generator) from 0.28.1 to 0.28.2.\r\n- [Commits](https://github.com/kubernetes/code-generator/compare/v0.28.1...v0.28.2)\r\n\r\n---\r\nupdated-dependencies:\r\n- dependency-name: k8s.io/code-generator\r\n  dependency-type: direct:production\r\n  update-type: version-update:semver-patch\r\n...\r\n\r\nSigned-off-by: dependabot[bot] <support@github.com>\r\nCo-authored-by: dependabot[bot] <49699333+dependabot[bot]@users.noreply.github.com>",
+          "timestamp": "2023-09-14T19:28:05+02:00",
+          "tree_id": "eac3c6c4f3afeb4dfb3567cea58cb9b25cc3dfa6",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/1932364721127713af252c33552ffcfcfd8396bc"
+        },
+        "date": 1694712710631,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - ns/op",
+            "value": 64253,
+            "unit": "ns/op",
+            "extra": "18050 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - B/op",
+            "value": 11098,
+            "unit": "B/op",
+            "extra": "18050 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - allocs/op",
+            "value": 12,
+            "unit": "allocs/op",
+            "extra": "18050 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDefaultContentToDBLessConfigConverter_Convert - ns/op",
+            "value": 102.5,
+            "unit": "ns/op",
+            "extra": "11714808 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDefaultContentToDBLessConfigConverter_Convert - B/op",
+            "value": 0,
+            "unit": "B/op",
+            "extra": "11714808 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDefaultContentToDBLessConfigConverter_Convert - allocs/op",
+            "value": 0,
+            "unit": "allocs/op",
+            "extra": "11714808 times\n2 procs"
           }
         ]
       }

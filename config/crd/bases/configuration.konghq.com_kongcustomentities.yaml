@@ -39,31 +39,19 @@ spec:
             description: Spec is the specification of the entity.
             properties:
               fields:
-                description: Fields is the list of fields in the entity.
+                description: Fields is the fields of the custom entity, in JSON format.
+                type: object
+                x-kubernetes-preserve-unknown-fields: true
+              patches:
+                description: Patches stores fields coming from external resources
+                  (e.g. secrets) adding to to a certain JSON path of the entity.
                 items:
-                  description: KongCustomEntityField defines one field of Kong custom
-                    entity.
+                  description: ConfigSourcePatch is a patch to add values from external
+                    resources (e.g. secrets) to a certain JSON path.
                   properties:
-                    key:
-                      description: Key is the key of the entity field.
-                      type: string
-                    type:
-                      description: Type is the type of the value in the field.
-                      enum:
-                      - nil
-                      - bool
-                      - int
-                      - number
-                      - string
-                      - array
-                      - object
-                      type: string
-                    value:
-                      description: Value defines the value of this field in JSON format.
-                      type: object
-                      x-kubernetes-preserve-unknown-fields: true
-                    valueFrom:
-                      description: ConfigSource is a wrapper around SecretValueFromSource.
+                    configSource:
+                      description: ConfigSource is the source secret name and key
+                        of the value.
                       properties:
                         secretKeyRef:
                           description: Specifies a name and a key of a secret to refer
@@ -81,26 +69,34 @@ spec:
                           - name
                           type: object
                       type: object
+                    path:
+                      description: Path is the JSON path of imported configurations
+                        to add to.
+                      type: string
                   required:
-                  - key
-                  - type
+                  - path
                   type: object
                 type: array
-              ingressClass:
-                type: string
               type:
                 description: Type is the type of this custom entity. Should be same
                   as the `Name` of a KongCustomEntityDefinition.
                 type: string
             required:
             - fields
-            - ingressClass
             - type
             type: object
           status:
             description: Status is the status of the entity.
             properties:
               conditions:
+                default:
+                - lastTransitionTime: "1970-01-01T00:00:00Z"
+                  message: Waiting for controller
+                  reason: Pending
+                  status: Unknown
+                  type: Programmed
+                description: "Conditions describe the current conditions of the KongCustomEntityStatus.
+                  \n Known condition types are: \n * \"Programmed\""
                 items:
                   description: "Condition contains details for one aspect of the current
                     state of this API Resource. --- This struct is intended for direct
@@ -167,11 +163,14 @@ spec:
                   - status
                   - type
                   type: object
+                maxItems: 8
                 type: array
+                x-kubernetes-list-map-keys:
+                - type
+                x-kubernetes-list-type: map
             type: object
         required:
         - spec
-        - status
         type: object
     served: true
     storage: true

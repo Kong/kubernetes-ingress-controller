@@ -268,6 +268,8 @@ func (p *Parser) BuildKongConfig() KongConfigBuildingResult {
 		}
 	}
 
+	p.renderCustomEntities()
+
 	if p.featureFlags.FillIDs {
 		// generate IDs for Kong entities
 		result.FillIDs(p.logger)

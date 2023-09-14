@@ -252,6 +252,31 @@ func setupControllers(
 				// StatusQueue:       kubernetesStatusQueue,
 			},
 		},
+		{
+			// TODO: add feature gates to turn on/off
+			Enabled: true,
+			Controller: &configuration.KongV1Alpha1KongCustomEntityReconciler{
+				Client:                     mgr.GetClient(),
+				Log:                        ctrl.Log.WithName("controllers").WithName("KongCustomEntity"),
+				Scheme:                     mgr.GetScheme(),
+				DataplaneClient:            dataplaneClient,
+				IngressClassName:           c.IngressClassName,
+				DisableIngressClassLookups: !c.IngressClassNetV1Enabled,
+				CacheSyncTimeout:           c.CacheSyncTimeout,
+				// TODO: add reference to secrets
+				ReferenceIndexers: referenceIndexers,
+			},
+		},
+		{
+			Enabled: true,
+			Controller: &configuration.KongV1Alpha1KongCustomEntityDefinitionReconciler{
+				Client:           mgr.GetClient(),
+				Log:              ctrl.Log.WithName("controllers").WithName("KongCustomEntityDefinition"),
+				Scheme:           mgr.GetScheme(),
+				DataplaneClient:  dataplaneClient,
+				CacheSyncTimeout: c.CacheSyncTimeout,
+			},
+		},
 		// ---------------------------------------------------------------------------
 		// Other Controllers
 		// ---------------------------------------------------------------------------

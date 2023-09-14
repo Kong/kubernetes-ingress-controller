@@ -12,6 +12,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/controllers"
 	ctrlref "github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/reference"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
+	kongv1alpha1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1alpha1"
 	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1beta1"
 )
 
@@ -39,6 +40,8 @@ func updateReferredObjects(
 		referredSecretList = listKongConsumerReferredSecrets(obj)
 	case *kongv1beta1.TCPIngress:
 		referredSecretList = listTCPIngressReferredSecrets(obj)
+	case *kongv1alpha1.KongCustomEntity:
+		referredSecretList = listKongCustomEntityReferredSecrets(obj)
 	}
 
 	for _, nsName := range referredSecretList {
@@ -127,6 +130,20 @@ func listTCPIngressReferredSecrets(tcpIngress *kongv1beta1.TCPIngress) []k8stype
 			Name:      tls.SecretName,
 		}
 		referredSecretNames = append(referredSecretNames, nsName)
+	}
+	return referredSecretNames
+}
+
+func listKongCustomEntityReferredSecrets(customEntity *kongv1alpha1.KongCustomEntity) []k8stypes.NamespacedName {
+	referredSecretNames := make([]k8stypes.NamespacedName, 0, len(customEntity.Spec.Patches))
+	for _, patch := range customEntity.Spec.Patches {
+		if patch.ConfigSource != nil {
+			nsName := k8stypes.NamespacedName{
+				Namespace: customEntity.Namespace,
+				Name:      patch.ConfigSource.SecretValue.Secret,
+			}
+			referredSecretNames = append(referredSecretNames, nsName)
+		}
 	}
 	return referredSecretNames
 }

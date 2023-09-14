@@ -10,6 +10,8 @@ resources:
 - bases/configuration.konghq.com_kongingresses.yaml
 - bases/configuration.konghq.com_kongplugins.yaml
 - bases/configuration.konghq.com_ingressclassparameterses.yaml
+- bases/configuration.konghq.com_kongcustomentities.yaml
+- bases/configuration.konghq.com_kongcustomentitydefinitions.yaml
 #+kubebuilder:scaffold:crdkustomizeresource
 
 patchesStrategicMerge:

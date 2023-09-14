@@ -105,6 +105,9 @@ Adding a new version? You'll need three changes:
 
 ### Fixed
 
+- Do not parse error body when failed to get response from reloading declartive
+  configurations to produce proper error log in such situations,
+  [#4666](https://github.com/Kong/kubernetes-ingress-controller/pull/4666) 
 - Set type meta of objects when adding them to caches and reference indexers
   to ensure that indexes of objects in reference indexers have correct object
   kind. This ensures referece relations of objects are stored and indexed 

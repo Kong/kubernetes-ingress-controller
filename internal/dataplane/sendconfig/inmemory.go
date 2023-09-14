@@ -66,6 +66,11 @@ func (s UpdateStrategyInMemory) Update(ctx context.Context, targetState ContentW
 
 	flattenErrors := shouldUseFlattenedErrors(s.version)
 	if errBody, err := s.configService.ReloadDeclarativeRawConfig(ctx, bytes.NewReader(config), true, flattenErrors); err != nil {
+		if len(errBody) == 0 {
+			// if we failed to get response in reloading config, we put the error from reloading in the parseErr return value
+			// to generate a proper error log.
+			return err, nil, err
+		}
 		resourceErrors, parseErr := parseFlatEntityErrors(errBody, s.log)
 		return err, resourceErrors, parseErr
 	}

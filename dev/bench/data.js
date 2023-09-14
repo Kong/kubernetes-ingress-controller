@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1694678132585,
+  "lastUpdate": 1694679698363,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -108114,6 +108114,66 @@ window.BENCHMARK_DATA = {
             "value": 0,
             "unit": "allocs/op",
             "extra": "10280053 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "tao.yi@konghq.com",
+            "name": "Tao Yi",
+            "username": "randmonkey"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "def00be5c00d25571b2df3a89c40efa0aad834b6",
+          "message": "Update internal/dataplane/sendconfig/inmemory.go\n\nCo-authored-by: Jakub Warczarek <jakub.warczarek@konghq.com>",
+          "timestamp": "2023-09-14T16:20:22+08:00",
+          "tree_id": "9beb8a74022e9103b0b22dfe824237bb44342a71",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/def00be5c00d25571b2df3a89c40efa0aad834b6"
+        },
+        "date": 1694679685016,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - ns/op",
+            "value": 67467,
+            "unit": "ns/op",
+            "extra": "18500 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - B/op",
+            "value": 11091,
+            "unit": "B/op",
+            "extra": "18500 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - allocs/op",
+            "value": 12,
+            "unit": "allocs/op",
+            "extra": "18500 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDefaultContentToDBLessConfigConverter_Convert - ns/op",
+            "value": 90.51,
+            "unit": "ns/op",
+            "extra": "13048072 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDefaultContentToDBLessConfigConverter_Convert - B/op",
+            "value": 0,
+            "unit": "B/op",
+            "extra": "13048072 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDefaultContentToDBLessConfigConverter_Convert - allocs/op",
+            "value": 0,
+            "unit": "allocs/op",
+            "extra": "13048072 times\n2 procs"
           }
         ]
       }

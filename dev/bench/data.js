@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1694683273464,
+  "lastUpdate": 1694686355454,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -108474,6 +108474,66 @@ window.BENCHMARK_DATA = {
             "value": 0,
             "unit": "allocs/op",
             "extra": "12663399 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "tao.yi@konghq.com",
+            "name": "Tao Yi",
+            "username": "randmonkey"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "ac90e1e2e674a3f369adc6152bf9304eb58d24b9",
+          "message": "fix(log): do not parse error body when response is empty in reloading config (#4666)\n\n* fix(log): do not parse error body when response is empty in reloading config\r\n\r\n* skip parsing when response is empty in parsing entity errors\r\n\r\n* add unit test",
+          "timestamp": "2023-09-14T10:09:05Z",
+          "tree_id": "83606f7314deee722adb52f127a9e53d0f1cc04a",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/ac90e1e2e674a3f369adc6152bf9304eb58d24b9"
+        },
+        "date": 1694686342292,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - ns/op",
+            "value": 80026,
+            "unit": "ns/op",
+            "extra": "16722 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - B/op",
+            "value": 11100,
+            "unit": "B/op",
+            "extra": "16722 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - allocs/op",
+            "value": 12,
+            "unit": "allocs/op",
+            "extra": "16722 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDefaultContentToDBLessConfigConverter_Convert - ns/op",
+            "value": 97.82,
+            "unit": "ns/op",
+            "extra": "11943236 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDefaultContentToDBLessConfigConverter_Convert - B/op",
+            "value": 0,
+            "unit": "B/op",
+            "extra": "11943236 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDefaultContentToDBLessConfigConverter_Convert - allocs/op",
+            "value": 0,
+            "unit": "allocs/op",
+            "extra": "11943236 times\n2 procs"
           }
         ]
       }

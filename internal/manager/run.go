@@ -23,6 +23,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/adminapi"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/clients"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/gateway"
+	ctrlref "github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/reference"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/configfetcher"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/parser"
@@ -163,12 +164,23 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 		c.UpdateStatus,
 	)
 
+	referenceIndexers := ctrlref.NewCacheIndexers(ctrl.LoggerFrom(ctx).WithName("controllers").WithName("reference-indexers"))
+	cache := store.NewCacheStores()
 	setupLog.Info("Starting Admission Server")
-	if err := setupAdmissionServer(ctx, c, clientsManager, mgr.GetClient(), deprecatedLogger, parserFeatureFlags, kongSemVersion); err != nil {
+	if err := setupAdmissionServer(
+		ctx,
+		c,
+		clientsManager,
+		mgr.GetClient(),
+		referenceIndexers,
+		cache,
+		deprecatedLogger,
+		parserFeatureFlags,
+		kongSemVersion,
+	); err != nil {
 		return err
 	}
 
-	cache := store.NewCacheStores()
 	configParser, err := parser.NewParser(
 		deprecatedLogger,
 		store.New(cache, c.IngressClassName, deprecatedLogger),
@@ -227,6 +239,7 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 		ctx,
 		mgr,
 		dataplaneClient,
+		referenceIndexers,
 		dataplaneAddressFinder,
 		udpDataplaneAddressFinder,
 		kubernetesStatusQueue,

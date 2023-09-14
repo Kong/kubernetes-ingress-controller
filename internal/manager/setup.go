@@ -26,9 +26,11 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/adminapi"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/admission"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/clients"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/reference"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/parser"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/manager/scheme"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 	dataplaneutil "github.com/kong/kubernetes-ingress-controller/v2/internal/util/dataplane"
 )
@@ -172,6 +174,8 @@ func setupAdmissionServer(
 	managerConfig *Config,
 	clientsManager *clients.AdminAPIClientsManager,
 	managerClient client.Client,
+	referenceIndexers reference.CacheIndexers,
+	cache store.CacheStores,
 	deprecatedLogger logrus.FieldLogger,
 	parserFeatures parser.FeatureFlags,
 	kongVersion semver.Version,
@@ -193,7 +197,9 @@ func setupAdmissionServer(
 			parserFeatures,
 			kongVersion,
 		),
-		Logger: logger,
+		ReferenceIndexers: referenceIndexers,
+		Cache:             cache,
+		Logger:            logger,
 	}, logger)
 	if err != nil {
 		return err

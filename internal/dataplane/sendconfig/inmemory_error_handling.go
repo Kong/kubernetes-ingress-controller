@@ -52,8 +52,14 @@ type FlatFieldError struct {
 // parseFlatEntityErrors takes a Kong /config error response body and parses its "fields.flattened_errors" value
 // into errors associated with Kubernetes resources.
 func parseFlatEntityErrors(body []byte, log logrus.FieldLogger) ([]ResourceError, error) {
+	// Directly return here to avoid the misleading "could not unmarshal config" message appear in logs.
+	if len(body) == 0 {
+		return nil, nil
+	}
+
 	var resourceErrors []ResourceError
 	var configError ConfigError
+
 	err := json.Unmarshal(body, &configError)
 	if err != nil {
 		return resourceErrors, fmt.Errorf("could not unmarshal config error: %w", err)

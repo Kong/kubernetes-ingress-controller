@@ -29,56 +29,51 @@ type KongCustomEntity struct {
 	// Spec is the specification of the entity.
 	Spec KongCustomEntitySpec `json:"spec"`
 	// Status is the status of the entity.
-	Status KongCustomEntityStatus `json:"status"`
+	Status KongCustomEntityStatus `json:"status,omitempty"`
 }
 
 // +k8s:deepcopy-gen:
 
 // KongCustomEntitySpec defines the specification of a Kong custom entity.
 type KongCustomEntitySpec struct {
-	IngressClassName string `json:"ingressClass"`
 	// +kubebuilder:validation:Required
 	// Type is the type of this custom entity.
 	// Should be same as the `Name` of a KongCustomEntityDefinition.
 	Type string `json:"type"`
-	// Fields is the list of fields in the entity.
-	Fields []KongCustomEntityField `json:"fields"`
+	// +kubebuilder:validation:Type=object
+	// Fields is the fields of the custom entity, in JSON format.
+	Fields apiextensionsv1.JSON `json:"fields"`
+	// Patches stores fields coming from external resources (e.g. secrets) adding to
+	// to a certain JSON path of the entity.
+	Patches []ConfigSourcePatch `json:"patches,omitempty"`
 }
-
-// KongEntityFieldType defines possible type of field in Kong custom entity.
-type KongEntityFieldType string
-
-const (
-	KongEntityFieldTypeNil     KongEntityFieldType = "nil"
-	KongEntityFieldTypeBoolean KongEntityFieldType = "bool"
-	KongEntityFieldTypeInteger KongEntityFieldType = "int"
-	KongEntityFieldTypeNumber  KongEntityFieldType = "number"
-	KongEntityFieldTypeString  KongEntityFieldType = "string"
-	KongEntityFieldTypeArray   KongEntityFieldType = "array"
-	KongEntityFieldTypeObject  KongEntityFieldType = "object"
-)
 
 // +k8s:deepcopy-gen:
 
-// KongCustomEntityField defines one field of Kong custom entity.
-type KongCustomEntityField struct {
-	// Key is the key of the entity field.
+// ConfigSourcePatch is a patch to add values from external resources (e.g. secrets)
+// to a certain JSON path.
+type ConfigSourcePatch struct {
 	// +kubebuilder:validation:Required
-	Key string `json:"key"`
-	// +kubebuilder:validation:Required
-	// +kubebuilder:validation:Enum:=nil;bool;int;number;string;array;object
-	// Type is the type of the value in the field.
-	Type KongEntityFieldType `json:"type"`
-	// +kubebuilder:validation:Type=object
-	// Value defines the value of this field in JSON format.
-	Value     apiextensionsv1.JSON `json:"value,omitempty"`
-	ValueFrom *kongv1.ConfigSource `json:"valueFrom,omitempty"`
+	// Path is the JSON path of imported configurations to add to.
+	Path string `json:"path"`
+	// ConfigSource is the source secret name and key of the value.
+	ConfigSource *kongv1.ConfigSource `json:"configSource,omitempty"`
 }
 
 // +k8s:deepcopy-gen:
 
 // KongCustomEntityStatus defines the status of a Kong custom entity.
 type KongCustomEntityStatus struct {
+	// Conditions describe the current conditions of the KongCustomEntityStatus.
+	//
+	// Known condition types are:
+	//
+	// * "Programmed"
+	//
+	// +listType=map
+	// +listMapKey=type
+	// +kubebuilder:validation:MaxItems=8
+	// +kubebuilder:default={{type: "Programmed", status: "Unknown", reason:"Pending", message:"Waiting for controller", lastTransitionTime: "1970-01-01T00:00:00Z"}}
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
 
@@ -139,4 +134,11 @@ type KongCustomEntityDefinitionList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []KongCustomEntityDefinition `json:"items"`
+}
+
+func init() {
+	SchemeBuilder.Register(
+		&KongCustomEntity{}, &KongCustomEntityList{},
+		&KongCustomEntityDefinition{}, &KongCustomEntityDefinitionList{},
+	)
 }

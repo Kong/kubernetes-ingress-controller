@@ -122,7 +122,7 @@ ConfigSource is a wrapper around SecretValueFromSource.
 
 
 _Appears in:_
-- [KongCustomEntityField](#kongcustomentityfield)
+- [ConfigSourcePatch](#configsourcepatch)
 - [KongPlugin](#kongplugin)
 
 
@@ -336,6 +336,23 @@ KongCustomEntityDefinition represents definition of a custom entity type in Kong
 
 
 
+### ConfigSourcePatch
+
+
+
+ConfigSourcePatch is a patch to add values from external resources (e.g. secrets) to a certain JSON path.
+
+
+
+| Field | Description |
+| --- | --- |
+| `path` _string_ | Path is the JSON path of imported configurations to add to. |
+| `configSource` _[ConfigSource](#configsource)_ | ConfigSource is the source secret name and key of the value. |
+
+
+_Appears in:_
+- [KongCustomEntitySpec](#kongcustomentityspec)
+
 ### IngressClassParametersSpec
 
 
@@ -372,25 +389,6 @@ KongCustomEntityDefinitionSpec is the specification of KongCustomEntityDefinitio
 _Appears in:_
 - [KongCustomEntityDefinition](#kongcustomentitydefinition)
 
-### KongCustomEntityField
-
-
-
-KongCustomEntityField defines one field of Kong custom entity.
-
-
-
-| Field | Description |
-| --- | --- |
-| `key` _string_ | Key is the key of the entity field. |
-| `type` _[KongEntityFieldType](#kongentityfieldtype)_ | Type is the type of the value in the field. |
-| `value` _[JSON](#json)_ | Value defines the value of this field in JSON format. |
-| `valueFrom` _[ConfigSource](#configsource)_ |  |
-
-
-_Appears in:_
-- [KongCustomEntitySpec](#kongcustomentityspec)
-
 ### KongCustomEntitySpec
 
 
@@ -401,28 +399,15 @@ KongCustomEntitySpec defines the specification of a Kong custom entity.
 
 | Field | Description |
 | --- | --- |
-| `ingressClass` _string_ |  |
 | `type` _string_ | Type is the type of this custom entity. Should be same as the `Name` of a KongCustomEntityDefinition. |
-| `fields` _[KongCustomEntityField](#kongcustomentityfield) array_ | Fields is the list of fields in the entity. |
+| `fields` _[JSON](#json)_ | Fields is the fields of the custom entity, in JSON format. |
+| `patches` _[ConfigSourcePatch](#configsourcepatch) array_ | Patches stores fields coming from external resources (e.g. secrets) adding to to a certain JSON path of the entity. |
 
 
 _Appears in:_
 - [KongCustomEntity](#kongcustomentity)
 
 
-
-### KongEntityFieldType
-
-_Underlying type:_ `string`
-
-KongEntityFieldType defines possible type of field in Kong custom entity.
-
-
-
-
-
-_Appears in:_
-- [KongCustomEntityField](#kongcustomentityfield)
 
 ### KongEntityForeignKey
 

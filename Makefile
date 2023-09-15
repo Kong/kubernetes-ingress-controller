@@ -44,7 +44,7 @@ _download_tool:
 		GOBIN=$(PROJECT_DIR)/bin go generate -tags=third_party ./$(TOOL).go )
 
 .PHONY: tools
-tools: controller-gen kustomize client-gen golangci-lint gotestsum crd-ref-docs skaffold looppointer
+tools: controller-gen kustomize client-gen golangci-lint gotestsum crd-ref-docs skaffold looppointer.download staticcheck.download
 
 CONTROLLER_GEN = $(PROJECT_DIR)/bin/controller-gen
 .PHONY: controller-gen

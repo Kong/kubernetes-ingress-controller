@@ -21,7 +21,7 @@ require (
 )
 
 // Note: needed for skaffold
-exclude github.com/docker/docker v23.0.1+incompatible
+exclude go.opentelemetry.io/otel/metric v0.37.0
 
 require (
 	4d63.com/gocheckcompilerdirectives v1.2.1 // indirect
@@ -371,7 +371,7 @@ require (
 	go.opentelemetry.io/otel/exporters/jaeger v1.13.0 // indirect
 	go.opentelemetry.io/otel/exporters/stdout/stdoutmetric v0.36.0 // indirect
 	go.opentelemetry.io/otel/exporters/stdout/stdouttrace v1.13.0 // indirect
-	go.opentelemetry.io/otel/metric v0.37.0 // indirect
+	go.opentelemetry.io/otel/metric v0.36.0 // indirect
 	go.opentelemetry.io/otel/sdk v1.14.0 // indirect
 	go.opentelemetry.io/otel/sdk/metric v0.36.0 // indirect
 	go.opentelemetry.io/otel/trace v1.15.0 // indirect

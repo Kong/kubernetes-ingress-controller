@@ -198,7 +198,6 @@ func setupAdmissionServer(
 			kongVersion,
 		),
 		ReferenceIndexers: referenceIndexers,
-		Cache:             cache,
 		Logger:            logger,
 	}, logger)
 	if err != nil {

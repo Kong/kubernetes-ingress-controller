@@ -15,7 +15,6 @@ import (
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/reference"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/store"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
 	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1beta1"
 )
@@ -28,7 +27,6 @@ type RequestHandler struct {
 	Validator KongValidator
 
 	ReferenceIndexers reference.CacheIndexers
-	Cache             store.CacheStores
 
 	Logger logrus.FieldLogger
 }
@@ -223,7 +221,7 @@ func (h RequestHandler) handleKongPlugin(
 		return nil, err
 	}
 
-	ok, message, err := h.Validator.ValidatePlugin(ctx, plugin)
+	ok, message, err := h.Validator.ValidatePlugin(ctx, plugin, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -272,15 +270,11 @@ func (h RequestHandler) handleSecret(
 				secret.Namespace, secret.Name, obj.GetNamespace(), obj.GetName(),
 			)
 
-			obj, exist, err := h.Cache.Plugin.Get(obj)
-			if err != nil || !exist {
-				continue
-			}
 			plugin, ok := obj.(*kongv1.KongPlugin)
 			if !ok {
 				continue
 			}
-			ok, msg, err := h.Validator.ValidatePlugin(ctx, *plugin)
+			ok, msg, err := h.Validator.ValidatePlugin(ctx, *plugin, &secret)
 			if err != nil {
 				return nil, err
 			}

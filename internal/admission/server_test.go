@@ -47,6 +47,7 @@ func (v KongFakeValidator) ValidateConsumerGroup(
 func (v KongFakeValidator) ValidatePlugin(
 	_ context.Context,
 	_ kongv1.KongPlugin,
+	_ *corev1.Secret,
 ) (bool, string, error) {
 	return v.Result, v.Message, v.Error
 }

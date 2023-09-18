@@ -96,7 +96,7 @@ jobs:
     with:
       kic-image-repo: ${{ needs.choose-image.outputs.image-repo }}
       kic-image-tag: ${{ needs.choose-image.outputs.image-tag }}
-      load-local-image: ${{ inputs.controller-image == '' }}
+      load-local-image: ${{ inputs.controller-image-repo == '' || inputs.controller.image-tag == '' }}
       run-gke: ${{ inputs.run-gke }}
       run-istio: ${{ inputs.run-istio }}
       all-supported-k8s-versions: ${{ inputs.all-supported-k8s-versions }}
@@ -109,7 +109,7 @@ jobs:
     with:
       kic-image-repo: ${{ needs.choose-image.outputs.image-repo }}
       kic-image-tag: ${{ needs.choose-image.outputs.image-tag }}
-      load-local-image: ${{ inputs.controller-image == '' }}
+      load-local-image: ${{ inputs.controller-image-repo == '' || inputs.controller.image-tag == '' }}
       kong-image-repo: kong/kong-gateway-dev
       kong-image-tag: nightly
       # these do not honor the inputs, as this job is intended to be a minimal

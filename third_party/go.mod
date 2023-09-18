@@ -11,7 +11,7 @@ require (
 	github.com/golangci/golangci-lint v1.54.2
 	github.com/jstemmer/go-junit-report/v2 v2.0.0
 	github.com/kyoh86/looppointer v0.2.1
-	gotest.tools/gotestsum v1.10.1
+	gotest.tools/gotestsum v1.11.0
 	honnef.co/go/tools v0.4.6
 	k8s.io/code-generator v0.28.2
 	sigs.k8s.io/controller-runtime/tools/setup-envtest v0.0.0-20230728161957-7f0c6dc440f3
@@ -91,6 +91,7 @@ require (
 	github.com/aws/smithy-go v1.13.5 // indirect
 	github.com/awslabs/amazon-ecr-credential-helper/ecr-login v0.0.0-20230522190001-adf1bafd791a // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
+	github.com/bitfield/gotestdox v0.2.1 // indirect
 	github.com/bkielbasa/cyclop v1.2.1 // indirect
 	github.com/blang/semver v3.5.1+incompatible // indirect
 	github.com/blizzy78/varnamelen v0.8.0 // indirect

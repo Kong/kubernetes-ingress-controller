@@ -141,7 +141,7 @@ jobs:
         id: license
         with:
           password: ${{ secrets.PULP_PASSWORD }}
-
+      
       # We need to pull the Gateway image locally if loading local image was specified.
       # This is a "workaround" of the fact that we bind the env variable - responsible for
       # indicating whether we'd like to load the images - for both controller
@@ -149,8 +149,14 @@ jobs:
       # image which is available in the external container image registry but not
       # locally and that fails.
       - name: Pull Gateway image for tests
-        if: ${{ inputs.kong-image != '' && inputs.load-local-image }}
-        run: docker pull ${{ inputs.kong-image }}
+        if: ${{ inputs.kong-image-repo != ''  && inputs.load-local-image }}
+        run: |
+          if [ -z ${{ inputs.kong-image-tag }} ]; then
+            KONG_IMAGE_FULLNAME=${{ inputs.kong-image-repo }}
+          else
+            KONG_IMAGE_FULLNAME=${{ inputs.kong-image-repo }}:${{ inputs.kong-image-tag }}
+          fi
+          docker pull $KONG_IMAGE_FULLNAME
 
       - name: run ${{ matrix.test }}
         run: make test.e2e
@@ -219,7 +225,7 @@ jobs:
           TEST_KONG_CONTROLLER_IMAGE: "kong/nightly-ingress-controller"
           TEST_KONG_CONTROLLER_TAG: "nightly"
           TEST_KONG_IMAGE: ${{ inputs.kong-image-repo }}
-          TEST_KONG_TAG: ${{ inputs.kong-iamge-tag }}
+          TEST_KONG_TAG: ${{ inputs.kong-image-tag }}
           TEST_KONG_EFFECTIVE_VERSION: ${{ inputs.kong-effective-version }}
           KONG_LICENSE_DATA: ${{ steps.license.outputs.license }}
           TEST_KONG_KONNECT_ACCESS_TOKEN: ${{ secrets.K8S_TEAM_KONNECT_ACCESS_TOKEN }}

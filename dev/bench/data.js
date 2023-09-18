@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1695046598826,
+  "lastUpdate": 1695047940002,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -110874,6 +110874,66 @@ window.BENCHMARK_DATA = {
             "value": 0,
             "unit": "allocs/op",
             "extra": "11197048 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "49699333+dependabot[bot]@users.noreply.github.com",
+            "name": "dependabot[bot]",
+            "username": "dependabot[bot]"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "5a000e2fb39fce59c014484866ed1c2769056872",
+          "message": "chore(deps): bump mukunku/tag-exists-action from 1.3.0 to 1.4.0\n\nBumps [mukunku/tag-exists-action](https://github.com/mukunku/tag-exists-action) from 1.3.0 to 1.4.0.\n- [Release notes](https://github.com/mukunku/tag-exists-action/releases)\n- [Commits](https://github.com/mukunku/tag-exists-action/compare/v1.3.0...v1.4.0)\n\n---\nupdated-dependencies:\n- dependency-name: mukunku/tag-exists-action\n  dependency-type: direct:production\n  update-type: version-update:semver-minor\n...\n\nSigned-off-by: dependabot[bot] <support@github.com>",
+          "timestamp": "2023-09-18T14:34:59Z",
+          "tree_id": "df0a1dc14450042e143b141a66c2b8c71a35ef7b",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/5a000e2fb39fce59c014484866ed1c2769056872"
+        },
+        "date": 1695047926419,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - ns/op",
+            "value": 88123,
+            "unit": "ns/op",
+            "extra": "16878 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - B/op",
+            "value": 11094,
+            "unit": "B/op",
+            "extra": "16878 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - allocs/op",
+            "value": 12,
+            "unit": "allocs/op",
+            "extra": "16878 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDefaultContentToDBLessConfigConverter_Convert - ns/op",
+            "value": 110.1,
+            "unit": "ns/op",
+            "extra": "9643206 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDefaultContentToDBLessConfigConverter_Convert - B/op",
+            "value": 0,
+            "unit": "B/op",
+            "extra": "9643206 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDefaultContentToDBLessConfigConverter_Convert - allocs/op",
+            "value": 0,
+            "unit": "allocs/op",
+            "extra": "9643206 times\n2 procs"
           }
         ]
       }

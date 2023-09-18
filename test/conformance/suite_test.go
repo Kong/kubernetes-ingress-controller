@@ -39,8 +39,8 @@ import (
 )
 
 var (
-	expressionRoutesMode = os.Getenv("KONG_TEST_EXPRESSION_ROUTES")
-	ingressClass         = "kong-conformance-tests"
+	ingressClass                  = "kong-conformance-tests"
+	conformanceTestsBaseManifests = fmt.Sprintf("%s/conformance/base/manifests.yaml", consts.GatewayRawRepoURL)
 
 	env                    environments.Environment
 	ctx                    context.Context

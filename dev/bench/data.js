@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1695130296772,
+  "lastUpdate": 1695130299239,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -112194,6 +112194,66 @@ window.BENCHMARK_DATA = {
             "value": 0,
             "unit": "allocs/op",
             "extra": "9020635 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "tao.yi@konghq.com",
+            "name": "Tao Yi",
+            "username": "randmonkey"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "a47c4320da6f789bbbc265ee51373c816fb0e7b5",
+          "message": "docs: add sections to tell usage of Draft PR (#4677)\n\n* docs: add sections to tell usage of Draft PR\r\n\r\n* fix words\r\n\r\n* add section working with pull requests\r\n\r\n* Update CONTRIBUTING.md\r\n\r\nCo-authored-by: Patryk Małek <patryk.malek@konghq.com>\r\n\r\n* Update CONTRIBUTING.md\r\n\r\nCo-authored-by: Jakub Warczarek <jakub.warczarek@konghq.com>\r\n\r\n---------\r\n\r\nCo-authored-by: Patryk Małek <patryk.malek@konghq.com>\r\nCo-authored-by: Jakub Warczarek <jakub.warczarek@konghq.com>",
+          "timestamp": "2023-09-19T13:25:18Z",
+          "tree_id": "32b52ad1fa2b75f4f59baf2f57dc8848a4bcd262",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/a47c4320da6f789bbbc265ee51373c816fb0e7b5"
+        },
+        "date": 1695130282410,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - ns/op",
+            "value": 87532,
+            "unit": "ns/op",
+            "extra": "15136 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - B/op",
+            "value": 11101,
+            "unit": "B/op",
+            "extra": "15136 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - allocs/op",
+            "value": 12,
+            "unit": "allocs/op",
+            "extra": "15136 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDefaultContentToDBLessConfigConverter_Convert - ns/op",
+            "value": 127.2,
+            "unit": "ns/op",
+            "extra": "9683822 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDefaultContentToDBLessConfigConverter_Convert - B/op",
+            "value": 0,
+            "unit": "B/op",
+            "extra": "9683822 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDefaultContentToDBLessConfigConverter_Convert - allocs/op",
+            "value": 0,
+            "unit": "allocs/op",
+            "extra": "9683822 times\n2 procs"
           }
         ]
       },

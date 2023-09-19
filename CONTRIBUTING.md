@@ -29,6 +29,11 @@ If you wish to contribute code (features or bug fixes) please keep in mind the f
 - bug fix pull requests should be opened against `main` as the base branch
 - feature pull requests should be opened with `next` as the base branch
 
+If your pull request is still in progress, but you want get some early reviews before
+it is ready to be merged, please add `do not merge` or `work in progress` labels to the
+pull request. If your pull request is not ready to be reviewed yet, please convert it to `Draft`.
+`Draft` pull requests will not be reviewed until they are converted to `Open` status.
+
 ## Stale issue and pull request policy
 
 To ensure our backlog is organized and up to date, we will close issues and

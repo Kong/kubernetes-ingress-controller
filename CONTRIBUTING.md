@@ -40,9 +40,6 @@ If your pull request is still in progress, but you want to get early reviews bef
 it is ready to be merged, please add `do not merge` or `work in progress` labels to the
 pull request. If your pull request is not ready to be reviewed yet, please convert it to `Draft`.
 `Draft` pull requests will not be reviewed until they are converted to `Open` status.
-
-
-
 ## Stale issue and pull request policy
 
 To ensure our backlog is organized and up to date, we will close issues and

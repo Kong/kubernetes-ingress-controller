@@ -29,10 +29,19 @@ If you wish to contribute code (features or bug fixes) please keep in mind the f
 - bug fix pull requests should be opened against `main` as the base branch
 - feature pull requests should be opened with `next` as the base branch
 
+## Working with Pull Requests 
+
+When you finish your work and want your contributions to be included, please submit a pull request
+and include necessary information about the pull request in its description following our
+[pull request template](https://github.com/Kong/kubernetes-ingress-controller/blob/a5cfca4a97927c2878fce593929a8e48442f3127/.github/PULL_REQUEST_TEMPLATE.md). 
+A clear title and description is helpful to encourage your pull request to be reviewed and merged.
+
 If your pull request is still in progress, but you want to get early reviews before
 it is ready to be merged, please add `do not merge` or `work in progress` labels to the
 pull request. If your pull request is not ready to be reviewed yet, please convert it to `Draft`.
 `Draft` pull requests will not be reviewed until they are converted to `Open` status.
+
+
 
 ## Stale issue and pull request policy
 

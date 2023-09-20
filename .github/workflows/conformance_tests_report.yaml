@@ -1,16 +1,16 @@
 name: Generate Kubernetes Gateway API conformance tests report
+run-name: "Generate Kubernetes Gateway API conformance tests report ${{ format('ref:{0}', github.event.inputs.tag) }}"
 
 on:
   workflow_dispatch:
     inputs:
       tag:
-        description: The version of code (e.g. v1.2.3 or commit hash)
+        description: The version of code to checkout (e.g. v1.2.3 or commit hash)
         required: false
         default: main
 
 jobs:
   generate-report:
-    name:
     runs-on: ubuntu-latest
     steps:
       - name: checkout repository

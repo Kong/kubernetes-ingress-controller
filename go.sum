@@ -5,8 +5,8 @@ cloud.google.com/go/compute v1.23.0 h1:tP41Zoavr8ptEqaW6j+LQOnyBBhO7OkOMAGrgLopT
 cloud.google.com/go/compute v1.23.0/go.mod h1:4tCnrn48xsqlwSAiLf1HXMQk8CONslYbdiEZc9FEIbM=
 cloud.google.com/go/compute/metadata v0.2.3 h1:mg4jlk7mCAj6xXp9UJ4fjI9VUI5rubuGBW5aJ7UnBMY=
 cloud.google.com/go/compute/metadata v0.2.3/go.mod h1:VAV5nSsACxMJvgaAuX6Pk2AawlZn8kiOGuCv6gTkwuA=
-cloud.google.com/go/container v1.25.0 h1:CpqvsG0NYwb43JOObbAn6IbxJXzvaHoBsp1keTzN8pE=
-cloud.google.com/go/container v1.25.0/go.mod h1:YJCmRet6+6jnYYRS000T6k0D0xUXQgBSaJ7VwI8FBj4=
+cloud.google.com/go/container v1.26.0 h1:SszQdI0qlyKsImz8/l26rpTZMyqvaH9yfua7rirDZvY=
+cloud.google.com/go/container v1.26.0/go.mod h1:YJCmRet6+6jnYYRS000T6k0D0xUXQgBSaJ7VwI8FBj4=
 contrib.go.opencensus.io/exporter/ocagent v0.7.1-0.20200907061046-05415f1de66d h1:LblfooH1lKOpp1hIhukktmSAxFkqMPFk9KR6iZ0MJNI=
 contrib.go.opencensus.io/exporter/ocagent v0.7.1-0.20200907061046-05415f1de66d/go.mod h1:IshRmMJBhDfFj5Y67nVhMYTTIze91RUeT73ipWKs/GY=
 contrib.go.opencensus.io/exporter/prometheus v0.4.0 h1:0QfIkj9z/iVZgK31D9H9ohjjIDApI2GOPScCKwxedbs=

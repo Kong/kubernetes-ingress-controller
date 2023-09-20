@@ -102,6 +102,8 @@ Adding a new version? You'll need three changes:
   in `HTTPRoute` or `GRPCRoute` if there are no matches in the rule and no
   hostnames in their parent objects.
   [#4526](https://github.com/Kong/kubernetes-ingress-controller/pull/4528)
+- The Gateway API has been bumped to 0.8.1.
+  [#4700](https://github.com/Kong/kubernetes-ingress-controller/pull/4700)
 
 ### Fixed
 

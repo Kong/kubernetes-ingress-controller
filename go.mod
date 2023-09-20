@@ -49,11 +49,11 @@ require (
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.8.4
 	google.golang.org/api v0.142.0
-	k8s.io/api v0.28.1
+	k8s.io/api v0.28.2
 	k8s.io/apiextensions-apiserver v0.28.1
 	k8s.io/apimachinery v0.28.2
-	k8s.io/client-go v0.28.1
-	k8s.io/component-base v0.28.1
+	k8s.io/client-go v0.28.2
+	k8s.io/component-base v0.28.2
 	knative.dev/networking v0.0.0-20230718160410-75dcd54d9510
 	knative.dev/pkg v0.0.0-20230718152110-aef227e72ead
 	sigs.k8s.io/controller-runtime v0.16.2

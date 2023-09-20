@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1695171808859,
+  "lastUpdate": 1695173504050,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -113274,6 +113274,66 @@ window.BENCHMARK_DATA = {
             "value": 0,
             "unit": "allocs/op",
             "extra": "11456124 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "571832+rainest@users.noreply.github.com",
+            "name": "Travis Raines",
+            "username": "rainest"
+          },
+          "committer": {
+            "email": "571832+rainest@users.noreply.github.com",
+            "name": "Travis Raines",
+            "username": "rainest"
+          },
+          "distinct": true,
+          "id": "e4268d8dbeecde1d0cfc34923dbb32ba9645ebc4",
+          "message": "feat(*) add zap logging scaffolding and admission\n\nSet up a zap-based logr.Logger and provide it to the manager runner.\n\nAdd the same for tests that run the manager.\n\nConvert the admission server and components to logr.Logger instead of\nlogrus.",
+          "timestamp": "2023-09-19T18:30:04-07:00",
+          "tree_id": "8571bb9a950919238d55fb23d6987491993bfe63",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/e4268d8dbeecde1d0cfc34923dbb32ba9645ebc4"
+        },
+        "date": 1695173490676,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - ns/op",
+            "value": 70037,
+            "unit": "ns/op",
+            "extra": "16635 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - B/op",
+            "value": 11100,
+            "unit": "B/op",
+            "extra": "16635 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - allocs/op",
+            "value": 12,
+            "unit": "allocs/op",
+            "extra": "16635 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDefaultContentToDBLessConfigConverter_Convert - ns/op",
+            "value": 107,
+            "unit": "ns/op",
+            "extra": "9693584 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDefaultContentToDBLessConfigConverter_Convert - B/op",
+            "value": 0,
+            "unit": "B/op",
+            "extra": "9693584 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkDefaultContentToDBLessConfigConverter_Convert - allocs/op",
+            "value": 0,
+            "unit": "allocs/op",
+            "extra": "9693584 times\n2 procs"
           }
         ]
       }

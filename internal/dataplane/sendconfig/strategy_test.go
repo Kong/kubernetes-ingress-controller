@@ -4,11 +4,12 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/go-logr/zapr"
 	"github.com/google/uuid"
 	"github.com/kong/go-kong/kong"
-	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/zap"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/adminapi"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/sendconfig"
@@ -89,7 +90,7 @@ func TestDefaultUpdateStrategyResolver_ResolveUpdateStrategy(t *testing.T) {
 
 			resolver := sendconfig.NewDefaultUpdateStrategyResolver(sendconfig.Config{
 				InMemory: tc.inMemory,
-			}, logrus.New())
+			}, zapr.NewLogger(zap.NewNop()))
 
 			strategy := resolver.ResolveUpdateStrategy(updateClient)
 			require.Equal(t, tc.expectedStrategyType, strategy.Type())

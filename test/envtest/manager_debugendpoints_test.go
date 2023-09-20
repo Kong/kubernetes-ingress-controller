@@ -39,12 +39,12 @@ func TestDebugEndpoints(t *testing.T) {
 		// We could try to work around this but that code calls os.Exit(1) whenever
 		// the root context is cancelled and that not what we want to test here.
 
-		deprecatedLogger, logger, err := manager.SetupLoggers(&cfg, io.Discard)
+		logger, err := manager.SetupLoggers(&cfg, io.Discard)
 		require.NoError(t, err)
 		diag, err := rootcmd.StartDiagnosticsServer(ctx, manager.DiagnosticsPort, &cfg, logger)
 		require.NoError(t, err)
 
-		err = manager.Run(ctx, &cfg, diag.ConfigDumps, deprecatedLogger)
+		err = manager.Run(ctx, &cfg, diag.ConfigDumps, logger)
 		require.NoError(t, err)
 	}(ctx)
 

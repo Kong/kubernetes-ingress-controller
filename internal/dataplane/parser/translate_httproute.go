@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	"github.com/blang/semver/v4"
-	"github.com/bombsimon/logrusr/v4"
 	"github.com/kong/go-kong/kong"
 	"github.com/samber/lo"
 	k8stypes "k8s.io/apimachinery/pkg/types"
@@ -28,7 +27,7 @@ func (p *Parser) ingressRulesFromHTTPRoutes() ingressRules {
 
 	httpRouteList, err := p.storer.ListHTTPRoutes()
 	if err != nil {
-		p.logger.WithError(err).Error("failed to list HTTPRoutes")
+		p.logger.V(util.ErrorLevel).Error(err, "failed to list HTTPRoutes")
 		return result
 	}
 
@@ -92,7 +91,7 @@ func (p *Parser) ingressRulesFromHTTPRoutesUsingExpressionRoutes(httpRoutes []*g
 		splitHTTPRouteMatches = append(splitHTTPRouteMatches, translators.SplitHTTPRoute(httproute)...)
 	}
 	// assign priorities to split HTTPRoutes.
-	splitHTTPRoutesWithPriorities := translators.AssignRoutePriorityToSplitHTTPRouteMatches(logrusr.New(p.logger), splitHTTPRouteMatches)
+	splitHTTPRoutesWithPriorities := translators.AssignRoutePriorityToSplitHTTPRouteMatches(p.logger, splitHTTPRouteMatches)
 	httpRouteNameToTranslationFailure := map[k8stypes.NamespacedName][]error{}
 
 	// translate split HTTPRoute matches to ingress rules, including services, routes, upstreams.
@@ -531,8 +530,8 @@ func (p *Parser) ingressRulesFromSplitHTTPRouteMatchWithPriority(
 	match := httpRouteMatchWithPriority.Match
 	httpRoute := httpRouteMatchWithPriority.Match.Source
 	if match.RuleIndex >= len(httpRoute.Spec.Rules) {
-		p.logger.Errorf("split match has rule index %d out of bound of rules in source HTTPRoute %d",
-			match.RuleIndex, len(httpRoute.Spec.Rules))
+		p.logger.Error(nil, "split match has rule out of bound of rules in source HTTPRoute",
+			"rule_index", match.RuleIndex, "rule_count", len(httpRoute.Spec.Rules))
 		return nil
 	}
 

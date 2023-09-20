@@ -5,9 +5,10 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/sirupsen/logrus"
+	"github.com/go-logr/zapr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/zap"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/deckerrors"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/sendconfig"
@@ -73,7 +74,7 @@ func newMockBackoffStrategy(allowUpdate bool) *mockBackoffStrategy {
 
 func TestUpdateStrategyWithBackoff(t *testing.T) {
 	ctx := context.Background()
-	log := logrus.New()
+	logger := zapr.NewLogger(zap.NewNop())
 
 	testCases := []struct {
 		name string
@@ -117,7 +118,7 @@ func TestUpdateStrategyWithBackoff(t *testing.T) {
 			updateStrategy := newMockUpdateStrategy(tc.updateShouldSucceed)
 			backoffStrategy := newMockBackoffStrategy(tc.updateShouldBeAllowed)
 
-			decoratedStrategy := sendconfig.NewUpdateStrategyWithBackoff(updateStrategy, backoffStrategy, log)
+			decoratedStrategy := sendconfig.NewUpdateStrategyWithBackoff(updateStrategy, backoffStrategy, logger)
 			err, _, _ := decoratedStrategy.Update(ctx, sendconfig.ContentWithHash{})
 			if tc.expectError != nil {
 				require.Equal(t, tc.expectError, err)

@@ -5,9 +5,10 @@ import (
 	"strconv"
 	"testing"
 
+	"github.com/go-logr/zapr"
 	"github.com/kong/go-kong/kong"
-	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
+	"go.uber.org/zap"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
@@ -216,13 +217,13 @@ func TestOverrideRoute(t *testing.T) {
 
 	for _, testcase := range testTable {
 		testcase := testcase
-		testcase.inRoute.override(logrus.New(), &testcase.inKongIngresss)
+		testcase.inRoute.override(zapr.NewLogger(zap.NewNop()), &testcase.inKongIngresss)
 		assert.Equal(testcase.inRoute, testcase.outRoute)
 	}
 
 	assert.NotPanics(func() {
 		var nilRoute *Route
-		nilRoute.override(logrus.New(), nil)
+		nilRoute.override(zapr.NewLogger(zap.NewNop()), nil)
 	})
 }
 
@@ -309,7 +310,7 @@ func TestOverrideExpressionRoute(t *testing.T) {
 		indexStr := strconv.Itoa(i)
 		tc := tc
 		t.Run(indexStr+"-"+tc.name, func(t *testing.T) {
-			tc.inRoute.override(logrus.New(), nil)
+			tc.inRoute.override(zapr.NewLogger(zap.NewNop()), nil)
 			assert.Equal(t, tc.outRoute, tc.inRoute, "should be the same as expected after overriding")
 		})
 	}
@@ -336,7 +337,7 @@ func TestOverrideRoutePriority(t *testing.T) {
 		},
 		Ingress: ingMeta,
 	}
-	route.override(logrus.New(), &kongIngress)
+	route.override(zapr.NewLogger(zap.NewNop()), &kongIngress)
 	assert.Equal(route.Hosts, kong.StringSlice("foo.com", "bar.com"))
 	assert.Equal(route.Protocols, kong.StringSlice("grpc", "grpcs"))
 }
@@ -354,11 +355,11 @@ func TestOverrideRouteByKongIngress(t *testing.T) {
 		},
 	}
 
-	route.overrideByKongIngress(logrus.New(), &kongIngress)
+	route.overrideByKongIngress(zapr.NewLogger(zap.NewNop()), &kongIngress)
 	assert.Equal(route.Protocols, kong.StringSlice("http"))
 	assert.NotPanics(func() {
 		var nilRoute *Route
-		nilRoute.override(logrus.New(), nil)
+		nilRoute.override(zapr.NewLogger(zap.NewNop()), nil)
 	})
 }
 
@@ -377,13 +378,13 @@ func TestOverrideRouteByAnnotation(t *testing.T) {
 		},
 		Ingress: ingMeta,
 	}
-	route.overrideByAnnotation(logrus.New())
+	route.overrideByAnnotation(zapr.NewLogger(zap.NewNop()))
 	assert.Equal(route.Hosts, kong.StringSlice("foo.com", "bar.com"))
 	assert.Equal(route.Protocols, kong.StringSlice("grpc", "grpcs"))
 
 	assert.NotPanics(func() {
 		var nilRoute *Route
-		nilRoute.override(logrus.New(), nil)
+		nilRoute.override(zapr.NewLogger(zap.NewNop()), nil)
 	})
 }
 
@@ -868,7 +869,7 @@ func TestOverrideRouteMethods(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tt.args.route.overrideMethods(logrus.New(), tt.args.anns)
+			tt.args.route.overrideMethods(zapr.NewLogger(zap.NewNop()), tt.args.anns)
 			if !reflect.DeepEqual(tt.args.route, tt.want) {
 				t.Errorf("overrideRouteMethods() got = %v, want %v", tt.args.route, tt.want)
 			}
@@ -919,7 +920,7 @@ func TestOverrideRouteSNIs(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tt.args.route.overrideSNIs(logrus.New(), tt.args.anns)
+			tt.args.route.overrideSNIs(zapr.NewLogger(zap.NewNop()), tt.args.anns)
 			if !reflect.DeepEqual(tt.args.route, tt.want) {
 				t.Errorf("overrideRouteSNIs() got = %v, want %v", tt.args.route, tt.want)
 			}
@@ -993,7 +994,7 @@ func TestOverrideRequestBuffering(t *testing.T) {
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			tt.args.route.overrideRequestBuffering(logrus.New(), tt.args.anns)
+			tt.args.route.overrideRequestBuffering(zapr.NewLogger(zap.NewNop()), tt.args.anns)
 			if !reflect.DeepEqual(tt.args.route.Route, tt.want) {
 				t.Errorf("overrideRequestBuffering() got = %v, want %v", &tt.args.route.Route, tt.want)
 			}
@@ -1067,7 +1068,7 @@ func TestOverrideResponseBuffering(t *testing.T) {
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			tt.args.route.overrideResponseBuffering(logrus.New(), tt.args.anns)
+			tt.args.route.overrideResponseBuffering(zapr.NewLogger(zap.NewNop()), tt.args.anns)
 			if !reflect.DeepEqual(tt.args.route.Route, tt.want) {
 				t.Errorf("overrideResponseBuffering() got = %v, want %v", &tt.args.route.Route, tt.want)
 			}
@@ -1131,7 +1132,7 @@ func TestOverrideHosts(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tt.args.route.overrideHosts(logrus.New(), tt.args.anns)
+			tt.args.route.overrideHosts(zapr.NewLogger(zap.NewNop()), tt.args.anns)
 			if !reflect.DeepEqual(tt.args.route, tt.want) {
 				t.Errorf("overrideHosts() got = %v, want %v", tt.args.route, tt.want)
 			}
@@ -1261,7 +1262,7 @@ func TestOverridePathHandling(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tt.args.route.overridePathHandling(logrus.New(), tt.args.anns)
+			tt.args.route.overridePathHandling(zapr.NewLogger(zap.NewNop()), tt.args.anns)
 			if !reflect.DeepEqual(tt.args.route, tt.want) {
 				t.Errorf("overridePathHandling() got = %v, want %v", tt.args.route, tt.want)
 			}

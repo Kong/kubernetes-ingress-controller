@@ -22,7 +22,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/sirupsen/logrus"
+	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
 	netv1 "k8s.io/api/networking/v1"
@@ -42,6 +42,7 @@ import (
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
 	ctrlutils "github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/utils"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
 	kongv1alpha1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1alpha1"
 	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1beta1"
@@ -117,7 +118,7 @@ type Store struct {
 	isValidIngressClass   func(objectMeta *metav1.ObjectMeta, annotation string, handling annotations.ClassMatching) bool
 	isValidIngressV1Class func(ingress *netv1.Ingress, handling annotations.ClassMatching) bool
 
-	logger logrus.FieldLogger
+	logger logr.Logger
 }
 
 var _ Storer = Store{}
@@ -429,7 +430,7 @@ func (c CacheStores) Delete(obj runtime.Object) error {
 }
 
 // New creates a new object store to be used in the ingress controller.
-func New(cs CacheStores, ingressClass string, logger logrus.FieldLogger) Storer {
+func New(cs CacheStores, ingressClass string, logger logr.Logger) Storer {
 	return Store{
 		stores:                cs,
 		ingressClass:          ingressClass,
@@ -473,7 +474,9 @@ func (s Store) ListIngressesV1() []*netv1.Ingress {
 	for _, item := range s.stores.IngressV1.List() {
 		ing, ok := item.(*netv1.Ingress)
 		if !ok {
-			s.logger.Warnf("listIngressesV1: dropping object of unexpected type: %#v", item)
+			// TODO 1893 these include their function names in a message. we may consider converting to
+			// https://pkg.go.dev/go.uber.org/zap#WithCaller
+			s.logger.V(util.WarnLevel).Info("listIngressesV1: dropping object of unexpected type", "type", fmt.Sprintf("%#v", item))
 			continue
 		}
 		if ing.ObjectMeta.GetAnnotations()[annotations.IngressClassKey] != "" {
@@ -487,7 +490,7 @@ func (s Store) ListIngressesV1() []*netv1.Ingress {
 		} else {
 			class, err := s.GetIngressClassV1(s.ingressClass)
 			if err != nil {
-				s.logger.Debugf("IngressClass %s not found", s.ingressClass)
+				s.logger.V(util.DebugLevel).Info("IngressClass not found", "class", s.ingressClass)
 				continue
 			}
 			if !ctrlutils.IsDefaultIngressClass(class) {
@@ -512,7 +515,7 @@ func (s Store) ListIngressClassesV1() []*netv1.IngressClass {
 	for _, item := range s.stores.IngressClassV1.List() {
 		class, ok := item.(*netv1.IngressClass)
 		if !ok {
-			s.logger.Warnf("listIngressClassesV1: dropping object of unexpected type: %#v", item)
+			s.logger.V(util.WarnLevel).Info("listIngressClassesV1: dropping object of unexpected type", "type", fmt.Sprintf("%#v", item))
 			continue
 		}
 		if class.Spec.Controller != IngressClassKongController {
@@ -534,7 +537,7 @@ func (s Store) ListIngressClassParametersV1Alpha1() []*kongv1alpha1.IngressClass
 	for _, item := range s.stores.IngressClassParametersV1alpha1.List() {
 		classParam, ok := item.(*kongv1alpha1.IngressClassParameters)
 		if !ok {
-			s.logger.Warnf("listIngressClassParametersV1alpha1: dropping object of unexpected type: %#v", item)
+			s.logger.V(util.WarnLevel).Info("listIngressClassParametersV1alpha1: dropping object of unexpected type", "type", fmt.Sprintf("%#v", item))
 			continue
 		}
 		classParams = append(classParams, classParam)
@@ -1028,7 +1031,7 @@ func (s Store) ListCACerts() ([]*corev1.Secret, error) {
 func (s Store) getIngressClassHandling() annotations.ClassMatching {
 	class, err := s.GetIngressClassV1(s.ingressClass)
 	if err != nil {
-		s.logger.Debugf("IngressClass %s not found", s.ingressClass)
+		s.logger.V(util.DebugLevel).Info("IngressClass not found", "class", s.ingressClass)
 		return annotations.ExactClassMatch
 	}
 	if ctrlutils.IsDefaultIngressClass(class) {

@@ -1,18 +1,18 @@
 package envtest
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"sync"
 	"testing"
 
-	"github.com/bombsimon/logrusr/v4"
+	"github.com/go-logr/zapr"
 	"github.com/phayes/freeport"
 	"github.com/samber/mo"
-	"github.com/sirupsen/logrus/hooks/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zaptest/observer"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -83,28 +83,6 @@ func WithPublishService(namespace string) func(cfg *manager.Config) {
 	}
 }
 
-// buffer is a goroutine safe bytes.Buffer.
-type buffer struct {
-	buffer bytes.Buffer
-	mutex  sync.RWMutex
-}
-
-// Write appends the contents of p to the buffer, growing the buffer as needed.
-// It returns the number of bytes written.
-func (s *buffer) Write(p []byte) (n int, err error) {
-	s.mutex.Lock()
-	defer s.mutex.Unlock()
-	return s.buffer.Write(p)
-}
-
-// String returns the contents of the unread portion of the buffer
-// as a string. If the Buffer is a nil pointer, it returns "<nil>".
-func (s *buffer) String() string {
-	s.mutex.RLock()
-	defer s.mutex.RUnlock()
-	return s.buffer.String()
-}
-
 // RunManager runs the manager in a goroutine. It's possible to modify the manager's configuration
 // by passing in modifyCfgFns. The manager is stopped when the context is canceled.
 func RunManager(
@@ -112,17 +90,15 @@ func RunManager(
 	t *testing.T,
 	envcfg *rest.Config,
 	modifyCfgFns ...func(cfg *manager.Config),
-) (loggerHook *test.Hook) {
+) (loggerHook *observer.ObservedLogs) {
 	cfg := ConfigForEnvConfig(t, envcfg)
 
 	for _, modifyCfgFn := range modifyCfgFns {
 		modifyCfgFn(&cfg)
 	}
 
-	logrusLogger, loggerHook := test.NewNullLogger()
-	b := &buffer{}
-	logrusLogger.Out = b
-	logger := logrusr.New(logrusLogger)
+	core, logs := observer.New(zap.InfoLevel)
+	logger := zapr.NewLogger(zap.New(core))
 	ctx = ctrl.LoggerInto(ctx, logger)
 
 	// This wait group makes it so that we wait for manager to exit.
@@ -131,15 +107,18 @@ func RunManager(
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		err := manager.Run(ctx, &cfg, util.ConfigDumpDiagnostic{}, logrusLogger)
+		err := manager.Run(ctx, &cfg, util.ConfigDumpDiagnostic{}, logger)
 		assert.NoError(t, err)
 	}()
 	t.Cleanup(func() {
 		wg.Wait()
 		if t.Failed() {
-			t.Logf("manager logs:\n%s", b.String())
+			t.Logf("manager logs:")
+			for _, entry := range logs.All() {
+				t.Logf("%s - %s", entry.Time, entry.Message)
+			}
 		}
 	})
 
-	return loggerHook
+	return logs
 }

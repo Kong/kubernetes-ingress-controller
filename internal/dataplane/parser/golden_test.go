@@ -12,9 +12,10 @@ import (
 	"testing"
 
 	"github.com/blang/semver/v4"
+	"github.com/go-logr/zapr"
 	"github.com/samber/lo"
-	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/zap"
 	"k8s.io/kubectl/pkg/cmd/util"
 	"sigs.k8s.io/yaml"
 
@@ -231,7 +232,7 @@ type parserGoldenTestCase struct {
 }
 
 func runParserGoldenTest(t *testing.T, tc parserGoldenTestCase) {
-	logger := logrus.New()
+	logger := zapr.NewLogger(zap.NewNop())
 
 	// Load the K8s objects from the YAML file.
 	objects := extractObjectsFromYAML(t, tc.k8sConfigFile)

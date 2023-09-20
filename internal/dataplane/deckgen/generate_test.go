@@ -4,11 +4,12 @@ import (
 	"context"
 	"testing"
 
+	"github.com/go-logr/zapr"
 	"github.com/kong/deck/file"
 	"github.com/kong/go-kong/kong"
 	"github.com/samber/lo"
-	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/zap"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/deckgen"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
@@ -61,7 +62,7 @@ func TestToDeckContent(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			result := deckgen.ToDeckContent(context.Background(), logrus.New(), tc.input, tc.params)
+			result := deckgen.ToDeckContent(context.Background(), zapr.NewLogger(zap.NewNop()), tc.input, tc.params)
 			require.Equal(t, tc.expected, result)
 		})
 	}

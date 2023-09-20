@@ -8,13 +8,15 @@ import (
 	"time"
 
 	"github.com/blang/semver/v4"
+	"github.com/go-logr/zapr"
 	"github.com/kong/go-kong/kong"
 	"github.com/samber/lo"
 	"github.com/samber/mo"
-	"github.com/sirupsen/logrus"
-	"github.com/sirupsen/logrus/hooks/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
+	"go.uber.org/zap/zaptest/observer"
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
 	netv1 "k8s.io/api/networking/v1"
@@ -4274,7 +4276,8 @@ func TestGetEndpoints(t *testing.T) {
 
 	for _, testCase := range tests {
 		t.Run(testCase.name, func(t *testing.T) {
-			result := getEndpoints(logrus.New(), testCase.svc, testCase.port, testCase.proto, testCase.fn, testCase.isServiceUpstream)
+			result := getEndpoints(zapr.NewLogger(zap.NewNop()), testCase.svc, testCase.port, testCase.proto, testCase.fn,
+				testCase.isServiceUpstream)
 			require.Equal(t, testCase.result, result)
 		})
 	}
@@ -5033,7 +5036,7 @@ func TestNewFeatureFlags(t *testing.T) {
 			expectedFeatureFlags: FeatureFlags{
 				CombinedServiceRoutes: true,
 			},
-			expectInfoLog: "ExpressionRoutes feature gate enabled but Gateway is running with \"any_other_router_mode\" router flavor, using that instead",
+			expectInfoLog: "ExpressionRoutes feature gate enabled but Gateway is running with incompatible router flavor, using that instead",
 		},
 		{
 			name: "expression routes feature gate enabled and combined routes disabled",
@@ -5096,15 +5099,16 @@ func TestNewFeatureFlags(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			log, logHook := test.NewNullLogger()
-			actualFlags := NewFeatureFlags(log, tc.featureGates, tc.kongVersion, tc.routerFlavor, tc.updateStatusFlag)
+			core, logs := observer.New(zap.InfoLevel)
+			logger := zapr.NewLogger(zap.New(core))
+			actualFlags := NewFeatureFlags(logger, tc.featureGates, tc.kongVersion, tc.routerFlavor, tc.updateStatusFlag)
 
 			require.Equal(t, tc.expectedFeatureFlags, actualFlags)
 
 			if tc.expectInfoLog != "" {
-				lastEntry := logHook.LastEntry()
+				lastEntry := logs.All()[logs.Len()-1]
 				require.NotNil(t, lastEntry)
-				require.Equal(t, logrus.InfoLevel, lastEntry.Level)
+				require.Equal(t, zapcore.InfoLevel, lastEntry.Level)
 				require.Equal(t, tc.expectInfoLog, lastEntry.Message)
 			}
 		})
@@ -5318,7 +5322,7 @@ func mustNewParser(t *testing.T, storer store.Storer) *Parser {
 	v, err := semver.Parse(testKongVersion)
 	require.NoError(t, err)
 
-	p, err := NewParser(logrus.New(), storer,
+	p, err := NewParser(zapr.NewLogger(zap.NewNop()), storer,
 		FeatureFlags{
 			// We'll assume these are true for all tests.
 			FillIDs:                           true,

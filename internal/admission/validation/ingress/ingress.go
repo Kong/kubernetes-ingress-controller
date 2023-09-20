@@ -4,12 +4,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io"
 	"strings"
 
 	"github.com/blang/semver/v4"
+	"github.com/go-logr/zapr"
 	"github.com/kong/go-kong/kong"
-	"github.com/sirupsen/logrus"
+	"go.uber.org/zap"
 	netv1 "k8s.io/api/networking/v1"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/failures"
@@ -57,9 +57,8 @@ func ValidateIngress(
 func ingressToKongRoutesForValidation(
 	parserFeatures parser.FeatureFlags, kongVersion semver.Version, ingress *netv1.Ingress,
 ) ([]kong.Route, error) {
-	discardLogger := logrus.New()
-	discardLogger.Out = io.Discard
-	failuresCollector, _ := failures.NewResourceFailuresCollector(discardLogger) // It fails only for nil logger.
+	discardLogger := zapr.NewLogger(zap.NewNop())
+	failuresCollector := failures.NewResourceFailuresCollector(discardLogger) // It fails only for nil logger.
 	var icp kongv1alpha1.IngressClassParametersSpec
 	if kongVersion.LT(versions.ExplicitRegexPathVersionCutoff) {
 		icp.EnableLegacyRegexDetection = true

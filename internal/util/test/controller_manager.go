@@ -8,7 +8,6 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	ktfkong "github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/kong"
-	"github.com/sirupsen/logrus"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/cmd/rootcmd"
@@ -32,7 +31,6 @@ var logOutput = os.Getenv("TEST_KONG_KIC_MANAGER_LOG_OUTPUT")
 // from running when they're done with it.
 func DeployControllerManagerForCluster(
 	ctx context.Context,
-	deprecatedLogger logrus.FieldLogger,
 	logger logr.Logger,
 	cluster clusters.Cluster,
 	additionalFlags ...string,
@@ -100,7 +98,7 @@ func DeployControllerManagerForCluster(
 	go func() {
 		defer os.Remove(kubeconfig.Name())
 		fmt.Fprintf(os.Stderr, "INFO: Starting Controller Manager for Cluster %s with Configuration: %+v\n", cluster.Name(), config)
-		if err := rootcmd.RunWithLogger(ctx, &config, deprecatedLogger, logger); err != nil {
+		if err := rootcmd.RunWithLogger(ctx, &config, logger); err != nil {
 			panic(err)
 		}
 	}()
@@ -114,14 +112,14 @@ func DeployControllerManagerForCluster(
 // will pass before the controller manager logs are setup.
 // This function can be used to sets up the loggers for the controller manager
 // before the cluster deployment.
-func SetupLoggers(logLevel string, logFormat string, logReduceRedundancy bool) (logrus.FieldLogger, logr.Logger, string, error) {
+func SetupLoggers(logLevel string, logFormat string, logReduceRedundancy bool) (logr.Logger, string, error) {
 	// construct the config for the logger
 	var err error
 	output := os.Stderr
 	if logOutput != "" {
 		output, err = os.OpenFile(logOutput, os.O_CREATE|os.O_RDWR|os.O_APPEND, 0o644)
 		if err != nil {
-			return nil, logr.Logger{}, logOutput, err
+			return logr.Logger{}, logOutput, err
 		}
 	}
 	config := manager.Config{
@@ -130,9 +128,9 @@ func SetupLoggers(logLevel string, logFormat string, logReduceRedundancy bool) (
 		LogReduceRedundancy: logReduceRedundancy,
 	}
 
-	deprecated, logger, err := manager.SetupLoggers(&config, output)
+	logger, err := manager.SetupLoggers(&config, output)
 	// Prevents controller-runtime from logging
 	// [controller-runtime] log.SetLogger(...) was never called; logs will not be displayed.
 	ctrllog.SetLogger(logger)
-	return deprecated, logger, "", err
+	return logger, "", err
 }

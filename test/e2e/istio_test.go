@@ -61,7 +61,7 @@ func TestIstioWithKongIngressGateway(t *testing.T) {
 	// after 30s from the start of controller manager package init function,
 	// the controller manager will set up a no op logger and continue.
 	// The logger cannot be configured after that point.
-	deprecatedLogger, logger, logOutput, err := testutils.SetupLoggers("trace", "text", false)
+	logger, logOutput, err := testutils.SetupLoggers("trace", "text", false)
 	require.NoError(t, err, "failed to configure logger")
 	if logOutput != "" {
 		t.Logf("INFO: writing manager logs to %s", logOutput)
@@ -111,7 +111,7 @@ func TestIstioWithKongIngressGateway(t *testing.T) {
 	}, time.Minute, time.Second)
 
 	t.Log("starting the controller manager")
-	require.NoError(t, testutils.DeployControllerManagerForCluster(ctx, deprecatedLogger, logger, env.Cluster(), "--log-level=debug"))
+	require.NoError(t, testutils.DeployControllerManagerForCluster(ctx, logger, env.Cluster(), "--log-level=debug"))
 
 	t.Log("creating a new mesh-enabled namespace for testing http traffic")
 	namespace := &corev1.Namespace{

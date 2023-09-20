@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/go-logr/logr"
 	"github.com/kong/go-kong/kong"
-	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	netv1 "k8s.io/api/networking/v1"
 	k8stypes "k8s.io/apimachinery/pkg/types"
@@ -50,7 +50,7 @@ func mergeIngressRules(objs ...ingressRules) ingressRules {
 
 // populateServices populates the ServiceNameToServices map with additional information
 // and returns a map of services to be skipped.
-func (ir *ingressRules) populateServices(log logrus.FieldLogger, s store.Storer, failuresCollector *failures.ResourceFailuresCollector) map[string]interface{} {
+func (ir *ingressRules) populateServices(logger logr.Logger, s store.Storer, failuresCollector *failures.ResourceFailuresCollector) map[string]interface{} {
 	serviceNamesToSkip := make(map[string]interface{})
 
 	// populate Kubernetes Service
@@ -61,7 +61,7 @@ func (ir *ingressRules) populateServices(log logrus.FieldLogger, s store.Storer,
 
 		// collect all the Kubernetes services configured for the service backends,
 		// and all annotations with our prefix in use across all services (when applicable).
-		k8sServices, seenKongAnnotations := getK8sServicesForBackends(log, s, service.Namespace, service.Backends)
+		k8sServices, seenKongAnnotations := getK8sServicesForBackends(logger, s, service.Namespace, service.Backends)
 
 		// if the Kubernetes services have been deemed invalid, log an error message
 		// and skip the current service.
@@ -100,9 +100,8 @@ func (ir *ingressRules) populateServices(log logrus.FieldLogger, s store.Storer,
 			if parent, ok := ir.ServiceNameToParent[*service.Name]; ok {
 				service.Tags = util.GenerateTagsForObject(parent)
 			} else {
-				log.WithFields(logrus.Fields{
-					"service": *service.Name,
-				}).Error("multi-service backend lacks parent info, cannot generate tags")
+				logger.V(util.ErrorLevel).Error(nil, "multi-service backend lacks parent info, cannot generate tags",
+					"service", *service.Name)
 			}
 		} else if len(k8sServices) > 0 {
 			service.Tags = util.GenerateTagsForObject(k8sServices[0])
@@ -111,9 +110,8 @@ func (ir *ingressRules) populateServices(log logrus.FieldLogger, s store.Storer,
 			// Service doesn't actually exist. attempting to generate tags for that Service would trigger a panic.
 			// the parser should discard this invalid route later, but this adds a placeholder value in case it doesn't.
 			// if you encounter an actual config where a service has these tags, something strange has happened.
-			log.WithFields(logrus.Fields{
-				"service": *service.Name,
-			}).Debug("service has zero k8sServices backends, cannot generate tags for it properly")
+			logger.V(util.DebugLevel).Info("service has zero k8sServices backends, cannot generate tags for it properly",
+				"service", *service.Name)
 			service.Tags = kong.StringSlice(
 				util.K8sNameTagPrefix+"UNKNOWN",
 				util.K8sNamespaceTagPrefix+"UNKNOWN",
@@ -243,7 +241,7 @@ func (s SNIs) Hosts() []string {
 }
 
 func getK8sServicesForBackends(
-	log logrus.FieldLogger,
+	log logr.Logger,
 	storer store.Storer,
 	namespace string,
 	backends kongstate.ServiceBackends,
@@ -262,10 +260,10 @@ func getK8sServicesForBackends(
 		}
 		k8sService, err := storer.GetService(backendNamespace, backend.Name)
 		if err != nil {
-			log.WithFields(logrus.Fields{
-				"service_name":      backend.PortDef.Name,
-				"service_namespace": backendNamespace,
-			}).Errorf("failed to fetch service: %v", err)
+			log.V(util.ErrorLevel).Error(err, "failed to fetch service",
+				"service_name", backend.PortDef.Name,
+				"service_namespace", backendNamespace,
+			)
 			continue
 		}
 		if k8sService != nil {

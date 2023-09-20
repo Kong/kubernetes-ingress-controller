@@ -4,8 +4,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/go-logr/logr"
 	"github.com/kong/go-kong/kong"
-	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
@@ -188,7 +188,7 @@ func (s *Service) overrideByAnnotation(anns map[string]string) {
 
 // override sets Service fields by KongIngress first, then by k8s Service's annotations.
 func (s *Service) override(
-	log logrus.FieldLogger,
+	logger logr.Logger,
 	kongIngress *kongv1.KongIngress,
 	svc *corev1.Service,
 ) {
@@ -207,18 +207,19 @@ func (s *Service) override(
 			gvk := s.Parent.GetObjectKind().GroupVersionKind()
 			if gvk.Group == gatewayv1alpha2.GroupName {
 				obj := s.Parent
-				fields := logrus.Fields{
-					"resource_name":      obj.GetName(),
-					"resource_namespace": obj.GetNamespace(),
-					"resource_kind":      gvk.Kind,
-				}
+				fieldLogger := logger.WithValues(
+					"resource_name", obj.GetName(),
+					"resource_namespace", obj.GetNamespace(),
+					"resource_kind", gvk.Kind,
+				)
 				if svc != nil {
-					fields["service_name"] = svc.Name
-					fields["service_namespace"] = svc.Namespace
+					fieldLogger = fieldLogger.WithValues(
+						"service_name", svc.Name,
+						"service_namespace", svc.Namespace,
+					)
 				}
-				log.WithFields(fields).
-					Warn("KongIngress annotation is not allowed on Services " +
-						"referenced by Gateway API *Route objects.")
+				fieldLogger.V(util.WarnLevel).Info("KongIngress annotation is not allowed on Services " +
+					"referenced by Gateway API *Route objects.")
 				return
 			}
 		}

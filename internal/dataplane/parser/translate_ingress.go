@@ -38,7 +38,7 @@ func (p *Parser) ingressRulesFromIngressV1() ingressRules {
 	if err != nil {
 		if !errors.As(err, &store.ErrNotFound{}) {
 			// anything else is unexpected
-			p.logger.Errorf("could not find IngressClassParameters, using defaults: %s", err)
+			p.logger.V(util.ErrorLevel).Error(err, "could not retrieve IngressClassParameters, using defaults")
 		}
 	}
 

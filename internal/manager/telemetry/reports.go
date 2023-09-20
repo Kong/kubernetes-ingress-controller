@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/go-logr/logr"
 	"github.com/google/uuid"
 	"k8s.io/client-go/rest"
 
@@ -41,6 +42,7 @@ type ReportConfig struct {
 // error is not nil - to stop the reports sending.
 func SetupAnonymousReports(
 	ctx context.Context,
+	logger logr.Logger,
 	kubeCfg *rest.Config,
 	clientsProvider GatewayClientsProvider,
 	reportCfg ReportConfig,
@@ -97,7 +99,7 @@ func SetupAnonymousReports(
 		reportCfg.TelemetryPeriod = telemetryPeriod
 	}
 
-	tMgr, err := CreateManager(kubeCfg, clientsProvider, fixedPayload, reportCfg)
+	tMgr, err := CreateManager(logger, kubeCfg, clientsProvider, fixedPayload, reportCfg)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create anonymous reports manager: %w", err)
 	}

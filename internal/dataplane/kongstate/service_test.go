@@ -1,13 +1,13 @@
 package kongstate
 
 import (
-	"io"
 	"reflect"
 	"testing"
 
+	"github.com/go-logr/zapr"
 	"github.com/kong/go-kong/kong"
-	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
+	"go.uber.org/zap"
 
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
 )
@@ -364,8 +364,7 @@ func TestOverrideService(t *testing.T) {
 
 	for _, testcase := range testTable {
 		testcase := testcase
-		log := logrus.New()
-		log.SetOutput(io.Discard)
+		log := zapr.NewLogger(zap.NewNop())
 
 		k8sServices := testcase.inService.K8sServices
 		for _, svc := range k8sServices {
@@ -375,8 +374,7 @@ func TestOverrideService(t *testing.T) {
 	}
 
 	assert.NotPanics(func() {
-		log := logrus.New()
-		log.SetOutput(io.Discard)
+		log := zapr.NewLogger(zap.NewNop())
 
 		var nilService *Service
 		nilService.override(log, nil, nil)

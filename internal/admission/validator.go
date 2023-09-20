@@ -6,8 +6,8 @@ import (
 	"strings"
 
 	"github.com/blang/semver/v4"
+	"github.com/go-logr/logr"
 	"github.com/kong/go-kong/kong"
-	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	netv1 "k8s.io/api/networking/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -21,6 +21,7 @@ import (
 	gatewaycontroller "github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/gateway"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/parser"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/versions"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
 	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1beta1"
@@ -51,7 +52,7 @@ type AdminAPIServicesProvider interface {
 // KongHTTPValidator implements KongValidator interface to validate Kong
 // entities using the Admin API of Kong.
 type KongHTTPValidator struct {
-	Logger                   logrus.FieldLogger
+	Logger                   logr.Logger
 	SecretGetter             kongstate.SecretGetter
 	ManagerClient            client.Client
 	AdminAPIServicesProvider AdminAPIServicesProvider
@@ -67,7 +68,7 @@ type KongHTTPValidator struct {
 // such as consumer credentials secrets. If you do not pass a cached client
 // here, the performance of this validator can get very poor at high scales.
 func NewKongHTTPValidator(
-	logger logrus.FieldLogger,
+	logger logr.Logger,
 	managerClient client.Client,
 	ingressClass string,
 	servicesProvider AdminAPIServicesProvider,
@@ -190,13 +191,19 @@ func (validator KongHTTPValidator) ValidateConsumerGroup(
 		return true, "", nil
 	}
 	info, err := infoSvc.Get(ctx)
+	// TODO 1893 these were originally debug-level errors, and would have been filtered out at default log level
+	// logr Error https://pkg.go.dev/github.com/go-logr/logr#Logger.Error always emits logs, but is recommended to allow
+	// finer control over error handling:
+	// > but they are separate methods so that LogSink implementations can choose to do things like attach additional
+	// > information (such as stack traces) on calls to Error().
+	// for closer behavior to logrus we'd need an Info() call that formats the error text into the message.
 	if err != nil {
-		validator.Logger.Debugf("failed to fetch Kong info: %v", err)
+		validator.Logger.V(util.DebugLevel).Error(err, "failed to fetch Kong info")
 		return false, ErrTextAdminAPIUnavailable, nil
 	}
 	version, err := kong.NewVersion(info.Version)
 	if err != nil {
-		validator.Logger.Debugf("failed to parse Kong version: %v", err)
+		validator.Logger.V(util.DebugLevel).Error(err, "failed to parse Kong version")
 	} else {
 		kongVer := semver.Version{Major: version.Major(), Minor: version.Minor()}
 		if !version.IsKongGatewayEnterprise() || !kongVer.GTE(versions.ConsumerGroupsVersionCutoff) {
@@ -497,7 +504,7 @@ func (validator KongHTTPValidator) ensureConsumerDoesNotExistInGateway(ctx conte
 		c, err := consumerSvc.Get(ctx, &username)
 		if err != nil {
 			if !kong.IsNotFoundErr(err) {
-				validator.Logger.WithError(err).Error("failed to fetch consumer from kong")
+				validator.Logger.V(util.ErrorLevel).Error(err, "failed to fetch consumer from kong")
 				return ErrTextConsumerUnretrievable, err
 			}
 		}

@@ -9,9 +9,10 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/go-logr/zapr"
 	"github.com/lithammer/dedent"
-	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
+	"go.uber.org/zap"
 	admissionv1 "k8s.io/api/admission/v1"
 	corev1 "k8s.io/api/core/v1"
 	netv1 "k8s.io/api/networking/v1"
@@ -79,7 +80,7 @@ func TestServeHTTPBasic(t *testing.T) {
 	res := httptest.NewRecorder()
 	server := RequestHandler{
 		Validator: KongFakeValidator{},
-		Logger:    logrus.New(),
+		Logger:    zapr.NewLogger(zap.NewNop()),
 	}
 	handler := http.HandlerFunc(server.ServeHTTP)
 
@@ -351,7 +352,7 @@ func TestValidationWebhook(t *testing.T) {
 				res := httptest.NewRecorder()
 				server := RequestHandler{
 					Validator: tt.validator,
-					Logger:    logrus.New(),
+					Logger:    zapr.NewLogger(zap.NewNop()),
 				}
 				handler := http.HandlerFunc(server.ServeHTTP)
 

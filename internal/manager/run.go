@@ -13,7 +13,6 @@ import (
 	"github.com/avast/retry-go/v4"
 	"github.com/blang/semver/v4"
 	"github.com/go-logr/logr"
-	"github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/util/sets"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
@@ -47,7 +46,12 @@ import (
 // -----------------------------------------------------------------------------
 
 // Run starts the controller manager and blocks until it exits.
-func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, deprecatedLogger logrus.FieldLogger) error {
+func Run(
+	ctx context.Context,
+	c *Config,
+	diagnostic util.ConfigDumpDiagnostic,
+	logger logr.Logger,
+) error {
 	setupLog := ctrl.LoggerFrom(ctx).WithName("setup")
 	setupLog.Info("starting controller manager", "release", metadata.Release, "repo", metadata.Repo, "commit", metadata.Commit)
 	setupLog.Info("the ingress class name has been set", "value", c.IngressClassName)
@@ -143,7 +147,7 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 	readinessChecker := clients.NewDefaultReadinessChecker(adminAPIClientsFactory, setupLog.WithName("readiness-checker"))
 	clientsManager, err := clients.NewAdminAPIClientsManager(
 		ctx,
-		deprecatedLogger,
+		logger,
 		initialKongClients,
 		readinessChecker,
 	)
@@ -156,7 +160,7 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 	}
 
 	parserFeatureFlags := parser.NewFeatureFlags(
-		deprecatedLogger,
+		logger,
 		featureGates,
 		kongSemVersion,
 		routerFlavor,
@@ -164,14 +168,14 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 	)
 
 	setupLog.Info("Starting Admission Server")
-	if err := setupAdmissionServer(ctx, c, clientsManager, mgr.GetClient(), deprecatedLogger, parserFeatureFlags, kongSemVersion); err != nil {
+	if err := setupAdmissionServer(ctx, c, clientsManager, mgr.GetClient(), logger, parserFeatureFlags, kongSemVersion); err != nil {
 		return err
 	}
 
 	cache := store.NewCacheStores()
 	configParser, err := parser.NewParser(
-		deprecatedLogger,
-		store.New(cache, c.IngressClassName, deprecatedLogger),
+		logger,
+		store.New(cache, c.IngressClassName, logger),
 		parserFeatureFlags,
 		kongSemVersion,
 	)
@@ -179,11 +183,11 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 		return fmt.Errorf("failed to create parser: %w", err)
 	}
 
-	updateStrategyResolver := sendconfig.NewDefaultUpdateStrategyResolver(kongConfig, deprecatedLogger)
-	configurationChangeDetector := sendconfig.NewDefaultConfigurationChangeDetector(deprecatedLogger)
+	updateStrategyResolver := sendconfig.NewDefaultUpdateStrategyResolver(kongConfig, logger)
+	configurationChangeDetector := sendconfig.NewDefaultConfigurationChangeDetector(logger)
 	kongConfigFetcher := configfetcher.NewDefaultKongLastGoodConfigFetcher(parserFeatureFlags.FillIDs)
 	dataplaneClient, err := dataplane.NewKongClient(
-		deprecatedLogger,
+		logger,
 		time.Duration(c.ProxyTimeoutSeconds*float32(time.Second)),
 		c.IngressClassName,
 		diagnostic,
@@ -202,7 +206,7 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 	}
 
 	setupLog.Info("Initializing Dataplane Synchronizer")
-	synchronizer, err := setupDataplaneSynchronizer(setupLog, deprecatedLogger, mgr, dataplaneClient, c.ProxySyncSeconds, c.InitCacheSyncDuration)
+	synchronizer, err := setupDataplaneSynchronizer(logger, mgr, dataplaneClient, c.ProxySyncSeconds, c.InitCacheSyncDuration)
 	if err != nil {
 		return fmt.Errorf("unable to initialize dataplane synchronizer: %w", err)
 	}
@@ -302,6 +306,7 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 	if c.AnonymousReports {
 		stopAnonymousReports, err := telemetry.SetupAnonymousReports(
 			ctx,
+			logger.WithName("telemetry"),
 			kubeconfig,
 			clientsManager,
 			telemetry.ReportConfig{

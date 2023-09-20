@@ -6,6 +6,7 @@ import (
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/parser/translators"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/versions"
 )
 
@@ -20,7 +21,7 @@ func (p *Parser) ingressRulesFromTCPRoutes() ingressRules {
 
 	tcpRouteList, err := p.storer.ListTCPRoutes()
 	if err != nil {
-		p.logger.WithError(err).Error("failed to list TCPRoutes")
+		p.logger.V(util.ErrorLevel).Error(err, "failed to list TCPRoutes")
 		return result
 	}
 
@@ -49,7 +50,7 @@ func (p *Parser) ingressRulesFromTCPRoutes() ingressRules {
 
 	if len(errs) > 0 {
 		for _, err := range errs {
-			p.logger.Errorf(err.Error())
+			p.logger.V(util.ErrorLevel).Error(err, "could not generate route from TCPRoute")
 		}
 	}
 

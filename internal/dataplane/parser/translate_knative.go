@@ -26,12 +26,12 @@ func (p *Parser) ingressRulesFromKnativeIngress() ingressRules {
 	if err != nil {
 		if !errors.As(err, &store.ErrNotFound{}) {
 			// anything else is unexpected
-			p.logger.Errorf("could not find IngressClassParameters, using defaults: %s", err)
+			p.logger.V(util.ErrorLevel).Error(err, "could not retrieve IngressClassParameters, using defaults")
 		}
 	}
 	ingressList, err := p.storer.ListKnativeIngresses()
 	if err != nil {
-		p.logger.WithError(err).Error("failed to list Knative Ingresses")
+		p.logger.V(util.ErrorLevel).Error(err, "failed to list Knative Ingresses")
 		return result
 	}
 

@@ -1,15 +1,15 @@
 package parser
 
 import (
-	"bytes"
 	"testing"
 
+	"github.com/go-logr/zapr"
 	"github.com/kong/go-kong/kong"
 	"github.com/samber/lo"
-	"github.com/sirupsen/logrus"
-	"github.com/sirupsen/logrus/hooks/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zaptest/observer"
 	corev1 "k8s.io/api/core/v1"
 	netv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -332,7 +332,7 @@ func TestGetK8sServicesForBackends(t *testing.T) {
 			}},
 			expectedAnnotations: map[string]string{},
 			expectedLogEntries: []string{
-				"failed to fetch service: Service default/test-service2 not found",
+				"failed to fetch service",
 			},
 		},
 	} {
@@ -340,15 +340,19 @@ func TestGetK8sServicesForBackends(t *testing.T) {
 			storer, err := store.NewFakeStore(store.FakeObjects{Services: tt.services})
 			require.NoError(t, err)
 
-			stdout := new(bytes.Buffer)
-			logger := logrus.New()
-			logger.SetOutput(stdout)
+			core, logs := observer.New(zap.InfoLevel)
+			logger := zapr.NewLogger(zap.New(core))
 
 			services, annotations := getK8sServicesForBackends(logger, storer, tt.namespace, tt.backends)
 			assert.Equal(t, tt.expectedServices, services)
 			assert.Equal(t, tt.expectedAnnotations, annotations)
-			for _, expectedLogEntry := range tt.expectedLogEntries {
-				assert.Contains(t, stdout.String(), expectedLogEntry)
+			for i, expectedLogEntry := range tt.expectedLogEntries {
+				// TODO 1893 zap observer entries are more structured than the basic buffer previously used. errors are
+				// roughly {Entry:{Message: <the message>, ...}, Context:[{Key: "Error", Message: "whatever"}, ...]}
+				// and not obviously easy to convert to a pure string format. testing the message alone instead as a
+				// reasonable approximation of the previous test, though it lacks the mention of the specific service
+				// from the upstream error
+				assert.Contains(t, logs.All()[i].Entry.Message, expectedLogEntry)
 			}
 		})
 	}
@@ -537,13 +541,14 @@ func TestDoK8sServicesMatchAnnotations(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			logger, loggerHook := test.NewNullLogger()
-			failuresCollector, err := failures.NewResourceFailuresCollector(logger)
-			require.NoError(t, err)
+			core, logs := observer.New(zap.InfoLevel)
+			logger := zapr.NewLogger(zap.New(core))
+
+			failuresCollector := failures.NewResourceFailuresCollector(logger)
 			assert.Equal(t, tt.expected, collectInconsistentAnnotations(tt.services, tt.annotations, failuresCollector, ""))
 			assert.Len(t, failuresCollector.PopResourceFailures(), len(tt.expectedLogEntries), "expecting as many translation failures as log entries")
 			for i := range tt.expectedLogEntries {
-				assert.Contains(t, loggerHook.AllEntries()[i].Message, tt.expectedLogEntries[i])
+				assert.Contains(t, logs.All()[i].Entry.Message, tt.expectedLogEntries[i])
 			}
 		})
 	}
@@ -647,10 +652,9 @@ func TestPopulateServices(t *testing.T) {
 			})
 			require.NoError(t, err)
 			ingressRules.ServiceNameToServices = tc.serviceNamesToServices
-			logger, _ := test.NewNullLogger()
-			failuresCollector, err := failures.NewResourceFailuresCollector(logger)
-			require.NoError(t, err)
-			servicesToBeSkipped := ingressRules.populateServices(logrus.New(), fakeStore, failuresCollector)
+			logger := zapr.NewLogger(zap.NewNop())
+			failuresCollector := failures.NewResourceFailuresCollector(logger)
+			servicesToBeSkipped := ingressRules.populateServices(logger, fakeStore, failuresCollector)
 			require.Equal(t, tc.serviceNamesToSkip, servicesToBeSkipped)
 		})
 	}

@@ -42,10 +42,10 @@ func TestMetricsAreServed(t *testing.T) {
 		// We could try to work around this but that code calls os.Exit(1) whenever
 		// the root context is cancelled and that not what we want to test here.
 
-		deprecatedLogger, _, err := manager.SetupLoggers(&cfg, io.Discard)
+		logger, err := manager.SetupLoggers(&cfg, io.Discard)
 		require.NoError(t, err)
 
-		err = manager.Run(ctx, &cfg, util.ConfigDumpDiagnostic{}, deprecatedLogger)
+		err = manager.Run(ctx, &cfg, util.ConfigDumpDiagnostic{}, logger)
 		require.NoError(t, err)
 	}(ctx)
 

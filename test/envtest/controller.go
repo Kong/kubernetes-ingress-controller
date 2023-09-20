@@ -1,15 +1,15 @@
 package envtest
 
 import (
-	"bytes"
 	"context"
 	"sync"
 	"testing"
 
-	"github.com/bombsimon/logrusr/v4"
-	"github.com/sirupsen/logrus"
+	"github.com/go-logr/zapr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zaptest/observer"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -27,11 +27,10 @@ import (
 func StartReconcilers(ctx context.Context, t *testing.T, scheme *runtime.Scheme, cfg *rest.Config, reconcilers ...controllers.Reconciler) {
 	t.Helper()
 
-	var b bytes.Buffer
-	log := logrus.New()
-	log.Out = &b
+	core, logs := observer.New(zap.InfoLevel)
+	logger := zapr.NewLogger(zap.New(core))
 	o := manager.Options{
-		Logger: logrusr.New(log),
+		Logger: logger,
 		Scheme: scheme,
 		Metrics: metricsserver.Options{
 			BindAddress: "0",
@@ -58,7 +57,10 @@ func StartReconcilers(ctx context.Context, t *testing.T, scheme *runtime.Scheme,
 		wg.Wait()
 
 		if t.Failed() {
-			t.Logf("Test %s failed: dumping controller logs\n%s", t.Name(), b.String())
+			t.Logf("Test %s failed: dumping controller logs\n", t.Name())
+			for _, log := range logs.All() {
+				t.Logf("%s %s\n", log.Time, log.Message)
+			}
 		}
 	})
 }

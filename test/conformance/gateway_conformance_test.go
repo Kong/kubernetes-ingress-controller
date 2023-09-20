@@ -32,6 +32,8 @@ var commonSkippedTests = []string{
 	tests.HTTPRouteRedirectScheme.ShortName,
 	// https://github.com/Kong/kubernetes-ingress-controller/issues/4165
 	tests.HTTPRouteRequestMirror.ShortName,
+	// https://github.com/Kong/kubernetes-ingress-controller/issues/4165
+	tests.HTTPRouteRequestMultipleMirrors.ShortName,
 
 	// experimental conformance
 	// https://github.com/Kong/kubernetes-ingress-controller/issues/3684

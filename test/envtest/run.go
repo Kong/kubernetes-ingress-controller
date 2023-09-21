@@ -83,6 +83,28 @@ func WithPublishService(namespace string) func(cfg *manager.Config) {
 	}
 }
 
+// buffer is a goroutine safe bytes.Buffer.
+type buffer struct {
+	buffer bytes.Buffer
+	mutex  sync.RWMutex
+}
+
+// Write appends the contents of p to the buffer, growing the buffer as needed.
+// It returns the number of bytes written.
+func (s *buffer) Write(p []byte) (n int, err error) {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+	return s.buffer.Write(p)
+}
+
+// String returns the contents of the unread portion of the buffer
+// as a string. If the Buffer is a nil pointer, it returns "<nil>".
+func (s *buffer) String() string {
+	s.mutex.RLock()
+	defer s.mutex.RUnlock()
+	return s.buffer.String()
+}
+
 // RunManager runs the manager in a goroutine. It's possible to modify the manager's configuration
 // by passing in modifyCfgFns. The manager is stopped when the context is canceled.
 func RunManager(
@@ -98,7 +120,7 @@ func RunManager(
 	}
 
 	logrusLogger, loggerHook := test.NewNullLogger()
-	b := &bytes.Buffer{}
+	b := &buffer{}
 	logrusLogger.Out = b
 	logger := logrusr.New(logrusLogger)
 	ctx = ctrl.LoggerInto(ctx, logger)

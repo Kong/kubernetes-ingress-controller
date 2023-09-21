@@ -182,6 +182,7 @@ spec:
                 - round-robin
                 - consistent-hashing
                 - least-connections
+                - latency
                 type: string
               hash_fallback:
                 description: 'HashFallback defines What to use as hashing input if

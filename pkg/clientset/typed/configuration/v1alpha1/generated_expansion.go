@@ -19,3 +19,7 @@ limitations under the License.
 package v1alpha1
 
 type IngressClassParametersExpansion interface{}
+
+type KongCustomEntityExpansion interface{}
+
+type KongCustomEntityDefinitionExpansion interface{}

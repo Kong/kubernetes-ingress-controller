@@ -32,6 +32,14 @@ func (c *FakeConfigurationV1alpha1) IngressClassParameterses(namespace string) v
 	return &FakeIngressClassParameterses{c, namespace}
 }
 
+func (c *FakeConfigurationV1alpha1) KongCustomEntities(namespace string) v1alpha1.KongCustomEntityInterface {
+	return &FakeKongCustomEntities{c, namespace}
+}
+
+func (c *FakeConfigurationV1alpha1) KongCustomEntityDefinitions(namespace string) v1alpha1.KongCustomEntityDefinitionInterface {
+	return &FakeKongCustomEntityDefinitions{c, namespace}
+}
+
 // RESTClient returns a RESTClient that is used to communicate
 // with API server by this client implementation.
 func (c *FakeConfigurationV1alpha1) RESTClient() rest.Interface {

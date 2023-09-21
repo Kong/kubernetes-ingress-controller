@@ -95,6 +95,11 @@ Adding a new version? You'll need three changes:
   [#4385](https://github.com/Kong/kubernetes-ingress-controller/pull/4385)
   [#4550](https://github.com/Kong/kubernetes-ingress-controller/pull/4550)
   [#4612](https://github.com/Kong/kubernetes-ingress-controller/pull/4612)
+- Add CRDs `KongCustomEntity` and `KongCustomEntityDefinition` to group
+  `configuration.konghq.com/v1alpha1` to support Kong custom entities. 
+  `KongCustomEntityDefinition` defines a Kong custom entity type and 
+  `KongCustomEntity` defines fields of a Kong custom entity.
+  [#4637](https://github.com/Kong/kubernetes-ingress-controller/pull/4637)
 
 ### Changes
 

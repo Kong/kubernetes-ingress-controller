@@ -122,6 +122,7 @@ ConfigSource is a wrapper around SecretValueFromSource.
 
 
 _Appears in:_
+- [ConfigSourcePatch](#configsourcepatch)
 - [KongPlugin](#kongplugin)
 
 
@@ -278,6 +279,8 @@ _Appears in:_
 Package v1alpha1 contains API Schema definitions for the configuration.konghq.com v1alpha1 API group.
 
 - [IngressClassParameters](#ingressclassparameters)
+- [KongCustomEntity](#kongcustomentity)
+- [KongCustomEntityDefinition](#kongcustomentitydefinition)
 
 ### IngressClassParameters
 
@@ -297,6 +300,59 @@ IngressClassParameters is the Schema for the IngressClassParameters API.
 
 
 
+### KongCustomEntity
+
+
+
+KongCustomEntity represents a custom entity in Kong.
+
+<!-- kong_custom_entity description placeholder -->
+
+| Field | Description |
+| --- | --- |
+| `apiVersion` _string_ | `configuration.konghq.com/v1alpha1`
+| `kind` _string_ | `KongCustomEntity`
+| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` _[KongCustomEntitySpec](#kongcustomentityspec)_ | Spec is the specification of the entity. |
+
+
+
+
+### KongCustomEntityDefinition
+
+
+
+KongCustomEntityDefinition represents definition of a custom entity type in Kong.
+
+<!-- kong_custom_entity_definition description placeholder -->
+
+| Field | Description |
+| --- | --- |
+| `apiVersion` _string_ | `configuration.konghq.com/v1alpha1`
+| `kind` _string_ | `KongCustomEntityDefinition`
+| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` _[KongCustomEntityDefinitionSpec](#kongcustomentitydefinitionspec)_ |  |
+
+
+
+
+### ConfigSourcePatch
+
+
+
+ConfigSourcePatch is a patch to add values from external resources (e.g. secrets) to a certain JSON path.
+
+
+
+| Field | Description |
+| --- | --- |
+| `path` _string_ | Path is the JSON path of imported configurations to add to. |
+| `configSource` _[ConfigSource](#configsource)_ | ConfigSource is the source secret name and key of the value. |
+
+
+_Appears in:_
+- [KongCustomEntitySpec](#kongcustomentityspec)
+
 ### IngressClassParametersSpec
 
 
@@ -313,6 +369,63 @@ IngressClassParameters is the Schema for the IngressClassParameters API.
 
 _Appears in:_
 - [IngressClassParameters](#ingressclassparameters)
+
+### KongCustomEntityDefinitionSpec
+
+
+
+KongCustomEntityDefinitionSpec is the specification of KongCustomEntityDefinition to define a type of Kong custom entity.
+
+
+
+| Field | Description |
+| --- | --- |
+| `name` _string_ | Name is the type name of the entity. |
+| `adminAPIName` _string_ | AdminAPIName is the name used in admin API paths to CRUD this type of entity. If AdminAPIName is empty, it uses the value of `Name`. For example: Name = "jwt_credentials" and AdminAPIName = "jwts", then we call `/jwts` or `/jwts/<id>` for CRUD. |
+| `adminAPINestedName` _string_ | AdminAPINestedName is the name used in the admin API paths to CRUD the entity attached to other entities. If AdminAPINestedName is empty, it is the same as `AdminAPIName`; if they are both empty, it uses the value of `Name`. like Name = "hmacauth_credentials", AdminAPIName = "hmac-auths" and AdminAPINestedName = "hmac-auth" We call `/consumers/*/hmac-auth` or  `/consumers/*/hmac-auth/*` for CRUD. |
+| `dependencies` _[KongEntityForeignKey](#kongentityforeignkey) array_ | Dependecies are the entity types which are required by this type. If it is empty, the entity type is a "top level" object that does not dependent on other entities. |
+
+
+_Appears in:_
+- [KongCustomEntityDefinition](#kongcustomentitydefinition)
+
+### KongCustomEntitySpec
+
+
+
+KongCustomEntitySpec defines the specification of a Kong custom entity.
+
+
+
+| Field | Description |
+| --- | --- |
+| `type` _string_ | Type is the type of this custom entity. Should be same as the `Name` of a KongCustomEntityDefinition. |
+| `fields` _[JSON](#json)_ | Fields is the fields of the custom entity, in JSON format. |
+| `patches` _[ConfigSourcePatch](#configsourcepatch) array_ | Patches stores fields coming from external resources (e.g. secrets) adding to to a certain JSON path of the entity. |
+
+
+_Appears in:_
+- [KongCustomEntity](#kongcustomentity)
+
+
+
+### KongEntityForeignKey
+
+
+
+KongEntityForeignKey represents a foreign key constraint of Kong entity.
+
+
+
+| Field | Description |
+| --- | --- |
+| `type` _string_ | Type is the type of the dependent entity in the foreign key constraint. |
+| `primaryKey` _string_ | PrimaryKey is the primary key to identify the foreign dependency, like "id" in service. |
+| `alternativeKeys` _string array_ | AlternativeKeys are other fields that could identify the foreign dependency, like "name" in service. |
+
+
+_Appears in:_
+- [KongCustomEntityDefinitionSpec](#kongcustomentitydefinitionspec)
 
 
 ## configuration.konghq.com/v1beta1

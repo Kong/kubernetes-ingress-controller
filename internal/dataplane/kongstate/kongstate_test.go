@@ -108,7 +108,7 @@ func ensureAllKongStateFieldsAreCoveredInTest(t *testing.T, testedFields []strin
 
 	// Meta test - ensure we have testcases covering all fields in KongState.
 	for _, field := range allKongStateFields {
-		assert.True(t, lo.Contains(testedFields, field), "field %s wasn't tested", field)
+		require.Containsf(t, testedFields, field, "field %s wasn't tested", field)
 	}
 }
 

@@ -244,21 +244,17 @@ func TestGatewayListenerConflicts(t *testing.T) {
 	httpsHost := gatewayv1beta1.Hostname("https.example")
 	httphostHost := gatewayv1beta1.Hostname("http.example")
 
-	// this tests compatibility to the extent that we can with Kong listens. it does not support the full range
+	// This tests compatibility to the extent that we can with Kong listens. it does not support the full range
 	// of compatible Gateway Routes. Gateway permits TLS and HTTPS routes to coexist on the same port so long
 	// as all use unique hostnames. Kong, however, requires that TLS routes go through a TLS stream listen, so
 	// the binds are separate and we cannot combine them. attempting to do so (e.g. setting the tls port to 443 here)
-	// will result in ListenerReasonPortUnavailable
+	// will result in ListenerReasonPortUnavailable.
 	gw.Spec.Listeners = []gatewayv1beta1.Listener{
-		// TODO https://github.com/Kong/kubernetes-ingress-controller/issues/4597
-		// This is disabled pending an apparent upstream bug in GWAPI v0.8.0.
-		// We need to confirm with upstream and either re-enable it after a fixed GWAPI release
-		// or remove it (or httphost).
-		//{
-		//	Name:     "http",
-		//	Protocol: gatewayv1beta1.HTTPProtocolType,
-		//	Port:     gatewayv1beta1.PortNumber(80),
-		//},
+		{
+			Name:     "http",
+			Protocol: gatewayv1beta1.HTTPProtocolType,
+			Port:     gatewayv1beta1.PortNumber(80),
+		},
 		{
 			Name:     "tls",
 			Protocol: gatewayv1beta1.TLSProtocolType,

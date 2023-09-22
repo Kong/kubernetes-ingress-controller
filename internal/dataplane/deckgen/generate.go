@@ -147,7 +147,7 @@ func ToDeckContent(
 
 	for _, c := range k8sState.Licenses {
 		content.Licenses = append(content.Licenses,
-			file.FLicense{License: c})
+			file.FLicense{License: c.License})
 	}
 
 	sort.SliceStable(content.Licenses, func(i, j int) bool {

@@ -264,7 +264,7 @@ func (p *Parser) BuildKongConfig() KongConfigBuildingResult {
 	if p.licenseGetter != nil {
 		optionalLicense := p.licenseGetter.GetLicense()
 		if l, ok := optionalLicense.Get(); ok {
-			result.Licenses = append(result.Licenses, l)
+			result.Licenses = append(result.Licenses, kongstate.License{License: l})
 		}
 	}
 

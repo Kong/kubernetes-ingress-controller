@@ -127,7 +127,7 @@ Adding a new version? You'll need three changes:
 - KongPlugins used on multiple resources will no longer result in
   `instance_name` collisions.
   [#4588](https://github.com/Kong/kubernetes-ingress-controller/issues/4588)
-- Fix `panic` when last known configuratino fetcher gets a `nil` Status when requesting
+- Fix `panic` when last known configuration fetcher gets a `nil` Status when requesting
   `/status` from Kong Gateway.
   This happens when Gateway is responding with a 50x HTTP status code.
   [#4627](https://github.com/Kong/kubernetes-ingress-controller/issues/4627)
@@ -137,6 +137,8 @@ Adding a new version? You'll need three changes:
   deleting existing configuration during an API server restart.
   [#4641](https://github.com/Kong/kubernetes-ingress-controller/issues/4641)
   [#4643](https://github.com/Kong/kubernetes-ingress-controller/issues/4643)
+- Fix `Licenses` and `ConsumerGroups` missing in sanitized copies of Kong configuration.
+  [#4710](https://github.com/Kong/kubernetes-ingress-controller/pull/4710
 
 ## [2.11.1]
 

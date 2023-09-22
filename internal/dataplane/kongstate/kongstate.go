@@ -24,7 +24,7 @@ type KongState struct {
 	Upstreams      []Upstream
 	Certificates   []Certificate
 	CACertificates []kong.CACertificate
-	Licenses       []kong.License
+	Licenses       []License
 	Plugins        []Plugin
 	Consumers      []Consumer
 	ConsumerGroups []ConsumerGroup
@@ -49,6 +49,13 @@ func (ks *KongState) SanitizedCopy() *KongState {
 			}
 			return
 		}(),
+		Licenses: func() (res []License) {
+			for _, v := range ks.Licenses {
+				res = append(res, *v.SanitizedCopy())
+			}
+			return
+		}(),
+		ConsumerGroups: ks.ConsumerGroups,
 	}
 }
 

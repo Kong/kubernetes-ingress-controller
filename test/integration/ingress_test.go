@@ -157,7 +157,7 @@ func TestGRPCIngressEssentials(t *testing.T) {
 	ns, cleaner := helpers.Setup(ctx, t, env)
 
 	t.Log("deploying a minimal HTTP container deployment to test Ingress routes")
-	container := generators.NewContainer("grpcbin", "moul/grpcbin", 9001)
+	container := generators.NewContainer("grpcbin", test.GRPCBinImage, test.GRPCBinPort)
 	deployment := generators.NewDeploymentForContainer(container)
 	deployment, err := env.Cluster().Client().AppsV1().Deployments(ns.Name).Create(ctx, deployment, metav1.CreateOptions{})
 	require.NoError(t, err)

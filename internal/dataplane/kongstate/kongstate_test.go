@@ -16,6 +16,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8stypes "k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/sets"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/failures"
@@ -31,6 +32,7 @@ var kongConsumerTypeMeta = metav1.TypeMeta{
 }
 
 func TestKongState_SanitizedCopy(t *testing.T) {
+	testedFields := sets.New[string]()
 	for _, tt := range []struct {
 		name string
 		in   KongState
@@ -47,6 +49,10 @@ func TestKongState_SanitizedCopy(t *testing.T) {
 				Consumers: []Consumer{{
 					KeyAuths: []*KeyAuth{{kong.KeyAuth{ID: kong.String("1"), Key: kong.String("secret")}}},
 				}},
+				Licenses: []License{{kong.License{ID: kong.String("1"), Payload: kong.String("secret")}}},
+				ConsumerGroups: []ConsumerGroup{{
+					ConsumerGroup: kong.ConsumerGroup{ID: kong.String("1"), Name: kong.String("consumer-group")},
+				}},
 			},
 			want: KongState{
 				Services:       []Service{{Service: kong.Service{ID: kong.String("1")}}},
@@ -57,13 +63,52 @@ func TestKongState_SanitizedCopy(t *testing.T) {
 				Consumers: []Consumer{{
 					KeyAuths: []*KeyAuth{{kong.KeyAuth{ID: kong.String("1"), Key: redactedString}}},
 				}},
+				Licenses: []License{{kong.License{ID: kong.String("1"), Payload: redactedString}}},
+				ConsumerGroups: []ConsumerGroup{{
+					ConsumerGroup: kong.ConsumerGroup{ID: kong.String("1"), Name: kong.String("consumer-group")},
+				}},
 			},
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
+			testedFields.Insert(extractNotEmptyFieldNames(tt.in)...)
 			got := *tt.in.SanitizedCopy()
 			assert.Equal(t, tt.want, got)
 		})
+	}
+
+	ensureAllKongStateFieldsAreCoveredInTest(t, testedFields.UnsortedList())
+}
+
+// extractNotEmptyFieldNames returns the names of all non-empty fields in the given KongState.
+// This is to programmatically find out what fields are used in a test case.
+func extractNotEmptyFieldNames(s KongState) []string {
+	var fields []string
+	typ := reflect.ValueOf(s).Type()
+	for i := 0; i < typ.NumField(); i++ {
+		f := typ.Field(i)
+		v := reflect.ValueOf(s).Field(i)
+		if !f.Anonymous && f.IsExported() && !v.IsZero() {
+			fields = append(fields, f.Name)
+		}
+	}
+	return fields
+}
+
+// ensureAllKongStateFieldsAreCoveredInTest ensures that all fields in KongState are covered in a tests.
+func ensureAllKongStateFieldsAreCoveredInTest(t *testing.T, testedFields []string) {
+	allKongStateFields := func() []string {
+		var fields []string
+		typ := reflect.ValueOf(KongState{}).Type()
+		for i := 0; i < typ.NumField(); i++ {
+			fields = append(fields, typ.Field(i).Name)
+		}
+		return fields
+	}()
+
+	// Meta test - ensure we have testcases covering all fields in KongState.
+	for _, field := range allKongStateFields {
+		assert.True(t, lo.Contains(testedFields, field), "field %s wasn't tested", field)
 	}
 }
 

@@ -2,8 +2,13 @@ package parser
 
 import (
 	"errors"
+	"fmt"
+	"os"
+	"os/exec"
+	"path"
 
 	"github.com/dominikbraun/graph"
+	"github.com/dominikbraun/graph/draw"
 	"github.com/kong/deck/file"
 	"k8s.io/apimachinery/pkg/util/sets"
 )
@@ -11,6 +16,7 @@ import (
 type Entity struct {
 	Name string
 	Type string
+	Raw  any
 }
 
 type EntityHash string
@@ -19,6 +25,26 @@ type KongConfigGraph = graph.Graph[EntityHash, Entity]
 
 func hashEntity(entity Entity) EntityHash {
 	return EntityHash(entity.Type + ":" + entity.Name)
+}
+
+func RenderGraphSVG(g KongConfigGraph, outFilePath string) (string, error) {
+	if outFilePath == "" {
+		outFilePath = path.Join(os.TempDir(), "kong-config-graph.svg")
+	}
+	f, err := os.CreateTemp("", "*.dot")
+	if err != nil {
+		return "", fmt.Errorf("failed to create temp file: %w", err)
+	}
+
+	err = draw.DOT(g, f)
+	if err != nil {
+		return "", fmt.Errorf("failed to render dot file: %w", err)
+	}
+
+	if err = exec.Command("dot", "-Tsvg", "-o", outFilePath, f.Name()).Run(); err != nil {
+		return "", fmt.Errorf("failed to render svg file: %w", err)
+	}
+	return outFilePath, nil
 }
 
 // FindConnectedComponents iterates over the graph vertices and runs a DFS on each vertex that has not been visited yet.

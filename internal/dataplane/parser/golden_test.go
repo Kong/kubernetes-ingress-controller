@@ -6,15 +6,12 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	"os/exec"
-	"path"
 	"path/filepath"
 	"reflect"
 	"strings"
 	"testing"
 
 	"github.com/blang/semver/v4"
-	"github.com/dominikbraun/graph/draw"
 	"github.com/samber/lo"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
@@ -260,22 +257,6 @@ func runParserGoldenTest(t *testing.T, tc parserGoldenTestCase) {
 			PluginSchemas:    pluginsSchemaStoreStub{},
 		},
 	)
-
-	// Build a graph of the Kong configuration.
-	graph, err := parser.BuildKongConfigGraph(targetConfig)
-	require.NoError(t, err, "failed building Kong configuration graph")
-
-	connectedComponents, err := parser.FindConnectedComponents(graph)
-	require.NoError(t, err, "failed finding connected components")
-
-	for i, component := range connectedComponents {
-		file, err := os.CreateTemp("", "*.dot")
-		err = draw.DOT(component, file)
-		require.NoError(t, err, "failed drawing graph")
-
-		err = exec.Command("dot", "-Tsvg", "-o", path.Dir(tc.goldenFile)+fmt.Sprintf("/component-%d.svg", i), file.Name()).Run()
-		require.NoError(t, err)
-	}
 
 	// Marshal the result into YAML bytes for comparison.
 	resultB, err := yaml.Marshal(targetConfig)

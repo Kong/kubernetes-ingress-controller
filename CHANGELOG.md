@@ -79,6 +79,14 @@ Adding a new version? You'll need three changes:
 
 > Release date: 2023-09-25
 
+### Breaking changes
+
+- Converted heterogenous logging systems to a single logging system using a
+  faster, more feature-rich library. This changes the default (console) log
+  format and removes semantif log levels (info, warn, etc.) in favor of
+  verbosity (0 is normal, 1 is more detailed, 2 is even more detailed, etc.).
+  JSON logs are unaffected other than the change from level to verbosity.
+
 ### Added
 
 - `konghq.com/rewrite` annotation has been introduced to manage URI rewriting.

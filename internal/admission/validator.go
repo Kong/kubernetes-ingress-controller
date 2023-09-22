@@ -191,19 +191,13 @@ func (validator KongHTTPValidator) ValidateConsumerGroup(
 		return true, "", nil
 	}
 	info, err := infoSvc.Get(ctx)
-	// TODO 1893 these were originally debug-level errors, and would have been filtered out at default log level
-	// logr Error https://pkg.go.dev/github.com/go-logr/logr#Logger.Error always emits logs, but is recommended to allow
-	// finer control over error handling:
-	// > but they are separate methods so that LogSink implementations can choose to do things like attach additional
-	// > information (such as stack traces) on calls to Error().
-	// for closer behavior to logrus we'd need an Info() call that formats the error text into the message.
 	if err != nil {
-		validator.Logger.V(util.DebugLevel).Error(err, "failed to fetch Kong info")
+		validator.Logger.V(util.DebugLevel).Info("failed to fetch Kong info", "error", err)
 		return false, ErrTextAdminAPIUnavailable, nil
 	}
 	version, err := kong.NewVersion(info.Version)
 	if err != nil {
-		validator.Logger.V(util.DebugLevel).Error(err, "failed to parse Kong version")
+		validator.Logger.V(util.DebugLevel).Info("failed to parse Kong version", "error", err)
 	} else {
 		kongVer := semver.Version{Major: version.Major(), Minor: version.Minor()}
 		if !version.IsKongGatewayEnterprise() || !kongVer.GTE(versions.ConsumerGroupsVersionCutoff) {

@@ -102,7 +102,7 @@ func TestResourceFailuresCollector(t *testing.T) {
 		require.NotNil(t, lastLog)
 		// TODO 1893 idk how this conversion should actually work, and fiddling with values is tiresome
 		// it will work when the level conversions are sorted. the code does log the warn constant
-		require.Equal(t, util.WarnLevel, lastLog.Level)
+		require.Equal(t, zapcore.Level(util.WarnLevel), lastLog.Level)
 		require.Len(t, collector.PopResourceFailures(), 0, "no failures expected - causing objects missing")
 	})
 }

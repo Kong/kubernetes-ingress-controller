@@ -214,10 +214,6 @@ func (ks *KongState) FillOverrides(logger logr.Logger, s store.Storer) {
 			kongIngress, err := getKongIngressFromObjectMeta(s, ks.Services[i].Routes[j].Ingress)
 			if err != nil {
 				logger.V(util.ErrorLevel).Error(err, "failed to fetch KongIngress resource",
-					// TODO 1893 we're not very consistent on whether name keys and such have resource prefixes
-					// it probably makes sense to dispense with the prefixes and use a "kind" field. consistent slog keys feels
-					// right, though you could also argue the other end that you don't want mixed (even if similar) data in a field
-					// left as-is for now to try and limit changes from existing logs
 					"resource_name", ks.Services[i].Routes[j].Ingress.Name,
 					"resource_namespace", ks.Services[i].Routes[j].Ingress.Namespace)
 			}

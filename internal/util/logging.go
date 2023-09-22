@@ -58,9 +58,6 @@ func MakeLogger(level string, formatter string, output io.Writer) (*zap.Logger, 
 	if err != nil {
 		return nil, fmt.Errorf("setting log formatter failed: %w", err)
 	}
-	// TODO 1893 we can maybe avoid building from a core by using
-	// https://pkg.go.dev/go.uber.org/zap#RegisterSink to make a URL
-	// that points to an io.Writer somehow. Not clear it'd be worth it.
 	core := zapcore.NewCore(encoder, zapcore.AddSync(output), levelFunc)
 
 	return zap.New(core), nil

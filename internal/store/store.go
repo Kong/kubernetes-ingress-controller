@@ -474,8 +474,6 @@ func (s Store) ListIngressesV1() []*netv1.Ingress {
 	for _, item := range s.stores.IngressV1.List() {
 		ing, ok := item.(*netv1.Ingress)
 		if !ok {
-			// TODO 1893 these include their function names in a message. we may consider converting to
-			// https://pkg.go.dev/go.uber.org/zap#WithCaller
 			s.logger.V(util.WarnLevel).Info("listIngressesV1: dropping object of unexpected type", "type", fmt.Sprintf("%#v", item))
 			continue
 		}

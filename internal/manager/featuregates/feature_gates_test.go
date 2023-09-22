@@ -10,7 +10,6 @@ import (
 
 func TestFeatureGates(t *testing.T) {
 	t.Log("setting up configurations and logging for feature gates testing")
-	// TODO 1893 this was setting up a buffer, but then the tests don't actually check it, so a Nop is apparently fine
 	setupLog := zapr.NewLogger(zap.NewNop())
 
 	t.Log("verifying feature gates setup defaults when no feature gates are configured")

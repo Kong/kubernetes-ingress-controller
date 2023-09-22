@@ -347,11 +347,6 @@ func TestGetK8sServicesForBackends(t *testing.T) {
 			assert.Equal(t, tt.expectedServices, services)
 			assert.Equal(t, tt.expectedAnnotations, annotations)
 			for i, expectedLogEntry := range tt.expectedLogEntries {
-				// TODO 1893 zap observer entries are more structured than the basic buffer previously used. errors are
-				// roughly {Entry:{Message: <the message>, ...}, Context:[{Key: "Error", Message: "whatever"}, ...]}
-				// and not obviously easy to convert to a pure string format. testing the message alone instead as a
-				// reasonable approximation of the previous test, though it lacks the mention of the specific service
-				// from the upstream error
 				assert.Contains(t, logs.All()[i].Entry.Message, expectedLogEntry)
 			}
 		})

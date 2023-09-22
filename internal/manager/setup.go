@@ -168,11 +168,6 @@ func setupAdmissionServer(
 	parserFeatures parser.FeatureFlags,
 	kongVersion semver.Version,
 ) error {
-	// TODO 1893 we previously used a "logrus.FieldLogerr.WithField("component", "whatever") to generate child loggers
-	// logr provides a dedicated WithName for this purpose https://pkg.go.dev/github.com/go-logr/logr#Logger.WithName
-	// it will use a different format. We could optionally use https://pkg.go.dev/github.com/go-logr/logr#Logger.WithValues
-	// to generate children more similar to logrusr. We weren't consistent about the field name though, so we may as well
-	// use the dedicated one.
 	admissionLogger := logger.WithName("admission-server")
 
 	if managerConfig.AdmissionServer.ListenAddr == "off" {

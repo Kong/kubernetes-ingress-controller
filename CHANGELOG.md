@@ -95,6 +95,9 @@ Adding a new version? You'll need three changes:
   [#4385](https://github.com/Kong/kubernetes-ingress-controller/pull/4385)
   [#4550](https://github.com/Kong/kubernetes-ingress-controller/pull/4550)
   [#4612](https://github.com/Kong/kubernetes-ingress-controller/pull/4612)
+- `KongIngress` CRD now supports `latency` algorithm in its `upstream.algorithm`
+  field. This can be used with Kong Gateway 3.2+.
+  [#4703](https://github.com/Kong/kubernetes-ingress-controller/pull/4703)
 
 ### Changes
 

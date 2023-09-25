@@ -134,13 +134,13 @@ jobs:
         run: |
           if [ "${{ inputs.kong-image }}" != "" ]; then
             export kong_image=$(echo ${{ inputs.kong-image }} | awk '{split($0,a,":"); print a[1]}')
-            export kong_tag=$(awk '{split($0,a,":"); print a[2]}')
+            export kong_tag=$(echo ${{ inputs.kong-image }} | awk '{split($0,a,":"); print a[2]}')
             echo "kong-image=$kong_image" >> $GITHUB_OUTPUT
             echo "kong-tag=$kong_tag" >> $GITHUB_OUTPUT
           fi
           if [ "${{ inputs.kic-image }}" != "" ]; then
-            export kic_image=$(awk '{split($0,a,":"); print a[1]}')
-            export kic_tag=$(awk '{split($0,a,":"); print a[2]}')
+            export kic_image=$(echo ${{ inputs.kic-image }} | awk '{split($0,a,":"); print a[1]}')
+            export kic_tag=$(echo ${{ inputs.kic-image }} | awk '{split($0,a,":"); print a[2]}')
             echo "kic-image=$kic_image" >> $GITHUB_OUTPUT
             echo "kic-tag=$kic_tag" >> $GITHUB_OUTPUT
           fi

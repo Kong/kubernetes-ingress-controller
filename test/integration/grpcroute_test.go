@@ -13,6 +13,7 @@ import (
 	ktfkong "github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/kong"
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
 	pb "github.com/moul/pb/grpcbin/go-grpc"
+	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
@@ -25,6 +26,7 @@ import (
 	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util/builder"
+	"github.com/kong/kubernetes-ingress-controller/v2/test"
 	"github.com/kong/kubernetes-ingress-controller/v2/test/helpers/certificate"
 	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/helpers"
 )
@@ -119,10 +121,8 @@ func TestGRPCRouteEssentials(t *testing.T) {
 	require.NoError(t, err)
 	cleaner.Add(gateway)
 
-	grpcPort := int32(9001)
-	grpcPortNumber := gatewayv1beta1.PortNumber(grpcPort)
 	t.Log("deploying a minimal GRPC container deployment to test Ingress routes")
-	container := generators.NewContainer("grpcbin", "moul/grpcbin", grpcPort)
+	container := generators.NewContainer("grpcbin", test.GRPCBinImage, test.GRPCBinPort)
 	deployment := generators.NewDeploymentForContainer(container)
 	deployment, err = env.Cluster().Client().AppsV1().Deployments(ns.Name).Create(ctx, deployment, metav1.CreateOptions{})
 	require.NoError(t, err)
@@ -170,7 +170,7 @@ func TestGRPCRouteEssentials(t *testing.T) {
 					BackendRef: gatewayv1alpha2.BackendRef{
 						BackendObjectReference: gatewayv1beta1.BackendObjectReference{
 							Name: gatewayv1beta1.ObjectName(service.Name),
-							Port: &grpcPortNumber,
+							Port: lo.ToPtr(gatewayv1beta1.PortNumber(test.GRPCBinPort)),
 						},
 					},
 				}},

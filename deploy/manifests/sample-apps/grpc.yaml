@@ -28,7 +28,7 @@ spec:
         app: grpcbin
     spec:
       containers:
-      - image: moul/grpcbin
+      - image: kong/grpcbin
         name: grpcbin
         ports:
         - containerPort: 9001

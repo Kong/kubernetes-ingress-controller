@@ -234,13 +234,13 @@ jobs:
       matrix:
         include:
           - kubernetes-version: 'v1.27.3'
+            istio-version: 'v1.19'
+          - kubernetes-version: 'v1.27.3'
             istio-version: 'v1.18'
           - kubernetes-version: 'v1.26.6'
             istio-version: 'v1.17'
           - kubernetes-version: 'v1.25.11'
             istio-version: 'v1.16'
-          - kubernetes-version: 'v1.25.11'
-            istio-version: 'v1.15'
     steps:
       - name: Download built image artifact
         if: ${{ inputs.load-local-image }}

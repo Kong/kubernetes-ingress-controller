@@ -42,7 +42,7 @@ require (
 	github.com/prometheus/client_golang v1.16.0
 	github.com/prometheus/common v0.44.0
 	github.com/samber/lo v1.38.1
-	github.com/samber/mo v1.8.0
+	github.com/samber/mo v1.10.0
 	github.com/sethvargo/go-password v0.2.0
 	github.com/sirupsen/logrus v1.9.3
 	github.com/spf13/cobra v1.7.0

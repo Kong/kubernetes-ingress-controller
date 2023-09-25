@@ -44,9 +44,6 @@ func TestGatewayExperimentalConformance(t *testing.T) {
 					suite.SupportHTTPRouteMethodMatching,
 					suite.SupportHTTPResponseHeaderModification,
 				),
-				SkipTests: []string{
-					tests.GatewayClassObservedGenerationBump.ShortName,
-				},
 			},
 			ConformanceProfiles: sets.New(
 				suite.HTTPConformanceProfileName,
@@ -71,7 +68,7 @@ func TestGatewayExperimentalConformance(t *testing.T) {
 	//cSuite.Run(t, []suite.ConformanceTest{tests.HTTPRouteRedirectPortAndScheme})
 	require.NoError(t, cSuite.Run(t, tests.ConformanceTests))
 
-	const reportFileName = "conformance-tests-report.yaml"
+	const reportFileName = "kong-kubernetes-ingress-controller.yaml"
 	t.Log("saving the gateway conformance test report to file:", reportFileName)
 	report, err := cSuite.Report()
 	require.NoError(t, err)

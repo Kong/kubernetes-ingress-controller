@@ -233,7 +233,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - kubernetes-version: 'v1.27.3'
+          - kubernetes-version: 'v1.28.0'
             istio-version: 'v1.19'
           - kubernetes-version: 'v1.27.3'
             istio-version: 'v1.18'

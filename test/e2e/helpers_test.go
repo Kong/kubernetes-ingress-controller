@@ -173,7 +173,7 @@ func createKINDBuilder(t *testing.T) *environments.Builder {
 		clusterBuilder = clusterBuilder.WithClusterVersion(clusterVersion)
 	}
 	builder := environments.NewBuilder().WithClusterBuilder(clusterBuilder).WithAddons(metallb.New())
-	if shouldLoadImages() {
+	if testenv.ClusterLoadImages() != "" {
 		builder = builder.WithAddons(buildImageLoadAddon(t, testenv.ControllerImageTag(), testenv.KongImageTag()))
 	}
 	return builder
@@ -186,7 +186,7 @@ func createExistingKINDBuilder(t *testing.T, name string) (*environments.Builder
 
 	builder = builder.WithExistingCluster(cluster)
 	builder = builder.WithAddons(metallb.New())
-	if shouldLoadImages() {
+	if testenv.ClusterLoadImages() != "" {
 		builder = builder.WithAddons(buildImageLoadAddon(t, testenv.ControllerImageTag(), testenv.KongImageTag()))
 	}
 	return builder, nil

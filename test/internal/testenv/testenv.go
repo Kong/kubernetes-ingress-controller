@@ -114,6 +114,11 @@ func ClusterProvider() string {
 	return os.Getenv("KONG_CLUSTER_PROVIDER")
 }
 
+// ClusterLoadImages loads images into test clusters when set.
+func ClusterLoadImages() string {
+	return os.Getenv("TEST_KONG_LOAD_IMAGES")
+}
+
 // ControllerFeatureGates contains the feature gates that should be enabled
 // for test runs in the controller.
 // If none specified, we fall back to default values.

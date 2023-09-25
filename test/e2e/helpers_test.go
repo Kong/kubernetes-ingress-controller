@@ -776,7 +776,7 @@ func buildImageLoadAddon(t *testing.T, images ...string) clusters.Addon {
 func createKongImagePullSecret(ctx context.Context, t *testing.T, env environments.Environment) {
 	t.Helper()
 
-	if kongImagePullUsername == "" || kongImagePullPassword == "" {
+	if testenv.KongPullUsername() == "" || testenv.KongPullPassword() == "" {
 		return
 	}
 	kubeconfigFilename := getTemporaryKubeconfig(t, env)
@@ -786,8 +786,8 @@ func createKongImagePullSecret(ctx context.Context, t *testing.T, env environmen
 		ctx,
 		"kubectl", "--kubeconfig", kubeconfigFilename,
 		"create", "secret", "docker-registry", secretName,
-		"--docker-username="+kongImagePullUsername,
-		"--docker-password="+kongImagePullPassword,
+		"--docker-username="+testenv.KongPullUsername(),
+		"--docker-password="+testenv.KongPullPassword(),
 	)
 	out, err := cmd.CombinedOutput()
 	require.NoError(t, err, "command output: "+string(out))

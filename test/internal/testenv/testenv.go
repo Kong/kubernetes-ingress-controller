@@ -1,6 +1,7 @@
 package testenv
 
 import (
+	"fmt"
 	"os"
 	"time"
 )
@@ -40,6 +41,33 @@ func KongTag() string {
 	return os.Getenv("TEST_KONG_TAG")
 }
 
+// KongImageTag is the combined Kong image and tag if both are set, or empty string if not.
+func KongImageTag() string {
+	if KongImage() != "" && KongTag() != "" {
+		return fmt.Sprintf("%s:%s", KongImage(), KongTag())
+	}
+	return ""
+}
+
+// ControllerImage is the Kong image to use in lieu of the default.
+func ControllerImage() string {
+	return os.Getenv("TEST_CONTROLLER_IMAGE")
+}
+
+// ControllerTag is the Kong image tag to use in tests.
+func ControllerTag() string {
+	return os.Getenv("TEST_CONTROLLER_TAG")
+}
+
+// ControllerImageTag is the combined Controller image and tag if both are set, or empty string if not.
+func ControllerImageTag() string {
+	if ControllerImage() != "" && ControllerTag() != "" {
+		return fmt.Sprintf("%s:%s", ControllerImage(), ControllerTag())
+	}
+	return ""
+}
+
+// KongEffectiveVersion is the effective semver of kong gateway.
 // KongEffectiveVersion is the effective semver of kong gateway.
 // When testing against "nightly" image of kong gateway, we need to set the effective version for parsing semver in chart templates.
 func KongEffectiveVersion() string {

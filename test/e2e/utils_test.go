@@ -161,9 +161,9 @@ func getTestManifest(t *testing.T, baseManifestPath string, skipTestPatches bool
 			return manifestsReader
 		}
 
-		if kongImageOverride != "" {
+		if testenv.KongImageTag() != "" {
 			patchReadinessProbeRange := kong.MustNewRange("<" + statusReadyProbeMinimalKongVersion.String())
-			kongVersion, err := getKongVersionFromOverrideImageTag()
+			kongVersion, err := getKongVersionFromOverrideTag()
 			// If we could not get version from kong image, assume they are latest.
 			// So we do not patch the readiness probe path to the legacy path `/status`.
 			if err == nil && patchReadinessProbeRange(kongVersion) {
@@ -202,10 +202,10 @@ func extractVersionFromImage(imageName string) (semver.Version, error) {
 // if the override KIC image is not set, it assumes that the latest image is used, so it never skips
 // the test if override image is not given.
 func skipTestIfControllerVersionBelow(t *testing.T, minVersion semver.Version) {
-	if controllerImageOverride == "" {
+	if testenv.ControllerImageTag() == "" {
 		return
 	}
-	v, err := extractVersionFromImage(controllerImageOverride)
+	v, err := extractVersionFromImage(testenv.ControllerImageTag())
 	// assume using latest version if failed to extract version from image tag.
 	if err != nil {
 		t.Logf("could not extract version from controller image: %v, assume using the latest version", err)
@@ -225,11 +225,11 @@ func getDBLessTestManifestByControllerImageEnv(t *testing.T) string {
 	t.Helper()
 
 	// if no version specified, we assume that we are using the latest version of KIC.
-	if controllerImageOverride == "" {
+	if testenv.ControllerImageTag() == "" {
 		return dblessPath
 	}
 
-	v, err := extractVersionFromImage(controllerImageOverride)
+	v, err := extractVersionFromImage(testenv.ControllerImageTag())
 	// assume using latest version if failed to extract version from image tag.
 	if err != nil {
 		t.Logf("could not extract version from controller image: %v, assume using the latest version", err)
@@ -242,22 +242,16 @@ func getDBLessTestManifestByControllerImageEnv(t *testing.T) string {
 	return dblessPath
 }
 
-// patchGatewayImageFromEnv will optionally replace a default controller image in manifests with `kongImageOverride`
+// patchGatewayImageFromEnv will optionally replace a default controller image in manifests with env overrides.
 // if it's set.
 func patchGatewayImageFromEnv(t *testing.T, manifestsReader io.Reader) (io.Reader, error) {
 	t.Helper()
 
-	if kongImageOverride != "" {
-		t.Logf("replace kong image with %s", kongImageOverride)
-		split := strings.Split(kongImageOverride, ":")
-		if len(split) < 2 {
-			return nil, fmt.Errorf("invalid image name '%s', expected <repo>:<tag> format", kongImageOverride)
-		}
-		repo := strings.Join(split[0:len(split)-1], ":")
-		tag := split[len(split)-1]
-		manifestsReader, err := patchKongImage(manifestsReader, repo, tag)
+	if testenv.KongImageTag() != "" {
+		t.Logf("replace kong image with %s", testenv.KongImageTag())
+		manifestsReader, err := patchKongImage(manifestsReader, testenv.KongImage(), testenv.KongTag())
 		if err != nil {
-			return nil, fmt.Errorf("failed patching override image '%v'", kongImageOverride)
+			return nil, fmt.Errorf("failed patching override image '%v'", testenv.KongImageTag())
 		}
 		return manifestsReader, nil
 	}
@@ -277,19 +271,15 @@ func splitImageRepoTag(image string) (string, string, error) {
 	return repo, tag, nil
 }
 
-// patchControllerImageFromEnv will optionally replace a default controller image in manifests with `controllerImageOverride`
+// patchControllerImageFromEnv will optionally replace a default controller image in manifests with env override
 // if it's set.
 func patchControllerImageFromEnv(t *testing.T, manifestReader io.Reader) (io.Reader, error) {
 	t.Helper()
 
-	if controllerImageOverride != "" {
-		repo, tag, err := splitImageRepoTag(controllerImageOverride)
+	if testenv.ControllerImageTag() != "" {
+		manifestReader, err := patchControllerImage(manifestReader, testenv.ControllerImage(), testenv.ControllerTag())
 		if err != nil {
-			return nil, err
-		}
-		manifestReader, err = patchControllerImage(manifestReader, repo, tag)
-		if err != nil {
-			return nil, fmt.Errorf("failed patching override image '%v': %w", controllerImageOverride, err)
+			return nil, fmt.Errorf("failed patching override image '%v': %w", testenv.ControllerImageTag(), err)
 		}
 		return manifestReader, nil
 	}
@@ -298,22 +288,18 @@ func patchControllerImageFromEnv(t *testing.T, manifestReader io.Reader) (io.Rea
 	return manifestReader, nil
 }
 
-// getKongVersionFromImageTag parses Kong version from tags of Kong image.
-// If environment variable `TEST_KONG_EFFECTIVE_VERSION` is set, override with its value.
-func getKongVersionFromOverrideImageTag() (kong.Version, error) {
+// getKongVersionFromOverrideTag parses Kong version from env effective version or override tag. The effective version
+// takes precedence.
+func getKongVersionFromOverrideTag() (kong.Version, error) {
 	if kongEffectiveVersion := testenv.KongEffectiveVersion(); kongEffectiveVersion != "" {
 		return kong.ParseSemanticVersion(kongEffectiveVersion)
 	}
 
-	if kongImageOverride == "" {
-		return kong.Version{}, errors.New("No Kong image provided")
+	if testenv.KongImageTag() == "" {
+		return kong.Version{}, errors.New("No Kong tag provided")
 	}
 
-	_, tag, err := splitImageRepoTag(kongImageOverride)
-	if err != nil {
-		return kong.Version{}, err
-	}
-	return kong.ParseSemanticVersion(tag)
+	return kong.ParseSemanticVersion(testenv.KongTag())
 }
 
 // getKongProxyIP takes a Service with Kong proxy ports and returns and its IP, or fails the test if it cannot.

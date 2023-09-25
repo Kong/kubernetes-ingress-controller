@@ -109,6 +109,11 @@ func ClusterVersion() string {
 	return os.Getenv("KONG_CLUSTER_VERSION")
 }
 
+// ClusterProvider indicates the Kubernetes cluster provider.
+func ClusterProvider() string {
+	return os.Getenv("KONG_CLUSTER_PROVIDER")
+}
+
 // ControllerFeatureGates contains the feature gates that should be enabled
 // for test runs in the controller.
 // If none specified, we fall back to default values.

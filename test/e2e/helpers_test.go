@@ -117,9 +117,9 @@ func setupE2ETest(t *testing.T, addons ...clusters.Addon) (context.Context, envi
 func getEnvironmentBuilder(ctx context.Context, t *testing.T) (*environments.Builder, error) {
 	t.Helper()
 
-	if existingCluster == "" {
+	if testenv.ExistingClusterName() == "" {
 		t.Logf("no existing cluster provided, creating a new one for %q type", clusterProvider)
-		switch clusterProvider {
+		switch testenv.ClusterProvider() {
 		case string(gke.GKEClusterType):
 			t.Log("creating a GKE cluster builder")
 			return createGKEBuilder(t)
@@ -129,9 +129,9 @@ func getEnvironmentBuilder(ctx context.Context, t *testing.T) (*environments.Bui
 		}
 	}
 
-	clusterParts := strings.Split(existingCluster, ":")
+	clusterParts := strings.Split(testenv.ExistingClusterName(), ":")
 	if len(clusterParts) < 2 {
-		return nil, fmt.Errorf("expected existing cluster in format <type>:<name>, got %s", existingCluster)
+		return nil, fmt.Errorf("expected existing cluster in format <type>:<name>, got %s", testenv.ExistingClusterName())
 	}
 
 	clusterType, clusterName := clusterParts[0], clusterParts[1]
@@ -845,18 +845,18 @@ func getTemporaryKubeconfig(t *testing.T, env environments.Environment) string {
 func runOnlyOnKindClusters(t *testing.T) {
 	t.Helper()
 
-	existingClusterIsKind := strings.Split(existingCluster, ":")[0] == string(kind.KindClusterType)
+	existingClusterIsKind := strings.Split(testenv.ExistingClusterName(), ":")[0] == string(kind.KindClusterType)
 	if existingClusterIsKind {
 		return
 	}
 
-	clusterProviderIsKind := clusterProvider == string(kind.KindClusterType)
+	clusterProviderIsKind := testenv.ClusterProvider() == string(kind.KindClusterType)
 	if clusterProviderIsKind {
 		return
 	}
 
-	clusterProviderUnspecified := clusterProvider == ""
-	existingClusterUnspecified := existingCluster == ""
+	clusterProviderUnspecified := testenv.ClusterProvider() == ""
+	existingClusterUnspecified := testenv.ExistingClusterName() == ""
 	if clusterProviderUnspecified && existingClusterUnspecified {
 		return
 	}

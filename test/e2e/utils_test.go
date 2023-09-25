@@ -260,17 +260,6 @@ func patchGatewayImageFromEnv(t *testing.T, manifestsReader io.Reader) (io.Reade
 	return manifestsReader, nil
 }
 
-// splitImageRepoTag splits repo and tag from given image name, like kong:3.4.0 => kong, 3.4.0.
-func splitImageRepoTag(image string) (string, string, error) {
-	split := strings.Split(image, ":")
-	if len(split) < 2 {
-		return "", "", fmt.Errorf("could not parse override image '%v', expected <repo>:<tag> format", image)
-	}
-	repo := strings.Join(split[0:len(split)-1], ":")
-	tag := split[len(split)-1]
-	return repo, tag, nil
-}
-
 // patchControllerImageFromEnv will optionally replace a default controller image in manifests with env override
 // if it's set.
 func patchControllerImageFromEnv(t *testing.T, manifestReader io.Reader) (io.Reader, error) {

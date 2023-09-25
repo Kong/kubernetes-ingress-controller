@@ -119,6 +119,23 @@ func ClusterLoadImages() string {
 	return os.Getenv("TEST_KONG_LOAD_IMAGES")
 }
 
+// See: https://docs.github.com/en/actions/learn-github-actions/variables#default-environment-variables
+
+// GithubServerURL returns a Github server URL from a Github Actions environment.
+func GithubServerURL() string {
+	return os.Getenv("GITHUB_SERVER_URL")
+}
+
+// GithubRepo returns a Github repository from a Github Actions environment.
+func GithubRepo() string {
+	return os.Getenv("GITHUB_REPOSITORY")
+}
+
+// GithubRunID returns a Github run ID from a Github Actions environment.
+func GithubRunID() string {
+	return os.Getenv("GITHUB_RUN_ID")
+}
+
 // ControllerFeatureGates contains the feature gates that should be enabled
 // for test runs in the controller.
 // If none specified, we fall back to default values.

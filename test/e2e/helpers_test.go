@@ -239,7 +239,7 @@ type ManifestDeploy struct {
 	Path string
 
 	// SkipTestPatches is a flag that controls whether to apply standard test patches (e.g. replace controller
-	// image when TEST_KONG_CONTROLLER_IMAGE_OVERRIDE set, etc.) to the manifests before deploying them.
+	// image when TEST_CONTROLLER_IMAGE set, etc.) to the manifests before deploying them.
 	SkipTestPatches bool
 
 	// AdditionalSecrets is a list of additional secrets to create before deploying the manifest.

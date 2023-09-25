@@ -34,6 +34,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/test/consts"
 	"github.com/kong/kubernetes-ingress-controller/v2/test/helpers/certificate"
 	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/helpers"
+	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/testenv"
 )
 
 // -----------------------------------------------------------------------------
@@ -84,8 +85,8 @@ func TestWebhookUpdate(t *testing.T) {
 	t.Log("building test cluster and environment")
 	clusterBuilder := kind.NewBuilder()
 	clusterBuilder.WithConfigReader(strings.NewReader(webhookKINDConfig))
-	if clusterVersionStr != "" {
-		clusterVersion, err := semver.ParseTolerant(clusterVersionStr)
+	if testenv.ClusterVersion() != "" {
+		clusterVersion, err := semver.ParseTolerant(testenv.ClusterVersion())
 		require.NoError(t, err)
 		t.Logf("k8s cluster version is set to %v", clusterVersion)
 		clusterBuilder.WithClusterVersion(clusterVersion)

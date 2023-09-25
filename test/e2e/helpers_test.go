@@ -118,7 +118,7 @@ func getEnvironmentBuilder(ctx context.Context, t *testing.T) (*environments.Bui
 	t.Helper()
 
 	if testenv.ExistingClusterName() == "" {
-		t.Logf("no existing cluster provided, creating a new one for %q type", clusterProvider)
+		t.Logf("no existing cluster provided, creating a new one for %q type", testenv.ClusterProvider())
 		switch testenv.ClusterProvider() {
 		case string(gke.GKEClusterType):
 			t.Log("creating a GKE cluster builder")

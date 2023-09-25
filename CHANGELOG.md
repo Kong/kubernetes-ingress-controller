@@ -7,6 +7,7 @@ Adding a new version? You'll need three changes:
 * Add the diff link, like "[2.7.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v1.2.2...v1.2.3".
   This is all the way at the bottom. It's the thing we always forget.
 --->
+ - [2.12.0](#2120)
  - [2.11.1](#2111)
  - [2.11.0](#2110)
  - [2.10.5](#2105)
@@ -74,20 +75,18 @@ Adding a new version? You'll need three changes:
  - [0.0.5](#005)
  - [0.0.4 and prior](#004-and-prior)
 
-## Unreleased
+## 2.12.0
+
+> Release date: 2023-09-25
 
 ### Added
 
-- Allow regex expressions in `HTTPRoute` configuration and provide validation in admission webhook.
-  Before this change admission webhook used to reject entirely such configurations incorrectly as not supported yet.
-  [#4608](https://github.com/Kong/kubernetes-ingress-controller/pull/4608)
+- `konghq.com/rewrite` annotation has been introduced to manage URI rewriting.
+  This feature requires enabling the `RewriteURIs` feature gate.
+  [#4360](https://github.com/Kong/kubernetes-ingress-controller/pull/4360), [#4646](https://github.com/Kong/kubernetes-ingress-controller/pull/4646)
 - Provide validation in admission webhook for `Ingress` paths (validate regex expressions).
   [#4647](https://github.com/Kong/kubernetes-ingress-controller/pull/4647)
-- Add new feature gate `RewriteURIs` to enable/disable the `konghq.com/rewrite`
-  annotation (default disabled).
   [#4360](https://github.com/Kong/kubernetes-ingress-controller/pull/4360)
-- `konghq.com/rewrite` annotation has been introduced to manage URI rewriting.
-  [#4360](https://github.com/Kong/kubernetes-ingress-controller/pull/4360), [#4646](https://github.com/Kong/kubernetes-ingress-controller/pull/4646)
 - Added support for expression-based Kong routes for `TCPRoute`, `UDPRoute`,
   `TCPIngress`, and `UDPIngress`. This requires the `ExpressionRoutes` feature
   gate and a Kong 3.4+ install with `KONG_ROUTER_FLAVOR=expressions` set in the
@@ -99,7 +98,7 @@ Adding a new version? You'll need three changes:
   field. This can be used with Kong Gateway 3.2+.
   [#4703](https://github.com/Kong/kubernetes-ingress-controller/pull/4703)
 
-### Changes
+### Changed
 
 - Generate wildcard routes to match all `HTTP` or `GRPC` requests for rules
   in `HTTPRoute` or `GRPCRoute` if there are no matches in the rule and no
@@ -110,6 +109,9 @@ Adding a new version? You'll need three changes:
 
 ### Fixed
 
+- Allow regex expressions in `HTTPRoute` configuration and provide validation in admission webhook.
+  Before this change admission webhook used to reject entirely such configurations incorrectly as not supported yet.
+  [#4608](https://github.com/Kong/kubernetes-ingress-controller/pull/4608)
 - Do not parse error body when failed to get response from reloading declarative
   configurations to produce proper error log in such situations,
   [#4666](https://github.com/Kong/kubernetes-ingress-controller/pull/4666) 
@@ -2781,6 +2783,7 @@ Please read the changelog and test in your environment.
  - The initial versions  were rapildy iterated to deliver
    a working ingress controller.
 
+[2.12.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.11.1...v2.12.0
 [2.11.1]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.11.0...v2.11.1
 [2.11.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.10.4...v2.11.0
 [2.10.5]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.10.4...v2.10.5

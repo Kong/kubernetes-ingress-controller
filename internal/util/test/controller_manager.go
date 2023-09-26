@@ -112,7 +112,7 @@ func DeployControllerManagerForCluster(
 // will pass before the controller manager logs are setup.
 // This function can be used to sets up the loggers for the controller manager
 // before the cluster deployment.
-func SetupLoggers(logLevel string, logFormat string, logReduceRedundancy bool) (logr.Logger, string, error) {
+func SetupLoggers(logLevel string, logFormat string) (logr.Logger, string, error) {
 	// construct the config for the logger
 	var err error
 	output := os.Stderr
@@ -123,9 +123,8 @@ func SetupLoggers(logLevel string, logFormat string, logReduceRedundancy bool) (
 		}
 	}
 	config := manager.Config{
-		LogLevel:            logLevel,
-		LogFormat:           logFormat,
-		LogReduceRedundancy: logReduceRedundancy,
+		LogLevel:  logLevel,
+		LogFormat: logFormat,
 	}
 
 	logger, err := manager.SetupLoggers(&config, output)

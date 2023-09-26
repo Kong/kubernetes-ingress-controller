@@ -60,7 +60,7 @@ func TestMain(m *testing.M) {
 	// after 30s from the start of controller manager package init function,
 	// the controller manager will set up a no op logger and continue.
 	// The logger cannot be configured after that point.
-	logger, logOutput, err := testutils.SetupLoggers("trace", "text", false)
+	logger, logOutput, err := testutils.SetupLoggers("trace", "text")
 	if err != nil {
 		exitOnErr(fmt.Errorf("failed to setup loggers: %w", err))
 	}

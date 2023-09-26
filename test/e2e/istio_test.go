@@ -61,7 +61,7 @@ func TestIstioWithKongIngressGateway(t *testing.T) {
 	// after 30s from the start of controller manager package init function,
 	// the controller manager will set up a no op logger and continue.
 	// The logger cannot be configured after that point.
-	logger, logOutput, err := testutils.SetupLoggers("trace", "text", false)
+	logger, logOutput, err := testutils.SetupLoggers("trace", "text")
 	require.NoError(t, err, "failed to configure logger")
 	if logOutput != "" {
 		t.Logf("INFO: writing manager logs to %s", logOutput)

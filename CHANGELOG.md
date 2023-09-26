@@ -81,6 +81,8 @@ Adding a new version? You'll need three changes:
 
 ### Breaking changes
 
+- Removed support for the `debug-log-reduce-redundancy` CLI flag.
+  [#4688](https://github.com/Kong/kubernetes-ingress-controller/pull/4688)
 - Converted heterogenous logging systems to a single logging system using a
   faster, more feature-rich library. This changes the default (console) log
   format and removes semantif log levels (info, warn, etc.) in favor of

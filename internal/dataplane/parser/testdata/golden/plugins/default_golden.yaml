@@ -1,59 +1,10 @@
 _format_version: "3.0"
-ca_certificates:
-- cert: |
-    -----BEGIN CERTIFICATE-----
-    MIIDtTCCAp2gAwIBAgIBATANBgkqhkiG9w0BAQsFADCBgzELMAkGA1UEBhMCVVMx
-    EzARBgNVBAgTCkNhbGlmb3JuaWExFjAUBgNVBAcTDVNhbiBGcmFuY2lzY28xJTAj
-    BgNVBAkTHDE1MCBTcGVhciBTdHJlZXQsIFN1aXRlIDE2MDAxDjAMBgNVBBETBTk0
-    MTA1MRAwDgYDVQQKEwdLb25nIEhRMB4XDTIzMDkyNjA4NDQzNVoXDTI0MDkyNjA4
-    NDQzNVowgYMxCzAJBgNVBAYTAlVTMRMwEQYDVQQIEwpDYWxpZm9ybmlhMRYwFAYD
-    VQQHEw1TYW4gRnJhbmNpc2NvMSUwIwYDVQQJExwxNTAgU3BlYXIgU3RyZWV0LCBT
-    dWl0ZSAxNjAwMQ4wDAYDVQQREwU5NDEwNTEQMA4GA1UEChMHS29uZyBIUTCCASIw
-    DQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBANcnsjbovNdW1HSKaq9ZJ9MwTP0h
-    DvShbh9VldLol3Am47xBJYny10EQU4yNF7KhBjbQGAg1hhjDGMp5wPrT66syt4gZ
-    IY5xW/6j4GL3E3DNfAgNo+xruEnVHjoz3z6qkt9oAC+T2Gt0BKVtPNQlUqhRBN4f
-    YBYoe08K79KSJpjLf96/H8eNJmw5WDzfTH0HdNgZRmcUQfWKgE+iZzAC4ppp8vxx
-    YDlXX24GN9bylWcn6TKUkSTolsxJ8mKYDR8zj4Sk6e3z9K14cdIKP3rpXIBiTIrr
-    vPsNZAzWgDArTGTS13NC7IzAwkK5iCB582CGJZ8TKqrMHtE+dGwofHJ1Mw0CAwEA
-    AaMyMDAwDwYDVR0TAQH/BAUwAwEB/zAdBgNVHQ4EFgQUniBh32i4njEZO9HxGPmY
-    k65EzZswDQYJKoZIhvcNAQELBQADggEBAArcmyihIjIin0nfeL6tJI08Ps2FKIQ9
-    7KnKHzkQPQvqgEmmBbzX15w8/YJul7LlspgXSJPWlJB+U3i00mbWZHN16uE2QcZG
-    b9leMr37xKz45199x9p0TFA8NC5MFmJOsHD60mxxoa35es0R21N6fykAj6YTrbvx
-    qUD+rfiJiS6k21Wt8ZreYIUK+8KNJGAXhBp2wGP7zUaxfMZtbuskoPca9pIyjX/C
-    MK0iwnVwlXkSqVBu7lizFJ07iuqZaPXbCPzVdiu2b9hNIp64bYAFL324xpBWmhTE
-    czuk5435Us8zYG1LGqa5S5CDWf2avx3Rfc3p6/IVSAwlqqLemKiCkZs=
-    -----END CERTIFICATE-----
-  id: secret-id
-  tags:
-  - k8s-name:kong-ca
-  - k8s-kind:Secret
-  - k8s-version:v1
 plugins:
 - config:
-    header_name: kong-id-2
-  instance_name: correlation-id-728157fcb
+    header_name: kong-id
+  instance_name: correlation-id-7f3599b13
   name: correlation-id
-  route: .httpbin.httpbin..80
-  tags:
-  - k8s-name:kong-id
-  - k8s-kind:KongPlugin
-  - k8s-group:configuration.konghq.com
-  - k8s-version:v1
-- config:
-    header_name: kong-id-2
-  instance_name: correlation-id-c1ebced53
-  name: correlation-id
-  route: .httpbin-other.httpbin..80
-  tags:
-  - k8s-name:kong-id
-  - k8s-kind:KongPlugin
-  - k8s-group:configuration.konghq.com
-  - k8s-version:v1
-- config:
-    header_name: kong-id-2
-  instance_name: correlation-id-b8a0ddb44
-  name: correlation-id
-  route: .httpbin-other.httpbin-other..80
+  route: .ingress1.httpbin..80
   tags:
   - k8s-name:kong-id
   - k8s-kind:KongPlugin
@@ -70,25 +21,7 @@ services:
   retries: 5
   routes:
   - https_redirect_status_code: 426
-    name: .httpbin.httpbin..80
-    path_handling: v0
-    paths:
-    - /httpbin
-    preserve_host: true
-    protocols:
-    - http
-    - https
-    regex_priority: 0
-    request_buffering: true
-    response_buffering: true
-    strip_path: false
-    tags:
-    - k8s-name:httpbin
-    - k8s-kind:Ingress
-    - k8s-group:networking.k8s.io
-    - k8s-version:v1
-  - https_redirect_status_code: 426
-    name: .httpbin-other.httpbin..80
+    name: .ingress1.httpbin..80
     path_handling: v0
     paths:
     - /httpbin-diff
@@ -101,7 +34,7 @@ services:
     response_buffering: true
     strip_path: false
     tags:
-    - k8s-name:httpbin-other
+    - k8s-name:ingress1
     - k8s-kind:Ingress
     - k8s-group:networking.k8s.io
     - k8s-version:v1
@@ -120,7 +53,7 @@ services:
   retries: 5
   routes:
   - https_redirect_status_code: 426
-    name: .httpbin-other.httpbin-other..80
+    name: .ingress2.httpbin-other..80
     path_handling: v0
     paths:
     - /httpbin-other
@@ -133,7 +66,7 @@ services:
     response_buffering: true
     strip_path: false
     tags:
-    - k8s-name:httpbin-other
+    - k8s-name:ingress2
     - k8s-kind:Ingress
     - k8s-group:networking.k8s.io
     - k8s-version:v1

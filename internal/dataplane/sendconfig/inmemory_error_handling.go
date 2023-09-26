@@ -52,20 +52,25 @@ type FlatFieldError struct {
 
 // parseFlatEntityErrors takes a Kong /config error response body and parses its "fields.flattened_errors" value
 // into errors associated with Kubernetes resources.
-func parseFlatEntityErrors(body []byte, log logrus.FieldLogger) ([]ResourceError, error) {
+func parseFlatEntityErrors(body []byte) ([]FlatEntityError, error) {
 	// Directly return here to avoid the misleading "could not unmarshal config" message appear in logs.
 	if len(body) == 0 {
 		return nil, nil
 	}
 
-	var resourceErrors []ResourceError
 	var configError ConfigError
 
 	err := json.Unmarshal(body, &configError)
 	if err != nil {
-		return resourceErrors, fmt.Errorf("could not unmarshal config error: %w", err)
+		return nil, fmt.Errorf("could not unmarshal config error: %w", err)
 	}
-	for _, ee := range configError.Flattened {
+
+	return configError.Flattened, nil
+}
+
+func ResourceErrorsFromEntityErrors(entityErrors []FlatEntityError, log logrus.FieldLogger) []ResourceError {
+	var resourceErrors []ResourceError
+	for _, ee := range entityErrors {
 		raw := rawResourceError{
 			Name:     ee.Name,
 			ID:       ee.ID,
@@ -99,7 +104,8 @@ func parseFlatEntityErrors(body []byte, log logrus.FieldLogger) ([]ResourceError
 		}
 		resourceErrors = append(resourceErrors, parsed)
 	}
-	return resourceErrors, nil
+
+	return resourceErrors
 }
 
 // parseRawResourceError takes a raw resource error and parses its tags into Kubernetes metadata. If critical tags are

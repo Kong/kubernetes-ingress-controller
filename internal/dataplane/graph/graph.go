@@ -4,14 +4,11 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"os/exec"
 
 	"github.com/dominikbraun/graph"
 	"github.com/dominikbraun/graph/draw"
 	"github.com/kong/deck/file"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/sendconfig"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 	"github.com/samber/lo"
 	"k8s.io/apimachinery/pkg/util/sets"
 )
@@ -30,27 +27,20 @@ func hashEntity(entity Entity) EntityHash {
 	return EntityHash(entity.Type + ":" + entity.Name)
 }
 
-func RenderGraphSVG(g KongConfigGraph, outFilePath string) (string, error) {
+func RenderGraphDOT(g KongConfigGraph, outFilePath string) (string, error) {
+	var outFile *os.File
 	if outFilePath == "" {
-		outFile, err := os.CreateTemp("", "*.svg")
+		var err error
+		outFile, err = os.CreateTemp("", "*.dot")
 		if err != nil {
 			return "", fmt.Errorf("failed to create temp file: %w", err)
 		}
 		defer outFile.Close()
 		outFilePath = outFile.Name()
 	}
-	f, err := os.CreateTemp("", "*.dot")
-	if err != nil {
-		return "", fmt.Errorf("failed to create temp file: %w", err)
-	}
-
-	err = draw.DOT(g, f)
+	err := draw.DOT(g, outFile)
 	if err != nil {
 		return "", fmt.Errorf("failed to render dot file: %w", err)
-	}
-
-	if err = exec.Command("dot", "-Tsvg", "-Kneato", "-o", outFilePath, f.Name()).Run(); err != nil {
-		return "", fmt.Errorf("failed to render svg file: %w", err)
 	}
 	return outFilePath, nil
 }
@@ -223,20 +213,20 @@ func BuildKongConfigGraph(config *file.Content) (KongConfigGraph, error) {
 		// we will have just one vertex per plugin type, which could result in unwanted connections
 		// (e.g. broken Service1 <-> Plugin <-> Service2 where Service1 and Service2 should not be connected).
 
-		if plugin.InstanceName == nil {
-			rel := util.Rel{}
-			if plugin.Service != nil {
-				rel.Service = *plugin.Service.ID
-			}
-			if plugin.Route != nil {
-				rel.Route = *plugin.Route.ID
-			}
-			if plugin.Consumer != nil {
-				rel.Consumer = *plugin.Consumer.Username
-			}
-			plugin.InstanceName = lo.ToPtr(kongstate.PluginInstanceName(*plugin.Name, sets.New[string](), rel))
-		}
-		ep := Entity{Name: *plugin.InstanceName, Type: "plugin", Raw: plugin.DeepCopy()}
+		// if plugin.InstanceName == nil {
+		// 	rel := util.Rel{}
+		// 	if plugin.Service != nil {
+		// 		rel.Service = *plugin.Service.ID
+		// 	}
+		// 	if plugin.Route != nil {
+		// 		rel.Route = *plugin.Route.ID
+		// 	}
+		// 	if plugin.Consumer != nil {
+		// 		rel.Consumer = *plugin.Consumer.Username
+		// 	}
+		// 	plugin.InstanceName = lo.ToPtr(kongstate.PluginInstanceName(*plugin.Name, sets.New[string](), rel))
+		// }
+		ep := Entity{Name: *plugin.Name, Type: "plugin", Raw: plugin.DeepCopy()}
 		if err := g.AddVertex(ep, coloredVertex(PluginColor)); err != nil && !errors.Is(err, graph.ErrVertexAlreadyExists) {
 			return nil, err
 		}
@@ -306,19 +296,17 @@ func BuildKongConfigFromGraph(g KongConfigGraph) (*file.Content, error) {
 
 // TODO: do we have to support full history or just the latest good config?
 func BuildFallbackKongConfig(
-	history []KongConfigGraph,
+	latestGoodConfig KongConfigGraph,
 	currentConfig KongConfigGraph,
 	entityErrors []sendconfig.FlatEntityError,
 ) (KongConfigGraph, error) {
-	if len(history) == 0 {
-		return nil, errors.New("history is empty")
-	}
 	if len(entityErrors) == 0 {
 		return nil, errors.New("entityErrors is empty")
 	}
-	latestGoodConfig := history[len(history)-1]
 
 	affectedEntities := lo.Map(entityErrors, func(ee sendconfig.FlatEntityError, _ int) EntityHash {
+		// TODO: how to make sure identification always works despite entity type?
+		// It would be good to have deterministic IDs assigned to all entities so that we can use them here.
 		return hashEntity(Entity{Name: ee.Name, Type: ee.Type})
 	})
 

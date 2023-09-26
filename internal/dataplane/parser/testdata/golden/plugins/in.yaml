@@ -1,17 +1,3 @@
----
-apiVersion: v1
-kind: Secret
-metadata:
-  name: kong-ca
-  labels:
-    konghq.com/ca-cert: "true"
-  annotations:
-    kubernetes.io/ingress.class: kong
-type: Opaque
-data:
-  id: c2VjcmV0LWlkCg==
-  cert: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUR0VENDQXAyZ0F3SUJBZ0lCQVRBTkJna3Foa2lHOXcwQkFRc0ZBRENCZ3pFTE1Ba0dBMVVFQmhNQ1ZWTXgKRXpBUkJnTlZCQWdUQ2tOaGJHbG1iM0p1YVdFeEZqQVVCZ05WQkFjVERWTmhiaUJHY21GdVkybHpZMjh4SlRBagpCZ05WQkFrVEhERTFNQ0JUY0dWaGNpQlRkSEpsWlhRc0lGTjFhWFJsSURFMk1EQXhEakFNQmdOVkJCRVRCVGswCk1UQTFNUkF3RGdZRFZRUUtFd2RMYjI1bklFaFJNQjRYRFRJek1Ea3lOakE0TkRRek5Wb1hEVEkwTURreU5qQTQKTkRRek5Wb3dnWU14Q3pBSkJnTlZCQVlUQWxWVE1STXdFUVlEVlFRSUV3cERZV3hwWm05eWJtbGhNUll3RkFZRApWUVFIRXcxVFlXNGdSbkpoYm1OcGMyTnZNU1V3SXdZRFZRUUpFeHd4TlRBZ1UzQmxZWElnVTNSeVpXVjBMQ0JUCmRXbDBaU0F4TmpBd01RNHdEQVlEVlFRUkV3VTVOREV3TlRFUU1BNEdBMVVFQ2hNSFMyOXVaeUJJVVRDQ0FTSXcKRFFZSktvWklodmNOQVFFQkJRQURnZ0VQQURDQ0FRb0NnZ0VCQU5jbnNqYm92TmRXMUhTS2FxOVpKOU13VFAwaApEdlNoYmg5VmxkTG9sM0FtNDd4QkpZbnkxMEVRVTR5TkY3S2hCamJRR0FnMWhoakRHTXA1d1ByVDY2c3l0NGdaCklZNXhXLzZqNEdMM0UzRE5mQWdObyt4cnVFblZIam96M3o2cWt0OW9BQytUMkd0MEJLVnRQTlFsVXFoUkJONGYKWUJZb2UwOEs3OUtTSnBqTGY5Ni9IOGVOSm13NVdEemZUSDBIZE5nWlJtY1VRZldLZ0UraVp6QUM0cHBwOHZ4eApZRGxYWDI0R045YnlsV2NuNlRLVWtTVG9sc3hKOG1LWURSOHpqNFNrNmUzejlLMTRjZElLUDNycFhJQmlUSXJyCnZQc05aQXpXZ0RBclRHVFMxM05DN0l6QXdrSzVpQ0I1ODJDR0paOFRLcXJNSHRFK2RHd29mSEoxTXcwQ0F3RUEKQWFNeU1EQXdEd1lEVlIwVEFRSC9CQVV3QXdFQi96QWRCZ05WSFE0RUZnUVVuaUJoMzJpNG5qRVpPOUh4R1BtWQprNjVFelpzd0RRWUpLb1pJaHZjTkFRRUxCUUFEZ2dFQkFBcmNteWloSWpJaW4wbmZlTDZ0SkkwOFBzMkZLSVE5CjdLbktIemtRUFF2cWdFbW1CYnpYMTV3OC9ZSnVsN0xsc3BnWFNKUFdsSkIrVTNpMDBtYldaSE4xNnVFMlFjWkcKYjlsZU1yMzd4S3o0NTE5OXg5cDBURkE4TkM1TUZtSk9zSEQ2MG14eG9hMzVlczBSMjFONmZ5a0FqNllUcmJ2eApxVUQrcmZpSmlTNmsyMVd0OFpyZVlJVUsrOEtOSkdBWGhCcDJ3R1A3elVheGZNWnRidXNrb1BjYTlwSXlqWC9DCk1LMGl3blZ3bFhrU3FWQnU3bGl6RkowN2l1cVphUFhiQ1B6VmRpdTJiOWhOSXA2NGJZQUZMMzI0eHBCV21oVEUKY3p1azU0MzVVczh6WUcxTEdxYTVTNUNEV2YyYXZ4M1JmYzNwNi9JVlNBd2xxcUxlbUtpQ2tacz0KLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQo=
----
 apiVersion: v1
 kind: Service
 metadata:
@@ -43,26 +29,7 @@ spec:
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: httpbin
-  annotations:
-    konghq.com/plugins: kong-id
-spec:
-  ingressClassName: kong
-  rules:
-  - http:
-      paths:
-      - path: /httpbin
-        pathType: ImplementationSpecific
-        backend:
-          service:
-            name: httpbin
-            port:
-              number: 80
----
-apiVersion: networking.k8s.io/v1
-kind: Ingress
-metadata:
-  name: httpbin-other
+  name: ingress1
   annotations:
     konghq.com/plugins: kong-id
 spec:
@@ -77,13 +44,23 @@ spec:
             name: httpbin
             port:
               number: 80
-      - path: /httpbin-other
-        pathType: ImplementationSpecific
-        backend:
-          service:
-            name: httpbin-other
-            port:
-              number: 80
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: ingress2
+spec:
+  ingressClassName: kong
+  rules:
+    - http:
+        paths:
+          - path: /httpbin-other
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: httpbin-other
+                port:
+                  number: 80
 ---
 apiVersion: configuration.konghq.com/v1
 kind: KongPlugin
@@ -91,12 +68,4 @@ metadata:
   name: kong-id
 config:
   header_name: kong-id
-plugin: correlation-id
----
-apiVersion: configuration.konghq.com/v1
-kind: KongPlugin
-metadata:
-  name: kong-id
-config:
-  header_name: kong-id-2
 plugin: correlation-id

@@ -48,14 +48,13 @@ func NewUpdateStrategyWithBackoff(
 // attempt so that the UpdateBackoffStrategy can keep track of it.
 func (s UpdateStrategyWithBackoff) Update(ctx context.Context, targetContent ContentWithHash) (
 	err error,
-	resourceErrors []ResourceError,
-	resourceErrorsParseErr error,
+	entityErrors []FlatEntityError,
 ) {
 	if canUpdate, whyNot := s.backoffStrategy.CanUpdate(targetContent.Hash); !canUpdate {
-		return NewUpdateSkippedDueToBackoffStrategyError(whyNot), nil, nil
+		return NewUpdateSkippedDueToBackoffStrategyError(whyNot), nil
 	}
 
-	err, resourceErrors, resourceErrorsParseErr = s.decorated.Update(ctx, targetContent)
+	err, entityErrors = s.decorated.Update(ctx, targetContent)
 	if err != nil {
 		s.log.WithError(err).Debug("Update failed, registering it for backoff strategy")
 		s.backoffStrategy.RegisterUpdateFailure(err, targetContent.Hash)
@@ -63,7 +62,7 @@ func (s UpdateStrategyWithBackoff) Update(ctx context.Context, targetContent Con
 		s.backoffStrategy.RegisterUpdateSuccess()
 	}
 
-	return err, resourceErrors, resourceErrorsParseErr
+	return err, entityErrors
 }
 
 func (s UpdateStrategyWithBackoff) MetricsProtocol() metrics.Protocol {

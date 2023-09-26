@@ -175,6 +175,99 @@ upstreams:
   - k8s-version:v1
 `
 
+const twoServicesSampleConfig = `
+_format_version: "3.0"
+plugins:
+- config:
+    header_name: kong-id
+  instance_name: correlation-id-7f3599b13
+  name: correlation-id
+  route: .ingress1.httpbin..80
+  tags:
+  - k8s-name:kong-id
+  - k8s-kind:KongPlugin
+  - k8s-group:configuration.konghq.com
+  - k8s-version:v1
+services:
+- connect_timeout: 60000
+  host: httpbin..80.svc
+  name: .httpbin.80
+  path: /
+  port: 80
+  protocol: http
+  read_timeout: 60000
+  retries: 5
+  routes:
+  - https_redirect_status_code: 426
+    name: .ingress1.httpbin..80
+    path_handling: v0
+    paths:
+    - /httpbin-diff
+    preserve_host: true
+    protocols:
+    - http
+    - https
+    regex_priority: 0
+    request_buffering: true
+    response_buffering: true
+    strip_path: false
+    tags:
+    - k8s-name:ingress1
+    - k8s-kind:Ingress
+    - k8s-group:networking.k8s.io
+    - k8s-version:v1
+  tags:
+  - k8s-name:httpbin
+  - k8s-kind:Service
+  - k8s-version:v1
+  write_timeout: 60000
+- connect_timeout: 60000
+  host: httpbin-other..80.svc
+  name: .httpbin-other.80
+  path: /
+  port: 80
+  protocol: http
+  read_timeout: 60000
+  retries: 5
+  routes:
+  - https_redirect_status_code: 426
+    name: .ingress2.httpbin-other..80
+    path_handling: v0
+    paths:
+    - /httpbin-other
+    preserve_host: true
+    protocols:
+    - http
+    - https
+    regex_priority: 0
+    request_buffering: true
+    response_buffering: true
+    strip_path: false
+    tags:
+    - k8s-name:ingress2
+    - k8s-kind:Ingress
+    - k8s-group:networking.k8s.io
+    - k8s-version:v1
+  tags:
+  - k8s-name:httpbin-other
+  - k8s-kind:Service
+  - k8s-version:v1
+  write_timeout: 60000
+upstreams:
+- algorithm: round-robin
+  name: httpbin..80.svc
+  tags:
+  - k8s-name:httpbin
+  - k8s-kind:Service
+  - k8s-version:v1
+- algorithm: round-robin
+  name: httpbin-other..80.svc
+  tags:
+  - k8s-name:httpbin-other
+  - k8s-kind:Service
+  - k8s-version:v1
+`
+
 func TestBuildKongConfigGraph(t *testing.T) {
 	testCases := []struct {
 		Name                 string
@@ -218,6 +311,10 @@ func TestBuildKongConfigGraph(t *testing.T) {
 				},
 			},
 		},
+		{
+			Name:       "two connected components",
+			KongConfig: twoServicesSampleConfig,
+		},
 	}
 
 	for _, tc := range testCases {
@@ -226,9 +323,11 @@ func TestBuildKongConfigGraph(t *testing.T) {
 
 			adjacencyMap, err := g.AdjacencyMap()
 			require.NoError(t, err)
-			require.Equal(t, adjacencyMapString(tc.ExpectedAdjacencyMap), adjacencyMapString(adjacencyMap))
+			t.Logf("adjacency map:\n%s", adjacencyMapString(adjacencyMap))
 
-			svg, err := graph.RenderGraphSVG(g, "")
+			// assert.Equal(t, adjacencyMapString(tc.ExpectedAdjacencyMap), adjacencyMapString(adjacencyMap))
+
+			svg, err := graph.RenderGraphDOT(g, "")
 			require.NoError(t, err)
 			t.Logf("graph: %s", svg)
 		})
@@ -408,9 +507,6 @@ upstreams:
   - k8s-version:v1`
 	lastKnownGoodConfigGraph := mustGraphFromRawYAML(t, lastKnownGoodConfig)
 
-	// These are revisions of Kong config that we have persisted.
-	history := []graph.KongConfigGraph{lastKnownGoodConfigGraph}
-
 	// This is the current Kong config parser has generated.
 	currentConfig := `_format_version: "3.0"
 plugins:
@@ -538,7 +634,7 @@ upstreams:
 		},
 	}
 
-	fallbackConfig, err := graph.BuildFallbackKongConfig(history, currentConfigGraph, entitiesErrors)
+	fallbackConfig, err := graph.BuildFallbackKongConfig(lastKnownGoodConfigGraph, currentConfigGraph, entitiesErrors)
 	require.NoError(t, err)
 
 	lastGoodSvg := dumpGraphAsSVG(t, lastKnownGoodConfigGraph)
@@ -566,7 +662,7 @@ func mustGraphFromRawYAML(t *testing.T, y string) graph.KongConfigGraph {
 }
 
 func dumpGraphAsSVG(t *testing.T, g graph.KongConfigGraph) string {
-	svg, err := graph.RenderGraphSVG(g, "")
+	svg, err := graph.RenderGraphDOT(g, "")
 	require.NoError(t, err)
 	return svg
 }

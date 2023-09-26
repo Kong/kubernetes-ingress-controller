@@ -47,18 +47,18 @@ func PerformUpdate(
 	promMetrics *metrics.CtrlFuncMetrics,
 	updateStrategyResolver UpdateStrategyResolver,
 	configChangeDetector ConfigurationChangeDetector,
-) ([]byte, []failures.ResourceFailure, error) {
+) ([]byte, []FlatEntityError, error) {
 	oldSHA := client.LastConfigSHA()
 	newSHA, err := deckgen.GenerateSHA(targetContent)
 	if err != nil {
-		return oldSHA, []failures.ResourceFailure{}, err
+		return oldSHA, nil, err
 	}
 
 	// disable optimization if reverse sync is enabled
 	if !config.EnableReverseSync {
 		configurationChanged, err := configChangeDetector.HasConfigurationChanged(ctx, oldSHA, newSHA, targetContent, client, client.AdminAPIClient())
 		if err != nil {
-			return nil, []failures.ResourceFailure{}, err
+			return nil, nil, err
 		}
 		if !configurationChanged {
 			if client.IsKonnect() {
@@ -66,29 +66,30 @@ func PerformUpdate(
 			} else {
 				log.Debug("no configuration change, skipping sync to Kong")
 			}
-			return oldSHA, []failures.ResourceFailure{}, nil
+			return oldSHA, nil, nil
 		}
 	}
 
 	updateStrategy := updateStrategyResolver.ResolveUpdateStrategy(client)
 	log = log.WithField("update_strategy", updateStrategy.Type())
 	timeStart := time.Now()
-	err, resourceErrors, resourceErrorsParseErr := updateStrategy.Update(ctx, ContentWithHash{
+	err, entityErrors := updateStrategy.Update(ctx, ContentWithHash{
 		Content: targetContent,
 		Hash:    newSHA,
 	})
 	duration := time.Since(timeStart)
 
 	metricsProtocol := updateStrategy.MetricsProtocol()
-	if err != nil {
+	if err != nil || len(entityErrors) > 0 {
 		// Not pushing metrics in case it's an update skip due to a backoff.
 		if errors.As(err, &UpdateSkippedDueToBackoffStrategyError{}) {
-			return nil, []failures.ResourceFailure{}, err
+			return nil, nil, err
 		}
 
-		resourceFailures := resourceErrorsToResourceFailures(resourceErrors, resourceErrorsParseErr, log)
+		resourceErrors := ResourceErrorsFromEntityErrors(entityErrors, log)
+		resourceFailures := ResourceErrorsToResourceFailures(resourceErrors, log)
 		promMetrics.RecordPushFailure(metricsProtocol, duration, client.BaseRootURL(), len(resourceFailures), err)
-		return nil, resourceFailures, err
+		return nil, entityErrors, err
 	}
 
 	promMetrics.RecordPushSuccess(metricsProtocol, duration, client.BaseRootURL())
@@ -102,18 +103,9 @@ func PerformUpdate(
 	return newSHA, nil, nil
 }
 
-// -----------------------------------------------------------------------------
-// Sendconfig - Private Functions
-// -----------------------------------------------------------------------------
-
-// resourceErrorsToResourceFailures translates a slice of ResourceError to a slice of failures.ResourceFailure.
+// ResourceErrorsToResourceFailures translates a slice of ResourceError to a slice of failures.ResourceFailure.
 // In case of parseErr being not nil, it just returns a nil slice.
-func resourceErrorsToResourceFailures(resourceErrors []ResourceError, parseErr error, log logrus.FieldLogger) []failures.ResourceFailure {
-	if parseErr != nil {
-		log.WithError(parseErr).Error("failed parsing resource errors")
-		return nil
-	}
-
+func ResourceErrorsToResourceFailures(resourceErrors []ResourceError, log logrus.FieldLogger) []failures.ResourceFailure {
 	var out []failures.ResourceFailure
 	for _, ee := range resourceErrors {
 		obj := metav1.PartialObjectMetadata{

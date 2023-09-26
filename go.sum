@@ -246,8 +246,8 @@ github.com/json-iterator/go v1.1.12/go.mod h1:e30LSqwooZae/UwlEbR2852Gd8hjQvJoHm
 github.com/juju/gnuflag v0.0.0-20171113085948-2ce1bb71843d/go.mod h1:2PavIy+JPciBPrBUjwbNvtwB6RQlve+hkpll6QSNmOE=
 github.com/kisielk/errcheck v1.5.0/go.mod h1:pFxgyoBC7bSaBwPgfKdkLd5X25qrDl4LWUI2bnpBCr8=
 github.com/kisielk/gotool v1.0.0/go.mod h1:XhKaO+MFFWcvkIS/tQcRk01m1F5IRFswLeQ+oQHNcck=
-github.com/kong/deck v1.26.1 h1:NwG/Zty5B0TlyDvHB9IlF9c7zRHDVEaYHFRjqxEM2yg=
-github.com/kong/deck v1.26.1/go.mod h1:B6f2nPWzTld/aTvtxAC6lWFIcAr4FsG25fgycdzeZQY=
+github.com/kong/deck v1.27.0 h1:0zoZEIsWJzjIQWV1RsQZV0IqEM5Mz/GQl2X77IwEZaQ=
+github.com/kong/deck v1.27.0/go.mod h1:6FvrNHuCDf0I9PkUd5sPrK9EnfG4aQLhs0vPmdDRylE=
 github.com/kong/go-kong v0.47.0 h1:fuZjRnUChITogljM4mY4HGGTKTaZM50970Wwg6EvQgs=
 github.com/kong/go-kong v0.47.0/go.mod h1:QaLx1EsT+roe5V6h7aKghwLn0bXg7l/Bg8wzlcCmygc=
 github.com/kong/kubernetes-telemetry v0.1.0 h1:dyDhB2SUvxVaDAxaZtLWL7JGAbkgwlCUM1P8gR/rCl0=

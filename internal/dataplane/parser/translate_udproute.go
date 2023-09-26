@@ -55,10 +55,8 @@ func (p *Parser) ingressRulesFromUDPRoutes() ingressRules {
 		applyExpressionToIngressRules(&result)
 	}
 
-	if len(errs) > 0 {
-		for _, err := range errs {
-			p.logger.V(util.ErrorLevel).Error(err, "could not generate route from UDPRoute")
-		}
+	for _, err := range errs {
+		p.logger.V(util.ErrorLevel).Error(err, "could not generate route from UDPRoute")
 	}
 
 	return result

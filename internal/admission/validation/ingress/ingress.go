@@ -58,7 +58,7 @@ func ingressToKongRoutesForValidation(
 	parserFeatures parser.FeatureFlags, kongVersion semver.Version, ingress *netv1.Ingress,
 ) ([]kong.Route, error) {
 	discardLogger := zapr.NewLogger(zap.NewNop())
-	failuresCollector := failures.NewResourceFailuresCollector(discardLogger) // It fails only for nil logger.
+	failuresCollector := failures.NewResourceFailuresCollector(discardLogger)
 	var icp kongv1alpha1.IngressClassParametersSpec
 	if kongVersion.LT(versions.ExplicitRegexPathVersionCutoff) {
 		icp.EnableLegacyRegexDetection = true

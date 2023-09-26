@@ -86,6 +86,7 @@ Adding a new version? You'll need three changes:
   format and removes semantif log levels (info, warn, etc.) in favor of
   verbosity (0 is normal, 1 is more detailed, 2 is even more detailed, etc.).
   JSON logs are unaffected other than the change from level to verbosity.
+  [#4688](https://github.com/Kong/kubernetes-ingress-controller/pull/4688)
 
 ### Added
 

@@ -94,7 +94,7 @@ func (r DefaultUpdateStrategyResolver) resolveUpdateStrategy(client UpdateClient
 			adminAPIClient,
 			dump.Config{
 				SkipCACerts:         true,
-				KonnectRuntimeGroup: client.KonnectRuntimeGroup(),
+				KonnectControlPlane: client.KonnectRuntimeGroup(),
 			},
 			r.config.Version,
 			r.config.Concurrency,

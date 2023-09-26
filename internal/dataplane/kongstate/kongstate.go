@@ -347,37 +347,32 @@ func buildPlugins(
 		usedInstanceNames := sets.New[string]()
 		for _, rel := range relations.GetCombinations() {
 			plugin := plugin.DeepCopy()
-			var sha [32]byte
 			// ID is populated because that is read by decK and in_memory
 			// translator too
 			if rel.Service != "" {
 				plugin.Service = &kong.Service{ID: kong.String(rel.Service)}
-				sha = sha256.Sum256([]byte("service-" + rel.Service))
 			}
 			if rel.Route != "" {
 				plugin.Route = &kong.Route{ID: kong.String(rel.Route)}
-				sha = sha256.Sum256([]byte("route-" + rel.Route))
 			}
 			if rel.Consumer != "" {
 				plugin.Consumer = &kong.Consumer{ID: kong.String(rel.Consumer)}
-				sha = sha256.Sum256([]byte("consumer-" + rel.Consumer))
 			}
 			if rel.ConsumerGroup != "" {
 				plugin.ConsumerGroup = &kong.ConsumerGroup{ID: kong.String(rel.ConsumerGroup)}
-				sha = sha256.Sum256([]byte("group-" + rel.ConsumerGroup))
 			}
 			// instance_name must be unique. Using the same KongPlugin on multiple resources will result in duplicates
 			// unless we add some sort of suffix.
 			if plugin.InstanceName != nil {
-				suffix := fmt.Sprintf("%x", sha)
-				short := suffix[:9]
-				suffixed := fmt.Sprintf("%s-%s", *plugin.InstanceName, short)
-				if usedInstanceNames.Has(suffixed) {
-					// in the unlikely event of a short hash collision, use the full one
-					suffixed = fmt.Sprintf("%s-%s", *plugin.InstanceName, suffix)
-				}
-				usedInstanceNames.Insert(suffixed)
-				plugin.InstanceName = &suffixed
+				uniqueInstanceName := PluginInstanceName(*plugin.InstanceName, usedInstanceNames, rel)
+				usedInstanceNames.Insert(uniqueInstanceName)
+				plugin.InstanceName = &uniqueInstanceName
+			} else {
+				// TODO: decide if it's fine to do so.
+				// If InstanceName is not set, we set it to the name of the KongPlugin.
+				uniqueInstanceName := PluginInstanceName(*plugin.Name, usedInstanceNames, rel)
+				usedInstanceNames.Insert(uniqueInstanceName)
+				plugin.InstanceName = &uniqueInstanceName
 			}
 			plugins = append(plugins, plugin)
 		}
@@ -391,6 +386,32 @@ func buildPlugins(
 	plugins = append(plugins, globalPlugins...)
 
 	return plugins
+}
+
+func PluginInstanceName(instanceName string, usedInstanceNames sets.Set[string], rel util.Rel) string {
+	var sha [32]byte
+	if rel.Service != "" {
+		sha = sha256.Sum256([]byte("service-" + rel.Service))
+	}
+	if rel.Route != "" {
+		sha = sha256.Sum256([]byte("route-" + rel.Route))
+	}
+	if rel.Consumer != "" {
+		sha = sha256.Sum256([]byte("consumer-" + rel.Consumer))
+	}
+	if rel.ConsumerGroup != "" {
+		sha = sha256.Sum256([]byte("group-" + rel.ConsumerGroup))
+	}
+
+	suffix := fmt.Sprintf("%x", sha)
+	short := suffix[:9]
+	suffixed := fmt.Sprintf("%s-%s", instanceName, short)
+	if usedInstanceNames.Has(suffixed) {
+		// in the unlikely event of a short hash collision, use the full one
+		suffixed = fmt.Sprintf("%s-%s", instanceName, suffix)
+	}
+
+	return suffixed
 }
 
 func globalPlugins(log logrus.FieldLogger, s store.Storer) ([]Plugin, error) {

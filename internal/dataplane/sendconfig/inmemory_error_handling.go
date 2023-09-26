@@ -33,6 +33,7 @@ type ConfigErrorFields struct{}
 
 // FlatEntityError represents a single Kong entity with one or more invalid fields.
 type FlatEntityError struct {
+	Type   string           `json:"entity_type,omitempty" yaml:"entity_type,omitempty"`
 	Name   string           `json:"entity_name,omitempty" yaml:"entity_name,omitempty"`
 	ID     string           `json:"entity_id,omitempty" yaml:"entity_id,omitempty"`
 	Tags   []string         `json:"entity_tags,omitempty" yaml:"entity_tags,omitempty"`

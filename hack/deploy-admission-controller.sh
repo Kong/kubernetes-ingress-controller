@@ -62,9 +62,19 @@ webhooks:
     resources:
     - secrets
   - apiGroups:
+    - networking.k8s.io
+    apiVersions:
+      - 'v1'
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - ingresses
+  - apiGroups:
     - gateway.networking.k8s.io
     apiVersions:
     - 'v1alpha2'
+    - 'v1beta1'
     operations:
     - CREATE
     - UPDATE

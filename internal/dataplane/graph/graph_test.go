@@ -426,9 +426,8 @@ plugins:
   - k8s-version:v1
 - config:
     header_name: kong-id-2
-  instance_name: correlation-id-c1ebced53
   name: correlation-id
-  route: .httpbin-other.httpbin..80
+  route: .httpbin-other.httpbin-other..80
   tags:
   - k8s-name:kong-id
   - k8s-kind:KongPlugin
@@ -443,9 +442,7 @@ plugins:
   - k8s-kind:KongPlugin
   - k8s-group:configuration.konghq.com
   - k8s-version:v1
-- config:
-    header_name: kong-id-2
-  name: correlation-id
+  name: key-auth
   route: .httpbin-other.httpbin-other..80
   tags:
   - k8s-name:kong-id
@@ -544,9 +541,17 @@ upstreams:
 	fallbackConfig, err := graph.BuildFallbackKongConfig(history, currentConfigGraph, entitiesErrors)
 	require.NoError(t, err)
 
-	dumpGraphAsSVG(t, "last known good", lastKnownGoodConfigGraph)
-	dumpGraphAsSVG(t, "current", currentConfigGraph)
-	dumpGraphAsSVG(t, "fallback", fallbackConfig)
+	lastGoodSvg := dumpGraphAsSVG(t, lastKnownGoodConfigGraph)
+	currentSvg := dumpGraphAsSVG(t, currentConfigGraph)
+	fallbackSvg := dumpGraphAsSVG(t, fallbackConfig)
+	t.Logf("open %s %s %s", lastGoodSvg, currentSvg, fallbackSvg)
+
+	fallbackKongConfig, err := graph.BuildKongConfigFromGraph(fallbackConfig)
+	require.NoError(t, err)
+
+	b, err := yaml.Marshal(fallbackKongConfig)
+	require.NoError(t, err)
+	t.Logf("fallback config:\n%s", string(b))
 }
 
 func mustGraphFromRawYAML(t *testing.T, y string) graph.KongConfigGraph {
@@ -560,9 +565,8 @@ func mustGraphFromRawYAML(t *testing.T, y string) graph.KongConfigGraph {
 	return g
 }
 
-func dumpGraphAsSVG(t *testing.T, name string, g graph.KongConfigGraph) {
+func dumpGraphAsSVG(t *testing.T, g graph.KongConfigGraph) string {
 	svg, err := graph.RenderGraphSVG(g, "")
 	require.NoError(t, err)
-
-	t.Logf("%s graph: %s", name, svg)
+	return svg
 }

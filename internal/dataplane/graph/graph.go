@@ -49,7 +49,7 @@ func RenderGraphSVG(g KongConfigGraph, outFilePath string) (string, error) {
 		return "", fmt.Errorf("failed to render dot file: %w", err)
 	}
 
-	if err = exec.Command("dot", "-Tsvg", "-o", outFilePath, f.Name()).Run(); err != nil {
+	if err = exec.Command("dot", "-Tsvg", "-Kneato", "-o", outFilePath, f.Name()).Run(); err != nil {
 		return "", fmt.Errorf("failed to render svg file: %w", err)
 	}
 	return outFilePath, nil
@@ -70,11 +70,11 @@ func FindConnectedComponents(g KongConfigGraph) ([]KongConfigGraph, error) {
 		}
 		component := graph.NewLike[EntityHash, Entity](g)
 		if err := graph.DFS[EntityHash, Entity](g, vertex, func(visitedHash EntityHash) bool {
-			visitedVertex, err := g.Vertex(visitedHash)
+			visitedVertex, props, err := g.VertexWithProperties(visitedHash)
 			if err != nil {
 				return false // continue DFS, should never happen
 			}
-			if err := component.AddVertex(visitedVertex); err != nil && !errors.Is(err, graph.ErrVertexAlreadyExists) {
+			if err := component.AddVertex(visitedVertex, graph.VertexAttributes(props.Attributes)); err != nil && !errors.Is(err, graph.ErrVertexAlreadyExists) {
 				return false // continue DFS, should never happen
 			}
 			visited.Insert(visitedHash)
@@ -87,8 +87,7 @@ func FindConnectedComponents(g KongConfigGraph) ([]KongConfigGraph, error) {
 		if err != nil {
 			return nil, err
 		}
-
-		// TODO: Might skip edges that were already added?
+		// TODO: Might we skip edges that were already added?
 		for _, edge := range edges {
 			_, sourceErr := component.Vertex(edge.Source)
 			_, targetErr := component.Vertex(edge.Target)
@@ -105,25 +104,50 @@ func FindConnectedComponents(g KongConfigGraph) ([]KongConfigGraph, error) {
 	return components, nil
 }
 
+const (
+	ColorAttribute     = "color"
+	FillColorAttribute = "fillcolor"
+
+	CACertColor          = "brown"
+	ServiceColor         = "coral"
+	RouteColor           = "darkkhaki"
+	CertificateColor     = "deepskyblue"
+	UpstreamColor        = "darkolivegreen"
+	TargetColor          = "goldenrod"
+	ConsumerColor        = "hotpink"
+	PluginColor          = "indianred"
+	EntityRecoveredColor = "lime"
+
+	StyleAttribute = "style"
+	FilledStyle    = "filled"
+)
+
+func coloredVertex(color string) func(*graph.VertexProperties) {
+	return graph.VertexAttributes(map[string]string{
+		FillColorAttribute: color,
+		StyleAttribute:     FilledStyle,
+	})
+}
+
 func BuildKongConfigGraph(config *file.Content) (KongConfigGraph, error) {
 	g := graph.New(hashEntity)
 
 	for _, caCert := range config.CACertificates {
 		ecac := Entity{Name: *caCert.ID, Type: "ca-certificate", Raw: caCert.DeepCopy()}
-		if err := g.AddVertex(ecac); err != nil && !errors.Is(err, graph.ErrVertexAlreadyExists) {
+		if err := g.AddVertex(ecac, coloredVertex(CACertColor)); err != nil && !errors.Is(err, graph.ErrVertexAlreadyExists) {
 			return nil, err
 		}
 	}
 
 	for _, service := range config.Services {
-		es := Entity{Name: *service.Name, Type: "service"}
-		if err := g.AddVertex(es); err != nil && !errors.Is(err, graph.ErrVertexAlreadyExists) {
+		es := Entity{Name: *service.Name, Type: "service", Raw: service.DeepCopy()}
+		if err := g.AddVertex(es, coloredVertex(ServiceColor)); err != nil && !errors.Is(err, graph.ErrVertexAlreadyExists) {
 			return nil, err
 		}
 
 		for _, route := range service.Routes {
 			er := Entity{Name: *route.Name, Type: "route", Raw: route.DeepCopy()}
-			if err := g.AddVertex(er); err != nil && !errors.Is(err, graph.ErrVertexAlreadyExists) {
+			if err := g.AddVertex(er, coloredVertex(RouteColor)); err != nil && !errors.Is(err, graph.ErrVertexAlreadyExists) {
 				return nil, err
 			}
 			if err := g.AddEdge(hashEntity(es), hashEntity(er)); err != nil && !errors.Is(err, graph.ErrEdgeAlreadyExists) {
@@ -133,7 +157,7 @@ func BuildKongConfigGraph(config *file.Content) (KongConfigGraph, error) {
 
 		if service.ClientCertificate != nil {
 			ecc := Entity{Name: *service.ClientCertificate.ID, Type: "certificate", Raw: service.ClientCertificate.DeepCopy()}
-			if err := g.AddVertex(ecc); err != nil && !errors.Is(err, graph.ErrVertexAlreadyExists) {
+			if err := g.AddVertex(ecc, coloredVertex(CertificateColor)); err != nil && !errors.Is(err, graph.ErrVertexAlreadyExists) {
 				return nil, err
 			}
 			if err := g.AddEdge(hashEntity(es), hashEntity(ecc)); err != nil && !errors.Is(err, graph.ErrEdgeAlreadyExists) {
@@ -149,14 +173,15 @@ func BuildKongConfigGraph(config *file.Content) (KongConfigGraph, error) {
 	}
 
 	for _, upstream := range config.Upstreams {
-		eu := Entity{Name: *upstream.Name, Type: "upstream"}
-		if err := g.AddVertex(eu); err != nil && !errors.Is(err, graph.ErrVertexAlreadyExists) && !errors.Is(err, graph.ErrEdgeAlreadyExists) {
+		// TODO: should we resolve edges between upstreams and services?
+		eu := Entity{Name: *upstream.Name, Type: "upstream", Raw: upstream.DeepCopy()}
+		if err := g.AddVertex(eu, coloredVertex(UpstreamColor)); err != nil && !errors.Is(err, graph.ErrVertexAlreadyExists) && !errors.Is(err, graph.ErrEdgeAlreadyExists) {
 			return nil, err
 		}
 
 		for _, target := range upstream.Targets {
 			et := Entity{Name: *target.Target.Target, Type: "target"}
-			if err := g.AddVertex(et); err != nil && !errors.Is(err, graph.ErrVertexAlreadyExists) {
+			if err := g.AddVertex(et, coloredVertex(TargetColor)); err != nil && !errors.Is(err, graph.ErrVertexAlreadyExists) {
 				return nil, err
 			}
 			if err := g.AddEdge(hashEntity(eu), hashEntity(et)); err != nil && !errors.Is(err, graph.ErrEdgeAlreadyExists) {
@@ -167,12 +192,12 @@ func BuildKongConfigGraph(config *file.Content) (KongConfigGraph, error) {
 
 	for _, certificate := range config.Certificates {
 		ec := Entity{Name: *certificate.ID, Type: "certificate"}
-		if err := g.AddVertex(ec); err != nil && !errors.Is(err, graph.ErrVertexAlreadyExists) {
+		if err := g.AddVertex(ec, coloredVertex(CertificateColor)); err != nil && !errors.Is(err, graph.ErrVertexAlreadyExists) {
 			return nil, err
 		}
 		for _, sni := range certificate.SNIs {
 			esni := Entity{Name: *sni.Name, Type: "sni"}
-			if err := g.AddVertex(esni); err != nil && !errors.Is(err, graph.ErrVertexAlreadyExists) {
+			if err := g.AddVertex(esni, coloredVertex(CertificateColor)); err != nil && !errors.Is(err, graph.ErrVertexAlreadyExists) {
 				return nil, err
 			}
 			if err := g.AddEdge(hashEntity(ec), hashEntity(esni)); err != nil && !errors.Is(err, graph.ErrEdgeAlreadyExists) {
@@ -182,7 +207,8 @@ func BuildKongConfigGraph(config *file.Content) (KongConfigGraph, error) {
 	}
 
 	for _, consumer := range config.Consumers {
-		if err := g.AddVertex(Entity{Name: *consumer.Username, Type: "consumer"}); err != nil {
+		ec := Entity{Name: *consumer.Username, Type: "consumer", Raw: consumer.DeepCopy()}
+		if err := g.AddVertex(ec, coloredVertex(ConsumerColor)); err != nil {
 			return nil, err
 		}
 		// TODO: handle consumer credentials
@@ -210,34 +236,25 @@ func BuildKongConfigGraph(config *file.Content) (KongConfigGraph, error) {
 			}
 			plugin.InstanceName = lo.ToPtr(kongstate.PluginInstanceName(*plugin.Name, sets.New[string](), rel))
 		}
-		ep := Entity{Name: *plugin.InstanceName, Type: "plugin"}
-		if err := g.AddVertex(ep); err != nil && !errors.Is(err, graph.ErrVertexAlreadyExists) {
+		ep := Entity{Name: *plugin.InstanceName, Type: "plugin", Raw: plugin.DeepCopy()}
+		if err := g.AddVertex(ep, coloredVertex(PluginColor)); err != nil && !errors.Is(err, graph.ErrVertexAlreadyExists) {
 			return nil, err
 		}
 
 		if plugin.Service != nil {
 			es := Entity{Name: *plugin.Service.ID, Type: "service"}
-			if err := g.AddVertex(es); err != nil && !errors.Is(err, graph.ErrVertexAlreadyExists) {
-				return nil, err
-			}
 			if err := g.AddEdge(hashEntity(ep), hashEntity(es)); err != nil && !errors.Is(err, graph.ErrEdgeAlreadyExists) {
 				return nil, err
 			}
 		}
 		if plugin.Route != nil {
 			er := Entity{Name: *plugin.Route.ID, Type: "route"}
-			if err := g.AddVertex(er); err != nil && !errors.Is(err, graph.ErrVertexAlreadyExists) {
-				return nil, err
-			}
 			if err := g.AddEdge(hashEntity(ep), hashEntity(er)); err != nil && !errors.Is(err, graph.ErrEdgeAlreadyExists) {
 				return nil, err
 			}
 		}
 		if plugin.Consumer != nil {
 			ec := Entity{Name: *plugin.Consumer.Username, Type: "consumer"}
-			if err := g.AddVertex(ec); err != nil && !errors.Is(err, graph.ErrVertexAlreadyExists) {
-				return nil, err
-			}
 			if err := g.AddEdge(hashEntity(ep), hashEntity(ec)); err != nil && !errors.Is(err, graph.ErrEdgeAlreadyExists) {
 				return nil, err
 			}
@@ -245,6 +262,46 @@ func BuildKongConfigGraph(config *file.Content) (KongConfigGraph, error) {
 	}
 
 	return g, nil
+}
+
+func BuildKongConfigFromGraph(g KongConfigGraph) (*file.Content, error) {
+	adjacencyMap, err := g.AdjacencyMap()
+	if err != nil {
+		return nil, fmt.Errorf("could not get adjacency map of graph: %w", err)
+	}
+
+	kongConfig := &file.Content{}
+	for vertex := range adjacencyMap {
+		v, err := g.Vertex(vertex)
+		if err != nil {
+			return nil, fmt.Errorf("could not get vertex %v: %w", vertex, err)
+		}
+		switch v.Type {
+		case "service":
+			service := v.Raw.(*file.FService)
+			kongConfig.Services = append(kongConfig.Services, *service)
+		case "route":
+			route := v.Raw.(*file.FRoute)
+			kongConfig.Routes = append(kongConfig.Routes, *route)
+		case "certificate":
+			certificate := v.Raw.(*file.FCertificate)
+			kongConfig.Certificates = append(kongConfig.Certificates, *certificate)
+		case "ca-certificate":
+			caCertificate := v.Raw.(*file.FCACertificate)
+			kongConfig.CACertificates = append(kongConfig.CACertificates, *caCertificate)
+		case "consumer":
+			consumer := v.Raw.(*file.FConsumer)
+			kongConfig.Consumers = append(kongConfig.Consumers, *consumer)
+		case "plugin":
+			plugin := v.Raw.(*file.FPlugin)
+			kongConfig.Plugins = append(kongConfig.Plugins, *plugin)
+		case "upstream":
+			upstream := v.Raw.(*file.FUpstream)
+			kongConfig.Upstreams = append(kongConfig.Upstreams, *upstream)
+		}
+	}
+
+	return kongConfig, nil
 }
 
 // TODO: do we have to support full history or just the latest good config?
@@ -312,11 +369,11 @@ func addConnectedComponentToGraph(g KongConfigGraph, component KongConfigGraph) 
 	}
 
 	for hash := range adjacencyMap {
-		vertex, err := component.Vertex(hash)
+		vertex, props, err := component.VertexWithProperties(hash)
 		if err != nil {
 			return fmt.Errorf("failed to get vertex %v: %w", hash, err)
 		}
-		_ = g.AddVertex(vertex)
+		_ = g.AddVertex(vertex, graph.VertexAttributes(props.Attributes), graph.VertexAttribute(ColorAttribute, EntityRecoveredColor))
 	}
 
 	edges, err := component.Edges()

@@ -77,6 +77,11 @@ Adding a new version? You'll need three changes:
 
 ## Unreleased
 
+### Breaking changes
+
+- Removed feature gate `CombinedServices`. The feature is enabled and it can't be changed.
+  [#4743](https://github.com/Kong/kubernetes-ingress-controller/pull/4743)
+
 ### Fixed
 
 - No more "log.SetLogger(...) was never called..." log entry during shutdown of KIC

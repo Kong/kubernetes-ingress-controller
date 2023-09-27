@@ -5062,25 +5062,21 @@ func TestNewFeatureFlags(t *testing.T) {
 			},
 		},
 		{
-			name: "combined services and routes enabled",
+			name: "combined routes enabled",
 			featureGates: map[string]bool{
-				featuregates.CombinedRoutesFeature:   true,
-				featuregates.CombinedServicesFeature: true,
+				featuregates.CombinedRoutesFeature: true,
 			},
 			expectedFeatureFlags: FeatureFlags{
 				CombinedServiceRoutes: true,
-				CombinedServices:      true,
 			},
 		},
 		{
-			name: "combined services enabled, but routes disabled",
+			name: "combined routes disabled",
 			featureGates: map[string]bool{
-				featuregates.CombinedRoutesFeature:   false,
-				featuregates.CombinedServicesFeature: true,
+				featuregates.CombinedRoutesFeature: false,
 			},
 			expectedFeatureFlags: FeatureFlags{
 				CombinedServiceRoutes: false,
-				CombinedServices:      false,
 			},
 		},
 		{

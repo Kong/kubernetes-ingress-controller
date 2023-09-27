@@ -115,7 +115,6 @@ func ingressV1ToKongServiceCombinedRoutes(
 	return translators.TranslateIngresses(ingresses, icp, translators.TranslateIngressFeatureFlags{
 		RegexPathPrefix:  featureFlags.RegexPathPrefix,
 		ExpressionRoutes: featureFlags.ExpressionRoutes,
-		CombinedServices: featureFlags.CombinedServices,
 	}, parsedObjectsCollector)
 }
 

@@ -75,6 +75,13 @@ Adding a new version? You'll need three changes:
  - [0.0.5](#005)
  - [0.0.4 and prior](#004-and-prior)
 
+## Unreleased
+
+### Fixed
+
+- No more "log.SetLogger(...) was never called..." log entry during shutdown of KIC
+  [#4738](https://github.com/Kong/kubernetes-ingress-controller/pull/4738)
+
 ## 2.12.0
 
 > Release date: 2023-09-25
@@ -140,7 +147,7 @@ Adding a new version? You'll need three changes:
   [#4641](https://github.com/Kong/kubernetes-ingress-controller/issues/4641)
   [#4643](https://github.com/Kong/kubernetes-ingress-controller/issues/4643)
 - Fix `Licenses` and `ConsumerGroups` missing in sanitized copies of Kong configuration.
-  [#4710](https://github.com/Kong/kubernetes-ingress-controller/pull/4710
+  [#4710](https://github.com/Kong/kubernetes-ingress-controller/pull/4710)
 
 ## [2.11.1]
 

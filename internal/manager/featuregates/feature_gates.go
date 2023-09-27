@@ -33,10 +33,6 @@ const (
 	// See: https://docs.konghq.com/gateway/latest/key-concepts/routes/expressions/ about expression based routes in Kong 3.0+.
 	ExpressionRoutesFeature = "ExpressionRoutes"
 
-	// CombinedServicesFeature is the name of the feature-gate that makes KIC create a single Kong Service when
-	// a Kubernetes Service is referenced by multiple netv1.Ingresses. It's effective only when CombinedRoutesFeature is enabled.
-	CombinedServicesFeature = "CombinedServices"
-
 	// FillIDsFeature is the name of the feature-gate that makes KIC fill in the ID fields of Kong entities (Services,
 	// Routes, and Consumers). It ensures that IDs remain stable across restarts of the controller.
 	FillIDsFeature = "FillIDs"
@@ -84,7 +80,6 @@ func GetFeatureGatesDefaults() map[string]bool {
 		GatewayAlphaFeature:     false,
 		CombinedRoutesFeature:   true,
 		ExpressionRoutesFeature: false,
-		CombinedServicesFeature: true,
 		FillIDsFeature:          false,
 		RewriteURIsFeature:      false,
 	}

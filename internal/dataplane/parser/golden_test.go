@@ -39,7 +39,6 @@ var (
 
 			// Feature flags that are directly propagated from the feature gates get their defaults.
 			CombinedServiceRoutes: featuregates.GetFeatureGatesDefaults()[featuregates.CombinedRoutesFeature],
-			CombinedServices:      featuregates.GetFeatureGatesDefaults()[featuregates.CombinedServicesFeature],
 			ExpressionRoutes:      featuregates.GetFeatureGatesDefaults()[featuregates.ExpressionRoutesFeature],
 			FillIDs:               featuregates.GetFeatureGatesDefaults()[featuregates.FillIDsFeature],
 

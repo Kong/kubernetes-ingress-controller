@@ -541,14 +541,12 @@ func TestFakeStorePlugins(t *testing.T) {
 	store, err = NewFakeStore(FakeObjects{KongPlugins: plugins})
 	require.Nil(err)
 	require.NotNil(store)
-	plugins, err = store.ListGlobalKongPlugins()
-	assert.NoError(err)
-	assert.Len(plugins, 0)
+	plugins = store.ListKongPlugins()
+	assert.Len(plugins, 1)
 
 	plugin, err := store.GetKongPlugin("default", "does-not-exist")
-	assert.NotNil(err)
-	assert.True(errors.As(err, &ErrNotFound{}))
-	assert.Nil(plugin)
+	require.ErrorAs(err, &ErrNotFound{})
+	require.Nil(plugin)
 }
 
 func TestFakeStoreClusterPlugins(t *testing.T) {

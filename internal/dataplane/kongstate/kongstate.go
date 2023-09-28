@@ -390,28 +390,17 @@ func buildPlugins(
 		}
 	}
 
-	globalPlugins, err := globalPlugins(log, s)
+	gKCPs, err := globalKongClusterPlugins(log, s)
 	if err != nil {
-		log.WithError(err).Error("failed to fetch global plugins")
+		log.WithError(err).Error("failed to fetch global Kong Cluster plugins")
 	}
 	// global plugins have no instance_name transform as they can only be applied once
-	plugins = append(plugins, globalPlugins...)
+	plugins = append(plugins, gKCPs...)
 
 	return plugins
 }
 
-func globalPlugins(log logrus.FieldLogger, s store.Storer) ([]Plugin, error) {
-	// removed as of 0.10.0
-	// only retrieved now to warn users
-	globalPlugins, err := s.ListGlobalKongPlugins()
-	if err != nil {
-		return nil, fmt.Errorf("error listing global KongPlugins: %w", err)
-	}
-	if len(globalPlugins) > 0 {
-		log.Warning("global KongPlugins found. These are no longer applied and",
-			" must be replaced with KongClusterPlugins.",
-			" Please run \"kubectl get kongplugin -l global=true --all-namespaces\" to list existing plugins")
-	}
+func globalKongClusterPlugins(log logrus.FieldLogger, s store.Storer) ([]Plugin, error) {
 	res := make(map[string]Plugin)
 	var duplicates []string // keep track of duplicate
 	// TODO respect the oldest CRD

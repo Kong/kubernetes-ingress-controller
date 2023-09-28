@@ -1053,7 +1053,7 @@ func TestKongRouteAnnotations(t *testing.T) {
 		// parser tests do not check tags, these are tested independently
 		state.Services[0].Service.Tags = nil
 		assert.Equal(t, kong.Service{
-			Name:           kong.String("default.foo-svc.pnum-80"),
+			Name:           kong.String("default.foo-svc.80"),
 			Host:           kong.String("foo-svc.default.80.svc"),
 			Path:           kong.String("/"),
 			Port:           kong.Int(80),
@@ -1062,23 +1062,23 @@ func TestKongRouteAnnotations(t *testing.T) {
 			WriteTimeout:   kong.Int(60000),
 			Retries:        kong.Int(5),
 			Protocol:       kong.String("http"),
-			ID:             kong.String("cce764ba-6924-5519-92ab-17c15418bbec"),
+			ID:             kong.String("d0bb3cdf-7dee-5d1a-8219-a44f840c8845"),
 		}, state.Services[0].Service)
 
 		require.Len(t, state.Services[0].Routes, 1, "expected one route to be rendered")
 		// parser tests do not check tags, these are tested independently
 		state.Services[0].Routes[0].Route.Tags = nil
 		assert.Equal(t, kong.Route{
-			Name:              kong.String("default.bar.00"),
+			Name:              kong.String("default.bar.foo-svc.example.com.80"),
 			StripPath:         kong.Bool(true),
 			Hosts:             kong.StringSlice("example.com"),
 			PreserveHost:      kong.Bool(true),
 			Paths:             kong.StringSlice("/"),
 			Protocols:         kong.StringSlice("http", "https"),
-			RegexPriority:     kong.Int(100),
+			RegexPriority:     kong.Int(0),
 			ResponseBuffering: kong.Bool(true),
 			RequestBuffering:  kong.Bool(true),
-			ID:                kong.String("0977b208-1478-5280-90cf-037af9ffc3ef"),
+			ID:                kong.String("3a26af2b-40ec-579c-81b0-dd6dc0072417"),
 		}, state.Services[0].Routes[0].Route)
 	})
 	t.Run("strip-path annotation is correctly processed (false)", func(t *testing.T) {
@@ -1142,7 +1142,7 @@ func TestKongRouteAnnotations(t *testing.T) {
 		// parser tests do not check tags, these are tested independently
 		state.Services[0].Service.Tags = nil
 		assert.Equal(t, kong.Service{
-			Name:           kong.String("default.foo-svc.pnum-80"),
+			Name:           kong.String("default.foo-svc.80"),
 			Host:           kong.String("foo-svc.default.80.svc"),
 			Path:           kong.String("/"),
 			Port:           kong.Int(80),
@@ -1151,23 +1151,23 @@ func TestKongRouteAnnotations(t *testing.T) {
 			WriteTimeout:   kong.Int(60000),
 			Retries:        kong.Int(5),
 			Protocol:       kong.String("http"),
-			ID:             kong.String("cce764ba-6924-5519-92ab-17c15418bbec"),
+			ID:             kong.String("d0bb3cdf-7dee-5d1a-8219-a44f840c8845"),
 		}, state.Services[0].Service)
 
 		require.Len(t, state.Services[0].Routes, 1, "expected one route to be rendered")
 		// parser tests do not check tags, these are tested independently
 		state.Services[0].Routes[0].Route.Tags = nil
 		assert.Equal(t, kong.Route{
-			Name:              kong.String("default.bar.00"),
+			Name:              kong.String("default.bar.foo-svc.example.com.80"),
 			StripPath:         kong.Bool(false),
 			Hosts:             kong.StringSlice("example.com"),
 			PreserveHost:      kong.Bool(true),
 			Paths:             kong.StringSlice("/"),
 			Protocols:         kong.StringSlice("http", "https"),
-			RegexPriority:     kong.Int(100),
+			RegexPriority:     kong.Int(0),
 			ResponseBuffering: kong.Bool(true),
 			RequestBuffering:  kong.Bool(true),
-			ID:                kong.String("0977b208-1478-5280-90cf-037af9ffc3ef"),
+			ID:                kong.String("3a26af2b-40ec-579c-81b0-dd6dc0072417"),
 		}, state.Services[0].Routes[0].Route)
 	})
 	t.Run("https-redirect-status-code annotation is correctly processed", func(t *testing.T) {
@@ -1231,7 +1231,7 @@ func TestKongRouteAnnotations(t *testing.T) {
 		// parser tests do not check tags, these are tested independently
 		state.Services[0].Service.Tags = nil
 		assert.Equal(t, kong.Service{
-			Name:           kong.String("default.foo-svc.pnum-80"),
+			Name:           kong.String("default.foo-svc.80"),
 			Host:           kong.String("foo-svc.default.80.svc"),
 			Path:           kong.String("/"),
 			Port:           kong.Int(80),
@@ -1240,24 +1240,24 @@ func TestKongRouteAnnotations(t *testing.T) {
 			WriteTimeout:   kong.Int(60000),
 			Retries:        kong.Int(5),
 			Protocol:       kong.String("http"),
-			ID:             kong.String("cce764ba-6924-5519-92ab-17c15418bbec"),
+			ID:             kong.String("d0bb3cdf-7dee-5d1a-8219-a44f840c8845"),
 		}, state.Services[0].Service)
 
 		// parser tests do not check tags, these are tested independently
 		state.Services[0].Routes[0].Route.Tags = nil
 		assert.Len(t, state.Services[0].Routes, 1, "expected one route to be rendered")
 		assert.Equal(t, kong.Route{
-			Name:                    kong.String("default.bar.00"),
+			Name:                    kong.String("default.bar.foo-svc.example.com.80"),
 			StripPath:               kong.Bool(false),
 			HTTPSRedirectStatusCode: kong.Int(301),
 			Hosts:                   kong.StringSlice("example.com"),
 			PreserveHost:            kong.Bool(true),
 			Paths:                   kong.StringSlice("/"),
 			Protocols:               kong.StringSlice("http", "https"),
-			RegexPriority:           kong.Int(100),
+			RegexPriority:           kong.Int(0),
 			ResponseBuffering:       kong.Bool(true),
 			RequestBuffering:        kong.Bool(true),
-			ID:                      kong.String("0977b208-1478-5280-90cf-037af9ffc3ef"),
+			ID:                      kong.String("3a26af2b-40ec-579c-81b0-dd6dc0072417"),
 		}, state.Services[0].Routes[0].Route)
 	})
 
@@ -1323,7 +1323,7 @@ func TestKongRouteAnnotations(t *testing.T) {
 			// parser tests do not check tags, these are tested independently
 			state.Services[0].Service.Tags = nil
 			assert.Equal(t, kong.Service{
-				Name:           kong.String("default.foo-svc.pnum-80"),
+				Name:           kong.String("default.foo-svc.80"),
 				Host:           kong.String("foo-svc.default.80.svc"),
 				Path:           kong.String("/"),
 				Port:           kong.Int(80),
@@ -1332,23 +1332,23 @@ func TestKongRouteAnnotations(t *testing.T) {
 				WriteTimeout:   kong.Int(60000),
 				Retries:        kong.Int(5),
 				Protocol:       kong.String("http"),
-				ID:             kong.String("cce764ba-6924-5519-92ab-17c15418bbec"),
+				ID:             kong.String("d0bb3cdf-7dee-5d1a-8219-a44f840c8845"),
 			}, state.Services[0].Service)
 
 			require.Len(t, state.Services[0].Routes, 1, "expected one route to be rendered")
 			// parser tests do not check tags, these are tested independently
 			state.Services[0].Routes[0].Route.Tags = nil
 			assert.Equal(t, kong.Route{
-				Name:              kong.String("default.bar.00"),
+				Name:              kong.String("default.bar.foo-svc.example.com.80"),
 				StripPath:         kong.Bool(false),
 				Hosts:             kong.StringSlice("example.com"),
 				PreserveHost:      kong.Bool(true),
 				Paths:             kong.StringSlice("/"),
 				Protocols:         kong.StringSlice("http", "https"),
-				RegexPriority:     kong.Int(100),
+				RegexPriority:     kong.Int(0),
 				ResponseBuffering: kong.Bool(true),
 				RequestBuffering:  kong.Bool(true),
-				ID:                kong.String("0977b208-1478-5280-90cf-037af9ffc3ef"),
+				ID:                kong.String("3a26af2b-40ec-579c-81b0-dd6dc0072417"),
 			}, state.Services[0].Routes[0].Route)
 		})
 	t.Run("preserve-host annotation is correctly processed", func(t *testing.T) {
@@ -1412,7 +1412,7 @@ func TestKongRouteAnnotations(t *testing.T) {
 		// parser tests do not check tags, these are tested independently
 		state.Services[0].Service.Tags = nil
 		assert.Equal(t, kong.Service{
-			Name:           kong.String("default.foo-svc.pnum-80"),
+			Name:           kong.String("default.foo-svc.80"),
 			Host:           kong.String("foo-svc.default.80.svc"),
 			Path:           kong.String("/"),
 			Port:           kong.Int(80),
@@ -1421,23 +1421,23 @@ func TestKongRouteAnnotations(t *testing.T) {
 			WriteTimeout:   kong.Int(60000),
 			Retries:        kong.Int(5),
 			Protocol:       kong.String("http"),
-			ID:             kong.String("cce764ba-6924-5519-92ab-17c15418bbec"),
+			ID:             kong.String("d0bb3cdf-7dee-5d1a-8219-a44f840c8845"),
 		}, state.Services[0].Service)
 
 		require.Len(t, state.Services[0].Routes, 1, "expected one route to be rendered")
 		// parser tests do not check tags, these are tested independently
 		state.Services[0].Routes[0].Route.Tags = nil
 		assert.Equal(t, kong.Route{
-			Name:              kong.String("default.bar.00"),
+			Name:              kong.String("default.bar.foo-svc.example.com.80"),
 			StripPath:         kong.Bool(false),
 			Hosts:             kong.StringSlice("example.com"),
 			PreserveHost:      kong.Bool(false),
 			Paths:             kong.StringSlice("/"),
 			Protocols:         kong.StringSlice("http", "https"),
-			RegexPriority:     kong.Int(100),
+			RegexPriority:     kong.Int(0),
 			ResponseBuffering: kong.Bool(true),
 			RequestBuffering:  kong.Bool(true),
-			ID:                kong.String("0977b208-1478-5280-90cf-037af9ffc3ef"),
+			ID:                kong.String("3a26af2b-40ec-579c-81b0-dd6dc0072417"),
 		}, state.Services[0].Routes[0].Route)
 	})
 
@@ -1503,7 +1503,7 @@ func TestKongRouteAnnotations(t *testing.T) {
 		// parser tests do not check tags, these are tested independently
 		state.Services[0].Service.Tags = nil
 		assert.Equal(t, kong.Service{
-			Name:           kong.String("default.foo-svc.pnum-80"),
+			Name:           kong.String("default.foo-svc.80"),
 			Host:           kong.String("foo-svc.default.80.svc"),
 			Path:           kong.String("/"),
 			Port:           kong.Int(80),
@@ -1512,23 +1512,23 @@ func TestKongRouteAnnotations(t *testing.T) {
 			WriteTimeout:   kong.Int(60000),
 			Retries:        kong.Int(5),
 			Protocol:       kong.String("http"),
-			ID:             kong.String("cce764ba-6924-5519-92ab-17c15418bbec"),
+			ID:             kong.String("d0bb3cdf-7dee-5d1a-8219-a44f840c8845"),
 		}, state.Services[0].Service)
 
 		require.Len(t, state.Services[0].Routes, 1, "expected one route to be rendered")
 		// parser tests do not check tags, these are tested independently
 		state.Services[0].Routes[0].Route.Tags = nil
 		assert.Equal(t, kong.Route{
-			Name:              kong.String("default.bar.00"),
+			Name:              kong.String("default.bar.foo-svc.example.com.80"),
 			StripPath:         kong.Bool(false),
 			Hosts:             kong.StringSlice("example.com"),
 			PreserveHost:      kong.Bool(true),
 			Paths:             kong.StringSlice("/"),
 			Protocols:         kong.StringSlice("http", "https"),
-			RegexPriority:     kong.Int(100),
+			RegexPriority:     kong.Int(0),
 			ResponseBuffering: kong.Bool(true),
 			RequestBuffering:  kong.Bool(true),
-			ID:                kong.String("0977b208-1478-5280-90cf-037af9ffc3ef"),
+			ID:                kong.String("3a26af2b-40ec-579c-81b0-dd6dc0072417"),
 		}, state.Services[0].Routes[0].Route)
 	})
 
@@ -1593,7 +1593,7 @@ func TestKongRouteAnnotations(t *testing.T) {
 		// parser tests do not check tags, these are tested independently
 		state.Services[0].Service.Tags = nil
 		assert.Equal(t, kong.Service{
-			Name:           kong.String("default.foo-svc.pnum-80"),
+			Name:           kong.String("default.foo-svc.80"),
 			Host:           kong.String("foo-svc.default.80.svc"),
 			Path:           kong.String("/"),
 			Port:           kong.Int(80),
@@ -1602,14 +1602,14 @@ func TestKongRouteAnnotations(t *testing.T) {
 			WriteTimeout:   kong.Int(60000),
 			Retries:        kong.Int(5),
 			Protocol:       kong.String("http"),
-			ID:             kong.String("cce764ba-6924-5519-92ab-17c15418bbec"),
+			ID:             kong.String("d0bb3cdf-7dee-5d1a-8219-a44f840c8845"),
 		}, state.Services[0].Service)
 
 		require.Len(t, state.Services[0].Routes, 1, "expected one route to be rendered")
 		// parser tests do not check tags, these are tested independently
 		state.Services[0].Routes[0].Route.Tags = nil
 		assert.Equal(t, kong.Route{
-			Name:              kong.String("default.bar.00"),
+			Name:              kong.String("default.bar.foo-svc.example.com.80"),
 			StripPath:         kong.Bool(false),
 			Hosts:             kong.StringSlice("example.com"),
 			PreserveHost:      kong.Bool(true),
@@ -1618,7 +1618,7 @@ func TestKongRouteAnnotations(t *testing.T) {
 			RegexPriority:     kong.Int(10),
 			ResponseBuffering: kong.Bool(true),
 			RequestBuffering:  kong.Bool(true),
-			ID:                kong.String("0977b208-1478-5280-90cf-037af9ffc3ef"),
+			ID:                kong.String("3a26af2b-40ec-579c-81b0-dd6dc0072417"),
 		}, state.Services[0].Routes[0].Route)
 	})
 
@@ -1683,7 +1683,7 @@ func TestKongRouteAnnotations(t *testing.T) {
 		// parser tests do not check tags, these are tested independently
 		state.Services[0].Service.Tags = nil
 		assert.Equal(t, kong.Service{
-			Name:           kong.String("default.foo-svc.pnum-80"),
+			Name:           kong.String("default.foo-svc.80"),
 			Host:           kong.String("foo-svc.default.80.svc"),
 			Path:           kong.String("/"),
 			Port:           kong.Int(80),
@@ -1692,23 +1692,23 @@ func TestKongRouteAnnotations(t *testing.T) {
 			WriteTimeout:   kong.Int(60000),
 			Retries:        kong.Int(5),
 			Protocol:       kong.String("http"),
-			ID:             kong.String("cce764ba-6924-5519-92ab-17c15418bbec"),
+			ID:             kong.String("d0bb3cdf-7dee-5d1a-8219-a44f840c8845"),
 		}, state.Services[0].Service)
 
 		require.Len(t, state.Services[0].Routes, 1, "expected one route to be rendered")
 		// parser tests do not check tags, these are tested independently
 		state.Services[0].Routes[0].Route.Tags = nil
 		assert.Equal(t, kong.Route{
-			Name:              kong.String("default.bar.00"),
+			Name:              kong.String("default.bar.foo-svc.example.com.80"),
 			StripPath:         kong.Bool(false),
-			RegexPriority:     kong.Int(100),
+			RegexPriority:     kong.Int(0),
 			Hosts:             kong.StringSlice("example.com"),
 			PreserveHost:      kong.Bool(true),
 			Paths:             kong.StringSlice("/"),
 			Protocols:         kong.StringSlice("http", "https"),
 			ResponseBuffering: kong.Bool(true),
 			RequestBuffering:  kong.Bool(true),
-			ID:                kong.String("0977b208-1478-5280-90cf-037af9ffc3ef"),
+			ID:                kong.String("3a26af2b-40ec-579c-81b0-dd6dc0072417"),
 		}, state.Services[0].Routes[0].Route)
 	})
 
@@ -1774,7 +1774,7 @@ func TestKongRouteAnnotations(t *testing.T) {
 		// parser tests do not check tags, these are tested independently
 		state.Services[0].Service.Tags = nil
 		assert.Equal(t, kong.Service{
-			Name:           kong.String("default.foo-svc.pnum-80"),
+			Name:           kong.String("default.foo-svc.80"),
 			Host:           kong.String("foo-svc.default.80.svc"),
 			Path:           kong.String("/"),
 			Port:           kong.Int(80),
@@ -1783,23 +1783,23 @@ func TestKongRouteAnnotations(t *testing.T) {
 			WriteTimeout:   kong.Int(60000),
 			Retries:        kong.Int(5),
 			Protocol:       kong.String("http"),
-			ID:             kong.String("cce764ba-6924-5519-92ab-17c15418bbec"),
+			ID:             kong.String("d0bb3cdf-7dee-5d1a-8219-a44f840c8845"),
 		}, state.Services[0].Service)
 
 		assert.Len(t, state.Services[0].Routes, 1, "expected one route to be rendered")
 		// parser tests do not check tags, these are tested independently
 		state.Services[0].Routes[0].Route.Tags = nil
 		assert.Equal(t, kong.Route{
-			Name:              kong.String("default.route-buffering-test.00"),
+			Name:              kong.String("default.route-buffering-test.foo-svc.example.com.80"),
 			StripPath:         kong.Bool(false),
-			RegexPriority:     kong.Int(100),
+			RegexPriority:     kong.Int(0),
 			Hosts:             kong.StringSlice("example.com"),
 			PreserveHost:      kong.Bool(true),
 			Paths:             kong.StringSlice("/"),
 			Protocols:         kong.StringSlice("http", "https"),
 			RequestBuffering:  kong.Bool(true),
 			ResponseBuffering: kong.Bool(true),
-			ID:                kong.String("7baaf482-722d-5f33-802f-098d31491846"),
+			ID:                kong.String("9fc167fb-bfe7-53b4-a0e2-7d36cf4bb5d4"),
 		}, state.Services[0].Routes[0].Route)
 	})
 	t.Run("route buffering options are processed (false)", func(t *testing.T) {
@@ -1864,7 +1864,7 @@ func TestKongRouteAnnotations(t *testing.T) {
 		// parser tests do not check tags, these are tested independently
 		state.Services[0].Service.Tags = nil
 		assert.Equal(t, kong.Service{
-			Name:           kong.String("default.foo-svc.pnum-80"),
+			Name:           kong.String("default.foo-svc.80"),
 			Host:           kong.String("foo-svc.default.80.svc"),
 			Path:           kong.String("/"),
 			Port:           kong.Int(80),
@@ -1873,23 +1873,23 @@ func TestKongRouteAnnotations(t *testing.T) {
 			WriteTimeout:   kong.Int(60000),
 			Retries:        kong.Int(5),
 			Protocol:       kong.String("http"),
-			ID:             kong.String("cce764ba-6924-5519-92ab-17c15418bbec"),
+			ID:             kong.String("d0bb3cdf-7dee-5d1a-8219-a44f840c8845"),
 		}, state.Services[0].Service)
 
 		assert.Len(t, state.Services[0].Routes, 1, "expected one route to be rendered")
 		// parser tests do not check tags, these are tested independently
 		state.Services[0].Routes[0].Route.Tags = nil
 		assert.Equal(t, kong.Route{
-			Name:              kong.String("default.route-buffering-test.00"),
+			Name:              kong.String("default.route-buffering-test.foo-svc.example.com.80"),
 			StripPath:         kong.Bool(false),
-			RegexPriority:     kong.Int(100),
+			RegexPriority:     kong.Int(0),
 			Hosts:             kong.StringSlice("example.com"),
 			PreserveHost:      kong.Bool(true),
 			Paths:             kong.StringSlice("/"),
 			Protocols:         kong.StringSlice("http", "https"),
 			RequestBuffering:  kong.Bool(false),
 			ResponseBuffering: kong.Bool(false),
-			ID:                kong.String("7baaf482-722d-5f33-802f-098d31491846"),
+			ID:                kong.String("9fc167fb-bfe7-53b4-a0e2-7d36cf4bb5d4"),
 		}, state.Services[0].Routes[0].Route)
 	})
 	t.Run("route buffering options are not processed with bad annotation values", func(t *testing.T) {
@@ -2106,7 +2106,7 @@ func TestKnativeIngressAndPlugins(t *testing.T) {
 													ServiceName:      "foo-svc",
 													ServicePort:      intstr.FromInt(42),
 												},
-												Percent: 100,
+												Percent: 0,
 											},
 										},
 									},
@@ -2186,7 +2186,7 @@ func TestKnativeIngressAndPlugins(t *testing.T) {
 													ServiceName:      "foo-svc",
 													ServicePort:      intstr.FromInt(42),
 												},
-												Percent: 100,
+												Percent: 0,
 											},
 										},
 									},
@@ -2270,7 +2270,7 @@ func TestKnativeIngressAndPlugins(t *testing.T) {
 													ServiceName:      "foo-svc",
 													ServicePort:      intstr.FromInt(42),
 												},
-												Percent: 100,
+												Percent: 0,
 											},
 										},
 									},
@@ -2339,7 +2339,7 @@ func TestKnativeIngressAndPlugins(t *testing.T) {
 													ServiceName:      "foo-svc",
 													ServicePort:      intstr.FromInt(42),
 												},
-												Percent: 100,
+												Percent: 0,
 											},
 										},
 									},
@@ -2512,7 +2512,7 @@ func TestKongServiceAnnotations(t *testing.T) {
 		// parser tests do not check tags, these are tested independently
 		state.Services[0].Service.Tags = nil
 		assert.Equal(t, kong.Service{
-			Name:           kong.String("default.foo-svc.pnum-80"),
+			Name:           kong.String("default.foo-svc.80"),
 			Host:           kong.String("foo-svc.default.80.svc"),
 			Path:           kong.String("/baz"),
 			Port:           kong.Int(80),
@@ -2521,23 +2521,23 @@ func TestKongServiceAnnotations(t *testing.T) {
 			WriteTimeout:   kong.Int(60000),
 			Retries:        kong.Int(5),
 			Protocol:       kong.String("http"),
-			ID:             kong.String("cce764ba-6924-5519-92ab-17c15418bbec"),
+			ID:             kong.String("d0bb3cdf-7dee-5d1a-8219-a44f840c8845"),
 		}, state.Services[0].Service)
 
 		assert.Len(t, state.Services[0].Routes, 1, "expected one route to be rendered")
 		// parser tests do not check tags, these are tested independently
 		state.Services[0].Routes[0].Route.Tags = nil
 		assert.Equal(t, kong.Route{
-			Name:              kong.String("default.bar.00"),
+			Name:              kong.String("default.bar.foo-svc.example.com.80"),
 			StripPath:         kong.Bool(false),
 			Hosts:             kong.StringSlice("example.com"),
 			PreserveHost:      kong.Bool(true),
 			Paths:             kong.StringSlice("/"),
 			Protocols:         kong.StringSlice("http", "https"),
-			RegexPriority:     kong.Int(100),
+			RegexPriority:     kong.Int(0),
 			ResponseBuffering: kong.Bool(true),
 			RequestBuffering:  kong.Bool(true),
-			ID:                kong.String("0977b208-1478-5280-90cf-037af9ffc3ef"),
+			ID:                kong.String("3a26af2b-40ec-579c-81b0-dd6dc0072417"),
 		}, state.Services[0].Routes[0].Route)
 	})
 
@@ -2604,7 +2604,7 @@ func TestKongServiceAnnotations(t *testing.T) {
 		// parser tests do not check tags, these are tested independently
 		state.Services[0].Service.Tags = nil
 		assert.Equal(t, kong.Service{
-			Name:           kong.String("default.foo-svc.pnum-80"),
+			Name:           kong.String("default.foo-svc.80"),
 			Host:           kong.String("foo-svc.default.80.svc"),
 			Path:           kong.String("/"),
 			Port:           kong.Int(80),
@@ -2613,7 +2613,7 @@ func TestKongServiceAnnotations(t *testing.T) {
 			WriteTimeout:   kong.Int(60000),
 			Retries:        kong.Int(5),
 			Protocol:       kong.String("http"),
-			ID:             kong.String("cce764ba-6924-5519-92ab-17c15418bbec"),
+			ID:             kong.String("d0bb3cdf-7dee-5d1a-8219-a44f840c8845"),
 		}, state.Services[0].Service)
 
 		assert.Len(t, state.Upstreams, 1, "expected one upstream to be rendered")
@@ -2628,16 +2628,16 @@ func TestKongServiceAnnotations(t *testing.T) {
 		// parser tests do not check tags, these are tested independently
 		state.Services[0].Routes[0].Route.Tags = nil
 		assert.Equal(t, kong.Route{
-			Name:              kong.String("default.bar.00"),
+			Name:              kong.String("default.bar.foo-svc.example.com.80"),
 			StripPath:         kong.Bool(false),
 			Hosts:             kong.StringSlice("example.com"),
 			PreserveHost:      kong.Bool(true),
 			Paths:             kong.StringSlice("/"),
 			Protocols:         kong.StringSlice("http", "https"),
-			RegexPriority:     kong.Int(100),
+			RegexPriority:     kong.Int(0),
 			ResponseBuffering: kong.Bool(true),
 			RequestBuffering:  kong.Bool(true),
-			ID:                kong.String("0977b208-1478-5280-90cf-037af9ffc3ef"),
+			ID:                kong.String("3a26af2b-40ec-579c-81b0-dd6dc0072417"),
 		}, state.Services[0].Routes[0].Route)
 	})
 
@@ -2702,7 +2702,7 @@ func TestKongServiceAnnotations(t *testing.T) {
 		// parser tests do not check tags, these are tested independently
 		state.Services[0].Service.Tags = nil
 		assert.Equal(t, kong.Service{
-			Name:           kong.String("default.foo-svc.pnum-80"),
+			Name:           kong.String("default.foo-svc.80"),
 			Host:           kong.String("foo-svc.default.80.svc"),
 			Path:           kong.String("/"),
 			Port:           kong.Int(80),
@@ -2711,15 +2711,15 @@ func TestKongServiceAnnotations(t *testing.T) {
 			WriteTimeout:   kong.Int(60000),
 			Retries:        kong.Int(5),
 			Protocol:       kong.String("http"),
-			ID:             kong.String("cce764ba-6924-5519-92ab-17c15418bbec"),
+			ID:             kong.String("d0bb3cdf-7dee-5d1a-8219-a44f840c8845"),
 		}, state.Services[0].Service)
 
 		require.Len(t, state.Services[0].Routes, 1, "expected one route to be rendered")
 		// parser tests do not check tags, these are tested independently
 		assert.Equal(t, kong.Route{
-			Name:              kong.String("default.bar.00"),
+			Name:              kong.String("default.bar.foo-svc.example.com.80"),
 			StripPath:         kong.Bool(false),
-			RegexPriority:     kong.Int(100),
+			RegexPriority:     kong.Int(0),
 			ResponseBuffering: kong.Bool(true),
 			RequestBuffering:  kong.Bool(true),
 			Hosts:             kong.StringSlice("example.com"),
@@ -2727,7 +2727,7 @@ func TestKongServiceAnnotations(t *testing.T) {
 			Paths:             kong.StringSlice("/"),
 			Protocols:         kong.StringSlice("http", "https"),
 			Methods:           kong.StringSlice("POST", "GET"),
-			ID:                kong.String("0977b208-1478-5280-90cf-037af9ffc3ef"),
+			ID:                kong.String("3a26af2b-40ec-579c-81b0-dd6dc0072417"),
 			Tags: []*string{
 				kong.String("k8s-name:bar"),
 				kong.String("k8s-namespace:default"),
@@ -3313,21 +3313,21 @@ func TestParserSNI(t *testing.T) {
 		state.Services[0].Routes[0].Route.Tags = nil
 		state.Services[0].Routes[1].Route.Tags = nil
 		assert.Equal(t, kong.Route{
-			Name:              kong.String("default.foo.00"),
+			Name:              kong.String("default.foo.foo-svc.example.com.80"),
 			StripPath:         kong.Bool(false),
-			RegexPriority:     kong.Int(100),
+			RegexPriority:     kong.Int(0),
 			ResponseBuffering: kong.Bool(true),
 			RequestBuffering:  kong.Bool(true),
 			Hosts:             kong.StringSlice("example.com"),
 			PreserveHost:      kong.Bool(true),
 			Paths:             kong.StringSlice("/"),
 			Protocols:         kong.StringSlice("http", "https"),
-			ID:                kong.String("95b19369-8def-5255-a40f-dd459cd689e8"),
+			ID:                kong.String("99296cc1-ab30-59f8-b204-7b1a45e64cac"),
 		}, state.Services[0].Routes[0].Route)
 		assert.Equal(t, kong.Route{
-			Name:              kong.String("default.foo.10"),
+			Name:              kong.String("default.foo.foo-svc._.example.com.80"),
 			StripPath:         kong.Bool(false),
-			RegexPriority:     kong.Int(100),
+			RegexPriority:     kong.Int(0),
 			ResponseBuffering: kong.Bool(true),
 			RequestBuffering:  kong.Bool(true),
 			Hosts:             kong.StringSlice("*.example.com"),
@@ -3335,7 +3335,7 @@ func TestParserSNI(t *testing.T) {
 			PreserveHost:      kong.Bool(true),
 			Paths:             kong.StringSlice("/"),
 			Protocols:         kong.StringSlice("http", "https"),
-			ID:                kong.String("9c78e74b-423f-5d44-abad-29d1cd137520"),
+			ID:                kong.String("cbdfe994-15d4-5336-909a-e302ed66e19a"),
 		}, state.Services[0].Routes[1].Route)
 	})
 	t.Run("route does not include SNI when TLS info absent", func(t *testing.T) {
@@ -3387,9 +3387,9 @@ func TestParserSNI(t *testing.T) {
 		// parser tests do not check tags, these are tested independently
 		state.Services[0].Routes[0].Route.Tags = nil
 		assert.Equal(t, kong.Route{
-			Name:              kong.String("default.foo.00"),
+			Name:              kong.String("default.foo.foo-svc.example.com.80"),
 			StripPath:         kong.Bool(false),
-			RegexPriority:     kong.Int(100),
+			RegexPriority:     kong.Int(0),
 			ResponseBuffering: kong.Bool(true),
 			RequestBuffering:  kong.Bool(true),
 			Hosts:             kong.StringSlice("example.com"),
@@ -3397,7 +3397,7 @@ func TestParserSNI(t *testing.T) {
 			PreserveHost:      kong.Bool(true),
 			Paths:             kong.StringSlice("/"),
 			Protocols:         kong.StringSlice("http", "https"),
-			ID:                kong.String("95b19369-8def-5255-a40f-dd459cd689e8"),
+			ID:                kong.String("99296cc1-ab30-59f8-b204-7b1a45e64cac"),
 		}, state.Services[0].Routes[0].Route)
 	})
 }
@@ -3454,16 +3454,16 @@ func TestParserHostAliases(t *testing.T) {
 		// parser tests do not check tags, these are tested independently
 		state.Services[0].Routes[0].Route.Tags = nil
 		assert.Equal(t, kong.Route{
-			Name:              kong.String("default.foo.00"),
+			Name:              kong.String("default.foo.foo-svc.example.com.80"),
 			StripPath:         kong.Bool(false),
-			RegexPriority:     kong.Int(100),
+			RegexPriority:     kong.Int(0),
 			ResponseBuffering: kong.Bool(true),
 			RequestBuffering:  kong.Bool(true),
 			Hosts:             kong.StringSlice("example.com", "*.example.com", "*.sample.com", "*.illustration.com"),
 			PreserveHost:      kong.Bool(true),
 			Paths:             kong.StringSlice("/"),
 			Protocols:         kong.StringSlice("http", "https"),
-			ID:                kong.String("95b19369-8def-5255-a40f-dd459cd689e8"),
+			ID:                kong.String("99296cc1-ab30-59f8-b204-7b1a45e64cac"),
 		}, state.Services[0].Routes[0].Route)
 	})
 	t.Run("route Hosts remain unmodified when Host-Aliases are not present", func(t *testing.T) {
@@ -3515,16 +3515,16 @@ func TestParserHostAliases(t *testing.T) {
 		// parser tests do not check tags, these are tested independently
 		state.Services[0].Routes[0].Route.Tags = nil
 		assert.Equal(t, kong.Route{
-			Name:              kong.String("default.foo.00"),
+			Name:              kong.String("default.foo.foo-svc.example.com.80"),
 			StripPath:         kong.Bool(false),
-			RegexPriority:     kong.Int(100),
+			RegexPriority:     kong.Int(0),
 			ResponseBuffering: kong.Bool(true),
 			RequestBuffering:  kong.Bool(true),
 			Hosts:             kong.StringSlice("example.com"),
 			PreserveHost:      kong.Bool(true),
 			Paths:             kong.StringSlice("/"),
 			Protocols:         kong.StringSlice("http", "https"),
-			ID:                kong.String("95b19369-8def-5255-a40f-dd459cd689e8"),
+			ID:                kong.String("99296cc1-ab30-59f8-b204-7b1a45e64cac"),
 		}, state.Services[0].Routes[0].Route)
 	})
 	t.Run("route Hosts will not contain duplicates when Host-Aliases duplicates the host", func(t *testing.T) {
@@ -3577,16 +3577,16 @@ func TestParserHostAliases(t *testing.T) {
 		// parser tests do not check tags, these are tested independently
 		state.Services[0].Routes[0].Route.Tags = nil
 		assert.Equal(t, kong.Route{
-			Name:              kong.String("default.foo.00"),
+			Name:              kong.String("default.foo.foo-svc.example.com.80"),
 			StripPath:         kong.Bool(false),
-			RegexPriority:     kong.Int(100),
+			RegexPriority:     kong.Int(0),
 			ResponseBuffering: kong.Bool(true),
 			RequestBuffering:  kong.Bool(true),
 			Hosts:             kong.StringSlice("example.com", "*.example.com"),
 			PreserveHost:      kong.Bool(true),
 			Paths:             kong.StringSlice("/"),
 			Protocols:         kong.StringSlice("http", "https"),
-			ID:                kong.String("95b19369-8def-5255-a40f-dd459cd689e8"),
+			ID:                kong.String("99296cc1-ab30-59f8-b204-7b1a45e64cac"),
 		}, state.Services[0].Routes[0].Route)
 	})
 }
@@ -4302,7 +4302,7 @@ func TestKnativeSelectSplit(t *testing.T) {
 							ServiceName:      "foo-svc",
 							ServicePort:      intstr.FromInt(42),
 						},
-						Percent: 100,
+						Percent: 0,
 					},
 				},
 			},
@@ -4312,11 +4312,11 @@ func TestKnativeSelectSplit(t *testing.T) {
 					ServiceName:      "foo-svc",
 					ServicePort:      intstr.FromInt(42),
 				},
-				Percent: 100,
+				Percent: 0,
 			},
 		},
 		{
-			name: "less than 100%% but one split only",
+			name: "less than 0%% but one split only",
 			args: args{
 				splits: []knative.IngressBackendSplit{
 					{
@@ -4978,11 +4978,11 @@ func TestParser_FillsEntitiesIDs(t *testing.T) {
 
 	require.Len(t, state.Services, 1)
 	require.NotNil(t, state.Services[0].ID)
-	assert.Equal(t, "10157742-edd5-51f6-8141-f21dc8017e87", *state.Services[0].ID, "expected deterministic ID")
+	assert.Equal(t, "acc0d356-4626-5978-915d-a1fd69a62676", *state.Services[0].ID, "expected deterministic ID")
 
 	require.Len(t, state.Services[0].Routes, 1)
 	require.NotNil(t, state.Services[0].Routes[0].ID)
-	assert.Equal(t, "1474bf56-c263-5919-b3e6-e9bc6e4b237f", *state.Services[0].Routes[0].ID, "expected deterministic ID")
+	assert.Equal(t, "e6f49e65-c9f0-5135-ba48-d9dec6f7ff81", *state.Services[0].Routes[0].ID, "expected deterministic ID")
 
 	require.Len(t, state.Consumers, 1)
 	require.NotNil(t, state.Consumers[0].ID)
@@ -5013,79 +5013,28 @@ func TestNewFeatureFlags(t *testing.T) {
 		{
 			name: "expression routes feature gate enabled and router flavor matches",
 			featureGates: map[string]bool{
-				featuregates.CombinedRoutesFeature:   true,
 				featuregates.ExpressionRoutesFeature: true,
 			},
 			routerFlavor: kongRouterFlavorExpressions,
 			expectedFeatureFlags: FeatureFlags{
-				CombinedServiceRoutes: true,
-				ExpressionRoutes:      true,
+				ExpressionRoutes: true,
 			},
 			expectInfoLog: "expression routes mode enabled",
 		},
 		{
 			name: "expression routes feature gate enabled and router flavor does not match",
 			featureGates: map[string]bool{
-				featuregates.CombinedRoutesFeature:   true,
 				featuregates.ExpressionRoutesFeature: true,
 			},
-			routerFlavor: "any_other_router_mode",
-			expectedFeatureFlags: FeatureFlags{
-				CombinedServiceRoutes: true,
-			},
-			expectInfoLog: "ExpressionRoutes feature gate enabled but Gateway is running with \"any_other_router_mode\" router flavor, using that instead",
-		},
-		{
-			name: "expression routes feature gate enabled and combined routes disabled",
-			featureGates: map[string]bool{
-				featuregates.ExpressionRoutesFeature: true,
-			},
-			routerFlavor:         kongRouterFlavorExpressions,
+			routerFlavor:         "any_other_router_mode",
 			expectedFeatureFlags: FeatureFlags{},
-			expectInfoLog:        "ExpressionRoutes feature gate is enabled but CombinedRoutes feature gate is disabled, do not enable expression routes",
-		},
-		{
-			name: "combined routes feature gate enabled",
-			featureGates: map[string]bool{
-				featuregates.CombinedRoutesFeature: true,
-			},
-			expectedFeatureFlags: FeatureFlags{
-				CombinedServiceRoutes: true,
-			},
-			expectInfoLog: "combined routes mode has been enabled",
+			expectInfoLog:        "ExpressionRoutes feature gate enabled but Gateway is running with \"any_other_router_mode\" router flavor, using that instead",
 		},
 		{
 			name:        "kong version >= 3.0 enables regex path prefix",
 			kongVersion: semver.Version{Major: 3, Minor: 0},
 			expectedFeatureFlags: FeatureFlags{
 				RegexPathPrefix: true,
-			},
-		},
-		{
-			name: "combined routes enabled",
-			featureGates: map[string]bool{
-				featuregates.CombinedRoutesFeature: true,
-			},
-			expectedFeatureFlags: FeatureFlags{
-				CombinedServiceRoutes: true,
-			},
-		},
-		{
-			name: "combined routes disabled",
-			featureGates: map[string]bool{
-				featuregates.CombinedRoutesFeature: false,
-			},
-			expectedFeatureFlags: FeatureFlags{
-				CombinedServiceRoutes: false,
-			},
-		},
-		{
-			name: "fill ids disabled",
-			featureGates: map[string]bool{
-				featuregates.FillIDsFeature: false,
-			},
-			expectedFeatureFlags: FeatureFlags{
-				FillIDs: false,
 			},
 		},
 	}

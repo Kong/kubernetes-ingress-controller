@@ -2,7 +2,6 @@ package ingress
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"io"
 	"strings"
@@ -12,7 +11,6 @@ import (
 	"github.com/sirupsen/logrus"
 	netv1 "k8s.io/api/networking/v1"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/failures"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/parser"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/versions"
 	kongv1alpha1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1alpha1"
@@ -29,14 +27,9 @@ func ValidateIngress(
 	kongVersion semver.Version,
 	ingress *netv1.Ingress,
 ) (bool, string, error) {
-	kongRoutes, err := ingressToKongRoutesForValidation(parserFeatures, kongVersion, ingress)
-	if err != nil {
-		return false, err.Error(), nil //nolint: nilerr
-	}
-
 	// Validate by using feature of Kong Gateway.
 	var errMsgs []string
-	for _, kg := range kongRoutes {
+	for _, kg := range ingressToKongRoutesForValidation(parserFeatures, kongVersion, ingress) {
 		kg := kg
 		ok, msg, err := routesValidator.Validate(ctx, &kg)
 		if err != nil {
@@ -47,7 +40,7 @@ func ValidateIngress(
 		}
 	}
 	if len(errMsgs) > 0 {
-		return false, validationMsg(errMsgs), nil
+		return false, fmt.Sprintf("Ingress failed schema validation: %s", strings.Join(errMsgs, ", ")), nil
 	}
 	return true, "", nil
 }
@@ -56,10 +49,9 @@ func ValidateIngress(
 // discards everything else that is not needed for validation.
 func ingressToKongRoutesForValidation(
 	parserFeatures parser.FeatureFlags, kongVersion semver.Version, ingress *netv1.Ingress,
-) ([]kong.Route, error) {
+) []kong.Route {
 	discardLogger := logrus.New()
 	discardLogger.Out = io.Discard
-	failuresCollector, _ := failures.NewResourceFailuresCollector(discardLogger) // It fails only for nil logger.
 	var icp kongv1alpha1.IngressClassParametersSpec
 	if kongVersion.LT(versions.ExplicitRegexPathVersionCutoff) {
 		icp.EnableLegacyRegexDetection = true
@@ -69,16 +61,7 @@ func ingressToKongRoutesForValidation(
 		[]*netv1.Ingress{ingress},
 		icp,
 		&parser.ObjectsCollector{}, // It's irrelevant for validation.
-		failuresCollector,
 	)
-
-	var errMsgs []string
-	for _, f := range failuresCollector.PopResourceFailures() {
-		errMsgs = append(errMsgs, f.Message())
-	}
-	if len(errMsgs) > 0 {
-		return nil, errors.New(validationMsg(errMsgs))
-	}
 
 	var kongRoutes []kong.Route
 	for _, svc := range kongServices {
@@ -86,9 +69,5 @@ func ingressToKongRoutesForValidation(
 			kongRoutes = append(kongRoutes, route.Route)
 		}
 	}
-	return kongRoutes, nil
-}
-
-func validationMsg(errMsgs []string) string {
-	return fmt.Sprintf("Ingress failed schema validation: %s", strings.Join(errMsgs, ", "))
+	return kongRoutes
 }

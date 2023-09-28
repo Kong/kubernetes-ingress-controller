@@ -23,7 +23,6 @@ func TestIngressRulesFromGRPCRoutesUsingExpressionRoutes(t *testing.T) {
 	fakestore, err := store.NewFakeStore(store.FakeObjects{})
 	require.NoError(t, err)
 	parser := mustNewParser(t, fakestore)
-	parser.featureFlags.CombinedServiceRoutes = true
 	parser.featureFlags.ExpressionRoutes = true
 	grpcRouteTypeMeta := metav1.TypeMeta{Kind: "GRPCRoute", APIVersion: gatewayv1alpha2.SchemeGroupVersion.String()}
 

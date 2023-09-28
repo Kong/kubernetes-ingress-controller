@@ -21,11 +21,6 @@ const (
 	// disabling the Alpha maturity APIs and relevant features for Gateway API.
 	GatewayAlphaFeature = "GatewayAlpha"
 
-	// CombinedRoutesFeature is the name of the feature-gate for the newer object
-	// translation logic that will combine routes for kong services when translating
-	// objects like Ingress instead of creating a route per path.
-	CombinedRoutesFeature = "CombinedRoutes"
-
 	// ExpressionRoutesFeature is the name of the feature-gate for enabling KIC to translate
 	// supported kubernetes objects into expression based routes in kong configrurations
 	// when controlled kong gateway uses expression based router by configuring `router_flavor` to `expressions`.
@@ -78,7 +73,6 @@ func GetFeatureGatesDefaults() map[string]bool {
 		KnativeFeature:          false,
 		GatewayFeature:          true,
 		GatewayAlphaFeature:     false,
-		CombinedRoutesFeature:   true,
 		ExpressionRoutesFeature: false,
 		FillIDsFeature:          true,
 		RewriteURIsFeature:      false,

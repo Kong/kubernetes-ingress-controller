@@ -11,6 +11,7 @@ import (
 
 	"github.com/kong/deck/file"
 	"github.com/kong/go-kong/kong"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/graph"
 	"github.com/samber/lo"
 	"github.com/samber/mo"
 	"github.com/sirupsen/logrus"
@@ -416,7 +417,12 @@ func (c *KongClient) Update(ctx context.Context) error {
 		c.logger.Debug("successfully built data-plane configuration")
 	}
 
-	shas, gatewaysSyncErr := c.sendOutToGatewayClients(ctx, parsingResult.KongState, c.kongConfig)
+	lastValidConfig, _ := c.kongConfigFetcher.LastValidConfig()
+	shas, gatewaysSyncErr := c.sendOutToGatewayClients(ctx, sendToGatewayClientsParams{
+		currentKongState:   parsingResult.KongState,
+		lastValidKongState: lastValidConfig,
+		config:             c.kongConfig,
+	})
 	konnectSyncErr := c.maybeSendOutToKonnectClient(ctx, parsingResult.KongState, c.kongConfig)
 
 	// Taking into account the results of syncing configuration with Gateways and Konnect, and potential translation
@@ -428,18 +434,6 @@ func (c *KongClient) Update(ctx context.Context) error {
 			TranslationFailuresOccurred: len(parsingResult.TranslationFailures) > 0,
 		},
 	))
-
-	// In case of a failure in syncing configuration with Gateways, propagate the error.
-	if gatewaysSyncErr != nil {
-		if state, found := c.kongConfigFetcher.LastValidConfig(); found {
-			_, fallbackSyncErr := c.sendOutToGatewayClients(ctx, state, c.kongConfig)
-			if fallbackSyncErr != nil {
-				return errors.Join(gatewaysSyncErr, fallbackSyncErr)
-			}
-			c.logger.Debug("due to errors in the current config, the last valid config has been pushed to Gateways")
-		}
-		return gatewaysSyncErr
-	}
 
 	// report on configured Kubernetes objects if enabled
 	if c.AreKubernetesObjectReportsEnabled() {
@@ -455,15 +449,21 @@ func (c *KongClient) Update(ctx context.Context) error {
 	return nil
 }
 
+type sendToGatewayClientsParams struct {
+	currentKongState   *kongstate.KongState
+	lastValidKongState *kongstate.KongState
+	config             sendconfig.Config
+}
+
 // sendOutToGatewayClients will generate deck content (config) from the provided kong state
 // and send it out to each of the configured gateway clients.
 func (c *KongClient) sendOutToGatewayClients(
-	ctx context.Context, s *kongstate.KongState, config sendconfig.Config,
+	ctx context.Context, params sendToGatewayClientsParams,
 ) ([]string, error) {
 	gatewayClients := c.clientsProvider.GatewayClients()
 	c.logger.Debugf("sending configuration to %d gateway clients", len(gatewayClients))
 	shas, err := iter.MapErr(gatewayClients, func(client **adminapi.Client) (string, error) {
-		return c.sendToClient(ctx, *client, s, config)
+		return c.sendToClient(ctx, *client, params)
 	})
 	if err != nil {
 		return nil, err
@@ -473,7 +473,8 @@ func (c *KongClient) sendOutToGatewayClients(
 	sort.Strings(shas)
 	c.SHAs = shas
 
-	c.kongConfigFetcher.StoreLastValidConfig(s)
+	// TODO: take into account which config was sent to gateway (current or fallback)
+	// c.kongConfigFetcher.StoreLastValidConfig(params.currentKongState)
 
 	return previousSHAs, nil
 }
@@ -487,7 +488,11 @@ func (c *KongClient) maybeSendOutToKonnectClient(ctx context.Context, s *kongsta
 		return nil
 	}
 
-	if _, err := c.sendToClient(ctx, konnectClient, s, config); err != nil {
+	if _, err := c.sendToClient(ctx, konnectClient, sendToGatewayClientsParams{
+		currentKongState:   s,
+		lastValidKongState: nil,
+		config:             config,
+	}); err != nil {
 		// In case of an error, we only log it since we don't want the Konnect to affect the basic functionality
 		// of the controller.
 
@@ -505,20 +510,19 @@ func (c *KongClient) maybeSendOutToKonnectClient(ctx context.Context, s *kongsta
 func (c *KongClient) sendToClient(
 	ctx context.Context,
 	client sendconfig.AdminAPIClient,
-	s *kongstate.KongState,
-	config sendconfig.Config,
+	params sendToGatewayClientsParams,
 ) (string, error) {
 	logger := c.logger.WithField("url", client.AdminAPIClient().BaseRootURL())
 
 	deckGenParams := deckgen.GenerateDeckContentParams{
-		FormatVersion:                   config.DeckFileFormatVersion,
-		SelectorTags:                    config.FilterTags,
-		ExpressionRoutes:                config.ExpressionRoutes,
+		FormatVersion:                   params.config.DeckFileFormatVersion,
+		SelectorTags:                    params.config.FilterTags,
+		ExpressionRoutes:                params.config.ExpressionRoutes,
 		PluginSchemas:                   client.PluginSchemaStore(),
-		AppendStubEntityWhenConfigEmpty: !client.IsKonnect() && config.InMemory,
+		AppendStubEntityWhenConfigEmpty: !client.IsKonnect() && params.config.InMemory,
 	}
-	targetContent := deckgen.ToDeckContent(ctx, logger, s, deckGenParams)
-	sendDiagnostic := prepareSendDiagnosticFn(ctx, logger, c.diagnostic, s, targetContent, deckGenParams)
+	targetContent := deckgen.ToDeckContent(ctx, logger, params.currentKongState, deckGenParams)
+	sendDiagnostic := prepareSendDiagnosticFn(ctx, logger, c.diagnostic, params.currentKongState, targetContent, deckGenParams)
 
 	// apply the configuration update in Kong
 	timedCtx, cancel := context.WithTimeout(ctx, c.requestTimeout)
@@ -527,31 +531,78 @@ func (c *KongClient) sendToClient(
 		timedCtx,
 		logger,
 		client,
-		config,
+		params.config,
 		targetContent,
 		c.prometheusMetrics,
 		c.updateStrategyResolver,
 		c.configChangeDetector,
 	)
 
-	c.recordResourceFailureEvents(entityErrors, KongConfigurationApplyFailedEventReason)
+	resourceErrors := sendconfig.ResourceErrorsFromEntityErrors(entityErrors, logger)
+	resourceFailures := sendconfig.ResourceErrorsToResourceFailures(resourceErrors, logger)
+	c.recordResourceFailureEvents(resourceFailures, KongConfigurationApplyFailedEventReason)
 	// Only record events on applying configuration to Kong gateway here.
 	if !client.IsKonnect() {
 		c.recordApplyConfigurationEvents(err, client.BaseRootURL())
 	}
 	sendDiagnostic(err != nil)
 
-	if err != nil {
+	if err != nil && params.lastValidKongState == nil {
 		if expired, ok := timedCtx.Deadline(); ok && time.Now().After(expired) {
 			logger.Warn("exceeded Kong API timeout, consider increasing --proxy-timeout-seconds")
 		}
 		return "", fmt.Errorf("performing update for %s failed: %w", client.AdminAPIClient().BaseRootURL(), err)
+	} else if err != nil {
+		logger.Info("building fallback configuration from the last valid configuration")
+		lastValid := deckgen.ToDeckContent(ctx, logger, params.lastValidKongState, deckGenParams)
+		lastValidConfigGraph, err := graph.BuildKongConfigGraph(lastValid)
+		if err != nil {
+			return "", fmt.Errorf("failed to build last valid configuration graph: %w", err)
+		}
+		targetConfigGraph, err := graph.BuildKongConfigGraph(targetContent)
+		if err != nil {
+			return "", fmt.Errorf("failed to build target configuration graph: %w", err)
+		}
+
+		// Build the fallback configuration from the last valid state.
+		fallbackConfigGraph, err := graph.BuildFallbackKongConfig(lastValidConfigGraph, targetConfigGraph, entityErrors)
+		if err != nil {
+			return "", fmt.Errorf("failed to build fallback configuration: %w", err)
+		}
+
+		fallbackConfig, err := graph.BuildKongConfigFromGraph(fallbackConfigGraph)
+		if err != nil {
+			return "", fmt.Errorf("failed to build fallback configuration: %w", err)
+		}
+
+		fallbackConfig.FormatVersion = targetContent.FormatVersion
+		fallbackConfig.Info = targetContent.Info
+
+		// Send the fallback configuration to Kong.
+		timedCtx, cancel := context.WithTimeout(ctx, c.requestTimeout)
+		defer cancel()
+		fallbackConfigSHA, _, err := sendconfig.PerformUpdate(
+			timedCtx,
+			logger,
+			client,
+			params.config,
+			fallbackConfig,
+			c.prometheusMetrics,
+			c.updateStrategyResolver,
+			c.configChangeDetector,
+		)
+		if err != nil {
+			return "", fmt.Errorf("failed to apply fallback configuration to Kong: %w", err)
+		}
+
+		logger.Info("successfully applied fallback configuration to Kong")
+		client.SetLastConfigSHA(fallbackConfigSHA)
+		return string(fallbackConfigSHA), nil
+	} else {
+		// update the lastConfigSHA with the new updated checksum
+		client.SetLastConfigSHA(newConfigSHA)
+		return string(newConfigSHA), nil
 	}
-
-	// update the lastConfigSHA with the new updated checksum
-	client.SetLastConfigSHA(newConfigSHA)
-
-	return string(newConfigSHA), nil
 }
 
 // SetConfigStatusNotifier sets a notifier which notifies subscribers about configuration sending results.

@@ -55,22 +55,24 @@ func NewUpdateStrategyInMemory(
 
 func (s UpdateStrategyInMemory) Update(ctx context.Context, targetState ContentWithHash) (
 	err error,
-	resourceErrors []ResourceError,
-	resourceErrorsParseErr error,
+	kongEntityErrors []FlatEntityError,
 ) {
 	dblessConfig := s.configConverter.Convert(targetState.Content)
 	config, err := json.Marshal(dblessConfig)
 	if err != nil {
-		return fmt.Errorf("constructing kong configuration: %w", err), nil, nil
+		return fmt.Errorf("constructing kong configuration: %w", err), nil
 	}
 
 	flattenErrors := shouldUseFlattenedErrors(s.version)
-	if errBody, err := s.configService.ReloadDeclarativeRawConfig(ctx, bytes.NewReader(config), true, flattenErrors); err != nil {
-		resourceErrors, parseErr := parseFlatEntityErrors(errBody, s.log)
-		return err, resourceErrors, parseErr
+	if errBody, reloadErr := s.configService.ReloadDeclarativeRawConfig(ctx, bytes.NewReader(config), true, flattenErrors); reloadErr != nil {
+		entityErrs, err := parseFlatEntityErrors(errBody)
+		if err != nil {
+			return fmt.Errorf("failed to parse config error: %w: %w", reloadErr, err), nil
+		}
+		return reloadErr, entityErrs
 	}
 
-	return nil, nil, nil
+	return nil, nil
 }
 
 func (s UpdateStrategyInMemory) MetricsProtocol() metrics.Protocol {

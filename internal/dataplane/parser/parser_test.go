@@ -627,6 +627,7 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 func TestCACertificate(t *testing.T) {
 	assert := assert.New(t)
 	caCert1, _ := certificate.MustGenerateSelfSignedCertPEMFormat(certificate.WithCATrue())
+
 	t.Run("valid CACertificate is processed", func(t *testing.T) {
 		secrets := []*corev1.Secret{
 			{

@@ -14,7 +14,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/cli-runtime/pkg/printers"
 	"k8s.io/client-go/tools/cache"
-	knative "knative.dev/networking/pkg/apis/networking/v1alpha1"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 	"sigs.k8s.io/yaml"
@@ -59,8 +58,6 @@ type FakeObjects struct {
 	KongIngresses                  []*kongv1.KongIngress
 	KongConsumers                  []*kongv1.KongConsumer
 	KongConsumerGroups             []*kongv1beta1.KongConsumerGroup
-
-	KnativeIngresses []*knative.Ingress
 }
 
 // NewFakeStore creates a store backed by the objects passed in as arguments.
@@ -202,13 +199,6 @@ func NewFakeStore(
 		}
 	}
 
-	knativeIngressStore := cache.NewStore(keyFunc)
-	for _, ingress := range objects.KnativeIngresses {
-		err := knativeIngressStore.Add(ingress)
-		if err != nil {
-			return nil, err
-		}
-	}
 	s = Store{
 		stores: CacheStores{
 			IngressV1:                      ingressV1Store,
@@ -231,7 +221,6 @@ func NewFakeStore(
 			ConsumerGroup:                  consumerGroupStore,
 			KongIngress:                    kongIngressStore,
 			IngressClassParametersV1alpha1: IngressClassParametersV1alpha1Store,
-			KnativeIngress:                 knativeIngressStore,
 		},
 		ingressClass:          annotations.DefaultIngressClass,
 		isValidIngressClass:   annotations.IngressClassValidatorFuncFromObjectMeta(annotations.DefaultIngressClass),

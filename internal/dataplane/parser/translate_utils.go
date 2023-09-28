@@ -3,7 +3,6 @@ package parser
 import (
 	"fmt"
 	"reflect"
-	"strings"
 
 	"github.com/blang/semver/v4"
 	"github.com/kong/go-kong/kong"
@@ -163,23 +162,6 @@ func generateKongServiceFromBackendRefWithRuleNumber(
 		protocol,
 		backendRefs...,
 	)
-}
-
-// maybePrependRegexPrefix takes a path, controller regex prefix, and a legacy heuristic toggle. It returns the path
-// with the Kong regex path prefix if it either began with the controller prefix or did not, but matched the legacy
-// heuristic, and the heuristic was enabled.
-func maybePrependRegexPrefix(path, controllerPrefix string, applyLegacyHeuristic bool) string {
-	if strings.HasPrefix(path, controllerPrefix) {
-		path = strings.Replace(path, controllerPrefix, translators.KongPathRegexPrefix, 1)
-	} else if applyLegacyHeuristic {
-		// this regex matches if the path _is not_ considered a regex by Kong 2.x
-		if LegacyRegexPathExpression.FindString(path) == "" {
-			if !strings.HasPrefix(path, translators.KongPathRegexPrefix) {
-				path = translators.KongPathRegexPrefix + path
-			}
-		}
-	}
-	return path
 }
 
 func applyExpressionToIngressRules(result *ingressRules) {

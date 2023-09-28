@@ -33,9 +33,7 @@ const (
 )
 
 const (
-	IngressClassKey                  = "kubernetes.io/ingress.class"
-	KnativeIngressClassKey           = "networking.knative.dev/ingress-class"
-	KnativeIngressClassDeprecatedKey = "networking.knative.dev/ingress.class"
+	IngressClassKey = "kubernetes.io/ingress.class"
 
 	AnnotationPrefix = "konghq.com"
 

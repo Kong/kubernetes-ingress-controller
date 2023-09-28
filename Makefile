@@ -208,7 +208,6 @@ manifests.crds: controller-gen ## Generate WebhookConfiguration and CustomResour
 .PHONY: manifests.rbac ## Generate ClusterRole objects.
 manifests.rbac: controller-gen
 	$(CONTROLLER_GEN) rbac:roleName=kong-ingress paths="./internal/controllers/configuration/"
-	$(CONTROLLER_GEN) rbac:roleName=kong-ingress-knative paths="./internal/controllers/knative/" output:rbac:artifacts:config=config/rbac/knative
 	$(CONTROLLER_GEN) rbac:roleName=kong-ingress-gateway paths="./internal/controllers/gateway/" output:rbac:artifacts:config=config/rbac/gateway
 	$(CONTROLLER_GEN) rbac:roleName=kong-ingress-crds paths="./internal/controllers/crds/" output:rbac:artifacts:config=config/rbac/crds
 
@@ -405,30 +404,12 @@ _test.integration: _check.container.environment go-junit-report
 		./test/integration | \
 	$(GOJUNIT) -iocopy -out $(JUNIT_REPORT) -parser gotest
 
-.PHONY: test.integration.dbless.knative
-test.integration.dbless.knative:
-	@$(MAKE) _test.integration \
-		GOTAGS="integration_tests,knative" \
-		GOTESTFLAGS="-run TestKnative" \
-		KONG_CONTROLLER_FEATURE_GATES="Knative=true" \
-		DBMODE=off \
-		COVERAGE_OUT=coverage.dbless.knative.out
-
 .PHONY: test.integration.dbless
 test.integration.dbless:
 	@$(MAKE) _test.integration \
 		GOTAGS="integration_tests" \
 		DBMODE=off \
 		COVERAGE_OUT=coverage.dbless.out
-
-.PHONY: test.integration.postgres.knative
-test.integration.postgres.knative:
-	@$(MAKE) _test.integration \
-		GOTAGS="integration_tests,knative" \
-		GOTESTFLAGS="-run TestKnative" \
-		KONG_CONTROLLER_FEATURE_GATES="Knative=true" \
-		DBMODE=postgres \
-		COVERAGE_OUT=coverage.postgres.knative.out
 
 .PHONY: test.integration.postgres
 test.integration.postgres:

@@ -358,7 +358,6 @@ func verifyTelemetryReport(t *testing.T, k8sVersion *version.Info, report string
 			"feature-gateway-service-discovery=false;"+
 			"feature-gateway=false;"+
 			"feature-gatewayalpha=false;"+
-			"feature-knative=false;"+
 			"feature-konnect-sync=false;"+
 			"feature-rewriteuris=false;"+
 			"hn=%s;"+

@@ -18,7 +18,6 @@ import (
 	netv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	knative "knative.dev/networking/pkg/apis/networking/v1alpha1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
@@ -179,7 +178,6 @@ func (p *Parser) BuildKongConfig() KongConfigBuildingResult {
 		p.ingressRulesFromIngressV1(),
 		p.ingressRulesFromTCPIngressV1beta1(),
 		p.ingressRulesFromUDPIngressV1beta1(),
-		p.ingressRulesFromKnativeIngress(),
 		p.ingressRulesFromHTTPRoutes(),
 		p.ingressRulesFromUDPRoutes(),
 		p.ingressRulesFromTCPRoutes(),
@@ -288,18 +286,6 @@ func (p *Parser) registerSuccessfullyParsedObject(obj client.Object) {
 // that have been successfully parsed as part of BuildKongConfig() call so far.
 func (p *Parser) popConfiguredKubernetesObjects() []client.Object {
 	return p.parsedObjectsCollector.Pop()
-}
-
-func knativeIngressToNetworkingTLS(tls []knative.IngressTLS) []netv1.IngressTLS {
-	var result []netv1.IngressTLS
-
-	for _, t := range tls {
-		result = append(result, netv1.IngressTLS{
-			Hosts:      t.Hosts,
-			SecretName: t.SecretName,
-		})
-	}
-	return result
 }
 
 func tcpIngressToNetworkingTLS(tls []kongv1beta1.IngressTLS) []netv1.IngressTLS {

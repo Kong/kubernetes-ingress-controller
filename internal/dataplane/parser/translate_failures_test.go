@@ -7,11 +7,9 @@ import (
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	knative "knative.dev/networking/pkg/apis/networking/v1alpha1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/failures"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/versions"
@@ -31,35 +29,6 @@ func TestTranslationFailureUnsupportedObjectsExpressionRoutes(t *testing.T) {
 		objects        store.FakeObjects
 		causingObjects []client.Object
 	}{
-		{
-			name: "knative.Ingresses are not supported",
-			objects: store.FakeObjects{
-				KnativeIngresses: []*knative.Ingress{
-					{
-						TypeMeta: metav1.TypeMeta{
-							Kind:       "Ingress",
-							APIVersion: knative.SchemeGroupVersion.String(),
-						},
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      "knative-ing-1",
-							Namespace: "default",
-							Annotations: map[string]string{
-								annotations.KnativeIngressClassKey: annotations.DefaultIngressClass,
-							},
-						},
-						Spec: knative.IngressSpec{},
-					},
-				},
-			},
-			causingObjects: []client.Object{
-				&knative.Ingress{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "knative-ing-1",
-						Namespace: "default",
-					},
-				},
-			},
-		},
 		{
 			name: "TLSRoutes in gateway APIs are not supported",
 			objects: store.FakeObjects{

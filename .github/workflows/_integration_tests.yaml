@@ -49,13 +49,6 @@ jobs:
             test: dbless
           - name: postgres
             test: postgres
-          - name: feature-gates
-            test: dbless
-            feature_gates: "GatewayAlpha=true"
-          - name: dbless-knative
-            test: dbless.knative
-          - name: postgres-knative
-            test: postgres.knative
           - name: enterprise-postgres
             test: enterprise.postgres
             enterprise: true
@@ -72,10 +65,10 @@ jobs:
             test: dbless
             feature_gates: "ExpressionRoutes=true,GatewayAlpha=true"
             router-flavor: "expressions"
-          - name: dbless-fill-ids
+          - name: dbless-gateway-alpha
             test: dbless
             feature_gates: "GatewayAlpha=true"
-          - name: postgres-fill-ids
+          - name: postgres-gateway-alpha
             test: postgres
             feature_gates: "GatewayAlpha=true"
           - name: dbless-rewrite-uris

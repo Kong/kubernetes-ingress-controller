@@ -268,6 +268,13 @@ func (r *UDPRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		// for any error other than 404, requeue
 		return ctrl.Result{}, err
 	}
+
+	err := util.PopulateTypeMeta(udproute)
+	if err != nil {
+		r.Log.Error(err, "could not set resource TypeMeta",
+			"namespace", udproute.GetNamespace(), "name", udproute.GetName())
+	}
+
 	debug(log, udproute, "processing udproute")
 
 	// if there's a present deletion timestamp then we need to update the proxy cache

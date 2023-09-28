@@ -268,6 +268,13 @@ func (r *TLSRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		// for any error other than 404, requeue
 		return ctrl.Result{}, err
 	}
+
+	err := util.PopulateTypeMeta(tlsroute)
+	if err != nil {
+		r.Log.Error(err, "could not set resource TypeMeta",
+			"namespace", tlsroute.GetNamespace(), "name", tlsroute.GetName())
+	}
+
 	debug(log, tlsroute, "processing tlsroute")
 
 	// if there's a present deletion timestamp then we need to update the proxy cache

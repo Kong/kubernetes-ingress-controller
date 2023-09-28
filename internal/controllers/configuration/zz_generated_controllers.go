@@ -28,7 +28,6 @@ import (
 	discoveryv1 "k8s.io/api/discovery/v1"
 	netv1 "k8s.io/api/networking/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	k8stypes "k8s.io/apimachinery/pkg/types"
@@ -100,11 +99,6 @@ func (r *CoreV1ServiceReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 
 	// get the relevant object
 	obj := new(corev1.Service)
-	// set type meta to the object
-	obj.TypeMeta = metav1.TypeMeta{
-		APIVersion: corev1.SchemeGroupVersion.String(),
-		Kind:       "Service",
-	}
 
 	if err := r.Get(ctx, req.NamespacedName, obj); err != nil {
 		if apierrors.IsNotFound(err) {
@@ -121,6 +115,11 @@ func (r *CoreV1ServiceReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		return ctrl.Result{}, err
 	}
 	log.V(util.DebugLevel).Info("reconciling resource", "namespace", req.Namespace, "name", req.Name)
+
+	err := util.PopulateTypeMeta(obj)
+	if err != nil {
+		log.WithValues().Error(err, "could not set resource TypeMeta", "namespace", obj.GetNamespace(), "name", obj.GetName())
+	}
 
 	// clean the object up if it's being deleted
 	if !obj.DeletionTimestamp.IsZero() && time.Now().After(obj.DeletionTimestamp.Time) {
@@ -209,11 +208,6 @@ func (r *DiscoveryV1EndpointSliceReconciler) Reconcile(ctx context.Context, req 
 
 	// get the relevant object
 	obj := new(discoveryv1.EndpointSlice)
-	// set type meta to the object
-	obj.TypeMeta = metav1.TypeMeta{
-		APIVersion: discoveryv1.SchemeGroupVersion.String(),
-		Kind:       "EndpointSlice",
-	}
 
 	if err := r.Get(ctx, req.NamespacedName, obj); err != nil {
 		if apierrors.IsNotFound(err) {
@@ -225,6 +219,11 @@ func (r *DiscoveryV1EndpointSliceReconciler) Reconcile(ctx context.Context, req 
 		return ctrl.Result{}, err
 	}
 	log.V(util.DebugLevel).Info("reconciling resource", "namespace", req.Namespace, "name", req.Name)
+
+	err := util.PopulateTypeMeta(obj)
+	if err != nil {
+		log.WithValues().Error(err, "could not set resource TypeMeta", "namespace", obj.GetNamespace(), "name", obj.GetName())
+	}
 
 	// clean the object up if it's being deleted
 	if !obj.DeletionTimestamp.IsZero() && time.Now().After(obj.DeletionTimestamp.Time) {
@@ -352,11 +351,6 @@ func (r *NetV1IngressReconciler) Reconcile(ctx context.Context, req ctrl.Request
 
 	// get the relevant object
 	obj := new(netv1.Ingress)
-	// set type meta to the object
-	obj.TypeMeta = metav1.TypeMeta{
-		APIVersion: netv1.SchemeGroupVersion.String(),
-		Kind:       "Ingress",
-	}
 
 	if err := r.Get(ctx, req.NamespacedName, obj); err != nil {
 		if apierrors.IsNotFound(err) {
@@ -373,6 +367,11 @@ func (r *NetV1IngressReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		return ctrl.Result{}, err
 	}
 	log.V(util.DebugLevel).Info("reconciling resource", "namespace", req.Namespace, "name", req.Name)
+
+	err := util.PopulateTypeMeta(obj)
+	if err != nil {
+		log.WithValues().Error(err, "could not set resource TypeMeta", "namespace", obj.GetNamespace(), "name", obj.GetName())
+	}
 
 	// clean the object up if it's being deleted
 	if !obj.DeletionTimestamp.IsZero() && time.Now().After(obj.DeletionTimestamp.Time) {
@@ -506,11 +505,6 @@ func (r *NetV1IngressClassReconciler) Reconcile(ctx context.Context, req ctrl.Re
 
 	// get the relevant object
 	obj := new(netv1.IngressClass)
-	// set type meta to the object
-	obj.TypeMeta = metav1.TypeMeta{
-		APIVersion: netv1.SchemeGroupVersion.String(),
-		Kind:       "IngressClass",
-	}
 
 	if err := r.Get(ctx, req.NamespacedName, obj); err != nil {
 		if apierrors.IsNotFound(err) {
@@ -522,6 +516,11 @@ func (r *NetV1IngressClassReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		return ctrl.Result{}, err
 	}
 	log.V(util.DebugLevel).Info("reconciling resource", "namespace", req.Namespace, "name", req.Name)
+
+	err := util.PopulateTypeMeta(obj)
+	if err != nil {
+		log.WithValues().Error(err, "could not set resource TypeMeta", "namespace", obj.GetNamespace(), "name", obj.GetName())
+	}
 
 	// clean the object up if it's being deleted
 	if !obj.DeletionTimestamp.IsZero() && time.Now().After(obj.DeletionTimestamp.Time) {
@@ -596,11 +595,6 @@ func (r *KongV1KongIngressReconciler) Reconcile(ctx context.Context, req ctrl.Re
 
 	// get the relevant object
 	obj := new(kongv1.KongIngress)
-	// set type meta to the object
-	obj.TypeMeta = metav1.TypeMeta{
-		APIVersion: kongv1.SchemeGroupVersion.String(),
-		Kind:       "KongIngress",
-	}
 
 	if err := r.Get(ctx, req.NamespacedName, obj); err != nil {
 		if apierrors.IsNotFound(err) {
@@ -612,6 +606,11 @@ func (r *KongV1KongIngressReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		return ctrl.Result{}, err
 	}
 	log.V(util.DebugLevel).Info("reconciling resource", "namespace", req.Namespace, "name", req.Name)
+
+	err := util.PopulateTypeMeta(obj)
+	if err != nil {
+		log.WithValues().Error(err, "could not set resource TypeMeta", "namespace", obj.GetNamespace(), "name", obj.GetName())
+	}
 
 	// clean the object up if it's being deleted
 	if !obj.DeletionTimestamp.IsZero() && time.Now().After(obj.DeletionTimestamp.Time) {
@@ -687,11 +686,6 @@ func (r *KongV1KongPluginReconciler) Reconcile(ctx context.Context, req ctrl.Req
 
 	// get the relevant object
 	obj := new(kongv1.KongPlugin)
-	// set type meta to the object
-	obj.TypeMeta = metav1.TypeMeta{
-		APIVersion: kongv1.SchemeGroupVersion.String(),
-		Kind:       "KongPlugin",
-	}
 
 	if err := r.Get(ctx, req.NamespacedName, obj); err != nil {
 		if apierrors.IsNotFound(err) {
@@ -708,6 +702,11 @@ func (r *KongV1KongPluginReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		return ctrl.Result{}, err
 	}
 	log.V(util.DebugLevel).Info("reconciling resource", "namespace", req.Namespace, "name", req.Name)
+
+	err := util.PopulateTypeMeta(obj)
+	if err != nil {
+		log.WithValues().Error(err, "could not set resource TypeMeta", "namespace", obj.GetNamespace(), "name", obj.GetName())
+	}
 
 	// clean the object up if it's being deleted
 	if !obj.DeletionTimestamp.IsZero() && time.Now().After(obj.DeletionTimestamp.Time) {
@@ -834,11 +833,6 @@ func (r *KongV1KongClusterPluginReconciler) Reconcile(ctx context.Context, req c
 
 	// get the relevant object
 	obj := new(kongv1.KongClusterPlugin)
-	// set type meta to the object
-	obj.TypeMeta = metav1.TypeMeta{
-		APIVersion: kongv1.SchemeGroupVersion.String(),
-		Kind:       "KongClusterPlugin",
-	}
 
 	if err := r.Get(ctx, req.NamespacedName, obj); err != nil {
 		if apierrors.IsNotFound(err) {
@@ -855,6 +849,11 @@ func (r *KongV1KongClusterPluginReconciler) Reconcile(ctx context.Context, req c
 		return ctrl.Result{}, err
 	}
 	log.V(util.DebugLevel).Info("reconciling resource", "namespace", req.Namespace, "name", req.Name)
+
+	err := util.PopulateTypeMeta(obj)
+	if err != nil {
+		log.WithValues().Error(err, "could not set resource TypeMeta", "namespace", obj.GetNamespace(), "name", obj.GetName())
+	}
 
 	// clean the object up if it's being deleted
 	if !obj.DeletionTimestamp.IsZero() && time.Now().After(obj.DeletionTimestamp.Time) {
@@ -1015,11 +1014,6 @@ func (r *KongV1KongConsumerReconciler) Reconcile(ctx context.Context, req ctrl.R
 
 	// get the relevant object
 	obj := new(kongv1.KongConsumer)
-	// set type meta to the object
-	obj.TypeMeta = metav1.TypeMeta{
-		APIVersion: kongv1.SchemeGroupVersion.String(),
-		Kind:       "KongConsumer",
-	}
 
 	if err := r.Get(ctx, req.NamespacedName, obj); err != nil {
 		if apierrors.IsNotFound(err) {
@@ -1036,6 +1030,11 @@ func (r *KongV1KongConsumerReconciler) Reconcile(ctx context.Context, req ctrl.R
 		return ctrl.Result{}, err
 	}
 	log.V(util.DebugLevel).Info("reconciling resource", "namespace", req.Namespace, "name", req.Name)
+
+	err := util.PopulateTypeMeta(obj)
+	if err != nil {
+		log.WithValues().Error(err, "could not set resource TypeMeta", "namespace", obj.GetNamespace(), "name", obj.GetName())
+	}
 
 	// clean the object up if it's being deleted
 	if !obj.DeletionTimestamp.IsZero() && time.Now().After(obj.DeletionTimestamp.Time) {
@@ -1207,11 +1206,6 @@ func (r *KongV1Beta1KongConsumerGroupReconciler) Reconcile(ctx context.Context, 
 
 	// get the relevant object
 	obj := new(kongv1beta1.KongConsumerGroup)
-	// set type meta to the object
-	obj.TypeMeta = metav1.TypeMeta{
-		APIVersion: kongv1beta1.SchemeGroupVersion.String(),
-		Kind:       "KongConsumerGroup",
-	}
 
 	if err := r.Get(ctx, req.NamespacedName, obj); err != nil {
 		if apierrors.IsNotFound(err) {
@@ -1228,6 +1222,11 @@ func (r *KongV1Beta1KongConsumerGroupReconciler) Reconcile(ctx context.Context, 
 		return ctrl.Result{}, err
 	}
 	log.V(util.DebugLevel).Info("reconciling resource", "namespace", req.Namespace, "name", req.Name)
+
+	err := util.PopulateTypeMeta(obj)
+	if err != nil {
+		log.WithValues().Error(err, "could not set resource TypeMeta", "namespace", obj.GetNamespace(), "name", obj.GetName())
+	}
 
 	// clean the object up if it's being deleted
 	if !obj.DeletionTimestamp.IsZero() && time.Now().After(obj.DeletionTimestamp.Time) {
@@ -1401,11 +1400,6 @@ func (r *KongV1Beta1TCPIngressReconciler) Reconcile(ctx context.Context, req ctr
 
 	// get the relevant object
 	obj := new(kongv1beta1.TCPIngress)
-	// set type meta to the object
-	obj.TypeMeta = metav1.TypeMeta{
-		APIVersion: kongv1beta1.SchemeGroupVersion.String(),
-		Kind:       "TCPIngress",
-	}
 
 	if err := r.Get(ctx, req.NamespacedName, obj); err != nil {
 		if apierrors.IsNotFound(err) {
@@ -1422,6 +1416,11 @@ func (r *KongV1Beta1TCPIngressReconciler) Reconcile(ctx context.Context, req ctr
 		return ctrl.Result{}, err
 	}
 	log.V(util.DebugLevel).Info("reconciling resource", "namespace", req.Namespace, "name", req.Name)
+
+	err := util.PopulateTypeMeta(obj)
+	if err != nil {
+		log.WithValues().Error(err, "could not set resource TypeMeta", "namespace", obj.GetNamespace(), "name", obj.GetName())
+	}
 
 	// clean the object up if it's being deleted
 	if !obj.DeletionTimestamp.IsZero() && time.Now().After(obj.DeletionTimestamp.Time) {
@@ -1608,11 +1607,6 @@ func (r *KongV1Beta1UDPIngressReconciler) Reconcile(ctx context.Context, req ctr
 
 	// get the relevant object
 	obj := new(kongv1beta1.UDPIngress)
-	// set type meta to the object
-	obj.TypeMeta = metav1.TypeMeta{
-		APIVersion: kongv1beta1.SchemeGroupVersion.String(),
-		Kind:       "UDPIngress",
-	}
 
 	if err := r.Get(ctx, req.NamespacedName, obj); err != nil {
 		if apierrors.IsNotFound(err) {
@@ -1624,6 +1618,11 @@ func (r *KongV1Beta1UDPIngressReconciler) Reconcile(ctx context.Context, req ctr
 		return ctrl.Result{}, err
 	}
 	log.V(util.DebugLevel).Info("reconciling resource", "namespace", req.Namespace, "name", req.Name)
+
+	err := util.PopulateTypeMeta(obj)
+	if err != nil {
+		log.WithValues().Error(err, "could not set resource TypeMeta", "namespace", obj.GetNamespace(), "name", obj.GetName())
+	}
 
 	// clean the object up if it's being deleted
 	if !obj.DeletionTimestamp.IsZero() && time.Now().After(obj.DeletionTimestamp.Time) {
@@ -1742,11 +1741,6 @@ func (r *KongV1Alpha1IngressClassParametersReconciler) Reconcile(ctx context.Con
 
 	// get the relevant object
 	obj := new(kongv1alpha1.IngressClassParameters)
-	// set type meta to the object
-	obj.TypeMeta = metav1.TypeMeta{
-		APIVersion: kongv1alpha1.SchemeGroupVersion.String(),
-		Kind:       "IngressClassParameters",
-	}
 
 	if err := r.Get(ctx, req.NamespacedName, obj); err != nil {
 		if apierrors.IsNotFound(err) {
@@ -1758,6 +1752,11 @@ func (r *KongV1Alpha1IngressClassParametersReconciler) Reconcile(ctx context.Con
 		return ctrl.Result{}, err
 	}
 	log.V(util.DebugLevel).Info("reconciling resource", "namespace", req.Namespace, "name", req.Name)
+
+	err := util.PopulateTypeMeta(obj)
+	if err != nil {
+		log.WithValues().Error(err, "could not set resource TypeMeta", "namespace", obj.GetNamespace(), "name", obj.GetName())
+	}
 
 	// clean the object up if it's being deleted
 	if !obj.DeletionTimestamp.IsZero() && time.Now().After(obj.DeletionTimestamp.Time) {

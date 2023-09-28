@@ -149,6 +149,23 @@ func TestConsumerCredential(t *testing.T) {
 		return resp.StatusCode == http.StatusOK
 	}, ingressWait, waitTick)
 
+	t.Logf("updating credential to confirm references update store copy")
+	credential, err = env.Cluster().Client().CoreV1().Secrets(ns.Name).Get(ctx, credential.Name, metav1.GetOptions{})
+	require.NoError(t, err)
+	credential.StringData = map[string]string{"password": "new_consumer_credential"}
+	_, err = env.Cluster().Client().CoreV1().Secrets(ns.Name).Update(ctx, credential, metav1.UpdateOptions{})
+	require.NoError(t, err)
+	assert.Eventually(t, func() bool {
+		req := helpers.MustHTTPRequest(t, "GET", proxyURL, "/test_consumer_credential", nil)
+		req.SetBasicAuth("test_consumer_credential", "new_consumer_credential")
+		resp, err := helpers.DefaultHTTPClient().Do(req)
+		if err != nil {
+			return false
+		}
+		defer resp.Body.Close()
+		return resp.StatusCode == http.StatusOK
+	}, ingressWait, waitTick)
+
 	t.Log("deleting Ingress and waiting for routes to be torn down")
 	require.NoError(t, clusters.DeleteIngress(ctx, env.Cluster(), ns.Name, ingress))
 	helpers.EventuallyExpectHTTP404WithNoRoute(t, proxyURL, "/test_plugin_essentials", ingressWait, waitTick, nil)

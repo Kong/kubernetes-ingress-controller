@@ -77,6 +77,11 @@ func (r *CoreV1SecretReconciler) SetLogger(l logr.Logger) {
 // - the secret has label: konghq.com/ca-cert:true
 // - or the secret is referred by objects we care (service, ingress, gateway, ...)
 func (r *CoreV1SecretReconciler) shouldReconcileSecret(obj client.Object) bool {
+	err := util.PopulateTypeMeta(obj)
+	if err != nil {
+		r.Log.Error(err, "could not set resource TypeMeta",
+			"namespace", obj.GetNamespace(), "name", obj.GetName())
+	}
 	secret, ok := obj.(*corev1.Secret)
 	if !ok {
 		return false
@@ -113,6 +118,13 @@ func (r *CoreV1SecretReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		}
 		return ctrl.Result{}, err
 	}
+
+	err := util.PopulateTypeMeta(secret)
+	if err != nil {
+		r.Log.Error(err, "could not set resource TypeMeta",
+			"namespace", secret.GetNamespace(), "name", secret.GetName())
+	}
+
 	log.V(util.DebugLevel).Info("reconciling resource", "namespace", req.Namespace, "name", req.Name)
 
 	// clean the object up if it's being deleted

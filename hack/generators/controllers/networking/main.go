@@ -397,7 +397,6 @@ import (
 	discoveryv1 "k8s.io/api/discovery/v1"
 	netv1 "k8s.io/api/networking/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	k8stypes "k8s.io/apimachinery/pkg/types"
@@ -550,11 +549,6 @@ func (r *{{.PackageAlias}}{{.Kind}}Reconciler) Reconcile(ctx context.Context, re
 
 	// get the relevant object
 	obj := new({{.PackageImportAlias}}.{{.Kind}})
-	// set type meta to the object
-	obj.TypeMeta = metav1.TypeMeta{
-		APIVersion: {{.PackageImportAlias}}.SchemeGroupVersion.String(),
-		Kind: "{{.Kind}}",
-	}
 
 	if err := r.Get(ctx, req.NamespacedName, obj); err != nil {
 		if apierrors.IsNotFound(err) {
@@ -571,6 +565,11 @@ func (r *{{.PackageAlias}}{{.Kind}}Reconciler) Reconcile(ctx context.Context, re
 		return ctrl.Result{}, err
 	}
 	log.V(util.DebugLevel).Info("reconciling resource", "namespace", req.Namespace, "name", req.Name)
+
+	err := util.PopulateTypeMeta(obj)
+	if err != nil {
+		log.WithValues().Error(err, "could not set resource TypeMeta", "namespace", obj.GetNamespace(), "name", obj.GetName())
+	}
 
 	// clean the object up if it's being deleted
 	if !obj.DeletionTimestamp.IsZero() && time.Now().After(obj.DeletionTimestamp.Time) {

@@ -11,9 +11,6 @@ import (
 // -----------------------------------------------------------------------------
 
 const (
-	// KnativeFeature is the name of the feature-gate for enabling/disabling Knative.
-	KnativeFeature = "Knative"
-
 	// GatewayFeature is the name of the feature-gate for enabling/disabling GatewayFeature APIs.
 	GatewayFeature = "Gateway"
 
@@ -70,7 +67,6 @@ func (fg FeatureGates) Enabled(feature string) bool {
 // NOTE: if you're adding a new feature gate, it needs to be added here.
 func GetFeatureGatesDefaults() map[string]bool {
 	return map[string]bool{
-		KnativeFeature:          false,
 		GatewayFeature:          true,
 		GatewayAlphaFeature:     false,
 		ExpressionRoutesFeature: false,

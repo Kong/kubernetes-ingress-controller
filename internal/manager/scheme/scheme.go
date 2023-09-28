@@ -4,7 +4,6 @@ import (
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
-	knativev1alpha1 "knative.dev/networking/pkg/apis/networking/v1alpha1"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
@@ -35,12 +34,6 @@ func Get(fg map[string]bool) (*runtime.Scheme, error) {
 	}
 	if err := kongv1beta1.AddToScheme(scheme); err != nil {
 		return nil, err
-	}
-
-	if v, ok := fg[featuregates.KnativeFeature]; ok && v {
-		if err := knativev1alpha1.AddToScheme(scheme); err != nil {
-			return nil, err
-		}
 	}
 
 	if v, ok := fg[featuregates.GatewayAlphaFeature]; ok && v {

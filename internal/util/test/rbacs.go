@@ -11,7 +11,6 @@ import (
 
 const (
 	kongRBACsKustomize        = "../../config/rbac/"
-	kongKnativeRBACsKustomize = "../../config/rbac/knative"
 	kongGatewayRBACsKustomize = "../../config/rbac/gateway"
 	kongCRDsRBACsKustomize    = "../../config/rbac/crds"
 )
@@ -19,11 +18,6 @@ const (
 func DeployRBACsForCluster(ctx context.Context, cluster clusters.Cluster) error {
 	fmt.Printf("INFO: deploying Kong RBACs to cluster\n")
 	if err := clusters.KustomizeDeployForCluster(ctx, cluster, kongRBACsKustomize, "-n", consts.ControllerNamespace); err != nil {
-		return err
-	}
-
-	fmt.Printf("INFO: deploying Kong knative RBACs to cluster\n")
-	if err := clusters.KustomizeDeployForCluster(ctx, cluster, kongKnativeRBACsKustomize, "-n", consts.ControllerNamespace); err != nil {
 		return err
 	}
 

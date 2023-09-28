@@ -35,7 +35,6 @@ import (
 	yamlserializer "k8s.io/apimachinery/pkg/runtime/serializer/yaml"
 	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/client-go/tools/cache"
-	knative "knative.dev/networking/pkg/apis/networking/v1alpha1"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 	"sigs.k8s.io/yaml"
@@ -94,7 +93,6 @@ type Storer interface {
 	ListGateways() ([]*gatewayv1beta1.Gateway, error)
 	ListTCPIngresses() ([]*kongv1beta1.TCPIngress, error)
 	ListUDPIngresses() ([]*kongv1beta1.UDPIngress, error)
-	ListKnativeIngresses() ([]*knative.Ingress, error)
 	ListGlobalKongClusterPlugins() ([]*kongv1.KongClusterPlugin, error)
 	ListKongPlugins() []*kongv1.KongPlugin
 	ListKongClusterPlugins() []*kongv1.KongClusterPlugin
@@ -150,9 +148,6 @@ type CacheStores struct {
 	UDPIngress                     cache.Store
 	IngressClassParametersV1alpha1 cache.Store
 
-	// Knative Stores
-	KnativeIngress cache.Store
-
 	l *sync.RWMutex
 }
 
@@ -182,8 +177,6 @@ func NewCacheStores() CacheStores {
 		TCPIngress:                     cache.NewStore(keyFunc),
 		UDPIngress:                     cache.NewStore(keyFunc),
 		IngressClassParametersV1alpha1: cache.NewStore(keyFunc),
-		// Knative Stores
-		KnativeIngress: cache.NewStore(keyFunc),
 
 		l: &sync.RWMutex{},
 	}
@@ -286,11 +279,6 @@ func (c CacheStores) Get(obj runtime.Object) (item interface{}, exists bool, err
 		return c.UDPIngress.Get(obj)
 	case *kongv1alpha1.IngressClassParameters:
 		return c.IngressClassParametersV1alpha1.Get(obj)
-	// ----------------------------------------------------------------------------
-	// 3rd Party API Support
-	// ----------------------------------------------------------------------------
-	case *knative.Ingress:
-		return c.KnativeIngress.Get(obj)
 	}
 	return nil, false, fmt.Errorf("%T is not a supported cache object type", obj)
 }
@@ -351,11 +339,6 @@ func (c CacheStores) Add(obj runtime.Object) error {
 		return c.UDPIngress.Add(obj)
 	case *kongv1alpha1.IngressClassParameters:
 		return c.IngressClassParametersV1alpha1.Add(obj)
-	// ----------------------------------------------------------------------------
-	// 3rd Party API Support
-	// ----------------------------------------------------------------------------
-	case *knative.Ingress:
-		return c.KnativeIngress.Add(obj)
 	default:
 		return fmt.Errorf("cannot add unsupported kind %q to the store", obj.GetObjectKind().GroupVersionKind())
 	}
@@ -417,11 +400,6 @@ func (c CacheStores) Delete(obj runtime.Object) error {
 		return c.UDPIngress.Delete(obj)
 	case *kongv1alpha1.IngressClassParameters:
 		return c.IngressClassParametersV1alpha1.Delete(obj)
-	// ----------------------------------------------------------------------------
-	// 3rd Party API Support
-	// ----------------------------------------------------------------------------
-	case *knative.Ingress:
-		return c.KnativeIngress.Delete(obj)
 	default:
 		return fmt.Errorf("cannot delete unsupported kind %q from the store", obj.GetObjectKind().GroupVersionKind())
 	}
@@ -702,38 +680,6 @@ func (s Store) ListUDPIngresses() ([]*kongv1beta1.UDPIngress, error) {
 			fmt.Sprintf("%s/%s", ingresses[j].Namespace, ingresses[j].Name)) < 0
 	})
 	return ingresses, err
-}
-
-// ListKnativeIngresses returns the list of Knative Ingresses from
-// ingresses.networking.internal.knative.dev group.
-func (s Store) ListKnativeIngresses() ([]*knative.Ingress, error) {
-	var ingresses []*knative.Ingress
-	if s.stores.KnativeIngress == nil {
-		return ingresses, nil
-	}
-
-	err := cache.ListAll(
-		s.stores.KnativeIngress,
-		labels.NewSelector(),
-		func(ob interface{}) {
-			ing, ok := ob.(*knative.Ingress)
-			if ok {
-				handlingClass := s.getIngressClassHandling()
-				if s.isValidIngressClass(&ing.ObjectMeta, annotations.KnativeIngressClassKey, handlingClass) ||
-					s.isValidIngressClass(&ing.ObjectMeta, annotations.KnativeIngressClassDeprecatedKey, handlingClass) {
-					ingresses = append(ingresses, ing)
-				}
-			}
-		})
-	if err != nil {
-		return nil, err
-	}
-
-	sort.SliceStable(ingresses, func(i, j int) bool {
-		return strings.Compare(fmt.Sprintf("%s/%s", ingresses[i].Namespace, ingresses[i].Name),
-			fmt.Sprintf("%s/%s", ingresses[j].Namespace, ingresses[j].Name)) < 0
-	})
-	return ingresses, nil
 }
 
 // GetEndpointSlicesForService returns all EndpointSlices for service
@@ -1115,13 +1061,6 @@ func mkObjFromGVK(gvk schema.GroupVersionKind) (runtime.Object, error) {
 		}, nil
 	case kongv1alpha1.SchemeGroupVersion.WithKind("IngressClassParameters"):
 		return &kongv1alpha1.IngressClassParameters{
-			TypeMeta: typeMetaFromGVK(gvk),
-		}, nil
-	// ----------------------------------------------------------------------------
-	// Knative APIs
-	// ----------------------------------------------------------------------------
-	case knative.SchemeGroupVersion.WithKind("Ingress"):
-		return &knative.Ingress{
 			TypeMeta: typeMetaFromGVK(gvk),
 		}, nil
 	default:

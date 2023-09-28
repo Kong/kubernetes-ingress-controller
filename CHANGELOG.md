@@ -87,6 +87,12 @@ Adding a new version? You'll need three changes:
 - No more "log.SetLogger(...) was never called..." log entry during shutdown of KIC
   [#4738](https://github.com/Kong/kubernetes-ingress-controller/pull/4738)
 
+### Added
+
+- The `FillIDs` feature gate is now enabled by default.
+  [#4746](https://github.com/Kong/kubernetes-ingress-controller/pull/4746)
+  
+
 ## 2.12.0
 
 > Release date: 2023-09-25

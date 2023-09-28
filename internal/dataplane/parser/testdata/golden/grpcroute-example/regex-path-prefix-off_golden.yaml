@@ -2,6 +2,7 @@ _format_version: "3.0"
 services:
 - connect_timeout: 60000
   host: grpcroute.default.grpcbin.0
+  id: 21a5e729-c47e-5086-a236-0551b9a11bda
   name: grpcroute.default.grpcbin.0
   plugins:
   - config:
@@ -15,6 +16,7 @@ services:
   - hosts:
     - example.com
     https_redirect_status_code: 426
+    id: c28a0082-bf9d-5577-bd96-c82519503d53
     name: grpcroute.default.grpcbin.0.0
     path_handling: v0
     paths:

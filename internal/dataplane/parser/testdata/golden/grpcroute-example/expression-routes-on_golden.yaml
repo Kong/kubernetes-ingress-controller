@@ -2,6 +2,7 @@ _format_version: "3.0"
 services:
 - connect_timeout: 60000
   host: grpcroute.default.grpcbin.example.com.0
+  id: e3750232-74d7-5496-bf14-1c266ec17184
   name: grpcroute.default.grpcbin.example.com.0
   plugins:
   - config:
@@ -14,6 +15,7 @@ services:
   routes:
   - expression: (http.path == "/grpcbin.GRPCBin/DummyUnary") && (http.host == "example.com")
     https_redirect_status_code: 426
+    id: b23f135f-8d7e-54cb-96eb-f2579ef1608b
     name: grpcroute.default.grpcbin.example.com.0.0
     preserve_host: true
     priority: 1713055227461631

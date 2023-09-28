@@ -33,6 +33,7 @@ plugins:
 services:
 - connect_timeout: 60000
   host: httpbin..80.svc
+  id: 84eb138f-d0f8-5200-a393-15b772b4b616
   name: .httpbin.80
   path: /
   port: 80
@@ -41,6 +42,7 @@ services:
   retries: 5
   routes:
   - https_redirect_status_code: 426
+    id: 0e0a5206-3e46-52e9-adab-943b1752a6c7
     name: .httpbin.httpbin..80
     path_handling: v0
     paths:
@@ -59,6 +61,7 @@ services:
     - k8s-group:networking.k8s.io
     - k8s-version:v1
   - https_redirect_status_code: 426
+    id: a45af20a-d4fd-5695-a7b6-363eade3150c
     name: .httpbin-other.httpbin..80
     path_handling: v0
     paths:
@@ -83,6 +86,7 @@ services:
   write_timeout: 60000
 - connect_timeout: 60000
   host: httpbin-other..80.svc
+  id: 13b20b54-10d5-5fd5-b453-38bdd73beb42
   name: .httpbin-other.80
   path: /
   port: 80
@@ -91,6 +95,7 @@ services:
   retries: 5
   routes:
   - https_redirect_status_code: 426
+    id: f1c0dac6-309d-5939-8182-fdfbf92d7d0b
     name: .httpbin-other.httpbin-other..80
     path_handling: v0
     paths:

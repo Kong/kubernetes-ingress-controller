@@ -74,10 +74,10 @@ jobs:
             router-flavor: "expressions"
           - name: dbless-fill-ids
             test: dbless
-            feature_gates: "GatewayAlpha=true,FillIDs=true"
+            feature_gates: "GatewayAlpha=true"
           - name: postgres-fill-ids
             test: postgres
-            feature_gates: "GatewayAlpha=true,FillIDs=true"
+            feature_gates: "GatewayAlpha=true"
           - name: dbless-rewrite-uris
             test: dbless
             feature_gates: "GatewayAlpha=true,RewriteURIs=true"

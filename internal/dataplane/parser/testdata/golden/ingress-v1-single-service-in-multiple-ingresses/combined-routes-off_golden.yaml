@@ -2,6 +2,7 @@ _format_version: "3.0"
 services:
 - connect_timeout: 60000
   host: foo-svc.foo-namespace.80.svc
+  id: cd111d84-e443-5591-a27e-9c33e18f6309
   name: foo-namespace.foo-svc.pnum-80
   path: /
   port: 80
@@ -12,6 +13,7 @@ services:
   - hosts:
     - example.com
     https_redirect_status_code: 426
+    id: 1d9c6ccc-b13f-5a88-ae11-549f290dcd8b
     name: foo-namespace.foo.00
     path_handling: v0
     paths:
@@ -33,6 +35,7 @@ services:
   - hosts:
     - example.com
     https_redirect_status_code: 426
+    id: 3f5f2f77-2dab-5665-939a-cea3820df7f4
     name: foo-namespace.foo-2.00
     path_handling: v0
     paths:

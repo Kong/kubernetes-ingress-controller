@@ -66,6 +66,7 @@ Features that reach GA and over time become stable will be removed from this tab
 | CombinedServices | `false` | Alpha | 2.10.0  | 3.0.0 |
 | CombinedServices | `true`  | Beta  | 2.11.0  | 3.0.0 |
 | FillIDs          | `false` | Alpha | 2.10.0  | 3.0.0 |
+| FillIDs          | `true`  | Beta  | 3.0.0   | TBD   |
 | RewriteURIs      | `false` | Alpha | 2.12.0  | TBD   |
 
 **NOTE**: The `Gateway` feature gate refers to [Gateway

@@ -5080,12 +5080,12 @@ func TestNewFeatureFlags(t *testing.T) {
 			},
 		},
 		{
-			name: "fill ids enabled",
+			name: "fill ids disabled",
 			featureGates: map[string]bool{
-				featuregates.FillIDsFeature: true,
+				featuregates.FillIDsFeature: false,
 			},
 			expectedFeatureFlags: FeatureFlags{
-				FillIDs: true,
+				FillIDs: false,
 			},
 		},
 	}

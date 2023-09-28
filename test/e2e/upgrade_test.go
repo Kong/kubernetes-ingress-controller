@@ -42,19 +42,6 @@ func TestDeployAndUpgradeAllInOnePostgres(t *testing.T) {
 	})
 }
 
-func TestDeployAndUpgradeAllInOnePostgres_FeatureGates(t *testing.T) {
-	testManifestsUpgrade(t, manifestsUpgradeTestParams{
-		fromManifestURL:   fmt.Sprintf(postgresURLTemplate, upgradeTestFromTag),
-		toManifestPath:    postgresPath,
-		beforeUpgradeHook: postgresBeforeUpgradeHook,
-		// We want to test that nothing breaks when enabling FillIDs feature gate to prevent regressions like
-		// https://github.com/Kong/kubernetes-ingress-controller/issues/4025.
-		// In 2.10.0 this is disabled by default, so we need a separate test for this.
-		// TODO: remove this test when FillIDs is enabled by default.
-		controllerFeatureGates: "FillIDs=true",
-	})
-}
-
 func postgresBeforeUpgradeHook(ctx context.Context, t *testing.T, env environments.Environment) {
 	// Injecting a beforeUpgradeHook to delete the old migrations job before the upgrade. This is necessary because it's
 	// not allowed to modify the existing job's spec.

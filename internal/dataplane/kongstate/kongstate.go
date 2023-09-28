@@ -490,7 +490,7 @@ func (ks *KongState) FillIDs(logger logrus.FieldLogger) {
 
 	for consumerIndex, consumer := range ks.Consumers {
 		if err := consumer.FillID(); err != nil {
-			logger.WithError(err).Errorf("failed to fill ID for consumer %s", *consumer.Username)
+			logger.WithError(err).Errorf("failed to fill ID for consumer %s", consumer.FriendlyName())
 		} else {
 			ks.Consumers[consumerIndex] = consumer
 		}

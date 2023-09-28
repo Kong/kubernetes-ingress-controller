@@ -95,7 +95,6 @@ type Storer interface {
 	ListTCPIngresses() ([]*kongv1beta1.TCPIngress, error)
 	ListUDPIngresses() ([]*kongv1beta1.UDPIngress, error)
 	ListKnativeIngresses() ([]*knative.Ingress, error)
-	ListGlobalKongPlugins() ([]*kongv1.KongPlugin, error)
 	ListGlobalKongClusterPlugins() ([]*kongv1.KongClusterPlugin, error)
 	ListKongPlugins() []*kongv1.KongPlugin
 	ListKongClusterPlugins() []*kongv1.KongClusterPlugin
@@ -925,31 +924,6 @@ func (s Store) ListKongConsumerGroups() []*kongv1beta1.KongConsumerGroup {
 	}
 
 	return consumerGroups
-}
-
-// ListGlobalKongPlugins returns all KongPlugin resources
-// filtered by the ingress.class annotation and with the
-// label global:"true".
-// Support for these global namespaced KongPlugins was removed in 0.10.0
-// This function remains only to provide warnings to users with old configuration.
-func (s Store) ListGlobalKongPlugins() ([]*kongv1.KongPlugin, error) {
-	var plugins []*kongv1.KongPlugin
-	req, err := labels.NewRequirement("global", selection.Equals, []string{"true"})
-	if err != nil {
-		return nil, err
-	}
-	err = cache.ListAll(s.stores.Plugin,
-		labels.NewSelector().Add(*req),
-		func(ob interface{}) {
-			p, ok := ob.(*kongv1.KongPlugin)
-			if ok && s.isValidIngressClass(&p.ObjectMeta, annotations.IngressClassKey, s.getIngressClassHandling()) {
-				plugins = append(plugins, p)
-			}
-		})
-	if err != nil {
-		return nil, err
-	}
-	return plugins, nil
 }
 
 // ListGlobalKongClusterPlugins returns all KongClusterPlugin resources

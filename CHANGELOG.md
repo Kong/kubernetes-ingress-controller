@@ -93,7 +93,9 @@ Adding a new version? You'll need three changes:
 
 - The `FillIDs` feature gate is now enabled by default.
   [#4746](https://github.com/Kong/kubernetes-ingress-controller/pull/4746)
-  
+- Get rid of deprecation warning in logs for unsupported label `global: true` for `KongPlugin`,
+  it'll be treated as any other label without a special meaning.
+  [#4737](https://github.com/Kong/kubernetes-ingress-controller/pull/4737)
 
 ## 2.12.0
 

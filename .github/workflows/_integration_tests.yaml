@@ -77,6 +77,10 @@ jobs:
           - name: postgres-rewrite-uris
             test: postgres
             feature_gates: "GatewayAlpha=true,RewriteURIs=true"
+          - name: dbless-invalid-config
+            test: dbless
+            run_invalid_config: "true"
+            go_test_flags: -run=TestIngressRecoverFromInvalidPath
 
     steps:
       - uses: Kong/kong-license@master
@@ -113,18 +117,10 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           KONG_LICENSE_DATA: ${{ steps.license.outputs.license }}
           KONG_CONTROLLER_FEATURE_GATES: "${{ matrix.feature_gates }}"
-          JUNIT_REPORT: "integration-tests-${{ matrix.name }}.xml"
+          JUNIT_REPORT: integration-tests-${{ matrix.name }}.xml
           TEST_KONG_ROUTER_FLAVOR: ${{ matrix.router-flavor }}
-
-      - name: run ${{ matrix.name }} - invalid config
-        run: make test.integration.${{ matrix.test }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          KONG_LICENSE_DATA: ${{ steps.license.outputs.license }}
-          KONG_CONTROLLER_FEATURE_GATES: "${{ matrix.feature_gates }}"
-          JUNIT_REPORT: "integration-tests-invalid-config-${{ matrix.name }}.xml"
-          GOTESTFLAGS: "-run=TestIngressRecoverFromInvalidPath"
-          TEST_RUN_INVALID_CONFIG_CASES: "true"
+          TEST_RUN_INVALID_CONFIG_CASES: ${{ matrix.run_invalid_config }}
+          GOTESTFLAGS: "${{ matrix.go_test_flags }}"
 
       - name: collect test coverage
         if: ${{ !cancelled() }}

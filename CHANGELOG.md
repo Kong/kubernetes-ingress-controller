@@ -87,7 +87,7 @@ Adding a new version? You'll need three changes:
 - Existing Kustomize (`deploy/manifests/`) and `deploy/single/` YAML manifests as a method of installing KIC.
     - The `deploy/single/` and `deploy/manifests/` directories will no longer work with KIC 3.0+. You should use the [Helm chart](https://docs.konghq.com/kubernetes-ingress-controller/latest/deployment/k4k8s/#helm) or [Kong Gateway Operator](https://docs.konghq.com/gateway-operator/latest/) instead.
 - DB-less deployments of Kong running with KIC as a sidecar. The [Gateway Discovery](https://docs.konghq.com/kubernetes-ingress-controller/latest/guides/using-gateway-discovery/) feature added in KIC 2.9 should be used instead.
-    - The mode where Kong runs with a database (Postgres) is not affected by the migration to Gateway Discovery yet, but likely will in the future [#4751](https://github.com/Kong/kubernetes-ingress-controller/issues/4751)
+    - The mode where Kong runs with a database (Postgres) is not affected by the migration to Gateway Discovery yet, but likely will be in the future [#4751](https://github.com/Kong/kubernetes-ingress-controller/issues/4751)
 
 ### Added
 

@@ -81,6 +81,8 @@ Adding a new version? You'll need three changes:
 
 - Removed feature gate `CombinedServices`. The feature is enabled and it can't be changed.
   [#4743](https://github.com/Kong/kubernetes-ingress-controller/pull/4743)
+- Removed feature gate `CombinedRoutes`. The feature is enabled and it can't be changed.
+  [#4749](https://github.com/Kong/kubernetes-ingress-controller/pull/4749)
 
 ### Fixed
 

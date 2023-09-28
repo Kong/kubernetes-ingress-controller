@@ -39,9 +39,11 @@ type testCaseIngressRulesFromHTTPRoutes struct {
 	errs     []error
 }
 
-// common test cases  should work with legacy parser and combined routes parser.
-func getIngressRulesFromHTTPRoutesCommonTestCases() []testCaseIngressRulesFromHTTPRoutes {
-	return []testCaseIngressRulesFromHTTPRoutes{
+func TestIngressRulesFromHTTPRoutes(t *testing.T) {
+	fakestore, err := store.NewFakeStore(store.FakeObjects{})
+	require.NoError(t, err)
+
+	testCases := []testCaseIngressRulesFromHTTPRoutes{
 		{
 			msg: "an empty list of HTTPRoutes should produce no ingress rules",
 			expected: func(routes []*gatewayv1beta1.HTTPRoute) ingressRules {
@@ -442,11 +444,6 @@ func getIngressRulesFromHTTPRoutesCommonTestCases() []testCaseIngressRulesFromHT
 				}
 			},
 		},
-	}
-}
-
-func getIngressRulesFromHTTPRoutesCombinedRoutesTestCases() []testCaseIngressRulesFromHTTPRoutes {
-	return []testCaseIngressRulesFromHTTPRoutes{
 		{
 			msg: "a single HTTPRoute with multiple rules with equal backendRefs results in a single service",
 			routes: []*gatewayv1beta1.HTTPRoute{{
@@ -1266,55 +1263,10 @@ func getIngressRulesFromHTTPRoutesCombinedRoutesTestCases() []testCaseIngressRul
 			},
 		},
 	}
-}
-
-func TestIngressRulesFromHTTPRoutes(t *testing.T) {
-	fakestore, err := store.NewFakeStore(store.FakeObjects{})
-	require.NoError(t, err)
-
-	testCases := getIngressRulesFromHTTPRoutesCommonTestCases()
 
 	for _, tt := range testCases {
 		t.Run(tt.msg, func(t *testing.T) {
 			p := mustNewParser(t, fakestore)
-
-			ingressRules := newIngressRules()
-
-			var errs []error
-			for _, httproute := range tt.routes {
-				// initialize the HTTPRoute object
-				httproute.SetGroupVersionKind(httprouteGVK)
-
-				// generate the ingress rules
-				err := p.ingressRulesFromHTTPRoute(&ingressRules, httproute)
-				if err != nil {
-					errs = append(errs, err)
-				}
-			}
-
-			// verify that we receive the expected values
-			expectedIngressRules := tt.expected(tt.routes)
-			assert.Equal(t, expectedIngressRules, ingressRules)
-
-			// verify that we receive any and all expected errors
-			for i := range tt.errs {
-				assert.ErrorIs(t, errs[i], tt.errs[i])
-			}
-		})
-	}
-}
-
-func TestIngressRulesFromHTTPRoutesWithCombinedServiceRoutes(t *testing.T) {
-	fakestore, err := store.NewFakeStore(store.FakeObjects{})
-	require.NoError(t, err)
-
-	testCases := getIngressRulesFromHTTPRoutesCommonTestCases()
-	testCases = append(testCases, getIngressRulesFromHTTPRoutesCombinedRoutesTestCases()...)
-
-	for _, tt := range testCases {
-		t.Run(tt.msg, func(t *testing.T) {
-			p := mustNewParser(t, fakestore)
-			p.featureFlags.CombinedServiceRoutes = true
 
 			ingressRules := newIngressRules()
 
@@ -1397,7 +1349,6 @@ func TestIngressRulesFromHTTPRoutes_RegexPrefix(t *testing.T) {
 	parser.featureFlags.RegexPathPrefix = true
 	parserWithCombinedServiceRoutes := mustNewParser(t, fakestore)
 	parserWithCombinedServiceRoutes.featureFlags.RegexPathPrefix = true
-	parserWithCombinedServiceRoutes.featureFlags.CombinedServiceRoutes = true
 	httpPort := gatewayv1beta1.PortNumber(80)
 
 	for _, tt := range []testCaseIngressRulesFromHTTPRoutes{
@@ -1510,7 +1461,6 @@ func TestIngressRulesFromHTTPRoutesUsingExpressionRoutes(t *testing.T) {
 	fakestore, err := store.NewFakeStore(store.FakeObjects{})
 	require.NoError(t, err)
 	parser := mustNewParser(t, fakestore)
-	parser.featureFlags.CombinedServiceRoutes = true
 	parser.featureFlags.ExpressionRoutes = true
 	httpRouteTypeMeta := metav1.TypeMeta{Kind: "HTTPRoute", APIVersion: gatewayv1beta1.SchemeGroupVersion.String()}
 
@@ -1892,7 +1842,6 @@ func TestIngressRulesFromSplitHTTPRouteMatchWithPriority(t *testing.T) {
 	fakestore, err := store.NewFakeStore(store.FakeObjects{})
 	require.NoError(t, err)
 	parser := mustNewParser(t, fakestore)
-	parser.featureFlags.CombinedServiceRoutes = true
 	parser.featureFlags.ExpressionRoutes = true
 	httpRouteTypeMeta := metav1.TypeMeta{Kind: "HTTPRoute", APIVersion: gatewayv1beta1.SchemeGroupVersion.String()}
 

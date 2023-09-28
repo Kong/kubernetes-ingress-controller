@@ -59,8 +59,8 @@ Features that reach GA and over time become stable will be removed from this tab
 | Knative          | `false` | Alpha | 0.8.0   | TBD   |
 | Gateway          | `false` | Alpha | 2.2.0   | TBD   |
 | Gateway          | `true`  | Beta  | 2.6.0   | TBD   |
-| CombinedRoutes   | `false` | Alpha | 2.4.0   | TBD   |
-| CombinedRoutes   | `true`  | Beta  | 2.8.0   | TBD   |
+| CombinedRoutes   | `false` | Alpha | 2.4.0   | 3.0.0 |
+| CombinedRoutes   | `true`  | Beta  | 2.8.0   | 3.0.0 |
 | GatewayAlpha     | `false` | Alpha | 2.6.0   | TBD   |
 | ExpressionRoutes | `false` | Alpha | 2.10.0  | TBD   |
 | CombinedServices | `false` | Alpha | 2.10.0  | 3.0.0 |

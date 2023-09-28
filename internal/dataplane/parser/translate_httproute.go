@@ -50,16 +50,38 @@ func (p *Parser) ingressRulesFromHTTPRoutes() ingressRules {
 	return result
 }
 
+// ingressRulesFromHTTPRoute validates and generates a set of proto-Kong routes (ingress rules) from an HTTPRoute.
+// If multiple rules in the HTTPRoute use the same Service, it combines them into a single Kong route.
 func (p *Parser) ingressRulesFromHTTPRoute(result *ingressRules, httproute *gatewayv1beta1.HTTPRoute) error {
 	if err := validateHTTPRoute(httproute); err != nil {
 		return fmt.Errorf("validation failed : %w", err)
 	}
+	for _, kongServiceTranslation := range translators.TranslateHTTPRoute(httproute) {
+		// HTTPRoute uses a wrapper HTTPBackendRef to add optional filters to its BackendRefs
+		backendRefs := httpBackendRefsToBackendRefs(kongServiceTranslation.BackendRefs)
 
-	if p.featureFlags.CombinedServiceRoutes {
-		return p.ingressRulesFromHTTPRouteWithCombinedServiceRoutes(httproute, result)
+		serviceName := kongServiceTranslation.Name
+
+		// create a service and attach the routes to it
+		service, err := generateKongServiceFromBackendRefWithName(p.logger, p.storer, result, serviceName, httproute, "http", backendRefs...)
+		if err != nil {
+			return err
+		}
+
+		// generate the routes for the service and attach them to the service
+		for _, kongRouteTranslation := range kongServiceTranslation.KongRoutes {
+			routes, err := GenerateKongRouteFromTranslation(httproute, kongRouteTranslation, p.featureFlags.RegexPathPrefix, p.featureFlags.ExpressionRoutes, p.kongVersion)
+			if err != nil {
+				return err
+			}
+			service.Routes = append(service.Routes, routes...)
+		}
+
+		// cache the service to avoid duplicates in further loop iterations
+		result.ServiceNameToServices[*service.Service.Name] = service
+		result.ServiceNameToParent[serviceName] = httproute
 	}
-
-	return p.ingressRulesFromHTTPRouteLegacyFallback(httproute, result)
+	return nil
 }
 
 func validateHTTPRoute(httproute *gatewayv1beta1.HTTPRoute) error {
@@ -124,68 +146,6 @@ func (p *Parser) ingressRulesFromHTTPRoutesUsingExpressionRoutes(httpRoutes []*g
 	}
 }
 
-// ingressRulesFromHTTPRouteWithCombinedServiceRoutes generates a set of proto-Kong routes (ingress rules) from an HTTPRoute.
-// If multiple rules in the HTTPRoute use the same Service, it combines them into a single Kong route.
-func (p *Parser) ingressRulesFromHTTPRouteWithCombinedServiceRoutes(httproute *gatewayv1beta1.HTTPRoute, result *ingressRules) error {
-	for _, kongServiceTranslation := range translators.TranslateHTTPRoute(httproute) {
-		// HTTPRoute uses a wrapper HTTPBackendRef to add optional filters to its BackendRefs
-		backendRefs := httpBackendRefsToBackendRefs(kongServiceTranslation.BackendRefs)
-
-		serviceName := kongServiceTranslation.Name
-
-		// create a service and attach the routes to it
-		service, err := generateKongServiceFromBackendRefWithName(p.logger, p.storer, result, serviceName, httproute, "http", backendRefs...)
-		if err != nil {
-			return err
-		}
-
-		// generate the routes for the service and attach them to the service
-		for _, kongRouteTranslation := range kongServiceTranslation.KongRoutes {
-			routes, err := GenerateKongRouteFromTranslation(httproute, kongRouteTranslation, p.featureFlags.RegexPathPrefix, p.featureFlags.ExpressionRoutes, p.kongVersion)
-			if err != nil {
-				return err
-			}
-			service.Routes = append(service.Routes, routes...)
-		}
-
-		// cache the service to avoid duplicates in further loop iterations
-		result.ServiceNameToServices[*service.Service.Name] = service
-		result.ServiceNameToParent[serviceName] = httproute
-	}
-
-	return nil
-}
-
-// ingressRulesFromHTTPRouteLegacyFallback generates a set of proto-Kong routes (ingress rules) from an HTTPRoute.
-// It generates a separate route for each rule.
-// It is planned for deprecation in favor of ingressRulesFromHTTPRouteWithCombinedServiceRoutes.
-func (p *Parser) ingressRulesFromHTTPRouteLegacyFallback(httproute *gatewayv1beta1.HTTPRoute, result *ingressRules) error {
-	// each rule may represent a different set of backend services that will be accepting
-	// traffic, so we make separate routes and Kong services for every present rule.
-	for ruleNumber, rule := range httproute.Spec.Rules {
-		// determine the routes needed to route traffic to services for this rule
-		routes, err := generateKongRoutesFromHTTPRouteRule(httproute, ruleNumber, rule, p.featureFlags.RegexPathPrefix, p.kongVersion)
-		if err != nil {
-			return err
-		}
-
-		// HTTPRoute uses a wrapper HTTPBackendRef to add optional filters to its BackendRefs
-		backendRefs := httpBackendRefsToBackendRefs(rule.BackendRefs)
-
-		// create a service and attach the routes to it
-		service, err := generateKongServiceFromBackendRefWithRuleNumber(p.logger, p.storer, result, httproute, ruleNumber, "http", backendRefs...)
-		if err != nil {
-			return err
-		}
-		service.Routes = append(service.Routes, routes...)
-
-		// cache the service to avoid duplicates in further loop iterations
-		result.ServiceNameToServices[*service.Service.Name] = service
-		result.ServiceNameToParent[*service.Service.Name] = httproute
-	}
-	return nil
-}
-
 // -----------------------------------------------------------------------------
 // Translate HTTPRoute - Utils
 // -----------------------------------------------------------------------------
@@ -206,82 +166,6 @@ func getHTTPRouteHostnamesAsSliceOfStringPointers(httproute *gatewayv1beta1.HTTP
 	return lo.Map(httproute.Spec.Hostnames, func(h gatewayv1beta1.Hostname, _ int) *string {
 		return kong.String(string(h))
 	})
-}
-
-// generateKongRoutesFromHTTPRouteRule converts an HTTPRoute rule to one or more
-// Kong Route objects to route traffic to services. This function will accept an
-// HTTPRoute that does not include any matches as long as it includes hostnames
-// to route traffic to the backend service with, in this case it will use the default
-// path prefix routing option for that service in addition to hostname routing.
-// If an HTTPRoute is provided that has matches that include any unsupported matching
-// configurations, this will produce an error and the route is considered invalid.
-func generateKongRoutesFromHTTPRouteRule(
-	httproute *gatewayv1beta1.HTTPRoute,
-	ruleNumber int,
-	rule gatewayv1beta1.HTTPRouteRule,
-	addRegexPrefix bool,
-	kongVersion semver.Version,
-) ([]kongstate.Route, error) {
-	// gather the k8s object information and hostnames from the httproute
-	objectInfo := util.FromK8sObject(httproute)
-	hostnames := getHTTPRouteHostnamesAsSliceOfStringPointers(httproute)
-	tags := util.GenerateTagsForObject(httproute)
-
-	// the HTTPRoute specification upstream specifically defines matches as
-	// independent (e.g. each match is an OR with other matches, not an AND).
-	// Therefore we treat each match rule as a separate Kong Route, so we iterate through
-	// all matches to determine all the routes that will be needed for the services.
-	var routes []kongstate.Route
-
-	if len(rule.Matches) > 0 {
-		for matchNumber := range rule.Matches {
-			// determine the name of the route, identify it as a route that belongs
-			// to a Kubernetes HTTPRoute object.
-			routeName := fmt.Sprintf(
-				"httproute.%s.%s.%d.%d",
-				httproute.Namespace,
-				httproute.Name,
-				ruleNumber,
-				matchNumber,
-			)
-
-			r, err := generateKongRoutesFromHTTPRouteMatches(
-				routeName,
-				rule.Matches[matchNumber:matchNumber+1],
-				rule.Filters,
-				objectInfo,
-				hostnames,
-				addRegexPrefix,
-				tags,
-				kongVersion,
-			)
-			if err != nil {
-				return nil, err
-			}
-
-			// add the route to the list of routes for the service(s)
-			routes = append(routes, r...)
-		}
-	} else {
-		routeName := fmt.Sprintf("httproute.%s.%s.0.0", httproute.Namespace, httproute.Name)
-		r, err := generateKongRoutesFromHTTPRouteMatches(routeName,
-			rule.Matches,
-			rule.Filters,
-			objectInfo,
-			hostnames,
-			addRegexPrefix,
-			tags,
-			kongVersion,
-		)
-		if err != nil {
-			return nil, err
-		}
-
-		// add the route to the list of routes for the service(s)
-		routes = append(routes, r...)
-	}
-
-	return routes, nil
 }
 
 // GenerateKongRouteFromTranslation generates Kong routes from HTTPRoute

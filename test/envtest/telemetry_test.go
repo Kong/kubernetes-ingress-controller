@@ -353,7 +353,6 @@ func verifyTelemetryReport(t *testing.T, k8sVersion *version.Info, report string
 		"<14>"+
 			"signal=kic-ping;"+
 			"db=off;"+
-			"feature-combinedroutes=true;"+
 			"feature-expressionroutes=false;"+
 			"feature-fillids=true;"+
 			"feature-gateway-service-discovery=false;"+

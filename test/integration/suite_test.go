@@ -179,8 +179,7 @@ func TestMain(m *testing.M) {
 			fmt.Sprintf("--admission-webhook-listen=0.0.0.0:%d", testutils.AdmissionWebhookListenPort),
 			"--profiling",
 			"--dump-config",
-			"--log-level=trace",             // not used, as controller logger is configured separately
-			"--debug-log-reduce-redundancy", // not used, as controller logger is configured separately
+			"--log-level=trace", // not used, as controller logger is configured separately
 			"--anonymous-reports=false",
 			fmt.Sprintf("--feature-gates=%s", featureGates),
 			fmt.Sprintf("--election-namespace=%s", kongAddon.Namespace()),

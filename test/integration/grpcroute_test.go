@@ -21,11 +21,10 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8stypes "k8s.io/apimachinery/pkg/types"
-	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
-	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util/builder"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/util/gatewayapi"
 	"github.com/kong/kubernetes-ingress-controller/v2/test"
 	"github.com/kong/kubernetes-ingress-controller/v2/test/helpers/certificate"
 	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/helpers"
@@ -105,15 +104,15 @@ func TestGRPCRouteEssentials(t *testing.T) {
 
 	t.Log("deploying a new gateway")
 	testHostname := "cholpon.example"
-	gateway, err := DeployGateway(ctx, gatewayClient, ns.Name, unmanagedGatewayClassName, func(gw *gatewayv1beta1.Gateway) {
+	gateway, err := DeployGateway(ctx, gatewayClient, ns.Name, unmanagedGatewayClassName, func(gw *gatewayapi.Gateway) {
 		gw.Spec.Listeners = builder.NewListener("https").
 			HTTPS().
 			WithPort(ktfkong.DefaultProxyTLSServicePort).
 			WithHostname(testHostname).
-			WithTLSConfig(&gatewayv1beta1.GatewayTLSConfig{
-				CertificateRefs: []gatewayv1beta1.SecretObjectReference{
+			WithTLSConfig(&gatewayapi.GatewayTLSConfig{
+				CertificateRefs: []gatewayapi.SecretObjectReference{
 					{
-						Name: gatewayv1beta1.ObjectName(secret.Name),
+						Name: gatewayapi.ObjectName(secret.Name),
 					},
 				},
 			}).IntoSlice()
@@ -134,43 +133,43 @@ func TestGRPCRouteEssentials(t *testing.T) {
 
 	t.Logf("creating an grpcroute to access deployment %s via kong", deployment.Name)
 
-	grpcRoute := &gatewayv1alpha2.GRPCRoute{
+	grpcRoute := &gatewayapi.GRPCRoute{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "cholpon-grpcroute",
 		},
-		Spec: gatewayv1alpha2.GRPCRouteSpec{
-			CommonRouteSpec: gatewayv1beta1.CommonRouteSpec{
-				ParentRefs: []gatewayv1beta1.ParentReference{{
-					Name: gatewayv1beta1.ObjectName(gateway.Name),
+		Spec: gatewayapi.GRPCRouteSpec{
+			CommonRouteSpec: gatewayapi.CommonRouteSpec{
+				ParentRefs: []gatewayapi.ParentReference{{
+					Name: gatewayapi.ObjectName(gateway.Name),
 				}},
 			},
-			Hostnames: []gatewayv1alpha2.Hostname{
-				gatewayv1alpha2.Hostname(testHostname),
+			Hostnames: []gatewayapi.Hostname{
+				gatewayapi.Hostname(testHostname),
 			},
-			Rules: []gatewayv1alpha2.GRPCRouteRule{{
-				Matches: []gatewayv1alpha2.GRPCRouteMatch{
+			Rules: []gatewayapi.GRPCRouteRule{{
+				Matches: []gatewayapi.GRPCRouteMatch{
 					{
 						// this will match only the DummyUnary method without any headers
-						Method: &gatewayv1alpha2.GRPCMethodMatch{
+						Method: &gatewayapi.GRPCMethodMatch{
 							Service: kong.String("grpcbin.GRPCBin"),
 							Method:  kong.String("DummyUnary"),
 						},
 					},
 					{
 						// this will match all methods with the x-hello header
-						Headers: []gatewayv1alpha2.GRPCHeaderMatch{
+						Headers: []gatewayapi.GRPCHeaderMatch{
 							{
-								Name:  gatewayv1alpha2.GRPCHeaderName("x-hello"),
+								Name:  gatewayapi.GRPCHeaderName("x-hello"),
 								Value: "bidi",
 							},
 						},
 					},
 				},
-				BackendRefs: []gatewayv1alpha2.GRPCBackendRef{{
-					BackendRef: gatewayv1alpha2.BackendRef{
-						BackendObjectReference: gatewayv1beta1.BackendObjectReference{
-							Name: gatewayv1beta1.ObjectName(service.Name),
-							Port: lo.ToPtr(gatewayv1beta1.PortNumber(test.GRPCBinPort)),
+				BackendRefs: []gatewayapi.GRPCBackendRef{{
+					BackendRef: gatewayapi.BackendRef{
+						BackendObjectReference: gatewayapi.BackendObjectReference{
+							Name: gatewayapi.ObjectName(service.Name),
+							Port: lo.ToPtr(gatewayapi.PortNumber(test.GRPCBinPort)),
 						},
 					},
 				}},
@@ -183,11 +182,11 @@ func TestGRPCRouteEssentials(t *testing.T) {
 	cleaner.Add(grpcRoute)
 
 	t.Log("verifying that the Gateway gets linked to the route via status")
-	callback := GetGatewayIsLinkedCallback(ctx, t, gatewayClient, gatewayv1beta1.HTTPProtocolType, ns.Name, grpcRoute.Name)
+	callback := GetGatewayIsLinkedCallback(ctx, t, gatewayClient, gatewayapi.HTTPProtocolType, ns.Name, grpcRoute.Name)
 	require.Eventually(t, callback, ingressWait, waitTick)
 	t.Log("verifying that the grpcroute contains 'Programmed' condition")
 	require.Eventually(t,
-		GetVerifyProgrammedConditionCallback(t, gatewayClient, gatewayv1beta1.HTTPProtocolType, ns.Name, grpcRoute.Name, metav1.ConditionTrue),
+		GetVerifyProgrammedConditionCallback(t, gatewayClient, gatewayapi.HTTPProtocolType, ns.Name, grpcRoute.Name, metav1.ConditionTrue),
 		ingressWait, waitTick,
 	)
 

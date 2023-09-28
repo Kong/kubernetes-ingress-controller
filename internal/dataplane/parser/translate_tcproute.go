@@ -3,9 +3,8 @@ package parser
 import (
 	"fmt"
 
-	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
-
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/parser/translators"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/util/gatewayapi"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/versions"
 )
 
@@ -56,7 +55,7 @@ func (p *Parser) ingressRulesFromTCPRoutes() ingressRules {
 	return result
 }
 
-func (p *Parser) ingressRulesFromTCPRoute(result *ingressRules, tcproute *gatewayv1alpha2.TCPRoute) error {
+func (p *Parser) ingressRulesFromTCPRoute(result *ingressRules, tcproute *gatewayapi.TCPRoute) error {
 	// first we grab the spec and gather some metdata about the object
 	spec := tcproute.Spec
 

@@ -5,17 +5,16 @@ import (
 
 	"github.com/samber/lo"
 	"github.com/samber/mo"
-	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/types"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/util/gatewayapi"
 )
 
 // getParentStatuses creates a parent status map for the provided route given the
 // route parent status slice.
-func getParentStatuses[routeT types.RouteT](
-	route routeT, parentStatuses []gatewayv1beta1.RouteParentStatus,
-) map[string]*gatewayv1beta1.RouteParentStatus {
-	m := make(map[string]*gatewayv1beta1.RouteParentStatus)
+func getParentStatuses[routeT gatewayapi.RouteT](
+	route routeT, parentStatuses []gatewayapi.RouteParentStatus,
+) map[string]*gatewayapi.RouteParentStatus {
+	m := make(map[string]*gatewayapi.RouteParentStatus)
 
 	for _, existingParent := range parentStatuses {
 		parentRef := getParentRef(existingParent)
@@ -33,7 +32,7 @@ type namespacedNamer interface {
 	GetSectionName() mo.Option[string]
 }
 
-func routeParentStatusKey[routeT types.RouteT](
+func routeParentStatusKey[routeT gatewayapi.RouteT](
 	route routeT, parentRef namespacedNamer,
 ) string {
 	namespace := route.GetNamespace()
@@ -42,7 +41,7 @@ func routeParentStatusKey[routeT types.RouteT](
 	}
 
 	switch any(route).(type) {
-	case *gatewayv1beta1.HTTPRoute:
+	case *gatewayapi.HTTPRoute:
 		return fmt.Sprintf("%s/%s/%s",
 			namespace,
 			parentRef.GetName(),
@@ -77,8 +76,8 @@ func (p parentRef) GetSectionName() mo.Option[string] {
 }
 
 // getParentRef serves as glue code to generically get parentRef from either
-// gatewayv1alpha2.RouteParentStatus or gatewayv1beta1.RouteParentStatus.
-func getParentRef(parentStatus gatewayv1beta1.RouteParentStatus) parentRef {
+// gatewayapi.RouteParentStatus or gatewayapi.RouteParentStatus.
+func getParentRef(parentStatus gatewayapi.RouteParentStatus) parentRef {
 	var sectionName *string
 
 	if parentStatus.ParentRef.SectionName != nil {

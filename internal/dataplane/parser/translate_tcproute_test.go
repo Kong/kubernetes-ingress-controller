@@ -15,6 +15,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util/builder"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/util/gatewayapi"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/versions"
 )
 
@@ -23,24 +24,24 @@ func TestIngressRulesFromTCPRoutesUsingExpressionRoutes(t *testing.T) {
 
 	testCases := []struct {
 		name                 string
-		tcpRoutes            []*gatewayv1alpha2.TCPRoute
+		tcpRoutes            []*gatewayapi.TCPRoute
 		expectedKongServices []kongstate.Service
 		expectedKongRoutes   map[string][]kongstate.Route
 		expectedFailures     []failures.ResourceFailure
 	}{
 		{
 			name: "tcproute with single rule and single backendref",
-			tcpRoutes: []*gatewayv1alpha2.TCPRoute{
+			tcpRoutes: []*gatewayapi.TCPRoute{
 				{
 					TypeMeta: tcpRouteTypeMeta,
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: "default",
 						Name:      "tcproute-1",
 					},
-					Spec: gatewayv1alpha2.TCPRouteSpec{
-						Rules: []gatewayv1alpha2.TCPRouteRule{
+					Spec: gatewayapi.TCPRouteSpec{
+						Rules: []gatewayapi.TCPRouteRule{
 							{
-								BackendRefs: []gatewayv1alpha2.BackendRef{
+								BackendRefs: []gatewayapi.BackendRef{
 									builder.NewBackendRef("service1").WithPort(80).Build(),
 								},
 							},
@@ -77,17 +78,17 @@ func TestIngressRulesFromTCPRoutesUsingExpressionRoutes(t *testing.T) {
 		},
 		{
 			name: "tcproute with single rule and multiple backendrefs",
-			tcpRoutes: []*gatewayv1alpha2.TCPRoute{
+			tcpRoutes: []*gatewayapi.TCPRoute{
 				{
 					TypeMeta: tcpRouteTypeMeta,
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: "default",
 						Name:      "tcproute-1",
 					},
-					Spec: gatewayv1alpha2.TCPRouteSpec{
-						Rules: []gatewayv1alpha2.TCPRouteRule{
+					Spec: gatewayapi.TCPRouteSpec{
+						Rules: []gatewayapi.TCPRouteRule{
 							{
-								BackendRefs: []gatewayv1alpha2.BackendRef{
+								BackendRefs: []gatewayapi.BackendRef{
 									builder.NewBackendRef("service1").WithPort(80).Build(),
 									builder.NewBackendRef("service2").WithPort(443).Build(),
 								},
@@ -129,23 +130,23 @@ func TestIngressRulesFromTCPRoutesUsingExpressionRoutes(t *testing.T) {
 		},
 		{
 			name: "tcproute with multiple rules",
-			tcpRoutes: []*gatewayv1alpha2.TCPRoute{
+			tcpRoutes: []*gatewayapi.TCPRoute{
 				{
 					TypeMeta: tcpRouteTypeMeta,
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: "default",
 						Name:      "tcproute-1",
 					},
-					Spec: gatewayv1alpha2.TCPRouteSpec{
-						Rules: []gatewayv1alpha2.TCPRouteRule{
+					Spec: gatewayapi.TCPRouteSpec{
+						Rules: []gatewayapi.TCPRouteRule{
 							{
-								BackendRefs: []gatewayv1alpha2.BackendRef{
+								BackendRefs: []gatewayapi.BackendRef{
 									builder.NewBackendRef("service1").WithPort(80).Build(),
 									builder.NewBackendRef("service2").WithPort(443).Build(),
 								},
 							},
 							{
-								BackendRefs: []gatewayv1alpha2.BackendRef{
+								BackendRefs: []gatewayapi.BackendRef{
 									builder.NewBackendRef("service3").WithPort(8080).Build(),
 									builder.NewBackendRef("service4").WithPort(8443).Build(),
 								},

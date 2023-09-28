@@ -10,11 +10,11 @@ import (
 	"github.com/stretchr/testify/require"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 	"sigs.k8s.io/gateway-api/conformance/tests"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/util/gatewayapi"
 	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/testenv"
 )
 
@@ -101,13 +101,13 @@ func TestGatewayConformance(t *testing.T) {
 	// To work with individual tests only, you can disable the normal Run call and construct a slice containing a
 	// single test only, e.g.:
 	//
-	//cSuite.Run(t, []suite.ConformanceTest{tests.GatewayClassObservedGenerationBump})
+	// cSuite.Run(t, []suite.ConformanceTest{tests.GatewayClassObservedGenerationBump})
 	cSuite.Run(t, tests.ConformanceTests)
 }
 
 func ensureTestGatewayClassIsUnmanaged(ctx context.Context, k8sClient client.Client) bool {
 	gwcNamespacedName := k8stypes.NamespacedName{Name: "gatewayclass-observed-generation-bump"}
-	gwc := &gatewayv1beta1.GatewayClass{}
+	gwc := &gatewayapi.GatewayClass{}
 	if err := k8sClient.Get(ctx, gwcNamespacedName, gwc); err != nil {
 		return false
 	}

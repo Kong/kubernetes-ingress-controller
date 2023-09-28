@@ -18,12 +18,12 @@ import (
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/util/gatewayapi"
 	testutils "github.com/kong/kubernetes-ingress-controller/v2/internal/util/test"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
 	"github.com/kong/kubernetes-ingress-controller/v2/pkg/clientset"
@@ -96,7 +96,7 @@ func TestTranslationFailures(t *testing.T) {
 				cleaner.Add(gwc)
 
 				gatewayName := testutils.RandomName(testTranslationFailuresObjectsPrefix)
-				gateway, err := DeployGateway(ctx, gatewayClient, ns, gatewayClassName, func(gw *gatewayv1beta1.Gateway) {
+				gateway, err := DeployGateway(ctx, gatewayClient, ns, gatewayClassName, func(gw *gatewayapi.Gateway) {
 					gw.Name = gatewayName
 				})
 				require.NoError(t, err)
@@ -355,19 +355,19 @@ func pluginUsingInvalidCACert(ns string) *kongv1.KongPlugin {
 	}
 }
 
-func httpRouteWithBackends(gatewayName string, services ...*corev1.Service) *gatewayv1beta1.HTTPRoute {
-	backendRefs := make([]gatewayv1beta1.HTTPBackendRef, 0, len(services))
+func httpRouteWithBackends(gatewayName string, services ...*corev1.Service) *gatewayapi.HTTPRoute {
+	backendRefs := make([]gatewayapi.HTTPBackendRef, 0, len(services))
 
 	if len(services) > 0 {
-		httpPort := gatewayv1beta1.PortNumber(80)
+		httpPort := gatewayapi.PortNumber(80)
 		weight := int32(100 / len(services))
 
 		for _, service := range services {
 			backendRefs = append(backendRefs,
-				gatewayv1beta1.HTTPBackendRef{
-					BackendRef: gatewayv1beta1.BackendRef{
-						BackendObjectReference: gatewayv1beta1.BackendObjectReference{
-							Name: gatewayv1beta1.ObjectName(service.Name),
+				gatewayapi.HTTPBackendRef{
+					BackendRef: gatewayapi.BackendRef{
+						BackendObjectReference: gatewayapi.BackendObjectReference{
+							Name: gatewayapi.ObjectName(service.Name),
 							Port: &httpPort,
 							Kind: util.StringToGatewayAPIKindPtr("Service"),
 						},
@@ -377,25 +377,25 @@ func httpRouteWithBackends(gatewayName string, services ...*corev1.Service) *gat
 		}
 	}
 
-	pathMatchPrefix := gatewayv1beta1.PathMatchPathPrefix
-	return &gatewayv1beta1.HTTPRoute{
+	pathMatchPrefix := gatewayapi.PathMatchPathPrefix
+	return &gatewayapi.HTTPRoute{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: testutils.RandomName(testTranslationFailuresObjectsPrefix),
 			Annotations: map[string]string{
 				annotations.AnnotationPrefix + annotations.StripPathKey: "true",
 			},
 		},
-		Spec: gatewayv1beta1.HTTPRouteSpec{
-			CommonRouteSpec: gatewayv1beta1.CommonRouteSpec{
-				ParentRefs: []gatewayv1beta1.ParentReference{{
-					Name: gatewayv1beta1.ObjectName(gatewayName),
+		Spec: gatewayapi.HTTPRouteSpec{
+			CommonRouteSpec: gatewayapi.CommonRouteSpec{
+				ParentRefs: []gatewayapi.ParentReference{{
+					Name: gatewayapi.ObjectName(gatewayName),
 				}},
 			},
-			Rules: []gatewayv1beta1.HTTPRouteRule{
+			Rules: []gatewayapi.HTTPRouteRule{
 				{
-					Matches: []gatewayv1beta1.HTTPRouteMatch{
+					Matches: []gatewayapi.HTTPRouteMatch{
 						{
-							Path: &gatewayv1beta1.HTTPPathMatch{
+							Path: &gatewayapi.HTTPPathMatch{
 								Type:  &pathMatchPrefix,
 								Value: kong.String("/test"),
 							},

@@ -10,10 +10,9 @@ import (
 	discoveryv1 "k8s.io/api/discovery/v1"
 	netv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
-	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/util/gatewayapi"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
 	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1beta1"
 )
@@ -643,18 +642,18 @@ func TestFakeStoreHTTPRoute(t *testing.T) {
 	assert := assert.New(t)
 	require := require.New(t)
 
-	classes := []*gatewayv1beta1.HTTPRoute{
+	classes := []*gatewayapi.HTTPRoute{
 		{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "foo",
 			},
-			Spec: gatewayv1beta1.HTTPRouteSpec{},
+			Spec: gatewayapi.HTTPRouteSpec{},
 		},
 		{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "bar",
 			},
-			Spec: gatewayv1beta1.HTTPRouteSpec{},
+			Spec: gatewayapi.HTTPRouteSpec{},
 		},
 	}
 	store, err := NewFakeStore(FakeObjects{HTTPRoutes: classes})
@@ -669,18 +668,18 @@ func TestFakeStoreUDPRoute(t *testing.T) {
 	assert := assert.New(t)
 	require := require.New(t)
 
-	classes := []*gatewayv1alpha2.UDPRoute{
+	classes := []*gatewayapi.UDPRoute{
 		{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "foo",
 			},
-			Spec: gatewayv1alpha2.UDPRouteSpec{},
+			Spec: gatewayapi.UDPRouteSpec{},
 		},
 		{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "bar",
 			},
-			Spec: gatewayv1alpha2.UDPRouteSpec{},
+			Spec: gatewayapi.UDPRouteSpec{},
 		},
 	}
 	store, err := NewFakeStore(FakeObjects{UDPRoutes: classes})
@@ -695,18 +694,18 @@ func TestFakeStoreTCPRoute(t *testing.T) {
 	assert := assert.New(t)
 	require := require.New(t)
 
-	classes := []*gatewayv1alpha2.TCPRoute{
+	classes := []*gatewayapi.TCPRoute{
 		{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "foo",
 			},
-			Spec: gatewayv1alpha2.TCPRouteSpec{},
+			Spec: gatewayapi.TCPRouteSpec{},
 		},
 		{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "bar",
 			},
-			Spec: gatewayv1alpha2.TCPRouteSpec{},
+			Spec: gatewayapi.TCPRouteSpec{},
 		},
 	}
 	store, err := NewFakeStore(FakeObjects{TCPRoutes: classes})
@@ -721,18 +720,18 @@ func TestFakeStoreTLSRoute(t *testing.T) {
 	assert := assert.New(t)
 	require := require.New(t)
 
-	classes := []*gatewayv1alpha2.TLSRoute{
+	classes := []*gatewayapi.TLSRoute{
 		{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "foo",
 			},
-			Spec: gatewayv1alpha2.TLSRouteSpec{},
+			Spec: gatewayapi.TLSRouteSpec{},
 		},
 		{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "bar",
 			},
-			Spec: gatewayv1alpha2.TLSRouteSpec{},
+			Spec: gatewayapi.TLSRouteSpec{},
 		},
 	}
 	store, err := NewFakeStore(FakeObjects{TLSRoutes: classes})
@@ -747,18 +746,18 @@ func TestFakeStoreReferenceGrant(t *testing.T) {
 	assert := assert.New(t)
 	require := require.New(t)
 
-	grants := []*gatewayv1beta1.ReferenceGrant{
+	grants := []*gatewayapi.ReferenceGrant{
 		{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "foo",
 			},
-			Spec: gatewayv1beta1.ReferenceGrantSpec{},
+			Spec: gatewayapi.ReferenceGrantSpec{},
 		},
 		{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "bar",
 			},
-			Spec: gatewayv1beta1.ReferenceGrantSpec{},
+			Spec: gatewayapi.ReferenceGrantSpec{},
 		},
 	}
 	store, err := NewFakeStore(FakeObjects{ReferenceGrants: grants})
@@ -773,18 +772,18 @@ func TestFakeStoreGateway(t *testing.T) {
 	assert := assert.New(t)
 	require := require.New(t)
 
-	grants := []*gatewayv1beta1.Gateway{
+	grants := []*gatewayapi.Gateway{
 		{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "foo",
 			},
-			Spec: gatewayv1beta1.GatewaySpec{},
+			Spec: gatewayapi.GatewaySpec{},
 		},
 		{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "bar",
 			},
-			Spec: gatewayv1beta1.GatewaySpec{},
+			Spec: gatewayapi.GatewaySpec{},
 		},
 	}
 	store, err := NewFakeStore(FakeObjects{Gateways: grants})

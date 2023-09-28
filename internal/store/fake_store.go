@@ -19,6 +19,7 @@ import (
 	"sigs.k8s.io/yaml"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/util/gatewayapi"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
 	kongv1alpha1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1alpha1"
 	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1beta1"
@@ -40,13 +41,13 @@ func clusterResourceKeyFunc(obj interface{}) (string, error) {
 type FakeObjects struct {
 	IngressesV1                    []*netv1.Ingress
 	IngressClassesV1               []*netv1.IngressClass
-	HTTPRoutes                     []*gatewayv1beta1.HTTPRoute
-	UDPRoutes                      []*gatewayv1alpha2.UDPRoute
-	TCPRoutes                      []*gatewayv1alpha2.TCPRoute
-	TLSRoutes                      []*gatewayv1alpha2.TLSRoute
-	GRPCRoutes                     []*gatewayv1alpha2.GRPCRoute
-	ReferenceGrants                []*gatewayv1beta1.ReferenceGrant
-	Gateways                       []*gatewayv1beta1.Gateway
+	HTTPRoutes                     []*gatewayapi.HTTPRoute
+	UDPRoutes                      []*gatewayapi.UDPRoute
+	TCPRoutes                      []*gatewayapi.TCPRoute
+	TLSRoutes                      []*gatewayapi.TLSRoute
+	GRPCRoutes                     []*gatewayapi.GRPCRoute
+	ReferenceGrants                []*gatewayapi.ReferenceGrant
+	Gateways                       []*gatewayapi.Gateway
 	TCPIngresses                   []*kongv1beta1.TCPIngress
 	UDPIngresses                   []*kongv1beta1.UDPIngress
 	IngressClassParametersV1alpha1 []*kongv1alpha1.IngressClassParameters
@@ -239,13 +240,13 @@ func (objects FakeObjects) MarshalToYAML() ([]byte, error) {
 	typeToGVK := map[reflect.Type]schema.GroupVersionKind{
 		reflect.TypeOf(&netv1.Ingress{}):                       netv1.SchemeGroupVersion.WithKind("Ingress"),
 		reflect.TypeOf(&netv1.IngressClass{}):                  netv1.SchemeGroupVersion.WithKind("IngressClass"),
-		reflect.TypeOf(&gatewayv1beta1.HTTPRoute{}):            gatewayv1beta1.SchemeGroupVersion.WithKind("HTTPRoute"),
-		reflect.TypeOf(&gatewayv1alpha2.UDPRoute{}):            gatewayv1alpha2.SchemeGroupVersion.WithKind("UDPRoute"),
-		reflect.TypeOf(&gatewayv1alpha2.TCPRoute{}):            gatewayv1alpha2.SchemeGroupVersion.WithKind("TCPRoute"),
-		reflect.TypeOf(&gatewayv1alpha2.TLSRoute{}):            gatewayv1alpha2.SchemeGroupVersion.WithKind("TLSRoute"),
-		reflect.TypeOf(&gatewayv1alpha2.GRPCRoute{}):           gatewayv1alpha2.SchemeGroupVersion.WithKind("GRPCRoute"),
-		reflect.TypeOf(&gatewayv1beta1.ReferenceGrant{}):       gatewayv1beta1.SchemeGroupVersion.WithKind("ReferenceGrant"),
-		reflect.TypeOf(&gatewayv1beta1.Gateway{}):              gatewayv1beta1.SchemeGroupVersion.WithKind("Gateway"),
+		reflect.TypeOf(&gatewayapi.HTTPRoute{}):                gatewayv1beta1.SchemeGroupVersion.WithKind("HTTPRoute"),
+		reflect.TypeOf(&gatewayapi.UDPRoute{}):                 gatewayv1alpha2.SchemeGroupVersion.WithKind("UDPRoute"),
+		reflect.TypeOf(&gatewayapi.TCPRoute{}):                 gatewayv1alpha2.SchemeGroupVersion.WithKind("TCPRoute"),
+		reflect.TypeOf(&gatewayapi.TLSRoute{}):                 gatewayv1alpha2.SchemeGroupVersion.WithKind("TLSRoute"),
+		reflect.TypeOf(&gatewayapi.GRPCRoute{}):                gatewayv1alpha2.SchemeGroupVersion.WithKind("GRPCRoute"),
+		reflect.TypeOf(&gatewayapi.ReferenceGrant{}):           gatewayv1beta1.SchemeGroupVersion.WithKind("ReferenceGrant"),
+		reflect.TypeOf(&gatewayapi.Gateway{}):                  gatewayv1beta1.SchemeGroupVersion.WithKind("Gateway"),
 		reflect.TypeOf(&kongv1beta1.TCPIngress{}):              kongv1beta1.SchemeGroupVersion.WithKind("TCPIngress"),
 		reflect.TypeOf(&kongv1beta1.UDPIngress{}):              kongv1beta1.SchemeGroupVersion.WithKind("UDPIngress"),
 		reflect.TypeOf(&kongv1alpha1.IngressClassParameters{}): kongv1alpha1.SchemeGroupVersion.WithKind("IngressClassParameters"),

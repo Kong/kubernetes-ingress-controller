@@ -6,34 +6,35 @@ import (
 	"github.com/kong/go-kong/kong"
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
-	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
+
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/util/gatewayapi"
 )
 
 func TestGeneratePluginsFromHTTPRouteFilters(t *testing.T) {
 	testCases := []struct {
 		name            string
-		filters         []gatewayv1beta1.HTTPRouteFilter
+		filters         []gatewayapi.HTTPRouteFilter
 		path            string
 		expectedPlugins []kong.Plugin
 	}{
 		{
 			name:            "no filters",
-			filters:         []gatewayv1beta1.HTTPRouteFilter{},
+			filters:         []gatewayapi.HTTPRouteFilter{},
 			expectedPlugins: []kong.Plugin{},
 		},
 		{
 			name: "request header modifier",
-			filters: []gatewayv1beta1.HTTPRouteFilter{
+			filters: []gatewayapi.HTTPRouteFilter{
 				{
-					Type: gatewayv1beta1.HTTPRouteFilterRequestHeaderModifier,
-					RequestHeaderModifier: &gatewayv1beta1.HTTPHeaderFilter{
-						Set: []gatewayv1beta1.HTTPHeader{
+					Type: gatewayapi.HTTPRouteFilterRequestHeaderModifier,
+					RequestHeaderModifier: &gatewayapi.HTTPHeaderFilter{
+						Set: []gatewayapi.HTTPHeader{
 							{
 								Name:  "header-to-set",
 								Value: "bar",
 							},
 						},
-						Add: []gatewayv1beta1.HTTPHeader{
+						Add: []gatewayapi.HTTPHeader{
 							{
 								Name:  "header-to-add",
 								Value: "foo",
@@ -73,11 +74,11 @@ func TestGeneratePluginsFromHTTPRouteFilters(t *testing.T) {
 		},
 		{
 			name: "request redirect modifier",
-			filters: []gatewayv1beta1.HTTPRouteFilter{
+			filters: []gatewayapi.HTTPRouteFilter{
 				{
-					Type: gatewayv1beta1.HTTPRouteFilterRequestRedirect,
-					RequestRedirect: &gatewayv1beta1.HTTPRequestRedirectFilter{
-						Hostname:   (*gatewayv1beta1.PreciseHostname)(lo.ToPtr("example.org")),
+					Type: gatewayapi.HTTPRouteFilterRequestRedirect,
+					RequestRedirect: &gatewayapi.HTTPRequestRedirectFilter{
+						Hostname:   (*gatewayapi.PreciseHostname)(lo.ToPtr("example.org")),
 						StatusCode: lo.ToPtr(302),
 					},
 				},
@@ -104,17 +105,17 @@ func TestGeneratePluginsFromHTTPRouteFilters(t *testing.T) {
 		},
 		{
 			name: "response header modifier",
-			filters: []gatewayv1beta1.HTTPRouteFilter{
+			filters: []gatewayapi.HTTPRouteFilter{
 				{
-					Type: gatewayv1beta1.HTTPRouteFilterResponseHeaderModifier,
-					ResponseHeaderModifier: &gatewayv1beta1.HTTPHeaderFilter{
-						Set: []gatewayv1beta1.HTTPHeader{
+					Type: gatewayapi.HTTPRouteFilterResponseHeaderModifier,
+					ResponseHeaderModifier: &gatewayapi.HTTPHeaderFilter{
+						Set: []gatewayapi.HTTPHeader{
 							{
 								Name:  "header-to-set",
 								Value: "bar",
 							},
 						},
-						Add: []gatewayv1beta1.HTTPHeader{
+						Add: []gatewayapi.HTTPHeader{
 							{
 								Name:  "header-to-add",
 								Value: "foo",

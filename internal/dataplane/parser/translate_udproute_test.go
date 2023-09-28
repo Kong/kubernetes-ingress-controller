@@ -18,6 +18,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/parser/translators"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util/builder"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/util/gatewayapi"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/versions"
 )
 
@@ -26,21 +27,21 @@ var udpRouteTypeMeta = metav1.TypeMeta{Kind: "UDPRoute", APIVersion: gatewayv1al
 func TestIngressRulesFromUDPRoutes(t *testing.T) {
 	testCases := []struct {
 		name                 string
-		udpRoutes            []*gatewayv1alpha2.UDPRoute
+		udpRoutes            []*gatewayapi.UDPRoute
 		expectedKongServices []kongstate.Service
 		expectedKongRoutes   map[string][]kongstate.Route
 		expectedFailures     []failures.ResourceFailure
 	}{
 		{
 			name: "single UDPRoute with single rule",
-			udpRoutes: []*gatewayv1alpha2.UDPRoute{
+			udpRoutes: []*gatewayapi.UDPRoute{
 				{
 					TypeMeta:   udpRouteTypeMeta,
 					ObjectMeta: metav1.ObjectMeta{Name: "single-rule", Namespace: "default"},
-					Spec: gatewayv1alpha2.UDPRouteSpec{
-						Rules: []gatewayv1alpha2.UDPRouteRule{
+					Spec: gatewayapi.UDPRouteSpec{
+						Rules: []gatewayapi.UDPRouteRule{
 							{
-								BackendRefs: []gatewayv1alpha2.BackendRef{
+								BackendRefs: []gatewayapi.BackendRef{
 									builder.NewBackendRef("service1").WithPort(80).Build(),
 								},
 							},
@@ -78,19 +79,19 @@ func TestIngressRulesFromUDPRoutes(t *testing.T) {
 		},
 		{
 			name: "single UDPRoute with multiple rules",
-			udpRoutes: []*gatewayv1alpha2.UDPRoute{
+			udpRoutes: []*gatewayapi.UDPRoute{
 				{
 					TypeMeta:   udpRouteTypeMeta,
 					ObjectMeta: metav1.ObjectMeta{Name: "multiple-rules", Namespace: "default"},
-					Spec: gatewayv1alpha2.UDPRouteSpec{
-						Rules: []gatewayv1alpha2.UDPRouteRule{
+					Spec: gatewayapi.UDPRouteSpec{
+						Rules: []gatewayapi.UDPRouteRule{
 							{
-								BackendRefs: []gatewayv1alpha2.BackendRef{
+								BackendRefs: []gatewayapi.BackendRef{
 									builder.NewBackendRef("service1").WithPort(80).Build(),
 								},
 							},
 							{
-								BackendRefs: []gatewayv1alpha2.BackendRef{
+								BackendRefs: []gatewayapi.BackendRef{
 									builder.NewBackendRef("service2").WithPort(81).Build(),
 								},
 							},
@@ -152,14 +153,14 @@ func TestIngressRulesFromUDPRoutes(t *testing.T) {
 		},
 		{
 			name: "single UDPRoute with single rule and multiple backendRefs",
-			udpRoutes: []*gatewayv1alpha2.UDPRoute{
+			udpRoutes: []*gatewayapi.UDPRoute{
 				{
 					TypeMeta:   udpRouteTypeMeta,
 					ObjectMeta: metav1.ObjectMeta{Name: "multiple-backends", Namespace: "default"},
-					Spec: gatewayv1alpha2.UDPRouteSpec{
-						Rules: []gatewayv1alpha2.UDPRouteRule{
+					Spec: gatewayapi.UDPRouteSpec{
+						Rules: []gatewayapi.UDPRouteRule{
 							{
-								BackendRefs: []gatewayv1alpha2.BackendRef{
+								BackendRefs: []gatewayapi.BackendRef{
 									builder.NewBackendRef("service1").WithPort(80).Build(),
 									builder.NewBackendRef("service1").WithPort(81).Build(),
 								},
@@ -203,14 +204,14 @@ func TestIngressRulesFromUDPRoutes(t *testing.T) {
 		},
 		{
 			name: "multiple udproutes with translation errors",
-			udpRoutes: []*gatewayv1alpha2.UDPRoute{
+			udpRoutes: []*gatewayapi.UDPRoute{
 				{
 					TypeMeta:   udpRouteTypeMeta,
 					ObjectMeta: metav1.ObjectMeta{Name: "single-rule", Namespace: "default"},
-					Spec: gatewayv1alpha2.UDPRouteSpec{
-						Rules: []gatewayv1alpha2.UDPRouteRule{
+					Spec: gatewayapi.UDPRouteSpec{
+						Rules: []gatewayapi.UDPRouteRule{
 							{
-								BackendRefs: []gatewayv1alpha2.BackendRef{
+								BackendRefs: []gatewayapi.BackendRef{
 									builder.NewBackendRef("service1").WithPort(80).Build(),
 								},
 							},
@@ -220,10 +221,10 @@ func TestIngressRulesFromUDPRoutes(t *testing.T) {
 				{
 					TypeMeta:   udpRouteTypeMeta,
 					ObjectMeta: metav1.ObjectMeta{Name: "single-rule-2", Namespace: "default"},
-					Spec: gatewayv1alpha2.UDPRouteSpec{
-						Rules: []gatewayv1alpha2.UDPRouteRule{
+					Spec: gatewayapi.UDPRouteSpec{
+						Rules: []gatewayapi.UDPRouteRule{
 							{
-								BackendRefs: []gatewayv1alpha2.BackendRef{
+								BackendRefs: []gatewayapi.BackendRef{
 									builder.NewBackendRef("service2").WithPort(8080).Build(),
 								},
 							},
@@ -233,7 +234,7 @@ func TestIngressRulesFromUDPRoutes(t *testing.T) {
 				{
 					TypeMeta:   udpRouteTypeMeta,
 					ObjectMeta: metav1.ObjectMeta{Name: "no-rule", Namespace: "default"},
-					Spec:       gatewayv1alpha2.UDPRouteSpec{},
+					Spec:       gatewayapi.UDPRouteSpec{},
 				},
 			},
 			expectedKongServices: []kongstate.Service{
@@ -289,7 +290,7 @@ func TestIngressRulesFromUDPRoutes(t *testing.T) {
 			expectedFailures: []failures.ResourceFailure{
 				newResourceFailure(
 					t, translators.ErrRouteValidationNoRules.Error(),
-					&gatewayv1alpha2.UDPRoute{
+					&gatewayapi.UDPRoute{
 						TypeMeta:   udpRouteTypeMeta,
 						ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "no-rule"},
 					},
@@ -354,7 +355,7 @@ func TestIngressRulesFromUDPRoutes(t *testing.T) {
 func TestIngressRulesFromUDPRoutesUsingExpressionRoutes(t *testing.T) {
 	testCases := []struct {
 		name                 string
-		udpRoutes            []*gatewayv1alpha2.UDPRoute
+		udpRoutes            []*gatewayapi.UDPRoute
 		kongVersion          semver.Version
 		expectedKongServices []kongstate.Service
 		expectedKongRoutes   map[string][]kongstate.Route
@@ -362,14 +363,14 @@ func TestIngressRulesFromUDPRoutesUsingExpressionRoutes(t *testing.T) {
 	}{
 		{
 			name: "single UDPRoute with single rule",
-			udpRoutes: []*gatewayv1alpha2.UDPRoute{
+			udpRoutes: []*gatewayapi.UDPRoute{
 				{
 					TypeMeta:   udpRouteTypeMeta,
 					ObjectMeta: metav1.ObjectMeta{Name: "single-rule", Namespace: "default"},
-					Spec: gatewayv1alpha2.UDPRouteSpec{
-						Rules: []gatewayv1alpha2.UDPRouteRule{
+					Spec: gatewayapi.UDPRouteSpec{
+						Rules: []gatewayapi.UDPRouteRule{
 							{
-								BackendRefs: []gatewayv1alpha2.BackendRef{
+								BackendRefs: []gatewayapi.BackendRef{
 									builder.NewBackendRef("service1").WithPort(80).Build(),
 								},
 							},
@@ -406,19 +407,19 @@ func TestIngressRulesFromUDPRoutesUsingExpressionRoutes(t *testing.T) {
 		},
 		{
 			name: "single UDPRoute with multiple rules",
-			udpRoutes: []*gatewayv1alpha2.UDPRoute{
+			udpRoutes: []*gatewayapi.UDPRoute{
 				{
 					TypeMeta:   udpRouteTypeMeta,
 					ObjectMeta: metav1.ObjectMeta{Name: "multiple-rules", Namespace: "default"},
-					Spec: gatewayv1alpha2.UDPRouteSpec{
-						Rules: []gatewayv1alpha2.UDPRouteRule{
+					Spec: gatewayapi.UDPRouteSpec{
+						Rules: []gatewayapi.UDPRouteRule{
 							{
-								BackendRefs: []gatewayv1alpha2.BackendRef{
+								BackendRefs: []gatewayapi.BackendRef{
 									builder.NewBackendRef("service1").WithPort(80).Build(),
 								},
 							},
 							{
-								BackendRefs: []gatewayv1alpha2.BackendRef{
+								BackendRefs: []gatewayapi.BackendRef{
 									builder.NewBackendRef("service2").WithPort(81).Build(),
 								},
 							},
@@ -476,14 +477,14 @@ func TestIngressRulesFromUDPRoutesUsingExpressionRoutes(t *testing.T) {
 		},
 		{
 			name: "single UDPRoute with single rule and multiple backendRefs",
-			udpRoutes: []*gatewayv1alpha2.UDPRoute{
+			udpRoutes: []*gatewayapi.UDPRoute{
 				{
 					TypeMeta:   udpRouteTypeMeta,
 					ObjectMeta: metav1.ObjectMeta{Name: "multiple-backends", Namespace: "default"},
-					Spec: gatewayv1alpha2.UDPRouteSpec{
-						Rules: []gatewayv1alpha2.UDPRouteRule{
+					Spec: gatewayapi.UDPRouteSpec{
+						Rules: []gatewayapi.UDPRouteRule{
 							{
-								BackendRefs: []gatewayv1alpha2.BackendRef{
+								BackendRefs: []gatewayapi.BackendRef{
 									builder.NewBackendRef("service1").WithPort(80).Build(),
 									builder.NewBackendRef("service1").WithPort(81).Build(),
 								},
@@ -525,14 +526,14 @@ func TestIngressRulesFromUDPRoutesUsingExpressionRoutes(t *testing.T) {
 		},
 		{
 			name: "multiple udproutes with translation errors",
-			udpRoutes: []*gatewayv1alpha2.UDPRoute{
+			udpRoutes: []*gatewayapi.UDPRoute{
 				{
 					TypeMeta:   udpRouteTypeMeta,
 					ObjectMeta: metav1.ObjectMeta{Name: "single-rule", Namespace: "default"},
-					Spec: gatewayv1alpha2.UDPRouteSpec{
-						Rules: []gatewayv1alpha2.UDPRouteRule{
+					Spec: gatewayapi.UDPRouteSpec{
+						Rules: []gatewayapi.UDPRouteRule{
 							{
-								BackendRefs: []gatewayv1alpha2.BackendRef{
+								BackendRefs: []gatewayapi.BackendRef{
 									builder.NewBackendRef("service1").WithPort(80).Build(),
 								},
 							},
@@ -542,10 +543,10 @@ func TestIngressRulesFromUDPRoutesUsingExpressionRoutes(t *testing.T) {
 				{
 					TypeMeta:   udpRouteTypeMeta,
 					ObjectMeta: metav1.ObjectMeta{Name: "single-rule-2", Namespace: "default"},
-					Spec: gatewayv1alpha2.UDPRouteSpec{
-						Rules: []gatewayv1alpha2.UDPRouteRule{
+					Spec: gatewayapi.UDPRouteSpec{
+						Rules: []gatewayapi.UDPRouteRule{
 							{
-								BackendRefs: []gatewayv1alpha2.BackendRef{
+								BackendRefs: []gatewayapi.BackendRef{
 									builder.NewBackendRef("service2").WithPort(8080).Build(),
 								},
 							},
@@ -555,7 +556,7 @@ func TestIngressRulesFromUDPRoutesUsingExpressionRoutes(t *testing.T) {
 				{
 					TypeMeta:   udpRouteTypeMeta,
 					ObjectMeta: metav1.ObjectMeta{Name: "no-rule", Namespace: "default"},
-					Spec:       gatewayv1alpha2.UDPRouteSpec{},
+					Spec:       gatewayapi.UDPRouteSpec{},
 				},
 			},
 			kongVersion: versions.ExpressionRouterL4Cutoff,
@@ -608,7 +609,7 @@ func TestIngressRulesFromUDPRoutesUsingExpressionRoutes(t *testing.T) {
 			expectedFailures: []failures.ResourceFailure{
 				newResourceFailure(
 					t, translators.ErrRouteValidationNoRules.Error(),
-					&gatewayv1alpha2.UDPRoute{
+					&gatewayapi.UDPRoute{
 						TypeMeta:   udpRouteTypeMeta,
 						ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "no-rule"},
 					},
@@ -617,14 +618,14 @@ func TestIngressRulesFromUDPRoutesUsingExpressionRoutes(t *testing.T) {
 		},
 		{
 			name: "versions less than 3.4 could not translate to expression routes",
-			udpRoutes: []*gatewayv1alpha2.UDPRoute{
+			udpRoutes: []*gatewayapi.UDPRoute{
 				{
 					TypeMeta:   udpRouteTypeMeta,
 					ObjectMeta: metav1.ObjectMeta{Name: "single-rule", Namespace: "default"},
-					Spec: gatewayv1alpha2.UDPRouteSpec{
-						Rules: []gatewayv1alpha2.UDPRouteRule{
+					Spec: gatewayapi.UDPRouteSpec{
+						Rules: []gatewayapi.UDPRouteRule{
 							{
-								BackendRefs: []gatewayv1alpha2.BackendRef{
+								BackendRefs: []gatewayapi.BackendRef{
 									builder.NewBackendRef("service1").WithPort(80).Build(),
 								},
 							},
@@ -637,7 +638,7 @@ func TestIngressRulesFromUDPRoutesUsingExpressionRoutes(t *testing.T) {
 				newResourceFailure(
 					t, fmt.Sprintf("resource kind %s.%s not supported when expression routes enabled",
 						udpRouteTypeMeta.APIVersion, udpRouteTypeMeta.Kind),
-					&gatewayv1alpha2.UDPRoute{
+					&gatewayapi.UDPRoute{
 						TypeMeta:   udpRouteTypeMeta,
 						ObjectMeta: metav1.ObjectMeta{Name: "single-rule", Namespace: "default"},
 					},

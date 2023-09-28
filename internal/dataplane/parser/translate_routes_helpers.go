@@ -6,10 +6,10 @@ import (
 
 	"github.com/kong/go-kong/kong"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/util/gatewayapi"
 )
 
 // -----------------------------------------------------------------------------
@@ -18,7 +18,7 @@ import (
 
 type tTCPorUDPorTLSRoute interface {
 	// Only accept TCP, UDP and TLS routes
-	*gatewayv1alpha2.UDPRoute | *gatewayv1alpha2.TCPRoute | *gatewayv1alpha2.TLSRoute
+	*gatewayapi.UDPRoute | *gatewayapi.TCPRoute | *gatewayapi.TLSRoute
 }
 
 type tRoute interface {
@@ -28,27 +28,27 @@ type tRoute interface {
 }
 
 type tRouteRule interface {
-	gatewayv1alpha2.UDPRouteRule | gatewayv1alpha2.TCPRouteRule | gatewayv1alpha2.TLSRouteRule
+	gatewayapi.UDPRouteRule | gatewayapi.TCPRouteRule | gatewayapi.TLSRouteRule
 }
 
 // getBackendRefs returns BackendRefs from TCPRouteRule, UDPRouteRule or TLSRouteRule.
-func getBackendRefs[TRouteRule tRouteRule](t TRouteRule) ([]gatewayv1alpha2.BackendRef, error) {
+func getBackendRefs[TRouteRule tRouteRule](t TRouteRule) ([]gatewayapi.BackendRef, error) {
 	// This is necessary because as of go1.18 (and go1.19) one cannot use common
 	// struct fields in generic code.
 	//
 	// Related golang issue: https://github.com/golang/go/issues/48522
 	switch tt := any(t).(type) {
-	case gatewayv1alpha2.UDPRouteRule:
+	case gatewayapi.UDPRouteRule:
 		if len(tt.BackendRefs) == 0 {
 			return nil, errors.New("UDPRoute rules must include at least one backendRef")
 		}
 		return tt.BackendRefs, nil
-	case gatewayv1alpha2.TCPRouteRule:
+	case gatewayapi.TCPRouteRule:
 		if len(tt.BackendRefs) == 0 {
 			return nil, errors.New("TCPRoute rules must include at least one backendRef")
 		}
 		return tt.BackendRefs, nil
-	case gatewayv1alpha2.TLSRouteRule:
+	case gatewayapi.TLSRouteRule:
 		// TLSRoutes don't require BackendRefs.
 		return tt.BackendRefs, nil
 	}
@@ -82,17 +82,17 @@ func generateKongRoutesFromRouteRule[T tRoute, TRule tRouteRule](
 // routeToKongRoute converts Gateway Route to kong.Route.
 func routeToKongRoute[TRoute tTCPorUDPorTLSRoute](
 	r TRoute,
-	backendRefs []gatewayv1alpha2.BackendRef,
+	backendRefs []gatewayapi.BackendRef,
 	ruleNumber int,
 	tags []*string,
 ) kong.Route {
 	var kr kong.Route
 	switch rr := any(r).(type) {
-	case *gatewayv1alpha2.UDPRoute:
+	case *gatewayapi.UDPRoute:
 		kr = udpRouteToKongRoute(rr, backendRefs, ruleNumber)
-	case *gatewayv1alpha2.TCPRoute:
+	case *gatewayapi.TCPRoute:
 		kr = tcpRouteToKongRoute(rr, backendRefs, ruleNumber)
-	case *gatewayv1alpha2.TLSRoute:
+	case *gatewayapi.TLSRoute:
 		kr = tlsRouteToKongRoute(rr, ruleNumber)
 	default:
 		kr = kong.Route{}
@@ -103,8 +103,8 @@ func routeToKongRoute[TRoute tTCPorUDPorTLSRoute](
 }
 
 func udpRouteToKongRoute(
-	r *gatewayv1alpha2.UDPRoute,
-	backendRefs []gatewayv1alpha2.BackendRef,
+	r *gatewayapi.UDPRoute,
+	backendRefs []gatewayapi.BackendRef,
 	ruleNumber int,
 ) kong.Route {
 	return kong.Route{
@@ -116,8 +116,8 @@ func udpRouteToKongRoute(
 }
 
 func tcpRouteToKongRoute(
-	r *gatewayv1alpha2.TCPRoute,
-	backendRefs []gatewayv1alpha2.BackendRef,
+	r *gatewayapi.TCPRoute,
+	backendRefs []gatewayapi.BackendRef,
 	ruleNumber int,
 ) kong.Route {
 	return kong.Route{
@@ -128,7 +128,7 @@ func tcpRouteToKongRoute(
 	}
 }
 
-func backendRefsToKongCIDRPorts(backendRefs []gatewayv1alpha2.BackendRef) []*kong.CIDRPort {
+func backendRefsToKongCIDRPorts(backendRefs []gatewayapi.BackendRef) []*kong.CIDRPort {
 	destinations := make([]*kong.CIDRPort, 0, len(backendRefs))
 	for _, backendRef := range backendRefs {
 		if backendRef.Port == nil {
@@ -144,7 +144,7 @@ func backendRefsToKongCIDRPorts(backendRefs []gatewayv1alpha2.BackendRef) []*kon
 	return destinations
 }
 
-func tlsRouteToKongRoute(r *gatewayv1alpha2.TLSRoute, ruleNumber int) kong.Route {
+func tlsRouteToKongRoute(r *gatewayapi.TLSRoute, ruleNumber int) kong.Route {
 	hostnames := make([]*string, 0, len(r.Spec.Hostnames))
 	for _, hostname := range r.Spec.Hostnames {
 		hostnames = append(hostnames, kong.String(string(hostname)))

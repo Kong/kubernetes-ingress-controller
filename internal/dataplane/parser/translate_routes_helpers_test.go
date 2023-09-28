@@ -8,32 +8,32 @@ import (
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/util/gatewayapi"
 )
 
 func TestGenerateKongRoutesFromRouteRule_TCP(t *testing.T) {
 	testcases := []struct {
 		name      string
-		route     *gatewayv1alpha2.TCPRoute
-		routeRule gatewayv1alpha2.TCPRouteRule
+		route     *gatewayapi.TCPRoute
+		routeRule gatewayapi.TCPRouteRule
 		expected  []kongstate.Route
 	}{
 		{
 			name: "TCPRoute gets translated correctly to kong.Route",
-			route: &gatewayv1alpha2.TCPRoute{
+			route: &gatewayapi.TCPRoute{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "mytcproute-name",
 					Namespace: "mynamespace",
 				},
 			},
-			routeRule: gatewayv1alpha2.TCPRouteRule{
-				BackendRefs: []gatewayv1alpha2.BackendRef{
+			routeRule: gatewayapi.TCPRouteRule{
+				BackendRefs: []gatewayapi.BackendRef{
 					{
-						BackendObjectReference: gatewayv1alpha2.BackendObjectReference{
-							Port: lo.ToPtr(gatewayv1alpha2.PortNumber(1234)),
+						BackendObjectReference: gatewayapi.BackendObjectReference{
+							Port: lo.ToPtr(gatewayapi.PortNumber(1234)),
 						},
 					},
 				},
@@ -81,23 +81,23 @@ func TestGenerateKongRoutesFromRouteRule_TCP(t *testing.T) {
 func TestGenerateKongRoutesFromRouteRule_UDP(t *testing.T) {
 	testcases := []struct {
 		name      string
-		route     *gatewayv1alpha2.UDPRoute
-		routeRule gatewayv1alpha2.UDPRouteRule
+		route     *gatewayapi.UDPRoute
+		routeRule gatewayapi.UDPRouteRule
 		expected  []kongstate.Route
 	}{
 		{
 			name: "UDPRoute gets translated correctly to kong.Route",
-			route: &gatewayv1alpha2.UDPRoute{
+			route: &gatewayapi.UDPRoute{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "myudproute-name",
 					Namespace: "mynamespace",
 				},
 			},
-			routeRule: gatewayv1alpha2.UDPRouteRule{
-				BackendRefs: []gatewayv1alpha2.BackendRef{
+			routeRule: gatewayapi.UDPRouteRule{
+				BackendRefs: []gatewayapi.BackendRef{
 					{
-						BackendObjectReference: gatewayv1alpha2.BackendObjectReference{
-							Port: lo.ToPtr(gatewayv1alpha2.PortNumber(1234)),
+						BackendObjectReference: gatewayapi.BackendObjectReference{
+							Port: lo.ToPtr(gatewayapi.PortNumber(1234)),
 						},
 					},
 				},
@@ -145,25 +145,25 @@ func TestGenerateKongRoutesFromRouteRule_UDP(t *testing.T) {
 func TestGenerateKongRoutesFromRouteRule_TLS(t *testing.T) {
 	testcases := []struct {
 		name      string
-		route     *gatewayv1alpha2.TLSRoute
-		routeRule gatewayv1alpha2.TLSRouteRule
+		route     *gatewayapi.TLSRoute
+		routeRule gatewayapi.TLSRouteRule
 		expected  []kongstate.Route
 	}{
 		{
 			name: "TLSRoute gets translated correctly to kong.Route",
-			route: &gatewayv1alpha2.TLSRoute{
+			route: &gatewayapi.TLSRoute{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "mytlsroute-name",
 					Namespace: "mynamespace",
 				},
-				Spec: gatewayv1alpha2.TLSRouteSpec{
-					Hostnames: []gatewayv1alpha2.Hostname{
+				Spec: gatewayapi.TLSRouteSpec{
+					Hostnames: []gatewayapi.Hostname{
 						"hostname.com",
 						"hostname2.com",
 					},
 				},
 			},
-			routeRule: gatewayv1alpha2.TLSRouteRule{},
+			routeRule: gatewayapi.TLSRouteRule{},
 			expected: []kongstate.Route{
 				{
 					Ingress: util.K8sObjectInfo{
@@ -189,14 +189,14 @@ func TestGenerateKongRoutesFromRouteRule_TLS(t *testing.T) {
 		},
 		{
 			name: "TLSRoute without hostnames gets translated correctly to kong.Route without SNIs",
-			route: &gatewayv1alpha2.TLSRoute{
+			route: &gatewayapi.TLSRoute{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "mytlsroute-name",
 					Namespace: "mynamespace",
 				},
-				Spec: gatewayv1alpha2.TLSRouteSpec{},
+				Spec: gatewayapi.TLSRouteSpec{},
 			},
-			routeRule: gatewayv1alpha2.TLSRouteRule{},
+			routeRule: gatewayapi.TLSRouteRule{},
 			expected: []kongstate.Route{
 				{
 					Ingress: util.K8sObjectInfo{

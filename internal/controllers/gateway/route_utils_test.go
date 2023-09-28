@@ -21,6 +21,7 @@ import (
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util/builder"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/util/gatewayapi"
 	"github.com/kong/kubernetes-ingress-controller/v2/pkg/clientset/scheme"
 )
 
@@ -36,9 +37,9 @@ func init() {
 }
 
 func TestFilterHostnames(t *testing.T) {
-	commonGateway := &gatewayv1beta1.Gateway{
-		Spec: gatewayv1beta1.GatewaySpec{
-			Listeners: []Listener{
+	commonGateway := &gatewayapi.Gateway{
+		Spec: gatewayapi.GatewaySpec{
+			Listeners: []gatewayapi.Listener{
 				{
 					Name:     "listener-1",
 					Hostname: util.StringToGatewayAPIHostnamePtr("very.specific.com"),
@@ -61,8 +62,8 @@ func TestFilterHostnames(t *testing.T) {
 	testCases := []struct {
 		name              string
 		gateways          []supportedGatewayWithCondition
-		httpRoute         *gatewayv1beta1.HTTPRoute
-		expectedHTTPRoute *gatewayv1beta1.HTTPRoute
+		httpRoute         *gatewayapi.HTTPRoute
+		expectedHTTPRoute *gatewayapi.HTTPRoute
 		hasError          bool
 		errString         string
 	}{
@@ -74,19 +75,19 @@ func TestFilterHostnames(t *testing.T) {
 					listenerName: "listener-1",
 				},
 			},
-			httpRoute: &gatewayv1beta1.HTTPRoute{
-				Spec: gatewayv1beta1.HTTPRouteSpec{
-					Hostnames: []gatewayv1beta1.Hostname{
-						util.StringToGatewayAPIHostnameV1Beta1("*.anotherwildcard.io"),
-						util.StringToGatewayAPIHostnameV1Beta1("*.nonmatchingwildcard.io"),
-						util.StringToGatewayAPIHostnameV1Beta1("very.specific.com"),
+			httpRoute: &gatewayapi.HTTPRoute{
+				Spec: gatewayapi.HTTPRouteSpec{
+					Hostnames: []gatewayapi.Hostname{
+						util.StringToGatewayAPIHostname("*.anotherwildcard.io"),
+						util.StringToGatewayAPIHostname("*.nonmatchingwildcard.io"),
+						util.StringToGatewayAPIHostname("very.specific.com"),
 					},
 				},
 			},
-			expectedHTTPRoute: &gatewayv1beta1.HTTPRoute{
-				Spec: gatewayv1beta1.HTTPRouteSpec{
-					Hostnames: []gatewayv1beta1.Hostname{
-						util.StringToGatewayAPIHostnameV1Beta1("very.specific.com"),
+			expectedHTTPRoute: &gatewayapi.HTTPRoute{
+				Spec: gatewayapi.HTTPRouteSpec{
+					Hostnames: []gatewayapi.Hostname{
+						util.StringToGatewayAPIHostname("very.specific.com"),
 					},
 				},
 			},
@@ -99,18 +100,18 @@ func TestFilterHostnames(t *testing.T) {
 					listenerName: "listener-1",
 				},
 			},
-			httpRoute: &gatewayv1beta1.HTTPRoute{
-				Spec: gatewayv1beta1.HTTPRouteSpec{
-					Hostnames: []gatewayv1beta1.Hostname{
-						util.StringToGatewayAPIHostnameV1Beta1("non.matching.com"),
-						util.StringToGatewayAPIHostnameV1Beta1("*.specific.com"),
+			httpRoute: &gatewayapi.HTTPRoute{
+				Spec: gatewayapi.HTTPRouteSpec{
+					Hostnames: []gatewayapi.Hostname{
+						util.StringToGatewayAPIHostname("non.matching.com"),
+						util.StringToGatewayAPIHostname("*.specific.com"),
 					},
 				},
 			},
-			expectedHTTPRoute: &gatewayv1beta1.HTTPRoute{
-				Spec: gatewayv1beta1.HTTPRouteSpec{
-					Hostnames: []gatewayv1beta1.Hostname{
-						util.StringToGatewayAPIHostnameV1Beta1("very.specific.com"),
+			expectedHTTPRoute: &gatewayapi.HTTPRoute{
+				Spec: gatewayapi.HTTPRouteSpec{
+					Hostnames: []gatewayapi.Hostname{
+						util.StringToGatewayAPIHostname("very.specific.com"),
 					},
 				},
 			},
@@ -123,23 +124,23 @@ func TestFilterHostnames(t *testing.T) {
 					listenerName: "listener-2",
 				},
 			},
-			httpRoute: &gatewayv1beta1.HTTPRoute{
-				Spec: gatewayv1beta1.HTTPRouteSpec{
-					Hostnames: []gatewayv1beta1.Hostname{
-						util.StringToGatewayAPIHostnameV1Beta1("non.matching.com"),
-						util.StringToGatewayAPIHostnameV1Beta1("wildcard.io"),
-						util.StringToGatewayAPIHostnameV1Beta1("foo.wildcard.io"),
-						util.StringToGatewayAPIHostnameV1Beta1("bar.wildcard.io"),
-						util.StringToGatewayAPIHostnameV1Beta1("foo.bar.wildcard.io"),
+			httpRoute: &gatewayapi.HTTPRoute{
+				Spec: gatewayapi.HTTPRouteSpec{
+					Hostnames: []gatewayapi.Hostname{
+						util.StringToGatewayAPIHostname("non.matching.com"),
+						util.StringToGatewayAPIHostname("wildcard.io"),
+						util.StringToGatewayAPIHostname("foo.wildcard.io"),
+						util.StringToGatewayAPIHostname("bar.wildcard.io"),
+						util.StringToGatewayAPIHostname("foo.bar.wildcard.io"),
 					},
 				},
 			},
-			expectedHTTPRoute: &gatewayv1beta1.HTTPRoute{
-				Spec: gatewayv1beta1.HTTPRouteSpec{
-					Hostnames: []gatewayv1beta1.Hostname{
-						util.StringToGatewayAPIHostnameV1Beta1("foo.wildcard.io"),
-						util.StringToGatewayAPIHostnameV1Beta1("bar.wildcard.io"),
-						util.StringToGatewayAPIHostnameV1Beta1("foo.bar.wildcard.io"),
+			expectedHTTPRoute: &gatewayapi.HTTPRoute{
+				Spec: gatewayapi.HTTPRouteSpec{
+					Hostnames: []gatewayapi.Hostname{
+						util.StringToGatewayAPIHostname("foo.wildcard.io"),
+						util.StringToGatewayAPIHostname("bar.wildcard.io"),
+						util.StringToGatewayAPIHostname("foo.bar.wildcard.io"),
 					},
 				},
 			},
@@ -152,17 +153,17 @@ func TestFilterHostnames(t *testing.T) {
 					listenerName: "listener-3",
 				},
 			},
-			httpRoute: &gatewayv1beta1.HTTPRoute{
-				Spec: gatewayv1beta1.HTTPRouteSpec{
-					Hostnames: []gatewayv1beta1.Hostname{
-						util.StringToGatewayAPIHostnameV1Beta1("*.anotherwildcard.io"),
+			httpRoute: &gatewayapi.HTTPRoute{
+				Spec: gatewayapi.HTTPRouteSpec{
+					Hostnames: []gatewayapi.Hostname{
+						util.StringToGatewayAPIHostname("*.anotherwildcard.io"),
 					},
 				},
 			},
-			expectedHTTPRoute: &gatewayv1beta1.HTTPRoute{
-				Spec: gatewayv1beta1.HTTPRouteSpec{
-					Hostnames: []gatewayv1beta1.Hostname{
-						util.StringToGatewayAPIHostnameV1Beta1("*.anotherwildcard.io"),
+			expectedHTTPRoute: &gatewayapi.HTTPRoute{
+				Spec: gatewayapi.HTTPRouteSpec{
+					Hostnames: []gatewayapi.Hostname{
+						util.StringToGatewayAPIHostname("*.anotherwildcard.io"),
 					},
 				},
 			},
@@ -174,14 +175,14 @@ func TestFilterHostnames(t *testing.T) {
 					gateway: commonGateway,
 				},
 			},
-			httpRoute: &gatewayv1beta1.HTTPRoute{
-				Spec: gatewayv1beta1.HTTPRouteSpec{
-					Hostnames: []gatewayv1beta1.Hostname{},
+			httpRoute: &gatewayapi.HTTPRoute{
+				Spec: gatewayapi.HTTPRouteSpec{
+					Hostnames: []gatewayapi.Hostname{},
 				},
 			},
-			expectedHTTPRoute: &gatewayv1beta1.HTTPRoute{
-				Spec: gatewayv1beta1.HTTPRouteSpec{
-					Hostnames: []gatewayv1beta1.Hostname{},
+			expectedHTTPRoute: &gatewayapi.HTTPRoute{
+				Spec: gatewayapi.HTTPRouteSpec{
+					Hostnames: []gatewayapi.Hostname{},
 				},
 			},
 		},
@@ -193,17 +194,17 @@ func TestFilterHostnames(t *testing.T) {
 					listenerName: "listner-1",
 				},
 			},
-			httpRoute: &gatewayv1beta1.HTTPRoute{
-				Spec: gatewayv1beta1.HTTPRouteSpec{
-					Hostnames: []gatewayv1beta1.Hostname{
-						util.StringToGatewayAPIHostnameV1Beta1("specific.but.wrong.com"),
-						util.StringToGatewayAPIHostnameV1Beta1("wildcard.io"),
+			httpRoute: &gatewayapi.HTTPRoute{
+				Spec: gatewayapi.HTTPRouteSpec{
+					Hostnames: []gatewayapi.Hostname{
+						util.StringToGatewayAPIHostname("specific.but.wrong.com"),
+						util.StringToGatewayAPIHostname("wildcard.io"),
 					},
 				},
 			},
-			expectedHTTPRoute: &gatewayv1beta1.HTTPRoute{
-				Spec: gatewayv1beta1.HTTPRouteSpec{
-					Hostnames: []gatewayv1beta1.Hostname{},
+			expectedHTTPRoute: &gatewayapi.HTTPRoute{
+				Spec: gatewayapi.HTTPRouteSpec{
+					Hostnames: []gatewayapi.Hostname{},
 				},
 			},
 			hasError:  true,
@@ -224,12 +225,12 @@ func TestFilterHostnames(t *testing.T) {
 }
 
 func TestGetSupportedGatewayForRoute(t *testing.T) {
-	gatewayClass := &GatewayClass{
+	gatewayClass := &gatewayapi.GatewayClass{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "test-gatewayclass",
 		},
-		Spec: gatewayv1beta1.GatewayClassSpec{
-			ControllerName: gatewayv1beta1.GatewayController("konghq.com/kic-gateway-controller"),
+		Spec: gatewayapi.GatewayClassSpec{
+			ControllerName: gatewayapi.GatewayController("konghq.com/kic-gateway-controller"),
 		},
 	}
 
@@ -239,9 +240,9 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 		},
 	}
 
-	routeConditionAccepted := func(status metav1.ConditionStatus, reason gatewayv1beta1.RouteConditionReason) metav1.Condition {
+	routeConditionAccepted := func(status metav1.ConditionStatus, reason gatewayapi.RouteConditionReason) metav1.Condition {
 		return metav1.Condition{
-			Type:   string(gatewayv1beta1.RouteConditionAccepted),
+			Type:   string(gatewayapi.RouteConditionAccepted),
 			Status: status,
 			Reason: string(reason),
 		}
@@ -252,10 +253,10 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 		listenerName string
 	}
 
-	goodGroup := gatewayv1beta1.Group(gatewayv1alpha2.GroupName)
-	goodKind := gatewayv1beta1.Kind("Gateway")
-	basicHTTPRoute := func() *HTTPRoute {
-		return &HTTPRoute{
+	goodGroup := gatewayapi.Group(gatewayv1alpha2.GroupName)
+	goodKind := gatewayapi.Kind("Gateway")
+	basicHTTPRoute := func() *gatewayapi.HTTPRoute {
+		return &gatewayapi.HTTPRoute{
 			TypeMeta: metav1.TypeMeta{
 				Kind:       "HTTPRoute",
 				APIVersion: gatewayv1beta1.GroupVersion.Group + "/" + gatewayv1beta1.GroupVersion.Version,
@@ -264,9 +265,9 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 				Name:      "basic-httproute",
 				Namespace: "test-namespace",
 			},
-			Spec: gatewayv1beta1.HTTPRouteSpec{
-				CommonRouteSpec: gatewayv1beta1.CommonRouteSpec{
-					ParentRefs: []gatewayv1beta1.ParentReference{
+			Spec: gatewayapi.HTTPRouteSpec{
+				CommonRouteSpec: gatewayapi.CommonRouteSpec{
+					ParentRefs: []gatewayapi.ParentReference{
 						{
 							Group: &goodGroup,
 							Kind:  &goodKind,
@@ -274,9 +275,9 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 						},
 					},
 				},
-				Rules: []gatewayv1beta1.HTTPRouteRule{
+				Rules: []gatewayapi.HTTPRouteRule{
 					{
-						BackendRefs: []gatewayv1beta1.HTTPBackendRef{
+						BackendRefs: []gatewayapi.HTTPBackendRef{
 							builder.NewHTTPBackendRef("fake-service").WithPort(80).Build(),
 						},
 					},
@@ -285,8 +286,8 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 		}
 	}
 	t.Run("HTTPRoute", func(t *testing.T) {
-		gatewayWithHTTP80Ready := func() *Gateway {
-			return &Gateway{
+		gatewayWithHTTP80Ready := func() *gatewayapi.Gateway {
+			return &gatewayapi.Gateway{
 				TypeMeta: metav1.TypeMeta{
 					APIVersion: gatewayv1beta1.GroupVersion.String(),
 					Kind:       "Gateway",
@@ -296,17 +297,17 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 					Namespace: "test-namespace",
 					UID:       "ce7f0678-f59a-483c-80d1-243d3738d22c",
 				},
-				Spec: gatewayv1beta1.GatewaySpec{
+				Spec: gatewayapi.GatewaySpec{
 					GatewayClassName: "test-gatewayclass",
 					Listeners:        builder.NewListener("http").WithPort(80).HTTP().IntoSlice(),
 				},
-				Status: gatewayv1beta1.GatewayStatus{
-					Listeners: []gatewayv1beta1.ListenerStatus{
+				Status: gatewayapi.GatewayStatus{
+					Listeners: []gatewayapi.ListenerStatus{
 						{
 							Name: "http",
 							Conditions: []metav1.Condition{
 								{
-									Type:   string(gatewayv1beta1.ListenerConditionProgrammed),
+									Type:   string(gatewayapi.ListenerConditionProgrammed),
 									Status: metav1.ConditionTrue,
 								},
 							},
@@ -319,7 +320,7 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 
 		tests := []struct {
 			name     string
-			route    *HTTPRoute
+			route    *gatewayapi.HTTPRoute
 			expected []expected
 			objects  []client.Object
 		}{
@@ -333,7 +334,7 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 				},
 				expected: []expected{
 					{
-						condition: routeConditionAccepted(metav1.ConditionTrue, gatewayv1beta1.RouteReasonAccepted),
+						condition: routeConditionAccepted(metav1.ConditionTrue, gatewayapi.RouteReasonAccepted),
 					},
 				},
 			},
@@ -341,12 +342,12 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 				name:  "basic HTTPRoute with TLS configuration gets accepted",
 				route: basicHTTPRoute(),
 				objects: []client.Object{
-					func() *Gateway {
+					func() *gatewayapi.Gateway {
 						gw := gatewayWithHTTP80Ready()
 						gw.Spec.Listeners = builder.
 							NewListener("http").WithPort(443).HTTPS().
-							WithTLSConfig(&gatewayv1beta1.GatewayTLSConfig{
-								Mode: lo.ToPtr(gatewayv1beta1.TLSModeTerminate),
+							WithTLSConfig(&gatewayapi.GatewayTLSConfig{
+								Mode: lo.ToPtr(gatewayapi.TLSModeTerminate),
 							}).
 							IntoSlice()
 						return gw
@@ -356,15 +357,15 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 				},
 				expected: []expected{
 					{
-						condition: routeConditionAccepted(metav1.ConditionTrue, gatewayv1beta1.RouteReasonAccepted),
+						condition: routeConditionAccepted(metav1.ConditionTrue, gatewayapi.RouteReasonAccepted),
 					},
 				},
 			},
 			{
 				name: "basic HTTPRoute specifying existing section name gets Accepted",
-				route: func() *HTTPRoute {
+				route: func() *gatewayapi.HTTPRoute {
 					r := basicHTTPRoute()
-					r.Spec.ParentRefs[0].SectionName = lo.ToPtr(gatewayv1beta1.SectionName("http"))
+					r.Spec.ParentRefs[0].SectionName = lo.ToPtr(gatewayapi.SectionName("http"))
 					return r
 				}(),
 				objects: []client.Object{
@@ -375,15 +376,15 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 				expected: []expected{
 					{
 						listenerName: "http",
-						condition:    routeConditionAccepted(metav1.ConditionTrue, gatewayv1beta1.RouteReasonAccepted),
+						condition:    routeConditionAccepted(metav1.ConditionTrue, gatewayapi.RouteReasonAccepted),
 					},
 				},
 			},
 			{
 				name: "basic HTTPRoute specifying existing port gets Accepted",
-				route: func() *HTTPRoute {
+				route: func() *gatewayapi.HTTPRoute {
 					r := basicHTTPRoute()
-					r.Spec.CommonRouteSpec.ParentRefs[0].Port = lo.ToPtr(gatewayv1beta1.PortNumber(80))
+					r.Spec.CommonRouteSpec.ParentRefs[0].Port = lo.ToPtr(gatewayapi.PortNumber(80))
 					return r
 				}(),
 				objects: []client.Object{
@@ -393,19 +394,19 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 				},
 				expected: []expected{
 					{
-						condition: routeConditionAccepted(metav1.ConditionTrue, gatewayv1beta1.RouteReasonAccepted),
+						condition: routeConditionAccepted(metav1.ConditionTrue, gatewayapi.RouteReasonAccepted),
 					},
 				},
 			},
 			{
 				name: "basic HTTPRoute specifying non-existing port does not get Accepted",
-				route: func() *HTTPRoute {
+				route: func() *gatewayapi.HTTPRoute {
 					r := basicHTTPRoute()
-					r.Spec.CommonRouteSpec.ParentRefs[0].Port = lo.ToPtr(PortNumber(80))
+					r.Spec.CommonRouteSpec.ParentRefs[0].Port = lo.ToPtr(gatewayapi.PortNumber(80))
 					return r
 				}(),
 				objects: []client.Object{
-					func() *Gateway {
+					func() *gatewayapi.Gateway {
 						gw := gatewayWithHTTP80Ready()
 						gw.Spec.Listeners = builder.NewListener("http").WithPort(81).HTTP().IntoSlice()
 						return gw
@@ -423,7 +424,7 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 				name:  "basic HTTPRoute does not get accepted if it is not in the supported kinds",
 				route: basicHTTPRoute(),
 				objects: []client.Object{
-					func() *Gateway {
+					func() *gatewayapi.Gateway {
 						gw := gatewayWithHTTP80Ready()
 						gw.Status.Listeners[0].SupportedKinds = nil
 						return gw
@@ -433,7 +434,7 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 				},
 				expected: []expected{
 					{
-						condition: routeConditionAccepted(metav1.ConditionFalse, gatewayv1beta1.RouteReasonNotAllowedByListeners),
+						condition: routeConditionAccepted(metav1.ConditionFalse, gatewayapi.RouteReasonNotAllowedByListeners),
 					},
 				},
 			},
@@ -441,13 +442,13 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 				name:  "basic HTTPRoute does not get accepted if it is not permitted by allowed routes",
 				route: basicHTTPRoute(),
 				objects: []client.Object{
-					func() *Gateway {
+					func() *gatewayapi.Gateway {
 						gw := gatewayWithHTTP80Ready()
 						gw.Spec.Listeners = builder.NewListener("http").
 							WithPort(80).
 							HTTP().
 							WithAllowedRoutes(
-								&gatewayv1beta1.AllowedRoutes{
+								&gatewayapi.AllowedRoutes{
 									Kinds: builder.NewRouteGroupKind().TCPRoute().IntoSlice(),
 								},
 							).
@@ -459,7 +460,7 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 				},
 				expected: []expected{
 					{
-						condition: routeConditionAccepted(metav1.ConditionFalse, gatewayv1beta1.RouteReasonNotAllowedByListeners),
+						condition: routeConditionAccepted(metav1.ConditionFalse, gatewayapi.RouteReasonNotAllowedByListeners),
 					},
 				},
 			},
@@ -467,7 +468,7 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 				name:  "basic HTTPRoute does get accepted if allowed routes only specified Same namespace",
 				route: basicHTTPRoute(),
 				objects: []client.Object{
-					func() *Gateway {
+					func() *gatewayapi.Gateway {
 						gw := gatewayWithHTTP80Ready()
 						gw.Spec.Listeners = builder.NewListener("http").
 							WithPort(80).
@@ -481,19 +482,19 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 				},
 				expected: []expected{
 					{
-						condition: routeConditionAccepted(metav1.ConditionTrue, gatewayv1beta1.RouteReasonAccepted),
+						condition: routeConditionAccepted(metav1.ConditionTrue, gatewayapi.RouteReasonAccepted),
 					},
 				},
 			},
 			{
 				name: "HTTPRoute does not get accepted if Listener hostnames do not match route hostnames",
-				route: func() *HTTPRoute {
+				route: func() *gatewayapi.HTTPRoute {
 					r := basicHTTPRoute()
-					r.Spec.Hostnames = []gatewayv1beta1.Hostname{"very.specific.com"}
+					r.Spec.Hostnames = []gatewayapi.Hostname{"very.specific.com"}
 					return r
 				}(),
 				objects: []client.Object{
-					func() *Gateway {
+					func() *gatewayapi.Gateway {
 						gw := gatewayWithHTTP80Ready()
 						gw.Spec.Listeners = builder.NewListener("http").
 							WithPort(80).
@@ -508,7 +509,7 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 				},
 				expected: []expected{
 					{
-						condition: routeConditionAccepted(metav1.ConditionFalse, gatewayv1beta1.RouteReasonNoMatchingListenerHostname),
+						condition: routeConditionAccepted(metav1.ConditionFalse, gatewayapi.RouteReasonNoMatchingListenerHostname),
 					},
 				},
 			},
@@ -516,12 +517,12 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 				name:  "HTTPRoute does not get accepted if Listener TLSConfig uses PassThrough",
 				route: basicHTTPRoute(),
 				objects: []client.Object{
-					func() *Gateway {
+					func() *gatewayapi.Gateway {
 						gw := gatewayWithHTTP80Ready()
 						gw.Spec.Listeners = builder.
 							NewListener("https").WithPort(443).HTTPS().
-							WithTLSConfig(&gatewayv1beta1.GatewayTLSConfig{
-								Mode: lo.ToPtr(gatewayv1beta1.TLSModePassthrough),
+							WithTLSConfig(&gatewayapi.GatewayTLSConfig{
+								Mode: lo.ToPtr(gatewayapi.TLSModePassthrough),
 							}).
 							IntoSlice()
 						gw.Status.Listeners[0].Name = "https"
@@ -562,8 +563,8 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 	})
 
 	t.Run("TCPRoute", func(t *testing.T) {
-		basicTCPRoute := func() *TCPRoute {
-			return &TCPRoute{
+		basicTCPRoute := func() *gatewayapi.TCPRoute {
+			return &gatewayapi.TCPRoute{
 				TypeMeta: metav1.TypeMeta{
 					Kind:       "TCPRoute",
 					APIVersion: gatewayv1alpha2.GroupVersion.String(),
@@ -572,9 +573,9 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 					Name:      "basic-tcproute",
 					Namespace: "test-namespace",
 				},
-				Spec: gatewayv1alpha2.TCPRouteSpec{
-					CommonRouteSpec: gatewayv1alpha2.CommonRouteSpec{
-						ParentRefs: []gatewayv1alpha2.ParentReference{
+				Spec: gatewayapi.TCPRouteSpec{
+					CommonRouteSpec: gatewayapi.CommonRouteSpec{
+						ParentRefs: []gatewayapi.ParentReference{
 							{
 								Group: &goodGroup,
 								Kind:  &goodKind,
@@ -585,8 +586,8 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 				},
 			}
 		}
-		gatewayWithTCP80Ready := func() *Gateway {
-			return &Gateway{
+		gatewayWithTCP80Ready := func() *gatewayapi.Gateway {
+			return &gatewayapi.Gateway{
 				TypeMeta: metav1.TypeMeta{
 					APIVersion: "gateway.networking.k8s.io/v1beta1",
 					Kind:       "Gateway",
@@ -596,17 +597,17 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 					Namespace: "test-namespace",
 					UID:       "ce7f0678-f59a-483c-80d1-243d3738d22c",
 				},
-				Spec: gatewayv1beta1.GatewaySpec{
+				Spec: gatewayapi.GatewaySpec{
 					GatewayClassName: "test-gatewayclass",
 					Listeners:        builder.NewListener("tcp").WithPort(80).TCP().IntoSlice(),
 				},
-				Status: gatewayv1beta1.GatewayStatus{
-					Listeners: []gatewayv1beta1.ListenerStatus{
+				Status: gatewayapi.GatewayStatus{
+					Listeners: []gatewayapi.ListenerStatus{
 						{
 							Name: "tcp",
 							Conditions: []metav1.Condition{
 								{
-									Type:   string(gatewayv1beta1.ListenerConditionProgrammed),
+									Type:   string(gatewayapi.ListenerConditionProgrammed),
 									Status: metav1.ConditionTrue,
 								},
 							},
@@ -623,7 +624,7 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 		}
 		tests := []struct {
 			name     string
-			route    *TCPRoute
+			route    *gatewayapi.TCPRoute
 			expected expected
 			objects  []client.Object
 			wantErr  bool
@@ -637,14 +638,14 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 					namespace,
 				},
 				expected: expected{
-					condition: routeConditionAccepted(metav1.ConditionTrue, gatewayv1beta1.RouteReasonAccepted),
+					condition: routeConditionAccepted(metav1.ConditionTrue, gatewayapi.RouteReasonAccepted),
 				},
 			},
 			{
 				name:  "basic TCPRoute does not get accepted because it is not in supported kinds",
 				route: basicTCPRoute(),
 				objects: []client.Object{
-					func() *Gateway {
+					func() *gatewayapi.Gateway {
 						gw := gatewayWithTCP80Ready()
 						gw.Status.Listeners[0].SupportedKinds = nil
 						return gw
@@ -653,15 +654,15 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 					namespace,
 				},
 				expected: expected{
-					condition: routeConditionAccepted(metav1.ConditionFalse, gatewayv1beta1.RouteReasonNotAllowedByListeners),
+					condition: routeConditionAccepted(metav1.ConditionFalse, gatewayapi.RouteReasonNotAllowedByListeners),
 				},
 			},
 			{
 				name: "TCPRoute specifying existing port gets Accepted",
-				route: func() *TCPRoute {
+				route: func() *gatewayapi.TCPRoute {
 					r := basicTCPRoute()
-					r.Spec.CommonRouteSpec.ParentRefs[0].Port = lo.ToPtr(gatewayv1alpha2.PortNumber(80))
-					r.Spec.Rules = []gatewayv1alpha2.TCPRouteRule{
+					r.Spec.CommonRouteSpec.ParentRefs[0].Port = lo.ToPtr(gatewayapi.PortNumber(80))
+					r.Spec.Rules = []gatewayapi.TCPRouteRule{
 						{
 							BackendRefs: builder.NewBackendRef("fake-service").WithPort(80).ToSlice(),
 						},
@@ -674,15 +675,15 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 					namespace,
 				},
 				expected: expected{
-					condition: routeConditionAccepted(metav1.ConditionTrue, gatewayv1beta1.RouteReasonAccepted),
+					condition: routeConditionAccepted(metav1.ConditionTrue, gatewayapi.RouteReasonAccepted),
 				},
 			},
 			{
 				name: "TCPRoute specifying non existing port does not get Accepted",
-				route: func() *TCPRoute {
+				route: func() *gatewayapi.TCPRoute {
 					r := basicTCPRoute()
-					r.Spec.CommonRouteSpec.ParentRefs[0].Port = lo.ToPtr(gatewayv1alpha2.PortNumber(8000))
-					r.Spec.Rules = []gatewayv1alpha2.TCPRouteRule{
+					r.Spec.CommonRouteSpec.ParentRefs[0].Port = lo.ToPtr(gatewayapi.PortNumber(8000))
+					r.Spec.Rules = []gatewayapi.TCPRouteRule{
 						{
 							BackendRefs: builder.NewBackendRef("fake-service").WithPort(80).ToSlice(),
 						},
@@ -700,11 +701,11 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 			},
 			{
 				name: "TCPRoute specifying in sectionName existing listener gets Accepted",
-				route: func() *TCPRoute {
+				route: func() *gatewayapi.TCPRoute {
 					r := basicTCPRoute()
-					r.Spec.CommonRouteSpec.ParentRefs[0].Port = lo.ToPtr(gatewayv1alpha2.PortNumber(80))
-					r.Spec.CommonRouteSpec.ParentRefs[0].SectionName = lo.ToPtr(gatewayv1alpha2.SectionName("tcp"))
-					r.Spec.Rules = []gatewayv1alpha2.TCPRouteRule{
+					r.Spec.CommonRouteSpec.ParentRefs[0].Port = lo.ToPtr(gatewayapi.PortNumber(80))
+					r.Spec.CommonRouteSpec.ParentRefs[0].SectionName = lo.ToPtr(gatewayapi.SectionName("tcp"))
+					r.Spec.Rules = []gatewayapi.TCPRouteRule{
 						{
 							BackendRefs: builder.NewBackendRef("fake-service").WithPort(80).ToSlice(),
 						},
@@ -718,16 +719,16 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 				},
 				expected: expected{
 					listenerName: "tcp",
-					condition:    routeConditionAccepted(metav1.ConditionTrue, gatewayv1beta1.RouteReasonAccepted),
+					condition:    routeConditionAccepted(metav1.ConditionTrue, gatewayapi.RouteReasonAccepted),
 				},
 			},
 			{
 				name: "TCPRoute specifying in sectionName non existing listener does not get Accepted",
-				route: func() *TCPRoute {
+				route: func() *gatewayapi.TCPRoute {
 					r := basicTCPRoute()
-					r.Spec.CommonRouteSpec.ParentRefs[0].Port = lo.ToPtr(gatewayv1alpha2.PortNumber(80))
-					r.Spec.CommonRouteSpec.ParentRefs[0].SectionName = lo.ToPtr(gatewayv1alpha2.SectionName("unknown-listener"))
-					r.Spec.Rules = []gatewayv1alpha2.TCPRouteRule{
+					r.Spec.CommonRouteSpec.ParentRefs[0].Port = lo.ToPtr(gatewayapi.PortNumber(80))
+					r.Spec.CommonRouteSpec.ParentRefs[0].SectionName = lo.ToPtr(gatewayapi.SectionName("unknown-listener"))
+					r.Spec.Rules = []gatewayapi.TCPRouteRule{
 						{
 							BackendRefs: builder.NewBackendRef("fake-service").WithPort(80).ToSlice(),
 						},
@@ -769,8 +770,8 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 	})
 
 	t.Run("UDPRoute", func(t *testing.T) {
-		basicUDPRoute := func() *UDPRoute {
-			return &UDPRoute{
+		basicUDPRoute := func() *gatewayapi.UDPRoute {
+			return &gatewayapi.UDPRoute{
 				TypeMeta: metav1.TypeMeta{
 					Kind:       "UDPRoute",
 					APIVersion: gatewayv1alpha2.GroupVersion.String(),
@@ -779,9 +780,9 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 					Name:      "basic-udproute",
 					Namespace: "test-namespace",
 				},
-				Spec: gatewayv1alpha2.UDPRouteSpec{
-					CommonRouteSpec: gatewayv1alpha2.CommonRouteSpec{
-						ParentRefs: []gatewayv1alpha2.ParentReference{
+				Spec: gatewayapi.UDPRouteSpec{
+					CommonRouteSpec: gatewayapi.CommonRouteSpec{
+						ParentRefs: []gatewayapi.ParentReference{
 							{
 								Group: &goodGroup,
 								Kind:  &goodKind,
@@ -792,8 +793,8 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 				},
 			}
 		}
-		gatewayWithUDP53Ready := func() *Gateway {
-			return &Gateway{
+		gatewayWithUDP53Ready := func() *gatewayapi.Gateway {
+			return &gatewayapi.Gateway{
 				TypeMeta: metav1.TypeMeta{
 					APIVersion: "gateway.networking.k8s.io/v1beta1",
 					Kind:       "Gateway",
@@ -803,17 +804,17 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 					Namespace: "test-namespace",
 					UID:       "ce7f0678-f59a-483c-80d1-243d3738d22c",
 				},
-				Spec: gatewayv1beta1.GatewaySpec{
+				Spec: gatewayapi.GatewaySpec{
 					GatewayClassName: "test-gatewayclass",
 					Listeners:        builder.NewListener("udp").WithPort(53).UDP().IntoSlice(),
 				},
-				Status: gatewayv1beta1.GatewayStatus{
-					Listeners: []gatewayv1beta1.ListenerStatus{
+				Status: gatewayapi.GatewayStatus{
+					Listeners: []gatewayapi.ListenerStatus{
 						{
 							Name: "udp",
 							Conditions: []metav1.Condition{
 								{
-									Type:   string(gatewayv1beta1.ListenerConditionProgrammed),
+									Type:   string(gatewayapi.ListenerConditionProgrammed),
 									Status: metav1.ConditionTrue,
 								},
 							},
@@ -830,7 +831,7 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 		}
 		tests := []struct {
 			name     string
-			route    *UDPRoute
+			route    *gatewayapi.UDPRoute
 			expected expected
 			objects  []client.Object
 			wantErr  bool
@@ -844,14 +845,14 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 					namespace,
 				},
 				expected: expected{
-					condition: routeConditionAccepted(metav1.ConditionTrue, gatewayv1beta1.RouteReasonAccepted),
+					condition: routeConditionAccepted(metav1.ConditionTrue, gatewayapi.RouteReasonAccepted),
 				},
 			},
 			{
 				name:  "basic UDPRoute does not get accepted because it is not in supported kinds",
 				route: basicUDPRoute(),
 				objects: []client.Object{
-					func() *Gateway {
+					func() *gatewayapi.Gateway {
 						gw := gatewayWithUDP53Ready()
 						gw.Status.Listeners[0].SupportedKinds = nil
 						return gw
@@ -860,14 +861,14 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 					namespace,
 				},
 				expected: expected{
-					condition: routeConditionAccepted(metav1.ConditionFalse, gatewayv1beta1.RouteReasonNotAllowedByListeners),
+					condition: routeConditionAccepted(metav1.ConditionFalse, gatewayapi.RouteReasonNotAllowedByListeners),
 				},
 			},
 			{
 				name: "UDPRoute specifying existing port gets Accepted",
-				route: func() *UDPRoute {
+				route: func() *gatewayapi.UDPRoute {
 					r := basicUDPRoute()
-					r.Spec.CommonRouteSpec.ParentRefs[0].Port = lo.ToPtr(gatewayv1alpha2.PortNumber(53))
+					r.Spec.CommonRouteSpec.ParentRefs[0].Port = lo.ToPtr(gatewayapi.PortNumber(53))
 					return r
 				}(),
 				objects: []client.Object{
@@ -876,14 +877,14 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 					namespace,
 				},
 				expected: expected{
-					condition: routeConditionAccepted(metav1.ConditionTrue, gatewayv1beta1.RouteReasonAccepted),
+					condition: routeConditionAccepted(metav1.ConditionTrue, gatewayapi.RouteReasonAccepted),
 				},
 			},
 			{
 				name: "UDPRoute specifying non existing port does not get Accepted",
-				route: func() *UDPRoute {
+				route: func() *gatewayapi.UDPRoute {
 					r := basicUDPRoute()
-					r.Spec.CommonRouteSpec.ParentRefs[0].Port = lo.ToPtr(gatewayv1alpha2.PortNumber(8000))
+					r.Spec.CommonRouteSpec.ParentRefs[0].Port = lo.ToPtr(gatewayapi.PortNumber(8000))
 					return r
 				}(),
 				objects: []client.Object{
@@ -897,10 +898,10 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 			},
 			{
 				name: "UDPRoute specifying in sectionName existing listener gets Accepted",
-				route: func() *UDPRoute {
+				route: func() *gatewayapi.UDPRoute {
 					r := basicUDPRoute()
-					r.Spec.CommonRouteSpec.ParentRefs[0].Port = lo.ToPtr(gatewayv1alpha2.PortNumber(53))
-					r.Spec.CommonRouteSpec.ParentRefs[0].SectionName = lo.ToPtr(gatewayv1alpha2.SectionName("udp"))
+					r.Spec.CommonRouteSpec.ParentRefs[0].Port = lo.ToPtr(gatewayapi.PortNumber(53))
+					r.Spec.CommonRouteSpec.ParentRefs[0].SectionName = lo.ToPtr(gatewayapi.SectionName("udp"))
 					return r
 				}(),
 				objects: []client.Object{
@@ -910,15 +911,15 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 				},
 				expected: expected{
 					listenerName: "udp",
-					condition:    routeConditionAccepted(metav1.ConditionTrue, gatewayv1beta1.RouteReasonAccepted),
+					condition:    routeConditionAccepted(metav1.ConditionTrue, gatewayapi.RouteReasonAccepted),
 				},
 			},
 			{
 				name: "UDPRoute specifying in sectionName non existing listener does not get Accepted",
-				route: func() *UDPRoute {
+				route: func() *gatewayapi.UDPRoute {
 					r := basicUDPRoute()
-					r.Spec.CommonRouteSpec.ParentRefs[0].Port = lo.ToPtr(gatewayv1alpha2.PortNumber(53))
-					r.Spec.CommonRouteSpec.ParentRefs[0].SectionName = lo.ToPtr(gatewayv1alpha2.SectionName("unknown-listener"))
+					r.Spec.CommonRouteSpec.ParentRefs[0].Port = lo.ToPtr(gatewayapi.PortNumber(53))
+					r.Spec.CommonRouteSpec.ParentRefs[0].SectionName = lo.ToPtr(gatewayapi.SectionName("unknown-listener"))
 					return r
 				}(),
 				objects: []client.Object{
@@ -956,8 +957,8 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 	})
 
 	t.Run("TLSRoute", func(t *testing.T) {
-		basicTLSRoute := func() *TLSRoute {
-			return &TLSRoute{
+		basicTLSRoute := func() *gatewayapi.TLSRoute {
+			return &gatewayapi.TLSRoute{
 				TypeMeta: metav1.TypeMeta{
 					Kind:       "TLSRoute",
 					APIVersion: gatewayv1alpha2.GroupVersion.Group + "/" + gatewayv1alpha2.GroupVersion.Version,
@@ -966,9 +967,9 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 					Name:      "basic-tlsroute",
 					Namespace: "test-namespace",
 				},
-				Spec: gatewayv1alpha2.TLSRouteSpec{
-					CommonRouteSpec: gatewayv1alpha2.CommonRouteSpec{
-						ParentRefs: []gatewayv1alpha2.ParentReference{
+				Spec: gatewayapi.TLSRouteSpec{
+					CommonRouteSpec: gatewayapi.CommonRouteSpec{
+						ParentRefs: []gatewayapi.ParentReference{
 							{
 								Group: &goodGroup,
 								Kind:  &goodKind,
@@ -979,8 +980,8 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 				},
 			}
 		}
-		gatewayWithTLS443PassthroughReady := func() *Gateway {
-			return &Gateway{
+		gatewayWithTLS443PassthroughReady := func() *gatewayapi.Gateway {
+			return &gatewayapi.Gateway{
 				TypeMeta: metav1.TypeMeta{
 					APIVersion: "gateway.networking.k8s.io/v1beta1",
 					Kind:       "Gateway",
@@ -990,22 +991,22 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 					Namespace: "test-namespace",
 					UID:       "ce7f0678-f59a-483c-80d1-243d3738d22c",
 				},
-				Spec: gatewayv1beta1.GatewaySpec{
+				Spec: gatewayapi.GatewaySpec{
 					GatewayClassName: "test-gatewayclass",
 					Listeners: builder.NewListener("tls").
 						WithPort(443).
 						TLS().
-						WithTLSConfig(&gatewayv1beta1.GatewayTLSConfig{
-							Mode: lo.ToPtr(gatewayv1beta1.TLSModePassthrough),
+						WithTLSConfig(&gatewayapi.GatewayTLSConfig{
+							Mode: lo.ToPtr(gatewayapi.TLSModePassthrough),
 						}).IntoSlice(),
 				},
-				Status: gatewayv1beta1.GatewayStatus{
-					Listeners: []gatewayv1beta1.ListenerStatus{
+				Status: gatewayapi.GatewayStatus{
+					Listeners: []gatewayapi.ListenerStatus{
 						{
 							Name: "tls",
 							Conditions: []metav1.Condition{
 								{
-									Type:   string(gatewayv1beta1.ListenerConditionProgrammed),
+									Type:   string(gatewayapi.ListenerConditionProgrammed),
 									Status: metav1.ConditionTrue,
 								},
 							},
@@ -1022,7 +1023,7 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 		}
 		tests := []struct {
 			name     string
-			route    *TLSRoute
+			route    *gatewayapi.TLSRoute
 			expected []expected
 			objects  []client.Object
 			wantErr  bool
@@ -1037,7 +1038,7 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 				},
 				expected: []expected{
 					{
-						condition: routeConditionAccepted(metav1.ConditionTrue, gatewayv1beta1.RouteReasonAccepted),
+						condition: routeConditionAccepted(metav1.ConditionTrue, gatewayapi.RouteReasonAccepted),
 					},
 				},
 			},
@@ -1045,13 +1046,13 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 				name:  "basic TLSRoute does not get accepted because there is no listener with TLS in passthrough mode",
 				route: basicTLSRoute(),
 				objects: []client.Object{
-					func() *Gateway {
+					func() *gatewayapi.Gateway {
 						gw := gatewayWithTLS443PassthroughReady()
 						gw.Spec.Listeners = builder.NewListener("tls").
 							WithPort(443).
 							TLS().
-							WithTLSConfig(&gatewayv1beta1.GatewayTLSConfig{
-								Mode: lo.ToPtr(gatewayv1beta1.TLSModeTerminate),
+							WithTLSConfig(&gatewayapi.GatewayTLSConfig{
+								Mode: lo.ToPtr(gatewayapi.TLSModeTerminate),
 							}).IntoSlice()
 						return gw
 					}(),
@@ -1068,7 +1069,7 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 				name:  "TLSRoute does not get accepted because it is not in supported kinds",
 				route: basicTLSRoute(),
 				objects: []client.Object{
-					func() *Gateway {
+					func() *gatewayapi.Gateway {
 						gw := gatewayWithTLS443PassthroughReady()
 						gw.Status.Listeners[0].SupportedKinds = nil
 						return gw
@@ -1078,15 +1079,15 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 				},
 				expected: []expected{
 					{
-						condition: routeConditionAccepted(metav1.ConditionFalse, gatewayv1beta1.RouteReasonNotAllowedByListeners),
+						condition: routeConditionAccepted(metav1.ConditionFalse, gatewayapi.RouteReasonNotAllowedByListeners),
 					},
 				},
 			},
 			{
 				name: "TLSRoute specifying existing port gets Accepted",
-				route: func() *TLSRoute {
+				route: func() *gatewayapi.TLSRoute {
 					r := basicTLSRoute()
-					r.Spec.CommonRouteSpec.ParentRefs[0].Port = lo.ToPtr(gatewayv1alpha2.PortNumber(443))
+					r.Spec.CommonRouteSpec.ParentRefs[0].Port = lo.ToPtr(gatewayapi.PortNumber(443))
 					return r
 				}(),
 				objects: []client.Object{
@@ -1096,15 +1097,15 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 				},
 				expected: []expected{
 					{
-						condition: routeConditionAccepted(metav1.ConditionTrue, gatewayv1beta1.RouteReasonAccepted),
+						condition: routeConditionAccepted(metav1.ConditionTrue, gatewayapi.RouteReasonAccepted),
 					},
 				},
 			},
 			{
 				name: "TLSRoute specifying non existing port does not get Accepted",
-				route: func() *TLSRoute {
+				route: func() *gatewayapi.TLSRoute {
 					r := basicTLSRoute()
-					r.Spec.CommonRouteSpec.ParentRefs[0].Port = lo.ToPtr(gatewayv1alpha2.PortNumber(444))
+					r.Spec.CommonRouteSpec.ParentRefs[0].Port = lo.ToPtr(gatewayapi.PortNumber(444))
 					return r
 				}(),
 				objects: []client.Object{
@@ -1120,10 +1121,10 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 			},
 			{
 				name: "TLSRoute specifying in sectionName existing listener gets Accepted",
-				route: func() *TLSRoute {
+				route: func() *gatewayapi.TLSRoute {
 					r := basicTLSRoute()
-					r.Spec.CommonRouteSpec.ParentRefs[0].Port = lo.ToPtr(gatewayv1alpha2.PortNumber(443))
-					r.Spec.CommonRouteSpec.ParentRefs[0].SectionName = lo.ToPtr(gatewayv1alpha2.SectionName("tls"))
+					r.Spec.CommonRouteSpec.ParentRefs[0].Port = lo.ToPtr(gatewayapi.PortNumber(443))
+					r.Spec.CommonRouteSpec.ParentRefs[0].SectionName = lo.ToPtr(gatewayapi.SectionName("tls"))
 					return r
 				}(),
 				objects: []client.Object{
@@ -1134,17 +1135,17 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 				expected: []expected{
 					{
 						listenerName: "tls",
-						condition:    routeConditionAccepted(metav1.ConditionTrue, gatewayv1beta1.RouteReasonAccepted),
+						condition:    routeConditionAccepted(metav1.ConditionTrue, gatewayapi.RouteReasonAccepted),
 					},
 				},
 			},
 			// unmatched sectionName.
 			{
 				name: "TLSRoute specifying in sectionName non existing listener does not get Accepted",
-				route: func() *TLSRoute {
+				route: func() *gatewayapi.TLSRoute {
 					r := basicTLSRoute()
-					r.Spec.CommonRouteSpec.ParentRefs[0].Port = lo.ToPtr(gatewayv1alpha2.PortNumber(443))
-					r.Spec.CommonRouteSpec.ParentRefs[0].SectionName = lo.ToPtr(gatewayv1alpha2.SectionName("unknown-listener"))
+					r.Spec.CommonRouteSpec.ParentRefs[0].Port = lo.ToPtr(gatewayapi.PortNumber(443))
+					r.Spec.CommonRouteSpec.ParentRefs[0].SectionName = lo.ToPtr(gatewayapi.SectionName("unknown-listener"))
 					return r
 				}(),
 				objects: []client.Object{
@@ -1185,9 +1186,9 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 	})
 
 	bustedParentHTTPRoute := basicHTTPRoute()
-	badGroup := gatewayv1beta1.Group("kechavakunduz.cholpon.uz")
-	badKind := gatewayv1beta1.Kind("razzoq")
-	bustedParentHTTPRoute.Spec.ParentRefs = []gatewayv1beta1.ParentReference{
+	badGroup := gatewayapi.Group("kechavakunduz.cholpon.uz")
+	badKind := gatewayapi.Kind("razzoq")
+	bustedParentHTTPRoute.Spec.ParentRefs = []gatewayapi.ParentReference{
 		{
 			Name:  "not-a-gateway",
 			Kind:  &badKind,
@@ -1206,8 +1207,8 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 }
 
 func TestEnsureParentsProgrammedCondition(t *testing.T) {
-	createGateway := func(nn k8stypes.NamespacedName) *Gateway {
-		return &Gateway{
+	createGateway := func(nn k8stypes.NamespacedName) *gatewayapi.Gateway {
+		return &gatewayapi.Gateway{
 			TypeMeta: metav1.TypeMeta{
 				APIVersion: gatewayv1beta1.GroupVersion.String(),
 				Kind:       "Gateway",
@@ -1217,17 +1218,17 @@ func TestEnsureParentsProgrammedCondition(t *testing.T) {
 				Namespace: nn.Namespace,
 				UID:       k8stypes.UID(uuid.NewString()),
 			},
-			Spec: gatewayv1beta1.GatewaySpec{
+			Spec: gatewayapi.GatewaySpec{
 				GatewayClassName: "test-gatewayclass",
 				Listeners:        builder.NewListener("http").WithPort(80).HTTP().IntoSlice(),
 			},
-			Status: gatewayv1beta1.GatewayStatus{
-				Listeners: []gatewayv1beta1.ListenerStatus{
+			Status: gatewayapi.GatewayStatus{
+				Listeners: []gatewayapi.ListenerStatus{
 					{
 						Name: "http-1",
 						Conditions: []metav1.Condition{
 							{
-								Type:   string(gatewayv1beta1.ListenerConditionProgrammed),
+								Type:   string(gatewayapi.ListenerConditionProgrammed),
 								Status: metav1.ConditionTrue,
 							},
 						},
@@ -1237,7 +1238,7 @@ func TestEnsureParentsProgrammedCondition(t *testing.T) {
 						Name: "http-2",
 						Conditions: []metav1.Condition{
 							{
-								Type:   string(gatewayv1beta1.ListenerConditionProgrammed),
+								Type:   string(gatewayapi.ListenerConditionProgrammed),
 								Status: metav1.ConditionTrue,
 							},
 						},
@@ -1262,15 +1263,15 @@ func TestEnsureParentsProgrammedCondition(t *testing.T) {
 
 		tests := []struct {
 			name           string
-			httpRouteFunc  func() *HTTPRoute
+			httpRouteFunc  func() *gatewayapi.HTTPRoute
 			gatewayFunc    func() []supportedGatewayWithCondition
 			expectedUpdate bool
-			expectedStatus *gatewayv1beta1.HTTPRouteStatus
+			expectedStatus *gatewayapi.HTTPRouteStatus
 		}{
 			{
 				name: "Programmed condition gets properly set to Status True when parent status is already set in route",
-				httpRouteFunc: func() *HTTPRoute {
-					return &HTTPRoute{
+				httpRouteFunc: func() *gatewayapi.HTTPRoute {
+					return &gatewayapi.HTTPRoute{
 						TypeMeta: metav1.TypeMeta{
 							Kind:       "HTTPRoute",
 							APIVersion: gatewayv1beta1.GroupVersion.Group + "/" + gatewayv1beta1.GroupVersion.Version,
@@ -1280,42 +1281,42 @@ func TestEnsureParentsProgrammedCondition(t *testing.T) {
 							Namespace:  gatewayNN1.Namespace,
 							Generation: 42,
 						},
-						Spec: gatewayv1beta1.HTTPRouteSpec{
-							CommonRouteSpec: gatewayv1beta1.CommonRouteSpec{
-								ParentRefs: []gatewayv1beta1.ParentReference{
+						Spec: gatewayapi.HTTPRouteSpec{
+							CommonRouteSpec: gatewayapi.CommonRouteSpec{
+								ParentRefs: []gatewayapi.ParentReference{
 									{
-										Group: lo.ToPtr(gatewayv1beta1.Group(gatewayv1beta1.GroupName)),
-										Kind:  lo.ToPtr(gatewayv1beta1.Kind("Gateway")),
+										Group: lo.ToPtr(gatewayapi.Group(gatewayv1beta1.GroupName)),
+										Kind:  lo.ToPtr(gatewayapi.Kind("Gateway")),
 										Name:  "test-gateway",
 									},
 								},
 							},
-							Rules: []gatewayv1beta1.HTTPRouteRule{
+							Rules: []gatewayapi.HTTPRouteRule{
 								{
-									BackendRefs: []gatewayv1beta1.HTTPBackendRef{
+									BackendRefs: []gatewayapi.HTTPBackendRef{
 										builder.NewHTTPBackendRef("fake-service").WithPort(80).Build(),
 									},
 								},
 							},
 						},
-						Status: gatewayv1beta1.HTTPRouteStatus{
-							RouteStatus: gatewayv1beta1.RouteStatus{
-								Parents: []gatewayv1beta1.RouteParentStatus{
+						Status: gatewayapi.HTTPRouteStatus{
+							RouteStatus: gatewayapi.RouteStatus{
+								Parents: []gatewayapi.RouteParentStatus{
 									{
-										ParentRef: gatewayv1beta1.ParentReference{
-											Kind:      lo.ToPtr(gatewayv1beta1.Kind("Gateway")),
-											Group:     lo.ToPtr(gatewayv1beta1.Group(gatewayv1beta1.GroupName)),
-											Name:      gatewayv1beta1.ObjectName(gatewayNN1.Name),
-											Namespace: (*gatewayv1beta1.Namespace)(&gatewayNN1.Namespace),
+										ParentRef: gatewayapi.ParentReference{
+											Kind:      lo.ToPtr(gatewayapi.Kind("Gateway")),
+											Group:     lo.ToPtr(gatewayapi.Group(gatewayv1beta1.GroupName)),
+											Name:      gatewayapi.ObjectName(gatewayNN1.Name),
+											Namespace: (*gatewayapi.Namespace)(&gatewayNN1.Namespace),
 										},
 										ControllerName: "konghq.com/kic-gateway-controller",
 										Conditions: []metav1.Condition{
 											{
-												Type:               string(gatewayv1beta1.GatewayConditionAccepted),
+												Type:               string(gatewayapi.GatewayConditionAccepted),
 												Message:            "",
 												ObservedGeneration: 1,
 												Status:             metav1.ConditionTrue,
-												Reason:             string(gatewayv1beta1.RouteConditionAccepted),
+												Reason:             string(gatewayapi.RouteConditionAccepted),
 												LastTransitionTime: metav1.Now(),
 											},
 											{
@@ -1334,24 +1335,24 @@ func TestEnsureParentsProgrammedCondition(t *testing.T) {
 					}
 				},
 				expectedUpdate: true,
-				expectedStatus: &gatewayv1beta1.HTTPRouteStatus{
-					RouteStatus: gatewayv1beta1.RouteStatus{
-						Parents: []gatewayv1beta1.RouteParentStatus{
+				expectedStatus: &gatewayapi.HTTPRouteStatus{
+					RouteStatus: gatewayapi.RouteStatus{
+						Parents: []gatewayapi.RouteParentStatus{
 							{
-								ParentRef: gatewayv1beta1.ParentReference{
-									Kind:      lo.ToPtr(gatewayv1beta1.Kind("Gateway")),
-									Group:     lo.ToPtr(gatewayv1beta1.Group(gatewayv1beta1.GroupName)),
-									Name:      gatewayv1beta1.ObjectName(gatewayNN1.Name),
-									Namespace: (*gatewayv1beta1.Namespace)(&gatewayNN1.Namespace),
+								ParentRef: gatewayapi.ParentReference{
+									Kind:      lo.ToPtr(gatewayapi.Kind("Gateway")),
+									Group:     lo.ToPtr(gatewayapi.Group(gatewayv1beta1.GroupName)),
+									Name:      gatewayapi.ObjectName(gatewayNN1.Name),
+									Namespace: (*gatewayapi.Namespace)(&gatewayNN1.Namespace),
 								},
 								ControllerName: "konghq.com/kic-gateway-controller",
 								Conditions: []metav1.Condition{
 									{
-										Type:               string(gatewayv1beta1.GatewayConditionAccepted),
+										Type:               string(gatewayapi.GatewayConditionAccepted),
 										Message:            "",
 										ObservedGeneration: 1,
 										Status:             metav1.ConditionTrue,
-										Reason:             string(gatewayv1beta1.RouteConditionAccepted),
+										Reason:             string(gatewayapi.RouteConditionAccepted),
 										LastTransitionTime: metav1.Now(),
 									},
 									{
@@ -1359,7 +1360,7 @@ func TestEnsureParentsProgrammedCondition(t *testing.T) {
 										Message:            "",
 										ObservedGeneration: 42,
 										Status:             metav1.ConditionTrue,
-										Reason:             string(gatewayv1beta1.RouteConditionAccepted),
+										Reason:             string(gatewayapi.RouteConditionAccepted),
 										LastTransitionTime: metav1.Now(),
 									},
 								},
@@ -1375,8 +1376,8 @@ func TestEnsureParentsProgrammedCondition(t *testing.T) {
 			},
 			{
 				name: "Programmed condition gets properly set to Status True when Programmed condition is not present in route's parent status",
-				httpRouteFunc: func() *HTTPRoute {
-					return &HTTPRoute{
+				httpRouteFunc: func() *gatewayapi.HTTPRoute {
+					return &gatewayapi.HTTPRoute{
 						TypeMeta: metav1.TypeMeta{
 							Kind:       "HTTPRoute",
 							APIVersion: gatewayv1beta1.GroupVersion.Group + "/" + gatewayv1beta1.GroupVersion.Version,
@@ -1386,42 +1387,42 @@ func TestEnsureParentsProgrammedCondition(t *testing.T) {
 							Namespace:  gatewayNN1.Namespace,
 							Generation: 42,
 						},
-						Spec: gatewayv1beta1.HTTPRouteSpec{
-							CommonRouteSpec: gatewayv1beta1.CommonRouteSpec{
-								ParentRefs: []gatewayv1beta1.ParentReference{
+						Spec: gatewayapi.HTTPRouteSpec{
+							CommonRouteSpec: gatewayapi.CommonRouteSpec{
+								ParentRefs: []gatewayapi.ParentReference{
 									{
-										Group: lo.ToPtr(gatewayv1beta1.Group(gatewayv1beta1.GroupName)),
-										Kind:  lo.ToPtr(gatewayv1beta1.Kind("Gateway")),
+										Group: lo.ToPtr(gatewayapi.Group(gatewayv1beta1.GroupName)),
+										Kind:  lo.ToPtr(gatewayapi.Kind("Gateway")),
 										Name:  "test-gateway",
 									},
 								},
 							},
-							Rules: []gatewayv1beta1.HTTPRouteRule{
+							Rules: []gatewayapi.HTTPRouteRule{
 								{
-									BackendRefs: []gatewayv1beta1.HTTPBackendRef{
+									BackendRefs: []gatewayapi.HTTPBackendRef{
 										builder.NewHTTPBackendRef("fake-service").WithPort(80).Build(),
 									},
 								},
 							},
 						},
-						Status: gatewayv1beta1.HTTPRouteStatus{
-							RouteStatus: gatewayv1beta1.RouteStatus{
-								Parents: []gatewayv1beta1.RouteParentStatus{
+						Status: gatewayapi.HTTPRouteStatus{
+							RouteStatus: gatewayapi.RouteStatus{
+								Parents: []gatewayapi.RouteParentStatus{
 									{
-										ParentRef: gatewayv1beta1.ParentReference{
-											Kind:      lo.ToPtr(gatewayv1beta1.Kind("Gateway")),
-											Group:     lo.ToPtr(gatewayv1beta1.Group(gatewayv1beta1.GroupName)),
-											Name:      gatewayv1beta1.ObjectName(gatewayNN1.Name),
-											Namespace: (*gatewayv1beta1.Namespace)(&gatewayNN1.Namespace),
+										ParentRef: gatewayapi.ParentReference{
+											Kind:      lo.ToPtr(gatewayapi.Kind("Gateway")),
+											Group:     lo.ToPtr(gatewayapi.Group(gatewayv1beta1.GroupName)),
+											Name:      gatewayapi.ObjectName(gatewayNN1.Name),
+											Namespace: (*gatewayapi.Namespace)(&gatewayNN1.Namespace),
 										},
 										ControllerName: "konghq.com/kic-gateway-controller",
 										Conditions: []metav1.Condition{
 											{
-												Type:               string(gatewayv1beta1.GatewayConditionAccepted),
+												Type:               string(gatewayapi.GatewayConditionAccepted),
 												Message:            "",
 												ObservedGeneration: 1,
 												Status:             metav1.ConditionTrue,
-												Reason:             string(gatewayv1beta1.RouteConditionAccepted),
+												Reason:             string(gatewayapi.RouteConditionAccepted),
 												LastTransitionTime: metav1.Now(),
 											},
 										},
@@ -1432,24 +1433,24 @@ func TestEnsureParentsProgrammedCondition(t *testing.T) {
 					}
 				},
 				expectedUpdate: true,
-				expectedStatus: &gatewayv1beta1.HTTPRouteStatus{
-					RouteStatus: gatewayv1beta1.RouteStatus{
-						Parents: []gatewayv1beta1.RouteParentStatus{
+				expectedStatus: &gatewayapi.HTTPRouteStatus{
+					RouteStatus: gatewayapi.RouteStatus{
+						Parents: []gatewayapi.RouteParentStatus{
 							{
-								ParentRef: gatewayv1beta1.ParentReference{
-									Kind:      lo.ToPtr(gatewayv1beta1.Kind("Gateway")),
-									Group:     lo.ToPtr(gatewayv1beta1.Group(gatewayv1beta1.GroupName)),
-									Name:      gatewayv1beta1.ObjectName(gatewayNN1.Name),
-									Namespace: (*gatewayv1beta1.Namespace)(&gatewayNN1.Namespace),
+								ParentRef: gatewayapi.ParentReference{
+									Kind:      lo.ToPtr(gatewayapi.Kind("Gateway")),
+									Group:     lo.ToPtr(gatewayapi.Group(gatewayv1beta1.GroupName)),
+									Name:      gatewayapi.ObjectName(gatewayNN1.Name),
+									Namespace: (*gatewayapi.Namespace)(&gatewayNN1.Namespace),
 								},
 								ControllerName: "konghq.com/kic-gateway-controller",
 								Conditions: []metav1.Condition{
 									{
-										Type:               string(gatewayv1beta1.GatewayConditionAccepted),
+										Type:               string(gatewayapi.GatewayConditionAccepted),
 										Message:            "",
 										ObservedGeneration: 1,
 										Status:             metav1.ConditionTrue,
-										Reason:             string(gatewayv1beta1.RouteConditionAccepted),
+										Reason:             string(gatewayapi.RouteConditionAccepted),
 										LastTransitionTime: metav1.Now(),
 									},
 									{
@@ -1457,7 +1458,7 @@ func TestEnsureParentsProgrammedCondition(t *testing.T) {
 										Message:            "",
 										ObservedGeneration: 42,
 										Status:             metav1.ConditionTrue,
-										Reason:             string(gatewayv1beta1.RouteConditionAccepted),
+										Reason:             string(gatewayapi.RouteConditionAccepted),
 										LastTransitionTime: metav1.Now(),
 									},
 								},
@@ -1473,8 +1474,8 @@ func TestEnsureParentsProgrammedCondition(t *testing.T) {
 			},
 			{
 				name: "Programmed condition gets properly set to Status True when Programmed condition is not present in route's parent status and Parent Section is specified",
-				httpRouteFunc: func() *HTTPRoute {
-					return &HTTPRoute{
+				httpRouteFunc: func() *gatewayapi.HTTPRoute {
+					return &gatewayapi.HTTPRoute{
 						TypeMeta: metav1.TypeMeta{
 							Kind:       "HTTPRoute",
 							APIVersion: gatewayv1beta1.GroupVersion.Group + "/" + gatewayv1beta1.GroupVersion.Version,
@@ -1484,35 +1485,35 @@ func TestEnsureParentsProgrammedCondition(t *testing.T) {
 							Namespace:  gatewayNN1.Namespace,
 							Generation: 42,
 						},
-						Spec: gatewayv1beta1.HTTPRouteSpec{
-							CommonRouteSpec: gatewayv1beta1.CommonRouteSpec{
-								ParentRefs: []gatewayv1beta1.ParentReference{
+						Spec: gatewayapi.HTTPRouteSpec{
+							CommonRouteSpec: gatewayapi.CommonRouteSpec{
+								ParentRefs: []gatewayapi.ParentReference{
 									{
-										Group:       lo.ToPtr(gatewayv1beta1.Group(gatewayv1beta1.GroupName)),
-										Kind:        lo.ToPtr(gatewayv1beta1.Kind("Gateway")),
+										Group:       lo.ToPtr(gatewayapi.Group(gatewayv1beta1.GroupName)),
+										Kind:        lo.ToPtr(gatewayapi.Kind("Gateway")),
 										Name:        "test-gateway",
-										SectionName: lo.ToPtr(gatewayv1beta1.SectionName("http-2")),
+										SectionName: lo.ToPtr(gatewayapi.SectionName("http-2")),
 									},
 								},
 							},
-							Rules: []gatewayv1beta1.HTTPRouteRule{
+							Rules: []gatewayapi.HTTPRouteRule{
 								{
-									BackendRefs: []gatewayv1beta1.HTTPBackendRef{
+									BackendRefs: []gatewayapi.HTTPBackendRef{
 										builder.NewHTTPBackendRef("fake-service").WithPort(80).Build(),
 									},
 								},
 							},
 						},
-						Status: gatewayv1beta1.HTTPRouteStatus{
-							RouteStatus: gatewayv1beta1.RouteStatus{
-								Parents: []gatewayv1beta1.RouteParentStatus{
+						Status: gatewayapi.HTTPRouteStatus{
+							RouteStatus: gatewayapi.RouteStatus{
+								Parents: []gatewayapi.RouteParentStatus{
 									{
-										ParentRef: gatewayv1beta1.ParentReference{
-											Kind:        lo.ToPtr(gatewayv1beta1.Kind("Gateway")),
-											Group:       lo.ToPtr(gatewayv1beta1.Group(gatewayv1beta1.GroupName)),
-											Name:        gatewayv1beta1.ObjectName(gatewayNN1.Name),
-											Namespace:   (*gatewayv1beta1.Namespace)(&gatewayNN1.Namespace),
-											SectionName: lo.ToPtr(gatewayv1beta1.SectionName("http-2")),
+										ParentRef: gatewayapi.ParentReference{
+											Kind:        lo.ToPtr(gatewayapi.Kind("Gateway")),
+											Group:       lo.ToPtr(gatewayapi.Group(gatewayv1beta1.GroupName)),
+											Name:        gatewayapi.ObjectName(gatewayNN1.Name),
+											Namespace:   (*gatewayapi.Namespace)(&gatewayNN1.Namespace),
+											SectionName: lo.ToPtr(gatewayapi.SectionName("http-2")),
 										},
 										ControllerName: "konghq.com/kic-gateway-controller",
 										Conditions:     []metav1.Condition{},
@@ -1523,16 +1524,16 @@ func TestEnsureParentsProgrammedCondition(t *testing.T) {
 					}
 				},
 				expectedUpdate: true,
-				expectedStatus: &gatewayv1beta1.HTTPRouteStatus{
-					RouteStatus: gatewayv1beta1.RouteStatus{
-						Parents: []gatewayv1beta1.RouteParentStatus{
+				expectedStatus: &gatewayapi.HTTPRouteStatus{
+					RouteStatus: gatewayapi.RouteStatus{
+						Parents: []gatewayapi.RouteParentStatus{
 							{
-								ParentRef: gatewayv1beta1.ParentReference{
-									Kind:        lo.ToPtr(gatewayv1beta1.Kind("Gateway")),
-									Group:       lo.ToPtr(gatewayv1beta1.Group(gatewayv1beta1.GroupName)),
-									Name:        gatewayv1beta1.ObjectName(gatewayNN1.Name),
-									Namespace:   (*gatewayv1beta1.Namespace)(&gatewayNN1.Namespace),
-									SectionName: lo.ToPtr(gatewayv1beta1.SectionName("http-2")),
+								ParentRef: gatewayapi.ParentReference{
+									Kind:        lo.ToPtr(gatewayapi.Kind("Gateway")),
+									Group:       lo.ToPtr(gatewayapi.Group(gatewayv1beta1.GroupName)),
+									Name:        gatewayapi.ObjectName(gatewayNN1.Name),
+									Namespace:   (*gatewayapi.Namespace)(&gatewayNN1.Namespace),
+									SectionName: lo.ToPtr(gatewayapi.SectionName("http-2")),
 								},
 								ControllerName: "konghq.com/kic-gateway-controller",
 								Conditions: []metav1.Condition{
@@ -1541,7 +1542,7 @@ func TestEnsureParentsProgrammedCondition(t *testing.T) {
 										Message:            "",
 										ObservedGeneration: 42,
 										Status:             metav1.ConditionTrue,
-										Reason:             string(gatewayv1beta1.RouteConditionAccepted),
+										Reason:             string(gatewayapi.RouteConditionAccepted),
 										LastTransitionTime: metav1.Now(),
 									},
 								},
@@ -1560,8 +1561,8 @@ func TestEnsureParentsProgrammedCondition(t *testing.T) {
 			},
 			{
 				name: "Programmed condition gets properly set to Status True when route's parent status is not set and Parent Section is specified with 2 gateways both with section name specified",
-				httpRouteFunc: func() *HTTPRoute {
-					return &HTTPRoute{
+				httpRouteFunc: func() *gatewayapi.HTTPRoute {
+					return &gatewayapi.HTTPRoute{
 						TypeMeta: metav1.TypeMeta{
 							Kind:       "HTTPRoute",
 							APIVersion: gatewayv1beta1.GroupVersion.Group + "/" + gatewayv1beta1.GroupVersion.Version,
@@ -1571,45 +1572,45 @@ func TestEnsureParentsProgrammedCondition(t *testing.T) {
 							Namespace:  gatewayNN1.Namespace,
 							Generation: 42,
 						},
-						Spec: gatewayv1beta1.HTTPRouteSpec{
-							CommonRouteSpec: gatewayv1beta1.CommonRouteSpec{
-								ParentRefs: []gatewayv1beta1.ParentReference{
+						Spec: gatewayapi.HTTPRouteSpec{
+							CommonRouteSpec: gatewayapi.CommonRouteSpec{
+								ParentRefs: []gatewayapi.ParentReference{
 									{
-										Group:       lo.ToPtr(gatewayv1beta1.Group(gatewayv1beta1.GroupName)),
-										Kind:        lo.ToPtr(gatewayv1beta1.Kind("Gateway")),
-										Name:        gatewayv1beta1.ObjectName(gateway1.Name),
-										SectionName: lo.ToPtr(gatewayv1beta1.SectionName("http-2")),
+										Group:       lo.ToPtr(gatewayapi.Group(gatewayv1beta1.GroupName)),
+										Kind:        lo.ToPtr(gatewayapi.Kind("Gateway")),
+										Name:        gatewayapi.ObjectName(gateway1.Name),
+										SectionName: lo.ToPtr(gatewayapi.SectionName("http-2")),
 									},
 									{
-										Group:       lo.ToPtr(gatewayv1beta1.Group(gatewayv1beta1.GroupName)),
-										Kind:        lo.ToPtr(gatewayv1beta1.Kind("Gateway")),
-										Name:        gatewayv1beta1.ObjectName(gateway2.Name),
-										SectionName: lo.ToPtr(gatewayv1beta1.SectionName("http-1")),
+										Group:       lo.ToPtr(gatewayapi.Group(gatewayv1beta1.GroupName)),
+										Kind:        lo.ToPtr(gatewayapi.Kind("Gateway")),
+										Name:        gatewayapi.ObjectName(gateway2.Name),
+										SectionName: lo.ToPtr(gatewayapi.SectionName("http-1")),
 									},
 								},
 							},
-							Rules: []gatewayv1beta1.HTTPRouteRule{
+							Rules: []gatewayapi.HTTPRouteRule{
 								{
-									BackendRefs: []gatewayv1beta1.HTTPBackendRef{
+									BackendRefs: []gatewayapi.HTTPBackendRef{
 										builder.NewHTTPBackendRef("fake-service").WithPort(80).Build(),
 									},
 								},
 							},
 						},
-						Status: gatewayv1beta1.HTTPRouteStatus{},
+						Status: gatewayapi.HTTPRouteStatus{},
 					}
 				},
 				expectedUpdate: true,
-				expectedStatus: &gatewayv1beta1.HTTPRouteStatus{
-					RouteStatus: gatewayv1beta1.RouteStatus{
-						Parents: []gatewayv1beta1.RouteParentStatus{
+				expectedStatus: &gatewayapi.HTTPRouteStatus{
+					RouteStatus: gatewayapi.RouteStatus{
+						Parents: []gatewayapi.RouteParentStatus{
 							{
-								ParentRef: gatewayv1beta1.ParentReference{
-									Kind:        lo.ToPtr(gatewayv1beta1.Kind("Gateway")),
-									Group:       lo.ToPtr(gatewayv1beta1.Group(gatewayv1beta1.GroupName)),
-									Name:        gatewayv1beta1.ObjectName(gatewayNN1.Name),
-									Namespace:   (*gatewayv1beta1.Namespace)(&gatewayNN1.Namespace),
-									SectionName: lo.ToPtr(gatewayv1beta1.SectionName("http-2")),
+								ParentRef: gatewayapi.ParentReference{
+									Kind:        lo.ToPtr(gatewayapi.Kind("Gateway")),
+									Group:       lo.ToPtr(gatewayapi.Group(gatewayv1beta1.GroupName)),
+									Name:        gatewayapi.ObjectName(gatewayNN1.Name),
+									Namespace:   (*gatewayapi.Namespace)(&gatewayNN1.Namespace),
+									SectionName: lo.ToPtr(gatewayapi.SectionName("http-2")),
 								},
 								ControllerName: "konghq.com/kic-gateway-controller",
 								Conditions: []metav1.Condition{
@@ -1618,18 +1619,18 @@ func TestEnsureParentsProgrammedCondition(t *testing.T) {
 										Message:            "",
 										ObservedGeneration: 42,
 										Status:             metav1.ConditionTrue,
-										Reason:             string(gatewayv1beta1.RouteConditionAccepted),
+										Reason:             string(gatewayapi.RouteConditionAccepted),
 										LastTransitionTime: metav1.Now(),
 									},
 								},
 							},
 							{
-								ParentRef: gatewayv1beta1.ParentReference{
-									Kind:        lo.ToPtr(gatewayv1beta1.Kind("Gateway")),
-									Group:       lo.ToPtr(gatewayv1beta1.Group(gatewayv1beta1.GroupName)),
-									Name:        gatewayv1beta1.ObjectName(gatewayNN2.Name),
-									Namespace:   (*gatewayv1beta1.Namespace)(&gatewayNN2.Namespace),
-									SectionName: lo.ToPtr(gatewayv1beta1.SectionName("http-1")),
+								ParentRef: gatewayapi.ParentReference{
+									Kind:        lo.ToPtr(gatewayapi.Kind("Gateway")),
+									Group:       lo.ToPtr(gatewayapi.Group(gatewayv1beta1.GroupName)),
+									Name:        gatewayapi.ObjectName(gatewayNN2.Name),
+									Namespace:   (*gatewayapi.Namespace)(&gatewayNN2.Namespace),
+									SectionName: lo.ToPtr(gatewayapi.SectionName("http-1")),
 								},
 								ControllerName: "konghq.com/kic-gateway-controller",
 								Conditions: []metav1.Condition{
@@ -1638,7 +1639,7 @@ func TestEnsureParentsProgrammedCondition(t *testing.T) {
 										Message:            "",
 										ObservedGeneration: 42,
 										Status:             metav1.ConditionTrue,
-										Reason:             string(gatewayv1beta1.RouteConditionAccepted),
+										Reason:             string(gatewayapi.RouteConditionAccepted),
 										LastTransitionTime: metav1.Now(),
 									},
 								},
@@ -1661,8 +1662,8 @@ func TestEnsureParentsProgrammedCondition(t *testing.T) {
 			},
 			{
 				name: "Programmed condition gets properly added to route's parents status when no status for that parent is present yet",
-				httpRouteFunc: func() *HTTPRoute {
-					return &HTTPRoute{
+				httpRouteFunc: func() *gatewayapi.HTTPRoute {
+					return &gatewayapi.HTTPRoute{
 						TypeMeta: metav1.TypeMeta{
 							Kind:       "HTTPRoute",
 							APIVersion: gatewayv1beta1.GroupVersion.Group + "/" + gatewayv1beta1.GroupVersion.Version,
@@ -1672,19 +1673,19 @@ func TestEnsureParentsProgrammedCondition(t *testing.T) {
 							Namespace:  gatewayNN1.Namespace,
 							Generation: 42,
 						},
-						Spec: gatewayv1beta1.HTTPRouteSpec{
-							CommonRouteSpec: gatewayv1beta1.CommonRouteSpec{
-								ParentRefs: []gatewayv1beta1.ParentReference{
+						Spec: gatewayapi.HTTPRouteSpec{
+							CommonRouteSpec: gatewayapi.CommonRouteSpec{
+								ParentRefs: []gatewayapi.ParentReference{
 									{
-										Group: lo.ToPtr(gatewayv1beta1.Group(gatewayv1beta1.GroupName)),
-										Kind:  lo.ToPtr(gatewayv1beta1.Kind("Gateway")),
+										Group: lo.ToPtr(gatewayapi.Group(gatewayv1beta1.GroupName)),
+										Kind:  lo.ToPtr(gatewayapi.Kind("Gateway")),
 										Name:  "test-gateway",
 									},
 								},
 							},
-							Rules: []gatewayv1beta1.HTTPRouteRule{
+							Rules: []gatewayapi.HTTPRouteRule{
 								{
-									BackendRefs: []gatewayv1beta1.HTTPBackendRef{
+									BackendRefs: []gatewayapi.HTTPBackendRef{
 										builder.NewHTTPBackendRef("fake-service").WithPort(80).Build(),
 									},
 								},
@@ -1693,15 +1694,15 @@ func TestEnsureParentsProgrammedCondition(t *testing.T) {
 					}
 				},
 				expectedUpdate: true,
-				expectedStatus: &gatewayv1beta1.HTTPRouteStatus{
-					RouteStatus: gatewayv1beta1.RouteStatus{
-						Parents: []gatewayv1beta1.RouteParentStatus{
+				expectedStatus: &gatewayapi.HTTPRouteStatus{
+					RouteStatus: gatewayapi.RouteStatus{
+						Parents: []gatewayapi.RouteParentStatus{
 							{
-								ParentRef: gatewayv1beta1.ParentReference{
-									Kind:      lo.ToPtr(gatewayv1beta1.Kind("Gateway")),
-									Group:     lo.ToPtr(gatewayv1beta1.Group(gatewayv1beta1.GroupName)),
-									Name:      gatewayv1beta1.ObjectName(gatewayNN1.Name),
-									Namespace: (*gatewayv1beta1.Namespace)(&gatewayNN1.Namespace),
+								ParentRef: gatewayapi.ParentReference{
+									Kind:      lo.ToPtr(gatewayapi.Kind("Gateway")),
+									Group:     lo.ToPtr(gatewayapi.Group(gatewayv1beta1.GroupName)),
+									Name:      gatewayapi.ObjectName(gatewayNN1.Name),
+									Namespace: (*gatewayapi.Namespace)(&gatewayNN1.Namespace),
 								},
 								ControllerName: "konghq.com/kic-gateway-controller",
 								Conditions: []metav1.Condition{
@@ -1710,7 +1711,7 @@ func TestEnsureParentsProgrammedCondition(t *testing.T) {
 										Message:            "",
 										ObservedGeneration: 42,
 										Status:             metav1.ConditionTrue,
-										Reason:             string(gatewayv1beta1.RouteConditionAccepted),
+										Reason:             string(gatewayapi.RouteConditionAccepted),
 										LastTransitionTime: metav1.Now(),
 									},
 								},
@@ -1726,8 +1727,8 @@ func TestEnsureParentsProgrammedCondition(t *testing.T) {
 			},
 			{
 				name: "no update is being done when an expected Programmed condition is already in place",
-				httpRouteFunc: func() *HTTPRoute {
-					return &HTTPRoute{
+				httpRouteFunc: func() *gatewayapi.HTTPRoute {
+					return &gatewayapi.HTTPRoute{
 						TypeMeta: metav1.TypeMeta{
 							Kind:       "HTTPRoute",
 							APIVersion: gatewayv1beta1.GroupVersion.Group + "/" + gatewayv1beta1.GroupVersion.Version,
@@ -1737,33 +1738,33 @@ func TestEnsureParentsProgrammedCondition(t *testing.T) {
 							Namespace:  gatewayNN1.Namespace,
 							Generation: 42,
 						},
-						Spec: gatewayv1beta1.HTTPRouteSpec{
-							CommonRouteSpec: gatewayv1beta1.CommonRouteSpec{
-								ParentRefs: []gatewayv1beta1.ParentReference{
+						Spec: gatewayapi.HTTPRouteSpec{
+							CommonRouteSpec: gatewayapi.CommonRouteSpec{
+								ParentRefs: []gatewayapi.ParentReference{
 									{
-										Group: lo.ToPtr(gatewayv1beta1.Group(gatewayv1beta1.GroupName)),
-										Kind:  lo.ToPtr(gatewayv1beta1.Kind("Gateway")),
+										Group: lo.ToPtr(gatewayapi.Group(gatewayv1beta1.GroupName)),
+										Kind:  lo.ToPtr(gatewayapi.Kind("Gateway")),
 										Name:  "test-gateway",
 									},
 								},
 							},
-							Rules: []gatewayv1beta1.HTTPRouteRule{
+							Rules: []gatewayapi.HTTPRouteRule{
 								{
-									BackendRefs: []gatewayv1beta1.HTTPBackendRef{
+									BackendRefs: []gatewayapi.HTTPBackendRef{
 										builder.NewHTTPBackendRef("fake-service").WithPort(80).Build(),
 									},
 								},
 							},
 						},
-						Status: gatewayv1beta1.HTTPRouteStatus{
-							RouteStatus: gatewayv1beta1.RouteStatus{
-								Parents: []gatewayv1beta1.RouteParentStatus{
+						Status: gatewayapi.HTTPRouteStatus{
+							RouteStatus: gatewayapi.RouteStatus{
+								Parents: []gatewayapi.RouteParentStatus{
 									{
-										ParentRef: gatewayv1beta1.ParentReference{
-											Kind:      lo.ToPtr(gatewayv1beta1.Kind("Gateway")),
-											Group:     lo.ToPtr(gatewayv1beta1.Group(gatewayv1beta1.GroupName)),
-											Name:      gatewayv1beta1.ObjectName(gatewayNN1.Name),
-											Namespace: (*gatewayv1beta1.Namespace)(&gatewayNN1.Namespace),
+										ParentRef: gatewayapi.ParentReference{
+											Kind:      lo.ToPtr(gatewayapi.Kind("Gateway")),
+											Group:     lo.ToPtr(gatewayapi.Group(gatewayv1beta1.GroupName)),
+											Name:      gatewayapi.ObjectName(gatewayNN1.Name),
+											Namespace: (*gatewayapi.Namespace)(&gatewayNN1.Namespace),
 										},
 										ControllerName: "konghq.com/kic-gateway-controller",
 										Conditions: []metav1.Condition{
@@ -1772,7 +1773,7 @@ func TestEnsureParentsProgrammedCondition(t *testing.T) {
 												Message:            "",
 												ObservedGeneration: 42,
 												Status:             metav1.ConditionTrue,
-												Reason:             string(gatewayv1beta1.RouteConditionAccepted),
+												Reason:             string(gatewayapi.RouteConditionAccepted),
 												LastTransitionTime: metav1.Now(),
 											},
 										},
@@ -1811,7 +1812,7 @@ func TestEnsureParentsProgrammedCondition(t *testing.T) {
 				updated, err := ensureParentsProgrammedCondition(ctx, fakeClient.Status(), httproute, httproute.Status.Parents, gateways,
 					metav1.Condition{
 						Status: metav1.ConditionTrue,
-						Reason: string(gatewayv1beta1.RouteConditionAccepted),
+						Reason: string(gatewayapi.RouteConditionAccepted),
 					},
 				)
 				require.NoError(t, err)
@@ -1840,55 +1841,55 @@ func TestEnsureParentsProgrammedCondition(t *testing.T) {
 func TestIsRouteAcceptedByListener(t *testing.T) {
 	testCases := []struct {
 		name          string
-		gateway       gatewayv1beta1.Gateway
-		httpRoute     *gatewayv1beta1.HTTPRoute
+		gateway       gatewayapi.Gateway
+		httpRoute     *gatewayapi.HTTPRoute
 		expectedValue bool
 	}{
 		{
 			name: "accepted, allowedRoutes from the same namespace",
-			httpRoute: &gatewayv1beta1.HTTPRoute{
+			httpRoute: &gatewayapi.HTTPRoute{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "route",
 					Namespace: "default",
 				},
-				Spec: gatewayv1beta1.HTTPRouteSpec{
-					CommonRouteSpec: gatewayv1beta1.CommonRouteSpec{
-						ParentRefs: []gatewayv1beta1.ParentReference{
+				Spec: gatewayapi.HTTPRouteSpec{
+					CommonRouteSpec: gatewayapi.CommonRouteSpec{
+						ParentRefs: []gatewayapi.ParentReference{
 							{
 								Name:        "gateway",
-								SectionName: lo.ToPtr(gatewayv1beta1.SectionName("listener-1")),
+								SectionName: lo.ToPtr(gatewayapi.SectionName("listener-1")),
 							},
 						},
 					},
 				},
 			},
-			gateway: gatewayv1beta1.Gateway{
+			gateway: gatewayapi.Gateway{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "gateway",
 					Namespace: "default",
 				},
-				Spec: gatewayv1beta1.GatewaySpec{
-					Listeners: []gatewayv1alpha2.Listener{
+				Spec: gatewayapi.GatewaySpec{
+					Listeners: []gatewayapi.Listener{
 						{
 							Name:          "listener-1",
 							AllowedRoutes: builder.NewAllowedRoutesFromSameNamespaces(),
-							Protocol:      gatewayv1beta1.HTTPProtocolType,
+							Protocol:      gatewayapi.HTTPProtocolType,
 						},
 					},
 				},
-				Status: gatewayv1beta1.GatewayStatus{
-					Listeners: []gatewayv1beta1.ListenerStatus{
+				Status: gatewayapi.GatewayStatus{
+					Listeners: []gatewayapi.ListenerStatus{
 						{
-							Name: gatewayv1beta1.SectionName("listener-1"),
-							SupportedKinds: []gatewayv1beta1.RouteGroupKind{
+							Name: gatewayapi.SectionName("listener-1"),
+							SupportedKinds: []gatewayapi.RouteGroupKind{
 								{
-									Group: lo.ToPtr(gatewayv1beta1.Group("gateway.networking.k8s.io")),
+									Group: lo.ToPtr(gatewayapi.Group("gateway.networking.k8s.io")),
 									Kind:  "HTTPRoute",
 								},
 							},
 							Conditions: []metav1.Condition{
 								{
-									Type:   string(gatewayv1beta1.ListenerConditionProgrammed),
+									Type:   string(gatewayapi.ListenerConditionProgrammed),
 									Status: metav1.ConditionTrue,
 								},
 							},
@@ -1900,29 +1901,29 @@ func TestIsRouteAcceptedByListener(t *testing.T) {
 		},
 		{
 			name: "accepted, allowedRoutes from selected namespace",
-			httpRoute: &gatewayv1beta1.HTTPRoute{
+			httpRoute: &gatewayapi.HTTPRoute{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "route",
 					Namespace: "other-namespace",
 				},
-				Spec: gatewayv1beta1.HTTPRouteSpec{
-					CommonRouteSpec: gatewayv1beta1.CommonRouteSpec{
-						ParentRefs: []gatewayv1beta1.ParentReference{
+				Spec: gatewayapi.HTTPRouteSpec{
+					CommonRouteSpec: gatewayapi.CommonRouteSpec{
+						ParentRefs: []gatewayapi.ParentReference{
 							{
 								Name:        "gateway",
-								SectionName: lo.ToPtr(gatewayv1beta1.SectionName("listener-1")),
+								SectionName: lo.ToPtr(gatewayapi.SectionName("listener-1")),
 							},
 						},
 					},
 				},
 			},
-			gateway: gatewayv1beta1.Gateway{
+			gateway: gatewayapi.Gateway{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "gateway",
 					Namespace: "default",
 				},
-				Spec: gatewayv1beta1.GatewaySpec{
-					Listeners: []gatewayv1alpha2.Listener{
+				Spec: gatewayapi.GatewaySpec{
+					Listeners: []gatewayapi.Listener{
 						{
 							Name: "listener-1",
 							AllowedRoutes: builder.NewAllowedRoutesFromSelectorNamespace(&metav1.LabelSelector{
@@ -1930,23 +1931,23 @@ func TestIsRouteAcceptedByListener(t *testing.T) {
 									"konghq.com/allowed-namespace": "true",
 								},
 							}),
-							Protocol: gatewayv1beta1.HTTPProtocolType,
+							Protocol: gatewayapi.HTTPProtocolType,
 						},
 					},
 				},
-				Status: gatewayv1beta1.GatewayStatus{
-					Listeners: []gatewayv1beta1.ListenerStatus{
+				Status: gatewayapi.GatewayStatus{
+					Listeners: []gatewayapi.ListenerStatus{
 						{
-							Name: gatewayv1beta1.SectionName("listener-1"),
-							SupportedKinds: []gatewayv1beta1.RouteGroupKind{
+							Name: gatewayapi.SectionName("listener-1"),
+							SupportedKinds: []gatewayapi.RouteGroupKind{
 								{
-									Group: lo.ToPtr(gatewayv1beta1.Group("gateway.networking.k8s.io")),
+									Group: lo.ToPtr(gatewayapi.Group("gateway.networking.k8s.io")),
 									Kind:  "HTTPRoute",
 								},
 							},
 							Conditions: []metav1.Condition{
 								{
-									Type:   string(gatewayv1beta1.ListenerConditionProgrammed),
+									Type:   string(gatewayapi.ListenerConditionProgrammed),
 									Status: metav1.ConditionTrue,
 								},
 							},
@@ -1958,49 +1959,49 @@ func TestIsRouteAcceptedByListener(t *testing.T) {
 		},
 		{
 			name: "not accepted, listener not ready",
-			httpRoute: &gatewayv1beta1.HTTPRoute{
+			httpRoute: &gatewayapi.HTTPRoute{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "route",
 					Namespace: "default",
 				},
-				Spec: gatewayv1beta1.HTTPRouteSpec{
-					CommonRouteSpec: gatewayv1beta1.CommonRouteSpec{
-						ParentRefs: []gatewayv1beta1.ParentReference{
+				Spec: gatewayapi.HTTPRouteSpec{
+					CommonRouteSpec: gatewayapi.CommonRouteSpec{
+						ParentRefs: []gatewayapi.ParentReference{
 							{
 								Name:        "gateway",
-								SectionName: lo.ToPtr(gatewayv1beta1.SectionName("listener-1")),
+								SectionName: lo.ToPtr(gatewayapi.SectionName("listener-1")),
 							},
 						},
 					},
 				},
 			},
-			gateway: gatewayv1beta1.Gateway{
+			gateway: gatewayapi.Gateway{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "gateway",
 					Namespace: "default",
 				},
-				Spec: gatewayv1beta1.GatewaySpec{
-					Listeners: []gatewayv1alpha2.Listener{
+				Spec: gatewayapi.GatewaySpec{
+					Listeners: []gatewayapi.Listener{
 						{
 							Name:          "listener-1",
 							AllowedRoutes: builder.NewAllowedRoutesFromSameNamespaces(),
-							Protocol:      gatewayv1beta1.HTTPProtocolType,
+							Protocol:      gatewayapi.HTTPProtocolType,
 						},
 					},
 				},
-				Status: gatewayv1beta1.GatewayStatus{
-					Listeners: []gatewayv1beta1.ListenerStatus{
+				Status: gatewayapi.GatewayStatus{
+					Listeners: []gatewayapi.ListenerStatus{
 						{
-							Name: gatewayv1beta1.SectionName("listener-1"),
-							SupportedKinds: []gatewayv1beta1.RouteGroupKind{
+							Name: gatewayapi.SectionName("listener-1"),
+							SupportedKinds: []gatewayapi.RouteGroupKind{
 								{
-									Group: lo.ToPtr(gatewayv1beta1.Group("gateway.networking.k8s.io")),
+									Group: lo.ToPtr(gatewayapi.Group("gateway.networking.k8s.io")),
 									Kind:  "HTTPRoute",
 								},
 							},
 							Conditions: []metav1.Condition{
 								{
-									Type:   string(gatewayv1beta1.ListenerConditionProgrammed),
+									Type:   string(gatewayapi.ListenerConditionProgrammed),
 									Status: metav1.ConditionFalse,
 								},
 							},
@@ -2012,49 +2013,49 @@ func TestIsRouteAcceptedByListener(t *testing.T) {
 		},
 		{
 			name: "not accepted, wrong sectionName",
-			httpRoute: &gatewayv1beta1.HTTPRoute{
+			httpRoute: &gatewayapi.HTTPRoute{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "route",
 					Namespace: "default",
 				},
-				Spec: gatewayv1beta1.HTTPRouteSpec{
-					CommonRouteSpec: gatewayv1beta1.CommonRouteSpec{
-						ParentRefs: []gatewayv1beta1.ParentReference{
+				Spec: gatewayapi.HTTPRouteSpec{
+					CommonRouteSpec: gatewayapi.CommonRouteSpec{
+						ParentRefs: []gatewayapi.ParentReference{
 							{
 								Name:        "gateway",
-								SectionName: lo.ToPtr(gatewayv1beta1.SectionName("wrong-listener")),
+								SectionName: lo.ToPtr(gatewayapi.SectionName("wrong-listener")),
 							},
 						},
 					},
 				},
 			},
-			gateway: gatewayv1beta1.Gateway{
+			gateway: gatewayapi.Gateway{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "gateway",
 					Namespace: "default",
 				},
-				Spec: gatewayv1beta1.GatewaySpec{
-					Listeners: []gatewayv1alpha2.Listener{
+				Spec: gatewayapi.GatewaySpec{
+					Listeners: []gatewayapi.Listener{
 						{
 							Name:          "listener-1",
 							AllowedRoutes: builder.NewAllowedRoutesFromSameNamespaces(),
-							Protocol:      gatewayv1beta1.HTTPProtocolType,
+							Protocol:      gatewayapi.HTTPProtocolType,
 						},
 					},
 				},
-				Status: gatewayv1beta1.GatewayStatus{
-					Listeners: []gatewayv1beta1.ListenerStatus{
+				Status: gatewayapi.GatewayStatus{
+					Listeners: []gatewayapi.ListenerStatus{
 						{
-							Name: gatewayv1beta1.SectionName("listener-1"),
-							SupportedKinds: []gatewayv1beta1.RouteGroupKind{
+							Name: gatewayapi.SectionName("listener-1"),
+							SupportedKinds: []gatewayapi.RouteGroupKind{
 								{
-									Group: lo.ToPtr(gatewayv1beta1.Group("gateway.networking.k8s.io")),
+									Group: lo.ToPtr(gatewayapi.Group("gateway.networking.k8s.io")),
 									Kind:  "HTTPRoute",
 								},
 							},
 							Conditions: []metav1.Condition{
 								{
-									Type:   string(gatewayv1beta1.ListenerConditionProgrammed),
+									Type:   string(gatewayapi.ListenerConditionProgrammed),
 									Status: metav1.ConditionTrue,
 								},
 							},
@@ -2066,51 +2067,51 @@ func TestIsRouteAcceptedByListener(t *testing.T) {
 		},
 		{
 			name: "not accepted, wrong port",
-			httpRoute: &gatewayv1beta1.HTTPRoute{
+			httpRoute: &gatewayapi.HTTPRoute{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "route",
 					Namespace: "default",
 				},
-				Spec: gatewayv1beta1.HTTPRouteSpec{
-					CommonRouteSpec: gatewayv1beta1.CommonRouteSpec{
-						ParentRefs: []gatewayv1beta1.ParentReference{
+				Spec: gatewayapi.HTTPRouteSpec{
+					CommonRouteSpec: gatewayapi.CommonRouteSpec{
+						ParentRefs: []gatewayapi.ParentReference{
 							{
 								Name:        "gateway",
-								SectionName: lo.ToPtr(gatewayv1beta1.SectionName("listener-1")),
-								Port:        lo.ToPtr(gatewayv1beta1.PortNumber(8080)),
+								SectionName: lo.ToPtr(gatewayapi.SectionName("listener-1")),
+								Port:        lo.ToPtr(gatewayapi.PortNumber(8080)),
 							},
 						},
 					},
 				},
 			},
-			gateway: gatewayv1beta1.Gateway{
+			gateway: gatewayapi.Gateway{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "gateway",
 					Namespace: "default",
 				},
-				Spec: gatewayv1beta1.GatewaySpec{
-					Listeners: []gatewayv1alpha2.Listener{
+				Spec: gatewayapi.GatewaySpec{
+					Listeners: []gatewayapi.Listener{
 						{
 							Name:          "listener-1",
 							AllowedRoutes: builder.NewAllowedRoutesFromSameNamespaces(),
-							Protocol:      gatewayv1beta1.HTTPProtocolType,
+							Protocol:      gatewayapi.HTTPProtocolType,
 							Port:          9090,
 						},
 					},
 				},
-				Status: gatewayv1beta1.GatewayStatus{
-					Listeners: []gatewayv1beta1.ListenerStatus{
+				Status: gatewayapi.GatewayStatus{
+					Listeners: []gatewayapi.ListenerStatus{
 						{
-							Name: gatewayv1beta1.SectionName("listener-1"),
-							SupportedKinds: []gatewayv1beta1.RouteGroupKind{
+							Name: gatewayapi.SectionName("listener-1"),
+							SupportedKinds: []gatewayapi.RouteGroupKind{
 								{
-									Group: lo.ToPtr(gatewayv1beta1.Group("gateway.networking.k8s.io")),
+									Group: lo.ToPtr(gatewayapi.Group("gateway.networking.k8s.io")),
 									Kind:  "HTTPRoute",
 								},
 							},
 							Conditions: []metav1.Condition{
 								{
-									Type:   string(gatewayv1beta1.ListenerConditionProgrammed),
+									Type:   string(gatewayapi.ListenerConditionProgrammed),
 									Status: metav1.ConditionTrue,
 								},
 							},
@@ -2122,49 +2123,49 @@ func TestIsRouteAcceptedByListener(t *testing.T) {
 		},
 		{
 			name: "not accepted, wrong protocol",
-			httpRoute: &gatewayv1beta1.HTTPRoute{
+			httpRoute: &gatewayapi.HTTPRoute{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "route",
 					Namespace: "default",
 				},
-				Spec: gatewayv1beta1.HTTPRouteSpec{
-					CommonRouteSpec: gatewayv1beta1.CommonRouteSpec{
-						ParentRefs: []gatewayv1beta1.ParentReference{
+				Spec: gatewayapi.HTTPRouteSpec{
+					CommonRouteSpec: gatewayapi.CommonRouteSpec{
+						ParentRefs: []gatewayapi.ParentReference{
 							{
 								Name:        "gateway",
-								SectionName: lo.ToPtr(gatewayv1beta1.SectionName("listener-1")),
+								SectionName: lo.ToPtr(gatewayapi.SectionName("listener-1")),
 							},
 						},
 					},
 				},
 			},
-			gateway: gatewayv1beta1.Gateway{
+			gateway: gatewayapi.Gateway{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "gateway",
 					Namespace: "default",
 				},
-				Spec: gatewayv1beta1.GatewaySpec{
-					Listeners: []gatewayv1alpha2.Listener{
+				Spec: gatewayapi.GatewaySpec{
+					Listeners: []gatewayapi.Listener{
 						{
 							Name:          "listener-1",
 							AllowedRoutes: builder.NewAllowedRoutesFromSameNamespaces(),
-							Protocol:      gatewayv1beta1.UDPProtocolType,
+							Protocol:      gatewayapi.UDPProtocolType,
 						},
 					},
 				},
-				Status: gatewayv1beta1.GatewayStatus{
-					Listeners: []gatewayv1beta1.ListenerStatus{
+				Status: gatewayapi.GatewayStatus{
+					Listeners: []gatewayapi.ListenerStatus{
 						{
-							Name: gatewayv1beta1.SectionName("listener-1"),
-							SupportedKinds: []gatewayv1beta1.RouteGroupKind{
+							Name: gatewayapi.SectionName("listener-1"),
+							SupportedKinds: []gatewayapi.RouteGroupKind{
 								{
-									Group: lo.ToPtr(gatewayv1beta1.Group("gateway.networking.k8s.io")),
+									Group: lo.ToPtr(gatewayapi.Group("gateway.networking.k8s.io")),
 									Kind:  "HTTPRoute",
 								},
 							},
 							Conditions: []metav1.Condition{
 								{
-									Type:   string(gatewayv1beta1.ListenerConditionProgrammed),
+									Type:   string(gatewayapi.ListenerConditionProgrammed),
 									Status: metav1.ConditionTrue,
 								},
 							},
@@ -2176,53 +2177,53 @@ func TestIsRouteAcceptedByListener(t *testing.T) {
 		},
 		{
 			name: "not accepted, wrong hostnames",
-			httpRoute: &gatewayv1beta1.HTTPRoute{
+			httpRoute: &gatewayapi.HTTPRoute{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "route",
 					Namespace: "default",
 				},
-				Spec: gatewayv1beta1.HTTPRouteSpec{
-					CommonRouteSpec: gatewayv1beta1.CommonRouteSpec{
-						ParentRefs: []gatewayv1beta1.ParentReference{
+				Spec: gatewayapi.HTTPRouteSpec{
+					CommonRouteSpec: gatewayapi.CommonRouteSpec{
+						ParentRefs: []gatewayapi.ParentReference{
 							{
 								Name:        "gateway",
-								SectionName: lo.ToPtr(gatewayv1beta1.SectionName("listener-1")),
+								SectionName: lo.ToPtr(gatewayapi.SectionName("listener-1")),
 							},
 						},
 					},
-					Hostnames: []gatewayv1beta1.Hostname{
+					Hostnames: []gatewayapi.Hostname{
 						"wrong.hostname.com",
 					},
 				},
 			},
-			gateway: gatewayv1beta1.Gateway{
+			gateway: gatewayapi.Gateway{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "gateway",
 					Namespace: "default",
 				},
-				Spec: gatewayv1beta1.GatewaySpec{
-					Listeners: []gatewayv1alpha2.Listener{
+				Spec: gatewayapi.GatewaySpec{
+					Listeners: []gatewayapi.Listener{
 						{
 							Name:          "listener-1",
 							AllowedRoutes: builder.NewAllowedRoutesFromSameNamespaces(),
-							Protocol:      gatewayv1beta1.HTTPProtocolType,
-							Hostname:      lo.ToPtr(gatewayv1beta1.Hostname("foo.bar.com")),
+							Protocol:      gatewayapi.HTTPProtocolType,
+							Hostname:      lo.ToPtr(gatewayapi.Hostname("foo.bar.com")),
 						},
 					},
 				},
-				Status: gatewayv1beta1.GatewayStatus{
-					Listeners: []gatewayv1beta1.ListenerStatus{
+				Status: gatewayapi.GatewayStatus{
+					Listeners: []gatewayapi.ListenerStatus{
 						{
-							Name: gatewayv1beta1.SectionName("listener-1"),
-							SupportedKinds: []gatewayv1beta1.RouteGroupKind{
+							Name: gatewayapi.SectionName("listener-1"),
+							SupportedKinds: []gatewayapi.RouteGroupKind{
 								{
-									Group: lo.ToPtr(gatewayv1beta1.Group("gateway.networking.k8s.io")),
+									Group: lo.ToPtr(gatewayapi.Group("gateway.networking.k8s.io")),
 									Kind:  "HTTPRoute",
 								},
 							},
 							Conditions: []metav1.Condition{
 								{
-									Type:   string(gatewayv1beta1.ListenerConditionProgrammed),
+									Type:   string(gatewayapi.ListenerConditionProgrammed),
 									Status: metav1.ConditionTrue,
 								},
 							},

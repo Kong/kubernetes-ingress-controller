@@ -22,10 +22,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
-	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/controllers"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/util/gatewayapi"
 	k8sobj "github.com/kong/kubernetes-ingress-controller/v2/internal/util/kubernetes/object"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util/kubernetes/object/status"
 )
@@ -63,7 +63,7 @@ func (r *UDPRouteReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	// removed from data-plane configurations, and any routes that are now supported
 	// due to that change get added to data-plane configurations.
 	if err := c.Watch(
-		source.Kind(mgr.GetCache(), &gatewayv1beta1.GatewayClass{}),
+		source.Kind(mgr.GetCache(), &gatewayapi.GatewayClass{}),
 		handler.EnqueueRequestsFromMapFunc(r.listUDPRoutesForGatewayClass),
 		predicate.Funcs{
 			GenericFunc: func(e event.GenericEvent) bool { return false }, // we don't need to enqueue from generic
@@ -80,7 +80,7 @@ func (r *UDPRouteReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	// removed from data-plane configurations, and any routes that are now supported
 	// due to that change get added to data-plane configurations.
 	if err := c.Watch(
-		source.Kind(mgr.GetCache(), &gatewayv1beta1.Gateway{}),
+		source.Kind(mgr.GetCache(), &gatewayapi.Gateway{}),
 		handler.EnqueueRequestsFromMapFunc(r.listUDPRoutesForGateway),
 	); err != nil {
 		return err
@@ -105,7 +105,7 @@ func (r *UDPRouteReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	// data-plane config for an UDPRoute if it somehow becomes disconnected from
 	// a supported Gateway and GatewayClass.
 	return c.Watch(
-		source.Kind(mgr.GetCache(), &gatewayv1alpha2.UDPRoute{}),
+		source.Kind(mgr.GetCache(), &gatewayapi.UDPRoute{}),
 		&handler.EnqueueRequestForObject{},
 	)
 }
@@ -122,14 +122,14 @@ func (r *UDPRouteReconciler) SetupWithManager(mgr ctrl.Manager) error {
 // the cached manager client to avoid API overhead.
 func (r *UDPRouteReconciler) listUDPRoutesForGatewayClass(ctx context.Context, obj client.Object) []reconcile.Request {
 	// verify that the object is a GatewayClass
-	gwc, ok := obj.(*gatewayv1beta1.GatewayClass)
+	gwc, ok := obj.(*gatewayapi.GatewayClass)
 	if !ok {
 		r.Log.Error(fmt.Errorf("invalid type"), "found invalid type in event handlers", "expected", "GatewayClass", "found", reflect.TypeOf(obj))
 		return nil
 	}
 
 	// map all Gateway objects
-	gatewayList := gatewayv1beta1.GatewayList{}
+	gatewayList := gatewayapi.GatewayList{}
 	if err := r.Client.List(ctx, &gatewayList); err != nil {
 		r.Log.Error(err, "failed to list gateway objects from the cached client")
 		return nil
@@ -153,7 +153,7 @@ func (r *UDPRouteReconciler) listUDPRoutesForGatewayClass(ctx context.Context, o
 	}
 
 	// map all UDPRoute objects
-	udprouteList := gatewayv1alpha2.UDPRouteList{}
+	udprouteList := gatewayapi.UDPRouteList{}
 	if err := r.Client.List(ctx, &udprouteList); err != nil {
 		r.Log.Error(err, "failed to list udproute objects from the cached client")
 		return nil
@@ -207,14 +207,14 @@ func (r *UDPRouteReconciler) listUDPRoutesForGatewayClass(ctx context.Context, o
 // this kind of problem without having to enqueue extra objects.
 func (r *UDPRouteReconciler) listUDPRoutesForGateway(ctx context.Context, obj client.Object) []reconcile.Request {
 	// verify that the object is a Gateway
-	gw, ok := obj.(*gatewayv1beta1.Gateway)
+	gw, ok := obj.(*gatewayapi.Gateway)
 	if !ok {
 		r.Log.Error(fmt.Errorf("invalid type"), "found invalid type in event handlers", "expected", "Gateway", "found", reflect.TypeOf(obj))
 		return nil
 	}
 
 	// map all UDPRoute objects
-	udprouteList := gatewayv1alpha2.UDPRouteList{}
+	udprouteList := gatewayapi.UDPRouteList{}
 	if err := r.Client.List(ctx, &udprouteList); err != nil {
 		r.Log.Error(err, "failed to list udproute objects from the cached client")
 		return nil
@@ -254,7 +254,7 @@ func (r *UDPRouteReconciler) listUDPRoutesForGateway(ctx context.Context, obj cl
 func (r *UDPRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := r.Log.WithValues("GatewayV1Alpha2UDPRoute", req.NamespacedName)
 
-	udproute := new(gatewayv1alpha2.UDPRoute)
+	udproute := new(gatewayapi.UDPRoute)
 	if err := r.Get(ctx, req.NamespacedName, udproute); err != nil {
 		// if the queued object is no longer present in the proxy cache we need
 		// to ensure that if it was ever added to the cache, it gets removed.
@@ -426,7 +426,7 @@ var udprouteParentKind = "Gateway"
 // ensureGatewayReferenceStatus takes any number of Gateways that should be
 // considered "attached" to a given UDPRoute and ensures that the status
 // for the UDPRoute is updated appropriately.
-func (r *UDPRouteReconciler) ensureGatewayReferenceStatusAdded(ctx context.Context, udproute *gatewayv1alpha2.UDPRoute, gateways ...supportedGatewayWithCondition) (bool, error) {
+func (r *UDPRouteReconciler) ensureGatewayReferenceStatusAdded(ctx context.Context, udproute *gatewayapi.UDPRoute, gateways ...supportedGatewayWithCondition) (bool, error) {
 	// map the existing parentStatues to avoid duplications
 	parentStatuses := getParentStatuses(udproute, udproute.Status.Parents)
 
@@ -435,20 +435,20 @@ func (r *UDPRouteReconciler) ensureGatewayReferenceStatusAdded(ctx context.Conte
 	for _, gateway := range gateways {
 		gateway := gateway
 		// build a new status for the parent Gateway
-		gatewayParentStatus := &gatewayv1alpha2.RouteParentStatus{
-			ParentRef: gatewayv1alpha2.ParentReference{
-				Group:     (*gatewayv1alpha2.Group)(&gatewayv1alpha2.GroupVersion.Group),
+		gatewayParentStatus := &gatewayapi.RouteParentStatus{
+			ParentRef: gatewayapi.ParentReference{
+				Group:     (*gatewayapi.Group)(&gatewayv1alpha2.GroupVersion.Group),
 				Kind:      util.StringToGatewayAPIKindPtr(udprouteParentKind),
-				Namespace: (*gatewayv1alpha2.Namespace)(&gateway.gateway.Namespace),
-				Name:      gatewayv1alpha2.ObjectName(gateway.gateway.Name),
+				Namespace: (*gatewayapi.Namespace)(&gateway.gateway.Namespace),
+				Name:      gatewayapi.ObjectName(gateway.gateway.Name),
 			},
 			ControllerName: GetControllerName(),
 			Conditions: []metav1.Condition{{
-				Type:               string(gatewayv1alpha2.RouteConditionAccepted),
+				Type:               string(gatewayapi.RouteConditionAccepted),
 				Status:             metav1.ConditionTrue,
 				ObservedGeneration: udproute.Generation,
 				LastTransitionTime: metav1.Now(),
-				Reason:             string(gatewayv1alpha2.RouteReasonAccepted),
+				Reason:             string(gatewayapi.RouteReasonAccepted),
 			}},
 		}
 
@@ -494,7 +494,7 @@ func (r *UDPRouteReconciler) ensureGatewayReferenceStatusAdded(ctx context.Conte
 	}
 
 	// update the udproute status with the new status references
-	udproute.Status.Parents = make([]gatewayv1alpha2.RouteParentStatus, 0, len(parentStatuses))
+	udproute.Status.Parents = make([]gatewayapi.RouteParentStatus, 0, len(parentStatuses))
 	for _, parent := range parentStatuses {
 		udproute.Status.Parents = append(udproute.Status.Parents, *parent)
 	}
@@ -511,9 +511,9 @@ func (r *UDPRouteReconciler) ensureGatewayReferenceStatusAdded(ctx context.Conte
 // ensureGatewayReferenceStatusRemoved uses the ControllerName provided by the Gateway
 // implementation to prune status references to Gateways supported by this controller
 // in the provided UDPRoute object.
-func (r *UDPRouteReconciler) ensureGatewayReferenceStatusRemoved(ctx context.Context, udproute *gatewayv1alpha2.UDPRoute) (bool, error) {
+func (r *UDPRouteReconciler) ensureGatewayReferenceStatusRemoved(ctx context.Context, udproute *gatewayapi.UDPRoute) (bool, error) {
 	// drop all status references to supported Gateway objects
-	newStatuses := make([]gatewayv1alpha2.RouteParentStatus, 0)
+	newStatuses := make([]gatewayapi.RouteParentStatus, 0)
 	for _, status := range udproute.Status.Parents {
 		if status.ControllerName != GetControllerName() {
 			newStatuses = append(newStatuses, status)

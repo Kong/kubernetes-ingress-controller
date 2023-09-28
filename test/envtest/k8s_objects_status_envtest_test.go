@@ -13,11 +13,11 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/gateway"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/manager"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util/builder"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/util/gatewayapi"
 )
 
 func TestHTTPRouteReconciliation_DoesNotBlockSyncLoopWhenStatusQueueBufferIsExceeded(t *testing.T) {
@@ -54,18 +54,18 @@ func TestHTTPRouteReconciliation_DoesNotBlockSyncLoopWhenStatusQueueBufferIsExce
 	require.NoError(t, ctrlClient.Create(ctx, &backendService))
 	t.Cleanup(func() { _ = ctrlClient.Delete(ctx, &backendService) })
 
-	httpRoute := gatewayv1beta1.HTTPRoute{
+	httpRoute := gatewayapi.HTTPRoute{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: gw.Namespace,
 			Name:      uuid.NewString(),
 		},
-		Spec: gatewayv1beta1.HTTPRouteSpec{
-			CommonRouteSpec: gatewayv1beta1.CommonRouteSpec{
-				ParentRefs: []gatewayv1beta1.ParentReference{{
-					Name: gatewayv1beta1.ObjectName(gw.Name),
+		Spec: gatewayapi.HTTPRouteSpec{
+			CommonRouteSpec: gatewayapi.CommonRouteSpec{
+				ParentRefs: []gatewayapi.ParentReference{{
+					Name: gatewayapi.ObjectName(gw.Name),
 				}},
 			},
-			Rules: []gatewayv1beta1.HTTPRouteRule{{
+			Rules: []gatewayapi.HTTPRouteRule{{
 				Matches: builder.NewHTTPRouteMatch().
 					WithPathPrefix("/path").
 					ToSlice(),
@@ -82,7 +82,7 @@ func TestHTTPRouteReconciliation_DoesNotBlockSyncLoopWhenStatusQueueBufferIsExce
 		time.Second*10, time.Millisecond*50)
 }
 
-func httpRouteGetsProgrammed(ctx context.Context, t *testing.T, cl client.Client, httpRoute gatewayv1beta1.HTTPRoute) func() bool {
+func httpRouteGetsProgrammed(ctx context.Context, t *testing.T, cl client.Client, httpRoute gatewayapi.HTTPRoute) func() bool {
 	return func() bool {
 		if err := cl.Get(ctx, client.ObjectKeyFromObject(&httpRoute), &httpRoute); err != nil {
 			t.Logf("failed to get httpRoute: %v", err)
@@ -93,7 +93,7 @@ func httpRouteGetsProgrammed(ctx context.Context, t *testing.T, cl client.Client
 			return false
 		}
 		programmed, ok := lo.Find(httpRoute.Status.Parents[0].Conditions, func(c metav1.Condition) bool {
-			return c.Type == string(gatewayv1beta1.GatewayConditionProgrammed)
+			return c.Type == string(gatewayapi.GatewayConditionProgrammed)
 		})
 		if !ok {
 			t.Logf("no programmed condition in httpRoute status")
@@ -151,18 +151,18 @@ func Test_WatchNamespaces(t *testing.T) {
 	require.NoError(t, ctrlClient.Create(ctx, &hiddenService))
 	t.Cleanup(func() { _ = ctrlClient.Delete(ctx, &hiddenService) })
 
-	httpRoute := gatewayv1beta1.HTTPRoute{
+	httpRoute := gatewayapi.HTTPRoute{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: gw.Namespace,
 			Name:      uuid.NewString(),
 		},
-		Spec: gatewayv1beta1.HTTPRouteSpec{
-			CommonRouteSpec: gatewayv1beta1.CommonRouteSpec{
-				ParentRefs: []gatewayv1beta1.ParentReference{{
-					Name: gatewayv1beta1.ObjectName(gw.Name),
+		Spec: gatewayapi.HTTPRouteSpec{
+			CommonRouteSpec: gatewayapi.CommonRouteSpec{
+				ParentRefs: []gatewayapi.ParentReference{{
+					Name: gatewayapi.ObjectName(gw.Name),
 				}},
 			},
-			Rules: []gatewayv1beta1.HTTPRouteRule{{
+			Rules: []gatewayapi.HTTPRouteRule{{
 				Matches: builder.NewHTTPRouteMatch().
 					WithPathPrefix("/path").
 					ToSlice(),
@@ -198,7 +198,7 @@ func Test_WatchNamespaces(t *testing.T) {
 }
 
 // deployGateway deploys a Gateway, GatewayClass, and publish Service for use in tests.
-func deployGateway(ctx context.Context, t *testing.T, client client.Client) gatewayv1beta1.Gateway {
+func deployGateway(ctx context.Context, t *testing.T, client client.Client) gatewayapi.Gateway {
 	ns := CreateNamespace(ctx, t, client)
 
 	publishSvc := corev1.Service{
@@ -217,8 +217,8 @@ func deployGateway(ctx context.Context, t *testing.T, client client.Client) gate
 	require.NoError(t, client.Create(ctx, &publishSvc))
 	t.Cleanup(func() { _ = client.Delete(ctx, &publishSvc) })
 
-	gwc := gatewayv1beta1.GatewayClass{
-		Spec: gatewayv1beta1.GatewayClassSpec{
+	gwc := gatewayapi.GatewayClass{
+		Spec: gatewayapi.GatewayClassSpec{
 			ControllerName: gateway.GetControllerName(),
 		},
 		ObjectMeta: metav1.ObjectMeta{
@@ -232,14 +232,14 @@ func deployGateway(ctx context.Context, t *testing.T, client client.Client) gate
 	require.NoError(t, client.Create(ctx, &gwc))
 	t.Cleanup(func() { _ = client.Delete(ctx, &gwc) })
 
-	gw := gatewayv1beta1.Gateway{
-		Spec: gatewayv1beta1.GatewaySpec{
-			GatewayClassName: gatewayv1beta1.ObjectName(gwc.Name),
-			Listeners: []gatewayv1beta1.Listener{
+	gw := gatewayapi.Gateway{
+		Spec: gatewayapi.GatewaySpec{
+			GatewayClassName: gatewayapi.ObjectName(gwc.Name),
+			Listeners: []gatewayapi.Listener{
 				{
 					Name:     "http",
-					Protocol: gatewayv1beta1.HTTPProtocolType,
-					Port:     gatewayv1beta1.PortNumber(8000),
+					Protocol: gatewayapi.HTTPProtocolType,
+					Port:     gatewayapi.PortNumber(8000),
 				},
 			},
 		},

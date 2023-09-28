@@ -7,48 +7,48 @@ import (
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
-	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
+
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/util/gatewayapi"
 )
 
 func TestGetParentStatuses(t *testing.T) {
 	t.Run("HTTPRoute", func(t *testing.T) {
 		tests := []struct {
 			name  string
-			route *gatewayv1beta1.HTTPRoute
-			want  map[string]*gatewayv1beta1.RouteParentStatus
+			route *gatewayapi.HTTPRoute
+			want  map[string]*gatewayapi.RouteParentStatus
 		}{
 			{
 				name: "basic",
-				route: &gatewayv1beta1.HTTPRoute{
+				route: &gatewayapi.HTTPRoute{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      uuid.NewString(),
 						Namespace: uuid.NewString(),
 					},
-					Status: gatewayv1beta1.HTTPRouteStatus{
-						RouteStatus: gatewayv1beta1.RouteStatus{
-							Parents: []gatewayv1beta1.RouteParentStatus{
+					Status: gatewayapi.HTTPRouteStatus{
+						RouteStatus: gatewayapi.RouteStatus{
+							Parents: []gatewayapi.RouteParentStatus{
 								{
-									ParentRef: gatewayv1beta1.ParentReference{
-										Group:       lo.ToPtr(gatewayv1beta1.Group("group")),
-										Kind:        lo.ToPtr(gatewayv1beta1.Kind("kind")),
-										Namespace:   lo.ToPtr(gatewayv1beta1.Namespace("namespace")),
-										Name:        gatewayv1beta1.ObjectName("name"),
-										SectionName: lo.ToPtr(gatewayv1beta1.SectionName("section1")),
+									ParentRef: gatewayapi.ParentReference{
+										Group:       lo.ToPtr(gatewayapi.Group("group")),
+										Kind:        lo.ToPtr(gatewayapi.Kind("kind")),
+										Namespace:   lo.ToPtr(gatewayapi.Namespace("namespace")),
+										Name:        gatewayapi.ObjectName("name"),
+										SectionName: lo.ToPtr(gatewayapi.SectionName("section1")),
 									},
 								},
 							},
 						},
 					},
 				},
-				want: map[string]*gatewayv1beta1.RouteParentStatus{
+				want: map[string]*gatewayapi.RouteParentStatus{
 					"namespace/name/section1": {
-						ParentRef: gatewayv1beta1.ParentReference{
-							Group:       lo.ToPtr(gatewayv1beta1.Group("group")),
-							Kind:        lo.ToPtr(gatewayv1beta1.Kind("kind")),
-							Namespace:   lo.ToPtr(gatewayv1beta1.Namespace("namespace")),
-							Name:        gatewayv1beta1.ObjectName("name"),
-							SectionName: lo.ToPtr(gatewayv1beta1.SectionName("section1")),
+						ParentRef: gatewayapi.ParentReference{
+							Group:       lo.ToPtr(gatewayapi.Group("group")),
+							Kind:        lo.ToPtr(gatewayapi.Kind("kind")),
+							Namespace:   lo.ToPtr(gatewayapi.Namespace("namespace")),
+							Name:        gatewayapi.ObjectName("name"),
+							SectionName: lo.ToPtr(gatewayapi.SectionName("section1")),
 						},
 					},
 				},
@@ -65,38 +65,38 @@ func TestGetParentStatuses(t *testing.T) {
 	t.Run("UDPRoute", func(t *testing.T) {
 		tests := []struct {
 			name  string
-			route *gatewayv1alpha2.UDPRoute
-			want  map[string]*gatewayv1alpha2.RouteParentStatus
+			route *gatewayapi.UDPRoute
+			want  map[string]*gatewayapi.RouteParentStatus
 		}{
 			{
 				name: "basic",
-				route: &gatewayv1alpha2.UDPRoute{
+				route: &gatewayapi.UDPRoute{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      uuid.NewString(),
 						Namespace: uuid.NewString(),
 					},
-					Status: gatewayv1alpha2.UDPRouteStatus{
-						RouteStatus: gatewayv1alpha2.RouteStatus{
-							Parents: []gatewayv1alpha2.RouteParentStatus{
+					Status: gatewayapi.UDPRouteStatus{
+						RouteStatus: gatewayapi.RouteStatus{
+							Parents: []gatewayapi.RouteParentStatus{
 								{
-									ParentRef: gatewayv1alpha2.ParentReference{
-										Group:     lo.ToPtr(gatewayv1alpha2.Group("group")),
-										Kind:      lo.ToPtr(gatewayv1alpha2.Kind("kind")),
-										Namespace: lo.ToPtr(gatewayv1alpha2.Namespace("namespace")),
-										Name:      gatewayv1alpha2.ObjectName("name"),
+									ParentRef: gatewayapi.ParentReference{
+										Group:     lo.ToPtr(gatewayapi.Group("group")),
+										Kind:      lo.ToPtr(gatewayapi.Kind("kind")),
+										Namespace: lo.ToPtr(gatewayapi.Namespace("namespace")),
+										Name:      gatewayapi.ObjectName("name"),
 									},
 								},
 							},
 						},
 					},
 				},
-				want: map[string]*gatewayv1alpha2.RouteParentStatus{
+				want: map[string]*gatewayapi.RouteParentStatus{
 					"namespace/name": {
-						ParentRef: gatewayv1alpha2.ParentReference{
-							Group:     lo.ToPtr(gatewayv1alpha2.Group("group")),
-							Kind:      lo.ToPtr(gatewayv1alpha2.Kind("kind")),
-							Namespace: lo.ToPtr(gatewayv1alpha2.Namespace("namespace")),
-							Name:      gatewayv1alpha2.ObjectName("name"),
+						ParentRef: gatewayapi.ParentReference{
+							Group:     lo.ToPtr(gatewayapi.Group("group")),
+							Kind:      lo.ToPtr(gatewayapi.Kind("kind")),
+							Namespace: lo.ToPtr(gatewayapi.Namespace("namespace")),
+							Name:      gatewayapi.ObjectName("name"),
 						},
 					},
 				},
@@ -113,38 +113,38 @@ func TestGetParentStatuses(t *testing.T) {
 	t.Run("TCPRoute", func(t *testing.T) {
 		tests := []struct {
 			name  string
-			route *gatewayv1alpha2.TCPRoute
-			want  map[string]*gatewayv1alpha2.RouteParentStatus
+			route *gatewayapi.TCPRoute
+			want  map[string]*gatewayapi.RouteParentStatus
 		}{
 			{
 				name: "basic",
-				route: &gatewayv1alpha2.TCPRoute{
+				route: &gatewayapi.TCPRoute{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      uuid.NewString(),
 						Namespace: uuid.NewString(),
 					},
-					Status: gatewayv1alpha2.TCPRouteStatus{
-						RouteStatus: gatewayv1alpha2.RouteStatus{
-							Parents: []gatewayv1alpha2.RouteParentStatus{
+					Status: gatewayapi.TCPRouteStatus{
+						RouteStatus: gatewayapi.RouteStatus{
+							Parents: []gatewayapi.RouteParentStatus{
 								{
-									ParentRef: gatewayv1alpha2.ParentReference{
-										Group:     lo.ToPtr(gatewayv1alpha2.Group("group")),
-										Kind:      lo.ToPtr(gatewayv1alpha2.Kind("kind")),
-										Namespace: lo.ToPtr(gatewayv1alpha2.Namespace("namespace")),
-										Name:      gatewayv1alpha2.ObjectName("name"),
+									ParentRef: gatewayapi.ParentReference{
+										Group:     lo.ToPtr(gatewayapi.Group("group")),
+										Kind:      lo.ToPtr(gatewayapi.Kind("kind")),
+										Namespace: lo.ToPtr(gatewayapi.Namespace("namespace")),
+										Name:      gatewayapi.ObjectName("name"),
 									},
 								},
 							},
 						},
 					},
 				},
-				want: map[string]*gatewayv1alpha2.RouteParentStatus{
+				want: map[string]*gatewayapi.RouteParentStatus{
 					"namespace/name": {
-						ParentRef: gatewayv1alpha2.ParentReference{
-							Group:     lo.ToPtr(gatewayv1alpha2.Group("group")),
-							Kind:      lo.ToPtr(gatewayv1alpha2.Kind("kind")),
-							Namespace: lo.ToPtr(gatewayv1alpha2.Namespace("namespace")),
-							Name:      gatewayv1alpha2.ObjectName("name"),
+						ParentRef: gatewayapi.ParentReference{
+							Group:     lo.ToPtr(gatewayapi.Group("group")),
+							Kind:      lo.ToPtr(gatewayapi.Kind("kind")),
+							Namespace: lo.ToPtr(gatewayapi.Namespace("namespace")),
+							Name:      gatewayapi.ObjectName("name"),
 						},
 					},
 				},
@@ -161,38 +161,38 @@ func TestGetParentStatuses(t *testing.T) {
 	t.Run("TLSRoute", func(t *testing.T) {
 		tests := []struct {
 			name  string
-			route *gatewayv1alpha2.TLSRoute
-			want  map[string]*gatewayv1alpha2.RouteParentStatus
+			route *gatewayapi.TLSRoute
+			want  map[string]*gatewayapi.RouteParentStatus
 		}{
 			{
 				name: "basic",
-				route: &gatewayv1alpha2.TLSRoute{
+				route: &gatewayapi.TLSRoute{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      uuid.NewString(),
 						Namespace: uuid.NewString(),
 					},
-					Status: gatewayv1alpha2.TLSRouteStatus{
-						RouteStatus: gatewayv1alpha2.RouteStatus{
-							Parents: []gatewayv1alpha2.RouteParentStatus{
+					Status: gatewayapi.TLSRouteStatus{
+						RouteStatus: gatewayapi.RouteStatus{
+							Parents: []gatewayapi.RouteParentStatus{
 								{
-									ParentRef: gatewayv1alpha2.ParentReference{
-										Group:     lo.ToPtr(gatewayv1alpha2.Group("group")),
-										Kind:      lo.ToPtr(gatewayv1alpha2.Kind("kind")),
-										Namespace: lo.ToPtr(gatewayv1alpha2.Namespace("namespace")),
-										Name:      gatewayv1alpha2.ObjectName("name"),
+									ParentRef: gatewayapi.ParentReference{
+										Group:     lo.ToPtr(gatewayapi.Group("group")),
+										Kind:      lo.ToPtr(gatewayapi.Kind("kind")),
+										Namespace: lo.ToPtr(gatewayapi.Namespace("namespace")),
+										Name:      gatewayapi.ObjectName("name"),
 									},
 								},
 							},
 						},
 					},
 				},
-				want: map[string]*gatewayv1alpha2.RouteParentStatus{
+				want: map[string]*gatewayapi.RouteParentStatus{
 					"namespace/name": {
-						ParentRef: gatewayv1alpha2.ParentReference{
-							Group:     lo.ToPtr(gatewayv1alpha2.Group("group")),
-							Kind:      lo.ToPtr(gatewayv1alpha2.Kind("kind")),
-							Namespace: lo.ToPtr(gatewayv1alpha2.Namespace("namespace")),
-							Name:      gatewayv1alpha2.ObjectName("name"),
+						ParentRef: gatewayapi.ParentReference{
+							Group:     lo.ToPtr(gatewayapi.Group("group")),
+							Kind:      lo.ToPtr(gatewayapi.Kind("kind")),
+							Namespace: lo.ToPtr(gatewayapi.Namespace("namespace")),
+							Name:      gatewayapi.ObjectName("name"),
 						},
 					},
 				},

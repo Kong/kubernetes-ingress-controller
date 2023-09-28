@@ -21,6 +21,7 @@ import (
 	gatewaycontroller "github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/gateway"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/parser"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/util/gatewayapi"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/versions"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
 	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1beta1"
@@ -33,8 +34,8 @@ type KongValidator interface {
 	ValidatePlugin(ctx context.Context, plugin kongv1.KongPlugin) (bool, string, error)
 	ValidateClusterPlugin(ctx context.Context, plugin kongv1.KongClusterPlugin) (bool, string, error)
 	ValidateCredential(ctx context.Context, secret corev1.Secret) (bool, string, error)
-	ValidateGateway(ctx context.Context, gateway gatewaycontroller.Gateway) (bool, string, error)
-	ValidateHTTPRoute(ctx context.Context, httproute gatewaycontroller.HTTPRoute) (bool, string, error)
+	ValidateGateway(ctx context.Context, gateway gatewayapi.Gateway) (bool, string, error)
+	ValidateHTTPRoute(ctx context.Context, httproute gatewayapi.HTTPRoute) (bool, string, error)
 	ValidateIngress(ctx context.Context, ingress netv1.Ingress) (bool, string, error)
 }
 
@@ -359,7 +360,7 @@ func (validator KongHTTPValidator) ValidateClusterPlugin(
 }
 
 func (validator KongHTTPValidator) ValidateGateway(
-	ctx context.Context, gateway gatewaycontroller.Gateway,
+	ctx context.Context, gateway gatewayapi.Gateway,
 ) (bool, string, error) {
 	// check if the gateway declares a gateway class
 	if gateway.Spec.GatewayClassName == "" {
@@ -367,7 +368,7 @@ func (validator KongHTTPValidator) ValidateGateway(
 	}
 
 	// validate the gatewayclass reference
-	gwc := gatewaycontroller.GatewayClass{}
+	gwc := gatewayapi.GatewayClass{}
 	if err := validator.ManagerClient.Get(ctx, client.ObjectKey{Name: string(gateway.Spec.GatewayClassName)}, &gwc); err != nil {
 		if strings.Contains(err.Error(), "not found") {
 			return true, "", nil // not managed by this controller
@@ -385,11 +386,11 @@ func (validator KongHTTPValidator) ValidateGateway(
 }
 
 func (validator KongHTTPValidator) ValidateHTTPRoute(
-	ctx context.Context, httproute gatewaycontroller.HTTPRoute,
+	ctx context.Context, httproute gatewayapi.HTTPRoute,
 ) (bool, string, error) {
 	// in order to be sure whether or not an HTTPRoute resource is managed by this
 	// controller we disallow references to Gateway resources that do not exist.
-	var managedGateways []*gatewaycontroller.Gateway
+	var managedGateways []*gatewayapi.Gateway
 	for _, parentRef := range httproute.Spec.ParentRefs {
 		// determine the namespace of the gateway referenced via parentRef. If no
 		// explicit namespace is provided, assume the namespace of the route.
@@ -400,7 +401,7 @@ func (validator KongHTTPValidator) ValidateHTTPRoute(
 
 		// gather the Gateway resource referenced by parentRef and fail validation
 		// if there is no such Gateway resource.
-		gateway := gatewaycontroller.Gateway{}
+		gateway := gatewayapi.Gateway{}
 		if err := validator.ManagerClient.Get(ctx, client.ObjectKey{
 			Namespace: namespace,
 			Name:      string(parentRef.Name),
@@ -409,7 +410,7 @@ func (validator KongHTTPValidator) ValidateHTTPRoute(
 		}
 
 		// pull the referenced GatewayClass object from the Gateway
-		gatewayClass := gatewaycontroller.GatewayClass{}
+		gatewayClass := gatewayapi.GatewayClass{}
 		if err := validator.ManagerClient.Get(ctx, client.ObjectKey{Name: string(gateway.Spec.GatewayClassName)}, &gatewayClass); err != nil {
 			return false, fmt.Sprintf("couldn't retrieve referenced gatewayclass %s", gateway.Spec.GatewayClassName), err
 		}

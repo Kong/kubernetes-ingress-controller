@@ -5,11 +5,11 @@ import (
 	"fmt"
 
 	"github.com/kong/go-kong/kong"
-	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/parser/translators"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/store"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/util/gatewayapi"
 )
 
 // -----------------------------------------------------------------------------
@@ -53,7 +53,7 @@ func (p *Parser) ingressRulesFromTLSRoutes() ingressRules {
 	return result
 }
 
-func (p *Parser) ingressRulesFromTLSRoute(result *ingressRules, tlsroute *gatewayv1alpha2.TLSRoute) error {
+func (p *Parser) ingressRulesFromTLSRoute(result *ingressRules, tlsroute *gatewayapi.TLSRoute) error {
 	// first we grab the spec and gather some metdata about the object
 	spec := tlsroute.Spec
 
@@ -102,7 +102,7 @@ func (p *Parser) ingressRulesFromTLSRoute(result *ingressRules, tlsroute *gatewa
 // isTLSRoutePassthrough returns true if we need to configure TLS passthrough to kong
 // for the tlsroute object.
 // returns a non-nil error if we failed to get the supported gateway.
-func (p *Parser) isTLSRoutePassthrough(tlsroute *gatewayv1alpha2.TLSRoute) (bool, error) {
+func (p *Parser) isTLSRoutePassthrough(tlsroute *gatewayapi.TLSRoute) (bool, error) {
 	// reconcile loop will push TLSRoute object with updated status when
 	// gateway is ready and TLSRoute object becomes stable.
 	// so we get the supported gateways from status.parents.
@@ -138,7 +138,7 @@ func (p *Parser) isTLSRoutePassthrough(tlsroute *gatewayv1alpha2.TLSRoute) (bool
 		for _, listener := range gateway.Spec.Listeners {
 			if parentRef.SectionName == nil || listener.Name == *parentRef.SectionName {
 				if listener.TLS != nil && listener.TLS.Mode != nil &&
-					*listener.TLS.Mode == gatewayv1beta1.TLSModePassthrough {
+					*listener.TLS.Mode == gatewayapi.TLSModePassthrough {
 					return true, nil
 				}
 			}

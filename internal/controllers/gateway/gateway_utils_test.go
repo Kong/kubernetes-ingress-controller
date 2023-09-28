@@ -14,6 +14,7 @@ import (
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util/builder"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/util/gatewayapi"
 )
 
 func init() {
@@ -25,88 +26,88 @@ func init() {
 func TestGetListenerSupportedRouteKinds(t *testing.T) {
 	testCases := []struct {
 		name                   string
-		listener               Listener
-		expectedSupportedKinds []gatewayv1beta1.RouteGroupKind
-		resolvedRefsReason     gatewayv1beta1.ListenerConditionReason
+		listener               gatewayapi.Listener
+		expectedSupportedKinds []gatewayapi.RouteGroupKind
+		resolvedRefsReason     gatewayapi.ListenerConditionReason
 	}{
 		{
 			name: "only HTTP protocol specified",
-			listener: Listener{
-				Protocol: HTTPProtocolType,
+			listener: gatewayapi.Listener{
+				Protocol: gatewayapi.HTTPProtocolType,
 			},
 			expectedSupportedKinds: builder.NewRouteGroupKind().HTTPRoute().IntoSlice(),
-			resolvedRefsReason:     gatewayv1beta1.ListenerReasonResolvedRefs,
+			resolvedRefsReason:     gatewayapi.ListenerReasonResolvedRefs,
 		},
 		{
 			name: "only HTTPS protocol specified",
-			listener: Listener{
-				Protocol: HTTPSProtocolType,
+			listener: gatewayapi.Listener{
+				Protocol: gatewayapi.HTTPSProtocolType,
 			},
-			expectedSupportedKinds: []gatewayv1beta1.RouteGroupKind{
+			expectedSupportedKinds: []gatewayapi.RouteGroupKind{
 				builder.NewRouteGroupKind().HTTPRoute().Build(),
 				builder.NewRouteGroupKind().GRPCRoute().Build(),
 			},
-			resolvedRefsReason: gatewayv1beta1.ListenerReasonResolvedRefs,
+			resolvedRefsReason: gatewayapi.ListenerReasonResolvedRefs,
 		},
 		{
 			name: "only TCP protocol specified",
-			listener: Listener{
-				Protocol: TCPProtocolType,
+			listener: gatewayapi.Listener{
+				Protocol: gatewayapi.TCPProtocolType,
 			},
 			expectedSupportedKinds: builder.NewRouteGroupKind().TCPRoute().IntoSlice(),
-			resolvedRefsReason:     gatewayv1beta1.ListenerReasonResolvedRefs,
+			resolvedRefsReason:     gatewayapi.ListenerReasonResolvedRefs,
 		},
 		{
 			name: "only UDP protocol specified",
-			listener: Listener{
-				Protocol: UDPProtocolType,
+			listener: gatewayapi.Listener{
+				Protocol: gatewayapi.UDPProtocolType,
 			},
 			expectedSupportedKinds: builder.NewRouteGroupKind().UDPRoute().IntoSlice(),
-			resolvedRefsReason:     gatewayv1beta1.ListenerReasonResolvedRefs,
+			resolvedRefsReason:     gatewayapi.ListenerReasonResolvedRefs,
 		},
 		{
 			name: "only TLS protocol specified",
-			listener: Listener{
-				Protocol: TLSProtocolType,
+			listener: gatewayapi.Listener{
+				Protocol: gatewayapi.TLSProtocolType,
 			},
 			expectedSupportedKinds: builder.NewRouteGroupKind().TLSRoute().IntoSlice(),
-			resolvedRefsReason:     gatewayv1beta1.ListenerReasonResolvedRefs,
+			resolvedRefsReason:     gatewayapi.ListenerReasonResolvedRefs,
 		},
 		{
 			name: "Kind not included in global gets discarded",
-			listener: Listener{
-				Protocol: HTTPProtocolType,
-				AllowedRoutes: &gatewayv1beta1.AllowedRoutes{
-					Kinds: []gatewayv1beta1.RouteGroupKind{
+			listener: gatewayapi.Listener{
+				Protocol: gatewayapi.HTTPProtocolType,
+				AllowedRoutes: &gatewayapi.AllowedRoutes{
+					Kinds: []gatewayapi.RouteGroupKind{
 						{
-							Group: lo.ToPtr(gatewayv1beta1.Group("unknown.group.com")),
-							Kind:  Kind("UnknownKind"),
+							Group: lo.ToPtr(gatewayapi.Group("unknown.group.com")),
+							Kind:  gatewayapi.Kind("UnknownKind"),
 						},
 						{
 							Group: &gatewayV1beta1Group,
-							Kind:  Kind("HTTPRoute"),
+							Kind:  gatewayapi.Kind("HTTPRoute"),
 						},
 					},
 				},
 			},
-			expectedSupportedKinds: []gatewayv1beta1.RouteGroupKind{
+			expectedSupportedKinds: []gatewayapi.RouteGroupKind{
 				{
 					Group: &gatewayV1beta1Group,
-					Kind:  Kind("HTTPRoute"),
+					Kind:  gatewayapi.Kind("HTTPRoute"),
 				},
 			},
-			resolvedRefsReason: gatewayv1beta1.ListenerReasonInvalidRouteKinds,
+			resolvedRefsReason: gatewayapi.ListenerReasonInvalidRouteKinds,
 		},
 		{
 			name: "Kind included in global gets passed",
-			listener: Listener{
-				Protocol: HTTPProtocolType,
-				AllowedRoutes: &gatewayv1beta1.AllowedRoutes{
+			listener: gatewayapi.Listener{
+				Protocol: gatewayapi.HTTPProtocolType,
+				AllowedRoutes: &gatewayapi.AllowedRoutes{
 					Kinds: builder.NewRouteGroupKind().HTTPRoute().IntoSlice(),
 				},
 			},
 			expectedSupportedKinds: builder.NewRouteGroupKind().HTTPRoute().IntoSlice(),
-			resolvedRefsReason:     gatewayv1beta1.ListenerReasonResolvedRefs,
+			resolvedRefsReason:     gatewayapi.ListenerReasonResolvedRefs,
 		},
 	}
 
@@ -124,10 +125,10 @@ func TestGetListenerStatus_no_duplicated_condition(t *testing.T) {
 	ctx := context.Background()
 	client := fake.NewClientBuilder().Build()
 
-	statuses, err := getListenerStatus(ctx, &Gateway{
-		Spec: gatewayv1beta1.GatewaySpec{
+	statuses, err := getListenerStatus(ctx, &gatewayapi.Gateway{
+		Spec: gatewayapi.GatewaySpec{
 			GatewayClassName: "kong",
-			Listeners: []gatewayv1beta1.Listener{
+			Listeners: []gatewayapi.Listener{
 				{
 					Port:     80,
 					Protocol: "TCP",
@@ -154,15 +155,15 @@ func TestRouteAcceptedByGateways(t *testing.T) {
 	testCases := []struct {
 		name           string
 		routeNamespace string
-		parentStatuses []gatewayv1beta1.RouteParentStatus
+		parentStatuses []gatewayapi.RouteParentStatus
 		gateways       []k8stypes.NamespacedName
 	}{
 		{
 			name:           "no parentStatus with accepted condition",
 			routeNamespace: "default",
-			parentStatuses: []gatewayv1beta1.RouteParentStatus{
+			parentStatuses: []gatewayapi.RouteParentStatus{
 				{
-					ParentRef: gatewayv1beta1.ParentReference{
+					ParentRef: gatewayapi.ParentReference{
 						Name: "gateway-1",
 					},
 				},
@@ -172,50 +173,50 @@ func TestRouteAcceptedByGateways(t *testing.T) {
 		{
 			name:           "a subset of parentStatus with correct params",
 			routeNamespace: "default",
-			parentStatuses: []gatewayv1beta1.RouteParentStatus{
+			parentStatuses: []gatewayapi.RouteParentStatus{
 				{
-					ParentRef: gatewayv1beta1.ParentReference{
+					ParentRef: gatewayapi.ParentReference{
 						Name:  "gateway-1",
-						Group: lo.ToPtr(gatewayv1beta1.Group("wrong-group")),
+						Group: lo.ToPtr(gatewayapi.Group("wrong-group")),
 					},
 					Conditions: []metav1.Condition{
 						{
 							Status: metav1.ConditionTrue,
-							Type:   string(gatewayv1beta1.RouteConditionAccepted),
+							Type:   string(gatewayapi.RouteConditionAccepted),
 						},
 					},
 				},
 				{
-					ParentRef: gatewayv1beta1.ParentReference{
+					ParentRef: gatewayapi.ParentReference{
 						Name: "gateway-2",
-						Kind: lo.ToPtr(gatewayv1beta1.Kind("wrong-kind")),
+						Kind: lo.ToPtr(gatewayapi.Kind("wrong-kind")),
 					},
 					Conditions: []metav1.Condition{
 						{
 							Status: metav1.ConditionTrue,
-							Type:   string(gatewayv1beta1.RouteConditionAccepted),
+							Type:   string(gatewayapi.RouteConditionAccepted),
 						},
 					},
 				},
 				{
-					ParentRef: gatewayv1beta1.ParentReference{
+					ParentRef: gatewayapi.ParentReference{
 						Name: "gateway-3",
 					},
 					Conditions: []metav1.Condition{
 						{
 							Status: metav1.ConditionTrue,
-							Type:   string(gatewayv1beta1.RouteConditionAccepted),
+							Type:   string(gatewayapi.RouteConditionAccepted),
 						},
 					},
 				},
 				{
-					ParentRef: gatewayv1beta1.ParentReference{
+					ParentRef: gatewayapi.ParentReference{
 						Name: "gateway-4",
 					},
 					Conditions: []metav1.Condition{
 						{
 							Status: metav1.ConditionFalse,
-							Type:   string(gatewayv1beta1.RouteConditionAccepted),
+							Type:   string(gatewayapi.RouteConditionAccepted),
 						},
 					},
 				},
@@ -230,27 +231,27 @@ func TestRouteAcceptedByGateways(t *testing.T) {
 		{
 			name:           "all parentStatuses",
 			routeNamespace: "default",
-			parentStatuses: []gatewayv1beta1.RouteParentStatus{
+			parentStatuses: []gatewayapi.RouteParentStatus{
 				{
-					ParentRef: gatewayv1beta1.ParentReference{
+					ParentRef: gatewayapi.ParentReference{
 						Name: "gateway-1",
 					},
 					Conditions: []metav1.Condition{
 						{
 							Status: metav1.ConditionTrue,
-							Type:   string(gatewayv1beta1.RouteConditionAccepted),
+							Type:   string(gatewayapi.RouteConditionAccepted),
 						},
 					},
 				},
 				{
-					ParentRef: gatewayv1beta1.ParentReference{
+					ParentRef: gatewayapi.ParentReference{
 						Name:      "gateway-2",
-						Namespace: lo.ToPtr(gatewayv1beta1.Namespace("namespace-2")),
+						Namespace: lo.ToPtr(gatewayapi.Namespace("namespace-2")),
 					},
 					Conditions: []metav1.Condition{
 						{
 							Status: metav1.ConditionTrue,
-							Type:   string(gatewayv1beta1.RouteConditionAccepted),
+							Type:   string(gatewayapi.RouteConditionAccepted),
 						},
 					},
 				},

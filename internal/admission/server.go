@@ -11,8 +11,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"sigs.k8s.io/controller-runtime/pkg/certwatcher"
-
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 )
 
 var (
@@ -93,7 +91,7 @@ func serverConfigToTLSConfig(ctx context.Context, sc *ServerConfig, logger logr.
 
 	go func() {
 		if err := watcher.Start(ctx); err != nil {
-			logger.V(util.ErrorLevel).Error(err, "certificate watcher error")
+			logger.Error(err, "certificate watcher error")
 		}
 	}()
 	return &tls.Config{

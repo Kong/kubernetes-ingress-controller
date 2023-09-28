@@ -483,7 +483,7 @@ func (p *Parser) getGatewayCerts() []certWrapper {
 	certs := []certWrapper{}
 	gateways, err := s.ListGateways()
 	if err != nil {
-		logger.V(util.ErrorLevel).Error(err, "failed to list Gateways")
+		logger.Error(err, "failed to list Gateways")
 		return certs
 	}
 	for _, gateway := range gateways {
@@ -534,7 +534,7 @@ func (p *Parser) getGatewayCerts() []certWrapper {
 					// retrieve the Secret and extract the PEM strings
 					secret, err := s.GetSecret(namespace, string(ref.Name))
 					if err != nil {
-						logger.V(util.ErrorLevel).Error(err, "failed to fetch secret",
+						logger.Error(err, "failed to fetch secret",
 							"gateway", gateway.Name,
 							"listener", listener.Name,
 							"secret_name", string(ref.Name),
@@ -652,7 +652,7 @@ func mergeCerts(logger logr.Logger, certLists ...[]certWrapper) []kongstate.Cert
 					// what binds the SNI to a given Secret. Knowing the Secret ID isn't of great use beyond knowing
 					// what cert will be served. however, the secretToSNIs input to getCerts does not provide this info
 					// https://github.com/Kong/kubernetes-ingress-controller/issues/2605
-					logger.V(util.ErrorLevel).Error(nil, "same SNI requested for multiple certs, can only serve one cert",
+					logger.Error(nil, "same SNI requested for multiple certs, can only serve one cert",
 						"served_secret_cert", seen,
 						"requested_secret_cert", *current.cert.ID,
 						"sni", sni)
@@ -774,7 +774,7 @@ func getEndpoints(
 	logger.V(util.DebugLevel).Info("fetching EndpointSlices")
 	endpointSlices, err := getEndpointSlices(service.Namespace, service.Name)
 	if err != nil {
-		logger.V(util.ErrorLevel).Error(err, "error fetching EndpointSlices")
+		logger.Error(err, "error fetching EndpointSlices")
 		return []util.Endpoint{}
 	}
 	logger.V(util.DebugLevel).Info("fetched EndpointSlices", "count", len(endpointSlices))

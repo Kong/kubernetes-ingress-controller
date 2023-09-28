@@ -197,7 +197,7 @@ func (r *Route) overrideMethods(logger logr.Logger, anns map[string]string) {
 		} else {
 			// if any method is invalid (not an uppercase alpha string),
 			// discard everything
-			logger.V(util.ErrorLevel).Error(nil, "invalid method", "route_name", r.Name, "method", method)
+			logger.Error(nil, "invalid method", "route_name", r.Name, "method", method)
 			return
 		}
 	}
@@ -221,7 +221,7 @@ func (r *Route) overrideSNIs(logger logr.Logger, anns map[string]string) {
 			snis = append(snis, kong.String(sanitizedSNI))
 		} else {
 			// SNI is not a valid hostname
-			logger.V(util.ErrorLevel).Error(nil, "invalid SNI", "route_name", r.Name, "sni", sni)
+			logger.Error(nil, "invalid SNI", "route_name", r.Name, "sni", sni)
 			return
 		}
 	}
@@ -295,7 +295,7 @@ func (r *Route) overrideByKongIngress(logger logr.Logger, kongIngress *kongv1.Ko
 			} else {
 				// if any method is invalid (not an uppercase alpha string),
 				// discard everything
-				logger.V(util.ErrorLevel).Error(nil, "ingress contains invalid method", "method", *method,
+				logger.Error(nil, "ingress contains invalid method", "method", *method,
 					"ingress_namespace", r.Ingress.Namespace,
 					"ingress_name", r.Ingress.Name)
 				invalid = true
@@ -334,7 +334,7 @@ func (r *Route) overrideByKongIngress(logger logr.Logger, kongIngress *kongv1.Ko
 				SNIs = append(SNIs, kong.String(SNI))
 			} else {
 				// SNI is not a valid hostname
-				logger.V(util.ErrorLevel).Error(nil, "invalid SNI", "sni", unsanitizedSNI, "kongroute", r.Name)
+				logger.Error(nil, "invalid SNI", "sni", unsanitizedSNI, "kongroute", r.Name)
 				return
 			}
 		}

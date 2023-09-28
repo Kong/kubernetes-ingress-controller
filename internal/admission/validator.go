@@ -498,7 +498,7 @@ func (validator KongHTTPValidator) ensureConsumerDoesNotExistInGateway(ctx conte
 		c, err := consumerSvc.Get(ctx, &username)
 		if err != nil {
 			if !kong.IsNotFoundErr(err) {
-				validator.Logger.V(util.ErrorLevel).Error(err, "failed to fetch consumer from kong")
+				validator.Logger.Error(err, "failed to fetch consumer from kong")
 				return ErrTextConsumerUnretrievable, err
 			}
 		}

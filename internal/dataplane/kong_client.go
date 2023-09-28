@@ -189,7 +189,7 @@ func NewKongClient(
 func (c *KongClient) initializeControllerPodReference() {
 	podNN, err := util.GetPodNN()
 	if err != nil {
-		c.logger.V(util.ErrorLevel).Error(err, "failed to resolve controller's pod to attach the apply configuration events to")
+		c.logger.Error(err, "failed to resolve controller's pod to attach the apply configuration events to")
 		return
 	}
 	c.controllerPodReference = mo.Some(podNN)
@@ -397,7 +397,7 @@ func (c *KongClient) Update(ctx context.Context) error {
 			if err := c.kongConfigFetcher.TryFetchingValidConfigFromGateways(ctx, c.logger, c.clientsProvider.GatewayClients()); err != nil {
 				// If the client fails to fetch the last good configuration, we log it
 				// and carry on, as this is a condition that can be recovered with the following steps.
-				c.logger.V(util.ErrorLevel).Error(err, "failed to fetch last good configuration from gateways")
+				c.logger.Error(err, "failed to fetch last good configuration from gateways")
 			}
 		}
 	}
@@ -492,9 +492,9 @@ func (c *KongClient) maybeSendOutToKonnectClient(ctx context.Context, s *kongsta
 		// of the controller.
 
 		if errors.As(err, &sendconfig.UpdateSkippedDueToBackoffStrategyError{}) {
-			c.logger.V(util.ErrorLevel).Error(err, "Skipped pushing configuration to Konnect")
+			c.logger.Error(err, "Skipped pushing configuration to Konnect")
 		} else {
-			c.logger.V(util.ErrorLevel).Error(err, "Failed pushing configuration to Konnect")
+			c.logger.Error(err, "Failed pushing configuration to Konnect")
 		}
 		return err
 	}
@@ -607,7 +607,7 @@ func prepareSendDiagnosticFn(
 		case diagnosticConfig.Configs <- util.ConfigDump{Failed: failed, Config: *config}:
 			logger.V(util.DebugLevel).Info("shipping config to diagnostic server")
 		default:
-			logger.V(util.ErrorLevel).Error(nil, "config diagnostic buffer full, dropping diagnostic config")
+			logger.Error(nil, "config diagnostic buffer full, dropping diagnostic config")
 		}
 	}
 }

@@ -100,7 +100,7 @@ func (ir *ingressRules) populateServices(logger logr.Logger, s store.Storer, fai
 			if parent, ok := ir.ServiceNameToParent[*service.Name]; ok {
 				service.Tags = util.GenerateTagsForObject(parent)
 			} else {
-				logger.V(util.ErrorLevel).Error(nil, "multi-service backend lacks parent info, cannot generate tags",
+				logger.Error(nil, "multi-service backend lacks parent info, cannot generate tags",
 					"service", *service.Name)
 			}
 		} else if len(k8sServices) > 0 {
@@ -260,7 +260,7 @@ func getK8sServicesForBackends(
 		}
 		k8sService, err := storer.GetService(backendNamespace, backend.Name)
 		if err != nil {
-			log.V(util.ErrorLevel).Error(err, "failed to fetch service",
+			log.Error(err, "failed to fetch service",
 				"service_name", backend.PortDef.Name,
 				"service_namespace", backendNamespace,
 			)

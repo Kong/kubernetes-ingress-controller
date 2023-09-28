@@ -6,7 +6,6 @@ import (
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/parser/translators"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/versions"
 )
 
@@ -21,7 +20,7 @@ func (p *Parser) ingressRulesFromUDPRoutes() ingressRules {
 
 	udpRouteList, err := p.storer.ListUDPRoutes()
 	if err != nil {
-		p.logger.V(util.ErrorLevel).Error(err, "failed to list UDPRoutes")
+		p.logger.Error(err, "failed to list UDPRoutes")
 		return result
 	}
 
@@ -56,7 +55,7 @@ func (p *Parser) ingressRulesFromUDPRoutes() ingressRules {
 	}
 
 	for _, err := range errs {
-		p.logger.V(util.ErrorLevel).Error(err, "could not generate route from UDPRoute")
+		p.logger.Error(err, "could not generate route from UDPRoute")
 	}
 
 	return result

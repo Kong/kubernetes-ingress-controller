@@ -27,7 +27,7 @@ func (p *Parser) ingressRulesFromHTTPRoutes() ingressRules {
 
 	httpRouteList, err := p.storer.ListHTTPRoutes()
 	if err != nil {
-		p.logger.V(util.ErrorLevel).Error(err, "failed to list HTTPRoutes")
+		p.logger.Error(err, "failed to list HTTPRoutes")
 		return result
 	}
 

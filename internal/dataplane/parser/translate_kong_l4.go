@@ -17,7 +17,7 @@ func (p *Parser) ingressRulesFromTCPIngressV1beta1() ingressRules {
 
 	ingressList, err := p.storer.ListTCPIngresses()
 	if err != nil {
-		p.logger.V(util.ErrorLevel).Error(err, "failed to list TCPIngresses")
+		p.logger.Error(err, "failed to list TCPIngresses")
 		return result
 	}
 
@@ -102,7 +102,7 @@ func (p *Parser) ingressRulesFromUDPIngressV1beta1() ingressRules {
 
 	ingressList, err := p.storer.ListUDPIngresses()
 	if err != nil {
-		p.logger.V(util.ErrorLevel).Error(err, "failed to list UDPIngresses")
+		p.logger.Error(err, "failed to list UDPIngresses")
 		return result
 	}
 

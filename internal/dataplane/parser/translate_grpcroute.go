@@ -22,7 +22,7 @@ func (p *Parser) ingressRulesFromGRPCRoutes() ingressRules {
 
 	grpcRouteList, err := p.storer.ListGRPCRoutes()
 	if err != nil {
-		p.logger.V(util.ErrorLevel).Error(err, "failed to list GRPCRoutes")
+		p.logger.Error(err, "failed to list GRPCRoutes")
 		return result
 	}
 
@@ -45,7 +45,7 @@ func (p *Parser) ingressRulesFromGRPCRoutes() ingressRules {
 
 	if len(errs) > 0 {
 		for _, err := range errs {
-			p.logger.V(util.ErrorLevel).Error(err, "could not generate route from GRPCRoute")
+			p.logger.Error(err, "could not generate route from GRPCRoute")
 		}
 	}
 

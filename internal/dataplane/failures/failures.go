@@ -89,7 +89,7 @@ func (c *ResourceFailuresCollector) PushResourceFailure(reason string, causingOb
 // logResourceFailure logs an error with a resource processing failure message for each causing object.
 func (c *ResourceFailuresCollector) logResourceFailure(reason string, causingObjects ...client.Object) {
 	for _, obj := range causingObjects {
-		c.logger.V(util.ErrorLevel).Error(fmt.Errorf("resource processing failed"), reason,
+		c.logger.Error(fmt.Errorf("resource processing failed"), reason,
 			"name", obj.GetName(),
 			"namespace", obj.GetNamespace(),
 			"GVK", obj.GetObjectKind().GroupVersionKind().String())

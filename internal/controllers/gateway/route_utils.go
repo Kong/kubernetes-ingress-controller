@@ -121,18 +121,6 @@ func parentRefsForRoute[T types.RouteT](route T) ([]ParentReference, error) {
 	}
 }
 
-const (
-	// This reason is used with the "Accepted" condition when there are
-	// no matching Parents. In the case of Gateways, this can occur when
-	// a Route ParentRef specifies a Port and/or SectionName that does not
-	// match any Listeners in the Gateway.
-	//
-	// NOTE: This is already in uptsream, albeit unreleased:
-	// https://github.com/kubernetes-sigs/gateway-api/pull/1516
-	// TODO: swap this out with upstream const when released.
-	RouteReasonNoMatchingParent gatewayv1beta1.RouteConditionReason = "NoMatchingParent"
-)
-
 // getSupportedGatewayForRoute will retrieve the Gateway and GatewayClass object for any
 // Gateway APIs route object (e.g. HTTPRoute, TCPRoute, e.t.c.) from the provided cached
 // client if they match this controller. If there are no gateways present for this route
@@ -285,7 +273,7 @@ func getSupportedGatewayForRoute[T types.RouteT](ctx context.Context, mgrc clien
 			// We failed to match a listener with this route
 
 			// This will also catch a case of not matching listener/section name.
-			reason := RouteReasonNoMatchingParent
+			reason := gatewayv1beta1.RouteReasonNoMatchingParent
 
 			if matchingHostname != nil && *matchingHostname == metav1.ConditionFalse {
 				// If there is no matchingHostname, the gateway Status Condition Accepted
@@ -294,11 +282,11 @@ func getSupportedGatewayForRoute[T types.RouteT](ctx context.Context, mgrc clien
 			} else if (parentRef.SectionName) != nil && !allowedByListenerName {
 				// If ParentRef specified listener names but none of the listeners matches the name,
 				// the gateway Status Condition Accepted must be set to False with reason RouteReasonNoMatchingParent.
-				reason = RouteReasonNoMatchingParent
+				reason = gatewayv1beta1.RouteReasonNoMatchingParent
 			} else if (parentRef.Port != nil) && !portMatched {
 				// If ParentRef specified a Port but none of the listeners matched, the gateway Status
 				// Condition Accepted must be set to False with reason NoMatchingListenerPort
-				reason = RouteReasonNoMatchingParent
+				reason = gatewayv1beta1.RouteReasonNoMatchingParent
 			} else if !allowedByAllowedRoutes || !allowedBySupportedKinds {
 				reason = gatewayv1beta1.RouteReasonNotAllowedByListeners
 			}

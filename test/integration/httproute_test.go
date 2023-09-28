@@ -22,7 +22,6 @@ import (
 	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
-	gatewaypkg "github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/gateway"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util/builder"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/versions"
@@ -323,7 +322,7 @@ func TestHTTPRouteEssentials(t *testing.T) {
 	}, time.Minute, time.Second)
 
 	t.Log("verifying that the HTTPRoute has the Condition 'Accepted' set to 'False' when it specified a port not existent in Gateway")
-	require.Eventually(t, HTTPRouteMatchesAcceptedCallback(t, gatewayClient, httpRoute, false, gatewaypkg.RouteReasonNoMatchingParent), statusWait, waitTick)
+	require.Eventually(t, HTTPRouteMatchesAcceptedCallback(t, gatewayClient, httpRoute, false, gatewayv1beta1.RouteReasonNoMatchingParent), statusWait, waitTick)
 }
 
 func TestHTTPRouteMultipleServices(t *testing.T) {

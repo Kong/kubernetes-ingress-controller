@@ -37,13 +37,7 @@ import (
 // Vars & Consts
 // -----------------------------------------------------------------------------
 
-var (
-	gatewayV1beta1Group = gatewayapi.Group(gatewayv1beta1.GroupName)
-	gatewayTypeMeta     = metav1.TypeMeta{
-		APIVersion: gatewayv1beta1.GroupVersion.String(),
-		Kind:       "Gateway",
-	}
-)
+var gatewayV1beta1Group = gatewayapi.Group(gatewayv1beta1.GroupName)
 
 // -----------------------------------------------------------------------------
 // Gateway Controller - GatewayReconciler
@@ -341,7 +335,6 @@ func (r *GatewayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	// gather the gateway object based on the reconciliation trigger. It's possible for the object
 	// to be gone at this point in which case it will be ignored.
 	gateway := new(gatewayapi.Gateway)
-	gateway.TypeMeta = gatewayTypeMeta
 	if err := r.Get(ctx, req.NamespacedName, gateway); err != nil {
 		if apierrors.IsNotFound(err) {
 			gateway.Namespace = req.Namespace
@@ -356,6 +349,13 @@ func (r *GatewayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		}
 		return ctrl.Result{Requeue: true}, err
 	}
+
+	err := util.PopulateTypeMeta(gateway)
+	if err != nil {
+		r.Log.Error(err, "could not set resource TypeMeta",
+			"namespace", gateway.GetNamespace(), "name", gateway.GetName())
+	}
+
 	debug(log, gateway, "processing gateway")
 
 	// though our watch configuration eliminates reconciliation of unsupported gateways it's

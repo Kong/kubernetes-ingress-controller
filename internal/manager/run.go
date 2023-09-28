@@ -123,7 +123,7 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 	kongConfig.Init(ctx, setupLog, initialKongClients)
 
 	setupLog.Info("configuring and building the controller manager")
-	controllerOpts, err := setupControllerOptions(ctx, setupLog, c, dbMode, featureGates)
+	controllerOpts, err := setupControllerOptions(ctx, setupLog, c, dbMode)
 	if err != nil {
 		return fmt.Errorf("unable to setup controller options: %w", err)
 	}

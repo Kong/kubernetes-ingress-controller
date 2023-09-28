@@ -64,9 +64,9 @@ func SetupLoggers(c *Config, output io.Writer) (logrus.FieldLogger, logr.Logger,
 	return deprecatedLogger, logger, nil
 }
 
-func setupControllerOptions(ctx context.Context, logger logr.Logger, c *Config, dbmode string, featureGates map[string]bool) (ctrl.Options, error) {
+func setupControllerOptions(ctx context.Context, logger logr.Logger, c *Config, dbmode string) (ctrl.Options, error) {
 	logger.Info("building the manager runtime scheme and loading apis into the scheme")
-	scheme, err := scheme.Get(featureGates)
+	scheme, err := scheme.Get()
 	if err != nil {
 		return ctrl.Options{}, err
 	}

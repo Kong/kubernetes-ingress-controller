@@ -7,15 +7,13 @@ import (
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/manager/featuregates"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
 	kongv1alpha1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1alpha1"
 	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1beta1"
 )
 
-// Get returns the scheme for the manager, enabling all the default schemes and
-// those that were enabled via the feature flags.
-func Get(fg map[string]bool) (*runtime.Scheme, error) {
+// Get returns a scheme aware of all types the manager can interact with.
+func Get() (*runtime.Scheme, error) {
 	scheme := runtime.NewScheme()
 
 	if err := apiextensionsv1.AddToScheme(scheme); err != nil {
@@ -36,15 +34,12 @@ func Get(fg map[string]bool) (*runtime.Scheme, error) {
 		return nil, err
 	}
 
-	if v, ok := fg[featuregates.GatewayAlphaFeature]; ok && v {
-		if err := gatewayv1alpha2.Install(scheme); err != nil {
-			return nil, err
-		}
+	if err := gatewayv1alpha2.Install(scheme); err != nil {
+		return nil, err
 	}
-	if v, ok := fg[featuregates.GatewayFeature]; ok && v {
-		if err := gatewayv1beta1.Install(scheme); err != nil {
-			return nil, err
-		}
+
+	if err := gatewayv1beta1.Install(scheme); err != nil {
+		return nil, err
 	}
 
 	return scheme, nil

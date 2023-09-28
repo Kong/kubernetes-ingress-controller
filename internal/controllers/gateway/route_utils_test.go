@@ -416,7 +416,7 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 				},
 				expected: []expected{
 					{
-						condition: routeConditionAccepted(metav1.ConditionFalse, gatewayv1beta1.RouteReasonNoMatchingParent),
+						condition: routeConditionAccepted(metav1.ConditionFalse, gatewayapi.RouteReasonNoMatchingParent),
 					},
 				},
 			},
@@ -533,7 +533,7 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 				},
 				expected: []expected{
 					{
-						condition: routeConditionAccepted(metav1.ConditionFalse, gatewayv1beta1.RouteReasonNoMatchingParent),
+						condition: routeConditionAccepted(metav1.ConditionFalse, gatewayapi.RouteReasonNoMatchingParent),
 					},
 				},
 			},
@@ -696,7 +696,7 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 					namespace,
 				},
 				expected: expected{
-					condition: routeConditionAccepted(metav1.ConditionFalse, gatewayv1beta1.RouteReasonNoMatchingParent),
+					condition: routeConditionAccepted(metav1.ConditionFalse, gatewayapi.RouteReasonNoMatchingParent),
 				},
 			},
 			{
@@ -742,7 +742,7 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 				},
 				expected: expected{
 					listenerName: "unknown-listener",
-					condition:    routeConditionAccepted(metav1.ConditionFalse, gatewayv1beta1.RouteReasonNoMatchingParent),
+					condition:    routeConditionAccepted(metav1.ConditionFalse, gatewayapi.RouteReasonNoMatchingParent),
 				},
 			},
 		}
@@ -893,7 +893,7 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 					namespace,
 				},
 				expected: expected{
-					condition: routeConditionAccepted(metav1.ConditionFalse, gatewayv1beta1.RouteReasonNoMatchingParent),
+					condition: routeConditionAccepted(metav1.ConditionFalse, gatewayapi.RouteReasonNoMatchingParent),
 				},
 			},
 			{
@@ -929,7 +929,7 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 				},
 				expected: expected{
 					listenerName: "unknown-listener",
-					condition:    routeConditionAccepted(metav1.ConditionFalse, gatewayv1beta1.RouteReasonNoMatchingParent),
+					condition:    routeConditionAccepted(metav1.ConditionFalse, gatewayapi.RouteReasonNoMatchingParent),
 				},
 			},
 		}
@@ -1061,7 +1061,7 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 				},
 				expected: []expected{
 					{
-						condition: routeConditionAccepted(metav1.ConditionFalse, gatewayv1beta1.RouteReasonNoMatchingParent),
+						condition: routeConditionAccepted(metav1.ConditionFalse, gatewayapi.RouteReasonNoMatchingParent),
 					},
 				},
 			},
@@ -1115,7 +1115,7 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 				},
 				expected: []expected{
 					{
-						condition: routeConditionAccepted(metav1.ConditionFalse, gatewayv1beta1.RouteReasonNoMatchingParent),
+						condition: routeConditionAccepted(metav1.ConditionFalse, gatewayapi.RouteReasonNoMatchingParent),
 					},
 				},
 			},
@@ -1156,7 +1156,7 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 				expected: []expected{
 					{
 						listenerName: "unknown-listener",
-						condition:    routeConditionAccepted(metav1.ConditionFalse, gatewayv1beta1.RouteReasonNoMatchingParent),
+						condition:    routeConditionAccepted(metav1.ConditionFalse, gatewayapi.RouteReasonNoMatchingParent),
 					},
 				},
 			},

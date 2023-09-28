@@ -2,6 +2,7 @@ _format_version: "3.0"
 services:
 - connect_timeout: 60000
   host: foo-svc.foo-namespace.http.svc
+  id: bc2b75ab-9763-539c-a251-d6a2730a964b
   name: foo-namespace.foo-svc.http
   path: /
   port: 80
@@ -11,6 +12,7 @@ services:
   routes:
   - expression: (http.host == "example.com") && (http.path ^= "/")
     https_redirect_status_code: 426
+    id: 0673ae1f-4318-59dc-96e7-fc17c218022f
     name: foo-namespace.regex-prefix.foo-svc.example.com.http
     preserve_host: true
     priority: 3382102062006273

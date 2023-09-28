@@ -2,6 +2,7 @@ _format_version: "3.0"
 services:
 - connect_timeout: 60000
   host: foo-svc.foo-namespace.8000.svc
+  id: 8c1ded2c-3f68-5845-bc85-f4c4c318829a
   name: foo-namespace.foo-svc.8000
   path: /
   port: 8000
@@ -11,6 +12,7 @@ services:
   routes:
   - expression: (http.host == "example.net") && (http.path ^= "/")
     https_redirect_status_code: 426
+    id: 2bd1c902-4d3c-50ed-9a78-f698cfa0cf37
     name: foo-namespace.foo.foo-svc.example.net.8000
     preserve_host: true
     priority: 3382102062006273
@@ -31,6 +33,7 @@ services:
   write_timeout: 60000
 - connect_timeout: 60000
   host: foo-svc.foo-namespace.80.svc
+  id: fe1e2edc-5479-52fe-b0f4-b90d8d5f83ba
   name: foo-namespace.foo-svc.80
   path: /
   port: 80
@@ -40,6 +43,7 @@ services:
   routes:
   - expression: (http.host == "example.com") && (http.path ^= "/")
     https_redirect_status_code: 426
+    id: 3eee2c18-8fcc-5661-8f84-5c89adfa404f
     name: foo-namespace.foo.foo-svc.example.com.80
     preserve_host: true
     priority: 3382102062006273

@@ -18,6 +18,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
@@ -48,6 +49,10 @@ func SetupLoggers(c *Config, output io.Writer) (logr.Logger, error) {
 		// disable deck's per-change diff output
 		cprint.DisableOutput = true
 	}
+
+	// Prevents controller-runtime from logging
+	// [controller-runtime] log.SetLogger(...) was never called; logs will not be displayed.
+	ctrllog.SetLogger(logger)
 
 	return logger, nil
 }

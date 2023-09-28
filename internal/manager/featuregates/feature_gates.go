@@ -11,9 +11,6 @@ import (
 // -----------------------------------------------------------------------------
 
 const (
-	// KnativeFeature is the name of the feature-gate for enabling/disabling Knative.
-	KnativeFeature = "Knative"
-
 	// GatewayFeature is the name of the feature-gate for enabling/disabling GatewayFeature APIs.
 	GatewayFeature = "Gateway"
 
@@ -21,21 +18,12 @@ const (
 	// disabling the Alpha maturity APIs and relevant features for Gateway API.
 	GatewayAlphaFeature = "GatewayAlpha"
 
-	// CombinedRoutesFeature is the name of the feature-gate for the newer object
-	// translation logic that will combine routes for kong services when translating
-	// objects like Ingress instead of creating a route per path.
-	CombinedRoutesFeature = "CombinedRoutes"
-
 	// ExpressionRoutesFeature is the name of the feature-gate for enabling KIC to translate
 	// supported kubernetes objects into expression based routes in kong configrurations
 	// when controlled kong gateway uses expression based router by configuring `router_flavor` to `expressions`.
 	// Note: this feature is experimental and some resources and features may not be supported.
 	// See: https://docs.konghq.com/gateway/latest/key-concepts/routes/expressions/ about expression based routes in Kong 3.0+.
 	ExpressionRoutesFeature = "ExpressionRoutes"
-
-	// CombinedServicesFeature is the name of the feature-gate that makes KIC create a single Kong Service when
-	// a Kubernetes Service is referenced by multiple netv1.Ingresses. It's effective only when CombinedRoutesFeature is enabled.
-	CombinedServicesFeature = "CombinedServices"
 
 	// FillIDsFeature is the name of the feature-gate that makes KIC fill in the ID fields of Kong entities (Services,
 	// Routes, and Consumers). It ensures that IDs remain stable across restarts of the controller.
@@ -79,13 +67,10 @@ func (fg FeatureGates) Enabled(feature string) bool {
 // NOTE: if you're adding a new feature gate, it needs to be added here.
 func GetFeatureGatesDefaults() map[string]bool {
 	return map[string]bool{
-		KnativeFeature:          false,
 		GatewayFeature:          true,
 		GatewayAlphaFeature:     false,
-		CombinedRoutesFeature:   true,
 		ExpressionRoutesFeature: false,
-		CombinedServicesFeature: true,
-		FillIDsFeature:          false,
+		FillIDsFeature:          true,
 		RewriteURIsFeature:      false,
 	}
 }

@@ -2,6 +2,7 @@ _format_version: "3.0"
 services:
 - connect_timeout: 60000
   host: httproute..httproute-testing.0
+  id: 58104a2b-77b7-59e4-aeee-7453dcf61b31
   name: httproute..httproute-testing.0
   port: 8080
   protocol: http
@@ -9,6 +10,7 @@ services:
   retries: 5
   routes:
   - https_redirect_status_code: 426
+    id: c2ee1eba-4c06-5753-88d6-1a96d54329ac
     name: httproute..httproute-testing.0.0
     path_handling: v0
     paths:

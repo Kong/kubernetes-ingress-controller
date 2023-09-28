@@ -307,7 +307,6 @@ func TestIngressRulesFromUDPRoutes(t *testing.T) {
 			})
 			require.NoError(t, err)
 			parser := mustNewParser(t, fakestore)
-			parser.featureFlags.CombinedServiceRoutes = true
 
 			failureCollector := failures.NewResourceFailuresCollector(zapr.NewLogger(zap.NewNop()))
 			parser.failuresCollector = failureCollector
@@ -655,7 +654,6 @@ func TestIngressRulesFromUDPRoutesUsingExpressionRoutes(t *testing.T) {
 			})
 			require.NoError(t, err)
 			parser := mustNewParser(t, fakestore)
-			parser.featureFlags.CombinedServiceRoutes = true
 			parser.featureFlags.ExpressionRoutes = true
 			parser.kongVersion = tc.kongVersion
 

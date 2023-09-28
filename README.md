@@ -1,9 +1,10 @@
 [![][kong-logo]][kong-url]
-[![Build Status](https://github.com/kong/kubernetes-ingress-controller/workflows/Test/badge.svg)](https://github.com/kong/kubernetes-ingress-controller/actions?query=branch%3Amaster+event%3Apush)
+[![Build Status](https://github.com/kong/kubernetes-ingress-controller/workflows/Test/badge.svg)](https://github.com/kong/kubernetes-ingress-controller/actions?query=branch%3Amain+event%3Apush)
 [![Go Reference](https://pkg.go.dev/badge/github.com/kong/kubernetes-ingress-controller/v2.svg)](https://pkg.go.dev/github.com/kong/kubernetes-ingress-controller/v2)
 [![Codecov](https://codecov.io/gh/Kong/kubernetes-ingress-controller/branch/main/graph/badge.svg?token=S1aqcXiGEo)](https://codecov.io/gh/Kong/kubernetes-ingress-controller)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://github.com/Kong/kong/blob/master/LICENSE)
 [![Twitter](https://img.shields.io/twitter/follow/thekonginc.svg?style=social&label=Follow)](https://twitter.com/intent/follow?screen_name=thekonginc)
+[![Conformance](https://img.shields.io/badge/Gateway%20API%20Conformance%20v0.8.1-Kong%20Ingress%20Controller%202.12-green)](https://github.com/kubernetes-sigs/gateway-api/blob/main/conformance/reports/v0.8.1/kong-kubernetes-ingress-controller.yaml)
 
 # Kong Ingress Controller for Kubernetes (KIC)
 

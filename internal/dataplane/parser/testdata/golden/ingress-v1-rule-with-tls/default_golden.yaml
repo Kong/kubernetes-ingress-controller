@@ -69,6 +69,7 @@ certificates:
 services:
 - connect_timeout: 60000
   host: foo-svc.bar-namespace.80.svc
+  id: edc1d53e-73b4-5932-9455-0e01f0d53e3f
   name: bar-namespace.foo-svc.80
   path: /
   port: 80
@@ -79,6 +80,7 @@ services:
   - hosts:
     - example.com
     https_redirect_status_code: 426
+    id: fc9a8135-0253-5631-b1e0-8712f796a4e2
     name: bar-namespace.ing-with-tls.foo-svc.example.com.80
     path_handling: v0
     paths:

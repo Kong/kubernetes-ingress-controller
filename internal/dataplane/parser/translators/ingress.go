@@ -35,10 +35,6 @@ type TranslateIngressFeatureFlags struct {
 
 	// ExpressionRoutes indicates whether to translate Kubernetes objects to expression based Kong Routes.
 	ExpressionRoutes bool
-
-	// CombinedServices enables parser to create a single Kong Service when a Kubernetes Service is referenced
-	// by multiple Ingresses. This is effective only when EnableCombinedServiceRoutes is enabled.
-	CombinedServices bool
 }
 
 // TranslateIngresses receives a slice of Kubernetes Ingress objects and produces a translated set of kong.Services
@@ -158,7 +154,7 @@ func (i *ingressTranslationIndex) Add(ingress *netv1.Ingress, addRegexPrefix add
 func (i *ingressTranslationIndex) Translate() map[string]kongstate.Service {
 	kongStateServiceCache := make(map[string]kongstate.Service)
 	for _, meta := range i.cache {
-		kongServiceName := meta.generateKongServiceName(i.featureFlags.CombinedServices)
+		kongServiceName := meta.generateKongServiceName()
 		kongStateService, ok := kongStateServiceCache[kongServiceName]
 		if !ok {
 			kongStateService = meta.translateIntoKongStateService(kongServiceName, meta.servicePort)
@@ -218,24 +214,10 @@ func (m *ingressTranslationMeta) translateIntoKongStateService(kongServiceName s
 	}
 }
 
-func (m *ingressTranslationMeta) generateKongServiceName(flagEnabledCombinedServices bool) string {
-	// If combined services is enabled, we use the following format for the service name:
-	// <namespace>.<service_name>.<service_port>
-	if flagEnabledCombinedServices {
-		return fmt.Sprintf(
-			"%s.%s.%s",
-			m.parentIngress.GetNamespace(),
-			m.serviceName,
-			m.servicePort.CanonicalString(),
-		)
-	}
-
-	// If combined services is disabled, we use the following format for the service name:
-	// <namespace>.<ingress_name>.<service_name>.<service_port>
+func (m *ingressTranslationMeta) generateKongServiceName() string {
 	return fmt.Sprintf(
-		"%s.%s.%s.%s",
+		"%s.%s.%s",
 		m.parentIngress.GetNamespace(),
-		m.parentIngress.GetName(),
 		m.serviceName,
 		m.servicePort.CanonicalString(),
 	)

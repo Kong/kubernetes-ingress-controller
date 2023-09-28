@@ -53,10 +53,10 @@ func TestTranslateIngressATC(t *testing.T) {
 				},
 			},
 			expectedServices: map[string]kongstate.Service{
-				"default.test-ingress.test-service.80": {
+				"default.test-service.80": {
 					Namespace: corev1.NamespaceDefault,
 					Service: kong.Service{
-						Name:           kong.String("default.test-ingress.test-service.80"),
+						Name:           kong.String("default.test-service.80"),
 						Host:           kong.String("test-service.default.80.svc"),
 						ConnectTimeout: kong.Int(int(defaultServiceTimeout.Milliseconds())),
 						Path:           kong.String("/"),
@@ -130,10 +130,10 @@ func TestTranslateIngressATC(t *testing.T) {
 				},
 			},
 			expectedServices: map[string]kongstate.Service{
-				"default.test-ingress.test-service.80": {
+				"default.test-service.80": {
 					Namespace: corev1.NamespaceDefault,
 					Service: kong.Service{
-						Name:           kong.String("default.test-ingress.test-service.80"),
+						Name:           kong.String("default.test-service.80"),
 						Host:           kong.String("test-service.default.80.svc"),
 						ConnectTimeout: kong.Int(int(defaultServiceTimeout.Milliseconds())),
 						Path:           kong.String("/"),
@@ -212,10 +212,10 @@ func TestTranslateIngressATC(t *testing.T) {
 				},
 			},
 			expectedServices: map[string]kongstate.Service{
-				"default.test-ingress-annotations.test-service.80": {
+				"default.test-service.80": {
 					Namespace: corev1.NamespaceDefault,
 					Service: kong.Service{
-						Name:           kong.String("default.test-ingress-annotations.test-service.80"),
+						Name:           kong.String("default.test-service.80"),
 						Host:           kong.String("test-service.default.80.svc"),
 						ConnectTimeout: kong.Int(int(defaultServiceTimeout.Milliseconds())),
 						Path:           kong.String("/"),
@@ -287,7 +287,6 @@ func TestTranslateIngressATC(t *testing.T) {
 				TranslateIngressFeatureFlags{
 					ExpressionRoutes: true,
 					RegexPathPrefix:  false,
-					CombinedServices: false,
 				},
 				noopObjectsCollector{},
 			)

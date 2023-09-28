@@ -386,28 +386,17 @@ func buildPlugins(
 		}
 	}
 
-	globalPlugins, err := globalPlugins(logger, s)
+	gKCPs, err := globalKongClusterPlugins(logger, s)
 	if err != nil {
 		logger.V(util.ErrorLevel).Error(err, "failed to fetch global plugins")
 	}
 	// global plugins have no instance_name transform as they can only be applied once
-	plugins = append(plugins, globalPlugins...)
+	plugins = append(plugins, gKCPs...)
 
 	return plugins
 }
 
-func globalPlugins(logger logr.Logger, s store.Storer) ([]Plugin, error) {
-	// removed as of 0.10.0
-	// only retrieved now to warn users
-	globalPlugins, err := s.ListGlobalKongPlugins()
-	if err != nil {
-		return nil, fmt.Errorf("error listing global KongPlugins: %w", err)
-	}
-	if len(globalPlugins) > 0 {
-		logger.V(util.WarnLevel).Info("global KongPlugins found. These are no longer applied and",
-			" must be replaced with KongClusterPlugins.",
-			" Please run \"kubectl get kongplugin -l global=true --all-namespaces\" to list existing plugins")
-	}
+func globalKongClusterPlugins(logger logr.Logger, s store.Storer) ([]Plugin, error) {
 	res := make(map[string]Plugin)
 	var duplicates []string // keep track of duplicate
 	// TODO respect the oldest CRD
@@ -483,7 +472,7 @@ func (ks *KongState) FillIDs(logger logr.Logger) {
 
 	for consumerIndex, consumer := range ks.Consumers {
 		if err := consumer.FillID(); err != nil {
-			logger.V(util.ErrorLevel).Error(err, "failed to fill ID for consumer", "consumer_name", *consumer.Username)
+			logger.V(util.ErrorLevel).Error(err, "failed to fill ID for consumer", "consumer_name", consumer.FriendlyName())
 		} else {
 			ks.Consumers[consumerIndex] = consumer
 		}

@@ -39,10 +39,8 @@ var (
 			ReportConfiguredKubernetesObjects: false,
 
 			// Feature flags that are directly propagated from the feature gates get their defaults.
-			CombinedServiceRoutes: featuregates.GetFeatureGatesDefaults()[featuregates.CombinedRoutesFeature],
-			CombinedServices:      featuregates.GetFeatureGatesDefaults()[featuregates.CombinedServicesFeature],
-			ExpressionRoutes:      featuregates.GetFeatureGatesDefaults()[featuregates.ExpressionRoutesFeature],
-			FillIDs:               featuregates.GetFeatureGatesDefaults()[featuregates.FillIDsFeature],
+			ExpressionRoutes: featuregates.GetFeatureGatesDefaults()[featuregates.ExpressionRoutesFeature],
+			FillIDs:          featuregates.GetFeatureGatesDefaults()[featuregates.FillIDsFeature],
 
 			// RegexPathPrefix depends on the Kong version and is enabled by default for Kong >= 3.0.0.
 			RegexPathPrefix: true,

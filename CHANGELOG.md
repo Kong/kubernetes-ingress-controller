@@ -75,6 +75,30 @@ Adding a new version? You'll need three changes:
  - [0.0.5](#005)
  - [0.0.4 and prior](#004-and-prior)
 
+## Unreleased
+
+### Breaking changes
+
+- Removed feature gate `CombinedServices`. The feature is enabled and it can't be changed.
+  [#4743](https://github.com/Kong/kubernetes-ingress-controller/pull/4743)
+- Removed feature gate `CombinedRoutes`. The feature is enabled and it can't be changed.
+  [#4749](https://github.com/Kong/kubernetes-ingress-controller/pull/4749)
+- Removed Knative support.
+  [#4748](https://github.com/Kong/kubernetes-ingress-controller/pull/4748)
+
+### Fixed
+
+- No more "log.SetLogger(...) was never called..." log entry during shutdown of KIC
+  [#4738](https://github.com/Kong/kubernetes-ingress-controller/pull/4738)
+
+### Added
+
+- The `FillIDs` feature gate is now enabled by default.
+  [#4746](https://github.com/Kong/kubernetes-ingress-controller/pull/4746)
+- Get rid of deprecation warning in logs for unsupported label `global: true` for `KongPlugin`,
+  it'll be treated as any other label without a special meaning.
+  [#4737](https://github.com/Kong/kubernetes-ingress-controller/pull/4737)
+
 ## 2.12.0
 
 > Release date: 2023-09-25
@@ -125,12 +149,12 @@ Adding a new version? You'll need three changes:
   [#4608](https://github.com/Kong/kubernetes-ingress-controller/pull/4608)
 - Do not parse error body when failed to get response from reloading declarative
   configurations to produce proper error log in such situations,
-  [#4666](https://github.com/Kong/kubernetes-ingress-controller/pull/4666) 
+  [#4666](https://github.com/Kong/kubernetes-ingress-controller/pull/4666)
 - Set type meta of objects when adding them to caches and reference indexers
   to ensure that indexes of objects in reference indexers have correct object
-  kind. This ensures referece relations of objects are stored and indexed 
+  kind. This ensures referece relations of objects are stored and indexed
   correctly.
-  [#4663](https://github.com/Kong/kubernetes-ingress-controller/pull/4663) 
+  [#4663](https://github.com/Kong/kubernetes-ingress-controller/pull/4663)
 - Display Service ports on generated Kong services, instead of a static default
   value. This change is cosmetic only.
   [#4503](https://github.com/Kong/kubernetes-ingress-controller/pull/4503)
@@ -151,7 +175,7 @@ Adding a new version? You'll need three changes:
   [#4641](https://github.com/Kong/kubernetes-ingress-controller/issues/4641)
   [#4643](https://github.com/Kong/kubernetes-ingress-controller/issues/4643)
 - Fix `Licenses` and `ConsumerGroups` missing in sanitized copies of Kong configuration.
-  [#4710](https://github.com/Kong/kubernetes-ingress-controller/pull/4710
+  [#4710](https://github.com/Kong/kubernetes-ingress-controller/pull/4710)
 
 ## [2.11.1]
 
@@ -204,7 +228,7 @@ Adding a new version? You'll need three changes:
   [#4211](https://github.com/Kong/kubernetes-ingress-controller/pull/4211)
 - Assign priorities to routes translated from Ingresses when parser translate
   them to expression based Kong routes. The assigning method is basically the
-  same as in Kong gateway's `traditional_compatible` router, except that 
+  same as in Kong gateway's `traditional_compatible` router, except that
   `regex_priority` field in Kong traditional route is not supported. This
   method is adopted to keep the compatibility with traditional router on
   maximum effort.
@@ -231,7 +255,7 @@ Adding a new version? You'll need three changes:
   in terms of accepting data-plane traffic, but are ready to accept configuration
   updates. The controller will now send configuration to such Gateways and will
   actively monitor their readiness for accepting configuration updates.
-  [#4368](https://github.com/Kong/kubernetes-ingress-controller/pull/4368
+  [#4368](https://github.com/Kong/kubernetes-ingress-controller/pull/4368)
 - `KongConsumer`, `KongConsumerGroup` `KongPlugin`, and `KongClusterPlugin` CRDs were extended with
   `Status.Conditions` field. It will contain the `Programmed` condition describing
   whether an object was successfully translated into Kong entities and sent to Kong.

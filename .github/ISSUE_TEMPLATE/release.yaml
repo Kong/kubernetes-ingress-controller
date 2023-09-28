@@ -84,7 +84,7 @@ body:
   id: conformance_tests_report
   attributes:
     label: Conformance tests report
-    value: Trigger for released version CI workflow `conformance_tests_report.yaml`, verify artifact and submit it to https://github.com/kubernetes-sigs/gateway-api/tree/main/conformance/reports. It's still in experimental phase.
+    value: Trigger for released version CI workflow `conformance_tests_report.yaml`, verify artifact and submit it to https://github.com/kubernetes-sigs/gateway-api/tree/main/conformance/reports. It's still in experimental phase. Update the KIC version in the README's Gateway API conformance badge.
 - type: textarea
   id: release_trouble_shooting_link
   attributes:

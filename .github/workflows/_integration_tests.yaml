@@ -49,9 +49,6 @@ jobs:
             test: dbless
           - name: postgres
             test: postgres
-          - name: feature-gates
-            test: dbless
-            feature_gates: "GatewayAlpha=true,CombinedRoutes=false"
           - name: enterprise-postgres
             test: enterprise.postgres
             enterprise: true

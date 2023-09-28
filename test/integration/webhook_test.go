@@ -615,6 +615,87 @@ func TestValidationWebhook(t *testing.T) {
 	require.Contains(t, err.Error(), "some fields were invalid due to missing data: rsa_public_key, key, secret")
 }
 
+func TestValidationWebhookValidateReferredObject(t *testing.T) {
+	ctx := context.Background()
+
+	t.Parallel()
+	ns := helpers.Namespace(ctx, t, env)
+
+	if env.Cluster().Type() != kind.KindClusterType {
+		t.Skip("webhook tests are only available on KIND clusters currently")
+	}
+
+	t.Log("creating an extra namespace for testing global consumer credentials validation")
+	require.NoError(t, clusters.CreateNamespace(ctx, env.Cluster(), extraWebhookNamespace))
+	defer func() {
+		if err := env.Cluster().Client().CoreV1().Namespaces().Delete(ctx, extraWebhookNamespace, metav1.DeleteOptions{}); err != nil {
+			if !apierrors.IsNotFound(err) {
+				assert.NoError(t, err)
+			}
+		}
+	}()
+
+	ensureAdmissionRegistration(
+		ctx,
+		t,
+		ns.Name,
+		"kong-validations-reference",
+		[]admregv1.RuleWithOperations{
+			{
+				Rule: admregv1.Rule{
+					APIGroups:   []string{""},
+					APIVersions: []string{"v1"},
+					Resources:   []string{"secrets"},
+				},
+				Operations: []admregv1.OperationType{admregv1.Update},
+			},
+		},
+	)
+	t.Log("waiting for webhook service to be connective")
+	ensureWebhookServiceIsConnective(ctx, t, "kong-validations-reference")
+
+	ratelimitSecret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "ratelimit-config-1",
+		},
+		StringData: map[string]string{
+			"config.yaml": `limit_by: consumer
+policy: local
+minute: 5`,
+		},
+	}
+	ratelimitSecret, err := env.Cluster().Client().CoreV1().Secrets(ns.Name).Create(ctx, ratelimitSecret, metav1.CreateOptions{})
+	require.NoError(t, err)
+
+	kongClient, err := clientset.NewForConfig(env.Cluster().Config())
+	ratelimitPlugin := &kongv1.KongPlugin{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "ratelimit-1",
+		},
+		PluginName: "rate-limiting",
+		ConfigFrom: &kongv1.ConfigSource{
+			SecretValue: kongv1.SecretValueFromSource{
+				Secret: "ratelimit-config-1",
+				Key:    "config.yaml",
+			},
+		},
+	}
+	ratelimitPlugin, err = kongClient.ConfigurationV1().KongPlugins(ns.Name).Create(ctx, ratelimitPlugin, metav1.CreateOptions{})
+	require.NoError(t, err)
+
+	t.Log("update secret to an invalid configuration of rate-limiting plugin")
+	ratelimitSecret.StringData = map[string]string{
+		"config.yaml": `limit_by: consumer
+policy: local`,
+	}
+	_, err = env.Cluster().Client().CoreV1().Secrets(ns.Name).Update(ctx, ratelimitSecret, metav1.UpdateOptions{})
+	require.Error(t, err)
+	require.Contains(t, err.Error(),
+		fmt.Sprintf("secret used in KongPlugin %s/ratelimit-1 will generate invalid configuration", ns.Name),
+	)
+
+}
+
 func ensureWebhookService(ctx context.Context, t *testing.T, name string) {
 	t.Logf("creating webhook service: %q in namespace: %q", name, consts.ControllerNamespace)
 	validationsService, err := env.Cluster().Client().CoreV1().Services(consts.ControllerNamespace).Create(ctx, &corev1.Service{

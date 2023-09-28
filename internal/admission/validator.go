@@ -30,7 +30,7 @@ import (
 type KongValidator interface {
 	ValidateConsumer(ctx context.Context, consumer kongv1.KongConsumer) (bool, string, error)
 	ValidateConsumerGroup(ctx context.Context, consumerGroup kongv1beta1.KongConsumerGroup) (bool, string, error)
-	ValidatePlugin(ctx context.Context, plugin kongv1.KongPlugin) (bool, string, error)
+	ValidatePlugin(ctx context.Context, plugin kongv1.KongPlugin, secret *corev1.Secret) (bool, string, error)
 	ValidateClusterPlugin(ctx context.Context, plugin kongv1.KongClusterPlugin) (bool, string, error)
 	ValidateCredential(ctx context.Context, secret corev1.Secret) (bool, string, error)
 	ValidateGateway(ctx context.Context, gateway gatewaycontroller.Gateway) (bool, string, error)
@@ -281,6 +281,17 @@ func (validator KongHTTPValidator) ValidateCredential(
 	return true, "", nil
 }
 
+type SingleSecretGetter struct {
+	secret *corev1.Secret
+}
+
+func (s SingleSecretGetter) GetSecret(namespace, name string) (*corev1.Secret, error) {
+	if namespace == s.secret.Namespace && name == s.secret.Name {
+		return s.secret, nil
+	}
+	return nil, fmt.Errorf("not found")
+}
+
 // ValidatePlugin checks if k8sPlugin is valid. It does so by performing
 // an HTTP request to Kong's Admin API entity validation endpoints.
 // If an error occurs during validation, it is returned as the last argument.
@@ -289,6 +300,7 @@ func (validator KongHTTPValidator) ValidateCredential(
 func (validator KongHTTPValidator) ValidatePlugin(
 	ctx context.Context,
 	k8sPlugin kongv1.KongPlugin,
+	secret *corev1.Secret,
 ) (bool, string, error) {
 	if k8sPlugin.PluginName == "" {
 		return false, ErrTextPluginNameEmpty, nil
@@ -304,7 +316,12 @@ func (validator KongHTTPValidator) ValidatePlugin(
 		if len(plugin.Config) > 0 {
 			return false, ErrTextPluginUsesBothConfigTypes, nil
 		}
-		config, err := kongstate.SecretToConfiguration(validator.SecretGetter, (*k8sPlugin.ConfigFrom).SecretValue, k8sPlugin.Namespace)
+
+		secretGetter := validator.SecretGetter
+		if secret != nil {
+			secretGetter = SingleSecretGetter{secret: secret}
+		}
+		config, err := kongstate.SecretToConfiguration(secretGetter, (*k8sPlugin.ConfigFrom).SecretValue, k8sPlugin.Namespace)
 		if err != nil {
 			return false, ErrTextPluginSecretConfigUnretrievable, err
 		}
@@ -355,7 +372,7 @@ func (validator KongHTTPValidator) ValidateClusterPlugin(
 	} else {
 		derived.ObjectMeta.Namespace = "default"
 	}
-	return validator.ValidatePlugin(ctx, derived)
+	return validator.ValidatePlugin(ctx, derived, nil)
 }
 
 func (validator KongHTTPValidator) ValidateGateway(

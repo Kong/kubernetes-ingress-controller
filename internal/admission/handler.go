@@ -11,8 +11,10 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	netv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/reference"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
 	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1beta1"
 )
@@ -23,6 +25,8 @@ type RequestHandler struct {
 	// Validator validates the entities that the k8s API-server asks
 	// it the server to validate.
 	Validator KongValidator
+
+	ReferenceIndexers reference.CacheIndexers
 
 	Logger logrus.FieldLogger
 }
@@ -57,6 +61,19 @@ func (h RequestHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 }
+
+var (
+	gvkKongPlugin = schema.GroupVersionKind{
+		Group:   kongv1.GroupVersion.Group,
+		Version: kongv1.GroupVersion.Version,
+		Kind:    "KongPlugin",
+	}
+	gvkKongClusterPlugin = schema.GroupVersionKind{
+		Group:   kongv1.GroupVersion.Group,
+		Version: kongv1.GroupVersion.Version,
+		Kind:    "KongClusterPlugin",
+	}
+)
 
 var (
 	consumerGVResource = metav1.GroupVersionResource{
@@ -204,7 +221,7 @@ func (h RequestHandler) handleKongPlugin(
 		return nil, err
 	}
 
-	ok, message, err := h.Validator.ValidatePlugin(ctx, plugin)
+	ok, message, err := h.Validator.ValidatePlugin(ctx, plugin, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -241,6 +258,35 @@ func (h RequestHandler) handleSecret(
 	if err != nil {
 		return nil, err
 	}
+
+	referrers, err := h.ReferenceIndexers.ListObjectsReferredBy(&secret)
+	if err != nil {
+		return nil, err
+	}
+	for _, obj := range referrers {
+		gvk := obj.GetObjectKind().GroupVersionKind()
+		if gvk == gvkKongPlugin {
+			h.Logger.Debug("secret %s/%s referred by KongPlugin %s/%s",
+				secret.Namespace, secret.Name, obj.GetNamespace(), obj.GetName(),
+			)
+
+			plugin, ok := obj.(*kongv1.KongPlugin)
+			if !ok {
+				continue
+			}
+			ok, msg, err := h.Validator.ValidatePlugin(ctx, *plugin, &secret)
+			if err != nil {
+				return nil, err
+			}
+			if !ok {
+				return responseBuilder.Allowed(false).WithMessage(
+					fmt.Sprintf("secret used in KongPlugin %s/%s will generate invalid configuration: %s",
+						plugin.Namespace, plugin.Name, msg),
+				).Build(), nil
+			}
+		}
+	}
+
 	if _, ok := secret.Data["kongCredType"]; !ok {
 		// secret does not look like a credential resource in Kong
 		return responseBuilder.Allowed(true).Build(), nil

@@ -203,3 +203,21 @@ func (c CacheIndexers) ListReferredObjects(referrer client.Object) ([]client.Obj
 	}
 	return objs, nil
 }
+
+// ListObjectsReferredBy lists all objects that refers to the referent in reference cache.
+func (c CacheIndexers) ListObjectsReferredBy(referent client.Object) ([]client.Object, error) {
+	refs, err := c.indexer.ByIndex(IndexNameReferent, objectKeyFunc(referent))
+	if err != nil {
+		return nil, err
+	}
+
+	objs := []client.Object{}
+	for _, ref := range refs {
+		r, ok := ref.(*ObjectReference)
+		if !ok {
+			return nil, ErrTypeNotObjectReference
+		}
+		objs = append(objs, r.Referrer)
+	}
+	return objs, nil
+}

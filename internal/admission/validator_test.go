@@ -203,7 +203,7 @@ func TestKongHTTPValidator_ValidatePlugin(t *testing.T) {
 				},
 				ingressClassMatcher: fakeClassMatcher,
 			}
-			got, got1, err := validator.ValidatePlugin(context.Background(), tt.args.plugin)
+			got, got1, err := validator.ValidatePlugin(context.Background(), tt.args.plugin, nil)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("KongHTTPValidator.ValidatePlugin() error = %v, wantErr %v", err, tt.wantErr)
 				return

@@ -4,18 +4,9 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
-	"net/http"
-	"time"
 
-	"github.com/sirupsen/logrus"
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/serializer"
+	"github.com/go-logr/logr"
 	"sigs.k8s.io/controller-runtime/pkg/certwatcher"
-)
-
-var (
-	scheme = runtime.NewScheme()
-	codecs = serializer.NewCodecFactory(scheme)
 )
 
 const (
@@ -33,23 +24,9 @@ type ServerConfig struct {
 	Key     string
 }
 
-func MakeTLSServer(ctx context.Context, config *ServerConfig, handler http.Handler,
-	log logrus.FieldLogger,
-) (*http.Server, error) {
-	const defaultHTTPReadHeaderTimeout = 10 * time.Second
-	tlsConfig, err := serverConfigToTLSConfig(ctx, config, log)
-	if err != nil {
-		return nil, err
-	}
-	return &http.Server{
-		Addr:              config.ListenAddr,
-		TLSConfig:         tlsConfig,
-		Handler:           handler,
-		ReadHeaderTimeout: defaultHTTPReadHeaderTimeout,
-	}, nil
-}
-
-func serverConfigToTLSConfig(ctx context.Context, sc *ServerConfig, log logrus.FieldLogger) (*tls.Config, error) {
+// ServerConfigToTLSConfig converts a ServerConfig to a tls.Config.
+// TODO: this could be handled by controller-runtime if we set its webhook.Options properly.
+func ServerConfigToTLSConfig(ctx context.Context, sc *ServerConfig, log logr.Logger) (*tls.Config, error) {
 	var watcher *certwatcher.CertWatcher
 	var cert, key []byte
 	switch {
@@ -66,7 +43,7 @@ func serverConfigToTLSConfig(ctx context.Context, sc *ServerConfig, log logrus.F
 			Certificates: []tls.Certificate{keyPair},
 		}, nil
 
-	// the caller provided explicit file paths to the certs, enable certwatcher for these paths
+		// the caller provided explicit file paths to the certs, enable certwatcher for these paths
 	case sc.CertPath != "" && sc.KeyPath != "" && sc.Cert == "" && sc.Key == "":
 		var err error
 		watcher, err = certwatcher.New(sc.CertPath, sc.KeyPath)
@@ -74,7 +51,7 @@ func serverConfigToTLSConfig(ctx context.Context, sc *ServerConfig, log logrus.F
 			return nil, fmt.Errorf("failed to create CertWatcher: %w", err)
 		}
 
-	// the caller provided no certificate configuration, assume the default paths and enable certwatcher for them
+		// the caller provided no certificate configuration, assume the default paths and enable certwatcher for them
 	case sc.CertPath == "" && sc.KeyPath == "" && sc.Cert == "" && sc.Key == "":
 		var err error
 		watcher, err = certwatcher.New(DefaultAdmissionWebhookCertPath, DefaultAdmissionWebhookKeyPath)
@@ -88,7 +65,7 @@ func serverConfigToTLSConfig(ctx context.Context, sc *ServerConfig, log logrus.F
 
 	go func() {
 		if err := watcher.Start(ctx); err != nil {
-			log.WithError(err).Error("certificate watcher error")
+			log.Error(err, "certificate watcher error")
 		}
 	}()
 	return &tls.Config{

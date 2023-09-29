@@ -78,11 +78,17 @@ func SetupAnonymousReports(
 	if !ok {
 		return nil, fmt.Errorf("malformed database configuration found in Kong client root")
 	}
+	routerFlavor, ok := cfg["router_flavor"].(string)
+	if !ok {
+		// version to old to use router flavor, de facto traditional
+		routerFlavor = "traditional"
+	}
 
 	fixedPayload := Payload{
 		"v":  metadata.Release,
 		"kv": kongVersion,
 		"db": kongDB,
+		"rf": routerFlavor,
 		"id": instanceIDProvider.GetID(), // universal unique identifier for this system
 	}
 

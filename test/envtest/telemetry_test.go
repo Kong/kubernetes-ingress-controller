@@ -361,6 +361,7 @@ func verifyTelemetryReport(t *testing.T, k8sVersion *version.Info, report string
 			"feature-rewriteuris=false;"+
 			"hn=%s;"+
 			"kv=3.3.0;"+
+			"rf=traditional;"+
 			"v=NOT_SET;"+
 			"k8s_arch=%s;"+
 			"k8s_provider=UNKNOWN;"+

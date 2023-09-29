@@ -101,6 +101,8 @@ Adding a new version? You'll need three changes:
 - Get rid of deprecation warning in logs for unsupported label `global: true` for `KongPlugin`,
   it'll be treated as any other label without a special meaning.
   [#4737](https://github.com/Kong/kubernetes-ingress-controller/pull/4737)
+- Telemetry now reports the router flavor.
+  [#4762](https://github.com/Kong/kubernetes-ingress-controller/pull/4762)
 
 [KIC Annotations reference]: https://docs.konghq.com/kubernetes-ingress-controller/latest/references/annotations/
 

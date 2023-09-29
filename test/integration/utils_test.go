@@ -8,7 +8,6 @@ import (
 	"net/url"
 	"os"
 
-	"github.com/blang/semver/v4"
 	"github.com/kong/kubernetes-testing-framework/pkg/environments"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/test/consts"
@@ -32,9 +31,6 @@ var (
 
 	// proxyUDPURL provides access to the UDP API endpoint for the Kong Addon which is deployed to the test environment's cluster.
 	proxyUDPURL *url.URL
-
-	// clusterVersion is a convenience var where the found version of the env.Cluster is stored.
-	clusterVersion semver.Version
 
 	// runInvalidConfigTests is set to true to run the test cases including invalid test cases.
 	runInvalidConfigTests bool

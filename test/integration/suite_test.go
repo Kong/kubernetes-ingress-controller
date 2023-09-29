@@ -101,8 +101,7 @@ func TestMain(m *testing.M) {
 		builder.WithAddons(metallb.New())
 
 		if testenv.ClusterVersion() != "" {
-			var err error
-			clusterVersion, err = semver.Parse(strings.TrimPrefix(testenv.ClusterVersion(), "v"))
+			clusterVersion, err := semver.Parse(strings.TrimPrefix(testenv.ClusterVersion(), "v"))
 			exitOnErr(ctx, err)
 
 			fmt.Printf("INFO: build a new KIND cluster with version %s\n", clusterVersion.String())
@@ -120,9 +119,6 @@ func TestMain(m *testing.M) {
 			fmt.Printf("ERROR: failed cleaning up the cluster: %v\n", err)
 		}
 	}()
-
-	clusterVersion, err = env.Cluster().Version()
-	exitOnErr(ctx, err)
 
 	exitOnErr(ctx, DeployAddonsForCluster(ctx, env.Cluster()))
 	fmt.Printf("INFO: waiting for cluster %s and all addons to become ready\n", env.Cluster().Name())
@@ -230,6 +226,9 @@ func TestMain(m *testing.M) {
 		fmt.Println("WARN: should run these cases separately to prevent config being affected by invalid cases")
 		runInvalidConfigTests = true
 	}
+
+	clusterVersion, err := env.Cluster().Version()
+	exitOnErr(ctx, err)
 
 	fmt.Printf("INFO: testing environment is ready KUBERNETES_VERSION=(%v): running tests\n", clusterVersion)
 	code = m.Run()

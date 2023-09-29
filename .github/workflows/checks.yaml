@@ -1,5 +1,5 @@
-name: PR checks
-run-name: PR checks, branch:${{ github.ref_name }}, triggered by @${{ github.actor }}
+name: Checks
+run-name: Checks, branch:${{ github.ref_name }}, triggered by @${{ github.actor }}
 
 concurrency:
   # Run only for most recent commit in PRs but for all tags and commits on main

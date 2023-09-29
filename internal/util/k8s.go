@@ -29,9 +29,9 @@ import (
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	clientset "k8s.io/client-go/kubernetes"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/gatewayapi"
 )
 
 // ParseNameNS parses a string searching a namespace and name.
@@ -133,7 +133,7 @@ var backendRefSupportedGroupKinds = map[string]struct{}{
 
 // IsBackendRefGroupKindSupported checks if the GroupKind of the object used as
 // BackendRef for the HTTPRoute is supported.
-func IsBackendRefGroupKindSupported(gatewayAPIGroup *gatewayv1beta1.Group, gatewayAPIKind *gatewayv1beta1.Kind) bool {
+func IsBackendRefGroupKindSupported(gatewayAPIGroup *gatewayapi.Group, gatewayAPIKind *gatewayapi.Kind) bool {
 	if gatewayAPIKind == nil {
 		return false
 	}

@@ -12,7 +12,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/blang/semver/v4"
 	"github.com/kong/go-kong/kong"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
@@ -197,10 +196,6 @@ func TestGRPCIngressEssentials(t *testing.T) {
 }
 
 func TestIngressClassNameSpec(t *testing.T) {
-	if clusterVersion.Major < uint64(2) && clusterVersion.Minor < uint64(19) {
-		t.Skip("ingress spec tests can not be properly validated against old clusters")
-	}
-
 	t.Parallel()
 	t.Log("locking IngressClass management")
 	ingressClassMutex.Lock()
@@ -351,10 +346,6 @@ func TestIngressNamespaces(t *testing.T) {
 }
 
 func TestIngressStatusUpdatesExtended(t *testing.T) {
-	if clusterVersion.Major == uint64(1) && clusterVersion.Minor < uint64(19) {
-		t.Skip("status test disabled for old cluster versions")
-	}
-
 	t.Parallel()
 
 	ctx := context.Background()
@@ -484,13 +475,6 @@ func TestIngressStatusUpdatesExtended(t *testing.T) {
 // stop working altogether.
 func TestIngressClassRegexToggle(t *testing.T) {
 	RunWhenKongVersion(t, fmt.Sprintf(">=%s", versions.ExplicitRegexPathVersionCutoff), "regex prefixes are only relevant for Kong 3.0+")
-
-	// skip the test if the cluster does not support namespaced ingress class parameter (<=1.21).
-	// since 1.21 is End of Life now.
-	namespacedIngressClassParameterMinKubernetesVersion := semver.MustParse("1.22.0")
-	if clusterVersion.LT(namespacedIngressClassParameterMinKubernetesVersion) {
-		t.Skipf("kubernetes cluster version %s does not support namespaced ingress class parameters", clusterVersion.String())
-	}
 
 	t.Log("locking IngressClass management")
 	ingressClassMutex.Lock()

@@ -11,10 +11,9 @@ import (
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
-	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/gatewayapi"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 )
 
@@ -24,23 +23,23 @@ func TestGenerateKongExpressionRoutesFromGRPCRouteRule(t *testing.T) {
 		objectName     string
 		annotations    map[string]string
 		hostnames      []string
-		rule           gatewayv1alpha2.GRPCRouteRule
+		rule           gatewayapi.GRPCRouteRule
 		expectedRoutes []kongstate.Route
 	}{
 		{
 			name:        "single match without hostname",
 			objectName:  "single-match",
 			annotations: map[string]string{},
-			rule: gatewayv1alpha2.GRPCRouteRule{
-				Matches: []gatewayv1alpha2.GRPCRouteMatch{
+			rule: gatewayapi.GRPCRouteRule{
+				Matches: []gatewayapi.GRPCRouteMatch{
 					{
-						Method: &gatewayv1alpha2.GRPCMethodMatch{
+						Method: &gatewayapi.GRPCMethodMatch{
 							Service: lo.ToPtr("service0"),
 							Method:  nil,
 						},
-						Headers: []gatewayv1alpha2.GRPCHeaderMatch{
+						Headers: []gatewayapi.GRPCHeaderMatch{
 							{
-								Name:  gatewayv1alpha2.GRPCHeaderName("X-Foo"),
+								Name:  gatewayapi.GRPCHeaderName("X-Foo"),
 								Value: "Bar",
 							},
 						},
@@ -69,10 +68,10 @@ func TestGenerateKongExpressionRoutesFromGRPCRouteRule(t *testing.T) {
 			objectName:  "single-match-with-hostname",
 			annotations: map[string]string{},
 			hostnames:   []string{"foo.com", "*.foo.com"},
-			rule: gatewayv1alpha2.GRPCRouteRule{
-				Matches: []gatewayv1alpha2.GRPCRouteMatch{
+			rule: gatewayapi.GRPCRouteRule{
+				Matches: []gatewayapi.GRPCRouteMatch{
 					{
-						Method: &gatewayv1alpha2.GRPCMethodMatch{
+						Method: &gatewayapi.GRPCMethodMatch{
 							Service: lo.ToPtr("service0"),
 							Method:  lo.ToPtr("method0"),
 						},
@@ -99,14 +98,14 @@ func TestGenerateKongExpressionRoutesFromGRPCRouteRule(t *testing.T) {
 		{
 			name:       "multuple matches without hostname",
 			objectName: "multiple-matches",
-			rule: gatewayv1alpha2.GRPCRouteRule{
-				Matches: []gatewayv1alpha2.GRPCRouteMatch{
+			rule: gatewayapi.GRPCRouteRule{
+				Matches: []gatewayapi.GRPCRouteMatch{
 					{
-						Method: &gatewayv1alpha2.GRPCMethodMatch{
+						Method: &gatewayapi.GRPCMethodMatch{
 							Service: nil,
 							Method:  lo.ToPtr("method0"),
 						},
-						Headers: []gatewayv1alpha2.GRPCHeaderMatch{
+						Headers: []gatewayapi.GRPCHeaderMatch{
 							{
 								Name:  "Version",
 								Value: "2",
@@ -118,8 +117,8 @@ func TestGenerateKongExpressionRoutesFromGRPCRouteRule(t *testing.T) {
 						},
 					},
 					{
-						Method: &gatewayv1alpha2.GRPCMethodMatch{
-							Type:    lo.ToPtr(gatewayv1alpha2.GRPCMethodMatchRegularExpression),
+						Method: &gatewayapi.GRPCMethodMatch{
+							Type:    lo.ToPtr(gatewayapi.GRPCMethodMatchRegularExpression),
 							Service: lo.ToPtr("v[012]"),
 						},
 					},
@@ -162,10 +161,10 @@ func TestGenerateKongExpressionRoutesFromGRPCRouteRule(t *testing.T) {
 				"konghq.com/protocols": "https",
 				"konghq.com/snis":      "kong.foo.com",
 			},
-			rule: gatewayv1alpha2.GRPCRouteRule{
-				Matches: []gatewayv1alpha2.GRPCRouteMatch{
+			rule: gatewayapi.GRPCRouteRule{
+				Matches: []gatewayapi.GRPCRouteMatch{
 					{
-						Method: &gatewayv1alpha2.GRPCMethodMatch{
+						Method: &gatewayapi.GRPCMethodMatch{
 							Service: lo.ToPtr("service0"),
 							Method:  lo.ToPtr("method0"),
 						},
@@ -197,8 +196,8 @@ func TestGenerateKongExpressionRoutesFromGRPCRouteRule(t *testing.T) {
 			name:       "single hostname with no match",
 			objectName: "hostname-only",
 			hostnames:  []string{"foo.com"},
-			rule: gatewayv1alpha2.GRPCRouteRule{
-				Matches: []gatewayv1alpha2.GRPCRouteMatch{},
+			rule: gatewayapi.GRPCRouteRule{
+				Matches: []gatewayapi.GRPCRouteMatch{},
 			},
 			expectedRoutes: []kongstate.Route{
 				{
@@ -221,7 +220,7 @@ func TestGenerateKongExpressionRoutesFromGRPCRouteRule(t *testing.T) {
 	for _, tc := range testCases {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
-			grpcroute := makeTestGRPCRoute(tc.objectName, "default", tc.annotations, tc.hostnames, []gatewayv1alpha2.GRPCRouteRule{tc.rule})
+			grpcroute := makeTestGRPCRoute(tc.objectName, "default", tc.annotations, tc.hostnames, []gatewayapi.GRPCRouteRule{tc.rule})
 			routes := GenerateKongExpressionRoutesFromGRPCRouteRule(grpcroute, 0)
 			require.Equal(t, tc.expectedRoutes, routes)
 		})
@@ -231,13 +230,13 @@ func TestGenerateKongExpressionRoutesFromGRPCRouteRule(t *testing.T) {
 func TestMethodMatcherFromGRPCMethodMatch(t *testing.T) {
 	testCases := []struct {
 		name       string
-		match      gatewayv1alpha2.GRPCMethodMatch
+		match      gatewayapi.GRPCMethodMatch
 		expression string
 	}{
 		{
 			name: "exact method match",
-			match: gatewayv1alpha2.GRPCMethodMatch{
-				Type:    lo.ToPtr(gatewayv1alpha2.GRPCMethodMatchExact),
+			match: gatewayapi.GRPCMethodMatch{
+				Type:    lo.ToPtr(gatewayapi.GRPCMethodMatchExact),
 				Service: lo.ToPtr("service0"),
 				Method:  lo.ToPtr("method0"),
 			},
@@ -245,16 +244,16 @@ func TestMethodMatcherFromGRPCMethodMatch(t *testing.T) {
 		},
 		{
 			name: "exact match with service unspecified",
-			match: gatewayv1alpha2.GRPCMethodMatch{
-				Type:   lo.ToPtr(gatewayv1alpha2.GRPCMethodMatchExact),
+			match: gatewayapi.GRPCMethodMatch{
+				Type:   lo.ToPtr(gatewayapi.GRPCMethodMatchExact),
 				Method: lo.ToPtr("method0"),
 			},
 			expression: `http.path =^ "/method0"`,
 		},
 		{
 			name: "regex method match",
-			match: gatewayv1alpha2.GRPCMethodMatch{
-				Type:    lo.ToPtr(gatewayv1alpha2.GRPCMethodMatchRegularExpression),
+			match: gatewayapi.GRPCMethodMatch{
+				Type:    lo.ToPtr(gatewayapi.GRPCMethodMatchRegularExpression),
 				Service: lo.ToPtr("auth-v[012]"),
 				Method:  lo.ToPtr("[a-z]+"),
 			},
@@ -262,8 +261,8 @@ func TestMethodMatcherFromGRPCMethodMatch(t *testing.T) {
 		},
 		{
 			name: "empty regex match",
-			match: gatewayv1alpha2.GRPCMethodMatch{
-				Type: lo.ToPtr(gatewayv1alpha2.GRPCMethodMatchRegularExpression),
+			match: gatewayapi.GRPCMethodMatch{
+				Type: lo.ToPtr(gatewayapi.GRPCMethodMatchRegularExpression),
 			},
 			expression: `http.path ^= "/"`,
 		},
@@ -278,14 +277,14 @@ func TestMethodMatcherFromGRPCMethodMatch(t *testing.T) {
 }
 
 func TestSplitGRPCRoute(t *testing.T) {
-	namesToBackendRefs := func(names []string) []gatewayv1alpha2.GRPCBackendRef {
-		backendRefs := []gatewayv1alpha2.GRPCBackendRef{}
+	namesToBackendRefs := func(names []string) []gatewayapi.GRPCBackendRef {
+		backendRefs := []gatewayapi.GRPCBackendRef{}
 		for _, name := range names {
 			backendRefs = append(backendRefs,
-				gatewayv1alpha2.GRPCBackendRef{
-					BackendRef: gatewayv1alpha2.BackendRef{
-						BackendObjectReference: gatewayv1alpha2.BackendObjectReference{
-							Name: gatewayv1alpha2.ObjectName(name),
+				gatewayapi.GRPCBackendRef{
+					BackendRef: gatewayapi.BackendRef{
+						BackendObjectReference: gatewayapi.BackendObjectReference{
+							Name: gatewayapi.ObjectName(name),
 						},
 					},
 				},
@@ -294,19 +293,19 @@ func TestSplitGRPCRoute(t *testing.T) {
 		return backendRefs
 	}
 
-	testGRPCRoutes := []*gatewayv1alpha2.GRPCRoute{
+	testGRPCRoutes := []*gatewayapi.GRPCRoute{
 		{
 			TypeMeta: grpcRouteTypeMeta,
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: "default",
 				Name:      "grpcroute-no-hostname-one-match",
 			},
-			Spec: gatewayv1alpha2.GRPCRouteSpec{
-				Rules: []gatewayv1alpha2.GRPCRouteRule{
+			Spec: gatewayapi.GRPCRouteSpec{
+				Rules: []gatewayapi.GRPCRouteRule{
 					{
-						Matches: []gatewayv1alpha2.GRPCRouteMatch{
+						Matches: []gatewayapi.GRPCRouteMatch{
 							{
-								Method: &gatewayv1alpha2.GRPCMethodMatch{
+								Method: &gatewayapi.GRPCMethodMatch{
 									Service: lo.ToPtr("pets"),
 									Method:  lo.ToPtr("list"),
 								},
@@ -323,21 +322,21 @@ func TestSplitGRPCRoute(t *testing.T) {
 				Namespace: "default",
 				Name:      "grpcroute-one-hostname-multiple-matches",
 			},
-			Spec: gatewayv1alpha2.GRPCRouteSpec{
-				Hostnames: []gatewayv1alpha2.Hostname{
-					gatewayv1alpha2.Hostname("petstore.com"),
+			Spec: gatewayapi.GRPCRouteSpec{
+				Hostnames: []gatewayapi.Hostname{
+					gatewayapi.Hostname("petstore.com"),
 				},
-				Rules: []gatewayv1alpha2.GRPCRouteRule{
+				Rules: []gatewayapi.GRPCRouteRule{
 					{
-						Matches: []gatewayv1alpha2.GRPCRouteMatch{
+						Matches: []gatewayapi.GRPCRouteMatch{
 							{
-								Method: &gatewayv1alpha2.GRPCMethodMatch{
+								Method: &gatewayapi.GRPCMethodMatch{
 									Service: lo.ToPtr("cats"),
 									Method:  lo.ToPtr("list"),
 								},
 							},
 							{
-								Method: &gatewayv1alpha2.GRPCMethodMatch{
+								Method: &gatewayapi.GRPCMethodMatch{
 									Service: lo.ToPtr("dogs"),
 									Method:  lo.ToPtr("list"),
 								},
@@ -346,15 +345,15 @@ func TestSplitGRPCRoute(t *testing.T) {
 						BackendRefs: namesToBackendRefs([]string{"listpets"}),
 					},
 					{
-						Matches: []gatewayv1alpha2.GRPCRouteMatch{
+						Matches: []gatewayapi.GRPCRouteMatch{
 							{
-								Method: &gatewayv1alpha2.GRPCMethodMatch{
+								Method: &gatewayapi.GRPCMethodMatch{
 									Service: lo.ToPtr("cats"),
 									Method:  lo.ToPtr("create"),
 								},
 							},
 							{
-								Method: &gatewayv1alpha2.GRPCMethodMatch{
+								Method: &gatewayapi.GRPCMethodMatch{
 									Service: lo.ToPtr("dogs"),
 									Method:  lo.ToPtr("create"),
 								},
@@ -371,16 +370,16 @@ func TestSplitGRPCRoute(t *testing.T) {
 				Namespace: "default",
 				Name:      "grpcroute-multiple-hostnames",
 			},
-			Spec: gatewayv1alpha2.GRPCRouteSpec{
-				Hostnames: []gatewayv1alpha2.Hostname{
-					gatewayv1alpha2.Hostname("petstore.com"),
-					gatewayv1alpha2.Hostname("petstore.net"),
+			Spec: gatewayapi.GRPCRouteSpec{
+				Hostnames: []gatewayapi.Hostname{
+					gatewayapi.Hostname("petstore.com"),
+					gatewayapi.Hostname("petstore.net"),
 				},
-				Rules: []gatewayv1alpha2.GRPCRouteRule{
+				Rules: []gatewayapi.GRPCRouteRule{
 					{
-						Matches: []gatewayv1alpha2.GRPCRouteMatch{
+						Matches: []gatewayapi.GRPCRouteMatch{
 							{
-								Method: &gatewayv1alpha2.GRPCMethodMatch{
+								Method: &gatewayapi.GRPCMethodMatch{
 									Service: lo.ToPtr("pets"),
 									Method:  lo.ToPtr("list"),
 								},
@@ -397,12 +396,12 @@ func TestSplitGRPCRoute(t *testing.T) {
 				Namespace: "default",
 				Name:      "grpcroute-multiple-hostnames-no-match",
 			},
-			Spec: gatewayv1alpha2.GRPCRouteSpec{
-				Hostnames: []gatewayv1alpha2.Hostname{
-					gatewayv1alpha2.Hostname("pets.com"),
-					gatewayv1alpha2.Hostname("pets.net"),
+			Spec: gatewayapi.GRPCRouteSpec{
+				Hostnames: []gatewayapi.Hostname{
+					gatewayapi.Hostname("pets.com"),
+					gatewayapi.Hostname("pets.net"),
 				},
-				Rules: []gatewayv1alpha2.GRPCRouteRule{
+				Rules: []gatewayapi.GRPCRouteRule{
 					{
 						BackendRefs: namesToBackendRefs([]string{"listpets"}),
 					},
@@ -413,7 +412,7 @@ func TestSplitGRPCRoute(t *testing.T) {
 
 	testCases := []struct {
 		name                 string
-		grpcRoute            *gatewayv1alpha2.GRPCRoute
+		grpcRoute            *gatewayapi.GRPCRoute
 		expectedSplitMatches []SplitGRPCRouteMatch
 	}{
 		{
@@ -490,14 +489,14 @@ func TestSplitGRPCRoute(t *testing.T) {
 				{
 					Source:     testGRPCRoutes[3],
 					Hostname:   string(testGRPCRoutes[3].Spec.Hostnames[0]),
-					Match:      gatewayv1alpha2.GRPCRouteMatch{},
+					Match:      gatewayapi.GRPCRouteMatch{},
 					RuleIndex:  0,
 					MatchIndex: 0,
 				},
 				{
 					Source:     testGRPCRoutes[3],
 					Hostname:   string(testGRPCRoutes[3].Spec.Hostnames[1]),
-					Match:      gatewayv1alpha2.GRPCRouteMatch{},
+					Match:      gatewayapi.GRPCRouteMatch{},
 					RuleIndex:  0,
 					MatchIndex: 0,
 				},
@@ -529,9 +528,9 @@ func TestCalculateSplitGRCPRoutePriorityTraits(t *testing.T) {
 			name: "precise hostname with exact method match",
 			match: SplitGRPCRouteMatch{
 				Hostname: "petstore.com",
-				Match: gatewayv1alpha2.GRPCRouteMatch{
-					Method: &gatewayv1alpha2.GRPCMethodMatch{
-						Type:    lo.ToPtr(gatewayv1alpha2.GRPCMethodMatchExact),
+				Match: gatewayapi.GRPCRouteMatch{
+					Method: &gatewayapi.GRPCMethodMatch{
+						Type:    lo.ToPtr(gatewayapi.GRPCMethodMatchExact),
 						Service: lo.ToPtr("pets"),
 						Method:  lo.ToPtr("list"),
 					},
@@ -540,7 +539,7 @@ func TestCalculateSplitGRCPRoutePriorityTraits(t *testing.T) {
 			expectedTraits: GRPCRoutePriorityTraits{
 				PreciseHostname: true,
 				HostnameLength:  len("petstore.com"),
-				MethodMatchType: gatewayv1alpha2.GRPCMethodMatchExact,
+				MethodMatchType: gatewayapi.GRPCMethodMatchExact,
 				ServiceLength:   len("pets"),
 				MethodLength:    len("list"),
 			},
@@ -549,9 +548,9 @@ func TestCalculateSplitGRCPRoutePriorityTraits(t *testing.T) {
 			name: "wildcard hostname and partial method match",
 			match: SplitGRPCRouteMatch{
 				Hostname: "*.petstore.com",
-				Match: gatewayv1alpha2.GRPCRouteMatch{
-					Method: &gatewayv1alpha2.GRPCMethodMatch{
-						Type:    lo.ToPtr(gatewayv1alpha2.GRPCMethodMatchExact),
+				Match: gatewayapi.GRPCRouteMatch{
+					Method: &gatewayapi.GRPCMethodMatch{
+						Type:    lo.ToPtr(gatewayapi.GRPCMethodMatchExact),
 						Service: lo.ToPtr("pets"),
 					},
 				},
@@ -559,7 +558,7 @@ func TestCalculateSplitGRCPRoutePriorityTraits(t *testing.T) {
 			expectedTraits: GRPCRoutePriorityTraits{
 				PreciseHostname: false,
 				HostnameLength:  len("*.petstore.com"),
-				MethodMatchType: gatewayv1alpha2.GRPCMethodMatchExact,
+				MethodMatchType: gatewayapi.GRPCMethodMatchExact,
 				ServiceLength:   len("pets"),
 				MethodLength:    0,
 			},
@@ -567,16 +566,16 @@ func TestCalculateSplitGRCPRoutePriorityTraits(t *testing.T) {
 		{
 			name: "no hostname with only header matches",
 			match: SplitGRPCRouteMatch{
-				Match: gatewayv1alpha2.GRPCRouteMatch{
-					Headers: []gatewayv1alpha2.GRPCHeaderMatch{
+				Match: gatewayapi.GRPCRouteMatch{
+					Headers: []gatewayapi.GRPCHeaderMatch{
 						{
-							Type:  lo.ToPtr(gatewayv1beta1.HeaderMatchExact),
-							Name:  gatewayv1alpha2.GRPCHeaderName("key1"),
+							Type:  lo.ToPtr(gatewayapi.HeaderMatchExact),
+							Name:  gatewayapi.GRPCHeaderName("key1"),
 							Value: "value1",
 						},
 						{
-							Type:  lo.ToPtr(gatewayv1beta1.HeaderMatchExact),
-							Name:  gatewayv1alpha2.GRPCHeaderName("key2"),
+							Type:  lo.ToPtr(gatewayapi.HeaderMatchExact),
+							Name:  gatewayapi.GRPCHeaderName("key2"),
 							Value: "value2",
 						},
 					},
@@ -660,19 +659,19 @@ func TestAssignRoutePriorityToSplitGRPCRouteMatches(t *testing.T) {
 			name: "no dupelicated fixed priority",
 			splitGRPCRouteMatches: []SplitGRPCRouteMatch{
 				{
-					Source: &gatewayv1alpha2.GRPCRoute{
+					Source: &gatewayapi.GRPCRoute{
 						ObjectMeta: metav1.ObjectMeta{
 							Namespace:         "default",
 							Name:              "grpcroute-1",
 							CreationTimestamp: metav1.NewTime(now.Add(-5 * time.Second)),
 						},
-						Spec: gatewayv1alpha2.GRPCRouteSpec{
-							Hostnames: []gatewayv1beta1.Hostname{"foo.com"},
-							Rules: []gatewayv1alpha2.GRPCRouteRule{
+						Spec: gatewayapi.GRPCRouteSpec{
+							Hostnames: []gatewayapi.Hostname{"foo.com"},
+							Rules: []gatewayapi.GRPCRouteRule{
 								{
-									Matches: []gatewayv1alpha2.GRPCRouteMatch{
+									Matches: []gatewayapi.GRPCRouteMatch{
 										{
-											Method: &gatewayv1alpha2.GRPCMethodMatch{
+											Method: &gatewayapi.GRPCMethodMatch{
 												Service: lo.ToPtr("pets"),
 												Method:  lo.ToPtr("list"),
 											},
@@ -683,8 +682,8 @@ func TestAssignRoutePriorityToSplitGRPCRouteMatches(t *testing.T) {
 						},
 					},
 					Hostname: "foo.com",
-					Match: gatewayv1alpha2.GRPCRouteMatch{
-						Method: &gatewayv1alpha2.GRPCMethodMatch{
+					Match: gatewayapi.GRPCRouteMatch{
+						Method: &gatewayapi.GRPCMethodMatch{
 							Service: lo.ToPtr("pets"),
 							Method:  lo.ToPtr("list"),
 						},
@@ -693,19 +692,19 @@ func TestAssignRoutePriorityToSplitGRPCRouteMatches(t *testing.T) {
 					MatchIndex: 0,
 				},
 				{
-					Source: &gatewayv1alpha2.GRPCRoute{
+					Source: &gatewayapi.GRPCRoute{
 						ObjectMeta: metav1.ObjectMeta{
 							Namespace:         "default",
 							Name:              "grpcroute-2",
 							CreationTimestamp: metav1.NewTime(now.Add(-5 * time.Second)),
 						},
-						Spec: gatewayv1alpha2.GRPCRouteSpec{
-							Hostnames: []gatewayv1beta1.Hostname{"*.bar.com"},
-							Rules: []gatewayv1alpha2.GRPCRouteRule{
+						Spec: gatewayapi.GRPCRouteSpec{
+							Hostnames: []gatewayapi.Hostname{"*.bar.com"},
+							Rules: []gatewayapi.GRPCRouteRule{
 								{
-									Matches: []gatewayv1alpha2.GRPCRouteMatch{
+									Matches: []gatewayapi.GRPCRouteMatch{
 										{
-											Method: &gatewayv1alpha2.GRPCMethodMatch{
+											Method: &gatewayapi.GRPCMethodMatch{
 												Service: lo.ToPtr("pets"),
 												Method:  lo.ToPtr("list"),
 											},
@@ -716,8 +715,8 @@ func TestAssignRoutePriorityToSplitGRPCRouteMatches(t *testing.T) {
 						},
 					},
 					Hostname: "*.bar.com",
-					Match: gatewayv1alpha2.GRPCRouteMatch{
-						Method: &gatewayv1alpha2.GRPCMethodMatch{
+					Match: gatewayapi.GRPCRouteMatch{
+						Method: &gatewayapi.GRPCMethodMatch{
 							Service: lo.ToPtr("pets"),
 							Method:  lo.ToPtr("list"),
 						},
@@ -755,19 +754,19 @@ func TestAssignRoutePriorityToSplitGRPCRouteMatches(t *testing.T) {
 			name: "break tie by creation timestamp",
 			splitGRPCRouteMatches: []SplitGRPCRouteMatch{
 				{
-					Source: &gatewayv1alpha2.GRPCRoute{
+					Source: &gatewayapi.GRPCRoute{
 						ObjectMeta: metav1.ObjectMeta{
 							Namespace:         "default",
 							Name:              "grpcroute-1",
 							CreationTimestamp: metav1.NewTime(now.Add(-5 * time.Second)),
 						},
-						Spec: gatewayv1alpha2.GRPCRouteSpec{
-							Hostnames: []gatewayv1beta1.Hostname{"foo.com"},
-							Rules: []gatewayv1alpha2.GRPCRouteRule{
+						Spec: gatewayapi.GRPCRouteSpec{
+							Hostnames: []gatewayapi.Hostname{"foo.com"},
+							Rules: []gatewayapi.GRPCRouteRule{
 								{
-									Matches: []gatewayv1alpha2.GRPCRouteMatch{
+									Matches: []gatewayapi.GRPCRouteMatch{
 										{
-											Method: &gatewayv1alpha2.GRPCMethodMatch{
+											Method: &gatewayapi.GRPCMethodMatch{
 												Service: lo.ToPtr("pets"),
 												Method:  lo.ToPtr("list"),
 											},
@@ -778,8 +777,8 @@ func TestAssignRoutePriorityToSplitGRPCRouteMatches(t *testing.T) {
 						},
 					},
 					Hostname: "foo.com",
-					Match: gatewayv1alpha2.GRPCRouteMatch{
-						Method: &gatewayv1alpha2.GRPCMethodMatch{
+					Match: gatewayapi.GRPCRouteMatch{
+						Method: &gatewayapi.GRPCMethodMatch{
 							Service: lo.ToPtr("pets"),
 							Method:  lo.ToPtr("list"),
 						},
@@ -788,20 +787,20 @@ func TestAssignRoutePriorityToSplitGRPCRouteMatches(t *testing.T) {
 					MatchIndex: 0,
 				},
 				{
-					Source: &gatewayv1alpha2.GRPCRoute{
+					Source: &gatewayapi.GRPCRoute{
 						ObjectMeta: metav1.ObjectMeta{
 							Namespace: "default",
 							Name:      "grpcroute-2",
 							// created earlier
 							CreationTimestamp: metav1.NewTime(now.Add(-10 * time.Second)),
 						},
-						Spec: gatewayv1alpha2.GRPCRouteSpec{
-							Hostnames: []gatewayv1beta1.Hostname{"bar.com"},
-							Rules: []gatewayv1alpha2.GRPCRouteRule{
+						Spec: gatewayapi.GRPCRouteSpec{
+							Hostnames: []gatewayapi.Hostname{"bar.com"},
+							Rules: []gatewayapi.GRPCRouteRule{
 								{
-									Matches: []gatewayv1alpha2.GRPCRouteMatch{
+									Matches: []gatewayapi.GRPCRouteMatch{
 										{
-											Method: &gatewayv1alpha2.GRPCMethodMatch{
+											Method: &gatewayapi.GRPCMethodMatch{
 												Service: lo.ToPtr("pets"),
 												Method:  lo.ToPtr("list"),
 											},
@@ -812,8 +811,8 @@ func TestAssignRoutePriorityToSplitGRPCRouteMatches(t *testing.T) {
 						},
 					},
 					Hostname: "bar.com",
-					Match: gatewayv1alpha2.GRPCRouteMatch{
-						Method: &gatewayv1alpha2.GRPCMethodMatch{
+					Match: gatewayapi.GRPCRouteMatch{
+						Method: &gatewayapi.GRPCMethodMatch{
 							Service: lo.ToPtr("pets"),
 							Method:  lo.ToPtr("list"),
 						},
@@ -853,19 +852,19 @@ func TestAssignRoutePriorityToSplitGRPCRouteMatches(t *testing.T) {
 			name: "break tie by name",
 			splitGRPCRouteMatches: []SplitGRPCRouteMatch{
 				{
-					Source: &gatewayv1alpha2.GRPCRoute{
+					Source: &gatewayapi.GRPCRoute{
 						ObjectMeta: metav1.ObjectMeta{
 							Namespace:         "default",
 							Name:              "grpcroute-1",
 							CreationTimestamp: metav1.NewTime(now.Add(-5 * time.Second)),
 						},
-						Spec: gatewayv1alpha2.GRPCRouteSpec{
-							Hostnames: []gatewayv1beta1.Hostname{"foo.com"},
-							Rules: []gatewayv1alpha2.GRPCRouteRule{
+						Spec: gatewayapi.GRPCRouteSpec{
+							Hostnames: []gatewayapi.Hostname{"foo.com"},
+							Rules: []gatewayapi.GRPCRouteRule{
 								{
-									Matches: []gatewayv1alpha2.GRPCRouteMatch{
+									Matches: []gatewayapi.GRPCRouteMatch{
 										{
-											Method: &gatewayv1alpha2.GRPCMethodMatch{
+											Method: &gatewayapi.GRPCMethodMatch{
 												Service: lo.ToPtr("pets"),
 												Method:  lo.ToPtr("list"),
 											},
@@ -876,8 +875,8 @@ func TestAssignRoutePriorityToSplitGRPCRouteMatches(t *testing.T) {
 						},
 					},
 					Hostname: "foo.com",
-					Match: gatewayv1alpha2.GRPCRouteMatch{
-						Method: &gatewayv1alpha2.GRPCMethodMatch{
+					Match: gatewayapi.GRPCRouteMatch{
+						Method: &gatewayapi.GRPCMethodMatch{
 							Service: lo.ToPtr("pets"),
 							Method:  lo.ToPtr("list"),
 						},
@@ -886,19 +885,19 @@ func TestAssignRoutePriorityToSplitGRPCRouteMatches(t *testing.T) {
 					MatchIndex: 0,
 				},
 				{
-					Source: &gatewayv1alpha2.GRPCRoute{
+					Source: &gatewayapi.GRPCRoute{
 						ObjectMeta: metav1.ObjectMeta{
 							Namespace:         "default",
 							Name:              "grpcroute-2",
 							CreationTimestamp: metav1.NewTime(now.Add(-5 * time.Second)),
 						},
-						Spec: gatewayv1alpha2.GRPCRouteSpec{
-							Hostnames: []gatewayv1beta1.Hostname{"bar.com"},
-							Rules: []gatewayv1alpha2.GRPCRouteRule{
+						Spec: gatewayapi.GRPCRouteSpec{
+							Hostnames: []gatewayapi.Hostname{"bar.com"},
+							Rules: []gatewayapi.GRPCRouteRule{
 								{
-									Matches: []gatewayv1alpha2.GRPCRouteMatch{
+									Matches: []gatewayapi.GRPCRouteMatch{
 										{
-											Method: &gatewayv1alpha2.GRPCMethodMatch{
+											Method: &gatewayapi.GRPCMethodMatch{
 												Service: lo.ToPtr("pets"),
 												Method:  lo.ToPtr("list"),
 											},
@@ -909,8 +908,8 @@ func TestAssignRoutePriorityToSplitGRPCRouteMatches(t *testing.T) {
 						},
 					},
 					Hostname: "bar.com",
-					Match: gatewayv1alpha2.GRPCRouteMatch{
-						Method: &gatewayv1alpha2.GRPCMethodMatch{
+					Match: gatewayapi.GRPCRouteMatch{
+						Method: &gatewayapi.GRPCMethodMatch{
 							Service: lo.ToPtr("pets"),
 							Method:  lo.ToPtr("list"),
 						},
@@ -950,25 +949,25 @@ func TestAssignRoutePriorityToSplitGRPCRouteMatches(t *testing.T) {
 			name: "break tie by internal match order",
 			splitGRPCRouteMatches: []SplitGRPCRouteMatch{
 				{
-					Source: &gatewayv1alpha2.GRPCRoute{
+					Source: &gatewayapi.GRPCRoute{
 						ObjectMeta: metav1.ObjectMeta{
 							Namespace:         "default",
 							Name:              "grpcroute-1",
 							CreationTimestamp: metav1.NewTime(now.Add(-5 * time.Second)),
 						},
-						Spec: gatewayv1alpha2.GRPCRouteSpec{
-							Hostnames: []gatewayv1beta1.Hostname{"foo.com"},
-							Rules: []gatewayv1alpha2.GRPCRouteRule{
+						Spec: gatewayapi.GRPCRouteSpec{
+							Hostnames: []gatewayapi.Hostname{"foo.com"},
+							Rules: []gatewayapi.GRPCRouteRule{
 								{
-									Matches: []gatewayv1alpha2.GRPCRouteMatch{
+									Matches: []gatewayapi.GRPCRouteMatch{
 										{
-											Method: &gatewayv1alpha2.GRPCMethodMatch{
+											Method: &gatewayapi.GRPCMethodMatch{
 												Service: lo.ToPtr("cats"),
 												Method:  lo.ToPtr("list"),
 											},
 										},
 										{
-											Method: &gatewayv1alpha2.GRPCMethodMatch{
+											Method: &gatewayapi.GRPCMethodMatch{
 												Service: lo.ToPtr("dogs"),
 												Method:  lo.ToPtr("list"),
 											},
@@ -979,8 +978,8 @@ func TestAssignRoutePriorityToSplitGRPCRouteMatches(t *testing.T) {
 						},
 					},
 					Hostname: "foo.com",
-					Match: gatewayv1alpha2.GRPCRouteMatch{
-						Method: &gatewayv1alpha2.GRPCMethodMatch{
+					Match: gatewayapi.GRPCRouteMatch{
+						Method: &gatewayapi.GRPCMethodMatch{
 							Service: lo.ToPtr("cats"),
 							Method:  lo.ToPtr("list"),
 						},
@@ -990,25 +989,25 @@ func TestAssignRoutePriorityToSplitGRPCRouteMatches(t *testing.T) {
 				},
 				{
 					// The same as the one above
-					Source: &gatewayv1alpha2.GRPCRoute{
+					Source: &gatewayapi.GRPCRoute{
 						ObjectMeta: metav1.ObjectMeta{
 							Namespace:         "default",
 							Name:              "grpcroute-1",
 							CreationTimestamp: metav1.NewTime(now.Add(-5 * time.Second)),
 						},
-						Spec: gatewayv1alpha2.GRPCRouteSpec{
-							Hostnames: []gatewayv1beta1.Hostname{"foo.com"},
-							Rules: []gatewayv1alpha2.GRPCRouteRule{
+						Spec: gatewayapi.GRPCRouteSpec{
+							Hostnames: []gatewayapi.Hostname{"foo.com"},
+							Rules: []gatewayapi.GRPCRouteRule{
 								{
-									Matches: []gatewayv1alpha2.GRPCRouteMatch{
+									Matches: []gatewayapi.GRPCRouteMatch{
 										{
-											Method: &gatewayv1alpha2.GRPCMethodMatch{
+											Method: &gatewayapi.GRPCMethodMatch{
 												Service: lo.ToPtr("cats"),
 												Method:  lo.ToPtr("list"),
 											},
 										},
 										{
-											Method: &gatewayv1alpha2.GRPCMethodMatch{
+											Method: &gatewayapi.GRPCMethodMatch{
 												Service: lo.ToPtr("dogs"),
 												Method:  lo.ToPtr("list"),
 											},
@@ -1019,8 +1018,8 @@ func TestAssignRoutePriorityToSplitGRPCRouteMatches(t *testing.T) {
 						},
 					},
 					Hostname: "foo.com",
-					Match: gatewayv1alpha2.GRPCRouteMatch{
-						Method: &gatewayv1alpha2.GRPCMethodMatch{
+					Match: gatewayapi.GRPCRouteMatch{
+						Method: &gatewayapi.GRPCMethodMatch{
 							Service: lo.ToPtr("dogs"),
 							Method:  lo.ToPtr("list"),
 						},
@@ -1092,19 +1091,19 @@ func TestKongExpressionRouteFromSplitGRPCRouteWithPriority(t *testing.T) {
 			name: "no host and exact method match",
 			splitGRPCMatchWithPriority: SplitGRPCRouteMatchToPriority{
 				Match: SplitGRPCRouteMatch{
-					Source: &gatewayv1alpha2.GRPCRoute{
+					Source: &gatewayapi.GRPCRoute{
 						TypeMeta: grpcRouteTypeMeta,
 						ObjectMeta: metav1.ObjectMeta{
 							Namespace: "default",
 							Name:      "no-hostname-exact-method",
 						},
-						Spec: gatewayv1alpha2.GRPCRouteSpec{
-							Rules: []gatewayv1alpha2.GRPCRouteRule{
+						Spec: gatewayapi.GRPCRouteSpec{
+							Rules: []gatewayapi.GRPCRouteRule{
 								{
-									Matches: []gatewayv1alpha2.GRPCRouteMatch{
+									Matches: []gatewayapi.GRPCRouteMatch{
 										{
-											Method: &gatewayv1alpha2.GRPCMethodMatch{
-												Type:    lo.ToPtr(gatewayv1alpha2.GRPCMethodMatchExact),
+											Method: &gatewayapi.GRPCMethodMatch{
+												Type:    lo.ToPtr(gatewayapi.GRPCMethodMatchExact),
 												Service: lo.ToPtr("pets"),
 												Method:  lo.ToPtr("list"),
 											},
@@ -1114,9 +1113,9 @@ func TestKongExpressionRouteFromSplitGRPCRouteWithPriority(t *testing.T) {
 							},
 						},
 					},
-					Match: gatewayv1alpha2.GRPCRouteMatch{
-						Method: &gatewayv1alpha2.GRPCMethodMatch{
-							Type:    lo.ToPtr(gatewayv1alpha2.GRPCMethodMatchExact),
+					Match: gatewayapi.GRPCRouteMatch{
+						Method: &gatewayapi.GRPCMethodMatch{
+							Type:    lo.ToPtr(gatewayapi.GRPCMethodMatchExact),
 							Service: lo.ToPtr("pets"),
 							Method:  lo.ToPtr("list"),
 						},
@@ -1140,22 +1139,22 @@ func TestKongExpressionRouteFromSplitGRPCRouteWithPriority(t *testing.T) {
 			name: "precise hostname and regex method match",
 			splitGRPCMatchWithPriority: SplitGRPCRouteMatchToPriority{
 				Match: SplitGRPCRouteMatch{
-					Source: &gatewayv1alpha2.GRPCRoute{
+					Source: &gatewayapi.GRPCRoute{
 						TypeMeta: grpcRouteTypeMeta,
 						ObjectMeta: metav1.ObjectMeta{
 							Namespace: "default",
 							Name:      "precise-hostname-regex-method",
 						},
-						Spec: gatewayv1alpha2.GRPCRouteSpec{
-							Hostnames: []gatewayv1alpha2.Hostname{
+						Spec: gatewayapi.GRPCRouteSpec{
+							Hostnames: []gatewayapi.Hostname{
 								"foo.com",
 							},
-							Rules: []gatewayv1alpha2.GRPCRouteRule{
+							Rules: []gatewayapi.GRPCRouteRule{
 								{
-									Matches: []gatewayv1alpha2.GRPCRouteMatch{
+									Matches: []gatewayapi.GRPCRouteMatch{
 										{
-											Method: &gatewayv1alpha2.GRPCMethodMatch{
-												Type:    lo.ToPtr(gatewayv1alpha2.GRPCMethodMatchRegularExpression),
+											Method: &gatewayapi.GRPCMethodMatch{
+												Type:    lo.ToPtr(gatewayapi.GRPCMethodMatchRegularExpression),
 												Service: lo.ToPtr("name"),
 												Method:  lo.ToPtr("[a-z0-9]+"),
 											},
@@ -1166,9 +1165,9 @@ func TestKongExpressionRouteFromSplitGRPCRouteWithPriority(t *testing.T) {
 						},
 					},
 					Hostname: "foo.com",
-					Match: gatewayv1alpha2.GRPCRouteMatch{
-						Method: &gatewayv1alpha2.GRPCMethodMatch{
-							Type:    lo.ToPtr(gatewayv1alpha2.GRPCMethodMatchRegularExpression),
+					Match: gatewayapi.GRPCRouteMatch{
+						Method: &gatewayapi.GRPCMethodMatch{
+							Type:    lo.ToPtr(gatewayapi.GRPCMethodMatchRegularExpression),
 							Service: lo.ToPtr("name"),
 							Method:  lo.ToPtr("[a-z0-9]+"),
 						},
@@ -1192,34 +1191,34 @@ func TestKongExpressionRouteFromSplitGRPCRouteWithPriority(t *testing.T) {
 			name: "wildcard hostname and header match",
 			splitGRPCMatchWithPriority: SplitGRPCRouteMatchToPriority{
 				Match: SplitGRPCRouteMatch{
-					Source: &gatewayv1alpha2.GRPCRoute{
+					Source: &gatewayapi.GRPCRoute{
 						TypeMeta: grpcRouteTypeMeta,
 						ObjectMeta: metav1.ObjectMeta{
 							Namespace: "default",
 							Name:      "wildcard-hostname-header-match",
 						},
-						Spec: gatewayv1alpha2.GRPCRouteSpec{
-							Hostnames: []gatewayv1alpha2.Hostname{
+						Spec: gatewayapi.GRPCRouteSpec{
+							Hostnames: []gatewayapi.Hostname{
 								"*.foo.com",
 							},
-							Rules: []gatewayv1alpha2.GRPCRouteRule{
+							Rules: []gatewayapi.GRPCRouteRule{
 								{
-									Matches: []gatewayv1alpha2.GRPCRouteMatch{
+									Matches: []gatewayapi.GRPCRouteMatch{
 										{
-											Method: &gatewayv1alpha2.GRPCMethodMatch{
-												Type:    lo.ToPtr(gatewayv1alpha2.GRPCMethodMatchExact),
+											Method: &gatewayapi.GRPCMethodMatch{
+												Type:    lo.ToPtr(gatewayapi.GRPCMethodMatchExact),
 												Service: lo.ToPtr("names"),
 												Method:  lo.ToPtr("create"),
 											},
 										},
 										{
-											Method: &gatewayv1alpha2.GRPCMethodMatch{
-												Type:    lo.ToPtr(gatewayv1alpha2.GRPCMethodMatchExact),
+											Method: &gatewayapi.GRPCMethodMatch{
+												Type:    lo.ToPtr(gatewayapi.GRPCMethodMatchExact),
 												Service: lo.ToPtr("name"),
 											},
-											Headers: []gatewayv1alpha2.GRPCHeaderMatch{
+											Headers: []gatewayapi.GRPCHeaderMatch{
 												{
-													Name:  gatewayv1alpha2.GRPCHeaderName("foo"),
+													Name:  gatewayapi.GRPCHeaderName("foo"),
 													Value: "bar",
 												},
 											},
@@ -1230,14 +1229,14 @@ func TestKongExpressionRouteFromSplitGRPCRouteWithPriority(t *testing.T) {
 						},
 					},
 					Hostname: "*.foo.com",
-					Match: gatewayv1alpha2.GRPCRouteMatch{
-						Method: &gatewayv1alpha2.GRPCMethodMatch{
-							Type:    lo.ToPtr(gatewayv1alpha2.GRPCMethodMatchExact),
+					Match: gatewayapi.GRPCRouteMatch{
+						Method: &gatewayapi.GRPCMethodMatch{
+							Type:    lo.ToPtr(gatewayapi.GRPCMethodMatchExact),
 							Service: lo.ToPtr("name"),
 						},
-						Headers: []gatewayv1alpha2.GRPCHeaderMatch{
+						Headers: []gatewayapi.GRPCHeaderMatch{
 							{
-								Name:  gatewayv1alpha2.GRPCHeaderName("foo"),
+								Name:  gatewayapi.GRPCHeaderName("foo"),
 								Value: "bar",
 							},
 						},

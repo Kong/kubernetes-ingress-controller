@@ -16,6 +16,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/failures"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/parser/translators"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/gatewayapi"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util/builder"
 )
@@ -29,7 +30,7 @@ func TestIngressRulesFromGRPCRoutesUsingExpressionRoutes(t *testing.T) {
 
 	testCases := []struct {
 		name                 string
-		grpcRoutes           []*gatewayv1alpha2.GRPCRoute
+		grpcRoutes           []*gatewayapi.GRPCRoute
 		expectedKongServices []kongstate.Service
 		// service name -> routes
 		expectedKongRoutes map[string][]kongstate.Route
@@ -37,46 +38,46 @@ func TestIngressRulesFromGRPCRoutesUsingExpressionRoutes(t *testing.T) {
 	}{
 		{
 			name: "single GRPCRoute with multiple hostnames and multiple rules",
-			grpcRoutes: []*gatewayv1alpha2.GRPCRoute{
+			grpcRoutes: []*gatewayapi.GRPCRoute{
 				{
 					TypeMeta: grpcRouteTypeMeta,
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: "default",
 						Name:      "grpcroute-1",
 					},
-					Spec: gatewayv1alpha2.GRPCRouteSpec{
-						Hostnames: []gatewayv1alpha2.Hostname{
+					Spec: gatewayapi.GRPCRouteSpec{
+						Hostnames: []gatewayapi.Hostname{
 							"foo.com",
 							"*.bar.com",
 						},
-						Rules: []gatewayv1alpha2.GRPCRouteRule{
+						Rules: []gatewayapi.GRPCRouteRule{
 							{
-								Matches: []gatewayv1alpha2.GRPCRouteMatch{
+								Matches: []gatewayapi.GRPCRouteMatch{
 									{
-										Method: &gatewayv1alpha2.GRPCMethodMatch{
-											Type:    lo.ToPtr(gatewayv1alpha2.GRPCMethodMatchExact),
+										Method: &gatewayapi.GRPCMethodMatch{
+											Type:    lo.ToPtr(gatewayapi.GRPCMethodMatchExact),
 											Service: lo.ToPtr("v1"),
 											Method:  lo.ToPtr("foo"),
 										},
 									},
 								},
-								BackendRefs: []gatewayv1alpha2.GRPCBackendRef{
+								BackendRefs: []gatewayapi.GRPCBackendRef{
 									{
 										BackendRef: builder.NewBackendRef("service1").WithPort(80).Build(),
 									},
 								},
 							},
 							{
-								Matches: []gatewayv1alpha2.GRPCRouteMatch{
+								Matches: []gatewayapi.GRPCRouteMatch{
 									{
-										Method: &gatewayv1alpha2.GRPCMethodMatch{
-											Type:    lo.ToPtr(gatewayv1alpha2.GRPCMethodMatchExact),
+										Method: &gatewayapi.GRPCMethodMatch{
+											Type:    lo.ToPtr(gatewayapi.GRPCMethodMatchExact),
 											Service: lo.ToPtr("v1"),
 											Method:  lo.ToPtr("foobar"),
 										},
 									},
 								},
-								BackendRefs: []gatewayv1alpha2.GRPCBackendRef{
+								BackendRefs: []gatewayapi.GRPCBackendRef{
 									{
 										BackendRef: builder.NewBackendRef("service2").WithPort(80).Build(),
 									},
@@ -169,36 +170,36 @@ func TestIngressRulesFromGRPCRoutesUsingExpressionRoutes(t *testing.T) {
 		},
 		{
 			name: "multiple GRPCRoutes with multiple matches",
-			grpcRoutes: []*gatewayv1alpha2.GRPCRoute{
+			grpcRoutes: []*gatewayapi.GRPCRoute{
 				{
 					TypeMeta: grpcRouteTypeMeta,
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: "default",
 						Name:      "grpcroute-1",
 					},
-					Spec: gatewayv1alpha2.GRPCRouteSpec{
-						Hostnames: []gatewayv1alpha2.Hostname{
+					Spec: gatewayapi.GRPCRouteSpec{
+						Hostnames: []gatewayapi.Hostname{
 							"foo.com",
 						},
-						Rules: []gatewayv1alpha2.GRPCRouteRule{
+						Rules: []gatewayapi.GRPCRouteRule{
 							{
-								Matches: []gatewayv1alpha2.GRPCRouteMatch{
+								Matches: []gatewayapi.GRPCRouteMatch{
 									{
-										Method: &gatewayv1alpha2.GRPCMethodMatch{
-											Type:    lo.ToPtr(gatewayv1alpha2.GRPCMethodMatchExact),
+										Method: &gatewayapi.GRPCMethodMatch{
+											Type:    lo.ToPtr(gatewayapi.GRPCMethodMatchExact),
 											Service: lo.ToPtr("v1"),
 											Method:  lo.ToPtr("foo"),
 										},
 									},
 									{
-										Method: &gatewayv1alpha2.GRPCMethodMatch{
-											Type:    lo.ToPtr(gatewayv1alpha2.GRPCMethodMatchExact),
+										Method: &gatewayapi.GRPCMethodMatch{
+											Type:    lo.ToPtr(gatewayapi.GRPCMethodMatchExact),
 											Service: lo.ToPtr("v1"),
 											Method:  lo.ToPtr("foobar"),
 										},
 									},
 								},
-								BackendRefs: []gatewayv1alpha2.GRPCBackendRef{
+								BackendRefs: []gatewayapi.GRPCBackendRef{
 									{
 										BackendRef: builder.NewBackendRef("service1").WithPort(80).Build(),
 									},
@@ -213,19 +214,19 @@ func TestIngressRulesFromGRPCRoutesUsingExpressionRoutes(t *testing.T) {
 						Namespace: "default",
 						Name:      "grpcroute-2",
 					},
-					Spec: gatewayv1alpha2.GRPCRouteSpec{
-						Rules: []gatewayv1alpha2.GRPCRouteRule{
+					Spec: gatewayapi.GRPCRouteSpec{
+						Rules: []gatewayapi.GRPCRouteRule{
 							{
-								Matches: []gatewayv1alpha2.GRPCRouteMatch{
+								Matches: []gatewayapi.GRPCRouteMatch{
 									{
-										Method: &gatewayv1alpha2.GRPCMethodMatch{
-											Type:    lo.ToPtr(gatewayv1alpha2.GRPCMethodMatchExact),
+										Method: &gatewayapi.GRPCMethodMatch{
+											Type:    lo.ToPtr(gatewayapi.GRPCMethodMatchExact),
 											Service: lo.ToPtr("v2"),
 											Method:  lo.ToPtr("foo"),
 										},
 									},
 								},
-								BackendRefs: []gatewayv1alpha2.GRPCBackendRef{
+								BackendRefs: []gatewayapi.GRPCBackendRef{
 									{
 										BackendRef: builder.NewBackendRef("service2").WithPort(80).Build(),
 									},
@@ -286,26 +287,26 @@ func TestIngressRulesFromGRPCRoutesUsingExpressionRoutes(t *testing.T) {
 		},
 		{
 			name: "multiple GRPCRoutes with translation error",
-			grpcRoutes: []*gatewayv1alpha2.GRPCRoute{
+			grpcRoutes: []*gatewayapi.GRPCRoute{
 				{
 					TypeMeta: grpcRouteTypeMeta,
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: "default",
 						Name:      "grpcroute-1",
 					},
-					Spec: gatewayv1alpha2.GRPCRouteSpec{
-						Rules: []gatewayv1alpha2.GRPCRouteRule{
+					Spec: gatewayapi.GRPCRouteSpec{
+						Rules: []gatewayapi.GRPCRouteRule{
 							{
-								Matches: []gatewayv1alpha2.GRPCRouteMatch{
+								Matches: []gatewayapi.GRPCRouteMatch{
 									{
-										Method: &gatewayv1alpha2.GRPCMethodMatch{
-											Type:    lo.ToPtr(gatewayv1alpha2.GRPCMethodMatchExact),
+										Method: &gatewayapi.GRPCMethodMatch{
+											Type:    lo.ToPtr(gatewayapi.GRPCMethodMatchExact),
 											Service: lo.ToPtr("v1"),
 											Method:  lo.ToPtr("foo"),
 										},
 									},
 								},
-								BackendRefs: []gatewayv1alpha2.GRPCBackendRef{
+								BackendRefs: []gatewayapi.GRPCBackendRef{
 									{
 										BackendRef: builder.NewBackendRef("service2").WithPort(80).Build(),
 									},
@@ -320,7 +321,7 @@ func TestIngressRulesFromGRPCRoutesUsingExpressionRoutes(t *testing.T) {
 						Namespace: "default",
 						Name:      "grpcroute-no-rules",
 					},
-					Spec: gatewayv1alpha2.GRPCRouteSpec{},
+					Spec: gatewayapi.GRPCRouteSpec{},
 				},
 				{
 					TypeMeta: grpcRouteTypeMeta,
@@ -328,10 +329,10 @@ func TestIngressRulesFromGRPCRoutesUsingExpressionRoutes(t *testing.T) {
 						Namespace: "default",
 						Name:      "grpcroute-no-hostnames-no-matches",
 					},
-					Spec: gatewayv1alpha2.GRPCRouteSpec{
-						Rules: []gatewayv1alpha2.GRPCRouteRule{
+					Spec: gatewayapi.GRPCRouteSpec{
+						Rules: []gatewayapi.GRPCRouteRule{
 							{
-								BackendRefs: []gatewayv1alpha2.GRPCBackendRef{
+								BackendRefs: []gatewayapi.GRPCBackendRef{
 									{
 										BackendRef: builder.NewBackendRef("service0").WithPort(80).Build(),
 									},
@@ -385,7 +386,7 @@ func TestIngressRulesFromGRPCRoutesUsingExpressionRoutes(t *testing.T) {
 			},
 			expectedFailures: []failures.ResourceFailure{
 				newResourceFailure(t, translators.ErrRouteValidationNoRules.Error(),
-					&gatewayv1alpha2.GRPCRoute{
+					&gatewayapi.GRPCRoute{
 						TypeMeta: grpcRouteTypeMeta,
 						ObjectMeta: metav1.ObjectMeta{
 							Namespace: "default",

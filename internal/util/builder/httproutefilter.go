@@ -2,31 +2,32 @@ package builder
 
 import (
 	"github.com/samber/lo"
-	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
+
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/gatewayapi"
 )
 
 // HTTPRouteFilterBuilder is a builder for gateway api HTTPRouteMatch.
 // Primarily used for testing.
 type HTTPRouteFilterBuilder struct {
-	httpRouteFilter gatewayv1beta1.HTTPRouteFilter
+	httpRouteFilter gatewayapi.HTTPRouteFilter
 }
 
-func (b *HTTPRouteFilterBuilder) Build() gatewayv1beta1.HTTPRouteFilter {
+func (b *HTTPRouteFilterBuilder) Build() gatewayapi.HTTPRouteFilter {
 	return b.httpRouteFilter
 }
 
 // NewHTTPRouteRequestRedirectFilter builds a request redirect HTTPRoute filter.
 func NewHTTPRouteRequestRedirectFilter() *HTTPRouteFilterBuilder {
-	filter := gatewayv1beta1.HTTPRouteFilter{
-		Type:            gatewayv1beta1.HTTPRouteFilterRequestRedirect,
-		RequestRedirect: &gatewayv1beta1.HTTPRequestRedirectFilter{},
+	filter := gatewayapi.HTTPRouteFilter{
+		Type:            gatewayapi.HTTPRouteFilterRequestRedirect,
+		RequestRedirect: &gatewayapi.HTTPRequestRedirectFilter{},
 	}
 	return &HTTPRouteFilterBuilder{httpRouteFilter: filter}
 }
 
 // WithRequestRedirectScheme sets scheme of request redirect filter.
 func (b *HTTPRouteFilterBuilder) WithRequestRedirectScheme(scheme string) *HTTPRouteFilterBuilder {
-	if b.httpRouteFilter.Type != gatewayv1beta1.HTTPRouteFilterRequestRedirect ||
+	if b.httpRouteFilter.Type != gatewayapi.HTTPRouteFilterRequestRedirect ||
 		b.httpRouteFilter.RequestRedirect == nil {
 		return b
 	}
@@ -37,19 +38,19 @@ func (b *HTTPRouteFilterBuilder) WithRequestRedirectScheme(scheme string) *HTTPR
 
 // WithRequestRedirectHost sets host of request redirect filter.
 func (b *HTTPRouteFilterBuilder) WithRequestRedirectHost(host string) *HTTPRouteFilterBuilder {
-	if b.httpRouteFilter.Type != gatewayv1beta1.HTTPRouteFilterRequestRedirect ||
+	if b.httpRouteFilter.Type != gatewayapi.HTTPRouteFilterRequestRedirect ||
 		b.httpRouteFilter.RequestRedirect == nil {
 		return b
 	}
 
-	preciseHost := (gatewayv1beta1.PreciseHostname)(host)
+	preciseHost := (gatewayapi.PreciseHostname)(host)
 	b.httpRouteFilter.RequestRedirect.Hostname = lo.ToPtr(preciseHost)
 	return b
 }
 
 // WithRequestRedirectStatusCode sets status code of response in request redirect filter.
 func (b *HTTPRouteFilterBuilder) WithRequestRedirectStatusCode(code int) *HTTPRouteFilterBuilder {
-	if b.httpRouteFilter.Type != gatewayv1beta1.HTTPRouteFilterRequestRedirect ||
+	if b.httpRouteFilter.Type != gatewayapi.HTTPRouteFilterRequestRedirect ||
 		b.httpRouteFilter.RequestRedirect == nil {
 		return b
 	}
@@ -60,15 +61,15 @@ func (b *HTTPRouteFilterBuilder) WithRequestRedirectStatusCode(code int) *HTTPRo
 
 // NewHTTPRouteRequestHeaderModifierFilter builds a request header modifier HTTPRoute filter.
 func NewHTTPRouteRequestHeaderModifierFilter() *HTTPRouteFilterBuilder {
-	filter := gatewayv1beta1.HTTPRouteFilter{
-		Type:                  gatewayv1beta1.HTTPRouteFilterRequestHeaderModifier,
-		RequestHeaderModifier: &gatewayv1beta1.HTTPHeaderFilter{},
+	filter := gatewayapi.HTTPRouteFilter{
+		Type:                  gatewayapi.HTTPRouteFilterRequestHeaderModifier,
+		RequestHeaderModifier: &gatewayapi.HTTPHeaderFilter{},
 	}
 	return &HTTPRouteFilterBuilder{httpRouteFilter: filter}
 }
 
-func (b *HTTPRouteFilterBuilder) WithRequestHeaderAdd(headers []gatewayv1beta1.HTTPHeader) *HTTPRouteFilterBuilder {
-	if b.httpRouteFilter.Type != gatewayv1beta1.HTTPRouteFilterRequestHeaderModifier ||
+func (b *HTTPRouteFilterBuilder) WithRequestHeaderAdd(headers []gatewayapi.HTTPHeader) *HTTPRouteFilterBuilder {
+	if b.httpRouteFilter.Type != gatewayapi.HTTPRouteFilterRequestHeaderModifier ||
 		b.httpRouteFilter.RequestHeaderModifier == nil {
 		return b
 	}
@@ -76,8 +77,8 @@ func (b *HTTPRouteFilterBuilder) WithRequestHeaderAdd(headers []gatewayv1beta1.H
 	return b
 }
 
-func (b *HTTPRouteFilterBuilder) WithRequestHeaderSet(headers []gatewayv1beta1.HTTPHeader) *HTTPRouteFilterBuilder {
-	if b.httpRouteFilter.Type != gatewayv1beta1.HTTPRouteFilterRequestHeaderModifier ||
+func (b *HTTPRouteFilterBuilder) WithRequestHeaderSet(headers []gatewayapi.HTTPHeader) *HTTPRouteFilterBuilder {
+	if b.httpRouteFilter.Type != gatewayapi.HTTPRouteFilterRequestHeaderModifier ||
 		b.httpRouteFilter.RequestHeaderModifier == nil {
 		return b
 	}
@@ -86,7 +87,7 @@ func (b *HTTPRouteFilterBuilder) WithRequestHeaderSet(headers []gatewayv1beta1.H
 }
 
 func (b *HTTPRouteFilterBuilder) WithRequestHeaderRemove(headerNames []string) *HTTPRouteFilterBuilder {
-	if b.httpRouteFilter.Type != gatewayv1beta1.HTTPRouteFilterRequestHeaderModifier ||
+	if b.httpRouteFilter.Type != gatewayapi.HTTPRouteFilterRequestHeaderModifier ||
 		b.httpRouteFilter.RequestHeaderModifier == nil {
 		return b
 	}

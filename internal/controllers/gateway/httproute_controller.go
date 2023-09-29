@@ -26,6 +26,7 @@ import (
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/controllers"
 	ctrlutils "github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/utils"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/gatewayapi"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 	k8sobj "github.com/kong/kubernetes-ingress-controller/v2/internal/util/kubernetes/object"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util/kubernetes/object/status"
@@ -81,7 +82,7 @@ func (r *HTTPRouteReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	// removed from data-plane configurations, and any routes that are now supported
 	// due to that change get added to data-plane configurations.
 	if err := c.Watch(
-		source.Kind(mgr.GetCache(), &gatewayv1beta1.GatewayClass{}),
+		source.Kind(mgr.GetCache(), &gatewayapi.GatewayClass{}),
 		handler.EnqueueRequestsFromMapFunc(r.listHTTPRoutesForGatewayClass),
 		predicate.Funcs{
 			GenericFunc: func(e event.GenericEvent) bool { return false }, // we don't need to enqueue from generic
@@ -98,7 +99,7 @@ func (r *HTTPRouteReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	// removed from data-plane configurations, and any routes that are now supported
 	// due to that change get added to data-plane configurations.
 	if err := c.Watch(
-		source.Kind(mgr.GetCache(), &gatewayv1beta1.Gateway{}),
+		source.Kind(mgr.GetCache(), &gatewayapi.Gateway{}),
 		handler.EnqueueRequestsFromMapFunc(r.listHTTPRoutesForGateway),
 	); err != nil {
 		return err
@@ -106,7 +107,7 @@ func (r *HTTPRouteReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 	if r.enableReferenceGrant {
 		if err := c.Watch(
-			source.Kind(mgr.GetCache(), &gatewayv1beta1.ReferenceGrant{}),
+			source.Kind(mgr.GetCache(), &gatewayapi.ReferenceGrant{}),
 			handler.EnqueueRequestsFromMapFunc(r.listReferenceGrantsForHTTPRoute),
 			predicate.NewPredicateFuncs(referenceGrantHasHTTPRouteFrom),
 		); err != nil {
@@ -133,7 +134,7 @@ func (r *HTTPRouteReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	// data-plane config for an HTTPRoute if it somehow becomes disconnected from
 	// a supported Gateway and GatewayClass.
 	return c.Watch(
-		source.Kind(mgr.GetCache(), &gatewayv1beta1.HTTPRoute{}),
+		source.Kind(mgr.GetCache(), &gatewayapi.HTTPRoute{}),
 		&handler.EnqueueRequestForObject{},
 	)
 }
@@ -145,16 +146,16 @@ func (r *HTTPRouteReconciler) SetupWithManager(mgr ctrl.Manager) error {
 // listReferenceGrantsForHTTPRoute is a watch predicate which finds all HTTPRoutes
 // mentioned in a From clause for a ReferenceGrant.
 func (r *HTTPRouteReconciler) listReferenceGrantsForHTTPRoute(ctx context.Context, obj client.Object) []reconcile.Request {
-	grant, ok := obj.(*gatewayv1beta1.ReferenceGrant)
+	grant, ok := obj.(*gatewayapi.ReferenceGrant)
 	if !ok {
 		r.Log.Error(
 			fmt.Errorf("unexpected object type"),
 			"referencegrant watch predicate received unexpected object type",
-			"expected", "*gatewayv1beta1.ReferenceGrant", "found", reflect.TypeOf(obj),
+			"expected", "*gatewayapi.ReferenceGrant", "found", reflect.TypeOf(obj),
 		)
 		return nil
 	}
-	httproutes := &gatewayv1beta1.HTTPRouteList{}
+	httproutes := &gatewayapi.HTTPRouteList{}
 	if err := r.Client.List(ctx, httproutes); err != nil {
 		r.Log.Error(err, "failed to list httproutes in watch", "referencegrant", grant.Name)
 		return nil
@@ -178,7 +179,7 @@ func (r *HTTPRouteReconciler) listReferenceGrantsForHTTPRoute(ctx context.Contex
 }
 
 func referenceGrantHasHTTPRouteFrom(obj client.Object) bool {
-	grant, ok := obj.(*gatewayv1beta1.ReferenceGrant)
+	grant, ok := obj.(*gatewayapi.ReferenceGrant)
 	if !ok {
 		return false
 	}
@@ -198,14 +199,14 @@ func referenceGrantHasHTTPRouteFrom(obj client.Object) bool {
 // the cached manager client to avoid API overhead.
 func (r *HTTPRouteReconciler) listHTTPRoutesForGatewayClass(ctx context.Context, obj client.Object) []reconcile.Request {
 	// verify that the object is a GatewayClass
-	gwc, ok := obj.(*gatewayv1beta1.GatewayClass)
+	gwc, ok := obj.(*gatewayapi.GatewayClass)
 	if !ok {
 		r.Log.Error(fmt.Errorf("invalid type"), "found invalid type in event handlers", "expected", "GatewayClass", "found", reflect.TypeOf(obj))
 		return nil
 	}
 
 	// map all Gateway objects
-	gatewayList := gatewayv1beta1.GatewayList{}
+	gatewayList := gatewayapi.GatewayList{}
 	if err := r.Client.List(ctx, &gatewayList); err != nil {
 		r.Log.Error(err, "failed to list gateway objects from the cached client")
 		return nil
@@ -229,7 +230,7 @@ func (r *HTTPRouteReconciler) listHTTPRoutesForGatewayClass(ctx context.Context,
 	}
 
 	// map all HTTPRoute objects
-	httprouteList := gatewayv1beta1.HTTPRouteList{}
+	httprouteList := gatewayapi.HTTPRouteList{}
 	if err := r.Client.List(ctx, &httprouteList); err != nil {
 		r.Log.Error(err, "failed to list httproute objects from the cached client")
 		return nil
@@ -283,14 +284,14 @@ func (r *HTTPRouteReconciler) listHTTPRoutesForGatewayClass(ctx context.Context,
 // this kind of problem without having to enqueue extra objects.
 func (r *HTTPRouteReconciler) listHTTPRoutesForGateway(ctx context.Context, obj client.Object) []reconcile.Request {
 	// verify that the object is a Gateway
-	gw, ok := obj.(*gatewayv1beta1.Gateway)
+	gw, ok := obj.(*gatewayapi.Gateway)
 	if !ok {
 		r.Log.Error(fmt.Errorf("invalid type"), "found invalid type in event handlers", "expected", "Gateway", "found", reflect.TypeOf(obj))
 		return nil
 	}
 
 	// map all HTTPRoute objects
-	httprouteList := gatewayv1beta1.HTTPRouteList{}
+	httprouteList := gatewayapi.HTTPRouteList{}
 	if err := r.Client.List(ctx, &httprouteList); err != nil {
 		r.Log.Error(err, "failed to list httproute objects from the cached client")
 		return nil
@@ -331,7 +332,7 @@ func (r *HTTPRouteReconciler) listHTTPRoutesForGateway(ctx context.Context, obj 
 func (r *HTTPRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := r.Log.WithValues("GatewayV1Beta1HTTPRoute", req.NamespacedName)
 
-	httproute := new(gatewayv1beta1.HTTPRoute)
+	httproute := new(gatewayapi.HTTPRoute)
 	if err := r.Get(ctx, req.NamespacedName, httproute); err != nil {
 		// if the queued object is no longer present in the proxy cache we need
 		// to ensure that if it was ever added to the cache, it gets removed.
@@ -505,7 +506,7 @@ var httprouteParentKind = "Gateway"
 // ensureGatewayReferenceStatus takes any number of Gateways that should be
 // considered "attached" to a given HTTPRoute and ensures that the status
 // for the HTTPRoute is updated appropriately.
-func (r *HTTPRouteReconciler) ensureGatewayReferenceStatusAdded(ctx context.Context, httproute *gatewayv1beta1.HTTPRoute, gateways ...supportedGatewayWithCondition) (bool, error) {
+func (r *HTTPRouteReconciler) ensureGatewayReferenceStatusAdded(ctx context.Context, httproute *gatewayapi.HTTPRoute, gateways ...supportedGatewayWithCondition) (bool, error) {
 	// map the existing parentStatues to avoid duplications
 	parentStatuses := getParentStatuses(httproute, httproute.Status.Parents)
 
@@ -514,12 +515,12 @@ func (r *HTTPRouteReconciler) ensureGatewayReferenceStatusAdded(ctx context.Cont
 	for _, gateway := range gateways {
 		gateway := gateway
 		// build a new status for the parent Gateway
-		gatewayParentStatus := &gatewayv1beta1.RouteParentStatus{
-			ParentRef: ParentReference{
-				Group:     (*gatewayv1beta1.Group)(&gatewayv1beta1.GroupVersion.Group),
+		gatewayParentStatus := &gatewayapi.RouteParentStatus{
+			ParentRef: gatewayapi.ParentReference{
+				Group:     (*gatewayapi.Group)(&gatewayv1beta1.GroupVersion.Group),
 				Kind:      util.StringToGatewayAPIKindPtr(httprouteParentKind),
-				Namespace: (*gatewayv1beta1.Namespace)(&gateway.gateway.Namespace),
-				Name:      gatewayv1beta1.ObjectName(gateway.gateway.Name),
+				Namespace: (*gatewayapi.Namespace)(&gateway.gateway.Namespace),
+				Name:      gatewayapi.ObjectName(gateway.gateway.Name),
 			},
 			ControllerName: GetControllerName(),
 			Conditions: []metav1.Condition{{
@@ -531,7 +532,7 @@ func (r *HTTPRouteReconciler) ensureGatewayReferenceStatusAdded(ctx context.Cont
 			}},
 		}
 		if gateway.listenerName != "" {
-			gatewayParentStatus.ParentRef.SectionName = lo.ToPtr(SectionName(gateway.listenerName))
+			gatewayParentStatus.ParentRef.SectionName = lo.ToPtr(gatewayapi.SectionName(gateway.listenerName))
 		}
 
 		key := fmt.Sprintf("%s/%s/%s", gateway.gateway.Namespace, gateway.gateway.Name, gateway.listenerName)
@@ -582,7 +583,7 @@ func (r *HTTPRouteReconciler) ensureGatewayReferenceStatusAdded(ctx context.Cont
 	}
 
 	// update the httproute status with the new status references
-	httproute.Status.Parents = make([]gatewayv1beta1.RouteParentStatus, 0, len(parentStatuses))
+	httproute.Status.Parents = make([]gatewayapi.RouteParentStatus, 0, len(parentStatuses))
 	for _, parent := range parentStatuses {
 		httproute.Status.Parents = append(httproute.Status.Parents, *parent)
 	}
@@ -599,9 +600,9 @@ func (r *HTTPRouteReconciler) ensureGatewayReferenceStatusAdded(ctx context.Cont
 // ensureGatewayReferenceStatusRemoved uses the ControllerName provided by the Gateway
 // implementation to prune status references to Gateways supported by this controller
 // in the provided HTTPRoute object.
-func (r *HTTPRouteReconciler) ensureGatewayReferenceStatusRemoved(ctx context.Context, httproute *gatewayv1beta1.HTTPRoute) (bool, error) {
+func (r *HTTPRouteReconciler) ensureGatewayReferenceStatusRemoved(ctx context.Context, httproute *gatewayapi.HTTPRoute) (bool, error) {
 	// drop all status references to supported Gateway objects
-	newStatuses := make([]gatewayv1beta1.RouteParentStatus, 0)
+	newStatuses := make([]gatewayapi.RouteParentStatus, 0)
 	for _, status := range httproute.Status.Parents {
 		if status.ControllerName != GetControllerName() {
 			newStatuses = append(newStatuses, status)
@@ -627,23 +628,23 @@ func (r *HTTPRouteReconciler) ensureGatewayReferenceStatusRemoved(ctx context.Co
 // setRouteConditionResolvedRefsCondition sets a condition of type ResolvedRefs on the route status.
 func (r *HTTPRouteReconciler) setRouteConditionResolvedRefsCondition(
 	ctx context.Context,
-	httpRoute *gatewayv1beta1.HTTPRoute,
-	parentStatuses map[string]*gatewayv1beta1.RouteParentStatus,
-) (map[string]*gatewayv1beta1.RouteParentStatus, bool, error) {
+	httpRoute *gatewayapi.HTTPRoute,
+	parentStatuses map[string]*gatewayapi.RouteParentStatus,
+) (map[string]*gatewayapi.RouteParentStatus, bool, error) {
 	var changed bool
 	resolvedRefsStatus := metav1.ConditionFalse
 	reason, err := r.getHTTPRouteRuleReason(ctx, *httpRoute)
 	if err != nil {
 		return nil, false, err
 	}
-	if reason == gatewayv1beta1.RouteReasonResolvedRefs {
+	if reason == gatewayapi.RouteReasonResolvedRefs {
 		resolvedRefsStatus = metav1.ConditionTrue
 	}
 
 	// iterate over all the parentStatuses conditions, and if no RouteConditionResolvedRefs is found,
 	// or if the condition is found but has to be changed, update the status and mark it to be updated
 	resolvedRefsCondition := metav1.Condition{
-		Type:               string(gatewayv1beta1.RouteConditionResolvedRefs),
+		Type:               string(gatewayapi.RouteConditionResolvedRefs),
 		Status:             resolvedRefsStatus,
 		ObservedGeneration: httpRoute.Generation,
 		LastTransitionTime: metav1.Now(),
@@ -652,7 +653,7 @@ func (r *HTTPRouteReconciler) setRouteConditionResolvedRefsCondition(
 	for _, parentStatus := range parentStatuses {
 		var conditionFound bool
 		for i, cond := range parentStatus.Conditions {
-			if cond.Type == string(gatewayv1beta1.RouteConditionResolvedRefs) {
+			if cond.Type == string(gatewayapi.RouteConditionResolvedRefs) {
 				if !(cond.Status == resolvedRefsStatus &&
 					cond.Reason == string(reason)) {
 					parentStatus.Conditions[i] = resolvedRefsCondition
@@ -671,7 +672,7 @@ func (r *HTTPRouteReconciler) setRouteConditionResolvedRefsCondition(
 	return parentStatuses, changed, nil
 }
 
-func (r *HTTPRouteReconciler) getHTTPRouteRuleReason(ctx context.Context, httpRoute gatewayv1beta1.HTTPRoute) (gatewayv1beta1.RouteConditionReason, error) {
+func (r *HTTPRouteReconciler) getHTTPRouteRuleReason(ctx context.Context, httpRoute gatewayapi.HTTPRoute) (gatewayapi.RouteConditionReason, error) {
 	for _, rule := range httpRoute.Spec.Rules {
 		for _, backendRef := range rule.BackendRefs {
 			backendNamespace := httpRoute.Namespace
@@ -681,7 +682,7 @@ func (r *HTTPRouteReconciler) getHTTPRouteRuleReason(ctx context.Context, httpRo
 
 			// Check if the BackendRef GroupKind is supported
 			if !util.IsBackendRefGroupKindSupported(backendRef.Group, backendRef.Kind) {
-				return gatewayv1beta1.RouteReasonInvalidKind, nil
+				return gatewayapi.RouteReasonInvalidKind, nil
 			}
 
 			// Check if all the objects referenced actually exist
@@ -692,22 +693,22 @@ func (r *HTTPRouteReconciler) getHTTPRouteRuleReason(ctx context.Context, httpRo
 				if !apierrors.IsNotFound(err) {
 					return "", err
 				}
-				return gatewayv1beta1.RouteReasonBackendNotFound, nil
+				return gatewayapi.RouteReasonBackendNotFound, nil
 			}
 
 			// Check if the object referenced is in another namespace,
 			// and if there is grant for that reference
 			if httpRoute.Namespace != backendNamespace {
 				if !r.enableReferenceGrant {
-					return gatewayv1beta1.RouteReasonRefNotPermitted, nil
+					return gatewayapi.RouteReasonRefNotPermitted, nil
 				}
 
-				referenceGrantList := &gatewayv1beta1.ReferenceGrantList{}
+				referenceGrantList := &gatewayapi.ReferenceGrantList{}
 				if err := r.Client.List(ctx, referenceGrantList, client.InNamespace(backendNamespace)); err != nil {
 					return "", err
 				}
 				if len(referenceGrantList.Items) == 0 {
-					return gatewayv1beta1.RouteReasonRefNotPermitted, nil
+					return gatewayapi.RouteReasonRefNotPermitted, nil
 				}
 				var isGranted bool
 				for _, grant := range referenceGrantList.Items {
@@ -717,12 +718,12 @@ func (r *HTTPRouteReconciler) getHTTPRouteRuleReason(ctx context.Context, httpRo
 					}
 				}
 				if !isGranted {
-					return gatewayv1beta1.RouteReasonRefNotPermitted, nil
+					return gatewayapi.RouteReasonRefNotPermitted, nil
 				}
 			}
 		}
 	}
-	return gatewayv1beta1.RouteReasonResolvedRefs, nil
+	return gatewayapi.RouteReasonResolvedRefs, nil
 }
 
 // SetLogger sets the logger.

@@ -28,6 +28,7 @@ import (
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/gateway"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/gatewayapi"
 	testutils "github.com/kong/kubernetes-ingress-controller/v2/internal/util/test"
 	"github.com/kong/kubernetes-ingress-controller/v2/test"
 	"github.com/kong/kubernetes-ingress-controller/v2/test/consts"
@@ -137,14 +138,14 @@ func prepareEnvForGatewayConformanceTests(t *testing.T) (c client.Client, gatewa
 	require.NoError(t, testutils.DeployControllerManagerForCluster(ctx, globalLogger, env.Cluster(), args...))
 
 	t.Log("creating GatewayClass for gateway conformance tests")
-	gatewayClass := &gatewayv1beta1.GatewayClass{
+	gatewayClass := &gatewayapi.GatewayClass{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: uuid.NewString(),
 			Annotations: map[string]string{
 				annotations.GatewayClassUnmanagedAnnotation: annotations.GatewayClassUnmanagedAnnotationValuePlaceholder,
 			},
 		},
-		Spec: gatewayv1beta1.GatewayClassSpec{
+		Spec: gatewayapi.GatewayClassSpec{
 			ControllerName: gateway.GetControllerName(),
 		},
 	}

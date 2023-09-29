@@ -3,11 +3,9 @@ package parser
 import (
 	"fmt"
 
-	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
-	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
-
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/parser/translators"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/gatewayapi"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 )
 
@@ -52,7 +50,7 @@ func (p *Parser) ingressRulesFromGRPCRoutes() ingressRules {
 	return result
 }
 
-func (p *Parser) ingressRulesFromGRPCRoute(result *ingressRules, grpcroute *gatewayv1alpha2.GRPCRoute) error {
+func (p *Parser) ingressRulesFromGRPCRoute(result *ingressRules, grpcroute *gatewayapi.GRPCRoute) error {
 	// validate the grpcRoute before it gets translated
 	if err := validateGRPCRoute(grpcroute); err != nil {
 		return err
@@ -90,12 +88,12 @@ func (p *Parser) ingressRulesFromGRPCRoute(result *ingressRules, grpcroute *gate
 // Because we need to assign different priorities based on the hostname and match in the specification of GRPCRoutes,
 // We need to split the GRPCRoutes into ones with only one hostname and one match, then assign priority to them
 // and finally translate the split GRPCRoutes into Kong services and routes with assigned priorities.
-func (p *Parser) ingressRulesFromGRPCRoutesUsingExpressionRoutes(grpcRoutes []*gatewayv1alpha2.GRPCRoute, result *ingressRules) {
+func (p *Parser) ingressRulesFromGRPCRoutesUsingExpressionRoutes(grpcRoutes []*gatewayapi.GRPCRoute, result *ingressRules) {
 	// first, split GRPCRoutes by hostname and match.
 	splitGRPCRouteMatches := []translators.SplitGRPCRouteMatch{}
 	// record GRPCRoutes passing the validation and get translated.
 	// after they are translated, register the success event in the parser.
-	translatedGRPCRoutes := []*gatewayv1alpha2.GRPCRoute{}
+	translatedGRPCRoutes := []*gatewayapi.GRPCRoute{}
 	for _, grpcRoute := range grpcRoutes {
 		// validate the GRPCRoute before it gets split by hostnames and matches.
 		if err := validateGRPCRoute(grpcRoute); err != nil {
@@ -156,8 +154,8 @@ func (p *Parser) ingressRulesFromGRPCRouteWithPriority(
 	rules.ServiceNameToParent[serviceName] = grpcRoute
 }
 
-func grpcBackendRefsToBackendRefs(grpcBackendRef []gatewayv1alpha2.GRPCBackendRef) []gatewayv1beta1.BackendRef {
-	backendRefs := make([]gatewayv1beta1.BackendRef, 0, len(grpcBackendRef))
+func grpcBackendRefsToBackendRefs(grpcBackendRef []gatewayapi.GRPCBackendRef) []gatewayapi.BackendRef {
+	backendRefs := make([]gatewayapi.BackendRef, 0, len(grpcBackendRef))
 
 	for _, hRef := range grpcBackendRef {
 		backendRefs = append(backendRefs, hRef.BackendRef)
@@ -165,7 +163,7 @@ func grpcBackendRefsToBackendRefs(grpcBackendRef []gatewayv1alpha2.GRPCBackendRe
 	return backendRefs
 }
 
-func validateGRPCRoute(grpcRoute *gatewayv1alpha2.GRPCRoute) error {
+func validateGRPCRoute(grpcRoute *gatewayapi.GRPCRoute) error {
 	if len(grpcRoute.Spec.Hostnames) == 0 {
 		if len(grpcRoute.Spec.Rules) == 0 {
 			return translators.ErrRouteValidationNoRules

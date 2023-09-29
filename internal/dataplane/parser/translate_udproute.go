@@ -3,9 +3,8 @@ package parser
 import (
 	"fmt"
 
-	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
-
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/parser/translators"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/gatewayapi"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/versions"
 )
 
@@ -61,7 +60,7 @@ func (p *Parser) ingressRulesFromUDPRoutes() ingressRules {
 	return result
 }
 
-func (p *Parser) ingressRulesFromUDPRoute(result *ingressRules, udproute *gatewayv1alpha2.UDPRoute) error {
+func (p *Parser) ingressRulesFromUDPRoute(result *ingressRules, udproute *gatewayapi.UDPRoute) error {
 	// first we grab the spec and gather some metdata about the object
 	spec := udproute.Spec
 
@@ -94,7 +93,7 @@ func (p *Parser) ingressRulesFromUDPRoute(result *ingressRules, udproute *gatewa
 // validation at this level as well as a fallback so that if routes are posted which
 // are invalid somehow make it past validation (e.g. the webhook is not enabled) we can
 // at least try to provide a helpful message about the situation in the manager logs.
-func validateUDPRoute(udproute *gatewayv1alpha2.UDPRoute) error {
+func validateUDPRoute(udproute *gatewayapi.UDPRoute) error {
 	if len(udproute.Spec.Rules) == 0 {
 		return translators.ErrRouteValidationNoRules
 	}

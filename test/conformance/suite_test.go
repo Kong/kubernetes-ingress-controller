@@ -130,7 +130,6 @@ func prepareEnvForGatewayConformanceTests(t *testing.T) (c client.Client, gatewa
 		"--profiling",
 		"--dump-config",
 		"--log-level=trace",
-		"--debug-log-reduce-redundancy",
 		featureGateFlag,
 		"--anonymous-reports=false",
 	}

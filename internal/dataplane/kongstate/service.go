@@ -1,18 +1,17 @@
 package kongstate
 
 import (
+	"sort"
 	"strconv"
 	"strings"
 
 	"github.com/kong/go-kong/kong"
-	"github.com/sirupsen/logrus"
+	"github.com/samber/lo"
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
-	kongv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
 )
 
 // Services is a list of kongstate.Service objects with sorting enabled based
@@ -58,32 +57,6 @@ type Service struct {
 	// For example, if this Service was created as a result of translating a Kubernetes Ingress, then
 	// Parent is expected to be the Ingress object itself.
 	Parent client.Object
-}
-
-// overrideByKongIngress sets Service fields by KongIngress.
-func (s *Service) overrideByKongIngress(kongIngress *kongv1.KongIngress) {
-	if kongIngress == nil || kongIngress.Proxy == nil {
-		return
-	}
-	p := kongIngress.Proxy
-	if p.Protocol != nil {
-		s.Protocol = kong.String(*p.Protocol)
-	}
-	if p.Path != nil {
-		s.Path = kong.String(*p.Path)
-	}
-	if p.Retries != nil {
-		s.Retries = kong.Int(*p.Retries)
-	}
-	if p.ConnectTimeout != nil {
-		s.ConnectTimeout = kong.Int(*p.ConnectTimeout)
-	}
-	if p.ReadTimeout != nil {
-		s.ReadTimeout = kong.Int(*p.ReadTimeout)
-	}
-	if p.WriteTimeout != nil {
-		s.WriteTimeout = kong.Int(*p.WriteTimeout)
-	}
 }
 
 func (s *Service) overridePath(anns map[string]string) {
@@ -186,50 +159,22 @@ func (s *Service) overrideByAnnotation(anns map[string]string) {
 	s.overrideRetries(anns)
 }
 
-// override sets Service fields by KongIngress first, then by k8s Service's annotations.
-func (s *Service) override(
-	log logrus.FieldLogger,
-	kongIngress *kongv1.KongIngress,
-	svc *corev1.Service,
-) {
+// override sets Service fields using Kubernetes Service annotations.
+func (s *Service) override() {
 	if s == nil {
 		return
 	}
 
-	if s.Parent != nil && kongIngress != nil {
-		kongIngressFromSvcAnnotation := annotations.ExtractConfigurationName(svc.Annotations)
-		if kongIngressFromSvcAnnotation != "" {
-			// If the parent object behind Kong Service is a Gateway API object
-			// (probably *Route but log a warning for all other objects as well)
-			// then check if we're trying to override said Service configuration with
-			// a KongIngress object and if that's the case then skip it since those
-			// should not be affected.
-			gvk := s.Parent.GetObjectKind().GroupVersionKind()
-			if gvk.Group == gatewayv1alpha2.GroupName {
-				obj := s.Parent
-				fields := logrus.Fields{
-					"resource_name":      obj.GetName(),
-					"resource_namespace": obj.GetNamespace(),
-					"resource_kind":      gvk.Kind,
-				}
-				if svc != nil {
-					fields["service_name"] = svc.Name
-					fields["service_namespace"] = svc.Namespace
-				}
-				log.WithFields(fields).
-					Warn("KongIngress annotation is not allowed on Services " +
-						"referenced by Gateway API *Route objects.")
-				return
-			}
-		}
-	}
-
-	s.overrideByKongIngress(kongIngress)
-	if svc != nil {
+	// Apply overrides from Kubernetes Service annotations. As we keep them in a map, let's first sort its keys to ensure
+	// deterministic order of overrides.
+	servicesNames := lo.Keys(s.K8sServices)
+	sort.Strings(servicesNames)
+	for _, serviceName := range servicesNames {
+		svc := s.K8sServices[serviceName]
 		s.overrideByAnnotation(svc.Annotations)
 	}
 
-	if *s.Protocol == "grpc" || *s.Protocol == "grpcs" {
+	if s.Protocol != nil && (*s.Protocol == "grpc" || *s.Protocol == "grpcs") {
 		// grpc(s) doesn't accept a path
 		s.Path = nil
 	}

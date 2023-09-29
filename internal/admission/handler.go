@@ -310,12 +310,12 @@ func (h RequestHandler) handleKongIngress(_ context.Context, request admissionv1
 	responseBuilder = responseBuilder.Allowed(true)
 
 	if kongIngress.Proxy != nil {
-		const warning = "'proxy' is DEPRECATED. Use Service's annotations instead."
+		const warning = "'proxy' is DEPRECATED. It will have no effect. Use Service's annotations instead."
 		responseBuilder = responseBuilder.WithWarning(warning)
 	}
 
 	if kongIngress.Route != nil {
-		const warning = "'route' is DEPRECATED. Use Ingress' annotations instead."
+		const warning = "'route' is DEPRECATED. It will have no effect. Use Ingress' annotations instead."
 		responseBuilder = responseBuilder.WithWarning(warning)
 	}
 

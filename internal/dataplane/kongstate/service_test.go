@@ -7,22 +7,23 @@ import (
 
 	"github.com/kong/go-kong/kong"
 	"github.com/sirupsen/logrus"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	kongv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
 )
 
 func TestOverrideService(t *testing.T) {
-	assert := assert.New(t)
-
-	testTable := []struct {
-		inService      Service
-		inKongIngresss kongv1.KongIngress
-		outService     Service
-		inAnnotation   map[string]string
+	testCases := []struct {
+		name                  string
+		inService             Service
+		k8sServiceAnnotations map[string]string
+		expectedService       Service
 	}{
 		{
-			Service{
+			name: "no overrides",
+			inService: Service{
 				Service: kong.Service{
 					Host:     kong.String("foo.com"),
 					Port:     kong.Int(80),
@@ -31,10 +32,7 @@ func TestOverrideService(t *testing.T) {
 					Path:     kong.String("/"),
 				},
 			},
-			kongv1.KongIngress{
-				Proxy: &kongv1.KongIngressService{},
-			},
-			Service{
+			expectedService: Service{
 				Service: kong.Service{
 					Host:     kong.String("foo.com"),
 					Port:     kong.Int(80),
@@ -43,10 +41,11 @@ func TestOverrideService(t *testing.T) {
 					Path:     kong.String("/"),
 				},
 			},
-			map[string]string{},
+			k8sServiceAnnotations: map[string]string{},
 		},
 		{
-			Service{
+			name: "override protocol to https",
+			inService: Service{
 				Service: kong.Service{
 					Host:     kong.String("foo.com"),
 					Port:     kong.Int(80),
@@ -55,12 +54,7 @@ func TestOverrideService(t *testing.T) {
 					Path:     kong.String("/"),
 				},
 			},
-			kongv1.KongIngress{
-				Proxy: &kongv1.KongIngressService{
-					Protocol: kong.String("https"),
-				},
-			},
-			Service{
+			expectedService: Service{
 				Service: kong.Service{
 					Host:     kong.String("foo.com"),
 					Port:     kong.Int(80),
@@ -69,10 +63,13 @@ func TestOverrideService(t *testing.T) {
 					Path:     kong.String("/"),
 				},
 			},
-			map[string]string{},
+			k8sServiceAnnotations: map[string]string{
+				annotations.AnnotationPrefix + annotations.ProtocolKey: "https",
+			},
 		},
 		{
-			Service{
+			name: "override retries to 0",
+			inService: Service{
 				Service: kong.Service{
 					Host:     kong.String("foo.com"),
 					Port:     kong.Int(80),
@@ -81,12 +78,7 @@ func TestOverrideService(t *testing.T) {
 					Path:     kong.String("/"),
 				},
 			},
-			kongv1.KongIngress{
-				Proxy: &kongv1.KongIngressService{
-					Retries: kong.Int(0),
-				},
-			},
-			Service{
+			expectedService: Service{
 				Service: kong.Service{
 					Host:     kong.String("foo.com"),
 					Port:     kong.Int(80),
@@ -96,10 +88,13 @@ func TestOverrideService(t *testing.T) {
 					Retries:  kong.Int(0),
 				},
 			},
-			map[string]string{},
+			k8sServiceAnnotations: map[string]string{
+				annotations.AnnotationPrefix + annotations.RetriesKey: "0",
+			},
 		},
 		{
-			Service{
+			name: "override retries to 1",
+			inService: Service{
 				Service: kong.Service{
 					Host:     kong.String("foo.com"),
 					Port:     kong.Int(80),
@@ -108,38 +103,7 @@ func TestOverrideService(t *testing.T) {
 					Path:     kong.String("/"),
 				},
 			},
-			kongv1.KongIngress{
-				Proxy: &kongv1.KongIngressService{
-					Path: kong.String("/new-path"),
-				},
-			},
-			Service{
-				Service: kong.Service{
-					Host:     kong.String("foo.com"),
-					Port:     kong.Int(80),
-					Name:     kong.String("foo"),
-					Protocol: kong.String("http"),
-					Path:     kong.String("/new-path"),
-				},
-			},
-			map[string]string{},
-		},
-		{
-			Service{
-				Service: kong.Service{
-					Host:     kong.String("foo.com"),
-					Port:     kong.Int(80),
-					Name:     kong.String("foo"),
-					Protocol: kong.String("http"),
-					Path:     kong.String("/"),
-				},
-			},
-			kongv1.KongIngress{
-				Proxy: &kongv1.KongIngressService{
-					Retries: kong.Int(1),
-				},
-			},
-			Service{
+			expectedService: Service{
 				Service: kong.Service{
 					Host:     kong.String("foo.com"),
 					Port:     kong.Int(80),
@@ -149,10 +113,13 @@ func TestOverrideService(t *testing.T) {
 					Retries:  kong.Int(1),
 				},
 			},
-			map[string]string{},
+			k8sServiceAnnotations: map[string]string{
+				annotations.AnnotationPrefix + annotations.RetriesKey: "1",
+			},
 		},
 		{
-			Service{
+			name: "override path",
+			inService: Service{
 				Service: kong.Service{
 					Host:     kong.String("foo.com"),
 					Port:     kong.Int(80),
@@ -161,14 +128,31 @@ func TestOverrideService(t *testing.T) {
 					Path:     kong.String("/"),
 				},
 			},
-			kongv1.KongIngress{
-				Proxy: &kongv1.KongIngressService{
-					ConnectTimeout: kong.Int(100),
-					ReadTimeout:    kong.Int(100),
-					WriteTimeout:   kong.Int(100),
+			expectedService: Service{
+				Service: kong.Service{
+					Host:     kong.String("foo.com"),
+					Port:     kong.Int(80),
+					Name:     kong.String("foo"),
+					Protocol: kong.String("http"),
+					Path:     kong.String("/new-path"),
 				},
 			},
-			Service{
+			k8sServiceAnnotations: map[string]string{
+				annotations.AnnotationPrefix + annotations.PathKey: "/new-path",
+			},
+		},
+		{
+			name: "override connect timeout, read timeout, write timeout",
+			inService: Service{
+				Service: kong.Service{
+					Host:     kong.String("foo.com"),
+					Port:     kong.Int(80),
+					Name:     kong.String("foo"),
+					Protocol: kong.String("http"),
+					Path:     kong.String("/"),
+				},
+			},
+			expectedService: Service{
 				Service: kong.Service{
 					Host:           kong.String("foo.com"),
 					Port:           kong.Int(80),
@@ -180,206 +164,33 @@ func TestOverrideService(t *testing.T) {
 					WriteTimeout:   kong.Int(100),
 				},
 			},
-			map[string]string{},
-		},
-		{
-			Service{
-				Service: kong.Service{
-					Host:     kong.String("foo.com"),
-					Port:     kong.Int(80),
-					Name:     kong.String("foo"),
-					Protocol: kong.String("grpc"),
-					Path:     nil,
-				},
+			k8sServiceAnnotations: map[string]string{
+				annotations.AnnotationPrefix + annotations.ConnectTimeoutKey: "100",
+				annotations.AnnotationPrefix + annotations.ReadTimeoutKey:    "100",
+				annotations.AnnotationPrefix + annotations.WriteTimeoutKey:   "100",
 			},
-			kongv1.KongIngress{
-				Proxy: &kongv1.KongIngressService{
-					Protocol: kong.String("grpc"),
-				},
-			},
-			Service{
-				Service: kong.Service{
-					Host:     kong.String("foo.com"),
-					Port:     kong.Int(80),
-					Name:     kong.String("foo"),
-					Protocol: kong.String("grpc"),
-					Path:     nil,
-				},
-			},
-			map[string]string{},
-		},
-		{
-			Service{
-				Service: kong.Service{
-					Host:     kong.String("foo.com"),
-					Port:     kong.Int(80),
-					Name:     kong.String("foo"),
-					Protocol: kong.String("https"),
-					Path:     nil,
-				},
-			},
-			kongv1.KongIngress{
-				Proxy: &kongv1.KongIngressService{
-					Protocol: kong.String("grpcs"),
-				},
-			},
-			Service{
-				Service: kong.Service{
-					Host:     kong.String("foo.com"),
-					Port:     kong.Int(80),
-					Name:     kong.String("foo"),
-					Protocol: kong.String("grpcs"),
-					Path:     nil,
-				},
-			},
-			map[string]string{},
-		},
-		{
-			Service{
-				Service: kong.Service{
-					Host:     kong.String("foo.com"),
-					Port:     kong.Int(80),
-					Name:     kong.String("foo"),
-					Protocol: kong.String("https"),
-					Path:     kong.String("/"),
-				},
-			},
-			kongv1.KongIngress{
-				Proxy: &kongv1.KongIngressService{
-					Protocol: kong.String("grpcs"),
-				},
-			},
-			Service{
-				Service: kong.Service{
-					Host:     kong.String("foo.com"),
-					Port:     kong.Int(80),
-					Name:     kong.String("foo"),
-					Protocol: kong.String("grpcs"),
-					Path:     nil,
-				},
-			},
-			map[string]string{"konghq.com/protocol": "grpcs"},
-		},
-		{
-			Service{
-				Service: kong.Service{
-					Host:     kong.String("foo.com"),
-					Port:     kong.Int(80),
-					Name:     kong.String("foo"),
-					Protocol: kong.String("https"),
-					Path:     kong.String("/"),
-				},
-			},
-			kongv1.KongIngress{
-				Proxy: &kongv1.KongIngressService{
-					Protocol: kong.String("grpcs"),
-				},
-			},
-			Service{
-				Service: kong.Service{
-					Host:     kong.String("foo.com"),
-					Port:     kong.Int(80),
-					Name:     kong.String("foo"),
-					Protocol: kong.String("grpc"),
-					Path:     nil,
-				},
-			},
-			map[string]string{"konghq.com/protocol": "grpc"},
-		},
-		{
-			Service{
-				Service: kong.Service{
-					Host:     kong.String("foo.com"),
-					Port:     kong.Int(80),
-					Name:     kong.String("foo"),
-					Protocol: kong.String("https"),
-					Path:     kong.String("/"),
-				},
-			},
-			kongv1.KongIngress{
-				Proxy: &kongv1.KongIngressService{},
-			},
-			Service{
-				Service: kong.Service{
-					Host:     kong.String("foo.com"),
-					Port:     kong.Int(80),
-					Name:     kong.String("foo"),
-					Protocol: kong.String("grpcs"),
-					Path:     nil,
-				},
-			},
-			map[string]string{"konghq.com/protocol": "grpcs"},
-		},
-		{
-			Service{
-				Service: kong.Service{
-					Host:     kong.String("foo.com"),
-					Port:     kong.Int(80),
-					Name:     kong.String("foo"),
-					Protocol: kong.String("https"),
-					Path:     kong.String("/"),
-				},
-			},
-			kongv1.KongIngress{
-				Proxy: &kongv1.KongIngressService{
-					Protocol: kong.String("grpcs"),
-				},
-			},
-			Service{
-				Service: kong.Service{
-					Host:     kong.String("foo.com"),
-					Port:     kong.Int(80),
-					Name:     kong.String("foo"),
-					Protocol: kong.String("https"),
-					Path:     kong.String("/"),
-				},
-			},
-			map[string]string{"konghq.com/protocol": "https"},
-		},
-		{
-			Service{
-				Service: kong.Service{
-					Host:     kong.String("foo.com"),
-					Port:     kong.Int(80),
-					Name:     kong.String("foo"),
-					Protocol: kong.String("https"),
-					Path:     kong.String("/"),
-				},
-			},
-			kongv1.KongIngress{
-				Proxy: &kongv1.KongIngressService{},
-			},
-			Service{
-				Service: kong.Service{
-					Host:     kong.String("foo.com"),
-					Port:     kong.Int(80),
-					Name:     kong.String("foo"),
-					Protocol: kong.String("https"),
-					Path:     kong.String("/"),
-				},
-			},
-			map[string]string{"konghq.com/protocol": "https"},
 		},
 	}
 
-	for _, testcase := range testTable {
-		testcase := testcase
+	for _, tc := range testCases {
+		tc := tc
 		log := logrus.New()
 		log.SetOutput(io.Discard)
 
-		k8sServices := testcase.inService.K8sServices
-		for _, svc := range k8sServices {
-			testcase.inService.override(log, &testcase.inKongIngresss, svc)
-			assert.Equal(testcase.inService, testcase.outService)
-		}
+		t.Run(tc.name, func(t *testing.T) {
+			service := tc.inService
+			for _, k8sSvc := range service.K8sServices {
+				service.overrideByAnnotation(k8sSvc.Annotations)
+				require.Equal(t, tc.expectedService.Service, service.Service)
+			}
+		})
 	}
+}
 
-	assert.NotPanics(func() {
-		log := logrus.New()
-		log.SetOutput(io.Discard)
-
+func TestNilServiceOverrideDoesntPanic(t *testing.T) {
+	require.NotPanics(t, func() {
 		var nilService *Service
-		nilService.override(log, nil, nil)
+		nilService.override()
 	})
 }
 
@@ -688,4 +499,38 @@ func TestOverrideRetries(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestServiceOverride_DeterministicOrderWhenMoreThan1KubernetesService(t *testing.T) {
+	service := Service{
+		Service: kong.Service{},
+		K8sServices: map[string]*corev1.Service{
+			"default/service-3": {
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						annotations.AnnotationPrefix + annotations.RetriesKey: "3",
+					},
+				},
+			},
+			"default/service-1": {
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						annotations.AnnotationPrefix + annotations.RetriesKey: "1",
+					},
+				},
+			},
+			"default/service-2": {
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						annotations.AnnotationPrefix + annotations.RetriesKey: "2",
+					},
+				},
+			},
+		},
+	}
+
+	// We expect default/service-3 to be the last one to be processed effectively overriding the previous annotations.
+	const expectedRetries = 3
+	service.override()
+	require.Equal(t, expectedRetries, *service.Service.Retries)
 }

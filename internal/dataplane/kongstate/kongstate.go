@@ -196,30 +196,11 @@ func (ks *KongState) FillConsumerGroups(_ logrus.FieldLogger, s store.Storer) {
 func (ks *KongState) FillOverrides(log logrus.FieldLogger, s store.Storer) {
 	for i := 0; i < len(ks.Services); i++ {
 		// Services
-		kongIngress, err := getKongIngressForServices(s, ks.Services[i].K8sServices)
-		if err != nil {
-			log.WithError(err).
-				Errorf("failed to fetch KongIngress resource for Services %s",
-					PrettyPrintServiceList(ks.Services[i].K8sServices),
-				)
-			continue
-		}
-
-		for _, svc := range ks.Services[i].K8sServices {
-			ks.Services[i].override(log, kongIngress, svc)
-		}
+		ks.Services[i].override()
 
 		// Routes
 		for j := 0; j < len(ks.Services[i].Routes); j++ {
-			kongIngress, err := getKongIngressFromObjectMeta(s, ks.Services[i].Routes[j].Ingress)
-			if err != nil {
-				log.WithFields(logrus.Fields{
-					"resource_name":      ks.Services[i].Routes[j].Ingress.Name,
-					"resource_namespace": ks.Services[i].Routes[j].Ingress.Namespace,
-				}).WithError(err).Errorf("failed to fetch KongIngress resource")
-			}
-
-			ks.Services[i].Routes[j].override(log, kongIngress)
+			ks.Services[i].Routes[j].override(log)
 		}
 	}
 

@@ -32,6 +32,8 @@ func RemoveCluster(ctx context.Context, cluster clusters.Cluster) error {
 		fmt.Printf("INFO: cluster %s is being deleted\n", cluster.Name())
 		return cluster.Cleanup(ctx)
 	}
+
+	fmt.Printf("INFO: cluster %s cleanup skipped\n", cluster.Name())
 	return nil
 }
 

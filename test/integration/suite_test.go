@@ -36,10 +36,6 @@ import (
 // -----------------------------------------------------------------------------
 
 func TestMain(m *testing.M) {
-	var code int
-	defer func() {
-		os.Exit(code)
-	}()
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -230,6 +226,8 @@ func TestMain(m *testing.M) {
 	clusterVersion, err := env.Cluster().Version()
 	exitOnErr(ctx, err)
 
+	var code int
+	defer func() { os.Exit(code) }()
 	fmt.Printf("INFO: testing environment is ready KUBERNETES_VERSION=(%v): running tests\n", clusterVersion)
 	code = m.Run()
 

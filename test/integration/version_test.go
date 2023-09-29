@@ -60,6 +60,8 @@ func RunWhenKongEnterprise(t *testing.T) {
 }
 
 func RunWhenKongExpressionRouterWithVersion(t *testing.T, vRangeStr string) {
+	t.Helper()
+
 	routerFlavor := eventuallyGetKongRouterFlavor(t, proxyAdminURL)
 	version := eventuallyGetKongVersion(t, proxyAdminURL)
 	vRange, err := kong.NewRange(vRangeStr)
@@ -84,6 +86,9 @@ func eventuallyGetKongVersion(t *testing.T, adminURL *url.URL) kong.Version {
 		version, err = helpers.GetKongVersion(adminURL, consts.KongTestPassword)
 		assert.NoError(t, err)
 	}, time.Minute, time.Second)
+
+	t.Logf("got Kong (%s) version: %s", adminURL, version)
+
 	return version
 }
 
@@ -99,6 +104,9 @@ func eventuallyGetKongDBMode(t *testing.T, adminURL *url.URL) string {
 		dbmode, err = helpers.GetKongDBMode(adminURL, consts.KongTestPassword)
 		assert.NoError(t, err)
 	}, time.Minute, time.Second)
+
+	t.Logf("got Kong (%s) db mode: %s", adminURL, dbmode)
+
 	return dbmode
 }
 
@@ -114,5 +122,8 @@ func eventuallyGetKongRouterFlavor(t *testing.T, adminURL *url.URL) string {
 		routerFlavor, err = helpers.GetKongRouterFlavor(adminURL, consts.KongTestPassword)
 		assert.NoError(t, err)
 	}, time.Minute, time.Second)
+
+	t.Logf("got Kong (%s) router flavor: %s", adminURL, routerFlavor)
+
 	return routerFlavor
 }

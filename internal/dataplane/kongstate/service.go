@@ -218,8 +218,8 @@ func (s *Service) override(
 						"service_namespace", svc.Namespace,
 					)
 				}
-				fieldLogger.V(util.WarnLevel).Info("KongIngress annotation is not allowed on Services " +
-					"referenced by Gateway API *Route objects.")
+				fieldLogger.V(util.WarnLevel).WithValues("warning", true).
+					Info("KongIngress annotation is not allowed on Services referenced by Gateway API *Route objects.")
 				return
 			}
 		}

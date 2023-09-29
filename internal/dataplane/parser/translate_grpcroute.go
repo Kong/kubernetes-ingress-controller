@@ -127,9 +127,10 @@ func (p *Parser) ingressRulesFromGRPCRouteWithPriority(
 	grpcRoute := splitGRPCRouteMatchWithPriority.Match.Source
 	// (very unlikely that) the rule index split from the source GRPCRoute is larger then length of original rules.
 	if len(grpcRoute.Spec.Rules) <= match.RuleIndex {
-		p.logger.V(util.WarnLevel).Info("split rule index is greater than the length of rules in source GRPCRoute",
-			"rule_index", match.RuleIndex,
-			"rule_count", len(grpcRoute.Spec.Rules))
+		p.logger.V(util.WarnLevel).WithValues("warning", true).
+			Info("split rule index is greater than the length of rules in source GRPCRoute",
+				"rule_index", match.RuleIndex,
+				"rule_count", len(grpcRoute.Spec.Rules))
 		return
 	}
 	grpcRouteRule := grpcRoute.Spec.Rules[match.RuleIndex]

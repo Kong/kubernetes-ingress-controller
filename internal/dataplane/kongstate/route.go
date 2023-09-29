@@ -261,7 +261,7 @@ func (r *Route) override(logger logr.Logger, kongIngress *kongv1.KongIngress) {
 	// not happen) and if that's the case then skip it since those should not be
 	// affected by said annotation.
 	if gvk := r.Ingress.GroupVersionKind; gvk.Group == gatewayv1alpha2.GroupName && kongIngress != nil {
-		logger.V(util.WarnLevel).Info("KongIngress annotation is not allowed on Gateway API objects",
+		logger.V(util.WarnLevel).WithValues("warning", true).Info("KongIngress annotation is not allowed on Gateway API objects",
 			"resource_name", r.Ingress.Name,
 			"resource_namespace", r.Ingress.Namespace,
 			"resource_kind", gvk.Kind)

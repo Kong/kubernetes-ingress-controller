@@ -78,7 +78,8 @@ func NewResourceFailuresCollector(logger logr.Logger) *ResourceFailuresCollector
 func (c *ResourceFailuresCollector) PushResourceFailure(reason string, causingObjects ...client.Object) {
 	resourceFailure, err := NewResourceFailure(reason, causingObjects...)
 	if err != nil {
-		c.logger.V(util.WarnLevel).Info("failed to create resource failure", "resource_failure_reason", reason, "error", err)
+		c.logger.V(util.WarnLevel).WithValues("warning", true).
+			Info("failed to create resource failure", "resource_failure_reason", reason, "error", err)
 		return
 	}
 

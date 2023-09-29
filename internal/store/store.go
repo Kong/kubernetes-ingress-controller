@@ -451,7 +451,8 @@ func (s Store) ListIngressesV1() []*netv1.Ingress {
 	for _, item := range s.stores.IngressV1.List() {
 		ing, ok := item.(*netv1.Ingress)
 		if !ok {
-			s.logger.V(util.WarnLevel).Info("listIngressesV1: dropping object of unexpected type", "type", fmt.Sprintf("%#v", item))
+			s.logger.V(util.WarnLevel).WithValues("warning", true).
+				Info("listIngressesV1: dropping object of unexpected type", "type", fmt.Sprintf("%#v", item))
 			continue
 		}
 		if ing.ObjectMeta.GetAnnotations()[annotations.IngressClassKey] != "" {
@@ -490,7 +491,8 @@ func (s Store) ListIngressClassesV1() []*netv1.IngressClass {
 	for _, item := range s.stores.IngressClassV1.List() {
 		class, ok := item.(*netv1.IngressClass)
 		if !ok {
-			s.logger.V(util.WarnLevel).Info("listIngressClassesV1: dropping object of unexpected type", "type", fmt.Sprintf("%#v", item))
+			s.logger.V(util.WarnLevel).WithValues("warning", true).
+				Info("listIngressClassesV1: dropping object of unexpected type", "type", fmt.Sprintf("%#v", item))
 			continue
 		}
 		if class.Spec.Controller != IngressClassKongController {
@@ -512,7 +514,8 @@ func (s Store) ListIngressClassParametersV1Alpha1() []*kongv1alpha1.IngressClass
 	for _, item := range s.stores.IngressClassParametersV1alpha1.List() {
 		classParam, ok := item.(*kongv1alpha1.IngressClassParameters)
 		if !ok {
-			s.logger.V(util.WarnLevel).Info("listIngressClassParametersV1alpha1: dropping object of unexpected type", "type", fmt.Sprintf("%#v", item))
+			s.logger.V(util.WarnLevel).WithValues("warning", true).
+				Info("listIngressClassParametersV1alpha1: dropping object of unexpected type", "type", fmt.Sprintf("%#v", item))
 			continue
 		}
 		classParams = append(classParams, classParam)

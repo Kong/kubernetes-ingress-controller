@@ -1,5 +1,5 @@
 [![kong-logo]][kong-url]
-[![Build Status](https://github.com/Kong/kubernetes-ingress-controller/actions/workflows/pr_checks.yaml/badge.svg)](https://github.com/Kong/kubernetes-ingress-controller/actions/workflows/pr_checks.yaml)
+[![Build Status](https://github.com/Kong/kubernetes-ingress-controller/actions/workflows/checks.yaml/badge.svg)](https://github.com/Kong/kubernetes-ingress-controller/actions/workflows/checks.yaml)
 [![Go Reference](https://pkg.go.dev/badge/github.com/kong/kubernetes-ingress-controller/v2.svg)](https://pkg.go.dev/github.com/kong/kubernetes-ingress-controller/v2)
 [![Codecov](https://codecov.io/gh/Kong/kubernetes-ingress-controller/branch/main/graph/badge.svg?token=S1aqcXiGEo)](https://codecov.io/gh/Kong/kubernetes-ingress-controller)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://github.com/Kong/kong/blob/master/LICENSE)

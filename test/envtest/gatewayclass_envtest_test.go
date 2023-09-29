@@ -20,8 +20,8 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/gateway"
 	ctrlref "github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/reference"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/gatewayapi"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util/builder"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/util/gatewayapi"
 	"github.com/kong/kubernetes-ingress-controller/v2/test/helpers/conditions"
 	"github.com/kong/kubernetes-ingress-controller/v2/test/mocks"
 )

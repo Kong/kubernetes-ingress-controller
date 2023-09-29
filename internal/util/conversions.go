@@ -3,7 +3,7 @@ package util
 import (
 	"github.com/samber/lo"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/util/gatewayapi"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/gatewayapi"
 )
 
 // -----------------------------------------------------------------------------

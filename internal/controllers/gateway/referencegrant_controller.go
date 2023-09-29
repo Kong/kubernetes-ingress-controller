@@ -31,7 +31,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/controllers"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/util/gatewayapi"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/gatewayapi"
 )
 
 // ReferenceGrantReconciler reconciles a ReferenceGrant object.

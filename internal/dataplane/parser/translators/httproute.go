@@ -9,7 +9,7 @@ import (
 
 	"github.com/kong/go-kong/kong"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/util/gatewayapi"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/gatewayapi"
 )
 
 // KongServiceTranslation is a translation of a single HTTPRoute into metadata

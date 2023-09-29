@@ -27,7 +27,7 @@ import (
 	testclient "k8s.io/client-go/kubernetes/fake"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/util/gatewayapi"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/gatewayapi"
 )
 
 func TestParseNameNS(t *testing.T) {

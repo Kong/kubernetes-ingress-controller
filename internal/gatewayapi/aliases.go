@@ -5,7 +5,7 @@ import (
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 )
 
-// This file contains aliases for types and consts from the Gateway API.  Its purpose is to allow easily migrate from
+// This file contains aliases for types and consts from the Gateway API.  Its purpose is to allow easy migration from
 // one version of the Gateway API to another with minimal changes to the codebase.
 
 type (

@@ -4521,7 +4521,7 @@ func TestNewFeatureFlags(t *testing.T) {
 			},
 			routerFlavor:         "any_other_router_mode",
 			expectedFeatureFlags: FeatureFlags{},
-			expectInfoLog:        "ExpressionRoutes feature gate enabled but Gateway is running with \"any_other_router_mode\" router flavor, using that instead",
+			expectInfoLog:        "ExpressionRoutes feature gate enabled but Gateway is running with incompatible router flavor, using that instead",
 		},
 		{
 			name:        "kong version >= 3.0 enables regex path prefix",

@@ -11,10 +11,9 @@ import (
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
-	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/gatewayapi"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
@@ -467,7 +466,7 @@ func TestGetKongIngressFromObjectMeta(t *testing.T) {
 	}{
 		{
 			name: "konghq.com/override annotation does not affect Gateway API's TCPRoute",
-			route: &gatewayv1alpha2.TCPRoute{
+			route: &gatewayapi.TCPRoute{
 				TypeMeta: metav1.TypeMeta{
 					Kind:       "TCPRoute",
 					APIVersion: "gateway.networking.k8s.io/v1alpha2",
@@ -492,7 +491,7 @@ func TestGetKongIngressFromObjectMeta(t *testing.T) {
 		},
 		{
 			name: "konghq.com/override annotation does not affect Gateway API's UDPRoute",
-			route: &gatewayv1alpha2.UDPRoute{
+			route: &gatewayapi.UDPRoute{
 				TypeMeta: metav1.TypeMeta{
 					Kind:       "UDPRoute",
 					APIVersion: "gateway.networking.k8s.io/v1alpha2",
@@ -517,7 +516,7 @@ func TestGetKongIngressFromObjectMeta(t *testing.T) {
 		},
 		{
 			name: "konghq.com/override annotation does not affect Gateway API's HTTPRoute",
-			route: &gatewayv1beta1.HTTPRoute{
+			route: &gatewayapi.HTTPRoute{
 				TypeMeta: metav1.TypeMeta{
 					Kind:       "HTTPRoute",
 					APIVersion: "gateway.networking.k8s.io/v1alpha2",
@@ -542,7 +541,7 @@ func TestGetKongIngressFromObjectMeta(t *testing.T) {
 		},
 		{
 			name: "konghq.com/override annotation does not affect Gateway API's TLSRoute",
-			route: &gatewayv1alpha2.TLSRoute{
+			route: &gatewayapi.TLSRoute{
 				TypeMeta: metav1.TypeMeta{
 					Kind:       "TLSRoute",
 					APIVersion: "gateway.networking.k8s.io/v1alpha2",

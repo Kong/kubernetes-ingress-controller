@@ -13,6 +13,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/gatewayapi"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
 	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1beta1"
 )
@@ -90,13 +91,13 @@ var (
 		Resource: "secrets",
 	}
 	gatewayGVResource = metav1.GroupVersionResource{
-		Group:    gatewayv1beta1.SchemeGroupVersion.Group,
-		Version:  gatewayv1beta1.SchemeGroupVersion.Version,
+		Group:    gatewayv1beta1.GroupVersion.Group,
+		Version:  gatewayv1beta1.GroupVersion.Version,
 		Resource: "gateways",
 	}
 	httprouteGVResource = metav1.GroupVersionResource{
-		Group:    gatewayv1beta1.SchemeGroupVersion.Group,
-		Version:  gatewayv1beta1.SchemeGroupVersion.Version,
+		Group:    gatewayv1beta1.GroupVersion.Group,
+		Version:  gatewayv1beta1.GroupVersion.Version,
 		Resource: "httproutes",
 	}
 	ingressGVResource = metav1.GroupVersionResource{
@@ -268,7 +269,7 @@ func (h RequestHandler) handleGateway(
 	request admissionv1.AdmissionRequest,
 	responseBuilder *ResponseBuilder,
 ) (*admissionv1.AdmissionResponse, error) {
-	gateway := gatewayv1beta1.Gateway{}
+	gateway := gatewayapi.Gateway{}
 	_, _, err := codecs.UniversalDeserializer().Decode(request.Object.Raw, nil, &gateway)
 	if err != nil {
 		return nil, err
@@ -286,7 +287,7 @@ func (h RequestHandler) handleHTTPRoute(
 	request admissionv1.AdmissionRequest,
 	responseBuilder *ResponseBuilder,
 ) (*admissionv1.AdmissionResponse, error) {
-	httproute := gatewayv1beta1.HTTPRoute{}
+	httproute := gatewayapi.HTTPRoute{}
 	_, _, err := codecs.UniversalDeserializer().Decode(request.Object.Raw, nil, &httproute)
 	if err != nil {
 		return nil, err

@@ -20,10 +20,9 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
-	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
 
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/gatewayapi"
 	"github.com/kong/kubernetes-ingress-controller/v2/test"
 	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/helpers"
 )
@@ -52,12 +51,12 @@ func TestTCPRouteEssentials(t *testing.T) {
 
 	t.Log("deploying a gateway to the test cluster using unmanaged gateway mode and port 8888")
 	gatewayName := uuid.NewString()
-	gateway, err := DeployGateway(ctx, gatewayClient, ns.Name, gatewayClassName, func(gw *gatewayv1beta1.Gateway) {
+	gateway, err := DeployGateway(ctx, gatewayClient, ns.Name, gatewayClassName, func(gw *gatewayapi.Gateway) {
 		gw.Name = gatewayName
-		gw.Spec.Listeners = []gatewayv1beta1.Listener{{
+		gw.Spec.Listeners = []gatewayapi.Listener{{
 			Name:     "tcp",
-			Protocol: gatewayv1beta1.TCPProtocolType,
-			Port:     gatewayv1beta1.PortNumber(ktfkong.DefaultTCPServicePort),
+			Protocol: gatewayapi.TCPProtocolType,
+			Port:     gatewayapi.PortNumber(ktfkong.DefaultTCPServicePort),
 		}}
 	})
 	require.NoError(t, err)
@@ -128,21 +127,21 @@ func TestTCPRouteEssentials(t *testing.T) {
 	cleaner.Add(service2)
 
 	t.Logf("creating a tcproute to access deployment %s via kong", deployment1.Name)
-	tcpPortDefault := gatewayv1alpha2.PortNumber(ktfkong.DefaultTCPServicePort)
-	tcpRoute := &gatewayv1alpha2.TCPRoute{
+	tcpPortDefault := gatewayapi.PortNumber(ktfkong.DefaultTCPServicePort)
+	tcpRoute := &gatewayapi.TCPRoute{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: uuid.NewString(),
 		},
-		Spec: gatewayv1alpha2.TCPRouteSpec{
-			CommonRouteSpec: gatewayv1alpha2.CommonRouteSpec{
-				ParentRefs: []gatewayv1alpha2.ParentReference{{
-					Name: gatewayv1alpha2.ObjectName(gatewayName),
+		Spec: gatewayapi.TCPRouteSpec{
+			CommonRouteSpec: gatewayapi.CommonRouteSpec{
+				ParentRefs: []gatewayapi.ParentReference{{
+					Name: gatewayapi.ObjectName(gatewayName),
 				}},
 			},
-			Rules: []gatewayv1alpha2.TCPRouteRule{{
-				BackendRefs: []gatewayv1alpha2.BackendRef{{
-					BackendObjectReference: gatewayv1alpha2.BackendObjectReference{
-						Name: gatewayv1alpha2.ObjectName(service1.Name),
+			Rules: []gatewayapi.TCPRouteRule{{
+				BackendRefs: []gatewayapi.BackendRef{{
+					BackendObjectReference: gatewayapi.BackendObjectReference{
+						Name: gatewayapi.ObjectName(service1.Name),
 						Port: &tcpPortDefault,
 					},
 				}},
@@ -154,11 +153,11 @@ func TestTCPRouteEssentials(t *testing.T) {
 	cleaner.Add(tcpRoute)
 
 	t.Log("verifying that the Gateway gets linked to the route via status")
-	callback := GetGatewayIsLinkedCallback(ctx, t, gatewayClient, gatewayv1beta1.TCPProtocolType, ns.Name, tcpRoute.Name)
+	callback := GetGatewayIsLinkedCallback(ctx, t, gatewayClient, gatewayapi.TCPProtocolType, ns.Name, tcpRoute.Name)
 	require.Eventually(t, callback, ingressWait, waitTick)
 	t.Log("verifying that the tcproute contains 'Programmed' condition")
 	require.Eventually(t,
-		GetVerifyProgrammedConditionCallback(t, gatewayClient, gatewayv1beta1.TCPProtocolType, ns.Name, tcpRoute.Name, metav1.ConditionTrue),
+		GetVerifyProgrammedConditionCallback(t, gatewayClient, gatewayapi.TCPProtocolType, ns.Name, tcpRoute.Name, metav1.ConditionTrue),
 		ingressWait, waitTick,
 	)
 
@@ -179,7 +178,7 @@ func TestTCPRouteEssentials(t *testing.T) {
 	}, time.Minute, time.Second)
 
 	t.Log("verifying that the Gateway gets unlinked from the route via status")
-	callback = GetGatewayIsUnlinkedCallback(ctx, t, gatewayClient, gatewayv1beta1.TCPProtocolType, ns.Name, tcpRoute.Name)
+	callback = GetGatewayIsUnlinkedCallback(ctx, t, gatewayClient, gatewayapi.TCPProtocolType, ns.Name, tcpRoute.Name)
 	require.Eventually(t, callback, ingressWait, waitTick)
 
 	t.Log("verifying that the tcpecho is no longer responding")
@@ -205,7 +204,7 @@ func TestTCPRouteEssentials(t *testing.T) {
 	}, time.Minute, time.Second)
 
 	t.Log("verifying that the Gateway gets linked to the route via status")
-	callback = GetGatewayIsLinkedCallback(ctx, t, gatewayClient, gatewayv1beta1.TCPProtocolType, ns.Name, tcpRoute.Name)
+	callback = GetGatewayIsLinkedCallback(ctx, t, gatewayClient, gatewayapi.TCPProtocolType, ns.Name, tcpRoute.Name)
 	require.Eventually(t, callback, ingressWait, waitTick)
 
 	t.Log("verifying that putting the parentRefs back results in the routes becoming available again")
@@ -218,7 +217,7 @@ func TestTCPRouteEssentials(t *testing.T) {
 	require.NoError(t, gatewayClient.GatewayV1beta1().GatewayClasses().Delete(ctx, gwc.Name, metav1.DeleteOptions{}))
 
 	t.Log("verifying that the Gateway gets unlinked from the route via status")
-	callback = GetGatewayIsUnlinkedCallback(ctx, t, gatewayClient, gatewayv1beta1.TCPProtocolType, ns.Name, tcpRoute.Name)
+	callback = GetGatewayIsUnlinkedCallback(ctx, t, gatewayClient, gatewayapi.TCPProtocolType, ns.Name, tcpRoute.Name)
 	require.Eventually(t, callback, ingressWait, waitTick)
 
 	t.Log("verifying that the data-plane configuration from the TCPRoute gets dropped with the GatewayClass now removed")
@@ -232,7 +231,7 @@ func TestTCPRouteEssentials(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Log("verifying that the Gateway gets linked to the route via status")
-	callback = GetGatewayIsLinkedCallback(ctx, t, gatewayClient, gatewayv1beta1.TCPProtocolType, ns.Name, tcpRoute.Name)
+	callback = GetGatewayIsLinkedCallback(ctx, t, gatewayClient, gatewayapi.TCPProtocolType, ns.Name, tcpRoute.Name)
 	require.Eventually(t, callback, ingressWait, waitTick)
 
 	t.Log("verifying that creating the GatewayClass again triggers reconciliation of TCPRoutes and the route becomes available again")
@@ -245,7 +244,7 @@ func TestTCPRouteEssentials(t *testing.T) {
 	require.NoError(t, gatewayClient.GatewayV1beta1().Gateways(ns.Name).Delete(ctx, gatewayName, metav1.DeleteOptions{}))
 
 	t.Log("verifying that the Gateway gets unlinked from the route via status")
-	callback = GetGatewayIsUnlinkedCallback(ctx, t, gatewayClient, gatewayv1beta1.TCPProtocolType, ns.Name, tcpRoute.Name)
+	callback = GetGatewayIsUnlinkedCallback(ctx, t, gatewayClient, gatewayapi.TCPProtocolType, ns.Name, tcpRoute.Name)
 	require.Eventually(t, callback, ingressWait, waitTick)
 
 	t.Log("verifying that the data-plane configuration from the TCPRoute gets dropped with the Gateway now removed")
@@ -255,18 +254,18 @@ func TestTCPRouteEssentials(t *testing.T) {
 	}, ingressWait, waitTick)
 
 	t.Log("putting the Gateway back")
-	gateway, err = DeployGateway(ctx, gatewayClient, ns.Name, gatewayClassName, func(gw *gatewayv1beta1.Gateway) {
+	gateway, err = DeployGateway(ctx, gatewayClient, ns.Name, gatewayClassName, func(gw *gatewayapi.Gateway) {
 		gw.Name = gatewayName
-		gw.Spec.Listeners = []gatewayv1beta1.Listener{{
+		gw.Spec.Listeners = []gatewayapi.Listener{{
 			Name:     "tcp",
-			Protocol: gatewayv1beta1.TCPProtocolType,
-			Port:     gatewayv1beta1.PortNumber(ktfkong.DefaultTCPServicePort),
+			Protocol: gatewayapi.TCPProtocolType,
+			Port:     gatewayapi.PortNumber(ktfkong.DefaultTCPServicePort),
 		}}
 	})
 	require.NoError(t, err)
 
 	t.Log("verifying that the Gateway gets linked to the route via status")
-	callback = GetGatewayIsLinkedCallback(ctx, t, gatewayClient, gatewayv1beta1.TCPProtocolType, ns.Name, tcpRoute.Name)
+	callback = GetGatewayIsLinkedCallback(ctx, t, gatewayClient, gatewayapi.TCPProtocolType, ns.Name, tcpRoute.Name)
 	require.Eventually(t, callback, ingressWait, waitTick)
 
 	t.Log("verifying that creating the Gateway again triggers reconciliation of TCPRoutes and the route becomes available again")
@@ -280,7 +279,7 @@ func TestTCPRouteEssentials(t *testing.T) {
 	require.NoError(t, gatewayClient.GatewayV1beta1().Gateways(ns.Name).Delete(ctx, gateway.Name, metav1.DeleteOptions{}))
 
 	t.Log("verifying that the Gateway gets unlinked from the route via status")
-	callback = GetGatewayIsUnlinkedCallback(ctx, t, gatewayClient, gatewayv1beta1.TCPProtocolType, ns.Name, tcpRoute.Name)
+	callback = GetGatewayIsUnlinkedCallback(ctx, t, gatewayClient, gatewayapi.TCPProtocolType, ns.Name, tcpRoute.Name)
 	require.Eventually(t, callback, ingressWait, waitTick)
 
 	t.Log("verifying that the data-plane configuration from the TCPRoute does not get orphaned with the GatewayClass and Gateway gone")
@@ -294,18 +293,18 @@ func TestTCPRouteEssentials(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Log("putting the Gateway back")
-	gateway, err = DeployGateway(ctx, gatewayClient, ns.Name, gatewayClassName, func(gw *gatewayv1beta1.Gateway) {
+	gateway, err = DeployGateway(ctx, gatewayClient, ns.Name, gatewayClassName, func(gw *gatewayapi.Gateway) {
 		gw.Name = gatewayName
-		gw.Spec.Listeners = []gatewayv1beta1.Listener{{
+		gw.Spec.Listeners = []gatewayapi.Listener{{
 			Name:     "tcp",
-			Protocol: gatewayv1beta1.TCPProtocolType,
-			Port:     gatewayv1beta1.PortNumber(ktfkong.DefaultTCPServicePort),
+			Protocol: gatewayapi.TCPProtocolType,
+			Port:     gatewayapi.PortNumber(ktfkong.DefaultTCPServicePort),
 		}}
 	})
 	require.NoError(t, err)
 
 	t.Log("verifying that the Gateway gets linked to the route via status")
-	callback = GetGatewayIsLinkedCallback(ctx, t, gatewayClient, gatewayv1beta1.TCPProtocolType, ns.Name, tcpRoute.Name)
+	callback = GetGatewayIsLinkedCallback(ctx, t, gatewayClient, gatewayapi.TCPProtocolType, ns.Name, tcpRoute.Name)
 	require.Eventually(t, callback, ingressWait, waitTick)
 
 	t.Log("verifying that creating the Gateway again triggers reconciliation of TCPRoutes and the route becomes available again")
@@ -319,16 +318,16 @@ func TestTCPRouteEssentials(t *testing.T) {
 		tcpRoute, err = gatewayClient.GatewayV1alpha2().TCPRoutes(ns.Name).Get(ctx, tcpRoute.Name, metav1.GetOptions{})
 		require.NoError(t, err)
 
-		tcpRoute.Spec.Rules[0].BackendRefs = []gatewayv1alpha2.BackendRef{
+		tcpRoute.Spec.Rules[0].BackendRefs = []gatewayapi.BackendRef{
 			{
-				BackendObjectReference: gatewayv1alpha2.BackendObjectReference{
-					Name: gatewayv1alpha2.ObjectName(service1.Name),
+				BackendObjectReference: gatewayapi.BackendObjectReference{
+					Name: gatewayapi.ObjectName(service1.Name),
 					Port: &tcpPortDefault,
 				},
 			},
 			{
-				BackendObjectReference: gatewayv1alpha2.BackendObjectReference{
-					Name: gatewayv1alpha2.ObjectName(service2.Name),
+				BackendObjectReference: gatewayapi.BackendObjectReference{
+					Name: gatewayapi.ObjectName(service2.Name),
 					Port: &tcpPortDefault,
 				},
 			},
@@ -361,7 +360,7 @@ func TestTCPRouteEssentials(t *testing.T) {
 	require.NoError(t, gatewayClient.GatewayV1beta1().Gateways(ns.Name).Delete(ctx, gateway.Name, metav1.DeleteOptions{}))
 
 	t.Log("verifying that the Gateway gets unlinked from the route via status")
-	callback = GetGatewayIsUnlinkedCallback(ctx, t, gatewayClient, gatewayv1beta1.TCPProtocolType, ns.Name, tcpRoute.Name)
+	callback = GetGatewayIsUnlinkedCallback(ctx, t, gatewayClient, gatewayapi.TCPProtocolType, ns.Name, tcpRoute.Name)
 	require.Eventually(t, callback, ingressWait, waitTick)
 
 	t.Log("verifying that the data-plane configuration from the TCPRoute does not get orphaned with the GatewayClass and Gateway gone")
@@ -372,12 +371,12 @@ func TestTCPRouteEssentials(t *testing.T) {
 
 	t.Log("testing port matching")
 	t.Log("putting the Gateway back")
-	_, err = DeployGateway(ctx, gatewayClient, ns.Name, gatewayClassName, func(gw *gatewayv1beta1.Gateway) {
+	_, err = DeployGateway(ctx, gatewayClient, ns.Name, gatewayClassName, func(gw *gatewayapi.Gateway) {
 		gw.Name = gatewayName
-		gw.Spec.Listeners = []gatewayv1beta1.Listener{{
+		gw.Spec.Listeners = []gatewayapi.Listener{{
 			Name:     "tcp",
-			Protocol: gatewayv1beta1.TCPProtocolType,
-			Port:     gatewayv1beta1.PortNumber(ktfkong.DefaultTCPServicePort),
+			Protocol: gatewayapi.TCPProtocolType,
+			Port:     gatewayapi.PortNumber(ktfkong.DefaultTCPServicePort),
 		}}
 	})
 	require.NoError(t, err)
@@ -397,7 +396,7 @@ func TestTCPRouteEssentials(t *testing.T) {
 		if err != nil {
 			return false
 		}
-		notExistingPort := gatewayv1alpha2.PortNumber(81)
+		notExistingPort := gatewayapi.PortNumber(81)
 		tcpRoute.Spec.ParentRefs[0].Port = &notExistingPort
 		tcpRoute, err = gatewayClient.GatewayV1alpha2().TCPRoutes(ns.Name).Update(ctx, tcpRoute, metav1.UpdateOptions{})
 		return err == nil
@@ -436,12 +435,12 @@ func TestTCPRouteReferenceGrant(t *testing.T) {
 
 	t.Log("deploying a gateway to the test cluster using unmanaged gateway mode")
 	gatewayName := uuid.NewString()
-	gateway, err := DeployGateway(ctx, gatewayClient, ns.Name, gatewayClassName, func(gw *gatewayv1beta1.Gateway) {
+	gateway, err := DeployGateway(ctx, gatewayClient, ns.Name, gatewayClassName, func(gw *gatewayapi.Gateway) {
 		gw.Name = gatewayName
-		gw.Spec.Listeners = []gatewayv1beta1.Listener{{
+		gw.Spec.Listeners = []gatewayapi.Listener{{
 			Name:     "tcp",
-			Protocol: gatewayv1beta1.TCPProtocolType,
-			Port:     gatewayv1beta1.PortNumber(ktfkong.DefaultTCPServicePort),
+			Protocol: gatewayapi.TCPProtocolType,
+			Port:     gatewayapi.PortNumber(ktfkong.DefaultTCPServicePort),
 		}}
 	})
 	require.NoError(t, err)
@@ -507,29 +506,29 @@ func TestTCPRouteReferenceGrant(t *testing.T) {
 	cleaner.Add(service2)
 
 	t.Logf("creating a tcproute to access deployment %s via kong", deployment1.Name)
-	tcpPortDefault := gatewayv1alpha2.PortNumber(ktfkong.DefaultTCPServicePort)
-	remoteNamespace := gatewayv1alpha2.Namespace(otherNs.Name)
-	tcproute := &gatewayv1alpha2.TCPRoute{
+	tcpPortDefault := gatewayapi.PortNumber(ktfkong.DefaultTCPServicePort)
+	remoteNamespace := gatewayapi.Namespace(otherNs.Name)
+	tcproute := &gatewayapi.TCPRoute{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: uuid.NewString(),
 		},
-		Spec: gatewayv1alpha2.TCPRouteSpec{
-			CommonRouteSpec: gatewayv1alpha2.CommonRouteSpec{
-				ParentRefs: []gatewayv1alpha2.ParentReference{{
-					Name: gatewayv1alpha2.ObjectName(gatewayName),
+		Spec: gatewayapi.TCPRouteSpec{
+			CommonRouteSpec: gatewayapi.CommonRouteSpec{
+				ParentRefs: []gatewayapi.ParentReference{{
+					Name: gatewayapi.ObjectName(gatewayName),
 				}},
 			},
-			Rules: []gatewayv1alpha2.TCPRouteRule{{
-				BackendRefs: []gatewayv1alpha2.BackendRef{
+			Rules: []gatewayapi.TCPRouteRule{{
+				BackendRefs: []gatewayapi.BackendRef{
 					{
-						BackendObjectReference: gatewayv1alpha2.BackendObjectReference{
-							Name: gatewayv1alpha2.ObjectName(service1.Name),
+						BackendObjectReference: gatewayapi.BackendObjectReference{
+							Name: gatewayapi.ObjectName(service1.Name),
 							Port: &tcpPortDefault,
 						},
 					},
 					{
-						BackendObjectReference: gatewayv1alpha2.BackendObjectReference{
-							Name:      gatewayv1alpha2.ObjectName(service2.Name),
+						BackendObjectReference: gatewayapi.BackendObjectReference{
+							Name:      gatewayapi.ObjectName(service2.Name),
 							Namespace: &remoteNamespace,
 							Port:      &tcpPortDefault,
 						},
@@ -553,33 +552,33 @@ func TestTCPRouteReferenceGrant(t *testing.T) {
 	}, time.Second*10, time.Second)
 
 	t.Logf("creating a ReferenceGrant that permits tcproute access from %s to services in %s", ns.Name, otherNs.Name)
-	grant := &gatewayv1beta1.ReferenceGrant{
+	grant := &gatewayapi.ReferenceGrant{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: uuid.NewString(),
 		},
-		Spec: gatewayv1beta1.ReferenceGrantSpec{
-			From: []gatewayv1beta1.ReferenceGrantFrom{
+		Spec: gatewayapi.ReferenceGrantSpec{
+			From: []gatewayapi.ReferenceGrantFrom{
 				{
 					// this isn't actually used, it's just a dummy extra from to confirm we handle multiple fine
-					Group:     gatewayv1alpha2.Group("gateway.networking.k8s.io"),
-					Kind:      gatewayv1alpha2.Kind("TCPRoute"),
-					Namespace: gatewayv1alpha2.Namespace("garbage"),
+					Group:     gatewayapi.Group("gateway.networking.k8s.io"),
+					Kind:      gatewayapi.Kind("TCPRoute"),
+					Namespace: gatewayapi.Namespace("garbage"),
 				},
 				{
-					Group:     gatewayv1alpha2.Group("gateway.networking.k8s.io"),
-					Kind:      gatewayv1alpha2.Kind("TCPRoute"),
-					Namespace: gatewayv1alpha2.Namespace(tcproute.Namespace),
+					Group:     gatewayapi.Group("gateway.networking.k8s.io"),
+					Kind:      gatewayapi.Kind("TCPRoute"),
+					Namespace: gatewayapi.Namespace(tcproute.Namespace),
 				},
 			},
-			To: []gatewayv1beta1.ReferenceGrantTo{
+			To: []gatewayapi.ReferenceGrantTo{
 				// also a dummy
 				{
-					Group: gatewayv1alpha2.Group(""),
-					Kind:  gatewayv1alpha2.Kind("Pterodactyl"),
+					Group: gatewayapi.Group(""),
+					Kind:  gatewayapi.Kind("Pterodactyl"),
 				},
 				{
-					Group: gatewayv1alpha2.Group(""),
-					Kind:  gatewayv1alpha2.Kind("Service"),
+					Group: gatewayapi.Group(""),
+					Kind:  gatewayapi.Kind("Service"),
 				},
 			},
 		},
@@ -599,10 +598,10 @@ func TestTCPRouteReferenceGrant(t *testing.T) {
 	}, ingressWait, waitTick)
 
 	t.Logf("testing specific name references")
-	serviceName := gatewayv1alpha2.ObjectName(service2.ObjectMeta.Name)
-	grant.Spec.To[1] = gatewayv1beta1.ReferenceGrantTo{
-		Kind:  gatewayv1alpha2.Kind("Service"),
-		Group: gatewayv1alpha2.Group(""),
+	serviceName := gatewayapi.ObjectName(service2.ObjectMeta.Name)
+	grant.Spec.To[1] = gatewayapi.ReferenceGrantTo{
+		Kind:  gatewayapi.Kind("Service"),
+		Group: gatewayapi.Group(""),
 		Name:  &serviceName,
 	}
 
@@ -615,7 +614,7 @@ func TestTCPRouteReferenceGrant(t *testing.T) {
 	}, ingressWait*2, waitTick)
 
 	t.Logf("testing incorrect name does not match")
-	blueguyName := gatewayv1alpha2.ObjectName("blueguy")
+	blueguyName := gatewayapi.ObjectName("blueguy")
 	grant.Spec.To[1].Name = &blueguyName
 	_, err = gatewayClient.GatewayV1beta1().ReferenceGrants(otherNs.Name).Update(ctx, grant, metav1.UpdateOptions{})
 	require.NoError(t, err)

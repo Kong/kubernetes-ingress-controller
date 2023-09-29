@@ -5,37 +5,36 @@ import (
 
 	"github.com/kong/go-kong/kong"
 	"github.com/samber/lo"
-	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
-	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/gatewayapi"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 )
 
 func getGRPCMatchDefaults() (
-	map[gatewayv1alpha2.GRPCMethodMatchType]string,
-	map[gatewayv1alpha2.GRPCMethodMatchType]string,
+	map[gatewayapi.GRPCMethodMatchType]string,
+	map[gatewayapi.GRPCMethodMatchType]string,
 ) {
 	// Kong routes derived from a GRPCRoute use a path composed of the match's gRPC service and method
 	// If either the service or method is omitted, there is a default regex determined by the match type
 	// https://gateway-api.sigs.k8s.io/geps/gep-1016/#matcher-types describes the defaults
 
 	// default path components for the GRPC service
-	return map[gatewayv1alpha2.GRPCMethodMatchType]string{
-			gatewayv1alpha2.GRPCMethodMatchType(""):          ".+",
-			gatewayv1alpha2.GRPCMethodMatchExact:             ".+",
-			gatewayv1alpha2.GRPCMethodMatchRegularExpression: ".+",
+	return map[gatewayapi.GRPCMethodMatchType]string{
+			gatewayapi.GRPCMethodMatchType(""):          ".+",
+			gatewayapi.GRPCMethodMatchExact:             ".+",
+			gatewayapi.GRPCMethodMatchRegularExpression: ".+",
 		},
 		// default path components for the GRPC method
-		map[gatewayv1alpha2.GRPCMethodMatchType]string{
-			gatewayv1alpha2.GRPCMethodMatchType(""):          "",
-			gatewayv1alpha2.GRPCMethodMatchExact:             "",
-			gatewayv1alpha2.GRPCMethodMatchRegularExpression: ".+",
+		map[gatewayapi.GRPCMethodMatchType]string{
+			gatewayapi.GRPCMethodMatchType(""):          "",
+			gatewayapi.GRPCMethodMatchExact:             "",
+			gatewayapi.GRPCMethodMatchRegularExpression: ".+",
 		}
 }
 
 func GenerateKongRoutesFromGRPCRouteRule(
-	grpcroute *gatewayv1alpha2.GRPCRoute,
+	grpcroute *gatewayapi.GRPCRoute,
 	ruleNumber int,
 	prependRegexPrefix bool,
 ) []kongstate.Route {
@@ -89,9 +88,9 @@ func GenerateKongRoutesFromGRPCRouteRule(
 			var method, service string
 			matchMethod := match.Method.Method
 			matchService := match.Method.Service
-			var matchType gatewayv1alpha2.GRPCMethodMatchType
+			var matchType gatewayapi.GRPCMethodMatchType
 			if match.Method.Type == nil {
-				matchType = gatewayv1alpha2.GRPCMethodMatchExact
+				matchType = gatewayapi.GRPCMethodMatchExact
 			} else {
 				matchType = *match.Method.Type
 			}
@@ -137,8 +136,8 @@ func GenerateKongRoutesFromGRPCRouteRule(
 // getGRPCRouteHostnamesAsSliceOfStringPointers translates the hostnames defined
 // in an GRPCRoute specification into a []*string slice, which is the type required
 // by kong.Route{}.
-func getGRPCRouteHostnamesAsSliceOfStringPointers(grpcroute *gatewayv1alpha2.GRPCRoute) []*string {
-	return lo.Map(grpcroute.Spec.Hostnames, func(h gatewayv1beta1.Hostname, _ int) *string {
+func getGRPCRouteHostnamesAsSliceOfStringPointers(grpcroute *gatewayapi.GRPCRoute) []*string {
+	return lo.Map(grpcroute.Spec.Hostnames, func(h gatewayapi.Hostname, _ int) *string {
 		return lo.ToPtr(string(h))
 	})
 }

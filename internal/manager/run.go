@@ -18,7 +18,6 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
-	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/adminapi"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/clients"
@@ -27,6 +26,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/configfetcher"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/parser"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/sendconfig"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/gatewayapi"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/konnect"
 	konnectLicense "github.com/kong/kubernetes-ingress-controller/v2/internal/konnect/license"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/konnect/nodes"
@@ -52,7 +52,7 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 	setupLog.Info("starting controller manager", "release", metadata.Release, "repo", metadata.Repo, "commit", metadata.Commit)
 	setupLog.Info("the ingress class name has been set", "value", c.IngressClassName)
 
-	gateway.SetControllerName(gatewayv1beta1.GatewayController(c.GatewayAPIControllerName))
+	gateway.SetControllerName(gatewayapi.GatewayController(c.GatewayAPIControllerName))
 
 	setupLog.Info("getting enabled options and features")
 	featureGates, err := featuregates.New(setupLog, c.FeatureGates)

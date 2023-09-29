@@ -11,6 +11,7 @@ import (
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/failures"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/gatewayapi"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/versions"
 )
@@ -32,7 +33,7 @@ func TestTranslationFailureUnsupportedObjectsExpressionRoutes(t *testing.T) {
 		{
 			name: "TLSRoutes in gateway APIs are not supported",
 			objects: store.FakeObjects{
-				TLSRoutes: []*gatewayv1alpha2.TLSRoute{
+				TLSRoutes: []*gatewayapi.TLSRoute{
 					{
 						TypeMeta: metav1.TypeMeta{
 							Kind:       "TLSRoute",
@@ -46,7 +47,7 @@ func TestTranslationFailureUnsupportedObjectsExpressionRoutes(t *testing.T) {
 				},
 			},
 			causingObjects: []client.Object{
-				&gatewayv1alpha2.TLSRoute{
+				&gatewayapi.TLSRoute{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "tlsroute-1",
 						Namespace: "default",

@@ -34,10 +34,7 @@ const (
 // allow differentiation between info and warn.
 
 var zapLevels = map[string]zapcore.Level{
-	"panic": zap.ErrorLevel,
-	"fatal": zap.ErrorLevel,
 	"error": zap.ErrorLevel,
-	"warn":  zap.InfoLevel,
 	"info":  zap.InfoLevel,
 	"debug": zap.DebugLevel,
 	// zap has no stock trace level, but does accept it for filtering if you define your own

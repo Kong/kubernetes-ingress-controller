@@ -139,7 +139,7 @@ func (c *Config) FlagSet() *pflag.FlagSet {
 	flagSet := pflag.NewFlagSet("", pflag.ContinueOnError)
 
 	// Logging configurations
-	flagSet.StringVar(&c.LogLevel, "log-level", "info", `Level of logging for the controller. Allowed values are trace, debug, info, warn, error, fatal and panic.`)
+	flagSet.StringVar(&c.LogLevel, "log-level", "info", `Level of logging for the controller. Allowed values are trace, debug, info, and error.`)
 	flagSet.StringVar(&c.LogFormat, "log-format", "text", `Format of logs of the controller. Allowed values are text and json.`)
 
 	// Kong high-level controller manager configurations

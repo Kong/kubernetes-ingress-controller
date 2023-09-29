@@ -85,6 +85,15 @@ Adding a new version? You'll need three changes:
   [#4749](https://github.com/Kong/kubernetes-ingress-controller/pull/4749)
 - Removed Knative support.
   [#4748](https://github.com/Kong/kubernetes-ingress-controller/pull/4748)
+- Removed support for the `debug-log-reduce-redundancy` CLI flag.
+  [#4688](https://github.com/Kong/kubernetes-ingress-controller/pull/4688)
+- The "text" logging format has changed. "json" should be used for
+  machine-parseable logs.
+  [#4688](https://github.com/Kong/kubernetes-ingress-controller/pull/4688)
+- The "warn", "fatal", and "panic" log levels are no longer available. "error"
+  is now the highest log level. "warn" logs are now logged at "info" level, but
+  include an additional "warning=true" field.
+  [#4688](https://github.com/Kong/kubernetes-ingress-controller/pull/4688)
 
 ### Fixed
 
@@ -102,17 +111,6 @@ Adding a new version? You'll need three changes:
 ## 2.12.0
 
 > Release date: 2023-09-25
-
-### Breaking changes
-
-- Removed support for the `debug-log-reduce-redundancy` CLI flag.
-  [#4688](https://github.com/Kong/kubernetes-ingress-controller/pull/4688)
-- Converted heterogenous logging systems to a single logging system using a
-  faster, more feature-rich library. This changes the default (console) log
-  format and removes semantif log levels (info, warn, etc.) in favor of
-  verbosity (0 is normal, 1 is more detailed, 2 is even more detailed, etc.).
-  JSON logs are unaffected other than the change from level to verbosity.
-  [#4688](https://github.com/Kong/kubernetes-ingress-controller/pull/4688)
 
 ### Added
 

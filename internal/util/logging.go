@@ -76,7 +76,7 @@ func getZapEncoding(typ string) (zapcore.Encoder, error) {
 	case "text", "console":
 		return zapcore.NewConsoleEncoder(zapcore.EncoderConfig{
 			TimeKey:        "time",
-			LevelKey:       zapcore.OmitKey,
+			LevelKey:       "level",
 			NameKey:        "logger",
 			CallerKey:      "caller",
 			FunctionKey:    zapcore.OmitKey,
@@ -91,7 +91,7 @@ func getZapEncoding(typ string) (zapcore.Encoder, error) {
 	case "json":
 		return zapcore.NewJSONEncoder(zapcore.EncoderConfig{
 			TimeKey:        "time",
-			LevelKey:       zapcore.OmitKey,
+			LevelKey:       "level",
 			NameKey:        "logger",
 			CallerKey:      "caller",
 			FunctionKey:    zapcore.OmitKey,

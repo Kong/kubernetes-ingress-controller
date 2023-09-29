@@ -25,8 +25,10 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/go-logr/logr"
+	"github.com/go-logr/zapr"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/types/gke"
-	"github.com/sirupsen/logrus"
+	"go.uber.org/zap"
 )
 
 const (
@@ -42,26 +44,31 @@ var (
 	gkeProject         = os.Getenv(gke.GKEProjectVar)
 	gkeLocation        = os.Getenv(gke.GKELocationVar)
 	konnectAccessToken = os.Getenv(konnectAccessTokenVar)
-	log                = logrus.New()
 )
 
 func main() {
+	zaplog, err := zap.NewDevelopment()
+	if err != nil {
+		os.Exit(1)
+	}
+	log := zapr.NewLogger(zaplog)
+
 	mode, err := getCleanupMode()
 	if err != nil {
-		log.Errorf("error getting cleanup mode: %v\n", err)
+		log.Error(err, "error getting cleanup mode")
 		os.Exit(1)
 	}
 
 	if err := validateVars(mode); err != nil {
-		log.Errorf("error validating vars: %v\n", err)
+		log.Error(err, "error validating vars")
 		os.Exit(1)
 	}
 
 	cleanupFuncs := resolveCleanupFuncs(mode)
 	ctx := context.Background()
 	for _, f := range cleanupFuncs {
-		if err := f(ctx); err != nil {
-			log.Errorf("error running cleanup function: %v\n", err)
+		if err := f(ctx, log); err != nil {
+			log.Error(err, "error running cleanup function")
 			os.Exit(1)
 		}
 	}
@@ -82,18 +89,18 @@ func getCleanupMode() (string, error) {
 	return os.Args[1], nil
 }
 
-func resolveCleanupFuncs(mode string) []func(context.Context) error {
+func resolveCleanupFuncs(mode string) []func(context.Context, logr.Logger) error {
 	switch mode {
 	case cleanupModeGKE:
-		return []func(context.Context) error{
+		return []func(context.Context, logr.Logger) error{
 			cleanupGKEClusters,
 		}
 	case cleanupModeKonnect:
-		return []func(context.Context) error{
+		return []func(context.Context, logr.Logger) error{
 			cleanupKonnectRuntimeGroups,
 		}
 	default:
-		return []func(context.Context) error{
+		return []func(context.Context, logr.Logger) error{
 			cleanupGKEClusters,
 			cleanupKonnectRuntimeGroups,
 		}

@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/go-logr/logr"
 	"github.com/oapi-codegen/runtime/types"
 	"github.com/samber/lo"
 
@@ -23,7 +24,7 @@ const (
 )
 
 // cleanupKonnectRuntimeGroups deletes orphaned runtime groups created by the tests and their roles.
-func cleanupKonnectRuntimeGroups(ctx context.Context) error {
+func cleanupKonnectRuntimeGroups(ctx context.Context, log logr.Logger) error {
 	rgClient, err := rg.NewClientWithResponses(konnectRuntimeGroupsBaseURL, rg.WithRequestEditorFn(
 		func(ctx context.Context, req *http.Request) error {
 			req.Header.Set("Authorization", "Bearer "+konnectAccessToken)
@@ -34,11 +35,11 @@ func cleanupKonnectRuntimeGroups(ctx context.Context) error {
 		return fmt.Errorf("failed to create runtime groups client: %w", err)
 	}
 
-	orphanedRGs, err := findOrphanedRuntimeGroups(ctx, rgClient)
+	orphanedRGs, err := findOrphanedRuntimeGroups(ctx, log, rgClient)
 	if err != nil {
 		return fmt.Errorf("failed to find orphaned runtime groups: %w", err)
 	}
-	if err := deleteRuntimeGroups(ctx, orphanedRGs, rgClient); err != nil {
+	if err := deleteRuntimeGroups(ctx, log, orphanedRGs, rgClient); err != nil {
 		return fmt.Errorf("failed to delete runtime groups: %w", err)
 	}
 
@@ -50,11 +51,11 @@ func cleanupKonnectRuntimeGroups(ctx context.Context) error {
 	// We can drop this once the automated cleanup is implemented on Konnect side:
 	// https://konghq.atlassian.net/browse/TPS-1453.
 	rolesClient := roles.NewClient(&http.Client{}, konnectRolesBaseURL, konnectAccessToken)
-	rolesToDelete, err := findOrphanedRolesToDelete(ctx, orphanedRGs, rolesClient)
+	rolesToDelete, err := findOrphanedRolesToDelete(ctx, log, orphanedRGs, rolesClient)
 	if err != nil {
 		return fmt.Errorf("failed to list runtime group roles to delete: %w", err)
 	}
-	if err := deleteRoles(ctx, rolesToDelete, rolesClient); err != nil {
+	if err := deleteRoles(ctx, log, rolesToDelete, rolesClient); err != nil {
 		return fmt.Errorf("failed to delete runtime group roles: %w", err)
 	}
 
@@ -62,7 +63,7 @@ func cleanupKonnectRuntimeGroups(ctx context.Context) error {
 }
 
 // findOrphanedRuntimeGroups finds runtime groups that were created by the tests and are older than timeUntilRuntimeGroupOrphaned.
-func findOrphanedRuntimeGroups(ctx context.Context, c *rg.ClientWithResponses) ([]types.UUID, error) {
+func findOrphanedRuntimeGroups(ctx context.Context, log logr.Logger, c *rg.ClientWithResponses) ([]types.UUID, error) {
 	response, err := c.ListRuntimeGroupsWithResponse(ctx, &rg.ListRuntimeGroupsParams{
 		PageSize: lo.ToPtr(konnectRuntimeGroupsLimit),
 	})
@@ -79,16 +80,16 @@ func findOrphanedRuntimeGroups(ctx context.Context, c *rg.ClientWithResponses) (
 	var orphanedRuntimeGroups []types.UUID
 	for _, runtimeGroup := range *response.JSON200.Data {
 		if runtimeGroup.Labels == nil || (*runtimeGroup.Labels)[createdInTestsRuntimeGroupLabel] != "true" {
-			log.Infof("runtime group %s was not created by the tests, skipping\n", *runtimeGroup.Name)
+			log.Info("runtime group was not created by the tests, skipping", "name", *runtimeGroup.Name)
 			continue
 		}
 		if runtimeGroup.CreatedAt == nil {
-			log.Infof("runtime group %s has no creation timestamp, skipping\n", *runtimeGroup.Name)
+			log.Info("runtime group has no creation timestamp, skipping", "name", *runtimeGroup.Name)
 			continue
 		}
 		orphanedAfter := (*runtimeGroup.CreatedAt).Add(timeUntilRuntimeGroupOrphaned)
 		if !time.Now().After(orphanedAfter) {
-			log.Infof("runtime group %s is not old enough to be considered orphaned, created at %s, skipping\n", *runtimeGroup.Name, *runtimeGroup.CreatedAt)
+			log.Info("runtime group is not old enough to be considered orphaned, skipping", "name", *runtimeGroup.Name, "created_at", *runtimeGroup.CreatedAt)
 			continue
 		}
 		orphanedRuntimeGroups = append(orphanedRuntimeGroups, *runtimeGroup.Id)
@@ -97,7 +98,7 @@ func findOrphanedRuntimeGroups(ctx context.Context, c *rg.ClientWithResponses) (
 }
 
 // deleteRuntimeGroups deletes runtime groups by their IDs.
-func deleteRuntimeGroups(ctx context.Context, rgsIDs []types.UUID, c *rg.ClientWithResponses) error {
+func deleteRuntimeGroups(ctx context.Context, log logr.Logger, rgsIDs []types.UUID, c *rg.ClientWithResponses) error {
 	if len(rgsIDs) < 1 {
 		log.Info("no runtime groups to clean up")
 		return nil
@@ -105,7 +106,7 @@ func deleteRuntimeGroups(ctx context.Context, rgsIDs []types.UUID, c *rg.ClientW
 
 	var errs []error
 	for _, rgID := range rgsIDs {
-		log.Infof("deleting runtime group %s\n", rgID)
+		log.Info("deleting runtime group", "name", rgID)
 		if _, err := c.DeleteRuntimeGroupWithResponse(ctx, rgID); err != nil {
 			errs = append(errs, fmt.Errorf("failed to delete runtime group %s: %w", rgID, err))
 		}
@@ -114,7 +115,7 @@ func deleteRuntimeGroups(ctx context.Context, rgsIDs []types.UUID, c *rg.ClientW
 }
 
 // findOrphanedRolesToDelete gets a list of roles that belong to the orphaned runtime groups.
-func findOrphanedRolesToDelete(ctx context.Context, orphanedRGsIDs []types.UUID, rolesClient *roles.Client) ([]string, error) {
+func findOrphanedRolesToDelete(ctx context.Context, log logr.Logger, orphanedRGsIDs []types.UUID, rolesClient *roles.Client) ([]string, error) {
 	if len(orphanedRGsIDs) < 1 {
 		log.Info("no runtime groups to clean up, skipping listing roles")
 		return nil, nil
@@ -131,7 +132,7 @@ func findOrphanedRolesToDelete(ctx context.Context, orphanedRGsIDs []types.UUID,
 			return rgID.String() == role.EntityID
 		})
 		if !belongsToOrphanedRuntimeGroup {
-			log.Infof("role %s is not assigned to an orphaned runtime group, skipping\n", role.ID)
+			log.Info("role is not assigned to an orphaned runtime group, skipping", "id", role.ID)
 			continue
 		}
 		rolesIDsToDelete = append(rolesIDsToDelete, role.ID)
@@ -140,7 +141,7 @@ func findOrphanedRolesToDelete(ctx context.Context, orphanedRGsIDs []types.UUID,
 }
 
 // deleteRoles deletes roles by their IDs.
-func deleteRoles(ctx context.Context, rolesIDsToDelete []string, rolesClient *roles.Client) error {
+func deleteRoles(ctx context.Context, log logr.Logger, rolesIDsToDelete []string, rolesClient *roles.Client) error {
 	if len(rolesIDsToDelete) == 0 {
 		log.Info("no roles to delete")
 		return nil
@@ -148,7 +149,7 @@ func deleteRoles(ctx context.Context, rolesIDsToDelete []string, rolesClient *ro
 
 	var errs []error
 	for _, roleID := range rolesIDsToDelete {
-		log.Infof("deleting role %s\n", roleID)
+		log.Info("deleting role", "id", roleID)
 		if err := rolesClient.DeleteRole(ctx, roleID); err != nil {
 			errs = append(errs, fmt.Errorf("failed to delete role %s: %w", roleID, err))
 		}

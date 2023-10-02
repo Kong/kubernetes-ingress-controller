@@ -508,8 +508,8 @@ debug: install _ensure-namespace
 	$(DLV) debug ./internal/cmd/main.go -- \
 		--anonymous-reports=false \
 		--kong-admin-url $(KONG_ADMIN_URL) \
-		--publish-service $(KONG_NAMESPACE)/$(KONG_PROXY_SERVICE) \
-		--publish-service-udp $(KONG_NAMESPACE)/$(KONG_PROXY_UDP_SERVICE) \
+		--ingress-service $(KONG_NAMESPACE)/$(KONG_PROXY_SERVICE) \
+		--ingress-service-udp $(KONG_NAMESPACE)/$(KONG_PROXY_UDP_SERVICE) \
 		--kubeconfig $(KUBECONFIG) \
 		--feature-gates=$(KONG_CONTROLLER_FEATURE_GATES)
 
@@ -581,8 +581,8 @@ _run:
 	go run ./internal/cmd/main.go \
 		--anonymous-reports=false \
 		--kong-admin-url $(KONG_ADMIN_URL) \
-		--publish-service $(KONG_NAMESPACE)/$(KONG_PROXY_SERVICE) \
-		--publish-service-udp $(KONG_NAMESPACE)/$(KONG_PROXY_UDP_SERVICE) \
+		--ingress-service $(KONG_NAMESPACE)/$(KONG_PROXY_SERVICE) \
+		--ingress-service-udp $(KONG_NAMESPACE)/$(KONG_PROXY_UDP_SERVICE) \
 		--kubeconfig $(KUBECONFIG) \
 		--feature-gates=$(KONG_CONTROLLER_FEATURE_GATES)
 

@@ -33,7 +33,7 @@ type Payload = types.ProviderReport
 type ReportValues struct {
 	FeatureGates                   map[string]bool
 	MeshDetection                  bool
-	PublishServiceNN               k8stypes.NamespacedName
+	IngressServiceNN               k8stypes.NamespacedName
 	KonnectSyncEnabled             bool
 	GatewayServiceDiscoveryEnabled bool
 }
@@ -120,7 +120,7 @@ func createManager(
 			// part responsible for detecting the mesh that current pod is running
 			// gets disabled.
 			if err == nil {
-				w, err := telemetry.NewMeshDetectWorkflow(cl, podNN, rv.PublishServiceNN)
+				w, err := telemetry.NewMeshDetectWorkflow(cl, podNN, rv.IngressServiceNN)
 				if err != nil {
 					return nil, fmt.Errorf("failed to create mesh detect workflow: %w", err)
 				}

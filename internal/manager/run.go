@@ -309,7 +309,7 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 				SplunkEndpointInsecureSkipVerify: c.SplunkEndpointInsecureSkipVerify,
 				TelemetryPeriod:                  c.TelemetryPeriod,
 				ReportValues: telemetry.ReportValues{
-					PublishServiceNN:               c.PublishService.OrEmpty(),
+					IngressServiceNN:               c.IngressService.OrEmpty(),
 					FeatureGates:                   featureGates,
 					MeshDetection:                  len(c.WatchNamespaces) == 0,
 					KonnectSyncEnabled:             c.Konnect.ConfigSynchronizationEnabled,

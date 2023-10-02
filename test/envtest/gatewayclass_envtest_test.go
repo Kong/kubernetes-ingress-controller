@@ -317,7 +317,7 @@ func TestGatewayWithGatewayClassReconciliation(t *testing.T) {
 			// start the former.
 			gwReconciler := &gateway.GatewayReconciler{
 				Client: client,
-				PublishServiceRef: k8stypes.NamespacedName{
+				IngressServiceRef: k8stypes.NamespacedName{
 					Namespace: ns.Name,
 					Name:      svc.Name,
 				},

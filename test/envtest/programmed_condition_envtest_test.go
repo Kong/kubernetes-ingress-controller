@@ -28,7 +28,7 @@ func TestKongCRDs_ProgrammedCondition(t *testing.T) {
 	defer cancel()
 	RunManager(ctx, t, envcfg, func(cfg *manager.Config) {
 		cfg.UpdateStatus = true
-		cfg.PublishStatusAddress = []string{"http://localhost:8080"}
+		cfg.IngressAddresses = []string{"http://localhost:8080"}
 	})
 
 	ns := CreateNamespace(ctx, t, ctrlClient)

@@ -103,6 +103,12 @@ Adding a new version? You'll need three changes:
   [#4737](https://github.com/Kong/kubernetes-ingress-controller/pull/4737)
 - Telemetry now reports the router flavor.
   [#4762](https://github.com/Kong/kubernetes-ingress-controller/pull/4762)
+- The following flags were renamed and marked as deprecated
+  - `--publish-service` to `--ingress-address`
+  - `--publish-status-address` to `--ingress-address`
+  - `--publish-service-udp` to `--ingress-service-udp`
+  - `--publish-status-address-udp` to `--ingress-address-udp`
+  [#4765](https://github.com/Kong/kubernetes-ingress-controller/pull/4765)
 
 [KIC Annotations reference]: https://docs.konghq.com/kubernetes-ingress-controller/latest/references/annotations/
 

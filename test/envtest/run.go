@@ -23,8 +23,8 @@ import (
 )
 
 const (
-	// PublishServiceName is the name of the publish service used in Gateway API tests.
-	PublishServiceName = "publish-svc"
+	// IngressServiceName is the name of the ingress service used in Gateway API tests.
+	IngressServiceName = "ingress-svc"
 )
 
 // ConfigForEnvConfig prepares a manager.Config for use in tests
@@ -73,11 +73,11 @@ func WithGatewayFeatureEnabled(cfg *manager.Config) {
 	cfg.FeatureGates[featuregates.GatewayAlphaFeature] = true
 }
 
-func WithPublishService(namespace string) func(cfg *manager.Config) {
+func WithIngressService(namespace string) func(cfg *manager.Config) {
 	return func(cfg *manager.Config) {
-		cfg.PublishStatusAddress = []string{"127.0.0.1"}
-		cfg.PublishService = mo.Some(k8stypes.NamespacedName{
-			Name:      PublishServiceName,
+		cfg.IngressAddresses = []string{"127.0.0.1"}
+		cfg.IngressService = mo.Some(k8stypes.NamespacedName{
+			Name:      IngressServiceName,
 			Namespace: namespace,
 		})
 	}

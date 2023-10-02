@@ -94,6 +94,9 @@ Adding a new version? You'll need three changes:
   is now the highest log level. "warn" logs are now logged at "info" level, but
   include an additional "warning=true" field.
   [#4688](https://github.com/Kong/kubernetes-ingress-controller/pull/4688)
+- Removed support for deprecated `KongIngress` fields: `Proxy` and `Route`. Respective
+  `Service` or `Ingress` annotations should be used instead. See [KIC Annotations reference].
+  [#4760](https://github.com/Kong/kubernetes-ingress-controller/pull/4760)
 
 ### Fixed
 
@@ -107,6 +110,8 @@ Adding a new version? You'll need three changes:
 - Get rid of deprecation warning in logs for unsupported label `global: true` for `KongPlugin`,
   it'll be treated as any other label without a special meaning.
   [#4737](https://github.com/Kong/kubernetes-ingress-controller/pull/4737)
+
+[KIC Annotations reference]: https://docs.konghq.com/kubernetes-ingress-controller/latest/references/annotations/
 
 ## 2.12.0
 

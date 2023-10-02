@@ -7,11 +7,9 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/kong/go-kong/kong"
-	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
-	kongv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
 )
 
 // Route represents a Kong Route and holds a reference to the Ingress
@@ -250,102 +248,13 @@ func (r *Route) overrideByAnnotation(logger logr.Logger) {
 }
 
 // override sets Route fields by KongIngress first, then by annotation.
-func (r *Route) override(logger logr.Logger, kongIngress *kongv1.KongIngress) {
+func (r *Route) override(logger logr.Logger) {
 	if r == nil {
 		return
 	}
 
-	// Check if we're trying to get KongIngress configuration based on an annotation
-	// on Gateway API object (this would most likely happen for *Route objects but
-	// log a warning for all other Gateway API objects as well since that also should
-	// not happen) and if that's the case then skip it since those should not be
-	// affected by said annotation.
-	if gvk := r.Ingress.GroupVersionKind; gvk.Group == gatewayv1alpha2.GroupName && kongIngress != nil {
-		logger.V(util.WarnLevel).WithValues("warning", true).Info("KongIngress annotation is not allowed on Gateway API objects",
-			"resource_name", r.Ingress.Name,
-			"resource_namespace", r.Ingress.Namespace,
-			"resource_kind", gvk.Kind)
-		return
-	}
-
-	r.overrideByKongIngress(logger, kongIngress)
 	r.overrideByAnnotation(logger)
 	r.normalizeProtocols()
-}
-
-// overrideByKongIngress sets Route fields by KongIngress.
-func (r *Route) overrideByKongIngress(logger logr.Logger, kongIngress *kongv1.KongIngress) {
-	// disable overriding routes by KongIngress if expression routes is enabled.
-	if r.ExpressionRoutes {
-		return
-	}
-
-	if kongIngress == nil || kongIngress.Route == nil {
-		return
-	}
-
-	ir := kongIngress.Route
-	if len(ir.Methods) != 0 {
-		invalid := false
-		var methods []*string
-		for _, method := range ir.Methods {
-			sanitizedMethod := strings.TrimSpace(strings.ToUpper(*method))
-			if validMethods.MatchString(sanitizedMethod) {
-				methods = append(methods, kong.String(sanitizedMethod))
-			} else {
-				// if any method is invalid (not an uppercase alpha string),
-				// discard everything
-				logger.Error(nil, "ingress contains invalid method", "method", *method,
-					"ingress_namespace", r.Ingress.Namespace,
-					"ingress_name", r.Ingress.Name)
-				invalid = true
-			}
-		}
-		if !invalid {
-			r.Methods = methods
-		}
-	}
-	if len(ir.Headers) != 0 {
-		r.Headers = ir.Headers
-	}
-	if len(ir.Protocols) != 0 {
-		r.Protocols = protocolPointersToStringPointers(ir.Protocols)
-	}
-	if ir.RegexPriority != nil {
-		r.RegexPriority = kong.Int(*ir.RegexPriority)
-	}
-	if ir.StripPath != nil {
-		r.StripPath = kong.Bool(*ir.StripPath)
-	}
-	if ir.PreserveHost != nil {
-		r.PreserveHost = kong.Bool(*ir.PreserveHost)
-	}
-	if ir.HTTPSRedirectStatusCode != nil {
-		r.HTTPSRedirectStatusCode = kong.Int(*ir.HTTPSRedirectStatusCode)
-	}
-	if ir.PathHandling != nil {
-		r.PathHandling = kong.String(*ir.PathHandling)
-	}
-	if len(ir.SNIs) != 0 {
-		var SNIs []*string
-		for _, unsanitizedSNI := range ir.SNIs {
-			SNI := strings.TrimSpace(*unsanitizedSNI)
-			if validSNIs.MatchString(SNI) {
-				SNIs = append(SNIs, kong.String(SNI))
-			} else {
-				// SNI is not a valid hostname
-				logger.Error(nil, "invalid SNI", "sni", unsanitizedSNI, "kongroute", r.Name)
-				return
-			}
-		}
-		r.SNIs = SNIs
-	}
-	if ir.RequestBuffering != nil {
-		r.RequestBuffering = kong.Bool(*ir.RequestBuffering)
-	}
-	if ir.ResponseBuffering != nil {
-		r.ResponseBuffering = kong.Bool(*ir.ResponseBuffering)
-	}
 }
 
 // overrideRequestBuffering ensures defaults for the request_buffering option.

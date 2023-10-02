@@ -41,8 +41,6 @@ import (
 	k8stypes "k8s.io/apimachinery/pkg/types"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
-	kongv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
-	"github.com/kong/kubernetes-ingress-controller/v2/pkg/clientset"
 	"github.com/kong/kubernetes-ingress-controller/v2/test"
 	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/helpers"
 	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/testenv"
@@ -410,8 +408,6 @@ const numberOfEchoBackends = 3
 func deployIngressWithEchoBackends(ctx context.Context, t *testing.T, env environments.Environment, noReplicas int) *netv1.Ingress {
 	t.Helper()
 
-	c, err := clientset.NewForConfig(env.Cluster().Config())
-	assert.NoError(t, err)
 	t.Log("deploying an HTTP service to test the ingress controller and proxy")
 	container := generators.NewContainer("echo", test.EchoImage, test.EchoHTTPPort)
 	container.Env = append(container.Env, corev1.EnvVar{
@@ -422,7 +418,7 @@ func deployIngressWithEchoBackends(ctx context.Context, t *testing.T, env enviro
 	})
 	deployment := generators.NewDeploymentForContainer(container)
 	deployment.Spec.Replicas = lo.ToPtr(int32(noReplicas))
-	deployment, err = env.Cluster().Client().AppsV1().Deployments(corev1.NamespaceDefault).Create(ctx, deployment, metav1.CreateOptions{})
+	deployment, err := env.Cluster().Client().AppsV1().Deployments(corev1.NamespaceDefault).Create(ctx, deployment, metav1.CreateOptions{})
 	require.NoError(t, err)
 
 	t.Logf("exposing deployment %s via service", deployment.Name)
@@ -430,26 +426,11 @@ func deployIngressWithEchoBackends(ctx context.Context, t *testing.T, env enviro
 	_, err = env.Cluster().Client().CoreV1().Services(corev1.NamespaceDefault).Create(ctx, service, metav1.CreateOptions{})
 	require.NoError(t, err)
 
-	kongIngressName := uuid.NewString()
-	king := &kongv1.KongIngress{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      kongIngressName,
-			Namespace: corev1.NamespaceDefault,
-			Annotations: map[string]string{
-				annotations.IngressClassKey: ingressClass,
-			},
-		},
-		Route: &kongv1.KongIngressRoute{
-			Methods: []*string{lo.ToPtr(http.MethodGet)},
-		},
-	}
-	_, err = c.ConfigurationV1().KongIngresses(corev1.NamespaceDefault).Create(ctx, king, metav1.CreateOptions{})
-	require.NoError(t, err)
 	t.Logf("creating an ingress for service %s with ingress.class %s", service.Name, ingressClass)
 	ingress := generators.NewIngressForService(echoPath, map[string]string{
-		annotations.IngressClassKey: ingressClass,
-		"konghq.com/strip-path":     "true",
-		"konghq.com/override":       kongIngressName,
+		annotations.IngressClassKey:                             ingressClass,
+		annotations.AnnotationPrefix + annotations.StripPathKey: "true",
+		annotations.AnnotationPrefix + annotations.MethodsKey:   http.MethodGet,
 	}, service)
 	require.NoError(t, clusters.DeployIngress(ctx, env.Cluster(), corev1.NamespaceDefault, ingress))
 	return ingress

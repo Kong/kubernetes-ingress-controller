@@ -151,13 +151,6 @@ func kongPluginFromK8SClusterPlugin(
 	}, nil
 }
 
-func protocolPointersToStringPointers(protocols []*kongv1.KongProtocol) (res []*string) {
-	for _, protocol := range protocols {
-		res = append(res, kong.String(string(*protocol)))
-	}
-	return
-}
-
 func protocolsToStrings(protocols []kongv1.KongProtocol) (res []string) {
 	for _, protocol := range protocols {
 		res = append(res, string(protocol))

@@ -88,6 +88,15 @@ Adding a new version? You'll need three changes:
 - Removed support for deprecated `KongIngress` fields: `Proxy` and `Route`. Respective
   `Service` or `Ingress` annotations should be used instead. See [KIC Annotations reference].
   [#4760](https://github.com/Kong/kubernetes-ingress-controller/pull/4760)
+- Removed previously deprecated flags:
+  - `sync-rate-limit`: Use `--proxy-sync-seconds` instead
+  - `stderrthreshold`: Has no effect
+  - `update-status-on-shutdown`: Has no effect
+  - `kong-custom-entities-secret`: Has no effect
+  - `leader-elect`: DEPRECATED as of 2.1.0: leader election behavior is determined automatically based on the Kong database setting and this flag has no effect
+  - `enable-controller-ingress-extensionsv1beta1`: Has no effect
+  - `enable-controller-ingress-networkingv1beta1`: Has no effect
+  [#4770](https://github.com/Kong/kubernetes-ingress-controller/pull/4770)
 
 ### Fixed
 

@@ -76,7 +76,7 @@ func TestUnmanagedGatewayBasics(t *testing.T) {
 		)
 	}, gatewayUpdateWaitTime, time.Second)
 
-	t.Log("verifying that the gateway address is populated from the publish service")
+	t.Log("verifying that the gateway address is populated from the ingress service")
 	require.Eventually(t, func() bool {
 		gw, err = gatewayClient.GatewayV1beta1().Gateways(ns.Name).Get(ctx, gw.Name, metav1.GetOptions{})
 		require.NoError(t, err)
@@ -100,7 +100,7 @@ func TestUnmanagedGatewayBasics(t *testing.T) {
 		return true
 	}, gatewayUpdateWaitTime, time.Second)
 
-	t.Log("verifying that the gateway status gets updated to match the publish service")
+	t.Log("verifying that the gateway status gets updated to match the ingress service")
 	require.Eventually(t, func() bool {
 		gw, err = gatewayClient.GatewayV1beta1().Gateways(ns.Name).Get(ctx, gw.Name, metav1.GetOptions{})
 		require.NoError(t, err)

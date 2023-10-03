@@ -249,15 +249,15 @@ generate.clientsets: client-gen
 		--trim-path-prefix pkg/$(REPO_URL)/v2/
 
 .PHONY: generate.docs
-generate.docs: generate.apidocs generate.cli-arguments
+generate.docs: generate.apidocs generate.cli-arguments-docs
 
 .PHONY: generate.apidocs
 generate.apidocs: crd-ref-docs
 	./scripts/apidocs-gen/generate.sh $(CRD_REF_DOCS)
 
 .PHONY: generate.cli-arguments
-generate.cli-arguments:
-	go run ./scripts/cli-arguments-gen/main.go > ./docs/cli-arguments.md
+generate.cli-arguments-docs:
+	go run ./scripts/cli-arguments-docs-gen/main.go > ./docs/cli-arguments.md
 
 # ------------------------------------------------------------------------------
 # Build - Container Images

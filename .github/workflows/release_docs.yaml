@@ -37,7 +37,7 @@ jobs:
 
       - name: Generate flags reference
         run: |
-          ./scripts/cli-arguments-gen/post-process-for-konoghq.sh \
+          ./scripts/cli-arguments-docs-gen/post-process-for-konghq.sh \
           docs.konghq.com/app/_src/kubernetes-ingress-controller/references/cli-arguments-${{ steps.semver_parser.outputs.major }}.${{ steps.semver_parser.outputs.minor }}.x.md
 
       - name: Detect changes

@@ -177,7 +177,9 @@ spec:
               `Services` can be a target, OR `Endpoints` can be targets).
             properties:
               algorithm:
-                description: Algorithm is the load balancing algorithm to use.
+                description: 'Algorithm is the load balancing algorithm to use. Accepted
+                  values are: "round-robin", "consistent-hashing", "least-connections",
+                  "latency".'
                 enum:
                 - round-robin
                 - consistent-hashing

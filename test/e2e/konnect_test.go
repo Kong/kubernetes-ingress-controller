@@ -51,7 +51,6 @@ var konnectAccessToken = os.Getenv("TEST_KONG_KONNECT_ACCESS_TOKEN")
 
 func TestKonnectConfigPush(t *testing.T) {
 	t.Parallel()
-	skipTestIfControllerVersionBelow(t, gatewayDiscoveryMinimalVersion)
 	skipIfMissingRequiredKonnectEnvVariables(t)
 
 	ctx, env := setupE2ETest(t)
@@ -77,7 +76,6 @@ func TestKonnectConfigPush(t *testing.T) {
 
 func TestKonnectLicenseActivation(t *testing.T) {
 	t.Parallel()
-	skipTestIfControllerVersionBelow(t, gatewayDiscoveryMinimalVersion)
 	skipIfMissingRequiredKonnectEnvVariables(t)
 
 	ctx, env := setupE2ETest(t)
@@ -143,7 +141,6 @@ func TestKonnectLicenseActivation(t *testing.T) {
 func TestKonnectWhenMisconfiguredBasicIngressNotAffected(t *testing.T) {
 	t.Parallel()
 	skipIfMissingRequiredKonnectEnvVariables(t)
-	skipTestIfControllerVersionBelow(t, gatewayDiscoveryMinimalVersion)
 	ctx, env := setupE2ETest(t)
 
 	rgID := createTestControlPlane(ctx, t)

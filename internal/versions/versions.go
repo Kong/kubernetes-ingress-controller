@@ -5,6 +5,9 @@ import (
 )
 
 var (
+	// KICv3VersionCutoff is the lowest version version of Kong Gateway supported by KIC >=v3.0.0.
+	KICv3VersionCutoff = semver.Version{Major: 3, Minor: 4, Patch: 1}
+
 	// RegexHeaderVersionCutoff is the Kong version prior to the addition of support for regular expression for matching headers.
 	RegexHeaderVersionCutoff = semver.Version{Major: 2, Minor: 8}
 

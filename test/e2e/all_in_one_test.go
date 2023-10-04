@@ -36,37 +36,9 @@ import (
 // ensure that things are up and running.
 // -----------------------------------------------------------------------------
 
-func TestDeployAllInOneDBLESSLegacy(t *testing.T) {
-	t.Log("configuring all-in-one-dbless-legacy.yaml manifest test")
-	t.Parallel()
-	ctx, env := setupE2ETest(t)
-
-	t.Log("deploying kong components")
-	deployments := ManifestDeploy{Path: dblessLegacyPath}.Run(ctx, t, env)
-	deployment := deployments.ControllerNN
-	forDeployment := metav1.ListOptions{
-		LabelSelector: fmt.Sprintf("app=%s", deployment.Name),
-	}
-	podList, err := env.Cluster().Client().CoreV1().Pods(deployment.Namespace).List(ctx, forDeployment)
-	require.NoError(t, err)
-	require.Equal(t, 1, len(podList.Items))
-	pod := podList.Items[0]
-
-	t.Log("running ingress tests to verify all-in-one deployed ingress controller and proxy are functional")
-	deployIngressWithEchoBackends(ctx, t, env, numberOfEchoBackends)
-	verifyIngressWithEchoBackends(ctx, t, env, numberOfEchoBackends)
-
-	t.Log("killing Kong process to simulate a crash and container restart")
-	killKong(ctx, t, env, &pod)
-
-	t.Log("confirming that routes are restored after crash")
-	verifyIngressWithEchoBackends(ctx, t, env, numberOfEchoBackends)
-}
-
 const entDBLESSPath = "../../deploy/single/all-in-one-dbless-k4k8s-enterprise.yaml"
 
 func TestDeployAllInOneEnterpriseDBLESS(t *testing.T) {
-	skipTestIfControllerVersionBelow(t, gatewayDiscoveryMinimalVersion)
 	t.Log("configuring all-in-one-dbless-k4k8s-enterprise.yaml manifest test")
 	if os.Getenv(kong.LicenseDataEnvVar) == "" {
 		t.Skipf("no license available to test enterprise: %s was not provided", kong.LicenseDataEnvVar)
@@ -285,7 +257,6 @@ func TestDeployAllInOneEnterprisePostgres(t *testing.T) {
 }
 
 func TestDeployAllInOneDBLESS(t *testing.T) {
-	skipTestIfControllerVersionBelow(t, gatewayDiscoveryMinimalVersion)
 	t.Parallel()
 
 	const (

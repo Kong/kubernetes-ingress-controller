@@ -59,16 +59,9 @@ func RunWhenKongEnterprise(t *testing.T) {
 	}
 }
 
-func RunWhenKongExpressionRouterWithVersion(t *testing.T, vRangeStr string) {
-	routerFlavor := eventuallyGetKongRouterFlavor(t, proxyAdminURL)
-	version := eventuallyGetKongVersion(t, proxyAdminURL)
-	vRange, err := kong.NewRange(vRangeStr)
-	require.NoError(t, err)
-
-	if routerFlavor == kongRouterFlavorExpressions {
-		if !vRange(version) {
-			t.Skipf("skip test when expression router enabled and version is %s", version.String())
-		}
+func RunWhenKongExpressionRouter(t *testing.T) {
+	if routerFlavor := eventuallyGetKongRouterFlavor(t, proxyAdminURL); routerFlavor != kongRouterFlavorExpressions {
+		t.Skipf("skip test because expression router is disabled (current router flavor is: %q)", routerFlavor)
 	}
 }
 

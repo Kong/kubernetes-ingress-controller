@@ -186,7 +186,7 @@ KongIngressUpstream contains KongIngress upstream configuration. It contains the
 | Field | Description |
 | --- | --- |
 | `host_header` _string_ | HostHeader is The hostname to be used as Host header when proxying requests through Kong. |
-| `algorithm` _string_ | Algorithm is the load balancing algorithm to use. |
+| `algorithm` _string_ | Algorithm is the load balancing algorithm to use. Accepted values are: "round-robin", "consistent-hashing", "least-connections", "latency". |
 | `slots` _integer_ | Slots is the number of slots in the load balancer algorithm. |
 | `healthchecks` _Healthcheck_ | Healthchecks defines the health check configurations in Kong. |
 | `hash_on` _string_ | HashOn defines what to use as hashing input. Accepted values are: "none", "consumer", "ip", "header", "cookie", "path", "query_arg", "uri_capture". |

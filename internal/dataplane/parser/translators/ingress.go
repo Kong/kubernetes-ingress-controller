@@ -3,6 +3,7 @@ package translators
 import (
 	"fmt"
 	"regexp"
+	"slices"
 	"strings"
 	"time"
 	"unicode"
@@ -153,7 +154,17 @@ func (i *ingressTranslationIndex) Add(ingress *netv1.Ingress, addRegexPrefix add
 
 func (i *ingressTranslationIndex) Translate() map[string]kongstate.Service {
 	kongStateServiceCache := make(map[string]kongstate.Service)
-	for _, meta := range i.cache {
+	// although this has no effect on the end route set, some parser tests are sensitive to route indices,
+	// so we sort here to avoid flakes
+	keys := make([]string, len(i.cache))
+	n := 0
+	for key := range i.cache {
+		keys[n] = key
+		n++
+	}
+	slices.Sort(keys)
+	for _, key := range keys {
+		meta := i.cache[key]
 		kongServiceName := meta.generateKongServiceName()
 		kongStateService, ok := kongStateServiceCache[kongServiceName]
 		if !ok {

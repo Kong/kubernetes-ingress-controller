@@ -5,7 +5,7 @@ go 1.21
 toolchain go1.21.0
 
 require (
-	github.com/GoogleContainerTools/skaffold/v2 v2.7.1
+	github.com/GoogleContainerTools/skaffold/v2 v2.8.0
 	github.com/elastic/crd-ref-docs v0.0.9
 	github.com/go-delve/delve v1.21.0
 	github.com/golangci/golangci-lint v1.54.2

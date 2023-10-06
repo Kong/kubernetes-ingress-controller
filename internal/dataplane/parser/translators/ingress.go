@@ -1,9 +1,9 @@
 package translators
 
 import (
+	"container/heap"
 	"fmt"
 	"regexp"
-	"slices"
 	"strings"
 	"time"
 	"unicode"
@@ -98,12 +98,14 @@ const (
 type ingressTranslationIndex struct {
 	cache        map[string]*ingressTranslationMeta
 	featureFlags TranslateIngressFeatureFlags
+	order        *util.StringHeap
 }
 
 func newIngressTranslationIndex(flags TranslateIngressFeatureFlags) *ingressTranslationIndex {
 	return &ingressTranslationIndex{
 		cache:        make(map[string]*ingressTranslationMeta),
 		featureFlags: flags,
+		order:        &util.StringHeap{},
 	}
 }
 
@@ -143,6 +145,9 @@ func (i *ingressTranslationIndex) Add(ingress *netv1.Ingress, addRegexPrefix add
 					servicePort:      port,
 					addRegexPrefixFn: addRegexPrefix,
 				}
+				// the order of routes ultimately doesn't matter, but using a consistent order simplifies unit testing,
+				// as the output only has array indices and cannot be accessed by name
+				heap.Push(i.order, cacheKey)
 			}
 
 			meta.parentIngress = ingress
@@ -154,16 +159,8 @@ func (i *ingressTranslationIndex) Add(ingress *netv1.Ingress, addRegexPrefix add
 
 func (i *ingressTranslationIndex) Translate() map[string]kongstate.Service {
 	kongStateServiceCache := make(map[string]kongstate.Service)
-	// although this has no effect on the end route set, some parser tests are sensitive to route indices,
-	// so we sort here to avoid flakes
-	keys := make([]string, len(i.cache))
-	n := 0
-	for key := range i.cache {
-		keys[n] = key
-		n++
-	}
-	slices.Sort(keys)
-	for _, key := range keys {
+	for i.order.Len() > 0 {
+		key := i.order.Pop().(string)
 		meta := i.cache[key]
 		kongServiceName := meta.generateKongServiceName()
 		kongStateService, ok := kongStateServiceCache[kongServiceName]

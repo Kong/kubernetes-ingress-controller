@@ -549,13 +549,6 @@ func (r *GatewayReconciler) reconcileUnmanagedGateway(ctx context.Context, log l
 		}
 	}
 
-	// TODO https://github.com/Kong/kubernetes-ingress-controller/issues/2559 check cross-Gateway compatibility
-	// When all Listeners on all Gateways were derived from Kong's configuration, they were guaranteed to be compatible
-	// because they were all identical, though there may have been some ambiguity re de facto merged Gateways that
-	// used different allowedRoutes. We only merged allowedRoutes within a single Gateway, but merged all Gateways into
-	// a single set of shared listens. We lack knowledge of whether this is compatible with user intent, and it may
-	// be incompatible with the spec, so we should consider evaluating cross-Gateway compatibility and raising error
-	// conditions in the event of a problem
 	listenerStatuses, err := getListenerStatus(ctx, gateway, combinedListeners, referenceGrantList.Items, r.Client)
 	if err != nil {
 		return ctrl.Result{}, err

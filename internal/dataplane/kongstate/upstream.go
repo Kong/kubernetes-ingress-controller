@@ -90,7 +90,6 @@ func (u *Upstream) overrideByKongIngress(kongIngress *kongv1.KongIngress) {
 	if k.HashFallbackURICapture != nil {
 		u.HashFallbackURICapture = kong.String(*k.HashFallbackURICapture)
 	}
-	// TODO https://github.com/Kong/kubernetes-ingress-controller/issues/2075
 }
 
 // override sets Upstream fields by KongIngress first, then by k8s Service's annotations.

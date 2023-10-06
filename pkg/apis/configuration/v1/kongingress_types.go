@@ -210,7 +210,7 @@ type KongIngressUpstream struct {
 	// HashFallbackURICapture is the "hash_fallback" version of HashOnURICapture.
 	HashFallbackURICapture *string `json:"hash_fallback_uri_capture,omitempty" yaml:"hash_fallback_uri_capture,omitempty"`
 
-	// TODO https://github.com/Kong/kubernetes-ingress-controller/issues/2075
+	// we need to check this one TODO https://github.com/Kong/kubernetes-ingress-controller/issues/2075
 	// ClientCertificate  *CertificateSecretRef `json:"client_certificate,omitempty" yaml:"client_certificate,omitempty"`
 }
 

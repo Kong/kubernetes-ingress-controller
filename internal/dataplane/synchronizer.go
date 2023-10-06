@@ -104,7 +104,7 @@ func NewSynchronizer(logger logrus.FieldLogger, client Client, opts ...Synchroni
 // To stop the server, the provided context must be Done().
 func (p *Synchronizer) Start(ctx context.Context) error {
 	select {
-	// TODO https://github.com/Kong/kubernetes-ingress-controller/issues/2249
+	// TODO https://github.com/Kong/kubernetes-ingress-controller/issues/2315
 	// This is a temporary mitigation to allow some time for controllers to
 	// populate their dataplaneClient cache.
 	case <-time.After(p.initWaitPeriod):

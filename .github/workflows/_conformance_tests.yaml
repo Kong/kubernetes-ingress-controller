@@ -49,6 +49,9 @@ jobs:
         env:
           JUNIT_REPORT: "conformance-tests.xml"
           KONG_TEST_EXPRESSION_ROUTES: ${{ matrix.expression_routes }}
+          # TODO: remove this until we use kong:3.4 as default in Kong Addon of KTF
+          TEST_KONG_IMAGE: kong
+          TEST_KONG_TAG: "3.4"
 
       - name: collect test report
         if: ${{ always() }}

@@ -134,6 +134,7 @@ func generateMatcherFromHTTPRouteMatch(match gatewayapi.HTTPRouteMatch) atc.Matc
 		matcher.And(headerMatcher)
 	}
 
+	// REVIEW: Since KIC 3.0.0 only support Kong 3.4.1 and above, could we omit the check of Kong version here?
 	if len(match.QueryParams) > 0 {
 		queryMatcher := queryParamMatcherFromHTTPQueryParamMatches(match.QueryParams)
 		matcher.And(queryMatcher)

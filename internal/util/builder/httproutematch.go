@@ -56,6 +56,15 @@ func (b *HTTPRouteMatchBuilder) WithQueryParam(name, value string) *HTTPRouteMat
 	return b
 }
 
+func (b *HTTPRouteMatchBuilder) WithQueryParamRegex(name, value string) *HTTPRouteMatchBuilder {
+	b.httpRouteMatch.QueryParams = append(b.httpRouteMatch.QueryParams, gatewayapi.HTTPQueryParamMatch{
+		Type:  lo.ToPtr(gatewayapi.QueryParamMatchRegularExpression),
+		Name:  gatewayapi.HTTPHeaderName(name),
+		Value: value,
+	})
+	return b
+}
+
 func (b *HTTPRouteMatchBuilder) WithMethod(method gatewayapi.HTTPMethod) *HTTPRouteMatchBuilder {
 	b.httpRouteMatch.Method = &method
 	return b

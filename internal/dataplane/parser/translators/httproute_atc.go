@@ -134,6 +134,11 @@ func generateMatcherFromHTTPRouteMatch(match gatewayapi.HTTPRouteMatch) atc.Matc
 		matcher.And(headerMatcher)
 	}
 
+	if len(match.QueryParams) > 0 {
+		queryMatcher := queryParamMatcherFromHTTPQueryParamMatches(match.QueryParams)
+		matcher.And(queryMatcher)
+	}
+
 	if match.Method != nil {
 		method := *match.Method
 		methodMatcher := methodMatcherFromMethods([]string{string(method)})
@@ -202,6 +207,33 @@ func headerMatcherFromHTTPHeaderMatches(headerMatches []gatewayapi.HTTPHeaderMat
 	matchers := make([]atc.Matcher, 0, len(headerMatches))
 	for _, headerMatch := range headerMatches {
 		matchers = append(matchers, headerMatcherFromHTTPHeaderMatch(headerMatch))
+	}
+	return atc.And(matchers...)
+}
+
+func queryParamMatcherFromHTTPQueryParamMatch(queryParamMatch gatewayapi.HTTPQueryParamMatch) atc.Matcher {
+	matchType := gatewayapi.QueryParamMatchExact
+	if queryParamMatch.Type != nil {
+		matchType = *queryParamMatch.Type
+	}
+	switch matchType {
+	case gatewayapi.QueryParamMatchExact:
+		return atc.NewPredicateHTTPQuery(string(queryParamMatch.Name), atc.OpEqual, queryParamMatch.Value)
+	case gatewayapi.QueryParamMatchRegularExpression:
+		return atc.NewPredicateHTTPQuery(string(queryParamMatch.Name), atc.OpRegexMatch, queryParamMatch.Value)
+	}
+	return nil // should be unreachable
+}
+
+func queryParamMatcherFromHTTPQueryParamMatches(queryParamMatches []gatewayapi.HTTPQueryParamMatch) atc.Matcher {
+	// sort queryParamMatches by names to generate a stable output.
+	sort.Slice(queryParamMatches, func(i, j int) bool {
+		return string(queryParamMatches[i].Name) < string(queryParamMatches[j].Name)
+	})
+
+	matchers := make([]atc.Matcher, 0, len(queryParamMatches))
+	for _, queryParamMatch := range queryParamMatches {
+		matchers = append(matchers, queryParamMatcherFromHTTPQueryParamMatch(queryParamMatch))
 	}
 	return atc.And(matchers...)
 }

@@ -318,6 +318,14 @@ func TestGenerateMatcherFromHTTPRouteMatch(t *testing.T) {
 				Build(),
 			expression: `((http.path == "/prefix/0") || (http.path ^= "/prefix/0/")) && ((http.headers.hash ~ "[0-9A-Fa-f]{32}") && (http.headers.x_foo == "Bar"))`,
 		},
+		{
+			name: "prefix path match and multiple query params",
+			match: builder.NewHTTPRouteMatch().WithPathPrefix("/prefix/0").
+				WithQueryParam("foo", "bar").
+				WithQueryParamRegex("id", "[0-9a-z-]+").
+				Build(),
+			expression: `((http.path == "/prefix/0") || (http.path ^= "/prefix/0/")) && ((http.queries.foo == "bar") && (http.queries.id ~ "[0-9a-z-]+"))`,
+		},
 	}
 
 	for _, tc := range testCases {

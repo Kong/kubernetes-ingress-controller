@@ -232,7 +232,8 @@ func generateKongRoutesFromHTTPRouteMatches(
 		return []kongstate.Route{r}, nil
 	}
 
-	// TODO: implement query param matches (https://github.com/Kong/kubernetes-ingress-controller/issues/2778)
+	// Kong starts to support query parameter match since 3.4.1 with expression router
+	// so with traditional/traditional compatible router, we do not support query parameter match.
 	if len(matches[0].QueryParams) > 0 {
 		return []kongstate.Route{}, translators.ErrRouteValidationQueryParamMatchesUnsupported
 	}

@@ -9,6 +9,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/kong/go-kong/kong"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
 	"github.com/stretchr/testify/require"
@@ -196,10 +197,10 @@ func deployMinimalSvcWithKeyAuth(
 
 	t.Logf("creating an ingress for service %q with plugin %q attached", service.Name, pluginKeyAuthName)
 	ingress := generators.NewIngressForService("/", map[string]string{
-		annotations.IngressClassKey:                             consts.IngressClass,
 		annotations.AnnotationPrefix + annotations.StripPathKey: "true",
 		annotations.AnnotationPrefix + annotations.PluginsKey:   pluginKeyAuthName,
 	}, service)
+	ingress.Spec.IngressClassName = kong.String(consts.IngressClass)
 	require.NoError(t, clusters.DeployIngress(ctx, env.Cluster(), namespace, ingress))
 	return deployment, service, ingress, pluginKeyAuth
 }

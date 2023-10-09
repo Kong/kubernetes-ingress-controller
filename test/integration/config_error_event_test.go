@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/kong/go-kong/kong"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
 	"github.com/stretchr/testify/assert"
@@ -14,7 +15,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/versions"
 	"github.com/kong/kubernetes-ingress-controller/v2/test"
@@ -54,11 +54,11 @@ func TestConfigErrorEventGeneration(t *testing.T) {
 	t.Logf("creating an ingress for service %s with invalid configuration", service.Name)
 	// GRPC routes cannot have methods, only HTTP, and we don't catch this as a translation error
 	ingress := generators.NewIngressForService("/bar", map[string]string{
-		annotations.IngressClassKey: consts.IngressClass,
-		"konghq.com/strip-path":     "true",
-		"konghq.com/protocols":      "grpcs",
-		"konghq.com/methods":        "GET",
+		"konghq.com/strip-path": "true",
+		"konghq.com/protocols":  "grpcs",
+		"konghq.com/methods":    "GET",
 	}, service)
+	ingress.Spec.IngressClassName = kong.String(consts.IngressClass)
 
 	t.Log("deploying ingress")
 	require.NoError(t, clusters.DeployIngress(ctx, env.Cluster(), ns.Name, ingress))

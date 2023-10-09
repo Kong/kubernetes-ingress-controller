@@ -13,6 +13,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/kong/go-kong/kong"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
 	"github.com/stretchr/testify/assert"
@@ -22,7 +23,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v2/test"
 	"github.com/kong/kubernetes-ingress-controller/v2/test/consts"
 	"github.com/kong/kubernetes-ingress-controller/v2/test/helpers/certificate"
@@ -53,10 +53,10 @@ func TestHTTPSRedirect(t *testing.T) {
 
 	t.Logf("exposing Service %s via Ingress", service.Name)
 	ingress := generators.NewIngressForService("/test_https_redirect", map[string]string{
-		annotations.IngressClassKey:             consts.IngressClass,
 		"konghq.com/protocols":                  "https",
 		"konghq.com/https-redirect-status-code": "301",
 	}, service)
+	ingress.Spec.IngressClassName = kong.String(consts.IngressClass)
 	assert.NoError(t, clusters.DeployIngress(ctx, env.Cluster(), ns.Name, ingress))
 	cleaner.Add(ingress)
 
@@ -122,13 +122,13 @@ func TestHTTPSIngress(t *testing.T) {
 
 	t.Logf("creating an ingress for service %s with ingress.class %s", service.Name, consts.IngressClass)
 	ingress1 := generators.NewIngressForService("/foo", map[string]string{
-		annotations.IngressClassKey: consts.IngressClass,
-		"konghq.com/strip-path":     "true",
+		"konghq.com/strip-path": "true",
 	}, service)
+	ingress1.Spec.IngressClassName = kong.String(consts.IngressClass)
 	ingress2 := generators.NewIngressForService("/bar", map[string]string{
-		annotations.IngressClassKey: consts.IngressClass,
-		"konghq.com/strip-path":     "true",
+		"konghq.com/strip-path": "true",
 	}, service)
+	ingress2.Spec.IngressClassName = kong.String(consts.IngressClass)
 
 	t.Log("configuring ingress tls spec")
 	ingress1.Spec.TLS = []netv1.IngressTLS{{SecretName: "secret1", Hosts: []string{"foo.example"}}}

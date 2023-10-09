@@ -2936,35 +2936,55 @@ func TestParserSNI(t *testing.T) {
 		require.Empty(t, result.TranslationFailures)
 		state := result.KongState
 		require.NotNil(t, state)
-		// parser tests do not check tags, these are tested independently
-		state.Services[0].Routes[0].Route.Tags = nil
-		state.Services[0].Routes[1].Route.Tags = nil
-		assert.Equal(t, kong.Route{
-			Name:              kong.String("default.foo.foo-svc.example.com.80"),
-			StripPath:         kong.Bool(false),
-			RegexPriority:     kong.Int(0),
-			ResponseBuffering: kong.Bool(true),
-			RequestBuffering:  kong.Bool(true),
-			Hosts:             kong.StringSlice("example.com"),
-			PreserveHost:      kong.Bool(true),
-			Paths:             kong.StringSlice("/"),
-			Protocols:         kong.StringSlice("http", "https"),
-			ID:                kong.String("99296cc1-ab30-59f8-b204-7b1a45e64cac"),
-		}, state.Services[0].Routes[0].Route)
-		assert.Equal(t, kong.Route{
-			Name:              kong.String("default.foo.foo-svc._.example.com.80"),
-			StripPath:         kong.Bool(false),
-			RegexPriority:     kong.Int(0),
-			ResponseBuffering: kong.Bool(true),
-			RequestBuffering:  kong.Bool(true),
-			Hosts:             kong.StringSlice("*.example.com"),
-			SNIs:              nil,
-			PreserveHost:      kong.Bool(true),
-			Paths:             kong.StringSlice("/"),
-			Protocols:         kong.StringSlice("http", "https"),
-			ID:                kong.String("cbdfe994-15d4-5336-909a-e302ed66e19a"),
-		}, state.Services[0].Routes[1].Route)
+
+		// Below asserts, check if the routes exist in the service route struct.
+		// The order is not check as the parser doesn't produce the service routes
+		// in deterministic order.
+		{
+			route, ok := lo.Find(state.Services[0].Routes, func(r kongstate.Route) bool {
+				return r.Route.ID != nil && *r.Route.ID == "99296cc1-ab30-59f8-b204-7b1a45e64cac"
+			})
+			if assert.True(t, ok) {
+				// parser tests do not check tags, these are tested independently
+				route.Route.Tags = nil
+				assert.Equal(t, kong.Route{
+					Name:              kong.String("default.foo.foo-svc.example.com.80"),
+					StripPath:         kong.Bool(false),
+					RegexPriority:     kong.Int(0),
+					ResponseBuffering: kong.Bool(true),
+					RequestBuffering:  kong.Bool(true),
+					Hosts:             kong.StringSlice("example.com"),
+					PreserveHost:      kong.Bool(true),
+					Paths:             kong.StringSlice("/"),
+					Protocols:         kong.StringSlice("http", "https"),
+					ID:                kong.String("99296cc1-ab30-59f8-b204-7b1a45e64cac"),
+				}, route.Route)
+			}
+		}
+		{
+			route, ok := lo.Find(state.Services[0].Routes, func(r kongstate.Route) bool {
+				return r.Route.ID != nil && *r.Route.ID == "cbdfe994-15d4-5336-909a-e302ed66e19a"
+			})
+			if assert.True(t, ok) {
+				// parser tests do not check tags, these are tested independently
+				route.Route.Tags = nil
+				assert.Equal(t, kong.Route{
+					Name:              kong.String("default.foo.foo-svc._.example.com.80"),
+					StripPath:         kong.Bool(false),
+					RegexPriority:     kong.Int(0),
+					ResponseBuffering: kong.Bool(true),
+					RequestBuffering:  kong.Bool(true),
+					Hosts:             kong.StringSlice("*.example.com"),
+					SNIs:              nil,
+					PreserveHost:      kong.Bool(true),
+					Paths:             kong.StringSlice("/"),
+					Protocols:         kong.StringSlice("http", "https"),
+					ID:                kong.String("cbdfe994-15d4-5336-909a-e302ed66e19a"),
+				}, route.Route)
+			}
+		}
 	})
+
 	t.Run("route does not include SNI when TLS info absent", func(t *testing.T) {
 		ingresses := []*netv1.Ingress{
 			{

@@ -62,7 +62,7 @@
 | `--konnect-license-polling-period` | `duration` | Polling period to be used after the first license is retrieved. | `12h0m0s` |
 | `--konnect-licensing-enabled` | `bool` | Retrieve licenses from Konnect if available. Overrides licenses provided via the environment. | `false` |
 | `--konnect-refresh-node-period` | `duration` | Period of uploading status of KIC and controlled kong gateway instances. | `1m0s` |
-| `--konnect-sync-enabled` | `bool` | Enable synchronization of data plane configuration with a Konnect runtime group. | `false` |
+| `--konnect-sync-enabled` | `bool` | Enable synchronization of data plane configuration with a Konnect control plane. | `false` |
 | `--konnect-tls-client-cert` | `string` | Konnect TLS client certificate. |  |
 | `--konnect-tls-client-cert-file` | `string` | Konnect TLS client certificate file path. |  |
 | `--konnect-tls-client-key` | `string` | Konnect TLS client key. |  |

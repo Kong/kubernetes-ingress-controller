@@ -66,7 +66,7 @@ type AdminAPIClientsManager struct {
 	readinessReconciliationTicker Ticker
 
 	// konnectClient represents a special-case of the data-plane which is Konnect cloud.
-	// This client is used to synchronise configuration with Konnect's Runtime Group Admin API.
+	// This client is used to synchronise configuration with Konnect's Control Plane Admin API.
 	konnectClient *adminapi.KonnectClient
 
 	// lock prevents concurrent access to the manager's fields.
@@ -150,7 +150,7 @@ func (c *AdminAPIClientsManager) Notify(discoveredAPIs []adminapi.DiscoveredAdmi
 	}
 }
 
-// SetKonnectClient sets a client that will be used to communicate with Konnect Runtime Group Admin API.
+// SetKonnectClient sets a client that will be used to communicate with Konnect Control Plane Admin API.
 // If called multiple times, it will override the client.
 func (c *AdminAPIClientsManager) SetKonnectClient(client *adminapi.KonnectClient) {
 	c.lock.Lock()

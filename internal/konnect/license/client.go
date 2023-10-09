@@ -48,7 +48,7 @@ func NewClient(cfg adminapi.KonnectConfig) (*Client, error) {
 
 	return &Client{
 		address:        cfg.Address,
-		runtimeGroupID: cfg.RuntimeGroupID,
+		runtimeGroupID: cfg.ControlPlaneID,
 		httpClient:     c,
 	}, nil
 }

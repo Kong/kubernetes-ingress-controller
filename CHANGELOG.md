@@ -97,6 +97,9 @@ Adding a new version? You'll need three changes:
   - `enable-controller-ingress-extensionsv1beta1`: Has no effect
   - `enable-controller-ingress-networkingv1beta1`: Has no effect
   [#4770](https://github.com/Kong/kubernetes-ingress-controller/pull/4770)
+- `--konnect-runtime-group-id` CLI flag is now deprecated. Please use `--konnect-control-plane-id`
+  instead.
+  [#4783](https://github.com/Kong/kubernetes-ingress-controller/pull/4783)
 
 ### Fixed
 

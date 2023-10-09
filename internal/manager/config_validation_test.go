@@ -153,6 +153,25 @@ func TestConfigValidatedVars(t *testing.T) {
 				ExpectedErrorContains: "namespace cannot be empty",
 			},
 		},
+		"--konnect-runtime-group-id": {
+			{
+				Input: "5ef731c0-6081-49d6-b3ec-d4f85e58b956",
+				ExtractValueFn: func(c manager.Config) any {
+					return c.Konnect.ControlPlaneID
+				},
+				ExpectedValue:              "5ef731c0-6081-49d6-b3ec-d4f85e58b956",
+				ExpectedUsageAdditionalMsg: "Flag --konnect-runtime-group-id has been deprecated, Use --konnect-control-plane-id instead.\n",
+			},
+		},
+		"--konnect-control-plane-id": {
+			{
+				Input: "5ef731c0-6081-49d6-b3ec-d4f85e58b956",
+				ExtractValueFn: func(c manager.Config) any {
+					return c.Konnect.ControlPlaneID
+				},
+				ExpectedValue: "5ef731c0-6081-49d6-b3ec-d4f85e58b956",
+			},
+		},
 	}
 
 	for flag, flagTestCases := range testCasesGroupedByFlag {
@@ -188,7 +207,7 @@ func TestConfigValidate(t *testing.T) {
 				KongAdminSvc: mo.Some(k8stypes.NamespacedName{Name: "admin-svc", Namespace: "ns"}),
 				Konnect: adminapi.KonnectConfig{
 					ConfigSynchronizationEnabled: true,
-					RuntimeGroupID:               "fbd3036f-0f1c-4e98-b71c-d4cd61213f90",
+					ControlPlaneID:               "fbd3036f-0f1c-4e98-b71c-d4cd61213f90",
 					Address:                      "https://us.kic.api.konghq.tech",
 					TLSClient: adminapi.TLSClientConfig{
 						// We do not set valid cert or key, and it's still considered valid as at this level we only care
@@ -244,8 +263,8 @@ func TestConfigValidate(t *testing.T) {
 
 		t.Run("enabled with no runtime group is rejected", func(t *testing.T) {
 			c := validEnabled()
-			c.Konnect.RuntimeGroupID = ""
-			require.ErrorContains(t, c.Validate(), "runtime group not specified")
+			c.Konnect.ControlPlaneID = ""
+			require.ErrorContains(t, c.Validate(), "control plane not specified")
 		})
 
 		t.Run("enabled with no address is rejected", func(t *testing.T) {

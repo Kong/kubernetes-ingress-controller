@@ -324,7 +324,7 @@ func createKonnectClientSecretAndConfigMap(ctx context.Context, t *testing.T, en
 			Name: "konnect-config",
 		},
 		Data: map[string]string{
-			"CONTROLLER_KONNECT_RUNTIME_GROUP_ID": rgID,
+			"CONTROLLER_KONNECT_CONTROL_PLANE_ID": rgID,
 			"CONTROLLER_KONNECT_ADDRESS":          konnectRuntimeGroupAdminAPIBaseURL,
 		},
 	}, metav1.CreateOptions{})
@@ -336,7 +336,7 @@ func createKonnectAdminAPIClient(t *testing.T, rgID, cert, key string) *adminapi
 	t.Helper()
 
 	c, err := adminapi.NewKongClientForKonnectRuntimeGroup(adminapi.KonnectConfig{
-		RuntimeGroupID: rgID,
+		ControlPlaneID: rgID,
 		Address:        konnectRuntimeGroupAdminAPIBaseURL,
 		TLSClient: adminapi.TLSClientConfig{
 			Cert: cert,
@@ -351,7 +351,7 @@ func createKonnectAdminAPIClient(t *testing.T, rgID, cert, key string) *adminapi
 func createKonnectNodeClient(t *testing.T, rgID, cert, key string) *nodes.Client {
 	cfg := adminapi.KonnectConfig{
 		ConfigSynchronizationEnabled: true,
-		RuntimeGroupID:               rgID,
+		ControlPlaneID:               rgID,
 		Address:                      konnectRuntimeGroupAdminAPIBaseURL,
 		RefreshNodePeriod:            konnect.MinRefreshNodePeriod,
 		TLSClient: adminapi.TLSClientConfig{

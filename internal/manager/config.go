@@ -258,7 +258,7 @@ func (c *Config) FlagSet() *pflag.FlagSet {
 	flagSet.BoolVar(&c.Konnect.LicenseSynchronizationEnabled, "konnect-licensing-enabled", false, "Retrieve licenses from Konnect if available. Overrides licenses provided via the environment.")
 	flagSet.DurationVar(&c.Konnect.InitialLicensePollingPeriod, "konnect-initial-license-polling-period", license.DefaultInitialPollingPeriod, "Polling period to be used before the first license is retrieved.")
 	flagSet.DurationVar(&c.Konnect.LicensePollingPeriod, "konnect-license-polling-period", license.DefaultPollingPeriod, "Polling period to be used after the first license is retrieved.")
-	flagSet.StringVar(&c.Konnect.RuntimeGroupID, "konnect-runtime-group-id", "", "An ID of a runtime group that is to be synchronized with data plane configuration.")
+	flagSet.StringVar(&c.Konnect.ControlPlaneID, "konnect-control-plane-id", "", "An ID of a control plane that is to be synchronized with data plane configuration.")
 	flagSet.StringVar(&c.Konnect.Address, "konnect-address", "https://us.kic.api.konghq.com", "Base address of Konnect API.")
 	flagSet.StringVar(&c.Konnect.TLSClient.Cert, "konnect-tls-client-cert", "", "Konnect TLS client certificate.")
 	flagSet.StringVar(&c.Konnect.TLSClient.CertFile, "konnect-tls-client-cert-file", "", "Konnect TLS client certificate file path.")
@@ -275,6 +275,9 @@ func (c *Config) FlagSet() *pflag.FlagSet {
 	_ = flagSet.MarkDeprecated("publish-status-address", "Use --ingress-address instead")
 	flagSet.StringSliceVar(&c.IngressAddressesUDP, "publish-status-address-udp", []string{}, "")
 	_ = flagSet.MarkDeprecated("publish-status-address-udp", "Use --ingress-address-udp instead")
+
+	flagSet.StringVar(&c.Konnect.ControlPlaneID, "konnect-runtime-group-id", "", "Use --konnect-control-plane-id instead.")
+	_ = flagSet.MarkDeprecated("konnect-runtime-group-id", "Use --konnect-control-plane-id instead.")
 
 	c.flagSet = flagSet
 	return flagSet

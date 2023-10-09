@@ -84,8 +84,8 @@ func (c *Config) validateKonnect() error {
 	if konnect.Address == "" {
 		return errors.New("address not specified")
 	}
-	if konnect.RuntimeGroupID == "" {
-		return errors.New("runtime group not specified")
+	if konnect.ControlPlaneID == "" {
+		return errors.New("control plane not specified")
 	}
 	if konnect.TLSClient.IsZero() {
 		return fmt.Errorf("missing TLS client configuration")

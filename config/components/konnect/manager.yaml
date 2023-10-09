@@ -11,7 +11,7 @@ spec:
         envFrom:
           - configMapRef:
               # konnect-config ConfigMap is expected to specify:
-              #   * CONTROLLER_KONNECT_RUNTIME_GROUP_ID (required)
+              #   * CONTROLLER_KONNECT_CONTROL_PLANE_ID (required)
               #   * CONTROLLER_KONNECT_ADDRESS (optional)
               name: konnect-config
         env:

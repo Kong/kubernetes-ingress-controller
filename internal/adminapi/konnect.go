@@ -21,7 +21,7 @@ type KonnectConfig struct {
 	// ConfigSynchronizationEnabled is the only toggle we had prior to the addition of the license agent.
 	// We likely want to combine these into a single Konnect toggle or piggyback off other Konnect functionality.
 	ConfigSynchronizationEnabled bool
-	RuntimeGroupID               string
+	ControlPlaneID               string
 	Address                      string
 	RefreshNodePeriod            time.Duration
 	TLSClient                    TLSClientConfig
@@ -52,7 +52,7 @@ func NewKongClientForKonnectRuntimeGroup(c KonnectConfig) (*KonnectClient, error
 	transport := http.DefaultTransport.(*http.Transport).Clone()
 	transport.TLSClientConfig = &tlsConfig
 	client, err := kong.NewClient(
-		lo.ToPtr(fmt.Sprintf("%s/%s/%s", c.Address, "kic/api/control-planes", c.RuntimeGroupID)),
+		lo.ToPtr(fmt.Sprintf("%s/%s/%s", c.Address, "kic/api/control-planes", c.ControlPlaneID)),
 		&http.Client{
 			Transport: transport,
 		},
@@ -63,7 +63,7 @@ func NewKongClientForKonnectRuntimeGroup(c KonnectConfig) (*KonnectClient, error
 	// Konnect supports tags, we don't need to verify that.
 	client.Tags = tagsStub{}
 
-	return NewKonnectClient(client, c.RuntimeGroupID), nil
+	return NewKonnectClient(client, c.ControlPlaneID), nil
 }
 
 // EnsureKonnectConnection ensures that the client is able to connect to Konnect.

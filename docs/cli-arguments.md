@@ -57,11 +57,11 @@
 | `--kong-admin-url` | `stringSlice` | Kong Admin URL(s) to connect to in the format "protocol://address:port". More than 1 URL can be provided, in such case the flag should be used multiple times or a corresponding env variable should use comma delimited addresses. | `[http://localhost:8001]` |
 | `--kong-workspace` | `string` | Kong Enterprise workspace to configure. Leave this empty if not using Kong workspaces. |  |
 | `--konnect-address` | `string` | Base address of Konnect API. | `https://us.kic.api.konghq.com` |
+| `--konnect-control-plane-id` | `string` | An ID of a control plane that is to be synchronized with data plane configuration. |  |
 | `--konnect-initial-license-polling-period` | `duration` | Polling period to be used before the first license is retrieved. | `1m0s` |
 | `--konnect-license-polling-period` | `duration` | Polling period to be used after the first license is retrieved. | `12h0m0s` |
 | `--konnect-licensing-enabled` | `bool` | Retrieve licenses from Konnect if available. Overrides licenses provided via the environment. | `false` |
 | `--konnect-refresh-node-period` | `duration` | Period of uploading status of KIC and controlled kong gateway instances. | `1m0s` |
-| `--konnect-runtime-group-id` | `string` | An ID of a runtime group that is to be synchronized with data plane configuration. |  |
 | `--konnect-sync-enabled` | `bool` | Enable synchronization of data plane configuration with a Konnect runtime group. | `false` |
 | `--konnect-tls-client-cert` | `string` | Konnect TLS client certificate. |  |
 | `--konnect-tls-client-cert-file` | `string` | Konnect TLS client certificate file path. |  |

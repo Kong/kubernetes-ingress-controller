@@ -424,9 +424,9 @@ func setupKonnectAdminAPIClientWithClientsMgr(
 	clientsManager *clients.AdminAPIClientsManager,
 	logger logr.Logger,
 ) {
-	konnectAdminAPIClient, err := adminapi.NewKongClientForKonnectRuntimeGroup(config)
+	konnectAdminAPIClient, err := adminapi.NewKongClientForKonnectControlPlane(config)
 	if err != nil {
-		logger.Error(err, "Failed creating Konnect Runtime Group Admin API client, skipping synchronisation")
+		logger.Error(err, "Failed creating Konnect Control Plane Admin API client, skipping synchronisation")
 		return
 	}
 	if err := adminapi.EnsureKonnectConnection(ctx, konnectAdminAPIClient.AdminAPIClient(), logger); err != nil {

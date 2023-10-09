@@ -34,7 +34,7 @@ type AdminAPIClient interface {
 	PluginSchemaStore() *util.PluginSchemaStore
 
 	IsKonnect() bool
-	KonnectRuntimeGroup() string
+	KonnectControlPlane() string
 }
 
 // PerformUpdate writes `targetContent` to Kong Admin API specified by `kongConfig`.

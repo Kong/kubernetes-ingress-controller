@@ -18,10 +18,10 @@ import (
 )
 
 // Client is used for sending requests to Konnect Node API.
-// It can be used to register Nodes in Konnect's Runtime Groups.
+// It can be used to register Nodes in Konnect's Control Planes.
 type Client struct {
 	address        string
-	runtimeGroupID string
+	controlPlaneID string
 	httpClient     *http.Client
 }
 
@@ -48,17 +48,17 @@ func NewClient(cfg adminapi.KonnectConfig) (*Client, error) {
 
 	return &Client{
 		address:        cfg.Address,
-		runtimeGroupID: cfg.ControlPlaneID,
+		controlPlaneID: cfg.ControlPlaneID,
 		httpClient:     c,
 	}, nil
 }
 
 func (c *Client) kicNodeAPIEndpoint() string {
-	return fmt.Sprintf(KicNodeAPIPathPattern, c.address, c.runtimeGroupID)
+	return fmt.Sprintf(KicNodeAPIPathPattern, c.address, c.controlPlaneID)
 }
 
 func (c *Client) kicNodeAPIEndpointWithNodeID(nodeID string) string {
-	return fmt.Sprintf(KicNodeAPIPathPattern, c.address, c.runtimeGroupID) + "/" + nodeID
+	return fmt.Sprintf(KicNodeAPIPathPattern, c.address, c.controlPlaneID) + "/" + nodeID
 }
 
 func (c *Client) CreateNode(ctx context.Context, req *CreateNodeRequest) (*CreateNodeResponse, error) {
@@ -131,7 +131,7 @@ func (c *Client) UpdateNode(ctx context.Context, nodeID string, req *UpdateNodeR
 	return resp, nil
 }
 
-// ListAllNodes call ListNodes() repeatedly to get all nodes in a runtime group.
+// ListAllNodes call ListNodes() repeatedly to get all nodes in a control plane.
 func (c *Client) ListAllNodes(ctx context.Context) ([]*NodeItem, error) {
 	nodes := []*NodeItem{}
 	pageNum := 0

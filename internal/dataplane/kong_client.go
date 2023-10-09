@@ -555,7 +555,7 @@ func (c *KongClient) sendToClient(
 }
 
 // SetConfigStatusNotifier sets a notifier which notifies subscribers about configuration sending results.
-// Currently it is used for uploading the node status to konnect runtime group.
+// Currently it is used for uploading the node status to konnect control plane.
 func (c *KongClient) SetConfigStatusNotifier(n clients.ConfigStatusNotifier) {
 	c.lock.Lock()
 	defer c.lock.Unlock()

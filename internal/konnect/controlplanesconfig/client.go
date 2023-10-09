@@ -5,7 +5,7 @@
 // until we have a proper Konnect API Go SDK: https://github.com/Kong/kubernetes-ingress-controller/issues/3550.
 
 //nolint:all
-package runtimegroupsconfig
+package controlplanesconfig
 
 import (
 	"bytes"
@@ -45,13 +45,13 @@ type GetDpClientCert struct {
 
 // GetExpectedConfigHash defines model for get-expected-config-hash.
 type GetExpectedConfigHash struct {
-	// CreatedAt Date the runtime group configuration was created.
+	// CreatedAt Date the control plane configuration was created.
 	CreatedAt *int `json:"created_at,omitempty"`
 
 	// ExpectedHash The expected configuration hash.
 	ExpectedHash *string `json:"expected_hash,omitempty"`
 
-	// UpdatedAt Date the runtime group configuration was last updated.
+	// UpdatedAt Date the control plane configuration was last updated.
 	UpdatedAt *int `json:"updated_at,omitempty"`
 }
 
@@ -1180,13 +1180,13 @@ type GetExpectedConfigHashHTTPResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
 	JSON200      *struct {
-		// CreatedAt Date the runtime group configuration was created.
+		// CreatedAt Date the control plane configuration was created.
 		CreatedAt *int `json:"created_at,omitempty"`
 
 		// ExpectedHash The expected configuration hash.
 		ExpectedHash *string `json:"expected_hash,omitempty"`
 
-		// UpdatedAt Date the runtime group configuration was last updated.
+		// UpdatedAt Date the control plane configuration was last updated.
 		UpdatedAt *int `json:"updated_at,omitempty"`
 	}
 }
@@ -1638,13 +1638,13 @@ func ParseGetExpectedConfigHashHTTPResponse(rsp *http.Response) (*GetExpectedCon
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
 		var dest struct {
-			// CreatedAt Date the runtime group configuration was created.
+			// CreatedAt Date the control plane configuration was created.
 			CreatedAt *int `json:"created_at,omitempty"`
 
 			// ExpectedHash The expected configuration hash.
 			ExpectedHash *string `json:"expected_hash,omitempty"`
 
-			// UpdatedAt Date the runtime group configuration was last updated.
+			// UpdatedAt Date the control plane configuration was last updated.
 			UpdatedAt *int `json:"updated_at,omitempty"`
 		}
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {

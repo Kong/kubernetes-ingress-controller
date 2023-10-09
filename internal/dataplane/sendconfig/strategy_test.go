@@ -17,7 +17,7 @@ import (
 type clientMock struct {
 	isKonnect bool
 
-	konnectRuntimeGroupWasCalled bool
+	konnectControlPlaneWasCalled bool
 	adminAPIClientWasCalled      bool
 }
 
@@ -25,8 +25,8 @@ func (c *clientMock) IsKonnect() bool {
 	return c.isKonnect
 }
 
-func (c *clientMock) KonnectRuntimeGroup() string {
-	c.konnectRuntimeGroupWasCalled = true
+func (c *clientMock) KonnectControlPlane() string {
+	c.konnectControlPlaneWasCalled = true
 	return uuid.NewString()
 }
 
@@ -48,19 +48,19 @@ func TestDefaultUpdateStrategyResolver_ResolveUpdateStrategy(t *testing.T) {
 		isKonnect                     bool
 		inMemory                      bool
 		expectedStrategyType          string
-		expectKonnectRuntimeGroupCall bool
+		expectKonnectControlPlaneCall bool
 	}{
 		{
 			isKonnect:                     true,
 			inMemory:                      false,
 			expectedStrategyType:          "WithBackoff(DBMode)",
-			expectKonnectRuntimeGroupCall: true,
+			expectKonnectControlPlaneCall: true,
 		},
 		{
 			isKonnect:                     true,
 			inMemory:                      true,
 			expectedStrategyType:          "WithBackoff(DBMode)",
-			expectKonnectRuntimeGroupCall: true,
+			expectKonnectControlPlaneCall: true,
 		},
 		{
 			isKonnect:            false,
@@ -94,7 +94,7 @@ func TestDefaultUpdateStrategyResolver_ResolveUpdateStrategy(t *testing.T) {
 			strategy := resolver.ResolveUpdateStrategy(updateClient)
 			require.Equal(t, tc.expectedStrategyType, strategy.Type())
 			assert.True(t, client.adminAPIClientWasCalled)
-			assert.Equal(t, tc.expectKonnectRuntimeGroupCall, client.konnectRuntimeGroupWasCalled)
+			assert.Equal(t, tc.expectKonnectControlPlaneCall, client.konnectControlPlaneWasCalled)
 		})
 	}
 }

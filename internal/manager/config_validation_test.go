@@ -261,7 +261,7 @@ func TestConfigValidate(t *testing.T) {
 			require.NoError(t, c.Validate())
 		})
 
-		t.Run("enabled with no runtime group is rejected", func(t *testing.T) {
+		t.Run("enabled with no control plane is rejected", func(t *testing.T) {
 			c := validEnabled()
 			c.Konnect.ControlPlaneID = ""
 			require.ErrorContains(t, c.Validate(), "control plane not specified")

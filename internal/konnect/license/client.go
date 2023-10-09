@@ -26,7 +26,7 @@ type Client struct {
 }
 
 // KICLicenseAPIPathPattern is the path pattern for KIC license operations.
-var KICLicenseAPIPathPattern = "%s/kic/api/runtime_groups/%s/v1/licenses"
+var KICLicenseAPIPathPattern = "%s/kic/api/control-planes/%s/v1/licenses"
 
 // NewClient creates a License API Konnect client.
 func NewClient(cfg adminapi.KonnectConfig) (*Client, error) {

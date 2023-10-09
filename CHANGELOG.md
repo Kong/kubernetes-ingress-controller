@@ -94,6 +94,11 @@ Adding a new version? You'll need three changes:
 - No more "log.SetLogger(...) was never called..." log entry during shutdown of KIC
   [#4738](https://github.com/Kong/kubernetes-ingress-controller/pull/4738)
 
+### Changed
+
+- Update paths of Konnect APIs from `runtime_groups/*` to `control-planes/*`.
+[#4566](https://github.com/Kong/kubernetes-ingress-controller/pull/4566)
+
 ### Added
 
 - The `FillIDs` feature gate is now enabled by default.

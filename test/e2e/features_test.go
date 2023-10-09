@@ -26,6 +26,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
 
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/gatewayapi"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
@@ -451,7 +452,7 @@ func TestDefaultIngressClass(t *testing.T) {
 
 	t.Logf("creating a classless ingress for service %s", service.Name)
 	ingress := generators.NewIngressForService("/abbosiysaltanati", map[string]string{
-		"konghq.com/strip-path": "true",
+		annotations.AnnotationPrefix + annotations.StripPathKey: "true",
 	}, service)
 	require.NoError(t, clusters.DeployIngress(ctx, env.Cluster(), kongDeployment.Namespace, ingress))
 

@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
+	"github.com/kong/go-kong/kong"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
 	"github.com/stretchr/testify/assert"
@@ -47,9 +48,9 @@ func TestConsumerCredential(t *testing.T) {
 
 	t.Logf("creating an ingress for service %s with ingress.class %s", service.Name, consts.IngressClass)
 	ingress := generators.NewIngressForService("/test_consumer_credential", map[string]string{
-		annotations.IngressClassKey: consts.IngressClass,
-		"konghq.com/strip-path":     "true",
+		"konghq.com/strip-path": "true",
 	}, service)
+	ingress.Spec.IngressClassName = kong.String(consts.IngressClass)
 	require.NoError(t, clusters.DeployIngress(ctx, env.Cluster(), ns.Name, ingress))
 	cleaner.Add(ingress)
 

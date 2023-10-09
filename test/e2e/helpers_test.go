@@ -19,7 +19,7 @@ import (
 	"github.com/blang/semver/v4"
 	"github.com/google/uuid"
 	"github.com/kong/deck/dump"
-	gokong "github.com/kong/go-kong/kong"
+	"github.com/kong/go-kong/kong"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/loadimage"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/metallb"
@@ -428,10 +428,10 @@ func deployIngressWithEchoBackends(ctx context.Context, t *testing.T, env enviro
 
 	t.Logf("creating an ingress for service %s with ingress.class %s", service.Name, ingressClass)
 	ingress := generators.NewIngressForService(echoPath, map[string]string{
-		annotations.IngressClassKey:                             ingressClass,
 		annotations.AnnotationPrefix + annotations.StripPathKey: "true",
 		annotations.AnnotationPrefix + annotations.MethodsKey:   http.MethodGet,
 	}, service)
+	ingress.Spec.IngressClassName = kong.String(ingressClass)
 	require.NoError(t, clusters.DeployIngress(ctx, env.Cluster(), corev1.NamespaceDefault, ingress))
 	return ingress
 }
@@ -516,7 +516,7 @@ func verifyIngressWithEchoBackendsPath(
 func verifyIngressWithEchoBackendsInAdminAPI(
 	ctx context.Context,
 	t *testing.T,
-	kongClient *gokong.Client,
+	kongClient *kong.Client,
 	noReplicas int,
 ) {
 	t.Helper()

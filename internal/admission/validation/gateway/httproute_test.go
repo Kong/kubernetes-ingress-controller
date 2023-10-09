@@ -12,6 +12,7 @@ import (
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/parser"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/gatewayapi"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/versions"
 )
 
 func TestValidateHTTPRoute(t *testing.T) {
@@ -254,7 +255,8 @@ func TestValidateHTTPRoute(t *testing.T) {
 			}},
 			valid:         false,
 			validationMsg: "httproute spec did not pass validation",
-			err:           fmt.Errorf("queryparam matching is not yet supported for httproute"),
+			err: fmt.Errorf("queryparam matching is only supported for httproute with Kong %s and expression router",
+				versions.QueryParameterVersionCutoff),
 		},
 		{
 			msg: "we don't support any group except core kubernetes for backendRefs",

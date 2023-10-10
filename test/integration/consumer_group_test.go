@@ -20,7 +20,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/versions"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
 	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1beta1"
 	"github.com/kong/kubernetes-ingress-controller/v2/pkg/clientset"
@@ -32,7 +31,6 @@ import (
 func TestConsumerGroup(t *testing.T) {
 	t.Parallel()
 
-	RunWhenKongVersion(t, fmt.Sprintf(">=%s", versions.ConsumerGroupsVersionCutoff))
 	RunWhenKongEnterprise(t)
 
 	ctx := context.Background()

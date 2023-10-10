@@ -450,9 +450,9 @@ func TestKongHTTPValidator_ValidateConsumerGroup(t *testing.T) {
 		wantErr          bool
 	}{
 		{
-			name:             "Enterprise version past threshold",
+			name:             "Enterprise version",
 			ConsumerGroupSvc: &fakeConsumerGroupSvc{err: nil},
-			InfoSvc:          &fakeInfoSvc{version: "3.4.0.0"},
+			InfoSvc:          &fakeInfoSvc{version: "3.4.1.0"},
 			args: args{
 				cg: kongv1beta1.KongConsumerGroup{},
 			},
@@ -461,20 +461,9 @@ func TestKongHTTPValidator_ValidateConsumerGroup(t *testing.T) {
 			wantErr:     false,
 		},
 		{
-			name:             "Enterprise version below threshold",
-			ConsumerGroupSvc: &fakeConsumerGroupSvc{err: nil},
-			InfoSvc:          &fakeInfoSvc{version: "3.2.0.0"},
-			args: args{
-				cg: kongv1beta1.KongConsumerGroup{},
-			},
-			wantOK:      false,
-			wantMessage: ErrTextConsumerGroupUnsupported,
-			wantErr:     false,
-		},
-		{
 			name:             "OSS version",
 			ConsumerGroupSvc: &fakeConsumerGroupSvc{err: nil},
-			InfoSvc:          &fakeInfoSvc{version: "3.4.0"},
+			InfoSvc:          &fakeInfoSvc{version: "3.4.1"},
 			args: args{
 				cg: kongv1beta1.KongConsumerGroup{},
 			},
@@ -483,9 +472,9 @@ func TestKongHTTPValidator_ValidateConsumerGroup(t *testing.T) {
 			wantErr:     false,
 		},
 		{
-			name:             "Enterprise version above threshold, unlicensed",
+			name:             "Enterprise version, unlicensed",
 			ConsumerGroupSvc: &fakeConsumerGroupSvc{err: kong.NewAPIError(http.StatusForbidden, "no license")},
-			InfoSvc:          &fakeInfoSvc{version: "3.4.0.0"},
+			InfoSvc:          &fakeInfoSvc{version: "3.4.1.0"},
 			args: args{
 				cg: kongv1beta1.KongConsumerGroup{},
 			},
@@ -494,9 +483,9 @@ func TestKongHTTPValidator_ValidateConsumerGroup(t *testing.T) {
 			wantErr:     false,
 		},
 		{
-			name:             "Enterprise version above threshold, API somehow missing",
+			name:             "Enterprise version, API somehow missing",
 			ConsumerGroupSvc: &fakeConsumerGroupSvc{err: kong.NewAPIError(http.StatusNotFound, "well, this is awkward")},
-			InfoSvc:          &fakeInfoSvc{version: "3.4.0.0"},
+			InfoSvc:          &fakeInfoSvc{version: "3.4.1.0"},
 			args: args{
 				cg: kongv1beta1.KongConsumerGroup{},
 			},
@@ -527,9 +516,9 @@ func TestKongHTTPValidator_ValidateConsumerGroup(t *testing.T) {
 			wantErr:     false,
 		},
 		{
-			name:             "Enterprise version above threshold, API returning unexpected error",
+			name:             "Enterprise version, API returning unexpected error",
 			ConsumerGroupSvc: &fakeConsumerGroupSvc{err: kong.NewAPIError(http.StatusTeapot, "I'm a teapot")},
-			InfoSvc:          &fakeInfoSvc{version: "3.4.0.0"},
+			InfoSvc:          &fakeInfoSvc{version: "3.4.1.0"},
 			args: args{
 				cg: kongv1beta1.KongConsumerGroup{},
 			},

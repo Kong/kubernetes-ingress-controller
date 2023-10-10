@@ -34,6 +34,8 @@ import (
 )
 
 func TestTelemetry(t *testing.T) {
+	t.Parallel()
+
 	t.Log("configuring TLS listener - server for telemetry data")
 	cert := certificate.MustGenerateSelfSignedCert()
 	telemetryServerListener, err := tls.Listen("tcp", "localhost:0", &tls.Config{

@@ -433,7 +433,7 @@ func (validator KongHTTPValidator) ValidateHTTPRoute(
 		routeValidator = routesSvc
 	}
 	return gatewayvalidation.ValidateHTTPRoute(
-		ctx, routeValidator, validator.ParserFeatures, validator.KongVersion, &httproute, managedGateways...,
+		ctx, routeValidator, validator.ParserFeatures, &httproute, managedGateways...,
 	)
 }
 

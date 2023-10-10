@@ -6,7 +6,6 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"net/url"
 	"testing"
 	"time"
 
@@ -44,11 +43,11 @@ func TestExpressionRouterGenerateRoutes(t *testing.T) {
 			name:    "exact match on path",
 			matcher: atc.NewPredicateHTTPPath(atc.OpEqual, "/foo"),
 			matchRequests: []*http.Request{
-				helpers.MustHTTPRequest(t, "GET", helpers.MustParseURL(t, "http://a.foo.com"), "foo", nil),
+				helpers.MustHTTPRequest(t, "GET", "a.foo.com", "foo", nil),
 			},
 			unmatchRequests: []*http.Request{
-				helpers.MustHTTPRequest(t, "GET", helpers.MustParseURL(t, "http://a.foo.com"), "foobar", nil),
-				helpers.MustHTTPRequest(t, "GET", helpers.MustParseURL(t, "http://a.foo.com"), "foo/", nil),
+				helpers.MustHTTPRequest(t, "GET", "a.foo.com", "foobar", nil),
+				helpers.MustHTTPRequest(t, "GET", "a.foo.com", "foo/", nil),
 			},
 		},
 		{
@@ -58,11 +57,11 @@ func TestExpressionRouterGenerateRoutes(t *testing.T) {
 				atc.NewPrediacteHTTPHost(atc.OpEqual, "a.foo.com"),
 			),
 			matchRequests: []*http.Request{
-				helpers.MustHTTPRequest(t, "GET", helpers.MustParseURL(t, "http://a.foo.com"), "foo", nil),
+				helpers.MustHTTPRequest(t, "GET", "a.foo.com", "foo", nil),
 			},
 			unmatchRequests: []*http.Request{
-				helpers.MustHTTPRequest(t, "GET", helpers.MustParseURL(t, "http://a.foo.com"), "foobar", nil),
-				helpers.MustHTTPRequest(t, "GET", helpers.MustParseURL(t, "http://b.foo.com"), "foo", nil),
+				helpers.MustHTTPRequest(t, "GET", "a.foo.com", "foobar", nil),
+				helpers.MustHTTPRequest(t, "GET", "b.foo.com", "foo", nil),
 			},
 		},
 		{
@@ -72,22 +71,19 @@ func TestExpressionRouterGenerateRoutes(t *testing.T) {
 				atc.NewPrediacteHTTPHost(atc.OpSuffixMatch, ".foo.com"),
 			),
 			matchRequests: []*http.Request{
-				helpers.MustHTTPRequest(t, "GET", helpers.MustParseURL(t, "http://a.foo.com"), "foo", nil),
-				helpers.MustHTTPRequest(t, "GET", helpers.MustParseURL(t, "http://b.foo.com"), "foo", nil),
+				helpers.MustHTTPRequest(t, "GET", "a.foo.com", "foo", nil),
+				helpers.MustHTTPRequest(t, "GET", "b.foo.com", "foo", nil),
 			},
 			unmatchRequests: []*http.Request{
-				helpers.MustHTTPRequest(t, "GET", helpers.MustParseURL(t, "http://a.foo.com"), "foobar", nil),
-				helpers.MustHTTPRequest(t, "GET", helpers.MustParseURL(t, "http://a.bar.com"), "foo", nil),
+				helpers.MustHTTPRequest(t, "GET", "a.foo.com", "foobar", nil),
+				helpers.MustHTTPRequest(t, "GET", "a.bar.com", "foo", nil),
 			},
 		},
 	}
 
 	proxyIP := getKongProxyIP(ctx, t, env, consts.ControllerNamespace)
-	proxyURL, err := url.Parse(fmt.Sprintf("http://%s", proxyIP))
-	proxyClient := helpers.DefaultHTTPClient()
-	proxyClient.Transport = &http.Transport{
-		Proxy: http.ProxyURL(proxyURL),
-	}
+	proxyURL := helpers.MustParseURL(t, fmt.Sprintf("http://%s", proxyIP))
+	proxyClient := helpers.DefaultHTTPClientWithProxy(proxyURL)
 
 	t.Log("deploying HTTP container deployment to test generating expression routes")
 	// TODO: use another HTTP server image that can return 200 on any path

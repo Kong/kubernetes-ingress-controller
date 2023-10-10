@@ -22,6 +22,16 @@ func DefaultHTTPClient() *http.Client {
 	}
 }
 
+func DefaultHTTPClientWithProxy(proxyURL *url.URL) *http.Client {
+	tr := &http.Transport{
+		Proxy: http.ProxyURL(proxyURL),
+	}
+	return &http.Client{
+		Transport: tr,
+		Timeout:   10 * time.Second,
+	}
+}
+
 // RetryableHTTPClient wraps a client with retry logic. That should be used when calling external services that might
 // temporarily fail (e.g. Konnect APIs), and we don't want them to affect the test results.
 func RetryableHTTPClient(base *http.Client) *http.Client {
@@ -36,11 +46,18 @@ func RetryableHTTPClient(base *http.Client) *http.Client {
 
 // MustHTTPRequest creates a request with provided parameters and it fails the
 // test that it was called in when request creation fails.
-func MustHTTPRequest(t *testing.T, method string, proxyURL *url.URL, path string, headers map[string]string) *http.Request {
-	// trim suffix '/'s of proxy URL and prefix '/'s of path to avoid duplicate /s
-	host := strings.TrimRight(proxyURL.String(), "/")
+func MustHTTPRequest(t *testing.T, method string, host, path string, headers map[string]string) *http.Request {
+	scheme := "http"
+	if strings.HasPrefix(host, "https://") {
+		scheme = "https"
+		host = strings.TrimPrefix(host, "https://")
+	} else if strings.HasPrefix(host, "http://") {
+		scheme = "http"
+		host = strings.TrimPrefix(host, "http://")
+	}
+	host = strings.TrimRight(host, "/")
 	path = strings.TrimLeft(path, "/")
-	req, err := http.NewRequest(method, fmt.Sprintf("%s/%s", host, path), nil)
+	req, err := http.NewRequest(method, fmt.Sprintf("%s://%s/%s", scheme, host, path), nil)
 	require.NoError(t, err)
 	for header, value := range headers {
 		req.Header.Set(header, value)
@@ -69,6 +86,7 @@ func MustParseURL(t *testing.T, urlStr string) *url.URL {
 func EventuallyGETPath(
 	t *testing.T,
 	proxyURL *url.URL,
+	host string,
 	path string,
 	statusCode int,
 	bodyContents string,
@@ -76,10 +94,10 @@ func EventuallyGETPath(
 	waitDuration time.Duration,
 	waitTick time.Duration,
 ) {
-	client := DefaultHTTPClient()
+	client := DefaultHTTPClientWithProxy(proxyURL)
 
 	require.Eventually(t, func() bool {
-		req := MustHTTPRequest(t, http.MethodGet, proxyURL, path, headers)
+		req := MustHTTPRequest(t, http.MethodGet, host, path, headers)
 		resp, err := client.Do(req)
 		if err != nil {
 			t.Logf("WARNING: http request failed for GET %s/%s: %v", proxyURL, path, err)
@@ -104,6 +122,7 @@ func EventuallyGETPath(
 func EventuallyExpectHTTP404WithNoRoute(
 	t *testing.T,
 	proxyURL *url.URL,
+	host string,
 	path string,
 	waitDuration time.Duration,
 	waitTick time.Duration,
@@ -112,6 +131,7 @@ func EventuallyExpectHTTP404WithNoRoute(
 	EventuallyGETPath(
 		t,
 		proxyURL,
+		host,
 		path,
 		http.StatusNotFound,
 		"no Route matched with those values",
@@ -143,6 +163,7 @@ func MatchRespByStatusAndContent(
 
 type CountHTTPResponsesConfig struct {
 	Method      string
+	Host        string
 	Path        string
 	Headers     map[string]string
 	Duration    time.Duration
@@ -155,7 +176,7 @@ func CountHTTPGetResponses(
 	cfg CountHTTPResponsesConfig,
 	matchers ...ResponseMatcher,
 ) (matchedResponseCounter map[string]int) {
-	req := MustHTTPRequest(t, cfg.Method, proxyURL, cfg.Path, cfg.Headers)
+	req := MustHTTPRequest(t, cfg.Method, cfg.Host, cfg.Path, cfg.Headers)
 	matchedResponseCounter = make(map[string]int)
 
 	finished := time.NewTimer(cfg.Duration)
@@ -166,15 +187,15 @@ func CountHTTPGetResponses(
 	for {
 		select {
 		case <-ticker.C:
-			countHTTPGetResponse(t, req, matchedResponseCounter, matchers...)
+			countHTTPGetResponse(t, req, proxyURL, matchedResponseCounter, matchers...)
 		case <-finished.C:
 			return matchedResponseCounter
 		}
 	}
 }
 
-func countHTTPGetResponse(t *testing.T, req *http.Request, matchCounter map[string]int, matchers ...ResponseMatcher) {
-	resp, err := DefaultHTTPClient().Do(req)
+func countHTTPGetResponse(t *testing.T, req *http.Request, proxyURL *url.URL, matchCounter map[string]int, matchers ...ResponseMatcher) {
+	resp, err := DefaultHTTPClientWithProxy(proxyURL).Do(req)
 	if err != nil {
 		return
 	}

@@ -5,6 +5,7 @@ metadata:
   labels:
     app: httpbin
   name: httpbin
+  namespace: default
 spec:
   ports:
     - port: 80
@@ -20,6 +21,7 @@ metadata:
   labels:
     app: nginx
   name: nginx
+  namespace: default
 spec:
   ports:
     - port: 8080
@@ -33,6 +35,7 @@ apiVersion: gateway.networking.k8s.io/v1beta1
 kind: HTTPRoute
 metadata:
   name: httproute-testing
+  namespace: default
   annotations:
     konghq.com/strip-path: "true"
 spec:

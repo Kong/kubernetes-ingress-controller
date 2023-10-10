@@ -6,6 +6,7 @@ metadata:
     kubernetes.io/ingress.class: kong
   name: ing-with-tls
   namespace: bar-namespace
+  uid: c6ac927c-4f5a-4e88-8b5d-c7b01d0f43af
 spec:
   rules:
   - host: example.com
@@ -35,6 +36,7 @@ metadata:
     kubernetes.io/ingress.class: kong
   name: foo-svc
   namespace: bar-namespace
+  uid: c6ac927c-4f5a-4e88-8b5d-c7b01d0f43af
 spec:
   ports:
     - port: 80
@@ -44,6 +46,7 @@ kind: Secret
 metadata:
   name: sooper-secret
   namespace: bar-namespace
+  uid: c6ac927c-4f5a-4e88-8b5d-c7b01d0f43af
 type: kubernetes.io/tls
 data:
   tls.key: |
@@ -81,6 +84,7 @@ kind: Secret
 metadata:
   name: sooper-secret2
   namespace: bar-namespace
+  uid: 8aade13c-1470-46bd-9849-9a74e349214f
 type: kubernetes.io/tls
 data:
   tls.key: |

@@ -70,22 +70,30 @@ jobs:
       - name: Print test names
         run: echo "Test names ${{ steps.set_test_names.outputs.test_names }}"
 
-  # TODO: extract this as a separate workflow reading the dependencies versions from a file (not only Kind, but also
-  # GKE, Istio, Kong, etc.)
-  # https://github.com/Kong/kubernetes-ingress-controller/issues/3349
   dependencies-versions:
     runs-on: ubuntu-latest
     outputs:
-      kind-versions: ${{ steps.set-kind-versions.outputs.kind-versions }}
+      kind: ${{ steps.set-versions.outputs.kind }}
+      gke: ${{ steps.set-versions.outputs.gke }}
+      istio: ${{ steps.set-versions.outputs.istio }}
     steps:
-      - id: set-kind-versions
-        name: Set Kind versions
+      - name: checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - id: set-versions
+        name: Set versions
         run: |
           if [ "${{ inputs.all-supported-k8s-versions }}" == "true" ]; then
-            echo "kind-versions=[\"1.23.17\", \"1.24.15\", \"1.25.11\", \"1.26.6\", \"1.27.3\", \"1.28.0\"]" >> $GITHUB_OUTPUT
+            echo "kind=$(cat .github/test_dependencies.yaml | yq -ojson '.e2e.kind' | jq -c)" >> $GITHUB_OUTPUT
           else
-            echo "kind-versions=[\"1.28.0\"]" >> $GITHUB_OUTPUT
+            # We assume the first version in the list is the latest one.
+            echo "kind=$(cat .github/test_dependencies.yaml | yq -ojson '.e2e.kind' | jq -c '[first]')" >> $GITHUB_OUTPUT
           fi
+          echo "gke=$(cat .github/test_dependencies.yaml | yq -ojson '.e2e.gke' | jq -c)" >> $GITHUB_OUTPUT
+          echo "istio=$(cat .github/test_dependencies.yaml | yq -ojson '.e2e.istio' | jq -c)" >> $GITHUB_OUTPUT
+
   kind:
     runs-on: ubuntu-latest
     if: ${{ !cancelled() }}
@@ -95,7 +103,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        kubernetes-version: ${{ fromJSON(needs.dependencies-versions.outputs.kind-versions) }}
+        kubernetes-version: ${{ fromJSON(needs.dependencies-versions.outputs.kind) }}
         test: ${{ fromJSON(needs.setup-e2e-tests.outputs.test_names) }}
     steps:
       - name: Download built image artifact
@@ -172,8 +180,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        kubernetes-version:
-          - 'v1.26.5'
+        kubernetes-version: ${{ fromJSON(needs.dependencies-versions.outputs.gke) }}
         test: ${{ fromJSON(needs.setup-e2e-tests.outputs.test_names) }}
     steps:
       - name: checkout repository
@@ -229,18 +236,11 @@ jobs:
   istio:
     if: ${{ inputs.run-istio }}
     runs-on: ubuntu-latest
+    needs: dependencies-versions
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - kubernetes-version: 'v1.28.0'
-            istio-version: 'v1.19'
-          - kubernetes-version: 'v1.27.3'
-            istio-version: 'v1.18'
-          - kubernetes-version: 'v1.26.6'
-            istio-version: 'v1.17'
-          - kubernetes-version: 'v1.25.11'
-            istio-version: 'v1.16'
+        include: ${{ fromJSON(needs.dependencies-versions.outputs.istio) }}
     steps:
       - name: Download built image artifact
         if: ${{ inputs.load-local-image }}
@@ -277,8 +277,8 @@ jobs:
           TEST_KONG_LOAD_IMAGES: ${{ inputs.load-local-image }}
           TEST_KONG_IMAGE_OVERRIDE: ${{ inputs.kong-image }}
           KONG_LICENSE_DATA: ${{ steps.license.outputs.license }}
-          KONG_CLUSTER_VERSION: ${{ matrix.kubernetes-version }}
-          ISTIO_VERSION: ${{ matrix.istio-version }}
+          KONG_CLUSTER_VERSION: ${{ matrix.kind }}
+          ISTIO_VERSION: ${{ matrix.istio }}
           NCPU: 1 # it was found that github actions (specifically) did not seem to perform well when spawning
           # multiple kind clusters within a single job, so only 1 is allowed at a time.
           GOTESTSUM_JUNITFILE: "istio-${{ matrix.kubernetes-version }}-${{ matrix.istio-version }}-tests.xml"

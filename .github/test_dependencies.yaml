@@ -1,0 +1,26 @@
+e2e:
+  kind:
+    - 'v1.28.0'
+    - 'v1.27.0'
+    - 'v1.26.3'
+    - 'v1.25.10'
+    - 'v1.24.11'
+    - 'v1.23.12'
+  gke:
+    - 'v1.26.5'
+  istio:
+    # For Istio, we define combinations of Kind and Istio versions that will be
+    # used directly in the test matrix `include` section.
+    - kind: 'v1.28.0'
+      istio: 'v1.19'
+    - kind: 'v1.27.3'
+      istio: 'v1.18'
+    - kind: 'v1.26.6'
+      istio: 'v1.17'
+    - kind: 'v1.25.11'
+      istio: 'v1.16'
+
+integration:
+  kind: 'v1.28.0'
+  kong-oss: '3.4'
+  kong-ee: '3.4'

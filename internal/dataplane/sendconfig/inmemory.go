@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/blang/semver/v4"
 	"github.com/kong/deck/file"
 	"github.com/sirupsen/logrus"
 
@@ -35,20 +34,17 @@ type UpdateStrategyInMemory struct {
 	configService   ConfigService
 	configConverter ContentToDBLessConfigConverter
 	log             logrus.FieldLogger
-	version         semver.Version
 }
 
 func NewUpdateStrategyInMemory(
 	configService ConfigService,
 	configConverter ContentToDBLessConfigConverter,
 	log logrus.FieldLogger,
-	version semver.Version,
 ) UpdateStrategyInMemory {
 	return UpdateStrategyInMemory{
 		configService:   configService,
 		configConverter: configConverter,
 		log:             log,
-		version:         version,
 	}
 }
 

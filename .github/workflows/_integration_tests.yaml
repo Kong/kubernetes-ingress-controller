@@ -11,7 +11,7 @@ on:
         type: string
         # TODO: Consider changing to "kong:latest"
         # See https://github.com/Kong/kubernetes-testing-framework/issues/542
-        default: "3.4"
+        default: "<from_test_dependencies.yaml>"
         required: false
       kong-oss-effective-version:
         # specifies effective semver of Kong gateway OSS when tag is not a valid semver (like 'nightly').
@@ -26,7 +26,7 @@ on:
         type: string
         # TODO: Consider changing to "kong/kong-gateway:latest"
         # See https://github.com/Kong/kubernetes-testing-framework/issues/542
-        default: "3.4"
+        default: "<from_test_dependencies.yaml>"
         required: false
       kong-enterprise-effective-version:
         # specifies effective semver of Kong gateway enterprise when tag is not a valid semver (like 'nightly').
@@ -35,11 +35,31 @@ on:
         required: false
 
 jobs:
+  dependencies-versions:
+    runs-on: ubuntu-latest
+    outputs:
+      kind: ${{ steps.set-versions.outputs.kind }}
+      kong-ee: ${{ steps.set-versions.outputs.kong-ee }}
+      kong-oss: ${{ steps.set-versions.outputs.kong-oss }}
+    steps:
+      - name: checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - id: set-versions
+        name: Set versions
+        run: |
+          echo "kind=$(cat .github/test_dependencies.yaml | yq -ojson '.integration.kind' | jq -c)" >> $GITHUB_OUTPUT
+          echo "kong-ee=$(cat .github/test_dependencies.yaml | yq -ojson '.integration.kong-oss' | jq -c)" >> $GITHUB_OUTPUT
+          echo "kong-oss=$(cat .github/test_dependencies.yaml | yq -ojson '.integration.kong-ee' | jq -c)" >> $GITHUB_OUTPUT
+
   integration-tests:
     name: ${{ matrix.name }}
     runs-on: ubuntu-latest
+    needs: dependencies-versions
     env:
-      KONG_CLUSTER_VERSION: 'v1.28.0'
+      KONG_CLUSTER_VERSION: ${{ needs.dependencies-versions.outputs.kind }}
       TEST_KONG_ROUTER_FLAVOR: 'traditional'
     strategy:
       fail-fast: false
@@ -91,13 +111,22 @@ jobs:
       - name: Set image of Kong
         id: set_kong_image
         run: |
+          kong_ee_tag="${{ inputs.kong-enterprise-container-tag }}"
+          if [ "${{ inputs.kong-enterprise-container-tag }}" == "<from_test_dependencies.yaml>" ]; then
+            kong_ee_tag=${{ needs.dependencies-versions.outputs.kong-ee }}
+          fi
+          kong_oss_tag="${{ inputs.kong-container-tag }}"
+          if [ "${{ inputs.kong-container-tag }}" == "<from_test_dependencies.yaml>" ]; then
+              kong_oss_tag=${{ needs.dependencies-versions.outputs.kong-oss }}
+          fi
+
           if [ "${{ matrix.enterprise }}" == "true" ]; then
             echo "TEST_KONG_IMAGE=${{ inputs.kong-enterprise-container-repo }}" >> $GITHUB_ENV
-            echo "TEST_KONG_TAG=${{ inputs.kong-enterprise-container-tag }}" >> $GITHUB_ENV
+            echo "TEST_KONG_TAG=${kong_ee_tag}" >> $GITHUB_ENV
             echo "TEST_KONG_EFFECTIVE_VERSION=${{ inputs.kong-enterprise-effective-version }}" >> $GITHUB_ENV
           else
             echo "TEST_KONG_IMAGE=${{ inputs.kong-container-repo }}" >> $GITHUB_ENV
-            echo "TEST_KONG_TAG=${{ inputs.kong-container-tag }}" >> $GITHUB_ENV
+            echo "TEST_KONG_TAG=${kong_oss_tag}" >> $GITHUB_ENV
             echo "TEST_KONG_EFFECTIVE_VERSION=${{ inputs.kong-oss-effective-version }}" >> $GITHUB_ENV
           fi
 

@@ -6,7 +6,7 @@ const (
 	ErrTextConsumerCredentialValidationFailed = "consumer credential failed validation"
 	ErrTextConsumerExists                     = "consumer already exists"
 	ErrTextConsumerUnretrievable              = "failed to fetch consumer from kong"
-	ErrTextConsumerGroupUnsupported           = "consumer group support requires Kong Enterprise 3.4+"
+	ErrTextConsumerGroupUnsupported           = "consumer group support requires Kong Enterprise"
 	ErrTextConsumerGroupUnlicensed            = "consumer group support requires a valid Kong Enterprise license"
 	ErrTextConsumerGroupUnexpected            = "unexpected error during checking support for consumer group"
 	ErrTextConsumerUsernameEmpty              = "username cannot be empty"

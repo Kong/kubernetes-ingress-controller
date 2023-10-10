@@ -12,7 +12,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
 )
 
@@ -100,7 +99,7 @@ func TestResourceFailuresCollector(t *testing.T) {
 		require.NotZero(t, logs.Len())
 		lastLog := logs.All()[logs.Len()-1]
 		require.NotNil(t, lastLog)
-		require.Equal(t, zapcore.Level(util.ErrorLevel), lastLog.Level)
+		require.Equal(t, zap.ErrorLevel, lastLog.Level)
 		require.Len(t, collector.PopResourceFailures(), 0, "no failures expected - causing objects missing")
 	})
 }

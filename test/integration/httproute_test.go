@@ -180,7 +180,7 @@ func TestHTTPRouteEssentials(t *testing.T) {
 		return false
 	}, ingressWait, waitTick)
 
-	t.Run("", func(t *testing.T) {
+	t.Run("header regex match", func(t *testing.T) {
 		httpRoute, err = gatewayClient.GatewayV1beta1().HTTPRoutes(ns.Name).Get(ctx, httpRoute.Name, metav1.GetOptions{})
 		require.NoError(t, err)
 

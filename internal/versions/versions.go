@@ -18,9 +18,6 @@ var (
 	// because the original version of the mTLS credential was not compatible with KIC.
 	MTLSCredentialVersionCutoff = semver.Version{Major: 2, Minor: 3, Patch: 2}
 
-	// TLSPassthroughCutoff is the lowest Kong version with support for TLS passthrough.
-	TLSPassthroughCutoff = semver.Version{Major: 2, Minor: 7}
-
 	// ExpressionRouterL4Cutoff is the lowest Kong version with support of L4 proxy in expression router.
 	ExpressionRouterL4Cutoff = semver.Version{Major: 3, Minor: 4}
 )

@@ -91,6 +91,13 @@ jobs:
     uses: ./.github/workflows/_envtest_tests.yaml
     secrets: inherit
 
+  kongintegration-tests:
+    needs:
+      - up-to-date
+    if: needs.up-to-date.outputs.status != 'true'
+    uses: ./.github/workflows/_kongintegration_tests.yaml
+    secrets: inherit
+
   integration-tests:
     needs:
     - should-run-with-secrets

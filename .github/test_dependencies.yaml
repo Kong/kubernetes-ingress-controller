@@ -18,15 +18,19 @@ e2e:
   # For Istio, we define combinations of Kind and Istio versions that will be
   # used directly in the test matrix `include` section.
   istio:
+      # renovate: datasource=docker depName=kindest/node versioning=docker
     - kind: 'v1.28.0'
       # renovate: datasource=docker depName=istio/istioctl versioning=docker
       istio: 'v1.19.0'
+      # renovate: datasource=docker depName=kindest/node versioning=docker
     - kind: 'v1.27.3'
       # renovate: datasource=docker depName=istio/istioctl versioning=docker
       istio: 'v1.18.0'
+      # renovate: datasource=docker depName=kindest/node versioning=docker
     - kind: 'v1.26.6'
       # renovate: datasource=docker depName=istio/istioctl versioning=docker
       istio: 'v1.17.0'
+      # renovate: datasource=docker depName=kindest/node versioning=docker
     - kind: 'v1.25.11'
       # renovate: datasource=docker depName=istio/istioctl versioning=docker
       istio: 'v1.16.0'
@@ -38,3 +42,7 @@ integration:
   kong-oss: '3.4.0'
   # renovate: datasource=docker depName=kong/kong-gateway versioning=docker
   kong-ee: '3.4.1.0'
+
+kongintegration:
+  # renovate: datasource=docker depName=kong versioning=docker
+  kong-oss: '3.4.1'

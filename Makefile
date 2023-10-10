@@ -482,6 +482,26 @@ test.expression_router: gotestsum
 		-parallel 1 \
 		./test/expressionrouter
 
+.PHONY: test.kongintegration
+test.kongintegration:
+	$(MAKE) _test.kongintegration GOTESTSUM_FORMAT=standard-verbose
+
+.PHONY: test.kongintegration.pretty
+test.kongintegration.pretty:
+	$(MAKE) _test.kongintegration GOTESTSUM_FORMAT=testname
+
+.PHONY: _test.kongintegration
+_test.kongintegration: gotestsum go-junit-report
+	GOTESTSUM_FORMAT=$(GOTESTSUM_FORMAT) \
+	$(GOTESTSUM) -- $(GOTESTFLAGS) \
+		-v \
+		-race \
+		-parallel $(NCPU) \
+		-coverpkg=$(PKG_LIST) \
+		-coverprofile=coverage.kongintegration.out \
+		./test/kongintegration | \
+	$(GOJUNIT) -iocopy -out $(JUNIT_REPORT) -parser gotest
+
 # ------------------------------------------------------------------------------
 # Operations - Local Deployment
 # ------------------------------------------------------------------------------

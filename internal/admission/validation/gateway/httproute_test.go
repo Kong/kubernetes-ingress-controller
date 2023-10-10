@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/blang/semver/v4"
 	"github.com/kong/go-kong/kong"
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
@@ -373,9 +372,9 @@ func TestValidateHTTPRoute(t *testing.T) {
 			err:           fmt.Errorf("Pod is not a supported kind for httproute backendRefs, only Service is supported"),
 		},
 	} {
-		// Passed Kong version and routesValidator are irrelevant for the above test cases.
+		// Passed routesValidator is irrelevant for the above test cases.
 		valid, validMsg, err := ValidateHTTPRoute(
-			context.Background(), mockRoutesValidator{}, parser.FeatureFlags{}, semver.MustParse("3.0.0"), tt.route, tt.gateways...,
+			context.Background(), mockRoutesValidator{}, parser.FeatureFlags{}, tt.route, tt.gateways...,
 		)
 		assert.Equal(t, tt.valid, valid, tt.msg)
 		assert.Equal(t, tt.validationMsg, validMsg, tt.msg)

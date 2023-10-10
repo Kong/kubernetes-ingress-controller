@@ -24,7 +24,6 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/gatewayapi"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util/builder"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/versions"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
 	"github.com/kong/kubernetes-ingress-controller/v2/pkg/clientset"
 	"github.com/kong/kubernetes-ingress-controller/v2/test"
@@ -181,9 +180,7 @@ func TestHTTPRouteEssentials(t *testing.T) {
 		return false
 	}, ingressWait, waitTick)
 
-	t.Run("", func(t *testing.T) {
-		RunWhenKongVersion(t, fmt.Sprintf(">=%s", versions.RegexHeaderVersionCutoff))
-
+	t.Run("header regex match", func(t *testing.T) {
 		httpRoute, err = gatewayClient.GatewayV1beta1().HTTPRoutes(ns.Name).Get(ctx, httpRoute.Name, metav1.GetOptions{})
 		require.NoError(t, err)
 

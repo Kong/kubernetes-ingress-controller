@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/blang/semver/v4"
 	"github.com/kong/go-kong/kong"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/parser"
@@ -30,7 +29,6 @@ func ValidateHTTPRoute(
 	ctx context.Context,
 	routesValidator routeValidator,
 	parserFeatures parser.FeatureFlags,
-	kongVersion semver.Version,
 	httproute *gatewayapi.HTTPRoute,
 	attachedGateways ...*gatewayapi.Gateway,
 ) (bool, string, error) {
@@ -64,7 +62,7 @@ func ValidateHTTPRoute(
 		}
 	}
 
-	return validateWithKongGateway(ctx, routesValidator, parserFeatures, kongVersion, httproute)
+	return validateWithKongGateway(ctx, routesValidator, parserFeatures, httproute)
 }
 
 // -----------------------------------------------------------------------------
@@ -188,7 +186,7 @@ func getListenersForHTTPRouteValidation(sectionName *gatewayapi.SectionName, gat
 }
 
 func validateWithKongGateway(
-	ctx context.Context, routesValidator routeValidator, parserFeatures parser.FeatureFlags, kongVersion semver.Version, httproute *gatewayapi.HTTPRoute,
+	ctx context.Context, routesValidator routeValidator, parserFeatures parser.FeatureFlags, httproute *gatewayapi.HTTPRoute,
 ) (bool, string, error) {
 	// Translate HTTPRoute to Kong Route object(s) that can be sent directly to the Admin API for validation.
 	// Use KIC parser that works both for traditional and expressions based routes.
@@ -201,7 +199,7 @@ func validateWithKongGateway(
 			Filters: rule.Filters,
 		}
 		routes, err := parser.GenerateKongRouteFromTranslation(
-			httproute, translation, parserFeatures.RegexPathPrefix, parserFeatures.ExpressionRoutes, kongVersion,
+			httproute, translation, parserFeatures.RegexPathPrefix, parserFeatures.ExpressionRoutes,
 		)
 		if err != nil {
 			errMsgs = append(errMsgs, err.Error())

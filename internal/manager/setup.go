@@ -2,9 +2,12 @@ package manager
 
 import (
 	"context"
+	"crypto/tls"
 	"errors"
 	"fmt"
 	"io"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/avast/retry-go/v4"
@@ -14,6 +17,7 @@ import (
 	"github.com/kong/deck/cprint"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
+	netv1 "k8s.io/api/networking/v1"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -29,9 +33,12 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/clients"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/parser"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/gatewayapi"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/manager/scheme"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 	dataplaneutil "github.com/kong/kubernetes-ingress-controller/v2/internal/util/dataplane"
+	kongv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
+	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1beta1"
 )
 
 // -----------------------------------------------------------------------------
@@ -64,9 +71,46 @@ func SetupLoggers(c *Config, output io.Writer) (logrus.FieldLogger, logr.Logger,
 	return deprecatedLogger, logger, nil
 }
 
+func webhookOptions(ctx context.Context, c *Config, log logr.Logger) (webhook.Options, error) {
+	if c.AdmissionServer.ListenAddr == "off" {
+		return webhook.Options{}, nil
+	}
+
+	tlsConfig, err := admission.ServerConfigToTLSConfig(ctx, &c.AdmissionServer, log)
+	if err != nil {
+		return webhook.Options{}, fmt.Errorf("failed to configure webhook TLS: %w", err)
+	}
+	withTLSConfig := func(config *tls.Config) {
+		*config = *tlsConfig.Clone()
+	}
+
+	hostAndPort := strings.SplitN(c.AdmissionServer.ListenAddr, ":", 2)
+	var (
+		host string
+		port int
+	)
+	if len(hostAndPort) == 2 {
+		host = hostAndPort[0]
+		port, err = strconv.Atoi(hostAndPort[1])
+		if err != nil {
+			return webhook.Options{}, fmt.Errorf("failed to parse webhook port: %w", err)
+		}
+	}
+	return webhook.Options{
+		Host:    host,
+		Port:    port,
+		TLSOpts: []func(*tls.Config){withTLSConfig},
+	}, nil
+}
+
 func setupControllerOptions(ctx context.Context, logger logr.Logger, c *Config, dbmode string, featureGates map[string]bool) (ctrl.Options, error) {
 	logger.Info("building the manager runtime scheme and loading apis into the scheme")
 	scheme, err := scheme.Get(featureGates)
+	if err != nil {
+		return ctrl.Options{}, err
+	}
+
+	webhookOpts, err := webhookOptions(ctx, c, logger)
 	if err != nil {
 		return ctrl.Options{}, err
 	}
@@ -77,7 +121,7 @@ func setupControllerOptions(ctx context.Context, logger logr.Logger, c *Config, 
 		Metrics: metricsserver.Options{
 			BindAddress: c.MetricsAddr,
 		},
-		WebhookServer:    webhook.NewServer(webhook.Options{Port: 9443}),
+		WebhookServer:    webhook.NewServer(webhookOpts),
 		LeaderElection:   leaderElectionEnabled(logger, c, dbmode),
 		LeaderElectionID: c.LeaderElectionID,
 		Cache: cache.Options{
@@ -173,13 +217,12 @@ func setupDataplaneSynchronizer(
 }
 
 func setupAdmissionServer(
-	ctx context.Context,
 	managerConfig *Config,
 	clientsManager *clients.AdminAPIClientsManager,
-	managerClient client.Client,
 	deprecatedLogger logrus.FieldLogger,
 	parserFeatures parser.FeatureFlags,
 	kongVersion semver.Version,
+	mgr ctrl.Manager,
 ) error {
 	logger := deprecatedLogger.WithField("component", "admission-server")
 
@@ -189,24 +232,70 @@ func setupAdmissionServer(
 	}
 
 	adminAPIServicesProvider := admission.NewDefaultAdminAPIServicesProvider(clientsManager)
-	srv, err := admission.MakeTLSServer(ctx, &managerConfig.AdmissionServer, &admission.RequestHandler{
-		Validator: admission.NewKongHTTPValidator(
-			logger,
-			managerClient,
-			managerConfig.IngressClassName,
-			adminAPIServicesProvider,
-			parserFeatures,
-			kongVersion,
-		),
-		Logger: logger,
-	}, logger)
-	if err != nil {
-		return err
+	validator := admission.NewKongHTTPValidator(
+		logger,
+		mgr.GetClient(),
+		managerConfig.IngressClassName,
+		adminAPIServicesProvider,
+		parserFeatures,
+		kongVersion,
+	)
+
+	if err := ctrl.NewWebhookManagedBy(mgr).
+		For(&kongv1.KongConsumer{}).
+		WithValidator(validator.KongConsumer()).
+		Complete(); err != nil {
+		return fmt.Errorf("failed to register KongConsumer validator: %w", err)
 	}
-	go func() {
-		err := srv.ListenAndServeTLS("", "")
-		logger.WithError(err).Error("admission webhook server stopped")
-	}()
+	if err := ctrl.NewWebhookManagedBy(mgr).
+		For(&kongv1beta1.KongConsumerGroup{}).
+		WithValidator(validator.KongConsumerGroup()).
+		Complete(); err != nil {
+		return fmt.Errorf("failed to register KongConsumerGroup validator: %w", err)
+	}
+	if err := ctrl.NewWebhookManagedBy(mgr).
+		For(&kongv1.KongPlugin{}).
+		WithValidator(validator.KongPlugin()).
+		Complete(); err != nil {
+		return fmt.Errorf("failed to register KongPlugin validator: %w", err)
+	}
+	if err := ctrl.NewWebhookManagedBy(mgr).
+		For(&kongv1.KongClusterPlugin{}).
+		WithValidator(validator.KongClusterPlugin()).
+		Complete(); err != nil {
+		return fmt.Errorf("failed to register KongClusterPlugin validator: %w", err)
+	}
+	if err := ctrl.NewWebhookManagedBy(mgr).
+		For(&corev1.Secret{}).
+		WithValidator(validator.Secret()).
+		Complete(); err != nil {
+		return fmt.Errorf("failed to register Secret validator: %w", err)
+	}
+	if err := ctrl.NewWebhookManagedBy(mgr).
+		For(&gatewayapi.Gateway{}).
+		WithValidator(validator.Gateway()).
+		Complete(); err != nil {
+		return fmt.Errorf("failed to register Gateway validator: %w", err)
+	}
+	if err := ctrl.NewWebhookManagedBy(mgr).
+		For(&gatewayapi.HTTPRoute{}).
+		WithValidator(validator.HTTPRoute()).
+		Complete(); err != nil {
+		return fmt.Errorf("failed to register HTTPRoute validator: %w", err)
+	}
+	if err := ctrl.NewWebhookManagedBy(mgr).
+		For(&kongv1.KongIngress{}).
+		WithValidator(admission.KongIngressValidator{}).
+		Complete(); err != nil {
+		return fmt.Errorf("failed to register KongIngress validator: %w", err)
+	}
+	if err := ctrl.NewWebhookManagedBy(mgr).
+		For(&netv1.Ingress{}).
+		WithValidator(validator.Ingress()).
+		Complete(); err != nil {
+		return fmt.Errorf("failed to register Ingress validator: %w", err)
+	}
+
 	return nil
 }
 

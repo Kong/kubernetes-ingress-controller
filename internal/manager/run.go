@@ -164,7 +164,7 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 	)
 
 	setupLog.Info("Starting Admission Server")
-	if err := setupAdmissionServer(ctx, c, clientsManager, mgr.GetClient(), deprecatedLogger, parserFeatureFlags, kongSemVersion); err != nil {
+	if err := setupAdmissionServer(c, clientsManager, deprecatedLogger, parserFeatureFlags, kongSemVersion, mgr); err != nil {
 		return err
 	}
 

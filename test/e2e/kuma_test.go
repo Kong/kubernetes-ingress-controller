@@ -21,8 +21,7 @@ func TestDeployAllInOneDBLESSKuma(t *testing.T) {
 	ctx, env := setupE2ETest(t, kuma.New())
 
 	t.Log("deploying kong components")
-	manifest := getDBLessTestManifestByControllerImageEnv(t)
-	deployments := ManifestDeploy{Path: manifest}.Run(ctx, t, env)
+	deployments := ManifestDeploy{Path: dblessPath}.Run(ctx, t, env)
 
 	t.Log("adding Kuma mesh")
 	require.NoError(t, kuma.EnableMeshForNamespace(ctx, env.Cluster(), "kong"))

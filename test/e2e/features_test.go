@@ -112,8 +112,7 @@ func TestWebhookUpdate(t *testing.T) {
 	}()
 
 	t.Log("deploying kong components")
-	manifest := getDBLessTestManifestByControllerImageEnv(t)
-	ManifestDeploy{Path: manifest}.Run(ctx, t, env)
+	ManifestDeploy{Path: dblessPath}.Run(ctx, t, env)
 
 	const firstCertificateCommonName = "first.example"
 	firstCertificateCrt, firstCertificateKey := certificate.MustGenerateSelfSignedCertPEMFormat(
@@ -237,8 +236,7 @@ func TestDeployAllInOneDBLESSGateway(t *testing.T) {
 	ctx, env := setupE2ETest(t)
 
 	t.Log("deploying kong components")
-	manifest := getDBLessTestManifestByControllerImageEnv(t)
-	deployments := ManifestDeploy{Path: manifest}.Run(ctx, t, env)
+	deployments := ManifestDeploy{Path: dblessPath}.Run(ctx, t, env)
 	controllerDeploymentNN := deployments.ControllerNN
 	controllerDeploymentListOptions := metav1.ListOptions{
 		LabelSelector: "app=" + controllerDeploymentNN.Name,
@@ -388,8 +386,7 @@ func TestDeployAllInOneDBLESSNoLoadBalancer(t *testing.T) {
 	ctx, env := setupE2ETest(t)
 
 	t.Log("deploying kong components")
-	manifest := getDBLessTestManifestByControllerImageEnv(t)
-	ManifestDeploy{Path: manifest}.Run(ctx, t, env)
+	ManifestDeploy{Path: dblessPath}.Run(ctx, t, env)
 
 	t.Log("running ingress tests to verify all-in-one deployed ingress controller and proxy are functional")
 	deployIngressWithEchoBackends(ctx, t, env, numberOfEchoBackends)
@@ -435,8 +432,7 @@ func TestDefaultIngressClass(t *testing.T) {
 	ctx, env := setupE2ETest(t)
 
 	t.Log("deploying kong components")
-	manifest := getDBLessTestManifestByControllerImageEnv(t)
-	deployments := ManifestDeploy{Path: manifest}.Run(ctx, t, env)
+	deployments := ManifestDeploy{Path: dblessPath}.Run(ctx, t, env)
 	kongDeployment := deployments.ControllerNN
 
 	t.Log("deploying a minimal HTTP container deployment to test Ingress routes")

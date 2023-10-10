@@ -102,7 +102,7 @@ func TestHTTPRouteExample(t *testing.T) {
 }
 
 func TestUDPRouteExample(t *testing.T) {
-	RunWhenKongExpressionRouterWithVersion(t, ">=3.4.0")
+	RunWhenKongExpressionRouter(t)
 	t.Log("locking UDP port")
 	udpMutex.Lock()
 	t.Cleanup(func() {
@@ -150,7 +150,7 @@ func TestUDPRouteExample(t *testing.T) {
 }
 
 func TestTCPRouteExample(t *testing.T) {
-	RunWhenKongExpressionRouterWithVersion(t, ">=3.4.0")
+	RunWhenKongExpressionRouter(t)
 	t.Log("locking TCP port")
 	tcpMutex.Lock()
 	t.Cleanup(func() {

@@ -49,6 +49,7 @@ func TestIngressWorksWithServiceBackendsSpecifyingOnlyPortNames(t *testing.T) {
 	require.NoError(t, err)
 	ns := CreateNamespace(ctx, t, ctrlClient)
 	RunManager(ctx, t, envcfg,
+		AdminAPIOptFns(),
 		WithIngressService(ns.Name),
 		WithIngressClass(ingressClassName),
 		WithProxySyncSeconds(0.01),

@@ -20,6 +20,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/manager"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/manager/featuregates"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
+	"github.com/kong/kubernetes-ingress-controller/v2/test/mocks"
 )
 
 const (
@@ -30,7 +31,7 @@ const (
 // ConfigForEnvConfig prepares a manager.Config for use in tests
 // It will start a mock Admin API server which will be set in KIC's config
 // and which will be automatically stopped during test cleanup.
-func ConfigForEnvConfig(t *testing.T, envcfg *rest.Config) manager.Config {
+func ConfigForEnvConfig(t *testing.T, envcfg *rest.Config, opts ...mocks.AdminAPIHandlerOpt) manager.Config {
 	t.Helper()
 
 	cfg := manager.Config{}
@@ -47,7 +48,7 @@ func ConfigForEnvConfig(t *testing.T, envcfg *rest.Config) manager.Config {
 	cfg.APIServerKeyData = envcfg.KeyData
 	cfg.APIServerCAData = envcfg.CAData
 
-	cfg.KongAdminURLs = []string{StartAdminAPIServerMock(t).URL}
+	cfg.KongAdminURLs = []string{StartAdminAPIServerMock(t, opts...).URL}
 	cfg.UpdateStatus = false
 	// Shorten the wait in tests.
 	cfg.ProxySyncSeconds = 0.1
@@ -84,6 +85,12 @@ func WithIngressService(namespace string) func(cfg *manager.Config) {
 	}
 }
 
+func WithIngressAddress(address string) func(cfg *manager.Config) {
+	return func(cfg *manager.Config) {
+		cfg.IngressAddresses = []string{address}
+	}
+}
+
 func WithIngressClass(name string) func(cfg *manager.Config) {
 	return func(cfg *manager.Config) {
 		cfg.IngressClassName = name
@@ -115,6 +122,12 @@ func WithProfiling() func(cfg *manager.Config) {
 	}
 }
 
+func WithUpdateStatus() func(cfg *manager.Config) {
+	return func(cfg *manager.Config) {
+		cfg.UpdateStatus = true
+	}
+}
+
 // buffer is a goroutine safe bytes.Buffer.
 type buffer struct {
 	buffer bytes.Buffer
@@ -137,15 +150,28 @@ func (s *buffer) String() string {
 	return s.buffer.String()
 }
 
+// AdminAPIOptFns wraps a variadic list of mocks.AdminAPIHandlerOpt and returns
+// a slice containing all of them.
+// The purpose of this is func is to make the call sites a bit less verbose.
+//
+// NOTE: Ideally we'd refactor the RunManager() so that it'd not need to accept
+// an empty slice of mocks.AdminAPIHandlerOpt or a call to AdminAPIOptFns() with
+// no arguments but we can't accept 2 variadic list parameters.
+// A slight refactor might be beneficial here.
+func AdminAPIOptFns(fns ...mocks.AdminAPIHandlerOpt) []mocks.AdminAPIHandlerOpt {
+	return fns
+}
+
 // RunManager runs the manager in a goroutine. It's possible to modify the manager's configuration
 // by passing in modifyCfgFns. The manager is stopped when the context is canceled.
 func RunManager(
 	ctx context.Context,
 	t *testing.T,
 	envcfg *rest.Config,
+	adminAPIOpts []mocks.AdminAPIHandlerOpt,
 	modifyCfgFns ...func(cfg *manager.Config),
 ) (loggerHook *test.Hook) {
-	cfg := ConfigForEnvConfig(t, envcfg)
+	cfg := ConfigForEnvConfig(t, envcfg, adminAPIOpts...)
 
 	for _, modifyCfgFn := range modifyCfgFns {
 		modifyCfgFn(&cfg)

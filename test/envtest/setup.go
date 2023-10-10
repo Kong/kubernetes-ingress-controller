@@ -125,6 +125,8 @@ func Setup(t *testing.T, scheme *k8sruntime.Scheme, optModifiers ...OptionModifi
 }
 
 func installGatewayCRDs(t *testing.T, scheme *k8sruntime.Scheme, cfg *rest.Config) {
+	t.Helper()
+
 	gatewayCRDPath := filepath.Join(build.Default.GOPATH, "pkg", "mod", "sigs.k8s.io", "gateway-api@"+consts.GatewayAPIVersion, "config", "crd", "experimental")
 	_, err := envtest.InstallCRDs(cfg, envtest.CRDInstallOptions{
 		Scheme:             scheme,
@@ -135,6 +137,8 @@ func installGatewayCRDs(t *testing.T, scheme *k8sruntime.Scheme, cfg *rest.Confi
 }
 
 func installKongCRDs(t *testing.T, scheme *k8sruntime.Scheme, cfg *rest.Config) {
+	t.Helper()
+
 	// extract project root path.
 	_, thisFilePath, _, _ := runtime.Caller(0) //nolint:dogsled
 	projectRoot := filepath.Join(filepath.Dir(thisFilePath), "..", "..")
@@ -150,6 +154,8 @@ func installKongCRDs(t *testing.T, scheme *k8sruntime.Scheme, cfg *rest.Config) 
 }
 
 func deployIngressClass(ctx context.Context, t *testing.T, name string, client ctrlclient.Client) {
+	t.Helper()
+
 	ingress := &netv1.IngressClass{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: name,

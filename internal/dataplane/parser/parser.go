@@ -209,7 +209,7 @@ func (p *Parser) BuildKongConfig() KongConfigBuildingResult {
 	result.FillOverrides(p.logger, p.storer)
 
 	// generate consumers and credentials
-	result.FillConsumersAndCredentials(p.storer, p.failuresCollector, p.kongVersion)
+	result.FillConsumersAndCredentials(p.storer, p.failuresCollector)
 	for i := range result.Consumers {
 		p.registerSuccessfullyParsedObject(&result.Consumers[i].K8sKongConsumer)
 	}

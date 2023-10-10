@@ -23,7 +23,6 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/parser"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/gatewayapi"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/versions"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
 	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1beta1"
 )
@@ -186,7 +185,6 @@ func (validator KongHTTPValidator) ValidateConsumerGroup(
 		return true, "", nil
 	}
 
-	// Consumer groups work only for Kong Enterprise >=3.4.
 	infoSvc, ok := validator.AdminAPIServicesProvider.GetInfoService()
 	if !ok {
 		return true, "", nil
@@ -200,8 +198,7 @@ func (validator KongHTTPValidator) ValidateConsumerGroup(
 	if err != nil {
 		validator.Logger.V(util.DebugLevel).Info("failed to parse Kong version", "error", err)
 	} else {
-		kongVer := semver.Version{Major: version.Major(), Minor: version.Minor()}
-		if !version.IsKongGatewayEnterprise() || !kongVer.GTE(versions.ConsumerGroupsVersionCutoff) {
+		if !version.IsKongGatewayEnterprise() {
 			return false, ErrTextConsumerGroupUnsupported, nil
 		}
 	}

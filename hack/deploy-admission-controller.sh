@@ -1,12 +1,10 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
-if [[ -n "${1}" ]]; then
+set -o nounset
+set -o pipefail
+
+if [[ ${#} -eq 1 && -n "${1}" ]]; then
   export KUBECONFIG="${1}"
-fi
-
-BASE64_OPTIONS=""
-if [[ "$OSTYPE" == "linux-gnu"* ]]; then
-  BASE64_OPTIONS="-w0"
 fi
 
 # create a self-signed certificate
@@ -21,6 +19,9 @@ kubectl create secret tls kong-validation-webhook -n kong \
 # enable the Admission Webhook Server server
 kubectl patch -n kong deploy/ingress-kong \
   -p '{"spec":{"template":{"spec":{"containers":[{"name":"ingress-controller","env":[{"name":"CONTROLLER_ADMISSION_WEBHOOK_LISTEN","value":":8080"}],"volumeMounts":[{"name":"validation-webhook","mountPath":"/admission-webhook"}]}],"volumes":[{"secret":{"secretName":"kong-validation-webhook"},"name":"validation-webhook"}]}}}}'
+
+readonly CABUNDLE=$(base64 < ${TMPDIR}/tls.crt)
+
 # configure k8s apiserver to send validations to the webhook
 (
 cat << EOF
@@ -85,6 +86,6 @@ webhooks:
     service:
       namespace: kong
       name: kong-validation-webhook
-    caBundle: $(base64 ${BASE64_OPTIONS:+${BASE64_OPTIONS}} "${TMPDIR}/tls.crt")
+    caBundle: ${CABUNDLE}
 EOF
 ) | kubectl apply -f -

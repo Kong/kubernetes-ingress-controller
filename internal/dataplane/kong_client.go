@@ -543,8 +543,7 @@ func (c *KongClient) sendToClient(
 
 	if err != nil {
 		if expired, ok := timedCtx.Deadline(); ok && time.Now().After(expired) {
-			logger.V(util.WarnLevel).WithValues("warning", true).
-				Info("exceeded Kong API timeout, consider increasing --proxy-timeout-seconds")
+			logger.Error(nil, "exceeded Kong API timeout, consider increasing --proxy-timeout-seconds")
 		}
 		return "", fmt.Errorf("performing update for %s failed: %w", client.AdminAPIClient().BaseRootURL(), err)
 	}

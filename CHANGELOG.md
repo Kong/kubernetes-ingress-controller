@@ -91,8 +91,7 @@ Adding a new version? You'll need three changes:
   machine-parseable logs.
   [#4688](https://github.com/Kong/kubernetes-ingress-controller/pull/4688)
 - The "warn", "fatal", and "panic" log levels are no longer available. "error"
-  is now the highest log level. "warn" logs are now logged at "info" level, but
-  include an additional "warning=true" field.
+  is now the highest log level. "warn" logs are now logged at "error" level.
   [#4688](https://github.com/Kong/kubernetes-ingress-controller/pull/4688)
 - Removed support for deprecated `KongIngress` fields: `Proxy` and `Route`. Respective
   `Service` or `Ingress` annotations should be used instead. See [KIC Annotations reference].

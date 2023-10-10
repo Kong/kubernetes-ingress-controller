@@ -89,7 +89,7 @@ func TestResourceFailuresCollector(t *testing.T) {
 		require.Empty(t, collector.PopResourceFailures(), "second call should not return any failure")
 	})
 
-	t.Run("does not crash but logs warning when no causing objects passed", func(t *testing.T) {
+	t.Run("does not crash but logs error when no causing objects passed", func(t *testing.T) {
 		core, logs := observer.New(zap.DebugLevel)
 		logger := zapr.NewLogger(zap.New(core))
 
@@ -100,7 +100,7 @@ func TestResourceFailuresCollector(t *testing.T) {
 		require.NotZero(t, logs.Len())
 		lastLog := logs.All()[logs.Len()-1]
 		require.NotNil(t, lastLog)
-		require.Equal(t, zapcore.Level(util.WarnLevel), lastLog.Level)
+		require.Equal(t, zapcore.Level(util.ErrorLevel), lastLog.Level)
 		require.Len(t, collector.PopResourceFailures(), 0, "no failures expected - causing objects missing")
 	})
 }

@@ -403,8 +403,7 @@ func AssignRoutePriorityToSplitGRPCRouteMatches(
 		// Just in case, log a very unlikely scenario where we have more than 2^14 routes with the same base
 		// priority and we have no bit space for them to be deterministically ordered.
 		if len(matches) > (1 << 14) {
-			logger.V(util.WarnLevel).WithValues("warning", true).
-				Info("Too many GRPCRoute matches to be deterministically ordered", "grpcroute_number", len(matches))
+			logger.Error(nil, "Too many GRPCRoute matches to be deterministically ordered", "grpcroute_number", len(matches))
 		}
 	}
 

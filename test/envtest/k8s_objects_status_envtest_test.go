@@ -14,13 +14,14 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/gateway"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/gatewayapi"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/manager"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util/builder"
 )
 
 func TestHTTPRouteReconciliation_DoesNotBlockSyncLoopWhenStatusQueueBufferIsExceeded(t *testing.T) {
+	t.Parallel()
+
 	scheme := Scheme(t, WithGatewayAPI)
 	envcfg := Setup(t, scheme)
 	ctrlClient := NewControllerClient(t, scheme, envcfg)
@@ -108,6 +109,8 @@ func httpRouteGetsProgrammed(ctx context.Context, t *testing.T, cl client.Client
 }
 
 func Test_WatchNamespaces(t *testing.T) {
+	t.Parallel()
+
 	scheme := Scheme(t, WithGatewayAPI)
 	envcfg := Setup(t, scheme)
 	ctrlClient := NewControllerClient(t, scheme, envcfg)
@@ -195,61 +198,4 @@ func Test_WatchNamespaces(t *testing.T) {
 		}
 		return false
 	}, time.Second*10, time.Second)
-}
-
-// deployGateway deploys a Gateway, GatewayClass, and ingress service for use in tests.
-func deployGateway(ctx context.Context, t *testing.T, client client.Client) gatewayapi.Gateway {
-	ns := CreateNamespace(ctx, t, client)
-
-	publishSvc := corev1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: ns.Name,
-			Name:      IngressServiceName,
-		},
-		Spec: corev1.ServiceSpec{
-			Ports: builder.NewServicePort().
-				WithName("http").
-				WithProtocol(corev1.ProtocolTCP).
-				WithPort(8000).
-				IntoSlice(),
-		},
-	}
-	require.NoError(t, client.Create(ctx, &publishSvc))
-	t.Cleanup(func() { _ = client.Delete(ctx, &publishSvc) })
-
-	gwc := gatewayapi.GatewayClass{
-		Spec: gatewayapi.GatewayClassSpec{
-			ControllerName: gateway.GetControllerName(),
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name: uuid.NewString(),
-			Annotations: map[string]string{
-				"konghq.com/gatewayclass-unmanaged": "placeholder",
-			},
-		},
-	}
-
-	require.NoError(t, client.Create(ctx, &gwc))
-	t.Cleanup(func() { _ = client.Delete(ctx, &gwc) })
-
-	gw := gatewayapi.Gateway{
-		Spec: gatewayapi.GatewaySpec{
-			GatewayClassName: gatewayapi.ObjectName(gwc.Name),
-			Listeners: []gatewayapi.Listener{
-				{
-					Name:     "http",
-					Protocol: gatewayapi.HTTPProtocolType,
-					Port:     gatewayapi.PortNumber(8000),
-				},
-			},
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: ns.Name,
-			Name:      uuid.NewString(),
-		},
-	}
-	require.NoError(t, client.Create(ctx, &gw))
-	t.Cleanup(func() { _ = client.Delete(ctx, &gw) })
-
-	return gw
 }

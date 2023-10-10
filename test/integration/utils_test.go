@@ -48,9 +48,11 @@ func exitOnErrWithCode(ctx context.Context, err error, exitCode int) {
 		return
 	}
 
-	fmt.Println("WARNING: failure occurred, performing test cleanup")
-	if rmErr := helpers.RemoveCluster(ctx, env.Cluster()); rmErr != nil {
-		err = fmt.Errorf("cleanup failed after test failure occurred CLEANUP_FAILURE=(%w): %w", rmErr, err)
+	fmt.Printf("WARNING: failure occurred: %v\n", err)
+	if env != nil {
+		if rmErr := helpers.RemoveCluster(ctx, env.Cluster()); rmErr != nil {
+			err = fmt.Errorf("cleanup failed after test failure occurred CLEANUP_FAILURE=(%w): %w", rmErr, err)
+		}
 	}
 
 	fmt.Fprintf(os.Stderr, "Error: tests failed: %s\n", err)

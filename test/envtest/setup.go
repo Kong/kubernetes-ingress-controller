@@ -12,7 +12,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
 	netv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8sruntime "k8s.io/apimachinery/pkg/runtime"
@@ -22,7 +24,10 @@ import (
 	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/controllers/gateway"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/gatewayapi"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/store"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/util/builder"
 	"github.com/kong/kubernetes-ingress-controller/v2/test/consts"
 )
 
@@ -154,4 +159,61 @@ func deployIngressClass(ctx context.Context, t *testing.T, name string, client c
 		},
 	}
 	require.NoError(t, client.Create(ctx, ingress))
+}
+
+// deployGateway deploys a Gateway, GatewayClass, and ingress service for use in tests.
+func deployGateway(ctx context.Context, t *testing.T, client ctrlclient.Client) gatewayapi.Gateway {
+	ns := CreateNamespace(ctx, t, client)
+
+	publishSvc := corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: ns.Name,
+			Name:      IngressServiceName,
+		},
+		Spec: corev1.ServiceSpec{
+			Ports: builder.NewServicePort().
+				WithName("http").
+				WithProtocol(corev1.ProtocolTCP).
+				WithPort(8000).
+				IntoSlice(),
+		},
+	}
+	require.NoError(t, client.Create(ctx, &publishSvc))
+	t.Cleanup(func() { _ = client.Delete(ctx, &publishSvc) })
+
+	gwc := gatewayapi.GatewayClass{
+		Spec: gatewayapi.GatewayClassSpec{
+			ControllerName: gateway.GetControllerName(),
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name: uuid.NewString(),
+			Annotations: map[string]string{
+				"konghq.com/gatewayclass-unmanaged": "placeholder",
+			},
+		},
+	}
+
+	require.NoError(t, client.Create(ctx, &gwc))
+	t.Cleanup(func() { _ = client.Delete(ctx, &gwc) })
+
+	gw := gatewayapi.Gateway{
+		Spec: gatewayapi.GatewaySpec{
+			GatewayClassName: gatewayapi.ObjectName(gwc.Name),
+			Listeners: []gatewayapi.Listener{
+				{
+					Name:     "http",
+					Protocol: gatewayapi.HTTPProtocolType,
+					Port:     gatewayapi.PortNumber(8000),
+				},
+			},
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: ns.Name,
+			Name:      uuid.NewString(),
+		},
+	}
+	require.NoError(t, client.Create(ctx, &gw))
+	t.Cleanup(func() { _ = client.Delete(ctx, &gw) })
+
+	return gw
 }

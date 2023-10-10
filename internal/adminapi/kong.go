@@ -10,10 +10,12 @@ import (
 	"os"
 	"strings"
 
+	"github.com/blang/semver/v4"
 	"github.com/kong/go-kong/kong"
 	"github.com/samber/lo"
 
 	tlsutil "github.com/kong/kubernetes-ingress-controller/v2/internal/util/tls"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/versions"
 )
 
 // KongClientNotReadyError is returned when the Kong client is not ready to be used yet.
@@ -30,14 +32,23 @@ func (e KongClientNotReadyError) Unwrap() error {
 	return e.Err
 }
 
+type KongGatewayUnsupportedVersionError struct {
+	msg string
+}
+
+func (e KongGatewayUnsupportedVersionError) Error() string {
+	return fmt.Sprintf("Kong Gateway version is not supported: %s", e.msg)
+}
+
 // NewKongClientForWorkspace returns a Kong API client for a given root API URL and workspace.
-// It ensures that the client is ready to be used by performing a status check, returns KongClientNotReadyError if not.
+// It ensures that the client is ready to be used by performing a status check, returns KongClientNotReadyError if not
+// or KongGatewayUnsupportedVersionError if it can't check Kong Gateway's version or it is not >= 3.4.1.
 // If the workspace does not already exist, NewKongClientForWorkspace will create it.
-func NewKongClientForWorkspace(ctx context.Context, adminURL string, wsName string,
-	httpclient *http.Client,
+func NewKongClientForWorkspace(
+	ctx context.Context, adminURL string, wsName string, httpClient *http.Client,
 ) (*Client, error) {
 	// Create the base client, and if no workspace was provided then return that.
-	client, err := kong.NewClient(kong.String(adminURL), httpclient)
+	client, err := kong.NewClient(kong.String(adminURL), httpClient)
 	if err != nil {
 		return nil, fmt.Errorf("creating Kong client: %w", err)
 	}
@@ -46,7 +57,7 @@ func NewKongClientForWorkspace(ctx context.Context, adminURL string, wsName stri
 	}
 
 	// Ensure that the client is ready to be used by performing a status check.
-	if _, err = client.Status(ctx); err != nil {
+	if _, err := client.Status(ctx); err != nil {
 		return nil, KongClientNotReadyError{Err: err}
 	}
 
@@ -61,16 +72,32 @@ func NewKongClientForWorkspace(ctx context.Context, adminURL string, wsName stri
 		workspace := kong.Workspace{
 			Name: kong.String(wsName),
 		}
-		_, err := client.Workspaces.Create(ctx, &workspace)
-		if err != nil {
+		if _, err := client.Workspaces.Create(ctx, &workspace); err != nil {
 			return nil, fmt.Errorf("creating workspace: %w", err)
 		}
 	}
 
 	// Ensure that we set the workspace appropriately.
 	client.SetWorkspace(wsName)
+	cl := NewClient(client)
 
-	return NewClient(client), nil
+	fetchedKongVersion, err := cl.GetKongVersion(ctx)
+	if err != nil {
+		return nil, KongGatewayUnsupportedVersionError{msg: fmt.Sprintf("getting Kong version: %v", err)}
+	}
+	kongVersion, err := kong.NewVersion(fetchedKongVersion)
+	if err != nil {
+		return nil, KongGatewayUnsupportedVersionError{msg: fmt.Sprintf("getting Kong version: %v", err)}
+	}
+	kongSemVersion := semver.Version{Major: kongVersion.Major(), Minor: kongVersion.Minor(), Patch: kongVersion.Patch()}
+	if kongSemVersion.LT(versions.KICv3VersionCutoff) {
+		return nil, KongGatewayUnsupportedVersionError{msg: fmt.Sprintf(
+			"version: %q is not supported by Kong Kubernetes Ingress Controller in version >=3.0.0, the lowest supported version is: %q",
+			kongSemVersion, versions.KICv3VersionCutoff,
+		)}
+	}
+
+	return cl, nil
 }
 
 // HTTPClientOpts defines parameters that configure an HTTP client.

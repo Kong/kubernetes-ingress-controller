@@ -108,6 +108,9 @@ Adding a new version? You'll need three changes:
 - `--konnect-runtime-group-id` CLI flag is now deprecated. Please use `--konnect-control-plane-id`
   instead.
   [#4783](https://github.com/Kong/kubernetes-ingress-controller/pull/4783)
+- Only Kong Gateway in version >= 3.4.1 is supported. The controller will refuse to start
+  if the version is lower, also won't discover such Kong Gateways.
+  [#4766](https://github.com/Kong/kubernetes-ingress-controller/pull/4766)
 
 ### Fixed
 

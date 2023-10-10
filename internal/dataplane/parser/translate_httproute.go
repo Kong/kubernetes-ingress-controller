@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/blang/semver/v4"
 	"github.com/kong/go-kong/kong"
 	"github.com/samber/lo"
 	k8stypes "k8s.io/apimachinery/pkg/types"
@@ -69,7 +68,7 @@ func (p *Parser) ingressRulesFromHTTPRoute(result *ingressRules, httproute *gate
 
 		// generate the routes for the service and attach them to the service
 		for _, kongRouteTranslation := range kongServiceTranslation.KongRoutes {
-			routes, err := GenerateKongRouteFromTranslation(httproute, kongRouteTranslation, p.featureFlags.RegexPathPrefix, p.featureFlags.ExpressionRoutes, p.kongVersion)
+			routes, err := GenerateKongRouteFromTranslation(httproute, kongRouteTranslation, p.featureFlags.RegexPathPrefix, p.featureFlags.ExpressionRoutes)
 			if err != nil {
 				return err
 			}
@@ -174,7 +173,6 @@ func GenerateKongRouteFromTranslation(
 	translation translators.KongRouteTranslation,
 	addRegexPrefix bool,
 	expressionRoutes bool,
-	kongVersion semver.Version,
 ) ([]kongstate.Route, error) {
 	// gather the k8s object information and hostnames from the httproute
 	objectInfo := util.FromK8sObject(httproute)
@@ -203,7 +201,6 @@ func GenerateKongRouteFromTranslation(
 		hostnames,
 		addRegexPrefix,
 		tags,
-		kongVersion,
 	)
 }
 
@@ -217,7 +214,6 @@ func generateKongRoutesFromHTTPRouteMatches(
 	hostnames []*string,
 	addRegexPrefix bool,
 	tags []*string,
-	kongVersion semver.Version,
 ) ([]kongstate.Route, error) {
 	if len(matches) == 0 {
 		// it's acceptable for an HTTPRoute to have no matches in the rulesets,
@@ -248,7 +244,7 @@ func generateKongRoutesFromHTTPRouteMatches(
 	r.Tags = tags
 
 	// convert header matching from HTTPRoute to Route format
-	headers, err := convertGatewayMatchHeadersToKongRouteMatchHeaders(matches[0].Headers, kongVersion)
+	headers, err := convertGatewayMatchHeadersToKongRouteMatchHeaders(matches[0].Headers)
 	if err != nil {
 		return []kongstate.Route{}, err
 	}

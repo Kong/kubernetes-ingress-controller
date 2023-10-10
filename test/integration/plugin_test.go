@@ -20,7 +20,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/versions"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
 	"github.com/kong/kubernetes-ingress-controller/v2/pkg/clientset"
 	"github.com/kong/kubernetes-ingress-controller/v2/test"
@@ -160,7 +159,6 @@ func TestPluginEssentials(t *testing.T) {
 func TestPluginOrdering(t *testing.T) {
 	t.Parallel()
 
-	RunWhenKongVersion(t, fmt.Sprintf(">=%s", versions.PluginOrderingVersionCutoff))
 	RunWhenKongEnterprise(t)
 
 	ctx := context.Background()

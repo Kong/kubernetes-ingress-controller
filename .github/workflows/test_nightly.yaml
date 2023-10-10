@@ -18,10 +18,10 @@ on:
 env:
   kong-gateway-enterprise-registry: kong/kong-gateway-dev
   kong-gateway-enterprise-tag: latest
-  kong-gateway-enterprise-effective-version: "3.4"
+  kong-gateway-enterprise-effective-version: "3.4.1"
   kong-gateway-oss-registry: kong/kong
   kong-gateway-oss-tag: latest-ubuntu
-  kong-gateway-oss-effective-version: "3.4"
+  kong-gateway-oss-effective-version: "3.4.1"
 
 jobs:
   post-comment-in-pr:

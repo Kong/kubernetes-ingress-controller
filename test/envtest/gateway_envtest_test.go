@@ -25,6 +25,8 @@ import (
 // Gateway's listener.
 // It reproduces https://github.com/Kong/kubernetes-ingress-controller/issues/4456.
 func TestGatewayReconciliation_MoreThan100Routes(t *testing.T) {
+	t.Parallel()
+
 	scheme := Scheme(t, WithGatewayAPI, WithKong)
 	envcfg := Setup(t, scheme)
 	ctrlClient := NewControllerClient(t, scheme, envcfg)

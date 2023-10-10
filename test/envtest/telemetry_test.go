@@ -34,6 +34,8 @@ import (
 )
 
 func TestTelemetry(t *testing.T) {
+	t.Parallel()
+
 	t.Log("configuring TLS listener - server for telemetry data")
 	cert := certificate.MustGenerateSelfSignedCert()
 	telemetryServerListener, err := tls.Listen("tcp", "localhost:0", &tls.Config{
@@ -361,7 +363,7 @@ func verifyTelemetryReport(t *testing.T, k8sVersion *version.Info, report string
 			"feature-konnect-sync=false;"+
 			"feature-rewriteuris=false;"+
 			"hn=%s;"+
-			"kv=3.3.0;"+
+			"kv=3.4.1;"+
 			"rf=traditional;"+
 			"v=NOT_SET;"+
 			"k8s_arch=%s;"+

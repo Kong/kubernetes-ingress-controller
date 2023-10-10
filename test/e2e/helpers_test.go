@@ -696,40 +696,6 @@ func verifyPostgres(ctx context.Context, t *testing.T, env environments.Environm
 	require.GreaterOrEqual(t, migrationJob.Status.Succeeded, int32(1))
 }
 
-// killKong kills the Kong container in a given Pod and returns when it has restarted.
-func killKong(ctx context.Context, t *testing.T, env environments.Environment, pod *corev1.Pod) {
-	t.Helper()
-
-	var orig, after int32
-	for _, status := range pod.Status.ContainerStatuses {
-		if status.Name == proxyContainerName {
-			orig = status.RestartCount
-		}
-	}
-
-	kubeconfig := getTemporaryKubeconfig(t, env)
-	cmd := exec.Command("kubectl", "--kubeconfig", kubeconfig, "exec", "-n", pod.Namespace, pod.Name, "--", "bash", "-c", "kill 1")
-	stdout, stderr := new(bytes.Buffer), new(bytes.Buffer)
-	cmd.Stdout = stdout
-	cmd.Stderr = stderr
-	err := cmd.Run()
-	require.NoErrorf(t, err, "kill failed: STDOUT(%s) STDERR(%s)", stdout.String(), stderr.String())
-	require.Eventually(t, func() bool {
-		pod, err = env.Cluster().Client().CoreV1().Pods(pod.Namespace).Get(ctx, pod.Name, metav1.GetOptions{})
-		require.NoError(t, err)
-		for _, status := range pod.Status.ContainerStatuses {
-			if status.Name == proxyContainerName {
-				if status.RestartCount > orig {
-					after = status.RestartCount
-					return true
-				}
-			}
-		}
-		return false
-	}, kongComponentWait, time.Second)
-	t.Logf("kong container has %v restart after kill", after)
-}
-
 // buildImageLoadAddon creates addon to load KIC and kong images.
 func buildImageLoadAddon(t *testing.T, images ...string) clusters.Addon {
 	t.Helper()

@@ -4,7 +4,6 @@ package integration
 
 import (
 	"context"
-	"fmt"
 	"testing"
 
 	"github.com/kong/go-kong/kong"
@@ -16,7 +15,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/versions"
 	"github.com/kong/kubernetes-ingress-controller/v2/test"
 	"github.com/kong/kubernetes-ingress-controller/v2/test/consts"
 	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/helpers"
@@ -27,9 +25,7 @@ func TestConfigErrorEventGeneration(t *testing.T) {
 	// The broken configuration prevents all updates and will break unrelated tests
 
 	skipTestForExpressionRouter(t)
-
 	RunWhenKongDBMode(t, "off", "config errors are only supported on DB-less mode")
-	RunWhenKongVersion(t, fmt.Sprintf(">=%s", versions.FlattenedErrorCutoff))
 
 	ctx := context.Background()
 	ns, cleaner := helpers.Setup(ctx, t, env)

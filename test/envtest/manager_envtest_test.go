@@ -21,6 +21,8 @@ import (
 // TestManagerDoesntStartUntilKubernetesAPIReachable ensures that the manager and its Runnables are not start until the
 // Kubernetes API server is reachable.
 func TestManagerDoesntStartUntilKubernetesAPIReachable(t *testing.T) {
+	t.Parallel()
+
 	scheme := Scheme(t, WithKong)
 	envcfg := Setup(t, scheme)
 

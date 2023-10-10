@@ -21,7 +21,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/versions"
 	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1beta1"
 	"github.com/kong/kubernetes-ingress-controller/v2/pkg/clientset"
 	"github.com/kong/kubernetes-ingress-controller/v2/test"
@@ -36,7 +35,7 @@ var (
 )
 
 func TestTCPIngressEssentials(t *testing.T) {
-	RunWhenKongExpressionRouterWithVersion(t, ">=3.4.0")
+	RunWhenKongExpressionRouter(t)
 	ctx := context.Background()
 
 	t.Parallel()
@@ -143,7 +142,7 @@ func TestTCPIngressEssentials(t *testing.T) {
 }
 
 func TestTCPIngressTLS(t *testing.T) {
-	RunWhenKongExpressionRouterWithVersion(t, ">=3.4.0")
+	RunWhenKongExpressionRouter(t)
 	t.Parallel()
 
 	t.Log("locking Gateway TLS ports")
@@ -308,9 +307,7 @@ func TestTCPIngressTLSPassthrough(t *testing.T) {
 	// TODO https://github.com/Kong/kubernetes-ingress-controller/issues/4540
 	// Kong does not currently recognize these requests even though the expression looks correct. This should be enabled
 	// after determining why the gateway is discarding these requests and applying any necessary fixes.
-	// RunWhenKongExpressionRouterWithVersion(t, ">=3.4.0")
-
-	RunWhenKongVersion(t, fmt.Sprintf(">=%s", versions.TLSPassthroughCutoff))
+	// RunWhenKongExpressionRouter(t)
 
 	t.Log("locking Gateway TLS ports")
 	tlsMutex.Lock()

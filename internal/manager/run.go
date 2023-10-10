@@ -76,6 +76,11 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 		return fmt.Errorf("failed to create admin apis discoverer: %w", err)
 	}
 
+	err = c.Resolve()
+	if err != nil {
+		return fmt.Errorf("failed to resolve configuration: %w", err)
+	}
+
 	adminAPIClientsFactory := adminapi.NewClientFactoryForWorkspace(c.KongWorkspace, c.KongAdminAPIConfig, c.KongAdminToken)
 
 	setupLog.Info("getting the kong admin api client configuration")

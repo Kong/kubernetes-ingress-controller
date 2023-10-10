@@ -2,6 +2,7 @@ package manager
 
 import (
 	"fmt"
+	"os"
 	"time"
 
 	"github.com/samber/mo"
@@ -48,6 +49,7 @@ type Config struct {
 	KongAdminInitializationRetries    uint
 	KongAdminInitializationRetryDelay time.Duration
 	KongAdminToken                    string
+	KongAdminTokenPath                string
 	KongWorkspace                     string
 	AnonymousReports                  bool
 	EnableReverseSync                 bool
@@ -156,6 +158,7 @@ func (c *Config) FlagSet() *pflag.FlagSet {
 	flagSet.UintVar(&c.KongAdminInitializationRetries, "kong-admin-init-retries", 60, "Number of attempts that will be made initially on controller startup to connect to the Kong Admin API")
 	flagSet.DurationVar(&c.KongAdminInitializationRetryDelay, "kong-admin-init-retry-delay", time.Second*1, "The time delay between every attempt (on controller startup) to connect to the Kong Admin API")
 	flagSet.StringVar(&c.KongAdminToken, "kong-admin-token", "", `The Kong Enterprise RBAC token used by the controller.`)
+	flagSet.StringVar(&c.KongAdminTokenPath, "kong-admin-token-file", "", `Path to the Kong Enterprise RBAC token file used by the controller.`)
 	flagSet.StringVar(&c.KongWorkspace, "kong-workspace", "", "Kong Enterprise workspace to configure. Leave this empty if not using Kong workspaces.")
 	flagSet.BoolVar(&c.AnonymousReports, "anonymous-reports", true, `Send anonymized usage data to help improve Kong`)
 	flagSet.BoolVar(&c.EnableReverseSync, "enable-reverse-sync", false, `Send configuration to Kong even if the configuration checksum has not changed since previous update.`)
@@ -282,6 +285,19 @@ func (c *Config) FlagSet() *pflag.FlagSet {
 
 	c.flagSet = flagSet
 	return flagSet
+}
+
+func (c *Config) Resolve() error {
+	if c.KongAdminToken == "" {
+		if c.KongAdminTokenPath != "" {
+			token, err := os.ReadFile(c.KongAdminTokenPath)
+			if err != nil {
+				return fmt.Errorf("failed to read --kong-admin-token-file from path '%s': %w", c.KongAdminTokenPath, err)
+			}
+			c.KongAdminToken = string(token)
+		}
+	}
+	return nil
 }
 
 func (c *Config) GetKubeconfig() (*rest.Config, error) {

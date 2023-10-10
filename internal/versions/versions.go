@@ -14,9 +14,6 @@ var (
 	// ExplicitRegexPathVersionCutoff is the lowest Kong version requiring the explicit "~" prefixes in regular expression paths.
 	ExplicitRegexPathVersionCutoff = semver.Version{Major: 3, Minor: 0}
 
-	// PluginOrderingVersionCutoff is the Kong version prior to the addition of plugin ordering.
-	PluginOrderingVersionCutoff = semver.Version{Major: 3}
-
 	// ConsumerGroupsVersionCutoff is the Kong version prior to the addition of Consumer Groups as first class citizens.
 	ConsumerGroupsVersionCutoff = semver.Version{Major: 3, Minor: 4}
 

@@ -159,8 +159,7 @@ Adding a new version? You'll need three changes:
   - `--publish-service-udp` to `--ingress-service-udp`
   - `--publish-status-address-udp` to `--ingress-address-udp`
   [#4765](https://github.com/Kong/kubernetes-ingress-controller/pull/4765)
-- Support Query Parameter matching of `HTTPRoute` with Kong 3.4.1 and above and
-  expression router enabled.
+- Support Query Parameter matching of `HTTPRoute` when expression router enabled.
   [#4780](https://github.com/Kong/kubernetes-ingress-controller/pull/4780)
 
 [KIC Annotations reference]: https://docs.konghq.com/kubernetes-ingress-controller/latest/references/annotations/

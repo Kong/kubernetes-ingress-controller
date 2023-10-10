@@ -28,7 +28,7 @@ func TestHTTPRouteReconciliation_DoesNotBlockSyncLoopWhenStatusQueueBufferIsExce
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	gw := deployGateway(ctx, t, ctrlClient)
-	RunManager(ctx, t, envcfg, WithPublishService(gw.Namespace), WithGatewayFeatureEnabled, func(cfg *manager.Config) {
+	RunManager(ctx, t, envcfg, WithIngressService(gw.Namespace), WithGatewayFeatureEnabled, func(cfg *manager.Config) {
 		// Enable status updates and change the queue's buffer size to 0 to
 		// ensure that the status update notifications do not block the
 		// sync loop despite the fact that the status update queue is full.
@@ -116,7 +116,7 @@ func Test_WatchNamespaces(t *testing.T) {
 	defer cancel()
 	gw := deployGateway(ctx, t, ctrlClient)
 	hidden := CreateNamespace(ctx, t, ctrlClient)
-	RunManager(ctx, t, envcfg, WithPublishService(gw.Namespace), WithGatewayFeatureEnabled, func(cfg *manager.Config) {
+	RunManager(ctx, t, envcfg, WithIngressService(gw.Namespace), WithGatewayFeatureEnabled, func(cfg *manager.Config) {
 		// Enable status updates and change the queue's buffer size to 0 to
 		// ensure that the status update notifications do not block the
 		// sync loop despite the fact that the status update queue is full.
@@ -197,14 +197,14 @@ func Test_WatchNamespaces(t *testing.T) {
 	}, time.Second*10, time.Second)
 }
 
-// deployGateway deploys a Gateway, GatewayClass, and publish Service for use in tests.
+// deployGateway deploys a Gateway, GatewayClass, and ingress service for use in tests.
 func deployGateway(ctx context.Context, t *testing.T, client client.Client) gatewayapi.Gateway {
 	ns := CreateNamespace(ctx, t, client)
 
 	publishSvc := corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: ns.Name,
-			Name:      PublishServiceName,
+			Name:      IngressServiceName,
 		},
 		Spec: corev1.ServiceSpec{
 			Ports: builder.NewServicePort().

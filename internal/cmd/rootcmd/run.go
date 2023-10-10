@@ -33,7 +33,7 @@ func RunWithLogger(ctx context.Context, c *manager.Config, logger logr.Logger) e
 		return fmt.Errorf("config invalid: %w", err)
 	}
 
-	diag, err := StartDiagnosticsServer(ctx, manager.DiagnosticsPort, c, logger)
+	diag, err := StartDiagnosticsServer(ctx, c.DiagnosticServerPort, c, logger)
 	if err != nil {
 		return fmt.Errorf("failed to start diagnostics server: %w", err)
 	}

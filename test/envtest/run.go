@@ -9,7 +9,6 @@ import (
 	"github.com/go-logr/zapr"
 	"github.com/phayes/freeport"
 	"github.com/samber/mo"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zaptest/observer"
@@ -17,14 +16,15 @@ import (
 	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
 
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/cmd/rootcmd"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/manager"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/manager/featuregates"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 )
 
 const (
-	// PublishServiceName is the name of the publish service used in Gateway API tests.
-	PublishServiceName = "publish-svc"
+	// IngressServiceName is the name of the ingress service used in Gateway API tests.
+	IngressServiceName = "ingress-svc"
 )
 
 // ConfigForEnvConfig prepares a manager.Config for use in tests
@@ -36,9 +36,10 @@ func ConfigForEnvConfig(t *testing.T, envcfg *rest.Config) manager.Config {
 	cfg := manager.Config{}
 	cfg.FlagSet() // Just set the defaults.
 
-	// Enable debugging endpoints.
-	cfg.EnableProfiling = true
-	cfg.EnableConfigDumps = true
+	// Disable debugging endpoints.
+	// If need be those can be enabled by manipulating the returned config.
+	cfg.EnableProfiling = false
+	cfg.EnableConfigDumps = false
 
 	// Override the APIServer.
 	cfg.APIServerHost = envcfg.Host
@@ -73,13 +74,44 @@ func WithGatewayFeatureEnabled(cfg *manager.Config) {
 	cfg.FeatureGates[featuregates.GatewayAlphaFeature] = true
 }
 
-func WithPublishService(namespace string) func(cfg *manager.Config) {
+func WithIngressService(namespace string) func(cfg *manager.Config) {
 	return func(cfg *manager.Config) {
-		cfg.PublishStatusAddress = []string{"127.0.0.1"}
-		cfg.PublishService = mo.Some(k8stypes.NamespacedName{
-			Name:      PublishServiceName,
+		cfg.IngressAddresses = []string{"127.0.0.1"}
+		cfg.IngressService = mo.Some(k8stypes.NamespacedName{
+			Name:      IngressServiceName,
 			Namespace: namespace,
 		})
+	}
+}
+
+func WithIngressClass(name string) func(cfg *manager.Config) {
+	return func(cfg *manager.Config) {
+		cfg.IngressClassName = name
+	}
+}
+
+func WithProxySyncSeconds(period float32) func(cfg *manager.Config) {
+	return func(cfg *manager.Config) {
+		cfg.ProxySyncSeconds = period
+	}
+}
+
+func WithDiagnosticsServer(port int) func(cfg *manager.Config) {
+	return func(cfg *manager.Config) {
+		cfg.DiagnosticServerPort = port
+		cfg.EnableConfigDumps = true
+	}
+}
+
+func WithHealthProbePort(port int) func(cfg *manager.Config) {
+	return func(cfg *manager.Config) {
+		cfg.ProbeAddr = fmt.Sprintf("localhost:%d", port)
+	}
+}
+
+func WithProfiling() func(cfg *manager.Config) {
+	return func(cfg *manager.Config) {
+		cfg.EnableProfiling = true
 	}
 }
 
@@ -100,6 +132,7 @@ func RunManager(
 	core, logs := observer.New(zap.InfoLevel)
 	logger := zapr.NewLogger(zap.New(core))
 	ctx = ctrl.LoggerInto(ctx, logger)
+	ctrl.SetLogger(logger)
 
 	// This wait group makes it so that we wait for manager to exit.
 	// This way we get clean test logs not mixing between tests.
@@ -107,8 +140,15 @@ func RunManager(
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		err := manager.Run(ctx, &cfg, util.ConfigDumpDiagnostic{}, logger)
-		assert.NoError(t, err)
+
+		var configDumps util.ConfigDumpDiagnostic
+		if cfg.EnableConfigDumps {
+			diag, err := rootcmd.StartDiagnosticsServer(ctx, cfg.DiagnosticServerPort, &cfg, logger)
+			require.NoError(t, err)
+			configDumps = diag.ConfigDumps
+		}
+
+		require.NoError(t, manager.Run(ctx, &cfg, configDumps, logger))
 	}()
 	t.Cleanup(func() {
 		wg.Wait()

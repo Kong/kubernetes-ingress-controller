@@ -36,7 +36,7 @@ type UpdateStrategy interface {
 
 type UpdateClient interface {
 	IsKonnect() bool
-	KonnectRuntimeGroup() string
+	KonnectControlPlane() string
 	AdminAPIClient() *kong.Client
 }
 
@@ -94,7 +94,7 @@ func (r DefaultUpdateStrategyResolver) resolveUpdateStrategy(client UpdateClient
 			adminAPIClient,
 			dump.Config{
 				SkipCACerts:         true,
-				KonnectControlPlane: client.KonnectRuntimeGroup(),
+				KonnectControlPlane: client.KonnectControlPlane(),
 			},
 			r.config.Version,
 			r.config.Concurrency,

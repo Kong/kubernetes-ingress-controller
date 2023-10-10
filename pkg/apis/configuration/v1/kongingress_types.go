@@ -162,6 +162,7 @@ type KongIngressUpstream struct {
 	HostHeader *string `json:"host_header,omitempty" yaml:"host_header,omitempty"`
 
 	// Algorithm is the load balancing algorithm to use.
+	// Accepted values are: "round-robin", "consistent-hashing", "least-connections", "latency".
 	// +kubebuilder:validation:Enum=round-robin;consistent-hashing;least-connections;latency
 	Algorithm *string `json:"algorithm,omitempty" yaml:"algorithm,omitempty"`
 

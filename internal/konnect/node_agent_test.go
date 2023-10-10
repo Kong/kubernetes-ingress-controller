@@ -283,7 +283,7 @@ func TestNodeAgentUpdateNodes(t *testing.T) {
 				// Notify gateway clients changes.
 				gatewayClientsChangesNotifier.Notify()
 
-				// Check number of nodes in RG.
+				// Check number of nodes in CP.
 				ns := nodeClient.MustAllNodes()
 				if len(ns) != tc.numNodes {
 					t.Logf("expected %d nodes, got %d", tc.numNodes, len(ns))

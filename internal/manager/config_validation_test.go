@@ -1,6 +1,7 @@
 package manager_test
 
 import (
+	"bytes"
 	"fmt"
 	"testing"
 
@@ -15,10 +16,11 @@ import (
 
 func TestConfigValidatedVars(t *testing.T) {
 	type testCase struct {
-		Input                 string
-		ExpectedValue         any
-		ExtractValueFn        func(c manager.Config) any
-		ExpectedErrorContains string
+		Input                      string
+		ExpectedValue              any
+		ExtractValueFn             func(c manager.Config) any
+		ExpectedErrorContains      string
+		ExpectedUsageAdditionalMsg string
 	}
 
 	testCasesGroupedByFlag := map[string][]testCase{
@@ -46,13 +48,92 @@ func TestConfigValidatedVars(t *testing.T) {
 			{
 				Input: "namespace/servicename",
 				ExtractValueFn: func(c manager.Config) any {
-					return c.PublishService
+					return c.IngressService
+				},
+				ExpectedValue:              mo.Some(k8stypes.NamespacedName{Namespace: "namespace", Name: "servicename"}),
+				ExpectedUsageAdditionalMsg: "Flag --publish-service has been deprecated, Use --ingress-service instead\n",
+			},
+			{
+				Input:                 "servicename",
+				ExpectedErrorContains: "the expected format is namespace/name",
+			},
+		},
+		"--ingress-service": {
+			{
+				Input: "namespace/servicename",
+				ExtractValueFn: func(c manager.Config) any {
+					return c.IngressService
 				},
 				ExpectedValue: mo.Some(k8stypes.NamespacedName{Namespace: "namespace", Name: "servicename"}),
 			},
 			{
 				Input:                 "servicename",
 				ExpectedErrorContains: "the expected format is namespace/name",
+			},
+		},
+		"--publish-status-address": {
+			{
+				Input: "192.0.2.42,some-dns-name,192.0.2.43",
+				ExtractValueFn: func(c manager.Config) any {
+					return c.IngressAddresses
+				},
+				ExpectedValue:              []string{"192.0.2.42", "some-dns-name", "192.0.2.43"},
+				ExpectedUsageAdditionalMsg: "Flag --publish-status-address has been deprecated, Use --ingress-address instead\n",
+			},
+		},
+		"--ingress-address": {
+			{
+				Input: "192.0.2.42,some-dns-name,192.0.2.43",
+				ExtractValueFn: func(c manager.Config) any {
+					return c.IngressAddresses
+				},
+				ExpectedValue: []string{"192.0.2.42", "some-dns-name", "192.0.2.43"},
+			},
+		},
+		"--publish-service-udp": {
+			{
+				Input: "namespace/servicename",
+				ExtractValueFn: func(c manager.Config) any {
+					return c.IngressServiceUDP
+				},
+				ExpectedValue:              mo.Some(k8stypes.NamespacedName{Namespace: "namespace", Name: "servicename"}),
+				ExpectedUsageAdditionalMsg: "Flag --publish-service-udp has been deprecated, Use --ingress-service-udp instead\n",
+			},
+			{
+				Input:                 "servicename",
+				ExpectedErrorContains: "the expected format is namespace/name",
+			},
+		},
+		"--ingress-service-udp": {
+			{
+				Input: "namespace/servicename",
+				ExtractValueFn: func(c manager.Config) any {
+					return c.IngressServiceUDP
+				},
+				ExpectedValue: mo.Some(k8stypes.NamespacedName{Namespace: "namespace", Name: "servicename"}),
+			},
+			{
+				Input:                 "servicename",
+				ExpectedErrorContains: "the expected format is namespace/name",
+			},
+		},
+		"--publish-status-address-udp": {
+			{
+				Input: "192.0.2.42,some-dns-name,192.0.2.43",
+				ExtractValueFn: func(c manager.Config) any {
+					return c.IngressAddressesUDP
+				},
+				ExpectedValue:              []string{"192.0.2.42", "some-dns-name", "192.0.2.43"},
+				ExpectedUsageAdditionalMsg: "Flag --publish-status-address-udp has been deprecated, Use --ingress-address-udp instead\n",
+			},
+		},
+		"--ingress-address-udp": {
+			{
+				Input: "192.0.2.42,some-dns-name,192.0.2.43",
+				ExtractValueFn: func(c manager.Config) any {
+					return c.IngressAddressesUDP
+				},
+				ExpectedValue: []string{"192.0.2.42", "some-dns-name", "192.0.2.43"},
 			},
 		},
 		"--kong-admin-svc": {
@@ -72,6 +153,25 @@ func TestConfigValidatedVars(t *testing.T) {
 				ExpectedErrorContains: "namespace cannot be empty",
 			},
 		},
+		"--konnect-runtime-group-id": {
+			{
+				Input: "5ef731c0-6081-49d6-b3ec-d4f85e58b956",
+				ExtractValueFn: func(c manager.Config) any {
+					return c.Konnect.ControlPlaneID
+				},
+				ExpectedValue:              "5ef731c0-6081-49d6-b3ec-d4f85e58b956",
+				ExpectedUsageAdditionalMsg: "Flag --konnect-runtime-group-id has been deprecated, Use --konnect-control-plane-id instead.\n",
+			},
+		},
+		"--konnect-control-plane-id": {
+			{
+				Input: "5ef731c0-6081-49d6-b3ec-d4f85e58b956",
+				ExtractValueFn: func(c manager.Config) any {
+					return c.Konnect.ControlPlaneID
+				},
+				ExpectedValue: "5ef731c0-6081-49d6-b3ec-d4f85e58b956",
+			},
+		},
 	}
 
 	for flag, flagTestCases := range testCasesGroupedByFlag {
@@ -83,14 +183,18 @@ func TestConfigValidatedVars(t *testing.T) {
 					input = []string{flag, tc.Input}
 				}
 
-				err := c.FlagSet().Parse(input)
+				flagSet := c.FlagSet()
+				var usageAdditionalMsg bytes.Buffer
+				flagSet.SetOutput(&usageAdditionalMsg)
+
+				err := flagSet.Parse(input)
 				if tc.ExpectedErrorContains != "" {
 					require.ErrorContains(t, err, tc.ExpectedErrorContains)
 					return
 				}
-
 				require.NoError(t, err)
 				require.Equal(t, tc.ExpectedValue, tc.ExtractValueFn(c))
+				require.Equal(t, tc.ExpectedUsageAdditionalMsg, usageAdditionalMsg.String())
 			})
 		}
 	}
@@ -103,7 +207,7 @@ func TestConfigValidate(t *testing.T) {
 				KongAdminSvc: mo.Some(k8stypes.NamespacedName{Name: "admin-svc", Namespace: "ns"}),
 				Konnect: adminapi.KonnectConfig{
 					ConfigSynchronizationEnabled: true,
-					RuntimeGroupID:               "fbd3036f-0f1c-4e98-b71c-d4cd61213f90",
+					ControlPlaneID:               "fbd3036f-0f1c-4e98-b71c-d4cd61213f90",
 					Address:                      "https://us.kic.api.konghq.tech",
 					TLSClient: adminapi.TLSClientConfig{
 						// We do not set valid cert or key, and it's still considered valid as at this level we only care
@@ -157,10 +261,10 @@ func TestConfigValidate(t *testing.T) {
 			require.NoError(t, c.Validate())
 		})
 
-		t.Run("enabled with no runtime group is rejected", func(t *testing.T) {
+		t.Run("enabled with no control plane is rejected", func(t *testing.T) {
 			c := validEnabled()
-			c.Konnect.RuntimeGroupID = ""
-			require.ErrorContains(t, c.Validate(), "runtime group not specified")
+			c.Konnect.ControlPlaneID = ""
+			require.ErrorContains(t, c.Validate(), "control plane not specified")
 		})
 
 		t.Run("enabled with no address is rejected", func(t *testing.T) {

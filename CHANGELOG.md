@@ -97,11 +97,28 @@ Adding a new version? You'll need three changes:
 - Removed support for deprecated `KongIngress` fields: `Proxy` and `Route`. Respective
   `Service` or `Ingress` annotations should be used instead. See [KIC Annotations reference].
   [#4760](https://github.com/Kong/kubernetes-ingress-controller/pull/4760)
+- Removed previously deprecated flags:
+  - `sync-rate-limit`: Use `--proxy-sync-seconds` instead
+  - `stderrthreshold`: Has no effect
+  - `update-status-on-shutdown`: Has no effect
+  - `kong-custom-entities-secret`: Has no effect
+  - `leader-elect`: DEPRECATED as of 2.1.0: leader election behavior is determined automatically based on the Kong database setting and this flag has no effect
+  - `enable-controller-ingress-extensionsv1beta1`: Has no effect
+  - `enable-controller-ingress-networkingv1beta1`: Has no effect
+  [#4770](https://github.com/Kong/kubernetes-ingress-controller/pull/4770)
+- `--konnect-runtime-group-id` CLI flag is now deprecated. Please use `--konnect-control-plane-id`
+  instead.
+  [#4783](https://github.com/Kong/kubernetes-ingress-controller/pull/4783)
 
 ### Fixed
 
 - No more "log.SetLogger(...) was never called..." log entry during shutdown of KIC
   [#4738](https://github.com/Kong/kubernetes-ingress-controller/pull/4738)
+
+### Changed
+
+- Update paths of Konnect APIs from `runtime_groups/*` to `control-planes/*`.
+[#4566](https://github.com/Kong/kubernetes-ingress-controller/pull/4566)
 
 ### Added
 
@@ -110,12 +127,30 @@ Adding a new version? You'll need three changes:
 - Get rid of deprecation warning in logs for unsupported label `global: true` for `KongPlugin`,
   it'll be treated as any other label without a special meaning.
   [#4737](https://github.com/Kong/kubernetes-ingress-controller/pull/4737)
+- Telemetry now reports the router flavor.
+  [#4762](https://github.com/Kong/kubernetes-ingress-controller/pull/4762)
+- The following flags were renamed and marked as deprecated
+  - `--publish-service` to `--ingress-address`
+  - `--publish-status-address` to `--ingress-address`
+  - `--publish-service-udp` to `--ingress-service-udp`
+  - `--publish-status-address-udp` to `--ingress-address-udp`
+  [#4765](https://github.com/Kong/kubernetes-ingress-controller/pull/4765)
 
 [KIC Annotations reference]: https://docs.konghq.com/kubernetes-ingress-controller/latest/references/annotations/
 
 ## 2.12.0
 
 > Release date: 2023-09-25
+
+### Deprecated
+
+- Knative Ingress is deprecated and will be removed in KIC 3.0. [#2813](https://github.com/Kong/kubernetes-ingress-controller/issues/2813)
+- `KongIngress` for `Service` and `Route` parameters has been deprecated since KIC 2.8 and will be removed in KIC 3.0.
+    - We expect to eventually deprecate `KongIngress` also for `Upstream` parameters as described in [#3174](https://github.com/Kong/kubernetes-ingress-controller/issues/3174)
+- Existing Kustomize (`deploy/manifests/`) and `deploy/single/` YAML manifests as a method of installing KIC.
+    - The `deploy/single/` and `deploy/manifests/` directories will no longer work with KIC 3.0+. You should use the [Helm chart](https://docs.konghq.com/kubernetes-ingress-controller/latest/deployment/k4k8s/#helm) or [Kong Gateway Operator](https://docs.konghq.com/gateway-operator/latest/) instead.
+- DB-less deployments of Kong running with KIC as a sidecar. The [Gateway Discovery](https://docs.konghq.com/kubernetes-ingress-controller/latest/guides/using-gateway-discovery/) feature added in KIC 2.9 should be used instead.
+    - The mode where Kong runs with a database (Postgres) is not affected by the migration to Gateway Discovery yet, but likely will in the future [#4751](https://github.com/Kong/kubernetes-ingress-controller/issues/4751)
 
 ### Added
 

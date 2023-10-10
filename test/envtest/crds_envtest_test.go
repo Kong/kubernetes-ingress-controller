@@ -35,7 +35,7 @@ func TestGatewayAPIControllersMayBeDynamicallyStarted(t *testing.T) {
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	loggerHook := RunManager(ctx, t, envcfg, WithGatewayFeatureEnabled, WithPublishService("ns"))
+	loggerHook := RunManager(ctx, t, envcfg, WithGatewayFeatureEnabled, WithIngressService("ns"))
 
 	controllers := []string{
 		"Gateway",

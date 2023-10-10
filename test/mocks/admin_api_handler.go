@@ -2,6 +2,7 @@ package mocks
 
 import (
 	"fmt"
+	"io"
 	"net/http"
 	"sync/atomic"
 	"testing"
@@ -125,6 +126,10 @@ type AdminAPIHandler struct {
 	// configurationHash specifies the configuration hash of mocked Kong instance
 	// return in /status response.
 	configurationHash string
+
+	// config holds the previously received config via `POST /config`.
+	// It is returned when `GET /config` requests are received.
+	config []byte
 }
 
 type AdminAPIHandlerOpt func(h *AdminAPIHandler)
@@ -211,10 +216,17 @@ func NewAdminAPIHandler(t *testing.T, opts ...AdminAPIHandlerOpt) *AdminAPIHandl
 	})
 	mux.HandleFunc("/config", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodGet {
-			_, _ = w.Write([]byte(`{"version": "3.3.0"}`))
+			if h.config != nil {
+				_, _ = w.Write(h.config)
+			} else {
+				_, _ = w.Write([]byte(`{"version": "3.3.0"}`))
+			}
 			return
 		}
 		if r.Method == http.MethodPost {
+			b, _ := io.ReadAll(r.Body)
+			h.t.Logf("got config: %v", string(b))
+			h.config = b
 			w.WriteHeader(http.StatusNoContent)
 			return
 		}

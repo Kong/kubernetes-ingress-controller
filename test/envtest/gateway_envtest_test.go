@@ -32,7 +32,7 @@ func TestGatewayReconciliation_MoreThan100Routes(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	gw := deployGateway(ctx, t, ctrlClient)
-	RunManager(ctx, t, envcfg, WithPublishService(gw.Namespace), WithGatewayFeatureEnabled)
+	RunManager(ctx, t, envcfg, WithIngressService(gw.Namespace), WithGatewayFeatureEnabled)
 
 	const numOfRoutes = 120
 	createHTTPRoutes(ctx, t, ctrlClient, gw, numOfRoutes)

@@ -24,9 +24,6 @@ var (
 	// because the original version of the mTLS credential was not compatible with KIC.
 	MTLSCredentialVersionCutoff = semver.Version{Major: 2, Minor: 3, Patch: 2}
 
-	// FlattenedErrorCutoff is the lowest Kong version with support for flattened errors.
-	FlattenedErrorCutoff = semver.Version{Major: 3, Minor: 2}
-
 	// TLSPassthroughCutoff is the lowest Kong version with support for TLS passthrough.
 	TLSPassthroughCutoff = semver.Version{Major: 2, Minor: 7}
 

@@ -391,7 +391,7 @@ _test.envtest: gotestsum setup-envtest use-setup-envtest
 test.envtest:
 	$(MAKE) _test.envtest GOTESTSUM_FORMAT=standard-verbose
 
-.PHONY: test.envtes.pretty
+.PHONY: test.envtest.pretty
 test.envtest.pretty:
 	$(MAKE) _test.envtest GOTESTSUM_FORMAT=testname
 

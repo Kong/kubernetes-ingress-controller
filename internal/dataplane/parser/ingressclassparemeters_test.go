@@ -109,7 +109,7 @@ func TestGetIngressClassParameters(t *testing.T) {
 				Name:      testIcpName,
 			},
 			parameterSpec: defaultIcpSpec,
-			err:           store.ErrNotFound{Message: "IngressClassParameters test-icp not found"},
+			err:           store.NotFoundError{Message: "IngressClassParameters test-icp not found"},
 		},
 		{
 			name: "unmatched-name",
@@ -121,7 +121,7 @@ func TestGetIngressClassParameters(t *testing.T) {
 				Name:      "another-icp",
 			},
 			parameterSpec: defaultIcpSpec,
-			err:           store.ErrNotFound{Message: "IngressClassParameters another-icp not found"},
+			err:           store.NotFoundError{Message: "IngressClassParameters another-icp not found"},
 		},
 	}
 
@@ -152,8 +152,8 @@ func TestGetIngressClassParameters(t *testing.T) {
 			if tc.err != nil {
 				assert.EqualError(t, err, tc.err.Error())
 
-				if errors.As(tc.err, &store.ErrNotFound{}) {
-					assert.ErrorAs(t, err, &store.ErrNotFound{})
+				if errors.As(tc.err, &store.NotFoundError{}) {
+					assert.ErrorAs(t, err, &store.NotFoundError{})
 				}
 			} else {
 				assert.NoError(t, err)

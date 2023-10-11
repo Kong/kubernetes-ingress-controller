@@ -22,7 +22,7 @@ func (p *Parser) ingressRulesFromIngressV1() ingressRules {
 	ingressList := p.storer.ListIngressesV1()
 	icp, err := getIngressClassParametersOrDefault(p.storer)
 	if err != nil {
-		if !errors.As(err, &store.ErrNotFound{}) {
+		if !errors.As(err, &store.NotFoundError{}) {
 			// anything else is unexpected
 			p.logger.Errorf("could not find IngressClassParameters, using defaults: %s", err)
 		}

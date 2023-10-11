@@ -73,8 +73,8 @@ func TestUpdateStrategyInMemory_PropagatesResourcesErrors(t *testing.T) {
 		UID:        "a3b8afcc-9f19-42e4-aa8f-5866168c2ad3",
 		APIVersion: "v1",
 		Problems: map[string]string{
-			"":     "failed conditional validation given value of field 'protocol'",
-			"path": "value must be null",
+			"service:test-service": "failed conditional validation given value of field 'protocol'",
+			"path":                 "value must be null",
 		},
 	}
 

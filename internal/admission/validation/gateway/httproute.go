@@ -98,11 +98,11 @@ func validateHTTPRouteListener(listener *gatewayapi.Listener) error {
 func validateHTTPRouteFeatures(httproute *gatewayapi.HTTPRoute, parserFeatures parser.FeatureFlags) error {
 	for _, rule := range httproute.Spec.Rules {
 		for _, match := range rule.Matches {
-			// We don't support query parameters matching rules yet
-			// TODO: https://github.com/Kong/kubernetes-ingress-controller/issues/3679
+			// We support query parameters matching rules only with expression router.
+			// See: https://github.com/Kong/kubernetes-ingress-controller/issues/3679
 			if len(match.QueryParams) != 0 {
 				if !parserFeatures.ExpressionRoutes {
-					return fmt.Errorf("queryparam matching is not supported with expression router only")
+					return fmt.Errorf("queryparam matching is supported with expression router only")
 				}
 			}
 		}

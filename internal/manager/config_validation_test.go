@@ -3,6 +3,7 @@ package manager_test
 import (
 	"bytes"
 	"fmt"
+	"os"
 	"testing"
 
 	"github.com/samber/mo"
@@ -335,6 +336,49 @@ func TestConfigValidate(t *testing.T) {
 			require.NoError(t, c.Validate())
 		})
 	})
+
+	t.Run("Admin Token", func(t *testing.T) {
+		validWithToken := func() manager.Config {
+			return manager.Config{
+				KongAdminToken: "non-empty-token",
+			}
+		}
+
+		t.Run("admin token accepted", func(t *testing.T) {
+			c := validWithToken()
+			require.NoError(t, c.Validate())
+			require.NoError(t, c.Resolve())
+		})
+	})
+
+	t.Run("Admin Token Path", func(t *testing.T) {
+		validWithTokenPath := func() manager.Config {
+			tempDir := t.TempDir()
+			tokenFile, err := os.CreateTemp(tempDir, "kong.token")
+			require.NoError(t, err)
+			_, err = tokenFile.Write([]byte("non-empty-token"))
+			require.NoError(t, err)
+			return manager.Config{
+				KongAdminTokenPath: tokenFile.Name()
+				,
+			}
+		}
+
+		t.Run("admin token path accepted", func(t *testing.T) {
+			c := validWithTokenPath()
+			require.NoError(t, c.Validate())
+			require.NoError(t, c.Resolve())
+			require.Equal(t, c.KongAdminToken, "non-empty-token")
+		})
+
+		t.Run("admin token and token path rejected", func(t *testing.T) {
+			c := validWithTokenPath()
+			c.KongAdminToken = "non-empty-token"
+			require.ErrorContains(t, c.Validate(), "both admin token and admin token file specified, only one allowed")
+		})
+
+	})
+
 }
 
 func TestConfigValidateGatewayDiscovery(t *testing.T) {

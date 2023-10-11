@@ -1,17 +1,7 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "gomod": {
-    "enabled": false
-  },
-  "kustomize": {
-    "enabled": false
-  },
-  "github-actions": {
-    "enabled": false
-  },
-  "dockerfile": {
-    "enabled": false
-  },
+  "configMigration": true,
+  "enabledManagers": ["regex"],
   "automerge": false,
   "separateMinorPatch": true,
   "customManagers": [

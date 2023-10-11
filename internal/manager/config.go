@@ -287,15 +287,14 @@ func (c *Config) FlagSet() *pflag.FlagSet {
 	return flagSet
 }
 
+// Resolve the Config item(s) value from file, when provided.
 func (c *Config) Resolve() error {
-	if c.KongAdminToken == "" {
-		if c.KongAdminTokenPath != "" {
-			token, err := os.ReadFile(c.KongAdminTokenPath)
-			if err != nil {
-				return fmt.Errorf("failed to read --kong-admin-token-file from path '%s': %w", c.KongAdminTokenPath, err)
-			}
-			c.KongAdminToken = string(token)
+	if c.KongAdminTokenPath != "" {
+		token, err := os.ReadFile(c.KongAdminTokenPath)
+		if err != nil {
+			return fmt.Errorf("failed to read --kong-admin-token-file from path '%s': %w", c.KongAdminTokenPath, err)
 		}
+		c.KongAdminToken = string(token)
 	}
 	return nil
 }

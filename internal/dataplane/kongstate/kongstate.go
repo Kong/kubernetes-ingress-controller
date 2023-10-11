@@ -13,6 +13,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/admission/validation/consumers/credentials"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/failures"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/labels"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 )
@@ -132,7 +133,7 @@ func (ks *KongState) FillConsumersAndCredentials(
 					if err != nil {
 						// add a translation error here to tell that parsing TTL failed.
 						pushCredentialResourceFailures(
-							fmt.Sprintf("faield to parse ttl to int: %v, skipfilling the fiedl", err),
+							fmt.Sprintf("failed to parse ttl to int: %v, skipfilling the field", err),
 						)
 					} else {
 						credConfig[k] = intVal
@@ -141,22 +142,27 @@ func (ks *KongState) FillConsumersAndCredentials(
 				}
 				credConfig[k] = string(v)
 			}
-			credType, ok := credConfig["kongCredType"].(string)
-			if !ok {
-				pushCredentialResourceFailures(
-					fmt.Sprintf("failed to provision credential: invalid kongCredType: type '%T' not string", credType),
-				)
-				continue
+			// try the label first. if it's present, no need to check the field
+			credType, labelOk := secret.Labels[labels.LabelPrefix+labels.CredentialKey]
+			var fieldOk bool
+			if !labelOk {
+				// if no label, fall back to the deprecated field
+				credType, fieldOk = credConfig["kongCredType"].(string)
+				if !fieldOk {
+					pushCredentialResourceFailures(
+						fmt.Sprintf("failed to provision credential: invalid kongCredType: type '%T' not string", credType),
+					)
+					continue
+				}
+			}
+			if fieldOk && !labelOk {
+				failuresCollector.PushResourceFailure("credential only has deprecated kongCredType field, needs "+
+					"konghq.com/credential label", secret)
+				failuresCollector.PushResourceFailure(fmt.Sprintf("nonexistent consumer group: %q", err), consumer)
 			}
 			if !credentials.SupportedTypes.Has(credType) {
 				pushCredentialResourceFailures(
 					fmt.Sprintf("failed to provision credential: unsupported kongCredType: %q", credType),
-				)
-				continue
-			}
-			if len(credConfig) <= 1 { // 1 key of credType itself
-				pushCredentialResourceFailures(
-					"failed to provision credential: empty secret",
 				)
 				continue
 			}

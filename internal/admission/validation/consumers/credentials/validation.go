@@ -6,6 +6,8 @@ import (
 	"strings"
 
 	corev1 "k8s.io/api/core/v1"
+
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/labels"
 )
 
 // -----------------------------------------------------------------------------
@@ -15,12 +17,19 @@ import (
 // ValidateCredentials performs basic validation on a credential secret given
 // the Kubernetes secret which contains credentials data.
 func ValidateCredentials(secret *corev1.Secret) error {
-	// the indication of credential type is required to be present on all credentials.
-	credentialTypeB, ok := secret.Data[TypeKey]
-	if !ok {
-		return fmt.Errorf("missing required key %s", TypeKey)
+	var credentialType string
+	var labelOk bool
+	credentialType, labelOk = secret.Labels[labels.LabelPrefix+labels.CredentialKey]
+
+	if !labelOk {
+		// the indication of credential type is required to be present on all credentials.
+		credentialTypeB, ok := secret.Data[TypeKey]
+		if !ok {
+			// while it's also missing the data field, encourage the new label convention
+			return fmt.Errorf("credential missing %s label", labels.LabelPrefix+labels.CredentialKey)
+		}
+		credentialType = string(credentialTypeB)
 	}
-	credentialType := string(credentialTypeB)
 
 	// verify that the credential type provided is valid
 	if !SupportedTypes.Has(credentialType) {

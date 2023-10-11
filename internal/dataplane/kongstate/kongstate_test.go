@@ -20,6 +20,7 @@ import (
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/failures"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/labels"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
@@ -478,6 +479,43 @@ func TestFillConsumersAndCredentials(t *testing.T) {
 				"foo":          []byte("bar"),
 			},
 		},
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "labeledSecret",
+				Namespace: "default",
+				Labels: map[string]string{
+					labels.LabelPrefix + labels.CredentialKey: "key-auth",
+				},
+			},
+			Data: map[string][]byte{
+				"key": []byte("little-rabbits-be-good"),
+			},
+		},
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "labeledSecretWithCredField",
+				Namespace: "default",
+				Labels: map[string]string{
+					labels.LabelPrefix + labels.CredentialKey: "key-auth",
+				},
+			},
+			Data: map[string][]byte{
+				"kongCredType": []byte("key-auth"),
+				"key":          []byte("little-rabbits-be-good"),
+			},
+		},
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "badTypeLabeledSecret",
+				Namespace: "default",
+				Labels: map[string]string{
+					labels.LabelPrefix + labels.CredentialKey: "bee-auth",
+				},
+			},
+			Data: map[string][]byte{
+				"foo": []byte("bar"),
+			},
+		},
 	}
 
 	testCases := []struct {
@@ -614,6 +652,103 @@ func TestFillConsumersAndCredentials(t *testing.T) {
 			},
 			expectedTranslationFailureMessages: map[k8stypes.NamespacedName]string{
 				{Namespace: "default", Name: "foo"}: fmt.Sprintf("failed to provision credential: unsupported kongCredType: %q", "unsupported"),
+			},
+		},
+		{
+			name: "referring to secret with unsupported credential label",
+			k8sConsumers: []*kongv1.KongConsumer{
+				{
+					TypeMeta: kongConsumerTypeMeta,
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "foo",
+						Namespace: "default",
+						Annotations: map[string]string{
+							"kubernetes.io/ingress.class": annotations.DefaultIngressClass,
+						},
+					},
+					Username: "foo",
+					Credentials: []string{
+						"badTypeLabeledSecret",
+					},
+				},
+			},
+			expectedKongStateConsumers: []Consumer{
+				{
+					Consumer: kong.Consumer{
+						Username: kong.String("foo"),
+					},
+				},
+			},
+			expectedTranslationFailureMessages: map[k8stypes.NamespacedName]string{
+				{Namespace: "default", Name: "foo"}: fmt.Sprintf("failed to provision credential: unsupported kongCredType: %q", "bee-auth"),
+			},
+		},
+		{
+			name: "KongConsumer with key-auth from label secret",
+			k8sConsumers: []*kongv1.KongConsumer{
+				{
+					TypeMeta: kongConsumerTypeMeta,
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "foo",
+						Namespace: "default",
+						Annotations: map[string]string{
+							"kubernetes.io/ingress.class": annotations.DefaultIngressClass,
+						},
+					},
+					Username: "foo",
+					CustomID: "foo",
+					Credentials: []string{
+						"labeledSecret",
+					},
+				},
+			},
+			expectedKongStateConsumers: []Consumer{
+				{
+					Consumer: kong.Consumer{
+						Username: kong.String("foo"),
+						CustomID: kong.String("foo"),
+					},
+					KeyAuths: []*KeyAuth{{kong.KeyAuth{
+						Key: kong.String("little-rabbits-be-good"),
+						Tags: util.GenerateTagsForObject(&corev1.Secret{
+							ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "labeledSecret"},
+						}),
+					}}},
+				},
+			},
+		},
+		{
+			name: "KongConsumer with key-auth from label secret with the old cred field",
+			k8sConsumers: []*kongv1.KongConsumer{
+				{
+					TypeMeta: kongConsumerTypeMeta,
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "foo",
+						Namespace: "default",
+						Annotations: map[string]string{
+							"kubernetes.io/ingress.class": annotations.DefaultIngressClass,
+						},
+					},
+					Username: "foo",
+					CustomID: "foo",
+					Credentials: []string{
+						"labeledSecretWithCredField",
+					},
+				},
+			},
+			expectedKongStateConsumers: []Consumer{
+				{
+					Consumer: kong.Consumer{
+						Username: kong.String("foo"),
+						CustomID: kong.String("foo"),
+					},
+					KeyAuths: []*KeyAuth{{kong.KeyAuth{
+						Key: kong.String("little-rabbits-be-good"),
+						Tags: util.GenerateTagsForObject(&corev1.Secret{
+							ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "labeledSecretWithCredField"},
+						}),
+					}}},
+				},
 			},
 		},
 	}

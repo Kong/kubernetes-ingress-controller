@@ -98,7 +98,7 @@ func TestKongStateFillConsumersAndCredentialsFailure(t *testing.T) {
 
 	// KongConsumer name -> event message
 	kongConsumerTranslationFailureMessages := map[string]string{
-		"consumer-empty-cred":  `credential "empty-cred" failure: failed to provision credential: empty secret`,
+		"consumer-empty-cred":  `credential "empty-cred" failure: failed to provision credential: key-auth is invalid: no key`,
 		"consumer-no-username": `no username or custom_id specified`,
 	}
 

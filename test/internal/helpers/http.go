@@ -85,19 +85,18 @@ func MustParseURL(t *testing.T, urlStr string) *url.URL {
 // calling test will fail and stop.
 func EventuallyGETPath(
 	t *testing.T,
-	proxyURL *url.URL,
+	proxyURL *url.URL, // proxyURL is the URL of Kong gateway proxy.
 	host string,
-	path string,
-	statusCode int,
-	bodyContents string,
-	headers map[string]string,
+	path string, // host and path are host and path of the URL in the GET request.
+	statusCode int, // statusCode is the expected status code.
+	bodyContents string, // bodyContents is the expected content to be contained in response body.
+	headers map[string]string, // headers are headers in the request.
 	waitDuration time.Duration,
 	waitTick time.Duration,
 ) {
 	var client *http.Client
 	if proxyURL != nil {
 		client = DefaultHTTPClientWithProxy(proxyURL)
-
 	} else {
 		client = DefaultHTTPClient()
 	}
@@ -106,7 +105,7 @@ func EventuallyGETPath(
 		req := MustHTTPRequest(t, http.MethodGet, host, path, headers)
 		resp, err := client.Do(req)
 		if err != nil {
-			t.Logf("WARNING: http request failed for GET %s/%s: %v", proxyURL, path, err)
+			t.Logf("WARNING: http request failed for GET %s/%s to %s: %v", host, path, proxyURL, err)
 			return false
 		}
 		defer resp.Body.Close()

@@ -5,7 +5,6 @@ import (
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/parser/translators"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/gatewayapi"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/versions"
 )
 
 // -----------------------------------------------------------------------------
@@ -25,13 +24,6 @@ func (p *Parser) ingressRulesFromUDPRoutes() ingressRules {
 
 	var errs []error
 	for _, udproute := range udpRouteList {
-		// Disable the translation to expression routes and register translation errors
-		// when expression route is enabled and Kong version is less than 3.4.
-		if p.featureFlags.ExpressionRoutes && p.kongVersion.LT(versions.ExpressionRouterL4Cutoff) {
-			p.registerResourceFailureNotSupportedForExpressionRoutes(udproute)
-			continue
-		}
-
 		if err := validateUDPRoute(udproute); err != nil {
 			errs = append(errs, err)
 			p.registerTranslationFailure(err.Error(), udproute)
@@ -61,7 +53,7 @@ func (p *Parser) ingressRulesFromUDPRoutes() ingressRules {
 }
 
 func (p *Parser) ingressRulesFromUDPRoute(result *ingressRules, udproute *gatewayapi.UDPRoute) error {
-	// first we grab the spec and gather some metdata about the object
+	// first we grab the spec and gather some metadata about the object
 	spec := udproute.Spec
 
 	// each rule may represent a different set of backend services that will be accepting

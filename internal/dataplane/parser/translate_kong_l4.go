@@ -9,7 +9,6 @@ import (
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/versions"
 )
 
 func (p *Parser) ingressRulesFromTCPIngressV1beta1() ingressRules {
@@ -27,17 +26,10 @@ func (p *Parser) ingressRulesFromTCPIngressV1beta1() ingressRules {
 	})
 
 	for _, ingress := range ingressList {
-		if p.featureFlags.ExpressionRoutes && p.kongVersion.LT(versions.ExpressionRouterL4Cutoff) {
-			p.registerResourceFailureNotSupportedForExpressionRoutes(ingress)
-			continue
-		}
-
-		ingressSpec := ingress.Spec
-
-		result.SecretNameToSNIs.addFromIngressV1TLS(tcpIngressToNetworkingTLS(ingressSpec.TLS), ingress)
+		result.SecretNameToSNIs.addFromIngressV1TLS(tcpIngressToNetworkingTLS(ingress.Spec.TLS), ingress)
 
 		var objectSuccessfullyParsed bool
-		for i, rule := range ingressSpec.Rules {
+		for i, rule := range ingress.Spec.Rules {
 			r := kongstate.Route{
 				Ingress: util.FromK8sObject(ingress),
 				Route: kong.Route{
@@ -51,8 +43,7 @@ func (p *Parser) ingressRulesFromTCPIngressV1beta1() ingressRules {
 					Tags: util.GenerateTagsForObject(ingress),
 				},
 			}
-			host := rule.Host
-			if host != "" {
+			if host := rule.Host; host != "" {
 				r.SNIs = kong.StringSlice(host)
 			}
 
@@ -111,15 +102,8 @@ func (p *Parser) ingressRulesFromUDPIngressV1beta1() ingressRules {
 	})
 
 	for _, ingress := range ingressList {
-		if p.featureFlags.ExpressionRoutes && p.kongVersion.LT(versions.ExpressionRouterL4Cutoff) {
-			p.registerResourceFailureNotSupportedForExpressionRoutes(ingress)
-			continue
-		}
-
-		ingressSpec := ingress.Spec
-
 		var objectSuccessfullyParsed bool
-		for i, rule := range ingressSpec.Rules {
+		for i, rule := range ingress.Spec.Rules {
 			// generate the kong Route based on the listen port
 			route := kongstate.Route{
 				Ingress: util.FromK8sObject(ingress),

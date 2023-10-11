@@ -7,7 +7,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/blang/semver/v4"
 	"github.com/go-logr/zapr"
 	"github.com/kong/go-kong/kong"
 	"github.com/samber/lo"
@@ -631,7 +630,7 @@ func TestFillConsumersAndCredentials(t *testing.T) {
 			failureCollector := failures.NewResourceFailuresCollector(logger)
 
 			state := KongState{}
-			state.FillConsumersAndCredentials(store, failureCollector, semver.MustParse("2.3.2"))
+			state.FillConsumersAndCredentials(store, failureCollector)
 			// compare translated consumers.
 			require.Len(t, state.Consumers, len(tc.expectedKongStateConsumers))
 			// compare fields. Since we only test for translating a single consumer, we only compare the first one if exists.

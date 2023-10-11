@@ -117,6 +117,5 @@ func (r DefaultUpdateStrategyResolver) resolveUpdateStrategy(client UpdateClient
 		adminAPIClient,
 		DefaultContentToDBLessConfigConverter{},
 		r.logger,
-		r.config.Version,
 	)
 }

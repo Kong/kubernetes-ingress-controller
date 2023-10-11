@@ -127,14 +127,14 @@ func resourceErrorsToResourceFailures(resourceErrors []ResourceError, parseErr e
 				UID:       k8stypes.UID(ee.UID),
 			},
 		}
-		for field, problem := range ee.Problems {
-			logger.V(util.DebugLevel).Info("adding failure", "resource_name", ee.Name, "resource_field", field, "problem", problem)
+		for problemSource, problem := range ee.Problems {
+			logger.V(util.DebugLevel).Info("adding failure", "resource_name", ee.Name, "source", problemSource, "problem", problem)
 			resourceFailure, failureCreateErr := failures.NewResourceFailure(
-				fmt.Sprintf("invalid %s: %s", field, problem),
+				fmt.Sprintf("invalid %s: %s", problemSource, problem),
 				&obj,
 			)
 			if failureCreateErr != nil {
-				logger.Error(failureCreateErr, "could create resource failure event")
+				logger.Error(failureCreateErr, "could not create resource failure event")
 			} else {
 				out = append(out, resourceFailure)
 			}

@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/blang/semver/v4"
 	"github.com/go-logr/logr"
 	"github.com/kong/deck/file"
 
@@ -35,20 +34,17 @@ type UpdateStrategyInMemory struct {
 	configService   ConfigService
 	configConverter ContentToDBLessConfigConverter
 	logger          logr.Logger
-	version         semver.Version
 }
 
 func NewUpdateStrategyInMemory(
 	configService ConfigService,
 	configConverter ContentToDBLessConfigConverter,
 	logger logr.Logger,
-	version semver.Version,
 ) UpdateStrategyInMemory {
 	return UpdateStrategyInMemory{
 		configService:   configService,
 		configConverter: configConverter,
 		logger:          logger,
-		version:         version,
 	}
 }
 

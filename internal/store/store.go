@@ -54,19 +54,6 @@ const (
 	IngressClassKongController = "ingress-controllers.konghq.com/kong"
 )
 
-// ErrNotFound error is returned when a lookup results in no resource.
-// This type is meant to be used for error handling using `errors.As()`.
-type ErrNotFound struct {
-	Message string
-}
-
-func (e ErrNotFound) Error() string {
-	if e.Message == "" {
-		return "not found"
-	}
-	return e.Message
-}
-
 // Storer is the interface that wraps the required methods to gather information
 // about ingresses, services, secrets and ingress annotations.
 type Storer interface {
@@ -427,7 +414,7 @@ func (s Store) GetSecret(namespace, name string) (*corev1.Secret, error) {
 		return nil, err
 	}
 	if !exists {
-		return nil, ErrNotFound{fmt.Sprintf("Secret %v not found", key)}
+		return nil, NotFoundError{fmt.Sprintf("Secret %v not found", key)}
 	}
 	return secret.(*corev1.Secret), nil
 }
@@ -440,7 +427,7 @@ func (s Store) GetService(namespace, name string) (*corev1.Service, error) {
 		return nil, err
 	}
 	if !exists {
-		return nil, ErrNotFound{fmt.Sprintf("Service %v not found", key)}
+		return nil, NotFoundError{fmt.Sprintf("Service %v not found", key)}
 	}
 	return service.(*corev1.Service), nil
 }
@@ -705,7 +692,7 @@ func (s Store) GetEndpointSlicesForService(namespace, name string) ([]*discovery
 		return nil, err
 	}
 	if len(endpointSlices) == 0 {
-		return nil, ErrNotFound{fmt.Sprintf("EndpointSlices for Service %s/%s not found", namespace, name)}
+		return nil, NotFoundError{fmt.Sprintf("EndpointSlices for Service %s/%s not found", namespace, name)}
 	}
 	return endpointSlices, nil
 }
@@ -718,7 +705,7 @@ func (s Store) GetKongPlugin(namespace, name string) (*kongv1.KongPlugin, error)
 		return nil, err
 	}
 	if !exists {
-		return nil, ErrNotFound{fmt.Sprintf("KongPlugin %v not found", key)}
+		return nil, NotFoundError{fmt.Sprintf("KongPlugin %v not found", key)}
 	}
 	return p.(*kongv1.KongPlugin), nil
 }
@@ -730,7 +717,7 @@ func (s Store) GetKongClusterPlugin(name string) (*kongv1.KongClusterPlugin, err
 		return nil, err
 	}
 	if !exists {
-		return nil, ErrNotFound{fmt.Sprintf("KongClusterPlugin %v not found", name)}
+		return nil, NotFoundError{fmt.Sprintf("KongClusterPlugin %v not found", name)}
 	}
 	return p.(*kongv1.KongClusterPlugin), nil
 }
@@ -743,7 +730,7 @@ func (s Store) GetKongIngress(namespace, name string) (*kongv1.KongIngress, erro
 		return nil, err
 	}
 	if !exists {
-		return nil, ErrNotFound{fmt.Sprintf("KongIngress %v not found", name)}
+		return nil, NotFoundError{fmt.Sprintf("KongIngress %v not found", name)}
 	}
 	return p.(*kongv1.KongIngress), nil
 }
@@ -756,7 +743,7 @@ func (s Store) GetKongConsumer(namespace, name string) (*kongv1.KongConsumer, er
 		return nil, err
 	}
 	if !exists {
-		return nil, ErrNotFound{fmt.Sprintf("KongConsumer %v not found", key)}
+		return nil, NotFoundError{fmt.Sprintf("KongConsumer %v not found", key)}
 	}
 	return p.(*kongv1.KongConsumer), nil
 }
@@ -769,7 +756,7 @@ func (s Store) GetKongConsumerGroup(namespace, name string) (*kongv1beta1.KongCo
 		return nil, err
 	}
 	if !exists {
-		return nil, ErrNotFound{fmt.Sprintf("KongConsumerGroup %v not found", key)}
+		return nil, NotFoundError{fmt.Sprintf("KongConsumerGroup %v not found", key)}
 	}
 	return p.(*kongv1beta1.KongConsumerGroup), nil
 }
@@ -785,7 +772,7 @@ func (s Store) GetIngressClassV1(name string) (*netv1.IngressClass, error) {
 		return nil, err
 	}
 	if !exists {
-		return nil, ErrNotFound{fmt.Sprintf("IngressClass %v not found", name)}
+		return nil, NotFoundError{fmt.Sprintf("IngressClass %v not found", name)}
 	}
 	return p.(*netv1.IngressClass), nil
 }
@@ -828,7 +815,7 @@ func (s Store) GetIngressClassParametersV1Alpha1(ingressClass *netv1.IngressClas
 		return nil, err
 	}
 	if !exists {
-		return nil, ErrNotFound{fmt.Sprintf("IngressClassParameters %v not found", ingressClass.Spec.Parameters.Name)}
+		return nil, NotFoundError{fmt.Sprintf("IngressClassParameters %v not found", ingressClass.Spec.Parameters.Name)}
 	}
 	return params.(*kongv1alpha1.IngressClassParameters), nil
 }
@@ -841,7 +828,7 @@ func (s Store) GetGateway(namespace string, name string) (*gatewayapi.Gateway, e
 		return nil, err
 	}
 	if !exists {
-		return nil, ErrNotFound{fmt.Sprintf("Gateway %v not found", name)}
+		return nil, NotFoundError{fmt.Sprintf("Gateway %v not found", name)}
 	}
 	return obj.(*gatewayapi.Gateway), nil
 }

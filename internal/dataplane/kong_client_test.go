@@ -38,6 +38,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/metrics"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/versions"
 	"github.com/kong/kubernetes-ingress-controller/v2/test/mocks"
 )
 
@@ -624,6 +625,7 @@ func TestKongClient_EmptyConfigUpdate(t *testing.T) {
 		gwContent, ok := updateStrategyResolver.lastUpdatedContentForURL(testGatewayClient.BaseRootURL())
 		require.True(t, ok)
 		assert.Equal(t, gwContent.Content, &file.Content{
+			FormatVersion: versions.DeckFileFormatVersion,
 			Upstreams: []file.FUpstream{
 				{
 					Upstream: kong.Upstream{
@@ -635,7 +637,7 @@ func TestKongClient_EmptyConfigUpdate(t *testing.T) {
 
 		konnectContent, ok := updateStrategyResolver.lastUpdatedContentForURL(testKonnectClient.BaseRootURL())
 		require.True(t, ok)
-		assert.Equal(t, konnectContent.Content, &file.Content{}, "konnect content should be empty")
+		require.True(t, deckgen.IsContentEmpty(konnectContent.Content), "konnect content should be empty")
 	})
 
 	t.Run("db", func(t *testing.T) {
@@ -645,11 +647,11 @@ func TestKongClient_EmptyConfigUpdate(t *testing.T) {
 
 		gwContent, ok := updateStrategyResolver.lastUpdatedContentForURL(testGatewayClient.BaseRootURL())
 		require.True(t, ok)
-		assert.Equal(t, gwContent.Content, &file.Content{}, "gateway content should be empty")
+		require.True(t, deckgen.IsContentEmpty(gwContent.Content), "konnect content should be empty")
 
 		konnectContent, ok := updateStrategyResolver.lastUpdatedContentForURL(testKonnectClient.BaseRootURL())
 		require.True(t, ok)
-		assert.Equal(t, konnectContent.Content, &file.Content{}, "konnect content should be empty")
+		require.True(t, deckgen.IsContentEmpty(konnectContent.Content), "konnect content should be empty")
 	})
 }
 

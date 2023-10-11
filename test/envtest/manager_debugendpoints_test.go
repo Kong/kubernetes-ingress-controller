@@ -31,6 +31,7 @@ func TestDebugEndpoints(t *testing.T) {
 	diagPort, healthPort := ports[0], ports[1]
 	envcfg := Setup(t, scheme.Scheme)
 	RunManager(ctx, t, envcfg,
+		AdminAPIOptFns(),
 		WithDiagnosticsServer(diagPort),
 		WithHealthProbePort(healthPort),
 		WithProfiling(),

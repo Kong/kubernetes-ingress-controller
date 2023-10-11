@@ -36,9 +36,6 @@ func TestListCoreV1ServiceReferredSecrets(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "ns1",
 					Name:      "service2",
-					Annotations: map[string]string{
-						"Kong": "3.0",
-					},
 				},
 			},
 			secretNum: 0,

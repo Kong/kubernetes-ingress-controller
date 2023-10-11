@@ -29,15 +29,19 @@ func TestHTTPRouteReconciliation_DoesNotBlockSyncLoopWhenStatusQueueBufferIsExce
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	gw := deployGateway(ctx, t, ctrlClient)
-	RunManager(ctx, t, envcfg, WithIngressService(gw.Namespace), WithGatewayFeatureEnabled, func(cfg *manager.Config) {
-		// Enable status updates and change the queue's buffer size to 0 to
-		// ensure that the status update notifications do not block the
-		// sync loop despite the fact that the status update queue is full.
-		// This is a regression test for https://github.com/Kong/kubernetes-ingress-controller/issues/4260.
-		// The test will timeout if the sync loop blocks (effectively manager.Run does not return after canceling context).
-		cfg.UpdateStatus = true
-		cfg.UpdateStatusQueueBufferSize = 0
-	})
+	RunManager(ctx, t, envcfg,
+		AdminAPIOptFns(),
+		WithIngressService(gw.Namespace),
+		WithGatewayFeatureEnabled,
+		func(cfg *manager.Config) {
+			// Enable status updates and change the queue's buffer size to 0 to
+			// ensure that the status update notifications do not block the
+			// sync loop despite the fact that the status update queue is full.
+			// This is a regression test for https://github.com/Kong/kubernetes-ingress-controller/issues/4260.
+			// The test will timeout if the sync loop blocks (effectively manager.Run does not return after canceling context).
+			cfg.UpdateStatus = true
+			cfg.UpdateStatusQueueBufferSize = 0
+		})
 
 	backendService := corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
@@ -119,17 +123,21 @@ func Test_WatchNamespaces(t *testing.T) {
 	defer cancel()
 	gw := deployGateway(ctx, t, ctrlClient)
 	hidden := CreateNamespace(ctx, t, ctrlClient)
-	RunManager(ctx, t, envcfg, WithIngressService(gw.Namespace), WithGatewayFeatureEnabled, func(cfg *manager.Config) {
-		// Enable status updates and change the queue's buffer size to 0 to
-		// ensure that the status update notifications do not block the
-		// sync loop despite the fact that the status update queue is full.
-		// This is a regression test for https://github.com/Kong/kubernetes-ingress-controller/issues/4260.
-		// The test will timeout if the sync loop blocks (effectively manager.Run does not return after canceling context).
-		cfg.UpdateStatus = true
-		cfg.UpdateStatusQueueBufferSize = 0
-		// hidden is excluded
-		cfg.WatchNamespaces = []string{gw.Namespace}
-	})
+	RunManager(ctx, t, envcfg,
+		AdminAPIOptFns(),
+		WithIngressService(gw.Namespace),
+		WithGatewayFeatureEnabled,
+		func(cfg *manager.Config) {
+			// Enable status updates and change the queue's buffer size to 0 to
+			// ensure that the status update notifications do not block the
+			// sync loop despite the fact that the status update queue is full.
+			// This is a regression test for https://github.com/Kong/kubernetes-ingress-controller/issues/4260.
+			// The test will timeout if the sync loop blocks (effectively manager.Run does not return after canceling context).
+			cfg.UpdateStatus = true
+			cfg.UpdateStatusQueueBufferSize = 0
+			// hidden is excluded
+			cfg.WatchNamespaces = []string{gw.Namespace}
+		})
 
 	backendService := corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{

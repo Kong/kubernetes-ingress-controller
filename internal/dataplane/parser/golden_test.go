@@ -251,7 +251,6 @@ func runParserGoldenTest(t *testing.T, tc parserGoldenTestCase) {
 		logger,
 		result.KongState,
 		deckgen.GenerateDeckContentParams{
-			FormatVersion:    "3.0",
 			ExpressionRoutes: tc.featureFlags.ExpressionRoutes,
 			PluginSchemas:    pluginsSchemaStoreStub{},
 		},

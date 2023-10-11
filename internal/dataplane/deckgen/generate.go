@@ -12,6 +12,7 @@ import (
 	"github.com/samber/lo"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/versions"
 )
 
 // StubUpstreamName is a name of a stub upstream that is created when the configuration is empty.
@@ -23,7 +24,6 @@ type PluginSchemaStore interface {
 
 // GenerateDeckContentParams is the parameters used to generate deck contents.
 type GenerateDeckContentParams struct {
-	FormatVersion    string
 	SelectorTags     []string
 	ExpressionRoutes bool
 	PluginSchemas    PluginSchemaStore
@@ -42,8 +42,7 @@ func ToDeckContent(
 	params GenerateDeckContentParams,
 ) *file.Content {
 	var content file.Content
-	content.FormatVersion = params.FormatVersion
-	var err error
+	content.FormatVersion = versions.DeckFileFormatVersion
 
 	for _, s := range k8sState.Services {
 		service := file.FService{Service: s.Service}
@@ -51,8 +50,7 @@ func ToDeckContent(
 			plugin := file.FPlugin{
 				Plugin: *p.DeepCopy(),
 			}
-			err = fillPlugin(ctx, &plugin, params.PluginSchemas)
-			if err != nil {
+			if err := fillPlugin(ctx, &plugin, params.PluginSchemas); err != nil {
 				logger.Error(err, "failed to fill in defaults for plugin", "plugin_name", *plugin.Name)
 			}
 			service.Plugins = append(service.Plugins, &plugin)
@@ -69,8 +67,7 @@ func ToDeckContent(
 				plugin := file.FPlugin{
 					Plugin: *p.DeepCopy(),
 				}
-				err = fillPlugin(ctx, &plugin, params.PluginSchemas)
-				if err != nil {
+				if err := fillPlugin(ctx, &plugin, params.PluginSchemas); err != nil {
 					logger.Error(err, "failed to fill in defaults for plugin", "plugin_name", *plugin.Name)
 				}
 				route.Plugins = append(route.Plugins, &plugin)
@@ -93,8 +90,7 @@ func ToDeckContent(
 		plugin := file.FPlugin{
 			Plugin: plugin.Plugin,
 		}
-		err = fillPlugin(ctx, &plugin, params.PluginSchemas)
-		if err != nil {
+		if err := fillPlugin(ctx, &plugin, params.PluginSchemas); err != nil {
 			logger.Error(err, "failed to fill in defaults for plugin", "plugin_name", *plugin.Name)
 		}
 		content.Plugins = append(content.Plugins, plugin)

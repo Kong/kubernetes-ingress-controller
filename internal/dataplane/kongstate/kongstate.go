@@ -6,7 +6,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/blang/semver/v4"
 	"github.com/go-logr/logr"
 	"github.com/kong/go-kong/kong"
 	"k8s.io/apimachinery/pkg/util/sets"
@@ -62,7 +61,6 @@ func (ks *KongState) SanitizedCopy() *KongState {
 func (ks *KongState) FillConsumersAndCredentials(
 	s store.Storer,
 	failuresCollector *failures.ResourceFailuresCollector,
-	kongVersion semver.Version,
 ) {
 	consumerIndex := make(map[string]Consumer)
 
@@ -163,8 +161,7 @@ func (ks *KongState) FillConsumersAndCredentials(
 				continue
 			}
 			credTags := util.GenerateTagsForObject(secret)
-			err = c.SetCredential(credType, credConfig, credTags, kongVersion)
-			if err != nil {
+			if err := c.SetCredential(credType, credConfig, credTags); err != nil {
 				pushCredentialResourceFailures(
 					fmt.Sprintf("failed to provision credential: %v", err),
 				)

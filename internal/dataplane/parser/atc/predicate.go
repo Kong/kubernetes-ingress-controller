@@ -1,6 +1,7 @@
 package atc
 
 import (
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -115,15 +116,36 @@ func (p Predicate) IsEmpty() bool {
 	return p.value == nil
 }
 
+var (
+	ErrTypeNotMatch    = errors.New("type does not match on sides of predicate")
+	ErrOperatorInvalid = errors.New("operator is not valid for the types of sides of predicate")
+)
+
 // NewPredicate generates a single predicate.
-// TODO: check validity of LHS, op and RHS:
-// https://github.com/Kong/kubernetes-ingress-controller/issues/3822.
-func NewPredicate(lhs LHS, op BinaryOperator, rhs Literal) Predicate {
+func NewPredicate(lhs LHS, op BinaryOperator, rhs Literal) (Predicate, error) {
+	// Check for predicates on string fields.
+	if lhs.FieldType() == FieldTypeString {
+		if rhs.Type() != LiteralTypeString {
+			return Predicate{}, ErrTypeNotMatch
+		}
+		if op == OpGreaterThan || op == OpGreaterEqual || op == OpLessThan || op == OpLessEqual {
+			return Predicate{}, ErrOperatorInvalid
+		}
+	}
+	// Check for predicates on integer fields.
+	if lhs.FieldType() == FieldTypeInt {
+		if rhs.Type() != LiteralTypeInt {
+			return Predicate{}, ErrTypeNotMatch
+		}
+		if op == OpContains || op == OpPrefixMatch || op == OpSuffixMatch || op == OpRegexMatch {
+			return Predicate{}, ErrOperatorInvalid
+		}
+	}
 	return Predicate{
 		field: lhs,
 		op:    op,
 		value: rhs,
-	}
+	}, nil
 }
 
 func NewPredicateNetProtocol(op BinaryOperator, value string) Predicate {

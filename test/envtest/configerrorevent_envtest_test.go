@@ -92,32 +92,37 @@ func TestConfigErrorEventGeneration(t *testing.T) {
 		}
 		t.Logf("got %d events", len(events.Items))
 
-		return true && // For the sake of equal indentation
-			lo.ContainsBy(events.Items, func(e corev1.Event) bool {
-				return e.Reason == dataplane.KongConfigurationApplyFailedEventReason &&
-					e.InvolvedObject.Kind == "Ingress" &&
-					e.InvolvedObject.Name == ingress.Name &&
-					e.Message == "invalid methods: cannot set 'methods' when 'protocols' is 'grpc' or 'grpcs'"
-			}) &&
-			lo.ContainsBy(events.Items, func(e corev1.Event) bool {
-				return e.Reason == dataplane.KongConfigurationApplyFailedEventReason &&
-					e.InvolvedObject.Kind == "Service" &&
-					e.InvolvedObject.Name == service.Name &&
-					e.Message == "invalid path: value must be null"
-			}) &&
-			lo.ContainsBy(events.Items, func(e corev1.Event) bool {
-				return e.Reason == dataplane.KongConfigurationApplyFailedEventReason &&
-					e.InvolvedObject.Kind == "Service" &&
-					e.InvolvedObject.Name == service.Name &&
-					e.Message == "invalid : failed conditional validation given value of field 'protocol'"
-			}) &&
-			lo.ContainsBy(events.Items, func(e corev1.Event) bool {
-				ok, err := regexp.MatchString(`failed to apply Kong configuration to http://[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+:[0-9]+: failed posting new config to /config: got status code 400`, e.Message)
-				return e.Reason == dataplane.KongConfigurationApplyFailedEventReason &&
-					e.InvolvedObject.Kind == "Pod" &&
-					e.InvolvedObject.Name == podName &&
-					ok && err == nil
-			})
+		matches := make([]bool, 4)
+		matches[0] = lo.ContainsBy(events.Items, func(e corev1.Event) bool {
+			return e.Reason == dataplane.KongConfigurationApplyFailedEventReason &&
+				e.InvolvedObject.Kind == "Ingress" &&
+				e.InvolvedObject.Name == ingress.Name &&
+				e.Message == "invalid methods: cannot set 'methods' when 'protocols' is 'grpc' or 'grpcs'"
+		})
+		matches[1] = lo.ContainsBy(events.Items, func(e corev1.Event) bool {
+			return e.Reason == dataplane.KongConfigurationApplyFailedEventReason &&
+				e.InvolvedObject.Kind == "Service" &&
+				e.InvolvedObject.Name == service.Name &&
+				e.Message == "invalid path: value must be null"
+		})
+		matches[2] = lo.ContainsBy(events.Items, func(e corev1.Event) bool {
+			return e.Reason == dataplane.KongConfigurationApplyFailedEventReason &&
+				e.InvolvedObject.Kind == "Service" &&
+				e.InvolvedObject.Name == service.Name &&
+				e.Message == "invalid service:httpbin.httpbin.80: failed conditional validation given value of field 'protocol'"
+		})
+		matches[3] = lo.ContainsBy(events.Items, func(e corev1.Event) bool {
+			ok, err := regexp.MatchString(`failed to apply Kong configuration to http://[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+:[0-9]+: failed posting new config to /config: got status code 400`, e.Message)
+			return e.Reason == dataplane.KongConfigurationApplyFailedEventReason &&
+				e.InvolvedObject.Kind == "Pod" &&
+				e.InvolvedObject.Name == podName &&
+				ok && err == nil
+		})
+		if lo.Count(matches, true) != 4 {
+			t.Logf("not all events matched: %+v", matches)
+			return false
+		}
+		return true
 	}, waitTime, tickTime)
 
 	t.Log("push failure events recorded successfully")

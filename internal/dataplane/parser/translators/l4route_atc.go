@@ -27,7 +27,8 @@ func ApplyExpressionToL4KongRoute(r *kongstate.Route) {
 	//
 	// Neither GWAPI Routes nor TCP/UDPIngress support sources either, so this only adds destinations.
 	for _, dst := range r.Destinations {
-		portMatchers = append(portMatchers, atc.NewPredicate(atc.FieldNetDstPort, atc.OpEqual, atc.IntLiteral(*dst.Port)))
+		portMatcher, _ := atc.NewPredicate(atc.FieldNetDstPort, atc.OpEqual, atc.IntLiteral(*dst.Port))
+		portMatchers = append(portMatchers, portMatcher)
 	}
 	matchers = append(matchers, atc.Or(portMatchers...))
 

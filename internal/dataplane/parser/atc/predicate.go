@@ -117,28 +117,28 @@ func (p Predicate) IsEmpty() bool {
 }
 
 var (
-	ErrorTypeNotMatch    = errors.New("type does not match on sides of predicate")
-	ErrorOperatorInvalid = errors.New("operator is not valid for the types of sides of predicate")
+	ErrTypeNotMatch    = errors.New("type does not match on sides of predicate")
+	ErrOperatorInvalid = errors.New("operator is not valid for the types of sides of predicate")
 )
 
 // NewPredicate generates a single predicate.
 func NewPredicate(lhs LHS, op BinaryOperator, rhs Literal) (Predicate, error) {
-	// check for predicates on string fields
+	// Check for predicates on string fields.
 	if lhs.FieldType() == FieldTypeString {
 		if rhs.Type() != LiteralTypeString {
-			return Predicate{}, ErrorTypeNotMatch
+			return Predicate{}, ErrTypeNotMatch
 		}
 		if op == OpGreaterThan || op == OpGreaterEqual || op == OpLessThan || op == OpLessEqual {
-			return Predicate{}, ErrorOperatorInvalid
+			return Predicate{}, ErrOperatorInvalid
 		}
 	}
-	// check for predicates on integer fields
+	// Check for predicates on integer fields.
 	if lhs.FieldType() == FieldTypeInt {
 		if rhs.Type() != LiteralTypeInt {
-			return Predicate{}, ErrorTypeNotMatch
+			return Predicate{}, ErrTypeNotMatch
 		}
 		if op == OpContains || op == OpPrefixMatch || op == OpSuffixMatch || op == OpRegexMatch {
-			return Predicate{}, ErrorOperatorInvalid
+			return Predicate{}, ErrOperatorInvalid
 		}
 	}
 	return Predicate{

@@ -15,6 +15,7 @@ linters:
   - dogsled
   - durationcheck
   - errcheck
+  - errname
   - errorlint
   - exhaustive
   - exportloopref

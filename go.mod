@@ -26,7 +26,7 @@ require (
 	github.com/bombsimon/logrusr/v4 v4.0.0
 	github.com/go-logr/logr v1.2.4
 	github.com/goccy/go-json v0.10.2
-	github.com/google/go-cmp v0.5.9
+	github.com/google/go-cmp v0.6.0
 	github.com/google/uuid v1.3.1
 	github.com/jpillora/backoff v1.0.0
 	github.com/kong/deck v1.27.1

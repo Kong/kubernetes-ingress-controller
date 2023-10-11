@@ -335,6 +335,33 @@ func TestConfigValidate(t *testing.T) {
 			require.NoError(t, c.Validate())
 		})
 	})
+
+	t.Run("Admin Token", func(t *testing.T) {
+		validWithToken := func() manager.Config {
+			return manager.Config{
+				KongAdminToken: "non-empty-token",
+			}
+		}
+
+		t.Run("admin token accepted", func(t *testing.T) {
+			c := validWithToken()
+			require.NoError(t, c.Validate())
+		})
+	})
+
+	t.Run("Admin Token Path", func(t *testing.T) {
+		validWithTokenPath := func() manager.Config {
+			return manager.Config{
+				KongAdminTokenPath: "non-empty-token-path",
+			}
+		}
+
+		t.Run("admin token and token path rejected", func(t *testing.T) {
+			c := validWithTokenPath()
+			c.KongAdminToken = "non-empty-token"
+			require.ErrorContains(t, c.Validate(), "both admin token and admin token file specified, only one allowed")
+		})
+	})
 }
 
 func TestConfigValidateGatewayDiscovery(t *testing.T) {

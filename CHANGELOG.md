@@ -103,6 +103,10 @@ Adding a new version? You'll need three changes:
 - Only Kong Gateway in version >= 3.4.1 is supported. The controller will refuse to start
   if the version is lower, also won't discover such Kong Gateways.
   [#4766](https://github.com/Kong/kubernetes-ingress-controller/pull/4766)
+- Added `--kong-admin-token-file` flag to provide the Kong admin token via file
+  [Providing Kong admin token via file](https://github.com/Kong/deck/blob/main/CHANGELOG.md#v1120).
+  [#4808](https://github.com/Kong/kubernetes-ingress-controller/pull/4808)
+
 
 ### Fixed
 

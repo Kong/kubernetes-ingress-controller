@@ -7,7 +7,6 @@ package kongintegration
 import (
 	"context"
 	"fmt"
-	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -17,16 +16,6 @@ import (
 
 	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/testenv"
 )
-
-func init() {
-	// Disable testcontainer's reaper (Ryuk) globally for this package. It's needed because Ryuk requires
-	// privileged mode to run, which is not desired and could cause issues in CI.
-	// Unfortunately, there is no way to disable it another way (e.g. via testcontainer's API), so we have
-	// to use this hack.
-	if err := os.Setenv("TESTCONTAINERS_RYUK_DISABLED", "true"); err != nil {
-		panic(fmt.Errorf("failed to disable testcontainer's reaper (Ryuk): %w", err))
-	}
-}
 
 // spawnDBLessKongContainer spawns a Kong container with DB-less mode enabled. It returns the admin API
 // URL to be used to configure it.

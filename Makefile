@@ -492,9 +492,11 @@ test.kongintegration.pretty:
 
 .PHONY: _test.kongintegration
 _test.kongintegration: gotestsum go-junit-report
+	# Disable testcontainer's reaper (Ryuk). It's needed because Ryuk requires
+	# privileged mode to run, which is not desired and could cause issues in CI.
+	TESTCONTAINERS_RYUK_DISABLED="true" \
 	GOTESTSUM_FORMAT=$(GOTESTSUM_FORMAT) \
 	$(GOTESTSUM) -- $(GOTESTFLAGS) \
-		-v \
 		-race \
 		-parallel $(NCPU) \
 		-coverpkg=$(PKG_LIST) \

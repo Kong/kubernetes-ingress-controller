@@ -181,7 +181,25 @@ make test.kongintegration.pretty
 By default, `kong:latest` image is used for running Kong Gateway. This can be changed
 by setting the `TEST_KONG_IMAGE` and `TEST_KONG_TAG` environment variables. 
 
+#### Potential issues
+
+##### testcontainer's Garbage Collector
+
+In case your environment doesn't allow running containers in privileged mode, you may encounter
+issues with testcontainer's [garbage collector][testcontainers-gc] (Ryuk) which requires it. In
+Makefile targets we disable the garbage collector by setting `TESTCONTAINERS_RYUK_DISABLED` environment
+variable to `true`.
+
+If you encounter issues with this while running tests directly (e.g. when debugging
+in an IDE), you can fix it by:
+
+- setting `TESTCONTAINERS_RYUK_DISABLED` environment variable to `true` in your IDE configuration,
+- adding `ryuk.disabled=true` to `.testcontainers.properties` file in your home directory (see
+  [Configuration locations][testcontainers-config] for exact locations depending on your OS).
+
 [testcontainers-go]: https://golang.testcontainers.org/
+[testcontainers-config]: https://golang.testcontainers.org/features/configuration/#configuration-locations
+[testcontainers-gc]: https://golang.testcontainers.org/features/garbage_collector/
 
 ### End-to-End (E2E) tests
 

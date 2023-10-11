@@ -6,17 +6,17 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/go-cmp/cmp"
 	"github.com/kong/deck/file"
 	"github.com/kong/go-kong/kong"
 	"github.com/samber/lo"
 	"github.com/sirupsen/logrus"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/sendconfig"
 )
 
-// TestUpdateStrategyInMemory_PropagatesResourcesErrors ensures that sendconfig.UpdateStrategyInMemory - 
+// TestUpdateStrategyInMemory_PropagatesResourcesErrors ensures that sendconfig.UpdateStrategyInMemory -
 // responsible for executing the configuration update logic - propagates the resources errors returned by the
 // Kong Admin API in the flattened errors response.
 func TestUpdateStrategyInMemory_PropagatesResourcesErrors(t *testing.T) {
@@ -78,18 +78,33 @@ func TestUpdateStrategyInMemory_PropagatesResourcesErrors(t *testing.T) {
 		},
 	}
 
-	require.EventuallyWithT(t, func(c *assert.CollectT) {
+	require.Eventually(t, func() bool {
 		err, resourceErrors, parseErr := sut.Update(ctx, faultyConfig)
-		assert.Error(c, err)
-		assert.NoError(c, parseErr)
-		assert.NotEmpty(c, resourceErrors)
+		if err == nil {
+			t.Logf("expected error: %v", err)
+			return false
+		}
+		if len(resourceErrors) == 0 {
+			t.Log("expected resource errors")
+			return false
+		}
+		if parseErr != nil {
+			t.Logf("expected no parse error: %v", parseErr)
+			return false
+		}
 
 		resourceErr, found := lo.Find(resourceErrors, func(r sendconfig.ResourceError) bool {
 			return r.Name == "test-service"
 		})
-		assert.True(c, found)
-		if assert.Equal(c, expectedResourceError, resourceErr) {
-			t.Logf("INFO: received expected resource error: %+v", resourceErr)
+		if !found {
+			t.Logf("expected resource error for test-service, got: %+v", resourceErrors)
+			return false
 		}
+		if diff := cmp.Diff(expectedResourceError, resourceErr); diff != "" {
+			t.Logf("expected resource error to match, got diff: %s", diff)
+			return false
+		}
+
+		return true
 	}, timeout, period)
 }

@@ -4,6 +4,7 @@ package integration
 
 import (
 	"context"
+	"regexp"
 	"testing"
 
 	"github.com/kong/go-kong/kong"
@@ -80,25 +81,33 @@ func TestConfigErrorEventGeneration(t *testing.T) {
 		}
 		t.Logf("got %d events", len(events.Items))
 
-		return true && // For the sake of equal indentation
-			lo.ContainsBy(events.Items, func(e corev1.Event) bool {
-				return e.Reason == dataplane.KongConfigurationApplyFailedEventReason &&
-					e.InvolvedObject.Kind == "Ingress" &&
-					e.InvolvedObject.Name == ingress.Name &&
-					e.Message == "invalid methods: cannot set 'methods' when 'protocols' is 'grpc' or 'grpcs'"
-			}) &&
-			lo.ContainsBy(events.Items, func(e corev1.Event) bool {
-				return e.Reason == dataplane.KongConfigurationApplyFailedEventReason &&
-					e.InvolvedObject.Kind == "Service" &&
-					e.InvolvedObject.Name == service.Name &&
-					e.Message == "invalid path: value must be null"
-			}) &&
-			lo.ContainsBy(events.Items, func(e corev1.Event) bool {
-				return e.Reason == dataplane.KongConfigurationApplyFailedEventReason &&
-					e.InvolvedObject.Kind == "Service" &&
-					e.InvolvedObject.Name == service.Name &&
-					e.Message == "invalid : failed conditional validation given value of field 'protocol'"
-			})
+		matches := make([]bool, 3)
+		matches[0] = lo.ContainsBy(events.Items, func(e corev1.Event) bool {
+			return e.Reason == dataplane.KongConfigurationApplyFailedEventReason &&
+				e.InvolvedObject.Kind == "Ingress" &&
+				e.InvolvedObject.Name == ingress.Name &&
+				e.Message == "invalid methods: cannot set 'methods' when 'protocols' is 'grpc' or 'grpcs'"
+		})
+		matches[1] = lo.ContainsBy(events.Items, func(e corev1.Event) bool {
+			return e.Reason == dataplane.KongConfigurationApplyFailedEventReason &&
+				e.InvolvedObject.Kind == "Service" &&
+				e.InvolvedObject.Name == service.Name &&
+				e.Message == "invalid path: value must be null"
+		})
+		matches[2] = lo.ContainsBy(events.Items, func(e corev1.Event) bool {
+			ok, err := regexp.MatchString(`invalid service:.+\.httpbin\.80: failed conditional validation given value of field 'protocol'`, e.Message)
+			return e.Reason == dataplane.KongConfigurationApplyFailedEventReason &&
+				e.InvolvedObject.Kind == "Service" &&
+				e.InvolvedObject.Name == service.Name &&
+				ok && err == nil
+		})
+
+		if lo.Count(matches, true) != 3 {
+			t.Logf("not all events matched: %+v", matches)
+			return false
+		}
+
+		return true
 	}, statusWait, waitTick)
 
 	t.Log("push failure events recorded successfully")

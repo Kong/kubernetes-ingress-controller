@@ -35,7 +35,7 @@ func TestParseFlatEntityErrors(t *testing.T) {
 					APIVersion: "v1",
 					UID:        "e7e5c93e-4d56-4cc3-8f4f-ff1fcbe95eb2",
 					Problems: map[string]string{
-						"":     "failed conditional validation given value of field protocol",
+						"service:67338dc2-31fd-47b6-85a9-9c11d347d090.httpbin.httpbin.80": "failed conditional validation given value of field protocol",
 						"path": "value must be null",
 					},
 				},

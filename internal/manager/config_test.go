@@ -1,11 +1,12 @@
 package manager_test
 
 import (
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/manager"
-	"github.com/stretchr/testify/require"
 	"os"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/manager"
 )
 
 func TestConfigResolve(t *testing.T) {

@@ -1,6 +1,26 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": [
-    "config:base"
+  "gomod": {
+    "enabled": false
+  },
+  "kustomize": {
+    "enabled": false
+  },
+  "github-actions": {
+    "enabled": false
+  },
+  "dockerfile": {
+    "enabled": false
+  },
+  "automerge": false,
+  "separateMinorPatch": true,
+  "customManagers": [
+    {
+      "customType": "regex",
+      "fileMatch": ["^.github/test_dependencies.yaml$"],
+      "matchStrings": [
+        "#\\s+renovate:\\s+datasource=(?<datasource>.*)\\s+depName=(?<depName>.*)\\s+versioning=(?<versioning>.*)\\n.+'(?<currentValue>.*)'"
+      ]
+    }
   ]
 }

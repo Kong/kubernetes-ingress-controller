@@ -12,6 +12,7 @@ import (
 
 	"github.com/kong/deck/file"
 	"github.com/kong/go-kong/kong"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/versions"
 	"github.com/kong/kubernetes-testing-framework/pkg/environments"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
@@ -101,7 +102,7 @@ func marshalKongConfig(t *testing.T, s kong.Service, r kong.Route) io.Reader {
 	t.Helper()
 
 	content := &file.Content{
-		FormatVersion: "3.0",
+		FormatVersion: versions.DeckFileFormatVersion,
 		Services: []file.FService{
 			{
 				Service: s,

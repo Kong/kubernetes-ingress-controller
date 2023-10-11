@@ -511,7 +511,6 @@ func (c *KongClient) sendToClient(
 	logger := c.logger.WithField("url", client.AdminAPIClient().BaseRootURL())
 
 	deckGenParams := deckgen.GenerateDeckContentParams{
-		FormatVersion:                   config.DeckFileFormatVersion,
 		SelectorTags:                    config.FilterTags,
 		ExpressionRoutes:                config.ExpressionRoutes,
 		PluginSchemas:                   client.PluginSchemaStore(),

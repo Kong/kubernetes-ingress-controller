@@ -2,6 +2,7 @@ package deckgen_test
 
 import (
 	"encoding/json"
+	"fmt"
 	"testing"
 
 	"github.com/kong/deck/file"
@@ -9,6 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/deckgen"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/versions"
 )
 
 func BenchmarkDeckgenGenerateSHA(b *testing.B) {
@@ -23,8 +25,8 @@ func BenchmarkDeckgenGenerateSHA(b *testing.B) {
 	}
 }
 
-const configJSON = `{
-	"_format_version": "3.0",
+var configJSON = fmt.Sprintf(`{
+	"_format_version": "%s",
 	"_info": {
 		"select_tags": [
 			"managed-by-ingress-controller"
@@ -294,7 +296,7 @@ const configJSON = `{
 			]
 		}
 	]
-}`
+}`, versions.DeckFileFormatVersion)
 
 func TestIsContentEmpty(t *testing.T) {
 	testCases := []struct {

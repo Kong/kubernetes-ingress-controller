@@ -359,8 +359,7 @@ func TestConfigValidate(t *testing.T) {
 			_, err = tokenFile.Write([]byte("non-empty-token"))
 			require.NoError(t, err)
 			return manager.Config{
-				KongAdminTokenPath: tokenFile.Name()
-				,
+				KongAdminTokenPath: tokenFile.Name(),
 			}
 		}
 
@@ -376,9 +375,7 @@ func TestConfigValidate(t *testing.T) {
 			c.KongAdminToken = "non-empty-token"
 			require.ErrorContains(t, c.Validate(), "both admin token and admin token file specified, only one allowed")
 		})
-
 	})
-
 }
 
 func TestConfigValidateGatewayDiscovery(t *testing.T) {

@@ -4,6 +4,7 @@
   "enabledManagers": ["regex"],
   "automerge": false,
   "separateMinorPatch": true,
+  "labels": ["dependencies"],
   "customManagers": [
     {
       "customType": "regex",

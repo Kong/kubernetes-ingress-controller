@@ -413,11 +413,9 @@ func ingressWithPathBackedByService(service *corev1.Service) *netv1.Ingress {
 	return &netv1.Ingress{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: testutils.RandomName(testTranslationFailuresObjectsPrefix),
-			Annotations: map[string]string{
-				annotations.IngressClassKey: consts.IngressClass,
-			},
 		},
 		Spec: netv1.IngressSpec{
+			IngressClassName: kong.String(consts.IngressClass),
 			Rules: []netv1.IngressRule{
 				{
 					IngressRuleValue: netv1.IngressRuleValue{

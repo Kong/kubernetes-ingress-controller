@@ -52,7 +52,7 @@ func TestCreateManager(t *testing.T) {
 		featureGates = map[string]bool{
 			"gateway": true,
 		}
-		publishService = k8stypes.NamespacedName{
+		ingressService = k8stypes.NamespacedName{
 			Namespace: "kong",
 			Name:      "kong-proxy",
 		}
@@ -99,7 +99,7 @@ func TestCreateManager(t *testing.T) {
 	reportValues := ReportValues{
 		FeatureGates:                   featureGates,
 		MeshDetection:                  true,
-		PublishServiceNN:               publishService,
+		IngressServiceNN:               ingressService,
 		KonnectSyncEnabled:             true,
 		GatewayServiceDiscoveryEnabled: true,
 	}

@@ -24,7 +24,6 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/gatewayapi"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util/builder"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/versions"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
 	"github.com/kong/kubernetes-ingress-controller/v2/pkg/clientset"
 	"github.com/kong/kubernetes-ingress-controller/v2/test"
@@ -156,20 +155,16 @@ func TestHTTPRouteEssentials(t *testing.T) {
 	)
 
 	t.Log("waiting for routes from HTTPRoute to become operational")
-	helpers.EventuallyGETPath(t, proxyURL, "test-http-route-essentials", http.StatusOK, "<title>httpbin.org</title>", emptyHeaderSet, ingressWait, waitTick)
-	helpers.EventuallyGETPath(t, proxyURL, "test-http-route-essentials/base64/wqt5b8q7ccK7IGRhbiBib3NocWEgYmlyIGphdm9iaW1peiB5b8q7cWRpci4K",
+	helpers.EventuallyGETPath(t, proxyURL, proxyURL.Host, "/test-http-route-essentials", http.StatusOK, "<title>httpbin.org</title>", emptyHeaderSet, ingressWait, waitTick)
+	helpers.EventuallyGETPath(t, proxyURL, proxyURL.Host, "/test-http-route-essentials/base64/wqt5b8q7ccK7IGRhbiBib3NocWEgYmlyIGphdm9iaW1peiB5b8q7cWRpci4K",
 		http.StatusOK, "«yoʻq» dan boshqa bir javobimiz yoʻqdir.", emptyHeaderSet, ingressWait, waitTick)
-	helpers.EventuallyGETPath(t, proxyURL, "2/test-http-route-essentials/regex/999", http.StatusOK, "<title>httpbin.org</title>", emptyHeaderSet, ingressWait, waitTick)
-	helpers.EventuallyGETPath(t, proxyURL, "3/exact-test-http-route-essentials", http.StatusOK, "<title>httpbin.org</title>", emptyHeaderSet, ingressWait, waitTick)
-	helpers.EventuallyGETPath(t, proxyURL, "3/exact-test-http-route-essentialsNO", http.StatusNotFound, "no Route matched", emptyHeaderSet, ingressWait, waitTick)
+	helpers.EventuallyGETPath(t, proxyURL, proxyURL.Host, "/2/test-http-route-essentials/regex/999", http.StatusOK, "<title>httpbin.org</title>", emptyHeaderSet, ingressWait, waitTick)
+	helpers.EventuallyGETPath(t, proxyURL, proxyURL.Host, "/3/exact-test-http-route-essentials", http.StatusOK, "<title>httpbin.org</title>", emptyHeaderSet, ingressWait, waitTick)
+	helpers.EventuallyGETPath(t, proxyURL, proxyURL.Host, "/3/exact-test-http-route-essentialsNO", http.StatusNotFound, "no Route matched", emptyHeaderSet, ingressWait, waitTick)
 
 	require.Eventually(t, func() bool {
-		req, err := http.NewRequest("GET", fmt.Sprintf("%s/%s", proxyURL, "test-http-route-essentials"), nil)
-		if err != nil {
-			t.Logf("WARNING: failed to create HTTP request: %v", err)
-			return false
-		}
-		resp, err := helpers.DefaultHTTPClient().Do(req)
+		req := helpers.MustHTTPRequest(t, http.MethodGet, proxyURL.Host, "/test-http-route-essentials", nil)
+		resp, err := helpers.DefaultHTTPClientWithProxy(proxyURL).Do(req)
 		if err != nil {
 			t.Logf("WARNING: http request failed for GET %s/%s: %v", proxyURL, "test-http-route-essentials", err)
 			return false
@@ -181,9 +176,7 @@ func TestHTTPRouteEssentials(t *testing.T) {
 		return false
 	}, ingressWait, waitTick)
 
-	t.Run("", func(t *testing.T) {
-		RunWhenKongVersion(t, fmt.Sprintf(">=%s", versions.RegexHeaderVersionCutoff))
-
+	t.Run("header regex match", func(t *testing.T) {
 		httpRoute, err = gatewayClient.GatewayV1beta1().HTTPRoutes(ns.Name).Get(ctx, httpRoute.Name, metav1.GetOptions{})
 		require.NoError(t, err)
 
@@ -200,7 +193,7 @@ func TestHTTPRouteEssentials(t *testing.T) {
 		require.NoError(t, err)
 
 		t.Log("verifying HTTPRoute header match")
-		helpers.EventuallyGETPath(t, proxyURL, "", http.StatusOK, "<title>httpbin.org</title>", map[string]string{"Content-Type": "audio/mp3"}, ingressWait, waitTick)
+		helpers.EventuallyGETPath(t, proxyURL, proxyURL.Host, "/", http.StatusOK, "<title>httpbin.org</title>", map[string]string{"Content-Type": "audio/mp3"}, ingressWait, waitTick)
 	})
 
 	t.Log("verifying that the HTTPRoute has the Condition 'Accepted' set to 'True'")
@@ -228,7 +221,7 @@ func TestHTTPRouteEssentials(t *testing.T) {
 	require.Eventually(t, callback, ingressWait, waitTick)
 
 	t.Log("verifying that the data-plane configuration from the HTTPRoute gets dropped with the parentRefs now removed")
-	helpers.EventuallyGETPath(t, proxyURL, "test-http-route-essentials", http.StatusNotFound, "", emptyHeaderSet, ingressWait, waitTick)
+	helpers.EventuallyGETPath(t, proxyURL, proxyURL.Host, "/test-http-route-essentials", http.StatusNotFound, "", emptyHeaderSet, ingressWait, waitTick)
 
 	t.Log("putting the parentRefs back")
 	require.Eventually(t, func() bool {
@@ -244,7 +237,7 @@ func TestHTTPRouteEssentials(t *testing.T) {
 	require.Eventually(t, callback, ingressWait, waitTick)
 
 	t.Log("verifying that putting the parentRefs back results in the routes becoming available again")
-	helpers.EventuallyGETPath(t, proxyURL, "test-http-route-essentials", http.StatusOK, "<title>httpbin.org</title>", emptyHeaderSet, ingressWait, waitTick)
+	helpers.EventuallyGETPath(t, proxyURL, proxyURL.Host, "/test-http-route-essentials", http.StatusOK, "<title>httpbin.org</title>", emptyHeaderSet, ingressWait, waitTick)
 
 	t.Log("deleting the GatewayClass")
 	require.NoError(t, gatewayClient.GatewayV1beta1().GatewayClasses().Delete(ctx, gatewayClassName, metav1.DeleteOptions{}))
@@ -253,7 +246,7 @@ func TestHTTPRouteEssentials(t *testing.T) {
 	callback = GetGatewayIsUnlinkedCallback(ctx, t, gatewayClient, gatewayapi.HTTPProtocolType, ns.Name, httpRoute.Name)
 	require.Eventually(t, callback, ingressWait, waitTick)
 	t.Log("verifying that the data-plane configuration from the HTTPRoute gets dropped with the GatewayClass now removed")
-	helpers.EventuallyGETPath(t, proxyURL, "test-http-route-essentials", http.StatusNotFound, "", emptyHeaderSet, ingressWait, waitTick)
+	helpers.EventuallyGETPath(t, proxyURL, proxyURL.Host, "/test-http-route-essentials", http.StatusNotFound, "", emptyHeaderSet, ingressWait, waitTick)
 
 	t.Log("putting the GatewayClass back")
 	gwc, err = DeployGatewayClass(ctx, gatewayClient, gatewayClassName)
@@ -265,7 +258,7 @@ func TestHTTPRouteEssentials(t *testing.T) {
 	require.Eventually(t, callback, ingressWait, waitTick)
 
 	t.Log("verifying that creating the GatewayClass again triggers reconciliation of HTTPRoutes and the route becomes available again")
-	helpers.EventuallyGETPath(t, proxyURL, "test-http-route-essentials", http.StatusOK, "<title>httpbin.org</title>", emptyHeaderSet, ingressWait, waitTick)
+	helpers.EventuallyGETPath(t, proxyURL, proxyURL.Host, "/test-http-route-essentials", http.StatusOK, "<title>httpbin.org</title>", emptyHeaderSet, ingressWait, waitTick)
 
 	t.Log("deleting the Gateway")
 	require.NoError(t, gatewayClient.GatewayV1beta1().Gateways(ns.Name).Delete(ctx, gatewayName, metav1.DeleteOptions{}))
@@ -275,7 +268,7 @@ func TestHTTPRouteEssentials(t *testing.T) {
 	require.Eventually(t, callback, ingressWait, waitTick)
 
 	t.Log("verifying that the data-plane configuration from the HTTPRoute gets dropped with the Gateway now removed")
-	helpers.EventuallyGETPath(t, proxyURL, "test-http-route-essentials", http.StatusNotFound, "", emptyHeaderSet, ingressWait, waitTick)
+	helpers.EventuallyGETPath(t, proxyURL, proxyURL.Host, "/test-http-route-essentials", http.StatusNotFound, "", emptyHeaderSet, ingressWait, waitTick)
 
 	t.Log("putting the Gateway back")
 	gateway, err = DeployGateway(ctx, gatewayClient, ns.Name, gatewayClassName, func(gw *gatewayapi.Gateway) {
@@ -288,7 +281,7 @@ func TestHTTPRouteEssentials(t *testing.T) {
 	require.Eventually(t, callback, ingressWait, waitTick)
 
 	t.Log("verifying that creating the Gateway again triggers reconciliation of HTTPRoutes and the route becomes available again")
-	helpers.EventuallyGETPath(t, proxyURL, "test-http-route-essentials", http.StatusOK, "<title>httpbin.org</title>", emptyHeaderSet, ingressWait, waitTick)
+	helpers.EventuallyGETPath(t, proxyURL, proxyURL.Host, "/test-http-route-essentials", http.StatusOK, "<title>httpbin.org</title>", emptyHeaderSet, ingressWait, waitTick)
 
 	t.Log("deleting both GatewayClass and Gateway rapidly")
 	require.NoError(t, gatewayClient.GatewayV1beta1().GatewayClasses().Delete(ctx, gwc.Name, metav1.DeleteOptions{}))
@@ -299,7 +292,7 @@ func TestHTTPRouteEssentials(t *testing.T) {
 	require.Eventually(t, callback, ingressWait, waitTick)
 
 	t.Log("verifying that the data-plane configuration from the HTTPRoute does not get orphaned with the GatewayClass and Gateway gone")
-	helpers.EventuallyGETPath(t, proxyURL, "test-http-route-essentials", http.StatusNotFound, "", emptyHeaderSet, ingressWait, waitTick)
+	helpers.EventuallyGETPath(t, proxyURL, proxyURL.Host, "/test-http-route-essentials", http.StatusNotFound, "", emptyHeaderSet, ingressWait, waitTick)
 
 	t.Log("testing port matching....")
 	t.Log("putting the Gateway back")
@@ -475,8 +468,8 @@ func TestHTTPRouteMultipleServices(t *testing.T) {
 	t.Log("verifying that both backends are ready to receive traffic")
 	httpbinRespContent := "<title>httpbin.org</title>"
 	nginxRespContent := "<title>Welcome to nginx!</title>"
-	helpers.EventuallyGETPath(t, proxyURL, "test-http-route-multiple-services", http.StatusOK, httpbinRespContent, emptyHeaderSet, ingressWait, waitTick)
-	helpers.EventuallyGETPath(t, proxyURL, "test-http-route-multiple-services", http.StatusOK, nginxRespContent, emptyHeaderSet, ingressWait, waitTick)
+	helpers.EventuallyGETPath(t, proxyURL, proxyURL.Host, "/test-http-route-multiple-services", http.StatusOK, httpbinRespContent, emptyHeaderSet, ingressWait, waitTick)
+	helpers.EventuallyGETPath(t, proxyURL, proxyURL.Host, "/test-http-route-multiple-services", http.StatusOK, nginxRespContent, emptyHeaderSet, ingressWait, waitTick)
 
 	t.Log("verifying that both backends receive requests according to weighted distribution")
 	httpbinRespName := "httpbin-resp"
@@ -488,6 +481,7 @@ func TestHTTPRouteMultipleServices(t *testing.T) {
 	}
 	weightedLoadBalancingTestConfig := helpers.CountHTTPResponsesConfig{
 		Method:      http.MethodGet,
+		Host:        proxyURL.Host,
 		Path:        "test-http-route-multiple-services",
 		Headers:     emptyHeaderSet,
 		Duration:    5 * time.Second,
@@ -509,7 +503,7 @@ func TestHTTPRouteMultipleServices(t *testing.T) {
 	)
 
 	t.Log("verifying that misconfigured service rules are _not_ routed")
-	helpers.EventuallyGETPath(t, proxyURL, "test-http-route-multiple-services-broken", http.StatusNotFound, "", emptyHeaderSet, ingressWait, waitTick)
+	helpers.EventuallyGETPath(t, proxyURL, proxyURL.Host, "/test-http-route-multiple-services-broken", http.StatusNotFound, "", emptyHeaderSet, ingressWait, waitTick)
 }
 
 func TestHTTPRouteFilterHosts(t *testing.T) {
@@ -587,9 +581,8 @@ func TestHTTPRouteFilterHosts(t *testing.T) {
 	// testGetByHost tries to get the test path with specified host in request,
 	// and returns true if 200 returned.
 	testGetByHost := func(t *testing.T, host string) bool {
-		req := helpers.MustHTTPRequest(t, "GET", proxyURL, "/test-http-route-filter-hosts", nil)
-		req.Host = host
-		resp, err := helpers.DefaultHTTPClient().Do(req)
+		req := helpers.MustHTTPRequest(t, http.MethodGet, host, "/test-http-route-filter-hosts", nil)
+		resp, err := helpers.DefaultHTTPClientWithProxy(proxyURL).Do(req)
 		if err != nil {
 			return false
 		}

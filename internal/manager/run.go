@@ -39,7 +39,6 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 	dataplaneutil "github.com/kong/kubernetes-ingress-controller/v2/internal/util/dataplane"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util/kubernetes/object/status"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/versions"
 )
 
 // -----------------------------------------------------------------------------
@@ -74,6 +73,11 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 	adminAPIsDiscoverer, err := adminapi.NewDiscoverer(sets.New(c.KongAdminSvcPortNames...), c.GatewayDiscoveryDNSStrategy)
 	if err != nil {
 		return fmt.Errorf("failed to create admin apis discoverer: %w", err)
+	}
+
+	err = c.Resolve()
+	if err != nil {
+		return fmt.Errorf("failed to resolve configuration: %w", err)
 	}
 
 	adminAPIClientsFactory := adminapi.NewClientFactoryForWorkspace(c.KongWorkspace, c.KongAdminAPIConfig, c.KongAdminToken)
@@ -111,14 +115,13 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 	kongSemVersion := semver.Version{Major: v.Major(), Minor: v.Minor(), Patch: v.Patch()}
 
 	kongConfig := sendconfig.Config{
-		Version:               kongSemVersion,
-		InMemory:              dataplaneutil.IsDBLessMode(dbMode),
-		Concurrency:           c.Concurrency,
-		FilterTags:            c.FilterTags,
-		SkipCACertificates:    c.SkipCACertificates,
-		EnableReverseSync:     c.EnableReverseSync,
-		ExpressionRoutes:      featureGates.Enabled(featuregates.ExpressionRoutesFeature),
-		DeckFileFormatVersion: versions.DeckFileFormat(kongSemVersion),
+		Version:            kongSemVersion,
+		InMemory:           dataplaneutil.IsDBLessMode(dbMode),
+		Concurrency:        c.Concurrency,
+		FilterTags:         c.FilterTags,
+		SkipCACertificates: c.SkipCACertificates,
+		EnableReverseSync:  c.EnableReverseSync,
+		ExpressionRoutes:   featureGates.Enabled(featuregates.ExpressionRoutesFeature),
 	}
 	kongConfig.Init(ctx, setupLog, initialKongClients)
 
@@ -309,7 +312,7 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 				SplunkEndpointInsecureSkipVerify: c.SplunkEndpointInsecureSkipVerify,
 				TelemetryPeriod:                  c.TelemetryPeriod,
 				ReportValues: telemetry.ReportValues{
-					PublishServiceNN:               c.PublishService.OrEmpty(),
+					IngressServiceNN:               c.IngressService.OrEmpty(),
 					FeatureGates:                   featureGates,
 					MeshDetection:                  len(c.WatchNamespaces) == 0,
 					KonnectSyncEnabled:             c.Konnect.ConfigSynchronizationEnabled,
@@ -424,9 +427,9 @@ func setupKonnectAdminAPIClientWithClientsMgr(
 	clientsManager *clients.AdminAPIClientsManager,
 	logger logr.Logger,
 ) {
-	konnectAdminAPIClient, err := adminapi.NewKongClientForKonnectRuntimeGroup(config)
+	konnectAdminAPIClient, err := adminapi.NewKongClientForKonnectControlPlane(config)
 	if err != nil {
-		logger.Error(err, "Failed creating Konnect Runtime Group Admin API client, skipping synchronisation")
+		logger.Error(err, "Failed creating Konnect Control Plane Admin API client, skipping synchronisation")
 		return
 	}
 	if err := adminapi.EnsureKonnectConnection(ctx, konnectAdminAPIClient.AdminAPIClient(), logger); err != nil {

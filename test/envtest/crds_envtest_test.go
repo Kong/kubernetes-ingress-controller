@@ -30,12 +30,18 @@ import (
 // TestGatewayAPIControllersMayBeDynamicallyStarted ensures that in case of missing CRDs installation in the
 // cluster, specific controllers are not started until the CRDs are installed.
 func TestGatewayAPIControllersMayBeDynamicallyStarted(t *testing.T) {
+	t.Parallel()
+
 	scheme := Scheme(t, WithKong)
 	envcfg := Setup(t, scheme, WithInstallGatewayCRDs(false))
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	loggerHook := RunManager(ctx, t, envcfg, WithGatewayFeatureEnabled, WithPublishService("ns"))
+	loggerHook := RunManager(ctx, t, envcfg,
+		AdminAPIOptFns(),
+		WithGatewayFeatureEnabled,
+		WithIngressService("ns"),
+	)
 
 	controllers := []string{
 		"Gateway",
@@ -83,6 +89,8 @@ func TestGatewayAPIControllersMayBeDynamicallyStarted(t *testing.T) {
 // TestNoKongCRDsInstalledIsFatal ensures that in case of missing Kong CRDs installation, the manager Run() eventually
 // returns an error due to cache synchronisation timeout.
 func TestNoKongCRDsInstalledIsFatal(t *testing.T) {
+	t.Parallel()
+
 	scheme := Scheme(t)
 	envcfg := Setup(t, scheme, WithInstallKongCRDs(false))
 
@@ -101,6 +109,8 @@ func TestNoKongCRDsInstalledIsFatal(t *testing.T) {
 }
 
 func TestCRDValidations(t *testing.T) {
+	t.Parallel()
+
 	ctx := context.Background()
 	scheme := Scheme(t, WithKong)
 	envcfg := Setup(t, scheme)

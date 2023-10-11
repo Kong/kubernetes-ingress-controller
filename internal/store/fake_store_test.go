@@ -321,7 +321,7 @@ func TestFakeStoreService(t *testing.T) {
 
 	service, err = store.GetService("default", "does-not-exists")
 	assert.NotNil(err)
-	assert.True(errors.As(err, &ErrNotFound{}))
+	assert.True(errors.As(err, &NotFoundError{}))
 	assert.Nil(service)
 }
 
@@ -375,7 +375,7 @@ func TestFakeStoreEndpointSlice(t *testing.T) {
 
 	t.Run("Get EndpointSlices for non-existing Service", func(t *testing.T) {
 		c, err := store.GetEndpointSlicesForService("default", "does-not-exist")
-		require.ErrorAs(t, err, &ErrNotFound{})
+		require.ErrorAs(t, err, &NotFoundError{})
 		require.Nil(t, c)
 	})
 }
@@ -406,7 +406,7 @@ func TestFakeStoreConsumer(t *testing.T) {
 	c, err = store.GetKongConsumer("default", "does-not-exist")
 	assert.Nil(c)
 	assert.NotNil(err)
-	assert.True(errors.As(err, &ErrNotFound{}))
+	assert.True(errors.As(err, &NotFoundError{}))
 }
 
 func TestFakeStoreConsumerGroup(t *testing.T) {
@@ -435,7 +435,7 @@ func TestFakeStoreConsumerGroup(t *testing.T) {
 	c, err = store.GetKongConsumerGroup("default", "does-not-exist")
 	assert.Nil(c)
 	assert.NotNil(err)
-	assert.True(errors.As(err, &ErrNotFound{}))
+	assert.True(errors.As(err, &NotFoundError{}))
 }
 
 func TestFakeStorePlugins(t *testing.T) {
@@ -469,7 +469,7 @@ func TestFakeStorePlugins(t *testing.T) {
 	assert.Len(plugins, 1)
 
 	plugin, err := store.GetKongPlugin("default", "does-not-exist")
-	require.ErrorAs(err, &ErrNotFound{})
+	require.ErrorAs(err, &NotFoundError{})
 	require.Nil(plugin)
 }
 
@@ -531,7 +531,7 @@ func TestFakeStoreClusterPlugins(t *testing.T) {
 
 	plugin, err = store.GetKongClusterPlugin("does-not-exist")
 	assert.NotNil(err)
-	assert.True(errors.As(err, &ErrNotFound{}))
+	assert.True(errors.As(err, &NotFoundError{}))
 	assert.Nil(plugin)
 }
 
@@ -557,7 +557,7 @@ func TestFakeStoreSecret(t *testing.T) {
 	secret, err = store.GetSecret("default", "does-not-exist")
 	assert.Nil(secret)
 	assert.NotNil(err)
-	assert.True(errors.As(err, &ErrNotFound{}))
+	assert.True(errors.As(err, &NotFoundError{}))
 }
 
 func TestFakeKongIngress(t *testing.T) {
@@ -582,7 +582,7 @@ func TestFakeKongIngress(t *testing.T) {
 	kingress, err = store.GetKongIngress("default", "does-not-exist")
 	assert.NotNil(err)
 	assert.Nil(kingress)
-	assert.True(errors.As(err, &ErrNotFound{}))
+	assert.True(errors.As(err, &NotFoundError{}))
 }
 
 func TestFakeStore_ListCACerts(t *testing.T) {

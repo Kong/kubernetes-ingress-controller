@@ -25,7 +25,7 @@ type Role struct {
 	// ID is the role ID.
 	ID string
 
-	// EntityID is the ID of the entity the role is assigned to (e.g. Runtime Group).
+	// EntityID is the ID of the entity the role is assigned to (e.g. Control Plane).
 	EntityID string
 }
 
@@ -50,8 +50,8 @@ func NewClient(httpClient *http.Client, baseURL string, personalAccessToken stri
 	}
 }
 
-// ListRuntimeGroupsRoles lists all roles assigned to the current user for Runtime Groups.
-func (c *Client) ListRuntimeGroupsRoles(ctx context.Context) ([]Role, error) {
+// ListControlPlanesRoles lists all roles assigned to the current user for Control Planes.
+func (c *Client) ListControlPlanesRoles(ctx context.Context) ([]Role, error) {
 	currentUserID, err := c.getCurrentUserID(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get current user ID: %w", err)

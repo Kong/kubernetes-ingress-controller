@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
+	"github.com/kong/go-kong/kong"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
 	"github.com/stretchr/testify/assert"
@@ -47,9 +48,9 @@ func TestConsumerCredential(t *testing.T) {
 
 	t.Logf("creating an ingress for service %s with ingress.class %s", service.Name, consts.IngressClass)
 	ingress := generators.NewIngressForService("/test_consumer_credential", map[string]string{
-		annotations.IngressClassKey: consts.IngressClass,
-		"konghq.com/strip-path":     "true",
+		"konghq.com/strip-path": "true",
 	}, service)
+	ingress.Spec.IngressClassName = kong.String(consts.IngressClass)
 	require.NoError(t, clusters.DeployIngress(ctx, env.Cluster(), ns.Name, ingress))
 	cleaner.Add(ingress)
 
@@ -139,9 +140,9 @@ func TestConsumerCredential(t *testing.T) {
 
 	t.Logf("validating that consumer has access")
 	assert.Eventually(t, func() bool {
-		req := helpers.MustHTTPRequest(t, "GET", proxyURL, "/test_consumer_credential", nil)
+		req := helpers.MustHTTPRequest(t, http.MethodGet, proxyURL.Host, "/test_consumer_credential", nil)
 		req.SetBasicAuth("test_consumer_credential", "test_consumer_credential")
-		resp, err := helpers.DefaultHTTPClient().Do(req)
+		resp, err := helpers.DefaultHTTPClientWithProxy(proxyURL).Do(req)
 		if err != nil {
 			return false
 		}
@@ -168,5 +169,5 @@ func TestConsumerCredential(t *testing.T) {
 
 	t.Log("deleting Ingress and waiting for routes to be torn down")
 	require.NoError(t, clusters.DeleteIngress(ctx, env.Cluster(), ns.Name, ingress))
-	helpers.EventuallyExpectHTTP404WithNoRoute(t, proxyURL, "/test_plugin_essentials", ingressWait, waitTick, nil)
+	helpers.EventuallyExpectHTTP404WithNoRoute(t, proxyURL, proxyURL.Host, "/test_plugin_essentials", ingressWait, waitTick, nil)
 }

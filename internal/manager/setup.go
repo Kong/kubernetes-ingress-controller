@@ -93,16 +93,16 @@ func setupControllerOptions(ctx context.Context, logger logr.Logger, c *Config, 
 	if len(c.WatchNamespaces) > 0 {
 		watchNamespaces := c.WatchNamespaces
 
-		// in all other cases we are a multi-namespace setup and must watch all the
+		// In all other cases we are a multi-namespace setup and must watch all the
 		// c.WatchNamespaces.
 		// this mode does not set the Namespace option, so the manager will default to watching all namespaces
 		// MultiNamespacedCacheBuilder imposes a filter on top of that watch to retrieve scoped resources
 		// from the watched namespaces only.
 		logger.Info("manager set up with multiple namespaces", "namespaces", watchNamespaces)
 
-		// if publish service has been provided the namespace for it should be
+		// If ingress service has been provided the namespace for it should be
 		// watched so that controllers can see updates to the service.
-		if s, ok := c.PublishService.Get(); ok {
+		if s, ok := c.IngressService.Get(); ok {
 			watchNamespaces = append(c.WatchNamespaces, s.Namespace)
 		}
 		watched := make(map[string]cache.Config)
@@ -211,19 +211,19 @@ func setupAdmissionServer(
 }
 
 // setupDataplaneAddressFinder returns a default and UDP address finder. These finders return the override addresses if
-// set or the publish service addresses if no overrides are set. If no UDP overrides or UDP publish service are set,
-// the UDP finder will also return the default addresses. If no override or publish service is set, this function
+// set or the ingress service addresses if no overrides are set. If no UDP overrides or UDP ingress service are set,
+// the UDP finder will also return the default addresses. If no override or ingress service is set, this function
 // returns nil finders and an error.
 func setupDataplaneAddressFinder(mgrc client.Client, c *Config, log logr.Logger) (*dataplane.AddressFinder, *dataplane.AddressFinder, error) {
 	if !c.UpdateStatus {
 		return nil, nil, nil
 	}
 
-	defaultAddressFinder, err := buildDataplaneAddressFinder(mgrc, c.PublishStatusAddress, c.PublishService)
+	defaultAddressFinder, err := buildDataplaneAddressFinder(mgrc, c.IngressAddresses, c.IngressService)
 	if err != nil {
 		return nil, nil, fmt.Errorf("status updates enabled but no method to determine data-plane addresses: %w", err)
 	}
-	udpAddressFinder, err := buildDataplaneAddressFinder(mgrc, c.PublishStatusAddressUDP, c.PublishServiceUDP)
+	udpAddressFinder, err := buildDataplaneAddressFinder(mgrc, c.IngressAddressesUDP, c.IngressServiceUDP)
 	if err != nil {
 		log.Info("falling back to a default address finder for UDP", "reason", err.Error())
 		udpAddressFinder = defaultAddressFinder
@@ -232,25 +232,25 @@ func setupDataplaneAddressFinder(mgrc client.Client, c *Config, log logr.Logger)
 	return defaultAddressFinder, udpAddressFinder, nil
 }
 
-func buildDataplaneAddressFinder(mgrc client.Client, publishStatusAddress []string, publishServiceNN OptionalNamespacedName) (*dataplane.AddressFinder, error) {
+func buildDataplaneAddressFinder(mgrc client.Client, ingressAddresses []string, ingressServiceNN OptionalNamespacedName) (*dataplane.AddressFinder, error) {
 	addressFinder := dataplane.NewAddressFinder()
 
-	if len(publishStatusAddress) > 0 {
-		addressFinder.SetOverrides(publishStatusAddress)
+	if len(ingressAddresses) > 0 {
+		addressFinder.SetOverrides(ingressAddresses)
 		return addressFinder, nil
 	}
-	if serviceNN, ok := publishServiceNN.Get(); ok {
+	if serviceNN, ok := ingressServiceNN.Get(); ok {
 		addressFinder.SetGetter(generateAddressFinderGetter(mgrc, serviceNN))
 		return addressFinder, nil
 	}
 
-	return nil, errors.New("no publish status address or publish service were provided")
+	return nil, errors.New("no publish status address or ingress service were provided")
 }
 
-func generateAddressFinderGetter(mgrc client.Client, publishServiceNn k8stypes.NamespacedName) func(context.Context) ([]string, error) {
+func generateAddressFinderGetter(mgrc client.Client, ingressServiceNN k8stypes.NamespacedName) func(context.Context) ([]string, error) {
 	return func(ctx context.Context) ([]string, error) {
 		svc := new(corev1.Service)
-		if err := mgrc.Get(ctx, publishServiceNn, svc); err != nil {
+		if err := mgrc.Get(ctx, ingressServiceNN, svc); err != nil {
 			return nil, err
 		}
 
@@ -270,7 +270,7 @@ func generateAddressFinderGetter(mgrc client.Client, publishServiceNn k8stypes.N
 		}
 
 		if len(addrs) == 0 {
-			return nil, fmt.Errorf("waiting for addresses to be provisioned for publish service %s", publishServiceNn)
+			return nil, fmt.Errorf("waiting for addresses to be provisioned for ingress service %q", ingressServiceNN)
 		}
 
 		return addrs, nil

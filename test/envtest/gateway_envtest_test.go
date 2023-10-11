@@ -25,6 +25,8 @@ import (
 // Gateway's listener.
 // It reproduces https://github.com/Kong/kubernetes-ingress-controller/issues/4456.
 func TestGatewayReconciliation_MoreThan100Routes(t *testing.T) {
+	t.Parallel()
+
 	scheme := Scheme(t, WithGatewayAPI, WithKong)
 	envcfg := Setup(t, scheme)
 	ctrlClient := NewControllerClient(t, scheme, envcfg)
@@ -32,7 +34,11 @@ func TestGatewayReconciliation_MoreThan100Routes(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	gw := deployGateway(ctx, t, ctrlClient)
-	RunManager(ctx, t, envcfg, WithPublishService(gw.Namespace), WithGatewayFeatureEnabled)
+	RunManager(ctx, t, envcfg,
+		AdminAPIOptFns(),
+		WithIngressService(gw.Namespace),
+		WithGatewayFeatureEnabled,
+	)
 
 	const numOfRoutes = 120
 	createHTTPRoutes(ctx, t, ctrlClient, gw, numOfRoutes)

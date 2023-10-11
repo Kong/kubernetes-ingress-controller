@@ -1,7 +1,6 @@
 package parser
 
 import (
-	"fmt"
 	"strings"
 	"testing"
 
@@ -378,7 +377,7 @@ func TestIngressRulesFromUDPRoutesUsingExpressionRoutes(t *testing.T) {
 					},
 				},
 			},
-			kongVersion: versions.ExpressionRouterL4Cutoff,
+			kongVersion: versions.KICv3VersionCutoff,
 			expectedKongServices: []kongstate.Service{
 				{
 					Service: kong.Service{
@@ -427,7 +426,7 @@ func TestIngressRulesFromUDPRoutesUsingExpressionRoutes(t *testing.T) {
 					},
 				},
 			},
-			kongVersion: versions.ExpressionRouterL4Cutoff,
+			kongVersion: versions.KICv3VersionCutoff,
 			expectedKongServices: []kongstate.Service{
 				{
 					Service: kong.Service{
@@ -493,7 +492,7 @@ func TestIngressRulesFromUDPRoutesUsingExpressionRoutes(t *testing.T) {
 					},
 				},
 			},
-			kongVersion: versions.ExpressionRouterL4Cutoff,
+			kongVersion: versions.KICv3VersionCutoff,
 			expectedKongServices: []kongstate.Service{
 				{
 					Service: kong.Service{
@@ -559,7 +558,7 @@ func TestIngressRulesFromUDPRoutesUsingExpressionRoutes(t *testing.T) {
 					Spec:       gatewayapi.UDPRouteSpec{},
 				},
 			},
-			kongVersion: versions.ExpressionRouterL4Cutoff,
+			kongVersion: versions.KICv3VersionCutoff,
 			expectedKongServices: []kongstate.Service{
 				{
 					Service: kong.Service{
@@ -612,35 +611,6 @@ func TestIngressRulesFromUDPRoutesUsingExpressionRoutes(t *testing.T) {
 					&gatewayapi.UDPRoute{
 						TypeMeta:   udpRouteTypeMeta,
 						ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "no-rule"},
-					},
-				),
-			},
-		},
-		{
-			name: "versions less than 3.4 could not translate to expression routes",
-			udpRoutes: []*gatewayapi.UDPRoute{
-				{
-					TypeMeta:   udpRouteTypeMeta,
-					ObjectMeta: metav1.ObjectMeta{Name: "single-rule", Namespace: "default"},
-					Spec: gatewayapi.UDPRouteSpec{
-						Rules: []gatewayapi.UDPRouteRule{
-							{
-								BackendRefs: []gatewayapi.BackendRef{
-									builder.NewBackendRef("service1").WithPort(80).Build(),
-								},
-							},
-						},
-					},
-				},
-			},
-			kongVersion: semver.MustParse("3.3.0"),
-			expectedFailures: []failures.ResourceFailure{
-				newResourceFailure(
-					t, fmt.Sprintf("resource kind %s.%s not supported when expression routes enabled",
-						udpRouteTypeMeta.APIVersion, udpRouteTypeMeta.Kind),
-					&gatewayapi.UDPRoute{
-						TypeMeta:   udpRouteTypeMeta,
-						ObjectMeta: metav1.ObjectMeta{Name: "single-rule", Namespace: "default"},
 					},
 				),
 			},

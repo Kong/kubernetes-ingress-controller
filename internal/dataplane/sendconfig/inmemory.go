@@ -7,12 +7,10 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/blang/semver/v4"
 	"github.com/kong/deck/file"
 	"github.com/sirupsen/logrus"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/metrics"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/versions"
 )
 
 type ConfigService interface {
@@ -36,20 +34,17 @@ type UpdateStrategyInMemory struct {
 	configService   ConfigService
 	configConverter ContentToDBLessConfigConverter
 	log             logrus.FieldLogger
-	version         semver.Version
 }
 
 func NewUpdateStrategyInMemory(
 	configService ConfigService,
 	configConverter ContentToDBLessConfigConverter,
 	log logrus.FieldLogger,
-	version semver.Version,
 ) UpdateStrategyInMemory {
 	return UpdateStrategyInMemory{
 		configService:   configService,
 		configConverter: configConverter,
 		log:             log,
-		version:         version,
 	}
 }
 
@@ -64,8 +59,7 @@ func (s UpdateStrategyInMemory) Update(ctx context.Context, targetState ContentW
 		return fmt.Errorf("constructing kong configuration: %w", err), nil, nil
 	}
 
-	flattenErrors := shouldUseFlattenedErrors(s.version)
-	if errBody, err := s.configService.ReloadDeclarativeRawConfig(ctx, bytes.NewReader(config), true, flattenErrors); err != nil {
+	if errBody, err := s.configService.ReloadDeclarativeRawConfig(ctx, bytes.NewReader(config), true, true); err != nil {
 		resourceErrors, parseErr := parseFlatEntityErrors(errBody, s.log)
 		return err, resourceErrors, parseErr
 	}
@@ -79,17 +73,6 @@ func (s UpdateStrategyInMemory) MetricsProtocol() metrics.Protocol {
 
 func (s UpdateStrategyInMemory) Type() string {
 	return "InMemory"
-}
-
-// shouldUseFlattenedErrors verifies whether we should pass flatten errors flag to ReloadDeclarativeRawConfig.
-// Kong's API library combines KVs in the request body (the config) and query string (check hash, flattened)
-// into a single set of parameters: https://github.com/Kong/go-kong/pull/271#issuecomment-1416212852
-// KIC therefore must _not_ request flattened errors on versions that do not support it, as otherwise Kong
-// will interpret the query string toggle as part of the config, and will reject it, as "flattened_errors" is
-// not a valid config key.
-// KIC only sends this query parameter if Kong is 3.2 or higher.
-func shouldUseFlattenedErrors(version semver.Version) bool {
-	return version.GTE(versions.FlattenedErrorCutoff)
 }
 
 type InMemoryClient interface {

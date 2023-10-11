@@ -34,6 +34,8 @@ import (
 )
 
 func TestTelemetry(t *testing.T) {
+	t.Parallel()
+
 	t.Log("configuring TLS listener - server for telemetry data")
 	cert := certificate.MustGenerateSelfSignedCert()
 	telemetryServerListener, err := tls.Listen("tcp", "localhost:0", &tls.Config{
@@ -79,14 +81,14 @@ func TestTelemetry(t *testing.T) {
 		waitTime = 3 * time.Second
 		tickTime = 10 * time.Millisecond
 	)
-	require.Eventually(t, func() bool {
+	require.Eventuallyf(t, func() bool {
 		select {
 		case report := <-reportChan:
 			return verifyTelemetryReport(t, k8sVersion, string(report))
 		case <-time.After(tickTime):
 			return false
 		}
-	}, waitTime, tickTime)
+	}, waitTime, tickTime, "telemetry report never matched expected value")
 }
 
 func configForEnvTestTelemetry(t *testing.T, envcfg *rest.Config, splunkEndpoint string, telemetryPeriod time.Duration) manager.Config {
@@ -340,7 +342,8 @@ func verifyTelemetryReport(t *testing.T, k8sVersion *version.Info, report string
 	for _, s := range []string{"id", "uptime"} {
 		report, err = removeStanzaFromReport(report, s)
 		if err != nil {
-			t.Logf("failed to remove stanza %q from report: %s", s, err)
+			// this normally happens during shutdown, when the report is an empty string
+			// no point in proceeding if so
 			return false
 		}
 	}
@@ -360,7 +363,8 @@ func verifyTelemetryReport(t *testing.T, k8sVersion *version.Info, report string
 			"feature-konnect-sync=false;"+
 			"feature-rewriteuris=false;"+
 			"hn=%s;"+
-			"kv=3.3.0;"+
+			"kv=3.4.1;"+
+			"rf=traditional;"+
 			"v=NOT_SET;"+
 			"k8s_arch=%s;"+
 			"k8s_provider=UNKNOWN;"+

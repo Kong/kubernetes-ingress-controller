@@ -29,18 +29,18 @@ import (
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/adminapi"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/konnect"
+	cp "github.com/kong/kubernetes-ingress-controller/v2/internal/konnect/controlplanes"
+	cpc "github.com/kong/kubernetes-ingress-controller/v2/internal/konnect/controlplanesconfig"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/konnect/nodes"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/konnect/roles"
-	rg "github.com/kong/kubernetes-ingress-controller/v2/internal/konnect/runtimegroups"
-	rgc "github.com/kong/kubernetes-ingress-controller/v2/internal/konnect/runtimegroupsconfig"
 	"github.com/kong/kubernetes-ingress-controller/v2/test/helpers/certificate"
 	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/helpers"
 )
 
 const (
-	konnectRuntimeGroupsBaseURL          = "https://us.kic.api.konghq.tech/v2"
-	konnectRuntimeGroupsConfigBaseURLFmt = "https://us.api.konghq.tech/konnect-api/api/runtime_groups/%s/v1"
-	konnectRuntimeGroupAdminAPIBaseURL   = "https://us.kic.api.konghq.tech"
+	konnectControlPlanesBaseURL          = "https://us.kic.api.konghq.tech/v2"
+	konnectControlPlanesConfigBaseURLFmt = "https://us.api.konghq.tech/v2/control-planes/%s/"
+	konnectControlPlaneAdminAPIBaseURL   = "https://us.kic.api.konghq.tech"
 	konnectRolesBaseURL                  = "https://global.api.konghq.tech/v2"
 
 	konnectNodeRegistrationTimeout = 5 * time.Minute
@@ -51,14 +51,13 @@ var konnectAccessToken = os.Getenv("TEST_KONG_KONNECT_ACCESS_TOKEN")
 
 func TestKonnectConfigPush(t *testing.T) {
 	t.Parallel()
-	skipTestIfControllerVersionBelow(t, gatewayDiscoveryMinimalVersion)
 	skipIfMissingRequiredKonnectEnvVariables(t)
 
 	ctx, env := setupE2ETest(t)
 
-	rgID := createTestRuntimeGroup(ctx, t)
-	cert, key := createClientCertificate(ctx, t, rgID)
-	createKonnectClientSecretAndConfigMap(ctx, t, env, cert, key, rgID)
+	cpID := createTestControlPlane(ctx, t)
+	cert, key := createClientCertificate(ctx, t, cpID)
+	createKonnectClientSecretAndConfigMap(ctx, t, env, cert, key, cpID)
 
 	deployments := deployAllInOneKonnectManifest(ctx, t, env)
 
@@ -66,23 +65,22 @@ func TestKonnectConfigPush(t *testing.T) {
 	deployIngressWithEchoBackends(ctx, t, env, numberOfEchoBackends)
 	verifyIngressWithEchoBackends(ctx, t, env, numberOfEchoBackends)
 
-	t.Log("ensuring ingress resources are correctly populated in Konnect Runtime Group's Admin API")
-	konnectAdminAPIClient := createKonnectAdminAPIClient(t, rgID, cert, key)
+	t.Log("ensuring ingress resources are correctly populated in Konnect Control Plane's Admin API")
+	konnectAdminAPIClient := createKonnectAdminAPIClient(t, cpID, cert, key)
 	verifyIngressWithEchoBackendsInAdminAPI(ctx, t, konnectAdminAPIClient.AdminAPIClient(), numberOfEchoBackends)
 
-	t.Log("ensuring KIC nodes and controlled kong gateway nodes are present in konnect runtime group")
-	requireKonnectNodesConsistentWithK8s(ctx, t, env, deployments, rgID, cert, key)
-	requireAllProxyReplicasIDsConsistentWithKonnect(ctx, t, env, deployments.ProxyNN, rgID, cert, key)
+	t.Log("ensuring KIC nodes and controlled kong gateway nodes are present in konnect control plane")
+	requireKonnectNodesConsistentWithK8s(ctx, t, env, deployments, cpID, cert, key)
+	requireAllProxyReplicasIDsConsistentWithKonnect(ctx, t, env, deployments.ProxyNN, cpID, cert, key)
 }
 
 func TestKonnectLicenseActivation(t *testing.T) {
 	t.Parallel()
-	skipTestIfControllerVersionBelow(t, gatewayDiscoveryMinimalVersion)
 	skipIfMissingRequiredKonnectEnvVariables(t)
 
 	ctx, env := setupE2ETest(t)
 
-	rgID := createTestRuntimeGroup(ctx, t)
+	rgID := createTestControlPlane(ctx, t)
 	cert, key := createClientCertificate(ctx, t, rgID)
 	createKonnectClientSecretAndConfigMap(ctx, t, env, cert, key, rgID)
 
@@ -143,14 +141,13 @@ func TestKonnectLicenseActivation(t *testing.T) {
 func TestKonnectWhenMisconfiguredBasicIngressNotAffected(t *testing.T) {
 	t.Parallel()
 	skipIfMissingRequiredKonnectEnvVariables(t)
-	skipTestIfControllerVersionBelow(t, gatewayDiscoveryMinimalVersion)
 	ctx, env := setupE2ETest(t)
 
-	rgID := createTestRuntimeGroup(ctx, t)
+	rgID := createTestControlPlane(ctx, t)
 	cert, key := createClientCertificate(ctx, t, rgID)
 
-	// create a Konnect client secret and config map with a non-existing runtime group ID to simulate misconfiguration
-	notExistingRgID := "not-existing-rg-id"
+	// create a Konnect client secret and config map with a non-existing control plane ID to simulate misconfiguration
+	notExistingRgID := "not-existing-cp-id"
 	createKonnectClientSecretAndConfigMap(ctx, t, env, cert, key, notExistingRgID)
 
 	deployAllInOneKonnectManifest(ctx, t, env)
@@ -175,10 +172,10 @@ func deployAllInOneKonnectManifest(ctx context.Context, t *testing.T, env enviro
 	return ManifestDeploy{Path: manifestFile}.Run(ctx, t, env)
 }
 
-func generateTestKonnectRuntimeGroupDescription(t *testing.T) string {
+func generateTestKonnectControlPlaneDescription(t *testing.T) string {
 	t.Helper()
 
-	desc := fmt.Sprintf("runtime group for test %s", t.Name())
+	desc := fmt.Sprintf("control plane for test %s", t.Name())
 	if githubServerURL != "" && githubRepo != "" && githubRunID != "" {
 		githubRunURL := fmt.Sprintf("%s/%s/actions/runs/%s",
 			githubServerURL, githubRepo, githubRunID)
@@ -188,11 +185,11 @@ func generateTestKonnectRuntimeGroupDescription(t *testing.T) string {
 	return desc
 }
 
-// createTestRuntimeGroup creates a runtime group to be used in tests. It returns the created runtime group's ID.
+// createTestControlPlane creates a control plane to be used in tests. It returns the created control plane's ID.
 // It also sets up a cleanup function for it to be deleted.
-func createTestRuntimeGroup(ctx context.Context, t *testing.T) string {
+func createTestControlPlane(ctx context.Context, t *testing.T) string {
 	t.Helper()
-	rgClient, err := rg.NewClientWithResponses(konnectRuntimeGroupsBaseURL, rg.WithRequestEditorFn(
+	rgClient, err := cp.NewClientWithResponses(konnectControlPlanesBaseURL, cp.WithRequestEditorFn(
 		func(ctx context.Context, req *http.Request) error {
 			req.Header.Set("Authorization", "Bearer "+konnectAccessToken)
 			return nil
@@ -208,22 +205,22 @@ func createTestRuntimeGroup(ctx context.Context, t *testing.T) string {
 	var rgID uuid.UUID
 	createRgErr := retry.Do(func() error {
 		rgName := uuid.NewString()
-		createRgResp, err := rgClient.CreateRuntimeGroupWithResponse(ctx, rg.CreateRuntimeGroupRequest{
-			Description: lo.ToPtr(generateTestKonnectRuntimeGroupDescription(t)),
-			Labels: &rg.Labels{
+		createRgResp, err := rgClient.CreateControlPlaneWithResponse(ctx, cp.CreateControlPlaneRequest{
+			Description: lo.ToPtr(generateTestKonnectControlPlaneDescription(t)),
+			Labels: &cp.Labels{
 				"created_in_tests": "true",
 			},
 			Name:        rgName,
-			ClusterType: rg.ClusterTypeKubernetesIngressController,
+			ClusterType: cp.ClusterTypeKubernetesIngressController,
 		})
 		if err != nil {
-			return fmt.Errorf("failed to create runtime group: %w", err)
+			return fmt.Errorf("failed to create control plane: %w", err)
 		}
 		if createRgResp.StatusCode() != http.StatusCreated {
 			return fmt.Errorf("failed to create RG: code %d, message %s", createRgResp.StatusCode(), string(createRgResp.Body))
 		}
 		if createRgResp.JSON201 == nil || createRgResp.JSON201.Id == nil {
-			return errors.New("No runtime group ID in response")
+			return errors.New("No control plane ID in response")
 		}
 
 		rgID = *createRgResp.JSON201.Id
@@ -232,56 +229,56 @@ func createTestRuntimeGroup(ctx context.Context, t *testing.T) string {
 	require.NoError(t, createRgErr)
 
 	t.Cleanup(func() {
-		t.Logf("deleting test Konnect Runtime Group: %q", rgID)
+		t.Logf("deleting test Konnect Control Plane: %q", rgID)
 		err := retry.Do(
 			func() error {
-				_, err := rgClient.DeleteRuntimeGroupWithResponse(ctx, rgID)
+				_, err := rgClient.DeleteControlPlaneWithResponse(ctx, rgID)
 				return err
 			},
 			retry.Attempts(5), retry.Delay(time.Second),
 		)
-		assert.NoErrorf(t, err, "failed to cleanup a runtime group: %q", rgID)
+		assert.NoErrorf(t, err, "failed to cleanup a control plane: %q", rgID)
 
-		// We have to manually delete roles created for the runtime group because Konnect doesn't do it automatically.
+		// We have to manually delete roles created for the control plane because Konnect doesn't do it automatically.
 		// If we don't do it, we will eventually hit a problem with Konnect APIs answering our requests with 504s
 		// because of a performance issue when there's too many roles for the account
 		// (see https://konghq.atlassian.net/browse/TPS-1319).
 		//
 		// We can drop this once the automated cleanup is implemented on Konnect side:
 		// https://konghq.atlassian.net/browse/TPS-1453.
-		rgRoles, err := rolesClient.ListRuntimeGroupsRoles(ctx)
-		require.NoErrorf(t, err, "failed to list runtime group roles for cleanup: %q", rgID)
+		rgRoles, err := rolesClient.ListControlPlanesRoles(ctx)
+		require.NoErrorf(t, err, "failed to list control plane roles for cleanup: %q", rgID)
 		for _, role := range rgRoles {
-			if role.EntityID == rgID.String() { // Delete only roles created for the runtime group.
-				t.Logf("deleting test Konnect Runtime Group role: %q", role.ID)
+			if role.EntityID == rgID.String() { // Delete only roles created for the control plane.
+				t.Logf("deleting test Konnect Control Plane role: %q", role.ID)
 				err := rolesClient.DeleteRole(ctx, role.ID)
-				assert.NoErrorf(t, err, "failed to cleanup a runtime group role: %q", role.ID)
+				assert.NoErrorf(t, err, "failed to cleanup a control plane role: %q", role.ID)
 			}
 		}
 	})
 
-	t.Logf("created test Konnect Runtime Group: %q", rgID.String())
+	t.Logf("created test Konnect Control Plane: %q", rgID.String())
 	return rgID.String()
 }
 
-// createClientCertificate creates a TLS client certificate and POSTs it to Konnect Runtime Group configuration API
+// createClientCertificate creates a TLS client certificate and POSTs it to Konnect Control Plane configuration API
 // so that KIC can use the certificates to authenticate against Konnect Admin API.
 func createClientCertificate(ctx context.Context, t *testing.T, rgID string) (certPEM string, keyPEM string) {
 	t.Helper()
 
-	rgConfigClient, err := rgc.NewClientWithResponses(fmt.Sprintf(konnectRuntimeGroupsConfigBaseURLFmt, rgID), rgc.WithRequestEditorFn(
+	rgConfigClient, err := cpc.NewClientWithResponses(fmt.Sprintf(konnectControlPlanesConfigBaseURLFmt, rgID), cpc.WithRequestEditorFn(
 		func(ctx context.Context, req *http.Request) error {
 			req.Header.Set("Authorization", "Bearer "+konnectAccessToken)
 			return nil
 		}),
-		rgc.WithHTTPClient(helpers.RetryableHTTPClient(helpers.DefaultHTTPClient())),
+		cpc.WithHTTPClient(helpers.RetryableHTTPClient(helpers.DefaultHTTPClient())),
 	)
 	require.NoError(t, err)
 
 	cert, key := certificate.MustGenerateSelfSignedCertPEMFormat()
 
 	t.Log("creating client certificate in Konnect")
-	resp, err := rgConfigClient.PostDpClientCertificatesWithResponse(ctx, rgc.PostDpClientCertificatesJSONRequestBody{
+	resp, err := rgConfigClient.PostDpClientCertificatesWithResponse(ctx, cpc.PostDpClientCertificatesJSONRequestBody{
 		Cert: string(cert),
 	})
 	require.NoError(t, err)
@@ -291,7 +288,7 @@ func createClientCertificate(ctx context.Context, t *testing.T, rgID string) (ce
 }
 
 // createKonnectClientSecretAndConfigMap creates a Secret with client TLS certificate that is used by KIC to communicate
-// with Konnect Admin API. It also creates a ConfigMap that specifies a Runtime Group ID and Konnect Admin API URL.
+// with Konnect Admin API. It also creates a ConfigMap that specifies a Control Plane ID and Konnect Admin API URL.
 // Both Secret and ConfigMap are used by all-in-one-dbless-konnect.yaml manifest and need to be populated before
 // deploying it.
 func createKonnectClientSecretAndConfigMap(ctx context.Context, t *testing.T, env environment.Environment, tlsCert, tlsKey, rgID string) {
@@ -324,20 +321,20 @@ func createKonnectClientSecretAndConfigMap(ctx context.Context, t *testing.T, en
 			Name: "konnect-config",
 		},
 		Data: map[string]string{
-			"CONTROLLER_KONNECT_RUNTIME_GROUP_ID": rgID,
-			"CONTROLLER_KONNECT_ADDRESS":          konnectRuntimeGroupAdminAPIBaseURL,
+			"CONTROLLER_KONNECT_CONTROL_PLANE_ID": rgID,
+			"CONTROLLER_KONNECT_ADDRESS":          konnectControlPlaneAdminAPIBaseURL,
 		},
 	}, metav1.CreateOptions{})
 	require.NoError(t, err)
 }
 
-// createKonnectAdminAPIClient creates an *kong.Client that will communicate with Konnect Runtime Group's Admin API.
+// createKonnectAdminAPIClient creates an *kong.Client that will communicate with Konnect Control Plane's Admin API.
 func createKonnectAdminAPIClient(t *testing.T, rgID, cert, key string) *adminapi.KonnectClient {
 	t.Helper()
 
-	c, err := adminapi.NewKongClientForKonnectRuntimeGroup(adminapi.KonnectConfig{
-		RuntimeGroupID: rgID,
-		Address:        konnectRuntimeGroupAdminAPIBaseURL,
+	c, err := adminapi.NewKongClientForKonnectControlPlane(adminapi.KonnectConfig{
+		ControlPlaneID: rgID,
+		Address:        konnectControlPlaneAdminAPIBaseURL,
 		TLSClient: adminapi.TLSClientConfig{
 			Cert: cert,
 			Key:  key,
@@ -347,12 +344,12 @@ func createKonnectAdminAPIClient(t *testing.T, rgID, cert, key string) *adminapi
 	return c
 }
 
-// createKonnectNodeClient creates a konnect.NodeClient to get nodes in konnect runtime group.
+// createKonnectNodeClient creates a konnect.NodeClient to get nodes in konnect control plane.
 func createKonnectNodeClient(t *testing.T, rgID, cert, key string) *nodes.Client {
 	cfg := adminapi.KonnectConfig{
 		ConfigSynchronizationEnabled: true,
-		RuntimeGroupID:               rgID,
-		Address:                      konnectRuntimeGroupAdminAPIBaseURL,
+		ControlPlaneID:               rgID,
+		Address:                      konnectControlPlaneAdminAPIBaseURL,
 		RefreshNodePeriod:            konnect.MinRefreshNodePeriod,
 		TLSClient: adminapi.TLSClientConfig{
 			Cert: cert,

@@ -34,7 +34,7 @@ type AdminAPIClient interface {
 	PluginSchemaStore() *util.PluginSchemaStore
 
 	IsKonnect() bool
-	KonnectRuntimeGroup() string
+	KonnectControlPlane() string
 }
 
 // PerformUpdate writes `targetContent` to Kong Admin API specified by `kongConfig`.
@@ -127,14 +127,14 @@ func resourceErrorsToResourceFailures(resourceErrors []ResourceError, parseErr e
 				UID:       k8stypes.UID(ee.UID),
 			},
 		}
-		for field, problem := range ee.Problems {
-			log.Debug(fmt.Sprintf("adding failure for %s: %s = %s", ee.Name, field, problem))
+		for problemSource, problem := range ee.Problems {
+			log.Debug(fmt.Sprintf("adding failure for %s: %s = %s", ee.Name, problemSource, problem))
 			resourceFailure, failureCreateErr := failures.NewResourceFailure(
-				fmt.Sprintf("invalid %s: %s", field, problem),
+				fmt.Sprintf("invalid %s: %s", problemSource, problem),
 				&obj,
 			)
 			if failureCreateErr != nil {
-				log.WithError(failureCreateErr).Error("could create resource failure event")
+				log.WithError(failureCreateErr).Error("could not create resource failure event")
 			} else {
 				out = append(out, resourceFailure)
 			}

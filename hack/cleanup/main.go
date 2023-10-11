@@ -9,15 +9,15 @@
 // 1. Its name begins with a predefined prefix (`gke-e2e-`).
 // 2. It was created more than 1h ago.
 //
-// A runtime group is considered orphaned when all conditions are satisfied:
+// A control plane is considered orphaned when all conditions are satisfied:
 // 1. It has a label `created_in_tests` with value `true`.
 // 2. It was created more than 1h ago.
 //
 // Usage: `go run ./hack/cleanup [mode]`
 // Where `mode` is one of:
-// - `all` (default): clean up both GKE clusters and Konnect runtime groups
+// - `all` (default): clean up both GKE clusters and Konnect control planes
 // - `gke`: clean up only GKE clusters
-// - `konnect`: clean up only Konnect runtime groups
+// - `konnect`: clean up only Konnect control planes
 package main
 
 import (
@@ -90,12 +90,12 @@ func resolveCleanupFuncs(mode string) []func(context.Context) error {
 		}
 	case cleanupModeKonnect:
 		return []func(context.Context) error{
-			cleanupKonnectRuntimeGroups,
+			cleanupKonnectControlPlanes,
 		}
 	default:
 		return []func(context.Context) error{
 			cleanupGKEClusters,
-			cleanupKonnectRuntimeGroups,
+			cleanupKonnectControlPlanes,
 		}
 	}
 }

@@ -5,7 +5,7 @@
 // until we have a proper Konnect API Go SDK: https://github.com/Kong/kubernetes-ingress-controller/issues/3550.
 
 //nolint:all
-package runtimegroups
+package controlplanes
 
 import (
 	"bytes"
@@ -79,22 +79,22 @@ type AdditionalErrorInformation_Item struct {
 	AdditionalProperties map[string]interface{} `json:"-"`
 }
 
-// CreateRuntimeGroupRequest The request schema for the create runtime group request.
-type CreateRuntimeGroupRequest struct {
-	// Description The description of the runtime group in Konnect.
+// CreateControlPlaneRequest The request schema for the create control plane request.
+type CreateControlPlaneRequest struct {
+	// Description The description of the control plane in Konnect.
 	Description *string `json:"description,omitempty"`
 
-	// Labels Labels to facilitate tagged search on runtime groups. Keys must be of length 1-63 characters, and cannot start with 'kong', 'konnect', 'mesh', 'kic', or '_'.
+	// Labels Labels to facilitate tagged search on control planes. Keys must be of length 1-63 characters, and cannot start with 'kong', 'konnect', 'mesh', 'kic', or '_'.
 	Labels *Labels `json:"labels,omitempty"`
 
-	// Name The name of the runtime group.
+	// Name The name of the control plane.
 	Name string `json:"name"`
 
-	// ClusterType is the type of cluster this runtime group is associated with.
+	// ClusterType is the type of cluster this control plane is associated with.
 	ClusterType ClusterType `json:"cluster_type,omitempty"`
 }
 
-// Labels Labels to facilitate tagged search on runtime groups. Keys must be of length 1-63 characters, and cannot start with 'kong', 'konnect', 'mesh', 'kic', or '_'.
+// Labels Labels to facilitate tagged search on control planes. Keys must be of length 1-63 characters, and cannot start with 'kong', 'konnect', 'mesh', 'kic', or '_'.
 type Labels map[string]string
 
 // PaginatedMeta Returns pagination information
@@ -112,8 +112,8 @@ type PaginatedMeta struct {
 	} `json:"page,omitempty"`
 }
 
-// RuntimeGroup The runtime group object contains information about a Kong control plane.
-type RuntimeGroup struct {
+// ControlPlane The control plane object contains information about a Kong control plane.
+type ControlPlane struct {
 	// Config CP configuration object for related access endpoints.
 	Config *struct {
 		// ControlPlaneEndpoint Control Plane Endpoint.
@@ -123,22 +123,22 @@ type RuntimeGroup struct {
 		TelemetryEndpoint *string `json:"telemetry_endpoint,omitempty"`
 	} `json:"config,omitempty"`
 
-	// CreatedAt An ISO-8604 timestamp representation of runtime group creation date.
+	// CreatedAt An ISO-8604 timestamp representation of control plane creation date.
 	CreatedAt *time.Time `json:"created_at,omitempty"`
 
-	// Description The description of the runtime group in Konnect.
+	// Description The description of the control plane in Konnect.
 	Description *string `json:"description,omitempty"`
 
-	// Id The runtime group ID.
+	// Id The control plane ID.
 	Id *openapi_types.UUID `json:"id,omitempty"`
 
-	// Labels Labels to facilitate tagged search on runtime groups. Keys must be of length 1-63 characters, and cannot start with 'kong', 'konnect', 'mesh', 'kic', or '_'.
+	// Labels Labels to facilitate tagged search on control planes. Keys must be of length 1-63 characters, and cannot start with 'kong', 'konnect', 'mesh', 'kic', or '_'.
 	Labels *Labels `json:"labels,omitempty"`
 
-	// Name The name of the runtime group.
+	// Name The name of the control plane.
 	Name *string `json:"name,omitempty"`
 
-	// UpdatedAt An ISO-8604 timestamp representation of runtime group update date.
+	// UpdatedAt An ISO-8604 timestamp representation of control plane update date.
 	UpdatedAt *time.Time `json:"updated_at,omitempty"`
 }
 
@@ -163,15 +163,15 @@ type Status500 int
 // Status503 The HTTP status code.
 type Status503 int
 
-// UpdateRuntimeGroupRequest The request schema for the update runtime group request.
-type UpdateRuntimeGroupRequest struct {
-	// Description The description of the runtime group in Konnect.
+// UpdateControlPlaneRequest The request schema for the update control plane request.
+type UpdateControlPlaneRequest struct {
+	// Description The description of the control plane in Konnect.
 	Description *string `json:"description,omitempty"`
 
-	// Labels Labels to facilitate tagged search on runtime groups. Keys must be of length 1-63 characters, and cannot start with 'kong', 'konnect', 'mesh', 'kic', or '_'.
+	// Labels Labels to facilitate tagged search on control planes. Keys must be of length 1-63 characters, and cannot start with 'kong', 'konnect', 'mesh', 'kic', or '_'.
 	Labels *Labels `json:"labels,omitempty"`
 
-	// Name The name of the runtime group.
+	// Name The name of the control plane.
 	Name *string `json:"name,omitempty"`
 }
 
@@ -190,25 +190,25 @@ type PageNumber = int
 // PageSize defines model for PageSize.
 type PageSize = int
 
-// CreateRuntimeGroupResponse The runtime group object contains information about a Kong control plane.
-type CreateRuntimeGroupResponse = RuntimeGroup
+// CreateControlPlaneResponse The control plane object contains information about a Kong control plane.
+type CreateControlPlaneResponse = ControlPlane
 
-// ListRuntimeGroupsResponse defines model for ListRuntimeGroupsResponse.
-type ListRuntimeGroupsResponse struct {
-	Data *[]RuntimeGroup `json:"data,omitempty"`
+// ListControlPlanesResponse defines model for ListControlPlanesResponse.
+type ListControlPlanesResponse struct {
+	Data *[]ControlPlane `json:"data,omitempty"`
 
 	// Meta Returns pagination information
 	Meta *PaginatedMeta `json:"meta,omitempty"`
 }
 
-// RetrieveRuntimeGroupResponse The runtime group object contains information about a Kong control plane.
-type RetrieveRuntimeGroupResponse = RuntimeGroup
+// RetrieveControlPlaneResponse The control plane object contains information about a Kong control plane.
+type RetrieveControlPlaneResponse = ControlPlane
 
-// UpdateRuntimeGroupResponse The runtime group object contains information about a Kong control plane.
-type UpdateRuntimeGroupResponse = RuntimeGroup
+// UpdateControlPlaneResponse The control plane object contains information about a Kong control plane.
+type UpdateControlPlaneResponse = ControlPlane
 
-// ListRuntimeGroupsParams defines parameters for ListRuntimeGroups.
-type ListRuntimeGroupsParams struct {
+// ListControlPlanesParams defines parameters for ListControlPlanes.
+type ListControlPlanesParams struct {
 	// PageSize How many items to include in a page.
 	PageSize *PageSize `form:"page[size],omitempty" json:"page[size],omitempty"`
 
@@ -225,11 +225,11 @@ type ListRuntimeGroupsParams struct {
 	FilterNameContains *FilterByNameContains `form:"filter[name][contains],omitempty" json:"filter[name][contains],omitempty"`
 }
 
-// CreateRuntimeGroupJSONRequestBody defines body for CreateRuntimeGroup for application/json ContentType.
-type CreateRuntimeGroupJSONRequestBody = CreateRuntimeGroupRequest
+// CreateControlPlaneJSONRequestBody defines body for CreateControlPlane for application/json ContentType.
+type CreateControlPlaneJSONRequestBody = CreateControlPlaneRequest
 
-// UpdateRuntimeGroupJSONRequestBody defines body for UpdateRuntimeGroup for application/json ContentType.
-type UpdateRuntimeGroupJSONRequestBody = UpdateRuntimeGroupRequest
+// UpdateControlPlaneJSONRequestBody defines body for UpdateControlPlane for application/json ContentType.
+type UpdateControlPlaneJSONRequestBody = UpdateControlPlaneRequest
 
 // Getter for additional properties for AdditionalErrorInformation_Item. Returns the specified
 // element and whether it was found
@@ -402,28 +402,28 @@ func WithRequestEditorFn(fn RequestEditorFn) ClientOption {
 
 // The interface specification for the client above.
 type ClientInterface interface {
-	// ListRuntimeGroups request
-	ListRuntimeGroups(ctx context.Context, params *ListRuntimeGroupsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+	// ListControlPlanes request
+	ListControlPlanes(ctx context.Context, params *ListControlPlanesParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	// CreateRuntimeGroup request with any body
-	CreateRuntimeGroupWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+	// CreateControlPlane request with any body
+	CreateControlPlaneWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	CreateRuntimeGroup(ctx context.Context, body CreateRuntimeGroupJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+	CreateControlPlane(ctx context.Context, body CreateControlPlaneJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	// DeleteRuntimeGroup request
-	DeleteRuntimeGroup(ctx context.Context, id openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error)
+	// DeleteControlPlane request
+	DeleteControlPlane(ctx context.Context, id openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	// GetRuntimeGroup request
-	GetRuntimeGroup(ctx context.Context, id openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error)
+	// GetControlPlane request
+	GetControlPlane(ctx context.Context, id openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	// UpdateRuntimeGroup request with any body
-	UpdateRuntimeGroupWithBody(ctx context.Context, id openapi_types.UUID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+	// UpdateControlPlane request with any body
+	UpdateControlPlaneWithBody(ctx context.Context, id openapi_types.UUID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	UpdateRuntimeGroup(ctx context.Context, id openapi_types.UUID, body UpdateRuntimeGroupJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+	UpdateControlPlane(ctx context.Context, id openapi_types.UUID, body UpdateControlPlaneJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 }
 
-func (c *Client) ListRuntimeGroups(ctx context.Context, params *ListRuntimeGroupsParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewListRuntimeGroupsRequest(c.Server, params)
+func (c *Client) ListControlPlanes(ctx context.Context, params *ListControlPlanesParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewListControlPlanesRequest(c.Server, params)
 	if err != nil {
 		return nil, err
 	}
@@ -434,8 +434,8 @@ func (c *Client) ListRuntimeGroups(ctx context.Context, params *ListRuntimeGroup
 	return c.Client.Do(req)
 }
 
-func (c *Client) CreateRuntimeGroupWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewCreateRuntimeGroupRequestWithBody(c.Server, contentType, body)
+func (c *Client) CreateControlPlaneWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewCreateControlPlaneRequestWithBody(c.Server, contentType, body)
 	if err != nil {
 		return nil, err
 	}
@@ -446,8 +446,8 @@ func (c *Client) CreateRuntimeGroupWithBody(ctx context.Context, contentType str
 	return c.Client.Do(req)
 }
 
-func (c *Client) CreateRuntimeGroup(ctx context.Context, body CreateRuntimeGroupJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewCreateRuntimeGroupRequest(c.Server, body)
+func (c *Client) CreateControlPlane(ctx context.Context, body CreateControlPlaneJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewCreateControlPlaneRequest(c.Server, body)
 	if err != nil {
 		return nil, err
 	}
@@ -458,8 +458,8 @@ func (c *Client) CreateRuntimeGroup(ctx context.Context, body CreateRuntimeGroup
 	return c.Client.Do(req)
 }
 
-func (c *Client) DeleteRuntimeGroup(ctx context.Context, id openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewDeleteRuntimeGroupRequest(c.Server, id)
+func (c *Client) DeleteControlPlane(ctx context.Context, id openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewDeleteControlPlaneRequest(c.Server, id)
 	if err != nil {
 		return nil, err
 	}
@@ -470,8 +470,8 @@ func (c *Client) DeleteRuntimeGroup(ctx context.Context, id openapi_types.UUID, 
 	return c.Client.Do(req)
 }
 
-func (c *Client) GetRuntimeGroup(ctx context.Context, id openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewGetRuntimeGroupRequest(c.Server, id)
+func (c *Client) GetControlPlane(ctx context.Context, id openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetControlPlaneRequest(c.Server, id)
 	if err != nil {
 		return nil, err
 	}
@@ -482,8 +482,8 @@ func (c *Client) GetRuntimeGroup(ctx context.Context, id openapi_types.UUID, req
 	return c.Client.Do(req)
 }
 
-func (c *Client) UpdateRuntimeGroupWithBody(ctx context.Context, id openapi_types.UUID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewUpdateRuntimeGroupRequestWithBody(c.Server, id, contentType, body)
+func (c *Client) UpdateControlPlaneWithBody(ctx context.Context, id openapi_types.UUID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewUpdateControlPlaneRequestWithBody(c.Server, id, contentType, body)
 	if err != nil {
 		return nil, err
 	}
@@ -494,8 +494,8 @@ func (c *Client) UpdateRuntimeGroupWithBody(ctx context.Context, id openapi_type
 	return c.Client.Do(req)
 }
 
-func (c *Client) UpdateRuntimeGroup(ctx context.Context, id openapi_types.UUID, body UpdateRuntimeGroupJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewUpdateRuntimeGroupRequest(c.Server, id, body)
+func (c *Client) UpdateControlPlane(ctx context.Context, id openapi_types.UUID, body UpdateControlPlaneJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewUpdateControlPlaneRequest(c.Server, id, body)
 	if err != nil {
 		return nil, err
 	}
@@ -506,8 +506,8 @@ func (c *Client) UpdateRuntimeGroup(ctx context.Context, id openapi_types.UUID, 
 	return c.Client.Do(req)
 }
 
-// NewListRuntimeGroupsRequest generates requests for ListRuntimeGroups
-func NewListRuntimeGroupsRequest(server string, params *ListRuntimeGroupsParams) (*http.Request, error) {
+// NewListControlPlanesRequest generates requests for ListControlPlanes
+func NewListControlPlanesRequest(server string, params *ListControlPlanesParams) (*http.Request, error) {
 	var err error
 
 	serverURL, err := url.Parse(server)
@@ -515,7 +515,7 @@ func NewListRuntimeGroupsRequest(server string, params *ListRuntimeGroupsParams)
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/runtime-groups")
+	operationPath := fmt.Sprintf("/control-planes")
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -617,19 +617,19 @@ func NewListRuntimeGroupsRequest(server string, params *ListRuntimeGroupsParams)
 	return req, nil
 }
 
-// NewCreateRuntimeGroupRequest calls the generic CreateRuntimeGroup builder with application/json body
-func NewCreateRuntimeGroupRequest(server string, body CreateRuntimeGroupJSONRequestBody) (*http.Request, error) {
+// NewCreateControlPlaneRequest calls the generic CreateControlPlane builder with application/json body
+func NewCreateControlPlaneRequest(server string, body CreateControlPlaneJSONRequestBody) (*http.Request, error) {
 	var bodyReader io.Reader
 	buf, err := json.Marshal(body)
 	if err != nil {
 		return nil, err
 	}
 	bodyReader = bytes.NewReader(buf)
-	return NewCreateRuntimeGroupRequestWithBody(server, "application/json", bodyReader)
+	return NewCreateControlPlaneRequestWithBody(server, "application/json", bodyReader)
 }
 
-// NewCreateRuntimeGroupRequestWithBody generates requests for CreateRuntimeGroup with any type of body
-func NewCreateRuntimeGroupRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
+// NewCreateControlPlaneRequestWithBody generates requests for CreateControlPlane with any type of body
+func NewCreateControlPlaneRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
 	var err error
 
 	serverURL, err := url.Parse(server)
@@ -637,7 +637,7 @@ func NewCreateRuntimeGroupRequestWithBody(server string, contentType string, bod
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/runtime-groups")
+	operationPath := fmt.Sprintf("/control-planes")
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -657,8 +657,8 @@ func NewCreateRuntimeGroupRequestWithBody(server string, contentType string, bod
 	return req, nil
 }
 
-// NewDeleteRuntimeGroupRequest generates requests for DeleteRuntimeGroup
-func NewDeleteRuntimeGroupRequest(server string, id openapi_types.UUID) (*http.Request, error) {
+// NewDeleteControlPlaneRequest generates requests for DeleteControlPlane
+func NewDeleteControlPlaneRequest(server string, id openapi_types.UUID) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
@@ -673,7 +673,7 @@ func NewDeleteRuntimeGroupRequest(server string, id openapi_types.UUID) (*http.R
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/runtime-groups/%s", pathParam0)
+	operationPath := fmt.Sprintf("/control-planes/%s", pathParam0)
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -691,8 +691,8 @@ func NewDeleteRuntimeGroupRequest(server string, id openapi_types.UUID) (*http.R
 	return req, nil
 }
 
-// NewGetRuntimeGroupRequest generates requests for GetRuntimeGroup
-func NewGetRuntimeGroupRequest(server string, id openapi_types.UUID) (*http.Request, error) {
+// NewGetControlPlaneRequest generates requests for GetControlPlane
+func NewGetControlPlaneRequest(server string, id openapi_types.UUID) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
@@ -707,7 +707,7 @@ func NewGetRuntimeGroupRequest(server string, id openapi_types.UUID) (*http.Requ
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/runtime-groups/%s", pathParam0)
+	operationPath := fmt.Sprintf("/control-planes/%s", pathParam0)
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -725,19 +725,19 @@ func NewGetRuntimeGroupRequest(server string, id openapi_types.UUID) (*http.Requ
 	return req, nil
 }
 
-// NewUpdateRuntimeGroupRequest calls the generic UpdateRuntimeGroup builder with application/json body
-func NewUpdateRuntimeGroupRequest(server string, id openapi_types.UUID, body UpdateRuntimeGroupJSONRequestBody) (*http.Request, error) {
+// NewUpdateControlPlaneRequest calls the generic UpdateControlPlane builder with application/json body
+func NewUpdateControlPlaneRequest(server string, id openapi_types.UUID, body UpdateControlPlaneJSONRequestBody) (*http.Request, error) {
 	var bodyReader io.Reader
 	buf, err := json.Marshal(body)
 	if err != nil {
 		return nil, err
 	}
 	bodyReader = bytes.NewReader(buf)
-	return NewUpdateRuntimeGroupRequestWithBody(server, id, "application/json", bodyReader)
+	return NewUpdateControlPlaneRequestWithBody(server, id, "application/json", bodyReader)
 }
 
-// NewUpdateRuntimeGroupRequestWithBody generates requests for UpdateRuntimeGroup with any type of body
-func NewUpdateRuntimeGroupRequestWithBody(server string, id openapi_types.UUID, contentType string, body io.Reader) (*http.Request, error) {
+// NewUpdateControlPlaneRequestWithBody generates requests for UpdateControlPlane with any type of body
+func NewUpdateControlPlaneRequestWithBody(server string, id openapi_types.UUID, contentType string, body io.Reader) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
@@ -752,7 +752,7 @@ func NewUpdateRuntimeGroupRequestWithBody(server string, id openapi_types.UUID, 
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/runtime-groups/%s", pathParam0)
+	operationPath := fmt.Sprintf("/control-planes/%s", pathParam0)
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -815,31 +815,31 @@ func WithBaseURL(baseURL string) ClientOption {
 
 // ClientWithResponsesInterface is the interface specification for the client with responses above.
 type ClientWithResponsesInterface interface {
-	// ListRuntimeGroups request
-	ListRuntimeGroupsWithResponse(ctx context.Context, params *ListRuntimeGroupsParams, reqEditors ...RequestEditorFn) (*ListRuntimeGroupsHTTPResponse, error)
+	// ListControlPlanes request
+	ListControlPlanesWithResponse(ctx context.Context, params *ListControlPlanesParams, reqEditors ...RequestEditorFn) (*ListControlPlanesHTTPResponse, error)
 
-	// CreateRuntimeGroup request with any body
-	CreateRuntimeGroupWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateRuntimeGroupHTTPResponse, error)
+	// CreateControlPlane request with any body
+	CreateControlPlaneWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateControlPlaneHTTPResponse, error)
 
-	CreateRuntimeGroupWithResponse(ctx context.Context, body CreateRuntimeGroupJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateRuntimeGroupHTTPResponse, error)
+	CreateControlPlaneWithResponse(ctx context.Context, body CreateControlPlaneJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateControlPlaneHTTPResponse, error)
 
-	// DeleteRuntimeGroup request
-	DeleteRuntimeGroupWithResponse(ctx context.Context, id openapi_types.UUID, reqEditors ...RequestEditorFn) (*DeleteRuntimeGroupHTTPResponse, error)
+	// DeleteControlPlane request
+	DeleteControlPlaneWithResponse(ctx context.Context, id openapi_types.UUID, reqEditors ...RequestEditorFn) (*DeleteControlPlaneHTTPResponse, error)
 
-	// GetRuntimeGroup request
-	GetRuntimeGroupWithResponse(ctx context.Context, id openapi_types.UUID, reqEditors ...RequestEditorFn) (*GetRuntimeGroupHTTPResponse, error)
+	// GetControlPlane request
+	GetControlPlaneWithResponse(ctx context.Context, id openapi_types.UUID, reqEditors ...RequestEditorFn) (*GetControlPlaneHTTPResponse, error)
 
-	// UpdateRuntimeGroup request with any body
-	UpdateRuntimeGroupWithBodyWithResponse(ctx context.Context, id openapi_types.UUID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateRuntimeGroupHTTPResponse, error)
+	// UpdateControlPlane request with any body
+	UpdateControlPlaneWithBodyWithResponse(ctx context.Context, id openapi_types.UUID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateControlPlaneHTTPResponse, error)
 
-	UpdateRuntimeGroupWithResponse(ctx context.Context, id openapi_types.UUID, body UpdateRuntimeGroupJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateRuntimeGroupHTTPResponse, error)
+	UpdateControlPlaneWithResponse(ctx context.Context, id openapi_types.UUID, body UpdateControlPlaneJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateControlPlaneHTTPResponse, error)
 }
 
-type ListRuntimeGroupsHTTPResponse struct {
+type ListControlPlanesHTTPResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
 	JSON200      *struct {
-		Data *[]RuntimeGroup `json:"data,omitempty"`
+		Data *[]ControlPlane `json:"data,omitempty"`
 
 		// Meta Returns pagination information
 		Meta *PaginatedMeta `json:"meta,omitempty"`
@@ -902,7 +902,7 @@ type ListRuntimeGroupsHTTPResponse struct {
 }
 
 // Status returns HTTPResponse.Status
-func (r ListRuntimeGroupsHTTPResponse) Status() string {
+func (r ListControlPlanesHTTPResponse) Status() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Status
 	}
@@ -910,17 +910,17 @@ func (r ListRuntimeGroupsHTTPResponse) Status() string {
 }
 
 // StatusCode returns HTTPResponse.StatusCode
-func (r ListRuntimeGroupsHTTPResponse) StatusCode() int {
+func (r ListControlPlanesHTTPResponse) StatusCode() int {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.StatusCode
 	}
 	return 0
 }
 
-type CreateRuntimeGroupHTTPResponse struct {
+type CreateControlPlaneHTTPResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
-	JSON201      *RuntimeGroup
+	JSON201      *ControlPlane
 	JSON400      *struct {
 		// Detail Information about the error response.
 		Detail *string `json:"detail,omitempty"`
@@ -1005,7 +1005,7 @@ type CreateRuntimeGroupHTTPResponse struct {
 }
 
 // Status returns HTTPResponse.Status
-func (r CreateRuntimeGroupHTTPResponse) Status() string {
+func (r CreateControlPlaneHTTPResponse) Status() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Status
 	}
@@ -1013,14 +1013,14 @@ func (r CreateRuntimeGroupHTTPResponse) Status() string {
 }
 
 // StatusCode returns HTTPResponse.StatusCode
-func (r CreateRuntimeGroupHTTPResponse) StatusCode() int {
+func (r CreateControlPlaneHTTPResponse) StatusCode() int {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.StatusCode
 	}
 	return 0
 }
 
-type DeleteRuntimeGroupHTTPResponse struct {
+type DeleteControlPlaneHTTPResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
 	JSON400      *struct {
@@ -1107,7 +1107,7 @@ type DeleteRuntimeGroupHTTPResponse struct {
 }
 
 // Status returns HTTPResponse.Status
-func (r DeleteRuntimeGroupHTTPResponse) Status() string {
+func (r DeleteControlPlaneHTTPResponse) Status() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Status
 	}
@@ -1115,17 +1115,17 @@ func (r DeleteRuntimeGroupHTTPResponse) Status() string {
 }
 
 // StatusCode returns HTTPResponse.StatusCode
-func (r DeleteRuntimeGroupHTTPResponse) StatusCode() int {
+func (r DeleteControlPlaneHTTPResponse) StatusCode() int {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.StatusCode
 	}
 	return 0
 }
 
-type GetRuntimeGroupHTTPResponse struct {
+type GetControlPlaneHTTPResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
-	JSON200      *RuntimeGroup
+	JSON200      *ControlPlane
 	JSON400      *struct {
 		// Detail Information about the error response.
 		Detail *string `json:"detail,omitempty"`
@@ -1197,7 +1197,7 @@ type GetRuntimeGroupHTTPResponse struct {
 }
 
 // Status returns HTTPResponse.Status
-func (r GetRuntimeGroupHTTPResponse) Status() string {
+func (r GetControlPlaneHTTPResponse) Status() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Status
 	}
@@ -1205,17 +1205,17 @@ func (r GetRuntimeGroupHTTPResponse) Status() string {
 }
 
 // StatusCode returns HTTPResponse.StatusCode
-func (r GetRuntimeGroupHTTPResponse) StatusCode() int {
+func (r GetControlPlaneHTTPResponse) StatusCode() int {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.StatusCode
 	}
 	return 0
 }
 
-type UpdateRuntimeGroupHTTPResponse struct {
+type UpdateControlPlaneHTTPResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
-	JSON200      *RuntimeGroup
+	JSON200      *ControlPlane
 	JSON400      *struct {
 		// Detail Information about the error response.
 		Detail *string `json:"detail,omitempty"`
@@ -1300,7 +1300,7 @@ type UpdateRuntimeGroupHTTPResponse struct {
 }
 
 // Status returns HTTPResponse.Status
-func (r UpdateRuntimeGroupHTTPResponse) Status() string {
+func (r UpdateControlPlaneHTTPResponse) Status() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Status
 	}
@@ -1308,83 +1308,83 @@ func (r UpdateRuntimeGroupHTTPResponse) Status() string {
 }
 
 // StatusCode returns HTTPResponse.StatusCode
-func (r UpdateRuntimeGroupHTTPResponse) StatusCode() int {
+func (r UpdateControlPlaneHTTPResponse) StatusCode() int {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.StatusCode
 	}
 	return 0
 }
 
-// ListRuntimeGroupsWithResponse request returning *ListRuntimeGroupsHTTPResponse
-func (c *ClientWithResponses) ListRuntimeGroupsWithResponse(ctx context.Context, params *ListRuntimeGroupsParams, reqEditors ...RequestEditorFn) (*ListRuntimeGroupsHTTPResponse, error) {
-	rsp, err := c.ListRuntimeGroups(ctx, params, reqEditors...)
+// ListControlPlanesWithResponse request returning *ListControlPlanesHTTPResponse
+func (c *ClientWithResponses) ListControlPlanesWithResponse(ctx context.Context, params *ListControlPlanesParams, reqEditors ...RequestEditorFn) (*ListControlPlanesHTTPResponse, error) {
+	rsp, err := c.ListControlPlanes(ctx, params, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
-	return ParseListRuntimeGroupsHTTPResponse(rsp)
+	return ParseListControlPlanesHTTPResponse(rsp)
 }
 
-// CreateRuntimeGroupWithBodyWithResponse request with arbitrary body returning *CreateRuntimeGroupHTTPResponse
-func (c *ClientWithResponses) CreateRuntimeGroupWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateRuntimeGroupHTTPResponse, error) {
-	rsp, err := c.CreateRuntimeGroupWithBody(ctx, contentType, body, reqEditors...)
+// CreateControlPlaneWithBodyWithResponse request with arbitrary body returning *CreateControlPlaneHTTPResponse
+func (c *ClientWithResponses) CreateControlPlaneWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateControlPlaneHTTPResponse, error) {
+	rsp, err := c.CreateControlPlaneWithBody(ctx, contentType, body, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
-	return ParseCreateRuntimeGroupHTTPResponse(rsp)
+	return ParseCreateControlPlaneHTTPResponse(rsp)
 }
 
-func (c *ClientWithResponses) CreateRuntimeGroupWithResponse(ctx context.Context, body CreateRuntimeGroupJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateRuntimeGroupHTTPResponse, error) {
-	rsp, err := c.CreateRuntimeGroup(ctx, body, reqEditors...)
+func (c *ClientWithResponses) CreateControlPlaneWithResponse(ctx context.Context, body CreateControlPlaneJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateControlPlaneHTTPResponse, error) {
+	rsp, err := c.CreateControlPlane(ctx, body, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
-	return ParseCreateRuntimeGroupHTTPResponse(rsp)
+	return ParseCreateControlPlaneHTTPResponse(rsp)
 }
 
-// DeleteRuntimeGroupWithResponse request returning *DeleteRuntimeGroupHTTPResponse
-func (c *ClientWithResponses) DeleteRuntimeGroupWithResponse(ctx context.Context, id openapi_types.UUID, reqEditors ...RequestEditorFn) (*DeleteRuntimeGroupHTTPResponse, error) {
-	rsp, err := c.DeleteRuntimeGroup(ctx, id, reqEditors...)
+// DeleteControlPlaneWithResponse request returning *DeleteControlPlaneHTTPResponse
+func (c *ClientWithResponses) DeleteControlPlaneWithResponse(ctx context.Context, id openapi_types.UUID, reqEditors ...RequestEditorFn) (*DeleteControlPlaneHTTPResponse, error) {
+	rsp, err := c.DeleteControlPlane(ctx, id, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
-	return ParseDeleteRuntimeGroupHTTPResponse(rsp)
+	return ParseDeleteControlPlaneHTTPResponse(rsp)
 }
 
-// GetRuntimeGroupWithResponse request returning *GetRuntimeGroupHTTPResponse
-func (c *ClientWithResponses) GetRuntimeGroupWithResponse(ctx context.Context, id openapi_types.UUID, reqEditors ...RequestEditorFn) (*GetRuntimeGroupHTTPResponse, error) {
-	rsp, err := c.GetRuntimeGroup(ctx, id, reqEditors...)
+// GetControlPlaneWithResponse request returning *GetControlPlaneHTTPResponse
+func (c *ClientWithResponses) GetControlPlaneWithResponse(ctx context.Context, id openapi_types.UUID, reqEditors ...RequestEditorFn) (*GetControlPlaneHTTPResponse, error) {
+	rsp, err := c.GetControlPlane(ctx, id, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
-	return ParseGetRuntimeGroupHTTPResponse(rsp)
+	return ParseGetControlPlaneHTTPResponse(rsp)
 }
 
-// UpdateRuntimeGroupWithBodyWithResponse request with arbitrary body returning *UpdateRuntimeGroupHTTPResponse
-func (c *ClientWithResponses) UpdateRuntimeGroupWithBodyWithResponse(ctx context.Context, id openapi_types.UUID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateRuntimeGroupHTTPResponse, error) {
-	rsp, err := c.UpdateRuntimeGroupWithBody(ctx, id, contentType, body, reqEditors...)
+// UpdateControlPlaneWithBodyWithResponse request with arbitrary body returning *UpdateControlPlaneHTTPResponse
+func (c *ClientWithResponses) UpdateControlPlaneWithBodyWithResponse(ctx context.Context, id openapi_types.UUID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateControlPlaneHTTPResponse, error) {
+	rsp, err := c.UpdateControlPlaneWithBody(ctx, id, contentType, body, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
-	return ParseUpdateRuntimeGroupHTTPResponse(rsp)
+	return ParseUpdateControlPlaneHTTPResponse(rsp)
 }
 
-func (c *ClientWithResponses) UpdateRuntimeGroupWithResponse(ctx context.Context, id openapi_types.UUID, body UpdateRuntimeGroupJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateRuntimeGroupHTTPResponse, error) {
-	rsp, err := c.UpdateRuntimeGroup(ctx, id, body, reqEditors...)
+func (c *ClientWithResponses) UpdateControlPlaneWithResponse(ctx context.Context, id openapi_types.UUID, body UpdateControlPlaneJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateControlPlaneHTTPResponse, error) {
+	rsp, err := c.UpdateControlPlane(ctx, id, body, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
-	return ParseUpdateRuntimeGroupHTTPResponse(rsp)
+	return ParseUpdateControlPlaneHTTPResponse(rsp)
 }
 
-// ParseListRuntimeGroupsHTTPResponse parses an HTTP response from a ListRuntimeGroupsWithResponse call
-func ParseListRuntimeGroupsHTTPResponse(rsp *http.Response) (*ListRuntimeGroupsHTTPResponse, error) {
+// ParseListControlPlanesHTTPResponse parses an HTTP response from a ListControlPlanesWithResponse call
+func ParseListControlPlanesHTTPResponse(rsp *http.Response) (*ListControlPlanesHTTPResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
 	defer func() { _ = rsp.Body.Close() }()
 	if err != nil {
 		return nil, err
 	}
 
-	response := &ListRuntimeGroupsHTTPResponse{
+	response := &ListControlPlanesHTTPResponse{
 		Body:         bodyBytes,
 		HTTPResponse: rsp,
 	}
@@ -1392,7 +1392,7 @@ func ParseListRuntimeGroupsHTTPResponse(rsp *http.Response) (*ListRuntimeGroupsH
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
 		var dest struct {
-			Data *[]RuntimeGroup `json:"data,omitempty"`
+			Data *[]ControlPlane `json:"data,omitempty"`
 
 			// Meta Returns pagination information
 			Meta *PaginatedMeta `json:"meta,omitempty"`
@@ -1486,22 +1486,22 @@ func ParseListRuntimeGroupsHTTPResponse(rsp *http.Response) (*ListRuntimeGroupsH
 	return response, nil
 }
 
-// ParseCreateRuntimeGroupHTTPResponse parses an HTTP response from a CreateRuntimeGroupWithResponse call
-func ParseCreateRuntimeGroupHTTPResponse(rsp *http.Response) (*CreateRuntimeGroupHTTPResponse, error) {
+// ParseCreateControlPlaneHTTPResponse parses an HTTP response from a CreateControlPlaneWithResponse call
+func ParseCreateControlPlaneHTTPResponse(rsp *http.Response) (*CreateControlPlaneHTTPResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
 	defer func() { _ = rsp.Body.Close() }()
 	if err != nil {
 		return nil, err
 	}
 
-	response := &CreateRuntimeGroupHTTPResponse{
+	response := &CreateControlPlaneHTTPResponse{
 		Body:         bodyBytes,
 		HTTPResponse: rsp,
 	}
 
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 201:
-		var dest RuntimeGroup
+		var dest ControlPlane
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
@@ -1629,15 +1629,15 @@ func ParseCreateRuntimeGroupHTTPResponse(rsp *http.Response) (*CreateRuntimeGrou
 	return response, nil
 }
 
-// ParseDeleteRuntimeGroupHTTPResponse parses an HTTP response from a DeleteRuntimeGroupWithResponse call
-func ParseDeleteRuntimeGroupHTTPResponse(rsp *http.Response) (*DeleteRuntimeGroupHTTPResponse, error) {
+// ParseDeleteControlPlaneHTTPResponse parses an HTTP response from a DeleteControlPlaneWithResponse call
+func ParseDeleteControlPlaneHTTPResponse(rsp *http.Response) (*DeleteControlPlaneHTTPResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
 	defer func() { _ = rsp.Body.Close() }()
 	if err != nil {
 		return nil, err
 	}
 
-	response := &DeleteRuntimeGroupHTTPResponse{
+	response := &DeleteControlPlaneHTTPResponse{
 		Body:         bodyBytes,
 		HTTPResponse: rsp,
 	}
@@ -1765,22 +1765,22 @@ func ParseDeleteRuntimeGroupHTTPResponse(rsp *http.Response) (*DeleteRuntimeGrou
 	return response, nil
 }
 
-// ParseGetRuntimeGroupHTTPResponse parses an HTTP response from a GetRuntimeGroupWithResponse call
-func ParseGetRuntimeGroupHTTPResponse(rsp *http.Response) (*GetRuntimeGroupHTTPResponse, error) {
+// ParseGetControlPlaneHTTPResponse parses an HTTP response from a GetControlPlaneWithResponse call
+func ParseGetControlPlaneHTTPResponse(rsp *http.Response) (*GetControlPlaneHTTPResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
 	defer func() { _ = rsp.Body.Close() }()
 	if err != nil {
 		return nil, err
 	}
 
-	response := &GetRuntimeGroupHTTPResponse{
+	response := &GetControlPlaneHTTPResponse{
 		Body:         bodyBytes,
 		HTTPResponse: rsp,
 	}
 
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest RuntimeGroup
+		var dest ControlPlane
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
@@ -1889,22 +1889,22 @@ func ParseGetRuntimeGroupHTTPResponse(rsp *http.Response) (*GetRuntimeGroupHTTPR
 	return response, nil
 }
 
-// ParseUpdateRuntimeGroupHTTPResponse parses an HTTP response from a UpdateRuntimeGroupWithResponse call
-func ParseUpdateRuntimeGroupHTTPResponse(rsp *http.Response) (*UpdateRuntimeGroupHTTPResponse, error) {
+// ParseUpdateControlPlaneHTTPResponse parses an HTTP response from a UpdateControlPlaneWithResponse call
+func ParseUpdateControlPlaneHTTPResponse(rsp *http.Response) (*UpdateControlPlaneHTTPResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
 	defer func() { _ = rsp.Body.Close() }()
 	if err != nil {
 		return nil, err
 	}
 
-	response := &UpdateRuntimeGroupHTTPResponse{
+	response := &UpdateControlPlaneHTTPResponse{
 		Body:         bodyBytes,
 		HTTPResponse: rsp,
 	}
 
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest RuntimeGroup
+		var dest ControlPlane
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}

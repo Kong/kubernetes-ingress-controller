@@ -90,18 +90,9 @@ func GetKongDBMode(proxyAdminURL *url.URL, kongTestPassword string) (string, err
 
 // GetKongRouterFlavor gets router flavor of Kong using the provided Admin API URL.
 func GetKongRouterFlavor(proxyAdminURL *url.URL, kongTestPassword string) (string, error) {
-	const (
-		// ExpressionRouterMinMajorVersion is the lowest major version of Kong that supports expression router.
-		// Kong below this version supports only "traditional" router, and does not contain "router_flavor" field in root configuration.
-		ExpressionRouterMinMajorVersion = 3
-	)
 	kongVersion, err := GetKongVersion(proxyAdminURL, kongTestPassword)
 	if err != nil {
 		return "", err
-	}
-
-	if kongVersion.Major() < ExpressionRouterMinMajorVersion {
-		return "traditional", nil
 	}
 
 	jsonResp, err := GetKongRootConfig(proxyAdminURL, kongTestPassword)
@@ -112,13 +103,13 @@ func GetKongRouterFlavor(proxyAdminURL *url.URL, kongTestPassword string) (strin
 	rootConfig, ok := jsonResp["configuration"].(map[string]any)
 	if !ok {
 		return "", fmt.Errorf(
-			"unexpected root configuration type %T for kong (URL: %s)",
+			"unexpected root configuration type %T for Kong (URL: %s)",
 			jsonResp["configuration"], proxyAdminURL,
 		)
 	}
 	routerFlavor, ok := rootConfig["router_flavor"]
 	if !ok {
-		return "", fmt.Errorf("missing 'router_flavor' key in kong's (version: %s, URL: %s) configuration: %s",
+		return "", fmt.Errorf("missing 'router_flavor' key in Kong's (version: %s, URL: %s) configuration: %s",
 			kongVersion, proxyAdminURL, rootConfig,
 		)
 	}
@@ -126,7 +117,7 @@ func GetKongRouterFlavor(proxyAdminURL *url.URL, kongTestPassword string) (strin
 	routerFlavorStr, ok := routerFlavor.(string)
 	if !ok {
 		return "", fmt.Errorf(
-			"'router_flavor' key is of unexpected type - %T - in kong's (URL: %s) configuration, value: %v",
+			"'router_flavor' key is of unexpected type - %T - in Kong's (URL: %s) configuration, value: %v",
 			routerFlavor, proxyAdminURL, routerFlavor,
 		)
 	}

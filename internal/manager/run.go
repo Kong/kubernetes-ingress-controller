@@ -39,7 +39,6 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 	dataplaneutil "github.com/kong/kubernetes-ingress-controller/v2/internal/util/dataplane"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util/kubernetes/object/status"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/versions"
 )
 
 // -----------------------------------------------------------------------------
@@ -111,14 +110,13 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 	kongSemVersion := semver.Version{Major: v.Major(), Minor: v.Minor(), Patch: v.Patch()}
 
 	kongConfig := sendconfig.Config{
-		Version:               kongSemVersion,
-		InMemory:              dataplaneutil.IsDBLessMode(dbMode),
-		Concurrency:           c.Concurrency,
-		FilterTags:            c.FilterTags,
-		SkipCACertificates:    c.SkipCACertificates,
-		EnableReverseSync:     c.EnableReverseSync,
-		ExpressionRoutes:      featureGates.Enabled(featuregates.ExpressionRoutesFeature),
-		DeckFileFormatVersion: versions.DeckFileFormat(kongSemVersion),
+		Version:            kongSemVersion,
+		InMemory:           dataplaneutil.IsDBLessMode(dbMode),
+		Concurrency:        c.Concurrency,
+		FilterTags:         c.FilterTags,
+		SkipCACertificates: c.SkipCACertificates,
+		EnableReverseSync:  c.EnableReverseSync,
+		ExpressionRoutes:   featureGates.Enabled(featuregates.ExpressionRoutesFeature),
 	}
 	kongConfig.Init(ctx, setupLog, initialKongClients)
 

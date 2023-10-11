@@ -10,7 +10,7 @@ var (
 
 	// ExplicitRegexPathVersionCutoff is the lowest Kong version requiring the explicit "~" prefixes in regular expression paths.
 	ExplicitRegexPathVersionCutoff = semver.Version{Major: 3, Minor: 0}
-
-	// ExpressionRouterL4Cutoff is the lowest Kong version with support of L4 proxy in expression router.
-	ExpressionRouterL4Cutoff = semver.Version{Major: 3, Minor: 4}
 )
+
+// DeckFileFormatVersion is the version of the decK file format used by KIC everywhere.
+const DeckFileFormatVersion = "3.0"

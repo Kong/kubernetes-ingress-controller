@@ -5,7 +5,6 @@ import (
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/parser/translators"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/gatewayapi"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/versions"
 )
 
 // -----------------------------------------------------------------------------
@@ -25,13 +24,6 @@ func (p *Parser) ingressRulesFromTCPRoutes() ingressRules {
 
 	var errs []error
 	for _, tcproute := range tcpRouteList {
-		// Disable the translation to expression routes and register translation errors
-		// when expression route is enabled and Kong version is less than 3.4.
-		if p.featureFlags.ExpressionRoutes && p.kongVersion.LT(versions.ExpressionRouterL4Cutoff) {
-			p.registerResourceFailureNotSupportedForExpressionRoutes(tcproute)
-			continue
-		}
-
 		if err := p.ingressRulesFromTCPRoute(&result, tcproute); err != nil {
 			err = fmt.Errorf("TCPRoute %s/%s can't be routed: %w", tcproute.Namespace, tcproute.Name, err)
 			errs = append(errs, err)

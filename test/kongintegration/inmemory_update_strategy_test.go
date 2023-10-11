@@ -16,8 +16,8 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/sendconfig"
 )
 
-// TestUpdateStrategyInMemory_PropagatesResourcesErrors ensures that the sendconfig.UpdateStrategyInMemory
-// responsible for executing the configuration update logic propagates the resources errors returned by the
+// TestUpdateStrategyInMemory_PropagatesResourcesErrors ensures that sendconfig.UpdateStrategyInMemory - 
+// responsible for executing the configuration update logic - propagates the resources errors returned by the
 // Kong Admin API in the flattened errors response.
 func TestUpdateStrategyInMemory_PropagatesResourcesErrors(t *testing.T) {
 	t.Parallel()

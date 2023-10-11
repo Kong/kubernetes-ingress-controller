@@ -94,7 +94,13 @@ func EventuallyGETPath(
 	waitDuration time.Duration,
 	waitTick time.Duration,
 ) {
-	client := DefaultHTTPClientWithProxy(proxyURL)
+	var client *http.Client
+	if proxyURL != nil {
+		client = DefaultHTTPClientWithProxy(proxyURL)
+
+	} else {
+		client = DefaultHTTPClient()
+	}
 
 	require.Eventually(t, func() bool {
 		req := MustHTTPRequest(t, http.MethodGet, host, path, headers)

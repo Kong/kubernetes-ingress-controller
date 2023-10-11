@@ -43,11 +43,11 @@ func TestExpressionRouterGenerateRoutes(t *testing.T) {
 			name:    "exact match on path",
 			matcher: atc.NewPredicateHTTPPath(atc.OpEqual, "/foo"),
 			matchRequests: []*http.Request{
-				helpers.MustHTTPRequest(t, "GET", "a.foo.com", "foo", nil),
+				helpers.MustHTTPRequest(t, http.MethodGet, "a.foo.com", "/foo", nil),
 			},
 			unmatchRequests: []*http.Request{
-				helpers.MustHTTPRequest(t, "GET", "a.foo.com", "foobar", nil),
-				helpers.MustHTTPRequest(t, "GET", "a.foo.com", "foo/", nil),
+				helpers.MustHTTPRequest(t, http.MethodGet, "a.foo.com", "/foobar", nil),
+				helpers.MustHTTPRequest(t, http.MethodGet, "a.foo.com", "/foo/", nil),
 			},
 		},
 		{
@@ -57,11 +57,11 @@ func TestExpressionRouterGenerateRoutes(t *testing.T) {
 				atc.NewPrediacteHTTPHost(atc.OpEqual, "a.foo.com"),
 			),
 			matchRequests: []*http.Request{
-				helpers.MustHTTPRequest(t, "GET", "a.foo.com", "foo", nil),
+				helpers.MustHTTPRequest(t, http.MethodGet, "a.foo.com", "/foo", nil),
 			},
 			unmatchRequests: []*http.Request{
-				helpers.MustHTTPRequest(t, "GET", "a.foo.com", "foobar", nil),
-				helpers.MustHTTPRequest(t, "GET", "b.foo.com", "foo", nil),
+				helpers.MustHTTPRequest(t, http.MethodGet, "a.foo.com", "/foobar", nil),
+				helpers.MustHTTPRequest(t, http.MethodGet, "b.foo.com", "/foo", nil),
 			},
 		},
 		{
@@ -71,12 +71,12 @@ func TestExpressionRouterGenerateRoutes(t *testing.T) {
 				atc.NewPrediacteHTTPHost(atc.OpSuffixMatch, ".foo.com"),
 			),
 			matchRequests: []*http.Request{
-				helpers.MustHTTPRequest(t, "GET", "a.foo.com", "foo", nil),
-				helpers.MustHTTPRequest(t, "GET", "b.foo.com", "foo", nil),
+				helpers.MustHTTPRequest(t, http.MethodGet, "a.foo.com", "/foo", nil),
+				helpers.MustHTTPRequest(t, http.MethodGet, "b.foo.com", "/foo", nil),
 			},
 			unmatchRequests: []*http.Request{
-				helpers.MustHTTPRequest(t, "GET", "a.foo.com", "foobar", nil),
-				helpers.MustHTTPRequest(t, "GET", "a.bar.com", "foo", nil),
+				helpers.MustHTTPRequest(t, http.MethodGet, "a.foo.com", "/foobar", nil),
+				helpers.MustHTTPRequest(t, http.MethodGet, "a.bar.com", "/foo", nil),
 			},
 		},
 	}

@@ -1002,7 +1002,7 @@ func TestIngressMatchByHost(t *testing.T) {
 	cleaner.Add(ingress)
 
 	t.Log("try to access the ingress by matching host")
-	req := helpers.MustHTTPRequest(t, "GET", "test.example", "", nil)
+	req := helpers.MustHTTPRequest(t, http.MethodGet, "test.example", "/", nil)
 	require.Eventually(t, func() bool {
 		resp, err := helpers.DefaultHTTPClientWithProxy(proxyURL).Do(req)
 		if err != nil {
@@ -1021,7 +1021,7 @@ func TestIngressMatchByHost(t *testing.T) {
 	}, ingressWait, waitTick)
 
 	t.Log("try to access the ingress by unmatching host, should return 404")
-	req = helpers.MustHTTPRequest(t, "GET", "foo.example", "", nil)
+	req = helpers.MustHTTPRequest(t, http.MethodGet, "foo.example", "/", nil)
 	resp, err := helpers.DefaultHTTPClientWithProxy(proxyURL).Do(req)
 	require.NoError(t, err)
 	defer resp.Body.Close()
@@ -1039,7 +1039,7 @@ func TestIngressMatchByHost(t *testing.T) {
 
 	t.Log("try to access the ingress by matching host")
 
-	req = helpers.MustHTTPRequest(t, "GET", "test0.example", "", nil)
+	req = helpers.MustHTTPRequest(t, http.MethodGet, "test0.example", "/", nil)
 	require.Eventually(t, func() bool {
 		resp, err := helpers.DefaultHTTPClientWithProxy(proxyURL).Do(req)
 		if err != nil {
@@ -1058,8 +1058,8 @@ func TestIngressMatchByHost(t *testing.T) {
 	}, ingressWait, waitTick)
 
 	t.Log("try to access the ingress by unmatching host, should return 404")
-	req.Host = "test.another"
-	resp, err = helpers.DefaultHTTPClient().Do(req)
+	req = helpers.MustHTTPRequest(t, http.MethodGet, "test.another", "/", nil)
+	resp, err = helpers.DefaultHTTPClientWithProxy(proxyURL).Do(req)
 	require.NoError(t, err)
 	defer resp.Body.Close()
 	require.Equal(t, resp.StatusCode, http.StatusNotFound)

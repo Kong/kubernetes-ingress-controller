@@ -310,8 +310,6 @@ func getSupportedGatewayForRoute[T gatewayapi.RouteT](ctx context.Context, mgrc 
 	}
 
 	if len(gateways) == 0 {
-		// TODO https://github.com/Kong/kubernetes-ingress-controller/issues/2417 separate out various rejected reasons
-		// and apply specific statuses for those failures in the Route controllers
 		return nil, fmt.Errorf(unsupportedGW)
 	}
 

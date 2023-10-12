@@ -22,7 +22,6 @@ import (
 	"k8s.io/client-go/util/retry"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/versions"
 	kongv1alpha1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1alpha1"
 	"github.com/kong/kubernetes-ingress-controller/v2/pkg/clientset"
 	"github.com/kong/kubernetes-ingress-controller/v2/test"
@@ -478,8 +477,6 @@ func TestIngressStatusUpdatesExtended(t *testing.T) {
 // parallel: parts of the test may add this route _without_ the prefix, and the 3.x router really hates this and will
 // stop working altogether.
 func TestIngressClassRegexToggle(t *testing.T) {
-	RunWhenKongVersion(t, fmt.Sprintf(">=%s", versions.ExplicitRegexPathVersionCutoff), "regex prefixes are only relevant for Kong 3.0+")
-
 	t.Log("locking IngressClass management")
 	ingressClassMutex.Lock()
 	t.Cleanup(func() {
@@ -602,8 +599,6 @@ func TestIngressClassRegexToggle(t *testing.T) {
 }
 
 func TestIngressRegexPrefix(t *testing.T) {
-	RunWhenKongVersion(t, fmt.Sprintf(">=%s", versions.ExplicitRegexPathVersionCutoff), "regex prefixes are only relevant for Kong 3.0+")
-
 	ctx := context.Background()
 	ns, cleaner := helpers.Setup(ctx, t, env)
 

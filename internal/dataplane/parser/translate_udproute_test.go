@@ -4,7 +4,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/blang/semver/v4"
 	"github.com/go-logr/zapr"
 	"github.com/kong/go-kong/kong"
 	"github.com/samber/lo"
@@ -19,7 +18,6 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/gatewayapi"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util/builder"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/versions"
 )
 
 var udpRouteTypeMeta = metav1.TypeMeta{Kind: "UDPRoute", APIVersion: gatewayv1alpha2.SchemeGroupVersion.String()}
@@ -355,7 +353,6 @@ func TestIngressRulesFromUDPRoutesUsingExpressionRoutes(t *testing.T) {
 	testCases := []struct {
 		name                 string
 		udpRoutes            []*gatewayapi.UDPRoute
-		kongVersion          semver.Version
 		expectedKongServices []kongstate.Service
 		expectedKongRoutes   map[string][]kongstate.Route
 		expectedFailures     []failures.ResourceFailure
@@ -377,7 +374,6 @@ func TestIngressRulesFromUDPRoutesUsingExpressionRoutes(t *testing.T) {
 					},
 				},
 			},
-			kongVersion: versions.KICv3VersionCutoff,
 			expectedKongServices: []kongstate.Service{
 				{
 					Service: kong.Service{
@@ -426,7 +422,6 @@ func TestIngressRulesFromUDPRoutesUsingExpressionRoutes(t *testing.T) {
 					},
 				},
 			},
-			kongVersion: versions.KICv3VersionCutoff,
 			expectedKongServices: []kongstate.Service{
 				{
 					Service: kong.Service{
@@ -492,7 +487,6 @@ func TestIngressRulesFromUDPRoutesUsingExpressionRoutes(t *testing.T) {
 					},
 				},
 			},
-			kongVersion: versions.KICv3VersionCutoff,
 			expectedKongServices: []kongstate.Service{
 				{
 					Service: kong.Service{
@@ -558,7 +552,6 @@ func TestIngressRulesFromUDPRoutesUsingExpressionRoutes(t *testing.T) {
 					Spec:       gatewayapi.UDPRouteSpec{},
 				},
 			},
-			kongVersion: versions.KICv3VersionCutoff,
 			expectedKongServices: []kongstate.Service{
 				{
 					Service: kong.Service{
@@ -626,7 +619,6 @@ func TestIngressRulesFromUDPRoutesUsingExpressionRoutes(t *testing.T) {
 			require.NoError(t, err)
 			parser := mustNewParser(t, fakestore)
 			parser.featureFlags.ExpressionRoutes = true
-			parser.kongVersion = tc.kongVersion
 
 			failureCollector := failures.NewResourceFailuresCollector(zapr.NewLogger(zap.NewNop()))
 			parser.failuresCollector = failureCollector

@@ -165,13 +165,12 @@ func Run(
 	parserFeatureFlags := parser.NewFeatureFlags(
 		logger,
 		featureGates,
-		kongSemVersion,
 		routerFlavor,
 		c.UpdateStatus,
 	)
 
 	setupLog.Info("Starting Admission Server")
-	if err := setupAdmissionServer(ctx, c, clientsManager, mgr.GetClient(), logger, parserFeatureFlags, kongSemVersion); err != nil {
+	if err := setupAdmissionServer(ctx, c, clientsManager, mgr.GetClient(), logger, parserFeatureFlags); err != nil {
 		return err
 	}
 
@@ -180,7 +179,6 @@ func Run(
 		logger,
 		store.New(cache, c.IngressClassName, logger),
 		parserFeatureFlags,
-		kongSemVersion,
 	)
 	if err != nil {
 		return fmt.Errorf("failed to create parser: %w", err)

@@ -232,7 +232,8 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 								Route: kong.Route{
 									Name: kong.String("httproute.default.basic-httproute.0.0"),
 									Paths: []*string{
-										kong.String("/httpbin"),
+										kong.String("~/httpbin$"),
+										kong.String("/httpbin/"),
 									},
 									PreserveHost: kong.Bool(true),
 									Protocols: []*string{
@@ -352,7 +353,7 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 								Route: kong.Route{
 									Name: kong.String("httproute.default.basic-httproute.0.0"),
 									Paths: []*string{
-										kong.String("/httpbin$"),
+										kong.String("~/httpbin$"),
 									},
 									PreserveHost: kong.Bool(true),
 									Protocols: []*string{
@@ -422,7 +423,7 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 								Route: kong.Route{
 									Name: kong.String("httproute.default.basic-httproute.0.0"),
 									Paths: []*string{
-										kong.String("/httpbin$"),
+										kong.String("~/httpbin$"),
 									},
 									PreserveHost: kong.Bool(true),
 									Protocols: []*string{
@@ -499,8 +500,10 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 									Route: kong.Route{
 										Name: kong.String("httproute.default.basic-httproute.0.0"),
 										Paths: []*string{
-											kong.String("/httpbin-1"),
-											kong.String("/httpbin-2"),
+											kong.String("~/httpbin-1$"),
+											kong.String("/httpbin-1/"),
+											kong.String("~/httpbin-2$"),
+											kong.String("/httpbin-2/"),
 										},
 										PreserveHost: kong.Bool(true),
 										Protocols: []*string{
@@ -527,7 +530,7 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 		},
 
 		{
-			msg: "a single HTTPRoute with multiple rules with different backendRefs results in a multiple services",
+			msg: "a single HTTPRoute with multiple rules with different backendRefs results in multiple services",
 			routes: []*gatewayapi.HTTPRoute{
 				{
 					ObjectMeta: metav1.ObjectMeta{
@@ -583,7 +586,8 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 								Route: kong.Route{
 									Name: kong.String("httproute.default.basic-httproute.0.0"),
 									Paths: []*string{
-										kong.String("/httpbin-1"),
+										kong.String("~/httpbin-1$"),
+										kong.String("/httpbin-1/"),
 									},
 									PreserveHost: kong.Bool(true),
 									Protocols: []*string{
@@ -622,7 +626,8 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 								Route: kong.Route{
 									Name: kong.String("httproute.default.basic-httproute.1.0"),
 									Paths: []*string{
-										kong.String("/httpbin-2"),
+										kong.String("~/httpbin-2$"),
+										kong.String("/httpbin-2/"),
 									},
 									PreserveHost: kong.Bool(true),
 									Protocols: []*string{
@@ -717,8 +722,10 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 									Route: kong.Route{
 										Name: kong.String("httproute.default.basic-httproute.0.0"),
 										Paths: []*string{
-											kong.String("/httpbin-1"),
-											kong.String("/httpbin-2"),
+											kong.String("~/httpbin-1$"),
+											kong.String("/httpbin-1/"),
+											kong.String("~/httpbin-2$"),
+											kong.String("/httpbin-2/"),
 										},
 										PreserveHost: kong.Bool(true),
 										Protocols: []*string{
@@ -760,7 +767,8 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 									Route: kong.Route{
 										Name: kong.String("httproute.default.basic-httproute.2.0"),
 										Paths: []*string{
-											kong.String("/httpbin-2"),
+											kong.String("~/httpbin-2$"),
+											kong.String("/httpbin-2/"),
 										},
 										PreserveHost: kong.Bool(true),
 										Protocols: []*string{
@@ -864,7 +872,8 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 									Route: kong.Route{
 										Name: kong.String("httproute.default.basic-httproute.0.0"),
 										Paths: []*string{
-											kong.String("/path-0"),
+											kong.String("~/path-0$"),
+											kong.String("/path-0/"),
 										},
 										PreserveHost: kong.Bool(true),
 										Protocols: []*string{
@@ -896,7 +905,8 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 									Route: kong.Route{
 										Name: kong.String("httproute.default.basic-httproute.1.0"),
 										Paths: []*string{
-											kong.String("/path-1"),
+											kong.String("~/path-1$"),
+											kong.String("/path-1/"),
 										},
 										PreserveHost: kong.Bool(true),
 										Protocols: []*string{
@@ -1000,8 +1010,10 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 									Route: kong.Route{
 										Name: kong.String("httproute.default.basic-httproute.0.0"),
 										Paths: []*string{
-											kong.String("/path-0"),
-											kong.String("/path-1"),
+											kong.String("~/path-0$"),
+											kong.String("/path-0/"),
+											kong.String("~/path-1$"),
+											kong.String("/path-1/"),
 										},
 										PreserveHost: kong.Bool(true),
 										Protocols: []*string{
@@ -1024,8 +1036,10 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 									Route: kong.Route{
 										Name: kong.String("httproute.default.basic-httproute.0.2"),
 										Paths: []*string{
-											kong.String("/path-2"),
-											kong.String("/path-3"),
+											kong.String("~/path-2$"),
+											kong.String("/path-2/"),
+											kong.String("~/path-3$"),
+											kong.String("/path-3/"),
 										},
 										PreserveHost: kong.Bool(true),
 										Protocols: []*string{
@@ -1049,8 +1063,10 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 									Route: kong.Route{
 										Name: kong.String("httproute.default.basic-httproute.0.4"),
 										Paths: []*string{
-											kong.String("/path-4"),
-											kong.String("/path-5"),
+											kong.String("~/path-4$"),
+											kong.String("/path-4/"),
+											kong.String("~/path-5$"),
+											kong.String("/path-5/"),
 										},
 										PreserveHost: kong.Bool(true),
 										Protocols: []*string{
@@ -1176,10 +1192,14 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 									Route: kong.Route{
 										Name: kong.String("httproute.default.basic-httproute.0.0"),
 										Paths: []*string{
-											kong.String("/path-0"),
-											kong.String("/path-1"),
-											kong.String("/path-4"),
-											kong.String("/path-5"),
+											kong.String("~/path-0$"),
+											kong.String("/path-0/"),
+											kong.String("~/path-1$"),
+											kong.String("/path-1/"),
+											kong.String("~/path-4$"),
+											kong.String("/path-4/"),
+											kong.String("~/path-5$"),
+											kong.String("/path-5/"),
 										},
 										PreserveHost: kong.Bool(true),
 										Protocols: []*string{
@@ -1202,8 +1222,10 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 									Route: kong.Route{
 										Name: kong.String("httproute.default.basic-httproute.0.2"),
 										Paths: []*string{
-											kong.String("/path-2"),
-											kong.String("/path-3"),
+											kong.String("~/path-2$"),
+											kong.String("/path-2/"),
+											kong.String("~/path-3$"),
+											kong.String("/path-3/"),
 										},
 										PreserveHost: kong.Bool(true),
 										Protocols: []*string{
@@ -1228,8 +1250,10 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 									Route: kong.Route{
 										Name: kong.String("httproute.default.basic-httproute.2.0"),
 										Paths: []*string{
-											kong.String("/path-6"),
-											kong.String("/path-7"),
+											kong.String("~/path-6$"),
+											kong.String("/path-6/"),
+											kong.String("~/path-7$"),
+											kong.String("/path-7/"),
 										},
 										PreserveHost: kong.Bool(true),
 										Protocols: []*string{
@@ -1348,10 +1372,7 @@ func TestIngressRulesFromHTTPRoutes_RegexPrefix(t *testing.T) {
 	fakestore, err := store.NewFakeStore(store.FakeObjects{})
 	require.NoError(t, err)
 	parser := mustNewParser(t, fakestore)
-	parser.featureFlags.RegexPathPrefix = true
 	parserWithCombinedServiceRoutes := mustNewParser(t, fakestore)
-	parserWithCombinedServiceRoutes.featureFlags.RegexPathPrefix = true
-	httpPort := gatewayapi.PortNumber(80)
 
 	for _, tt := range []testCaseIngressRulesFromHTTPRoutes{
 		{
@@ -1371,7 +1392,7 @@ func TestIngressRulesFromHTTPRoutes_RegexPrefix(t *testing.T) {
 							BackendRef: gatewayapi.BackendRef{
 								BackendObjectReference: gatewayapi.BackendObjectReference{
 									Name: gatewayapi.ObjectName("fake-service"),
-									Port: &httpPort,
+									Port: lo.ToPtr(gatewayapi.PortNumber(80)),
 									Kind: util.StringToGatewayAPIKindPtr("Service"),
 								},
 							},

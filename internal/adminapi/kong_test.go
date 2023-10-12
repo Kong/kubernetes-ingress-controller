@@ -15,6 +15,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/adminapi"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/versions"
 	"github.com/kong/kubernetes-ingress-controller/v2/test/helpers/certificate"
 	"github.com/kong/kubernetes-ingress-controller/v2/test/mocks"
 )
@@ -133,6 +134,11 @@ func TestNewKongClientForWorkspace(t *testing.T) {
 			adminAPIReady:   true,
 			adminAPIVersion: "3.4.0",
 			expectError:     adminapi.KongGatewayUnsupportedVersionError{},
+		},
+		{
+			name:            "admin api is in supported OSS version",
+			adminAPIReady:   true,
+			adminAPIVersion: versions.KICv3VersionCutoff.String(),
 		},
 		{
 			name:            "admin api has malformed version",

@@ -15,14 +15,17 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/clients"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/konnect"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/konnect/nodes"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/versions"
 	"github.com/kong/kubernetes-ingress-controller/v2/test/mocks"
 )
 
 const (
-	testKicVersion  = "2.9.0"
-	testKongVersion = "3.2.0.0"
-	testHostname    = "ingress-0"
+	testKicVersion = "2.9.0"
+	testHostname   = "ingress-0"
 )
+
+// testKongVersion matches enterprise version format.
+var testKongVersion = fmt.Sprintf("%s.0", versions.KICv3VersionCutoff)
 
 type mockGatewayInstanceGetter struct {
 	gatewayInstances []konnect.GatewayInstance

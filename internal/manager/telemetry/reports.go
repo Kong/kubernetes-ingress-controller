@@ -6,10 +6,12 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/kong/go-kong/kong"
 	"k8s.io/client-go/rest"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/adminapi"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/manager/metadata"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/manager/utils/kongconfig"
 )
 
 // GatewayClientsProvider is an interface that provides clients for the currently discovered Gateway instances.
@@ -65,23 +67,18 @@ func SetupAnonymousReports(
 		return nil, fmt.Errorf("failed to get Kong root config data: %w", err)
 	}
 
-	// gather versioning information from the kong client
-	kongVersion, ok := root["version"].(string)
-	if !ok {
+	// Gather versioning information from the kong client
+	kongVersion := kong.VersionFromInfo(root)
+	if kongVersion == "" {
 		return nil, fmt.Errorf("malformed Kong version found in Kong client root")
 	}
-	cfg, ok := root["configuration"].(map[string]interface{})
-	if !ok {
-		return nil, fmt.Errorf("malformed Kong configuration found in Kong client root")
+	kongDB, err := kongconfig.DBModeFromRoot(root)
+	if err != nil {
+		return nil, err
 	}
-	kongDB, ok := cfg["database"].(string)
-	if !ok {
-		return nil, fmt.Errorf("malformed database configuration found in Kong client root")
-	}
-	routerFlavor, ok := cfg["router_flavor"].(string)
-	if !ok {
-		// version to old to use router flavor, de facto traditional
-		routerFlavor = "traditional"
+	routerFlavor, err := kongconfig.RouterFlavorFromRoot(root)
+	if err != nil {
+		return nil, err
 	}
 
 	fixedPayload := Payload{

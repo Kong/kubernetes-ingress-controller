@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math/rand"
 	"reflect"
 	"sort"
 	"sync"
@@ -461,17 +462,43 @@ func (c *KongClient) sendOutToGatewayClients(
 	ctx context.Context, s *kongstate.KongState, config sendconfig.Config,
 ) ([]string, error) {
 	gatewayClients := c.clientsProvider.GatewayClients()
-	c.logger.V(util.DebugLevel).Info("sending configuration to gateway clients", "count", len(gatewayClients))
-	shas, err := iter.MapErr(gatewayClients, func(client **adminapi.Client) (string, error) {
-		return c.sendToClient(ctx, *client, s, config)
-	})
-	if err != nil {
-		return nil, err
-	}
 	previousSHAs := c.SHAs
+	gatewayClientURLs := []string{}
+	for _, cl := range gatewayClients {
+		gatewayClientURLs = append(gatewayClientURLs, cl.BaseRootURL())
+	}
 
-	sort.Strings(shas)
-	c.SHAs = shas
+	if dataplaneutil.IsDBLessMode(c.dbmode) {
+		c.logger.V(util.DebugLevel).Info("sending configuration to gateway clients", "urls", gatewayClientURLs)
+		shas, err := iter.MapErr(gatewayClients, func(client **adminapi.Client) (string, error) {
+			return c.sendToClient(ctx, *client, s, config)
+		})
+		if err != nil {
+			return nil, err
+		}
+
+		sort.Strings(shas)
+		c.SHAs = shas
+	} else {
+		// directly return if no gateway clients found.
+		if len(gatewayClients) == 0 {
+			c.logger.Info("no active gateway clients found, skip sending")
+			return previousSHAs, nil
+		}
+		// randomly choose one client.
+		// REVIEW: The order of GatewayClients() is random, could we just use the "first" client?
+		clientIndex := rand.Intn(len(gatewayClients)) //nolint:gosec
+		c.logger.V(util.DebugLevel).Info(
+			fmt.Sprintf("sending configuration to gateway client %d/%d", clientIndex+1, len(gatewayClients)),
+			"chosen_url", gatewayClientURLs[clientIndex],
+			"urls", gatewayClientURLs,
+		)
+		sha, err := c.sendToClient(ctx, gatewayClients[clientIndex], s, config)
+		if err != nil {
+			return nil, err
+		}
+		c.SHAs = []string{sha}
+	}
 
 	c.kongConfigFetcher.StoreLastValidConfig(s)
 

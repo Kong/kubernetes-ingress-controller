@@ -256,6 +256,26 @@ func TestDeployAllInOneEnterprisePostgres(t *testing.T) {
 	verifyEnterpriseWithPostgres(ctx, t, env, adminPassword)
 }
 
+func TestDeployAllInOnePostgresGatewayDiscovery(t *testing.T) {
+	t.Parallel()
+
+	const (
+		manifestFileName = "all-in-one-postgres-multiple-gateways.yaml"
+		manifestFilePath = "../../deploy/single/" + manifestFileName
+	)
+
+	t.Logf("configuring %s manifest test", manifestFileName)
+	ctx, env := setupE2ETest(t)
+
+	t.Log("deploying kong components")
+	deployments := ManifestDeploy{Path: manifestFilePath}.Run(ctx, t, env)
+
+	t.Log("running ingress tests to verify all-in-one deployed ingress controller and proxy are functional")
+	deployIngressWithEchoBackends(ctx, t, env, numberOfEchoBackends)
+	verifyIngressWithEchoBackends(ctx, t, env, numberOfEchoBackends)
+	ensureAllProxyReplicasAreConfigured(ctx, t, env, deployments.ProxyNN)
+}
+
 func TestDeployAllInOneDBLESS(t *testing.T) {
 	t.Parallel()
 

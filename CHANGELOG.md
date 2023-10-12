@@ -116,6 +116,8 @@ Adding a new version? You'll need three changes:
   will be included in the message reported in `KongConfigurationApplyFailed` Kubernetes event
   generated for it.
   [#4813](https://github.com/Kong/kubernetes-ingress-controller/pull/4813)
+- Fixed an incorrect watch, set in UDPRoute controller watching UDProute status updates.
+  [#4835](https://github.com/Kong/kubernetes-ingress-controller/pull/4835)
 
 ### Changed
 

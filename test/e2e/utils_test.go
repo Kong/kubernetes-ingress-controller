@@ -16,7 +16,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/testenv"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/types/gke"
 	"github.com/kong/kubernetes-testing-framework/pkg/environments"
 	"github.com/phayes/freeport"
@@ -27,6 +26,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
+
+	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/testenv"
 )
 
 const (

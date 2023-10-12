@@ -126,12 +126,12 @@ func Run(ctx context.Context, c *Config, diagnostic util.ConfigDumpDiagnostic, d
 	kongConfig.Init(ctx, setupLog, initialKongClients)
 
 	setupLog.Info("configuring and building the controller manager")
-	controllerOpts, err := setupControllerOptions(ctx, setupLog, c, dbMode)
+	managerOpts, err := setupManagerOptions(ctx, setupLog, c, dbMode)
 	if err != nil {
-		return fmt.Errorf("unable to setup controller options: %w", err)
+		return fmt.Errorf("unable to setup manager options: %w", err)
 	}
 
-	mgr, err := ctrl.NewManager(kubeconfig, controllerOpts)
+	mgr, err := ctrl.NewManager(kubeconfig, managerOpts)
 	if err != nil {
 		return fmt.Errorf("unable to create controller manager: %w", err)
 	}

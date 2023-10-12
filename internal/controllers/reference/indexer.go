@@ -8,6 +8,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/controllers"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/manager/scheme"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 )
 
@@ -37,6 +38,14 @@ func objectKeyFunc(obj client.Object) (string, error) {
 	metaObj, ok := o.(client.Object)
 	if !ok {
 		return "", fmt.Errorf("could not convert %s/%s back to client Object", obj.GetNamespace(), obj.GetName())
+	}
+	s, err := scheme.Get()
+	if err != nil {
+		return "", fmt.Errorf("could not get scheme for %s/%s metadata: %w", obj.GetNamespace(), obj.GetName(), err)
+	}
+	err = util.PopulateTypeMeta(o, s)
+	if err != nil {
+		return "", fmt.Errorf("could not populate %s/%s metadata: %w", obj.GetNamespace(), obj.GetName(), err)
 	}
 	return metaObj.GetObjectKind().GroupVersionKind().String() + "/" +
 		metaObj.GetNamespace() + "/" + metaObj.GetName(), nil

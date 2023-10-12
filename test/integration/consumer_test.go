@@ -55,7 +55,7 @@ func TestConsumerCredential(t *testing.T) {
 	cleaner.Add(ingress)
 
 	t.Log("waiting for routes from Ingress to be operational")
-	assert.Eventually(t, func() bool {
+	require.Eventually(t, func() bool {
 		resp, err := helpers.DefaultHTTPClient().Get(fmt.Sprintf("%s/test_consumer_credential", proxyURL))
 		if err != nil {
 			t.Logf("WARNING: error while waiting for %s: %v", proxyURL, err)

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
@@ -33,4 +34,14 @@ func (c TypeMetaSettingClient) Get(
 		return fmt.Errorf("failed to populate type meta: %w", err)
 	}
 	return nil
+}
+
+// newManagerClient generates a controller-runtime client and wraps it in our override decorator.
+func newManagerClient(config *rest.Config, options client.Options) (client.Client, error) {
+	base, err := client.New(config, options)
+	if err != nil {
+		return nil, err
+	}
+	metaSetter := NewTypeMetaSettingClient(base)
+	return metaSetter, nil
 }

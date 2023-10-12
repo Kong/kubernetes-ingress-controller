@@ -54,6 +54,7 @@
 | `--kong-admin-tls-server-name` | `string` | SNI name to use to verify the certificate presented by Kong in TLS. |  |
 | `--kong-admin-tls-skip-verify` | `bool` | Disable verification of TLS certificate of Kong's Admin endpoint. | `false` |
 | `--kong-admin-token` | `string` | The Kong Enterprise RBAC token used by the controller. |  |
+| `--kong-admin-token-file` | `string` | Path to the Kong Enterprise RBAC token file used by the controller. |  |
 | `--kong-admin-url` | `stringSlice` | Kong Admin URL(s) to connect to in the format "protocol://address:port". More than 1 URL can be provided, in such case the flag should be used multiple times or a corresponding env variable should use comma delimited addresses. | `[http://localhost:8001]` |
 | `--kong-workspace` | `string` | Kong Enterprise workspace to configure. Leave this empty if not using Kong workspaces. |  |
 | `--konnect-address` | `string` | Base address of Konnect API. | `https://us.kic.api.konghq.com` |

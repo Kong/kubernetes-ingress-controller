@@ -134,11 +134,11 @@ func TestIngressRegexMatchPath(t *testing.T) {
 
 			t.Log("testing paths expected to match")
 			for _, path := range tc.matchPaths {
-				helpers.EventuallyGETPath(t, proxyURL, path, http.StatusOK, "<title>httpbin.org</title>", nil, ingressWait, waitTick)
+				helpers.EventuallyGETPath(t, proxyURL, proxyURL.Host, path, http.StatusOK, "<title>httpbin.org</title>", nil, ingressWait, waitTick)
 			}
 			t.Log("testing paths expected not to match")
 			for _, path := range tc.notMatchPaths {
-				helpers.EventuallyExpectHTTP404WithNoRoute(t, proxyURL, path, ingressWait, waitTick, nil)
+				helpers.EventuallyExpectHTTP404WithNoRoute(t, proxyURL, proxyURL.Host, path, ingressWait, waitTick, nil)
 			}
 		})
 	}
@@ -233,6 +233,7 @@ func TestIngressRegexMatchHeader(t *testing.T) {
 				helpers.EventuallyGETPath(
 					t,
 					proxyURL,
+					proxyURL.Host,
 					"/",
 					http.StatusOK,
 					"<title>httpbin.org</title>",
@@ -247,6 +248,7 @@ func TestIngressRegexMatchHeader(t *testing.T) {
 				helpers.EventuallyExpectHTTP404WithNoRoute(
 					t,
 					proxyURL,
+					proxyURL.Host,
 					"/",
 					ingressWait,
 					waitTick,

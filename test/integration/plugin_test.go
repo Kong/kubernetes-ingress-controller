@@ -153,7 +153,7 @@ func TestPluginEssentials(t *testing.T) {
 
 	t.Log("deleting Ingress and waiting for routes to be torn down")
 	require.NoError(t, clusters.DeleteIngress(ctx, env.Cluster(), ns.Name, ingress))
-	helpers.EventuallyExpectHTTP404WithNoRoute(t, proxyURL, "/test_plugin_essentials", ingressWait, waitTick, nil)
+	helpers.EventuallyExpectHTTP404WithNoRoute(t, proxyURL, proxyURL.Host, "/test_plugin_essentials", ingressWait, waitTick, nil)
 }
 
 func TestPluginOrdering(t *testing.T) {
@@ -300,5 +300,5 @@ func TestPluginOrdering(t *testing.T) {
 
 	t.Log("deleting Ingress and waiting for routes to be torn down")
 	require.NoError(t, clusters.DeleteIngress(ctx, env.Cluster(), ns.Name, ingress))
-	helpers.EventuallyExpectHTTP404WithNoRoute(t, proxyURL, "/test_plugin_ordering", ingressWait, waitTick, nil)
+	helpers.EventuallyExpectHTTP404WithNoRoute(t, proxyURL, proxyURL.Host, "/test_plugin_ordering", ingressWait, waitTick, nil)
 }

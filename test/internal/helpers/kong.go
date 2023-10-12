@@ -1,41 +1,32 @@
 package helpers
 
 import (
-	"encoding/json"
+	"context"
 	"fmt"
-	"io"
-	"net/http"
 	"net/url"
 	"os"
+	"time"
 
 	"github.com/kong/go-kong/kong"
+	"github.com/samber/lo"
+
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/adminapi"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/manager/utils/kongconfig"
 )
 
 // GetKongRootConfig gets version and root configurations of Kong from / endpoint of the provided Admin API URL.
 func GetKongRootConfig(proxyAdminURL *url.URL, kongTestPassword string) (map[string]any, error) {
-	req, err := http.NewRequest(http.MethodGet, proxyAdminURL.String(), nil)
+	httpClient, err := adminapi.MakeHTTPClient(&adminapi.HTTPClientOpts{}, kongTestPassword)
 	if err != nil {
-		return nil, fmt.Errorf("failed creating request for %s: %w", proxyAdminURL, err)
+		return nil, fmt.Errorf("failed creating specific HTTP client for Kong API URL: %q: %w", proxyAdminURL, err)
 	}
-	req.Header.Set("kong-admin-token", kongTestPassword)
-	resp, err := DefaultHTTPClient().Do(req)
+	kc, err := kong.NewClient(lo.ToPtr(proxyAdminURL.String()), httpClient)
 	if err != nil {
-		return nil, fmt.Errorf("failed issuing HTTP request for %s: %w", proxyAdminURL, err)
+		return nil, fmt.Errorf("failed creating Kong API client for URL: %q: %w", proxyAdminURL, err)
 	}
-	defer resp.Body.Close()
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, fmt.Errorf("failed reading response body from %s: %w", proxyAdminURL, err)
-	}
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("failed getting kong version from %s: %s: %s", proxyAdminURL, resp.Status, body)
-	}
-
-	var jsonResp map[string]any
-	if err := json.Unmarshal(body, &jsonResp); err != nil {
-		return nil, fmt.Errorf("failed parsing response body from %s: %w", proxyAdminURL, err)
-	}
-	return jsonResp, nil
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	return kc.Root(ctx)
 }
 
 // GetKongVersion returns kong version using the provided Admin API URL.
@@ -50,12 +41,7 @@ func GetKongVersion(proxyAdminURL *url.URL, kongTestPassword string) (kong.Versi
 	if err != nil {
 		return kong.Version{}, err
 	}
-	m := kong.VersionFromInfo(jsonResp)
-	version, err := kong.ParseSemanticVersion(m)
-	if err != nil {
-		return kong.Version{}, fmt.Errorf("failed parsing kong (URL: %s) semver from body: %s: %w", proxyAdminURL, m, err)
-	}
-	return version, nil
+	return kongconfig.KongVersionFromRoot(jsonResp)
 }
 
 // GetKongDBMode returns kong dbmode using the provided Admin API URL.
@@ -64,62 +50,22 @@ func GetKongDBMode(proxyAdminURL *url.URL, kongTestPassword string) (string, err
 	if err != nil {
 		return "", err
 	}
-
-	rootConfig, ok := jsonResp["configuration"].(map[string]any)
-	if !ok {
-		return "", fmt.Errorf(
-			"unexpected root configuration type %T for kong (URL: %s)",
-			jsonResp["configuration"], proxyAdminURL,
-		)
+	dbMode, err := kongconfig.DBModeFromRoot(jsonResp)
+	if err != nil {
+		return "", fmt.Errorf("%w (for URL: %s)", err, proxyAdminURL)
 	}
-
-	db, ok := rootConfig["database"]
-	if !ok {
-		return "", fmt.Errorf("missing 'database' key in kong's (URL: %s) configuration", proxyAdminURL)
-	}
-
-	dbStr, ok := db.(string)
-	if !ok {
-		return "", fmt.Errorf(
-			"'database' key is of unexpected type - %T - in kong's (URL: %s) configuration, value: %v",
-			db, proxyAdminURL, db,
-		)
-	}
-	return dbStr, nil
+	return dbMode, nil
 }
 
 // GetKongRouterFlavor gets router flavor of Kong using the provided Admin API URL.
 func GetKongRouterFlavor(proxyAdminURL *url.URL, kongTestPassword string) (string, error) {
-	kongVersion, err := GetKongVersion(proxyAdminURL, kongTestPassword)
-	if err != nil {
-		return "", err
-	}
-
 	jsonResp, err := GetKongRootConfig(proxyAdminURL, kongTestPassword)
 	if err != nil {
 		return "", err
 	}
-
-	rootConfig, ok := jsonResp["configuration"].(map[string]any)
-	if !ok {
-		return "", fmt.Errorf(
-			"unexpected root configuration type %T for Kong (URL: %s)",
-			jsonResp["configuration"], proxyAdminURL,
-		)
+	routerFlavor, err := kongconfig.RouterFlavorFromRoot(jsonResp)
+	if err != nil {
+		return "", fmt.Errorf("%w (for URL: %s)", err, proxyAdminURL)
 	}
-	routerFlavor, ok := rootConfig["router_flavor"]
-	if !ok {
-		return "", fmt.Errorf("missing 'router_flavor' key in Kong's (version: %s, URL: %s) configuration: %s",
-			kongVersion, proxyAdminURL, rootConfig,
-		)
-	}
-
-	routerFlavorStr, ok := routerFlavor.(string)
-	if !ok {
-		return "", fmt.Errorf(
-			"'router_flavor' key is of unexpected type - %T - in Kong's (URL: %s) configuration, value: %v",
-			routerFlavor, proxyAdminURL, routerFlavor,
-		)
-	}
-	return routerFlavorStr, nil
+	return routerFlavor, nil
 }

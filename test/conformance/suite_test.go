@@ -127,7 +127,7 @@ func prepareEnvForGatewayConformanceTests(t *testing.T) (c client.Client, gatewa
 		fmt.Sprintf("--ingress-class=%s", ingressClass),
 		fmt.Sprintf("--admission-webhook-cert=%s", cert),
 		fmt.Sprintf("--admission-webhook-key=%s", key),
-		fmt.Sprintf("--admission-webhook-listen=%s:%d", testutils.AdmissionWebhookListenHost, testutils.AdmissionWebhookListenPort),
+		fmt.Sprintf("--admission-webhook-listen=%s:%d", testutils.GetAdmissionWebhookListenHost(), testutils.AdmissionWebhookListenPort),
 		"--profiling",
 		"--dump-config",
 		"--log-level=trace",

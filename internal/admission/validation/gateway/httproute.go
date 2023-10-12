@@ -99,7 +99,7 @@ func validateHTTPRouteFeatures(httproute *gatewayapi.HTTPRoute) error {
 	for _, rule := range httproute.Spec.Rules {
 		for _, match := range rule.Matches {
 			// We don't support query parameters matching rules yet
-			// See: https://github.com/Kong/kubernetes-ingress-controller/issues/3679
+			// TODO: https://github.com/Kong/kubernetes-ingress-controller/issues/3679
 			if len(match.QueryParams) != 0 {
 				return fmt.Errorf("queryparam matching is not yet supported for httproute")
 			}

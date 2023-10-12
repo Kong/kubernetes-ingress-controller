@@ -298,18 +298,15 @@ func TestGatewayListenerConflicts(t *testing.T) {
 	require.Eventually(t, func() bool {
 		gw, err = gatewayClient.GatewayV1beta1().Gateways(ns.Name).Get(ctx, gw.Name, metav1.GetOptions{})
 		require.NoError(t, err)
-		// TODO https://github.com/Kong/kubernetes-ingress-controller/issues/4597
-		// var httpReady, tlsReady, httpsReady, httphostReady bool
-		var tlsReady, httpsReady, httphostReady bool
+		var httpReady, tlsReady, httpsReady, httphostReady bool
 		for _, lstatus := range gw.Status.Listeners {
-			// TODO https://github.com/Kong/kubernetes-ingress-controller/issues/4597
-			// if lstatus.Name == "http" {
-			//	for _, condition := range lstatus.Conditions {
-			//		if condition.Type == string(gatewayapi.ListenerConditionProgrammed) {
-			//			httpReady = (condition.Status == metav1.ConditionTrue)
-			//		}
-			//	}
-			// }
+			if lstatus.Name == "http" {
+				for _, condition := range lstatus.Conditions {
+					if condition.Type == string(gatewayapi.ListenerConditionProgrammed) {
+						httpReady = (condition.Status == metav1.ConditionTrue)
+					}
+				}
+			}
 			if lstatus.Name == "tls" {
 				for _, condition := range lstatus.Conditions {
 					if condition.Type == string(gatewayapi.ListenerConditionProgrammed) {
@@ -332,9 +329,7 @@ func TestGatewayListenerConflicts(t *testing.T) {
 				}
 			}
 		}
-		// TODO https://github.com/Kong/kubernetes-ingress-controller/issues/4597
-		// return httpReady && tlsReady && httpsReady && httphostReady
-		return tlsReady && httpsReady && httphostReady
+		return httpReady && tlsReady && httpsReady && httphostReady
 	}, gatewayUpdateWaitTime, time.Second)
 }
 
@@ -434,9 +429,9 @@ func TestGatewayFilters(t *testing.T) {
 	require.Eventually(t, callback, ingressWait, waitTick)
 
 	t.Log("waiting for routes from HTTPRoute to become operational")
-	helpers.EventuallyGETPath(t, proxyURL, "test_gateway_filters", http.StatusOK, "<title>httpbin.org</title>", emptyHeaderSet, ingressWait, waitTick)
+	helpers.EventuallyGETPath(t, proxyURL, proxyURL.Host, "test_gateway_filters", http.StatusOK, "<title>httpbin.org</title>", emptyHeaderSet, ingressWait, waitTick)
 	t.Log("waiting for routes from HTTPRoute in other namespace to become operational")
-	helpers.EventuallyGETPath(t, proxyURL, "other_test_gateway_filters", http.StatusOK, "<title>httpbin.org</title>", emptyHeaderSet, ingressWait, waitTick)
+	helpers.EventuallyGETPath(t, proxyURL, proxyURL.Host, "other_test_gateway_filters", http.StatusOK, "<title>httpbin.org</title>", emptyHeaderSet, ingressWait, waitTick)
 
 	t.Log("changing to the same namespace filter")
 	require.Eventually(t, func() bool {
@@ -459,9 +454,9 @@ func TestGatewayFilters(t *testing.T) {
 	}, ingressWait, waitTick)
 
 	t.Log("confirming other namespace route becomes inaccessible")
-	helpers.EventuallyGETPath(t, proxyURL, "other_test_gateway_filters", http.StatusNotFound, "no Route matched", emptyHeaderSet, ingressWait, waitTick)
+	helpers.EventuallyGETPath(t, proxyURL, proxyURL.Host, "other_test_gateway_filters", http.StatusNotFound, "no Route matched", emptyHeaderSet, ingressWait, waitTick)
 	t.Log("confirming same namespace route still operational")
-	helpers.EventuallyGETPath(t, proxyURL, "test_gateway_filters", http.StatusOK, "<title>httpbin.org</title>", emptyHeaderSet, ingressWait, waitTick)
+	helpers.EventuallyGETPath(t, proxyURL, proxyURL.Host, "test_gateway_filters", http.StatusOK, "<title>httpbin.org</title>", emptyHeaderSet, ingressWait, waitTick)
 
 	t.Log("changing to a selector filter")
 	require.Eventually(t, func() bool {
@@ -490,7 +485,7 @@ func TestGatewayFilters(t *testing.T) {
 	}, ingressWait, waitTick)
 
 	t.Log("confirming wrong selector namespace route becomes inaccessible")
-	helpers.EventuallyGETPath(t, proxyURL, "test_gateway_filters", http.StatusNotFound, "no Route matched", emptyHeaderSet, ingressWait, waitTick)
+	helpers.EventuallyGETPath(t, proxyURL, proxyURL.Host, "test_gateway_filters", http.StatusNotFound, "no Route matched", emptyHeaderSet, ingressWait, waitTick)
 	t.Log("confirming right selector namespace route becomes operational")
-	helpers.EventuallyGETPath(t, proxyURL, "other_test_gateway_filters", http.StatusOK, "<title>httpbin.org</title>", emptyHeaderSet, ingressWait, waitTick)
+	helpers.EventuallyGETPath(t, proxyURL, proxyURL.Host, "other_test_gateway_filters", http.StatusOK, "<title>httpbin.org</title>", emptyHeaderSet, ingressWait, waitTick)
 }

@@ -16,9 +16,6 @@ on:
         type: string
         default: linux/amd64
     outputs:
-      image:
-        description: The image name and tag.
-        value: ${{ jobs.build.outputs.image }}
       tag:
         description: The tag of built image
         value: ${{ jobs.build.outputs.tag }}
@@ -78,7 +75,6 @@ jobs:
     runs-on: ubuntu-latest
     needs: prepare-tags
     outputs:
-      image: kong/kubernetes-ingress-controller:${{ steps.meta.outputs.version }}
       tag: ${{ steps.meta.outputs.version }}
     steps:
       - name: checkout repository

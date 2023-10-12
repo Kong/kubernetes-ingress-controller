@@ -131,6 +131,7 @@ jobs:
       - linters
       - unit-tests
       - envtest-tests
+      - kongintegration-tests
       - integration-tests
       - conformance-tests
       - build-docker-image
@@ -146,6 +147,7 @@ jobs:
       - should-run-with-secrets
       - unit-tests
       - envtest-tests
+      - kongintegration-tests
       - integration-tests
       - conformance-tests
       - up-to-date

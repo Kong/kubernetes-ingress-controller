@@ -51,8 +51,8 @@ jobs:
         name: Set versions
         run: |
           echo "kind=$(cat .github/test_dependencies.yaml | yq -ojson '.integration.kind' | jq -c)" >> $GITHUB_OUTPUT
-          echo "kong-ee=$(cat .github/test_dependencies.yaml | yq -ojson '.integration.kong-oss' | jq -c)" >> $GITHUB_OUTPUT
-          echo "kong-oss=$(cat .github/test_dependencies.yaml | yq -ojson '.integration.kong-ee' | jq -c)" >> $GITHUB_OUTPUT
+          echo "kong-ee=$(cat .github/test_dependencies.yaml | yq -ojson '.integration.kong-ee' | jq -c)" >> $GITHUB_OUTPUT
+          echo "kong-oss=$(cat .github/test_dependencies.yaml | yq -ojson '.integration.kong-oss' | jq -c)" >> $GITHUB_OUTPUT
 
   integration-tests:
     name: ${{ matrix.name }}

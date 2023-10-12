@@ -1,0 +1,18 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "configMigration": true,
+  "enabledManagers": ["regex"],
+  "automerge": false,
+  "separateMinorPatch": true,
+  "labels": ["dependencies"],
+  "schedule": "before 5am every weekday",
+  "customManagers": [
+    {
+      "customType": "regex",
+      "fileMatch": ["^.github/test_dependencies.yaml$"],
+      "matchStrings": [
+        "#\\s+renovate:\\s+datasource=(?<datasource>.*)\\s+depName=(?<depName>.*)\\s+versioning=(?<versioning>.*)\\n.+'(?<currentValue>.*)'"
+      ]
+    }
+  ]
+}

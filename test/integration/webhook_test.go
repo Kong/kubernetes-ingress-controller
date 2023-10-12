@@ -645,7 +645,7 @@ func ensureWebhookService(ctx context.Context, t *testing.T, name string) {
 		AddressType: discoveryv1.AddressTypeIPv4,
 		Endpoints: []discoveryv1.Endpoint{
 			{
-				Addresses: []string{testutils.AdmissionWebhookListenHost},
+				Addresses: []string{testutils.GetAdmissionWebhookListenHost()},
 			},
 		},
 		Ports: builder.NewEndpointPort(testutils.AdmissionWebhookListenPort).WithName("default").WithProtocol(corev1.ProtocolTCP).IntoSlice(),

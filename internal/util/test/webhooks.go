@@ -23,31 +23,52 @@ import (
 //
 // This works if the test runs against a KIND cluster, and does not work against cloud providers (like GKE).
 
-var AdmissionWebhookListenHost = admissionWebhookListenHost()
+const AdmissionWebhookListenPort = 49023
 
-const (
-	AdmissionWebhookListenPort = 49023
-
-	colimaHostAddress                 = "192.168.5.2"
-	defaultDockerBridgeNetworkGateway = "172.17.0.1"
-)
-
-func admissionWebhookListenHost() string {
-	if isColimaHost() {
-		return colimaHostAddress
-	}
-
-	return defaultDockerBridgeNetworkGateway
+// GetAdmissionWebhookListenHost returns the host IP address depends on environment where the test is running.
+func GetAdmissionWebhookListenHost() string {
+	return admissionWebhookListenHost
 }
 
-func isColimaHost() bool {
+var admissionWebhookListenHost = getHostIPbyType(getHostType())
+
+type hostType string
+
+const (
+	hostTypeColima hostType = "colima"
+	hostTypeLima   hostType = "lima"
+	defaultDocker  hostType = "defaultDocker"
+)
+
+func getHostIPbyType(ht hostType) string {
+	// Read more about those IPs in the docs of particular solution, e.g. for Lima:
+	// https://github.com/lima-vm/socket_vmnet?tab=readme-ov-file#how-to-use-static-ip-addresses
+	switch ht {
+	case hostTypeColima:
+		return "192.168.5.2"
+	case hostTypeLima:
+		return "192.168.105.1"
+	case defaultDocker:
+		return "172.17.0.1"
+	default:
+		panic("unsupported host type")
+	}
+}
+
+func getHostType() hostType {
 	cmd := exec.Command("docker", "info", "--format", "{{.Name}}")
 	out, err := cmd.CombinedOutput()
+	output := string(out)
 	if err != nil {
-		fmt.Printf("failed to run %q command %s\n", cmd.String(), err)
-		fmt.Println(string(out))
-		return false
+		fmt.Printf("failed to run %q command %s\n%s\n", cmd.String(), err, output)
+		return defaultDocker
 	}
-
-	return strings.Contains(string(out), "colima")
+	switch {
+	case strings.Contains(output, "colima"):
+		return hostTypeColima
+	case strings.Contains(output, "lima"):
+		return hostTypeLima
+	default:
+		return defaultDocker
+	}
 }

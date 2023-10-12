@@ -14,5 +14,11 @@
         "#\\s+renovate:\\s+datasource=(?<datasource>.*)\\s+depName=(?<depName>.*)\\s+versioning=(?<versioning>.*)\\n.+'(?<currentValue>.*)'"
       ]
     }
-  ]
+  ],
+  "customDatasources": {
+    "gke-rapid": {
+      "defaultRegistryUrlTemplate": "https://raw.githubusercontent.com/kong/gke-renovate-datasource/main/static/rapid.json",
+      "format": "json"
+    }
+  }
 }

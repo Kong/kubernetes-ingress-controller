@@ -157,7 +157,7 @@ func TestConsumerCredential(t *testing.T) {
 	_, err = env.Cluster().Client().CoreV1().Secrets(ns.Name).Update(ctx, credential, metav1.UpdateOptions{})
 	require.NoError(t, err)
 	assert.Eventually(t, func() bool {
-		req := helpers.MustHTTPRequest(t, "GET", proxyURL, "/test_consumer_credential", nil)
+		req := helpers.MustHTTPRequest(t, "GET", proxyURL.Host, "/test_consumer_credential", nil)
 		req.SetBasicAuth("new_consumer_credential", "test_consumer_credential")
 		resp, err := helpers.DefaultHTTPClient().Do(req)
 		if err != nil {

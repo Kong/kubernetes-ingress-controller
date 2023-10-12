@@ -13,25 +13,26 @@ e2e:
     # renovate: datasource=docker depName=kindest/node versioning=docker
     - 'v1.23.17'
   gke:
-    - 'v1.26.5'
+    # renovate: datasource=custom.gke-rapid depName=gke versioning=semver
+    - '1.26.5'
 
   # For Istio, we define combinations of Kind and Istio versions that will be
   # used directly in the test matrix `include` section.
   istio:
-      # renovate: datasource=docker depName=kindest/node versioning=docker
-    - kind: 'v1.28.0'
+    - # renovate: datasource=docker depName=kindest/node versioning=docker
+      kind: 'v1.28.0'
       # renovate: datasource=docker depName=istio/istioctl versioning=docker
       istio: 'v1.19.0'
-      # renovate: datasource=docker depName=kindest/node versioning=docker
-    - kind: 'v1.27.3'
+    - # renovate: datasource=docker depName=kindest/node versioning=docker
+      kind: 'v1.27.3'
       # renovate: datasource=docker depName=istio/istioctl versioning=docker
       istio: 'v1.18.0'
-      # renovate: datasource=docker depName=kindest/node versioning=docker
-    - kind: 'v1.26.6'
+    - # renovate: datasource=docker depName=kindest/node versioning=docker
+      kind: 'v1.26.6'
       # renovate: datasource=docker depName=istio/istioctl versioning=docker
       istio: 'v1.17.0'
-      # renovate: datasource=docker depName=kindest/node versioning=docker
-    - kind: 'v1.25.11'
+    - # renovate: datasource=docker depName=kindest/node versioning=docker
+      kind: 'v1.25.11'
       # renovate: datasource=docker depName=istio/istioctl versioning=docker
       istio: 'v1.16.0'
 

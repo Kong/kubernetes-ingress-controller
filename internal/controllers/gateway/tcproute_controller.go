@@ -270,12 +270,6 @@ func (r *TCPRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		return ctrl.Result{}, err
 	}
 
-	err := util.PopulateTypeMeta(tcproute)
-	if err != nil {
-		r.Log.Error(err, "could not set resource TypeMeta",
-			"namespace", tcproute.GetNamespace(), "name", tcproute.GetName())
-	}
-
 	debug(log, tcproute, "processing tcproute")
 
 	// if there's a present deletion timestamp then we need to update the proxy cache

@@ -566,11 +566,6 @@ func (r *{{.PackageAlias}}{{.Kind}}Reconciler) Reconcile(ctx context.Context, re
 	}
 	log.V(util.DebugLevel).Info("reconciling resource", "namespace", req.Namespace, "name", req.Name)
 
-	err := util.PopulateTypeMeta(obj)
-	if err != nil {
-		log.WithValues().Error(err, "could not set resource TypeMeta", "namespace", obj.GetNamespace(), "name", obj.GetName())
-	}
-
 	// clean the object up if it's being deleted
 	if !obj.DeletionTimestamp.IsZero() && time.Now().After(obj.DeletionTimestamp.Time) {
 		log.V(util.DebugLevel).Info("resource is being deleted, its configuration will be removed", "type", "{{.Kind}}", "namespace", req.Namespace, "name", req.Name)

@@ -273,12 +273,6 @@ func (r *GRPCRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		return ctrl.Result{}, err
 	}
 
-	err := util.PopulateTypeMeta(grpcroute)
-	if err != nil {
-		r.Log.Error(err, "could not set resource TypeMeta",
-			"namespace", grpcroute.GetNamespace(), "name", grpcroute.GetName())
-	}
-
 	debug(log, grpcroute, "processing grpcroute")
 
 	// if there's a present deletion timestamp then we need to update the proxy cache

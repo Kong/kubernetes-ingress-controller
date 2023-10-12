@@ -121,12 +121,6 @@ func (r *GatewayClassReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		return ctrl.Result{}, err
 	}
 
-	err := util.PopulateTypeMeta(gwc)
-	if err != nil {
-		r.Log.Error(err, "could not set resource TypeMeta",
-			"namespace", gwc.GetNamespace(), "name", gwc.GetName())
-	}
-
 	log.V(util.DebugLevel).Info("processing gatewayclass", "name", req.Name)
 
 	if isGatewayClassControlledAndUnmanaged(gwc) {

@@ -32,7 +32,6 @@ import (
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/controllers"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/gatewayapi"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 )
 
 // ReferenceGrantReconciler reconciles a ReferenceGrant object.
@@ -84,12 +83,6 @@ func (r *ReferenceGrantReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 
 		// for any error other than 404, requeue
 		return ctrl.Result{}, err
-	}
-
-	err := util.PopulateTypeMeta(grant)
-	if err != nil {
-		r.Log.Error(err, "could not set resource TypeMeta",
-			"namespace", grant.GetNamespace(), "name", grant.GetName())
 	}
 
 	debug(log, grant, "processing referencegrant")

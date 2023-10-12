@@ -87,11 +87,6 @@ func (r *KongAdminAPIServiceReconciler) SetLogger(l logr.Logger) {
 }
 
 func (r *KongAdminAPIServiceReconciler) shouldReconcileEndpointSlice(obj client.Object) bool {
-	err := util.PopulateTypeMeta(obj)
-	if err != nil {
-		r.Log.Error(err, "could not set resource TypeMeta",
-			"namespace", obj.GetNamespace(), "name", obj.GetName())
-	}
 	endpoints, ok := obj.(*discoveryv1.EndpointSlice)
 	if !ok {
 		return false

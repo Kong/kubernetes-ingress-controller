@@ -20,8 +20,6 @@ import (
 	"fmt"
 
 	"k8s.io/apimachinery/pkg/runtime"
-
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/manager/scheme"
 )
 
 // Endpoint describes a kubernetes endpoint, same as a target in Kong.
@@ -39,11 +37,7 @@ type Endpoint struct {
 // It has been modified to remove the io.Writer output and to use the scheme package directly instead of the Typer helper.
 
 // PopulateTypeMeta adds GVK information to a runtime.Object that may not have it available in the object TypeMeta.
-func PopulateTypeMeta(obj runtime.Object) error {
-	s, err := scheme.Get()
-	if err != nil {
-		return fmt.Errorf("could not build scheme: %w", err)
-	}
+func PopulateTypeMeta(obj runtime.Object, s *runtime.Scheme) error {
 	gvks, _, err := s.ObjectKinds(obj)
 	if err != nil {
 		return fmt.Errorf("missing apiVersion or kind and cannot assign it; %w", err)

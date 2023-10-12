@@ -3,9 +3,12 @@ package util
 import (
 	"testing"
 
+	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/manager/scheme"
 )
 
 func TestPopulateTypeMeta(t *testing.T) {
@@ -22,7 +25,7 @@ func TestPopulateTypeMeta(t *testing.T) {
 
 	require.Empty(t, credential.GetObjectKind().GroupVersionKind().Kind)
 
-	err := PopulateTypeMeta(credential)
+	err := PopulateTypeMeta(credential, lo.Must(scheme.Get()))
 
 	require.NoError(t, err)
 	require.NotEmpty(t, credential.GetObjectKind().GroupVersionKind().Kind)

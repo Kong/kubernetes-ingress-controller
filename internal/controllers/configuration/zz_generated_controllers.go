@@ -116,11 +116,6 @@ func (r *CoreV1ServiceReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	}
 	log.V(util.DebugLevel).Info("reconciling resource", "namespace", req.Namespace, "name", req.Name)
 
-	err := util.PopulateTypeMeta(obj)
-	if err != nil {
-		log.WithValues().Error(err, "could not set resource TypeMeta", "namespace", obj.GetNamespace(), "name", obj.GetName())
-	}
-
 	// clean the object up if it's being deleted
 	if !obj.DeletionTimestamp.IsZero() && time.Now().After(obj.DeletionTimestamp.Time) {
 		log.V(util.DebugLevel).Info("resource is being deleted, its configuration will be removed", "type", "Service", "namespace", req.Namespace, "name", req.Name)
@@ -219,11 +214,6 @@ func (r *DiscoveryV1EndpointSliceReconciler) Reconcile(ctx context.Context, req 
 		return ctrl.Result{}, err
 	}
 	log.V(util.DebugLevel).Info("reconciling resource", "namespace", req.Namespace, "name", req.Name)
-
-	err := util.PopulateTypeMeta(obj)
-	if err != nil {
-		log.WithValues().Error(err, "could not set resource TypeMeta", "namespace", obj.GetNamespace(), "name", obj.GetName())
-	}
 
 	// clean the object up if it's being deleted
 	if !obj.DeletionTimestamp.IsZero() && time.Now().After(obj.DeletionTimestamp.Time) {
@@ -367,11 +357,6 @@ func (r *NetV1IngressReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		return ctrl.Result{}, err
 	}
 	log.V(util.DebugLevel).Info("reconciling resource", "namespace", req.Namespace, "name", req.Name)
-
-	err := util.PopulateTypeMeta(obj)
-	if err != nil {
-		log.WithValues().Error(err, "could not set resource TypeMeta", "namespace", obj.GetNamespace(), "name", obj.GetName())
-	}
 
 	// clean the object up if it's being deleted
 	if !obj.DeletionTimestamp.IsZero() && time.Now().After(obj.DeletionTimestamp.Time) {
@@ -517,11 +502,6 @@ func (r *NetV1IngressClassReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	}
 	log.V(util.DebugLevel).Info("reconciling resource", "namespace", req.Namespace, "name", req.Name)
 
-	err := util.PopulateTypeMeta(obj)
-	if err != nil {
-		log.WithValues().Error(err, "could not set resource TypeMeta", "namespace", obj.GetNamespace(), "name", obj.GetName())
-	}
-
 	// clean the object up if it's being deleted
 	if !obj.DeletionTimestamp.IsZero() && time.Now().After(obj.DeletionTimestamp.Time) {
 		log.V(util.DebugLevel).Info("resource is being deleted, its configuration will be removed", "type", "IngressClass", "namespace", req.Namespace, "name", req.Name)
@@ -606,11 +586,6 @@ func (r *KongV1KongIngressReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		return ctrl.Result{}, err
 	}
 	log.V(util.DebugLevel).Info("reconciling resource", "namespace", req.Namespace, "name", req.Name)
-
-	err := util.PopulateTypeMeta(obj)
-	if err != nil {
-		log.WithValues().Error(err, "could not set resource TypeMeta", "namespace", obj.GetNamespace(), "name", obj.GetName())
-	}
 
 	// clean the object up if it's being deleted
 	if !obj.DeletionTimestamp.IsZero() && time.Now().After(obj.DeletionTimestamp.Time) {
@@ -702,11 +677,6 @@ func (r *KongV1KongPluginReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		return ctrl.Result{}, err
 	}
 	log.V(util.DebugLevel).Info("reconciling resource", "namespace", req.Namespace, "name", req.Name)
-
-	err := util.PopulateTypeMeta(obj)
-	if err != nil {
-		log.WithValues().Error(err, "could not set resource TypeMeta", "namespace", obj.GetNamespace(), "name", obj.GetName())
-	}
 
 	// clean the object up if it's being deleted
 	if !obj.DeletionTimestamp.IsZero() && time.Now().After(obj.DeletionTimestamp.Time) {
@@ -849,11 +819,6 @@ func (r *KongV1KongClusterPluginReconciler) Reconcile(ctx context.Context, req c
 		return ctrl.Result{}, err
 	}
 	log.V(util.DebugLevel).Info("reconciling resource", "namespace", req.Namespace, "name", req.Name)
-
-	err := util.PopulateTypeMeta(obj)
-	if err != nil {
-		log.WithValues().Error(err, "could not set resource TypeMeta", "namespace", obj.GetNamespace(), "name", obj.GetName())
-	}
 
 	// clean the object up if it's being deleted
 	if !obj.DeletionTimestamp.IsZero() && time.Now().After(obj.DeletionTimestamp.Time) {
@@ -1030,11 +995,6 @@ func (r *KongV1KongConsumerReconciler) Reconcile(ctx context.Context, req ctrl.R
 		return ctrl.Result{}, err
 	}
 	log.V(util.DebugLevel).Info("reconciling resource", "namespace", req.Namespace, "name", req.Name)
-
-	err := util.PopulateTypeMeta(obj)
-	if err != nil {
-		log.WithValues().Error(err, "could not set resource TypeMeta", "namespace", obj.GetNamespace(), "name", obj.GetName())
-	}
 
 	// clean the object up if it's being deleted
 	if !obj.DeletionTimestamp.IsZero() && time.Now().After(obj.DeletionTimestamp.Time) {
@@ -1222,11 +1182,6 @@ func (r *KongV1Beta1KongConsumerGroupReconciler) Reconcile(ctx context.Context, 
 		return ctrl.Result{}, err
 	}
 	log.V(util.DebugLevel).Info("reconciling resource", "namespace", req.Namespace, "name", req.Name)
-
-	err := util.PopulateTypeMeta(obj)
-	if err != nil {
-		log.WithValues().Error(err, "could not set resource TypeMeta", "namespace", obj.GetNamespace(), "name", obj.GetName())
-	}
 
 	// clean the object up if it's being deleted
 	if !obj.DeletionTimestamp.IsZero() && time.Now().After(obj.DeletionTimestamp.Time) {
@@ -1416,11 +1371,6 @@ func (r *KongV1Beta1TCPIngressReconciler) Reconcile(ctx context.Context, req ctr
 		return ctrl.Result{}, err
 	}
 	log.V(util.DebugLevel).Info("reconciling resource", "namespace", req.Namespace, "name", req.Name)
-
-	err := util.PopulateTypeMeta(obj)
-	if err != nil {
-		log.WithValues().Error(err, "could not set resource TypeMeta", "namespace", obj.GetNamespace(), "name", obj.GetName())
-	}
 
 	// clean the object up if it's being deleted
 	if !obj.DeletionTimestamp.IsZero() && time.Now().After(obj.DeletionTimestamp.Time) {
@@ -1619,11 +1569,6 @@ func (r *KongV1Beta1UDPIngressReconciler) Reconcile(ctx context.Context, req ctr
 	}
 	log.V(util.DebugLevel).Info("reconciling resource", "namespace", req.Namespace, "name", req.Name)
 
-	err := util.PopulateTypeMeta(obj)
-	if err != nil {
-		log.WithValues().Error(err, "could not set resource TypeMeta", "namespace", obj.GetNamespace(), "name", obj.GetName())
-	}
-
 	// clean the object up if it's being deleted
 	if !obj.DeletionTimestamp.IsZero() && time.Now().After(obj.DeletionTimestamp.Time) {
 		log.V(util.DebugLevel).Info("resource is being deleted, its configuration will be removed", "type", "UDPIngress", "namespace", req.Namespace, "name", req.Name)
@@ -1752,11 +1697,6 @@ func (r *KongV1Alpha1IngressClassParametersReconciler) Reconcile(ctx context.Con
 		return ctrl.Result{}, err
 	}
 	log.V(util.DebugLevel).Info("reconciling resource", "namespace", req.Namespace, "name", req.Name)
-
-	err := util.PopulateTypeMeta(obj)
-	if err != nil {
-		log.WithValues().Error(err, "could not set resource TypeMeta", "namespace", obj.GetNamespace(), "name", obj.GetName())
-	}
 
 	// clean the object up if it's being deleted
 	if !obj.DeletionTimestamp.IsZero() && time.Now().After(obj.DeletionTimestamp.Time) {

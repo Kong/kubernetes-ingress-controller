@@ -67,6 +67,7 @@ func setupControllers(
 ) []ControllerDef {
 	referenceIndexers := ctrlref.NewCacheIndexers(ctrl.LoggerFrom(ctx).WithName("controllers").WithName("reference-indexers"))
 
+	client := NewTypeMetaSettingClient(mgr.GetClient())
 	controllers := []ControllerDef{
 		// ---------------------------------------------------------------------------
 		// Kong Gateway Admin API Service discovery
@@ -74,7 +75,7 @@ func setupControllers(
 		{
 			Enabled: c.KongAdminSvc.IsPresent(),
 			Controller: &configuration.KongAdminAPIServiceReconciler{
-				Client:              mgr.GetClient(),
+				Client:              client,
 				ServiceNN:           c.KongAdminSvc.OrEmpty(),
 				Log:                 ctrl.LoggerFrom(ctx).WithName("controllers").WithName("KongAdminAPIService"),
 				CacheSyncTimeout:    c.CacheSyncTimeout,
@@ -88,7 +89,7 @@ func setupControllers(
 		{
 			Enabled: c.IngressClassNetV1Enabled,
 			Controller: &configuration.NetV1IngressClassReconciler{
-				Client:           mgr.GetClient(),
+				Client:           client,
 				Log:              ctrl.LoggerFrom(ctx).WithName("controllers").WithName("IngressClass").WithName("netv1"),
 				DataplaneClient:  dataplaneClient,
 				Scheme:           mgr.GetScheme(),
@@ -98,7 +99,7 @@ func setupControllers(
 		{
 			Enabled: c.IngressNetV1Enabled,
 			Controller: &configuration.NetV1IngressReconciler{
-				Client:                     mgr.GetClient(),
+				Client:                     client,
 				Log:                        ctrl.LoggerFrom(ctx).WithName("controllers").WithName("Ingress").WithName("netv1"),
 				Scheme:                     mgr.GetScheme(),
 				DataplaneClient:            dataplaneClient,
@@ -113,7 +114,7 @@ func setupControllers(
 		{
 			Enabled: c.ServiceEnabled,
 			Controller: &configuration.CoreV1ServiceReconciler{
-				Client:            mgr.GetClient(),
+				Client:            client,
 				Log:               ctrl.LoggerFrom(ctx).WithName("controllers").WithName("Service"),
 				Scheme:            mgr.GetScheme(),
 				DataplaneClient:   dataplaneClient,
@@ -124,7 +125,7 @@ func setupControllers(
 		{
 			Enabled: c.ServiceEnabled,
 			Controller: &configuration.DiscoveryV1EndpointSliceReconciler{
-				Client:           mgr.GetClient(),
+				Client:           client,
 				Log:              ctrl.LoggerFrom(ctx).WithName("controllers").WithName("EndpointSlice"),
 				Scheme:           mgr.GetScheme(),
 				DataplaneClient:  dataplaneClient,
@@ -134,7 +135,7 @@ func setupControllers(
 		{
 			Enabled: true,
 			Controller: &configuration.CoreV1SecretReconciler{
-				Client:            mgr.GetClient(),
+				Client:            client,
 				Log:               ctrl.LoggerFrom(ctx).WithName("controllers").WithName("Secrets"),
 				Scheme:            mgr.GetScheme(),
 				DataplaneClient:   dataplaneClient,
@@ -148,7 +149,7 @@ func setupControllers(
 		{
 			Enabled: c.UDPIngressEnabled,
 			Controller: &configuration.KongV1Beta1UDPIngressReconciler{
-				Client:                     mgr.GetClient(),
+				Client:                     client,
 				Log:                        ctrl.LoggerFrom(ctx).WithName("controllers").WithName("UDPIngress"),
 				Scheme:                     mgr.GetScheme(),
 				DataplaneClient:            dataplaneClient,
@@ -162,7 +163,7 @@ func setupControllers(
 		{
 			Enabled: c.TCPIngressEnabled,
 			Controller: &configuration.KongV1Beta1TCPIngressReconciler{
-				Client:                     mgr.GetClient(),
+				Client:                     client,
 				Log:                        ctrl.LoggerFrom(ctx).WithName("controllers").WithName("TCPIngress"),
 				Scheme:                     mgr.GetScheme(),
 				DataplaneClient:            dataplaneClient,
@@ -177,7 +178,7 @@ func setupControllers(
 		{
 			Enabled: c.KongIngressEnabled,
 			Controller: &configuration.KongV1KongIngressReconciler{
-				Client:           mgr.GetClient(),
+				Client:           client,
 				Log:              ctrl.LoggerFrom(ctx).WithName("controllers").WithName("KongIngress"),
 				Scheme:           mgr.GetScheme(),
 				DataplaneClient:  dataplaneClient,
@@ -187,7 +188,7 @@ func setupControllers(
 		{
 			Enabled: c.IngressClassParametersEnabled,
 			Controller: &configuration.KongV1Alpha1IngressClassParametersReconciler{
-				Client:           mgr.GetClient(),
+				Client:           client,
 				Log:              ctrl.LoggerFrom(ctx).WithName("controllers").WithName("IngressClassParameters"),
 				Scheme:           mgr.GetScheme(),
 				DataplaneClient:  dataplaneClient,
@@ -197,7 +198,7 @@ func setupControllers(
 		{
 			Enabled: c.KongPluginEnabled,
 			Controller: &configuration.KongV1KongPluginReconciler{
-				Client:            mgr.GetClient(),
+				Client:            client,
 				Log:               ctrl.LoggerFrom(ctx).WithName("controllers").WithName("KongPlugin"),
 				Scheme:            mgr.GetScheme(),
 				DataplaneClient:   dataplaneClient,
@@ -210,7 +211,7 @@ func setupControllers(
 		{
 			Enabled: c.KongConsumerEnabled,
 			Controller: &configuration.KongV1KongConsumerReconciler{
-				Client:                     mgr.GetClient(),
+				Client:                     client,
 				Log:                        ctrl.LoggerFrom(ctx).WithName("controllers").WithName("KongConsumer"),
 				Scheme:                     mgr.GetScheme(),
 				DataplaneClient:            dataplaneClient,
@@ -224,7 +225,7 @@ func setupControllers(
 		{
 			Enabled: c.KongConsumerEnabled,
 			Controller: &configuration.KongV1Beta1KongConsumerGroupReconciler{
-				Client:                     mgr.GetClient(),
+				Client:                     client,
 				Log:                        ctrl.LoggerFrom(ctx).WithName("controllers").WithName("KongConsumerGroup"),
 				Scheme:                     mgr.GetScheme(),
 				DataplaneClient:            dataplaneClient,
@@ -238,7 +239,7 @@ func setupControllers(
 		{
 			Enabled: c.KongClusterPluginEnabled,
 			Controller: &configuration.KongV1KongClusterPluginReconciler{
-				Client:                     mgr.GetClient(),
+				Client:                     client,
 				Log:                        ctrl.LoggerFrom(ctx).WithName("controllers").WithName("KongClusterPlugin"),
 				Scheme:                     mgr.GetScheme(),
 				DataplaneClient:            dataplaneClient,
@@ -261,7 +262,7 @@ func setupControllers(
 				CacheSyncTimeout: c.CacheSyncTimeout,
 				RequiredCRDs:     baseGatewayCRDs(),
 				Controller: &gateway.GatewayReconciler{
-					Client:               mgr.GetClient(),
+					Client:               client,
 					Log:                  ctrl.LoggerFrom(ctx).WithName("controllers").WithName("Gateway"),
 					Scheme:               mgr.GetScheme(),
 					DataplaneClient:      dataplaneClient,
@@ -285,7 +286,7 @@ func setupControllers(
 					Resource: "httproutes",
 				}),
 				Controller: &gateway.HTTPRouteReconciler{
-					Client:           mgr.GetClient(),
+					Client:           client,
 					Log:              ctrl.LoggerFrom(ctx).WithName("controllers").WithName("HTTPRoute"),
 					Scheme:           mgr.GetScheme(),
 					DataplaneClient:  dataplaneClient,
@@ -309,7 +310,7 @@ func setupControllers(
 					Resource: "referencegrants",
 				}),
 				Controller: &gateway.ReferenceGrantReconciler{
-					Client:           mgr.GetClient(),
+					Client:           client,
 					Log:              ctrl.LoggerFrom(ctx).WithName("controllers").WithName("ReferenceGrant"),
 					Scheme:           mgr.GetScheme(),
 					DataplaneClient:  dataplaneClient,
@@ -329,7 +330,7 @@ func setupControllers(
 					Resource: "udproutes",
 				}),
 				Controller: &gateway.UDPRouteReconciler{
-					Client:           mgr.GetClient(),
+					Client:           client,
 					Log:              ctrl.LoggerFrom(ctx).WithName("controllers").WithName("UDPRoute"),
 					Scheme:           mgr.GetScheme(),
 					DataplaneClient:  dataplaneClient,
@@ -350,7 +351,7 @@ func setupControllers(
 					Resource: "tcproutes",
 				}),
 				Controller: &gateway.TCPRouteReconciler{
-					Client:           mgr.GetClient(),
+					Client:           client,
 					Log:              ctrl.LoggerFrom(ctx).WithName("controllers").WithName("TCPRoute"),
 					Scheme:           mgr.GetScheme(),
 					DataplaneClient:  dataplaneClient,
@@ -371,7 +372,7 @@ func setupControllers(
 					Resource: "tlsroutes",
 				}),
 				Controller: &gateway.TLSRouteReconciler{
-					Client:           mgr.GetClient(),
+					Client:           client,
 					Log:              ctrl.LoggerFrom(ctx).WithName("controllers").WithName("TLSRoute"),
 					Scheme:           mgr.GetScheme(),
 					DataplaneClient:  dataplaneClient,
@@ -392,7 +393,7 @@ func setupControllers(
 					Resource: "grpcroutes",
 				}),
 				Controller: &gateway.GRPCRouteReconciler{
-					Client:           mgr.GetClient(),
+					Client:           client,
 					Log:              ctrl.LoggerFrom(ctx).WithName("controllers").WithName("GRPCRoute"),
 					Scheme:           mgr.GetScheme(),
 					DataplaneClient:  dataplaneClient,

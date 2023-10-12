@@ -114,12 +114,6 @@ func (r *CoreV1SecretReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		return ctrl.Result{}, err
 	}
 
-	err := util.PopulateTypeMeta(secret)
-	if err != nil {
-		r.Log.Error(err, "could not set resource TypeMeta",
-			"namespace", secret.GetNamespace(), "name", secret.GetName())
-	}
-
 	log.V(util.DebugLevel).Info("reconciling resource", "namespace", req.Namespace, "name", req.Name)
 
 	// clean the object up if it's being deleted

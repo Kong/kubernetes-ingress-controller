@@ -38,10 +38,6 @@ func objectKeyFunc(obj client.Object) (string, error) {
 	if !ok {
 		return "", fmt.Errorf("could not convert %s/%s back to client Object", obj.GetNamespace(), obj.GetName())
 	}
-	err := util.PopulateTypeMeta(o)
-	if err != nil {
-		return "", fmt.Errorf("could not populate %s/%s metadata: %w", obj.GetNamespace(), obj.GetName(), err)
-	}
 	return metaObj.GetObjectKind().GroupVersionKind().String() + "/" +
 		metaObj.GetNamespace() + "/" + metaObj.GetName(), nil
 }

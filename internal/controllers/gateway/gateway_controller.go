@@ -350,12 +350,6 @@ func (r *GatewayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		return ctrl.Result{Requeue: true}, err
 	}
 
-	err := util.PopulateTypeMeta(gateway)
-	if err != nil {
-		r.Log.Error(err, "could not set resource TypeMeta",
-			"namespace", gateway.GetNamespace(), "name", gateway.GetName())
-	}
-
 	debug(log, gateway, "processing gateway")
 
 	// though our watch configuration eliminates reconciliation of unsupported gateways it's

@@ -66,8 +66,7 @@ func GenerateKongExpressionRoutesFromHTTPRouteMatches(
 
 	atc.ApplyExpression(&r.Route, routeMatcher, 1)
 	// generate plugins.
-	plugins := GeneratePluginsFromHTTPRouteFilters(translation.Filters, "", tags)
-	r.Plugins = plugins
+	ConvertFiltersToPlugins(&r, translation.Filters, "", tags)
 	return []kongstate.Route{r}, nil
 }
 
@@ -104,9 +103,7 @@ func generateKongExpressionRoutesWithRequestRedirectFilter(
 		if match.Path != nil && match.Path.Value != nil {
 			path = *match.Path.Value
 		}
-		plugins := GeneratePluginsFromHTTPRouteFilters(translation.Filters, path, tags)
-		matchRoute.Plugins = plugins
-
+		ConvertFiltersToPlugins(&matchRoute, translation.Filters, path, tags)
 		routes = append(routes, matchRoute)
 	}
 	return routes, nil
@@ -593,8 +590,7 @@ func KongExpressionRouteFromHTTPRouteMatchWithPriority(
 			path = *match.Match.Path.Value
 		}
 
-		plugins := GeneratePluginsFromHTTPRouteFilters(rule.Filters, path, tags)
-		r.Plugins = plugins
+		ConvertFiltersToPlugins(&r, rule.Filters, path, tags)
 	}
 
 	return r

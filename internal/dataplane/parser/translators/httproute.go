@@ -9,6 +9,8 @@ import (
 
 	"github.com/kong/go-kong/kong"
 
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/gatewayapi"
 )
 
@@ -350,14 +352,35 @@ func mustMarshalJSON[T any](val T) string {
 	return string(key)
 }
 
-// GeneratePluginsFromHTTPRouteFilters converts HTTPRouteFilter into Kong plugins.
+func ConvertFiltersToPlugins(route *kongstate.Route, filters []gatewayapi.HTTPRouteFilter, path string, tags []*string) {
+	plugins, pluginAnnotation := generatePluginsFromHTTPRouteFilters(filters, path, tags)
+	if route.Plugins == nil {
+		route.Plugins = make([]kong.Plugin, 0)
+	}
+	route.Plugins = append(route.Plugins, plugins...)
+	if len(pluginAnnotation) > 0 {
+		if route.Ingress.Annotations == nil {
+			route.Ingress.Annotations = make(map[string]string)
+		}
+		if _, ok := route.Ingress.Annotations[annotations.AnnotationPrefix+annotations.PluginsKey]; !ok {
+			route.Ingress.Annotations[annotations.AnnotationPrefix+annotations.PluginsKey] = pluginAnnotation
+		} else {
+			route.Ingress.Annotations[annotations.AnnotationPrefix+annotations.PluginsKey] = fmt.Sprintf("%s,%s",
+				route.Ingress.Annotations[annotations.AnnotationPrefix+annotations.PluginsKey],
+				pluginAnnotation)
+		}
+	}
+}
+
+// generatePluginsFromHTTPRouteFilters converts HTTPRouteFilter into Kong plugins.
 // path is the parameter to be used by the redirect plugin, to perform redirection.
-func GeneratePluginsFromHTTPRouteFilters(filters []gatewayapi.HTTPRouteFilter, path string, tags []*string) []kong.Plugin {
+func generatePluginsFromHTTPRouteFilters(filters []gatewayapi.HTTPRouteFilter, path string, tags []*string) ([]kong.Plugin, string) {
 	kongPlugins := make([]kong.Plugin, 0)
 	if len(filters) == 0 {
-		return kongPlugins
+		return kongPlugins, ""
 	}
 
+	var pluginsAnnotation string
 	for _, filter := range filters {
 		switch filter.Type {
 		case gatewayapi.HTTPRouteFilterRequestHeaderModifier:
@@ -369,8 +392,15 @@ func GeneratePluginsFromHTTPRouteFilters(filters []gatewayapi.HTTPRouteFilter, p
 		case gatewayapi.HTTPRouteFilterResponseHeaderModifier:
 			kongPlugins = append(kongPlugins, generateResponseHeaderModifierKongPlugin(filter.ResponseHeaderModifier))
 
-		case gatewayapi.HTTPRouteFilterExtensionRef,
-			gatewayapi.HTTPRouteFilterRequestMirror,
+		case gatewayapi.HTTPRouteFilterExtensionRef:
+			plugin := generateExtensionRefKongPlugin(filter.ExtensionRef)
+			if len(pluginsAnnotation) > 0 {
+				pluginsAnnotation = fmt.Sprintf("%s,%s", pluginsAnnotation, plugin)
+			} else {
+				pluginsAnnotation = plugin
+			}
+
+		case gatewayapi.HTTPRouteFilterRequestMirror,
 			gatewayapi.HTTPRouteFilterURLRewrite:
 			// not supported
 		}
@@ -381,7 +411,7 @@ func GeneratePluginsFromHTTPRouteFilters(filters []gatewayapi.HTTPRouteFilter, p
 		p.Tags = tags
 	}
 
-	return kongPlugins
+	return kongPlugins, pluginsAnnotation
 }
 
 // generateRequestRedirectKongPlugin generates configurations of plugins to satisfy the specification
@@ -427,6 +457,10 @@ func generateRequestRedirectKongPlugin(modifier *gatewayapi.HTTPRequestRedirectF
 	}
 
 	return plugins
+}
+
+func generateExtensionRefKongPlugin(modifier *gatewayapi.LocalObjectReference) string {
+	return string(modifier.Name)
 }
 
 // generateRequestHeaderModifierKongPlugin converts a gatewayapi.HTTPRequestHeaderFilter into a

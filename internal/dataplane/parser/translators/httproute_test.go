@@ -12,10 +12,11 @@ import (
 
 func TestGeneratePluginsFromHTTPRouteFilters(t *testing.T) {
 	testCases := []struct {
-		name            string
-		filters         []gatewayapi.HTTPRouteFilter
-		path            string
-		expectedPlugins []kong.Plugin
+		name                      string
+		filters                   []gatewayapi.HTTPRouteFilter
+		path                      string
+		expectedPlugins           []kong.Plugin
+		expectedPluginsAnnotation string
 	}{
 		{
 			name:            "no filters",
@@ -153,13 +154,37 @@ func TestGeneratePluginsFromHTTPRouteFilters(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "extension-refs",
+			filters: []gatewayapi.HTTPRouteFilter{
+				{
+					Type: gatewayapi.HTTPRouteFilterExtensionRef,
+					ExtensionRef: &gatewayapi.LocalObjectReference{
+						Group: gatewayapi.Group("configuration.konghq.com/v1"),
+						Kind:  gatewayapi.Kind("KongPlugin"),
+						Name:  "plugin1",
+					},
+				},
+				{
+					Type: gatewayapi.HTTPRouteFilterExtensionRef,
+					ExtensionRef: &gatewayapi.LocalObjectReference{
+						Group: gatewayapi.Group("configuration.konghq.com/v1"),
+						Kind:  gatewayapi.Kind("KongPlugin"),
+						Name:  "plugin2",
+					},
+				},
+			},
+			expectedPluginsAnnotation: "plugin1,plugin2",
+			expectedPlugins:           []kong.Plugin{},
+		},
 	}
 
 	for _, tc := range testCases {
 		tc := tc
-		plugins := GeneratePluginsFromHTTPRouteFilters(tc.filters, tc.path, nil)
 		t.Run(tc.name, func(t *testing.T) {
+			plugins, pluginsAnnotation := generatePluginsFromHTTPRouteFilters(tc.filters, tc.path, nil)
 			require.Equal(t, tc.expectedPlugins, plugins)
+			require.Equal(t, tc.expectedPluginsAnnotation, pluginsAnnotation)
 		})
 	}
 }

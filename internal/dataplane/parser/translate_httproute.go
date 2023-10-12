@@ -270,8 +270,7 @@ func generateKongRoutesFromHTTPRouteMatches(
 
 	// if the redirect filter has not been set, we still need to set the route plugins
 	if !hasRedirectFilter {
-		plugins := translators.GeneratePluginsFromHTTPRouteFilters(filters, "", tags)
-		r.Plugins = append(r.Plugins, plugins...)
+		translators.ConvertFiltersToPlugins(&r, filters, "", tags)
 		routes = []kongstate.Route{r}
 	}
 
@@ -320,8 +319,7 @@ func getRoutesFromMatches(
 			}
 
 			// generate kong plugins from rule.filters
-			plugins := translators.GeneratePluginsFromHTTPRouteFilters(filters, path, tags)
-			matchRoute.Plugins = append(matchRoute.Plugins, plugins...)
+			translators.ConvertFiltersToPlugins(matchRoute, filters, path, tags)
 
 			routes = append(routes, *route)
 		} else {

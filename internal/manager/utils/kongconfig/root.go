@@ -16,12 +16,6 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/adminapi"
 )
 
-const (
-	kongRouterFlavorTraditional         = "traditional"
-	kongRouterFlavorExpressions         = "expressions"
-	expressionRouterMinimalMajorVersion = 3
-)
-
 // KongStartUpOptions includes start up configurations of Kong that could change behavior of Kong Ingress Controller.
 // The fields are extracted from results of Kong gateway configuration root.
 type KongStartUpOptions struct {
@@ -57,7 +51,7 @@ func ValidateRoots(roots []Root, skipCACerts bool) (*KongStartUpOptions, error) 
 		return nil, err
 	}
 
-	routerFlavor, err := RouterFlavorFromRoot(uniqs[0], kongVersion)
+	routerFlavor, err := RouterFlavorFromRoot(uniqs[0])
 	if err != nil {
 		return nil, err
 	}
@@ -100,7 +94,7 @@ func DBModeFromRoot(r Root) (string, error) {
 	return dbModeStr, nil
 }
 
-func RouterFlavorFromRoot(r Root, kongVersion kong.Version) (string, error) {
+func RouterFlavorFromRoot(r Root) (string, error) {
 	rootConfig, err := extractConfigurationFromRoot(r)
 	if err != nil {
 		return "", err
@@ -109,10 +103,7 @@ func RouterFlavorFromRoot(r Root, kongVersion kong.Version) (string, error) {
 	const routerFlavorKey = "router_flavor"
 	routerFlavor, exist := rootConfig[routerFlavorKey]
 	if !exist {
-		if kongVersion.Major() < expressionRouterMinimalMajorVersion {
-			return kongRouterFlavorTraditional, nil
-		}
-		return "", fmt.Errorf("%q field missing from Gateway's configuration root for version: %s", routerFlavorKey, kongVersion.String())
+		return "", fmt.Errorf("missing field %q  from Kong Gateway's configuration root", routerFlavorKey)
 	}
 	routerFlavorStr, ok := routerFlavor.(string)
 	if !ok {

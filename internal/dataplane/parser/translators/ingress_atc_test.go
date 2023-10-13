@@ -286,7 +286,6 @@ func TestTranslateIngressATC(t *testing.T) {
 				kongv1alpha1.IngressClassParametersSpec{},
 				TranslateIngressFeatureFlags{
 					ExpressionRoutes: true,
-					RegexPathPrefix:  false,
 				},
 				noopObjectsCollector{},
 			)

@@ -84,7 +84,6 @@ func IngressesV1ToKongServices(
 	parsedObjectsCollector *ObjectsCollector,
 ) KongServicesCache {
 	return translators.TranslateIngresses(ingresses, icp, translators.TranslateIngressFeatureFlags{
-		RegexPathPrefix:  featureFlags.RegexPathPrefix,
 		ExpressionRoutes: featureFlags.ExpressionRoutes,
 	}, parsedObjectsCollector)
 }

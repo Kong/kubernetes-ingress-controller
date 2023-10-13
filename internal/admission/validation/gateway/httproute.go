@@ -199,7 +199,7 @@ func validateWithKongGateway(
 			Filters: rule.Filters,
 		}
 		routes, err := parser.GenerateKongRouteFromTranslation(
-			httproute, translation, parserFeatures.RegexPathPrefix, parserFeatures.ExpressionRoutes,
+			httproute, translation, parserFeatures.ExpressionRoutes,
 		)
 		if err != nil {
 			errMsgs = append(errMsgs, err.Error())

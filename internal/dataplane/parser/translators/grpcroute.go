@@ -36,7 +36,6 @@ func getGRPCMatchDefaults() (
 func GenerateKongRoutesFromGRPCRouteRule(
 	grpcroute *gatewayapi.GRPCRoute,
 	ruleNumber int,
-	prependRegexPrefix bool,
 ) []kongstate.Route {
 	if ruleNumber >= len(grpcroute.Spec.Rules) {
 		return nil
@@ -104,13 +103,8 @@ func GenerateKongRoutesFromGRPCRouteRule(
 			} else {
 				service = *matchService
 			}
-			// Kong prior to 3.0 does not accept paths starting with ~,
-			// so we should only add the path regex prefix (~) only for Kong 3.0+.
-			path := fmt.Sprintf("/%s/%s", service, method)
-			if prependRegexPrefix {
-				path = KongPathRegexPrefix + path
-			}
-			r.Paths = append(r.Paths, kong.String(path))
+			path := kong.String(KongPathRegexPrefix + fmt.Sprintf("/%s/%s", service, method))
+			r.Paths = append(r.Paths, path)
 		}
 
 		if len(grpcroute.Spec.Hostnames) > 0 {

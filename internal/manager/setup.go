@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/avast/retry-go/v4"
-	"github.com/blang/semver/v4"
 	"github.com/go-logr/logr"
 	"github.com/go-logr/zapr"
 	"github.com/kong/deck/cprint"
@@ -171,7 +170,6 @@ func setupAdmissionServer(
 	managerClient client.Client,
 	logger logr.Logger,
 	parserFeatures parser.FeatureFlags,
-	kongVersion semver.Version,
 ) error {
 	admissionLogger := logger.WithName("admission-server")
 
@@ -188,7 +186,6 @@ func setupAdmissionServer(
 			managerConfig.IngressClassName,
 			adminAPIServicesProvider,
 			parserFeatures,
-			kongVersion,
 		),
 		Logger: admissionLogger,
 	}, admissionLogger)

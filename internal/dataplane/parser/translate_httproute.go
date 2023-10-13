@@ -68,7 +68,7 @@ func (p *Parser) ingressRulesFromHTTPRoute(result *ingressRules, httproute *gate
 
 		// generate the routes for the service and attach them to the service
 		for _, kongRouteTranslation := range kongServiceTranslation.KongRoutes {
-			routes, err := GenerateKongRouteFromTranslation(httproute, kongRouteTranslation, p.featureFlags.RegexPathPrefix, p.featureFlags.ExpressionRoutes)
+			routes, err := GenerateKongRouteFromTranslation(httproute, kongRouteTranslation, p.featureFlags.ExpressionRoutes)
 			if err != nil {
 				return err
 			}
@@ -171,7 +171,6 @@ func getHTTPRouteHostnamesAsSliceOfStringPointers(httproute *gatewayapi.HTTPRout
 func GenerateKongRouteFromTranslation(
 	httproute *gatewayapi.HTTPRoute,
 	translation translators.KongRouteTranslation,
-	addRegexPrefix bool,
 	expressionRoutes bool,
 ) ([]kongstate.Route, error) {
 	// gather the k8s object information and hostnames from the httproute
@@ -199,7 +198,6 @@ func GenerateKongRouteFromTranslation(
 		translation.Filters,
 		objectInfo,
 		hostnames,
-		addRegexPrefix,
 		tags,
 	)
 }
@@ -212,7 +210,6 @@ func generateKongRoutesFromHTTPRouteMatches(
 	filters []gatewayapi.HTTPRouteFilter,
 	ingressObjectInfo util.K8sObjectInfo,
 	hostnames []*string,
-	addRegexPrefix bool,
 	tags []*string,
 ) ([]kongstate.Route, error) {
 	if len(matches) == 0 {
@@ -259,7 +256,7 @@ func generateKongRoutesFromHTTPRouteMatches(
 		return filter.Type == gatewayapi.HTTPRouteFilterRequestRedirect
 	})
 
-	routes := getRoutesFromMatches(matches, &r, filters, tags, hasRedirectFilter, addRegexPrefix)
+	routes := getRoutesFromMatches(matches, &r, filters, tags, hasRedirectFilter)
 
 	// if the redirect filter has not been set, we still need to set the route plugins
 	if !hasRedirectFilter {
@@ -272,12 +269,12 @@ func generateKongRoutesFromHTTPRouteMatches(
 }
 
 // getRoutesFromMatches converts all the httpRoute matches to the proper set of kong routes.
-func getRoutesFromMatches(matches []gatewayapi.HTTPRouteMatch,
+func getRoutesFromMatches(
+	matches []gatewayapi.HTTPRouteMatch,
 	route *kongstate.Route,
 	filters []gatewayapi.HTTPRouteFilter,
 	tags []*string,
 	hasRedirectFilter bool,
-	addRegexPrefix bool,
 ) []kongstate.Route {
 	seenMethods := make(map[string]struct{})
 	routes := make([]kongstate.Route, 0)
@@ -292,7 +289,7 @@ func getRoutesFromMatches(matches []gatewayapi.HTTPRouteMatch,
 			// default if it is not. For those types, we use the path value as-is and let Kong determine the type.
 			// For exact matches, we transform the path into a regular expression that terminates after the value
 			if match.Path != nil {
-				paths := generateKongRoutePathFromHTTPRouteMatch(match, addRegexPrefix)
+				paths := generateKongRoutePathFromHTTPRouteMatch(match)
 				for _, p := range paths {
 					matchRoute.Route.Paths = append(matchRoute.Route.Paths, kong.String(p))
 				}
@@ -318,14 +315,13 @@ func getRoutesFromMatches(matches []gatewayapi.HTTPRouteMatch,
 
 			routes = append(routes, *route)
 		} else {
-			// configure path matching information about the route if paths matching was defined
+			// Configure path matching information about the route if paths matching was defined
 			// Kong automatically infers whether or not a path is a regular expression and uses a prefix match by
 			// default if it is not. For those types, we use the path value as-is and let Kong determine the type.
-			// For exact matches, we transform the path into a regular expression that terminates after the value
+			// For exact matches, we transform the path into a regular expression that terminates after the value.
 			if match.Path != nil {
-				paths := generateKongRoutePathFromHTTPRouteMatch(match, addRegexPrefix)
-				for _, p := range paths {
-					route.Route.Paths = append(route.Route.Paths, kong.String(p))
+				for _, path := range generateKongRoutePathFromHTTPRouteMatch(match) {
+					route.Route.Paths = append(route.Route.Paths, kong.String(path))
 				}
 			}
 
@@ -341,32 +337,22 @@ func getRoutesFromMatches(matches []gatewayapi.HTTPRouteMatch,
 	return routes
 }
 
-func generateKongRoutePathFromHTTPRouteMatch(match gatewayapi.HTTPRouteMatch, addRegexPrefix bool) []string {
+func generateKongRoutePathFromHTTPRouteMatch(match gatewayapi.HTTPRouteMatch) []string {
 	switch *match.Path.Type {
 	case gatewayapi.PathMatchExact:
-		terminated := *match.Path.Value + "$"
-		if addRegexPrefix {
-			terminated = translators.KongPathRegexPrefix + terminated
-		}
-		return []string{terminated}
+		return []string{translators.KongPathRegexPrefix + *match.Path.Value + "$"}
 
 	case gatewayapi.PathMatchPathPrefix:
 		paths := make([]string, 0, 2)
 		path := *match.Path.Value
-		if addRegexPrefix {
-			paths = append(paths, fmt.Sprintf("%s%s$", translators.KongPathRegexPrefix, path))
-			if !strings.HasSuffix(path, "/") {
-				path = fmt.Sprintf("%s/", path)
-			}
+		paths = append(paths, fmt.Sprintf("%s%s$", translators.KongPathRegexPrefix, path))
+		if !strings.HasSuffix(path, "/") {
+			path = fmt.Sprintf("%s/", path)
 		}
 		return append(paths, path)
 
 	case gatewayapi.PathMatchRegularExpression:
-		path := *match.Path.Value
-		if addRegexPrefix {
-			path = translators.KongPathRegexPrefix + path
-		}
-		return []string{path}
+		return []string{translators.KongPathRegexPrefix + *match.Path.Value}
 	}
 
 	return []string{""} // unreachable code

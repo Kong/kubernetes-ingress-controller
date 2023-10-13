@@ -5,12 +5,10 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/blang/semver/v4"
 	"github.com/kong/go-kong/kong"
 	netv1 "k8s.io/api/networking/v1"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/parser"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/versions"
 	kongv1alpha1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1alpha1"
 )
 
@@ -22,12 +20,11 @@ func ValidateIngress(
 	ctx context.Context,
 	routesValidator routeValidator,
 	parserFeatures parser.FeatureFlags,
-	kongVersion semver.Version,
 	ingress *netv1.Ingress,
 ) (bool, string, error) {
 	// Validate by using feature of Kong Gateway.
 	var errMsgs []string
-	for _, kg := range ingressToKongRoutesForValidation(parserFeatures, kongVersion, ingress) {
+	for _, kg := range ingressToKongRoutesForValidation(parserFeatures, ingress) {
 		kg := kg
 		ok, msg, err := routesValidator.Validate(ctx, &kg)
 		if err != nil {
@@ -46,16 +43,12 @@ func ValidateIngress(
 // ingressToKongRoutesForValidation converts Ingress to Kong Routes that can be validated by Kong Gateway,
 // discards everything else that is not needed for validation.
 func ingressToKongRoutesForValidation(
-	parserFeatures parser.FeatureFlags, kongVersion semver.Version, ingress *netv1.Ingress,
+	parserFeatures parser.FeatureFlags, ingress *netv1.Ingress,
 ) []kong.Route {
-	var icp kongv1alpha1.IngressClassParametersSpec
-	if kongVersion.LT(versions.ExplicitRegexPathVersionCutoff) {
-		icp.EnableLegacyRegexDetection = true
-	}
 	kongServices := parser.IngressesV1ToKongServices(
 		parserFeatures,
 		[]*netv1.Ingress{ingress},
-		icp,
+		kongv1alpha1.IngressClassParametersSpec{EnableLegacyRegexDetection: true},
 		&parser.ObjectsCollector{}, // It's irrelevant for validation.
 	)
 

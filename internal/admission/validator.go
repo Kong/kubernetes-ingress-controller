@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/blang/semver/v4"
 	"github.com/go-logr/logr"
 	"github.com/kong/go-kong/kong"
 	corev1 "k8s.io/api/core/v1"
@@ -57,7 +56,6 @@ type KongHTTPValidator struct {
 	ManagerClient            client.Client
 	AdminAPIServicesProvider AdminAPIServicesProvider
 	ParserFeatures           parser.FeatureFlags
-	KongVersion              semver.Version
 
 	ingressClassMatcher   func(*metav1.ObjectMeta, string, annotations.ClassMatching) bool
 	ingressV1ClassMatcher func(*netv1.Ingress, annotations.ClassMatching) bool
@@ -73,7 +71,6 @@ func NewKongHTTPValidator(
 	ingressClass string,
 	servicesProvider AdminAPIServicesProvider,
 	parserFeatures parser.FeatureFlags,
-	kongVersion semver.Version,
 ) KongHTTPValidator {
 	return KongHTTPValidator{
 		Logger:                   logger,
@@ -81,7 +78,6 @@ func NewKongHTTPValidator(
 		ManagerClient:            managerClient,
 		AdminAPIServicesProvider: servicesProvider,
 		ParserFeatures:           parserFeatures,
-		KongVersion:              kongVersion,
 
 		ingressClassMatcher:   annotations.IngressClassValidatorFuncFromObjectMeta(ingressClass),
 		ingressV1ClassMatcher: annotations.IngressClassValidatorFuncFromV1Ingress(ingressClass),
@@ -448,7 +444,7 @@ func (validator KongHTTPValidator) ValidateIngress(
 	if routesSvc, ok := validator.AdminAPIServicesProvider.GetRoutesService(); ok {
 		routeValidator = routesSvc
 	}
-	return ingressvalidation.ValidateIngress(ctx, routeValidator, validator.ParserFeatures, validator.KongVersion, &ingress)
+	return ingressvalidation.ValidateIngress(ctx, routeValidator, validator.ParserFeatures, &ingress)
 }
 
 type routeValidator interface {

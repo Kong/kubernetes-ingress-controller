@@ -7,7 +7,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/blang/semver/v4"
 	"github.com/go-logr/zapr"
 	"github.com/kong/go-kong/kong"
 	"github.com/samber/lo"
@@ -4507,7 +4506,6 @@ func TestNewFeatureFlags(t *testing.T) {
 		name string
 
 		featureGates     map[string]bool
-		kongVersion      semver.Version
 		routerFlavor     string
 		updateStatusFlag bool
 
@@ -4543,20 +4541,13 @@ func TestNewFeatureFlags(t *testing.T) {
 			expectedFeatureFlags: FeatureFlags{},
 			expectInfoLog:        "ExpressionRoutes feature gate enabled but Gateway is running with incompatible router flavor, using that instead",
 		},
-		{
-			name:        "kong version >= 3.0 enables regex path prefix",
-			kongVersion: semver.Version{Major: 3, Minor: 0},
-			expectedFeatureFlags: FeatureFlags{
-				RegexPathPrefix: true,
-			},
-		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			core, logs := observer.New(zap.InfoLevel)
 			logger := zapr.NewLogger(zap.New(core))
-			actualFlags := NewFeatureFlags(logger, tc.featureGates, tc.kongVersion, tc.routerFlavor, tc.updateStatusFlag)
+			actualFlags := NewFeatureFlags(logger, tc.featureGates, tc.routerFlavor, tc.updateStatusFlag)
 
 			require.Equal(t, tc.expectedFeatureFlags, actualFlags)
 
@@ -4772,18 +4763,12 @@ func TestParser_ConfiguredKubernetesObjects(t *testing.T) {
 }
 
 func mustNewParser(t *testing.T, storer store.Storer) *Parser {
-	const testKongVersion = "3.2.0"
-
-	v, err := semver.Parse(testKongVersion)
-	require.NoError(t, err)
-
 	p, err := NewParser(zapr.NewLogger(zap.NewNop()), storer,
 		FeatureFlags{
 			// We'll assume these are true for all tests.
 			FillIDs:                           true,
 			ReportConfiguredKubernetesObjects: true,
 		},
-		v,
 	)
 	require.NoError(t, err)
 	return p

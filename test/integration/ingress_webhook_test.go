@@ -4,7 +4,6 @@ package integration
 
 import (
 	"context"
-	"fmt"
 	"testing"
 
 	"github.com/google/uuid"
@@ -15,7 +14,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util/builder"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/versions"
 	"github.com/kong/kubernetes-ingress-controller/v2/test/consts"
 	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/helpers"
 )
@@ -83,7 +81,6 @@ func invalidRegexInIngressPathTestCase(wantCreateErrSubstring string) testCaseIn
 func TestIngressValidationWebhookTraditionalRouter(t *testing.T) {
 	skipTestForNonKindCluster(t)
 	skipTestForRouterFlavors(t, expressions)
-	RunWhenKongVersion(t, fmt.Sprintf(">=%s", versions.ExplicitRegexPathVersionCutoff))
 
 	ctx := context.Background()
 	namespace := setUpEnvForTestingIngressValidationWebhook(ctx, t)
@@ -96,34 +93,6 @@ func TestIngressValidationWebhookTraditionalRouter(t *testing.T) {
 				constructIngressRuleWithPathsImplSpecific("", "/bar", "/~foo[1-9]"),
 			).Build(),
 			WantCreateErrSubstring: `should start with: / (fixed path) or ~/ (regex path)`,
-		},
-	)
-	testIngressValidationWebhook(ctx, t, namespace, testCases)
-}
-
-func TestIngressValidationWebhookTraditionalRouterBeforeRequiringExplicitRegexPath(t *testing.T) {
-	skipTestForNonKindCluster(t)
-	skipTestForRouterFlavors(t, expressions)
-	RunWhenKongVersion(t, fmt.Sprintf("<%s", versions.ExplicitRegexPathVersionCutoff))
-
-	ctx := context.Background()
-	namespace := setUpEnvForTestingIngressValidationWebhook(ctx, t)
-	testCases := append(
-		commonIngressValidationTestCases(),
-		invalidRegexInIngressPathTestCase("should start with: /"),
-		testCaseIngressValidation{
-			Name: "path should start with / without any explicit regex prefixes",
-			Ingress: builder.NewIngress(uuid.NewString(), "").WithLegacyClassAnnotation(consts.IngressClass).WithRules(
-				constructIngressRuleWithPathsImplSpecific("", "/bar", "/~foo[1-9]"),
-			).Build(),
-			WantCreateErrSubstring: "should start with: /",
-		},
-		testCaseIngressValidation{
-			Name: "path with invalid regex should fail validation",
-			Ingress: builder.NewIngress(uuid.NewString(), "").WithLegacyClassAnnotation(consts.IngressClass).WithRules(
-				constructIngressRuleWithPathsImplSpecific("", "/foo[[["),
-			).Build(),
-			WantCreateErrSubstring: `invalid regex: '/foo[[['`,
 		},
 	)
 	testIngressValidationWebhook(ctx, t, namespace, testCases)

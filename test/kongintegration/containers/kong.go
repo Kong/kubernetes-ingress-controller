@@ -19,6 +19,14 @@ const (
 	defaultRouterFlavor = "expressions"
 )
 
+type KongOpt func(*testcontainers.ContainerRequest)
+
+func KongWithRouterFlavor(flavor string) KongOpt {
+	return func(req *testcontainers.ContainerRequest) {
+		req.Env["KONG_ROUTER_FLAVOR"] = flavor
+	}
+}
+
 // Kong represents a docker container running Kong.
 type Kong struct {
 	container testcontainers.Container
@@ -26,7 +34,7 @@ type Kong struct {
 
 // NewKong spawns a docker container running Kong (its image is determined by environment variables).
 // It sets up a cleanup function that will terminate the container when the test finishes.
-func NewKong(ctx context.Context, t *testing.T) Kong {
+func NewKong(ctx context.Context, t *testing.T, opts ...KongOpt) Kong {
 	req := testcontainers.ContainerRequest{
 		Image:        kongImageUnderTest(),
 		ExposedPorts: []string{kongAdminPort, kongProxyPort},
@@ -40,6 +48,9 @@ func NewKong(ctx context.Context, t *testing.T) Kong {
 			wait.ForListeningPort(kongAdminPort),
 			wait.ForListeningPort(kongProxyPort),
 		),
+	}
+	for _, opt := range opts {
+		opt(&req)
 	}
 	kongC, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
 		ContainerRequest: req,

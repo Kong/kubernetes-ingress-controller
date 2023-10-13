@@ -23,12 +23,14 @@ services:
     - k8s-name:foo
     - k8s-namespace:foo-namespace
     - k8s-kind:Ingress
+    - k8s-uid:c6ac927c-4f5a-4e88-8b5d-c7b01d0f43af
     - k8s-group:networking.k8s.io
     - k8s-version:v1
   tags:
   - k8s-name:foo-svc
   - k8s-namespace:foo-namespace
   - k8s-kind:Service
+  - k8s-uid:c6ac927c-4f5a-4e88-8b5d-c7b01d0f43af
   - k8s-version:v1
   write_timeout: 60000
 - connect_timeout: 60000
@@ -54,12 +56,14 @@ services:
     - k8s-name:foo
     - k8s-namespace:foo-namespace
     - k8s-kind:Ingress
+    - k8s-uid:c6ac927c-4f5a-4e88-8b5d-c7b01d0f43af
     - k8s-group:networking.k8s.io
     - k8s-version:v1
   tags:
   - k8s-name:foo-svc
   - k8s-namespace:foo-namespace
   - k8s-kind:Service
+  - k8s-uid:c6ac927c-4f5a-4e88-8b5d-c7b01d0f43af
   - k8s-version:v1
   write_timeout: 60000
 upstreams:
@@ -69,6 +73,7 @@ upstreams:
   - k8s-name:foo-svc
   - k8s-namespace:foo-namespace
   - k8s-kind:Service
+  - k8s-uid:c6ac927c-4f5a-4e88-8b5d-c7b01d0f43af
   - k8s-version:v1
 - algorithm: round-robin
   name: foo-svc.foo-namespace.80.svc
@@ -76,4 +81,5 @@ upstreams:
   - k8s-name:foo-svc
   - k8s-namespace:foo-namespace
   - k8s-kind:Service
+  - k8s-uid:c6ac927c-4f5a-4e88-8b5d-c7b01d0f43af
   - k8s-version:v1

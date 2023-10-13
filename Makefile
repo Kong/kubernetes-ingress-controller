@@ -495,6 +495,7 @@ _test.kongintegration: gotestsum go-junit-report
 		-race \
 		-parallel $(NCPU) \
 		-coverpkg=$(PKG_LIST) \
+		-run=$(TEST_CASE) \
 		-coverprofile=coverage.kongintegration.out \
 		./test/kongintegration | \
 	$(GOJUNIT) -iocopy -out $(JUNIT_REPORT) -parser gotest

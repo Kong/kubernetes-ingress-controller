@@ -115,7 +115,7 @@ func ensureTestGatewayClassIsUnmanaged(ctx context.Context, k8sClient client.Cli
 	if gwc.Annotations == nil {
 		gwc.Annotations = map[string]string{}
 	}
-	gwc.Annotations[annotations.GatewayClassUnmanagedAnnotation] = annotations.GatewayClassUnmanagedAnnotationValuePlaceholder
+	gwc.Annotations[annotations.AnnotationPrefix+annotations.GatewayClassUnmanagedKey] = annotations.GatewayClassUnmanagedAnnotationValuePlaceholder
 	if err := k8sClient.Update(ctx, gwc); err != nil {
 		return false
 	}

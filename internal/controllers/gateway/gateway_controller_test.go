@@ -333,7 +333,7 @@ func TestIsGatewayControlledAndUnmanagedMode(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "uncontrolled-unmanaged",
 					Annotations: map[string]string{
-						annotations.GatewayClassUnmanagedAnnotation: annotations.GatewayClassUnmanagedAnnotationValuePlaceholder,
+						annotations.AnnotationPrefix + annotations.GatewayClassUnmanagedKey: annotations.GatewayClassUnmanagedAnnotationValuePlaceholder,
 					},
 				},
 				Spec: gatewayapi.GatewayClassSpec{
@@ -360,7 +360,7 @@ func TestIsGatewayControlledAndUnmanagedMode(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "controlled-unmanaged",
 					Annotations: map[string]string{
-						annotations.GatewayClassUnmanagedAnnotation: annotations.GatewayClassUnmanagedAnnotationValuePlaceholder,
+						annotations.AnnotationPrefix + annotations.GatewayClassUnmanagedKey: annotations.GatewayClassUnmanagedAnnotationValuePlaceholder,
 					},
 				},
 				Spec: gatewayapi.GatewayClassSpec{

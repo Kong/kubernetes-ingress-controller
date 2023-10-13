@@ -35,8 +35,7 @@ func NewHTTPBin(ctx context.Context, t *testing.T) HTTPBin {
 	require.NoError(t, err)
 
 	t.Cleanup(func() {
-		err := httpBinC.Terminate(ctx)
-		assert.NoError(t, err)
+		assert.NoError(t, httpBinC.Terminate(ctx))
 	})
 
 	return HTTPBin{

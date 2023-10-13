@@ -48,8 +48,7 @@ func NewKong(ctx context.Context, t *testing.T) Kong {
 	require.NoError(t, err)
 
 	t.Cleanup(func() {
-		err := kongC.Terminate(ctx)
-		assert.NoError(t, err)
+		assert.NoError(t, kongC.Terminate(ctx))
 	})
 
 	return Kong{

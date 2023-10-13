@@ -16,6 +16,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/parser/atc"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/versions"
 	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/helpers"
 	"github.com/kong/kubernetes-ingress-controller/v2/test/kongintegration/containers"
 )
@@ -23,29 +24,36 @@ import (
 func TestExpressionsRouterMatchers_GenerateValidExpressions(t *testing.T) {
 	t.Parallel()
 
+	const (
+		timeout = time.Second * 5
+		period  = time.Millisecond * 200
+	)
+
 	ctx := context.Background()
 
 	kongC := containers.NewKong(ctx, t)
-	kongClient, err := kong.NewClient(lo.ToPtr(kongC.AdminURL(ctx, t)), &http.Client{})
+	kongClient, err := kong.NewClient(lo.ToPtr(kongC.AdminURL(ctx, t)), helpers.DefaultHTTPClient())
 	require.NoError(t, err)
 
 	httpBinC := containers.NewHTTPBin(ctx, t)
 
+	type request struct {
+		host string
+		path string
+	}
 	testCases := []struct {
 		name            string
 		matcher         atc.Matcher
-		matchRequests   []*http.Request
-		unmatchRequests []*http.Request
+		matchRequests   []request
+		unmatchRequests []request
 	}{
 		{
-			name:    "exact match on path",
-			matcher: atc.NewPredicateHTTPPath(atc.OpEqual, "/foo"),
-			matchRequests: []*http.Request{
-				helpers.MustHTTPRequest(t, "GET", helpers.MustParseURL(t, "http://a.foo.com").String(), "foo", nil),
-			},
-			unmatchRequests: []*http.Request{
-				helpers.MustHTTPRequest(t, "GET", helpers.MustParseURL(t, "http://a.foo.com").String(), "foobar", nil),
-				helpers.MustHTTPRequest(t, "GET", helpers.MustParseURL(t, "http://a.foo.com").String(), "foo/", nil),
+			name:          "exact match on path",
+			matcher:       atc.NewPredicateHTTPPath(atc.OpEqual, "/foo"),
+			matchRequests: []request{{"a.foo.com", "foo"}},
+			unmatchRequests: []request{
+				{"a.foo.com", "foobar"},
+				{"a.foo.com", "foo/"},
 			},
 		},
 		{
@@ -54,12 +62,10 @@ func TestExpressionsRouterMatchers_GenerateValidExpressions(t *testing.T) {
 				atc.NewPredicateHTTPPath(atc.OpEqual, "/foo"),
 				atc.NewPrediacteHTTPHost(atc.OpEqual, "a.foo.com"),
 			),
-			matchRequests: []*http.Request{
-				helpers.MustHTTPRequest(t, "GET", helpers.MustParseURL(t, "http://a.foo.com").String(), "foo", nil),
-			},
-			unmatchRequests: []*http.Request{
-				helpers.MustHTTPRequest(t, "GET", helpers.MustParseURL(t, "http://a.foo.com").String(), "foobar", nil),
-				helpers.MustHTTPRequest(t, "GET", helpers.MustParseURL(t, "http://b.foo.com").String(), "foo", nil),
+			matchRequests: []request{{"a.foo.com", "foo"}},
+			unmatchRequests: []request{
+				{"a.foo.com", "foobar"},
+				{"b.foo.com", "foo"},
 			},
 		},
 		{
@@ -68,24 +74,19 @@ func TestExpressionsRouterMatchers_GenerateValidExpressions(t *testing.T) {
 				atc.NewPredicateHTTPPath(atc.OpEqual, "/foo"),
 				atc.NewPrediacteHTTPHost(atc.OpSuffixMatch, ".foo.com"),
 			),
-			matchRequests: []*http.Request{
-				helpers.MustHTTPRequest(t, "GET", helpers.MustParseURL(t, "http://a.foo.com").String(), "foo", nil),
-				helpers.MustHTTPRequest(t, "GET", helpers.MustParseURL(t, "http://b.foo.com").String(), "foo", nil),
+			matchRequests: []request{
+				{"a.foo.com", "foo"},
+				{"b.foo.com", "foo"},
 			},
-			unmatchRequests: []*http.Request{
-				helpers.MustHTTPRequest(t, "GET", helpers.MustParseURL(t, "http://a.foo.com").String(), "foobar", nil),
-				helpers.MustHTTPRequest(t, "GET", helpers.MustParseURL(t, "http://a.bar.com").String(), "foo", nil),
+			unmatchRequests: []request{
+				{"a.foo.com", "foobar"},
+				{"a.bar.com", "foo"},
 			},
 		},
 	}
 
 	proxyParsedURL, err := url.Parse(kongC.ProxyURL(ctx, t))
 	require.NoError(t, err)
-	proxyClient := helpers.DefaultHTTPClient()
-	proxyClient.Transport = &http.Transport{
-		Proxy: http.ProxyURL(proxyParsedURL),
-	}
-
 	s := &kong.Service{
 		Host: kong.String(httpBinC.IP(ctx, t)),
 		Path: kong.String("/"),
@@ -98,7 +99,7 @@ func TestExpressionsRouterMatchers_GenerateValidExpressions(t *testing.T) {
 				StripPath: kong.Bool(true),
 			}
 			atc.ApplyExpression(r, tc.matcher, 1)
-			req, err := kongClient.NewRequest("POST", "/config", nil, marshalKongConfig(t, *s, *r))
+			req, err := kongClient.NewRequest(http.MethodPost, "/config", nil, marshalKongConfig(t, *s, *r))
 			require.NoError(t, err)
 
 			resp, err := kongClient.DoRAW(ctx, req)
@@ -106,28 +107,14 @@ func TestExpressionsRouterMatchers_GenerateValidExpressions(t *testing.T) {
 			require.NoError(t, resp.Body.Close())
 			require.Equal(t, http.StatusCreated, resp.StatusCode)
 
-			// matched requests should access upstream service
-			require.Eventually(t, func() bool {
-				for _, req := range tc.matchRequests {
-					resp, err := proxyClient.Do(req)
-					if err != nil {
-						t.Logf("error happened on getting response from kong: %v", err)
-						return false
-					}
-					resp.Body.Close()
-					if resp.StatusCode != http.StatusOK {
-						return false
-					}
-				}
-				return true
-			}, time.Minute, 5*time.Second)
+			// Matched requests should access the upstream service.
+			for _, req := range tc.matchRequests {
+				helpers.EventuallyGETPath(t, proxyParsedURL, req.host, req.path, http.StatusOK, "", nil, timeout, period)
+			}
 
-			// unmatched requests should get a 404 from Kong
+			// Unmatched requests should get a 404 from Kong.
 			for _, req := range tc.unmatchRequests {
-				resp, err := proxyClient.Do(req)
-				require.NoError(t, err)
-				require.NoError(t, resp.Body.Close())
-				require.Equal(t, http.StatusNotFound, resp.StatusCode)
+				helpers.EventuallyGETPath(t, proxyParsedURL, req.host, req.path, http.StatusNotFound, "", nil, timeout, period)
 			}
 		})
 	}
@@ -136,7 +123,7 @@ func TestExpressionsRouterMatchers_GenerateValidExpressions(t *testing.T) {
 func marshalKongConfig(t *testing.T, s kong.Service, r kong.Route) io.Reader {
 	t.Helper()
 	content := &file.Content{
-		FormatVersion: "3.0",
+		FormatVersion: versions.DeckFileFormatVersion,
 		Services: []file.FService{
 			{
 				Service: s,

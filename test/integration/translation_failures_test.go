@@ -90,12 +90,12 @@ func TestTranslationFailures(t *testing.T) {
 				require.NoError(t, err)
 
 				gatewayClassName := testutils.RandomName(testTranslationFailuresObjectsPrefix)
-				gwc, err := DeployGatewayClass(ctx, gatewayClient, gatewayClassName)
+				gwc, err := helpers.DeployGatewayClass(ctx, gatewayClient, gatewayClassName)
 				require.NoError(t, err)
 				cleaner.Add(gwc)
 
 				gatewayName := testutils.RandomName(testTranslationFailuresObjectsPrefix)
-				gateway, err := DeployGateway(ctx, gatewayClient, ns, gatewayClassName, func(gw *gatewayapi.Gateway) {
+				gateway, err := helpers.DeployGateway(ctx, gatewayClient, ns, gatewayClassName, func(gw *gatewayapi.Gateway) {
 					gw.Name = gatewayName
 				})
 				require.NoError(t, err)

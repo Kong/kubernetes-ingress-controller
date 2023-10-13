@@ -6,12 +6,10 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"net"
 	"net/http"
 	"os"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	ktfkong "github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/kong"
@@ -98,54 +96,6 @@ func TestHTTPRouteExample(t *testing.T) {
 			return strings.Contains(b.String(), "<title>Welcome to nginx!</title>")
 		}
 		return false
-	}, ingressWait, waitTick)
-}
-
-func TestUDPRouteExample(t *testing.T) {
-	RunWhenKongExpressionRouter(t)
-	t.Log("locking UDP port")
-	udpMutex.Lock()
-	t.Cleanup(func() {
-		t.Log("unlocking UDP port")
-		udpMutex.Unlock()
-	})
-
-	var (
-		ctx                      = context.Background()
-		udpRouteExampleManifests = fmt.Sprintf("%s/gateway-udproute.yaml", examplesDIR)
-	)
-
-	_, cleaner := helpers.Setup(ctx, t, env)
-
-	t.Logf("applying yaml manifest %s", udpRouteExampleManifests)
-	b, err := os.ReadFile(udpRouteExampleManifests)
-	// TODO as of 2022-04-01, UDPRoute does not support using a different inbound port than the outbound
-	// destination service port. Once parentRef port functionality is stable, we should remove this
-	s := string(b)
-	s = strings.ReplaceAll(s, "port: 53", "port: 9999")
-	require.NoError(t, err)
-	require.NoError(t, clusters.ApplyManifestByYAML(ctx, env.Cluster(), s))
-	cleaner.AddManifest(s)
-
-	t.Logf("configuring test and setting up API clients")
-	resolver := &net.Resolver{
-		PreferGo: true,
-		Dial: func(ctx context.Context, network, address string) (net.Conn, error) {
-			d := net.Dialer{
-				Timeout: time.Second * 5,
-			}
-			return d.DialContext(ctx, network, fmt.Sprintf("%s:%d", proxyUDPURL.Hostname(), 9999))
-		},
-	}
-
-	t.Logf("verifying that the UDPRoute becomes routable")
-	require.Eventually(t, func() bool {
-		_, err := resolver.LookupHost(ctx, "kernel.org")
-		if err != nil {
-			t.Logf("failed resolving kernel.org: %v", err)
-			return false
-		}
-		return true
 	}, ingressWait, waitTick)
 }
 

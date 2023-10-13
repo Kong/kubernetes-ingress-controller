@@ -10,6 +10,8 @@ In KIC, we use several levels of testing:
 - [unit tests](#unit-tests)
 - [`envtest` based tests](#envtest-based-tests)
 - [integration tests](#integration-tests)
+- [isolated integration tests](#isolated-integration-tests)
+- [Kong integration tests](#kong-integration-tests)
 - [end to end (E2E) tests](#end-to-end-e2e-tests)
 
 ### Unit tests
@@ -144,6 +146,105 @@ This can allow you to run a subset of all the tests for faster feedback times, e
 make test.integration.dbless GOTESTFLAGS="-count 1 -run TestUDPRouteEssentials"
 ```
 
+[ktf]: https://github.com/Kong/kubernetes-testing-framework
+[pkggodev_testmain]: https://pkg.go.dev/testing#hdr-Main
+[integration_test_suite]: https://github.com/Kong/kubernetes-ingress-controller/blob/61e06ee64ff913aa9952816121125fca7ed59ba5/test/integration/suite_test.go#L36
+[manager_run]: https://github.com/Kong/kubernetes-ingress-controller/blob/5abc699aeee552945a76c82e3f7abb3e1b2fabf1/internal/cmd/rootcmd/run.go#L14-L22
+
+### Isolated integration tests
+
+Similarly to KIC's integration tests, isolated integration tests rely on its
+controller manager being run in the same process as the tests via [`manager.Run()`][manager_run].
+
+These tests rely on [kubernetes-sigs/e2e-framework][github-e2e-framework] for setup,
+teardown, tests filtering etc.
+
+Said setup will either create a new [kind](https://kind.sigs.k8s.io) cluster or use an existing one to run the
+tests against.
+
+Most of the setup - and cleanup after the tests have run - is being done using [ktf][ktf].
+
+Currently, the cluster is being shared across all the tests that are a part
+of the test suite so special care needs to be taken in order to clean up after the tests
+that run.
+The typical approach is to run them in a dedicated, disposable Kubernetes namespace created just for the purposes of that test.
+
+#### Difference between isolated and regular integration tests
+
+There are a couple of key differences between isolated and regular integration tests:
+
+- In isolated tests each test's [`Feature`][pkggodev-e2e-framework-feature] gets
+  its own kong deployment through the means of [ktf][ktf]'s kong addon.
+- In isolated tests each test's [`Feature`][pkggodev-e2e-framework-feature] gets
+  its own controller manager instance started which is configured against the above
+  mentioned kong instance.
+  Said controller manager instance will be configured to only watch `Feature`'s
+  dedicated namespace (more info below) via `--watch-namespace`.
+  You can add more namespaces for the controller manager to watch via
+  `ControllerManagerOptAdditionalWatchNamespace` `featureSetup` option:
+
+  ```go
+  ...
+  WithSetup("deploy kong addon into cluster", featureSetup(
+    helpers.ControllerManagerOptAdditionalWatchNamespace("my-additional-namespace"),
+  )).
+  ...
+  ```
+
+- In regular integration tests each test gets it's own Kubernetes namespace through
+  manual creation via helper functions like:
+
+  ```go
+  ns, cleaner := helpers.Setup(ctx, t, env)
+  ```
+
+  Which will automatically remove the namspace when the test is finished.
+
+  In isolated tests each test's [`Feature`][pkggodev-e2e-framework-feature] will
+  get its own Kubernetes namespace which you can get via:
+
+  ```go
+  namespace := GetNamespaceForT(ctx, t)
+  ```
+
+#### Room for improvement
+
+- Eventually the whole integration suite could be migrate to use this setup.
+  When that happens, we can add logic into setup which would make tests that don't 
+  need this level of separation to reuse a common installation of Kong (e.g. to
+  its default - `kong` - namespace).
+
+  This way we'll have the best of both worlds:
+
+  - seprate tests where it's needed
+  - shared, when it's not and where speed is the priority
+
+#### How to run
+
+Tests are located under `tests/integration/isolated` and use `integration_tests`
+[build tag][go_build_tag].
+
+You can run them using one of the dedicated Makefile targets:
+
+- `test.integration.isolated.dbless` run all dbless isolated integration tests with standard
+  verbose output on stderr. The output will also include controllers' logs.
+
+Through `GOTESTFLAGS` you can specify custom flags that will be passed to `go test`.
+This can allow you to run a subset of all the tests for faster feedback times, e.g.:
+
+```
+make test.integration.isolated.dbless GOTESTFLAGS="-count 1 -run TestUDPRouteEssentials"
+```
+
+You can also specify e2e-framework's flags e.g. to filter tests via [labels][github-e2e-framework-labels].
+
+```
+make test.integration.isolated.dbless E2E_FRAMEWORK_FLAGS="-labels=kind=UDPRoute,example=true"
+```
+
+[github-e2e-framework]: https://github.com/kubernetes-sigs/e2e-framework
+[github-e2e-framework-labels]: https://github.com/kubernetes-sigs/e2e-framework/tree/main/examples/skip_flags#use-labels-in-your-tests
+[pkggodev-e2e-framework-feature]: https://pkg.go.dev/sigs.k8s.io/e2e-framework/pkg/features
 [ktf]: https://github.com/Kong/kubernetes-testing-framework
 [pkggodev_testmain]: https://pkg.go.dev/testing#hdr-Main
 [integration_test_suite]: https://github.com/Kong/kubernetes-ingress-controller/blob/61e06ee64ff913aa9952816121125fca7ed59ba5/test/integration/suite_test.go#L36

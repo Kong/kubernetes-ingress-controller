@@ -42,7 +42,6 @@ import (
 
 var (
 	conformanceTestsBaseManifests = fmt.Sprintf("%s/conformance/base/manifests.yaml", consts.GatewayRawRepoURL)
-	ingressClass                  = "kong-conformance-tests"
 
 	env          environments.Environment
 	ctx          context.Context
@@ -122,10 +121,13 @@ func prepareEnvForGatewayConformanceTests(t *testing.T) (c client.Client, gatewa
 
 	featureGateFlag := fmt.Sprintf("--feature-gates=%s", consts.DefaultFeatureGates)
 
+	t.Log("preparing the environment to run the controller manager")
+	require.NoError(t, testutils.PrepareClusterForRunningControllerManager(ctx, env.Cluster()))
+
 	t.Log("starting the controller manager")
 	cert, key := certificate.GetKongSystemSelfSignedCerts()
 	args := []string{
-		fmt.Sprintf("--ingress-class=%s", ingressClass),
+		"--ingress-class=kong-conformance-tests",
 		fmt.Sprintf("--admission-webhook-cert=%s", cert),
 		fmt.Sprintf("--admission-webhook-key=%s", key),
 		fmt.Sprintf("--admission-webhook-listen=%s:%d", testutils.GetAdmissionWebhookListenHost(), testutils.AdmissionWebhookListenPort),
@@ -135,8 +137,9 @@ func prepareEnvForGatewayConformanceTests(t *testing.T) (c client.Client, gatewa
 		featureGateFlag,
 		"--anonymous-reports=false",
 	}
-
-	require.NoError(t, testutils.DeployControllerManagerForCluster(ctx, globalLogger, env.Cluster(), args...))
+	cancel, err := testutils.DeployControllerManagerForCluster(ctx, globalLogger, env.Cluster(), nil, args...)
+	t.Cleanup(func() { cancel() })
+	require.NoError(t, err)
 
 	t.Log("creating GatewayClass for gateway conformance tests")
 	gatewayClass := &gatewayapi.GatewayClass{

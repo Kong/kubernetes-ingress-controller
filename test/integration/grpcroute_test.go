@@ -78,7 +78,7 @@ func TestGRPCRouteEssentials(t *testing.T) {
 
 	t.Log("deploying a new gatewayClass")
 	gatewayClassName := uuid.NewString()
-	gwc, err := DeployGatewayClass(ctx, gatewayClient, gatewayClassName)
+	gwc, err := helpers.DeployGatewayClass(ctx, gatewayClient, gatewayClassName)
 	require.NoError(t, err)
 	cleaner.Add(gwc)
 
@@ -104,7 +104,7 @@ func TestGRPCRouteEssentials(t *testing.T) {
 
 	t.Log("deploying a new gateway")
 	testHostname := "cholpon.example"
-	gateway, err := DeployGateway(ctx, gatewayClient, ns.Name, unmanagedGatewayClassName, func(gw *gatewayapi.Gateway) {
+	gateway, err := helpers.DeployGateway(ctx, gatewayClient, ns.Name, unmanagedGatewayClassName, func(gw *gatewayapi.Gateway) {
 		gw.Spec.Listeners = builder.NewListener("https").
 			HTTPS().
 			WithPort(ktfkong.DefaultProxyTLSServicePort).
@@ -182,11 +182,11 @@ func TestGRPCRouteEssentials(t *testing.T) {
 	cleaner.Add(grpcRoute)
 
 	t.Log("verifying that the Gateway gets linked to the route via status")
-	callback := GetGatewayIsLinkedCallback(ctx, t, gatewayClient, gatewayapi.HTTPProtocolType, ns.Name, grpcRoute.Name)
+	callback := helpers.GetGatewayIsLinkedCallback(ctx, t, gatewayClient, gatewayapi.HTTPProtocolType, ns.Name, grpcRoute.Name)
 	require.Eventually(t, callback, ingressWait, waitTick)
 	t.Log("verifying that the grpcroute contains 'Programmed' condition")
 	require.Eventually(t,
-		GetVerifyProgrammedConditionCallback(t, gatewayClient, gatewayapi.HTTPProtocolType, ns.Name, grpcRoute.Name, metav1.ConditionTrue),
+		helpers.GetVerifyProgrammedConditionCallback(t, gatewayClient, gatewayapi.HTTPProtocolType, ns.Name, grpcRoute.Name, metav1.ConditionTrue),
 		ingressWait, waitTick,
 	)
 

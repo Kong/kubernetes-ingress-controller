@@ -8,6 +8,9 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	ktfkong "github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/kong"
+	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/cmd/rootcmd"
@@ -22,38 +25,23 @@ var logOutput = os.Getenv("TEST_KONG_KIC_MANAGER_LOG_OUTPUT")
 // Testing Utility Functions - Controller Manager
 // -----------------------------------------------------------------------------
 
-// DeployControllerManagerForCluster deploys all the base CRDs needed for the
-// controller manager to function, and also runs a copy of the controller
-// manager on a provided test cluster.
-//
-// Controller managers started this way will run in the background in a goroutine:
-// The caller must use the provided context.Context to stop the controller manager
-// from running when they're done with it.
-func DeployControllerManagerForCluster(
+// PrepareClusterForRunningControllerManager prepares the provided cluster for running
+// the controller manager.
+// It creates kong's namespace, deploys its RBAC manifests and CRDs.
+func PrepareClusterForRunningControllerManager(
 	ctx context.Context,
-	logger logr.Logger,
 	cluster clusters.Cluster,
-	additionalFlags ...string,
 ) error {
-	// ensure that the provided test cluster has a kongAddon deployed to it
-	var kongAddon *ktfkong.Addon
-	for _, addon := range cluster.ListAddons() {
-		if addon.Name() == ktfkong.AddonName {
-			var ok bool
-			kongAddon, ok = addon.(*ktfkong.Addon)
-			if !ok {
-				return fmt.Errorf("an invalid kong addon was present in test environment")
-			}
+	ns := &corev1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: consts.ControllerNamespace,
+		},
+	}
+	nsClient := cluster.Client().CoreV1().Namespaces()
+	if _, err := nsClient.Create(ctx, ns, metav1.CreateOptions{}); err != nil {
+		if !apierrors.IsAlreadyExists(err) {
+			return fmt.Errorf("failed creating %s namespace: %w", ns.Name, err)
 		}
-	}
-	if kongAddon == nil {
-		return fmt.Errorf("no kong addon found loaded in cluster %s", cluster.Name())
-	}
-
-	// determine the proxy admin URL for the Kong Gateway on this cluster:
-	proxyAdminURL, err := kongAddon.ProxyAdminURL(ctx, cluster)
-	if err != nil {
-		return fmt.Errorf("couldn't determine Kong Gateway Admin URL on cluster %s: %w", cluster.Name(), err)
 	}
 
 	// deploy all RBACs required for testing to the cluster
@@ -66,11 +54,49 @@ func DeployControllerManagerForCluster(
 		return fmt.Errorf("failed to deploy CRDs: %w", err)
 	}
 
+	return nil
+}
+
+// DeployControllerManagerForCluster deploys all the base CRDs needed for the
+// controller manager to function, and also runs a copy of the controller
+// manager on a provided test cluster.
+//
+// Controller managers started this way will run in the background in a goroutine:
+// The caller must use the provided context.Context to stop the controller manager
+// from running when they're done with it.
+//
+// It returns a context cancellation func which will stop the manager and an error.
+func DeployControllerManagerForCluster(
+	ctx context.Context,
+	logger logr.Logger,
+	cluster clusters.Cluster,
+	kongAddon *ktfkong.Addon,
+	additionalFlags ...string,
+) (func(), error) {
+	if kongAddon == nil {
+		// ensure that the provided test cluster has a kongAddon deployed to it
+		for _, addon := range cluster.ListAddons() {
+			a, ok := addon.(*ktfkong.Addon)
+			if ok {
+				kongAddon = a
+			}
+		}
+	}
+	if kongAddon == nil {
+		return nil, fmt.Errorf("no kong addon found loaded in cluster %s", cluster.Name())
+	}
+
+	// determine the proxy admin URL for the Kong Gateway on this cluster:
+	proxyAdminURL, err := kongAddon.ProxyAdminURL(ctx, cluster)
+	if err != nil {
+		return nil, fmt.Errorf("couldn't determine Kong Gateway Admin URL on cluster %s: %w", cluster.Name(), err)
+	}
+
 	// create a tempfile to hold the cluster kubeconfig that will be used for the controller
 	// generate a temporary kubeconfig since we're going to be using the helm CLI
 	kubeconfig, err := clusters.TempKubeconfig(cluster)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	// render all controller manager flag options
@@ -78,9 +104,9 @@ func DeployControllerManagerForCluster(
 		fmt.Sprintf("--kong-admin-url=http://%s:8001", proxyAdminURL.Hostname()),
 		fmt.Sprintf("--kubeconfig=%s", kubeconfig.Name()),
 		"--election-id=integrationtests.konghq.com",
-		fmt.Sprintf("--publish-service=%s/ingress-controller-kong-proxy", consts.ControllerNamespace),
-		fmt.Sprintf("--publish-service-udp=%s/ingress-controller-kong-udp-proxy", consts.ControllerNamespace),
 		"--log-format=text",
+		fmt.Sprintf("--publish-service=%s/ingress-controller-kong-proxy", kongAddon.Namespace()),
+		fmt.Sprintf("--publish-service-udp=%s/ingress-controller-kong-udp-proxy", kongAddon.Namespace()),
 	}
 	controllerManagerFlags = append(controllerManagerFlags, additionalFlags...)
 
@@ -91,9 +117,10 @@ func DeployControllerManagerForCluster(
 	flags := config.FlagSet()
 	if err := flags.Parse(controllerManagerFlags); err != nil {
 		os.Remove(kubeconfig.Name())
-		return fmt.Errorf("failed to parse manager flags: %w", err)
+		return nil, fmt.Errorf("failed to parse manager flags: %w", err)
 	}
 
+	ctx, cancel := context.WithCancel(ctx)
 	// run the controller in the background
 	go func() {
 		defer os.Remove(kubeconfig.Name())
@@ -104,7 +131,7 @@ func DeployControllerManagerForCluster(
 		}
 	}()
 
-	return nil
+	return cancel, nil
 }
 
 // SetupLoggers sets up the loggers for the controller manager.

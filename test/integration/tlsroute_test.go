@@ -107,7 +107,7 @@ func TestTLSRoutePassthroughReferenceGrant(t *testing.T) {
 
 	modePassthrough := gatewayapi.TLSModePassthrough
 	t.Log("deploying a gateway to the test cluster using unmanaged gateway mode")
-	gateway, err := DeployGateway(ctx, gatewayClient, ns.Name, unmanagedGatewayClassName, func(gw *gatewayapi.Gateway) {
+	gateway, err := helpers.DeployGateway(ctx, gatewayClient, ns.Name, unmanagedGatewayClassName, func(gw *gatewayapi.Gateway) {
 		otherNamespace := gatewayapi.Namespace(otherNs.Name)
 		gw.Spec.Listeners = []gatewayapi.Listener{
 			builder.NewListener("tls").
@@ -352,14 +352,14 @@ func TestTLSRoutePassthrough(t *testing.T) {
 
 	t.Log("deploying a supported gatewayclass to the test cluster")
 	gatewayClassName := uuid.NewString()
-	gwc, err := DeployGatewayClass(ctx, gatewayClient, gatewayClassName)
+	gwc, err := helpers.DeployGatewayClass(ctx, gatewayClient, gatewayClassName)
 	require.NoError(t, err)
 	cleaner.Add(gwc)
 
 	t.Log("deploying a gateway to the test cluster using unmanaged gateway mode")
 	modePassthrough := gatewayapi.TLSModePassthrough
 	gatewayName := uuid.NewString()
-	gateway, err := DeployGateway(ctx, gatewayClient, ns.Name, gatewayClassName, func(gw *gatewayapi.Gateway) {
+	gateway, err := helpers.DeployGateway(ctx, gatewayClient, ns.Name, gatewayClassName, func(gw *gatewayapi.Gateway) {
 		hostname := gatewayapi.Hostname(tlsRouteHostname)
 		gw.Name = gatewayName
 		gw.Spec.Listeners = []gatewayapi.Listener{
@@ -474,7 +474,7 @@ func TestTLSRoutePassthrough(t *testing.T) {
 	}, time.Minute, time.Second)
 
 	t.Log("verifying that the Gateway gets unlinked from the route via status")
-	callback := GetGatewayIsUnlinkedCallback(ctx, t, gatewayClient, gatewayapi.TLSProtocolType, ns.Name, tlsRoute.Name)
+	callback := helpers.GetGatewayIsUnlinkedCallback(ctx, t, gatewayClient, gatewayapi.TLSProtocolType, ns.Name, tlsRoute.Name)
 	require.Eventually(t, callback, ingressWait, waitTick)
 
 	t.Log("verifying that the tcpecho is no longer responding")
@@ -494,7 +494,7 @@ func TestTLSRoutePassthrough(t *testing.T) {
 	}, time.Minute, time.Second)
 
 	t.Log("verifying that the Gateway gets linked to the route via status")
-	callback = GetGatewayIsLinkedCallback(ctx, t, gatewayClient, gatewayapi.TLSProtocolType, ns.Name, tlsRoute.Name)
+	callback = helpers.GetGatewayIsLinkedCallback(ctx, t, gatewayClient, gatewayapi.TLSProtocolType, ns.Name, tlsRoute.Name)
 	require.Eventually(t, callback, ingressWait, waitTick)
 
 	t.Log("verifying that putting the parentRefs back results in the routes becoming available again")
@@ -510,7 +510,7 @@ func TestTLSRoutePassthrough(t *testing.T) {
 	require.NoError(t, gatewayClient.GatewayV1().GatewayClasses().Delete(ctx, gwc.Name, metav1.DeleteOptions{}))
 
 	t.Log("verifying that the Gateway gets unlinked from the route via status")
-	callback = GetGatewayIsUnlinkedCallback(ctx, t, gatewayClient, gatewayapi.TLSProtocolType, ns.Name, tlsRoute.Name)
+	callback = helpers.GetGatewayIsUnlinkedCallback(ctx, t, gatewayClient, gatewayapi.TLSProtocolType, ns.Name, tlsRoute.Name)
 	require.Eventually(t, callback, ingressWait, waitTick)
 
 	t.Log("verifying that the data-plane configuration from the TLSRoute gets dropped with the GatewayClass now removed")
@@ -520,11 +520,11 @@ func TestTLSRoutePassthrough(t *testing.T) {
 	}, ingressWait, waitTick)
 
 	t.Log("putting the GatewayClass back")
-	gwc, err = DeployGatewayClass(ctx, gatewayClient, gatewayClassName)
+	gwc, err = helpers.DeployGatewayClass(ctx, gatewayClient, gatewayClassName)
 	require.NoError(t, err)
 
 	t.Log("verifying that the Gateway gets linked to the route via status")
-	callback = GetGatewayIsLinkedCallback(ctx, t, gatewayClient, gatewayapi.TLSProtocolType, ns.Name, tlsRoute.Name)
+	callback = helpers.GetGatewayIsLinkedCallback(ctx, t, gatewayClient, gatewayapi.TLSProtocolType, ns.Name, tlsRoute.Name)
 	require.Eventually(t, callback, ingressWait, waitTick)
 
 	t.Log("verifying that creating the GatewayClass again triggers reconciliation of TLSRoutes and the route becomes available again")
@@ -540,7 +540,7 @@ func TestTLSRoutePassthrough(t *testing.T) {
 	require.NoError(t, gatewayClient.GatewayV1().Gateways(ns.Name).Delete(ctx, gatewayName, metav1.DeleteOptions{}))
 
 	t.Log("verifying that the Gateway gets unlinked from the route via status")
-	callback = GetGatewayIsUnlinkedCallback(ctx, t, gatewayClient, gatewayapi.TLSProtocolType, ns.Name, tlsRoute.Name)
+	callback = helpers.GetGatewayIsUnlinkedCallback(ctx, t, gatewayClient, gatewayapi.TLSProtocolType, ns.Name, tlsRoute.Name)
 	require.Eventually(t, callback, ingressWait, waitTick)
 
 	t.Log("verifying that the data-plane configuration from the TLSRoute gets dropped with the Gateway now removed")
@@ -550,7 +550,7 @@ func TestTLSRoutePassthrough(t *testing.T) {
 	}, ingressWait, waitTick)
 
 	t.Log("putting the Gateway back")
-	gateway, err = DeployGateway(ctx, gatewayClient, ns.Name, gatewayClassName, func(gw *gatewayapi.Gateway) {
+	gateway, err = helpers.DeployGateway(ctx, gatewayClient, ns.Name, gatewayClassName, func(gw *gatewayapi.Gateway) {
 		hostname := gatewayapi.Hostname(tlsRouteHostname)
 		gw.Name = gatewayName
 		gw.Spec.Listeners = []gatewayapi.Listener{
@@ -573,7 +573,7 @@ func TestTLSRoutePassthrough(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Log("verifying that the Gateway gets linked to the route via status")
-	callback = GetGatewayIsLinkedCallback(ctx, t, gatewayClient, gatewayapi.TLSProtocolType, ns.Name, tlsRoute.Name)
+	callback = helpers.GetGatewayIsLinkedCallback(ctx, t, gatewayClient, gatewayapi.TLSProtocolType, ns.Name, tlsRoute.Name)
 	require.Eventually(t, callback, ingressWait, waitTick)
 
 	t.Log("verifying that creating the Gateway again triggers reconciliation of TLSRoutes and the route becomes available again")
@@ -630,7 +630,7 @@ func TestTLSRoutePassthrough(t *testing.T) {
 	require.NoError(t, gatewayClient.GatewayV1().Gateways(ns.Name).Delete(ctx, gateway.Name, metav1.DeleteOptions{}))
 
 	t.Log("verifying that the Gateway gets unlinked from the route via status")
-	callback = GetGatewayIsUnlinkedCallback(ctx, t, gatewayClient, gatewayapi.TLSProtocolType, ns.Name, tlsRoute.Name)
+	callback = helpers.GetGatewayIsUnlinkedCallback(ctx, t, gatewayClient, gatewayapi.TLSProtocolType, ns.Name, tlsRoute.Name)
 	require.Eventually(t, callback, ingressWait, waitTick)
 
 	t.Log("verifying that the data-plane configuration from the TLSRoute does not get orphaned with the GatewayClass and Gateway gone")
@@ -642,7 +642,7 @@ func TestTLSRoutePassthrough(t *testing.T) {
 
 	t.Log("testing port matching")
 	t.Log("putting the Gateway back")
-	_, err = DeployGateway(ctx, gatewayClient, ns.Name, gatewayClassName, func(gw *gatewayapi.Gateway) {
+	_, err = helpers.DeployGateway(ctx, gatewayClient, ns.Name, gatewayClassName, func(gw *gatewayapi.Gateway) {
 		hostname := gatewayapi.Hostname(tlsRouteHostname)
 		gw.Name = gatewayName
 		gw.Spec.Listeners = []gatewayapi.Listener{
@@ -665,7 +665,7 @@ func TestTLSRoutePassthrough(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Log("putting the GatewayClass back")
-	_, err = DeployGatewayClass(ctx, gatewayClient, gatewayClassName)
+	_, err = helpers.DeployGatewayClass(ctx, gatewayClient, gatewayClassName)
 
 	t.Log("ensuring tls echo responds after recreating gateway and gateway class")
 	require.Eventually(t, func() bool {

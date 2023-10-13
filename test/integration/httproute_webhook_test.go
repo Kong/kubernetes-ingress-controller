@@ -235,7 +235,7 @@ func setUpEnvForTestingHTTPRouteValidationWebhook(ctx context.Context, t *testin
 	require.NoError(t, err)
 
 	t.Log("creating a managed gateway")
-	managedGateway, err = DeployGateway(ctx, gatewayClient, ns.Name, unmanagedGatewayClassName, func(g *gatewayapi.Gateway) {
+	managedGateway, err = helpers.DeployGateway(ctx, gatewayClient, ns.Name, unmanagedGatewayClassName, func(g *gatewayapi.Gateway) {
 		g.Name = uuid.NewString()
 	})
 	require.NoError(t, err)
@@ -243,7 +243,7 @@ func setUpEnvForTestingHTTPRouteValidationWebhook(ctx context.Context, t *testin
 	t.Logf("created managed gateway: %q", managedGateway.Name)
 
 	t.Logf("creating an unmanaged gatewayclass")
-	unmanagedGatewayClass, err := DeployGatewayClass(ctx, gatewayClient, uuid.NewString(), func(gc *gatewayapi.GatewayClass) {
+	unmanagedGatewayClass, err := helpers.DeployGatewayClass(ctx, gatewayClient, uuid.NewString(), func(gc *gatewayapi.GatewayClass) {
 		gc.Spec.ControllerName = unsupportedControllerName
 	})
 	require.NoError(t, err)
@@ -251,7 +251,7 @@ func setUpEnvForTestingHTTPRouteValidationWebhook(ctx context.Context, t *testin
 	t.Logf("created unmanaged gatewayclass: %q", unmanagedGatewayClass.Name)
 
 	t.Log("creating an unmanaged gateway")
-	unmanagedGateway, err = DeployGateway(ctx, gatewayClient, ns.Name, unmanagedGatewayClass.Name, func(g *gatewayapi.Gateway) {
+	unmanagedGateway, err = helpers.DeployGateway(ctx, gatewayClient, ns.Name, unmanagedGatewayClass.Name, func(g *gatewayapi.Gateway) {
 		g.Name = uuid.NewString()
 	})
 	require.NoError(t, err)

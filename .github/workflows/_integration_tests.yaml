@@ -107,6 +107,14 @@ jobs:
             test: dbless
             run_invalid_config: "true"
             go_test_flags: -run=TestIngressRecoverFromInvalidPath
+          #
+          - name: isolated-dbless
+            test: isolated.dbless
+            feature_gates: "GatewayAlpha=true"
+          - name: isolated-dbless-expression-router
+            router-flavor: expressions
+            test: isolated.dbless
+            feature_gates: "GatewayAlpha=true"
 
     steps:
       - uses: Kong/kong-license@master

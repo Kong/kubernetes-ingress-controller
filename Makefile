@@ -474,14 +474,6 @@ test.istio: gotestsum
 		-timeout $(E2E_TEST_TIMEOUT) \
 		./test/e2e/...
 
-.PHONY: test.expression_router
-test.expression_router: gotestsum
-	GOTESTSUM_FORMAT=$(GOTESTSUM_FORMAT) \
-	GOFLAGS="-tags=expression_router_tests" $(GOTESTSUM) -- $(GOTESTFLAGS) \
-		-race \
-		-parallel 1 \
-		./test/expressionrouter
-
 .PHONY: test.kongintegration
 test.kongintegration:
 	$(MAKE) _test.kongintegration GOTESTSUM_FORMAT=standard-verbose

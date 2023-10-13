@@ -15,6 +15,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/sendconfig"
+	"github.com/kong/kubernetes-ingress-controller/v2/test/kongintegration/containers"
 )
 
 // TestUpdateStrategyInMemory_PropagatesResourcesErrors ensures that sendconfig.UpdateStrategyInMemory -
@@ -30,8 +31,8 @@ func TestUpdateStrategyInMemory_PropagatesResourcesErrors(t *testing.T) {
 
 	ctx := context.Background()
 
-	adminURL := spawnDBLessKongContainer(ctx, t)
-	kongClient, err := kong.NewClient(kong.String(adminURL), &http.Client{})
+	kongC := containers.NewKong(ctx, t)
+	kongClient, err := kong.NewClient(lo.ToPtr(kongC.AdminURL(ctx, t)), &http.Client{})
 	require.NoError(t, err)
 
 	logbase, err := zap.NewDevelopment()

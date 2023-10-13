@@ -91,7 +91,7 @@ func (r *UDPRouteReconciler) SetupWithManager(mgr ctrl.Manager) error {
 			&source.Channel{Source: r.StatusQueue.Subscribe(schema.GroupVersionKind{
 				Group:   gatewayv1alpha2.GroupVersion.Group,
 				Version: gatewayv1alpha2.GroupVersion.Version,
-				Kind:    "TCPRoute",
+				Kind:    "UDPRoute",
 			})},
 			&handler.EnqueueRequestForObject{},
 		); err != nil {
@@ -380,7 +380,7 @@ func (r *UDPRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		}
 
 		if configurationStatus == k8sobj.ConfigurationStatusFailed {
-			debug(log, udproute, "tcproute configuration failed")
+			debug(log, udproute, "udproute configuration failed")
 			statusUpdated, err := ensureParentsProgrammedCondition(ctx, r.Status(), udproute, udproute.Status.Parents, gateways, metav1.Condition{
 				Status: metav1.ConditionFalse,
 				Reason: string(ConditionReasonTranslationError),

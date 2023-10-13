@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/sirupsen/logrus"
+	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
@@ -79,7 +79,7 @@ type FlatError struct {
 
 // parseFlatEntityErrors takes a Kong /config error response body and parses its "fields.flattened_errors" value
 // into errors associated with Kubernetes resources.
-func parseFlatEntityErrors(body []byte, log logrus.FieldLogger) ([]ResourceError, error) {
+func parseFlatEntityErrors(body []byte, logger logr.Logger) ([]ResourceError, error) {
 	// Directly return here to avoid the misleading "could not unmarshal config" message appear in logs.
 	if len(body) == 0 {
 		return nil, nil
@@ -101,11 +101,8 @@ func parseFlatEntityErrors(body []byte, log logrus.FieldLogger) ([]ResourceError
 		}
 		for _, p := range ee.Errors {
 			if len(p.Message) > 0 && len(p.Messages) > 0 {
-				log.WithFields(logrus.Fields{
-					"name":  ee.Name,
-					"field": p.Field,
-				}).Error("entity has both single and array errors for field")
-
+				logger.Error(nil, "entity has both single and array errors for field",
+					"name", ee.Name, "field", p.Field)
 				continue
 			}
 			if len(p.Message) > 0 {
@@ -128,7 +125,7 @@ func parseFlatEntityErrors(body []byte, log logrus.FieldLogger) ([]ResourceError
 		}
 		parsed, err := parseRawResourceError(raw)
 		if err != nil {
-			log.WithError(err).WithField("name", ee.Name).Error("entity tags missing fields")
+			logger.Error(err, "entity tags missing fields", "name", ee.Name)
 			continue
 		}
 		resourceErrors = append(resourceErrors, parsed)

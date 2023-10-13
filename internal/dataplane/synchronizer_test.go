@@ -8,9 +8,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/sirupsen/logrus"
+	"github.com/go-logr/zapr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/zap"
 )
 
 const testSynchronizerTick = time.Millisecond * 10
@@ -29,7 +30,7 @@ func TestSynchronizer(t *testing.T) {
 
 	t.Log("initializing the dataplane synchronizer")
 	sync, err := NewSynchronizer(
-		logrus.New(),
+		zapr.NewLogger(zap.NewNop()),
 		c,
 		WithStagger(testSynchronizerTick),
 		WithInitCacheSyncDuration(testSynchronizerTick),
@@ -94,7 +95,7 @@ func TestSynchronizer_IsReadyDoesntBlockWhenDataPlaneIsBlocked(t *testing.T) {
 		t.Run(fmt.Sprintf("dbmode=%s", dbMode), func(t *testing.T) {
 			c := &fakeDataplaneClient{dbmode: dbMode, t: t}
 			s, err := NewSynchronizer(
-				logrus.New(),
+				zapr.NewLogger(zap.NewNop()),
 				c,
 				WithStagger(testSynchronizerTick),
 				WithInitCacheSyncDuration(testSynchronizerTick),

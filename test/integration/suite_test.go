@@ -49,7 +49,7 @@ func TestMain(m *testing.M) {
 	// after 30s from the start of controller manager package init function,
 	// the controller manager will set up a no op logger and continue.
 	// The logger cannot be configured after that point.
-	deprecatedLogger, logger, logOutput, err := testutils.SetupLoggers("trace", "text", false)
+	logger, logOutput, err := testutils.SetupLoggers("trace", "text")
 	if err != nil {
 		exitOnErrWithCode(ctx, fmt.Errorf("failed to setup loggers: %w", err), consts.ExitCodeCantCreateLogger)
 	}
@@ -175,14 +175,13 @@ func TestMain(m *testing.M) {
 			fmt.Sprintf("--admission-webhook-listen=0.0.0.0:%d", testutils.AdmissionWebhookListenPort),
 			"--profiling",
 			"--dump-config",
-			"--log-level=trace",             // not used, as controller logger is configured separately
-			"--debug-log-reduce-redundancy", // not used, as controller logger is configured separately
+			"--log-level=trace", // not used, as controller logger is configured separately
 			"--anonymous-reports=false",
 			fmt.Sprintf("--feature-gates=%s", featureGates),
 			fmt.Sprintf("--election-namespace=%s", kongAddon.Namespace()),
 		}
 		allControllerArgs := append(standardControllerArgs, extraControllerArgs...)
-		exitOnErr(ctx, testutils.DeployControllerManagerForCluster(ctx, deprecatedLogger, logger, env.Cluster(), allControllerArgs...))
+		exitOnErr(ctx, testutils.DeployControllerManagerForCluster(ctx, logger, env.Cluster(), allControllerArgs...))
 	}
 
 	gatewayClient, err := gatewayclient.NewForConfig(env.Cluster().Config())

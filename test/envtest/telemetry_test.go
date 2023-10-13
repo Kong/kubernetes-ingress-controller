@@ -63,11 +63,11 @@ func TestTelemetry(t *testing.T) {
 
 	t.Log("starting the controller manager")
 	go func() {
-		deprecatedLogger, _, err := manager.SetupLoggers(&cfg, io.Discard)
+		logger, err := manager.SetupLoggers(&cfg, io.Discard)
 		if !assert.NoError(t, err) {
 			return
 		}
-		err = manager.Run(ctx, &cfg, util.ConfigDumpDiagnostic{}, deprecatedLogger)
+		err = manager.Run(ctx, &cfg, util.ConfigDumpDiagnostic{}, logger)
 		assert.NoError(t, err)
 	}()
 

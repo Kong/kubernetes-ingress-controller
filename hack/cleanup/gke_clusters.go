@@ -9,6 +9,7 @@ import (
 
 	container "cloud.google.com/go/container/apiv1"
 	"cloud.google.com/go/container/apiv1/containerpb"
+	"github.com/go-logr/logr"
 	"google.golang.org/api/option"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/test/e2e"
@@ -16,7 +17,7 @@ import (
 
 const timeUntilClusterOrphaned = time.Hour
 
-func cleanupGKEClusters(ctx context.Context) error {
+func cleanupGKEClusters(ctx context.Context, log logr.Logger) error {
 	var creds map[string]string
 	if err := json.Unmarshal([]byte(gkeCreds), &creds); err != nil {
 		return fmt.Errorf("invalid credentials: %w", err)
@@ -29,7 +30,7 @@ func cleanupGKEClusters(ctx context.Context) error {
 	}
 	defer mgrc.Close()
 
-	clusterNames, err := findOrphanedClusters(ctx, mgrc)
+	clusterNames, err := findOrphanedClusters(ctx, log, mgrc)
 	if err != nil {
 		return fmt.Errorf("could not find orphaned clusters: %w", err)
 	}
@@ -41,7 +42,7 @@ func cleanupGKEClusters(ctx context.Context) error {
 
 	var errs []error
 	for _, clusterName := range clusterNames {
-		log.Infof("cleaning up cluster %s\n", clusterName)
+		log.Info("cleaning up cluster", "name", clusterName)
 		err := deleteCluster(ctx, mgrc, gkeProject, gkeLocation, clusterName)
 		if err != nil {
 			errs = append(errs, err)
@@ -69,7 +70,7 @@ func deleteCluster(ctx context.Context, mgrc *container.ClusterManagerClient, pr
 	return nil
 }
 
-func findOrphanedClusters(ctx context.Context, mgrc *container.ClusterManagerClient) ([]string, error) {
+func findOrphanedClusters(ctx context.Context, log logr.Logger, mgrc *container.ClusterManagerClient) ([]string, error) {
 	clusterListReq := containerpb.ListClustersRequest{
 		Parent: fmt.Sprintf("projects/%s/locations/%s", gkeProject, gkeLocation),
 	}
@@ -81,7 +82,7 @@ func findOrphanedClusters(ctx context.Context, mgrc *container.ClusterManagerCli
 	var orphanedClusterNames []string
 	for _, cluster := range clusterListResp.Clusters {
 		if !e2e.IsGKETestCluster(cluster) {
-			log.Infof("non test cluster %s found and skipped (built at %s)\n", cluster.Name, cluster.GetCreateTime())
+			log.Info("non test cluster found and skipped", "name", cluster.Name, "built_at", cluster.GetCreateTime())
 			continue
 		}
 
@@ -94,7 +95,7 @@ func findOrphanedClusters(ctx context.Context, mgrc *container.ClusterManagerCli
 		if time.Now().UTC().After(orphanTime) {
 			orphanedClusterNames = append(orphanedClusterNames, cluster.Name)
 		} else {
-			log.Infof("cluster %s skipped (built in the last %s)\n", cluster.Name, timeUntilClusterOrphaned)
+			log.Info("cluster skipped", "name", cluster.Name, "build_in_last", timeUntilClusterOrphaned)
 		}
 	}
 

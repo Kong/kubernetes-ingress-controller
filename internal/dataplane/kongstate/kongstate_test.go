@@ -7,11 +7,12 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/go-logr/zapr"
 	"github.com/kong/go-kong/kong"
 	"github.com/samber/lo"
-	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8stypes "k8s.io/apimachinery/pkg/types"
@@ -625,9 +626,8 @@ func TestFillConsumersAndCredentials(t *testing.T) {
 				Secrets:       secrets,
 				KongConsumers: tc.k8sConsumers,
 			})
-			logger := logrus.New()
-			failureCollector, err := failures.NewResourceFailuresCollector(logger)
-			require.NoError(t, err)
+			logger := zapr.NewLogger(zap.NewNop())
+			failureCollector := failures.NewResourceFailuresCollector(logger)
 
 			state := KongState{}
 			state.FillConsumersAndCredentials(store, failureCollector)
@@ -777,7 +777,7 @@ func TestKongState_FillIDs(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			tc.state.FillIDs(logrus.New())
+			tc.state.FillIDs(zapr.NewLogger(zap.NewNop()))
 			tc.expect(t, tc.state)
 		})
 	}
@@ -813,7 +813,7 @@ func TestKongState_BuildPluginsCollisions(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			log := logrus.New()
+			log := zapr.NewLogger(zap.NewNop())
 			store, _ := store.NewFakeStore(store.FakeObjects{
 				KongPlugins: tt.in,
 			})

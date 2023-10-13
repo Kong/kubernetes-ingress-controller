@@ -85,6 +85,14 @@ Adding a new version? You'll need three changes:
   [#4749](https://github.com/Kong/kubernetes-ingress-controller/pull/4749)
 - Removed Knative support.
   [#4748](https://github.com/Kong/kubernetes-ingress-controller/pull/4748)
+- Removed support for the `debug-log-reduce-redundancy` CLI flag.
+  [#4688](https://github.com/Kong/kubernetes-ingress-controller/pull/4688)
+- The "text" logging format has changed. "json" should be used for
+  machine-parseable logs.
+  [#4688](https://github.com/Kong/kubernetes-ingress-controller/pull/4688)
+- The "warn", "fatal", and "panic" log levels are no longer available. "error"
+  is now the highest log level. "warn" logs are now logged at "error" level.
+  [#4688](https://github.com/Kong/kubernetes-ingress-controller/pull/4688)
 - Removed support for deprecated `KongIngress` fields: `Proxy` and `Route`. Respective
   `Service` or `Ingress` annotations should be used instead. See [KIC Annotations reference].
   [#4760](https://github.com/Kong/kubernetes-ingress-controller/pull/4760)

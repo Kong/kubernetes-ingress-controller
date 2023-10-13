@@ -469,7 +469,7 @@ func AssignRoutePriorityToSplitHTTPRouteMatches(
 		// Just in case, log a very unlikely scenario where we have more than 2^18 matches with the same base
 		// priority and we have no bit space for them to be deterministically ordered.
 		if len(matches) > (1 << 18) {
-			logger.V(util.WarnLevel).Info("Too many HTTPRoute matches to be deterministically ordered", "match_number", len(matches))
+			logger.Error(nil, "Too many HTTPRoute matches to be deterministically ordered", "match_number", len(matches))
 		}
 	}
 

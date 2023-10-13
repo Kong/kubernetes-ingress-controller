@@ -5,9 +5,9 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/go-logr/logr"
 	"github.com/kong/deck/file"
 	"github.com/kong/go-kong/kong"
-	"github.com/sirupsen/logrus"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/deckgen"
 )
@@ -42,11 +42,11 @@ type StatusClient interface {
 }
 
 type DefaultConfigurationChangeDetector struct {
-	log logrus.FieldLogger
+	logger logr.Logger
 }
 
-func NewDefaultConfigurationChangeDetector(log logrus.FieldLogger) *DefaultConfigurationChangeDetector {
-	return &DefaultConfigurationChangeDetector{log: log}
+func NewDefaultConfigurationChangeDetector(logger logr.Logger) *DefaultConfigurationChangeDetector {
+	return &DefaultConfigurationChangeDetector{logger: logger}
 }
 
 func (d *DefaultConfigurationChangeDetector) HasConfigurationChanged(

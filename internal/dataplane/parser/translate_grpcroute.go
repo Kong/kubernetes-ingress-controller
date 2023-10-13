@@ -3,8 +3,6 @@ package parser
 import (
 	"fmt"
 
-	"github.com/bombsimon/logrusr/v4"
-
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/parser/translators"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/gatewayapi"
@@ -21,7 +19,7 @@ func (p *Parser) ingressRulesFromGRPCRoutes() ingressRules {
 
 	grpcRouteList, err := p.storer.ListGRPCRoutes()
 	if err != nil {
-		p.logger.WithError(err).Error("failed to list GRPCRoutes")
+		p.logger.Error(err, "failed to list GRPCRoutes")
 		return result
 	}
 
@@ -44,7 +42,7 @@ func (p *Parser) ingressRulesFromGRPCRoutes() ingressRules {
 
 	if len(errs) > 0 {
 		for _, err := range errs {
-			p.logger.Errorf(err.Error())
+			p.logger.Error(err, "could not generate route from GRPCRoute")
 		}
 	}
 
@@ -106,7 +104,7 @@ func (p *Parser) ingressRulesFromGRPCRoutesUsingExpressionRoutes(grpcRoutes []*g
 	}
 
 	// assign priorities to split GRPCRoutes.
-	splitGRPCRouteMatchesWithPriorities := translators.AssignRoutePriorityToSplitGRPCRouteMatches(logrusr.New(p.logger), splitGRPCRouteMatches)
+	splitGRPCRouteMatchesWithPriorities := translators.AssignRoutePriorityToSplitGRPCRouteMatches(p.logger, splitGRPCRouteMatches)
 	// generate Kong service and route from each split GRPC route with its assigned priority of Kong route.
 	for _, splitGRPCRouteMatchWithPriority := range splitGRPCRouteMatchesWithPriorities {
 		p.ingressRulesFromGRPCRouteWithPriority(result, splitGRPCRouteMatchWithPriority)
@@ -126,8 +124,9 @@ func (p *Parser) ingressRulesFromGRPCRouteWithPriority(
 	grpcRoute := splitGRPCRouteMatchWithPriority.Match.Source
 	// (very unlikely that) the rule index split from the source GRPCRoute is larger then length of original rules.
 	if len(grpcRoute.Spec.Rules) <= match.RuleIndex {
-		p.logger.Infof("WARN: split rule index %d is larger then the length of rules in source GRPCRoute %d",
-			match.RuleIndex, len(grpcRoute.Spec.Rules))
+		p.logger.Error(nil, "split rule index is greater than the length of rules in source GRPCRoute",
+			"rule_index", match.RuleIndex,
+			"rule_count", len(grpcRoute.Spec.Rules))
 		return
 	}
 	grpcRouteRule := grpcRoute.Spec.Rules[match.RuleIndex]

@@ -6,9 +6,10 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/sirupsen/logrus"
+	"github.com/go-logr/zapr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/zap"
 	netv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -143,7 +144,7 @@ func TestGetIngressClassParameters(t *testing.T) {
 			require.NoError(t, err)
 			err = cacheStores.Add(icp)
 			require.NoError(t, err)
-			s := store.New(cacheStores, ingressClass.Name, logrus.New())
+			s := store.New(cacheStores, ingressClass.Name, zapr.NewLogger(zap.NewNop()))
 			icpSpec, err := getIngressClassParametersOrDefault(s)
 			assert.Truef(t, reflect.DeepEqual(*tc.parameterSpec, icpSpec),
 				fmt.Sprintf("should get same ingress parameter spec: expected %+v, actual %+v", tc.parameterSpec, icpSpec),

@@ -6,10 +6,11 @@ import (
 	"net/http"
 	"testing"
 
+	"github.com/go-logr/zapr"
 	"github.com/kong/go-kong/kong"
 	"github.com/samber/lo"
-	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/zap"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -536,7 +537,7 @@ func TestKongHTTPValidator_ValidateConsumerGroup(t *testing.T) {
 					consumerGroupSvc: tt.ConsumerGroupSvc,
 				},
 				ingressClassMatcher: fakeClassMatcher,
-				Logger:              logrus.New(),
+				Logger:              zapr.NewLogger(zap.NewNop()),
 			}
 			got, gotMsg, err := validator.ValidateConsumerGroup(context.Background(), tt.args.cg)
 			if (err != nil) != tt.wantErr {

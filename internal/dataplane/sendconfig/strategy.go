@@ -3,10 +3,10 @@ package sendconfig
 import (
 	"context"
 
+	"github.com/go-logr/logr"
 	"github.com/kong/deck/dump"
 	"github.com/kong/deck/file"
 	"github.com/kong/go-kong/kong"
-	"github.com/sirupsen/logrus"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/adminapi"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/metrics"
@@ -57,13 +57,13 @@ type ResourceError struct {
 
 type DefaultUpdateStrategyResolver struct {
 	config Config
-	log    logrus.FieldLogger
+	logger logr.Logger
 }
 
-func NewDefaultUpdateStrategyResolver(config Config, log logrus.FieldLogger) DefaultUpdateStrategyResolver {
+func NewDefaultUpdateStrategyResolver(config Config, logger logr.Logger) DefaultUpdateStrategyResolver {
 	return DefaultUpdateStrategyResolver{
 		config: config,
-		log:    log,
+		logger: logger,
 	}
 }
 
@@ -78,7 +78,7 @@ func (r DefaultUpdateStrategyResolver) ResolveUpdateStrategy(
 	updateStrategy := r.resolveUpdateStrategy(client)
 
 	if clientWithBackoff, ok := client.(UpdateClientWithBackoff); ok {
-		return NewUpdateStrategyWithBackoff(updateStrategy, clientWithBackoff.BackoffStrategy(), r.log)
+		return NewUpdateStrategyWithBackoff(updateStrategy, clientWithBackoff.BackoffStrategy(), r.logger)
 	}
 
 	return updateStrategy
@@ -116,6 +116,6 @@ func (r DefaultUpdateStrategyResolver) resolveUpdateStrategy(client UpdateClient
 	return NewUpdateStrategyInMemory(
 		adminAPIClient,
 		DefaultContentToDBLessConfigConverter{},
-		r.log,
+		r.logger,
 	)
 }

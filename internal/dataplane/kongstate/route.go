@@ -5,8 +5,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/go-logr/logr"
 	"github.com/kong/go-kong/kong"
-	"github.com/sirupsen/logrus"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
@@ -182,7 +182,7 @@ func (r *Route) overrideRegexPriority(anns map[string]string) {
 	r.RegexPriority = kong.Int(regexPriority)
 }
 
-func (r *Route) overrideMethods(log logrus.FieldLogger, anns map[string]string) {
+func (r *Route) overrideMethods(logger logr.Logger, anns map[string]string) {
 	annMethods := annotations.ExtractMethods(anns)
 	if len(annMethods) == 0 {
 		return
@@ -195,7 +195,7 @@ func (r *Route) overrideMethods(log logrus.FieldLogger, anns map[string]string) 
 		} else {
 			// if any method is invalid (not an uppercase alpha string),
 			// discard everything
-			log.WithField("kongroute", r.Name).Errorf("invalid method: %v", method)
+			logger.Error(nil, "invalid method", "route_name", r.Name, "method", method)
 			return
 		}
 	}
@@ -203,7 +203,7 @@ func (r *Route) overrideMethods(log logrus.FieldLogger, anns map[string]string) 
 	r.Methods = methods
 }
 
-func (r *Route) overrideSNIs(log logrus.FieldLogger, anns map[string]string) {
+func (r *Route) overrideSNIs(logger logr.Logger, anns map[string]string) {
 	var annSNIs []string
 	var exists bool
 	annSNIs, exists = annotations.ExtractSNIs(anns)
@@ -219,7 +219,7 @@ func (r *Route) overrideSNIs(log logrus.FieldLogger, anns map[string]string) {
 			snis = append(snis, kong.String(sanitizedSNI))
 		} else {
 			// SNI is not a valid hostname
-			log.WithField("kongroute", r.Name).Errorf("invalid SNI: %v", sni)
+			logger.Error(nil, "invalid SNI", "route_name", r.Name, "sni", sni)
 			return
 		}
 	}
@@ -228,37 +228,37 @@ func (r *Route) overrideSNIs(log logrus.FieldLogger, anns map[string]string) {
 }
 
 // overrideByAnnotation sets Route protocols via annotation.
-func (r *Route) overrideByAnnotation(log logrus.FieldLogger) {
+func (r *Route) overrideByAnnotation(logger logr.Logger) {
 	r.overrideStripPath(r.Ingress.Annotations)
 	r.overrideHTTPSRedirectCode(r.Ingress.Annotations)
 	r.overridePreserveHost(r.Ingress.Annotations)
-	r.overrideRequestBuffering(log, r.Ingress.Annotations)
-	r.overrideResponseBuffering(log, r.Ingress.Annotations)
+	r.overrideRequestBuffering(logger, r.Ingress.Annotations)
+	r.overrideResponseBuffering(logger, r.Ingress.Annotations)
 	r.overrideProtocols(r.Ingress.Annotations)
 	// skip the fields that are not supported when kong is using expression router:
 	// `regexPriority`, `methods`, `snis`, `hosts`, `headers`, `pathHandling`,
 	if !r.ExpressionRoutes {
 		r.overrideRegexPriority(r.Ingress.Annotations)
-		r.overrideMethods(log, r.Ingress.Annotations)
-		r.overrideSNIs(log, r.Ingress.Annotations)
-		r.overrideHosts(log, r.Ingress.Annotations)
+		r.overrideMethods(logger, r.Ingress.Annotations)
+		r.overrideSNIs(logger, r.Ingress.Annotations)
+		r.overrideHosts(logger, r.Ingress.Annotations)
 		r.overrideHeaders(r.Ingress.Annotations)
-		r.overridePathHandling(log, r.Ingress.Annotations)
+		r.overridePathHandling(logger, r.Ingress.Annotations)
 	}
 }
 
 // override sets Route fields by KongIngress first, then by annotation.
-func (r *Route) override(log logrus.FieldLogger) {
+func (r *Route) override(logger logr.Logger) {
 	if r == nil {
 		return
 	}
 
-	r.overrideByAnnotation(log)
+	r.overrideByAnnotation(logger)
 	r.normalizeProtocols()
 }
 
 // overrideRequestBuffering ensures defaults for the request_buffering option.
-func (r *Route) overrideRequestBuffering(log logrus.FieldLogger, anns map[string]string) {
+func (r *Route) overrideRequestBuffering(logger logr.Logger, anns map[string]string) {
 	annotationValue, ok := annotations.ExtractRequestBuffering(anns)
 	if !ok {
 		// the annotation is not set, quit
@@ -268,7 +268,7 @@ func (r *Route) overrideRequestBuffering(log logrus.FieldLogger, anns map[string
 	isEnabled, err := strconv.ParseBool(strings.ToLower(annotationValue))
 	if err != nil {
 		// the value provided is not a parseable boolean, quit
-		log.WithField("kongroute", r.Name).Errorf("invalid request_buffering value: %s", err)
+		logger.Error(err, "invalid request_buffering value", "kongroute", r.Name)
 		return
 	}
 
@@ -276,7 +276,7 @@ func (r *Route) overrideRequestBuffering(log logrus.FieldLogger, anns map[string
 }
 
 // overrideResponseBuffering ensures defaults for the response_buffering option.
-func (r *Route) overrideResponseBuffering(log logrus.FieldLogger, anns map[string]string) {
+func (r *Route) overrideResponseBuffering(logger logr.Logger, anns map[string]string) {
 	annotationValue, ok := annotations.ExtractResponseBuffering(anns)
 	if !ok {
 		// the annotation is not set, quit
@@ -286,7 +286,7 @@ func (r *Route) overrideResponseBuffering(log logrus.FieldLogger, anns map[strin
 	isEnabled, err := strconv.ParseBool(strings.ToLower(annotationValue))
 	if err != nil {
 		// the value provided is not a parseable boolean, quit
-		log.WithField("kongroute", r.Name).Errorf("invalid response_buffering value: %s", err)
+		logger.Error(err, "invalid response_buffering values", "kongroute", r.Name)
 		return
 	}
 
@@ -294,7 +294,7 @@ func (r *Route) overrideResponseBuffering(log logrus.FieldLogger, anns map[strin
 }
 
 // overrideHosts appends Host-Aliases to Hosts.
-func (r *Route) overrideHosts(log logrus.FieldLogger, anns map[string]string) {
+func (r *Route) overrideHosts(logger logr.Logger, anns map[string]string) {
 	var hosts []*string
 	var annHostAliases []string
 	var exists bool
@@ -322,7 +322,7 @@ func (r *Route) overrideHosts(log logrus.FieldLogger, anns map[string]string) {
 			hosts = appendIfMissing(hosts, sanitizedHost)
 		} else {
 			// Host Alias is not a valid hostname
-			log.WithField("kongroute", r.Name).Errorf("invalid host: %v", hostAlias)
+			logger.Error(nil, "invalid host alias", "value", hostAlias, "kongroute", r.Name)
 			return
 		}
 	}
@@ -338,14 +338,14 @@ func (r *Route) overrideHeaders(anns map[string]string) {
 	r.Headers = headers
 }
 
-func (r *Route) overridePathHandling(log logrus.FieldLogger, anns map[string]string) {
+func (r *Route) overridePathHandling(logger logr.Logger, anns map[string]string) {
 	val, ok := annotations.ExtractPathHandling(anns)
 	if !ok {
 		return
 	}
 
 	if !validPathHandling.MatchString(val) {
-		log.WithField("kongroute", r.Name).Errorf("invalid path_handling value: %s", val)
+		logger.Error(nil, "invalid path_handling", "value", val, "kongroute", r.Name)
 		return
 	}
 

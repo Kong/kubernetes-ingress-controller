@@ -6,8 +6,8 @@ import (
 	"strings"
 
 	"github.com/blang/semver/v4"
+	"github.com/go-logr/logr"
 	"github.com/kong/go-kong/kong"
-	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	netv1 "k8s.io/api/networking/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -22,6 +22,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/parser"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/gatewayapi"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 	kongv1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1"
 	kongv1beta1 "github.com/kong/kubernetes-ingress-controller/v2/pkg/apis/configuration/v1beta1"
 )
@@ -51,7 +52,7 @@ type AdminAPIServicesProvider interface {
 // KongHTTPValidator implements KongValidator interface to validate Kong
 // entities using the Admin API of Kong.
 type KongHTTPValidator struct {
-	Logger                   logrus.FieldLogger
+	Logger                   logr.Logger
 	SecretGetter             kongstate.SecretGetter
 	ManagerClient            client.Client
 	AdminAPIServicesProvider AdminAPIServicesProvider
@@ -67,7 +68,7 @@ type KongHTTPValidator struct {
 // such as consumer credentials secrets. If you do not pass a cached client
 // here, the performance of this validator can get very poor at high scales.
 func NewKongHTTPValidator(
-	logger logrus.FieldLogger,
+	logger logr.Logger,
 	managerClient client.Client,
 	ingressClass string,
 	servicesProvider AdminAPIServicesProvider,
@@ -190,12 +191,12 @@ func (validator KongHTTPValidator) ValidateConsumerGroup(
 	}
 	info, err := infoSvc.Get(ctx)
 	if err != nil {
-		validator.Logger.Debugf("failed to fetch Kong info: %v", err)
+		validator.Logger.V(util.DebugLevel).Info("failed to fetch Kong info", "error", err)
 		return false, ErrTextAdminAPIUnavailable, nil
 	}
 	version, err := kong.NewVersion(info.Version)
 	if err != nil {
-		validator.Logger.Debugf("failed to parse Kong version: %v", err)
+		validator.Logger.V(util.DebugLevel).Info("failed to parse Kong version", "error", err)
 	} else {
 		if !version.IsKongGatewayEnterprise() {
 			return false, ErrTextConsumerGroupUnsupported, nil
@@ -495,7 +496,7 @@ func (validator KongHTTPValidator) ensureConsumerDoesNotExistInGateway(ctx conte
 		c, err := consumerSvc.Get(ctx, &username)
 		if err != nil {
 			if !kong.IsNotFoundErr(err) {
-				validator.Logger.WithError(err).Error("failed to fetch consumer from kong")
+				validator.Logger.Error(err, "failed to fetch consumer from kong")
 				return ErrTextConsumerUnretrievable, err
 			}
 		}

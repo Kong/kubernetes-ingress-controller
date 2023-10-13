@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/go-logr/logr"
 	"github.com/oapi-codegen/runtime/types"
 	"github.com/samber/lo"
 
@@ -23,7 +24,7 @@ const (
 )
 
 // cleanupKonnectControlPlanes deletes orphaned control planes created by the tests and their roles.
-func cleanupKonnectControlPlanes(ctx context.Context) error {
+func cleanupKonnectControlPlanes(ctx context.Context, log logr.Logger) error {
 	cpClient, err := cp.NewClientWithResponses(konnectControlPlanesBaseURL, cp.WithRequestEditorFn(
 		func(ctx context.Context, req *http.Request) error {
 			req.Header.Set("Authorization", "Bearer "+konnectAccessToken)
@@ -34,11 +35,11 @@ func cleanupKonnectControlPlanes(ctx context.Context) error {
 		return fmt.Errorf("failed to create control planes client: %w", err)
 	}
 
-	orphanedCPs, err := findOrphanedControlPlanes(ctx, cpClient)
+	orphanedCPs, err := findOrphanedControlPlanes(ctx, log, cpClient)
 	if err != nil {
 		return fmt.Errorf("failed to find orphaned control planes: %w", err)
 	}
-	if err := deleteControlPlanes(ctx, orphanedCPs, cpClient); err != nil {
+	if err := deleteControlPlanes(ctx, log, orphanedCPs, cpClient); err != nil {
 		return fmt.Errorf("failed to delete control planes: %w", err)
 	}
 
@@ -50,11 +51,11 @@ func cleanupKonnectControlPlanes(ctx context.Context) error {
 	// We can drop this once the automated cleanup is implemented on Konnect side:
 	// https://konghq.atlassian.net/browse/TPS-1453.
 	rolesClient := roles.NewClient(&http.Client{}, konnectRolesBaseURL, konnectAccessToken)
-	rolesToDelete, err := findOrphanedRolesToDelete(ctx, orphanedCPs, rolesClient)
+	rolesToDelete, err := findOrphanedRolesToDelete(ctx, log, orphanedCPs, rolesClient)
 	if err != nil {
 		return fmt.Errorf("failed to list control plane roles to delete: %w", err)
 	}
-	if err := deleteRoles(ctx, rolesToDelete, rolesClient); err != nil {
+	if err := deleteRoles(ctx, log, rolesToDelete, rolesClient); err != nil {
 		return fmt.Errorf("failed to delete control plane roles: %w", err)
 	}
 
@@ -62,7 +63,7 @@ func cleanupKonnectControlPlanes(ctx context.Context) error {
 }
 
 // findOrphanedControlPlanes finds control planes that were created by the tests and are older than timeUntilControlPlaneOrphaned.
-func findOrphanedControlPlanes(ctx context.Context, c *cp.ClientWithResponses) ([]types.UUID, error) {
+func findOrphanedControlPlanes(ctx context.Context, log logr.Logger, c *cp.ClientWithResponses) ([]types.UUID, error) {
 	response, err := c.ListControlPlanesWithResponse(ctx, &cp.ListControlPlanesParams{
 		PageSize: lo.ToPtr(konnectControlPlanesLimit),
 	})
@@ -79,16 +80,16 @@ func findOrphanedControlPlanes(ctx context.Context, c *cp.ClientWithResponses) (
 	var orphanedControlPlanes []types.UUID
 	for _, ControlPlane := range *response.JSON200.Data {
 		if ControlPlane.Labels == nil || (*ControlPlane.Labels)[createdInTestsControlPlaneLabel] != "true" {
-			log.Infof("control plane %s was not created by the tests, skipping\n", *ControlPlane.Name)
+			log.Info("control plane was not created by the tests, skipping", "name", *ControlPlane.Name)
 			continue
 		}
 		if ControlPlane.CreatedAt == nil {
-			log.Infof("control plane %s has no creation timestamp, skipping\n", *ControlPlane.Name)
+			log.Info("control plane has no creation timestamp, skipping", "name", *ControlPlane.Name)
 			continue
 		}
 		orphanedAfter := (*ControlPlane.CreatedAt).Add(timeUntilControlPlaneOrphaned)
 		if !time.Now().After(orphanedAfter) {
-			log.Infof("control plane %s is not old enough to be considered orphaned, created at %s, skipping\n", *ControlPlane.Name, *ControlPlane.CreatedAt)
+			log.Info("control plane is not old enough to be considered orphaned, skipping", "name", *ControlPlane.Name, "created_at", *ControlPlane.CreatedAt)
 			continue
 		}
 		orphanedControlPlanes = append(orphanedControlPlanes, *ControlPlane.Id)
@@ -97,7 +98,7 @@ func findOrphanedControlPlanes(ctx context.Context, c *cp.ClientWithResponses) (
 }
 
 // deleteControlPlanes deletes control planes by their IDs.
-func deleteControlPlanes(ctx context.Context, cpsIDs []types.UUID, c *cp.ClientWithResponses) error {
+func deleteControlPlanes(ctx context.Context, log logr.Logger, cpsIDs []types.UUID, c *cp.ClientWithResponses) error {
 	if len(cpsIDs) < 1 {
 		log.Info("no control planes to clean up")
 		return nil
@@ -105,7 +106,7 @@ func deleteControlPlanes(ctx context.Context, cpsIDs []types.UUID, c *cp.ClientW
 
 	var errs []error
 	for _, cpID := range cpsIDs {
-		log.Infof("deleting control plane %s\n", cpID)
+		log.Info("deleting control plane", "name", cpID)
 		if _, err := c.DeleteControlPlaneWithResponse(ctx, cpID); err != nil {
 			errs = append(errs, fmt.Errorf("failed to delete control plane %s: %w", cpID, err))
 		}
@@ -114,7 +115,7 @@ func deleteControlPlanes(ctx context.Context, cpsIDs []types.UUID, c *cp.ClientW
 }
 
 // findOrphanedRolesToDelete gets a list of roles that belong to the orphaned control planes.
-func findOrphanedRolesToDelete(ctx context.Context, orphanedCPsIDs []types.UUID, rolesClient *roles.Client) ([]string, error) {
+func findOrphanedRolesToDelete(ctx context.Context, log logr.Logger, orphanedCPsIDs []types.UUID, rolesClient *roles.Client) ([]string, error) {
 	if len(orphanedCPsIDs) < 1 {
 		log.Info("no control planes to clean up, skipping listing roles")
 		return nil, nil
@@ -131,7 +132,7 @@ func findOrphanedRolesToDelete(ctx context.Context, orphanedCPsIDs []types.UUID,
 			return cpID.String() == role.EntityID
 		})
 		if !belongsToOrphanedControlPlane {
-			log.Infof("role %s is not assigned to an orphaned control plane, skipping\n", role.ID)
+			log.Info("role is not assigned to an orphaned control plane, skipping", "id", role.ID)
 			continue
 		}
 		rolesIDsToDelete = append(rolesIDsToDelete, role.ID)
@@ -140,7 +141,7 @@ func findOrphanedRolesToDelete(ctx context.Context, orphanedCPsIDs []types.UUID,
 }
 
 // deleteRoles deletes roles by their IDs.
-func deleteRoles(ctx context.Context, rolesIDsToDelete []string, rolesClient *roles.Client) error {
+func deleteRoles(ctx context.Context, log logr.Logger, rolesIDsToDelete []string, rolesClient *roles.Client) error {
 	if len(rolesIDsToDelete) == 0 {
 		log.Info("no roles to delete")
 		return nil
@@ -148,7 +149,7 @@ func deleteRoles(ctx context.Context, rolesIDsToDelete []string, rolesClient *ro
 
 	var errs []error
 	for _, roleID := range rolesIDsToDelete {
-		log.Infof("deleting role %s\n", roleID)
+		log.Info("deleting role", "id", roleID)
 		if err := rolesClient.DeleteRole(ctx, roleID); err != nil {
 			errs = append(errs, fmt.Errorf("failed to delete role %s: %w", roleID, err))
 		}

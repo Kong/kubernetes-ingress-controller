@@ -4,10 +4,11 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/sirupsen/logrus"
+	"github.com/go-logr/logr"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/adminapi"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/metrics"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 )
 
 type UpdateSkippedDueToBackoffStrategyError struct {
@@ -26,18 +27,18 @@ func (e UpdateSkippedDueToBackoffStrategyError) Error() string {
 type UpdateStrategyWithBackoff struct {
 	decorated       UpdateStrategy
 	backoffStrategy adminapi.UpdateBackoffStrategy
-	log             logrus.FieldLogger
+	logger          logr.Logger
 }
 
 func NewUpdateStrategyWithBackoff(
 	decorated UpdateStrategy,
 	backoffStrategy adminapi.UpdateBackoffStrategy,
-	log logrus.FieldLogger,
+	logger logr.Logger,
 ) UpdateStrategyWithBackoff {
 	return UpdateStrategyWithBackoff{
 		decorated:       decorated,
 		backoffStrategy: backoffStrategy,
-		log:             log,
+		logger:          logger,
 	}
 }
 
@@ -57,7 +58,7 @@ func (s UpdateStrategyWithBackoff) Update(ctx context.Context, targetContent Con
 
 	err, resourceErrors, resourceErrorsParseErr = s.decorated.Update(ctx, targetContent)
 	if err != nil {
-		s.log.WithError(err).Debug("Update failed, registering it for backoff strategy")
+		s.logger.V(util.DebugLevel).Error(err, "Update failed, registering it for backoff strategy")
 		s.backoffStrategy.RegisterUpdateFailure(err, targetContent.Hash)
 	} else {
 		s.backoffStrategy.RegisterUpdateSuccess()

@@ -23,8 +23,8 @@ require (
 	github.com/Masterminds/sprig/v3 v3.2.3
 	github.com/avast/retry-go/v4 v4.5.0
 	github.com/blang/semver/v4 v4.0.0
-	github.com/bombsimon/logrusr/v4 v4.0.0
 	github.com/go-logr/logr v1.2.4
+	github.com/go-logr/zapr v1.2.4
 	github.com/goccy/go-json v0.10.2
 	github.com/google/go-cmp v0.6.0
 	github.com/google/uuid v1.3.1
@@ -44,11 +44,11 @@ require (
 	github.com/samber/lo v1.38.1
 	github.com/samber/mo v1.11.0
 	github.com/sethvargo/go-password v0.2.0
-	github.com/sirupsen/logrus v1.9.3
 	github.com/spf13/cobra v1.7.0
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.8.4
 	github.com/testcontainers/testcontainers-go v0.25.0
+	go.uber.org/zap v1.26.0
 	google.golang.org/api v0.146.0
 	k8s.io/api v0.28.2
 	k8s.io/apiextensions-apiserver v0.28.2
@@ -82,7 +82,7 @@ require (
 	github.com/opencontainers/runc v1.1.5 // indirect
 	github.com/puzpuzpuz/xsync/v2 v2.4.1 // indirect
 	github.com/shoenig/go-m1cpu v0.1.6 // indirect
-	go.uber.org/zap v1.26.0 // indirect
+	github.com/sirupsen/logrus v1.9.3 // indirect
 	golang.org/x/net v0.17.0 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20230913181813-007df8e322eb // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20230920204549-e6e6cdab5c13 // indirect

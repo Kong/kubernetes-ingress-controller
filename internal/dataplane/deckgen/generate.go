@@ -6,10 +6,10 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/go-logr/logr"
 	"github.com/kong/deck/file"
 	"github.com/kong/go-kong/kong"
 	"github.com/samber/lo"
-	"github.com/sirupsen/logrus"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/versions"
@@ -37,7 +37,7 @@ type GenerateDeckContentParams struct {
 // ToDeckContent generates a decK configuration from `k8sState` and auxiliary parameters.
 func ToDeckContent(
 	ctx context.Context,
-	log logrus.FieldLogger,
+	logger logr.Logger,
 	k8sState *kongstate.KongState,
 	params GenerateDeckContentParams,
 ) *file.Content {
@@ -51,7 +51,7 @@ func ToDeckContent(
 				Plugin: *p.DeepCopy(),
 			}
 			if err := fillPlugin(ctx, &plugin, params.PluginSchemas); err != nil {
-				log.Errorf("failed to fill-in defaults for plugin: %s", *plugin.Name)
+				logger.Error(err, "failed to fill in defaults for plugin", "plugin_name", *plugin.Name)
 			}
 			service.Plugins = append(service.Plugins, &plugin)
 			sort.SliceStable(service.Plugins, func(i, j int) bool {
@@ -68,7 +68,7 @@ func ToDeckContent(
 					Plugin: *p.DeepCopy(),
 				}
 				if err := fillPlugin(ctx, &plugin, params.PluginSchemas); err != nil {
-					log.Errorf("failed to fill-in defaults for plugin: %s", *plugin.Name)
+					logger.Error(err, "failed to fill in defaults for plugin", "plugin_name", *plugin.Name)
 				}
 				route.Plugins = append(route.Plugins, &plugin)
 				sort.SliceStable(route.Plugins, func(i, j int) bool {
@@ -91,7 +91,7 @@ func ToDeckContent(
 			Plugin: plugin.Plugin,
 		}
 		if err := fillPlugin(ctx, &plugin, params.PluginSchemas); err != nil {
-			log.Errorf("failed to fill-in defaults for plugin: %s", *plugin.Name)
+			logger.Error(err, "failed to fill in defaults for plugin", "plugin_name", *plugin.Name)
 		}
 		content.Plugins = append(content.Plugins, plugin)
 	}
@@ -157,7 +157,7 @@ func ToDeckContent(
 		// fail the rest of the deckgen either or this will result in one bad consumer being capable of
 		// stopping all updates to the Kong Admin API.
 		if consumer.Username == nil {
-			log.Errorf("invalid consumer received (username was empty)")
+			logger.Error(nil, "invalid consumer received (username was empty)")
 			continue
 		}
 

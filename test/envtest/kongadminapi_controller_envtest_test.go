@@ -9,12 +9,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/bombsimon/logrusr/v4"
+	"github.com/go-logr/zapr"
 	"github.com/google/uuid"
 	"github.com/samber/lo"
-	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -61,7 +61,7 @@ func startKongAdminAPIServiceReconciler(ctx context.Context, t *testing.T, clien
 	adminPod = CreatePod(ctx, t, client, ns.Name)
 
 	mgr, err := ctrl.NewManager(cfg, ctrl.Options{
-		Logger: logrusr.New(logrus.New()),
+		Logger: zapr.NewLogger(zap.NewNop()),
 		Scheme: client.Scheme(),
 		Metrics: metricsserver.Options{
 			BindAddress: "0",

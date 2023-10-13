@@ -9,10 +9,10 @@ import (
 	"strings"
 
 	"github.com/blang/semver/v4"
+	"github.com/go-logr/logr"
 	"github.com/kong/go-kong/kong"
 	"github.com/samber/lo"
 	"github.com/samber/mo"
-	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
 	netv1 "k8s.io/api/networking/v1"
@@ -73,7 +73,7 @@ type FeatureFlags struct {
 }
 
 func NewFeatureFlags(
-	logger logrus.FieldLogger,
+	logger logr.Logger,
 	featureGates featuregates.FeatureGates,
 	kongVersion semver.Version,
 	routerFlavor string,
@@ -89,7 +89,7 @@ func NewFeatureFlags(
 }
 
 func shouldEnableParserExpressionRoutes(
-	logger logrus.FieldLogger,
+	logger logr.Logger,
 	featureGates featuregates.FeatureGates,
 	routerFlavor string,
 ) bool {
@@ -97,10 +97,10 @@ func shouldEnableParserExpressionRoutes(
 		return false
 	}
 	if routerFlavor != kongRouterFlavorExpressions {
-		logger.Infof("ExpressionRoutes feature gate enabled but Gateway is running with %q router flavor, using that instead", routerFlavor)
+		logger.V(util.InfoLevel).Info("ExpressionRoutes feature gate enabled but Gateway is running with incompatible router flavor, using that instead", "flavor", routerFlavor)
 		return false
 	}
-	logger.Info("expression routes mode enabled")
+	logger.V(util.InfoLevel).Info("expression routes mode enabled")
 	return true
 }
 
@@ -114,7 +114,7 @@ type LicenseGetter interface {
 // equivalent Kong objects and configurations, producing a complete
 // state configuration for the Kong Admin API.
 type Parser struct {
-	logger        logrus.FieldLogger
+	logger        logr.Logger
 	storer        store.Storer
 	licenseGetter LicenseGetter
 	featureFlags  FeatureFlags
@@ -127,15 +127,12 @@ type Parser struct {
 // NewParser produces a new Parser object provided a logging mechanism
 // and a Kubernetes object store.
 func NewParser(
-	logger logrus.FieldLogger,
+	logger logr.Logger,
 	storer store.Storer,
 	featureFlags FeatureFlags,
 	kongVersion semver.Version,
 ) (*Parser, error) {
-	failuresCollector, err := failures.NewResourceFailuresCollector(logger)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create translation errors collector: %w", err)
-	}
+	failuresCollector := failures.NewResourceFailuresCollector(logger)
 
 	// If the feature flag is enabled, create a new collector for parsed objects.
 	var parsedObjectsCollector *ObjectsCollector
@@ -397,7 +394,8 @@ func (p *Parser) getUpstreams(serviceMap map[string]kongstate.Service) ([]kongst
 				newTargets := getServiceEndpoints(p.logger, p.storer, k8sService, port)
 
 				if len(newTargets) == 0 {
-					p.logger.WithField("service_name", *service.Name).Infof("no targets could be found for kubernetes service %s/%s", k8sService.Namespace, k8sService.Name)
+					p.logger.V(util.InfoLevel).Info("no targets could be found for kubernetes service",
+						"namespace", k8sService.Namespace, "name", k8sService.Name, "kong_service", *service.Name)
 				}
 
 				// if weights were set for the backend then that weight needs to be
@@ -432,7 +430,7 @@ func (p *Parser) getUpstreams(serviceMap map[string]kongstate.Service) ([]kongst
 
 			// warn if an upstream was created with 0 targets
 			if len(targets) == 0 {
-				p.logger.WithField("service_name", *service.Name).Infof("no targets found to create upstream")
+				p.logger.V(util.InfoLevel).Info("no targets found to create upstream", "service_name", *service.Name)
 			}
 
 			// define the upstream including all the newly populated targets
@@ -480,12 +478,12 @@ type certWrapper struct {
 }
 
 func (p *Parser) getGatewayCerts() []certWrapper {
-	log := p.logger
+	logger := p.logger
 	s := p.storer
 	certs := []certWrapper{}
 	gateways, err := s.ListGateways()
 	if err != nil {
-		log.WithError(err).Error("failed to list Gateways")
+		logger.Error(err, "failed to list Gateways")
 		return certs
 	}
 	for _, gateway := range gateways {
@@ -497,12 +495,12 @@ func (p *Parser) getGatewayCerts() []certWrapper {
 		for _, listener := range gateway.Spec.Listeners {
 			status, ok := statuses[listener.Name]
 			if !ok {
-				log.WithFields(logrus.Fields{
-					"gateway":           gateway.Name,
-					"listener":          listener.Name,
-					"listener_protocol": listener.Protocol,
-					"listener_port":     listener.Port,
-				}).Debug("listener missing status information")
+				logger.V(util.DebugLevel).Info("listener missing status information",
+					"gateway", gateway.Name,
+					"listener", listener.Name,
+					"listener_protocol", listener.Protocol,
+					"listener_port", listener.Port,
+				)
 				continue
 			}
 
@@ -536,12 +534,12 @@ func (p *Parser) getGatewayCerts() []certWrapper {
 					// retrieve the Secret and extract the PEM strings
 					secret, err := s.GetSecret(namespace, string(ref.Name))
 					if err != nil {
-						log.WithFields(logrus.Fields{
-							"gateway":          gateway.Name,
-							"listener":         listener.Name,
-							"secret_name":      string(ref.Name),
-							"secret_namespace": namespace,
-						}).WithError(err).Error("failed to fetch secret")
+						logger.Error(err, "failed to fetch secret",
+							"gateway", gateway.Name,
+							"listener", listener.Name,
+							"secret_name", string(ref.Name),
+							"secret_namespace", namespace,
+						)
 						continue
 					}
 					cert, key, err := getCertFromSecret(secret)
@@ -619,7 +617,7 @@ func (p *Parser) registerResourceFailureNotSupportedForExpressionRoutes(obj clie
 	}
 }
 
-func mergeCerts(log logrus.FieldLogger, certLists ...[]certWrapper) []kongstate.Certificate {
+func mergeCerts(logger logr.Logger, certLists ...[]certWrapper) []kongstate.Certificate {
 	snisSeen := make(map[string]string)
 	certsSeen := make(map[string]certWrapper)
 	for _, cl := range certLists {
@@ -654,11 +652,10 @@ func mergeCerts(log logrus.FieldLogger, certLists ...[]certWrapper) []kongstate.
 					// what binds the SNI to a given Secret. Knowing the Secret ID isn't of great use beyond knowing
 					// what cert will be served. however, the secretToSNIs input to getCerts does not provide this info
 					// https://github.com/Kong/kubernetes-ingress-controller/issues/2605
-					log.WithFields(logrus.Fields{
-						"served_secret_cert":    seen,
-						"requested_secret_cert": *current.cert.ID,
-						"sni":                   sni,
-					}).Error("same SNI requested for multiple certs, can only serve one cert")
+					logger.Error(nil, "same SNI requested for multiple certs, can only serve one cert",
+						"served_secret_cert", seen,
+						"requested_secret_cert", *current.cert.ID,
+						"sni", sni)
 				}
 			}
 			certsSeen[current.identifier] = current
@@ -675,16 +672,16 @@ func mergeCerts(log logrus.FieldLogger, certLists ...[]certWrapper) []kongstate.
 }
 
 func getServiceEndpoints(
-	log logrus.FieldLogger,
+	logger logr.Logger,
 	s store.Storer,
 	svc *corev1.Service,
 	servicePort *corev1.ServicePort,
 ) []kongstate.Target {
-	log = log.WithFields(logrus.Fields{
-		"service_name":      svc.Name,
-		"service_namespace": svc.Namespace,
-		"service_port":      servicePort,
-	})
+	logger = logger.WithValues(
+		"service_name", svc.Name,
+		"service_namespace", svc.Namespace,
+		"service_port", servicePort,
+	)
 
 	// In theory a Service could have multiple port protocols, we need to ensure we gather
 	// endpoints based on all the protocols the service is configured for. We always check
@@ -695,7 +692,7 @@ func getServiceEndpoints(
 	var isSvcUpstream bool
 	ingressClassParameters, err := getIngressClassParametersOrDefault(s)
 	if err != nil {
-		log.Debugf("error getting an IngressClassParameters: %v", err)
+		logger.V(util.DebugLevel).Info("unable to retrieve IngressClassParameters", "error", err)
 	} else {
 		isSvcUpstream = ingressClassParameters.ServiceUpstream
 	}
@@ -703,11 +700,11 @@ func getServiceEndpoints(
 	// Check all protocols for associated endpoints.
 	endpoints := []util.Endpoint{}
 	for protocol := range protocols {
-		newEndpoints := getEndpoints(log, svc, servicePort, protocol, s.GetEndpointSlicesForService, isSvcUpstream)
+		newEndpoints := getEndpoints(logger, svc, servicePort, protocol, s.GetEndpointSlicesForService, isSvcUpstream)
 		endpoints = append(endpoints, newEndpoints...)
 	}
 	if len(endpoints) == 0 {
-		log.Debugf("no active endpoints")
+		logger.V(util.DebugLevel).Info("no active endpoints")
 	}
 
 	return targetsForEndpoints(endpoints)
@@ -735,7 +732,7 @@ func getIngressClassParametersOrDefault(s store.Storer) (kongv1alpha1.IngressCla
 // It also checks if the service is an upstream service either by its annotations
 // of by IngressClassParameters configuration provided as a flag.
 func getEndpoints(
-	log logrus.FieldLogger,
+	logger logr.Logger,
 	service *corev1.Service,
 	port *corev1.ServicePort,
 	proto corev1.Protocol,
@@ -757,15 +754,15 @@ func getEndpoints(
 		}
 	}
 
-	log = log.WithFields(logrus.Fields{
-		"service_name":      service.Name,
-		"service_namespace": service.Namespace,
-		"service_port":      port.String(),
-	})
+	logger = logger.WithValues(
+		"service_name", service.Name,
+		"service_namespace", service.Namespace,
+		"service_port", port.String(),
+	)
 
 	// ExternalName services
 	if service.Spec.Type == corev1.ServiceTypeExternalName {
-		log.Debug("found service of type=ExternalName")
+		logger.V(util.DebugLevel).Info("found service of type=ExternalName")
 		return []util.Endpoint{
 			{
 				Address: service.Spec.ExternalName,
@@ -774,13 +771,13 @@ func getEndpoints(
 		}
 	}
 
-	log.Debugf("fetching EndpointSlices")
+	logger.V(util.DebugLevel).Info("fetching EndpointSlices")
 	endpointSlices, err := getEndpointSlices(service.Namespace, service.Name)
 	if err != nil {
-		log.WithError(err).Error("error fetching EndpointSlices")
+		logger.Error(err, "error fetching EndpointSlices")
 		return []util.Endpoint{}
 	}
-	log.Debugf("fetched %d EndpointSlices", len(endpointSlices))
+	logger.V(util.DebugLevel).Info("fetched EndpointSlices", "count", len(endpointSlices))
 
 	// Avoid duplicated upstream servers when the service contains
 	// multiple port definitions sharing the same target port.
@@ -815,7 +812,7 @@ func getEndpoints(
 			}
 		}
 	}
-	log.Debugf("found endpoints: %v", upstreamServers)
+	logger.V(util.DebugLevel).Info("found endpoints", "endpoints", upstreamServers)
 	return upstreamServers
 }
 

@@ -9,10 +9,9 @@ import (
 
 	"github.com/avast/retry-go/v4"
 	"github.com/blang/semver/v4"
-	"github.com/bombsimon/logrusr/v4"
 	"github.com/go-logr/logr"
+	"github.com/go-logr/zapr"
 	"github.com/kong/deck/cprint"
-	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
@@ -39,18 +38,12 @@ import (
 // -----------------------------------------------------------------------------
 
 // SetupLoggers sets up the loggers for the controller manager.
-func SetupLoggers(c *Config, output io.Writer) (logrus.FieldLogger, logr.Logger, error) {
-	deprecatedLogger, err := util.MakeLogger(c.LogLevel, c.LogFormat, output)
+func SetupLoggers(c *Config, output io.Writer) (logr.Logger, error) {
+	zapBase, err := util.MakeLogger(c.LogLevel, c.LogFormat, output)
 	if err != nil {
-		return nil, logr.Logger{}, fmt.Errorf("failed to make logger: %w", err)
+		return logr.Logger{}, fmt.Errorf("failed to make logger: %w", err)
 	}
-
-	if c.LogReduceRedundancy {
-		deprecatedLogger.Info("WARNING: log stifling has been enabled (experimental)")
-		deprecatedLogger = util.MakeDebugLoggerWithReducedRedudancy(output, &logrus.TextFormatter{}, 3, time.Second*30)
-	}
-
-	logger := logrusr.New(deprecatedLogger)
+	logger := zapr.NewLoggerWithOptions(zapBase, zapr.LogInfoLevel("v"))
 
 	if c.LogLevel != "trace" && c.LogLevel != "debug" {
 		// disable deck's per-change diff output
@@ -61,7 +54,7 @@ func SetupLoggers(c *Config, output io.Writer) (logrus.FieldLogger, logr.Logger,
 	// [controller-runtime] log.SetLogger(...) was never called; logs will not be displayed.
 	ctrllog.SetLogger(logger)
 
-	return deprecatedLogger, logger, nil
+	return logger, nil
 }
 
 func setupControllerOptions(ctx context.Context, logger logr.Logger, c *Config, dbmode string, featureGates map[string]bool) (ctrl.Options, error) {
@@ -140,7 +133,6 @@ func leaderElectionEnabled(logger logr.Logger, c *Config, dbmode string) bool {
 
 func setupDataplaneSynchronizer(
 	logger logr.Logger,
-	fieldLogger logrus.FieldLogger,
 	mgr manager.Manager,
 	dataplaneClient dataplane.Client,
 	proxySyncSeconds float32,
@@ -155,7 +147,7 @@ func setupDataplaneSynchronizer(
 	}
 
 	dataplaneSynchronizer, err := dataplane.NewSynchronizer(
-		fieldLogger.WithField("subsystem", "dataplane-synchronizer"),
+		logger.WithName("dataplane-synchronizer"),
 		dataplaneClient,
 		dataplane.WithStagger(time.Duration(proxySyncSeconds*float32(time.Second))),
 		dataplane.WithInitCacheSyncDuration(initCacheSyncWait),
@@ -177,11 +169,11 @@ func setupAdmissionServer(
 	managerConfig *Config,
 	clientsManager *clients.AdminAPIClientsManager,
 	managerClient client.Client,
-	deprecatedLogger logrus.FieldLogger,
+	logger logr.Logger,
 	parserFeatures parser.FeatureFlags,
 	kongVersion semver.Version,
 ) error {
-	logger := deprecatedLogger.WithField("component", "admission-server")
+	admissionLogger := logger.WithName("admission-server")
 
 	if managerConfig.AdmissionServer.ListenAddr == "off" {
 		logger.Info("admission webhook server disabled")
@@ -191,21 +183,21 @@ func setupAdmissionServer(
 	adminAPIServicesProvider := admission.NewDefaultAdminAPIServicesProvider(clientsManager)
 	srv, err := admission.MakeTLSServer(ctx, &managerConfig.AdmissionServer, &admission.RequestHandler{
 		Validator: admission.NewKongHTTPValidator(
-			logger,
+			admissionLogger,
 			managerClient,
 			managerConfig.IngressClassName,
 			adminAPIServicesProvider,
 			parserFeatures,
 			kongVersion,
 		),
-		Logger: logger,
-	}, logger)
+		Logger: admissionLogger,
+	}, admissionLogger)
 	if err != nil {
 		return err
 	}
 	go func() {
 		err := srv.ListenAndServeTLS("", "")
-		logger.WithError(err).Error("admission webhook server stopped")
+		logger.Error(err, "admission webhook server stopped")
 	}()
 	return nil
 }

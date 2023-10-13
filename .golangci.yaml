@@ -110,6 +110,13 @@ linters-settings:
       - k8s.io/utils/pointer:
           recommendations:
           - github.com/samber/lo
+      - github.com/sirupsen/logrus:
+          recommendations:
+          - go.uber.org/zap
+      - github.com/bombsimon/logrusr/v4:
+          recommendations:
+          - github.com/go-logr/zapr
+          - github.com/go-logr/logr
   tenv:
     all: true
   loggercheck:

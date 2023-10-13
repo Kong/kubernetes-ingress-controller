@@ -18,7 +18,7 @@ func (p *Parser) ingressRulesFromUDPRoutes() ingressRules {
 
 	udpRouteList, err := p.storer.ListUDPRoutes()
 	if err != nil {
-		p.logger.WithError(err).Errorf("failed to list UDPRoutes")
+		p.logger.Error(err, "failed to list UDPRoutes")
 		return result
 	}
 
@@ -45,10 +45,8 @@ func (p *Parser) ingressRulesFromUDPRoutes() ingressRules {
 		applyExpressionToIngressRules(&result)
 	}
 
-	if len(errs) > 0 {
-		for _, err := range errs {
-			p.logger.Errorf(err.Error())
-		}
+	for _, err := range errs {
+		p.logger.Error(err, "could not generate route from UDPRoute")
 	}
 
 	return result

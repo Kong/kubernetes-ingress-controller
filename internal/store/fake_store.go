@@ -5,8 +5,9 @@ import (
 	"fmt"
 	"reflect"
 
+	"github.com/go-logr/zapr"
 	"github.com/samber/lo"
-	"github.com/sirupsen/logrus"
+	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
 	netv1 "k8s.io/api/networking/v1"
@@ -227,7 +228,7 @@ func NewFakeStore(
 		isValidIngressClass:   annotations.IngressClassValidatorFuncFromObjectMeta(annotations.DefaultIngressClass),
 		isValidIngressV1Class: annotations.IngressClassValidatorFuncFromV1Ingress(annotations.DefaultIngressClass),
 		ingressClassMatching:  annotations.ExactClassMatch,
-		logger:                logrus.New(),
+		logger:                zapr.NewLogger(zap.NewNop()),
 	}
 	return s, nil
 }

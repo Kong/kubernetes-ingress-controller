@@ -3,12 +3,10 @@ package ingress
 import (
 	"context"
 	"fmt"
-	"io"
 	"strings"
 
 	"github.com/blang/semver/v4"
 	"github.com/kong/go-kong/kong"
-	"github.com/sirupsen/logrus"
 	netv1 "k8s.io/api/networking/v1"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/parser"
@@ -50,8 +48,6 @@ func ValidateIngress(
 func ingressToKongRoutesForValidation(
 	parserFeatures parser.FeatureFlags, kongVersion semver.Version, ingress *netv1.Ingress,
 ) []kong.Route {
-	discardLogger := logrus.New()
-	discardLogger.Out = io.Discard
 	var icp kongv1alpha1.IngressClassParametersSpec
 	if kongVersion.LT(versions.ExplicitRegexPathVersionCutoff) {
 		icp.EnableLegacyRegexDetection = true

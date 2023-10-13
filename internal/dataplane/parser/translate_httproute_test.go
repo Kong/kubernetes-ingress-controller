@@ -4,11 +4,12 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/go-logr/zapr"
 	"github.com/kong/go-kong/kong"
 	"github.com/samber/lo"
-	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -1799,8 +1800,7 @@ func TestIngressRulesFromHTTPRoutesUsingExpressionRoutes(t *testing.T) {
 	for _, tc := range testCases {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
-			failureCollector, err := failures.NewResourceFailuresCollector(logrus.New())
-			require.NoError(t, err)
+			failureCollector := failures.NewResourceFailuresCollector(zapr.NewLogger(zap.NewNop()))
 			parser.failuresCollector = failureCollector
 
 			result := newIngressRules()

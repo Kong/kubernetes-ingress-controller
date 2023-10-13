@@ -1,12 +1,10 @@
 package kongstate
 
 import (
-	"io"
 	"reflect"
 	"testing"
 
 	"github.com/kong/go-kong/kong"
-	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -174,8 +172,6 @@ func TestOverrideService(t *testing.T) {
 
 	for _, tc := range testCases {
 		tc := tc
-		log := logrus.New()
-		log.SetOutput(io.Discard)
 
 		t.Run(tc.name, func(t *testing.T) {
 			service := tc.inService

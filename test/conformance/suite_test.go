@@ -15,7 +15,6 @@ import (
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/metallb"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/types/kind"
 	"github.com/kong/kubernetes-testing-framework/pkg/environments"
-	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/sync/errgroup"
 	corev1 "k8s.io/api/core/v1"
@@ -42,10 +41,9 @@ var (
 	conformanceTestsBaseManifests = fmt.Sprintf("%s/conformance/base/manifests.yaml", consts.GatewayRawRepoURL)
 	ingressClass                  = "kong-conformance-tests"
 
-	env                    environments.Environment
-	ctx                    context.Context
-	globalDeprecatedLogger logrus.FieldLogger
-	globalLogger           logr.Logger
+	env          environments.Environment
+	ctx          context.Context
+	globalLogger logr.Logger
 )
 
 func TestMain(m *testing.M) {
@@ -63,14 +61,13 @@ func TestMain(m *testing.M) {
 	// after 30s from the start of controller manager package init function,
 	// the controller manager will set up a no op logger and continue.
 	// The logger cannot be configured after that point.
-	deprecatedLogger, logger, logOutput, err := testutils.SetupLoggers("trace", "text", false)
+	logger, logOutput, err := testutils.SetupLoggers("trace", "text")
 	if err != nil {
 		exitOnErr(fmt.Errorf("failed to setup loggers: %w", err))
 	}
 	if logOutput != "" {
 		fmt.Printf("INFO: writing manager logs to %s\n", logOutput)
 	}
-	globalDeprecatedLogger = deprecatedLogger
 	globalLogger = logger
 
 	// In order to pass conformance tests, the expression router is required.
@@ -134,12 +131,11 @@ func prepareEnvForGatewayConformanceTests(t *testing.T) (c client.Client, gatewa
 		"--profiling",
 		"--dump-config",
 		"--log-level=trace",
-		"--debug-log-reduce-redundancy",
 		featureGateFlag,
 		"--anonymous-reports=false",
 	}
 
-	require.NoError(t, testutils.DeployControllerManagerForCluster(ctx, globalDeprecatedLogger, globalLogger, env.Cluster(), args...))
+	require.NoError(t, testutils.DeployControllerManagerForCluster(ctx, globalLogger, env.Cluster(), args...))
 
 	t.Log("creating GatewayClass for gateway conformance tests")
 	gatewayClass := &gatewayapi.GatewayClass{

@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"reflect"
 
+	"github.com/go-logr/logr"
 	"github.com/kong/go-kong/kong"
-	"github.com/sirupsen/logrus"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/kongstate"
@@ -67,7 +67,7 @@ func getPermittedForReferenceGrantFrom(
 // generateKongServiceFromBackendRefWithName translates backendRefs into a Kong service for use with the
 // rules generated from a Gateway APIs route. The service name is provided by the caller.
 func generateKongServiceFromBackendRefWithName(
-	logger logrus.FieldLogger,
+	logger logr.Logger,
 	storer store.Storer,
 	rules *ingressRules,
 	serviceName string,
@@ -135,7 +135,7 @@ func generateKongServiceFromBackendRefWithName(
 // generateKongServiceFromBackendRefWithRuleNumber translates backendRefs for rule ruleNumber into a Kong service for use with the
 // rules generated from a Gateway APIs route. The service name is computed from route and ruleNumber by the function.
 func generateKongServiceFromBackendRefWithRuleNumber(
-	logger logrus.FieldLogger,
+	logger logr.Logger,
 	storer store.Storer,
 	rules *ingressRules,
 	route client.Object,

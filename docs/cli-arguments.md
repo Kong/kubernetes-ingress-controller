@@ -70,7 +70,7 @@
 | `--konnect-tls-client-key-file` | `string` | Konnect TLS client key file path. |  |
 | `--kubeconfig` | `string` | Path to the kubeconfig file. |  |
 | `--log-format` | `string` | Format of logs of the controller. Allowed values are text and json. | `text` |
-| `--log-level` | `string` | Level of logging for the controller. Allowed values are trace, debug, info, warn, error, fatal and panic. | `info` |
+| `--log-level` | `string` | Level of logging for the controller. Allowed values are trace, debug, info, and error. | `info` |
 | `--metrics-bind-address` | `string` | The address the metric endpoint binds to. | `:10255` |
 | `--profiling` | `bool` | Enable profiling via web interface host:10256/debug/pprof/. | `false` |
 | `--proxy-sync-seconds` | `float32` | Define the rate (in seconds) in which configuration updates will be applied to the Kong Admin API. | `3` |

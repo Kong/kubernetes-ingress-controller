@@ -6,12 +6,13 @@ import (
 	"testing"
 	"time"
 
+	"github.com/go-logr/zapr"
 	"github.com/google/go-cmp/cmp"
 	"github.com/kong/deck/file"
 	"github.com/kong/go-kong/kong"
 	"github.com/samber/lo"
-	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/zap"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/sendconfig"
 )
@@ -33,10 +34,13 @@ func TestUpdateStrategyInMemory_PropagatesResourcesErrors(t *testing.T) {
 	kongClient, err := kong.NewClient(kong.String(adminURL), &http.Client{})
 	require.NoError(t, err)
 
+	logbase, err := zap.NewDevelopment()
+	require.NoError(t, err)
+	logger := zapr.NewLogger(logbase)
 	sut := sendconfig.NewUpdateStrategyInMemory(
 		kongClient,
 		sendconfig.DefaultContentToDBLessConfigConverter{},
-		logrus.New(),
+		logger,
 	)
 
 	// This configuration is faulty and should return a resource error.

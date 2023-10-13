@@ -10,14 +10,16 @@ import (
 	"testing"
 	"time"
 
+	"github.com/go-logr/logr"
+	"github.com/go-logr/zapr"
 	"github.com/google/uuid"
 	"github.com/kong/deck/file"
 	"github.com/kong/deck/utils"
 	"github.com/kong/go-kong/kong"
 	"github.com/samber/lo"
-	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	netv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -663,7 +665,7 @@ func setupTestKongClient(
 	eventRecorder record.EventRecorder,
 	kongRawStateGetter configfetcher.LastValidConfigFetcher,
 ) *KongClient {
-	logger := logrus.New()
+	logger := zapr.NewLogger(zap.NewNop())
 	timeout := time.Second
 	ingressClass := "kong"
 	diagnostic := util.ConfigDumpDiagnostic{}
@@ -737,7 +739,7 @@ func (cf *mockKongLastValidConfigFetcher) StoreLastValidConfig(s *kongstate.Kong
 	cf.lastKongState = s
 }
 
-func (cf *mockKongLastValidConfigFetcher) TryFetchingValidConfigFromGateways(context.Context, logrus.FieldLogger, []*adminapi.Client) error {
+func (cf *mockKongLastValidConfigFetcher) TryFetchingValidConfigFromGateways(context.Context, logr.Logger, []*adminapi.Client) error {
 	if cf.kongRawState != nil {
 		cf.lastKongState = configfetcher.KongRawStateToKongState(cf.kongRawState)
 	}

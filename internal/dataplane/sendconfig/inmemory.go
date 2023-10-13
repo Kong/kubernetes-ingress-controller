@@ -7,8 +7,8 @@ import (
 	"fmt"
 	"io"
 
+	"github.com/go-logr/logr"
 	"github.com/kong/deck/file"
-	"github.com/sirupsen/logrus"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/metrics"
 )
@@ -33,18 +33,18 @@ type ContentToDBLessConfigConverter interface {
 type UpdateStrategyInMemory struct {
 	configService   ConfigService
 	configConverter ContentToDBLessConfigConverter
-	log             logrus.FieldLogger
+	logger          logr.Logger
 }
 
 func NewUpdateStrategyInMemory(
 	configService ConfigService,
 	configConverter ContentToDBLessConfigConverter,
-	log logrus.FieldLogger,
+	logger logr.Logger,
 ) UpdateStrategyInMemory {
 	return UpdateStrategyInMemory{
 		configService:   configService,
 		configConverter: configConverter,
-		log:             log,
+		logger:          logger,
 	}
 }
 
@@ -60,7 +60,7 @@ func (s UpdateStrategyInMemory) Update(ctx context.Context, targetState ContentW
 	}
 
 	if errBody, err := s.configService.ReloadDeclarativeRawConfig(ctx, bytes.NewReader(config), true, true); err != nil {
-		resourceErrors, parseErr := parseFlatEntityErrors(errBody, s.log)
+		resourceErrors, parseErr := parseFlatEntityErrors(errBody, s.logger)
 		return err, resourceErrors, parseErr
 	}
 

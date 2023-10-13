@@ -4,75 +4,102 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/sirupsen/logrus"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 )
 
-// we currently implement two different loggers and use a middleware called
-// logrusr to translate logrus loggers into go-logrs (used by controller-runtime).
-// The middleware currently squashes loglevels 0-4 together and effectively starts
-// the "info" level logging at 0 (whereas logrus starts that at 4 (range from 0)).
-// Since the middleware at the time of writing made all of this part of the private
-// implementation these options are used for convenience until a time when we unify
-// our logging implementations into one or the other.
-//
-// See: https://github.com/Kong/kubernetes-ingress-controller/issues/1893
+// logr does not use semantic log types. Logs are either informational or error messages with arbitrary verbosity,
+// though errors print regardless of the verbosity (though ensuring this is left up to the implementation--logr
+// interfaces only set the level; they do not filter lines). Only levels above the base info level have meaning.
+// The error and warn levels here are effectively just placeholders.
+
 const (
-	logrusrDiff = 4
+	// ErrorLevel is the logr verbosity level for errors.
+	ErrorLevel = 0
 
-	// InfoLevel is the converted logging level from logrus to go-logr for
-	// information level logging. Note that the logrusr middleware technically
-	// flattens all levels prior to this level into this level as well.
-	InfoLevel = int(logrus.InfoLevel) - logrusrDiff
+	// WarnLevel is the logr verbosity level for warnings.
+	WarnLevel = 0
 
-	// DebugLevel is the converted logging level from logrus to go-logr for
-	// debug level logging.
-	DebugLevel = int(logrus.DebugLevel) - logrusrDiff
+	// InfoLevel is the logr verbosity level for info logs.
+	InfoLevel = 0
 
-	// WarnLevel is the converted logrus level to go-logr for warnings.
-	WarnLevel = int(logrus.WarnLevel) - logrusrDiff
+	// DebugLevel is the logr verbosity level for debug logs.
+	DebugLevel = 1
+
+	// TraceLevel is the logr verbosity level for trace logs.
+	TraceLevel = 2
 )
 
-var logrusLevels = map[string]logrus.Level{
-	"panic": logrus.PanicLevel,
-	"fatal": logrus.FatalLevel,
-	"error": logrus.ErrorLevel,
-	"warn":  logrus.WarnLevel,
-	"info":  logrus.InfoLevel,
-	"debug": logrus.DebugLevel,
-	"trace": logrus.TraceLevel,
+// similar to the above, these are squashed for levels info and higher. assumptions by other libraries don't easily
+// allow differentiation between info and warn.
+
+var zapLevels = map[string]zapcore.Level{
+	"error": zap.ErrorLevel,
+	"info":  zap.InfoLevel,
+	"debug": zap.DebugLevel,
+	// zap has no stock trace level, but does accept it for filtering if you define your own
+	"trace": zapcore.Level(-2),
 }
 
-func MakeLogger(level string, formatter string, output io.Writer) (logrus.FieldLogger, error) {
-	log := logrus.New()
-	var err error
-
-	logLevel, err := getLogrusLevel(level)
+func MakeLogger(level string, formatter string, output io.Writer) (*zap.Logger, error) {
+	logLevel, err := getZapLevel(level)
 	if err != nil {
 		return nil, fmt.Errorf("setting log level failed: %w", err)
 	}
-	if log.Formatter, err = getLogrusFormatter(formatter); err != nil {
+	levelFunc := zap.LevelEnablerFunc(func(lvl zapcore.Level) bool {
+		// note that zapr flips the sign of Info V-levels, so V(2) results in lvl=-2 here
+		return lvl >= logLevel
+	})
+
+	encoder, err := getZapEncoding(formatter)
+	if err != nil {
 		return nil, fmt.Errorf("setting log formatter failed: %w", err)
 	}
+	core := zapcore.NewCore(encoder, zapcore.AddSync(output), levelFunc)
 
-	log.SetLevel(logLevel)
-	log.Out = output
-	return log, nil
+	return zap.New(core), nil
 }
 
-func getLogrusLevel(level string) (logrus.Level, error) {
-	res, ok := logrusLevels[level]
+func getZapLevel(level string) (zapcore.Level, error) {
+	res, ok := zapLevels[level]
 	if !ok {
 		return 0, fmt.Errorf("%q is not a valid log level", level)
 	}
 	return res, nil
 }
 
-func getLogrusFormatter(typ string) (logrus.Formatter, error) {
+func getZapEncoding(typ string) (zapcore.Encoder, error) {
 	switch typ {
-	case "text":
-		return &logrus.TextFormatter{}, nil
+	case "text", "console":
+		return zapcore.NewConsoleEncoder(zapcore.EncoderConfig{
+			TimeKey:        "time",
+			LevelKey:       "level",
+			NameKey:        "logger",
+			CallerKey:      "caller",
+			FunctionKey:    zapcore.OmitKey,
+			MessageKey:     "msg",
+			StacktraceKey:  "stacktrace",
+			LineEnding:     zapcore.DefaultLineEnding,
+			EncodeLevel:    zapcore.LowercaseLevelEncoder,
+			EncodeTime:     zapcore.RFC3339TimeEncoder,
+			EncodeDuration: zapcore.SecondsDurationEncoder,
+			EncodeCaller:   zapcore.ShortCallerEncoder,
+		}), nil
 	case "json":
-		return &logrus.JSONFormatter{}, nil
+		return zapcore.NewJSONEncoder(zapcore.EncoderConfig{
+			TimeKey:        "time",
+			LevelKey:       "level",
+			NameKey:        "logger",
+			CallerKey:      "caller",
+			FunctionKey:    zapcore.OmitKey,
+			MessageKey:     "msg",
+			StacktraceKey:  "stacktrace",
+			LineEnding:     zapcore.DefaultLineEnding,
+			EncodeLevel:    zapcore.LowercaseLevelEncoder,
+			EncodeTime:     zapcore.RFC3339TimeEncoder,
+			EncodeDuration: zapcore.SecondsDurationEncoder,
+			EncodeCaller:   zapcore.ShortCallerEncoder,
+		}), nil
 	}
 	return nil, fmt.Errorf("%q is not a valid log formatter", typ)
 }

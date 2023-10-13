@@ -3,12 +3,13 @@ package sendconfig
 import (
 	"testing"
 
-	"github.com/sirupsen/logrus"
+	"github.com/go-logr/zapr"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/zap"
 )
 
 func TestParseFlatEntityErrors(t *testing.T) {
-	log := logrus.New()
+	logger := zapr.NewLogger(zap.NewNop())
 	tests := []struct {
 		name    string
 		body    []byte
@@ -156,7 +157,7 @@ func TestParseFlatEntityErrors(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := parseFlatEntityErrors(tt.body, log)
+			got, err := parseFlatEntityErrors(tt.body, logger)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("parseFlatEntityErrors() error = %v, wantErr %v", err, tt.wantErr)
 				return

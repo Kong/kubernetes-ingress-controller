@@ -6,8 +6,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/go-logr/logr"
 	"github.com/kong/go-kong/kong"
-	"github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/util/sets"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/admission/validation/consumers/credentials"
@@ -178,7 +178,7 @@ func (ks *KongState) FillConsumersAndCredentials(
 	}
 }
 
-func (ks *KongState) FillConsumerGroups(_ logrus.FieldLogger, s store.Storer) {
+func (ks *KongState) FillConsumerGroups(_ logr.Logger, s store.Storer) {
 	for _, cg := range s.ListKongConsumerGroups() {
 		ks.ConsumerGroups = append(ks.ConsumerGroups, ConsumerGroup{
 			ConsumerGroup: kong.ConsumerGroup{
@@ -190,14 +190,14 @@ func (ks *KongState) FillConsumerGroups(_ logrus.FieldLogger, s store.Storer) {
 	}
 }
 
-func (ks *KongState) FillOverrides(log logrus.FieldLogger, s store.Storer) {
+func (ks *KongState) FillOverrides(logger logr.Logger, s store.Storer) {
 	for i := 0; i < len(ks.Services); i++ {
 		// Services
 		ks.Services[i].override()
 
 		// Routes
 		for j := 0; j < len(ks.Services[i].Routes); j++ {
-			ks.Services[i].Routes[j].override(log)
+			ks.Services[i].Routes[j].override(logger)
 		}
 	}
 
@@ -205,10 +205,8 @@ func (ks *KongState) FillOverrides(log logrus.FieldLogger, s store.Storer) {
 	for i := 0; i < len(ks.Upstreams); i++ {
 		kongIngress, err := getKongIngressForServices(s, ks.Upstreams[i].Service.K8sServices)
 		if err != nil {
-			log.WithError(err).
-				Errorf("failed to fetch KongIngress resource for Services %s",
-					PrettyPrintServiceList(ks.Upstreams[i].Service.K8sServices),
-				)
+			logger.Error(err, "failed to fetch KongIngress resource for Services",
+				"names", PrettyPrintServiceList(ks.Upstreams[i].Service.K8sServices))
 			continue
 		}
 
@@ -294,7 +292,7 @@ func (ks *KongState) getPluginRelations() map[string]util.ForeignRelations {
 }
 
 func buildPlugins(
-	log logrus.FieldLogger,
+	logger logr.Logger,
 	s store.Storer,
 	failuresCollector *failures.ResourceFailuresCollector,
 	pluginRels map[string]util.ForeignRelations,
@@ -306,10 +304,9 @@ func buildPlugins(
 		namespace, kongPluginName := identifier[0], identifier[1]
 		k8sPlugin, k8sClusterPlugin, err := getKongPluginOrKongClusterPlugin(s, namespace, kongPluginName)
 		if err != nil {
-			log.WithFields(logrus.Fields{
-				"kongplugin_name":      kongPluginName,
-				"kongplugin_namespace": namespace,
-			}).WithError(err).Errorf("failed to fetch KongPlugin resource")
+			logger.Error(err, "failed to fetch KongPlugin resource",
+				"kongplugin_name", kongPluginName,
+				"kongplugin_namespace", namespace)
 			continue
 		}
 
@@ -368,9 +365,9 @@ func buildPlugins(
 		}
 	}
 
-	gKCPs, err := globalKongClusterPlugins(log, s)
+	gKCPs, err := globalKongClusterPlugins(logger, s)
 	if err != nil {
-		log.WithError(err).Error("failed to fetch global Kong Cluster plugins")
+		logger.Error(err, "failed to fetch global plugins")
 	}
 	// global plugins have no instance_name transform as they can only be applied once
 	plugins = append(plugins, gKCPs...)
@@ -378,7 +375,7 @@ func buildPlugins(
 	return plugins
 }
 
-func globalKongClusterPlugins(log logrus.FieldLogger, s store.Storer) ([]Plugin, error) {
+func globalKongClusterPlugins(logger logr.Logger, s store.Storer) ([]Plugin, error) {
 	res := make(map[string]Plugin)
 	var duplicates []string // keep track of duplicate
 	// TODO respect the oldest CRD
@@ -396,24 +393,21 @@ func globalKongClusterPlugins(log logrus.FieldLogger, s store.Storer) ([]Plugin,
 		pluginName := k8sPlugin.PluginName
 		// empty pluginName skip it
 		if pluginName == "" {
-			log.WithFields(logrus.Fields{
-				"kongclusterplugin_name": k8sPlugin.Name,
-			}).Errorf("invalid KongClusterPlugin: empty plugin property")
+			logger.Error(nil, "invalid KongClusterPlugin: empty plugin property",
+				"kongclusterplugin_name", k8sPlugin.Name)
 			continue
 		}
 		if _, ok := res[pluginName]; ok {
-			log.Error("multiple KongPlugin definitions found with"+
-				" 'global' label for '", pluginName,
-				"', the plugin will not be applied")
+			logger.Error(nil, "multiple KongPlugin with 'global' label found, cannot apply",
+				"kongplugin_name", pluginName)
 			duplicates = append(duplicates, pluginName)
 			continue
 		}
 		if plugin, err := kongPluginFromK8SClusterPlugin(s, k8sPlugin); err == nil {
 			res[pluginName] = plugin
 		} else {
-			log.WithFields(logrus.Fields{
-				"kongclusterplugin_name": k8sPlugin.Name,
-			}).WithError(err).Error("failed to generate configuration from KongClusterPlugin")
+			logger.Error(err, "failed to generate configuration from KongClusterPlugin",
+				"kongclusterplugin_name", k8sPlugin.Name)
 		}
 	}
 	for _, plugin := range duplicates {
@@ -427,7 +421,7 @@ func globalKongClusterPlugins(log logrus.FieldLogger, s store.Storer) ([]Plugin,
 }
 
 func (ks *KongState) FillPlugins(
-	log logrus.FieldLogger,
+	log logr.Logger,
 	s store.Storer,
 	failuresCollector *failures.ResourceFailuresCollector,
 ) {
@@ -438,17 +432,17 @@ func (ks *KongState) FillPlugins(
 // that supports the FillID method (these are Service, Route, Consumer and Consumer
 // Group). It makes their IDs deterministic, enabling their correct identification
 // in external systems (e.g. Konnect Analytics).
-func (ks *KongState) FillIDs(logger logrus.FieldLogger) {
+func (ks *KongState) FillIDs(logger logr.Logger) {
 	for svcIndex, svc := range ks.Services {
 		if err := svc.FillID(); err != nil {
-			logger.WithError(err).Errorf("failed to fill ID for service %s", *svc.Name)
+			logger.Error(err, "failed to fill ID for service", "service_name", *svc.Name)
 		} else {
 			ks.Services[svcIndex] = svc
 		}
 
 		for routeIndex, route := range svc.Routes {
 			if err := route.FillID(); err != nil {
-				logger.WithError(err).Errorf("failed to fill ID for route %s", *route.Name)
+				logger.Error(err, "failed to fill ID for route", "route_name", *route.Name)
 			} else {
 				ks.Services[svcIndex].Routes[routeIndex] = route
 			}
@@ -457,7 +451,7 @@ func (ks *KongState) FillIDs(logger logrus.FieldLogger) {
 
 	for consumerIndex, consumer := range ks.Consumers {
 		if err := consumer.FillID(); err != nil {
-			logger.WithError(err).Errorf("failed to fill ID for consumer %s", consumer.FriendlyName())
+			logger.Error(err, "failed to fill ID for consumer", "consumer_name", consumer.FriendlyName())
 		} else {
 			ks.Consumers[consumerIndex] = consumer
 		}
@@ -465,7 +459,7 @@ func (ks *KongState) FillIDs(logger logrus.FieldLogger) {
 
 	for consumerGroupIndex, consumerGroup := range ks.ConsumerGroups {
 		if err := consumerGroup.FillID(); err != nil {
-			logger.WithError(err).Errorf("failed to fill ID for consumer group %s", *consumerGroup.Name)
+			logger.Error(err, "failed to fill ID for consumer group", "consumer_group_name", *consumerGroup.Name)
 		} else {
 			ks.ConsumerGroups[consumerGroupIndex] = consumerGroup
 		}

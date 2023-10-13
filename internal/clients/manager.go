@@ -6,11 +6,12 @@ import (
 	"sync"
 	"time"
 
+	"github.com/go-logr/logr"
 	"github.com/samber/lo"
-	"github.com/sirupsen/logrus"
 	"golang.org/x/exp/maps"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/adminapi"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util/clock"
 )
 
@@ -72,7 +73,7 @@ type AdminAPIClientsManager struct {
 	// lock prevents concurrent access to the manager's fields.
 	lock sync.RWMutex
 
-	logger logrus.FieldLogger
+	logger logr.Logger
 }
 
 type AdminAPIClientsManagerOption func(*AdminAPIClientsManager)
@@ -86,7 +87,7 @@ func WithReadinessReconciliationTicker(ticker Ticker) AdminAPIClientsManagerOpti
 
 func NewAdminAPIClientsManager(
 	ctx context.Context,
-	logger logrus.FieldLogger,
+	logger logr.Logger,
 	initialClients []*adminapi.Client,
 	readinessChecker ReadinessChecker,
 	opts ...AdminAPIClientsManagerOption,
@@ -213,7 +214,7 @@ func (c *AdminAPIClientsManager) gatewayClientsReconciliationLoop() {
 	for {
 		select {
 		case <-c.ctx.Done():
-			c.logger.Infof("closing AdminAPIClientsManager: %s", c.ctx.Err())
+			c.logger.V(util.InfoLevel).Info("closing AdminAPIClientsManager", "reason", c.ctx.Err())
 			c.closeGatewayClientsSubscribers()
 			return
 		case discoveredAdminAPIs := <-c.discoveredAdminAPIsNotifyChan:
@@ -228,7 +229,7 @@ func (c *AdminAPIClientsManager) gatewayClientsReconciliationLoop() {
 // It will adjust lists of gateway clients and notify subscribers about the change if readyGatewayClients list has
 // changed.
 func (c *AdminAPIClientsManager) onDiscoveredAdminAPIsNotification(discoveredAdminAPIs []adminapi.DiscoveredAdminAPI) {
-	c.logger.Debug("received notification about Admin API addresses change")
+	c.logger.V(util.DebugLevel).Info("received notification about Admin API addresses change")
 
 	clientsChanged := c.adjustGatewayClients(discoveredAdminAPIs)
 	readinessChanged := c.reconcileGatewayClientsReadiness()
@@ -240,7 +241,7 @@ func (c *AdminAPIClientsManager) onDiscoveredAdminAPIsNotification(discoveredAdm
 // onReadinessReconciliationTick is called on every readinessReconciliationTicker tick. It will reconcile readiness
 // of all gateway clients and notify subscribers about the change if readyGatewayClients list has changed.
 func (c *AdminAPIClientsManager) onReadinessReconciliationTick() {
-	c.logger.Debug("reconciling readiness of gateway clients")
+	c.logger.V(util.DebugLevel).Info("reconciling readiness of gateway clients")
 
 	if changed := c.reconcileGatewayClientsReadiness(); changed {
 		c.notifyGatewayClientsSubscribers()
@@ -337,11 +338,11 @@ func (c *AdminAPIClientsManager) reconcileGatewayClientsReadiness() bool {
 
 // notifyGatewayClientsSubscribers sends notifications to all subscribers that have called SubscribeToGatewayClientsChanges.
 func (c *AdminAPIClientsManager) notifyGatewayClientsSubscribers() {
-	c.logger.Debug("notifying subscribers about gateway clients change")
+	c.logger.V(util.DebugLevel).Info("notifying subscribers about gateway clients change")
 	for _, sub := range c.gatewayClientsChangesSubscribers {
 		select {
 		case <-c.ctx.Done():
-			c.logger.Info("not sending notification to subscribers as the context is done")
+			c.logger.V(util.InfoLevel).Info("not sending notification to subscribers as the context is done")
 			return
 		case sub <- struct{}{}:
 		}

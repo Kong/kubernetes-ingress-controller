@@ -5,9 +5,10 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/sirupsen/logrus"
+	"github.com/go-logr/zapr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/zap"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/adminapi"
 	"github.com/kong/kubernetes-ingress-controller/v2/test/mocks"
@@ -81,7 +82,7 @@ func TestTryFetchingValidConfigFromGateways(t *testing.T) {
 			require.Nil(t, state)
 
 			ctx := context.Background()
-			err := fetcher.TryFetchingValidConfigFromGateways(ctx, logrus.New(), tc.adminAPIClients(t, ctx))
+			err := fetcher.TryFetchingValidConfigFromGateways(ctx, zapr.NewLogger(zap.NewNop()), tc.adminAPIClients(t, ctx))
 			if tc.expectError {
 				require.Error(t, err)
 				assert.False(t, ok)

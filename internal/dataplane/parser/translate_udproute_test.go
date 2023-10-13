@@ -5,10 +5,11 @@ import (
 	"testing"
 
 	"github.com/blang/semver/v4"
+	"github.com/go-logr/zapr"
 	"github.com/kong/go-kong/kong"
 	"github.com/samber/lo"
-	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/zap"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
@@ -307,8 +308,7 @@ func TestIngressRulesFromUDPRoutes(t *testing.T) {
 			require.NoError(t, err)
 			parser := mustNewParser(t, fakestore)
 
-			failureCollector, err := failures.NewResourceFailuresCollector(logrus.New())
-			require.NoError(t, err)
+			failureCollector := failures.NewResourceFailuresCollector(zapr.NewLogger(zap.NewNop()))
 			parser.failuresCollector = failureCollector
 
 			result := parser.ingressRulesFromUDPRoutes()
@@ -628,8 +628,7 @@ func TestIngressRulesFromUDPRoutesUsingExpressionRoutes(t *testing.T) {
 			parser.featureFlags.ExpressionRoutes = true
 			parser.kongVersion = tc.kongVersion
 
-			failureCollector, err := failures.NewResourceFailuresCollector(logrus.New())
-			require.NoError(t, err)
+			failureCollector := failures.NewResourceFailuresCollector(zapr.NewLogger(zap.NewNop()))
 			parser.failuresCollector = failureCollector
 
 			result := parser.ingressRulesFromUDPRoutes()

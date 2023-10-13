@@ -23,7 +23,7 @@ func (p *Parser) ingressRulesFromTLSRoutes() ingressRules {
 
 	tlsRouteList, err := p.storer.ListTLSRoutes()
 	if err != nil {
-		p.logger.WithError(err).Error("failed to list TLSRoutes")
+		p.logger.Error(err, "failed to list TLSRoutes")
 		return result
 	}
 
@@ -46,7 +46,7 @@ func (p *Parser) ingressRulesFromTLSRoutes() ingressRules {
 
 	if len(errs) > 0 {
 		for _, err := range errs {
-			p.logger.Errorf(err.Error())
+			p.logger.Error(err, "could not generate route from TLSRoute")
 		}
 	}
 
@@ -126,8 +126,11 @@ func (p *Parser) isTLSRoutePassthrough(tlsroute *gatewayapi.TLSRoute) (bool, err
 		if err != nil {
 			if errors.As(err, &store.NotFoundError{}) {
 				// log an error if the gateway expected to support the TLSRoute is not found in our cache.
-				p.logger.WithError(err).Errorf("gateway %s/%s not found for TLSRoute %s/%s",
-					gatewayNamespace, parentRef.Name, tlsroute.Namespace, tlsroute.Name)
+				p.logger.Error(err, "Gateway not found for TLSRoute",
+					"gateway_namespace", gatewayNamespace,
+					"gateway_name", parentRef.Name,
+					"tlsroute_namesapce", tlsroute.Namespace,
+					"tlsroute_name", tlsroute.Name)
 				continue
 			}
 			return false, err

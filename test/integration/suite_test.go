@@ -4,6 +4,7 @@ package integration
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -138,11 +139,13 @@ func TestMain(m *testing.M) {
 		ctx,
 		retry.Do(
 			func() error {
-				version, err := helpers.GetKongVersion(proxyAdminURL, consts.KongTestPassword)
+				reqCtx, cancel := context.WithTimeout(ctx, test.RequestTimeout)
+				defer cancel()
+				kongVersion, err := helpers.ValidateMinimalSupportedKongVersion(reqCtx, proxyAdminURL, consts.KongTestPassword)
 				if err != nil {
 					return err
 				}
-				fmt.Printf("INFO: using Kong instance (version: %s) reachable at %s\n", version, proxyAdminURL)
+				fmt.Printf("INFO: using Kong instance (version: %q) reachable at %s\n", kongVersion, proxyAdminURL)
 				return nil
 			},
 			retry.OnRetry(
@@ -150,7 +153,9 @@ func TestMain(m *testing.M) {
 					fmt.Printf("WARNING: try to get Kong Gateway version attempt %d/10 - error: %s\n", n+1, err)
 				},
 			),
-			retry.LastErrorOnly(true),
+			retry.LastErrorOnly(true), retry.RetryIf(func(err error) bool {
+				return !errors.As(err, &helpers.TooOldKongGatewayError{})
+			}),
 		))
 
 	if v := os.Getenv("KONG_BRING_MY_OWN_KIC"); v == "true" {

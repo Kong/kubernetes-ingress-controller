@@ -3,6 +3,7 @@ package containers
 import (
 	"context"
 	"fmt"
+	"net/url"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -10,6 +11,9 @@ import (
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/wait"
 
+	"github.com/kong/kubernetes-ingress-controller/v2/test"
+	"github.com/kong/kubernetes-ingress-controller/v2/test/consts"
+	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/helpers"
 	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/testenv"
 )
 
@@ -58,13 +62,23 @@ func NewKong(ctx context.Context, t *testing.T, opts ...KongOpt) Kong {
 	})
 	require.NoError(t, err)
 
+	kong := Kong{
+		container: kongC,
+	}
+	adminURL, err := url.Parse(kong.AdminURL(ctx, t))
+	require.NoError(t, err)
+
+	reqCtx, cancel := context.WithTimeout(ctx, test.RequestTimeout)
+	defer cancel()
+	kongVersion, err := helpers.ValidateMinimalSupportedKongVersion(reqCtx, adminURL, consts.KongTestPassword)
+	require.NoError(t, err)
+	fmt.Printf("INFO: using Kong instance (version: %q) reachable at %s\n", kongVersion, adminURL)
+
 	t.Cleanup(func() {
 		assert.NoError(t, kongC.Terminate(ctx))
 	})
 
-	return Kong{
-		container: kongC,
-	}
+	return kong
 }
 
 // AdminURL returns the admin API URL of the Kong container reachable from the host machine.

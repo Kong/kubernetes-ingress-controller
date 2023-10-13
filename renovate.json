@@ -19,10 +19,10 @@
     {
       "customType": "regex",
       "fileMatch": [
-        "^test/consts/helm.go$"
+        "^.github/test_dependencies.yaml$"
       ],
       "matchStrings": [
-        "//\\s+renovate:\\s+datasource=(?<datasource>.*)\\s+depName=(?<depName>.*)\\s+versioning=(?<versioning>.*)\\n.+\"(?<currentValue>.*)\""
+        "#\\s+renovate:\\s+datasource=(?<datasource>.*)\\s+depName=(?<depName>.*)\\s+versioning=(?<versioning>.*)\\n.+'(?<currentValue>.*)'"
       ],
       "extractVersionTemplate": "^kong-?(?<version>.*)$"
     }

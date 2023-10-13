@@ -54,7 +54,7 @@ jobs:
           echo "kind=$(yq -ojson -r '.integration.kind' < .github/test_dependencies.yaml )" >> $GITHUB_OUTPUT
           echo "kong-ee=$(yq -ojson -r '.integration.kong-ee' < .github/test_dependencies.yaml )" >> $GITHUB_OUTPUT
           echo "kong-oss=$(yq -ojson -r '.integration.kong-oss' < .github/test_dependencies.yaml )" >> $GITHUB_OUTPUT
-          echo "helm-kong=$(yq -ojson -r '.integration.helm.kong' < .github/test_dependencies.yaml )" >> $GITHUB_ENV
+          echo "helm-kong=$(yq -ojson -r '.integration.helm.kong' < .github/test_dependencies.yaml )" >> $GITHUB_OUTPUT
 
   integration-tests:
     name: ${{ matrix.name }}

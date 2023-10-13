@@ -92,7 +92,7 @@ jobs:
             echo "kind=$(yq -r -ojson '.e2e.kind' < .github/test_dependencies.yaml | jq '[first]')" >> $GITHUB_OUTPUT
           fi
           echo "gke=$(yq -r -ojson '.e2e.gke' < .github/test_dependencies.yaml)" >> $GITHUB_OUTPUT
-          echo "istio=$(yq -r -ojson '.e2e.istio' < .github/test_dependencies.yaml)" >> $GITHUB_OUTPUT
+          echo "istio=$(yq -r -ojson '.e2e.istio' < .github/test_dependencies.yaml | jq -c)" >> $GITHUB_OUTPUT
 
   kind:
     runs-on: ubuntu-latest

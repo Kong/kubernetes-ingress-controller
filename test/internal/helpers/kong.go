@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"net/url"
 	"os"
-	"time"
 
 	"github.com/blang/semver/v4"
 	"github.com/kong/go-kong/kong"
@@ -17,7 +16,7 @@ import (
 )
 
 // GetKongRootConfig gets version and root configurations of Kong from / endpoint of the provided Admin API URL.
-func GetKongRootConfig(proxyAdminURL *url.URL, kongTestPassword string) (map[string]any, error) {
+func GetKongRootConfig(ctx context.Context, proxyAdminURL *url.URL, kongTestPassword string) (map[string]any, error) {
 	httpClient, err := adminapi.MakeHTTPClient(&adminapi.HTTPClientOpts{}, kongTestPassword)
 	if err != nil {
 		return nil, fmt.Errorf("failed creating specific HTTP client for Kong API URL: %q: %w", proxyAdminURL, err)
@@ -26,20 +25,18 @@ func GetKongRootConfig(proxyAdminURL *url.URL, kongTestPassword string) (map[str
 	if err != nil {
 		return nil, fmt.Errorf("failed creating Kong API client for URL: %q: %w", proxyAdminURL, err)
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
 	return kc.Root(ctx)
 }
 
 // GetKongVersion returns kong version using the provided Admin API URL.
-func GetKongVersion(proxyAdminURL *url.URL, kongTestPassword string) (kong.Version, error) {
+func GetKongVersion(ctx context.Context, proxyAdminURL *url.URL, kongTestPassword string) (kong.Version, error) {
 	if override := os.Getenv("TEST_KONG_VERSION_OVERRIDE"); len(override) > 0 {
 		if _, err := kong.ParseSemanticVersion(override); err != nil {
 			return kong.Version{}, err
 		}
 		return kong.NewVersion(override)
 	}
-	jsonResp, err := GetKongRootConfig(proxyAdminURL, kongTestPassword)
+	jsonResp, err := GetKongRootConfig(ctx, proxyAdminURL, kongTestPassword)
 	if err != nil {
 		return kong.Version{}, err
 	}
@@ -48,8 +45,8 @@ func GetKongVersion(proxyAdminURL *url.URL, kongTestPassword string) (kong.Versi
 
 // ValidateMinimalSupportedKongVersion returns version of Kong Gateway running at the provided Admin API URL.
 // In case the version is below the minimal supported version versions.KICv3VersionCutoff (3.4.1), it returns an error.
-func ValidateMinimalSupportedKongVersion(proxyAdminURL *url.URL, kongTestPassword string) (kong.Version, error) {
-	kongVersion, err := GetKongVersion(proxyAdminURL, kongTestPassword)
+func ValidateMinimalSupportedKongVersion(ctx context.Context, proxyAdminURL *url.URL, kongTestPassword string) (kong.Version, error) {
+	kongVersion, err := GetKongVersion(ctx, proxyAdminURL, kongTestPassword)
 	if err != nil {
 		return kong.Version{}, err
 	}
@@ -76,8 +73,8 @@ func (e TooOldKongGatewayError) Error() string {
 }
 
 // GetKongDBMode returns kong dbmode using the provided Admin API URL.
-func GetKongDBMode(proxyAdminURL *url.URL, kongTestPassword string) (string, error) {
-	jsonResp, err := GetKongRootConfig(proxyAdminURL, kongTestPassword)
+func GetKongDBMode(ctx context.Context, proxyAdminURL *url.URL, kongTestPassword string) (string, error) {
+	jsonResp, err := GetKongRootConfig(ctx, proxyAdminURL, kongTestPassword)
 	if err != nil {
 		return "", err
 	}
@@ -89,8 +86,8 @@ func GetKongDBMode(proxyAdminURL *url.URL, kongTestPassword string) (string, err
 }
 
 // GetKongRouterFlavor gets router flavor of Kong using the provided Admin API URL.
-func GetKongRouterFlavor(proxyAdminURL *url.URL, kongTestPassword string) (string, error) {
-	jsonResp, err := GetKongRootConfig(proxyAdminURL, kongTestPassword)
+func GetKongRouterFlavor(ctx context.Context, proxyAdminURL *url.URL, kongTestPassword string) (string, error) {
+	jsonResp, err := GetKongRootConfig(ctx, proxyAdminURL, kongTestPassword)
 	if err != nil {
 		return "", err
 	}

@@ -139,7 +139,9 @@ func TestMain(m *testing.M) {
 		ctx,
 		retry.Do(
 			func() error {
-				kongVersion, err := helpers.ValidateMinimalSupportedKongVersion(proxyAdminURL, consts.KongTestPassword)
+				reqCtx, cancel := context.WithTimeout(ctx, test.RequestTimeout)
+				defer cancel()
+				kongVersion, err := helpers.ValidateMinimalSupportedKongVersion(reqCtx, proxyAdminURL, consts.KongTestPassword)
 				if err != nil {
 					return err
 				}

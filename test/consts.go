@@ -28,5 +28,8 @@ const (
 
 	// EnvironmentCleanupTimeout is the amount of time that will be given by the test suite to the
 	// testing environment to perform its cleanup when the test suite is shutting down.
-	EnvironmentCleanupTimeout = time.Minute * 3
+	EnvironmentCleanupTimeout = 3 * time.Minute
+
+	// RequestTimeout is the amount of time that will be given to any request to complete.
+	RequestTimeout = 10 * time.Second
 )

@@ -613,7 +613,7 @@ func TestHTTPRouteFilterHosts(t *testing.T) {
 			return false
 		}
 		return true
-	}, 10*time.Second, 100*time.Millisecond)
+	}, test.RequestTimeout, 100*time.Millisecond)
 	t.Logf("test host matched hostname in listeners")
 	require.Eventually(t, func() bool {
 		return testGetByHost(t, "test.specific.io")

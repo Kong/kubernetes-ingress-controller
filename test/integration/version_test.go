@@ -3,6 +3,7 @@
 package integration
 
 import (
+	"context"
 	"net/url"
 	"testing"
 	"time"
@@ -11,6 +12,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/kong/kubernetes-ingress-controller/v2/test"
 	"github.com/kong/kubernetes-ingress-controller/v2/test/consts"
 	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/helpers"
 )
@@ -74,7 +76,9 @@ func eventuallyGetKongVersion(t *testing.T, adminURL *url.URL) kong.Version {
 	)
 
 	require.EventuallyWithT(t, func(t *assert.CollectT) {
-		version, err = helpers.GetKongVersion(adminURL, consts.KongTestPassword)
+		ctx, cancel := context.WithTimeout(context.Background(), test.RequestTimeout)
+		defer cancel()
+		version, err = helpers.GetKongVersion(ctx, adminURL, consts.KongTestPassword)
 		assert.NoError(t, err)
 	}, time.Minute, time.Second)
 	return version
@@ -89,7 +93,9 @@ func eventuallyGetKongDBMode(t *testing.T, adminURL *url.URL) string {
 	)
 
 	require.EventuallyWithT(t, func(t *assert.CollectT) {
-		dbmode, err = helpers.GetKongDBMode(adminURL, consts.KongTestPassword)
+		ctx, cancel := context.WithTimeout(context.Background(), test.RequestTimeout)
+		defer cancel()
+		dbmode, err = helpers.GetKongDBMode(ctx, adminURL, consts.KongTestPassword)
 		assert.NoError(t, err)
 	}, time.Minute, time.Second)
 	return dbmode
@@ -104,7 +110,9 @@ func eventuallyGetKongRouterFlavor(t *testing.T, adminURL *url.URL) string {
 	)
 
 	require.EventuallyWithT(t, func(t *assert.CollectT) {
-		routerFlavor, err = helpers.GetKongRouterFlavor(adminURL, consts.KongTestPassword)
+		ctx, cancel := context.WithTimeout(context.Background(), test.RequestTimeout)
+		defer cancel()
+		routerFlavor, err = helpers.GetKongRouterFlavor(ctx, adminURL, consts.KongTestPassword)
 		assert.NoError(t, err)
 	}, time.Minute, time.Second)
 	return routerFlavor

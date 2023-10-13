@@ -15,6 +15,7 @@ import (
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/gatewayapi"
+	"github.com/kong/kubernetes-ingress-controller/v2/test"
 	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/testenv"
 )
 
@@ -96,7 +97,7 @@ func TestGatewayConformance(t *testing.T) {
 	// test order execution.
 	go require.Eventually(t, func() bool {
 		return ensureTestGatewayClassIsUnmanaged(ctx, k8sClient)
-	}, 10*time.Minute, 10*time.Second)
+	}, 10*time.Minute, test.RequestTimeout)
 
 	// To work with individual tests only, you can disable the normal Run call and construct a slice containing a
 	// single test only, e.g.:

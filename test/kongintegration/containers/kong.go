@@ -11,6 +11,7 @@ import (
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/wait"
 
+	"github.com/kong/kubernetes-ingress-controller/v2/test"
 	"github.com/kong/kubernetes-ingress-controller/v2/test/consts"
 	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/helpers"
 	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/testenv"
@@ -67,7 +68,9 @@ func NewKong(ctx context.Context, t *testing.T, opts ...KongOpt) Kong {
 	adminURL, err := url.Parse(kong.AdminURL(ctx, t))
 	require.NoError(t, err)
 
-	kongVersion, err := helpers.ValidateMinimalSupportedKongVersion(adminURL, consts.KongTestPassword) //nolint:contextcheck
+	reqCtx, cancel := context.WithTimeout(ctx, test.RequestTimeout)
+	defer cancel()
+	kongVersion, err := helpers.ValidateMinimalSupportedKongVersion(reqCtx, adminURL, consts.KongTestPassword)
 	require.NoError(t, err)
 	fmt.Printf("INFO: using Kong instance (version: %q) reachable at %s\n", kongVersion, adminURL)
 

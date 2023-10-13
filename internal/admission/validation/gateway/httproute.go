@@ -99,7 +99,6 @@ func validateHTTPRouteFeatures(httproute *gatewayapi.HTTPRoute, parserFeatures p
 	for _, rule := range httproute.Spec.Rules {
 		for _, match := range rule.Matches {
 			// We support query parameters matching rules only with expression router.
-			// See: https://github.com/Kong/kubernetes-ingress-controller/issues/3679
 			if len(match.QueryParams) != 0 {
 				if !parserFeatures.ExpressionRoutes {
 					return fmt.Errorf("queryparam matching is supported with expression router only")

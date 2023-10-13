@@ -198,7 +198,7 @@ func TestHTTPRouteEssentials(t *testing.T) {
 	})
 
 	t.Run("HTTPRoute query param match", func(t *testing.T) {
-		RunWhenKongExpressionRouter(t)
+		RunWhenKongExpressionRouter(t) //nolint:contextcheck
 
 		httpRoute, err = gatewayClient.GatewayV1beta1().HTTPRoutes(ns.Name).Get(ctx, httpRoute.Name, metav1.GetOptions{})
 		require.NoError(t, err)
@@ -216,7 +216,7 @@ func TestHTTPRouteEssentials(t *testing.T) {
 		require.NoError(t, err)
 
 		t.Log("verifying HTTPRoute query param match")
-		helpers.EventuallyGETPath(t, proxyURL, "?foo=bar", http.StatusOK, "<title>httpbin.org</title>", nil, ingressWait, waitTick)
+		helpers.EventuallyGETPath(t, proxyURL, proxyURL.Host, "/?foo=bar", http.StatusOK, "<title>httpbin.org</title>", nil, ingressWait, waitTick)
 	})
 
 	t.Log("verifying that the HTTPRoute has the Condition 'Accepted' set to 'True'")

@@ -1,6 +1,7 @@
 package testenv
 
 import (
+	"fmt"
 	"os"
 	"time"
 )
@@ -50,6 +51,7 @@ func KongEffectiveVersion() string {
 func KongHelmChartVersion() string {
 	v := os.Getenv("TEST_KONG_HELM_CHART_VERSION")
 	if v == "" {
+		fmt.Println("ERROR: missing required TEST_KONG_HELM_CHART_VERSION")
 		os.Exit(1)
 	}
 	return v

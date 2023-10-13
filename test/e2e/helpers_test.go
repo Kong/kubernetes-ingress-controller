@@ -421,7 +421,7 @@ func getProxyDeploymentName(manifestPath string) string {
 		return singlePodDeploymentName
 	}
 	// all non-legacy dbless manifests use a multi-pod deployment
-	if strings.Contains(manifestPath, "dbless") {
+	if strings.Contains(manifestPath, "dbless") || strings.Contains(manifestPath, "multiple-gateways") {
 		return multiPodDeploymentName
 	}
 

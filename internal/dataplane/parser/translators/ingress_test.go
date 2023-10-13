@@ -1358,7 +1358,7 @@ func TestFlattenMultipleSlashes(t *testing.T) {
 	}
 }
 
-func TestPathsFromIngressPathsRegexPrefix(t *testing.T) {
+func TestPathsFromIngressPaths(t *testing.T) {
 	for _, tt := range []struct {
 		name string
 		in   netv1.HTTPIngressPath

@@ -98,6 +98,8 @@ func TestWebhookUpdate(t *testing.T) {
 	if testenv.ClusterLoadImages() == "true" {
 		if b, err := loadimage.NewBuilder().WithImage(testenv.ControllerImageTag()); err == nil {
 			addons = append(addons, b.Build())
+		} else {
+			requite.NoError(t, err)
 		}
 	}
 	builder := environments.NewBuilder().WithExistingCluster(cluster).WithAddons(addons...)

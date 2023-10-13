@@ -200,6 +200,10 @@ Adding a new version? You'll need three changes:
   that prefer to mount a file over binding a Secret to an environment variable
   value. Only one of the two options can be used.
   [#4808](https://github.com/Kong/kubernetes-ingress-controller/pull/4808)
+- Allow Gateway Discovery with database backed Kong. Currently KIC will send 
+  Kong configurations to the admin API endpoints of one of the Kong pods behind
+  the Kong Admin Service specified by `--kong-admin-svc`.
+  [#4828](https://github.com/Kong/kubernetes-ingress-controller/pull/4828)
 
 [KIC Annotations reference]: https://docs.konghq.com/kubernetes-ingress-controller/latest/references/annotations/
 

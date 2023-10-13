@@ -487,6 +487,8 @@ func (c *KongClient) sendOutToGatewayClients(
 		}
 		// randomly choose one client.
 		// REVIEW: The order of GatewayClients() is random, could we just use the "first" client?
+		// TODO: if multiple gateway instances uses different DBs, choose one client for each DB:
+		// https://github.com/Kong/kubernetes-ingress-controller/issues/4845
 		clientIndex := rand.Intn(len(gatewayClients)) //nolint:gosec
 		c.logger.V(util.DebugLevel).Info(
 			fmt.Sprintf("sending configuration to gateway client %d/%d", clientIndex+1, len(gatewayClients)),

@@ -71,15 +71,22 @@ spec:
 	assert.NoError(t, err)
 	assert.False(t, exists)
 
+	var got interface{}
 	t.Log("ensuring that we can Get() the objects back out of the cache store")
 	svc := &corev1.Service{ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "httpbin-deployment"}}
 	ing := &netv1.Ingress{ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "httpbin-ingress"}}
-	_, exists, err = cs.Get(svc)
+	got, exists, err = cs.Get(svc)
 	assert.NoError(t, err)
 	assert.True(t, exists)
-	_, exists, err = cs.Get(ing)
+	gotSvc, ok := got.(*corev1.Service)
+	require.True(t, ok)
+	require.NotEmpty(t, gotSvc.TypeMeta.Kind)
+	got, exists, err = cs.Get(ing)
 	assert.NoError(t, err)
 	assert.True(t, exists)
+	gotIng, ok := got.(*netv1.Ingress)
+	require.True(t, ok)
+	require.NotEmpty(t, gotIng.TypeMeta.Kind)
 }
 
 func TestGetIngressClassHandling(t *testing.T) {

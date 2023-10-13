@@ -56,15 +56,15 @@ func SetupLoggers(c *Config, output io.Writer) (logr.Logger, error) {
 	return logger, nil
 }
 
-func setupControllerOptions(ctx context.Context, logger logr.Logger, c *Config, dbmode string, featureGates map[string]bool) (ctrl.Options, error) {
+func setupManagerOptions(ctx context.Context, logger logr.Logger, c *Config, dbmode string) (ctrl.Options, error) {
 	logger.Info("building the manager runtime scheme and loading apis into the scheme")
-	scheme, err := scheme.Get(featureGates)
+	scheme, err := scheme.Get()
 	if err != nil {
 		return ctrl.Options{}, err
 	}
 
-	// configure the general controller options
-	controllerOpts := ctrl.Options{
+	// configure the general manager options
+	managerOpts := ctrl.Options{
 		Scheme: scheme,
 		Metrics: metricsserver.Options{
 			BindAddress: c.MetricsAddr,
@@ -75,7 +75,8 @@ func setupControllerOptions(ctx context.Context, logger logr.Logger, c *Config, 
 		Cache: cache.Options{
 			SyncPeriod: &c.SyncPeriod,
 		},
-		Logger: ctrl.LoggerFrom(ctx),
+		Logger:    ctrl.LoggerFrom(ctx),
+		NewClient: newManagerClient,
 	}
 
 	// If there are no configured watch namespaces, then we're watching ALL namespaces,
@@ -101,14 +102,14 @@ func setupControllerOptions(ctx context.Context, logger logr.Logger, c *Config, 
 		for _, n := range sets.NewString(watchNamespaces...).List() {
 			watched[n] = cache.Config{}
 		}
-		controllerOpts.Cache.DefaultNamespaces = watched
+		managerOpts.Cache.DefaultNamespaces = watched
 	}
 
 	if len(c.LeaderElectionNamespace) > 0 {
-		controllerOpts.LeaderElectionNamespace = c.LeaderElectionNamespace
+		managerOpts.LeaderElectionNamespace = c.LeaderElectionNamespace
 	}
 
-	return controllerOpts, nil
+	return managerOpts, nil
 }
 
 func leaderElectionEnabled(logger logr.Logger, c *Config, dbmode string) bool {

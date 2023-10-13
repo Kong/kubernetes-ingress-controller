@@ -55,7 +55,7 @@ func TestConsumerCredential(t *testing.T) {
 	cleaner.Add(ingress)
 
 	t.Log("waiting for routes from Ingress to be operational")
-	assert.Eventually(t, func() bool {
+	require.Eventually(t, func() bool {
 		resp, err := helpers.DefaultHTTPClient().Get(fmt.Sprintf("%s/test_consumer_credential", proxyURL))
 		if err != nil {
 			t.Logf("WARNING: error while waiting for %s: %v", proxyURL, err)
@@ -143,6 +143,23 @@ func TestConsumerCredential(t *testing.T) {
 		req := helpers.MustHTTPRequest(t, http.MethodGet, proxyURL.Host, "/test_consumer_credential", nil)
 		req.SetBasicAuth("test_consumer_credential", "test_consumer_credential")
 		resp, err := helpers.DefaultHTTPClientWithProxy(proxyURL).Do(req)
+		if err != nil {
+			return false
+		}
+		defer resp.Body.Close()
+		return resp.StatusCode == http.StatusOK
+	}, ingressWait, waitTick)
+
+	t.Logf("updating credential to confirm references update store copy")
+	credential, err = env.Cluster().Client().CoreV1().Secrets(ns.Name).Get(ctx, credential.Name, metav1.GetOptions{})
+	require.NoError(t, err)
+	credential.StringData = map[string]string{"username": "new_consumer_credential"}
+	_, err = env.Cluster().Client().CoreV1().Secrets(ns.Name).Update(ctx, credential, metav1.UpdateOptions{})
+	require.NoError(t, err)
+	assert.Eventually(t, func() bool {
+		req := helpers.MustHTTPRequest(t, "GET", proxyURL.String(), "/test_consumer_credential", nil)
+		req.SetBasicAuth("new_consumer_credential", "test_consumer_credential")
+		resp, err := helpers.DefaultHTTPClient().Do(req)
 		if err != nil {
 			return false
 		}

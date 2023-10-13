@@ -268,6 +268,7 @@ func (r *TLSRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		// for any error other than 404, requeue
 		return ctrl.Result{}, err
 	}
+
 	debug(log, tlsroute, "processing tlsroute")
 
 	// if there's a present deletion timestamp then we need to update the proxy cache

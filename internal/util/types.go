@@ -1,5 +1,5 @@
 /*
-Copyright 2016 The Kubernetes Authors.
+Copyright 2018 The Kubernetes Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -16,10 +16,43 @@ limitations under the License.
 
 package util
 
+import (
+	"fmt"
+
+	"k8s.io/apimachinery/pkg/runtime"
+)
+
 // Endpoint describes a kubernetes endpoint, same as a target in Kong.
 type Endpoint struct {
 	// Address IP address of the endpoint
 	Address string `json:"address"`
 	// Port number of the TCP port
 	Port string `json:"port"`
+}
+
+// TypeMeta is stripped after unmarshaling into Go struct due to the issue described in
+// https://github.com/kubernetes/kubernetes/issues/3030, but we need it for various purposes.
+
+// This function is adopted from https://github.com/kubernetes/cli-runtime/blob/v0.28.2/pkg/printers/typesetter.go#L39-L72
+// It has been modified to remove the io.Writer output and to use the scheme package directly instead of the Typer helper.
+
+// PopulateTypeMeta adds GVK information to a runtime.Object that may not have it available in the object TypeMeta.
+func PopulateTypeMeta(obj runtime.Object, s *runtime.Scheme) error {
+	gvks, _, err := s.ObjectKinds(obj)
+	if err != nil {
+		return fmt.Errorf("missing apiVersion or kind and cannot assign it; %w", err)
+	}
+
+	for _, gvk := range gvks {
+		if len(gvk.Kind) == 0 {
+			continue
+		}
+		if len(gvk.Version) == 0 || gvk.Version == runtime.APIVersionInternal {
+			continue
+		}
+		obj.GetObjectKind().SetGroupVersionKind(gvk)
+		break
+	}
+
+	return nil
 }

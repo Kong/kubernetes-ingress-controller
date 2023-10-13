@@ -120,6 +120,8 @@ Adding a new version? You'll need three changes:
 
 - No more "log.SetLogger(...) was never called..." log entry during shutdown of KIC
   [#4738](https://github.com/Kong/kubernetes-ingress-controller/pull/4738)
+- Changes to referenced Secrets are now tracked independent of their referent.
+  [#4758](https://github.com/Kong/kubernetes-ingress-controller/pull/4758)
 - When Kong returns a flattened error related to a Kong entity, the entity's type and name
   will be included in the message reported in `KongConfigurationApplyFailed` Kubernetes event
   generated for it.

@@ -84,6 +84,7 @@ func (r *ReferenceGrantReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		// for any error other than 404, requeue
 		return ctrl.Result{}, err
 	}
+
 	debug(log, grant, "processing referencegrant")
 
 	debug(log, grant, "checking deletion timestamp")

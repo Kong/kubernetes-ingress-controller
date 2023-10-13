@@ -268,6 +268,7 @@ func (r *UDPRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		// for any error other than 404, requeue
 		return ctrl.Result{}, err
 	}
+
 	debug(log, udproute, "processing udproute")
 
 	// if there's a present deletion timestamp then we need to update the proxy cache

@@ -111,13 +111,6 @@ func Run(
 	routerFlavor := kongStartUpConfig.RouterFlavor
 	v := kongStartUpConfig.Version
 
-	/*
-		err = c.ValidateGatewayDiscovery(kongStartUpConfig.DBMode)
-		if err != nil {
-			return err
-		}
-	*/
-
 	kongSemVersion := semver.Version{Major: v.Major(), Minor: v.Minor(), Patch: v.Patch()}
 
 	kongConfig := sendconfig.Config{

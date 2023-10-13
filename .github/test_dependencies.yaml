@@ -22,7 +22,7 @@ e2e:
     - # renovate: datasource=docker depName=kindest/node versioning=docker
       kind: 'v1.28.0'
       # renovate: datasource=docker depName=istio/istioctl versioning=docker
-      istio: 'v1.19.0'
+      istio: '1.19.3'
     - # renovate: datasource=docker depName=kindest/node versioning=docker
       kind: 'v1.27.3'
       # renovate: datasource=docker depName=istio/istioctl versioning=docker

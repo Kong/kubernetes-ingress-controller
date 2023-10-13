@@ -65,7 +65,7 @@ func TestMain(m *testing.M) {
 	}
 
 	// Pin the Helm chart version.
-	kongbuilder.WithHelmChartVersion(consts.KongHelmChartVersion)
+	kongbuilder.WithHelmChartVersion(testenv.KongHelmChartVersion())
 
 	kongAddon := kongbuilder.Build()
 	builder := environments.NewBuilder().WithAddons(kongAddon)

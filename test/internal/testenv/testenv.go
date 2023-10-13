@@ -46,6 +46,15 @@ func KongEffectiveVersion() string {
 	return os.Getenv("TEST_KONG_EFFECTIVE_VERSION")
 }
 
+// KongHelmChartVersion is the 'kong' helm chart version to use in tests.
+func KongHelmChartVersion() string {
+	v := os.Getenv("TEST_KONG_HELM_CHART_VERSION")
+	if v == "" {
+		os.Exit(1)
+	}
+	return v
+}
+
 // KongRouterFlavor returns router mode of Kong in tests. Currently supports:
 // - `traditional`
 // - `traditional_compatible`.

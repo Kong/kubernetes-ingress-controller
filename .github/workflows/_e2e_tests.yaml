@@ -86,13 +86,13 @@ jobs:
         name: Set versions
         run: |
           if [ "${{ inputs.all-supported-k8s-versions }}" == "true" ]; then
-            echo "kind=$(cat .github/test_dependencies.yaml | yq -ojson '.e2e.kind' | jq -c)" >> $GITHUB_OUTPUT
+            echo "kind=$(yq -r -ojson '.e2e.kind' < .github/test_dependencies.yaml)" >> $GITHUB_OUTPUT
           else
             # We assume the first version in the list is the latest one.
-            echo "kind=$(cat .github/test_dependencies.yaml | yq -ojson '.e2e.kind' | jq -c '[first]')" >> $GITHUB_OUTPUT
+            echo "kind=$(yq -r -ojson '.e2e.kind' < .github/test_dependencies.yaml | jq '[first]')" >> $GITHUB_OUTPUT
           fi
-          echo "gke=$(cat .github/test_dependencies.yaml | yq -ojson '.e2e.gke' | jq -c)" >> $GITHUB_OUTPUT
-          echo "istio=$(cat .github/test_dependencies.yaml | yq -ojson '.e2e.istio' | jq -c)" >> $GITHUB_OUTPUT
+          echo "gke=$(yq -r -ojson '.e2e.gke' < .github/test_dependencies.yaml)" >> $GITHUB_OUTPUT
+          echo "istio=$(yq -r -ojson '.e2e.istio' < .github/test_dependencies.yaml)" >> $GITHUB_OUTPUT
 
   kind:
     runs-on: ubuntu-latest

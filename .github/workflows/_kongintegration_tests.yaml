@@ -20,7 +20,7 @@ jobs:
       - name: set kong version
         run: |
           echo "TEST_KONG_IMAGE=kong" >> $GITHUB_ENV
-          echo "TEST_KONG_TAG=$(cat .github/test_dependencies.yaml | yq -ojson -r '.kongintegration.kong-oss')" >> $GITHUB_ENV
+          echo "TEST_KONG_TAG=$(yq -ojson -r '.kongintegration.kong-oss' < .github/test_dependencies.yaml )" >> $GITHUB_ENV
 
       - name: run kong integration tests
         run: make test.kongintegration

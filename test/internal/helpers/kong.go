@@ -7,11 +7,13 @@ import (
 	"os"
 	"time"
 
+	"github.com/blang/semver/v4"
 	"github.com/kong/go-kong/kong"
 	"github.com/samber/lo"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/adminapi"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/manager/utils/kongconfig"
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/versions"
 )
 
 // GetKongRootConfig gets version and root configurations of Kong from / endpoint of the provided Admin API URL.
@@ -42,6 +44,35 @@ func GetKongVersion(proxyAdminURL *url.URL, kongTestPassword string) (kong.Versi
 		return kong.Version{}, err
 	}
 	return kongconfig.KongVersionFromRoot(jsonResp)
+}
+
+// ValidateMinimalSupportedKongVersion returns version of Kong Gateway running at the provided Admin API URL.
+// In case the version is below the minimal supported version versions.KICv3VersionCutoff (3.4.1), it returns an error.
+func ValidateMinimalSupportedKongVersion(proxyAdminURL *url.URL, kongTestPassword string) (kong.Version, error) {
+	kongVersion, err := GetKongVersion(proxyAdminURL, kongTestPassword)
+	if err != nil {
+		return kong.Version{}, err
+	}
+	kongSemVersion := semver.Version{Major: kongVersion.Major(), Minor: kongVersion.Minor(), Patch: kongVersion.Patch()}
+	if kongSemVersion.LT(versions.KICv3VersionCutoff) {
+		return kong.Version{}, TooOldKongGatewayError{
+			actualVersion:   kongSemVersion,
+			expectedVersion: versions.KICv3VersionCutoff,
+		}
+	}
+	return kongVersion, nil
+}
+
+type TooOldKongGatewayError struct {
+	actualVersion   semver.Version
+	expectedVersion semver.Version
+}
+
+func (e TooOldKongGatewayError) Error() string {
+	return fmt.Sprintf(
+		"version: %q is not supported by Kong Kubernetes Ingress Controller in version >=3.0.0, the lowest supported version is: %q",
+		e.actualVersion, e.expectedVersion,
+	)
 }
 
 // GetKongDBMode returns kong dbmode using the provided Admin API URL.

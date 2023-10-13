@@ -1,6 +1,7 @@
 package testenv
 
 import (
+	"fmt"
 	"os"
 	"time"
 )
@@ -44,6 +45,16 @@ func KongTag() string {
 // When testing against "nightly" image of kong gateway, we need to set the effective version for parsing semver in chart templates.
 func KongEffectiveVersion() string {
 	return os.Getenv("TEST_KONG_EFFECTIVE_VERSION")
+}
+
+// KongHelmChartVersion is the 'kong' helm chart version to use in tests.
+func KongHelmChartVersion() string {
+	v := os.Getenv("TEST_KONG_HELM_CHART_VERSION")
+	if v == "" {
+		fmt.Println("ERROR: missing required TEST_KONG_HELM_CHART_VERSION")
+		os.Exit(1)
+	}
+	return v
 }
 
 // KongRouterFlavor returns router mode of Kong in tests. Currently supports:

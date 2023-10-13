@@ -41,6 +41,7 @@ jobs:
       kind: ${{ steps.set-versions.outputs.kind }}
       kong-ee: ${{ steps.set-versions.outputs.kong-ee }}
       kong-oss: ${{ steps.set-versions.outputs.kong-oss }}
+      helm-kong: ${{ steps.set-versions.outputs.helm-kong }}
     steps:
       - name: checkout repository
         uses: actions/checkout@v4
@@ -50,9 +51,10 @@ jobs:
       - id: set-versions
         name: Set versions
         run: |
-          echo "kind=$(cat .github/test_dependencies.yaml | yq -ojson '.integration.kind' | jq -c)" >> $GITHUB_OUTPUT
-          echo "kong-ee=$(cat .github/test_dependencies.yaml | yq -ojson '.integration.kong-ee' | jq -c)" >> $GITHUB_OUTPUT
-          echo "kong-oss=$(cat .github/test_dependencies.yaml | yq -ojson '.integration.kong-oss' | jq -c)" >> $GITHUB_OUTPUT
+          echo "kind=$(yq -ojson -r '.integration.kind' < .github/test_dependencies.yaml )" >> $GITHUB_OUTPUT
+          echo "kong-ee=$(yq -ojson -r '.integration.kong-ee' < .github/test_dependencies.yaml )" >> $GITHUB_OUTPUT
+          echo "kong-oss=$(yq -ojson -r '.integration.kong-oss' < .github/test_dependencies.yaml )" >> $GITHUB_OUTPUT
+          echo "helm-kong=$(yq -ojson -r '.integration.helm.kong' < .github/test_dependencies.yaml )" >> $GITHUB_OUTPUT
 
   integration-tests:
     name: ${{ matrix.name }}
@@ -61,6 +63,7 @@ jobs:
     env:
       KONG_CLUSTER_VERSION: ${{ needs.dependencies-versions.outputs.kind }}
       TEST_KONG_ROUTER_FLAVOR: 'traditional'
+      TEST_KONG_HELM_CHART_VERSION: ${{ needs.dependencies-versions.outputs.helm-kong }}
     strategy:
       fail-fast: false
       matrix:

@@ -399,6 +399,8 @@ test.envtest.pretty:
 _check.container.environment:
 	@./scripts/check-container-environment.sh
 
+TEST_KONG_HELM_CHART_VERSION ?= $(shell yq -ojson -r '.integration.helm.kong' < .github/test_dependencies.yaml)
+
 # Integration tests don't use gotestsum because there's a data race issue
 # when go toolchain is writing to os.Stderr which is being read in go-kong
 # https://github.com/Kong/go-kong/blob/c71247b5c8aae2/kong/client.go#L182
@@ -409,6 +411,7 @@ _check.container.environment:
 .PHONY: _test.integration
 _test.integration: _check.container.environment go-junit-report
 	KONG_CLUSTER_VERSION="$(KONG_CLUSTER_VERSION)" \
+		TEST_KONG_HELM_CHART_VERSION="$(TEST_KONG_HELM_CHART_VERSION)" \
 		TEST_DATABASE_MODE="$(DBMODE)" \
 		GOFLAGS="-tags=$(GOTAGS)" \
 		KONG_CONTROLLER_FEATURE_GATES="$(KONG_CONTROLLER_FEATURE_GATES)" \

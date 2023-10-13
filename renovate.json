@@ -9,11 +9,24 @@
   "customManagers": [
     {
       "customType": "regex",
-      "fileMatch": ["^.github/test_dependencies.yaml$"],
+      "fileMatch": [
+        "^.github/test_dependencies.yaml$"
+      ],
       "matchStrings": [
         "#\\s+renovate:\\s+datasource=(?<datasource>.*)\\s+depName=(?<depName>.*)\\s+versioning=(?<versioning>.*)\\n.+'(?<currentValue>.*)'"
       ]
+    },
+    {
+      "customType": "regex",
+      "fileMatch": [
+        "^test/consts/helm.go$"
+      ],
+      "matchStrings": [
+        "//\\s+renovate:\\s+datasource=(?<datasource>.*)\\s+depName=(?<depName>.*)\\s+versioning=(?<versioning>.*)\\n.+\"(?<currentValue>.*)\""
+      ],
+      "extractVersionTemplate": "^kong-?(?<version>.*)$"
     }
+
   ],
   "customDatasources": {
     "gke-rapid": {

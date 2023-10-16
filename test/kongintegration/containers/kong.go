@@ -2,6 +2,7 @@ package containers
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/url"
 	"testing"
@@ -69,18 +70,19 @@ func NewKong(ctx context.Context, t *testing.T, opts ...KongOpt) Kong {
 	adminURL, err := url.Parse(kong.AdminURL(ctx, t))
 	require.NoError(t, err)
 
-	reqCtx, cancel := context.WithTimeout(ctx, test.RequestTimeout)
-	defer cancel()
-
 	const (
 		waitTime = time.Minute
 		tickTime = 100 * time.Millisecond
 	)
 	require.Eventually(t, func() bool {
+		reqCtx, cancel := context.WithTimeout(ctx, test.RequestTimeout)
+		defer cancel()
 		kongVersion, err := helpers.ValidateMinimalSupportedKongVersion(reqCtx, adminURL, consts.KongTestPassword)
 		if err != nil {
-			t.Logf("failed validating Kong version: %v", err)
-			return false
+			if !errors.As(err, &helpers.TooOldKongGatewayError{}) {
+				t.Logf("failed validating Kong version: %v", err)
+				return false
+			}
 		}
 
 		t.Logf("using Kong instance (version: %q) reachable at %s\n", kongVersion, adminURL)

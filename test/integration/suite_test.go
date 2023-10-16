@@ -66,7 +66,9 @@ func TestMain(m *testing.M) {
 	}
 
 	// Pin the Helm chart version.
-	kongbuilder.WithHelmChartVersion(testenv.KongHelmChartVersion())
+	if v := os.Getenv("TEST_KONG_HELM_CHART_VERSION"); v != "" {
+		kongbuilder.WithHelmChartVersion(testenv.KongHelmChartVersion())
+	}
 
 	kongAddon := kongbuilder.Build()
 	builder := environments.NewBuilder().WithAddons(kongAddon)

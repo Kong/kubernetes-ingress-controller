@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/url"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -70,9 +71,21 @@ func NewKong(ctx context.Context, t *testing.T, opts ...KongOpt) Kong {
 
 	reqCtx, cancel := context.WithTimeout(ctx, test.RequestTimeout)
 	defer cancel()
-	kongVersion, err := helpers.ValidateMinimalSupportedKongVersion(reqCtx, adminURL, consts.KongTestPassword)
-	require.NoError(t, err)
-	fmt.Printf("INFO: using Kong instance (version: %q) reachable at %s\n", kongVersion, adminURL)
+
+	const (
+		waitTime = time.Minute
+		tickTime = 100 * time.Millisecond
+	)
+	require.Eventually(t, func() bool {
+		kongVersion, err := helpers.ValidateMinimalSupportedKongVersion(reqCtx, adminURL, consts.KongTestPassword)
+		if err != nil {
+			t.Logf("failed validating Kong version: %v", err)
+			return false
+		}
+
+		t.Logf("using Kong instance (version: %q) reachable at %s\n", kongVersion, adminURL)
+		return true
+	}, waitTime, tickTime)
 
 	t.Cleanup(func() {
 		assert.NoError(t, kongC.Terminate(ctx))

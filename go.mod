@@ -32,7 +32,7 @@ require (
 	github.com/kong/deck v1.27.1
 	github.com/kong/go-kong v0.47.0
 	github.com/kong/kubernetes-telemetry v0.1.1
-	github.com/kong/kubernetes-testing-framework v0.39.1
+	github.com/kong/kubernetes-testing-framework v0.40.0
 	github.com/lithammer/dedent v1.1.0
 	github.com/miekg/dns v1.1.56
 	github.com/mitchellh/mapstructure v1.5.0
@@ -83,6 +83,7 @@ require (
 	github.com/puzpuzpuz/xsync/v2 v2.5.1 // indirect
 	github.com/shoenig/go-m1cpu v0.1.6 // indirect
 	github.com/sirupsen/logrus v1.9.3 // indirect
+	go4.org/netipx v0.0.0-20230728184502-ec4c8b891b28 // indirect
 	golang.org/x/net v0.17.0 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20231002182017-d307bd883b97 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20231009173412-8bfb1ae86b6c // indirect
@@ -109,7 +110,7 @@ require (
 	github.com/docker/docker v24.0.6+incompatible // indirect
 	github.com/docker/go-connections v0.4.0
 	github.com/docker/go-units v0.5.0 // indirect
-	github.com/emicklei/go-restful/v3 v3.10.2 // indirect
+	github.com/emicklei/go-restful/v3 v3.11.0 // indirect
 	github.com/evanphx/json-patch v5.6.0+incompatible // indirect
 	github.com/evanphx/json-patch/v5 v5.7.0 // indirect
 	github.com/exponent-io/jsonpath v0.0.0-20151013193312-d6023ce2651d // indirect

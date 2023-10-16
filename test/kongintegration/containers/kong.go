@@ -91,7 +91,7 @@ func NewKong(ctx context.Context, t *testing.T, opts ...KongOpt) Kong {
 					return err
 				}
 
-				t.Logf("using Kong instance (version: %q) reachable at %s\n", kongVersion, adminURL)
+				t.Logf("using Kong instance (version: %q) reachable at %s", kongVersion, adminURL)
 				return nil
 			},
 			retry.Context(versionCtx),

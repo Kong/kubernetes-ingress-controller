@@ -263,32 +263,19 @@ func TestTranslationFailures(t *testing.T) {
 				var receivedEvents []corev1.Event
 
 				for _, expectedCausingObject := range expected.causingObjects {
-					events, err := env.Cluster().Client().CoreV1().Events(ns.GetName()).List(ctx, metav1.ListOptions{
-						FieldSelector: fmt.Sprintf(
-							"reason=%s,type=%s,involvedObject.name=%s",
-							dataplane.KongConfigurationTranslationFailedEventReason,
-							corev1.EventTypeWarning,
-							expectedCausingObject.GetName(),
-						),
-					})
-					if err != nil {
-						t.Logf("failed to list events: %s", err)
-						eventsForAllObjectsFound = false
-						continue
-					}
+					events, eventForCurrentObjectFound := findTranslationFailureEventsForObject(
+						ctx,
+						t,
+						ns,
+						expectedCausingObject,
+						expected.reasonContains,
+					)
 
-					if len(events.Items) == 0 {
-						t.Logf("waiting for events related to '%s' to be created", expectedCausingObject.GetName())
-						eventsForAllObjectsFound = false
-						continue
-					}
-
-					if actualMsg := events.Items[0].Message; !strings.Contains(actualMsg, expected.reasonContains) {
-						t.Logf("received event's message (%s) does not contain the expected reason: '%s'", actualMsg, expected.reasonContains)
+					receivedEvents = append(receivedEvents, events...)
+					if !eventForCurrentObjectFound {
 						eventsForAllObjectsFound = false
 					}
 
-					receivedEvents = append(receivedEvents, events.Items...)
 				}
 
 				logReceivedEvents(t, receivedEvents, eventsForAllObjectsFound)
@@ -296,6 +283,42 @@ func TestTranslationFailures(t *testing.T) {
 			}, time.Minute*5, time.Second)
 		})
 	}
+}
+
+// findTranslationFailureEventsForObject finds out ALL warning events related to the input object
+// and returns true if any of the event's message contains the expected reason.
+func findTranslationFailureEventsForObject(
+	ctx context.Context,
+	t *testing.T,
+	ns *corev1.Namespace,
+	obj client.Object,
+	expectedReasonContains string,
+) ([]corev1.Event, bool) {
+	relatedEvents, err := env.Cluster().Client().CoreV1().Events(ns.GetName()).List(ctx, metav1.ListOptions{
+		FieldSelector: fmt.Sprintf(
+			"reason=%s,type=%s,involvedObject.name=%s",
+			dataplane.KongConfigurationTranslationFailedEventReason,
+			corev1.EventTypeWarning,
+			obj.GetName(),
+		),
+	})
+	if err != nil {
+		t.Logf("failed to list events: %v", err)
+		return []corev1.Event{}, false
+	}
+	if len(relatedEvents.Items) == 0 {
+		t.Logf("waiting for events related to %q to be created", obj.GetName())
+		return []corev1.Event{}, false
+	}
+	for _, event := range relatedEvents.Items {
+		actualMsg := event.Message
+		if strings.Contains(actualMsg, expectedReasonContains) {
+			t.Logf("received event's message (%q) contains the expected reason: %q", actualMsg, expectedReasonContains)
+			return relatedEvents.Items, true
+		}
+		t.Logf("received event's message (%q) does not contain the expected reason: %q", actualMsg, expectedReasonContains)
+	}
+	return relatedEvents.Items, false
 }
 
 func logReceivedEvents(t *testing.T, events []corev1.Event, eventsForAllObjectsFound bool) {

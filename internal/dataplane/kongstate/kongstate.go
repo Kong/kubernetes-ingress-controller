@@ -158,7 +158,6 @@ func (ks *KongState) FillConsumersAndCredentials(
 			if fieldOk && !labelOk {
 				failuresCollector.PushResourceFailure("credential only has deprecated kongCredType field, needs "+
 					"konghq.com/credential label", secret)
-				failuresCollector.PushResourceFailure(fmt.Sprintf("nonexistent consumer group: %q", err), consumer)
 			}
 			if !credentials.SupportedTypes.Has(credType) {
 				pushCredentialResourceFailures(

@@ -55,6 +55,7 @@ type Config struct {
 	SyncPeriod                        time.Duration
 	SkipCACertificates                bool
 	CacheSyncTimeout                  time.Duration
+	GracefulShutdownTimeout           *time.Duration
 
 	// Kong Proxy configurations
 	APIServerHost               string

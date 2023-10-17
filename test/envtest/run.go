@@ -5,9 +5,11 @@ import (
 	"fmt"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/go-logr/zapr"
 	"github.com/phayes/freeport"
+	"github.com/samber/lo"
 	"github.com/samber/mo"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
@@ -64,6 +66,9 @@ func ConfigForEnvConfig(t *testing.T, envcfg *rest.Config, opts ...mocks.AdminAP
 	cfg.AnonymousReports = false
 	cfg.FeatureGates = featuregates.GetFeatureGatesDefaults()
 	cfg.FeatureGates[featuregates.GatewayFeature] = false
+
+	// Extend the graceful shutdown timeout to prevent flakiness on CI.
+	cfg.GracefulShutdownTimeout = lo.ToPtr(time.Minute)
 
 	return cfg
 }

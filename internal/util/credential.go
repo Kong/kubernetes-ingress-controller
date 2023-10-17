@@ -8,18 +8,21 @@ import (
 
 // TODO https://github.com/Kong/kubernetes-ingress-controller/issues/4853 remove field handling when no longer supported.
 
+// CredentialTypeSource indicates the source of credential type information (or lack thereof) in a Secret.
+type CredentialTypeSource int
+
 const (
 	// CredentialTypeAbsent indicates that no credential information is present in a Secret.
-	CredentialTypeAbsent = iota
+	CredentialTypeAbsent CredentialTypeSource = iota
 	// CredentialTypeFromLabel indicates that a Secret's credential type was determined from a label.
-	CredentialTypeFromLabel = iota
+	CredentialTypeFromLabel
 	// CredentialTypeFromField indicates that a Secret's credential type was determined from a data field.
-	CredentialTypeFromField = iota
+	CredentialTypeFromField
 )
 
 // ExtractKongCredentialType returns the credential type of a Secret and a code indicating whether the credential type
 // was obtained from a label, field, or not at all. Labels take precedence over fields if both are present.
-func ExtractKongCredentialType(secret *corev1.Secret) (string, int) {
+func ExtractKongCredentialType(secret *corev1.Secret) (string, CredentialTypeSource) {
 	credType, labelOk := secret.Labels[labels.LabelPrefix+labels.CredentialKey]
 	if !labelOk {
 		// if no label, fall back to the deprecated field

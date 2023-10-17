@@ -3,10 +3,11 @@ package util
 import (
 	"testing"
 
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/labels"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/kong/kubernetes-ingress-controller/v2/internal/labels"
 )
 
 func TestExtractKongCredentialType(t *testing.T) {
@@ -14,7 +15,7 @@ func TestExtractKongCredentialType(t *testing.T) {
 		name           string
 		secret         *corev1.Secret
 		credType       string
-		credTypeSource int
+		credTypeSource CredentialTypeSource
 	}{
 		{
 			name: "labeled credential",

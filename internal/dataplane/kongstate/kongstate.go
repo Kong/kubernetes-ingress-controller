@@ -59,6 +59,7 @@ func (ks *KongState) SanitizedCopy() *KongState {
 }
 
 func (ks *KongState) FillConsumersAndCredentials(
+	logger logr.Logger,
 	s store.Storer,
 	failuresCollector *failures.ResourceFailuresCollector,
 ) {
@@ -105,8 +106,9 @@ func (ks *KongState) FillConsumersAndCredentials(
 			// try the label first. if it's present, no need to check the field
 			credType, credTypeSource := util.ExtractKongCredentialType(secret)
 			if credTypeSource == util.CredentialTypeFromField {
-				failuresCollector.PushResourceFailure("credential only has deprecated kongCredType field, needs "+
-					"konghq.com/credential label", secret)
+				logger.Error(nil,
+					fmt.Sprintf("Secret uses deprecated kongCredType field, needs konghq.com/credential=%s label", credType),
+					"namesapce", secret.Namespace, "name", secret.Name)
 			}
 			if !credentials.SupportedTypes.Has(credType) {
 				pushCredentialResourceFailures(

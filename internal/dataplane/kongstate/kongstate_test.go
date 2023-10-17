@@ -651,7 +651,7 @@ func TestFillConsumersAndCredentials(t *testing.T) {
 				},
 			},
 			expectedTranslationFailureMessages: map[k8stypes.NamespacedName]string{
-				{Namespace: "default", Name: "foo"}: fmt.Sprintf("failed to provision credential: unsupported kongCredType: %q", "unsupported"),
+				{Namespace: "default", Name: "foo"}: fmt.Sprintf("failed to provision credential: unsupported credential type: %q", "unsupported"),
 			},
 		},
 		{
@@ -680,7 +680,7 @@ func TestFillConsumersAndCredentials(t *testing.T) {
 				},
 			},
 			expectedTranslationFailureMessages: map[k8stypes.NamespacedName]string{
-				{Namespace: "default", Name: "foo"}: fmt.Sprintf("failed to provision credential: unsupported kongCredType: %q", "bee-auth"),
+				{Namespace: "default", Name: "foo"}: fmt.Sprintf("failed to provision credential: unsupported credential type: %q", "bee-auth"),
 			},
 		},
 		{
@@ -765,7 +765,7 @@ func TestFillConsumersAndCredentials(t *testing.T) {
 			failureCollector := failures.NewResourceFailuresCollector(logger)
 
 			state := KongState{}
-			state.FillConsumersAndCredentials(store, failureCollector)
+			state.FillConsumersAndCredentials(logger, store, failureCollector)
 			// compare translated consumers.
 			require.Len(t, state.Consumers, len(tc.expectedKongStateConsumers))
 			// compare fields. Since we only test for translating a single consumer, we only compare the first one if exists.

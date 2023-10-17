@@ -142,6 +142,10 @@ Adding a new version? You'll need three changes:
 
 ### Added
 
+- Added support for expression-based Kong routes for `TLSRoute`. This requires
+  the `ExpressionRoutes` feature gate and a Kong installed with
+  `KONG_ROUTER_FLAVOR=expressions` set in the environment.
+  [#4574](https://github.com/Kong/kubernetes-ingress-controller/pull/4574).
 - The `FillIDs` feature gate is now enabled by default.
   [#4746](https://github.com/Kong/kubernetes-ingress-controller/pull/4746)
 - Get rid of deprecation warning in logs for unsupported label `global: true` for `KongPlugin`,

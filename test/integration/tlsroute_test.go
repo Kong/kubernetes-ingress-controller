@@ -44,7 +44,6 @@ const (
 // TestTLSRouteReferenceGrant tests cross-namespace certificate references. These are technically implemented within
 // Gateway Listeners, but require an attached Route to see the associated certificate behavior on the proxy.
 func TestTLSRoutePassthroughReferenceGrant(t *testing.T) {
-	skipTestForExpressionRouter(t)
 	t.Log("locking Gateway TLS ports")
 	tlsMutex.Lock()
 	t.Cleanup(func() {
@@ -310,7 +309,6 @@ func TestTLSRoutePassthroughReferenceGrant(t *testing.T) {
 }
 
 func TestTLSRoutePassthrough(t *testing.T) {
-	skipTestForExpressionRouter(t)
 	t.Log("locking Gateway TLS ports")
 	tlsMutex.Lock()
 	t.Cleanup(func() {

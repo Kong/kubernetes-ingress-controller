@@ -592,18 +592,6 @@ func (p *Parser) getCerts(secretsToSNIs SecretNameToSNIs) []certWrapper {
 	return certs
 }
 
-func (p *Parser) registerResourceFailureNotSupportedForExpressionRoutes(obj client.Object) {
-	if p.featureFlags.ExpressionRoutes {
-		gvk := obj.GetObjectKind().GroupVersionKind()
-		p.failuresCollector.PushResourceFailure(
-			fmt.Sprintf(
-				"resource kind %s/%s.%s not supported when expression routes enabled",
-				gvk.Group, gvk.Version, gvk.Kind,
-			), obj,
-		)
-	}
-}
-
 func mergeCerts(logger logr.Logger, certLists ...[]certWrapper) []kongstate.Certificate {
 	snisSeen := make(map[string]string)
 	certsSeen := make(map[string]certWrapper)

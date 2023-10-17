@@ -79,7 +79,7 @@ type KongUpstreamPolicySpec struct {
 	Healthchecks *KongUpstreamHealthcheck `json:"healthchecks,omitempty"`
 
 	// HostHeader is the hostname to be used as Host header when proxying requests through Kong.
-	HostHeader *string `json:"host_header,omitempty"`
+	HostHeader *string `json:"hostHeader,omitempty"`
 }
 
 // KongUpstreamHash defines how to calculate hash for consistent-hashing load balancing algorithm.
@@ -90,6 +90,9 @@ type KongUpstreamHash struct {
 
 	// Cookie is the name of the cookie to use as hash input.
 	Cookie *string `json:"cookie,omitempty"`
+
+	// CookiePath is cookie path to set in the response headers.
+	CookiePath *string `json:"cookiePath,omitempty"`
 
 	// QueryArg is the name of the query argument to use as hash input.
 	QueryArg *string `json:"queryArg,omitempty"`

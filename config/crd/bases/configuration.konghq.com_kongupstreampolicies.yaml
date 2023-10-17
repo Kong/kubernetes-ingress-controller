@@ -74,6 +74,10 @@ spec:
                   cookie:
                     description: Cookie is the name of the cookie to use as hash input.
                     type: string
+                  cookiePath:
+                    description: CookiePath is cookie path to set in the response
+                      headers.
+                    type: string
                   header:
                     description: Header is the name of the header to use as hash input.
                     type: string
@@ -93,6 +97,10 @@ spec:
                 properties:
                   cookie:
                     description: Cookie is the name of the cookie to use as hash input.
+                    type: string
+                  cookiePath:
+                    description: CookiePath is cookie path to set in the response
+                      headers.
                     type: string
                   header:
                     description: Header is the name of the header to use as hash input.
@@ -285,7 +293,7 @@ spec:
                       to be considered healthy.
                     type: integer
                 type: object
-              host_header:
+              hostHeader:
                 description: HostHeader is the hostname to be used as Host header
                   when proxying requests through Kong.
                 type: string

@@ -117,6 +117,10 @@ Adding a new version? You'll need three changes:
 - `deploy/single/all-in-one-dbless-legacy.yaml` manifest is removed.
   It was already deprecated in 2.9
   [#4866](https://github.com/Kong/kubernetes-ingress-controller/pull/4866)
+- `deploy/single/all-in-one-dbless-enterprise.yaml` manifest is removed.
+  It's nearly identical to `deploy/single/all-in-one-dbless-k4k8s-enterprise.yaml`
+  which is used in the official docs.
+  [#4873](https://github.com/Kong/kubernetes-ingress-controller/pull/4873)
 
 ### Fixed
 
@@ -292,7 +296,7 @@ Adding a new version? You'll need three changes:
   [specification on priorities of matches in `HTTPRoute`][httproute-specification].
   [#4296](https://github.com/Kong/kubernetes-ingress-controller/pull/4296)
   [#4434](https://github.com/Kong/kubernetes-ingress-controller/pull/4434)
-- Assign priorities to routes translated from GRPCRoutes when the parser translates 
+- Assign priorities to routes translated from GRPCRoutes when the parser translates
   them to expression based Kong routes. The priority order follows the
   [specification on match priorities in GRPCRoute][grpcroute-specification].
   [#4364](https://github.com/Kong/kubernetes-ingress-controller/pull/4364)
@@ -344,11 +348,11 @@ Adding a new version? You'll need three changes:
 - Changed the Gateway's readiness probe in all-in-one manifests from `/status`
   to `/status/ready`. Gateways will be considered ready only after an initial
   configuration is applied by the controller.
-  [#4368](https://github.com/Kong/kubernetes-ingress-controller/pull/4368
-- When translating to expression based Kong routes, annotations to specify 
+  [#4368](https://github.com/Kong/kubernetes-ingress-controller/pull/4368)
+- When translating to expression based Kong routes, annotations to specify
   protocols are translated to `protocols` field of the result Kong route,
-  instead of putting the conditions to match protocols inside expressions. 
-  [#4422](https://github.com/Kong/kubernetes-ingress-controller/pull/4422) 
+  instead of putting the conditions to match protocols inside expressions.
+  [#4422](https://github.com/Kong/kubernetes-ingress-controller/pull/4422)
 
 ### Fixed
 
@@ -364,7 +368,7 @@ Adding a new version? You'll need three changes:
 - `Gateway` can now correctly update `AttachedRoutes` even if there are more
   than 100 `HttpRoute`s.
   [#4458](https://github.com/Kong/kubernetes-ingress-controller/pull/4458)
- 
+
 [gojson]: https://github.com/goccy/go-json
 [httproute-specification]: https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1beta1.HTTPRoute
 [grpcroute-specification]:  https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1alpha2.GRPCRouteRule

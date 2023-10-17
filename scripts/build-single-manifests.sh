@@ -23,6 +23,5 @@ generate_all_in_one_manifest 'config/variants/postgres' 'deploy/single/all-in-on
 generate_all_in_one_manifest 'config/variants/enterprise' 'deploy/single/all-in-one-dbless-k4k8s-enterprise.yaml'
 generate_all_in_one_manifest 'config/variants/enterprise-postgres' 'deploy/single/all-in-one-postgres-enterprise.yaml'
 generate_all_in_one_manifest 'config/variants/multi-gw/oss' 'deploy/single/all-in-one-dbless.yaml'
-generate_all_in_one_manifest 'config/variants/multi-gw/enterprise' 'deploy/single/all-in-one-dbless-enterprise.yaml'
 generate_all_in_one_manifest 'config/variants/konnect/oss' 'deploy/single/all-in-one-dbless-konnect.yaml'
 generate_all_in_one_manifest 'config/variants/konnect/enterprise' 'deploy/single/all-in-one-dbless-konnect-enterprise.yaml'

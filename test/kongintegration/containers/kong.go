@@ -2,10 +2,13 @@ package containers
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/url"
 	"testing"
+	"time"
 
+	"github.com/avast/retry-go/v4"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go"
@@ -67,16 +70,43 @@ func NewKong(ctx context.Context, t *testing.T, opts ...KongOpt) Kong {
 	}
 	adminURL, err := url.Parse(kong.AdminURL(ctx, t))
 	require.NoError(t, err)
-
-	reqCtx, cancel := context.WithTimeout(ctx, test.RequestTimeout)
-	defer cancel()
-	kongVersion, err := helpers.ValidateMinimalSupportedKongVersion(reqCtx, adminURL, consts.KongTestPassword)
-	require.NoError(t, err)
-	fmt.Printf("INFO: using Kong instance (version: %q) reachable at %s\n", kongVersion, adminURL)
-
 	t.Cleanup(func() {
 		assert.NoError(t, kongC.Terminate(ctx))
 	})
+
+	const (
+		tickTime = 100 * time.Millisecond
+		waitTime = time.Minute
+	)
+	versionCtx, cancel := context.WithTimeout(ctx, waitTime)
+	defer cancel()
+
+	require.NoError(t,
+		retry.Do(
+			func() error {
+				reqCtx, cancel := context.WithTimeout(ctx, test.RequestTimeout)
+				defer cancel()
+				kongVersion, err := helpers.ValidateMinimalSupportedKongVersion(reqCtx, adminURL, consts.KongTestPassword)
+				if err != nil {
+					return err
+				}
+
+				t.Logf("using Kong instance (version: %q) reachable at %s", kongVersion, adminURL)
+				return nil
+			},
+			retry.Context(versionCtx),
+			retry.Attempts(0),
+			retry.Delay(tickTime),
+			retry.DelayType(retry.FixedDelay),
+			retry.LastErrorOnly(true),
+			retry.OnRetry(func(n uint, err error) {
+				t.Logf("failed validating Kong version: %v", err)
+			}),
+			retry.RetryIf(func(err error) bool {
+				return !errors.As(err, &helpers.TooOldKongGatewayError{})
+			}),
+		),
+	)
 
 	return kong
 }

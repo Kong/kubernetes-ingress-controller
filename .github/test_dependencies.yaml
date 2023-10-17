@@ -3,15 +3,15 @@ e2e:
     # renovate: datasource=docker depName=kindest/node versioning=docker
     - 'v1.28.0'
     # renovate: datasource=docker depName=kindest/node versioning=docker
-    - 'v1.27.3'
+    - 'v1.28.0'
     # renovate: datasource=docker depName=kindest/node versioning=docker
-    - 'v1.26.6'
+    - 'v1.28.0'
     # renovate: datasource=docker depName=kindest/node versioning=docker
-    - 'v1.25.11'
+    - 'v1.28.0'
     # renovate: datasource=docker depName=kindest/node versioning=docker
-    - 'v1.24.15'
+    - 'v1.28.0'
     # renovate: datasource=docker depName=kindest/node versioning=docker
-    - 'v1.23.17'
+    - 'v1.28.0'
   gke:
     # renovate: datasource=custom.gke-rapid depName=gke versioning=semver
     - '1.26.9'
@@ -24,15 +24,15 @@ e2e:
       # renovate: datasource=docker depName=istio/istioctl versioning=docker
       istio: '1.19.3'
     - # renovate: datasource=docker depName=kindest/node versioning=docker
-      kind: 'v1.27.3'
+      kind: 'v1.28.0'
       # renovate: datasource=docker depName=istio/istioctl versioning=docker
       istio: '1.18.5'
     - # renovate: datasource=docker depName=kindest/node versioning=docker
-      kind: 'v1.26.6'
+      kind: 'v1.28.0'
       # renovate: datasource=docker depName=istio/istioctl versioning=docker
       istio: '1.17.8'
     - # renovate: datasource=docker depName=kindest/node versioning=docker
-      kind: 'v1.25.11'
+      kind: 'v1.28.0'
       # renovate: datasource=docker depName=istio/istioctl versioning=docker
       istio: '1.16.7'
 

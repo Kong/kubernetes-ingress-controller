@@ -114,7 +114,9 @@ Adding a new version? You'll need three changes:
 - Added `--kong-admin-token-file` flag to provide the Kong admin token via file
   [Providing Kong admin token via file](https://github.com/Kong/deck/blob/main/CHANGELOG.md#v1120).
   [#4808](https://github.com/Kong/kubernetes-ingress-controller/pull/4808)
-
+- `deploy/single/all-in-one-dbless-legacy.yaml` manifest is removed.
+  It was already deprecated in 2.9
+  [#4866](https://github.com/Kong/kubernetes-ingress-controller/pull/4866)
 
 ### Fixed
 

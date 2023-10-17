@@ -39,7 +39,7 @@ e2e:
 integration:
   helm:
     # renovate: datasource=github-releases depName=kong/charts versioning=semver
-    kong: '2.26.5'
+    kong: '2.29.0'
   # renovate: datasource=docker depName=kindest/node versioning=docker
   kind: 'v1.28.0'
   # renovate: datasource=docker depName=kong versioning=docker

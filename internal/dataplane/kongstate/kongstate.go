@@ -13,7 +13,6 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/admission/validation/consumers/credentials"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/dataplane/failures"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/labels"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util"
 )
@@ -103,6 +102,18 @@ func (ks *KongState) FillConsumersAndCredentials(
 				continue
 			}
 			credConfig := map[string]interface{}{}
+			// try the label first. if it's present, no need to check the field
+			credType, credTypeSource := util.ExtractKongCredentialType(secret)
+			if credTypeSource == util.CredentialTypeFromField {
+				failuresCollector.PushResourceFailure("credential only has deprecated kongCredType field, needs "+
+					"konghq.com/credential label", secret)
+			}
+			if !credentials.SupportedTypes.Has(credType) {
+				pushCredentialResourceFailures(
+					fmt.Sprintf("failed to provision credential: unsupported credential type: %q", credType),
+				)
+				continue
+			}
 			for k, v := range secret.Data {
 				// TODO populate these based on schema from Kong
 				// and remove this workaround
@@ -141,29 +152,6 @@ func (ks *KongState) FillConsumersAndCredentials(
 					continue
 				}
 				credConfig[k] = string(v)
-			}
-			// try the label first. if it's present, no need to check the field
-			credType, labelOk := secret.Labels[labels.LabelPrefix+labels.CredentialKey]
-			var fieldOk bool
-			if !labelOk {
-				// if no label, fall back to the deprecated field
-				credType, fieldOk = credConfig["kongCredType"].(string)
-				if !fieldOk {
-					pushCredentialResourceFailures(
-						fmt.Sprintf("failed to provision credential: invalid kongCredType: type '%T' not string", credType),
-					)
-					continue
-				}
-			}
-			if fieldOk && !labelOk {
-				failuresCollector.PushResourceFailure("credential only has deprecated kongCredType field, needs "+
-					"konghq.com/credential label", secret)
-			}
-			if !credentials.SupportedTypes.Has(credType) {
-				pushCredentialResourceFailures(
-					fmt.Sprintf("failed to provision credential: unsupported kongCredType: %q", credType),
-				)
-				continue
 			}
 			credTags := util.GenerateTagsForObject(secret)
 			if err := c.SetCredential(credType, credConfig, credTags); err != nil {

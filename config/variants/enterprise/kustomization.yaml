@@ -1,7 +1,8 @@
 resources:
 - ../multi-gw/base
-patchesStrategicMerge:
-- kong-enterprise.yaml
+
+patches:
+- path: kong-enterprise.yaml
 
 components:
   - ../../image/enterprise/

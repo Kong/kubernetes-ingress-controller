@@ -26,15 +26,15 @@ e2e:
     - # renovate: datasource=docker depName=kindest/node versioning=docker
       kind: 'v1.27.3'
       # renovate: datasource=docker depName=istio/istioctl versioning=docker
-      istio: '1.18.5'
+      istio: '1.19.3'
     - # renovate: datasource=docker depName=kindest/node versioning=docker
       kind: 'v1.26.6'
       # renovate: datasource=docker depName=istio/istioctl versioning=docker
-      istio: '1.17.8'
+      istio: '1.19.3'
     - # renovate: datasource=docker depName=kindest/node versioning=docker
       kind: 'v1.25.11'
       # renovate: datasource=docker depName=istio/istioctl versioning=docker
-      istio: '1.16.7'
+      istio: '1.19.3'
 
 integration:
   helm:

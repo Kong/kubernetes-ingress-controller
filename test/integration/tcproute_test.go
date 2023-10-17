@@ -163,8 +163,7 @@ func TestTCPRouteEssentials(t *testing.T) {
 
 	t.Log("verifying that the tcpecho is responding properly")
 	require.Eventually(t, func() bool {
-		responded, err := test.TCPEchoResponds(fmt.Sprintf("%s:%d", proxyURL.Hostname(), ktfkong.DefaultTCPServicePort), testUUID1)
-		return err == nil && responded == true
+		return test.TCPEchoResponds(fmt.Sprintf("%s:%d", proxyURL.Hostname(), ktfkong.DefaultTCPServicePort), testUUID1) == nil
 	}, ingressWait, waitTick)
 
 	t.Log("removing the parentrefs from the TCPRoute")
@@ -184,14 +183,14 @@ func TestTCPRouteEssentials(t *testing.T) {
 	t.Log("verifying that the tcpecho is no longer responding")
 	defer func() {
 		if t.Failed() {
-			responded, err := test.TCPEchoResponds(fmt.Sprintf("%s:%d", proxyURL.Hostname(), ktfkong.DefaultTCPServicePort), testUUID1)
-			t.Logf("no longer responding check failure state: responded=%v, eof=%v, reset=%v, err=%v", responded,
+			err := test.TCPEchoResponds(fmt.Sprintf("%s:%d", proxyURL.Hostname(), ktfkong.DefaultTCPServicePort), testUUID1)
+			t.Logf("no longer responding check failure state: eof=%v, reset=%v, err=%v",
 				errors.Is(err, io.EOF), errors.Is(err, syscall.ECONNRESET), err)
 		}
 	}()
 	require.Eventually(t, func() bool {
-		responded, err := test.TCPEchoResponds(fmt.Sprintf("%s:%d", proxyURL.Hostname(), ktfkong.DefaultTCPServicePort), testUUID1)
-		return responded == false && (errors.Is(err, io.EOF) || errors.Is(err, syscall.ECONNRESET))
+		err := test.TCPEchoResponds(fmt.Sprintf("%s:%d", proxyURL.Hostname(), ktfkong.DefaultTCPServicePort), testUUID1)
+		return errors.Is(err, io.EOF) || errors.Is(err, syscall.ECONNRESET)
 	}, ingressWait, waitTick)
 
 	t.Log("putting the parentRefs back")
@@ -209,8 +208,7 @@ func TestTCPRouteEssentials(t *testing.T) {
 
 	t.Log("verifying that putting the parentRefs back results in the routes becoming available again")
 	require.Eventually(t, func() bool {
-		responded, err := test.TCPEchoResponds(fmt.Sprintf("%s:%d", proxyURL.Hostname(), ktfkong.DefaultTCPServicePort), testUUID1)
-		return err == nil && responded == true
+		return test.TCPEchoResponds(fmt.Sprintf("%s:%d", proxyURL.Hostname(), ktfkong.DefaultTCPServicePort), testUUID1) == nil
 	}, ingressWait, waitTick)
 
 	t.Log("deleting the GatewayClass")
@@ -222,8 +220,8 @@ func TestTCPRouteEssentials(t *testing.T) {
 
 	t.Log("verifying that the data-plane configuration from the TCPRoute gets dropped with the GatewayClass now removed")
 	require.Eventually(t, func() bool {
-		responded, err := test.TCPEchoResponds(fmt.Sprintf("%s:%d", proxyURL.Hostname(), ktfkong.DefaultTCPServicePort), testUUID1)
-		return responded == false && (errors.Is(err, io.EOF) || errors.Is(err, syscall.ECONNRESET))
+		err := test.TCPEchoResponds(fmt.Sprintf("%s:%d", proxyURL.Hostname(), ktfkong.DefaultTCPServicePort), testUUID1)
+		return errors.Is(err, io.EOF) || errors.Is(err, syscall.ECONNRESET)
 	}, ingressWait, waitTick)
 
 	t.Log("putting the GatewayClass back")
@@ -236,8 +234,7 @@ func TestTCPRouteEssentials(t *testing.T) {
 
 	t.Log("verifying that creating the GatewayClass again triggers reconciliation of TCPRoutes and the route becomes available again")
 	require.Eventually(t, func() bool {
-		responded, err := test.TCPEchoResponds(fmt.Sprintf("%s:%d", proxyURL.Hostname(), ktfkong.DefaultTCPServicePort), testUUID1)
-		return err == nil && responded == true
+		return test.TCPEchoResponds(fmt.Sprintf("%s:%d", proxyURL.Hostname(), ktfkong.DefaultTCPServicePort), testUUID1) == nil
 	}, ingressWait, waitTick)
 
 	t.Log("deleting the Gateway")
@@ -249,8 +246,8 @@ func TestTCPRouteEssentials(t *testing.T) {
 
 	t.Log("verifying that the data-plane configuration from the TCPRoute gets dropped with the Gateway now removed")
 	require.Eventually(t, func() bool {
-		responded, err := test.TCPEchoResponds(fmt.Sprintf("%s:%d", proxyURL.Hostname(), ktfkong.DefaultTCPServicePort), testUUID1)
-		return responded == false && (errors.Is(err, io.EOF) || errors.Is(err, syscall.ECONNRESET))
+		err := test.TCPEchoResponds(fmt.Sprintf("%s:%d", proxyURL.Hostname(), ktfkong.DefaultTCPServicePort), testUUID1)
+		return errors.Is(err, io.EOF) || errors.Is(err, syscall.ECONNRESET)
 	}, ingressWait, waitTick)
 
 	t.Log("putting the Gateway back")
@@ -270,8 +267,7 @@ func TestTCPRouteEssentials(t *testing.T) {
 
 	t.Log("verifying that creating the Gateway again triggers reconciliation of TCPRoutes and the route becomes available again")
 	require.Eventually(t, func() bool {
-		responded, err := test.TCPEchoResponds(fmt.Sprintf("%s:%d", proxyURL.Hostname(), ktfkong.DefaultTCPServicePort), testUUID1)
-		return err == nil && responded == true
+		return test.TCPEchoResponds(fmt.Sprintf("%s:%d", proxyURL.Hostname(), ktfkong.DefaultTCPServicePort), testUUID1) == nil
 	}, ingressWait, waitTick)
 
 	t.Log("deleting both GatewayClass and Gateway rapidly")
@@ -284,8 +280,8 @@ func TestTCPRouteEssentials(t *testing.T) {
 
 	t.Log("verifying that the data-plane configuration from the TCPRoute does not get orphaned with the GatewayClass and Gateway gone")
 	require.Eventually(t, func() bool {
-		responded, err := test.TCPEchoResponds(fmt.Sprintf("%s:%d", proxyURL.Hostname(), ktfkong.DefaultTCPServicePort), testUUID1)
-		return responded == false && (errors.Is(err, io.EOF) || errors.Is(err, syscall.ECONNRESET))
+		err := test.TCPEchoResponds(fmt.Sprintf("%s:%d", proxyURL.Hostname(), ktfkong.DefaultTCPServicePort), testUUID1)
+		return errors.Is(err, io.EOF) || errors.Is(err, syscall.ECONNRESET)
 	}, ingressWait, waitTick)
 
 	t.Log("putting the GatewayClass back")
@@ -309,8 +305,7 @@ func TestTCPRouteEssentials(t *testing.T) {
 
 	t.Log("verifying that creating the Gateway again triggers reconciliation of TCPRoutes and the route becomes available again")
 	require.Eventually(t, func() bool {
-		responded, err := test.TCPEchoResponds(fmt.Sprintf("%s:%d", proxyURL.Hostname(), ktfkong.DefaultTCPServicePort), testUUID1)
-		return err == nil && responded == true
+		return test.TCPEchoResponds(fmt.Sprintf("%s:%d", proxyURL.Hostname(), ktfkong.DefaultTCPServicePort), testUUID1) == nil
 	}, ingressWait, waitTick)
 
 	t.Log("adding an additional backendRef to the TCPRoute")
@@ -339,20 +334,16 @@ func TestTCPRouteEssentials(t *testing.T) {
 
 	t.Log("verifying that the TCPRoute is now load-balanced between two services")
 	require.Eventually(t, func() bool {
-		responded, err := test.TCPEchoResponds(fmt.Sprintf("%s:%d", proxyURL.Hostname(), ktfkong.DefaultTCPServicePort), testUUID1)
-		return err == nil && responded == true
+		return test.TCPEchoResponds(fmt.Sprintf("%s:%d", proxyURL.Hostname(), ktfkong.DefaultTCPServicePort), testUUID1) == nil
 	}, ingressWait, waitTick)
 	require.Eventually(t, func() bool {
-		responded, err := test.TCPEchoResponds(fmt.Sprintf("%s:%d", proxyURL.Hostname(), ktfkong.DefaultTCPServicePort), testUUID2)
-		return err == nil && responded == true
+		return test.TCPEchoResponds(fmt.Sprintf("%s:%d", proxyURL.Hostname(), ktfkong.DefaultTCPServicePort), testUUID2) == nil
 	}, ingressWait, waitTick)
 	require.Eventually(t, func() bool {
-		responded, err := test.TCPEchoResponds(fmt.Sprintf("%s:%d", proxyURL.Hostname(), ktfkong.DefaultTCPServicePort), testUUID1)
-		return err == nil && responded == true
+		return test.TCPEchoResponds(fmt.Sprintf("%s:%d", proxyURL.Hostname(), ktfkong.DefaultTCPServicePort), testUUID1) == nil
 	}, ingressWait, waitTick)
 	require.Eventually(t, func() bool {
-		responded, err := test.TCPEchoResponds(fmt.Sprintf("%s:%d", proxyURL.Hostname(), ktfkong.DefaultTCPServicePort), testUUID2)
-		return err == nil && responded == true
+		return test.TCPEchoResponds(fmt.Sprintf("%s:%d", proxyURL.Hostname(), ktfkong.DefaultTCPServicePort), testUUID2) == nil
 	}, ingressWait, waitTick)
 
 	t.Log("deleting both GatewayClass and Gateway rapidly")
@@ -365,8 +356,8 @@ func TestTCPRouteEssentials(t *testing.T) {
 
 	t.Log("verifying that the data-plane configuration from the TCPRoute does not get orphaned with the GatewayClass and Gateway gone")
 	require.Eventually(t, func() bool {
-		responded, err := test.TCPEchoResponds(fmt.Sprintf("%s:%d", proxyURL.Hostname(), ktfkong.DefaultTCPServicePort), testUUID1)
-		return responded == false && (errors.Is(err, io.EOF) || errors.Is(err, syscall.ECONNRESET))
+		err := test.TCPEchoResponds(fmt.Sprintf("%s:%d", proxyURL.Hostname(), ktfkong.DefaultTCPServicePort), testUUID1)
+		return errors.Is(err, io.EOF) || errors.Is(err, syscall.ECONNRESET)
 	}, ingressWait, waitTick)
 
 	t.Log("testing port matching")
@@ -386,8 +377,7 @@ func TestTCPRouteEssentials(t *testing.T) {
 
 	t.Log("verifying that the TCPRoute responds before specifying a port not existent in Gateway")
 	require.Eventually(t, func() bool {
-		responded, err := test.TCPEchoResponds(fmt.Sprintf("%s:%d", proxyURL.Hostname(), ktfkong.DefaultTCPServicePort), testUUID1)
-		return err == nil && responded == true
+		return test.TCPEchoResponds(fmt.Sprintf("%s:%d", proxyURL.Hostname(), ktfkong.DefaultTCPServicePort), testUUID1) == nil
 	}, ingressWait, waitTick)
 
 	t.Log("setting the port in ParentRef which does not have a matching listener in Gateway")
@@ -404,8 +394,8 @@ func TestTCPRouteEssentials(t *testing.T) {
 
 	t.Log("verifying that the TCPRoute does not respond after specifying a port not existent in Gateway")
 	require.Eventually(t, func() bool {
-		responded, err := test.TCPEchoResponds(fmt.Sprintf("%s:%d", proxyURL.Hostname(), ktfkong.DefaultTCPServicePort), testUUID1)
-		return responded == false && (errors.Is(err, io.EOF) || errors.Is(err, syscall.ECONNRESET))
+		err := test.TCPEchoResponds(fmt.Sprintf("%s:%d", proxyURL.Hostname(), ktfkong.DefaultTCPServicePort), testUUID1)
+		return errors.Is(err, io.EOF) || errors.Is(err, syscall.ECONNRESET)
 	}, ingressWait, waitTick)
 }
 
@@ -543,12 +533,10 @@ func TestTCPRouteReferenceGrant(t *testing.T) {
 
 	t.Log("verifying that only the local tcpecho is responding without a ReferenceGrant")
 	require.Eventually(t, func() bool {
-		responded, err := test.TCPEchoResponds(fmt.Sprintf("%s:%d", proxyURL.Hostname(), ktfkong.DefaultTCPServicePort), testUUID1)
-		return err == nil && responded == true
+		return test.TCPEchoResponds(fmt.Sprintf("%s:%d", proxyURL.Hostname(), ktfkong.DefaultTCPServicePort), testUUID1) == nil
 	}, ingressWait*2, waitTick)
 	require.Never(t, func() bool {
-		responded, err := test.TCPEchoResponds(fmt.Sprintf("%s:%d", proxyURL.Hostname(), ktfkong.DefaultTCPServicePort), testUUID2)
-		return err == nil && responded == true
+		return test.TCPEchoResponds(fmt.Sprintf("%s:%d", proxyURL.Hostname(), ktfkong.DefaultTCPServicePort), testUUID2) == nil
 	}, time.Second*10, time.Second)
 
 	t.Logf("creating a ReferenceGrant that permits tcproute access from %s to services in %s", ns.Name, otherNs.Name)
@@ -589,12 +577,10 @@ func TestTCPRouteReferenceGrant(t *testing.T) {
 
 	t.Log("verifying that requests reach both the local and remote namespace echo instances")
 	require.Eventually(t, func() bool {
-		responded, err := test.TCPEchoResponds(fmt.Sprintf("%s:%d", proxyURL.Hostname(), ktfkong.DefaultTCPServicePort), testUUID1)
-		return err == nil && responded == true
+		return test.TCPEchoResponds(fmt.Sprintf("%s:%d", proxyURL.Hostname(), ktfkong.DefaultTCPServicePort), testUUID1) == nil
 	}, ingressWait, waitTick)
 	require.Eventually(t, func() bool {
-		responded, err := test.TCPEchoResponds(fmt.Sprintf("%s:%d", proxyURL.Hostname(), ktfkong.DefaultTCPServicePort), testUUID2)
-		return err == nil && responded == true
+		return test.TCPEchoResponds(fmt.Sprintf("%s:%d", proxyURL.Hostname(), ktfkong.DefaultTCPServicePort), testUUID2) == nil
 	}, ingressWait, waitTick)
 
 	t.Logf("testing specific name references")
@@ -609,8 +595,7 @@ func TestTCPRouteReferenceGrant(t *testing.T) {
 	require.NoError(t, err)
 
 	require.Eventually(t, func() bool {
-		responded, err := test.TCPEchoResponds(fmt.Sprintf("%s:%d", proxyURL.Hostname(), ktfkong.DefaultTCPServicePort), testUUID2)
-		return err == nil && responded == true
+		return test.TCPEchoResponds(fmt.Sprintf("%s:%d", proxyURL.Hostname(), ktfkong.DefaultTCPServicePort), testUUID2) == nil
 	}, ingressWait*2, waitTick)
 
 	t.Logf("testing incorrect name does not match")
@@ -620,7 +605,6 @@ func TestTCPRouteReferenceGrant(t *testing.T) {
 	require.NoError(t, err)
 
 	require.Eventually(t, func() bool {
-		responded, err := test.TCPEchoResponds(fmt.Sprintf("%s:%d", proxyURL.Hostname(), ktfkong.DefaultTCPServicePort), testUUID2)
-		return err != nil && responded == false
+		return test.TCPEchoResponds(fmt.Sprintf("%s:%d", proxyURL.Hostname(), ktfkong.DefaultTCPServicePort), testUUID2) != nil
 	}, ingressWait, waitTick)
 }

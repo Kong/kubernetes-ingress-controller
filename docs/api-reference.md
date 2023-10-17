@@ -14,6 +14,7 @@ Package v1 contains API Schema definitions for the konghq.com v1 API group.
 - [KongConsumer](#kongconsumer)
 - [KongIngress](#kongingress)
 - [KongPlugin](#kongplugin)
+- [KongUpstreamPolicy](#kongupstreampolicy)
 
 ### KongClusterPlugin
 
@@ -104,6 +105,26 @@ KongPlugin is the Schema for the kongplugins API.
 | `protocols` _[KongProtocol](#kongprotocol) array_ | Protocols configures plugin to run on requests received on specific protocols. |
 | `ordering` _[PluginOrdering](#pluginordering)_ | Ordering overrides the normal plugin execution order. It's only available on Kong Enterprise. `<phase>` is a request processing phase (for example, `access` or `body_filter`) and `<plugin>` is the name of the plugin that will run before or after the KongPlugin. For example, a KongPlugin with `plugin: rate-limiting` and `before.access: ["key-auth"]` will create a rate limiting plugin that limits requests _before_ they are authenticated. |
 | `instance_name` _string_ | InstanceName is an optional custom name to identify an instance of the plugin. This is useful when running the same plugin in multiple contexts, for example, on multiple services. |
+
+
+
+
+### KongUpstreamPolicy
+
+
+
+KongUpstreamPolicy allows attaching Kong Upstream Policies to Gateway API resources: - HTTPRoute, - TCPRoute, - UDPRoute, - GRPCRoute. 
+ It allows configuring algorithm that should be used for load balancing traffic between Kong Upstream's Targets. It also allows configuring health checks for Kong Upstream's Targets. 
+ In the case of Gateway API *Routes, the KongUpstreamPolicy will affect all of Kong Upstreams associated with the Gateway API *Route.
+
+<!-- kong_upstream_policy description placeholder -->
+
+| Field | Description |
+| --- | --- |
+| `apiVersion` _string_ | `configuration.konghq.com/v1`
+| `kind` _string_ | `KongUpstreamPolicy`
+| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` _[KongUpstreamPolicySpec](#kongupstreampolicyspec)_ | Spec contains the configuration of the Kong upstream. |
 
 
 
@@ -220,6 +241,66 @@ _Appears in:_
 - [KongClusterPlugin](#kongclusterplugin)
 - [KongIngressRoute](#kongingressroute)
 - [KongPlugin](#kongplugin)
+
+### KongUpstreamHash
+
+
+
+KongUpstreamHash defines how to calculate hash for consistent-hashing load balancing algorithm. One of the fields must be set.
+
+
+
+| Field | Description |
+| --- | --- |
+| `header` _string_ | Header is the name of the header to use as hash input. |
+| `cookie` _string_ | Cookie is the name of the cookie to use as hash input. |
+| `query_arg` _string_ | QueryArg is the name of the query argument to use as hash input. |
+| `uri_capture` _string_ | URICapture is the name of the URI capture group to use as hash input. |
+
+
+_Appears in:_
+- [KongUpstreamPolicyConfig](#kongupstreampolicyconfig)
+
+### KongUpstreamPolicyConfig
+
+
+
+KongUpstreamPolicyConfig contains the configuration parameters for Kong upstream.
+
+
+
+| Field | Description |
+| --- | --- |
+| `algorithm` _string_ | Algorithm is the load balancing algorithm to use. Accepted values are: "round-robin", "consistent-hashing", "least-connections", "latency". |
+| `slots` _integer_ | Slots is the number of slots in the load balancer algorithm. If not set, the default value in Kong for the algorithm is used. |
+| `hash_on` _[KongUpstreamHash](#kongupstreamhash)_ | HashOn defines how to calculate hash for consistent-hashing load balancing algorithm. |
+| `hash_on_fallback` _[KongUpstreamHash](#kongupstreamhash)_ | HasOnFallback defines how to calculate hash for consistent-hashing load balancing algorithm if the primary hash function fails. |
+| `healthchecks` _[Healthcheck](#healthcheck)_ | Healthchecks defines the health check configurations in Kong. REVIEW: I think we should not depend on go-kong types here. |
+| `host_header` _string_ | HostHeader is the hostname to be used as Host header when proxying requests through Kong. REVIEW: this could be achieved with Gateway API HTTPHeaderFilter, do we need that? |
+
+
+_Appears in:_
+- [KongUpstreamPolicySpec](#kongupstreampolicyspec)
+
+### KongUpstreamPolicySpec
+
+
+
+KongUpstreamPolicySpec contains the specification for KongUpstreamPolicy.
+
+
+
+| Field | Description |
+| --- | --- |
+| `targetRef` _[PolicyTargetReference](#policytargetreference)_ | TargetRef identifies an API object to apply policy to (supported: HTTPRoute, TCPRoute, UDPRoute, GRPCRoute). |
+| `override` _[KongUpstreamPolicyConfig](#kongupstreampolicyconfig)_ | Override defines policy configuration that should override policy configuration attached below the targeted resource in the hierarchy. |
+| `default` _[KongUpstreamPolicyConfig](#kongupstreampolicyconfig)_ | Default defines default policy configuration for the targeted resource. |
+
+
+_Appears in:_
+- [KongUpstreamPolicy](#kongupstreampolicy)
+
+
 
 ### NamespacedConfigSource
 

@@ -32,6 +32,7 @@ type ConfigurationV1Interface interface {
 	KongConsumersGetter
 	KongIngressesGetter
 	KongPluginsGetter
+	KongUpstreamPoliciesGetter
 }
 
 // ConfigurationV1Client is used to interact with features provided by the configuration.konghq.com group.
@@ -53,6 +54,10 @@ func (c *ConfigurationV1Client) KongIngresses(namespace string) KongIngressInter
 
 func (c *ConfigurationV1Client) KongPlugins(namespace string) KongPluginInterface {
 	return newKongPlugins(c, namespace)
+}
+
+func (c *ConfigurationV1Client) KongUpstreamPolicies(namespace string) KongUpstreamPolicyInterface {
+	return newKongUpstreamPolicies(c, namespace)
 }
 
 // NewForConfig creates a new ConfigurationV1Client for the given config.

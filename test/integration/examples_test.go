@@ -172,8 +172,7 @@ func TestTCPRouteExample(t *testing.T) {
 
 	t.Log("verifying that TCPRoute becomes routable")
 	require.Eventually(t, func() bool {
-		responds, err := test.TCPEchoResponds(fmt.Sprintf("%s:%d", proxyURL.Hostname(), ktfkong.DefaultTCPServicePort), "tcproute-example-manifest")
-		return err == nil && responds
+		return test.TCPEchoResponds(fmt.Sprintf("%s:%d", proxyURL.Hostname(), ktfkong.DefaultTCPServicePort), "tcproute-example-manifest") == nil
 	}, ingressWait, waitTick)
 }
 
@@ -200,9 +199,8 @@ func TestTLSRouteExample(t *testing.T) {
 
 	t.Log("verifying that TLSRoute becomes routable")
 	require.Eventually(t, func() bool {
-		responded, err := tlsEchoResponds(fmt.Sprintf("%s:%d", proxyURL.Hostname(), ktfkong.DefaultTLSServicePort),
-			"tlsroute-example-manifest", "tlsroute.kong.example", "tlsroute.kong.example", true)
-		return err == nil && responded
+		return tlsEchoResponds(fmt.Sprintf("%s:%d", proxyURL.Hostname(), ktfkong.DefaultTLSServicePort),
+			"tlsroute-example-manifest", "tlsroute.kong.example", "tlsroute.kong.example", true) == nil
 	}, ingressWait, waitTick)
 }
 

@@ -300,12 +300,11 @@ func verifyTCPRoute(ctx context.Context, t *testing.T, env environments.Environm
 
 	t.Logf("waiting for route from TCPRoute to be operational at %s:%d", proxyIP, tcpListenerPort)
 	require.Eventually(t, func() bool {
-		ok, err := test.TCPEchoResponds(fmt.Sprintf("%s:%d", proxyIP, tcpListenerPort), "tcpecho-tcproute")
-		if err != nil {
+		if err := test.TCPEchoResponds(fmt.Sprintf("%s:%d", proxyIP, tcpListenerPort), "tcpecho-tcproute"); err != nil {
 			t.Logf("failed to connect to %s:%d, error %v", proxyIP, tcpListenerPort, err)
 			return false
 		}
-		return ok
+		return true
 	}, ingressWait, 5*time.Second,
 	)
 }

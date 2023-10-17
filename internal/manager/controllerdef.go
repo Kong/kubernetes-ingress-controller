@@ -294,11 +294,8 @@ func setupControllers(
 				},
 			},
 		},
-		// ---------------------------------------------------------------------------
-		// Gateway API Controllers - Alpha APIs
-		// ---------------------------------------------------------------------------
 		{
-			Enabled: featureGates[featuregates.GatewayAlphaFeature],
+			Enabled: featureGates[featuregates.GatewayFeature],
 			Controller: &crds.DynamicCRDController{
 				Manager:          mgr,
 				Log:              ctrl.LoggerFrom(ctx).WithName("controllers").WithName("Dynamic/ReferenceGrant"),
@@ -317,6 +314,9 @@ func setupControllers(
 				},
 			},
 		},
+		// ---------------------------------------------------------------------------
+		// Gateway API Controllers - Alpha APIs
+		// ---------------------------------------------------------------------------
 		{
 			Enabled: featureGates[featuregates.GatewayAlphaFeature],
 			Controller: &crds.DynamicCRDController{

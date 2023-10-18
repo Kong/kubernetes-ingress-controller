@@ -67,7 +67,7 @@ func TestUnmanagedGatewayBasics(t *testing.T) {
 	require.Eventually(t, func() bool {
 		gw, err = gatewayClient.GatewayV1beta1().Gateways(ns.Name).Get(ctx, defaultGatewayName, metav1.GetOptions{})
 		require.NoError(t, err)
-		return gw.Annotations[annotations.GatewayClassUnmanagedAnnotation] == strings.Join(
+		return gw.Annotations[annotations.AnnotationPrefix+annotations.GatewayPublishServiceKey] == strings.Join(
 			[]string{
 				fmt.Sprintf("%s/%s", pubsvc.Namespace, pubsvc.Name),
 				fmt.Sprintf("%s/%s", pubsvcUDP.Namespace, pubsvcUDP.Name),

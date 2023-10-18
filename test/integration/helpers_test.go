@@ -44,7 +44,7 @@ func DeployGatewayClass(ctx context.Context, client *gatewayclient.Clientset, ga
 		ObjectMeta: metav1.ObjectMeta{
 			Name: gatewayClassName,
 			Annotations: map[string]string{
-				annotations.GatewayClassUnmanagedAnnotation: annotations.GatewayClassUnmanagedAnnotationValuePlaceholder,
+				annotations.AnnotationPrefix + annotations.GatewayClassUnmanagedKey: annotations.GatewayClassUnmanagedAnnotationValuePlaceholder,
 			},
 		},
 		Spec: gatewayapi.GatewayClassSpec{

@@ -42,7 +42,7 @@ func deployGateway(ctx context.Context, t *testing.T, env environments.Environme
 			Name: uuid.NewString(),
 			Annotations: map[string]string{
 				// annotate the gatewayclass to unmanaged.
-				annotations.GatewayClassUnmanagedAnnotation: annotations.GatewayClassUnmanagedAnnotationValuePlaceholder,
+				annotations.AnnotationPrefix + annotations.GatewayClassUnmanagedKey: annotations.GatewayClassUnmanagedAnnotationValuePlaceholder,
 			},
 		},
 		Spec: gatewayapi.GatewayClassSpec{
@@ -106,7 +106,7 @@ func deployGatewayWithTCPListener(ctx context.Context, t *testing.T, env environ
 			Name: uuid.NewString(),
 			Annotations: map[string]string{
 				// annotate the gatewayclass to unmanaged.
-				annotations.GatewayClassUnmanagedAnnotation: annotations.GatewayClassUnmanagedAnnotationValuePlaceholder,
+				annotations.AnnotationPrefix + annotations.GatewayClassUnmanagedKey: annotations.GatewayClassUnmanagedAnnotationValuePlaceholder,
 			},
 		},
 		Spec: gatewayapi.GatewayClassSpec{

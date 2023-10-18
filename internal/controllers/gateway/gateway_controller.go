@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"reflect"
-	"strings"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -440,7 +439,7 @@ func (r *GatewayReconciler) reconcileUnmanagedGateway(ctx context.Context, log l
 
 	// enforce the service reference as the annotation value for the key UnmanagedGateway.
 	debug(log, gateway, "initializing admin service annotation if unset")
-	if !isObjectUnmanaged(gateway.GetAnnotations()) {
+	if len(annotations.ExtractGatewayPublishService(gateway.Annotations)) == 0 {
 		services := []string{r.IngressServiceRef.String()}
 
 		// UDP service is optional.
@@ -448,16 +447,15 @@ func (r *GatewayReconciler) reconcileUnmanagedGateway(ctx context.Context, log l
 			services = append(services, udpRef.String())
 		}
 
-		servicesAnnotation := strings.Join(services, ",")
-		debug(log, gateway, fmt.Sprintf("no unmanaged annotation, setting it to proxy services %s", services))
+		debug(log, gateway, fmt.Sprintf("no publish service annotation, setting it to proxy services %s", services))
 		if gateway.Annotations == nil {
 			gateway.Annotations = map[string]string{}
 		}
-		annotations.UpdateUnmanagedAnnotation(gateway.Annotations, servicesAnnotation)
+		annotations.UpdateGatewayPublishService(gateway.Annotations, services)
 		return ctrl.Result{}, r.Update(ctx, gateway)
 	}
 
-	serviceRefs := strings.Split(annotations.ExtractUnmanagedGatewayClassMode(gateway.Annotations), ",")
+	serviceRefs := annotations.ExtractGatewayPublishService(gateway.Annotations)
 	// Validation check of the Gateway to ensure that the ingress service is actually available
 	// in the cluster. If it is not the object will be requeued until it exists (or is otherwise retrievable).
 	debug(log, gateway, "gathering the gateway ingress service") // This will also be done by the validating webhook, this is a fallback.

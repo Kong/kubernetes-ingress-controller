@@ -16,6 +16,7 @@ import (
 
 	"github.com/kong/kubernetes-ingress-controller/v2/test/integration/consts"
 	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/helpers"
+	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/testlabels"
 )
 
 func TestExampleUDPRoute(t *testing.T) {
@@ -25,9 +26,9 @@ func TestExampleUDPRoute(t *testing.T) {
 
 	f := features.
 		New("example").
-		WithLabel("example", "true").
-		WithLabel("gatewayapi", "alpha").
-		WithLabel("kind", "UDPRoute").
+		WithLabel(testlabels.Example, testlabels.ExampleTrue).
+		WithLabel(testlabels.NetworkingFamily, testlabels.NetworkingFamilyGatewayAPI).
+		WithLabel(testlabels.Kind, testlabels.KindUDPRoute).
 		Setup(SkipIfRouterNotExpressions).
 		WithSetup("deploy kong addon into cluster", featureSetup(
 			helpers.ControllerManagerOptAdditionalWatchNamespace("default"),

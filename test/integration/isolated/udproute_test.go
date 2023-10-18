@@ -23,6 +23,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/util/builder"
 	"github.com/kong/kubernetes-ingress-controller/v2/test/integration/consts"
 	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/helpers"
+	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/testlabels"
 )
 
 const (
@@ -85,8 +86,8 @@ func TestUDPRoute(t *testing.T) {
 
 	fEssentials := features.
 		New("essentials").
-		WithLabel("gatewayapi", "alpha").
-		WithLabel("kind", "UDPRoute").
+		WithLabel(testlabels.NetworkingFamily, testlabels.NetworkingFamilyGatewayAPI).
+		WithLabel(testlabels.Kind, testlabels.KindUDPRoute).
 		Setup(SkipIfRouterNotExpressions).
 		WithSetup("deploy kong addon into cluster", featureSetup()).
 		WithSetup("inject Klient into test context", injectKlient()).
@@ -482,8 +483,8 @@ func TestUDPRoute(t *testing.T) {
 
 	fPortMatching := features.
 		New("port matching").
-		WithLabel("gatewayapi", "alpha").
-		WithLabel("kind", "UDPRoute").
+		WithLabel(testlabels.NetworkingFamily, testlabels.NetworkingFamilyGatewayAPI).
+		WithLabel(testlabels.Kind, testlabels.KindUDPRoute).
 		Setup(SkipIfRouterNotExpressions).
 		WithSetup("deploy kong addon into cluster", featureSetup()).
 		WithSetup("inject Klient into test context", injectKlient()).

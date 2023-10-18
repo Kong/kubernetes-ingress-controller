@@ -177,7 +177,6 @@ func TestTCPRouteExample(t *testing.T) {
 }
 
 func TestTLSRouteExample(t *testing.T) {
-	skipTestForExpressionRouter(t)
 	t.Log("locking Gateway TLS ports")
 	tlsMutex.Lock()
 	t.Cleanup(func() {
@@ -279,7 +278,6 @@ func TestIngressExample(t *testing.T) {
 }
 
 func TestUDPIngressExample(t *testing.T) {
-	skipTestForExpressionRouter(t)
 	t.Log("locking UDP port")
 	udpMutex.Lock()
 	t.Cleanup(func() {

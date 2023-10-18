@@ -24,7 +24,7 @@ import (
 )
 
 func TestServiceOverrides(t *testing.T) {
-	skipTestForExpressionRouter(t)
+	skipTestForRouterFlavors(t, expressions)
 	ctx := context.Background()
 
 	t.Parallel()
